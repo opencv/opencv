@@ -66,36 +66,36 @@ void cv::ocl::dft(const oclMat &src, oclMat &dst, int flags)
 
 namespace cv
 {
-    namespace ocl
-    {
-        enum FftType
-        {
-            C2R = 1, // complex to complex
-            R2C = 2, // real to opencl HERMITIAN_INTERLEAVED
-            C2C = 3  // opencl HERMITIAN_INTERLEAVED to real
-        };
-        struct FftPlan
-        {
-            friend void fft_setup();
-            friend void fft_teardown();
-            ~FftPlan();
-        protected:
-            FftPlan(Size _dft_size, int _src_step, int _dst_step, int _flags, FftType _type);
-            const Size dft_size;
-            const int src_step, dst_step;
-            const int flags;
-            const FftType type;
-            clAmdFftPlanHandle plHandle;
-            static vector<FftPlan *> planStore;
-            static bool started;
-            static clAmdFftSetupData *setupData;
-        public:
-            // return a baked plan->
-            // if there is one matched plan, return it
-            // if not, bake a new one, put it into the planStore and return it.
-            static clAmdFftPlanHandle getPlan(Size _dft_size, int _src_step, int _dst_step, int _flags, FftType _type);
-        };
-    }
+namespace ocl
+{
+enum FftType
+{
+    C2R = 1, // complex to complex
+    R2C = 2, // real to opencl HERMITIAN_INTERLEAVED
+    C2C = 3  // opencl HERMITIAN_INTERLEAVED to real
+};
+struct FftPlan
+{
+    friend void fft_setup();
+    friend void fft_teardown();
+    ~FftPlan();
+protected:
+    FftPlan(Size _dft_size, int _src_step, int _dst_step, int _flags, FftType _type);
+    const Size dft_size;
+    const int src_step, dst_step;
+    const int flags;
+    const FftType type;
+    clAmdFftPlanHandle plHandle;
+    static vector<FftPlan *> planStore;
+    static bool started;
+    static clAmdFftSetupData *setupData;
+public:
+    // return a baked plan->
+    // if there is one matched plan, return it
+    // if not, bake a new one, put it into the planStore and return it.
+    static clAmdFftPlanHandle getPlan(Size _dft_size, int _src_step, int _dst_step, int _flags, FftType _type);
+};
+}
 }
 bool cv::ocl::FftPlan::started = false;
 vector<cv::ocl::FftPlan *> cv::ocl::FftPlan::planStore = vector<cv::ocl::FftPlan *>();
@@ -107,8 +107,9 @@ void cv::ocl::fft_setup()
     {
         return;
     }
+
     FftPlan::setupData = new clAmdFftSetupData;
-    openCLSafeCall(clAmdFftInitSetupData( FftPlan::setupData ));
+    openCLSafeCall(clAmdFftInitSetupData(FftPlan::setupData));
     FftPlan::started = true;
 }
 void cv::ocl::fft_teardown()
@@ -117,13 +118,16 @@ void cv::ocl::fft_teardown()
     {
         return;
     }
+
     delete FftPlan::setupData;
+
     for(int i = 0; i < FftPlan::planStore.size(); i ++)
     {
         delete FftPlan::planStore[i];
     }
+
     FftPlan::planStore.clear();
-    openCLSafeCall( clAmdFftTeardown( ) );
+    openCLSafeCall(clAmdFftTeardown());
     FftPlan::started = false;
 }
 
@@ -159,46 +163,46 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
 
     switch(_type)
     {
-    case C2C:
-        inLayout        = CLFFT_COMPLEX_INTERLEAVED;
-        outLayout       = CLFFT_COMPLEX_INTERLEAVED;
-        clStridesIn[1]  = src_step / sizeof(std::complex<float>);
-        clStridesOut[1] = clStridesIn[1];
-        break;
-    case R2C:
-        CV_Assert(!is_row_dft); // this is not supported yet
-        inLayout        = CLFFT_REAL;
-        outLayout       = CLFFT_HERMITIAN_INTERLEAVED;
-        clStridesIn[1]  = src_step / sizeof(float);
-        clStridesOut[1] = dst_step / sizeof(std::complex<float>);
-        break;
-    case C2R:
-        CV_Assert(!is_row_dft); // this is not supported yet
-        inLayout        = CLFFT_HERMITIAN_INTERLEAVED;
-        outLayout       = CLFFT_REAL;
-        clStridesIn[1]  = src_step / sizeof(std::complex<float>);
-        clStridesOut[1] = dst_step / sizeof(float);
-        break;
-    default:
-        //std::runtime_error("does not support this convertion!");
-        cout << "Does not support this convertion!" << endl;
-        throw exception();
-        break;
+        case C2C:
+            inLayout        = CLFFT_COMPLEX_INTERLEAVED;
+            outLayout       = CLFFT_COMPLEX_INTERLEAVED;
+            clStridesIn[1]  = src_step / sizeof(std::complex<float>);
+            clStridesOut[1] = clStridesIn[1];
+            break;
+        case R2C:
+            CV_Assert(!is_row_dft); // this is not supported yet
+            inLayout        = CLFFT_REAL;
+            outLayout       = CLFFT_HERMITIAN_INTERLEAVED;
+            clStridesIn[1]  = src_step / sizeof(float);
+            clStridesOut[1] = dst_step / sizeof(std::complex<float>);
+            break;
+        case C2R:
+            CV_Assert(!is_row_dft); // this is not supported yet
+            inLayout        = CLFFT_HERMITIAN_INTERLEAVED;
+            outLayout       = CLFFT_REAL;
+            clStridesIn[1]  = src_step / sizeof(std::complex<float>);
+            clStridesOut[1] = dst_step / sizeof(float);
+            break;
+        default:
+            //std::runtime_error("does not support this convertion!");
+            cout << "Does not support this convertion!" << endl;
+            throw exception();
+            break;
     }
 
     clStridesIn[2]  = is_row_dft ? clStridesIn[1]  : dft_size.width * clStridesIn[1];
     clStridesOut[2] = is_row_dft ? clStridesOut[1] : dft_size.width * clStridesOut[1];
 
-    openCLSafeCall( clAmdFftCreateDefaultPlan( &plHandle, Context::getContext()->impl->clContext, dim, clLengthsIn ) );
+    openCLSafeCall(clAmdFftCreateDefaultPlan(&plHandle, Context::getContext()->impl->clContext, dim, clLengthsIn));
 
-    openCLSafeCall( clAmdFftSetResultLocation( plHandle, CLFFT_OUTOFPLACE ) );
-    openCLSafeCall( clAmdFftSetLayout( plHandle, inLayout, outLayout ) );
-    openCLSafeCall( clAmdFftSetPlanBatchSize( plHandle, batchSize ) );
+    openCLSafeCall(clAmdFftSetResultLocation(plHandle, CLFFT_OUTOFPLACE));
+    openCLSafeCall(clAmdFftSetLayout(plHandle, inLayout, outLayout));
+    openCLSafeCall(clAmdFftSetPlanBatchSize(plHandle, batchSize));
 
-    openCLSafeCall( clAmdFftSetPlanInStride  ( plHandle, dim, clStridesIn ) );
-    openCLSafeCall( clAmdFftSetPlanOutStride ( plHandle, dim, clStridesOut ) );
-    openCLSafeCall( clAmdFftSetPlanDistance  ( plHandle, clStridesIn[ dim ], clStridesIn[ dim ]) );
-    openCLSafeCall( clAmdFftBakePlan( plHandle, 1, &(Context::getContext()->impl->clCmdQueue), NULL, NULL ) );
+    openCLSafeCall(clAmdFftSetPlanInStride(plHandle, dim, clStridesIn));
+    openCLSafeCall(clAmdFftSetPlanOutStride(plHandle, dim, clStridesOut));
+    openCLSafeCall(clAmdFftSetPlanDistance(plHandle, clStridesIn[ dim ], clStridesIn[ dim ]));
+    openCLSafeCall(clAmdFftBakePlan(plHandle, 1, &(Context::getContext()->impl->clCmdQueue), NULL, NULL));
 }
 cv::ocl::FftPlan::~FftPlan()
 {
@@ -209,7 +213,8 @@ cv::ocl::FftPlan::~FftPlan()
             planStore.erase(planStore.begin() + i);
         }
     }
-    openCLSafeCall( clAmdFftDestroyPlan( &plHandle ) );
+
+    openCLSafeCall(clAmdFftDestroyPlan(&plHandle));
 }
 
 clAmdFftPlanHandle cv::ocl::FftPlan::getPlan(Size _dft_size, int _src_step, int _dst_step, int _flags, FftType _type)
@@ -218,6 +223,7 @@ clAmdFftPlanHandle cv::ocl::FftPlan::getPlan(Size _dft_size, int _src_step, int 
     for(int i = 0; i < planStore.size(); i ++)
     {
         FftPlan *plan = planStore[i];
+
         if(
             plan->dft_size.width == _dft_size.width &&
             plan->dft_size.height == _dft_size.height &&
@@ -230,6 +236,7 @@ clAmdFftPlanHandle cv::ocl::FftPlan::getPlan(Size _dft_size, int _src_step, int 
             return plan->plHandle;
         }
     }
+
     // no baked plan is found
     FftPlan *newPlan = new FftPlan(_dft_size, _src_step, _dst_step, _flags, _type);
     planStore.push_back(newPlan);
@@ -242,6 +249,7 @@ void cv::ocl::dft(const oclMat &src, oclMat &dst, Size dft_size, int flags)
     {
         dft_size = src.size();
     }
+
     // check if the given dft size is of optimal dft size
     CV_Assert(dft_size.area() == getOptimalDFTSize(dft_size.area()));
 
@@ -264,45 +272,49 @@ void cv::ocl::dft(const oclMat &src, oclMat &dst, Size dft_size, int flags)
 
     switch(type)
     {
-    case C2C:
-        dst.create(src.rows, src.cols, CV_32FC2);
-        break;
-    case R2C:
-        CV_Assert(!is_row_dft); // this is not supported yet
-        dst.create(src.rows, src.cols / 2 + 1, CV_32FC2);
-        break;
-    case C2R:
-        CV_Assert(dft_size.width / 2 + 1 == src.cols && dft_size.height == src.rows);
-        CV_Assert(!is_row_dft); // this is not supported yet
-        dst.create(src.rows, dft_size.width, CV_32FC1);
-        break;
-    default:
-        //std::runtime_error("does not support this convertion!");
-        cout << "Does not support this convertion!" << endl;
-        throw exception();
-        break;
+        case C2C:
+            dst.create(src.rows, src.cols, CV_32FC2);
+            break;
+        case R2C:
+            CV_Assert(!is_row_dft); // this is not supported yet
+            dst.create(src.rows, src.cols / 2 + 1, CV_32FC2);
+            break;
+        case C2R:
+            CV_Assert(dft_size.width / 2 + 1 == src.cols && dft_size.height == src.rows);
+            CV_Assert(!is_row_dft); // this is not supported yet
+            dst.create(src.rows, dft_size.width, CV_32FC1);
+            break;
+        default:
+            //std::runtime_error("does not support this convertion!");
+            cout << "Does not support this convertion!" << endl;
+            throw exception();
+            break;
     }
+
     clAmdFftPlanHandle plHandle = FftPlan::getPlan(dft_size, src.step, dst.step, flags, type);
 
     //get the buffersize
     size_t buffersize = 0;
-    openCLSafeCall( clAmdFftGetTmpBufSize(plHandle, &buffersize ) );
+    openCLSafeCall(clAmdFftGetTmpBufSize(plHandle, &buffersize));
 
     //allocate the intermediate buffer
     cl_mem clMedBuffer = NULL;
-    if (buffersize)
+
+    if(buffersize)
     {
         cl_int medstatus;
-        clMedBuffer = clCreateBuffer ( src.clCxt->impl->clContext, CL_MEM_READ_WRITE, buffersize, 0, &medstatus);
-        openCLSafeCall( medstatus );
+        clMedBuffer = clCreateBuffer(src.clCxt->impl->clContext, CL_MEM_READ_WRITE, buffersize, 0, &medstatus);
+        openCLSafeCall(medstatus);
     }
-    openCLSafeCall( clAmdFftEnqueueTransform( plHandle,
-                    is_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD,
-                    1,
-                    &src.clCxt->impl->clCmdQueue,
-                    0, NULL, NULL,
-                    (cl_mem *)&src.data, (cl_mem *)&dst.data, clMedBuffer ) );
-    openCLSafeCall( clFinish(src.clCxt->impl->clCmdQueue) );
+
+    openCLSafeCall(clAmdFftEnqueueTransform(plHandle,
+                                            is_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD,
+                                            1,
+                                            &src.clCxt->impl->clCmdQueue,
+                                            0, NULL, NULL,
+                                            (cl_mem *)&src.data, (cl_mem *)&dst.data, clMedBuffer));
+    openCLSafeCall(clFinish(src.clCxt->impl->clCmdQueue));
+
     if(clMedBuffer)
     {
         openCLFree(clMedBuffer);

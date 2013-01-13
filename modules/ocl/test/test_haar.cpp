@@ -55,7 +55,7 @@ using namespace cv;
 extern string workdir;
 struct getRect
 {
-    Rect operator ()(const CvAvgComp &e) const
+    Rect operator()(const CvAvgComp &e) const
     {
         return e.rect;
     }
@@ -67,21 +67,22 @@ PARAM_TEST_CASE(HaarTestBase, int, int)
     cv::ocl::OclCascadeClassifier cascade, nestedCascade;
     cv::CascadeClassifier cpucascade, cpunestedCascade;
     //    Mat img;
-
+    
     double scale;
     int index;
-
+    
     virtual void SetUp()
     {
         scale = 1.0;
         index = 0;
         string cascadeName = workdir + "../../data/haarcascades/haarcascade_frontalface_alt.xml";
-
-        if( (!cascade.load( cascadeName )) || (!cpucascade.load(cascadeName)))
+        
+        if((!cascade.load(cascadeName)) || (!cpucascade.load(cascadeName)))
         {
             cout << "ERROR: Could not load classifier cascade" << endl;
             return;
         }
+        
         //int devnums = getDevice(oclinfo);
         //CV_Assert(devnums>0);
         ////if you want to use undefault device, set it here
@@ -97,18 +98,18 @@ struct Haar : HaarTestBase {};
 TEST_F(Haar, FaceDetect)
 {
     string imgName = workdir + "lena.jpg";
-    Mat img = imread( imgName, 1 );
-
+    Mat img = imread(imgName, 1);
+    
     if(img.empty())
     {
         std::cout << "Couldn't read " << imgName << std::endl;
         return ;
     }
-
+    
     //int i = 0;
     //double t = 0;
     vector<Rect> faces, oclfaces;
-
+    
     const static Scalar colors[] =  { CV_RGB(0, 0, 255),
                                       CV_RGB(0, 128, 255),
                                       CV_RGB(0, 255, 255),
@@ -118,30 +119,30 @@ TEST_F(Haar, FaceDetect)
                                       CV_RGB(255, 0, 0),
                                       CV_RGB(255, 0, 255)
                                     } ;
-
-    Mat gray, smallImg(cvRound (img.rows / scale), cvRound(img.cols / scale), CV_8UC1 );
+                                    
+    Mat gray, smallImg(cvRound(img.rows / scale), cvRound(img.cols / scale), CV_8UC1);
     MemStorage storage(cvCreateMemStorage(0));
-    cvtColor( img, gray, CV_BGR2GRAY );
-    resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
-    equalizeHist( smallImg, smallImg );
-
-
+    cvtColor(img, gray, CV_BGR2GRAY);
+    resize(gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR);
+    equalizeHist(smallImg, smallImg);
+    
+    
     cv::ocl::oclMat image;
     CvSeq *_objects;
     image.upload(smallImg);
-    _objects = cascade.oclHaarDetectObjects( image, storage, 1.1,
-               3, 0
-               | CV_HAAR_SCALE_IMAGE
-               , Size(30, 30), Size(0, 0) );
+    _objects = cascade.oclHaarDetectObjects(image, storage, 1.1,
+                                            3, 0
+                                            | CV_HAAR_SCALE_IMAGE
+                                            , Size(30, 30), Size(0, 0));
     vector<CvAvgComp> vecAvgComp;
     Seq<CvAvgComp>(_objects).copyTo(vecAvgComp);
     oclfaces.resize(vecAvgComp.size());
     std::transform(vecAvgComp.begin(), vecAvgComp.end(), oclfaces.begin(), getRect());
-
-    cpucascade.detectMultiScale( smallImg, faces,  1.1,
-                                 3, 0
-                                 | CV_HAAR_SCALE_IMAGE
-                                 , Size(30, 30), Size(0, 0) );
+    
+    cpucascade.detectMultiScale(smallImg, faces,  1.1,
+                                3, 0
+                                | CV_HAAR_SCALE_IMAGE
+                                , Size(30, 30), Size(0, 0));
     EXPECT_EQ(faces.size(), oclfaces.size());
     /*	for( vector<Rect>::const_iterator r = faces.begin(); r != faces.end(); r++, i++ )
     {
@@ -158,6 +159,6 @@ TEST_F(Haar, FaceDetect)
     //imshow("result",img);
     //waitKey(0);
     //destroyAllWindows();
-
+    
 }
 #endif // HAVE_OPENCL

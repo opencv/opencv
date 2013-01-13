@@ -60,44 +60,47 @@ TEST(SURF, Performance)
 {
     cv::Mat img = readImage(FILTER_IMAGE, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
-
+    
     ocl::SURF_OCL d_surf;
     ocl::oclMat d_keypoints;
     ocl::oclMat d_descriptors;
-
+    
     double totalgputick = 0;
     double totalgputick_kernel = 0;
-
+    
     double t1 = 0;
     double t2 = 0;
+    
     for(int j = 0; j < LOOP_TIMES + 1; j ++)
     {
         t1 = (double)cvGetTickCount();//gpu start1
-
+        
         ocl::oclMat d_src(img);//upload
-
+        
         t2 = (double)cvGetTickCount(); //kernel
         d_surf(d_src, ocl::oclMat(), d_keypoints, d_descriptors);
         t2 = (double)cvGetTickCount() - t2;//kernel
-
+        
         cv::Mat cpu_kp, cpu_dp;
-        d_keypoints.download (cpu_kp);//download
-        d_descriptors.download (cpu_dp);//download
-
+        d_keypoints.download(cpu_kp); //download
+        d_descriptors.download(cpu_dp); //download
+        
         t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+        
         if(j == 0)
+        {
             continue;
-
+        }
+        
         totalgputick = t1 + totalgputick;
-
+        
         totalgputick_kernel = t2 + totalgputick_kernel;
-
+        
     }
-
+    
     cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-
-
+    
+    
 }
 #endif  //Have opencl

@@ -55,13 +55,13 @@
 ////////////////////////////////////////////////////////////////////////
 // ColumnSum
 
-PARAM_TEST_CASE(ColumnSum, cv::Size, bool )
+PARAM_TEST_CASE(ColumnSum, cv::Size, bool)
 {
     cv::Size size;
     cv::Mat src;
     bool useRoi;
     //std::vector<cv::ocl::Info> oclinfo;
-
+    
     virtual void SetUp()
     {
         size = GET_PARAM(0);
@@ -76,21 +76,21 @@ TEST_P(ColumnSum, Accuracy)
     cv::Mat src = randomMat(size, CV_32FC1);
     cv::ocl::oclMat d_dst;
     cv::ocl::oclMat d_src(src);
-
+    
     cv::ocl::columnSum(d_src, d_dst);
-
+    
     cv::Mat dst(d_dst);
-
-    for (int j = 0; j < src.cols; ++j)
+    
+    for(int j = 0; j < src.cols; ++j)
     {
         float gold = src.at<float>(0, j);
         float res = dst.at<float>(0, j);
         ASSERT_NEAR(res, gold, 1e-5);
     }
-
-    for (int i = 1; i < src.rows; ++i)
+    
+    for(int i = 1; i < src.rows; ++i)
     {
-        for (int j = 0; j < src.cols; ++j)
+        for(int j = 0; j < src.cols; ++j)
         {
             float gold = src.at<float>(i, j) += src.at<float>(i - 1, j);
             float res = dst.at<float>(i, j);

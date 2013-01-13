@@ -66,38 +66,40 @@ TEST_P(Dft, C2C)
     cv::Mat a = randomMat(dft_size, CV_32FC2, 0.0, 10.0);
     int flags = 0;
     flags |= dft_rows ? cv::DFT_ROWS : 0;
-
+    
     cv::ocl::oclMat d_b;
-
+    
     double totalgputick = 0;
     double totalgputick_kernel = 0;
     double t1 = 0;
     double t2 = 0;
-
+    
     for(int j = 0; j < LOOP_TIMES + 1; j ++)
     {
-
+    
         t1 = (double)cvGetTickCount();//gpu start1
-
+        
         cv::ocl::oclMat ga = cv::ocl::oclMat(a); //upload
-
+        
         t2 = (double)cvGetTickCount(); //kernel
         cv::ocl::dft(ga, d_b, a.size(), flags);
         t2 = (double)cvGetTickCount() - t2;//kernel
-
+        
         cv::Mat cpu_dst;
-        d_b.download (cpu_dst);//download
-
+        d_b.download(cpu_dst); //download
+        
         t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+        
         if(j == 0)
+        {
             continue;
-
+        }
+        
         totalgputick = t1 + totalgputick;
         totalgputick_kernel = t2 + totalgputick_kernel;
-
+        
     }
-
+    
     cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
 }
@@ -107,15 +109,15 @@ TEST_P(Dft, C2C)
 TEST_P(Dft, R2CthenC2R)
 {
     cv::Mat a = randomMat(dft_size, CV_32FC1, 0.0, 10.0);
-
+    
     int flags = 0;
     //flags |= dft_rows ? cv::DFT_ROWS : 0; // not supported yet
-
+    
     cv::ocl::oclMat d_b, d_c;
-
+    
     cv::ocl::dft(cv::ocl::oclMat(a), d_b, a.size(), flags);
     cv::ocl::dft(d_b, d_c, a.size(), flags + cv::DFT_INVERSE + cv::DFT_REAL_OUTPUT);
-
+    
     EXPECT_MAT_NEAR(a, d_c, a.size().area() * 1e-4, "");
 }
 

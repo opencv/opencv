@@ -53,50 +53,53 @@ using std::endl;
 #if !defined (HAVE_OPENCL)
 namespace cv
 {
-    namespace ocl
-    {
-        //nothing
-    }//namespace ocl
+namespace ocl
+{
+//nothing
+}//namespace ocl
 }//namespace cv
 
 #else /* !defined (HAVE_OPENCL) */
 
 namespace cv
 {
-    namespace ocl
+namespace ocl
+{
+class ProgramCache
+{
+protected:
+    ProgramCache();
+    friend class auto_ptr<ProgramCache>;
+    static auto_ptr<ProgramCache> programCache;
+
+public:
+    ~ProgramCache();
+    static ProgramCache *getProgramCache()
     {
-        class ProgramCache
+        if(NULL == programCache.get())
         {
-        protected:
-            ProgramCache();
-            friend class auto_ptr<ProgramCache>;
-            static auto_ptr<ProgramCache> programCache;
+            programCache.reset(new ProgramCache());
+        }
 
-        public:
-            ~ProgramCache();
-            static ProgramCache *getProgramCache()
-            {
-                if( NULL == programCache.get())
-                    programCache.reset(new ProgramCache());
-                return programCache.get();
-            }
+        return programCache.get();
+    }
 
-            //lookup the binary given the file name
-            cl_program progLookup(string srcsign);
+    //lookup the binary given the file name
+    cl_program progLookup(string srcsign);
 
-            //add program to the cache
-            void addProgram(string srcsign, cl_program program);
-            void releaseProgram();
+    //add program to the cache
+    void addProgram(string srcsign, cl_program program);
+    void releaseProgram();
 
-            map <string, cl_program> codeCache;
-            unsigned int cacheSize;
-            //The presumed watermark for the cache volume (256MB). Is it enough?
-            //We may need more delicate algorithms when necessary later.
-            //Right now, let's just leave it along.
-            static const unsigned MAX_PROG_CACHE_SIZE = 1024;
-        };
+    map <string, cl_program> codeCache;
+    unsigned int cacheSize;
+    //The presumed watermark for the cache volume (256MB). Is it enough?
+    //We may need more delicate algorithms when necessary later.
+    //Right now, let's just leave it along.
+    static const unsigned MAX_PROG_CACHE_SIZE = 1024;
+};
 
-    }//namespace ocl
+}//namespace ocl
 
 }//namespace cv
 #endif

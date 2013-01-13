@@ -56,11 +56,11 @@ PARAM_TEST_CASE(ConvertToTestBase, MatType, MatType)
 {
     int type;
     int dst_type;
-
+    
     //src mat
     cv::Mat mat;
     cv::Mat dst;
-
+    
     // set up roi
     int roicols;
     int roirows;
@@ -68,26 +68,26 @@ PARAM_TEST_CASE(ConvertToTestBase, MatType, MatType)
     int srcy;
     int dstx;
     int dsty;
-
+    
     //src mat with roi
     cv::Mat mat_roi;
     cv::Mat dst_roi;
     //std::vector<cv::ocl::Info> oclinfo;
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
-
+    
     //ocl mat with roi
     cv::ocl::oclMat gmat;
     cv::ocl::oclMat gdst;
-
+    
     virtual void SetUp()
     {
         type     = GET_PARAM(0);
         dst_type = GET_PARAM(1);
-
+        
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
-
+        
         mat = randomMat(rng, size, type, 5, 16, false);
         dst  = randomMat(rng, size, type, 5, 16, false);
         //std::vector<cv::ocl::Info> oclinfo;
@@ -96,7 +96,7 @@ PARAM_TEST_CASE(ConvertToTestBase, MatType, MatType)
         ////if you want to use undefault device, set it here
         ////setDevice(oclinfo[0]);
     }
-
+    
     void random_roi()
     {
 #ifdef RANDOMROI
@@ -116,13 +116,13 @@ PARAM_TEST_CASE(ConvertToTestBase, MatType, MatType)
         dstx = 0;
         dsty = 0;
 #endif
-
+        
         mat_roi = mat(Rect(srcx, srcy, roicols, roirows));
         dst_roi  = dst(Rect(dstx, dsty, roicols, roirows));
-
+        
         gdst_whole = dst;
         gdst = gdst_whole(Rect(dstx, dsty, roicols, roirows));
-
+        
         gmat = mat_roi;
     }
 };
@@ -135,15 +135,15 @@ TEST_P(ConvertTo, Accuracy)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-
+        
         mat_roi.convertTo(dst_roi, dst_type);
         gmat.convertTo(gdst, dst_type);
-
+        
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
         char sss[1024];
         sprintf(sss, "roicols=%d,roirows=%d,srcx =%d,srcy=%d,dstx=%d,dsty=%d", roicols, roirows, srcx , srcy, dstx, dsty);
-
+        
         EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, sss);
     }
 }
@@ -156,11 +156,11 @@ TEST_P(ConvertTo, Accuracy)
 PARAM_TEST_CASE(CopyToTestBase, MatType, bool)
 {
     int type;
-
+    
     cv::Mat mat;
     cv::Mat mask;
     cv::Mat dst;
-
+    
     // set up roi
     int roicols;
     int roirows;
@@ -170,7 +170,7 @@ PARAM_TEST_CASE(CopyToTestBase, MatType, bool)
     int dsty;
     int maskx;
     int masky;
-
+    
     //src mat with roi
     cv::Mat mat_roi;
     cv::Mat mask_roi;
@@ -178,31 +178,31 @@ PARAM_TEST_CASE(CopyToTestBase, MatType, bool)
     //std::vector<cv::ocl::Info> oclinfo;
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
-
+    
     //ocl mat with roi
     cv::ocl::oclMat gmat;
     cv::ocl::oclMat gdst;
     cv::ocl::oclMat gmask;
-
+    
     virtual void SetUp()
     {
         type = GET_PARAM(0);
-
+        
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
-
+        
         mat = randomMat(rng, size, type, 5, 16, false);
         dst  = randomMat(rng, size, type, 5, 16, false);
         mask = randomMat(rng, size, CV_8UC1, 0, 2,  false);
-
+        
         cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
-
+        
         //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
         //CV_Assert(devnums > 0);
         ////if you want to use undefault device, set it here
         ////setDevice(oclinfo[0]);
     }
-
+    
     void random_roi()
     {
 #ifdef RANDOMROI
@@ -226,14 +226,14 @@ PARAM_TEST_CASE(CopyToTestBase, MatType, bool)
         maskx = 0;
         masky = 0;
 #endif
-
+        
         mat_roi = mat(Rect(srcx, srcy, roicols, roirows));
         mask_roi = mask(Rect(maskx, masky, roicols, roirows));
         dst_roi  = dst(Rect(dstx, dsty, roicols, roirows));
-
+        
         gdst_whole = dst;
         gdst = gdst_whole(Rect(dstx, dsty, roicols, roirows));
-
+        
         gmat = mat_roi;
         gmask = mask_roi;
     }
@@ -246,15 +246,15 @@ TEST_P(CopyTo, Without_mask)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-
+        
         mat_roi.copyTo(dst_roi);
         gmat.copyTo(gdst);
-
+        
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
         char sss[1024];
         sprintf(sss, "roicols=%d,roirows=%d,srcx =%d,srcy=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d", roicols, roirows, srcx , srcy, dstx, dsty, maskx, masky);
-
+        
         EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, sss);
     }
 }
@@ -264,15 +264,15 @@ TEST_P(CopyTo, With_mask)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-
+        
         mat_roi.copyTo(dst_roi, mask_roi);
         gmat.copyTo(gdst, gmask);
-
+        
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
         char sss[1024];
         sprintf(sss, "roicols=%d,roirows=%d,srcx =%d,srcy=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d", roicols, roirows, srcx , srcy, dstx, dsty, maskx, masky);
-
+        
         EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, sss);
     }
 }
@@ -286,10 +286,10 @@ PARAM_TEST_CASE(SetToTestBase, MatType, bool)
 {
     int type;
     cv::Scalar val;
-
+    
     cv::Mat mat;
     cv::Mat mask;
-
+    
     // set up roi
     int roicols;
     int roirows;
@@ -297,37 +297,37 @@ PARAM_TEST_CASE(SetToTestBase, MatType, bool)
     int srcy;
     int maskx;
     int masky;
-
+    
     //src mat with roi
     cv::Mat mat_roi;
     cv::Mat mask_roi;
     //std::vector<cv::ocl::Info> oclinfo;
     //ocl dst mat for testing
     cv::ocl::oclMat gmat_whole;
-
+    
     //ocl mat with roi
     cv::ocl::oclMat gmat;
     cv::ocl::oclMat gmask;
-
+    
     virtual void SetUp()
     {
         type = GET_PARAM(0);
-
+        
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
-
+        
         mat = randomMat(rng, size, type, 5, 16, false);
         mask = randomMat(rng, size, CV_8UC1, 0, 2,  false);
-
+        
         cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
         val = cv::Scalar(rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0));
-
+        
         //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
         //CV_Assert(devnums > 0);
         ////if you want to use undefault device, set it here
         ////setDevice(oclinfo[0]);
     }
-
+    
     void random_roi()
     {
 #ifdef RANDOMROI
@@ -347,13 +347,13 @@ PARAM_TEST_CASE(SetToTestBase, MatType, bool)
         maskx = 0;
         masky = 0;
 #endif
-
+        
         mat_roi = mat(Rect(srcx, srcy, roicols, roirows));
         mask_roi = mask(Rect(maskx, masky, roicols, roirows));
-
+        
         gmat_whole = mat;
         gmat = gmat_whole(Rect(srcx, srcy, roicols, roirows));
-
+        
         gmask = mask_roi;
     }
 };
@@ -365,15 +365,15 @@ TEST_P(SetTo, Without_mask)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-
+        
         mat_roi.setTo(val);
         gmat.setTo(val);
-
+        
         cv::Mat cpu_dst;
         gmat_whole.download(cpu_dst);
         char sss[1024];
         sprintf(sss, "roicols=%d,roirows=%d,srcx =%d,srcy=%d,maskx=%d,masky=%d", roicols, roirows, srcx , srcy, maskx, masky);
-
+        
         EXPECT_MAT_NEAR(mat, cpu_dst, 1., sss);
     }
 }
@@ -383,15 +383,15 @@ TEST_P(SetTo, With_mask)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-
+        
         mat_roi.setTo(val, mask_roi);
         gmat.setTo(val, gmask);
-
+        
         cv::Mat cpu_dst;
         gmat_whole.download(cpu_dst);
         char sss[1024];
         sprintf(sss, "roicols=%d,roirows=%d,srcx =%d,srcy=%d,maskx=%d,masky=%d", roicols, roirows, srcx , srcy, maskx, masky);
-
+        
         EXPECT_MAT_NEAR(mat, cpu_dst, 1., sss);
     }
 }
@@ -401,11 +401,11 @@ PARAM_TEST_CASE(convertC3C4, MatType, cv::Size)
 {
     int type;
     cv::Size ksize;
-
+    
     //src mat
     cv::Mat mat1;
     cv::Mat dst;
-
+    
     // set up roi
     int roicols;
     int roirows;
@@ -413,32 +413,32 @@ PARAM_TEST_CASE(convertC3C4, MatType, cv::Size)
     int src1y;
     int dstx;
     int dsty;
-
+    
     //src mat with roi
     cv::Mat mat1_roi;
     cv::Mat dst_roi;
     //std::vector<cv::ocl::Info> oclinfo;
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
-
+    
     //ocl mat with roi
     cv::ocl::oclMat gmat1;
     cv::ocl::oclMat gdst;
-
+    
     virtual void SetUp()
     {
         type = GET_PARAM(0);
         ksize = GET_PARAM(1);
-
-
-
+        
+        
+        
         //dst  = randomMat(rng, size, type, 5, 16, false);
         //int devnums = getDevice(oclinfo);
         //CV_Assert(devnums > 0);
         ////if you want to use undefault device, set it here
         ////setDevice(oclinfo[1]);
     }
-
+    
     void random_roi()
     {
 #ifdef RANDOMROI
@@ -458,29 +458,30 @@ PARAM_TEST_CASE(convertC3C4, MatType, cv::Size)
         dstx = 0;
         dsty = 0;
 #endif
-
+        
         mat1_roi = mat1(Rect(src1x, src1y, roicols, roirows));
         dst_roi  = dst(Rect(dstx, dsty, roicols, roirows));
-
+        
         gdst_whole = dst;
         gdst = gdst_whole(Rect(dstx, dsty, roicols, roirows));
-
-
+        
+        
         gmat1 = mat1_roi;
     }
-
+    
 };
 
 TEST_P(convertC3C4, Accuracy)
 {
     cv::RNG &rng = TS::ptr()->get_rng();
+    
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         //random_roi();
         int width = rng.uniform(2, MWIDTH);
         int height = rng.uniform(2, MHEIGHT);
         cv::Size size(width, height);
-
+        
         mat1 = randomMat(rng, size, type, 0, 40, false);
         gmat1 = mat1;
         cv::Mat cpu_dst;
@@ -489,7 +490,7 @@ TEST_P(convertC3C4, Accuracy)
         sprintf(sss, "cols=%d,rows=%d", mat1.cols, mat1.rows);
         EXPECT_MAT_NEAR(mat1, cpu_dst, 0.0, sss);
     }
-
+    
 }
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, ConvertTo, Combine(

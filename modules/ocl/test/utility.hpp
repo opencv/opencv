@@ -99,10 +99,10 @@ double checkSimilarity(const cv::Mat &m1, const cv::Mat &m2);
 
 namespace cv
 {
-    namespace ocl
-    {
-        // void PrintTo(const DeviceInfo& info, std::ostream* os);
-    }
+namespace ocl
+{
+// void PrintTo(const DeviceInfo& info, std::ostream* os);
+}
 }
 
 using perf::MatDepth;
@@ -118,12 +118,12 @@ class Inverse
 {
 public:
     inline Inverse(bool val = false) : val_(val) {}
-
+    
     inline operator bool() const
     {
         return val_;
     }
-
+    
 private:
     bool val_;
 };

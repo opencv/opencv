@@ -61,14 +61,14 @@ PARAM_TEST_CASE(PyrDown, MatType, int)
     //src mat
     cv::Mat mat1;
     cv::Mat dst;
-
+    
     //std::vector<cv::ocl::Info> oclinfo;
     //ocl dst mat for testing
-
+    
     cv::ocl::oclMat gmat1;
     cv::ocl::oclMat gdst;
-
-
+    
+    
     virtual void SetUp()
     {
         type = GET_PARAM(0);
@@ -76,8 +76,8 @@ PARAM_TEST_CASE(PyrDown, MatType, int)
         //int devnums = getDevice(oclinfo);
         //CV_Assert(devnums > 0);
     }
-
-
+    
+    
 };
 
 #define VARNAME(A) string(#A);
@@ -88,45 +88,45 @@ TEST_P(PyrDown, Mat)
     cv::Size size(MWIDTH, MHEIGHT);
     cv::RNG &rng = TS::ptr()->get_rng();
     mat1 = randomMat(rng, size, CV_MAKETYPE(type, channels), 5, 16, false);
-
-
+    
+    
     cv::ocl::oclMat gdst;
     double totalgputick = 0;
     double totalgputick_kernel = 0;
-
+    
     double t1 = 0;
     double t2 = 0;
-
-    for (int j = 0; j < LOOP_TIMES + 1; j ++)
+    
+    for(int j = 0; j < LOOP_TIMES + 1; j ++)
     {
-
+    
         t1 = (double)cvGetTickCount();//gpu start1
-
+        
         cv::ocl::oclMat gmat1(mat1);
-
+        
         t2 = (double)cvGetTickCount(); //kernel
         cv::ocl::pyrDown(gmat1, gdst);
         t2 = (double)cvGetTickCount() - t2;//kernel
-
+        
         cv::Mat cpu_dst;
         gdst.download(cpu_dst);
-
+        
         t1 = (double)cvGetTickCount() - t1;//gpu end1
-
-        if (j == 0)
+        
+        if(j == 0)
         {
             continue;
         }
-
+        
         totalgputick = t1 + totalgputick;
-
+        
         totalgputick_kernel = t2 + totalgputick_kernel;
-
+        
     }
-
+    
     cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-
+    
 }
 
 //********test****************

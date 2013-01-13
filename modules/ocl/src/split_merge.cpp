@@ -62,340 +62,353 @@ using std::endl;
 
 namespace cv
 {
-    namespace ocl
-    {
-        void cv::ocl::merge(const oclMat *src_mat, size_t count, oclMat &dst_mat)
-        {
-            throw_nogpu();
-        }
-        void cv::ocl::merge(const vector<oclMat> &src_mat, oclMat &dst_mat)
-        {
-            throw_nogpu();
-        }
+namespace ocl
+{
+void cv::ocl::merge(const oclMat *src_mat, size_t count, oclMat &dst_mat)
+{
+    throw_nogpu();
+}
+void cv::ocl::merge(const vector<oclMat> &src_mat, oclMat &dst_mat)
+{
+    throw_nogpu();
+}
 
-        void cv::ocl::split(const oclMat &src, oclMat *dst)
-        {
-            throw_nogpu();
-        }
-        void cv::ocl::split(const oclMat &src, vector<oclMat> &dst)
-        {
-            throw_nogpu();
-        }
-    }
+void cv::ocl::split(const oclMat &src, oclMat *dst)
+{
+    throw_nogpu();
+}
+void cv::ocl::split(const oclMat &src, vector<oclMat> &dst)
+{
+    throw_nogpu();
+}
+}
 }
 
 #else /* !defined (HAVE_OPENCL) */
 
 namespace cv
 {
-    namespace ocl
-    {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *merge_mat;
-        extern const char *split_mat;
-    }
+namespace ocl
+{
+///////////////////////////OpenCL kernel strings///////////////////////////
+extern const char *merge_mat;
+extern const char *split_mat;
+}
 }
 namespace cv
 {
-    namespace ocl
+namespace ocl
+{
+namespace split_merge
+{
+///////////////////////////////////////////////////////////
+///////////////common/////////////////////////////////////
+/////////////////////////////////////////////////////////
+inline int divUp(int total, int grain)
+{
+    return (total + grain - 1) / grain;
+}
+////////////////////////////////////////////////////////////////////////////
+////////////////////merge//////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+void merge_vector_run_no_roi(const oclMat *mat_src, size_t n, oclMat &mat_dst)
+{
+    Context  *clCxt = mat_dst.clCxt;
+    int channels = mat_dst.oclchannels();
+    int depth = mat_dst.depth();
+
+    string kernelName = "merge_vector";
+
+    int indexes[4][7] = {{0, 0, 0, 0, 0, 0, 0},
+        {4, 4, 2, 2, 1, 1, 1},
+        {4, 4, 2, 2 , 1, 1, 1},
+        {4, 4, 2, 2, 1, 1, 1}
+    };
+
+    size_t index = indexes[channels - 1][mat_dst.depth()];
+    int    cols = divUp(mat_dst.cols, index);
+    size_t localThreads[3]  = { 64, 4, 1 };
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(mat_dst.rows, localThreads[1]) *localThreads[1],
+                                1
+                              };
+
+    vector<pair<size_t , const void *> > args;
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst.rows));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&cols));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_dst.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst.step));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_src[0].data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src[0].step));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_src[1].data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src[1].step));
+
+    if(n >= 3)
     {
-        namespace split_merge
+        args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_src[2].data));
+        args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src[2].step));
+    }
+
+    if(n >= 4)
+    {
+        args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_src[3].data));
+        args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src[3].step));
+    }
+
+    openCLExecuteKernel(clCxt, &merge_mat, kernelName, globalThreads, localThreads, args, channels, depth);
+}
+
+void merge_vector_run(const oclMat *mat_src, size_t n, oclMat &mat_dst)
+{
+    if(mat_dst.clCxt -> impl -> double_support == 0 && mat_dst.type() == CV_64F)
+    {
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        return;
+    }
+
+    Context  *clCxt = mat_dst.clCxt;
+    int channels = mat_dst.oclchannels();
+    int depth = mat_dst.depth();
+
+    string kernelName = "merge_vector";
+
+    int vector_lengths[4][7] = {{0, 0, 0, 0, 0, 0, 0},
+        {2, 2, 1, 1, 1, 1, 1},
+        {4, 4, 2, 2 , 1, 1, 1},
+        {1, 1, 1, 1, 1, 1, 1}
+    };
+
+    size_t vector_length = vector_lengths[channels - 1][depth];
+    int offset_cols = (mat_dst.offset / mat_dst.elemSize()) & (vector_length - 1);
+    int cols = divUp(mat_dst.cols + offset_cols, vector_length);
+
+    size_t localThreads[3]  = { 64, 4, 1 };
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(mat_dst.rows, localThreads[1]) *localThreads[1],
+                                1
+                              };
+
+    int dst_step1 = mat_dst.cols * mat_dst.elemSize();
+    vector<pair<size_t , const void *> > args;
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_dst.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst.step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst.offset));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_src[0].data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src[0].step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src[0].offset));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_src[1].data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src[1].step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src[1].offset));
+
+    if(channels == 4)
+    {
+        args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_src[2].data));
+        args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src[2].step));
+        args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src[2].offset));
+
+        // if channel == 3, then the matrix will convert to channel =4
+        //if(n == 3)
+        //   args.push_back( make_pair( sizeof(cl_int), (void *)&offset_cols));
+
+        if(n == 3)
         {
-            ///////////////////////////////////////////////////////////
-            ///////////////common/////////////////////////////////////
-            /////////////////////////////////////////////////////////
-            inline int divUp(int total, int grain)
-            {
-                return (total + grain - 1) / grain;
-            }
-            ////////////////////////////////////////////////////////////////////////////
-            ////////////////////merge//////////////////////////////////////////////////
-            ////////////////////////////////////////////////////////////////////////////
-            void merge_vector_run_no_roi(const oclMat *mat_src, size_t n, oclMat &mat_dst)
-            {
-                Context  *clCxt = mat_dst.clCxt;
-                int channels = mat_dst.oclchannels();
-                int depth = mat_dst.depth();
-
-                string kernelName = "merge_vector";
-
-                int indexes[4][7] = {{0, 0, 0, 0, 0, 0, 0},
-                    {4, 4, 2, 2, 1, 1, 1},
-                    {4, 4, 2, 2 , 1, 1, 1},
-                    {4, 4, 2, 2, 1, 1, 1}
-                };
-
-                size_t index = indexes[channels - 1][mat_dst.depth()];
-                int    cols = divUp(mat_dst.cols, index);
-                size_t localThreads[3]  = { 64, 4, 1 };
-                size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                            divUp(mat_dst.rows, localThreads[1]) *localThreads[1],
-                                            1
-                                          };
-
-                vector<pair<size_t , const void *> > args;
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst.rows));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst.data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst.step));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[0].data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[0].step));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[1].data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[1].step));
-                if(n >= 3)
-                {
-                    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[2].data));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[2].step));
-                }
-                if(n >= 4)
-                {
-                    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[3].data));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[3].step));
-                }
-
-                openCLExecuteKernel(clCxt, &merge_mat, kernelName, globalThreads, localThreads, args, channels, depth);
-            }
-
-            void merge_vector_run(const oclMat *mat_src, size_t n, oclMat &mat_dst)
-            {
-                if(mat_dst.clCxt -> impl -> double_support == 0 && mat_dst.type() == CV_64F)
-                {
-                    CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
-                    return;
-                }
-
-                Context  *clCxt = mat_dst.clCxt;
-                int channels = mat_dst.oclchannels();
-                int depth = mat_dst.depth();
-
-                string kernelName = "merge_vector";
-
-                int vector_lengths[4][7] = {{0, 0, 0, 0, 0, 0, 0},
-                    {2, 2, 1, 1, 1, 1, 1},
-                    {4, 4, 2, 2 , 1, 1, 1},
-                    {1, 1, 1, 1, 1, 1, 1}
-                };
-
-                size_t vector_length = vector_lengths[channels - 1][depth];
-                int offset_cols = (mat_dst.offset / mat_dst.elemSize()) & (vector_length - 1);
-                int cols = divUp(mat_dst.cols + offset_cols, vector_length);
-
-                size_t localThreads[3]  = { 64, 4, 1 };
-                size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                            divUp(mat_dst.rows, localThreads[1]) *localThreads[1],
-                                            1
-                                          };
-
-                int dst_step1 = mat_dst.cols * mat_dst.elemSize();
-                vector<pair<size_t , const void *> > args;
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst.data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst.step));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst.offset));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[0].data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[0].step));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[0].offset));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[1].data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[1].step));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[1].offset));
-
-                if(channels == 4)
-                {
-                    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[2].data));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[2].step));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[2].offset));
-
-                    // if channel == 3, then the matrix will convert to channel =4
-                    //if(n == 3)
-                    //   args.push_back( make_pair( sizeof(cl_int), (void *)&offset_cols));
-
-                    if(n == 3)
-                    {
-                        args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[2].data));
-                        args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[2].step));
-                        args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[2].offset));
-                    }
-                    else if( n == 4)
-                    {
-                        args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[3].data));
-                        args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[3].step));
-                        args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[3].offset));
-                    }
-                }
-
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst.rows));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1));
-
-                openCLExecuteKernel(clCxt, &merge_mat, kernelName, globalThreads, localThreads, args, channels, depth);
-            }
-            void merge(const oclMat *mat_src, size_t n, oclMat &mat_dst)
-            {
-                CV_Assert(mat_src);
-                CV_Assert(n > 0);
-
-                int depth = mat_src[0].depth();
-                Size size = mat_src[0].size();
-
-                int total_channels = 0;
-
-                for(size_t i = 0; i < n; ++i)
-                {
-                    CV_Assert(depth == mat_src[i].depth());
-                    CV_Assert(size == mat_src[i].size());
-
-                    total_channels += mat_src[i].oclchannels();
-                }
-
-                CV_Assert(total_channels <= 4);
-
-                if(total_channels == 1)
-                {
-                    mat_src[0].copyTo(mat_dst);
-                    return;
-                }
-
-                mat_dst.create(size, CV_MAKETYPE(depth, total_channels));
-                merge_vector_run(mat_src, n, mat_dst);
-            }
-            ////////////////////////////////////////////////////////////////////////////////////////////////////
-            //////////////////////////////////////split/////////////////////////////////////////////////////////////
-            //////////////////////////////////////////////////////////////////////////////////////////////////
-            void split_vector_run_no_roi(const oclMat &mat_src, oclMat *mat_dst)
-            {
-                Context  *clCxt = mat_src.clCxt;
-                int channels = mat_src.oclchannels();
-                int depth = mat_src.depth();
-
-                string kernelName = "split_vector";
-
-                int indexes[4][7] = {{0, 0, 0, 0, 0, 0, 0},
-                    {8, 8, 8, 8, 4, 4, 2},
-                    {8, 8, 8, 8 , 4, 4, 4},
-                    {4, 4, 2, 2, 1, 1, 1}
-                };
-
-                size_t index = indexes[channels - 1][mat_dst[0].depth()];
-                int cols = divUp(mat_src.cols, index);
-                size_t localThreads[3]  = { 64, 4, 1 };
-                size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                            divUp(mat_src.rows, localThreads[1]) *localThreads[1],
-                                            1
-                                          };
-
-                vector<pair<size_t , const void *> > args;
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src.data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src.step));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src.rows));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[0].data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[0].step));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[1].data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[1].step));
-                if(channels >= 3)
-                {
-                    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[2].data));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[2].step));
-                }
-                if(channels >= 4)
-                {
-                    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[3].data));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[3].step));
-                }
-
-                openCLExecuteKernel(clCxt, &split_mat, kernelName, globalThreads, localThreads, args, channels, depth);
-            }
-            void split_vector_run(const oclMat &mat_src, oclMat *mat_dst)
-            {
-
-                if(mat_src.clCxt -> impl -> double_support == 0 && mat_src.type() == CV_64F)
-                {
-                    CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
-                    return;
-                }
-
-                Context  *clCxt = mat_src.clCxt;
-                int channels = mat_src.oclchannels();
-                int depth = mat_src.depth();
-
-                string kernelName = "split_vector";
-
-                int vector_lengths[4][7] = {{0, 0, 0, 0, 0, 0, 0},
-                    {4, 4, 2, 2, 1, 1, 1},
-                    {4, 4, 2, 2 , 1, 1, 1},
-                    {4, 4, 2, 2, 1, 1, 1}
-                };
-
-                size_t vector_length = vector_lengths[channels - 1][mat_dst[0].depth()];
-
-                int max_offset_cols = 0;
-                for(int i = 0; i < channels; i++)
-                {
-                    int offset_cols = (mat_dst[i].offset / mat_dst[i].elemSize()) & (vector_length - 1);
-                    if(max_offset_cols < offset_cols)
-                        max_offset_cols = offset_cols;
-                }
-
-                int cols =  vector_length == 1 ? divUp(mat_src.cols, vector_length)
-                            : divUp(mat_src.cols + max_offset_cols, vector_length);
-
-                size_t localThreads[3]  = { 64, 4, 1 };
-                size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                            divUp(mat_src.rows, localThreads[1]) *localThreads[1], 1
-                                          };
-
-                int dst_step1 = mat_dst[0].cols * mat_dst[0].elemSize();
-                vector<pair<size_t , const void *> > args;
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src.data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src.step));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src.offset));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[0].data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[0].step));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[0].offset));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[1].data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[1].step));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[1].offset));
-                if(channels >= 3)
-                {
-
-                    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[2].data));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[2].step));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[2].offset));
-                }
-                if(channels >= 4)
-                {
-                    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[3].data));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[3].step));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[3].offset));
-                }
-
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src.rows));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1));
-
-                openCLExecuteKernel(clCxt, &split_mat, kernelName, globalThreads, localThreads, args, channels, depth);
-            }
-            void split(const oclMat &mat_src, oclMat *mat_dst)
-            {
-                CV_Assert(mat_dst);
-
-                int depth = mat_src.depth();
-                int num_channels = mat_src.oclchannels();
-                Size size = mat_src.size();
-
-                if(num_channels == 1)
-                {
-                    mat_src.copyTo(mat_dst[0]);
-                    return;
-                }
-
-                int i;
-                for(i = 0; i < num_channels; i++)
-                    mat_dst[i].create(size, CV_MAKETYPE(depth, 1));
-
-                split_vector_run(mat_src, mat_dst);
-            }
+            args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_src[2].data));
+            args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src[2].step));
+            args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src[2].offset));
+        }
+        else if(n == 4)
+        {
+            args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_src[3].data));
+            args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src[3].step));
+            args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src[3].offset));
         }
     }
+
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst.rows));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&cols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&dst_step1));
+
+    openCLExecuteKernel(clCxt, &merge_mat, kernelName, globalThreads, localThreads, args, channels, depth);
+}
+void merge(const oclMat *mat_src, size_t n, oclMat &mat_dst)
+{
+    CV_Assert(mat_src);
+    CV_Assert(n > 0);
+
+    int depth = mat_src[0].depth();
+    Size size = mat_src[0].size();
+
+    int total_channels = 0;
+
+    for(size_t i = 0; i < n; ++i)
+    {
+        CV_Assert(depth == mat_src[i].depth());
+        CV_Assert(size == mat_src[i].size());
+
+        total_channels += mat_src[i].oclchannels();
+    }
+
+    CV_Assert(total_channels <= 4);
+
+    if(total_channels == 1)
+    {
+        mat_src[0].copyTo(mat_dst);
+        return;
+    }
+
+    mat_dst.create(size, CV_MAKETYPE(depth, total_channels));
+    merge_vector_run(mat_src, n, mat_dst);
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////split/////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+void split_vector_run_no_roi(const oclMat &mat_src, oclMat *mat_dst)
+{
+    Context  *clCxt = mat_src.clCxt;
+    int channels = mat_src.oclchannels();
+    int depth = mat_src.depth();
+
+    string kernelName = "split_vector";
+
+    int indexes[4][7] = {{0, 0, 0, 0, 0, 0, 0},
+        {8, 8, 8, 8, 4, 4, 2},
+        {8, 8, 8, 8 , 4, 4, 4},
+        {4, 4, 2, 2, 1, 1, 1}
+    };
+
+    size_t index = indexes[channels - 1][mat_dst[0].depth()];
+    int cols = divUp(mat_src.cols, index);
+    size_t localThreads[3]  = { 64, 4, 1 };
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(mat_src.rows, localThreads[1]) *localThreads[1],
+                                1
+                              };
+
+    vector<pair<size_t , const void *> > args;
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_src.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src.step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src.rows));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&cols));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_dst[0].data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst[0].step));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_dst[1].data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst[1].step));
+
+    if(channels >= 3)
+    {
+        args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_dst[2].data));
+        args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst[2].step));
+    }
+
+    if(channels >= 4)
+    {
+        args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_dst[3].data));
+        args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst[3].step));
+    }
+
+    openCLExecuteKernel(clCxt, &split_mat, kernelName, globalThreads, localThreads, args, channels, depth);
+}
+void split_vector_run(const oclMat &mat_src, oclMat *mat_dst)
+{
+
+    if(mat_src.clCxt -> impl -> double_support == 0 && mat_src.type() == CV_64F)
+    {
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        return;
+    }
+
+    Context  *clCxt = mat_src.clCxt;
+    int channels = mat_src.oclchannels();
+    int depth = mat_src.depth();
+
+    string kernelName = "split_vector";
+
+    int vector_lengths[4][7] = {{0, 0, 0, 0, 0, 0, 0},
+        {4, 4, 2, 2, 1, 1, 1},
+        {4, 4, 2, 2 , 1, 1, 1},
+        {4, 4, 2, 2, 1, 1, 1}
+    };
+
+    size_t vector_length = vector_lengths[channels - 1][mat_dst[0].depth()];
+
+    int max_offset_cols = 0;
+
+    for(int i = 0; i < channels; i++)
+    {
+        int offset_cols = (mat_dst[i].offset / mat_dst[i].elemSize()) & (vector_length - 1);
+
+        if(max_offset_cols < offset_cols)
+        {
+            max_offset_cols = offset_cols;
+        }
+    }
+
+    int cols =  vector_length == 1 ? divUp(mat_src.cols, vector_length)
+                : divUp(mat_src.cols + max_offset_cols, vector_length);
+
+    size_t localThreads[3]  = { 64, 4, 1 };
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(mat_src.rows, localThreads[1]) *localThreads[1], 1
+                              };
+
+    int dst_step1 = mat_dst[0].cols * mat_dst[0].elemSize();
+    vector<pair<size_t , const void *> > args;
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_src.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src.step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src.offset));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_dst[0].data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst[0].step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst[0].offset));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_dst[1].data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst[1].step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst[1].offset));
+
+    if(channels >= 3)
+    {
+
+        args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_dst[2].data));
+        args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst[2].step));
+        args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst[2].offset));
+    }
+
+    if(channels >= 4)
+    {
+        args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_dst[3].data));
+        args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst[3].step));
+        args.push_back(make_pair(sizeof(cl_int), (void *)&mat_dst[3].offset));
+    }
+
+    args.push_back(make_pair(sizeof(cl_int), (void *)&mat_src.rows));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&cols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&dst_step1));
+
+    openCLExecuteKernel(clCxt, &split_mat, kernelName, globalThreads, localThreads, args, channels, depth);
+}
+void split(const oclMat &mat_src, oclMat *mat_dst)
+{
+    CV_Assert(mat_dst);
+
+    int depth = mat_src.depth();
+    int num_channels = mat_src.oclchannels();
+    Size size = mat_src.size();
+
+    if(num_channels == 1)
+    {
+        mat_src.copyTo(mat_dst[0]);
+        return;
+    }
+
+    int i;
+
+    for(i = 0; i < num_channels; i++)
+    {
+        mat_dst[i].create(size, CV_MAKETYPE(depth, 1));
+    }
+
+    split_vector_run(mat_src, mat_dst);
+}
+}
+}
 }
 
 void cv::ocl::merge(const oclMat *src, size_t n, oclMat &dst)
@@ -414,7 +427,10 @@ void cv::ocl::split(const oclMat &src, oclMat *dst)
 void cv::ocl::split(const oclMat &src, vector<oclMat> &dst)
 {
     dst.resize(src.oclchannels());
+
     if(src.oclchannels() > 0)
+    {
         split_merge::split(src, &dst[0]);
+    }
 }
 #endif /* !defined (HAVE_OPENCL) */

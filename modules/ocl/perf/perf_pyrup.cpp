@@ -59,7 +59,7 @@ PARAM_TEST_CASE(PyrUp, MatType, int)
     int type;
     int channels;
     //std::vector<cv::ocl::Info> oclinfo;
-
+    
     virtual void SetUp()
     {
         type = GET_PARAM(0);
@@ -75,45 +75,45 @@ TEST_P(PyrUp, Performance)
     cv::Mat src = randomMat(size, CV_MAKETYPE(type, channels));
     cv::Mat dst_gold;
     cv::ocl::oclMat dst;
-
-
+    
+    
     double totalgputick = 0;
     double totalgputick_kernel = 0;
-
+    
     double t1 = 0;
     double t2 = 0;
-
-    for (int j = 0; j < LOOP_TIMES + 1; j ++)
+    
+    for(int j = 0; j < LOOP_TIMES + 1; j ++)
     {
         t1 = (double)cvGetTickCount();//gpu start1
-
+        
         cv::ocl::oclMat srcMat = cv::ocl::oclMat(src);//upload
-
+        
         t2 = (double)cvGetTickCount(); //kernel
         cv::ocl::pyrUp(srcMat, dst);
         t2 = (double)cvGetTickCount() - t2;//kernel
-
+        
         cv::Mat cpu_dst;
         dst.download(cpu_dst); //download
-
+        
         t1 = (double)cvGetTickCount() - t1;//gpu end1
-
-        if (j == 0)
+        
+        if(j == 0)
         {
             continue;
         }
-
+        
         totalgputick = t1 + totalgputick;
-
+        
         totalgputick_kernel = t2 + totalgputick_kernel;
-
+        
     }
-
-
+    
+    
     cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-
-
+    
+    
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, PyrUp, Combine(

@@ -54,20 +54,20 @@ using namespace std;
 
 namespace cv
 {
-    namespace ocl
-    {
-        enum FLUSH_MODE
-        {
-            CLFINISH = 0,
-            CLFLUSH,
-            DISABLE
-        };
-        void openCLExecuteKernel2(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
-                                  size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels, int depth, FLUSH_MODE finish_mode = DISABLE);
-        void openCLExecuteKernel2(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
-                                  size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
-                                  int depth, char *build_options, FLUSH_MODE finish_mode = DISABLE);
-    }//namespace ocl
+namespace ocl
+{
+enum FLUSH_MODE
+{
+    CLFINISH = 0,
+    CLFLUSH,
+    DISABLE
+};
+void openCLExecuteKernel2(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
+                          size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels, int depth, FLUSH_MODE finish_mode = DISABLE);
+void openCLExecuteKernel2(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
+                          size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
+                          int depth, char *build_options, FLUSH_MODE finish_mode = DISABLE);
+}//namespace ocl
 
 }//namespace cv
 #endif // HAVE_OPENCL

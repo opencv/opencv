@@ -68,13 +68,13 @@ TEST_P(Gemm, Accuracy)
     cv::Mat a = randomMat(mat_size, type, 0.0, 10.0);
     cv::Mat b = randomMat(mat_size, type, 0.0, 10.0);
     cv::Mat c = randomMat(mat_size, type, 0.0, 10.0);
-
+    
     cv::Mat dst;
     cv::ocl::oclMat ocl_dst;
-
+    
     cv::gemm(a, b, 1.0, c, 1.0, dst, flags);
     cv::ocl::gemm(cv::ocl::oclMat(a), cv::ocl::oclMat(b), 1.0, cv::ocl::oclMat(c), 1.0, ocl_dst, flags);
-
+    
     EXPECT_MAT_NEAR(dst, ocl_dst, mat_size.area() * 1e-4, "");
 }
 

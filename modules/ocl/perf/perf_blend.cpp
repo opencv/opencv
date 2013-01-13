@@ -58,10 +58,10 @@ PARAM_TEST_CASE(Blend, MatType, int)
     int type;
     int channels;
     std::vector<cv::ocl::Info> oclinfo;
-
+    
     virtual void SetUp()
     {
-
+    
         type = GET_PARAM(0);
         channels = GET_PARAM(1);
         //int devnums = getDevice(oclinfo);
@@ -79,42 +79,42 @@ TEST_P(Blend, Performance)
     cv::Mat weights2 = randomMat(size, CV_32F, 0, 1);
     cv::ocl::oclMat gimg1(size, CV_MAKETYPE(type, channels)), gimg2(size, CV_MAKETYPE(type, channels)), gweights1(size, CV_32F), gweights2(size, CV_32F);
     cv::ocl::oclMat gdst(size, CV_MAKETYPE(type, channels));
-
-
+    
+    
     double totalgputick_all = 0;
     double totalgputick_kernel = 0;
     double t1 = 0;
     double t2 = 0;
-
-    for (int j = 0; j < LOOP_TIMES + 1; j ++) //LOOP_TIMES=100
+    
+    for(int j = 0; j < LOOP_TIMES + 1; j ++)  //LOOP_TIMES=100
     {
         t1 = (double)cvGetTickCount();
         cv::ocl::oclMat gimg1 = cv::ocl::oclMat(img1_host);
         cv::ocl::oclMat gimg2 = cv::ocl::oclMat(img2_host);
         cv::ocl::oclMat gweights1 = cv::ocl::oclMat(weights1);
         cv::ocl::oclMat gweights2 = cv::ocl::oclMat(weights1);
-
+        
         t2 = (double)cvGetTickCount();
         cv::ocl::blendLinear(gimg1, gimg2, gweights1, gweights2, gdst);
         t2 = (double)cvGetTickCount() - t2;
-
+        
         cv::Mat m;
         gdst.download(m);
         t1 = (double)cvGetTickCount() - t1;
-
-        if (j == 0)
+        
+        if(j == 0)
         {
             continue;
         }
-
+        
         totalgputick_all = t1 + totalgputick_all;
         totalgputick_kernel = t2 + totalgputick_kernel;
     };
-
+    
     cout << "average gpu total  runtime is  " << totalgputick_all / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-
+    
     cout << "average gpu runtime without data transfering  is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-
+    
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Blend, Combine(

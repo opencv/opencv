@@ -68,9 +68,9 @@ TEST_P(Dft, C2C)
     cv::Mat b_gold;
     int flags = 0;
     flags |= dft_rows ? cv::DFT_ROWS : 0;
-
+    
     cv::ocl::oclMat d_b;
-
+    
     cv::dft(a, b_gold, flags);
     cv::ocl::dft(cv::ocl::oclMat(a), d_b, a.size(), flags);
     EXPECT_MAT_NEAR(b_gold, cv::Mat(d_b), a.size().area() * 1e-4, "");
@@ -80,10 +80,10 @@ TEST_P(Dft, C2C)
 TEST_P(Dft, R2CthenC2R)
 {
     cv::Mat a = randomMat(dft_size, CV_32FC1, 0.0, 10.0);
-
+    
     int flags = 0;
     //flags |= dft_rows ? cv::DFT_ROWS : 0; // not supported yet
-
+    
     cv::ocl::oclMat d_b, d_c;
     cv::ocl::dft(cv::ocl::oclMat(a), d_b, a.size(), flags);
     cv::ocl::dft(d_b, d_c, a.size(), flags + cv::DFT_INVERSE + cv::DFT_REAL_OUTPUT);

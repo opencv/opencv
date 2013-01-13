@@ -89,14 +89,14 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
     int dst1y;
     int maskx;
     int masky;
-
+    
     //mat
     cv::Mat mat1;
     cv::Mat mat2;
     cv::Mat mask;
     cv::Mat dst;
     cv::Mat dst1; //bak, for two outputs
-
+    
     //mat with roi
     cv::Mat mat1_roi;
     cv::Mat mat2_roi;
@@ -110,14 +110,14 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
     cv::ocl::oclMat clmask;
     cv::ocl::oclMat cldst;
     cv::ocl::oclMat cldst1; //bak
-
+    
     //ocl mat with roi
     cv::ocl::oclMat clmat1_roi;
     cv::ocl::oclMat clmat2_roi;
     cv::ocl::oclMat clmask_roi;
     cv::ocl::oclMat cldst_roi;
     cv::ocl::oclMat cldst1_roi;
-
+    
     virtual void SetUp()
     {
         type1 = GET_PARAM(0);
@@ -128,6 +128,7 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
         double min = 1, max = 20;
+        
         //int devnums = getDevice(oclinfo);
         //CV_Assert(devnums>0);
         ////if you want to use undefault device, set it here
@@ -138,31 +139,36 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
             mat1 = randomMat(rng, size, type1, min, max, false);
             clmat1 = mat1;
         }
+        
         if(type2 != nulltype)
         {
             mat2 = randomMat(rng, size, type2, min, max, false);
             clmat2 = mat2;
         }
+        
         if(type3 != nulltype)
         {
             dst  = randomMat(rng, size, type3, min, max, false);
             cldst = dst;
         }
+        
         if(type4 != nulltype)
         {
             dst1 = randomMat(rng, size, type4, min, max, false);
             cldst1 = dst1;
         }
+        
         if(type5 != nulltype)
         {
             mask = randomMat(rng, size, CV_8UC1, 0, 2,  false);
             cv::threshold(mask, mask, 0.5, 255., type5);
             clmask = mask;
         }
+        
         val = cv::Scalar(rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0));
     }
-
-
+    
+    
     void Has_roi(int b)
     {
         //cv::RNG& rng = TS::ptr()->get_rng();
@@ -197,38 +203,42 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
             maskx	 = 0;
             masky	= 0;
         };
-
+        
         if(type1 != nulltype)
         {
             mat1_roi = mat1(Rect(src1x, src1y, roicols, roirows));
             //clmat1_roi = clmat1(Rect(src1x,src1y,roicols,roirows));
         }
+        
         if(type2 != nulltype)
         {
             mat2_roi = mat2(Rect(src2x, src2y, roicols, roirows));
             //clmat2_roi = clmat2(Rect(src2x,src2y,roicols,roirows));
         }
+        
         if(type3 != nulltype)
         {
             dst_roi  = dst(Rect(dstx, dsty, roicols, roirows));
             //cldst_roi = cldst(Rect(dstx,dsty,roicols,roirows));
         }
+        
         if(type4 != nulltype)
         {
             dst1_roi = dst1(Rect(dst1x, dst1y, roicols, roirows));
             //cldst1_roi = cldst1(Rect(dst1x,dst1y,roicols,roirows));
         }
+        
         if(type5 != nulltype)
         {
             mask_roi = mask(Rect(maskx, masky, roicols, roirows));
             //clmask_roi = clmask(Rect(maskx,masky,roicols,roirows));
         }
     }
-
+    
     void random_roi()
     {
         cv::RNG &rng = TS::ptr()->get_rng();
-
+        
         //randomize ROI
         roicols = rng.uniform(1, mat1.cols);
         roirows = rng.uniform(1, mat1.rows);
@@ -242,27 +252,31 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
         dst1y    = rng.uniform(0, dst1.rows  - roirows);
         maskx   = rng.uniform(0, mask.cols - roicols);
         masky   = rng.uniform(0, mask.rows - roirows);
-
+        
         if(type1 != nulltype)
         {
             mat1_roi = mat1(Rect(src1x, src1y, roicols, roirows));
             //clmat1_roi = clmat1(Rect(src1x,src1y,roicols,roirows));
         }
+        
         if(type2 != nulltype)
         {
             mat2_roi = mat2(Rect(src2x, src2y, roicols, roirows));
             //clmat2_roi = clmat2(Rect(src2x,src2y,roicols,roirows));
         }
+        
         if(type3 != nulltype)
         {
             dst_roi  = dst(Rect(dstx, dsty, roicols, roirows));
             //cldst_roi = cldst(Rect(dstx,dsty,roicols,roirows));
         }
+        
         if(type4 != nulltype)
         {
             dst1_roi = dst1(Rect(dst1x, dst1y, roicols, roirows));
             //cldst1_roi = cldst1(Rect(dst1x,dst1y,roicols,roirows));
         }
+        
         if(type5 != nulltype)
         {
             mask_roi = mask(Rect(maskx, masky, roicols, roirows));
@@ -276,7 +290,7 @@ struct equalizeHist : ImgprocTestBase {};
 
 TEST_P(equalizeHist, MatType)
 {
-    if (mat1.type() != CV_8UC1 || mat1.type() != dst.type())
+    if(mat1.type() != CV_8UC1 || mat1.type() != dst.type())
     {
         cout << "Unsupported type" << endl;
         EXPECT_DOUBLE_EQ(0.0, 0.0);
@@ -290,24 +304,28 @@ TEST_P(equalizeHist, MatType)
         double t0 = 0;
         double t1 = 0;
         double t2 = 0;
+        
         for(int k = LOOPROISTART; k < LOOPROIEND; k++)
         {
             totalcputick = 0;
             totalgputick = 0;
             totalgputick_kernel = 0;
+            
             for(int j = 0; j < LOOP_TIMES + 1; j ++)
             {
                 Has_roi(k);
-
+                
                 t0 = (double)cvGetTickCount();//cpu start
                 cv::equalizeHist(mat1_roi, dst_roi);
                 t0 = (double)cvGetTickCount() - t0;//cpu end
-
+                
                 t1 = (double)cvGetTickCount();//gpu start1
+                
                 if(type1 != nulltype)
                 {
                     clmat1_roi = clmat1(Rect(src1x, src1y, roicols, roirows));
                 }
+                
                 cldst_roi = cldst(Rect(dstx, dsty, roicols, roirows));
                 t2 = (double)cvGetTickCount(); //kernel
                 cv::ocl::equalizeHist(clmat1_roi, cldst_roi);
@@ -315,15 +333,18 @@ TEST_P(equalizeHist, MatType)
                 cv::Mat cpu_cldst;
                 //cldst.download(cpu_cldst);//download
                 t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+                
                 if(j == 0)
+                {
                     continue;
-
+                }
+                
                 totalgputick = t1 + totalgputick;
                 totalcputick = t0 + totalcputick;
                 totalgputick_kernel = t2 + totalgputick_kernel;
-
+                
             }
+            
             if(k == 0)
             {
                 cout << "no roi\n";
@@ -332,18 +353,25 @@ TEST_P(equalizeHist, MatType)
             {
                 cout << "with roi\n";
             };
+            
             cout << "average cpu runtime is  " << totalcputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+            
             cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+            
             cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
         }
+        
 #else
+        
         for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
         {
             Has_roi(j);
+        
             if(type1 != nulltype)
             {
                 clmat1_roi = clmat1(Rect(src1x, src1y, roicols, roirows));
             }
+        
             if(j == 0)
             {
                 cout << "no roi:";
@@ -352,8 +380,10 @@ TEST_P(equalizeHist, MatType)
             {
                 cout << "\nwith roi:";
             };
+        
             cv::ocl::equalizeHist(clmat1_roi, cldst_roi);
         };
+        
 #endif
     }
 }
@@ -371,8 +401,8 @@ TEST_P(bilateralFilter, Mat)
     double sigmaspace = 20.0;
     int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE/*,cv::BORDER_REFLECT,cv::BORDER_WRAP,cv::BORDER_REFLECT_101*/};
     const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
-
-    if (mat1.depth() != CV_8U || mat1.type() != dst.type())
+    
+    if(mat1.depth() != CV_8U || mat1.type() != dst.type())
     {
         cout << "Unsupported type" << endl;
         EXPECT_DOUBLE_EQ(0.0, 0.0);
@@ -389,42 +419,51 @@ TEST_P(bilateralFilter, Mat)
             double t0 = 0;
             double t1 = 0;
             double t2 = 0;
+            
             for(int k = LOOPROISTART; k < LOOPROIEND; k++)
             {
                 totalcputick = 0;
                 totalgputick = 0;
                 totalgputick_kernel = 0;
+                
                 for(int j = 0; j < LOOP_TIMES + 1; j ++)
                 {
                     Has_roi(k);
+                    
                     if(((bordertype[i] != cv::BORDER_CONSTANT) && (bordertype[i] != cv::BORDER_REPLICATE)) && (mat1_roi.cols <= radius) || (mat1_roi.cols <= radius) || (mat1_roi.rows <= radius) || (mat1_roi.rows <= radius))
                     {
                         continue;
                     }
+                    
                     t0 = (double)cvGetTickCount();//cpu start
                     cv::bilateralFilter(mat1_roi, dst_roi, d, sigmacolor, sigmaspace, bordertype[i]);
                     t0 = (double)cvGetTickCount() - t0;//cpu end
-
+                    
                     t1 = (double)cvGetTickCount();//gpu start1
+                    
                     if(type1 != nulltype)
                     {
                         clmat1_roi = clmat1(Rect(src1x, src1y, roicols, roirows));
                     }
+                    
                     t2 = (double)cvGetTickCount(); //kernel
                     cv::ocl::bilateralFilter(clmat1_roi, cldst_roi, d, sigmacolor, sigmaspace, bordertype[i]);
                     t2 = (double)cvGetTickCount() - t2;//kernel
                     cv::Mat cpu_cldst;
                     cldst.download(cpu_cldst);//download
                     t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+                    
                     if(j == 0)
+                    {
                         continue;
-
+                    }
+                    
                     totalgputick = t1 + totalgputick;
                     totalcputick = t0 + totalcputick;
                     totalgputick_kernel = t2 + totalgputick_kernel;
-
+                    
                 }
+                
                 if(k == 0)
                 {
                     cout << "no roi\n";
@@ -433,19 +472,25 @@ TEST_P(bilateralFilter, Mat)
                 {
                     cout << "with roi\n";
                 };
+                
                 cout << "average cpu runtime is  " << totalcputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+                
                 cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+                
                 cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
             }
-
+            
 #else
+            
             for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
             {
                 Has_roi(j);
+            
                 if(type1 != nulltype)
                 {
                     clmat1_roi = clmat1(Rect(src1x, src1y, roicols, roirows));
                 };
+            
                 if(j == 0)
                 {
                     cout << "no roi:";
@@ -454,12 +499,13 @@ TEST_P(bilateralFilter, Mat)
                 {
                     cout << "\nwith roi:";
                 };
+            
                 cv::ocl::bilateralFilter(clmat1_roi, cldst_roi, d, sigmacolor, sigmaspace, bordertype[i]);
             };
-
+            
 #endif
         };
-
+        
     }
 }
 
@@ -475,7 +521,8 @@ TEST_P(CopyMakeBorder, Mat)
     int bottom = 5;
     int left = 6;
     int right = 6;
-    if (mat1.type() != dst.type())
+    
+    if(mat1.type() != dst.type())
     {
         cout << "Unsupported type" << endl;
         EXPECT_DOUBLE_EQ(0.0, 0.0);
@@ -491,39 +538,46 @@ TEST_P(CopyMakeBorder, Mat)
             double t0 = 0;
             double t1 = 0;
             double t2 = 0;
-            for(int k = LOOPROISTART; k < 1; k++) //don't support roi perf test
+            
+            for(int k = LOOPROISTART; k < 1; k++)  //don't support roi perf test
             {
                 totalcputick = 0;
                 totalgputick = 0;
                 totalgputick_kernel = 0;
+                
                 for(int j = 0; j < LOOP_TIMES + 1; j ++)
                 {
                     Has_roi(k);
-
+                    
                     t0 = (double)cvGetTickCount();//cpu start
                     cv::copyMakeBorder(mat1_roi, dst_roi, top, bottom, left, right, bordertype[i] | cv::BORDER_ISOLATED, cv::Scalar(1.0));
                     t0 = (double)cvGetTickCount() - t0;//cpu end
-
+                    
                     t1 = (double)cvGetTickCount();//gpu start1
+                    
                     if(type1 != nulltype)
                     {
                         clmat1_roi = clmat1(Rect(src1x, src1y, roicols, roirows));
                     }
+                    
                     t2 = (double)cvGetTickCount(); //kernel
                     cv::ocl::copyMakeBorder(clmat1_roi, cldst_roi, top, bottom, left, right,  bordertype[i] | cv::BORDER_ISOLATED, cv::Scalar(1.0));
                     t2 = (double)cvGetTickCount() - t2;//kernel
                     cv::Mat cpu_cldst;
                     cldst.download(cpu_cldst);//download
                     t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+                    
                     if(j == 0)
+                    {
                         continue;
-
+                    }
+                    
                     totalgputick = t1 + totalgputick;
                     totalcputick = t0 + totalcputick;
                     totalgputick_kernel = t2 + totalgputick_kernel;
-
+                    
                 }
+                
                 if(k == 0)
                 {
                     cout << "no roi\n";
@@ -532,18 +586,25 @@ TEST_P(CopyMakeBorder, Mat)
                 {
                     cout << "with roi\n";
                 };
+                
                 cout << "average cpu runtime is  " << totalcputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+                
                 cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+                
                 cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
             }
+            
 #else
+            
             for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
             {
                 Has_roi(j);
+            
                 if(type1 != nulltype)
                 {
                     clmat1_roi = clmat1(Rect(src1x, src1y, roicols, roirows));
                 };
+            
                 if(j == 0)
                 {
                     cout << "no roi:";
@@ -552,8 +613,10 @@ TEST_P(CopyMakeBorder, Mat)
                 {
                     cout << "\nwith roi:";
                 };
+            
                 cv::ocl::copyMakeBorder(clmat1_roi, cldst_roi, top, bottom, left, right,  bordertype[i] | cv::BORDER_ISOLATED, cv::Scalar(1.0));
             };
+            
 #endif
         };
     }
@@ -572,11 +635,13 @@ TEST_P(cornerMinEigenVal, Mat)
     double t0 = 0;
     double t1 = 0;
     double t2 = 0;
+    
     for(int k = LOOPROISTART; k < LOOPROIEND; k++)
     {
         totalcputick = 0;
         totalgputick = 0;
         totalgputick_kernel = 0;
+        
         for(int j = 0; j < LOOP_TIMES + 1; j ++)
         {
             Has_roi(k);
@@ -585,27 +650,32 @@ TEST_P(cornerMinEigenVal, Mat)
             t0 = (double)cvGetTickCount();//cpu start
             cv::cornerMinEigenVal(mat1_roi, dst_roi, blockSize, apertureSize, borderType);
             t0 = (double)cvGetTickCount() - t0;//cpu end
-
+            
             t1 = (double)cvGetTickCount();//gpu start1
+            
             if(type1 != nulltype)
             {
                 clmat1_roi = clmat1(Rect(src1x, src1y, roicols, roirows));
             }
+            
             t2 = (double)cvGetTickCount(); //kernel
             cv::ocl::cornerMinEigenVal(clmat1_roi, cldst_roi, blockSize, apertureSize, borderType);
             t2 = (double)cvGetTickCount() - t2;//kernel
             cv::Mat cpu_cldst;
             cldst.download(cpu_cldst);//download
             t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+            
             if(j == 0)
+            {
                 continue;
-
+            }
+            
             totalgputick = t1 + totalgputick;
             totalcputick = t0 + totalcputick;
             totalgputick_kernel = t2 + totalgputick_kernel;
-
+            
         }
+        
         if(k == 0)
         {
             cout << "no roi\n";
@@ -614,20 +684,27 @@ TEST_P(cornerMinEigenVal, Mat)
         {
             cout << "with roi\n";
         };
+        
         cout << "average cpu runtime is  " << totalcputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     }
+    
 #else
+    
     for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
     {
         Has_roi(j);
         int blockSize = 7, apertureSize = 1 + 2 * (rand() % 4);
         int borderType = cv::BORDER_REFLECT;
+    
         if(type1 != nulltype)
         {
             clmat1_roi = clmat1(Rect(src1x, src1y, roicols, roirows));
         };
+    
         if(j == 0)
         {
             cout << "no roi:";
@@ -636,8 +713,10 @@ TEST_P(cornerMinEigenVal, Mat)
         {
             cout << "\nwith roi:";
         };
+    
         cv::ocl::cornerMinEigenVal(clmat1_roi, cldst_roi, blockSize, apertureSize, borderType);
     };
+    
 #endif
 }
 
@@ -655,11 +734,13 @@ TEST_P(cornerHarris, Mat)
     double t0 = 0;
     double t1 = 0;
     double t2 = 0;
+    
     for(int k = LOOPROISTART; k < LOOPROIEND; k++)
     {
         totalcputick = 0;
         totalgputick = 0;
         totalgputick_kernel = 0;
+        
         for(int j = 0; j < LOOP_TIMES + 1; j ++)
         {
             Has_roi(k);
@@ -669,27 +750,32 @@ TEST_P(cornerHarris, Mat)
             t0 = (double)cvGetTickCount();//cpu start
             cv::cornerHarris(mat1_roi, dst_roi, blockSize, apertureSize, kk, borderType);
             t0 = (double)cvGetTickCount() - t0;//cpu end
-
+            
             t1 = (double)cvGetTickCount();//gpu start1
+            
             if(type1 != nulltype)
             {
                 clmat1_roi = clmat1(Rect(src1x, src1y, roicols, roirows));
             }
+            
             t2 = (double)cvGetTickCount(); //kernel
             cv::ocl::cornerHarris(clmat1_roi, cldst_roi, blockSize, apertureSize, kk, borderType);
             t2 = (double)cvGetTickCount() - t2;//kernel
             cv::Mat cpu_cldst;
             cldst.download(cpu_cldst);//download
             t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+            
             if(j == 0)
+            {
                 continue;
-
+            }
+            
             totalgputick = t1 + totalgputick;
             totalcputick = t0 + totalcputick;
             totalgputick_kernel = t2 + totalgputick_kernel;
-
+            
         }
+        
         if(k == 0)
         {
             cout << "no roi\n";
@@ -698,21 +784,28 @@ TEST_P(cornerHarris, Mat)
         {
             cout << "with roi\n";
         };
+        
         cout << "average cpu runtime is  " << totalcputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     }
+    
 #else
+    
     for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
     {
         Has_roi(j);
         double kk = 2;
         int blockSize = 7, apertureSize = 3;
         int borderType = cv::BORDER_REFLECT;
+    
         if(type1 != nulltype)
         {
             clmat1_roi = clmat1(Rect(src1x, src1y, roicols, roirows));
         };
+    
         if(j == 0)
         {
             cout << "no roi:";
@@ -721,10 +814,12 @@ TEST_P(cornerHarris, Mat)
         {
             cout << "\nwith roi:";
         };
+    
         cv::ocl::cornerHarris(clmat1_roi, cldst_roi, blockSize, apertureSize, kk, borderType);
     };
+    
 #endif
-
+    
 }
 
 
@@ -741,23 +836,27 @@ TEST_P(integral, Mat)
     double t0 = 0;
     double t1 = 0;
     double t2 = 0;
+    
     for(int k = LOOPROISTART; k < LOOPROIEND; k++)
     {
         totalcputick = 0;
         totalgputick = 0;
         totalgputick_kernel = 0;
+        
         for(int j = 0; j < LOOP_TIMES + 1; j ++)
         {
             Has_roi(k);
             t0 = (double)cvGetTickCount();//cpu start
             cv::integral(mat1_roi, dst_roi, dst1_roi);
             t0 = (double)cvGetTickCount() - t0;//cpu end
-
+            
             t1 = (double)cvGetTickCount();//gpu start1
+            
             if(type1 != nulltype)
             {
                 clmat1_roi = clmat1(Rect(src1x, src1y, roicols, roirows));
             }
+            
             t2 = (double)cvGetTickCount(); //kernel
             cv::ocl::integral(clmat1_roi, cldst_roi, cldst1_roi);
             t2 = (double)cvGetTickCount() - t2;//kernel
@@ -766,15 +865,18 @@ TEST_P(integral, Mat)
             cldst.download(cpu_cldst);//download
             cldst1.download(cpu_cldst1);
             t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+            
             if(j == 0)
+            {
                 continue;
-
+            }
+            
             totalgputick = t1 + totalgputick;
             totalcputick = t0 + totalcputick;
             totalgputick_kernel = t2 + totalgputick_kernel;
-
+            
         }
+        
         if(k == 0)
         {
             cout << "no roi\n";
@@ -783,18 +885,25 @@ TEST_P(integral, Mat)
         {
             cout << "with roi\n";
         };
+        
         cout << "average cpu runtime is  " << totalcputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     }
+    
 #else
+    
     for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
     {
         Has_roi(j);
+    
         if(type1 != nulltype)
         {
             clmat1_roi = clmat1(Rect(src1x, src1y, roicols, roirows));
         };
+    
         if(j == 0)
         {
             cout << "no roi:";
@@ -803,8 +912,10 @@ TEST_P(integral, Mat)
         {
             cout << "\nwith roi:";
         };
+    
         cv::ocl::integral(clmat1_roi, cldst_roi, cldst1_roi);
     };
+    
 #endif
 }
 
@@ -817,11 +928,11 @@ PARAM_TEST_CASE(WarpTestBase, MatType, int)
     int type;
     cv::Size size;
     int interpolation;
-
+    
     //src mat
     cv::Mat mat1;
     cv::Mat dst;
-
+    
     // set up roi
     int src_roicols;
     int src_roirows;
@@ -831,31 +942,31 @@ PARAM_TEST_CASE(WarpTestBase, MatType, int)
     int src1y;
     int dstx;
     int dsty;
-
-
+    
+    
     //src mat with roi
     cv::Mat mat1_roi;
     cv::Mat dst_roi;
     //std::vector<cv::ocl::Info> oclinfo;
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
-
+    
     //ocl mat with roi
     cv::ocl::oclMat gmat1;
     cv::ocl::oclMat gdst;
-
+    
     virtual void SetUp()
     {
         type = GET_PARAM(0);
         //dsize = GET_PARAM(1);
         interpolation = GET_PARAM(1);
-
+        
         cv::RNG &rng = TS::ptr()->get_rng();
         size = cv::Size(MWIDTH, MHEIGHT);
-
+        
         mat1 = randomMat(rng, size, type, 5, 16, false);
         dst  = randomMat(rng, size, type, 5, 16, false);
-
+        
         //int devnums = getDevice(oclinfo);
         //CV_Assert(devnums > 0);
         ////if you want to use undefault device, set it here
@@ -876,7 +987,7 @@ PARAM_TEST_CASE(WarpTestBase, MatType, int)
             src1y   = 1;
             dstx    = 1;
             dsty    = 1;
-
+            
         }
         else
         {
@@ -888,14 +999,16 @@ PARAM_TEST_CASE(WarpTestBase, MatType, int)
             src1y = 0;
             dstx = 0;
             dsty = 0;
-
+            
         };
+        
         mat1_roi = mat1(Rect(src1x, src1y, src_roicols, src_roirows));
+        
         dst_roi  = dst(Rect(dstx, dsty, dst_roicols, dst_roirows));
-
-
+        
+        
     }
-
+    
 };
 
 /////warpAffine
@@ -910,7 +1023,7 @@ TEST_P(WarpAffine, Mat)
         {sin(3.14 / 6), cos(3.14 / 6), -100.0}
     };
     Mat M(2, 3, CV_64F, (void *)coeffs);
-
+    
 #ifndef PRINT_KERNEL_RUN_TIME
     double totalcputick = 0;
     double totalgputick = 0;
@@ -918,39 +1031,44 @@ TEST_P(WarpAffine, Mat)
     double t0 = 0;
     double t1 = 0;
     double t2 = 0;
+    
     for(int k = LOOPROISTART; k < LOOPROIEND; k++)
     {
         totalcputick = 0;
         totalgputick = 0;
         totalgputick_kernel = 0;
+        
         for(int j = 0; j < LOOP_TIMES + 1; j ++)
         {
             Has_roi(k);
-
+            
             t0 = (double)cvGetTickCount();//cpu start
             cv::warpAffine(mat1_roi, dst_roi, M, size, interpolation);
             t0 = (double)cvGetTickCount() - t0;//cpu end
-
+            
             t1 = (double)cvGetTickCount();//gpu start1
             gdst_whole = dst;
             gdst = gdst_whole(Rect(dstx, dsty, dst_roicols, dst_roirows));
-
+            
             gmat1 = mat1_roi;
             t2 = (double)cvGetTickCount(); //kernel
             cv::ocl::warpAffine(gmat1, gdst, M, size, interpolation);
             t2 = (double)cvGetTickCount() - t2;//kernel
             cv::Mat cpu_dst;
-            gdst_whole.download (cpu_dst);//download
+            gdst_whole.download(cpu_dst); //download
             t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+            
             if(j == 0)
+            {
                 continue;
-
+            }
+            
             totalgputick = t1 + totalgputick;
             totalcputick = t0 + totalcputick;
             totalgputick_kernel = t2 + totalgputick_kernel;
-
+            
         }
+        
         if(k == 0)
         {
             cout << "no roi\n";
@@ -959,17 +1077,23 @@ TEST_P(WarpAffine, Mat)
         {
             cout << "with roi\n";
         };
+        
         cout << "average cpu runtime is  " << totalcputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     }
+    
 #else
+    
     for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
     {
         Has_roi(j);
         gdst_whole = dst;
         gdst = gdst_whole(Rect(dstx, dsty, dst_roicols, dst_roirows));
         gmat1 = mat1_roi;
+    
         if(j == 0)
         {
             cout << "no roi:";
@@ -978,10 +1102,12 @@ TEST_P(WarpAffine, Mat)
         {
             cout << "\nwith roi:";
         };
+    
         cv::ocl::warpAffine(gmat1, gdst, M, size, interpolation);
     };
+    
 #endif
-
+    
 }
 
 
@@ -998,7 +1124,7 @@ TEST_P(WarpPerspective, Mat)
         {0.0, 0.0, 1.0}
     };
     Mat M(3, 3, CV_64F, (void *)coeffs);
-
+    
 #ifndef PRINT_KERNEL_RUN_TIME
     double totalcputick = 0;
     double totalgputick = 0;
@@ -1006,39 +1132,44 @@ TEST_P(WarpPerspective, Mat)
     double t0 = 0;
     double t1 = 0;
     double t2 = 0;
+    
     for(int k = LOOPROISTART; k < LOOPROIEND; k++)
     {
         totalcputick = 0;
         totalgputick = 0;
         totalgputick_kernel = 0;
+        
         for(int j = 0; j < LOOP_TIMES + 1; j ++)
         {
             Has_roi(k);
-
+            
             t0 = (double)cvGetTickCount();//cpu start
             cv::warpPerspective(mat1_roi, dst_roi, M, size, interpolation);
             t0 = (double)cvGetTickCount() - t0;//cpu end
-
+            
             t1 = (double)cvGetTickCount();//gpu start1
             gdst_whole = dst;
             gdst = gdst_whole(Rect(dstx, dsty, dst_roicols, dst_roirows));
-
+            
             gmat1 = mat1_roi;
             t2 = (double)cvGetTickCount(); //kernel
             cv::ocl::warpPerspective(gmat1, gdst, M, size, interpolation);
             t2 = (double)cvGetTickCount() - t2;//kernel
             cv::Mat cpu_dst;
-            gdst_whole.download (cpu_dst);//download
+            gdst_whole.download(cpu_dst); //download
             t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+            
             if(j == 0)
+            {
                 continue;
-
+            }
+            
             totalgputick = t1 + totalgputick;
             totalcputick = t0 + totalcputick;
             totalgputick_kernel = t2 + totalgputick_kernel;
-
+            
         }
+        
         if(k == 0)
         {
             cout << "no roi\n";
@@ -1047,17 +1178,23 @@ TEST_P(WarpPerspective, Mat)
         {
             cout << "with roi\n";
         };
+        
         cout << "average cpu runtime is  " << totalcputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     }
+    
 #else
+    
     for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
     {
         Has_roi(j);
         gdst_whole = dst;
         gdst = gdst_whole(Rect(dstx, dsty, dst_roicols, dst_roirows));
         gmat1 = mat1_roi;
+    
         if(j == 0)
         {
             cout << "no roi:";
@@ -1066,10 +1203,12 @@ TEST_P(WarpPerspective, Mat)
         {
             cout << "\nwith roi:";
         };
+    
         cv::ocl::warpPerspective(gmat1, gdst, M, size, interpolation);
     };
+    
 #endif
-
+    
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1082,16 +1221,16 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
     int map1Type;
     int map2Type;
     cv::Scalar val;
-
+    
     int interpolation;
     int bordertype;
-
+    
     cv::Mat src;
     cv::Mat dst;
     cv::Mat map1;
     cv::Mat map2;
-
-
+    
+    
     int src_roicols;
     int src_roirows;
     int dst_roicols;
@@ -1108,21 +1247,21 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
     int map1y;
     int map2x;
     int map2y;
-
+    
     cv::Mat src_roi;
     cv::Mat dst_roi;
     cv::Mat map1_roi;
     cv::Mat map2_roi;
-
+    
     //ocl mat for testing
     cv::ocl::oclMat gdst;
-
+    
     //ocl mat with roi
     cv::ocl::oclMat gsrc_roi;
     cv::ocl::oclMat gdst_roi;
     cv::ocl::oclMat gmap1_roi;
     cv::ocl::oclMat gmap2_roi;
-
+    
     virtual void SetUp()
     {
         srcType = GET_PARAM(0);
@@ -1130,48 +1269,52 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
         map2Type = GET_PARAM(2);
         interpolation = GET_PARAM(3);
         bordertype = GET_PARAM(4);
-
+        
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size srcSize = cv::Size(MWIDTH, MHEIGHT);
         cv::Size dstSize = cv::Size(MWIDTH, MHEIGHT);
         cv::Size map1Size = cv::Size(MWIDTH, MHEIGHT);
         double min = 5, max = 16;
-
+        
         if(srcType != nulltype)
         {
             src = randomMat(rng, srcSize, srcType, min, max, false);
         }
+        
         if((map1Type == CV_16SC2 && map2Type == nulltype) || (map1Type == CV_32FC2 && map2Type == nulltype))
         {
             map1 = randomMat(rng, map1Size, map1Type, min, max, false);
-
+            
         }
-        else if (map1Type == CV_32FC1 && map2Type == CV_32FC1)
+        else if(map1Type == CV_32FC1 && map2Type == CV_32FC1)
         {
             map1 = randomMat(rng, map1Size, map1Type, min, max, false);
             map2 = randomMat(rng, map1Size, map1Type, min, max, false);
         }
-
+        
         else
-            cout << "The wrong input type" << endl;
-
-        dst = randomMat(rng, map1Size, srcType, min, max, false);
-        switch (src.channels())
         {
-        case 1:
-            val = cv::Scalar(rng.uniform(0.0, 10.0), 0, 0, 0);
-            break;
-        case 2:
-            val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), 0, 0);
-            break;
-        case 3:
-            val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), 0);
-            break;
-        case 4:
-            val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0));
-            break;
+            cout << "The wrong input type" << endl;
         }
-
+        
+        dst = randomMat(rng, map1Size, srcType, min, max, false);
+        
+        switch(src.channels())
+        {
+            case 1:
+                val = cv::Scalar(rng.uniform(0.0, 10.0), 0, 0, 0);
+                break;
+            case 2:
+                val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), 0, 0);
+                break;
+            case 3:
+                val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), 0);
+                break;
+            case 4:
+                val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0));
+                break;
+        }
+        
         //int devnums = getDevice(oclinfo);
         //CV_Assert(devnums > 0);
         //if you want to use undefault device, set it here
@@ -1185,11 +1328,11 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
             //randomize ROI
             dst_roicols = dst.cols - 1;
             dst_roirows = dst.rows - 1;
-
+            
             src_roicols = src.cols - 1;
             src_roirows = src.rows - 1;
-
-
+            
+            
             srcx = 1;
             srcy = 1;
             dstx = 1;
@@ -1199,16 +1342,17 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
         {
             dst_roicols = dst.cols;
             dst_roirows = dst.rows;
-
+            
             src_roicols = src.cols;
             src_roirows = src.rows;
-
-
+            
+            
             srcx = 0;
             srcy = 0;
             dstx = 0;
             dsty = 0;
         }
+        
         map1_roicols = dst_roicols;
         map1_roirows = dst_roirows;
         map2_roicols = dst_roicols;
@@ -1217,23 +1361,24 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
         map1y = dsty;
         map2x = dstx;
         map2y = dsty;
-
+        
         if((map1Type == CV_16SC2 && map2Type == nulltype) || (map1Type == CV_32FC2 && map2Type == nulltype))
         {
             map1_roi = map1(Rect(map1x, map1y, map1_roicols, map1_roirows));
             gmap1_roi = map1_roi;
         }
-
-        else if (map1Type == CV_32FC1 && map2Type == CV_32FC1)
+        
+        else if(map1Type == CV_32FC1 && map2Type == CV_32FC1)
         {
             map1_roi = map1(Rect(map1x, map1y, map1_roicols, map1_roirows));
             map2_roi = map2(Rect(map2x, map2y, map2_roicols, map2_roirows));
             gmap1_roi = map1_roi;
             gmap2_roi = map2_roi;
         }
+        
         dst_roi = dst(Rect(dstx, dsty, dst_roicols, dst_roirows));
         src_roi = dst(Rect(srcx, srcy, src_roicols, src_roirows));
-
+        
     }
 };
 
@@ -1244,6 +1389,7 @@ TEST_P(Remap, Mat)
         cout << "LINEAR don't support the map1Type and map2Type" << endl;
         return;
     }
+    
     int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
     const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
     cout << borderstr[0] << endl;
@@ -1254,40 +1400,46 @@ TEST_P(Remap, Mat)
     double t0 = 0;
     double t1 = 0;
     double t2 = 0;
+    
     for(int k = 0; k < 2; k++)
     {
         totalcputick = 0;
         totalgputick = 0;
         totalgputick_kernel = 0;
+        
         for(int j = 0; j < LOOP_TIMES + 1; j++)
         {
             Has_roi(k);
-
+            
             t0 = (double)cvGetTickCount();//cpu start
             cv::remap(src_roi, dst_roi, map1_roi, map2_roi, interpolation, bordertype[0], val);
             t0 = (double)cvGetTickCount() - t0;//cpu end
-
+            
             t1 = (double)cvGetTickCount();//gpu start
             gsrc_roi = src_roi;
             gdst = dst;
             gdst_roi = gdst(Rect(dstx, dsty, dst_roicols, dst_roirows));
-
+            
             t2 = (double)cvGetTickCount();//kernel
             cv::ocl::remap(gsrc_roi, gdst_roi, gmap1_roi, gmap2_roi, interpolation, bordertype[0], val);
             t2 = (double)cvGetTickCount() - t2;//kernel
-
+            
             cv::Mat cpu_dst;
             gdst.download(cpu_dst);
-
+            
             t1 = (double)cvGetTickCount() - t1;//gpu end
-
-            if (j == 0)
+            
+            if(j == 0)
+            {
                 continue;
+            }
+            
             totalgputick = t1 + totalgputick;
             totalcputick = t0 + totalcputick;
             totalgputick_kernel = t2 + totalgputick_kernel;
-
+            
         }
+        
         if(k == 0)
         {
             cout << "no roi\n";
@@ -1296,17 +1448,23 @@ TEST_P(Remap, Mat)
         {
             cout << "with roi\n";
         };
+        
         cout << "average cpu runtime is  " << totalcputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     }
+    
 #else
+    
     for(int j = 0; j < 2; j ++)
     {
         Has_roi(j);
         gdst = dst;
         gdst_roi = gdst(Rect(dstx, dsty, dst_roicols, dst_roirows));
         gsrc_roi = src_roi;
+    
         if(j == 0)
         {
             cout << "no roi:";
@@ -1315,10 +1473,12 @@ TEST_P(Remap, Mat)
         {
             cout << "\nwith roi:";
         };
+    
         cv::ocl::remap(gsrc_roi, gdst_roi, gmap1_roi, gmap2_roi, interpolation, bordertype[0], val);
     };
+    
 #endif
-
+    
 }
 
 
@@ -1331,11 +1491,11 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
     cv::Size dsize;
     double fx, fy;
     int interpolation;
-
+    
     //src mat
     cv::Mat mat1;
     cv::Mat dst;
-
+    
     // set up roi
     int src_roicols;
     int src_roirows;
@@ -1345,19 +1505,19 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
     int src1y;
     int dstx;
     int dsty;
-
-
+    
+    
     //src mat with roi
     cv::Mat mat1_roi;
     cv::Mat dst_roi;
     //std::vector<cv::ocl::Info> oclinfo;
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
-
+    
     //ocl mat with roi
     cv::ocl::oclMat gmat1;
     cv::ocl::oclMat gdst;
-
+    
     virtual void SetUp()
     {
         type = GET_PARAM(0);
@@ -1365,25 +1525,25 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
         fx = GET_PARAM(2);
         fy = GET_PARAM(3);
         interpolation = GET_PARAM(4);
-
+        
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
-
+        
         if(dsize == cv::Size() && !(fx > 0 && fy > 0))
         {
             cout << "invalid dsize and fx fy" << endl;
             return;
         }
-
+        
         if(dsize == cv::Size())
         {
             dsize.width = (int)(size.width * fx);
             dsize.height = (int)(size.height * fy);
         }
-
+        
         mat1 = randomMat(rng, size, type, 5, 16, false);
         dst  = randomMat(rng, dsize, type, 5, 16, false);
-
+        
         //int devnums = getDevice(oclinfo);
         //CV_Assert(devnums > 0);
         ////if you want to use undefault device, set it here
@@ -1404,7 +1564,7 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
             src1y   = 1;
             dstx    = 1;
             dsty    = 1;
-
+            
         }
         else
         {
@@ -1416,14 +1576,16 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
             src1y = 0;
             dstx = 0;
             dsty = 0;
-
+            
         };
+        
         mat1_roi = mat1(Rect(src1x, src1y, src_roicols, src_roirows));
+        
         dst_roi  = dst(Rect(dstx, dsty, dst_roicols, dst_roirows));
-
-
+        
+        
     }
-
+    
 };
 
 TEST_P(Resize, Mat)
@@ -1435,39 +1597,44 @@ TEST_P(Resize, Mat)
     double t0 = 0;
     double t1 = 0;
     double t2 = 0;
+    
     for(int k = LOOPROISTART; k < LOOPROIEND; k++)
     {
         totalcputick = 0;
         totalgputick = 0;
         totalgputick_kernel = 0;
+        
         for(int j = 0; j < LOOP_TIMES + 1; j ++)
         {
             Has_roi(k);
-
+            
             t0 = (double)cvGetTickCount();//cpu start
             cv::resize(mat1_roi, dst_roi, dsize, fx, fy, interpolation);
             t0 = (double)cvGetTickCount() - t0;//cpu end
-
+            
             t1 = (double)cvGetTickCount();//gpu start1
             gdst_whole = dst;
             gdst = gdst_whole(Rect(dstx, dsty, dst_roicols, dst_roirows));
-
+            
             gmat1 = mat1_roi;
             t2 = (double)cvGetTickCount(); //kernel
             cv::ocl::resize(gmat1, gdst, dsize, fx, fy, interpolation);
             t2 = (double)cvGetTickCount() - t2;//kernel
             cv::Mat cpu_dst;
-            gdst_whole.download (cpu_dst);//download
+            gdst_whole.download(cpu_dst); //download
             t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+            
             if(j == 0)
+            {
                 continue;
-
+            }
+            
             totalgputick = t1 + totalgputick;
             totalcputick = t0 + totalcputick;
             totalgputick_kernel = t2 + totalgputick_kernel;
-
+            
         }
+        
         if(k == 0)
         {
             cout << "no roi\n";
@@ -1476,17 +1643,23 @@ TEST_P(Resize, Mat)
         {
             cout << "with roi\n";
         };
+        
         cout << "average cpu runtime is  " << totalcputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     }
+    
 #else
+    
     for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
     {
         Has_roi(j);
         gdst_whole = dst;
         gdst = gdst_whole(Rect(dstx, dsty, dst_roicols, dst_roirows));
         gmat1 = mat1_roi;
+    
         if(j == 0)
         {
             cout << "no roi:";
@@ -1495,10 +1668,12 @@ TEST_P(Resize, Mat)
         {
             cout << "\nwith roi:";
         };
+    
         cv::ocl::resize(gmat1, gdst, dsize, fx, fy, interpolation);
     };
+    
 #endif
-
+    
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1508,11 +1683,11 @@ PARAM_TEST_CASE(Threshold, MatType, ThreshOp)
 {
     int type;
     int threshOp;
-
+    
     //src mat
     cv::Mat mat1;
     cv::Mat dst;
-
+    
     // set up roi
     int roicols;
     int roirows;
@@ -1520,29 +1695,29 @@ PARAM_TEST_CASE(Threshold, MatType, ThreshOp)
     int src1y;
     int dstx;
     int dsty;
-
+    
     //src mat with roi
     cv::Mat mat1_roi;
     cv::Mat dst_roi;
     //std::vector<cv::ocl::Info> oclinfo;
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
-
+    
     //ocl mat with roi
     cv::ocl::oclMat gmat1;
     cv::ocl::oclMat gdst;
-
+    
     virtual void SetUp()
     {
         type = GET_PARAM(0);
         threshOp = GET_PARAM(1);
-
+        
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
-
+        
         mat1 = randomMat(rng, size, type, 5, 16, false);
         dst  = randomMat(rng, size, type, 5, 16, false);
-
+        
         //int devnums = getDevice(oclinfo);
         //CV_Assert(devnums > 0);
         ////if you want to use undefault device, set it here
@@ -1561,7 +1736,7 @@ PARAM_TEST_CASE(Threshold, MatType, ThreshOp)
             src1y   = 1;
             dstx    = 1;
             dsty    = 1;
-
+            
         }
         else
         {
@@ -1571,12 +1746,14 @@ PARAM_TEST_CASE(Threshold, MatType, ThreshOp)
             src1y = 0;
             dstx = 0;
             dsty = 0;
-
+            
         };
+        
         mat1_roi = mat1(Rect(src1x, src1y, roicols, roirows));
+        
         dst_roi  = dst(Rect(dstx, dsty, roicols, roirows));
-
-
+        
+        
     }
 };
 
@@ -1589,42 +1766,47 @@ TEST_P(Threshold, Mat)
     double t0 = 0;
     double t1 = 0;
     double t2 = 0;
+    
     for(int k = LOOPROISTART; k < LOOPROIEND; k++)
     {
         totalcputick = 0;
         totalgputick = 0;
         totalgputick_kernel = 0;
+        
         for(int j = 0; j < LOOP_TIMES + 1; j ++)
         {
             Has_roi(k);
-
+            
             double maxVal = randomDouble(20.0, 127.0);
             double thresh = randomDouble(0.0, maxVal);
             t0 = (double)cvGetTickCount();//cpu start
             cv::threshold(mat1_roi, dst_roi, thresh, maxVal, threshOp);
             t0 = (double)cvGetTickCount() - t0;//cpu end
-
+            
             t1 = (double)cvGetTickCount();//gpu start1
-
+            
             gdst_whole = dst;
             gdst = gdst_whole(Rect(dstx, dsty, roicols, roirows));
             gmat1 = mat1_roi;
             t2 = (double)cvGetTickCount(); //kernel
             cv::ocl::threshold(gmat1, gdst, thresh, maxVal, threshOp);
             t2 = (double)cvGetTickCount() - t2;//kernel
-
+            
             cv::Mat cpu_dst;
-            gdst_whole.download (cpu_dst);//download
+            gdst_whole.download(cpu_dst); //download
             t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+            
             if(j == 0)
+            {
                 continue;
-
+            }
+            
             totalgputick = t1 + totalgputick;
             totalcputick = t0 + totalcputick;
             totalgputick_kernel = t2 + totalgputick_kernel;
-
+            
         }
+        
         if(k == 0)
         {
             cout << "no roi\n";
@@ -1633,11 +1815,16 @@ TEST_P(Threshold, Mat)
         {
             cout << "with roi\n";
         };
+        
         cout << "average cpu runtime is  " << totalcputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     }
+    
 #else
+    
     for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
     {
         Has_roi(j);
@@ -1646,7 +1833,7 @@ TEST_P(Threshold, Mat)
         gdst_whole = dst;
         gdst = gdst_whole(Rect(dstx, dsty, roicols, roirows));
         gmat1 = mat1_roi;
-
+    
         if(j == 0)
         {
             cout << "no roi:";
@@ -1655,10 +1842,12 @@ TEST_P(Threshold, Mat)
         {
             cout << "\nwith roi:";
         };
+    
         cv::ocl::threshold(gmat1, gdst, thresh, maxVal, threshOp);
     };
+    
 #endif
-
+    
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //meanShift
@@ -1672,7 +1861,7 @@ PARAM_TEST_CASE(meanShiftTestBase, MatType, MatType, int, int, cv::TermCriteria)
     cv::Mat src;
     cv::Mat dst;
     cv::Mat dstCoor;
-
+    
     //set up roi
     int roicols;
     int roirows;
@@ -1680,22 +1869,22 @@ PARAM_TEST_CASE(meanShiftTestBase, MatType, MatType, int, int, cv::TermCriteria)
     int srcy;
     int dstx;
     int dsty;
-
+    
     //src mat with roi
     cv::Mat src_roi;
     cv::Mat dst_roi;
     cv::Mat dstCoor_roi;
-
+    
     //ocl dst mat
     cv::ocl::oclMat gdst;
     cv::ocl::oclMat gdstCoor;
-
+    
     //std::vector<cv::ocl::Info> oclinfo;
     //ocl mat with roi
     cv::ocl::oclMat gsrc_roi;
     cv::ocl::oclMat gdst_roi;
     cv::ocl::oclMat gdstCoor_roi;
-
+    
     virtual void SetUp()
     {
         type     = GET_PARAM(0);
@@ -1703,23 +1892,23 @@ PARAM_TEST_CASE(meanShiftTestBase, MatType, MatType, int, int, cv::TermCriteria)
         sp       = GET_PARAM(2);
         sr       = GET_PARAM(3);
         crit     = GET_PARAM(4);
-
+        
         cv::RNG &rng = TS::ptr()->get_rng();
-
+        
         // MWIDTH=256, MHEIGHT=256. defined in utility.hpp
         cv::Size size = cv::Size(MWIDTH, MHEIGHT);
-
+        
         src = randomMat(rng, size, type, 5, 16, false);
         dst = randomMat(rng, size, type, 5, 16, false);
         dstCoor = randomMat(rng, size, typeCoor, 5, 16, false);
-
+        
         //int devnums = getDevice(oclinfo);
         //CV_Assert(devnums > 0);
         ////if you want to use undefault device, set it here
         ////setDevice(oclinfo[0]);
         //cv::ocl::setBinpath(CLBINPATH);
     }
-
+    
     void Has_roi(int b)
     {
         if(b)
@@ -1741,12 +1930,15 @@ PARAM_TEST_CASE(meanShiftTestBase, MatType, MatType, int, int, cv::TermCriteria)
             dstx = 0;
             dsty = 0;
         };
-
+        
         src_roi = src(Rect(srcx, srcy, roicols, roirows));
+        
         dst_roi = dst(Rect(dstx, dsty, roicols, roirows));
+        
         dstCoor_roi = dstCoor(Rect(dstx, dsty, roicols, roirows));
-
+        
         gdst = dst;
+        
         gdstCoor = dstCoor;
     }
 };
@@ -1760,35 +1952,40 @@ TEST_P(meanShiftFiltering, Mat)
 #ifndef PRINT_KERNEL_RUN_TIME
     double t1 = 0;
     double t2 = 0;
+    
     for(int k = 0; k < 2; k++)
     {
         double totalgputick = 0;
         double totalgputick_kernel = 0;
+        
         for(int j = 0; j < LOOP_TIMES + 1; j ++)
         {
             Has_roi(k);
-
+            
             t1 = (double)cvGetTickCount();//gpu start1
-
+            
             gsrc_roi = src_roi;
             gdst_roi = gdst(Rect(dstx, dsty, roicols, roirows));  //gdst_roi
-
+            
             t2 = (double)cvGetTickCount(); //kernel
             cv::ocl::meanShiftFiltering(gsrc_roi, gdst_roi, sp, sr, crit);
             t2 = (double)cvGetTickCount() - t2;//kernel
-
+            
             cv::Mat cpu_gdst;
             gdst.download(cpu_gdst);//download
-
+            
             t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+            
             if(j == 0)
+            {
                 continue;
-
+            }
+            
             totalgputick = t1 + totalgputick;
             totalgputick_kernel = t2 + totalgputick_kernel;
-
+            
         }
+        
         if(k == 0)
         {
             cout << "no roi\n";
@@ -1797,17 +1994,21 @@ TEST_P(meanShiftFiltering, Mat)
         {
             cout << "with roi\n";
         };
+        
         cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     }
+    
 #else
+    
     for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
     {
         Has_roi(j);
-
+    
         gsrc_roi = src_roi;
         gdst_roi = gdst(Rect(dstx, dsty, roicols, roirows));  //gdst_roi
-
+    
         if(j == 0)
         {
             cout << "no roi:";
@@ -1816,10 +2017,12 @@ TEST_P(meanShiftFiltering, Mat)
         {
             cout << "\nwith roi:";
         };
+    
         cv::ocl::meanShiftFiltering(gsrc_roi, gdst_roi, sp, sr, crit);
     };
+    
 #endif
-
+    
 }
 
 ///////////////////////////meanShiftProc//////////////////////////////////
@@ -1831,36 +2034,41 @@ TEST_P(meanShiftProc, Mat)
 #ifndef PRINT_KERNEL_RUN_TIME
     double t1 = 0;
     double t2 = 0;
+    
     for(int k = 0; k < 2; k++)
     {
         double totalgputick = 0;
         double totalgputick_kernel = 0;
+        
         for(int j = 0; j < LOOP_TIMES + 1; j ++)
         {
             Has_roi(k);
-
+            
             t1 = (double)cvGetTickCount();//gpu start1
-
+            
             gsrc_roi = src_roi;
             gdst_roi = gdst(Rect(dstx, dsty, roicols, roirows));  //gdst_roi
             gdstCoor_roi = gdstCoor(Rect(dstx, dsty, roicols, roirows));
-
+            
             t2 = (double)cvGetTickCount(); //kernel
             cv::ocl::meanShiftProc(gsrc_roi, gdst_roi, gdstCoor_roi, sp, sr, crit);
             t2 = (double)cvGetTickCount() - t2;//kernel
-
+            
             cv::Mat cpu_gdstCoor;
             gdstCoor.download(cpu_gdstCoor);//download
-
+            
             t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+            
             if(j == 0)
+            {
                 continue;
-
+            }
+            
             totalgputick = t1 + totalgputick;
             totalgputick_kernel = t2 + totalgputick_kernel;
-
+            
         }
+        
         if(k == 0)
         {
             cout << "no roi\n";
@@ -1869,18 +2077,22 @@ TEST_P(meanShiftProc, Mat)
         {
             cout << "with roi\n";
         };
+        
         cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     }
+    
 #else
+    
     for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
     {
         Has_roi(j);
-
+    
         gsrc_roi = src_roi;
         gdst_roi = gdst(Rect(dstx, dsty, roicols, roirows));  //gdst_roi
         gdstCoor_roi = gdstCoor(Rect(dstx, dsty, roicols, roirows));
-
+    
         if(j == 0)
         {
             cout << "no roi:";
@@ -1889,10 +2101,12 @@ TEST_P(meanShiftProc, Mat)
         {
             cout << "\nwith roi:";
         };
+    
         cv::ocl::meanShiftProc(gsrc_roi, gdst_roi, gdstCoor_roi, sp, sr, crit);
     };
+    
 #endif
-
+    
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -1902,21 +2116,24 @@ void calcHistGold(const cv::Mat &src, cv::Mat &hist)
 {
     hist.create(1, 256, CV_32SC1);
     hist.setTo(cv::Scalar::all(0));
-
+    
     int *hist_row = hist.ptr<int>();
-    for (int y = 0; y < src.rows; ++y)
+    
+    for(int y = 0; y < src.rows; ++y)
     {
         const uchar *src_row = src.ptr(y);
-
-        for (int x = 0; x < src.cols; ++x)
+        
+        for(int x = 0; x < src.cols; ++x)
+        {
             ++hist_row[src_row[x]];
+        }
     }
 }
 
 PARAM_TEST_CASE(histTestBase, MatType, MatType)
 {
     int type_src;
-
+    
     //src mat
     cv::Mat src;
     cv::Mat dst_hist;
@@ -1929,27 +2146,27 @@ PARAM_TEST_CASE(histTestBase, MatType, MatType)
     cv::Mat src_roi;
     //ocl dst mat, dst_hist and gdst_hist don't have roi
     cv::ocl::oclMat gdst_hist;
-
+    
     //ocl mat with roi
     cv::ocl::oclMat gsrc_roi;
-
+    
     //    std::vector<cv::ocl::Info> oclinfo;
-
+    
     virtual void SetUp()
     {
         type_src   = GET_PARAM(0);
-
+        
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size = cv::Size(MWIDTH, MHEIGHT);
-
+        
         src = randomMat(rng, size, type_src, 0, 256, false);
-
+        
         //        int devnums = getDevice(oclinfo);
         //        CV_Assert(devnums > 0);
         //if you want to use undefault device, set it here
         //setDevice(oclinfo[0]);
     }
-
+    
     void Has_roi(int b)
     {
         if(b)
@@ -1967,6 +2184,7 @@ PARAM_TEST_CASE(histTestBase, MatType, MatType)
             srcx = 0;
             srcy = 0;
         };
+        
         src_roi = src(Rect(srcx, srcy, roicols, roirows));
     }
 };
@@ -1980,40 +2198,45 @@ TEST_P(calcHist, Mat)
     double t0 = 0;
     double t1 = 0;
     double t2 = 0;
+    
     for(int k = 0; k < 2; k++)
     {
         double totalcputick = 0;
         double totalgputick = 0;
         double totalgputick_kernel = 0;
+        
         for(int j = 0; j < LOOP_TIMES + 1; j ++)
         {
             Has_roi(k);
-
+            
             t0 = (double)cvGetTickCount();//cpu start
             calcHistGold(src_roi, dst_hist);
             t0 = (double)cvGetTickCount() - t0;//cpu end
-
+            
             t1 = (double)cvGetTickCount();//gpu start1
-
+            
             gsrc_roi = src_roi;
-
+            
             t2 = (double)cvGetTickCount(); //kernel
             cv::ocl::calcHist(gsrc_roi, gdst_hist);
             t2 = (double)cvGetTickCount() - t2;//kernel
-
+            
             cv::Mat cpu_hist;
             gdst_hist.download(cpu_hist);//download
-
+            
             t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+            
             if(j == 0)
+            {
                 continue;
-
+            }
+            
             totalcputick = t0 + totalcputick;
             totalgputick = t1 + totalgputick;
             totalgputick_kernel = t2 + totalgputick_kernel;
-
+            
         }
+        
         if(k == 0)
         {
             cout << "no roi\n";
@@ -2022,17 +2245,22 @@ TEST_P(calcHist, Mat)
         {
             cout << "with roi\n";
         };
+        
         cout << "average cpu runtime is  " << totalcputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+        
         cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     }
+    
 #else
+    
     for(int j = 0; j < 2; j ++)
     {
         Has_roi(j);
-
+    
         gsrc_roi = src_roi;
-
+    
         if(j == 0)
         {
             cout << "no roi:";
@@ -2041,8 +2269,10 @@ TEST_P(calcHist, Mat)
         {
             cout << "\nwith roi:";
         };
+    
         cv::ocl::calcHist(gsrc_roi, gdst_hist);
     };
+    
 #endif
 }
 

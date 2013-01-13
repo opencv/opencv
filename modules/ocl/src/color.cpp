@@ -70,41 +70,41 @@ void cv::ocl::cvtColor(const oclMat &, oclMat &, int, int, const Stream &)
 
 namespace cv
 {
-    namespace ocl
-    {
-        extern const char *cvt_color;
-    }
+namespace ocl
+{
+extern const char *cvt_color;
+}
 }
 
 namespace
 {
-    void RGB2Gray_caller(const oclMat &src, oclMat &dst, int bidx)
-    {
-        vector<pair<size_t , const void *> > args;
-        int channels = src.oclchannels();
-        char build_options[50];
-        //printf("depth:%d,channels:%d,bidx:%d\n",src.depth(),src.oclchannels(),bidx);
-        sprintf(build_options, "-D DEPTH_%d", src.depth());
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.step));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&channels));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&bidx));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data));
-        size_t gt[3] = {src.cols, src.rows, 1}, lt[3] = {16, 16, 1};
-        openCLExecuteKernel(src.clCxt, &cvt_color, "RGB2Gray", gt, lt, args, -1, -1, build_options);
-    }
-    void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int /*dcn*/)
-    {
-        Size sz = src.size();
-        int scn = src.oclchannels(), depth = src.depth(), bidx;
+void RGB2Gray_caller(const oclMat &src, oclMat &dst, int bidx)
+{
+    vector<pair<size_t , const void *> > args;
+    int channels = src.oclchannels();
+    char build_options[50];
+    //printf("depth:%d,channels:%d,bidx:%d\n",src.depth(),src.oclchannels(),bidx);
+    sprintf(build_options, "-D DEPTH_%d", src.depth());
+    args.push_back(make_pair(sizeof(cl_int) , (void *)&src.cols));
+    args.push_back(make_pair(sizeof(cl_int) , (void *)&src.rows));
+    args.push_back(make_pair(sizeof(cl_int) , (void *)&src.step));
+    args.push_back(make_pair(sizeof(cl_int) , (void *)&dst.step));
+    args.push_back(make_pair(sizeof(cl_int) , (void *)&channels));
+    args.push_back(make_pair(sizeof(cl_int) , (void *)&bidx));
+    args.push_back(make_pair(sizeof(cl_mem) , (void *)&src.data));
+    args.push_back(make_pair(sizeof(cl_mem) , (void *)&dst.data));
+    size_t gt[3] = {src.cols, src.rows, 1}, lt[3] = {16, 16, 1};
+    openCLExecuteKernel(src.clCxt, &cvt_color, "RGB2Gray", gt, lt, args, -1, -1, build_options);
+}
+void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int /*dcn*/)
+{
+    Size sz = src.size();
+    int scn = src.oclchannels(), depth = src.depth(), bidx;
 
-        CV_Assert(depth == CV_8U || depth == CV_16U);
+    CV_Assert(depth == CV_8U || depth == CV_16U);
 
-        switch (code)
-        {
+    switch(code)
+    {
             /*
             case CV_BGR2BGRA: case CV_RGB2BGRA: case CV_BGRA2BGR:
             case CV_RGBA2BGR: case CV_RGB2BGR: case CV_BGRA2RGBA:
@@ -140,9 +140,9 @@ namespace
         case CV_HLS2BGR: case CV_HLS2RGB: case CV_HLS2BGR_FULL: case CV_HLS2RGB_FULL:
         */
         default:
-            CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
-        }
+            CV_Error(CV_StsBadFlag, "Unknown/unsupported color conversion code");
     }
+}
 }
 
 void cv::ocl::cvtColor(const oclMat &src, oclMat &dst, int code, int dcn)

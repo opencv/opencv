@@ -59,7 +59,7 @@ PARAM_TEST_CASE(PyrUp, MatType, int)
     int type;
     int channels;
     //std::vector<cv::ocl::Info> oclinfo;
-
+    
     virtual void SetUp()
     {
         //int devnums = cv::ocl::getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
@@ -83,10 +83,10 @@ TEST_P(PyrUp, Accuracy)
         Mat cpu_dst;
         dst.download(cpu_dst);
         char s[100] = {0};
-
+        
         EXPECT_MAT_NEAR(dst_gold, cpu_dst, (src.depth() == CV_32F ? 1e-4f : 1.0), s);
     }
-
+    
 }
 
 

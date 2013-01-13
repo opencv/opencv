@@ -193,24 +193,24 @@ vector<DeviceInfo> devices(FeatureSet feature)
 vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end)
 {
     vector<MatType> v;
-
+    
     v.reserve((depth_end - depth_start + 1) * (cn_end - cn_start + 1));
-
-    for (int depth = depth_start; depth <= depth_end; ++depth)
+    
+    for(int depth = depth_start; depth <= depth_end; ++depth)
     {
-        for (int cn = cn_start; cn <= cn_end; ++cn)
+        for(int cn = cn_start; cn <= cn_end; ++cn)
         {
             v.push_back(CV_MAKETYPE(depth, cn));
         }
     }
-
+    
     return v;
 }
 
 const vector<MatType> &all_types()
 {
     static vector<MatType> v = types(CV_8U, CV_64F, 1, 4);
-
+    
     return v;
 }
 
@@ -222,12 +222,14 @@ Mat readImage(const string &fileName, int flags)
 Mat readImageType(const string &fname, int type)
 {
     Mat src = readImage(fname, CV_MAT_CN(type) == 1 ? IMREAD_GRAYSCALE : IMREAD_COLOR);
-    if (CV_MAT_CN(type) == 4)
+    
+    if(CV_MAT_CN(type) == 4)
     {
         Mat temp;
         cvtColor(src, temp, cv::COLOR_BGR2BGRA);
         swap(src, temp);
     }
+    
     src.convertTo(src, CV_MAT_DEPTH(type));
     return src;
 }
@@ -258,9 +260,13 @@ void cv::ocl::PrintTo(const DeviceInfo& info, ostream* os)
 
 void PrintTo(const Inverse &inverse, std::ostream *os)
 {
-    if (inverse)
+    if(inverse)
+    {
         (*os) << "inverse";
+    }
     else
+    {
         (*os) << "direct";
+    }
 }
 

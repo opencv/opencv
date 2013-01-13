@@ -86,6 +86,7 @@ PARAM_TEST_CASE(HOG, WinSizw48, bool)
     virtual void SetUp()
     {
         is48 = GET_PARAM(0);
+        
         if(is48)
         {
             detector = cv::ocl::HOGDescriptor::getPeopleDetector48x96();
@@ -101,61 +102,64 @@ TEST_P(HOG, Performance)
 {
     cv::Mat img = readImage(workdir + "lena.jpg", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
-
+    
     // define HOG related arguments
     float scale = 1.05f;
     //int nlevels = 13;
     int gr_threshold = 8;
     float hit_threshold = 1.4f;
     //bool hit_threshold_auto = true;
-
+    
     int win_width = is48 ? 48 : 64;
     int win_stride_width = 8;
     int win_stride_height = 8;
-
+    
     bool gamma_corr = true;
-
+    
     Size win_size(win_width, win_width * 2); //(64, 128) or (48, 96)
     Size win_stride(win_stride_width, win_stride_height);
-
+    
     cv::ocl::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9,
                                    cv::ocl::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr,
                                    cv::ocl::HOGDescriptor::DEFAULT_NLEVELS);
-
+                                   
     gpu_hog.setSVMDetector(detector);
-
+    
     double totalgputick = 0;
     double totalgputick_kernel = 0;
-
+    
     double t1 = 0;
     double t2 = 0;
+    
     for(int j = 0; j < LOOP_TIMES + 1; j ++)
     {
         t1 = (double)cvGetTickCount();//gpu start1
-
+        
         ocl::oclMat d_src(img);//upload
-
+        
         t2 = (double)cvGetTickCount(); //kernel
-
+        
         vector<Rect> found;
         gpu_hog.detectMultiScale(d_src, found, hit_threshold, win_stride,
                                  Size(0, 0), scale, gr_threshold);
-
+                                 
         t2 = (double)cvGetTickCount() - t2;//kernel
-
+        
         // no download time for HOG
-
+        
         t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+        
         if(j == 0)
+        {
             continue;
-
+        }
+        
         totalgputick = t1 + totalgputick;
-
+        
         totalgputick_kernel = t2 + totalgputick_kernel;
-
+        
     }
-
+    
     cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
 }

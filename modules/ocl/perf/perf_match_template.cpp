@@ -96,7 +96,7 @@ PARAM_TEST_CASE(MatchTemplate, cv::Size, TemplateSize, Channels, TemplateMethod)
     int cn;
     int method;
     //vector<cv::ocl::Info> oclinfo;
-
+    
     virtual void SetUp()
     {
         size = GET_PARAM(0);
@@ -115,50 +115,53 @@ TEST_P(MatchTemplate8U, Performance)
     std::cout << "Image Size: (" << size.width << ", " << size.height << ")" << std::endl;
     std::cout << "Template Size: (" << templ_size.width << ", " << templ_size.height << ")" << std::endl;
     std::cout << "Channels: " << cn << std::endl;
-
+    
     cv::Mat image = randomMat(size, CV_MAKETYPE(CV_8U, cn));
     cv::Mat templ = randomMat(templ_size, CV_MAKETYPE(CV_8U, cn));
     cv::Mat dst_gold;
     cv::ocl::oclMat dst;
-
-
-
-
-
+    
+    
+    
+    
+    
     double totalgputick = 0;
     double totalgputick_kernel = 0;
-
+    
     double t1 = 0;
     double t2 = 0;
+    
     for(int j = 0; j < LOOP_TIMES + 1; j ++)
     {
-
+    
         t1 = (double)cvGetTickCount();//gpu start1
-
+        
         cv::ocl::oclMat ocl_image = cv::ocl::oclMat(image);//upload
         cv::ocl::oclMat ocl_templ = cv::ocl::oclMat(templ);//upload
-
+        
         t2 = (double)cvGetTickCount(); //kernel
         cv::ocl::matchTemplate(ocl_image, ocl_templ, dst, method);
         t2 = (double)cvGetTickCount() - t2;//kernel
-
+        
         cv::Mat cpu_dst;
-        dst.download (cpu_dst);//download
-
+        dst.download(cpu_dst); //download
+        
         t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+        
         if(j == 0)
+        {
             continue;
-
+        }
+        
         totalgputick = t1 + totalgputick;
         totalgputick_kernel = t2 + totalgputick_kernel;
-
+        
     }
-
+    
     cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-
-
+    
+    
 }
 
 
@@ -171,46 +174,47 @@ TEST_P(MatchTemplate32F, Performance)
     std::cout << "Channels: " << cn << std::endl;
     cv::Mat image = randomMat(size, CV_MAKETYPE(CV_32F, cn));
     cv::Mat templ = randomMat(templ_size, CV_MAKETYPE(CV_32F, cn));
-
+    
     cv::Mat dst_gold;
     cv::ocl::oclMat dst;
-
-
-
-
+    
+    
+    
+    
     double totalgputick = 0;
     double totalgputick_kernel = 0;
-
+    
     double t1 = 0;
     double t2 = 0;
+    
     for(int j = 0; j < LOOP_TIMES; j ++)
     {
-
+    
         t1 = (double)cvGetTickCount();//gpu start1
-
+        
         cv::ocl::oclMat ocl_image = cv::ocl::oclMat(image);//upload
         cv::ocl::oclMat ocl_templ = cv::ocl::oclMat(templ);//upload
-
+        
         t2 = (double)cvGetTickCount(); //kernel
         cv::ocl::matchTemplate(ocl_image, ocl_templ, dst, method);
         t2 = (double)cvGetTickCount() - t2;//kernel
-
+        
         cv::Mat cpu_dst;
-        dst.download (cpu_dst);//download
-
+        dst.download(cpu_dst); //download
+        
         t1 = (double)cvGetTickCount() - t1;//gpu end1
-
+        
         totalgputick = t1 + totalgputick;
-
+        
         totalgputick_kernel = t2 + totalgputick_kernel;
-
+        
     }
-
+    
     cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-
-
-
+    
+    
+    
 }
 
 

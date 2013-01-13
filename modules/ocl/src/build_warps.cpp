@@ -66,11 +66,11 @@ void cv::ocl::buildWarpSphericalMaps(Size, Rect, const Mat &, const Mat &, float
 
 namespace cv
 {
-    namespace ocl
-    {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *build_warps;
-    }
+namespace ocl
+{
+///////////////////////////OpenCL kernel strings///////////////////////////
+extern const char *build_warps;
+}
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -102,16 +102,16 @@ void cv::ocl::buildWarpPlaneMaps(Size /*src_size*/, Rect dst_roi, const Mat &K, 
     string kernelName = "buildWarpPlaneMaps";
     vector< pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&map_x.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&map_y.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&KRT_mat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_u));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_v));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_y.step));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&scale));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&map_x.data));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&map_y.data));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&KRT_mat.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&tl_u));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&tl_v));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&map_x.cols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&map_x.rows));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&map_x.step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&map_y.step));
+    args.push_back(make_pair(sizeof(cl_float), (void *)&scale));
 
     size_t globalThreads[3] = {map_x.cols, map_x.rows, 1};
     size_t localThreads[3]  = {32, 8, 1};
@@ -142,16 +142,16 @@ void cv::ocl::buildWarpCylindricalMaps(Size /*src_size*/, Rect dst_roi, const Ma
     string kernelName = "buildWarpCylindricalMaps";
     vector< pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&map_x.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&map_y.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&KR_oclMat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_u));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_v));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_y.step));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&scale));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&map_x.data));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&map_y.data));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&KR_oclMat.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&tl_u));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&tl_v));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&map_x.cols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&map_x.rows));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&map_x.step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&map_y.step));
+    args.push_back(make_pair(sizeof(cl_float), (void *)&scale));
 
     size_t globalThreads[3] = {map_x.cols, map_x.rows, 1};
     size_t localThreads[3]  = {32, 8, 1};
@@ -181,16 +181,16 @@ void cv::ocl::buildWarpSphericalMaps(Size /*src_size*/, Rect dst_roi, const Mat 
     string kernelName = "buildWarpSphericalMaps";
     vector< pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&map_x.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&map_y.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&KR_oclMat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_u));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_v));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_y.step));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&scale));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&map_x.data));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&map_y.data));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&KR_oclMat.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&tl_u));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&tl_v));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&map_x.cols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&map_x.rows));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&map_x.step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&map_y.step));
+    args.push_back(make_pair(sizeof(cl_float), (void *)&scale));
 
     size_t globalThreads[3] = {map_x.cols, map_x.rows, 1};
     size_t localThreads[3]  = {32, 8, 1};
@@ -209,8 +209,10 @@ void cv::ocl::buildWarpAffineMaps(const Mat &M, bool inverse, Size dsize, oclMat
     float coeffs[2 * 3];
     Mat coeffsMat(2, 3, CV_32F, (void *)coeffs);
 
-    if (inverse)
+    if(inverse)
+    {
         M.convertTo(coeffsMat, coeffsMat.type());
+    }
     else
     {
         cv::Mat iM;
@@ -224,13 +226,13 @@ void cv::ocl::buildWarpAffineMaps(const Mat &M, bool inverse, Size dsize, oclMat
     string kernelName = "buildWarpAffineMaps";
     vector< pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&xmap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&ymap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&coeffsOclMat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&ymap.step));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&xmap.data));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&ymap.data));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&coeffsOclMat.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&xmap.cols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&xmap.rows));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&xmap.step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&ymap.step));
 
     size_t globalThreads[3] = {xmap.cols, xmap.rows, 1};
     size_t localThreads[3]  = {32, 8, 1};
@@ -248,8 +250,10 @@ void cv::ocl::buildWarpPerspectiveMaps(const Mat &M, bool inverse, Size dsize, o
     float coeffs[3 * 3];
     Mat coeffsMat(3, 3, CV_32F, (void *)coeffs);
 
-    if (inverse)
+    if(inverse)
+    {
         M.convertTo(coeffsMat, coeffsMat.type());
+    }
     else
     {
         cv::Mat iM;
@@ -263,13 +267,13 @@ void cv::ocl::buildWarpPerspectiveMaps(const Mat &M, bool inverse, Size dsize, o
     string kernelName = "buildWarpPerspectiveMaps";
     vector< pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&xmap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&ymap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&coeffsOclMat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&ymap.step));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&xmap.data));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&ymap.data));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&coeffsOclMat.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&xmap.cols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&xmap.rows));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&xmap.step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&ymap.step));
 
     size_t globalThreads[3] = {xmap.cols, xmap.rows, 1};
     size_t localThreads[3]  = {32, 8, 1};

@@ -55,16 +55,16 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int)
 {
     int type;
     int channels;
-
+    
     //src mat
     cv::Mat mat1;
     cv::Mat mat2;
     cv::Mat mat3;
     cv::Mat mat4;
-
+    
     //dst mat
     cv::Mat dst;
-
+    
     // set up roi
     int roicols;
     int roirows;
@@ -78,46 +78,46 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int)
     int src4y;
     int dstx;
     int dsty;
-
+    
     //src mat with roi
     cv::Mat mat1_roi;
     cv::Mat mat2_roi;
     cv::Mat mat3_roi;
     cv::Mat mat4_roi;
-
+    
     //dst mat with roi
     cv::Mat dst_roi;
     //std::vector<cv::ocl::Info> oclinfo;
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
-
+    
     //ocl mat with roi
     cv::ocl::oclMat gmat1;
     cv::ocl::oclMat gmat2;
     cv::ocl::oclMat gmat3;
     cv::ocl::oclMat gmat4;
     cv::ocl::oclMat gdst;
-
+    
     virtual void SetUp()
     {
         type = GET_PARAM(0);
         channels = GET_PARAM(1);
-
+        
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
-
+        
         mat1 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
         mat2 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
         mat3 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
         mat4 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
         dst  = randomMat(rng, size, CV_MAKETYPE(type, channels), 5, 16, false);
-
+        
         //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
         //CV_Assert(devnums > 0);
         ////if you want to use undefault device, set it here
         ////setDevice(oclinfo[0]);
     }
-
+    
     void random_roi()
     {
 #ifdef RANDOMROI
@@ -149,25 +149,25 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int)
         dstx    = 0;
         dsty    = 0;
 #endif
-
-
+        
+        
         mat1_roi = mat1(Rect(src1x, src1y, roicols, roirows));
         mat2_roi = mat2(Rect(src2x, src2y, roicols, roirows));
         mat3_roi = mat3(Rect(src3x, src3y, roicols, roirows));
         mat4_roi = mat4(Rect(src4x, src4y, roicols, roirows));
-
-
+        
+        
         dst_roi = dst(Rect(dstx, dsty, roicols, roirows));
-
+        
         gdst_whole = dst;
         gdst = gdst_whole(Rect(dstx, dsty, roicols, roirows));
-
+        
         gmat1 = mat1_roi;
         gmat2 = mat2_roi;
         gmat3 = mat3_roi;
         gmat4 = mat4_roi;
     }
-
+    
 };
 
 struct Merge : MergeTestBase {};
@@ -177,39 +177,51 @@ TEST_P(Merge, Accuracy)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-
+        
         std::vector<cv::Mat> dev_src;
         dev_src.push_back(mat1_roi);
-
+        
         if(channels >= 2)
+        {
             dev_src.push_back(mat2_roi);
-
+        }
+        
         if(channels >= 3)
+        {
             dev_src.push_back(mat3_roi);
-
+        }
+        
         if(channels >= 4)
+        {
             dev_src.push_back(mat4_roi);
-
+        }
+        
         std::vector<cv::ocl::oclMat> dev_gsrc;
         dev_gsrc.push_back(gmat1);
-
+        
         if(channels >= 2)
+        {
             dev_gsrc.push_back(gmat2);
-
+        }
+        
         if(channels >= 3)
+        {
             dev_gsrc.push_back(gmat3);
-
+        }
+        
         if(channels >= 4)
+        {
             dev_gsrc.push_back(gmat4);
-
+        }
+        
         cv::merge(dev_src, dst_roi);
         cv::ocl::merge(dev_gsrc, gdst);
-
+        
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
         char sss[1024];
         sprintf(sss, "roicols=%d,roirows=%d,src1x =%d,src1y=%d,src2x =%d,src2y=%d,src3x =%d,src3y=%d,src4x =%d,src4y=%d,dstx=%d,dsty=%d", roicols, roirows, src1x, src1y, src2x , src2y, src3x , src3y, src4x , src4y, dstx, dsty);
-
+        
         EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, sss);
     }
 }
@@ -220,16 +232,16 @@ PARAM_TEST_CASE(SplitTestBase, MatType, int)
 {
     int type;
     int channels;
-
+    
     //src mat
     cv::Mat mat;
-
+    
     //dstmat
     cv::Mat dst1;
     cv::Mat dst2;
     cv::Mat dst3;
     cv::Mat dst4;
-
+    
     // set up roi
     int roicols;
     int roirows;
@@ -243,10 +255,10 @@ PARAM_TEST_CASE(SplitTestBase, MatType, int)
     int dst3y;
     int dst4x;
     int dst4y;
-
+    
     //src mat with roi
     cv::Mat mat_roi;
-
+    
     //dst mat with roi
     cv::Mat dst1_roi;
     cv::Mat dst2_roi;
@@ -258,34 +270,34 @@ PARAM_TEST_CASE(SplitTestBase, MatType, int)
     cv::ocl::oclMat gdst2_whole;
     cv::ocl::oclMat gdst3_whole;
     cv::ocl::oclMat gdst4_whole;
-
+    
     //ocl mat with roi
     cv::ocl::oclMat gmat;
     cv::ocl::oclMat gdst1;
     cv::ocl::oclMat gdst2;
     cv::ocl::oclMat gdst3;
     cv::ocl::oclMat gdst4;
-
+    
     virtual void SetUp()
     {
         type = GET_PARAM(0);
         channels = GET_PARAM(1);
-
+        
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
-
+        
         mat  = randomMat(rng, size, CV_MAKETYPE(type, channels), 5, 16, false);
         dst1 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
         dst2 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
         dst3 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
         dst4 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
-
+        
         //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
         //CV_Assert(devnums > 0);
         ////if you want to use undefault device, set it here
         ////setDevice(oclinfo[0]);
     }
-
+    
     void random_roi()
     {
 #ifdef RANDOMROI
@@ -317,29 +329,29 @@ PARAM_TEST_CASE(SplitTestBase, MatType, int)
         dst4x   = 0;
         dst4y   = 0;
 #endif
-
+        
         mat_roi = mat(Rect(srcx, srcy, roicols, roirows));
-
+        
         dst1_roi = dst1(Rect(dst1x, dst1y, roicols, roirows));
         dst2_roi = dst2(Rect(dst2x, dst2y, roicols, roirows));
         dst3_roi = dst3(Rect(dst3x, dst3y, roicols, roirows));
         dst4_roi = dst4(Rect(dst4x, dst4y, roicols, roirows));
-
+        
         gdst1_whole = dst1;
         gdst1 = gdst1_whole(Rect(dst1x, dst1y, roicols, roirows));
-
+        
         gdst2_whole = dst2;
         gdst2 = gdst2_whole(Rect(dst2x, dst2y, roicols, roirows));
-
+        
         gdst3_whole = dst3;
         gdst3 = gdst3_whole(Rect(dst3x, dst3y, roicols, roirows));
-
+        
         gdst4_whole = dst4;
         gdst4 = gdst4_whole(Rect(dst4x, dst4y, roicols, roirows));
-
+        
         gmat = mat_roi;
     }
-
+    
 };
 
 struct Split : SplitTestBase {};
@@ -349,13 +361,13 @@ TEST_P(Split, Accuracy)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-
+        
         cv::Mat         dev_dst[4]  = {dst1_roi, dst2_roi, dst3_roi, dst4_roi};
         cv::ocl::oclMat dev_gdst[4] = {gdst1, gdst2, gdst3, gdst4};
-
+        
         cv::split(mat_roi, dev_dst);
         cv::ocl::split(gmat, dev_gdst);
-
+        
         cv::Mat cpu_dst1;
         cv::Mat cpu_dst2;
         cv::Mat cpu_dst3;
@@ -366,18 +378,26 @@ TEST_P(Split, Accuracy)
         gdst4_whole.download(cpu_dst4);
         char sss[1024];
         sprintf(sss, "roicols=%d,roirows=%d,dst1x =%d,dsty=%d,dst2x =%d,dst2y=%d,dst3x =%d,dst3y=%d,dst4x =%d,dst4y=%d,srcx=%d,srcy=%d", roicols, roirows, dst1x , dst1y, dst2x , dst2y, dst3x , dst3y, dst4x , dst4y, srcx, srcy);
-
+        
         if(channels >= 1)
+        {
             EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.0, sss);
-
+        }
+        
         if(channels >= 2)
+        {
             EXPECT_MAT_NEAR(dst2, cpu_dst2, 0.0, sss);
-
+        }
+        
         if(channels >= 3)
+        {
             EXPECT_MAT_NEAR(dst3, cpu_dst3, 0.0, sss);
-
+        }
+        
         if(channels >= 4)
+        {
             EXPECT_MAT_NEAR(dst4, cpu_dst4, 0.0, sss);
+        }
     }
 }
 

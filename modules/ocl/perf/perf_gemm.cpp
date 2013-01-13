@@ -59,7 +59,7 @@ PARAM_TEST_CASE(Gemm, int, cv::Size, int)
         type     = GET_PARAM(0);
         mat_size = GET_PARAM(1);
         flags    = GET_PARAM(2);
-
+        
         cv::ocl::getDevice(info);
     }
 };
@@ -70,37 +70,40 @@ TEST_P(Gemm, Performance)
     cv::Mat b = randomMat(mat_size, type, 0.0, 10.0);
     cv::Mat c = randomMat(mat_size, type, 0.0, 10.0);
     cv::ocl::oclMat ocl_dst;
-
+    
     double totalgputick = 0;
     double totalgputick_kernel = 0;
     double t1 = 0;
     double t2 = 0;
-
+    
     for(int j = 0; j < LOOP_TIMES + 1; j ++)
     {
-
+    
         t1 = (double)cvGetTickCount();//gpu start1
-
+        
         cv::ocl::oclMat ga = cv::ocl::oclMat(a);//upload
         cv::ocl::oclMat gb = cv::ocl::oclMat(b);//upload
         cv::ocl::oclMat gc = cv::ocl::oclMat(c);//upload
-
+        
         t2 = (double)cvGetTickCount(); //kernel
         cv::ocl::gemm(ga, gb, 1.0, gc, 1.0, ocl_dst, flags);
         t2 = (double)cvGetTickCount() - t2;//kernel
-
+        
         cv::Mat cpu_dst;
-        ocl_dst.download (cpu_dst);//download
-
+        ocl_dst.download(cpu_dst); //download
+        
         t1 = (double)cvGetTickCount() - t1;//gpu end
-
+        
         if(j == 0)
+        {
             continue;
-
+        }
+        
         totalgputick = t1 + totalgputick;
         totalgputick_kernel = t2 + totalgputick_kernel;
-
+        
     }
+    
     cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
 }

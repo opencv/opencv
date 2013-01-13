@@ -57,7 +57,7 @@ PARAM_TEST_CASE(Canny, AppertureSize, L2gradient)
 {
     int apperture_size;
     bool useL2gradient;
-
+    
     cv::Mat edges_gold;
     //std::vector<cv::ocl::Info> oclinfo;
     virtual void SetUp()
@@ -73,22 +73,22 @@ TEST_P(Canny, Accuracy)
 {
     cv::Mat img = readImage(workdir + "fruits.jpg", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
-
+    
     double low_thresh = 50.0;
     double high_thresh = 100.0;
-
+    
     cv::resize(img, img, cv::Size(512, 384));
     cv::ocl::oclMat ocl_img = cv::ocl::oclMat(img);
-
+    
     cv::ocl::oclMat edges;
     cv::ocl::Canny(ocl_img, edges, low_thresh, high_thresh, apperture_size, useL2gradient);
-
+    
     char filename [100];
     sprintf(filename, "G:/Valve_edges_a%d_L2Grad%d.jpg", apperture_size, (int)useL2gradient);
-
+    
     cv::Mat edges_gold;
     cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, useL2gradient);
-
+    
 #if SHOW_RESULT
     cv::Mat edges_x2, ocl_edges(edges);
     edges_x2.create(edges.rows, edges.cols * 2, edges.type());
