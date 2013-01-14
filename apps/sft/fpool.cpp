@@ -129,9 +129,11 @@ void sft::ICFFeaturePool::fill(int desired)
         if (std::find(pool.begin(), pool.end(),f) == pool.end())
         {
             pool.push_back(f);
-            std::cout << f << std::endl;
+            dprintf(".");
         }
     }
+
+    dprintf("\n");
 }
 
 std::ostream& sft::operator<<(std::ostream& out, const sft::ICF& m)
@@ -244,7 +246,7 @@ ScaledDataset::ScaledDataset(const string& path, const int oct)
 
     dprintf("%s\n", "Negatives globbing...");
 #if !defined (_WIN32) && ! defined(__MINGW32__)
-    glob(path + "/neg/octave_" + itoa(oct) + "/*.png", neg);
+    glob(path + "/neg/octave_" + itoa(oct) + "/*.jpg", neg);
 #else
     glob(path + "/neg/octave_" + itoa(oct),     "png", neg);
 #endif

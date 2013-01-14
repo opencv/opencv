@@ -45,31 +45,66 @@
 
 #include "test_precomp.hpp"
 
+// show detection results on input image with cv::imshow
+#define SHOW_DETECTIONS
+
+#if defined SHOW_DETECTIONS
+# define SHOW(res)           \
+    cv::imshow(#res, res);\
+    cv::waitKey(30);
+#else
+# define SHOW(res)
+#endif
+
 TEST(SCascade, readCascade)
 {
-    std::string xml = cvtest::TS::ptr()->get_data_path() + "softcascade/soft-cascade-17.12.2012.xml";
+    std::string xml = "/home/kellan/cs-caltech-13.01.2013/caltech-octave_-1.xml";//cvtest::TS::ptr()->get_data_path() + "softcascade/soft-cascade-17.12.2012.xml";
     cv::SCascade cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 }
 
-TEST(SCascade, detect)
-{
-    typedef cv::SCascade::Detection Detection;
-    std::string xml =  cvtest::TS::ptr()->get_data_path() + "softcascade/soft-cascade-17.12.2012.xml";
-    cv::SCascade cascade;
-    cv::FileStorage fs(xml, cv::FileStorage::READ);
-    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+// TEST(SCascade, detect)
+// {
+//     typedef cv::SCascade::Detection Detection;
+//     std::string xml =  cvtest::TS::ptr()->get_data_path() + "softcascade/soft-cascade-17.12.2012.xml";// "/home/kellan/cs-caltech-13.01.2013/caltech-octave_-1.xml";//cvtest::TS::ptr()->get_data_path() + "softcascade/soft-cascade-17.12.2012.xml";
+//     cv::SCascade cascade;
+//     cv::FileStorage fs(xml, cv::FileStorage::READ);
+//     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path() + "softcascade/bahnhof/image_00000000_0.png");
-    ASSERT_FALSE(colored.empty());
+//     cv::VideoCapture capture("/home/kellan/datasets/caltech/set00/V009.seq/I0%4d.jpg");
+//     ASSERT_TRUE(capture.isOpened());
 
-    std::vector<Detection> objects;
-    cascade.detect(colored, cv::noArray(), objects);
+//     for (;;)
+//     {
 
-    ASSERT_EQ(823, (int)objects.size());
-}
+//         cv::Mat frame;
+//         if (!capture.read(frame))
+//         {
+//             std::cout << "Nothing to read. " << std::endl << std::flush;
+//             return;
+//         }
+
+//         cv::Mat colored;
+//         frame.copyTo(colored);
+//         ASSERT_FALSE(colored.empty());
+
+//         std::vector<Detection> objects;
+//         cascade.detect(colored, cv::noArray(), objects);
+
+//         for (int i = 0; i  < (int)objects.size(); ++i)
+//         {
+//             Detection d = objects[i];
+//             cv::rectangle(colored, cv::Rect(d.bb.x, d.bb.y, d.bb.width, d.bb.height), cv::Scalar(255, 0, 0, 255), 1);
+//         }
+
+//         SHOW(colored)
+
+//         // ASSERT_EQ(823, (int)objects.size());
+//     }
+//     // cv::Mat colored = //cv::imread(cvtest::TS::ptr()->get_data_path() + "softcascade/bahnhof/image_00000000_0.png");
+// }
 
 TEST(SCascade, detectSeparate)
 {
