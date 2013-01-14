@@ -101,7 +101,7 @@ struct Feature
         if (useBoxes)
             rect = cv::Rect(x, y, w, h);
         else
-            rect = cv::Rect(x, y, w + x, h + x);
+            rect = cv::Rect(x, y, w + x, h + y);
 
         // 1 / area
         rarea = 1.f / ((rect.width - rect.x) * (rect.height - rect.y));
