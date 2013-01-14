@@ -148,7 +148,7 @@ if __name__ == "__main__":
     opath = os.path.join(options.output, datetime.now().strftime("raw_ge64_cr_mirr_ts" + "-%Y-%m-%d-%H-%M-%S"))
     os.mkdir(opath)
 
-    gl = glob.iglob( os.path.join(options.input, "set[0-1][0-5]/V0[0-9][0-9].txt"))
+    gl = glob.iglob( os.path.join(options.input, "set[0][0]/V0[0-9][0-9].txt"))
     for each in gl:
         path, ext = os.path.splitext(each)
         path = path + ".seq"
