@@ -28,6 +28,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 
     @Override
     protected void setUp() throws Exception {
+        super.setUp();
         extractor = DescriptorExtractor.create(DescriptorExtractor.SIFT);
         keypoint = new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1);
         matSize = 100;
@@ -44,8 +45,6 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
                    );
             }
         };
-
-        super.setUp();
     }
 
     public void testComputeListOfMatListOfListOfKeyPointListOfMat() {
@@ -88,7 +87,9 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
         extractor.write(filename);
 
         String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<name>Feature2D.SIFT</name>\n<contrastThreshold>4.0000000000000001e-02</contrastThreshold>\n<edgeThreshold>10.</edgeThreshold>\n<nFeatures>0</nFeatures>\n<nOctaveLayers>3</nOctaveLayers>\n<sigma>1.6000000000000001e+00</sigma>\n</opencv_storage>\n";
-        assertEquals(truth, readFile(filename));
+        String actual = readFile(filename);
+        actual = actual.replaceAll("e([+-])0(\\d\\d)", "e$1$2"); // NOTE: workaround for different platforms double representation
+        assertEquals(truth, actual);
     }
 
     public void testWriteYml() {
@@ -97,7 +98,9 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
         extractor.write(filename);
 
         String truth = "%YAML:1.0\nname: \"Feature2D.SIFT\"\ncontrastThreshold: 4.0000000000000001e-02\nedgeThreshold: 10.\nnFeatures: 0\nnOctaveLayers: 3\nsigma: 1.6000000000000001e+00\n";
-        assertEquals(truth, readFile(filename));
+        String actual = readFile(filename);
+        actual = actual.replaceAll("e([+-])0(\\d\\d)", "e$1$2"); // NOTE: workaround for different platforms double representation
+        assertEquals(truth, actual);
     }
 
 }
