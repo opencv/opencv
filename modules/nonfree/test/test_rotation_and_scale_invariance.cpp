@@ -682,7 +682,7 @@ TEST(Features2d_RotationInvariance2_Detector_SURF, regression)
 
     surf(cross, noArray(), keypoints);
 
-    ASSERT_EQ(keypoints.size(), 5);
+    ASSERT_EQ(keypoints.size(), (vector<KeyPoint>::size_type) 5);
     ASSERT_LT( fabs(keypoints[1].response - keypoints[2].response), 1e-6);
     ASSERT_LT( fabs(keypoints[1].response - keypoints[3].response), 1e-6);
     ASSERT_LT( fabs(keypoints[1].response - keypoints[4].response), 1e-6);
