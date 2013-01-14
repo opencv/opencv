@@ -668,3 +668,22 @@ TEST(Features2d_ScaleInvariance_Descriptor_SIFT, regression)
                                        0.87f);
     test.safe_run();
 }
+
+
+TEST(Features2d_RotationInvariance2_Detector_SURF, regression)
+{
+    Mat cross(100, 100, CV_8UC1, Scalar(255));
+    line(cross, Point(30, 50), Point(69, 50), Scalar(100), 3);
+    line(cross, Point(50, 30), Point(50, 69), Scalar(100), 3);
+
+    SURF surf(8000., 3, 4, true, false);
+
+    vector<KeyPoint> keypoints;
+
+    surf(cross, noArray(), keypoints);
+
+    ASSERT_EQ(keypoints.size(), 5);
+    ASSERT_LT( fabs(keypoints[1].response - keypoints[2].response), 1e-6);
+    ASSERT_LT( fabs(keypoints[1].response - keypoints[3].response), 1e-6);
+    ASSERT_LT( fabs(keypoints[1].response - keypoints[4].response), 1e-6);
+}
