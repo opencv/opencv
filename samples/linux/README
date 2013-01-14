@@ -1,0 +1,12 @@
+Description:
+The script creates the necessary CMakeLists.txt file needed for cmake configuration. Next to that, it makes a new directory called 'build' and puts there all the files produced after cmake. Then it compiles the filename.cpp and finally copies the executable file back to the original directory. So, that's an easy way for starters with OpenCV to build and run their "hello OpenCV" applications using gcc and CMake.
+
+Usage: ./cvmake.sh filename.cpp
+
+for example: $ ./cmvmake.sh displayname.cpp
+
+then run displayname using lena's image
+
+for example: $ ./displayimage lena.jpg 
+
+more info: http://docs.opencv.org/doc/tutorials/introduction/linux_gcc_cmake/linux_gcc_cmake.html#linux-gcc-usage
