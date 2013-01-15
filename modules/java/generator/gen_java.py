@@ -1243,6 +1243,10 @@ extern "C" {
                     jni_name = "&%(n)s"
                 else:
                     jni_name = "%(n)s"
+                    if not a.out and not "jni_var" in type_dict[a.ctype]:
+                        # explicit cast to C type to avoid ambiguous call error on platforms (mingw)
+                        # where jni types are different from native types (e.g. jint is not the same as int)
+                        jni_name  = "(%s)%s" % (a.ctype, jni_name)
                 if not a.ctype: # hidden
                     jni_name = a.defval
                 cvargs.append( type_dict[a.ctype].get("jni_name", jni_name) % {"n" : a.name})
@@ -1267,8 +1271,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         LOGD("$module::$fname()");
         $prologue
         $retval$cvname( $cvargs );
-        $epilogue
-        $ret
+        $epilogue$ret
     } catch(cv::Exception e) {
         LOGD("$module::$fname() catched cv::Exception: %s", e.what());
         jclass je = env->FindClass("org/opencv/core/CvException");
@@ -1292,7 +1295,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         args  = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
         argst = ", ".join([type_dict[a.ctype].get("jni_type") for a in jni_args]), \
         prologue = "\n        ".join(c_prologue), \
-        epilogue = "  ".join(c_epilogue), \
+        epilogue = "  ".join(c_epilogue) + ("\n        " if c_epilogue else ""), \
         ret = ret, \
         cvname = cvname, \
         cvargs = ", ".join(cvargs), \

@@ -208,7 +208,7 @@ Retina::getMagno
 Retina::getParameters
 +++++++++++++++++++++
 
-.. ocv:function:: Retina::RetinaParameters Retina::getParameters()
+.. ocv:function:: struct Retina::RetinaParameters Retina::getParameters()
 
     Retrieve the current parameters values in a *Retina::RetinaParameters* structure
 

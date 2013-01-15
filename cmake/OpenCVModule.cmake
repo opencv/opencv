@@ -164,6 +164,9 @@ macro(ocv_module_disable module)
   set(HAVE_${__modname} OFF CACHE INTERNAL "Module ${__modname} can not be built in current configuration")
   set(OPENCV_MODULE_${__modname}_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "Location of ${__modname} module sources")
   set(OPENCV_MODULES_DISABLED_FORCE "${OPENCV_MODULES_DISABLED_FORCE}" CACHE INTERNAL "List of OpenCV modules which can not be build in current configuration")
+  if(BUILD_${__modname})
+    # touch variable controlling build of the module to suppress "unused variable" CMake warning
+  endif()
   unset(__modname)
   return() # leave the current folder
 endmacro()
