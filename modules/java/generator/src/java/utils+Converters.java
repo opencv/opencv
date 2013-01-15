@@ -262,7 +262,7 @@ public class Converters {
         int[] buff = new int[count * 2];
         m.get(0, 0, buff);
         for (int i = 0; i < count; i++) {
-            long addr = (((long) buff[i * 2]) << 32) | ((long) buff[i * 2 + 1]);
+            long addr = (((long) buff[i * 2]) << 32) | (((long) buff[i * 2 + 1]) & 0xffffffffL);
             mats.add(new Mat(addr));
         }
     }
