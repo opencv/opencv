@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_HPP__
-#define __OPENCV_GPU_HPP__
+#ifndef __OPENCV_OCL_HPP__
+#define __OPENCV_OCL_HPP__
 
 #include <memory>
 #include <vector>
