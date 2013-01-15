@@ -69,6 +69,7 @@ if __name__ == "__main__":
         groupName = next(c for c in cases if c).shortName()
         if groupName != prevGroupName:
             if prevGroupName != None:
+                suit_time = suit_time/60 #from seconds to minutes
                 testsuits.append({'name': prevGroupName, 'time': suit_time, \
                     'num': suit_num, 'failed': fails_num})
                 overall_time += suit_time
@@ -97,7 +98,7 @@ if __name__ == "__main__":
 
     # header
     tbl.newColumn('name', 'Testsuit', align = 'left', cssclass = 'col_name')
-    tbl.newColumn('time', 'Time (s)', align = 'center', cssclass = 'col_name')
+    tbl.newColumn('time', 'Time (min)', align = 'center', cssclass = 'col_name')
     tbl.newColumn('num', 'Num of tests', align = 'center', cssclass = 'col_name')
     tbl.newColumn('failed', 'Failed', align = 'center', cssclass = 'col_name')
 
@@ -123,6 +124,6 @@ if __name__ == "__main__":
 
         splitter = 15 * '*'
         print '\n%s\n  %s\n%s\n' % (splitter, module_name, splitter)
-        print 'Overall time: %f\n' % overall_time
+        print 'Overall time: %.2f min\n' % overall_time
         tbl.consolePrintTable(sys.stdout)
         print 4 * '\n'
