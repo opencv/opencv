@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Jia Haipeng, jiahaipeng95@gmail.com
+//    Dachuan Zhao, dachuan@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -260,3 +261,22 @@ __kernel void arithm_mul_D6 (__global double *src1, int src1_step, int src1_offs
     }
 }
 #endif
+
+__kernel void arithm_muls_D5 (__global float *src1, int src1_step, int src1_offset,
+                             __global float *dst,  int dst_step,  int dst_offset,
+                             int rows, int cols, int dst_step1, float scalar)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < cols && y < rows)
+    {
+        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset);
+        int dst_index  = mad24(y, dst_step,  (x << 2) + dst_offset);
+
+        float data1 = *((__global float *)((__global char *)src1 + src1_index));
+        float tmp = data1 * scalar;
+
+        *((__global float *)((__global char *)dst + dst_index)) = tmp;
+    }
+}

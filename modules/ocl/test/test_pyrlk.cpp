@@ -118,9 +118,9 @@ TEST_P(Sparse, Mat)
     cv::Mat status_mat(1, d_status.cols, CV_8UC1, (void *)&status[0]);
     d_status.download(status_mat);
 
-    //std::vector<float> err(d_err.cols);
-    //cv::Mat err_mat(1, d_err.cols, CV_32FC1, (void*)&err[0]);
-    //d_err.download(err_mat);
+    std::vector<float> err(d_err.cols);
+    cv::Mat err_mat(1, d_err.cols, CV_32FC1, (void*)&err[0]);
+    d_err.download(err_mat);
 
     std::vector<cv::Point2f> nextPts_gold;
     std::vector<unsigned char> status_gold;
@@ -153,9 +153,9 @@ TEST_P(Sparse, Mat)
         }
     }
 
-    double bad_ratio = static_cast<double>(mistmatch) / (nextPts.size() * 2);
+    double bad_ratio = static_cast<double>(mistmatch) / (nextPts.size());
 
-    ASSERT_LE(bad_ratio, 0.05f);
+    ASSERT_LE(bad_ratio, 0.02f);
 
 }
 
