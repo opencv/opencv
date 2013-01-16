@@ -63,13 +63,13 @@ using namespace std;
 
 namespace cv
 {
-    namespace ocl
-    {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *haarobjectdetect;
-        extern const char *haarobjectdetectbackup;
-        extern const char *haarobjectdetect_scaled2;
-    }
+namespace ocl
+{
+///////////////////////////OpenCL kernel strings///////////////////////////
+extern const char *haarobjectdetect;
+extern const char *haarobjectdetectbackup;
+extern const char *haarobjectdetect_scaled2;
+}
 }
 
 /* these settings affect the quality of detection: change with care */
@@ -883,13 +883,6 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
     bool findBiggestObject = (flags & CV_HAAR_FIND_BIGGEST_OBJECT) != 0;
     //    bool roughSearch = (flags & CV_HAAR_DO_ROUGH_SEARCH) != 0;
 
-    //the Intel HD Graphics is unsupported
-    if (gimg.clCxt->impl->devName.find("Intel(R) HD Graphics") != string::npos)
-    {
-        cout << " Intel HD GPU device unsupported " << endl;
-        return NULL;
-    }
-
     //double t = 0;
     if( maxSize.height == 0 || maxSize.width == 0 )
     {
@@ -937,7 +930,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
     if( gimg.cols < minSize.width || gimg.rows < minSize.height )
         CV_Error(CV_StsError, "Image too small");
 
-    if( flags & CV_HAAR_SCALE_IMAGE )
+    if( (flags & CV_HAAR_SCALE_IMAGE) && gimg.clCxt->impl->devName.find("Intel(R) HD Graphics") == string::npos )
     {
         CvSize winSize0 = cascade->orig_window_size;
         //float scalefactor = 1.1f;
@@ -2170,41 +2163,41 @@ CvType haar_type( CV_TYPE_NAME_HAAR, gpuIsHaarClassifier,
 namespace cv
 {
 
-    HaarClassifierCascade::HaarClassifierCascade() {}
-    HaarClassifierCascade::HaarClassifierCascade(const String &filename)
-    {
-        load(filename);
-    }
+HaarClassifierCascade::HaarClassifierCascade() {}
+HaarClassifierCascade::HaarClassifierCascade(const String &filename)
+{
+    load(filename);
+}
 
-    bool HaarClassifierCascade::load(const String &filename)
-    {
-        cascade = Ptr<CvHaarClassifierCascade>((CvHaarClassifierCascade *)cvLoad(filename.c_str(), 0, 0, 0));
-        return (CvHaarClassifierCascade *)cascade != 0;
-    }
+bool HaarClassifierCascade::load(const String &filename)
+{
+    cascade = Ptr<CvHaarClassifierCascade>((CvHaarClassifierCascade *)cvLoad(filename.c_str(), 0, 0, 0));
+    return (CvHaarClassifierCascade *)cascade != 0;
+}
 
-    void HaarClassifierCascade::detectMultiScale( const Mat &image,
-            Vector<Rect> &objects, double scaleFactor,
-            int minNeighbors, int flags,
-            Size minSize )
-    {
-        MemStorage storage(cvCreateMemStorage(0));
-        CvMat _image = image;
-        CvSeq *_objects = gpuHaarDetectObjects( &_image, cascade, storage, scaleFactor,
-                                                minNeighbors, flags, minSize );
-        Seq<Rect>(_objects).copyTo(objects);
-    }
+void HaarClassifierCascade::detectMultiScale( const Mat &image,
+        Vector<Rect> &objects, double scaleFactor,
+        int minNeighbors, int flags,
+        Size minSize )
+{
+    MemStorage storage(cvCreateMemStorage(0));
+    CvMat _image = image;
+    CvSeq *_objects = gpuHaarDetectObjects( &_image, cascade, storage, scaleFactor,
+                                            minNeighbors, flags, minSize );
+    Seq<Rect>(_objects).copyTo(objects);
+}
 
-    int HaarClassifierCascade::runAt(Point pt, int startStage, int) const
-    {
-        return gpuRunHaarClassifierCascade(cascade, pt, startStage);
-    }
+int HaarClassifierCascade::runAt(Point pt, int startStage, int) const
+{
+    return gpuRunHaarClassifierCascade(cascade, pt, startStage);
+}
 
-    void HaarClassifierCascade::setImages( const Mat &sum, const Mat &sqsum,
-                                           const Mat &tilted, double scale )
-    {
-        CvMat _sum = sum, _sqsum = sqsum, _tilted = tilted;
-        gpuSetImagesForHaarClassifierCascade( cascade, &_sum, &_sqsum, &_tilted, scale );
-    }
+void HaarClassifierCascade::setImages( const Mat &sum, const Mat &sqsum,
+                                       const Mat &tilted, double scale )
+{
+    CvMat _sum = sum, _sqsum = sqsum, _tilted = tilted;
+    gpuSetImagesForHaarClassifierCascade( cascade, &_sum, &_sqsum, &_tilted, scale );
+}
 
 }
 #endif
@@ -2579,116 +2572,116 @@ CvPoint pt, int start_stage */)
 
 namespace cv
 {
-    namespace ocl
+namespace ocl
+{
+
+struct gpuHaarDetectObjects_ScaleImage_Invoker
+{
+    gpuHaarDetectObjects_ScaleImage_Invoker( const CvHaarClassifierCascade *_cascade,
+            int _stripSize, double _factor,
+            const Mat &_sum1, const Mat &_sqsum1, Mat *_norm1,
+            Mat *_mask1, Rect _equRect, ConcurrentRectVector &_vec )
     {
+        cascade = _cascade;
+        stripSize = _stripSize;
+        factor = _factor;
+        sum1 = _sum1;
+        sqsum1 = _sqsum1;
+        norm1 = _norm1;
+        mask1 = _mask1;
+        equRect = _equRect;
+        vec = &_vec;
+    }
 
-        struct gpuHaarDetectObjects_ScaleImage_Invoker
+    void operator()( const BlockedRange &range ) const
+    {
+        Size winSize0 = cascade->orig_window_size;
+        Size winSize(cvRound(winSize0.width * factor), cvRound(winSize0.height * factor));
+        int y1 = range.begin() * stripSize, y2 = min(range.end() * stripSize, sum1.rows - 1 - winSize0.height);
+        Size ssz(sum1.cols - 1 - winSize0.width, y2 - y1);
+        int x, y, ystep = factor > 2 ? 1 : 2;
+
+        for( y = y1; y < y2; y += ystep )
+            for( x = 0; x < ssz.width; x += ystep )
+            {
+                if( gpuRunHaarClassifierCascade( /*cascade, cvPoint(x, y), 0*/ ) > 0 )
+                    vec->push_back(Rect(cvRound(x * factor), cvRound(y * factor),
+                                        winSize.width, winSize.height));
+            }
+    }
+
+    const CvHaarClassifierCascade *cascade;
+    int stripSize;
+    double factor;
+    Mat sum1, sqsum1, *norm1, *mask1;
+    Rect equRect;
+    ConcurrentRectVector *vec;
+};
+
+
+struct gpuHaarDetectObjects_ScaleCascade_Invoker
+{
+    gpuHaarDetectObjects_ScaleCascade_Invoker( const CvHaarClassifierCascade *_cascade,
+            Size _winsize, const Range &_xrange, double _ystep,
+            size_t _sumstep, const int **_p, const int **_pq,
+            ConcurrentRectVector &_vec )
+    {
+        cascade = _cascade;
+        winsize = _winsize;
+        xrange = _xrange;
+        ystep = _ystep;
+        sumstep = _sumstep;
+        p = _p;
+        pq = _pq;
+        vec = &_vec;
+    }
+
+    void operator()( const BlockedRange &range ) const
+    {
+        int iy, startY = range.begin(), endY = range.end();
+        const int *p0 = p[0], *p1 = p[1], *p2 = p[2], *p3 = p[3];
+        const int *pq0 = pq[0], *pq1 = pq[1], *pq2 = pq[2], *pq3 = pq[3];
+        bool doCannyPruning = p0 != 0;
+        int sstep = (int)(sumstep / sizeof(p0[0]));
+
+        for( iy = startY; iy < endY; iy++ )
         {
-            gpuHaarDetectObjects_ScaleImage_Invoker( const CvHaarClassifierCascade *_cascade,
-                    int _stripSize, double _factor,
-                    const Mat &_sum1, const Mat &_sqsum1, Mat *_norm1,
-                    Mat *_mask1, Rect _equRect, ConcurrentRectVector &_vec )
+            int ix, y = cvRound(iy * ystep), ixstep = 1;
+            for( ix = xrange.start; ix < xrange.end; ix += ixstep )
             {
-                cascade = _cascade;
-                stripSize = _stripSize;
-                factor = _factor;
-                sum1 = _sum1;
-                sqsum1 = _sqsum1;
-                norm1 = _norm1;
-                mask1 = _mask1;
-                equRect = _equRect;
-                vec = &_vec;
-            }
+                int x = cvRound(ix * ystep); // it should really be ystep, not ixstep
 
-            void operator()( const BlockedRange &range ) const
-            {
-                Size winSize0 = cascade->orig_window_size;
-                Size winSize(cvRound(winSize0.width * factor), cvRound(winSize0.height * factor));
-                int y1 = range.begin() * stripSize, y2 = min(range.end() * stripSize, sum1.rows - 1 - winSize0.height);
-                Size ssz(sum1.cols - 1 - winSize0.width, y2 - y1);
-                int x, y, ystep = factor > 2 ? 1 : 2;
-
-                for( y = y1; y < y2; y += ystep )
-                    for( x = 0; x < ssz.width; x += ystep )
-                    {
-                        if( gpuRunHaarClassifierCascade( /*cascade, cvPoint(x, y), 0*/ ) > 0 )
-                            vec->push_back(Rect(cvRound(x * factor), cvRound(y * factor),
-                                                winSize.width, winSize.height));
-                    }
-            }
-
-            const CvHaarClassifierCascade *cascade;
-            int stripSize;
-            double factor;
-            Mat sum1, sqsum1, *norm1, *mask1;
-            Rect equRect;
-            ConcurrentRectVector *vec;
-        };
-
-
-        struct gpuHaarDetectObjects_ScaleCascade_Invoker
-        {
-            gpuHaarDetectObjects_ScaleCascade_Invoker( const CvHaarClassifierCascade *_cascade,
-                    Size _winsize, const Range &_xrange, double _ystep,
-                    size_t _sumstep, const int **_p, const int **_pq,
-                    ConcurrentRectVector &_vec )
-            {
-                cascade = _cascade;
-                winsize = _winsize;
-                xrange = _xrange;
-                ystep = _ystep;
-                sumstep = _sumstep;
-                p = _p;
-                pq = _pq;
-                vec = &_vec;
-            }
-
-            void operator()( const BlockedRange &range ) const
-            {
-                int iy, startY = range.begin(), endY = range.end();
-                const int *p0 = p[0], *p1 = p[1], *p2 = p[2], *p3 = p[3];
-                const int *pq0 = pq[0], *pq1 = pq[1], *pq2 = pq[2], *pq3 = pq[3];
-                bool doCannyPruning = p0 != 0;
-                int sstep = (int)(sumstep / sizeof(p0[0]));
-
-                for( iy = startY; iy < endY; iy++ )
+                if( doCannyPruning )
                 {
-                    int ix, y = cvRound(iy * ystep), ixstep = 1;
-                    for( ix = xrange.start; ix < xrange.end; ix += ixstep )
+                    int offset = y * sstep + x;
+                    int s = p0[offset] - p1[offset] - p2[offset] + p3[offset];
+                    int sq = pq0[offset] - pq1[offset] - pq2[offset] + pq3[offset];
+                    if( s < 100 || sq < 20 )
                     {
-                        int x = cvRound(ix * ystep); // it should really be ystep, not ixstep
-
-                        if( doCannyPruning )
-                        {
-                            int offset = y * sstep + x;
-                            int s = p0[offset] - p1[offset] - p2[offset] + p3[offset];
-                            int sq = pq0[offset] - pq1[offset] - pq2[offset] + pq3[offset];
-                            if( s < 100 || sq < 20 )
-                            {
-                                ixstep = 2;
-                                continue;
-                            }
-                        }
-
-                        int result = gpuRunHaarClassifierCascade(/* cascade, cvPoint(x, y), 0 */);
-                        if( result > 0 )
-                            vec->push_back(Rect(x, y, winsize.width, winsize.height));
-                        ixstep = result != 0 ? 1 : 2;
+                        ixstep = 2;
+                        continue;
                     }
                 }
+
+                int result = gpuRunHaarClassifierCascade(/* cascade, cvPoint(x, y), 0 */);
+                if( result > 0 )
+                    vec->push_back(Rect(x, y, winsize.width, winsize.height));
+                ixstep = result != 0 ? 1 : 2;
             }
-
-            const CvHaarClassifierCascade *cascade;
-            double ystep;
-            size_t sumstep;
-            Size winsize;
-            Range xrange;
-            const int **p;
-            const int **pq;
-            ConcurrentRectVector *vec;
-        };
-
+        }
     }
+
+    const CvHaarClassifierCascade *cascade;
+    double ystep;
+    size_t sumstep;
+    Size winsize;
+    Range xrange;
+    const int **p;
+    const int **pq;
+    ConcurrentRectVector *vec;
+};
+
+}
 }
 
 /*
