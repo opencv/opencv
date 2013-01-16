@@ -3,11 +3,11 @@ Designing controls for the buttonbar (Mode: WITH_QT)
 
 In previous versions of OpenCV you can see a fixed number of controls inside a buttonbar. Let us call these controls standard controls. Each version of OpenCV, which was compiled with an activated option WITH_QT delivers a buttonbar like the following:
 
-.. image:: images/Standard_Buttonbar.png
+.. image:: pics/Standard_Buttonbar.png
      :alt: standard buttonbar
      :align: center 
 
-Each of these standard controls is of type QAction and contains an icon as you can see in the image above.
+Each of these standard controls is of type QAction and contains an icon as you can see in the image above. The last icon for the properties window is greyed out if there is nothing in the source code using it.
 
 Starting with OpenCV 2.4.4 you can compose a buttonbar yourself and this is done by an interpreted \*.cfg file. This file is based on XML-Format and contains a complete description for buttonbars of several OpenCV windows.
 Compared with the former standard buttonbar you are free to set a new order inside the buttonbar and - more important - you can add controls which can communicate with a self written application. One example for this purpose is the example application buttonsqt.cpp.  
@@ -35,6 +35,7 @@ The command $Zoom generates the first 4 icons of the former standard buttonbar. 
 
    <Wnd1>
       "clusters"
+      "CV_WINDOW_NORMAL 25,50 700*600"
       "#$Zoom"
       "#$Panning"
       "$SaveImg"
@@ -42,11 +43,14 @@ The command $Zoom generates the first 4 icons of the former standard buttonbar. 
    </Wnd1>
 
 You can use the comment char # to deactivate some of standard controls programmed inside /modules/highgui/src/window_QT.cpp.  In this case only two standard controls (and nothing else) would remain active.
+Additonal you can define for each window it's initial mode,position and size. With a line like "CV_WINDOW_NORMAL 25,50 700*600" the window mode is possibly changed away from "AUTOSIZE" to predefined values. 
+In this case we have defined an window offset x=25,y=50 and a window size of 700*600 Pixel.
+
 Please try to make a \*.cfg for the delaunay executable and test it with activated/decactivated lines inside <Wnd1></Wnd1>.
 
 Let us now have a look on an example with user interaction by buttons additional to keystrokes. You find the complete source code of this example in /samples/cpp/buttonsqt.cpp
 
-The executable of the example ist called buttonsqt and so we need a file buttonsqt.cfg :
+The executable of the example ist called buttonsqt and so we need a file buttonsqt.cfg which you can find in /samples/cpp like the source code:
 
 .. code-block:: xml
 
@@ -102,7 +106,7 @@ The executable of the example ist called buttonsqt and so we need a file buttons
     </Wnd2>
 
     <Wnd3>
-  "Dummy"
+	"Dummy"
 	"$Zoom"
 	"$Panning"
 	"$SaveImg"
@@ -152,7 +156,7 @@ All controls of type QAction appear as contex menue by pressing the right mouse 
 
 The buttonbar we composed inside  <Wnd1></Wnd1> looks in this way:
 
-.. image:: images/Buttonbar_ColorImg.png
+.. image:: pics/Buttonbar_ColorImg.png
      :alt: buttonbar of window ColorImg
      :align: center 
 
@@ -246,7 +250,7 @@ But keep in mind $SaveImg to be a command (generating the floppy disk icon ) and
 
 Let us now have a look on the lines between <Wnd2></Wnd2> adressing window "Saturation".
 
-.. image:: images/Buttonbar_Saturation.png
+.. image:: pics/Buttonbar_Saturation.png
      :alt: buttonbar of window Saturation
      :align: center 
 
@@ -267,14 +271,8 @@ A modification of it is given by the line
 In this case we get a dual state button similar to QCheckBox but with different look and feel.
 
 Finaly we get a QLineEdit control by using:
-"$Edit E1 QLineEdit Field ; w270 left"
+"$Edit E1 QLineEdit ; w270 left"
  
-
-The buttonbar we composed inside  <Wnd2></Wnd2> looks in this way:
-
-.. image:: images/Buttonbar_Saturation.png
-     :alt: buttonbar of window Saturation
-     :align: center 
 
 
 
