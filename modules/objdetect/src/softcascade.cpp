@@ -524,7 +524,7 @@ void cv::SCascade::detect(cv::InputArray _image, cv::InputArray _rois, std::vect
 
     objects.clear();
 
-    if (_rois.kind() == cv::_InputArray::NONE)
+    if (_rois.empty())
         return detectNoRoi(image, objects);
 
     int shr = fld.shrinkage;
@@ -576,7 +576,7 @@ void cv::SCascade::detect(InputArray _image, InputArray _rois,  OutputArray _rec
 
     _confs.create(1, objects.size(), CV_32F);
     cv::Mat confs = _confs.getMat();
-    float* confPtr = rects.ptr<float>(0);
+    float* confPtr = confs.ptr<float>(0);
 
     typedef std::vector<Detection>::const_iterator IDet;
 
