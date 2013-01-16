@@ -11,6 +11,7 @@ It provides easy interface to:
 * Add trackbars to the windows, handle simple mouse events as well as keyboard commands.
 * Read and write images to/from disk or memory.
 * Read video from camera or file and write video to a file.
+* Configure a buttonbar and use it with your own application.
 
 .. toctree::
     :maxdepth: 2
@@ -18,3 +19,4 @@ It provides easy interface to:
     user_interface
     reading_and_writing_images_and_video
     qt_new_functions
+    buttonbar_controls
