@@ -68,6 +68,8 @@ public:
 protected:
     virtual void computeReprojError( const CvMat* m1, const CvMat* m2,
                                      const CvMat* model, CvMat* error );
+    virtual bool isMinimalSetConsistent( const CvMat* m1, const CvMat* m2 );
+    virtual bool weakConstraint ( const CvMat* srcPoints, const CvMat* dstPoints, int t1, int t2, int t3 );
 };
 
 
@@ -285,6 +287,74 @@ cvFindHomography( const CvMat* objectPoints, const CvMat* imagePoints,
     }
 
     return (int)result;
+}
+
+// We check whether three correspondences for the homography estimation
+// are geometrically consistent (the points in the source image should 
+// maintain the same circular order than in the destination image).
+//
+// The usefullness of this constraint is explained in the paper:
+//
+// "Speeding-up homography estimation in mobile devices"
+// Journal of Real-Time Image Processing. 2013. DOI: 10.1007/s11554-012-0314-1
+// Pablo Marquez-Neila, Javier Lopez-Alberca, Jose M. Buenaposada, Luis Baumela
+bool
+CvHomographyEstimator::weakConstraint ( const CvMat* srcPoints, const CvMat* dstPoints, int t1, int t2, int t3 )
+{
+  const CvPoint2D64f* src = (const CvPoint2D64f*)srcPoints->data.ptr;
+  const CvPoint2D64f* dst = (const CvPoint2D64f*)dstPoints->data.ptr;
+
+  CvMat* A = cvCreateMat( 3, 3, CV_64F );
+  CvMat* B = cvCreateMat( 3, 3, CV_64F );
+
+  double detA;
+  double detB;
+
+  cvmSet(A, 0, 0, src[t1].x);
+  cvmSet(A, 0, 1, src[t1].y);
+  cvmSet(A, 0, 2, 1);
+  cvmSet(A, 1, 0, src[t2].x);
+  cvmSet(A, 1, 1, src[t2].y);
+  cvmSet(A, 1, 2, 1);
+  cvmSet(A, 2, 0, src[t3].x);
+  cvmSet(A, 2, 1, src[t3].y);
+  cvmSet(A, 2, 2, 1);
+
+  cvmSet(B, 0, 0, dst[t1].x);
+  cvmSet(B, 0, 1, dst[t1].y);
+  cvmSet(B, 0, 2, 1);
+  cvmSet(B, 1, 0, dst[t2].x);
+  cvmSet(B, 1, 1, dst[t2].y);
+  cvmSet(B, 1, 2, 1);
+  cvmSet(B, 2, 0, dst[t3].x);
+  cvmSet(B, 2, 1, dst[t3].y);
+  cvmSet(B, 2, 2, 1);
+
+  detA = cvDet(A);
+  detB = cvDet(B);
+
+  cvReleaseMat(&A);
+  cvReleaseMat(&B);
+
+  return (detA*detB >= 0);
+};
+
+// We check whether the minimal set of points for the homography estimation
+// are geometrically consistent. We check if every 3 correspondences sets
+// fulfills the constraint.
+//
+// The usefullness of this constraint is explained in the paper:
+//
+// "Speeding-up homography estimation in mobile devices"
+// Journal of Real-Time Image Processing. 2013. DOI: 10.1007/s11554-012-0314-1
+// Pablo Marquez-Neila, Javier Lopez-Alberca, Jose M. Buenaposada, Luis Baumela
+bool
+CvHomographyEstimator::isMinimalSetConsistent ( const CvMat* srcPoints, const CvMat* dstPoints )
+{
+  return weakConstraint(srcPoints, dstPoints, 0, 1, 2) &&
+         weakConstraint(srcPoints, dstPoints, 1, 2, 3) &&
+         weakConstraint(srcPoints, dstPoints, 0, 2, 3) &&
+         weakConstraint(srcPoints, dstPoints, 0, 1, 3);
 }
 
 
