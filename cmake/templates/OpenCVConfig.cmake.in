@@ -41,8 +41,9 @@
 set(OpenCV_COMPUTE_CAPABILITIES @OpenCV_CUDA_CC_CONFIGCMAKE@)
 
 set(OpenCV_CUDA_VERSION @OpenCV_CUDA_VERSION@)
-set(OpenCV_USE_CUBLAS @HAVE_CUBLAS@)
-set(OpenCV_USE_CUFFT  @HAVE_CUFFT@)
+set(OpenCV_USE_CUBLAS   @HAVE_CUBLAS@)
+set(OpenCV_USE_CUFFT    @HAVE_CUFFT@)
+set(OpenCV_USE_NVCUVID  @HAVE_NVCUVID@)
 
 # Android API level from which OpenCV has been compiled is remembered
 set(OpenCV_ANDROID_NATIVE_API_LEVEL @OpenCV_ANDROID_NATIVE_API_LEVEL_CONFIGCMAKE@)
@@ -216,17 +217,22 @@ foreach(__opttype OPT DBG)
   else()
     #TODO: duplicates are annoying but they should not be the problem
   endif()
-  # fix hard coded paths for CUDA libraries under Windows
-  if(WIN32 AND OpenCV_CUDA_VERSION AND NOT OpenCV_SHARED)
+  
+  # CUDA
+  if(OpenCV_CUDA_VERSION AND (CARMA OR (WIN32 AND NOT OpenCV_SHARED)))
     if(NOT CUDA_FOUND)
       find_package(CUDA ${OpenCV_CUDA_VERSION} EXACT REQUIRED)
     else()
       if(NOT CUDA_VERSION_STRING VERSION_EQUAL OpenCV_CUDA_VERSION)
-        message(FATAL_ERROR "OpenCV static library compiled with CUDA ${OpenCV_CUDA_VERSION} support. Please, use the same version or rebuild OpenCV with CUDA ${CUDA_VERSION_STRING}")
+        if(WIN32)
+          message(FATAL_ERROR "OpenCV static library was compiled with CUDA ${OpenCV_CUDA_VERSION} support. Please, use the same version or rebuild OpenCV with CUDA ${CUDA_VERSION_STRING}")
+        else()
+          message(FATAL_ERROR "OpenCV library for CARMA was compiled with CUDA ${OpenCV_CUDA_VERSION} support. Please, use the same version or rebuild OpenCV with CUDA ${CUDA_VERSION_STRING}")
+        endif()
       endif()
     endif()
 
-    list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY} ${CUDA_nvcuvid_LIBRARY} ${CUDA_nvcuvenc_LIBRARY})
+    list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
 
     if(OpenCV_USE_CUBLAS)
       list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_CUBLAS_LIBRARIES})
@@ -236,6 +242,13 @@ foreach(__opttype OPT DBG)
       list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_CUFFT_LIBRARIES})
     endif()
 
+    if(OpenCV_USE_NVCUVID)
+      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_nvcuvid_LIBRARIES})
+    endif()
+
+    if(WIN32)
+      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_nvcuvenc_LIBRARIES})
+    endif()
   endif()
 endforeach()
 

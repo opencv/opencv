@@ -1,7 +1,7 @@
 #ifndef __OPENCV_GTESTCV_HPP__
 #define __OPENCV_GTESTCV_HPP__
 
-#if HAVE_CVCONFIG_H
+#ifdef HAVE_CVCONFIG_H
 #include "cvconfig.h"
 #endif
 #ifndef GTEST_CREATE_SHARED_LIBRARY

@@ -125,7 +125,7 @@ namespace bgfg
     void calcDiffHistogram_gpu(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame,
                                unsigned int* hist0, unsigned int* hist1, unsigned int* hist2,
                                unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2,
-                               int cc, cudaStream_t stream);
+                               bool cc20, cudaStream_t stream);
 
     template <typename PT, typename CT>
     void calcDiffThreshMask_gpu(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame, uchar3 bestThres, cv::gpu::PtrStepSzb changeMask, cudaStream_t stream);

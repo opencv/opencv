@@ -294,9 +294,8 @@ void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& 
 
     ensureSizeIsEnough(1, maxCircles, CV_32FC3, circles);
 
-    DeviceInfo devInfo;
     const int circlesCount = circlesAccumRadius_gpu(centers, centersCount, srcPoints, pointsCount, circles.ptr<float3>(), maxCircles,
-                                                    dp, minRadius, maxRadius, votesThreshold, devInfo.supports(FEATURE_SET_COMPUTE_20));
+                                                    dp, minRadius, maxRadius, votesThreshold, deviceSupports(FEATURE_SET_COMPUTE_20));
 
     if (circlesCount > 0)
         circles.cols = circlesCount;
@@ -531,7 +530,7 @@ namespace
         const func_t func = funcs[dx.depth()];
         CV_Assert(func != 0);
 
-        edgePointList.cols = edgePointList.step / sizeof(int);
+        edgePointList.cols = (int) (edgePointList.step / sizeof(int));
         ensureSizeIsEnough(2, edges.size().area(), CV_32SC1, edgePointList);
 
         edgePointList.cols = func(edges, dx, dy, edgePointList.ptr<unsigned int>(0), edgePointList.ptr<float>(1));

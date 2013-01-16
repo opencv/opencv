@@ -547,14 +547,13 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    DeviceInfo info;
     cv::Size whole;
     cv::Point offset;
 
     src.locateROI(whole, offset);
 
-    if (info.supports(WARP_SHUFFLE_FUNCTIONS) && src.cols <= 2048
-        && offset.x % 16 == 0 && ((src.cols + 63) / 64) * 64 <= (src.step - offset.x))
+    if (deviceSupports(WARP_SHUFFLE_FUNCTIONS) && src.cols <= 2048
+        && offset.x % 16 == 0 && ((src.cols + 63) / 64) * 64 <= (static_cast<int>(src.step) - offset.x))
     {
         ensureSizeIsEnough(((src.rows + 7) / 8) * 8, ((src.cols + 63) / 64) * 64, CV_32SC1, buffer);
 
@@ -972,36 +971,20 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4
     hist_callers[src.depth()](src, hist, levels, buf, StreamAccessor::getStream(stream));
 }
 
-namespace cv { namespace gpu { namespace device
+namespace hist
 {
-    namespace hist
-    {
-        void histogram256_gpu(PtrStepSzb src, int* hist, unsigned int* buf, cudaStream_t stream);
-
-        const int PARTIAL_HISTOGRAM256_COUNT = 240;
-        const int HISTOGRAM256_BIN_COUNT     = 256;
-
-        void equalizeHist_gpu(PtrStepSzb src, PtrStepSzb dst, const int* lut, cudaStream_t stream);
-    }
-}}}
+    void histogram256(PtrStepSzb src, int* hist, cudaStream_t stream);
+    void equalizeHist(PtrStepSzb src, PtrStepSzb dst, const int* lut, cudaStream_t stream);
+}
 
 void cv::gpu::calcHist(const GpuMat& src, GpuMat& hist, Stream& stream)
 {
-    GpuMat buf;
-    calcHist(src, hist, buf, stream);
-}
-
-void cv::gpu::calcHist(const GpuMat& src, GpuMat& hist, GpuMat& buf, Stream& stream)
-{
-    using namespace ::cv::gpu::device::hist;
-
     CV_Assert(src.type() == CV_8UC1);
 
     hist.create(1, 256, CV_32SC1);
+    hist.setTo(Scalar::all(0));
 
-    ensureSizeIsEnough(1, PARTIAL_HISTOGRAM256_COUNT * HISTOGRAM256_BIN_COUNT, CV_32SC1, buf);
-
-    histogram256_gpu(src, hist.ptr<int>(), buf.ptr<unsigned int>(), StreamAccessor::getStream(stream));
+    hist::histogram256(src, hist.ptr<int>(), StreamAccessor::getStream(stream));
 }
 
 void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, Stream& stream)
@@ -1019,8 +1002,6 @@ void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, Stream&
 
 void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat& buf, Stream& s)
 {
-    using namespace ::cv::gpu::device::hist;
-
     CV_Assert(src.type() == CV_8UC1);
 
     dst.create(src.size(), src.type());
@@ -1028,15 +1009,12 @@ void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat&
     int intBufSize;
     nppSafeCall( nppsIntegralGetBufferSize_32s(256, &intBufSize) );
 
-    int bufSize = static_cast<int>(std::max(256 * 240 * sizeof(int), intBufSize + 256 * sizeof(int)));
+    ensureSizeIsEnough(1, intBufSize + 256 * sizeof(int), CV_8UC1, buf);
 
-    ensureSizeIsEnough(1, bufSize, CV_8UC1, buf);
-
-    GpuMat histBuf(1, 256 * 240, CV_32SC1, buf.ptr());
     GpuMat intBuf(1, intBufSize, CV_8UC1, buf.ptr());
     GpuMat lut(1, 256, CV_32S, buf.ptr() + intBufSize);
 
-    calcHist(src, hist, histBuf, s);
+    calcHist(src, hist, s);
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
@@ -1044,10 +1022,7 @@ void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat&
 
     nppSafeCall( nppsIntegral_32s(hist.ptr<Npp32s>(), lut.ptr<Npp32s>(), 256, intBuf.ptr<Npp8u>()) );
 
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
-
-    equalizeHist_gpu(src, dst, lut.ptr<int>(), stream);
+    hist::equalizeHist(src, dst, lut.ptr<int>(), stream);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -1448,35 +1423,31 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
 //////////////////////////////////////////////////////////////////////////////
 // Canny
 
-cv::gpu::CannyBuf::CannyBuf(const GpuMat& dx_, const GpuMat& dy_) : dx(dx_), dy(dy_)
+cv::gpu::CannyBuf::CannyBuf(const GpuMat& dx_, const GpuMat& dy_)
 {
-    CV_Assert(dx_.type() == CV_32SC1 && dy_.type() == CV_32SC1 && dx_.size() == dy_.size());
-
-    create(dx_.size(), -1);
+    (void) dx_;
+    (void) dy_;
 }
 
 void cv::gpu::CannyBuf::create(const Size& image_size, int apperture_size)
 {
-    ensureSizeIsEnough(image_size, CV_32SC1, dx);
-    ensureSizeIsEnough(image_size, CV_32SC1, dy);
+    if (apperture_size > 0)
+    {
+        ensureSizeIsEnough(image_size, CV_32SC1, dx);
+        ensureSizeIsEnough(image_size, CV_32SC1, dy);
 
-    if (apperture_size == 3)
-    {
-        ensureSizeIsEnough(image_size, CV_32SC1, dx_buf);
-        ensureSizeIsEnough(image_size, CV_32SC1, dy_buf);
-    }
-    else if(apperture_size > 0)
-    {
-        if (!filterDX)
+        if (apperture_size != 3)
+        {
             filterDX = createDerivFilter_GPU(CV_8UC1, CV_32S, 1, 0, apperture_size, BORDER_REPLICATE);
-        if (!filterDY)
             filterDY = createDerivFilter_GPU(CV_8UC1, CV_32S, 0, 1, apperture_size, BORDER_REPLICATE);
+        }
     }
 
-    ensureSizeIsEnough(image_size.height + 2, image_size.width + 2, CV_32FC1, edgeBuf);
+    ensureSizeIsEnough(image_size, CV_32FC1, dx_buf);
+    ensureSizeIsEnough(image_size, CV_32SC1, edgeBuf);
 
-    ensureSizeIsEnough(1, image_size.width * image_size.height, CV_16UC2, trackBuf1);
-    ensureSizeIsEnough(1, image_size.width * image_size.height, CV_16UC2, trackBuf2);
+    ensureSizeIsEnough(1, image_size.area(), CV_16UC2, trackBuf1);
+    ensureSizeIsEnough(1, image_size.area(), CV_16UC2, trackBuf2);
 }
 
 void cv::gpu::CannyBuf::release()
@@ -1488,93 +1459,91 @@ void cv::gpu::CannyBuf::release()
     edgeBuf.release();
     trackBuf1.release();
     trackBuf2.release();
+    filterDX.release();
+    filterDY.release();
 }
 
-namespace cv { namespace gpu { namespace device
+namespace canny
 {
-    namespace canny
-    {
-        void calcSobelRowPass_gpu(PtrStepb src, PtrStepi dx_buf, PtrStepi dy_buf, int rows, int cols);
+    void calcMagnitude(PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad);
+    void calcMagnitude(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad);
 
-        void calcMagnitude_gpu(PtrStepi dx_buf, PtrStepi dy_buf, PtrStepi dx, PtrStepi dy, PtrStepf mag, int rows, int cols, bool L2Grad);
-        void calcMagnitude_gpu(PtrStepi dx, PtrStepi dy, PtrStepf mag, int rows, int cols, bool L2Grad);
+    void calcMap(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, PtrStepSzi map, float low_thresh, float high_thresh);
 
-        void calcMap_gpu(PtrStepi dx, PtrStepi dy, PtrStepf mag, PtrStepi map, int rows, int cols, float low_thresh, float high_thresh);
+    void edgesHysteresisLocal(PtrStepSzi map, ushort2* st1);
 
-        void edgesHysteresisLocal_gpu(PtrStepi map, ushort2* st1, int rows, int cols);
+    void edgesHysteresisGlobal(PtrStepSzi map, ushort2* st1, ushort2* st2);
 
-        void edgesHysteresisGlobal_gpu(PtrStepi map, ushort2* st1, ushort2* st2, int rows, int cols);
-
-        void getEdges_gpu(PtrStepi map, PtrStepb dst, int rows, int cols);
-    }
-}}}
+    void getEdges(PtrStepSzi map, PtrStepSzb dst);
+}
 
 namespace
 {
-    void CannyCaller(CannyBuf& buf, GpuMat& dst, float low_thresh, float high_thresh)
+    void CannyCaller(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& dst, float low_thresh, float high_thresh)
     {
-        using namespace ::cv::gpu::device::canny;
+        using namespace canny;
 
-        calcMap_gpu(buf.dx, buf.dy, buf.edgeBuf, buf.edgeBuf, dst.rows, dst.cols, low_thresh, high_thresh);
+        buf.edgeBuf.setTo(Scalar::all(0));
+        calcMap(dx, dy, buf.dx_buf, buf.edgeBuf, low_thresh, high_thresh);
 
-        edgesHysteresisLocal_gpu(buf.edgeBuf, buf.trackBuf1.ptr<ushort2>(), dst.rows, dst.cols);
+        edgesHysteresisLocal(buf.edgeBuf, buf.trackBuf1.ptr<ushort2>());
 
-        edgesHysteresisGlobal_gpu(buf.edgeBuf, buf.trackBuf1.ptr<ushort2>(), buf.trackBuf2.ptr<ushort2>(), dst.rows, dst.cols);
+        edgesHysteresisGlobal(buf.edgeBuf, buf.trackBuf1.ptr<ushort2>(), buf.trackBuf2.ptr<ushort2>());
 
-        getEdges_gpu(buf.edgeBuf, dst, dst.rows, dst.cols);
+        getEdges(buf.edgeBuf, dst);
     }
 }
 
 void cv::gpu::Canny(const GpuMat& src, GpuMat& dst, double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
 {
-    CannyBuf buf(src.size(), apperture_size);
+    CannyBuf buf;
     Canny(src, buf, dst, low_thresh, high_thresh, apperture_size, L2gradient);
 }
 
 void cv::gpu::Canny(const GpuMat& src, CannyBuf& buf, GpuMat& dst, double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
 {
-    using namespace ::cv::gpu::device::canny;
+    using namespace canny;
 
     CV_Assert(src.type() == CV_8UC1);
 
-    if (!TargetArchs::builtWith(SHARED_ATOMICS) || !DeviceInfo().supports(SHARED_ATOMICS))
+    if (!deviceSupports(SHARED_ATOMICS))
         CV_Error(CV_StsNotImplemented, "The device doesn't support shared atomics");
 
     if( low_thresh > high_thresh )
         std::swap( low_thresh, high_thresh);
 
     dst.create(src.size(), CV_8U);
-    dst.setTo(Scalar::all(0));
-
     buf.create(src.size(), apperture_size);
-    buf.edgeBuf.setTo(Scalar::all(0));
 
     if (apperture_size == 3)
     {
-        calcSobelRowPass_gpu(src, buf.dx_buf, buf.dy_buf, src.rows, src.cols);
+        Size wholeSize;
+        Point ofs;
+        src.locateROI(wholeSize, ofs);
+        GpuMat srcWhole(wholeSize, src.type(), src.datastart, src.step);
 
-        calcMagnitude_gpu(buf.dx_buf, buf.dy_buf, buf.dx, buf.dy, buf.edgeBuf, src.rows, src.cols, L2gradient);
+        calcMagnitude(srcWhole, ofs.x, ofs.y, buf.dx, buf.dy, buf.dx_buf, L2gradient);
     }
     else
     {
         buf.filterDX->apply(src, buf.dx, Rect(0, 0, src.cols, src.rows));
         buf.filterDY->apply(src, buf.dy, Rect(0, 0, src.cols, src.rows));
 
-        calcMagnitude_gpu(buf.dx, buf.dy, buf.edgeBuf, src.rows, src.cols, L2gradient);
+        calcMagnitude(buf.dx, buf.dy, buf.dx_buf, L2gradient);
     }
 
-    CannyCaller(buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
+    CannyCaller(buf.dx, buf.dy, buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
 }
 
 void cv::gpu::Canny(const GpuMat& dx, const GpuMat& dy, GpuMat& dst, double low_thresh, double high_thresh, bool L2gradient)
 {
-    CannyBuf buf(dx, dy);
+    CannyBuf buf;
     Canny(dx, dy, buf, dst, low_thresh, high_thresh, L2gradient);
 }
 
 void cv::gpu::Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& dst, double low_thresh, double high_thresh, bool L2gradient)
 {
-    using namespace ::cv::gpu::device::canny;
+    using namespace canny;
 
     CV_Assert(TargetArchs::builtWith(SHARED_ATOMICS) && DeviceInfo().supports(SHARED_ATOMICS));
     CV_Assert(dx.type() == CV_32SC1 && dy.type() == CV_32SC1 && dx.size() == dy.size());
@@ -1583,17 +1552,11 @@ void cv::gpu::Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& d
         std::swap( low_thresh, high_thresh);
 
     dst.create(dx.size(), CV_8U);
-    dst.setTo(Scalar::all(0));
-
-    buf.dx = dx; buf.dy = dy;
     buf.create(dx.size(), -1);
-    buf.edgeBuf.setTo(Scalar::all(0));
 
-    calcMagnitude_gpu(dx, dy, buf.edgeBuf, dx.rows, dx.cols, L2gradient);
+    calcMagnitude(dx, dy, buf.dx_buf, L2gradient);
 
-    CannyCaller(buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
+    CannyCaller(dx, dy, buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
 }
 
 #endif /* !defined (HAVE_CUDA) */
-
-

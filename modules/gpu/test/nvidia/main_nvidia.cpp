@@ -276,6 +276,8 @@ static void devNullOutput(const std::string& msg)
     (void)msg;
 }
 
+}
+
 bool nvidia_NPPST_Integral_Image(const std::string& test_data_path, OutputLevel outputLevel)
 {
     path = test_data_path.c_str();
@@ -290,8 +292,6 @@ bool nvidia_NPPST_Integral_Image(const std::string& test_data_path, OutputLevel 
     generateIntegralTests<Ncv32f, Ncv32f>(testListerII, testSrcRandom_32f, 4096, 4096);
 
     return testListerII.invoke();
-}
-
 }
 
 bool nvidia_NPPST_Squared_Integral_Image(const std::string& test_data_path, OutputLevel outputLevel)
@@ -375,9 +375,9 @@ bool nvidia_NCV_Vector_Operations(const std::string& test_data_path, OutputLevel
 
     NCVAutoTestLister testListerVectorOperations("Vector Operations", outputLevel);
 
-    NCVTestSourceProvider<Ncv32u> testSrcRandom_32u(2010, 0, 0xFFFFFFFF, 4096, 4096);
+    NCVTestSourceProvider<Ncv32u> testSrcRandom_32u(2010, 0, 0xFFFFFFFF, 2048, 2048);
 
-    generateVectorTests(testListerVectorOperations, testSrcRandom_32u, 4096*4096);
+    generateVectorTests(testListerVectorOperations, testSrcRandom_32u, 2048*2048);
 
     return testListerVectorOperations.invoke();
 

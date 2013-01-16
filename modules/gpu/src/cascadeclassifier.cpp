@@ -622,7 +622,7 @@ private:
         }
 
         // copy data structures on gpu
-        stage_mat.upload(cv::Mat(1, stages.size() * sizeof(Stage), CV_8UC1, (uchar*)&(stages[0]) ));
+        stage_mat.upload(cv::Mat(1, (int) (stages.size() * sizeof(Stage)), CV_8UC1, (uchar*)&(stages[0]) ));
         trees_mat.upload(cv::Mat(cl_trees).reshape(1,1));
         nodes_mat.upload(cv::Mat(cl_nodes).reshape(1,1));
         leaves_mat.upload(cv::Mat(cl_leaves).reshape(1,1));
