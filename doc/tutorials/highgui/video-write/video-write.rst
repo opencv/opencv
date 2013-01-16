@@ -36,7 +36,6 @@ You may also find the source code and these video file in the :file:`samples/cpp
    :language: cpp
    :linenos:
    :tab-width: 4
-   :lines: 1-8, 21-22, 24-97
 
 The structure of a video
 ========================
