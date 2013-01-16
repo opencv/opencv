@@ -56,7 +56,7 @@ Class providing memory buffers for :ocv:func:`ocl::matchTemplate` function, plus
 You can use field `user_block_size` to set specific block size for :ocv:func:`ocl::matchTemplate` function. If you leave its default value `Size(0,0)` then automatic estimation of block size will be used (which is optimized for speed). By varying `user_block_size` you can reduce memory requirements at the cost of speed.
 
 ocl::matchTemplate
-----------------------
+------------------
 Computes a proximity map for a raster template and an image where the template is searched for.
 
 .. ocv:function:: void ocl::matchTemplate(const oclMat& image, const oclMat& templ, oclMat& result, int method)
@@ -71,7 +71,7 @@ Computes a proximity map for a raster template and an image where the template i
 
     :param method: Specifies the way to compare the template with the image.
 
-    :param buf: Optional buffer to avoid extra memory allocations and to adjust some specific parameters. See :ocv:class:`ocl::MatchTemplateBuf`.
+    :param buf: Optional buffer to avoid extra memory allocations and to adjust some specific parameters. See :ocv:struct:`ocl::MatchTemplateBuf`.
 
     The following methods are supported for the ``CV_8U`` depth images for now:
 

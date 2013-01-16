@@ -210,9 +210,9 @@ The sample below demonstrates how to use RotatedRect:
 
 .. seealso::
 
-    :ocv:cfunc:`CamShift`,
-    :ocv:func:`fitEllipse`,
-    :ocv:func:`minAreaRect`,
+    :ocv:func:`CamShift` ,
+    :ocv:func:`fitEllipse` ,
+    :ocv:func:`minAreaRect` ,
     :ocv:struct:`CvBox2D`
 
 TermCriteria
@@ -1303,7 +1303,7 @@ because ``cvtColor`` , as well as the most of OpenCV functions, calls ``Mat::cre
 
 
 Mat::addref
----------------
+-----------
 Increments the reference counter.
 
 .. ocv:function:: void Mat::addref()
@@ -1313,7 +1313,7 @@ The method increments the reference counter associated with the matrix data. If 
 
 
 Mat::release
-----------------
+------------
 Decrements the reference counter and deallocates the matrix if needed.
 
 .. ocv:function:: void Mat::release()
@@ -1324,7 +1324,7 @@ The method decrements the reference counter associated with the matrix data. Whe
 This method can be called manually to force the matrix data deallocation. But since this method is automatically called in the destructor, or by any other method that changes the data pointer, it is usually not needed. The reference counter decrement and check for 0 is an atomic operation on the platforms that support it. Thus, it is safe to operate on the same matrices asynchronously in different threads.
 
 Mat::resize
----------------
+-----------
 Changes the number of matrix rows.
 
 .. ocv:function:: void Mat::resize( size_t sz )
@@ -1337,7 +1337,7 @@ The methods change the number of matrix rows. If the matrix is reallocated, the 
 
 
 Mat::reserve
----------------
+------------
 Reserves space for the certain number of rows.
 
 .. ocv:function:: void Mat::reserve( size_t sz )
@@ -1370,7 +1370,7 @@ The method removes one or more rows from the bottom of the matrix.
 
 
 Mat::locateROI
-------------------
+--------------
 Locates the matrix header within a parent matrix.
 
 .. ocv:function:: void Mat::locateROI( Size& wholeSize, Point& ofs ) const
@@ -1387,7 +1387,7 @@ After you extracted a submatrix from a matrix using
 
 
 Mat::adjustROI
-------------------
+--------------
 Adjusts a submatrix size and position within the parent matrix.
 
 .. ocv:function:: Mat& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright )
@@ -1417,7 +1417,7 @@ The function is used internally by the OpenCV filtering functions, like
 
 
 Mat::operator()
--------------------
+---------------
 Extracts a rectangular submatrix.
 
 .. ocv:function:: Mat Mat::operator()( Range rowRange, Range colRange ) const
@@ -1955,202 +1955,6 @@ SparseMat
 ---------
 .. ocv:class:: SparseMat
 
-Sparse n-dimensional array. ::
-
-    class SparseMat
-    {
-    public:
-        typedef SparseMatIterator iterator;
-        typedef SparseMatConstIterator const_iterator;
-
-        // internal structure - sparse matrix header
-        struct Hdr
-        {
-            ...
-        };
-
-        // sparse matrix node - element of a hash table
-        struct Node
-        {
-            size_t hashval;
-            size_t next;
-            int idx[CV_MAX_DIM];
-        };
-
-        ////////// constructors and destructor //////////
-        // default constructor
-        SparseMat();
-        // creates matrix of the specified size and type
-        SparseMat(int dims, const int* _sizes, int _type);
-        // copy constructor
-        SparseMat(const SparseMat& m);
-        // converts dense array to the sparse form,
-        // if try1d is true and matrix is a single-column matrix (Nx1),
-        // then the sparse matrix will be 1-dimensional.
-        SparseMat(const Mat& m, bool try1d=false);
-        // converts an old-style sparse matrix to the new style.
-        // all the data is copied so that "m" can be safely
-        // deleted after the conversion
-        SparseMat(const CvSparseMat* m);
-        // destructor
-        ~SparseMat();
-
-        ///////// assignment operations ///////////
-
-        // this is an O(1) operation; no data is copied
-        SparseMat& operator = (const SparseMat& m);
-        // (equivalent to the corresponding constructor with try1d=false)
-        SparseMat& operator = (const Mat& m);
-
-        // creates a full copy of the matrix
-        SparseMat clone() const;
-
-        // copy all the data to the destination matrix.
-        // the destination will be reallocated if needed.
-        void copyTo( SparseMat& m ) const;
-        // converts 1D or 2D sparse matrix to dense 2D matrix.
-        // If the sparse matrix is 1D, the result will
-        // be a single-column matrix.
-        void copyTo( Mat& m ) const;
-        // converts arbitrary sparse matrix to dense matrix.
-        // multiplies all the matrix elements by the specified scalar
-        void convertTo( SparseMat& m, int rtype, double alpha=1 ) const;
-        // converts sparse matrix to dense matrix with optional type conversion and scaling.
-        // When rtype=-1, the destination element type will be the same
-        // as the sparse matrix element type.
-        // Otherwise, rtype will specify the depth and
-        // the number of channels will remain the same as in the sparse matrix
-        void convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const;
-
-        // not used now
-        void assignTo( SparseMat& m, int type=-1 ) const;
-
-        // reallocates sparse matrix. If it was already of the proper size and type,
-        // it is simply cleared with clear(), otherwise,
-        // the old matrix is released (using release()) and the new one is allocated.
-        void create(int dims, const int* _sizes, int _type);
-        // sets all the matrix elements to 0, which means clearing the hash table.
-        void clear();
-        // manually increases reference counter to the header.
-        void addref();
-        // decreses the header reference counter when it reaches 0.
-        // the header and all the underlying data are deallocated.
-        void release();
-
-        // converts sparse matrix to the old-style representation.
-        // all the elements are copied.
-        operator CvSparseMat*() const;
-        // size of each element in bytes
-        // (the matrix nodes will be bigger because of
-        //  element indices and other SparseMat::Node elements).
-        size_t elemSize() const;
-        // elemSize()/channels()
-        size_t elemSize1() const;
-
-        // the same is in Mat
-        int type() const;
-        int depth() const;
-        int channels() const;
-
-        // returns the array of sizes and 0 if the matrix is not allocated
-        const int* size() const;
-        // returns i-th size (or 0)
-        int size(int i) const;
-        // returns the matrix dimensionality
-        int dims() const;
-        // returns the number of non-zero elements
-        size_t nzcount() const;
-
-        // compute element hash value from the element indices:
-        // 1D case
-        size_t hash(int i0) const;
-        // 2D case
-        size_t hash(int i0, int i1) const;
-        // 3D case
-        size_t hash(int i0, int i1, int i2) const;
-        // n-D case
-        size_t hash(const int* idx) const;
-
-        // low-level element-access functions,
-        // special variants for 1D, 2D, 3D cases, and the generic one for n-D case.
-        //
-        // return pointer to the matrix element.
-        //  if the element is there (it is non-zero), the pointer to it is returned
-        //  if it is not there and createMissing=false, NULL pointer is returned
-        //  if it is not there and createMissing=true, the new element
-        //    is created and initialized with 0. Pointer to it is returned.
-        //  If the optional hashval pointer is not NULL, the element hash value is
-        //  not computed but *hashval is taken instead.
-        uchar* ptr(int i0, bool createMissing, size_t* hashval=0);
-        uchar* ptr(int i0, int i1, bool createMissing, size_t* hashval=0);
-        uchar* ptr(int i0, int i1, int i2, bool createMissing, size_t* hashval=0);
-        uchar* ptr(const int* idx, bool createMissing, size_t* hashval=0);
-
-        // higher-level element access functions:
-        // ref<_Tp>(i0,...[,hashval]) - equivalent to *(_Tp*)ptr(i0,...true[,hashval]).
-        //    always return valid reference to the element.
-        //    If it does not exist, it is created.
-        // find<_Tp>(i0,...[,hashval]) - equivalent to (_const Tp*)ptr(i0,...false[,hashval]).
-        //    return pointer to the element or NULL pointer if the element is not there.
-        // value<_Tp>(i0,...[,hashval]) - equivalent to
-        //    { const _Tp* p = find<_Tp>(i0,...[,hashval]); return p ? *p : _Tp(); }
-        //    that is, 0 is returned when the element is not there.
-        // note that _Tp must match the actual matrix type -
-        // the functions do not do any on-fly type conversion
-
-        // 1D case
-        template<typename _Tp> _Tp& ref(int i0, size_t* hashval=0);
-        template<typename _Tp> _Tp value(int i0, size_t* hashval=0) const;
-        template<typename _Tp> const _Tp* find(int i0, size_t* hashval=0) const;
-
-        // 2D case
-        template<typename _Tp> _Tp& ref(int i0, int i1, size_t* hashval=0);
-        template<typename _Tp> _Tp value(int i0, int i1, size_t* hashval=0) const;
-        template<typename _Tp> const _Tp* find(int i0, int i1, size_t* hashval=0) const;
-
-        // 3D case
-        template<typename _Tp> _Tp& ref(int i0, int i1, int i2, size_t* hashval=0);
-        template<typename _Tp> _Tp value(int i0, int i1, int i2, size_t* hashval=0) const;
-        template<typename _Tp> const _Tp* find(int i0, int i1, int i2, size_t* hashval=0) const;
-
-        // n-D case
-        template<typename _Tp> _Tp& ref(const int* idx, size_t* hashval=0);
-        template<typename _Tp> _Tp value(const int* idx, size_t* hashval=0) const;
-        template<typename _Tp> const _Tp* find(const int* idx, size_t* hashval=0) const;
-
-        // erase the specified matrix element.
-        // when there is no such an element, the methods do nothing
-        void erase(int i0, int i1, size_t* hashval=0);
-        void erase(int i0, int i1, int i2, size_t* hashval=0);
-        void erase(const int* idx, size_t* hashval=0);
-
-        // return the matrix iterators,
-        //   pointing to the first sparse matrix element,
-        SparseMatIterator begin();
-        SparseMatConstIterator begin() const;
-        //   ... or to the point after the last sparse matrix element
-        SparseMatIterator end();
-        SparseMatConstIterator end() const;
-
-        // and the template forms of the above methods.
-        // _Tp must match the actual matrix type.
-        template<typename _Tp> SparseMatIterator_<_Tp> begin();
-        template<typename _Tp> SparseMatConstIterator_<_Tp> begin() const;
-        template<typename _Tp> SparseMatIterator_<_Tp> end();
-        template<typename _Tp> SparseMatConstIterator_<_Tp> end() const;
-
-        // return value stored in the sparse martix node
-        template<typename _Tp> _Tp& value(Node* n);
-        template<typename _Tp> const _Tp& value(const Node* n) const;
-
-        ////////////// some internally used methods ///////////////
-        ...
-
-        // pointer to the sparse matrix header
-        Hdr* hdr;
-    };
-
-
 The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Such a sparse array can store elements of any type that
 :ocv:class:`Mat` can store. *Sparse* means that only non-zero elements are stored (though, as a result of operations on a sparse matrix, some of its stored elements can actually become 0. It is up to you to detect such elements and delete them using ``SparseMat::erase`` ). The non-zero elements are stored in a hash table that grows when it is filled so that the search time is O(1) in average (regardless of whether element is there or not). Elements can be accessed using the following methods:
 
@@ -2231,6 +2035,204 @@ The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Su
 
     ..
 
+SparseMat::SparseMat
+--------------------
+Various SparseMat constructors.
+
+.. ocv:function:: SparseMat::SparseMat()
+.. ocv:function:: SparseMat::SparseMat(int dims, const int* _sizes, int _type)
+.. ocv:function:: SparseMat::SparseMat(const SparseMat& m)
+.. ocv:function:: SparseMat::SparseMat(const Mat& m, bool try1d=false)
+.. ocv:function:: SparseMat::SparseMat(const CvSparseMat* m)
+
+    :param m: Source matrix for copy constructor. If m is dense matrix (ocv:class:`Mat`) then it will be converted to sparse representation.
+    :param dims: Array dimensionality.
+    :param _sizes: Sparce matrix size on all dementions.
+    :param _type: Sparse matrix data type.
+    :param try1d: if try1d is true and matrix is a single-column matrix (Nx1), then the sparse matrix will be 1-dimensional.
+
+SparseMat::~SparseMat
+---------------------
+SparseMat object destructor.
+
+.. ocv:function:: SparseMat::~SparseMat()
+
+SparseMat::operator =
+---------------------
+Provides sparse matrix assignment operators.
+
+.. ocv:function:: SparseMat& SparseMat::operator=(const SparseMat& m)
+.. ocv:function:: SparseMat& SparseMat::operator=(const Mat& m)
+
+The last variant is equivalent to the corresponding constructor with try1d=false.
+
+
+SparseMat::clone
+----------------
+Creates a full copy of the matrix.
+
+.. ocv:function:: SparseMat SparseMat::clone() const
+
+SparseMat::copyTo
+-----------------
+Copy all the data to the destination matrix.The destination will be reallocated if needed.
+
+.. ocv:function:: void SparseMat::copyTo( SparseMat& m ) const
+.. ocv:function:: void SparseMat::copyTo( Mat& m ) const
+
+    :param m: Target for copiing.
+
+The last variant converts 1D or 2D sparse matrix to dense 2D matrix. If the sparse matrix is 1D, the result will be a single-column matrix.
+
+SparceMat::convertTo
+--------------------
+Convert sparse matrix with possible type change and scaling.
+
+.. ocv:function:: void SparseMat::convertTo( SparseMat& m, int rtype, double alpha=1 ) const
+.. ocv:function:: void SparseMat::convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const
+
+The first version converts arbitrary sparse matrix to dense matrix and multiplies all the matrix elements by the specified scalar.
+The second versiob converts sparse matrix to dense matrix with optional type conversion and scaling.
+When rtype=-1, the destination element type will be the same as the sparse matrix element type.
+Otherwise, rtype will specify the depth and the number of channels will remain the same as in the sparse matrix.
+
+SparseMat:create
+----------------
+Reallocates sparse matrix. If it was already of the proper size and type, it is simply cleared with clear(), otherwise,
+the old matrix is released (using release()) and the new one is allocated.
+
+.. ocv:function:: void SparseMat::create(int dims, const int* _sizes, int _type)
+
+    :param dims: Array dimensionality.
+    :param _sizes: Sparce matrix size on all dementions.
+    :param _type: Sparse matrix data type.
+
+SparseMat::clear
+----------------
+Sets all the matrix elements to 0, which means clearing the hash table.
+
+.. ocv:function:: void SparseMat::clear()
+
+SparseMat::addref
+-----------------
+Manually increases reference counter to the header.
+
+.. ocv:function:: void SparseMat::addref()
+
+SparseMat::release
+------------------
+Decreses the header reference counter when it reaches 0. The header and all the underlying data are deallocated.
+
+.. ocv:function:: void SparseMat::release()
+
+SparseMat::CvSparseMat *
+------------------------
+Converts sparse matrix to the old-style representation. All the elements are copied.
+
+.. ocv:function:: SparseMat::operator CvSparseMat*() const
+
+SparseMat::elemSize
+-------------------
+Size of each element in bytes (the matrix nodes will be bigger because of element indices and other SparseMat::Node elements).
+
+.. ocv:function:: size_t SparseMat::elemSize() const
+
+SparseMat::elemSize1
+--------------------
+elemSize()/channels().
+
+.. ocv:function::  size_t SparseMat::elemSize() const
+
+SparseMat::type
+---------------
+Returns the type of a matrix element.
+
+.. ocv:function:: int SparseMat::type() const
+
+The method returns a sparse matrix element type. This is an identifier compatible with the ``CvMat`` type system, like ``CV_16SC3`` or 16-bit signed 3-channel array, and so on.
+
+SparseMat::depth
+----------------
+Returns the depth of a sparse matrix element.
+
+.. ocv:function:: int SparseMat::depth() const
+
+The method returns the identifier of the matrix element depth (the type of each individual channel). For example, for a 16-bit signed 3-channel array, the method returns ``CV_16S``
+
+* ``CV_8U``     - 8-bit unsigned integers ( ``0..255``     )
+
+* ``CV_8S``     - 8-bit signed integers ( ``-128..127``     )
+
+* ``CV_16U``     - 16-bit unsigned integers ( ``0..65535``     )
+
+* ``CV_16S``     - 16-bit signed integers ( ``-32768..32767``     )
+
+* ``CV_32S``     - 32-bit signed integers ( ``-2147483648..2147483647``     )
+
+* ``CV_32F``     - 32-bit floating-point numbers ( ``-FLT_MAX..FLT_MAX, INF, NAN``     )
+
+* ``CV_64F``     - 64-bit floating-point numbers ( ``-DBL_MAX..DBL_MAX, INF, NAN``     )
+
+SparseMat::channels
+-------------------
+Returns the number of matrix channels.
+
+.. ocv:function:: int SparseMat::channels() const
+
+The method returns the number of matrix channels.
+
+SparseMat::size
+---------------
+Returns the array of sizes or matrix size by i dimention and 0 if the matrix is not allocated.
+
+.. ocv:function:: const int* SparseMat::size() const
+.. ocv:function:: int SparseMat::size(int i) const
+
+    :param i: Dimention index.
+
+SparseMat::dims
+---------------
+Returns the matrix dimensionality.
+
+.. ocv:function:: int SparseMat::dims() const
+
+SparseMat::nzcount
+------------------
+Returns the number of non-zero elements.
+
+.. ocv:function:: size_t SparseMat::nzcount() const
+
+SparseMat::hash
+---------------
+Compute element hash value from the element indices.
+
+.. ocv:function:: size_t SparseMat::hash(int i0) const
+.. ocv:function:: size_t SparseMat::hash(int i0, int i1) const
+.. ocv:function:: size_t SparseMat::hash(int i0, int i1, int i2) const
+.. ocv:function:: size_t SparseMat::hash(const int* idx) const
+
+SparseMat::ptr
+--------------
+Low-level element-access functions, special variants for 1D, 2D, 3D cases, and the generic one for n-D case.
+
+.. ocv:function:: uchar* SparseMat::ptr(int i0, bool createMissing, size_t* hashval=0)
+.. ocv:function:: uchar* SparseMat::ptr(int i0, int i1, bool createMissing, size_t* hashval=0)
+.. ocv:function:: uchar* SparseMat::ptr(int i0, int i1, int i2, bool createMissing, size_t* hashval=0)
+.. ocv:function:: uchar* SparseMat::ptr(const int* idx, bool createMissing, size_t* hashval=0)
+
+Return pointer to the matrix element. If the element is there (it is non-zero), the pointer to it is returned.
+If it is not there and ``createMissing=false``, NULL pointer is returned. If it is not there and ``createMissing=true``,
+the new elementis created and initialized with 0. Pointer to it is returned. If the optional hashval pointer is not ``NULL``,
+the element hash value is not computed but ``hashval`` is taken instead.
+
+SparseMat::erase
+----------------
+Erase the specified matrix element. When there is no such an element, the methods do nothing.
+
+.. ocv:function:: void SparseMat::erase(int i0, int i1, size_t* hashval=0)
+.. ocv:function:: void SparseMat::erase(int i0, int i1, int i2, size_t* hashval=0)
+.. ocv:function:: void SparseMat::erase(const int* idx, size_t* hashval=0)
+
 SparseMat\_
 -----------
 .. ocv:class:: SparseMat_
@@ -2286,7 +2288,7 @@ Template sparse n-dimensional array class derived from
         SparseMatConstIterator_<_Tp> end() const;
     };
 
-``SparseMat_`` is a thin wrapper on top of :ocv:class:`SparseMat`  created in the same way as ``Mat_`` .
+``SparseMat_`` is a thin wrapper on top of :ocv:class:`SparseMat` created in the same way as ``Mat_`` .
 It simplifies notation of some operations. ::
 
     int sz[] = {10, 20, 30};
@@ -2340,6 +2342,11 @@ Here is example of SIFT use in your application via Algorithm interface: ::
     vector<KeyPoint> keypoints;
     (*sift)(image, noArray(), keypoints, descriptors);
 
+Algorithm::name
+---------------
+Returns the algorithm name
+
+.. ocv:function:: string Algorithm::name() const
 
 Algorithm::get
 --------------

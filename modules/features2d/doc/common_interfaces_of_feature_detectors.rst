@@ -113,7 +113,7 @@ Detects keypoints in an image (first variant) or image set (second variant).
     :param masks: Masks for each input image specifying where to look for keypoints (optional). ``masks[i]`` is a mask for ``images[i]``.
 
 FeatureDetector::create
----------------------------
+-----------------------
 Creates a feature detector by its name.
 
 .. ocv:function:: Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
@@ -219,8 +219,7 @@ StarFeatureDetector
 -------------------
 .. ocv:class:: StarFeatureDetector : public FeatureDetector
 
-Wrapping class for feature detection using the
-:ocv:class:`StarDetector` class. ::
+The class implements the keypoint detector introduced by K. Konolige, synonym of ``StarDetector``.  ::
 
     class StarFeatureDetector : public FeatureDetector
     {
@@ -412,7 +411,7 @@ Example of creating ``DynamicAdaptedFeatureDetector`` : ::
 
 
 DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
-----------------------------------------------------------------
+------------------------------------------------------------
 The constructor
 
 .. ocv:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector( const Ptr<AdjusterAdapter>& adjuster, int min_features=400, int max_features=500, int max_iters=5 )
@@ -484,7 +483,7 @@ Example: ::
 
 
 AdjusterAdapter::good
--------------------------
+---------------------
 Returns false if the detector parameters cannot be adjusted any more.
 
 .. ocv:function:: bool AdjusterAdapter::good() const
@@ -497,7 +496,7 @@ Example: ::
         }
 
 AdjusterAdapter::create
--------------------------
+-----------------------
 Creates an adjuster adapter by name
 
 .. ocv:function:: Ptr<AdjusterAdapter> AdjusterAdapter::create( const string& detectorType )
@@ -528,3 +527,23 @@ StarAdjuster
                 StarAdjuster(double initial_thresh = 30.0);
                 ...
         };
+
+SurfAdjuster
+------------
+.. ocv:class:: SurfAdjuster: public AdjusterAdapter
+
+:ocv:class:`AdjusterAdapter` for ``SurfFeatureDetector``.  ::
+
+    class CV_EXPORTS SurfAdjuster: public AdjusterAdapter
+    {
+    public:
+        SurfAdjuster( double initial_thresh=400.f, double min_thresh=2, double max_thresh=1000 );
+
+        virtual void tooFew(int minv, int n_detected);
+        virtual void tooMany(int maxv, int n_detected);
+        virtual bool good() const;
+
+        virtual Ptr<AdjusterAdapter> clone() const;
+
+        ...
+    };

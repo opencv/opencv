@@ -287,7 +287,7 @@ The function finds all of the motion segments and marks them in ``segmask`` with
 
 
 CamShift
-------------
+--------
 Finds an object center, size, and orientation.
 
 .. ocv:function:: RotatedRect CamShift( InputArray probImage, Rect& window, TermCriteria criteria )
@@ -316,7 +316,7 @@ See the OpenCV sample ``camshiftdemo.c`` that tracks colored objects.
 
 
 meanShift
--------------
+---------
 Finds an object on a back projection image.
 
 .. ocv:function:: int meanShift( InputArray probImage, Rect& window, TermCriteria criteria )
