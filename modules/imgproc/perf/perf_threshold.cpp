@@ -31,7 +31,7 @@ PERF_TEST_P(Size_MatType_ThreshType, threshold,
     double maxval = theRNG().uniform(1, 254);
 
     declare.in(src, WARMUP_RNG).out(dst);
-    declare.time(100);
+    declare.iterations(500);
 
     TEST_CYCLE() threshold(src, dst, thresh, maxval, threshType);
 

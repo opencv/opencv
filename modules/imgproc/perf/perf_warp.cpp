@@ -90,12 +90,7 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
 
 PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
              Combine(
-                 Values( Size(176,144), Size(320,240), Size(352,288), Size(480,480),
-                         Size(640,480), Size(704,576), Size(720,408), Size(720,480),
-                         Size(720,576), Size(768,432), Size(800,448), Size(960,720),
-                         Size(1024,768), Size(1280,720), Size(1280,960), Size(1360,720),
-                         Size(1600,1200), Size(1920,1080), Size(2048,1536), Size(2592,1920),
-                         Size(2592,1944), Size(3264,2448), Size(4096,3072), Size(4208,3120) ),
+                 Values( Size(640,480), Size(1920,1080), Size(2592,1944) ),
                  ValuesIn( InterType::all() ),
                  ValuesIn( BorderMode::all() ),
                  Values( CV_8UC1, CV_8UC4 )

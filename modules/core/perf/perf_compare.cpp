@@ -13,7 +13,7 @@ typedef perf::TestBaseWithParam<Size_MatType_CmpType_t> Size_MatType_CmpType;
 
 PERF_TEST_P( Size_MatType_CmpType, compare,
              testing::Combine(
-                 testing::Values(TYPICAL_MAT_SIZES),
+                 testing::Values(::perf::szVGA, ::perf::sz1080p),
                  testing::Values(CV_8UC1, CV_8UC4, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1),
                  testing::ValuesIn(CmpType::all())
                  )

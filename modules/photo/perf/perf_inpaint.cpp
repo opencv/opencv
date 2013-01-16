@@ -13,7 +13,7 @@ typedef perf::TestBaseWithParam<InpaintArea_InpaintingMethod_t> InpaintArea_Inpa
 
 PERF_TEST_P(InpaintArea_InpaintingMethod, inpaint,
             testing::Combine(
-                SZ_ALL_SMALL,
+                testing::Values(::perf::szSmall24, ::perf::szSmall32, ::perf::szSmall64),
                 testing::ValuesIn(InpaintingMethod::all())
                 )
             )
