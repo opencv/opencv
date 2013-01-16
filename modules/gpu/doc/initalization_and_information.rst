@@ -6,7 +6,7 @@ Initalization and Information
 
 
 gpu::getCudaEnabledDeviceCount
-----------------------------------
+------------------------------
 Returns the number of installed CUDA-enabled devices.
 
 .. ocv:function:: int gpu::getCudaEnabledDeviceCount()
@@ -16,7 +16,7 @@ Use this function before any other GPU functions calls. If OpenCV is compiled wi
 
 
 gpu::setDevice
-------------------
+--------------
 Sets a device and initializes it for the current thread.
 
 .. ocv:function:: void gpu::setDevice(int device)
@@ -28,7 +28,7 @@ If the call of this function is omitted, a default device is initialized at the 
 
 
 gpu::getDevice
-------------------
+--------------
 Returns the current device index set by :ocv:func:`gpu::setDevice` or initialized by default.
 
 .. ocv:function:: int gpu::getDevice()
@@ -36,7 +36,7 @@ Returns the current device index set by :ocv:func:`gpu::setDevice` or initialize
 
 
 gpu::resetDevice
-------------------
+----------------
 Explicitly destroys and cleans up all resources associated with the current device in the current process.
 
 .. ocv:function:: void gpu::resetDevice()
@@ -47,8 +47,7 @@ Any subsequent API call to this device will reinitialize the device.
 
 gpu::FeatureSet
 ---------------
-
-Class providing GPU computing features. ::
+Enumeration providing GPU computing features. ::
 
     enum FeatureSet
     {
@@ -62,7 +61,6 @@ Class providing GPU computing features. ::
         SHARED_ATOMICS,
         NATIVE_DOUBLE
     };
-
 
 
 gpu::TargetArchs
@@ -132,7 +130,7 @@ Class providing functionality for querying the specified GPU properties. ::
 
 
 gpu::DeviceInfo::DeviceInfo
--------------------------------
+---------------------------
 The constructors.
 
 .. ocv:function:: gpu::DeviceInfo::DeviceInfo()
@@ -146,7 +144,7 @@ Constructs the ``DeviceInfo`` object for the specified device. If ``device_id`` 
 
 
 gpu::DeviceInfo::name
--------------------------
+---------------------
 Returns the device name.
 
 .. ocv:function:: string gpu::DeviceInfo::name() const
@@ -154,7 +152,7 @@ Returns the device name.
 
 
 gpu::DeviceInfo::majorVersion
----------------------------------
+-----------------------------
 Returns the major compute capability version.
 
 .. ocv:function:: int gpu::DeviceInfo::majorVersion()
@@ -162,7 +160,7 @@ Returns the major compute capability version.
 
 
 gpu::DeviceInfo::minorVersion
----------------------------------
+-----------------------------
 Returns the minor compute capability version.
 
 .. ocv:function:: int gpu::DeviceInfo::minorVersion()
@@ -170,7 +168,7 @@ Returns the minor compute capability version.
 
 
 gpu::DeviceInfo::multiProcessorCount
-----------------------------------------
+------------------------------------
 Returns the number of streaming multiprocessors.
 
 .. ocv:function:: int gpu::DeviceInfo::multiProcessorCount()
@@ -178,7 +176,7 @@ Returns the number of streaming multiprocessors.
 
 
 gpu::DeviceInfo::freeMemory
--------------------------------
+---------------------------
 Returns the amount of free memory in bytes.
 
 .. ocv:function:: size_t gpu::DeviceInfo::freeMemory()
@@ -186,7 +184,7 @@ Returns the amount of free memory in bytes.
 
 
 gpu::DeviceInfo::totalMemory
---------------------------------
+----------------------------
 Returns the amount of total memory in bytes.
 
 .. ocv:function:: size_t gpu::DeviceInfo::totalMemory()
@@ -194,7 +192,7 @@ Returns the amount of total memory in bytes.
 
 
 gpu::DeviceInfo::supports
------------------------------
+-------------------------
 Provides information on GPU feature support.
 
 .. ocv:function:: bool gpu::DeviceInfo::supports( FeatureSet feature_set ) const
@@ -206,7 +204,7 @@ This function returns ``true`` if the device has the specified GPU feature. Othe
 
 
 gpu::DeviceInfo::isCompatible
----------------------------------
+-----------------------------
 Checks the GPU module and device compatibility.
 
 .. ocv:function:: bool gpu::DeviceInfo::isCompatible()
@@ -216,7 +214,7 @@ This function returns ``true`` if the GPU module can be run on the specified dev
 
 
 gpu::DeviceInfo::deviceID
----------------------------------
+-------------------------
 Returns system index of the GPU device starting with 0.
 
 .. ocv:function:: int gpu::DeviceInfo::deviceID()
