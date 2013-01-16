@@ -58,9 +58,6 @@
 /* OpenEXR codec */
 #cmakedefine  HAVE_ILMIMF
 
-/* Apple ImageIO Framework */
-#cmakedefine  HAVE_IMAGEIO
-
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine  HAVE_INTTYPES_H 1
 
@@ -175,20 +172,14 @@
 /* NVidia Cuda Runtime API*/
 #cmakedefine HAVE_CUDA
 
-/* OpenCL Support */
-#cmakedefine HAVE_OPENCL
-
-/* AMD's OpenCL Fast Fourier Transform Library*/
-#cmakedefine HAVE_CLAMDFFT
-
-/* AMD's Basic Linear Algebra Subprograms Library*/
-#cmakedefine HAVE_CLAMDBLAS
-
 /* NVidia Cuda Fast Fourier Transform (FFT) API*/
 #cmakedefine HAVE_CUFFT
 
 /* NVidia Cuda Basic Linear Algebra Subprograms (BLAS) API*/
 #cmakedefine HAVE_CUBLAS
+
+/* NVidia Video Decoding API*/
+#cmakedefine HAVE_NVCUVID
 
 /* Compile for 'real' NVIDIA GPU architectures */
 #define CUDA_ARCH_BIN "${OPENCV_CUDA_ARCH_BIN}"
@@ -201,6 +192,15 @@
 
 /* Create PTX or BIN for 1.0 compute capability */
 #cmakedefine CUDA_ARCH_BIN_OR_PTX_10
+
+/* OpenCL Support */
+#cmakedefine HAVE_OPENCL
+
+/* AMD's OpenCL Fast Fourier Transform Library*/
+#cmakedefine HAVE_CLAMDFFT
+
+/* AMD's Basic Linear Algebra Subprograms Library*/
+#cmakedefine HAVE_CLAMDBLAS
 
 /* VideoInput library */
 #cmakedefine HAVE_VIDEOINPUT

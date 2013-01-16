@@ -48,40 +48,47 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
+cv::gpu::PyrLKOpticalFlow::PyrLKOpticalFlow() { throw_nogpu(); }
 void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_nogpu(); }
 void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_nogpu(); }
+void cv::gpu::PyrLKOpticalFlow::releaseMemory() {}
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace device
+namespace pyrlk
 {
-    namespace pyrlk
-    {
-        void loadConstants(int2 winSize, int iters);
+    void loadConstants(int2 winSize, int iters);
 
-        void lkSparse1_gpu(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
-            int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
-        void lkSparse4_gpu(PtrStepSz<float4> I, PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
-            int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
+    void sparse1(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+                 int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
+    void sparse4(PtrStepSz<float4> I, PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+                 int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
 
-        void lkDense_gpu(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
-                         PtrStepSzf err, int2 winSize, cudaStream_t stream = 0);
-    }
-}}}
+    void dense(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
+               PtrStepSzf err, int2 winSize, cudaStream_t stream = 0);
+}
+
+cv::gpu::PyrLKOpticalFlow::PyrLKOpticalFlow()
+{
+    winSize = Size(21, 21);
+    maxLevel = 3;
+    iters = 30;
+    useInitialFlow = false;
+}
 
 namespace
 {
-    void calcPatchSize(cv::Size winSize, dim3& block, dim3& patch, bool isDeviceArch11)
+    void calcPatchSize(cv::Size winSize, dim3& block, dim3& patch)
     {
         if (winSize.width > 32 && winSize.width > 2 * winSize.height)
         {
-            block.x = isDeviceArch11 ? 16 : 32;
+            block.x = deviceSupports(FEATURE_SET_COMPUTE_12) ? 32 : 16;
             block.y = 8;
         }
         else
         {
             block.x = 16;
-            block.y = isDeviceArch11 ? 8 : 16;
+            block.y = deviceSupports(FEATURE_SET_COMPUTE_12) ? 16 : 8;
         }
 
         patch.x = (winSize.width  + block.x - 1) / block.x;
@@ -93,8 +100,6 @@ namespace
 
 void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts, GpuMat& status, GpuMat* err)
 {
-    using namespace cv::gpu::device::pyrlk;
-
     if (prevPts.empty())
     {
         nextPts.release();
@@ -104,9 +109,9 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
     }
 
     dim3 block, patch;
-    calcPatchSize(winSize, block, patch, isDeviceArch11_);
+    calcPatchSize(winSize, block, patch);
 
-    CV_Assert(prevImg.type() == CV_8UC1 || prevImg.type() == CV_8UC3 || prevImg.type() == CV_8UC4);
+    CV_Assert(prevImg.channels() == 1 || prevImg.channels() == 3 || prevImg.channels() == 4);
     CV_Assert(prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type());
     CV_Assert(maxLevel >= 0);
     CV_Assert(winSize.width > 2 && winSize.height > 2);
@@ -142,11 +147,11 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
     }
     else
     {
-        cvtColor(prevImg, dx_calcBuf_, COLOR_BGR2BGRA);
-        dx_calcBuf_.convertTo(prevPyr_[0], CV_32F);
+        cvtColor(prevImg, buf_, COLOR_BGR2BGRA);
+        buf_.convertTo(prevPyr_[0], CV_32F);
 
-        cvtColor(nextImg, dx_calcBuf_, COLOR_BGR2BGRA);
-        dx_calcBuf_.convertTo(nextPyr_[0], CV_32F);
+        cvtColor(nextImg, buf_, COLOR_BGR2BGRA);
+        buf_.convertTo(nextPyr_[0], CV_32F);
     }
 
     for (int level = 1; level <= maxLevel; ++level)
@@ -155,19 +160,19 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
         pyrDown(nextPyr_[level - 1], nextPyr_[level]);
     }
 
-    loadConstants(make_int2(winSize.width, winSize.height), iters);
+    pyrlk::loadConstants(make_int2(winSize.width, winSize.height), iters);
 
     for (int level = maxLevel; level >= 0; level--)
     {
         if (cn == 1)
         {
-            lkSparse1_gpu(prevPyr_[level], nextPyr_[level],
+            pyrlk::sparse1(prevPyr_[level], nextPyr_[level],
                 prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(), level == 0 && err ? err->ptr<float>() : 0, prevPts.cols,
                 level, block, patch);
         }
         else
         {
-            lkSparse4_gpu(prevPyr_[level], nextPyr_[level],
+            pyrlk::sparse4(prevPyr_[level], nextPyr_[level],
                 prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(), level == 0 && err ? err->ptr<float>() : 0, prevPts.cols,
                 level, block, patch);
         }
@@ -176,8 +181,6 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
 
 void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err)
 {
-    using namespace cv::gpu::device::pyrlk;
-
     CV_Assert(prevImg.type() == CV_8UC1);
     CV_Assert(prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type());
     CV_Assert(maxLevel >= 0);
@@ -200,9 +203,6 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
         pyrDown(nextPyr_[level - 1], nextPyr_[level]);
     }
 
-    uPyr_.resize(2);
-    vPyr_.resize(2);
-
     ensureSizeIsEnough(prevImg.size(), CV_32FC1, uPyr_[0]);
     ensureSizeIsEnough(prevImg.size(), CV_32FC1, vPyr_[0]);
     ensureSizeIsEnough(prevImg.size(), CV_32FC1, uPyr_[1]);
@@ -211,7 +211,7 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
     vPyr_[1].setTo(Scalar::all(0));
 
     int2 winSize2i = make_int2(winSize.width, winSize.height);
-    loadConstants(winSize2i, iters);
+    pyrlk::loadConstants(winSize2i, iters);
 
     PtrStepSzf derr = err ? *err : PtrStepSzf();
 
@@ -221,7 +221,7 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
     {
         int idx2 = (idx + 1) & 1;
 
-        lkDense_gpu(prevPyr_[level], nextPyr_[level], uPyr_[idx], vPyr_[idx], uPyr_[idx2], vPyr_[idx2],
+        pyrlk::dense(prevPyr_[level], nextPyr_[level], uPyr_[idx], vPyr_[idx], uPyr_[idx2], vPyr_[idx2],
             level == 0 ? derr : PtrStepSzf(), winSize2i);
 
         if (level > 0)
@@ -230,6 +230,20 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
 
     uPyr_[idx].copyTo(u);
     vPyr_[idx].copyTo(v);
+}
+
+void cv::gpu::PyrLKOpticalFlow::releaseMemory()
+{
+    prevPyr_.clear();
+    nextPyr_.clear();
+
+    buf_.release();
+
+    uPyr_[0].release();
+    vPyr_[0].release();
+
+    uPyr_[1].release();
+    vPyr_[1].release();
 }
 
 #endif /* !defined (HAVE_CUDA) */

@@ -43,26 +43,29 @@
 
 #ifdef HAVE_CUDA
 
-namespace {
-
-IMPLEMENT_PARAM_CLASS(KSize, cv::Size)
-
-cv::Mat getInnerROI(cv::InputArray m_, cv::Size ksize)
+namespace
 {
-    cv::Mat m = getMat(m_);
-    cv::Rect roi(ksize.width, ksize.height, m.cols - 2 * ksize.width, m.rows - 2 * ksize.height);
-    return m(roi);
-}
+    IMPLEMENT_PARAM_CLASS(KSize, cv::Size)
+    IMPLEMENT_PARAM_CLASS(Anchor, cv::Point)
+    IMPLEMENT_PARAM_CLASS(Deriv_X, int)
+    IMPLEMENT_PARAM_CLASS(Deriv_Y, int)
+    IMPLEMENT_PARAM_CLASS(Iterations, int)
 
-cv::Mat getInnerROI(cv::InputArray m, int ksize)
-{
-    return getInnerROI(m, cv::Size(ksize, ksize));
+    cv::Mat getInnerROI(cv::InputArray m_, cv::Size ksize)
+    {
+        cv::Mat m = getMat(m_);
+        cv::Rect roi(ksize.width, ksize.height, m.cols - 2 * ksize.width, m.rows - 2 * ksize.height);
+        return m(roi);
+    }
+
+    cv::Mat getInnerROI(cv::InputArray m, int ksize)
+    {
+        return getInnerROI(m, cv::Size(ksize, ksize));
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Blur
-
-IMPLEMENT_PARAM_CLASS(Anchor, cv::Point)
 
 PARAM_TEST_CASE(Blur, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Anchor, UseRoi)
 {
@@ -86,7 +89,7 @@ PARAM_TEST_CASE(Blur, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Anchor, Use
     }
 };
 
-TEST_P(Blur, Accuracy)
+GPU_TEST_P(Blur, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -110,36 +113,39 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Blur, testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Sobel
 
-IMPLEMENT_PARAM_CLASS(Deriv_X, int)
-IMPLEMENT_PARAM_CLASS(Deriv_Y, int)
-
-PARAM_TEST_CASE(Sobel, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Deriv_X, Deriv_Y, BorderType, UseRoi)
+PARAM_TEST_CASE(Sobel, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, KSize, Deriv_X, Deriv_Y, BorderType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
-    int type;
+    int depth;
+    int cn;
     cv::Size ksize;
     int dx;
     int dy;
     int borderType;
     bool useRoi;
 
+    int type;
+
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
-        type = GET_PARAM(2);
-        ksize = GET_PARAM(3);
-        dx = GET_PARAM(4);
-        dy = GET_PARAM(5);
-        borderType = GET_PARAM(6);
-        useRoi = GET_PARAM(7);
+        depth = GET_PARAM(2);
+        cn = GET_PARAM(3);
+        ksize = GET_PARAM(4);
+        dx = GET_PARAM(5);
+        dy = GET_PARAM(6);
+        borderType = GET_PARAM(7);
+        useRoi = GET_PARAM(8);
 
         cv::gpu::setDevice(devInfo.deviceID());
+
+        type = CV_MAKE_TYPE(depth, cn);
     }
 };
 
-TEST_P(Sobel, Accuracy)
+GPU_TEST_P(Sobel, Accuracy)
 {
     if (dx == 0 && dy == 0)
         return;
@@ -152,13 +158,14 @@ TEST_P(Sobel, Accuracy)
     cv::Mat dst_gold;
     cv::Sobel(src, dst_gold, -1, dx, dy, ksize.width, 1.0, 0.0, borderType);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.1);
+    EXPECT_MAT_NEAR(getInnerROI(dst_gold, ksize), getInnerROI(dst, ksize), CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.1);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Filter, Sobel, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
+    testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32F)),
+    IMAGE_CHANNELS,
     testing::Values(KSize(cv::Size(3, 3)), KSize(cv::Size(5, 5)), KSize(cv::Size(7, 7))),
     testing::Values(Deriv_X(0), Deriv_X(1), Deriv_X(2)),
     testing::Values(Deriv_Y(0), Deriv_Y(1), Deriv_Y(2)),
@@ -171,31 +178,37 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Sobel, testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Scharr
 
-PARAM_TEST_CASE(Scharr, cv::gpu::DeviceInfo, cv::Size, MatType, Deriv_X, Deriv_Y, BorderType, UseRoi)
+PARAM_TEST_CASE(Scharr, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, Deriv_X, Deriv_Y, BorderType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
-    int type;
+    int depth;
+    int cn;
     int dx;
     int dy;
     int borderType;
     bool useRoi;
 
+    int type;
+
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
-        type = GET_PARAM(2);
-        dx = GET_PARAM(3);
-        dy = GET_PARAM(4);
-        borderType = GET_PARAM(5);
-        useRoi = GET_PARAM(6);
+        depth = GET_PARAM(2);
+        cn = GET_PARAM(3);
+        dx = GET_PARAM(4);
+        dy = GET_PARAM(5);
+        borderType = GET_PARAM(6);
+        useRoi = GET_PARAM(7);
 
         cv::gpu::setDevice(devInfo.deviceID());
+
+        type = CV_MAKE_TYPE(depth, cn);
     }
 };
 
-TEST_P(Scharr, Accuracy)
+GPU_TEST_P(Scharr, Accuracy)
 {
     if (dx + dy != 1)
         return;
@@ -208,13 +221,14 @@ TEST_P(Scharr, Accuracy)
     cv::Mat dst_gold;
     cv::Scharr(src, dst_gold, -1, dx, dy, 1.0, 0.0, borderType);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.1);
+    EXPECT_MAT_NEAR(getInnerROI(dst_gold, cv::Size(3, 3)), getInnerROI(dst, cv::Size(3, 3)), CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.1);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Filter, Scharr, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
+    testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32F)),
+    IMAGE_CHANNELS,
     testing::Values(Deriv_X(0), Deriv_X(1)),
     testing::Values(Deriv_Y(0), Deriv_Y(1)),
     testing::Values(BorderType(cv::BORDER_REFLECT101),
@@ -226,29 +240,35 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Scharr, testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // GaussianBlur
 
-PARAM_TEST_CASE(GaussianBlur, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, BorderType, UseRoi)
+PARAM_TEST_CASE(GaussianBlur, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, KSize, BorderType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
-    int type;
+    int depth;
+    int cn;
     cv::Size ksize;
     int borderType;
     bool useRoi;
+
+    int type;
 
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
-        type = GET_PARAM(2);
-        ksize = GET_PARAM(3);
-        borderType = GET_PARAM(4);
-        useRoi = GET_PARAM(5);
+        depth = GET_PARAM(2);
+        cn = GET_PARAM(3);
+        ksize = GET_PARAM(4);
+        borderType = GET_PARAM(5);
+        useRoi = GET_PARAM(6);
 
         cv::gpu::setDevice(devInfo.deviceID());
+
+        type = CV_MAKE_TYPE(depth, cn);
     }
 };
 
-TEST_P(GaussianBlur, Accuracy)
+GPU_TEST_P(GaussianBlur, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     double sigma1 = randomDouble(0.1, 1.0);
@@ -281,7 +301,8 @@ TEST_P(GaussianBlur, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Filter, GaussianBlur, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
+    testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32F)),
+    IMAGE_CHANNELS,
     testing::Values(KSize(cv::Size(3, 3)),
                     KSize(cv::Size(5, 5)),
                     KSize(cv::Size(7, 7)),
@@ -326,7 +347,7 @@ PARAM_TEST_CASE(Laplacian, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, UseRoi
     }
 };
 
-TEST_P(Laplacian, Accuracy)
+GPU_TEST_P(Laplacian, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -348,8 +369,6 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Laplacian, testing::Combine(
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Erode
-
-IMPLEMENT_PARAM_CLASS(Iterations, int)
 
 PARAM_TEST_CASE(Erode, cv::gpu::DeviceInfo, cv::Size, MatType, Anchor, Iterations, UseRoi)
 {
@@ -373,7 +392,7 @@ PARAM_TEST_CASE(Erode, cv::gpu::DeviceInfo, cv::Size, MatType, Anchor, Iteration
     }
 };
 
-TEST_P(Erode, Accuracy)
+GPU_TEST_P(Erode, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Mat kernel = cv::Mat::ones(3, 3, CV_8U);
@@ -422,7 +441,7 @@ PARAM_TEST_CASE(Dilate, cv::gpu::DeviceInfo, cv::Size, MatType, Anchor, Iteratio
     }
 };
 
-TEST_P(Dilate, Accuracy)
+GPU_TEST_P(Dilate, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Mat kernel = cv::Mat::ones(3, 3, CV_8U);
@@ -476,7 +495,7 @@ PARAM_TEST_CASE(MorphEx, cv::gpu::DeviceInfo, cv::Size, MatType, MorphOp, Anchor
     }
 };
 
-TEST_P(MorphEx, Accuracy)
+GPU_TEST_P(MorphEx, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Mat kernel = cv::Mat::ones(3, 3, CV_8U);
@@ -530,7 +549,7 @@ PARAM_TEST_CASE(Filter2D, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Anchor,
     }
 };
 
-TEST_P(Filter2D, Accuracy)
+GPU_TEST_P(Filter2D, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Mat kernel = randomMat(cv::Size(ksize.width, ksize.height), CV_32FC1, 0.0, 1.0);
@@ -552,7 +571,5 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Filter2D, testing::Combine(
     testing::Values(Anchor(cv::Point(-1, -1)), Anchor(cv::Point(0, 0)), Anchor(cv::Point(2, 2))),
     testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_CONSTANT), BorderType(cv::BORDER_REFLECT)),
     WHOLE_SUBMAT));
-
-} // namespace
 
 #endif // HAVE_CUDA

@@ -115,7 +115,6 @@ CvCapture * cvCreateCameraCapture_V4L( int index );
 CvCapture * cvCreateCameraCapture_DC1394( int index );
 CvCapture * cvCreateCameraCapture_DC1394_2( int index );
 CvCapture* cvCreateCameraCapture_MIL( int index );
-CvCapture* cvCreateCameraCapture_Giganetix( int index );
 CvCapture * cvCreateCameraCapture_CMU( int index );
 CV_IMPL CvCapture * cvCreateCameraCapture_TYZX( int index );
 CvCapture* cvCreateFileCapture_Win32( const char* filename );
@@ -206,9 +205,6 @@ void cvSetRatioWindow_QT(const char* name,double prop_value);
 double cvGetOpenGlProp_QT(const char* name);
 #endif
 
-// OpenGL
-typedef void (CV_CDECL *CvOpenGlCleanCallback)(void* userdata);
-void icvSetOpenGlCleanCallback(const char* window_name, CvOpenGlCleanCallback callback, void* userdata);
 
 
 /*namespace cv

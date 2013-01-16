@@ -51,7 +51,7 @@ struct CompactPoints : testing::TestWithParam<gpu::DeviceInfo>
     virtual void SetUp() { gpu::setDevice(GetParam().deviceID()); }
 };
 
-TEST_P(CompactPoints, CanCompactizeSmallInput)
+GPU_TEST_P(CompactPoints, CanCompactizeSmallInput)
 {
     Mat src0(1, 3, CV_32FC2);
     src0.at<Point2f>(0,0) = Point2f(0,0);

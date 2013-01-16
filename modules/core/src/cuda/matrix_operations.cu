@@ -44,6 +44,7 @@
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/transform.hpp"
 #include "opencv2/gpu/device/functional.hpp"
+#include "opencv2/gpu/device/type_traits.hpp"
 
 namespace cv { namespace gpu { namespace device
 {
@@ -54,6 +55,7 @@ namespace cv { namespace gpu { namespace device
     void writeScalar(const int*);
     void writeScalar(const float*);
     void writeScalar(const double*);
+    void copyToWithMask_gpu(PtrStepSzb src, PtrStepSzb dst, size_t elemSize1, int cn, PtrStepSzb mask, bool colorMask, cudaStream_t stream);
     void convert_gpu(PtrStepSzb, int, PtrStepSzb, int, double, double, cudaStream_t);
 }}}
 
@@ -226,16 +228,16 @@ namespace cv { namespace gpu { namespace device
     //////////////////////////////// ConvertTo ////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
 
-    template <typename T, typename D> struct Convertor : unary_function<T, D>
+    template <typename T, typename D, typename S> struct Convertor : unary_function<T, D>
     {
-        Convertor(double alpha_, double beta_) : alpha(alpha_), beta(beta_) {}
+        Convertor(S alpha_, S beta_) : alpha(alpha_), beta(beta_) {}
 
-        __device__ __forceinline__ D operator()(const T& src) const
+        __device__ __forceinline__ D operator()(typename TypeTraits<T>::ParameterType src) const
         {
             return saturate_cast<D>(alpha * src + beta);
         }
 
-        double alpha, beta;
+        S alpha, beta;
     };
 
     namespace detail
@@ -282,16 +284,16 @@ namespace cv { namespace gpu { namespace device
         };
     }
 
-    template <typename T, typename D> struct TransformFunctorTraits< Convertor<T, D> > : detail::ConvertTraits< Convertor<T, D> >
+    template <typename T, typename D, typename S> struct TransformFunctorTraits< Convertor<T, D, S> > : detail::ConvertTraits< Convertor<T, D, S> >
     {
     };
 
-    template<typename T, typename D>
+    template<typename T, typename D, typename S>
     void cvt_(PtrStepSzb src, PtrStepSzb dst, double alpha, double beta, cudaStream_t stream)
     {
         cudaSafeCall( cudaSetDoubleForDevice(&alpha) );
         cudaSafeCall( cudaSetDoubleForDevice(&beta) );
-        Convertor<T, D> op(alpha, beta);
+        Convertor<T, D, S> op(static_cast<S>(alpha), static_cast<S>(beta));
         cv::gpu::device::transform((PtrStepSz<T>)src, (PtrStepSz<D>)dst, op, WithOutMask(), stream);
     }
 
@@ -304,36 +306,74 @@ namespace cv { namespace gpu { namespace device
     {
         typedef void (*caller_t)(PtrStepSzb src, PtrStepSzb dst, double alpha, double beta, cudaStream_t stream);
 
-        static const caller_t tab[8][8] =
+        static const caller_t tab[7][7] =
         {
-            {cvt_<uchar, uchar>, cvt_<uchar, schar>, cvt_<uchar, ushort>, cvt_<uchar, short>,
-            cvt_<uchar, int>, cvt_<uchar, float>, cvt_<uchar, double>, 0},
-
-            {cvt_<schar, uchar>, cvt_<schar, schar>, cvt_<schar, ushort>, cvt_<schar, short>,
-            cvt_<schar, int>, cvt_<schar, float>, cvt_<schar, double>, 0},
-
-            {cvt_<ushort, uchar>, cvt_<ushort, schar>, cvt_<ushort, ushort>, cvt_<ushort, short>,
-            cvt_<ushort, int>, cvt_<ushort, float>, cvt_<ushort, double>, 0},
-
-            {cvt_<short, uchar>, cvt_<short, schar>, cvt_<short, ushort>, cvt_<short, short>,
-            cvt_<short, int>, cvt_<short, float>, cvt_<short, double>, 0},
-
-            {cvt_<int, uchar>, cvt_<int, schar>, cvt_<int, ushort>,
-            cvt_<int, short>, cvt_<int, int>, cvt_<int, float>, cvt_<int, double>, 0},
-
-            {cvt_<float, uchar>, cvt_<float, schar>, cvt_<float, ushort>,
-            cvt_<float, short>, cvt_<float, int>, cvt_<float, float>, cvt_<float, double>, 0},
-
-            {cvt_<double, uchar>, cvt_<double, schar>, cvt_<double, ushort>,
-            cvt_<double, short>, cvt_<double, int>, cvt_<double, float>, cvt_<double, double>, 0},
-
-            {0,0,0,0,0,0,0,0}
+            {
+                cvt_<uchar, uchar, float>,
+                cvt_<uchar, schar, float>,
+                cvt_<uchar, ushort, float>,
+                cvt_<uchar, short, float>,
+                cvt_<uchar, int, float>,
+                cvt_<uchar, float, float>,
+                cvt_<uchar, double, double>
+            },
+            {
+                cvt_<schar, uchar, float>,
+                cvt_<schar, schar, float>,
+                cvt_<schar, ushort, float>,
+                cvt_<schar, short, float>,
+                cvt_<schar, int, float>,
+                cvt_<schar, float, float>,
+                cvt_<schar, double, double>
+            },
+            {
+                cvt_<ushort, uchar, float>,
+                cvt_<ushort, schar, float>,
+                cvt_<ushort, ushort, float>,
+                cvt_<ushort, short, float>,
+                cvt_<ushort, int, float>,
+                cvt_<ushort, float, float>,
+                cvt_<ushort, double, double>
+            },
+            {
+                cvt_<short, uchar, float>,
+                cvt_<short, schar, float>,
+                cvt_<short, ushort, float>,
+                cvt_<short, short, float>,
+                cvt_<short, int, float>,
+                cvt_<short, float, float>,
+                cvt_<short, double, double>
+            },
+            {
+                cvt_<int, uchar, float>,
+                cvt_<int, schar, float>,
+                cvt_<int, ushort, float>,
+                cvt_<int, short, float>,
+                cvt_<int, int, double>,
+                cvt_<int, float, double>,
+                cvt_<int, double, double>
+            },
+            {
+                cvt_<float, uchar, float>,
+                cvt_<float, schar, float>,
+                cvt_<float, ushort, float>,
+                cvt_<float, short, float>,
+                cvt_<float, int, float>,
+                cvt_<float, float, float>,
+                cvt_<float, double, double>
+            },
+            {
+                cvt_<double, uchar, double>,
+                cvt_<double, schar, double>,
+                cvt_<double, ushort, double>,
+                cvt_<double, short, double>,
+                cvt_<double, int, double>,
+                cvt_<double, float, double>,
+                cvt_<double, double, double>
+            }
         };
 
         caller_t func = tab[sdepth][ddepth];
-        if (!func)
-            cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__, "convert_gpu");
-
         func(src, dst, alpha, beta, stream);
     }
 

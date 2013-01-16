@@ -118,25 +118,25 @@ int main(int argc, char** argv)
 {
     try
     {
-         const char*  keys =
-                "{ h | help ?            | false | Print help}"
-                "{ i | info              | false | Print information about system and exit }"
-                "{ d | device            | -1   | Device on which tests will be executed (-1 means all devices) }"
-                "{ nvtest_output_level | nvtest_output_level | none | NVidia test verbosity level (none, compact, full) }"
+        const std::string keys =
+                "{ h help ?            |      | Print help}"
+                "{ i info              |      | Print information about system and exit }"
+                "{ device              | -1   | Device on which tests will be executed (-1 means all devices) }"
+                "{ nvtest_output_level | none | NVidia test verbosity level (none, compact, full) }"
                 ;
 
         CommandLineParser cmd(argc, (const char**)argv, keys);
 
-        if (cmd.get<bool>("help"))
+        if (cmd.has("help"))
         {
-            cmd.printParams();
+            cmd.printMessage();
             return 0;
         }
 
         printOsInfo();
         printCudaInfo();
 
-        if (cmd.get<bool>("info"))
+        if (cmd.has("info"))
         {
             return 0;
         }

@@ -3,7 +3,6 @@
 
 #include "cvconfig.h"
 #include "opencv2/core/core.hpp"
-#include "opencv2/core/opengl_interop.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/video/video.hpp"
@@ -66,40 +65,6 @@ static void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<
     }
 }
 
-#ifdef HAVE_OPENGL
-
-struct DrawData
-{
-    GlTexture tex;
-    GlArrays arr;
-};
-
-static void drawCallback(void* userdata)
-{
-    DrawData* data = static_cast<DrawData*>(userdata);
-
-    if (data->tex.empty() || data->arr.empty())
-        return;
-
-    static GlCamera camera;
-    static bool init_camera = true;
-
-    if (init_camera)
-    {
-        camera.setOrthoProjection(0.0, 1.0, 1.0, 0.0, 0.0, 1.0);
-        camera.lookAt(Point3d(0.0, 0.0, 1.0), Point3d(0.0, 0.0, 0.0), Point3d(0.0, 1.0, 0.0));
-        init_camera = false;
-    }
-
-    camera.setupProjectionMatrix();
-    camera.setupModelViewMatrix();
-
-    render(data->tex);
-    render(data->arr, RenderMode::TRIANGLES);
-}
-
-#endif
-
 template <typename T> inline T clamp (T x, T a, T b)
 {
     return ((x) > (a) ? ((x) < (b) ? (x) : (b)) : (a));
@@ -152,23 +117,22 @@ static void getFlowField(const Mat& u, const Mat& v, Mat& flowField)
 int main(int argc, const char* argv[])
 {
     const char* keys =
-        "{ h            | help           | false | print help message }"
-        "{ l            | left           |       | specify left image }"
-        "{ r            | right          |       | specify right image }"
-        "{ gray         | gray           | false | use grayscale sources [PyrLK Sparse] }"
-        "{ win_size     | win_size       | 21    | specify windows size [PyrLK] }"
-        "{ max_level    | max_level      | 3     | specify max level [PyrLK] }"
-        "{ iters        | iters          | 30    | specify iterations count [PyrLK] }"
-        "{ points       | points         | 4000  | specify points count [GoodFeatureToTrack] }"
-        "{ min_dist     | min_dist       | 0     | specify minimal distance between points [GoodFeatureToTrack] }";
+        "{ h             help   |       | print help message }"
+        "{ l             left   |       | specify left image }"
+        "{ r             right  |       | specify right image }"
+        "{ gray                 |       | use grayscale sources [PyrLK Sparse] }"
+        "{ win_size             | 21    | specify windows size [PyrLK] }"
+        "{ max_level            | 3     | specify max level [PyrLK] }"
+        "{ iters                | 30    | specify iterations count [PyrLK] }"
+        "{ points               | 4000  | specify points count [GoodFeatureToTrack] }"
+        "{ min_dist             | 0     | specify minimal distance between points [GoodFeatureToTrack] }";
 
     CommandLineParser cmd(argc, argv, keys);
 
-    if (cmd.get<bool>("help"))
+    if (cmd.has("help") || !cmd.check())
     {
-        cout << "Usage: pyrlk_optical_flow [options]" << endl;
-        cout << "Avaible options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
+        cmd.printErrors();
         return 0;
     }
 
@@ -181,7 +145,7 @@ int main(int argc, const char* argv[])
         return -1;
     }
 
-    bool useGray = cmd.get<bool>("gray");
+    bool useGray = cmd.has("gray");
     int winSize = cmd.get<int>("win_size");
     int maxLevel = cmd.get<int>("max_level");
     int iters = cmd.get<int>("iters");
@@ -199,12 +163,6 @@ int main(int argc, const char* argv[])
 
     namedWindow("PyrLK [Sparse]", WINDOW_NORMAL);
     namedWindow("PyrLK [Dense] Flow Field", WINDOW_NORMAL);
-
-    #ifdef HAVE_OPENGL
-        namedWindow("PyrLK [Dense]", WINDOW_OPENGL);
-
-        setGlDevice();
-    #endif
 
     cout << "Image size : " << frame0.cols << " x " << frame0.rows << endl;
     cout << "Points count : " << points << endl;
@@ -270,21 +228,6 @@ int main(int argc, const char* argv[])
     getFlowField(Mat(d_u), Mat(d_v), flowField);
 
     imshow("PyrLK [Dense] Flow Field", flowField);
-
-    #ifdef HAVE_OPENGL
-        setOpenGlContext("PyrLK [Dense]");
-
-        GpuMat d_vertex, d_colors;
-        createOpticalFlowNeedleMap(d_u, d_v, d_vertex, d_colors);
-
-        DrawData drawData;
-
-        drawData.tex.copyFrom(d_frame0Gray);
-        drawData.arr.setVertexArray(d_vertex);
-        drawData.arr.setColorArray(d_colors, false);
-
-        setOpenGlDrawCallback("PyrLK [Dense]", drawCallback, &drawData);
-    #endif
 
     waitKey();
 

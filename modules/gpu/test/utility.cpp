@@ -67,7 +67,7 @@ double randomDouble(double minVal, double maxVal)
 
 Size randomSize(int minVal, int maxVal)
 {
-    return cv::Size(randomInt(minVal, maxVal), randomInt(minVal, maxVal));
+    return Size(randomInt(minVal, maxVal), randomInt(minVal, maxVal));
 }
 
 Scalar randomScalar(double minVal, double maxVal)
@@ -83,7 +83,7 @@ Mat randomMat(Size size, int type, double minVal, double maxVal)
 //////////////////////////////////////////////////////////////////////
 // GpuMat create
 
-cv::gpu::GpuMat createMat(cv::Size size, int type, bool useRoi)
+GpuMat createMat(Size size, int type, bool useRoi)
 {
     Size size0 = size;
 
@@ -122,19 +122,11 @@ Mat readImageType(const std::string& fname, int type)
     if (CV_MAT_CN(type) == 4)
     {
         Mat temp;
-        cvtColor(src, temp, cv::COLOR_BGR2BGRA);
+        cvtColor(src, temp, COLOR_BGR2BGRA);
         swap(src, temp);
     }
     src.convertTo(src, CV_MAT_DEPTH(type), CV_MAT_DEPTH(type) == CV_32F ? 1.0 / 255.0 : 1.0);
     return src;
-}
-
-//////////////////////////////////////////////////////////////////////
-// Image dumping
-
-void dumpImage(const std::string& fileName, const cv::Mat& image)
-{
-    cv::imwrite(TS::ptr()->get_data_path() + fileName, image);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -156,7 +148,7 @@ void DeviceManager::load(int i)
     devices_.clear();
     devices_.reserve(1);
 
-    ostringstream msg;
+    std::ostringstream msg;
 
     if (i < 0 || i >= getCudaEnabledDeviceCount())
     {
@@ -195,21 +187,39 @@ void DeviceManager::loadAll()
 //////////////////////////////////////////////////////////////////////
 // Additional assertion
 
-Mat getMat(InputArray arr)
+namespace
 {
-    if (arr.kind() == _InputArray::GPU_MAT)
+    template <typename T, typename OutT> std::string printMatValImpl(const Mat& m, Point p)
     {
-        Mat m;
-        arr.getGpuMat().download(m);
-        return m;
+        const int cn = m.channels();
+
+        std::ostringstream ostr;
+        ostr << "(";
+
+        p.x /= cn;
+
+        ostr << static_cast<OutT>(m.at<T>(p.y, p.x * cn));
+        for (int c = 1; c < m.channels(); ++c)
+        {
+            ostr << ", " << static_cast<OutT>(m.at<T>(p.y, p.x * cn + c));
+        }
+        ostr << ")";
+
+        return ostr.str();
     }
 
-    return arr.getMat();
-}
+    std::string printMatVal(const Mat& m, Point p)
+    {
+        typedef std::string (*func_t)(const Mat& m, Point p);
 
-double checkNorm(InputArray m1, InputArray m2)
-{
-    return norm(getMat(m1), getMat(m2), NORM_INF);
+        static const func_t funcs[] =
+        {
+            printMatValImpl<uchar, int>, printMatValImpl<schar, int>, printMatValImpl<ushort, int>, printMatValImpl<short, int>,
+            printMatValImpl<int, int>, printMatValImpl<float, float>, printMatValImpl<double, double>
+        };
+
+        return funcs[m.depth()](m, p);
+    }
 }
 
 void minMaxLocGold(const Mat& src, double* minVal_, double* maxVal_, Point* minLoc_, Point* maxLoc_, const Mat& mask)
@@ -229,8 +239,8 @@ void minMaxLocGold(const Mat& src, double* minVal_, double* maxVal_, Point* minL
 
     for (int y = 0; y < src.rows; ++y)
     {
-        const schar* src_row = src.ptr<signed char>(y);
-        const uchar* mask_row = mask.empty() ? 0 : mask.ptr<unsigned char>(y);
+        const schar* src_row = src.ptr<schar>(y);
+        const uchar* mask_row = mask.empty() ? 0 : mask.ptr<uchar>(y);
 
         for (int x = 0; x < src.cols; ++x)
         {
@@ -260,42 +270,19 @@ void minMaxLocGold(const Mat& src, double* minVal_, double* maxVal_, Point* minL
     if (maxLoc_) *maxLoc_ = maxLoc;
 }
 
-namespace
+Mat getMat(InputArray arr)
 {
-    template <typename T, typename OutT> std::string printMatValImpl(const Mat& m, Point p)
+    if (arr.kind() == _InputArray::GPU_MAT)
     {
-        const int cn = m.channels();
-
-        ostringstream ostr;
-        ostr << "(";
-
-        p.x /= cn;
-
-        ostr << static_cast<OutT>(m.at<T>(p.y, p.x * cn));
-        for (int c = 1; c < m.channels(); ++c)
-        {
-            ostr << ", " << static_cast<OutT>(m.at<T>(p.y, p.x * cn + c));
-        }
-        ostr << ")";
-
-        return ostr.str();
+        Mat m;
+        arr.getGpuMat().download(m);
+        return m;
     }
 
-    std::string printMatVal(const Mat& m, Point p)
-    {
-        typedef std::string (*func_t)(const Mat& m, Point p);
-
-        static const func_t funcs[] =
-        {
-            printMatValImpl<uchar, int>, printMatValImpl<schar, int>, printMatValImpl<ushort, int>, printMatValImpl<short, int>,
-            printMatValImpl<int, int>, printMatValImpl<float, float>, printMatValImpl<double, double>
-        };
-
-        return funcs[m.depth()](m, p);
-    }
+    return arr.getMat();
 }
 
-testing::AssertionResult assertMatNear(const char* expr1, const char* expr2, const char* eps_expr, cv::InputArray m1_, cv::InputArray m2_, double eps)
+AssertionResult assertMatNear(const char* expr1, const char* expr2, const char* eps_expr, InputArray m1_, InputArray m2_, double eps)
 {
     Mat m1 = getMat(m1_);
     Mat m2 = getMat(m2_);
@@ -344,18 +331,6 @@ double checkSimilarity(InputArray m1, InputArray m2)
 //////////////////////////////////////////////////////////////////////
 // Helper structs for value-parameterized tests
 
-vector<MatDepth> depths(int depth_start, int depth_end)
-{
-    vector<MatDepth> v;
-
-    v.reserve((depth_end - depth_start + 1));
-
-    for (int depth = depth_start; depth <= depth_end; ++depth)
-        v.push_back(depth);
-
-    return v;
-}
-
 vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end)
 {
     vector<MatType> v;
@@ -366,7 +341,7 @@ vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end)
     {
         for (int cn = cn_start; cn <= cn_end; ++cn)
         {
-            v.push_back(CV_MAKETYPE(depth, cn));
+            v.push_back(MatType(CV_MAKE_TYPE(depth, cn)));
         }
     }
 
@@ -399,6 +374,14 @@ void PrintTo(const Inverse& inverse, std::ostream* os)
         (*os) << "inverse";
     else
         (*os) << "direct";
+}
+
+//////////////////////////////////////////////////////////////////////
+// Other
+
+void dumpImage(const std::string& fileName, const Mat& image)
+{
+    imwrite(TS::ptr()->get_data_path() + fileName, image);
 }
 
 void showDiff(InputArray gold_, InputArray actual_, double eps)

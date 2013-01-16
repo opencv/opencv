@@ -43,11 +43,11 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
-
+#include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/vec_traits.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/block.hpp"
+#include "opencv2/gpu/device/functional.hpp"
+#include "opencv2/gpu/device/reduce.hpp"
 #include "opencv2/gpu/device/border_interpolate.hpp"
 
 using namespace cv::gpu;
@@ -184,6 +184,85 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
+
+        template <int cn> struct Unroll;
+        template <> struct Unroll<1>
+        {
+            template <int BLOCK_SIZE>
+            static __device__ __forceinline__ thrust::tuple<volatile float*, volatile float*> smem_tuple(float* smem)
+            {
+                return cv::gpu::device::smem_tuple(smem, smem + BLOCK_SIZE);
+            }
+
+            static __device__ __forceinline__ thrust::tuple<float&, float&> tie(float& val1, float& val2)
+            {
+                return thrust::tie(val1, val2);
+            }
+
+            static __device__ __forceinline__ const thrust::tuple<plus<float>, plus<float> > op()
+            {
+                plus<float> op;
+                return thrust::make_tuple(op, op);
+            }
+        };
+        template <> struct Unroll<2>
+        {
+            template <int BLOCK_SIZE>
+            static __device__ __forceinline__ thrust::tuple<volatile float*, volatile float*, volatile float*> smem_tuple(float* smem)
+            {
+                return cv::gpu::device::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE);
+            }
+
+            static __device__ __forceinline__ thrust::tuple<float&, float&, float&> tie(float& val1, float2& val2)
+            {
+                return thrust::tie(val1, val2.x, val2.y);
+            }
+
+            static __device__ __forceinline__ const thrust::tuple<plus<float>, plus<float>, plus<float> > op()
+            {
+                plus<float> op;
+                return thrust::make_tuple(op, op, op);
+            }
+        };
+        template <> struct Unroll<3>
+        {
+            template <int BLOCK_SIZE>
+            static __device__ __forceinline__ thrust::tuple<volatile float*, volatile float*, volatile float*, volatile float*> smem_tuple(float* smem)
+            {
+                return cv::gpu::device::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE, smem + 3 * BLOCK_SIZE);
+            }
+
+            static __device__ __forceinline__ thrust::tuple<float&, float&, float&, float&> tie(float& val1, float3& val2)
+            {
+                return thrust::tie(val1, val2.x, val2.y, val2.z);
+            }
+
+            static __device__ __forceinline__ const thrust::tuple<plus<float>, plus<float>, plus<float>, plus<float> > op()
+            {
+                plus<float> op;
+                return thrust::make_tuple(op, op, op, op);
+            }
+        };
+        template <> struct Unroll<4>
+        {
+            template <int BLOCK_SIZE>
+            static __device__ __forceinline__ thrust::tuple<volatile float*, volatile float*, volatile float*, volatile float*, volatile float*> smem_tuple(float* smem)
+            {
+                return cv::gpu::device::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE, smem + 3 * BLOCK_SIZE, smem + 4 * BLOCK_SIZE);
+            }
+
+            static __device__ __forceinline__ thrust::tuple<float&, float&, float&, float&, float&> tie(float& val1, float4& val2)
+            {
+                return thrust::tie(val1, val2.x, val2.y, val2.z, val2.w);
+            }
+
+            static __device__ __forceinline__ const thrust::tuple<plus<float>, plus<float>, plus<float>, plus<float>, plus<float> > op()
+            {
+                plus<float> op;
+                return thrust::make_tuple(op, op, op, op, op);
+            }
+        };
+
         __device__ __forceinline__ int calcDist(const uchar&  a, const uchar&  b) { return (a-b)*(a-b); }
         __device__ __forceinline__ int calcDist(const uchar2& a, const uchar2& b) { return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y); }
         __device__ __forceinline__ int calcDist(const uchar3& a, const uchar3& b) { return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y) + (a.z-b.z)*(a.z-b.z); }
@@ -340,30 +419,15 @@ namespace cv { namespace gpu { namespace device
                     sum = sum + weight * saturate_cast<sum_type>(src(sy + y, sx + x));
                 }
 
-                volatile __shared__ float cta_buffer[CTA_SIZE];
+                __shared__ float cta_buffer[CTA_SIZE * (VecTraits<T>::cn + 1)];
 
-                int tid = threadIdx.x;
+                reduce<CTA_SIZE>(Unroll<VecTraits<T>::cn>::template smem_tuple<CTA_SIZE>(cta_buffer),
+                                 Unroll<VecTraits<T>::cn>::tie(weights_sum, sum),
+                                 threadIdx.x,
+                                 Unroll<VecTraits<T>::cn>::op());
 
-                cta_buffer[tid] = weights_sum;
-                __syncthreads();
-                Block::reduce<CTA_SIZE>(cta_buffer, plus());
-                weights_sum = cta_buffer[0];
-
-                __syncthreads();
-
-
-                for(int n = 0; n < VecTraits<T>::cn; ++n)
-                {
-                    cta_buffer[tid] = reinterpret_cast<float*>(&sum)[n];
-                    __syncthreads();
-                    Block::reduce<CTA_SIZE>(cta_buffer, plus());
-                    reinterpret_cast<float*>(&sum)[n] = cta_buffer[0];
-
-                    __syncthreads();
-                }
-
-                if (tid == 0)
-                    dst = saturate_cast<T>(sum/weights_sum);
+                if (threadIdx.x == 0)
+                    dst = saturate_cast<T>(sum / weights_sum);
             }
 
             __device__ __forceinline__ void operator()(PtrStepSz<T>& dst) const

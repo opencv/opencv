@@ -91,7 +91,7 @@ class SparseMat;
 typedef Mat MatND;
 
 class GlBuffer;
-class GlTexture;
+class GlTexture2D;
 class GlArrays;
 class GlCamera;
 
@@ -108,13 +108,6 @@ template<typename _Tp> class CV_EXPORTS Mat_;
 template<typename _Tp> class CV_EXPORTS MatIterator_;
 template<typename _Tp> class CV_EXPORTS MatConstIterator_;
 template<typename _Tp> class CV_EXPORTS MatCommaInitializer_;
-
-#if !defined(ANDROID) || (defined(_GLIBCXX_USE_WCHAR_T) && _GLIBCXX_USE_WCHAR_T)
-typedef std::basic_string<wchar_t> WString;
-
-CV_EXPORTS string fromUtf16(const WString& str);
-CV_EXPORTS WString toUtf16(const string& str);
-#endif
 
 CV_EXPORTS string format( const char* fmt, ... );
 CV_EXPORTS string tempfile( const char* suffix CV_DEFAULT(0));
@@ -1288,6 +1281,9 @@ public:
     int* refcount; //< the associated reference counter
 };
 
+template<class T, class U> bool operator==(Ptr<T> const & a, Ptr<U> const & b);
+template<class T, class U> bool operator!=(Ptr<T> const & a, Ptr<U> const & b);
+
 
 //////////////////////// Input/Output Array Arguments /////////////////////////////////
 
@@ -1311,7 +1307,7 @@ public:
         STD_VECTOR_MAT    = 5 << KIND_SHIFT,
         EXPR              = 6 << KIND_SHIFT,
         OPENGL_BUFFER     = 7 << KIND_SHIFT,
-        OPENGL_TEXTURE    = 8 << KIND_SHIFT,
+        OPENGL_TEXTURE2D    = 8 << KIND_SHIFT,
         GPU_MAT           = 9 << KIND_SHIFT
     };
     _InputArray();
@@ -1328,13 +1324,13 @@ public:
     _InputArray(const Scalar& s);
     _InputArray(const double& val);
     _InputArray(const GlBuffer& buf);
-    _InputArray(const GlTexture& tex);
+    _InputArray(const GlTexture2D& tex);
     _InputArray(const gpu::GpuMat& d_mat);
 
     virtual Mat getMat(int i=-1) const;
     virtual void getMatVector(vector<Mat>& mv) const;
     virtual GlBuffer getGlBuffer() const;
-    virtual GlTexture getGlTexture() const;
+    virtual GlTexture2D getGlTexture2D() const;
     virtual gpu::GpuMat getGpuMat() const;
 
     virtual int kind() const;
@@ -1345,9 +1341,7 @@ public:
     virtual int channels(int i=-1) const;
     virtual bool empty() const;
 
-#ifdef OPENCV_CAN_BREAK_BINARY_COMPATIBILITY
     virtual ~_InputArray();
-#endif
 
     int flags;
     void* obj;
@@ -1387,6 +1381,8 @@ public:
     template<typename _Tp, int m, int n> _OutputArray(Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(_Tp* vec, int n);
     _OutputArray(gpu::GpuMat& d_mat);
+    _OutputArray(GlBuffer& buf);
+    _OutputArray(GlTexture2D& tex);
 
     _OutputArray(const Mat& m);
     template<typename _Tp> _OutputArray(const vector<_Tp>& vec);
@@ -1397,21 +1393,23 @@ public:
     template<typename _Tp, int m, int n> _OutputArray(const Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(const _Tp* vec, int n);
     _OutputArray(const gpu::GpuMat& d_mat);
+    _OutputArray(const GlBuffer& buf);
+    _OutputArray(const GlTexture2D& tex);
 
     virtual bool fixedSize() const;
     virtual bool fixedType() const;
     virtual bool needed() const;
     virtual Mat& getMatRef(int i=-1) const;
-    /*virtual*/ gpu::GpuMat& getGpuMatRef() const;
+    virtual gpu::GpuMat& getGpuMatRef() const;
+    virtual GlBuffer& getGlBufferRef() const;
+    virtual GlTexture2D& getGlTexture2DRef() const;
     virtual void create(Size sz, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void release() const;
     virtual void clear() const;
 
-#ifdef OPENCV_CAN_BREAK_BINARY_COMPATIBILITY
     virtual ~_OutputArray();
-#endif
 };
 
 typedef const _InputArray& InputArray;
@@ -2143,15 +2141,11 @@ CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, in
 
 //! makes multi-channel array out of several single-channel arrays
 CV_EXPORTS void merge(const Mat* mv, size_t count, OutputArray dst);
-CV_EXPORTS void merge(const vector<Mat>& mv, OutputArray dst );
-
 //! makes multi-channel array out of several single-channel arrays
 CV_EXPORTS_W void merge(InputArrayOfArrays mv, OutputArray dst);
 
 //! copies each plane of a multi-channel array to a dedicated array
 CV_EXPORTS void split(const Mat& src, Mat* mvbegin);
-CV_EXPORTS void split(const Mat& m, vector<Mat>& mv );
-
 //! copies each plane of a multi-channel array to a dedicated array
 CV_EXPORTS_W void split(InputArray m, OutputArrayOfArrays mv);
 
@@ -2388,7 +2382,7 @@ public:
     PCA(InputArray data, InputArray mean, int flags, double retainedVariance);
     //! operator that performs PCA. The previously stored data, if any, is released
     PCA& operator()(InputArray data, InputArray mean, int flags, int maxComponents=0);
-    PCA& computeVar(InputArray data, InputArray mean, int flags, double retainedVariance);
+    PCA& operator()(InputArray data, InputArray mean, int flags, double retainedVariance);
     //! projects vector from the original space to the principal components subspace
     Mat project(InputArray vec) const;
     //! projects vector from the original space to the principal components subspace
@@ -2406,7 +2400,7 @@ public:
 CV_EXPORTS_W void PCACompute(InputArray data, CV_OUT InputOutputArray mean,
                              OutputArray eigenvectors, int maxComponents=0);
 
-CV_EXPORTS_W void PCAComputeVar(InputArray data, CV_OUT InputOutputArray mean,
+CV_EXPORTS_W void PCACompute(InputArray data, CV_OUT InputOutputArray mean,
                              OutputArray eigenvectors, double retainedVariance);
 
 CV_EXPORTS_W void PCAProject(InputArray data, InputArray mean,
@@ -2570,13 +2564,20 @@ CV_EXPORTS_W void fillPoly(InputOutputArray img, InputArrayOfArrays pts,
                            Point offset=Point() );
 
 //! draws one or more polygonal curves
-CV_EXPORTS void polylines(Mat& img, const Point** pts, const int* npts,
+CV_EXPORTS void polylines(Mat& img, const Point* const* pts, const int* npts,
                           int ncontours, bool isClosed, const Scalar& color,
                           int thickness=1, int lineType=8, int shift=0 );
 
 CV_EXPORTS_W void polylines(InputOutputArray img, InputArrayOfArrays pts,
                             bool isClosed, const Scalar& color,
                             int thickness=1, int lineType=8, int shift=0 );
+
+//! draws contours in the image
+CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays contours,
+                              int contourIdx, const Scalar& color,
+                              int thickness=1, int lineType=8,
+                              InputArray hierarchy=noArray(),
+                              int maxLevel=INT_MAX, Point offset=Point() );
 
 //! clips the line segment by the rectangle Rect(0, 0, imgSize.width, imgSize.height)
 CV_EXPORTS bool clipLine(Size imgSize, CV_IN_OUT Point& pt1, CV_IN_OUT Point& pt2);
@@ -4011,7 +4012,7 @@ public:
     //! closes the file and releases all the memory buffers
     CV_WRAP virtual void release();
     //! closes the file, releases all the memory buffers and returns the text string
-    CV_WRAP string releaseAndGetString();
+    CV_WRAP virtual string releaseAndGetString();
 
     //! returns the first element of the top-level mapping
     CV_WRAP FileNode getFirstTopLevelNode() const;
@@ -4423,11 +4424,6 @@ public:
                   void (Algorithm::*setter)(int)=0,
                   const string& help=string());
     void addParam(Algorithm& algo, const char* name,
-                  short& value, bool readOnly=false,
-                  int (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(int)=0,
-                  const string& help=string());
-    void addParam(Algorithm& algo, const char* name,
                   bool& value, bool readOnly=false,
                   int (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(int)=0,
@@ -4476,7 +4472,7 @@ protected:
 
 struct CV_EXPORTS Param
 {
-    enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7, UNSIGNED_INT=8, UINT64=9, SHORT=10 };
+    enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7, UNSIGNED_INT=8, UINT64=9 };
 
     Param();
     Param(int _type, bool _readonly, int _offset,
@@ -4505,14 +4501,6 @@ template<> struct ParamType<int>
     typedef int member_type;
 
     enum { type = Param::INT };
-};
-
-template<> struct ParamType<short>
-{
-    typedef int const_param_type;
-    typedef int member_type;
-
-    enum { type = Param::SHORT };
 };
 
 template<> struct ParamType<double>
@@ -4580,113 +4568,49 @@ template<> struct ParamType<uint64>
 };
 
 
-/*!
-"\nThe CommandLineParser class is designed for command line arguments parsing\n"
-           "Keys map: \n"
-           "Before you start to work with CommandLineParser you have to create a map for keys.\n"
-           "    It will look like this\n"
-           "    const char* keys =\n"
-           "    {\n"
-           "        {    s|  string|  123asd |string parameter}\n"
-           "        {    d|  digit |  100    |digit parameter }\n"
-           "        {    c|noCamera|false    |without camera  }\n"
-           "        {    1|        |some text|help            }\n"
-           "        {    2|        |333      |another help    }\n"
-           "    };\n"
-           "Usage syntax: \n"
-           "    \"{\" - start of parameter string.\n"
-           "    \"}\" - end of parameter string\n"
-           "    \"|\" - separator between short name, full name, default value and help\n"
-           "Supported syntax: \n"
-           "    --key1=arg1  <If a key with '--' must has an argument\n"
-           "                  you have to assign it through '=' sign.> \n"
-           "<If the key with '--' doesn't have any argument, it means that it is a bool key>\n"
-           "    -key2=arg2   <If a key with '-' must has an argument \n"
-           "                  you have to assign it through '=' sign.> \n"
-           "If the key with '-' doesn't have any argument, it means that it is a bool key\n"
-           "    key3                 <This key can't has any parameter> \n"
-           "Usage: \n"
-           "      Imagine that the input parameters are next:\n"
-           "                -s=string_value --digit=250 --noCamera lena.jpg 10000\n"
-           "    CommandLineParser parser(argc, argv, keys) - create a parser object\n"
-           "    parser.get<string>(\"s\" or \"string\") will return you first parameter value\n"
-           "    parser.get<string>(\"s\", false or \"string\", false) will return you first parameter value\n"
-           "                                                                without spaces in end and begin\n"
-           "    parser.get<int>(\"d\" or \"digit\") will return you second parameter value.\n"
-           "                    It also works with 'unsigned int', 'double', and 'float' types>\n"
-           "    parser.get<bool>(\"c\" or \"noCamera\") will return you true .\n"
-           "                                If you enter this key in commandline>\n"
-           "                                It return you false otherwise.\n"
-           "    parser.get<string>(\"1\") will return you the first argument without parameter (lena.jpg) \n"
-           "    parser.get<int>(\"2\") will return you the second argument without parameter (10000)\n"
-           "                          It also works with 'unsigned int', 'double', and 'float' types \n"
-*/
+// The CommandLineParser class is designed for command line arguments parsing
+
 class CV_EXPORTS CommandLineParser
 {
-    public:
+public:
+    CommandLineParser(int argc, const char* const argv[], const string& keys);
+    CommandLineParser(const CommandLineParser& parser);
+    CommandLineParser& operator = (const CommandLineParser& parser);
 
-    //! the default constructor
-      CommandLineParser(int argc, const char* const argv[], const char* key_map);
+    string getPathToApplication() const;
 
-    //! get parameter, you can choose: delete spaces in end and begin or not
-    template<typename _Tp>
-    _Tp get(const std::string& name, bool space_delete=true)
+    template <typename T>
+    T get(const string& name, bool space_delete = true) const
     {
-        if (!has(name))
-        {
-            return _Tp();
-        }
-        std::string str = getString(name);
-        return analyzeValue<_Tp>(str, space_delete);
+        T val = T();
+        getByName(name, space_delete, ParamType<T>::type, (void*)&val);
+        return val;
     }
 
-    //! print short name, full name, current value and help for all params
-    void printParams();
-
-    protected:
-    std::map<std::string, std::vector<std::string> > data;
-    std::string getString(const std::string& name);
-
-    bool has(const std::string& keys);
-
-    template<typename _Tp>
-    _Tp analyzeValue(const std::string& str, bool space_delete=false);
-
-    template<typename _Tp>
-    static _Tp getData(const std::string& str)
+    template <typename T>
+    T get(int index, bool space_delete = true) const
     {
-        _Tp res = _Tp();
-        std::stringstream s1(str);
-        s1 >> res;
-        return res;
+        T val = T();
+        getByIndex(index, space_delete, ParamType<T>::type, (void*)&val);
+        return val;
     }
 
-    template<typename _Tp>
-     _Tp fromStringNumber(const std::string& str);//the default conversion function for numbers
+    bool has(const string& name) const;
 
-    };
+    bool check() const;
 
-template<> CV_EXPORTS
-bool CommandLineParser::get<bool>(const std::string& name, bool space_delete);
+    void about(const string& message);
 
-template<> CV_EXPORTS
-std::string CommandLineParser::analyzeValue<std::string>(const std::string& str, bool space_delete);
+    void printMessage() const;
+    void printErrors() const;
 
-template<> CV_EXPORTS
-int CommandLineParser::analyzeValue<int>(const std::string& str, bool space_delete);
+protected:
+    void getByName(const string& name, bool space_delete, int type, void* dst) const;
+    void getByIndex(int index, bool space_delete, int type, void* dst) const;
 
-template<> CV_EXPORTS
-unsigned int CommandLineParser::analyzeValue<unsigned int>(const std::string& str, bool space_delete);
-
-template<> CV_EXPORTS
-uint64 CommandLineParser::analyzeValue<uint64>(const std::string& str, bool space_delete);
-
-template<> CV_EXPORTS
-float CommandLineParser::analyzeValue<float>(const std::string& str, bool space_delete);
-
-template<> CV_EXPORTS
-double CommandLineParser::analyzeValue<double>(const std::string& str, bool space_delete);
-
+    struct Impl;
+    Impl* impl;
+};
 
 /////////////////////////////// Parallel Primitives //////////////////////////////////
 

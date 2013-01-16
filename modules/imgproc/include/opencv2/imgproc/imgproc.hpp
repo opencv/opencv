@@ -637,9 +637,7 @@ CV_EXPORTS_W void accumulateWeighted( InputArray src, InputOutputArray dst,
 CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2);
 
 CV_EXPORTS_W Point2d phaseCorrelate(InputArray src1, InputArray src2,
-                                  InputArray window = noArray());
-CV_EXPORTS_W Point2d phaseCorrelateRes(InputArray src1, InputArray src2,
-                                    InputArray window, CV_OUT double* response = 0);
+                                    InputArray window = noArray(), CV_OUT double* response=0);
 CV_EXPORTS_W void createHanningWindow(OutputArray dst, Size winSize, int type);
 
 //! type of the threshold operation
@@ -1050,7 +1048,18 @@ enum
     COLOR_RGBA2mRGBA = 125,
     COLOR_mRGBA2RGBA = 126,
 
-    COLOR_COLORCVT_MAX  = 127
+    // Edge-Aware Demosaicing
+    COLOR_BayerBG2BGR_EA = 127,
+    COLOR_BayerGB2BGR_EA = 128,
+    COLOR_BayerRG2BGR_EA = 129,
+    COLOR_BayerGR2BGR_EA = 130,
+
+    COLOR_BayerBG2RGB_EA = COLOR_BayerRG2BGR_EA,
+    COLOR_BayerGB2RGB_EA = COLOR_BayerGR2BGR_EA,
+    COLOR_BayerRG2RGB_EA = COLOR_BayerBG2BGR_EA,
+    COLOR_BayerGR2RGB_EA = COLOR_BayerGB2BGR_EA,
+
+    COLOR_COLORCVT_MAX  = 131
 };
 
 
@@ -1093,6 +1102,20 @@ enum { TM_SQDIFF=0, TM_SQDIFF_NORMED=1, TM_CCORR=2, TM_CCORR_NORMED=3, TM_CCOEFF
 CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
                                  OutputArray result, int method );
 
+enum { CC_STAT_LEFT=0, CC_STAT_TOP=1, CC_STAT_WIDTH=2, CC_STAT_HEIGHT=3, CC_STAT_AREA=4, CC_STAT_MAX = 5};
+
+// computes the connected components labeled image of boolean image ``image``
+// with 4 or 8 way connectivity - returns N, the total
+// number of labels [0, N-1] where 0 represents the background label.
+// ltype specifies the output label image type, an important
+// consideration based on the total number of labels or
+// alternatively the total number of pixels in the source image.
+CV_EXPORTS_W int connectedComponents(InputArray image, OutputArray labels,
+                                     int connectivity = 8, int ltype=CV_32S);
+CV_EXPORTS_W int connectedComponentsWithStats(InputArray image, OutputArray labels,
+                                              OutputArray stats, OutputArray centroids,
+                                              int connectivity = 8, int ltype=CV_32S);
+
 //! mode of the contour retrieval algorithm
 enum
 {
@@ -1120,13 +1143,6 @@ CV_EXPORTS_W void findContours( InputOutputArray image, OutputArrayOfArrays cont
 //! retrieves contours from black-n-white image.
 CV_EXPORTS void findContours( InputOutputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset=Point());
-
-//! draws contours in the image
-CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays contours,
-                              int contourIdx, const Scalar& color,
-                              int thickness=1, int lineType=8,
-                              InputArray hierarchy=noArray(),
-                              int maxLevel=INT_MAX, Point offset=Point() );
 
 //! approximates contour or a curve using Douglas-Peucker algorithm
 CV_EXPORTS_W void approxPolyDP( InputArray curve,
@@ -1260,6 +1276,9 @@ protected:
     Point2f topLeft;
     Point2f bottomRight;
 };
+
+// main function for all demosaicing procceses
+CV_EXPORTS_W void demosaicing(InputArray _src, OutputArray _dst, int code, int dcn = 0);
 
 }
 

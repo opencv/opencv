@@ -174,7 +174,7 @@ Compares two histograms.
             * **CV_COMP_INTERSECT**     Intersection
 
             * **CV_COMP_BHATTACHARYYA**     Bhattacharyya distance
-            
+
             * **CV_COMP_HELLINGER**     Synonym for ``CV_COMP_BHATTACHARYYA``
 
 The functions ``compareHist`` compare two dense or two sparse histograms using the specified method:

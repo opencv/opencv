@@ -58,6 +58,7 @@ bool cv::gpu::CascadeClassifier_GPU::load(const string&)              { throw_no
 Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const        { throw_nogpu(); return Size();}
 void cv::gpu::CascadeClassifier_GPU::release()                        { throw_nogpu(); }
 int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, double, int, Size)       {throw_nogpu(); return -1;}
+int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, Size, Size, double, int) {throw_nogpu(); return -1;}
 
 #else
 
@@ -622,7 +623,7 @@ private:
         }
 
         // copy data structures on gpu
-        stage_mat.upload(cv::Mat(1, stages.size() * sizeof(Stage), CV_8UC1, (uchar*)&(stages[0]) ));
+        stage_mat.upload(cv::Mat(1, (int) (stages.size() * sizeof(Stage)), CV_8UC1, (uchar*)&(stages[0]) ));
         trees_mat.upload(cv::Mat(cl_trees).reshape(1,1));
         nodes_mat.upload(cv::Mat(cl_nodes).reshape(1,1));
         leaves_mat.upload(cv::Mat(cl_leaves).reshape(1,1));
@@ -680,6 +681,12 @@ int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat& image, GpuMa
 {
     CV_Assert( !this->empty());
     return impl->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, minSize, cv::Size());
+}
+
+int cv::gpu::CascadeClassifier_GPU::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize, double scaleFactor, int minNeighbors)
+{
+    CV_Assert( !this->empty());
+    return impl->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, minSize, maxObjectSize);
 }
 
 bool cv::gpu::CascadeClassifier_GPU::load(const string& filename)

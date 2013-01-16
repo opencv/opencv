@@ -6,7 +6,7 @@ Android Development with OpenCV
 
 This tutorial has been created to help you use OpenCV library within your Android project.
 
-This guide was written with Windows 7 in mind, though it should work with any other OS supported by 
+This guide was written with Windows 7 in mind, though it should work with any other OS supported by
 OpenCV4Android SDK.
 
 This tutorial assumes you have the following installed and configured:
@@ -23,22 +23,22 @@ This tutorial assumes you have the following installed and configured:
 
 If you need help with anything of the above, you may refer to our :ref:`android_dev_intro` guide.
 
-This tutorial also assumes you have OpenCV4Android SDK already installed on your development 
-machine and OpenCV Manager on your testing device correspondingly. If you need help with any of 
+This tutorial also assumes you have OpenCV4Android SDK already installed on your development
+machine and OpenCV Manager on your testing device correspondingly. If you need help with any of
 these, you may consult our :ref:`O4A_SDK` tutorial.
 
-If you encounter any error after thoroughly following these steps, feel free to contact us via 
-`OpenCV4Android <https://groups.google.com/group/android-opencv/>`_ discussion group or OpenCV 
+If you encounter any error after thoroughly following these steps, feel free to contact us via
+`OpenCV4Android <https://groups.google.com/group/android-opencv/>`_ discussion group or OpenCV
 `Q&A forum <http://answers.opencv.org>`_ . We'll do our best to help you out.
 
 
 Using OpenCV Library Within Your Android Project
 ================================================
 
-In this section we will explain how to make some existing project to use OpenCV. 
-Starting with 2.4.2 release for Android, *OpenCV Manager* is used to provide apps with the best 
-available version of OpenCV. 
-You can get more information here: :ref:`Android_OpenCV_Manager` and in these 
+In this section we will explain how to make some existing project to use OpenCV.
+Starting with 2.4.2 release for Android, *OpenCV Manager* is used to provide apps with the best
+available version of OpenCV.
+You can get more information here: :ref:`Android_OpenCV_Manager` and in these
 `slides <https://docs.google.com/a/itseez.com/presentation/d/1EO_1kijgBg_BsjNp2ymk-aarg-0K279_1VZRcPplSuk/present#slide=id.p>`_.
 
 
@@ -48,31 +48,31 @@ Java
 Application Development with Async Initialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Using async initialization is a **recommended** way for application development. It uses the OpenCV 
+Using async initialization is a **recommended** way for application development. It uses the OpenCV
 Manager to access OpenCV libraries externally installed in the target system.
 
-#. Add OpenCV library project to your workspace. Use menu 
+#. Add OpenCV library project to your workspace. Use menu
    :guilabel:`File -> Import -> Existing project in your workspace`.
 
-   Press :guilabel:`Browse`  button and locate OpenCV4Android SDK 
+   Press :guilabel:`Browse`  button and locate OpenCV4Android SDK
    (:file:`OpenCV-2.4.3-android-sdk/sdk`).
 
    .. image:: images/eclipse_opencv_dependency0.png
         :alt: Add dependency from OpenCV library
         :align: center
 
-#. In application project add a reference to the OpenCV Java SDK in 
+#. In application project add a reference to the OpenCV Java SDK in
    :guilabel:`Project -> Properties -> Android -> Library -> Add` select ``OpenCV Library - 2.4.3``.
 
    .. image:: images/eclipse_opencv_dependency1.png
         :alt: Add dependency from OpenCV library
         :align: center
 
-In most cases OpenCV Manager may be installed automatically from Google Play. For the case, when 
-Google Play is not available, i.e. emulator, developer board, etc, you can install it manually 
+In most cases OpenCV Manager may be installed automatically from Google Play. For the case, when
+Google Play is not available, i.e. emulator, developer board, etc, you can install it manually
 using adb tool. See :ref:`manager_selection` for details.
 
-There is a very base code snippet implementing the async initialization. It shows basic principles. 
+There is a very base code snippet implementing the async initialization. It shows basic principles.
 See the "15-puzzle" OpenCV sample for details.
 
 .. code-block:: java
@@ -113,47 +113,47 @@ See the "15-puzzle" OpenCV sample for details.
         }
     }
 
-It this case application works with OpenCV Manager in asynchronous fashion. ``OnManagerConnected`` 
-callback will be called in UI thread, when initialization finishes. Please note, that it is not 
-allowed to use OpenCV calls or load OpenCV-dependent native libs before invoking this callback. 
-Load your own native libraries that depend on OpenCV after the successful OpenCV initialization. 
-Default ``BaseLoaderCallback`` implementation treat application context as Activity and calls 
-``Activity.finish()`` method to exit in case of initialization failure. To override this behavior 
-you need to override ``finish()`` method of ``BaseLoaderCallback`` class and implement your own 
+It this case application works with OpenCV Manager in asynchronous fashion. ``OnManagerConnected``
+callback will be called in UI thread, when initialization finishes. Please note, that it is not
+allowed to use OpenCV calls or load OpenCV-dependent native libs before invoking this callback.
+Load your own native libraries that depend on OpenCV after the successful OpenCV initialization.
+Default ``BaseLoaderCallback`` implementation treat application context as Activity and calls
+``Activity.finish()`` method to exit in case of initialization failure. To override this behavior
+you need to override ``finish()`` method of ``BaseLoaderCallback`` class and implement your own
 finalization method.
 
 
 Application Development with Static Initialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-According to this approach all OpenCV binaries are included into your application package. It is 
-designed mostly for development purposes. This approach is deprecated for the production code, 
-release package is recommended to communicate with OpenCV Manager via the async initialization 
+According to this approach all OpenCV binaries are included into your application package. It is
+designed mostly for development purposes. This approach is deprecated for the production code,
+release package is recommended to communicate with OpenCV Manager via the async initialization
 described above.
 
-#. Add the OpenCV library project to your workspace the same way as for the async initialization 
-   above. Use menu :guilabel:`File -> Import -> Existing project in your workspace`, 
-   press :guilabel:`Browse` button and select OpenCV SDK path 
+#. Add the OpenCV library project to your workspace the same way as for the async initialization
+   above. Use menu :guilabel:`File -> Import -> Existing project in your workspace`,
+   press :guilabel:`Browse` button and select OpenCV SDK path
    (:file:`OpenCV-2.4.3-android-sdk/sdk`).
 
    .. image:: images/eclipse_opencv_dependency0.png
         :alt: Add dependency from OpenCV library
         :align: center
 
-#. In the application project add a reference to the OpenCV4Android SDK in 
+#. In the application project add a reference to the OpenCV4Android SDK in
    :guilabel:`Project -> Properties -> Android -> Library -> Add` select ``OpenCV Library - 2.4.3``;
 
    .. image:: images/eclipse_opencv_dependency1.png
        :alt: Add dependency from OpenCV library
        :align: center
 
-#. If your application project **doesn't have a JNI part**, just copy the corresponding OpenCV 
-   native libs from :file:`<OpenCV-2.4.3-android-sdk>/sdk/native/libs/<target_arch>` to your 
+#. If your application project **doesn't have a JNI part**, just copy the corresponding OpenCV
+   native libs from :file:`<OpenCV-2.4.3-android-sdk>/sdk/native/libs/<target_arch>` to your
    project directory to folder :file:`libs/<target_arch>`.
 
-   In case of the application project **with a JNI part**, instead of manual libraries copying you 
+   In case of the application project **with a JNI part**, instead of manual libraries copying you
    need to modify your ``Android.mk`` file:
-   add the following two code lines after the ``"include $(CLEAR_VARS)"`` and before 
+   add the following two code lines after the ``"include $(CLEAR_VARS)"`` and before
    ``"include path_to_OpenCV-2.4.3-android-sdk/sdk/native/jni/OpenCV.mk"``
 
    .. code-block:: make
@@ -174,13 +174,13 @@ described above.
       OPENCV_INSTALL_MODULES:=on
       include ../../sdk/native/jni/OpenCV.mk
 
-   After that the OpenCV libraries will be copied to your application :file:`libs` folder during 
+   After that the OpenCV libraries will be copied to your application :file:`libs` folder during
    the JNI build.v
 
-   Eclipse will automatically include all the libraries from the :file:`libs` folder to the 
-   application package (APK). 
+   Eclipse will automatically include all the libraries from the :file:`libs` folder to the
+   application package (APK).
 
-#. The last step of enabling OpenCV in your application is Java initialization code before calling 
+#. The last step of enabling OpenCV in your application is Java initialization code before calling
    OpenCV API. It can be done, for example, in the static section of the ``Activity`` class:
 
    .. code-block:: java
@@ -192,7 +192,7 @@ described above.
           }
       }
 
-   If you application includes other OpenCV-dependent native libraries you should load them 
+   If you application includes other OpenCV-dependent native libraries you should load them
    **after** OpenCV initialization:
 
    .. code-block:: java
@@ -211,16 +211,16 @@ described above.
 Native/C++
 ----------
 
-To build your own Android application, using OpenCV as native part, the following steps should be 
+To build your own Android application, using OpenCV as native part, the following steps should be
 taken:
 
-#. You can use an environment variable to specify the location of OpenCV package or just hardcode 
+#. You can use an environment variable to specify the location of OpenCV package or just hardcode
    absolute or relative path in the :file:`jni/Android.mk` of your projects.
 
-#.  The file :file:`jni/Android.mk` should be written for the current application using the common 
+#.  The file :file:`jni/Android.mk` should be written for the current application using the common
     rules for this file.
 
-    For detailed information see the Android NDK documentation from the Android NDK archive, in the 
+    For detailed information see the Android NDK documentation from the Android NDK archive, in the
     file :file:`<path_where_NDK_is_placed>/docs/ANDROID-MK.html`.
 
 #. The following line:
@@ -235,7 +235,7 @@ taken:
 
       include $(CLEAR_VARS)
 
-#. Several variables can be used to customize OpenCV stuff, but you **don't need** to use them when 
+#. Several variables can be used to customize OpenCV stuff, but you **don't need** to use them when
    your application uses the `async initialization` via the `OpenCV Manager` API.
 
    .. note:: These variables should be set **before**  the ``"include .../OpenCV.mk"`` line:
@@ -244,7 +244,7 @@ taken:
 
                 OPENCV_INSTALL_MODULES:=on
 
-   Copies necessary OpenCV dynamic libs to the project ``libs`` folder in order to include them 
+   Copies necessary OpenCV dynamic libs to the project ``libs`` folder in order to include them
    into the APK.
 
    .. code-block:: make
@@ -257,7 +257,7 @@ taken:
 
       OPENCV_LIB_TYPE:=STATIC
 
-   Perform static linking with OpenCV. By default dynamic link is used and the project JNI lib 
+   Perform static linking with OpenCV. By default dynamic link is used and the project JNI lib
    depends on ``libopencv_java.so``.
 
 #. The file :file:`Application.mk` should exist and should contain lines:
@@ -275,8 +275,8 @@ taken:
 
    Should specify the application target platforms.
 
-   In some cases a linkage error (like ``"In function 'cv::toUtf16(std::basic_string<...>... 
-   undefined reference to 'mbstowcs'"``) happens when building an application JNI library, 
+   In some cases a linkage error (like ``"In function 'cv::toUtf16(std::basic_string<...>...
+   undefined reference to 'mbstowcs'"``) happens when building an application JNI library,
    depending on OpenCV. The following line in the :file:`Application.mk` usually fixes it:
 
    .. code-block:: make
@@ -284,24 +284,24 @@ taken:
       APP_PLATFORM := android-9
 
 
-#. Either use :ref:`manual <NDK_build_cli>` ``ndk-build`` invocation or 
-   :ref:`setup Eclipse CDT Builder <CDT_Builder>` to build native JNI lib before (re)building the Java 
+#. Either use :ref:`manual <NDK_build_cli>` ``ndk-build`` invocation or
+   :ref:`setup Eclipse CDT Builder <CDT_Builder>` to build native JNI lib before (re)building the Java
    part and creating an APK.
 
 
 Hello OpenCV Sample
 ===================
 
-Here are basic steps to guide you trough the process of creating a simple OpenCV-centric 
-application. It will be capable of accessing camera output, processing it and displaying the 
+Here are basic steps to guide you trough the process of creating a simple OpenCV-centric
+application. It will be capable of accessing camera output, processing it and displaying the
 result.
 
-#. Open Eclipse IDE, create a new clean workspace, create a new Android project 
+#. Open Eclipse IDE, create a new clean workspace, create a new Android project
    :menuselection:`File --> New --> Android Project`.
 
 #. Set name, target, package and ``minSDKVersion`` accordingly.
 
-#. Create a new class :menuselection:`File -> New -> Class`. Name it for example: 
+#. Create a new class :menuselection:`File -> New -> Class`. Name it for example:
    *HelloOpenCVView*.
 
    .. image:: images/dev_OCV_new_class.png
@@ -315,7 +315,7 @@ result.
 
    * Add an ``import`` line for ``android.content.context``.
 
-   * Modify autogenerated stubs: ``HelloOpenCVView``, ``surfaceCreated``, ``surfaceDestroyed`` and 
+   * Modify autogenerated stubs: ``HelloOpenCVView``, ``surfaceCreated``, ``surfaceDestroyed`` and
      ``surfaceChanged``.
 
      .. code-block:: java
@@ -367,8 +367,8 @@ result.
             // TODO setup camera
         }
 
-#. Create a new ``Activity`` :menuselection:`New -> Other -> Android -> Android Activity` and name 
-   it, for example: *HelloOpenCVActivity*. For this activity define ``onCreate``, ``onResume`` and 
+#. Create a new ``Activity`` :menuselection:`New -> Other -> Android -> Android Activity` and name
+   it, for example: *HelloOpenCVActivity*. For this activity define ``onCreate``, ``onResume`` and
    ``onPause`` voids.
 
    .. code-block:: java

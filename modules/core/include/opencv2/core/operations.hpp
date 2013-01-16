@@ -2691,6 +2691,12 @@ template<typename _Tp> template<typename _Tp2> inline const Ptr<_Tp2> Ptr<_Tp>::
     return p;
 }
 
+template<class _Tp, class _Tp2> inline bool operator==(const Ptr<_Tp>& a, const Ptr<_Tp2>& b) { return a.refcount == b.refcount; }
+template<class _Tp, class _Tp2> inline bool operator!=(const Ptr<_Tp>& a, const Ptr<_Tp2>& b) { return a.refcount != b.refcount; }
+
+
+
+
 //// specializied implementations of Ptr::delete_obj() for classic OpenCV types
 
 template<> CV_EXPORTS void Ptr<CvMat>::delete_obj();

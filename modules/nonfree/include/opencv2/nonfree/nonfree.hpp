@@ -48,7 +48,7 @@
 namespace cv
 {
 
-CV_EXPORTS_W bool initModule_nonfree();
+CV_EXPORTS bool initModule_nonfree();
 
 }
 

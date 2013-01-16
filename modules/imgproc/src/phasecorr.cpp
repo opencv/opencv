@@ -488,7 +488,7 @@ static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Siz
 
 }
 
-cv::Point2d cv::phaseCorrelateRes(InputArray _src1, InputArray _src2, InputArray _window, double* response)
+cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _window, double* response)
 {
     Mat src1 = _src1.getMat();
     Mat src2 = _src2.getMat();
@@ -568,10 +568,6 @@ cv::Point2d cv::phaseCorrelateRes(InputArray _src1, InputArray _src2, InputArray
     return (center - t);
 }
 
-cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _window)
-{
-    return phaseCorrelateRes(_src1, _src2, _window, 0);
-}
 
 void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
 {
