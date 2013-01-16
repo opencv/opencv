@@ -3107,6 +3107,10 @@ public:
     void allocate(size_t _size);
     //! deallocates the buffer if it was dynamically allocated
     void deallocate();
+    //! resizes the buffer and preserves the content
+	void resize(size_t _size);
+	//! returns the current buffer size
+	size_t size() const;
     //! returns pointer to the real buffer, stack-allocated or head-allocated
     operator _Tp* ();
     //! returns read-only pointer to the real buffer, stack-allocated or head-allocated
@@ -3116,7 +3120,7 @@ protected:
     //! pointer to the real buffer, can point to buf if the buffer is small enough
     _Tp* ptr;
     //! size of the real buffer
-    size_t size;
+    size_t sz;
     //! pre-allocated buffer
     _Tp buf[fixed_size+buffer_padding];
 };

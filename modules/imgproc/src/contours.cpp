@@ -1753,23 +1753,6 @@ void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
     findContours(_image, _contours, noArray(), mode, method, offset);
 }
 
-void cv::approxPolyDP( InputArray _curve, OutputArray _approxCurve,
-                       double epsilon, bool closed )
-{
-    Mat curve = _curve.getMat();
-    int npoints = curve.checkVector(2), depth = curve.depth();
-    CV_Assert( npoints >= 0 && (depth == CV_32S || depth == CV_32F));
-    CvMat _ccurve = curve;
-    MemStorage storage(cvCreateMemStorage());
-    CvSeq* result = cvApproxPoly(&_ccurve, sizeof(CvContour), storage, CV_POLY_APPROX_DP, epsilon, closed);
-    if( result->total > 0 )
-    {
-        _approxCurve.create(result->total, 1, CV_MAKETYPE(curve.depth(), 2), -1, true);
-        cvCvtSeqToArray(result, _approxCurve.getMat().data );
-    }
-}
-
-
 double cv::arcLength( InputArray _curve, bool closed )
 {
     Mat curve = _curve.getMat();
