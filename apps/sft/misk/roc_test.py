@@ -54,12 +54,9 @@ if __name__ == "__main__":
             sft.draw_rects(img, boxes, (255, 0, 0), lambda x, y : y)
 
         frame = frame + 1
-
-        # sample = samples[]
-
-
-
         rects, confs = cascade.detect(img, rois = None)
+
+        fp = sft.match(boxes, rects, confs)
 
     #     # draw results
         if rects is not None:

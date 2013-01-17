@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import cv2, re, glob
+import numpy as np
 
 def draw_rects(img, rects, color, l = lambda x, y : x + y):
     if rects is not None:
@@ -11,6 +12,24 @@ class Sample:
     def __init__(self, bbs, img):
         self.image = img
         self.bbs = bb
+
+class Detection:
+    def __init__(self, bb, conf):
+        self.bb = bb
+        self.conf = conf
+
+    # we use rect-stype for dt and box style for gt. ToDo: fix it
+    def overlap(self, b):
+        a = self.bb
+        print "HERE:", a, b
+        w = min( a[0] + a[2], b[0] + b[2]) - max(a[0], b[0]);
+        h = min( a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]);
+
+        cross_area = 0.0 if (w < 0 or h < 0) else float(w * h)
+        union_area = (a[2] * a[3]) + ((b[2] - b[0]) * (b[3] - b[1])) - cross_area;
+
+        return cross_area / union_area;
+
 
 def parse_inria(ipath, f):
     bbs = []
@@ -40,3 +59,16 @@ def parse_idl(f):
         l = re.sub(r"(\;|\.)$", "]}", l)
         map.update(eval(l))
     return map
+
+def match(gts, rects, confs):
+    if rects is None:
+        return 0
+
+    dts = zip(*[rects.tolist(), confs.tolist()])
+    dts = zip(dts[0][0], dts[0][1])
+    dts = [Detection(r,c) for r, c in dts]
+
+    for dt in dts:
+        for gt in gts:
+            overlap =  dt.overlap(gt)
+            print overlap
