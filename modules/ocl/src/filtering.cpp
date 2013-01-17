@@ -170,100 +170,100 @@ void cv::ocl::morphologyEx( const oclMat &, oclMat &, int, const Mat &, Point, i
 //helper routines
 namespace cv
 {
-    namespace ocl
-    {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *filtering_boxFilter;
-        extern const char *filter_sep_row;
-        extern const char *filter_sep_col;
-        extern const char *filtering_laplacian;
-        extern const char *filtering_morph;
-    }
+namespace ocl
+{
+///////////////////////////OpenCL kernel strings///////////////////////////
+extern const char *filtering_boxFilter;
+extern const char *filter_sep_row;
+extern const char *filter_sep_col;
+extern const char *filtering_laplacian;
+extern const char *filtering_morph;
+}
 }
 
 namespace
 {
-    inline int divUp(int total, int grain)
-    {
-        return (total + grain - 1) / grain;
-    }
+inline int divUp(int total, int grain)
+{
+    return (total + grain - 1) / grain;
+}
 }
 
 namespace
 {
-    inline void normalizeAnchor(int &anchor, int ksize)
+inline void normalizeAnchor(int &anchor, int ksize)
+{
+    if (anchor < 0)
+        anchor = ksize >> 1;
+
+    CV_Assert(0 <= anchor && anchor < ksize);
+}
+
+inline void normalizeAnchor(Point &anchor, const Size &ksize)
+{
+    normalizeAnchor(anchor.x, ksize.width);
+    normalizeAnchor(anchor.y, ksize.height);
+}
+
+inline void normalizeROI(Rect &roi, const Size &ksize, const Point &anchor, const Size &src_size)
+{
+    if (roi == Rect(0, 0, -1, -1))
+        roi = Rect(0, 0, src_size.width, src_size.height);
+    CV_Assert(ksize.height > 0 && ksize.width > 0 && ((ksize.height & 1) == 1) && ((ksize.width & 1) == 1));
+    CV_Assert((anchor.x == -1 && anchor.y == -1) || (anchor.x == ksize.width >> 1 && anchor.y == ksize.height >> 1));
+    CV_Assert(roi.x >= 0 && roi.y >= 0 && roi.width <= src_size.width && roi.height <= src_size.height);
+}
+
+
+inline void normalizeKernel(const Mat &kernel, oclMat &gpu_krnl, int type = CV_8U, int *nDivisor = 0, bool reverse = false)
+{
+    int scale = nDivisor && (kernel.depth() == CV_32F || kernel.depth() == CV_64F) ? 256 : 1;
+    if (nDivisor) *nDivisor = scale;
+
+    Mat temp(kernel.size(), type);
+    kernel.convertTo(temp, type, scale);
+    Mat cont_krnl = temp.reshape(1, 1);
+
+    if (reverse)
     {
-        if (anchor < 0)
-            anchor = ksize >> 1;
-
-        CV_Assert(0 <= anchor && anchor < ksize);
-    }
-
-    inline void normalizeAnchor(Point &anchor, const Size &ksize)
-    {
-        normalizeAnchor(anchor.x, ksize.width);
-        normalizeAnchor(anchor.y, ksize.height);
-    }
-
-    inline void normalizeROI(Rect &roi, const Size &ksize, const Point &anchor, const Size &src_size)
-    {
-        if (roi == Rect(0, 0, -1, -1))
-            roi = Rect(0, 0, src_size.width, src_size.height);
-        CV_Assert(ksize.height > 0 && ksize.width > 0 && ((ksize.height & 1) == 1) && ((ksize.width & 1) == 1));
-        CV_Assert((anchor.x == -1 && anchor.y == -1) || (anchor.x == ksize.width >> 1 && anchor.y == ksize.height >> 1));
-        CV_Assert(roi.x >= 0 && roi.y >= 0 && roi.width <= src_size.width && roi.height <= src_size.height);
-    }
-
-
-    inline void normalizeKernel(const Mat &kernel, oclMat &gpu_krnl, int type = CV_8U, int *nDivisor = 0, bool reverse = false)
-    {
-        int scale = nDivisor && (kernel.depth() == CV_32F || kernel.depth() == CV_64F) ? 256 : 1;
-        if (nDivisor) *nDivisor = scale;
-
-        Mat temp(kernel.size(), type);
-        kernel.convertTo(temp, type, scale);
-        Mat cont_krnl = temp.reshape(1, 1);
-
-        if (reverse)
+        int count = cont_krnl.cols >> 1;
+        for (int i = 0; i < count; ++i)
         {
-            int count = cont_krnl.cols >> 1;
-            for (int i = 0; i < count; ++i)
-            {
-                std::swap(cont_krnl.at<int>(0, i), cont_krnl.at<int>(0, cont_krnl.cols - 1 - i));
-            }
+            std::swap(cont_krnl.at<int>(0, i), cont_krnl.at<int>(0, cont_krnl.cols - 1 - i));
         }
-
-        gpu_krnl.upload(cont_krnl);
     }
+
+    gpu_krnl.upload(cont_krnl);
+}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Filter2D
 namespace
 {
-    class Filter2DEngine_GPU : public FilterEngine_GPU
+class Filter2DEngine_GPU : public FilterEngine_GPU
+{
+public:
+    Filter2DEngine_GPU(const Ptr<BaseFilter_GPU> &filter2D_) : filter2D(filter2D_) {}
+
+    virtual void apply(const oclMat &src, oclMat &dst, Rect roi = Rect(0, 0, -1, -1))
     {
-    public:
-        Filter2DEngine_GPU(const Ptr<BaseFilter_GPU> &filter2D_) : filter2D(filter2D_) {}
+        Size src_size = src.size();
 
-        virtual void apply(const oclMat &src, oclMat &dst, Rect roi = Rect(0, 0, -1, -1))
-        {
-            Size src_size = src.size();
+        // Delete those two clause below which exist before, However, the result is alos correct
+        // dst.create(src_size, src.type());
+        // dst = Scalar(0.0);
 
-            // Delete those two clause below which exist before, However, the result is alos correct
-            // dst.create(src_size, src.type());
-            // dst = Scalar(0.0);
+        normalizeROI(roi, filter2D->ksize, filter2D->anchor, src_size);
 
-            normalizeROI(roi, filter2D->ksize, filter2D->anchor, src_size);
+        oclMat srcROI = src(roi);
+        oclMat dstROI = dst(roi);
 
-            oclMat srcROI = src(roi);
-            oclMat dstROI = dst(roi);
+        (*filter2D)(srcROI, dstROI);
+    }
 
-            (*filter2D)(srcROI, dstROI);
-        }
-
-        Ptr<BaseFilter_GPU> filter2D;
-    };
+    Ptr<BaseFilter_GPU> filter2D;
+};
 }
 
 Ptr<FilterEngine_GPU> cv::ocl::createFilter2D_GPU(const Ptr<BaseFilter_GPU> filter2D)
@@ -275,22 +275,22 @@ Ptr<FilterEngine_GPU> cv::ocl::createFilter2D_GPU(const Ptr<BaseFilter_GPU> filt
 // Box Filter
 namespace
 {
-    typedef void (*FilterBox_t)(const oclMat & , oclMat & , Size &, const Point, const int);
+typedef void (*FilterBox_t)(const oclMat & , oclMat & , Size &, const Point, const int);
 
-    class GPUBoxFilter : public BaseFilter_GPU
+class GPUBoxFilter : public BaseFilter_GPU
+{
+public:
+    GPUBoxFilter(const Size &ksize_, const Point &anchor_, const int borderType_, FilterBox_t func_) :
+        BaseFilter_GPU(ksize_, anchor_, borderType_), func(func_) {}
+
+    virtual void operator()(const oclMat &src, oclMat &dst)
     {
-    public:
-        GPUBoxFilter(const Size &ksize_, const Point &anchor_, const int borderType_, FilterBox_t func_) :
-            BaseFilter_GPU(ksize_, anchor_, borderType_), func(func_) {}
+        func(src, dst, ksize, anchor, borderType);
+    }
 
-        virtual void operator()(const oclMat &src, oclMat &dst)
-        {
-            func(src, dst, ksize, anchor, borderType);
-        }
+    FilterBox_t func;
 
-        FilterBox_t func;
-
-    };
+};
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -298,22 +298,22 @@ namespace
 
 namespace
 {
-    typedef void (*GPUMorfFilter_t)(const oclMat & , oclMat & , oclMat & , Size &, const Point);
+typedef void (*GPUMorfFilter_t)(const oclMat & , oclMat & , oclMat & , Size &, const Point);
 
-    class MorphFilter_GPU : public BaseFilter_GPU
+class MorphFilter_GPU : public BaseFilter_GPU
+{
+public:
+    MorphFilter_GPU(const Size &ksize_, const Point &anchor_, const oclMat &kernel_, GPUMorfFilter_t func_) :
+        BaseFilter_GPU(ksize_, anchor_, BORDER_CONSTANT), kernel(kernel_), func(func_) {}
+
+    virtual void operator()(const oclMat &src, oclMat &dst)
     {
-    public:
-        MorphFilter_GPU(const Size &ksize_, const Point &anchor_, const oclMat &kernel_, GPUMorfFilter_t func_) :
-            BaseFilter_GPU(ksize_, anchor_, BORDER_CONSTANT), kernel(kernel_), func(func_) {}
+        func(src, dst, kernel, ksize, anchor) ;
+    }
 
-        virtual void operator()(const oclMat &src, oclMat &dst)
-        {
-            func(src, dst, kernel, ksize, anchor) ;
-        }
-
-        oclMat kernel;
-        GPUMorfFilter_t func;
-    };
+    oclMat kernel;
+    GPUMorfFilter_t func;
+};
 }
 
 /*
@@ -483,47 +483,47 @@ Ptr<BaseFilter_GPU> cv::ocl::getMorphologyFilter_GPU(int op, int type, const Mat
 
 namespace
 {
-    class MorphologyFilterEngine_GPU : public Filter2DEngine_GPU
+class MorphologyFilterEngine_GPU : public Filter2DEngine_GPU
+{
+public:
+    MorphologyFilterEngine_GPU(const Ptr<BaseFilter_GPU> &filter2D_, int iters_) :
+        Filter2DEngine_GPU(filter2D_), iters(iters_) {}
+
+    virtual void apply(const oclMat &src, oclMat &dst)
     {
-    public:
-        MorphologyFilterEngine_GPU(const Ptr<BaseFilter_GPU> &filter2D_, int iters_) :
-            Filter2DEngine_GPU(filter2D_), iters(iters_) {}
-
-        virtual void apply(const oclMat &src, oclMat &dst)
+        Filter2DEngine_GPU::apply(src, dst);
+        //if (iters > 1)
+        //{
+        // Size wholesize;
+        // Point ofs;
+        // dst.locateROI(wholesize,ofs);
+        // int rows = dst.rows, cols = dst.cols;
+        // dst.adjustROI(ofs.y,-ofs.y-rows+dst.wholerows,ofs.x,-ofs.x-cols+dst.wholecols);
+        // dst.copyTo(morfBuf);
+        // dst.adjustROI(-ofs.y,ofs.y+rows-dst.wholerows,-ofs.x,ofs.x+cols-dst.wholecols);
+        // morfBuf.adjustROI(-ofs.y,ofs.y+rows-dst.wholerows,-ofs.x,ofs.x+cols-dst.wholecols);
+        // //morfBuf.create(src.size(),src.type());
+        // //Filter2DEngine_GPU::apply(dst, morfBuf);
+        // //morfBuf.copyTo(dst);
+        //}
+        for(int i = 1; i < iters; ++i)
         {
-            Filter2DEngine_GPU::apply(src, dst);
-            //if (iters > 1)
-            //{
-            // Size wholesize;
-            // Point ofs;
-            // dst.locateROI(wholesize,ofs);
-            // int rows = dst.rows, cols = dst.cols;
-            // dst.adjustROI(ofs.y,-ofs.y-rows+dst.wholerows,ofs.x,-ofs.x-cols+dst.wholecols);
-            // dst.copyTo(morfBuf);
-            // dst.adjustROI(-ofs.y,ofs.y+rows-dst.wholerows,-ofs.x,ofs.x+cols-dst.wholecols);
-            // morfBuf.adjustROI(-ofs.y,ofs.y+rows-dst.wholerows,-ofs.x,ofs.x+cols-dst.wholecols);
-            // //morfBuf.create(src.size(),src.type());
-            // //Filter2DEngine_GPU::apply(dst, morfBuf);
-            // //morfBuf.copyTo(dst);
-            //}
-            for(int i = 1; i < iters; ++i)
-            {
-                //dst.swap(morfBuf);
-                Size wholesize;
-                Point ofs;
-                dst.locateROI(wholesize, ofs);
-                int rows = dst.rows, cols = dst.cols;
-                dst.adjustROI(ofs.y, -ofs.y - rows + dst.wholerows, ofs.x, -ofs.x - cols + dst.wholecols);
-                dst.copyTo(morfBuf);
-                dst.adjustROI(-ofs.y, ofs.y + rows - dst.wholerows, -ofs.x, ofs.x + cols - dst.wholecols);
-                morfBuf.adjustROI(-ofs.y, ofs.y + rows - dst.wholerows, -ofs.x, ofs.x + cols - dst.wholecols);
-                Filter2DEngine_GPU::apply(morfBuf, dst);
-            }
+            //dst.swap(morfBuf);
+            Size wholesize;
+            Point ofs;
+            dst.locateROI(wholesize, ofs);
+            int rows = dst.rows, cols = dst.cols;
+            dst.adjustROI(ofs.y, -ofs.y - rows + dst.wholerows, ofs.x, -ofs.x - cols + dst.wholecols);
+            dst.copyTo(morfBuf);
+            dst.adjustROI(-ofs.y, ofs.y + rows - dst.wholerows, -ofs.x, ofs.x + cols - dst.wholecols);
+            morfBuf.adjustROI(-ofs.y, ofs.y + rows - dst.wholerows, -ofs.x, ofs.x + cols - dst.wholecols);
+            Filter2DEngine_GPU::apply(morfBuf, dst);
         }
+    }
 
-        int iters;
-        oclMat morfBuf;
-    };
+    int iters;
+    oclMat morfBuf;
+};
 }
 
 Ptr<FilterEngine_GPU> cv::ocl::createMorphologyFilter_GPU(int op, int type, const Mat &kernel, const Point &anchor, int iterations)
@@ -539,45 +539,45 @@ Ptr<FilterEngine_GPU> cv::ocl::createMorphologyFilter_GPU(int op, int type, cons
 
 namespace
 {
-    void morphOp(int op, const oclMat &src, oclMat &dst, const Mat &_kernel, Point anchor, int iterations, int borderType, const Scalar &borderValue)
+void morphOp(int op, const oclMat &src, oclMat &dst, const Mat &_kernel, Point anchor, int iterations, int borderType, const Scalar &borderValue)
+{
+    if((borderType != cv::BORDER_CONSTANT) || (borderValue != morphologyDefaultBorderValue()))
     {
-        if((borderType != cv::BORDER_CONSTANT) || (borderValue != morphologyDefaultBorderValue()))
-        {
-            CV_Error(CV_StsBadArg, "unsupported border type");
-        }
-        Mat kernel;
-        Size ksize = _kernel.data ? _kernel.size() : Size(3, 3);
-
-        normalizeAnchor(anchor, ksize);
-
-        if (iterations == 0 || _kernel.rows * _kernel.cols == 1)
-        {
-            src.copyTo(dst);
-            return;
-        }
-
-        dst.create(src.size(), src.type());
-
-        if (!_kernel.data)
-        {
-            kernel = getStructuringElement(MORPH_RECT, Size(1 + iterations * 2, 1 + iterations * 2));
-            anchor = Point(iterations, iterations);
-            iterations = 1;
-        }
-        else if (iterations > 1 && countNonZero(_kernel) == _kernel.rows * _kernel.cols)
-        {
-            anchor = Point(anchor.x * iterations, anchor.y * iterations);
-            kernel = getStructuringElement(MORPH_RECT, Size(ksize.width + iterations * (ksize.width - 1),
-                                           ksize.height + iterations * (ksize.height - 1)), anchor);
-            iterations = 1;
-        }
-        else
-            kernel = _kernel;
-
-        Ptr<FilterEngine_GPU> f = createMorphologyFilter_GPU(op, src.type(), kernel, anchor, iterations);
-
-        f->apply(src, dst);
+        CV_Error(CV_StsBadArg, "unsupported border type");
     }
+    Mat kernel;
+    Size ksize = _kernel.data ? _kernel.size() : Size(3, 3);
+
+    normalizeAnchor(anchor, ksize);
+
+    if (iterations == 0 || _kernel.rows * _kernel.cols == 1)
+    {
+        src.copyTo(dst);
+        return;
+    }
+
+    dst.create(src.size(), src.type());
+
+    if (!_kernel.data)
+    {
+        kernel = getStructuringElement(MORPH_RECT, Size(1 + iterations * 2, 1 + iterations * 2));
+        anchor = Point(iterations, iterations);
+        iterations = 1;
+    }
+    else if (iterations > 1 && countNonZero(_kernel) == _kernel.rows * _kernel.cols)
+    {
+        anchor = Point(anchor.x * iterations, anchor.y * iterations);
+        kernel = getStructuringElement(MORPH_RECT, Size(ksize.width + iterations * (ksize.width - 1),
+                                       ksize.height + iterations * (ksize.height - 1)), anchor);
+        iterations = 1;
+    }
+    else
+        kernel = _kernel;
+
+    Ptr<FilterEngine_GPU> f = createMorphologyFilter_GPU(op, src.type(), kernel, anchor, iterations);
+
+    f->apply(src, dst);
+}
 }
 
 void cv::ocl::erode( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor, int iterations,
@@ -645,23 +645,23 @@ void cv::ocl::morphologyEx( const oclMat &src, oclMat &dst, int op, const Mat &k
 
 namespace
 {
-    typedef void (*GPUFilter2D_t)(const oclMat & , oclMat & , oclMat & , Size &, const Point, const int);
+typedef void (*GPUFilter2D_t)(const oclMat & , oclMat & , oclMat & , Size &, const Point, const int);
 
-    class LinearFilter_GPU : public BaseFilter_GPU
+class LinearFilter_GPU : public BaseFilter_GPU
+{
+public:
+    LinearFilter_GPU(const Size &ksize_, const Point &anchor_, const oclMat &kernel_, GPUFilter2D_t func_,
+                     int borderType_) :
+        BaseFilter_GPU(ksize_, anchor_, borderType_), kernel(kernel_), func(func_) {}
+
+    virtual void operator()(const oclMat &src, oclMat &dst)
     {
-    public:
-        LinearFilter_GPU(const Size &ksize_, const Point &anchor_, const oclMat &kernel_, GPUFilter2D_t func_,
-                         int borderType_) :
-            BaseFilter_GPU(ksize_, anchor_, borderType_), kernel(kernel_), func(func_) {}
+        func(src, dst, kernel, ksize, anchor, borderType) ;
+    }
 
-        virtual void operator()(const oclMat &src, oclMat &dst)
-        {
-            func(src, dst, kernel, ksize, anchor, borderType) ;
-        }
-
-        oclMat kernel;
-        GPUFilter2D_t func;
-    };
+    oclMat kernel;
+    GPUFilter2D_t func;
+};
 }
 
 void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
@@ -764,50 +764,50 @@ void cv::ocl::filter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &ke
 
 namespace
 {
-    class SeparableFilterEngine_GPU : public FilterEngine_GPU
+class SeparableFilterEngine_GPU : public FilterEngine_GPU
+{
+public:
+    SeparableFilterEngine_GPU(const Ptr<BaseRowFilter_GPU> &rowFilter_,
+                              const Ptr<BaseColumnFilter_GPU> &columnFilter_) :
+        rowFilter(rowFilter_), columnFilter(columnFilter_)
     {
-    public:
-        SeparableFilterEngine_GPU(const Ptr<BaseRowFilter_GPU> &rowFilter_,
-                                  const Ptr<BaseColumnFilter_GPU> &columnFilter_) :
-            rowFilter(rowFilter_), columnFilter(columnFilter_)
-        {
-            ksize = Size(rowFilter->ksize, columnFilter->ksize);
-            anchor = Point(rowFilter->anchor, columnFilter->anchor);
-        }
+        ksize = Size(rowFilter->ksize, columnFilter->ksize);
+        anchor = Point(rowFilter->anchor, columnFilter->anchor);
+    }
 
-        virtual void apply(const oclMat &src, oclMat &dst, Rect roi = Rect(0, 0, -1, -1))
-        {
-            Size src_size = src.size();
-            //int src_type = src.type();
+    virtual void apply(const oclMat &src, oclMat &dst, Rect roi = Rect(0, 0, -1, -1))
+    {
+        Size src_size = src.size();
+        //int src_type = src.type();
 
-            int cn = src.oclchannels();
-            //dst.create(src_size, src_type);
-            dst = Scalar(0.0);
-            //dstBuf.create(src_size, src_type);
-            dstBuf.create(src_size.height + ksize.height - 1, src_size.width, CV_MAKETYPE(CV_32F, cn));
-            dstBuf = Scalar(0.0);
+        int cn = src.oclchannels();
+        //dst.create(src_size, src_type);
+        dst = Scalar(0.0);
+        //dstBuf.create(src_size, src_type);
+        dstBuf.create(src_size.height + ksize.height - 1, src_size.width, CV_MAKETYPE(CV_32F, cn));
+        dstBuf = Scalar(0.0);
 
-            normalizeROI(roi, ksize, anchor, src_size);
+        normalizeROI(roi, ksize, anchor, src_size);
 
-            srcROI = src(roi);
-            dstROI = dst(roi);
-            //dstBufROI = dstBuf(roi);
+        srcROI = src(roi);
+        dstROI = dst(roi);
+        //dstBufROI = dstBuf(roi);
 
-            (*rowFilter)(srcROI, dstBuf);
-            //Mat rm(dstBufROI);
-            //std::cout << "rm " << rm << endl;
-            (*columnFilter)(dstBuf, dstROI);
-        }
+        (*rowFilter)(srcROI, dstBuf);
+        //Mat rm(dstBufROI);
+        //std::cout << "rm " << rm << endl;
+        (*columnFilter)(dstBuf, dstROI);
+    }
 
-        Ptr<BaseRowFilter_GPU> rowFilter;
-        Ptr<BaseColumnFilter_GPU> columnFilter;
-        Size ksize;
-        Point anchor;
-        oclMat dstBuf;
-        oclMat srcROI;
-        oclMat dstROI;
-        oclMat dstBufROI;
-    };
+    Ptr<BaseRowFilter_GPU> rowFilter;
+    Ptr<BaseColumnFilter_GPU> columnFilter;
+    Size ksize;
+    Point anchor;
+    oclMat dstBuf;
+    oclMat srcROI;
+    oclMat dstROI;
+    oclMat dstBufROI;
+};
 }
 
 Ptr<FilterEngine_GPU> cv::ocl::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU> &rowFilter,
@@ -1107,22 +1107,22 @@ void cv::ocl::boxFilter(const oclMat &src, oclMat &dst, int ddepth, Size ksize,
 
 namespace
 {
-    typedef void (*gpuFilter1D_t)(const oclMat &src, const oclMat &dst, oclMat kernel, int ksize, int anchor, int bordertype);
+typedef void (*gpuFilter1D_t)(const oclMat &src, const oclMat &dst, oclMat kernel, int ksize, int anchor, int bordertype);
 
-    class GpuLinearRowFilter : public BaseRowFilter_GPU
+class GpuLinearRowFilter : public BaseRowFilter_GPU
+{
+public:
+    GpuLinearRowFilter(int ksize_, int anchor_, const oclMat &kernel_, gpuFilter1D_t func_, int bordertype_) :
+        BaseRowFilter_GPU(ksize_, anchor_, bordertype_), kernel(kernel_), func(func_) {}
+
+    virtual void operator()(const oclMat &src, oclMat &dst)
     {
-    public:
-        GpuLinearRowFilter(int ksize_, int anchor_, const oclMat &kernel_, gpuFilter1D_t func_, int bordertype_) :
-            BaseRowFilter_GPU(ksize_, anchor_, bordertype_), kernel(kernel_), func(func_) {}
+        func(src, dst, kernel, ksize, anchor, bordertype);
+    }
 
-        virtual void operator()(const oclMat &src, oclMat &dst)
-        {
-            func(src, dst, kernel, ksize, anchor, bordertype);
-        }
-
-        oclMat kernel;
-        gpuFilter1D_t func;
-    };
+    oclMat kernel;
+    gpuFilter1D_t func;
+};
 }
 
 template <typename T> struct index_and_sizeof;
@@ -1263,20 +1263,20 @@ Ptr<BaseRowFilter_GPU> cv::ocl::getLinearRowFilter_GPU(int srcType, int /*bufTyp
 
 namespace
 {
-    class GpuLinearColumnFilter : public BaseColumnFilter_GPU
+class GpuLinearColumnFilter : public BaseColumnFilter_GPU
+{
+public:
+    GpuLinearColumnFilter(int ksize_, int anchor_, const oclMat &kernel_, gpuFilter1D_t func_, int bordertype_) :
+        BaseColumnFilter_GPU(ksize_, anchor_, bordertype_), kernel(kernel_), func(func_) {}
+
+    virtual void operator()(const oclMat &src, oclMat &dst)
     {
-    public:
-        GpuLinearColumnFilter(int ksize_, int anchor_, const oclMat &kernel_, gpuFilter1D_t func_, int bordertype_) :
-            BaseColumnFilter_GPU(ksize_, anchor_, bordertype_), kernel(kernel_), func(func_) {}
+        func(src, dst, kernel, ksize, anchor, bordertype);
+    }
 
-        virtual void operator()(const oclMat &src, oclMat &dst)
-        {
-            func(src, dst, kernel, ksize, anchor, bordertype);
-        }
-
-        oclMat kernel;
-        gpuFilter1D_t func;
-    };
+    oclMat kernel;
+    gpuFilter1D_t func;
+};
 }
 
 template <typename T>
