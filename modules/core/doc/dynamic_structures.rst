@@ -166,6 +166,12 @@ field of the set is the total number of nodes both occupied and free. When an oc
 
 ``CvSet`` is used to represent graphs (:ocv:struct:`CvGraph`), sparse multi-dimensional arrays (:ocv:struct:`CvSparseMat`), and planar subdivisions (:ocv:struct:`CvSubdiv2D`).
 
+CvSetElem
+---------
+
+.. ocv:struct:: CvSetElem
+
+The structure is represent single element of :ocv:struct:`CvSet`. It consists of two fields: element data pointer and flags.
 
 CvGraph
 -------
@@ -174,6 +180,24 @@ CvGraph
 The structure ``CvGraph`` is a base for graphs used in OpenCV 1.x. It inherits from
 :ocv:struct:`CvSet`, that is, it is considered as a set of vertices. Besides, it contains another set as a member, a set of graph edges. Graphs in OpenCV are represented using adjacency lists format.
 
+CvGraphVtx
+----------
+.. ocv:struct:: CvGraphVtx
+
+The structure represents single vertex in :ocv:struct:`CvGraph`. It consists of two filds: pointer to first edge and flags.
+
+CvGraphEdge
+-----------
+.. ocv:struct:: CvGraphEdge
+
+The structure represents edge in :ocv:struct:`CvGraph`.  Each edge consists of:
+
+- Two pointers to the starting and ending vertices (vtx[0] and vtx[1] respectively);
+- Two pointers to next edges for the starting and ending vertices, where
+  next[0] points to the next edge in the vtx[0] adjacency list and
+  next[1] points to the next edge in the vtx[1] adjacency list;
+- Weight;
+- Flags.
 
 CvGraphScanner
 --------------

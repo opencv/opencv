@@ -124,7 +124,7 @@ CvBoostTree
 -----------
 .. ocv:class:: CvBoostTree : public CvDTree
 
-The weak tree classifier, a component of the boosted tree classifier :ocv:class:`CvBoost`, is a derivative of :ocv:class:`CvDTree`. Normally, there is no need to use the weak classifiers directly. However, they can be accessed as elements of the sequence :ocv:member:`CvBoost::weak`, retrieved by :ocv:func:`CvBoost::get_weak_predictors`.
+The weak tree classifier, a component of the boosted tree classifier :ocv:class:`CvBoost`, is a derivative of :ocv:class:`CvDTree`. Normally, there is no need to use the weak classifiers directly. However, they can be accessed as elements of the sequence ``CvBoost::weak``, retrieved by :ocv:func:`CvBoost::get_weak_predictors`.
 
 .. note:: In case of LogitBoost and Gentle AdaBoost, each weak predictor is a regression tree, rather than a classification tree. Even in case of Discrete AdaBoost and Real AdaBoost, the ``CvBoostTree::predict`` return value (:ocv:member:`CvDTreeNode::value`) is not an output class label. A negative value "votes" for class #0, a positive value - for class #1. The votes are weighted. The weight of each individual tree may be increased or decreased using the method ``CvBoostTree::scale``.
 
@@ -233,4 +233,3 @@ CvBoost::get_data
 Returns used train data of the boosted tree classifier.
 
 .. ocv:function:: const CvDTreeTrainData* CvBoost::get_data() const
-

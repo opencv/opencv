@@ -785,7 +785,7 @@ Constructors.
 
     :param fps: Framerate of the created video stream.
 
-    :param params: Encoder parameters. See :ocv:class:`gpu::VideoWriter_GPU::EncoderParams` .
+    :param params: Encoder parameters. See :ocv:struct:`gpu::VideoWriter_GPU::EncoderParams` .
 
     :param format: Surface format of input frames ( ``SF_UYVY`` , ``SF_YUY2`` , ``SF_YV12`` , ``SF_NV12`` , ``SF_IYUV`` , ``SF_BGR`` or ``SF_GRAY``). BGR or gray frames will be converted to YV12 format before encoding, frames with other formats will be used as is.
 

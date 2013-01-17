@@ -148,7 +148,7 @@ Brute-force descriptor matcher. For each descriptor in the first set, this match
 
 The class ``BruteForceMatcher_OCL_base`` has an interface similar to the class :ocv:class:`DescriptorMatcher`. It has two groups of ``match`` methods: for matching descriptors of one image with another image or with an image set. Also, all functions have an alternative to save results either to the GPU memory or to the CPU memory. ``BruteForceMatcher_OCL_base`` supports only the ``L1<float>``, ``L2<float>``, and ``Hamming`` distance types.
 
-.. seealso:: :ocv:class:`DescriptorMatcher`, :ocv:class:`BruteForceMatcher`
+.. seealso:: :ocv:class:`DescriptorMatcher`, :ocv:class:`BFMatcher`
 
 
 

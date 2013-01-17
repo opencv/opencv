@@ -1,3 +1,5 @@
+// TODO: This file is largely a duplicate of the one in android_test.
+
 package org.opencv.test;
 
 import java.io.BufferedReader;
@@ -24,8 +26,6 @@ import org.opencv.core.Size;
 import org.opencv.features2d.DMatch;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.highgui.Highgui;
-
-import android.util.Log;
 
 public class OpenCVTestCase extends TestCase {
     //change to 'true' to unblock fail on fail("Not yet implemented")
@@ -95,6 +95,32 @@ public class OpenCVTestCase extends TestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+
+    try {
+        System.loadLibrary("opencv_java");
+    } catch (SecurityException e) {
+        System.out.println(e.toString());
+        System.exit(-1);
+    } catch (UnsatisfiedLinkError e) {
+        System.out.println(e.toString());
+        System.exit(-1);
+    }
+
+    String pwd;
+    try {
+        pwd = new File(".").getCanonicalPath() + File.separator;
+    } catch (IOException e) {
+        System.out.println(e);
+        return;
+    }
+
+    OpenCVTestRunner.LENA_PATH = pwd + "res/drawable/lena.jpg";
+    OpenCVTestRunner.CHESS_PATH = pwd + "res/drawable/chessboard.jpg";
+    OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH = pwd + "res/raw/lbpcascade_frontalface.xml";
+
+    assert(new File(OpenCVTestRunner.LENA_PATH).exists());
+    assert(new File(OpenCVTestRunner.CHESS_PATH).exists());
+    assert(new File(OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH).exists());
 
         dst = new Mat();
         assertTrue(dst.empty());
@@ -186,7 +212,7 @@ public class OpenCVTestCase extends TestCase {
         if (isTestCaseEnabled) {
             super.runTest();
         } else {
-            Log.e(TAG, "Test case \"" + this.getClass().getName() + "\" disabled!");
+            OpenCVTestRunner.Log(TAG + " :: " + "Test case \"" + this.getClass().getName() + "\" disabled!");
         }
     }
 
