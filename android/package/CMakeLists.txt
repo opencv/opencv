@@ -56,7 +56,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${ANDROID_MANIFEST_FILE}" "${PACKAGE
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/res/values/strings.xml"   "${PACKAGE_DIR}/res/values/strings.xml"    @ONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/res/drawable/icon.png"   "${PACKAGE_DIR}/res/drawable/icon.png"   COPYONLY)
 
-set(target_name "OpenCV_${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}.${OPENCV_VERSION_PATCH}_binary_pack_${ANDROID_PACKAGE_PLATFORM}")
+set(target_name "OpenCV_${OPENCV_VERSION}_binary_pack_${ANDROID_PACKAGE_PLATFORM}")
 get_target_property(opencv_java_location opencv_java LOCATION)
 
 set(android_proj_target_files ${ANDROID_PROJECT_FILES})

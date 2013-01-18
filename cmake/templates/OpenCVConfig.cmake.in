@@ -22,10 +22,11 @@
 #      - OpenCV_INCLUDE_DIRS             : The OpenCV include directories.
 #      - OpenCV_COMPUTE_CAPABILITIES     : The version of compute capability
 #      - OpenCV_ANDROID_NATIVE_API_LEVEL : Minimum required level of Android API
-#      - OpenCV_VERSION                  : The version of this OpenCV build. Example: "@OPENCV_VERSION@"
-#      - OpenCV_VERSION_MAJOR            : Major version part of OpenCV_VERSION. Example: "@OPENCV_VERSION_MAJOR@"
-#      - OpenCV_VERSION_MINOR            : Minor version part of OpenCV_VERSION. Example: "@OPENCV_VERSION_MINOR@"
-#      - OpenCV_VERSION_PATCH            : Patch version part of OpenCV_VERSION. Example: "@OPENCV_VERSION_PATCH@"
+#      - OpenCV_VERSION                  : The version of this OpenCV build: "@OPENCV_VERSION@"
+#      - OpenCV_VERSION_MAJOR            : Major version part of OpenCV_VERSION: "@OPENCV_VERSION_MAJOR@"
+#      - OpenCV_VERSION_MINOR            : Minor version part of OpenCV_VERSION: "@OPENCV_VERSION_MINOR@"
+#      - OpenCV_VERSION_PATCH            : Patch version part of OpenCV_VERSION: "@OPENCV_VERSION_PATCH@"
+#      - OpenCV_VERSION_TWEAK            : Tweak version part of OpenCV_VERSION: "@OPENCV_VERSION_TWEAK@"
 #
 #    Advanced variables:
 #      - OpenCV_SHARED
@@ -99,6 +100,7 @@ SET(OpenCV_VERSION @OPENCV_VERSION@)
 SET(OpenCV_VERSION_MAJOR  @OPENCV_VERSION_MAJOR@)
 SET(OpenCV_VERSION_MINOR  @OPENCV_VERSION_MINOR@)
 SET(OpenCV_VERSION_PATCH  @OPENCV_VERSION_PATCH@)
+SET(OpenCV_VERSION_TWEAK  @OPENCV_VERSION_TWEAK@)
 
 # ====================================================================
 # Link libraries: e.g.   libopencv_core.so, opencv_imgproc220d.lib, etc...
@@ -183,7 +185,7 @@ set(OpenCV_FIND_COMPONENTS ${OpenCV_FIND_COMPONENTS_})
 #  Resolve dependencies
 # ==============================================================
 if(OpenCV_USE_MANGLED_PATHS)
-  set(OpenCV_LIB_SUFFIX ".${OpenCV_VERSION}")
+  set(OpenCV_LIB_SUFFIX ".${OpenCV_VERSION_MAJOR}.${OpenCV_VERSION_MINOR}.${OpenCV_VERSION_PATCH}")
 else()
   set(OpenCV_LIB_SUFFIX "")
 endif()
