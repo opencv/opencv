@@ -47,7 +47,7 @@
 
 TEST(SCascade, readCascade)
 {
-    std::string xml = cvtest::TS::ptr()->get_data_path() + "softcascade/soft-cascade-17.12.2012.xml";
+    std::string xml = cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
     cv::SCascade cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
@@ -57,46 +57,46 @@ TEST(SCascade, readCascade)
 TEST(SCascade, detect)
 {
     typedef cv::SCascade::Detection Detection;
-    std::string xml =  cvtest::TS::ptr()->get_data_path() + "softcascade/soft-cascade-17.12.2012.xml";
+    std::string xml =  cvtest::TS::ptr()->get_data_path()+ "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
     cv::SCascade cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path() + "softcascade/bahnhof/image_00000000_0.png");
+    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path()  + "cascadeandhog/images/image_00000000_0.png");
     ASSERT_FALSE(colored.empty());
 
     std::vector<Detection> objects;
     cascade.detect(colored, cv::noArray(), objects);
 
-    ASSERT_EQ(823, (int)objects.size());
+    ASSERT_EQ(719, (int)objects.size());
 }
 
 TEST(SCascade, detectSeparate)
 {
     typedef cv::SCascade::Detection Detection;
-    std::string xml =  cvtest::TS::ptr()->get_data_path() + "softcascade/soft-cascade-17.12.2012.xml";
+    std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
     cv::SCascade cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path() + "softcascade/bahnhof/image_00000000_0.png");
+    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path() + "cascadeandhog/images/image_00000000_0.png");
     ASSERT_FALSE(colored.empty());
 
     cv::Mat rects, confs;
 
     cascade.detect(colored, cv::noArray(), rects, confs);
-    ASSERT_EQ(823, confs.cols);
+    ASSERT_EQ(719, confs.cols);
 }
 
 TEST(SCascade, detectRoi)
 {
     typedef cv::SCascade::Detection Detection;
-    std::string xml =  cvtest::TS::ptr()->get_data_path() + "softcascade/soft-cascade-17.12.2012.xml";
+    std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
     cv::SCascade cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path() + "softcascade/bahnhof/image_00000000_0.png");
+    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path() + "cascadeandhog/images/image_00000000_0.png");
     ASSERT_FALSE(colored.empty());
 
     std::vector<Detection> objects;
@@ -104,24 +104,41 @@ TEST(SCascade, detectRoi)
     rois.push_back(cv::Rect(0, 0, 640, 480));
 
     cascade.detect(colored, rois, objects);
-    ASSERT_EQ(823, (int)objects.size());
+    ASSERT_EQ(719, (int)objects.size());
 }
 
 TEST(SCascade, detectNoRoi)
 {
     typedef cv::SCascade::Detection Detection;
-    std::string xml =  cvtest::TS::ptr()->get_data_path() + "softcascade/soft-cascade-17.12.2012.xml";
+    std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
     cv::SCascade cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path() + "softcascade/bahnhof/image_00000000_0.png");
+    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path() + "cascadeandhog/images/image_00000000_0.png");
     ASSERT_FALSE(colored.empty());
 
     std::vector<Detection> objects;
     std::vector<cv::Rect> rois;
 
     cascade.detect(colored, rois, objects);
+
+    ASSERT_EQ(719, (int)objects.size());
+}
+
+TEST(SCascade, detectEmptyRoi)
+{
+    typedef cv::SCascade::Detection Detection;
+    std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
+    cv::SCascade cascade;
+    cv::FileStorage fs(xml, cv::FileStorage::READ);
+    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+
+    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path() + "cascadeandhog/images/image_00000000_0.png");
+    ASSERT_FALSE(colored.empty());
+
+    std::vector<Detection> objects;
+    cascade.detect(colored, cv::Mat::zeros(colored.size(), CV_8UC1), objects);
 
     ASSERT_EQ(0, (int)objects.size());
 }
