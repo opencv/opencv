@@ -62,3 +62,14 @@ set_target_properties(${engine}_jni PROPERTIES
 
 get_target_property(engine_lib_location ${engine}_jni LOCATION)
 add_custom_command(TARGET ${engine}_jni POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${engine_lib_location}")
+
+# native tests
+add_definitions(-DGTEST_HAS_CLONE=0 -DGTEST_OS_LINUX_ANDROID=1 -DGTEST_HAS_TR1_TUPLE=0)
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-allow-shlib-undefined")
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/jni/Tests)
+file(GLOB engine_test_files "jni/Tests/*.cpp")
+
+add_executable(opencv_engine_test ${engine_test_files} jni/Tests/gtest/gtest-all.cpp)
+target_link_libraries(opencv_engine_test z binder log utils android_runtime ${engine} ${engine}_jni)
+
