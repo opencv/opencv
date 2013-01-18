@@ -15,59 +15,43 @@ using namespace android;
 
 const int OpenCVEngine::Platform = DetectKnownPlatforms();
 const int OpenCVEngine::CpuID = GetCpuID();
+const int OpenCVEngine::KnownVersions[] = {2040000, 2040100, 2040200, 2040300, 2040301, 2040302};
 
-std::set<std::string> OpenCVEngine::InitKnownOpenCVersions()
+bool OpenCVEngine::ValidateVersion(int version)
 {
-    std::set<std::string> result;
+    for (size_t i = 0; i < sizeof(KnownVersions)/sizeof(int); i++)
+        if (KnownVersions[i] == version)
+            return true;
 
-    result.insert("240");
-    result.insert("241");
-    result.insert("242");
-    result.insert("243");
-
-    return result;
+    return false;
 }
 
-const std::set<std::string> OpenCVEngine::KnownVersions = InitKnownOpenCVersions();
-
-bool OpenCVEngine::ValidateVersionString(const std::string& version)
+int OpenCVEngine::NormalizeVersionString(std::string version)
 {
-    return (KnownVersions.find(version) != KnownVersions.end());
-}
-
-std::string OpenCVEngine::NormalizeVersionString(std::string version)
-{
-    std::string result = "";
-    std::string suffix = "";
+    int result = 0;
 
     if (version.empty())
     {
         return result;
     }
 
-    if (('a' == version[version.size()-1]) || ('b' == version[version.size()-1]))
-    {
-        suffix = version[version.size()-1];
-        version.erase(version.size()-1);
-    }
-
     std::vector<std::string> parts = SplitStringVector(version, '.');
 
-    if (parts.size() >= 2)
+    // Use only 4 digits of the version, i.e. 1.2.3.4.
+    // Other digits will be ignored.
+    if (parts.size() > 4)
+        parts.erase(parts.begin()+4, parts.end());
+
+    int multiplyer = 1000000;
+    for (std::vector<std::string>::const_iterator it = parts.begin(); it != parts.end(); ++it)
     {
-        if (parts.size() >= 3)
-        {
-            result = parts[0] + parts[1] + parts[2] + suffix;
-            if (!ValidateVersionString(result))
-                result = "";
-        }
-        else
-        {
-            result = parts[0] + parts[1] + "0" + suffix;
-            if (!ValidateVersionString(result))
-                result = "";
-        }
+        int digit = atoi(it->c_str());
+        result += multiplyer*digit;
+        multiplyer /= 100;
     }
+
+    if (!ValidateVersion(result))
+        result  = 0;
 
     return result;
 }
@@ -86,19 +70,19 @@ int32_t OpenCVEngine::GetVersion()
 String16 OpenCVEngine::GetLibPathByVersion(android::String16 version)
 {
     std::string std_version(String8(version).string());
-    std::string norm_version;
+    int norm_version;
     std::string path;
 
     LOGD("OpenCVEngine::GetLibPathByVersion(%s) impl", String8(version).string());
 
     norm_version = NormalizeVersionString(std_version);
 
-    if (!norm_version.empty())
+    if (0 != norm_version)
     {
         path = PackageManager->GetPackagePathByVersion(norm_version, Platform, CpuID);
         if (path.empty())
         {
-            LOGI("Package OpenCV of version %s is not installed. Try to install it :)", norm_version.c_str());
+            LOGI("Package OpenCV of version \"%s\" (%d) is not installed. Try to install it :)", String8(version).string(), norm_version);
         }
         else
         {
@@ -107,7 +91,7 @@ String16 OpenCVEngine::GetLibPathByVersion(android::String16 version)
     }
     else
     {
-        LOGE("OpenCV version \"%s\" (%s) is not supported", String8(version).string(), norm_version.c_str());
+        LOGE("OpenCV version \"%s\" (%d) is not supported", String8(version).string(), norm_version);
     }
 
     return String16(path.c_str());
@@ -116,11 +100,11 @@ String16 OpenCVEngine::GetLibPathByVersion(android::String16 version)
 android::String16 OpenCVEngine::GetLibraryList(android::String16 version)
 {
     std::string std_version = String8(version).string();
-    std::string norm_version;
+    int norm_version;
     String16 result;
     norm_version = NormalizeVersionString(std_version);
 
-    if (!norm_version.empty())
+    if (0 != norm_version)
     {
         std::string tmp = PackageManager->GetPackagePathByVersion(norm_version, Platform, CpuID);
         if (!tmp.empty())
@@ -156,12 +140,12 @@ android::String16 OpenCVEngine::GetLibraryList(android::String16 version)
         }
         else
         {
-            LOGI("Package OpenCV of version %s is not installed. Try to install it :)", norm_version.c_str());
+            LOGI("Package OpenCV of version \"%s\" (%d) is not installed. Try to install it :)", std_version.c_str(), norm_version);
         }
     }
     else
     {
-        LOGE("OpenCV version \"%s\" is not supported", norm_version.c_str());
+        LOGE("OpenCV version \"%s\" is not supported", std_version.c_str());
     }
 
     return result;
@@ -170,21 +154,21 @@ android::String16 OpenCVEngine::GetLibraryList(android::String16 version)
 bool OpenCVEngine::InstallVersion(android::String16 version)
 {
     std::string std_version = String8(version).string();
-    std::string norm_version;
+    int norm_version;
     bool result = false;
 
     LOGD("OpenCVEngine::InstallVersion() begin");
 
     norm_version = NormalizeVersionString(std_version);
 
-    if (!norm_version.empty())
+    if (0 != norm_version)
     {
         LOGD("PackageManager->InstallVersion call");
         result = PackageManager->InstallVersion(norm_version, Platform, CpuID);
     }
     else
     {
-        LOGE("OpenCV version \"%s\" is not supported", norm_version.c_str());
+        LOGE("OpenCV version \"%s\" (%d) is not supported", std_version.c_str(), norm_version);
     }
 
     LOGD("OpenCVEngine::InstallVersion() end");
