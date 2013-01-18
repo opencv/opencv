@@ -63,5 +63,7 @@ if __name__ == "__main__":
             sft.draw_rects(img, rects[0], (0, 255, 0))
 
         cv2.imshow("result", img);
-        if (cv2.waitKey (5) != -1):
+        if (cv2.waitKey (0) == 27):
             break;
+
+    # sft.plot_curve()
