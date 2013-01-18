@@ -879,7 +879,6 @@ void CvBoostTree::read( CvFileStorage* fs, CvFileNode* fnode, CvBoost* _ensemble
     ensemble = _ensemble;
 }
 
-
 void CvBoostTree::read( CvFileStorage*, CvFileNode* )
 {
     assert(0);
