@@ -925,7 +925,7 @@ protected:
 
         RNG& rng = theRNG();
         Size mSize(rng.uniform(minMSize, maxMSize), rng.uniform(minMSize, maxMSize));
-        size_t mvSize = rng(maxMvSize);
+        size_t mvSize = rng.uniform(1, maxMvSize);
 
         int res = cvtest::TS::OK, curRes = res;
         curRes = run_case(CV_8U, mvSize, mSize, rng);
