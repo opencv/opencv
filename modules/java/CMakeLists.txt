@@ -278,7 +278,7 @@ if(ANDROID)
   endif()
 else(ANDROID)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/jar/build.xml" "${OpenCV_BINARY_DIR}/build.xml" IMMEDIATE @ONLY)
-  set(JAR_NAME opencv-${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}.${OPENCV_VERSION_PATCH}.jar)
+  set(JAR_NAME opencv-${OPENCV_VERSION}.jar)
 
   add_custom_command(
     OUTPUT "${OpenCV_BINARY_DIR}/bin/${JAR_NAME}" "${OpenCV_BINARY_DIR}/bin/.${JAR_NAME}.dephelper"
