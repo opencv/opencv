@@ -395,8 +395,8 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
     double sigma = m*0.3, s = 1;
 
     AutoBuffer<float> _vsum((width+m*2+2)*5 + 16), _hsum(width*5 + 16);
-    AutoBuffer<float, 4096> _kernel((m+1)*5 + 16);
-    AutoBuffer<float*, 1024> _srow(m*2+1);
+    AutoBuffer<float> _kernel((m+1)*5 + 16);
+    AutoBuffer<float*> _srow(m*2+1);
     float *vsum = alignPtr((float*)_vsum + (m+1)*5, 16), *hsum = alignPtr((float*)_hsum, 16);
     float* kernel = (float*)_kernel;
     const float** srow = (const float**)&_srow[0];

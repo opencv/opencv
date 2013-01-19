@@ -2534,23 +2534,46 @@ inline Point LineIterator::pos() const
 
 /////////////////////////////// AutoBuffer ////////////////////////////////////////
 
-template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::AutoBuffer()
+template<typename _Tp> inline AutoBuffer<_Tp>::AutoBuffer()
 {
     ptr = buf;
     sz = fixed_size;
 }
 
-template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::AutoBuffer(size_t _size)
+template<typename _Tp> inline AutoBuffer<_Tp>::AutoBuffer(size_t _size)
 {
     ptr = buf;
     sz = fixed_size;
     allocate(_size);
 }
 
-template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::~AutoBuffer()
+template<typename _Tp>
+inline AutoBuffer<_Tp>::AutoBuffer(const AutoBuffer<_Tp>& abuf )
+{
+    ptr = buf;
+    sz = fixed_size;
+    allocate(abuf.size);
+    for( size_t i = 0; i < sz; i++ )
+        ptr[i] = abuf.ptr[i];
+}
+
+template<typename _Tp>
+inline AutoBuffer<_Tp>& AutoBuffer<_Tp>::operator = (const AutoBuffer<_Tp>& abuf )
+{
+    if( this != &abuf )
+    {
+        deallocate();
+        allocate(abuf.size);
+        for( size_t i = 0; i < sz; i++ )
+            ptr[i] = abuf.ptr[i];
+    }
+    return *this;
+}
+
+template<typename _Tp> inline AutoBuffer<_Tp>::~AutoBuffer()
 { deallocate(); }
 
-template<typename _Tp, size_t fixed_size> inline void AutoBuffer<_Tp, fixed_size>::allocate(size_t _size)
+template<typename _Tp> inline void AutoBuffer<_Tp>::allocate(size_t _size)
 {
     if(_size <= sz)
     {
@@ -2565,17 +2588,17 @@ template<typename _Tp, size_t fixed_size> inline void AutoBuffer<_Tp, fixed_size
     }
 }
 
-template<typename _Tp, size_t fixed_size> inline void AutoBuffer<_Tp, fixed_size>::deallocate()
+template<typename _Tp> inline void AutoBuffer<_Tp>::deallocate()
 {
     if( ptr != buf )
     {
         delete[] ptr;
         ptr = buf;
-        sz = 0;
+        sz = fixed_size;
     }
 }
 
-template<typename _Tp, size_t fixed_size> inline void AutoBuffer<_Tp, fixed_size>::resize(size_t _size)
+template<typename _Tp> inline void AutoBuffer<_Tp>::resize(size_t _size)
 {
     if(_size <= sz)
     {
@@ -2598,13 +2621,13 @@ template<typename _Tp, size_t fixed_size> inline void AutoBuffer<_Tp, fixed_size
         delete[] prevptr;
 }
 
-template<typename _Tp, size_t fixed_size> inline size_t AutoBuffer<_Tp, fixed_size>::size() const
+template<typename _Tp> inline size_t AutoBuffer<_Tp>::size() const
 { return sz; }
 
-template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::operator _Tp* ()
+template<typename _Tp> inline AutoBuffer<_Tp>::operator _Tp* ()
 { return ptr; }
 
-template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::operator const _Tp* () const
+template<typename _Tp> inline AutoBuffer<_Tp>::operator const _Tp* () const
 { return ptr; }
 
 

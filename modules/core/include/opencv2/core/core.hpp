@@ -109,6 +109,8 @@ template<typename _Tp> class CV_EXPORTS MatIterator_;
 template<typename _Tp> class CV_EXPORTS MatConstIterator_;
 template<typename _Tp> class CV_EXPORTS MatCommaInitializer_;
 
+template<typename _Tp> class CV_EXPORTS AutoBuffer;
+
 CV_EXPORTS string format( const char* fmt, ... );
 CV_EXPORTS string tempfile( const char* suffix CV_DEFAULT(0));
 
@@ -2061,7 +2063,8 @@ CV_EXPORTS void swap(Mat& a, Mat& b);
 
 //! converts array (CvMat or IplImage) to cv::Mat
 CV_EXPORTS Mat cvarrToMat(const CvArr* arr, bool copyData=false,
-                          bool allowND=true, int coiMode=0);
+                          bool allowND=true, int coiMode=0,
+                          AutoBuffer<double>* buf=0);
 //! extracts Channel of Interest from CvMat or IplImage and makes cv::Mat out of it.
 CV_EXPORTS void extractImageCOI(const CvArr* arr, OutputArray coiimg, int coi=-1);
 //! inserts single-channel cv::Mat into a multi-channel CvMat or IplImage
@@ -3081,7 +3084,7 @@ public:
  \code
  void my_func(const cv::Mat& m)
  {
-    cv::AutoBuffer<float, 1000> buf; // create automatic buffer containing 1000 floats
+    cv::AutoBuffer<float> buf; // create automatic buffer containing 1000 floats
 
     buf.allocate(m.rows); // if m.rows <= 1000, the pre-allocated buffer is used,
                           // otherwise the buffer of "m.rows" floats will be allocated
@@ -3090,16 +3093,22 @@ public:
  }
  \endcode
 */
-template<typename _Tp, size_t fixed_size=4096/sizeof(_Tp)+8> class CV_EXPORTS AutoBuffer
+template<typename _Tp> class CV_EXPORTS AutoBuffer
 {
 public:
     typedef _Tp value_type;
-    enum { buffer_padding = (int)((16 + sizeof(_Tp) - 1)/sizeof(_Tp)) };
+    enum { fixed_size = 1024/sizeof(_Tp)+8, buffer_padding = (int)((16 + sizeof(_Tp) - 1)/sizeof(_Tp)) };
 
     //! the default contructor
     AutoBuffer();
     //! constructor taking the real buffer size
     AutoBuffer(size_t _size);
+
+    //! the copy constructor
+    AutoBuffer(const AutoBuffer<_Tp>& buf);
+    //! the assignment operator
+    AutoBuffer<_Tp>& operator = (const AutoBuffer<_Tp>& buf);
+
     //! destructor. calls deallocate()
     ~AutoBuffer();
 
@@ -4317,7 +4326,6 @@ public:
     // (to distinguish between 0 and seq->total)
     int index;
 };
-
 
 class CV_EXPORTS Algorithm;
 class CV_EXPORTS AlgorithmInfo;

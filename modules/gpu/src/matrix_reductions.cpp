@@ -92,7 +92,7 @@ namespace
         }
         void download(double** hptrs)
         {
-            AutoBuffer<double, 2 * sizeof(double)> hbuf(count);
+            AutoBuffer<double> hbuf(count);
             cudaSafeCall( cudaMemcpy((void*)hbuf, pdev, count * sizeof(double), cudaMemcpyDeviceToHost) );
             for (int i = 0; i < count; ++i)
                 *hptrs[i] = hbuf[i];

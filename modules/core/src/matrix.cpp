@@ -669,7 +669,7 @@ void Mat::push_back(const Mat& elems)
 
 
 Mat cvarrToMat(const CvArr* arr, bool copyData,
-               bool /*allowND*/, int coiMode)
+               bool /*allowND*/, int coiMode, AutoBuffer<double>* abuf )
 {
     if( !arr )
         return Mat();
@@ -687,10 +687,21 @@ Mat cvarrToMat(const CvArr* arr, bool copyData,
     if( CV_IS_SEQ(arr) )
     {
         CvSeq* seq = (CvSeq*)arr;
-        CV_Assert(seq->total > 0 && CV_ELEM_SIZE(seq->flags) == seq->elem_size);
+        int total = seq->total, type = CV_MAT_TYPE(seq->flags), esz = seq->elem_size;
+        if( total == 0 )
+            return Mat();
+        CV_Assert(total > 0 && CV_ELEM_SIZE(seq->flags) == esz);
         if(!copyData && seq->first->next == seq->first)
-            return Mat(seq->total, 1, CV_MAT_TYPE(seq->flags), seq->first->data);
-        Mat buf(seq->total, 1, CV_MAT_TYPE(seq->flags));
+            return Mat(total, 1, type, seq->first->data);
+        if( abuf )
+        {
+            abuf->allocate(((size_t)total*esz + sizeof(double)-1)/sizeof(double));
+            double* bufdata = *abuf;
+            cvCvtSeqToArray(seq, bufdata, CV_WHOLE_SEQ);
+            return Mat(total, 1, type, bufdata);
+        }
+
+        Mat buf(total, 1, type);
         cvCvtSeqToArray(seq, buf.data, CV_WHOLE_SEQ);
         return buf;
     }

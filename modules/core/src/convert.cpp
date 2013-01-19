@@ -1314,7 +1314,7 @@ cvMixChannels( const CvArr** src, int src_count,
                CvArr** dst, int dst_count,
                const int* from_to, int pair_count )
 {
-    cv::AutoBuffer<cv::Mat, 32> buf(src_count + dst_count);
+    cv::AutoBuffer<cv::Mat> buf(src_count + dst_count);
 
     int i;
     for( i = 0; i < src_count; i++ )
