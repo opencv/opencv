@@ -29,11 +29,23 @@ def plot_curve():
     plt.xscale('log')
     plt.show()
 
-
+def crop_rect(rect, factor):
+    val_x = factor * float(rect[2])
+    val_y = factor * float(rect[3])
+    x = [int(rect[0] + val_x), int(rect[1] + val_y), int(rect[2] - 2.0 * val_x), int(rect[3] - 2.0 * val_y)]
+    return x
 
 def draw_rects(img, rects, color, l = lambda x, y : x + y):
     if rects is not None:
         for x1, y1, x2, y2 in rects:
+            cv2.rectangle(img, (x1, y1), (l(x1, x2), l(y1, y2)), color, 2)
+
+def draw_dt(img, dts, color, l = lambda x, y : x + y):
+    if dts is not None:
+        for dt in dts:
+            bb = dt.bb
+            x1, y1, x2, y2 = dt.bb[0], dt.bb[1], dt.bb[2], dt.bb[3]
+
             cv2.rectangle(img, (x1, y1), (l(x1, x2), l(y1, y2)), color, 2)
 
 class Annotation:
@@ -49,6 +61,10 @@ class Detection:
     # def crop(self):
     #     rel_scale = self.bb[1] / 128
 
+    def crop(self, factor):
+        print "was", self.bb
+        self.bb = crop_rect(self.bb, factor)
+        print "bec", self.bb
 
     # we use rect-stype for dt and box style for gt. ToDo: fix it
     def overlap(self, b):
@@ -94,6 +110,16 @@ def parse_idl(f):
         map.update(eval(l))
     return map
 
+def norm_box(box, ratio):
+    middle = float(box[0] + box[2]) / 2.0
+    new_half_width = float(box[3] - box[1]) * ratio / 2.0
+    return (int(round(middle - new_half_width)), box[1], int(round(middle + new_half_width)), box[3])
+
+
+def norm_acpect_ratio(boxes, ratio):
+    return [ norm_box(box, ratio)  for box in boxes]
+
+
 def match(gts, rects, confs):
     if rects is None:
         return 0
@@ -104,6 +130,11 @@ def match(gts, rects, confs):
     dts = zip(*[rects.tolist(), confs.tolist()])
     dts = zip(dts[0][0], dts[0][1])
     dts = [Detection(r,c) for r, c in dts]
+
+    factor = 1.0 / 8.0
+    dt_old = dts
+    for dt in dts:
+        dt.crop(factor)
 
     for gt in gts:
 
@@ -132,3 +163,4 @@ def match(gts, rects, confs):
             fp = fp + 1
 
     print "fp", fp
+    return dt_old

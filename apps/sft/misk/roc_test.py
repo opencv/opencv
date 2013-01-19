@@ -40,6 +40,7 @@ if __name__ == "__main__":
     frame = 0
     pattern = args.input
     camera =  cv2.VideoCapture(args.input)
+
     while True:
         ret, img = camera.read()
         if not ret:
@@ -50,17 +51,18 @@ if __name__ == "__main__":
         _, tail = os.path.split(name)
 
         boxes = samples[tail]
+        boxes = sft.norm_acpect_ratio(boxes, 0.5)
+
         if boxes is not None:
             sft.draw_rects(img, boxes, (255, 0, 0), lambda x, y : y)
 
         frame = frame + 1
         rects, confs = cascade.detect(img, rois = None)
 
-        fp = sft.match(boxes, rects, confs)
+        dt_old = sft.match(boxes, rects, confs)
 
-    #     # draw results
-        if rects is not None:
-            sft.draw_rects(img, rects[0], (0, 255, 0))
+        if dt_old is not None:
+            sft.draw_dt(img, dt_old, (0, 255, 0))
 
         cv2.imshow("result", img);
         if (cv2.waitKey (0) == 27):
