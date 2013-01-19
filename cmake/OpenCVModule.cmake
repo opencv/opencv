@@ -470,7 +470,7 @@ macro(ocv_create_module)
     # Android SDK build scripts can include only .so files into final .apk
     # As result we should not set version properties for Android
     set_target_properties(${the_module} PROPERTIES
-      VERSION ${OPENCV_VERSION}
+      VERSION ${OPENCV_LIBVERSION}
       SOVERSION ${OPENCV_SOVERSION}
     )
   endif()
