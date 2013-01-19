@@ -11,22 +11,24 @@
 
 using namespace std;
 
-set<string> CommonPackageManager::GetInstalledVersions()
+vector<int> CommonPackageManager::GetInstalledVersions()
 {
-    set<string> result;
+    vector<int> result;
     vector<PackageInfo> installed_packages = GetInstalledPackages();
 
-    for (vector<PackageInfo>::const_iterator it = installed_packages.begin(); it != installed_packages.end(); ++it)
+    result.resize(installed_packages.size());
+
+    for (size_t i = 0; i < installed_packages.size(); i++)
     {
-        string version = it->GetVersion();
-        assert(!version.empty());
-        result.insert(version);
+        int version = installed_packages[i].GetVersion();
+        assert(version);
+        result[i] = version;
     }
 
     return result;
 }
 
-bool CommonPackageManager::CheckVersionInstalled(const std::string& version, int platform, int cpu_id)
+bool CommonPackageManager::CheckVersionInstalled(int version, int platform, int cpu_id)
 {
     bool result = false;
     LOGD("CommonPackageManager::CheckVersionInstalled() begin");
@@ -48,14 +50,14 @@ bool CommonPackageManager::CheckVersionInstalled(const std::string& version, int
     return result;
 }
 
-bool CommonPackageManager::InstallVersion(const std::string& version, int platform, int cpu_id)
+bool CommonPackageManager::InstallVersion(int version, int platform, int cpu_id)
 {
     LOGD("CommonPackageManager::InstallVersion() begin");
     PackageInfo package(version, platform, cpu_id);
     return InstallPackage(package);
 }
 
-string CommonPackageManager::GetPackagePathByVersion(const std::string& version, int platform, int cpu_id)
+string CommonPackageManager::GetPackagePathByVersion(int version, int platform, int cpu_id)
 {
     string result;
     PackageInfo target_package(version, platform, cpu_id);
@@ -64,7 +66,7 @@ string CommonPackageManager::GetPackagePathByVersion(const std::string& version,
 
     for (vector<PackageInfo>::iterator it = all_packages.begin(); it != all_packages.end(); ++it)
     {
-        LOGD("Check version \"%s\" compatibility with \"%s\"\n", version.c_str(), it->GetVersion().c_str());
+        LOGD("Check version \"%d\" compatibility with \"%d\"\n", version, it->GetVersion());
         if (IsVersionCompatible(version, it->GetVersion()))
         {
             LOGD("Compatible");
@@ -79,7 +81,7 @@ string CommonPackageManager::GetPackagePathByVersion(const std::string& version,
     if (!packages.empty())
     {
         int OptRating = -1;
-        std::string OptVersion = "";
+        int OptVersion = 0;
         std::vector<std::pair<int, int> >& group = CommonPackageManager::ArmRating;
 
         if ((cpu_id & ARCH_X86) || (cpu_id & ARCH_X64))
@@ -124,20 +126,13 @@ string CommonPackageManager::GetPackagePathByVersion(const std::string& version,
     return result;
 }
 
-bool CommonPackageManager::IsVersionCompatible(const std::string& target_version, const std::string& package_version)
+bool CommonPackageManager::IsVersionCompatible(int target_version, int package_version)
 {
-    assert (target_version.size() == 3);
-    assert (package_version.size() == 3);
-
-    bool result = false;
+    assert(target_version);
+    assert(package_version);
 
     // major version is the same and minor package version is above or the same as target.
-    if ((package_version[0] == target_version[0]) && (package_version[1] == target_version[1]) && (package_version[2] >= target_version[2]))
-    {
-        result = true;
-    }
-
-    return result;
+    return ( (package_version/10000 == target_version/10000) && (package_version%10000 >= target_version%10000) );
 }
 
 int CommonPackageManager::GetHardwareRating(int platform, int cpu_id, const std::vector<std::pair<int, int> >& group)
