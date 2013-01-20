@@ -34,43 +34,47 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    # parse annotations
     samples = call_parser(args.anttn_format, args.annotations)
-
-    # where we use nms cv::SCascade::DOLLAR == 2
-    cascade = cv2.SCascade(args.min_scale, args.max_scale, args.nscales, 2)
-    xml = cv2.FileStorage(args.cascade, 0)
-    dom = xml.getFirstTopLevelNode()
-    assert cascade.load(dom)
-
+    cascade = sft.cascade(args.min_scale, args.max_scale, args.nscales, args.cascade)
     pattern = args.input
     camera =  cv2.VideoCapture(pattern)
 
-    frame = 0
+    # for plotting over dataset
+    nannotated  = 0
+    nframes     = 0
+
+    confidenses = []
+    tp          = []
+
     while True:
         ret, img = camera.read()
         if not ret:
             break;
 
-        name = pattern % (frame,)
-        qq = pattern.format(frame)
+        name = pattern % (nframes,)
         _, tail = os.path.split(name)
 
         boxes = samples[tail]
         boxes = sft.norm_acpect_ratio(boxes, 0.5)
 
-        frame = frame + 1
+        nannotated = nannotated + len(boxes)
+        nframes = nframes + 1
         rects, confs = cascade.detect(img, rois = None)
 
+        if confs is None:
+            continue
+
         dts = sft.convert2detections(rects, confs)
-        sft.draw_dt(img, dts, bgr["green"])
 
-        fp, fn = sft.match(boxes, dts)
-        print "fp and fn", fp, fn
+        confs = confs.tolist()[0]
+        confs.sort(lambda x, y : -1  if (x - y) > 0 else 1)
+        confidenses = confidenses + confs
 
+        matched = sft.match(boxes, dts)
+        tp = tp + matched
 
-        sft.draw_rects(img, boxes, bgr["blue"], lambda x, y : y)
-        cv2.imshow("result", img);
-        if (cv2.waitKey (0) == 27):
-            break;
+        print nframes, nannotated
 
-    # sft.plot_curve()
+    fppi, miss_rate = sft.computeROC(confidenses, tp, nannotated, nframes)
+    sft.plotLogLog(fppi, miss_rate)
