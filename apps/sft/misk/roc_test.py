@@ -7,6 +7,11 @@ import sys, os, os.path, glob, math, cv2
 from datetime import datetime
 import numpy
 
+#      "key"    : (  b,   g,   r)
+bgr = { "red"   : (  0,   0, 255),
+        "green" : (  0, 255,   0),
+        "blue"  : (255,   0 ,  0)}
+
 def call_parser(f, a):
     return eval( "sft.parse_" + f + "('" + a + "')")
 
@@ -37,10 +42,10 @@ if __name__ == "__main__":
     dom = xml.getFirstTopLevelNode()
     assert cascade.load(dom)
 
-    frame = 0
     pattern = args.input
-    camera =  cv2.VideoCapture(args.input)
+    camera =  cv2.VideoCapture(pattern)
 
+    frame = 0
     while True:
         ret, img = camera.read()
         if not ret:
@@ -53,17 +58,17 @@ if __name__ == "__main__":
         boxes = samples[tail]
         boxes = sft.norm_acpect_ratio(boxes, 0.5)
 
-        if boxes is not None:
-            sft.draw_rects(img, boxes, (255, 0, 0), lambda x, y : y)
-
         frame = frame + 1
         rects, confs = cascade.detect(img, rois = None)
 
-        dt_old = sft.match(boxes, rects, confs)
+        dts = sft.convert2detections(rects, confs)
+        sft.draw_dt(img, dts, bgr["green"])
 
-        if dt_old is not None:
-            sft.draw_dt(img, dt_old, (0, 255, 0))
+        fp, fn = sft.match(boxes, dts)
+        print "fp and fn", fp, fn
 
+
+        sft.draw_rects(img, boxes, bgr["blue"], lambda x, y : y)
         cv2.imshow("result", img);
         if (cv2.waitKey (0) == 27):
             break;

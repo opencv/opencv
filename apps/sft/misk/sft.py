@@ -4,6 +4,29 @@ import cv2, re, glob
 import numpy as np
 import matplotlib.pyplot as plt
 
+""" Convert numpy matrices with rectangles and confidences to sorted list of detections."""
+def convert2detections(rects, confs, crop_factor = 0.125):
+    if rects is None:
+        return []
+
+    dts = zip(*[rects.tolist(), confs.tolist()])
+    dts = zip(dts[0][0], dts[0][1])
+    dts = [Detection(r,c) for r, c in dts]
+
+    dts.sort(lambda x, y : -1  if (x.conf - y.conf) > 0 else 1)
+    for dt in dts:
+        dt.crop(crop_factor)
+
+    return dts
+
+def crop_rect(rect, factor):
+    val_x = factor * float(rect[2])
+    val_y = factor * float(rect[3])
+    x = [int(rect[0] + val_x), int(rect[1] + val_y), int(rect[2] - 2.0 * val_x), int(rect[3] - 2.0 * val_y)]
+    return x
+
+#
+
 def plot_curve():
 
     fig, ax = plt.subplots()
@@ -29,12 +52,6 @@ def plot_curve():
     plt.xscale('log')
     plt.show()
 
-def crop_rect(rect, factor):
-    val_x = factor * float(rect[2])
-    val_y = factor * float(rect[3])
-    x = [int(rect[0] + val_x), int(rect[1] + val_y), int(rect[2] - 2.0 * val_x), int(rect[3] - 2.0 * val_y)]
-    return x
-
 def draw_rects(img, rects, color, l = lambda x, y : x + y):
     if rects is not None:
         for x1, y1, x2, y2 in rects:
@@ -58,16 +75,13 @@ class Detection:
         self.conf = conf
         self.matched = False
 
-    # def crop(self):
-    #     rel_scale = self.bb[1] / 128
-
     def crop(self, factor):
-        print "was", self.bb
         self.bb = crop_rect(self.bb, factor)
-        print "bec", self.bb
 
     # we use rect-stype for dt and box style for gt. ToDo: fix it
     def overlap(self, b):
+
+        print self.bb, "vs", b
         a = self.bb
         w = min( a[0] + a[2], b[2]) - max(a[0], b[0]);
         h = min( a[1] + a[3], b[3]) - max(a[1], b[1]);
@@ -120,47 +134,40 @@ def norm_acpect_ratio(boxes, ratio):
     return [ norm_box(box, ratio)  for box in boxes]
 
 
-def match(gts, rects, confs):
-    if rects is None:
-        return 0
+def match(gts, dts):
 
-    fp = 0
-    fn = 0
-
-    dts = zip(*[rects.tolist(), confs.tolist()])
-    dts = zip(dts[0][0], dts[0][1])
-    dts = [Detection(r,c) for r, c in dts]
-
-    factor = 1.0 / 8.0
-    dt_old = dts
     for dt in dts:
-        dt.crop(factor)
+        print  dt.bb,
+
+    print
 
     for gt in gts:
+        print gt
 
-        # exclude small
-        if gt[2] - gt[0] < 27:
-            continue
 
-        matched = False
+    # Cartesian product for each detection BB_dt with each BB_gt
+    overlaps = [[dt.overlap(gt) for gt in gts]for dt in dts]
+    print overlaps
 
-        for dt in dts:
-            # dt.crop()
-            overlap =  dt.overlap(gt)
-            print dt.bb,  "vs", gt, overlap
-            if overlap > 0.5:
-                dt.mark_matched()
-                matched = True
-                print "matched ", dt.bb, gt
+    matches_gt = [0]*len(gts)
+    print matches_gt
 
-        if not matched:
-            fn = fn + 1
+    matches_dt = [0]*len(dts)
+    print matches_dt
 
-    print "fn", fn
+    for idx, row in enumerate(overlaps):
+        print idx, row
 
-    for dt in dts:
-        if not dt.matched:
-            fp = fp + 1
+        imax = row.index(max(row))
 
-    print "fp", fp
-    return dt_old
+        if (matches_gt[imax] == 0 and row[imax] > 0.5):
+            matches_gt[imax] = 1
+            matches_dt[idx]  = 1
+
+    print matches_gt
+    print matches_dt
+
+    fp = sum(1 for x in matches_dt if x == 0)
+    fn = sum(1 for x in matches_gt if x == 0)
+
+    return fp, fn
