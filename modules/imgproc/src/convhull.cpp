@@ -584,7 +584,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
 void convexityDefects( InputArray _points, InputArray _hull, OutputArray _defects )
 {
     Mat points = _points.getMat();
-    int i, j = 0, index, npoints = points.checkVector(2, CV_32S);
+    int i, j = 0, npoints = points.checkVector(2, CV_32S);
     CV_Assert( npoints >= 0 );
 
     if( npoints <= 3 )
