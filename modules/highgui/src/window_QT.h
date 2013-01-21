@@ -38,6 +38,11 @@
 
 //--------------------Google Code 2010 -- Yannick Verdie--------------------//
 
+//--------------------------------------------------------------------//
+// Interpretation of *.cfg file to use user defined buttonbars        //
+// added by Harald Schmidt                                            //
+//--------------------------------------------------------------------//
+
 #ifndef __OPENCV_HIGHGUI_QT_H__
 #define __OPENCV_HIGHGUI_QT_H__
 

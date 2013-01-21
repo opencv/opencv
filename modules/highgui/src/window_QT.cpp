@@ -38,6 +38,11 @@
 
 //--------------------Google Code 2010 -- Yannick Verdie--------------------//
 
+//--------------------------------------------------------------------//
+// Interpretation of *.cfg file to use user defined buttonbars        //
+// added by Harald Schmidt                                            //
+//--------------------------------------------------------------------//
+
 
 #if defined(HAVE_QT)
 
@@ -1716,7 +1721,7 @@ CvWindow::CvWindow(QString name, int arg2)
 
     QString exe_name = QFileInfo(QApplication::applicationFilePath()).fileName();
 
-    cv::CvConfigBase myCfg;
+    cv::ConfigBase myCfg;
 
     // read window position + size from *.cfg
     cv::readConfig( qPrintable(exe_name), qPrintable(m_WndName), &myCfg );

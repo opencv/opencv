@@ -116,6 +116,7 @@ enum
     CV_WINDOW_KEEPRATIO    = 0x00000000//the ration image is respected.
 };
 
+// ---------  HS ---------
 /* some additional modes for button bar config */
 enum { EMOD_PropWnd, EMOD_Zoom, EMOD_Panning, EMOD_SaveImg, 
        EMOD_TxtButton, EMOD_Label, EMOD_Edit, EMOD_Combo, 

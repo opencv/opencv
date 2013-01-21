@@ -74,7 +74,7 @@ int main( int , char** argv )
     string winOrg = "ColorImg";
     
     // read window position + size from *.cfg
-    cv::CvConfigBase myCfg;
+    cv::ConfigBase myCfg;
     cv::readConfig( exe_name.c_str(), winOrg.c_str(), &myCfg );
 
     int initPosX       = myCfg.initPosX;

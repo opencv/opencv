@@ -62,7 +62,7 @@
 // - Reading of a new config file .cfg which contains data for window positioning and
 // additional the configuration of several controls (Qt only). In the first step
 // only a structure is filled with:
-// int cv::readConfig( const char file, const char * name, CvConfigBase * cfg )
+// int cv::readConfig( const char file, const char * name, ConfigBase * cfg )
 //
 // - New Interface function for communication between an OpenCV application and the HighGUI module
 // If this function is called inside a time loop, you get information about pressed buttons
@@ -73,6 +73,30 @@
 #include "precomp.hpp"
 #include <map>
 #include "opencv2/core/opengl_interop.hpp"
+
+
+// Split string into parts, see:
+// http://www.codeproject.com/Articles/1114/STL-Split-String
+// used by cv::readConfig here
+class SplitList : public std::vector<std::string>
+{
+public:
+    SplitList(const std::string& str, const char* delimList)
+    {
+        size_t lastPos = 0;
+        size_t pos = str.find_first_of(delimList);
+ 
+        while (pos != std::string::npos)
+        {
+            if (pos != lastPos)
+                push_back(str.substr(lastPos, pos-lastPos));
+            lastPos = pos + 1;
+            pos = str.find_first_of(delimList, lastPos);
+        }
+        if (lastPos < str.length())
+            push_back(str.substr(lastPos, pos-lastPos));
+    }
+};
 
 
 // in later times, use this file as a dispatcher to implementations like cvcap.cpp
@@ -337,9 +361,10 @@ int cv::startWindowThread()
 
 
 
-int cv::readConfig( const char* file, const char * name, CvConfigBase * cfg  )
+int cv::readConfig( const char* file, const char * name, ConfigBase * cfg  )
 {
   // read some basic data from *.cfg but no controls here
+  // this function is called by window_QT.cpp only in the moment
   
   cfg->initWidth  = -1;
   cfg->initHeight = -1;
@@ -350,27 +375,26 @@ int cv::readConfig( const char* file, const char * name, CvConfigBase * cfg  )
   
   char csCfgFile[512];
   strcpy( csCfgFile, file); 
-  char * p = strrchr( csCfgFile,'.');
+  char * p = strstr( csCfgFile,".exe");
 
   if ( p != NULL )
   {
-	  *p = 0;
-	  strcat( csCfgFile, ".cfg") ;
-  } else {
-	  // linux
-	  strcat( csCfgFile, ".cfg") ;
-  }
- 
+    *p = 0;  // Windows
+  } 
+
+  strcat( csCfgFile, ".cfg") ;
+
+  
   // TODO: 
   // - use GetModuleFileName(NULL, szFilename, MAX_PATH) to get executable name
   //   in window_w32.cpp 
   // - use  QString exe_name = QFileInfo(QApplication::applicationFilePath()).fileName();
-  //   in window_QT.cpp for the same purpose
+  //   in window_QT.cpp for the same purpose (this is done)
   // - how to do it with GTK ? 
-  //   g_get_prgname() or g_get_application_name() deliver the name of the window
-  //   and not the name of the executable. Whats wrong ??
-	
- 
+  //   Call cvInitSystem before cvNamedWindow in your application - otherwise 
+  //   g_get_prgname() or g_get_application_name()  will deliver the name of 
+  //   the window and not the name of the executable !
+  
   cfg->fs.open(csCfgFile, cv::FileStorage::READ);
   if (!cfg->fs.isOpened())
   {
@@ -427,16 +451,11 @@ int cv::readConfig( const char* file, const char * name, CvConfigBase * cfg  )
 		if ( linecnt > 0 )
 		{
 		
-		  if ( cfg->m_verboseLevel > 1 )
+		  if ( cfg->m_verboseLevel > 2 )
 		  {
 		      printf("\n   [%s]", content.c_str() );
 		  }  
-	
-		  // aus cmdparser.cpp kommt:
-		  // vector<string> split_string(const string& str, const string& delimiters)
-		  // vector<string> baseVec = split_string( strBase, " ");
-
-	
+		
 		  if ( strstr(csBuffer,"CV_WINDOW_") != NULL )
 		  { 
 		    // may be there is a window position or size behind the window mode in *.cfg
@@ -468,7 +487,7 @@ int cv::readConfig( const char* file, const char * name, CvConfigBase * cfg  )
 			}
 		    }
 
-		    if ( cfg->m_verboseLevel > 0 )
+		    if ( cfg->m_verboseLevel > 1 )
 		    {
 			  printf("\n%s:[%s]  %d,%d (%d*%d Pixel) WindowMode=%d  (cv::readConfig)", 
 				CfgWndN.c_str(), cfg->wndname.c_str(), cfg->initPosX, cfg->initPosY , cfg->initWidth, cfg->initHeight, cfg->WindowMode );

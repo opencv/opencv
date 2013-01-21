@@ -51,29 +51,6 @@
 struct CvCapture;
 struct CvVideoWriter;
 
-// Split string into parts, see:
-// http://www.codeproject.com/Articles/1114/STL-Split-String
-class SplitList : public std::vector<std::string>
-{
-public:
-    SplitList(const std::string& str, const char* delimList)
-    {
-        size_t lastPos = 0;
-        size_t pos = str.find_first_of(delimList);
- 
-        while (pos != std::string::npos)
-        {
-            if (pos != lastPos)
-                push_back(str.substr(lastPos, pos-lastPos));
-            lastPos = pos + 1;
-            pos = str.find_first_of(delimList, lastPos);
-        }
-        if (lastPos < str.length())
-            push_back(str.substr(lastPos, pos-lastPos));
-    }
-};
-
-
 namespace cv
 {
 
@@ -92,8 +69,8 @@ enum {
 
 
 
-/***************************** CvConfigBase structure ******************************/
-typedef struct CvConfigBase
+/***************************** cv::ConfigBase structure ******************************/
+typedef struct ConfigBase
 {
     int initWidth;
     int initHeight;
@@ -105,7 +82,7 @@ typedef struct CvConfigBase
     std::string wndname;
     cv::FileStorage fs;
     
-} CvConfigBase;
+} ConfigBase;
 
 
 CV_EXPORTS_W void namedWindow(const string& winname, int flags = WINDOW_AUTOSIZE);
@@ -169,7 +146,7 @@ CV_EXPORTS_W void setTrackbarPos(const string& trackbarname, const string& winna
 
 
 // *.cfg reading
-CV_EXPORTS int readConfig( const char* file, const char * name, CvConfigBase * cfg );
+CV_EXPORTS int readConfig( const char* file, const char * name, ConfigBase * cfg );
 
 
 // OpenGL support
@@ -208,7 +185,6 @@ CV_EXPORTS  int setButtonBarContent(const string winname, int etype, int idx, co
 CV_EXPORTS  int setMapContent(const string winname, const string& varname, const char * text );
 CV_EXPORTS void dispInfoBox(const string winname, const char* caption, const string& text);
 CV_EXPORTS bool getCommandVec(const string& winname, vector<string> & stringVec, char* cmd = NULL);
-
 //-------------------------
 
 enum
