@@ -54,19 +54,20 @@ typedef perf::TestBaseWithParam<fixture> detect;
 
 
 namespace {
-  typedef cv::SCascade::Detection detection_t;
+typedef cv::SCascade::Detection detection_t;
 
-  void extractRacts(std::vector<detection_t> objectBoxes, vector<Rect> rects)
-  {
+void extractRacts(std::vector<detection_t> objectBoxes, vector<Rect>& rects)
+{
     rects.clear();
     for (int i = 0; i < (int)objectBoxes.size(); ++i)
-      rects.push_back(objectBoxes[i].bb);
-  }
+        rects.push_back(objectBoxes[i].bb);
+}
+
 }
 
 PERF_TEST_P(detect, SCascade,
-    testing::Combine(testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
-    testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png"))))
+    testing::Combine(testing::Values(std::string("cv/cascadeandhog/cascades/inria_caltech-17.01.2013.xml")),
+    testing::Values(std::string("cv/cascadeandhog/images/image_00000000_0.png"))))
 {
     typedef cv::SCascade::Detection Detection;
     cv::Mat colored = imread(getDataPath(get<1>(GetParam())));
