@@ -2643,6 +2643,69 @@ CV_EXPORTS_W Size getTextSize(const string& text, int fontFace,
                             double fontScale, int thickness,
                             CV_OUT int* baseLine);
 
+//! Creates and return image_ostream object to render text on the image like the std::cout does.
+//! An image_ostream class supports operator<< for both primitive and opencv types.
+class CV_EXPORTS image_ostream
+{
+public:
+    image_ostream(Mat& img, Point org, int fontFace, double fontScale, Scalar color, int thickness=1, int lineType=8, bool bottomLeftOrigin=false);
+    
+    //! Copy contstructor is necessary because compiler cannot perform RVO in putText() function in some cases. To deal with it we introduce copy
+    //! constructor which copies image_ostream object and it's internall string buffer.
+    image_ostream(const image_ostream&);
+
+    //! Prints everything to the cv::Mat in the desctuctor
+    ~image_ostream();
+
+    
+    //! Defalt operator<< to take everything
+    template <typename T>
+    image_ostream& operator<<(const T& x)
+    {
+        _str << x;
+        return *this;
+    }
+    
+    // this is the type of std::cout
+    typedef std::basic_ostream<char, std::char_traits<char> > CoutType;
+    
+    // this is the function signature of std::endl
+    typedef CoutType& (*ManipType)(CoutType&);
+    
+    //! Define an operator<< to take in std::endl and other manipulators
+    inline image_ostream& operator<<(ManipType manip)
+    {
+        manip(_str);
+        return *this;
+    }
+
+private:
+    void nextLine();    
+    
+private:
+    Mat& _img;
+    Point _org;
+    int _fontFace;
+    double _fontScale;
+    Scalar _color;
+    int _thickness;
+    int _lineType;
+    bool _bottomLeftOrigin;
+
+    int               _offset;
+    std::stringstream _str;
+};
+
+//! Creates and return image_ostream object to render text on the image like the std::cout does.
+//! An image_ostream class supports operator<< for both primitive and opencv types.
+static inline image_ostream putText( Mat& img, Point org,
+    int fontFace, double fontScale, Scalar color,
+    int thickness=1, int lineType=8,
+    bool bottomLeftOrigin=false )
+{
+    return image_ostream(img, org, fontFace, fontScale, color, thickness, lineType, bottomLeftOrigin);
+}
+
 ///////////////////////////////// Mat_<_Tp> ////////////////////////////////////
 
 /*!
