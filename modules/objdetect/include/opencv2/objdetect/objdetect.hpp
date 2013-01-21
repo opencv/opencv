@@ -561,7 +561,7 @@ public:
     virtual void detect(InputArray image, InputArray rois, std::vector<Detection>& objects) const;
     // Param rects is an output array of bounding rectangles for detected objects.
     // Param confs is an output array of confidence for detected objects. i-th bounding rectangle corresponds i-th configence.
-    CV_WRAP virtual void detect(InputArray image, InputArray rois, OutputArray rects, OutputArray confs) const;
+    CV_WRAP virtual void detect(InputArray image, InputArray rois, CV_OUT OutputArray rects, CV_OUT OutputArray confs) const;
 
 private:
     void detectNoRoi(const Mat& image, std::vector<Detection>& objects) const;
