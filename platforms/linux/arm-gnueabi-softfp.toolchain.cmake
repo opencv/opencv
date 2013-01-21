@@ -10,9 +10,9 @@ set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-psabi" )
 set( CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -Wno-psabi" )
 
 # can be any other plases
-set(__arm_linux_eabi_root /usr/arm-linux-gnueabi)
+set(ARM_LINUX_SYSROOT /usr/arm-linux-gnueabi CACHE PATH "ARM cross compilation system root")
 
-set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} ${__arm_linux_eabi_root})
+set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} ${ARM_LINUX_SYSROOT})
 
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
