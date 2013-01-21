@@ -7,6 +7,8 @@ import sys, os, os.path, glob, math, cv2
 from datetime import datetime
 import numpy
 
+plot_colors = ['b', 'r', 'g', 'c', 'm']
+
 #      "key"    : (  b,   g,   r)
 bgr = { "red"   : (  0,   0, 255),
         "green" : (  0, 255,   0),
@@ -19,7 +21,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Plot ROC curve using Caltech mathod of per image detection performance estimation.')
 
     # positional
-    parser.add_argument("cascade",     help = "Path to the tested detector.")
+    parser.add_argument("cascade",     help = "Path to the tested detector.",  nargs='+')
     parser.add_argument("input",       help = "Image sequence pattern.")
     parser.add_argument("annotations", help = "Path to the annotations.")
 
@@ -34,47 +36,53 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # parse annotations
+    print args.cascade
+    # # parse annotations
+    sft.initPlot()
     samples = call_parser(args.anttn_format, args.annotations)
-    cascade = sft.cascade(args.min_scale, args.max_scale, args.nscales, args.cascade)
-    pattern = args.input
-    camera =  cv2.VideoCapture(pattern)
+    for idx, each in enumerate(args.cascade):
+        print each
+        cascade = sft.cascade(args.min_scale, args.max_scale, args.nscales, each)
+        pattern = args.input
+        camera =  cv2.VideoCapture(pattern)
 
-    # for plotting over dataset
-    nannotated  = 0
-    nframes     = 0
+        # for plotting over dataset
+        nannotated  = 0
+        nframes     = 0
 
-    confidenses = []
-    tp          = []
+        confidenses = []
+        tp          = []
 
-    while True:
-        ret, img = camera.read()
-        if not ret:
-            break;
+        while True:
+            ret, img = camera.read()
+            if not ret:
+                break;
 
-        name = pattern % (nframes,)
-        _, tail = os.path.split(name)
+            name = pattern % (nframes,)
+            _, tail = os.path.split(name)
 
-        boxes = samples[tail]
-        boxes = sft.norm_acpect_ratio(boxes, 0.5)
+            boxes = samples[tail]
+            boxes = sft.norm_acpect_ratio(boxes, 0.5)
 
-        nannotated = nannotated + len(boxes)
-        nframes = nframes + 1
-        rects, confs = cascade.detect(img, rois = None)
+            nannotated = nannotated + len(boxes)
+            nframes = nframes + 1
+            rects, confs = cascade.detect(img, rois = None)
 
-        if confs is None:
-            continue
+            if confs is None:
+                continue
 
-        dts = sft.convert2detections(rects, confs)
+            dts = sft.convert2detections(rects, confs)
 
-        confs = confs.tolist()[0]
-        confs.sort(lambda x, y : -1  if (x - y) > 0 else 1)
-        confidenses = confidenses + confs
+            confs = confs.tolist()[0]
+            confs.sort(lambda x, y : -1  if (x - y) > 0 else 1)
+            confidenses = confidenses + confs
 
-        matched = sft.match(boxes, dts)
-        tp = tp + matched
+            matched = sft.match(boxes, dts)
+            tp = tp + matched
 
-        print nframes, nannotated
+            print nframes, nannotated
 
-    fppi, miss_rate = sft.computeROC(confidenses, tp, nannotated, nframes)
-    sft.plotLogLog(fppi, miss_rate)
+        fppi, miss_rate = sft.computeROC(confidenses, tp, nannotated, nframes)
+        sft.plotLogLog(fppi, miss_rate, plot_colors[idx])
+
+    sft.showPlot("roc_curve.png")

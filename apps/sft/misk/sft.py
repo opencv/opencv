@@ -55,7 +55,7 @@ def crop_rect(rect, factor):
 
 #
 
-def plotLogLog(fppi, miss_rate):
+def initPlot():
 
     fig, ax = plt.subplots()
     fig.canvas.draw()
@@ -63,21 +63,18 @@ def plotLogLog(fppi, miss_rate):
     plt.xlabel("fppi")
     plt.ylabel("miss rate")
     plt.title("ROC curve Bahnhof")
-
-    # plt.yticks( [0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.64, 0.80])
-    # ylabels = [item.get_text() for item in ax.get_yticklabels()]
-    # ax.set_yticklabels( ylabels )
     plt.grid(True)
-
-    # plt.xticks( [pow(10, -4), pow(10, -3), pow(10, -2), pow(10, -1), pow(10, 0), pow(10, 1)])
-    # xlabels = [item.get_text() for item in ax.get_xticklabels()]
-    # ax.set_xticklabels( xlabels )
     plt.xscale('log')
     plt.yscale('log')
 
-    plt.semilogy(fppi, miss_rate, color='m', linewidth=2)
-
+def showPlot(name):
+    plt.savefig(name)
     plt.show()
+
+
+def plotLogLog(fppi, miss_rate, c):
+    plt.semilogy(fppi, miss_rate, color = c, linewidth = 2)
+
 
 def draw_rects(img, rects, color, l = lambda x, y : x + y):
     if rects is not None:
