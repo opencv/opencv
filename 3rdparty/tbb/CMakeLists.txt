@@ -115,28 +115,15 @@ file(GLOB lib_srcs "${tbb_src_dir}/src/tbb/*.cpp")
 file(GLOB lib_hdrs "${tbb_src_dir}/src/tbb/*.h")
 list(APPEND lib_srcs "${tbb_src_dir}/src/rml/client/rml_tbb.cpp")
 
-if (ANDROID)
-  add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
-                  -D__TBB_BUILD=1                        #required
-                  -D__TBB_SURVIVE_THREAD_SWITCH=0        #no cilk on Android?
-                  -DUSE_PTHREAD                          #required
-                  -DTBB_USE_GCC_BUILTINS=1               #required
-                  -DTBB_USE_DEBUG=0                      #just to be sure
-                  -DTBB_NO_LEGACY=1                      #don't need backward compatibility
-                  -DDO_ITT_NOTIFY=0                      #it seems that we don't need these notifications on Android
+add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
+                -D__TBB_BUILD=1                        #required
+                -D__TBB_SURVIVE_THREAD_SWITCH=0        #no cilk on Android?
+                -DUSE_PTHREAD                          #required
+                -DTBB_USE_GCC_BUILTINS=1               #required
+                -DTBB_USE_DEBUG=0                      #just to be sure
+                -DTBB_NO_LEGACY=1                      #don't need backward compatibility
+                -DDO_ITT_NOTIFY=0                      #it seems that we don't need these notifications on Android
                )
-else()
-  add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=1         #required
-                  -D__TBB_BUILD=1                        #required
-                  -D__TBB_SURVIVE_THREAD_SWITCH=1        #cilk
-                  -DUSE_PTHREAD                          #required
-                  -DTBB_USE_GCC_BUILTINS=1               #required
-                  -DTBB_USE_DEBUG=0                      #just to be sure
-                  -DTBB_NO_LEGACY=1                      #don't need backward compatibility
-                  -DDO_ITT_NOTIFY=0                      #Required
-               )
-
-endif()
 
 if(ANDROID_COMPILER_IS_CLANG)
   add_definitions(-D__TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
@@ -155,13 +142,8 @@ else()
   set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs} "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
 endif()
 
-if (BUILD_SHARED_LIBS)
-  add_library(tbb SHARED ${TBB_SOURCE_FILES})
-  target_link_libraries(tbb c m dl)
-else()
-  add_library(tbb STATIC ${TBB_SOURCE_FILES})
-  target_link_libraries(tbb c m dl)
-endif()
+add_library(tbb ${TBB_SOURCE_FILES})
+target_link_libraries(tbb c m dl)
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
 string(REPLACE "-Werror=non-virtual-dtor" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
