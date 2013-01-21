@@ -2007,6 +2007,41 @@ Size getTextSize( const string& text, int fontFace, double fontScale, int thickn
     return size;
 }
 
+image_ostream::image_ostream(Mat& img, Point org, int fontFace, double fontScale, Scalar color, int thickness, int lineType, bool bottomLeftOrigin)
+    : _img(img)
+    , _org(org)
+    , _fontFace(fontFace)
+    , _fontScale(fontScale)
+    , _color(color)
+    , _thickness(thickness)
+    , _lineType(lineType)
+    , _bottomLeftOrigin(bottomLeftOrigin)
+    , _offset(0)
+{
+}
+
+image_ostream::~image_ostream()
+{
+    nextLine();
+}
+
+void image_ostream::nextLine()
+{
+    std::string line;
+    do
+    {
+        std::getline(_str, line);
+        
+        int baseLine;
+        cv::Size textSize = cv::getTextSize(line, _fontFace, _fontScale, _thickness, &baseLine);
+        cv::putText(_img, line, _org + cv::Point(0, _offset), _fontFace, _fontScale, _color,_thickness, _lineType, _bottomLeftOrigin);
+
+        _offset += textSize.height + baseLine;
+    } while (!_str.eof());
+
+    _str = std::stringstream();
+}
+
 }
 
 

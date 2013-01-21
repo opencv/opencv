@@ -1,6 +1,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include <stdio.h>
+#include <iomanip>
 using namespace cv;
 
 static void help()
@@ -157,10 +158,28 @@ int main()
             return 0;
     }
 
+    Mat image2;
+    for( i = 0; i < 255; i += 1 )
+    {
+        image2 = image - Scalar::all(i);
+        putText(image2, cv::Point(100,100), CV_FONT_HERSHEY_COMPLEX, 1, Scalar(i, i, 255)) 
+                << "cv::putText() Demo!" << std::endl 
+                << "cv::putText(...) << \"Hello\\nWorld\";" << std::endl 
+                << "You can use std::endl" << std::endl 
+                << "or even\\n symbol\nto format text" << std::endl
+                << "And we support formatters:\n"
+                << "std::setprecision(5)" << std::setprecision(5) << CV_PI << std::endl
+                << "std::scientific " << std::scientific << CV_PI << std::endl
+                << "So you can use cv::putText like regular std::cout!";
+
+        imshow(wndname, image2);
+        if(waitKey(DELAY) >= 0)
+            return 0;
+    }
+
     Size textsize = getTextSize("OpenCV forever!", CV_FONT_HERSHEY_COMPLEX, 3, 5, 0);
     Point org((width - textsize.width)/2, (height - textsize.height)/2);
 
-    Mat image2;
     for( i = 0; i < 255; i += 2 )
     {
         image2 = image - Scalar::all(i);
