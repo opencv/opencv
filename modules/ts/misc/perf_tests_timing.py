@@ -56,33 +56,39 @@ if __name__ == "__main__":
                 test_cases[name] = [None] * setsCount
             test_cases[name][i] = case
 
-    testsuits = [] # testsuit name, time, flag for failed tests
+    testsuits = [] # testsuit name, time, num, flag for failed tests
 
+    overall_time = 0
     prevGroupName = None
     suit_time = 0
-    has_failed = False
+    suit_num = 0
+    fails_num = 0
     for name in sorted(test_cases.iterkeys(), key=alphanum_keyselector):
         cases = test_cases[name]
 
         groupName = next(c for c in cases if c).shortName()
         if groupName != prevGroupName:
             if prevGroupName != None:
+                suit_time = suit_time/60 #from seconds to minutes
                 testsuits.append({'name': prevGroupName, 'time': suit_time, \
-                    'failed': has_failed})
-                has_failed = False
+                    'num': suit_num, 'failed': fails_num})
+                overall_time += suit_time
                 suit_time = 0
+                suit_num = 0
+                fails_num = 0
             prevGroupName = groupName
 
         for i in range(setsCount):
             case = cases[i]
             if not case is None:
+                suit_num += 1
                 if case.get('status') == 'run':
                     suit_time += case.get('time')
                 if case.get('status') == 'failed':
-                    has_failed = True
+                    fails_num += 1
 
     testsuits.append({'name': prevGroupName, 'time': suit_time, \
-        'failed': has_failed})
+        'num': suit_num, 'failed': fails_num})
 
     if len(testsuits)==0:
         print 'No testsuits found'
@@ -91,17 +97,19 @@ if __name__ == "__main__":
     tbl = table()
 
     # header
-    tbl.newColumn('name', 'Name of testsuit', align = 'left', cssclass = 'col_name')
-    tbl.newColumn('time', 'Time (ms)', align = 'left', cssclass = 'col_name')
-    tbl.newColumn('failed', 'Failed tests', align = 'center', cssclass = 'col_name')
+    tbl.newColumn('name', 'Testsuit', align = 'left', cssclass = 'col_name')
+    tbl.newColumn('time', 'Time (min)', align = 'center', cssclass = 'col_name')
+    tbl.newColumn('num', 'Num of tests', align = 'center', cssclass = 'col_name')
+    tbl.newColumn('failed', 'Failed', align = 'center', cssclass = 'col_name')
 
     # rows
     for suit in sorted(testsuits, key = lambda suit: suit['time'], reverse = True):
         tbl.newRow()
         tbl.newCell('name', suit['name'])
         tbl.newCell('time', formatValue(suit['time'], '', ''), suit['time'])
-        if (suit['failed']):
-            tbl.newCell('failed', 'Yes')
+        tbl.newCell('num', suit['num'])
+        if (suit['failed'] != 0):
+            tbl.newCell('failed', suit['failed'])
         else:
             tbl.newCell('failed', ' ')
 
@@ -116,5 +124,6 @@ if __name__ == "__main__":
 
         splitter = 15 * '*'
         print '\n%s\n  %s\n%s\n' % (splitter, module_name, splitter)
+        print 'Overall time: %.2f min\n' % overall_time
         tbl.consolePrintTable(sys.stdout)
         print 4 * '\n'
