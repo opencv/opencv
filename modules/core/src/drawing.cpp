@@ -2025,6 +2025,22 @@ image_ostream::~image_ostream()
     nextLine();
 }
 
+image_ostream::image_ostream(const image_ostream& rhs)
+    : _img(rhs._img)
+    , _org(rhs._org)
+    , _fontFace(rhs._fontFace)
+    , _fontScale(rhs._fontScale)
+    , _color(rhs._color)
+    , _thickness(rhs._thickness)
+    , _lineType(rhs._lineType)
+    , _bottomLeftOrigin(rhs._bottomLeftOrigin)
+    , _offset(0)
+    , _str(rhs._str.str())
+{
+        
+}
+    
+
 void image_ostream::nextLine()
 {
     std::string line;
@@ -2038,8 +2054,6 @@ void image_ostream::nextLine()
 
         _offset += textSize.height + baseLine;
     } while (!_str.eof());
-
-    _str = std::stringstream();
 }
 
 }

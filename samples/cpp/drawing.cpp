@@ -162,7 +162,7 @@ int main()
     for( i = 0; i < 255; i += 1 )
     {
         image2 = image - Scalar::all(i);
-        putText(image2, cv::Point(100,100), CV_FONT_HERSHEY_COMPLEX, 1, Scalar(i, i, 255)) 
+        putText(image2, cv::Point(100,100), CV_FONT_HERSHEY_COMPLEX, 1, Scalar(i, i, 255))
                 << "cv::putText() Demo!" << std::endl 
                 << "cv::putText(...) << \"Hello\\nWorld\";" << std::endl 
                 << "You can use std::endl" << std::endl 

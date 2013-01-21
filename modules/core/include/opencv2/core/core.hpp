@@ -2643,13 +2643,21 @@ CV_EXPORTS_W Size getTextSize(const string& text, int fontFace,
                             double fontScale, int thickness,
                             CV_OUT int* baseLine);
 
-//! Define the custom class that behaves like the std::basic_ostream but renders the text on the cv::Mat
+//! Creates and return image_ostream object to render text on the image like the std::cout does.
+//! An image_ostream class supports operator<< for both primitive and opencv types.
 class CV_EXPORTS image_ostream
 {
 public:
     image_ostream(Mat& img, Point org, int fontFace, double fontScale, Scalar color, int thickness=1, int lineType=8, bool bottomLeftOrigin=false);
+    
+    //! Copy contstructor is necessary because compiler cannot perform RVO in putText() function in some cases. To deal with it we introduce copy
+    //! constructor which copies image_ostream object and it's internall string buffer.
+    image_ostream(const image_ostream&);
+
+    //! Prints everything to the cv::Mat in the desctuctor
     ~image_ostream();
 
+    
     //! Defalt operator<< to take everything
     template <typename T>
     image_ostream& operator<<(const T& x)
@@ -2657,32 +2665,23 @@ public:
         _str << x;
         return *this;
     }
-
+    
     // this is the type of std::cout
     typedef std::basic_ostream<char, std::char_traits<char> > CoutType;
-
+    
     // this is the function signature of std::endl
-    typedef CoutType& (*StandardEndLine)(CoutType&);
-
-    // define an operator<< to take in std::endl
-    inline image_ostream& operator<<(StandardEndLine  manip)
+    typedef CoutType& (*ManipType)(CoutType&);
+    
+    //! Define an operator<< to take in std::endl and other manipulators
+    inline image_ostream& operator<<(ManipType manip)
     {
-        // This check allows to correctly handle endline manipulator
-        if (manip == ::std::endl)
-        {
-            nextLine();
-        }
-        else
-        {
-            manip(_str);      
-        }
-
+        manip(_str);
         return *this;
     }
 
 private:
-    void nextLine();
-
+    void nextLine();    
+    
 private:
     Mat& _img;
     Point _org;
@@ -2693,7 +2692,7 @@ private:
     int _lineType;
     bool _bottomLeftOrigin;
 
-    int                _offset;
+    int               _offset;
     std::stringstream _str;
 };
 
