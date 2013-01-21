@@ -6,6 +6,7 @@ Fast Approximate Nearest Neighbor Search
 
 This section documents OpenCV's interface to the FLANN library. FLANN (Fast Library for Approximate Nearest Neighbors) is a library that contains a collection of algorithms optimized for fast nearest neighbor search in large datasets and for high dimensional features. More information about FLANN can be found in [Muja2009]_ .
 
+.. [Muja2009] Marius Muja, David G. Lowe. Fast Approximate Nearest Neighbors with Automatic Algorithm Configuration, 2009
 
 flann::Index\_
 -----------------
@@ -150,7 +151,7 @@ flann::Index_<T>::knnSearch
 ----------------------------
 Performs a K-nearest neighbor search for a given query point using the index.
 
-.. ocv:function:: void flann::Index_<T>::knnSearch(const vector<T>& query, vector<int>& indices,                 vector<float>& dists, int knn, const SearchParams& params)
+.. ocv:function:: void flann::Index_<T>::knnSearch(const vector<T>& query, vector<int>& indices, vector<float>& dists, int knn, const SearchParams& params)
 
 .. ocv:function:: void flann::Index_<T>::knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, const SearchParams& params)
 
@@ -179,9 +180,9 @@ flann::Index_<T>::radiusSearch
 --------------------------------------
 Performs a radius nearest neighbor search for a given query point.
 
-.. ocv:function:: int flann::Index_<T>::radiusSearch(const vector<T>& query, vector<int>& indices,                   vector<float>& dists, float radius, const SearchParams& params)
+.. ocv:function:: int flann::Index_<T>::radiusSearch(const vector<T>& query, vector<int>& indices, vector<float>& dists, float radius, const SearchParams& params)
 
-.. ocv:function:: int flann::Index_<T>::radiusSearch(const Mat& query, Mat& indices, Mat& dists,                   float radius, const SearchParams& params)
+.. ocv:function:: int flann::Index_<T>::radiusSearch(const Mat& query, Mat& indices, Mat& dists, float radius, const SearchParams& params)
 
     :param query: The query point
 

@@ -154,9 +154,9 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
     }
 
     protected void setUp() throws Exception {
+        super.setUp();
         matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED);
         matSize = 100;
-
         truth = new DMatch[] {
                 new DMatch(0, 0, 0, 1.049694f),
                 new DMatch(1, 0, 0, 1.0984558f),
@@ -164,8 +164,6 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
                 new DMatch(3, 1, 0, 0.48435235f),
                 new DMatch(4, 0, 0, 1.0836693f)
                 };
-
-        super.setUp();
     }
 
     public void testAdd() {

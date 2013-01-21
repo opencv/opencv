@@ -325,7 +325,7 @@ Retina::RetinaParameters
 .. ocv:struct:: Retina::RetinaParameters
 
   This structure merges all the parameters that can be adjusted threw the **Retina::setup()**, **Retina::setupOPLandIPLParvoChannel** and **Retina::setupIPLMagnoChannel** setup methods
-Parameters structure for better clarity, check explenations on the comments of methods : setupOPLandIPLParvoChannel and setupIPLMagnoChannel. ::
+  Parameters structure for better clarity, check explenations on the comments of methods : setupOPLandIPLParvoChannel and setupIPLMagnoChannel. ::
 
     class RetinaParameters{
         struct OPLandIplParvoParameters{ // Outer Plexiform Layer (OPL) and Inner Plexiform Layer Parvocellular (IplParvo) parameters

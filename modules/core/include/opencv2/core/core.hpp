@@ -1277,11 +1277,12 @@ public:
     operator _Tp* ();
     operator const _Tp*() const;
 
-    bool operator==(const Ptr<_Tp>& ptr) const;
-
     _Tp* obj; //< the object pointer.
     int* refcount; //< the associated reference counter
 };
+
+template<class T, class U> bool operator==(Ptr<T> const & a, Ptr<U> const & b);
+template<class T, class U> bool operator!=(Ptr<T> const & a, Ptr<U> const & b);
 
 
 //////////////////////// Input/Output Array Arguments /////////////////////////////////

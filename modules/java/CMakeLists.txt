@@ -295,7 +295,12 @@ endif(ANDROID)
 add_dependencies(${lib_target} ${api_target})
 add_dependencies(${the_module} ${lib_target})
 
-#android test project
+# android test project
 if(ANDROID AND BUILD_TESTS)
   add_subdirectory(android_test)
+endif()
+
+# Desktop Java test project.
+if((NOT ANDROID) AND BUILD_TESTS)
+  add_subdirectory(java_test)
 endif()

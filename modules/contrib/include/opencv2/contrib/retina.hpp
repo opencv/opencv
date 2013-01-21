@@ -115,7 +115,7 @@ class CV_EXPORTS Retina {
 public:
 
     // parameters structure for better clarity, check explenations on the comments of methods : setupOPLandIPLParvoChannel and setupIPLMagnoChannel
-        struct RetinaParameters{
+    struct RetinaParameters{
         struct OPLandIplParvoParameters{ // Outer Plexiform Layer (OPL) and Inner Plexiform Layer Parvocellular (IplParvo) parameters
                OPLandIplParvoParameters():colorMode(true),
                                  normaliseOutput(true),
@@ -166,14 +166,14 @@ public:
     virtual ~Retina();
 
     /**
-        * retreive retina input buffer size
-        */
-        Size inputSize();
+    * retreive retina input buffer size
+    */
+    Size inputSize();
 
     /**
-        * retreive retina output buffer size
-        */
-        Size outputSize();
+    * retreive retina output buffer size
+    */
+    Size outputSize();
 
     /**
      * try to open an XML retina parameters file to adjust current retina instance setup
@@ -190,9 +190,9 @@ public:
      * => if the xml file does not exist, then default setup is applied
      * => warning, Exceptions are thrown if read XML file is not valid
      * @param fs : the open Filestorage which contains retina parameters
-         * @param applyDefaultSetupOnFailure : set to true if an error must be thrown on error
+     * @param applyDefaultSetupOnFailure : set to true if an error must be thrown on error
      */
-        void setup(cv::FileStorage &fs, const bool applyDefaultSetupOnFailure=true);
+    void setup(cv::FileStorage &fs, const bool applyDefaultSetupOnFailure=true);
 
     /**
      * try to open an XML retina parameters file to adjust current retina instance setup
@@ -203,10 +203,10 @@ public:
      */
     void setup(RetinaParameters newParameters);
 
-        /**
-         * @return the current parameters setup
-         */
-        struct Retina::RetinaParameters getParameters();
+    /**
+     * @return the current parameters setup
+     */
+    Retina::RetinaParameters getParameters();
 
     /**
      * parameters setup display method
@@ -305,17 +305,17 @@ public:
      */
     void clearBuffers();
 
-        /**
-        * Activate/desactivate the Magnocellular pathway processing (motion information extraction), by default, it is activated
-        * @param activate: true if Magnocellular output should be activated, false if not
-        */
-        void activateMovingContoursProcessing(const bool activate);
+    /**
+    * Activate/desactivate the Magnocellular pathway processing (motion information extraction), by default, it is activated
+    * @param activate: true if Magnocellular output should be activated, false if not
+    */
+    void activateMovingContoursProcessing(const bool activate);
 
-        /**
-        * Activate/desactivate the Parvocellular pathway processing (contours information extraction), by default, it is activated
-        * @param activate: true if Parvocellular (contours information extraction) output should be activated, false if not
-        */
-        void activateContoursProcessing(const bool activate);
+    /**
+    * Activate/desactivate the Parvocellular pathway processing (contours information extraction), by default, it is activated
+    * @param activate: true if Parvocellular (contours information extraction) output should be activated, false if not
+    */
+    void activateContoursProcessing(const bool activate);
 
 protected:
     // Parameteres setup members

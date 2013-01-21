@@ -3241,7 +3241,7 @@ The constructors.
 
         * **SVD::NO_UV** indicates that only a vector of singular values ``w`` is to be processed, while ``u`` and ``vt`` will be set to empty matrices.
 
-        * **SVD::FULL_UV** when the matrix is not square, by default the algorithm produces ``u`` and ``vt`` matrices of sufficiently large size for the further ``A`` reconstruction; if, however, ``FULL_UV`` flag is specified, ``u`` and ``vt``will be full-size square orthogonal matrices.
+        * **SVD::FULL_UV** when the matrix is not square, by default the algorithm produces ``u`` and ``vt`` matrices of sufficiently large size for the further ``A`` reconstruction; if, however,   ``FULL_UV`` flag is specified, ``u`` and ``vt`` will be full-size square orthogonal matrices.
 
 The first constructor initializes an empty ``SVD`` structure. The second constructor initializes an empty ``SVD`` structure and then calls
 :ocv:funcx:`SVD::operator()` .

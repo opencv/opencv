@@ -52,18 +52,15 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
 
     @Override
     protected void setUp() throws Exception {
+        super.setUp();
         detector = FeatureDetector.create(FeatureDetector.SURF);
-
         matSize = 100;
-
         truth = new KeyPoint[] {
                 new KeyPoint(55.775578f, 55.775578f, 16, 80.245735f, 8617.8633f, 0, -1),
                 new KeyPoint(44.224422f, 55.775578f, 16, 170.24574f, 8617.8633f, 0, -1),
                 new KeyPoint(44.224422f, 44.224422f, 16, 260.24573f, 8617.8633f, 0, -1),
                 new KeyPoint(55.775578f, 44.224422f, 16, 350.24573f, 8617.8633f, 0, -1)
             };
-
-        super.setUp();
     }
 
     public void testCreate() {

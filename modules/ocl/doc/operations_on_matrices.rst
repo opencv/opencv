@@ -3,11 +3,11 @@ Operations on Matrics
 
 .. highlight:: cpp
 
-ocl::convertTo
-------------------
+ocl::oclMat::convertTo
+----------------------
 Returns void
 
-.. ocv:function:: void convertTo( oclMat &m, int rtype, double alpha = 1, double beta = 0 ) const
+.. ocv:function:: void ocl::oclMat::convertTo( oclMat &m, int rtype, double alpha = 1, double beta = 0 ) const
 
     :param m: The destination matrix. If it does not have a proper size or type before the operation, it will be reallocated
 
@@ -19,11 +19,11 @@ Returns void
 
 The method converts source pixel values to the target datatype. saturate cast is applied in the end to avoid possible overflows. Supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4.
 
-ocl::copyTo
-------------------
+ocl::oclMat::copyTo
+-------------------
 Returns void
 
-.. ocv:function:: void copyTo( oclMat &m, const oclMat &mask ) const
+.. ocv:function:: void ocl::oclMat::copyTo( oclMat &m, const oclMat &mask ) const
 
     :param m: The destination matrix. If it does not have a proper size or type before the operation, it will be reallocated
 
@@ -31,11 +31,11 @@ Returns void
 
 Copies the matrix to another one. Supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4
 
-ocl::setTo
+ocl::oclMat::setTo
 ------------------
 Returns oclMat
 
-.. ocv:function:: oclMat &setTo(const Scalar &s, const oclMat &mask = oclMat())
+.. ocv:function:: oclMat& ocl::oclMat::setTo(const Scalar &s, const oclMat &mask = oclMat())
 
     :param s: Assigned scalar, which is converted to the actual array type
 
@@ -47,15 +47,16 @@ ocl::absdiff
 ------------------
 Returns void
 
-.. ocv:function:: void absdiff(const oclMat &a, const oclMat &b, oclMat &c)
+.. ocv:function:: void ocl::absdiff( const oclMat& a, const oclMat& b, oclMat& c )
 
-.. ocv:function:: void absdiff(const oclMat &a, const Scalar& sc, oclMat &c)
+.. ocv:function:: void ocl::absdiff( const oclMat& a, const Scalar& s, oclMat& c )
+
 
     :param a: The first input array
 
     :param b: The second input array, must be the same size and same type as a
 
-    :param sc: Scalar, the second input parameter
+    :param s: Scalar, the second input parameter
 
     :param c: The destination array, it will have the same size and same type as a
 
@@ -65,17 +66,19 @@ ocl::add
 ------------------
 Returns void
 
-.. ocv:function:: void add(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat& mask=oclMat())
+.. ocv:function:: void ocl::add( const oclMat & a, const oclMat & b, oclMat & c )
 
-.. ocv:function:: void add(const oclMat &src1, const Scalar &sc, oclMat &dst, const oclMat& mask=oclMat())
+.. ocv:function:: void ocl::add( const oclMat & a, const oclMat & b, oclMat & c, const oclMat & mask )
 
-    :param src1: The first input array
+.. ocv:function:: void ocl::add( const oclMat & a, const Scalar & sc, oclMat & c, const oclMat & mask=oclMat() )
 
-    :param src2: The second input array, must be the same size and same type as src1
+    :param a: The first input array
+
+    :param b: The second input array, must be the same size and same type as src1
 
     :param sc: Scalar, the second input parameter
 
-    :param dst: The destination array, it will have the same size and same type as src1
+    :param c: The destination array, it will have the same size and same type as src1
 
     :param mask: he optional operation mask, 8-bit single channel array; specifies elements of the destination array to be changed
 
@@ -85,17 +88,22 @@ ocl::subtract
 ------------------
 Returns void
 
-.. ocv:function:: void subtract(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat& mask=oclMat())
+.. ocv:function:: void ocl::subtract( const oclMat& a, const oclMat& b, oclMat& c )
 
-.. ocv:function:: void subtract(const oclMat &src1, const Scalar &sc, oclMat &dst, const oclMat& mask=oclMat())
+.. ocv:function:: void ocl::subtract( const oclMat& a, const oclMat& b, oclMat& c, const oclMat& mask )
 
-    :param src1: The first input array
+.. ocv:function:: void ocl::subtract( const oclMat& a, const Scalar& sc, oclMat& c, const oclMat& mask=oclMat() )
 
-    :param src2: The second input array, must be the same size and same type as src1
+.. ocv:function:: void ocl::subtract( const Scalar& sc, const oclMat& a, oclMat& c, const oclMat& mask=oclMat() )
+
+
+    :param a: The first input array
+
+    :param b: The second input array, must be the same size and same type as src1
 
     :param sc: Scalar, the second input parameter
 
-    :param dst: The destination array, it will have the same size and same type as src1
+    :param c: The destination array, it will have the same size and same type as src1
 
     :param mask: he optional operation mask, 8-bit single channel array; specifies elements of the destination array to be changed
 
@@ -105,13 +113,13 @@ ocl::multiply
 ------------------
 Returns void
 
-.. ocv:function:: void multiply(const oclMat &src1, const oclMat &src2, oclMat &dst, double scale = 1)
+.. ocv:function:: void ocl::multiply( const oclMat& a, const oclMat& b, oclMat& c, double scale=1 )
 
-    :param src1: The first input array
+    :param a: The first input array
 
-    :param src2: The second input array, must be the same size and same type as src1
+    :param b: The second input array, must be the same size and same type as src1
 
-    :param dst: The destination array, it will have the same size and same type as src1
+    :param c: The destination array, it will have the same size and same type as src1
 
     :param scale: must be 1 now
 
@@ -121,13 +129,15 @@ ocl::divide
 ------------------
 Returns void
 
-.. ocv:function:: void divide(const oclMat &src1, const oclMat &src2, oclMat &dst, double scale = 1)
+.. ocv:function:: void ocl::divide( const oclMat& a, const oclMat& b, oclMat& c, double scale=1 )
 
-    :param src1: The first input array
+.. ocv:function:: void ocl::divide( double scale, const oclMat& b, oclMat& c )
 
-    :param src2: The second input array, must be the same size and same type as src1
+    :param a: The first input array
 
-    :param dst: The destination array, it will have the same size and same type as src1
+    :param b: The second input array, must be the same size and same type as src1
+
+    :param c: The destination array, it will have the same size and same type as src1
 
     :param scale: must be 1 now
 
@@ -137,15 +147,15 @@ ocl::bitwise_and
 ------------------
 Returns void
 
-.. ocv:function:: void bitwise_and(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat& mask=oclMat())
+.. ocv:function:: void ocl::bitwise_and( const oclMat& src1, const oclMat& src2, oclMat& dst, const oclMat& mask=oclMat() )
 
-.. ocv:function:: void bitwise_and(const oclMat &src1, const Scalar &sc, oclMat &dst, const oclMat& mask=oclMat())
+.. ocv:function:: void ocl::bitwise_and( const oclMat& src1, const Scalar& s, oclMat& dst, const oclMat& mask=oclMat() )
 
     :param src1: The first input array
 
     :param src2: The second input array, must be the same size and same type as src1
 
-    :param sc: Scalar, the second input parameter
+    :param s: Scalar, the second input parameter
 
     :param dst: The destination array, it will have the same size and same type as src1
 
@@ -157,15 +167,15 @@ ocl::bitwise_or
 ------------------
 Returns void
 
-.. ocv:function:: void bitwise_or(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat& mask=oclMat())
+.. ocv:function:: void ocl::bitwise_or( const oclMat& src1, const oclMat& src2, oclMat& dst, const oclMat& mask=oclMat() )
 
-.. ocv:function:: void bitwise_or(const oclMat &src1, const Scalar &sc, oclMat &dst, const oclMat& mask=oclMat())
+.. ocv:function:: void ocl::bitwise_or( const oclMat& src1, const Scalar& s, oclMat& dst, const oclMat& mask=oclMat() )
 
     :param src1: The first input array
 
     :param src2: The second input array, must be the same size and same type as src1
 
-    :param sc: Scalar, the second input parameter
+    :param s: Scalar, the second input parameter
 
     :param dst: The destination array, it will have the same size and same type as src1
 
@@ -177,9 +187,9 @@ ocl::bitwise_xor
 ------------------
 Returns void
 
-.. ocv:function:: void bitwise_xor(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat& mask=oclMat())
+.. ocv:function:: void ocl::bitwise_xor( const oclMat& src1, const oclMat& src2, oclMat& dst, const oclMat& mask=oclMat() )
 
-.. ocv:function:: void bitwise_xor(const oclMat &src1, const Scalar &sc, oclMat &dst, const oclMat& mask=oclMat())
+.. ocv:function:: void ocl::bitwise_xor( const oclMat& src1, const Scalar& s, oclMat& dst, const oclMat& mask=oclMat() )
 
     :param src1: The first input array
 
@@ -197,7 +207,7 @@ ocl::bitwise_not
 ------------------
 Returns void
 
-.. ocv:function:: void bitwise_not(const oclMat &src, oclMat &dst)
+.. ocv:function:: void ocl::bitwise_not(const oclMat &src, oclMat &dst)
 
     :param src: The input array
 
@@ -209,7 +219,7 @@ ocl::cartToPolar
 ------------------
 Returns void
 
-.. ocv:function:: void cartToPolar(const oclMat &x, const oclMat &y, oclMat &magnitude, oclMat &angle, bool angleInDegrees = false)
+.. ocv:function:: void ocl::cartToPolar(const oclMat &x, const oclMat &y, oclMat &magnitude, oclMat &angle, bool angleInDegrees = false)
 
     :param x: The array of x-coordinates; must be single-precision or double-precision floating-point array
 
@@ -227,7 +237,7 @@ ocl::polarToCart
 ------------------
 Returns void
 
-.. ocv:function:: void polarToCart(const oclMat &magnitude, const oclMat &angle, oclMat &x, oclMat &y, bool angleInDegrees = false)
+.. ocv:function:: void ocl::polarToCart(const oclMat &magnitude, const oclMat &angle, oclMat &x, oclMat &y, bool angleInDegrees = false)
 
     :param magnitude: The source floating-point array of magnitudes of 2D vectors. It can be an empty matrix (=Mat()) - in this case the function assumes that all the magnitudes are =1. If it's not empty, it must have the same size and same type as angle
 
@@ -245,7 +255,7 @@ ocl::compare
 ------------------
 Returns void
 
-.. ocv:function:: void compare(const oclMat &a, const oclMat &b, oclMat &c, int cmpop)
+.. ocv:function:: void ocl::compare(const oclMat &a, const oclMat &b, oclMat &c, int cmpop)
 
     :param a: The first source array
 
@@ -261,7 +271,7 @@ ocl::exp
 ------------------
 Returns void
 
-.. ocv:function:: void exp(const oclMat &a, oclMat &b)
+.. ocv:function:: void ocl::exp(const oclMat &a, oclMat &b)
 
     :param a: The first source array
 
@@ -273,7 +283,7 @@ ocl::log
 ------------------
 Returns void
 
-.. ocv:function:: void log(const oclMat &a, oclMat &b)
+.. ocv:function:: void ocl::log(const oclMat &a, oclMat &b)
 
     :param a: The first source array
 
@@ -285,7 +295,7 @@ ocl::LUT
 ------------------
 Returns void
 
-.. ocv:function:: void LUT(const oclMat &src, const oclMat &lut, oclMat &dst)
+.. ocv:function:: void ocl::LUT(const oclMat &src, const oclMat &lut, oclMat &dst)
 
     :param src: Source array of 8-bit elements
 
@@ -299,7 +309,7 @@ ocl::magnitude
 ------------------
 Returns void
 
-.. ocv:function:: void magnitude(const oclMat &x, const oclMat &y, oclMat &magnitude)
+.. ocv:function:: void ocl::magnitude(const oclMat &x, const oclMat &y, oclMat &magnitude)
 
     :param x: The floating-point array of x-coordinates of the vectors
 
@@ -313,11 +323,11 @@ ocl::flip
 ------------------
 Returns void
 
-.. ocv:function:: void flip(const oclMat &src, oclMat &dst, int flipCode)
+.. ocv:function:: void ocl::flip( const oclMat& a, oclMat& b, int flipCode )
 
-    :param src: Source image.
+    :param a: Source image.
 
-    :param dst: Destination image
+    :param b: Destination image
 
     :param flipCode: Specifies how to flip the array: 0 means flipping around the x-axis, positive (e.g., 1) means flipping around y-axis, and negative (e.g., -1) means flipping around both axes.
 
@@ -327,7 +337,7 @@ ocl::meanStdDev
 ------------------
 Returns void
 
-.. ocv:function:: void meanStdDev(const oclMat &mtx, Scalar &mean, Scalar &stddev)
+.. ocv:function:: void ocl::meanStdDev(const oclMat &mtx, Scalar &mean, Scalar &stddev)
 
     :param mtx: Source image.
 
@@ -341,7 +351,7 @@ ocl::merge
 ------------------
 Returns void
 
-.. ocv:function:: void merge(const vector<oclMat> &src, oclMat &dst)
+.. ocv:function:: void ocl::merge(const vector<oclMat> &src, oclMat &dst)
 
     :param src: The source array or vector of the single-channel matrices to be merged. All the matrices in src must have the same size and the same type
 
@@ -353,7 +363,7 @@ ocl::split
 ------------------
 Returns void
 
-.. ocv:function:: void split(const oclMat &src, vector<oclMat> &dst)
+.. ocv:function:: void ocl::split(const oclMat &src, vector<oclMat> &dst)
 
     :param src: The source multi-channel array
 
@@ -365,9 +375,9 @@ ocl::norm
 ------------------
 Returns the calculated norm
 
-.. ocv:function:: double norm(const oclMat &src1, int normType = NORM_L2)
+.. ocv:function:: double ocl::norm(const oclMat &src1, int normType = NORM_L2)
 
-.. ocv:function:: double norm(const oclMat &src1, const oclMat &src2, int normType = NORM_L2)
+.. ocv:function:: double ocl::norm(const oclMat &src1, const oclMat &src2, int normType = NORM_L2)
 
     :param src1: The first source array
 
@@ -381,7 +391,7 @@ ocl::phase
 ------------------
 Returns void
 
-.. ocv:function:: void phase(const oclMat &x, const oclMat &y, oclMat &angle, bool angleInDegrees = false)
+.. ocv:function:: void ocl::phase(const oclMat &x, const oclMat &y, oclMat &angle, bool angleInDegrees = false)
 
     :param x: The source floating-point array of x-coordinates of 2D vectors
 
@@ -397,7 +407,7 @@ ocl::pow
 ------------------
 Returns void
 
-.. ocv:function:: void pow(const oclMat &x, double p, oclMat &y)
+.. ocv:function:: void ocl::pow(const oclMat &x, double p, oclMat &y)
 
     :param x: The source array
 
@@ -411,7 +421,7 @@ ocl::transpose
 ------------------
 Returns void
 
-.. ocv:function:: void transpose(const oclMat &src, oclMat &dst)
+.. ocv:function:: void ocl::transpose(const oclMat &src, oclMat &dst)
 
     :param src: The source array
 
@@ -424,7 +434,7 @@ ocl::dft
 ------------
 Performs a forward or inverse discrete Fourier transform (1D or 2D) of the floating point matrix.
 
-.. ocv:function:: void ocl::dft(const oclMat& src, oclMat& dst, Size dft_size, int flags=0)
+.. ocv:function:: void ocl::dft( const oclMat& src, oclMat& dst, Size dft_size=Size(0, 0), int flags=0 )
 
     :param src: Source matrix (real or complex).
 
@@ -452,7 +462,7 @@ ocl::gemm
 ------------------
 Performs generalized matrix multiplication.
 
-.. ocv:function:: void gemm(const oclMat& src1, const oclMat& src2, double alpha, const oclMat& src3, double beta, oclMat& dst, int flags = 0)
+.. ocv:function:: void ocl::gemm(const oclMat& src1, const oclMat& src2, double alpha, const oclMat& src3, double beta, oclMat& dst, int flags = 0)
 
     :param src1: First multiplied input matrix that should be ``CV_32FC1`` type.
 

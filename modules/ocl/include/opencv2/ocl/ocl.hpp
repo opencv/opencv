@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_HPP__
-#define __OPENCV_GPU_HPP__
+#ifndef __OPENCV_OCL_HPP__
+#define __OPENCV_OCL_HPP__
 
 #include <memory>
 #include <vector>
@@ -95,9 +95,9 @@ namespace cv
 
         //other opencl program
 
-        CV_EXPORTS void *getoclContext();
+        CV_EXPORTS void* getoclContext();
 
-        CV_EXPORTS void *getoclCommandQueue();
+        CV_EXPORTS void* getoclCommandQueue();
         //////////////////////////////// Error handling ////////////////////////
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
 
@@ -191,10 +191,10 @@ namespace cv
 
             //! sets every oclMatrix element to s
             //It supports 8UC1 8UC4 32SC1 32SC4 32FC1 32FC4
-            oclMat &operator = (const Scalar &s);
+            oclMat& operator = (const Scalar &s);
             //! sets some of the oclMatrix elements to s, according to the mask
             //It supports 8UC1 8UC4 32SC1 32SC4 32FC1 32FC4
-            oclMat &setTo(const Scalar &s, const oclMat &mask = oclMat());
+            oclMat& setTo(const Scalar &s, const oclMat &mask = oclMat());
             //! creates alternative oclMatrix header for the same data, with different
             // number of channels and/or different number of rows. see cvReshape.
             oclMat reshape(int cn, int rows = 0) const;
@@ -213,7 +213,7 @@ namespace cv
             //! locates oclMatrix header within a parent oclMatrix. See below
             void locateROI( Size &wholeSize, Point &ofs ) const;
             //! moves/resizes the current oclMatrix ROI inside the parent oclMatrix.
-            oclMat &adjustROI( int dtop, int dbottom, int dleft, int dright );
+            oclMat& adjustROI( int dtop, int dbottom, int dleft, int dright );
             //! extracts a rectangular sub-oclMatrix
             // (this is a generalized form of row, rowRange etc.)
             oclMat operator()( Range rowRange, Range colRange ) const;
@@ -249,7 +249,7 @@ namespace cv
             bool empty() const;
 
             //! returns pointer to y-th row
-            uchar *ptr(int y = 0);
+            uchar* ptr(int y = 0);
             const uchar *ptr(int y = 0) const;
 
             //! template version of the above method
@@ -347,7 +347,7 @@ namespace cv
 
         //! transposes the matrix
         // supports  CV_8UC1, 8UC4, 8SC4, 16UC2, 16SC2, 32SC1 and 32FC1.(the same as cuda)
-        CV_EXPORTS void transpose(const oclMat &src1, oclMat &dst);
+        CV_EXPORTS void transpose(const oclMat &src, oclMat &dst);
 
         //! computes element-wise absolute difference of two arrays (c = abs(a - b))
         // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
@@ -407,7 +407,7 @@ namespace cv
         CV_EXPORTS void equalizeHist(const oclMat &mat_src, oclMat &mat_dst);
         //! bilateralFilter
         // supports 8UC1 8UC4
-        CV_EXPORTS void bilateralFilter(const oclMat &, oclMat &, int , double, double, int);
+        CV_EXPORTS void bilateralFilter(const oclMat& src, oclMat& dst, int d, double sigmaColor, double sigmaSpave, int borderType=BORDER_DEFAULT);
         //! computes exponent of each matrix element (b = e**a)
         // supports only CV_32FC1 type
         CV_EXPORTS void exp(const oclMat &a, oclMat &b);
@@ -719,7 +719,7 @@ namespace cv
             OclCascadeClassifier() {};
             ~OclCascadeClassifier() {};
 
-            CvSeq *oclHaarDetectObjects(oclMat &gimg, CvMemStorage *storage, double scaleFactor,
+            CvSeq* oclHaarDetectObjects(oclMat &gimg, CvMemStorage *storage, double scaleFactor,
                                         int minNeighbors, int flags, CvSize minSize = cvSize(0, 0), CvSize maxSize = cvSize(0, 0));
         };
 
@@ -729,7 +729,7 @@ namespace cv
         CV_EXPORTS void pyrDown(const oclMat &src, oclMat &dst);
 
         //! upsamples the source image and then smoothes it
-        CV_EXPORTS void pyrUp(const cv::ocl::oclMat &src, cv::ocl::oclMat &dst);
+        CV_EXPORTS void pyrUp(const oclMat &src, oclMat &dst);
 
         //! performs linear blending of two images
         //! to avoid accuracy errors sum of weigths shouldn't be very close to zero
@@ -827,6 +827,22 @@ namespace cv
 
         };
 
+        ///////////////////////////////////////// Hough Transform /////////////////////////////////////////
+        //! HoughCircles
+        struct HoughCirclesBuf
+        {
+            oclMat edges;
+            oclMat accum;
+            oclMat srcPoints;
+            oclMat centers;
+            CannyBuf cannyBuf;
+        };
+
+        CV_EXPORTS void HoughCircles(const oclMat& src, oclMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
+        CV_EXPORTS void HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& buf, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
+        CV_EXPORTS void HoughCirclesDownload(const oclMat& d_circles, OutputArray h_circles);
+
+    
         ///////////////////////////////////////// clAmdFft related /////////////////////////////////////////
         //! Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
         //! Param dft_size is the size of DFT transform.
@@ -1705,11 +1721,11 @@ namespace cv
         };
         //////////////// build warping maps ////////////////////
         //! builds plane warping maps
-        CV_EXPORTS void buildWarpPlaneMaps(Size, Rect, const Mat &, const Mat &, const Mat &, float, oclMat &, oclMat &);
+        CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat &R, const Mat &T, float scale, oclMat &map_x, oclMat &map_y);
         //! builds cylindrical warping maps
-        CV_EXPORTS void buildWarpCylindricalMaps(Size, Rect, const Mat &, const Mat &, float, oclMat &, oclMat &);
+        CV_EXPORTS void buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat &R, float scale, oclMat &map_x, oclMat &map_y);
         //! builds spherical warping maps
-        CV_EXPORTS void buildWarpSphericalMaps(Size, Rect, const Mat &, const Mat &, float, oclMat &, oclMat &);
+        CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat &R, float scale, oclMat &map_x, oclMat &map_y);
         //! builds Affine warping maps
         CV_EXPORTS void buildWarpAffineMaps(const Mat &M, bool inverse, Size dsize, oclMat &xmap, oclMat &ymap);
 
@@ -1746,4 +1762,4 @@ namespace cv
 #if _MSC_VER >= 1200
 #pragma warning( pop)
 #endif
-#endif /* __OPENCV_GPU_HPP__ */
+#endif /* __OPENCV_OCL_HPP__ */

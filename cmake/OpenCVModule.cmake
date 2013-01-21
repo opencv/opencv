@@ -164,6 +164,9 @@ macro(ocv_module_disable module)
   set(HAVE_${__modname} OFF CACHE INTERNAL "Module ${__modname} can not be built in current configuration")
   set(OPENCV_MODULE_${__modname}_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "Location of ${__modname} module sources")
   set(OPENCV_MODULES_DISABLED_FORCE "${OPENCV_MODULES_DISABLED_FORCE}" CACHE INTERNAL "List of OpenCV modules which can not be build in current configuration")
+  if(BUILD_${__modname})
+    # touch variable controlling build of the module to suppress "unused variable" CMake warning
+  endif()
   unset(__modname)
   return() # leave the current folder
 endmacro()
@@ -171,6 +174,7 @@ endmacro()
 
 # Internal macro; partly disables OpenCV module
 macro(__ocv_module_turn_off the_module)
+  list(REMOVE_ITEM OPENCV_MODULES_DISABLED_AUTO "${the_module}")
   list(APPEND OPENCV_MODULES_DISABLED_AUTO "${the_module}")
   list(REMOVE_ITEM OPENCV_MODULES_BUILD "${the_module}")
   list(REMOVE_ITEM OPENCV_MODULES_PUBLIC "${the_module}")
@@ -190,7 +194,7 @@ macro(__ocv_flatten_module_required_dependencies the_module)
       break()
     elseif(";${OPENCV_MODULES_DISABLED_USER};${OPENCV_MODULES_DISABLED_AUTO};" MATCHES ";${__dep};")
       __ocv_module_turn_off(${the_module}) # depends on disabled module
-      break()
+      list(APPEND __flattened_deps "${__dep}")
     elseif(";${OPENCV_MODULES_BUILD};" MATCHES ";${__dep};")
       if(";${__resolved_deps};" MATCHES ";${__dep};")
         list(APPEND __flattened_deps "${__dep}") # all dependencies of this module are already resolved
@@ -259,6 +263,7 @@ macro(__ocv_flatten_module_dependencies)
   foreach(m ${OPENCV_MODULES_BUILD})
     set(HAVE_${m} ON CACHE INTERNAL "Module ${m} will be built in current configuration")
     __ocv_flatten_module_required_dependencies(${m})
+    set(OPENCV_MODULE_${m}_DEPS ${OPENCV_MODULE_${m}_DEPS} CACHE INTERNAL "Flattened required dependencies of ${m} module")
   endforeach()
 
   foreach(m ${OPENCV_MODULES_BUILD})
@@ -283,7 +288,7 @@ macro(__ocv_flatten_module_dependencies)
   ocv_list_unique(OPENCV_MODULES_BUILD_)
 
   set(OPENCV_MODULES_PUBLIC        ${OPENCV_MODULES_PUBLIC}        CACHE INTERNAL "List of OpenCV modules marked for export")
-  set(OPENCV_MODULES_BUILD         ${OPENCV_MODULES_BUILD_}         CACHE INTERNAL "List of OpenCV modules included into the build")
+  set(OPENCV_MODULES_BUILD         ${OPENCV_MODULES_BUILD_}        CACHE INTERNAL "List of OpenCV modules included into the build")
   set(OPENCV_MODULES_DISABLED_AUTO ${OPENCV_MODULES_DISABLED_AUTO} CACHE INTERNAL "List of OpenCV modules implicitly disabled due to dependencies")
 endmacro()
 

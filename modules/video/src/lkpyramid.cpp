@@ -1194,8 +1194,8 @@ cvCalcOpticalFlowPyrLK( const void* arrA, const void* arrB,
         st = cv::Mat(count, 1, CV_8U, (void*)status);
     if( error )
         err = cv::Mat(count, 1, CV_32F, (void*)error);
-    cv::calcOpticalFlowPyrLK( A, B, ptA, ptB, status ? cv::_OutputArray(st) : cv::_OutputArray(),
-                              error ? cv::_OutputArray(err) : cv::_OutputArray(),
+    cv::calcOpticalFlowPyrLK( A, B, ptA, ptB, st,
+                              error ? cv::_OutputArray(err) : cv::noArray(),
                               winSize, level, criteria, flags);
 }
 

@@ -26,10 +26,9 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
 
     @Override
     protected void setUp() throws Exception {
+        super.setUp();
         extractor = DescriptorExtractor.create(DescriptorExtractor.BRIEF);
         matSize = 100;
-
-        super.setUp();
     }
 
     public void testComputeListOfMatListOfListOfKeyPointListOfMat() {

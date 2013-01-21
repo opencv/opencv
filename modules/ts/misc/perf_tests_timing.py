@@ -5,6 +5,7 @@ from table_formatter import *
 from optparse import OptionParser
 from operator import itemgetter, attrgetter
 from summary import getSetName, alphanum_keyselector
+import re
 
 if __name__ == "__main__":
     usage = "%prog <log_name>.xml [...]"
@@ -21,14 +22,13 @@ if __name__ == "__main__":
 
     options.generateHtml = detectHtmlOutputType(options.format)
 
-    # expand wildcards and filter duplicates
-    file = os.path.abspath(args[0])
+    input_file = args[0]
+    file = os.path.abspath(input_file)
     if not os.path.isfile(file):
         sys.stderr.write("IOError reading \"" + file + "\" - " + str(err) + os.linesep)
         parser.print_help()
         exit(0)
 
-    # read all passed files
     test_sets = []
     try:
         tests = testlog_parser.parseLogFile(file)
@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     if not test_sets:
         sys.stderr.write("Error: no test data found" + os.linesep)
-        quit()
+        exit(0)
 
     # find matches
     setsCount = len(test_sets)
@@ -81,6 +81,13 @@ if __name__ == "__main__":
                 if case.get('status') == 'failed':
                     has_failed = True
 
+    testsuits.append({'name': prevGroupName, 'time': suit_time, \
+        'failed': has_failed})
+
+    if len(testsuits)==0:
+        print 'No testsuits found'
+        exit(0)
+
     tbl = table()
 
     # header
@@ -103,4 +110,11 @@ if __name__ == "__main__":
         tbl.htmlPrintTable(sys.stdout)
         htmlPrintFooter(sys.stdout)
     else:
+        input_file = re.sub(r'^[\.\/]*', '', input_file)
+        find_module_name = re.search(r'([^_]*)', input_file)
+        module_name = find_module_name.group(0)
+
+        splitter = 15 * '*'
+        print '\n%s\n  %s\n%s\n' % (splitter, module_name, splitter)
         tbl.consolePrintTable(sys.stdout)
+        print 4 * '\n'
