@@ -42,7 +42,7 @@
 
 #include "thread_wrappers.h"
 
-#if defined(HAVE_CUDA) && !defined(__APPLE__)
+#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
 
 #ifdef WIN32
     #define NOMINMAX

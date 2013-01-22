@@ -280,7 +280,7 @@ namespace cv { namespace gpu { namespace device
     OPENCV_GPU_IMPLEMENT_VEC_UNOP (type, operator ! , logical_not) \
     OPENCV_GPU_IMPLEMENT_VEC_BINOP(type, max, maximum) \
     OPENCV_GPU_IMPLEMENT_VEC_BINOP(type, min, minimum) \
-    OPENCV_GPU_IMPLEMENT_VEC_UNOP(type, fabs, fabs_func) \
+    OPENCV_GPU_IMPLEMENT_VEC_UNOP(type, abs, abs_func) \
     OPENCV_GPU_IMPLEMENT_VEC_UNOP(type, sqrt, sqrt_func) \
     OPENCV_GPU_IMPLEMENT_VEC_UNOP(type, exp, exp_func) \
     OPENCV_GPU_IMPLEMENT_VEC_UNOP(type, exp2, exp2_func) \

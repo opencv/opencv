@@ -47,7 +47,7 @@ GpuMat d_result[2];
 // CPU result
 Mat result;
 
-void printHelp()
+static void printHelp()
 {
     std::cout << "Usage: stereo_multi_gpu --left <image> --right <image>\n";
 }

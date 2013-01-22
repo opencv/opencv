@@ -475,6 +475,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
     void fixture##_##name::PerfTestBody()
 
 
+
 #define CV_PERF_TEST_MAIN(testsuitname, ...) \
 int main(int argc, char **argv)\
 {\

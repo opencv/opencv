@@ -68,11 +68,16 @@ void cv::gpu::polarToCart(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, 
 void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const GpuMat& src3, double beta, GpuMat& dst, int flags, Stream& stream)
 {
 #ifndef HAVE_CUBLAS
-    (void)src1; (void)src2; (void)alpha; (void)src3; (void)beta; (void)dst; (void)flags; (void)stream;
+    (void)src1;
+    (void)src2;
+    (void)alpha;
+    (void)src3;
+    (void)beta;
+    (void)dst;
+    (void)flags;
+    (void)stream;
     CV_Error(CV_StsNotImplemented, "The library was build without CUBLAS");
-
 #else
-
     // CUBLAS works with column-major matrices
 
     CV_Assert(src1.type() == CV_32FC1 || src1.type() == CV_32FC2 || src1.type() == CV_64FC1 || src1.type() == CV_64FC2);
@@ -80,7 +85,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
 
     if (src1.depth() == CV_64F)
     {
-        if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
+        if (!deviceSupports(NATIVE_DOUBLE))
             CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
     }
 
@@ -188,7 +193,6 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     }
 
     cublasSafeCall( cublasDestroy_v2(handle) );
-
 #endif
 }
 
@@ -227,7 +231,7 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
     }
     else // if (src.elemSize() == 8)
     {
-        if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
+        if (!deviceSupports(NATIVE_DOUBLE))
             CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
 
         NppStStreamHandler h(stream);

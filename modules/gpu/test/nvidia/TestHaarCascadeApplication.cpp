@@ -210,6 +210,18 @@ bool TestHaarCascadeApplication::process()
 #if defined(__GNUC__)
     //http://www.christian-seiler.de/projekte/fpmath/
 
+    #ifndef _FPU_EXTENDED
+    #define _FPU_EXTENDED 0
+    #endif
+
+    #ifndef _FPU_DOUBLE
+    #define _FPU_DOUBLE 0
+    #endif
+
+    #ifndef _FPU_SINGLE
+    #define _FPU_SINGLE 0
+    #endif
+
     fpu_control_t fpu_oldcw, fpu_cw;
     _FPU_GETCW(fpu_oldcw); // store old cw
      fpu_cw = (fpu_oldcw & ~_FPU_EXTENDED & ~_FPU_DOUBLE & ~_FPU_SINGLE) | _FPU_SINGLE;

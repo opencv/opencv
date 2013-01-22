@@ -125,9 +125,6 @@ int cv::gpu::FAST_GPU::calcKeyPointsLocation(const GpuMat& img, const GpuMat& ma
     CV_Assert(img.type() == CV_8UC1);
     CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == img.size()));
 
-    if (!TargetArchs::builtWith(GLOBAL_ATOMICS) || !DeviceInfo().supports(GLOBAL_ATOMICS))
-        CV_Error(CV_StsNotImplemented, "The device doesn't support global atomics");
-
     int maxKeypoints = static_cast<int>(keypointsRatio * img.size().area());
 
     ensureSizeIsEnough(1, maxKeypoints, CV_16SC2, kpLoc_);
@@ -147,9 +144,6 @@ int cv::gpu::FAST_GPU::calcKeyPointsLocation(const GpuMat& img, const GpuMat& ma
 int cv::gpu::FAST_GPU::getKeyPoints(GpuMat& keypoints)
 {
     using namespace cv::gpu::device::fast;
-
-    if (!TargetArchs::builtWith(GLOBAL_ATOMICS) || !DeviceInfo().supports(GLOBAL_ATOMICS))
-        CV_Error(CV_StsNotImplemented, "The device doesn't support global atomics");
 
     if (count_ == 0)
         return 0;
