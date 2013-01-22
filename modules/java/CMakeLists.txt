@@ -100,11 +100,6 @@ foreach(jfile ${handwrittren_java_sources})
   endif()
 endforeach()
 
-# remove VideoCapture wrapper if highgui is disabled
-if(NOT HAVE_opencv_highgui)
-  list(REMOVE_ITEM handwrittren_cpp_sources "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp/VideoCapture.cpp")
-endif()
-
 # create list of javadoc documented files
 unset(documented_java_files)
 foreach(java_file ${handwrittren_java_sources} ${generated_java_sources})
@@ -157,12 +152,9 @@ foreach(java_file ${source_java_files})
   endif()
 endforeach()
 
-# custom target for java API
-set(api_target ${the_module}_api)
-add_custom_target(${api_target} DEPENDS ${java_files} ${documented_java_files} ${java_documented_headers_deps})
-
 # add opencv_java library
-add_library(${the_module} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_sources} ${generated_cpp_sources})
+add_library(${the_module} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_sources} ${generated_cpp_sources}
+                                 ${java_files} ${documented_java_files} ${java_documented_headers_deps})
 if(BUILD_FAT_JAVA_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
   list(REMOVE_ITEM __deps ${the_module} opencv_ts)
@@ -176,7 +168,6 @@ if(BUILD_FAT_JAVA_LIB)
 else()
   target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
 endif()
-add_dependencies(${the_module} ${api_target})
 
 # Additional target properties
 set_target_properties(${the_module} PROPERTIES
@@ -285,14 +276,13 @@ else(ANDROID)
     COMMAND ${ANT_EXECUTABLE} -q -noinput -k jar
     COMMAND ${CMAKE_COMMAND} -E touch "${OpenCV_BINARY_DIR}/bin/.${JAR_NAME}.dephelper"
     WORKING_DIRECTORY "${OpenCV_BINARY_DIR}"
-    DEPENDS "${OpenCV_BINARY_DIR}/build.xml" ${java_files}
+    DEPENDS "${OpenCV_BINARY_DIR}/build.xml" ${java_files} ${documented_java_files} ${java_documented_headers_deps}
     COMMENT "Generating ${JAR_NAME}"
     )
 
   add_custom_target(${lib_target} SOURCES "${OpenCV_BINARY_DIR}/bin/${JAR_NAME}")
 endif(ANDROID)
 
-add_dependencies(${lib_target} ${api_target})
 add_dependencies(${the_module} ${lib_target})
 
 # android test project
