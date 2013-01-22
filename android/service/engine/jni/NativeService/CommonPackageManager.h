@@ -16,11 +16,11 @@ public:
     virtual ~CommonPackageManager();
 
 protected:
-    static std::vector<std::pair<int, int> > ArmRating;
-    static std::vector<std::pair<int, int> > IntelRating;
+    static const std::vector<std::pair<int, int> > ArchRatings[];
 
     static std::vector<std::pair<int, int> > InitArmRating();
     static std::vector<std::pair<int, int> > InitIntelRating();
+    static std::vector<std::pair<int, int> > InitMipsRating();
 
     bool IsVersionCompatible(int target_version, int package_version);
     int GetHardwareRating(int platform, int cpu_id, const std::vector<std::pair<int, int> >& group);
