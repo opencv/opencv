@@ -37,7 +37,7 @@
       <sysproperty key="java.library.path" path="${javaLibraryPath}"/>
       <classpath refid="master-classpath"/>
       <classpath>
-      	<pathelement location="build/classes"/>
+        <pathelement location="build/classes"/>
       </classpath>
 
       <formatter type="xml"/>

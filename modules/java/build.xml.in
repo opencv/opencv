@@ -10,6 +10,6 @@
       <include name="**/*.java"/>
     </javac>
 
-    <jar basedir="src" destfile="bin/opencv-@OPENCV_VERSION@.jar"/>
+    <jar basedir="src" destfile="bin/@JAR_NAME@"/>
   </target>
 </project>
