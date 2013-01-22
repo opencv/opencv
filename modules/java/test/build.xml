@@ -16,7 +16,7 @@
   <target name="compile">
     <mkdir dir="build/classes"/>
 
-    <javac sourcepath="" srcdir="src" destdir="build/classes" >
+    <javac sourcepath="" srcdir="src" destdir="build/classes" includeantruntime="false" >
       <include name="**/*.java"/>
       <classpath refid="master-classpath"/>
     </javac>
@@ -26,7 +26,7 @@
     <mkdir dir="build/jar"/>
     <jar destfile="build/jar/opencv-test.jar" basedir="build/classes">
       <manifest>
-	<attribute name="Main-Class" value="org.opencv.test.OpenCVTestRunner"/>
+        <attribute name="Main-Class" value="org.opencv.test.OpenCVTestRunner"/>
       </manifest>
     </jar>
   </target>
@@ -35,6 +35,7 @@
     <mkdir dir="testResults"/>
     <junit printsummary="false" haltonfailure="false" haltonerror="false" showoutput="false" logfailedtests="true" maxmemory="256m">
       <sysproperty key="java.library.path" path="${javaLibraryPath}"/>
+      <env key="PATH" path="${javaLibraryPath}"/>
       <classpath refid="master-classpath"/>
       <classpath>
         <pathelement location="build/classes"/>
@@ -43,11 +44,16 @@
       <formatter type="xml"/>
 
       <batchtest fork="yes" todir="testResults">
-	<zipfileset src="build/jar/opencv-test.jar" includes="**/*.class" excludes="**/OpenCVTest*">
-	 <exclude name="**/*$*.class"/>
-	</zipfileset>
+        <zipfileset src="build/jar/opencv-test.jar" includes="**/*.class" excludes="**/OpenCVTest*">
+          <exclude name="**/*$*.class"/>
+        </zipfileset>
       </batchtest>
     </junit>
+  </target>
+
+  <target name="build">
+    <antcall target="compile"/>
+    <antcall target="jar"/>
   </target>
 
   <target name="buildAndTest">

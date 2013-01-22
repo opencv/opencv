@@ -303,6 +303,12 @@ set_target_properties(${the_module} PROPERTIES
     LINK_INTERFACE_LIBRARIES ""
     )
 
+if(ANDROID)
+  set_target_properties(${the_module} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH})
+else()
+  set_target_properties(${the_module} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
+endif()
+
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_module} PROPERTIES FOLDER "bindings")
 endif()
