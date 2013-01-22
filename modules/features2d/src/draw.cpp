@@ -200,10 +200,13 @@ void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
     // draw matches
     for( size_t m = 0; m < matches1to2.size(); m++ )
     {
-        int i1 = matches1to2[m].queryIdx;
-        int i2 = matches1to2[m].trainIdx;
         if( matchesMask.empty() || matchesMask[m] )
         {
+            int i1 = matches1to2[m].queryIdx;
+            int i2 = matches1to2[m].trainIdx;
+            CV_Assert(i1 >= 0 && i1 < static_cast<int>(keypoints1.size()));
+            CV_Assert(i2 >= 0 && i2 < static_cast<int>(keypoints2.size()));
+
             const KeyPoint &kp1 = keypoints1[i1], &kp2 = keypoints2[i2];
             _drawMatch( outImg, outImg1, outImg2, kp1, kp2, matchColor, flags );
         }
