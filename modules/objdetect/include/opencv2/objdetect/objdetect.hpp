@@ -489,6 +489,15 @@ protected:
 };
 
 
+class CV_EXPORTS_W ICFPreprocessor
+{
+public:
+    CV_WRAP ICFPreprocessor();
+    CV_WRAP void apply(cv::InputArray _frame, cv::OutputArray _integrals) const;
+protected:
+    enum {BINS = 10};
+};
+
 // Implementation of soft (stageless) cascaded detector.
 class CV_EXPORTS_W SCascade : public Algorithm
 {
