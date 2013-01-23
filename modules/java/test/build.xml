@@ -33,7 +33,7 @@
 
   <target name="test">
     <mkdir dir="testResults"/>
-    <junit printsummary="false" haltonfailure="false" haltonerror="false" showoutput="false" logfailedtests="true" maxmemory="256m">
+    <junit printsummary="true" haltonfailure="false" haltonerror="false" showoutput="false" logfailedtests="true" maxmemory="256m">
       <sysproperty key="java.library.path" path="${javaLibraryPath}"/>
       <env key="PATH" path="${javaLibraryPath}"/>
       <classpath refid="master-classpath"/>
