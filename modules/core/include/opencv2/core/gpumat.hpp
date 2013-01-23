@@ -79,6 +79,8 @@ namespace cv { namespace gpu
         WARP_SHUFFLE_FUNCTIONS = FEATURE_SET_COMPUTE_30
     };
 
+    CV_EXPORTS bool deviceSupports(FeatureSet feature_set);
+
     // Gives information about what GPU archs this OpenCV GPU module was
     // compiled for
     class CV_EXPORTS TargetArchs

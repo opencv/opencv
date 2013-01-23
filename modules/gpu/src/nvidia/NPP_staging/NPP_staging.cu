@@ -44,6 +44,8 @@
 #include <vector>
 #include <cuda_runtime.h>
 #include "NPP_staging.hpp"
+#include "opencv2/gpu/device/warp.hpp"
+#include "opencv2/gpu/device/warp_shuffle.hpp"
 
 
 texture<Ncv8u,  1, cudaReadModeElementType> tex8u;
@@ -90,6 +92,36 @@ NCV_CT_ASSERT(K_WARP_SIZE == 32); //this is required for the manual unroll of th
 //assuming size <= WARP_SIZE and size is power of 2
 template <class T>
 inline __device__ T warpScanInclusive(T idata, volatile T *s_Data)
+{
+#if __CUDA_ARCH__ >= 300
+    const unsigned int laneId = cv::gpu::device::Warp::laneId();
+
+    // scan on shuffl functions
+    #pragma unroll
+    for (int i = 1; i <= (K_WARP_SIZE / 2); i *= 2)
+    {
+        const T n = cv::gpu::device::shfl_up(idata, i);
+        if (laneId >= i)
+              idata += n;
+    }
+
+    return idata;
+#else
+    Ncv32u pos = 2 * threadIdx.x - (threadIdx.x & (K_WARP_SIZE - 1));
+    s_Data[pos] = 0;
+    pos += K_WARP_SIZE;
+    s_Data[pos] = idata;
+
+    s_Data[pos] += s_Data[pos - 1];
+    s_Data[pos] += s_Data[pos - 2];
+    s_Data[pos] += s_Data[pos - 4];
+    s_Data[pos] += s_Data[pos - 8];
+    s_Data[pos] += s_Data[pos - 16];
+
+    return s_Data[pos];
+#endif
+}
+inline __device__ Ncv64u warpScanInclusive(Ncv64u idata, volatile Ncv64u *s_Data)
 {
     Ncv32u pos = 2 * threadIdx.x - (threadIdx.x & (K_WARP_SIZE - 1));
     s_Data[pos] = 0;

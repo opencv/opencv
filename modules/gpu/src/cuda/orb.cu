@@ -47,10 +47,11 @@
 
 #if !defined CUDA_DISABLER
 
+#include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 
 #include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/gpu/device/reduce.hpp"
 #include "opencv2/gpu/device/functional.hpp"
 
 namespace cv { namespace gpu { namespace device
@@ -75,9 +76,9 @@ namespace cv { namespace gpu { namespace device
 
         __global__ void HarrisResponses(const PtrStepb img, const short2* loc_, float* response, const int npoints, const int blockSize, const float harris_k)
         {
-            __shared__ int smem[8 * 32];
-
-            volatile int* srow = smem + threadIdx.y * blockDim.x;
+            __shared__ int smem0[8 * 32];
+            __shared__ int smem1[8 * 32];
+            __shared__ int smem2[8 * 32];
 
             const int ptidx = blockIdx.x * blockDim.y + threadIdx.y;
 
@@ -109,9 +110,12 @@ namespace cv { namespace gpu { namespace device
                     c += Ix * Iy;
                 }
 
-                reduce<32>(srow, a, threadIdx.x, plus<volatile int>());
-                reduce<32>(srow, b, threadIdx.x, plus<volatile int>());
-                reduce<32>(srow, c, threadIdx.x, plus<volatile int>());
+                int* srow0 = smem0 + threadIdx.y * blockDim.x;
+                int* srow1 = smem1 + threadIdx.y * blockDim.x;
+                int* srow2 = smem2 + threadIdx.y * blockDim.x;
+
+                plus<int> op;
+                reduce<32>(smem_tuple(srow0, srow1, srow2), thrust::tie(a, b, c), threadIdx.x, thrust::make_tuple(op, op, op));
 
                 if (threadIdx.x == 0)
                 {
@@ -151,9 +155,13 @@ namespace cv { namespace gpu { namespace device
 
         __global__ void IC_Angle(const PtrStepb image, const short2* loc_, float* angle, const int npoints, const int half_k)
         {
-            __shared__ int smem[8 * 32];
+            __shared__ int smem0[8 * 32];
+            __shared__ int smem1[8 * 32];
 
-            volatile int* srow = smem + threadIdx.y * blockDim.x;
+            int* srow0 = smem0 + threadIdx.y * blockDim.x;
+            int* srow1 = smem1 + threadIdx.y * blockDim.x;
+
+            plus<int> op;
 
             const int ptidx = blockIdx.x * blockDim.y + threadIdx.y;
 
@@ -167,7 +175,7 @@ namespace cv { namespace gpu { namespace device
                 for (int u = threadIdx.x - half_k; u <= half_k; u += blockDim.x)
                     m_10 += u * image(loc.y, loc.x + u);
 
-                reduce<32>(srow, m_10, threadIdx.x, plus<volatile int>());
+                reduce<32>(srow0, m_10, threadIdx.x, op);
 
                 for (int v = 1; v <= half_k; ++v)
                 {
@@ -185,8 +193,7 @@ namespace cv { namespace gpu { namespace device
                         m_sum += u * (val_plus + val_minus);
                     }
 
-                    reduce<32>(srow, v_sum, threadIdx.x, plus<volatile int>());
-                    reduce<32>(srow, m_sum, threadIdx.x, plus<volatile int>());
+                    reduce<32>(smem_tuple(srow0, srow1), thrust::tie(v_sum, m_sum), threadIdx.x, thrust::make_tuple(op, op));
 
                     m_10 += m_sum;
                     m_01 += v * v_sum;

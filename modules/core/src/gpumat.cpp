@@ -45,8 +45,7 @@
 #include <iostream>
 
 #ifdef HAVE_CUDA
-    #include <cuda.h>
-    #include <cuda_runtime_api.h>
+    #include <cuda_runtime.h>
     #include <npp.h>
 
     #define CUDART_MINIMUM_REQUIRED_VERSION 4010
@@ -69,33 +68,89 @@ using namespace cv::gpu;
 
 namespace
 {
-    // Compares value to set using the given comparator. Returns true if
-    // there is at least one element x in the set satisfying to: x cmp value
-    // predicate.
-    template <typename Comparer>
-    bool compareToSet(const std::string& set_as_str, int value, Comparer cmp)
+    class CudaArch
+    {
+    public:
+        CudaArch();
+
+        bool builtWith(FeatureSet feature_set) const;
+        bool hasPtx(int major, int minor) const;
+        bool hasBin(int major, int minor) const;
+        bool hasEqualOrLessPtx(int major, int minor) const;
+        bool hasEqualOrGreaterPtx(int major, int minor) const;
+        bool hasEqualOrGreaterBin(int major, int minor) const;
+
+    private:
+        static void fromStr(const string& set_as_str, vector<int>& arr);
+
+        vector<int> bin;
+        vector<int> ptx;
+        vector<int> features;
+    };
+
+    const CudaArch cudaArch;
+
+    CudaArch::CudaArch()
+    {
+    #ifdef HAVE_CUDA
+        fromStr(CUDA_ARCH_BIN, bin);
+        fromStr(CUDA_ARCH_PTX, ptx);
+        fromStr(CUDA_ARCH_FEATURES, features);
+    #endif
+    }
+
+    bool CudaArch::builtWith(FeatureSet feature_set) const
+    {
+        return !features.empty() && (features.back() >= feature_set);
+    }
+
+    bool CudaArch::hasPtx(int major, int minor) const
+    {
+        return find(ptx.begin(), ptx.end(), major * 10 + minor) != ptx.end();
+    }
+
+    bool CudaArch::hasBin(int major, int minor) const
+    {
+        return find(bin.begin(), bin.end(), major * 10 + minor) != bin.end();
+    }
+
+    bool CudaArch::hasEqualOrLessPtx(int major, int minor) const
+    {
+        return !ptx.empty() && (ptx.front() <= major * 10 + minor);
+    }
+
+    bool CudaArch::hasEqualOrGreaterPtx(int major, int minor) const
+    {
+        return !ptx.empty() && (ptx.back() >= major * 10 + minor);
+    }
+
+    bool CudaArch::hasEqualOrGreaterBin(int major, int minor) const
+    {
+        return !bin.empty() && (bin.back() >= major * 10 + minor);
+    }
+
+    void CudaArch::fromStr(const string& set_as_str, vector<int>& arr)
     {
         if (set_as_str.find_first_not_of(" ") == string::npos)
-            return false;
+            return;
 
-        std::stringstream stream(set_as_str);
+        istringstream stream(set_as_str);
         int cur_value;
 
         while (!stream.eof())
         {
             stream >> cur_value;
-            if (cmp(cur_value, value))
-                return true;
+            arr.push_back(cur_value);
         }
 
-        return false;
+        sort(arr.begin(), arr.end());
     }
 }
 
 bool cv::gpu::TargetArchs::builtWith(cv::gpu::FeatureSet feature_set)
 {
 #if defined (HAVE_CUDA)
-    return ::compareToSet(CUDA_ARCH_FEATURES, feature_set, std::greater_equal<int>());
+    return cudaArch.builtWith(feature_set);
 #else
     (void)feature_set;
     return false;
@@ -110,7 +165,7 @@ bool cv::gpu::TargetArchs::has(int major, int minor)
 bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
 {
 #if defined (HAVE_CUDA)
-    return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor, std::equal_to<int>());
+    return cudaArch.hasPtx(major, minor);
 #else
     (void)major;
     (void)minor;
@@ -121,7 +176,7 @@ bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
 bool cv::gpu::TargetArchs::hasBin(int major, int minor)
 {
 #if defined (HAVE_CUDA)
-    return ::compareToSet(CUDA_ARCH_BIN, major * 10 + minor, std::equal_to<int>());
+    return cudaArch.hasBin(major, minor);
 #else
     (void)major;
     (void)minor;
@@ -132,8 +187,7 @@ bool cv::gpu::TargetArchs::hasBin(int major, int minor)
 bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
 {
 #if defined (HAVE_CUDA)
-    return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor,
-                     std::less_equal<int>());
+    return cudaArch.hasEqualOrLessPtx(major, minor);
 #else
     (void)major;
     (void)minor;
@@ -143,14 +197,13 @@ bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
 
 bool cv::gpu::TargetArchs::hasEqualOrGreater(int major, int minor)
 {
-    return hasEqualOrGreaterPtx(major, minor) ||
-           hasEqualOrGreaterBin(major, minor);
+    return hasEqualOrGreaterPtx(major, minor) || hasEqualOrGreaterBin(major, minor);
 }
 
 bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 {
 #if defined (HAVE_CUDA)
-    return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor, std::greater_equal<int>());
+    return cudaArch.hasEqualOrGreaterPtx(major, minor);
 #else
     (void)major;
     (void)minor;
@@ -161,13 +214,37 @@ bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
 {
 #if defined (HAVE_CUDA)
-    return ::compareToSet(CUDA_ARCH_BIN, major * 10 + minor,
-                     std::greater_equal<int>());
+    return cudaArch.hasEqualOrGreaterBin(major, minor);
 #else
     (void)major;
     (void)minor;
     return false;
 #endif
+}
+
+bool cv::gpu::deviceSupports(FeatureSet feature_set)
+{
+    static int versions[] =
+    {
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+    };
+    static const int cache_size = static_cast<int>(sizeof(versions) / sizeof(versions[0]));
+
+    const int devId = getDevice();
+
+    int version;
+
+    if (devId < cache_size && versions[devId] >= 0)
+        version = versions[devId];
+    else
+    {
+        DeviceInfo dev(devId);
+        version = dev.majorVersion() * 10 + dev.minorVersion();
+        if (devId < cache_size)
+            versions[devId] = version;
+    }
+
+    return TargetArchs::builtWith(feature_set) && (version >= feature_set);
 }
 
 #if !defined (HAVE_CUDA)
