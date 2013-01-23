@@ -66,7 +66,7 @@ PARAM_TEST_CASE(Threshold, cv::gpu::DeviceInfo, cv::Size, MatType, ThreshOp, Use
     }
 };
 
-TEST_P(Threshold, Accuracy)
+GPU_TEST_P(Threshold, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     double maxVal = randomDouble(20.0, 127.0);

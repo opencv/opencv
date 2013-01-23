@@ -39,8 +39,14 @@
 //
 //M*/
 
-#ifndef __OPENCV_TEST_UTILITY_HPP__
-#define __OPENCV_TEST_UTILITY_HPP__
+#ifndef __OPENCV_GPU_TEST_UTILITY_HPP__
+#define __OPENCV_GPU_TEST_UTILITY_HPP__
+
+#include "opencv2/core/core.hpp"
+#include "opencv2/core/gpumat.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/ts/ts.hpp"
+#include "opencv2/ts/ts_perf.hpp"
 
 //////////////////////////////////////////////////////////////////////
 // random generators
@@ -67,11 +73,6 @@ cv::Mat readImage(const std::string& fileName, int flags = cv::IMREAD_COLOR);
 cv::Mat readImageType(const std::string& fname, int type);
 
 //////////////////////////////////////////////////////////////////////
-// Image dumping
-
-void dumpImage(const std::string& fileName, const cv::Mat& image);
-
-//////////////////////////////////////////////////////////////////////
 // Gpu devices
 
 //! return true if device supports specified feature and gpu module was built with support the feature.
@@ -96,11 +97,9 @@ private:
 //////////////////////////////////////////////////////////////////////
 // Additional assertion
 
-cv::Mat getMat(cv::InputArray arr);
-
-double checkNorm(cv::InputArray m1, cv::InputArray m2);
-
 void minMaxLocGold(const cv::Mat& src, double* minVal_, double* maxVal_ = 0, cv::Point* minLoc_ = 0, cv::Point* maxLoc_ = 0, const cv::Mat& mask = cv::Mat());
+
+cv::Mat getMat(cv::InputArray arr);
 
 testing::AssertionResult assertMatNear(const char* expr1, const char* expr2, const char* eps_expr, cv::InputArray m1, cv::InputArray m2, double eps);
 
@@ -164,6 +163,45 @@ double checkSimilarity(cv::InputArray m1, cv::InputArray m2);
 //////////////////////////////////////////////////////////////////////
 // Helper structs for value-parameterized tests
 
+#define GPU_TEST_P(test_case_name, test_name) \
+  class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) \
+      : public test_case_name { \
+   public: \
+    GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {} \
+    virtual void TestBody(); \
+   private: \
+    void UnsafeTestBody(); \
+    static int AddToRegistry() { \
+      ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
+          GetTestCasePatternHolder<test_case_name>(\
+              #test_case_name, __FILE__, __LINE__)->AddTestPattern(\
+                  #test_case_name, \
+                  #test_name, \
+                  new ::testing::internal::TestMetaFactory< \
+                      GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>()); \
+      return 0; \
+    } \
+    static int gtest_registering_dummy_; \
+    GTEST_DISALLOW_COPY_AND_ASSIGN_(\
+        GTEST_TEST_CLASS_NAME_(test_case_name, test_name)); \
+  }; \
+  int GTEST_TEST_CLASS_NAME_(test_case_name, \
+                             test_name)::gtest_registering_dummy_ = \
+      GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::AddToRegistry(); \
+  void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() \
+  { \
+    try \
+    { \
+      UnsafeTestBody(); \
+    } \
+    catch (...) \
+    { \
+      cv::gpu::resetDevice(); \
+      throw; \
+    } \
+  } \
+  void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::UnsafeTestBody()
+
 #define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
 #define GET_PARAM(k) std::tr1::get< k >(GetParam())
 
@@ -178,11 +216,8 @@ namespace cv { namespace gpu
 
 using perf::MatDepth;
 
-//! return vector with depths from specified range.
-std::vector<MatDepth> depths(int depth_start, int depth_end);
-
 #define ALL_DEPTH testing::Values(MatDepth(CV_8U), MatDepth(CV_8S), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32S), MatDepth(CV_32F), MatDepth(CV_64F))
-#define DEPTHS(depth_start, depth_end) testing::ValuesIn(depths(depth_start, depth_end))
+
 #define DEPTH_PAIRS testing::Values(std::make_pair(MatDepth(CV_8U), MatDepth(CV_8U)),   \
                                     std::make_pair(MatDepth(CV_8U), MatDepth(CV_16U)),  \
                                     std::make_pair(MatDepth(CV_8U), MatDepth(CV_16S)),  \
@@ -237,8 +272,6 @@ private:
 
 void PrintTo(const UseRoi& useRoi, std::ostream* os);
 
-#define WHOLE testing::Values(UseRoi(false))
-#define SUBMAT testing::Values(UseRoi(true))
 #define WHOLE_SUBMAT testing::Values(UseRoi(false), UseRoi(true))
 
 // Direct/Inverse
@@ -253,7 +286,9 @@ public:
 private:
     bool val_;
 };
+
 void PrintTo(const Inverse& useRoi, std::ostream* os);
+
 #define DIRECT_INVERSE testing::Values(Inverse(false), Inverse(true))
 
 // Param class
@@ -291,6 +326,7 @@ CV_FLAGS(WarpFlags, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC, cv::WA
 //////////////////////////////////////////////////////////////////////
 // Other
 
+void dumpImage(const std::string& fileName, const cv::Mat& image);
 void showDiff(cv::InputArray gold, cv::InputArray actual, double eps);
 
-#endif // __OPENCV_TEST_UTILITY_HPP__
+#endif // __OPENCV_GPU_TEST_UTILITY_HPP__

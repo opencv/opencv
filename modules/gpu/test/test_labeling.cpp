@@ -43,8 +43,8 @@
 
 #ifdef HAVE_CUDA
 
-namespace {
-
+namespace
+{
     struct GreedyLabeling
     {
         struct dot
@@ -82,7 +82,7 @@ namespace {
             int cc = -1;
 
             int* dist_labels = (int*)labels.data;
-            int pitch = labels.step1();
+            int pitch = (int) labels.step1();
 
             unsigned char* source = (unsigned char*)image.data;
             int width = image.cols;
@@ -166,7 +166,7 @@ struct Labeling : testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(Labeling, ConnectedComponents)
+GPU_TEST_P(Labeling, DISABLED_ConnectedComponents)
 {
     cv::Mat image;
     cvtColor(loat_image(), image, CV_BGR2GRAY);
@@ -186,11 +186,11 @@ TEST_P(Labeling, ConnectedComponents)
 
     cv::gpu::connectivityMask(cv::gpu::GpuMat(image), mask, cv::Scalar::all(0), cv::Scalar::all(2));
 
-    ASSERT_NO_THROW(cv::gpu::labelComponents(mask, components));
+    cv::gpu::labelComponents(mask, components);
 
     host.checkCorrectness(cv::Mat(components));
 }
 
-INSTANTIATE_TEST_CASE_P(ConnectedComponents, Labeling, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_ConnectedComponents, Labeling, ALL_DEVICES);
 
 #endif // HAVE_CUDA
