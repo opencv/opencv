@@ -643,7 +643,7 @@ void smoothBorder(Mat& img, const Scalar& color, int delta)
             p = img.ptr(r, c);
             for(i=0; i<ch; i++) s[i] = p[i];
             s = s * k1 + color * k2;
-            for(i=0; i<ch; i++) p[i] = s[i];
+            for(i=0; i<ch; i++) p[i] = uchar(s[i]);
         }
         for(c=0; c<n; c++)
         {
@@ -651,7 +651,7 @@ void smoothBorder(Mat& img, const Scalar& color, int delta)
             p = img.ptr(r, img.cols-c-1);
             for(i=0; i<ch; i++) s[i] = p[i];
             s = s * k1 + color * k2;
-            for(i=0; i<ch; i++) p[i] = s[i];
+            for(i=0; i<ch; i++) p[i] = uchar(s[i]);
         }
     }
 }
