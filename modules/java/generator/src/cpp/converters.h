@@ -1,5 +1,3 @@
-#include <jni.h>
-
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/core/core.hpp"
 #include "features2d_manual.hpp"
