@@ -302,7 +302,7 @@ macro(add_android_project target path)
          COMMAND ${CMAKE_COMMAND} -E touch "${android_proj_bin_dir}/bin/${target}-debug.apk" # needed because ant does not update the timestamp of updated apk
          WORKING_DIRECTORY "${android_proj_bin_dir}"
          MAIN_DEPENDENCY "${android_proj_bin_dir}/${ANDROID_MANIFEST_FILE}"
-         DEPENDS "${OpenCV_BINARY_DIR}/bin/.classes.jar.dephelper" opencv_java # as we are part of OpenCV we can just force this dependency
+         DEPENDS "${OpenCV_BINARY_DIR}/bin/classes.jar.dephelper" opencv_java # as we are part of OpenCV we can just force this dependency
          DEPENDS ${android_proj_file_deps} ${JNI_LIB_NAME})
     endif()
 

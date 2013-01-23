@@ -39,6 +39,6 @@ public class OpenCVTestRunner {
 
     public static String getOutputFileName(String name)
     {
-	return getTempFileName(name);
+        return getTempFileName(name);
     }
 }
