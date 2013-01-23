@@ -1,23 +1,13 @@
-#include <jni.h>
+#define LOG_TAG "org.opencv.android.Utils"
+#include "common.h"
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
-#ifdef ANDROID
-
+#ifdef __ANDROID__
 #include <android/bitmap.h>
 
-#include <android/log.h>
-#define LOG_TAG "org.opencv.android.Utils"
-#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
-#ifdef DEBUG
-#define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
-#else //!DEBUG
-#define LOGD(...)
-#endif //DEBUG
-
 using namespace cv;
-
 
 extern "C" {
 
@@ -168,4 +158,4 @@ JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap
 
 } // extern "C"
 
-#endif //ANDROID
+#endif //__ANDROID__

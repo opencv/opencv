@@ -2,6 +2,13 @@
 
 #include "opencv2/core/core.hpp"
 
+namespace cv
+{
+
+CV_EXPORTS_W void setErrorVerbosity(bool verbose);
+
+}
+
 #if 0
 
 namespace cv

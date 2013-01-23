@@ -1,12 +1,5 @@
-#include <jni.h>
-
-#if defined DEBUG && defined ANDROID
-#include <android/log.h>
-#define MODULE_LOG_TAG "OpenCV.highgui"
-#define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, MODULE_LOG_TAG, __VA_ARGS__))
-#else
-#define LOGD(...)
-#endif
+#define LOG_TAG "org.opencv.highgui.VideoCapture"
+#include "common.h"
 
 #include "opencv2/opencv_modules.hpp"
 #ifdef HAVE_OPENCV_HIGHGUI

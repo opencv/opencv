@@ -80,6 +80,10 @@ set_target_properties(${the_module} PROPERTIES
                       OUTPUT_NAME cv2
                       SUFFIX ${CVPY_SUFFIX})
 
+if(ENABLE_SOLUTION_FOLDERS)
+  set_target_properties(${the_module} PROPERTIES FOLDER "bindings")
+endif()
+
 if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function")
 endif()
