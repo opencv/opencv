@@ -323,7 +323,7 @@ static void fitLine2D( const Point2f * points, int count, int dist,
     float rdelta = reps != 0 ? reps : 1.0f;
     float adelta = aeps != 0 ? aeps : 0.01f;
     double min_err = DBL_MAX, err = 0;
-    RNG rng(-1);
+    RNG rng((uint64)-1);
 
     memset( line, 0, 4*sizeof(line[0]) );
 
@@ -463,7 +463,7 @@ static void fitLine3D( Point3f * points, int count, int dist,
     float rdelta = reps != 0 ? reps : 1.0f;
     float adelta = aeps != 0 ? aeps : 0.01f;
     double min_err = DBL_MAX, err = 0;
-    RNG rng(-1);
+    RNG rng((uint64)-1);
 
     switch (dist)
     {

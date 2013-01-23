@@ -109,7 +109,7 @@ template<typename _Tp> class CV_EXPORTS MatIterator_;
 template<typename _Tp> class CV_EXPORTS MatConstIterator_;
 template<typename _Tp> class CV_EXPORTS MatCommaInitializer_;
 
-template<typename _Tp> class CV_EXPORTS AutoBuffer;
+template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class CV_EXPORTS AutoBuffer;
 
 CV_EXPORTS string format( const char* fmt, ... );
 CV_EXPORTS string tempfile( const char* suffix CV_DEFAULT(0));
@@ -3093,11 +3093,10 @@ public:
  }
  \endcode
 */
-template<typename _Tp> class CV_EXPORTS AutoBuffer
+template<typename _Tp, size_t fixed_size> class CV_EXPORTS AutoBuffer
 {
 public:
     typedef _Tp value_type;
-    enum { fixed_size = 1024/sizeof(_Tp)+8, buffer_padding = (int)((16 + sizeof(_Tp) - 1)/sizeof(_Tp)) };
 
     //! the default contructor
     AutoBuffer();
@@ -3105,9 +3104,9 @@ public:
     AutoBuffer(size_t _size);
 
     //! the copy constructor
-    AutoBuffer(const AutoBuffer<_Tp>& buf);
+    AutoBuffer(const AutoBuffer<_Tp, fixed_size>& buf);
     //! the assignment operator
-    AutoBuffer<_Tp>& operator = (const AutoBuffer<_Tp>& buf);
+    AutoBuffer<_Tp, fixed_size>& operator = (const AutoBuffer<_Tp, fixed_size>& buf);
 
     //! destructor. calls deallocate()
     ~AutoBuffer();
@@ -3117,7 +3116,7 @@ public:
     //! deallocates the buffer if it was dynamically allocated
     void deallocate();
     //! resizes the buffer and preserves the content
-	void resize(size_t _size);
+    void resize(size_t _size);
 	//! returns the current buffer size
 	size_t size() const;
     //! returns pointer to the real buffer, stack-allocated or head-allocated
@@ -3131,7 +3130,7 @@ protected:
     //! size of the real buffer
     size_t sz;
     //! pre-allocated buffer
-    _Tp buf[fixed_size+buffer_padding];
+    _Tp buf[fixed_size];
 };
 
 /////////////////////////// multi-dimensional dense matrix //////////////////////////

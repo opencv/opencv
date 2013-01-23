@@ -110,7 +110,7 @@ static int findEnslosingCicle4pts_32f( Point2f* pts, Point2f& _center, float& _r
     for( i = 0; i < 4; i++ )
         for( j = i + 1; j < 4; j++ )
         {
-            float dist = norm(pts[i] - pts[j]);
+            float dist = (float)norm(pts[i] - pts[j]);
 
             if( max_dist < dist )
             {
@@ -132,13 +132,14 @@ static int findEnslosingCicle4pts_32f( Point2f* pts, Point2f& _center, float& _r
                 idxs[k++] = i;
         }
 
-        center = Point2f( (pts[idxs[0]].x + pts[idxs[1]].x)*0.5f, (pts[idxs[0]].y + pts[idxs[1]].y)*0.5f );
+        center = Point2f( (pts[idxs[0]].x + pts[idxs[1]].x)*0.5f,
+                          (pts[idxs[0]].y + pts[idxs[1]].y)*0.5f );
         radius = (float)(norm(pts[idxs[0]] - center)*1.03);
         if( radius < 1.f )
             radius = 1.f;
 
         if( pointInCircle( pts[idxs[2]], center, radius ) >= 0 &&
-           pointInCircle( pts[idxs[3]], center, radius ) >= 0 )
+            pointInCircle( pts[idxs[3]], center, radius ) >= 0 )
         {
             k = 2; //rand()%2+2;
         }
@@ -148,14 +149,14 @@ static int findEnslosingCicle4pts_32f( Point2f* pts, Point2f& _center, float& _r
             for( i = 0; i < 4; i++ )
             {
                 if( findCircle( pts[shuffles[i][0]], pts[shuffles[i][1]],
-                               pts[shuffles[i][2]], &center, &radius ) >= 0 )
+                                pts[shuffles[i][2]], &center, &radius ) )
                 {
                     radius *= 1.03f;
                     if( radius < 2.f )
                         radius = 2.f;
 
                     if( pointInCircle( pts[shuffles[i][3]], center, radius ) >= 0 &&
-                       min_radius > radius )
+                        min_radius > radius )
                     {
                         min_radius = radius;
                         min_center = center;
@@ -217,9 +218,9 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
     Point2f pt = is_float ? ptsf[0] : Point2f((float)ptsi[0].x,(float)ptsi[0].y);
     Point2f pts[4] = {pt, pt, pt, pt};
 
-    for(int i = 1; i < count; i++ )
+    for( i = 1; i < count; i++ )
     {
-        Point2f pt = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        pt = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
 
         if( pt.x < pts[0].x )
             pts[0] = pt;
@@ -234,20 +235,20 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
     for( k = 0; k < max_iters; k++ )
     {
         double min_delta = 0, delta;
-        Point2f ptf, farAway(0,0);
+        Point2f farAway(0,0);
         /*only for first iteration because the alg is repared at the loop's foot*/
         if( k == 0 )
             findEnslosingCicle4pts_32f( pts, center, radius );
 
         for( i = 0; i < count; i++ )
         {
-            ptf = is_float ? ptsf[i] : Point2f((float)ptsi[i].x,(float)ptsi[i].y);
+            pt = is_float ? ptsf[i] : Point2f((float)ptsi[i].x,(float)ptsi[i].y);
 
-            delta = pointInCircle( ptf, center, radius );
+            delta = pointInCircle( pt, center, radius );
             if( delta < min_delta )
             {
                 min_delta = delta;
-                farAway = ptf;
+                farAway = pt;
             }
         }
         result = min_delta >= 0;
@@ -275,10 +276,10 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
     if( !result )
     {
         radius = 0.f;
-        for(int i = 0; i < count; i++ )
+        for( i = 0; i < count; i++ )
         {
-            Point2f ptf = is_float ? ptsf[i] : Point2f((float)ptsi[i].x,(float)ptsi[i].y);
-            float dx = center.x - ptf.x, dy = center.y - ptf.y;
+            pt = is_float ? ptsf[i] : Point2f((float)ptsi[i].x,(float)ptsi[i].y);
+            float dx = center.x - pt.x, dy = center.y - pt.y;
             float t = dx*dx + dy*dy;
             radius = MAX(radius, t);
         }
@@ -1045,14 +1046,12 @@ cvFitEllipse2( const CvArr* array )
 CV_IMPL  CvRect
 cvBoundingRect( CvArr* array, int update )
 {
-    CvSeqReader reader;
     CvRect  rect = { 0, 0, 0, 0 };
     CvContour contour_header;
     CvSeq* ptseq = 0;
     CvSeqBlock block;
 
     CvMat stub, *mat = 0;
-    int  xmin = 0, ymin = 0, xmax = -1, ymax = -1, i, j, k;
     int calculate = update;
 
     if( CV_IS_SEQ( array ))
