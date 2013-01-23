@@ -45,8 +45,6 @@
 #include <vector>
 #include "NCV.hpp"
 
-using namespace std;
-
 
 //==============================================================================
 //
@@ -55,16 +53,16 @@ using namespace std;
 //==============================================================================
 
 
-static void stdDebugOutput(const string &msg)
+static void stdDebugOutput(const std::string &msg)
 {
-    cout << msg;
+    std::cout << msg;
 }
 
 
 static NCVDebugOutputHandler *debugOutputHandler = stdDebugOutput;
 
 
-void ncvDebugOutput(const string &msg)
+void ncvDebugOutput(const std::string &msg)
 {
     debugOutputHandler(msg);
 }

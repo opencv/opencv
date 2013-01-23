@@ -638,7 +638,7 @@ namespace cv { namespace gpu { namespace device
                 kp_dir *= 180.0f / CV_PI_F;
 
                 kp_dir = 360.0f - kp_dir;
-                if (abs(kp_dir - 360.f) < FLT_EPSILON)
+                if (::fabsf(kp_dir - 360.f) < FLT_EPSILON)
                     kp_dir = 0.f;
 
                 featureDir[blockIdx.x] = kp_dir;

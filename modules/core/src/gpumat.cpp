@@ -315,18 +315,6 @@ void cv::gpu::DeviceInfo::queryMemory(size_t& free_memory, size_t& total_memory)
 
 namespace
 {
-    template <class T> void getCudaAttribute(T *attribute, CUdevice_attribute device_attribute, int device)
-    {
-        *attribute = T();
-        //CUresult error = CUDA_SUCCESS;// = cuDeviceGetAttribute( attribute, device_attribute, device ); why link erros under ubuntu??
-        CUresult error = cuDeviceGetAttribute( attribute, device_attribute, device );
-        if( CUDA_SUCCESS == error )
-            return;
-
-        printf("Driver API error = %04d\n", error);
-        cv::gpu::error("driver API error", __FILE__, __LINE__);
-    }
-
     int convertSMVer2Cores(int major, int minor)
     {
         // Defines for GPU Architecture types (using the SM version to determine the # of cores per SM
@@ -335,7 +323,7 @@ namespace
             int Cores;
         } SMtoCores;
 
-        SMtoCores gpuArchCoresPerSM[] =  { { 0x10,  8 }, { 0x11,  8 }, { 0x12,  8 }, { 0x13,  8 }, { 0x20, 32 }, { 0x21, 48 }, {0x30, 192}, { -1, -1 }  };
+        SMtoCores gpuArchCoresPerSM[] =  { { 0x10,  8 }, { 0x11,  8 }, { 0x12,  8 }, { 0x13,  8 }, { 0x20, 32 }, { 0x21, 48 }, {0x30, 192}, {0x35, 192}, { -1, -1 }  };
 
         int index = 0;
         while (gpuArchCoresPerSM[index].SM != -1)
@@ -344,7 +332,7 @@ namespace
                 return gpuArchCoresPerSM[index].Cores;
             index++;
         }
-        printf("MapSMtoCores undefined SMversion %d.%d!\n", major, minor);
+
         return -1;
     }
 }
@@ -382,21 +370,12 @@ void cv::gpu::printCudaDeviceInfo(int device)
         printf("  CUDA Driver Version / Runtime Version          %d.%d / %d.%d\n", driverVersion/1000, driverVersion%100, runtimeVersion/1000, runtimeVersion%100);
         printf("  CUDA Capability Major/Minor version number:    %d.%d\n", prop.major, prop.minor);
         printf("  Total amount of global memory:                 %.0f MBytes (%llu bytes)\n", (float)prop.totalGlobalMem/1048576.0f, (unsigned long long) prop.totalGlobalMem);
-        printf("  (%2d) Multiprocessors x (%2d) CUDA Cores/MP:     %d CUDA Cores\n",
-            prop.multiProcessorCount, convertSMVer2Cores(prop.major, prop.minor),
-            convertSMVer2Cores(prop.major, prop.minor) * prop.multiProcessorCount);
+
+        int cores = convertSMVer2Cores(prop.major, prop.minor);
+        if (cores > 0)
+            printf("  (%2d) Multiprocessors x (%2d) CUDA Cores/MP:     %d CUDA Cores\n", prop.multiProcessorCount, cores, cores * prop.multiProcessorCount);
+
         printf("  GPU Clock Speed:                               %.2f GHz\n", prop.clockRate * 1e-6f);
-
-        // This is not available in the CUDA Runtime API, so we make the necessary calls the driver API to support this for output
-        int memoryClock, memBusWidth, L2CacheSize;
-        getCudaAttribute<int>( &memoryClock, CU_DEVICE_ATTRIBUTE_MEMORY_CLOCK_RATE, dev );
-        getCudaAttribute<int>( &memBusWidth, CU_DEVICE_ATTRIBUTE_GLOBAL_MEMORY_BUS_WIDTH, dev );
-        getCudaAttribute<int>( &L2CacheSize, CU_DEVICE_ATTRIBUTE_L2_CACHE_SIZE, dev );
-
-        printf("  Memory Clock rate:                             %.2f Mhz\n", memoryClock * 1e-3f);
-        printf("  Memory Bus Width:                              %d-bit\n", memBusWidth);
-        if (L2CacheSize)
-            printf("  L2 Cache Size:                                 %d bytes\n", L2CacheSize);
 
         printf("  Max Texture Dimension Size (x,y,z)             1D=(%d), 2D=(%d,%d), 3D=(%d,%d,%d)\n",
             prop.maxTexture1D, prop.maxTexture2D[0], prop.maxTexture2D[1],
@@ -457,7 +436,12 @@ void cv::gpu::printShortCudaDeviceInfo(int device)
 
         const char *arch_str = prop.major < 2 ? " (not Fermi)" : "";
         printf("Device %d:  \"%s\"  %.0fMb", dev, prop.name, (float)prop.totalGlobalMem/1048576.0f);
-        printf(", sm_%d%d%s, %d cores", prop.major, prop.minor, arch_str, convertSMVer2Cores(prop.major, prop.minor) * prop.multiProcessorCount);
+        printf(", sm_%d%d%s", prop.major, prop.minor, arch_str);
+
+        int cores = convertSMVer2Cores(prop.major, prop.minor);
+        if (cores > 0)
+            printf(", %d cores", cores * prop.multiProcessorCount);
+
         printf(", Driver/Runtime ver.%d.%d/%d.%d\n", driverVersion/1000, driverVersion%100, runtimeVersion/1000, runtimeVersion%100);
     }
     fflush(stdout);

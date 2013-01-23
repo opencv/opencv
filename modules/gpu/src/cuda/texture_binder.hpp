@@ -85,7 +85,7 @@ namespace cv
 
   namespace device
   {
-      using pcl::gpu::TextureBinder;
+      using cv::gpu::TextureBinder;
   }
 }
 

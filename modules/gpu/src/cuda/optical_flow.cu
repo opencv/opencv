@@ -164,40 +164,40 @@ namespace cv { namespace gpu { namespace device
 
                 r = ::fmin(r, 2.5f);
 
-                v[1].x = arrow_x + r * ::cosf(theta - CV_PI / 2.0f);
-                v[1].y = arrow_y + r * ::sinf(theta - CV_PI / 2.0f);
+                v[1].x = arrow_x + r * ::cosf(theta - CV_PI_F / 2.0f);
+                v[1].y = arrow_y + r * ::sinf(theta - CV_PI_F / 2.0f);
 
-                v[4].x = arrow_x + r * ::cosf(theta + CV_PI / 2.0f);
-                v[4].y = arrow_y + r * ::sinf(theta + CV_PI / 2.0f);
+                v[4].x = arrow_x + r * ::cosf(theta + CV_PI_F / 2.0f);
+                v[4].y = arrow_y + r * ::sinf(theta + CV_PI_F / 2.0f);
 
                 int indx = (y * u_avg.cols + x) * NUM_VERTS_PER_ARROW * 3;
 
-                color_data[indx] = (theta - CV_PI) / CV_PI * 180.0f;
+                color_data[indx] = (theta - CV_PI_F) / CV_PI_F * 180.0f;
                 vertex_data[indx++] = v[0].x * xscale;
                 vertex_data[indx++] = v[0].y * yscale;
                 vertex_data[indx++] = v[0].z;
 
-                color_data[indx] = (theta - CV_PI) / CV_PI * 180.0f;
+                color_data[indx] = (theta - CV_PI_F) / CV_PI_F * 180.0f;
                 vertex_data[indx++] = v[1].x * xscale;
                 vertex_data[indx++] = v[1].y * yscale;
                 vertex_data[indx++] = v[1].z;
 
-                color_data[indx] = (theta - CV_PI) / CV_PI * 180.0f;
+                color_data[indx] = (theta - CV_PI_F) / CV_PI_F * 180.0f;
                 vertex_data[indx++] = v[2].x * xscale;
                 vertex_data[indx++] = v[2].y * yscale;
                 vertex_data[indx++] = v[2].z;
 
-                color_data[indx] = (theta - CV_PI) / CV_PI * 180.0f;
+                color_data[indx] = (theta - CV_PI_F) / CV_PI_F * 180.0f;
                 vertex_data[indx++] = v[3].x * xscale;
                 vertex_data[indx++] = v[3].y * yscale;
                 vertex_data[indx++] = v[3].z;
 
-                color_data[indx] = (theta - CV_PI) / CV_PI * 180.0f;
+                color_data[indx] = (theta - CV_PI_F) / CV_PI_F * 180.0f;
                 vertex_data[indx++] = v[4].x * xscale;
                 vertex_data[indx++] = v[4].y * yscale;
                 vertex_data[indx++] = v[4].z;
 
-                color_data[indx] = (theta - CV_PI) / CV_PI * 180.0f;
+                color_data[indx] = (theta - CV_PI_F) / CV_PI_F * 180.0f;
                 vertex_data[indx++] = v[5].x * xscale;
                 vertex_data[indx++] = v[5].y * yscale;
                 vertex_data[indx++] = v[5].z;

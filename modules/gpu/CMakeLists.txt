@@ -52,13 +52,11 @@ if (HAVE_CUDA)
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
 
   if(NOT APPLE)
-    unset(CUDA_nvcuvid_LIBRARY CACHE)
     find_cuda_helper_libs(nvcuvid)
     set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvid_LIBRARY})
   endif()
 
   if(WIN32)
-    unset(CUDA_nvcuvenc_LIBRARY CACHE)
     find_cuda_helper_libs(nvcuvenc)
     set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvenc_LIBRARY})
   endif()
