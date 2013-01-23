@@ -439,7 +439,7 @@ void error( const Exception& exc )
             exc.func.c_str() : "unknown function", exc.file.c_str(), exc.line );
         fprintf( stderr, "%s\n", buf );
         fflush( stderr );
-#  ifdef ANDROID
+#  ifdef __ANDROID__
         __android_log_print(ANDROID_LOG_ERROR, "cv::error()", "%s", buf);
 #  endif
     }

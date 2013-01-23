@@ -22,6 +22,10 @@
 
 #include "converters.h"
 
+#include "core_manual.hpp"
+#include "features2d_manual.hpp"
+
+
 #ifdef _MSC_VER
 #  pragma warning(disable:4800 4244)
 #endif
