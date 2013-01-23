@@ -482,6 +482,8 @@ static void fastHessianDetector( const Mat& sum, const Mat& mask_sum, vector<Key
     vector<int> sampleSteps(nTotalLayers);
     vector<int> middleIndices(nMiddleLayers);
 
+    keypoints.clear();
+
     // Allocate space and calculate properties of each layer
     int index = 0, middleIndex = 0, step = SAMPLE_STEP0;
 
