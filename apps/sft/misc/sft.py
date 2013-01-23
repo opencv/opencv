@@ -3,6 +3,7 @@
 import cv2, re, glob
 import numpy             as np
 import matplotlib.pyplot as plt
+from itertools import izip
 
 """ Convert numPy matrices with rectangles and confidences to sorted list of detections."""
 def convert2detections(rects, confs, crop_factor = 0.125):
@@ -39,10 +40,12 @@ def cumsum(n):
     return cum
 
 """ Compute x and y arrays for ROC plot"""
-def computeROC(confidenses, tp, nannotated, nframes):
-    confidenses, tp = zip(*sorted(zip(confidenses, tp), reverse = True))
+def computeROC(confidenses, tp, nannotated, nframes, ignored):
+    confidenses, tp, ignored = zip(*sorted(zip(confidenses, tp, ignored), reverse = True))
 
     fp = [(1 - x) for x in tp]
+    fp = [(x - y) for x, y in izip(fp, ignored)]
+
     fp = cumsum(fp)
     tp = cumsum(tp)
     miss_rate = [(1 - x / (nannotated + 0.000001)) for x in tp]
@@ -81,16 +84,27 @@ def match(gts, dts):
     # Cartesian product for each detection BB_dt with each BB_gt
     overlaps = [[dt.overlap(gt) for gt in gts]for dt in dts]
 
-    matches_gt = [0]*len(gts)
-    matches_dt = [0]*len(dts)
+    matches_gt     = [0]*len(gts)
+    matches_dt     = [0]*len(dts)
+    matches_ignore = [0]*len(dts)
 
     for idx, row in enumerate(overlaps):
         imax = row.index(max(row))
 
+        # try to match ground thrush
         if (matches_gt[imax] == 0 and row[imax] > 0.5):
             matches_gt[imax] = 1
             matches_dt[idx]  = 1
-    return matches_dt
+
+    for idx, dt in enumerate(dts):
+        # try to math ignored
+        if matches_dt[idx] == 0:
+            row = gts
+            row = [i for i in row if (i[3] - i[1]) < 53 or (i[3] - i[1]) >  256]
+            for each in row:
+                if dts[idx].overlapIgnored(each) > 0.5:
+                    matches_ignore[idx] = 1
+    return matches_dt, matches_ignore
 
 
 def plotLogLog(fppi, miss_rate, c):
@@ -135,6 +149,18 @@ class Detection:
         union_area = (a[2] * a[3]) + ((b[2] - b[0]) * (b[3] - b[1])) - cross_area;
 
         return cross_area / union_area
+
+        # we use rect-style for dt and box style for gt. ToDo: fix it
+    def overlapIgnored(self, b):
+
+        a = self.bb
+        w = min( a[0] + a[2], b[2]) - max(a[0], b[0]);
+        h = min( a[1] + a[3], b[3]) - max(a[1], b[1]);
+
+        cross_area = 0.0 if (w < 0 or h < 0) else float(w * h)
+        self_area = (a[2] * a[3]);
+
+        return cross_area / self_area
 
     def mark_matched(self):
         self.matched = True

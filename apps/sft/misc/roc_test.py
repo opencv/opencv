@@ -52,6 +52,7 @@ if __name__ == "__main__":
 
         confidenses = []
         tp          = []
+        ignored     = []
 
         while True:
             ret, img = camera.read()
@@ -77,12 +78,13 @@ if __name__ == "__main__":
             confs.sort(lambda x, y : -1  if (x - y) > 0 else 1)
             confidenses = confidenses + confs
 
-            matched = sft.match(boxes, dts)
+            matched, skip_list = sft.match(boxes, dts)
             tp = tp + matched
+            ignored = ignored + skip_list
 
             print nframes, nannotated
 
-        fppi, miss_rate = sft.computeROC(confidenses, tp, nannotated, nframes)
+        fppi, miss_rate = sft.computeROC(confidenses, tp, nannotated, nframes, ignored)
         sft.plotLogLog(fppi, miss_rate, plot_colors[idx])
 
     sft.showPlot("roc_curve.png")
