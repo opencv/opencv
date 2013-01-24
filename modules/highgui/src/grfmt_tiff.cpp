@@ -469,7 +469,7 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
 
     // row buffer, because TIFFWriteScanline modifies the original data!
     size_t scanlineSize = TIFFScanlineSize(pTiffHandle);
-    AutoBuffer<uchar,1024> _buffer(scanlineSize+32);
+    AutoBuffer<uchar> _buffer(scanlineSize+32);
     uchar* buffer = _buffer;
     if (!buffer)
     {
@@ -577,9 +577,9 @@ bool  TiffEncoder::write( const Mat& img, const vector<int>& /*params*/)
 #endif*/
     int directoryOffset = 0;
 
-    AutoBuffer<int,1024> stripOffsets(stripCount);
-    AutoBuffer<short,1024> stripCounts(stripCount);
-    AutoBuffer<uchar,1024> _buffer(fileStep+32);
+    AutoBuffer<int> stripOffsets(stripCount);
+    AutoBuffer<short> stripCounts(stripCount);
+    AutoBuffer<uchar> _buffer(fileStep+32);
     uchar* buffer = _buffer;
     int  stripOffsetsOffset = 0;
     int  stripCountsOffset = 0;
