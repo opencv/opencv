@@ -180,7 +180,7 @@ _cleanup_:
 }
 
 void detectAndDraw( Mat& img,
-    cv::ocl::OclCascadeClassifier& cascade, CascadeClassifier& nestedCascade,
+    cv::ocl::OclCascadeClassifier& cascade, CascadeClassifier&,
     double scale)
 {
     int i = 0;
