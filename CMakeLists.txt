@@ -161,13 +161,13 @@ OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF I
 OCV_OPTION(BUILD_ANDROID_PACKAGE    "Build platform-specific package for Google Play" OFF IF ANDROID )
 
 # 3rd party libs
-OCV_OPTION(BUILD_ZLIB               "Build zlib from source"         WIN32 OR APPLE )
-OCV_OPTION(BUILD_TIFF               "Build libtiff from source"      WIN32 OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_JASPER             "Build libjasper from source"    WIN32 OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"      WIN32 OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_PNG                "Build libpng from source"       WIN32 OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"      WIN32 OR ANDROID OR APPLE )
-
+OCV_OPTION(BUILD_ZLIB               "Build zlib from source"             WIN32 OR APPLE )
+OCV_OPTION(BUILD_TIFF               "Build libtiff from source"          WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_JASPER             "Build libjasper from source"        WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"          WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_PNG                "Build libpng from source"           WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"          WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_TBB                "Download and build TBB from source" ANDROID IF CMAKE_COMPILER_IS_GNUCXX )
 
 # OpenCV installation options
 # ===================================================
