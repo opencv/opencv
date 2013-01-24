@@ -44,7 +44,7 @@
 //M*/
 
 #include "precomp.hpp"
-
+#include <functional>
 #include <iterator>
 #include <vector>
 using namespace cv;
