@@ -246,7 +246,7 @@ public:
         meanshiftV.resize(positionsCount);
         distanceV.resize(positionsCount);
         iterMax = maxIter;
-	modeEps = eps;
+        modeEps = eps;
 
         for (unsigned i = 0; i<positionsV.size(); i++)
         {
