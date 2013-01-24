@@ -239,7 +239,17 @@ void cv::Octave::processPositives(const Dataset* dataset, const FeaturePool* poo
     nnegatives = cvRound(nnegatives * total / (double)npositives);
 }
 
-#define USE_LONG_SEEDS
+#if defined _WIN32 && (_WIN32 || _WIN64)
+# if _WIN64
+#  define USE_LONG_SEEDS
+# endif
+#endif
+#if defined (__GNUC__) &&__GNUC__
+# if defined(__x86_64__) || defined(__ppc64__)
+#  define USE_LONG_SEEDS
+# endif
+#endif
+
 #if defined USE_LONG_SEEDS
 # define INDEX_ENGINE_SEED      764224349868LU
 #else
