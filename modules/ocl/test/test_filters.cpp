@@ -831,13 +831,13 @@ INSTANTIATE_TEST_CASE_P(Filters, Laplacian, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(1, 3)));
 
-//INSTANTIATE_TEST_CASE_P(Filter, ErodeDilate, Combine(Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1, 2, 3)));
+INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1, 2, 3)));
 
-INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(Values(CV_8UC1, CV_8UC1), Values(false)));
+//INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(Values(CV_8UC1, CV_8UC1), Values(false)));
 
-//INSTANTIATE_TEST_CASE_P(Filter, ErodeDilate, Combine(Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1, 2, 3)));
+INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1, 2, 3)));
 
-INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(Values(CV_8UC1, CV_8UC1), Values(false)));
+//INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(Values(CV_8UC1, CV_8UC1), Values(false)));
 
 
 INSTANTIATE_TEST_CASE_P(Filter, Sobel, Combine(Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
