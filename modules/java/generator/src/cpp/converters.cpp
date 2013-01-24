@@ -1,3 +1,4 @@
+#define LOG_TAG "org.opencv.utils.Converters"
 #include "common.h"
 
 using namespace cv;
