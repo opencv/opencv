@@ -144,7 +144,7 @@ A call to ``waitKey()`` starts a message passing cycle that waits for a key stro
 
     Mat img = imread("image.jpg");
     Mat grey;
-    cvtColor(img, grey, CV_BGR2GREY);
+    cvtColor(img, grey, CV_BGR2GRAY);
 
     Mat sobelx;
     Sobel(grey, sobelx, CV_32F, 1, 0);
