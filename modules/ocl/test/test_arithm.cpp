@@ -1110,8 +1110,8 @@ TEST_P(Phase, Mat)
         for(int j = 0; j < LOOP_TIMES; j++)
         {
             random_roi();
-            cv::phase(mat1_roi, mat2_roi, dst_roi, angelInDegrees);
-            cv::ocl::phase(gmat1, gmat2, gdst, angelInDegrees);
+            cv::phase(mat1_roi, mat2_roi, dst_roi, angelInDegrees ? true : false);
+            cv::ocl::phase(gmat1, gmat2, gdst, angelInDegrees ? true : false);
 
             cv::Mat cpu_dst;
             gdst_whole.download(cpu_dst);
