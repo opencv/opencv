@@ -14,6 +14,13 @@ bgr = { "red"   : (  0,   0, 255),
         "green" : (  0, 255,   0),
         "blue"  : (255,   0 ,  0)}
 
+def range(s):
+    try:
+        lb, rb = map(int, s.split(','))
+        return lb, rb
+    except:
+        raise argparse.ArgumentTypeError("Must be lb, rb")
+
 def call_parser(f, a):
     return eval( "sft.parse_" + f + "('" + a + "')")
 
@@ -31,10 +38,15 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output",    dest = "output",    type = str,   metavar= "path", help = "Path to store resultiong image.",           default = "./roc.png")
     parser.add_argument("-n", "--nscales",   dest = "nscales",   type = int,   metavar= "n",    help = "Prefered count of scales from min to max.", default = 55)
 
+    parser.add_argument("-r", "--scale-range",          dest = "scale_range", type = range,  default = (128 * 0.4, 128 * 2.4))
+    parser.add_argument("-e", "--extended-range-ratio", dest = "ext_ratio",   type = float,  default = 1.25)
+
     # required
     parser.add_argument("-f", "--anttn-format", dest = "anttn_format", choices = ['inria', 'caltech', "idl"], help = "Annotation file for test sequence.", required = True)
 
     args = parser.parse_args()
+
+    print args.scale_range
 
     print args.cascade
     # # parse annotations
@@ -64,6 +76,8 @@ if __name__ == "__main__":
 
             boxes = samples[tail]
             boxes = sft.norm_acpect_ratio(boxes, 0.5)
+            boxes = [b for b in boxes if (b[3] - b[1]) > args.scale_range[0] / args.ext_ratio]
+            boxes = [b for b in boxes if (b[3] - b[1]) < args.scale_range[1] * args.ext_ratio]
 
             nannotated = nannotated + len(boxes)
             nframes = nframes + 1

@@ -75,18 +75,21 @@ def initPlot(name = "ROC curve Bahnhof"):
 
 """Show resulted plot"""
 def showPlot(file_name):
-    # plt.savefig(file_name)
+    plt.savefig(file_name)
     plt.axis((pow(10, -3), pow(10, 1), 0.0, 1))
     plt.yticks( [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.64, 0.8, 1], ['.05', '.10', '.20', '.30', '.40', '.50', '.64', '.80', '1'] )
     plt.show()
 
 def match(gts, dts):
-    # Cartesian product for each detection BB_dt with each BB_gt
-    overlaps = [[dt.overlap(gt) for gt in gts]for dt in dts]
-
     matches_gt     = [0]*len(gts)
     matches_dt     = [0]*len(dts)
     matches_ignore = [0]*len(dts)
+
+    if len(gts) == 0:
+        return matches_dt, matches_ignore
+
+    # Cartesian product for each detection BB_dt with each BB_gt
+    overlaps = [[dt.overlap(gt) for gt in gts]for dt in dts]
 
     for idx, row in enumerate(overlaps):
         imax = row.index(max(row))
