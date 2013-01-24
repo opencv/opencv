@@ -8,6 +8,7 @@
 // @Authors
 //    Niko Li, newlife20080214@gmail.com
 //    Zero Lin, zero.lin@amd.com
+//    Yao Wang, bitwangyaoyao@gmail.com
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
@@ -100,14 +101,26 @@ __kernel void morph_C1_D0(__global const uchar * restrict src,
     LDS_DAT[point2] = temp1;
     barrier(CLK_LOCAL_MEM_FENCE);
     uchar4 res = (uchar4)VAL;
-    for(int i=0;i<2*RADIUSY+1;i++)
-        for(int j=0;j<2*RADIUSX+1;j++)
+
+    for(int i=0; i<2*RADIUSY+1; i++)
+        for(int j=0; j<2*RADIUSX+1; j++)
         {
-            res =mat_kernel[i*(2*RADIUSX+1)+j]? MORPH_OP(res,vload4(0,(__local uchar*)&LDS_DAT[mad24((l_y+i),width,l_x)]+offset+j)):res;
+            res =
+#ifndef RECTKERNEL
+                mat_kernel[i*(2*RADIUSX+1)+j] ?
+#endif
+                MORPH_OP(res,vload4(0,(__local uchar*)&LDS_DAT[mad24((l_y+i),width,l_x)]+offset+j))
+#ifndef RECTKERNEL
+                :res
+#endif
+                ;
         }
+
     int gidx = get_global_id(0)<<2;
     int gidy = get_global_id(1);
     int out_addr = mad24(gidy,dst_step_in_pixel,gidx+dst_offset_in_pixel);
+
+#ifdef USEROI
     if(gidx+3<cols && gidy<rows && (dst_offset_in_pixel&3==0))
     {
         *(__global uchar4*)&dst[out_addr] = res;
@@ -137,16 +150,19 @@ __kernel void morph_C1_D0(__global const uchar * restrict src,
             dst[out_addr] = res.x;
         }
     }
+#else
+    *(__global uchar4*)&dst[out_addr] = res;
+#endif
 }
 #else
 __kernel void morph(__global const GENTYPE * restrict src,
-                          __global GENTYPE *dst,
-                          int src_offset_x, int src_offset_y,
-                          int cols, int rows,
-                          int src_step_in_pixel, int dst_step_in_pixel,
-                          __constant uchar * mat_kernel,
-                          int src_whole_cols, int src_whole_rows,
-                          int dst_offset_in_pixel)
+                    __global GENTYPE *dst,
+                    int src_offset_x, int src_offset_y,
+                    int cols, int rows,
+                    int src_step_in_pixel, int dst_step_in_pixel,
+                    __constant uchar * mat_kernel,
+                    int src_whole_cols, int src_whole_rows,
+                    int dst_offset_in_pixel)
 {
     int l_x = get_local_id(0);
     int l_y = get_local_id(1);
@@ -154,7 +170,7 @@ __kernel void morph(__global const GENTYPE * restrict src,
     int y = get_group_id(1)*LSIZE1;
     int start_x = x+src_offset_x-RADIUSX;
     int end_x = x + src_offset_x+LSIZE0+RADIUSX;
-    int width = end_x -start_x+1;
+    int width = end_x -(x+src_offset_x-RADIUSX)+1;
     int start_y = y+src_offset_y-RADIUSY;
     int point1 = mad24(l_y,LSIZE0,l_x);
     int point2 = point1 + LSIZE0*LSIZE1;
@@ -188,10 +204,18 @@ __kernel void morph(__global const GENTYPE * restrict src,
     LDS_DAT[point2] = temp1;
     barrier(CLK_LOCAL_MEM_FENCE);
     GENTYPE res = (GENTYPE)VAL;
-    for(int i=0;i<2*RADIUSY+1;i++)
-        for(int j=0;j<2*RADIUSX+1;j++)
+    for(int i=0; i<2*RADIUSY+1; i++)
+        for(int j=0; j<2*RADIUSX+1; j++)
         {
-            res =mat_kernel[i*(2*RADIUSX+1)+j]? MORPH_OP(res,LDS_DAT[mad24(l_y+i,width,l_x+j)]):res;
+            res =
+#ifndef RECTKERNEL
+                mat_kernel[i*(2*RADIUSX+1)+j] ?
+#endif
+                MORPH_OP(res,LDS_DAT[mad24(l_y+i,width,l_x+j)])
+#ifndef RECTKERNEL
+                :res
+#endif
+                ;
         }
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
