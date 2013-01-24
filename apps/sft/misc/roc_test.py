@@ -74,10 +74,7 @@ if __name__ == "__main__":
             name = pattern % (nframes,)
             _, tail = os.path.split(name)
 
-            boxes = samples[tail]
-            boxes = sft.norm_acpect_ratio(boxes, 0.5)
-            boxes = [b for b in boxes if (b[3] - b[1]) > args.scale_range[0] / args.ext_ratio]
-            boxes = [b for b in boxes if (b[3] - b[1]) < args.scale_range[1] * args.ext_ratio]
+            boxes = sft.filter_for_range(samples[tail], args.scale_range, args.ext_ratio)
 
             nannotated = nannotated + len(boxes)
             nframes = nframes + 1

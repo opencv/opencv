@@ -30,20 +30,6 @@ def adjust(box, tb, lr):
 
     return [mix, miy, max, may]
 
-def resize(image, d_w, d_h):
-    if (d_h < image.shape[0]) or (d_w < image.shape[1]):
-        ratio = min(d_h / float(image.shape[0]), d_w / float(image.shape[1]))
-
-        kernel_size = int( 5 / (2 * ratio))
-        sigma = 0.5 / ratio
-        image_to_resize = cv2.filter2D(image, cv2.CV_8UC3, cv2.getGaussianKernel(kernel_size, sigma))
-        interpolation_type = cv2.INTER_AREA
-    else:
-        image_to_resize = image
-        interpolation_type = cv2.INTER_CUBIC
-
-    return cv2.resize(image_to_resize,(d_w, d_h), None, 0, 0, interpolation_type)
-
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-i", "--input", dest="input", metavar="DIRECTORY", type="string",
@@ -110,7 +96,7 @@ if __name__ == "__main__":
                 left    = int(max(0, 0 - box[0]))
                 right   = int(max(0, box[2] - mat_w))
                 cropped = cv2.copyMakeBorder(cropped, top, bottom, left, right, cv2.BORDER_REPLICATE)
-                resized = resize(cropped, whole_mod_w, whole_mod_h)
+                resized = sft.resize_sample(cropped, whole_mod_w, whole_mod_h)
 
                 out_name = ".png"
                 if round(math.log(scale)/math.log(2)) < each:
@@ -143,7 +129,7 @@ if __name__ == "__main__":
                 if (img.shape[0] <= min_shape[0]):
                     resized_size = (int(min_shape[0] * ratio), int(min_shape[0]))
 
-                img = resize(img, resized_size[0], resized_size[1])
+                img = sft.resize_sample(img, resized_size[0], resized_size[1])
             else:
                 out_name = "negative_sample_%i.png" % idx
 

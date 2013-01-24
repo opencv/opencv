@@ -30,7 +30,7 @@ def cascade(min_scale, max_scale, nscales, f):
     assert c.load(dom)
     return c
 
-""" Compute prefix sum for en array"""
+""" Compute prefix sum for en array."""
 def cumsum(n):
     cum = []
     y = 0
@@ -39,7 +39,7 @@ def cumsum(n):
         cum.append(y)
     return cum
 
-""" Compute x and y arrays for ROC plot"""
+""" Compute x and y arrays for ROC plot."""
 def computeROC(confidenses, tp, nannotated, nframes, ignored):
     confidenses, tp, ignored = zip(*sorted(zip(confidenses, tp, ignored), reverse = True))
 
@@ -53,14 +53,14 @@ def computeROC(confidenses, tp, nannotated, nframes, ignored):
 
     return fppi, miss_rate
 
-""" Crop rectangle by factor"""
+""" Crop rectangle by factor."""
 def crop_rect(rect, factor):
     val_x = factor * float(rect[2])
     val_y = factor * float(rect[3])
     x = [int(rect[0] + val_x), int(rect[1] + val_y), int(rect[2] - 2.0 * val_x), int(rect[3] - 2.0 * val_y)]
     return x
 
-"""Initialize plot axises"""
+""" Initialize plot axises."""
 def initPlot(name = "ROC curve Bahnhof"):
 
     fig, ax = plt.subplots()
@@ -73,13 +73,14 @@ def initPlot(name = "ROC curve Bahnhof"):
     plt.xscale('log')
     plt.yscale('log')
 
-"""Show resulted plot"""
+""" Show resulted plot."""
 def showPlot(file_name):
     plt.savefig(file_name)
     plt.axis((pow(10, -3), pow(10, 1), 0.0, 1))
     plt.yticks( [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.64, 0.8, 1], ['.05', '.10', '.20', '.30', '.40', '.50', '.64', '.80', '1'] )
     plt.show()
 
+""" Filter true positives and ignored detections for cascade detector output."""
 def match(gts, dts):
     matches_gt     = [0]*len(gts)
     matches_dt     = [0]*len(dts)
@@ -94,7 +95,7 @@ def match(gts, dts):
     for idx, row in enumerate(overlaps):
         imax = row.index(max(row))
 
-        # try to match ground thrush
+        # try to match ground truth
         if (matches_gt[imax] == 0 and row[imax] > 0.5):
             matches_gt[imax] = 1
             matches_dt[idx]  = 1
@@ -109,16 +110,17 @@ def match(gts, dts):
                     matches_ignore[idx] = 1
     return matches_dt, matches_ignore
 
-
+""" Draw plot."""
 def plotLogLog(fppi, miss_rate, c):
     print
     plt.loglog(fppi, miss_rate, color = c, linewidth = 2)
 
-
+""" Draw detections or ground truth on image."""
 def draw_rects(img, rects, color, l = lambda x, y : x + y):
     if rects is not None:
         for x1, y1, x2, y2 in rects:
             cv2.rectangle(img, (x1, y1), (l(x1, x2), l(y1, y2)), color, 2)
+
 
 def draw_dt(img, dts, color, l = lambda x, y : x + y):
     if dts is not None:
@@ -127,10 +129,6 @@ def draw_dt(img, dts, color, l = lambda x, y : x + y):
             x1, y1, x2, y2 = dt.bb[0], dt.bb[1], dt.bb[2], dt.bb[3]
 
             cv2.rectangle(img, (x1, y1), (l(x1, x2), l(y1, y2)), color, 2)
-
-class Annotation:
-    def __init__(self, bb):
-        self.bb = bb
 
 class Detection:
     def __init__(self, bb, conf):
@@ -168,7 +166,7 @@ class Detection:
     def mark_matched(self):
         self.matched = True
 
-
+"""Parse INPIA annotation format"""
 def parse_inria(ipath, f):
     bbs = []
     path = None
@@ -185,10 +183,11 @@ def parse_inria(ipath, f):
 
     return Sample(path, bbs)
 
-def glob_set(pattern):
-    return [__n for __n in glob.iglob(pattern)] #glob.iglob(pattern)
 
-# parse ETH idl file
+def glob_set(pattern):
+    return [__n for __n in glob.iglob(pattern)]
+
+""" Parse ETH idl file. """
 def parse_idl(f):
     map = {}
     for l in open(f):
@@ -198,11 +197,35 @@ def parse_idl(f):
         map.update(eval(l))
     return map
 
+""" Normalize detection box to unified aspect ration."""
 def norm_box(box, ratio):
     middle = float(box[0] + box[2]) / 2.0
     new_half_width = float(box[3] - box[1]) * ratio / 2.0
     return (int(round(middle - new_half_width)), box[1], int(round(middle + new_half_width)), box[3])
 
-
+""" Process array of boxes."""
 def norm_acpect_ratio(boxes, ratio):
     return [ norm_box(box, ratio)  for box in boxes]
+
+""" Filter detections out of extended range. """
+def filter_for_range(boxes, scale_range, ext_ratio):
+    boxes = sft.norm_acpect_ratio(boxes, 0.5)
+    boxes = [b for b in boxes if (b[3] - b[1]) > scale_range[0] / ext_ratio]
+    boxes = [b for b in boxes if (b[3] - b[1]) < scale_range[1] * ext_ratio]
+    return boxes
+
+""" Resize sample for training."""
+def resize_sample(image, d_w, d_h):
+    h, w, _ = image.shape
+    if (d_h < h) or (d_w < w):
+        ratio = min(d_h / float(h), d_w / float(w))
+
+        kernel_size = int( 5 / (2 * ratio))
+        sigma = 0.5 / ratio
+        image_to_resize = cv2.filter2D(image, cv2.CV_8UC3, cv2.getGaussianKernel(kernel_size, sigma))
+        interpolation_type = cv2.INTER_AREA
+    else:
+        image_to_resize = image
+        interpolation_type = cv2.INTER_CUBIC
+
+    return cv2.resize(image_to_resize,(d_w, d_h), None, 0, 0, interpolation_type)

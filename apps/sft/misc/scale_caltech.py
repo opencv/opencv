@@ -6,20 +6,6 @@ from optparse import OptionParser
 import re
 import numpy as np
 
-def resize(image, d_w, d_h):
-    if (d_h < image.shape[0]) or (d_w < image.shape[1]):
-        ratio = min(d_h / float(image.shape[0]), d_w / float(image.shape[1]))
-
-        kernel_size = int( 5 / (2 * ratio))
-        sigma = 0.5 / ratio
-        image_to_resize = cv2.filter2D(image, cv2.CV_8UC3, cv2.getGaussianKernel(kernel_size, sigma))
-        interpolation_type = cv2.INTER_AREA
-    else:
-        image_to_resize = image
-        interpolation_type = cv2.INTER_CUBIC
-
-    return cv2.resize(image_to_resize,(d_w, d_h), None, 0, 0, interpolation_type)
-
 def extractPositive(f, path, opath, octave, min_possible):
     newobj = re.compile("^lbl=\'(\w+)\'\s+str=(\d+)\s+end=(\d+)\s+hide=0$")
     pos    = re.compile("^pos\s=(\[[((\d+\.+\d*)|\s+|\;)]*\])$")
@@ -107,7 +93,7 @@ def extractPositive(f, path, opath, octave, min_possible):
                                 continue
 
                             cropped = cv2.copyMakeBorder(cropped, top, bottom, left, right, cv2.BORDER_REPLICATE)
-                            resized = resize(cropped, whole_mod_w, whole_mod_h)
+                            resized = sft.resize_sample(cropped, whole_mod_w, whole_mod_h)
                             flipped = cv2.flip(resized, 1)
 
                             cv2.imshow("resized", resized)
