@@ -37,6 +37,7 @@
 //the use of this software, even if advised of the possibility of such damage.
 
 //--------------------Google Code 2010 -- Yannick Verdie--------------------//
+
 #ifndef __OPENCV_HIGHGUI_QT_H__
 #define __OPENCV_HIGHGUI_QT_H__
 
@@ -80,11 +81,16 @@
 #include <QMenu>
 #include <QtTest/QTest>
 
+#include <QComboBox>   // needed for new Buttonbar from *.cfg 
+#include <QSpinBox>    
+#include <QToolButton>
+#include <QMessageBox> // HS, 5.7.2012
+
 //start private enum
 enum { CV_MODE_NORMAL = 0, CV_MODE_OPENGL = 1 };
 
 //we can change the keyboard shortcuts from here !
-enum {	shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
+enum {  shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
         shortcut_zoom_imgRegion = Qt::CTRL + Qt::Key_X,
         shortcut_save_img		= Qt::CTRL + Qt::Key_S,
         shortcut_properties_win	= Qt::CTRL + Qt::Key_P,
@@ -136,6 +142,10 @@ public slots:
     void setRatioWindow(QString name, double arg2 );
     void saveWindowParameters(QString name);
     void loadWindowParameters(QString name);
+ 
+    void ModifyContent(QString WndName, int etype, int idx, QString text); // GuiReceiver
+    void SetMapContent(QString WndName, QString varname, QString content );
+   
     void putText(void* arg1, QString text, QPoint org, void* font);
     void addButton(QString button_name, int button_type, int initial_button_state , void* on_change, void* userdata);
     void enablePropertiesButtonEachWindow();
@@ -278,6 +288,13 @@ private:
 };
 
 
+typedef struct AdmElem {
+	int elemtype;
+	int start;
+	int cnt;
+} AdmElem;
+
+
 class CvWindow : public CvWinModel
 {
     Q_OBJECT
@@ -302,6 +319,18 @@ public:
 
     void displayInfo(QString text, int delayms);
     void displayStatusBar(QString text, int delayms);
+
+    //----
+    
+    void readConfigControls_QT( cv::FileStorage fs );
+    void prepareControls(char *csBuffer);
+    void replaceBrackets(QString & txt);
+    void modifyContent(QString WndName, int eType,  int idx, QString text );  // *.cfg
+    void MsgBoxInfo(const char * pCaption, std::string Info );
+    void applyTransTab();
+    void getMapContent(QString in, QString & out );
+    void setMapContent(QString varname, QString content );
+    //----
 
     void enablePropertiesButton();
 
@@ -331,6 +360,13 @@ public:
     QPointer<QToolBar> myToolBar;
     QPointer<QLabel> myStatusBar_msg;
 
+    QVector<QString> m_ContentVec;
+    QVector<QString> m_CmdVec;
+    QVector<QString> m_LanguageVec;
+    bool m_bApplyLanguage;
+    QMap<QString,QString> VarMap;
+    
+    
 protected:
     virtual void keyPressEvent(QKeyEvent* event);
 
@@ -339,6 +375,31 @@ private:
     int mode_display; //opengl or native
     ViewPort* myView;
 
+    //--------------- basic data for window position+size 
+    int initWidth;
+    int initHeight;
+    int initPosX;
+    int initPosY;
+    int WindowMode;
+    
+    //------- new Toolbar elements from *.cfg 
+    int m_verboseLevel;
+    int m_idxPropWnd;
+    QString m_WndName;
+    QString m_StatusLine;
+    QVector<QPushButton*>    vect_QButton;  
+    QVector<QComboBox*>      vect_QCombo;
+    QVector<QLineEdit*>      vect_QLineEdit;
+    QVector<QLabel*>         vect_QLabel;
+    QVector<QCheckBox*>      vect_QCheckBox;
+    QVector<QSlider*>        vect_QSlider;
+    QVector<QSpinBox *>      vect_QSpinBox;
+    QVector<QToolButton *>   vect_QToolButton;
+    QVector<QAction *>       vect_MenuAct;
+    QVector<QString>	  vecString;
+    QVector<AdmElem>      vect_Adm;
+    //----------------------------------------
+            
     QVector<QShortcut*> vect_QShortcuts;
 
     void icvLoadTrackbars(QSettings *settings);
@@ -347,7 +408,8 @@ private:
     void icvSaveControlPanel();
     void icvLoadButtonbar(CvButtonbar* t,QSettings *settings);
     void icvSaveButtonbar(CvButtonbar* t,QSettings *settings);
-
+    void InitExchange();
+    void createStandardActions();    
     void createActions();
     void createShortcuts();
     void createToolBar();
@@ -363,6 +425,39 @@ private:
 
 private slots:
     void displayPropertiesWin();
+    void slotCall_0();
+    void slotCall_1();
+    void slotCall_2();
+    void slotCall_3();
+    void slotCall_4();
+    void slotCall_5();
+    void slotCall_6();
+    void slotCall_7();
+    void slotCall_8();
+    void slotCall_9();
+    void slotCallPush_0();
+    void slotCallPush_1();
+    void slotCallPush_2();
+    void slotCallPush_3();
+    void slotCallPush_4();
+    void slotCallCheck_0();
+    void slotCallCheck_1();
+    void slotCallCheck_2();
+    void slotCallCheck_3();
+    void slotCallCheck_4();
+    void slotCallSpin_0(int iVal);
+    void slotCallSpin_1(int iVal);
+    void slotCallSpin_2(int iVal);
+    void slotCallSpin_3(int iVal);
+    void slotCallSpin_4(int iVal);
+    void slotCallString(const QString & s);
+    void slotCallBox();
+    void slotMenuAct0();
+    void slotMenuAct1();
+    void slotMenuAct2();
+    void slotMenuAct3();
+    void slotMenuAct4();
+
 };
 
 
@@ -399,6 +494,7 @@ public:
     virtual void updateGl() = 0;
 
     virtual void setSize(QSize size_) = 0;
+    virtual void setStatusLineComponents(QString components) = 0;    
 };
 
 
@@ -430,7 +526,10 @@ public:
     void updateGl();
 
     void setSize(QSize size_);
+    void setStatusLineComponents(QString components);
+    void getMapContent( QString in, QString & out );
 
+    
 protected:
     void initializeGL();
     void resizeGL(int w, int h);
@@ -445,6 +544,7 @@ protected:
 
 private:
     QSize size;
+    QStringList StatusLineList; 
 
     CvMouseCallback mouseCallback;
     void* mouseData;
@@ -486,6 +586,10 @@ public:
     void updateGl();
 
     void setSize(QSize size_);
+    
+    void setStatusLineComponents(QString components);
+    void getMapContent( QString in, QString & out );
+
 
 public slots:
     //reference:
@@ -524,6 +628,7 @@ private:
     QImage image2Draw_qt;
     QImage image2Draw_qt_resized;
     int nbChannelOriginImage;
+    QStringList StatusLineList; 
 
     //for mouse callback
     CvMouseCallback on_mouse;
