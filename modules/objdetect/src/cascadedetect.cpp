@@ -237,7 +237,7 @@ class MeanshiftGrouping
 {
 public:
     MeanshiftGrouping(const Point3d& densKer, const vector<Point3d>& posV,
-        const vector<double>& wV, double, int maxIter = 20)
+        const vector<double>& wV, double eps, int maxIter = 20)
     {
         densityKernel = densKer;
         weightsV = wV;
@@ -246,6 +246,7 @@ public:
         meanshiftV.resize(positionsCount);
         distanceV.resize(positionsCount);
         iterMax = maxIter;
+        modeEps = eps;
 
         for (unsigned i = 0; i<positionsV.size(); i++)
         {
