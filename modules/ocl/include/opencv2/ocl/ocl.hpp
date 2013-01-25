@@ -456,9 +456,29 @@ namespace cv
         CV_EXPORTS void bitwise_xor(const oclMat &src1, const Scalar &s, oclMat &dst, const oclMat &mask = oclMat());
         //! computes convolution of two images
 
-        //! support only CV_32FC1 type
+        struct CV_EXPORTS ConvolveBuf
+        {
+            Size result_size;
+            Size block_size;
+            Size user_block_size;
+            Size dft_size;
 
-        CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result);
+            oclMat image_spect, templ_spect, result_spect;
+            oclMat image_block, templ_block, result_data;
+
+            void create(Size image_size, Size templ_size);
+            static Size estimateBlockSize(Size result_size, Size templ_size);
+        };
+
+        //! computes convolution of two images
+        //! support only CV_32FC1 type
+        CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result, bool ccorr = false);
+        CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result, bool ccorr, ConvolveBuf& buf);
+
+        //! Performs a per-element multiplication of two Fourier spectrums.
+        //! Only full (not packed) CV_32FC2 complex spectrums in the interleaved format are supported for now.
+        //! support only CV_32FC2 type
+        CV_EXPORTS void mulSpectrums(const oclMat &a, const oclMat &b, oclMat &c, int flags, float scale, bool conjB = false);
 
 
         //! Logical operators

@@ -23,6 +23,7 @@
 //    Zhang Ying, zhangying913@gmail.com
 //    Xu Pang, pangxu010@163.com
 //    Wu Zailong, bullet@yeah.net
+//    Peng Xiao, pengxiao@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -134,6 +135,7 @@ namespace cv
         extern const char *imgproc_calcHarris;
         extern const char *imgproc_calcMinEigenVal;
         extern const char *imgproc_convolve;
+        extern const char *imgproc_mulAndScaleSpectrums;
         ////////////////////////////////////OpenCL call wrappers////////////////////////////
 
         template <typename T> struct index_and_sizeof;
@@ -1627,16 +1629,157 @@ namespace cv
 
     }
 }
+
+//////////////////////////////////mulSpectrums////////////////////////////////////////////////////
+void cv::ocl::mulSpectrums(const oclMat &a, const oclMat &b, oclMat &c, int /*flags*/, float scale, bool conjB)
+{
+    CV_Assert(a.type() == CV_32FC2);
+    CV_Assert(b.type() == CV_32FC2);
+
+    c.create(a.size(), CV_32FC2);
+
+    size_t lt[3]  = { 16, 16, 1 };
+    size_t gt[3]  = { a.cols, a.rows, 1 };
+
+    string kernelName = conjB ? "mulAndScaleSpectrumsKernel_CONJ":"mulAndScaleSpectrumsKernel";
+
+    vector<pair<size_t , const void *> > args;
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&a.data ));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&b.data ));
+    args.push_back( make_pair( sizeof(cl_float), (void *)&scale));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&c.data ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&a.cols ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&a.rows));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&a.step ));
+
+    Context *clCxt = Context::getContext();
+    openCLExecuteKernel(clCxt, &imgproc_mulAndScaleSpectrums, kernelName, gt, lt, args, -1, -1);
+}
+
 //////////////////////////////////convolve////////////////////////////////////////////////////
 inline int divUp(int total, int grain)
 {
     return (total + grain - 1) / grain;
 }
-void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, string kernelName, const char **kernelString)
+
+// ported from CUDA module
+void cv::ocl::ConvolveBuf::create(Size image_size, Size templ_size)
+{
+    result_size = Size(image_size.width - templ_size.width + 1,
+                       image_size.height - templ_size.height + 1);
+
+    block_size = user_block_size;
+    if (user_block_size.width == 0 || user_block_size.height == 0)
+        block_size = estimateBlockSize(result_size, templ_size);
+
+    dft_size.width  = 1 << int(ceil(std::log(block_size.width + templ_size.width - 1.) / std::log(2.)));
+    dft_size.height = 1 << int(ceil(std::log(block_size.height + templ_size.height - 1.) / std::log(2.)));
+
+    // CUFFT has hard-coded kernels for power-of-2 sizes (up to 8192),
+    // see CUDA Toolkit 4.1 CUFFT Library Programming Guide
+    //if (dft_size.width > 8192)
+    dft_size.width = getOptimalDFTSize(block_size.width + templ_size.width - 1.);
+    //if (dft_size.height > 8192)
+    dft_size.height = getOptimalDFTSize(block_size.height + templ_size.height - 1.);
+
+    // To avoid wasting time doing small DFTs
+    dft_size.width = std::max(dft_size.width, 512);
+    dft_size.height = std::max(dft_size.height, 512);
+
+    image_block.create(dft_size, CV_32F);
+    templ_block.create(dft_size, CV_32F);
+    result_data.create(dft_size, CV_32F);
+
+    //spect_len = dft_size.height * (dft_size.width / 2 + 1);
+    image_spect.create(dft_size.height, dft_size.width / 2 + 1, CV_32FC2);
+    templ_spect.create(dft_size.height, dft_size.width / 2 + 1, CV_32FC2);
+    result_spect.create(dft_size.height, dft_size.width / 2 + 1, CV_32FC2);
+
+    // Use maximum result matrix block size for the estimated DFT block size
+    block_size.width = std::min(dft_size.width - templ_size.width + 1, result_size.width);
+    block_size.height = std::min(dft_size.height - templ_size.height + 1, result_size.height);
+}
+
+Size cv::ocl::ConvolveBuf::estimateBlockSize(Size result_size, Size /*templ_size*/)
+{
+    int width = (result_size.width + 2) / 3;
+    int height = (result_size.height + 2) / 3;
+    width = std::min(width, result_size.width);
+    height = std::min(height, result_size.height);    
+    return Size(width, height);
+}
+
+void convolve_run_fft(const oclMat &image, const oclMat &templ, oclMat &result, bool ccorr, ConvolveBuf& buf)
+{
+#if defined HAVE_CLAMDFFT
+    CV_Assert(image.type() == CV_32F);
+    CV_Assert(templ.type() == CV_32F);
+
+    buf.create(image.size(), templ.size());
+    result.create(buf.result_size, CV_32F);
+
+    Size& block_size = buf.block_size;
+    Size& dft_size = buf.dft_size;
+
+    oclMat& image_block = buf.image_block;
+    oclMat& templ_block = buf.templ_block;
+    oclMat& result_data = buf.result_data;
+
+    oclMat& image_spect = buf.image_spect;
+    oclMat& templ_spect = buf.templ_spect;
+    oclMat& result_spect = buf.result_spect;
+
+    oclMat templ_roi = templ;
+    copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
+                   templ_block.cols - templ_roi.cols, 0, Scalar());
+
+    cv::ocl::dft(templ_block, templ_spect, dft_size);
+
+    // Process all blocks of the result matrix
+    for (int y = 0; y < result.rows; y += block_size.height)
+    {
+        for (int x = 0; x < result.cols; x += block_size.width)
+        {
+            Size image_roi_size(std::min(x + dft_size.width, image.cols) - x,
+                                std::min(y + dft_size.height, image.rows) - y);
+            Rect roi0(x, y, image_roi_size.width, image_roi_size.height);
+
+            oclMat image_roi(image, roi0);
+
+            copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
+                           0, image_block.cols - image_roi.cols, 0, Scalar());
+
+            cv::ocl::dft(image_block, image_spect, dft_size);
+
+            mulSpectrums(image_spect, templ_spect, result_spect, 0,
+                                 1.f / dft_size.area(), ccorr);
+
+            cv::ocl::dft(result_spect, result_data, dft_size, cv::DFT_INVERSE | cv::DFT_REAL_OUTPUT);
+
+            Size result_roi_size(std::min(x + block_size.width, result.cols) - x,
+                                 std::min(y + block_size.height, result.rows) - y);
+            
+            Rect roi1(x, y, result_roi_size.width, result_roi_size.height);
+            Rect roi2(0, 0, result_roi_size.width, result_roi_size.height);
+
+            oclMat result_roi(result, roi1);
+            oclMat result_block(result_data, roi2);
+
+            result_block.copyTo(result_roi);
+        }
+    }
+
+#else
+    CV_Error(CV_StsNotImplemented, "OpenCL DFT is not implemented");
+#endif
+}
+
+
+void convolve_run(const oclMat &src, const oclMat &templ, oclMat &dst, string kernelName, const char **kernelString)
 {
     CV_Assert(src.depth() == CV_32FC1);
-    CV_Assert(temp1.depth() == CV_32F);
-    CV_Assert(temp1.cols <= 17 && temp1.rows <= 17);
+    CV_Assert(templ.depth() == CV_32F);
+    CV_Assert(templ.cols <= 17 && templ.rows <= 17);
 
     dst.create(src.size(), src.type());
 
@@ -1660,26 +1803,39 @@ void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, string ke
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&temp1.data ));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&templ.data ));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src.step ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&temp1.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&temp1.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&temp1.cols ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&templ.step ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&templ.rows ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&templ.cols ));
 
     openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
 }
-void cv::ocl::convolve(const oclMat &x, const oclMat &t, oclMat &y)
+void cv::ocl::convolve(const oclMat &x, const oclMat &t, oclMat &y, bool ccorr)
 {
     CV_Assert(x.depth() == CV_32F);
     CV_Assert(t.depth() == CV_32F);
-    CV_Assert(x.type() == y.type() && x.size() == y.size());
     y.create(x.size(), x.type());
     string kernelName = "convolve";
+    if(t.cols > 17 || t.rows > 17)
+    {
+        ConvolveBuf buf;
+        convolve_run_fft(x, t, y, ccorr, buf);
+    }
+    else
+    {
+        CV_Assert(ccorr == false);
+        convolve_run(x, t, y, kernelName, &imgproc_convolve);
+    }
+}
 
-    convolve_run(x, t, y, kernelName, &imgproc_convolve);
+void cv::ocl::convolve(const oclMat &image, const oclMat &templ, oclMat &result, bool ccorr, ConvolveBuf& buf)
+{
+    result.create(image.size(), image.type());
+    convolve_run_fft(image, templ, result, ccorr, buf);
 }
 #endif /* !defined (HAVE_OPENCL) */
