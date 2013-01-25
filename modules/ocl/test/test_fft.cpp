@@ -48,50 +48,60 @@ using namespace std;
 #ifdef HAVE_CLAMDFFT
 ////////////////////////////////////////////////////////////////////////////
 // Dft
-PARAM_TEST_CASE(Dft, cv::Size, bool)
+PARAM_TEST_CASE(Dft, cv::Size, int)
 {
     cv::Size dft_size;
-    bool	 dft_rows;
-    //std::vector<cv::ocl::Info> oclinfo;
+    int	 dft_flags;
     virtual void SetUp()
     {
-        //int devnums = getDevice(oclinfo);
-        //   CV_Assert(devnums > 0);
-        dft_size = GET_PARAM(0);
-        dft_rows = GET_PARAM(1);
+        dft_size  = GET_PARAM(0);
+        dft_flags = GET_PARAM(1);
     }
 };
 
 TEST_P(Dft, C2C)
 {
-    cv::Mat a = randomMat(dft_size, CV_32FC2, 0.0, 10.0);
+    cv::Mat a = randomMat(dft_size, CV_32FC2, 0.0, 100.0);
     cv::Mat b_gold;
-    int flags = 0;
-    flags |= dft_rows ? cv::DFT_ROWS : 0;
 
     cv::ocl::oclMat d_b;
 
-    cv::dft(a, b_gold, flags);
-    cv::ocl::dft(cv::ocl::oclMat(a), d_b, a.size(), flags);
+    cv::dft(a, b_gold, dft_flags);
+    cv::ocl::dft(cv::ocl::oclMat(a), d_b, a.size(), dft_flags);
     EXPECT_MAT_NEAR(b_gold, cv::Mat(d_b), a.size().area() * 1e-4, "");
 }
 
+TEST_P(Dft, R2C)
+{
+    cv::Mat a = randomMat(dft_size, CV_32FC1, 0.0, 100.0);
+    cv::Mat b_gold, b_gold_roi;
+
+    cv::ocl::oclMat d_b, d_c;
+    cv::ocl::dft(cv::ocl::oclMat(a), d_b, a.size(), dft_flags);
+    cv::dft(a, b_gold, cv::DFT_COMPLEX_OUTPUT | dft_flags);
+
+    b_gold_roi = b_gold(cv::Rect(0, 0, d_b.cols, d_b.rows));
+    EXPECT_MAT_NEAR(b_gold_roi, cv::Mat(d_b), a.size().area() * 1e-4, "");
+
+    cv::Mat c_gold;
+    cv::dft(b_gold, c_gold, cv::DFT_INVERSE | cv::DFT_REAL_OUTPUT | cv::DFT_SCALE);
+    EXPECT_MAT_NEAR(b_gold_roi, cv::Mat(d_b), a.size().area() * 1e-4, "");
+}
 
 TEST_P(Dft, R2CthenC2R)
 {
     cv::Mat a = randomMat(dft_size, CV_32FC1, 0.0, 10.0);
 
-    int flags = 0;
-    //flags |= dft_rows ? cv::DFT_ROWS : 0; // not supported yet
-
     cv::ocl::oclMat d_b, d_c;
-    cv::ocl::dft(cv::ocl::oclMat(a), d_b, a.size(), flags);
-    cv::ocl::dft(d_b, d_c, a.size(), flags + cv::DFT_INVERSE + cv::DFT_REAL_OUTPUT);
+    cv::ocl::dft(cv::ocl::oclMat(a), d_b, a.size(), 0);
+    cv::ocl::dft(d_b, d_c, a.size(), cv::DFT_SCALE | cv::DFT_INVERSE | cv::DFT_REAL_OUTPUT);
     EXPECT_MAT_NEAR(a, d_c, a.size().area() * 1e-4, "");
 }
 
-INSTANTIATE_TEST_CASE_P(ocl_DFT, Dft, testing::Combine(
-                            testing::Values(cv::Size(5, 4), cv::Size(20, 20)),
-                            testing::Values(false, true)));
+
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, Dft, testing::Combine(
+                            testing::Values(cv::Size(2, 3), cv::Size(5, 4), cv::Size(25, 20), cv::Size(512, 1), cv::Size(1024, 768)),
+                            testing::Values(0, (int)cv::DFT_ROWS, (int)cv::DFT_SCALE) ));
+
 
 #endif // HAVE_CLAMDFFT
