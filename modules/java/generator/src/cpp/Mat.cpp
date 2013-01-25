@@ -1,27 +1,6 @@
-#include <jni.h>
-
-#include "converters.h"
-
-#ifdef ANDROID
-
-#include <android/log.h>
 #define LOG_TAG "org.opencv.core.Mat"
-#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
-#ifdef DEBUG
-#define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
-#else //!DEBUG
-#define LOGD(...)
-#endif //DEBUG
 
-#else
-#define LOGE(...)
-#define LOGD(...)
-#endif
-
-#ifdef _MSC_VER
-#  pragma warning(disable:4800)
-#endif
-
+#include "common.h"
 #include "opencv2/core/core.hpp"
 
 using namespace cv;

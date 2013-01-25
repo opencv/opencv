@@ -691,7 +691,7 @@ __kernel
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    int ind = grp_idy * get_num_groups(0) + grp_idx;
+    int ind = mad24(grp_idy, (int)get_local_size(0), grp_idx);
 
     if(ind < count)
     {
@@ -714,10 +714,10 @@ __kernel
             }
             barrier(CLK_LOCAL_MEM_FENCE);
 
-            while (s_counter > 0 && s_counter <= stack_size - get_num_groups(0))
+            while (s_counter > 0 && s_counter <= stack_size - get_local_size(0))
             {
                 const int subTaskIdx = lidx >> 3;
-                const int portion = min(s_counter, get_num_groups(0) >> 3);
+                const int portion = min(s_counter, get_local_size(0)>> 3);
 
                 pos.x = pos.y = 0;
 
@@ -757,7 +757,7 @@ __kernel
 
                 ind = s_ind;
 
-                for (int i = lidx; i < s_counter; i += get_num_groups(0))
+                for (int i = lidx; i < s_counter; i += get_local_size(0))
                 {
                     st2[ind + i] = s_st[i];
                 }

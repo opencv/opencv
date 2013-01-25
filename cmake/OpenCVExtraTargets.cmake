@@ -16,7 +16,7 @@ endif()
 # Source package, for "make package_source"
 # ----------------------------------------------------------------------------
 if(BUILD_PACKAGE)
-  set(TARBALL_NAME "${CMAKE_PROJECT_NAME}-${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}.${OPENCV_VERSION_PATCH}")
+  set(TARBALL_NAME "${CMAKE_PROJECT_NAME}-${OPENCV_VERSION}")
   if (NOT WIN32)
     if(APPLE)
       set(TAR_CMD gnutar)

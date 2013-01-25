@@ -547,6 +547,15 @@ struct CV_EXPORTS DefaultRngAuto
 
 }
 
+namespace cvtest
+{
+
+// test images generation functions
+CV_EXPORTS void fillGradient(Mat& img, int delta = 5);
+CV_EXPORTS void smoothBorder(Mat& img, const Scalar& color, int delta = 3);
+
+} //namespace cvtest
+
 // fills c with zeros
 CV_EXPORTS void cvTsZero( CvMat* c, const CvMat* mask=0 );
 

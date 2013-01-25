@@ -237,23 +237,13 @@ namespace cv
 
         int getDevice(std::vector<Info> &oclinfo, int devicetype)
         {
-            cl_device_type _devicetype;
             switch(devicetype)
             {
             case CVCL_DEVICE_TYPE_DEFAULT:
-                _devicetype = CL_DEVICE_TYPE_DEFAULT;
-                break;
             case CVCL_DEVICE_TYPE_CPU:
-                _devicetype = CL_DEVICE_TYPE_CPU;
-                break;
             case CVCL_DEVICE_TYPE_GPU:
-                _devicetype = CL_DEVICE_TYPE_GPU;
-                break;
             case CVCL_DEVICE_TYPE_ACCELERATOR:
-                _devicetype = CL_DEVICE_TYPE_ACCELERATOR;
-                break;
             case CVCL_DEVICE_TYPE_ALL:
-                _devicetype = CL_DEVICE_TYPE_ALL;
                 break;
             default:
                 CV_Error(CV_GpuApiCallError, "Unkown device type");
@@ -336,7 +326,7 @@ namespace cv
             size_t extends_size;
             openCLSafeCall(clGetDeviceInfo(oclinfo.impl->devices[devnum], CL_DEVICE_EXTENSIONS,
                                            EXT_LEN, (void *)extends_set, &extends_size));
-            CV_Assert(extends_size < EXT_LEN);
+            CV_Assert(extends_size < (size_t)EXT_LEN);
             extends_set[EXT_LEN - 1] = 0;
             memset(oclinfo.impl->extra_options, 0, 512);
             oclinfo.impl->double_support = 0;
@@ -592,7 +582,7 @@ namespace cv
                     size_t binarySize = ftell(fp);
                     fseek(fp, 0, SEEK_SET);
                     char *binary = new char[binarySize];
-                    fread(binary, binarySize, 1, fp);
+                    CV_Assert(1 == fread(binary, binarySize, 1, fp));
                     fclose(fp);
                     cl_int status = 0;
                     program = clCreateProgramWithBinary(clCxt->impl->clContext,

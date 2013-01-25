@@ -871,22 +871,9 @@ public class %(jc)s {
 // This file is auto-generated, please don't edit!
 //
 
-#include <jni.h>
+#define LOG_TAG "org.opencv.%(m)s"
 
-#include "converters.h"
-
-#if defined DEBUG && defined ANDROID
-#  include <android/log.h>
-#  define MODULE_LOG_TAG "OpenCV.%(m)s"
-#  define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, MODULE_LOG_TAG, __VA_ARGS__))
-#else //DEBUG
-#  define LOGD(...)
-#endif //DEBUG
-
-#ifdef _MSC_VER
-#  pragma warning(disable:4800 4244)
-#endif
-
+#include "common.h"
 #include "opencv2/%(m)s/%(m)s.hpp"
 
 using namespace cv;

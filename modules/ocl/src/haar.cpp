@@ -63,13 +63,13 @@ using namespace std;
 
 namespace cv
 {
-    namespace ocl
-    {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *haarobjectdetect;
-        extern const char *haarobjectdetectbackup;
-        extern const char *haarobjectdetect_scaled2;
-    }
+namespace ocl
+{
+///////////////////////////OpenCL kernel strings///////////////////////////
+extern const char *haarobjectdetect;
+extern const char *haarobjectdetectbackup;
+extern const char *haarobjectdetect_scaled2;
+}
 }
 
 /* these settings affect the quality of detection: change with care */
@@ -150,7 +150,7 @@ typedef struct
     int imgoff;
     float factor;
 } detect_piramid_info;
-#if WIN32
+#ifdef WIN32
 #define _ALIGNED_ON(_ALIGNMENT) __declspec(align(_ALIGNMENT))
 typedef _ALIGNED_ON(128) struct  GpuHidHaarFeature
 {
@@ -300,40 +300,37 @@ const float icv_stage_threshold_bias = 0.0001f;
 double globaltime = 0;
 
 
-CvHaarClassifierCascade *
-gpuCreateHaarClassifierCascade( int stage_count )
-{
-    CvHaarClassifierCascade *cascade = 0;
+// static CvHaarClassifierCascade * gpuCreateHaarClassifierCascade( int stage_count )
+// {
+//     CvHaarClassifierCascade *cascade = 0;
 
-    int block_size = sizeof(*cascade) + stage_count * sizeof(*cascade->stage_classifier);
+//     int block_size = sizeof(*cascade) + stage_count * sizeof(*cascade->stage_classifier);
 
-    if( stage_count <= 0 )
-        CV_Error( CV_StsOutOfRange, "Number of stages should be positive" );
+//     if( stage_count <= 0 )
+//         CV_Error( CV_StsOutOfRange, "Number of stages should be positive" );
 
-    cascade = (CvHaarClassifierCascade *)cvAlloc( block_size );
-    memset( cascade, 0, block_size );
+//     cascade = (CvHaarClassifierCascade *)cvAlloc( block_size );
+//     memset( cascade, 0, block_size );
 
-    cascade->stage_classifier = (CvHaarStageClassifier *)(cascade + 1);
-    cascade->flags = CV_HAAR_MAGIC_VAL;
-    cascade->count = stage_count;
+//     cascade->stage_classifier = (CvHaarStageClassifier *)(cascade + 1);
+//     cascade->flags = CV_HAAR_MAGIC_VAL;
+//     cascade->count = stage_count;
 
-    return cascade;
-}
+//     return cascade;
+// }
 
 //static int globalcounter = 0;
 
-void
-gpuReleaseHidHaarClassifierCascade( GpuHidHaarClassifierCascade **_cascade )
-{
-    if( _cascade && *_cascade )
-    {
-        cvFree( _cascade );
-    }
-}
+// static void gpuReleaseHidHaarClassifierCascade( GpuHidHaarClassifierCascade **_cascade )
+// {
+//     if( _cascade && *_cascade )
+//     {
+//         cvFree( _cascade );
+//     }
+// }
 
 /* create more efficient internal representation of haar classifier cascade */
-GpuHidHaarClassifierCascade *
-gpuCreateHidHaarClassifierCascade( CvHaarClassifierCascade *cascade, int *size, int *totalclassifier)
+static GpuHidHaarClassifierCascade * gpuCreateHidHaarClassifierCascade( CvHaarClassifierCascade *cascade, int *size, int *totalclassifier)
 {
     GpuHidHaarClassifierCascade *out = 0;
 
@@ -522,8 +519,7 @@ gpuCreateHidHaarClassifierCascade( CvHaarClassifierCascade *cascade, int *size, 
 	((rect).p0[offset] - (rect).p1[offset] - (rect).p2[offset] + (rect).p3[offset])
 
 
-CV_IMPL void
-gpuSetImagesForHaarClassifierCascade( CvHaarClassifierCascade *_cascade,
+static void gpuSetImagesForHaarClassifierCascade( CvHaarClassifierCascade *_cascade,
                                       /*   const CvArr* _sum,
                                       const CvArr* _sqsum,
                                       const CvArr* _tilted_sum,*/
@@ -767,8 +763,8 @@ gpuSetImagesForHaarClassifierCascade( CvHaarClassifierCascade *_cascade,
         } /* j */
     }
 }
-CV_IMPL void
-gpuSetHaarClassifierCascade( CvHaarClassifierCascade *_cascade
+
+static void gpuSetHaarClassifierCascade( CvHaarClassifierCascade *_cascade
                              /*double scale=0.0,*/
                              /*int step*/)
 {
@@ -870,7 +866,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
     int datasize=0;
     int totalclassifier=0;
 
-    void *out;
+    //void *out;
     GpuHidHaarClassifierCascade *gcascade;
     GpuHidHaarStageClassifier    *stage;
     GpuHidHaarClassifier         *classifier;
@@ -882,13 +878,6 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
     //    bool doCannyPruning = (flags & CV_HAAR_DO_CANNY_PRUNING) != 0;
     bool findBiggestObject = (flags & CV_HAAR_FIND_BIGGEST_OBJECT) != 0;
     //    bool roughSearch = (flags & CV_HAAR_DO_ROUGH_SEARCH) != 0;
-
-    //the Intel HD Graphics is unsupported
-    if (gimg.clCxt->impl->devName.find("Intel(R) HD Graphics") != string::npos)
-    {
-        cout << " Intel HD GPU device unsupported " << endl;
-        return NULL;
-    }
 
     //double t = 0;
     if( maxSize.height == 0 || maxSize.width == 0 )
@@ -917,7 +906,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
     //gsqsum1 = oclMat( gimg.rows + 1, gimg.cols + 1, CV_32FC1 );
 
     if( !cascade->hid_cascade )
-        out = (void *)gpuCreateHidHaarClassifierCascade(cascade, &datasize, &totalclassifier);
+        /*out = (void *)*/gpuCreateHidHaarClassifierCascade(cascade, &datasize, &totalclassifier);
     if( cascade->hid_cascade->has_tilted_features )
         gtilted1 = oclMat( gimg.rows + 1, gimg.cols + 1, CV_32SC1 );
 
@@ -937,7 +926,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
     if( gimg.cols < minSize.width || gimg.rows < minSize.height )
         CV_Error(CV_StsError, "Image too small");
 
-    if( flags & CV_HAAR_SCALE_IMAGE )
+    if( (flags & CV_HAAR_SCALE_IMAGE) && gimg.clCxt->impl->devName.find("Intel(R) HD Graphics") == string::npos )
     {
         CvSize winSize0 = cascade->orig_window_size;
         //float scalefactor = 1.1f;
@@ -1418,206 +1407,203 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
 }
 
 
-CvHaarClassifierCascade *
-gpuLoadCascadeCART( const char **input_cascade, int n, CvSize orig_window_size )
-{
-    int i;
-    CvHaarClassifierCascade *cascade = gpuCreateHaarClassifierCascade(n);
-    cascade->orig_window_size = orig_window_size;
+// static CvHaarClassifierCascade * gpuLoadCascadeCART( const char **input_cascade, int n, CvSize orig_window_size )
+// {
+//     int i;
+//     CvHaarClassifierCascade *cascade = gpuCreateHaarClassifierCascade(n);
+//     cascade->orig_window_size = orig_window_size;
 
-    for( i = 0; i < n; i++ )
-    {
-        int j, count, l;
-        float threshold = 0;
-        const char *stage = input_cascade[i];
-        int dl = 0;
+//     for( i = 0; i < n; i++ )
+//     {
+//         int j, count, l;
+//         float threshold = 0;
+//         const char *stage = input_cascade[i];
+//         int dl = 0;
 
-        /* tree links */
-        int parent = -1;
-        int next = -1;
+//         /* tree links */
+//         int parent = -1;
+//         int next = -1;
 
-        sscanf( stage, "%d%n", &count, &dl );
-        stage += dl;
+//         sscanf( stage, "%d%n", &count, &dl );
+//         stage += dl;
 
-        assert( count > 0 );
-        cascade->stage_classifier[i].count = count;
-        cascade->stage_classifier[i].classifier =
-            (CvHaarClassifier *)cvAlloc( count * sizeof(cascade->stage_classifier[i].classifier[0]));
+//         assert( count > 0 );
+//         cascade->stage_classifier[i].count = count;
+//         cascade->stage_classifier[i].classifier =
+//             (CvHaarClassifier *)cvAlloc( count * sizeof(cascade->stage_classifier[i].classifier[0]));
 
-        for( j = 0; j < count; j++ )
-        {
-            CvHaarClassifier *classifier = cascade->stage_classifier[i].classifier + j;
-            int k, rects = 0;
-            char str[100];
+//         for( j = 0; j < count; j++ )
+//         {
+//             CvHaarClassifier *classifier = cascade->stage_classifier[i].classifier + j;
+//             int k, rects = 0;
+//             char str[100];
 
-            sscanf( stage, "%d%n", &classifier->count, &dl );
-            stage += dl;
+//             sscanf( stage, "%d%n", &classifier->count, &dl );
+//             stage += dl;
 
-            classifier->haar_feature = (CvHaarFeature *) cvAlloc(
-                                           classifier->count * ( sizeof( *classifier->haar_feature ) +
-                                                   sizeof( *classifier->threshold ) +
-                                                   sizeof( *classifier->left ) +
-                                                   sizeof( *classifier->right ) ) +
-                                           (classifier->count + 1) * sizeof( *classifier->alpha ) );
-            classifier->threshold = (float *) (classifier->haar_feature + classifier->count);
-            classifier->left = (int *) (classifier->threshold + classifier->count);
-            classifier->right = (int *) (classifier->left + classifier->count);
-            classifier->alpha = (float *) (classifier->right + classifier->count);
+//             classifier->haar_feature = (CvHaarFeature *) cvAlloc(
+//                                            classifier->count * ( sizeof( *classifier->haar_feature ) +
+//                                                    sizeof( *classifier->threshold ) +
+//                                                    sizeof( *classifier->left ) +
+//                                                    sizeof( *classifier->right ) ) +
+//                                            (classifier->count + 1) * sizeof( *classifier->alpha ) );
+//             classifier->threshold = (float *) (classifier->haar_feature + classifier->count);
+//             classifier->left = (int *) (classifier->threshold + classifier->count);
+//             classifier->right = (int *) (classifier->left + classifier->count);
+//             classifier->alpha = (float *) (classifier->right + classifier->count);
 
-            for( l = 0; l < classifier->count; l++ )
-            {
-                sscanf( stage, "%d%n", &rects, &dl );
-                stage += dl;
+//             for( l = 0; l < classifier->count; l++ )
+//             {
+//                 sscanf( stage, "%d%n", &rects, &dl );
+//                 stage += dl;
 
-                assert( rects >= 2 && rects <= CV_HAAR_FEATURE_MAX );
+//                 assert( rects >= 2 && rects <= CV_HAAR_FEATURE_MAX );
 
-                for( k = 0; k < rects; k++ )
-                {
-                    CvRect r;
-                    int band = 0;
-                    sscanf( stage, "%d%d%d%d%d%f%n",
-                            &r.x, &r.y, &r.width, &r.height, &band,
-                            &(classifier->haar_feature[l].rect[k].weight), &dl );
-                    stage += dl;
-                    classifier->haar_feature[l].rect[k].r = r;
-                }
-                sscanf( stage, "%s%n", str, &dl );
-                stage += dl;
+//                 for( k = 0; k < rects; k++ )
+//                 {
+//                     CvRect r;
+//                     int band = 0;
+//                     sscanf( stage, "%d%d%d%d%d%f%n",
+//                             &r.x, &r.y, &r.width, &r.height, &band,
+//                             &(classifier->haar_feature[l].rect[k].weight), &dl );
+//                     stage += dl;
+//                     classifier->haar_feature[l].rect[k].r = r;
+//                 }
+//                 sscanf( stage, "%s%n", str, &dl );
+//                 stage += dl;
 
-                classifier->haar_feature[l].tilted = strncmp( str, "tilted", 6 ) == 0;
+//                 classifier->haar_feature[l].tilted = strncmp( str, "tilted", 6 ) == 0;
 
-                for( k = rects; k < CV_HAAR_FEATURE_MAX; k++ )
-                {
-                    memset( classifier->haar_feature[l].rect + k, 0,
-                            sizeof(classifier->haar_feature[l].rect[k]) );
-                }
+//                 for( k = rects; k < CV_HAAR_FEATURE_MAX; k++ )
+//                 {
+//                     memset( classifier->haar_feature[l].rect + k, 0,
+//                             sizeof(classifier->haar_feature[l].rect[k]) );
+//                 }
 
-                sscanf( stage, "%f%d%d%n", &(classifier->threshold[l]),
-                        &(classifier->left[l]),
-                        &(classifier->right[l]), &dl );
-                stage += dl;
-            }
-            for( l = 0; l <= classifier->count; l++ )
-            {
-                sscanf( stage, "%f%n", &(classifier->alpha[l]), &dl );
-                stage += dl;
-            }
-        }
+//                 sscanf( stage, "%f%d%d%n", &(classifier->threshold[l]),
+//                         &(classifier->left[l]),
+//                         &(classifier->right[l]), &dl );
+//                 stage += dl;
+//             }
+//             for( l = 0; l <= classifier->count; l++ )
+//             {
+//                 sscanf( stage, "%f%n", &(classifier->alpha[l]), &dl );
+//                 stage += dl;
+//             }
+//         }
 
-        sscanf( stage, "%f%n", &threshold, &dl );
-        stage += dl;
+//         sscanf( stage, "%f%n", &threshold, &dl );
+//         stage += dl;
 
-        cascade->stage_classifier[i].threshold = threshold;
+//         cascade->stage_classifier[i].threshold = threshold;
 
-        /* load tree links */
-        if( sscanf( stage, "%d%d%n", &parent, &next, &dl ) != 2 )
-        {
-            parent = i - 1;
-            next = -1;
-        }
-        stage += dl;
+//         /* load tree links */
+//         if( sscanf( stage, "%d%d%n", &parent, &next, &dl ) != 2 )
+//         {
+//             parent = i - 1;
+//             next = -1;
+//         }
+//         stage += dl;
 
-        cascade->stage_classifier[i].parent = parent;
-        cascade->stage_classifier[i].next = next;
-        cascade->stage_classifier[i].child = -1;
+//         cascade->stage_classifier[i].parent = parent;
+//         cascade->stage_classifier[i].next = next;
+//         cascade->stage_classifier[i].child = -1;
 
-        if( parent != -1 && cascade->stage_classifier[parent].child == -1 )
-        {
-            cascade->stage_classifier[parent].child = i;
-        }
-    }
+//         if( parent != -1 && cascade->stage_classifier[parent].child == -1 )
+//         {
+//             cascade->stage_classifier[parent].child = i;
+//         }
+//     }
 
-    return cascade;
-}
+//     return cascade;
+// }
 
 #ifndef _MAX_PATH
 #define _MAX_PATH 1024
 #endif
 
-CV_IMPL CvHaarClassifierCascade *
-gpuLoadHaarClassifierCascade( const char *directory, CvSize orig_window_size )
-{
-    const char **input_cascade = 0;
-    CvHaarClassifierCascade *cascade = 0;
+// static CvHaarClassifierCascade * gpuLoadHaarClassifierCascade( const char *directory, CvSize orig_window_size )
+// {
+//     const char **input_cascade = 0;
+//     CvHaarClassifierCascade *cascade = 0;
 
-    int i, n;
-    const char *slash;
-    char name[_MAX_PATH];
-    int size = 0;
-    char *ptr = 0;
+//     int i, n;
+//     const char *slash;
+//     char name[_MAX_PATH];
+//     int size = 0;
+//     char *ptr = 0;
 
-    if( !directory )
-        CV_Error( CV_StsNullPtr, "Null path is passed" );
+//     if( !directory )
+//         CV_Error( CV_StsNullPtr, "Null path is passed" );
 
-    n = (int)strlen(directory) - 1;
-    slash = directory[n] == '\\' || directory[n] == '/' ? "" : "/";
+//     n = (int)strlen(directory) - 1;
+//     slash = directory[n] == '\\' || directory[n] == '/' ? "" : "/";
 
-    /* try to read the classifier from directory */
-    for( n = 0; ; n++ )
-    {
-        sprintf( name, "%s%s%d/AdaBoostCARTHaarClassifier.txt", directory, slash, n );
-        FILE *f = fopen( name, "rb" );
-        if( !f )
-            break;
-        fseek( f, 0, SEEK_END );
-        size += ftell( f ) + 1;
-        fclose(f);
-    }
+//     /* try to read the classifier from directory */
+//     for( n = 0; ; n++ )
+//     {
+//         sprintf( name, "%s%s%d/AdaBoostCARTHaarClassifier.txt", directory, slash, n );
+//         FILE *f = fopen( name, "rb" );
+//         if( !f )
+//             break;
+//         fseek( f, 0, SEEK_END );
+//         size += ftell( f ) + 1;
+//         fclose(f);
+//     }
 
-    if( n == 0 && slash[0] )
-        return (CvHaarClassifierCascade *)cvLoad( directory );
+//     if( n == 0 && slash[0] )
+//         return (CvHaarClassifierCascade *)cvLoad( directory );
 
-    if( n == 0 )
-        CV_Error( CV_StsBadArg, "Invalid path" );
+//     if( n == 0 )
+//         CV_Error( CV_StsBadArg, "Invalid path" );
 
-    size += (n + 1) * sizeof(char *);
-    input_cascade = (const char **)cvAlloc( size );
-    ptr = (char *)(input_cascade + n + 1);
+//     size += (n + 1) * sizeof(char *);
+//     input_cascade = (const char **)cvAlloc( size );
+//     ptr = (char *)(input_cascade + n + 1);
 
-    for( i = 0; i < n; i++ )
-    {
-        sprintf( name, "%s/%d/AdaBoostCARTHaarClassifier.txt", directory, i );
-        FILE *f = fopen( name, "rb" );
-        if( !f )
-            CV_Error( CV_StsError, "" );
-        fseek( f, 0, SEEK_END );
-        size = ftell( f );
-        fseek( f, 0, SEEK_SET );
-        fread( ptr, 1, size, f );
-        fclose(f);
-        input_cascade[i] = ptr;
-        ptr += size;
-        *ptr++ = '\0';
-    }
+//     for( i = 0; i < n; i++ )
+//     {
+//         sprintf( name, "%s/%d/AdaBoostCARTHaarClassifier.txt", directory, i );
+//         FILE *f = fopen( name, "rb" );
+//         if( !f )
+//             CV_Error( CV_StsError, "" );
+//         fseek( f, 0, SEEK_END );
+//         size = ftell( f );
+//         fseek( f, 0, SEEK_SET );
+//         CV_Assert((size_t)size == fread( ptr, 1, size, f ));
+//         fclose(f);
+//         input_cascade[i] = ptr;
+//         ptr += size;
+//         *ptr++ = '\0';
+//     }
 
-    input_cascade[n] = 0;
-    cascade = gpuLoadCascadeCART( input_cascade, n, orig_window_size );
+//     input_cascade[n] = 0;
+//     cascade = gpuLoadCascadeCART( input_cascade, n, orig_window_size );
 
-    if( input_cascade )
-        cvFree( &input_cascade );
+//     if( input_cascade )
+//         cvFree( &input_cascade );
 
-    return cascade;
-}
+//     return cascade;
+// }
 
 
-CV_IMPL void
-gpuReleaseHaarClassifierCascade( CvHaarClassifierCascade **_cascade )
-{
-    if( _cascade && *_cascade )
-    {
-        int i, j;
-        CvHaarClassifierCascade *cascade = *_cascade;
+// static void gpuReleaseHaarClassifierCascade( CvHaarClassifierCascade **_cascade )
+// {
+//     if( _cascade && *_cascade )
+//     {
+//         int i, j;
+//         CvHaarClassifierCascade *cascade = *_cascade;
 
-        for( i = 0; i < cascade->count; i++ )
-        {
-            for( j = 0; j < cascade->stage_classifier[i].count; j++ )
-                cvFree( &cascade->stage_classifier[i].classifier[j].haar_feature );
-            cvFree( &cascade->stage_classifier[i].classifier );
-        }
-        gpuReleaseHidHaarClassifierCascade( (GpuHidHaarClassifierCascade **)&cascade->hid_cascade );
-        cvFree( _cascade );
-    }
-}
+//         for( i = 0; i < cascade->count; i++ )
+//         {
+//             for( j = 0; j < cascade->stage_classifier[i].count; j++ )
+//                 cvFree( &cascade->stage_classifier[i].classifier[j].haar_feature );
+//             cvFree( &cascade->stage_classifier[i].classifier );
+//         }
+//         gpuReleaseHidHaarClassifierCascade( (GpuHidHaarClassifierCascade **)&cascade->hid_cascade );
+//         cvFree( _cascade );
+//     }
+// }
 
 
 /****************************************************************************************\
@@ -1641,524 +1627,520 @@ gpuReleaseHaarClassifierCascade( CvHaarClassifierCascade **_cascade )
 #define ICV_HAAR_PARENT_NAME            "parent"
 #define ICV_HAAR_NEXT_NAME              "next"
 
-int
-gpuIsHaarClassifier( const void *struct_ptr )
-{
-    return CV_IS_HAAR_CLASSIFIER( struct_ptr );
-}
+// static int gpuIsHaarClassifier( const void *struct_ptr )
+// {
+//     return CV_IS_HAAR_CLASSIFIER( struct_ptr );
+// }
 
-void *
-gpuReadHaarClassifier( CvFileStorage *fs, CvFileNode *node )
-{
-    CvHaarClassifierCascade *cascade = NULL;
+// static void * gpuReadHaarClassifier( CvFileStorage *fs, CvFileNode *node )
+// {
+//     CvHaarClassifierCascade *cascade = NULL;
 
-    char buf[256];
-    CvFileNode *seq_fn = NULL; /* sequence */
-    CvFileNode *fn = NULL;
-    CvFileNode *stages_fn = NULL;
-    CvSeqReader stages_reader;
-    int n;
-    int i, j, k, l;
-    int parent, next;
+//     char buf[256];
+//     CvFileNode *seq_fn = NULL; /* sequence */
+//     CvFileNode *fn = NULL;
+//     CvFileNode *stages_fn = NULL;
+//     CvSeqReader stages_reader;
+//     int n;
+//     int i, j, k, l;
+//     int parent, next;
 
-    stages_fn = cvGetFileNodeByName( fs, node, ICV_HAAR_STAGES_NAME );
-    if( !stages_fn || !CV_NODE_IS_SEQ( stages_fn->tag) )
-        CV_Error( CV_StsError, "Invalid stages node" );
+//     stages_fn = cvGetFileNodeByName( fs, node, ICV_HAAR_STAGES_NAME );
+//     if( !stages_fn || !CV_NODE_IS_SEQ( stages_fn->tag) )
+//         CV_Error( CV_StsError, "Invalid stages node" );
 
-    n = stages_fn->data.seq->total;
-    cascade = gpuCreateHaarClassifierCascade(n);
+//     n = stages_fn->data.seq->total;
+//     cascade = gpuCreateHaarClassifierCascade(n);
 
-    /* read size */
-    seq_fn = cvGetFileNodeByName( fs, node, ICV_HAAR_SIZE_NAME );
-    if( !seq_fn || !CV_NODE_IS_SEQ( seq_fn->tag ) || seq_fn->data.seq->total != 2 )
-        CV_Error( CV_StsError, "size node is not a valid sequence." );
-    fn = (CvFileNode *) cvGetSeqElem( seq_fn->data.seq, 0 );
-    if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i <= 0 )
-        CV_Error( CV_StsError, "Invalid size node: width must be positive integer" );
-    cascade->orig_window_size.width = fn->data.i;
-    fn = (CvFileNode *) cvGetSeqElem( seq_fn->data.seq, 1 );
-    if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i <= 0 )
-        CV_Error( CV_StsError, "Invalid size node: height must be positive integer" );
-    cascade->orig_window_size.height = fn->data.i;
+//     /* read size */
+//     seq_fn = cvGetFileNodeByName( fs, node, ICV_HAAR_SIZE_NAME );
+//     if( !seq_fn || !CV_NODE_IS_SEQ( seq_fn->tag ) || seq_fn->data.seq->total != 2 )
+//         CV_Error( CV_StsError, "size node is not a valid sequence." );
+//     fn = (CvFileNode *) cvGetSeqElem( seq_fn->data.seq, 0 );
+//     if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i <= 0 )
+//         CV_Error( CV_StsError, "Invalid size node: width must be positive integer" );
+//     cascade->orig_window_size.width = fn->data.i;
+//     fn = (CvFileNode *) cvGetSeqElem( seq_fn->data.seq, 1 );
+//     if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i <= 0 )
+//         CV_Error( CV_StsError, "Invalid size node: height must be positive integer" );
+//     cascade->orig_window_size.height = fn->data.i;
 
-    cvStartReadSeq( stages_fn->data.seq, &stages_reader );
-    for( i = 0; i < n; ++i )
-    {
-        CvFileNode *stage_fn;
-        CvFileNode *trees_fn;
-        CvSeqReader trees_reader;
+//     cvStartReadSeq( stages_fn->data.seq, &stages_reader );
+//     for( i = 0; i < n; ++i )
+//     {
+//         CvFileNode *stage_fn;
+//         CvFileNode *trees_fn;
+//         CvSeqReader trees_reader;
 
-        stage_fn = (CvFileNode *) stages_reader.ptr;
-        if( !CV_NODE_IS_MAP( stage_fn->tag ) )
-        {
-            sprintf( buf, "Invalid stage %d", i );
-            CV_Error( CV_StsError, buf );
-        }
+//         stage_fn = (CvFileNode *) stages_reader.ptr;
+//         if( !CV_NODE_IS_MAP( stage_fn->tag ) )
+//         {
+//             sprintf( buf, "Invalid stage %d", i );
+//             CV_Error( CV_StsError, buf );
+//         }
 
-        trees_fn = cvGetFileNodeByName( fs, stage_fn, ICV_HAAR_TREES_NAME );
-        if( !trees_fn || !CV_NODE_IS_SEQ( trees_fn->tag )
-                || trees_fn->data.seq->total <= 0 )
-        {
-            sprintf( buf, "Trees node is not a valid sequence. (stage %d)", i );
-            CV_Error( CV_StsError, buf );
-        }
+//         trees_fn = cvGetFileNodeByName( fs, stage_fn, ICV_HAAR_TREES_NAME );
+//         if( !trees_fn || !CV_NODE_IS_SEQ( trees_fn->tag )
+//                 || trees_fn->data.seq->total <= 0 )
+//         {
+//             sprintf( buf, "Trees node is not a valid sequence. (stage %d)", i );
+//             CV_Error( CV_StsError, buf );
+//         }
 
-        cascade->stage_classifier[i].classifier =
-            (CvHaarClassifier *) cvAlloc( trees_fn->data.seq->total
-                                          * sizeof( cascade->stage_classifier[i].classifier[0] ) );
-        for( j = 0; j < trees_fn->data.seq->total; ++j )
-        {
-            cascade->stage_classifier[i].classifier[j].haar_feature = NULL;
-        }
-        cascade->stage_classifier[i].count = trees_fn->data.seq->total;
+//         cascade->stage_classifier[i].classifier =
+//             (CvHaarClassifier *) cvAlloc( trees_fn->data.seq->total
+//                                           * sizeof( cascade->stage_classifier[i].classifier[0] ) );
+//         for( j = 0; j < trees_fn->data.seq->total; ++j )
+//         {
+//             cascade->stage_classifier[i].classifier[j].haar_feature = NULL;
+//         }
+//         cascade->stage_classifier[i].count = trees_fn->data.seq->total;
 
-        cvStartReadSeq( trees_fn->data.seq, &trees_reader );
-        for( j = 0; j < trees_fn->data.seq->total; ++j )
-        {
-            CvFileNode *tree_fn;
-            CvSeqReader tree_reader;
-            CvHaarClassifier *classifier;
-            int last_idx;
+//         cvStartReadSeq( trees_fn->data.seq, &trees_reader );
+//         for( j = 0; j < trees_fn->data.seq->total; ++j )
+//         {
+//             CvFileNode *tree_fn;
+//             CvSeqReader tree_reader;
+//             CvHaarClassifier *classifier;
+//             int last_idx;
 
-            classifier = &cascade->stage_classifier[i].classifier[j];
-            tree_fn = (CvFileNode *) trees_reader.ptr;
-            if( !CV_NODE_IS_SEQ( tree_fn->tag ) || tree_fn->data.seq->total <= 0 )
-            {
-                sprintf( buf, "Tree node is not a valid sequence."
-                         " (stage %d, tree %d)", i, j );
-                CV_Error( CV_StsError, buf );
-            }
+//             classifier = &cascade->stage_classifier[i].classifier[j];
+//             tree_fn = (CvFileNode *) trees_reader.ptr;
+//             if( !CV_NODE_IS_SEQ( tree_fn->tag ) || tree_fn->data.seq->total <= 0 )
+//             {
+//                 sprintf( buf, "Tree node is not a valid sequence."
+//                          " (stage %d, tree %d)", i, j );
+//                 CV_Error( CV_StsError, buf );
+//             }
 
-            classifier->count = tree_fn->data.seq->total;
-            classifier->haar_feature = (CvHaarFeature *) cvAlloc(
-                                           classifier->count * ( sizeof( *classifier->haar_feature ) +
-                                                   sizeof( *classifier->threshold ) +
-                                                   sizeof( *classifier->left ) +
-                                                   sizeof( *classifier->right ) ) +
-                                           (classifier->count + 1) * sizeof( *classifier->alpha ) );
-            classifier->threshold = (float *) (classifier->haar_feature + classifier->count);
-            classifier->left = (int *) (classifier->threshold + classifier->count);
-            classifier->right = (int *) (classifier->left + classifier->count);
-            classifier->alpha = (float *) (classifier->right + classifier->count);
+//             classifier->count = tree_fn->data.seq->total;
+//             classifier->haar_feature = (CvHaarFeature *) cvAlloc(
+//                                            classifier->count * ( sizeof( *classifier->haar_feature ) +
+//                                                    sizeof( *classifier->threshold ) +
+//                                                    sizeof( *classifier->left ) +
+//                                                    sizeof( *classifier->right ) ) +
+//                                            (classifier->count + 1) * sizeof( *classifier->alpha ) );
+//             classifier->threshold = (float *) (classifier->haar_feature + classifier->count);
+//             classifier->left = (int *) (classifier->threshold + classifier->count);
+//             classifier->right = (int *) (classifier->left + classifier->count);
+//             classifier->alpha = (float *) (classifier->right + classifier->count);
 
-            cvStartReadSeq( tree_fn->data.seq, &tree_reader );
-            for( k = 0, last_idx = 0; k < tree_fn->data.seq->total; ++k )
-            {
-                CvFileNode *node_fn;
-                CvFileNode *feature_fn;
-                CvFileNode *rects_fn;
-                CvSeqReader rects_reader;
+//             cvStartReadSeq( tree_fn->data.seq, &tree_reader );
+//             for( k = 0, last_idx = 0; k < tree_fn->data.seq->total; ++k )
+//             {
+//                 CvFileNode *node_fn;
+//                 CvFileNode *feature_fn;
+//                 CvFileNode *rects_fn;
+//                 CvSeqReader rects_reader;
 
-                node_fn = (CvFileNode *) tree_reader.ptr;
-                if( !CV_NODE_IS_MAP( node_fn->tag ) )
-                {
-                    sprintf( buf, "Tree node %d is not a valid map. (stage %d, tree %d)",
-                             k, i, j );
-                    CV_Error( CV_StsError, buf );
-                }
-                feature_fn = cvGetFileNodeByName( fs, node_fn, ICV_HAAR_FEATURE_NAME );
-                if( !feature_fn || !CV_NODE_IS_MAP( feature_fn->tag ) )
-                {
-                    sprintf( buf, "Feature node is not a valid map. "
-                             "(stage %d, tree %d, node %d)", i, j, k );
-                    CV_Error( CV_StsError, buf );
-                }
-                rects_fn = cvGetFileNodeByName( fs, feature_fn, ICV_HAAR_RECTS_NAME );
-                if( !rects_fn || !CV_NODE_IS_SEQ( rects_fn->tag )
-                        || rects_fn->data.seq->total < 1
-                        || rects_fn->data.seq->total > CV_HAAR_FEATURE_MAX )
-                {
-                    sprintf( buf, "Rects node is not a valid sequence. "
-                             "(stage %d, tree %d, node %d)", i, j, k );
-                    CV_Error( CV_StsError, buf );
-                }
-                cvStartReadSeq( rects_fn->data.seq, &rects_reader );
-                for( l = 0; l < rects_fn->data.seq->total; ++l )
-                {
-                    CvFileNode *rect_fn;
-                    CvRect r;
+//                 node_fn = (CvFileNode *) tree_reader.ptr;
+//                 if( !CV_NODE_IS_MAP( node_fn->tag ) )
+//                 {
+//                     sprintf( buf, "Tree node %d is not a valid map. (stage %d, tree %d)",
+//                              k, i, j );
+//                     CV_Error( CV_StsError, buf );
+//                 }
+//                 feature_fn = cvGetFileNodeByName( fs, node_fn, ICV_HAAR_FEATURE_NAME );
+//                 if( !feature_fn || !CV_NODE_IS_MAP( feature_fn->tag ) )
+//                 {
+//                     sprintf( buf, "Feature node is not a valid map. "
+//                              "(stage %d, tree %d, node %d)", i, j, k );
+//                     CV_Error( CV_StsError, buf );
+//                 }
+//                 rects_fn = cvGetFileNodeByName( fs, feature_fn, ICV_HAAR_RECTS_NAME );
+//                 if( !rects_fn || !CV_NODE_IS_SEQ( rects_fn->tag )
+//                         || rects_fn->data.seq->total < 1
+//                         || rects_fn->data.seq->total > CV_HAAR_FEATURE_MAX )
+//                 {
+//                     sprintf( buf, "Rects node is not a valid sequence. "
+//                              "(stage %d, tree %d, node %d)", i, j, k );
+//                     CV_Error( CV_StsError, buf );
+//                 }
+//                 cvStartReadSeq( rects_fn->data.seq, &rects_reader );
+//                 for( l = 0; l < rects_fn->data.seq->total; ++l )
+//                 {
+//                     CvFileNode *rect_fn;
+//                     CvRect r;
 
-                    rect_fn = (CvFileNode *) rects_reader.ptr;
-                    if( !CV_NODE_IS_SEQ( rect_fn->tag ) || rect_fn->data.seq->total != 5 )
-                    {
-                        sprintf( buf, "Rect %d is not a valid sequence. "
-                                 "(stage %d, tree %d, node %d)", l, i, j, k );
-                        CV_Error( CV_StsError, buf );
-                    }
+//                     rect_fn = (CvFileNode *) rects_reader.ptr;
+//                     if( !CV_NODE_IS_SEQ( rect_fn->tag ) || rect_fn->data.seq->total != 5 )
+//                     {
+//                         sprintf( buf, "Rect %d is not a valid sequence. "
+//                                  "(stage %d, tree %d, node %d)", l, i, j, k );
+//                         CV_Error( CV_StsError, buf );
+//                     }
 
-                    fn = CV_SEQ_ELEM( rect_fn->data.seq, CvFileNode, 0 );
-                    if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i < 0 )
-                    {
-                        sprintf( buf, "x coordinate must be non-negative integer. "
-                                 "(stage %d, tree %d, node %d, rect %d)", i, j, k, l );
-                        CV_Error( CV_StsError, buf );
-                    }
-                    r.x = fn->data.i;
-                    fn = CV_SEQ_ELEM( rect_fn->data.seq, CvFileNode, 1 );
-                    if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i < 0 )
-                    {
-                        sprintf( buf, "y coordinate must be non-negative integer. "
-                                 "(stage %d, tree %d, node %d, rect %d)", i, j, k, l );
-                        CV_Error( CV_StsError, buf );
-                    }
-                    r.y = fn->data.i;
-                    fn = CV_SEQ_ELEM( rect_fn->data.seq, CvFileNode, 2 );
-                    if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i <= 0
-                            || r.x + fn->data.i > cascade->orig_window_size.width )
-                    {
-                        sprintf( buf, "width must be positive integer and "
-                                 "(x + width) must not exceed window width. "
-                                 "(stage %d, tree %d, node %d, rect %d)", i, j, k, l );
-                        CV_Error( CV_StsError, buf );
-                    }
-                    r.width = fn->data.i;
-                    fn = CV_SEQ_ELEM( rect_fn->data.seq, CvFileNode, 3 );
-                    if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i <= 0
-                            || r.y + fn->data.i > cascade->orig_window_size.height )
-                    {
-                        sprintf( buf, "height must be positive integer and "
-                                 "(y + height) must not exceed window height. "
-                                 "(stage %d, tree %d, node %d, rect %d)", i, j, k, l );
-                        CV_Error( CV_StsError, buf );
-                    }
-                    r.height = fn->data.i;
-                    fn = CV_SEQ_ELEM( rect_fn->data.seq, CvFileNode, 4 );
-                    if( !CV_NODE_IS_REAL( fn->tag ) )
-                    {
-                        sprintf( buf, "weight must be real number. "
-                                 "(stage %d, tree %d, node %d, rect %d)", i, j, k, l );
-                        CV_Error( CV_StsError, buf );
-                    }
+//                     fn = CV_SEQ_ELEM( rect_fn->data.seq, CvFileNode, 0 );
+//                     if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i < 0 )
+//                     {
+//                         sprintf( buf, "x coordinate must be non-negative integer. "
+//                                  "(stage %d, tree %d, node %d, rect %d)", i, j, k, l );
+//                         CV_Error( CV_StsError, buf );
+//                     }
+//                     r.x = fn->data.i;
+//                     fn = CV_SEQ_ELEM( rect_fn->data.seq, CvFileNode, 1 );
+//                     if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i < 0 )
+//                     {
+//                         sprintf( buf, "y coordinate must be non-negative integer. "
+//                                  "(stage %d, tree %d, node %d, rect %d)", i, j, k, l );
+//                         CV_Error( CV_StsError, buf );
+//                     }
+//                     r.y = fn->data.i;
+//                     fn = CV_SEQ_ELEM( rect_fn->data.seq, CvFileNode, 2 );
+//                     if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i <= 0
+//                             || r.x + fn->data.i > cascade->orig_window_size.width )
+//                     {
+//                         sprintf( buf, "width must be positive integer and "
+//                                  "(x + width) must not exceed window width. "
+//                                  "(stage %d, tree %d, node %d, rect %d)", i, j, k, l );
+//                         CV_Error( CV_StsError, buf );
+//                     }
+//                     r.width = fn->data.i;
+//                     fn = CV_SEQ_ELEM( rect_fn->data.seq, CvFileNode, 3 );
+//                     if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i <= 0
+//                             || r.y + fn->data.i > cascade->orig_window_size.height )
+//                     {
+//                         sprintf( buf, "height must be positive integer and "
+//                                  "(y + height) must not exceed window height. "
+//                                  "(stage %d, tree %d, node %d, rect %d)", i, j, k, l );
+//                         CV_Error( CV_StsError, buf );
+//                     }
+//                     r.height = fn->data.i;
+//                     fn = CV_SEQ_ELEM( rect_fn->data.seq, CvFileNode, 4 );
+//                     if( !CV_NODE_IS_REAL( fn->tag ) )
+//                     {
+//                         sprintf( buf, "weight must be real number. "
+//                                  "(stage %d, tree %d, node %d, rect %d)", i, j, k, l );
+//                         CV_Error( CV_StsError, buf );
+//                     }
 
-                    classifier->haar_feature[k].rect[l].weight = (float) fn->data.f;
-                    classifier->haar_feature[k].rect[l].r = r;
+//                     classifier->haar_feature[k].rect[l].weight = (float) fn->data.f;
+//                     classifier->haar_feature[k].rect[l].r = r;
 
-                    CV_NEXT_SEQ_ELEM( sizeof( *rect_fn ), rects_reader );
-                } /* for each rect */
-                for( l = rects_fn->data.seq->total; l < CV_HAAR_FEATURE_MAX; ++l )
-                {
-                    classifier->haar_feature[k].rect[l].weight = 0;
-                    classifier->haar_feature[k].rect[l].r = cvRect( 0, 0, 0, 0 );
-                }
+//                     CV_NEXT_SEQ_ELEM( sizeof( *rect_fn ), rects_reader );
+//                 } /* for each rect */
+//                 for( l = rects_fn->data.seq->total; l < CV_HAAR_FEATURE_MAX; ++l )
+//                 {
+//                     classifier->haar_feature[k].rect[l].weight = 0;
+//                     classifier->haar_feature[k].rect[l].r = cvRect( 0, 0, 0, 0 );
+//                 }
 
-                fn = cvGetFileNodeByName( fs, feature_fn, ICV_HAAR_TILTED_NAME);
-                if( !fn || !CV_NODE_IS_INT( fn->tag ) )
-                {
-                    sprintf( buf, "tilted must be 0 or 1. "
-                             "(stage %d, tree %d, node %d)", i, j, k );
-                    CV_Error( CV_StsError, buf );
-                }
-                classifier->haar_feature[k].tilted = ( fn->data.i != 0 );
-                fn = cvGetFileNodeByName( fs, node_fn, ICV_HAAR_THRESHOLD_NAME);
-                if( !fn || !CV_NODE_IS_REAL( fn->tag ) )
-                {
-                    sprintf( buf, "threshold must be real number. "
-                             "(stage %d, tree %d, node %d)", i, j, k );
-                    CV_Error( CV_StsError, buf );
-                }
-                classifier->threshold[k] = (float) fn->data.f;
-                fn = cvGetFileNodeByName( fs, node_fn, ICV_HAAR_LEFT_NODE_NAME);
-                if( fn )
-                {
-                    if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i <= k
-                            || fn->data.i >= tree_fn->data.seq->total )
-                    {
-                        sprintf( buf, "left node must be valid node number. "
-                                 "(stage %d, tree %d, node %d)", i, j, k );
-                        CV_Error( CV_StsError, buf );
-                    }
-                    /* left node */
-                    classifier->left[k] = fn->data.i;
-                }
-                else
-                {
-                    fn = cvGetFileNodeByName( fs, node_fn, ICV_HAAR_LEFT_VAL_NAME );
-                    if( !fn )
-                    {
-                        sprintf( buf, "left node or left value must be specified. "
-                                 "(stage %d, tree %d, node %d)", i, j, k );
-                        CV_Error( CV_StsError, buf );
-                    }
-                    if( !CV_NODE_IS_REAL( fn->tag ) )
-                    {
-                        sprintf( buf, "left value must be real number. "
-                                 "(stage %d, tree %d, node %d)", i, j, k );
-                        CV_Error( CV_StsError, buf );
-                    }
-                    /* left value */
-                    if( last_idx >= classifier->count + 1 )
-                    {
-                        sprintf( buf, "Tree structure is broken: too many values. "
-                                 "(stage %d, tree %d, node %d)", i, j, k );
-                        CV_Error( CV_StsError, buf );
-                    }
-                    classifier->left[k] = -last_idx;
-                    classifier->alpha[last_idx++] = (float) fn->data.f;
-                }
-                fn = cvGetFileNodeByName( fs, node_fn, ICV_HAAR_RIGHT_NODE_NAME);
-                if( fn )
-                {
-                    if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i <= k
-                            || fn->data.i >= tree_fn->data.seq->total )
-                    {
-                        sprintf( buf, "right node must be valid node number. "
-                                 "(stage %d, tree %d, node %d)", i, j, k );
-                        CV_Error( CV_StsError, buf );
-                    }
-                    /* right node */
-                    classifier->right[k] = fn->data.i;
-                }
-                else
-                {
-                    fn = cvGetFileNodeByName( fs, node_fn, ICV_HAAR_RIGHT_VAL_NAME );
-                    if( !fn )
-                    {
-                        sprintf( buf, "right node or right value must be specified. "
-                                 "(stage %d, tree %d, node %d)", i, j, k );
-                        CV_Error( CV_StsError, buf );
-                    }
-                    if( !CV_NODE_IS_REAL( fn->tag ) )
-                    {
-                        sprintf( buf, "right value must be real number. "
-                                 "(stage %d, tree %d, node %d)", i, j, k );
-                        CV_Error( CV_StsError, buf );
-                    }
-                    /* right value */
-                    if( last_idx >= classifier->count + 1 )
-                    {
-                        sprintf( buf, "Tree structure is broken: too many values. "
-                                 "(stage %d, tree %d, node %d)", i, j, k );
-                        CV_Error( CV_StsError, buf );
-                    }
-                    classifier->right[k] = -last_idx;
-                    classifier->alpha[last_idx++] = (float) fn->data.f;
-                }
+//                 fn = cvGetFileNodeByName( fs, feature_fn, ICV_HAAR_TILTED_NAME);
+//                 if( !fn || !CV_NODE_IS_INT( fn->tag ) )
+//                 {
+//                     sprintf( buf, "tilted must be 0 or 1. "
+//                              "(stage %d, tree %d, node %d)", i, j, k );
+//                     CV_Error( CV_StsError, buf );
+//                 }
+//                 classifier->haar_feature[k].tilted = ( fn->data.i != 0 );
+//                 fn = cvGetFileNodeByName( fs, node_fn, ICV_HAAR_THRESHOLD_NAME);
+//                 if( !fn || !CV_NODE_IS_REAL( fn->tag ) )
+//                 {
+//                     sprintf( buf, "threshold must be real number. "
+//                              "(stage %d, tree %d, node %d)", i, j, k );
+//                     CV_Error( CV_StsError, buf );
+//                 }
+//                 classifier->threshold[k] = (float) fn->data.f;
+//                 fn = cvGetFileNodeByName( fs, node_fn, ICV_HAAR_LEFT_NODE_NAME);
+//                 if( fn )
+//                 {
+//                     if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i <= k
+//                             || fn->data.i >= tree_fn->data.seq->total )
+//                     {
+//                         sprintf( buf, "left node must be valid node number. "
+//                                  "(stage %d, tree %d, node %d)", i, j, k );
+//                         CV_Error( CV_StsError, buf );
+//                     }
+//                     /* left node */
+//                     classifier->left[k] = fn->data.i;
+//                 }
+//                 else
+//                 {
+//                     fn = cvGetFileNodeByName( fs, node_fn, ICV_HAAR_LEFT_VAL_NAME );
+//                     if( !fn )
+//                     {
+//                         sprintf( buf, "left node or left value must be specified. "
+//                                  "(stage %d, tree %d, node %d)", i, j, k );
+//                         CV_Error( CV_StsError, buf );
+//                     }
+//                     if( !CV_NODE_IS_REAL( fn->tag ) )
+//                     {
+//                         sprintf( buf, "left value must be real number. "
+//                                  "(stage %d, tree %d, node %d)", i, j, k );
+//                         CV_Error( CV_StsError, buf );
+//                     }
+//                     /* left value */
+//                     if( last_idx >= classifier->count + 1 )
+//                     {
+//                         sprintf( buf, "Tree structure is broken: too many values. "
+//                                  "(stage %d, tree %d, node %d)", i, j, k );
+//                         CV_Error( CV_StsError, buf );
+//                     }
+//                     classifier->left[k] = -last_idx;
+//                     classifier->alpha[last_idx++] = (float) fn->data.f;
+//                 }
+//                 fn = cvGetFileNodeByName( fs, node_fn, ICV_HAAR_RIGHT_NODE_NAME);
+//                 if( fn )
+//                 {
+//                     if( !CV_NODE_IS_INT( fn->tag ) || fn->data.i <= k
+//                             || fn->data.i >= tree_fn->data.seq->total )
+//                     {
+//                         sprintf( buf, "right node must be valid node number. "
+//                                  "(stage %d, tree %d, node %d)", i, j, k );
+//                         CV_Error( CV_StsError, buf );
+//                     }
+//                     /* right node */
+//                     classifier->right[k] = fn->data.i;
+//                 }
+//                 else
+//                 {
+//                     fn = cvGetFileNodeByName( fs, node_fn, ICV_HAAR_RIGHT_VAL_NAME );
+//                     if( !fn )
+//                     {
+//                         sprintf( buf, "right node or right value must be specified. "
+//                                  "(stage %d, tree %d, node %d)", i, j, k );
+//                         CV_Error( CV_StsError, buf );
+//                     }
+//                     if( !CV_NODE_IS_REAL( fn->tag ) )
+//                     {
+//                         sprintf( buf, "right value must be real number. "
+//                                  "(stage %d, tree %d, node %d)", i, j, k );
+//                         CV_Error( CV_StsError, buf );
+//                     }
+//                     /* right value */
+//                     if( last_idx >= classifier->count + 1 )
+//                     {
+//                         sprintf( buf, "Tree structure is broken: too many values. "
+//                                  "(stage %d, tree %d, node %d)", i, j, k );
+//                         CV_Error( CV_StsError, buf );
+//                     }
+//                     classifier->right[k] = -last_idx;
+//                     classifier->alpha[last_idx++] = (float) fn->data.f;
+//                 }
 
-                CV_NEXT_SEQ_ELEM( sizeof( *node_fn ), tree_reader );
-            } /* for each node */
-            if( last_idx != classifier->count + 1 )
-            {
-                sprintf( buf, "Tree structure is broken: too few values. "
-                         "(stage %d, tree %d)", i, j );
-                CV_Error( CV_StsError, buf );
-            }
+//                 CV_NEXT_SEQ_ELEM( sizeof( *node_fn ), tree_reader );
+//             } /* for each node */
+//             if( last_idx != classifier->count + 1 )
+//             {
+//                 sprintf( buf, "Tree structure is broken: too few values. "
+//                          "(stage %d, tree %d)", i, j );
+//                 CV_Error( CV_StsError, buf );
+//             }
 
-            CV_NEXT_SEQ_ELEM( sizeof( *tree_fn ), trees_reader );
-        } /* for each tree */
+//             CV_NEXT_SEQ_ELEM( sizeof( *tree_fn ), trees_reader );
+//         } /* for each tree */
 
-        fn = cvGetFileNodeByName( fs, stage_fn, ICV_HAAR_STAGE_THRESHOLD_NAME);
-        if( !fn || !CV_NODE_IS_REAL( fn->tag ) )
-        {
-            sprintf( buf, "stage threshold must be real number. (stage %d)", i );
-            CV_Error( CV_StsError, buf );
-        }
-        cascade->stage_classifier[i].threshold = (float) fn->data.f;
+//         fn = cvGetFileNodeByName( fs, stage_fn, ICV_HAAR_STAGE_THRESHOLD_NAME);
+//         if( !fn || !CV_NODE_IS_REAL( fn->tag ) )
+//         {
+//             sprintf( buf, "stage threshold must be real number. (stage %d)", i );
+//             CV_Error( CV_StsError, buf );
+//         }
+//         cascade->stage_classifier[i].threshold = (float) fn->data.f;
 
-        parent = i - 1;
-        next = -1;
+//         parent = i - 1;
+//         next = -1;
 
-        fn = cvGetFileNodeByName( fs, stage_fn, ICV_HAAR_PARENT_NAME );
-        if( !fn || !CV_NODE_IS_INT( fn->tag )
-                || fn->data.i < -1 || fn->data.i >= cascade->count )
-        {
-            sprintf( buf, "parent must be integer number. (stage %d)", i );
-            CV_Error( CV_StsError, buf );
-        }
-        parent = fn->data.i;
-        fn = cvGetFileNodeByName( fs, stage_fn, ICV_HAAR_NEXT_NAME );
-        if( !fn || !CV_NODE_IS_INT( fn->tag )
-                || fn->data.i < -1 || fn->data.i >= cascade->count )
-        {
-            sprintf( buf, "next must be integer number. (stage %d)", i );
-            CV_Error( CV_StsError, buf );
-        }
-        next = fn->data.i;
+//         fn = cvGetFileNodeByName( fs, stage_fn, ICV_HAAR_PARENT_NAME );
+//         if( !fn || !CV_NODE_IS_INT( fn->tag )
+//                 || fn->data.i < -1 || fn->data.i >= cascade->count )
+//         {
+//             sprintf( buf, "parent must be integer number. (stage %d)", i );
+//             CV_Error( CV_StsError, buf );
+//         }
+//         parent = fn->data.i;
+//         fn = cvGetFileNodeByName( fs, stage_fn, ICV_HAAR_NEXT_NAME );
+//         if( !fn || !CV_NODE_IS_INT( fn->tag )
+//                 || fn->data.i < -1 || fn->data.i >= cascade->count )
+//         {
+//             sprintf( buf, "next must be integer number. (stage %d)", i );
+//             CV_Error( CV_StsError, buf );
+//         }
+//         next = fn->data.i;
 
-        cascade->stage_classifier[i].parent = parent;
-        cascade->stage_classifier[i].next = next;
-        cascade->stage_classifier[i].child = -1;
+//         cascade->stage_classifier[i].parent = parent;
+//         cascade->stage_classifier[i].next = next;
+//         cascade->stage_classifier[i].child = -1;
 
-        if( parent != -1 && cascade->stage_classifier[parent].child == -1 )
-        {
-            cascade->stage_classifier[parent].child = i;
-        }
+//         if( parent != -1 && cascade->stage_classifier[parent].child == -1 )
+//         {
+//             cascade->stage_classifier[parent].child = i;
+//         }
 
-        CV_NEXT_SEQ_ELEM( sizeof( *stage_fn ), stages_reader );
-    } /* for each stage */
+//         CV_NEXT_SEQ_ELEM( sizeof( *stage_fn ), stages_reader );
+//     } /* for each stage */
 
-    return cascade;
-}
+//     return cascade;
+// }
 
-void
-gpuWriteHaarClassifier( CvFileStorage *fs, const char *name, const void *struct_ptr,
-                        CvAttrList attributes )
-{
-    int i, j, k, l;
-    char buf[256];
-    const CvHaarClassifierCascade *cascade = (const CvHaarClassifierCascade *) struct_ptr;
+// static void gpuWriteHaarClassifier( CvFileStorage *fs, const char *name, const void *struct_ptr,
+//                         CvAttrList attributes )
+// {
+//     int i, j, k, l;
+//     char buf[256];
+//     const CvHaarClassifierCascade *cascade = (const CvHaarClassifierCascade *) struct_ptr;
 
-    /* TODO: parameters check */
+//     /* TODO: parameters check */
 
-    cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_HAAR, attributes );
+//     cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_HAAR, attributes );
 
-    cvStartWriteStruct( fs, ICV_HAAR_SIZE_NAME, CV_NODE_SEQ | CV_NODE_FLOW );
-    cvWriteInt( fs, NULL, cascade->orig_window_size.width );
-    cvWriteInt( fs, NULL, cascade->orig_window_size.height );
-    cvEndWriteStruct( fs ); /* size */
+//     cvStartWriteStruct( fs, ICV_HAAR_SIZE_NAME, CV_NODE_SEQ | CV_NODE_FLOW );
+//     cvWriteInt( fs, NULL, cascade->orig_window_size.width );
+//     cvWriteInt( fs, NULL, cascade->orig_window_size.height );
+//     cvEndWriteStruct( fs ); /* size */
 
-    cvStartWriteStruct( fs, ICV_HAAR_STAGES_NAME, CV_NODE_SEQ );
-    for( i = 0; i < cascade->count; ++i )
-    {
-        cvStartWriteStruct( fs, NULL, CV_NODE_MAP );
-        sprintf( buf, "stage %d", i );
-        cvWriteComment( fs, buf, 1 );
+//     cvStartWriteStruct( fs, ICV_HAAR_STAGES_NAME, CV_NODE_SEQ );
+//     for( i = 0; i < cascade->count; ++i )
+//     {
+//         cvStartWriteStruct( fs, NULL, CV_NODE_MAP );
+//         sprintf( buf, "stage %d", i );
+//         cvWriteComment( fs, buf, 1 );
 
-        cvStartWriteStruct( fs, ICV_HAAR_TREES_NAME, CV_NODE_SEQ );
+//         cvStartWriteStruct( fs, ICV_HAAR_TREES_NAME, CV_NODE_SEQ );
 
-        for( j = 0; j < cascade->stage_classifier[i].count; ++j )
-        {
-            CvHaarClassifier *tree = &cascade->stage_classifier[i].classifier[j];
+//         for( j = 0; j < cascade->stage_classifier[i].count; ++j )
+//         {
+//             CvHaarClassifier *tree = &cascade->stage_classifier[i].classifier[j];
 
-            cvStartWriteStruct( fs, NULL, CV_NODE_SEQ );
-            sprintf( buf, "tree %d", j );
-            cvWriteComment( fs, buf, 1 );
+//             cvStartWriteStruct( fs, NULL, CV_NODE_SEQ );
+//             sprintf( buf, "tree %d", j );
+//             cvWriteComment( fs, buf, 1 );
 
-            for( k = 0; k < tree->count; ++k )
-            {
-                CvHaarFeature *feature = &tree->haar_feature[k];
+//             for( k = 0; k < tree->count; ++k )
+//             {
+//                 CvHaarFeature *feature = &tree->haar_feature[k];
 
-                cvStartWriteStruct( fs, NULL, CV_NODE_MAP );
-                if( k )
-                {
-                    sprintf( buf, "node %d", k );
-                }
-                else
-                {
-                    sprintf( buf, "root node" );
-                }
-                cvWriteComment( fs, buf, 1 );
+//                 cvStartWriteStruct( fs, NULL, CV_NODE_MAP );
+//                 if( k )
+//                 {
+//                     sprintf( buf, "node %d", k );
+//                 }
+//                 else
+//                 {
+//                     sprintf( buf, "root node" );
+//                 }
+//                 cvWriteComment( fs, buf, 1 );
 
-                cvStartWriteStruct( fs, ICV_HAAR_FEATURE_NAME, CV_NODE_MAP );
+//                 cvStartWriteStruct( fs, ICV_HAAR_FEATURE_NAME, CV_NODE_MAP );
 
-                cvStartWriteStruct( fs, ICV_HAAR_RECTS_NAME, CV_NODE_SEQ );
-                for( l = 0; l < CV_HAAR_FEATURE_MAX && feature->rect[l].r.width != 0; ++l )
-                {
-                    cvStartWriteStruct( fs, NULL, CV_NODE_SEQ | CV_NODE_FLOW );
-                    cvWriteInt(  fs, NULL, feature->rect[l].r.x );
-                    cvWriteInt(  fs, NULL, feature->rect[l].r.y );
-                    cvWriteInt(  fs, NULL, feature->rect[l].r.width );
-                    cvWriteInt(  fs, NULL, feature->rect[l].r.height );
-                    cvWriteReal( fs, NULL, feature->rect[l].weight );
-                    cvEndWriteStruct( fs ); /* rect */
-                }
-                cvEndWriteStruct( fs ); /* rects */
-                cvWriteInt( fs, ICV_HAAR_TILTED_NAME, feature->tilted );
-                cvEndWriteStruct( fs ); /* feature */
+//                 cvStartWriteStruct( fs, ICV_HAAR_RECTS_NAME, CV_NODE_SEQ );
+//                 for( l = 0; l < CV_HAAR_FEATURE_MAX && feature->rect[l].r.width != 0; ++l )
+//                 {
+//                     cvStartWriteStruct( fs, NULL, CV_NODE_SEQ | CV_NODE_FLOW );
+//                     cvWriteInt(  fs, NULL, feature->rect[l].r.x );
+//                     cvWriteInt(  fs, NULL, feature->rect[l].r.y );
+//                     cvWriteInt(  fs, NULL, feature->rect[l].r.width );
+//                     cvWriteInt(  fs, NULL, feature->rect[l].r.height );
+//                     cvWriteReal( fs, NULL, feature->rect[l].weight );
+//                     cvEndWriteStruct( fs ); /* rect */
+//                 }
+//                 cvEndWriteStruct( fs ); /* rects */
+//                 cvWriteInt( fs, ICV_HAAR_TILTED_NAME, feature->tilted );
+//                 cvEndWriteStruct( fs ); /* feature */
 
-                cvWriteReal( fs, ICV_HAAR_THRESHOLD_NAME, tree->threshold[k]);
+//                 cvWriteReal( fs, ICV_HAAR_THRESHOLD_NAME, tree->threshold[k]);
 
-                if( tree->left[k] > 0 )
-                {
-                    cvWriteInt( fs, ICV_HAAR_LEFT_NODE_NAME, tree->left[k] );
-                }
-                else
-                {
-                    cvWriteReal( fs, ICV_HAAR_LEFT_VAL_NAME,
-                                 tree->alpha[-tree->left[k]] );
-                }
+//                 if( tree->left[k] > 0 )
+//                 {
+//                     cvWriteInt( fs, ICV_HAAR_LEFT_NODE_NAME, tree->left[k] );
+//                 }
+//                 else
+//                 {
+//                     cvWriteReal( fs, ICV_HAAR_LEFT_VAL_NAME,
+//                                  tree->alpha[-tree->left[k]] );
+//                 }
 
-                if( tree->right[k] > 0 )
-                {
-                    cvWriteInt( fs, ICV_HAAR_RIGHT_NODE_NAME, tree->right[k] );
-                }
-                else
-                {
-                    cvWriteReal( fs, ICV_HAAR_RIGHT_VAL_NAME,
-                                 tree->alpha[-tree->right[k]] );
-                }
+//                 if( tree->right[k] > 0 )
+//                 {
+//                     cvWriteInt( fs, ICV_HAAR_RIGHT_NODE_NAME, tree->right[k] );
+//                 }
+//                 else
+//                 {
+//                     cvWriteReal( fs, ICV_HAAR_RIGHT_VAL_NAME,
+//                                  tree->alpha[-tree->right[k]] );
+//                 }
 
-                cvEndWriteStruct( fs ); /* split */
-            }
+//                 cvEndWriteStruct( fs ); /* split */
+//             }
 
-            cvEndWriteStruct( fs ); /* tree */
-        }
+//             cvEndWriteStruct( fs ); /* tree */
+//         }
 
-        cvEndWriteStruct( fs ); /* trees */
+//         cvEndWriteStruct( fs ); /* trees */
 
-        cvWriteReal( fs, ICV_HAAR_STAGE_THRESHOLD_NAME, cascade->stage_classifier[i].threshold);
-        cvWriteInt( fs, ICV_HAAR_PARENT_NAME, cascade->stage_classifier[i].parent );
-        cvWriteInt( fs, ICV_HAAR_NEXT_NAME, cascade->stage_classifier[i].next );
+//         cvWriteReal( fs, ICV_HAAR_STAGE_THRESHOLD_NAME, cascade->stage_classifier[i].threshold);
+//         cvWriteInt( fs, ICV_HAAR_PARENT_NAME, cascade->stage_classifier[i].parent );
+//         cvWriteInt( fs, ICV_HAAR_NEXT_NAME, cascade->stage_classifier[i].next );
 
-        cvEndWriteStruct( fs ); /* stage */
-    } /* for each stage */
+//         cvEndWriteStruct( fs ); /* stage */
+//     } /* for each stage */
 
-    cvEndWriteStruct( fs ); /* stages */
-    cvEndWriteStruct( fs ); /* root */
-}
+//     cvEndWriteStruct( fs ); /* stages */
+//     cvEndWriteStruct( fs ); /* root */
+// }
 
-void *
-gpuCloneHaarClassifier( const void *struct_ptr )
-{
-    CvHaarClassifierCascade *cascade = NULL;
+// static void * gpuCloneHaarClassifier( const void *struct_ptr )
+// {
+//     CvHaarClassifierCascade *cascade = NULL;
 
-    int i, j, k, n;
-    const CvHaarClassifierCascade *cascade_src =
-        (const CvHaarClassifierCascade *) struct_ptr;
+//     int i, j, k, n;
+//     const CvHaarClassifierCascade *cascade_src =
+//         (const CvHaarClassifierCascade *) struct_ptr;
 
-    n = cascade_src->count;
-    cascade = gpuCreateHaarClassifierCascade(n);
-    cascade->orig_window_size = cascade_src->orig_window_size;
+//     n = cascade_src->count;
+//     cascade = gpuCreateHaarClassifierCascade(n);
+//     cascade->orig_window_size = cascade_src->orig_window_size;
 
-    for( i = 0; i < n; ++i )
-    {
-        cascade->stage_classifier[i].parent = cascade_src->stage_classifier[i].parent;
-        cascade->stage_classifier[i].next = cascade_src->stage_classifier[i].next;
-        cascade->stage_classifier[i].child = cascade_src->stage_classifier[i].child;
-        cascade->stage_classifier[i].threshold = cascade_src->stage_classifier[i].threshold;
+//     for( i = 0; i < n; ++i )
+//     {
+//         cascade->stage_classifier[i].parent = cascade_src->stage_classifier[i].parent;
+//         cascade->stage_classifier[i].next = cascade_src->stage_classifier[i].next;
+//         cascade->stage_classifier[i].child = cascade_src->stage_classifier[i].child;
+//         cascade->stage_classifier[i].threshold = cascade_src->stage_classifier[i].threshold;
 
-        cascade->stage_classifier[i].count = 0;
-        cascade->stage_classifier[i].classifier =
-            (CvHaarClassifier *) cvAlloc( cascade_src->stage_classifier[i].count
-                                          * sizeof( cascade->stage_classifier[i].classifier[0] ) );
+//         cascade->stage_classifier[i].count = 0;
+//         cascade->stage_classifier[i].classifier =
+//             (CvHaarClassifier *) cvAlloc( cascade_src->stage_classifier[i].count
+//                                           * sizeof( cascade->stage_classifier[i].classifier[0] ) );
 
-        cascade->stage_classifier[i].count = cascade_src->stage_classifier[i].count;
+//         cascade->stage_classifier[i].count = cascade_src->stage_classifier[i].count;
 
-        for( j = 0; j < cascade->stage_classifier[i].count; ++j )
-            cascade->stage_classifier[i].classifier[j].haar_feature = NULL;
+//         for( j = 0; j < cascade->stage_classifier[i].count; ++j )
+//             cascade->stage_classifier[i].classifier[j].haar_feature = NULL;
 
-        for( j = 0; j < cascade->stage_classifier[i].count; ++j )
-        {
-            const CvHaarClassifier *classifier_src =
-                &cascade_src->stage_classifier[i].classifier[j];
-            CvHaarClassifier *classifier =
-                &cascade->stage_classifier[i].classifier[j];
+//         for( j = 0; j < cascade->stage_classifier[i].count; ++j )
+//         {
+//             const CvHaarClassifier *classifier_src =
+//                 &cascade_src->stage_classifier[i].classifier[j];
+//             CvHaarClassifier *classifier =
+//                 &cascade->stage_classifier[i].classifier[j];
 
-            classifier->count = classifier_src->count;
-            classifier->haar_feature = (CvHaarFeature *) cvAlloc(
-                                           classifier->count * ( sizeof( *classifier->haar_feature ) +
-                                                   sizeof( *classifier->threshold ) +
-                                                   sizeof( *classifier->left ) +
-                                                   sizeof( *classifier->right ) ) +
-                                           (classifier->count + 1) * sizeof( *classifier->alpha ) );
-            classifier->threshold = (float *) (classifier->haar_feature + classifier->count);
-            classifier->left = (int *) (classifier->threshold + classifier->count);
-            classifier->right = (int *) (classifier->left + classifier->count);
-            classifier->alpha = (float *) (classifier->right + classifier->count);
-            for( k = 0; k < classifier->count; ++k )
-            {
-                classifier->haar_feature[k] = classifier_src->haar_feature[k];
-                classifier->threshold[k] = classifier_src->threshold[k];
-                classifier->left[k] = classifier_src->left[k];
-                classifier->right[k] = classifier_src->right[k];
-                classifier->alpha[k] = classifier_src->alpha[k];
-            }
-            classifier->alpha[classifier->count] =
-                classifier_src->alpha[classifier->count];
-        }
-    }
+//             classifier->count = classifier_src->count;
+//             classifier->haar_feature = (CvHaarFeature *) cvAlloc(
+//                                            classifier->count * ( sizeof( *classifier->haar_feature ) +
+//                                                    sizeof( *classifier->threshold ) +
+//                                                    sizeof( *classifier->left ) +
+//                                                    sizeof( *classifier->right ) ) +
+//                                            (classifier->count + 1) * sizeof( *classifier->alpha ) );
+//             classifier->threshold = (float *) (classifier->haar_feature + classifier->count);
+//             classifier->left = (int *) (classifier->threshold + classifier->count);
+//             classifier->right = (int *) (classifier->left + classifier->count);
+//             classifier->alpha = (float *) (classifier->right + classifier->count);
+//             for( k = 0; k < classifier->count; ++k )
+//             {
+//                 classifier->haar_feature[k] = classifier_src->haar_feature[k];
+//                 classifier->threshold[k] = classifier_src->threshold[k];
+//                 classifier->left[k] = classifier_src->left[k];
+//                 classifier->right[k] = classifier_src->right[k];
+//                 classifier->alpha[k] = classifier_src->alpha[k];
+//             }
+//             classifier->alpha[classifier->count] =
+//                 classifier_src->alpha[classifier->count];
+//         }
+//     }
 
-    return cascade;
-}
+//     return cascade;
+// }
 
 #if 0
 CvType haar_type( CV_TYPE_NAME_HAAR, gpuIsHaarClassifier,
@@ -2170,41 +2152,41 @@ CvType haar_type( CV_TYPE_NAME_HAAR, gpuIsHaarClassifier,
 namespace cv
 {
 
-    HaarClassifierCascade::HaarClassifierCascade() {}
-    HaarClassifierCascade::HaarClassifierCascade(const String &filename)
-    {
-        load(filename);
-    }
+HaarClassifierCascade::HaarClassifierCascade() {}
+HaarClassifierCascade::HaarClassifierCascade(const String &filename)
+{
+    load(filename);
+}
 
-    bool HaarClassifierCascade::load(const String &filename)
-    {
-        cascade = Ptr<CvHaarClassifierCascade>((CvHaarClassifierCascade *)cvLoad(filename.c_str(), 0, 0, 0));
-        return (CvHaarClassifierCascade *)cascade != 0;
-    }
+bool HaarClassifierCascade::load(const String &filename)
+{
+    cascade = Ptr<CvHaarClassifierCascade>((CvHaarClassifierCascade *)cvLoad(filename.c_str(), 0, 0, 0));
+    return (CvHaarClassifierCascade *)cascade != 0;
+}
 
-    void HaarClassifierCascade::detectMultiScale( const Mat &image,
-            Vector<Rect> &objects, double scaleFactor,
-            int minNeighbors, int flags,
-            Size minSize )
-    {
-        MemStorage storage(cvCreateMemStorage(0));
-        CvMat _image = image;
-        CvSeq *_objects = gpuHaarDetectObjects( &_image, cascade, storage, scaleFactor,
-                                                minNeighbors, flags, minSize );
-        Seq<Rect>(_objects).copyTo(objects);
-    }
+void HaarClassifierCascade::detectMultiScale( const Mat &image,
+        Vector<Rect> &objects, double scaleFactor,
+        int minNeighbors, int flags,
+        Size minSize )
+{
+    MemStorage storage(cvCreateMemStorage(0));
+    CvMat _image = image;
+    CvSeq *_objects = gpuHaarDetectObjects( &_image, cascade, storage, scaleFactor,
+                                            minNeighbors, flags, minSize );
+    Seq<Rect>(_objects).copyTo(objects);
+}
 
-    int HaarClassifierCascade::runAt(Point pt, int startStage, int) const
-    {
-        return gpuRunHaarClassifierCascade(cascade, pt, startStage);
-    }
+int HaarClassifierCascade::runAt(Point pt, int startStage, int) const
+{
+    return gpuRunHaarClassifierCascade(cascade, pt, startStage);
+}
 
-    void HaarClassifierCascade::setImages( const Mat &sum, const Mat &sqsum,
-                                           const Mat &tilted, double scale )
-    {
-        CvMat _sum = sum, _sqsum = sqsum, _tilted = tilted;
-        gpuSetImagesForHaarClassifierCascade( cascade, &_sum, &_sqsum, &_tilted, scale );
-    }
+void HaarClassifierCascade::setImages( const Mat &sum, const Mat &sqsum,
+                                       const Mat &tilted, double scale )
+{
+    CvMat _sum = sum, _sqsum = sqsum, _tilted = tilted;
+    gpuSetImagesForHaarClassifierCascade( cascade, &_sum, &_sqsum, &_tilted, scale );
+}
 
 }
 #endif
@@ -2497,8 +2479,7 @@ size_t p_offset )
 
 
 */
-CV_IMPL int
-gpuRunHaarClassifierCascade( /*const CvHaarClassifierCascade *_cascade,
+static int gpuRunHaarClassifierCascade( /*const CvHaarClassifierCascade *_cascade,
 CvPoint pt, int start_stage */)
 {
     /*
@@ -2579,116 +2560,116 @@ CvPoint pt, int start_stage */)
 
 namespace cv
 {
-    namespace ocl
+namespace ocl
+{
+
+struct gpuHaarDetectObjects_ScaleImage_Invoker
+{
+    gpuHaarDetectObjects_ScaleImage_Invoker( const CvHaarClassifierCascade *_cascade,
+            int _stripSize, double _factor,
+            const Mat &_sum1, const Mat &_sqsum1, Mat *_norm1,
+            Mat *_mask1, Rect _equRect, ConcurrentRectVector &_vec )
     {
+        cascade = _cascade;
+        stripSize = _stripSize;
+        factor = _factor;
+        sum1 = _sum1;
+        sqsum1 = _sqsum1;
+        norm1 = _norm1;
+        mask1 = _mask1;
+        equRect = _equRect;
+        vec = &_vec;
+    }
 
-        struct gpuHaarDetectObjects_ScaleImage_Invoker
+    void operator()( const BlockedRange &range ) const
+    {
+        Size winSize0 = cascade->orig_window_size;
+        Size winSize(cvRound(winSize0.width * factor), cvRound(winSize0.height * factor));
+        int y1 = range.begin() * stripSize, y2 = min(range.end() * stripSize, sum1.rows - 1 - winSize0.height);
+        Size ssz(sum1.cols - 1 - winSize0.width, y2 - y1);
+        int x, y, ystep = factor > 2 ? 1 : 2;
+
+        for( y = y1; y < y2; y += ystep )
+            for( x = 0; x < ssz.width; x += ystep )
+            {
+                if( gpuRunHaarClassifierCascade( /*cascade, cvPoint(x, y), 0*/ ) > 0 )
+                    vec->push_back(Rect(cvRound(x * factor), cvRound(y * factor),
+                                        winSize.width, winSize.height));
+            }
+    }
+
+    const CvHaarClassifierCascade *cascade;
+    int stripSize;
+    double factor;
+    Mat sum1, sqsum1, *norm1, *mask1;
+    Rect equRect;
+    ConcurrentRectVector *vec;
+};
+
+
+struct gpuHaarDetectObjects_ScaleCascade_Invoker
+{
+    gpuHaarDetectObjects_ScaleCascade_Invoker( const CvHaarClassifierCascade *_cascade,
+            Size _winsize, const Range &_xrange, double _ystep,
+            size_t _sumstep, const int **_p, const int **_pq,
+            ConcurrentRectVector &_vec )
+    {
+        cascade = _cascade;
+        winsize = _winsize;
+        xrange = _xrange;
+        ystep = _ystep;
+        sumstep = _sumstep;
+        p = _p;
+        pq = _pq;
+        vec = &_vec;
+    }
+
+    void operator()( const BlockedRange &range ) const
+    {
+        int iy, startY = range.begin(), endY = range.end();
+        const int *p0 = p[0], *p1 = p[1], *p2 = p[2], *p3 = p[3];
+        const int *pq0 = pq[0], *pq1 = pq[1], *pq2 = pq[2], *pq3 = pq[3];
+        bool doCannyPruning = p0 != 0;
+        int sstep = (int)(sumstep / sizeof(p0[0]));
+
+        for( iy = startY; iy < endY; iy++ )
         {
-            gpuHaarDetectObjects_ScaleImage_Invoker( const CvHaarClassifierCascade *_cascade,
-                    int _stripSize, double _factor,
-                    const Mat &_sum1, const Mat &_sqsum1, Mat *_norm1,
-                    Mat *_mask1, Rect _equRect, ConcurrentRectVector &_vec )
+            int ix, y = cvRound(iy * ystep), ixstep = 1;
+            for( ix = xrange.start; ix < xrange.end; ix += ixstep )
             {
-                cascade = _cascade;
-                stripSize = _stripSize;
-                factor = _factor;
-                sum1 = _sum1;
-                sqsum1 = _sqsum1;
-                norm1 = _norm1;
-                mask1 = _mask1;
-                equRect = _equRect;
-                vec = &_vec;
-            }
+                int x = cvRound(ix * ystep); // it should really be ystep, not ixstep
 
-            void operator()( const BlockedRange &range ) const
-            {
-                Size winSize0 = cascade->orig_window_size;
-                Size winSize(cvRound(winSize0.width * factor), cvRound(winSize0.height * factor));
-                int y1 = range.begin() * stripSize, y2 = min(range.end() * stripSize, sum1.rows - 1 - winSize0.height);
-                Size ssz(sum1.cols - 1 - winSize0.width, y2 - y1);
-                int x, y, ystep = factor > 2 ? 1 : 2;
-
-                for( y = y1; y < y2; y += ystep )
-                    for( x = 0; x < ssz.width; x += ystep )
-                    {
-                        if( gpuRunHaarClassifierCascade( /*cascade, cvPoint(x, y), 0*/ ) > 0 )
-                            vec->push_back(Rect(cvRound(x * factor), cvRound(y * factor),
-                                                winSize.width, winSize.height));
-                    }
-            }
-
-            const CvHaarClassifierCascade *cascade;
-            int stripSize;
-            double factor;
-            Mat sum1, sqsum1, *norm1, *mask1;
-            Rect equRect;
-            ConcurrentRectVector *vec;
-        };
-
-
-        struct gpuHaarDetectObjects_ScaleCascade_Invoker
-        {
-            gpuHaarDetectObjects_ScaleCascade_Invoker( const CvHaarClassifierCascade *_cascade,
-                    Size _winsize, const Range &_xrange, double _ystep,
-                    size_t _sumstep, const int **_p, const int **_pq,
-                    ConcurrentRectVector &_vec )
-            {
-                cascade = _cascade;
-                winsize = _winsize;
-                xrange = _xrange;
-                ystep = _ystep;
-                sumstep = _sumstep;
-                p = _p;
-                pq = _pq;
-                vec = &_vec;
-            }
-
-            void operator()( const BlockedRange &range ) const
-            {
-                int iy, startY = range.begin(), endY = range.end();
-                const int *p0 = p[0], *p1 = p[1], *p2 = p[2], *p3 = p[3];
-                const int *pq0 = pq[0], *pq1 = pq[1], *pq2 = pq[2], *pq3 = pq[3];
-                bool doCannyPruning = p0 != 0;
-                int sstep = (int)(sumstep / sizeof(p0[0]));
-
-                for( iy = startY; iy < endY; iy++ )
+                if( doCannyPruning )
                 {
-                    int ix, y = cvRound(iy * ystep), ixstep = 1;
-                    for( ix = xrange.start; ix < xrange.end; ix += ixstep )
+                    int offset = y * sstep + x;
+                    int s = p0[offset] - p1[offset] - p2[offset] + p3[offset];
+                    int sq = pq0[offset] - pq1[offset] - pq2[offset] + pq3[offset];
+                    if( s < 100 || sq < 20 )
                     {
-                        int x = cvRound(ix * ystep); // it should really be ystep, not ixstep
-
-                        if( doCannyPruning )
-                        {
-                            int offset = y * sstep + x;
-                            int s = p0[offset] - p1[offset] - p2[offset] + p3[offset];
-                            int sq = pq0[offset] - pq1[offset] - pq2[offset] + pq3[offset];
-                            if( s < 100 || sq < 20 )
-                            {
-                                ixstep = 2;
-                                continue;
-                            }
-                        }
-
-                        int result = gpuRunHaarClassifierCascade(/* cascade, cvPoint(x, y), 0 */);
-                        if( result > 0 )
-                            vec->push_back(Rect(x, y, winsize.width, winsize.height));
-                        ixstep = result != 0 ? 1 : 2;
+                        ixstep = 2;
+                        continue;
                     }
                 }
+
+                int result = gpuRunHaarClassifierCascade(/* cascade, cvPoint(x, y), 0 */);
+                if( result > 0 )
+                    vec->push_back(Rect(x, y, winsize.width, winsize.height));
+                ixstep = result != 0 ? 1 : 2;
             }
-
-            const CvHaarClassifierCascade *cascade;
-            double ystep;
-            size_t sumstep;
-            Size winsize;
-            Range xrange;
-            const int **p;
-            const int **pq;
-            ConcurrentRectVector *vec;
-        };
-
+        }
     }
+
+    const CvHaarClassifierCascade *cascade;
+    double ystep;
+    size_t sumstep;
+    Size winsize;
+    Range xrange;
+    const int **p;
+    const int **pq;
+    ConcurrentRectVector *vec;
+};
+
+}
 }
 
 /*

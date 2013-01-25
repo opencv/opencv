@@ -96,31 +96,33 @@ public class OpenCVTestCase extends TestCase {
     protected void setUp() throws Exception {
         super.setUp();
 
-    try {
-        System.loadLibrary("opencv_java");
-    } catch (SecurityException e) {
-        System.out.println(e.toString());
-        System.exit(-1);
-    } catch (UnsatisfiedLinkError e) {
-        System.out.println(e.toString());
-        System.exit(-1);
-    }
+        try {
+            System.loadLibrary("opencv_java");
+        } catch (SecurityException e) {
+            System.out.println(e.toString());
+            System.exit(-1);
+        } catch (UnsatisfiedLinkError e) {
+            System.out.println(e.toString());
+            System.exit(-1);
+        }
 
-    String pwd;
-    try {
-        pwd = new File(".").getCanonicalPath() + File.separator;
-    } catch (IOException e) {
-        System.out.println(e);
-        return;
-    }
+        Core.setErrorVerbosity(false);
 
-    OpenCVTestRunner.LENA_PATH = pwd + "res/drawable/lena.jpg";
-    OpenCVTestRunner.CHESS_PATH = pwd + "res/drawable/chessboard.jpg";
-    OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH = pwd + "res/raw/lbpcascade_frontalface.xml";
+        String pwd;
+        try {
+            pwd = new File(".").getCanonicalPath() + File.separator;
+        } catch (IOException e) {
+            System.out.println(e);
+            return;
+        }
 
-    assert(new File(OpenCVTestRunner.LENA_PATH).exists());
-    assert(new File(OpenCVTestRunner.CHESS_PATH).exists());
-    assert(new File(OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH).exists());
+        OpenCVTestRunner.LENA_PATH = pwd + "res/drawable/lena.jpg";
+        OpenCVTestRunner.CHESS_PATH = pwd + "res/drawable/chessboard.jpg";
+        OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH = pwd + "res/raw/lbpcascade_frontalface.xml";
+
+        assert(new File(OpenCVTestRunner.LENA_PATH).exists());
+        assert(new File(OpenCVTestRunner.CHESS_PATH).exists());
+        assert(new File(OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH).exists());
 
         dst = new Mat();
         assertTrue(dst.empty());

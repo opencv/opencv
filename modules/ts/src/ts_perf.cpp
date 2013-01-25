@@ -339,7 +339,7 @@ static double evalEps(double expected, double actual, double _eps, ERROR_TYPE er
     if (err == ERROR_ABSOLUTE)
         return _eps;
     else if (err == ERROR_RELATIVE)
-        return std::max(std::abs(expected), std::abs(actual)) * err;
+        return std::max(std::abs(expected), std::abs(actual)) * _eps;
     return 0;
 }
 

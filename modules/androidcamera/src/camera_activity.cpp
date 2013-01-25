@@ -269,7 +269,7 @@ void CameraWrapperConnector::fillListWrapperLibs(const string& folderPath, vecto
 
 std::string CameraWrapperConnector::getDefaultPathLibFolder()
 {
-    #define BIN_PACKAGE_NAME(x) "org.opencv.lib_v" CVAUX_STR(CV_MAJOR_VERSION) CVAUX_STR(CV_MINOR_VERSION) "_" x
+    #define BIN_PACKAGE_NAME(x) "org.opencv.lib_v" CVAUX_STR(CV_VERSION_EPOCH) CVAUX_STR(CV_VERSION_MAJOR) "_" x
     const char* const packageList[] = {BIN_PACKAGE_NAME("armv7a"), OPENCV_ENGINE_PACKAGE};
     for (size_t i = 0; i < sizeof(packageList)/sizeof(packageList[0]); i++)
     {

@@ -111,52 +111,52 @@ namespace cv
             ////////////////////////////////////////////////////////////////////////////
             ////////////////////merge//////////////////////////////////////////////////
             ////////////////////////////////////////////////////////////////////////////
-            void merge_vector_run_no_roi(const oclMat *mat_src, size_t n, oclMat &mat_dst)
-            {
-                Context  *clCxt = mat_dst.clCxt;
-                int channels = mat_dst.oclchannels();
-                int depth = mat_dst.depth();
+            // static void merge_vector_run_no_roi(const oclMat *mat_src, size_t n, oclMat &mat_dst)
+            // {
+            //     Context  *clCxt = mat_dst.clCxt;
+            //     int channels = mat_dst.oclchannels();
+            //     int depth = mat_dst.depth();
 
-                string kernelName = "merge_vector";
+            //     string kernelName = "merge_vector";
 
-                int indexes[4][7] = {{0, 0, 0, 0, 0, 0, 0},
-                    {4, 4, 2, 2, 1, 1, 1},
-                    {4, 4, 2, 2 , 1, 1, 1},
-                    {4, 4, 2, 2, 1, 1, 1}
-                };
+            //     int indexes[4][7] = {{0, 0, 0, 0, 0, 0, 0},
+            //         {4, 4, 2, 2, 1, 1, 1},
+            //         {4, 4, 2, 2 , 1, 1, 1},
+            //         {4, 4, 2, 2, 1, 1, 1}
+            //     };
 
-                size_t index = indexes[channels - 1][mat_dst.depth()];
-                int    cols = divUp(mat_dst.cols, index);
-                size_t localThreads[3]  = { 64, 4, 1 };
-                size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                            divUp(mat_dst.rows, localThreads[1]) *localThreads[1],
-                                            1
-                                          };
+            //     size_t index = indexes[channels - 1][mat_dst.depth()];
+            //     int    cols = divUp(mat_dst.cols, index);
+            //     size_t localThreads[3]  = { 64, 4, 1 };
+            //     size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+            //                                 divUp(mat_dst.rows, localThreads[1]) *localThreads[1],
+            //                                 1
+            //                               };
 
-                vector<pair<size_t , const void *> > args;
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst.rows));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst.data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst.step));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[0].data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[0].step));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[1].data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[1].step));
-                if(n >= 3)
-                {
-                    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[2].data));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[2].step));
-                }
-                if(n >= 4)
-                {
-                    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[3].data));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[3].step));
-                }
+            //     vector<pair<size_t , const void *> > args;
+            //     args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst.rows));
+            //     args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
+            //     args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst.data));
+            //     args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst.step));
+            //     args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[0].data));
+            //     args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[0].step));
+            //     args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[1].data));
+            //     args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[1].step));
+            //     if(n >= 3)
+            //     {
+            //         args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[2].data));
+            //         args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[2].step));
+            //     }
+            //     if(n >= 4)
+            //     {
+            //         args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[3].data));
+            //         args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[3].step));
+            //     }
 
-                openCLExecuteKernel(clCxt, &merge_mat, kernelName, globalThreads, localThreads, args, channels, depth);
-            }
+            //     openCLExecuteKernel(clCxt, &merge_mat, kernelName, globalThreads, localThreads, args, channels, depth);
+            // }
 
-            void merge_vector_run(const oclMat *mat_src, size_t n, oclMat &mat_dst)
+            static void merge_vector_run(const oclMat *mat_src, size_t n, oclMat &mat_dst)
             {
                 if(mat_dst.clCxt -> impl -> double_support == 0 && mat_dst.type() == CV_64F)
                 {
@@ -228,7 +228,7 @@ namespace cv
 
                 openCLExecuteKernel(clCxt, &merge_mat, kernelName, globalThreads, localThreads, args, channels, depth);
             }
-            void merge(const oclMat *mat_src, size_t n, oclMat &mat_dst)
+            static void merge(const oclMat *mat_src, size_t n, oclMat &mat_dst)
             {
                 CV_Assert(mat_src);
                 CV_Assert(n > 0);
@@ -260,51 +260,51 @@ namespace cv
             ////////////////////////////////////////////////////////////////////////////////////////////////////
             //////////////////////////////////////split/////////////////////////////////////////////////////////////
             //////////////////////////////////////////////////////////////////////////////////////////////////
-            void split_vector_run_no_roi(const oclMat &mat_src, oclMat *mat_dst)
-            {
-                Context  *clCxt = mat_src.clCxt;
-                int channels = mat_src.oclchannels();
-                int depth = mat_src.depth();
+            // static void split_vector_run_no_roi(const oclMat &mat_src, oclMat *mat_dst)
+            // {
+            //     Context  *clCxt = mat_src.clCxt;
+            //     int channels = mat_src.oclchannels();
+            //     int depth = mat_src.depth();
 
-                string kernelName = "split_vector";
+            //     string kernelName = "split_vector";
 
-                int indexes[4][7] = {{0, 0, 0, 0, 0, 0, 0},
-                    {8, 8, 8, 8, 4, 4, 2},
-                    {8, 8, 8, 8 , 4, 4, 4},
-                    {4, 4, 2, 2, 1, 1, 1}
-                };
+            //     int indexes[4][7] = {{0, 0, 0, 0, 0, 0, 0},
+            //         {8, 8, 8, 8, 4, 4, 2},
+            //         {8, 8, 8, 8 , 4, 4, 4},
+            //         {4, 4, 2, 2, 1, 1, 1}
+            //     };
 
-                size_t index = indexes[channels - 1][mat_dst[0].depth()];
-                int cols = divUp(mat_src.cols, index);
-                size_t localThreads[3]  = { 64, 4, 1 };
-                size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                            divUp(mat_src.rows, localThreads[1]) *localThreads[1],
-                                            1
-                                          };
+            //     size_t index = indexes[channels - 1][mat_dst[0].depth()];
+            //     int cols = divUp(mat_src.cols, index);
+            //     size_t localThreads[3]  = { 64, 4, 1 };
+            //     size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+            //                                 divUp(mat_src.rows, localThreads[1]) *localThreads[1],
+            //                                 1
+            //                               };
 
-                vector<pair<size_t , const void *> > args;
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src.data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src.step));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src.rows));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[0].data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[0].step));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[1].data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[1].step));
-                if(channels >= 3)
-                {
-                    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[2].data));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[2].step));
-                }
-                if(channels >= 4)
-                {
-                    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[3].data));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[3].step));
-                }
+            //     vector<pair<size_t , const void *> > args;
+            //     args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src.data));
+            //     args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src.step));
+            //     args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src.rows));
+            //     args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
+            //     args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[0].data));
+            //     args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[0].step));
+            //     args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[1].data));
+            //     args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[1].step));
+            //     if(channels >= 3)
+            //     {
+            //         args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[2].data));
+            //         args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[2].step));
+            //     }
+            //     if(channels >= 4)
+            //     {
+            //         args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_dst[3].data));
+            //         args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst[3].step));
+            //     }
 
-                openCLExecuteKernel(clCxt, &split_mat, kernelName, globalThreads, localThreads, args, channels, depth);
-            }
-            void split_vector_run(const oclMat &mat_src, oclMat *mat_dst)
+            //     openCLExecuteKernel(clCxt, &split_mat, kernelName, globalThreads, localThreads, args, channels, depth);
+            // }
+            static void split_vector_run(const oclMat &mat_src, oclMat *mat_dst)
             {
 
                 if(mat_src.clCxt -> impl -> double_support == 0 && mat_src.type() == CV_64F)
@@ -374,7 +374,7 @@ namespace cv
 
                 openCLExecuteKernel(clCxt, &split_mat, kernelName, globalThreads, localThreads, args, channels, depth);
             }
-            void split(const oclMat &mat_src, oclMat *mat_dst)
+            static void split(const oclMat &mat_src, oclMat *mat_dst)
             {
                 CV_Assert(mat_dst);
 

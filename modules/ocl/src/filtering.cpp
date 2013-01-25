@@ -47,6 +47,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "mcwutil.hpp"
 #include <iostream>
 using namespace std;
 using namespace cv;
@@ -109,7 +110,7 @@ Ptr<FilterEngine_GPU> cv::ocl::createLinearFilter_GPU(int, int, const Mat &, con
     return Ptr<FilterEngine_GPU>(0);
 }
 
-Ptr<FilterEngine_GPU> cv::ocl::createDerivFilter_GPU( int srcType, int dstType, int dx, int dy, int ksize, int borderType )
+Ptr<FilterEngine_GPU> cv::ocl::createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize, int borderType)
 {
     throw_nogpu();
     return Ptr<FilterEngine_GPU>(0);
@@ -150,17 +151,17 @@ void cv::ocl::Laplacian(const oclMat &, oclMat &, int, int, double)
     throw_nogpu();
 }
 
-void cv::ocl::erode( const oclMat &, oclMat &, const Mat &, Point, int)
+void cv::ocl::erode(const oclMat &, oclMat &, const Mat &, Point, int)
 {
     throw_nogpu();
 }
 
-void cv::ocl::dilate( const oclMat &, oclMat &, const Mat &, Point, int)
+void cv::ocl::dilate(const oclMat &, oclMat &, const Mat &, Point, int)
 {
     throw_nogpu();
 }
 
-void cv::ocl::morphologyEx( const oclMat &, oclMat &, int, const Mat &, Point, int)
+void cv::ocl::morphologyEx(const oclMat &, oclMat &, int, const Mat &, Point, int)
 {
     throw_nogpu();
 }
@@ -170,100 +171,110 @@ void cv::ocl::morphologyEx( const oclMat &, oclMat &, int, const Mat &, Point, i
 //helper routines
 namespace cv
 {
-    namespace ocl
-    {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *filtering_boxFilter;
-        extern const char *filter_sep_row;
-        extern const char *filter_sep_col;
-        extern const char *filtering_laplacian;
-        extern const char *filtering_morph;
-    }
+namespace ocl
+{
+///////////////////////////OpenCL kernel strings///////////////////////////
+extern const char *filtering_boxFilter;
+extern const char *filter_sep_row;
+extern const char *filter_sep_col;
+extern const char *filtering_laplacian;
+extern const char *filtering_morph;
+}
 }
 
 namespace
 {
-    inline int divUp(int total, int grain)
-    {
-        return (total + grain - 1) / grain;
-    }
+inline int divUp(int total, int grain)
+{
+    return (total + grain - 1) / grain;
+}
 }
 
 namespace
 {
-    inline void normalizeAnchor(int &anchor, int ksize)
+inline void normalizeAnchor(int &anchor, int ksize)
+{
+    if (anchor < 0)
     {
-        if (anchor < 0)
-            anchor = ksize >> 1;
-
-        CV_Assert(0 <= anchor && anchor < ksize);
+        anchor = ksize >> 1;
     }
 
-    inline void normalizeAnchor(Point &anchor, const Size &ksize)
+    CV_Assert(0 <= anchor && anchor < ksize);
+}
+
+inline void normalizeAnchor(Point &anchor, const Size &ksize)
+{
+    normalizeAnchor(anchor.x, ksize.width);
+    normalizeAnchor(anchor.y, ksize.height);
+}
+
+inline void normalizeROI(Rect &roi, const Size &ksize, const Point &anchor, const Size &src_size)
+{
+    if (roi == Rect(0, 0, -1, -1))
     {
-        normalizeAnchor(anchor.x, ksize.width);
-        normalizeAnchor(anchor.y, ksize.height);
+        roi = Rect(0, 0, src_size.width, src_size.height);
     }
 
-    inline void normalizeROI(Rect &roi, const Size &ksize, const Point &anchor, const Size &src_size)
+    CV_Assert(ksize.height > 0 && ksize.width > 0 && ((ksize.height & 1) == 1) && ((ksize.width & 1) == 1));
+    CV_Assert((anchor.x == -1 && anchor.y == -1) || (anchor.x == ksize.width >> 1 && anchor.y == ksize.height >> 1));
+    CV_Assert(roi.x >= 0 && roi.y >= 0 && roi.width <= src_size.width && roi.height <= src_size.height);
+}
+
+
+inline void normalizeKernel(const Mat &kernel, oclMat &gpu_krnl, int type = CV_8U, int *nDivisor = 0, bool reverse = false)
+{
+    int scale = nDivisor && (kernel.depth() == CV_32F || kernel.depth() == CV_64F) ? 256 : 1;
+
+    if (nDivisor)
     {
-        if (roi == Rect(0, 0, -1, -1))
-            roi = Rect(0, 0, src_size.width, src_size.height);
-        CV_Assert(ksize.height > 0 && ksize.width > 0 && ((ksize.height & 1) == 1) && ((ksize.width & 1) == 1));
-        CV_Assert((anchor.x == -1 && anchor.y == -1) || (anchor.x == ksize.width >> 1 && anchor.y == ksize.height >> 1));
-        CV_Assert(roi.x >= 0 && roi.y >= 0 && roi.width <= src_size.width && roi.height <= src_size.height);
+        *nDivisor = scale;
     }
 
+    Mat temp(kernel.size(), type);
+    kernel.convertTo(temp, type, scale);
+    Mat cont_krnl = temp.reshape(1, 1);
 
-    inline void normalizeKernel(const Mat &kernel, oclMat &gpu_krnl, int type = CV_8U, int *nDivisor = 0, bool reverse = false)
+    if (reverse)
     {
-        int scale = nDivisor && (kernel.depth() == CV_32F || kernel.depth() == CV_64F) ? 256 : 1;
-        if (nDivisor) *nDivisor = scale;
+        int count = cont_krnl.cols >> 1;
 
-        Mat temp(kernel.size(), type);
-        kernel.convertTo(temp, type, scale);
-        Mat cont_krnl = temp.reshape(1, 1);
-
-        if (reverse)
+        for (int i = 0; i < count; ++i)
         {
-            int count = cont_krnl.cols >> 1;
-            for (int i = 0; i < count; ++i)
-            {
-                std::swap(cont_krnl.at<int>(0, i), cont_krnl.at<int>(0, cont_krnl.cols - 1 - i));
-            }
+            std::swap(cont_krnl.at<int>(0, i), cont_krnl.at<int>(0, cont_krnl.cols - 1 - i));
         }
-
-        gpu_krnl.upload(cont_krnl);
     }
+
+    gpu_krnl.upload(cont_krnl);
+}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Filter2D
 namespace
 {
-    class Filter2DEngine_GPU : public FilterEngine_GPU
+class Filter2DEngine_GPU : public FilterEngine_GPU
+{
+public:
+    Filter2DEngine_GPU(const Ptr<BaseFilter_GPU> &filter2D_) : filter2D(filter2D_) {}
+
+    virtual void apply(const oclMat &src, oclMat &dst, Rect roi = Rect(0, 0, -1, -1))
     {
-    public:
-        Filter2DEngine_GPU(const Ptr<BaseFilter_GPU> &filter2D_) : filter2D(filter2D_) {}
+        Size src_size = src.size();
 
-        virtual void apply(const oclMat &src, oclMat &dst, Rect roi = Rect(0, 0, -1, -1))
-        {
-            Size src_size = src.size();
+        // Delete those two clause below which exist before, However, the result is alos correct
+        // dst.create(src_size, src.type());
+        // dst = Scalar(0.0);
 
-            // Delete those two clause below which exist before, However, the result is alos correct
-            // dst.create(src_size, src.type());
-            // dst = Scalar(0.0);
+        normalizeROI(roi, filter2D->ksize, filter2D->anchor, src_size);
 
-            normalizeROI(roi, filter2D->ksize, filter2D->anchor, src_size);
+        oclMat srcROI = src(roi);
+        oclMat dstROI = dst(roi);
 
-            oclMat srcROI = src(roi);
-            oclMat dstROI = dst(roi);
+        (*filter2D)(srcROI, dstROI);
+    }
 
-            (*filter2D)(srcROI, dstROI);
-        }
-
-        Ptr<BaseFilter_GPU> filter2D;
-    };
+    Ptr<BaseFilter_GPU> filter2D;
+};
 }
 
 Ptr<FilterEngine_GPU> cv::ocl::createFilter2D_GPU(const Ptr<BaseFilter_GPU> filter2D)
@@ -275,22 +286,22 @@ Ptr<FilterEngine_GPU> cv::ocl::createFilter2D_GPU(const Ptr<BaseFilter_GPU> filt
 // Box Filter
 namespace
 {
-    typedef void (*FilterBox_t)(const oclMat & , oclMat & , Size &, const Point, const int);
+typedef void (*FilterBox_t)(const oclMat & , oclMat & , Size &, const Point, const int);
 
-    class GPUBoxFilter : public BaseFilter_GPU
+class GPUBoxFilter : public BaseFilter_GPU
+{
+public:
+    GPUBoxFilter(const Size &ksize_, const Point &anchor_, const int borderType_, FilterBox_t func_) :
+        BaseFilter_GPU(ksize_, anchor_, borderType_), func(func_) {}
+
+    virtual void operator()(const oclMat &src, oclMat &dst)
     {
-    public:
-        GPUBoxFilter(const Size &ksize_, const Point &anchor_, const int borderType_, FilterBox_t func_) :
-            BaseFilter_GPU(ksize_, anchor_, borderType_), func(func_) {}
+        func(src, dst, ksize, anchor, borderType);
+    }
 
-        virtual void operator()(const oclMat &src, oclMat &dst)
-        {
-            func(src, dst, ksize, anchor, borderType);
-        }
+    FilterBox_t func;
 
-        FilterBox_t func;
-
-    };
+};
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -298,22 +309,22 @@ namespace
 
 namespace
 {
-    typedef void (*GPUMorfFilter_t)(const oclMat & , oclMat & , oclMat & , Size &, const Point);
+typedef void (*GPUMorfFilter_t)(const oclMat & , oclMat & , oclMat & , Size &, const Point);
 
-    class MorphFilter_GPU : public BaseFilter_GPU
+class MorphFilter_GPU : public BaseFilter_GPU
+{
+public:
+    MorphFilter_GPU(const Size &ksize_, const Point &anchor_, const oclMat &kernel_, GPUMorfFilter_t func_) :
+        BaseFilter_GPU(ksize_, anchor_, BORDER_CONSTANT), kernel(kernel_), func(func_) {}
+
+    virtual void operator()(const oclMat &src, oclMat &dst)
     {
-    public:
-        MorphFilter_GPU(const Size &ksize_, const Point &anchor_, const oclMat &kernel_, GPUMorfFilter_t func_) :
-            BaseFilter_GPU(ksize_, anchor_, BORDER_CONSTANT), kernel(kernel_), func(func_) {}
+        func(src, dst, kernel, ksize, anchor) ;
+    }
 
-        virtual void operator()(const oclMat &src, oclMat &dst)
-        {
-            func(src, dst, kernel, ksize, anchor) ;
-        }
-
-        oclMat kernel;
-        GPUMorfFilter_t func;
-    };
+    oclMat kernel;
+    GPUMorfFilter_t func;
+};
 }
 
 /*
@@ -321,14 +332,14 @@ namespace
 **Extend this if necessary later.
 **Note that the kernel need to be further refined.
 */
-void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, const Point anchor)
+static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, const Point anchor)
 {
     //Normalize the result by default
     //float alpha = ksize.height * ksize.width;
     CV_Assert(src.clCxt == dst.clCxt);
-    CV_Assert( (src.cols == dst.cols) &&
-               (src.rows == dst.rows) );
-    CV_Assert( (src.oclchannels() == dst.oclchannels()) );
+    CV_Assert((src.cols == dst.cols) &&
+              (src.rows == dst.rows));
+    CV_Assert((src.oclchannels() == dst.oclchannels()));
 
     int srcStep = src.step1() / src.oclchannels();
     int dstStep = dst.step1() / dst.oclchannels();
@@ -342,19 +353,21 @@ void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, c
     size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0], (src.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1};
 
-    if(src.type() == CV_8UC1)
+    if (src.type() == CV_8UC1)
     {
         kernelName = "morph_C1_D0";
         globalThreads[0] = ((src.cols + 3) / 4 + localThreads[0] - 1) / localThreads[0] * localThreads[0];
-        CV_Assert( localThreads[0]*localThreads[1] * 8 >= (localThreads[0] * 4 + ksize.width - 1) * (localThreads[1] + ksize.height - 1) );
+        CV_Assert(localThreads[0]*localThreads[1] * 8 >= (localThreads[0] * 4 + ksize.width - 1) * (localThreads[1] + ksize.height - 1));
     }
     else
     {
         kernelName = "morph";
-        CV_Assert( localThreads[0]*localThreads[1] * 2 >= (localThreads[0] + ksize.width - 1) * (localThreads[1] + ksize.height - 1) );
+        CV_Assert(localThreads[0]*localThreads[1] * 2 >= (localThreads[0] + ksize.width - 1) * (localThreads[1] + ksize.height - 1));
     }
+
     char s[64];
-    switch(src.type())
+
+    switch (src.type())
     {
     case CV_8UC1:
         sprintf(s, "-D VAL=255");
@@ -373,34 +386,35 @@ void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, c
     default:
         CV_Error(CV_StsUnsupportedFormat, "unsupported type");
     }
+
     char compile_option[128];
-    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D ERODE %s", anchor.x, anchor.y, localThreads[0], localThreads[1], s);
+    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D ERODE %s", anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], s);
     vector< pair<size_t, const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&srcOffset_x));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&srcOffset_y));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&srcStep));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dstStep));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_kernel.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.wholerows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dstOffset));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&srcOffset_x));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&srcOffset_y));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src.cols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src.rows));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&srcStep));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&dstStep));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&dstOffset));
     openCLExecuteKernel(clCxt, &filtering_morph, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
 
 
 //! data type supported: CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4
-void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, const Point anchor)
+static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, const Point anchor)
 {
     //Normalize the result by default
     //float alpha = ksize.height * ksize.width;
     CV_Assert(src.clCxt == dst.clCxt);
-    CV_Assert( (src.cols == dst.cols) &&
-               (src.rows == dst.rows) );
-    CV_Assert( (src.oclchannels() == dst.oclchannels()) );
+    CV_Assert((src.cols == dst.cols) &&
+              (src.rows == dst.rows));
+    CV_Assert((src.oclchannels() == dst.oclchannels()));
 
     int srcStep = src.step1() / src.oclchannels();
     int dstStep = dst.step1() / dst.oclchannels();
@@ -414,19 +428,21 @@ void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, 
     size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3] = {(src.cols + localThreads[0]) / localThreads[0] *localThreads[0], (src.rows + localThreads[1]) / localThreads[1] *localThreads[1], 1};
 
-    if(src.type() == CV_8UC1)
+    if (src.type() == CV_8UC1)
     {
         kernelName = "morph_C1_D0";
         globalThreads[0] = ((src.cols + 3) / 4 + localThreads[0]) / localThreads[0] * localThreads[0];
-        CV_Assert( localThreads[0]*localThreads[1] * 8 >= (localThreads[0] * 4 + ksize.width - 1) * (localThreads[1] + ksize.height - 1) );
+        CV_Assert(localThreads[0]*localThreads[1] * 8 >= (localThreads[0] * 4 + ksize.width - 1) * (localThreads[1] + ksize.height - 1));
     }
     else
     {
         kernelName = "morph";
-        CV_Assert( localThreads[0]*localThreads[1] * 2 >= (localThreads[0] + ksize.width - 1) * (localThreads[1] + ksize.height - 1) );
+        CV_Assert(localThreads[0]*localThreads[1] * 2 >= (localThreads[0] + ksize.width - 1) * (localThreads[1] + ksize.height - 1));
     }
+
     char s[64];
-    switch(src.type())
+
+    switch (src.type())
     {
     case CV_8UC1:
         sprintf(s, "-D VAL=0");
@@ -445,21 +461,22 @@ void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, 
     default:
         CV_Error(CV_StsUnsupportedFormat, "unsupported type");
     }
+
     char compile_option[128];
-    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D DILATE %s", anchor.x, anchor.y, localThreads[0], localThreads[1], s);
+    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D DILATE %s", anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], s);
     vector< pair<size_t, const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&srcOffset_x));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&srcOffset_y));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&srcStep));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dstStep));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_kernel.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.wholerows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dstOffset));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&srcOffset_x));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&srcOffset_y));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src.cols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src.rows));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&srcStep));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&dstStep));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&dstOffset));
     openCLExecuteKernel(clCxt, &filtering_morph, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
 
@@ -483,47 +500,48 @@ Ptr<BaseFilter_GPU> cv::ocl::getMorphologyFilter_GPU(int op, int type, const Mat
 
 namespace
 {
-    class MorphologyFilterEngine_GPU : public Filter2DEngine_GPU
+class MorphologyFilterEngine_GPU : public Filter2DEngine_GPU
+{
+public:
+    MorphologyFilterEngine_GPU(const Ptr<BaseFilter_GPU> &filter2D_, int iters_) :
+        Filter2DEngine_GPU(filter2D_), iters(iters_) {}
+
+    virtual void apply(const oclMat &src, oclMat &dst)
     {
-    public:
-        MorphologyFilterEngine_GPU(const Ptr<BaseFilter_GPU> &filter2D_, int iters_) :
-            Filter2DEngine_GPU(filter2D_), iters(iters_) {}
+        Filter2DEngine_GPU::apply(src, dst);
 
-        virtual void apply(const oclMat &src, oclMat &dst)
+        //if (iters > 1)
+        //{
+        // Size wholesize;
+        // Point ofs;
+        // dst.locateROI(wholesize,ofs);
+        // int rows = dst.rows, cols = dst.cols;
+        // dst.adjustROI(ofs.y,-ofs.y-rows+dst.wholerows,ofs.x,-ofs.x-cols+dst.wholecols);
+        // dst.copyTo(morfBuf);
+        // dst.adjustROI(-ofs.y,ofs.y+rows-dst.wholerows,-ofs.x,ofs.x+cols-dst.wholecols);
+        // morfBuf.adjustROI(-ofs.y,ofs.y+rows-dst.wholerows,-ofs.x,ofs.x+cols-dst.wholecols);
+        // //morfBuf.create(src.size(),src.type());
+        // //Filter2DEngine_GPU::apply(dst, morfBuf);
+        // //morfBuf.copyTo(dst);
+        //}
+        for (int i = 1; i < iters; ++i)
         {
-            Filter2DEngine_GPU::apply(src, dst);
-            //if (iters > 1)
-            //{
-            // Size wholesize;
-            // Point ofs;
-            // dst.locateROI(wholesize,ofs);
-            // int rows = dst.rows, cols = dst.cols;
-            // dst.adjustROI(ofs.y,-ofs.y-rows+dst.wholerows,ofs.x,-ofs.x-cols+dst.wholecols);
-            // dst.copyTo(morfBuf);
-            // dst.adjustROI(-ofs.y,ofs.y+rows-dst.wholerows,-ofs.x,ofs.x+cols-dst.wholecols);
-            // morfBuf.adjustROI(-ofs.y,ofs.y+rows-dst.wholerows,-ofs.x,ofs.x+cols-dst.wholecols);
-            // //morfBuf.create(src.size(),src.type());
-            // //Filter2DEngine_GPU::apply(dst, morfBuf);
-            // //morfBuf.copyTo(dst);
-            //}
-            for(int i = 1; i < iters; ++i)
-            {
-                //dst.swap(morfBuf);
-                Size wholesize;
-                Point ofs;
-                dst.locateROI(wholesize, ofs);
-                int rows = dst.rows, cols = dst.cols;
-                dst.adjustROI(ofs.y, -ofs.y - rows + dst.wholerows, ofs.x, -ofs.x - cols + dst.wholecols);
-                dst.copyTo(morfBuf);
-                dst.adjustROI(-ofs.y, ofs.y + rows - dst.wholerows, -ofs.x, ofs.x + cols - dst.wholecols);
-                morfBuf.adjustROI(-ofs.y, ofs.y + rows - dst.wholerows, -ofs.x, ofs.x + cols - dst.wholecols);
-                Filter2DEngine_GPU::apply(morfBuf, dst);
-            }
+            //dst.swap(morfBuf);
+            Size wholesize;
+            Point ofs;
+            dst.locateROI(wholesize, ofs);
+            int rows = dst.rows, cols = dst.cols;
+            dst.adjustROI(ofs.y, -ofs.y - rows + dst.wholerows, ofs.x, -ofs.x - cols + dst.wholecols);
+            dst.copyTo(morfBuf);
+            dst.adjustROI(-ofs.y, ofs.y + rows - dst.wholerows, -ofs.x, ofs.x + cols - dst.wholecols);
+            morfBuf.adjustROI(-ofs.y, ofs.y + rows - dst.wholerows, -ofs.x, ofs.x + cols - dst.wholecols);
+            Filter2DEngine_GPU::apply(morfBuf, dst);
         }
+    }
 
-        int iters;
-        oclMat morfBuf;
-    };
+    int iters;
+    oclMat morfBuf;
+};
 }
 
 Ptr<FilterEngine_GPU> cv::ocl::createMorphologyFilter_GPU(int op, int type, const Mat &kernel, const Point &anchor, int iterations)
@@ -539,104 +557,113 @@ Ptr<FilterEngine_GPU> cv::ocl::createMorphologyFilter_GPU(int op, int type, cons
 
 namespace
 {
-    void morphOp(int op, const oclMat &src, oclMat &dst, const Mat &_kernel, Point anchor, int iterations, int borderType, const Scalar &borderValue)
+void morphOp(int op, const oclMat &src, oclMat &dst, const Mat &_kernel, Point anchor, int iterations, int borderType, const Scalar &borderValue)
+{
+    if ((borderType != cv::BORDER_CONSTANT) || (borderValue != morphologyDefaultBorderValue()))
     {
-        if((borderType != cv::BORDER_CONSTANT) || (borderValue != morphologyDefaultBorderValue()))
-        {
-            CV_Error(CV_StsBadArg, "unsupported border type");
-        }
-        Mat kernel;
-        Size ksize = _kernel.data ? _kernel.size() : Size(3, 3);
-
-        normalizeAnchor(anchor, ksize);
-
-        if (iterations == 0 || _kernel.rows * _kernel.cols == 1)
-        {
-            src.copyTo(dst);
-            return;
-        }
-
-        dst.create(src.size(), src.type());
-
-        if (!_kernel.data)
-        {
-            kernel = getStructuringElement(MORPH_RECT, Size(1 + iterations * 2, 1 + iterations * 2));
-            anchor = Point(iterations, iterations);
-            iterations = 1;
-        }
-        else if (iterations > 1 && countNonZero(_kernel) == _kernel.rows * _kernel.cols)
-        {
-            anchor = Point(anchor.x * iterations, anchor.y * iterations);
-            kernel = getStructuringElement(MORPH_RECT, Size(ksize.width + iterations * (ksize.width - 1),
-                                           ksize.height + iterations * (ksize.height - 1)), anchor);
-            iterations = 1;
-        }
-        else
-            kernel = _kernel;
-
-        Ptr<FilterEngine_GPU> f = createMorphologyFilter_GPU(op, src.type(), kernel, anchor, iterations);
-
-        f->apply(src, dst);
+        CV_Error(CV_StsBadArg, "unsupported border type");
     }
+
+    Mat kernel;
+    Size ksize = _kernel.data ? _kernel.size() : Size(3, 3);
+
+    normalizeAnchor(anchor, ksize);
+
+    if (iterations == 0 || _kernel.rows *_kernel.cols == 1)
+    {
+        src.copyTo(dst);
+        return;
+    }
+
+    dst.create(src.size(), src.type());
+
+    if (!_kernel.data)
+    {
+        kernel = getStructuringElement(MORPH_RECT, Size(1 + iterations * 2, 1 + iterations * 2));
+        anchor = Point(iterations, iterations);
+        iterations = 1;
+    }
+    else if (iterations > 1 && countNonZero(_kernel) == _kernel.rows * _kernel.cols)
+    {
+        anchor = Point(anchor.x * iterations, anchor.y * iterations);
+        kernel = getStructuringElement(MORPH_RECT, Size(ksize.width + iterations * (ksize.width - 1),
+                                       ksize.height + iterations * (ksize.height - 1)), anchor);
+        iterations = 1;
+    }
+    else
+    {
+        kernel = _kernel;
+    }
+
+    Ptr<FilterEngine_GPU> f = createMorphologyFilter_GPU(op, src.type(), kernel, anchor, iterations);
+
+    f->apply(src, dst);
+}
 }
 
-void cv::ocl::erode( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor, int iterations,
-                     int borderType, const Scalar &borderValue)
+void cv::ocl::erode(const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor, int iterations,
+                    int borderType, const Scalar &borderValue)
 {
     bool allZero = true;
-    for(int i = 0; i < kernel.rows * kernel.cols; ++i)
-        if(kernel.data[i] != 0)
+
+    for (int i = 0; i < kernel.rows * kernel.cols; ++i)
+        if (kernel.data[i] != 0)
+        {
             allZero = false;
-    if(allZero)
+        }
+
+    if (allZero)
     {
         kernel.data[0] = 1;
     }
+
     morphOp(MORPH_ERODE, src, dst, kernel, anchor, iterations, borderType, borderValue);
 }
 
-void cv::ocl::dilate( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor, int iterations,
-                      int borderType, const Scalar &borderValue)
+void cv::ocl::dilate(const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor, int iterations,
+                     int borderType, const Scalar &borderValue)
 {
     morphOp(MORPH_DILATE, src, dst, kernel, anchor, iterations, borderType, borderValue);
 }
 
-void cv::ocl::morphologyEx( const oclMat &src, oclMat &dst, int op, const Mat &kernel, Point anchor, int iterations,
-                            int borderType, const Scalar &borderValue)
+void cv::ocl::morphologyEx(const oclMat &src, oclMat &dst, int op, const Mat &kernel, Point anchor, int iterations,
+                           int borderType, const Scalar &borderValue)
 {
     oclMat temp;
-    switch( op )
+
+    switch (op)
     {
     case MORPH_ERODE:
-        erode( src, dst, kernel, anchor, iterations, borderType, borderValue);
+        erode(src, dst, kernel, anchor, iterations, borderType, borderValue);
         break;
     case MORPH_DILATE:
-        dilate( src, dst, kernel, anchor, iterations, borderType, borderValue);
+        dilate(src, dst, kernel, anchor, iterations, borderType, borderValue);
         break;
     case MORPH_OPEN:
-        erode( src, temp, kernel, anchor, iterations, borderType, borderValue);
-        dilate( temp, dst, kernel, anchor, iterations, borderType, borderValue);
+        erode(src, temp, kernel, anchor, iterations, borderType, borderValue);
+        dilate(temp, dst, kernel, anchor, iterations, borderType, borderValue);
         break;
     case CV_MOP_CLOSE:
-        dilate( src, temp, kernel, anchor, iterations, borderType, borderValue);
-        erode( temp, dst, kernel, anchor, iterations, borderType, borderValue);
+        dilate(src, temp, kernel, anchor, iterations, borderType, borderValue);
+        erode(temp, dst, kernel, anchor, iterations, borderType, borderValue);
         break;
     case CV_MOP_GRADIENT:
-        erode( src, temp, kernel, anchor, iterations, borderType, borderValue);
-        dilate( src, dst, kernel, anchor, iterations, borderType, borderValue);
+        erode(src, temp, kernel, anchor, iterations, borderType, borderValue);
+        dilate(src, dst, kernel, anchor, iterations, borderType, borderValue);
         subtract(dst, temp, dst);
         break;
     case CV_MOP_TOPHAT:
-        erode( src, dst, kernel, anchor, iterations, borderType, borderValue);
-        dilate( dst, temp, kernel, anchor, iterations, borderType, borderValue);
+        erode(src, dst, kernel, anchor, iterations, borderType, borderValue);
+        dilate(dst, temp, kernel, anchor, iterations, borderType, borderValue);
         subtract(src, temp, dst);
         break;
     case CV_MOP_BLACKHAT:
-        dilate( src, dst, kernel, anchor, iterations, borderType, borderValue);
-        erode( dst, temp, kernel, anchor, iterations, borderType, borderValue);
+        dilate(src, dst, kernel, anchor, iterations, borderType, borderValue);
+        erode(dst, temp, kernel, anchor, iterations, borderType, borderValue);
         subtract(temp, src, dst);
         break;
     default:
-        CV_Error( CV_StsBadArg, "unknown morphological operation" );
+        CV_Error(CV_StsBadArg, "unknown morphological operation");
     }
 }
 
@@ -645,33 +672,33 @@ void cv::ocl::morphologyEx( const oclMat &src, oclMat &dst, int op, const Mat &k
 
 namespace
 {
-    typedef void (*GPUFilter2D_t)(const oclMat & , oclMat & , oclMat & , Size &, const Point, const int);
+typedef void (*GPUFilter2D_t)(const oclMat & , oclMat & , oclMat & , Size &, const Point, const int);
 
-    class LinearFilter_GPU : public BaseFilter_GPU
+class LinearFilter_GPU : public BaseFilter_GPU
+{
+public:
+    LinearFilter_GPU(const Size &ksize_, const Point &anchor_, const oclMat &kernel_, GPUFilter2D_t func_,
+                     int borderType_) :
+        BaseFilter_GPU(ksize_, anchor_, borderType_), kernel(kernel_), func(func_) {}
+
+    virtual void operator()(const oclMat &src, oclMat &dst)
     {
-    public:
-        LinearFilter_GPU(const Size &ksize_, const Point &anchor_, const oclMat &kernel_, GPUFilter2D_t func_,
-                         int borderType_) :
-            BaseFilter_GPU(ksize_, anchor_, borderType_), kernel(kernel_), func(func_) {}
+        func(src, dst, kernel, ksize, anchor, borderType) ;
+    }
 
-        virtual void operator()(const oclMat &src, oclMat &dst)
-        {
-            func(src, dst, kernel, ksize, anchor, borderType) ;
-        }
-
-        oclMat kernel;
-        GPUFilter2D_t func;
-    };
+    oclMat kernel;
+    GPUFilter2D_t func;
+};
 }
 
-void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
+static void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
                  Size &ksize, const Point anchor, const int borderType)
 {
     CV_Assert(src.clCxt == dst.clCxt);
-    CV_Assert( (src.cols == dst.cols) &&
-               (src.rows == dst.rows) );
-    CV_Assert( (src.oclchannels() == dst.oclchannels()) );
-    CV_Assert( (borderType != 0) );
+    CV_Assert((src.cols == dst.cols) &&
+              (src.rows == dst.rows));
+    CV_Assert((src.oclchannels() == dst.oclchannels()));
+    CV_Assert((borderType != 0));
     CV_Assert(ksize.height > 0 && ksize.width > 0 && ((ksize.height & 1) == 1) && ((ksize.width & 1) == 1));
     CV_Assert((anchor.x == -1 && anchor.y == -1) || (anchor.x == ksize.width >> 1 && anchor.y == ksize.height >> 1));
     Context *clCxt = src.clCxt;
@@ -703,20 +730,20 @@ void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
                               };
 
     vector< pair<size_t, const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src_offset_x));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src_offset_y));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_offset_x));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_offset_y));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_kernel.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src.step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src_offset_x));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src_offset_y));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&dst_offset_x));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&dst_offset_y));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src.cols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src.rows));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&cols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
 
     openCLExecuteKernel(clCxt, &filtering_laplacian, kernelName, globalThreads, localThreads, args, cn, depth);
 }
@@ -750,8 +777,10 @@ Ptr<FilterEngine_GPU> cv::ocl::createLinearFilter_GPU(int srcType, int dstType, 
 void cv::ocl::filter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernel, Point anchor, int borderType)
 {
 
-    if( ddepth < 0 )
+    if (ddepth < 0)
+    {
         ddepth = src.depth();
+    }
 
     dst.create(src.size(), CV_MAKETYPE(ddepth, src.channels()));
 
@@ -764,50 +793,50 @@ void cv::ocl::filter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &ke
 
 namespace
 {
-    class SeparableFilterEngine_GPU : public FilterEngine_GPU
+class SeparableFilterEngine_GPU : public FilterEngine_GPU
+{
+public:
+    SeparableFilterEngine_GPU(const Ptr<BaseRowFilter_GPU> &rowFilter_,
+                              const Ptr<BaseColumnFilter_GPU> &columnFilter_) :
+        rowFilter(rowFilter_), columnFilter(columnFilter_)
     {
-    public:
-        SeparableFilterEngine_GPU(const Ptr<BaseRowFilter_GPU> &rowFilter_,
-                                  const Ptr<BaseColumnFilter_GPU> &columnFilter_) :
-            rowFilter(rowFilter_), columnFilter(columnFilter_)
-        {
-            ksize = Size(rowFilter->ksize, columnFilter->ksize);
-            anchor = Point(rowFilter->anchor, columnFilter->anchor);
-        }
+        ksize = Size(rowFilter->ksize, columnFilter->ksize);
+        anchor = Point(rowFilter->anchor, columnFilter->anchor);
+    }
 
-        virtual void apply(const oclMat &src, oclMat &dst, Rect roi = Rect(0, 0, -1, -1))
-        {
-            Size src_size = src.size();
-            //int src_type = src.type();
+    virtual void apply(const oclMat &src, oclMat &dst, Rect roi = Rect(0, 0, -1, -1))
+    {
+        Size src_size = src.size();
+        //int src_type = src.type();
 
-            int cn = src.oclchannels();
-            //dst.create(src_size, src_type);
-            dst = Scalar(0.0);
-            //dstBuf.create(src_size, src_type);
-            dstBuf.create(src_size.height + ksize.height - 1, src_size.width, CV_MAKETYPE(CV_32F, cn));
-            dstBuf = Scalar(0.0);
+        int cn = src.oclchannels();
+        //dst.create(src_size, src_type);
+        //dst = Scalar(0.0);
+        //dstBuf.create(src_size, src_type);
+        dstBuf.create(src_size.height + ksize.height - 1, src_size.width, CV_MAKETYPE(CV_32F, cn));
+        //dstBuf = Scalar(0.0);
 
-            normalizeROI(roi, ksize, anchor, src_size);
+        normalizeROI(roi, ksize, anchor, src_size);
 
-            srcROI = src(roi);
-            dstROI = dst(roi);
-            //dstBufROI = dstBuf(roi);
+        srcROI = src(roi);
+        dstROI = dst(roi);
+        //dstBufROI = dstBuf(roi);
 
-            (*rowFilter)(srcROI, dstBuf);
-            //Mat rm(dstBufROI);
-            //std::cout << "rm " << rm << endl;
-            (*columnFilter)(dstBuf, dstROI);
-        }
+        (*rowFilter)(srcROI, dstBuf);
+        //Mat rm(dstBufROI);
+        //std::cout << "rm " << rm << endl;
+        (*columnFilter)(dstBuf, dstROI);
+    }
 
-        Ptr<BaseRowFilter_GPU> rowFilter;
-        Ptr<BaseColumnFilter_GPU> columnFilter;
-        Size ksize;
-        Point anchor;
-        oclMat dstBuf;
-        oclMat srcROI;
-        oclMat dstROI;
-        oclMat dstBufROI;
-    };
+    Ptr<BaseRowFilter_GPU> rowFilter;
+    Ptr<BaseColumnFilter_GPU> columnFilter;
+    Size ksize;
+    Point anchor;
+    oclMat dstBuf;
+    oclMat srcROI;
+    oclMat dstROI;
+    oclMat dstBufROI;
+};
 }
 
 Ptr<FilterEngine_GPU> cv::ocl::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU> &rowFilter,
@@ -821,7 +850,7 @@ Ptr<FilterEngine_GPU> cv::ocl::createSeparableFilter_GPU(const Ptr<BaseRowFilter
 **support four border types: BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101
 */
 
-void GPUFilterBox_8u_C1R(const oclMat &src, oclMat &dst,
+static void GPUFilterBox_8u_C1R(const oclMat &src, oclMat &dst,
                          Size &ksize, const Point anchor, const int borderType)
 {
     //Normalize the result by default
@@ -829,13 +858,14 @@ void GPUFilterBox_8u_C1R(const oclMat &src, oclMat &dst,
 
     CV_Assert(src.clCxt == dst.clCxt);
     CV_Assert((src.cols == dst.cols) &&
-              (src.rows == dst.rows) );
+              (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
     string kernelName = "boxFilter_C1_D0";
 
     char btype[30];
-    switch(borderType)
+
+    switch (borderType)
     {
     case 0:
         sprintf(btype, "BORDER_CONSTANT");
@@ -882,7 +912,7 @@ void GPUFilterBox_8u_C1R(const oclMat &src, oclMat &dst,
     openCLExecuteKernel(clCxt, &filtering_boxFilter, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
 
-void GPUFilterBox_8u_C4R(const oclMat &src, oclMat &dst,
+static void GPUFilterBox_8u_C4R(const oclMat &src, oclMat &dst,
                          Size &ksize, const Point anchor, const int borderType)
 {
     //Normalize the result by default
@@ -890,13 +920,14 @@ void GPUFilterBox_8u_C4R(const oclMat &src, oclMat &dst,
 
     CV_Assert(src.clCxt == dst.clCxt);
     CV_Assert((src.cols == dst.cols) &&
-              (src.rows == dst.rows) );
+              (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
     string kernelName = "boxFilter_C4_D0";
 
     char btype[30];
-    switch(borderType)
+
+    switch (borderType)
     {
     case 0:
         sprintf(btype, "BORDER_CONSTANT");
@@ -943,7 +974,7 @@ void GPUFilterBox_8u_C4R(const oclMat &src, oclMat &dst,
     openCLExecuteKernel(clCxt, &filtering_boxFilter, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
 
-void GPUFilterBox_32F_C1R(const oclMat &src, oclMat &dst,
+static void GPUFilterBox_32F_C1R(const oclMat &src, oclMat &dst,
                           Size &ksize, const Point anchor, const int borderType)
 {
     //Normalize the result by default
@@ -951,13 +982,14 @@ void GPUFilterBox_32F_C1R(const oclMat &src, oclMat &dst,
 
     CV_Assert(src.clCxt == dst.clCxt);
     CV_Assert((src.cols == dst.cols) &&
-              (src.rows == dst.rows) );
+              (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
     string kernelName = "boxFilter_C1_D5";
 
     char btype[30];
-    switch(borderType)
+
+    switch (borderType)
     {
     case 0:
         sprintf(btype, "BORDER_CONSTANT");
@@ -1005,7 +1037,7 @@ void GPUFilterBox_32F_C1R(const oclMat &src, oclMat &dst,
     openCLExecuteKernel(clCxt, &filtering_boxFilter, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
 
-void GPUFilterBox_32F_C4R(const oclMat &src, oclMat &dst,
+static void GPUFilterBox_32F_C4R(const oclMat &src, oclMat &dst,
                           Size &ksize, const Point anchor, const int borderType)
 {
     //Normalize the result by default
@@ -1013,13 +1045,14 @@ void GPUFilterBox_32F_C4R(const oclMat &src, oclMat &dst,
 
     CV_Assert(src.clCxt == dst.clCxt);
     CV_Assert((src.cols == dst.cols) &&
-              (src.rows == dst.rows) );
+              (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
     string kernelName = "boxFilter_C4_D5";
 
     char btype[30];
-    switch(borderType)
+
+    switch (borderType)
     {
     case 0:
         sprintf(btype, "BORDER_CONSTANT");
@@ -1095,8 +1128,11 @@ void cv::ocl::boxFilter(const oclMat &src, oclMat &dst, int ddepth, Size ksize,
                         Point anchor, int borderType)
 {
     int sdepth = src.depth(), cn = src.channels();
-    if( ddepth < 0 )
+
+    if (ddepth < 0)
+    {
         ddepth = sdepth;
+    }
 
     dst.create(src.size(), CV_MAKETYPE(ddepth, cn));
 
@@ -1107,22 +1143,22 @@ void cv::ocl::boxFilter(const oclMat &src, oclMat &dst, int ddepth, Size ksize,
 
 namespace
 {
-    typedef void (*gpuFilter1D_t)(const oclMat &src, const oclMat &dst, oclMat kernel, int ksize, int anchor, int bordertype);
+typedef void (*gpuFilter1D_t)(const oclMat &src, const oclMat &dst, oclMat kernel, int ksize, int anchor, int bordertype);
 
-    class GpuLinearRowFilter : public BaseRowFilter_GPU
+class GpuLinearRowFilter : public BaseRowFilter_GPU
+{
+public:
+    GpuLinearRowFilter(int ksize_, int anchor_, const oclMat &kernel_, gpuFilter1D_t func_, int bordertype_) :
+        BaseRowFilter_GPU(ksize_, anchor_, bordertype_), kernel(kernel_), func(func_) {}
+
+    virtual void operator()(const oclMat &src, oclMat &dst)
     {
-    public:
-        GpuLinearRowFilter(int ksize_, int anchor_, const oclMat &kernel_, gpuFilter1D_t func_, int bordertype_) :
-            BaseRowFilter_GPU(ksize_, anchor_, bordertype_), kernel(kernel_), func(func_) {}
+        func(src, dst, kernel, ksize, anchor, bordertype);
+    }
 
-        virtual void operator()(const oclMat &src, oclMat &dst)
-        {
-            func(src, dst, kernel, ksize, anchor, bordertype);
-        }
-
-        oclMat kernel;
-        gpuFilter1D_t func;
-    };
+    oclMat kernel;
+    gpuFilter1D_t func;
+};
 }
 
 template <typename T> struct index_and_sizeof;
@@ -1161,7 +1197,8 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     string kernelName = "row_filter";
 
     char btype[30];
-    switch(bordertype)
+
+    switch (bordertype)
     {
     case 0:
         sprintf(btype, "BORDER_CONSTANT");
@@ -1179,15 +1216,17 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
         sprintf(btype, "BORDER_REFLECT_101");
         break;
     }
+
     char compile_option[128];
-    sprintf(compile_option, "-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s", anchor, localThreads[0], localThreads[1], channels, btype);
+    sprintf(compile_option, "-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s", anchor, (int)localThreads[0], (int)localThreads[1], channels, btype);
 
     size_t globalThreads[3];
     globalThreads[1] = (dst.rows + localThreads[1] - 1) / localThreads[1] * localThreads[1];
     globalThreads[2] = (1 + localThreads[2] - 1) / localThreads[2] * localThreads[2];
-    if(src.depth() == CV_8U)
+
+    if (src.depth() == CV_8U)
     {
-        switch(channels)
+        switch (channels)
         {
         case 1:
         case 3:
@@ -1205,18 +1244,19 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     {
         globalThreads[0] = (dst.cols + localThreads[0] - 1) / localThreads[0] * localThreads[0];
     }
+
     //sanity checks
     CV_Assert(clCxt == dst.clCxt);
     CV_Assert(src.cols == dst.cols);
     CV_Assert(src.oclchannels() == dst.oclchannels());
     CV_Assert(ksize == (anchor << 1) + 1);
     int src_pix_per_row, dst_pix_per_row;
-    int src_offset_x, src_offset_y, dst_offset_in_pixel;
+    int src_offset_x, src_offset_y;//, dst_offset_in_pixel;
     src_pix_per_row = src.step / src.elemSize();
     src_offset_x = (src.offset % src.step) / src.elemSize();
     src_offset_y = src.offset / src.step;
     dst_pix_per_row = dst.step / dst.elemSize();
-    dst_offset_in_pixel = dst.offset / dst.elemSize();
+    //dst_offset_in_pixel = dst.offset / dst.elemSize();
     int ridusy = (dst.rows - src.rows) >> 1;
     vector<pair<size_t , const void *> > args;
     args.push_back(make_pair(sizeof(cl_mem), &src.data));
@@ -1232,7 +1272,7 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     args.push_back(make_pair(sizeof(cl_int), (void *)&ridusy));
     args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
 
-    openCLExecuteKernel(clCxt, &filter_sep_row, kernelName, globalThreads, localThreads, args, channels, src.depth(), compile_option);
+    openCLExecuteKernel2(clCxt, &filter_sep_row, kernelName, globalThreads, localThreads, args, channels, src.depth(), compile_option, CLFLUSH);
 }
 
 Ptr<BaseRowFilter_GPU> cv::ocl::getLinearRowFilter_GPU(int srcType, int /*bufType*/, const Mat &rowKernel, int anchor, int bordertype)
@@ -1263,20 +1303,20 @@ Ptr<BaseRowFilter_GPU> cv::ocl::getLinearRowFilter_GPU(int srcType, int /*bufTyp
 
 namespace
 {
-    class GpuLinearColumnFilter : public BaseColumnFilter_GPU
+class GpuLinearColumnFilter : public BaseColumnFilter_GPU
+{
+public:
+    GpuLinearColumnFilter(int ksize_, int anchor_, const oclMat &kernel_, gpuFilter1D_t func_, int bordertype_) :
+        BaseColumnFilter_GPU(ksize_, anchor_, bordertype_), kernel(kernel_), func(func_) {}
+
+    virtual void operator()(const oclMat &src, oclMat &dst)
     {
-    public:
-        GpuLinearColumnFilter(int ksize_, int anchor_, const oclMat &kernel_, gpuFilter1D_t func_, int bordertype_) :
-            BaseColumnFilter_GPU(ksize_, anchor_, bordertype_), kernel(kernel_), func(func_) {}
+        func(src, dst, kernel, ksize, anchor, bordertype);
+    }
 
-        virtual void operator()(const oclMat &src, oclMat &dst)
-        {
-            func(src, dst, kernel, ksize, anchor, bordertype);
-        }
-
-        oclMat kernel;
-        gpuFilter1D_t func;
-    };
+    oclMat kernel;
+    gpuFilter1D_t func;
+};
 }
 
 template <typename T>
@@ -1289,7 +1329,8 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
     string kernelName = "col_filter";
 
     char btype[30];
-    switch(bordertype)
+
+    switch (bordertype)
     {
     case 0:
         sprintf(btype, "BORDER_CONSTANT");
@@ -1307,56 +1348,59 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
         sprintf(btype, "BORDER_REFLECT_101");
         break;
     }
+
     char compile_option[256];
 
 
     size_t globalThreads[3];
     globalThreads[1] = (dst.rows + localThreads[1] - 1) / localThreads[1] * localThreads[1];
     globalThreads[2] = (1 + localThreads[2] - 1) / localThreads[2] * localThreads[2];
-    if(dst.depth() == CV_8U)
+
+    if (dst.depth() == CV_8U)
     {
-        switch(channels)
+        switch (channels)
         {
         case 1:
             globalThreads[0] = (dst.cols + localThreads[0] - 1) / localThreads[0] * localThreads[0];
             sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, localThreads[0], localThreads[1], channels, btype, "float", "uchar", "convert_uchar_sat");
+                    anchor, (int)localThreads[0], (int)localThreads[1], channels, btype, "float", "uchar", "convert_uchar_sat");
             break;
         case 2:
             globalThreads[0] = ((dst.cols + 1) / 2 + localThreads[0] - 1) / localThreads[0] * localThreads[0];
             sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, localThreads[0], localThreads[1], channels, btype, "float2", "uchar2", "convert_uchar2_sat");
+                    anchor, (int)localThreads[0], (int)localThreads[1], channels, btype, "float2", "uchar2", "convert_uchar2_sat");
             break;
         case 3:
         case 4:
             globalThreads[0] = (dst.cols + localThreads[0] - 1) / localThreads[0] * localThreads[0];
             sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, localThreads[0], localThreads[1], channels, btype, "float4", "uchar4", "convert_uchar4_sat");
+                    anchor, (int)localThreads[0], (int)localThreads[1], channels, btype, "float4", "uchar4", "convert_uchar4_sat");
             break;
         }
     }
     else
     {
         globalThreads[0] = (dst.cols + localThreads[0] - 1) / localThreads[0] * localThreads[0];
-        switch(dst.type())
+
+        switch (dst.type())
         {
         case CV_32SC1:
             sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, localThreads[0], localThreads[1], channels, btype, "float", "int", "convert_int_sat");
+                    anchor, (int)localThreads[0], (int)localThreads[1], channels, btype, "float", "int", "convert_int_sat");
             break;
         case CV_32SC3:
         case CV_32SC4:
             sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, localThreads[0], localThreads[1], channels, btype, "float4", "int4", "convert_int4_sat");
+                    anchor, (int)localThreads[0], (int)localThreads[1], channels, btype, "float4", "int4", "convert_int4_sat");
             break;
         case CV_32FC1:
             sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, localThreads[0], localThreads[1], channels, btype, "float", "float", "");
+                    anchor, (int)localThreads[0], (int)localThreads[1], channels, btype, "float", "float", "");
             break;
         case CV_32FC3:
         case CV_32FC4:
             sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, localThreads[0], localThreads[1], channels, btype, "float4", "float4", "");
+                    anchor, (int)localThreads[0], (int)localThreads[1], channels, btype, "float4", "float4", "");
             break;
         }
     }
@@ -1367,10 +1411,11 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
     CV_Assert(src.oclchannels() == dst.oclchannels());
     CV_Assert(ksize == (anchor << 1) + 1);
     int src_pix_per_row, dst_pix_per_row;
-    int src_offset_x, src_offset_y, dst_offset_in_pixel;
+    //int src_offset_x, src_offset_y;
+    int dst_offset_in_pixel;
     src_pix_per_row = src.step / src.elemSize();
-    src_offset_x = (src.offset % src.step) / src.elemSize();
-    src_offset_y = src.offset / src.step;
+    //src_offset_x = (src.offset % src.step) / src.elemSize();
+    //src_offset_y = src.offset / src.step;
     dst_pix_per_row = dst.step / dst.elemSize();
     dst_offset_in_pixel = dst.offset / dst.elemSize();
 
@@ -1441,20 +1486,25 @@ Ptr<FilterEngine_GPU> cv::ocl::createSeparableLinearFilter_GPU(int srcType, int 
 
 void cv::ocl::sepFilter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernelX, const Mat &kernelY, Point anchor, double delta, int bordertype)
 {
-    if((dst.cols != dst.wholecols) || (dst.rows != dst.wholerows)) //has roi
+    if ((dst.cols != dst.wholecols) || (dst.rows != dst.wholerows)) //has roi
     {
-        if((bordertype & cv::BORDER_ISOLATED) != 0)
+        if ((bordertype & cv::BORDER_ISOLATED) != 0)
         {
             bordertype &= ~cv::BORDER_ISOLATED;
-            if((bordertype != cv::BORDER_CONSTANT) &&
+
+            if ((bordertype != cv::BORDER_CONSTANT) &&
                     (bordertype != cv::BORDER_REPLICATE))
             {
                 CV_Error(CV_StsBadArg, "unsupported border type");
             }
         }
     }
-    if( ddepth < 0 )
+
+    if (ddepth < 0)
+    {
         ddepth = src.depth();
+    }
+
     //CV_Assert(ddepth == src.depth());
     dst.create(src.size(), CV_MAKETYPE(ddepth, src.channels()));
 
@@ -1462,12 +1512,12 @@ void cv::ocl::sepFilter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat 
     f->apply(src, dst);
 }
 
-Ptr<FilterEngine_GPU> cv::ocl::createDerivFilter_GPU( int srcType, int dstType, int dx, int dy, int ksize, int borderType )
+Ptr<FilterEngine_GPU> cv::ocl::createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize, int borderType)
 {
     Mat kx, ky;
-    getDerivKernels( kx, ky, dx, dy, ksize, false, CV_32F );
+    getDerivKernels(kx, ky, dx, dy, ksize, false, CV_32F);
     return createSeparableLinearFilter_GPU(srcType, dstType,
-                                           kx, ky, Point(-1, -1), 0, borderType );
+                                           kx, ky, Point(-1, -1), 0, borderType);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1482,15 +1532,20 @@ void cv::ocl::Sobel(const oclMat &src, oclMat &dst, int ddepth, int dx, int dy, 
         // usually the smoothing part is the slowest to compute,
         // so try to scale it instead of the faster differenciating part
         if (dx == 0)
+        {
             kx *= scale;
+        }
         else
+        {
             ky *= scale;
+        }
     }
+
     // Mat kx_, ky_;
     //ky.convertTo(ky_,CV_32S,1<<8);
     //kx.convertTo(kx_,CV_32S,1<<8);
 
-    sepFilter2D(src, dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
+    sepFilter2D(src, dst, ddepth, kx, ky, Point(-1, -1), delta, borderType);
 }
 
 void cv::ocl::Scharr(const oclMat &src, oclMat &dst, int ddepth, int dx, int dy, double scale, double delta , int bordertype)
@@ -1498,14 +1553,18 @@ void cv::ocl::Scharr(const oclMat &src, oclMat &dst, int ddepth, int dx, int dy,
     Mat kx, ky;
     getDerivKernels(kx, ky, dx, dy, -1, false, CV_32F);
 
-    if( scale != 1 )
+    if (scale != 1)
     {
         // usually the smoothing part is the slowest to compute,
         // so try to scale it instead of the faster differenciating part
-        if( dx == 0 )
+        if (dx == 0)
+        {
             kx *= scale;
+        }
         else
+        {
             ky *= scale;
+        }
     }
 
     // Mat kx_, ky_;
@@ -1517,7 +1576,7 @@ void cv::ocl::Scharr(const oclMat &src, oclMat &dst, int ddepth, int dx, int dy,
 
 void cv::ocl::Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize, double scale)
 {
-    if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
+    if (src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
     {
         CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
@@ -1531,8 +1590,12 @@ void cv::ocl::Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize, d
         {2, 0, 2, 0, -8, 0, 2, 0, 2}
     };
     Mat kernel(3, 3, CV_32S, (void *)K[ksize == 3]);
+
     if (scale != 1)
+    {
         kernel *= scale;
+    }
+
     filter2D(src, dst, ddepth, kernel, Point(-1, -1));
 }
 
@@ -1544,25 +1607,38 @@ Ptr<FilterEngine_GPU> cv::ocl::createGaussianFilter_GPU(int type, Size ksize, do
     int depth = CV_MAT_DEPTH(type);
 
     if (sigma2 <= 0)
+    {
         sigma2 = sigma1;
+    }
 
     // automatic detection of kernel size from sigma
     if (ksize.width <= 0 && sigma1 > 0)
+    {
         ksize.width = cvRound(sigma1 * (depth == CV_8U ? 3 : 4) * 2 + 1) | 1;
-    if (ksize.height <= 0 && sigma2 > 0)
-        ksize.height = cvRound(sigma2 * (depth == CV_8U ? 3 : 4) * 2 + 1) | 1;
+    }
 
-    CV_Assert( ksize.width > 0 && ksize.width % 2 == 1 && ksize.height > 0 && ksize.height % 2 == 1 );
+    if (ksize.height <= 0 && sigma2 > 0)
+    {
+        ksize.height = cvRound(sigma2 * (depth == CV_8U ? 3 : 4) * 2 + 1) | 1;
+    }
+
+    CV_Assert(ksize.width > 0 && ksize.width % 2 == 1 && ksize.height > 0 && ksize.height % 2 == 1);
 
     sigma1 = std::max(sigma1, 0.0);
     sigma2 = std::max(sigma2, 0.0);
 
-    Mat kx = getGaussianKernel( ksize.width, sigma1, std::max(depth, CV_32F) );
+    Mat kx = getGaussianKernel(ksize.width, sigma1, std::max(depth, CV_32F));
     Mat ky;
-    if( ksize.height == ksize.width && std::abs(sigma1 - sigma2) < DBL_EPSILON )
+
+    if (ksize.height == ksize.width && std::abs(sigma1 - sigma2) < DBL_EPSILON)
+    {
         ky = kx;
+    }
     else
-        ky = getGaussianKernel( ksize.height, sigma2, std::max(depth, CV_32F) );
+    {
+        ky = getGaussianKernel(ksize.height, sigma2, std::max(depth, CV_32F));
+    }
+
     //Mat kx_, ky_;
     //kx.convertTo(kx_,CV_32S,1<<8);
     //ky.convertTo(ky_,CV_32S,1<<8);
@@ -1576,26 +1652,36 @@ void cv::ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double si
         src.copyTo(dst);
         return;
     }
-    if((dst.cols != dst.wholecols) || (dst.rows != dst.wholerows)) //has roi
+
+    if ((dst.cols != dst.wholecols) || (dst.rows != dst.wholerows)) //has roi
     {
-        if((bordertype & cv::BORDER_ISOLATED) != 0)
+        if ((bordertype & cv::BORDER_ISOLATED) != 0)
         {
             bordertype &= ~cv::BORDER_ISOLATED;
-            if((bordertype != cv::BORDER_CONSTANT) &&
+
+            if ((bordertype != cv::BORDER_CONSTANT) &&
                     (bordertype != cv::BORDER_REPLICATE))
             {
                 CV_Error(CV_StsBadArg, "unsupported border type");
             }
         }
     }
+
     dst.create(src.size(), src.type());
-    if( bordertype != BORDER_CONSTANT )
+
+    if (bordertype != BORDER_CONSTANT)
     {
-        if( src.rows == 1 )
+        if (src.rows == 1)
+        {
             ksize.height = 1;
-        if( src.cols == 1 )
+        }
+
+        if (src.cols == 1)
+        {
             ksize.width = 1;
+        }
     }
+
     Ptr<FilterEngine_GPU> f = createGaussianFilter_GPU(src.type(), ksize, sigma1, sigma2, bordertype);
     f->apply(src, dst);
 }

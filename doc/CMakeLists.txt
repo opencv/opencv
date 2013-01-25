@@ -60,7 +60,7 @@ if(BUILD_DOCS AND HAVE_SPHINX)
 
   configure_file("${OpenCV_SOURCE_DIR}/modules/refman.rst.in" "${OpenCV_SOURCE_DIR}/modules/refman.rst" IMMEDIATE @ONLY)
 
-  file(GLOB_RECURSE OPENCV_FILES_UG user_guide/*.rst)
+  file(GLOB_RECURSE OPENCV_FILES_UG  user_guide/*.rst)
   file(GLOB_RECURSE OPENCV_FILES_TUT tutorials/*.rst)
   file(GLOB_RECURSE OPENCV_FILES_TUT_PICT tutorials/*.png tutorials/*.jpg)
 
@@ -74,14 +74,21 @@ if(BUILD_DOCS AND HAVE_SPHINX)
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
       COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2refman.tex
       COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2manager.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv2refman.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv2refman.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv2manager.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv2manager.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv_user.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv_user.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv_tutorials.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv_tutorials.tex
+      COMMAND ${CMAKE_COMMAND} -E echo "Generating opencv2refman.pdf"
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv2refman.tex
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv2refman.tex
+      COMMAND ${CMAKE_COMMAND} -E echo "Generating opencv2manager.pdf"
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv2manager.tex
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv2manager.tex
+      COMMAND ${CMAKE_COMMAND} -E echo "Generating opencv_user.pdf"
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv_user.tex
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv_user.tex
+      COMMAND ${CMAKE_COMMAND} -E echo "Generating opencv_tutorials.pdf"
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv_tutorials.tex
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv_tutorials.tex
+      COMMAND ${CMAKE_COMMAND} -E echo "Generating opencv_cheatsheet.pdf"
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode "${CMAKE_CURRENT_SOURCE_DIR}/opencv_cheatsheet.tex"
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode "${CMAKE_CURRENT_SOURCE_DIR}/opencv_cheatsheet.tex"
       DEPENDS ${OPENCV_DOC_DEPS}
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       COMMENT "Generating the PDF Manuals"
