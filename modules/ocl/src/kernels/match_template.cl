@@ -52,15 +52,21 @@
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
 
-#if !defined(USE_SQR_INTEGRAL) && (defined (__ATI__) || defined (__NVIDIA__))
+#if defined DOUBLE_SUPPORT
 #define TYPE_IMAGE_SQSUM double
 #else
-#define TYPE_IMAGE_SQSUM ulong
+#define TYPE_IMAGE_SQSUM float
+#endif
+
+#ifndef CN4
+#define CN4 1
+#else   
+#define CN4 4
 #endif
 
 //////////////////////////////////////////////////
 // utilities
-#define SQSUMS_PTR(ox, oy) mad24(gidy + oy, img_sqsums_step, gidx + img_sqsums_offset + ox)
+#define SQSUMS_PTR(ox, oy) mad24(gidy + oy, img_sqsums_step, (gidx + img_sqsums_offset + ox) * CN4)
 #define SUMS_PTR(ox, oy) mad24(gidy + oy, img_sums_step, gidx + img_sums_offset + ox)
 // normAcc* are accurate normalization routines which make GPU matchTemplate
 // consistent with CPU one
@@ -92,21 +98,21 @@ float normAcc_SQDIFF(float num, float denum)
 //////////////////////////////////////////////////////////////////////
 // normalize
 
-__kernel
-void normalizeKernel_C1_D0
-(
-    __global const TYPE_IMAGE_SQSUM * img_sqsums,
+__kernel 
+    void normalizeKernel_C1_D0
+    (
+    __global const float * img_sqsums,
     __global float * res,
     ulong tpl_sqsum,
     int res_rows,
     int res_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int img_sqsums_offset,
     int img_sqsums_step,
     int res_offset,
     int res_step
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -125,21 +131,21 @@ void normalizeKernel_C1_D0
     }
 }
 
-__kernel
-void matchTemplate_Prepared_SQDIFF_C1_D0
-(
+__kernel 
+    void matchTemplate_Prepared_SQDIFF_C1_D0
+    (
     __global const TYPE_IMAGE_SQSUM * img_sqsums,
     __global float * res,
     ulong tpl_sqsum,
     int res_rows,
     int res_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int img_sqsums_offset,
     int img_sqsums_step,
     int res_offset,
     int res_step
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -158,21 +164,21 @@ void matchTemplate_Prepared_SQDIFF_C1_D0
     }
 }
 
-__kernel
-void matchTemplate_Prepared_SQDIFF_NORMED_C1_D0
-(
-    __global const TYPE_IMAGE_SQSUM * img_sqsums,
+__kernel 
+    void matchTemplate_Prepared_SQDIFF_NORMED_C1_D0
+    (
+    __global const float * img_sqsums,
     __global float * res,
     ulong tpl_sqsum,
     int res_rows,
     int res_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int img_sqsums_offset,
     int img_sqsums_step,
     int res_offset,
     int res_step
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -188,22 +194,22 @@ void matchTemplate_Prepared_SQDIFF_NORMED_C1_D0
             (img_sqsums[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums[SQSUMS_PTR(tpl_cols, 0)]) -
             (img_sqsums[SQSUMS_PTR(0, tpl_rows)] - img_sqsums[SQSUMS_PTR(0, 0)]));
         res[res_idx] = normAcc_SQDIFF(image_sqsum_ - 2.f * res[res_idx] + tpl_sqsum,
-                                        sqrt(image_sqsum_ * tpl_sqsum));
+            sqrt(image_sqsum_ * tpl_sqsum));
     }
 }
 
 //////////////////////////////////////////////////
 // SQDIFF
-__kernel
-void matchTemplate_Naive_SQDIFF_C1_D0
-(
+__kernel 
+    void matchTemplate_Naive_SQDIFF_C1_D0
+    (
     __global const uchar * img,
     __global const uchar * tpl,
     __global float * res,
     int img_rows,
     int img_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int res_rows,
     int res_cols,
     int img_offset,
@@ -212,7 +218,7 @@ void matchTemplate_Naive_SQDIFF_C1_D0
     int img_step,
     int tpl_step,
     int res_step
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -240,16 +246,16 @@ void matchTemplate_Naive_SQDIFF_C1_D0
     }
 }
 
-__kernel
-void matchTemplate_Naive_SQDIFF_C1_D5
-(
+__kernel 
+    void matchTemplate_Naive_SQDIFF_C1_D5
+    (
     __global const float * img,
     __global const float * tpl,
     __global float * res,
     int img_rows,
     int img_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int res_rows,
     int res_cols,
     int img_offset,
@@ -258,7 +264,7 @@ void matchTemplate_Naive_SQDIFF_C1_D5
     int img_step,
     int tpl_step,
     int res_step
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -291,16 +297,16 @@ void matchTemplate_Naive_SQDIFF_C1_D5
     }
 }
 
-__kernel
-void matchTemplate_Naive_SQDIFF_C4_D0
-(
+__kernel 
+    void matchTemplate_Naive_SQDIFF_C4_D0
+    (
     __global const uchar4 * img,
     __global const uchar4 * tpl,
     __global float * res,
     int img_rows,
     int img_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int res_rows,
     int res_cols,
     int img_offset,
@@ -309,7 +315,7 @@ void matchTemplate_Naive_SQDIFF_C4_D0
     int img_step,
     int tpl_step,
     int res_step
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -346,16 +352,16 @@ void matchTemplate_Naive_SQDIFF_C4_D0
     }
 }
 
-__kernel
-void matchTemplate_Naive_SQDIFF_C4_D5
-(
+__kernel 
+    void matchTemplate_Naive_SQDIFF_C4_D5
+    (
     __global const float4 * img,
     __global const float4 * tpl,
     __global float * res,
     int img_rows,
     int img_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int res_rows,
     int res_cols,
     int img_offset,
@@ -364,7 +370,7 @@ void matchTemplate_Naive_SQDIFF_C4_D5
     int img_step,
     int tpl_step,
     int res_step
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -403,16 +409,16 @@ void matchTemplate_Naive_SQDIFF_C4_D5
 
 //////////////////////////////////////////////////
 // CCORR
-__kernel
-void matchTemplate_Naive_CCORR_C1_D0
-(
+__kernel 
+    void matchTemplate_Naive_CCORR_C1_D0
+    (
     __global const uchar * img,
     __global const uchar * tpl,
     __global float * res,
     int img_rows,
     int img_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int res_rows,
     int res_cols,
     int img_offset,
@@ -421,7 +427,7 @@ void matchTemplate_Naive_CCORR_C1_D0
     int img_step,
     int tpl_step,
     int res_step
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -448,16 +454,16 @@ void matchTemplate_Naive_CCORR_C1_D0
     }
 }
 
-__kernel
-void matchTemplate_Naive_CCORR_C1_D5
-(
+__kernel 
+    void matchTemplate_Naive_CCORR_C1_D5
+    (
     __global const float * img,
     __global const float * tpl,
     __global float * res,
     int img_rows,
     int img_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int res_rows,
     int res_cols,
     int img_offset,
@@ -466,7 +472,7 @@ void matchTemplate_Naive_CCORR_C1_D5
     int img_step,
     int tpl_step,
     int res_step
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -497,16 +503,16 @@ void matchTemplate_Naive_CCORR_C1_D5
     }
 }
 
-__kernel
-void matchTemplate_Naive_CCORR_C4_D0
-(
+__kernel 
+    void matchTemplate_Naive_CCORR_C4_D0
+    (
     __global const uchar4 * img,
     __global const uchar4 * tpl,
     __global float * res,
     int img_rows,
     int img_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int res_rows,
     int res_cols,
     int img_offset,
@@ -515,7 +521,7 @@ void matchTemplate_Naive_CCORR_C4_D0
     int img_step,
     int tpl_step,
     int res_step
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -546,16 +552,16 @@ void matchTemplate_Naive_CCORR_C4_D0
     }
 }
 
-__kernel
-void matchTemplate_Naive_CCORR_C4_D5
-(
+__kernel 
+    void matchTemplate_Naive_CCORR_C4_D5
+    (
     __global const float4 * img,
     __global const float4 * tpl,
     __global float * res,
     int img_rows,
     int img_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int res_rows,
     int res_cols,
     int img_offset,
@@ -564,7 +570,7 @@ void matchTemplate_Naive_CCORR_C4_D5
     int img_step,
     int tpl_step,
     int res_step
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -597,14 +603,14 @@ void matchTemplate_Naive_CCORR_C4_D5
 
 //////////////////////////////////////////////////
 // CCOFF
-__kernel
-void matchTemplate_Prepared_CCOFF_C1_D0
-(
+__kernel 
+    void matchTemplate_Prepared_CCOFF_C1_D0
+    (
     __global float * res,
     int img_rows,
     int img_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int res_rows,
     int res_cols,
     int res_offset,
@@ -613,7 +619,7 @@ void matchTemplate_Prepared_CCOFF_C1_D0
     int img_sums_offset,
     int img_sums_step,
     float tpl_sum
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -629,18 +635,18 @@ void matchTemplate_Prepared_CCOFF_C1_D0
     {
         float sum = (float)(
             (img_sums[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums[SUMS_PTR(0, tpl_rows)] - img_sums[SUMS_PTR(0, 0)]));
+            - (img_sums[SUMS_PTR(0, tpl_rows)] - img_sums[SUMS_PTR(0, 0)]));
         res[res_idx] -= sum * tpl_sum;
     }
 }
-__kernel
-void matchTemplate_Prepared_CCOFF_C4_D0
-(
+__kernel 
+    void matchTemplate_Prepared_CCOFF_C4_D0
+    (
     __global float * res,
     int img_rows,
     int img_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int res_rows,
     int res_cols,
     int res_offset,
@@ -655,7 +661,7 @@ void matchTemplate_Prepared_CCOFF_C4_D0
     float tpl_sum_c1,
     float tpl_sum_c2,
     float tpl_sum_c3
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -672,28 +678,28 @@ void matchTemplate_Prepared_CCOFF_C4_D0
         float ccorr = res[res_idx];
         ccorr -= tpl_sum_c0*(float)(
             (img_sums_c0[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c0[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c0[SUMS_PTR(0, tpl_rows)] - img_sums_c0[SUMS_PTR(0, 0)]));
+            - (img_sums_c0[SUMS_PTR(0, tpl_rows)] - img_sums_c0[SUMS_PTR(0, 0)]));
         ccorr -= tpl_sum_c1*(float)(
             (img_sums_c1[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c1[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c1[SUMS_PTR(0, tpl_rows)] - img_sums_c1[SUMS_PTR(0, 0)]));
+            - (img_sums_c1[SUMS_PTR(0, tpl_rows)] - img_sums_c1[SUMS_PTR(0, 0)]));
         ccorr -= tpl_sum_c2*(float)(
             (img_sums_c2[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c2[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c2[SUMS_PTR(0, tpl_rows)] - img_sums_c2[SUMS_PTR(0, 0)]));
+            - (img_sums_c2[SUMS_PTR(0, tpl_rows)] - img_sums_c2[SUMS_PTR(0, 0)]));
         ccorr -= tpl_sum_c3*(float)(
             (img_sums_c3[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c3[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c3[SUMS_PTR(0, tpl_rows)] - img_sums_c3[SUMS_PTR(0, 0)]));
+            - (img_sums_c3[SUMS_PTR(0, tpl_rows)] - img_sums_c3[SUMS_PTR(0, 0)]));
         res[res_idx] = ccorr;
     }
 }
 
 __kernel
-void matchTemplate_Prepared_CCOFF_NORMED_C1_D0
-(
+    void matchTemplate_Prepared_CCOFF_NORMED_C1_D0
+    (
     __global float * res,
     int img_rows,
     int img_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int res_rows,
     int res_cols,
     int res_offset,
@@ -702,12 +708,12 @@ void matchTemplate_Prepared_CCOFF_NORMED_C1_D0
     __global const uint * img_sums,
     int img_sums_offset,
     int img_sums_step,
-    __global const TYPE_IMAGE_SQSUM * img_sqsums,
+    __global const float * img_sqsums,
     int img_sqsums_offset,
     int img_sqsums_step,
     float tpl_sum,
     float tpl_sqsum
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -726,23 +732,23 @@ void matchTemplate_Prepared_CCOFF_NORMED_C1_D0
     {
         float image_sum_ =  (float)(
             (img_sums[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums[SUMS_PTR(0, tpl_rows)] - img_sums[SUMS_PTR(0, 0)]));
+            - (img_sums[SUMS_PTR(0, tpl_rows)] - img_sums[SUMS_PTR(0, 0)]));
 
         float image_sqsum_ = (float)(
             (img_sqsums[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums[SQSUMS_PTR(tpl_cols, 0)]) -
             (img_sqsums[SQSUMS_PTR(0, tpl_rows)] - img_sqsums[SQSUMS_PTR(0, 0)]));
         res[res_idx] = normAcc(res[res_idx] - image_sum_ * tpl_sum,
-                               sqrt(tpl_sqsum * (image_sqsum_ - weight * image_sum_ * image_sum_)));
+            sqrt(tpl_sqsum * (image_sqsum_ - weight * image_sum_ * image_sum_)));
     }
 }
 __kernel
-void matchTemplate_Prepared_CCOFF_NORMED_C4_D0
-(
+    void matchTemplate_Prepared_CCOFF_NORMED_C4_D0
+    (
     __global float * res,
     int img_rows,
     int img_cols,
     int tpl_rows,
-    int tpl_cols,
+    int tpl_cols, 
     int res_rows,
     int res_cols,
     int res_offset,
@@ -754,10 +760,10 @@ void matchTemplate_Prepared_CCOFF_NORMED_C4_D0
     __global const uint * img_sums_c3,
     int img_sums_offset,
     int img_sums_step,
-    __global const TYPE_IMAGE_SQSUM * img_sqsums_c0,
-    __global const TYPE_IMAGE_SQSUM * img_sqsums_c1,
-    __global const TYPE_IMAGE_SQSUM * img_sqsums_c2,
-    __global const TYPE_IMAGE_SQSUM * img_sqsums_c3,
+    __global const float * img_sqsums_c0,
+    __global const float * img_sqsums_c1,
+    __global const float * img_sqsums_c2,
+    __global const float * img_sqsums_c3,
     int img_sqsums_offset,
     int img_sqsums_step,
     float tpl_sum_c0,
@@ -765,7 +771,7 @@ void matchTemplate_Prepared_CCOFF_NORMED_C4_D0
     float tpl_sum_c2,
     float tpl_sum_c3,
     float tpl_sqsum
-)
+    )
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -783,16 +789,16 @@ void matchTemplate_Prepared_CCOFF_NORMED_C4_D0
     {
         float image_sum_c0 =  (float)(
             (img_sums_c0[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c0[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c0[SUMS_PTR(0, tpl_rows)] - img_sums_c0[SUMS_PTR(0, 0)]));
+            - (img_sums_c0[SUMS_PTR(0, tpl_rows)] - img_sums_c0[SUMS_PTR(0, 0)]));
         float image_sum_c1 =  (float)(
             (img_sums_c1[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c1[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c1[SUMS_PTR(0, tpl_rows)] - img_sums_c1[SUMS_PTR(0, 0)]));
+            - (img_sums_c1[SUMS_PTR(0, tpl_rows)] - img_sums_c1[SUMS_PTR(0, 0)]));
         float image_sum_c2 =  (float)(
             (img_sums_c2[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c2[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c2[SUMS_PTR(0, tpl_rows)] - img_sums_c2[SUMS_PTR(0, 0)]));
+            - (img_sums_c2[SUMS_PTR(0, tpl_rows)] - img_sums_c2[SUMS_PTR(0, 0)]));
         float image_sum_c3 =  (float)(
             (img_sums_c3[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c3[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c3[SUMS_PTR(0, tpl_rows)] - img_sums_c3[SUMS_PTR(0, 0)]));
+            - (img_sums_c3[SUMS_PTR(0, tpl_rows)] - img_sums_c3[SUMS_PTR(0, 0)]));
 
         float image_sqsum_c0 = (float)(
             (img_sqsums_c0[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums_c0[SQSUMS_PTR(tpl_cols, 0)]) -
@@ -807,7 +813,7 @@ void matchTemplate_Prepared_CCOFF_NORMED_C4_D0
             (img_sqsums_c3[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums_c3[SQSUMS_PTR(tpl_cols, 0)]) -
             (img_sqsums_c3[SQSUMS_PTR(0, tpl_rows)] - img_sqsums_c3[SQSUMS_PTR(0, 0)]));
 
-        float num = res[res_idx] -
+        float num = res[res_idx] - 
             image_sum_c0 * tpl_sum_c0 -
             image_sum_c1 * tpl_sum_c1 -
             image_sum_c2 * tpl_sum_c2 -
@@ -822,3 +828,34 @@ void matchTemplate_Prepared_CCOFF_NORMED_C4_D0
     }
 }
 
+//////////////////////////////////////////////////////////////////////
+// extractFirstChannel
+__kernel
+    void extractFirstChannel
+    (
+    const __global float4* img,
+    __global float* res,
+    int rows,
+    int cols,
+    int img_offset,
+    int res_offset,
+    int img_step,
+    int res_step
+    )
+{
+    img_step   /= sizeof(float4);
+    res_step   /= sizeof(float);
+    img_offset /= sizeof(float4);
+    res_offset /= sizeof(float);
+
+    img += img_offset;
+    res += res_offset;
+
+    int gidx = get_global_id(0);
+    int gidy = get_global_id(1);
+
+    if(gidx < cols && gidy < rows)
+    {
+        res[gidx + gidy * res_step] = img[gidx + gidy * img_step].x;
+    }
+}
