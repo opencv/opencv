@@ -332,7 +332,7 @@ public:
 **Extend this if necessary later.
 **Note that the kernel need to be further refined.
 */
-void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, const Point anchor)
+static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, const Point anchor)
 {
     //Normalize the result by default
     //float alpha = ksize.height * ksize.width;
@@ -388,7 +388,7 @@ void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, c
     }
 
     char compile_option[128];
-    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D ERODE %s", anchor.x, anchor.y, localThreads[0], localThreads[1], s);
+    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D ERODE %s", anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], s);
     vector< pair<size_t, const void *> > args;
     args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
     args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
@@ -407,7 +407,7 @@ void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, c
 
 
 //! data type supported: CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4
-void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, const Point anchor)
+static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, const Point anchor)
 {
     //Normalize the result by default
     //float alpha = ksize.height * ksize.width;
@@ -463,7 +463,7 @@ void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, 
     }
 
     char compile_option[128];
-    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D DILATE %s", anchor.x, anchor.y, localThreads[0], localThreads[1], s);
+    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D DILATE %s", anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], s);
     vector< pair<size_t, const void *> > args;
     args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
     args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
@@ -691,7 +691,7 @@ public:
 };
 }
 
-void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
+static void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
                  Size &ksize, const Point anchor, const int borderType)
 {
     CV_Assert(src.clCxt == dst.clCxt);
@@ -850,7 +850,7 @@ Ptr<FilterEngine_GPU> cv::ocl::createSeparableFilter_GPU(const Ptr<BaseRowFilter
 **support four border types: BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101
 */
 
-void GPUFilterBox_8u_C1R(const oclMat &src, oclMat &dst,
+static void GPUFilterBox_8u_C1R(const oclMat &src, oclMat &dst,
                          Size &ksize, const Point anchor, const int borderType)
 {
     //Normalize the result by default
@@ -912,7 +912,7 @@ void GPUFilterBox_8u_C1R(const oclMat &src, oclMat &dst,
     openCLExecuteKernel(clCxt, &filtering_boxFilter, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
 
-void GPUFilterBox_8u_C4R(const oclMat &src, oclMat &dst,
+static void GPUFilterBox_8u_C4R(const oclMat &src, oclMat &dst,
                          Size &ksize, const Point anchor, const int borderType)
 {
     //Normalize the result by default
@@ -974,7 +974,7 @@ void GPUFilterBox_8u_C4R(const oclMat &src, oclMat &dst,
     openCLExecuteKernel(clCxt, &filtering_boxFilter, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
 
-void GPUFilterBox_32F_C1R(const oclMat &src, oclMat &dst,
+static void GPUFilterBox_32F_C1R(const oclMat &src, oclMat &dst,
                           Size &ksize, const Point anchor, const int borderType)
 {
     //Normalize the result by default
@@ -1037,7 +1037,7 @@ void GPUFilterBox_32F_C1R(const oclMat &src, oclMat &dst,
     openCLExecuteKernel(clCxt, &filtering_boxFilter, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
 
-void GPUFilterBox_32F_C4R(const oclMat &src, oclMat &dst,
+static void GPUFilterBox_32F_C4R(const oclMat &src, oclMat &dst,
                           Size &ksize, const Point anchor, const int borderType)
 {
     //Normalize the result by default
@@ -1218,7 +1218,7 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     }
 
     char compile_option[128];
-    sprintf(compile_option, "-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s", anchor, localThreads[0], localThreads[1], channels, btype);
+    sprintf(compile_option, "-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s", anchor, (int)localThreads[0], (int)localThreads[1], channels, btype);
 
     size_t globalThreads[3];
     globalThreads[1] = (dst.rows + localThreads[1] - 1) / localThreads[1] * localThreads[1];
@@ -1251,12 +1251,12 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     CV_Assert(src.oclchannels() == dst.oclchannels());
     CV_Assert(ksize == (anchor << 1) + 1);
     int src_pix_per_row, dst_pix_per_row;
-    int src_offset_x, src_offset_y, dst_offset_in_pixel;
+    int src_offset_x, src_offset_y;//, dst_offset_in_pixel;
     src_pix_per_row = src.step / src.elemSize();
     src_offset_x = (src.offset % src.step) / src.elemSize();
     src_offset_y = src.offset / src.step;
     dst_pix_per_row = dst.step / dst.elemSize();
-    dst_offset_in_pixel = dst.offset / dst.elemSize();
+    //dst_offset_in_pixel = dst.offset / dst.elemSize();
     int ridusy = (dst.rows - src.rows) >> 1;
     vector<pair<size_t , const void *> > args;
     args.push_back(make_pair(sizeof(cl_mem), &src.data));
@@ -1363,18 +1363,18 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
         case 1:
             globalThreads[0] = (dst.cols + localThreads[0] - 1) / localThreads[0] * localThreads[0];
             sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, localThreads[0], localThreads[1], channels, btype, "float", "uchar", "convert_uchar_sat");
+                    anchor, (int)localThreads[0], (int)localThreads[1], channels, btype, "float", "uchar", "convert_uchar_sat");
             break;
         case 2:
             globalThreads[0] = ((dst.cols + 1) / 2 + localThreads[0] - 1) / localThreads[0] * localThreads[0];
             sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, localThreads[0], localThreads[1], channels, btype, "float2", "uchar2", "convert_uchar2_sat");
+                    anchor, (int)localThreads[0], (int)localThreads[1], channels, btype, "float2", "uchar2", "convert_uchar2_sat");
             break;
         case 3:
         case 4:
             globalThreads[0] = (dst.cols + localThreads[0] - 1) / localThreads[0] * localThreads[0];
             sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, localThreads[0], localThreads[1], channels, btype, "float4", "uchar4", "convert_uchar4_sat");
+                    anchor, (int)localThreads[0], (int)localThreads[1], channels, btype, "float4", "uchar4", "convert_uchar4_sat");
             break;
         }
     }
@@ -1386,21 +1386,21 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
         {
         case CV_32SC1:
             sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, localThreads[0], localThreads[1], channels, btype, "float", "int", "convert_int_sat");
+                    anchor, (int)localThreads[0], (int)localThreads[1], channels, btype, "float", "int", "convert_int_sat");
             break;
         case CV_32SC3:
         case CV_32SC4:
             sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, localThreads[0], localThreads[1], channels, btype, "float4", "int4", "convert_int4_sat");
+                    anchor, (int)localThreads[0], (int)localThreads[1], channels, btype, "float4", "int4", "convert_int4_sat");
             break;
         case CV_32FC1:
             sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, localThreads[0], localThreads[1], channels, btype, "float", "float", "");
+                    anchor, (int)localThreads[0], (int)localThreads[1], channels, btype, "float", "float", "");
             break;
         case CV_32FC3:
         case CV_32FC4:
             sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, localThreads[0], localThreads[1], channels, btype, "float4", "float4", "");
+                    anchor, (int)localThreads[0], (int)localThreads[1], channels, btype, "float4", "float4", "");
             break;
         }
     }
@@ -1411,10 +1411,11 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
     CV_Assert(src.oclchannels() == dst.oclchannels());
     CV_Assert(ksize == (anchor << 1) + 1);
     int src_pix_per_row, dst_pix_per_row;
-    int src_offset_x, src_offset_y, dst_offset_in_pixel;
+    //int src_offset_x, src_offset_y;
+    int dst_offset_in_pixel;
     src_pix_per_row = src.step / src.elemSize();
-    src_offset_x = (src.offset % src.step) / src.elemSize();
-    src_offset_y = src.offset / src.step;
+    //src_offset_x = (src.offset % src.step) / src.elemSize();
+    //src_offset_y = src.offset / src.step;
     dst_pix_per_row = dst.step / dst.elemSize();
     dst_offset_in_pixel = dst.offset / dst.elemSize();
 

@@ -109,15 +109,15 @@ TEST_F(Haar, FaceDetect)
     //double t = 0;
     vector<Rect> faces, oclfaces;
 
-    const static Scalar colors[] =  { CV_RGB(0, 0, 255),
-                                      CV_RGB(0, 128, 255),
-                                      CV_RGB(0, 255, 255),
-                                      CV_RGB(0, 255, 0),
-                                      CV_RGB(255, 128, 0),
-                                      CV_RGB(255, 255, 0),
-                                      CV_RGB(255, 0, 0),
-                                      CV_RGB(255, 0, 255)
-                                    } ;
+    // const static Scalar colors[] =  { CV_RGB(0, 0, 255),
+    //                                   CV_RGB(0, 128, 255),
+    //                                   CV_RGB(0, 255, 255),
+    //                                   CV_RGB(0, 255, 0),
+    //                                   CV_RGB(255, 128, 0),
+    //                                   CV_RGB(255, 255, 0),
+    //                                   CV_RGB(255, 0, 0),
+    //                                   CV_RGB(255, 0, 255)
+    //                                 } ;
 
     Mat gray, smallImg(cvRound (img.rows / scale), cvRound(img.cols / scale), CV_8UC1 );
     MemStorage storage(cvCreateMemStorage(0));

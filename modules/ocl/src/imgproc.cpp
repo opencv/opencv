@@ -171,7 +171,7 @@ namespace cv
 
         typedef void (*gpuThresh_t)(const oclMat &src, oclMat &dst, double thresh, double maxVal, int type);
 
-        void threshold_8u(const oclMat &src, oclMat &dst, double thresh, double maxVal, int type)
+        static void threshold_8u(const oclMat &src, oclMat &dst, double thresh, double maxVal, int type)
         {
             CV_Assert( (src.cols == dst.cols) && (src.rows == dst.rows) );
             Context *clCxt = src.clCxt;
@@ -202,7 +202,7 @@ namespace cv
             openCLExecuteKernel(clCxt, &imgproc_threshold, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
         }
 
-        void threshold_32f(const oclMat &src, oclMat &dst, double thresh, double maxVal, int type)
+        static void threshold_32f(const oclMat &src, oclMat &dst, double thresh, double maxVal, int type)
         {
             CV_Assert( (src.cols == dst.cols) && (src.rows == dst.rows) );
             Context *clCxt = src.clCxt;
@@ -388,7 +388,7 @@ namespace cv
         ////////////////////////////////////////////////////////////////////////////////////////////
         // resize
 
-        void resize_gpu( const oclMat &src, oclMat &dst, double fx, double fy, int interpolation)
+        static void resize_gpu( const oclMat &src, oclMat &dst, double fx, double fy, int interpolation)
         {
             CV_Assert( (src.channels() == dst.channels()) );
             Context *clCxt = src.clCxt;
@@ -593,7 +593,7 @@ namespace cv
             int dstOffset = dst.offset / dst.elemSize();
             int __bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, BORDER_REFLECT, BORDER_WRAP, BORDER_REFLECT_101};
             const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
-            int bordertype_index;
+            size_t bordertype_index;
             for(bordertype_index = 0; bordertype_index < sizeof(__bordertype) / sizeof(int); bordertype_index++)
             {
                 if(__bordertype[bordertype_index] == bordertype)
@@ -826,9 +826,9 @@ namespace cv
             {
 #define Sd(y,x) (Sd[y*3+x])
 #define Dd(y,x) (Dd[y*3+x])
-#define det3(m)   (m(0,0)*(m(1,1)*m(2,2) - m(1,2)*m(2,1)) -  \
-        m(0,1)*(m(1,0)*m(2,2) - m(1,2)*m(2,0)) +  \
-        m(0,2)*(m(1,0)*m(2,1) - m(1,1)*m(2,0)))
+#define det3(m)    (m(0,0)*(m(1,1)*m(2,2) - m(1,2)*m(2,1)) -  \
+                    m(0,1)*(m(1,0)*m(2,2) - m(1,2)*m(2,0)) +  \
+                    m(0,2)*(m(1,0)*m(2,1) - m(1,1)*m(2,0)))
                 double *Sd = M;
                 double *Dd = M;
                 double d = det3(Sd);
@@ -1018,12 +1018,19 @@ namespace cv
 
             int warpInd = (flags & WARP_INVERSE_MAP) >> 4;
             F coeffs[2][3];
-            Mat coeffsMat(2, 3, CV_64F, (void *)coeffs);
+
+            double coeffsM[2*3];
+            Mat coeffsMat(2, 3, CV_64F, (void *)coeffsM);
             M.convertTo(coeffsMat, coeffsMat.type());
             if(!warpInd)
             {
-                convert_coeffs((F *)(&coeffs[0][0]));
+                convert_coeffs(coeffsM);
             }
+
+            for(int i = 0; i < 2; ++i)
+                for(int j = 0; j < 3; ++j)
+                    coeffs[i][j] = coeffsM[i*3+j];
+
             warpAffine_gpu(src, dst, coeffs, interpolation);
         }
 
@@ -1041,12 +1048,18 @@ namespace cv
 
             int warpInd = (flags & WARP_INVERSE_MAP) >> 4;
             double coeffs[3][3];
-            Mat coeffsMat(3, 3, CV_64F, (void *)coeffs);
+
+            double coeffsM[3*3];
+            Mat coeffsMat(3, 3, CV_64F, (void *)coeffsM);
             M.convertTo(coeffsMat, coeffsMat.type());
             if(!warpInd)
             {
-                invert((double *)(&coeffs[0][0]));
+                invert(coeffsM);
             }
+
+            for(int i = 0; i < 3; ++i)
+                for(int j = 0; j < 3; ++j)
+                    coeffs[i][j] = coeffsM[i*3+j];
 
             warpPerspective_gpu(src, dst, coeffs, interpolation);
         }
@@ -1144,7 +1157,7 @@ namespace cv
         }
 
         /////////////////////// corner //////////////////////////////
-        void extractCovData(const oclMat &src, oclMat &Dx, oclMat &Dy,
+        static void extractCovData(const oclMat &src, oclMat &Dx, oclMat &Dy,
                             int blockSize, int ksize, int borderType)
         {
             CV_Assert(src.type() == CV_8UC1 || src.type() == CV_32FC1);
@@ -1174,7 +1187,7 @@ namespace cv
             CV_Assert(Dx.offset == 0 && Dy.offset == 0);
         }
 
-        void corner_ocl(const char *src_str, string kernelName, int block_size, float k, oclMat &Dx, oclMat &Dy,
+        static void corner_ocl(const char *src_str, string kernelName, int block_size, float k, oclMat &Dx, oclMat &Dy,
                         oclMat &dst, int border_type)
         {
             char borderType[30];
@@ -1258,7 +1271,7 @@ namespace cv
             corner_ocl(imgproc_calcMinEigenVal, "calcMinEigenVal", blockSize, 0, Dx, Dy, dst, borderType);
         }
         /////////////////////////////////// MeanShiftfiltering ///////////////////////////////////////////////
-        void meanShiftFiltering_gpu(const oclMat &src, oclMat dst, int sp, int sr, int maxIter, float eps)
+        static void meanShiftFiltering_gpu(const oclMat &src, oclMat dst, int sp, int sr, int maxIter, float eps)
         {
             CV_Assert( (src.cols == dst.cols) && (src.rows == dst.rows) );
             CV_Assert( !(dst.step & 0x3) );
@@ -1321,7 +1334,7 @@ namespace cv
 
         }
 
-        void meanShiftProc_gpu(const oclMat &src, oclMat dstr, oclMat dstsp, int sp, int sr, int maxIter, float eps)
+        static void meanShiftProc_gpu(const oclMat &src, oclMat dstr, oclMat dstsp, int sp, int sr, int maxIter, float eps)
         {
             //sanity checks
             CV_Assert( (src.cols == dstr.cols) && (src.rows == dstr.rows) &&
@@ -1398,7 +1411,7 @@ namespace cv
             const int HISTOGRAM256_BIN_COUNT = 256;
         }
         ///////////////////////////////calcHist/////////////////////////////////////////////////////////////////
-        void calc_sub_hist(const oclMat &mat_src, const oclMat &mat_sub_hist)
+        static void calc_sub_hist(const oclMat &mat_src, const oclMat &mat_sub_hist)
         {
             using namespace histograms;
 
@@ -1477,7 +1490,7 @@ namespace cv
                 openCLExecuteKernel(clCxt, &imgproc_histogram, kernelName, globalThreads, localThreads, args, -1, depth);
             }
         }
-        void merge_sub_hist(const oclMat &sub_hist, oclMat &mat_hist)
+        static void merge_sub_hist(const oclMat &sub_hist, oclMat &mat_hist)
         {
             using namespace histograms;
 
@@ -1535,7 +1548,6 @@ namespace cv
         {
             int cn = src.channels();
             int i, j, maxk, radius;
-            Size size = src.size();
 
             CV_Assert( (src.channels() == 1 || src.channels() == 3) &&
                        src.type() == dst.type() && src.size() == dst.size() &&
@@ -1632,7 +1644,7 @@ inline int divUp(int total, int grain)
 {
     return (total + grain - 1) / grain;
 }
-void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, string kernelName, const char **kernelString)
+static void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, string kernelName, const char **kernelString)
 {
     CV_Assert(src.depth() == CV_32FC1);
     CV_Assert(temp1.depth() == CV_32F);

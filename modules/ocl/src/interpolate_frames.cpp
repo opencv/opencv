@@ -282,7 +282,7 @@ void interpolate::bindImgTex(const oclMat &img, cl_mem &texture)
         openCLFree(texture);
     }
 
-#if CL_VERSION_1_2
+#ifdef CL_VERSION_1_2
     cl_image_desc desc;
     desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
     desc.image_width      = img.step / img.elemSize();

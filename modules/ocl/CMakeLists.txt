@@ -39,6 +39,8 @@ if (HAVE_OPENCL)
   endif()
 endif()
 
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
+
 ocv_set_module_sources(HEADERS ${lib_hdrs} SOURCES ${lib_int_hdrs} ${lib_srcs} ${kernels_cpp})
 ocv_create_module(${ocl_link_libs})
 

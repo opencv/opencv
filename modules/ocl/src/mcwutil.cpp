@@ -62,7 +62,7 @@ namespace cv
         }
 
         // provide additional methods for the user to interact with the command queue after a task is fired
-        void openCLExecuteKernel_2(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
+        static void openCLExecuteKernel_2(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
                                    size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
                                    int depth, char *build_options, FLUSH_MODE finish_mode)
         {
