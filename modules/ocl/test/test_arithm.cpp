@@ -1449,8 +1449,8 @@ TEST_P(MagnitudeSqr, Mat)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         // random_roi();
-        int64 start, end;
-        start = cv::getTickCount();
+        // int64 start, end;
+        // start = cv::getTickCount();
         for(int i = 0; i < mat1.rows; ++i)
             for(int j = 0; j < mat1.cols; ++j)
             {
@@ -1465,7 +1465,7 @@ TEST_P(MagnitudeSqr, Mat)
 
                 //  ((float *)(dst.data))[i*dst.step/4 +j]= val1 * val1 +val2 * val2;
             }
-        end = cv::getTickCount();
+        // end = cv::getTickCount();
 
 
 

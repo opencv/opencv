@@ -115,7 +115,7 @@ inline int divUp(int total, int grain)
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////// ConvertTo ////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
-void convert_run_cus(const oclMat &src, oclMat &dst, double alpha, double beta)
+static void convert_run_cus(const oclMat &src, oclMat &dst, double alpha, double beta)
 {
     string kernelName = "convert_to_S";
     stringstream idxStr;
@@ -186,7 +186,7 @@ void convertTo( const oclMat &src, oclMat &dst, int rtype, double alpha, double 
 //    setTo(s);
 //    return *this;
 //}
-void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, string kernelName)
+static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, string kernelName)
 {
     vector<pair<size_t , const void *> > args;
 
@@ -356,7 +356,7 @@ void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, string 
     default:
         CV_Error(CV_StsUnsupportedFormat, "unknown depth");
     }
-#if CL_VERSION_1_2
+#ifdef CL_VERSION_1_2
     if(dst.offset == 0 && dst.cols == dst.wholecols)
     {
         clEnqueueFillBuffer(dst.clCxt->impl->clCmdQueue, (cl_mem)dst.data, args[0].second, args[0].first, 0, dst.step * dst.rows, 0, NULL, NULL);
@@ -382,7 +382,7 @@ void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, string 
 #endif
 }
 
-oclMat &setTo(oclMat &src, const Scalar &scalar)
+static oclMat &setTo(oclMat &src, const Scalar &scalar)
 {
     CV_Assert( src.depth() >= 0 && src.depth() <= 6 );
     CV_DbgAssert( !src.empty());
@@ -402,48 +402,48 @@ oclMat &setTo(oclMat &src, const Scalar &scalar)
 ///////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// CopyTo /////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
-void copy_to_with_mask_cus(const oclMat &src, oclMat &dst, const oclMat &mask, string kernelName)
-{
-    CV_DbgAssert( dst.rows == mask.rows && dst.cols == mask.cols &&
-                  src.rows == dst.rows && src.cols == dst.cols
-                  && mask.type() == CV_8UC1);
+// static void copy_to_with_mask_cus(const oclMat &src, oclMat &dst, const oclMat &mask, string kernelName)
+// {
+//     CV_DbgAssert( dst.rows == mask.rows && dst.cols == mask.cols &&
+//                   src.rows == dst.rows && src.cols == dst.cols
+//                   && mask.type() == CV_8UC1);
 
-    vector<pair<size_t , const void *> > args;
+//     vector<pair<size_t , const void *> > args;
 
-    std::string string_types[4][7] = {{"uchar", "char", "ushort", "short", "int", "float", "double"},
-        {"uchar2", "char2", "ushort2", "short2", "int2", "float2", "double2"},
-        {"uchar3", "char3", "ushort3", "short3", "int3", "float3", "double3"},
-        {"uchar4", "char4", "ushort4", "short4", "int4", "float4", "double4"}
-    };
-    char compile_option[32];
-    sprintf(compile_option, "-D GENTYPE=%s", string_types[dst.oclchannels() - 1][dst.depth()].c_str());
-    size_t localThreads[3] = {16, 16, 1};
-    size_t globalThreads[3];
+//     std::string string_types[4][7] = {{"uchar", "char", "ushort", "short", "int", "float", "double"},
+//         {"uchar2", "char2", "ushort2", "short2", "int2", "float2", "double2"},
+//         {"uchar3", "char3", "ushort3", "short3", "int3", "float3", "double3"},
+//         {"uchar4", "char4", "ushort4", "short4", "int4", "float4", "double4"}
+//     };
+//     char compile_option[32];
+//     sprintf(compile_option, "-D GENTYPE=%s", string_types[dst.oclchannels() - 1][dst.depth()].c_str());
+//     size_t localThreads[3] = {16, 16, 1};
+//     size_t globalThreads[3];
 
-    globalThreads[0] = divUp(dst.cols, localThreads[0]) * localThreads[0];
-    globalThreads[1] = divUp(dst.rows, localThreads[1]) * localThreads[1];
-    globalThreads[2] = 1;
+//     globalThreads[0] = divUp(dst.cols, localThreads[0]) * localThreads[0];
+//     globalThreads[1] = divUp(dst.rows, localThreads[1]) * localThreads[1];
+//     globalThreads[2] = 1;
 
-    int dststep_in_pixel = dst.step / dst.elemSize(), dstoffset_in_pixel = dst.offset / dst.elemSize();
-    int srcstep_in_pixel = src.step / src.elemSize(), srcoffset_in_pixel = src.offset / src.elemSize();
+//     int dststep_in_pixel = dst.step / dst.elemSize(), dstoffset_in_pixel = dst.offset / dst.elemSize();
+//     int srcstep_in_pixel = src.step / src.elemSize(), srcoffset_in_pixel = src.offset / src.elemSize();
 
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&mask.data ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&srcstep_in_pixel ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&srcoffset_in_pixel ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dststep_in_pixel ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dstoffset_in_pixel ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.step ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.offset ));
+//     args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
+//     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
+//     args.push_back( make_pair( sizeof(cl_mem) , (void *)&mask.data ));
+//     args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols ));
+//     args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
+//     args.push_back( make_pair( sizeof(cl_int) , (void *)&srcstep_in_pixel ));
+//     args.push_back( make_pair( sizeof(cl_int) , (void *)&srcoffset_in_pixel ));
+//     args.push_back( make_pair( sizeof(cl_int) , (void *)&dststep_in_pixel ));
+//     args.push_back( make_pair( sizeof(cl_int) , (void *)&dstoffset_in_pixel ));
+//     args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.step ));
+//     args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.offset ));
 
-    openCLExecuteKernel2(dst.clCxt , &operator_copyToM, kernelName, globalThreads,
-                         localThreads, args, -1, -1, compile_option, CLFLUSH);
-}
+//     openCLExecuteKernel2(dst.clCxt , &operator_copyToM, kernelName, globalThreads,
+//                          localThreads, args, -1, -1, compile_option, CLFLUSH);
+// }
 
-void copyTo(const oclMat &src, oclMat &m )
+static void copyTo(const oclMat &src, oclMat &m )
 {
     CV_DbgAssert(!src.empty());
     m.create(src.size(), src.type());
@@ -451,20 +451,20 @@ void copyTo(const oclMat &src, oclMat &m )
                        src.data, src.step, src.cols * src.elemSize(), src.rows, src.offset);
 }
 
-void copyTo(const oclMat &src, oclMat &mat, const oclMat &mask)
-{
-    if (mask.empty())
-    {
-        copyTo(src, mat);
-    }
-    else
-    {
-        mat.create(src.size(), src.type());
-        copy_to_with_mask_cus(src, mat, mask, "copy_to_with_mask");
-    }
-}
+// static void copyTo(const oclMat &src, oclMat &mat, const oclMat &mask)
+// {
+//     if (mask.empty())
+//     {
+//         copyTo(src, mat);
+//     }
+//     else
+//     {
+//         mat.create(src.size(), src.type());
+//         copy_to_with_mask_cus(src, mat, mask, "copy_to_with_mask");
+//     }
+// }
 
-void arithmetic_run(const oclMat &src1, oclMat &dst, string kernelName, const char **kernelString, void *_scalar)
+static void arithmetic_run(const oclMat &src1, oclMat &dst, string kernelName, const char **kernelString, void *_scalar)
 {
     if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
@@ -529,12 +529,12 @@ void arithmetic_run(const oclMat &src1, oclMat &dst, string kernelName, const ch
     openCLExecuteKernel2(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, src1.depth(), CLFLUSH);
 }
 
-void multiply_cus(const oclMat &src1, oclMat &dst, float scalar)
+static void multiply_cus(const oclMat &src1, oclMat &dst, float scalar)
 {
     arithmetic_run(src1, dst, "arithm_muls", &arithm_mul, (void *)(&scalar));
 }
 
-void pyrdown_run_cus(const oclMat &src, const oclMat &dst)
+static void pyrdown_run_cus(const oclMat &src, const oclMat &dst)
 {
 
     CV_Assert(src.type() == dst.type());
@@ -559,7 +559,7 @@ void pyrdown_run_cus(const oclMat &src, const oclMat &dst)
     openCLExecuteKernel2(clCxt, &pyr_down, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth(), CLFLUSH);
 }
 
-void pyrDown_cus(const oclMat &src, oclMat &dst)
+static void pyrDown_cus(const oclMat &src, oclMat &dst)
 {
     CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
 
@@ -673,7 +673,7 @@ void pyrDown_cus(const oclMat &src, oclMat &dst)
 //	//}
 //}
 
-cl_mem bindTexture(const oclMat &mat, int depth, int channels)
+static cl_mem bindTexture(const oclMat &mat, int depth, int channels)
 {
     cl_mem texture;
     cl_image_format format;
@@ -698,7 +698,7 @@ cl_mem bindTexture(const oclMat &mat, int depth, int channels)
     {
         format.image_channel_order     = CL_RGBA;
     }
-#if CL_VERSION_1_2
+#ifdef CL_VERSION_1_2
     cl_image_desc desc;
     desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
     desc.image_width      = mat.step / mat.elemSize();
@@ -730,12 +730,12 @@ cl_mem bindTexture(const oclMat &mat, int depth, int channels)
     return texture;
 }
 
-void releaseTexture(cl_mem texture)
+static void releaseTexture(cl_mem texture)
 {
     openCLFree(texture);
 }
 
-void lkSparse_run(oclMat &I, oclMat &J,
+static void lkSparse_run(oclMat &I, oclMat &J,
                   const oclMat &prevPts, oclMat &nextPts, oclMat &status, oclMat& err, bool /*GET_MIN_EIGENVALS*/, int ptcount,
                   int level, /*dim3 block, */dim3 patch, Size winSize, int iters)
 {
@@ -915,7 +915,7 @@ void cv::ocl::PyrLKOpticalFlow::sparse(const oclMat &prevImg, const oclMat &next
         delete err;
 }
 
-void lkDense_run(oclMat &I, oclMat &J, oclMat &u, oclMat &v,
+static void lkDense_run(oclMat &I, oclMat &J, oclMat &u, oclMat &v,
                  oclMat &prevU, oclMat &prevV, oclMat *err, Size winSize, int iters)
 {
     Context  *clCxt = I.clCxt;

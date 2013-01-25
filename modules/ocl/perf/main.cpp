@@ -113,15 +113,15 @@ int main(int argc, char **argv)
 
 
     print_info();
-    int flag = CVCL_DEVICE_TYPE_GPU;
+    // int flag = CVCL_DEVICE_TYPE_GPU;
 
-    if(type == "cpu")
+    // if(type == "cpu")
 
-    {
+    // {
 
-        flag = CVCL_DEVICE_TYPE_CPU;
+    //     flag = CVCL_DEVICE_TYPE_CPU;
 
-    }
+    // }
     std::vector<cv::ocl::Info> oclinfo;
     int devnums = getDevice(oclinfo);
     if(devnums <= device || device < 0)

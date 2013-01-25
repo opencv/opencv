@@ -84,12 +84,12 @@ double checkSimilarity(const cv::Mat &m1, const cv::Mat &m2);
     EXPECT_LE(checkNorm(cv::Mat(mat)), eps) \
 }
 
-//#define EXPECT_MAT_NEAR(mat1, mat2, eps) \
-//{ \
-//    ASSERT_EQ(mat1.type(), mat2.type()); \
-//    ASSERT_EQ(mat1.size(), mat2.size()); \
-//    EXPECT_LE(checkNorm(cv::Mat(mat1), cv::Mat(mat2)), eps); \
-//}
+/*#define EXPECT_MAT_NEAR(mat1, mat2, eps) \
+{ \
+   ASSERT_EQ(mat1.type(), mat2.type()); \
+   ASSERT_EQ(mat1.size(), mat2.size()); \
+   EXPECT_LE(checkNorm(cv::Mat(mat1), cv::Mat(mat2)), eps); \
+}*/
 
 #define EXPECT_MAT_NEAR(mat1, mat2, eps,s) \
 { \

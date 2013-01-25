@@ -362,11 +362,11 @@ void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string 
 
     openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
 }
-void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName, const char **kernelString)
+static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName, const char **kernelString)
 {
     arithmetic_run<char>(src1, src2, dst, kernelName, kernelString, (void *)NULL);
 }
-void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString)
+static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString)
 {
     if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
@@ -476,7 +476,9 @@ void arithmetic_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, 
     //CV_Assert(src1.depth() != CV_8S);
 
     if(mask.data)
+    {
         CV_Assert(mask.type() == CV_8U && src1.rows == mask.rows && src1.cols == mask.cols);
+    }
 
     Context  *clCxt = src1.clCxt;
     int channels = dst.oclchannels();
@@ -530,7 +532,7 @@ void arithmetic_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, 
     openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, channels, depth);
 }
 
-void arithmetic_scalar_run(const oclMat &src, oclMat &dst, string kernelName, const char **kernelString, double scalar)
+static void arithmetic_scalar_run(const oclMat &src, oclMat &dst, string kernelName, const char **kernelString, double scalar)
 {
     if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
     {
@@ -590,7 +592,7 @@ void arithmetic_scalar_run(const oclMat &src, oclMat &dst, string kernelName, co
 typedef void (*ArithmeticFuncS)(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString, int isMatSubScalar);
 
 
-void arithmetic_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString, int isMatSubScalar)
+static void arithmetic_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString, int isMatSubScalar)
 {
     static ArithmeticFuncS tab[8] =
     {
@@ -608,7 +610,7 @@ void arithmetic_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, cons
         cv::ocl::error("Unsupported arithmetic operation", __FILE__, __LINE__);
     func(src1, src2, dst, mask, kernelName, kernelString, isMatSubScalar);
 }
-void arithmetic_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString)
+static void arithmetic_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString)
 {
     arithmetic_scalar(src1, src2, dst, mask, kernelName, kernelString, 0);
 }
@@ -660,7 +662,7 @@ void cv::ocl::absdiff(const oclMat &src1, const Scalar &src2, oclMat &dst)
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////  compare ///////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-void compare_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName, const char **kernelString)
+static void compare_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName, const char **kernelString)
 {
     dst.create(src1.size(), CV_8UC1);
     CV_Assert(src1.oclchannels() == 1);
@@ -739,7 +741,7 @@ void cv::ocl::compare(const oclMat &src1, const oclMat &src2, oclMat &dst , int 
 //////////////////////////////////////////////////////////////////////////////
 
 //type = 0 sum,type = 1 absSum,type = 2 sqrSum
-void arithmetic_sum_buffer_run(const oclMat &src, cl_mem &dst, int vlen , int groupnum, int type = 0)
+static void arithmetic_sum_buffer_run(const oclMat &src, cl_mem &dst, int vlen , int groupnum, int type = 0)
 {
     vector<pair<size_t , const void *> > args;
     int all_cols = src.step / (vlen * src.elemSize1());
@@ -872,7 +874,7 @@ void cv::ocl::meanStdDev(const oclMat &src, Scalar &mean, Scalar &stddev)
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////// minMax  /////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-void arithmetic_minMax_run(const oclMat &src, const oclMat &mask, cl_mem &dst, int vlen , int groupnum, string kernelName)
+static void arithmetic_minMax_run(const oclMat &src, const oclMat &mask, cl_mem &dst, int vlen , int groupnum, string kernelName)
 {
     vector<pair<size_t , const void *> > args;
     int all_cols = src.step / (vlen * src.elemSize1());
@@ -909,7 +911,7 @@ void arithmetic_minMax_run(const oclMat &src, const oclMat &mask, cl_mem &dst, i
 }
 
 
-void arithmetic_minMax_mask_run(const oclMat &src, const oclMat &mask, cl_mem &dst, int vlen, int groupnum, string kernelName)
+static void arithmetic_minMax_mask_run(const oclMat &src, const oclMat &mask, cl_mem &dst, int vlen, int groupnum, string kernelName)
 {
     vector<pair<size_t , const void *> > args;
     size_t gt[3] = {groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
@@ -1063,7 +1065,7 @@ double cv::ocl::norm(const oclMat &src1, const oclMat &src2, int normType)
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// flip //////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-void arithmetic_flip_rows_run(const oclMat &src, oclMat &dst, string kernelName)
+static void arithmetic_flip_rows_run(const oclMat &src, oclMat &dst, string kernelName)
 {
     if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
     {
@@ -1112,7 +1114,7 @@ void arithmetic_flip_rows_run(const oclMat &src, oclMat &dst, string kernelName)
 
     openCLExecuteKernel(clCxt, &arithm_flip, kernelName, globalThreads, localThreads, args, -1, depth);
 }
-void arithmetic_flip_cols_run(const oclMat &src, oclMat &dst, string kernelName, bool isVertical)
+static void arithmetic_flip_cols_run(const oclMat &src, oclMat &dst, string kernelName, bool isVertical)
 {
     if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
     {
@@ -1183,7 +1185,7 @@ void cv::ocl::flip(const oclMat &src, oclMat &dst, int flipCode)
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// LUT  //////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-void arithmetic_lut_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName)
+static void arithmetic_lut_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName)
 {
     Context *clCxt = src1.clCxt;
     int channels = src1.oclchannels();
@@ -1284,7 +1286,7 @@ void cv::ocl::LUT(const oclMat &src, const oclMat &lut, oclMat &dst)
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////// exp log /////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-void arithmetic_exp_log_run(const oclMat &src, oclMat &dst, string kernelName, const char **kernelString)
+static void arithmetic_exp_log_run(const oclMat &src, oclMat &dst, string kernelName, const char **kernelString)
 {
     dst.create(src.size(), src.type());
     CV_Assert(src.cols == dst.cols &&
@@ -1333,7 +1335,7 @@ void cv::ocl::log(const oclMat &src, oclMat &dst)
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////////// magnitude phase ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-void arithmetic_magnitude_phase_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName)
+static void arithmetic_magnitude_phase_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName)
 {
     if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
@@ -1381,7 +1383,7 @@ void cv::ocl::magnitude(const oclMat &src1, const oclMat &src2, oclMat &dst)
     arithmetic_magnitude_phase_run(src1, src2, dst, "arithm_magnitude");
 }
 
-void arithmetic_phase_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName, const char **kernelString)
+static void arithmetic_phase_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName, const char **kernelString)
 {
     if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
@@ -1444,7 +1446,7 @@ void cv::ocl::phase(const oclMat &x, const oclMat &y, oclMat &Angle , bool angle
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// cartToPolar ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-void arithmetic_cartToPolar_run(const oclMat &src1, const oclMat &src2, oclMat &dst_mag, oclMat &dst_cart,
+static void arithmetic_cartToPolar_run(const oclMat &src1, const oclMat &src2, oclMat &dst_mag, oclMat &dst_cart,
                                 string kernelName, bool angleInDegrees)
 {
     if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
@@ -1499,7 +1501,7 @@ void cv::ocl::cartToPolar(const oclMat &x, const oclMat &y, oclMat &mag, oclMat 
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// polarToCart ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-void arithmetic_ptc_run(const oclMat &src1, const oclMat &src2, oclMat &dst1, oclMat &dst2, bool angleInDegrees,
+static void arithmetic_ptc_run(const oclMat &src1, const oclMat &src2, oclMat &dst1, oclMat &dst2, bool angleInDegrees,
                         string kernelName)
 {
     if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
@@ -1564,7 +1566,7 @@ void cv::ocl::polarToCart(const oclMat &magnitude, const oclMat &angle, oclMat &
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////// minMaxLoc ////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-void arithmetic_minMaxLoc_run(const oclMat &src, cl_mem &dst, int vlen , int groupnum)
+static void arithmetic_minMaxLoc_run(const oclMat &src, cl_mem &dst, int vlen , int groupnum)
 {
     vector<pair<size_t , const void *> > args;
     int all_cols = src.step / (vlen * src.elemSize1());
@@ -1588,7 +1590,7 @@ void arithmetic_minMaxLoc_run(const oclMat &src, cl_mem &dst, int vlen , int gro
     openCLExecuteKernel(src.clCxt, &arithm_minMaxLoc, "arithm_op_minMaxLoc", gt, lt, args, -1, -1, build_options);
 }
 
-void arithmetic_minMaxLoc_mask_run(const oclMat &src, const oclMat &mask, cl_mem &dst, int vlen, int groupnum)
+static void arithmetic_minMaxLoc_mask_run(const oclMat &src, const oclMat &mask, cl_mem &dst, int vlen, int groupnum)
 {
     vector<pair<size_t , const void *> > args;
     size_t gt[3] = {groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
@@ -1702,7 +1704,7 @@ void cv::ocl::minMaxLoc(const oclMat &src, double *minVal, double *maxVal,
 //////////////////////////////////////////////////////////////////////////////
 ///////////////////////////// countNonZero ///////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-void arithmetic_countNonZero_run(const oclMat &src, cl_mem &dst, int vlen , int groupnum, string kernelName)
+static void arithmetic_countNonZero_run(const oclMat &src, cl_mem &dst, int vlen , int groupnum, string kernelName)
 {
     vector<pair<size_t , const void *> > args;
     int all_cols = src.step / (vlen * src.elemSize1());
@@ -1759,7 +1761,7 @@ int cv::ocl::countNonZero(const oclMat &src)
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////bitwise_op////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-void bitwise_run(const oclMat &src1, oclMat &dst, string kernelName, const char **kernelString)
+static void bitwise_run(const oclMat &src1, oclMat &dst, string kernelName, const char **kernelString)
 {
     dst.create(src1.size(), src1.type());
 
@@ -1853,11 +1855,11 @@ void bitwise_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string ker
 
     openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
 }
-void bitwise_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName, const char **kernelString)
+static void bitwise_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName, const char **kernelString)
 {
     bitwise_run<char>(src1, src2, dst, kernelName, kernelString, (void *)NULL);
 }
-void bitwise_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString)
+static void bitwise_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString)
 {
     dst.create(src1.size(), src1.type());
     CV_Assert(src1.cols == src2.cols && src2.cols == dst.cols &&
@@ -1919,7 +1921,9 @@ void bitwise_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, con
 
 
     if(mask.data)
+    {
         CV_Assert(mask.type() == CV_8U && src1.rows == mask.rows && src1.cols == mask.cols);
+    }
 
     Context  *clCxt = src1.clCxt;
     int channels = dst.oclchannels();
@@ -1977,7 +1981,7 @@ void bitwise_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, con
 typedef void (*BitwiseFuncS)(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString, int isMatSubScalar);
 
 
-void bitwise_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString, int isMatSubScalar)
+static void bitwise_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString, int isMatSubScalar)
 {
     static BitwiseFuncS tab[8] =
     {
@@ -2007,7 +2011,7 @@ void bitwise_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const o
         cv::ocl::error("Unsupported arithmetic operation", __FILE__, __LINE__);
     func(src1, src2, dst, mask, kernelName, kernelString, isMatSubScalar);
 }
-void bitwise_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString)
+static void bitwise_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString)
 {
     bitwise_scalar(src1, src2, dst, mask, kernelName, kernelString, 0);
 }
@@ -2153,7 +2157,7 @@ cv::ocl::oclMat cv::ocl::operator ^ (const oclMat &src1, const oclMat &src2)
 //////////////////////////////////////////////////////////////////////////////
 #define TILE_DIM      (32)
 #define BLOCK_ROWS    (256/TILE_DIM)
-void transpose_run(const oclMat &src, oclMat &dst, string kernelName)
+static void transpose_run(const oclMat &src, oclMat &dst, string kernelName)
 {
     if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
     {
@@ -2368,7 +2372,7 @@ void cv::ocl::magnitudeSqr(const oclMat &src1, oclMat &dst)
     openCLExecuteKernel(clCxt, &arithm_magnitudeSqr, "magnitudeSqr", globalThreads, localThreads, args, 2, depth);
 }
 
-void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, string kernelName, const char **kernelString)
+static void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, string kernelName, const char **kernelString)
 {
     CV_Assert(src1.cols == dst.cols && src1.rows == dst.rows);
     CV_Assert(src1.type() == dst.type());
@@ -2417,7 +2421,7 @@ void cv::ocl::pow(const oclMat &x, double p, oclMat &y)
         return;
     }
 
-    CV_Assert(x.type() == y.type() && x.size() == y.size() && x.depth() == CV_32F || x.depth() == CV_64F);
+    CV_Assert((x.type() == y.type() && x.size() == y.size() && x.depth() == CV_32F) || x.depth() == CV_64F);
     y.create(x.size(), x.type());
     string kernelName = "arithm_pow";
 

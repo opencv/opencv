@@ -38,6 +38,15 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
+#endif
+
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 

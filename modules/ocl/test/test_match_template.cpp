@@ -100,7 +100,7 @@ TEST_P(MatchTemplate8U, Accuracy)
 
     EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1, sss);
 
-#if PERF_TEST
+#ifdef PERF_TEST
     {
         P_TEST_FULL( {}, {cv::ocl::matchTemplate(ocl_image, ocl_templ, dst, method);}, {});
         P_TEST_FULL( {}, {cv::matchTemplate(image, templ, dst_gold, method);}, {});
@@ -145,7 +145,7 @@ TEST_P(MatchTemplate32F, Accuracy)
 
     EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1, sss);
 
-#if PERF_TEST
+#ifdef PERF_TEST
     {
         std::cout << "Method: " << TEMPLATE_METHOD_NAMES[method] << std::endl;
         std::cout << "Image Size: (" << size.width << ", " << size.height << ")" << std::endl;

@@ -1738,12 +1738,13 @@ namespace cv
 
     }
 }
-#if _MSC_VER >= 1200
-#pragma warning( push)
-#pragma warning( disable: 4267)
+#if defined _MSC_VER && _MSC_VER >= 1200
+#  pragma warning( push)
+#  pragma warning( disable: 4267)
 #endif
 #include "opencv2/ocl/matrix_operations.hpp"
-#if _MSC_VER >= 1200
-#pragma warning( pop)
+#if defined _MSC_VER && _MSC_VER >= 1200
+#  pragma warning( pop)
 #endif
+
 #endif /* __OPENCV_GPU_HPP__ */

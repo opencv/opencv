@@ -126,7 +126,7 @@ namespace cv
 
 ////////////////////////////////////////////////////////////////////////
 // convert_C3C4
-void convert_C3C4(const cl_mem &src, oclMat &dst)
+static void convert_C3C4(const cl_mem &src, oclMat &dst)
 {
     int dstStep_in_pixel = dst.step1() / dst.oclchannels();
     int pixel_end = dst.wholecols * dst.wholerows - 1;
@@ -174,7 +174,7 @@ void convert_C3C4(const cl_mem &src, oclMat &dst)
 }
 ////////////////////////////////////////////////////////////////////////
 // convert_C4C3
-void convert_C4C3(const oclMat &src, cl_mem &dst)
+static void convert_C4C3(const oclMat &src, cl_mem &dst)
 {
     int srcStep_in_pixel = src.step1() / src.oclchannels();
     int pixel_end = src.wholecols * src.wholerows - 1;
@@ -336,7 +336,7 @@ inline int divUp(int total, int grain)
 ///////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// CopyTo /////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
-void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask, string kernelName)
+static void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask, string kernelName)
 {
     CV_DbgAssert( dst.rows == mask.rows && dst.cols == mask.cols &&
                   src.rows == dst.rows && src.cols == dst.cols
@@ -401,7 +401,7 @@ void cv::ocl::oclMat::copyTo( oclMat &mat, const oclMat &mask) const
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////// ConvertTo ////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
-void convert_run(const oclMat &src, oclMat &dst, double alpha, double beta)
+static void convert_run(const oclMat &src, oclMat &dst, double alpha, double beta)
 {
     string kernelName = "convert_to_S";
     stringstream idxStr;
@@ -472,7 +472,7 @@ oclMat &cv::ocl::oclMat::operator = (const Scalar &s)
     setTo(s);
     return *this;
 }
-void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kernelName)
+static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kernelName)
 {
     vector<pair<size_t , const void *> > args;
 
@@ -642,7 +642,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
     default:
         CV_Error(CV_StsUnsupportedFormat, "unknown depth");
     }
-#if CL_VERSION_1_2
+#ifdef CL_VERSION_1_2
     if(dst.offset == 0 && dst.cols == dst.wholecols)
     {
         clEnqueueFillBuffer(dst.clCxt->impl->clCmdQueue, (cl_mem)dst.data, args[0].second, args[0].first, 0, dst.step * dst.rows, 0, NULL, NULL);
@@ -668,7 +668,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 #endif
 }
 
-void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &mask, string kernelName)
+static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &mask, string kernelName)
 {
     CV_DbgAssert( dst.rows == mask.rows && dst.cols == mask.cols);
     vector<pair<size_t , const void *> > args;
