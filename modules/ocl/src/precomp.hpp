@@ -46,7 +46,7 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#if _MSC_VER >= 1200
+#if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4267 4324 4244 4251 4710 4711 4514 4996 )
 #endif
 

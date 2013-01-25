@@ -2597,13 +2597,13 @@ TEST_P(Sum, MAT)
             Has_roi(k);
 
             t0 = (double)cvGetTickCount();//cpu start
-            Scalar cpures = cv::sum(mat1_roi);
+            cv::sum(mat1_roi);
             t0 = (double)cvGetTickCount() - t0;//cpu end
 
             t1 = (double)cvGetTickCount();//gpu start1
             gmat1 = mat1_roi;
             t2 = (double)cvGetTickCount(); //kernel
-            Scalar gpures = cv::ocl::sum(gmat1);
+            cv::ocl::sum(gmat1);
             t2 = (double)cvGetTickCount() - t2;//kernel
             t1 = (double)cvGetTickCount() - t1;//gpu end1
             if(j == 0)

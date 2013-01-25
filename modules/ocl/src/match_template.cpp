@@ -99,7 +99,7 @@ namespace cv
         // Evaluates optimal template's area threshold. If
         // template's area is less  than the threshold, we use naive match
         // template version, otherwise FFT-based (if available)
-        int getTemplateThreshold(int method, int depth)
+        static int getTemplateThreshold(int method, int depth)
         {
             switch (method)
             {
