@@ -46,7 +46,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::ocl;
 
-#if !defined (HAVE_OPENCL) 
+#if !defined (HAVE_OPENCL)
 
 void cv::ocl::HoughCircles(const oclMat&, oclMat&, int, float, float, int, int, int, int, int) { throw_nogpu(); }
 void cv::ocl::HoughCircles(const oclMat&, oclMat&, HoughCirclesBuf&, int, float, float, int, int, int, int, int) { throw_nogpu(); }
@@ -59,18 +59,6 @@ void cv::ocl::HoughCirclesDownload(const oclMat&, OutputArray) { throw_nogpu(); 
 namespace cv { namespace ocl {
     ///////////////////////////OpenCL kernel strings///////////////////////////
     extern const char *imgproc_hough;
-
-    namespace hough
-    {
-        int buildPointList_gpu(const oclMat& src, oclMat& list);
-        void circlesAccumCenters_gpu(const unsigned int* list, int count, const oclMat& dx, const oclMat& dy, oclMat& accum, int minRadius, int maxRadius, float idp);
-        int buildCentersList_gpu(const oclMat& accum, oclMat& centers, int threshold);
-
-        int circlesAccumRadius_gpu(const oclMat& centers, int centersCount,
-                                   const oclMat& list, int count,
-                                   oclMat& circles, int maxCircles,
-                                   float dp, int minRadius, int maxRadius, int threshold);
-    }
 }}
 
 
@@ -78,7 +66,7 @@ namespace cv { namespace ocl {
 //////////////////////////////////////////////////////////
 // common functions
 
-namespace cv { namespace ocl { namespace hough
+namespace
 {
     int buildPointList_gpu(const oclMat& src, oclMat& list)
     {
@@ -87,9 +75,9 @@ namespace cv { namespace ocl { namespace hough
         int totalCount = 0;
         int err = CL_SUCCESS;
         cl_mem counter = clCreateBuffer(src.clCxt->impl->clContext,
-                                        CL_MEM_COPY_HOST_PTR,  
+                                        CL_MEM_COPY_HOST_PTR,
                                         sizeof(int),
-                                        &totalCount,   
+                                        &totalCount,
                                         &err);
         openCLSafeCall(err);
 
@@ -99,7 +87,7 @@ namespace cv { namespace ocl { namespace hough
 
         const int PIXELS_PER_BLOCK = blkSizeX * PIXELS_PER_THREAD;
         const size_t glbSizeX = src.cols % (PIXELS_PER_BLOCK) == 0 ? src.cols : MUL_UP(src.cols, PIXELS_PER_BLOCK);
-        const size_t glbSizeY = src.rows % blkSizeY == 0 ? src.rows : MUL_UP(src.rows, blkSizeY);      
+        const size_t glbSizeY = src.rows % blkSizeY == 0 ? src.rows : MUL_UP(src.rows, blkSizeY);
         size_t globalThreads[3] = { glbSizeX, glbSizeY, 1 };
 
         vector<pair<size_t , const void *> > args;
@@ -111,23 +99,23 @@ namespace cv { namespace ocl { namespace hough
         args.push_back( make_pair( sizeof(cl_mem)  , (void *)&counter ));
 
         openCLExecuteKernel(src.clCxt, &imgproc_hough, "buildPointList", globalThreads, localThreads, args, -1, -1);
-        openCLSafeCall(clEnqueueReadBuffer(src.clCxt->impl->clCmdQueue, counter, CL_TRUE, 0, sizeof(int), &totalCount, 0, NULL, NULL));  
+        openCLSafeCall(clEnqueueReadBuffer(src.clCxt->impl->clCmdQueue, counter, CL_TRUE, 0, sizeof(int), &totalCount, 0, NULL, NULL));
         openCLSafeCall(clReleaseMemObject(counter));
-        
+
         return totalCount;
-    }    
-}}}
+    }
+}
 
 //////////////////////////////////////////////////////////
 // HoughCircles
 
-namespace cv { namespace ocl { namespace hough
+namespace
 {
     void circlesAccumCenters_gpu(const oclMat& list, int count, const oclMat& dx, const oclMat& dy, oclMat& accum, int minRadius, int maxRadius, float idp)
     {
         const size_t blkSizeX = 256;
         size_t localThreads[3] = { 256, 1, 1 };
-        
+
         const size_t glbSizeX = count % blkSizeX == 0 ? count : MUL_UP(count, blkSizeX);
         size_t globalThreads[3] = { glbSizeX, 1, 1 };
 
@@ -140,16 +128,16 @@ namespace cv { namespace ocl { namespace hough
         args.push_back( make_pair( sizeof(cl_mem)  , (void *)&dx.data ));
         args.push_back( make_pair( sizeof(cl_int)  , (void *)&dx.step ));
         args.push_back( make_pair( sizeof(cl_mem)  , (void *)&dy.data ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&dy.step ));        
+        args.push_back( make_pair( sizeof(cl_int)  , (void *)&dy.step ));
         args.push_back( make_pair( sizeof(cl_mem)  , (void *)&accum.data ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&accum.step ));        
+        args.push_back( make_pair( sizeof(cl_int)  , (void *)&accum.step ));
         args.push_back( make_pair( sizeof(cl_int)  , (void *)&width ));
         args.push_back( make_pair( sizeof(cl_int)  , (void *)&height ));
         args.push_back( make_pair( sizeof(cl_int)  , (void *)&minRadius));
         args.push_back( make_pair( sizeof(cl_int)  , (void *)&maxRadius));
         args.push_back( make_pair( sizeof(cl_float), (void *)&idp));
 
-        openCLExecuteKernel(accum.clCxt, &imgproc_hough, "circlesAccumCenters", globalThreads, localThreads, args, -1, -1);        
+        openCLExecuteKernel(accum.clCxt, &imgproc_hough, "circlesAccumCenters", globalThreads, localThreads, args, -1, -1);
     }
 
     int buildCentersList_gpu(const oclMat& accum, oclMat& centers, int threshold)
@@ -157,16 +145,16 @@ namespace cv { namespace ocl { namespace hough
         int totalCount = 0;
         int err = CL_SUCCESS;
         cl_mem counter = clCreateBuffer(accum.clCxt->impl->clContext,
-                                        CL_MEM_COPY_HOST_PTR,  
+                                        CL_MEM_COPY_HOST_PTR,
                                         sizeof(int),
-                                        &totalCount,   
+                                        &totalCount,
                                         &err);
-        openCLSafeCall(err);        
+        openCLSafeCall(err);
 
         const size_t blkSizeX = 32;
         const size_t blkSizeY = 8;
-        size_t localThreads[3] = { blkSizeX, blkSizeY, 1 };        
-        
+        size_t localThreads[3] = { blkSizeX, blkSizeY, 1 };
+
         const size_t glbSizeX = (accum.cols - 2) % blkSizeX == 0 ? accum.cols - 2 : MUL_UP(accum.cols - 2, blkSizeX);
         const size_t glbSizeY = (accum.rows - 2) % blkSizeY == 0 ? accum.rows - 2 : MUL_UP(accum.rows - 2, blkSizeY);
         size_t globalThreads[3] = { glbSizeX, glbSizeY, 1 };
@@ -181,10 +169,10 @@ namespace cv { namespace ocl { namespace hough
         args.push_back( make_pair( sizeof(cl_mem)  , (void *)&counter ));
 
         openCLExecuteKernel(accum.clCxt, &imgproc_hough, "buildCentersList", globalThreads, localThreads, args, -1, -1);
-        
-        openCLSafeCall(clEnqueueReadBuffer(accum.clCxt->impl->clCmdQueue, counter, CL_TRUE, 0, sizeof(int), &totalCount, 0, NULL, NULL));  
+
+        openCLSafeCall(clEnqueueReadBuffer(accum.clCxt->impl->clCmdQueue, counter, CL_TRUE, 0, sizeof(int), &totalCount, 0, NULL, NULL));
         openCLSafeCall(clReleaseMemObject(counter));
-        
+
         return totalCount;
     }
 
@@ -196,13 +184,13 @@ namespace cv { namespace ocl { namespace hough
         int totalCount = 0;
         int err = CL_SUCCESS;
         cl_mem counter = clCreateBuffer(circles.clCxt->impl->clContext,
-                                        CL_MEM_COPY_HOST_PTR,  
+                                        CL_MEM_COPY_HOST_PTR,
                                         sizeof(int),
-                                        &totalCount,   
+                                        &totalCount,
                                         &err);
-        openCLSafeCall(err);        
+        openCLSafeCall(err);
 
-        const size_t blkSizeX = circles.clCxt->impl->maxWorkGroupSize; 
+        const size_t blkSizeX = circles.clCxt->impl->maxWorkGroupSize;
         size_t localThreads[3] = { blkSizeX, 1, 1 };
 
         const size_t glbSizeX = centersCount * blkSizeX;
@@ -227,10 +215,10 @@ namespace cv { namespace ocl { namespace hough
 
         CV_Assert(circles.offset == 0);
 
-        openCLExecuteKernel(circles.clCxt, &imgproc_hough, "circlesAccumRadius", globalThreads, localThreads, args, -1, -1);        
+        openCLExecuteKernel(circles.clCxt, &imgproc_hough, "circlesAccumRadius", globalThreads, localThreads, args, -1, -1);
 
         openCLSafeCall(clEnqueueReadBuffer(circles.clCxt->impl->clCmdQueue, counter, CL_TRUE, 0, sizeof(int), &totalCount, 0, NULL, NULL));
-        
+
         openCLSafeCall(clReleaseMemObject(counter));
 
         totalCount = ::min(totalCount, maxCircles);
@@ -239,7 +227,7 @@ namespace cv { namespace ocl { namespace hough
     }
 
 
-}}} // namespace cv { namespace ocl { namespace hough
+} // namespace
 
 
 
@@ -261,13 +249,13 @@ void cv::ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& 
     CV_Assert(cannyThreshold > 0);
     CV_Assert(votesThreshold > 0);
     CV_Assert(maxCircles > 0);
-    
+
     const float idp = 1.0f / dp;
 
     cv::ocl::Canny(src, buf.cannyBuf, buf.edges, std::max(cannyThreshold / 2, 1), cannyThreshold);
 
     ensureSizeIsEnough(1, src.size().area(), CV_32SC1, buf.srcPoints);
-    const int pointsCount = hough::buildPointList_gpu(buf.edges, buf.srcPoints);
+    const int pointsCount = buildPointList_gpu(buf.edges, buf.srcPoints);
     if (pointsCount == 0)
     {
         circles.release();
@@ -277,10 +265,10 @@ void cv::ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& 
     ensureSizeIsEnough(cvCeil(src.rows * idp) + 2, cvCeil(src.cols * idp) + 2, CV_32SC1, buf.accum);
     buf.accum.setTo(Scalar::all(0));
 
-    hough::circlesAccumCenters_gpu(buf.srcPoints, pointsCount, buf.cannyBuf.dx, buf.cannyBuf.dy, buf.accum, minRadius, maxRadius, idp);
+    circlesAccumCenters_gpu(buf.srcPoints, pointsCount, buf.cannyBuf.dx, buf.cannyBuf.dy, buf.accum, minRadius, maxRadius, idp);
 
-    ensureSizeIsEnough(1, src.size().area(), CV_32SC1, buf.centers);    
-    int centersCount = hough::buildCentersList_gpu(buf.accum, buf.centers, votesThreshold);
+    ensureSizeIsEnough(1, src.size().area(), CV_32SC1, buf.centers);
+    int centersCount = buildCentersList_gpu(buf.accum, buf.centers, votesThreshold);
     if (centersCount == 0)
     {
         circles.release();
@@ -304,9 +292,9 @@ void cv::ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& 
                                            oldBuf,
                                            0,
                                            NULL,
-                                           NULL));  
+                                           NULL));
 
-        
+
         const int cellSize = cvRound(minDist);
         const int gridWidth = (src.cols + cellSize - 1) / cellSize;
         const int gridHeight = (src.rows + cellSize - 1) / cellSize;
@@ -348,7 +336,7 @@ void cv::ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& 
                         const int val = m[j];
                         const int jx = val & 0xFFFF;
                         const int jy = (val >> 16) & 0xFFFF;
-                        
+
                         float dx = (float)(px - jx);
                         float dy = (float)(py - jy);
 
@@ -378,13 +366,13 @@ void cv::ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& 
                                             newBuf,
                                             0,
                                             0,
-                                            0));     
+                                            0));
         centersCount = newCount;
     }
 
     ensureSizeIsEnough(1, maxCircles, CV_32FC3, circles);
 
-    const int circlesCount = hough::circlesAccumRadius_gpu(buf.centers, centersCount,
+    const int circlesCount = circlesAccumRadius_gpu(buf.centers, centersCount,
                                                            buf.srcPoints, pointsCount,
                                                            circles, maxCircles,
                                                            dp, minRadius, maxRadius, votesThreshold);
@@ -399,7 +387,7 @@ void cv::ocl::HoughCirclesDownload(const oclMat& d_circles, cv::OutputArray h_ci
 {
     // FIX ME: garbage values are copied!
     CV_Error(CV_StsNotImplemented, "HoughCirclesDownload is not implemented");
-     
+
     if (d_circles.empty())
     {
         h_circles_.release();
