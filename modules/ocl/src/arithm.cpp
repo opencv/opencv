@@ -2205,7 +2205,6 @@ void cv::ocl::transpose(const oclMat &src, oclMat &dst)
     CV_Assert(src.type() == CV_8UC1  || src.type() == CV_8UC3 || src.type() == CV_8UC4  || src.type() == CV_8SC3  || src.type() == CV_8SC4  ||
               src.type() == CV_16UC2 || src.type() == CV_16SC2 || src.type() == CV_32SC1 || src.type() == CV_32FC1);
 
-    stringstream idxstr;
     oclMat emptyMat;
 
     if( src.data == dst.data && dst.cols == dst.rows )
