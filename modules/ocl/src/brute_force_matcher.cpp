@@ -44,7 +44,7 @@
 //M*/
 
 #include "precomp.hpp"
-
+#include <functional>
 #include <iterator>
 #include <vector>
 using namespace cv;
@@ -821,7 +821,7 @@ void findKnnMatch(int k, const oclMat &trainIdx, const oclMat &distance, const o
     }
 }
 
-void findKnnMatchDispatcher(int k, const oclMat &trainIdx, const oclMat &distance, const oclMat &allDist, int distType)
+static void findKnnMatchDispatcher(int k, const oclMat &trainIdx, const oclMat &distance, const oclMat &allDist, int distType)
 {
     findKnnMatch<256>(k, trainIdx, distance, allDist, distType);
 }
