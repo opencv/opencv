@@ -67,6 +67,24 @@ enum {
     WND_PROP_OPENGL       = CV_WND_PROP_OPENGL       // opengl support
 };
 
+
+
+/***************************** cv::ConfigBase structure ******************************/
+typedef struct ConfigBase
+{
+    int initWidth;
+    int initHeight;
+    int initPosX;
+    int initPosY;
+    int WindowMode;
+    int m_verboseLevel;
+    
+    std::string wndname;
+    cv::FileStorage fs;
+    
+} ConfigBase;
+
+
 CV_EXPORTS_W void namedWindow(const string& winname, int flags = WINDOW_AUTOSIZE);
 CV_EXPORTS_W void destroyWindow(const string& winname);
 CV_EXPORTS_W void destroyAllWindows();
@@ -79,6 +97,9 @@ CV_EXPORTS_W void imshow(const string& winname, InputArray mat);
 
 CV_EXPORTS_W void resizeWindow(const string& winname, int width, int height);
 CV_EXPORTS_W void moveWindow(const string& winname, int x, int y);
+
+// move window dependent from percentage values of screen size.....
+CV_EXPORTS_W void adjustWindowPos(const string& winname, int xp, int xwp, int yp, int yhp);//HS
 
 CV_EXPORTS_W void setWindowProperty(const string& winname, int prop_id, double prop_value);//YV
 CV_EXPORTS_W double getWindowProperty(const string& winname, int prop_id);//YV
@@ -123,6 +144,11 @@ CV_EXPORTS int createTrackbar(const string& trackbarname, const string& winname,
 CV_EXPORTS_W int getTrackbarPos(const string& trackbarname, const string& winname);
 CV_EXPORTS_W void setTrackbarPos(const string& trackbarname, const string& winname, int pos);
 
+
+// *.cfg reading
+CV_EXPORTS int readConfig( const char* file, const char * name, ConfigBase * cfg );
+
+
 // OpenGL support
 
 typedef void (CV_CDECL *OpenGlDrawCallback)(void* userdata);
@@ -131,6 +157,7 @@ CV_EXPORTS void setOpenGlDrawCallback(const string& winname, OpenGlDrawCallback 
 CV_EXPORTS void setOpenGlContext(const string& winname);
 
 CV_EXPORTS void updateWindow(const string& winname);
+
 
 //Only for Qt
 
@@ -152,6 +179,12 @@ CV_EXPORTS int createButton( const string& bar_name, ButtonCallback on_change,
                              void* userdata=NULL, int type=CV_PUSH_BUTTON,
                              bool initial_button_state=0);
 
+//------------------- functions for buttonbar + statusline  (highgui.hpp)
+CV_EXPORTS  int getButtonBarContent(const string winname, int idx, char * txt);
+CV_EXPORTS  int setButtonBarContent(const string winname, int etype, int idx, const char * txt);
+CV_EXPORTS  int setMapContent(const string winname, const string& varname, const char * text );
+CV_EXPORTS void dispInfoBox(const string winname, const char* caption, const string& text);
+CV_EXPORTS bool getCommandVec(const string& winname, vector<string> & stringVec, char* cmd = NULL);
 //-------------------------
 
 enum
@@ -240,6 +273,7 @@ public:
 protected:
     Ptr<CvVideoWriter> writer;
 };
+
 
 #endif
 
