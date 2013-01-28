@@ -236,6 +236,7 @@ static int pyopencv_to(const PyObject* o, Mat& m, const ArgInfo info, bool allow
                typenum == NPY_BYTE ? CV_8S :
                typenum == NPY_USHORT ? CV_16U :
                typenum == NPY_SHORT ? CV_16S :
+               typenum == NPY_INT ? CV_32S :
                typenum == NPY_INT32 ? CV_32S :
                typenum == NPY_FLOAT ? CV_32F :
                typenum == NPY_DOUBLE ? CV_64F : -1;
@@ -245,7 +246,7 @@ static int pyopencv_to(const PyObject* o, Mat& m, const ArgInfo info, bool allow
         if( typenum == NPY_INT64 || typenum == NPY_UINT64 || type == NPY_LONG )
         {
             needcopy = needcast = true;
-            new_typenum = NPY_INT32;
+            new_typenum = NPY_INT;
             type = CV_32S;
         }
         else
