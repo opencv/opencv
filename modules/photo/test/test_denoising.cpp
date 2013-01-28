@@ -145,3 +145,14 @@ TEST(Photo_DenoisingColoredMulti, regression)
 
     ASSERT_EQ(0, norm(result != expected));
 }
+
+TEST(Photo_White, issue_2646)
+{
+    cv::Mat img(50, 50, CV_8UC1, cv::Scalar::all(255));
+    cv::Mat filtered;
+    cv::fastNlMeansDenoising(img, filtered);
+
+    int nonWhitePixelsCount = (int)img.total() - cv::countNonZero(filtered == img);
+
+    ASSERT_EQ(0, nonWhitePixelsCount);
+}
