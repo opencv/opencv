@@ -183,7 +183,7 @@ The function can do the following transformations:
 
     .. math::
 
-        G  \leftarrow Y - 0.344  \cdot (Cr - delta) - 0.714  \cdot (Cb - delta)
+        G  \leftarrow Y - 0.714  \cdot (Cr - delta) - 0.344  \cdot (Cb - delta)
 
     .. math::
 
