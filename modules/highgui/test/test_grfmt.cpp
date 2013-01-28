@@ -282,3 +282,12 @@ TEST(Highgui_ImreadVSCvtColor, regression)
 }
 #endif
 
+#ifdef HAVE_JPEG
+TEST(Highgui_Jpeg, encode_empty)
+{
+    cv::Mat img;
+    std::vector<uchar> jpegImg;
+
+    ASSERT_THROW(cv::imencode(".jpg", img, jpegImg), cv::Exception);
+}
+#endif

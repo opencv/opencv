@@ -100,12 +100,16 @@ public:
     virtual string getDescription() const;
     virtual ImageEncoder newEncoder() const;
 
+    virtual void throwOnEror() const;
+
 protected:
     string m_description;
 
     string m_filename;
     vector<uchar>* m_buf;
     bool m_buf_supported;
+
+    string m_last_error;
 };
 
 }
