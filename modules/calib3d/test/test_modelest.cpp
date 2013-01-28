@@ -212,7 +212,8 @@ void CV_ModelEstimator2_Test::prepare_to_validation( int test_case_idx )
 void CV_ModelEstimator2_Test::run_func()
 {
     //make the input continuous
-    CvMat _input = test_mat[INPUT][0].clone();
+    Mat input = test_mat[INPUT][0].clone();
+    CvMat _input = input;
 
     RNG &rng = ts->get_rng();
     int modelPoints = cvtest::randInt(rng);
