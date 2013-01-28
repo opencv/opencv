@@ -2595,7 +2595,7 @@ cvCopyHist( const CvHistogram* src, CvHistogram** _dst )
     int eq = 0;
     int is_sparse;
     int i, dims1, dims2;
-    int size1[CV_MAX_DIM], size2[CV_MAX_DIM], total = 1;
+    int size1[CV_MAX_DIM], size2[CV_MAX_DIM];
     float* ranges[CV_MAX_DIM];
     float** thresh = 0;
     CvHistogram* dst;
@@ -2610,9 +2610,8 @@ cvCopyHist( const CvHistogram* src, CvHistogram** _dst )
 
     is_sparse = CV_IS_SPARSE_MAT(src->bins);
     dims1 = cvGetDims( src->bins, size1 );
-    for( i = 0; i < dims1; i++ )
-        total *= size1[i];
-
+    i = dims1;
+    
     if( dst && is_sparse == CV_IS_SPARSE_MAT(dst->bins))
     {
         dims2 = cvGetDims( dst->bins, size2 );
