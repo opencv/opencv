@@ -260,3 +260,22 @@ class caltech:
         occl = re.match(r'^occl\s*=(\[[\d\s\.\;]+\])$', l).group(1)
         occl = re.sub(r"\s(?!\])", ",", occl)
         return eval(occl)
+
+def parse_caltech(f):
+    (nFrame, nSample) = caltech.parse_header(f)
+    objects = caltech.extract_objects(f)
+
+    annotations = [[] for i in range(nFrame)]
+    for obj in objects:
+        (type, start, end) = re.search(r'^lbl=\'(\w+)\'\s+str=(\d+)\s+end=(\d+)\s+hide=0$', obj[0]).groups()
+        print type, start, end
+        start = int(start) -1
+        end   = int(end)
+        pos   = caltech.parse_pos(obj[1])
+        posv  = caltech.parse_pos(obj[2])
+        occl  = caltech.parse_occl(obj[3])
+
+        for idx, (p, pv, oc) in enumerate(zip(*[pos, posv, occl])):
+            annotations[start + idx].append((type, p, oc, pv))
+
+    return annotations
