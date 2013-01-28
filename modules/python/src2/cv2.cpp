@@ -476,7 +476,12 @@ static bool pyopencv_to(PyObject* obj, int& value, const char* name = "<unknown>
     (void)name;
     if(!obj || obj == Py_None)
         return true;
-    value = (int)PyInt_AsLong(obj);
+    if(PyInt_Check(obj))
+        value = (int)PyInt_AsLong(obj);
+    else if(PyLong_Check(obj))
+        value = (int)PyLong_AsLong(obj);
+    else
+        return false;
     return value != -1 || !PyErr_Occurred();
 }
 
@@ -741,7 +746,14 @@ template<typename _Tp> struct pyopencvVecConverter
                 PyObject* item_ij = items_i[j];
                 if( PyInt_Check(item_ij))
                 {
-                    int v = PyInt_AsLong(item_ij);
+                    int v = (int)PyInt_AsLong(item_ij);
+                    if( v == -1 && PyErr_Occurred() )
+                        break;
+                    data[j] = saturate_cast<_Cp>(v);
+                }
+                else if( PyLong_Check(item_ij))
+                {
+                    int v = (int)PyLong_AsLong(item_ij);
                     if( v == -1 && PyErr_Occurred() )
                         break;
                     data[j] = saturate_cast<_Cp>(v);

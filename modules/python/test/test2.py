@@ -42,6 +42,11 @@ class Hackathon244Tests(NewOpenCVTests):
         self.assert_(cv2.norm(a, cv2.NORM_L1) == 15)
         absa1 = cv2.absdiff(a, 0)
         self.assert_(cv2.norm(absa1, absa0, cv2.NORM_INF) == 0)
+        
+    def test_imencode(self):
+        a = np.zeros((480, 640), dtype=np.uint8)
+        flag, ajpg = cv2.imencode("img_q90.jpg", a, [cv2.IMWRITE_JPEG_QUALITY, 90])
+        self.assert_(flag == True and ajpg.dtype == np.uint8 and ajpg.shape[0] > 1 and ajpg.shape[1] == 1)
 
 if __name__ == '__main__':
     print "testing", cv.__version__
