@@ -40,9 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-
-//TODO: is there a better way to include an internal header?
-#include "../src/_modelest.h"
+#include "_modelest.h"
 
 using namespace cv;
 
