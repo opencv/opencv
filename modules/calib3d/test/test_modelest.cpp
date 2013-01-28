@@ -56,8 +56,8 @@ public:
     bool checkSubsetPublic( const CvMat* ms1, int count, bool checkPartialSubset );
 };
 
-BareModelEstimator::BareModelEstimator(int modelPoints, CvSize modelSize, int maxBasicSolutions)
-    :CvModelEstimator2(modelPoints, modelSize, maxBasicSolutions)
+BareModelEstimator::BareModelEstimator(int _modelPoints, CvSize _modelSize, int _maxBasicSolutions)
+    :CvModelEstimator2(_modelPoints, _modelSize, _maxBasicSolutions)
 {
 }
 
