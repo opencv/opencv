@@ -224,9 +224,42 @@ static int pyopencv_to(const PyObject* o, Mat& m, const ArgInfo info, bool allow
         return true;
     }
 
+    if( PyInt_Check(o) )
+    {
+        double v[] = {PyInt_AsLong((PyObject*)o), 0., 0., 0.};
+        m = Mat(4, 1, CV_64F, v).clone();
+        return true;
+    }
+    if( PyFloat_Check(o) )
+    {
+        double v[] = {PyFloat_AsDouble((PyObject*)o), 0., 0., 0.};
+        m = Mat(4, 1, CV_64F, v).clone();
+        return true;
+    }
+    if( PyTuple_Check(o) )
+    {
+        int i, sz = (int)PyTuple_Size((PyObject*)o);
+        m = Mat(sz, 1, CV_64F);
+        for( i = 0; i < sz; i++ )
+        {
+            PyObject* oi = PyTuple_GET_ITEM(o, i);
+            if( PyInt_Check(oi) )
+                m.at<double>(i) = (double)PyInt_AsLong(oi);
+            else if( PyFloat_Check(oi) )
+                m.at<double>(i) = (double)PyFloat_AsDouble(oi);
+            else
+            {
+                failmsg("%s is not a numerical tuple", info.name);
+                m.release();
+                return false;
+            }
+        }
+        return true;
+    }
+
     if( !PyArray_Check(o) )
     {
-        failmsg("%s is not a numpy array", info.name);
+        failmsg("%s is not a numpy array, neither a scalar", info.name);
         return false;
     }
 
