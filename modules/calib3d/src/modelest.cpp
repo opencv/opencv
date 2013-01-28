@@ -363,7 +363,7 @@ bool CvModelEstimator2::checkSubset( const CvMat* m, int count )
             break;
     }
 
-    return i >= i1;
+    return i > i1;
 }
 
 
