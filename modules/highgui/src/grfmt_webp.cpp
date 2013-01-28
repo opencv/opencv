@@ -40,18 +40,20 @@
 //
 //M*/
 
+#ifdef HAVE_WEBP
+
 #include <webp/decode.h>
 #include <stdio.h>
 
 #include "precomp.hpp"
-#include "grfmt_bmp.hpp"
+#include "grfmt_webp.hpp"
 
 namespace cv
 {
 
 WebPDecoder::WebPDecoder()
 {
-	m_Signature = "RIFF....WEBPVP8 ";
+	m_signature = "RIFF....WEBPVP8 ";
 	m_buf_supported = true;
 }
 
@@ -94,7 +96,7 @@ bool WebPDecoder::readHeader()
 		webp_file_data_size = ftell(webp_file);
 		fseek(webp_file, 0, SEEK_SET);
 	
-		webp_file_data = (uint8_t) malloc (webp_file_data_size);
+		webp_file_data = (uint8_t *) malloc (webp_file_data_size);
 	
 		if(webp_file_data != NULL)
 		{
@@ -106,12 +108,12 @@ bool WebPDecoder::readHeader()
 					header_read = true;
 					
 					/*
-					 * According to VP8 bitstream format these are the values
-					 * that are default.
+					 * According to VP8 bitstream format these are the default
+					 * values.
 					 */
-					m_type = CV_8UC3;			// TODO Check if this is correct.	
-					m_origin = IPL_ORIGIN_TL;	// TODO Check if this is correct.
-					m_bpp = 24;					// TODO Check if this is correct.
+					m_type = CV_8UC3;			
+					// m_origin = IPL_ORIGIN_TL;	// TODO Check if this is correct.
+					// m_bpp = 24;
 				}
 				else
 				{
@@ -121,7 +123,7 @@ bool WebPDecoder::readHeader()
 			}
 			else
 			{
-				printf("Not able to read %d bytes from file %s", webp_file_data_size
+				printf("Not able to read %lu bytes from file %s", webp_file_data_size
 					, m_filename.c_str());
 			}
 		
@@ -134,18 +136,51 @@ bool WebPDecoder::readHeader()
 	return header_read;
 }
 
+bool WebPDecoder::readData(Mat &img)
+{
+	bool data_read = false;
+
+	uint8_t *webp_file_data = NULL;
+	size_t webp_file_data_size = 0;
+
+	FILE *webp_file = NULL;
+	webp_file = fopen(m_filename.c_str(), "rb");
+
+	if(webp_file != NULL)
+	{
+		fseek(webp_file, 0, SEEK_END);
+		webp_file_data_size = ftell(webp_file);
+		fseek(webp_file, 0, SEEK_SET);
+
+		webp_file_data = (uint8_t *) malloc (webp_file_data_size);
+
+		if(webp_file_data != NULL)
+		{
+			size_t data_read_size = fread(webp_file_data, webp_file_data_size, 1,
+											webp_file);
+			if( (data_read_size == webp_file_data_size) &&
+				(m_width > 0 && m_height > 0) )
+			{
+				uchar* out_data = img.data;
+				unsigned int out_data_size = m_width * m_height * 3 * sizeof(uchar);
+				WebPDecodeBGRInto(webp_file_data, webp_file_data_size, out_data,
+									out_data_size, m_width * 3);
+			}
+			else
+			{
+				printf("Not able to read %lu bytes from file %s", webp_file_data_size
+					, m_filename.c_str());
+			}
+	
+			free(webp_file_data); webp_file_data = NULL;
+		}
+
+		fclose(webp_file); webp_file = NULL;
+	}
+
+	return data_read;
 }
 
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
+#endif

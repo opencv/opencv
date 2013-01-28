@@ -64,6 +64,10 @@ struct ImageCodecInitializer
         decoders.push_back( new JpegDecoder );
         encoders.push_back( new JpegEncoder );
     #endif
+    #ifdef HAVE_WEBP
+        decoders.push_back( new WebPDecoder );
+        // encoders.push_back( new WebPEncoder );
+    #endif
         decoders.push_back( new SunRasterDecoder );
         encoders.push_back( new SunRasterEncoder );
         decoders.push_back( new PxMDecoder );

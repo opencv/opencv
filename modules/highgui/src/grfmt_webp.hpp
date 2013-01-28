@@ -45,6 +45,8 @@
 
 #include "grfmt_base.hpp"
 
+#ifdef HAVE_WEBP
+
 #define WEBP_SIGNATURE "RIFF....WEBP"
 
 namespace cv
@@ -68,6 +70,8 @@ protected:
 };
 
 }
+
+#endif
 
 #endif /* _GRFMT_WEBP_H_ */
 
