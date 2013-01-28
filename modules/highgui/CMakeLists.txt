@@ -23,7 +23,7 @@ endif()
 if(WITH_WEBP)
   add_definitions(-DHAVE_WEBP)
   ocv_include_directories(${WEBP_INCLUDE_DIR})
-  list(APPEND GRFMT_LIBS ${WEBPG_LIBRARIES})
+  list(APPEND GRFMT_LIBS ${WEBP_LIBRARIES})
 endif()
 
 if(WITH_PNG)
