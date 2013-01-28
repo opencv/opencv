@@ -45,7 +45,7 @@
 
 #include "precomp.hpp"
 
-class CvModelEstimator2
+class CV_EXPORTS CvModelEstimator2
 {
 public:
     CvModelEstimator2(int _modelPoints, CvSize _modelSize, int _maxBasicSolutions);
