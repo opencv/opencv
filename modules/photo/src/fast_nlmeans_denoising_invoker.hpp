@@ -257,7 +257,7 @@ void FastNlMeansDenoisingInvoker<T>::operator() (const BlockedRange& range) cons
             }
 
             for (size_t channel_num = 0; channel_num < sizeof(T); channel_num++)
-                estimation[channel_num] = (estimation[channel_num] + weights_sum/2) / weights_sum;
+                estimation[channel_num] = ((unsigned)estimation[channel_num] + weights_sum/2) / weights_sum;
 
             dst_.at<T>(i,j) = saturateCastFromArray<T>(estimation);
         }

@@ -56,7 +56,7 @@ using namespace std;
 #endif
 
 
-TEST(Imgproc_DenoisingGrayscale, regression)
+TEST(Photo_DenoisingGrayscale, regression)
 {
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
     string original_path = folder + "lena_noised_gaussian_sigma=10.png";
@@ -76,7 +76,7 @@ TEST(Imgproc_DenoisingGrayscale, regression)
     ASSERT_EQ(0, norm(result != expected));
 }
 
-TEST(Imgproc_DenoisingColored, regression)
+TEST(Photo_DenoisingColored, regression)
 {
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
     string original_path = folder + "lena_noised_gaussian_sigma=10.png";
@@ -96,7 +96,7 @@ TEST(Imgproc_DenoisingColored, regression)
     ASSERT_EQ(0, norm(result != expected));
 }
 
-TEST(Imgproc_DenoisingGrayscaleMulti, regression)
+TEST(Photo_DenoisingGrayscaleMulti, regression)
 {
     const int imgs_count = 3;
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
@@ -121,7 +121,7 @@ TEST(Imgproc_DenoisingGrayscaleMulti, regression)
     ASSERT_EQ(0, norm(result != expected));
 }
 
-TEST(Imgproc_DenoisingColoredMulti, regression)
+TEST(Photo_DenoisingColoredMulti, regression)
 {
     const int imgs_count = 3;
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
@@ -146,3 +146,13 @@ TEST(Imgproc_DenoisingColoredMulti, regression)
     ASSERT_EQ(0, norm(result != expected));
 }
 
+TEST(Photo_White, issue_2646)
+{
+    cv::Mat img(50, 50, CV_8UC1, cv::Scalar::all(255));
+    cv::Mat filtered;
+    cv::fastNlMeansDenoising(img, filtered);
+
+    int nonWhitePixelsCount = (int)img.total() - cv::countNonZero(filtered == img);
+
+    ASSERT_EQ(0, nonWhitePixelsCount);
+}
