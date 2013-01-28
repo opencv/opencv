@@ -226,3 +226,37 @@ def resize_sample(image, d_w, d_h):
         interpolation_type = cv2.INTER_CUBIC
 
     return cv2.resize(image_to_resize,(d_w, d_h), None, 0, 0, interpolation_type)
+
+newobj = re.compile("^lbl=\'(\w+)\'\s+str=(\d+)\s+end=(\d+)\s+hide=0$")
+
+class caltech:
+    @staticmethod
+    def extract_objects(f):
+        objects = []
+        tmp = []
+        for l in f:
+            if newobj.match(l) is not None:
+                objects.append(tmp)
+                tmp = []
+            tmp.append(l)
+        return objects[1:]
+
+    @staticmethod
+    def parse_header(f):
+        _    = f.readline() # skip first line (version string)
+        head = f.readline()
+        (nFrame, nSample) = re.search(r'nFrame=(\d+) n=(\d+)', head).groups()
+        return (int(nFrame), int(nSample))
+
+    @staticmethod
+    def parse_pos(l):
+        pos = re.match(r'^posv?\s*=(\[[\d\s\.\;]+\])$', l).group(1)
+        pos = re.sub(r"(\[)(\d)", "\\1[\\2", pos)
+        pos = re.sub(r"\s", ", ", re.sub(r"\;\s+(?=\])", "]", re.sub(r"\;\s+(?!\])", "],[", pos)))
+        return eval(pos)
+
+    @staticmethod
+    def parse_occl(l):
+        occl = re.match(r'^occl\s*=(\[[\d\s\.\;]+\])$', l).group(1)
+        occl = re.sub(r"\s(?!\])", ",", occl)
+        return eval(occl)

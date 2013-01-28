@@ -9,7 +9,7 @@ import numpy
 
 plot_colors = ['b', 'c', 'r', 'g', 'm']
 
-#      "key"    : (  b,   g,   r)
+#       "key"   : (  b,   g,   r)
 bgr = { "red"   : (  0,   0, 255),
         "green" : (  0, 255,   0),
         "blue"  : (255,   0 ,  0)}
