@@ -186,7 +186,7 @@ class CreateVideoWriterInvoker :
 public:
     const static Size FrameSize;
     static std::string TmpDirectory;
-    
+
     CreateVideoWriterInvoker(std::vector<VideoWriter*>& _writers, std::vector<std::string>& _files) :
         ParallelLoopBody(), writers(&_writers), files(&_files)
     {
@@ -221,7 +221,7 @@ class WriteVideo_Invoker :
 {
 public:
     enum { FrameCount = 300 };
-    
+
     static const Scalar ObjectColor;
     static const Point Center;
 
@@ -229,11 +229,11 @@ public:
         ParallelLoopBody(), writers(&_writers)
     {
     }
-    
+
     static void GenerateFrame(Mat& frame, unsigned int i)
     {
         frame = Scalar::all(i % 255);
-        
+
         std::string text = to_string(i);
         putText(frame, text, Point(50, Center.y), FONT_HERSHEY_SIMPLEX, 5.0, ObjectColor, 5, CV_AA);
         circle(frame, Center, i + 2, ObjectColor, 2, CV_AA);
@@ -245,7 +245,7 @@ public:
         VideoWriter* writer = writers->operator[](range.start);
         CV_Assert(writer != NULL);
         CV_Assert(writer->isOpened());
-        
+
         Mat frame(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
         for (unsigned int i = 0; i < FrameCount; ++i)
         {
@@ -253,7 +253,7 @@ public:
             writer->operator<< (frame);
         }
     }
-    
+
 protected:
     static std::string to_string(unsigned int i)
     {
