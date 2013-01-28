@@ -354,20 +354,6 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h);
 static int numCameras = 0;
 static int indexList = 0;
 
-#ifdef HAVE_IOCTL_ULONG
-static int xioctl( int fd, unsigned long request, void *arg)
-#else
-static int xioctl( int fd, int request, void *arg)
-#endif
-{
-  int r;
-
-  do r = ioctl (fd, request, arg);
-  while (-1 == r && EINTR == errno);
-
-  return r;
-}
-
 /* Simple test program: Find number of Video Sources available.
    Start from 0 and go to MAX_CAMERAS while checking for the device with that name.
    If it fails on the first attempt of /dev/video0, then check if /dev/video is valid.
@@ -431,7 +417,7 @@ static int try_palette_v4l2(CvCaptureCAM_V4L* capture, unsigned long colorspace)
   capture->form.fmt.pix.width = DEFAULT_V4L_WIDTH;
   capture->form.fmt.pix.height = DEFAULT_V4L_HEIGHT;
 
-  if (-1 == xioctl (capture->deviceHandle, VIDIOC_S_FMT, &capture->form))
+  if (-1 == ioctl (capture->deviceHandle, VIDIOC_S_FMT, &capture->form))
       return -1;
 
 
@@ -511,7 +497,7 @@ static int try_init_v4l2(CvCaptureCAM_V4L* capture, char *deviceName)
   }
 
   CLEAR (capture->cap);
-  if (-1 == xioctl (capture->deviceHandle, VIDIOC_QUERYCAP, &capture->cap))
+  if (-1 == ioctl (capture->deviceHandle, VIDIOC_QUERYCAP, &capture->cap))
   {
 #ifndef NDEBUG
     fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_QUERYCAP \"%s\": %s\n", deviceName, strerror(errno));
@@ -521,7 +507,7 @@ static int try_init_v4l2(CvCaptureCAM_V4L* capture, char *deviceName)
   }
 
   /* Query channels number */
-  if (-1 == xioctl (capture->deviceHandle, VIDIOC_G_INPUT, &deviceIndex))
+  if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_INPUT, &deviceIndex))
   {
 #ifndef NDEBUG
     fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_G_INPUT \"%s\": %s\n", deviceName, strerror(errno));
@@ -533,7 +519,7 @@ static int try_init_v4l2(CvCaptureCAM_V4L* capture, char *deviceName)
   /* Query information about current input */
   CLEAR (capture->inp);
   capture->inp.index = deviceIndex;
-  if (-1 == xioctl (capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->inp))
+  if (-1 == ioctl (capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->inp))
   {
 #ifndef NDEBUG
     fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_ENUMINPUT \"%s\": %s\n", deviceName, strerror(errno));
@@ -655,7 +641,7 @@ static void v4l2_scan_controls_enumerate_menu(CvCaptureCAM_V4L* capture)
        (int)capture->querymenu.index <= capture->queryctrl.maximum;
        capture->querymenu.index++)
   {
-    if (0 == xioctl (capture->deviceHandle, VIDIOC_QUERYMENU,
+    if (0 == ioctl (capture->deviceHandle, VIDIOC_QUERYMENU,
                      &capture->querymenu))
     {
 //      printf (" %s\n", capture->querymenu.name);
@@ -679,7 +665,7 @@ static void v4l2_scan_controls(CvCaptureCAM_V4L* capture)
     CLEAR (capture->queryctrl);
     capture->queryctrl.id = ctrl_id;
 
-    if (0 == xioctl (capture->deviceHandle, VIDIOC_QUERYCTRL,
+    if (0 == ioctl (capture->deviceHandle, VIDIOC_QUERYCTRL,
                      &capture->queryctrl))
     {
 
@@ -749,7 +735,7 @@ static void v4l2_scan_controls(CvCaptureCAM_V4L* capture)
     CLEAR (capture->queryctrl);
     capture->queryctrl.id = ctrl_id;
 
-    if (0 == xioctl (capture->deviceHandle, VIDIOC_QUERYCTRL,
+    if (0 == ioctl (capture->deviceHandle, VIDIOC_QUERYCTRL,
                      &capture->queryctrl))
     {
 
@@ -872,7 +858,7 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
        capture->inp.index = CHANNEL_NUMBER;
        /* Set only channel number to CHANNEL_NUMBER */
        /* V4L2 have a status field from selected video mode */
-       if (-1 == xioctl (capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->inp))
+       if (-1 == ioctl (capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->inp))
        {
          fprintf (stderr, "HIGHGUI ERROR: V4L2: Aren't able to set channel number\n");
          icvCloseCAM_V4L (capture);
@@ -884,7 +870,7 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
    CLEAR (capture->form);
    capture->form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-   if (-1 == xioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form)) {
+   if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form)) {
        fprintf( stderr, "HIGHGUI ERROR: V4L2: Could not obtain specifics of capture window.\n\n");
        icvCloseCAM_V4L(capture);
        return -1;
@@ -922,7 +908,7 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
    capture->req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
    capture->req.memory = V4L2_MEMORY_MMAP;
 
-   if (-1 == xioctl (capture->deviceHandle, VIDIOC_REQBUFS, &capture->req))
+   if (-1 == ioctl (capture->deviceHandle, VIDIOC_REQBUFS, &capture->req))
    {
        if (EINVAL == errno)
        {
@@ -962,7 +948,7 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
        buf.memory = V4L2_MEMORY_MMAP;
        buf.index = n_buffers;
 
-       if (-1 == xioctl (capture->deviceHandle, VIDIOC_QUERYBUF, &buf)) {
+       if (-1 == ioctl (capture->deviceHandle, VIDIOC_QUERYBUF, &buf)) {
            perror ("VIDIOC_QUERYBUF");
 
            /* free capture, and returns an error code */
@@ -1201,7 +1187,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
 
-    if (-1 == xioctl (capture->deviceHandle, VIDIOC_DQBUF, &buf)) {
+    if (-1 == ioctl (capture->deviceHandle, VIDIOC_DQBUF, &buf)) {
         switch (errno) {
         case EAGAIN:
             return 0;
@@ -1209,7 +1195,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
         case EIO:
         if (!(buf.flags & (V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE)))
         {
-          if (xioctl(capture->deviceHandle, VIDIOC_QBUF, &buf) == -1)
+          if (ioctl(capture->deviceHandle, VIDIOC_QBUF, &buf) == -1)
           {
             return 0;
           }
@@ -1232,7 +1218,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
    //printf("got data in buff %d, len=%d, flags=0x%X, seq=%d, used=%d)\n",
    //	  buf.index, buf.length, buf.flags, buf.sequence, buf.bytesused);
 
-   if (-1 == xioctl (capture->deviceHandle, VIDIOC_QBUF, &buf))
+   if (-1 == ioctl (capture->deviceHandle, VIDIOC_QBUF, &buf))
        perror ("VIDIOC_QBUF");
 
    return 1;
@@ -1308,7 +1294,7 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
           buf.memory      = V4L2_MEMORY_MMAP;
           buf.index       = (unsigned long)capture->bufferIndex;
 
-          if (-1 == xioctl (capture->deviceHandle, VIDIOC_QBUF, &buf)) {
+          if (-1 == ioctl (capture->deviceHandle, VIDIOC_QBUF, &buf)) {
               perror ("VIDIOC_QBUF");
               return 0;
           }
@@ -1316,7 +1302,7 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
 
         /* enable the streaming */
         capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        if (-1 == xioctl (capture->deviceHandle, VIDIOC_STREAMON,
+        if (-1 == ioctl (capture->deviceHandle, VIDIOC_STREAMON,
                           &capture->type)) {
             /* error enabling the stream */
             perror ("VIDIOC_STREAMON");
@@ -2301,7 +2287,7 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
 
       CLEAR (capture->form);
       capture->form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-      if (-1 == xioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form)) {
+      if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form)) {
           /* display an error message, and return an error code */
           perror ("VIDIOC_G_FMT");
           return -1;
@@ -2342,7 +2328,7 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
         return -1;
       }
 
-      if (-1 == xioctl (capture->deviceHandle, VIDIOC_G_CTRL,
+      if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_CTRL,
                         &capture->control)) {
 
           fprintf( stderr, "HIGHGUI ERROR: V4L2: ");
@@ -2480,7 +2466,7 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h) {
     CLEAR (capture->cropcap);
     capture->cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-    if (xioctl (capture->deviceHandle, VIDIOC_CROPCAP, &capture->cropcap) < 0) {
+    if (ioctl (capture->deviceHandle, VIDIOC_CROPCAP, &capture->cropcap) < 0) {
         fprintf(stderr, "HIGHGUI ERROR: V4L/V4L2: VIDIOC_CROPCAP\n");
     } else {
 
@@ -2489,7 +2475,7 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h) {
         capture->crop.c= capture->cropcap.defrect;
 
         /* set the crop area, but don't exit if the device don't support croping */
-        if (xioctl (capture->deviceHandle, VIDIOC_S_CROP, &capture->crop) < 0) {
+        if (ioctl (capture->deviceHandle, VIDIOC_S_CROP, &capture->crop) < 0) {
             fprintf(stderr, "HIGHGUI ERROR: V4L/V4L2: VIDIOC_S_CROP\n");
         }
     }
@@ -2498,7 +2484,7 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h) {
     capture->form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
     /* read the current setting, mainly to retreive the pixelformat information */
-    xioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form);
+    ioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form);
 
     /* set the values we want to change */
     capture->form.fmt.pix.width = w;
@@ -2513,7 +2499,7 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h) {
      * don't test if the set of the size is ok, because some device
      * don't allow changing the size, and we will get the real size
      * later */
-    xioctl (capture->deviceHandle, VIDIOC_S_FMT, &capture->form);
+    ioctl (capture->deviceHandle, VIDIOC_S_FMT, &capture->form);
 
     /* try to set framerate to 30 fps */
     struct v4l2_streamparm setfps;
@@ -2521,14 +2507,14 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h) {
     setfps.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     setfps.parm.capture.timeperframe.numerator = 1;
     setfps.parm.capture.timeperframe.denominator = 30;
-    xioctl (capture->deviceHandle, VIDIOC_S_PARM, &setfps);
+    ioctl (capture->deviceHandle, VIDIOC_S_PARM, &setfps);
 
     /* we need to re-initialize some things, like buffers, because the size has
      * changed */
     capture->FirstCapture = 1;
 
     /* Get window info again, to get the real value */
-    if (-1 == xioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form))
+    if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form))
     {
       fprintf(stderr, "HIGHGUI ERROR: V4L/V4L2: Could not obtain specifics of capture window.\n\n");
 
@@ -2628,7 +2614,7 @@ static int icvSetControl (CvCaptureCAM_V4L* capture,
     }
 
     /* get the min and max values */
-    if (-1 == xioctl (capture->deviceHandle,
+    if (-1 == ioctl (capture->deviceHandle,
                       VIDIOC_G_CTRL, &capture->control)) {
 //          perror ("VIDIOC_G_CTRL for getting min/max values");
           return -1;
@@ -2698,7 +2684,7 @@ static int icvSetControl (CvCaptureCAM_V4L* capture,
     capture->control.value = (int)(value * (v4l2_max - v4l2_min) + v4l2_min);
 
     /* The driver may clamp the value or return ERANGE, ignored here */
-    if (-1 == xioctl (capture->deviceHandle,
+    if (-1 == ioctl (capture->deviceHandle,
                       VIDIOC_S_CTRL, &capture->control) && errno != ERANGE) {
         perror ("VIDIOC_S_CTRL");
         return -1;
