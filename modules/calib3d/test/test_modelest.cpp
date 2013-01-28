@@ -111,7 +111,7 @@ void CV_ModelEstimator2_Test::get_test_array_types_and_sizes( int /*test_case_id
                                                               vector<vector<Size> > &sizes, vector<vector<int> > &types )
 {
     RNG &rng = ts->get_rng();
-    checkPartialSubsets = static_cast<bool>(cvtest::randInt(rng) % 2);
+    checkPartialSubsets = (cvtest::randInt(rng) % 2 == 0);
 
     int pointsCount = cvtest::randInt(rng) % maxPointsCount;
     usedPointsCount = pointsCount == 0 ? 0 : cvtest::randInt(rng) % pointsCount;
