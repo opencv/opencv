@@ -61,11 +61,7 @@ def crop_rect(rect, factor):
     return x
 
 """ Initialize plot axises."""
-def initPlot(name = "ROC curve Bahnhof"):
-
-    fig, ax = plt.subplots()
-    fig.canvas.draw()
-
+def initPlot(name):
     plt.xlabel("fppi")
     plt.ylabel("miss rate")
     plt.title(name)
@@ -73,11 +69,16 @@ def initPlot(name = "ROC curve Bahnhof"):
     plt.xscale('log')
     plt.yscale('log')
 
+""" Draw plot."""
+def plotLogLog(fppi, miss_rate, c):
+    plt.loglog(fppi, miss_rate, color = c, linewidth = 2)
+
 """ Show resulted plot."""
-def showPlot(file_name):
-    plt.savefig(file_name)
-    plt.axis((pow(10, -3), pow(10, 1), 0.0, 1))
+def showPlot(file_name, labels):
+    plt.axis((pow(10, -3), pow(10, 1), .035, 1))
     plt.yticks( [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.64, 0.8, 1], ['.05', '.10', '.20', '.30', '.40', '.50', '.64', '.80', '1'] )
+    plt.legend(labels, loc = "lower left")
+    plt.savefig(file_name)
     plt.show()
 
 """ Filter true positives and ignored detections for cascade detector output."""
@@ -110,10 +111,6 @@ def match(gts, dts):
                     matches_ignore[idx] = 1
     return matches_dt, matches_ignore
 
-""" Draw plot."""
-def plotLogLog(fppi, miss_rate, c):
-    print
-    plt.loglog(fppi, miss_rate, color = c, linewidth = 2)
 
 """ Draw detections or ground truth on image."""
 def draw_rects(img, rects, color, l = lambda x, y : x + y):
@@ -209,7 +206,7 @@ def norm_acpect_ratio(boxes, ratio):
 
 """ Filter detections out of extended range. """
 def filter_for_range(boxes, scale_range, ext_ratio):
-    boxes = sft.norm_acpect_ratio(boxes, 0.5)
+    boxes = norm_acpect_ratio(boxes, 0.5)
     boxes = [b for b in boxes if (b[3] - b[1]) > scale_range[0] / ext_ratio]
     boxes = [b for b in boxes if (b[3] - b[1]) < scale_range[1] * ext_ratio]
     return boxes

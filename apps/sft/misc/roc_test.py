@@ -7,7 +7,7 @@ import sys, os, os.path, glob, math, cv2
 from datetime import datetime
 import numpy
 
-plot_colors = ['b', 'r', 'g', 'c', 'm']
+plot_colors = ['b', 'c', 'r', 'g', 'm']
 
 #      "key"    : (  b,   g,   r)
 bgr = { "red"   : (  0,   0, 255),
@@ -25,7 +25,7 @@ def call_parser(f, a):
     return eval( "sft.parse_" + f + "('" + a + "')")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description = 'Plot ROC curve using Caltech mathod of per image detection performance estimation.')
+    parser = argparse.ArgumentParser(description = 'Plot ROC curve using Caltech method of per image detection performance estimation.')
 
     # positional
     parser.add_argument("cascade",     help = "Path to the tested detector.",  nargs='+')
@@ -35,22 +35,24 @@ if __name__ == "__main__":
     # optional
     parser.add_argument("-m", "--min_scale", dest = "min_scale", type = float, metavar= "fl",   help = "Minimum scale to be tested.",               default = 0.4)
     parser.add_argument("-M", "--max_scale", dest = "max_scale", type = float, metavar= "fl",   help = "Maximum scale to be tested.",               default = 5.0)
-    parser.add_argument("-o", "--output",    dest = "output",    type = str,   metavar= "path", help = "Path to store resultiong image.",           default = "./roc.png")
-    parser.add_argument("-n", "--nscales",   dest = "nscales",   type = int,   metavar= "n",    help = "Prefered count of scales from min to max.", default = 55)
+    parser.add_argument("-o", "--output",    dest = "output",    type = str,   metavar= "path", help = "Path to store resulting image.",           default = "./roc.png")
+    parser.add_argument("-n", "--nscales",   dest = "nscales",   type = int,   metavar= "n",    help = "Preferred count of scales from min to max.", default = 55)
 
     parser.add_argument("-r", "--scale-range",          dest = "scale_range", type = range,  default = (128 * 0.4, 128 * 2.4))
     parser.add_argument("-e", "--extended-range-ratio", dest = "ext_ratio",   type = float,  default = 1.25)
+    parser.add_argument("-t", "--title",                dest = "title",       type = str,    default = "ROC curve Bahnhof")
 
     # required
     parser.add_argument("-f", "--anttn-format", dest = "anttn_format", choices = ['inria', 'caltech', "idl"], help = "Annotation file for test sequence.", required = True)
+    parser.add_argument("-l", "--labels", dest = "labels" ,required=True,     help = "Plot labels for legend.",       nargs='+')
 
     args = parser.parse_args()
 
     print args.scale_range
 
     print args.cascade
-    # # parse annotations
-    sft.initPlot()
+    # parse annotations
+    sft.initPlot(args.title)
     samples = call_parser(args.anttn_format, args.annotations)
     for idx, each in enumerate(args.cascade):
         print each
@@ -98,4 +100,4 @@ if __name__ == "__main__":
         fppi, miss_rate = sft.computeROC(confidenses, tp, nannotated, nframes, ignored)
         sft.plotLogLog(fppi, miss_rate, plot_colors[idx])
 
-    sft.showPlot("roc_curve.png")
+    sft.showPlot(args.output, args.labels)
