@@ -721,7 +721,7 @@ template<typename _Tp, int m> struct CV_EXPORTS Matx_DetOp
             return p;
         for( int i = 0; i < m; i++ )
             p *= temp(i, i);
-        return p;
+        return 1./p;
     }
 };
 
