@@ -618,6 +618,13 @@ if(WITH_JPEG)
 else()
   status("    JPEG:"       "NO")
 endif()
+
+if(WITH_WEBP)
+  status("    WEBP:"       WEBP_FOUND    THEN "${WEBP_LIBRARY} (ver ${WEBP_LIB_VERSION})"        ELSE "build (ver ${WEBP_LIB_VERSION})")
+else()
+  status("    WEBP:"       "NO")
+endif()
+
 if(WITH_PNG)
   status("    PNG:"        PNG_FOUND     THEN "${PNG_LIBRARY} (ver ${PNG_VERSION})"              ELSE "build (ver ${PNG_VERSION})")
 else()
