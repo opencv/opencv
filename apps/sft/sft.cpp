@@ -127,7 +127,7 @@ int main(int argc, char** argv)
         cv::Rect boundingBox = cfg.bbox(it);
         std::cout << "Object bounding box" << boundingBox << std::endl;
 
-        cv::Octave boost(boundingBox, npositives, nnegatives, *it, shrinkage);
+        cv::SoftCascadeOctave boost(boundingBox, npositives, nnegatives, *it, shrinkage);
 
         std::string path = cfg.trainPath;
         sft::ScaledDataset dataset(path, *it);

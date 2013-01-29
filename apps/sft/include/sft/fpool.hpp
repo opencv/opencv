@@ -43,7 +43,6 @@
 #ifndef __SFT_OCTAVE_HPP__
 #define __SFT_OCTAVE_HPP__
 
-#include <opencv2/ml/ml.hpp>
 #include <sft/common.hpp>
 
 #include <opencv2/imgproc/imgproc.hpp>
