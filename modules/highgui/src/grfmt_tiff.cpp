@@ -402,7 +402,18 @@ void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
 }
 
 #ifdef HAVE_TIFF
-bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
+
+static void readParam(const vector<int>& params, int key, int& value)
+{
+    for(size_t i = 0; i + 1 < params.size(); i += 2)
+        if(params[i] == key)
+        {
+            value = params[i+1];
+            break;
+        }
+}
+
+bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& params)
 {
     int channels = img.channels();
     int width = img.cols, height = img.rows;
@@ -429,7 +440,9 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
 
     const int bitsPerByte = 8;
     size_t fileStep = (width * channels * bitsPerChannel) / bitsPerByte;
+
     int rowsPerStrip = (int)((1 << 13)/fileStep);
+    readParam(params, TIFFTAG_ROWSPERSTRIP, rowsPerStrip);
 
     if( rowsPerStrip < 1 )
         rowsPerStrip = 1;
@@ -449,6 +462,9 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
     // defaults for now, maybe base them on params in the future
     int   compression  = COMPRESSION_LZW;
     int   predictor    = PREDICTOR_HORIZONTAL;
+
+    readParam(params, TIFFTAG_COMPRESSION, compression);
+    readParam(params, TIFFTAG_PREDICTOR, predictor);
 
     int   colorspace = channels > 1 ? PHOTOMETRIC_RGB : PHOTOMETRIC_MINISBLACK;
 
