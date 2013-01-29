@@ -998,6 +998,23 @@ bool CV_OperationsTest::operations1()
 
         add(Mat::zeros(6, 1, CV_64F), 1, c, noArray(), c.type());
         CV_Assert( norm(Matx61f(1.f, 1.f, 1.f, 1.f, 1.f, 1.f), c, CV_C) == 0 );
+
+        vector<Point2f> pt2d(3);
+        vector<Point3d> pt3d(2);
+
+        CV_Assert( Mat(pt2d).checkVector(2) == 3 && Mat(pt2d).checkVector(3) < 0 &&
+                   Mat(pt3d).checkVector(2) < 0 && Mat(pt3d).checkVector(3) == 2 );
+
+        Matx44f m44(0.8147f, 0.6324f, 0.9575f, 0.9572f,
+                0.9058f, 0.0975f, 0.9649f, 0.4854f,
+                0.1270f, 0.2785f, 0.1576f, 0.8003f,
+                0.9134f, 0.5469f, 0.9706f, 0.1419f);
+        double d = determinant(m44);
+        CV_Assert( fabs(d - (-0.0262)) <= 0.001 );
+
+        Cv32suf z;
+        z.i = 0x80000000;
+        CV_Assert( cvFloor(z.f) == 0 && cvCeil(z.f) == 0 && cvRound(z.f) == 0 );
     }
     catch(const test_excep&)
     {
