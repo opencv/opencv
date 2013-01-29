@@ -346,7 +346,11 @@ static int numCameras = 0;
 static int indexList = 0;
 
 // IOCTL handling for V4L2
+#ifdef HAVE_IOCTL_ULONG
+static int xioctl( int fd, unsigned long request, void *arg)
+#else
 static int xioctl( int fd, int request, void *arg)
+#endif
 {
 
   int r;
