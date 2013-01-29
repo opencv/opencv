@@ -42,22 +42,14 @@
 
 #include "precomp.hpp"
 
-namespace cv
+struct cv::IntegralChannelBuilder::Fields
 {
+};
 
-CV_INIT_ALGORITHM(SoftCascadeDetector, "SoftCascade.SoftCascadeDetector",
-                  obj.info()->addParam(obj, "minScale",    obj.minScale);
-                  obj.info()->addParam(obj, "maxScale",    obj.maxScale);
-                  obj.info()->addParam(obj, "scales",      obj.scales);
-                  obj.info()->addParam(obj, "rejCriteria", obj.rejCriteria));
+cv::IntegralChannelBuilder::IntegralChannelBuilder() : fields(new Fields()) {}
+cv::IntegralChannelBuilder::~IntegralChannelBuilder() {}
 
-CV_INIT_ALGORITHM(IntegralChannelBuilder, "SoftCascade.IntegralChannelBuilder", );
-
-bool initModule_softcascade(void)
+void cv::IntegralChannelBuilder::read(const FileNode& fn)
 {
-    Ptr<Algorithm> sc1 = createSoftCascadeDetector();
-    Ptr<Algorithm> sc2 = createIntegralChannelBuilder();
-    return (sc1->info() != 0) && (sc2->info() != 0);
-}
-
+    Algorithm::read(fn);
 }

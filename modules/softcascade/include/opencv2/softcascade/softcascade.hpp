@@ -48,15 +48,6 @@
 
 namespace cv {
 
-class CV_EXPORTS_W ICFPreprocessor
-{
-public:
-    CV_WRAP ICFPreprocessor();
-    CV_WRAP void apply(cv::InputArray _frame, cv::OutputArray _integrals) const;
-protected:
-    enum {BINS = 10};
-};
-
 // Representation of detectors result.
 struct CV_EXPORTS Detection
 {
@@ -72,6 +63,51 @@ struct CV_EXPORTS Detection
     cv::Rect bb;
     float confidence;
     int kind;
+};
+
+class CV_EXPORTS FeaturePool
+{
+public:
+
+    virtual int size() const = 0;
+    virtual float apply(int fi, int si, const Mat& integrals) const = 0;
+    virtual void write( cv::FileStorage& fs, int index) const = 0;
+
+    virtual void preprocess(InputArray frame, OutputArray integrals) const = 0;
+
+    virtual ~FeaturePool();
+};
+
+class CV_EXPORTS Dataset
+{
+public:
+    typedef enum {POSITIVE = 1, NEGATIVE = 2} SampleType;
+
+    virtual cv::Mat get(SampleType type, int idx) const = 0;
+    virtual int available(SampleType type) const = 0;
+    virtual ~Dataset();
+};
+
+
+// ========================================================================== //
+//             Implementation of Integral Channel Feature.
+// ========================================================================== //
+
+class CV_EXPORTS_W IntegralChannelBuilder : public Algorithm
+{
+public:
+    CV_WRAP IntegralChannelBuilder();
+    CV_WRAP virtual ~IntegralChannelBuilder();
+
+    cv::AlgorithmInfo* info() const;
+
+    // Load channel builder config.
+    CV_WRAP virtual void read(const FileNode& fileNode);
+
+private:
+    struct Fields;
+    cv::Ptr<Fields> fields;
+
 };
 
 // Create channel integrals for Soft Cascade detector.
@@ -97,27 +133,13 @@ private:
     int shrinkage;
 };
 
-class CV_EXPORTS FeaturePool
+class CV_EXPORTS_W ICFPreprocessor
 {
 public:
-
-    virtual int size() const = 0;
-    virtual float apply(int fi, int si, const Mat& integrals) const = 0;
-    virtual void write( cv::FileStorage& fs, int index) const = 0;
-
-    virtual void preprocess(InputArray frame, OutputArray integrals) const = 0;
-
-    virtual ~FeaturePool();
-};
-
-class CV_EXPORTS Dataset
-{
-public:
-    typedef enum {POSITIVE = 1, NEGATIVE = 2} SampleType;
-
-    virtual cv::Mat get(SampleType type, int idx) const = 0;
-    virtual int available(SampleType type) const = 0;
-    virtual ~Dataset();
+    CV_WRAP ICFPreprocessor();
+    CV_WRAP void apply(cv::InputArray _frame, cv::OutputArray _integrals) const;
+protected:
+    enum {BINS = 10};
 };
 
 // ========================================================================== //
