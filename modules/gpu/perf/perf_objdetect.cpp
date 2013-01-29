@@ -89,7 +89,6 @@ PERF_TEST_P(HOG, CalTech, Values<string>("gpu/caltech/image_00000009_0.png", "gp
     SANITY_CHECK(found_locations);
 }
 
-
 ///////////////////////////////////////////////////////////////
 // HaarClassifier
 

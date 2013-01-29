@@ -43,12 +43,10 @@
 
 #if !defined CUDA_DISABLER
 
-#include "thrust/device_ptr.h"
-#include "thrust/remove.h"
-#include "thrust/functional.h"
-#include "internal_shared.hpp"
-
-using namespace thrust;
+#include <thrust/device_ptr.h>
+#include <thrust/remove.h>
+#include <thrust/functional.h>
+#include "opencv2/gpu/device/common.hpp"
 
 namespace cv { namespace gpu { namespace device { namespace globmotion {
 
@@ -61,10 +59,10 @@ int compactPoints(int N, float *points0, float *points1, const uchar *mask)
     thrust::device_ptr<float2> dpoints1((float2*)points1);
     thrust::device_ptr<const uchar> dmask(mask);
 
-    return thrust::remove_if(thrust::make_zip_iterator(thrust::make_tuple(dpoints0, dpoints1)),
+    return (int)(thrust::remove_if(thrust::make_zip_iterator(thrust::make_tuple(dpoints0, dpoints1)),
                              thrust::make_zip_iterator(thrust::make_tuple(dpoints0 + N, dpoints1 + N)),
                              dmask, thrust::not1(thrust::identity<uchar>()))
-           - make_zip_iterator(make_tuple(dpoints0, dpoints1));
+           - thrust::make_zip_iterator(make_tuple(dpoints0, dpoints1)));
 }
 
 

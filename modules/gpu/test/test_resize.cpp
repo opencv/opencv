@@ -136,7 +136,7 @@ PARAM_TEST_CASE(Resize, cv::gpu::DeviceInfo, cv::Size, MatType, double, Interpol
     }
 };
 
-TEST_P(Resize, Accuracy)
+GPU_TEST_P(Resize, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -157,8 +157,8 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Resize, testing::Combine(
     testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
     WHOLE_SUBMAT));
 
-
 /////////////////
+
 PARAM_TEST_CASE(ResizeSameAsHost, cv::gpu::DeviceInfo, cv::Size, MatType, double, Interpolation, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
@@ -182,7 +182,7 @@ PARAM_TEST_CASE(ResizeSameAsHost, cv::gpu::DeviceInfo, cv::Size, MatType, double
 };
 
 // downscaling only: used for classifiers
-TEST_P(ResizeSameAsHost, Accuracy)
+GPU_TEST_P(ResizeSameAsHost, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -224,7 +224,7 @@ PARAM_TEST_CASE(ResizeNPP, cv::gpu::DeviceInfo, MatType, double, Interpolation)
     }
 };
 
-TEST_P(ResizeNPP, Accuracy)
+GPU_TEST_P(ResizeNPP, Accuracy)
 {
     cv::Mat src = readImageType("stereobp/aloe-L.png", type);
     ASSERT_FALSE(src.empty());
