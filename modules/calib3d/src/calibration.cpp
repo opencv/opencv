@@ -412,7 +412,7 @@ CV_IMPL void cvComposeRT( const CvMat* _rvec1, const CvMat* _tvec1,
     cvRodrigues2( &r1, &R1, &dR1dr1 );
     cvRodrigues2( &r2, &R2, &dR2dr2 );
 
-    if( _rvec3 || dr3dr1 || dr3dr1 )
+    if( _rvec3 || dr3dr1 || dr3dr2 )
     {
         double _r3[3], _R3[9], _dR3dR1[9*9], _dR3dR2[9*9], _dr3dR3[9*3];
         double _W1[9*3], _W2[3*3];
