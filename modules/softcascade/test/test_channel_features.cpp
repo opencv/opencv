@@ -40,79 +40,21 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
-namespace {
-
-class ICF : public cv::ChannelFeatureBuilder
+TEST(ChannelFeatureBuilderTest, info)
 {
-    virtual ~ICF() {}
-    virtual cv::AlgorithmInfo* info() const;
-    virtual void operator()(cv::InputArray _frame, CV_OUT cv::OutputArray _integrals) const
-    {
-        CV_Assert(_frame.type() == CV_8UC3);
-
-        cv::Mat frame      = _frame.getMat();
-        int h = frame.rows;
-        int w = frame.cols;
-        _integrals.create(h / 4 * 10 + 1, w / 4 + 1, CV_32SC1);
-        cv::Mat& integrals = _integrals.getMatRef();
-
-        cv::Mat channels, gray;
-
-        channels.create(h * 10, w, CV_8UC1);
-        channels.setTo(0);
-
-        cvtColor(frame, gray, CV_BGR2GRAY);
-
-        cv::Mat df_dx, df_dy, mag, angle;
-        cv::Sobel(gray, df_dx, CV_32F, 1, 0);
-        cv::Sobel(gray, df_dy, CV_32F, 0, 1);
-
-        cv::cartToPolar(df_dx, df_dy, mag, angle, true);
-        mag *= (1.f / (8 * sqrt(2.f)));
-
-        cv::Mat nmag;
-        mag.convertTo(nmag, CV_8UC1);
-
-        angle *=  6 / 360.f;
-
-        for (int y = 0; y < h; ++y)
-        {
-            uchar* magnitude = nmag.ptr<uchar>(y);
-            float* ang = angle.ptr<float>(y);
-
-            for (int x = 0; x < w; ++x)
-            {
-                channels.ptr<uchar>(y + (h * (int)ang[x]))[x] = magnitude[x];
-            }
-        }
-
-        cv::Mat luv, shrunk;
-        cv::cvtColor(frame, luv, CV_BGR2Luv);
-
-        std::vector<cv::Mat> splited;
-        for (int i = 0; i < 3; ++i)
-            splited.push_back(channels(cv::Rect(0, h * (7 + i), w, h)));
-        split(luv, splited);
-
-        float shrinkage = static_cast<float>(integrals.cols - 1) / channels.cols;
-
-        CV_Assert(shrinkage == 0.25);
-
-        cv::resize(channels, shrunk, cv::Size(), shrinkage, shrinkage, CV_INTER_AREA);
-        cv::integral(shrunk, integrals, cv::noArray(), CV_32S);
-    }
-};
-
+    cv::Ptr<cv::ChannelFeatureBuilder> builder = cv::ChannelFeatureBuilder::create();
+    ASSERT_TRUE(builder->info() != 0);
 }
 
-CV_INIT_ALGORITHM(ICF, "ChannelFeatureBuilder.ICF", );
-
-cv::ChannelFeatureBuilder::~ChannelFeatureBuilder() {}
-
-cv::Ptr<cv::ChannelFeatureBuilder> cv::ChannelFeatureBuilder::create()
+TEST(ChannelFeatureBuilderTest, compute)
 {
-    cv::Ptr<cv::ChannelFeatureBuilder> builder(new ICF());
-    return builder;
+    cv::Ptr<cv::ChannelFeatureBuilder> builder = cv::ChannelFeatureBuilder::create();
+
+    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path()  + "cascadeandhog/images/image_00000000_0.png");
+    cv::Mat ints;
+    (*builder)(colored, ints);
+
+    ASSERT_FALSE(ints.empty());
 }

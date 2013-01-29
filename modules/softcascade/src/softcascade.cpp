@@ -169,37 +169,30 @@ struct Level
         return (sarea == 0.0f)? threshold : (threshold * scaling[idx] * sarea);
     }
 };
-
 struct ChannelStorage
 {
-    std::vector<cv::Mat> hog;
+    cv::Mat hog;
     int shrinkage;
     int offset;
     int step;
+    int model_height;
+
+    cv::Ptr<cv::ChannelFeatureBuilder> builder;
 
     enum {HOG_BINS = 6, HOG_LUV_BINS = 10};
 
     ChannelStorage(const cv::Mat& colored, int shr) : shrinkage(shr)
     {
-        hog.clear();
-        hog.reserve(10);
-        cv::Channels ints(shr);
+        builder = cv::ChannelFeatureBuilder::create();
+        (*builder)(colored, hog);
 
-        // convert to gray
-        cv::Mat grey;
-        cv::cvtColor(colored, grey, CV_BGR2GRAY);
-
-        ints.appendHogBins(grey, hog, 6);
-        ints.appendLuvBins(colored, hog);
-
-        step = hog[0].cols;
+        step = hog.step1();
+        model_height = colored.rows / shrinkage;
     }
 
     float get(const int channel, const cv::Rect& area) const
     {
-        // CV_Assert(channel < HOG_LUV_BINS);
-        const cv::Mat& m = hog[channel];
-        int *ptr = ((int*)(m.data)) + offset;
+        const int *ptr = hog.ptr<const int>(0) + model_height * channel * step + offset;
 
         int a = ptr[area.y * step + area.x];
         int b = ptr[area.y * step + area.width];
@@ -509,7 +502,7 @@ void cv::SoftCascadeDetector::detectNoRoi(const cv::Mat& image, std::vector<Dete
         }
     }
 
-    if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
+    // if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
 }
 
 void cv::SoftCascadeDetector::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<Detection>& objects) const

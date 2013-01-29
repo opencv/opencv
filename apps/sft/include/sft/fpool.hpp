@@ -119,7 +119,7 @@ private:
 
     static const unsigned int seed = 0;
 
-    cv::ICFPreprocessor preprocessor;
+    cv::Ptr<cv::ChannelFeatureBuilder> builder;
 
     enum { N_CHANNELS = 10 };
 };

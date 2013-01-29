@@ -51,13 +51,11 @@ CV_INIT_ALGORITHM(SoftCascadeDetector, "SoftCascade.SoftCascadeDetector",
                   obj.info()->addParam(obj, "scales",      obj.scales);
                   obj.info()->addParam(obj, "rejCriteria", obj.rejCriteria));
 
-CV_INIT_ALGORITHM(IntegralChannelBuilder, "SoftCascade.IntegralChannelBuilder", );
 
 bool initModule_softcascade(void)
 {
     Ptr<Algorithm> sc1 = createSoftCascadeDetector();
-    Ptr<Algorithm> sc2 = createIntegralChannelBuilder();
-    return (sc1->info() != 0) && (sc2->info() != 0);
+    return (sc1->info() != 0);
 }
 
 }

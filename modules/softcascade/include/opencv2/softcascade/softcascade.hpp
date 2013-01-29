@@ -93,53 +93,15 @@ public:
 //             Implementation of Integral Channel Feature.
 // ========================================================================== //
 
-class CV_EXPORTS_W IntegralChannelBuilder : public Algorithm
+class CV_EXPORTS_W ChannelFeatureBuilder : public Algorithm
 {
 public:
-    CV_WRAP IntegralChannelBuilder();
-    CV_WRAP virtual ~IntegralChannelBuilder();
+    virtual ~ChannelFeatureBuilder();
 
-    cv::AlgorithmInfo* info() const;
+    // apply channels to source frame
+    CV_WRAP_AS(compute) virtual void operator()(InputArray src, CV_OUT OutputArray channels) const = 0;
 
-    // Load channel builder config.
-    CV_WRAP virtual void read(const FileNode& fileNode);
-
-private:
-    struct Fields;
-    cv::Ptr<Fields> fields;
-
-};
-
-// Create channel integrals for Soft Cascade detector.
-class CV_EXPORTS Channels
-{
-public:
-    // constrictor form resizing factor.
-    // Param shrinkage is a resizing factor. Resize is applied before the computing integral sum
-    Channels(const int shrinkage);
-
-    // Appends specified number of HOG first-order features integrals into given vector.
-    // Param gray is an input 1-channel gray image.
-    // Param integrals is a vector of integrals. Hog-channels will be appended to it.
-    // Param bins is a number of hog-bins
-    void appendHogBins(const cv::Mat& gray, std::vector<cv::Mat>& integrals, int bins) const;
-
-    // Converts 3-channel BGR input frame in  Luv and appends each channel to the integrals.
-    // Param frame is an input 3-channel BGR colored image.
-    // Param integrals is a vector of integrals. Computed from the frame luv-channels will be appended to it.
-    void appendLuvBins(const cv::Mat& frame, std::vector<cv::Mat>& integrals) const;
-
-private:
-    int shrinkage;
-};
-
-class CV_EXPORTS_W ICFPreprocessor
-{
-public:
-    CV_WRAP ICFPreprocessor();
-    CV_WRAP void apply(cv::InputArray _frame, cv::OutputArray _integrals) const;
-protected:
-    enum {BINS = 10};
+    CV_WRAP static cv::Ptr<ChannelFeatureBuilder> create();
 };
 
 // ========================================================================== //
