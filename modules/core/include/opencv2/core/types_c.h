@@ -342,9 +342,8 @@ CV_INLINE  int  cvFloor( double value )
     return i - (i > value);
 #else
     int i = cvRound(value);
-    Cv32suf diff;
-    diff.f = (float)(value - i);
-    return i - (diff.i < 0);
+    float diff = (float)(value - i);
+    return i - (diff < 0);
 #endif
 }
 
@@ -360,9 +359,8 @@ CV_INLINE  int  cvCeil( double value )
     return i + (i < value);
 #else
     int i = cvRound(value);
-    Cv32suf diff;
-    diff.f = (float)(i - value);
-    return i + (diff.i < 0);
+    float diff = (float)(i - value);
+    return i + (diff < 0);
 #endif
 }
 
@@ -371,31 +369,19 @@ CV_INLINE  int  cvCeil( double value )
 
 CV_INLINE int cvIsNaN( double value )
 {
-#if 1/*defined _MSC_VER || defined __BORLANDC__
-    return _isnan(value);
-#elif defined __GNUC__
-    return isnan(value);
-#else*/
     Cv64suf ieee754;
     ieee754.f = value;
     return ((unsigned)(ieee754.u >> 32) & 0x7fffffff) +
            ((unsigned)ieee754.u != 0) > 0x7ff00000;
-#endif
 }
 
 
 CV_INLINE int cvIsInf( double value )
 {
-#if 1/*defined _MSC_VER || defined __BORLANDC__
-    return !_finite(value);
-#elif defined __GNUC__
-    return isinf(value);
-#else*/
     Cv64suf ieee754;
     ieee754.f = value;
     return ((unsigned)(ieee754.u >> 32) & 0x7fffffff) == 0x7ff00000 &&
            (unsigned)ieee754.u == 0;
-#endif
 }
 
 
