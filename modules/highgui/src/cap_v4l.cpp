@@ -1415,7 +1415,7 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
 
 static inline void
 move_420_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
-           int rowPixels, unsigned char * rgb)
+               int rowPixels, unsigned char * rgb)
 {
     const int rvScale = 91881;
     const int guScale = -22553;
@@ -1454,7 +1454,7 @@ move_420_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
 
 static inline void
 move_411_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
-           int /*rowPixels*/, unsigned char * rgb)
+               int /*rowPixels*/, unsigned char * rgb)
 {
     const int rvScale = 91881;
     const int guScale = -22553;
@@ -1546,6 +1546,7 @@ yuv420p_to_rgb24(int width, int height,
 //
 /* Converts from interlaced YUV420 to RGB24. */
 /* [FD] untested... */
+#ifdef HAVE_CAMV4L
 static void
 yuv420_to_rgb24(int width, int height,
         unsigned char *pIn0, unsigned char *pOut0)
@@ -1590,6 +1591,7 @@ yuv420_to_rgb24(int width, int height,
         pOut += width * bytes;
     }
 }
+#endif //HAVE_CAMV4L
 
 // Consider a YUV411P image of 8x2 pixels.
 //
@@ -1641,6 +1643,8 @@ yuv411p_to_rgb24(int width, int height,
 /* based on ccvt_yuyv_bgr32() from camstream */
 #define SAT(c) \
         if (c & (~255)) { if (c < 0) c = 0; else c = 255; }
+
+#ifdef HAVE_CAMV4L2
 static void
 yuyv_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
 {
@@ -1732,6 +1736,7 @@ uyvy_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
       }
    }
 }
+#endif //HAVE_CAMV4L2
 
 #ifdef HAVE_JPEG
 
@@ -1758,6 +1763,7 @@ mjpeg_to_rgb24 (int width, int height,
  *
  */
 
+#ifdef HAVE_CAMV4L2
 static void bayer2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, unsigned char *dst)
 {
     long int i;
@@ -1918,7 +1924,6 @@ static void sgbrg2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, uns
         rawpt++;
     }
 }
-
 
 #define CLAMP(x)        ((x)<0?0:((x)>255)?255:(x))
 
@@ -2090,7 +2095,7 @@ static int sonix_decompress(int width, int height, unsigned char *inp, unsigned 
 
   return 0;
 }
-
+#endif //HAVE_CAMV4L2
 
 static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 
@@ -2153,78 +2158,77 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
   if (V4L2_SUPPORT == 1)
   {
     switch (capture->palette)
-      {
-      case PALETTE_BGR24:
-    memcpy((char *)capture->frame.imageData,
-           (char *)capture->buffers[capture->bufferIndex].start,
-           capture->frame.imageSize);
-    break;
+    {
+    case PALETTE_BGR24:
+        memcpy((char *)capture->frame.imageData,
+               (char *)capture->buffers[capture->bufferIndex].start,
+               capture->frame.imageSize);
+        break;
 
-      case PALETTE_YVU420:
-      yuv420p_to_rgb24(capture->form.fmt.pix.width,
-               capture->form.fmt.pix.height,
-               (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-               (unsigned char*)capture->frame.imageData);
-      break;
+    case PALETTE_YVU420:
+        yuv420p_to_rgb24(capture->form.fmt.pix.width,
+                 capture->form.fmt.pix.height,
+                 (unsigned char*)(capture->buffers[capture->bufferIndex].start),
+                 (unsigned char*)capture->frame.imageData);
+        break;
 
-      case PALETTE_YUV411P:
-    yuv411p_to_rgb24(capture->form.fmt.pix.width,
-             capture->form.fmt.pix.height,
-             (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-             (unsigned char*)capture->frame.imageData);
-    break;
+    case PALETTE_YUV411P:
+        yuv411p_to_rgb24(capture->form.fmt.pix.width,
+                 capture->form.fmt.pix.height,
+                 (unsigned char*)(capture->buffers[capture->bufferIndex].start),
+                 (unsigned char*)capture->frame.imageData);
+        break;
 #ifdef HAVE_JPEG
-      case PALETTE_MJPEG:
-    if (!mjpeg_to_rgb24(capture->form.fmt.pix.width,
-                capture->form.fmt.pix.height,
-                (unsigned char*)(capture->buffers[capture->bufferIndex]
-                         .start),
-                capture->buffers[capture->bufferIndex].length,
-                (unsigned char*)capture->frame.imageData))
-      return 0;
-    break;
+    case PALETTE_MJPEG:
+        if (!mjpeg_to_rgb24(capture->form.fmt.pix.width,
+                    capture->form.fmt.pix.height,
+                    (unsigned char*)(capture->buffers[capture->bufferIndex]
+                             .start),
+                    capture->buffers[capture->bufferIndex].length,
+                    (unsigned char*)capture->frame.imageData))
+          return 0;
+        break;
 #endif
 
-      case PALETTE_YUYV:
-    yuyv_to_rgb24(capture->form.fmt.pix.width,
-              capture->form.fmt.pix.height,
-              (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-              (unsigned char*)capture->frame.imageData);
-    break;
+    case PALETTE_YUYV:
+        yuyv_to_rgb24(capture->form.fmt.pix.width,
+                  capture->form.fmt.pix.height,
+                  (unsigned char*)(capture->buffers[capture->bufferIndex].start),
+                  (unsigned char*)capture->frame.imageData);
+        break;
+    case PALETTE_UYVY:
+        uyvy_to_rgb24(capture->form.fmt.pix.width,
+                  capture->form.fmt.pix.height,
+                  (unsigned char*)(capture->buffers[capture->bufferIndex].start),
+                  (unsigned char*)capture->frame.imageData);
+        break;
+    case PALETTE_SBGGR8:
+        bayer2rgb24(capture->form.fmt.pix.width,
+                capture->form.fmt.pix.height,
+                (unsigned char*)capture->buffers[capture->bufferIndex].start,
+                (unsigned char*)capture->frame.imageData);
+        break;
 
-      case PALETTE_UYVY:
-    uyvy_to_rgb24(capture->form.fmt.pix.width,
-              capture->form.fmt.pix.height,
-              (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-              (unsigned char*)capture->frame.imageData);
-    break;
-      case PALETTE_SBGGR8:
-    bayer2rgb24(capture->form.fmt.pix.width,
-            capture->form.fmt.pix.height,
-            (unsigned char*)capture->buffers[capture->bufferIndex].start,
-            (unsigned char*)capture->frame.imageData);
-    break;
+    case PALETTE_SN9C10X:
+        sonix_decompress_init();
+        sonix_decompress(capture->form.fmt.pix.width,
+                 capture->form.fmt.pix.height,
+                 (unsigned char*)capture->buffers[capture->bufferIndex].start,
+                 (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start);
 
-      case PALETTE_SN9C10X:
-    sonix_decompress_init();
-    sonix_decompress(capture->form.fmt.pix.width,
-             capture->form.fmt.pix.height,
-             (unsigned char*)capture->buffers[capture->bufferIndex].start,
-             (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start);
+        bayer2rgb24(capture->form.fmt.pix.width,
+                capture->form.fmt.pix.height,
+                (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
+                (unsigned char*)capture->frame.imageData);
+        break;
 
-    bayer2rgb24(capture->form.fmt.pix.width,
-            capture->form.fmt.pix.height,
-            (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
-            (unsigned char*)capture->frame.imageData);
-    break;
-
-      case PALETTE_SGBRG:
-    sgbrg2rgb24(capture->form.fmt.pix.width,
-            capture->form.fmt.pix.height,
-            (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
-            (unsigned char*)capture->frame.imageData);
-    break;
-      }
+    case PALETTE_SGBRG:
+        sgbrg2rgb24(capture->form.fmt.pix.width,
+                capture->form.fmt.pix.height,
+                (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
+                (unsigned char*)capture->frame.imageData);
+        break;
+    }
   }
 #endif /* HAVE_CAMV4L2 */
 #if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
@@ -2233,31 +2237,32 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 #ifdef HAVE_CAMV4L
   {
 
-    switch(capture->imageProperties.palette) {
-      case VIDEO_PALETTE_RGB24:
+    switch(capture->imageProperties.palette)
+    {
+    case VIDEO_PALETTE_RGB24:
         memcpy((char *)capture->frame.imageData,
            (char *)(capture->memoryMap + capture->memoryBuffer.offsets[capture->bufferIndex]),
            capture->frame.imageSize);
         break;
-      case VIDEO_PALETTE_YUV420P:
+    case VIDEO_PALETTE_YUV420P:
         yuv420p_to_rgb24(capture->captureWindow.width,
              capture->captureWindow.height,
              (unsigned char*)(capture->memoryMap + capture->memoryBuffer.offsets[capture->bufferIndex]),
              (unsigned char*)capture->frame.imageData);
         break;
-      case VIDEO_PALETTE_YUV420:
+    case VIDEO_PALETTE_YUV420:
         yuv420_to_rgb24(capture->captureWindow.width,
           capture->captureWindow.height,
           (unsigned char*)(capture->memoryMap + capture->memoryBuffer.offsets[capture->bufferIndex]),
           (unsigned char*)capture->frame.imageData);
         break;
-      case VIDEO_PALETTE_YUV411P:
+    case VIDEO_PALETTE_YUV411P:
         yuv411p_to_rgb24(capture->captureWindow.width,
           capture->captureWindow.height,
           (unsigned char*)(capture->memoryMap + capture->memoryBuffer.offsets[capture->bufferIndex]),
           (unsigned char*)capture->frame.imageData);
         break;
-      default:
+    default:
         fprintf( stderr,
                  "HIGHGUI ERROR: V4L: Cannot convert from palette %d to RGB\n",
                  capture->imageProperties.palette);
