@@ -48,7 +48,7 @@
 
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/objdetect/objdetect.hpp>
+#include <opencv2/softcascade/softcascade.hpp>
 namespace sft
 {
 struct ICF

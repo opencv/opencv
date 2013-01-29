@@ -2,10 +2,10 @@ if(IOS OR ANDROID)
   return()
 endif()
 
-set(the_target sft)
-set(name ${the_target})
+set(name sft)
+set(the_target opencv_${name})
 
-set(OPENCV_${the_target}_DEPS opencv_core opencv_objdetect opencv_highgui opencv_imgproc opencv_ml)
+set(OPENCV_${the_target}_DEPS opencv_core opencv_softcascade opencv_highgui opencv_imgproc opencv_ml)
 ocv_check_dependencies(${OPENCV_${the_target}_DEPS})
 
 if(NOT OCV_DEPENDENCIES_FOUND)
@@ -28,7 +28,7 @@ set_target_properties(${the_target} PROPERTIES
                       ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
                       RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
                       INSTALL_NAME_DIR lib
-                      OUTPUT_NAME ${name})
+                      OUTPUT_NAME ${the_target})
 
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_target} PROPERTIES FOLDER "applications")
