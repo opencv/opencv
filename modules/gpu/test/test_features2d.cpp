@@ -43,118 +43,122 @@
 
 #ifdef HAVE_CUDA
 
-namespace {
-
-bool keyPointsEquals(const cv::KeyPoint& p1, const cv::KeyPoint& p2)
+namespace
 {
-    const double maxPtDif = 1.0;
-    const double maxSizeDif = 1.0;
-    const double maxAngleDif = 2.0;
-    const double maxResponseDif = 0.1;
-
-    double dist = cv::norm(p1.pt - p2.pt);
-
-    if (dist < maxPtDif &&
-        fabs(p1.size - p2.size) < maxSizeDif &&
-        abs(p1.angle - p2.angle) < maxAngleDif &&
-        abs(p1.response - p2.response) < maxResponseDif &&
-        p1.octave == p2.octave &&
-        p1.class_id == p2.class_id)
+    bool keyPointsEquals(const cv::KeyPoint& p1, const cv::KeyPoint& p2)
     {
-        return true;
-    }
+        const double maxPtDif = 1.0;
+        const double maxSizeDif = 1.0;
+        const double maxAngleDif = 2.0;
+        const double maxResponseDif = 0.1;
 
-    return false;
-}
+        double dist = cv::norm(p1.pt - p2.pt);
 
-struct KeyPointLess : std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
-{
-    bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
-    {
-        return kp1.pt.y < kp2.pt.y || (kp1.pt.y == kp2.pt.y && kp1.pt.x < kp2.pt.x);
-    }
-};
-
-testing::AssertionResult assertKeyPointsEquals(const char* gold_expr, const char* actual_expr, std::vector<cv::KeyPoint>& gold, std::vector<cv::KeyPoint>& actual)
-{
-    if (gold.size() != actual.size())
-    {
-        return testing::AssertionFailure() << "KeyPoints size mistmach\n"
-                                           << "\"" << gold_expr << "\" : " << gold.size() << "\n"
-                                           << "\"" << actual_expr << "\" : " << actual.size();
-    }
-
-    std::sort(actual.begin(), actual.end(), KeyPointLess());
-    std::sort(gold.begin(), gold.end(), KeyPointLess());
-
-    for (size_t i = 0; i < gold.size(); ++i)
-    {
-        const cv::KeyPoint& p1 = gold[i];
-        const cv::KeyPoint& p2 = actual[i];
-
-        if (!keyPointsEquals(p1, p2))
+        if (dist < maxPtDif &&
+            fabs(p1.size - p2.size) < maxSizeDif &&
+            abs(p1.angle - p2.angle) < maxAngleDif &&
+            abs(p1.response - p2.response) < maxResponseDif &&
+            p1.octave == p2.octave &&
+            p1.class_id == p2.class_id)
         {
-            return testing::AssertionFailure() << "KeyPoints differ at " << i << "\n"
-                                               << "\"" << gold_expr << "\" vs \"" << actual_expr << "\" : \n"
-                                               << "pt : " << testing::PrintToString(p1.pt) << " vs " << testing::PrintToString(p2.pt) << "\n"
-                                               << "size : " << p1.size << " vs " << p2.size << "\n"
-                                               << "angle : " << p1.angle << " vs " << p2.angle << "\n"
-                                               << "response : " << p1.response << " vs " << p2.response << "\n"
-                                               << "octave : " << p1.octave << " vs " << p2.octave << "\n"
-                                               << "class_id : " << p1.class_id << " vs " << p2.class_id;
+            return true;
         }
+
+        return false;
     }
 
-    return ::testing::AssertionSuccess();
-}
-
-#define ASSERT_KEYPOINTS_EQ(gold, actual) EXPECT_PRED_FORMAT2(assertKeyPointsEquals, gold, actual);
-
-int getMatchedPointsCount(std::vector<cv::KeyPoint>& gold, std::vector<cv::KeyPoint>& actual)
-{
-    std::sort(actual.begin(), actual.end(), KeyPointLess());
-    std::sort(gold.begin(), gold.end(), KeyPointLess());
-
-    int validCount = 0;
-
-    for (size_t i = 0; i < gold.size(); ++i)
+    struct KeyPointLess : std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
     {
-        const cv::KeyPoint& p1 = gold[i];
-        const cv::KeyPoint& p2 = actual[i];
+        bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
+        {
+            return kp1.pt.y < kp2.pt.y || (kp1.pt.y == kp2.pt.y && kp1.pt.x < kp2.pt.x);
+        }
+    };
 
-        if (keyPointsEquals(p1, p2))
-            ++validCount;
-    }
-
-    return validCount;
-}
-
-int getMatchedPointsCount(const std::vector<cv::KeyPoint>& keypoints1, const std::vector<cv::KeyPoint>& keypoints2, const std::vector<cv::DMatch>& matches)
-{
-    int validCount = 0;
-
-    for (size_t i = 0; i < matches.size(); ++i)
+    testing::AssertionResult assertKeyPointsEquals(const char* gold_expr, const char* actual_expr, std::vector<cv::KeyPoint>& gold, std::vector<cv::KeyPoint>& actual)
     {
-        const cv::DMatch& m = matches[i];
+        if (gold.size() != actual.size())
+        {
+            return testing::AssertionFailure() << "KeyPoints size mistmach\n"
+                                               << "\"" << gold_expr << "\" : " << gold.size() << "\n"
+                                               << "\"" << actual_expr << "\" : " << actual.size();
+        }
 
-        const cv::KeyPoint& p1 = keypoints1[m.queryIdx];
-        const cv::KeyPoint& p2 = keypoints2[m.trainIdx];
+        std::sort(actual.begin(), actual.end(), KeyPointLess());
+        std::sort(gold.begin(), gold.end(), KeyPointLess());
 
-        if (keyPointsEquals(p1, p2))
-            ++validCount;
+        for (size_t i = 0; i < gold.size(); ++i)
+        {
+            const cv::KeyPoint& p1 = gold[i];
+            const cv::KeyPoint& p2 = actual[i];
+
+            if (!keyPointsEquals(p1, p2))
+            {
+                return testing::AssertionFailure() << "KeyPoints differ at " << i << "\n"
+                                                   << "\"" << gold_expr << "\" vs \"" << actual_expr << "\" : \n"
+                                                   << "pt : " << testing::PrintToString(p1.pt) << " vs " << testing::PrintToString(p2.pt) << "\n"
+                                                   << "size : " << p1.size << " vs " << p2.size << "\n"
+                                                   << "angle : " << p1.angle << " vs " << p2.angle << "\n"
+                                                   << "response : " << p1.response << " vs " << p2.response << "\n"
+                                                   << "octave : " << p1.octave << " vs " << p2.octave << "\n"
+                                                   << "class_id : " << p1.class_id << " vs " << p2.class_id;
+            }
+        }
+
+        return ::testing::AssertionSuccess();
     }
 
-    return validCount;
+    #define ASSERT_KEYPOINTS_EQ(gold, actual) EXPECT_PRED_FORMAT2(assertKeyPointsEquals, gold, actual);
+
+    int getMatchedPointsCount(std::vector<cv::KeyPoint>& gold, std::vector<cv::KeyPoint>& actual)
+    {
+        std::sort(actual.begin(), actual.end(), KeyPointLess());
+        std::sort(gold.begin(), gold.end(), KeyPointLess());
+
+        int validCount = 0;
+
+        for (size_t i = 0; i < gold.size(); ++i)
+        {
+            const cv::KeyPoint& p1 = gold[i];
+            const cv::KeyPoint& p2 = actual[i];
+
+            if (keyPointsEquals(p1, p2))
+                ++validCount;
+        }
+
+        return validCount;
+    }
+
+    int getMatchedPointsCount(const std::vector<cv::KeyPoint>& keypoints1, const std::vector<cv::KeyPoint>& keypoints2, const std::vector<cv::DMatch>& matches)
+    {
+        int validCount = 0;
+
+        for (size_t i = 0; i < matches.size(); ++i)
+        {
+            const cv::DMatch& m = matches[i];
+
+            const cv::KeyPoint& p1 = keypoints1[m.queryIdx];
+            const cv::KeyPoint& p2 = keypoints2[m.trainIdx];
+
+            if (keyPointsEquals(p1, p2))
+                ++validCount;
+        }
+
+        return validCount;
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // SURF
 
-IMPLEMENT_PARAM_CLASS(SURF_HessianThreshold, double)
-IMPLEMENT_PARAM_CLASS(SURF_Octaves, int)
-IMPLEMENT_PARAM_CLASS(SURF_OctaveLayers, int)
-IMPLEMENT_PARAM_CLASS(SURF_Extended, bool)
-IMPLEMENT_PARAM_CLASS(SURF_Upright, bool)
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(SURF_HessianThreshold, double)
+    IMPLEMENT_PARAM_CLASS(SURF_Octaves, int)
+    IMPLEMENT_PARAM_CLASS(SURF_OctaveLayers, int)
+    IMPLEMENT_PARAM_CLASS(SURF_Extended, bool)
+    IMPLEMENT_PARAM_CLASS(SURF_Upright, bool)
+}
 
 PARAM_TEST_CASE(SURF, cv::gpu::DeviceInfo, SURF_HessianThreshold, SURF_Octaves, SURF_OctaveLayers, SURF_Extended, SURF_Upright)
 {
@@ -178,7 +182,7 @@ PARAM_TEST_CASE(SURF, cv::gpu::DeviceInfo, SURF_HessianThreshold, SURF_Octaves, 
     }
 };
 
-TEST_P(SURF, Detector)
+GPU_TEST_P(SURF, Detector)
 {
     cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
@@ -226,7 +230,7 @@ TEST_P(SURF, Detector)
     }
 }
 
-TEST_P(SURF, Detector_Masked)
+GPU_TEST_P(SURF, Detector_Masked)
 {
     cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
@@ -277,7 +281,7 @@ TEST_P(SURF, Detector_Masked)
     }
 }
 
-TEST_P(SURF, Descriptor)
+GPU_TEST_P(SURF, Descriptor)
 {
     cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
@@ -328,7 +332,7 @@ TEST_P(SURF, Descriptor)
         int matchedCount = getMatchedPointsCount(keypoints, keypoints, matches);
         double matchedRatio = static_cast<double>(matchedCount) / keypoints.size();
 
-        EXPECT_GT(matchedRatio, 0.35);
+        EXPECT_GT(matchedRatio, 0.6);
     }
 }
 
@@ -343,8 +347,11 @@ INSTANTIATE_TEST_CASE_P(GPU_Features2D, SURF, testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // FAST
 
-IMPLEMENT_PARAM_CLASS(FAST_Threshold, int)
-IMPLEMENT_PARAM_CLASS(FAST_NonmaxSupression, bool)
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(FAST_Threshold, int)
+    IMPLEMENT_PARAM_CLASS(FAST_NonmaxSupression, bool)
+}
 
 PARAM_TEST_CASE(FAST, cv::gpu::DeviceInfo, FAST_Threshold, FAST_NonmaxSupression)
 {
@@ -362,7 +369,7 @@ PARAM_TEST_CASE(FAST, cv::gpu::DeviceInfo, FAST_Threshold, FAST_NonmaxSupression
     }
 };
 
-TEST_P(FAST, Accuracy)
+GPU_TEST_P(FAST, Accuracy)
 {
     cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
@@ -402,14 +409,17 @@ INSTANTIATE_TEST_CASE_P(GPU_Features2D, FAST, testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // ORB
 
-IMPLEMENT_PARAM_CLASS(ORB_FeaturesCount, int)
-IMPLEMENT_PARAM_CLASS(ORB_ScaleFactor, float)
-IMPLEMENT_PARAM_CLASS(ORB_LevelsCount, int)
-IMPLEMENT_PARAM_CLASS(ORB_EdgeThreshold, int)
-IMPLEMENT_PARAM_CLASS(ORB_firstLevel, int)
-IMPLEMENT_PARAM_CLASS(ORB_WTA_K, int)
-IMPLEMENT_PARAM_CLASS(ORB_PatchSize, int)
-IMPLEMENT_PARAM_CLASS(ORB_BlurForDescriptor, bool)
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(ORB_FeaturesCount, int)
+    IMPLEMENT_PARAM_CLASS(ORB_ScaleFactor, float)
+    IMPLEMENT_PARAM_CLASS(ORB_LevelsCount, int)
+    IMPLEMENT_PARAM_CLASS(ORB_EdgeThreshold, int)
+    IMPLEMENT_PARAM_CLASS(ORB_firstLevel, int)
+    IMPLEMENT_PARAM_CLASS(ORB_WTA_K, int)
+    IMPLEMENT_PARAM_CLASS(ORB_PatchSize, int)
+    IMPLEMENT_PARAM_CLASS(ORB_BlurForDescriptor, bool)
+}
 
 CV_ENUM(ORB_ScoreType, cv::ORB::HARRIS_SCORE, cv::ORB::FAST_SCORE)
 
@@ -443,7 +453,7 @@ PARAM_TEST_CASE(ORB, cv::gpu::DeviceInfo, ORB_FeaturesCount, ORB_ScaleFactor, OR
     }
 };
 
-TEST_P(ORB, Accuracy)
+GPU_TEST_P(ORB, Accuracy)
 {
     cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
@@ -505,8 +515,11 @@ INSTANTIATE_TEST_CASE_P(GPU_Features2D, ORB,  testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // BruteForceMatcher
 
-IMPLEMENT_PARAM_CLASS(DescriptorSize, int)
-IMPLEMENT_PARAM_CLASS(UseMask, bool)
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(DescriptorSize, int)
+    IMPLEMENT_PARAM_CLASS(UseMask, bool)
+}
 
 PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, NormCode, DescriptorSize, UseMask)
 {
@@ -568,7 +581,7 @@ PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, NormCode, DescriptorSize
     }
 };
 
-TEST_P(BruteForceMatcher, Match_Single)
+GPU_TEST_P(BruteForceMatcher, Match_Single)
 {
     cv::gpu::BruteForceMatcher_GPU_base matcher(
                 cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
@@ -596,7 +609,7 @@ TEST_P(BruteForceMatcher, Match_Single)
     ASSERT_EQ(0, badCount);
 }
 
-TEST_P(BruteForceMatcher, Match_Collection)
+GPU_TEST_P(BruteForceMatcher, Match_Collection)
 {
     cv::gpu::BruteForceMatcher_GPU_base matcher(
                         cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
@@ -651,7 +664,7 @@ TEST_P(BruteForceMatcher, Match_Collection)
     ASSERT_EQ(0, badCount);
 }
 
-TEST_P(BruteForceMatcher, KnnMatch_2_Single)
+GPU_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
 {
     cv::gpu::BruteForceMatcher_GPU_base matcher(
                         cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
@@ -691,7 +704,7 @@ TEST_P(BruteForceMatcher, KnnMatch_2_Single)
     ASSERT_EQ(0, badCount);
 }
 
-TEST_P(BruteForceMatcher, KnnMatch_3_Single)
+GPU_TEST_P(BruteForceMatcher, KnnMatch_3_Single)
 {
     cv::gpu::BruteForceMatcher_GPU_base matcher(
                         cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
@@ -731,7 +744,7 @@ TEST_P(BruteForceMatcher, KnnMatch_3_Single)
     ASSERT_EQ(0, badCount);
 }
 
-TEST_P(BruteForceMatcher, KnnMatch_2_Collection)
+GPU_TEST_P(BruteForceMatcher, KnnMatch_2_Collection)
 {
     cv::gpu::BruteForceMatcher_GPU_base matcher(
                         cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
@@ -794,7 +807,7 @@ TEST_P(BruteForceMatcher, KnnMatch_2_Collection)
     ASSERT_EQ(0, badCount);
 }
 
-TEST_P(BruteForceMatcher, KnnMatch_3_Collection)
+GPU_TEST_P(BruteForceMatcher, KnnMatch_3_Collection)
 {
     cv::gpu::BruteForceMatcher_GPU_base matcher(
                         cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
@@ -857,7 +870,7 @@ TEST_P(BruteForceMatcher, KnnMatch_3_Collection)
     ASSERT_EQ(0, badCount);
 }
 
-TEST_P(BruteForceMatcher, RadiusMatch_Single)
+GPU_TEST_P(BruteForceMatcher, RadiusMatch_Single)
 {
     cv::gpu::BruteForceMatcher_GPU_base matcher(
                         cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
@@ -907,7 +920,7 @@ TEST_P(BruteForceMatcher, RadiusMatch_Single)
     }
 }
 
-TEST_P(BruteForceMatcher, RadiusMatch_Collection)
+GPU_TEST_P(BruteForceMatcher, RadiusMatch_Collection)
 {
     cv::gpu::BruteForceMatcher_GPU_base matcher(
                         cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
@@ -992,7 +1005,5 @@ INSTANTIATE_TEST_CASE_P(GPU_Features2D, BruteForceMatcher, testing::Combine(
     testing::Values(NormCode(cv::NORM_L1), NormCode(cv::NORM_L2)),
     testing::Values(DescriptorSize(57), DescriptorSize(64), DescriptorSize(83), DescriptorSize(128), DescriptorSize(179), DescriptorSize(256), DescriptorSize(304)),
     testing::Values(UseMask(false), UseMask(true))));
-
-} // namespace
 
 #endif // HAVE_CUDA

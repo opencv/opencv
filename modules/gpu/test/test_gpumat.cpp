@@ -44,8 +44,6 @@
 
 #ifdef HAVE_CUDA
 
-namespace {
-
 ////////////////////////////////////////////////////////////////////////////////
 // SetTo
 
@@ -67,7 +65,7 @@ PARAM_TEST_CASE(SetTo, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
     }
 };
 
-TEST_P(SetTo, Zero)
+GPU_TEST_P(SetTo, Zero)
 {
     cv::Scalar zero = cv::Scalar::all(0);
 
@@ -77,7 +75,7 @@ TEST_P(SetTo, Zero)
     EXPECT_MAT_NEAR(cv::Mat::zeros(size, type), mat, 0.0);
 }
 
-TEST_P(SetTo, SameVal)
+GPU_TEST_P(SetTo, SameVal)
 {
     cv::Scalar val = cv::Scalar::all(randomDouble(0.0, 255.0));
 
@@ -102,7 +100,7 @@ TEST_P(SetTo, SameVal)
     }
 }
 
-TEST_P(SetTo, DifferentVal)
+GPU_TEST_P(SetTo, DifferentVal)
 {
     cv::Scalar val = randomScalar(0.0, 255.0);
 
@@ -127,7 +125,7 @@ TEST_P(SetTo, DifferentVal)
     }
 }
 
-TEST_P(SetTo, Masked)
+GPU_TEST_P(SetTo, Masked)
 {
     cv::Scalar val = randomScalar(0.0, 255.0);
     cv::Mat mat_gold = randomMat(size, type);
@@ -184,7 +182,7 @@ PARAM_TEST_CASE(CopyTo, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
     }
 };
 
-TEST_P(CopyTo, WithOutMask)
+GPU_TEST_P(CopyTo, WithOutMask)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -195,7 +193,7 @@ TEST_P(CopyTo, WithOutMask)
     EXPECT_MAT_NEAR(src, dst, 0.0);
 }
 
-TEST_P(CopyTo, Masked)
+GPU_TEST_P(CopyTo, Masked)
 {
     cv::Mat src = randomMat(size, type);
     cv::Mat mask = randomMat(size, CV_8UC1, 0.0, 2.0);
@@ -255,7 +253,7 @@ PARAM_TEST_CASE(ConvertTo, cv::gpu::DeviceInfo, cv::Size, MatDepth, MatDepth, Us
     }
 };
 
-TEST_P(ConvertTo, WithOutScaling)
+GPU_TEST_P(ConvertTo, WithOutScaling)
 {
     cv::Mat src = randomMat(size, depth1);
 
@@ -285,7 +283,7 @@ TEST_P(ConvertTo, WithOutScaling)
     }
 }
 
-TEST_P(ConvertTo, WithScaling)
+GPU_TEST_P(ConvertTo, WithScaling)
 {
     cv::Mat src = randomMat(size, depth1);
     double a = randomDouble(0.0, 1.0);
@@ -323,7 +321,5 @@ INSTANTIATE_TEST_CASE_P(GPU_GpuMat, ConvertTo, testing::Combine(
     ALL_DEPTH,
     ALL_DEPTH,
     WHOLE_SUBMAT));
-
-} // namespace
 
 #endif // HAVE_CUDA

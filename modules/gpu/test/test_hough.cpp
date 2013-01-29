@@ -43,8 +43,6 @@
 
 #ifdef HAVE_CUDA
 
-namespace {
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // HoughLines
 
@@ -79,7 +77,7 @@ PARAM_TEST_CASE(HoughLines, cv::gpu::DeviceInfo, cv::Size, UseRoi)
     }
 };
 
-TEST_P(HoughLines, Accuracy)
+GPU_TEST_P(HoughLines, Accuracy)
 {
     const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     cv::gpu::setDevice(devInfo.deviceID());
@@ -87,7 +85,7 @@ TEST_P(HoughLines, Accuracy)
     const bool useRoi = GET_PARAM(2);
 
     const float rho = 1.0f;
-    const float theta = 1.5f * CV_PI / 180.0f;
+    const float theta = (float) (1.5 * CV_PI / 180.0);
     const int threshold = 100;
 
     cv::Mat src(size, CV_8UC1);
@@ -124,7 +122,7 @@ PARAM_TEST_CASE(HoughCircles, cv::gpu::DeviceInfo, cv::Size, UseRoi)
     }
 };
 
-TEST_P(HoughCircles, Accuracy)
+GPU_TEST_P(HoughCircles, Accuracy)
 {
     const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     cv::gpu::setDevice(devInfo.deviceID());
@@ -188,7 +186,7 @@ PARAM_TEST_CASE(GeneralizedHough, cv::gpu::DeviceInfo, UseRoi)
 {
 };
 
-TEST_P(GeneralizedHough, POSITION)
+GPU_TEST_P(GeneralizedHough, POSITION)
 {
     const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     cv::gpu::setDevice(devInfo.deviceID());
@@ -250,7 +248,5 @@ TEST_P(GeneralizedHough, POSITION)
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, GeneralizedHough, testing::Combine(
     ALL_DEVICES,
     WHOLE_SUBMAT));
-
-} // namespace
 
 #endif // HAVE_CUDA

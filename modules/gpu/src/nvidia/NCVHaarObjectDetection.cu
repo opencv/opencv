@@ -65,6 +65,8 @@
 #include "NPP_staging/NPP_staging.hpp"
 #include "NCVRuntimeTemplates.hpp"
 #include "NCVHaarObjectDetection.hpp"
+#include "opencv2/gpu/device/warp.hpp"
+#include "opencv2/gpu/device/warp_shuffle.hpp"
 
 
 //==============================================================================
@@ -81,6 +83,20 @@ NCV_CT_ASSERT(K_WARP_SIZE == 32); //this is required for the manual unroll of th
 //assuming size <= WARP_SIZE and size is power of 2
 __device__ Ncv32u warpScanInclusive(Ncv32u idata, volatile Ncv32u *s_Data)
 {
+#if __CUDA_ARCH__ >= 300
+    const unsigned int laneId = cv::gpu::device::Warp::laneId();
+
+    // scan on shuffl functions
+    #pragma unroll
+    for (int i = 1; i <= (K_WARP_SIZE / 2); i *= 2)
+    {
+        const Ncv32u n = cv::gpu::device::shfl_up(idata, i);
+        if (laneId >= i)
+              idata += n;
+    }
+
+    return idata;
+#else
     Ncv32u pos = 2 * threadIdx.x - (threadIdx.x & (K_WARP_SIZE - 1));
     s_Data[pos] = 0;
     pos += K_WARP_SIZE;
@@ -93,6 +109,7 @@ __device__ Ncv32u warpScanInclusive(Ncv32u idata, volatile Ncv32u *s_Data)
     s_Data[pos] += s_Data[pos - 16];
 
     return s_Data[pos];
+#endif
 }
 
 __device__ __forceinline__ Ncv32u warpScanExclusive(Ncv32u idata, volatile Ncv32u *s_Data)

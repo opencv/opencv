@@ -42,9 +42,10 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
+#include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/transform.hpp"
 #include "opencv2/gpu/device/functional.hpp"
+#include "opencv2/gpu/device/reduce.hpp"
 
 namespace cv { namespace gpu { namespace device
 {
@@ -66,6 +67,8 @@ namespace cv { namespace gpu { namespace device
                         crot1.x * p.x + crot1.y * p.y + crot1.z * p.z + ctransl.y,
                         crot2.x * p.x + crot2.y * p.y + crot2.z * p.z + ctransl.z);
             }
+            __device__ __forceinline__ TransformOp() {}
+            __device__ __forceinline__ TransformOp(const TransformOp&) {}
         };
 
         void call(const PtrStepSz<float3> src, const float* rot,
@@ -103,6 +106,8 @@ namespace cv { namespace gpu { namespace device
                         (cproj0.x * t.x + cproj0.y * t.y) / t.z + cproj0.z,
                         (cproj1.x * t.x + cproj1.y * t.y) / t.z + cproj1.z);
             }
+            __device__ __forceinline__ ProjectOp() {}
+            __device__ __forceinline__ ProjectOp(const ProjectOp&) {}
         };
 
         void call(const PtrStepSz<float3> src, const float* rot,
@@ -134,6 +139,7 @@ namespace cv { namespace gpu { namespace device
             return x * x;
         }
 
+        template <int BLOCK_SIZE>
         __global__ void computeHypothesisScoresKernel(
                 const int num_points, const float3* object, const float2* image,
                 const float dist_threshold, int* g_num_inliers)
@@ -156,19 +162,11 @@ namespace cv { namespace gpu { namespace device
                     ++num_inliers;
             }
 
-            extern __shared__ float s_num_inliers[];
-            s_num_inliers[threadIdx.x] = num_inliers;
-            __syncthreads();
-
-            for (int step = blockDim.x / 2; step > 0; step >>= 1)
-            {
-                if (threadIdx.x < step)
-                    s_num_inliers[threadIdx.x] += s_num_inliers[threadIdx.x + step];
-                __syncthreads();
-            }
+            __shared__ int s_num_inliers[BLOCK_SIZE];
+            reduce<BLOCK_SIZE>(s_num_inliers, num_inliers, threadIdx.x, plus<int>());
 
             if (threadIdx.x == 0)
-                g_num_inliers[blockIdx.x] = s_num_inliers[0];
+                g_num_inliers[blockIdx.x] = num_inliers;
         }
 
         void computeHypothesisScores(
@@ -181,9 +179,8 @@ namespace cv { namespace gpu { namespace device
 
             dim3 threads(256);
             dim3 grid(num_hypotheses);
-            int smem_size = threads.x * sizeof(float);
 
-            computeHypothesisScoresKernel<<<grid, threads, smem_size>>>(
+            computeHypothesisScoresKernel<256><<<grid, threads>>>(
                     num_points, object, image, dist_threshold, hypothesis_scores);
             cudaSafeCall( cudaGetLastError() );
 

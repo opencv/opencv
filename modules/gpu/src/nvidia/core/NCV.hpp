@@ -288,7 +288,7 @@ NCV_EXPORTS void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);
     do \
     { \
         cudaError_t res = cudacall; \
-        ncvAssertPrintReturn(cudaSuccess==res, "cudaError_t=" << res, errCode); \
+        ncvAssertPrintReturn(cudaSuccess==res, "cudaError_t=" << (int)res, errCode); \
     } while (0)
 
 
@@ -296,7 +296,7 @@ NCV_EXPORTS void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);
     do \
     { \
         cudaError_t res = cudaGetLastError(); \
-        ncvAssertPrintReturn(cudaSuccess==res, "cudaError_t=" << res, errCode); \
+        ncvAssertPrintReturn(cudaSuccess==res, "cudaError_t=" << (int)res, errCode); \
     } while (0)
 
 

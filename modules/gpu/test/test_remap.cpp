@@ -152,7 +152,7 @@ PARAM_TEST_CASE(Remap, cv::gpu::DeviceInfo, cv::Size, MatType, Interpolation, Bo
     }
 };
 
-TEST_P(Remap, Accuracy)
+GPU_TEST_P(Remap, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Scalar val = randomScalar(0.0, 255.0);

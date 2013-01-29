@@ -44,7 +44,6 @@
 #define OPENCV_GPU_EMULATION_HPP_
 
 #include "warp_reduce.hpp"
-#include <stdio.h>
 
 namespace cv { namespace gpu { namespace device
 {
