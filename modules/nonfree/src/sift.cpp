@@ -162,8 +162,24 @@ static const float SIFT_DESCR_MAG_THR = 0.2f;
 // factor used to convert floating-point descriptor to unsigned char
 static const float SIFT_INT_DESCR_FCTR = 512.f;
 
+#if 0
+// intermediate type used for DoG pyramids
+typedef short sift_wt;
 static const int SIFT_FIXPT_SCALE = 48;
+#else
+// intermediate type used for DoG pyramids
+typedef float sift_wt;
+static const int SIFT_FIXPT_SCALE = 1;
+#endif
 
+static inline void
+unpackOctave(const KeyPoint& kpt, int& octave, int& layer, float& scale)
+{
+    octave = kpt.octave & 255;
+    layer = (kpt.octave >> 8) & 255;
+    octave = octave < 128 ? octave : (-128 | octave);
+    scale = octave >= 0 ? 1.f/(1 << octave) : (float)(1 << -octave);
+}
 
 static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma )
 {
@@ -172,7 +188,7 @@ static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma
         cvtColor(img, gray, COLOR_BGR2GRAY);
     else
         img.copyTo(gray);
-    gray.convertTo(gray_fpt, CV_16S, SIFT_FIXPT_SCALE, 0);
+    gray.convertTo(gray_fpt, DataType<sift_wt>::type, SIFT_FIXPT_SCALE, 0);
 
     float sig_diff;
 
@@ -245,7 +261,7 @@ void SIFT::buildDoGPyramid( const vector<Mat>& gpyr, vector<Mat>& dogpyr ) const
             const Mat& src1 = gpyr[o*(nOctaveLayers + 3) + i];
             const Mat& src2 = gpyr[o*(nOctaveLayers + 3) + i + 1];
             Mat& dst = dogpyr[o*(nOctaveLayers + 2) + i];
-            subtract(src2, src1, dst, noArray(), CV_16S);
+            subtract(src2, src1, dst, noArray(), DataType<sift_wt>::type);
         }
     }
 }
@@ -276,8 +292,8 @@ static float calcOrientationHist( const Mat& img, Point pt, int radius,
             if( x <= 0 || x >= img.cols - 1 )
                 continue;
 
-            float dx = (float)(img.at<short>(y, x+1) - img.at<short>(y, x-1));
-            float dy = (float)(img.at<short>(y-1, x) - img.at<short>(y+1, x));
+            float dx = (float)(img.at<sift_wt>(y, x+1) - img.at<sift_wt>(y, x-1));
+            float dy = (float)(img.at<sift_wt>(y-1, x) - img.at<sift_wt>(y+1, x));
 
             X[k] = dx; Y[k] = dy; W[k] = (i*i + j*j)*expf_scale;
             k++;
@@ -323,7 +339,7 @@ static float calcOrientationHist( const Mat& img, Point pt, int radius,
 
 //
 // Interpolates a scale-space extremum's location and scale to subpixel
-// accuracy to form an image feature.  Rejects features with low contrast.
+// accuracy to form an image feature. Rejects features with low contrast.
 // Based on Section 4 of Lowe's paper.
 static bool adjustLocalExtrema( const vector<Mat>& dog_pyr, KeyPoint& kpt, int octv,
                                 int& layer, int& r, int& c, int nOctaveLayers,
@@ -334,7 +350,7 @@ static bool adjustLocalExtrema( const vector<Mat>& dog_pyr, KeyPoint& kpt, int o
     const float second_deriv_scale = img_scale;
     const float cross_deriv_scale = img_scale*0.25f;
 
-    float xi=0, xr=0, xc=0, contr;
+    float xi=0, xr=0, xc=0, contr=0;
     int i = 0;
 
     for( ; i < SIFT_MAX_INTERP_STEPS; i++ )
@@ -344,20 +360,20 @@ static bool adjustLocalExtrema( const vector<Mat>& dog_pyr, KeyPoint& kpt, int o
         const Mat& prev = dog_pyr[idx-1];
         const Mat& next = dog_pyr[idx+1];
 
-        Vec3f dD((img.at<short>(r, c+1) - img.at<short>(r, c-1))*deriv_scale,
-                 (img.at<short>(r+1, c) - img.at<short>(r-1, c))*deriv_scale,
-                 (next.at<short>(r, c) - prev.at<short>(r, c))*deriv_scale);
+        Vec3f dD((img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1))*deriv_scale,
+                 (img.at<sift_wt>(r+1, c) - img.at<sift_wt>(r-1, c))*deriv_scale,
+                 (next.at<sift_wt>(r, c) - prev.at<sift_wt>(r, c))*deriv_scale);
 
-        float v2 = (float)img.at<short>(r, c)*2;
-        float dxx = (img.at<short>(r, c+1) + img.at<short>(r, c-1) - v2)*second_deriv_scale;
-        float dyy = (img.at<short>(r+1, c) + img.at<short>(r-1, c) - v2)*second_deriv_scale;
-        float dss = (next.at<short>(r, c) + prev.at<short>(r, c) - v2)*second_deriv_scale;
-        float dxy = (img.at<short>(r+1, c+1) - img.at<short>(r+1, c-1) -
-                     img.at<short>(r-1, c+1) + img.at<short>(r-1, c-1))*cross_deriv_scale;
-        float dxs = (next.at<short>(r, c+1) - next.at<short>(r, c-1) -
-                     prev.at<short>(r, c+1) + prev.at<short>(r, c-1))*cross_deriv_scale;
-        float dys = (next.at<short>(r+1, c) - next.at<short>(r-1, c) -
-                     prev.at<short>(r+1, c) + prev.at<short>(r-1, c))*cross_deriv_scale;
+        float v2 = (float)img.at<sift_wt>(r, c)*2;
+        float dxx = (img.at<sift_wt>(r, c+1) + img.at<sift_wt>(r, c-1) - v2)*second_deriv_scale;
+        float dyy = (img.at<sift_wt>(r+1, c) + img.at<sift_wt>(r-1, c) - v2)*second_deriv_scale;
+        float dss = (next.at<sift_wt>(r, c) + prev.at<sift_wt>(r, c) - v2)*second_deriv_scale;
+        float dxy = (img.at<sift_wt>(r+1, c+1) - img.at<sift_wt>(r+1, c-1) -
+                     img.at<sift_wt>(r-1, c+1) + img.at<sift_wt>(r-1, c-1))*cross_deriv_scale;
+        float dxs = (next.at<sift_wt>(r, c+1) - next.at<sift_wt>(r, c-1) -
+                     prev.at<sift_wt>(r, c+1) + prev.at<sift_wt>(r, c-1))*cross_deriv_scale;
+        float dys = (next.at<sift_wt>(r+1, c) - next.at<sift_wt>(r-1, c) -
+                     prev.at<sift_wt>(r+1, c) + prev.at<sift_wt>(r-1, c))*cross_deriv_scale;
 
         Matx33f H(dxx, dxy, dxs,
                   dxy, dyy, dys,
@@ -369,20 +385,25 @@ static bool adjustLocalExtrema( const vector<Mat>& dog_pyr, KeyPoint& kpt, int o
         xr = -X[1];
         xc = -X[0];
 
-        if( std::abs( xi ) < 0.5f  &&  std::abs( xr ) < 0.5f  &&  std::abs( xc ) < 0.5f )
+        if( std::abs(xi) < 0.5f && std::abs(xr) < 0.5f && std::abs(xc) < 0.5f )
             break;
 
-        c += cvRound( xc );
-        r += cvRound( xr );
-        layer += cvRound( xi );
+        if( std::abs(xi) > (float)(INT_MAX/3) ||
+            std::abs(xr) > (float)(INT_MAX/3) ||
+            std::abs(xc) > (float)(INT_MAX/3) )
+            return false;
+
+        c += cvRound(xc);
+        r += cvRound(xr);
+        layer += cvRound(xi);
 
         if( layer < 1 || layer > nOctaveLayers ||
-           c < SIFT_IMG_BORDER || c >= img.cols - SIFT_IMG_BORDER  ||
-           r < SIFT_IMG_BORDER || r >= img.rows - SIFT_IMG_BORDER )
+            c < SIFT_IMG_BORDER || c >= img.cols - SIFT_IMG_BORDER  ||
+            r < SIFT_IMG_BORDER || r >= img.rows - SIFT_IMG_BORDER )
             return false;
     }
 
-    /* ensure convergence of interpolation */
+    // ensure convergence of interpolation
     if( i >= SIFT_MAX_INTERP_STEPS )
         return false;
 
@@ -391,21 +412,21 @@ static bool adjustLocalExtrema( const vector<Mat>& dog_pyr, KeyPoint& kpt, int o
         const Mat& img = dog_pyr[idx];
         const Mat& prev = dog_pyr[idx-1];
         const Mat& next = dog_pyr[idx+1];
-        Matx31f dD((img.at<short>(r, c+1) - img.at<short>(r, c-1))*deriv_scale,
-                   (img.at<short>(r+1, c) - img.at<short>(r-1, c))*deriv_scale,
-                   (next.at<short>(r, c) - prev.at<short>(r, c))*deriv_scale);
+        Matx31f dD((img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1))*deriv_scale,
+                   (img.at<sift_wt>(r+1, c) - img.at<sift_wt>(r-1, c))*deriv_scale,
+                   (next.at<sift_wt>(r, c) - prev.at<sift_wt>(r, c))*deriv_scale);
         float t = dD.dot(Matx31f(xc, xr, xi));
 
-        contr = img.at<short>(r, c)*img_scale + t * 0.5f;
+        contr = img.at<sift_wt>(r, c)*img_scale + t * 0.5f;
         if( std::abs( contr ) * nOctaveLayers < contrastThreshold )
             return false;
 
-        /* principal curvatures are computed using the trace and det of Hessian */
-        float v2 = img.at<short>(r, c)*2.f;
-        float dxx = (img.at<short>(r, c+1) + img.at<short>(r, c-1) - v2)*second_deriv_scale;
-        float dyy = (img.at<short>(r+1, c) + img.at<short>(r-1, c) - v2)*second_deriv_scale;
-        float dxy = (img.at<short>(r+1, c+1) - img.at<short>(r+1, c-1) -
-                     img.at<short>(r-1, c+1) + img.at<short>(r-1, c-1)) * cross_deriv_scale;
+        // principal curvatures are computed using the trace and det of Hessian
+        float v2 = img.at<sift_wt>(r, c)*2.f;
+        float dxx = (img.at<sift_wt>(r, c+1) + img.at<sift_wt>(r, c-1) - v2)*second_deriv_scale;
+        float dyy = (img.at<sift_wt>(r+1, c) + img.at<sift_wt>(r-1, c) - v2)*second_deriv_scale;
+        float dxy = (img.at<sift_wt>(r+1, c+1) - img.at<sift_wt>(r+1, c-1) -
+                     img.at<sift_wt>(r-1, c+1) + img.at<sift_wt>(r-1, c-1)) * cross_deriv_scale;
         float tr = dxx + dyy;
         float det = dxx * dyy - dxy * dxy;
 
@@ -417,6 +438,7 @@ static bool adjustLocalExtrema( const vector<Mat>& dog_pyr, KeyPoint& kpt, int o
     kpt.pt.y = (r + xr) * (1 << octv);
     kpt.octave = octv + (layer << 8) + (cvRound((xi + 0.5)*255) << 16);
     kpt.size = sigma*powf(2.f, (layer + xi) / nOctaveLayers)*(1 << octv)*2;
+    kpt.response = std::abs(contr);
 
     return true;
 }
@@ -448,13 +470,13 @@ void SIFT::findScaleSpaceExtrema( const vector<Mat>& gauss_pyr, const vector<Mat
 
             for( int r = SIFT_IMG_BORDER; r < rows-SIFT_IMG_BORDER; r++)
             {
-                const short* currptr = img.ptr<short>(r);
-                const short* prevptr = prev.ptr<short>(r);
-                const short* nextptr = next.ptr<short>(r);
+                const sift_wt* currptr = img.ptr<sift_wt>(r);
+                const sift_wt* prevptr = prev.ptr<sift_wt>(r);
+                const sift_wt* nextptr = next.ptr<sift_wt>(r);
 
                 for( int c = SIFT_IMG_BORDER; c < cols-SIFT_IMG_BORDER; c++)
                 {
-                    int val = currptr[c];
+                    sift_wt val = currptr[c];
 
                     // find local extrema with pixel accuracy
                     if( std::abs(val) > threshold &&
@@ -541,11 +563,9 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
     for( i = -radius, k = 0; i <= radius; i++ )
         for( j = -radius; j <= radius; j++ )
         {
-            /*
-             Calculate sample's histogram array coords rotated relative to ori.
-             Subtract 0.5 so samples that fall e.g. in the center of row 1 (i.e.
-             r_rot = 1.5) have full weight placed in row 1 after interpolation.
-             */
+            // Calculate sample's histogram array coords rotated relative to ori.
+            // Subtract 0.5 so samples that fall e.g. in the center of row 1 (i.e.
+            // r_rot = 1.5) have full weight placed in row 1 after interpolation.
             float c_rot = j * cos_t - i * sin_t;
             float r_rot = j * sin_t + i * cos_t;
             float rbin = r_rot + d/2 - 0.5f;
@@ -553,10 +573,10 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
             int r = pt.y + i, c = pt.x + j;
 
             if( rbin > -1 && rbin < d && cbin > -1 && cbin < d &&
-               r > 0 && r < rows - 1 && c > 0 && c < cols - 1 )
+                r > 0 && r < rows - 1 && c > 0 && c < cols - 1 )
             {
-                float dx = (float)(img.at<short>(r, c+1) - img.at<short>(r, c-1));
-                float dy = (float)(img.at<short>(r-1, c) - img.at<short>(r+1, c));
+                float dx = (float)(img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1));
+                float dy = (float)(img.at<sift_wt>(r-1, c) - img.at<sift_wt>(r+1, c));
                 X[k] = dx; Y[k] = dy; RBin[k] = rbin; CBin[k] = cbin;
                 W[k] = (c_rot * c_rot + r_rot * r_rot)*exp_scale;
                 k++;
@@ -632,29 +652,46 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
         nrm2 += val*val;
     }
     nrm2 = SIFT_INT_DESCR_FCTR/std::max(std::sqrt(nrm2), FLT_EPSILON);
+
+#if 1
     for( k = 0; k < len; k++ )
     {
         dst[k] = saturate_cast<uchar>(dst[k]*nrm2);
     }
+#else
+    float nrm1 = 0;
+    for( k = 0; k < len; k++ )
+    {
+        dst[k] *= nrm2;
+        nrm1 += dst[k];
+    }
+    nrm1 = 1.f/std::max(nrm1, FLT_EPSILON);
+    for( k = 0; k < len; k++ )
+    {
+        dst[k] = std::sqrt(dst[k] * nrm1);//saturate_cast<uchar>(std::sqrt(dst[k] * nrm1)*SIFT_INT_DESCR_FCTR);
+    }
+#endif
 }
 
 static void calcDescriptors(const vector<Mat>& gpyr, const vector<KeyPoint>& keypoints,
-                            Mat& descriptors, int nOctaveLayers )
+                            Mat& descriptors, int nOctaveLayers, int firstOctave )
 {
     int d = SIFT_DESCR_WIDTH, n = SIFT_DESCR_HIST_BINS;
 
     for( size_t i = 0; i < keypoints.size(); i++ )
     {
         KeyPoint kpt = keypoints[i];
-        int octv=kpt.octave & 255, layer=(kpt.octave >> 8) & 255;
-        float scale = 1.f/(1 << octv);
+        int octave, layer;
+        float scale;
+        unpackOctave(kpt, octave, layer, scale);
+        CV_Assert(octave >= firstOctave && layer <= nOctaveLayers+2);
         float size=kpt.size*scale;
         Point2f ptf(kpt.pt.x*scale, kpt.pt.y*scale);
-        const Mat& img = gpyr[octv*(nOctaveLayers + 3) + layer];
+        const Mat& img = gpyr[(octave - firstOctave)*(nOctaveLayers + 3) + layer];
 
         float angle = 360.f - kpt.angle;
         if(std::abs(angle - 360.f) < FLT_EPSILON)
-           angle = 0.f;
+            angle = 0.f;
         calcSIFTDescriptor(img, ptf, angle, size*0.5f, d, n, descriptors.ptr<float>((int)i));
     }
 }
@@ -691,6 +728,7 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
                       OutputArray _descriptors,
                       bool useProvidedKeypoints) const
 {
+    int firstOctave = -1, actualNOctaves = 0, actualNLayers = 0;
     Mat image = _image.getMat(), mask = _mask.getMat();
 
     if( image.empty() || image.depth() != CV_8U )
@@ -699,9 +737,28 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
     if( !mask.empty() && mask.type() != CV_8UC1 )
         CV_Error( CV_StsBadArg, "mask has incorrect type (!=CV_8UC1)" );
 
-    Mat base = createInitialImage(image, false, (float)sigma);
+    if( useProvidedKeypoints )
+    {
+        firstOctave = 0;
+        int maxOctave = INT_MIN;
+        for( size_t i = 0; i < keypoints.size(); i++ )
+        {
+            int octave, layer;
+            float scale;
+            unpackOctave(keypoints[i], octave, layer, scale);
+            firstOctave = std::min(firstOctave, octave);
+            maxOctave = std::max(maxOctave, octave);
+            actualNLayers = std::max(actualNLayers, layer-2);
+        }
+
+        firstOctave = std::min(firstOctave, 0);
+        CV_Assert( firstOctave >= -1 && actualNLayers <= nOctaveLayers );
+        actualNOctaves = maxOctave - firstOctave + 1;
+    }
+
+    Mat base = createInitialImage(image, firstOctave < 0, (float)sigma);
     vector<Mat> gpyr, dogpyr;
-    int nOctaves = cvRound(log( (double)std::min( base.cols, base.rows ) ) / log(2.) - 2);
+    int nOctaves = actualNOctaves > 0 ? actualNOctaves : cvRound(log( (double)std::min( base.cols, base.rows ) ) / log(2.) - 2) - firstOctave;
 
     //double t, tf = getTickFrequency();
     //t = (double)getTickCount();
@@ -724,6 +781,16 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
             KeyPointsFilter::retainBest(keypoints, nfeatures);
         //t = (double)getTickCount() - t;
         //printf("keypoint detection time: %g\n", t*1000./tf);
+
+        if( firstOctave < 0 )
+            for( size_t i = 0; i < keypoints.size(); i++ )
+            {
+                KeyPoint& kpt = keypoints[i];
+                float scale = 1.f/(float)(1 << -firstOctave);
+                kpt.octave = (kpt.octave & ~255) | ((kpt.octave + firstOctave) & 255);
+                kpt.pt *= scale;
+                kpt.size *= scale;
+            }
     }
     else
     {
@@ -738,7 +805,7 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
         _descriptors.create((int)keypoints.size(), dsize, CV_32F);
         Mat descriptors = _descriptors.getMat();
 
-        calcDescriptors(gpyr, keypoints, descriptors, nOctaveLayers);
+        calcDescriptors(gpyr, keypoints, descriptors, nOctaveLayers, firstOctave);
         //t = (double)getTickCount() - t;
         //printf("descriptor extraction time: %g\n", t*1000./tf);
     }
