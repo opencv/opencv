@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2012, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2008-2013, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -22,7 +22,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and / or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -216,7 +216,7 @@ void BoostedSoftCascadeOctave::setRejectThresholds(cv::OutputArray _thresholds)
 {
     dprintf("set thresholds according to DBP strategy\n");
 
-    // labels desided by classifier
+    // labels decided by classifier
     cv::Mat desisions(responses.cols, responses.rows, responses.type());
     float* dptr = desisions.ptr<float>(0);
 
@@ -423,7 +423,7 @@ void BoostedSoftCascadeOctave::write( cv::FileStorage &fso, const FeaturePool* p
         << "scale" << logScale
         << "weaks" << weak->total
         << "trees" << "[";
-        // should be replased with the H.L. one
+        // should be replaced with the H.L. one
         CvSeqReader reader;
         cvStartReadSeq( weak, &reader);
 
@@ -463,7 +463,7 @@ bool BoostedSoftCascadeOctave::train(const Dataset* dataset, const FeaturePool* 
     processPositives(dataset, pool);
     generateNegatives(dataset, pool);
 
-    // 2. only sumple case (all features used)
+    // 2. only simple case (all features used)
     int nfeatures = pool->size();
     cv::Mat varIdx(1, nfeatures, CV_32SC1);
     int* ptr = varIdx.ptr<int>(0);
@@ -471,7 +471,7 @@ bool BoostedSoftCascadeOctave::train(const Dataset* dataset, const FeaturePool* 
     for (int x = 0; x < nfeatures; ++x)
         ptr[x] = x;
 
-    // 3. only sumple case (all samples used)
+    // 3. only simple case (all samples used)
     int nsamples = npositives + nnegatives;
     cv::Mat sampleIdx(1, nsamples, CV_32SC1);
     ptr = sampleIdx.ptr<int>(0);
@@ -479,7 +479,7 @@ bool BoostedSoftCascadeOctave::train(const Dataset* dataset, const FeaturePool* 
     for (int x = 0; x < nsamples; ++x)
         ptr[x] = x;
 
-    // 4. ICF has an orderable responce.
+    // 4. ICF has an ordered response.
     cv::Mat varType(1, nfeatures + 1, CV_8UC1);
     uchar* uptr = varType.ptr<uchar>(0);
     for (int x = 0; x < nfeatures; ++x)

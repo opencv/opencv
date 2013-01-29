@@ -40,7 +40,7 @@
 //
 //M*/
 
-// Trating application for Soft Cascades.
+// Training application for Soft Cascades.
 
 #include <sft/common.hpp>
 #include <iostream>
@@ -114,7 +114,7 @@ int main(int argc, char** argv)
     // 3. Train all octaves
     for (ivector::const_iterator it = cfg.octaves.begin(); it != cfg.octaves.end(); ++it)
     {
-        // a. create rangom feature pool
+        // a. create random feature pool
         int nfeatures  = cfg.poolSize;
         cv::Size model = cfg.model(it);
         std::cout << "Model " << model << std::endl;

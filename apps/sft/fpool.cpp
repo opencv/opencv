@@ -197,7 +197,7 @@ namespace {
 using namespace sft;
 void glob(const string& refRoot, const string& refExt, svector &refvecFiles)
 {
-    std::string     strFilePath;             // Filepath
+    std::string     strFilePath;             // File path
     std::string     strExtension;            // Extension
 
     std::string strPattern = refRoot + "\\*.*";
@@ -240,14 +240,14 @@ void glob(const string& refRoot, const string& refExt, svector &refvecFiles)
 
 #endif
 
-// in the default case data folders should be alligned as following:
+// in the default case data folders should be aligned as following:
 // 1. positives: <train or test path>/octave_<octave number>/pos/*.png
 // 2. negatives: <train or test path>/octave_<octave number>/neg/*.png
 ScaledDataset::ScaledDataset(const string& path, const int oct)
 {
     dprintf("%s\n", "get dataset file names...");
 
-    dprintf("%s\n", "Positives globbing...");
+    dprintf("%s\n", "Positives globing...");
 
 #if !defined (_WIN32) && ! defined(__MINGW32__)
     glob(path + "/pos/octave_" + itoa(oct) + "/*.png", pos);
@@ -255,7 +255,7 @@ ScaledDataset::ScaledDataset(const string& path, const int oct)
     glob(path + "/pos/octave_" + itoa(oct),     "png", pos);
 #endif
 
-    dprintf("%s\n", "Negatives globbing...");
+    dprintf("%s\n", "Negatives globing...");
 #if !defined (_WIN32) && ! defined(__MINGW32__)
     glob(path + "/neg/octave_" + itoa(oct) + "/*.png", neg);
 #else

@@ -93,7 +93,7 @@ struct Config
     // List of octaves for which have to be trained cascades (a list of powers of two)
     ivector octaves;
 
-    // Maximum number of positives that should be ised during training
+    // Maximum number of positives that should be used during training
     int positives;
 
     // Initial number of negatives used during training.
@@ -102,10 +102,10 @@ struct Config
     // Number of weak negatives to add each bootstrapping step.
     int btpNegatives;
 
-    // Inverse of scale for feature resazing
+    // Inverse of scale for feature resizing
     int shrinkage;
 
-    // Depth on weak classifier's desition tree
+    // Depth on weak classifier's decision tree
     int treeDepth;
 
     // Weak classifiers number in resulted cascade
@@ -120,10 +120,10 @@ struct Config
     // path to resulting cascade
     string outXmlPath;
 
-    // seed for fandom generation
+    // seed for random generation
     int seed;
 
-    // // bounding retangle for actual exemple into example window
+    // // bounding rectangle for actual example into example window
     // cv::Rect exampleWindow;
 };
 

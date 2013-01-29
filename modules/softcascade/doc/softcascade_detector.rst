@@ -25,29 +25,37 @@ The sample has been rejected if it fall rejection threshold. So stageless cascad
 .. [BMTG12] Rodrigo Benenson, Markus Mathias, Radu Timofte and Luc Van Gool. Pedestrian detection at 100 frames per second. IEEE CVPR, 2012.
 
 
-SCascade
-----------------
-.. ocv:class:: SCascade
+SoftCascadeDetector
+-------------------
+.. ocv:class:: SoftCascadeDetector
 
 Implementation of soft (stageless) cascaded detector. ::
 
-    class CV_EXPORTS SCascade : public Algorithm
+    class CV_EXPORTS_W SoftCascadeDetector : public Algorithm
     {
     public:
-        SCascade(const float minScale = 0.4f, const float maxScale = 5.f, const int scales = 55, const int rejfactor = 1);
-        virtual ~SCascade();
+
+        enum { NO_REJECT = 1, DOLLAR = 2, /*PASCAL = 4,*/ DEFAULT = NO_REJECT};
+
+        CV_WRAP SoftCascadeDetector(double minScale = 0.4, double maxScale = 5., int scales = 55, int rejCriteria = 1);
+        CV_WRAP virtual ~SoftCascadeDetector();
         cv::AlgorithmInfo* info() const;
-        virtual bool load(const FileNode& fn);
+        CV_WRAP virtual bool load(const FileNode& fileNode);
+        CV_WRAP virtual void read(const FileNode& fileNode);
         virtual void detect(InputArray image, InputArray rois, std::vector<Detection>& objects) const;
-        virtual void detect(InputArray image, InputArray rois, OutputArray rects, OutputArray confs) const;
-    };
+        CV_WRAP virtual void detect(InputArray image, InputArray rois, CV_OUT OutputArray rects, CV_OUT OutputArray confs) const;
+
+    }
 
 
-SCascade::SCascade
---------------------------
+
+SoftCascadeDetector::SoftCascadeDetector
+----------------------------------------
 An empty cascade will be created.
 
-.. ocv:function:: bool SCascade::SCascade(const float minScale = 0.4f, const float maxScale = 5.f, const int scales = 55, const int rejfactor = 1)
+.. ocv:function:: SoftCascadeDetector::SoftCascadeDetector(float minScale = 0.4f, float maxScale = 5.f, int scales = 55, int rejCriteria = 1)
+
+.. ocv:pyfunction:: cv2.SoftCascadeDetector.SoftCascadeDetector(minScale[, maxScale[, scales[, rejCriteria]]]) -> cascade
 
     :param minScale: a minimum scale relative to the original size of the image on which cascade will be applied.
 
@@ -55,35 +63,39 @@ An empty cascade will be created.
 
     :param scales: a number of scales from minScale to maxScale.
 
-    :param rejfactor: used for non maximum suppression.
+    :param rejCriteria: algorithm used for non maximum suppression.
 
 
 
-SCascade::~SCascade
----------------------------
-Destructor for SCascade.
+SoftCascadeDetector::~SoftCascadeDetector
+-----------------------------------------
+Destructor for SoftCascadeDetector.
 
-.. ocv:function:: SCascade::~SCascade()
+.. ocv:function:: SoftCascadeDetector::~SoftCascadeDetector()
 
 
 
-SCascade::load
+SoftCascadeDetector::load
 --------------------------
 Load cascade from FileNode.
 
-.. ocv:function:: bool SCascade::load(const FileNode& fn)
+.. ocv:function:: bool SoftCascadeDetector::load(const FileNode& fileNode)
 
-    :param fn: File node from which the soft cascade are read.
+.. ocv:pyfunction:: cv2.SoftCascadeDetector.load(fileNode)
+
+    :param fileNode: File node from which the soft cascade are read.
 
 
 
-SCascade::detect
---------------------------
+SoftCascadeDetector::detect
+---------------------------
 Apply cascade to an input frame and return the vector of Detection objects.
 
-.. ocv:function:: void SCascade::detect(InputArray image, InputArray rois, std::vector<Detection>& objects) const
+.. ocv:function:: void SoftCascadeDetector::detect(InputArray image, InputArray rois, std::vector<Detection>& objects) const
 
-.. ocv:function:: void SCascade::detect(InputArray image, InputArray rois, OutputArray rects, OutputArray confs) const
+.. ocv:function:: void SoftCascadeDetector::detect(InputArray image, InputArray rois, OutputArray rects, OutputArray confs) const
+
+.. ocv:pyfunction:: cv2.SoftCascadeDetector.detect(image, rois) -> (rects, confs)
 
     :param image: a frame on which detector will be applied.
 
@@ -94,3 +106,40 @@ Apply cascade to an input frame and return the vector of Detection objects.
     :param rects: an output array of bounding rectangles for detected objects.
 
     :param confs: an output array of confidence for detected objects. i-th bounding rectangle corresponds i-th confidence.
+
+
+ChannelFeatureBuilder
+---------------------
+.. ocv:class:: ChannelFeatureBuilder
+
+Public interface for of soft (stageless) cascaded detector. ::
+
+    class CV_EXPORTS_W ChannelFeatureBuilder : public Algorithm
+    {
+    public:
+        virtual ~ChannelFeatureBuilder();
+
+        CV_WRAP_AS(compute) virtual void operator()(InputArray src, CV_OUT OutputArray channels) const = 0;
+
+        CV_WRAP static cv::Ptr<ChannelFeatureBuilder> create();
+    };
+
+
+ChannelFeatureBuilder:~ChannelFeatureBuilder
+--------------------------------------------
+Destructor for ChannelFeatureBuilder.
+
+.. ocv:function:: ChannelFeatureBuilder::~ChannelFeatureBuilder()
+
+
+ChannelFeatureBuilder::operator()
+---------------------------------
+Create channel feature integrals for input image.
+
+.. ocv:function:: void ChannelFeatureBuilder::operator()(InputArray src, OutputArray channels) const
+
+.. ocv:pyfunction:: cv2.ChannelFeatureBuilder.compute(src, channels) -> None
+
+    :param src source frame
+
+    :param channels in OutputArray of computed channels
