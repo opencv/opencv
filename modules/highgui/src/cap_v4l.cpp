@@ -202,7 +202,7 @@ make & enjoy!
 
 #include "precomp.hpp"
 
-#if !defined WIN32 && defined HAVE_CAMV4L && defined HAVE_CAMV4L2
+#if !defined WIN32 && (defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO)
 
 #define CLEAR(x) memset (&(x), 0, sizeof (x))
 
@@ -214,17 +214,24 @@ make & enjoy!
 #include <sys/types.h>
 #include <sys/mman.h>
 
+#ifdef HAVE_CAMVAL
 #include <linux/videodev.h>
+#endif
 
 #include <string.h>
 #include <stdlib.h>
-#include <asm/types.h>          /* for videodev2.h */
 #include <assert.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
 #ifdef HAVE_CAMV4L2
+#include <asm/types.h>          /* for videodev2.h */
 #include <linux/videodev2.h>
+#endif
+
+#ifdef HAVE_VIDEOIO
+#include <sys/videoio.h>
+#define HAVE_CAMV4L2
 #endif
 
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
@@ -288,11 +295,13 @@ typedef struct CvCaptureCAM_V4L
     int deviceHandle;
     int bufferIndex;
     int FirstCapture;
+#ifdef HAVE_CAMV4L
     struct video_capability capability;
     struct video_window     captureWindow;
     struct video_picture    imageProperties;
     struct video_mbuf       memoryBuffer;
     struct video_mmap       *mmaps;
+#endif /* HAVE_CAMV4L */
     char *memoryMap;
     IplImage frame;
 
@@ -345,23 +354,19 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h);
 static int numCameras = 0;
 static int indexList = 0;
 
-#ifdef HAVE_CAMV4L2
-
-// IOCTL handling for V4L2
+#ifdef HAVE_IOCTL_ULONG
+static int xioctl( int fd, unsigned long request, void *arg)
+#else
 static int xioctl( int fd, int request, void *arg)
+#endif
 {
-
   int r;
-
 
   do r = ioctl (fd, request, arg);
   while (-1 == r && EINTR == errno);
 
   return r;
-
 }
-
-#endif /* HAVE_CAMV4L2 */
 
 /* Simple test program: Find number of Video Sources available.
    Start from 0 and go to MAX_CAMERAS while checking for the device with that name.
@@ -393,6 +398,8 @@ static void icvInitCapture_V4L() {
 
 }; /* End icvInitCapture_V4L */
 
+#ifdef HAVE_CAMV4L
+
 static int
 try_palette(int fd,
             struct video_picture *cam_pic,
@@ -409,6 +416,8 @@ try_palette(int fd,
     return 1;
   return 0;
 }
+
+#endif /* HAVE_CAMV4L */
 
 #ifdef HAVE_CAMV4L2
 
@@ -434,6 +443,8 @@ static int try_palette_v4l2(CvCaptureCAM_V4L* capture, unsigned long colorspace)
 
 #endif /* HAVE_CAMV4L2 */
 
+#ifdef HAVE_CAMV4L
+
 static int try_init_v4l(CvCaptureCAM_V4L* capture, char *deviceName)
 {
 
@@ -449,7 +460,6 @@ static int try_init_v4l(CvCaptureCAM_V4L* capture, char *deviceName)
   /* No matter what the name - it still must be opened! */
   capture->deviceHandle = open(deviceName, O_RDWR);
 
-
   if (capture->deviceHandle == 0)
   {
     detect = -1;
@@ -463,7 +473,6 @@ static int try_init_v4l(CvCaptureCAM_V4L* capture, char *deviceName)
     if (ioctl(capture->deviceHandle, VIDIOCGCAP, &capture->capability) < 0)
     {
       detect = 0;
-
       icvCloseCAM_V4L(capture);
     }
       else
@@ -476,54 +485,64 @@ static int try_init_v4l(CvCaptureCAM_V4L* capture, char *deviceName)
 
 }
 
+#endif /* HAVE_CAMV4L */
+
 #ifdef HAVE_CAMV4L2
 
 static int try_init_v4l2(CvCaptureCAM_V4L* capture, char *deviceName)
 {
-
-  // if detect = -1 then unable to open device
-  // if detect = 0 then detected nothing
-  // if detect = 1 then V4L2 device
-  int detect = 0;
-
-
   // Test device for V4L2 compability
+  // Return value:
+  // -1 then unable to open device
+  //  0 then detected nothing
+  //  1 then V4L2 device
+
+  int deviceIndex;
 
   /* Open and test V4L2 device */
   capture->deviceHandle = open (deviceName, O_RDWR /* required */ | O_NONBLOCK, 0);
-
-
-
-  if (capture->deviceHandle == 0)
+  if (-1 == capture->deviceHandle)
   {
-    detect = -1;
-
+#ifndef NDEBUG
+    fprintf(stderr, "(DEBUG) try_init_v4l2 open \"%s\": %s\n", deviceName, strerror(errno));
+#endif
     icvCloseCAM_V4L(capture);
+    return -1;
   }
 
-  if (detect == 0)
+  CLEAR (capture->cap);
+  if (-1 == xioctl (capture->deviceHandle, VIDIOC_QUERYCAP, &capture->cap))
   {
-    CLEAR (capture->cap);
-    if (-1 == xioctl (capture->deviceHandle, VIDIOC_QUERYCAP, &capture->cap))
-    {
-      detect = 0;
-
-      icvCloseCAM_V4L(capture);
-    }
-      else
-    {
-      CLEAR (capture->capability);
-      capture->capability.type = capture->cap.capabilities;
-
-      /* Query channels number */
-      if (-1 != xioctl (capture->deviceHandle, VIDIOC_G_INPUT, &capture->capability.channels))
-      {
-        detect = 1;
-      }
-    }
+#ifndef NDEBUG
+    fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_QUERYCAP \"%s\": %s\n", deviceName, strerror(errno));
+#endif
+    icvCloseCAM_V4L(capture);
+    return 0;
   }
 
-  return detect;
+  /* Query channels number */
+  if (-1 == xioctl (capture->deviceHandle, VIDIOC_G_INPUT, &deviceIndex))
+  {
+#ifndef NDEBUG
+    fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_G_INPUT \"%s\": %s\n", deviceName, strerror(errno));
+#endif
+    icvCloseCAM_V4L(capture);
+    return 0;
+  }
+
+  /* Query information about current input */
+  CLEAR (capture->inp);
+  capture->inp.index = deviceIndex;
+  if (-1 == xioctl (capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->inp))
+  {
+#ifndef NDEBUG
+    fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_ENUMINPUT \"%s\": %s\n", deviceName, strerror(errno));
+#endif
+    icvCloseCAM_V4L(capture);
+    return 0;
+  }
+
+  return 1;
 
 }
 
@@ -546,17 +565,12 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture)
   else
 
 #ifdef HAVE_JPEG
-#ifdef __USE_GNU
-      /* support for MJPEG is only available with libjpeg and gcc,
-     because it's use libjepg and fmemopen()
-      */
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_MJPEG) == 0 ||
       try_palette_v4l2(capture, V4L2_PIX_FMT_JPEG) == 0)
   {
     capture->palette = PALETTE_MJPEG;
   }
   else
-#endif
 #endif
 
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_YUYV) == 0)
@@ -593,6 +607,8 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture)
 
 #endif /* HAVE_CAMV4L2 */
 
+#ifdef HAVE_CAMV4L
+
 static int autosetup_capture_mode_v4l(CvCaptureCAM_V4L* capture)
 {
 
@@ -625,6 +641,8 @@ static int autosetup_capture_mode_v4l(CvCaptureCAM_V4L* capture)
   return 0;
 
 }
+
+#endif /* HAVE_CAMV4L */
 
 #ifdef HAVE_CAMV4L2
 
@@ -976,8 +994,8 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
 
    /* Set up Image data */
    cvInitImageHeader( &capture->frame,
-                      cvSize( capture->captureWindow.width,
-                              capture->captureWindow.height ),
+                      cvSize( capture->form.fmt.pix.width,
+                              capture->form.fmt.pix.height ),
                       IPL_DEPTH_8U, 3, IPL_ORIGIN_TL, 4 );
    /* Allocate space for RGBA data */
    capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
@@ -986,6 +1004,8 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
 }; /* End _capture_V4L2 */
 
 #endif /* HAVE_CAMV4L2 */
+
+#ifdef HAVE_CAMV4L
 
 static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
 {
@@ -1105,6 +1125,8 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
    return 1;
 }; /* End _capture_V4L */
 
+#endif /* HAVE_CAMV4L */
+
 static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
 {
    static int autoindex;
@@ -1154,10 +1176,12 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
        icvCloseCAM_V4L(capture);
        V4L2_SUPPORT = 0;
 #endif  /* HAVE_CAMV4L2 */
+#ifdef HAVE_CAMV4L
        if (_capture_V4L (capture, deviceName) == -1) {
            icvCloseCAM_V4L(capture);
            return NULL;
        }
+#endif  /* HAVE_CAMV4L */
 #ifdef HAVE_CAMV4L2
    } else {
        V4L2_SUPPORT = 1;
@@ -1266,7 +1290,9 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
 
 #ifdef HAVE_CAMV4L2
 
+#ifdef HAVE_CAMV4L
       if (V4L2_SUPPORT == 1)
+#endif
       {
 
         for (capture->bufferIndex = 0;
@@ -1296,8 +1322,12 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
             perror ("VIDIOC_STREAMON");
             return 0;
         }
-      } else
+      }
 #endif /* HAVE_CAMV4L2 */
+#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
+      else
+#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
+#ifdef HAVE_CAMV4L
       {
 
         for (capture->bufferIndex = 0;
@@ -1316,6 +1346,7 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
         }
 
       }
+#endif /* HAVE_CAMV4L */
 
 #if defined(V4L_ABORT_BADJPEG) && defined(HAVE_CAMV4L2)
      if (V4L2_SUPPORT == 1)
@@ -1337,8 +1368,12 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
 
      mainloop_v4l2(capture);
 
-   } else
+   }
 #endif /* HAVE_CAMV4L2 */
+#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
+     else
+#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
+#ifdef HAVE_CAMV4L
    {
 
      capture->mmaps[capture->bufferIndex].frame  = capture->bufferIndex;
@@ -1358,6 +1393,7 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
      }
 
    }
+#endif /* HAVE_CAMV4L */
 
    return(1);
 }
@@ -2075,6 +2111,7 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 #ifdef HAVE_CAMV4L2
   if (V4L2_SUPPORT == 0)
 #endif /* HAVE_CAMV4L2 */
+#ifdef HAVE_CAMV4L
   {
 
     /* [FD] this really belongs here */
@@ -2083,6 +2120,7 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
     }
 
   }
+#endif /* HAVE_CAMV4L */
 
    /* Now get what has already been captured as a IplImage return */
 
@@ -2103,8 +2141,12 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
        capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
     }
 
-  } else
+  }
 #endif /* HAVE_CAMV4L2 */
+#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
+    else
+#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
+#ifdef HAVE_CAMV4L
   {
 
     if((capture->frame.width != capture->mmaps[capture->bufferIndex].width)
@@ -2118,6 +2160,7 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
     }
 
   }
+#endif /* HAVE_CAMV4L */
 
 #ifdef HAVE_CAMV4L2
 
@@ -2145,10 +2188,6 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
              (unsigned char*)capture->frame.imageData);
     break;
 #ifdef HAVE_JPEG
-#ifdef __USE_GNU
-    /* support for MJPEG is only available with libjpeg and gcc,
-       because it's use libjepg and fmemopen()
-    */
       case PALETTE_MJPEG:
     if (!mjpeg_to_rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
@@ -2158,7 +2197,6 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
                 (unsigned char*)capture->frame.imageData))
       return 0;
     break;
-#endif
 #endif
 
       case PALETTE_YUYV:
@@ -2201,8 +2239,12 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
             (unsigned char*)capture->frame.imageData);
     break;
       }
-  } else
+  }
 #endif /* HAVE_CAMV4L2 */
+#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
+    else
+#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
+#ifdef HAVE_CAMV4L
   {
 
     switch(capture->imageProperties.palette) {
@@ -2238,6 +2280,7 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
     }
 
   }
+#endif /* HAVE_CAMV4L */
 
    return(&capture->frame);
 }
@@ -2247,7 +2290,9 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
 
 #ifdef HAVE_CAMV4L2
 
+#ifdef HAVE_CAMV4L
   if (V4L2_SUPPORT == 1)
+#endif
   {
 
       /* default value for min and max */
@@ -2358,8 +2403,12 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
       /* all was OK, so convert to 0.0 - 1.0 range, and return the value */
       return ((float)capture->control.value - v4l2_min + 1) / (v4l2_max - v4l2_min);
 
-  } else
+  }
 #endif /* HAVE_CAMV4L2 */
+#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
+    else
+#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
+#ifdef HAVE_CAMV4L
   {
 
     int retval = -1;
@@ -2417,6 +2466,7 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
     return float (retval) / 0xFFFF;
 
   }
+#endif /* HAVE_CAMV4L */
 
 };
 
@@ -2489,8 +2539,12 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h) {
 
     return 0;
 
-  } else
+  }
 #endif /* HAVE_CAMV4L2 */
+#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
+    else
+#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
+#ifdef HAVE_CAMV4L
   {
 
     if (capture==0) return 0;
@@ -2517,6 +2571,7 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h) {
      capture->FirstCapture = 1;
 
   }
+#endif /* HAVE_CAMV4L */
 
   return 0;
 
@@ -2648,8 +2703,12 @@ static int icvSetControl (CvCaptureCAM_V4L* capture,
         perror ("VIDIOC_S_CTRL");
         return -1;
     }
-  } else
+  }
 #endif /* HAVE_CAMV4L2 */
+#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
+    else
+#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
+#ifdef HAVE_CAMV4L
   {
 
     int v4l_value;
@@ -2694,6 +2753,7 @@ static int icvSetControl (CvCaptureCAM_V4L* capture,
        return -1;
     }
   }
+#endif /* HAVE_CAMV4L */
 
   /* all was OK */
   return 0;
@@ -2754,6 +2814,7 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
 #ifdef HAVE_CAMV4L2
      if (V4L2_SUPPORT == 0)
 #endif /* HAVE_CAMV4L2 */
+#ifdef HAVE_CAMV4L
      {
 
        if (capture->mmaps)
@@ -2762,10 +2823,14 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
          munmap(capture->memoryMap, capture->memoryBuffer.size);
 
      }
+#endif /* HAVE_CAMV4L */
+#if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
+     else
+#endif /* HAVE_CAMV4L && HAVE_CAMV4L2 */
 #ifdef HAVE_CAMV4L2
-     else {
+       {
        capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-       if (ioctl(capture->deviceHandle, VIDIOC_STREAMOFF, &capture->type) < 0) {
+       if (-1 == ioctl(capture->deviceHandle, VIDIOC_STREAMOFF, &capture->type)) {
            perror ("Unable to stop the stream.");
        }
 

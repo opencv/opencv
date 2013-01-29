@@ -19,8 +19,14 @@
 /* V4L2 capturing support */
 #cmakedefine HAVE_CAMV4L2
 
+/* V4L2 capturing support in videoio.h */
+#cmakedefine HAVE_VIDEOIO
+
 /* V4L/V4L2 capturing support via libv4l */
 #cmakedefine HAVE_LIBV4L
+
+/* ioctl takes unsigned long request rather than int */
+#cmakedefine HAVE_IOCTL_ULONG
 
 /* Carbon windowing environment */
 #cmakedefine HAVE_CARBON
