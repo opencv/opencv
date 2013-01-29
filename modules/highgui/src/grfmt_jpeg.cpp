@@ -537,8 +537,10 @@ ImageEncoder JpegEncoder::newEncoder() const
     return new JpegEncoder;
 }
 
-bool  JpegEncoder::write( const Mat& img, const vector<int>& params )
+bool JpegEncoder::write( const Mat& img, const vector<int>& params )
 {
+    m_last_error.clear();
+
     struct fileWrapper
     {
         FILE* f;
@@ -633,6 +635,14 @@ bool  JpegEncoder::write( const Mat& img, const vector<int>& params )
     }
 
 _exit_:
+
+    if(!result)
+    {
+        char jmsg_buf[JMSG_LENGTH_MAX];
+        jerr.pub.format_message((j_common_ptr)&cinfo, jmsg_buf);
+        m_last_error = jmsg_buf;
+    }
+
     jpeg_destroy_compress( &cinfo );
 
     return result;

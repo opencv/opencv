@@ -123,6 +123,15 @@ ImageEncoder BaseImageEncoder::newEncoder() const
     return ImageEncoder();
 }
 
+void BaseImageEncoder::throwOnEror() const
+{
+    if(!m_last_error.empty())
+    {
+        std::string msg = "Raw image encoder error: " + m_last_error;
+        CV_Error( CV_BadImageSize, msg.c_str() );
+    }
+}
+
 }
 
 /* End of file. */

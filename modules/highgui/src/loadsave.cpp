@@ -420,6 +420,7 @@ bool imencode( const string& ext, InputArray _image,
     if( encoder->setDestination(buf) )
     {
         code = encoder->write(image, params);
+        encoder->throwOnEror();
         CV_Assert( code );
     }
     else
@@ -427,8 +428,11 @@ bool imencode( const string& ext, InputArray _image,
         string filename = tempfile();
         code = encoder->setDestination(filename);
         CV_Assert( code );
+
         code = encoder->write(image, params);
+        encoder->throwOnEror();
         CV_Assert( code );
+
         FILE* f = fopen( filename.c_str(), "rb" );
         CV_Assert(f != 0);
         fseek( f, 0, SEEK_END );
