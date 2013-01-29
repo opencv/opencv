@@ -44,7 +44,6 @@
 #define __OPENCV_SOFTCASCADE_HPP__
 
 #include "opencv2/core/core.hpp"
-#include "opencv2/ml/ml.hpp"
 
 namespace cv {
 
@@ -90,7 +89,7 @@ public:
 
 
 // ========================================================================== //
-//             Implementation of Integral Channel Feature.
+//             Public Interface for Integral Channel Feature.
 // ========================================================================== //
 
 class CV_EXPORTS_W ChannelFeatureBuilder : public Algorithm
@@ -155,12 +154,11 @@ private:
 };
 
 // ========================================================================== //
-//      Implementation of singe soft (stageless) cascade octave training.
+//     Public Interface for singe soft (stageless) cascade octave training.
 // ========================================================================== //
-class CV_EXPORTS SoftCascadeOctave : public cv::Boost
+class CV_EXPORTS SoftCascadeOctave : public Algorithm
 {
 public:
-
     enum
     {
         // Direct backward pruning. (Cha Zhang and Paul Viola)
@@ -171,39 +169,14 @@ public:
         HEURISTIC = 4
     };
 
-    SoftCascadeOctave(cv::Rect boundingBox, int npositives, int nnegatives, int logScale, int shrinkage);
-    virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth);
-    virtual void setRejectThresholds(OutputArray thresholds);
-    virtual void write( CvFileStorage* fs, string name) const;
-    virtual void write( cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const;
-    virtual float predict( InputArray _sample, InputArray _votes, bool raw_mode, bool return_sum ) const;
     virtual ~SoftCascadeOctave();
-protected:
-    virtual bool train( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& varIdx=cv::Mat(),
-       const cv::Mat& sampleIdx=cv::Mat(), const cv::Mat& varType=cv::Mat(), const cv::Mat& missingDataMask=cv::Mat());
+    static cv::Ptr<SoftCascadeOctave> create(cv::Rect boundingBox, int npositives, int nnegatives,
+        int logScale, int shrinkage);
 
-    void processPositives(const Dataset* dataset, const FeaturePool* pool);
-    void generateNegatives(const Dataset* dataset, const FeaturePool* pool);
-
-    float predict( const Mat& _sample, const cv::Range range) const;
-private:
-    void traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfeatures, int* used, const double* th) const;
-    virtual void initial_weights(double (&p)[2]);
-
-    int logScale;
-    cv::Rect boundingBox;
-
-    int npositives;
-    int nnegatives;
-
-    int shrinkage;
-
-    Mat integrals;
-    Mat responses;
-
-    CvBoostParams params;
-
-    Mat trainData;
+    virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth) = 0;
+    virtual void setRejectThresholds(OutputArray thresholds) = 0;
+    virtual void write( cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const = 0;
+    virtual void write( CvFileStorage* fs, string name) const = 0;
 };
 
 CV_EXPORTS bool initModule_softcascade(void);

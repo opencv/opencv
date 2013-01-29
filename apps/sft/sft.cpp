@@ -43,6 +43,7 @@
 // Trating application for Soft Cascades.
 
 #include <sft/common.hpp>
+#include <iostream>
 #include <sft/fpool.hpp>
 #include <sft/config.hpp>
 
@@ -127,22 +128,24 @@ int main(int argc, char** argv)
         cv::Rect boundingBox = cfg.bbox(it);
         std::cout << "Object bounding box" << boundingBox << std::endl;
 
-        cv::SoftCascadeOctave boost(boundingBox, npositives, nnegatives, *it, shrinkage);
+        typedef cv::SoftCascadeOctave Octave;
+
+        cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage);
 
         std::string path = cfg.trainPath;
         sft::ScaledDataset dataset(path, *it);
 
-        if (boost.train(&dataset, &pool, cfg.weaks, cfg.treeDepth))
+        if (boost->train(&dataset, &pool, cfg.weaks, cfg.treeDepth))
         {
             CvFileStorage* fout = cvOpenFileStorage(cfg.resPath(it).c_str(), 0, CV_STORAGE_WRITE);
-            boost.write(fout, cfg.cascadeName);
+            boost->write(fout, cfg.cascadeName);
 
             cvReleaseFileStorage( &fout);
 
             cv::Mat thresholds;
-            boost.setRejectThresholds(thresholds);
+            boost->setRejectThresholds(thresholds);
 
-            boost.write(fso, &pool, thresholds);
+            boost->write(fso, &pool, thresholds);
 
             cv::FileStorage tfs(("thresholds." + cfg.resPath(it)).c_str(), cv::FileStorage::WRITE);
             tfs << "thresholds" << thresholds;

@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include <queue>
+#include <string>
 
 #define WITH_DEBUG_OUT
 
@@ -122,10 +123,56 @@ struct Random
 }
 #endif
 
+using cv::Dataset;
+using cv::FeaturePool;
+using cv::InputArray;
+using cv::OutputArray;
+using cv::Mat;
+
 cv::FeaturePool::~FeaturePool(){}
 cv::Dataset::~Dataset(){}
 
-cv::SoftCascadeOctave::SoftCascadeOctave(cv::Rect bb, int np, int nn, int ls, int shr)
+class BoostedSoftCascadeOctave : public cv::Boost, public cv::SoftCascadeOctave
+{
+public:
+
+    BoostedSoftCascadeOctave(cv::Rect boundingBox = cv::Rect(), int npositives = 0, int nnegatives = 0, int logScale = 0, int shrinkage = 1);
+    virtual ~BoostedSoftCascadeOctave();
+    virtual cv::AlgorithmInfo* info() const;
+    virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth);
+    virtual void setRejectThresholds(OutputArray thresholds);
+    virtual void write( cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const;
+    virtual void write( CvFileStorage* fs, std::string name) const;
+protected:
+    virtual float predict( InputArray _sample, InputArray _votes, bool raw_mode, bool return_sum ) const;
+    virtual bool train( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& varIdx=cv::Mat(),
+       const cv::Mat& sampleIdx=cv::Mat(), const cv::Mat& varType=cv::Mat(), const cv::Mat& missingDataMask=cv::Mat());
+
+    void processPositives(const Dataset* dataset, const FeaturePool* pool);
+    void generateNegatives(const Dataset* dataset, const FeaturePool* pool);
+
+    float predict( const Mat& _sample, const cv::Range range) const;
+private:
+    void traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfeatures, int* used, const double* th) const;
+    virtual void initial_weights(double (&p)[2]);
+
+    int logScale;
+    cv::Rect boundingBox;
+
+    int npositives;
+    int nnegatives;
+
+    int shrinkage;
+
+    Mat integrals;
+    Mat responses;
+
+    CvBoostParams params;
+
+    Mat trainData;
+};
+
+BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, int ls, int shr)
 : logScale(ls), boundingBox(bb), npositives(np), nnegatives(nn), shrinkage(shr)
 {
     int maxSample = npositives + nnegatives;
@@ -155,9 +202,9 @@ cv::SoftCascadeOctave::SoftCascadeOctave(cv::Rect bb, int np, int nn, int ls, in
     params = _params;
 }
 
-cv::SoftCascadeOctave::~SoftCascadeOctave(){}
+BoostedSoftCascadeOctave::~BoostedSoftCascadeOctave(){}
 
-bool cv::SoftCascadeOctave::train( const cv::Mat& _trainData, const cv::Mat& _responses, const cv::Mat& varIdx,
+bool BoostedSoftCascadeOctave::train( const cv::Mat& _trainData, const cv::Mat& _responses, const cv::Mat& varIdx,
        const cv::Mat& sampleIdx, const cv::Mat& varType, const cv::Mat& missingDataMask)
 {
     bool update = false;
@@ -165,7 +212,7 @@ bool cv::SoftCascadeOctave::train( const cv::Mat& _trainData, const cv::Mat& _re
     update);
 }
 
-void cv::SoftCascadeOctave::setRejectThresholds(cv::OutputArray _thresholds)
+void BoostedSoftCascadeOctave::setRejectThresholds(cv::OutputArray _thresholds)
 {
     dprintf("set thresholds according to DBP strategy\n");
 
@@ -212,7 +259,7 @@ void cv::SoftCascadeOctave::setRejectThresholds(cv::OutputArray _thresholds)
     }
 }
 
-void cv::SoftCascadeOctave::processPositives(const Dataset* dataset, const FeaturePool* pool)
+void BoostedSoftCascadeOctave::processPositives(const Dataset* dataset, const FeaturePool* pool)
 {
     int w = boundingBox.width;
     int h = boundingBox.height;
@@ -259,7 +306,7 @@ void cv::SoftCascadeOctave::processPositives(const Dataset* dataset, const Featu
 #undef USE_LONG_SEEDS
 
 
-void cv::SoftCascadeOctave::generateNegatives(const Dataset* dataset, const FeaturePool* pool)
+void BoostedSoftCascadeOctave::generateNegatives(const Dataset* dataset, const FeaturePool* pool)
 {
     // ToDo: set seed, use offsets
     sft::Random::engine eng(DX_DY_SEED);
@@ -308,7 +355,7 @@ template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
 
-void cv::SoftCascadeOctave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfeatures, int* used, const double* th) const
+void BoostedSoftCascadeOctave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfeatures, int* used, const double* th) const
 {
     std::queue<const CvDTreeNode*> nodes;
     nodes.push( tree->get_root());
@@ -365,7 +412,7 @@ void cv::SoftCascadeOctave::traverse(const CvBoostTree* tree, cv::FileStorage& f
     fs << "}";
 }
 
-void cv::SoftCascadeOctave::write( cv::FileStorage &fso, const FeaturePool* pool, InputArray _thresholds) const
+void BoostedSoftCascadeOctave::write( cv::FileStorage &fso, const FeaturePool* pool, InputArray _thresholds) const
 {
     CV_Assert(!_thresholds.empty());
     cv::Mat used( 1, weak->total * ( (int)pow(2.f, params.max_depth) - 1), CV_32SC1);
@@ -397,14 +444,14 @@ void cv::SoftCascadeOctave::write( cv::FileStorage &fso, const FeaturePool* pool
         << "}";
 }
 
-void cv::SoftCascadeOctave::initial_weights(double (&p)[2])
+void BoostedSoftCascadeOctave::initial_weights(double (&p)[2])
 {
     double n = data->sample_count;
     p[0] =  n / (2. * (double)(nnegatives));
     p[1] =  n / (2. * (double)(npositives));
 }
 
-bool cv::SoftCascadeOctave::train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth)
+bool BoostedSoftCascadeOctave::train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth)
 {
     CV_Assert(treeDepth == 2);
     CV_Assert(weaks > 0);
@@ -458,7 +505,7 @@ bool cv::SoftCascadeOctave::train(const Dataset* dataset, const FeaturePool* poo
 
 }
 
-float cv::SoftCascadeOctave::predict( cv::InputArray _sample, cv::InputArray _votes, bool raw_mode, bool return_sum ) const
+float BoostedSoftCascadeOctave::predict( cv::InputArray _sample, cv::InputArray _votes, bool raw_mode, bool return_sum ) const
 {
     cv::Mat sample = _sample.getMat();
     CvMat csample = sample;
@@ -472,13 +519,24 @@ float cv::SoftCascadeOctave::predict( cv::InputArray _sample, cv::InputArray _vo
     }
 }
 
-float cv::SoftCascadeOctave::predict( const Mat& _sample, const cv::Range range) const
+float BoostedSoftCascadeOctave::predict( const Mat& _sample, const cv::Range range) const
 {
     CvMat sample = _sample;
     return CvBoost::predict(&sample, 0, 0, range, false, true);
 }
 
-void cv::SoftCascadeOctave::write( CvFileStorage* fs, string name) const
+void BoostedSoftCascadeOctave::write( CvFileStorage* fs, std::string _name) const
 {
-    CvBoost::write(fs, name.c_str());
+    CvBoost::write(fs, _name.c_str());
+}
+
+CV_INIT_ALGORITHM(BoostedSoftCascadeOctave, "SoftCascadeOctave.BoostedSoftCascadeOctave", );
+
+cv::SoftCascadeOctave::~SoftCascadeOctave(){}
+
+cv::Ptr<cv::SoftCascadeOctave> cv::SoftCascadeOctave::create(cv::Rect boundingBox, int npositives, int nnegatives,
+        int logScale, int shrinkage)
+{
+    cv::Ptr<cv::SoftCascadeOctave> octave(new BoostedSoftCascadeOctave(boundingBox, npositives, nnegatives, logScale, shrinkage));
+    return octave;
 }

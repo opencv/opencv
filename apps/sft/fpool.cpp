@@ -43,6 +43,8 @@
 #include <sft/fpool.hpp>
 #include <sft/random.hpp>
 
+#include <iostream>
+
 #include <queue>
 
 // ========= FeaturePool ========= //
