@@ -1212,6 +1212,7 @@ int maxFunctionalScore(const CvLSVMFilterObject **all_F, int n,
         free(tmpPartsDisplacement[i]);
     }
     free(tmpPoints);
+    free(tmpPartsDisplacement);
     free(tmpScore);
     free(tmpKPoints);
 
