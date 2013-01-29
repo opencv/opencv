@@ -134,7 +134,6 @@ struct Level
     cv::Size objSize;
 
     float scaling[2]; // 0-th for channels <= 6, 1-st otherwise
-    typedef cv::SCascade::Detection Detection;
 
     Level(const Octave& oct, const float scale, const int shrinkage, const int w, const int h)
     :  octave(&oct), origScale(scale), relScale(scale / oct.scale),
@@ -146,13 +145,13 @@ struct Level
         scaleshift = static_cast<int>(relScale * (1 << 16));
     }
 
-    void addDetection(const int x, const int y, float confidence, std::vector<Detection>& detections) const
+    void addDetection(const int x, const int y, float confidence, std::vector<cv::Detection>& detections) const
     {
         // fix me
         int shrinkage = 4;//(*octave).shrinkage;
         cv::Rect rect(cvRound(x * shrinkage), cvRound(y * shrinkage), objSize.width, objSize.height);
 
-        detections.push_back(Detection(rect, confidence));
+        detections.push_back(cv::Detection(rect, confidence));
     }
 
     float rescale(cv::Rect& scaledRect, const float threshold, int idx) const
@@ -184,9 +183,9 @@ struct ChannelStorage
     {
         hog.clear();
         hog.reserve(10);
-        cv::SCascade::Channels ints(shr);
+        cv::Channels ints(shr);
 
-        // convert to grey
+        // convert to gray
         cv::Mat grey;
         cv::cvtColor(colored, grey, CV_BGR2GRAY);
 
@@ -213,7 +212,7 @@ struct ChannelStorage
 
 }
 
-struct cv::SCascade::Fields
+struct cv::SoftCascadeDetector::Fields
 {
     float minScale;
     float maxScale;
@@ -417,17 +416,17 @@ struct cv::SCascade::Fields
     }
 };
 
-cv::SCascade::SCascade(const double mins, const double maxs, const int nsc, const int rej)
+cv::SoftCascadeDetector::SoftCascadeDetector(const double mins, const double maxs, const int nsc, const int rej)
 : fields(0), minScale(mins), maxScale(maxs), scales(nsc), rejCriteria(rej) {}
 
-cv::SCascade::~SCascade() { delete fields;}
+cv::SoftCascadeDetector::~SoftCascadeDetector() { delete fields;}
 
-void cv::SCascade::read(const FileNode& fn)
+void cv::SoftCascadeDetector::read(const FileNode& fn)
 {
     Algorithm::read(fn);
 }
 
-bool cv::SCascade::load(const FileNode& fn)
+bool cv::SoftCascadeDetector::load(const FileNode& fn)
 {
     if (fields) delete fields;
 
@@ -436,13 +435,13 @@ bool cv::SCascade::load(const FileNode& fn)
 }
 
 namespace {
-typedef cv::SCascade::Detection Detection;
-typedef std::vector<Detection>  dvector;
+
+typedef std::vector<cv::Detection>  dvector;
 
 
 struct ConfidenceGt
 {
-    bool operator()(const Detection& a, const Detection& b) const
+    bool operator()(const cv::Detection& a, const cv::Detection& b) const
     {
         return a.confidence > b.confidence;
     }
@@ -463,10 +462,10 @@ void DollarNMS(dvector& objects)
 
     for (dvector::iterator dIt = objects.begin(); dIt != objects.end(); ++dIt)
     {
-        const Detection &a = *dIt;
+        const cv::Detection &a = *dIt;
         for (dvector::iterator next = dIt + 1; next != objects.end(); )
         {
-            const Detection &b = *next;
+            const cv::Detection &b = *next;
 
             const float ovl =  overlap(a.bb, b.bb) / std::min(a.bb.area(), b.bb.area());
 
@@ -478,15 +477,15 @@ void DollarNMS(dvector& objects)
     }
 }
 
-static void suppress(int type, std::vector<Detection>& objects)
+static void suppress(int type, std::vector<cv::Detection>& objects)
 {
-    CV_Assert(type == cv::SCascade::DOLLAR);
+    CV_Assert(type == cv::SoftCascadeDetector::DOLLAR);
     DollarNMS(objects);
 }
 
 }
 
-void cv::SCascade::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects) const
+void cv::SoftCascadeDetector::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects) const
 {
     Fields& fld = *fields;
     // create integrals
@@ -513,9 +512,9 @@ void cv::SCascade::detectNoRoi(const cv::Mat& image, std::vector<Detection>& obj
     if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
 }
 
-void cv::SCascade::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<Detection>& objects) const
+void cv::SoftCascadeDetector::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<Detection>& objects) const
 {
-    // only color images are supperted
+    // only color images are suppered
     cv::Mat image = _image.getMat();
     CV_Assert(image.type() == CV_8UC3);
 
@@ -565,7 +564,7 @@ void cv::SCascade::detect(cv::InputArray _image, cv::InputArray _rois, std::vect
     if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
 }
 
-void cv::SCascade::detect(InputArray _image, InputArray _rois,  OutputArray _rects, OutputArray _confs) const
+void cv::SoftCascadeDetector::detect(InputArray _image, InputArray _rois,  OutputArray _rects, OutputArray _confs) const
 {
     std::vector<Detection> objects;
     detect( _image, _rois, objects);

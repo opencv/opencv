@@ -99,9 +99,9 @@ void cv::ICFPreprocessor::apply(cv::InputArray _frame, cv::OutputArray _integral
     cv::integral(shrunk, integrals, cv::noArray(), CV_32S);
 }
 
-cv::SCascade::Channels::Channels(int shr) : shrinkage(shr) {}
+cv::Channels::Channels(int shr) : shrinkage(shr) {}
 
-void cv::SCascade::Channels::appendHogBins(const cv::Mat& gray, std::vector<cv::Mat>& integrals, int bins) const
+void cv::Channels::appendHogBins(const cv::Mat& gray, std::vector<cv::Mat>& integrals, int bins) const
 {
     CV_Assert(gray.type() == CV_8UC1);
     int h = gray.rows;
@@ -149,7 +149,7 @@ void cv::SCascade::Channels::appendHogBins(const cv::Mat& gray, std::vector<cv::
     integrals.push_back(mag);
 }
 
-void cv::SCascade::Channels::appendLuvBins(const cv::Mat& frame, std::vector<cv::Mat>& integrals) const
+void cv::Channels::appendLuvBins(const cv::Mat& frame, std::vector<cv::Mat>& integrals) const
 {
     CV_Assert(frame.type() == CV_8UC3);
     CV_Assert(!(frame.cols % shrinkage) && !(frame.rows % shrinkage));

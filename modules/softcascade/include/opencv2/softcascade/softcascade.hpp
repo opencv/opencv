@@ -56,50 +56,52 @@ protected:
     enum {BINS = 10};
 };
 
-// Implementation of soft (stageless) cascaded detector.
-class CV_EXPORTS_W SCascade : public Algorithm
+// Representation of detectors result.
+struct CV_EXPORTS Detection
+{
+    // Default object type.
+    enum {PEDESTRIAN = 1};
+
+    // Creates Detection from an object bounding box and confidence.
+    // Param b is a bounding box
+    // Param c is a confidence that object belongs to class k
+    // Param k is an object class
+    Detection(const cv::Rect& b, const float c, int k = PEDESTRIAN) : bb(b), confidence(c), kind(k) {}
+
+    cv::Rect bb;
+    float confidence;
+    int kind;
+};
+
+// Create channel integrals for Soft Cascade detector.
+class CV_EXPORTS Channels
 {
 public:
+    // constrictor form resizing factor.
+    // Param shrinkage is a resizing factor. Resize is applied before the computing integral sum
+    Channels(const int shrinkage);
 
-    // Representation of detectors result.
-    struct CV_EXPORTS Detection
-    {
-        // Default object type.
-        enum {PEDESTRIAN = 1};
+    // Appends specified number of HOG first-order features integrals into given vector.
+    // Param gray is an input 1-channel gray image.
+    // Param integrals is a vector of integrals. Hog-channels will be appended to it.
+    // Param bins is a number of hog-bins
+    void appendHogBins(const cv::Mat& gray, std::vector<cv::Mat>& integrals, int bins) const;
 
-        // Creates Detection from an object bounding box and confidence.
-        // Param b is a bounding box
-        // Param c is a confidence that object belongs to class k
-        // Param k is an object class
-        Detection(const cv::Rect& b, const float c, int k = PEDESTRIAN) : bb(b), confidence(c), kind(k) {}
+    // Converts 3-channel BGR input frame in  Luv and appends each channel to the integrals.
+    // Param frame is an input 3-channel BGR colored image.
+    // Param integrals is a vector of integrals. Computed from the frame luv-channels will be appended to it.
+    void appendLuvBins(const cv::Mat& frame, std::vector<cv::Mat>& integrals) const;
 
-        cv::Rect bb;
-        float confidence;
-        int kind;
-    };
+private:
+    int shrinkage;
+};
 
-    // Create channel integrals for Soft Cascade detector.
-    class CV_EXPORTS Channels
-    {
-    public:
-        // constrictor form resizing factor.
-        // Param shrinkage is a resizing factor. Resize is applied before the computing integral sum
-        Channels(const int shrinkage);
-
-        // Appends specified number of HOG first-order features integrals into given vector.
-        // Param gray is an input 1-channel gray image.
-        // Param integrals is a vector of integrals. Hog-channels will be appended to it.
-        // Param bins is a number of hog-bins
-        void appendHogBins(const cv::Mat& gray, std::vector<cv::Mat>& integrals, int bins) const;
-
-        // Converts 3-channel BGR input frame in  Luv and appends each channel to the integrals.
-        // Param frame is an input 3-channel BGR colored image.
-        // Param integrals is a vector of integrals. Computed from the frame luv-channels will be appended to it.
-        void appendLuvBins(const cv::Mat& frame, std::vector<cv::Mat>& integrals) const;
-
-    private:
-        int shrinkage;
-    };
+// ========================================================================== //
+//             Implementation of soft (stageless) cascaded detector.
+// ========================================================================== //
+class CV_EXPORTS_W SoftCascadeDetector : public Algorithm
+{
+public:
 
     enum { NO_REJECT = 1, DOLLAR = 2, /*PASCAL = 4,*/ DEFAULT = NO_REJECT};
 
@@ -108,24 +110,25 @@ public:
     // Param minScale is a maximum scale relative to the original size of the image on which cascade will be applied.
     // Param scales is a number of scales from minScale to maxScale.
     // Param rejCriteria is used for NMS.
-    CV_WRAP SCascade(const double minScale = 0.4, const double maxScale = 5., const int scales = 55, const int rejCriteria = 1);
+    CV_WRAP SoftCascadeDetector(double minScale = 0.4, double maxScale = 5., int scales = 55, int rejCriteria = 1);
 
-    CV_WRAP virtual ~SCascade();
+    CV_WRAP virtual ~SoftCascadeDetector();
 
     cv::AlgorithmInfo* info() const;
 
-    // Load cascade from FileNode.
-    // Param fn is a root node for cascade. Should be <cascade>.
-    CV_WRAP virtual bool load(const FileNode& fn);
+    // Load soft cascade from FileNode.
+    // Param fileNode is a root node for cascade.
+    CV_WRAP virtual bool load(const FileNode& fileNode);
 
-    // Load cascade config.
-    CV_WRAP virtual void read(const FileNode& fn);
+    // Load soft cascade config.
+    CV_WRAP virtual void read(const FileNode& fileNode);
 
     // Return the vector of Detection objects.
     // Param image is a frame on which detector will be applied.
     // Param rois is a vector of regions of interest. Only the objects that fall into one of the regions will be returned.
     // Param objects is an output array of Detections
     virtual void detect(InputArray image, InputArray rois, std::vector<Detection>& objects) const;
+
     // Param rects is an output array of bounding rectangles for detected objects.
     // Param confs is an output array of confidence for detected objects. i-th bounding rectangle corresponds i-th confidence.
     CV_WRAP virtual void detect(InputArray image, InputArray rois, CV_OUT OutputArray rects, CV_OUT OutputArray confs) const;
@@ -144,6 +147,7 @@ private:
 };
 
 CV_EXPORTS bool initModule_softcascade(void);
+
 }
 
 #endif

@@ -9,9 +9,8 @@ typedef perf::TestBaseWithParam<fixture> detect;
 
 
 namespace {
-typedef cv::SCascade::Detection detection_t;
 
-void extractRacts(std::vector<detection_t> objectBoxes, std::vector<Rect>& rects)
+void extractRacts(std::vector<cv::Detection> objectBoxes, std::vector<Rect>& rects)
 {
     rects.clear();
     for (int i = 0; i < (int)objectBoxes.size(); ++i)
@@ -20,20 +19,19 @@ void extractRacts(std::vector<detection_t> objectBoxes, std::vector<Rect>& rects
 
 }
 
-PERF_TEST_P(detect, SCascade,
+PERF_TEST_P(detect, SoftCascadeDetector,
     testing::Combine(testing::Values(std::string("cv/cascadeandhog/cascades/inria_caltech-17.01.2013.xml")),
     testing::Values(std::string("cv/cascadeandhog/images/image_00000000_0.png"))))
 {
-    typedef cv::SCascade::Detection Detection;
     cv::Mat colored = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(colored.empty());
 
-    cv::SCascade cascade;
+    cv::SoftCascadeDetector cascade;
     cv::FileStorage fs(getDataPath(get<0>(GetParam())), cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    std::vector<detection_t> objectBoxes;
+    std::vector<cv::Detection> objectBoxes;
     cascade.detect(colored, cv::noArray(), objectBoxes);
 
     TEST_CYCLE()

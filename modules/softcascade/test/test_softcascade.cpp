@@ -45,20 +45,20 @@
 
 #include "test_precomp.hpp"
 
-TEST(SCascade, readCascade)
+TEST(SoftCascadeDetector, readCascade)
 {
     std::string xml = cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
-    cv::SCascade cascade;
+    cv::SoftCascadeDetector cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 }
 
-TEST(SCascade, detect)
+TEST(SoftCascadeDetector, detect)
 {
-    typedef cv::SCascade::Detection Detection;
+    typedef cv::Detection Detection;
     std::string xml =  cvtest::TS::ptr()->get_data_path()+ "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
-    cv::SCascade cascade;
+    cv::SoftCascadeDetector cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
@@ -71,11 +71,11 @@ TEST(SCascade, detect)
     ASSERT_EQ(719, (int)objects.size());
 }
 
-TEST(SCascade, detectSeparate)
+TEST(SoftCascadeDetector, detectSeparate)
 {
-    typedef cv::SCascade::Detection Detection;
+    typedef cv::Detection Detection;
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
-    cv::SCascade cascade;
+    cv::SoftCascadeDetector cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
@@ -88,11 +88,11 @@ TEST(SCascade, detectSeparate)
     ASSERT_EQ(719, confs.cols);
 }
 
-TEST(SCascade, detectRoi)
+TEST(SoftCascadeDetector, detectRoi)
 {
-    typedef cv::SCascade::Detection Detection;
+    typedef cv::Detection Detection;
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
-    cv::SCascade cascade;
+    cv::SoftCascadeDetector cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
@@ -107,11 +107,11 @@ TEST(SCascade, detectRoi)
     ASSERT_EQ(719, (int)objects.size());
 }
 
-TEST(SCascade, detectNoRoi)
+TEST(SoftCascadeDetector, detectNoRoi)
 {
-    typedef cv::SCascade::Detection Detection;
+    typedef cv::Detection Detection;
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
-    cv::SCascade cascade;
+    cv::SoftCascadeDetector cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
@@ -126,11 +126,11 @@ TEST(SCascade, detectNoRoi)
     ASSERT_EQ(719, (int)objects.size());
 }
 
-TEST(SCascade, detectEmptyRoi)
+TEST(SoftCascadeDetector, detectEmptyRoi)
 {
-    typedef cv::SCascade::Detection Detection;
+    typedef cv::Detection Detection;
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
-    cv::SCascade cascade;
+    cv::SoftCascadeDetector cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 

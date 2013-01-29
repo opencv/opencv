@@ -45,7 +45,7 @@
 namespace cv
 {
 
-CV_INIT_ALGORITHM(SCascade, "CascadeDetector.SCascade",
+CV_INIT_ALGORITHM(SoftCascadeDetector, "CascadeDetector.SoftCascadeDetector",
                   obj.info()->addParam(obj, "minScale",    obj.minScale);
                   obj.info()->addParam(obj, "maxScale",    obj.maxScale);
                   obj.info()->addParam(obj, "scales",      obj.scales);
@@ -53,7 +53,7 @@ CV_INIT_ALGORITHM(SCascade, "CascadeDetector.SCascade",
 
 bool initModule_softcascade(void)
 {
-    Ptr<Algorithm> sc = createSCascade();
+    Ptr<Algorithm> sc = createSoftCascadeDetector();
     return sc->info() != 0;
 }
 
