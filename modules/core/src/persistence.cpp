@@ -584,10 +584,11 @@ cvGetHashedKey( CvFileStorage* fs, const char* str, int len, int create_missing 
     CvStringHashNode* node = 0;
     unsigned hashval = 0;
     int i, tab_size;
-    CvStringHash* map = fs->str_hash;
 
     if( !fs )
         return 0;
+
+    CvStringHash* map = fs->str_hash;
 
     if( len < 0 )
     {

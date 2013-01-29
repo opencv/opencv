@@ -615,7 +615,7 @@ namespace cv
                                                              CL_PROGRAM_BUILD_LOG, buildLogSize, buildLog, NULL));
                         cout << "\n\t\t\tBUILD LOG\n";
                         cout << buildLog << endl;
-                        delete buildLog;
+                        delete [] buildLog;
                     }
                     openCLVerifyCall(status);
                 }
