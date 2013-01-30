@@ -130,7 +130,7 @@ int main(int argc, char** argv)
 
         typedef cv::SoftCascadeOctave Octave;
 
-        cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage);
+        cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage, nfeatures);
 
         std::string path = cfg.trainPath;
         sft::ScaledDataset dataset(path, *it);

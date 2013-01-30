@@ -64,11 +64,15 @@ using cv::Mat;
 cv::FeaturePool::~FeaturePool(){}
 cv::Dataset::~Dataset(){}
 
+namespace {
+
+
 class BoostedSoftCascadeOctave : public cv::Boost, public cv::SoftCascadeOctave
 {
 public:
 
-    BoostedSoftCascadeOctave(cv::Rect boundingBox = cv::Rect(), int npositives = 0, int nnegatives = 0, int logScale = 0, int shrinkage = 1);
+    BoostedSoftCascadeOctave(cv::Rect boundingBox = cv::Rect(), int npositives = 0, int nnegatives = 0, int logScale = 0,
+        int shrinkage = 1, int poolSize = 0);
     virtual ~BoostedSoftCascadeOctave();
     virtual cv::AlgorithmInfo* info() const;
     virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth);
@@ -80,8 +84,8 @@ protected:
     virtual bool train( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& varIdx=cv::Mat(),
        const cv::Mat& sampleIdx=cv::Mat(), const cv::Mat& varType=cv::Mat(), const cv::Mat& missingDataMask=cv::Mat());
 
-    void processPositives(const Dataset* dataset, const FeaturePool* pool);
-    void generateNegatives(const Dataset* dataset, const FeaturePool* pool);
+    void processPositives(const Dataset* dataset);
+    void generateNegatives(const Dataset* dataset);
 
     float predict( const Mat& _sample, const cv::Range range) const;
 private:
@@ -102,9 +106,11 @@ private:
     CvBoostParams params;
 
     Mat trainData;
+
+    cv::Ptr<cv::ChannelFeatureBuilder> builder;
 };
 
-BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, int ls, int shr)
+BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, int ls, int shr, int poolSize)
 : logScale(ls), boundingBox(bb), npositives(np), nnegatives(nn), shrinkage(shr)
 {
     int maxSample = npositives + nnegatives;
@@ -132,6 +138,13 @@ BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, 
     }
 
     params = _params;
+
+    builder = cv::ChannelFeatureBuilder::create();
+
+    int w = boundingBox.width;
+    int h = boundingBox.height;
+
+    integrals.create(poolSize, (w / shrinkage + 1) * (h / shrinkage * 10 + 1), CV_32SC1);
 }
 
 BoostedSoftCascadeOctave::~BoostedSoftCascadeOctave(){}
@@ -191,12 +204,11 @@ void BoostedSoftCascadeOctave::setRejectThresholds(cv::OutputArray _thresholds)
     }
 }
 
-void BoostedSoftCascadeOctave::processPositives(const Dataset* dataset, const FeaturePool* pool)
+void BoostedSoftCascadeOctave::processPositives(const Dataset* dataset)
 {
-    int w = boundingBox.width;
     int h = boundingBox.height;
 
-    integrals.create(pool->size(), (w / shrinkage + 1) * (h / shrinkage * 10 + 1), CV_32SC1);
+    cv::ChannelFeatureBuilder& _builder = *builder;
 
     int total = 0;
     for (int curr = 0; curr < dataset->available( Dataset::POSITIVE); ++curr)
@@ -206,7 +218,7 @@ void BoostedSoftCascadeOctave::processPositives(const Dataset* dataset, const Fe
         cv::Mat channels = integrals.row(total).reshape(0, h / shrinkage * 10 + 1);
         sample = sample(boundingBox);
 
-        pool->preprocess(sample, channels);
+        _builder(sample, channels);
         responses.ptr<float>(total)[0] = 1.f;
 
         if (++total >= npositives) break;
@@ -238,7 +250,7 @@ void BoostedSoftCascadeOctave::processPositives(const Dataset* dataset, const Fe
 #undef USE_LONG_SEEDS
 
 
-void BoostedSoftCascadeOctave::generateNegatives(const Dataset* dataset, const FeaturePool* pool)
+void BoostedSoftCascadeOctave::generateNegatives(const Dataset* dataset)
 {
     // ToDo: set seed, use offsets
     sft::Random::engine eng(DX_DY_SEED);
@@ -251,6 +263,8 @@ void BoostedSoftCascadeOctave::generateNegatives(const Dataset* dataset, const F
 
     int total = 0;
     Mat sum;
+
+    cv::ChannelFeatureBuilder& _builder = *builder;
     for (int i = npositives; i < nnegatives + npositives; ++total)
     {
         int curr = iRand(idxEng);
@@ -269,7 +283,7 @@ void BoostedSoftCascadeOctave::generateNegatives(const Dataset* dataset, const F
         frame = frame(cv::Rect(dx, dy, boundingBox.width, boundingBox.height));
 
         cv::Mat channels = integrals.row(i).reshape(0, h / shrinkage * 10 + 1);
-        pool->preprocess(frame, channels);
+        _builder(frame, channels);
 
         dprintf("generated %d %d\n", dx, dy);
         // // if (predict(sum))
@@ -392,8 +406,8 @@ bool BoostedSoftCascadeOctave::train(const Dataset* dataset, const FeaturePool* 
     params.weak_count = weaks;
 
     // 1. fill integrals and classes
-    processPositives(dataset, pool);
-    generateNegatives(dataset, pool);
+    processPositives(dataset);
+    generateNegatives(dataset);
 
     // 2. only simple case (all features used)
     int nfeatures = pool->size();
@@ -462,13 +476,16 @@ void BoostedSoftCascadeOctave::write( CvFileStorage* fs, std::string _name) cons
     CvBoost::write(fs, _name.c_str());
 }
 
+}
+
 CV_INIT_ALGORITHM(BoostedSoftCascadeOctave, "SoftCascadeOctave.BoostedSoftCascadeOctave", );
 
 cv::SoftCascadeOctave::~SoftCascadeOctave(){}
 
 cv::Ptr<cv::SoftCascadeOctave> cv::SoftCascadeOctave::create(cv::Rect boundingBox, int npositives, int nnegatives,
-        int logScale, int shrinkage)
+        int logScale, int shrinkage, int poolSize)
 {
-    cv::Ptr<cv::SoftCascadeOctave> octave(new BoostedSoftCascadeOctave(boundingBox, npositives, nnegatives, logScale, shrinkage));
+    cv::Ptr<cv::SoftCascadeOctave> octave(
+        new BoostedSoftCascadeOctave(boundingBox, npositives, nnegatives, logScale, shrinkage, poolSize));
     return octave;
 }

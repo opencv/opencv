@@ -53,12 +53,6 @@ sft::ICFFeaturePool::ICFFeaturePool(cv::Size m, int n) : FeaturePool(), model(m)
 {
     CV_Assert(m != cv::Size() && n > 0);
     fill(nfeatures);
-    builder = cv::ChannelFeatureBuilder::create();
-}
-
-void sft::ICFFeaturePool::preprocess(cv::InputArray frame, cv::OutputArray integrals) const
-{
-    (*builder)(frame, integrals);
 }
 
 float sft::ICFFeaturePool::apply(int fi, int si, const Mat& integrals) const

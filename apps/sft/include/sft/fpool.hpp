@@ -61,7 +61,6 @@ public:
 
     virtual int size() const { return (int)pool.size(); }
     virtual float apply(int fi, int si, const cv::Mat& integrals) const;
-    virtual void preprocess(cv::InputArray _frame, cv::OutputArray _integrals) const;
     virtual void write( cv::FileStorage& fs, int index) const;
 
     virtual ~ICFFeaturePool();
@@ -76,8 +75,6 @@ private:
     std::vector<cv::ChannelFeature> pool;
 
     static const unsigned int seed = 0;
-
-    cv::Ptr<cv::ChannelFeatureBuilder> builder;
 
     enum { N_CHANNELS = 10 };
 };

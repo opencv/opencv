@@ -71,9 +71,6 @@ public:
     virtual int size() const = 0;
     virtual float apply(int fi, int si, const Mat& integrals) const = 0;
     virtual void write( cv::FileStorage& fs, int index) const = 0;
-
-    virtual void preprocess(InputArray frame, OutputArray integrals) const = 0;
-
     virtual ~FeaturePool();
 };
 
@@ -196,7 +193,7 @@ public:
 
     virtual ~SoftCascadeOctave();
     static cv::Ptr<SoftCascadeOctave> create(cv::Rect boundingBox, int npositives, int nnegatives,
-        int logScale, int shrinkage);
+        int logScale, int shrinkage, int poolSize);
 
     virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth) = 0;
     virtual void setRejectThresholds(OutputArray thresholds) = 0;
