@@ -547,7 +547,7 @@ void CascadeInvoker<Policy>::operator()(const PtrStepSzb& roi, const PtrStepSzi&
     soft_cascade<Policy, false><<<grid, Policy::block(), 0, stream>>>(inv, det, max_det, ctr, 0);
     cudaSafeCall( cudaGetLastError());
 
-    grid = dim3(fw, fh / Policy::STA_Y, 38 - downscales);
+    grid = dim3(fw, fh / Policy::STA_Y, min(38, scales) - downscales);
     soft_cascade<Policy, true><<<grid, Policy::block(), 0, stream>>>(inv, det, max_det, ctr, downscales);
 
     if (!stream)

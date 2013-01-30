@@ -219,15 +219,30 @@ INSTANTIATE_TEST_CASE_P(GPU_SoftCascade, SCascadeTestRoi, testing::Combine(
     testing::Range(0, 5)));
 
 ////////////////////////////////////////
-PARAM_TEST_CASE(SCascadeTestAll, cv::gpu::DeviceInfo, std::string)
+
+namespace {
+
+struct Fixture
+{
+    std::string path;
+    int expected;
+
+    Fixture(){}
+    Fixture(std::string p, int e): path(p), expected(e) {}
+};
+}
+
+PARAM_TEST_CASE(SCascadeTestAll, cv::gpu::DeviceInfo, Fixture)
 {
 
     std::string xml;
+    int expected;
 
     virtual void SetUp()
     {
         cv::gpu::setDevice(GET_PARAM(0).deviceID());
-        xml = path(GET_PARAM(1));
+        xml = path(GET_PARAM(1).path);
+        expected = GET_PARAM(1).expected;
     }
 };
 
@@ -265,34 +280,7 @@ GPU_TEST_P(SCascadeTestAll, detect)
     }
 
     SHOW(coloredCpu);
-    // ASSERT_EQ(count, 2448);
-}
-
-GPU_TEST_P(SCascadeTestAll, detectOnIntegral)
-{
-    cv::gpu::SCascade cascade;
-
-    cv::FileStorage fs(xml, cv::FileStorage::READ);
-    ASSERT_TRUE(fs.isOpened());
-
-    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
-
-    cv::Mat coloredCpu = cv::imread(path("images/image_00000000_0.png"));
-    cv::ICFPreprocessor preprocessor;
-    cv::Mat integrals(coloredCpu.rows / 4 * 10 + 1, coloredCpu.cols / 4 + 1, CV_8UC1);
-    preprocessor.apply(coloredCpu, integrals);
-    GpuMat hogluv(integrals);
-
-    GpuMat objectBoxes(1, 100000, CV_8UC1), rois(cv::Size(640, 480), CV_8UC1);
-    rois.setTo(1);
-
-    objectBoxes.setTo(0);
-    cascade.detect(hogluv, rois, objectBoxes);
-
-//     typedef cv::gpu::SCascade::Detection Detection;
-//     cv::Mat detections(objectBoxes);
-//     int a = *(detections.ptr<int>(0));
-//     ASSERT_EQ(a, 1024);
+    ASSERT_EQ(*count, expected);
 }
 
 GPU_TEST_P(SCascadeTestAll, detectStream)
@@ -308,9 +296,7 @@ GPU_TEST_P(SCascadeTestAll, detectStream)
     ASSERT_FALSE(coloredCpu.empty());
 
     GpuMat colored(coloredCpu), objectBoxes(1, 100000, CV_8UC1), rois(colored.size(), CV_8UC1);
-    rois.setTo(0);
-    GpuMat sub(rois, cv::Rect(rois.cols / 4, rois.rows / 4,rois.cols / 2, rois.rows / 2));
-    sub.setTo(cv::Scalar::all(1));
+    rois.setTo(cv::Scalar::all(1));
 
     cv::gpu::Stream s;
 
@@ -318,14 +304,14 @@ GPU_TEST_P(SCascadeTestAll, detectStream)
     cascade.detect(colored, rois, objectBoxes, s);
     s.waitForCompletion();
 
-    // typedef cv::gpu::SCascade::Detection Detection;
-    // cv::Mat detections(objectBoxes);
-    // int a = *(detections.ptr<int>(0));
-    // ASSERT_EQ(a, 2448);
+    typedef cv::gpu::SCascade::Detection Detection;
+    cv::Mat detections(objectBoxes);
+    int a = *(detections.ptr<int>(0));
+    ASSERT_EQ(a, expected);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_SoftCascade, SCascadeTestAll, testing::Combine( ALL_DEVICES,
-                    testing::Values(std::string("cascades/inria_caltech-17.01.2013.xml"),
-                                    std::string("cascades/sc_cvpr_2012_to_opencv_new_format.xml"))));
+                    testing::Values(Fixture("cascades/inria_caltech-17.01.2013.xml", 7),
+                                    Fixture("cascades/sc_cvpr_2012_to_opencv_new_format.xml", 1291))));
 
 #endif

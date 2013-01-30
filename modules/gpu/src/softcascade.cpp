@@ -133,10 +133,6 @@ struct cv::gpu::SCascade::Fields
 
         std::string fformat = (string)root[SC_FEATURE_FORMAT];
         bool useBoxes = (fformat == "BOX");
-
-        if(useBoxes)
-            std::cout << "use boxes!!!";
-
         ushort shrinkage = cv::saturate_cast<ushort>((int)root[SC_SHRINKAGE]);
 
         FileNode fn = root[SC_OCTAVES];
@@ -154,12 +150,7 @@ struct cv::gpu::SCascade::Fields
         {
             FileNode fns = *it;
             float scale = powf(2.f,saturate_cast<float>((int)fns[SC_OCT_SCALE]));
-            std::cout << "octave scale " << scale << std::endl;
-
             bool isUPOctave = scale >= 1;
-
-            if (isUPOctave)
-                std::cout << "isUPOctave" << std::endl;
 
             ushort nweaks = saturate_cast<ushort>((int)fns[SC_OCT_WEAKS]);
 
@@ -225,11 +216,9 @@ struct cv::gpu::SCascade::Fields
                 {
                     inIt +=2;
                     int featureIdx = (int)(*(inIt++));
-                    // std::cout << "  featureIdx " << featureIdx << " " << feature_rects[featureIdx] << std::endl;
 
                     float orig_threshold = (float)(*(inIt++));
                     unsigned int th = saturate_cast<unsigned int>((int)orig_threshold);
-                    // std::cout << "orig_threshold " << orig_threshold << " converted " << th << std::endl;
                     cv::Rect& r = feature_rects[featureIdx];
                     uchar4 rect;
                     rect.x = saturate_cast<uchar>(r.x);
@@ -248,7 +237,6 @@ struct cv::gpu::SCascade::Fields
                     vleaves.push_back((float)(*inIt));
                 }
             }
-            std::cout << std::endl;
         }
 
         cv::Mat hoctaves(1, (int) (voctaves.size() * sizeof(Octave)), CV_8UC1, (uchar*)&(voctaves[0]));
@@ -424,7 +412,7 @@ public:
     // 160x120x10
     GpuMat shrunk;
 
-    // temporial mat for integrall
+    // temporal mat for integral
     GpuMat integralBuffer;
 
     // 161x121x10
@@ -591,7 +579,7 @@ private:
 
         cv::gpu::cartToPolar(dfdx, dfdy, mag, ang, true, s);
 
-        // normolize magnitude to uchar interval and angles to 6 bins
+        // normalize magnitude to uchar interval and angles to 6 bins
         GpuMat nmag(fplane, cv::Rect(0, 4 * fh, fw, fh));
         GpuMat nang(fplane, cv::Rect(0, 5 * fh, fw, fh));
 

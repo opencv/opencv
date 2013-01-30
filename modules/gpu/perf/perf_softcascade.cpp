@@ -194,52 +194,6 @@ RUN_GPU(SCascadeTestRoi, detectEachRoi)
 
 NO_CPU(SCascadeTestRoi, detectEachRoi)
 
-SC_PERF_TEST_P(SCascadeTest, detectOnIntegral,
-    testing::Combine(
-        testing::Values(std::string("cv/cascadeandhog/cascades/inria_caltech-17.01.2013.xml"),
-                        std::string("cv/cascadeandhog/cascades/sc_cvpr_2012_to_opencv_new_format.xml")),
-        testing::Values(std::string("cv/cascadeandhog/integrals.xml"))))
-
-static std::string itoa(long i)
-{
-    static char s[65];
-    sprintf(s, "%ld", i);
-    return std::string(s);
-}
-
-RUN_GPU(SCascadeTest, detectOnIntegral)
-{
-    cv::Mat cpu = readImage ("cv/cascadeandhog/images/image_00000000_0.png");
-    ASSERT_FALSE(cpu.empty());
-
-    cv::ICFPreprocessor preprocessor;
-    cv::Mat test_res(cpu.rows / 4 * 10 + 1, cpu.cols / 4 + 1, CV_8UC1);
-    preprocessor.apply(cpu,test_res);
-
-    cv::gpu::SCascade cascade;
-
-    cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
-    ASSERT_TRUE(fs.isOpened());
-
-    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
-
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(cv::Size(640, 480), CV_8UC1);
-    rois.setTo(1);
-
-    cv::gpu::GpuMat hogluv(test_res);
-
-    cascade.detect(hogluv, rois, objectBoxes);
-
-    TEST_CYCLE()
-    {
-        cascade.detect(hogluv, rois, objectBoxes);
-    }
-
-    SANITY_CHECK(sortDetections(objectBoxes));
-}
-
-NO_CPU(SCascadeTest, detectOnIntegral)
-
 SC_PERF_TEST_P(SCascadeTest, detectStream,
     testing::Combine(
         testing::Values(std::string("cv/cascadeandhog/cascades/inria_caltech-17.01.2013.xml"),
@@ -271,10 +225,7 @@ RUN_GPU(SCascadeTest, detectStream)
         cascade.detect(colored, rois, objectBoxes, s);
     }
 
-#ifdef HAVE_CUDA
-    cudaDeviceSynchronize();
-#endif
-
+    s.waitForCompletion();
     SANITY_CHECK(sortDetections(objectBoxes));
 }
 
