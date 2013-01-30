@@ -159,7 +159,7 @@ void CV_ModelEstimator2_Test::fill_array( int test_case_idx, int i, int j, Mat& 
                         Point2d tangentVector_1 = arr.at<Point2d>(endPointIndex) - arr.at<Point2d>(startPointIndex);
                         Point2d tangentVector_2 = arr.at<Point2d>(testPointIndex) - arr.at<Point2d>(startPointIndex);
 
-                        const float eps = 1e-4;
+                        const float eps = 1e-4f;
                         //TODO: perhaps it is better to normalize the cross product by norms of the tangent vectors
                         if (fabs(tangentVector_1.cross(tangentVector_2)) < eps)
                         {

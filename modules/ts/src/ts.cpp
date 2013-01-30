@@ -47,8 +47,12 @@
 #include <time.h>
 #if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
 #include <io.h>
-#define NOMINMAX
+
 #include <windows.h>
+#undef small
+#undef min
+#undef max
+#undef abs
 
 #ifdef _MSC_VER
 #include <eh.h>

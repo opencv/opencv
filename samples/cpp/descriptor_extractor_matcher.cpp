@@ -222,7 +222,7 @@ static void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
                      DrawMatchesFlags::DRAW_OVER_OUTIMG | DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 #endif
 
-        printf("Number of inliers: %d\n", countNonZero(matchesMask));
+        cout << "Number of inliers: " << countNonZero(matchesMask) << endl;
     }
     else
         drawMatches( img1, keypoints1, img2, keypoints2, filteredMatches, drawImg );
