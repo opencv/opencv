@@ -211,4 +211,34 @@ _exit_:
 
 TEST(Video_OpticalFlowPyrLK, accuracy) { CV_OptFlowPyrLKTest test; test.safe_run(); }
 
-/* End of file. */
+TEST(Video_OpticalFlowPyrLK, submat)
+{
+    // see bug #2075
+    std::string path = cvtest::TS::ptr()->get_data_path() + "../cv/shared/lena.png";
+
+    cv::Mat lenaImg = cv::imread(path);
+    ASSERT_FALSE(lenaImg.empty());
+
+    cv::Mat wholeImage;
+    cv::resize(lenaImg, wholeImage, cv::Size(1024, 1024));
+
+    cv::Mat img1 = wholeImage(cv::Rect(0, 0, 640, 360)).clone();
+    cv::Mat img2 = wholeImage(cv::Rect(40, 60, 640, 360));
+
+    std::vector<uchar> status;
+    std::vector<float> error;
+    std::vector<cv::Point2f> prev;
+    std::vector<cv::Point2f> next;
+
+    cv::RNG rng(123123);
+
+    for(int i = 0; i < 50; ++i)
+    {
+        int x = rng.uniform(0, 640);
+        int y = rng.uniform(0, 360);
+
+        prev.push_back(cv::Point2f((float)x, (float)y));
+    }
+
+    ASSERT_NO_THROW(cv::calcOpticalFlowPyrLK(img1, img2, prev, next, status, error));
+}
