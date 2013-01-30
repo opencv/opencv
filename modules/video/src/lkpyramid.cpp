@@ -1911,8 +1911,11 @@ cv::Mat cv::estimateRigidTransform( InputArray src1,
 {
     Mat M(2, 3, CV_64F), A = src1.getMat(), B = src2.getMat();
     CvMat matA = A, matB = B, matM = M;
-    cvEstimateRigidTransform(&matA, &matB, &matM, fullAffine);
-    return M;
+    int err = cvEstimateRigidTransform(&matA, &matB, &matM, fullAffine);
+    if (err == 1)
+        return M;
+    else
+        return Mat();
 }
 
 /* End of file. */
