@@ -3735,13 +3735,13 @@ float cv::rectify3Collinear( InputArray _cameraMatrix1, InputArray _distCoeffs1,
                    OutputArray _Rmat1, OutputArray _Rmat2, OutputArray _Rmat3,
                    OutputArray _Pmat1, OutputArray _Pmat2, OutputArray _Pmat3,
                    OutputArray _Qmat,
-                   double alpha, Size /*newImgSize*/,
+                   double alpha, Size newImgSize,
                    Rect* roi1, Rect* roi2, int flags )
 {
     // first, rectify the 1-2 stereo pair
     stereoRectify( _cameraMatrix1, _distCoeffs1, _cameraMatrix2, _distCoeffs2,
                    imageSize, _Rmat12, _Tmat12, _Rmat1, _Rmat2, _Pmat1, _Pmat2, _Qmat,
-                   flags, alpha, imageSize, roi1, roi2 );
+                   flags, alpha, newImgSize, roi1, roi2 );
 
     Mat R12 = _Rmat12.getMat(), R13 = _Rmat13.getMat(), T12 = _Tmat12.getMat(), T13 = _Tmat13.getMat();
 
