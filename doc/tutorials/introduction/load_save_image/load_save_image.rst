@@ -15,7 +15,7 @@ In this tutorial you will learn how to:
 .. container:: enumeratevisibleitemswithsquare
 
    * Load an image using :imread:`imread <>`
-   * Transform an image from RGB to Grayscale format by using :cvt_color:`cvtColor <>`
+   * Transform an image from BGR to Grayscale format by using :cvt_color:`cvtColor <>`
    * Save your transformed image in a file on disk (using :imwrite:`imwrite <>`)
 
 Code
@@ -45,7 +45,7 @@ Here it is:
     }
 
     Mat gray_image;
-    cvtColor( image, gray_image, CV_RGB2GRAY );
+    cvtColor( image, gray_image, CV_BGR2GRAY );
 
     imwrite( "../../images/Gray_Image.jpg", gray_image );
 
@@ -68,11 +68,11 @@ Explanation
    * Creating a Mat object to store the image information
    * Load an image using :imread:`imread <>`, located in the path given by *imageName*. Fort this example, assume you are loading a RGB image.
 
-#. Now we are going to convert our image from RGB to Grayscale format. OpenCV has a really nice function to do this kind of transformations:
+#. Now we are going to convert our image from BGR to Grayscale format. OpenCV has a really nice function to do this kind of transformations:
 
    .. code-block:: cpp
 
-      cvtColor( image, gray_image, CV_RGB2GRAY );
+      cvtColor( image, gray_image, CV_BGR2GRAY );
 
    As you can see, :cvt_color:`cvtColor <>` takes as arguments:
 
@@ -80,7 +80,7 @@ Explanation
 
       * a source image (*image*)
       * a destination image (*gray_image*), in which we will save the converted image.
-      * an additional parameter that indicates what kind of transformation will be performed. In this case we use **CV_RGB2GRAY** (self-explanatory).
+      * an additional parameter that indicates what kind of transformation will be performed. In this case we use **CV_BGR2GRAY** (because of :imread:`imread <>` has BGR default channel order in case of color images).
 
 #. So now we have our new *gray_image* and want to save it on disk (otherwise it will get lost after the program ends). To save it, we will use a function analagous to :imread:`imread <>`: :imwrite:`imwrite <>`
 

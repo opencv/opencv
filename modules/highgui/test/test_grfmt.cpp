@@ -291,3 +291,22 @@ TEST(Highgui_Jpeg, encode_empty)
     ASSERT_THROW(cv::imencode(".jpg", img, jpegImg), cv::Exception);
 }
 #endif
+
+
+#ifdef HAVE_TIFF
+#include "tiff.h"
+TEST(Highgui_Tiff, decode_tile16384x16384)
+{
+    // see issue #2161
+    cv::Mat big(16384, 16384, CV_8UC1, cv::Scalar::all(0));
+    string file = cv::tempfile(".tiff");
+    std::vector<int> params;
+    params.push_back(TIFFTAG_ROWSPERSTRIP);
+    params.push_back(big.rows);
+    cv::imwrite(file, big, params);
+    big.release();
+
+    EXPECT_NO_THROW(cv::imread(file));
+    remove(file.c_str());
+}
+#endif

@@ -131,7 +131,7 @@ endif(HAVE_UNICAP)
 
 if(HAVE_LIBV4L)
   list(APPEND highgui_srcs src/cap_libv4l.cpp)
-elseif(HAVE_CAMV4L OR HAVE_CAMV4L2)
+elseif(HAVE_CAMV4L OR HAVE_CAMV4L2 OR HAVE_VIDEOIO)
   list(APPEND highgui_srcs src/cap_v4l.cpp)
 endif()
 
@@ -214,6 +214,24 @@ ocv_set_module_sources(HEADERS ${highgui_ext_hdrs} SOURCES ${highgui_srcs} ${hig
 ocv_module_include_directories()
 
 ocv_create_module(${GRFMT_LIBS} ${HIGHGUI_LIBRARIES})
+
+if(APPLE)
+  ocv_check_flag_support(OBJCXX "-fobjc-exceptions" HAVE_OBJC_EXCEPTIONS)
+  if(HAVE_OBJC_EXCEPTIONS)
+    foreach(source ${OPENCV_MODULE_${the_module}_SOURCES})
+      if("${source}" MATCHES "\\.mm$")
+        get_source_file_property(flags "${source}" COMPILE_FLAGS)
+        if(flags)
+          set(flags "${_flags} -fobjc-exceptions")
+        else()
+          set(flags "-fobjc-exceptions")
+        endif()
+
+        set_source_files_properties("${source}" PROPERTIES COMPILE_FLAGS "${flags}")
+      endif()
+    endforeach()
+  endif()
+endif()
 
 if(BUILD_SHARED_LIBS)
   add_definitions(-DHIGHGUI_EXPORTS)

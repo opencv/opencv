@@ -43,9 +43,9 @@
 #ifndef _CV_MODEL_EST_H_
 #define _CV_MODEL_EST_H_
 
-#include "precomp.hpp"
+#include "opencv2/calib3d/calib3d.hpp"
 
-class CvModelEstimator2
+class CV_EXPORTS CvModelEstimator2
 {
 public:
     CvModelEstimator2(int _modelPoints, CvSize _modelSize, int _maxBasicSolutions);
