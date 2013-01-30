@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<exp_lines type_id="opencv-matrix">
+  <rows>1</rows>
+  <cols>8</cols>
+  <dt>"2f"</dt>
+  <data>
+    128. 1.57079637e+00 24. 1.57079637e+00 205. 1.57079637e+00 414.
+    7.85398185e-01 -163. 2.56563401e+00 -250. 2.56563401e+00 42. 0. 231.
+    0.</data></exp_lines>
+</opencv_storage>
