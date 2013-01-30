@@ -34,6 +34,7 @@ set(opencv_hdrs
     "${OPENCV_MODULE_opencv_features2d_LOCATION}/include/opencv2/features2d/features2d.hpp"
     "${OPENCV_MODULE_opencv_calib3d_LOCATION}/include/opencv2/calib3d/calib3d.hpp"
     "${OPENCV_MODULE_opencv_objdetect_LOCATION}/include/opencv2/objdetect/objdetect.hpp"
+    "${OPENCV_MODULE_opencv_softcascade_LOCATION}/include/opencv2/softcascade/softcascade.hpp"
     "${OPENCV_MODULE_opencv_contrib_LOCATION}/include/opencv2/contrib/contrib.hpp")
 
 if(HAVE_opencv_nonfree)

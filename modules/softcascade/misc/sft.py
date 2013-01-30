@@ -23,8 +23,8 @@ def convert2detections(rects, confs, crop_factor = 0.125):
 
 """ Create new instance of soft cascade."""
 def cascade(min_scale, max_scale, nscales, f):
-    # where we use nms cv::SCascade::DOLLAR == 2
-    c = cv2.SCascade(min_scale, max_scale, nscales, 2)
+    # where we use nms cv::SoftCascadeDetector::DOLLAR == 2
+    c = cv2.SoftCascadeDetector(min_scale, max_scale, nscales, 2)
     xml = cv2.FileStorage(f, 0)
     dom = xml.getFirstTopLevelNode()
     assert c.load(dom)
