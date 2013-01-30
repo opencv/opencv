@@ -58,6 +58,9 @@ void Foo(int /*k*/, void* /*z*/) {}
 
 void CV_HighGuiOnlyGuiTest::run( int /*start_from */)
 {
+    ts->printf(ts->LOG, "GUI 0\n");
+    cvDestroyAllWindows();
+
     ts->printf(ts->LOG, "GUI 1\n");
     namedWindow("Win");
 
