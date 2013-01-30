@@ -461,12 +461,19 @@ protected:
 
 void CvVideoWriter_GStreamer::init()
 {
-    encs[CV_FOURCC('H','F','Y','U')]=(char*)"ffenc_huffyuv";
     encs[CV_FOURCC('D','R','A','C')]=(char*)"diracenc";
-    encs[CV_FOURCC('X','V','I','D')]=(char*)"xvidenc";
-    encs[CV_FOURCC('X','2','6','4')]=(char*)"x264enc";
+    encs[CV_FOURCC('H','F','Y','U')]=(char*)"ffenc_huffyuv";
+    encs[CV_FOURCC('J','P','E','G')]=(char*)"jpegenc";
+    encs[CV_FOURCC('M','J','P','G')]=(char*)"jpegenc";
     encs[CV_FOURCC('M','P','1','V')]=(char*)"mpeg2enc";
-    //encs[CV_FOURCC('M','P','2','V')]=(char*)"mpeg2enc";
+    encs[CV_FOURCC('M','P','2','V')]=(char*)"mpeg2enc";
+    encs[CV_FOURCC('T','H','E','O')]=(char*)"theoraenc";
+    encs[CV_FOURCC('V','P','8','0')]=(char*)"vp8enc";
+    encs[CV_FOURCC('H','2','6','4')]=(char*)"x264enc";
+    encs[CV_FOURCC('X','2','6','4')]=(char*)"x264enc";
+    encs[CV_FOURCC('X','V','I','D')]=(char*)"xvidenc";
+    encs[CV_FOURCC('F','F','Y','U')]=(char*)"y4menc";
+    //encs[CV_FOURCC('H','F','Y','U')]=(char*)"y4menc";
     pipeline=0;
     buffer=0;
 }
