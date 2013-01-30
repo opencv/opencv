@@ -62,7 +62,7 @@ public class MatTest extends OpenCVTestCase {
         assertEquals(2, new Mat(2, 10, CvType.CV_8U).checkVector(10));
         assertEquals(2, new Mat(1, 2, CvType.CV_8UC(10)).checkVector(10));
         assertEquals(2, new Mat(2, 1, CvType.CV_8UC(10)).checkVector(10));
-        assertEquals(2, new Mat(1, 10, CvType.CV_8UC2).checkVector(10));
+        assertEquals(10, new Mat(1, 10, CvType.CV_8UC2).checkVector(2));
 
         assertTrue(0 > new Mat().checkVector(0));
         assertTrue(0 > new Mat(10, 1, CvType.CV_8U).checkVector(10));
@@ -73,7 +73,7 @@ public class MatTest extends OpenCVTestCase {
         assertEquals(2, new Mat(2, 10, CvType.CV_8U).checkVector(10, CvType.CV_8U));
         assertEquals(2, new Mat(1, 2, CvType.CV_8UC(10)).checkVector(10, CvType.CV_8U));
         assertEquals(2, new Mat(2, 1, CvType.CV_8UC(10)).checkVector(10, CvType.CV_8U));
-        assertEquals(2, new Mat(1, 10, CvType.CV_8UC2).checkVector(10, CvType.CV_8U));
+        assertEquals(10, new Mat(1, 10, CvType.CV_8UC2).checkVector(2, CvType.CV_8U));
 
         assertTrue(0 > new Mat(2, 10, CvType.CV_8U).checkVector(10, CvType.CV_8S));
         assertTrue(0 > new Mat(1, 2, CvType.CV_8UC(10)).checkVector(10, CvType.CV_8S));
