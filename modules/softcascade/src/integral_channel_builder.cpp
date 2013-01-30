@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "_random.hpp"
 
 namespace {
 
@@ -160,3 +161,116 @@ std::ostream& cv::operator<<(std::ostream& out, const cv::ChannelFeature& m)
 }
 
 cv::ChannelFeature::~ChannelFeature(){}
+
+namespace {
+
+class ChannelFeaturePool : public cv::FeaturePool
+{
+public:
+    ChannelFeaturePool(cv::Size m, int n) : FeaturePool(), model(m)
+    {
+        CV_Assert(m != cv::Size() && n > 0);
+        fill(n);
+    }
+
+    virtual int size() const { return (int)pool.size(); }
+    virtual float apply(int fi, int si, const cv::Mat& integrals) const;
+    virtual void write( cv::FileStorage& fs, int index) const;
+
+    virtual ~ChannelFeaturePool() {}
+
+private:
+
+    void fill(int desired);
+
+    cv::Size model;
+    std::vector<cv::ChannelFeature> pool;
+    enum { N_CHANNELS = 10 };
+};
+
+float ChannelFeaturePool::apply(int fi, int si, const cv::Mat& integrals) const
+{
+    return pool[fi](integrals.row(si), model);
+}
+
+void ChannelFeaturePool::write( cv::FileStorage& fs, int index) const
+{
+    CV_Assert((index > 0) && (index < (int)pool.size()));
+    fs << pool[index];
+}
+
+#if defined _WIN32 && (_WIN32 || _WIN64)
+# if _WIN64
+#  define USE_LONG_SEEDS
+# endif
+#endif
+#if defined (__GNUC__) &&__GNUC__
+# if defined(__x86_64__) || defined(__ppc64__)
+#  define USE_LONG_SEEDS
+# endif
+#endif
+
+#if defined USE_LONG_SEEDS
+# define FEATURE_RECT_SEED      8854342234LU
+#else
+# define FEATURE_RECT_SEED      88543422LU
+#endif
+# define DCHANNELS_SEED         314152314LU
+#undef USE_LONG_SEEDS
+
+void ChannelFeaturePool::fill(int desired)
+{
+    int mw = model.width;
+    int mh = model.height;
+
+    int maxPoolSize = (mw -1) * mw / 2 * (mh - 1) * mh / 2 * N_CHANNELS;
+
+    int nfeatures = std::min(desired, maxPoolSize);
+    // dprintf("Requeste feature pool %d max %d suggested %d\n", desired, maxPoolSize, nfeatures);
+
+    pool.reserve(nfeatures);
+
+    sft::Random::engine eng(FEATURE_RECT_SEED);
+    sft::Random::engine eng_ch(DCHANNELS_SEED);
+
+    sft::Random::uniform chRand(0, N_CHANNELS - 1);
+
+    sft::Random::uniform xRand(0, model.width  - 2);
+    sft::Random::uniform yRand(0, model.height - 2);
+
+    sft::Random::uniform wRand(1, model.width  - 1);
+    sft::Random::uniform hRand(1, model.height - 1);
+
+    while (pool.size() < size_t(nfeatures))
+    {
+        int x = xRand(eng);
+        int y = yRand(eng);
+
+        int w = 1 + wRand(eng, model.width  - x - 1);
+        int h = 1 + hRand(eng, model.height - y - 1);
+
+        CV_Assert(w > 0);
+        CV_Assert(h > 0);
+
+        CV_Assert(w + x < model.width);
+        CV_Assert(h + y < model.height);
+
+        int ch = chRand(eng_ch);
+
+        cv::ChannelFeature f(x, y, w, h, ch);
+
+        if (std::find(pool.begin(), pool.end(),f) == pool.end())
+        {
+            pool.push_back(f);
+            std::cout << f << std::endl;
+        }
+    }
+}
+
+}
+
+cv::Ptr<cv::FeaturePool> cv::FeaturePool::create(const cv::Size& model, int nfeatures)
+{
+    cv::Ptr<cv::FeaturePool> pool(new ChannelFeaturePool(model, nfeatures));
+    return pool;
+}

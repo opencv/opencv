@@ -118,8 +118,8 @@ int main(int argc, char** argv)
         int nfeatures  = cfg.poolSize;
         cv::Size model = cfg.model(it);
         std::cout << "Model " << model << std::endl;
-        sft::ICFFeaturePool pool(model, nfeatures);
-        nfeatures = pool.size();
+        cv::Ptr<cv::FeaturePool> pool = cv::FeaturePool::create(model, nfeatures);
+        nfeatures = pool->size();
 
 
         int npositives = cfg.positives;
@@ -135,7 +135,7 @@ int main(int argc, char** argv)
         std::string path = cfg.trainPath;
         sft::ScaledDataset dataset(path, *it);
 
-        if (boost->train(&dataset, &pool, cfg.weaks, cfg.treeDepth))
+        if (boost->train(&dataset, pool, cfg.weaks, cfg.treeDepth))
         {
             CvFileStorage* fout = cvOpenFileStorage(cfg.resPath(it).c_str(), 0, CV_STORAGE_WRITE);
             boost->write(fout, cfg.cascadeName);
@@ -145,7 +145,7 @@ int main(int argc, char** argv)
             cv::Mat thresholds;
             boost->setRejectThresholds(thresholds);
 
-            boost->write(fso, &pool, thresholds);
+            boost->write(fso, pool, thresholds);
 
             cv::FileStorage tfs(("thresholds." + cfg.resPath(it)).c_str(), cv::FileStorage::WRITE);
             tfs << "thresholds" << thresholds;

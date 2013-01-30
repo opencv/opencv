@@ -64,15 +64,7 @@ struct CV_EXPORTS Detection
     int kind;
 };
 
-class CV_EXPORTS FeaturePool
-{
-public:
 
-    virtual int size() const = 0;
-    virtual float apply(int fi, int si, const Mat& integrals) const = 0;
-    virtual void write( cv::FileStorage& fs, int index) const = 0;
-    virtual ~FeaturePool();
-};
 
 class CV_EXPORTS Dataset
 {
@@ -82,6 +74,22 @@ public:
     virtual cv::Mat get(SampleType type, int idx) const = 0;
     virtual int available(SampleType type) const = 0;
     virtual ~Dataset();
+};
+
+// ========================================================================== //
+//                       Public interface feature pool.
+// ========================================================================== //
+
+class CV_EXPORTS FeaturePool
+{
+public:
+
+    virtual int size() const = 0;
+    virtual float apply(int fi, int si, const Mat& channels) const = 0;
+    virtual void write( cv::FileStorage& fs, int index) const = 0;
+    virtual ~FeaturePool();
+
+    static cv::Ptr<FeaturePool> create(const cv::Size& model, int nfeatures);
 };
 
 // ========================================================================== //

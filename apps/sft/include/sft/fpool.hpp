@@ -51,35 +51,7 @@
 namespace sft
 {
 
-using cv::FeaturePool;
 using cv::Dataset;
-
-class ICFFeaturePool : public cv::FeaturePool
-{
-public:
-    ICFFeaturePool(cv::Size model, int nfeatures);
-
-    virtual int size() const { return (int)pool.size(); }
-    virtual float apply(int fi, int si, const cv::Mat& integrals) const;
-    virtual void write( cv::FileStorage& fs, int index) const;
-
-    virtual ~ICFFeaturePool();
-
-private:
-
-    void fill(int desired);
-
-    cv::Size model;
-    int nfeatures;
-
-    std::vector<cv::ChannelFeature> pool;
-
-    static const unsigned int seed = 0;
-
-    enum { N_CHANNELS = 10 };
-};
-
-
 
 class ScaledDataset : public Dataset
 {
