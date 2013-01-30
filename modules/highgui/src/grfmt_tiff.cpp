@@ -168,7 +168,6 @@ bool  TiffDecoder::readData( Mat& img )
     bool result = false;
     bool color = img.channels() > 1;
     uchar* data = img.data;
-    int step = (int)img.step;
 
     if( img.depth() != CV_8U && img.depth() != CV_16U && img.depth() != CV_32F && img.depth() != CV_64F )
         return false;
@@ -211,14 +210,14 @@ bool  TiffDecoder::readData( Mat& img )
             if( tile_height0 <= 0 )
                 tile_height0 = m_height;
 
-            AutoBuffer<uchar> _buffer(tile_height0*tile_width0*8);
+            AutoBuffer<uchar> _buffer( size_t(8) * tile_height0*tile_width0);
             uchar* buffer = _buffer;
             ushort* buffer16 = (ushort*)buffer;
             float* buffer32 = (float*)buffer;
             double* buffer64 = (double*)buffer;
             int tileidx = 0;
 
-            for( y = 0; y < m_height; y += tile_height0, data += step*tile_height0 )
+            for( y = 0; y < m_height; y += tile_height0, data += img.step*tile_height0 )
             {
                 int tile_height = tile_height0;
 
@@ -250,11 +249,11 @@ bool  TiffDecoder::readData( Mat& img )
                             for( i = 0; i < tile_height; i++ )
                                 if( color )
                                     icvCvt_BGRA2BGR_8u_C4C3R( buffer + i*tile_width*4, 0,
-                                                             data + x*3 + step*(tile_height - i - 1), 0,
+                                                             data + x*3 + img.step*(tile_height - i - 1), 0,
                                                              cvSize(tile_width,1), 2 );
                                 else
                                     icvCvt_BGRA2Gray_8u_C4C1R( buffer + i*tile_width*4, 0,
-                                                              data + x + step*(tile_height - i - 1), 0,
+                                                              data + x + img.step*(tile_height - i - 1), 0,
                                                               cvSize(tile_width,1), 2 );
                             break;
                         }
@@ -279,19 +278,19 @@ bool  TiffDecoder::readData( Mat& img )
                                     if( ncn == 1 )
                                     {
                                         icvCvt_Gray2BGR_16u_C1C3R(buffer16 + i*tile_width*ncn, 0,
-                                                                  (ushort*)(data + step*i) + x*3, 0,
+                                                                  (ushort*)(data + img.step*i) + x*3, 0,
                                                                   cvSize(tile_width,1) );
                                     }
                                     else if( ncn == 3 )
                                     {
                                         icvCvt_RGB2BGR_16u_C3R(buffer16 + i*tile_width*ncn, 0,
-                                                               (ushort*)(data + step*i) + x*3, 0,
+                                                               (ushort*)(data + img.step*i) + x*3, 0,
                                                                cvSize(tile_width,1) );
                                     }
                                     else
                                     {
                                         icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width*ncn, 0,
-                                                               (ushort*)(data + step*i) + x*3, 0,
+                                                               (ushort*)(data + img.step*i) + x*3, 0,
                                                                cvSize(tile_width,1), 2 );
                                     }
                                 }
@@ -299,14 +298,14 @@ bool  TiffDecoder::readData( Mat& img )
                                 {
                                     if( ncn == 1 )
                                     {
-                                        memcpy((ushort*)(data + step*i)+x,
+                                        memcpy((ushort*)(data + img.step*i)+x,
                                                buffer16 + i*tile_width*ncn,
                                                tile_width*sizeof(buffer16[0]));
                                     }
                                     else
                                     {
                                         icvCvt_BGRA2Gray_16u_CnC1R(buffer16 + i*tile_width*ncn, 0,
-                                                               (ushort*)(data + step*i) + x, 0,
+                                                               (ushort*)(data + img.step*i) + x, 0,
                                                                cvSize(tile_width,1), ncn, 2 );
                                     }
                                 }
@@ -332,13 +331,13 @@ bool  TiffDecoder::readData( Mat& img )
                             {
                                 if(dst_bpp == 32)
                                 {
-                                    memcpy((float*)(data + step*i)+x,
+                                    memcpy((float*)(data + img.step*i)+x,
                                            buffer32 + i*tile_width*ncn,
                                            tile_width*sizeof(buffer32[0]));
                                 }
                                 else
                                 {
-                                    memcpy((double*)(data + step*i)+x,
+                                    memcpy((double*)(data + img.step*i)+x,
                                          buffer64 + i*tile_width*ncn,
                                          tile_width*sizeof(buffer64[0]));
                                 }
@@ -402,7 +401,18 @@ void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
 }
 
 #ifdef HAVE_TIFF
-bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
+
+static void readParam(const vector<int>& params, int key, int& value)
+{
+    for(size_t i = 0; i + 1 < params.size(); i += 2)
+        if(params[i] == key)
+        {
+            value = params[i+1];
+            break;
+        }
+}
+
+bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& params)
 {
     int channels = img.channels();
     int width = img.cols, height = img.rows;
@@ -429,7 +439,9 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
 
     const int bitsPerByte = 8;
     size_t fileStep = (width * channels * bitsPerChannel) / bitsPerByte;
+
     int rowsPerStrip = (int)((1 << 13)/fileStep);
+    readParam(params, TIFFTAG_ROWSPERSTRIP, rowsPerStrip);
 
     if( rowsPerStrip < 1 )
         rowsPerStrip = 1;
@@ -450,6 +462,9 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
     int   compression  = COMPRESSION_LZW;
     int   predictor    = PREDICTOR_HORIZONTAL;
 
+    readParam(params, TIFFTAG_COMPRESSION, compression);
+    readParam(params, TIFFTAG_PREDICTOR, predictor);
+
     int   colorspace = channels > 1 ? PHOTOMETRIC_RGB : PHOTOMETRIC_MINISBLACK;
 
     if ( !TIFFSetField(pTiffHandle, TIFFTAG_IMAGEWIDTH, width)
@@ -469,7 +484,7 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
 
     // row buffer, because TIFFWriteScanline modifies the original data!
     size_t scanlineSize = TIFFScanlineSize(pTiffHandle);
-    AutoBuffer<uchar,1024> _buffer(scanlineSize+32);
+    AutoBuffer<uchar> _buffer(scanlineSize+32);
     uchar* buffer = _buffer;
     if (!buffer)
     {
@@ -577,9 +592,9 @@ bool  TiffEncoder::write( const Mat& img, const vector<int>& /*params*/)
 #endif*/
     int directoryOffset = 0;
 
-    AutoBuffer<int,1024> stripOffsets(stripCount);
-    AutoBuffer<short,1024> stripCounts(stripCount);
-    AutoBuffer<uchar,1024> _buffer(fileStep+32);
+    AutoBuffer<int> stripOffsets(stripCount);
+    AutoBuffer<short> stripCounts(stripCount);
+    AutoBuffer<uchar> _buffer(fileStep+32);
     uchar* buffer = _buffer;
     int  stripOffsetsOffset = 0;
     int  stripCountsOffset = 0;
