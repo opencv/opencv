@@ -100,7 +100,7 @@ namespace cv { namespace gpu
         typedef unsigned char uchar;
         typedef unsigned short ushort;
         typedef signed char schar;
-        #ifdef _WIN32
+        #if defined (_WIN32) || defined (__APPLE__)
             typedef unsigned int uint;
         #endif
 
