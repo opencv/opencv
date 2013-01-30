@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "_random.hpp"
 
 namespace {
 
@@ -199,25 +198,6 @@ void ChannelFeaturePool::write( cv::FileStorage& fs, int index) const
     fs << pool[index];
 }
 
-#if defined _WIN32 && (_WIN32 || _WIN64)
-# if _WIN64
-#  define USE_LONG_SEEDS
-# endif
-#endif
-#if defined (__GNUC__) &&__GNUC__
-# if defined(__x86_64__) || defined(__ppc64__)
-#  define USE_LONG_SEEDS
-# endif
-#endif
-
-#if defined USE_LONG_SEEDS
-# define FEATURE_RECT_SEED      8854342234LU
-#else
-# define FEATURE_RECT_SEED      88543422LU
-#endif
-# define DCHANNELS_SEED         314152314LU
-#undef USE_LONG_SEEDS
-
 void ChannelFeaturePool::fill(int desired)
 {
     int mw = model.width;
@@ -226,8 +206,6 @@ void ChannelFeaturePool::fill(int desired)
     int maxPoolSize = (mw -1) * mw / 2 * (mh - 1) * mh / 2 * N_CHANNELS;
 
     int nfeatures = std::min(desired, maxPoolSize);
-    // dprintf("Requeste feature pool %d max %d suggested %d\n", desired, maxPoolSize, nfeatures);
-
     pool.reserve(nfeatures);
 
     sft::Random::engine eng(FEATURE_RECT_SEED);
@@ -262,7 +240,6 @@ void ChannelFeaturePool::fill(int desired)
         if (std::find(pool.begin(), pool.end(),f) == pool.end())
         {
             pool.push_back(f);
-            std::cout << f << std::endl;
         }
     }
 }

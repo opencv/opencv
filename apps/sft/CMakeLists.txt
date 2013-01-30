@@ -1,7 +1,3 @@
-if(IOS OR ANDROID)
-  return()
-endif()
-
 set(name sft)
 set(the_target opencv_${name})
 

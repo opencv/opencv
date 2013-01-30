@@ -1115,7 +1115,7 @@ bool CvBoost::train( CvMLData* _data,
     return result;
 }
 
-void CvBoost::initial_weights(double (&p)[2])
+void CvBoost::initialize_weights(double (&p)[2])
 {
     p[0] = 1.;
     p[1] = 1.;
@@ -1166,7 +1166,7 @@ CvBoost::update_weights( CvBoostTree* tree )
 
         double w0 = 1./ n;
         double p[2] = { 1., 1. };
-        initial_weights(p);
+        initialize_weights(p);
 
         cvReleaseMat( &orig_response );
         cvReleaseMat( &sum_response );

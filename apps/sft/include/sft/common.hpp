@@ -44,6 +44,7 @@
 #define __SFT_COMMON_HPP__
 
 #include <opencv2/core/core.hpp>
+#include <opencv2/softcascade/softcascade.hpp>
 
 namespace sft
 {
@@ -58,7 +59,7 @@ namespace sft
 }
 
 // used for noisy printfs
-#define WITH_DEBUG_OUT
+//#define WITH_DEBUG_OUT
 
 #if defined WITH_DEBUG_OUT
 # include <stdio.h>

@@ -75,9 +75,7 @@ struct Config
 
     string resPath(ivector::const_iterator it) const
     {
-        char s[65];
-        sprintf(s, "%d", *it);
-        return std::string(cascadeName) + s + ".xml";
+        return cv::format("%s%d.xml",cascadeName.c_str(), *it);
     }
 
     // Paths to a rescaled data

@@ -43,17 +43,6 @@
 #include "precomp.hpp"
 #include <queue>
 #include <string>
-#include "_random.hpp"
-
-#define WITH_DEBUG_OUT
-
-#if defined WITH_DEBUG_OUT
-# include <stdio.h>
-# define dprintf(format, ...)  printf(format, ##__VA_ARGS__)
-#else
-# define dprintf(format, ...)
-#endif
-
 
 using cv::Dataset;
 using cv::FeaturePool;
@@ -90,7 +79,7 @@ protected:
     float predict( const Mat& _sample, const cv::Range range) const;
 private:
     void traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfeatures, int* used, const double* th) const;
-    virtual void initial_weights(double (&p)[2]);
+    virtual void initialize_weights(double (&p)[2]);
 
     int logScale;
     cv::Rect boundingBox;
@@ -159,8 +148,6 @@ bool BoostedSoftCascadeOctave::train( const cv::Mat& _trainData, const cv::Mat& 
 
 void BoostedSoftCascadeOctave::setRejectThresholds(cv::OutputArray _thresholds)
 {
-    dprintf("set thresholds according to DBP strategy\n");
-
     // labels decided by classifier
     cv::Mat desisions(responses.cols, responses.rows, responses.type());
     float* dptr = desisions.ptr<float>(0);
@@ -223,32 +210,9 @@ void BoostedSoftCascadeOctave::processPositives(const Dataset* dataset)
 
         if (++total >= npositives) break;
     }
-
-    dprintf("Processing positives finished:\n\trequested %d positives, collected %d samples.\n", npositives, total);
-
     npositives  = total;
     nnegatives = cvRound(nnegatives * total / (double)npositives);
 }
-
-#if defined _WIN32 && (_WIN32 || _WIN64)
-# if _WIN64
-#  define USE_LONG_SEEDS
-# endif
-#endif
-#if defined (__GNUC__) &&__GNUC__
-# if defined(__x86_64__) || defined(__ppc64__)
-#  define USE_LONG_SEEDS
-# endif
-#endif
-
-#if defined USE_LONG_SEEDS
-# define INDEX_ENGINE_SEED      764224349868LU
-#else
-# define INDEX_ENGINE_SEED      76422434LU
-#endif
-# define DX_DY_SEED             65633343LU
-#undef USE_LONG_SEEDS
-
 
 void BoostedSoftCascadeOctave::generateNegatives(const Dataset* dataset)
 {
@@ -285,15 +249,12 @@ void BoostedSoftCascadeOctave::generateNegatives(const Dataset* dataset)
         cv::Mat channels = integrals.row(i).reshape(0, h / shrinkage * 10 + 1);
         _builder(frame, channels);
 
-        dprintf("generated %d %d\n", dx, dy);
         // // if (predict(sum))
         {
             responses.ptr<float>(i)[0] = 0.f;
             ++i;
         }
     }
-
-    dprintf("Processing negatives finished:\n\trequested %d negatives, viewed %d samples.\n", nnegatives, total);
 }
 
 
@@ -390,7 +351,7 @@ void BoostedSoftCascadeOctave::write( cv::FileStorage &fso, const FeaturePool* p
         << "}";
 }
 
-void BoostedSoftCascadeOctave::initial_weights(double (&p)[2])
+void BoostedSoftCascadeOctave::initialize_weights(double (&p)[2])
 {
     double n = data->sample_count;
     p[0] =  n / (2. * (double)(nnegatives));

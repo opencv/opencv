@@ -40,27 +40,16 @@
 //
 //M*/
 
-#include <sft/fpool.hpp>
+#include <sft/dataset.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 #include <iostream>
 #include <queue>
 
-// ============ Dataset ============ //
-namespace {
-using namespace sft;
-
-string itoa(long i)
-{
-    char s[65];
-    sprintf(s, "%ld", i);
-    return std::string(s);
-}
-
-}
+inline std::string itoa(long i) { return cv::format("%ld", i); }
 
 #if !defined (_WIN32) && ! defined(__MINGW32__)
-
-#include <glob.h>
+# include <glob.h>
 
 namespace {
 using namespace sft;
@@ -84,7 +73,7 @@ void glob(const string& path, svector& ret)
 }
 #else
 
-#include <windows.h>
+# include <windows.h>
 namespace {
 using namespace sft;
 void glob(const string& refRoot, const string& refExt, svector &refvecFiles)
@@ -138,7 +127,6 @@ void glob(const string& refRoot, const string& refExt, svector &refvecFiles)
 ScaledDataset::ScaledDataset(const string& path, const int oct)
 {
     dprintf("%s\n", "get dataset file names...");
-
     dprintf("%s\n", "Positives globing...");
 
 #if !defined (_WIN32) && ! defined(__MINGW32__)

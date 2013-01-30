@@ -44,7 +44,7 @@
 
 #include <sft/common.hpp>
 #include <iostream>
-#include <sft/fpool.hpp>
+#include <sft/dataset.hpp>
 #include <sft/config.hpp>
 
 #include <opencv2/core/core_c.h>

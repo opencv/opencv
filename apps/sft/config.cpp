@@ -108,9 +108,9 @@ void sft::write(cv::FileStorage& fs, const string&, const Config& x)
 
 void sft::read(const cv::FileNode& node, Config& x, const Config& default_value)
 {
-    if(node.empty())
-        x = default_value;
-    else
+    x = default_value;
+
+    if(!node.empty())
         x.read(node);
 }
 

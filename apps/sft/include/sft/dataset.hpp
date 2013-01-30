@@ -44,10 +44,6 @@
 #define __SFT_OCTAVE_HPP__
 
 #include <sft/common.hpp>
-
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/softcascade/softcascade.hpp>
 namespace sft
 {
 
