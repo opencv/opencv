@@ -43,6 +43,7 @@
 #if !defined CUDA_DISABLER
 
 #include <utility>
+#include <algorithm>//std::swap
 #include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/emulation.hpp"
 #include "opencv2/gpu/device/transform.hpp"
