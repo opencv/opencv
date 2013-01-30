@@ -138,7 +138,7 @@ void HOGDescriptor::write(FileStorage& fs, const String& objName) const
     << "gammaCorrection" << gammaCorrection
     << "nlevels" << nlevels;
     if( !svmDetector.empty() )
-        fs << "SVMDetector" << "[:" << svmDetector << "]";
+        fs << "SVMDetector" << svmDetector;
     fs << "}";
 }
 

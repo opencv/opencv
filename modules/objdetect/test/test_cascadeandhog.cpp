@@ -461,5 +461,38 @@ int CV_HOGDetectorTest::detectMultiScale( int di, const Mat& img,
     return cvtest::TS::OK;
 }
 
+//----------------------------------------------- HOGDetectorReadWriteTest -----------------------------------
+class CV_HOGDetectorReadWriteTest : public cvtest::BaseTest
+{
+public:
+    CV_HOGDetectorReadWriteTest();
+protected:
+    void run(int startFrom);
+};
+
+CV_HOGDetectorReadWriteTest::CV_HOGDetectorReadWriteTest()
+{
+
+}
+
+void CV_HOGDetectorReadWriteTest::run(int /* startFrom */)
+{
+    Mat img;
+    img = imread(ts->get_data_path() + "/cascadeandhog/images/karen-and-rob.png");
+
+    HOGDescriptor hog;
+    hog.setSVMDetector(HOGDescriptor::getDefaultPeopleDetector());
+
+    FileStorage fs("myhog.xml", FileStorage::WRITE);
+    hog.write(fs, "myHOG");
+
+    fs.open("myhog.xml", FileStorage::READ);
+    FileNode n = fs["opencv_storage"]["myHOG"];
+    hog.read(n);
+}
+
+
+
 TEST(Objdetect_CascadeDetector, regression) { CV_CascadeDetectorTest test; test.safe_run(); }
 TEST(Objdetect_HOGDetector, regression) { CV_HOGDetectorTest test; test.safe_run(); }
+TEST(Objdetect_HOGDetectorReadWrite, regression) { CV_HOGDetectorReadWriteTest test; test.safe_run(); }
