@@ -1,3 +1,7 @@
+#if defined __clang__
+#  pragma GCC diagnostic ignored "-Wdelete-non-virtual-dtor"
+#endif
+
 #include <string>
 #include <iostream>
 #include <fstream>

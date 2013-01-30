@@ -43,7 +43,7 @@
 #ifndef _CV_MODEL_EST_H_
 #define _CV_MODEL_EST_H_
 
-#include "precomp.hpp"
+#include "opencv2/calib3d/calib3d.hpp"
 
 class CV_EXPORTS CvModelEstimator2
 {
