@@ -141,7 +141,7 @@ namespace cv
         }
 
 
-        inline oclMat::oclMat(const oclMat &m, const Range &rowRange, const Range &colRange)
+        inline oclMat::oclMat(const oclMat &m, const Range &rRange, const Range &cRange)
         {
             flags = m.flags;
             step = m.step;
@@ -152,22 +152,22 @@ namespace cv
             wholerows = m.wholerows;
             wholecols = m.wholecols;
             offset = m.offset;
-            if( rowRange == Range::all() )
+            if( rRange == Range::all() )
                 rows = m.rows;
             else
             {
-                CV_Assert( 0 <= rowRange.start && rowRange.start <= rowRange.end && rowRange.end <= m.rows );
-                rows = rowRange.size();
-                offset += step * rowRange.start;
+                CV_Assert( 0 <= rRange.start && rRange.start <= rRange.end && rRange.end <= m.rows );
+                rows = rRange.size();
+                offset += step * rRange.start;
             }
 
-            if( colRange == Range::all() )
+            if( cRange == Range::all() )
                 cols = m.cols;
             else
             {
-                CV_Assert( 0 <= colRange.start && colRange.start <= colRange.end && colRange.end <= m.cols );
-                cols = colRange.size();
-                offset += colRange.start * elemSize();
+                CV_Assert( 0 <= cRange.start && cRange.start <= cRange.end && cRange.end <= m.cols );
+                cols = cRange.size();
+                offset += cRange.start * elemSize();
                 flags &= cols < m.cols ? ~Mat::CONTINUOUS_FLAG : -1;
             }
 
@@ -296,12 +296,12 @@ namespace cv
         //CPP void oclMat::copyTo( oclMat& m, const oclMat& mask  ) const;
         //CPP void oclMat::convertTo( oclMat& m, int rtype, double alpha=1, double beta=0 ) const;
 
-        inline void oclMat::assignTo( oclMat &m, int type ) const
+        inline void oclMat::assignTo( oclMat &m, int mtype ) const
         {
-            if( type < 0 )
+            if( mtype < 0 )
                 m = *this;
             else
-                convertTo(m, type);
+                convertTo(m, mtype);
         }
 
         //CPP oclMat& oclMat::operator = (const Scalar& s);
@@ -370,9 +370,9 @@ namespace cv
             return *this;
         }
 
-        inline oclMat oclMat::operator()( Range rowRange, Range colRange ) const
+        inline oclMat oclMat::operator()( Range rRange, Range cRange ) const
         {
-            return oclMat(*this, rowRange, colRange);
+            return oclMat(*this, rRange, cRange);
         }
         inline oclMat oclMat::operator()( const Rect &roi ) const
         {
