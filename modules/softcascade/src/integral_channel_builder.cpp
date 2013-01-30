@@ -44,9 +44,9 @@
 
 namespace {
 
-class ICF : public cv::ChannelFeatureBuilder
+class ICFBuilder : public cv::ChannelFeatureBuilder
 {
-    virtual ~ICF() {}
+    virtual ~ICFBuilder() {}
     virtual cv::AlgorithmInfo* info() const;
     virtual void operator()(cv::InputArray _frame, CV_OUT cv::OutputArray _integrals) const
     {
@@ -107,12 +107,56 @@ class ICF : public cv::ChannelFeatureBuilder
 
 }
 
-CV_INIT_ALGORITHM(ICF, "ChannelFeatureBuilder.ICF", );
+CV_INIT_ALGORITHM(ICFBuilder, "ChannelFeatureBuilder.ICFBuilder", );
 
 cv::ChannelFeatureBuilder::~ChannelFeatureBuilder() {}
 
 cv::Ptr<cv::ChannelFeatureBuilder> cv::ChannelFeatureBuilder::create()
 {
-    cv::Ptr<cv::ChannelFeatureBuilder> builder(new ICF());
+    cv::Ptr<cv::ChannelFeatureBuilder> builder(new ICFBuilder());
     return builder;
 }
+
+cv::ChannelFeature::ChannelFeature(int x, int y, int w, int h, int ch)
+: bb(cv::Rect(x, y, w, h)), channel(ch) {}
+
+bool cv::ChannelFeature::operator ==(cv::ChannelFeature b)
+{
+    return bb == b.bb && channel == b.channel;
+}
+
+bool cv::ChannelFeature::operator !=(cv::ChannelFeature b)
+{
+    return bb != b.bb || channel != b.channel;
+}
+
+
+float cv::ChannelFeature::operator() (const cv::Mat& integrals, const cv::Size& model) const
+{
+    int step = model.width + 1;
+
+    const int* ptr = integrals.ptr<int>(0) + (model.height * channel + bb.y) * step + bb.x;
+
+    int a = ptr[0];
+    int b = ptr[bb.width];
+
+    ptr += bb.height * step;
+
+    int c = ptr[bb.width];
+    int d = ptr[0];
+
+    return (float)(a - b + c - d);
+}
+
+void cv::write(cv::FileStorage& fs, const string&, const cv::ChannelFeature& f)
+{
+    fs << "{" << "channel" << f.channel << "rect" << f.bb << "}";
+}
+
+std::ostream& cv::operator<<(std::ostream& out, const cv::ChannelFeature& m)
+{
+    out << m.channel << " " << m.bb;
+    return out;
+}
+
+cv::ChannelFeature::~ChannelFeature(){}

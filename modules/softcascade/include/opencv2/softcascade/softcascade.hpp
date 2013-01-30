@@ -87,6 +87,31 @@ public:
     virtual ~Dataset();
 };
 
+// ========================================================================== //
+//                         First order channel feature.
+// ========================================================================== //
+
+class CV_EXPORTS ChannelFeature
+{
+public:
+    ChannelFeature(int x, int y, int w, int h, int ch);
+    ~ChannelFeature();
+
+    bool operator ==(ChannelFeature b);
+    bool operator !=(ChannelFeature b);
+
+    float operator() (const cv::Mat& integrals, const cv::Size& model) const;
+
+    friend void write(cv::FileStorage& fs, const std::string&, const ChannelFeature& f);
+    friend std::ostream& operator<<(std::ostream& out, const ChannelFeature& f);
+
+private:
+    cv::Rect bb;
+    int channel;
+};
+
+void write(cv::FileStorage& fs, const std::string&, const ChannelFeature& f);
+std::ostream& operator<<(std::ostream& out, const ChannelFeature& m);
 
 // ========================================================================== //
 //             Public Interface for Integral Channel Feature.

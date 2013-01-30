@@ -72,11 +72,6 @@ void sft::ICFFeaturePool::write( cv::FileStorage& fs, int index) const
     fs << pool[index];
 }
 
-void sft::write(cv::FileStorage& fs, const string&, const ICF& f)
-{
-    fs << "{" << "channel" << f.channel << "rect" << f.bb << "}";
-}
-
 sft::ICFFeaturePool::~ICFFeaturePool(){}
 
 #if defined _WIN32 && (_WIN32 || _WIN64)
@@ -137,7 +132,7 @@ void sft::ICFFeaturePool::fill(int desired)
 
         int ch = chRand(eng_ch);
 
-        sft::ICF f(x, y, w, h, ch);
+        cv::ChannelFeature f(x, y, w, h, ch);
 
         if (std::find(pool.begin(), pool.end(),f) == pool.end())
         {
@@ -145,12 +140,6 @@ void sft::ICFFeaturePool::fill(int desired)
             std::cout << f << std::endl;
         }
     }
-}
-
-std::ostream& sft::operator<<(std::ostream& out, const sft::ICF& m)
-{
-    out << m.channel << " " << m.bb;
-    return out;
 }
 
 // ============ Dataset ============ //

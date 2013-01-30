@@ -40,63 +40,78 @@
 //
 //M*/
 
-#ifndef __SFT_OCTAVE_HPP__
-#define __SFT_OCTAVE_HPP__
+#ifndef __SFT_RANDOM_HPP__
+#define __SFT_RANDOM_HPP__
 
-#include <sft/common.hpp>
+#if defined(_MSC_VER) && _MSC_VER >= 1600
 
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/softcascade/softcascade.hpp>
-namespace sft
+# include <random>
+namespace sft {
+struct Random
 {
-
-using cv::FeaturePool;
-using cv::Dataset;
-
-class ICFFeaturePool : public cv::FeaturePool
-{
-public:
-    ICFFeaturePool(cv::Size model, int nfeatures);
-
-    virtual int size() const { return (int)pool.size(); }
-    virtual float apply(int fi, int si, const cv::Mat& integrals) const;
-    virtual void preprocess(cv::InputArray _frame, cv::OutputArray _integrals) const;
-    virtual void write( cv::FileStorage& fs, int index) const;
-
-    virtual ~ICFFeaturePool();
-
-private:
-
-    void fill(int desired);
-
-    cv::Size model;
-    int nfeatures;
-
-    std::vector<cv::ChannelFeature> pool;
-
-    static const unsigned int seed = 0;
-
-    cv::Ptr<cv::ChannelFeatureBuilder> builder;
-
-    enum { N_CHANNELS = 10 };
-};
-
-
-
-class ScaledDataset : public Dataset
-{
-public:
-    ScaledDataset(const sft::string& path, const int octave);
-
-    virtual cv::Mat get(SampleType type, int idx) const;
-    virtual int available(SampleType type) const;
-    virtual ~ScaledDataset();
-
-private:
-    svector pos;
-    svector neg;
+    typedef std::mt19937 engine;
+    typedef std::uniform_int<int> uniform;
 };
 }
+
+#elif (__GNUC__) && __GNUC__ > 3 && __GNUC_MINOR__ > 1 && !defined(__ANDROID__)
+
+# if defined (__cplusplus) && __cplusplus > 201100L
+#  include <random>
+namespace sft {
+struct Random
+{
+    typedef std::mt19937 engine;
+    typedef std::uniform_int<int> uniform;
+};
+}
+# else
+#   include <tr1/random>
+
+namespace sft {
+struct Random
+{
+    typedef std::tr1::mt19937 engine;
+    typedef std::tr1::uniform_int<int> uniform;
+};
+}
+# endif
+
+#else
+#include <opencv2/core/core.hpp>
+namespace rnd {
+
+typedef cv::RNG engine;
+
+template<typename T>
+struct uniform_int
+{
+    uniform_int(const int _min, const int _max) : min(_min), max(_max) {}
+    T operator() (engine& eng, const int bound) const
+    {
+        return (T)eng.uniform(min, bound);
+    }
+
+    T operator() (engine& eng) const
+    {
+        return (T)eng.uniform(min, max);
+    }
+
+private:
+    int min;
+    int max;
+};
+
+}
+
+namespace sft {
+struct Random
+{
+    typedef rnd::engine engine;
+    typedef rnd::uniform_int<int> uniform;
+};
+}
+
+#endif
 
 #endif
