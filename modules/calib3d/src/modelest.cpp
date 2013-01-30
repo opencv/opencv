@@ -331,6 +331,9 @@ bool CvModelEstimator2::getSubset( const CvMat* m1, const CvMat* m2,
 
 bool CvModelEstimator2::checkSubset( const CvMat* m, int count )
 {
+    if( count <= 2 )
+        return true;
+
     int j, k, i, i0, i1;
     CvPoint2D64f* ptr = (CvPoint2D64f*)m->data.ptr;
 
