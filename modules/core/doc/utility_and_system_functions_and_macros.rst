@@ -408,7 +408,7 @@ Sets the number of threads used by OpenCV.
 
     :param nthreads: Number of threads used by OpenCV.
 
-The function sets the number of threads used by OpenCV in parallel OpenMP regions. If ``nthreads=0`` , the function uses the default number of threads that is usually equal to the number of the processing cores.
+The function sets the number of threads used by OpenCV in parallel OpenMP regions. If ``nthreads=0`` , the function uses the default number of threads that is usually equal to the number of the logical cores.
 
 .. seealso::
    :ocv:func:`getNumThreads`,
