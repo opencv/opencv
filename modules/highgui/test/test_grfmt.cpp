@@ -304,14 +304,27 @@ TEST(Highgui_Tiff, decode_tile16384x16384)
 {
     // see issue #2161
     cv::Mat big(16384, 16384, CV_8UC1, cv::Scalar::all(0));
-    string file = cv::tempfile(".tiff");
+    string file3 = cv::tempfile(".tiff");
+    string file4 = cv::tempfile(".tiff");
+
     std::vector<int> params;
     params.push_back(TIFFTAG_ROWSPERSTRIP);
     params.push_back(big.rows);
-    cv::imwrite(file, big, params);
+    cv::imwrite(file4, big, params);
+    cv::imwrite(file3, big.colRange(0, big.cols - 1), params);
     big.release();
 
-    EXPECT_NO_THROW(cv::imread(file));
-    remove(file.c_str());
+    try
+    {
+        cv::imread(file3);
+        EXPECT_NO_THROW(cv::imread(file4));
+    }
+    catch(const std::bad_alloc&)
+    {
+        // have no enough memory
+    }
+
+    remove(file3.c_str());
+    remove(file4.c_str());
 }
 #endif
