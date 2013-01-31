@@ -1930,7 +1930,7 @@ void cv::transpose( InputArray _src, OutputArray _dst )
     // handle the case of single-column/single-row matrices, stored in STL vectors.
     if( src.rows != dst.cols || src.cols != dst.rows )
     {
-        CV_Assert( src.cols == 1 || src.rows == 1 );
+        CV_Assert( src.size() == dst.size() && (src.cols == 1 || src.rows == 1) );
         src.copyTo(dst);
         return;
     }
