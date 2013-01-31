@@ -245,7 +245,6 @@ Calculates the width and height of a text string.
 The function ``getTextSize`` calculates and returns the size of a box that contains the specified text.
 That is, the following code renders some text, the tight box surrounding it, and the baseline: ::
 
-    // Use "y" to show that the baseLine is about
     string text = "Funny text inside the box";
     int fontFace = FONT_HERSHEY_SCRIPT_SIMPLEX;
     double fontScale = 2;
