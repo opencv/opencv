@@ -45,8 +45,8 @@
 #include <stdio.h>
 #include "opencv2/core/internal.hpp"
 
-#if CV_SSE2 || CV_SSE3
-#   if !CV_SSE4_1 && !CV_SSE4_2
+#if CV_SSE2
+#   if 1 /*!CV_SSE4_1 && !CV_SSE4_2*/
 #       define _mm_blendv_pd(a, b, m) _mm_xor_pd(a, _mm_and_pd(_mm_xor_pd(b, a), m))
 #       define _mm_blendv_ps(a, b, m) _mm_xor_ps(a, _mm_and_ps(_mm_xor_ps(b, a), m))
 #   endif
@@ -58,7 +58,7 @@
 #    pragma warning( disable : 4752 )
 #  endif
 #else
-#  if CV_SSE2 || CV_SSE3
+#  if CV_SSE2
 #    define CV_HAAR_USE_SSE 1
 #  endif
 #endif
