@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-namespace cv
+namespace cv { namespace scascade
 {
 
 CV_INIT_ALGORITHM(SoftCascadeDetector, "SoftCascade.SoftCascadeDetector",
@@ -58,4 +58,4 @@ bool initModule_softcascade(void)
     return (sc1->info() != 0);
 }
 
-}
+} }

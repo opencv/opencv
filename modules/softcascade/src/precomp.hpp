@@ -55,4 +55,6 @@
 #include "opencv2/ml/ml.hpp"
 #include "_random.hpp"
 
+using namespace cv::scascade;
+
 #endif

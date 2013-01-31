@@ -10,7 +10,7 @@ typedef perf::TestBaseWithParam<fixture> detect;
 
 namespace {
 
-void extractRacts(std::vector<cv::Detection> objectBoxes, std::vector<Rect>& rects)
+void extractRacts(std::vector<cv::scascade::Detection> objectBoxes, std::vector<Rect>& rects)
 {
     rects.clear();
     for (int i = 0; i < (int)objectBoxes.size(); ++i)
@@ -26,12 +26,12 @@ PERF_TEST_P(detect, SoftCascadeDetector,
     cv::Mat colored = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(colored.empty());
 
-    cv::SoftCascadeDetector cascade;
+    cv::scascade::SoftCascadeDetector cascade;
     cv::FileStorage fs(getDataPath(get<0>(GetParam())), cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    std::vector<cv::Detection> objectBoxes;
+    std::vector<cv::scascade::Detection> objectBoxes;
     cascade.detect(colored, cv::noArray(), objectBoxes);
 
     TEST_CYCLE()

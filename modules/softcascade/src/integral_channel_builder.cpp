@@ -44,7 +44,7 @@
 
 namespace {
 
-class ICFBuilder : public cv::ChannelFeatureBuilder
+class ICFBuilder : public ChannelFeatureBuilder
 {
     virtual ~ICFBuilder() {}
     virtual cv::AlgorithmInfo* info() const;
@@ -109,29 +109,29 @@ class ICFBuilder : public cv::ChannelFeatureBuilder
 
 CV_INIT_ALGORITHM(ICFBuilder, "ChannelFeatureBuilder.ICFBuilder", );
 
-cv::ChannelFeatureBuilder::~ChannelFeatureBuilder() {}
+cv::scascade::ChannelFeatureBuilder::~ChannelFeatureBuilder() {}
 
-cv::Ptr<cv::ChannelFeatureBuilder> cv::ChannelFeatureBuilder::create()
+cv::Ptr<ChannelFeatureBuilder> ChannelFeatureBuilder::create()
 {
-    cv::Ptr<cv::ChannelFeatureBuilder> builder(new ICFBuilder());
+    cv::Ptr<ChannelFeatureBuilder> builder(new ICFBuilder());
     return builder;
 }
 
-cv::ChannelFeature::ChannelFeature(int x, int y, int w, int h, int ch)
+cv::scascade::ChannelFeature::ChannelFeature(int x, int y, int w, int h, int ch)
 : bb(cv::Rect(x, y, w, h)), channel(ch) {}
 
-bool cv::ChannelFeature::operator ==(cv::ChannelFeature b)
+bool ChannelFeature::operator ==(ChannelFeature b)
 {
     return bb == b.bb && channel == b.channel;
 }
 
-bool cv::ChannelFeature::operator !=(cv::ChannelFeature b)
+bool ChannelFeature::operator !=(ChannelFeature b)
 {
     return bb != b.bb || channel != b.channel;
 }
 
 
-float cv::ChannelFeature::operator() (const cv::Mat& integrals, const cv::Size& model) const
+float cv::scascade::ChannelFeature::operator() (const cv::Mat& integrals, const cv::Size& model) const
 {
     int step = model.width + 1;
 
@@ -148,22 +148,22 @@ float cv::ChannelFeature::operator() (const cv::Mat& integrals, const cv::Size& 
     return (float)(a - b + c - d);
 }
 
-void cv::write(cv::FileStorage& fs, const string&, const cv::ChannelFeature& f)
+void cv::scascade::write(cv::FileStorage& fs, const string&, const ChannelFeature& f)
 {
     fs << "{" << "channel" << f.channel << "rect" << f.bb << "}";
 }
 
-std::ostream& cv::operator<<(std::ostream& out, const cv::ChannelFeature& m)
+std::ostream& cv::scascade::operator<<(std::ostream& out, const ChannelFeature& m)
 {
     out << m.channel << " " << m.bb;
     return out;
 }
 
-cv::ChannelFeature::~ChannelFeature(){}
+cv::scascade::ChannelFeature::~ChannelFeature(){}
 
 namespace {
 
-class ChannelFeaturePool : public cv::FeaturePool
+class ChannelFeaturePool : public FeaturePool
 {
 public:
     ChannelFeaturePool(cv::Size m, int n) : FeaturePool(), model(m)
@@ -183,7 +183,7 @@ private:
     void fill(int desired);
 
     cv::Size model;
-    std::vector<cv::ChannelFeature> pool;
+    std::vector<ChannelFeature> pool;
     enum { N_CHANNELS = 10 };
 };
 
@@ -235,7 +235,7 @@ void ChannelFeaturePool::fill(int desired)
 
         int ch = chRand(eng_ch);
 
-        cv::ChannelFeature f(x, y, w, h, ch);
+        ChannelFeature f(x, y, w, h, ch);
 
         if (std::find(pool.begin(), pool.end(),f) == pool.end())
         {
@@ -246,8 +246,8 @@ void ChannelFeaturePool::fill(int desired)
 
 }
 
-cv::Ptr<cv::FeaturePool> cv::FeaturePool::create(const cv::Size& model, int nfeatures)
+cv::Ptr<FeaturePool> cv::scascade::FeaturePool::create(const cv::Size& model, int nfeatures)
 {
-    cv::Ptr<cv::FeaturePool> pool(new ChannelFeaturePool(model, nfeatures));
+    cv::Ptr<FeaturePool> pool(new ChannelFeaturePool(model, nfeatures));
     return pool;
 }

@@ -145,13 +145,13 @@ struct Level
         scaleshift = static_cast<int>(relScale * (1 << 16));
     }
 
-    void addDetection(const int x, const int y, float confidence, std::vector<cv::Detection>& detections) const
+    void addDetection(const int x, const int y, float confidence, std::vector<Detection>& detections) const
     {
         // fix me
         int shrinkage = 4;//(*octave).shrinkage;
         cv::Rect rect(cvRound(x * shrinkage), cvRound(y * shrinkage), objSize.width, objSize.height);
 
-        detections.push_back(cv::Detection(rect, confidence));
+        detections.push_back(Detection(rect, confidence));
     }
 
     float rescale(cv::Rect& scaledRect, const float threshold, int idx) const
@@ -177,13 +177,13 @@ struct ChannelStorage
     int step;
     int model_height;
 
-    cv::Ptr<cv::ChannelFeatureBuilder> builder;
+    cv::Ptr<ChannelFeatureBuilder> builder;
 
     enum {HOG_BINS = 6, HOG_LUV_BINS = 10};
 
     ChannelStorage(const cv::Mat& colored, int shr) : shrinkage(shr)
     {
-        builder = cv::ChannelFeatureBuilder::create();
+        builder = ChannelFeatureBuilder::create();
         (*builder)(colored, hog);
 
         step = hog.step1();
@@ -205,7 +205,7 @@ struct ChannelStorage
 
 }
 
-struct cv::SoftCascadeDetector::Fields
+struct SoftCascadeDetector::Fields
 {
     float minScale;
     float maxScale;
@@ -409,17 +409,17 @@ struct cv::SoftCascadeDetector::Fields
     }
 };
 
-cv::SoftCascadeDetector::SoftCascadeDetector(const double mins, const double maxs, const int nsc, const int rej)
+SoftCascadeDetector::SoftCascadeDetector(const double mins, const double maxs, const int nsc, const int rej)
 : fields(0), minScale(mins), maxScale(maxs), scales(nsc), rejCriteria(rej) {}
 
-cv::SoftCascadeDetector::~SoftCascadeDetector() { delete fields;}
+SoftCascadeDetector::~SoftCascadeDetector() { delete fields;}
 
-void cv::SoftCascadeDetector::read(const FileNode& fn)
+void SoftCascadeDetector::read(const FileNode& fn)
 {
     Algorithm::read(fn);
 }
 
-bool cv::SoftCascadeDetector::load(const FileNode& fn)
+bool SoftCascadeDetector::load(const FileNode& fn)
 {
     if (fields) delete fields;
 
@@ -429,12 +429,12 @@ bool cv::SoftCascadeDetector::load(const FileNode& fn)
 
 namespace {
 
-typedef std::vector<cv::Detection>  dvector;
+typedef std::vector<Detection>  dvector;
 
 
 struct ConfidenceGt
 {
-    bool operator()(const cv::Detection& a, const cv::Detection& b) const
+    bool operator()(const Detection& a, const Detection& b) const
     {
         return a.confidence > b.confidence;
     }
@@ -455,10 +455,10 @@ void DollarNMS(dvector& objects)
 
     for (dvector::iterator dIt = objects.begin(); dIt != objects.end(); ++dIt)
     {
-        const cv::Detection &a = *dIt;
+        const Detection &a = *dIt;
         for (dvector::iterator next = dIt + 1; next != objects.end(); )
         {
-            const cv::Detection &b = *next;
+            const Detection &b = *next;
 
             const float ovl =  overlap(a.bb, b.bb) / std::min(a.bb.area(), b.bb.area());
 
@@ -470,15 +470,15 @@ void DollarNMS(dvector& objects)
     }
 }
 
-static void suppress(int type, std::vector<cv::Detection>& objects)
+static void suppress(int type, std::vector<Detection>& objects)
 {
-    CV_Assert(type == cv::SoftCascadeDetector::DOLLAR);
+    CV_Assert(type == SoftCascadeDetector::DOLLAR);
     DollarNMS(objects);
 }
 
 }
 
-void cv::SoftCascadeDetector::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects) const
+void SoftCascadeDetector::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects) const
 {
     Fields& fld = *fields;
     // create integrals
@@ -505,7 +505,7 @@ void cv::SoftCascadeDetector::detectNoRoi(const cv::Mat& image, std::vector<Dete
     // if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
 }
 
-void cv::SoftCascadeDetector::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<Detection>& objects) const
+void SoftCascadeDetector::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<Detection>& objects) const
 {
     // only color images are suppered
     cv::Mat image = _image.getMat();
@@ -557,7 +557,7 @@ void cv::SoftCascadeDetector::detect(cv::InputArray _image, cv::InputArray _rois
     if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
 }
 
-void cv::SoftCascadeDetector::detect(InputArray _image, InputArray _rois,  OutputArray _rects, OutputArray _confs) const
+void SoftCascadeDetector::detect(InputArray _image, InputArray _rois,  OutputArray _rects, OutputArray _confs) const
 {
     std::vector<Detection> objects;
     detect( _image, _rois, objects);

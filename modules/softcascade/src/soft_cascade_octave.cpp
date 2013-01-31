@@ -44,19 +44,17 @@
 #include <queue>
 #include <string>
 
-using cv::Dataset;
-using cv::FeaturePool;
 using cv::InputArray;
 using cv::OutputArray;
 using cv::Mat;
 
-cv::FeaturePool::~FeaturePool(){}
-cv::Dataset::~Dataset(){}
+cv::scascade::FeaturePool::~FeaturePool(){}
+cv::scascade::Dataset::~Dataset(){}
 
 namespace {
 
 
-class BoostedSoftCascadeOctave : public cv::Boost, public cv::SoftCascadeOctave
+class BoostedSoftCascadeOctave : public cv::Boost, public SoftCascadeOctave
 {
 public:
 
@@ -96,7 +94,7 @@ private:
 
     Mat trainData;
 
-    cv::Ptr<cv::ChannelFeatureBuilder> builder;
+    cv::Ptr<ChannelFeatureBuilder> builder;
 };
 
 BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, int ls, int shr, int poolSize)
@@ -128,7 +126,7 @@ BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, 
 
     params = _params;
 
-    builder = cv::ChannelFeatureBuilder::create();
+    builder = ChannelFeatureBuilder::create();
 
     int w = boundingBox.width;
     int h = boundingBox.height;
@@ -195,7 +193,7 @@ void BoostedSoftCascadeOctave::processPositives(const Dataset* dataset)
 {
     int h = boundingBox.height;
 
-    cv::ChannelFeatureBuilder& _builder = *builder;
+    ChannelFeatureBuilder& _builder = *builder;
 
     int total = 0;
     for (int curr = 0; curr < dataset->available( Dataset::POSITIVE); ++curr)
@@ -228,7 +226,7 @@ void BoostedSoftCascadeOctave::generateNegatives(const Dataset* dataset)
     int total = 0;
     Mat sum;
 
-    cv::ChannelFeatureBuilder& _builder = *builder;
+    ChannelFeatureBuilder& _builder = *builder;
     for (int i = npositives; i < nnegatives + npositives; ++total)
     {
         int curr = iRand(idxEng);
@@ -441,12 +439,12 @@ void BoostedSoftCascadeOctave::write( CvFileStorage* fs, std::string _name) cons
 
 CV_INIT_ALGORITHM(BoostedSoftCascadeOctave, "SoftCascadeOctave.BoostedSoftCascadeOctave", );
 
-cv::SoftCascadeOctave::~SoftCascadeOctave(){}
+cv::scascade::SoftCascadeOctave::~SoftCascadeOctave(){}
 
-cv::Ptr<cv::SoftCascadeOctave> cv::SoftCascadeOctave::create(cv::Rect boundingBox, int npositives, int nnegatives,
+cv::Ptr<SoftCascadeOctave> cv::scascade::SoftCascadeOctave::create(cv::Rect boundingBox, int npositives, int nnegatives,
         int logScale, int shrinkage, int poolSize)
 {
-    cv::Ptr<cv::SoftCascadeOctave> octave(
+    cv::Ptr<SoftCascadeOctave> octave(
         new BoostedSoftCascadeOctave(boundingBox, npositives, nnegatives, logScale, shrinkage, poolSize));
     return octave;
 }

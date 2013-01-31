@@ -45,7 +45,7 @@
 
 #include "opencv2/core/core.hpp"
 
-namespace cv {
+namespace cv { namespace scascade {
 
 // Representation of detectors result.
 struct CV_EXPORTS Detection
@@ -122,7 +122,7 @@ std::ostream& operator<<(std::ostream& out, const ChannelFeature& m);
 //             Public Interface for Integral Channel Feature.
 // ========================================================================== //
 
-class CV_EXPORTS_W ChannelFeatureBuilder : public Algorithm
+class CV_EXPORTS_W ChannelFeatureBuilder : public cv::Algorithm
 {
 public:
     virtual ~ChannelFeatureBuilder();
@@ -136,7 +136,7 @@ public:
 // ========================================================================== //
 //             Implementation of soft (stageless) cascaded detector.
 // ========================================================================== //
-class CV_EXPORTS_W SoftCascadeDetector : public Algorithm
+class CV_EXPORTS_W SoftCascadeDetector : public cv::Algorithm
 {
 public:
 
@@ -186,7 +186,7 @@ private:
 // ========================================================================== //
 //     Public Interface for singe soft (stageless) cascade octave training.
 // ========================================================================== //
-class CV_EXPORTS SoftCascadeOctave : public Algorithm
+class CV_EXPORTS SoftCascadeOctave : public cv::Algorithm
 {
 public:
     enum
@@ -211,6 +211,6 @@ public:
 
 CV_EXPORTS bool initModule_softcascade(void);
 
-}
+} }
 
 #endif
