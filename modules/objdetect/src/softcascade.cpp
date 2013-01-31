@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <iostream>
 
 namespace {
 
@@ -365,7 +364,7 @@ struct cv::SCascade::Fields
         std::string fformat = (string)root[FEATURE_FORMAT];
         bool useBoxes = (fformat == "BOX");
 
-        // only HOG-like integral channel features cupported
+        // only HOG-like integral channel features supported
         string featureTypeStr = (string)root[SC_FEATURE_TYPE];
         CV_Assert(featureTypeStr == SC_ICF);
 

@@ -488,7 +488,6 @@ protected:
     Ptr<MaskGenerator> maskGenerator;
 };
 
-
 // Implementation of soft (stageless) cascaded detector.
 class CV_EXPORTS_W SCascade : public Algorithm
 {

@@ -103,43 +103,40 @@ struct cv::gpu::SCascade::Fields
     {
         static const char *const SC_STAGE_TYPE          = "stageType";
         static const char *const SC_BOOST               = "BOOST";
-
         static const char *const SC_FEATURE_TYPE        = "featureType";
         static const char *const SC_ICF                 = "ICF";
+        static const char *const SC_ORIG_W              = "width";
+        static const char *const SC_ORIG_H              = "height";
+        static const char *const SC_FEATURE_FORMAT      = "featureFormat";
+        static const char *const SC_SHRINKAGE           = "shrinkage";
+        static const char *const SC_OCTAVES             = "octaves";
+        static const char *const SC_OCT_SCALE           = "scale";
+        static const char *const SC_OCT_WEAKS           = "weaks";
+        static const char *const SC_TREES               = "trees";
+        static const char *const SC_WEAK_THRESHOLD      = "treeThreshold";
+        static const char *const SC_FEATURES            = "features";
+        static const char *const SC_INTERNAL            = "internalNodes";
+        static const char *const SC_LEAF                = "leafValues";
+        static const char *const SC_F_CHANNEL           = "channel";
+        static const char *const SC_F_RECT              = "rect";
 
         // only Ada Boost supported
         std::string stageTypeStr = (string)root[SC_STAGE_TYPE];
         CV_Assert(stageTypeStr == SC_BOOST);
 
-        // only HOG-like integral channel features cupported
+        // only HOG-like integral channel features supported
         string featureTypeStr = (string)root[SC_FEATURE_TYPE];
         CV_Assert(featureTypeStr == SC_ICF);
-
-        static const char *const SC_ORIG_W              = "width";
-        static const char *const SC_ORIG_H              = "height";
 
         int origWidth  = (int)root[SC_ORIG_W];
         int origHeight = (int)root[SC_ORIG_H];
 
-        static const char *const SC_OCTAVES             = "octaves";
-        static const char *const SC_STAGES              = "stages";
-        static const char *const SC_FEATURES            = "features";
-
-        static const char *const SC_WEEK                = "weakClassifiers";
-        static const char *const SC_INTERNAL            = "internalNodes";
-        static const char *const SC_LEAF                = "leafValues";
-
-        static const char *const SC_OCT_SCALE           = "scale";
-        static const char *const SC_OCT_STAGES          = "stageNum";
-        static const char *const SC_OCT_SHRINKAGE       = "shrinkingFactor";
-
-        static const char *const SC_STAGE_THRESHOLD     = "stageThreshold";
-
-        static const char * const SC_F_CHANNEL          = "channel";
-        static const char * const SC_F_RECT             = "rect";
+        std::string fformat = (string)root[SC_FEATURE_FORMAT];
+        bool useBoxes = (fformat == "BOX");
+        ushort shrinkage = cv::saturate_cast<ushort>((int)root[SC_SHRINKAGE]);
 
         FileNode fn = root[SC_OCTAVES];
-        if (fn.empty()) return false;
+        if (fn.empty()) return 0;
 
         using namespace device::icf;
 
@@ -149,82 +146,97 @@ struct cv::gpu::SCascade::Fields
         std::vector<float>   vleaves;
 
         FileNodeIterator it = fn.begin(), it_end = fn.end();
-        int feature_offset = 0;
-        ushort octIndex = 0;
-        ushort shrinkage = 1;
-
-        for (; it != it_end; ++it)
+        for (ushort octIndex = 0; it != it_end; ++it, ++octIndex)
         {
             FileNode fns = *it;
-            float scale = (float)fns[SC_OCT_SCALE];
-
+            float scale = powf(2.f,saturate_cast<float>((int)fns[SC_OCT_SCALE]));
             bool isUPOctave = scale >= 1;
 
-            ushort nstages = saturate_cast<ushort>((int)fns[SC_OCT_STAGES]);
+            ushort nweaks = saturate_cast<ushort>((int)fns[SC_OCT_WEAKS]);
+
             ushort2 size;
             size.x = cvRound(origWidth * scale);
             size.y = cvRound(origHeight * scale);
-            shrinkage = saturate_cast<ushort>((int)fns[SC_OCT_SHRINKAGE]);
 
-            Octave octave(octIndex, nstages, shrinkage, size, scale);
+            Octave octave(octIndex, nweaks, shrinkage, size, scale);
             CV_Assert(octave.stages > 0);
             voctaves.push_back(octave);
 
             FileNode ffs = fns[SC_FEATURES];
-            if (ffs.empty()) return false;
+            if (ffs.empty()) return 0;
 
-            FileNodeIterator ftrs = ffs.begin();
+            std::vector<cv::Rect> feature_rects;
+            std::vector<int> feature_channels;
 
-            fns = fns[SC_STAGES];
+            FileNodeIterator ftrs = ffs.begin(), ftrs_end = ffs.end();
+            int feature_offset = 0;
+            for (; ftrs != ftrs_end; ++ftrs, ++feature_offset )
+            {
+                cv::FileNode ftn = (*ftrs)[SC_F_RECT];
+                cv::FileNodeIterator r_it = ftn.begin();
+                int x = (int)*(r_it++);
+                int y = (int)*(r_it++);
+                int w = (int)*(r_it++);
+                int h = (int)*(r_it++);
+
+                if (useBoxes)
+                {
+                    if (isUPOctave)
+                    {
+                        w -= x;
+                        h -= y;
+                    }
+                }
+                else
+                {
+                    if (!isUPOctave)
+                    {
+                        w += x;
+                        h += y;
+                    }
+                }
+                feature_rects.push_back(cv::Rect(x, y, w, h));
+                feature_channels.push_back((int)(*ftrs)[SC_F_CHANNEL]);
+            }
+
+            fns = fns[SC_TREES];
             if (fn.empty()) return false;
 
             // for each stage (~ decision tree with H = 2)
             FileNodeIterator st = fns.begin(), st_end = fns.end();
             for (; st != st_end; ++st )
             {
-                fns = *st;
-                vstages.push_back((float)fns[SC_STAGE_THRESHOLD]);
+                FileNode octfn = *st;
+                float threshold = (float)octfn[SC_WEAK_THRESHOLD];
+                vstages.push_back(threshold);
 
-                fns = fns[SC_WEEK];
-                FileNodeIterator ftr = fns.begin(), ft_end = fns.end();
-                for (; ftr != ft_end; ++ftr)
+                FileNode intfns = octfn[SC_INTERNAL];
+                FileNodeIterator inIt = intfns.begin(), inIt_end = intfns.end();
+                for (; inIt != inIt_end;)
                 {
-                    fns = (*ftr)[SC_INTERNAL];
-                    FileNodeIterator inIt = fns.begin(), inIt_end = fns.end();
-                    for (; inIt != inIt_end;)
-                    {
-                        // int feature = (int)(*(inIt +=2)) + feature_offset;
-                        inIt +=3;
-                        // extract feature, Todo:check it
-                        unsigned int th = saturate_cast<unsigned int>((float)(*(inIt++)));
-                        cv::FileNode ftn = (*ftrs)[SC_F_RECT];
-                        cv::FileNodeIterator r_it = ftn.begin();
-                        uchar4 rect;
-                        rect.x = saturate_cast<uchar>((int)*(r_it++));
-                        rect.y = saturate_cast<uchar>((int)*(r_it++));
-                        rect.z = saturate_cast<uchar>((int)*(r_it++));
-                        rect.w = saturate_cast<uchar>((int)*(r_it++));
+                    inIt +=2;
+                    int featureIdx = (int)(*(inIt++));
 
-                        if (isUPOctave)
-                        {
-                            rect.z -= rect.x;
-                            rect.w -= rect.y;
-                        }
+                    float orig_threshold = (float)(*(inIt++));
+                    unsigned int th = saturate_cast<unsigned int>((int)orig_threshold);
+                    cv::Rect& r = feature_rects[featureIdx];
+                    uchar4 rect;
+                    rect.x = saturate_cast<uchar>(r.x);
+                    rect.y = saturate_cast<uchar>(r.y);
+                    rect.z = saturate_cast<uchar>(r.width);
+                    rect.w = saturate_cast<uchar>(r.height);
 
-                        unsigned int channel = saturate_cast<unsigned int>((int)(*ftrs)[SC_F_CHANNEL]);
-                        vnodes.push_back(Node(rect, channel, th));
-                        ++ftrs;
-                    }
+                    unsigned int channel = saturate_cast<unsigned int>(feature_channels[featureIdx]);
+                    vnodes.push_back(Node(rect, channel, th));
+                }
 
-                    fns = (*ftr)[SC_LEAF];
-                    inIt = fns.begin(), inIt_end = fns.end();
-                    for (; inIt != inIt_end; ++inIt)
-                        vleaves.push_back((float)(*inIt));
+                intfns = octfn[SC_LEAF];
+                inIt = intfns.begin(), inIt_end = intfns.end();
+                for (; inIt != inIt_end; ++inIt)
+                {
+                    vleaves.push_back((float)(*inIt));
                 }
             }
-
-            feature_offset += octave.stages * 3;
-            ++octIndex;
         }
 
         cv::Mat hoctaves(1, (int) (voctaves.size() * sizeof(Octave)), CV_8UC1, (uchar*)&(voctaves[0]));
@@ -400,7 +412,7 @@ public:
     // 160x120x10
     GpuMat shrunk;
 
-    // temporial mat for integrall
+    // temporal mat for integral
     GpuMat integralBuffer;
 
     // 161x121x10
@@ -567,7 +579,7 @@ private:
 
         cv::gpu::cartToPolar(dfdx, dfdy, mag, ang, true, s);
 
-        // normolize magnitude to uchar interval and angles to 6 bins
+        // normalize magnitude to uchar interval and angles to 6 bins
         GpuMat nmag(fplane, cv::Rect(0, 4 * fh, fw, fh));
         GpuMat nang(fplane, cv::Rect(0, 5 * fh, fw, fh));
 

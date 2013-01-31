@@ -352,7 +352,7 @@ namespace icf {
         {
     #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 300
     #pragma unroll
-            // scan on shuffl functions
+            // scan on shuffle functions
             for (int i = 1; i < Policy::WARP; i *= 2)
             {
                 const float n = __shfl_up(impact, i, Policy::WARP);
@@ -459,7 +459,7 @@ __device void CascadeInvoker<Policy>::detect(Detection* objects, const uint ndet
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
     const int x = blockIdx.x;
 
-    // load Lavel
+    // load Level
     __shared__ Level level;
 
     // check POI
@@ -501,11 +501,12 @@ __device void CascadeInvoker<Policy>::detect(Detection* objects, const uint ndet
         float impact = leaves[(st + threadIdx.x) * 4 + lShift];
 
         PrefixSum<Policy>::apply(impact);
-        confidence += impact;
 
     #if __CUDA_ARCH__ >= 120
-        if(__any((confidence <= stages[(st + threadIdx.x)]))) st += 2048;
+        if(__any((confidence + impact <= stages[(st + threadIdx.x)]))) st += 2048;
     #endif
+        impact = __shfl(impact, 31);
+        confidence += impact;
     }
 
     if(!threadIdx.x && st == stEnd &&  ((confidence - FLT_EPSILON) >= 0))
@@ -546,7 +547,7 @@ void CascadeInvoker<Policy>::operator()(const PtrStepSzb& roi, const PtrStepSzi&
     soft_cascade<Policy, false><<<grid, Policy::block(), 0, stream>>>(inv, det, max_det, ctr, 0);
     cudaSafeCall( cudaGetLastError());
 
-    grid = dim3(fw, fh / Policy::STA_Y, scales - downscales);
+    grid = dim3(fw, fh / Policy::STA_Y, min(38, scales) - downscales);
     soft_cascade<Policy, true><<<grid, Policy::block(), 0, stream>>>(inv, det, max_det, ctr, downscales);
 
     if (!stream)
