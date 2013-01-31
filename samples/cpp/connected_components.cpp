@@ -48,7 +48,7 @@ int main( int argc, const char** argv )
 {
     help();
     CommandLineParser parser(argc, argv, keys);
-    string inputImage = parser.get<string>("@image");
+    string inputImage = parser.get<string>(0);
     img = imread(inputImage.c_str(), 0);
 
     if(img.empty())

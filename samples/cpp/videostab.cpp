@@ -356,7 +356,7 @@ int main(int argc, const char **argv)
 
         // check if source video is specified
 
-        string inputPath = arg("1");
+        string inputPath = arg(0);
         if (inputPath.empty())
             throw runtime_error("specify video file path");
 

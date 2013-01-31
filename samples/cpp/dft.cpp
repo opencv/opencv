@@ -24,7 +24,7 @@ int main(int argc, const char ** argv)
 {
     help();
     CommandLineParser parser(argc, argv, keys);
-    string filename = parser.get<string>(1);
+    string filename = parser.get<string>(0);
 
     Mat img = imread(filename.c_str(), CV_LOAD_IMAGE_GRAYSCALE);
     if( img.empty() )
