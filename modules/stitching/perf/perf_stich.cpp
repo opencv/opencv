@@ -154,7 +154,7 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
 
 PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
                  TEST_DETECTORS,
-                 testing::Values(2, 4, 6, 8))
+                 testing::Values(2, 4, 8))
              )
 {
     Mat img1, img1_full = imread( getDataPath("stitching/b1.png") );

@@ -131,7 +131,7 @@ PERF_TEST_P(Size_MatType_NormType, normalize,
 
 PERF_TEST_P(Size_MatType_NormType, normalize_mask,
             testing::Combine(
-                testing::Values(TYPICAL_MAT_SIZES),
+                testing::Values(::perf::szVGA, ::perf::sz1080p),
                 testing::Values(TYPICAL_MAT_TYPES),
                 testing::Values((int)NORM_INF, (int)NORM_L1, (int)NORM_L2)
                 )
@@ -192,6 +192,7 @@ PERF_TEST_P( Size_MatType, normalize_minmax, TYPICAL_MATS )
     Mat dst(sz, matType);
 
     declare.in(src, WARMUP_RNG).out(dst);
+    declare.time(30);
 
     TEST_CYCLE() normalize(src, dst, 20., 100., NORM_MINMAX);
 
