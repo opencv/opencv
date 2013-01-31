@@ -52,7 +52,7 @@
 #   endif
 #endif
 
-#if CV_AVX
+#if 0 /*CV_AVX*/
 #  define CV_HAAR_USE_AVX 1
 #  if defined _MSC_VER
 #    pragma warning( disable : 4752 )
