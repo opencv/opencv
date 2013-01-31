@@ -467,10 +467,8 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
     _out.create(3, 4, CV_64F);
     Mat out = _out.getMat();
 
-    _inliers.create(count, 1, CV_8U);
-    Mat inliers = _inliers.getMat();
+    Mat inliers(1, count, CV_8U);
     inliers = Scalar::all(1);
-    transpose(inliers, inliers);
 
     Mat dFrom, dTo;
     from.convertTo(dFrom, CV_64F);
@@ -479,7 +477,7 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
     dTo = dTo.reshape(3, 1);
 
     CvMat F3x4 = out;
-    CvMat mask  = inliers;
+    CvMat mask = inliers;
     CvMat m1 = dFrom;
     CvMat m2 = dTo;
 
@@ -487,5 +485,9 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
     param1 = param1 <= 0 ? 3 : param1;
     param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
 
-    return Affine3DEstimator().runRANSAC(&m1, &m2, &F3x4, &mask, param1, param2 );
+    int ok = Affine3DEstimator().runRANSAC(&m1, &m2, &F3x4, &mask, param1, param2 );
+    if( _inliers.needed() )
+        transpose(inliers, _inliers);
+
+    return ok;
 }
