@@ -70,7 +70,7 @@ int main( int argc, const char** argv )
     help();
 
     CommandLineParser parser(argc, argv, keys);
-    string inputImage = parser.get<string>(1);
+    string inputImage = parser.get<string>(0);
 
     // Load the source image. HighGUI use.
     image = imread( inputImage, 0 );

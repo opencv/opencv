@@ -77,7 +77,7 @@ int main( int argc, const char** argv )
     float hranges[] = {0,180};
     const float* phranges = hranges;
     CommandLineParser parser(argc, argv, keys);
-    int camNum = parser.get<int>(1);
+    int camNum = parser.get<int>(0);
 
     cap.open(camNum);
 
