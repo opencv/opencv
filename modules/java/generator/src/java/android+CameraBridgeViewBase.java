@@ -6,7 +6,6 @@ import org.opencv.R;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
-import org.opencv.highgui.Highgui;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -44,7 +43,6 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
     protected int mFrameHeight;
     protected int mMaxHeight;
     protected int mMaxWidth;
-    protected int mPreviewFormat = Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA;
     protected int mCameraIndex = -1;
     protected boolean mEnabled;
     protected FpsMeter mFpsMeter = null;
@@ -91,9 +89,14 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
          * The returned values - is a modified frame which needs to be displayed on the screen.
          * TODO: pass the parameters specifying the format of the frame (BPP, YUV or RGB and etc)
          */
-        public Mat onCameraFrame(Mat inputFrame);
+        public Mat onCameraFrame(CvCameraViewFrame inputFrame);
 
     }
+
+    public interface CvCameraViewFrame {
+        public abstract Mat rgba();
+        public abstract Mat gray();
+    };
 
     public void surfaceChanged(SurfaceHolder arg0, int arg1, int arg2, int arg3) {
         Log.d(TAG, "call surfaceChanged event");
@@ -181,11 +184,6 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
     public void setMaxFrameSize(int maxWidth, int maxHeight) {
         mMaxWidth = maxWidth;
         mMaxHeight = maxHeight;
-    }
-
-    public void SetCaptureFormat(int format)
-    {
-        mPreviewFormat = format;
     }
 
     /**
@@ -276,13 +274,13 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
      * then displayed on the screen.
      * @param frame - the current frame to be delivered
      */
-    protected void deliverAndDrawFrame(Mat frame) {
+    protected void deliverAndDrawFrame(CvCameraViewFrame frame) {
         Mat modified;
 
         if (mListener != null) {
             modified = mListener.onCameraFrame(frame);
         } else {
-            modified = frame;
+            modified = frame.rgba();
         }
 
         boolean bmpValid = true;
