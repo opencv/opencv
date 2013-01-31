@@ -169,11 +169,11 @@ CvBoost::predict
 ----------------
 Predicts a response for an input sample.
 
-.. ocv:function:: float CvBoost::predict(  const Mat& sample, const Mat& missing=Mat(), const Range& slice=Range::all(), bool rawMode=false, bool returnSum=false ) const
+.. ocv:function:: float CvBoost::predict(  const Mat& sample, const Mat& missing=Mat(), const Range& slice=Range::all(), bool raw_mode=false, bool return_sum=false ) const
 
 .. ocv:function:: float CvBoost::predict( const CvMat* sample, const CvMat* missing=0, CvMat* weak_responses=0, CvSlice slice=CV_WHOLE_SEQ, bool raw_mode=false, bool return_sum=false ) const
 
-.. ocv:pyfunction:: cv2.Boost.predict(sample[, missing[, slice[, rawMode[, returnSum]]]]) -> retval
+.. ocv:pyfunction:: cv2.Boost.predict(sample[, missing[, slice[, raw_mode[, return_sum]]]]) -> retval
 
     :param sample: Input sample.
 
