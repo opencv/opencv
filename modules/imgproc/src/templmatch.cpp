@@ -252,6 +252,12 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     _result.create(corrSize, CV_32F);
     Mat result = _result.getMat();
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (templ.total() <= 256 && templ.cols >= 8 &&
+        tegra::matchTemplate(img, templ, result, method))
+        return;
+#endif
+
     int cn = img.channels();
     crossCorr( img, templ, result, result.size(), result.type(), Point(0,0), 0, 0);
 
