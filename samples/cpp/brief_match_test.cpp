@@ -62,8 +62,8 @@ int main(int argc, const char ** argv)
 
   help();
   CommandLineParser parser(argc, argv, keys);
-  string im1_name = parser.get<string>(1);
-  string im2_name = parser.get<string>(2);
+  string im1_name = parser.get<string>(0);
+  string im2_name = parser.get<string>(1);
 
   Mat im1 = imread(im1_name, CV_LOAD_IMAGE_GRAYSCALE);
   Mat im2 = imread(im2_name, CV_LOAD_IMAGE_GRAYSCALE);
