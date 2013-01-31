@@ -40,6 +40,10 @@
 //
 //M*/
 
+#if defined __clang__
+#  pragma GCC diagnostic ignored "-Wdelete-non-virtual-dtor"
+#endif
+
 #include "precomp.hpp"
 #include "opencv2/videostab/stabilizer.hpp"
 
