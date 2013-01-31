@@ -616,7 +616,7 @@ protected:
 TEST(Features2d_RotationInvariance_Detector_SURF, regression)
 {
     DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"),
-                                        0.45f,
+                                        0.44f,
                                         0.76f);
     test.safe_run();
 }

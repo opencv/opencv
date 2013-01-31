@@ -1114,6 +1114,10 @@ protected:
         Mat d1, d2;
         f->operator()(img1, Mat(), kpt1, d1);
         f->operator()(img1, Mat(), kpt2, d2);
+        for( size_t i = 0; i < kpt1.size(); i++ )
+            CV_Assert(kpt1[i].response > 0 );
+        for( size_t i = 0; i < kpt2.size(); i++ )
+            CV_Assert(kpt2[i].response > 0 );
 
         vector<DMatch> matches;
         BFMatcher(NORM_L2, true).match(d1, d2, matches);
@@ -1140,5 +1144,5 @@ protected:
 };
 
 TEST(Features2d_SIFTHomographyTest, regression) { CV_DetectPlanarTest test("SIFT", 80); test.safe_run(); }
-//TEST(Features2d_SURFHomographyTest, regression) { CV_DetectPlanarTest test("SURF", 80); test.safe_run(); }
+TEST(Features2d_SURFHomographyTest, regression) { CV_DetectPlanarTest test("SURF", 80); test.safe_run(); }
 
