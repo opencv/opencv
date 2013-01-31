@@ -460,20 +460,23 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
                          double param1, double param2)
 {
     Mat from = _from.getMat(), to = _to.getMat();
-    int count = from.checkVector(3, CV_32F);
+    int count = from.checkVector(3);
 
-    CV_Assert( count >= 0 && to.checkVector(3, CV_32F) == count );
+    CV_Assert( count >= 0 && to.checkVector(3) == count );
 
     _out.create(3, 4, CV_64F);
     Mat out = _out.getMat();
 
-    _inliers.create(count, 1, CV_8U, -1, true);
+    _inliers.create(count, 1, CV_8U);
     Mat inliers = _inliers.getMat();
     inliers = Scalar::all(1);
+    transpose(inliers, inliers);
 
     Mat dFrom, dTo;
     from.convertTo(dFrom, CV_64F);
     to.convertTo(dTo, CV_64F);
+    dFrom = dFrom.reshape(3, 1);
+    dTo = dTo.reshape(3, 1);
 
     CvMat F3x4 = out;
     CvMat mask  = inliers;
