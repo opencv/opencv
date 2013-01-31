@@ -698,11 +698,12 @@ struct SURFInvoker
                 cvGetQuadrangleSubPix( img, &win, &W );
                 */
 
-                // Nearest neighbour version (faster)
                 float win_offset = -(float)(win_size-1)/2;
                 float start_x = center.x + win_offset*cos_dir + win_offset*sin_dir;
                 float start_y = center.y - win_offset*sin_dir + win_offset*cos_dir;
                 uchar* WIN = win.data;
+#if 0
+                // Nearest neighbour version (faster)
                 for( i = 0; i < win_size; i++, start_x += sin_dir, start_y += cos_dir )
                 {
                     float pixel_x = start_x;
@@ -714,6 +715,36 @@ struct SURFInvoker
                         WIN[i*win_size + j] = img->at<uchar>(y, x);
                     }
                 }
+#else
+                int ncols1 = img->cols-1, nrows1 = img->rows-1;
+                size_t imgstep = img->step;
+                for( i = 0; i < win_size; i++, start_x += sin_dir, start_y += cos_dir )
+                {
+                    double pixel_x = start_x;
+                    double pixel_y = start_y;
+                    for( j = 0; j < win_size; j++, pixel_x += cos_dir, pixel_y -= sin_dir )
+                    {
+                        int ix = cvFloor(pixel_x), iy = cvFloor(pixel_y);
+                        if( (unsigned)ix < (unsigned)ncols1 &&
+                            (unsigned)iy < (unsigned)nrows1 )
+                        {
+                            float a = (float)(pixel_x - ix), b = (float)(pixel_y - iy);
+                            const uchar* imgptr = &img->at<uchar>(iy, ix);
+                            WIN[i*win_size + j] = (uchar)
+                                cvRound(imgptr[0]*(1.f - a)*(1.f - b) +
+                                        imgptr[1]*a*(1.f - b) +
+                                        imgptr[imgstep]*(1.f - a)*b +
+                                        imgptr[imgstep+1]*a*b);
+                        }
+                        else
+                        {
+                            int x = std::min(std::max(cvRound(pixel_x), 0), ncols1);
+                            int y = std::min(std::max(cvRound(pixel_y), 0), nrows1);
+                            WIN[i*win_size + j] = img->at<uchar>(y, x);
+                        }
+                    }
+                }
+#endif
             }
             else
             {
@@ -844,10 +875,10 @@ struct SURFInvoker
 SURF::SURF()
 {
     hessianThreshold = 100;
-    extended = true;
+    extended = false;
     upright = false;
     nOctaves = 4;
-    nOctaveLayers = 2;
+    nOctaveLayers = 3;
 }
 
 SURF::SURF(double _threshold, int _nOctaves, int _nOctaveLayers, bool _extended, bool _upright)

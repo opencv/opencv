@@ -214,7 +214,7 @@ make & enjoy!
 #include <sys/types.h>
 #include <sys/mman.h>
 
-#ifdef HAVE_CAMVAL
+#ifdef HAVE_CAMV4L
 #include <linux/videodev.h>
 #endif
 

@@ -499,7 +499,7 @@ CV_IMPL void cvDestroyWindow(const char* name)
 CV_IMPL void cvDestroyAllWindows()
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        return;
 
     QMetaObject::invokeMethod(guiMainThread,
         "destroyAllWindow",

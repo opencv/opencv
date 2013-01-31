@@ -1203,7 +1203,7 @@ bool videoInput::setupDevice(int deviceNumber, int w, int h){
 bool videoInput::setupDeviceFourcc(int deviceNumber, int w, int h,int fourcc){
     if(deviceNumber >= VI_MAX_CAMERAS || VDList[deviceNumber]->readyToCapture) return false;
 
-    if ( fourcc > 0 ) {
+    if ( fourcc != -1 ) {
         GUID *mediaType = getMediaSubtypeFromFourcc(fourcc);
         if ( mediaType ) {
             setAttemptCaptureSize(deviceNumber,w,h,*mediaType);
@@ -2193,7 +2193,7 @@ int videoInput::getFourccFromMediaSubtype(GUID type) {
 GUID *videoInput::getMediaSubtypeFromFourcc(int fourcc){
 
     for (int i=0;i<VI_NUM_TYPES;i++) {
-        if ( (unsigned long)fourcc == mediaSubtypes[i].Data1 ) {
+        if ( (unsigned long)(unsigned)fourcc == mediaSubtypes[i].Data1 ) {
             return &mediaSubtypes[i];
         }
     }
@@ -3268,8 +3268,8 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
         break;
 
     case CV_CAP_PROP_FOURCC:
-        fourcc = cvRound(value);
-        if ( fourcc < 0 ) {
+        fourcc = (int)(unsigned long)(value);
+        if ( fourcc == -1 ) {
             // following cvCreateVideo usage will pop up caprturepindialog here if fourcc=-1
             // TODO - how to create a capture pin dialog
         }
