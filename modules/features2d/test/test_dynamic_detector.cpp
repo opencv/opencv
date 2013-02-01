@@ -162,6 +162,46 @@ void CV_DynamicAdaptedFeatureDetectorTest::run(int)
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
         }
     }
+
+    {
+        RNG &rng = ts->get_rng();
+
+        //TODO: enable SURF too
+        string detectorType = cvtest::randInt(rng) % 2 ? "FAST" : "STAR";
+        Ptr<AdjusterAdapter> adapter = AdjusterAdapter::create(detectorType);
+
+        vector<KeyPoint> keypointsOriginal;
+        adapter->detect(image, keypointsOriginal);
+        const int keypointsOriginalCount = static_cast<int>(keypointsOriginal.size());
+
+        {
+            const int max_keypoints = keypointsOriginalCount - 1 - static_cast<int>(cvtest::randInt(rng) % 100);
+            const int min_keypoints = std::max(0, max_keypoints - 500 - static_cast<int>(cvtest::randInt(rng) % 1000));
+            const int max_iterations = 5;
+            Ptr<DynamicAdaptedFeatureDetector> detector = new DynamicAdaptedFeatureDetector(adapter, min_keypoints, max_keypoints, max_iterations, false);
+            vector<KeyPoint> keypoints;
+            detector->detect(image, keypoints);
+            if (keypoints.size() < static_cast<size_t>(min_keypoints) || keypoints.size() > static_cast<size_t>(max_keypoints))
+            {
+                ts->printf(cvtest::TS::LOG, "DynamicAdaptedFeatureDetector was not able to reduce number of keypoints\n");
+                ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+            }
+        }
+
+        {
+            const int min_keypoints = keypointsOriginalCount + 1 + cvtest::randInt(rng) % 100 ;
+            const int max_keypoints = min_keypoints + 500 + cvtest::randInt(rng) % 1000;
+            const int max_iterations = 5;
+            Ptr<DynamicAdaptedFeatureDetector> detector = new DynamicAdaptedFeatureDetector(adapter, min_keypoints, max_keypoints, max_iterations);
+            vector<KeyPoint> keypoints;
+            detector->detect(image, keypoints);
+            if (keypoints.size() < static_cast<size_t>(min_keypoints) || keypoints.size() > static_cast<size_t>(max_keypoints))
+            {
+                ts->printf(cvtest::TS::LOG, "DynamicAdaptedFeatureDetector was not able to increase number of keypoints\n");
+                ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+            }
+        }
+    }
 }
 
 TEST(Features2d_DynamicAdaptedFeatureDetector, validation) { CV_DynamicAdaptedFeatureDetectorTest test; test.safe_run(); }
