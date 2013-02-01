@@ -1726,7 +1726,7 @@ typedef void (*BatchDistFunc)(const uchar* src1, const uchar* src2, size_t step2
                               int nvecs, int len, uchar* dist, const uchar* mask);
 
 
-struct BatchDistInvoker
+struct BatchDistInvoker : public ParallelLoopBody
 {
     BatchDistInvoker( const Mat& _src1, const Mat& _src2,
                       Mat& _dist, Mat& _nidx, int _K,
@@ -1743,12 +1743,12 @@ struct BatchDistInvoker
         func = _func;
     }
 
-    void operator()(const BlockedRange& range) const
+    void operator()(const Range& range) const
     {
         AutoBuffer<int> buf(src2->rows);
         int* bufptr = buf;
 
-        for( int i = range.begin(); i < range.end(); i++ )
+        for( int i = range.start; i < range.end; i++ )
         {
             func(src1->ptr(i), src2->ptr(), src2->step, src2->rows, src2->cols,
                  K > 0 ? (uchar*)bufptr : dist->ptr(i), mask->data ? mask->ptr(i) : 0);
@@ -1899,8 +1899,8 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
                   ("The combination of type=%d, dtype=%d and normType=%d is not supported",
                    type, dtype, normType));
 
-    parallel_for(BlockedRange(0, src1.rows),
-                 BatchDistInvoker(src1, src2, dist, nidx, K, mask, update, func));
+    parallel_for_(Range(0, src1.rows),
+                  BatchDistInvoker(src1, src2, dist, nidx, K, mask, update, func));
 }
 
 
