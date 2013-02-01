@@ -2037,10 +2037,10 @@ public:
     //! default constructor
     TermCriteria();
     //! full constructor
-    TermCriteria(int _type, int _maxCount, double _epsilon);
+    TermCriteria(int type, int maxCount, double epsilon);
     //! conversion from CvTermCriteria
     TermCriteria(const CvTermCriteria& criteria);
-    //! conversion from CvTermCriteria
+    //! conversion to CvTermCriteria
     operator CvTermCriteria() const;
 
     int type; //!< the type of termination criteria: COUNT, EPS or COUNT + EPS

@@ -161,6 +161,16 @@ CV_INIT_ALGORITHM(GridAdaptedFeatureDetector, "Feature2D.Grid",
                   obj.info()->addParam(obj, "gridRows", obj.gridRows);
                   obj.info()->addParam(obj, "gridCols", obj.gridCols));
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+CV_INIT_ALGORITHM(BFMatcher, "DescriptorMatcher.BFMatcher",
+                  obj.info()->addParam(obj, "normType", obj.normType);
+                  obj.info()->addParam(obj, "crossCheck", obj.crossCheck));
+
+CV_INIT_ALGORITHM(FlannBasedMatcher, "DescriptorMatcher.FlannBasedMatcher",);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 bool cv::initModule_features2d(void)
 {
     bool all = true;
@@ -175,6 +185,8 @@ bool cv::initModule_features2d(void)
     all &= !HarrisDetector_info_auto.name().empty();
     all &= !DenseFeatureDetector_info_auto.name().empty();
     all &= !GridAdaptedFeatureDetector_info_auto.name().empty();
+    all &= !BFMatcher_info_auto.name().empty();
+    all &= !FlannBasedMatcher_info_auto.name().empty();
 
     return all;
 }

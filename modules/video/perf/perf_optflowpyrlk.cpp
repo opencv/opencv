@@ -33,7 +33,7 @@ PERF_TEST_P(Path_Idx_Cn_NPoints_WSize, OpticalFlowPyrLK_full, testing::Combine(
                 testing::Range(1, 3),
                 testing::Values(1, 3, 4),
                 testing::Values(make_tuple(9, 9), make_tuple(15, 15)),
-                testing::Values(7, 11, 25)
+                testing::Values(7, 11)
                 )
             )
 {
@@ -105,7 +105,7 @@ PERF_TEST_P(Path_Idx_Cn_NPoints_WSize_Deriv, OpticalFlowPyrLK_self, testing::Com
                 testing::Range(1, 3),
                 testing::Values(1, 3, 4),
                 testing::Values(make_tuple(9, 9), make_tuple(15, 15)),
-                testing::Values(7, 11, 25),
+                testing::Values(7, 11),
                 testing::Bool()
                 )
             )

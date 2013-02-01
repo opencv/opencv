@@ -621,7 +621,7 @@ TEST(Features2d_RotationInvariance_Detector_SURF, regression)
     test.safe_run();
 }
 
-TEST(Features2d_RotationInvariance_Detector_SIFT, regression)
+TEST(Features2d_RotationInvariance_Detector_SIFT, DISABLED_regression)
 {
     DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"),
                                         0.45f,

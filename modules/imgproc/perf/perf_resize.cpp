@@ -97,7 +97,7 @@ typedef TestBaseWithParam<tr1::tuple<MatType, Size, double> > MatInfo_Size_Scale
 PERF_TEST_P(MatInfo_Size_Scale_Area, ResizeArea,
             testing::Combine(
                 testing::Values(CV_8UC1, CV_8UC4),
-                testing::Values(szVGA, szqHD, sz720p, sz1080p),
+                testing::Values(szVGA, szqHD, sz720p),
                 testing::Values(2.4, 3.4, 1.3)
                 )
             )

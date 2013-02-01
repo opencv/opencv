@@ -219,7 +219,31 @@ TermCriteria
 ------------
 .. ocv:class:: TermCriteria
 
-Template class defining termination criteria for iterative algorithms.
+  The class defining termination criteria for iterative algorithms. You can initialize it by default constructor and then override any parameters, or the structure may be fully initialized using the advanced variant of the constructor.
+
+TermCriteria::TermCriteria
+--------------------------
+The constructors.
+
+.. ocv:function:: TermCriteria::TermCriteria()
+
+.. ocv:function:: TermCriteria::TermCriteria(int type, int maxCount, double epsilon)
+
+.. ocv:function:: TermCriteria::TermCriteria(const CvTermCriteria& criteria)
+
+    :param type: The type of termination criteria: ``TermCriteria::COUNT``, ``TermCriteria::EPS`` or ``TermCriteria::COUNT`` + ``TermCriteria::EPS``.
+
+    :param maxCount: The maximum number of iterations or elements to compute.
+
+    :param epsilon: The desired accuracy or change in parameters at which the iterative algorithm stops.
+
+    :param criteria: Termination criteria in the deprecated ``CvTermCriteria`` format.
+   
+TermCriteria::operator CvTermCriteria
+-------------------------------------
+Converts to the deprecated ``CvTermCriteria`` format.
+
+.. ocv:function:: TermCriteria::operator CvTermCriteria() const
 
 Matx
 ----

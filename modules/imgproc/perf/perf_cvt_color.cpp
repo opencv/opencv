@@ -56,11 +56,6 @@ enum
 };
 
 CV_ENUM(CvtMode,
-    CV_BayerBG2BGR, CV_BayerBG2BGR_VNG, CV_BayerBG2GRAY,
-    CV_BayerGB2BGR, CV_BayerGB2BGR_VNG, CV_BayerGB2GRAY,
-    CV_BayerGR2BGR, CV_BayerGR2BGR_VNG, CV_BayerGR2GRAY,
-    CV_BayerRG2BGR, CV_BayerRG2BGR_VNG, CV_BayerRG2GRAY,
-
     CV_BGR2BGR555, CV_BGR2BGR565, CV_BGR2BGRA, CV_BGR2GRAY,
     CV_BGR2HLS, CV_BGR2HLS_FULL, CV_BGR2HSV, CV_BGR2HSV_FULL,
     CV_BGR2Lab, CV_BGR2Luv, CV_BGR2RGB, CV_BGR2RGBA, CV_BGR2XYZ,
@@ -105,6 +100,15 @@ CV_ENUM(CvtMode,
     CV_YCrCb2BGR, CV_YCrCb2RGB, CX_YCrCb2BGRA, CX_YCrCb2RGBA,
     CV_YUV2BGR, CV_YUV2RGB, CX_YUV2BGRA, CX_YUV2RGBA
     )
+
+
+CV_ENUM(CvtModeBayer,
+    CV_BayerBG2BGR, CV_BayerBG2BGR_VNG, CV_BayerBG2GRAY,
+    CV_BayerGB2BGR, CV_BayerGB2BGR_VNG, CV_BayerGB2GRAY,
+    CV_BayerGR2BGR, CV_BayerGR2BGR_VNG, CV_BayerGR2GRAY,
+    CV_BayerRG2BGR, CV_BayerRG2BGR_VNG, CV_BayerRG2GRAY
+    )
+
 
 CV_ENUM(CvtMode2, CV_YUV2BGR_NV12, CV_YUV2BGRA_NV12, CV_YUV2RGB_NV12, CV_YUV2RGBA_NV12, CV_YUV2BGR_NV21, CV_YUV2BGRA_NV21, CV_YUV2RGB_NV21, CV_YUV2RGBA_NV21,
                   CV_YUV2BGR_YV12, CV_YUV2BGRA_YV12, CV_YUV2RGB_YV12, CV_YUV2RGBA_YV12, CV_YUV2BGR_IYUV, CV_YUV2BGRA_IYUV, CV_YUV2RGB_IYUV, CV_YUV2RGBA_IYUV,
@@ -231,8 +235,34 @@ typedef perf::TestBaseWithParam<Size_CvtMode_t> Size_CvtMode;
 
 PERF_TEST_P(Size_CvtMode, cvtColor8u,
             testing::Combine(
-                testing::Values(TYPICAL_MAT_SIZES),
+                testing::Values(::perf::szODD, ::perf::szVGA, ::perf::sz1080p),
                 testing::ValuesIn(CvtMode::all())
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int mode = get<1>(GetParam());
+    ChPair ch = getConversionInfo(mode);
+    mode %= CV_COLORCVT_MAX;
+
+    Mat src(sz, CV_8UC(ch.scn));
+    Mat dst(sz, CV_8UC(ch.dcn));
+
+    declare.time(100);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() cvtColor(src, dst, mode, ch.dcn);
+
+    SANITY_CHECK(dst, 1);
+}
+
+typedef std::tr1::tuple<Size, CvtModeBayer> Size_CvtMode_Bayer_t;
+typedef perf::TestBaseWithParam<Size_CvtMode_Bayer_t> Size_CvtMode_Bayer;
+
+PERF_TEST_P(Size_CvtMode_Bayer, cvtColorBayer8u,
+            testing::Combine(
+                testing::Values(::perf::szODD, ::perf::szVGA),
+                testing::ValuesIn(CvtModeBayer::all())
                 )
             )
 {
@@ -257,7 +287,7 @@ typedef perf::TestBaseWithParam<Size_CvtMode2_t> Size_CvtMode2;
 
 PERF_TEST_P(Size_CvtMode2, cvtColorYUV420,
             testing::Combine(
-                testing::Values(szVGA, sz720p, sz1080p, Size(130, 60)),
+                testing::Values(szVGA, sz1080p, Size(130, 60)),
                 testing::ValuesIn(CvtMode2::all())
                 )
             )
