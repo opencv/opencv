@@ -195,7 +195,7 @@ void CV_DetectorTest::run( int )
         validationFS << DETECTORS << "{";
         assert( detectorNames.size() == detectorFilenames.size() );
         nit = detectorNames.begin();
-        for( int di = 0; di < detectorNames.size(); ++nit, di++ )
+        for( int di = 0; nit != detectorNames.end(); ++nit, di++ )
         {
             validationFS << *nit << "{";
             writeDetector( validationFS, di );
