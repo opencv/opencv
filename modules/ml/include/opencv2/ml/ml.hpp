@@ -1251,6 +1251,8 @@ protected:
     virtual void write_params( CvFileStorage* fs ) const;
     virtual void read_params( CvFileStorage* fs, CvFileNode* node );
 
+    virtual void initialize_weights(double (&p)[2]);
+
     CvDTreeTrainData* data;
     CvBoostParams params;
     CvSeq* weak;
@@ -2129,7 +2131,6 @@ typedef CvGBTrees GradientBoostingTrees;
 template<> CV_EXPORTS void Ptr<CvDTreeSplit>::delete_obj();
 
 CV_EXPORTS bool initModule_ml(void);
-
 }
 
 #endif // __cplusplus

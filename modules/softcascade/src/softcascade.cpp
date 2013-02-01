@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2012, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2008-2013, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -22,7 +22,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and / or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -42,11 +42,17 @@
 
 #include "precomp.hpp"
 
+using cv::softcascade::Detection;
+using cv::softcascade::Detector;
+using cv::softcascade::ChannelFeatureBuilder;
+
+using namespace cv;
+
 namespace {
 
-struct Octave
+struct SOctave
 {
-    Octave(const int i, const cv::Size& origObjSize, const cv::FileNode& fn)
+    SOctave(const int i, const cv::Size& origObjSize, const cv::FileNode& fn)
     : index(i), weaks((int)fn[SC_OCT_WEAKS]), scale(pow(2,(float)fn[SC_OCT_SCALE])),
       size(cvRound(origObjSize.width * scale), cvRound(origObjSize.height * scale)) {}
 
@@ -115,16 +121,16 @@ struct Feature
     static const char *const SC_F_RECT;
 };
 
-const char *const Octave::SC_OCT_SCALE      = "scale";
-const char *const Octave::SC_OCT_WEAKS      = "weaks";
-const char *const Octave::SC_OCT_SHRINKAGE  = "shrinkingFactor";
+const char *const SOctave::SC_OCT_SCALE      = "scale";
+const char *const SOctave::SC_OCT_WEAKS      = "weaks";
+const char *const SOctave::SC_OCT_SHRINKAGE  = "shrinkingFactor";
 const char *const Weak::SC_WEAK_THRESHOLD   = "treeThreshold";
 const char *const Feature::SC_F_CHANNEL     = "channel";
 const char *const Feature::SC_F_RECT        = "rect";
 
 struct Level
 {
-    const Octave* octave;
+    const SOctave* octave;
 
     float origScale;
     float relScale;
@@ -134,9 +140,8 @@ struct Level
     cv::Size objSize;
 
     float scaling[2]; // 0-th for channels <= 6, 1-st otherwise
-    typedef cv::SCascade::Detection Detection;
 
-    Level(const Octave& oct, const float scale, const int shrinkage, const int w, const int h)
+    Level(const SOctave& oct, const float scale, const int shrinkage, const int w, const int h)
     :  octave(&oct), origScale(scale), relScale(scale / oct.scale),
        workRect(cv::Size(cvRound(w / (float)shrinkage),cvRound(h / (float)shrinkage))),
        objSize(cv::Size(cvRound(oct.size.width * relScale), cvRound(oct.size.height * relScale)))
@@ -170,37 +175,30 @@ struct Level
         return (sarea == 0.0f)? threshold : (threshold * scaling[idx] * sarea);
     }
 };
-
 struct ChannelStorage
 {
-    std::vector<cv::Mat> hog;
+    cv::Mat hog;
     int shrinkage;
     int offset;
     int step;
+    int model_height;
+
+    cv::Ptr<ChannelFeatureBuilder> builder;
 
     enum {HOG_BINS = 6, HOG_LUV_BINS = 10};
 
     ChannelStorage(const cv::Mat& colored, int shr) : shrinkage(shr)
     {
-        hog.clear();
-        hog.reserve(10);
-        cv::SCascade::Channels ints(shr);
+        builder = ChannelFeatureBuilder::create();
+        (*builder)(colored, hog);
 
-        // convert to grey
-        cv::Mat grey;
-        cv::cvtColor(colored, grey, CV_BGR2GRAY);
-
-        ints.appendHogBins(grey, hog, 6);
-        ints.appendLuvBins(colored, hog);
-
-        step = hog[0].cols;
+        step = hog.step1();
+        model_height = colored.rows / shrinkage;
     }
 
     float get(const int channel, const cv::Rect& area) const
     {
-        // CV_Assert(channel < HOG_LUV_BINS);
-        const cv::Mat& m = hog[channel];
-        int *ptr = ((int*)(m.data)) + offset;
+        const int *ptr = hog.ptr<const int>(0) + model_height * channel * step + offset;
 
         int a = ptr[area.y * step + area.x];
         int b = ptr[area.y * step + area.width];
@@ -213,7 +211,8 @@ struct ChannelStorage
 
 }
 
-struct cv::SCascade::Fields
+
+struct Detector::Fields
 {
     float minScale;
     float maxScale;
@@ -224,7 +223,7 @@ struct cv::SCascade::Fields
 
     int shrinkage;
 
-    std::vector<Octave>  octaves;
+    std::vector<SOctave>  octaves;
     std::vector<Weak>    weaks;
     std::vector<Node>    nodes;
     std::vector<float>   leaves;
@@ -234,14 +233,14 @@ struct cv::SCascade::Fields
 
     cv::Size frameSize;
 
-    typedef std::vector<Octave>::iterator  octIt_t;
+    typedef std::vector<SOctave>::iterator  octIt_t;
     typedef std::vector<Detection> dvector;
 
     void detectAt(const int dx, const int dy, const Level& level, const ChannelStorage& storage, dvector& detections) const
     {
         float detectionScore = 0.f;
 
-        const Octave& octave = *(level.octave);
+        const SOctave& octave = *(level.octave);
 
         int stBegin = octave.index * octave.weaks, stEnd = stBegin + octave.weaks;
 
@@ -287,7 +286,7 @@ struct cv::SCascade::Fields
         octIt_t res =  octaves.begin();
         for (octIt_t oct = octaves.begin(); oct < octaves.end(); ++oct)
         {
-            const Octave& octave =*oct;
+            const SOctave& octave =*oct;
             float logOctave = log(octave.scale);
             float logAbsScale = fabs(logFactor - logOctave);
 
@@ -381,7 +380,7 @@ struct cv::SCascade::Fields
         for (int octIndex = 0; it != it_end; ++it, ++octIndex)
         {
             FileNode fns = *it;
-            Octave octave(octIndex, cv::Size(origObjWidth, origObjHeight), fns);
+            SOctave octave(octIndex, cv::Size(origObjWidth, origObjHeight), fns);
             CV_Assert(octave.weaks > 0);
             octaves.push_back(octave);
 
@@ -417,17 +416,17 @@ struct cv::SCascade::Fields
     }
 };
 
-cv::SCascade::SCascade(const double mins, const double maxs, const int nsc, const int rej)
+Detector::Detector(const double mins, const double maxs, const int nsc, const int rej)
 : fields(0), minScale(mins), maxScale(maxs), scales(nsc), rejCriteria(rej) {}
 
-cv::SCascade::~SCascade() { delete fields;}
+Detector::~Detector() { delete fields;}
 
-void cv::SCascade::read(const FileNode& fn)
+void Detector::read(const cv::FileNode& fn)
 {
     Algorithm::read(fn);
 }
 
-bool cv::SCascade::load(const FileNode& fn)
+bool Detector::load(const cv::FileNode& fn)
 {
     if (fields) delete fields;
 
@@ -436,7 +435,8 @@ bool cv::SCascade::load(const FileNode& fn)
 }
 
 namespace {
-typedef cv::SCascade::Detection Detection;
+
+using cv::softcascade::Detection;
 typedef std::vector<Detection>  dvector;
 
 
@@ -480,13 +480,13 @@ void DollarNMS(dvector& objects)
 
 static void suppress(int type, std::vector<Detection>& objects)
 {
-    CV_Assert(type == cv::SCascade::DOLLAR);
+    CV_Assert(type == Detector::DOLLAR);
     DollarNMS(objects);
 }
 
 }
 
-void cv::SCascade::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects) const
+void Detector::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects) const
 {
     Fields& fld = *fields;
     // create integrals
@@ -513,9 +513,9 @@ void cv::SCascade::detectNoRoi(const cv::Mat& image, std::vector<Detection>& obj
     if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
 }
 
-void cv::SCascade::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<Detection>& objects) const
+void Detector::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<Detection>& objects) const
 {
-    // only color images are supperted
+    // only color images are suppered
     cv::Mat image = _image.getMat();
     CV_Assert(image.type() == CV_8UC3);
 
@@ -565,7 +565,7 @@ void cv::SCascade::detect(cv::InputArray _image, cv::InputArray _rois, std::vect
     if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
 }
 
-void cv::SCascade::detect(InputArray _image, InputArray _rois,  OutputArray _rects, OutputArray _confs) const
+void Detector::detect(InputArray _image, InputArray _rois,  OutputArray _rects, OutputArray _confs) const
 {
     std::vector<Detection> objects;
     detect( _image, _rois, objects);

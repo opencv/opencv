@@ -879,7 +879,6 @@ void CvBoostTree::read( CvFileStorage* fs, CvFileNode* fnode, CvBoost* _ensemble
     ensemble = _ensemble;
 }
 
-
 void CvBoostTree::read( CvFileStorage*, CvFileNode* )
 {
     assert(0);
@@ -1116,6 +1115,12 @@ bool CvBoost::train( CvMLData* _data,
     return result;
 }
 
+void CvBoost::initialize_weights(double (&p)[2])
+{
+    p[0] = 1.;
+    p[1] = 1.;
+}
+
 void
 CvBoost::update_weights( CvBoostTree* tree )
 {
@@ -1159,8 +1164,9 @@ CvBoost::update_weights( CvBoostTree* tree )
         // in case of logitboost and gentle adaboost each weak tree is a regression tree,
         // so we need to convert class labels to floating-point values
 
-        double w0 = 1./n;
-        double p[2] = { 1, 1 };
+        double w0 = 1./ n;
+        double p[2] = { 1., 1. };
+        initialize_weights(p);
 
         cvReleaseMat( &orig_response );
         cvReleaseMat( &sum_response );

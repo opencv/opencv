@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2012, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2008-2013, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -22,7 +22,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and / or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -45,20 +45,21 @@
 
 #include "test_precomp.hpp"
 
-TEST(SCascade, readCascade)
+using namespace cv::softcascade;
+
+TEST(SoftCascadeDetector, readCascade)
 {
     std::string xml = cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
-    cv::SCascade cascade;
+     Detector cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 }
 
-TEST(SCascade, detect)
+TEST(SoftCascadeDetector, detect)
 {
-    typedef cv::SCascade::Detection Detection;
     std::string xml =  cvtest::TS::ptr()->get_data_path()+ "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
-    cv::SCascade cascade;
+    Detector cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
@@ -71,11 +72,10 @@ TEST(SCascade, detect)
     ASSERT_EQ(719, (int)objects.size());
 }
 
-TEST(SCascade, detectSeparate)
+TEST(SoftCascadeDetector, detectSeparate)
 {
-    typedef cv::SCascade::Detection Detection;
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
-    cv::SCascade cascade;
+    Detector cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
@@ -88,11 +88,10 @@ TEST(SCascade, detectSeparate)
     ASSERT_EQ(719, confs.cols);
 }
 
-TEST(SCascade, detectRoi)
+TEST(SoftCascadeDetector, detectRoi)
 {
-    typedef cv::SCascade::Detection Detection;
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
-    cv::SCascade cascade;
+    Detector cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
@@ -107,11 +106,10 @@ TEST(SCascade, detectRoi)
     ASSERT_EQ(719, (int)objects.size());
 }
 
-TEST(SCascade, detectNoRoi)
+TEST(SoftCascadeDetector, detectNoRoi)
 {
-    typedef cv::SCascade::Detection Detection;
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
-    cv::SCascade cascade;
+    Detector cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
@@ -126,11 +124,10 @@ TEST(SCascade, detectNoRoi)
     ASSERT_EQ(719, (int)objects.size());
 }
 
-TEST(SCascade, detectEmptyRoi)
+TEST(SoftCascadeDetector, detectEmptyRoi)
 {
-    typedef cv::SCascade::Detection Detection;
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/cascades/inria_caltech-17.01.2013.xml";
-    cv::SCascade cascade;
+    Detector cascade;
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
