@@ -46,7 +46,7 @@ static void detect_and_draw_objects( IplImage* image, CvLatentSvmDetector* detec
 #endif
 
     start = cvGetTickCount();
-    detections = cvLatentSvmDetectObjects(image, detector, storage, 0.5f, numThreads);
+    detections = cvLatentSvmDetectObjects(image, detector, storage, 0.5f);
     finish = cvGetTickCount();
     printf("detection time = %.3f\n", (float)(finish - start) / (float)(cvGetTickFrequency() * 1000000.0));
 

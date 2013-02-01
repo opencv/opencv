@@ -23,6 +23,16 @@
 #define Dyy      454
 #define BTAG     500
 
+#define PCA          5
+#define WEIGHTSPCA   162
+#define CASCADE_Th   163
+#define HYPOTHES_PCA 164
+#define DEFORM_PCA   165
+#define HYPOTHES     166
+#define DEFORM       167
+
+#define PCACOEFF     6
+
 #define STEP_END 1000
 
 #define EMODEL    (STEP_END + MODEL)
@@ -45,21 +55,27 @@
 #define EDyy      (STEP_END + Dyy)
 #define EBTAG     (STEP_END + BTAG)
 
-//extern "C" {
-    int LSVMparser(const char * filename, CvLSVMFilterObject *** model, int *last, int *max,
-                   int **comp, float **b, int *count, float * score);
-#ifdef __cplusplus
-extern "C"
-#endif
+#define EPCA          (STEP_END + PCA)
+#define EWEIGHTSPCA   (STEP_END + WEIGHTSPCA)
+#define ECASCADE_Th   (STEP_END + CASCADE_Th)
+#define EHYPOTHES_PCA (STEP_END + HYPOTHES_PCA)
+#define EDEFORM_PCA   (STEP_END + DEFORM_PCA)
+#define EHYPOTHES     (STEP_END + HYPOTHES)
+#define EDEFORM       (STEP_END + DEFORM)
+
+#define EPCACOEFF     (STEP_END + PCACOEFF)
+
     int loadModel(
-
-              const char *modelPath,
-
-              CvLSVMFilterObject ***filters,
-              int *kFilters,
-              int *kComponents,
-              int **kPartFilters,
-              float **b,
-              float *scoreThreshold);
+             // Входные параметры
+              const char *modelPath,// - путь до файла с моделью
+             
+              // Выходные параметры
+              CvLSVMFilterObject ***filters,// - массив указателей на фильтры компонент
+              int *kFilters, //- общее количество фильтров во всех моделях
+              int *kComponents, //- количество компонент
+              int **kPartFilters, //- массив, содержащий количество точных фильтров в каждой компоненте
+              float **b, //- массив линейных членов в оценочной функции
+              float *scoreThreshold,
+              float ** PCAcoeff); //- порог для score)
 //};
 #endif

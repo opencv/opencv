@@ -4,8 +4,6 @@
 #include "_lsvmparser.h"
 #include "_lsvm_error.h"
 
-namespace
-{
 int isMODEL    (char *str){
     char stag [] = "<Model>";
     char etag [] = "</Model>";
@@ -140,6 +138,67 @@ int isB      (char *str){
     return 0;
 }
 
+int isWEIGHTS_PCA  (char *str){
+    char stag [] = "<WeightsPCA>";
+    char etag [] = "</WeightsPCA>";
+    if(strcmp(stag, str) == 0)return  WEIGHTSPCA;
+    if(strcmp(etag, str) == 0)return EWEIGHTSPCA;
+    return 0;
+}
+
+int isPCA  (char *str){
+    char stag [] = "<PCA>";
+    char etag [] = "</PCA>";
+    if(strcmp(stag, str) == 0)return  PCA;
+    if(strcmp(etag, str) == 0)return EPCA;
+    return 0;
+}
+
+int isPCAcoeff  (char *str){
+    char stag [] = "<PCAcoeff>";
+    char etag [] = "</PCAcoeff>";
+    if(strcmp(stag, str) == 0)return  PCACOEFF;
+    if(strcmp(etag, str) == 0)return EPCACOEFF;
+    return 0;
+}
+
+int isCASCADE_Th  (char *str){
+    char stag [] = "<CascadeThresholds>";
+    char etag [] = "</CascadeThresholds>";
+    if(strcmp(stag, str) == 0)return  CASCADE_Th;
+    if(strcmp(etag, str) == 0)return ECASCADE_Th;
+    return 0;
+}
+
+int isHYPOTHES_PCA  (char *str){
+    char stag [] = "<HypothesisThresholdPCA>";
+    char etag [] = "</HypothesisThresholdPCA>";
+    if(strcmp(stag, str) == 0)return  HYPOTHES_PCA;
+    if(strcmp(etag, str) == 0)return EHYPOTHES_PCA;
+    return 0;
+}
+int isDEFORM_PCA  (char *str){
+    char stag [] = "<DeformationThresholdPCA>";
+    char etag [] = "</DeformationThresholdPCA>";
+    if(strcmp(stag, str) == 0)return  DEFORM_PCA;
+    if(strcmp(etag, str) == 0)return EDEFORM_PCA;
+    return 0;
+}
+int isHYPOTHES  (char *str){
+    char stag [] = "<HypothesisThreshold>";
+    char etag [] = "</HypothesisThreshold>";
+    if(strcmp(stag, str) == 0)return  HYPOTHES;
+    if(strcmp(etag, str) == 0)return EHYPOTHES;
+    return 0;
+}
+int isDEFORM  (char *str){
+    char stag [] = "<DeformationThreshold>";
+    char etag [] = "</DeformationThreshold>";
+    if(strcmp(stag, str) == 0)return  DEFORM;
+    if(strcmp(etag, str) == 0)return EDEFORM;
+    return 0;
+}
+
 int getTeg(char *str){
     int sum = 0;
     sum = isMODEL (str)+
@@ -160,12 +219,22 @@ int getTeg(char *str){
     isDy       (str)+
     isDxx      (str)+
     isDyy      (str)+
-    isB        (str);
+    isB        (str)+
+    isPCA         (str)+
+    isCASCADE_Th  (str)+
+    isHYPOTHES_PCA(str)+
+    isDEFORM_PCA  (str)+
+    isHYPOTHES    (str)+
+    isDEFORM      (str)+
+    isWEIGHTS_PCA (str)+
+    isPCAcoeff    (str)
+    ;
 
     return sum;
 }
 
-void addFilter(CvLSVMFilterObject *** model, int *last, int *max){
+void addFilter(CvLSVMFilterObject *** model, int *last, int *max)
+{
     CvLSVMFilterObject ** nmodel;
     int i;
     (*last) ++;
@@ -179,11 +248,96 @@ void addFilter(CvLSVMFilterObject *** model, int *last, int *max){
         (*model) = nmodel;
     }
     (*model) [(*last)] = (CvLSVMFilterObject *)malloc(sizeof(CvLSVMFilterObject));
+    (*model) [(*last)]->Hypothesis      = 0.0f;
+    (*model) [(*last)]->Deformation     = 0.0f;
+    (*model) [(*last)]->Hypothesis_PCA  = 0.0f;
+    (*model) [(*last)]->Deformation_PCA = 0.0f;
+
 }
 
-void parserRFilter  (FILE * xmlf, int p, CvLSVMFilterObject * model, float *b){
+//##############################################
+void parserCascadeThresholds  (FILE * xmlf, CvLSVMFilterObject * model){
     int st = 0;
-    int sizeX=0, sizeY=0;
+    int tag;
+    int tagVal;
+    char ch;
+    int i,j;
+    char buf[1024];
+    char tagBuf[1024];
+    
+    i   = 0;
+    j   = 0;
+    st  = 0;
+    tag = 0;
+    while(!feof(xmlf)){
+        ch = fgetc( xmlf );
+        if(ch == '<'){
+            tag = 1;
+            j   = 1;
+            tagBuf[j - 1] = ch;
+        }else {
+            if(ch == '>'){
+                tagBuf[j    ] = ch;
+                tagBuf[j + 1] = '\0';
+                
+                tagVal = getTeg(tagBuf);
+               
+                if(tagVal == ECASCADE_Th){
+                    return;
+                }
+                if(tagVal == HYPOTHES_PCA){
+                    st = 1;
+                    i = 0;
+                }
+                if(tagVal == EHYPOTHES_PCA){
+                    st = 0;
+                    buf[i] = '\0';
+                    model->Hypothesis_PCA =(float) atof(buf);
+                }
+                if(tagVal == DEFORM_PCA){
+                    st = 1;
+                    i = 0;
+                }
+                if(tagVal == EDEFORM_PCA){
+                    st = 0;
+                    buf[i] = '\0';
+                    model->Deformation_PCA =(float) atof(buf);
+                }
+                if(tagVal == HYPOTHES){
+                    st = 1;
+                    i = 0;
+                }
+                if(tagVal == EHYPOTHES){
+                    st = 0;
+                    buf[i] = '\0';
+                    model->Hypothesis = (float)atof(buf);
+                }
+                if(tagVal == DEFORM){
+                    st = 1;
+                    i = 0;
+                }
+                if(tagVal == EDEFORM){
+                    st = 0;
+                    buf[i] = '\0';
+                    model->Deformation = (float)atof(buf);
+                }
+                tag = 0;
+                i   = 0;                
+            }else{
+                if((tag == 0)&& (st == 1)){
+                    buf[i] = ch; i++;
+                }else{
+                    tagBuf[j] = ch; j++;
+                }
+            }
+        }        
+    }
+}
+//##############################################
+
+void parserRFilter  (FILE * xmlf, int p, int pca, CvLSVMFilterObject * model, float *b){
+    int st = 0;
+    int sizeX, sizeY;
     int tag;
     int tagVal;
     char ch;
@@ -206,7 +360,7 @@ void parserRFilter  (FILE * xmlf, int p, CvLSVMFilterObject * model, float *b){
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = (char)fgetc( xmlf );
+        ch = fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -215,9 +369,9 @@ void parserRFilter  (FILE * xmlf, int p, CvLSVMFilterObject * model, float *b){
             if(ch == '>'){
                 tagBuf[j    ] = ch;
                 tagBuf[j + 1] = '\0';
-
+                
                 tagVal = getTeg(tagBuf);
-
+               
                 if(tagVal == ERFILTER){
                     //printf("</RootFilter>\n");
                     return;
@@ -245,18 +399,30 @@ void parserRFilter  (FILE * xmlf, int p, CvLSVMFilterObject * model, float *b){
                     //printf("<sizeY>%d</sizeY>\n", sizeY);
                 }
                 if(tagVal == WEIGHTS){
+                    int cnt = 0;
                     data = (double *)malloc( sizeof(double) * p * sizeX * sizeY);
-                    size_t elements_read = fread(data, sizeof(double), p * sizeX * sizeY, xmlf);
-                    CV_Assert(elements_read == (size_t)(p * sizeX * sizeY));
+                    cnt  = fread(data, sizeof(double), p * sizeX * sizeY, xmlf);
                     model->H = (float *)malloc(sizeof(float)* p * sizeX * sizeY);
                     for(ii = 0; ii < p * sizeX * sizeY; ii++){
                         model->H[ii] = (float)data[ii];
                     }
                     free(data);
                 }
-                if(tagVal == EWEIGHTS){
-                    //printf("WEIGHTS OK\n");
+                if(tagVal == WEIGHTSPCA){
+                    int cnt = 0;
+                    data = (double *)malloc( sizeof(double) * pca * sizeX * sizeY);
+                    cnt  = fread(data, sizeof(double), pca * sizeX * sizeY, xmlf);
+                    model->H_PCA = (float *)malloc(sizeof(float)* pca * sizeX * sizeY);
+                    for(ii = 0; ii < pca * sizeX * sizeY; ii++){
+                        model->H_PCA[ii] = (float)data[ii];
+                    }
+                    free(data);
                 }
+
+                if(tagVal == CASCADE_Th){
+                    parserCascadeThresholds  (xmlf, model);
+                }
+
                 if(tagVal == BTAG){
                     st = 1;
                     i = 0;
@@ -269,7 +435,7 @@ void parserRFilter  (FILE * xmlf, int p, CvLSVMFilterObject * model, float *b){
                 }
 
                 tag = 0;
-                i   = 0;
+                i   = 0;                
             }else{
                 if((tag == 0)&& (st == 1)){
                     buf[i] = ch; i++;
@@ -277,11 +443,11 @@ void parserRFilter  (FILE * xmlf, int p, CvLSVMFilterObject * model, float *b){
                     tagBuf[j] = ch; j++;
                 }
             }
-        }
+        }        
     }
 }
 
-void parserV  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
+void parserV  (FILE * xmlf, int p, CvLSVMFilterObject * model){
     int st = 0;
     int tag;
     int tagVal;
@@ -296,7 +462,7 @@ void parserV  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = (char)fgetc( xmlf );
+        ch = fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -305,9 +471,9 @@ void parserV  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
             if(ch == '>'){
                 tagBuf[j    ] = ch;
                 tagBuf[j + 1] = '\0';
-
+                
                 tagVal = getTeg(tagBuf);
-
+               
                 if(tagVal == ETAGV){
                     //printf("    </V>\n");
                     return;
@@ -333,7 +499,7 @@ void parserV  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
                     //printf("        <Vy>%d</Vy>\n", model->V.y);
                 }
                 tag = 0;
-                i   = 0;
+                i   = 0;                
             }else{
                 if((tag == 0)&& (st == 1)){
                     buf[i] = ch; i++;
@@ -341,10 +507,10 @@ void parserV  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
                     tagBuf[j] = ch; j++;
                 }
             }
-        }
+        }        
     }
 }
-void parserD  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
+void parserD  (FILE * xmlf, int p, CvLSVMFilterObject * model){
     int st = 0;
     int tag;
     int tagVal;
@@ -359,7 +525,7 @@ void parserD  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = (char)fgetc( xmlf );
+        ch = fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -368,9 +534,9 @@ void parserD  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
             if(ch == '>'){
                 tagBuf[j    ] = ch;
                 tagBuf[j + 1] = '\0';
-
+                
                 tagVal = getTeg(tagBuf);
-
+               
                 if(tagVal == ETAGD){
                     //printf("    </D>\n");
                     return;
@@ -382,7 +548,7 @@ void parserD  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
                 if(tagVal == EDx){
                     st = 0;
                     buf[i] = '\0';
-
+                    
                     model->fineFunction[0] = (float)atof(buf);
                     //printf("        <Dx>%f</Dx>\n", model->fineFunction[0]);
                 }
@@ -393,7 +559,7 @@ void parserD  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
                 if(tagVal == EDy){
                     st = 0;
                     buf[i] = '\0';
-
+                    
                     model->fineFunction[1] = (float)atof(buf);
                     //printf("        <Dy>%f</Dy>\n", model->fineFunction[1]);
                 }
@@ -404,7 +570,7 @@ void parserD  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
                 if(tagVal == EDxx){
                     st = 0;
                     buf[i] = '\0';
-
+                    
                     model->fineFunction[2] = (float)atof(buf);
                     //printf("        <Dxx>%f</Dxx>\n", model->fineFunction[2]);
                 }
@@ -415,13 +581,13 @@ void parserD  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
                 if(tagVal == EDyy){
                     st = 0;
                     buf[i] = '\0';
-
+                    
                     model->fineFunction[3] = (float)atof(buf);
                     //printf("        <Dyy>%f</Dyy>\n", model->fineFunction[3]);
                 }
 
                 tag = 0;
-                i   = 0;
+                i   = 0;                
             }else{
                 if((tag == 0)&& (st == 1)){
                     buf[i] = ch; i++;
@@ -429,13 +595,13 @@ void parserD  (FILE * xmlf, int /*p*/, CvLSVMFilterObject * model){
                     tagBuf[j] = ch; j++;
                 }
             }
-        }
+        }        
     }
 }
 
-void parserPFilter  (FILE * xmlf, int p, int /*N_path*/, CvLSVMFilterObject * model){
+void parserPFilter  (FILE * xmlf, int p, int pca, int N_path, CvLSVMFilterObject * model){
     int st = 0;
-    int sizeX=0, sizeY=0;
+    int sizeX, sizeY;
     int tag;
     int tagVal;
     char ch;
@@ -458,7 +624,7 @@ void parserPFilter  (FILE * xmlf, int p, int /*N_path*/, CvLSVMFilterObject * mo
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = (char)fgetc( xmlf );
+        ch = fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -467,9 +633,9 @@ void parserPFilter  (FILE * xmlf, int p, int /*N_path*/, CvLSVMFilterObject * mo
             if(ch == '>'){
                 tagBuf[j    ] = ch;
                 tagBuf[j + 1] = '\0';
-
+                
                 tagVal = getTeg(tagBuf);
-
+               
                 if(tagVal == EPFILTER){
                     //printf("</PathFilter>\n");
                     return;
@@ -505,19 +671,30 @@ void parserPFilter  (FILE * xmlf, int p, int /*N_path*/, CvLSVMFilterObject * mo
                 }
                 if(tagVal == WEIGHTS){
                     data = (double *)malloc( sizeof(double) * p * sizeX * sizeY);
-                    size_t elements_read = fread(data, sizeof(double), p * sizeX * sizeY, xmlf);
-                    CV_Assert(elements_read == (size_t)(p * sizeX * sizeY));
+                    fread(data, sizeof(double), p * sizeX * sizeY, xmlf);
                     model->H = (float *)malloc(sizeof(float)* p * sizeX * sizeY);
                     for(ii = 0; ii < p * sizeX * sizeY; ii++){
                         model->H[ii] = (float)data[ii];
                     }
                     free(data);
                 }
+                if(tagVal == WEIGHTSPCA){
+                    data = (double *)malloc( sizeof(double) * pca * sizeX * sizeY);
+                    fread(data, sizeof(double), pca * sizeX * sizeY, xmlf);
+                    model->H_PCA = (float *)malloc(sizeof(float)* pca * sizeX * sizeY);
+                    for(ii = 0; ii < pca * sizeX * sizeY; ii++){
+                        model->H_PCA[ii] = (float)data[ii];
+                    }
+                    free(data);
+                }
+                if(tagVal == CASCADE_Th){
+                    parserCascadeThresholds  (xmlf, model);
+                }
                 if(tagVal == EWEIGHTS){
                     //printf("WEIGHTS OK\n");
                 }
                 tag = 0;
-                i   = 0;
+                i   = 0;                
             }else{
                 if((tag == 0)&& (st == 1)){
                     buf[i] = ch; i++;
@@ -525,26 +702,26 @@ void parserPFilter  (FILE * xmlf, int p, int /*N_path*/, CvLSVMFilterObject * mo
                     tagBuf[j] = ch; j++;
                 }
             }
-        }
+        }        
     }
 }
-void parserPFilterS (FILE * xmlf, int p, CvLSVMFilterObject *** model, int *last, int *max){
+void parserPFilterS (FILE * xmlf, int p, int pca, CvLSVMFilterObject *** model, int *last, int *max){
     int st = 0;
     int N_path = 0;
     int tag;
     int tagVal;
     char ch;
-    int /*i,*/j;
-    //char buf[1024];
+    int i,j;
+    char buf[1024];
     char tagBuf[1024];
     //printf("<PartFilters>\n");
 
-    //i   = 0;
+    i   = 0;
     j   = 0;
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = (char)fgetc( xmlf );
+        ch = fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -553,46 +730,46 @@ void parserPFilterS (FILE * xmlf, int p, CvLSVMFilterObject *** model, int *last
             if(ch == '>'){
                 tagBuf[j    ] = ch;
                 tagBuf[j + 1] = '\0';
-
+                
                 tagVal = getTeg(tagBuf);
-
+               
                 if(tagVal == EPFILTERs){
                     //printf("</PartFilters>\n");
                     return;
                 }
                 if(tagVal == PFILTER){
                     addFilter(model, last, max);
-                    parserPFilter  (xmlf, p, N_path, (*model)[*last]);
+                    parserPFilter  (xmlf, p, pca, N_path, (*model)[*last]);
                     N_path++;
                 }
                 tag = 0;
-                //i   = 0;
+                i   = 0;                
             }else{
                 if((tag == 0)&& (st == 1)){
-                    //buf[i] = ch; i++;
+                    buf[i] = ch; i++;
                 }else{
                     tagBuf[j] = ch; j++;
                 }
             }
-        }
+        }        
     }
 }
-void parserComp (FILE * xmlf, int p, int *N_comp, CvLSVMFilterObject *** model, float *b, int *last, int *max){
+void parserComp (FILE * xmlf, int p, int pca, int *N_comp, CvLSVMFilterObject *** model, float *b, int *last, int *max){
     int st = 0;
     int tag;
     int tagVal;
     char ch;
-    int /*i,*/j;
-    //char buf[1024];
+    int i,j;
+    char buf[1024];
     char tagBuf[1024];
     //printf("<Component> %d\n", *N_comp);
 
-    //i   = 0;
+    i   = 0;
     j   = 0;
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = (char)fgetc( xmlf );
+        ch = fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -601,34 +778,34 @@ void parserComp (FILE * xmlf, int p, int *N_comp, CvLSVMFilterObject *** model, 
             if(ch == '>'){
                 tagBuf[j    ] = ch;
                 tagBuf[j + 1] = '\0';
-
+                
                 tagVal = getTeg(tagBuf);
-
+               
                 if(tagVal == ECOMP){
                     (*N_comp) ++;
                     return;
                 }
                 if(tagVal == RFILTER){
                     addFilter(model, last, max);
-                    parserRFilter   (xmlf, p, (*model)[*last],b);
+                    parserRFilter   (xmlf, p, pca, (*model)[*last],b);
                 }
                 if(tagVal == PFILTERs){
-                    parserPFilterS  (xmlf, p, model, last, max);
+                    parserPFilterS  (xmlf, p, pca, model, last, max);
                 }
                 tag = 0;
-                //i   = 0;
+                i   = 0;                
             }else{
                 if((tag == 0)&& (st == 1)){
-                    //buf[i] = ch; i++;
+                    buf[i] = ch; i++;
                 }else{
                     tagBuf[j] = ch; j++;
                 }
             }
-        }
+        }        
     }
 }
-void parserModel(FILE * xmlf, CvLSVMFilterObject *** model, int *last, int *max, int **comp, float **b, int *count, float * score){
-    int p = 0;
+void parserModel(FILE * xmlf, CvLSVMFilterObject *** model, int *last, int *max, int **comp, float **b, int *count, float * score, float** PCAcoeff){
+    int p = 0, pca = 0;
     int N_comp = 0;
     int * cmp;
     float *bb;
@@ -636,18 +813,18 @@ void parserModel(FILE * xmlf, CvLSVMFilterObject *** model, int *last, int *max,
     int tag;
     int tagVal;
     char ch;
-    int i,j, ii = 0;
+    int i,j, ii = 0, jj;
     char buf[1024];
     char tagBuf[1024];
-
+    double *data;
     //printf("<Model>\n");
-
+    
     i   = 0;
     j   = 0;
     st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = (char)fgetc( xmlf );
+        ch = fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -656,9 +833,9 @@ void parserModel(FILE * xmlf, CvLSVMFilterObject *** model, int *last, int *max,
             if(ch == '>'){
                 tagBuf[j    ] = ch;
                 tagBuf[j + 1] = '\0';
-
+                
                 tagVal = getTeg(tagBuf);
-
+               
                 if(tagVal == EMODEL){
                     //printf("</Model>\n");
                     for(ii = 0; ii <= *last; ii++){
@@ -669,11 +846,11 @@ void parserModel(FILE * xmlf, CvLSVMFilterObject *** model, int *last, int *max,
                 }
                 if(tagVal == COMP){
                     if(N_comp == 0){
-                        cmp = (int    *)malloc(sizeof(int));
+                        cmp = (int   *)malloc(sizeof(int));
                         bb  = (float *)malloc(sizeof(float));
                         * comp = cmp;
                         * b    = bb;
-                        * count = N_comp + 1;
+                        * count = N_comp + 1; 
                     } else {
                         cmp = (int   *)malloc(sizeof(int)   * (N_comp + 1));
                         bb  = (float *)malloc(sizeof(float) * (N_comp + 1));
@@ -685,9 +862,9 @@ void parserModel(FILE * xmlf, CvLSVMFilterObject *** model, int *last, int *max,
                         free(* b   );
                         * comp = cmp;
                         * b    = bb;
-                        * count = N_comp + 1;
+                        * count = N_comp + 1; 
                     }
-                    parserComp(xmlf, p, &N_comp, model, &((*b)[N_comp]), last, max);
+                    parserComp(xmlf, p, pca, &N_comp, model, &((*b)[N_comp]), last, max);
                     cmp[N_comp - 1] = *last;
                 }
                 if(tagVal == P){
@@ -700,6 +877,37 @@ void parserModel(FILE * xmlf, CvLSVMFilterObject *** model, int *last, int *max,
                     p = atoi(buf);
                     //printf("<P>%d</P>\n", p);
                 }
+                if(tagVal == PCA){
+                    st = 1;
+                    i = 0;
+                }
+                if(tagVal == EPCA){
+                    st = 0;
+                    buf[i] = '\0';
+                    pca = atoi(buf);
+                    //printf("<PCA>%d</PCA>\n", p);
+                }
+                if(tagVal == SCORE){
+                    st = 1;
+                    i = 0;
+                }
+                if(tagVal == PCACOEFF){
+                    st = 0;
+                    i = 0;
+                    p--;
+                    data = (double *)malloc( sizeof(double) * p * p);
+                    (*PCAcoeff) = (float *)malloc( sizeof(float) * p * p);
+                    fread(data, sizeof(double), p * p, xmlf);
+                    for(jj = 0; jj < p * p; jj++){
+                      (*PCAcoeff)[jj] = (float)data[jj];
+                    }
+                    free(data);
+                    p++;
+                }
+                if(tagVal == EPCACOEFF){
+                    st = 0;
+                    //printf("<PCA>%d</PCA>\n", p);
+                }
                 if(tagVal == SCORE){
                     st = 1;
                     i = 0;
@@ -711,7 +919,7 @@ void parserModel(FILE * xmlf, CvLSVMFilterObject *** model, int *last, int *max,
                     //printf("<ScoreThreshold>%f</ScoreThreshold>\n", score);
                 }
                 tag = 0;
-                i   = 0;
+                i   = 0;                
             }else{
                 if((tag == 0)&& (st == 1)){
                     buf[i] = ch; i++;
@@ -719,19 +927,25 @@ void parserModel(FILE * xmlf, CvLSVMFilterObject *** model, int *last, int *max,
                     tagBuf[j] = ch; j++;
                 }
             }
-        }
+        }        
     }
 }
 
-}//namespace
-
-int LSVMparser(const char * filename, CvLSVMFilterObject *** model, int *last, int *max, int **comp, float **b, int *count, float * score){
-    //int st = 0;
+void LSVMparser(const char * filename, 
+                CvLSVMFilterObject *** model, 
+                int *last, 
+                int *max, 
+                int **comp, 
+                float **b, 
+                int *count, 
+                float * score,
+                float** PCAcoeff){
+    int st = 0;
     int tag;
     char ch;
-    int /*i,*/j;
+    int i,j;
     FILE *xmlf;
-    //char buf[1024];
+    char buf[1024];
     char tagBuf[1024];
 
     (*max) = 10;
@@ -739,17 +953,14 @@ int LSVMparser(const char * filename, CvLSVMFilterObject *** model, int *last, i
     (*model) = (CvLSVMFilterObject ** )malloc((sizeof(CvLSVMFilterObject * )) * (*max));
 
     //printf("parse : %s\n", filename);
-
     xmlf = fopen(filename, "rb");
-    if(xmlf == NULL)
-        return LSVM_PARSER_FILE_NOT_FOUND;
-
-    //i   = 0;
+    
+    i   = 0;
     j   = 0;
-    //st  = 0;
+    st  = 0;
     tag = 0;
     while(!feof(xmlf)){
-        ch = (char)fgetc( xmlf );
+        ch = fgetc( xmlf );
         if(ch == '<'){
             tag = 1;
             j   = 1;
@@ -757,47 +968,44 @@ int LSVMparser(const char * filename, CvLSVMFilterObject *** model, int *last, i
         }else {
             if(ch == '>'){
                 tag = 0;
-                //i   = 0;
+                i   = 0;
                 tagBuf[j    ] = ch;
                 tagBuf[j + 1] = '\0';
                 if(getTeg(tagBuf) == MODEL){
-                    parserModel(xmlf, model, last, max, comp, b, count, score);
+                    parserModel(xmlf, model, last, max, comp, b, count, score, PCAcoeff);
                 }
             }else{
                 if(tag == 0){
-                    //buf[i] = ch; i++;
+                    buf[i] = ch; i++;
                 }else{
                     tagBuf[j] = ch; j++;
                 }
             }
-        }
+        }        
     }
-
     fclose(xmlf);
-    return LATENT_SVM_OK;
 }
 
 int loadModel(
-              const char *modelPath,
-              CvLSVMFilterObject ***filters,
-              int *kFilters,
-              int *kComponents,
-              int **kPartFilters,
-              float **b,
-              float *scoreThreshold){
+             // Входные параметры
+              const char *modelPath,// - путь до файла с моделью
+             
+              // Выходные параметры
+              CvLSVMFilterObject ***filters,// - массив указателей на фильтры компонент
+              int *kFilters, //- общее количество фильтров во всех моделях
+              int *kComponents, //- количество компонент
+              int **kPartFilters, //- массив, содержащий количество точных фильтров в каждой компоненте
+              float **b, //- массив линейных членов в оценочной функции
+              float *scoreThreshold,
+              float ** PCAcoeff){ //- порог для score)
     int last;
     int max;
     int *comp;
     int count;
     int i;
-    int err;
     float score;
-    //printf("start_parse\n\n");
 
-    err = LSVMparser(modelPath, filters, &last, &max, &comp, b, &count, &score);
-    if(err != LATENT_SVM_OK){
-        return err;
-    }
+    LSVMparser(modelPath, filters, &last, &max, &comp, b, &count, &score, PCAcoeff);
     (*kFilters)       = last + 1;
     (*kComponents)    = count;
     (*scoreThreshold) = (float) score;
@@ -808,6 +1016,12 @@ int loadModel(
         (*kPartFilters)[i] = (comp[i] - comp[i - 1]) - 1;
     }
     (*kPartFilters)[0] = comp[0];
+
+
+    for(i = 0; i < (*kFilters);i++){
+        (*(filters))[i]->deltaX = 5;// maxX;
+        (*(filters))[i]->deltaY = 5;// maxY;
+    }
 
     return 0;
 }

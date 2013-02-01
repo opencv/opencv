@@ -78,10 +78,9 @@ void CV_LatentSVMDetectorTest::run( int /* start_from */)
 {
     string img_path = string(ts->get_data_path()) + "latentsvmdetector/cat.png";
     string model_path = string(ts->get_data_path()) + "latentsvmdetector/models_VOC2007/cat.xml";
-    int numThreads = -1;
-
+    
 #ifdef HAVE_TBB
-    numThreads = 2;
+    int numThreads = 2;
     tbb::task_scheduler_init init(tbb::task_scheduler_init::deferred);
     init.initialize(numThreads);
 #endif
@@ -103,7 +102,7 @@ void CV_LatentSVMDetectorTest::run( int /* start_from */)
 
     CvMemStorage* storage = cvCreateMemStorage(0);
     CvSeq* detections = 0;
-    detections = cvLatentSvmDetectObjects(image, detector, storage, 0.5f, numThreads);
+    detections = cvLatentSvmDetectObjects(image, detector, storage, 0.5f);
     if (detections->total != num_detections)
     {
         ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );

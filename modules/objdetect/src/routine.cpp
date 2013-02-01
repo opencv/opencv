@@ -2,7 +2,7 @@
 #include "_lsvm_routine.h"
 
 int allocFilterObject(CvLSVMFilterObject **obj, const int sizeX,
-                      const int sizeY, const int numFeatures)
+                      const int sizeY, const int numFeatures) 
 {
     int i;
     (*obj) = (CvLSVMFilterObject *)malloc(sizeof(CvLSVMFilterObject));
@@ -16,7 +16,7 @@ int allocFilterObject(CvLSVMFilterObject **obj, const int sizeX,
     (*obj)->V.x         = 0;
     (*obj)->V.y         = 0;
     (*obj)->V.l         = 0;
-    (*obj)->H = (float *) malloc(sizeof (float) *
+    (*obj)->H = (float *) malloc(sizeof (float) * 
                                 (sizeX * sizeY  * numFeatures));
     for(i = 0; i < sizeX * sizeY * numFeatures; i++)
     {
@@ -33,7 +33,7 @@ int freeFilterObject (CvLSVMFilterObject **obj)
     return LATENT_SVM_OK;
 }
 
-int allocFeatureMapObject(CvLSVMFeatureMap **obj, const int sizeX,
+int allocFeatureMapObject(CvLSVMFeatureMap **obj, const int sizeX, 
                           const int sizeY, const int numFeatures)
 {
     int i;
@@ -41,7 +41,7 @@ int allocFeatureMapObject(CvLSVMFeatureMap **obj, const int sizeX,
     (*obj)->sizeX       = sizeX;
     (*obj)->sizeY       = sizeY;
     (*obj)->numFeatures = numFeatures;
-    (*obj)->map = (float *) malloc(sizeof (float) *
+    (*obj)->map = (float *) malloc(sizeof (float) * 
                                   (sizeX * sizeY  * numFeatures));
     for(i = 0; i < sizeX * sizeY * numFeatures; i++)
     {
@@ -59,7 +59,7 @@ int freeFeatureMapObject (CvLSVMFeatureMap **obj)
 }
 
 int allocFeaturePyramidObject(CvLSVMFeaturePyramid **obj,
-                              const int numLevels)
+                              const int numLevels) 
 {
     (*obj) = (CvLSVMFeaturePyramid *)malloc(sizeof(CvLSVMFeaturePyramid));
     (*obj)->numLevels = numLevels;
@@ -70,7 +70,7 @@ int allocFeaturePyramidObject(CvLSVMFeaturePyramid **obj,
 
 int freeFeaturePyramidObject (CvLSVMFeaturePyramid **obj)
 {
-    int i;
+    int i; 
     if(*obj == NULL) return LATENT_SVM_MEM_NULL;
     for(i = 0; i < (*obj)->numLevels; i++)
     {
@@ -79,39 +79,5 @@ int freeFeaturePyramidObject (CvLSVMFeaturePyramid **obj)
     free((*obj)->pyramid);
     free(*obj);
     (*obj) = NULL;
-    return LATENT_SVM_OK;
-}
-
-int allocFFTImage(CvLSVMFftImage **image, int numFeatures, int dimX, int dimY)
-{
-    int i, j, size;
-    *image = (CvLSVMFftImage *)malloc(sizeof(CvLSVMFftImage));
-    (*image)->numFeatures = numFeatures;
-    (*image)->dimX         = dimX;
-    (*image)->dimY         = dimY;
-    (*image)->channels     = (float **)malloc(sizeof(float *) * numFeatures);
-    size = 2 * dimX * dimY;
-    for (i = 0; i < numFeatures; i++)
-    {
-        (*image)->channels[i] = (float *)malloc(sizeof(float) * size);
-        for (j = 0; j < size; j++)
-        {
-            (*image)->channels[i][j] = 0.0f;
-        }
-    }
-    return LATENT_SVM_OK;
-}
-
-int freeFFTImage(CvLSVMFftImage **image)
-{
-    int i;
-    if (*image == NULL) return LATENT_SVM_OK;
-    for (i = 0; i < (*image)->numFeatures; i++)
-    {
-        free((*image)->channels[i]);
-        (*image)->channels[i] = NULL;
-    }
-    free((*image)->channels);
-    (*image)->channels = NULL;
     return LATENT_SVM_OK;
 }

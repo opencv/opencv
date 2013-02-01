@@ -12,7 +12,7 @@
 // with all fields including arrays
 // Error status is return value
 //////////////////////////////////////////////////////////////
-int allocFilterObject(CvLSVMFilterObject **obj, const int sizeX, const int sizeY,
+int allocFilterObject(CvLSVMFilterObject **obj, const int sizeX, const int sizeY, 
                       const int p);
 int freeFilterObject (CvLSVMFilterObject **obj);
 
@@ -20,16 +20,8 @@ int allocFeatureMapObject(CvLSVMFeatureMap **obj, const int sizeX, const int siz
                           const int p);
 int freeFeatureMapObject (CvLSVMFeatureMap **obj);
 
-#ifdef __cplusplus
-extern "C"
-#endif
-int allocFeaturePyramidObject(CvLSVMFeaturePyramid **obj,
+int allocFeaturePyramidObject(CvLSVMFeaturePyramid **obj, 
                               const int countLevel);
 
-#ifdef __cplusplus
-extern "C"
-#endif
 int freeFeaturePyramidObject (CvLSVMFeaturePyramid **obj);
-int allocFFTImage(CvLSVMFftImage **image, int p, int dimX, int dimY);
-int freeFFTImage(CvLSVMFftImage **image);
 #endif

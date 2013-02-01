@@ -15,14 +15,32 @@
 // (pyramid constructed both contrast and non-contrast image)
 //////////////////////////////////////////////////////////////
 
+void FeaturePyramid32(CvLSVMFeaturePyramid* H, int maxX, int maxY);
+
 /*
-// Getting feature pyramid
+// Creation PSA feature pyramid
 //
 // API
-// int getFeaturePyramid(IplImage * image, const filterObject **all_F,
+// featurePyramid* createPSA_FeaturePyramid(featurePyramid* H);
+
+// INPUT
+// H                 - feature pyramid     
+// OUTPUT
+// RESULT
+// PSA feature pyramid
+*/
+CvLSVMFeaturePyramid* createPCA_FeaturePyramid(CvLSVMFeaturePyramid* H, 
+                                               CvLatentSvmDetector* detector, 
+                                               int maxX, int maxY);
+
+/*
+// Getting feature pyramid  
+//
+// API
+// int getFeaturePyramid(IplImage * image, const CvLSVMFilterObject **all_F, 
                       const int n_f,
-                      const int lambda, const int k,
-                      const int startX, const int startY,
+                      const int lambda, const int k, 
+                      const int startX, const int startY, 
                       const int W, const int H, featurePyramid **maps);
 // INPUT
 // image             - image
@@ -40,7 +58,7 @@
 int getFeaturePyramid(IplImage * image, CvLSVMFeaturePyramid **maps);
 
 /*
-// Getting feature map for the selected subimage
+// Getting feature map for the selected subimage  
 //
 // API
 // int getFeatureMaps(const IplImage * image, const int k, featureMap **map);
@@ -56,7 +74,7 @@ int getFeatureMaps(const IplImage * image, const int k, CvLSVMFeatureMap **map);
 
 
 /*
-// Feature map Normalization and Truncation
+// Feature map Normalization and Truncation 
 //
 // API
 // int normalizationAndTruncationFeatureMaps(featureMap *map, const float alfa);
@@ -91,14 +109,14 @@ int PCAFeatureMaps(CvLSVMFeatureMap *map);
 //////////////////////////////////////////////////////////////
 
 /*
-// Transformation filter displacement from the block space
+// Transformation filter displacement from the block space 
 // to the space of pixels at the initial image
 //
 // API
-// int convertPoints(int countLevel, int lambda,
+// int convertPoints(int countLevel, int lambda, 
                      int initialImageLevel,
-                     CvPoint *points, int *levels,
-                     CvPoint **partsDisplacement, int kPoints, int n,
+                     CvPoint *points, int *levels, 
+                     CvPoint **partsDisplacement, int kPoints, int n, 
                      int maxXBorder,
                      int maxYBorder);
 // INPUT
@@ -119,10 +137,10 @@ int PCAFeatureMaps(CvLSVMFeatureMap *map);
 // RESULT
 // Error status
 */
-int convertPoints(int countLevel, int lambda,
+int convertPoints(int countLevel, int lambda, 
                   int initialImageLevel,
-                  CvPoint *points, int *levels,
-                  CvPoint **partsDisplacement, int kPoints, int n,
+                  CvPoint *points, int *levels, 
+                  CvPoint **partsDisplacement, int kPoints, int n, 
                   int maxXBorder,
                   int maxYBorder);
 
@@ -130,7 +148,7 @@ int convertPoints(int countLevel, int lambda,
 // Elimination boxes that are outside the image boudaries
 //
 // API
-// int clippingBoxes(int width, int height,
+// int clippingBoxes(int width, int height, 
                      CvPoint *points, int kPoints);
 // INPUT
 // width             - image wediht
@@ -140,15 +158,12 @@ int convertPoints(int countLevel, int lambda,
 // kPoints           - points number
 // OUTPUT
 // points            - updated points (if coordinates less than zero then
-                       set zero coordinate, if coordinates more than image
+                       set zero coordinate, if coordinates more than image 
                        size then set coordinates equal image size)
 // RESULT
 // Error status
 */
-#ifdef __cplusplus
-extern "C"
-#endif
-int clippingBoxes(int width, int height,
+int clippingBoxes(int width, int height, 
                   CvPoint *points, int kPoints);
 
 /*
@@ -159,101 +174,22 @@ int clippingBoxes(int width, int height,
                                                   int maxXBorder, int maxYBorder);
 
 // INPUT
-// image             - initial image
+// image             - initial image     
 // maxXBorder        - the largest root filter size (X-direction)
 // maxYBorder        - the largest root filter size (Y-direction)
 // OUTPUT
 // RESULT
 // Feature pyramid with nullable border
 */
-#ifdef __cplusplus
-extern "C"
-#endif
 CvLSVMFeaturePyramid* createFeaturePyramidWithBorder(IplImage *image,
                                                int maxXBorder, int maxYBorder);
-
-/*
-// Computation of the root filter displacement and values of score function
-//
-// API
-// int searchObject(const featurePyramid *H, const filterObject **all_F, int n,
-                    float b,
-                    int maxXBorder,
-                    int maxYBorder,
-                    CvPoint **points, int **levels, int *kPoints, float *score,
-                    CvPoint ***partsDisplacement);
-// INPUT
-// H                 - feature pyramid
-// all_F             - the set of filters (the first element is root filter,
-                       other elements - part filters)
-// n                 - the number of part filters
-// b                 - linear term of the score function
-// maxXBorder        - the largest root filter size (X-direction)
-// maxYBorder        - the largest root filter size (Y-direction)
-// OUTPUT
-// points            - positions (x, y) of the upper-left corner
-                       of root filter frame
-// levels            - levels that correspond to each position
-// kPoints           - number of positions
-// score             - value of the score function
-// partsDisplacement - part filters displacement for each position
-                       of the root filter
-// RESULT
-// Error status
-*/
-int searchObject(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all_F, int n,
-                 float b,
-                 int maxXBorder,
-                 int maxYBorder,
-                 CvPoint **points, int **levels, int *kPoints, float *score,
-                 CvPoint ***partsDisplacement);
-
-/*
-// Computation of the root filter displacement and values of score function
-//
-// API
-// int searchObjectThreshold(const featurePyramid *H,
-                             const filterObject **all_F, int n,
-                             float b,
-                             int maxXBorder, int maxYBorder,
-                             float scoreThreshold,
-                             CvPoint **points, int **levels, int *kPoints,
-                             float **score, CvPoint ***partsDisplacement);
-// INPUT
-// H                 - feature pyramid
-// all_F             - the set of filters (the first element is root filter,
-                       other elements - part filters)
-// n                 - the number of part filters
-// b                 - linear term of the score function
-// maxXBorder        - the largest root filter size (X-direction)
-// maxYBorder        - the largest root filter size (Y-direction)
-// scoreThreshold    - score threshold
-// OUTPUT
-// points            - positions (x, y) of the upper-left corner
-                       of root filter frame
-// levels            - levels that correspond to each position
-// kPoints           - number of positions
-// score             - values of the score function
-// partsDisplacement - part filters displacement for each position
-                       of the root filter
-// RESULT
-// Error status
-*/
-int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
-                          const CvLSVMFilterObject **all_F, int n,
-                          float b,
-                          int maxXBorder, int maxYBorder,
-                          float scoreThreshold,
-                          CvPoint **points, int **levels, int *kPoints,
-                          float **score, CvPoint ***partsDisplacement,
-                          int numThreads CV_DEFAULT(-1));
 
 /*
 // Computation root filters displacement and values of score function
 //
 // API
 // int searchObjectThresholdSomeComponents(const featurePyramid *H,
-                                           const filterObject **filters,
+                                           const CvLSVMFilterObject **filters, 
                                            int kComponents, const int *kPartFilters,
                                            const float *b, float scoreThreshold,
                                            CvPoint **points, CvPoint **oppPoints,
@@ -273,15 +209,13 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
 // RESULT
 // Error status
 */
-#ifdef __cplusplus
-extern "C"
-#endif
 int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
-                                        const CvLSVMFilterObject **filters,
+										const CvLSVMFeaturePyramid *H_PCA,
+                                        const CvLSVMFilterObject **filters, 
                                         int kComponents, const int *kPartFilters,
                                         const float *b, float scoreThreshold,
                                         CvPoint **points, CvPoint **oppPoints,
-                                        float **score, int *kPoints, int numThreads);
+                                        float **score, int *kPoints);
 
 /*
 // Compute opposite point for filter box
@@ -314,9 +248,9 @@ int getOppositePoint(CvPoint point,
 //
 // API
 // int showRootFilterBoxes(const IplImage *image,
-                           const filterObject *filter,
+                           const CvLSVMFilterObject *filter, 
                            CvPoint *points, int *levels, int kPoints,
-                           CvScalar color, int thickness,
+                           CvScalar color, int thickness, 
                            int line_type, int shift);
 // INPUT
 // image             - initial image
@@ -334,9 +268,9 @@ int getOppositePoint(CvPoint point,
 // Error status
 */
 int showRootFilterBoxes(IplImage *image,
-                        const CvLSVMFilterObject *filter,
+                        const CvLSVMFilterObject *filter, 
                         CvPoint *points, int *levels, int kPoints,
-                        CvScalar color, int thickness,
+                        CvScalar color, int thickness, 
                         int line_type, int shift);
 
 /*
@@ -344,9 +278,9 @@ int showRootFilterBoxes(IplImage *image,
 //
 // API
 // int showPartFilterBoxes(const IplImage *image,
-                           const filterObject *filter,
+                           const CvLSVMFilterObject *filter, 
                            CvPoint *points, int *levels, int kPoints,
-                           CvScalar color, int thickness,
+                           CvScalar color, int thickness, 
                            int line_type, int shift);
 // INPUT
 // image             - initial image
@@ -366,17 +300,17 @@ int showRootFilterBoxes(IplImage *image,
 */
 int showPartFilterBoxes(IplImage *image,
                         const CvLSVMFilterObject **filters,
-                        int n, CvPoint **partsDisplacement,
+                        int n, CvPoint **partsDisplacement, 
                         int *levels, int kPoints,
-                        CvScalar color, int thickness,
+                        CvScalar color, int thickness, 
                         int line_type, int shift);
 
 /*
 // Drawing boxes
 //
 // API
-// int showBoxes(const IplImage *img,
-                 const CvPoint *points, const CvPoint *oppositePoints, int kPoints,
+// int showBoxes(const IplImage *img, 
+                 const CvPoint *points, const CvPoint *oppositePoints, int kPoints, 
                  CvScalar color, int thickness, int line_type, int shift);
 // INPUT
 // img               - initial image
@@ -391,8 +325,8 @@ int showPartFilterBoxes(IplImage *image,
 // RESULT
 // Error status
 */
-int showBoxes(IplImage *img,
-              const CvPoint *points, const CvPoint *oppositePoints, int kPoints,
+int showBoxes(IplImage *img, 
+              const CvPoint *points, const CvPoint *oppositePoints, int kPoints, 
               CvScalar color, int thickness, int line_type, int shift);
 
 #endif

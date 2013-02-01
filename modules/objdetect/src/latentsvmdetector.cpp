@@ -2,6 +2,8 @@
 #include "_lsvmparser.h"
 #include "_lsvm_matching.h"
 
+const int pca_size = 31;
+
 /*
 // load trained detector from a file
 //
@@ -23,8 +25,9 @@ CvLatentSvmDetector* cvLoadLatentSvmDetector(const char* filename)
     float* b = 0;
     float scoreThreshold = 0.f;
     int err_code = 0;
+	float* PCAcoeff = 0;
 
-    err_code = loadModel(filename, &filters, &kFilters, &kComponents, &kPartFilters, &b, &scoreThreshold);
+    err_code = loadModel(filename, &filters, &kFilters, &kComponents, &kPartFilters, &b, &scoreThreshold, &PCAcoeff);
     if (err_code != LATENT_SVM_OK) return 0;
 
     detector = (CvLatentSvmDetector*)malloc(sizeof(CvLatentSvmDetector));
@@ -34,6 +37,8 @@ CvLatentSvmDetector* cvLoadLatentSvmDetector(const char* filename)
     detector->num_filters = kFilters;
     detector->num_part_filters = kPartFilters;
     detector->score_threshold = scoreThreshold;
+	  detector->pca = PCAcoeff;
+    detector->pca_size = pca_size;
 
     return detector;
 }
@@ -57,6 +62,7 @@ void cvReleaseLatentSvmDetector(CvLatentSvmDetector** detector)
         free((*detector)->filters[i]);
     }
     free((*detector)->filters);
+	free((*detector)->pca);
     free((*detector));
     *detector = 0;
 }
@@ -83,9 +89,10 @@ void cvReleaseLatentSvmDetector(CvLatentSvmDetector** detector)
 CvSeq* cvLatentSvmDetectObjects(IplImage* image,
                                 CvLatentSvmDetector* detector,
                                 CvMemStorage* storage,
-                                float overlap_threshold, int numThreads)
+                                float overlap_threshold)
 {
     CvLSVMFeaturePyramid *H = 0;
+	CvLSVMFeaturePyramid *H_PCA = 0;
     CvPoint *points = 0, *oppPoints = 0;
     int kPoints = 0;
     float *score = 0;
@@ -105,10 +112,16 @@ CvSeq* cvLatentSvmDetectObjects(IplImage* image,
                      detector->num_part_filters, &maxXBorder, &maxYBorder);
     // Create feature pyramid with nullable border
     H = createFeaturePyramidWithBorder(image, maxXBorder, maxYBorder);
+	
+	// Create PSA feature pyramid
+    H_PCA = createPCA_FeaturePyramid(H, detector, maxXBorder, maxYBorder);
+    
+    FeaturePyramid32(H, maxXBorder, maxYBorder);
+	
     // Search object
-    error = searchObjectThresholdSomeComponents(H, (const CvLSVMFilterObject**)(detector->filters),
+    error = searchObjectThresholdSomeComponents(H, H_PCA,(const CvLSVMFilterObject**)(detector->filters),
         detector->num_components, detector->num_part_filters, detector->b, detector->score_threshold,
-        &points, &oppPoints, &score, &kPoints, numThreads);
+        &points, &oppPoints, &score, &kPoints);
     if (error != LATENT_SVM_OK)
     {
         return NULL;
@@ -139,6 +152,7 @@ CvSeq* cvLatentSvmDetectObjects(IplImage* image,
         cvCvtColor(image, image, CV_RGB2BGR);
 
     freeFeaturePyramidObject(&H);
+	freeFeaturePyramidObject(&H_PCA);
     free(points);
     free(oppPoints);
     free(score);
@@ -192,7 +206,7 @@ size_t LatentSvmDetector::getClassCount() const
     return classNames.size();
 }
 
-static string extractModelName( const string& filename )
+string extractModelName( const string& filename )
 {
     size_t startPos = filename.rfind('/');
     if( startPos == string::npos )
@@ -251,7 +265,7 @@ void LatentSvmDetector::detect( const Mat& image,
     {
         IplImage image_ipl = image;
         CvMemStorage* storage = cvCreateMemStorage(0);
-        CvSeq* detections = cvLatentSvmDetectObjects( &image_ipl, detectors[classID], storage, overlapThreshold, numThreads );
+        CvSeq* detections = cvLatentSvmDetectObjects( &image_ipl, (CvLatentSvmDetector*)(detectors[classID]), storage, overlapThreshold);
 
         // convert results
         objectDetections.reserve( objectDetections.size() + detections->total );
