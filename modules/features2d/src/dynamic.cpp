@@ -86,12 +86,15 @@ void DynamicAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoin
     //break if the desired number hasn't been reached.
     int iter_count = escape_iters_;
 
-    while( iter_count > 0 && !(down && up) && !thresh_good && adjuster_->good() )
+    while( iter_count > 0 && !(down && up) && !thresh_good )
     {
         keypoints.clear();
 
         //the adjuster takes care of calling the detector with updated parameters
         adjuster_->detect(image, keypoints,mask);
+
+        if (!adjuster_->good())
+            break;
 
         if( int(keypoints.size()) < min_features_ )
         {

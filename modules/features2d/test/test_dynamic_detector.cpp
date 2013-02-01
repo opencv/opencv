@@ -129,7 +129,7 @@ void CV_DynamicAdaptedFeatureDetectorTest::run(int)
             vector<KeyPoint> keypoints_1;
             detector->detect(image, keypoints_1);
         }
-        catch(const cv::Exception &ex)
+        catch(const cv::Exception &)
         {
             isExceptionThrown = true;
         }
@@ -138,6 +138,28 @@ void CV_DynamicAdaptedFeatureDetectorTest::run(int)
         {
             ts->printf(cvtest::TS::LOG, "Exception wasn't thrown when calling a const DynamicAdaptedFeatureDetector with save_adjusted_parameters=true\n");
             ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ARG_CHECK);
+        }
+    }
+
+    {
+        bool save_adjusted_parameters = true;
+        Ptr<AdjusterAdapter> adapter = new FastAdjuster(20, true, 20, 20);
+        Ptr<DynamicAdaptedFeatureDetector> detector = new DynamicAdaptedFeatureDetector(adapter, min_features, max_features, max_iters, save_adjusted_parameters);
+
+        vector<KeyPoint> keypoints_1, keypoints_2;
+        detector->detect(image, keypoints_1);
+        detector->detect(image, keypoints_2);
+
+        if (keypoints_1.size() != keypoints_2.size())
+        {
+            ts->printf(cvtest::TS::LOG, "Adjusting parameters when adjuster is not good\n");
+            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        }
+
+        if (keypoints_1.empty())
+        {
+            ts->printf(cvtest::TS::LOG, "Didn't detect any keypoints when adjuster is not good\n");
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
         }
     }
 }
