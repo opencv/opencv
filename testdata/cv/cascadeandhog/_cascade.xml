@@ -5,7 +5,7 @@
   <sE>0.017</sE>
   <noPairE>0.1</noPairE>
   <detector_names>
-    haarold1 haarold2 haar1 haar3 lbp1 lbp3</detector_names>
+    haarold1 haarold2 haarold3 haar1 haar3 lbp1 lbp3</detector_names>
   <detectors>
     <haarold1>
       <fn>cascadeandhog/cascades/haarcascade_frontalface_alt.xml</fn>
@@ -13,6 +13,9 @@
     <haarold2>
       <fn>cascadeandhog/cascades/haarcascade_frontalface_alt2.xml</fn>
       <scale_cascade>1</scale_cascade></haarold2>
+    <haarold3>
+      <fn>cascadeandhog/cascades/haarcascade_frontalface_default.xml</fn>
+      <scale_cascade>1</scale_cascade></haarold3>  
     <haar1>
       <fn>cascadeandhog/cascades/haarcascade_1.xml</fn>
       <scale_cascade>0</scale_cascade></haar1>
