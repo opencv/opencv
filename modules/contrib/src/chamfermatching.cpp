@@ -622,7 +622,6 @@ void ChamferMatcher::Matching::followContour(Mat& templ_img, template_coords_t& 
 {
     const int dir[][2] = { {-1,-1}, {-1,0}, {-1,1}, {0,1}, {1,1}, {1,0}, {1,-1}, {0,-1} };
     coordinate_t next;
-    coordinate_t next_temp;
     unsigned char ptr;
 
     assert (direction==-1 || !coords.empty());
