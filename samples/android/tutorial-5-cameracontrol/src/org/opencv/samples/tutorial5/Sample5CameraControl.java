@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.ListIterator;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
@@ -102,8 +103,8 @@ public class Sample5CameraControl extends Activity implements CvCameraViewListen
     public void onCameraViewStopped() {
     }
 
-    public Mat onCameraFrame(Mat inputFrame) {
-        return inputFrame;
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+        return inputFrame.rgba();
     }
 
     @Override

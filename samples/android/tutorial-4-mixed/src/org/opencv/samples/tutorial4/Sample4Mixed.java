@@ -1,13 +1,13 @@
 package org.opencv.samples.tutorial4;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
-import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
 import android.app.Activity;
@@ -28,7 +28,7 @@ public class Sample4Mixed extends Activity implements CvCameraViewListener {
     private int                    mViewMode;
     private Mat                    mRgba;
     private Mat                    mIntermediateMat;
-    private Mat                    mGrayMat;
+    private Mat                    mGray;
 
     private MenuItem               mItemPreviewRGBA;
     private MenuItem               mItemPreviewGray;
@@ -109,37 +109,38 @@ public class Sample4Mixed extends Activity implements CvCameraViewListener {
     public void onCameraViewStarted(int width, int height) {
         mRgba = new Mat(height, width, CvType.CV_8UC4);
         mIntermediateMat = new Mat(height, width, CvType.CV_8UC4);
-        mGrayMat = new Mat(height, width, CvType.CV_8UC1);
+        mGray = new Mat(height, width, CvType.CV_8UC1);
     }
 
     public void onCameraViewStopped() {
         mRgba.release();
-        mGrayMat.release();
+        mGray.release();
         mIntermediateMat.release();
     }
 
-    public Mat onCameraFrame(Mat inputFrame) {
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
         final int viewMode = mViewMode;
-
         switch (viewMode) {
         case VIEW_MODE_GRAY:
             // input frame has gray scale format
-            Imgproc.cvtColor(inputFrame, mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
+            Imgproc.cvtColor(inputFrame.gray(), mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
             break;
         case VIEW_MODE_RGBA:
             // input frame has RBGA format
-            inputFrame.copyTo(mRgba);
+            mRgba = inputFrame.rgba();
             break;
         case VIEW_MODE_CANNY:
             // input frame has gray scale format
-            Imgproc.Canny(inputFrame, mIntermediateMat, 80, 100);
+            mRgba = inputFrame.rgba();
+            Imgproc.Canny(inputFrame.gray(), mIntermediateMat, 80, 100);
             Imgproc.cvtColor(mIntermediateMat, mRgba, Imgproc.COLOR_GRAY2BGRA, 4);
             break;
         case VIEW_MODE_FEATURES:
             // input frame has RGBA format
-            inputFrame.copyTo(mRgba);
-            Imgproc.cvtColor(mRgba, mGrayMat, Imgproc.COLOR_RGBA2GRAY);
-            FindFeatures(mGrayMat.getNativeObjAddr(), mRgba.getNativeObjAddr());
+            mRgba = inputFrame.rgba();
+            mGray = inputFrame.gray();
+            Imgproc.cvtColor(mRgba, mGray, Imgproc.COLOR_RGBA2GRAY);
+            FindFeatures(mGray.getNativeObjAddr(), mRgba.getNativeObjAddr());
             break;
         }
 
@@ -150,17 +151,13 @@ public class Sample4Mixed extends Activity implements CvCameraViewListener {
         Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
 
         if (item == mItemPreviewRGBA) {
-            mOpenCvCameraView.SetCaptureFormat(Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
             mViewMode = VIEW_MODE_RGBA;
         } else if (item == mItemPreviewGray) {
-            mOpenCvCameraView.SetCaptureFormat(Highgui.CV_CAP_ANDROID_GREY_FRAME);
             mViewMode = VIEW_MODE_GRAY;
         } else if (item == mItemPreviewCanny) {
-            mOpenCvCameraView.SetCaptureFormat(Highgui.CV_CAP_ANDROID_GREY_FRAME);
             mViewMode = VIEW_MODE_CANNY;
         } else if (item == mItemPreviewFeatures) {
             mViewMode = VIEW_MODE_FEATURES;
-            mOpenCvCameraView.SetCaptureFormat(Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
         }
 
         return true;

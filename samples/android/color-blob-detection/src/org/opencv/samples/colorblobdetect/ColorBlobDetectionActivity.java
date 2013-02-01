@@ -3,6 +3,7 @@ package org.opencv.samples.colorblobdetect;
 import java.util.List;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
@@ -160,8 +161,8 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
         return false; // don't need subsequent touch events
     }
 
-    public Mat onCameraFrame(Mat inputFrame) {
-        inputFrame.copyTo(mRgba);
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+        mRgba = inputFrame.rgba();
 
         if (mIsColorSelected) {
             mDetector.process(mRgba);

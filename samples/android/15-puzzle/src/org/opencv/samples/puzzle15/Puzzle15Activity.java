@@ -1,6 +1,7 @@
 package org.opencv.samples.puzzle15;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
@@ -109,10 +110,6 @@ public class Puzzle15Activity extends Activity implements CvCameraViewListener, 
     public void onCameraViewStopped() {
     }
 
-    public Mat onCameraFrame(Mat inputFrame) {
-        return mPuzzle15.puzzleFrame(inputFrame);
-    }
-
     public boolean onTouch(View view, MotionEvent event) {
         int xpos, ypos;
 
@@ -128,5 +125,9 @@ public class Puzzle15Activity extends Activity implements CvCameraViewListener, 
         }
 
         return false;
+    }
+
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+        return mPuzzle15.puzzleFrame(inputFrame.rgba());
     }
 }

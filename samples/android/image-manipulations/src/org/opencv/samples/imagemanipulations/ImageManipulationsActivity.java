@@ -3,6 +3,7 @@ package org.opencv.samples.imagemanipulations;
 import java.util.Arrays;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
@@ -258,8 +259,8 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
         mZoomWindow = null;
     }
 
-    public Mat onCameraFrame(Mat inputFrame) {
-        inputFrame.copyTo(mRgba);
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+        mRgba = inputFrame.rgba();
 
         switch (ImageManipulationsActivity.viewMode) {
         case ImageManipulationsActivity.VIEW_MODE_RGBA:
@@ -315,7 +316,7 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_SOBEL:
-            Imgproc.cvtColor(mRgba, mGray, Imgproc.COLOR_RGBA2GRAY);
+            mGray = inputFrame.gray();
 
             if ((mRgbaInnerWindow == null) || (mGrayInnerWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
                 CreateAuxiliaryMats();

@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
@@ -16,7 +17,6 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
-import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
 
 import android.app.Activity;
@@ -157,10 +157,10 @@ public class FdActivity extends Activity implements CvCameraViewListener {
         mRgba.release();
     }
 
-    public Mat onCameraFrame(Mat inputFrame) {
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
 
-        inputFrame.copyTo(mRgba);
-        Imgproc.cvtColor(inputFrame, mGray, Imgproc.COLOR_RGBA2GRAY);
+        mRgba = inputFrame.rgba();
+        mGray = inputFrame.gray();
 
         if (mAbsoluteFaceSize == 0) {
             int height = mGray.rows();

@@ -1,6 +1,7 @@
 package org.opencv.samples.tutorial2;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
@@ -10,7 +11,6 @@ import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
-import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
 import android.app.Activity;
@@ -101,20 +101,20 @@ public class Sample2NativeCamera extends Activity implements CvCameraViewListene
         mIntermediateMat.release();
     }
 
-    public Mat onCameraFrame(Mat inputFrame) {
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
         switch (Sample2NativeCamera.viewMode) {
             case Sample2NativeCamera.VIEW_MODE_GRAY:
             {
-                Imgproc.cvtColor(inputFrame, mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
+                Imgproc.cvtColor(inputFrame.gray(), mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
             } break;
             case Sample2NativeCamera.VIEW_MODE_RGBA:
             {
-                inputFrame.copyTo(mRgba);
-                Core.putText(mRgba, "OpenCV+Android", new Point(10, inputFrame.rows() - 10), 3, 1, new Scalar(255, 0, 0, 255), 2);
+                mRgba = inputFrame.rgba();
+                Core.putText(mRgba, "OpenCV+Android", new Point(10, mRgba.rows() - 10), 3, 1, new Scalar(255, 0, 0, 255), 2);
             } break;
             case Sample2NativeCamera.VIEW_MODE_CANNY:
             {
-                Imgproc.Canny(inputFrame, mIntermediateMat, 80, 100);
+                Imgproc.Canny(inputFrame.gray(), mIntermediateMat, 80, 100);
                 Imgproc.cvtColor(mIntermediateMat, mRgba, Imgproc.COLOR_GRAY2BGRA, 4);
             } break;
         }
@@ -136,17 +136,14 @@ public class Sample2NativeCamera extends Activity implements CvCameraViewListene
         Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
         if (item == mItemPreviewRGBA)
         {
-            mOpenCvCameraView.SetCaptureFormat(Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
             viewMode = VIEW_MODE_RGBA;
         }
         else if (item == mItemPreviewGray)
         {
-            mOpenCvCameraView.SetCaptureFormat(Highgui.CV_CAP_ANDROID_GREY_FRAME);
             viewMode = VIEW_MODE_GRAY;
         }
         else if (item == mItemPreviewCanny)
         {
-            mOpenCvCameraView.SetCaptureFormat(Highgui.CV_CAP_ANDROID_GREY_FRAME);
             viewMode = VIEW_MODE_CANNY;
         }
 
