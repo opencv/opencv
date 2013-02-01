@@ -267,7 +267,7 @@ BFMatcher::BFMatcher
 --------------------
 Brute-force matcher constructor.
 
-.. ocv:function:: BFMatcher::BFMatcher( int normType, bool crossCheck=false )
+.. ocv:function:: BFMatcher::BFMatcher( int normType=NORM_L2, bool crossCheck=false )
 
     :param normType: One of ``NORM_L1``, ``NORM_L2``, ``NORM_HAMMING``, ``NORM_HAMMING2``. ``L1`` and ``L2`` norms are preferable choices for SIFT and SURF descriptors, ``NORM_HAMMING`` should be used with ORB and BRIEF, ``NORM_HAMMING2`` should be used with ORB when ``WTA_K==3`` or ``4`` (see ORB::ORB constructor description).
 
