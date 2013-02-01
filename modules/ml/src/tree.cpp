@@ -159,8 +159,8 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     char err[100];
     const int *sidx = 0, *vidx = 0;
 
-    uint64 effective_buf_size = -1;
-    int effective_buf_height = -1, effective_buf_width = -1;
+    uint64 effective_buf_size = 0;
+    int effective_buf_height = 0, effective_buf_width = 0;
 
     if( _update_data && data_root )
     {

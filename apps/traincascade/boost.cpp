@@ -489,8 +489,8 @@ void CvCascadeBoostTrainData::setData( const CvFeatureEvaluator* _featureEvaluat
     int* idst = 0;
     unsigned short* udst = 0;
 
-    uint64 effective_buf_size = -1;
-    int effective_buf_height = -1, effective_buf_width = -1;
+    uint64 effective_buf_size = 0;
+    int effective_buf_height = 0, effective_buf_width = 0;
 
 
     clear();
