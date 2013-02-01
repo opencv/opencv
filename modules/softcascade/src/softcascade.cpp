@@ -42,11 +42,17 @@
 
 #include "precomp.hpp"
 
+using cv::softcascade::Detection;
+using cv::softcascade::Detector;
+using cv::softcascade::ChannelFeatureBuilder;
+
+using namespace cv;
+
 namespace {
 
-struct Octave
+struct SOctave
 {
-    Octave(const int i, const cv::Size& origObjSize, const cv::FileNode& fn)
+    SOctave(const int i, const cv::Size& origObjSize, const cv::FileNode& fn)
     : index(i), weaks((int)fn[SC_OCT_WEAKS]), scale(pow(2,(float)fn[SC_OCT_SCALE])),
       size(cvRound(origObjSize.width * scale), cvRound(origObjSize.height * scale)) {}
 
@@ -115,16 +121,16 @@ struct Feature
     static const char *const SC_F_RECT;
 };
 
-const char *const Octave::SC_OCT_SCALE      = "scale";
-const char *const Octave::SC_OCT_WEAKS      = "weaks";
-const char *const Octave::SC_OCT_SHRINKAGE  = "shrinkingFactor";
+const char *const SOctave::SC_OCT_SCALE      = "scale";
+const char *const SOctave::SC_OCT_WEAKS      = "weaks";
+const char *const SOctave::SC_OCT_SHRINKAGE  = "shrinkingFactor";
 const char *const Weak::SC_WEAK_THRESHOLD   = "treeThreshold";
 const char *const Feature::SC_F_CHANNEL     = "channel";
 const char *const Feature::SC_F_RECT        = "rect";
 
 struct Level
 {
-    const Octave* octave;
+    const SOctave* octave;
 
     float origScale;
     float relScale;
@@ -135,7 +141,7 @@ struct Level
 
     float scaling[2]; // 0-th for channels <= 6, 1-st otherwise
 
-    Level(const Octave& oct, const float scale, const int shrinkage, const int w, const int h)
+    Level(const SOctave& oct, const float scale, const int shrinkage, const int w, const int h)
     :  octave(&oct), origScale(scale), relScale(scale / oct.scale),
        workRect(cv::Size(cvRound(w / (float)shrinkage),cvRound(h / (float)shrinkage))),
        objSize(cv::Size(cvRound(oct.size.width * relScale), cvRound(oct.size.height * relScale)))
@@ -205,7 +211,8 @@ struct ChannelStorage
 
 }
 
-struct SoftCascadeDetector::Fields
+
+struct Detector::Fields
 {
     float minScale;
     float maxScale;
@@ -216,7 +223,7 @@ struct SoftCascadeDetector::Fields
 
     int shrinkage;
 
-    std::vector<Octave>  octaves;
+    std::vector<SOctave>  octaves;
     std::vector<Weak>    weaks;
     std::vector<Node>    nodes;
     std::vector<float>   leaves;
@@ -226,14 +233,14 @@ struct SoftCascadeDetector::Fields
 
     cv::Size frameSize;
 
-    typedef std::vector<Octave>::iterator  octIt_t;
+    typedef std::vector<SOctave>::iterator  octIt_t;
     typedef std::vector<Detection> dvector;
 
     void detectAt(const int dx, const int dy, const Level& level, const ChannelStorage& storage, dvector& detections) const
     {
         float detectionScore = 0.f;
 
-        const Octave& octave = *(level.octave);
+        const SOctave& octave = *(level.octave);
 
         int stBegin = octave.index * octave.weaks, stEnd = stBegin + octave.weaks;
 
@@ -279,7 +286,7 @@ struct SoftCascadeDetector::Fields
         octIt_t res =  octaves.begin();
         for (octIt_t oct = octaves.begin(); oct < octaves.end(); ++oct)
         {
-            const Octave& octave =*oct;
+            const SOctave& octave =*oct;
             float logOctave = log(octave.scale);
             float logAbsScale = fabs(logFactor - logOctave);
 
@@ -373,7 +380,7 @@ struct SoftCascadeDetector::Fields
         for (int octIndex = 0; it != it_end; ++it, ++octIndex)
         {
             FileNode fns = *it;
-            Octave octave(octIndex, cv::Size(origObjWidth, origObjHeight), fns);
+            SOctave octave(octIndex, cv::Size(origObjWidth, origObjHeight), fns);
             CV_Assert(octave.weaks > 0);
             octaves.push_back(octave);
 
@@ -409,17 +416,17 @@ struct SoftCascadeDetector::Fields
     }
 };
 
-SoftCascadeDetector::SoftCascadeDetector(const double mins, const double maxs, const int nsc, const int rej)
+Detector::Detector(const double mins, const double maxs, const int nsc, const int rej)
 : fields(0), minScale(mins), maxScale(maxs), scales(nsc), rejCriteria(rej) {}
 
-SoftCascadeDetector::~SoftCascadeDetector() { delete fields;}
+Detector::~Detector() { delete fields;}
 
-void SoftCascadeDetector::read(const FileNode& fn)
+void Detector::read(const cv::FileNode& fn)
 {
     Algorithm::read(fn);
 }
 
-bool SoftCascadeDetector::load(const FileNode& fn)
+bool Detector::load(const cv::FileNode& fn)
 {
     if (fields) delete fields;
 
@@ -429,6 +436,7 @@ bool SoftCascadeDetector::load(const FileNode& fn)
 
 namespace {
 
+using cv::softcascade::Detection;
 typedef std::vector<Detection>  dvector;
 
 
@@ -472,13 +480,13 @@ void DollarNMS(dvector& objects)
 
 static void suppress(int type, std::vector<Detection>& objects)
 {
-    CV_Assert(type == SoftCascadeDetector::DOLLAR);
+    CV_Assert(type == Detector::DOLLAR);
     DollarNMS(objects);
 }
 
 }
 
-void SoftCascadeDetector::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects) const
+void Detector::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects) const
 {
     Fields& fld = *fields;
     // create integrals
@@ -502,10 +510,10 @@ void SoftCascadeDetector::detectNoRoi(const cv::Mat& image, std::vector<Detectio
         }
     }
 
-    // if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
+    if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
 }
 
-void SoftCascadeDetector::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<Detection>& objects) const
+void Detector::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<Detection>& objects) const
 {
     // only color images are suppered
     cv::Mat image = _image.getMat();
@@ -557,7 +565,7 @@ void SoftCascadeDetector::detect(cv::InputArray _image, cv::InputArray _rois, st
     if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
 }
 
-void SoftCascadeDetector::detect(InputArray _image, InputArray _rois,  OutputArray _rects, OutputArray _confs) const
+void Detector::detect(InputArray _image, InputArray _rois,  OutputArray _rects, OutputArray _confs) const
 {
     std::vector<Detection> objects;
     detect( _image, _rois, objects);

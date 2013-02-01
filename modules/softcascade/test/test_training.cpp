@@ -57,8 +57,10 @@ using namespace std;
 
 namespace {
 
+using namespace cv::softcascade;
+
 typedef vector<string> svector;
-class ScaledDataset : public cv::scascade::Dataset
+class ScaledDataset : public Dataset
 {
 public:
     ScaledDataset(const string& path, const int octave);
@@ -210,7 +212,7 @@ TEST(DISABLED_SoftCascade, training)
         float octave = powf(2.f, (float)(*it));
         cv::Size model = cv::Size( cvRound(64 * octave) / shrinkage, cvRound(128 * octave) / shrinkage );
 
-        cv::Ptr<cv::scascade::FeaturePool> pool = cv::scascade::FeaturePool::create(model, nfeatures);
+        cv::Ptr<FeaturePool> pool = FeaturePool::create(model, nfeatures);
         nfeatures = pool->size();
         int npositives = 20;
         int nnegatives = 40;
@@ -218,7 +220,6 @@ TEST(DISABLED_SoftCascade, training)
         cv::Rect boundingBox = cv::Rect( cvRound(20 * octave), cvRound(20  * octave),
                                          cvRound(64 * octave), cvRound(128 * octave));
 
-        typedef cv::scascade::SoftCascadeOctave Octave;
         cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage, nfeatures);
 
         std::string path = cvtest::TS::ptr()->get_data_path() + "softcascade/sample_training_set";

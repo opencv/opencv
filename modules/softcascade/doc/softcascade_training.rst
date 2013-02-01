@@ -7,13 +7,13 @@ Soft Cascade Detector Training
 --------------------------------------------
 
 
-SoftCascadeOctave
+Octave
 -----------------
-.. ocv:class:: SoftCascadeOctave
+.. ocv:class:: Octave
 
 Public interface for soft cascade training algorithm. ::
 
-    class CV_EXPORTS SoftCascadeOctave : public Algorithm
+    class CV_EXPORTS Octave : public Algorithm
     {
     public:
 
@@ -25,8 +25,8 @@ Public interface for soft cascade training algorithm. ::
             // Originally proposed by L. Bourdev and J. Brandt
             HEURISTIC = 4 };
 
-        virtual ~SoftCascadeOctave();
-        static cv::Ptr<SoftCascadeOctave> create(cv::Rect boundingBox, int npositives, int nnegatives, int logScale, int shrinkage);
+        virtual ~Octave();
+        static cv::Ptr<Octave> create(cv::Rect boundingBox, int npositives, int nnegatives, int logScale, int shrinkage);
 
         virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth) = 0;
         virtual void setRejectThresholds(OutputArray thresholds) = 0;
@@ -37,17 +37,17 @@ Public interface for soft cascade training algorithm. ::
 
 
 
-SoftCascadeOctave::~SoftCascadeOctave
+Octave::~Octave
 ---------------------------------------
-Destructor for SoftCascadeOctave.
+Destructor for Octave.
 
-.. ocv:function:: SoftCascadeOctave::~SoftCascadeOctave()
+.. ocv:function:: Octave::~Octave()
 
 
-SoftCascadeOctave::train
+Octave::train
 ------------------------
 
-.. ocv:function:: bool SoftCascadeOctave::train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth)
+.. ocv:function:: bool Octave::train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth)
 
     :param dataset an object that allows communicate for training set.
 
@@ -59,19 +59,19 @@ SoftCascadeOctave::train
 
 
 
-SoftCascadeOctave::setRejectThresholds
+Octave::setRejectThresholds
 --------------------------------------
 
-.. ocv:function:: void SoftCascadeOctave::setRejectThresholds(OutputArray thresholds)
+.. ocv:function:: void Octave::setRejectThresholds(OutputArray thresholds)
 
     :param thresholds an output array of resulted rejection vector. Have same size as number of trained stages.
 
 
-SoftCascadeOctave::write
+Octave::write
 ------------------------
 
-.. ocv:function:: void SoftCascadeOctave::train(cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const
-.. ocv:function:: void SoftCascadeOctave::train( CvFileStorage* fs, string name) const
+.. ocv:function:: void Octave::train(cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const
+.. ocv:function:: void Octave::train( CvFileStorage* fs, string name) const
 
     :param fs an output file storage to store trained detector.
 

@@ -42,10 +42,10 @@
 
 #include "precomp.hpp"
 
-namespace cv { namespace scascade
+namespace cv { namespace softcascade
 {
 
-CV_INIT_ALGORITHM(SoftCascadeDetector, "SoftCascade.SoftCascadeDetector",
+CV_INIT_ALGORITHM(Detector, "SoftCascade.Detector",
                   obj.info()->addParam(obj, "minScale",    obj.minScale);
                   obj.info()->addParam(obj, "maxScale",    obj.maxScale);
                   obj.info()->addParam(obj, "scales",      obj.scales);
@@ -54,7 +54,7 @@ CV_INIT_ALGORITHM(SoftCascadeDetector, "SoftCascade.SoftCascadeDetector",
 
 bool initModule_softcascade(void)
 {
-    Ptr<Algorithm> sc1 = createSoftCascadeDetector();
+    Ptr<Algorithm> sc1 = createDetector();
     return (sc1->info() != 0);
 }
 

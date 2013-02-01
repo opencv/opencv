@@ -47,7 +47,7 @@
 namespace sft
 {
 
-using cv::Dataset;
+using cv::softcascade::Dataset;
 
 class ScaledDataset : public Dataset
 {

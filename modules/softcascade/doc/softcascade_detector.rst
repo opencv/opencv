@@ -25,20 +25,20 @@ The sample has been rejected if it fall rejection threshold. So stageless cascad
 .. [BMTG12] Rodrigo Benenson, Markus Mathias, Radu Timofte and Luc Van Gool. Pedestrian detection at 100 frames per second. IEEE CVPR, 2012.
 
 
-SoftCascadeDetector
+Detector
 -------------------
-.. ocv:class:: SoftCascadeDetector
+.. ocv:class:: Detector
 
 Implementation of soft (stageless) cascaded detector. ::
 
-    class CV_EXPORTS_W SoftCascadeDetector : public Algorithm
+    class CV_EXPORTS_W Detector : public Algorithm
     {
     public:
 
         enum { NO_REJECT = 1, DOLLAR = 2, /*PASCAL = 4,*/ DEFAULT = NO_REJECT};
 
-        CV_WRAP SoftCascadeDetector(double minScale = 0.4, double maxScale = 5., int scales = 55, int rejCriteria = 1);
-        CV_WRAP virtual ~SoftCascadeDetector();
+        CV_WRAP Detector(double minScale = 0.4, double maxScale = 5., int scales = 55, int rejCriteria = 1);
+        CV_WRAP virtual ~Detector();
         cv::AlgorithmInfo* info() const;
         CV_WRAP virtual bool load(const FileNode& fileNode);
         CV_WRAP virtual void read(const FileNode& fileNode);
@@ -49,13 +49,13 @@ Implementation of soft (stageless) cascaded detector. ::
 
 
 
-SoftCascadeDetector::SoftCascadeDetector
+Detector::Detector
 ----------------------------------------
 An empty cascade will be created.
 
-.. ocv:function:: SoftCascadeDetector::SoftCascadeDetector(float minScale = 0.4f, float maxScale = 5.f, int scales = 55, int rejCriteria = 1)
+.. ocv:function:: Detector::Detector(float minScale = 0.4f, float maxScale = 5.f, int scales = 55, int rejCriteria = 1)
 
-.. ocv:pyfunction:: cv2.SoftCascadeDetector.SoftCascadeDetector(minScale[, maxScale[, scales[, rejCriteria]]]) -> cascade
+.. ocv:pyfunction:: cv2.Detector.Detector(minScale[, maxScale[, scales[, rejCriteria]]]) -> cascade
 
     :param minScale: a minimum scale relative to the original size of the image on which cascade will be applied.
 
@@ -67,35 +67,35 @@ An empty cascade will be created.
 
 
 
-SoftCascadeDetector::~SoftCascadeDetector
+Detector::~Detector
 -----------------------------------------
-Destructor for SoftCascadeDetector.
+Destructor for Detector.
 
-.. ocv:function:: SoftCascadeDetector::~SoftCascadeDetector()
+.. ocv:function:: Detector::~Detector()
 
 
 
-SoftCascadeDetector::load
+Detector::load
 --------------------------
 Load cascade from FileNode.
 
-.. ocv:function:: bool SoftCascadeDetector::load(const FileNode& fileNode)
+.. ocv:function:: bool Detector::load(const FileNode& fileNode)
 
-.. ocv:pyfunction:: cv2.SoftCascadeDetector.load(fileNode)
+.. ocv:pyfunction:: cv2.Detector.load(fileNode)
 
     :param fileNode: File node from which the soft cascade are read.
 
 
 
-SoftCascadeDetector::detect
+Detector::detect
 ---------------------------
 Apply cascade to an input frame and return the vector of Detection objects.
 
-.. ocv:function:: void SoftCascadeDetector::detect(InputArray image, InputArray rois, std::vector<Detection>& objects) const
+.. ocv:function:: void Detector::detect(InputArray image, InputArray rois, std::vector<Detection>& objects) const
 
-.. ocv:function:: void SoftCascadeDetector::detect(InputArray image, InputArray rois, OutputArray rects, OutputArray confs) const
+.. ocv:function:: void Detector::detect(InputArray image, InputArray rois, OutputArray rects, OutputArray confs) const
 
-.. ocv:pyfunction:: cv2.SoftCascadeDetector.detect(image, rois) -> (rects, confs)
+.. ocv:pyfunction:: cv2.Detector.detect(image, rois) -> (rects, confs)
 
     :param image: a frame on which detector will be applied.
 

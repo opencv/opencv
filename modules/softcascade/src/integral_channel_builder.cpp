@@ -44,10 +44,13 @@
 
 namespace {
 
+using namespace cv::softcascade;
+
 class ICFBuilder : public ChannelFeatureBuilder
 {
     virtual ~ICFBuilder() {}
     virtual cv::AlgorithmInfo* info() const;
+
     virtual void operator()(cv::InputArray _frame, CV_OUT cv::OutputArray _integrals) const
     {
         CV_Assert(_frame.type() == CV_8UC3);
@@ -107,9 +110,12 @@ class ICFBuilder : public ChannelFeatureBuilder
 
 }
 
+using cv::softcascade::ChannelFeatureBuilder;
+using cv::softcascade::ChannelFeature;
+
 CV_INIT_ALGORITHM(ICFBuilder, "ChannelFeatureBuilder.ICFBuilder", );
 
-cv::scascade::ChannelFeatureBuilder::~ChannelFeatureBuilder() {}
+ChannelFeatureBuilder::~ChannelFeatureBuilder() {}
 
 cv::Ptr<ChannelFeatureBuilder> ChannelFeatureBuilder::create()
 {
@@ -117,7 +123,7 @@ cv::Ptr<ChannelFeatureBuilder> ChannelFeatureBuilder::create()
     return builder;
 }
 
-cv::scascade::ChannelFeature::ChannelFeature(int x, int y, int w, int h, int ch)
+ChannelFeature::ChannelFeature(int x, int y, int w, int h, int ch)
 : bb(cv::Rect(x, y, w, h)), channel(ch) {}
 
 bool ChannelFeature::operator ==(ChannelFeature b)
@@ -131,7 +137,7 @@ bool ChannelFeature::operator !=(ChannelFeature b)
 }
 
 
-float cv::scascade::ChannelFeature::operator() (const cv::Mat& integrals, const cv::Size& model) const
+float ChannelFeature::operator() (const cv::Mat& integrals, const cv::Size& model) const
 {
     int step = model.width + 1;
 
@@ -148,20 +154,22 @@ float cv::scascade::ChannelFeature::operator() (const cv::Mat& integrals, const 
     return (float)(a - b + c - d);
 }
 
-void cv::scascade::write(cv::FileStorage& fs, const string&, const ChannelFeature& f)
+void cv::softcascade::write(cv::FileStorage& fs, const string&, const ChannelFeature& f)
 {
     fs << "{" << "channel" << f.channel << "rect" << f.bb << "}";
 }
 
-std::ostream& cv::scascade::operator<<(std::ostream& out, const ChannelFeature& m)
+std::ostream& cv::softcascade::operator<<(std::ostream& out, const ChannelFeature& m)
 {
     out << m.channel << " " << m.bb;
     return out;
 }
 
-cv::scascade::ChannelFeature::~ChannelFeature(){}
+ChannelFeature::~ChannelFeature(){}
 
 namespace {
+
+using namespace cv::softcascade;
 
 class ChannelFeaturePool : public FeaturePool
 {
@@ -200,6 +208,7 @@ void ChannelFeaturePool::write( cv::FileStorage& fs, int index) const
 
 void ChannelFeaturePool::fill(int desired)
 {
+    using namespace cv::softcascade::internal;
     int mw = model.width;
     int mh = model.height;
 
@@ -208,16 +217,16 @@ void ChannelFeaturePool::fill(int desired)
     int nfeatures = std::min(desired, maxPoolSize);
     pool.reserve(nfeatures);
 
-    sft::Random::engine eng(FEATURE_RECT_SEED);
-    sft::Random::engine eng_ch(DCHANNELS_SEED);
+    Random::engine eng(FEATURE_RECT_SEED);
+    Random::engine eng_ch(DCHANNELS_SEED);
 
-    sft::Random::uniform chRand(0, N_CHANNELS - 1);
+    Random::uniform chRand(0, N_CHANNELS - 1);
 
-    sft::Random::uniform xRand(0, model.width  - 2);
-    sft::Random::uniform yRand(0, model.height - 2);
+    Random::uniform xRand(0, model.width  - 2);
+    Random::uniform yRand(0, model.height - 2);
 
-    sft::Random::uniform wRand(1, model.width  - 1);
-    sft::Random::uniform hRand(1, model.height - 1);
+    Random::uniform wRand(1, model.width  - 1);
+    Random::uniform hRand(1, model.height - 1);
 
     while (pool.size() < size_t(nfeatures))
     {
@@ -246,7 +255,7 @@ void ChannelFeaturePool::fill(int desired)
 
 }
 
-cv::Ptr<FeaturePool> cv::scascade::FeaturePool::create(const cv::Size& model, int nfeatures)
+cv::Ptr<FeaturePool> FeaturePool::create(const cv::Size& model, int nfeatures)
 {
     cv::Ptr<FeaturePool> pool(new ChannelFeaturePool(model, nfeatures));
     return pool;

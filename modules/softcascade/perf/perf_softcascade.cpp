@@ -4,13 +4,16 @@
 using cv::Rect;
 using std::tr1::get;
 
+
+using namespace cv::softcascade;
+
 typedef std::tr1::tuple<std::string, std::string> fixture;
 typedef perf::TestBaseWithParam<fixture> detect;
 
 
 namespace {
 
-void extractRacts(std::vector<cv::scascade::Detection> objectBoxes, std::vector<Rect>& rects)
+void extractRacts(std::vector<Detection> objectBoxes, std::vector<Rect>& rects)
 {
     rects.clear();
     for (int i = 0; i < (int)objectBoxes.size(); ++i)
@@ -26,14 +29,12 @@ PERF_TEST_P(detect, SoftCascadeDetector,
     cv::Mat colored = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(colored.empty());
 
-    cv::scascade::SoftCascadeDetector cascade;
+    Detector cascade;
     cv::FileStorage fs(getDataPath(get<0>(GetParam())), cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    std::vector<cv::scascade::Detection> objectBoxes;
-    cascade.detect(colored, cv::noArray(), objectBoxes);
-
+    std::vector<Detection> objectBoxes;
     TEST_CYCLE()
     {
         cascade.detect(colored, cv::noArray(), objectBoxes);

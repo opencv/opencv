@@ -76,7 +76,7 @@ int main(int argc, char** argv)
     string configPath = parser.get<string>("config");
     if (configPath.empty())
     {
-        std::cout << "Configuration file is missing or empty. Could not start training." << std::endl << std::flush;
+        std::cout << "Configuration file is missing or empty. Could not start training." << std::endl;
         return 0;
     }
 
@@ -84,7 +84,7 @@ int main(int argc, char** argv)
     cv::FileStorage fs(configPath, cv::FileStorage::READ);
     if(!fs.isOpened())
     {
-        std::cout << "Configuration file " << configPath << " can't be opened." << std::endl << std::flush;
+        std::cout << "Configuration file " << configPath << " can't be opened." << std::endl;
         return 1;
     }
 
@@ -97,7 +97,7 @@ int main(int argc, char** argv)
     cv::FileStorage fso(cfg.outXmlPath, cv::FileStorage::WRITE);
     if(!fso.isOpened())
     {
-        std::cout << "Training stopped. Output classifier Xml file " << cfg.outXmlPath << " can't be opened." << std::endl << std::flush;
+        std::cout << "Training stopped. Output classifier Xml file " << cfg.outXmlPath << " can't be opened." << std::endl;
         return 1;
     }
 
@@ -128,7 +128,7 @@ int main(int argc, char** argv)
         cv::Rect boundingBox = cfg.bbox(it);
         std::cout << "Object bounding box" << boundingBox << std::endl;
 
-        typedef cv::SoftCascadeOctave Octave;
+        typedef cv::Octave Octave;
 
         cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage, nfeatures);
 

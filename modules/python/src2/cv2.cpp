@@ -97,7 +97,7 @@ catch (const cv::Exception &e) \
 }
 
 using namespace cv;
-typedef cv::scascade::ChannelFeatureBuilder scascade_ChannelFeatureBuilder;
+typedef cv::softcascade::ChannelFeatureBuilder softcascade_ChannelFeatureBuilder;
 
 typedef vector<uchar> vector_uchar;
 typedef vector<int> vector_int;
@@ -126,7 +126,7 @@ typedef Ptr<DescriptorExtractor> Ptr_DescriptorExtractor;
 typedef Ptr<Feature2D> Ptr_Feature2D;
 typedef Ptr<DescriptorMatcher> Ptr_DescriptorMatcher;
 
-typedef Ptr<cv::scascade::ChannelFeatureBuilder> Ptr_ChannelFeatureBuilder;
+typedef Ptr<cv::softcascade::ChannelFeatureBuilder> Ptr_ChannelFeatureBuilder;
 
 typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
 

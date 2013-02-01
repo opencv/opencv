@@ -114,6 +114,8 @@ void sft::read(const cv::FileNode& node, Config& x, const Config& default_value)
         x.read(node);
 }
 
+namespace {
+
 struct Out
 {
     Out(std::ostream& _out): out(_out) {}
@@ -124,6 +126,7 @@ struct Out
 private:
     Out& operator=(Out const& other);
 };
+}
 
 std::ostream& sft::operator<<(std::ostream& out, const Config& m)
 {

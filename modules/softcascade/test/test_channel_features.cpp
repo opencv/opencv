@@ -42,15 +42,17 @@
 
 #include "test_precomp.hpp"
 
+using namespace cv::softcascade;
+
 TEST(ChannelFeatureBuilderTest, info)
 {
-    cv::Ptr<cv::scascade::ChannelFeatureBuilder> builder = cv::scascade::ChannelFeatureBuilder::create();
+    cv::Ptr<ChannelFeatureBuilder> builder = ChannelFeatureBuilder::create();
     ASSERT_TRUE(builder->info() != 0);
 }
 
 TEST(ChannelFeatureBuilderTest, compute)
 {
-    cv::Ptr<cv::scascade::ChannelFeatureBuilder> builder = cv::scascade::ChannelFeatureBuilder::create();
+    cv::Ptr<ChannelFeatureBuilder> builder = ChannelFeatureBuilder::create();
 
     cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path()  + "cascadeandhog/images/image_00000000_0.png");
     cv::Mat ints;

@@ -22,7 +22,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and / or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -44,41 +44,53 @@
 #define __SFT_RANDOM_HPP__
 
 #if defined(_MSC_VER) && _MSC_VER >= 1600
-
 # include <random>
-namespace sft {
+
+namespace cv { namespace softcascade { namespace internal
+{
+
 struct Random
 {
     typedef std::mt19937 engine;
     typedef std::uniform_int<int> uniform;
 };
-}
+
+}}}
 
 #elif (__GNUC__) && __GNUC__ > 3 && __GNUC_MINOR__ > 1 && !defined(__ANDROID__)
-
 # if defined (__cplusplus) && __cplusplus > 201100L
 #  include <random>
-namespace sft {
+
+namespace cv { namespace softcascade { namespace internal
+{
+
 struct Random
 {
     typedef std::mt19937 engine;
     typedef std::uniform_int<int> uniform;
 };
-}
-# else
-#   include <tr1/random>
+}}}
 
-namespace sft {
+# else
+#  include <tr1/random>
+
+namespace cv { namespace softcascade { namespace internal
+{
+
 struct Random
 {
     typedef std::tr1::mt19937 engine;
     typedef std::tr1::uniform_int<int> uniform;
 };
-}
+
+}}}
 # endif
 
 #else
-#include <opencv2/core/core.hpp>
+# include <opencv2/core/core.hpp>
+
+namespace cv { namespace softcascade { namespace internal
+{
 namespace rnd {
 
 typedef cv::RNG engine;
@@ -104,13 +116,13 @@ private:
 
 }
 
-namespace sft {
 struct Random
 {
     typedef rnd::engine engine;
     typedef rnd::uniform_int<int> uniform;
 };
-}
+
+}}}
 
 #endif
 

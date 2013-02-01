@@ -46,7 +46,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/softcascade/softcascade.hpp>
 
-namespace cv {using namespace scascade;}
+namespace cv {using namespace softcascade;}
 namespace sft
 {
 

@@ -45,7 +45,7 @@
 
 #include "opencv2/core/core.hpp"
 
-namespace cv { namespace scascade {
+namespace cv { namespace softcascade {
 
 // Representation of detectors result.
 struct CV_EXPORTS Detection
@@ -63,8 +63,6 @@ struct CV_EXPORTS Detection
     float confidence;
     int kind;
 };
-
-
 
 class CV_EXPORTS Dataset
 {
@@ -136,7 +134,7 @@ public:
 // ========================================================================== //
 //             Implementation of soft (stageless) cascaded detector.
 // ========================================================================== //
-class CV_EXPORTS_W SoftCascadeDetector : public cv::Algorithm
+class CV_EXPORTS_W Detector : public cv::Algorithm
 {
 public:
 
@@ -147,9 +145,9 @@ public:
     // Param minScale is a maximum scale relative to the original size of the image on which cascade will be applied.
     // Param scales is a number of scales from minScale to maxScale.
     // Param rejCriteria is used for NMS.
-    CV_WRAP SoftCascadeDetector(double minScale = 0.4, double maxScale = 5., int scales = 55, int rejCriteria = 1);
+    CV_WRAP Detector(double minScale = 0.4, double maxScale = 5., int scales = 55, int rejCriteria = 1);
 
-    CV_WRAP virtual ~SoftCascadeDetector();
+    CV_WRAP virtual ~Detector();
 
     cv::AlgorithmInfo* info() const;
 
@@ -186,7 +184,7 @@ private:
 // ========================================================================== //
 //     Public Interface for singe soft (stageless) cascade octave training.
 // ========================================================================== //
-class CV_EXPORTS SoftCascadeOctave : public cv::Algorithm
+class CV_EXPORTS Octave : public cv::Algorithm
 {
 public:
     enum
@@ -199,8 +197,8 @@ public:
         HEURISTIC = 4
     };
 
-    virtual ~SoftCascadeOctave();
-    static cv::Ptr<SoftCascadeOctave> create(cv::Rect boundingBox, int npositives, int nnegatives,
+    virtual ~Octave();
+    static cv::Ptr<Octave> create(cv::Rect boundingBox, int npositives, int nnegatives,
         int logScale, int shrinkage, int poolSize);
 
     virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth) = 0;
@@ -211,6 +209,6 @@ public:
 
 CV_EXPORTS bool initModule_softcascade(void);
 
-} }
+}} // namespace cv { namespace softcascade {
 
 #endif
