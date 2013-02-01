@@ -150,7 +150,7 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
 
         detector.write(filename);
 
-        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<name>Feature2D.SURF</name>\n<extended>1</extended>\n<hessianThreshold>100.</hessianThreshold>\n<nOctaveLayers>2</nOctaveLayers>\n<nOctaves>4</nOctaves>\n<upright>0</upright>\n</opencv_storage>\n";
+        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<name>Feature2D.SURF</name>\n<extended>0</extended>\n<hessianThreshold>100.</hessianThreshold>\n<nOctaveLayers>3</nOctaveLayers>\n<nOctaves>4</nOctaves>\n<upright>0</upright>\n</opencv_storage>\n";
         assertEquals(truth, readFile(filename));
     }
 
@@ -159,7 +159,7 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
 
         detector.write(filename);
 
-        String truth = "%YAML:1.0\nname: \"Feature2D.SURF\"\nextended: 1\nhessianThreshold: 100.\nnOctaveLayers: 2\nnOctaves: 4\nupright: 0\n";
+        String truth = "%YAML:1.0\nname: \"Feature2D.SURF\"\nextended: 0\nhessianThreshold: 100.\nnOctaveLayers: 3\nnOctaves: 4\nupright: 0\n";
         assertEquals(truth, readFile(filename));
     }
 
