@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2012, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2008-2013, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -22,7 +22,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and / or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -40,21 +40,23 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
-namespace cv
+using namespace cv::softcascade;
+
+TEST(ChannelFeatureBuilderTest, info)
 {
-
-CV_INIT_ALGORITHM(SCascade, "CascadeDetector.SCascade",
-                  obj.info()->addParam(obj, "minScale",    obj.minScale);
-                  obj.info()->addParam(obj, "maxScale",    obj.maxScale);
-                  obj.info()->addParam(obj, "scales",      obj.scales);
-                  obj.info()->addParam(obj, "rejCriteria", obj.rejCriteria));
-
-bool initModule_objdetect(void)
-{
-    Ptr<Algorithm> sc = createSCascade();
-    return sc->info() != 0;
+    cv::Ptr<ChannelFeatureBuilder> builder = ChannelFeatureBuilder::create();
+    ASSERT_TRUE(builder->info() != 0);
 }
 
+TEST(ChannelFeatureBuilderTest, compute)
+{
+    cv::Ptr<ChannelFeatureBuilder> builder = ChannelFeatureBuilder::create();
+
+    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path()  + "cascadeandhog/images/image_00000000_0.png");
+    cv::Mat ints;
+    (*builder)(colored, ints);
+
+    ASSERT_FALSE(ints.empty());
 }
