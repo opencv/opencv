@@ -786,13 +786,25 @@ public:
      *  \param max_iters the maximum number of times to try to adjust the feature detector params
      *          for the FastAdjuster this can be high, but with Star or Surf this can get time consuming
      *  \param min_features the minimum desired features
+     *  \param save_adjusted_parameters if true then adjusted parameters of a detector will be saved
+     *          and used as initial parameters for adjustment in a next detection. Otherwise adjusted parameters will be discarded.
      */
-    DynamicAdaptedFeatureDetector( const Ptr<AdjusterAdapter>& adjuster, int min_features=400, int max_features=500, int max_iters=5 );
+    DynamicAdaptedFeatureDetector( const Ptr<AdjusterAdapter>& adjuster=0, int min_features=400, int max_features=500, int max_iters=5,
+                                   bool save_adjusted_parameters=false);
 
     virtual bool empty() const;
 
+    virtual void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() );
+
+    virtual Ptr<DynamicAdaptedFeatureDetector> clone() const;
+
+    AlgorithmInfo* info() const;
+
+    using FeatureDetector::detect;
 protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() );
 
 private:
     DynamicAdaptedFeatureDetector& operator=(const DynamicAdaptedFeatureDetector&);
@@ -800,7 +812,10 @@ private:
 
     int escape_iters_;
     int min_features_, max_features_;
-    const Ptr<AdjusterAdapter> adjuster_;
+    Ptr<AdjusterAdapter> adjuster_;
+    bool save_adjusted_parameters_;
+
+    bool call_const_impl_;
 };
 
 /**\brief an adjust for the FAST detector. This will basically decrement or increment the

@@ -45,8 +45,10 @@ namespace cv
 {
 
 DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(const Ptr<AdjusterAdapter>& a,
-                                         int min_features, int max_features, int max_iters ) :
-        escape_iters_(max_iters), min_features_(min_features), max_features_(max_features), adjuster_(a)
+                                         int min_features, int max_features, int max_iters,
+                                         bool save_adjusted_parameters) :
+        escape_iters_(max_iters), min_features_(min_features), max_features_(max_features),
+        adjuster_(a == 0 ? 0 : a->clone()), save_adjusted_parameters_(save_adjusted_parameters), call_const_impl_(true)
 {}
 
 bool DynamicAdaptedFeatureDetector::empty() const
@@ -54,7 +56,25 @@ bool DynamicAdaptedFeatureDetector::empty() const
     return adjuster_.empty() || adjuster_->empty();
 }
 
-void DynamicAdaptedFeatureDetector::detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
+Ptr<DynamicAdaptedFeatureDetector> DynamicAdaptedFeatureDetector::clone() const
+{
+    Ptr<DynamicAdaptedFeatureDetector> cloned_obj = new DynamicAdaptedFeatureDetector(adjuster_, min_features_, max_features_, escape_iters_, save_adjusted_parameters_);
+    return cloned_obj;
+}
+
+void DynamicAdaptedFeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask )
+{
+    //TODO: is this construction thread-safe in case of save_adjusted_parameters == false?
+    //otherwise use if condition and do assigment iff saved_adjusted_parameters == true
+    call_const_impl_ = !save_adjusted_parameters_;
+    DynamicAdaptedFeatureDetector const *this_const = this;
+    this_const->detect(image, keypoints, mask);
+    //the same as FeatureDetector::detect(image, keypoints, mask); (if FeatureDetector doesn't have non-const detect)
+    //TODO: is this construction thread-safe?
+    call_const_impl_ = true;
+}
+
+void DynamicAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask )
 {
     //for oscillation testing
     bool down = false;
@@ -63,34 +83,57 @@ void DynamicAdaptedFeatureDetector::detectImpl(const Mat& image, vector<KeyPoint
     //flag for whether the correct threshhold has been reached
     bool thresh_good = false;
 
-    Ptr<AdjusterAdapter> adjuster = adjuster_->clone();
-
     //break if the desired number hasn't been reached.
     int iter_count = escape_iters_;
 
-    while( iter_count > 0 && !(down && up) && !thresh_good && adjuster->good() )
+    while( iter_count > 0 && !(down && up) && !thresh_good && adjuster_->good() )
     {
         keypoints.clear();
 
         //the adjuster takes care of calling the detector with updated parameters
-        adjuster->detect(image, keypoints,mask);
+        adjuster_->detect(image, keypoints,mask);
 
         if( int(keypoints.size()) < min_features_ )
         {
             down = true;
-            adjuster->tooFew(min_features_, (int)keypoints.size());
+            adjuster_->tooFew(min_features_, (int)keypoints.size());
         }
         else if( int(keypoints.size()) > max_features_ )
         {
             up = true;
-            adjuster->tooMany(max_features_, (int)keypoints.size());
+            adjuster_->tooMany(max_features_, (int)keypoints.size());
         }
         else
             thresh_good = true;
 
         iter_count--;
     }
+}
 
+void DynamicAdaptedFeatureDetector::detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
+{
+    if (call_const_impl_ && save_adjusted_parameters_)
+    {
+        string errorMessage = "You are trying to save adjusted parameters into a constant detector."
+                "It is not possible to modify a constant object. Please use save_adjusted_parameters=false or use a non-constant detector";
+        CV_Error(CV_StsBadArg, errorMessage);
+    }
+
+    if (call_const_impl_)
+    {
+        CV_Assert(!save_adjusted_parameters_);
+
+        Ptr<DynamicAdaptedFeatureDetector> cloned_obj = clone();
+        cloned_obj->detectImpl(image, keypoints, mask);
+    }
+    else
+    {
+        //Of course, const_cast is bad.
+        //However, it will be applied if only non-const detect() is called
+        //so it doesn't violate const correctness of public API.
+        DynamicAdaptedFeatureDetector *this_nonconst = const_cast<DynamicAdaptedFeatureDetector*>(this);
+        this_nonconst->detectImpl(image, keypoints, mask);
+    }
 }
 
 FastAdjuster::FastAdjuster( int init_thresh, bool nonmax, int min_thresh, int max_thresh ) :
