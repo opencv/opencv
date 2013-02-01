@@ -154,8 +154,8 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     int sample_all = 0, r_type, cv_n;
     int total_c_count = 0;
     int tree_block_size, temp_block_size, max_split_size, nv_size, cv_size = 0;
-    int64 ds_step, dv_step, ms_step = 0, mv_step = 0; // {data|mask}{sample|var}_step
-    int64 vi, i, size;
+    int ds_step, dv_step, ms_step = 0, mv_step = 0; // {data|mask}{sample|var}_step
+    int vi, i, size;
     char err[100];
     const int *sidx = 0, *vidx = 0;
 
@@ -421,17 +421,17 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
             for( i = 0; i < sample_count; i++ )
             {
                 int val = INT_MAX, si = sidx ? sidx[i] : i;
-                if( !mask || !mask[si*m_step] )
+                if( !mask || !mask[(size_t)si*m_step] )
                 {
                     if( idata )
-                        val = idata[si*step];
+                        val = idata[(size_t)si*step];
                     else
                     {
-                        float t = fdata[si*step];
+                        float t = fdata[(size_t)si*step];
                         val = cvRound(t);
                         if( fabs(t - val) > FLT_EPSILON )
                         {
-                            sprintf( err, "%ld-th value of %ld-th (categorical) "
+                            sprintf( err, "%d-th value of %d-th (categorical) "
                                 "variable is not an integer", i, vi );
                             CV_ERROR( CV_StsBadArg, err );
                         }
@@ -439,7 +439,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
                     if( val == INT_MAX )
                     {
-                        sprintf( err, "%ld-th value of %ld-th (categorical) "
+                        sprintf( err, "%d-th value of %d-th (categorical) "
                             "variable is too large", i, vi );
                         CV_ERROR( CV_StsBadArg, err );
                     }
@@ -537,16 +537,16 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
             {
                 float val = ord_nan;
                 int si = sidx ? sidx[i] : i;
-                if( !mask || !mask[si*m_step] )
+                if( !mask || !mask[(size_t)si*m_step] )
                 {
                     if( idata )
-                        val = (float)idata[si*step];
+                        val = (float)idata[(size_t)si*step];
                     else
-                        val = fdata[si*step];
+                        val = fdata[(size_t)si*step];
 
                     if( fabs(val) >= ord_nan )
                     {
-                        sprintf( err, "%ld-th value of %ld-th (ordered) "
+                        sprintf( err, "%d-th value of %d-th (ordered) "
                             "variable (=%g) is too large", i, vi, val );
                         CV_ERROR( CV_StsBadArg, err );
                     }
@@ -3333,7 +3333,7 @@ float CvDTree::calc_error( CvMLData* _data, int type, vector<float> *resp )
             float r = (float)predict( &sample, missing ? &miss : 0 )->value;
             if( pred_resp )
                 pred_resp[i] = r;
-            int d = fabs((double)r - response->data.fl[si*r_step]) <= FLT_EPSILON ? 0 : 1;
+            int d = fabs((double)r - response->data.fl[(size_t)si*r_step]) <= FLT_EPSILON ? 0 : 1;
             err += d;
         }
         err = sample_count ? err / (float)sample_count * 100 : -FLT_MAX;
@@ -3350,7 +3350,7 @@ float CvDTree::calc_error( CvMLData* _data, int type, vector<float> *resp )
             float r = (float)predict( &sample, missing ? &miss : 0 )->value;
             if( pred_resp )
                 pred_resp[i] = r;
-            float d = r - response->data.fl[si*r_step];
+            float d = r - response->data.fl[(size_t)si*r_step];
             err += d*d;
         }
         err = sample_count ? err / (float)sample_count : -FLT_MAX;
@@ -3656,8 +3656,8 @@ CvDTreeNode* CvDTree::predict( const CvMat* _sample,
             int vi = split->var_idx;
             int ci = vtype[vi];
             i = vidx ? vidx[vi] : vi;
-            float val = sample[i*step];
-            if( m && m[i*mstep] )
+            float val = sample[(size_t)i*step];
+            if( m && m[(size_t)i*mstep] )
                 continue;
             if( ci < 0 ) // ordered
                 dir = val <= split->ord.c ? -1 : 1;
