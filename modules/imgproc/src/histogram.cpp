@@ -2592,39 +2592,36 @@ cvCompareHist( const CvHistogram* hist1,
 CV_IMPL void
 cvCopyHist( const CvHistogram* src, CvHistogram** _dst )
 {
-    int eq = 0;
-    int is_sparse;
-    int i, dims1, dims2;
-    int size1[CV_MAX_DIM], size2[CV_MAX_DIM], total = 1;
-    float* ranges[CV_MAX_DIM];
-    float** thresh = 0;
-    CvHistogram* dst;
-
     if( !_dst )
         CV_Error( CV_StsNullPtr, "Destination double pointer is NULL" );
 
-    dst = *_dst;
+    CvHistogram* dst = *_dst;
 
     if( !CV_IS_HIST(src) || (dst && !CV_IS_HIST(dst)) )
         CV_Error( CV_StsBadArg, "Invalid histogram header[s]" );
 
-    is_sparse = CV_IS_SPARSE_MAT(src->bins);
-    dims1 = cvGetDims( src->bins, size1 );
-    for( i = 0; i < dims1; i++ )
-        total *= size1[i];
-
-    if( dst && is_sparse == CV_IS_SPARSE_MAT(dst->bins))
+    bool eq = false;
+    int size1[CV_MAX_DIM];
+    bool is_sparse = CV_IS_SPARSE_MAT(src->bins);
+    int dims1 = cvGetDims( src->bins, size1 );
+    
+    if( dst && (is_sparse == CV_IS_SPARSE_MAT(dst->bins)))
     {
-        dims2 = cvGetDims( dst->bins, size2 );
+        int size2[CV_MAX_DIM];
+        int dims2 = cvGetDims( dst->bins, size2 );
 
         if( dims1 == dims2 )
         {
+            int i;
+            
             for( i = 0; i < dims1; i++ )
+            {
                 if( size1[i] != size2[i] )
                     break;
+            }
+                   
+	        eq = (i == dims1);
         }
-
-        eq = i == dims1;
     }
 
     if( !eq )
@@ -2636,14 +2633,21 @@ cvCopyHist( const CvHistogram* src, CvHistogram** _dst )
 
     if( CV_HIST_HAS_RANGES( src ))
     {
+        float* ranges[CV_MAX_DIM];
+        float** thresh = 0;
+        
         if( CV_IS_UNIFORM_HIST( src ))
         {
-            for( i = 0; i < dims1; i++ )
+            for( int i = 0; i < dims1; i++ )
                 ranges[i] = (float*)src->thresh[i];
+                
             thresh = ranges;
         }
         else
+        {
             thresh = src->thresh2;
+        }
+            
         cvSetHistBinRanges( dst, thresh, CV_IS_UNIFORM_HIST(src));
     }
 
