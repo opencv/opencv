@@ -1101,7 +1101,7 @@ struct VResizeLanczos4
     {
         CastOp castOp;
         VecOp vecOp;
-        int k, x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
+        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
         #if CV_ENABLE_UNROLLED
         for( ; x <= width - 4; x += 4 )
         {
@@ -1109,7 +1109,7 @@ struct VResizeLanczos4
             const WT* S = src[0];
             WT s0 = S[x]*b, s1 = S[x+1]*b, s2 = S[x+2]*b, s3 = S[x+3]*b;
 
-            for( k = 1; k < 8; k++ )
+            for( int k = 1; k < 8; k++ )
             {
                 b = beta[k]; S = src[k];
                 s0 += S[x]*b; s1 += S[x+1]*b;
@@ -1962,17 +1962,17 @@ template<typename T>
 static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
                           int borderType, const Scalar& _borderValue )
 {
-    Size ssize = _src.size(), dsize = _dst.size();
-    int cn = _src.channels();
+    const int cn = _src.channels();
     const T* S0 = (const T*)_src.data;
-    size_t sstep = _src.step/sizeof(S0[0]);
-    Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
+    const size_t sstep = _src.step/sizeof(S0[0]);
+    const Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
         saturate_cast<T>(_borderValue[1]),
         saturate_cast<T>(_borderValue[2]),
         saturate_cast<T>(_borderValue[3]));
-    int dx, dy;
 
-    unsigned width1 = ssize.width, height1 = ssize.height;
+    const Size ssize = _src.size();
+    Size dsize = _dst.size();
+    const unsigned int width1 = ssize.width, height1 = ssize.height;
 
     if( _dst.isContinuous() && _xy.isContinuous() )
     {
@@ -1980,14 +1980,14 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
         dsize.height = 1;
     }
 
-    for( dy = 0; dy < dsize.height; dy++ )
+    for( int dy = 0; dy < dsize.height; dy++ )
     {
         T* D = (T*)(_dst.data + _dst.step*dy);
         const short* XY = (const short*)(_xy.data + _xy.step*dy);
 
         if( cn == 1 )
         {
-            for( dx = 0; dx < dsize.width; dx++ )
+            for( int dx = 0; dx < dsize.width; dx++ )
             {
                 int sx = XY[dx*2], sy = XY[dx*2+1];
                 if( (unsigned)sx < width1 && (unsigned)sy < height1 )
@@ -2013,7 +2013,7 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
         }
         else
         {
-            for( dx = 0; dx < dsize.width; dx++, D += cn )
+            for( int dx = 0; dx < dsize.width; dx++, D += cn )
             {
                 int sx = XY[dx*2], sy = XY[dx*2+1], k;
                 const T *S;
@@ -2074,7 +2074,7 @@ struct RemapVec_8u
     int operator()( const Mat& _src, void* _dst, const short* XY,
                     const ushort* FXY, const void* _wtab, int width ) const
     {
-        int cn = _src.channels();
+        const int cn = _src.channels();
 
         if( (cn != 1 && cn != 3 && cn != 4) || !checkHardwareSupport(CV_CPU_SSE2) )
             return 0;
@@ -2281,27 +2281,28 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
 {
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
-    Size ssize = _src.size(), dsize = _dst.size();
-    int cn = _src.channels();
+    const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = (const T*)_src.data;
-    size_t sstep = _src.step/sizeof(S0[0]);
-    Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
+    const size_t sstep = _src.step/sizeof(S0[0]);
+    const Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
         saturate_cast<T>(_borderValue[1]),
         saturate_cast<T>(_borderValue[2]),
         saturate_cast<T>(_borderValue[3]));
-    int dx, dy;
     CastOp castOp;
     VecOp vecOp;
 
-    unsigned width1 = std::max(ssize.width-1, 0), height1 = std::max(ssize.height-1, 0);
+    const Size ssize = _src.size();
+    Size dsize = _dst.size();
+    unsigned int width1 = std::max(ssize.width-1, 0);
+    const unsigned int height1 = std::max(ssize.height-1, 0);
     CV_Assert( cn <= 4 && ssize.area() > 0 );
 #if CV_SSE2
     if( _src.type() == CV_8UC3 )
         width1 = std::max(ssize.width-2, 0);
 #endif
 
-    for( dy = 0; dy < dsize.height; dy++ )
+    for( int dy = 0; dy < dsize.height; dy++ )
     {
         T* D = (T*)(_dst.data + _dst.step*dy);
         const short* XY = (const short*)(_xy.data + _xy.step*dy);
@@ -2309,9 +2310,9 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
         int X0 = 0;
         bool prevInlier = false;
 
-        for( dx = 0; dx <= dsize.width; dx++ )
+        for( int dx = 0; dx <= dsize.width; dx++ )
         {
-            bool curInlier = dx < dsize.width ?
+            const bool curInlier = dx < dsize.width ?
                 (unsigned)XY[dx*2] < width1 &&
                 (unsigned)XY[dx*2+1] < height1 : !prevInlier;
             if( curInlier == prevInlier )
@@ -2324,7 +2325,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
 
             if( !curInlier )
             {
-                int len = vecOp( _src, D, XY + dx*2, FXY + dx, wtab, X1 - dx );
+                const int len = vecOp( _src, D, XY + dx*2, FXY + dx, wtab, X1 - dx );
                 D += len*cn;
                 dx += len;
 
@@ -2332,7 +2333,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 {
                     for( ; dx < X1; dx++, D++ )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1];
+                        const int sx = XY[dx*2], sy = XY[dx*2+1];
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx;
                         *D = castOp(WT(S[0]*w[0] + S[1]*w[1] + S[sstep]*w[2] + S[sstep+1]*w[3]));
@@ -2341,7 +2342,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else if( cn == 2 )
                     for( ; dx < X1; dx++, D += 2 )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1];
+                        const int sx = XY[dx*2], sy = XY[dx*2+1];
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx*2;
                         WT t0 = S[0]*w[0] + S[2]*w[1] + S[sstep]*w[2] + S[sstep+2]*w[3];
@@ -2351,7 +2352,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else if( cn == 3 )
                     for( ; dx < X1; dx++, D += 3 )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1];
+                        const int sx = XY[dx*2], sy = XY[dx*2+1];
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx*3;
                         WT t0 = S[0]*w[0] + S[3]*w[1] + S[sstep]*w[2] + S[sstep+3]*w[3];
@@ -2362,7 +2363,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 else
                     for( ; dx < X1; dx++, D += 4 )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1];
+                        const int sx = XY[dx*2], sy = XY[dx*2+1];
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx*4;
                         WT t0 = S[0]*w[0] + S[4]*w[1] + S[sstep]*w[2] + S[sstep+4]*w[3];
@@ -2383,9 +2384,10 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                 }
 
                 if( cn == 1 )
+                {
                     for( ; dx < X1; dx++, D++ )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1];
+                        const int sx = XY[dx*2], sy = XY[dx*2+1];
                         if( borderType == BORDER_CONSTANT &&
                             (sx >= ssize.width || sx+1 < 0 ||
                              sy >= ssize.height || sy+1 < 0) )
@@ -2422,15 +2424,17 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                             D[0] = castOp(WT(v0*w[0] + v1*w[1] + v2*w[2] + v3*w[3]));
                         }
                     }
+                }
                 else
+                {
                     for( ; dx < X1; dx++, D += cn )
                     {
-                        int sx = XY[dx*2], sy = XY[dx*2+1], k;
+                        const int sx = XY[dx*2], sy = XY[dx*2+1];
                         if( borderType == BORDER_CONSTANT &&
                             (sx >= ssize.width || sx+1 < 0 ||
                              sy >= ssize.height || sy+1 < 0) )
                         {
-                            for( k = 0; k < cn; k++ )
+                            for( int k = 0; k < cn; k++ )
                                 D[k] = cval[k];
                         }
                         else
@@ -2464,10 +2468,11 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                                 v2 = sx0 >= 0 && sy1 >= 0 ? S0 + sy1*sstep + sx0*cn : &cval[0];
                                 v3 = sx1 >= 0 && sy1 >= 0 ? S0 + sy1*sstep + sx1*cn : &cval[0];
                             }
-                            for( k = 0; k < cn; k++ )
+                            for( int k = 0; k < cn; k++ )
                                 D[k] = castOp(WT(v0[k]*w[0] + v1[k]*w[1] + v2[k]*w[2] + v3[k]*w[3]));
                         }
                     }
+                }
             }
         }
     }
@@ -2481,20 +2486,20 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
 {
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
-    Size ssize = _src.size(), dsize = _dst.size();
-    int cn = _src.channels();
+    const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = (const T*)_src.data;
-    size_t sstep = _src.step/sizeof(S0[0]);
-    Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
+    const size_t sstep = _src.step/sizeof(S0[0]);
+    const Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
         saturate_cast<T>(_borderValue[1]),
         saturate_cast<T>(_borderValue[2]),
         saturate_cast<T>(_borderValue[3]));
-    int dx, dy;
     CastOp castOp;
-    int borderType1 = borderType != BORDER_TRANSPARENT ? borderType : BORDER_REFLECT_101;
+    const int borderType1 = (borderType != BORDER_TRANSPARENT) ? borderType : BORDER_REFLECT_101;
 
-    unsigned width1 = std::max(ssize.width-3, 0), height1 = std::max(ssize.height-3, 0);
+    const Size ssize = _src.size();
+    Size dsize = _dst.size();
+    const unsigned int width1 = std::max(ssize.width-3, 0), height1 = std::max(ssize.height-3, 0);
 
     if( _dst.isContinuous() && _xy.isContinuous() && _fxy.isContinuous() )
     {
@@ -2502,21 +2507,21 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
         dsize.height = 1;
     }
 
-    for( dy = 0; dy < dsize.height; dy++ )
+    for( int dy = 0; dy < dsize.height; dy++ )
     {
         T* D = (T*)(_dst.data + _dst.step*dy);
         const short* XY = (const short*)(_xy.data + _xy.step*dy);
         const ushort* FXY = (const ushort*)(_fxy.data + _fxy.step*dy);
 
-        for( dx = 0; dx < dsize.width; dx++, D += cn )
+        for( int dx = 0; dx < dsize.width; dx++, D += cn )
         {
             int sx = XY[dx*2]-1, sy = XY[dx*2+1]-1;
             const AT* w = wtab + FXY[dx]*16;
-            int i, k;
+
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
                 const T* S = S0 + sy*sstep + sx*cn;
-                for( k = 0; k < cn; k++ )
+                for( int k = 0; k < cn; k++ )
                 {
                     WT sum = S[0]*w[0] + S[cn]*w[1] + S[cn*2]*w[2] + S[cn*3]*w[3];
                     S += sstep;
@@ -2541,21 +2546,22 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
                     (sx >= ssize.width || sx+4 <= 0 ||
                     sy >= ssize.height || sy+4 <= 0))
                 {
-                    for( k = 0; k < cn; k++ )
+                    for( int k = 0; k < cn; k++ )
                         D[k] = cval[k];
                     continue;
                 }
 
-                for( i = 0; i < 4; i++ )
+                for( int i = 0; i < 4; i++ )
                 {
                     x[i] = borderInterpolate(sx + i, ssize.width, borderType1)*cn;
                     y[i] = borderInterpolate(sy + i, ssize.height, borderType1);
                 }
 
-                for( k = 0; k < cn; k++, S0++, w -= 16 )
+                for( int k = 0; k < cn; k++, S0++, w -= 16 )
                 {
-                    WT cv = cval[k], sum = cv*ONE;
-                    for( i = 0; i < 4; i++, w += 4 )
+                    const WT cv = cval[k];
+                    WT sum = cv*ONE;
+                    for( int i = 0; i < 4; i++, w += 4 )
                     {
                         int yi = y[i];
                         const T* S = S0 + yi*sstep;
@@ -2586,20 +2592,20 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
 {
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
-    Size ssize = _src.size(), dsize = _dst.size();
-    int cn = _src.channels();
+    const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = (const T*)_src.data;
-    size_t sstep = _src.step/sizeof(S0[0]);
-    Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
+    const size_t sstep = _src.step/sizeof(S0[0]);
+    const Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
         saturate_cast<T>(_borderValue[1]),
         saturate_cast<T>(_borderValue[2]),
         saturate_cast<T>(_borderValue[3]));
-    int dx, dy;
     CastOp castOp;
-    int borderType1 = borderType != BORDER_TRANSPARENT ? borderType : BORDER_REFLECT_101;
+    const int borderType1 = (borderType != BORDER_TRANSPARENT) ? borderType : BORDER_REFLECT_101;
 
-    unsigned width1 = std::max(ssize.width-7, 0), height1 = std::max(ssize.height-7, 0);
+    const Size ssize = _src.size();
+    Size dsize = _dst.size();
+    const unsigned int width1 = std::max(ssize.width-7, 0), height1 = std::max(ssize.height-7, 0);
 
     if( _dst.isContinuous() && _xy.isContinuous() && _fxy.isContinuous() )
     {
@@ -2607,21 +2613,21 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
         dsize.height = 1;
     }
 
-    for( dy = 0; dy < dsize.height; dy++ )
+    for( int dy = 0; dy < dsize.height; dy++ )
     {
         T* D = (T*)(_dst.data + _dst.step*dy);
         const short* XY = (const short*)(_xy.data + _xy.step*dy);
         const ushort* FXY = (const ushort*)(_fxy.data + _fxy.step*dy);
 
-        for( dx = 0; dx < dsize.width; dx++, D += cn )
+        for( int dx = 0; dx < dsize.width; dx++, D += cn )
         {
-            int sx = XY[dx*2]-3, sy = XY[dx*2+1]-3;
+            const int sx = XY[dx*2]-3, sy = XY[dx*2+1]-3;
             const AT* w = wtab + FXY[dx]*64;
             const T* S = S0 + sy*sstep + sx*cn;
-            int i, k;
+
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
-                for( k = 0; k < cn; k++ )
+                for( int k = 0; k < cn; k++ )
                 {
                     WT sum = 0;
                     for( int r = 0; r < 8; r++, S += sstep, w += 8 )
@@ -2644,26 +2650,28 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
                     (sx >= ssize.width || sx+8 <= 0 ||
                     sy >= ssize.height || sy+8 <= 0))
                 {
-                    for( k = 0; k < cn; k++ )
+                    for( int k = 0; k < cn; k++ )
                         D[k] = cval[k];
                     continue;
                 }
 
-                for( i = 0; i < 8; i++ )
+                for( int i = 0; i < 8; i++ )
                 {
                     x[i] = borderInterpolate(sx + i, ssize.width, borderType1)*cn;
                     y[i] = borderInterpolate(sy + i, ssize.height, borderType1);
                 }
 
-                for( k = 0; k < cn; k++, S0++, w -= 64 )
+                for( int k = 0; k < cn; k++, S0++, w -= 64 )
                 {
-                    WT cv = cval[k], sum = cv*ONE;
-                    for( i = 0; i < 8; i++, w += 8 )
+                    const WT cv = cval[k];
+                    WT sum = cv*ONE;
+                    for( int i = 0; i < 8; i++, w += 8 )
                     {
-                        int yi = y[i];
-                        const T* S1 = S0 + yi*sstep;
-                        if( yi < 0 )
+                        if( y[i] < 0 )
                             continue;
+
+                        const T* S1 = S0 + y[i]*sstep;
+
                         if( x[0] >= 0 )
                             sum += (S1[x[0]] - cv)*w[0];
                         if( x[1] >= 0 )
@@ -2712,10 +2720,9 @@ public:
 
     virtual void operator() (const Range& range) const
     {
-        int x, y, x1, y1;
         const int buf_size = 1 << 14;
         int brows0 = std::min(128, dst->rows), map_depth = m1->depth();
-        int bcols0 = std::min(buf_size/brows0, dst->cols);
+        const int bcols0 = std::min(buf_size/brows0, dst->cols);
         brows0 = std::min(buf_size/bcols0, dst->rows);
     #if CV_SSE2
         bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
@@ -2725,12 +2732,12 @@ public:
         if( !nnfunc )
             _bufa.create(brows0, bcols0, CV_16UC1);
 
-        for( y = range.start; y < range.end; y += brows0 )
+        for( int y = range.start; y < range.end; y += brows0 )
         {
-            for( x = 0; x < dst->cols; x += bcols0 )
+            for( int x = 0; x < dst->cols; x += bcols0 )
             {
-                int brows = std::min(brows0, range.end - y);
-                int bcols = std::min(bcols0, dst->cols - x);
+                const int brows = std::min(brows0, range.end - y);
+                const int bcols = std::min(bcols0, dst->cols - x);
                 Mat dpart(*dst, Rect(x, y, bcols, brows));
                 Mat bufxy(_bufxy, Rect(0, 0, bcols, brows));
 
@@ -2740,13 +2747,13 @@ public:
                         bufxy = (*m1)(Rect(x, y, bcols, brows));
                     else if( map_depth != CV_32F )
                     {
-                        for( y1 = 0; y1 < brows; y1++ )
+                        for( int y1 = 0; y1 < brows; y1++ )
                         {
                             short* XY = (short*)(bufxy.data + bufxy.step*y1);
                             const short* sXY = (const short*)(m1->data + m1->step*(y+y1)) + x*2;
                             const ushort* sA = (const ushort*)(m2->data + m2->step*(y+y1)) + x;
 
-                            for( x1 = 0; x1 < bcols; x1++ )
+                            for( int x1 = 0; x1 < bcols; x1++ )
                             {
                                 int a = sA[x1] & (INTER_TAB_SIZE2-1);
                                 XY[x1*2] = sXY[x1*2] + NNDeltaTab_i[a][0];
@@ -2758,12 +2765,12 @@ public:
                         (*m1)(Rect(x, y, bcols, brows)).convertTo(bufxy, bufxy.depth());
                     else
                     {
-                        for( y1 = 0; y1 < brows; y1++ )
+                        for( int y1 = 0; y1 < brows; y1++ )
                         {
                             short* XY = (short*)(bufxy.data + bufxy.step*y1);
                             const float* sX = (const float*)(m1->data + m1->step*(y+y1)) + x;
                             const float* sY = (const float*)(m2->data + m2->step*(y+y1)) + x;
-                            x1 = 0;
+                            int x1 = 0;
 
                         #if CV_SSE2
                             if( useSIMD )
@@ -2800,7 +2807,7 @@ public:
                 }
 
                 Mat bufa(_bufa, Rect(0, 0, bcols, brows));
-                for( y1 = 0; y1 < brows; y1++ )
+                for( int y1 = 0; y1 < brows; y1++ )
                 {
                     short* XY = (short*)(bufxy.data + bufxy.step*y1);
                     ushort* A = (ushort*)(bufa.data + bufa.step*y1);
@@ -2815,7 +2822,7 @@ public:
                         const float* sX = (const float*)(m1->data + m1->step*(y+y1)) + x;
                         const float* sY = (const float*)(m2->data + m2->step*(y+y1)) + x;
 
-                        x1 = 0;
+                        int x1 = 0;
                     #if CV_SSE2
                         if( useSIMD )
                         {
@@ -2868,7 +2875,7 @@ public:
                     {
                         const float* sXY = (const float*)(m1->data + m1->step*(y+y1)) + x*2;
 
-                        for( x1 = 0; x1 < bcols; x1++ )
+                        for( int x1 = 0; x1 < bcols; x1++ )
                         {
                             int sx = cvRound(sXY[x1*2]*INTER_TAB_SIZE);
                             int sy = cvRound(sXY[x1*2+1]*INTER_TAB_SIZE);
@@ -2949,8 +2956,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
     RemapNNFunc nnfunc = 0;
     RemapFunc ifunc = 0;
     const void* ctab = 0;
-    bool fixpt = depth == CV_8U;
-    bool planar_input = false;
+    const bool fixpt = (depth == CV_8U);
 
     if( interpolation == INTER_NEAREST )
     {
@@ -2975,6 +2981,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
     }
 
     const Mat *m1 = &map1, *m2 = &map2;
+    bool planar_input = false;
 
     if( (map1.type() == CV_16SC2 && (map2.type() == CV_16UC1 || map2.type() == CV_16SC1 || !map2.data)) ||
         (map2.type() == CV_16SC2 && (map1.type() == CV_16UC1 || map1.type() == CV_16SC1 || !map1.data)) )
@@ -3000,8 +3007,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                       OutputArray _dstmap1, OutputArray _dstmap2,
                       int dstm1type, bool nninterpolate )
 {
-    Mat map1 = _map1.getMat(), map2 = _map2.getMat(), dstmap1, dstmap2;
-    Size size = map1.size();
+    Mat map1 = _map1.getMat(), map2 = _map2.getMat();
     const Mat *m1 = &map1, *m2 = &map2;
     int m1type = m1->type(), m2type = m2->type();
 
@@ -3019,6 +3025,10 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     if( dstm1type <= 0 )
         dstm1type = m1type == CV_16SC2 ? CV_32FC2 : CV_16SC2;
     CV_Assert( dstm1type == CV_16SC2 || dstm1type == CV_32FC1 || dstm1type == CV_32FC2 );
+
+    Size size = map1.size();
+    Mat dstmap1, dstmap2;
+
     _dstmap1.create( size, dstm1type );
     dstmap1 = _dstmap1.getMat();
 
@@ -3062,8 +3072,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     }
 
     const float scale = 1.f/INTER_TAB_SIZE;
-    int x, y;
-    for( y = 0; y < size.height; y++ )
+
+    for( int y = 0; y < size.height; y++ )
     {
         const float* src1f = (const float*)(m1->data + m1->step*y);
         const float* src2f = (const float*)(m2->data + m2->step*y);
@@ -3078,13 +3088,13 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         if( m1type == CV_32FC1 && dstm1type == CV_16SC2 )
         {
             if( nninterpolate )
-                for( x = 0; x < size.width; x++ )
+                for( int x = 0; x < size.width; x++ )
                 {
                     dst1[x*2] = saturate_cast<short>(src1f[x]);
                     dst1[x*2+1] = saturate_cast<short>(src2f[x]);
                 }
             else
-                for( x = 0; x < size.width; x++ )
+                for( int x = 0; x < size.width; x++ )
                 {
                     int ix = saturate_cast<int>(src1f[x]*INTER_TAB_SIZE);
                     int iy = saturate_cast<int>(src2f[x]*INTER_TAB_SIZE);
@@ -3096,13 +3106,13 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         else if( m1type == CV_32FC2 && dstm1type == CV_16SC2 )
         {
             if( nninterpolate )
-                for( x = 0; x < size.width; x++ )
+                for( int x = 0; x < size.width; x++ )
                 {
                     dst1[x*2] = saturate_cast<short>(src1f[x*2]);
                     dst1[x*2+1] = saturate_cast<short>(src1f[x*2+1]);
                 }
             else
-                for( x = 0; x < size.width; x++ )
+                for( int x = 0; x < size.width; x++ )
                 {
                     int ix = saturate_cast<int>(src1f[x*2]*INTER_TAB_SIZE);
                     int iy = saturate_cast<int>(src1f[x*2+1]*INTER_TAB_SIZE);
@@ -3113,7 +3123,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         }
         else if( m1type == CV_16SC2 && dstm1type == CV_32FC1 )
         {
-            for( x = 0; x < size.width; x++ )
+            for( int x = 0; x < size.width; x++ )
             {
                 int fxy = src2 ? src2[x] : 0;
                 dst1f[x] = src1[x*2] + (fxy & (INTER_TAB_SIZE-1))*scale;
@@ -3122,7 +3132,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         }
         else if( m1type == CV_16SC2 && dstm1type == CV_32FC2 )
         {
-            for( x = 0; x < size.width; x++ )
+            for( int x = 0; x < size.width; x++ )
             {
                 int fxy = src2 ? src2[x] : 0;
                 dst1f[x*2] = src1[x*2] + (fxy & (INTER_TAB_SIZE-1))*scale;
@@ -3130,7 +3140,9 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
             }
         }
         else
+        {
             CV_Error( CV_StsNotImplemented, "Unsupported combination of input/output matrices" );
+        }
     }
 }
 
@@ -3156,43 +3168,45 @@ public:
         short XY[BLOCK_SZ*BLOCK_SZ*2], A[BLOCK_SZ*BLOCK_SZ];
         const int AB_BITS = MAX(10, (int)INTER_BITS);
         const int AB_SCALE = 1 << AB_BITS;
-        int round_delta = interpolation == INTER_NEAREST ? AB_SCALE/2 : AB_SCALE/INTER_TAB_SIZE/2, x, y, x1, y1;
+        const int round_delta = (interpolation == INTER_NEAREST) ? AB_SCALE/2 : AB_SCALE/INTER_TAB_SIZE/2;
     #if CV_SSE2
         bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
     #endif
 
         int bh0 = std::min(BLOCK_SZ/2, dst.rows);
-        int bw0 = std::min(BLOCK_SZ*BLOCK_SZ/bh0, dst.cols);
+        const int bw0 = std::min(BLOCK_SZ*BLOCK_SZ/bh0, dst.cols);
         bh0 = std::min(BLOCK_SZ*BLOCK_SZ/bw0, dst.rows);
 
-        for( y = range.start; y < range.end; y += bh0 )
+        for( int y = range.start; y < range.end; y += bh0 )
         {
-            for( x = 0; x < dst.cols; x += bw0 )
+            for( int x = 0; x < dst.cols; x += bw0 )
             {
-                int bw = std::min( bw0, dst.cols - x);
-                int bh = std::min( bh0, range.end - y);
+                const int bw = std::min( bw0, dst.cols - x);
+                const int bh = std::min( bh0, range.end - y);
 
                 Mat _XY(bh, bw, CV_16SC2, XY), matA;
                 Mat dpart(dst, Rect(x, y, bw, bh));
 
-                for( y1 = 0; y1 < bh; y1++ )
+                for( int y1 = 0; y1 < bh; y1++ )
                 {
                     short* xy = XY + y1*bw*2;
-                    int X0 = saturate_cast<int>((M[1]*(y + y1) + M[2])*AB_SCALE) + round_delta;
-                    int Y0 = saturate_cast<int>((M[4]*(y + y1) + M[5])*AB_SCALE) + round_delta;
+                    const int X0 = saturate_cast<int>((M[1]*(y + y1) + M[2])*AB_SCALE) + round_delta;
+                    const int Y0 = saturate_cast<int>((M[4]*(y + y1) + M[5])*AB_SCALE) + round_delta;
 
                     if( interpolation == INTER_NEAREST )
-                        for( x1 = 0; x1 < bw; x1++ )
+                    {
+                        for( int x1 = 0; x1 < bw; x1++ )
                         {
                             int X = (X0 + adelta[x+x1]) >> AB_BITS;
                             int Y = (Y0 + bdelta[x+x1]) >> AB_BITS;
                             xy[x1*2] = saturate_cast<short>(X);
                             xy[x1*2+1] = saturate_cast<short>(Y);
                         }
+                    }
                     else
                     {
                         short* alpha = A + y1*bw;
-                        x1 = 0;
+                        int x1 = 0;
                     #if CV_SSE2
                         if( useSIMD )
                         {
@@ -3729,41 +3743,37 @@ CV_IMPL void
 cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
             CvPoint2D32f center, double M, int flags )
 {
-    cv::Ptr<CvMat> mapx, mapy;
+    if( M <= 0 )
+        CV_Error( CV_StsOutOfRange, "M should be >0" );
 
     CvMat srcstub, *src = cvGetMat(srcarr, &srcstub);
     CvMat dststub, *dst = cvGetMat(dstarr, &dststub);
-    CvSize ssize, dsize;
 
     if( !CV_ARE_TYPES_EQ( src, dst ))
         CV_Error( CV_StsUnmatchedFormats, "" );
 
-    if( M <= 0 )
-        CV_Error( CV_StsOutOfRange, "M should be >0" );
+    CvSize ssize = cvGetMatSize(src);
+    CvSize dsize = cvGetMatSize(dst);
 
-    ssize = cvGetMatSize(src);
-    dsize = cvGetMatSize(dst);
-
-    mapx = cvCreateMat( dsize.height, dsize.width, CV_32F );
-    mapy = cvCreateMat( dsize.height, dsize.width, CV_32F );
+    cv::Ptr<CvMat> mapx = cvCreateMat( dsize.height, dsize.width, CV_32F );
+    cv::Ptr<CvMat> mapy = cvCreateMat( dsize.height, dsize.width, CV_32F );
 
     if( !(flags & CV_WARP_INVERSE_MAP) )
     {
-        int phi, rho;
         cv::AutoBuffer<double> _exp_tab(dsize.width);
         double* exp_tab = _exp_tab;
 
-        for( rho = 0; rho < dst->width; rho++ )
+        for( int rho = 0; rho < dst->width; rho++ )
             exp_tab[rho] = std::exp(rho/M);
 
-        for( phi = 0; phi < dsize.height; phi++ )
+        for( int phi = 0; phi < dsize.height; phi++ )
         {
             double cp = cos(phi*2*CV_PI/dsize.height);
             double sp = sin(phi*2*CV_PI/dsize.height);
             float* mx = (float*)(mapx->data.ptr + phi*mapx->step);
             float* my = (float*)(mapy->data.ptr + phi*mapy->step);
 
-            for( rho = 0; rho < dsize.width; rho++ )
+            for( int rho = 0; rho < dsize.width; rho++ )
             {
                 double r = exp_tab[rho];
                 double x = r*cp + center.x;
@@ -3776,37 +3786,35 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
     }
     else
     {
-        int x, y;
-        CvMat bufx, bufy, bufp, bufa;
-        double ascale = ssize.height/(2*CV_PI);
+        const double ascale = ssize.height/(2*CV_PI);
         cv::AutoBuffer<float> _buf(4*dsize.width);
         float* buf = _buf;
 
-        bufx = cvMat( 1, dsize.width, CV_32F, buf );
-        bufy = cvMat( 1, dsize.width, CV_32F, buf + dsize.width );
-        bufp = cvMat( 1, dsize.width, CV_32F, buf + dsize.width*2 );
-        bufa = cvMat( 1, dsize.width, CV_32F, buf + dsize.width*3 );
+        CvMat bufx = cvMat( 1, dsize.width, CV_32F, buf );
+        CvMat bufy = cvMat( 1, dsize.width, CV_32F, buf + dsize.width );
+        CvMat bufp = cvMat( 1, dsize.width, CV_32F, buf + dsize.width*2 );
+        CvMat bufa = cvMat( 1, dsize.width, CV_32F, buf + dsize.width*3 );
 
-        for( x = 0; x < dsize.width; x++ )
+        for( int x = 0; x < dsize.width; x++ )
             bufx.data.fl[x] = (float)x - center.x;
 
-        for( y = 0; y < dsize.height; y++ )
+        for( int y = 0; y < dsize.height; y++ )
         {
             float* mx = (float*)(mapx->data.ptr + y*mapx->step);
             float* my = (float*)(mapy->data.ptr + y*mapy->step);
 
-            for( x = 0; x < dsize.width; x++ )
+            for( int x = 0; x < dsize.width; x++ )
                 bufy.data.fl[x] = (float)y - center.y;
 
 #if 1
             cvCartToPolar( &bufx, &bufy, &bufp, &bufa );
 
-            for( x = 0; x < dsize.width; x++ )
+            for( int x = 0; x < dsize.width; x++ )
                 bufp.data.fl[x] += 1.f;
 
             cvLog( &bufp, &bufp );
 
-            for( x = 0; x < dsize.width; x++ )
+            for( int x = 0; x < dsize.width; x++ )
             {
                 double rho = bufp.data.fl[x]*M;
                 double phi = bufa.data.fl[x]*ascale;
@@ -3815,7 +3823,7 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
                 my[x] = (float)phi;
             }
 #else
-            for( x = 0; x < dsize.width; x++ )
+            for( int x = 0; x < dsize.width; x++ )
             {
                 double xx = bufx.data.fl[x];
                 double yy = bufy.data.fl[x];
@@ -3845,38 +3853,28 @@ CV_IMPL
 void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
             CvPoint2D32f center, double maxRadius, int flags )
 {
-    cv::Ptr<CvMat> mapx, mapy;
-
-    CvMat srcstub, *src = (CvMat*)srcarr;
-    CvMat dststub, *dst = (CvMat*)dstarr;
-    CvSize ssize, dsize;
-
-    src = cvGetMat( srcarr, &srcstub,0,0 );
-    dst = cvGetMat( dstarr, &dststub,0,0 );
+    CvMat srcstub, *src = cvGetMat(srcarr, &srcstub);
+    CvMat dststub, *dst = cvGetMat(dstarr, &dststub);
 
     if( !CV_ARE_TYPES_EQ( src, dst ))
         CV_Error( CV_StsUnmatchedFormats, "" );
 
-    ssize.width = src->cols;
-    ssize.height = src->rows;
-    dsize.width = dst->cols;
-    dsize.height = dst->rows;
+    CvSize ssize = cvGetMatSize(src);
+    CvSize dsize = cvGetMatSize(dst);
 
-    mapx = cvCreateMat( dsize.height, dsize.width, CV_32F );
-    mapy = cvCreateMat( dsize.height, dsize.width, CV_32F );
+    cv::Ptr<CvMat> mapx = cvCreateMat( dsize.height, dsize.width, CV_32F );
+    cv::Ptr<CvMat> mapy = cvCreateMat( dsize.height, dsize.width, CV_32F );
 
     if( !(flags & CV_WARP_INVERSE_MAP) )
     {
-        int phi, rho;
-
-        for( phi = 0; phi < dsize.height; phi++ )
+        for( int phi = 0; phi < dsize.height; phi++ )
         {
-            double cp = cos(phi*2*CV_PI/dsize.height);
-            double sp = sin(phi*2*CV_PI/dsize.height);
+            const double cp = cos(phi*2*CV_PI/dsize.height);
+            const double sp = sin(phi*2*CV_PI/dsize.height);
             float* mx = (float*)(mapx->data.ptr + phi*mapx->step);
             float* my = (float*)(mapy->data.ptr + phi*mapy->step);
 
-            for( rho = 0; rho < dsize.width; rho++ )
+            for( int rho = 0; rho < dsize.width; rho++ )
             {
                 double r = maxRadius*(rho+1)/dsize.width;
                 double x = r*cp + center.x;
@@ -3889,36 +3887,34 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
     }
     else
     {
-        int x, y;
-        CvMat bufx, bufy, bufp, bufa;
         const double ascale = ssize.height/(2*CV_PI);
         const double pscale = ssize.width/maxRadius;
 
         cv::AutoBuffer<float> _buf(4*dsize.width);
         float* buf = _buf;
 
-        bufx = cvMat( 1, dsize.width, CV_32F, buf );
-        bufy = cvMat( 1, dsize.width, CV_32F, buf + dsize.width );
-        bufp = cvMat( 1, dsize.width, CV_32F, buf + dsize.width*2 );
-        bufa = cvMat( 1, dsize.width, CV_32F, buf + dsize.width*3 );
+        CvMat bufx = cvMat( 1, dsize.width, CV_32F, buf );
+        CvMat bufy = cvMat( 1, dsize.width, CV_32F, buf + dsize.width );
+        CvMat bufp = cvMat( 1, dsize.width, CV_32F, buf + dsize.width*2 );
+        CvMat bufa = cvMat( 1, dsize.width, CV_32F, buf + dsize.width*3 );
 
-        for( x = 0; x < dsize.width; x++ )
+        for( int x = 0; x < dsize.width; x++ )
             bufx.data.fl[x] = (float)x - center.x;
 
-        for( y = 0; y < dsize.height; y++ )
+        for( int y = 0; y < dsize.height; y++ )
         {
             float* mx = (float*)(mapx->data.ptr + y*mapx->step);
             float* my = (float*)(mapy->data.ptr + y*mapy->step);
 
-            for( x = 0; x < dsize.width; x++ )
+            for( int x = 0; x < dsize.width; x++ )
                 bufy.data.fl[x] = (float)y - center.y;
 
             cvCartToPolar( &bufx, &bufy, &bufp, &bufa, 0 );
 
-            for( x = 0; x < dsize.width; x++ )
+            for( int x = 0; x < dsize.width; x++ )
                 bufp.data.fl[x] += 1.f;
 
-            for( x = 0; x < dsize.width; x++ )
+            for( int x = 0; x < dsize.width; x++ )
             {
                 double rho = bufp.data.fl[x]*pscale;
                 double phi = bufa.data.fl[x]*ascale;
