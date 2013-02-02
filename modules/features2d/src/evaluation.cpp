@@ -241,7 +241,8 @@ static void filterEllipticKeyPointsByImageSize( vector<EllipticKeyPoint>& keypoi
 
 struct IntersectAreaCounter
 {
-    IntersectAreaCounter() : bua(0), bna(0) {}
+    IntersectAreaCounter() :
+               dr(0.0), bua(0), bna(0), minx(0), miny(0), maxy(0) {}
     IntersectAreaCounter( float _dr, int _minx,
                           int _miny, int _maxy,
                           const Point2f& _diff,
@@ -461,7 +462,7 @@ void cv::evaluateFeatureDetector( const Mat& img1, const Mat& img2, const Mat& H
     keypoints2 = _keypoints2 != 0 ? _keypoints2 : &buf2;
 
     if( (keypoints1->empty() || keypoints2->empty()) && fdetector.empty() )
-        CV_Error( CV_StsBadArg, "fdetector must be no empty when keypoints1 or keypoints2 is empty" );
+        CV_Error( CV_StsBadArg, "fdetector must not be empty when keypoints1 or keypoints2 is empty" );
 
     if( keypoints1->empty() )
         fdetector->detect( img1, *keypoints1 );
@@ -572,10 +573,10 @@ void cv::evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, con
     correctMatches1to2Mask = _correctMatches1to2Mask != 0 ? _correctMatches1to2Mask : &buf2;
 
     if( keypoints1.empty() )
-        CV_Error( CV_StsBadArg, "keypoints1 must be no empty" );
+        CV_Error( CV_StsBadArg, "keypoints1 must not be empty" );
 
     if( matches1to2->empty() && dmatcher.empty() )
-        CV_Error( CV_StsBadArg, "dmatch must be no empty when matches1to2 is empty" );
+        CV_Error( CV_StsBadArg, "dmatch must not be empty when matches1to2 is empty" );
 
     bool computeKeypoints2ByPrj = keypoints2.empty();
     if( computeKeypoints2ByPrj )
