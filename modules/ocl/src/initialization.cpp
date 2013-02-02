@@ -304,23 +304,11 @@ int getDevice(std::vector<Info> &oclinfo, int devicetype)
     }
     return devcienums;
 }
-void setDevice(Info &oclinfo, int devnum)
-{
-    CV_Assert(devnum >= 0);
-    cl_int status = 0;
-    oclinfo.impl->devnum = devnum;
-    cl_context_properties cps[3] =
-    {
-        CL_CONTEXT_PLATFORM, (cl_context_properties)(oclinfo.impl->oclplatform), 0
-    };
 
-    oclinfo.impl->oclcontext = clCreateContext(cps, 1, &oclinfo.impl->devices[devnum], NULL, NULL, &status);
-    openCLVerifyCall(status);
-    //create the command queue using the first device of the list
-    oclinfo.impl->clCmdQueue = clCreateCommandQueue(oclinfo.impl->oclcontext, oclinfo.impl->devices[devnum],
-                               CL_QUEUE_PROFILING_ENABLE, &status);
-    openCLVerifyCall(status);
+void fillClcontext(Info &oclinfo)
+{
     //get device information
+    size_t devnum = oclinfo.impl->devnum;
     openCLSafeCall(clGetDeviceInfo(oclinfo.impl->devices[devnum], CL_DEVICE_MAX_WORK_GROUP_SIZE,
                                    sizeof(size_t), (void *)&oclinfo.impl->maxWorkGroupSize, NULL));
     openCLSafeCall(clGetDeviceInfo(oclinfo.impl->devices[devnum], CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS,
@@ -351,6 +339,41 @@ void setDevice(Info &oclinfo, int devnum)
     }
     Context::setContext(oclinfo);
 }
+
+void setDevice(Info &oclinfo, int devnum)
+{
+    CV_Assert(devnum >= 0);
+    cl_int status = 0;
+    oclinfo.impl->devnum = devnum;
+    cl_context_properties cps[3] =
+    {
+        CL_CONTEXT_PLATFORM, (cl_context_properties)(oclinfo.impl->oclplatform), 0
+    };
+
+    oclinfo.impl->oclcontext = clCreateContext(cps, 1, &oclinfo.impl->devices[devnum], NULL, NULL, &status);
+    openCLVerifyCall(status);
+    //create the command queue using the first device of the list
+    oclinfo.impl->clCmdQueue = clCreateCommandQueue(oclinfo.impl->oclcontext, oclinfo.impl->devices[devnum],
+                               CL_QUEUE_PROFILING_ENABLE, &status);
+    openCLVerifyCall(status);
+
+    fillClcontext(oclinfo);
+}
+void setDeviceEx(Info &oclinfo, void *ctx, void *q, int devnum)
+{
+    CV_Assert(devnum >= 0);
+    cl_int status = 0;
+    oclinfo.impl->devnum = devnum;
+    if(ctx && q)
+    {
+        oclinfo.impl->oclcontext = (cl_context)ctx;
+        oclinfo.impl->clCmdQueue = (cl_command_queue)q;
+        clRetainContext((cl_context)ctx);
+        clRetainCommandQueue((cl_command_queue)q);
+        fillClcontext(oclinfo);
+    }
+}
+
 void *getoclContext()
 
 {
