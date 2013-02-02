@@ -12,10 +12,12 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
 //    Guoping Long, longguoping@gmail.com
+//    Yao Wang, bitwangyaoyao@gmail.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -131,15 +133,15 @@ namespace cv
             //Information of the OpenCL context
             cl_context clContext;
             cl_command_queue clCmdQueue;
-            cl_device_id *devices;
+            cl_device_id devices;
             string devName;
             cl_uint maxDimensions;
             size_t maxWorkGroupSize;
-            size_t *maxWorkItemSizes;
+            size_t maxWorkItemSizes[4];
             cl_uint maxComputeUnits;
             int double_support;
             //extra options to recognize vendor specific fp64 extensions
-            char *extra_options;
+            char extra_options[512];
             string Binpath;
         };
     }
