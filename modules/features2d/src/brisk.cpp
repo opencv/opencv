@@ -309,10 +309,9 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
   {
     indexChange.resize(points_ * (points_ - 1) / 2);
     indSize = (unsigned int)indexChange.size();
-  }
-  for (unsigned int i = 0; i < indSize; i++)
-  {
-    indexChange[i] = i;
+
+    for (unsigned int i = 0; i < indSize; i++)
+      indexChange[i] = i;
   }
   const float dMin_sq = dMin_ * dMin_;
   const float dMax_sq = dMax_ * dMax_;
