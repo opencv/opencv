@@ -505,7 +505,10 @@ __device void CascadeInvoker<Policy>::detect(Detection* objects, const uint ndet
     #if __CUDA_ARCH__ >= 120
         if(__any((confidence + impact <= stages[(st + threadIdx.x)]))) st += 2048;
     #endif
+    #if __CUDA_ARCH__ >= 300
         impact = __shfl(impact, 31);
+    #endif
+
         confidence += impact;
     }
 
