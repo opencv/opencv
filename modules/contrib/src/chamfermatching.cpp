@@ -930,15 +930,13 @@ void ChamferMatcher::Template::show() const
 void ChamferMatcher::Matching::addTemplateFromImage(Mat& templ, float scale)
 {
     Template* cmt = new Template(templ, scale);
-    if(templates.size() > 0)
-        templates.clear();
+    templates.clear();
     templates.push_back(cmt);
     cmt->show();
 }
 
 void ChamferMatcher::Matching::addTemplate(Template& template_){
-    if(templates.size() > 0)
-        templates.clear();
+    templates.clear();
     templates.push_back(&template_);
 }
 /**
