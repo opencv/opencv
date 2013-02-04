@@ -12,11 +12,13 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
 //    Guoping Long, longguoping@gmail.com
-//	  Niko Li, newlife20080214@gmail.com
+//    Niko Li, newlife20080214@gmail.com
+//    Yao Wang, bitwangyaoyao@gmail.com
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
@@ -292,23 +294,12 @@ namespace cv
             }
             return devcienums;
         }
-        void setDevice(Info &oclinfo, int devnum)
-        {
-            CV_Assert(devnum >= 0);
-            cl_int status = 0;
-            cl_context_properties cps[3] =
-            {
-                CL_CONTEXT_PLATFORM, (cl_context_properties)(oclinfo.impl->oclplatform), 0
-            };
-            oclinfo.impl->devnum = devnum;
-            oclinfo.impl->oclcontext = clCreateContext(cps, 1, &oclinfo.impl->devices[devnum], NULL, NULL, &status);
-            openCLVerifyCall(status);
-            //create the command queue using the first device of the list
-            oclinfo.impl->clCmdQueue = clCreateCommandQueue(oclinfo.impl->oclcontext, oclinfo.impl->devices[devnum],
-                                       CL_QUEUE_PROFILING_ENABLE, &status);
-            openCLVerifyCall(status);
 
+        static void fillClcontext(Info &oclinfo)
+        {
             //get device information
+            size_t devnum = oclinfo.impl->devnum;
+
             openCLSafeCall(clGetDeviceInfo(oclinfo.impl->devices[devnum], CL_DEVICE_MAX_WORK_GROUP_SIZE,
                                            sizeof(size_t), (void *)&oclinfo.impl->maxWorkGroupSize, NULL));
             openCLSafeCall(clGetDeviceInfo(oclinfo.impl->devices[devnum], CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS,
@@ -338,7 +329,41 @@ namespace cv
                 oclinfo.impl -> double_support = 1;
             }
             Context::setContext(oclinfo);
+
         }
+
+        void setDevice(Info &oclinfo, int devnum)
+        {
+            CV_Assert(devnum >= 0);
+            cl_int status = 0;
+            cl_context_properties cps[3] =
+            {
+                CL_CONTEXT_PLATFORM, (cl_context_properties)(oclinfo.impl->oclplatform), 0
+            };
+            oclinfo.impl->devnum = devnum;
+            oclinfo.impl->oclcontext = clCreateContext(cps, 1, &oclinfo.impl->devices[devnum], NULL, NULL, &status);
+            openCLVerifyCall(status);
+            //create the command queue using the first device of the list
+            oclinfo.impl->clCmdQueue = clCreateCommandQueue(oclinfo.impl->oclcontext, oclinfo.impl->devices[devnum],
+                                       CL_QUEUE_PROFILING_ENABLE, &status);
+            openCLVerifyCall(status);
+            fillClcontext(oclinfo);
+        }
+
+        void setDeviceEx(Info &oclinfo, void *ctx, void *q, int devnum)
+        {
+            CV_Assert(devnum >= 0);
+            oclinfo.impl->devnum = devnum;
+            if(ctx && q)
+            {
+                oclinfo.impl->oclcontext = (cl_context)ctx;
+                oclinfo.impl->clCmdQueue = (cl_command_queue)q;
+                clRetainContext((cl_context)ctx);
+                clRetainCommandQueue((cl_command_queue)q);
+                fillClcontext(oclinfo);
+             }
+         }
+
         void *getoclContext()
 
         {
@@ -440,86 +465,34 @@ namespace cv
             Context *clcxt = Context::getContext();
             clcxt->impl->Binpath = path;
         }
-        int savetofile(const Context *clcxt,  cl_program &program, const char *fileName)
+
+        int savetofile(const Context*,  cl_program &program, const char *fileName)
         {
-            //cl_int status;
-            size_t numDevices = 1;
-            cl_device_id *devices = clcxt->impl->devices;
-            //figure out the sizes of each of the binaries.
-            size_t *binarySizes = (size_t *)malloc( sizeof(size_t) * numDevices );
-
+            size_t binarySize;
             openCLSafeCall(clGetProgramInfo(program,
-                                            CL_PROGRAM_BINARY_SIZES,
-                                            sizeof(size_t) * numDevices,
-                                            binarySizes, NULL));
-
-            size_t i = 0;
-            //copy over all of the generated binaries.
-            char **binaries = (char **)malloc( sizeof(char *) * numDevices );
-            if(binaries == NULL)
+                                    CL_PROGRAM_BINARY_SIZES,
+                                    sizeof(size_t),
+                                    &binarySize, NULL));
+            char* binary = (char*)malloc(binarySize);
+            if(binary == NULL)
             {
-                CV_Error(CV_StsNoMem, "Failed to allocate host memory.(binaries)\r\n");
-            }
-
-            for(i = 0; i < numDevices; i++)
-            {
-                if(binarySizes[i] != 0)
-                {
-                    binaries[i] = (char *)malloc( sizeof(char) * binarySizes[i]);
-                    if(binaries[i] == NULL)
-                    {
-                        CV_Error(CV_StsNoMem, "Failed to allocate host memory.(binaries[i])\r\n");
-                    }
-                }
-                else
-                {
-                    binaries[i] = NULL;
-                }
+                CV_Error(CV_StsNoMem, "Failed to allocate host memory.");
             }
             openCLSafeCall(clGetProgramInfo(program,
-                                            CL_PROGRAM_BINARIES,
-                                            sizeof(char *) * numDevices,
-                                            binaries,
-                                            NULL));
+                                    CL_PROGRAM_BINARIES,
+                                    sizeof(char *),
+                                    &binary,
+                                    NULL));
 
-            //dump out each binary into its own separate file.
-            for(i = 0; i < numDevices; i++)
+            FILE *fp = fopen(fileName, "wb+");
+            if(fp != NULL)
             {
-                if(binarySizes[i] != 0)
-                {
-                    char deviceName[1024];
-                    openCLSafeCall(clGetDeviceInfo(devices[i],
-                                                   CL_DEVICE_NAME,
-                                                   sizeof(deviceName),
-                                                   deviceName,
-                                                   NULL));
-
-                    printf( "%s binary kernel: %s\n", deviceName, fileName);
-                    FILE *fp = fopen(fileName, "wb+");
-                    if(fp == NULL)
-                    {
-                        char *temp = NULL;
-                        sprintf(temp, "Failed to load kernel file : %s\r\n", fileName);
-                        CV_Error(CV_GpuApiCallError, temp);
-                    }
-                    else
-                    {
-                        fwrite(binaries[i], binarySizes[i], 1, fp);
-                        free(binaries[i]);
-                        fclose(fp);
-                    }
-                }
-                else
-                {
-                    printf("Skipping %s since there is no binary data to write!\n",
-                           fileName);
-                }
+                fwrite(binary, binarySize, 1, fp);
+                free(binary);
+                fclose(fp);
             }
-            free(binarySizes);
-            free(binaries);
             return 1;
         }
-
 
         cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, string kernelName,
                                             const char *build_options)
@@ -572,7 +545,7 @@ namespace cv
                     program = clCreateProgramWithSource(
                                   clCxt->impl->clContext, 1, source, NULL, &status);
                     openCLVerifyCall(status);
-                    status = clBuildProgram(program, 1, &(clCxt->impl->devices[0]), all_build_options, NULL, NULL);
+                    status = clBuildProgram(program, 1, &(clCxt->impl->devices), all_build_options, NULL, NULL);
                     if(status == CL_SUCCESS && clCxt->impl->Binpath.size())
                         savetofile(clCxt, program, filename.c_str());
                 }
@@ -587,13 +560,14 @@ namespace cv
                     cl_int status = 0;
                     program = clCreateProgramWithBinary(clCxt->impl->clContext,
                                                         1,
-                                                        &(clCxt->impl->devices[0]),
+                                                        &(clCxt->impl->devices),
                                                         (const size_t *)&binarySize,
                                                         (const unsigned char **)&binary,
                                                         NULL,
                                                         &status);
                     openCLVerifyCall(status);
-                    status = clBuildProgram(program, 1, &(clCxt->impl->devices[0]), all_build_options, NULL, NULL);
+                    status = clBuildProgram(program, 1, &(clCxt->impl->devices), all_build_options, NULL, NULL);
+                    delete[] binary;
                 }
 
                 if(status != CL_SUCCESS)
@@ -604,14 +578,14 @@ namespace cv
                         char *buildLog = NULL;
                         size_t buildLogSize = 0;
                         logStatus = clGetProgramBuildInfo(program,
-                                                          clCxt->impl->devices[0], CL_PROGRAM_BUILD_LOG, buildLogSize,
+                                                          clCxt->impl->devices, CL_PROGRAM_BUILD_LOG, buildLogSize,
                                                           buildLog, &buildLogSize);
                         if(logStatus != CL_SUCCESS)
                             cout << "Failed to build the program and get the build info." << endl;
                         buildLog = new char[buildLogSize];
                         CV_DbgAssert(!!buildLog);
                         memset(buildLog, 0, buildLogSize);
-                        openCLSafeCall(clGetProgramBuildInfo(program, clCxt->impl->devices[0],
+                        openCLSafeCall(clGetProgramBuildInfo(program, clCxt->impl->devices,
                                                              CL_PROGRAM_BUILD_LOG, buildLogSize, buildLog, NULL));
                         cout << "\n\t\t\tBUILD LOG\n";
                         cout << buildLog << endl;
@@ -633,7 +607,7 @@ namespace cv
         void openCLVerifyKernel(const Context *clCxt, cl_kernel kernel, size_t *localThreads)
         {
             size_t kernelWorkGroupSize;
-            openCLSafeCall(clGetKernelWorkGroupInfo(kernel, clCxt->impl->devices[0],
+            openCLSafeCall(clGetKernelWorkGroupInfo(kernel, clCxt->impl->devices,
                                                     CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &kernelWorkGroupSize, 0));
             CV_Assert( (localThreads[0] <= clCxt->impl->maxWorkItemSizes[0]) &&
                           (localThreads[1] <= clCxt->impl->maxWorkItemSizes[1]) &&
@@ -795,15 +769,16 @@ namespace cv
             Context *clcxt = getContext();
             clcxt->impl->clContext = oclinfo.impl->oclcontext;
             clcxt->impl->clCmdQueue = oclinfo.impl->clCmdQueue;
-            clcxt->impl->devices = &oclinfo.impl->devices[oclinfo.impl->devnum];
+            clcxt->impl->devices = oclinfo.impl->devices[oclinfo.impl->devnum];
             clcxt->impl->devName = oclinfo.impl->devName[oclinfo.impl->devnum];
             clcxt->impl->maxDimensions = oclinfo.impl->maxDimensions;
             clcxt->impl->maxWorkGroupSize = oclinfo.impl->maxWorkGroupSize;
-            clcxt->impl->maxWorkItemSizes = oclinfo.impl->maxWorkItemSizes;
+            for(size_t i=0; i<clcxt->impl->maxDimensions && i<4; i++)
+                clcxt->impl->maxWorkItemSizes[i] = oclinfo.impl->maxWorkItemSizes[i];
             clcxt->impl->maxComputeUnits = oclinfo.impl->maxComputeUnits;
             clcxt->impl->double_support = oclinfo.impl->double_support;
             //extra options to recognize compiler options
-            clcxt->impl->extra_options = oclinfo.impl->extra_options;
+            memcpy(clcxt->impl->extra_options, oclinfo.impl->extra_options, 512);
         }
         Context::Context()
         {
@@ -814,11 +789,12 @@ namespace cv
             impl->devices = NULL;
             impl->maxDimensions = 0;
             impl->maxWorkGroupSize = 0;
-            impl->maxWorkItemSizes = NULL;
+            for(int i=0; i<4; i++)
+                impl->maxWorkItemSizes[i] = 0;
             impl->maxComputeUnits = 0;
             impl->double_support = 0;
             //extra options to recognize vendor specific fp64 extensions
-            impl->extra_options = NULL;
+            memset(impl->extra_options, 0, 512);
             programCache = ProgramCache::getProgramCache();
         }
 

@@ -742,7 +742,7 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     Context  *clCxt = I.clCxt;
     char platform[256] = {0};
     cl_platform_id pid;
-    clGetDeviceInfo(*clCxt->impl->devices, CL_DEVICE_PLATFORM, sizeof(pid), &pid, NULL);
+    clGetDeviceInfo(clCxt->impl->devices, CL_DEVICE_PLATFORM, sizeof(pid), &pid, NULL);
     clGetPlatformInfo(pid, CL_PLATFORM_NAME, 256, platform, NULL);
     std::string namestr = platform;
     bool isImageSupported = true;
