@@ -79,6 +79,7 @@ The current implementation supports the following types of a descriptor extracto
  * ``"SIFT"`` -- :ocv:class:`SIFT`
  * ``"SURF"`` -- :ocv:class:`SURF`
  * ``"ORB"`` -- :ocv:class:`ORB`
+ * ``"BRISK"`` -- :ocv:class:`BRISK`
  * ``"BRIEF"`` -- :ocv:class:`BriefDescriptorExtractor`
 
 A combined format is also supported: descriptor extractor adapter name ( ``"Opponent"`` --

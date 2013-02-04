@@ -98,6 +98,58 @@ Finds keypoints in an image and computes their descriptors
 
     :param useProvidedKeypoints: If it is true, then the method will use the provided vector of keypoints instead of detecting them.
 
+BRISK
+-----
+.. ocv:class:: BRISK : public Feature2D
+
+Class implementing the BRISK keypoint detector and descriptor extractor, described in [LCS11]_.
+
+.. [LCS11] Stefan Leutenegger, Margarita Chli and Roland Siegwart: BRISK: Binary Robust Invariant Scalable Keypoints. ICCV 2011: 2548-2555.
+
+BRISK::BRISK
+------------
+The BRISK constructor
+
+.. ocv:function:: BRISK::BRISK(int thresh=30, int octaves=3, float patternScale=1.0f)
+
+    :param thresh: FAST/AGAST detection threshold score.
+
+    :param octaves: detection octaves. Use 0 to do single scale.
+
+    :param patternScale: apply this scale to the pattern used for sampling the neighbourhood of a keypoint.
+
+BRISK::BRISK
+------------
+The BRISK constructor for a custom pattern
+
+.. ocv:function:: BRISK::BRISK(std::vector<float> &radiusList, std::vector<int> &numberList, float dMax=5.85f, float dMin=8.2f, std::vector<int> indexChange=std::vector<int>())
+
+    :param radiusList: defines the radii (in pixels) where the samples around a keypoint are taken (for keypoint scale 1).
+
+    :param numberList: defines the number of sampling points on the sampling circle. Must be the same size as radiusList..
+
+    :param dMax: threshold for the short pairings used for descriptor formation (in pixels for keypoint scale 1).
+
+    :param dMin: threshold for the long pairings used for orientation determination (in pixels for keypoint scale 1).
+
+    :param indexChanges: index remapping of the bits.
+
+BRISK::operator()
+-----------------
+Finds keypoints in an image and computes their descriptors
+
+.. ocv:function:: void BRISK::operator()(InputArray image, InputArray mask, vector<KeyPoint>& keypoints, OutputArray descriptors, bool useProvidedKeypoints=false ) const
+
+    :param image: The input 8-bit grayscale image.
+
+    :param mask: The operation mask.
+
+    :param keypoints: The output vector of keypoints.
+
+    :param descriptors: The output descriptors. Pass ``cv::noArray()`` if you do not need it.
+
+    :param useProvidedKeypoints: If it is true, then the method will use the provided vector of keypoints instead of detecting them.
+
 FREAK
 -----
 .. ocv:class:: FREAK : public DescriptorExtractor
