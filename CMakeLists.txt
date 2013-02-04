@@ -129,6 +129,7 @@ OCV_OPTION(WITH_OPENGL         "Include OpenGL support"                      OFF
 OCV_OPTION(WITH_OPENNI         "Include OpenNI support"                      OFF  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_PNG            "Include PNG support"                         ON   IF (NOT IOS) )
 OCV_OPTION(WITH_PVAPI          "Include Prosilica GigE support"              ON   IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_GIGEAPI        "Include Smartek GigE support"                ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_QT             "Build with Qt Backend support"               OFF  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_QUICKTIME      "Use QuickTime for Video I/O insted of QTKit" OFF  IF APPLE )
 OCV_OPTION(WITH_TBB            "Include Intel TBB support"                   OFF  IF (NOT IOS) )
@@ -704,6 +705,10 @@ endif(DEFINED WITH_OPENNI)
 if(DEFINED WITH_PVAPI)
   status("    PvAPI:"          HAVE_PVAPI          THEN YES                                        ELSE NO)
 endif(DEFINED WITH_PVAPI)
+
+if(DEFINED WITH_GIGEAPI)
+  status("    GigEVisionSDK:"  HAVE_GIGE_API          THEN YES                                        ELSE NO)
+endif(DEFINED WITH_GIGEAPI)
 
 if(DEFINED WITH_QUICKTIME)
   status("    QuickTime:"      WITH_QUICKTIME      THEN YES                                        ELSE NO)
