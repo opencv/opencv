@@ -3120,6 +3120,7 @@ protected:
     void init();
 
     int index, width, height,fourcc;
+    int widthSet, heightSet;
     IplImage* frame;
     static videoInput VI;
 };
@@ -3138,6 +3139,7 @@ CvCaptureCAM_DShow::CvCaptureCAM_DShow()
     index = -1;
     frame = 0;
     width = height = fourcc = -1;
+    widthSet = heightSet = -1;
     CoInitialize(0);
 }
 
@@ -3155,7 +3157,7 @@ void CvCaptureCAM_DShow::close()
         index = -1;
         cvReleaseImage(&frame);
     }
-    width = height = -1;
+    widthSet = heightSet = width = height = -1;
 }
 
 // Initialize camera input
@@ -3282,9 +3284,12 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
         {
             VI.stopDevice(index);
             VI.setIdealFramerate(index,fps);
-            VI.setupDevice(index);
+            if (widthSet > 0 && heightSet > 0)
+                VI.setupDevice(index, widthSet, heightSet);
+            else
+                VI.setupDevice(index);
         }
-        break;
+        return VI.isDeviceSetup(index);
 
     }
 
@@ -3299,8 +3304,15 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
                 VI.setIdealFramerate(index, fps);
                 VI.setupDeviceFourcc(index, width, height, fourcc);
             }
-            width = height = fourcc = -1;
-            return VI.isDeviceSetup(index);
+
+            bool success = VI.isDeviceSetup(index);
+            if (success)
+            {
+                widthSet = width;
+                heightSet = height;
+                width = height = fourcc = -1;
+            }
+            return success;
         }
         return true;
     }
