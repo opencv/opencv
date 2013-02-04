@@ -84,20 +84,26 @@ namespace cv
         //this function may be obsoleted
         //CV_EXPORTS cl_device_id getDevice();
         //the function must be called before any other cv::ocl::functions, it initialize ocl runtime
+        //each Info relates to an OpenCL platform
+        //there is one or more devices in each platform, each one has a separate name
         CV_EXPORTS int getDevice(std::vector<Info> &oclinfo, int devicetype = CVCL_DEVICE_TYPE_GPU);
+
         //set device you want to use, optional function after getDevice be called
+        //the devnum is the index of the selected device in DeviceName vector of INfo
         CV_EXPORTS void setDevice(Info &oclinfo, int devnum = 0);
-        //this function is not ready yet
-        //CV_EXPORTS void getComputeCapability(cl_device_id device, int &major, int &minor);
+
         //optional function, if you want save opencl binary kernel to the file, set its path
         CV_EXPORTS  void setBinpath(const char *path);
-        //The two functions below are used to get opencl runtime so that opencv can interactive with
 
-        //other opencl program
-
+        //The two functions below enable other opencl program to use ocl module's cl_context and cl_command_queue
         CV_EXPORTS void* getoclContext();
 
         CV_EXPORTS void* getoclCommandQueue();
+
+        //this function enable ocl module to use customized cl_context and cl_command_queue
+        //getDevice also need to be called before this function
+        CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0); 
+
         //////////////////////////////// Error handling ////////////////////////
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
 
