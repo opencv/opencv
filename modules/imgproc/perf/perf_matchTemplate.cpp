@@ -37,7 +37,14 @@ PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateSmall,
 
     TEST_CYCLE() matchTemplate(img, tmpl, result, method);
 
-    SANITY_CHECK(result, 65536 * tmpl.total() * 1e-7);
+    bool isNormed =
+        method == CV_TM_CCORR_NORMED ||
+        method == CV_TM_SQDIFF_NORMED ||
+        method == CV_TM_CCOEFF_NORMED;
+    double eps = isNormed ? 1e-6
+        : 255 * 255 * tmpl.total() * 1e-6;
+
+    SANITY_CHECK(result, eps);
 }
 
 PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateBig,
@@ -63,5 +70,12 @@ PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateBig,
 
     TEST_CYCLE() matchTemplate(img, tmpl, result, method);
 
-    SANITY_CHECK(result, 65536 * tmpl.total() * 1e-7);
+    bool isNormed =
+        method == CV_TM_CCORR_NORMED ||
+        method == CV_TM_SQDIFF_NORMED ||
+        method == CV_TM_CCOEFF_NORMED;
+    double eps = isNormed ? 1e-6
+        : 255 * 255 * tmpl.total() * 1e-6;
+
+    SANITY_CHECK(result, eps);
 }
