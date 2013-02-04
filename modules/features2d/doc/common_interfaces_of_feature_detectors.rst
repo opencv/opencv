@@ -127,6 +127,7 @@ The following detector types are supported:
 * ``"SIFT"`` -- :ocv:class:`SIFT` (nonfree module)
 * ``"SURF"`` -- :ocv:class:`SURF` (nonfree module)
 * ``"ORB"`` -- :ocv:class:`ORB`
+* ``"BRISK"`` -- :ocv:class:`BRISK`
 * ``"MSER"`` -- :ocv:class:`MSER`
 * ``"GFTT"`` -- :ocv:class:`GoodFeaturesToTrackDetector`
 * ``"HARRIS"`` -- :ocv:class:`GoodFeaturesToTrackDetector` with Harris detector enabled

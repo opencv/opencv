@@ -622,7 +622,6 @@ void ChamferMatcher::Matching::followContour(Mat& templ_img, template_coords_t& 
 {
     const int dir[][2] = { {-1,-1}, {-1,0}, {-1,1}, {0,1}, {1,1}, {1,0}, {1,-1}, {0,-1} };
     coordinate_t next;
-    coordinate_t next_temp;
     unsigned char ptr;
 
     assert (direction==-1 || !coords.empty());
@@ -931,15 +930,13 @@ void ChamferMatcher::Template::show() const
 void ChamferMatcher::Matching::addTemplateFromImage(Mat& templ, float scale)
 {
     Template* cmt = new Template(templ, scale);
-    if(templates.size() > 0)
-        templates.clear();
+    templates.clear();
     templates.push_back(cmt);
     cmt->show();
 }
 
 void ChamferMatcher::Matching::addTemplate(Template& template_){
-    if(templates.size() > 0)
-        templates.clear();
+    templates.clear();
     templates.push_back(&template_);
 }
 /**

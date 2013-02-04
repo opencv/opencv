@@ -2507,7 +2507,7 @@ static void generateRandomCenter(const vector<Vec2f>& box, float* center, RNG& r
         center[j] = ((float)rng*(1.f+margin*2.f)-margin)*(box[j][1] - box[j][0]) + box[j][0];
 }
 
-class KMeansPPDistanceComputer
+class KMeansPPDistanceComputer : public ParallelLoopBody
 {
 public:
     KMeansPPDistanceComputer( float *_tdist2,
@@ -2523,10 +2523,10 @@ public:
           step(_step),
           stepci(_stepci) { }
 
-    void operator()( const cv::BlockedRange& range ) const
+    void operator()( const cv::Range& range ) const
     {
-        const int begin = range.begin();
-        const int end = range.end();
+        const int begin = range.start;
+        const int end = range.end;
 
         for ( int i = begin; i<end; i++ )
         {
@@ -2582,7 +2582,7 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
                     break;
             int ci = i;
 
-            parallel_for(BlockedRange(0, N),
+            parallel_for_(Range(0, N),
                          KMeansPPDistanceComputer(tdist2, data, dist, dims, step, step*ci));
             for( i = 0; i < N; i++ )
             {
@@ -2610,7 +2610,7 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
     }
 }
 
-class KMeansDistanceComputer
+class KMeansDistanceComputer : public ParallelLoopBody
 {
 public:
     KMeansDistanceComputer( double *_distances,
@@ -2624,10 +2624,10 @@ public:
     {
     }
 
-    void operator()( const BlockedRange& range ) const
+    void operator()( const Range& range ) const
     {
-        const int begin = range.begin();
-        const int end = range.end();
+        const int begin = range.start;
+        const int end = range.end;
         const int K = centers.rows;
         const int dims = centers.cols;
 
@@ -2884,7 +2884,7 @@ double cv::kmeans( InputArray _data, int K,
             // assign labels
             Mat dists(1, N, CV_64F);
             double* dist = dists.ptr<double>(0);
-            parallel_for(BlockedRange(0, N),
+            parallel_for_(Range(0, N),
                          KMeansDistanceComputer(dist, labels, data, centers));
             compactness = 0;
             for( i = 0; i < N; i++ )
