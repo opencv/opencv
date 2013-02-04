@@ -11,7 +11,7 @@ add_subdirectory(face-detection)
 add_subdirectory(image-manipulations)
 add_subdirectory(color-blob-detection)
 
-add_subdirectory(tutorial-1-addopencv)
+add_subdirectory(tutorial-1-camerapreview)
 add_subdirectory(tutorial-2-opencvcamera)
 add_subdirectory(tutorial-3-native)
 add_subdirectory(tutorial-4-mixed)

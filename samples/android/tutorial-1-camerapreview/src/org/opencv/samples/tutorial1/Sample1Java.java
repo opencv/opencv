@@ -88,7 +88,7 @@ public class Sample1Java extends Activity implements CvCameraViewListener2 {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         Log.i(TAG, "called onCreateOptionsMenu");
-        mItemSwitchCamera = menu.add("Switch camera");
+        mItemSwitchCamera = menu.add("Toggle Native/Java camera");
         return true;
     }
 
