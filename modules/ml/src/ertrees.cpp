@@ -185,12 +185,12 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
     if ( is_buf_16u )
     {
-        CV_CALL( buf = cvCreateMat( buf_count, buf_size, CV_16UC1 ));
+        CV_CALL( buf = cvCreateMat( buf_count * sample_count, buf_size / sample_count, CV_16UC1 ));
         CV_CALL( pair16u32s_ptr = (CvPair16u32s*)cvAlloc( sample_count*sizeof(pair16u32s_ptr[0]) ));
     }
     else
     {
-        CV_CALL( buf = cvCreateMat( buf_count, buf_size, CV_32SC1 ));
+        CV_CALL( buf = cvCreateMat( buf_count * sample_count, buf_size / sample_count, CV_32SC1 ));
         CV_CALL( int_ptr = (int**)cvAlloc( sample_count*sizeof(int_ptr[0]) ));
     }
 
@@ -578,9 +578,9 @@ const int* CvERTreeTrainData::get_cat_var_data( CvDTreeNode* n, int vi, int* cat
     int ci = get_var_type( vi);
     const int* cat_values = 0;
     if( !is_buf_16u )
-        cat_values = buf->data.i + n->buf_idx*buf->cols + ci*sample_count + n->offset;
+        cat_values = buf->data.i + n->buf_idx*sample_count *(work_var_count + 1) + ci*sample_count + n->offset;
     else {
-        const unsigned short* short_values = (const unsigned short*)(buf->data.s + n->buf_idx*buf->cols +
+        const unsigned short* short_values = (const unsigned short*)(buf->data.s + n->buf_idx*sample_count *(work_var_count + 1) +
             ci*sample_count + n->offset);
         for( int i = 0; i < n->sample_count; i++ )
             cat_values_buf[i] = short_values[i];
@@ -1385,9 +1385,9 @@ void CvForestERTree::split_node_data( CvDTreeNode* node )
 
         if (data->is_buf_16u)
         {
-            unsigned short *ldst = (unsigned short *)(buf->data.s + left->buf_idx*buf->cols +
+            unsigned short *ldst = (unsigned short *)(buf->data.s + left->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 ci*scount + left->offset);
-            unsigned short *rdst = (unsigned short *)(buf->data.s + right->buf_idx*buf->cols +
+            unsigned short *rdst = (unsigned short *)(buf->data.s + right->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 ci*scount + right->offset);
 
             for( i = 0; i < n; i++ )
@@ -1415,9 +1415,9 @@ void CvForestERTree::split_node_data( CvDTreeNode* node )
         }
         else
         {
-            int *ldst = buf->data.i + left->buf_idx*buf->cols +
+            int *ldst = buf->data.i + left->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 ci*scount + left->offset;
-            int *rdst = buf->data.i + right->buf_idx*buf->cols +
+            int *rdst = buf->data.i + right->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 ci*scount + right->offset;
 
             for( i = 0; i < n; i++ )
@@ -1460,9 +1460,9 @@ void CvForestERTree::split_node_data( CvDTreeNode* node )
 
         if (data->is_buf_16u)
         {
-            unsigned short* ldst = (unsigned short*)(buf->data.s + left->buf_idx*buf->cols +
+            unsigned short* ldst = (unsigned short*)(buf->data.s + left->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 pos*scount + left->offset);
-            unsigned short* rdst = (unsigned short*)(buf->data.s + right->buf_idx*buf->cols +
+            unsigned short* rdst = (unsigned short*)(buf->data.s + right->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 pos*scount + right->offset);
 
             for (i = 0; i < n; i++)
@@ -1483,9 +1483,9 @@ void CvForestERTree::split_node_data( CvDTreeNode* node )
         }
         else
         {
-            int* ldst = buf->data.i + left->buf_idx*buf->cols +
+            int* ldst = buf->data.i + left->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 pos*scount + left->offset;
-            int* rdst = buf->data.i + right->buf_idx*buf->cols +
+            int* rdst = buf->data.i + right->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 pos*scount + right->offset;
             for (i = 0; i < n; i++)
             {

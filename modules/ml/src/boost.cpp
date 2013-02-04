@@ -1141,7 +1141,7 @@ CvBoost::update_weights( CvBoostTree* tree )
     else
     {
         if( have_subsample )
-            _buf_size += data->buf->cols*(sizeof(float)+sizeof(uchar));
+            _buf_size += data->sample_count *(data->work_var_count + 1)*(sizeof(float)+sizeof(uchar));
     }
     inn_buf.allocate(_buf_size);
     uchar* cur_buf_pos = (uchar*)inn_buf;
@@ -1195,7 +1195,7 @@ CvBoost::update_weights( CvBoostTree* tree )
 
         if (data->is_buf_16u)
         {
-            unsigned short* labels = (unsigned short*)(dtree_data_buf->data.s + data->data_root->buf_idx*dtree_data_buf->cols +
+            unsigned short* labels = (unsigned short*)(dtree_data_buf->data.s + data->data_root->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 data->data_root->offset + (data->work_var_count-1)*data->sample_count);
             for( i = 0; i < n; i++ )
             {
@@ -1213,7 +1213,7 @@ CvBoost::update_weights( CvBoostTree* tree )
         }
         else
         {
-            int* labels = dtree_data_buf->data.i + data->data_root->buf_idx*dtree_data_buf->cols +
+            int* labels = dtree_data_buf->data.i + data->data_root->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 data->data_root->offset + (data->work_var_count-1)*data->sample_count;
 
             for( i = 0; i < n; i++ )
@@ -1260,9 +1260,10 @@ CvBoost::update_weights( CvBoostTree* tree )
         if( have_subsample )
         {
             float* values = (float*)cur_buf_pos;
-            cur_buf_pos = (uchar*)(values + data->buf->cols);
+            cur_buf_pos = (uchar*)(values + data->sample_count *(data->work_var_count + 1));
             uchar* missing = cur_buf_pos;
-            cur_buf_pos = missing + data->buf->step;
+            CV_Assert(data->buf->cols == data->work_var_count + 1);
+            cur_buf_pos = missing + (int64)data->buf->step * (int64)data->sample_count;//FIXME: this branch of code should be re-checked!
             CvMat _sample, _mask;
 
             // invert the subsample mask
