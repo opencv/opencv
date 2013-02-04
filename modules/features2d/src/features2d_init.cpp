@@ -130,6 +130,26 @@ CV_INIT_ALGORITHM(GFTTDetector, "Feature2D.GFTT",
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+CV_INIT_ALGORITHM(SimpleBlobDetector, "Feature2D.SimpleBlob",
+                  obj.info()->addParam(obj, "thresholdStep",    obj.params.thresholdStep);
+                  obj.info()->addParam(obj, "minThreshold",     obj.params.minThreshold);
+                  obj.info()->addParam(obj, "maxThreshold",     obj.params.maxThreshold);
+                  obj.info()->addParam(obj, "minRepeatability", obj.params.minRepeatability);
+                  obj.info()->addParam(obj, "minDistBetweenBlobs", obj.params.minDistBetweenBlobs);
+                  obj.info()->addParam(obj, "filterByColor",    obj.params.filterByColor);
+                  obj.info()->addParam(obj, "blobColor",        obj.params.blobColor);
+                  obj.info()->addParam(obj, "filterByArea",     obj.params.filterByArea);
+                  obj.info()->addParam(obj, "maxArea",          obj.params.maxArea);
+                  obj.info()->addParam(obj, "filterByCircularity", obj.params.filterByCircularity);
+                  obj.info()->addParam(obj, "maxCircularity",   obj.params.maxCircularity);
+                  obj.info()->addParam(obj, "filterByInertia",  obj.params.filterByInertia);
+                  obj.info()->addParam(obj, "maxInertiaRatio",  obj.params.maxInertiaRatio);
+                  obj.info()->addParam(obj, "filterByConvexity", obj.params.filterByConvexity);
+                  obj.info()->addParam(obj, "maxConvexity",     obj.params.maxConvexity);
+                  );
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 class CV_EXPORTS HarrisDetector : public GFTTDetector
 {
 public:
