@@ -60,7 +60,7 @@
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-		<project id="OpenCV Tutorial 4 - Mix Java+Native OpenCV.null.1819504790" name="OpenCV Tutorial 4 - Mix Java+Native OpenCV"/>
+		<project id="OpenCV Tutorial 2 - Mixed Processing OpenCV.null.1819504790" name="OpenCV Tutorial 2 - Mixed Processing"/>
 	</storageModule>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
@@ -69,6 +69,6 @@
 		</scannerConfigBuildInfo>
 	</storageModule>
 	<storageModule moduleId="refreshScope" versionNumber="1">
-		<resource resourceType="PROJECT" workspacePath="/OpenCV Tutorial 4 - Mix Java+Native OpenCV"/>
+		<resource resourceType="PROJECT" workspacePath="/OpenCV Tutorial 2 - Mixed Processing"/>
 	</storageModule>
 </cproject>
