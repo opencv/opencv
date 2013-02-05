@@ -7,6 +7,6 @@
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:visibility="gone"
-        android:id="@+id/tutorial5_activity_java_surface_view" />
+        android:id="@+id/tutorial3_activity_java_surface_view" />
 
 </LinearLayout>

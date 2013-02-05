@@ -1,4 +1,4 @@
-package org.opencv.samples.tutorial5;
+package org.opencv.samples.tutorial3;
 
 import java.io.FileOutputStream;
 import java.util.List;

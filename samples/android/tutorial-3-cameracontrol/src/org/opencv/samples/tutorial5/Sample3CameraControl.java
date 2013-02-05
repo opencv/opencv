@@ -1,4 +1,4 @@
-package org.opencv.samples.tutorial5;
+package org.opencv.samples.tutorial3;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -28,7 +28,7 @@ import android.view.View.OnTouchListener;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-public class Sample5CameraControl extends Activity implements CvCameraViewListener2, OnTouchListener {
+public class Sample3CameraControl extends Activity implements CvCameraViewListener2, OnTouchListener {
     private static final String TAG = "OCVSample::Activity";
 
     private SampleJavaCameraView mOpenCvCameraView;
@@ -46,7 +46,7 @@ public class Sample5CameraControl extends Activity implements CvCameraViewListen
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
                     mOpenCvCameraView.enableView();
-                    mOpenCvCameraView.setOnTouchListener(Sample5CameraControl.this);
+                    mOpenCvCameraView.setOnTouchListener(Sample3CameraControl.this);
                 } break;
                 default:
                 {
@@ -56,7 +56,7 @@ public class Sample5CameraControl extends Activity implements CvCameraViewListen
         }
     };
 
-    public Sample5CameraControl() {
+    public Sample3CameraControl() {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
@@ -67,9 +67,9 @@ public class Sample5CameraControl extends Activity implements CvCameraViewListen
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        setContentView(R.layout.tutorial5_surface_view);
+        setContentView(R.layout.tutorial3_surface_view);
 
-        mOpenCvCameraView = (SampleJavaCameraView) findViewById(R.id.tutorial5_activity_java_surface_view);
+        mOpenCvCameraView = (SampleJavaCameraView) findViewById(R.id.tutorial3_activity_java_surface_view);
 
         mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
 
