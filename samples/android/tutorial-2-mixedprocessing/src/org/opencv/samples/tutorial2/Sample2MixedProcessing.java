@@ -1,4 +1,4 @@
-package org.opencv.samples.tutorial4;
+package org.opencv.samples.tutorial2;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
@@ -17,7 +17,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
 
-public class Sample4Mixed extends Activity implements CvCameraViewListener2 {
+public class Sample2MixedProcessing extends Activity implements CvCameraViewListener2 {
     private static final String    TAG = "OCVSample::Activity";
 
     private static final int       VIEW_MODE_RGBA     = 0;
@@ -58,7 +58,7 @@ public class Sample4Mixed extends Activity implements CvCameraViewListener2 {
         }
     };
 
-    public Sample4Mixed() {
+    public Sample2MixedProcessing() {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
@@ -69,9 +69,9 @@ public class Sample4Mixed extends Activity implements CvCameraViewListener2 {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        setContentView(R.layout.tutorial4_surface_view);
+        setContentView(R.layout.tutorial2_surface_view);
 
-        mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial4_activity_surface_view);
+        mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial2_activity_surface_view);
         mOpenCvCameraView.setCvCameraViewListener(this);
     }
 

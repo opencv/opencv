@@ -12,7 +12,7 @@ add_subdirectory(image-manipulations)
 add_subdirectory(color-blob-detection)
 
 add_subdirectory(tutorial-1-camerapreview)
-add_subdirectory(tutorial-4-mixed)
+add_subdirectory(tutorial-2-mixedprocessing)
 add_subdirectory(tutorial-5-cameracontrol)
 
 #hello-android sample

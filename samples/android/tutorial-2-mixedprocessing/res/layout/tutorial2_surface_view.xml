@@ -6,6 +6,6 @@
     <org.opencv.android.JavaCameraView
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:id="@+id/tutorial4_activity_surface_view" />
+        android:id="@+id/tutorial2_activity_surface_view" />
 
 </LinearLayout>

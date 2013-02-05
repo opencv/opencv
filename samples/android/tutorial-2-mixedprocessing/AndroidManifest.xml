@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="org.opencv.samples.tutorial4"
+          package="org.opencv.samples.tutorial2"
           android:versionCode="21"
           android:versionName="2.1">
 
@@ -9,7 +9,7 @@
         android:icon="@drawable/icon"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen" >
 
-        <activity android:name="Sample4Mixed"
+        <activity android:name="Sample2MixedProcessing"
                   android:label="@string/app_name"
                   android:screenOrientation="landscape"
                   android:configChanges="keyboardHidden|orientation">
