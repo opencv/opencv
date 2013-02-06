@@ -136,11 +136,16 @@ if(tbb_need_GENERIC_DWORD_LOAD_STORE)
   set(tbb_need_GENERIC_DWORD_LOAD_STORE ON PARENT_SCOPE)
 endif()
 
-if (ANDROID)
-  set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h" "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
-else()
-  set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs} "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
+set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs})
+
+if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+  if (NOT ANDROID)
+    set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/arm_linux_stub.cpp")
+  endif()
+  set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h")
 endif()
+
+set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
 
 add_library(tbb ${TBB_SOURCE_FILES})
 target_link_libraries(tbb c m dl)
@@ -148,7 +153,7 @@ target_link_libraries(tbb c m dl)
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
 string(REPLACE "-Werror=non-virtual-dtor" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-if(ANDROID)
+if(UNIX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
 endif()
 
@@ -168,4 +173,3 @@ endif()
 
 # get TBB version
 ocv_parse_header("${tbb_src_dir}/include/tbb/tbb_stddef.h" TBB_VERSION_LINES TBB_VERSION_MAJOR TBB_VERSION_MINOR TBB_INTERFACE_VERSION CACHE)
-
