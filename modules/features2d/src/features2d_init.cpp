@@ -134,7 +134,7 @@ CV_INIT_ALGORITHM(SimpleBlobDetector, "Feature2D.SimpleBlob",
                   obj.info()->addParam(obj, "thresholdStep",    obj.params.thresholdStep);
                   obj.info()->addParam(obj, "minThreshold",     obj.params.minThreshold);
                   obj.info()->addParam(obj, "maxThreshold",     obj.params.maxThreshold);
-                  obj.info()->addParam_(obj, "minRepeatability", ParamType<size_t>::type, &obj.params.minRepeatability, false, 0, 0);
+                  obj.info()->addParam_(obj, "minRepeatability", (sizeof(size_t) == sizeof(uint64))?Param::UINT64 : Param::UNSIGNED_INT, &obj.params.minRepeatability, false, 0, 0);
                   obj.info()->addParam(obj, "minDistBetweenBlobs", obj.params.minDistBetweenBlobs);
                   obj.info()->addParam(obj, "filterByColor",    obj.params.filterByColor);
                   obj.info()->addParam(obj, "blobColor",        obj.params.blobColor);
