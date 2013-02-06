@@ -1,7 +1,7 @@
 Data Structures
 =============================
 
-.. ocv:class:: oclMat
+.. ocv:class:: ocl::oclMat
 
 OpenCV C++ 1-D or 2-D dense array class ::
 
