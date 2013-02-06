@@ -56,7 +56,7 @@ template<typename T> struct MinOp
     typedef T type1;
     typedef T type2;
     typedef T rtype;
-    T operator ()(T a, T b) const { return std::min(a, b); }
+    T operator ()(const T a, const T b) const { return std::min(a, b); }
 };
 
 template<typename T> struct MaxOp
@@ -64,7 +64,7 @@ template<typename T> struct MaxOp
     typedef T type1;
     typedef T type2;
     typedef T rtype;
-    T operator ()(T a, T b) const { return std::max(a, b); }
+    T operator ()(const T a, const T b) const { return std::max(a, b); }
 };
 
 #undef CV_MIN_8U
@@ -72,8 +72,8 @@ template<typename T> struct MaxOp
 #define CV_MIN_8U(a,b)       ((a) - CV_FAST_CAST_8U((a) - (b)))
 #define CV_MAX_8U(a,b)       ((a) + CV_FAST_CAST_8U((b) - (a)))
 
-template<> inline uchar MinOp<uchar>::operator ()(uchar a, uchar b) const { return CV_MIN_8U(a, b); }
-template<> inline uchar MaxOp<uchar>::operator ()(uchar a, uchar b) const { return CV_MAX_8U(a, b); }
+template<> inline uchar MinOp<uchar>::operator ()(const uchar a, const uchar b) const { return CV_MIN_8U(a, b); }
+template<> inline uchar MaxOp<uchar>::operator ()(const uchar a, const uchar b) const { return CV_MAX_8U(a, b); }
 
 struct MorphRowNoVec
 {

@@ -94,7 +94,7 @@ template<typename T1, typename T2=T1, typename T3=T1> struct OpAdd
     typedef T1 type1;
     typedef T2 type2;
     typedef T3 rtype;
-    T3 operator ()(T1 a, T2 b) const { return saturate_cast<T3>(a + b); }
+    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a + b); }
 };
 
 template<typename T1, typename T2=T1, typename T3=T1> struct OpSub
@@ -102,7 +102,7 @@ template<typename T1, typename T2=T1, typename T3=T1> struct OpSub
     typedef T1 type1;
     typedef T2 type2;
     typedef T3 rtype;
-    T3 operator ()(T1 a, T2 b) const { return saturate_cast<T3>(a - b); }
+    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a - b); }
 };
 
 template<typename T1, typename T2=T1, typename T3=T1> struct OpRSub
@@ -110,7 +110,7 @@ template<typename T1, typename T2=T1, typename T3=T1> struct OpRSub
     typedef T1 type1;
     typedef T2 type2;
     typedef T3 rtype;
-    T3 operator ()(T1 a, T2 b) const { return saturate_cast<T3>(b - a); }
+    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(b - a); }
 };
 
 template<typename T> struct OpMin
@@ -118,7 +118,7 @@ template<typename T> struct OpMin
     typedef T type1;
     typedef T type2;
     typedef T rtype;
-    T operator ()(T a, T b) const { return std::min(a, b); }
+    T operator ()(const T a, const T b) const { return std::min(a, b); }
 };
 
 template<typename T> struct OpMax
@@ -126,7 +126,7 @@ template<typename T> struct OpMax
     typedef T type1;
     typedef T type2;
     typedef T rtype;
-    T operator ()(T a, T b) const { return std::max(a, b); }
+    T operator ()(const T a, const T b) const { return std::max(a, b); }
 };
 
 inline Size getContinuousSize( const Mat& m1, int widthScale=1 )
