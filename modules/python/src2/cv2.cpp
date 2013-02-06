@@ -442,11 +442,6 @@ static bool pyopencv_to(PyObject* obj, bool& value, const char* name = "<unknown
     return true;
 }
 
-static PyObject* pyopencv_from(size_t value)
-{
-    return PyLong_FromUnsignedLong((unsigned long)value);
-}
-
 static bool pyopencv_to(PyObject* obj, size_t& value, const char* name = "<unknown>")
 {
     (void)name;
