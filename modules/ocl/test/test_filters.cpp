@@ -365,10 +365,10 @@ TEST_P(Laplacian, Accuracy)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // erode & dilate
 
-PARAM_TEST_CASE(ErodeDilateBase, MatType, bool)
+PARAM_TEST_CASE(ErodeDilateBase, MatType, int)
 {
     int type;
-    //int iterations;
+    int iterations;
 
     //erode or dilate kernel
     cv::Mat kernel;
@@ -399,7 +399,7 @@ PARAM_TEST_CASE(ErodeDilateBase, MatType, bool)
     virtual void SetUp()
     {
         type = GET_PARAM(0);
-        //  iterations = GET_PARAM(1);
+        iterations = GET_PARAM(1);
 
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
@@ -409,10 +409,6 @@ PARAM_TEST_CASE(ErodeDilateBase, MatType, bool)
         //		rng.fill(kernel, cv::RNG::UNIFORM, cv::Scalar::all(0), cv::Scalar::all(3));
         kernel = randomMat(rng, Size(3, 3), CV_8UC1, 0, 3, false);
 
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
-        ////if you want to use undefault device, set it here
-        ////setDevice(oclinfo[0]);
     }
 
     void random_roi()
@@ -456,12 +452,9 @@ TEST_P(Erode, Mat)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-        //int iterations =3;
-        //cv::erode(mat1_roi, dst_roi, kernel, Point(-1, -1), iterations);
-        //cv::ocl::erode(gmat1, gdst, kernel, Point(-1, -1), iterations);
 
-        cv::erode(mat1_roi, dst_roi, kernel);
-        cv::ocl::erode(gmat1, gdst, kernel);
+        cv::erode(mat1_roi, dst_roi, kernel, Point(-1, -1), iterations);
+        cv::ocl::erode(gmat1, gdst, kernel, Point(-1, -1), iterations);
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
@@ -486,12 +479,8 @@ TEST_P(Dilate, Mat)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-        //int iterations =3;
-        //      cv::erode(mat1_roi, dst_roi, kernel, Point(-1, -1), iterations);
-        //      cv::ocl::erode(gmat1, gdst, kernel, Point(-1, -1), iterations);
-
-        cv::dilate(mat1_roi, dst_roi, kernel);
-        cv::ocl::dilate(gmat1, gdst, kernel);
+        cv::erode(mat1_roi, dst_roi, kernel, Point(-1, -1), iterations);
+        cv::ocl::erode(gmat1, gdst, kernel, Point(-1, -1), iterations);
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
@@ -831,11 +820,11 @@ INSTANTIATE_TEST_CASE_P(Filters, Laplacian, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(1, 3)));
 
-INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1, 2, 3)));
+INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1)));
 
 //INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(Values(CV_8UC1, CV_8UC1), Values(false)));
 
-INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1, 2, 3)));
+INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1)));
 
 //INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(Values(CV_8UC1, CV_8UC1), Values(false)));
 
