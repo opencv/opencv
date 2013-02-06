@@ -703,7 +703,7 @@ static cl_mem bindTexture(const oclMat &mat, int depth, int channels)
     desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
     desc.image_width      = mat.step / mat.elemSize();
     desc.image_height     = mat.rows;
-    desc.image_depth      = NULL;
+    desc.image_depth      = 0;
     desc.image_array_size = 1;
     desc.image_row_pitch  = 0;
     desc.image_slice_pitch = 0;
