@@ -2,8 +2,14 @@ set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_VERSION 1)
 set(CMAKE_SYSTEM_PROCESSOR arm)
 
-set(CMAKE_C_COMPILER    arm-linux-gnueabihf-gcc-4.6)
-set(CMAKE_CXX_COMPILER  arm-linux-gnueabihf-g++-4.6)
+if (CARMA)
+  set(GCC_COMPILER_VERSION "4.5" CACHE STRING "GCC Compiler version")
+else()
+  set(GCC_COMPILER_VERSION "4.6" CACHE STRING "GCC Compiler version")
+endif()
+
+set(CMAKE_C_COMPILER    arm-linux-gnueabi-gcc-${GCC_COMPILER_VERSION})
+set(CMAKE_CXX_COMPILER  arm-linux-gnueabi-g++-${GCC_COMPILER_VERSION})
 
 set(CMAKE_CXX_FLAGS           ""                    CACHE STRING "c++ flags")
 set(CMAKE_C_FLAGS             ""                    CACHE STRING "c flags")
