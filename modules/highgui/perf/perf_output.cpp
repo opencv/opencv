@@ -32,4 +32,3 @@ PERF_TEST_P(VideoWriter_Writing, WriteFrame,
 }
 
 #endif // BUILD_WITH_VIDEO_OUTPUT_SUPPORT
-

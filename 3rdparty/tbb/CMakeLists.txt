@@ -1,4 +1,4 @@
-#build TBB for Android from source
+#Cross compile TBB from source
 project(tbb)
 
 # 4.1 update 1 - works fine
@@ -117,12 +117,12 @@ list(APPEND lib_srcs "${tbb_src_dir}/src/rml/client/rml_tbb.cpp")
 
 add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
                 -D__TBB_BUILD=1                        #required
-                -D__TBB_SURVIVE_THREAD_SWITCH=0        #no cilk on Android?
-                -DUSE_PTHREAD                          #required
-                -DTBB_USE_GCC_BUILTINS=1               #required
+                -D__TBB_SURVIVE_THREAD_SWITCH=0        #no cilk support
+                -DUSE_PTHREAD                          #required for Unix
+                -DTBB_USE_GCC_BUILTINS=1               #required for ARM GCC
                 -DTBB_USE_DEBUG=0                      #just to be sure
                 -DTBB_NO_LEGACY=1                      #don't need backward compatibility
-                -DDO_ITT_NOTIFY=0                      #it seems that we don't need these notifications on Android
+                -DDO_ITT_NOTIFY=0                      #it seems that we don't need these notifications
                )
 
 if(ANDROID_COMPILER_IS_CLANG)
@@ -143,6 +143,7 @@ if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
     set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/arm_linux_stub.cpp")
   endif()
   set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
 endif()
 
 set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
@@ -152,10 +153,6 @@ target_link_libraries(tbb c m dl)
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
 string(REPLACE "-Werror=non-virtual-dtor" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-
-if(UNIX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
-endif()
 
 set_target_properties(tbb
   PROPERTIES OUTPUT_NAME tbb
