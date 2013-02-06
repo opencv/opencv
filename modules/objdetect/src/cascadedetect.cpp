@@ -1141,7 +1141,7 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
 
         Size windowSize( cvRound(originalWindowSize.width*factor), cvRound(originalWindowSize.height*factor) );
         Size scaledImageSize( cvRound( grayImage.cols/factor ), cvRound( grayImage.rows/factor ) );
-        Size processingRectSize( scaledImageSize.width - originalWindowSize.width + 1, scaledImageSize.height - originalWindowSize.height + 1 );
+        Size processingRectSize( scaledImageSize.width - originalWindowSize.width , scaledImageSize.height - originalWindowSize.height);
 
         if( processingRectSize.width <= 0 || processingRectSize.height <= 0 )
             break;
