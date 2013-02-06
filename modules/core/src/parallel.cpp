@@ -42,46 +42,8 @@
 
 #include "precomp.hpp"
 
-#if defined WIN32 || defined WINCE
-    #include <windows.h>
-    #undef small
-    #undef min
-    #undef max
-    #undef abs
-#endif
-
-#if defined __linux__ || defined __APPLE__
-    #include <unistd.h>
-    #include <stdio.h>
-    #include <sys/types.h>
-    #if defined ANDROID
-        #include <sys/sysconf.h>
-    #else
-        #include <sys/sysctl.h>
-    #endif
-#endif
-
-#ifdef _OPENMP
-    #define HAVE_OPENMP
-#endif
-
-#ifdef __APPLE__
-    #define HAVE_GCD
-#endif
-
-#if defined _MSC_VER && _MSC_VER >= 1600
-    #define HAVE_CONCURRENCY
-#endif
-
-/* IMPORTANT: always use the same order of defines
-   1. HAVE_TBB         - 3rdparty library, should be explicitly enabled
-   2. HAVE_CSTRIPES    - 3rdparty library, should be explicitly enabled
-   3. HAVE_OPENMP      - integrated to compiler, should be explicitly enabled
-   4. HAVE_GCD         - system wide, used automatically        (APPLE only)
-   5. HAVE_CONCURRENCY - part of runtime, used automatically    (Windows only - MSVS 10, MSVS 11)
-*/
-
 #if defined HAVE_TBB
+    // include TBB before windows.h to avoid possible conflicts (issue #2497)
     #include "tbb/tbb_stddef.h"
     #if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
         #include "tbb/tbb.h"
@@ -96,6 +58,50 @@
     #endif // end TBB version
 #endif
 
+#if defined WIN32 || defined WINCE
+    #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
+      #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
+    #endif
+    #include <windows.h>
+    #undef small
+    #undef min
+    #undef max
+    #undef abs
+#endif
+
+#if defined __linux__ || defined __APPLE__
+    #include <unistd.h>
+    #include <stdio.h>
+    #include <sys/types.h>
+    #include <pthread.h>
+    #if defined ANDROID
+        #include <sys/sysconf.h>
+    #else
+        #include <sys/sysctl.h>
+    #endif
+#endif
+
+#ifdef _OPENMP
+    #define HAVE_OPENMP
+#endif
+
+#ifdef __APPLE__
+    #define HAVE_GCD
+    #include <libkern/OSAtomic.h>
+#endif
+
+#if defined _MSC_VER && _MSC_VER >= 1600
+    #define HAVE_CONCURRENCY
+#endif
+
+/* IMPORTANT: always use the same order of defines
+   1. HAVE_TBB         - 3rdparty library, should be explicitly enabled
+   2. HAVE_CSTRIPES    - 3rdparty library, should be explicitly enabled
+   3. HAVE_OPENMP      - integrated to compiler, should be explicitly enabled
+   4. HAVE_GCD         - system wide, used automatically        (APPLE only)
+   5. HAVE_CONCURRENCY - part of runtime, used automatically    (Windows only - MSVS 10, MSVS 11)
+*/
+
 #ifndef HAVE_TBB
     #if defined HAVE_CSTRIPES
         #include "C=.h"
@@ -104,7 +110,6 @@
         #include <omp.h>
     #elif defined HAVE_GCD
         #include <dispatch/dispatch.h>
-        #include <pthread.h>
     #elif defined HAVE_CONCURRENCY
         #include <ppl.h>
     #endif
@@ -114,10 +119,7 @@
    #define HAVE_PARALLEL_FRAMEWORK
 #endif
 
-namespace cv
-{
-    ParallelLoopBody::~ParallelLoopBody() {}
-}
+cv::ParallelLoopBody::~ParallelLoopBody() {}
 
 namespace
 {
@@ -477,6 +479,104 @@ int cv::getNumberOfCPUs(void)
     return 1;
 #endif
 }
+
+#if (defined WIN32 || defined _WIN32 || defined WINCE) && !defined __GNUC__
+
+int cv::_interlockedExchangeAdd(int* addr, int delta)
+{
+#if defined _MSC_VER && _MSC_VER >= 1500
+    return (int)_InterlockedExchangeAdd((long volatile*)addr, delta);
+#else
+    return (int)InterlockedExchangeAdd((long volatile*)addr, delta);
+#endif
+}
+#endif
+
+
+/* ================================   CriticalSection  ================================ */
+
+#if defined WIN32 || defined _WIN32 || defined WINCE
+
+struct cv::Mutex::Impl
+{
+    Impl() { InitializeCriticalSection(&cs); }
+    ~Impl() { DeleteCriticalSection(&cs); }
+
+    void lock() { EnterCriticalSection(&cs); }
+    bool trylock() { return TryEnterCriticalSection(&cs) != 0; }
+    void unlock() { LeaveCriticalSection(&cs); }
+
+    CRITICAL_SECTION cs;
+};
+
+#elif defined __APPLE__
+
+struct cv::Mutex::Impl
+{
+    Impl() { sl = OS_SPINLOCK_INIT; }
+    ~Impl() {}
+
+    void lock() { OSSpinLockLock(&sl); }
+    bool trylock() { return OSSpinLockTry(&sl); }
+    void unlock() { OSSpinLockUnlock(&sl); }
+
+    OSSpinLock sl;
+};
+
+#elif defined __linux__ && !defined __ANDROID__
+
+struct cv::Mutex::Impl
+{
+    Impl() { pthread_spin_init(&sl, 0); }
+    ~Impl() { pthread_spin_destroy(&sl); }
+
+    void lock() { pthread_spin_lock(&sl); }
+    bool trylock() { return pthread_spin_trylock(&sl) == 0; }
+    void unlock() { pthread_spin_unlock(&sl); }
+
+    pthread_spinlock_t sl;
+};
+
+#else
+
+struct cv::Mutex::Impl
+{
+    Impl() { pthread_mutex_init(&sl, 0); }
+    ~Impl() { pthread_mutex_destroy(&sl); }
+
+    void lock() { pthread_mutex_lock(&sl); }
+    bool trylock() { return pthread_mutex_trylock(&sl) == 0; }
+    void unlock() { pthread_mutex_unlock(&sl); }
+
+    pthread_mutex_t sl;
+};
+
+#endif
+
+
+cv::Mutex::Mutex(const cv::Mutex&)
+{
+    CV_Error(CV_StsNotImplemented, "cv::Mutex copying is not supported. Pass your mutex by reference.");
+}
+
+cv::Mutex& cv::Mutex::operator = (const cv::Mutex&)
+{
+    CV_Error(CV_StsNotImplemented, "cv::Mutex copying is not supported. Pass your mutex by reference.");
+    return *this;
+}
+
+cv::Mutex::Mutex() { impl = new Mutex::Impl; }
+
+cv::Mutex::~Mutex() { delete impl; }
+
+void cv::Mutex::lock() { impl->lock(); }
+
+void cv::Mutex::unlock() { impl->unlock(); }
+
+bool cv::Mutex::trylock() { return impl->trylock(); }
+
+
+/* ================================   Legacy API  ================================ */
 
 CV_IMPL void cvSetNumThreads(int nt)
 {

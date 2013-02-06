@@ -948,7 +948,7 @@ class CascadeClassifierInvoker : public ParallelLoopBody
 {
 public:
     CascadeClassifierInvoker( CascadeClassifier& _cc, Size _sz1, int _stripSize, int _yStep, double _factor,
-        vector<Rect>& _vec, vector<int>& _levels, vector<double>& _weights, bool outputLevels, const Mat& _mask, Mutex* _mtx)
+        vector<Rect>& _vec, vector<int>& _levels, vector<double>& _weights, bool outputLevels, const Mat& _mask, CriticalSection* _cs)
     {
         classifier = &_cc;
         processingRectSize = _sz1;
@@ -959,7 +959,7 @@ public:
         rejectLevels = outputLevels ? &_levels : 0;
         levelWeights = outputLevels ? &_weights : 0;
         mask = _mask;
-        mtx = _mtx;
+        cs = _cs;
     }
 
     void operator()(const Range& range) const
@@ -991,19 +991,17 @@ public:
                         result =  -(int)classifier->data.stages.size();
                     if( classifier->data.stages.size() + result < 4 )
                     {
-                        mtx->lock();
+                        CriticalSection::ScopedLock guard(*cs);
                         rectangles->push_back(Rect(cvRound(x*scalingFactor), cvRound(y*scalingFactor), winSize.width, winSize.height));
                         rejectLevels->push_back(-result);
                         levelWeights->push_back(gypWeight);
-                        mtx->unlock();
                     }
                 }
                 else if( result > 0 )
                 {
-                    mtx->lock();
+                    CriticalSection::ScopedLock guard(*cs);
                     rectangles->push_back(Rect(cvRound(x*scalingFactor), cvRound(y*scalingFactor),
                                                winSize.width, winSize.height));
-                    mtx->unlock();
                 }
                 if( result == 0 )
                     x += yStep;
@@ -1019,7 +1017,7 @@ public:
     vector<int> *rejectLevels;
     vector<double> *levelWeights;
     Mat mask;
-    Mutex* mtx;
+    CriticalSection* cs;
 };
 
 struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } };
@@ -1044,18 +1042,18 @@ bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Siz
     vector<Rect> candidatesVector;
     vector<int> rejectLevels;
     vector<double> levelWeights;
-    Mutex mtx;
+    CriticalSection cs;
     if( outputRejectLevels )
     {
         parallel_for_(Range(0, stripCount), CascadeClassifierInvoker( *this, processingRectSize, stripSize, yStep, factor,
-            candidatesVector, rejectLevels, levelWeights, true, currentMask, &mtx));
+            candidatesVector, rejectLevels, levelWeights, true, currentMask, &cs));
         levels.insert( levels.end(), rejectLevels.begin(), rejectLevels.end() );
         weights.insert( weights.end(), levelWeights.begin(), levelWeights.end() );
     }
     else
     {
          parallel_for_(Range(0, stripCount), CascadeClassifierInvoker( *this, processingRectSize, stripSize, yStep, factor,
-            candidatesVector, rejectLevels, levelWeights, false, currentMask, &mtx));
+            candidatesVector, rejectLevels, levelWeights, false, currentMask, &cs));
     }
     candidates.insert( candidates.end(), candidatesVector.begin(), candidatesVector.end() );
 

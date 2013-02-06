@@ -94,24 +94,14 @@ void fastFree(void* ptr)
 #define STAT(stmt)
 
 #ifdef WIN32
-struct CriticalSection
-{
-    CriticalSection() { InitializeCriticalSection(&cs); }
-    ~CriticalSection() { DeleteCriticalSection(&cs); }
-    void lock() { EnterCriticalSection(&cs); }
-    void unlock() { LeaveCriticalSection(&cs); }
-    bool trylock() { return TryEnterCriticalSection(&cs) != 0; }
 
-    CRITICAL_SECTION cs;
-};
-
-void* SystemAlloc(size_t size)
+static void* SystemAlloc(size_t size)
 {
     void* ptr = malloc(size);
     return ptr ? ptr : OutOfMemoryError(size);
 }
 
-void SystemFree(void* ptr, size_t)
+static void SystemFree(void* ptr, size_t)
 {
     free(ptr);
 }
@@ -119,18 +109,7 @@ void SystemFree(void* ptr, size_t)
 
 #include <sys/mman.h>
 
-struct CriticalSection
-{
-    CriticalSection() { pthread_mutex_init(&mutex, 0); }
-    ~CriticalSection() { pthread_mutex_destroy(&mutex); }
-    void lock() { pthread_mutex_lock(&mutex); }
-    void unlock() { pthread_mutex_unlock(&mutex); }
-    bool trylock() { return pthread_mutex_trylock(&mutex) == 0; }
-
-    pthread_mutex_t mutex;
-};
-
-void* SystemAlloc(size_t size)
+static void* SystemAlloc(size_t size)
 {
     #ifndef MAP_ANONYMOUS
     #define MAP_ANONYMOUS MAP_ANON
@@ -140,18 +119,11 @@ void* SystemAlloc(size_t size)
     return ptr != MAP_FAILED ? ptr : OutOfMemoryError(size);
 }
 
-void SystemFree(void* ptr, size_t size)
+static void SystemFree(void* ptr, size_t size)
 {
     munmap(ptr, size);
 }
 #endif //WIN32
-
-struct AutoLock
-{
-    AutoLock(CriticalSection& _cs) : cs(&_cs) { cs->lock(); }
-    ~AutoLock() { cs->unlock(); }
-    CriticalSection* cs;
-};
 
 const size_t MEM_BLOCK_SIGNATURE = 0x01234567;
 const int MEM_BLOCK_SHIFT = 14;
@@ -283,7 +255,7 @@ struct BlockPool
 
     ~BlockPool()
     {
-        AutoLock lock(cs);
+        CriticalSection::ScopedLock lock(cs);
         while( pool )
         {
             BigBlock* nextBlock = pool->next;
@@ -295,7 +267,7 @@ struct BlockPool
 
     Block* alloc()
     {
-        AutoLock lock(cs);
+        CriticalSection::ScopedLock lock(cs);
         Block* block;
         if( !freeBlocks )
         {
@@ -314,7 +286,7 @@ struct BlockPool
 
     void free(Block* block)
     {
-        AutoLock lock(cs);
+        CriticalSection::ScopedLock lock(cs);
         block->prev = 0;
         block->next = freeBlocks;
         freeBlocks = block;
@@ -349,7 +321,7 @@ struct ThreadData
                     Block* next = block->next;
                     int allocated = block->allocated;
                     {
-                    AutoLock lock(block->cs);
+                    CriticalSection::ScopedLock lock(block->cs);
                     block->next = block->prev = 0;
                     block->threadData = 0;
                     Node *node = block->publicFreeList;
@@ -545,7 +517,7 @@ void* fastMalloc( size_t size )
                     if( block->publicFreeList )
                     {
                         {
-                        AutoLock lock(block->cs);
+                        CriticalSection::ScopedLock lock(block->cs);
                         block->privateFreeList = block->publicFreeList;
                         block->publicFreeList = 0;
                         }
@@ -651,7 +623,7 @@ void fastFree( void* ptr )
     }
     else
     {
-        AutoLock lock(block->cs);
+        CriticalSection::ScopedLock lock(block->cs);
         SANITY_CHECK(block);
 
         node->next = block->publicFreeList;

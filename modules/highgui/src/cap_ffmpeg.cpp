@@ -57,14 +57,14 @@ static CvCreateVideoWriter_Plugin icvCreateVideoWriter_FFMPEG_p = 0;
 static CvReleaseVideoWriter_Plugin icvReleaseVideoWriter_FFMPEG_p = 0;
 static CvWriteFrame_Plugin icvWriteFrame_FFMPEG_p = 0;
 
-static cv::Mutex _icvInitFFMPEG_mutex;
+static cv::CriticalSection _icvInitFFMPEG_lock;
 
 class icvInitFFMPEG
 {
 public:
     static void Init()
     {
-        cv::AutoLock al(_icvInitFFMPEG_mutex);
+        cv::CriticalSection::ScopedLock guard(_icvInitFFMPEG_lock);
         static icvInitFFMPEG init;
     }
 

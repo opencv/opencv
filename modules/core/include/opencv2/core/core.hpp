@@ -4707,19 +4707,33 @@ class CV_EXPORTS Mutex
 public:
     Mutex();
     ~Mutex();
-    Mutex(const Mutex& m);
-    Mutex& operator = (const Mutex& m);
+
+    Mutex(const Mutex& m);              // DO NOT USE
+    Mutex& operator = (const Mutex& m); // DO NOT USE
 
     void lock();
     bool trylock();
     void unlock();
 
-    struct Impl;
+    class ScopedLock
+    {
+    public:
+        ScopedLock(Mutex& lockMe) : mtx_(lockMe) { mtx_.lock(); }
+        ~ScopedLock() { mtx_.unlock(); }
+    private:
+        Mutex& mtx_;
+        ScopedLock(const ScopedLock&);
+        ScopedLock& operator=(const ScopedLock&);
+    };
+
 protected:
+    struct Impl;
     Impl* impl;
 };
 
-class CV_EXPORTS AutoLock
+typedef Mutex CriticalSection;
+
+class CV_EXPORTS AutoLock // DO NOT USE
 {
 public:
     AutoLock(Mutex& m) : mutex(&m) { mutex->lock(); }

@@ -86,7 +86,7 @@ namespace cv { namespace gpu
 
             bool isInUse(int pictureIndex) const { return isFrameInUse_[pictureIndex] != 0; }
 
-            CriticalSection criticalSection_;
+            cv::CriticalSection criticalSection_;
 
             volatile int isFrameInUse_[MaximumSize];
             volatile int endOfDecode_;

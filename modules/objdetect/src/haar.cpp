@@ -1285,7 +1285,7 @@ public:
                                           const Mat& _sum1, const Mat& _sqsum1, Mat* _norm1,
                                           Mat* _mask1, Rect _equRect, std::vector<Rect>& _vec,
                                           std::vector<int>& _levels, std::vector<double>& _weights,
-                                          bool _outputLevels, Mutex *_mtx )
+                                          bool _outputLevels, CriticalSection* _cs )
     {
         cascade = _cascade;
         stripSize = _stripSize;
@@ -1298,7 +1298,7 @@ public:
         vec = &_vec;
         rejectLevels = _outputLevels ? &_levels : 0;
         levelWeights = _outputLevels ? &_weights : 0;
-        mtx = _mtx;
+        cs = _cs;
     }
 
     void operator()( const Range& range ) const
@@ -1358,10 +1358,11 @@ public:
                     for( x = 0; x < ssz.width; x += ystep )
                         if( mask1row[x] != 0 )
                         {
-                            mtx->lock();
-                            vec->push_back(Rect(cvRound(x*factor), cvRound(y*factor),
-                                                winSize.width, winSize.height));
-                            mtx->unlock();
+                            {
+                                CriticalSection::ScopedLock guard(*cs);
+                                vec->push_back(Rect(cvRound(x*factor), cvRound(y*factor),
+                                                    winSize.width, winSize.height));
+                            }
                             if( --positive == 0 )
                                 break;
                         }
@@ -1382,22 +1383,20 @@ public:
                             result = -1*cascade->count;
                         if( cascade->count + result < 4 )
                         {
-                            mtx->lock();
+                            CriticalSection::ScopedLock guard(*cs);
                             vec->push_back(Rect(cvRound(x*factor), cvRound(y*factor),
                                            winSize.width, winSize.height));
                             rejectLevels->push_back(-result);
                             levelWeights->push_back(gypWeight);
-                            mtx->unlock();
                         }
                     }
                     else
                     {
                         if( result > 0 )
                         {
-                            mtx->lock();
+                            CriticalSection::ScopedLock guard(*cs);
                             vec->push_back(Rect(cvRound(x*factor), cvRound(y*factor),
                                            winSize.width, winSize.height));
-                            mtx->unlock();
                         }
                     }
                 }
@@ -1411,7 +1410,7 @@ public:
     std::vector<Rect>* vec;
     std::vector<int>* rejectLevels;
     std::vector<double>* levelWeights;
-    Mutex* mtx;
+    CriticalSection* cs;
 };
 
 
@@ -1421,7 +1420,7 @@ public:
     HaarDetectObjects_ScaleCascade_Invoker( const CvHaarClassifierCascade* _cascade,
                                             Size _winsize, const Range& _xrange, double _ystep,
                                             size_t _sumstep, const int** _p, const int** _pq,
-                                            std::vector<Rect>& _vec, Mutex* _mtx )
+                                            std::vector<Rect>& _vec, CriticalSection* _cs )
     {
         cascade = _cascade;
         winsize = _winsize;
@@ -1430,7 +1429,7 @@ public:
         sumstep = _sumstep;
         p = _p; pq = _pq;
         vec = &_vec;
-        mtx = _mtx;
+        cs = _cs;
     }
 
     void operator()( const Range& range ) const
@@ -1463,9 +1462,8 @@ public:
                 int result = cvRunHaarClassifierCascade( cascade, cvPoint(x, y), 0 );
                 if( result > 0 )
                 {
-                    mtx->lock();
+                    CriticalSection::ScopedLock guard(*cs);
                     vec->push_back(Rect(x, y, winsize.width, winsize.height));
-                    mtx->unlock();
                 }
                 ixstep = result != 0 ? 1 : 2;
             }
@@ -1480,7 +1478,7 @@ public:
     const int** p;
     const int** pq;
     std::vector<Rect>* vec;
-    Mutex* mtx;
+    CriticalSection* cs;
 };
 
 
@@ -1508,7 +1506,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
     bool doCannyPruning = (flags & CV_HAAR_DO_CANNY_PRUNING) != 0;
     bool findBiggestObject = (flags & CV_HAAR_FIND_BIGGEST_OBJECT) != 0;
     bool roughSearch = (flags & CV_HAAR_DO_ROUGH_SEARCH) != 0;
-    cv::Mutex mtx;
+    cv::CriticalSection cs;
 
     if( !CV_IS_HAAR_CLASSIFIER(cascade) )
         CV_Error( !cascade ? CV_StsNullPtr : CV_StsBadArg, "Invalid classifier cascade" );
@@ -1622,7 +1620,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
                          cv::HaarDetectObjects_ScaleImage_Invoker(cascade,
                                 (((sz1.height + stripCount - 1)/stripCount + ystep-1)/ystep)*ystep,
                                 factor, cv::Mat(&sum1), cv::Mat(&sqsum1), &_norm1, &_mask1,
-                                cv::Rect(equRect), allCandidates, rejectLevels, levelWeights, outputRejectLevels, &mtx));
+                                cv::Rect(equRect), allCandidates, rejectLevels, levelWeights, outputRejectLevels, &cs));
         }
     }
     else
@@ -1717,7 +1715,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
             cv::parallel_for_(cv::Range(startY, endY),
                 cv::HaarDetectObjects_ScaleCascade_Invoker(cascade, winSize, cv::Range(startX, endX),
                                                            ystep, sum->step, (const int**)p,
-                                                           (const int**)pq, allCandidates, &mtx ));
+                                                           (const int**)pq, allCandidates, &cs ));
 
             if( findBiggestObject && !allCandidates.empty() && scanROI.area() == 0 )
             {

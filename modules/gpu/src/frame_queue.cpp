@@ -79,7 +79,7 @@ void cv::gpu::detail::FrameQueue::enqueue(const CUVIDPARSERDISPINFO* picParams)
         bool isFramePlaced = false;
 
         {
-            CriticalSection::AutoLock autoLock(criticalSection_);
+            CriticalSection::ScopedLock autoLock(criticalSection_);
 
             if (framesInQueue_ < MaximumSize)
             {
@@ -100,7 +100,7 @@ void cv::gpu::detail::FrameQueue::enqueue(const CUVIDPARSERDISPINFO* picParams)
 
 bool cv::gpu::detail::FrameQueue::dequeue(CUVIDPARSERDISPINFO& displayInfo)
 {
-    CriticalSection::AutoLock autoLock(criticalSection_);
+    CriticalSection::ScopedLock autoLock(criticalSection_);
 
     if (framesInQueue_ > 0)
     {

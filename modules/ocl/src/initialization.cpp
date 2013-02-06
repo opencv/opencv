@@ -747,12 +747,12 @@ namespace cv
         /////////////////////////////OpenCL initialization/////////////////
         auto_ptr<Context> Context::clCxt;
         int Context::val = 0;
-        Mutex cs;
+        CriticalSection cs;
         Context *Context::getContext()
         {
             if(val == 0)
             {
-                AutoLock al(cs);
+                CriticalSection::ScopedLock sl(cs);
                 if( NULL == clCxt.get())
                     clCxt.reset(new Context);
 

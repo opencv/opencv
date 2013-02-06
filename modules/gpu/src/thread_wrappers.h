@@ -51,41 +51,6 @@ namespace cv { namespace gpu
 {
     namespace detail
     {
-        class CriticalSection
-        {
-        public:
-            CriticalSection();
-            ~CriticalSection();
-
-            void enter();
-            void leave();
-
-            class AutoLock
-            {
-            public:
-                explicit AutoLock(CriticalSection& criticalSection) :
-                    criticalSection_(criticalSection)
-                {
-                    criticalSection_.enter();
-                }
-
-                ~AutoLock()
-                {
-                    criticalSection_.leave();
-                }
-
-            private:
-                CriticalSection& criticalSection_;
-            };
-
-        private:
-            CriticalSection(const CriticalSection&);
-            CriticalSection& operator=(const CriticalSection&);
-
-            class Impl;
-            std::auto_ptr<Impl> impl_;
-        };
-
         class Thread
         {
         public:
