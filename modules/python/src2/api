@@ -355,7 +355,7 @@ Merge
 MixChannels
   cvarr_count src /K
   cvarr_count dst
-  intpair fromTo 
+  intpair fromTo
 RandShuffle
   CvArr mat
   CvRNG* rng
@@ -712,7 +712,7 @@ SolvePoly
   CvMat roots
   int maxiter 10
   int fig 10
-  
+
 # Random Number Generation
 RNG CvRNG
   int64 seed -1LL
@@ -1282,7 +1282,7 @@ FindStereoCorrespondenceGC
   CvArr dispRight
   CvStereoGCState* state
   int useDisparityGuess 0
-CalibrateCamera2 
+CalibrateCamera2
   CvMat objectPoints
   CvMat imagePoints
   CvMat pointCounts
@@ -1595,8 +1595,6 @@ GrabFrame int
   CvCapture* capture
 RetrieveFrame ROIplImage*
   CvCapture* capture
-QueryFrame ROIplImage*
-  CvCapture* capture
 GetCaptureProperty double
   CvCapture* capture
   int property_id
@@ -1780,6 +1778,8 @@ LoadImageM /doconly
 LoadImage /doconly
   char* filename
   int iscolor CV_LOAD_IMAGE_COLOR
+QueryFrame ROIplImage* /doconly
+  CvCapture* capture
 ReshapeMatND CvMat /doconly
   CvMat arr
   int newCn

@@ -2590,6 +2590,26 @@ static PyObject *FROM_CvPoints(CvPoints src)
 /* A few functions are too odd to be generated,
  * so are handwritten here */
 
+static PyObject *pycvQueryFrame(PyObject *self, PyObject *args)
+{
+  CvCapture* capture;
+  PyObject *pyobj_capture = NULL;
+
+  if (!PyArg_ParseTuple(args, "O", &pyobj_capture))
+    return NULL;
+  Py_INCREF(pyobj_capture);
+  if (!convert_to_CvCapturePTR(pyobj_capture, &capture, "capture")) return NULL;
+
+  ROIplImage* r;
+  Py_BEGIN_ALLOW_THREADS
+  r = cvQueryFrame(capture);
+  Py_END_ALLOW_THREADS
+
+  Py_DECREF(pyobj_capture);
+
+  return FROM_ROIplImagePTR(r);
+}
+
 static PyObject *pycvWaitKey(PyObject *self, PyObject *args, PyObject *kw)
 {
   int delay = 0;
