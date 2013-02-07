@@ -7,7 +7,7 @@ import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 import org.opencv.imgproc.Imgproc;
 
 import android.app.Activity;
@@ -17,7 +17,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
 
-public class Sample4Mixed extends Activity implements CvCameraViewListener {
+public class Sample4Mixed extends Activity implements CvCameraViewListener2 {
     private static final String    TAG = "OCVSample::Activity";
 
     private static final int       VIEW_MODE_RGBA     = 0;
@@ -133,13 +133,12 @@ public class Sample4Mixed extends Activity implements CvCameraViewListener {
             // input frame has gray scale format
             mRgba = inputFrame.rgba();
             Imgproc.Canny(inputFrame.gray(), mIntermediateMat, 80, 100);
-            Imgproc.cvtColor(mIntermediateMat, mRgba, Imgproc.COLOR_GRAY2BGRA, 4);
+            Imgproc.cvtColor(mIntermediateMat, mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
             break;
         case VIEW_MODE_FEATURES:
             // input frame has RGBA format
             mRgba = inputFrame.rgba();
             mGray = inputFrame.gray();
-            Imgproc.cvtColor(mRgba, mGray, Imgproc.COLOR_RGBA2GRAY);
             FindFeatures(mGray.getNativeObjAddr(), mRgba.getNativeObjAddr());
             break;
         }
