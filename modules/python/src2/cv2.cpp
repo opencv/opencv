@@ -451,6 +451,14 @@ static bool pyopencv_to(PyObject* obj, size_t& value, const char* name = "<unkno
     return value != (size_t)-1 || !PyErr_Occurred();
 }
 
+static PyObject* pyopencv_from(unsigned int value)
+{
+    return PyLong_FromUnsignedLong(value);
+}
+static PyObject* pyopencv_from(unsigned long int value)
+{
+    return PyLong_FromUnsignedLong(value);
+}
 static PyObject* pyopencv_from(int value)
 {
     return PyInt_FromLong(value);
