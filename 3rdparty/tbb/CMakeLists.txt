@@ -1,11 +1,18 @@
 #Cross compile TBB from source
 project(tbb)
 
-# 4.1 update 1 - works fine
-set(tbb_ver "tbb41_20121003oss")
-set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20121003oss_src.tgz")
-set(tbb_md5 "2a684fefb855d2d0318d1ef09afa75ff")
+# 4.1 update 2 - works fine
+set(tbb_ver "tbb41_20130116oss")
+set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130116oss_src.tgz")
+set(tbb_md5 "3809790e1001a1b32d59c9fee590ee85")
 set(tbb_version_file "version_string.ver")
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
+
+# 4.1 update 1 - works fine
+#set(tbb_ver "tbb41_20121003oss")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20121003oss_src.tgz")
+#set(tbb_md5 "2a684fefb855d2d0318d1ef09afa75ff")
+#set(tbb_version_file "version_string.ver")
 
 # 4.1 - works fine
 #set(tbb_ver "tbb41_20120718oss")
