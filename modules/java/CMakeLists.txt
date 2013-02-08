@@ -166,11 +166,7 @@ if(ANDROID)
   set(android_copied_files "")
   set(android_step3_input_files "")
   foreach(file ${handwrittren_lib_project_files_rel})
-    add_custom_command(OUTPUT "${OpenCV_BINARY_DIR}/${file}"
-                   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/android_lib/${file}" "${OpenCV_BINARY_DIR}/${file}"
-                   MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/android_lib/${file}"
-                   COMMENT "Generating ${file}"
-                  )
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/android_lib/${file}" "${OpenCV_BINARY_DIR}/${file}" @ONLY)
     list(APPEND android_copied_files "${OpenCV_BINARY_DIR}/${file}")
     list(APPEND android_step3_input_files "${CMAKE_CURRENT_SOURCE_DIR}/android_lib/${file}")
 
@@ -198,7 +194,7 @@ if(ANDROID AND ANDROID_EXECUTABLE)
   ocv_list_add_prefix(lib_target_files "${OpenCV_BINARY_DIR}/")
 
   android_get_compatible_target(lib_target_sdk_target ${ANDROID_NATIVE_API_LEVEL} ${ANDROID_SDK_TARGET} 11)
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/android_lib/${ANDROID_MANIFEST_FILE}"  "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}")
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/android_lib/${ANDROID_MANIFEST_FILE}" "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" @ONLY)
 
   add_custom_command(OUTPUT ${lib_target_files} "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
                      COMMAND ${CMAKE_COMMAND} -E remove ${lib_target_files}
