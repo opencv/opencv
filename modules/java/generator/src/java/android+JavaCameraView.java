@@ -16,7 +16,6 @@ import android.view.SurfaceHolder;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
-import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
 /**
@@ -33,7 +32,6 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
     private static final int MAGIC_TEXTURE_ID = 10;
     private static final String TAG = "JavaCameraView";
 
-    private Mat mBaseMat;
     private byte mBuffer[];
     private Mat[] mFrameChain;
     private int mChainIdx = 0;
@@ -41,7 +39,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
     private boolean mStopThread;
 
     protected Camera mCamera;
-
+    protected JavaCameraFrame mCameraFrame;
     private SurfaceTexture mSurfaceTexture;
 
     public static class JavaCameraSizeAccessor implements ListItemAccessor {
@@ -146,13 +144,13 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                     mCamera.addCallbackBuffer(mBuffer);
                     mCamera.setPreviewCallbackWithBuffer(this);
 
-                    mBaseMat = new Mat(mFrameHeight + (mFrameHeight/2), mFrameWidth, CvType.CV_8UC1);
-
                     mFrameChain = new Mat[2];
-                    mFrameChain[0] = new Mat();
-                    mFrameChain[1] = new Mat();
+                    mFrameChain[0] = new Mat(mFrameHeight + (mFrameHeight/2), mFrameWidth, CvType.CV_8UC1);
+                    mFrameChain[1] = new Mat(mFrameHeight + (mFrameHeight/2), mFrameWidth, CvType.CV_8UC1);
 
                     AllocateCache();
+
+                    mCameraFrame = new JavaCameraFrame(mFrameChain[mChainIdx], mFrameWidth, mFrameHeight);
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                         mSurfaceTexture = new SurfaceTexture(MAGIC_TEXTURE_ID);
@@ -183,12 +181,12 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                 mCamera.release();
             }
             mCamera = null;
-            if (mBaseMat != null)
-                mBaseMat.release();
             if (mFrameChain != null) {
                 mFrameChain[0].release();
                 mFrameChain[1].release();
             }
+            if (mCameraFrame != null)
+                mCameraFrame.release();
         }
     }
 
@@ -242,12 +240,44 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
         Log.i(TAG, "Frame size  is " + frame.length);
         synchronized (this)
         {
-            mBaseMat.put(0, 0, frame);
+            mFrameChain[1 - mChainIdx].put(0, 0, frame);
             this.notify();
         }
         if (mCamera != null)
             mCamera.addCallbackBuffer(mBuffer);
     }
+
+    private class JavaCameraFrame implements CvCameraViewFrame
+    {
+        public Mat gray() {
+            return mYuvFrameData.submat(0, mHeight, 0, mWidth);
+        }
+
+        public Mat rgba() {
+            Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2BGR_NV12, 4);
+            return mRgba;
+        }
+
+        public JavaCameraFrame(Mat Yuv420sp, int width, int height) {
+            super();
+            mWidth = width;
+            mHeight = height;
+            mYuvFrameData = Yuv420sp;
+            mRgba = new Mat();
+        }
+
+        public void release() {
+            mRgba.release();
+        }
+
+        private JavaCameraFrame(CvCameraViewFrame obj) {
+        }
+
+        private Mat mYuvFrameData;
+        private Mat mRgba;
+        private int mWidth;
+        private int mHeight;
+    };
 
     private class CameraWorker implements Runnable {
 
@@ -263,18 +293,8 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                 }
 
                 if (!mStopThread) {
-                    switch (mPreviewFormat) {
-                        case Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA:
-                            Imgproc.cvtColor(mBaseMat, mFrameChain[mChainIdx], Imgproc.COLOR_YUV2RGBA_NV21, 4);
-                        break;
-                        case Highgui.CV_CAP_ANDROID_GREY_FRAME:
-                            mFrameChain[mChainIdx] = mBaseMat.submat(0, mFrameHeight, 0, mFrameWidth);
-                        break;
-                        default:
-                            Log.e(TAG, "Invalid frame format! Only RGBA and Gray Scale are supported!");
-                    };
                     if (!mFrameChain[mChainIdx].empty())
-                        deliverAndDrawFrame(mFrameChain[mChainIdx]);
+                        deliverAndDrawFrame(mCameraFrame);
                     mChainIdx = 1 - mChainIdx;
                 }
             } while (!mStopThread);

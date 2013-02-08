@@ -1,24 +1,24 @@
 package org.opencv.samples.tutorial3;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
-import org.opencv.imgproc.Imgproc;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.WindowManager;
 
-public class Sample3Native extends Activity implements CvCameraViewListener {
+public class Sample3Native extends Activity implements CvCameraViewListener2 {
     private static final String TAG = "OCVSample::Activity";
 
     private Mat                    mRgba;
-    private Mat                    mGrayMat;
+    private Mat                    mGray;
     private CameraBridgeViewBase   mOpenCvCameraView;
 
     private BaseLoaderCallback     mLoaderCallback = new BaseLoaderCallback(this) {
@@ -62,9 +62,9 @@ public class Sample3Native extends Activity implements CvCameraViewListener {
     @Override
     public void onPause()
     {
+        super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-        super.onPause();
     }
 
     @Override
@@ -82,18 +82,18 @@ public class Sample3Native extends Activity implements CvCameraViewListener {
 
     public void onCameraViewStarted(int width, int height) {
         mRgba = new Mat(height, width, CvType.CV_8UC4);
-        mGrayMat = new Mat(height, width, CvType.CV_8UC1);
+        mGray = new Mat(height, width, CvType.CV_8UC1);
     }
 
     public void onCameraViewStopped() {
         mRgba.release();
-        mGrayMat.release();
+        mGray.release();
     }
 
-    public Mat onCameraFrame(Mat inputFrame) {
-        inputFrame.copyTo(mRgba);
-        Imgproc.cvtColor(mRgba, mGrayMat, Imgproc.COLOR_RGBA2GRAY);
-        FindFeatures(mGrayMat.getNativeObjAddr(), mRgba.getNativeObjAddr());
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+        mRgba = inputFrame.rgba();
+        mGray = inputFrame.gray();
+        FindFeatures(mGray.getNativeObjAddr(), mRgba.getNativeObjAddr());
 
         return mRgba;
     }
