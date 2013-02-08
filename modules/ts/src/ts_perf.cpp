@@ -139,12 +139,12 @@ Regression& Regression::add(TestBase* test, const std::string& name, cv::InputAr
 Regression& Regression::addKeypoints(TestBase* test, const std::string& name, const std::vector<cv::KeyPoint>& array, double eps, ERROR_TYPE err)
 {
     int len = (int)array.size();
-    cv::Mat pt      (len, 1, CV_32FC2, (void*)&array[0].pt,       sizeof(cv::KeyPoint));
-    cv::Mat size    (len, 1, CV_32FC1, (void*)&array[0].size,     sizeof(cv::KeyPoint));
-    cv::Mat angle   (len, 1, CV_32FC1, (void*)&array[0].angle,    sizeof(cv::KeyPoint));
-    cv::Mat response(len, 1, CV_32FC1, (void*)&array[0].response, sizeof(cv::KeyPoint));
-    cv::Mat octave  (len, 1, CV_32SC1, (void*)&array[0].octave,   sizeof(cv::KeyPoint));
-    cv::Mat class_id(len, 1, CV_32SC1, (void*)&array[0].class_id, sizeof(cv::KeyPoint));
+    cv::Mat pt      (len, 1, CV_32FC2, len ? (void*)&array[0].pt : 0,       sizeof(cv::KeyPoint));
+    cv::Mat size    (len, 1, CV_32FC1, len ? (void*)&array[0].size : 0,     sizeof(cv::KeyPoint));
+    cv::Mat angle   (len, 1, CV_32FC1, len ? (void*)&array[0].angle : 0,    sizeof(cv::KeyPoint));
+    cv::Mat response(len, 1, CV_32FC1, len ? (void*)&array[0].response : 0, sizeof(cv::KeyPoint));
+    cv::Mat octave  (len, 1, CV_32SC1, len ? (void*)&array[0].octave : 0,   sizeof(cv::KeyPoint));
+    cv::Mat class_id(len, 1, CV_32SC1, len ? (void*)&array[0].class_id : 0, sizeof(cv::KeyPoint));
 
     return Regression::add(test, name + "-pt",       pt,       eps, ERROR_ABSOLUTE)
                                 (name + "-size",     size,     eps, ERROR_ABSOLUTE)
@@ -156,11 +156,11 @@ Regression& Regression::addKeypoints(TestBase* test, const std::string& name, co
 
 Regression& Regression::addMatches(TestBase* test, const std::string& name, const std::vector<cv::DMatch>& array, double eps, ERROR_TYPE err)
 {
-    int len = (int)array.size();
-    cv::Mat queryIdx(len, 1, CV_32SC1, (void*)&array[0].queryIdx, sizeof(cv::DMatch));
-    cv::Mat trainIdx(len, 1, CV_32SC1, (void*)&array[0].trainIdx, sizeof(cv::DMatch));
-    cv::Mat imgIdx  (len, 1, CV_32SC1, (void*)&array[0].imgIdx,   sizeof(cv::DMatch));
-    cv::Mat distance(len, 1, CV_32FC1, (void*)&array[0].distance, sizeof(cv::DMatch));
+    int len = (int)array.size();      
+    cv::Mat queryIdx(len, 1, CV_32SC1, len ? (void*)&array[0].queryIdx : 0, sizeof(cv::DMatch));
+    cv::Mat trainIdx(len, 1, CV_32SC1, len ? (void*)&array[0].trainIdx : 0, sizeof(cv::DMatch));
+    cv::Mat imgIdx  (len, 1, CV_32SC1, len ? (void*)&array[0].imgIdx : 0,   sizeof(cv::DMatch));
+    cv::Mat distance(len, 1, CV_32FC1, len ? (void*)&array[0].distance : 0, sizeof(cv::DMatch));
 
     return Regression::add(test, name + "-queryIdx", queryIdx, DBL_EPSILON, ERROR_ABSOLUTE)
                                 (name + "-trainIdx", trainIdx, DBL_EPSILON, ERROR_ABSOLUTE)
