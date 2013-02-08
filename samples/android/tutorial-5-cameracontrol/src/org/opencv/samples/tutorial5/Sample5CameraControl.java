@@ -6,10 +6,11 @@ import java.util.List;
 import java.util.ListIterator;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
-import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -27,7 +28,7 @@ import android.view.View.OnTouchListener;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-public class Sample5CameraControl extends Activity implements CvCameraViewListener, OnTouchListener {
+public class Sample5CameraControl extends Activity implements CvCameraViewListener2, OnTouchListener {
     private static final String TAG = "OCVSample::Activity";
 
     private SampleJavaCameraView mOpenCvCameraView;
@@ -78,9 +79,9 @@ public class Sample5CameraControl extends Activity implements CvCameraViewListen
     @Override
     public void onPause()
     {
+        super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-        super.onPause();
     }
 
     @Override
@@ -102,8 +103,8 @@ public class Sample5CameraControl extends Activity implements CvCameraViewListen
     public void onCameraViewStopped() {
     }
 
-    public Mat onCameraFrame(Mat inputFrame) {
-        return inputFrame;
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+        return inputFrame.rgba();
     }
 
     @Override

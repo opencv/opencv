@@ -63,9 +63,9 @@ public class Puzzle15Activity extends Activity implements CvCameraViewListener, 
     @Override
     public void onPause()
     {
+        super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-        super.onPause();
     }
 
     @Override
@@ -109,10 +109,6 @@ public class Puzzle15Activity extends Activity implements CvCameraViewListener, 
     public void onCameraViewStopped() {
     }
 
-    public Mat onCameraFrame(Mat inputFrame) {
-        return mPuzzle15.puzzleFrame(inputFrame);
-    }
-
     public boolean onTouch(View view, MotionEvent event) {
         int xpos, ypos;
 
@@ -128,5 +124,9 @@ public class Puzzle15Activity extends Activity implements CvCameraViewListener, 
         }
 
         return false;
+    }
+
+    public Mat onCameraFrame(Mat inputFrame) {
+        return mPuzzle15.puzzleFrame(inputFrame);
     }
 }

@@ -1,11 +1,12 @@
 package org.opencv.samples.tutorial1;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -16,7 +17,7 @@ import android.view.SurfaceView;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-public class Sample1Java extends Activity implements CvCameraViewListener {
+public class Sample1Java extends Activity implements CvCameraViewListener2 {
     private static final String TAG = "OCVSample::Activity";
 
     private CameraBridgeViewBase mOpenCvCameraView;
@@ -66,9 +67,9 @@ public class Sample1Java extends Activity implements CvCameraViewListener {
     @Override
     public void onPause()
     {
+        super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-        super.onPause();
     }
 
     @Override
@@ -124,7 +125,7 @@ public class Sample1Java extends Activity implements CvCameraViewListener {
     public void onCameraViewStopped() {
     }
 
-    public Mat onCameraFrame(Mat inputFrame) {
-        return inputFrame;
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+        return inputFrame.rgba();
     }
 }
