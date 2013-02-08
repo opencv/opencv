@@ -1991,7 +1991,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             for( j = 0; j < len; j++ )
             {
                 double a = h1[j] - h2[j];
-                double b = h1[j];
+                double b = h1[j] + h2[j];
                 if( fabs(b) > DBL_EPSILON )
                     result += a*a/b;
             }
@@ -2073,7 +2073,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
             const SparseMat::Node* node = it.node();
             float v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
             double a = v1 - v2;
-            double b = v1;
+            double b = v1 + v2;
             if( fabs(b) > DBL_EPSILON )
                 result += a*a/b;
         }
