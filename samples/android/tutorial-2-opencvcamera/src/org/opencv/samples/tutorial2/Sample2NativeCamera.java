@@ -73,9 +73,9 @@ public class Sample2NativeCamera extends Activity implements CvCameraViewListene
     @Override
     public void onPause()
     {
+        super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-        super.onPause();
     }
 
     @Override

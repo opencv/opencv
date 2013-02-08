@@ -79,9 +79,9 @@ public class Sample5CameraControl extends Activity implements CvCameraViewListen
     @Override
     public void onPause()
     {
+        super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-        super.onPause();
     }
 
     @Override

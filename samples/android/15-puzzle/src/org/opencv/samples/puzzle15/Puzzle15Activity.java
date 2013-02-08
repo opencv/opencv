@@ -1,12 +1,11 @@
 package org.opencv.samples.puzzle15;
 
 import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
 
 import android.os.Bundle;
 import android.app.Activity;
@@ -17,7 +16,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 
-public class Puzzle15Activity extends Activity implements CvCameraViewListener2, View.OnTouchListener {
+public class Puzzle15Activity extends Activity implements CvCameraViewListener, View.OnTouchListener {
 
     private static final String  TAG = "Sample::Puzzle15::Activity";
 
@@ -64,9 +63,9 @@ public class Puzzle15Activity extends Activity implements CvCameraViewListener2,
     @Override
     public void onPause()
     {
+        super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-        super.onPause();
     }
 
     @Override
@@ -127,7 +126,7 @@ public class Puzzle15Activity extends Activity implements CvCameraViewListener2,
         return false;
     }
 
-    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
-        return mPuzzle15.puzzleFrame(inputFrame.rgba());
+    public Mat onCameraFrame(Mat inputFrame) {
+        return mPuzzle15.puzzleFrame(inputFrame);
     }
 }

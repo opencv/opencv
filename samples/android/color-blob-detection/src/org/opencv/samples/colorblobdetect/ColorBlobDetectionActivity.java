@@ -79,9 +79,9 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
     @Override
     public void onPause()
     {
+        super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-        super.onPause();
     }
 
     @Override

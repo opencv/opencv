@@ -263,7 +263,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
             mWidth = width;
             mHeight = height;
             mYuvFrameData = Yuv420sp;
-            mRgba = new Mat(mHeight, mWidth, CvType.CV_8UC4);
+            mRgba = new Mat();
         }
 
         public void release() {
