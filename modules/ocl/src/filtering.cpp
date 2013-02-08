@@ -19,6 +19,7 @@
 //    Jia Haipeng, jiahaipeng95@gmail.com
 //    Zero Lin, Zero.Lin@amd.com
 //    Zhang Ying, zhangying913@gmail.com
+//    Yao Wang, bitwangyaoyao@gmail.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -309,21 +310,22 @@ public:
 
 namespace
 {
-typedef void (*GPUMorfFilter_t)(const oclMat & , oclMat & , oclMat & , Size &, const Point);
+typedef void (*GPUMorfFilter_t)(const oclMat & , oclMat & , oclMat & , Size &, const Point, bool rectKernel, bool usrROI);
 
 class MorphFilter_GPU : public BaseFilter_GPU
 {
 public:
     MorphFilter_GPU(const Size &ksize_, const Point &anchor_, const oclMat &kernel_, GPUMorfFilter_t func_) :
-        BaseFilter_GPU(ksize_, anchor_, BORDER_CONSTANT), kernel(kernel_), func(func_) {}
+        BaseFilter_GPU(ksize_, anchor_, BORDER_CONSTANT), kernel(kernel_), func(func_), rectKernel(false) {}
 
     virtual void operator()(const oclMat &src, oclMat &dst)
     {
-        func(src, dst, kernel, ksize, anchor) ;
+        func(src, dst, kernel, ksize, anchor, rectKernel, false) ;
     }
 
     oclMat kernel;
     GPUMorfFilter_t func;
+    bool rectKernel;
 };
 }
 
@@ -332,7 +334,8 @@ public:
 **Extend this if necessary later.
 **Note that the kernel need to be further refined.
 */
-static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, const Point anchor)
+static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, 
+                         Size &ksize, const Point anchor, bool rectKernel, bool useROI)
 {
     //Normalize the result by default
     //float alpha = ksize.height * ksize.width;
@@ -388,7 +391,11 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &k
     }
 
     char compile_option[128];
-    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D ERODE %s", anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], s);
+    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D ERODE %s %s %s", 
+        anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], 
+	    rectKernel?"-D RECTKERNEL":"",
+	    useROI?"-D USEROI":"",
+	    s);
     vector< pair<size_t, const void *> > args;
     args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
     args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
@@ -407,7 +414,8 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &k
 
 
 //! data type supported: CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4
-static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, const Point anchor)
+static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, 
+                          Size &ksize, const Point anchor, bool rectKernel, bool useROI)
 {
     //Normalize the result by default
     //float alpha = ksize.height * ksize.width;
@@ -426,12 +434,13 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &
     Context *clCxt = src.clCxt;
     string kernelName;
     size_t localThreads[3] = {16, 16, 1};
-    size_t globalThreads[3] = {(src.cols + localThreads[0]) / localThreads[0] *localThreads[0], (src.rows + localThreads[1]) / localThreads[1] *localThreads[1], 1};
+    size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0], 
+                               (src.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1};
 
     if (src.type() == CV_8UC1)
     {
         kernelName = "morph_C1_D0";
-        globalThreads[0] = ((src.cols + 3) / 4 + localThreads[0]) / localThreads[0] * localThreads[0];
+        globalThreads[0] = ((src.cols + 3) / 4 + localThreads[0] - 1) / localThreads[0] * localThreads[0];
         CV_Assert(localThreads[0]*localThreads[1] * 8 >= (localThreads[0] * 4 + ksize.width - 1) * (localThreads[1] + ksize.height - 1));
     }
     else
@@ -463,7 +472,11 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &
     }
 
     char compile_option[128];
-    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D DILATE %s", anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], s);
+    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D DILATE %s %s %s", 
+        anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], 
+        rectKernel?"-D RECTKERNEL":"",
+        useROI?"-D USEROI":"",
+        s);
     vector< pair<size_t, const void *> > args;
     args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
     args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
@@ -495,7 +508,14 @@ Ptr<BaseFilter_GPU> cv::ocl::getMorphologyFilter_GPU(int op, int type, const Mat
     normalizeKernel(kernel, gpu_krnl);
     normalizeAnchor(anchor, ksize);
 
-    return Ptr<BaseFilter_GPU>(new MorphFilter_GPU(ksize, anchor, gpu_krnl, GPUMorfFilter_callers[op][CV_MAT_CN(type)]));
+    bool noZero = true;
+    for(int i = 0; i < kernel.rows * kernel.cols; ++i)
+        if(kernel.data[i] != 1)
+            noZero = false;
+    MorphFilter_GPU* mfgpu=new MorphFilter_GPU(ksize, anchor, gpu_krnl, GPUMorfFilter_callers[op][CV_MAT_CN(type)]);
+    if(noZero)
+        mfgpu->rectKernel = true;
+    return Ptr<BaseFilter_GPU>(mfgpu);
 }
 
 namespace
