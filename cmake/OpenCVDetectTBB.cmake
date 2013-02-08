@@ -1,4 +1,4 @@
-if(ANDROID AND NOT MIPS)
+if(BUILD_TBB)
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/tbb")
   include_directories(SYSTEM ${TBB_INCLUDE_DIRS})
   set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} tbb)
