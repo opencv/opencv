@@ -1010,7 +1010,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             result0[CV_COMP_CORREL] += v0*v1;
             result0[CV_COMP_INTERSECT] += MIN(v0,v1);
             if( fabs(v0) > DBL_EPSILON )
-                result0[CV_COMP_CHISQR] += (v0 - v1)*(v0 - v1)/v0;
+                result0[CV_COMP_CHISQR] += (v0 - v1)*(v0 - v1)/(v0 + v1);
             s0 += v0;
             s1 += v1;
             sq0 += v0*v0;
@@ -1035,7 +1035,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             result0[CV_COMP_CORREL] += v0*v1;
             result0[CV_COMP_INTERSECT] += MIN(v0,v1);
             if( fabs(v0) > DBL_EPSILON )
-                result0[CV_COMP_CHISQR] += (v0 - v1)*(v0 - v1)/v0;
+                result0[CV_COMP_CHISQR] += (v0 - v1)*(v0 - v1)/(v0 + v1);
             s0 += v0;
             sq0 += v0*v0;
             result0[CV_COMP_BHATTACHARYYA] += sqrt(v0*v1);
