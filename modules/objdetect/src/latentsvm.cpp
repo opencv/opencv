@@ -11,6 +11,12 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
+#ifdef HAVE_TBB
+#include <tbb/tbb.h>
+#include "tbb/parallel_for.h"
+#include "tbb/blocked_range.h"
+#endif
+
 void FeaturePyramid32(CvLSVMFeaturePyramid* H, int maxX, int maxY){
     CvLSVMFeatureMap *H32; 
     int i, j, k, l;
@@ -284,29 +290,27 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
 {
     int opResult = LATENT_SVM_OK;
 
-	int i, j, k, path;
-	int di, dj, ii;
+  int i, j, k, path;
+  int di, dj, ii;
 
     //int *map,jj, nomer;
     //FILE *dump;
 
-    int tr = 0, fl = 0;
-	
-	float p;
-	float fine, pfine;
-	float mpath;
+  float p;
+  float fine, pfine;
+  float mpath;
 
-	CvPoint *tmpPoints;
-	int     *tmpLevels;
+  CvPoint *tmpPoints;
+  int     *tmpLevels;
     float   **tmpAScore;
 
 //PSA отсечение объектов
     int flag,flag2;
 
     CvPoint *PCAPoints;
-	int     *PCALevels;
+  int     *PCALevels;
     float   **PCAAScore; 
-	int      PCAkPoints;
+  int      PCAkPoints;
     float    PCAScore;
     int tmpSize = 10;
     int tmpStep = 10;
@@ -352,8 +356,8 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
         step = maxX - (int)ceil(maxXBorder/2.0);
         //dump = fopen("map_10.csv", "w");
         for(j = (int)ceil(maxYBorder/2.0) ; j < maxY; j++){
-            for(i = (int)ceil(maxXBorder/2.0) ; i < maxX; i++){		    
-			    rootScoreForLevel[(j - (int)ceil(maxYBorder/2.0)) * step + i - (int)ceil(maxXBorder/2.0)] 
+            for(i = (int)ceil(maxXBorder/2.0) ; i < maxX; i++){        
+          rootScoreForLevel[(j - (int)ceil(maxYBorder/2.0)) * step + i - (int)ceil(maxXBorder/2.0)] 
                 = calcM_PCA(k, i, j, H_PCA, all_F[0]);
         //         fprintf(dump, "%f;", rootScoreForLevel[j * maxX + i]);
             }
@@ -369,17 +373,17 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
       
         for(j = (int)ceil(maxYBorder/2.0) ; j < maxY; j++){
             for(i = (int)ceil(maxXBorder/2.0) ; i < maxX; i++){
-		//	    PCAScore = calcM_PCA(k, i, j, H_PCA, all_F[0]);
+    //      PCAScore = calcM_PCA(k, i, j, H_PCA, all_F[0]);
                 PCAScore = 
                     rootScoreForLevel[(j - (int)ceil(maxYBorder/2.0)) * step + i - (int)ceil(maxXBorder/2.0)];
                 PCAScore += b;
                 PCAAScore[PCAkPoints][0] = PCAScore - b;
 
                 flag2=0;
-			    for(path = 1 ; (path <= n) && (!flag2); path++){
+          for(path = 1 ; (path <= n) && (!flag2); path++){
                     if(PCAScore > all_F[path - 1]->Deformation_PCA)
                     {
-					    p = F_MIN ;
+              p = F_MIN ;
                         pfine = 0.f;
                         //pathX = (i - maxXBorder - 1) * 2 + maxXBorder + 1 + all_F[path]->V.x;
                         //pathY = (j - maxYBorder - 1) * 2 + maxYBorder + 1 + all_F[path]->V.y; 
@@ -387,21 +391,21 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
                         pathY = j * 2 - maxYBorder + all_F[path]->V.y; 
                         flag = 1;
                         for(dj = max(0,        pathY - all_F[path]->deltaY); 
-						    dj < min(maxPathY, pathY + all_F[path]->deltaY); 
-						    dj++){
+                dj < min(maxPathY, pathY + all_F[path]->deltaY); 
+                dj++){
                             for(di = max(0,        pathX - all_F[path]->deltaX); 
-					            di < min(maxPathX, pathX + all_F[path]->deltaX); 
-					            di++){
-						        //fine = calcFine(all_F[path], abs(pathX - di), abs(pathY - dj));
+                      di < min(maxPathX, pathX + all_F[path]->deltaX); 
+                      di++){
+                    //fine = calcFine(all_F[path], abs(pathX - di), abs(pathY - dj));
                                 fine = calcFine(all_F[path], pathX - di, pathY - dj);
                                 if((PCAScore - fine) > all_F[path - 1]->Hypothesis_PCA)
                                 {
                                     flag = 0;
-							        mpath = calcM_PCA_cash(k - LAMBDA, di, dj, H_PCA, all_F[path], cashM[path - 1], maskM[path - 1], maxPathX) - fine;
-							        if( mpath > p){
-								        p     = mpath;
+                      mpath = calcM_PCA_cash(k - LAMBDA, di, dj, H_PCA, all_F[path], cashM[path - 1], maskM[path - 1], maxPathX) - fine;
+                      if( mpath > p){
+                        p     = mpath;
                                         pfine = fine;
-                        		    }
+                                }
                                 }
                             }
                         }
@@ -409,17 +413,17 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
                             PCAAScore[PCAkPoints][path] = p;// + pfine;
                             PCAScore += p;// + pfine;                            
                         } else flag2 = 1;
-				    } 
+            } 
                     else flag2 = 1;
-			    }
+          }
                 if((PCAScore > all_F[n]->Hypothesis_PCA)&&(flag2==0)){
-       			    PCALevels[PCAkPoints]   = k;
-				    PCAPoints[PCAkPoints].x = i;
-				    PCAPoints[PCAkPoints].y = j;
+                 PCALevels[PCAkPoints]   = k;
+            PCAPoints[PCAkPoints].x = i;
+            PCAPoints[PCAkPoints].y = j;
                     PCAAScore[PCAkPoints][n + 1] = PCAScore;
-				    PCAkPoints ++;
-				    if(PCAkPoints >= tmpSize){
-					    //перевыделение памяти
+            PCAkPoints ++;
+            if(PCAkPoints >= tmpSize){
+              //перевыделение памяти
                         tmpPoints = (CvPoint*)malloc(sizeof(CvPoint) * (tmpSize + tmpStep));
                         tmpLevels = (int*)malloc(sizeof(int)     * (tmpSize + tmpStep));
                         tmpAScore = (float **)malloc(sizeof(float *) * (tmpSize + tmpStep));
@@ -428,8 +432,8 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
                         }
                         for(ii = 0; ii < PCAkPoints; ii++){
                             tmpLevels[ii]   = PCALevels[ii]  ;
-				            tmpPoints[ii].x = PCAPoints[ii].x;
-				            tmpPoints[ii].y = PCAPoints[ii].y;
+                    tmpPoints[ii].x = PCAPoints[ii].x;
+                    tmpPoints[ii].y = PCAPoints[ii].y;
                             tmpAScore[ii]   = PCAAScore[ii]  ;
                         }
                         free(PCALevels);
@@ -439,77 +443,77 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
                         PCAPoints = tmpPoints;
                         PCAAScore = tmpAScore;
                         tmpSize += tmpStep;
-				    }
+            }
                 }     
-		    }            
-	    }
+        }            
+      }
         free (rootScoreForLevel);
     }
 
 //Выявление объектов
   (*points) = (CvPoint *)malloc(sizeof(CvPoint) * PCAkPoints);
-	(*levels) = (int    *)malloc(sizeof(int    ) * PCAkPoints);
-	(*score ) = (float  *)malloc(sizeof(float  ) * PCAkPoints);
-	(*partsDisplacement) = (CvPoint **)malloc(sizeof(CvPoint *) * (PCAkPoints + 1));
-	
-	(*kPoints) = 0;
+  (*levels) = (int    *)malloc(sizeof(int    ) * PCAkPoints);
+  (*score ) = (float  *)malloc(sizeof(float  ) * PCAkPoints);
+  (*partsDisplacement) = (CvPoint **)malloc(sizeof(CvPoint *) * (PCAkPoints + 1));
+  
+  (*kPoints) = 0;
     if(PCAkPoints > 0)
         (*partsDisplacement)[(*kPoints)] = (CvPoint *)malloc(sizeof(CvPoint) * (n + 1));
     for(ii = 0; ii < PCAkPoints; ii++)
     {
-	    k = PCALevels[ii]  ;
-	    i = PCAPoints[ii].x;
-	    j = PCAPoints[ii].y;
+      k = PCALevels[ii]  ;
+      i = PCAPoints[ii].x;
+      j = PCAPoints[ii].y;
         
         maxPathX = H_PCA->pyramid[k - LAMBDA]->sizeX - maxXBorder + 1;
         maxPathY = H_PCA->pyramid[k - LAMBDA]->sizeY - maxYBorder + 1;
 
-	    (*score )[(*kPoints)] = PCAAScore[ii][n + 1] + calcM(k, i, j, H, all_F[0]) - PCAAScore[ii][0];
+      (*score )[(*kPoints)] = PCAAScore[ii][n + 1] + calcM(k, i, j, H, all_F[0]) - PCAAScore[ii][0];
         (*partsDisplacement)[(*kPoints)][0].x = i;
-		(*partsDisplacement)[(*kPoints)][0].y = j;
-	    for(path = 1 ; path <= n; path++){
+    (*partsDisplacement)[(*kPoints)][0].y = j;
+      for(path = 1 ; path <= n; path++){
             if((*score )[(*kPoints)] < all_F[path - 1]->Deformation) break;
            // {
-		    p = F_MIN ;
+        p = F_MIN ;
             flag = 1;
             //pathX = (i - maxXBorder - 1) * 2 + maxXBorder + 1 + all_F[path]->V.x;
             //pathY = (j - maxYBorder - 1) * 2 + maxYBorder + 1 + all_F[path]->V.y; 
             pathX = i * 2 - maxXBorder + all_F[path]->V.x;
             pathY = j * 2 - maxYBorder + all_F[path]->V.y; 
             for(dj = max(0,        pathY - all_F[path]->deltaY); 
-			    dj < min(maxPathY, pathY + all_F[path]->deltaY); 
-			    dj++){
+          dj < min(maxPathY, pathY + all_F[path]->deltaY); 
+          dj++){
                 for(di = max(0,        pathX - all_F[path]->deltaX); 
-		            di < min(maxPathX, pathX + all_F[path]->deltaX); 
-		            di++){
-				    //fine = calcFine(all_F[path], abs(pathX - di), abs(pathY - dj));
+                di < min(maxPathX, pathX + all_F[path]->deltaX); 
+                di++){
+            //fine = calcFine(all_F[path], abs(pathX - di), abs(pathY - dj));
                     fine = calcFine(all_F[path], pathX - di, pathY - dj);
                     if(((*score )[(*kPoints)] - fine) > all_F[path - 1]->Hypothesis)
                     {
                         flag = 0;
                         mpath = calcM(k - LAMBDA, di, dj, H, all_F[path]) - fine;
-					    if(mpath > p){
-						    p = mpath;
+              if(mpath > p){
+                p = mpath;
                             pfine = fine;
-						    (*partsDisplacement)[(*kPoints)][path].x = di;
-						    (*partsDisplacement)[(*kPoints)][path].y = dj;
-					    }
-				    }
-			    }
-		    }
+                (*partsDisplacement)[(*kPoints)][path].x = di;
+                (*partsDisplacement)[(*kPoints)][path].y = dj;
+              }
+            }
+          }
+        }
             if(flag == 0)
-		        (*score )[(*kPoints)] +=  p - PCAAScore[ii][path];// + pfine;
-		   // }
-	    }
-	    if((*score )[(*kPoints)] > scoreThreshold)
+            (*score )[(*kPoints)] +=  p - PCAAScore[ii][path];// + pfine;
+       // }
+      }
+      if((*score )[(*kPoints)] > scoreThreshold)
         {
-		    (*levels)[(*kPoints)]   = k;
-		    (*points)[(*kPoints)].x = i;
-		    (*points)[(*kPoints)].y = j;
-		    (*kPoints) ++;
+        (*levels)[(*kPoints)]   = k;
+        (*points)[(*kPoints)].x = i;
+        (*points)[(*kPoints)].y = j;
+        (*kPoints) ++;
             (*partsDisplacement)[(*kPoints)] = (CvPoint*) malloc(sizeof(CvPoint) * (n + 1));
-	    }
-	}
+      }
+  }
     if((*kPoints) > 0){
         free((*partsDisplacement)[(*kPoints)]);
     }
@@ -760,6 +764,71 @@ int showBoxes(IplImage *img,
 //    return LATENT_SVM_OK;
 //}
 
+
+#ifdef HAVE_TBB
+
+struct PathOfModel {
+    int *componentIndex;
+    const CvLSVMFeaturePyramid *H;
+    const CvLSVMFeaturePyramid *H_PCA;
+    const CvLSVMFilterObject **filters;
+    const int *kPartFilters;
+    const float *b;
+    unsigned int maxXBorder, maxYBorder;
+    CvPoint **pointsArr, **oppPointsArr, ***partsDisplacementArr;
+    float **scoreArr;
+    int *kPointsArr, **levelsArr;
+    float scoreThreshold;
+    CvPoint **oppPoints;
+public:
+    PathOfModel(
+      int *_componentIndex,
+    const CvLSVMFeaturePyramid *_H,
+    const CvLSVMFeaturePyramid *_H_PCA,
+    const CvLSVMFilterObject **_filters,
+    const int *_kPartFilters,
+    const float *_b,
+    unsigned int _maxXBorder, unsigned int _maxYBorder,
+    CvPoint **_pointsArr, CvPoint  **_oppPointsArr, CvPoint  ***_partsDisplacementArr,
+    float **_scoreArr,
+    int *_kPointsArr, int **_levelsArr,
+    float _scoreThreshold,
+    CvPoint **_oppPoints
+    ):
+    componentIndex(_componentIndex),
+    H(_H),
+    H_PCA(_H_PCA),
+    filters(_filters),
+    kPartFilters(_kPartFilters),
+    b(_b),
+    maxXBorder(_maxXBorder),
+    maxYBorder(_maxYBorder),
+    pointsArr(_pointsArr),
+    oppPointsArr(_oppPointsArr),
+    partsDisplacementArr(_partsDisplacementArr),
+    scoreArr(_scoreArr),
+    kPointsArr(_kPointsArr),
+    levelsArr(_levelsArr),
+    scoreThreshold(_scoreThreshold),
+    oppPoints(_oppPoints)
+    {}
+
+    
+    void operator()( const tbb::blocked_range<int>& range ) const {
+        
+        for( int i=range.begin(); i!=range.end(); ++i )
+        {
+          searchObjectThreshold(H, H_PCA, &(filters[componentIndex[i]]), kPartFilters[i],
+            b[i], maxXBorder, maxYBorder, scoreThreshold, 
+            &(pointsArr[i]), &(levelsArr[i]), &(kPointsArr[i]), 
+            &(scoreArr[i]), &(partsDisplacementArr[i]));
+          estimateBoxes(pointsArr[i], levelsArr[i], kPointsArr[i], 
+            filters[componentIndex[i]]->sizeX, filters[componentIndex[i]]->sizeY, &(oppPointsArr[i]));
+        }
+    }
+};
+
+#endif
 /*
 // Computation root filters displacement and values of score function
 //
@@ -786,7 +855,7 @@ int showBoxes(IplImage *img,
 // Error status
 */
 int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
-										const CvLSVMFeaturePyramid *H_PCA,
+                                        const CvLSVMFeaturePyramid *H_PCA,
                                         const CvLSVMFilterObject **filters, 
                                         int kComponents, const int *kPartFilters,
                                         const float *b, float scoreThreshold,
@@ -821,6 +890,26 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
     }
     // For each component perform searching
 //#pragma omp parallel for schedule(dynamic) reduction(+ : sum) 
+#ifdef HAVE_TBB
+    PathOfModel POM(
+      componentIndex,
+      H,
+      H_PCA,
+      filters,
+      kPartFilters,
+      b,
+      maxXBorder,
+      maxYBorder,
+      pointsArr,
+      oppPointsArr,
+      partsDisplacementArr,
+      scoreArr,
+      kPointsArr,
+      levelsArr,
+      scoreThreshold,
+      oppPoints);
+    tbb::parallel_for( tbb::blocked_range<int>( 0, kComponents ), POM);
+#else
     for (i = 0; i < kComponents; i++)
     {
         searchObjectThreshold(H, H_PCA, &(filters[componentIndex[i]]), kPartFilters[i],
@@ -828,8 +917,11 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
             &(pointsArr[i]), &(levelsArr[i]), &(kPointsArr[i]), 
             &(scoreArr[i]), &(partsDisplacementArr[i]));
         estimateBoxes(pointsArr[i], levelsArr[i], kPointsArr[i], 
-            filters[componentIndex[i]]->sizeX, filters[componentIndex[i]]->sizeY, &(oppPointsArr[i]));        
-        
+            filters[componentIndex[i]]->sizeX, filters[componentIndex[i]]->sizeY, &(oppPointsArr[i]));
+    }
+#endif
+    for (i = 0; i < kComponents; i++)
+    {    
         //*kPoints += kPointsArr[i];
         sum += kPointsArr[i];
     } 

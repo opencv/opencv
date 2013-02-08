@@ -2,6 +2,12 @@
 #include "_latentsvm.h"
 #include "_lsvm_resizeimg.h"
 
+#ifdef HAVE_TBB
+#include <tbb/tbb.h>
+#include "tbb/parallel_for.h"
+#include "tbb/blocked_range.h"
+#endif
+
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
 #endif
@@ -438,7 +444,6 @@ int PCAFeatureMaps(CvLSVMFeatureMap *map)
     return LATENT_SVM_OK;
 }
 
-
 int getPathOfFeaturePyramid(IplImage * image, 
                             float step, int numStep, int startIndex,
                             int sideLength, CvLSVMFeaturePyramid **maps)
@@ -460,6 +465,52 @@ int getPathOfFeaturePyramid(IplImage * image,
     }/*for(i = 0; i < numStep; i++)*/
     return LATENT_SVM_OK;
 }
+
+#ifdef HAVE_TBB
+
+struct PathOfFeaturePyramid {
+    IplImage * image;
+    
+    float step;
+    int startIndex;
+    int sideLength;
+    CvLSVMFeaturePyramid **maps;
+
+    void operator()( const tbb::blocked_range<int>& range ) const {
+        CvLSVMFeatureMap *map;
+        IplImage *scaleTmp;
+        float scale;
+        int   err;
+        
+        for( int i=range.begin(); i!=range.end(); ++i )
+        {
+          scale = 1.0f / powf(step, (float)i);
+          scaleTmp = resize_opencv (image, scale);
+          err = getFeatureMaps(scaleTmp, sideLength, &map);
+          err = normalizeAndTruncate(map, VAL_OF_TRUNCATE);
+          err = PCAFeatureMaps(map);
+          (*maps)->pyramid[startIndex + i] = map;
+          cvReleaseImage(&scaleTmp);
+        }
+    }
+};
+
+int getPathOfFeaturePyramid_TBB(IplImage * image, 
+                            float step, int numStep, int startIndex,
+                            int sideLength, CvLSVMFeaturePyramid **maps)
+{
+    PathOfFeaturePyramid str;
+    str.step = step;
+    str.startIndex = startIndex;
+    str.sideLength = sideLength;
+    str.maps = maps;
+    str.image = image;
+    
+    tbb::parallel_for( tbb::blocked_range<int>( 0, numStep ), str );
+    
+    return LATENT_SVM_OK;
+}
+#endif
 
 /*
 // Getting feature pyramid  
@@ -509,11 +560,18 @@ int getFeaturePyramid(IplImage * image, CvLSVMFeaturePyramid **maps)
     
     allocFeaturePyramidObject(maps, numStep + LAMBDA);
 
+#ifdef HAVE_TBB
+    getPathOfFeaturePyramid_TBB(imgResize, step   , LAMBDA, 0, 
+                            SIDE_LENGTH / 2, maps);
+    getPathOfFeaturePyramid_TBB(imgResize, step, numStep, LAMBDA, 
+                            SIDE_LENGTH    , maps);
+#else
     getPathOfFeaturePyramid(imgResize, step   , LAMBDA, 0, 
                             SIDE_LENGTH / 2, maps);
     getPathOfFeaturePyramid(imgResize, step, numStep, LAMBDA, 
                             SIDE_LENGTH    , maps);
-    
+#endif
+
     if(image->depth != IPL_DEPTH_32F)
     {
         cvReleaseImage(&imgResize);
