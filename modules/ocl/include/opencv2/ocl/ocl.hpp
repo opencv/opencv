@@ -219,6 +219,11 @@ namespace cv
             oclMat operator()( Range rowRange, Range colRange ) const;
             oclMat operator()( const Rect &roi ) const;
 
+            oclMat& operator+=( const oclMat& m );
+            oclMat& operator-=( const oclMat& m );
+            oclMat& operator*=( const oclMat& m );
+            oclMat& operator/=( const oclMat& m );
+
             //! returns true if the oclMatrix data is continuous
             // (i.e. when there are no gaps between successive rows).
             // similar to CV_IS_oclMat_CONT(cvoclMat->type)
@@ -467,6 +472,12 @@ namespace cv
         CV_EXPORTS oclMat operator & (const oclMat &src1, const oclMat &src2);
         CV_EXPORTS oclMat operator ^ (const oclMat &src1, const oclMat &src2);
         CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0);
+
+        //! Mathematics operators
+        CV_EXPORTS oclMat operator + (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMat operator - (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMat operator * (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMat operator / (const oclMat &src1, const oclMat &src2);
 
         //////////////////////////////// Filter Engine ////////////////////////////////
 

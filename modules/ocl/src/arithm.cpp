@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -2149,6 +2150,34 @@ cv::ocl::oclMat cv::ocl::operator ^ (const oclMat &src1, const oclMat &src2)
 {
     oclMat dst;
     bitwise_xor(src1, src2, dst);
+    return dst;
+}
+
+cv::ocl::oclMat cv::ocl::operator + (const oclMat &src1, const oclMat &src2)
+{
+    oclMat dst;
+    add(src1, src2, dst);
+    return dst;
+}
+
+cv::ocl::oclMat cv::ocl::operator - (const oclMat &src1, const oclMat &src2)
+{
+    oclMat dst;
+    subtract(src1, src2, dst);
+    return dst;
+}
+
+cv::ocl::oclMat cv::ocl::operator * (const oclMat &src1, const oclMat &src2)
+{
+    oclMat dst;
+    multiply(src1, src2, dst);
+    return dst;
+}
+
+cv::ocl::oclMat cv::ocl::operator / (const oclMat &src1, const oclMat &src2)
+{
+    oclMat dst;
+    divide(src1, src2, dst);
     return dst;
 }
 
