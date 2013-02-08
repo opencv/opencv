@@ -82,8 +82,39 @@ class Hackathon244Tests(NewOpenCVTests):
         for kpt in keypoints:
             self.assertNotEqual(kpt.response, 0)
 
+    def check_close_angles(self, a, b, angle_delta):
+        self.assert_(abs(a - b) <= angle_delta or
+                     abs(360 - abs(a - b)) <= angle_delta)
+
+    def check_close_pairs(self, a, b, delta):
+        self.assertLessEqual(abs(a[0] - b[0]), delta)
+        self.assertLessEqual(abs(a[1] - b[1]), delta)
+
+    def check_close_boxes(self, a, b, delta, angle_delta):
+        self.check_close_pairs(a[0], b[0], delta)
+        self.check_close_pairs(a[1], b[1], delta)
+        self.check_close_angles(a[2], b[2], angle_delta)
+
+    def test_geometry(self):
+        npt = 100
+        np.random.seed(244)
+        a = np.random.randn(npt,2).astype('float32')*50 + 150
+
+        img = np.zeros((300, 300, 3), dtype='uint8')
+        be = cv2.fitEllipse(a)
+        br = cv2.minAreaRect(a)
+        mc, mr = cv2.minEnclosingCircle(a)
+        
+        be0 = ((150.2511749267578, 150.77322387695312), (158.024658203125, 197.57696533203125), 37.57804489135742)
+        br0 = ((161.2974090576172, 154.41793823242188), (199.2301483154297, 207.7177734375), -9.164555549621582)
+        mc0, mr0 = (160.41790771484375, 144.55152893066406), 136.713500977
+        
+        self.check_close_boxes(be, be0, 5, 15)
+        self.check_close_boxes(br, br0, 5, 15)
+        self.check_close_pairs(mc, mc0, 5)
+        self.assertLessEqual(abs(mr - mr0), 5)
 
 if __name__ == '__main__':
-    print "testing", cv.__version__
+    print "testing", cv2.__version__
     random.seed(0)
     unittest.main()
