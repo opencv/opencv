@@ -47,10 +47,14 @@ CV_IMPL CvSeq* cvPointSeqFromMat( int seq_kind, const CvArr* arr,
     CV_Assert( arr != 0 && contour_header != 0 && block != 0 );
 
     int eltype;
+    CvMat hdr;
     CvMat* mat = (CvMat*)arr;
 
     if( !CV_IS_MAT( mat ))
         CV_Error( CV_StsBadArg, "Input array is not a valid matrix" );
+
+    if( CV_MAT_CN(mat->type) == 1 && mat->width == 2 )
+        mat = cvReshape(mat, &hdr, 2);
 
     eltype = CV_MAT_TYPE( mat->type );
     if( eltype != CV_32SC2 && eltype != CV_32FC2 )
