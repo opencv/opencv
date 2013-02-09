@@ -237,7 +237,7 @@ enum
 /* Estimate the geometric transformation between 2 images (area-based alignment) */
 CVAPI(double)  cvFindTransformECC (const CvArr* templateImage, const CvArr* inputImage, 
 								   CvMat * map_matrix, 
-								   const int warpECC CV_DEFAULT(MOTION_AFFINE),
+								   const int warpECC=MOTION_AFFINE,
 								   const CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 50, 0.001));
 
 

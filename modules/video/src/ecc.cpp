@@ -367,8 +367,9 @@ double cv::findTransformECC(InputArray templateImage,
 	CV_Assert (warpECC == MOTION_AFFINE || warpECC == MOTION_HOMOGRAPHY ||
 		warpECC == MOTION_EUCLIDEAN || warpECC == MOTION_TRANSLATION);
 	
-	if (warpECC == MOTION_HOMOGRAPHY)
+	if (warpECC == MOTION_HOMOGRAPHY){
 		CV_Assert (map.rows ==3);
+	}
 
 	CV_Assert (criteria.type & TermCriteria::COUNT || criteria.type & TermCriteria::EPS);
 	const int    numberOfIterations = (criteria.type & TermCriteria::COUNT) ? criteria.maxCount : 200;
