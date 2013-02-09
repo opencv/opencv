@@ -17,8 +17,16 @@ PERF_TEST_P(TransformationType, findTransformECC, /*testing::ValuesIn(MotionType
 			(int) MOTION_AFFINE, (int) MOTION_HOMOGRAPHY)
 			)
 {
-    Mat templateImage = imread(getDataPath("cv/shared/cameramanTemplate.png"),0);
-    Mat inputImage = imread(getDataPath("cv/shared/cameramanImage.png"),0);
+
+	declare.time(400);
+
+	string filename1 = getDataPath("cv/shared/cameramanTemplate.png");
+	string filename2 = getDataPath("cv/shared/cameramanImage.png");
+    Mat templateImage = imread(filename1, IMREAD_GRAYSCALE);
+    Mat inputImage = imread(filename2, IMREAD_GRAYSCALE);
+
+	if (templateImage.empty()) FAIL() << "Unable to load template image " << filename1;
+    if (inputImage.empty()) FAIL() << "Unable to load input image image " << filename2;
 
 
     int transform_type = get<0>(GetParam());
@@ -29,7 +37,7 @@ PERF_TEST_P(TransformationType, findTransformECC, /*testing::ValuesIn(MotionType
 	else
 		warpMat = Mat::eye(3,3, CV_32F);
 
-	declare.time(200).iterations(10);
+	declare.iterations(10);
 	
 	TEST_CYCLE()
 	{
