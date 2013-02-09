@@ -24,6 +24,11 @@
 using namespace cv;
 using namespace std;
 
+static void help(void);
+static int readWarp(string iFilename, Mat& warp, int motionType);
+static int saveWarp(string fileName, const Mat& warp, int motionType);
+static void draw_warped_roi(Mat& image, const int width, const int height, Mat& W);
+
 
 #define HOMO_VECTOR(H, x, y)\
 H.at<float>(0,0) = (float)(x);\
@@ -33,7 +38,6 @@ H.at<float>(2,0) = 1.;
 #define GET_HOMO_VALUES(X, x, y)\
 (x) = static_cast<float> (X.at<float>(0,0)/X.at<float>(2,0));\
 (y) = static_cast<float> (X.at<float>(1,0)/X.at<float>(2,0));
-
 
 static void help(void)
 {
@@ -50,7 +54,7 @@ static void help(void)
          << "  Example: ecc -i image.pgm -t template.pgm -o finalWarp.txt -m homography -n 75 -v 1 -init initWarp.txt -oim warped.pgm"  << endl << flush;
 }
 
-int readWarp(string iFilename, Mat& warp, int motionType){
+static int readWarp(string iFilename, Mat& warp, int motionType){
 
 	CV_Assert(warp.type()==CV_32FC1);
 	float* matPtr = warp.ptr<float>(0);
@@ -77,7 +81,7 @@ int readWarp(string iFilename, Mat& warp, int motionType){
 	return ret_value;
 }
 
-int saveWarp(string fileName, const Mat& warp, int motionType)
+static int saveWarp(string fileName, const Mat& warp, int motionType)
 {
 
 	CV_Assert(warp.type()==CV_32FC1);

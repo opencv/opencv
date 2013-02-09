@@ -29,7 +29,7 @@ PERF_TEST_P(TransformationType, findTransformECC, /*testing::ValuesIn(MotionType
 	else
 		warpMat = Mat::eye(3,3, CV_32F);
 
-	declare.time(40).iterations(10);
+	declare.time(200).iterations(10);
 	
 	TEST_CYCLE()
 	{
