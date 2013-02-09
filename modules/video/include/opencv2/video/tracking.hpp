@@ -222,6 +222,27 @@ CVAPI(const CvMat*)  cvKalmanCorrect( CvKalman* kalman, const CvMat* measurement
 #define cvKalmanUpdateByTime  cvKalmanPredict
 #define cvKalmanUpdateByMeasurement cvKalmanCorrect
 
+
+/****************************************************************************************\
+*                                       Image Alignment (ECC algorithm)                  *
+\****************************************************************************************/
+enum
+{
+    MOTION_TRANSLATION,
+	MOTION_EUCLIDEAN,
+	MOTION_AFFINE,
+	MOTION_HOMOGRAPHY
+};
+
+/* Estimate the geometric transformation between 2 images (area-based alignment) */
+CVAPI(double)  cvFindTransformECC (const CvArr* templateImage, const CvArr* inputImage, 
+								   CvMat * map_matrix, 
+								   const int warpECC CV_DEFAULT(MOTION_AFFINE),
+								   const CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 50, 0.001));
+
+
+
+
 #ifdef __cplusplus
 }
 
@@ -326,6 +347,22 @@ CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next,
 // that maps one 2D point set to another or one image to another.
 CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst,
                                          bool fullAffine);
+
+//! estimates the best-fit Translation, Euclidean, Affine or Perspective Transformation
+// with respect to Enhanced Correlation Coefficient criterion that maps one image to 
+// another (area-based alignment)
+//
+// see reference:
+// Evangelidis, G. E., Psarakis, E.Z., Parametric Image Alignment using
+// Enhanced Correlation Coefficient Maximization, PAMI, 30(8), 2008
+
+CV_EXPORTS_W double findTransformECC(InputArray templateImage, 
+									 InputArray inputImage,
+									 CV_OUT InputOutputArray map_matrix,
+									 int warpECC=MOTION_AFFINE,
+									 TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001));
+
+
 
 //! computes dense optical flow using Simple Flow algorithm
 CV_EXPORTS_W void calcOpticalFlowSF(InputArray from,
