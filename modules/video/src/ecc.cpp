@@ -533,8 +533,7 @@ double cv::findTransformECC(InputArray templateImage,
 		if (lambda_d <= 0.0)
 		{
 			rho = -1;
-			printf("ECC algorithm's break at %d-th iteration\n", i);
-			CV_Error(CV_StsNoConv, "The correlation is going to be minimized. Images may be uncorrelated or non-overlapped");
+			CV_Error(CV_StsNoConv, "The algorithm stopped before its convergence. The correlation is going to be minimized. Images may be uncorrelated or non-overlapped");
 
 		}
 		const double lambda = (lambda_n/lambda_d);
