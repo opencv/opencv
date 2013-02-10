@@ -69,6 +69,16 @@ public:
 protected:
 };
 
+class WebPEncoder : public BaseImageEncoder
+{
+	WebPEncoder();
+	~WebPEncoder();
+
+	bool write(const Mat& img, const vector<int>& params);
+
+	ImageEncoder newEncoder() const;
+};
+
 }
 
 #endif

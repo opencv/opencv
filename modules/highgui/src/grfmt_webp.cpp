@@ -190,6 +190,30 @@ bool WebPDecoder::readData(Mat &img)
 	return data_read;
 }
 
+WebPEncoder::WebPEncoder()
+{
+	m_description = "WebP files (*.webp)";
+	m_buf_supported = true;
+}
+
+WebPEncoder::~WebPEncoder()
+{
+}
+
+ImageEncoder WebPEncoder::newEncoder() const
+{
+	return new WebPEncoder();
+}
+
+bool WebPEncoder::write(const Mat& img, const vector<int>& params)
+{
+	bool image_created = false;
+
+	
+
+	return image_created;
+}
+
 }
 
 #endif
