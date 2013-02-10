@@ -42,13 +42,13 @@ PERF_TEST_P(TransformationType, findTransformECC, /*testing::ValuesIn(MotionType
 	//warpMap is InputOutputArray
 	declare.iterations(10).in(templateImage, inputImage);
 
-	SANITY_CHECK(warpMat, 1e-3);
-
+	
 	TEST_CYCLE()
 	{
 		//a negative epsilon means that 50 iterations will be executed
 		findTransformECC(templateImage, inputImage, warpMat, transform_type,
 		TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, -1));
 	}
+
     SANITY_CHECK(warpMat, 1e-3);
 }
