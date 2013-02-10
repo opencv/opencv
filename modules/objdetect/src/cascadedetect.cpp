@@ -152,7 +152,7 @@ void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps, vec
     vector<Rect> rrects(nclasses);
     vector<int> rweights(nclasses, 0);
     vector<int> rejectLevels(nclasses, 0);
-    vector<double> rejectWeights(nclasses, 0);
+    vector<double> rejectWeights(nclasses, DBL_MIN);
     int i, j, nlabels = (int)labels.size();
     for( i = 0; i < nlabels; i++ )
     {
@@ -168,18 +168,13 @@ void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps, vec
         for( i = 0; i < nlabels; i++ )
         {
             int cls = labels[i];
-            if( (*weights)[i] >= rejectLevels[cls] )
+            if( (*weights)[i] > rejectLevels[cls] )
             {
                 rejectLevels[cls] = (*weights)[i];
+                rejectWeights[cls] = (*levelWeights)[i];
             }
-
-            //< Different from the original OpenCV way
-            //< We want face with larger rejectLevels 
-            //< and more neighbors has larger weight
-            //< TODO: this is just an approximating way
-            {
-                rejectWeights[cls] += (*levelWeights)[i]*(*weights)[i];
-            }
+            else if( ( (*weights)[i] == rejectLevels[cls] ) && ( (*levelWeights)[i] > rejectWeights[cls] ) )
+                rejectWeights[cls] = (*levelWeights)[i];
         }
     }
 
@@ -202,7 +197,7 @@ void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps, vec
     for( i = 0; i < nclasses; i++ )
     {
         Rect r1 = rrects[i];
-        int n1 = rweights[i];
+        int n1 = levelWeights ? rejectLevels[i] : rweights[i];
         double w1 = rejectWeights[i];
         if( n1 <= groupThreshold )
             continue;
@@ -990,16 +985,24 @@ public:
 
                 logger.setPoint(Point(x, y), result);
 #endif
-                if( result > 0 )
+                if( rejectLevels )
+                {
+                    if( result == 1 )
+                        result =  -(int)classifier->data.stages.size();
+                    if( classifier->data.stages.size() + result < 4 )
+                    {
+                        mtx->lock();
+                        rectangles->push_back(Rect(cvRound(x*scalingFactor), cvRound(y*scalingFactor), winSize.width, winSize.height));
+                        rejectLevels->push_back(-result);
+                        levelWeights->push_back(gypWeight);
+                        mtx->unlock();
+                    }
+                }
+                else if( result > 0 )
                 {
                     mtx->lock();
                     rectangles->push_back(Rect(cvRound(x*scalingFactor), cvRound(y*scalingFactor),
                                                winSize.width, winSize.height));
-                    if( rejectLevels )
-                    {
-                        rejectLevels->push_back((int)classifier->data.stages.size());
-                        levelWeights->push_back(gypWeight);
-                    }
                     mtx->unlock();
                 }
                 if( result == 0 )
