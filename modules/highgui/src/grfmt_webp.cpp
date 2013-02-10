@@ -117,12 +117,16 @@ bool WebPDecoder::readHeader()
 				}
 				else
 				{
+					cvError(CV_StsError, __FUNCTION__, "Cannot get width, height",
+						__FILE__, __LINE__);
 					printf("Cannot get width, height information about %s\n",
 						m_filename.c_str());
 				}
 			}
 			else
 			{
+				cvError(CV_StsError, __FUNCTION__, "Not able to read from file",
+					__FILE__, __LINE__);
 				printf("Not able to read %lu bytes from file %s", webp_file_data_size
 					, m_filename.c_str());
 			}
@@ -168,6 +172,8 @@ bool WebPDecoder::readData(Mat &img)
 			}
 			else
 			{
+				cvError(CV_StsError, __FUNCTION__, "Not able to read data from file",
+					__FILE__, __LINE__);
 				printf("Not able to read %lu bytes from file %s", webp_file_data_size
 					, m_filename.c_str());
 			}
