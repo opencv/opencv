@@ -167,8 +167,11 @@ bool WebPDecoder::readData(Mat &img)
 			{
 				uchar* out_data = img.data;
 				unsigned int out_data_size = m_width * m_height * 3 * sizeof(uchar);
-				WebPDecodeBGRInto(webp_file_data, webp_file_data_size, out_data,
-									out_data_size, m_width * 3);
+				uchar *res_ptr = WebPDecodeBGRInto(webp_file_data,
+					webp_file_data_size, out_data, out_data_size, m_width * 3);
+
+				if(res_ptr == out_data)
+					data_read = true;
 			}
 			else
 			{
