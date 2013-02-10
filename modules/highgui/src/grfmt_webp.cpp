@@ -100,7 +100,7 @@ bool WebPDecoder::readHeader()
 	
 		if(webp_file_data != NULL)
 		{
-			size_t data_read_size = fread(webp_file_data, webp_file_data_size, 1, webp_file);
+			size_t data_read_size = fread(webp_file_data, 1, webp_file_data_size, webp_file);
 			if(data_read_size == webp_file_data_size)
 			{
 				if(WebPGetInfo(webp_file_data, webp_file_data_size, &m_width, &m_height) == 1)
@@ -156,7 +156,7 @@ bool WebPDecoder::readData(Mat &img)
 
 		if(webp_file_data != NULL)
 		{
-			size_t data_read_size = fread(webp_file_data, webp_file_data_size, 1,
+			size_t data_read_size = fread(webp_file_data, 1, webp_file_data_size,
 											webp_file);
 			if( (data_read_size == webp_file_data_size) &&
 				(m_width > 0 && m_height > 0) )
