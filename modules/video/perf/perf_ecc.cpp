@@ -37,13 +37,17 @@ PERF_TEST_P(TransformationType, findTransformECC, /*testing::ValuesIn(MotionType
 	else
 		warpMat = Mat::eye(3,3, CV_32F);
 
-	declare.iterations(10);
+	if (warpMat.empty()) FAIL() << "No initial warp";
+
+	//warpMap is InputOutputArray
+	declare.iterations(10).in(templateImage, inputImage);
+
 	
 	TEST_CYCLE()
 	{
-		//we set a negative epsilon so that 50 iterations are executed
+		//a negative epsilon means that 50 iterations will be executed
 		findTransformECC(templateImage, inputImage, warpMat, transform_type,
 		TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, -1));
 	}
-    SANITY_CHECK(warpMat, 1e-4);
+    SANITY_CHECK(warpMat, 1e-3);
 }
