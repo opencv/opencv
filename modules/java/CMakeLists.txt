@@ -253,6 +253,13 @@ else(ANDROID)
                      DEPENDS ${step3_depends}
                      COMMENT "Generating ${JAR_NAME}"
                     )
+
+  if(WIN32)
+    set(JAR_INSTALL_DIR java)
+  else(WIN32)
+    set(JAR_INSTALL_DIR share/OpenCV/java)
+  endif(WIN32)
+  install(FILES ${JAR_FILE} DESTINATION ${JAR_INSTALL_DIR} COMPONENT main)
 endif(ANDROID)
 
 # step 5: build native part
@@ -287,7 +294,8 @@ endif()
 
 # Additional target properties
 set_target_properties(${the_module} PROPERTIES
-    OUTPUT_NAME "${the_module}"
+    OUTPUT_NAME "${the_module}${OPENCV_DLLVERSION}"
+    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
     INSTALL_NAME_DIR ${OPENCV_LIB_INSTALL_PATH}
@@ -304,9 +312,15 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_module} PROPERTIES FOLDER "bindings")
 endif()
 
-install(TARGETS ${the_module}
-        LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
-        ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
+if(ANDROID)
+  install(TARGETS ${the_module}
+          LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
+          ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
+else()
+  install(TARGETS ${the_module}
+          RUNTIME DESTINATION ${JAR_INSTALL_DIR} COMPONENT main
+          LIBRARY DESTINATION ${JAR_INSTALL_DIR} COMPONENT main)
+endif()
 
 ######################################################################################################################################
 
