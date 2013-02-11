@@ -1542,7 +1542,7 @@ TEST(Core_Add, AddToColumnWhen3Rows)
     ASSERT_EQ(0, countNonZero(m1 - m2));
 }
 
-TEST(Core_Add, DISABLED_AddToColumnWhen4Rows)
+TEST(Core_Add, AddToColumnWhen4Rows)
 {
     cv::Mat m1 = (cv::Mat_<double>(4, 2) << 1, 2, 3, 4, 5, 6, 7, 8);
     m1.col(1) += 10;
