@@ -86,7 +86,7 @@ add_custom_command(
          COMMAND ${CMAKE_COMMAND} -E touch "${APK_NAME}"
          WORKING_DIRECTORY "${PACKAGE_DIR}"
          MAIN_DEPENDENCY "${PACKAGE_DIR}/${ANDROID_MANIFEST_FILE}"
-         DEPENDS "${OpenCV_BINARY_DIR}/bin/.classes.jar.dephelper" "${PACKAGE_DIR}/res/values/strings.xml" "${PACKAGE_DIR}/res/drawable/icon.png" ${camera_wrappers} opencv_java
+         DEPENDS "${OpenCV_BINARY_DIR}/bin/classes.jar.dephelper" "${PACKAGE_DIR}/res/values/strings.xml" "${PACKAGE_DIR}/res/drawable/icon.png" ${camera_wrappers} opencv_java
        )
 
 install(FILES "${APK_NAME}" DESTINATION "apk/" COMPONENT main)
