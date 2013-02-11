@@ -17,7 +17,7 @@ import android.view.SurfaceView;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-public class Sample1Java extends Activity implements CvCameraViewListener2 {
+public class Tutorial1Activity extends Activity implements CvCameraViewListener2 {
     private static final String TAG = "OCVSample::Activity";
 
     private CameraBridgeViewBase mOpenCvCameraView;
@@ -41,7 +41,7 @@ public class Sample1Java extends Activity implements CvCameraViewListener2 {
         }
     };
 
-    public Sample1Java() {
+    public Tutorial1Activity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 

@@ -14,11 +14,11 @@ import android.hardware.Camera.Size;
 import android.util.AttributeSet;
 import android.util.Log;
 
-public class SampleJavaCameraView extends JavaCameraView {
+public class Tutorial3View extends JavaCameraView {
 
-    private static final String TAG = "Sample::SampleJavaCameraView";
+    private static final String TAG = "Sample::Tutorial3View";
 
-    public SampleJavaCameraView(Context context, AttributeSet attrs) {
+    public Tutorial3View(Context context, AttributeSet attrs) {
         super(context, attrs);
     }
 

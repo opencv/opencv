@@ -9,7 +9,7 @@
         android:icon="@drawable/icon"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen" >
 
-        <activity android:name="Sample3CameraControl"
+        <activity android:name="Tutorial3Activity"
                   android:label="@string/app_name"
                   android:screenOrientation="landscape"
                   android:configChanges="keyboardHidden|orientation">

@@ -17,7 +17,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
 
-public class Sample2MixedProcessing extends Activity implements CvCameraViewListener2 {
+public class Tutorial2Activity extends Activity implements CvCameraViewListener2 {
     private static final String    TAG = "OCVSample::Activity";
 
     private static final int       VIEW_MODE_RGBA     = 0;
@@ -58,7 +58,7 @@ public class Sample2MixedProcessing extends Activity implements CvCameraViewList
         }
     };
 
-    public Sample2MixedProcessing() {
+    public Tutorial2Activity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 

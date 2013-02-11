@@ -28,10 +28,10 @@ import android.view.View.OnTouchListener;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-public class Sample3CameraControl extends Activity implements CvCameraViewListener2, OnTouchListener {
+public class Tutorial3Activity extends Activity implements CvCameraViewListener2, OnTouchListener {
     private static final String TAG = "OCVSample::Activity";
 
-    private SampleJavaCameraView mOpenCvCameraView;
+    private Tutorial3View mOpenCvCameraView;
     private List<Size> mResolutionList;
     private MenuItem[] mEffectMenuItems;
     private SubMenu mColorEffectsMenu;
@@ -46,7 +46,7 @@ public class Sample3CameraControl extends Activity implements CvCameraViewListen
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
                     mOpenCvCameraView.enableView();
-                    mOpenCvCameraView.setOnTouchListener(Sample3CameraControl.this);
+                    mOpenCvCameraView.setOnTouchListener(Tutorial3Activity.this);
                 } break;
                 default:
                 {
@@ -56,7 +56,7 @@ public class Sample3CameraControl extends Activity implements CvCameraViewListen
         }
     };
 
-    public Sample3CameraControl() {
+    public Tutorial3Activity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
@@ -69,7 +69,7 @@ public class Sample3CameraControl extends Activity implements CvCameraViewListen
 
         setContentView(R.layout.tutorial3_surface_view);
 
-        mOpenCvCameraView = (SampleJavaCameraView) findViewById(R.id.tutorial3_activity_java_surface_view);
+        mOpenCvCameraView = (Tutorial3View) findViewById(R.id.tutorial3_activity_java_surface_view);
 
         mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
 

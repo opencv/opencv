@@ -1,4 +1,4 @@
-set(sample example-tutorial-2-nativeprocessing)
+set(sample example-tutorial-2-mixedprocessing)
 
 if(BUILD_FAT_JAVA_LIB)
   set(native_deps opencv_java)
