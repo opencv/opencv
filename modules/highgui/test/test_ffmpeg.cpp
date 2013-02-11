@@ -241,18 +241,18 @@ public:
 
     virtual void operator() (const Range& range) const
     {
-        if((range.start + 1) != range.end)
-            return;
-
-        VideoWriter* writer = writers->operator[](range.start);
-        CV_Assert(writer != NULL);
-        CV_Assert(writer->isOpened());
-
-        Mat frame(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
-        for (unsigned int i = 0; i < FrameCount; ++i)
+        for (int j = range.start; j < range.end; ++j)
         {
-            GenerateFrame(frame, i);
-            writer->operator<< (frame);
+            VideoWriter* writer = writers->operator[](j);
+            CV_Assert(writer != NULL);
+            CV_Assert(writer->isOpened());
+
+            Mat frame(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
+            for (unsigned int i = 0; i < FrameCount; ++i)
+            {
+                GenerateFrame(frame, i);
+                writer->operator<< (frame);
+            }
         }
     }
 
@@ -305,47 +305,47 @@ public:
 
     virtual void operator() (const Range& range) const
     {
-        if((range.start + 1) != range.end)
-            return;
-
-        VideoCapture* capture = readers->operator[](range.start);
-        CV_Assert(capture != NULL);
-        CV_Assert(capture->isOpened());
-
-        const static double eps = 23.0;
-        unsigned int frameCount = static_cast<unsigned int>(capture->get(CV_CAP_PROP_FRAME_COUNT));
-        CV_Assert(frameCount == WriteVideo_Invoker::FrameCount);
-        Mat reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
-
-        for (unsigned int i = 0; i < frameCount && next; ++i)
+        for (int j = range.start; j < range.end; ++j)
         {
-            Mat actual;
-            (*capture) >> actual;
+            VideoCapture* capture = readers->operator[](j);
+            CV_Assert(capture != NULL);
+            CV_Assert(capture->isOpened());
 
-            WriteVideo_Invoker::GenerateFrame(reference, i);
+            const static double eps = 23.0;
+            unsigned int frameCount = static_cast<unsigned int>(capture->get(CV_CAP_PROP_FRAME_COUNT));
+            CV_Assert(frameCount == WriteVideo_Invoker::FrameCount);
+            Mat reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
 
-            EXPECT_EQ(reference.cols, actual.cols);
-            EXPECT_EQ(reference.rows, actual.rows);
-            EXPECT_EQ(reference.depth(), actual.depth());
-            EXPECT_EQ(reference.channels(), actual.channels());
-
-            double psnr = PSNR(actual, reference);
-            if (psnr < eps)
+            for (unsigned int i = 0; i < frameCount && next; ++i)
             {
-#define SUM cvtest::TS::SUMMARY
-                ts->printf(SUM, "\nPSNR: %lf\n", psnr);
-                ts->printf(SUM, "Video #: %d\n", range.start);
-                ts->printf(SUM, "Frame #: %d\n", i);
-#undef SUM
-                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-                ts->set_gtest_status();
+                Mat actual;
+                (*capture) >> actual;
 
-                Mat diff;
-                absdiff(actual, reference, diff);
+                WriteVideo_Invoker::GenerateFrame(reference, i);
 
-                EXPECT_EQ(countNonZero(diff.reshape(1) > 1), 0);
+                EXPECT_EQ(reference.cols, actual.cols);
+                EXPECT_EQ(reference.rows, actual.rows);
+                EXPECT_EQ(reference.depth(), actual.depth());
+                EXPECT_EQ(reference.channels(), actual.channels());
 
-                next = false;
+                double psnr = PSNR(actual, reference);
+                if (psnr < eps)
+                {
+    #define SUM cvtest::TS::SUMMARY
+                    ts->printf(SUM, "\nPSNR: %lf\n", psnr);
+                    ts->printf(SUM, "Video #: %d\n", range.start);
+                    ts->printf(SUM, "Frame #: %d\n", i);
+    #undef SUM
+                    ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                    ts->set_gtest_status();
+
+                    Mat diff;
+                    absdiff(actual, reference, diff);
+
+                    EXPECT_EQ(countNonZero(diff.reshape(1) > 1), 0);
+
+                    next = false;
+                }
             }
         }
     }
