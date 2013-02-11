@@ -43,6 +43,7 @@
 #ifdef HAVE_WEBP
 
 #include <webp/decode.h>
+#include <webp/encode.h>
 #include <stdio.h>
 
 #include "precomp.hpp"
@@ -112,8 +113,6 @@ bool WebPDecoder::readHeader()
 					 * values.
 					 */
 					m_type = CV_8UC3;			
-					// m_origin = IPL_ORIGIN_TL;	// TODO Check if this is correct.
-					// m_bpp = 24;
 				}
 				else
 				{
@@ -209,7 +208,35 @@ bool WebPEncoder::write(const Mat& img, const vector<int>& params)
 {
 	bool image_created = false;
 
+	int channels = img.channels(), depth = img.depth();
+	int width = img.cols, height = img.rows;
+
+	const Mat *image = &img;
+	Mat temp;
+	int quality = 95;
+
+	if(depth != CV_8U)
+		return false;
 	
+	if(channels == 1)
+	{
+		return false;
+		/*
+		cvtColor(*image, temp, CV_GRAY2BG);
+		image = &temp;
+		channels = 3;
+		*/
+	}
+
+	uint8_t *out = new uint8_t[width * height * channels];
+	int s = WebPEncodeBGR(image->data, width, height, ((width * 3 + 3) & ~3) /*channels*/,
+		(float) quality, &out);
+
+	FILE *fd = fopen(m_filename.c_str(), "wb");
+	fwrite(out, s, sizeof(uint8_t), fd);
+	fclose(fd); fd = NULL;
+
+	delete[] out;
 
 	return image_created;
 }

@@ -71,6 +71,7 @@ protected:
 
 class WebPEncoder : public BaseImageEncoder
 {
+public:
 	WebPEncoder();
 	~WebPEncoder();
 
