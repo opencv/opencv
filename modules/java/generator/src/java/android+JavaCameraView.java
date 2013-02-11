@@ -198,7 +198,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
          */
         /* First step - initialize camera connection */
         Log.d(TAG, "Connecting to camera");
-        if (!initializeCamera(getWidth(), getHeight()))
+        if (!initializeCamera(width, height))
             return false;
 
         /* now we can start update thread */

@@ -37,7 +37,7 @@ public class NativeCameraView extends CameraBridgeViewBase {
          * 2. We need to start thread which will be getting frames
          */
         /* First step - initialize camera connection */
-        if (!initializeCamera(getWidth(), getHeight()))
+        if (!initializeCamera(width, height))
             return false;
 
         /* now we can start update thread */
