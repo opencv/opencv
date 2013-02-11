@@ -359,7 +359,7 @@ private:
 
 bool ReadImageAndTest::next;
 
-TEST(Highgui_Video_parallel_writers_and_readers, accuracy)
+TEST(Highgui_Video_parallel_writers_and_readers, DISABLED_accuracy)
 {
     const unsigned int threadsCount = 4;
     cvtest::TS* ts = cvtest::TS::ptr();
