@@ -1531,3 +1531,23 @@ TEST(Multiply, FloatingPointRounding)
     // with CV_32F this produce result 16202
     ASSERT_EQ(dst.at<ushort>(0,0), 16201);
 }
+
+TEST(Core_Add, AddToColumnWhen3Rows)
+{
+    cv::Mat m1 = (cv::Mat_<double>(3, 2) << 1, 2, 3, 4, 5, 6);
+    m1.col(1) += 10;
+
+    cv::Mat m2 = (cv::Mat_<double>(3, 2) << 1, 12, 3, 14, 5, 16);
+
+    ASSERT_EQ(0, countNonZero(m1 - m2));
+}
+
+TEST(Core_Add, DISABLED_AddToColumnWhen4Rows)
+{
+    cv::Mat m1 = (cv::Mat_<double>(4, 2) << 1, 2, 3, 4, 5, 6, 7, 8);
+    m1.col(1) += 10;
+
+    cv::Mat m2 = (cv::Mat_<double>(4, 2) << 1, 12, 3, 14, 5, 16, 7, 18);
+
+    ASSERT_EQ(0, countNonZero(m1 - m2));
+}
