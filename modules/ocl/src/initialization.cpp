@@ -538,10 +538,12 @@ namespace cv
                     filename = clCxt->impl->Binpath  + kernelName + "_" + clCxt->impl->devName + ".clb";
                 }
 
-                FILE *fp;
-                fp = fopen(filename.c_str(), "rb");
-                if(fp == NULL || clCxt->impl->Binpath.size() == 0)    //we should genetate a binary file for the first time.
+                FILE *fp = fopen(filename.c_str(), "rb");
+                if(fp == NULL || clCxt->impl->Binpath.size() == 0)    //we should generate a binary file for the first time.
                 {
+                    if(fp != NULL)
+                        fclose(fp);
+
                     program = clCreateProgramWithSource(
                                   clCxt->impl->clContext, 1, source, NULL, &status);
                     openCLVerifyCall(status);
