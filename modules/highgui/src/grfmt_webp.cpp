@@ -232,6 +232,8 @@ bool WebPEncoder::write(const Mat& img, const vector<int>& params)
 	int s = WebPEncodeBGR(image->data, width, height, ((width * 3 + 3) & ~3) /*channels*/,
 		(float) quality, &out);
 
+	image_created = true;
+
 	FILE *fd = fopen(m_filename.c_str(), "wb");
 	fwrite(out, s, sizeof(uint8_t), fd);
 	fclose(fd); fd = NULL;
