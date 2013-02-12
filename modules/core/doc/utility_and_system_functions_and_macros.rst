@@ -255,7 +255,7 @@ The function allocates the buffer of the specified size and returns it. When the
 
 
 fastFree
-------------
+--------
 Deallocates a memory buffer.
 
 .. ocv:function:: void fastFree(void* ptr)
@@ -279,6 +279,14 @@ Returns a text string formatted using the ``printf``\ -like expression.
 The function acts like ``sprintf``  but forms and returns an STL string. It can be used to form an error message in the
 :ocv:class:`Exception` constructor.
 
+
+getBuildInformation
+-------------------
+Returns full configuration time cmake output.
+
+.. ocv:function:: const std::string& getBuildInformation()
+
+Returned value is raw cmake output including version control system revision, compiler version, compiler flags, enabled modules and third party libraries, etc. Output format depends on target architecture.
 
 
 checkHardwareSupport
@@ -304,7 +312,7 @@ Returns true if the specified feature is supported by the host hardware.
 The function returns true if the host hardware supports the specified feature. When user calls ``setUseOptimized(false)``, the subsequent calls to ``checkHardwareSupport()`` will return false until ``setUseOptimized(true)`` is called. This way user can dynamically switch on and off the optimized code in OpenCV.
 
 getNumThreads
------------------
+-------------
 Returns the number of threads used by OpenCV.
 
 .. ocv:function:: int getNumThreads()
@@ -318,7 +326,7 @@ The function returns the number of threads that is used by OpenCV.
 
 
 getThreadNum
-----------------
+------------
 Returns the index of the currently executed thread.
 
 .. ocv:function:: int getThreadNum()
@@ -332,7 +340,7 @@ The function returns a 0-based index of the currently executed thread. The funct
 
 
 getTickCount
-----------------
+------------
 Returns the number of ticks.
 
 .. ocv:function:: int64 getTickCount()
@@ -346,7 +354,7 @@ It can be used to initialize
 
 
 getTickFrequency
---------------------
+----------------
 Returns the number of ticks per second.
 
 .. ocv:function:: double getTickFrequency()
@@ -363,7 +371,7 @@ That is, the following code computes the execution time in seconds: ::
 
 
 getCPUTickCount
-----------------
+---------------
 Returns the number of CPU ticks.
 
 .. ocv:function:: int64 getCPUTickCount()
@@ -417,7 +425,7 @@ The function sets the number of threads used by OpenCV in parallel OpenMP region
 
 
 setUseOptimized
------------------
+---------------
 Enables or disables the optimized code.
 
 .. ocv:function:: int cvUseOptimized( int on_off )
@@ -433,7 +441,7 @@ The function can be used to dynamically turn on and off optimized code (code tha
 By default, the optimized code is enabled unless you disable it in CMake. The current status can be retrieved using ``useOptimized``.
 
 useOptimized
------------------
+------------
 Returns the status of optimized code usage.
 
 .. ocv:function:: bool useOptimized()
