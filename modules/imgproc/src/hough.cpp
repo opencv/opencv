@@ -605,7 +605,7 @@ void cv::HoughLines( InputArray _image, OutputArray _lines,
     if( srn == 0 && stn == 0 )
         HoughLinesStandard(image, (float)rho, (float)theta, threshold, lines, INT_MAX);
     else
-        HoughLinesSDiv(image, (float)rho, (float)theta, threshold, (float)srn, (float)stn, lines, INT_MAX);
+        HoughLinesSDiv(image, (float)rho, (float)theta, threshold, cvRound(srn), cvRound(stn), lines, INT_MAX);
 
     Mat(lines).copyTo(_lines);
 }
