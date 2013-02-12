@@ -49,6 +49,10 @@
 #pragma warning( disable: 4244 4510 4512 4610 )
 #endif
 
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -2054,7 +2058,7 @@ bool InputMediaStream_FFMPEG::read(unsigned char** data, int* size, int* endOfFi
 
         if (ret < 0)
         {
-            if (ret == AVERROR_EOF)
+            if (ret == (int)AVERROR_EOF)
                 *endOfFile = true;
             return false;
         }
