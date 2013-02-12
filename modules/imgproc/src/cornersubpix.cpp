@@ -113,8 +113,8 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
                 for( j = 0; j < win_w; j++, k++ )
                 {
                     double m = mask[k];
-                    double tgx = subpix[1] - subpix[-1];
-                    double tgy = subpix[win_w+2] - subpix[-win_w-2];
+                    double tgx = subpix[j+1] - subpix[j-1];
+                    double tgy = subpix[j+win_w+2] - subpix[j-win_w-2];
                     double gxx = tgx * tgx * m;
                     double gxy = tgx * tgy * m;
                     double gyy = tgy * tgy * m;
@@ -139,6 +139,8 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
             cI2.y = (float)(cI.y - b*scale*bb1 + a*scale*bb2);
             err = (cI2.x - cI.x) * (cI2.x - cI.x) + (cI2.y - cI.y) * (cI2.y - cI.y);
             cI = cI2;
+            if( cI.x < 0 || cI.x >= src.cols || cI.y < 0 || cI.y >= src.rows )
+                break;
         }
         while( ++iter < max_iters && err > eps );
 
