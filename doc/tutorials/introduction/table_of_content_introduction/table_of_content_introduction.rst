@@ -3,7 +3,9 @@
 Introduction to OpenCV
 -----------------------------------------------------------
 
-Here you can read tutorials about how to set up your computer to work with the OpenCV library. Additionaly you can find a few very basic sample source code that will let introduce you to the world of the OpenCV.
+Here you can read tutorials about how to set up your computer to work with the OpenCV library.
+Additionally you can find a few very basic sample source code that will let introduce you to the
+world of the OpenCV.
 
 .. include:: ../../definitions/tocDefinitions.rst
 
@@ -189,6 +191,24 @@ Here you can read tutorials about how to set up your computer to work with the O
      .. |Install_iOS| image:: images/opencv_ios.png
                  :width:  90pt
 
+* **Embedded Linux**
+
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  =========== ======================================================
+  |Usage_1|   **Title:** :ref:`ARM-Linux-cross-compile`
+
+              *Compatibility:* > OpenCV 2.4.4
+
+              *Author:* |Author_AlexS|
+
+              We will learn how to setup OpenCV cross compilation environment for ARM Linux.
+
+  =========== ======================================================
+
+* **Common**
+
   .. tabularcolumns:: m{100pt} m{300pt}
   .. cssclass:: toctableopencv
 
@@ -249,7 +269,7 @@ Here you can read tutorials about how to set up your computer to work with the O
 
    \pagebreak
 
-.. We use a custom table of content format and as the table of content only imforms Sphinx about the hierarchy of the files, no need to show it.
+.. We use a custom table of content format and as the table of content only informs Sphinx about the hierarchy of the files, no need to show it.
 .. toctree::
    :hidden:
 
@@ -263,6 +283,7 @@ Here you can read tutorials about how to set up your computer to work with the O
    ../android_binary_package/O4A_SDK
    ../android_binary_package/dev_with_OCV_on_Android
    ../ios_install/ios_install
+   ../crosscompilation/arm_crosscompile_with_cmake
    ../display_image/display_image
    ../load_save_image/load_save_image
    ../how_to_write_a_tutorial/how_to_write_a_tutorial
