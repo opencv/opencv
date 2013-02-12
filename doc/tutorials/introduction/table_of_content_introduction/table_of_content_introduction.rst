@@ -137,7 +137,7 @@ Here you can read tutorials about how to set up your computer to work with the O
   ================ =================================================
   |AndroidLogo|    **Title:** :ref:`dev_with_OCV_on_Android`
 
-                   *Compatibility:* > OpenCV 2.4.2
+                   *Compatibility:* > OpenCV 2.4.3
 
                    *Author:* |Author_VsevolodG|
 

@@ -166,11 +166,7 @@ if(ANDROID)
   set(android_copied_files "")
   set(android_step3_input_files "")
   foreach(file ${handwrittren_lib_project_files_rel})
-    add_custom_command(OUTPUT "${OpenCV_BINARY_DIR}/${file}"
-                   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/android_lib/${file}" "${OpenCV_BINARY_DIR}/${file}"
-                   MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/android_lib/${file}"
-                   COMMENT "Generating ${file}"
-                  )
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/android_lib/${file}" "${OpenCV_BINARY_DIR}/${file}" @ONLY)
     list(APPEND android_copied_files "${OpenCV_BINARY_DIR}/${file}")
     list(APPEND android_step3_input_files "${CMAKE_CURRENT_SOURCE_DIR}/android_lib/${file}")
 
@@ -198,7 +194,7 @@ if(ANDROID AND ANDROID_EXECUTABLE)
   ocv_list_add_prefix(lib_target_files "${OpenCV_BINARY_DIR}/")
 
   android_get_compatible_target(lib_target_sdk_target ${ANDROID_NATIVE_API_LEVEL} ${ANDROID_SDK_TARGET} 11)
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/android_lib/${ANDROID_MANIFEST_FILE}"  "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}")
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/android_lib/${ANDROID_MANIFEST_FILE}" "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" @ONLY)
 
   add_custom_command(OUTPUT ${lib_target_files} "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
                      COMMAND ${CMAKE_COMMAND} -E remove ${lib_target_files}
@@ -257,6 +253,13 @@ else(ANDROID)
                      DEPENDS ${step3_depends}
                      COMMENT "Generating ${JAR_NAME}"
                     )
+
+  if(WIN32)
+    set(JAR_INSTALL_DIR java)
+  else(WIN32)
+    set(JAR_INSTALL_DIR share/OpenCV/java)
+  endif(WIN32)
+  install(FILES ${JAR_FILE} DESTINATION ${JAR_INSTALL_DIR} COMPONENT main)
 endif(ANDROID)
 
 # step 5: build native part
@@ -291,7 +294,8 @@ endif()
 
 # Additional target properties
 set_target_properties(${the_module} PROPERTIES
-    OUTPUT_NAME "${the_module}"
+    OUTPUT_NAME "${the_module}${OPENCV_DLLVERSION}"
+    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
     INSTALL_NAME_DIR ${OPENCV_LIB_INSTALL_PATH}
@@ -308,9 +312,15 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_module} PROPERTIES FOLDER "bindings")
 endif()
 
-install(TARGETS ${the_module}
-        LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
-        ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
+if(ANDROID)
+  install(TARGETS ${the_module}
+          LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
+          ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
+else()
+  install(TARGETS ${the_module}
+          RUNTIME DESTINATION ${JAR_INSTALL_DIR} COMPONENT main
+          LIBRARY DESTINATION ${JAR_INSTALL_DIR} COMPONENT main)
+endif()
 
 ######################################################################################################################################
 
