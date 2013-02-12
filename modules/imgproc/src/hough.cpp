@@ -88,10 +88,10 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
     AutoBuffer<int> _accum((numangle+2) * (numrho+2));
-    AutoBuffer<int> _sort_buf(numangle * numrho);
+    vector<int> _sort_buf;
     AutoBuffer<float> _tabSin(numangle);
     AutoBuffer<float> _tabCos(numangle);
-    int *accum = _accum, *sort_buf = _sort_buf;
+    int *accum = _accum;
     float *tabSin = _tabSin, *tabCos = _tabCos;
 
     memset( accum, 0, sizeof(accum[0]) * (numangle+2) * (numrho+2) );
@@ -124,19 +124,19 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
             if( accum[base] > threshold &&
                 accum[base] > accum[base - 1] && accum[base] >= accum[base + 1] &&
                 accum[base] > accum[base - numrho - 2] && accum[base] >= accum[base + numrho + 2] )
-                sort_buf[total++] = base;
+                _sort_buf.push_back(base);
         }
 
     // stage 3. sort the detected lines by accumulator value
-    std::sort( sort_buf, sort_buf + total, hough_cmp_gt(accum));
+    cv::sort(_sort_buf, hough_cmp_gt(accum));
 
     // stage 4. store the first min(total,linesMax) lines to the output buffer
-    linesMax = MIN(linesMax, total);
+    linesMax = min(linesMax, (int)_sort_buf.size());
     double scale = 1./(numrho+2);
     for( i = 0; i < linesMax; i++ )
     {
         LinePolar line;
-        int idx = sort_buf[i];
+        int idx = _sort_buf[i];
         int n = cvFloor(idx*scale) - 1;
         int r = idx - (n+1)*(numrho+2) - 1;
         line.rho = (r - (numrho - 1)*0.5f) * rho;
@@ -362,11 +362,11 @@ HoughLinesSDiv( const Mat& img,
         }
     }
 
-    for( size_t i = 0; i < lst.size(); i++ )
+    for( size_t idx = 0; idx < lst.size(); idx++ )
     {
-        if( lst[i].rho < 0 )
+        if( lst[idx].rho < 0 )
             continue;
-        lines.push_back(Vec2f(lst[i].rho, lst[i].theta));
+        lines.push_back(Vec2f(lst[idx].rho, lst[idx].theta));
     }
 }
 
@@ -604,9 +604,9 @@ void cv::HoughLines( InputArray _image, OutputArray _lines,
     vector<Vec2f> lines;
 
     if( srn == 0 && stn == 0 )
-        HoughLinesStandard(image, rho, theta, threshold, lines, INT_MAX);
+        HoughLinesStandard(image, (float)rho, (float)theta, threshold, lines, INT_MAX);
     else
-        HoughLinesSDiv(image, rho, theta, threshold, srn, stn, lines, INT_MAX);
+        HoughLinesSDiv(image, (float)rho, (float)theta, threshold, (float)srn, (float)stn, lines, INT_MAX);
 
     Mat(lines).copyTo(_lines);
 }
@@ -618,7 +618,7 @@ void cv::HoughLinesP(InputArray _image, OutputArray _lines,
 {
     Mat image = _image.getMat();
     vector<Vec4i> lines;
-    HoughLinesProbabilistic(image, rho, theta, threshold, minLineLength, maxGap, lines, INT_MAX);
+    HoughLinesProbabilistic(image, (float)rho, (float)theta, threshold, cvRound(minLineLength), cvRound(maxGap), lines, INT_MAX);
     Mat(lines).copyTo(_lines);
 }
 

@@ -205,7 +205,7 @@ void getRectSubPix_Cn_(const _Tp* src, int src_step, Size src_size,
 
             for( j = r.x*cn; j < r.width*cn; j++ )
             {
-                _WTp s0 = src[j]*a11 + src[j+cn]*a12 + src2[j]*a21 + src2[j+cn]*a22;
+                s0 = src[j]*a11 + src[j+cn]*a12 + src2[j]*a21 + src2[j+cn]*a22;
                 dst[j] = cast_op(s0);
             }
 

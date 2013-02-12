@@ -766,7 +766,7 @@ icvDistanceATS_L1_8u( const cv::Mat& src, cv::Mat& dst )
 CV_IMPL void
 cvDistTransform( const void* srcarr, void* dstarr,
                 int distType, int maskSize,
-                const float *mask,
+                const float * /*mask*/,
                 void* labelsarr, int labelType )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
