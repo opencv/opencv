@@ -73,7 +73,6 @@ static void
 HoughLinesStandard( const Mat& img, float rho, float theta,
                     int threshold, vector<Vec2f>& lines, int linesMax )
 {
-    int total = 0;
     int i, j;
     float irho = 1 / rho;
 
