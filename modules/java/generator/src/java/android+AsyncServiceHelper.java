@@ -3,6 +3,7 @@ package org.opencv.android;
 import java.io.File;
 import java.util.StringTokenizer;
 
+import org.opencv.core.Core;
 import org.opencv.engine.OpenCVEngineInterface;
 
 import android.content.ComponentName;
@@ -85,7 +86,6 @@ class AsyncServiceHelper
                     {
                         mServiceInstallationProgress = true;
                         Log.d(TAG, "Package installation started");
-
                     }
                     else
                     {
@@ -299,6 +299,10 @@ class AsyncServiceHelper
                         if (initOpenCVLibs(path, libs))
                         {
                             Log.d(TAG, "First attempt to load libs is OK");
+                            String eol = System.getProperty("line.separator");
+                            for (String str : Core.getBuildInformation().split(eol))
+                                Log.i(TAG, str);
+
                             status = LoaderCallbackInterface.SUCCESS;
                         }
                         else
