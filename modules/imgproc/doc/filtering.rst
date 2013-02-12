@@ -487,6 +487,8 @@ Blurs an image using the box filter.
 
     :param dst: output image of the same size and type as ``src``.
 
+    :param ddepth: the output image depth (-1 to use ``src.depth()``).
+
     :param ksize: blurring kernel size.
 
     :param anchor: anchor point; default value ``Point(-1,-1)`` means that the anchor is at the kernel center.
