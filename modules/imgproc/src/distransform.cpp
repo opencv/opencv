@@ -653,20 +653,8 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
 
         if( labelType == CV_DIST_LABEL_CCOMP )
         {
-            /*CvSeq *contours = 0;
-            cv::Ptr<CvMemStorage> st = cvCreateMemStorage();
-            cv::Ptr<CvMat> src_copy = cvCreateMat( size.height+border*2, size.width+border*2, src->type );
-            cvCopyMakeBorder(src, src_copy, cvPoint(border, border), IPL_BORDER_CONSTANT, cvScalarAll(255));
-            cvCmpS( src_copy, 0, src_copy, CV_CMP_EQ );
-            cvFindContours( src_copy, st, &contours, sizeof(CvContour),
-                           CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, cvPoint(-border, -border));
-
-            for( int label = 1; contours != 0; contours = contours->h_next, label++ )
-            {
-                CvScalar area_color = cvScalarAll(label);
-                cvDrawContours( labels, contours, area_color, area_color, -255, -1, 8 );
-            }*/
-            // TODO
+            Mat zpix = src == 0;
+            connectedComponents(zpix, labels, 8, CV_32S);
         }
         else
         {

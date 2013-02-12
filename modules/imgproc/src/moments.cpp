@@ -381,7 +381,6 @@ cv::Moments cv::moments( InputArray _src, bool binary )
     const int TILE_SIZE = 32;
     Mat mat = _src.getMat();
     MomentsInTileFunc func = 0;
-    double buf[TILE_SIZE*TILE_SIZE];
     uchar nzbuf[TILE_SIZE*TILE_SIZE];
     Moments m;
     int type = mat.type();
