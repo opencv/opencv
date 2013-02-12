@@ -57,6 +57,128 @@ using namespace cv::gpu::device;
 
 namespace detail
 {
+    __device__ __forceinline__ int cvAtomicAdd(int* address, int val)
+    {
+        return ::atomicAdd(address, val);
+    }
+    __device__ __forceinline__ unsigned int cvAtomicAdd(unsigned int* address, unsigned int val)
+    {
+        return ::atomicAdd(address, val);
+    }
+    __device__ __forceinline__ float cvAtomicAdd(float* address, float val)
+    {
+    #if __CUDA_ARCH__ >= 200
+        return ::atomicAdd(address, val);
+    #else
+        int* address_as_i = (int*) address;
+        int old = *address_as_i, assumed;
+        do {
+            assumed = old;
+            old = ::atomicCAS(address_as_i, assumed,
+                __float_as_int(val + __int_as_float(assumed)));
+        } while (assumed != old);
+        return __int_as_float(old);
+    #endif
+    }
+    __device__ __forceinline__ double cvAtomicAdd(double* address, double val)
+    {
+    #if __CUDA_ARCH__ >= 130
+        unsigned long long int* address_as_ull = (unsigned long long int*) address;
+        unsigned long long int old = *address_as_ull, assumed;
+        do {
+            assumed = old;
+            old = ::atomicCAS(address_as_ull, assumed,
+                __double_as_longlong(val + __longlong_as_double(assumed)));
+        } while (assumed != old);
+        return __longlong_as_double(old);
+    #else
+        (void) address;
+        (void) val;
+        return 0.0;
+    #endif
+    }
+
+    __device__ __forceinline__ int cvAtomicMin(int* address, int val)
+    {
+        return ::atomicMin(address, val);
+    }
+    __device__ __forceinline__ float cvAtomicMin(float* address, float val)
+    {
+    #if __CUDA_ARCH__ >= 120
+        int* address_as_i = (int*) address;
+        int old = *address_as_i, assumed;
+        do {
+            assumed = old;
+            old = ::atomicCAS(address_as_i, assumed,
+                __float_as_int(::fminf(val, __int_as_float(assumed))));
+        } while (assumed != old);
+        return __int_as_float(old);
+    #else
+        (void) address;
+        (void) val;
+        return 0.0f;
+    #endif
+    }
+    __device__ __forceinline__ double cvAtomicMin(double* address, double val)
+    {
+    #if __CUDA_ARCH__ >= 130
+        unsigned long long int* address_as_ull = (unsigned long long int*) address;
+        unsigned long long int old = *address_as_ull, assumed;
+        do {
+            assumed = old;
+            old = ::atomicCAS(address_as_ull, assumed,
+                __double_as_longlong(::fmin(val, __longlong_as_double(assumed))));
+        } while (assumed != old);
+        return __longlong_as_double(old);
+    #else
+        (void) address;
+        (void) val;
+        return 0.0;
+    #endif
+    }
+
+    __device__ __forceinline__ int cvAtomicMax(int* address, int val)
+    {
+        return ::atomicMax(address, val);
+    }
+    __device__ __forceinline__ float cvAtomicMax(float* address, float val)
+    {
+    #if __CUDA_ARCH__ >= 120
+        int* address_as_i = (int*) address;
+        int old = *address_as_i, assumed;
+        do {
+            assumed = old;
+            old = ::atomicCAS(address_as_i, assumed,
+                __float_as_int(::fmaxf(val, __int_as_float(assumed))));
+        } while (assumed != old);
+        return __int_as_float(old);
+    #else
+        (void) address;
+        (void) val;
+        return 0.0f;
+    #endif
+    }
+    __device__ __forceinline__ double cvAtomicMax(double* address, double val)
+    {
+    #if __CUDA_ARCH__ >= 130
+        unsigned long long int* address_as_ull = (unsigned long long int*) address;
+        unsigned long long int old = *address_as_ull, assumed;
+        do {
+            assumed = old;
+            old = ::atomicCAS(address_as_ull, assumed,
+                __double_as_longlong(::fmax(val, __longlong_as_double(assumed))));
+        } while (assumed != old);
+        return __longlong_as_double(old);
+    #else
+        (void) address;
+        (void) val;
+        return 0.0;
+    #endif
+    }
+}
+
+namespace detail
+{
     template <int cn> struct Unroll;
     template <> struct Unroll<1>
     {
@@ -152,7 +274,7 @@ namespace sum
     {
         static __device__ void run(R* ptr, R val)
         {
-            ::atomicAdd(ptr, val);
+            detail::cvAtomicAdd(ptr, val);
         }
     };
     template <typename R> struct AtomicAdd<R, 2>
@@ -161,8 +283,8 @@ namespace sum
 
         static __device__ void run(R* ptr, val_type val)
         {
-            ::atomicAdd(ptr, val.x);
-            ::atomicAdd(ptr + 1, val.y);
+            detail::cvAtomicAdd(ptr, val.x);
+            detail::cvAtomicAdd(ptr + 1, val.y);
         }
     };
     template <typename R> struct AtomicAdd<R, 3>
@@ -171,9 +293,9 @@ namespace sum
 
         static __device__ void run(R* ptr, val_type val)
         {
-            ::atomicAdd(ptr, val.x);
-            ::atomicAdd(ptr + 1, val.y);
-            ::atomicAdd(ptr + 2, val.z);
+            detail::cvAtomicAdd(ptr, val.x);
+            detail::cvAtomicAdd(ptr + 1, val.y);
+            detail::cvAtomicAdd(ptr + 2, val.z);
         }
     };
     template <typename R> struct AtomicAdd<R, 4>
@@ -182,10 +304,10 @@ namespace sum
 
         static __device__ void run(R* ptr, val_type val)
         {
-            ::atomicAdd(ptr, val.x);
-            ::atomicAdd(ptr + 1, val.y);
-            ::atomicAdd(ptr + 2, val.z);
-            ::atomicAdd(ptr + 3, val.w);
+            detail::cvAtomicAdd(ptr, val.x);
+            detail::cvAtomicAdd(ptr + 1, val.y);
+            detail::cvAtomicAdd(ptr + 2, val.z);
+            detail::cvAtomicAdd(ptr + 3, val.w);
         }
     };
 
@@ -227,41 +349,6 @@ namespace sum
                 }
             }
         #endif
-        }
-    };
-    template <int BLOCK_SIZE, int cn>
-    struct GlobalReduce<BLOCK_SIZE, double, cn>
-    {
-        typedef typename TypeVec<double, cn>::vec_type result_type;
-
-        static __device__ void run(result_type& sum, result_type* result, int tid, int bid, double* smem)
-        {
-            __shared__ bool is_last;
-
-            if (tid == 0)
-            {
-                result[bid] = sum;
-
-                __threadfence();
-
-                unsigned int ticket = ::atomicAdd(&blocks_finished, 1);
-                is_last = (ticket == gridDim.x * gridDim.y - 1);
-            }
-
-            __syncthreads();
-
-            if (is_last)
-            {
-                sum = tid < gridDim.x * gridDim.y ? result[tid] : VecTraits<result_type>::all(0);
-
-                device::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(sum), tid, detail::Unroll<cn>::op(plus<double>()));
-
-                if (tid == 0)
-                {
-                    result[0] = sum;
-                    blocks_finished = 0;
-                }
-            }
         }
     };
 
@@ -519,52 +606,11 @@ namespace minMax
     {
         static __device__ void run(R& mymin, R& mymax, R* minval, R* maxval, int tid, int bid, R* sminval, R* smaxval)
         {
-            __shared__ bool is_last;
-
-            if (tid == 0)
-            {
-                minval[bid] = mymin;
-                maxval[bid] = mymax;
-
-                __threadfence();
-
-                unsigned int ticket = ::atomicAdd(&blocks_finished, 1);
-                is_last = (ticket == gridDim.x * gridDim.y - 1);
-            }
-
-            __syncthreads();
-
-            if (is_last)
-            {
-                int idx = ::min(tid, gridDim.x * gridDim.y - 1);
-
-                mymin = minval[idx];
-                mymax = maxval[idx];
-
-                const minimum<R> minOp;
-                const maximum<R> maxOp;
-                device::reduce<BLOCK_SIZE>(smem_tuple(sminval, smaxval), thrust::tie(mymin, mymax), tid, thrust::make_tuple(minOp, maxOp));
-
-                if (tid == 0)
-                {
-                    minval[0] = mymin;
-                    maxval[0] = mymax;
-
-                    blocks_finished = 0;
-                }
-            }
-        }
-    };
-    template <int BLOCK_SIZE>
-    struct GlobalReduce<BLOCK_SIZE, int>
-    {
-        static __device__ void run(int& mymin, int& mymax, int* minval, int* maxval, int tid, int bid, int* sminval, int* smaxval)
-        {
         #if __CUDA_ARCH__ >= 200
             if (tid == 0)
             {
-                ::atomicMin(minval, mymin);
-                ::atomicMax(maxval, mymax);
+                detail::cvAtomicMin(minval, mymin);
+                detail::cvAtomicMax(maxval, mymax);
             }
         #else
             __shared__ bool is_last;
@@ -589,8 +635,8 @@ namespace minMax
                 mymin = minval[idx];
                 mymax = maxval[idx];
 
-                const minimum<int> minOp;
-                const maximum<int> maxOp;
+                const minimum<R> minOp;
+                const maximum<R> maxOp;
                 device::reduce<BLOCK_SIZE>(smem_tuple(sminval, smaxval), thrust::tie(mymin, mymax), tid, thrust::make_tuple(minOp, maxOp));
 
                 if (tid == 0)
@@ -672,12 +718,19 @@ namespace minMax
         *minval_buf = numeric_limits<int>::max();
         *maxval_buf = numeric_limits<int>::min();
     }
+    __global__ void setDefaultKernel(float* minval_buf, float* maxval_buf)
+    {
+        *minval_buf = numeric_limits<float>::max();
+        *maxval_buf = -numeric_limits<float>::max();
+    }
+    __global__ void setDefaultKernel(double* minval_buf, double* maxval_buf)
+    {
+        *minval_buf = numeric_limits<double>::max();
+        *maxval_buf = -numeric_limits<double>::max();
+    }
 
     template <typename R>
-    void setDefault(R*, R*)
-    {
-    }
-    void setDefault(int* minval_buf, int* maxval_buf)
+    void setDefault(R* minval_buf, R* maxval_buf)
     {
         setDefaultKernel<<<1, 1>>>(minval_buf, maxval_buf);
     }
@@ -728,21 +781,19 @@ namespace minMax
 
 namespace minMaxLoc
 {
-    __device__ unsigned int blocks_finished = 0;
-
     // To avoid shared bank conflicts we convert each value into value of
     // appropriate type (32 bits minimum)
     template <typename T> struct MinMaxTypeTraits;
-    template <> struct MinMaxTypeTraits<uchar> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<schar> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<ushort> { typedef int best_type; };
+    template <> struct MinMaxTypeTraits<unsigned char> { typedef int best_type; };
+    template <> struct MinMaxTypeTraits<signed char> { typedef int best_type; };
+    template <> struct MinMaxTypeTraits<unsigned short> { typedef int best_type; };
     template <> struct MinMaxTypeTraits<short> { typedef int best_type; };
     template <> struct MinMaxTypeTraits<int> { typedef int best_type; };
     template <> struct MinMaxTypeTraits<float> { typedef float best_type; };
     template <> struct MinMaxTypeTraits<double> { typedef double best_type; };
 
     template <int BLOCK_SIZE, typename T, class Mask>
-    __global__ void kernel(const PtrStepSz<T> src, const Mask mask, T* minval, T* maxval, unsigned int* minloc, unsigned int* maxloc, const int twidth, const int theight)
+    __global__ void kernel_pass_1(const PtrStepSz<T> src, const Mask mask, T* minval, T* maxval, unsigned int* minloc, unsigned int* maxloc, const int twidth, const int theight)
     {
         typedef typename MinMaxTypeTraits<T>::best_type work_type;
 
@@ -750,7 +801,6 @@ namespace minMaxLoc
         __shared__ work_type smaxval[BLOCK_SIZE];
         __shared__ unsigned int sminloc[BLOCK_SIZE];
         __shared__ unsigned int smaxloc[BLOCK_SIZE];
-        __shared__ bool is_last;
 
         const int x0 = blockIdx.x * blockDim.x * twidth + threadIdx.x;
         const int y0 = blockIdx.y * blockDim.y * theight + threadIdx.y;
@@ -799,38 +849,36 @@ namespace minMaxLoc
             maxval[bid] = (T) mymax;
             minloc[bid] = myminloc;
             maxloc[bid] = mymaxloc;
-
-            __threadfence();
-
-            unsigned int ticket = ::atomicInc(&blocks_finished, gridDim.x * gridDim.y);
-            is_last = (ticket == gridDim.x * gridDim.y - 1);
         }
+    }
+    template <int BLOCK_SIZE, typename T>
+    __global__ void kernel_pass_2(T* minval, T* maxval, unsigned int* minloc, unsigned int* maxloc, int count)
+    {
+        typedef typename MinMaxTypeTraits<T>::best_type work_type;
 
-        __syncthreads();
+        __shared__ work_type sminval[BLOCK_SIZE];
+        __shared__ work_type smaxval[BLOCK_SIZE];
+        __shared__ unsigned int sminloc[BLOCK_SIZE];
+        __shared__ unsigned int smaxloc[BLOCK_SIZE];
 
-        if (is_last)
+        unsigned int idx = ::min(threadIdx.x, count - 1);
+
+        work_type mymin = minval[idx];
+        work_type mymax = maxval[idx];
+        unsigned int myminloc = minloc[idx];
+        unsigned int mymaxloc = maxloc[idx];
+
+        reduceKeyVal<BLOCK_SIZE>(smem_tuple(sminval, smaxval), thrust::tie(mymin, mymax),
+                                 smem_tuple(sminloc, smaxloc), thrust::tie(myminloc, mymaxloc),
+                                 threadIdx.x,
+                                 thrust::make_tuple(less<work_type>(), greater<work_type>()));
+
+        if (threadIdx.x == 0)
         {
-            unsigned int idx = ::min(tid, gridDim.x * gridDim.y - 1);
-
-            mymin = minval[idx];
-            mymax = maxval[idx];
-            myminloc = minloc[idx];
-            mymaxloc = maxloc[idx];
-
-            reduceKeyVal<BLOCK_SIZE>(smem_tuple(sminval, smaxval), thrust::tie(mymin, mymax),
-                                     smem_tuple(sminloc, smaxloc), thrust::tie(myminloc, mymaxloc),
-                                     tid,
-                                     thrust::make_tuple(less<work_type>(), greater<work_type>()));
-
-            if (tid == 0)
-            {
-                minval[0] = (T) mymin;
-                maxval[0] = (T) mymax;
-                minloc[0] = myminloc;
-                maxloc[0] = mymaxloc;
-
-                blocks_finished = 0;
-            }
+            minval[0] = (T) mymin;
+            maxval[0] = (T) mymax;
+            minloc[0] = myminloc;
+            maxloc[0] = mymaxloc;
         }
     }
 
@@ -877,10 +925,13 @@ namespace minMaxLoc
         unsigned int* maxloc_buf = locbuf.ptr(1);
 
         if (mask.data)
-            kernel<threads_x * threads_y><<<grid, block>>>((PtrStepSz<T>) src, SingleMask(mask), minval_buf, maxval_buf, minloc_buf, maxloc_buf, twidth, theight);
+            kernel_pass_1<threads_x * threads_y><<<grid, block>>>((PtrStepSz<T>) src, SingleMask(mask), minval_buf, maxval_buf, minloc_buf, maxloc_buf, twidth, theight);
         else
-            kernel<threads_x * threads_y><<<grid, block>>>((PtrStepSz<T>) src, WithOutMask(), minval_buf, maxval_buf, minloc_buf, maxloc_buf, twidth, theight);
+            kernel_pass_1<threads_x * threads_y><<<grid, block>>>((PtrStepSz<T>) src, WithOutMask(), minval_buf, maxval_buf, minloc_buf, maxloc_buf, twidth, theight);
 
+        cudaSafeCall( cudaGetLastError() );
+
+        kernel_pass_2<threads_x * threads_y><<<1, threads_x * threads_y>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -898,9 +949,9 @@ namespace minMaxLoc
         maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
     }
 
-    template void run<uchar >(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc, PtrStepb valbuf, PtrStep<unsigned int> locbuf);
-    template void run<schar >(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc, PtrStepb valbuf, PtrStep<unsigned int> locbuf);
-    template void run<ushort>(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc, PtrStepb valbuf, PtrStep<unsigned int> locbuf);
+    template void run<unsigned char >(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc, PtrStepb valbuf, PtrStep<unsigned int> locbuf);
+    template void run<signed char >(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc, PtrStepb valbuf, PtrStep<unsigned int> locbuf);
+    template void run<unsigned short>(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc, PtrStepb valbuf, PtrStep<unsigned int> locbuf);
     template void run<short >(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc, PtrStepb valbuf, PtrStep<unsigned int> locbuf);
     template void run<int   >(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc, PtrStepb valbuf, PtrStep<unsigned int> locbuf);
     template void run<float >(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc, PtrStepb valbuf, PtrStep<unsigned int> locbuf);
