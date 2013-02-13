@@ -119,6 +119,7 @@
 #define CV_COMP_CHISQR        1
 #define CV_COMP_INTERSECT     2
 #define CV_COMP_BHATTACHARYYA 3
+#define CV_COMP_CHISQR_ALT    4
 #define CV_DIST_MASK_3   3
 #define CV_DIST_MASK_5   5
 #define CV_DIST_MASK_PRECISE 0
