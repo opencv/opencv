@@ -7,11 +7,6 @@ if(WITH_TBB)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectTBB.cmake")
 endif(WITH_TBB)
 
-# --- C= ---
-if(WITH_CSTRIPES)
-  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCStripes.cmake")
-endif(WITH_CSTRIPES)
-
 # --- IPP ---
 ocv_clear_vars(IPP_FOUND)
 if(WITH_IPP)
@@ -43,3 +38,35 @@ if(WITH_EIGEN)
     set(HAVE_EIGEN 1)
   endif()
 endif(WITH_EIGEN)
+
+# --- C= ---
+if(WITH_CSTRIPES AND NOT HAVE_TBB)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCStripes.cmake")
+else()
+  set(HAVE_CSTRIPES 0)
+endif()
+
+# --- OpenMP ---
+if(NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
+  set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/omptest.cpp")
+  FILE(WRITE "${_fname}" "#ifndef _OPENMP\n#error\n#endif\nint main() { return 0; }\n")
+  TRY_COMPILE(HAVE_OPENMP "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp" "${_fname}")
+else()
+  set(HAVE_OPENMP 0)
+endif()
+
+# --- GCD ---
+if(APPLE AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES AND NOT HAVE_OPENMP)
+  set(HAVE_GCD 1)
+else()
+  set(HAVE_GCD 0)
+endif()
+
+# --- Concurrency ---
+if(MSVC AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES AND NOT HAVE_OPENMP)
+  set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/concurrencytest.cpp")
+  FILE(WRITE "${_fname}" "#if _MSC_VER < 1600\n#error\n#endif\nint main() { return 0; }\n")
+  TRY_COMPILE(HAVE_CONCURRENCY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp" "${_fname}")
+else()
+  set(HAVE_CONCURRENCY 0)
+endif()
