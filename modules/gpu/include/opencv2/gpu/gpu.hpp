@@ -465,6 +465,12 @@ CV_EXPORTS void cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude,
 //! supports only floating-point source
 CV_EXPORTS void polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees = false, Stream& stream = Stream::Null());
 
+//! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values
+CV_EXPORTS void normalize(const GpuMat& src, GpuMat& dst, double alpha = 1, double beta = 0,
+                          int norm_type = NORM_L2, int dtype = -1, const GpuMat& mask = GpuMat());
+CV_EXPORTS void normalize(const GpuMat& src, GpuMat& dst, double a, double b,
+                          int norm_type, int dtype, const GpuMat& mask, GpuMat& norm_buf, GpuMat& cvt_buf);
+
 
 //////////////////////////// Per-element operations ////////////////////////////////////
 

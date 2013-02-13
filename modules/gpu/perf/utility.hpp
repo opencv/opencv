@@ -17,7 +17,7 @@ CV_ENUM(BorderMode, cv::BORDER_REFLECT101, cv::BORDER_REPLICATE, cv::BORDER_CONS
 
 CV_ENUM(Interpolation, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC, cv::INTER_AREA)
 #define ALL_INTERPOLATIONS testing::ValuesIn(Interpolation::all())
-CV_ENUM(NormType, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2, cv::NORM_HAMMING)
+CV_ENUM(NormType, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2, cv::NORM_HAMMING, cv::NORM_MINMAX)
 
 const int Gray = 1, TwoChannel = 2, BGR = 3, BGRA = 4;
 CV_ENUM(MatCn, Gray, TwoChannel, BGR, BGRA)

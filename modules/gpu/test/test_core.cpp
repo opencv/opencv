@@ -3540,4 +3540,70 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Reduce, testing::Combine(
     ALL_REDUCE_CODES,
     WHOLE_SUBMAT));
 
+//////////////////////////////////////////////////////////////////////////////
+// Normalize
+
+PARAM_TEST_CASE(Normalize, cv::gpu::DeviceInfo, cv::Size, MatDepth, NormCode, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    int type;
+    int norm_type;
+    bool useRoi;
+
+    double alpha;
+    double beta;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        type = GET_PARAM(2);
+        norm_type = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        alpha = 1;
+        beta = 0;
+    }
+
+};
+
+GPU_TEST_P(Normalize, WithOutMask)
+{
+    cv::Mat src = randomMat(size, type);
+
+    cv::gpu::GpuMat dst = createMat(size, type, useRoi);
+    cv::gpu::normalize(loadMat(src, useRoi), dst, alpha, beta, norm_type, type);
+
+    cv::Mat dst_gold;
+    cv::normalize(src, dst_gold, alpha, beta, norm_type, type);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-6);
+}
+
+GPU_TEST_P(Normalize, WithMask)
+{
+    cv::Mat src = randomMat(size, type);
+    cv::Mat mask = randomMat(size, CV_8UC1, 0, 2);
+
+    cv::gpu::GpuMat dst = createMat(size, type, useRoi);
+    dst.setTo(cv::Scalar::all(0));
+    cv::gpu::normalize(loadMat(src, useRoi), dst, alpha, beta, norm_type, type, loadMat(mask, useRoi));
+
+    cv::Mat dst_gold(size, type);
+    dst_gold.setTo(cv::Scalar::all(0));
+    cv::normalize(src, dst_gold, alpha, beta, norm_type, type, mask);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-6);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Core, Normalize, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    ALL_DEPTH,
+    testing::Values(NormCode(cv::NORM_L1), NormCode(cv::NORM_L2), NormCode(cv::NORM_INF), NormCode(cv::NORM_MINMAX)),
+    WHOLE_SUBMAT));
+
 #endif // HAVE_CUDA
