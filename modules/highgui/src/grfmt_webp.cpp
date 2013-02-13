@@ -49,6 +49,8 @@
 #include "precomp.hpp"
 #include "grfmt_webp.hpp"
 
+#include "opencv2/imgproc/imgproc.hpp"
+
 namespace cv
 {
 
@@ -84,58 +86,47 @@ bool WebPDecoder::checkSignature( const string& signature ) const
 bool WebPDecoder::readHeader()
 {
 	bool header_read = false;
+	uint8_t *webp_file_data = NULL;
+	size_t webp_file_data_size = 0;
+	size_t data_read_size = 0;
 	
 	FILE *webp_file = NULL;
 	webp_file = fopen(m_filename.c_str(), "rb");
 	
-	if(webp_file != NULL)
-	{	
-		uint8_t *webp_file_data = NULL;
-		size_t webp_file_data_size = 0;
-	
-		fseek(webp_file, 0, SEEK_END);
-		webp_file_data_size = ftell(webp_file);
-		fseek(webp_file, 0, SEEK_SET);
-	
-		webp_file_data = (uint8_t *) malloc (webp_file_data_size);
-	
-		if(webp_file_data != NULL)
-		{
-			size_t data_read_size = fread(webp_file_data, 1, webp_file_data_size, webp_file);
-			if(data_read_size == webp_file_data_size)
-			{
-				if(WebPGetInfo(webp_file_data, webp_file_data_size, &m_width, &m_height) == 1)
-				{
-					header_read = true;
-					
-					/*
-					 * According to VP8 bitstream format these are the default
-					 * values.
-					 */
-					m_type = CV_8UC3;			
-				}
-				else
-				{
-					cvError(CV_StsError, __FUNCTION__, "Cannot get width, height",
-						__FILE__, __LINE__);
-					printf("Cannot get width, height information about %s\n",
-						m_filename.c_str());
-				}
-			}
-			else
-			{
-				cvError(CV_StsError, __FUNCTION__, "Not able to read from file",
-					__FILE__, __LINE__);
-				printf("Not able to read %lu bytes from file %s", webp_file_data_size
-					, m_filename.c_str());
-			}
-		
-			free(webp_file_data); webp_file_data = NULL;
-		}
-	
-		fclose(webp_file); webp_file = NULL;
+	if(webp_file == NULL)
+	{
+		goto Exit;
 	}
+
+	fseek(webp_file, 0, SEEK_END);
+	webp_file_data_size = ftell(webp_file);
+	fseek(webp_file, 0, SEEK_SET);
+
+	webp_file_data = (uint8_t *) malloc (webp_file_data_size);
+
+	if(webp_file_data == NULL)
+	{
+		goto Exit_CloseFile;
+	}
+
+	data_read_size = fread(webp_file_data, 1, webp_file_data_size,
+		webp_file);
+	if(data_read_size == webp_file_data_size)
+	{
+		if(WebPGetInfo(webp_file_data, webp_file_data_size, &m_width,
+			&m_height) == 1)
+		{
+			header_read = true;
+			m_type = CV_8UC3;			
+		}
+	}
+
+	free(webp_file_data); webp_file_data = NULL;
+
+Exit_CloseFile:
+	fclose(webp_file); webp_file = NULL;
 	
+Exit:
 	return header_read;
 }
 
@@ -145,47 +136,48 @@ bool WebPDecoder::readData(Mat &img)
 
 	uint8_t *webp_file_data = NULL;
 	size_t webp_file_data_size = 0;
+	size_t data_read_size = 0;
 
 	FILE *webp_file = NULL;
 	webp_file = fopen(m_filename.c_str(), "rb");
 
-	if(webp_file != NULL)
+	if(webp_file == NULL)
 	{
-		fseek(webp_file, 0, SEEK_END);
-		webp_file_data_size = ftell(webp_file);
-		fseek(webp_file, 0, SEEK_SET);
-
-		webp_file_data = (uint8_t *) malloc (webp_file_data_size);
-
-		if(webp_file_data != NULL)
-		{
-			size_t data_read_size = fread(webp_file_data, 1, webp_file_data_size,
-											webp_file);
-			if( (data_read_size == webp_file_data_size) &&
-				(m_width > 0 && m_height > 0) )
-			{
-				uchar* out_data = img.data;
-				unsigned int out_data_size = m_width * m_height * 3 * sizeof(uchar);
-				uchar *res_ptr = WebPDecodeBGRInto(webp_file_data,
-					webp_file_data_size, out_data, out_data_size, m_width * 3);
-
-				if(res_ptr == out_data)
-					data_read = true;
-			}
-			else
-			{
-				cvError(CV_StsError, __FUNCTION__, "Not able to read data from file",
-					__FILE__, __LINE__);
-				printf("Not able to read %lu bytes from file %s", webp_file_data_size
-					, m_filename.c_str());
-			}
-	
-			free(webp_file_data); webp_file_data = NULL;
-		}
-
-		fclose(webp_file); webp_file = NULL;
+		goto Exit;
 	}
 
+	fseek(webp_file, 0, SEEK_END);
+	webp_file_data_size = ftell(webp_file);
+	fseek(webp_file, 0, SEEK_SET);
+
+	webp_file_data = (uint8_t *) malloc (webp_file_data_size);
+	
+	if(webp_file_data == NULL)
+	{
+		goto Exit_CloseFile;
+	}
+
+	data_read_size = fread(webp_file_data, 1, webp_file_data_size,
+		webp_file);
+	
+	if( (data_read_size == webp_file_data_size) &&
+		(m_width > 0 && m_height > 0) )
+	{
+		uchar* out_data = img.data;
+		unsigned int out_data_size = m_width * m_height * 3 * sizeof(uchar);
+		uchar *res_ptr = WebPDecodeBGRInto(webp_file_data,
+			webp_file_data_size, out_data, out_data_size, m_width * 3);
+
+		if(res_ptr == out_data)
+			data_read = true;
+	}
+
+	free(webp_file_data); webp_file_data = NULL;
+
+Exit_CloseFile:
+	fclose(webp_file); webp_file = NULL;
+
+Exit:
 	return data_read;
 }
 
@@ -213,33 +205,40 @@ bool WebPEncoder::write(const Mat& img, const vector<int>& params)
 
 	const Mat *image = &img;
 	Mat temp;
-	int quality = 95;
+	int quality = 95, size = 0;
+
+	uint8_t *out = NULL;
 
 	if(depth != CV_8U)
-		return false;
+	{
+		goto Exit;
+	}
 	
 	if(channels == 1)
 	{
-		return false;
-		/*
-		cvtColor(*image, temp, CV_GRAY2BG);
+		cvtColor(*image, temp, CV_GRAY2BGR);
 		image = &temp;
 		channels = 3;
-		*/
 	}
 
-	uint8_t *out = new uint8_t[width * height * channels];
-	int s = WebPEncodeBGR(image->data, width, height, ((width * 3 + 3) & ~3) /*channels*/,
+	size = WebPEncodeBGR(image->data, width, height, ((width * 3 + 3) & ~3),
 		(float) quality, &out);
 
-	image_created = true;
+	if(size > 0)
+	{
+		image_created = true;
 
-	FILE *fd = fopen(m_filename.c_str(), "wb");
-	fwrite(out, s, sizeof(uint8_t), fd);
-	fclose(fd); fd = NULL;
+		FILE *fd = fopen(m_filename.c_str(), "wb");
+		if(fd != NULL)
+		{
+			fwrite(out, size, sizeof(uint8_t), fd);
+			fclose(fd); fd = NULL;
+		}
+	}
 
-	delete[] out;
+	free(out); out = NULL;
 
+Exit:
 	return image_created;
 }
 

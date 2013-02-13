@@ -47,8 +47,6 @@
 
 #ifdef HAVE_WEBP
 
-#define WEBP_SIGNATURE "RIFF....WEBP"
-
 namespace cv
 {
 
