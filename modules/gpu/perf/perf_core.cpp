@@ -648,6 +648,39 @@ PERF_TEST_P(Sz_Depth_Code, Core_CompareMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITH
 }
 
 //////////////////////////////////////////////////////////////////////
+// CompareScalar
+
+PERF_TEST_P(Sz_Depth_Code, Core_CompareScalar, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH, ALL_CMP_CODES))
+{
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const int cmp_code = GET_PARAM(2);
+
+    cv::Mat src(size, depth);
+    fillRandom(src);
+
+    cv::Scalar s = cv::Scalar::all(100);
+
+    if (PERF_RUN_GPU())
+    {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
+        TEST_CYCLE() cv::gpu::compare(d_src, s, d_dst, cmp_code);
+
+        GPU_SANITY_CHECK(d_dst);
+    }
+    else
+    {
+        cv::Mat dst;
+
+        TEST_CYCLE() cv::compare(src, s, dst, cmp_code);
+
+        CPU_SANITY_CHECK(dst);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
 // BitwiseNot
 
 PERF_TEST_P(Sz_Depth, Core_BitwiseNot, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32S)))
