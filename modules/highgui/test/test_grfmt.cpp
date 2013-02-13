@@ -124,10 +124,10 @@ public:
                             ts->set_failed_test_info(ts->FAIL_MISMATCH);
                         }
                     }
-		    if (ext == 3 /*TIFF*/)
+                    if (ext == 3 /*TIFF*/)
                     {
                     /* 4 channels should stay 4 channels */
-                        int num_channels = 4; 
+                        int num_channels = 4;
                         ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U,num_channels, ext_from_int(ext).c_str());
                         Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
                         circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
@@ -143,7 +143,7 @@ public:
 
                         CV_Assert(img.size() == img_test.size());
                         CV_Assert(img.type() == img_test.type());
-                        CV_Assert(img.channels() == 4);
+                        CV_Assert(img_test.channels() == 4);
 
                         double n = norm(img, img_test);
                         if ( n > 1.0)
@@ -153,7 +153,6 @@ public:
                         }
 
                     }
-		
                 }
 
 #ifdef HAVE_JPEG
