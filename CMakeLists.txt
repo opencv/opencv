@@ -301,21 +301,19 @@ find_host_program(GIT_EXECUTABLE NAMES ${git_names} PATH_SUFFIXES Git/cmd Git/bi
 mark_as_advanced(GIT_EXECUTABLE)
 
 if(GIT_EXECUTABLE)
-  execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+  execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --always --dirty --match "2.[0-9].[0-9]*"
     WORKING_DIRECTORY "${OpenCV_SOURCE_DIR}"
-    OUTPUT_VARIABLE OPENCV_GIT_HASH_SORT
+    OUTPUT_VARIABLE OPENCV_VCSVERSION
     RESULT_VARIABLE GIT_RESULT
     ERROR_QUIET
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
-  if(GIT_RESULT EQUAL 0)
-    set(OPENCV_VCSVERSION "commit:${OPENCV_GIT_HASH_SORT}")
-  else()
-    set(OPENCV_VCSVERSION "exported")
+  if(NOT GIT_RESULT EQUAL 0)
+    set(OPENCV_VCSVERSION "unknown")
   endif()
 else()
   # We don't have git:
-  set(OPENCV_VCSVERSION "")
+  set(OPENCV_VCSVERSION "unknown")
 endif()
 
 
