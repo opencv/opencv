@@ -1982,6 +1982,95 @@ private:
 };
 
 
+// Implementation of the Zach, Pock and Bischof Dual TV-L1 Optical Flow method
+//
+// see reference:
+//   [1] C. Zach, T. Pock and H. Bischof, "A Duality Based Approach for Realtime TV-L1 Optical Flow".
+//   [2] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
+class CV_EXPORTS OpticalFlowDual_TVL1_GPU
+{
+public:
+    OpticalFlowDual_TVL1_GPU();
+
+    void operator ()(const GpuMat& I0, const GpuMat& I1, GpuMat& flowx, GpuMat& flowy);
+
+    void collectGarbage();
+
+    /**
+     * Time step of the numerical scheme.
+     */
+    double tau;
+
+    /**
+     * Weight parameter for the data term, attachment parameter.
+     * This is the most relevant parameter, which determines the smoothness of the output.
+     * The smaller this parameter is, the smoother the solutions we obtain.
+     * It depends on the range of motions of the images, so its value should be adapted to each image sequence.
+     */
+    double lambda;
+
+    /**
+     * Weight parameter for (u - v)^2, tightness parameter.
+     * It serves as a link between the attachment and the regularization terms.
+     * In theory, it should have a small value in order to maintain both parts in correspondence.
+     * The method is stable for a large range of values of this parameter.
+     */
+    double theta;
+
+    /**
+     * Number of scales used to create the pyramid of images.
+     */
+    int nscales;
+
+    /**
+     * Number of warpings per scale.
+     * Represents the number of times that I1(x+u0) and grad( I1(x+u0) ) are computed per scale.
+     * This is a parameter that assures the stability of the method.
+     * It also affects the running time, so it is a compromise between speed and accuracy.
+     */
+    int warps;
+
+    /**
+     * Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time.
+     * A small value will yield more accurate solutions at the expense of a slower convergence.
+     */
+    double epsilon;
+
+    /**
+     * Stopping criterion iterations number used in the numerical scheme.
+     */
+    int iterations;
+
+    bool useInitialFlow;
+
+private:
+    void procOneScale(const GpuMat& I0, const GpuMat& I1, GpuMat& u1, GpuMat& u2);
+
+    std::vector<GpuMat> I0s;
+    std::vector<GpuMat> I1s;
+    std::vector<GpuMat> u1s;
+    std::vector<GpuMat> u2s;
+
+    GpuMat I1x_buf;
+    GpuMat I1y_buf;
+
+    GpuMat I1w_buf;
+    GpuMat I1wx_buf;
+    GpuMat I1wy_buf;
+
+    GpuMat grad_buf;
+    GpuMat rho_c_buf;
+
+    GpuMat p11_buf;
+    GpuMat p12_buf;
+    GpuMat p21_buf;
+    GpuMat p22_buf;
+
+    GpuMat diff_buf;
+    GpuMat norm_buf;
+};
+
+
 //! Interpolate frames (images) using provided optical flow (displacement field).
 //! frame0   - frame 0 (32-bit floating point images, single channel)
 //! frame1   - frame 1 (the same type and size)

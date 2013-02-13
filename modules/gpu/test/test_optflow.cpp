@@ -401,4 +401,48 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, FarnebackOpticalFlow, testing::Combine(
     testing::Values(FarnebackOptFlowFlags(0), FarnebackOptFlowFlags(cv::OPTFLOW_FARNEBACK_GAUSSIAN)),
     testing::Values(UseInitFlow(false), UseInitFlow(true))));
 
+//////////////////////////////////////////////////////
+// OpticalFlowDual_TVL1
+
+PARAM_TEST_CASE(OpticalFlowDual_TVL1, cv::gpu::DeviceInfo, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        useRoi = GET_PARAM(1);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+GPU_TEST_P(OpticalFlowDual_TVL1, Accuracy)
+{
+    cv::Mat frame0 = readImage("opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame0.empty());
+
+    cv::Mat frame1 = readImage("opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame1.empty());
+
+    cv::gpu::OpticalFlowDual_TVL1_GPU d_alg;
+    cv::gpu::GpuMat d_flowx = createMat(frame0.size(), CV_32FC1, useRoi);
+    cv::gpu::GpuMat d_flowy = createMat(frame0.size(), CV_32FC1, useRoi);
+    d_alg(loadMat(frame0, useRoi), loadMat(frame1, useRoi), d_flowx, d_flowy);
+
+    cv::OpticalFlowDual_TVL1 alg;
+    cv::Mat flow;
+    alg(frame0, frame1, flow);
+    cv::Mat gold[2];
+    cv::split(flow, gold);
+
+    EXPECT_MAT_SIMILAR(gold[0], d_flowx, 3e-3);
+    EXPECT_MAT_SIMILAR(gold[1], d_flowy, 3e-3);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Video, OpticalFlowDual_TVL1, testing::Combine(
+    ALL_DEVICES,
+    WHOLE_SUBMAT));
+
 #endif // HAVE_CUDA
