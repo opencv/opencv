@@ -946,7 +946,7 @@ int CV_ThreshHistTest::validate_test_results( int /*test_case_idx*/ )
 class CV_CompareHistTest : public CV_BaseHistTest
 {
 public:
-    enum { MAX_METHOD = 4 };
+    enum { MAX_METHOD = 5 };
 
     CV_CompareHistTest();
 protected:
@@ -1010,7 +1010,10 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             result0[CV_COMP_CORREL] += v0*v1;
             result0[CV_COMP_INTERSECT] += MIN(v0,v1);
             if( fabs(v0) > DBL_EPSILON )
-                result0[CV_COMP_CHISQR] += (v0 - v1)*(v0 - v1)/v0;
+            {
+                result0[CV_COMP_CHISQR]     += (v0 - v1)*(v0 - v1)/v0;
+                result0[CV_COMP_CHISQR_ALT] += (v0 - v1)*(v0 - v1)/(v0 + v1);
+            }
             s0 += v0;
             s1 += v1;
             sq0 += v0*v0;
@@ -1035,7 +1038,10 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             result0[CV_COMP_CORREL] += v0*v1;
             result0[CV_COMP_INTERSECT] += MIN(v0,v1);
             if( fabs(v0) > DBL_EPSILON )
-                result0[CV_COMP_CHISQR] += (v0 - v1)*(v0 - v1)/v0;
+            {
+                result0[CV_COMP_CHISQR]     += (v0 - v1)*(v0 - v1)/v0;
+                result0[CV_COMP_CHISQR_ALT] += (v0 - v1)*(v0 - v1)/(v0 + v1);
+            }
             s0 += v0;
             sq0 += v0*v0;
             result0[CV_COMP_BHATTACHARYYA] += sqrt(v0*v1);
@@ -1049,6 +1055,8 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             sq1 += v1*v1;
         }
     }
+
+    result0[CV_COMP_CHISQR_ALT] *= 0.5;
 
     t = (sq0 - s0*s0/total_size)*(sq1 - s1*s1/total_size);
     result0[CV_COMP_CORREL] = fabs(t) > DBL_EPSILON ?
@@ -1064,6 +1072,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
         double v = result[i], v0 = result0[i];
         const char* method_name =
             i == CV_COMP_CHISQR ? "Chi-Square" :
+            i == CV_COMP_CHISQR_ALT ? "Alternative Chi-Square" :
             i == CV_COMP_CORREL ? "Correlation" :
             i == CV_COMP_INTERSECT ? "Intersection" :
             i == CV_COMP_BHATTACHARYYA ? "Bhattacharyya" : "Unknown";
