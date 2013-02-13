@@ -101,8 +101,8 @@ public:
                         continue;
                     for (int num_channels = 1; num_channels <= 4; num_channels++)
                     {
-			if (num_channels == 2) continue;
-			if (num_channels == 4 && ext!=3 /*TIFF*/) continue;
+                        if (num_channels == 2) continue;
+                        if (num_channels == 4 && ext!=3 /*TIFF*/) continue;
 
                         ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ext_from_int(ext).c_str());
                         Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
