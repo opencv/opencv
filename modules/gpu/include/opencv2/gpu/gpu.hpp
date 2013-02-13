@@ -867,6 +867,11 @@ CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, float rho, float th
 CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
 CV_EXPORTS void HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines, OutputArray h_votes = noArray());
 
+//! HoughLinesP
+
+//! finds line segments in the black-n-white image using probabalistic Hough transform
+CV_EXPORTS void HoughLinesP(const GpuMat& image, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int minLineLength, int maxLineGap, int maxLines = 4096);
+
 //! HoughCircles
 
 struct HoughCirclesBuf

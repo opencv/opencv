@@ -1706,6 +1706,16 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidGetLayer, Combine(GPU_TYPICAL_MAT_S
 }
 
 namespace {
+    struct Vec4iComparator
+    {
+        bool operator()(const cv::Vec4i& a, const cv::Vec4i b) const
+        {
+            if (a[0] != b[0]) return a[0] < b[0];
+            else if(a[1] != b[1]) return a[1] < b[1];
+            else if(a[2] != b[2]) return a[2] < b[2];
+            else return a[3] < b[3];
+        }
+    };
     struct Vec3fComparator
     {
         bool operator()(const cv::Vec3f& a, const cv::Vec3f b) const
@@ -1780,6 +1790,62 @@ PERF_TEST_P(Sz, ImgProc_HoughLines, GPU_TYPICAL_MAT_SIZES)
         }
 
         std::sort(lines.begin(), lines.end(), Vec2fComparator());
+        SANITY_CHECK(lines);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// HoughLinesP
+
+DEF_PARAM_TEST_1(Image, std::string);
+
+PERF_TEST_P(Image, ImgProc_HoughLinesP, testing::Values("cv/shared/pic5.png", "stitching/a1.png"))
+{
+    declare.time(30.0);
+
+    std::string fileName = getDataPath(GetParam());
+
+    const float rho = 1.0f;
+    const float theta = static_cast<float>(CV_PI / 180.0);
+    const int threshold = 100;
+    const int minLineLenght = 50;
+    const int maxLineGap = 5;
+
+    cv::Mat image = cv::imread(fileName, cv::IMREAD_GRAYSCALE);
+
+    cv::Mat mask;
+    cv::Canny(image, mask, 50, 100);
+
+    if (PERF_RUN_GPU())
+    {
+        cv::gpu::GpuMat d_mask(mask);
+        cv::gpu::GpuMat d_lines;
+        cv::gpu::HoughLinesBuf d_buf;
+
+        cv::gpu::HoughLinesP(d_mask, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::HoughLinesP(d_mask, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
+        }
+
+        cv::Mat h_lines(d_lines);
+        cv::Vec4i* begin = h_lines.ptr<cv::Vec4i>();
+        cv::Vec4i* end = h_lines.ptr<cv::Vec4i>() + h_lines.cols;
+        std::sort(begin, end, Vec4iComparator());
+        SANITY_CHECK(h_lines);
+    }
+    else
+    {
+        std::vector<cv::Vec4i> lines;
+        cv::HoughLinesP(mask, lines, rho, theta, threshold, minLineLenght, maxLineGap);
+
+        TEST_CYCLE()
+        {
+            cv::HoughLinesP(mask, lines, rho, theta, threshold, minLineLenght, maxLineGap);
+        }
+
+        std::sort(lines.begin(), lines.end(), Vec4iComparator());
         SANITY_CHECK(lines);
     }
 }
