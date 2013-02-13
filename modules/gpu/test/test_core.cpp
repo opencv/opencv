@@ -2918,10 +2918,12 @@ PARAM_TEST_CASE(Norm, cv::gpu::DeviceInfo, cv::Size, MatDepth, NormCode, UseRoi)
 GPU_TEST_P(Norm, Accuracy)
 {
     cv::Mat src = randomMat(size, depth);
+    cv::Mat mask = randomMat(size, CV_8UC1, 0, 2);
 
-    double val = cv::gpu::norm(loadMat(src, useRoi), normCode);
+    cv::gpu::GpuMat d_buf;
+    double val = cv::gpu::norm(loadMat(src, useRoi), normCode, loadMat(mask, useRoi), d_buf);
 
-    double val_gold = cv::norm(src, normCode);
+    double val_gold = cv::norm(src, normCode, mask);
 
     EXPECT_NEAR(val_gold, val, depth < CV_32F ? 0.0 : 1.0);
 }

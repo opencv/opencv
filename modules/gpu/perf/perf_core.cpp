@@ -1631,7 +1631,7 @@ PERF_TEST_P(Sz_Depth_Norm, Core_Norm, Combine(
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() dst = cv::gpu::norm(d_src, normType, d_buf);
+        TEST_CYCLE() dst = cv::gpu::norm(d_src, normType, cv::gpu::GpuMat(), d_buf);
     }
     else
     {
@@ -1701,7 +1701,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_Sum, Combine(
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() dst = cv::gpu::sum(d_src, d_buf);
+        TEST_CYCLE() dst = cv::gpu::sum(d_src, cv::gpu::GpuMat(), d_buf);
     }
     else
     {
@@ -1736,7 +1736,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_SumAbs, Combine(
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() dst = cv::gpu::absSum(d_src, d_buf);
+        TEST_CYCLE() dst = cv::gpu::absSum(d_src, cv::gpu::GpuMat(), d_buf);
 
         SANITY_CHECK(dst, 1e-6);
     }
@@ -1770,7 +1770,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_SumSqr, Combine(
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() dst = cv::gpu::sqrSum(d_src, d_buf);
+        TEST_CYCLE() dst = cv::gpu::sqrSum(d_src, cv::gpu::GpuMat(), d_buf);
 
         SANITY_CHECK(dst, 1e-6);
     }

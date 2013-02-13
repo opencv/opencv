@@ -919,11 +919,8 @@ CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev, GpuM
 //! supports NORM_INF, NORM_L1, NORM_L2
 //! supports all matrices except 64F
 CV_EXPORTS double norm(const GpuMat& src1, int normType=NORM_L2);
-
-//! computes norm of array
-//! supports NORM_INF, NORM_L1, NORM_L2
-//! supports all matrices except 64F
 CV_EXPORTS double norm(const GpuMat& src1, int normType, GpuMat& buf);
+CV_EXPORTS double norm(const GpuMat& src1, int normType, const GpuMat& mask, GpuMat& buf);
 
 //! computes norm of the difference between two arrays
 //! supports NORM_INF, NORM_L1, NORM_L2
@@ -933,45 +930,33 @@ CV_EXPORTS double norm(const GpuMat& src1, const GpuMat& src2, int normType=NORM
 //! computes sum of array elements
 //! supports only single channel images
 CV_EXPORTS Scalar sum(const GpuMat& src);
-
-//! computes sum of array elements
-//! supports only single channel images
 CV_EXPORTS Scalar sum(const GpuMat& src, GpuMat& buf);
+CV_EXPORTS Scalar sum(const GpuMat& src, const GpuMat& mask, GpuMat& buf);
 
 //! computes sum of array elements absolute values
 //! supports only single channel images
 CV_EXPORTS Scalar absSum(const GpuMat& src);
-
-//! computes sum of array elements absolute values
-//! supports only single channel images
 CV_EXPORTS Scalar absSum(const GpuMat& src, GpuMat& buf);
+CV_EXPORTS Scalar absSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf);
 
 //! computes squared sum of array elements
 //! supports only single channel images
 CV_EXPORTS Scalar sqrSum(const GpuMat& src);
-
-//! computes squared sum of array elements
-//! supports only single channel images
 CV_EXPORTS Scalar sqrSum(const GpuMat& src, GpuMat& buf);
+CV_EXPORTS Scalar sqrSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf);
 
 //! finds global minimum and maximum array elements and returns their values
 CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal=0, const GpuMat& mask=GpuMat());
-
-//! finds global minimum and maximum array elements and returns their values
 CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf);
 
 //! finds global minimum and maximum array elements and returns their values with locations
 CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0,
                           const GpuMat& mask=GpuMat());
-
-//! finds global minimum and maximum array elements and returns their values with locations
 CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
                           const GpuMat& mask, GpuMat& valbuf, GpuMat& locbuf);
 
 //! counts non-zero array elements
 CV_EXPORTS int countNonZero(const GpuMat& src);
-
-//! counts non-zero array elements
 CV_EXPORTS int countNonZero(const GpuMat& src, GpuMat& buf);
 
 //! reduces a matrix to a vector
