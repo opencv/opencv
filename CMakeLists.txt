@@ -718,7 +718,7 @@ if(DEFINED WITH_PVAPI)
 endif(DEFINED WITH_PVAPI)
 
 if(DEFINED WITH_GIGEAPI)
-  status("    GigEVisionSDK:"  HAVE_GIGE_API          THEN YES                                        ELSE NO)
+  status("    GigEVisionSDK:"  HAVE_GIGE_API       THEN YES                                        ELSE NO)
 endif(DEFINED WITH_GIGEAPI)
 
 if(DEFINED WITH_QUICKTIME)
@@ -799,6 +799,19 @@ if(HAVE_CUDA)
   status("    NVIDIA GPU arch:"      ${OPENCV_CUDA_ARCH_BIN})
   status("    NVIDIA PTX archs:"     ${OPENCV_CUDA_ARCH_PTX})
   status("    Use fast math:"        CUDA_FAST_MATH THEN YES ELSE NO)
+endif()
+
+if(HAVE_OPENCL AND BUILD_opencv_ocl)
+  status("")
+  status("  OpenCL")
+  if(OPENCL_INCLUDE_DIR)
+    status("    Include:"            ${OPENCL_INCLUDE_DIR})
+  endif()
+  if(OPENCL_LIBRARIES)
+    status("    libraries:"          ${OPENCL_LIBRARIES})
+  endif()
+  status("    Use AMDFFT:"           HAVE_CLAMDFFT  THEN YES ELSE NO)
+  status("    Use AMDBLAS:"          HAVE_CLAMDBLAS THEN YES ELSE NO)
 endif()
 
 # ========================== python ==========================
