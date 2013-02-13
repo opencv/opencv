@@ -103,11 +103,11 @@ public:
 
     size_t signatureLength() const;
     bool checkSignature( const string& signature ) const;
-    int normalizeChannelsNumber(int channels) const;
     ImageDecoder newDecoder() const;
 
 protected:
     void* m_tif;
+    int normalizeChannelsNumber(int channels) const;
 };
 
 #endif
