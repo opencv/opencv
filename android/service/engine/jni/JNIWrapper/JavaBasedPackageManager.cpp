@@ -40,6 +40,7 @@ bool JavaBasedPackageManager::InstallPackage(const PackageInfo& package)
     if (!jmethod)
     {
         LOGE("MarketConnector::GetAppFormMarket method was not found!");
+        jenv->DeleteLocalRef(jclazz);
         return false;
     }
 
@@ -74,7 +75,6 @@ vector<PackageInfo> JavaBasedPackageManager::GetInstalledPackages()
         JavaContext->AttachCurrentThread(&jenv, NULL);
     }
 
-    LOGD("GetObjectClass call");
     jclass jclazz = jenv->GetObjectClass(JavaPackageManager);
     if (!jclazz)
     {
@@ -82,15 +82,14 @@ vector<PackageInfo> JavaBasedPackageManager::GetInstalledPackages()
         return result;
     }
 
-    LOGD("GetMethodID call");
     jmethodID jmethod = jenv->GetMethodID(jclazz, "GetInstalledOpenCVPackages", "()[Landroid/content/pm/PackageInfo;");
     if (!jmethod)
     {
         LOGE("MarketConnector::GetInstalledOpenCVPackages method was not found!");
+        jenv->DeleteLocalRef(jclazz);
         return result;
     }
 
-    LOGD("Java package manager call");
     jobjectArray jpkgs = static_cast<jobjectArray>(jenv->CallNonvirtualObjectMethod(JavaPackageManager, jclazz, jmethod));
     jsize size = jenv->GetArrayLength(jpkgs);
 
@@ -102,7 +101,6 @@ vector<PackageInfo> JavaBasedPackageManager::GetInstalledPackages()
     {
         jobject jtmp = jenv->GetObjectArrayElement(jpkgs, i);
         PackageInfo tmp = ConvertPackageFromJava(jtmp, jenv);
-        jenv->DeleteLocalRef(jtmp);
 
         if (tmp.IsValid())
             result.push_back(tmp);
@@ -137,6 +135,7 @@ static jint GetAndroidVersion(JNIEnv* jenv)
 PackageInfo JavaBasedPackageManager::ConvertPackageFromJava(jobject package, JNIEnv* jenv)
 {
     jclass jclazz = jenv->GetObjectClass(package);
+
     jfieldID jfield = jenv->GetFieldID(jclazz, "packageName", "Ljava/lang/String;");
     jstring jnameobj = static_cast<jstring>(jenv->GetObjectField(package, jfield));
     const char* jnamestr = jenv->GetStringUTFChars(jnameobj, NULL);
@@ -148,6 +147,7 @@ PackageInfo JavaBasedPackageManager::ConvertPackageFromJava(jobject package, JNI
     const char* jversionstr = jenv->GetStringUTFChars(jversionobj, NULL);
     string verison(jversionstr);
     jenv->DeleteLocalRef(jversionobj);
+
     jenv->DeleteLocalRef(jclazz);
 
     static const jint api_level = GetAndroidVersion(jenv);
