@@ -116,40 +116,11 @@ CvPyramid;
 #define  CV_SET( dst, val, len, idx )  \
     for( (idx) = 0; (idx) < (len); (idx)++) (dst)[idx] = (val)
 
-/* performs convolution of 2d floating-point array with 3x1, 1x3 or separable 3x3 mask */
-void icvSepConvSmall3_32f( float* src, int src_step, float* dst, int dst_step,
-            CvSize src_size, const float* kx, const float* ky, float* buffer );
-
 #undef   CV_CALC_MIN
 #define  CV_CALC_MIN(a, b) if((a) > (b)) (a) = (b)
 
 #undef   CV_CALC_MAX
 #define  CV_CALC_MAX(a, b) if((a) < (b)) (a) = (b)
-
-CvStatus CV_STDCALL
-icvCopyReplicateBorder_8u( const uchar* src, int srcstep, CvSize srcroi,
-                           uchar* dst, int dststep, CvSize dstroi,
-                           int left, int right, int cn, const uchar* value = 0 );
-
-CvStatus CV_STDCALL icvGetRectSubPix_8u_C1R
-( const uchar* src, int src_step, CvSize src_size,
-  uchar* dst, int dst_step, CvSize win_size, CvPoint2D32f center );
-CvStatus CV_STDCALL icvGetRectSubPix_8u32f_C1R
-( const uchar* src, int src_step, CvSize src_size,
-  float* dst, int dst_step, CvSize win_size, CvPoint2D32f center );
-CvStatus CV_STDCALL icvGetRectSubPix_32f_C1R
-( const float* src, int src_step, CvSize src_size,
-  float* dst, int dst_step, CvSize win_size, CvPoint2D32f center );
-
-CvStatus CV_STDCALL icvGetQuadrangleSubPix_8u_C1R
-( const uchar* src, int src_step, CvSize src_size,
-  uchar* dst, int dst_step, CvSize win_size, const float *matrix );
-CvStatus CV_STDCALL icvGetQuadrangleSubPix_8u32f_C1R
-( const uchar* src, int src_step, CvSize src_size,
-  float* dst, int dst_step, CvSize win_size, const float *matrix );
-CvStatus CV_STDCALL icvGetQuadrangleSubPix_32f_C1R
-( const float* src, int src_step, CvSize src_size,
-  float* dst, int dst_step, CvSize win_size, const float *matrix );
 
 #include "_geom.h"
 
