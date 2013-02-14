@@ -1262,7 +1262,8 @@ bool CvSVM::set_params( const CvSVMParams& _params )
     svm_type = params.svm_type;
 
     if( kernel_type != LINEAR && kernel_type != POLY &&
-        kernel_type != SIGMOID && kernel_type != RBF )
+        kernel_type != SIGMOID && kernel_type != RBF && 
+        kernel_type != INTER && kernel_type != CHI2)
         CV_ERROR( CV_StsBadArg, "Unknown/unsupported kernel type" );
 
     if( kernel_type == LINEAR )
