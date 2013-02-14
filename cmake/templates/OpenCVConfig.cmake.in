@@ -219,18 +219,14 @@ foreach(__opttype OPT DBG)
   else()
     #TODO: duplicates are annoying but they should not be the problem
   endif()
-  
+
   # CUDA
-  if(OpenCV_CUDA_VERSION AND (CARMA OR (WIN32 AND NOT OpenCV_SHARED)))
+  if(OpenCV_CUDA_VERSION AND WIN32 AND NOT OpenCV_SHARED)
     if(NOT CUDA_FOUND)
       find_package(CUDA ${OpenCV_CUDA_VERSION} EXACT REQUIRED)
     else()
       if(NOT CUDA_VERSION_STRING VERSION_EQUAL OpenCV_CUDA_VERSION)
-        if(WIN32)
-          message(FATAL_ERROR "OpenCV static library was compiled with CUDA ${OpenCV_CUDA_VERSION} support. Please, use the same version or rebuild OpenCV with CUDA ${CUDA_VERSION_STRING}")
-        else()
-          message(FATAL_ERROR "OpenCV library for CARMA was compiled with CUDA ${OpenCV_CUDA_VERSION} support. Please, use the same version or rebuild OpenCV with CUDA ${CUDA_VERSION_STRING}")
-        endif()
+        message(FATAL_ERROR "OpenCV static library was compiled with CUDA ${OpenCV_CUDA_VERSION} support. Please, use the same version or rebuild OpenCV with CUDA ${CUDA_VERSION_STRING}")
       endif()
     endif()
 
