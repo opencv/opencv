@@ -51,13 +51,17 @@ void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&) { throw_nogpu(); }
 void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&, GpuMat&) { throw_nogpu(); }
 double cv::gpu::norm(const GpuMat&, int) { throw_nogpu(); return 0.0; }
 double cv::gpu::norm(const GpuMat&, int, GpuMat&) { throw_nogpu(); return 0.0; }
+double cv::gpu::norm(const GpuMat&, int, const GpuMat&, GpuMat&) { throw_nogpu(); return 0.0; }
 double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_nogpu(); return 0.0; }
 Scalar cv::gpu::sum(const GpuMat&) { throw_nogpu(); return Scalar(); }
 Scalar cv::gpu::sum(const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
+Scalar cv::gpu::sum(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
 Scalar cv::gpu::absSum(const GpuMat&) { throw_nogpu(); return Scalar(); }
 Scalar cv::gpu::absSum(const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
+Scalar cv::gpu::absSum(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
 Scalar cv::gpu::sqrSum(const GpuMat&) { throw_nogpu(); return Scalar(); }
 Scalar cv::gpu::sqrSum(const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
+Scalar cv::gpu::sqrSum(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
 void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&) { throw_nogpu(); }
 void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&) { throw_nogpu(); }
@@ -150,24 +154,30 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev, GpuMat
 double cv::gpu::norm(const GpuMat& src, int normType)
 {
     GpuMat buf;
-    return norm(src, normType, buf);
+    return norm(src, normType, GpuMat(), buf);
 }
 
 double cv::gpu::norm(const GpuMat& src, int normType, GpuMat& buf)
 {
+    return norm(src, normType, GpuMat(), buf);
+}
+
+double cv::gpu::norm(const GpuMat& src, int normType, const GpuMat& mask, GpuMat& buf)
+{
     CV_Assert(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2);
+    CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size() && src.channels() == 1));
 
     GpuMat src_single_channel = src.reshape(1);
 
     if (normType == NORM_L1)
-        return absSum(src_single_channel, buf)[0];
+        return absSum(src_single_channel, mask, buf)[0];
 
     if (normType == NORM_L2)
-        return std::sqrt(sqrSum(src_single_channel, buf)[0]);
+        return std::sqrt(sqrSum(src_single_channel, mask, buf)[0]);
 
     // NORM_INF
     double min_val, max_val;
-    minMax(src_single_channel, &min_val, &max_val, GpuMat(), buf);
+    minMax(src_single_channel, &min_val, &max_val, mask, buf);
     return std::max(std::abs(min_val), std::abs(max_val));
 }
 
@@ -209,24 +219,29 @@ namespace sum
     void getBufSize(int cols, int rows, int cn, int& bufcols, int& bufrows);
 
     template <typename T, int cn>
-    void run(PtrStepSzb src, void* buf, double* sum);
+    void run(PtrStepSzb src, void* buf, double* sum, PtrStepSzb mask);
 
     template <typename T, int cn>
-    void runAbs(PtrStepSzb src, void* buf, double* sum);
+    void runAbs(PtrStepSzb src, void* buf, double* sum, PtrStepSzb mask);
 
     template <typename T, int cn>
-    void runSqr(PtrStepSzb src, void* buf, double* sum);
+    void runSqr(PtrStepSzb src, void* buf, double* sum, PtrStepSzb mask);
 }
 
 Scalar cv::gpu::sum(const GpuMat& src)
 {
     GpuMat buf;
-    return sum(src, buf);
+    return sum(src, GpuMat(), buf);
 }
 
 Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf)
 {
-    typedef void (*func_t)(PtrStepSzb src, void* buf, double* sum);
+    return sum(src, GpuMat(), buf);
+}
+
+Scalar cv::gpu::sum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
+{
+    typedef void (*func_t)(PtrStepSzb src, void* buf, double* sum, PtrStepSzb mask);
     static const func_t funcs[7][5] =
     {
         {0, ::sum::run<uchar , 1>, ::sum::run<uchar , 2>, ::sum::run<uchar , 3>, ::sum::run<uchar , 4>},
@@ -238,6 +253,8 @@ Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf)
         {0, ::sum::run<double, 1>, ::sum::run<double, 2>, ::sum::run<double, 3>, ::sum::run<double, 4>}
     };
 
+    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
+
     if (src.depth() == CV_64F)
     {
         if (!deviceSupports(NATIVE_DOUBLE))
@@ -252,7 +269,7 @@ Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf)
     const func_t func = funcs[src.depth()][src.channels()];
 
     double result[4];
-    func(src, buf.data, result);
+    func(src, buf.data, result, mask);
 
     return Scalar(result[0], result[1], result[2], result[3]);
 }
@@ -260,12 +277,17 @@ Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf)
 Scalar cv::gpu::absSum(const GpuMat& src)
 {
     GpuMat buf;
-    return absSum(src, buf);
+    return absSum(src, GpuMat(), buf);
 }
 
 Scalar cv::gpu::absSum(const GpuMat& src, GpuMat& buf)
 {
-    typedef void (*func_t)(PtrStepSzb src, void* buf, double* sum);
+    return absSum(src, GpuMat(), buf);
+}
+
+Scalar cv::gpu::absSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
+{
+    typedef void (*func_t)(PtrStepSzb src, void* buf, double* sum, PtrStepSzb mask);
     static const func_t funcs[7][5] =
     {
         {0, ::sum::runAbs<uchar , 1>, ::sum::runAbs<uchar , 2>, ::sum::runAbs<uchar , 3>, ::sum::runAbs<uchar , 4>},
@@ -277,6 +299,8 @@ Scalar cv::gpu::absSum(const GpuMat& src, GpuMat& buf)
         {0, ::sum::runAbs<double, 1>, ::sum::runAbs<double, 2>, ::sum::runAbs<double, 3>, ::sum::runAbs<double, 4>}
     };
 
+    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
+
     if (src.depth() == CV_64F)
     {
         if (!deviceSupports(NATIVE_DOUBLE))
@@ -291,7 +315,7 @@ Scalar cv::gpu::absSum(const GpuMat& src, GpuMat& buf)
     const func_t func = funcs[src.depth()][src.channels()];
 
     double result[4];
-    func(src, buf.data, result);
+    func(src, buf.data, result, mask);
 
     return Scalar(result[0], result[1], result[2], result[3]);
 }
@@ -299,12 +323,17 @@ Scalar cv::gpu::absSum(const GpuMat& src, GpuMat& buf)
 Scalar cv::gpu::sqrSum(const GpuMat& src)
 {
     GpuMat buf;
-    return sqrSum(src, buf);
+    return sqrSum(src, GpuMat(), buf);
 }
 
 Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf)
 {
-    typedef void (*func_t)(PtrStepSzb src, void* buf, double* sum);
+    return sqrSum(src, GpuMat(), buf);
+}
+
+Scalar cv::gpu::sqrSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
+{
+    typedef void (*func_t)(PtrStepSzb src, void* buf, double* sum, PtrStepSzb mask);
     static const func_t funcs[7][5] =
     {
         {0, ::sum::runSqr<uchar , 1>, ::sum::runSqr<uchar , 2>, ::sum::runSqr<uchar , 3>, ::sum::runSqr<uchar , 4>},
@@ -316,6 +345,8 @@ Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf)
         {0, ::sum::runSqr<double, 1>, ::sum::runSqr<double, 2>, ::sum::runSqr<double, 3>, ::sum::runSqr<double, 4>}
     };
 
+    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
+
     if (src.depth() == CV_64F)
     {
         if (!deviceSupports(NATIVE_DOUBLE))
@@ -330,7 +361,7 @@ Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf)
     const func_t func = funcs[src.depth()][src.channels()];
 
     double result[4];
-    func(src, buf.data, result);
+    func(src, buf.data, result, mask);
 
     return Scalar(result[0], result[1], result[2], result[3]);
 }

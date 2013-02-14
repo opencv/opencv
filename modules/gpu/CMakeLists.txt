@@ -21,7 +21,7 @@ source_group("Src\\Cuda"      FILES ${lib_cuda} ${lib_cuda_hdrs})
 source_group("Device"         FILES ${lib_device_hdrs})
 source_group("Device\\Detail" FILES ${lib_device_hdrs_detail})
 
-if (HAVE_CUDA)
+if(HAVE_CUDA)
   file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp" "src/nvidia/*.h*")
   file(GLOB_RECURSE ncv_cuda "src/nvidia/*.cu")
   set(ncv_files ${ncv_srcs} ${ncv_cuda})
@@ -104,3 +104,7 @@ ocv_add_accuracy_tests(FILES "Include" ${test_hdrs}
                        FILES "Src" ${test_srcs}
                        ${nvidia})
 ocv_add_perf_tests()
+
+if(HAVE_CUDA)
+  add_subdirectory(perf4au)
+endif()

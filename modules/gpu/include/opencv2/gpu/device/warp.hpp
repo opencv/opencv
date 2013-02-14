@@ -97,6 +97,25 @@ namespace cv { namespace gpu { namespace device
             return out;
         }
 
+        template <class T, class BinOp>
+        static __device__ __forceinline__ T reduce(volatile T *ptr, BinOp op)
+        {
+            const unsigned int lane = laneId();
+
+            if (lane < 16)
+            {
+                T partial = ptr[lane];
+
+                ptr[lane] = partial = op(partial, ptr[lane + 16]);
+                ptr[lane] = partial = op(partial, ptr[lane + 8]);
+                ptr[lane] = partial = op(partial, ptr[lane + 4]);
+                ptr[lane] = partial = op(partial, ptr[lane + 2]);
+                ptr[lane] = partial = op(partial, ptr[lane + 1]);
+            }
+
+            return *ptr;
+        }
+
         template<typename OutIt, typename T>
         static __device__ __forceinline__ void yota(OutIt beg, OutIt end, T value)
         {

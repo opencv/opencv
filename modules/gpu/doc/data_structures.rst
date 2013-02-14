@@ -271,41 +271,37 @@ This class encapsulates a queue of asynchronous calls. Some functions have overl
     class CV_EXPORTS Stream
     {
     public:
-            Stream();
-            ~Stream();
+        Stream();
+        ~Stream();
 
-            Stream(const Stream&);
-            Stream& operator=(const Stream&);
+        Stream(const Stream&);
+        Stream& operator=(const Stream&);
 
-            bool queryIfComplete();
-            void waitForCompletion();
+        bool queryIfComplete();
+        void waitForCompletion();
 
-            //! downloads asynchronously.
-            // Warning! cv::Mat must point to page locked memory
-                     (i.e. to CudaMem data or to its subMat)
-            void enqueueDownload(const GpuMat& src, CudaMem& dst);
-            void enqueueDownload(const GpuMat& src, Mat& dst);
+        void enqueueDownload(const GpuMat& src, CudaMem& dst);
+        void enqueueDownload(const GpuMat& src, Mat& dst);
 
-            //! uploads asynchronously.
-            // Warning! cv::Mat must point to page locked memory
-                     (i.e. to CudaMem data or to its ROI)
-            void enqueueUpload(const CudaMem& src, GpuMat& dst);
-            void enqueueUpload(const Mat& src, GpuMat& dst);
+        void enqueueUpload(const CudaMem& src, GpuMat& dst);
+        void enqueueUpload(const Mat& src, GpuMat& dst);
 
-            void enqueueCopy(const GpuMat& src, GpuMat& dst);
+        void enqueueCopy(const GpuMat& src, GpuMat& dst);
 
-            void enqueueMemSet(const GpuMat& src, Scalar val);
-            void enqueueMemSet(const GpuMat& src, Scalar val, const GpuMat& mask);
+        void enqueueMemSet(const GpuMat& src, Scalar val);
+        void enqueueMemSet(const GpuMat& src, Scalar val, const GpuMat& mask);
 
-            // converts matrix type, ex from float to uchar depending on type
-            void enqueueConvert(const GpuMat& src, GpuMat& dst, int type,
-                    double a = 1, double b = 0);
+        void enqueueConvert(const GpuMat& src, GpuMat& dst, int type,
+                            double a = 1, double b = 0);
+
+        typedef void (*StreamCallback)(Stream& stream, int status, void* userData);
+        void enqueueHostCallback(StreamCallback callback, void* userData);
     };
 
 
 
 gpu::Stream::queryIfComplete
---------------------------------
+----------------------------
 Returns ``true`` if the current stream queue is finished. Otherwise, it returns false.
 
 .. ocv:function:: bool gpu::Stream::queryIfComplete()
@@ -313,10 +309,70 @@ Returns ``true`` if the current stream queue is finished. Otherwise, it returns 
 
 
 gpu::Stream::waitForCompletion
-----------------------------------
+------------------------------
 Blocks the current CPU thread until all operations in the stream are complete.
 
 .. ocv:function:: void gpu::Stream::waitForCompletion()
+
+
+
+gpu::Stream::enqueueDownload
+----------------------------
+Copies data from device to host.
+
+.. ocv:function:: void gpu::Stream::enqueueDownload(const GpuMat& src, CudaMem& dst)
+
+.. ocv:function:: void gpu::Stream::enqueueDownload(const GpuMat& src, Mat& dst)
+
+.. note:: ``cv::Mat`` must point to page locked memory (i.e. to ``CudaMem`` data or to its subMat) or must be registered with :ocv:func:`gpu::registerPageLocked` .
+
+
+
+gpu::Stream::enqueueUpload
+--------------------------
+Copies data from host to device.
+
+.. ocv:function:: void gpu::Stream::enqueueUpload(const CudaMem& src, GpuMat& dst)
+
+.. ocv:function:: void gpu::Stream::enqueueUpload(const Mat& src, GpuMat& dst)
+
+.. note:: ``cv::Mat`` must point to page locked memory (i.e. to ``CudaMem`` data or to its subMat) or must be registered with :ocv:func:`gpu::registerPageLocked` .
+
+
+
+gpu::Stream::enqueueCopy
+------------------------
+Copies data from device to device.
+
+.. ocv:function:: void gpu::Stream::enqueueCopy(const GpuMat& src, GpuMat& dst)
+
+
+
+gpu::Stream::enqueueMemSet
+--------------------------
+Initializes or sets device memory to a value.
+
+.. ocv:function:: void gpu::Stream::enqueueMemSet(const GpuMat& src, Scalar val)
+
+.. ocv:function:: void gpu::Stream::enqueueMemSet(const GpuMat& src, Scalar val, const GpuMat& mask)
+
+
+
+gpu::Stream::enqueueConvert
+---------------------------
+Converts matrix type, ex from float to uchar depending on type.
+
+.. ocv:function:: void gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int type, double a = 1, double b = 0)
+
+
+
+gpu::Stream::enqueueHostCallback
+--------------------------------
+Adds a callback to be called on the host after all currently enqueued items in the stream have completed.
+
+.. ocv:function:: void gpu::Stream::enqueueHostCallback(StreamCallback callback, void* userData)
+
+.. note:: Callbacks must not make any CUDA API calls. Callbacks must not perform any synchronization that may depend on outstanding device work or other callbacks that are not mandated to run earlier.  Callbacks without a mandated order (in independent streams) execute in undefined order and may be serialized.
 
 
 

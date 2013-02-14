@@ -64,6 +64,7 @@ void cv::gpu::sqrt(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::exp(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::log(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::compare(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
+void cv::gpu::compare(const GpuMat&, Scalar, GpuMat&, int, Stream&) { throw_nogpu(); }
 void cv::gpu::bitwise_not(const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::bitwise_or(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::bitwise_or(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_nogpu(); }
@@ -1999,6 +2000,69 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
     const func_t func = funcs[depth][code];
 
     func(src1_, src2_, dst_, stream);
+}
+
+namespace arithm
+{
+    template <typename T> void cmpScalarEq(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
+    template <typename T> void cmpScalarNe(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
+    template <typename T> void cmpScalarLt(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
+    template <typename T> void cmpScalarLe(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
+    template <typename T> void cmpScalarGt(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
+    template <typename T> void cmpScalarGe(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
+}
+
+namespace
+{
+    template <typename T> void castScalar(Scalar& sc)
+    {
+        sc.val[0] = saturate_cast<T>(sc.val[0]);
+        sc.val[1] = saturate_cast<T>(sc.val[1]);
+        sc.val[2] = saturate_cast<T>(sc.val[2]);
+        sc.val[3] = saturate_cast<T>(sc.val[3]);
+    }
+}
+
+void cv::gpu::compare(const GpuMat& src, Scalar sc, GpuMat& dst, int cmpop, Stream& stream)
+{
+    using namespace arithm;
+
+    typedef void (*func_t)(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream);
+    static const func_t funcs[7][6] =
+    {
+        {cmpScalarEq<unsigned char> , cmpScalarGt<unsigned char> , cmpScalarGe<unsigned char> , cmpScalarLt<unsigned char> , cmpScalarLe<unsigned char> , cmpScalarNe<unsigned char> },
+        {cmpScalarEq<signed char>   , cmpScalarGt<signed char>   , cmpScalarGe<signed char>   , cmpScalarLt<signed char>   , cmpScalarLe<signed char>   , cmpScalarNe<signed char>   },
+        {cmpScalarEq<unsigned short>, cmpScalarGt<unsigned short>, cmpScalarGe<unsigned short>, cmpScalarLt<unsigned short>, cmpScalarLe<unsigned short>, cmpScalarNe<unsigned short>},
+        {cmpScalarEq<short>         , cmpScalarGt<short>         , cmpScalarGe<short>         , cmpScalarLt<short>         , cmpScalarLe<short>         , cmpScalarNe<short>         },
+        {cmpScalarEq<int>           , cmpScalarGt<int>           , cmpScalarGe<int>           , cmpScalarLt<int>           , cmpScalarLe<int>           , cmpScalarNe<int>           },
+        {cmpScalarEq<float>         , cmpScalarGt<float>         , cmpScalarGe<float>         , cmpScalarLt<float>         , cmpScalarLe<float>         , cmpScalarNe<float>         },
+        {cmpScalarEq<double>        , cmpScalarGt<double>        , cmpScalarGe<double>        , cmpScalarLt<double>        , cmpScalarLe<double>        , cmpScalarNe<double>        }
+    };
+
+    typedef void (*cast_func_t)(Scalar& sc);
+    static const cast_func_t cast_func[] =
+    {
+        castScalar<unsigned char>, castScalar<signed char>, castScalar<unsigned short>, castScalar<short>, castScalar<int>, castScalar<float>, castScalar<double>
+    };
+
+    const int depth = src.depth();
+    const int cn = src.channels();
+
+    CV_Assert( depth <= CV_64F );
+    CV_Assert( cn <= 4 );
+    CV_Assert( cmpop >= CMP_EQ && cmpop <= CMP_NE );
+
+    if (depth == CV_64F)
+    {
+        if (!deviceSupports(NATIVE_DOUBLE))
+            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+    }
+
+    dst.create(src.size(), CV_MAKE_TYPE(CV_8U, cn));
+
+    cast_func[depth](sc);
+
+    funcs[depth][cmpop](src, cn, sc.val, dst, StreamAccessor::getStream(stream));
 }
 
 //////////////////////////////////////////////////////////////////////////////
