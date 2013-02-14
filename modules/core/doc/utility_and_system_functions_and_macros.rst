@@ -311,13 +311,34 @@ Returns true if the specified feature is supported by the host hardware.
 
 The function returns true if the host hardware supports the specified feature. When user calls ``setUseOptimized(false)``, the subsequent calls to ``checkHardwareSupport()`` will return false until ``setUseOptimized(true)`` is called. This way user can dynamically switch on and off the optimized code in OpenCV.
 
+
+
+getNumberOfCPUs
+-----------------
+Returns the number of logical CPUs available for the process.
+
+.. ocv:function:: int getNumberOfCPUs()
+
+
+
 getNumThreads
--------------
-Returns the number of threads used by OpenCV.
+-----------------
+Returns the number of threads used by OpenCV for parallel regions.
+Always returns 1 if OpenCV is built without threading support.
 
 .. ocv:function:: int getNumThreads()
 
-The function returns the number of threads that is used by OpenCV.
+The exact meaning of return value depends on the threading framework used by OpenCV library:
+
+    * **TBB** – The number of threads, that OpenCV will try to use for parallel regions.
+      If there is any ``tbb::thread_scheduler_init`` in user code conflicting with OpenCV, then
+      function returns default number of threads used by TBB library.
+    * **OpenMP** – An upper bound on the number of threads that could be used to form a new team.
+    * **Concurrency** – The number of threads, that OpenCV will try to use for parallel regions.
+    * **GCD** – Unsupported; returns the GCD thread pool limit (512) for compatibility.
+    * **C=** – The number of threads, that OpenCV will try to use for parallel regions,
+      if before called ``setNumThreads`` with ``threads > 0``,
+      otherwise returns the number of logical CPUs, available for the process.
 
 .. seealso::
    :ocv:func:`setNumThreads`,
@@ -326,16 +347,24 @@ The function returns the number of threads that is used by OpenCV.
 
 
 getThreadNum
-------------
-Returns the index of the currently executed thread.
+----------------
+Returns the index of the currently executed thread within the current parallel region.
+Always returns 0 if called outside of parallel region.
 
 .. ocv:function:: int getThreadNum()
 
-The function returns a 0-based index of the currently executed thread. The function is only valid inside a parallel OpenMP region. When OpenCV is built without OpenMP support, the function always returns 0.
+The exact meaning of return value depends on the threading framework used by OpenCV library:
+
+    * **TBB** – Unsupported with current 4.1 TBB release. May be will be supported in future.
+    * **OpenMP** – The thread number, within the current team, of the calling thread.
+    * **Concurrency** – An ID for the virtual processor that the current context is executing
+      on (0 for master thread and unique number for others, but not necessary 1,2,3,...).
+    * **GCD** – System calling thread's ID. Never returns 0 inside parallel region.
+    * **C=** – The index of the current parallel task.
 
 .. seealso::
    :ocv:func:`setNumThreads`,
-   :ocv:func:`getNumThreads` .
+   :ocv:func:`getNumThreads`
 
 
 
@@ -410,13 +439,25 @@ This operation is used in the simplest or most complex image processing function
 
 setNumThreads
 -----------------
-Sets the number of threads used by OpenCV.
+OpenCV will try to set the number of threads for the next parallel region.
+If ``threads == 0``, OpenCV will disable threading optimizations and run all it's
+functions sequentially. Passing ``threads < 0`` will reset threads number to system default.
+This function must be called outside of parallel region.
 
-.. ocv:function:: void setNumThreads(int nthreads)
+.. ocv:function:: void setNumThreads(int threads)
 
-    :param nthreads: Number of threads used by OpenCV.
+    :param threads: Number of threads used by OpenCV.
 
-The function sets the number of threads used by OpenCV in parallel OpenMP regions. If ``nthreads=0`` , the function uses the default number of threads that is usually equal to the number of the processing cores.
+OpenCV will try to run it's functions with specified threads number, but
+some behaviour differs from framework:
+
+    * **TBB** – User-defined parallel constructions will run with the same threads number,
+      if another does not specified. If late on user creates own scheduler, OpenCV will be use it.
+    * **OpenMP** – No special defined behaviour.
+    * **Concurrency** – If ``threads == 1``, OpenCV will disable threading optimizations
+      and run it's functions sequentially.
+    * **GCD** – Supports only values <= 0.
+    * **C=** – No special defined behaviour.
 
 .. seealso::
    :ocv:func:`getNumThreads`,
