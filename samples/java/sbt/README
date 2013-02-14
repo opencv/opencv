@@ -4,5 +4,3 @@ To run the examples:
 1) Install OpenCV and copy the OpenCV jar to lib/. This jar must match the native libraries installed in your system. If this isn't the case, you may get a java.lang.UnsatisfiedLinkError at runtime.
 
 3) Go to the root directory and type "sbt/sbt run". This should generate images in your current directory.
-
-MIT License

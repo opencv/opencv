@@ -11,8 +11,8 @@ object OpenCVJavaDemoBuild extends Build {
     )
   )
 
-  def buildSettings = 
-    Project.defaultSettings ++ 
+  def buildSettings =
+    Project.defaultSettings ++
     scalaSettings
 
   lazy val root = {

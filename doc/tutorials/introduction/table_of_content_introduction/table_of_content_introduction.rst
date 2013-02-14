@@ -111,9 +111,9 @@ Here you can read tutorials about how to set up your computer to work with the O
 
                    *Compatibility:* > OpenCV 2.4.4
 
-                   *Author:* |Author_VsevolodG|
+                   *Author:* |Author_EricCh|
 
-                   Explains how to build and run a simple desktop Java application using Eclipse and the Simple Build Tool (SBT).
+                   Explains how to build and run a simple desktop Java application using Eclipse, Ant or the Simple Build Tool (SBT).
 
   ================ =================================================
 
@@ -258,7 +258,7 @@ Here you can read tutorials about how to set up your computer to work with the O
    ../linux_eclipse/linux_eclipse
    ../windows_install/windows_install
    ../windows_visual_studio_Opencv/windows_visual_studio_Opencv
-   ../android_binary_package/java_dev_intro
+   ../desktop_java/java_dev_intro
    ../android_binary_package/android_dev_intro
    ../android_binary_package/O4A_SDK
    ../android_binary_package/dev_with_OCV_on_Android

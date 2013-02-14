@@ -16,7 +16,7 @@ import reflect._
 object ScalaCorrespondenceMatchingDemo {
   def run() {
     println(s"\nRunning ${classTag[this.type].toString.replace("$", "")}")
-    
+
     // Detects keypoints and extracts descriptors in a given image of type Mat.
     def detectAndExtract(mat: Mat) = {
       // A special container class for KeyPoint.
@@ -27,7 +27,7 @@ object ScalaCorrespondenceMatchingDemo {
 
       println(s"There were ${keyPoints.toArray.size} KeyPoints detected")
 
-      // Let's just use the best KeyPoints.   
+      // Let's just use the best KeyPoints.
       val sorted = keyPoints.toArray.sortBy(_.response).reverse.take(50)
       // There isn't a constructor that takes Array[KeyPoint], so we unpack
       // the array and use the constructor that can take any number of
@@ -44,7 +44,7 @@ object ScalaCorrespondenceMatchingDemo {
       (bestKeyPoints, descriptors)
     }
 
-    // Load the images from the |resources| directory. 
+    // Load the images from the |resources| directory.
     val leftImage = Highgui.imread(getClass.getResource("/img1.bmp").getPath)
     val rightImage = Highgui.imread(getClass.getResource("/img2.bmp").getPath)
 
