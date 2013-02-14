@@ -2610,6 +2610,38 @@ static PyObject *pycvQueryFrame(PyObject *self, PyObject *args)
   return FROM_ROIplImagePTR(r);
 }
 
+static PyObject *pycvHoughCircles(PyObject *self, PyObject *args, PyObject *kw)
+{
+  CvArr* image;
+  PyObject *pyobj_image = NULL;
+  CvMat* circle_storage;
+  PyObject *pyobj_circle_storage = NULL;
+  int method;
+  double dp;
+  double min_dist;
+  double param1 = 100;
+  double param2 = 100;
+  int min_radius = 0;
+  int max_radius = 0;
+
+  const char *keywords[] = { "image", "circle_storage", "method", "dp", "min_dist", "param1", "param2", "min_radius", "max_radius", NULL };
+  if (!PyArg_ParseTupleAndKeywords(args, kw, "OOidd|ddii", (char**)keywords, &pyobj_image, &pyobj_circle_storage, &method, &dp, &min_dist, &param1, &param2, &min_radius, &max_radius))
+    return NULL;
+  if (!convert_to_CvArr(pyobj_image, &image, "image")) return NULL;
+  if (!convert_to_CvMat(pyobj_circle_storage, &circle_storage, "circle_storage")) return NULL;
+  Py_INCREF(pyobj_image);
+  Py_INCREF(pyobj_circle_storage);
+
+  Py_BEGIN_ALLOW_THREADS
+  cvHoughCircles(image, circle_storage, method, dp, min_dist, param1, param2, min_radius, max_radius);
+  Py_END_ALLOW_THREADS
+
+  Py_DECREF(pyobj_circle_storage);
+  Py_DECREF(pyobj_image);
+
+  Py_RETURN_NONE;
+}
+
 static PyObject *pycvWaitKey(PyObject *self, PyObject *args, PyObject *kw)
 {
   int delay = 0;
