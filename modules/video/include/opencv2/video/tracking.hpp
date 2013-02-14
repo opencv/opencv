@@ -352,104 +352,19 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                                     double upscale_sigma_color,
                                     double speed_up_thr);
 
+class CV_EXPORTS DenseOpticalFlow : public Algorithm
+{
+public:
+    virtual void calc(InputArray I0, InputArray I1, InputOutputArray flow) = 0;
+    virtual void collectGarbage() = 0;
+};
+
 // Implementation of the Zach, Pock and Bischof Dual TV-L1 Optical Flow method
 //
 // see reference:
 //   [1] C. Zach, T. Pock and H. Bischof, "A Duality Based Approach for Realtime TV-L1 Optical Flow".
 //   [2] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
-class CV_EXPORTS OpticalFlowDual_TVL1
-{
-public:
-    OpticalFlowDual_TVL1();
-
-    void operator ()(InputArray I0, InputArray I1, InputOutputArray flow);
-
-    void collectGarbage();
-
-    /**
-     * Time step of the numerical scheme.
-     */
-    double tau;
-
-    /**
-     * Weight parameter for the data term, attachment parameter.
-     * This is the most relevant parameter, which determines the smoothness of the output.
-     * The smaller this parameter is, the smoother the solutions we obtain.
-     * It depends on the range of motions of the images, so its value should be adapted to each image sequence.
-     */
-    double lambda;
-
-    /**
-     * Weight parameter for (u - v)^2, tightness parameter.
-     * It serves as a link between the attachment and the regularization terms.
-     * In theory, it should have a small value in order to maintain both parts in correspondence.
-     * The method is stable for a large range of values of this parameter.
-     */
-    double theta;
-
-    /**
-     * Number of scales used to create the pyramid of images.
-     */
-    int nscales;
-
-    /**
-     * Number of warpings per scale.
-     * Represents the number of times that I1(x+u0) and grad( I1(x+u0) ) are computed per scale.
-     * This is a parameter that assures the stability of the method.
-     * It also affects the running time, so it is a compromise between speed and accuracy.
-     */
-    int warps;
-
-    /**
-     * Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time.
-     * A small value will yield more accurate solutions at the expense of a slower convergence.
-     */
-    double epsilon;
-
-    /**
-     * Stopping criterion iterations number used in the numerical scheme.
-     */
-    int iterations;
-
-    bool useInitialFlow;
-
-private:
-    void procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2);
-
-    std::vector<Mat_<float> > I0s;
-    std::vector<Mat_<float> > I1s;
-    std::vector<Mat_<float> > u1s;
-    std::vector<Mat_<float> > u2s;
-
-    Mat_<float> I1x_buf;
-    Mat_<float> I1y_buf;
-
-    Mat_<float> flowMap1_buf;
-    Mat_<float> flowMap2_buf;
-
-    Mat_<float> I1w_buf;
-    Mat_<float> I1wx_buf;
-    Mat_<float> I1wy_buf;
-
-    Mat_<float> grad_buf;
-    Mat_<float> rho_c_buf;
-
-    Mat_<float> v1_buf;
-    Mat_<float> v2_buf;
-
-    Mat_<float> p11_buf;
-    Mat_<float> p12_buf;
-    Mat_<float> p21_buf;
-    Mat_<float> p22_buf;
-
-    Mat_<float> div_p1_buf;
-    Mat_<float> div_p2_buf;
-
-    Mat_<float> u1x_buf;
-    Mat_<float> u1y_buf;
-    Mat_<float> u2x_buf;
-    Mat_<float> u2y_buf;
-};
+CV_EXPORTS Ptr<DenseOpticalFlow> createOptFlow_DualTVL1();
 
 }
 
