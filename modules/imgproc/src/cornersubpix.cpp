@@ -60,7 +60,7 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
         return;
 
     CV_Assert( win.width > 0 && win.height > 0 );
-    CV_Assert( src.cols >= win_w + 4 && src.rows >= win_h + 4 );
+    CV_Assert( src.cols >= win.width*2 + 5 && src.rows >= win.height*2 + 5 );
     CV_Assert( src.channels() == 1 );
 
     Mat maskm(win_h, win_w, CV_32F), subpix_buf(win_h+2, win_w+2, CV_32F);

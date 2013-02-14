@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -398,8 +399,8 @@ HoughLinesProbabilistic( Mat& image,
 
     for( int n = 0; n < numangle; n++ )
     {
-        trigtab[n*2] = (float)(cos(n*theta) * irho);
-        trigtab[n*2+1] = (float)(sin(n*theta) * irho);
+        trigtab[n*2] = (float)(cos((double)n*theta) * irho);
+        trigtab[n*2+1] = (float)(sin((double)n*theta) * irho);
     }
     const float* ttab = &trigtab[0];
     uchar* mdata0 = mask.data;

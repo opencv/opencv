@@ -592,6 +592,88 @@ trueDistTrans( const Mat& src, Mat& dst )
     cv::parallel_for(cv::BlockedRange(0, m), cv::DTRowInvoker(&dst, sqr_tab, inv_tab));
 }
 
+
+/****************************************************************************************\
+ Non-inplace and Inplace 8u->8u Distance Transform for CityBlock (a.k.a. L1) metric
+ (C) 2006 by Jay Stavinzky.
+\****************************************************************************************/
+
+//BEGIN ATS ADDITION
+// 8-bit grayscale distance transform function
+static void
+distanceATS_L1_8u( const Mat& src, Mat& dst )
+{
+    int width = src.cols, height = src.rows;
+
+    int a;
+    uchar lut[256];
+    int x, y;
+
+    const uchar *sbase = src.data;
+    uchar *dbase = dst.data;
+    int srcstep = (int)src.step;
+    int dststep = (int)dst.step;
+
+    CV_Assert( src.type() == CV_8UC1 && dst.type() == CV_8UC1 );
+    CV_Assert( src.size() == dst.size() );
+
+    ////////////////////// forward scan ////////////////////////
+    for( x = 0; x < 256; x++ )
+        lut[x] = CV_CAST_8U(x+1);
+
+    //init first pixel to max (we're going to be skipping it)
+    dbase[0] = (uchar)(sbase[0] == 0 ? 0 : 255);
+
+    //first row (scan west only, skip first pixel)
+    for( x = 1; x < width; x++ )
+        dbase[x] = (uchar)(sbase[x] == 0 ? 0 : lut[dbase[x-1]]);
+
+    for( y = 1; y < height; y++ )
+    {
+        sbase += srcstep;
+        dbase += dststep;
+
+        //for left edge, scan north only
+        a = sbase[0] == 0 ? 0 : lut[dbase[-dststep]];
+        dbase[0] = (uchar)a;
+
+        for( x = 1; x < width; x++ )
+        {
+            a = sbase[x] == 0 ? 0 : lut[MIN(a, dbase[x - dststep])];
+            dbase[x] = (uchar)a;
+        }
+    }
+
+    ////////////////////// backward scan ///////////////////////
+
+    a = dbase[width-1];
+
+    // do last row east pixel scan here (skip bottom right pixel)
+    for( x = width - 2; x >= 0; x-- )
+    {
+        a = lut[a];
+        dbase[x] = (uchar)(CV_CALC_MIN_8U(a, dbase[x]));
+    }
+
+    // right edge is the only error case
+    for( y = height - 2; y >= 0; y-- )
+    {
+        dbase -= dststep;
+
+        // do right edge
+        a = lut[dbase[width-1+dststep]];
+        dbase[width-1] = (uchar)(MIN(a, dbase[width-1]));
+        
+        for( x = width - 2; x >= 0; x-- )
+        {
+            int b = dbase[x+dststep];
+            a = lut[MIN(a, b)];
+            dbase[x] = (uchar)(MIN(a, dbase[x]));
+        }
+    }
+}
+//END ATS ADDITION
+
 }
 
 
@@ -599,10 +681,18 @@ trueDistTrans( const Mat& src, Mat& dst )
 void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labels,
                             int distType, int maskSize, int labelType )
 {
-    Mat src = _src.getMat();
-    _dst.create( src.size(), CV_32F );
-    Mat dst = _dst.getMat(), labels;
+    Mat src = _src.getMat(), dst = _dst.getMat(), labels;
     bool need_labels = _labels.needed();
+
+    CV_Assert( src.type() == CV_8U );
+    if( dst.size == src.size && dst.type() == CV_8U && !need_labels && distType == CV_DIST_L1 )
+    {
+        distanceATS_L1_8u(src, dst);
+        return;
+    }
+
+    _dst.create( src.size(), CV_32F );
+    dst = _dst.getMat();
 
     if( need_labels )
     {
@@ -682,98 +772,15 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst,
 }
 
 
-/****************************************************************************************\
- Non-inplace and Inplace 8u->8u Distance Transform for CityBlock (a.k.a. L1) metric
- (C) 2006 by Jay Stavinzky.
-\****************************************************************************************/
-
-//BEGIN ATS ADDITION
-/* 8-bit grayscale distance transform function */
-static void
-icvDistanceATS_L1_8u( const cv::Mat& src, cv::Mat& dst )
-{
-    int width = src.cols, height = src.rows;
-
-    int a;
-    uchar lut[256];
-    int x, y;
-
-    const uchar *sbase = src.data;
-    uchar *dbase = dst.data;
-    int srcstep = (int)src.step;
-    int dststep = (int)dst.step;
-
-    CV_Assert( src.type() == CV_8UC1 && dst.type() == CV_8UC1 );
-    CV_Assert( src.size() == dst.size() );
-
-    ////////////////////// forward scan ////////////////////////
-    for( x = 0; x < 256; x++ )
-        lut[x] = CV_CAST_8U(x+1);
-
-    //init first pixel to max (we're going to be skipping it)
-    dbase[0] = (uchar)(sbase[0] == 0 ? 0 : 255);
-
-    //first row (scan west only, skip first pixel)
-    for( x = 1; x < width; x++ )
-        dbase[x] = (uchar)(sbase[x] == 0 ? 0 : lut[dbase[x-1]]);
-
-    for( y = 1; y < height; y++ )
-    {
-        sbase += srcstep;
-        dbase += dststep;
-
-        //for left edge, scan north only
-        a = sbase[0] == 0 ? 0 : lut[dbase[-dststep]];
-        dbase[0] = (uchar)a;
-
-        for( x = 1; x < width; x++ )
-        {
-            a = sbase[x] == 0 ? 0 : lut[MIN(a, dbase[x - dststep])];
-            dbase[x] = (uchar)a;
-        }
-    }
-
-    ////////////////////// backward scan ///////////////////////
-
-    a = dbase[width-1];
-
-    // do last row east pixel scan here (skip bottom right pixel)
-    for( x = width - 2; x >= 0; x-- )
-    {
-        a = lut[a];
-        dbase[x] = (uchar)(CV_CALC_MIN_8U(a, dbase[x]));
-    }
-
-    // right edge is the only error case
-    for( y = height - 2; y >= 0; y-- )
-    {
-        dbase -= dststep;
-
-        // do right edge
-        a = lut[dbase[width-1+dststep]];
-        dbase[width-1] = (uchar)(MIN(a, dbase[width-1]));
-
-        for( x = width - 2; x >= 0; x-- )
-        {
-            int b = dbase[x+dststep];
-            a = lut[MIN(a, b)];
-            dbase[x] = (uchar)(MIN(a, dbase[x]));
-        }
-    }
-}
-//END ATS ADDITION
-
 CV_IMPL void
 cvDistTransform( const void* srcarr, void* dstarr,
                 int distType, int maskSize,
                 const float * /*mask*/,
                 void* labelsarr, int labelType )
 {
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    cv::Mat labels = cv::cvarrToMat(labelsarr);
-
-    if( !labelsarr && distType == CV_DIST_L1 && dst.type() == CV_8U )
-        icvDistanceATS_L1_8u( src, dst );
+    cv::Mat src = cv::cvarrToMat(srcarr);
+    const cv::Mat dst = cv::cvarrToMat(dstarr);
+    const cv::Mat labels = cv::cvarrToMat(labelsarr);
 
     cv::distanceTransform(src, dst, labelsarr ? cv::_OutputArray(labels) : cv::_OutputArray(),
                           distType, maskSize, labelType);

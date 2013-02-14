@@ -1969,6 +1969,11 @@ static TransposeInplaceFunc transposeInplaceTab[] =
 void cv::transpose( InputArray _src, OutputArray _dst )
 {
     Mat src = _src.getMat();
+    if( src.empty() )
+    {
+        _dst.release();
+        return;
+    }
     size_t esz = src.elemSize();
     CV_Assert( src.dims <= 2 && esz <= (size_t)32 );
 

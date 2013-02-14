@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
@@ -298,7 +298,8 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
 CV_IMPL void
 cvGetRectSubPix( const void* srcarr, void* dstarr, CvPoint2D32f center )
 {
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
+    cv::Mat src = cv::cvarrToMat(srcarr);
+    const cv::Mat dst = cv::cvarrToMat(dstarr);
     CV_Assert( src.channels() == dst.channels() );
 
     cv::getRectSubPix(src, dst.size(), center, dst, dst.type());
@@ -308,7 +309,8 @@ cvGetRectSubPix( const void* srcarr, void* dstarr, CvPoint2D32f center )
 CV_IMPL void
 cvGetQuadrangleSubPix( const void* srcarr, void* dstarr, const CvMat* mat )
 {
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr), m = cv::cvarrToMat(mat);
+    cv::Mat src = cv::cvarrToMat(srcarr), m = cv::cvarrToMat(mat);
+    const cv::Mat dst = cv::cvarrToMat(dstarr);
     cv::Size win_size = dst.size();
     double matrix[6];
     cv::Mat M(2, 3, CV_64F, matrix);

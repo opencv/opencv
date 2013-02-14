@@ -31,12 +31,11 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
 
     Canny(image, image, 0, 0);
 
-    Mat lines_t, lines;
+    Mat lines;
     declare.time(60);
 
-    TEST_CYCLE() HoughLines(image, lines_t, rhoStep, thetaStep, threshold);
+    TEST_CYCLE() HoughLines(image, lines, rhoStep, thetaStep, threshold);
 
-    if( !lines_t.empty() )
-        transpose(lines_t, lines);
+    transpose(lines, lines);
     SANITY_CHECK(lines);
 }
