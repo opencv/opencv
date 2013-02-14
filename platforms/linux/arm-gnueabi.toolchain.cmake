@@ -2,11 +2,7 @@ set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_VERSION 1)
 set(CMAKE_SYSTEM_PROCESSOR arm)
 
-if (CARMA)
-  set(GCC_COMPILER_VERSION "4.5" CACHE STRING "GCC Compiler version")
-else()
-  set(GCC_COMPILER_VERSION "4.6" CACHE STRING "GCC Compiler version")
-endif()
+set(GCC_COMPILER_VERSION "4.6" CACHE STRING "GCC Compiler version")
 
 set(FLOAT_ABI_SUFFIX "")
 
@@ -52,10 +48,6 @@ set( CMAKE_SKIP_RPATH TRUE CACHE BOOL "If set, runtime paths are not added when 
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
-
-if (CARMA)
-    add_definitions(-DCARMA)
-endif()
 
 # macro to find programs on the host OS
 macro( find_host_program )
