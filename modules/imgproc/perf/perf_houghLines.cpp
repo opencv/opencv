@@ -36,5 +36,6 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
 
     TEST_CYCLE() HoughLines(image, lines, rhoStep, thetaStep, threshold);
 
+    transpose(lines, lines);
     SANITY_CHECK(lines);
 }
