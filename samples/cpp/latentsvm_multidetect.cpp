@@ -36,13 +36,13 @@ static void help()
             endl;
 }
 
-static void detectAndDrawObjects( Mat& image, LatentSvmDetector& detector, const vector<Scalar>& colors, float overlapThreshold, int numThreads )
+static void detectAndDrawObjects( Mat& image, LatentSvmDetector& detector, const vector<Scalar>& colors, float overlapThreshold)
 {
     vector<LatentSvmDetector::ObjectDetection> detections;
 
     TickMeter tm;
     tm.start();
-    detector.detect( image, detections, overlapThreshold, numThreads);
+    detector.detect( image, detections, overlapThreshold);
     tm.stop();
 
     cout << "Detection time = " << tm.getTimeSec() << " sec" << endl;
@@ -105,10 +105,9 @@ static void readDirectory( const string& directoryName, vector<string>& filename
 int main(int argc, char* argv[])
 {
     help();
-
     string images_folder, models_folder;
     float overlapThreshold = 0.2f;
-    int numThreads = -1;
+    int numThreads = 1;
     if( argc > 2 )
     {
         images_folder = argv[1];
@@ -122,6 +121,12 @@ int main(int argc, char* argv[])
 
         if( argc > 4 ) numThreads = atoi(argv[4]);
     }
+
+#ifdef HAVE_TBB
+    tbb::task_scheduler_init init(tbb::task_scheduler_init::deferred);
+    init.initialize(numThreads);
+#endif
+
 
     vector<string> images_filenames, models_filenames;
     readDirectory( images_folder, images_filenames );
@@ -153,7 +158,7 @@ int main(int argc, char* argv[])
         if( image.empty() )  continue;
 
         cout << "Process image " << images_filenames[i] << endl;
-        detectAndDrawObjects( image, detector, colors, overlapThreshold, numThreads );
+        detectAndDrawObjects( image, detector, colors, overlapThreshold);
 
         imshow( "result", image );
 

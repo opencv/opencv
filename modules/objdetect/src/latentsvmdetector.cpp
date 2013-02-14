@@ -75,8 +75,7 @@ void cvReleaseLatentSvmDetector(CvLatentSvmDetector** detector)
 // CvSeq* cvLatentSvmDetectObjects(const IplImage* image,
 //                                  CvLatentSvmDetector* detector,
 //                                  CvMemStorage* storage,
-//                                  float overlap_threshold = 0.5f,
-                                    int numThreads = -1);
+//                                  float overlap_threshold = 0.5f);
 // INPUT
 // image                - image to detect objects in
 // detector             - Latent SVM detector in internal representation
@@ -254,13 +253,10 @@ bool LatentSvmDetector::load( const vector<string>& filenames, const vector<stri
 
 void LatentSvmDetector::detect( const Mat& image,
                                 vector<ObjectDetection>& objectDetections,
-                                float overlapThreshold,
-                                int numThreads )
+                                float overlapThreshold)
 {
     objectDetections.clear();
-    if( numThreads <= 0 )
-        numThreads = 1;
-
+    
     for( size_t classID = 0; classID < detectors.size(); classID++ )
     {
         IplImage image_ipl = image;

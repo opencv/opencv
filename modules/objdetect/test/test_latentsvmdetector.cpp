@@ -211,10 +211,10 @@ void LatentSVMDetectorTest::run( int /* start_from */)
 
     string true_res_path = string(ts->get_data_path()) + "latentsvmdetector/results.xml";
 
-    int numThreads = 1;
-
 #ifdef HAVE_TBB
-    numThreads = 2;
+    int numThreads = 2;
+    tbb::task_scheduler_init init(tbb::task_scheduler_init::deferred);
+    init.initialize(numThreads);
 #endif
 
     Mat image_cat = imread( img_path_cat );
@@ -246,9 +246,9 @@ void LatentSVMDetectorTest::run( int /* start_from */)
     // 1. Test method detect
     // Run detectors
     vector<LatentSvmDetector::ObjectDetection> detections1_cat, detections12_cat, detections12_cars;
-    detector1.detect( image_cat, detections1_cat, 0.5, numThreads );
-    detector12.detect( image_cat, detections12_cat, 0.5, numThreads );
-    detector12.detect( image_cars, detections12_cars, 0.5, numThreads );
+    detector1.detect( image_cat, detections1_cat, 0.5);
+    detector12.detect( image_cat, detections12_cat, 0.5);
+    detector12.detect( image_cars, detections12_cars, 0.5);
 
     // Load true results
     FileStorage fs( true_res_path, FileStorage::READ );

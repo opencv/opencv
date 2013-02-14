@@ -261,8 +261,7 @@ CVAPI(void) cvReleaseLatentSvmDetector(CvLatentSvmDetector** detector);
 // CvSeq* cvLatentSvmDetectObjects(const IplImage* image,
 //									CvLatentSvmDetector* detector,
 //									CvMemStorage* storage,
-//									float overlap_threshold = 0.5f,
-//                                  int numThreads = -1);
+//									float overlap_threshold = 0.5f);
 // INPUT
 // image				- image to detect objects in
 // detector				- Latent SVM detector in internal representation
@@ -322,8 +321,7 @@ public:
 
     virtual void detect( const Mat& image,
                          vector<ObjectDetection>& objectDetections,
-                         float overlapThreshold=0.5f,
-                         int numThreads=-1 );
+                         float overlapThreshold=0.5f);
 
     const vector<string>& getClassNames() const;
     size_t getClassCount() const;
