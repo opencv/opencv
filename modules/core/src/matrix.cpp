@@ -3504,14 +3504,11 @@ static inline void copyElem(const uchar* from, uchar* to, size_t elemSize)
 
 static inline bool isZeroElem(const uchar* data, size_t elemSize)
 {
-    size_t i;
-    for( i = 0; i <= elemSize - sizeof(int); i += sizeof(int) )
-        if( *(int*)(data + i) != 0 )
+    static uchar all_zeros[256] = {0};
+    for (; elemSize >= 256; elemSize -= 256, data +=256)
+        if (memcmp(data, all_zeros, 256))
             return false;
-    for( ; i < elemSize; i++ )
-        if( data[i] != 0 )
-            return false;
-    return true;
+    return (! memcmp(data, all_zeros, elemSize));
 }
 
 SparseMat::Hdr::Hdr( int _dims, const int* _sizes, int _type )
