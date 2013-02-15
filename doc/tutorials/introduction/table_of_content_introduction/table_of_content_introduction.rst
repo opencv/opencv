@@ -111,7 +111,7 @@ Here you can read tutorials about how to set up your computer to work with the O
 
                    *Compatibility:* > OpenCV 2.4.4
 
-                   *Author:* |Author_EricCh|
+                   *Authors:* |Author_EricCh| and |Author_AndreyP|
 
                    Explains how to build and run a simple desktop Java application using Eclipse, Ant or the Simple Build Tool (SBT).
 

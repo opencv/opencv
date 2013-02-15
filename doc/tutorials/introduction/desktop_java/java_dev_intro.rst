@@ -13,8 +13,6 @@ We will use either `Eclipse <http://eclipse.org/>`_, `Apache Ant <http://ant.apa
 `Simple Build Tool (SBT) <http://www.scala-sbt.org/>`_ to build the application.
 
 For further reading after this guide, look at the :ref:`Android_Dev_Intro` tutorials.
-The interfaces for desktop Java and Android are nearly identical. You may also consult the
-`Java wiki page <http://code.opencv.org/projects/opencv/wiki/Java_API_howto>`_.
 
 What we'll do in this guide
 ***************************
@@ -39,15 +37,13 @@ The most simple way to get it is downloading the appropriate package of **versio
 
 .. note:: Windows users can find the prebuilt files needed for Java development in the
           :file:`opencv/build/java/` folder inside the package.
-          Other OSes users (and Windows ones optionally) can build OpenCV from sources locally.
+          For other OSes it's required to build OpenCV from sources.
 
-Another option to get OpenCV sources is to clone OpenCV git repository,
-either the primary one at ``git://code.opencv.org/opencv.git`` or
-its `Github mirror <https://github.com/Itseez/opencv/>`_.
-Be aware that Java is currently only supported on the ``2.4`` git branch and not yet merged to the ``master``.
+Another option to get OpenCV sources is to clone `OpenCV git repository
+<https://github.com/Itseez/opencv/>`_.
 In order to build OpenCV with Java bindings you need :abbr:`JDK (Java Development Kit)`
 (we recommend `Oracle/Sun JDK 6 or 7 <http://www.oracle.com/technetwork/java/javase/downloads/>`_),
-`Apache Ant <http://ant.apache.org/>`_ and ``Python`` v2.6 or higher to be installed.
+`Apache Ant <http://ant.apache.org/>`_ and `Python` v2.6 or higher to be installed.
 
 Build OpenCV
 ############
@@ -110,7 +106,7 @@ Create a simple Java sample and an Ant build file for it
 .. note::
     The described sample is provided with OpenCV library in the :file:`opencv/samples/java/ant` folder.
 
-* Create a folder where you'll create this sample application.
+* Create a folder where you'll develop this sample application.
 
 * In this folder create an XML file with the following content using any text editor:
 
@@ -180,7 +176,7 @@ Create a simple Java sample and an Ant build file for it
         See `Ant documentation <http://ant.apache.org/manual/>`_ for detailed description
         of its build file format.
 
-* Create an :file:`src` folder nect to the :file:`build.xml` file and a :file:`SimpleSample.java` file in it.
+* Create an :file:`src` folder next to the :file:`build.xml` file and a :file:`SimpleSample.java` file in it.
 
 * Put the following Java code into the :file:`SimpleSample.java` file:
     .. code-block:: java
@@ -205,7 +201,7 @@ Create a simple Java sample and an Ant build file for it
 
         }
 
-* run the following command in console in the folder containing :file:`build.xml`:
+* Run the following command in console in the folder containing :file:`build.xml`:
     .. code-block:: bash
 
         ant -DocvJarDir=path/to/dir/containing/opencv-244.jar -DocvLibDir=path/to/dir/containing/opencv_java244/native/library
@@ -225,6 +221,8 @@ Create a simple Java sample and an Ant build file for it
 
 Create a simple Java project in Eclipse
 ***************************************
+
+Now let's look at the possiblity of using OpenCV in Java when developing in Eclipse IDE.
 
 * Create a new Eclipse workspace
 * Create a new Java project via :guilabel:`File --> New --> Java Project`
@@ -292,7 +290,7 @@ Create a simple Java project in Eclipse
         :alt: Eclipse: Main class
         :align: center
 
-* Put a simple OpenCV calls there, e.g.:
+* Put some simple OpenCV calls there, e.g.:
     .. code-block:: java
 
         import org.opencv.core.CvType;
@@ -306,7 +304,7 @@ Create a simple Java project in Eclipse
             }
         }
 
-* Press :guilabel:`Run` button and see the identity matrix content in the Eclipse ``Console`` window.
+* Press :guilabel:`Run` button and find the identity matrix content in the Eclipse ``Console`` window.
 
     .. image:: images/eclipse_run.png
         :alt: Eclipse: run
@@ -320,7 +318,7 @@ those unfamiliar with this build tool. We're using SBT because it is particularl
 
 First, download and install `SBT <http://www.scala-sbt.org/>`_ using the instructions on its `web site <http://www.scala-sbt.org/>`_.
 
-Next, navigate to a new directory where you'd like the application source to live (outside opencv).
+Next, navigate to a new directory where you'd like the application source to live (outside :file:`opencv` dir).
 Let's call it "JavaSample" and create a directory for it:
 
         .. code-block:: bash
@@ -384,11 +382,11 @@ You should see something like this:
         :alt: SBT output
         :align: center
 
-You can now import the SBT project using :guilabel:`Import ... -> Existing projects into workspace` from Eclipse.
+You can now import the SBT project to Eclipse using :guilabel:`Import ... -> Existing projects into workspace`.
 Whether you actually do this is optional for the guide;
-we'll be using SBT to build the project, so if you choose to use Eclipse it will just be as a text editor.
+we'll be using SBT to build the project, so if you choose to use Eclipse it will just serve as a text editor.
 
-To test everything is working, create a simple "Hello OpenCV" application.
+To test that everything is working, create a simple "Hello OpenCV" application.
 Do this by creating a file :file:`src/main/java/HelloOpenCV.java` with the following contents:
 
         .. code-block:: java
@@ -432,10 +430,11 @@ Next, create the directory src/main/resources and download this Lena image into 
         :alt: Lena
         :align: center
 
-Make sure it's called :file:`"lena.bmp"`.
+Make sure it's called :file:`"lena.png"`.
 Items in the resources directory are available to the Java application at runtime.
 
-Next, copy :file:`lbpcascade_frontalface.xml` into the resources directory:
+Next, copy :file:`lbpcascade_frontalface.xml` from :file:`opencv/data/` into the :file:`resources`
+directory:
 
         .. code-block:: bash
 
@@ -465,7 +464,7 @@ Now modify src/main/java/HelloOpenCV.java so it contains the following Java code
        // Create a face detector from the cascade file in the resources
        // directory.
        CascadeClassifier faceDetector = new CascadeClassifier(getClass().getResource("/lbpcascade_frontalface.xml").getPath());
-       Mat image = Highgui.imread(getClass().getResource("/lena.bmp").getPath());
+       Mat image = Highgui.imread(getClass().getResource("/lena.png").getPath());
 
        // Detect faces in the image.
        // MatOfRect is a special container class for Rect.
@@ -518,3 +517,7 @@ It should also write the following image to :file:`faceDetection.png`:
      .. image:: images/faceDetection.png
         :alt: Detected face
         :align: center
+
+You're done!
+Now you have a sample Java application working with OpenCV, so you can start the work on your own.
+We wish you good luck and many years of joyful life!

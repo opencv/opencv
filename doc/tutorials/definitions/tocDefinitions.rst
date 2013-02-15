@@ -9,3 +9,4 @@
 .. |Author_EduardF| unicode:: Eduard U+0020 Feicho
 .. |Author_AlexB| unicode:: Alexandre U+0020 Benoit
 .. |Author_EricCh| unicode:: Eric U+0020 Christiansen
+.. |Author_AndreyP| unicode:: Andrey U+0020 Pavlenko
