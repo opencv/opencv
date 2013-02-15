@@ -5,7 +5,7 @@ Discriminatively Trained Part Based Models for Object Detection
 ---------------------------------------------------------------
 
 The object detector described below has been initially proposed by
-P.F. Felzenszwalb in [Felzenszwalb2010]_.  It is based on a
+P.F. Felzenszwalb in [Felzenszwalb2010a]_.  It is based on a
 Dalal-Triggs detector that uses a single filter on histogram of
 oriented gradients (HOG) features to represent an object category.
 This detector uses a sliding window approach, where a filter is
@@ -25,7 +25,19 @@ from the input image. Another improvement is a representation of the
 class of models by a mixture of star models. The score of a mixture
 model at a particular position and scale is the maximum over
 components, of the score of that component model at the given
-location.
+location. 
+
+The detector was dramatically speeded-up with cascade algorithm
+proposed by P.F. Felzenszwalb in [Felzenszwalb2010b]_. The algorithm
+prunes partial hypotheses using thresholds on their scores.The basic
+idea of the algorithm is to use a hierarchy of models defined by an
+ordering of the original model’s parts. For a model with (n+1)
+parts, including the root, a sequence of (n+1) models is obtained.
+The i-th model in this sequence is defined by the first i parts from
+the original model. Using this hierarchy, low scoring hypotheses can be
+pruned after looking at the best configuration of a subset of the parts.
+Hypotheses that score high under a weak model are evaluated further using
+a richer model.
 
 In OpenCV there are C implementation of Latent SVM and C++ wrapper of it.
 C version is the structure :ocv:struct:`CvObjectDetection` and a set of functions
@@ -259,6 +271,6 @@ Return a count of loaded models (classes).
 .. ocv:function:: size_t LatentSvmDetector::getClassCount() const
 
 
-.. [Felzenszwalb2010] Felzenszwalb, P. F. and Girshick, R. B. and McAllester, D. and Ramanan, D. *Object Detection with Discriminatively Trained Part Based Models*. PAMI, vol. 32, no. 9, pp. 1627-1645, September 2010
-
+.. [Felzenszwalb2010a] Felzenszwalb, P. F. and Girshick, R. B. and McAllester, D. and Ramanan, D. *Object Detection with Discriminatively Trained Part Based Models*. PAMI, vol. 32, no. 9, pp. 1627-1645, September 2010
+.. [Felzenszwalb2010b] Felzenszwalb, P. F. and Girshick, R. B. and McAllester, D. *Cascade Object Detection with Deformable Part Models*. CVPR 2010, pp. 2241-2248
 
