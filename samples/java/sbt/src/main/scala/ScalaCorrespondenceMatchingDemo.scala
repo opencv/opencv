@@ -45,8 +45,8 @@ object ScalaCorrespondenceMatchingDemo {
     }
 
     // Load the images from the |resources| directory.
-    val leftImage = Highgui.imread(getClass.getResource("/img1.bmp").getPath)
-    val rightImage = Highgui.imread(getClass.getResource("/img2.bmp").getPath)
+    val leftImage = Highgui.imread(getClass.getResource("/img1.png").getPath)
+    val rightImage = Highgui.imread(getClass.getResource("/img2.png").getPath)
 
     // Detect KeyPoints and extract descriptors.
     val (leftKeyPoints, leftDescriptors) = detectAndExtract(leftImage)
