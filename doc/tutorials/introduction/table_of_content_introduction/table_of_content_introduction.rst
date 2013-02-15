@@ -101,6 +101,26 @@ Here you can read tutorials about how to set up your computer to work with the O
                       :height: 90pt
                       :width:  90pt
 
+* **Desktop Java**
+
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ================ =================================================
+  |JavaLogo|       **Title:** :ref:`Java_Dev_Intro`
+
+                   *Compatibility:* > OpenCV 2.4.4
+
+                   *Authors:* |Author_EricCh| and |Author_AndreyP|
+
+                   Explains how to build and run a simple desktop Java application using Eclipse, Ant or the Simple Build Tool (SBT).
+
+  ================ =================================================
+
+     .. |JavaLogo| image:: images/Java_logo.png
+                        :height: 90pt
+                        :width:  90pt
+
 * **Android**
 
   .. tabularcolumns:: m{100pt} m{300pt}
@@ -238,6 +258,7 @@ Here you can read tutorials about how to set up your computer to work with the O
    ../linux_eclipse/linux_eclipse
    ../windows_install/windows_install
    ../windows_visual_studio_Opencv/windows_visual_studio_Opencv
+   ../desktop_java/java_dev_intro
    ../android_binary_package/android_dev_intro
    ../android_binary_package/O4A_SDK
    ../android_binary_package/dev_with_OCV_on_Android
