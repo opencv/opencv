@@ -201,7 +201,7 @@ Detects objects of different sizes in the input image. The detected objects are 
 
     :param image: Matrix of the type   ``CV_8U``  containing an image where objects are detected.
 
-    :param objects: Vector of rectangles where each rectangle contains the detected object.
+    :param objects: Vector of rectangles where each rectangle contains the detected object, the rectangles may be partially outside the original image.
 
     :param scaleFactor: Parameter specifying how much the image size is reduced at each image scale.
 
