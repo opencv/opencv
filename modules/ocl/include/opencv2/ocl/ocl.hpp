@@ -119,6 +119,7 @@ namespace cv
             Impl *impl;
         };
 
+        class CV_EXPORTS oclMatExpr;
         //////////////////////////////// oclMat ////////////////////////////////
         class CV_EXPORTS oclMat
         {
@@ -152,7 +153,7 @@ namespace cv
             oclMat &operator = (const oclMat &m);
             //! assignment operator. Perfom blocking upload to device.
             oclMat &operator = (const Mat &m);
-
+            oclMat& operator = (const oclMatExpr& expr);
 
             //! pefroms blocking upload data to oclMat.
             void upload(const cv::Mat &m);
@@ -295,6 +296,7 @@ namespace cv
             int wholerows;
             int wholecols;
         };
+
 
         ///////////////////// mat split and merge /////////////////////////////////
         //! Compose a multi-channel array from several single-channel arrays
@@ -459,25 +461,24 @@ namespace cv
         // supports all types
         CV_EXPORTS void bitwise_xor(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask = oclMat());
         CV_EXPORTS void bitwise_xor(const oclMat &src1, const Scalar &s, oclMat &dst, const oclMat &mask = oclMat());
-        //! computes convolution of two images
-
-        //! support only CV_32FC1 type
-
-        CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result);
-
 
         //! Logical operators
         CV_EXPORTS oclMat operator ~ (const oclMat &src);
         CV_EXPORTS oclMat operator | (const oclMat &src1, const oclMat &src2);
         CV_EXPORTS oclMat operator & (const oclMat &src1, const oclMat &src2);
         CV_EXPORTS oclMat operator ^ (const oclMat &src1, const oclMat &src2);
-        CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0);
 
         //! Mathematics operators
-        CV_EXPORTS oclMat operator + (const oclMat &src1, const oclMat &src2);
-        CV_EXPORTS oclMat operator - (const oclMat &src1, const oclMat &src2);
-        CV_EXPORTS oclMat operator * (const oclMat &src1, const oclMat &src2);
-        CV_EXPORTS oclMat operator / (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMatExpr operator + (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMatExpr operator - (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMatExpr operator * (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMatExpr operator / (const oclMat &src1, const oclMat &src2);
+ 
+        //! computes convolution of two images
+        //! support only CV_32FC1 type
+        CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result);
+ 
+       CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0);
 
         //////////////////////////////// Filter Engine ////////////////////////////////
 

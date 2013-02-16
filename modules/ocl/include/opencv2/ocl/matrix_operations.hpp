@@ -48,9 +48,27 @@ namespace cv
 
     namespace ocl
     {
-        ////////////////////////////////////OpenCL kernel strings//////////////////////////
-        //extern const char *convertC3C4;
 
+        enum
+        {
+            MAT_ADD,
+            MAT_SUB,
+            MAT_MUL,
+            MAT_DIV
+        };
+
+        class oclMatExpr
+        {
+            public:
+                oclMatExpr(const oclMat& _a, const oclMat& _b, int _op)
+                    : a(_a), b(_b), op(_op){}
+                operator oclMat() const;
+                void assign(oclMat& m) const;
+
+            protected:
+                int op;
+                oclMat a, b;
+        };
         ////////////////////////////////////////////////////////////////////////
         //////////////////////////////// oclMat ////////////////////////////////
         ////////////////////////////////////////////////////////////////////////
@@ -234,6 +252,12 @@ namespace cv
         {
             //clCxt = Context::getContext();
             upload(m);
+            return *this;
+        }
+
+        oclMat& oclMat::operator = (const oclMatExpr& expr)
+        {
+            expr.assign(*this);
             return *this;
         }
 

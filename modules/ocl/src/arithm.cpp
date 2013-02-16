@@ -2153,32 +2153,54 @@ cv::ocl::oclMat cv::ocl::operator ^ (const oclMat &src1, const oclMat &src2)
     return dst;
 }
 
-cv::ocl::oclMat cv::ocl::operator + (const oclMat &src1, const oclMat &src2)
+cv::ocl::oclMatExpr cv::ocl::operator + (const oclMat &src1, const oclMat &src2)
 {
-    oclMat dst;
-    add(src1, src2, dst);
+    oclMatExpr dst(src1, src2, cv::ocl::MAT_ADD);
     return dst;
 }
 
-cv::ocl::oclMat cv::ocl::operator - (const oclMat &src1, const oclMat &src2)
+cv::ocl::oclMatExpr cv::ocl::operator - (const oclMat &src1, const oclMat &src2)
 {
-    oclMat dst;
-    subtract(src1, src2, dst);
+    oclMatExpr dst(src1, src2, cv::ocl::MAT_SUB);
     return dst;
 }
 
-cv::ocl::oclMat cv::ocl::operator * (const oclMat &src1, const oclMat &src2)
+cv::ocl::oclMatExpr cv::ocl::operator * (const oclMat &src1, const oclMat &src2)
 {
-    oclMat dst;
-    multiply(src1, src2, dst);
+    oclMatExpr dst(src1, src2, cv::ocl::MAT_MUL);
     return dst;
 }
 
-cv::ocl::oclMat cv::ocl::operator / (const oclMat &src1, const oclMat &src2)
+cv::ocl::oclMatExpr cv::ocl::operator / (const oclMat &src1, const oclMat &src2)
 {
-    oclMat dst;
-    divide(src1, src2, dst);
+    oclMatExpr dst(src1, src2, cv::ocl::MAT_DIV);
     return dst;
+}
+
+void oclMatExpr::assign(oclMat& m) const
+{
+    switch (op)
+    {
+        case MAT_ADD:
+            add(a, b, m);
+            break;
+        case MAT_SUB:
+            subtract(a, b, m);
+            break;
+        case MAT_MUL:
+            multiply(a, b, m);
+            break;
+        case MAT_DIV:
+            divide(a, b, m);
+            break;
+    }
+}
+
+oclMatExpr::operator oclMat() const
+{
+    oclMat m;
+    assign(m);
+    return m;
 }
 
 //////////////////////////////////////////////////////////////////////////////
