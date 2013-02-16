@@ -153,7 +153,7 @@ namespace cv
             oclMat &operator = (const oclMat &m);
             //! assignment operator. Perfom blocking upload to device.
             oclMat &operator = (const Mat &m);
-            oclMat& operator = (const oclMatExpr& expr);
+            oclMat &operator = (const oclMatExpr& expr);
 
             //! pefroms blocking upload data to oclMat.
             void upload(const cv::Mat &m);
@@ -463,10 +463,10 @@ namespace cv
         CV_EXPORTS void bitwise_xor(const oclMat &src1, const Scalar &s, oclMat &dst, const oclMat &mask = oclMat());
 
         //! Logical operators
-        CV_EXPORTS oclMat operator ~ (const oclMat &src);
-        CV_EXPORTS oclMat operator | (const oclMat &src1, const oclMat &src2);
-        CV_EXPORTS oclMat operator & (const oclMat &src1, const oclMat &src2);
-        CV_EXPORTS oclMat operator ^ (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMatExpr operator ~ (const oclMat &src);
+        CV_EXPORTS oclMatExpr operator | (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMatExpr operator & (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMatExpr operator ^ (const oclMat &src1, const oclMat &src2);
 
         //! Mathematics operators
         CV_EXPORTS oclMatExpr operator + (const oclMat &src1, const oclMat &src2);
@@ -478,7 +478,7 @@ namespace cv
         //! support only CV_32FC1 type
         CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result);
  
-       CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0);
+        CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0);
 
         //////////////////////////////// Filter Engine ////////////////////////////////
 

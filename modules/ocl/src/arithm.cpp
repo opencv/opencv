@@ -2125,56 +2125,44 @@ void cv::ocl::bitwise_xor(const oclMat &src1, const Scalar &src2, oclMat &dst, c
         bitwise_scalar( src1, src2, dst, mask, kernelName, &arithm_bitwise_xor_scalar);
 }
 
-cv::ocl::oclMat cv::ocl::operator ~ (const oclMat &src)
+oclMatExpr cv::ocl::operator ~ (const oclMat &src)
 {
-    oclMat dst;
-    bitwise_not(src, dst);
-    return dst;
+    return oclMatExpr(src, oclMat(), MAT_NOT);
 }
 
-cv::ocl::oclMat cv::ocl::operator | (const oclMat &src1, const oclMat &src2)
+oclMatExpr cv::ocl::operator | (const oclMat &src1, const oclMat &src2)
 {
-    oclMat dst;
-    bitwise_or(src1, src2, dst);
-    return dst;
+    return oclMatExpr(src1, src2, MAT_OR);
 }
 
-cv::ocl::oclMat cv::ocl::operator & (const oclMat &src1, const oclMat &src2)
+oclMatExpr cv::ocl::operator & (const oclMat &src1, const oclMat &src2)
 {
-    oclMat dst;
-    bitwise_and(src1, src2, dst);
-    return dst;
+    return oclMatExpr(src1, src2, MAT_AND);
 }
 
-cv::ocl::oclMat cv::ocl::operator ^ (const oclMat &src1, const oclMat &src2)
+oclMatExpr cv::ocl::operator ^ (const oclMat &src1, const oclMat &src2)
 {
-    oclMat dst;
-    bitwise_xor(src1, src2, dst);
-    return dst;
+    return oclMatExpr(src1, src2, MAT_XOR);
 }
 
 cv::ocl::oclMatExpr cv::ocl::operator + (const oclMat &src1, const oclMat &src2)
 {
-    oclMatExpr dst(src1, src2, cv::ocl::MAT_ADD);
-    return dst;
+    return oclMatExpr(src1, src2, cv::ocl::MAT_ADD);
 }
 
 cv::ocl::oclMatExpr cv::ocl::operator - (const oclMat &src1, const oclMat &src2)
 {
-    oclMatExpr dst(src1, src2, cv::ocl::MAT_SUB);
-    return dst;
+    return oclMatExpr(src1, src2, cv::ocl::MAT_SUB);
 }
 
 cv::ocl::oclMatExpr cv::ocl::operator * (const oclMat &src1, const oclMat &src2)
 {
-    oclMatExpr dst(src1, src2, cv::ocl::MAT_MUL);
-    return dst;
+    return oclMatExpr(src1, src2, cv::ocl::MAT_MUL);
 }
 
 cv::ocl::oclMatExpr cv::ocl::operator / (const oclMat &src1, const oclMat &src2)
 {
-    oclMatExpr dst(src1, src2, cv::ocl::MAT_DIV);
-    return dst;
+    return oclMatExpr(src1, src2, cv::ocl::MAT_DIV);
 }
 
 void oclMatExpr::assign(oclMat& m) const
@@ -2192,6 +2180,18 @@ void oclMatExpr::assign(oclMat& m) const
             break;
         case MAT_DIV:
             divide(a, b, m);
+            break;
+        case MAT_NOT:
+            bitwise_not(a, m);
+            break;
+        case MAT_AND:
+            bitwise_and(a, b, m);
+            break;
+        case MAT_OR:
+            bitwise_or(a, b, m);
+            break;
+        case MAT_XOR:
+            bitwise_xor(a, b, m);
             break;
     }
 }

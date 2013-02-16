@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -51,23 +52,28 @@ namespace cv
 
         enum
         {
-            MAT_ADD,
+            MAT_ADD = 1,
             MAT_SUB,
             MAT_MUL,
-            MAT_DIV
+            MAT_DIV,
+            MAT_NOT,
+            MAT_AND,
+            MAT_OR,
+            MAT_XOR
         };
 
-        class oclMatExpr
+        class CV_EXPORTS oclMatExpr
         {
             public:
+                oclMatExpr() : a(oclMat()), b(oclMat()), op(0) {}
                 oclMatExpr(const oclMat& _a, const oclMat& _b, int _op)
-                    : a(_a), b(_b), op(_op){}
+                    : a(_a), b(_b), op(_op) {}
                 operator oclMat() const;
                 void assign(oclMat& m) const;
 
             protected:
-                int op;
                 oclMat a, b;
+                int op;
         };
         ////////////////////////////////////////////////////////////////////////
         //////////////////////////////// oclMat ////////////////////////////////
@@ -255,7 +261,7 @@ namespace cv
             return *this;
         }
 
-        oclMat& oclMat::operator = (const oclMatExpr& expr)
+        inline oclMat& oclMat::operator = (const oclMatExpr& expr)
         {
             expr.assign(*this);
             return *this;
