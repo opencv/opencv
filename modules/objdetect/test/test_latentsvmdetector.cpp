@@ -184,6 +184,15 @@ std::ostream& operator << (std::ostream& os, const CvRect& r)
 
 bool compareResults( const vector<LatentSvmDetector::ObjectDetection>& calc, const vector<LatentSvmDetector::ObjectDetection>& valid, int eps, float threshold)
 {
+  /*  std::cout<<"\n\n" << calc.size() << " \n";
+
+    for( size_t i = 0; i < calc.size(); i++ )
+    {
+      std::cout << calc[i].rect.x << " " << calc[i].rect.y << " ";
+      std::cout << calc[i].rect.width<< " " << calc[i].rect.height<< " " ;
+      std::cout << calc[i].score<< " " << calc[i].classID<< " ";
+    }
+*/
     if( calc.size() != valid.size() )
         return false;
 
@@ -246,6 +255,7 @@ void LatentSVMDetectorTest::run( int /* start_from */)
     // 1. Test method detect
     // Run detectors
     vector<LatentSvmDetector::ObjectDetection> detections1_cat, detections12_cat, detections12_cars;
+    //best parametre  detector1.detect( image_cat, detections1_cat, 1);
     detector1.detect( image_cat, detections1_cat, 0.5);
     detector12.detect( image_cat, detections12_cat, 0.5);
     detector12.detect( image_cars, detections12_cars, 0.5);
@@ -306,5 +316,5 @@ void LatentSVMDetectorTest::run( int /* start_from */)
     ts->set_failed_test_info( cvtest::TS::OK);
 }
 
-TEST(Objdetect_LatentSVMDetector_c, DISABLED_regression) { CV_LatentSVMDetectorTest test; test.safe_run(); }
-TEST(Objdetect_LatentSVMDetector_cpp, DISABLED_regression) { LatentSVMDetectorTest test; test.safe_run(); }
+TEST(Objdetect_LatentSVMDetector_c, regression) { CV_LatentSVMDetectorTest test; test.safe_run(); }
+TEST(Objdetect_LatentSVMDetector_cpp, regression) { LatentSVMDetectorTest test; test.safe_run(); }
