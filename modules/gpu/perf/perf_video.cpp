@@ -431,13 +431,13 @@ PERF_TEST_P(ImagePair, Video_OpticalFlowDual_TVL1,
     {
         cv::Mat flow;
 
-        cv::OpticalFlowDual_TVL1 alg;
+        cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
 
-        alg(frame0, frame1, flow);
+        alg->calc(frame0, frame1, flow);
 
         TEST_CYCLE()
         {
-            alg(frame0, frame1, flow);
+            alg->calc(frame0, frame1, flow);
         }
 
         CPU_SANITY_CHECK(flow);

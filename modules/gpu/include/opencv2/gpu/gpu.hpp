@@ -145,43 +145,49 @@ public:
     ~Stream();
 
     Stream(const Stream&);
-    Stream& operator=(const Stream&);
+    Stream& operator =(const Stream&);
 
     bool queryIfComplete();
     void waitForCompletion();
 
-    //! downloads asynchronously.
+    //! downloads asynchronously
     // Warning! cv::Mat must point to page locked memory (i.e. to CudaMem data or to its subMat)
     void enqueueDownload(const GpuMat& src, CudaMem& dst);
     void enqueueDownload(const GpuMat& src, Mat& dst);
 
-    //! uploads asynchronously.
+    //! uploads asynchronously
     // Warning! cv::Mat must point to page locked memory (i.e. to CudaMem data or to its ROI)
     void enqueueUpload(const CudaMem& src, GpuMat& dst);
     void enqueueUpload(const Mat& src, GpuMat& dst);
 
+    //! copy asynchronously
     void enqueueCopy(const GpuMat& src, GpuMat& dst);
 
+    //! memory set asynchronously
     void enqueueMemSet(GpuMat& src, Scalar val);
     void enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask);
 
-    // converts matrix type, ex from float to uchar depending on type
-    void enqueueConvert(const GpuMat& src, GpuMat& dst, int type, double a = 1, double b = 0);
+    //! converts matrix type, ex from float to uchar depending on type
+    void enqueueConvert(const GpuMat& src, GpuMat& dst, int dtype, double a = 1, double b = 0);
+
+    //! adds a callback to be called on the host after all currently enqueued items in the stream have completed
+    typedef void (*StreamCallback)(Stream& stream, int status, void* userData);
+    void enqueueHostCallback(StreamCallback callback, void* userData);
 
     static Stream& Null();
 
     operator bool() const;
 
 private:
+    struct Impl;
+
+    explicit Stream(Impl* impl);
     void create();
     void release();
 
-    struct Impl;
     Impl *impl;
 
     friend struct StreamAccessor;
-
-    explicit Stream(Impl* impl);
 };
 
 
@@ -458,6 +464,12 @@ CV_EXPORTS void cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude,
 //! converts polar coordinates to Cartesian
 //! supports only floating-point source
 CV_EXPORTS void polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees = false, Stream& stream = Stream::Null());
+
+//! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values
+CV_EXPORTS void normalize(const GpuMat& src, GpuMat& dst, double alpha = 1, double beta = 0,
+                          int norm_type = NORM_L2, int dtype = -1, const GpuMat& mask = GpuMat());
+CV_EXPORTS void normalize(const GpuMat& src, GpuMat& dst, double a, double b,
+                          int norm_type, int dtype, const GpuMat& mask, GpuMat& norm_buf, GpuMat& cvt_buf);
 
 
 //////////////////////////// Per-element operations ////////////////////////////////////
@@ -910,11 +922,8 @@ CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev, GpuM
 //! supports NORM_INF, NORM_L1, NORM_L2
 //! supports all matrices except 64F
 CV_EXPORTS double norm(const GpuMat& src1, int normType=NORM_L2);
-
-//! computes norm of array
-//! supports NORM_INF, NORM_L1, NORM_L2
-//! supports all matrices except 64F
 CV_EXPORTS double norm(const GpuMat& src1, int normType, GpuMat& buf);
+CV_EXPORTS double norm(const GpuMat& src1, int normType, const GpuMat& mask, GpuMat& buf);
 
 //! computes norm of the difference between two arrays
 //! supports NORM_INF, NORM_L1, NORM_L2
@@ -924,45 +933,33 @@ CV_EXPORTS double norm(const GpuMat& src1, const GpuMat& src2, int normType=NORM
 //! computes sum of array elements
 //! supports only single channel images
 CV_EXPORTS Scalar sum(const GpuMat& src);
-
-//! computes sum of array elements
-//! supports only single channel images
 CV_EXPORTS Scalar sum(const GpuMat& src, GpuMat& buf);
+CV_EXPORTS Scalar sum(const GpuMat& src, const GpuMat& mask, GpuMat& buf);
 
 //! computes sum of array elements absolute values
 //! supports only single channel images
 CV_EXPORTS Scalar absSum(const GpuMat& src);
-
-//! computes sum of array elements absolute values
-//! supports only single channel images
 CV_EXPORTS Scalar absSum(const GpuMat& src, GpuMat& buf);
+CV_EXPORTS Scalar absSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf);
 
 //! computes squared sum of array elements
 //! supports only single channel images
 CV_EXPORTS Scalar sqrSum(const GpuMat& src);
-
-//! computes squared sum of array elements
-//! supports only single channel images
 CV_EXPORTS Scalar sqrSum(const GpuMat& src, GpuMat& buf);
+CV_EXPORTS Scalar sqrSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf);
 
 //! finds global minimum and maximum array elements and returns their values
 CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal=0, const GpuMat& mask=GpuMat());
-
-//! finds global minimum and maximum array elements and returns their values
 CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf);
 
 //! finds global minimum and maximum array elements and returns their values with locations
 CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0,
                           const GpuMat& mask=GpuMat());
-
-//! finds global minimum and maximum array elements and returns their values with locations
 CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
                           const GpuMat& mask, GpuMat& valbuf, GpuMat& locbuf);
 
 //! counts non-zero array elements
 CV_EXPORTS int countNonZero(const GpuMat& src);
-
-//! counts non-zero array elements
 CV_EXPORTS int countNonZero(const GpuMat& src, GpuMat& buf);
 
 //! reduces a matrix to a vector

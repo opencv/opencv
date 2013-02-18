@@ -110,7 +110,7 @@ endif()
 
 # Optional 3rd party components
 # ===================================================
-OCV_OPTION(WITH_1394           "Include IEEE1394 support"                    ON   IF (UNIX AND NOT ANDROID AND NOT IOS AND NOT CARMA) )
+OCV_OPTION(WITH_1394           "Include IEEE1394 support"                    ON   IF (UNIX AND NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_AVFOUNDATION   "Use AVFoundation for Video I/O"              ON   IF IOS)
 OCV_OPTION(WITH_CARBON         "Use Carbon for UI instead of Cocoa"          OFF  IF APPLE )
 OCV_OPTION(WITH_CUDA           "Include NVidia Cuda Runtime support"         ON   IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS) )
@@ -141,9 +141,9 @@ OCV_OPTION(WITH_VIDEOINPUT     "Build HighGUI with DirectShow support"       ON 
 OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF (NOT ANDROID AND NOT APPLE) )
 OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_CLP            "Include Clp support (EPL)"                   OFF)
-OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              OFF  IF (NOT ANDROID AND NOT IOS AND NOT CARMA) )
-OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      OFF  IF (NOT ANDROID AND NOT IOS AND NOT CARMA) )
-OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     OFF  IF (NOT ANDROID AND NOT IOS AND NOT CARMA) )
+OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              OFF  IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      OFF  IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     OFF  IF (NOT ANDROID AND NOT IOS) )
 
 
 # OpenCV build components
@@ -163,12 +163,12 @@ OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF I
 OCV_OPTION(BUILD_ANDROID_PACKAGE    "Build platform-specific package for Google Play" OFF IF ANDROID )
 
 # 3rd party libs
-OCV_OPTION(BUILD_ZLIB               "Build zlib from source"             WIN32 OR APPLE OR CARMA )
-OCV_OPTION(BUILD_TIFF               "Build libtiff from source"          WIN32 OR ANDROID OR APPLE OR CARMA )
-OCV_OPTION(BUILD_JASPER             "Build libjasper from source"        WIN32 OR ANDROID OR APPLE OR CARMA )
-OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"          WIN32 OR ANDROID OR APPLE OR CARMA )
-OCV_OPTION(BUILD_PNG                "Build libpng from source"           WIN32 OR ANDROID OR APPLE OR CARMA )
-OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"          WIN32 OR ANDROID OR APPLE OR CARMA )
+OCV_OPTION(BUILD_ZLIB               "Build zlib from source"             WIN32 OR APPLE )
+OCV_OPTION(BUILD_TIFF               "Build libtiff from source"          WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_JASPER             "Build libjasper from source"        WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"          WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_PNG                "Build libpng from source"           WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"          WIN32 OR ANDROID OR APPLE )
 OCV_OPTION(BUILD_TBB                "Download and build TBB from source" ANDROID IF CMAKE_COMPILER_IS_GNUCXX )
 
 # OpenCV installation options
@@ -301,21 +301,19 @@ find_host_program(GIT_EXECUTABLE NAMES ${git_names} PATH_SUFFIXES Git/cmd Git/bi
 mark_as_advanced(GIT_EXECUTABLE)
 
 if(GIT_EXECUTABLE)
-  execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+  execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --always --dirty --match "2.[0-9].[0-9]*"
     WORKING_DIRECTORY "${OpenCV_SOURCE_DIR}"
-    OUTPUT_VARIABLE OPENCV_GIT_HASH_SORT
+    OUTPUT_VARIABLE OPENCV_VCSVERSION
     RESULT_VARIABLE GIT_RESULT
     ERROR_QUIET
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
-  if(GIT_RESULT EQUAL 0)
-    set(OPENCV_VCSVERSION "commit:${OPENCV_GIT_HASH_SORT}")
-  else()
-    set(OPENCV_VCSVERSION "exported")
+  if(NOT GIT_RESULT EQUAL 0)
+    set(OPENCV_VCSVERSION "unknown")
   endif()
 else()
   # We don't have git:
-  set(OPENCV_VCSVERSION "")
+  set(OPENCV_VCSVERSION "unknown")
 endif()
 
 
@@ -523,10 +521,21 @@ if(NOT CMAKE_GENERATOR MATCHES "Xcode|Visual Studio")
 endif()
 
 # ========================== C/C++ options ==========================
+if(CMAKE_CXX_COMPILER_VERSION)
+  set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (ver ${CMAKE_CXX_COMPILER_VERSION})")
+elseif(CMAKE_COMPILER_IS_CLANGCXX)
+  set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (ver ${CMAKE_CLANG_REGEX_VERSION})")
+elseif(CMAKE_COMPILER_IS_GNUCXX)
+  set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (ver ${CMAKE_GCC_REGEX_VERSION})")
+else()
+  set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1}")
+endif()
+string(STRIP "${OPENCV_COMPILER_STR}" OPENCV_COMPILER_STR)
+
 status("")
 status("  C/C++:")
 status("    Built as dynamic libs?:" BUILD_SHARED_LIBS THEN YES ELSE NO)
-status("    C++ Compiler:"           CMAKE_COMPILER_IS_GNUCXX THEN "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (ver ${CMAKE_GCC_REGEX_VERSION})" ELSE "${CMAKE_CXX_COMPILER}" )
+status("    C++ Compiler:"           ${OPENCV_COMPILER_STR})
 status("    C++ flags (Release):"    ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE})
 status("    C++ flags (Debug):"      ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG})
 status("    C Compiler:"             ${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1})
@@ -575,15 +584,16 @@ if(ANDROID)
   status("    Android ABI:" ${ANDROID_ABI})
   status("    STL type:" ${ANDROID_STL})
   status("    Native API level:" android-${ANDROID_NATIVE_API_LEVEL})
-  status("    SDK target:" "${ANDROID_SDK_TARGET}")
+  android_get_compatible_target(android_sdk_target_status ${ANDROID_NATIVE_API_LEVEL} ${ANDROID_SDK_TARGET} 11)
+  status("    SDK target:" "${android_sdk_target_status}")
   if(BUILD_WITH_ANDROID_NDK)
     status("    Android NDK:" "${ANDROID_NDK} (toolchain: ${ANDROID_TOOLCHAIN_NAME})")
   elseif(BUILD_WITH_STANDALONE_TOOLCHAIN)
     status("    Android toolchain:" "${ANDROID_STANDALONE_TOOLCHAIN}")
   endif()
   status("    android tool:"  ANDROID_EXECUTABLE  THEN "${ANDROID_EXECUTABLE} (${ANDROID_TOOLS_Pkg_Desc})" ELSE NO)
-  status("    ant:"           ANT_EXECUTABLE      THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})"            ELSE NO)
-  status("    Google Play package:" BUILD_ANDROID_PACKAGE THEN YES ELSE NO)
+  status("    Google Play package:" BUILD_ANDROID_PACKAGE                                         THEN YES ELSE NO)
+  status("    Android examples:"    BUILD_ANDROID_EXAMPLES AND CAN_BUILD_ANDROID_PROJECTS         THEN YES ELSE NO)
 endif()
 
 # ========================== GUI ==========================
@@ -707,7 +717,7 @@ if(DEFINED WITH_PVAPI)
 endif(DEFINED WITH_PVAPI)
 
 if(DEFINED WITH_GIGEAPI)
-  status("    GigEVisionSDK:"  HAVE_GIGE_API          THEN YES                                        ELSE NO)
+  status("    GigEVisionSDK:"  HAVE_GIGE_API       THEN YES                                        ELSE NO)
 endif(DEFINED WITH_GIGEAPI)
 
 if(DEFINED WITH_QUICKTIME)
@@ -753,31 +763,21 @@ endif(DEFINED WITH_XINE)
 status("")
 status("  Other third-party libraries:")
 
-if(DEFINED WITH_IPP)
-  if(WITH_IPP AND IPP_FOUND)
-    status("    Use IPP:" "${IPP_LATEST_VERSION_STR} [${IPP_LATEST_VERSION_MAJOR}.${IPP_LATEST_VERSION_MINOR}.${IPP_LATEST_VERSION_BUILD}]")
-    status("         at:" "${IPP_ROOT_DIR}")
-  else()
-    status("    Use IPP:"   WITH_IPP AND NOT IPP_FOUND THEN "IPP not found" ELSE NO)
-  endif()
-endif(DEFINED WITH_IPP)
+if(WITH_IPP AND IPP_FOUND)
+  status("    Use IPP:" "${IPP_LATEST_VERSION_STR} [${IPP_LATEST_VERSION_MAJOR}.${IPP_LATEST_VERSION_MINOR}.${IPP_LATEST_VERSION_BUILD}]")
+  status("         at:" "${IPP_ROOT_DIR}")
+else()
+  status("    Use IPP:"   WITH_IPP AND NOT IPP_FOUND THEN "IPP not found" ELSE NO)
+endif()
 
-if(DEFINED WITH_TBB)
-  status("    Use TBB:"   HAVE_TBB   THEN "YES (ver ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} interface ${TBB_INTERFACE_VERSION})" ELSE NO)
-endif(DEFINED WITH_TBB)
-
-if(DEFINED WITH_CSTRIPES)
-  status("    Use C=:"   HAVE_CSTRIPES   THEN YES ELSE NO)
-endif(DEFINED WITH_CSTRIPES)
-
-if(DEFINED WITH_CUDA)
-  status("    Use Cuda:"  HAVE_CUDA  THEN "YES (ver ${CUDA_VERSION_STRING})" ELSE NO)
-endif(DEFINED WITH_CUDA)
-
-status("    Use OpenCL:"  HAVE_OPENCL  THEN YES ELSE NO)
-
-status("    Use Eigen:" HAVE_EIGEN THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
-status("    Use Clp:"   HAVE_CLP   THEN YES ELSE NO)
+status("    Use Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
+status("    Use TBB:"        HAVE_TBB         THEN "YES (ver ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} interface ${TBB_INTERFACE_VERSION})" ELSE NO)
+status("    Use OpenMP:"     HAVE_OPENMP      THEN YES ELSE NO)
+status("    Use GCD"         HAVE_GCD         THEN YES ELSE NO)
+status("    Use Concurrency" HAVE_CONCURRENCY THEN YES ELSE NO)
+status("    Use C=:"         HAVE_CSTRIPES    THEN YES ELSE NO)
+status("    Use Cuda:"       HAVE_CUDA        THEN "YES (ver ${CUDA_VERSION_STRING})" ELSE NO)
+status("    Use OpenCL:"     HAVE_OPENCL      THEN YES ELSE NO)
 
 if(HAVE_CUDA)
   status("")
@@ -791,10 +791,23 @@ if(HAVE_CUDA)
   status("    Use fast math:"        CUDA_FAST_MATH THEN YES ELSE NO)
 endif()
 
+if(HAVE_OPENCL AND BUILD_opencv_ocl)
+  status("")
+  status("  OpenCL")
+  if(OPENCL_INCLUDE_DIR)
+    status("    Include:"            ${OPENCL_INCLUDE_DIR})
+  endif()
+  if(OPENCL_LIBRARIES)
+    status("    libraries:"          ${OPENCL_LIBRARIES})
+  endif()
+  status("    Use AMDFFT:"           HAVE_CLAMDFFT  THEN YES ELSE NO)
+  status("    Use AMDBLAS:"          HAVE_CLAMDBLAS THEN YES ELSE NO)
+endif()
+
 # ========================== python ==========================
 status("")
 status("  Python:")
-status("    Interpreter:"   PYTHON_EXECUTABLE     THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_FULL})"         ELSE NO)
+status("    Interpreter:"     PYTHON_EXECUTABLE   THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_FULL})"         ELSE NO)
 if(BUILD_opencv_python)
   if(PYTHONLIBS_VERSION_STRING)
     status("    Libraries:"   HAVE_opencv_python  THEN  "${PYTHON_LIBRARIES} (ver ${PYTHONLIBS_VERSION_STRING})"   ELSE NO)
@@ -804,6 +817,15 @@ if(BUILD_opencv_python)
   status("    numpy:"         PYTHON_USE_NUMPY    THEN "${PYTHON_NUMPY_INCLUDE_DIR} (ver ${PYTHON_NUMPY_VERSION})" ELSE "NO (Python wrappers can not be generated)")
   status("    packages path:" PYTHON_EXECUTABLE   THEN "${PYTHON_PACKAGES_PATH}"                                   ELSE "-")
 endif()
+
+# ========================== java ==========================
+status("")
+status("  Java:")
+status("    ant:"           ANT_EXECUTABLE      THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})"                    ELSE NO)
+if(NOT ANDROID)
+  status("    JNI:"         JNI_INCLUDE_DIRS    THEN "${JNI_INCLUDE_DIRS}"                                       ELSE NO)
+endif()
+status("    Java tests:"    BUILD_TESTS AND (NOT ANDROID OR CAN_BUILD_ANDROID_PROJECTS)                 THEN YES ELSE NO)
 
 # ========================== documentation ==========================
 if(BUILD_DOCS)
@@ -823,12 +845,7 @@ status("")
 status("  Tests and samples:")
 status("    Tests:"             BUILD_TESTS AND HAVE_opencv_ts       THEN YES ELSE NO)
 status("    Performance tests:" BUILD_PERF_TESTS AND HAVE_opencv_ts  THEN YES ELSE NO)
-status("    Examples:"          BUILD_EXAMPLES                       THEN YES ELSE NO)
-
-if(ANDROID)
-  status("    Android tests:"    BUILD_TESTS AND CAN_BUILD_ANDROID_PROJECTS            THEN YES ELSE NO)
-  status("    Android examples:" BUILD_ANDROID_EXAMPLES AND CAN_BUILD_ANDROID_PROJECTS THEN YES ELSE NO)
-endif()
+status("    C/C++ Examples:"    BUILD_EXAMPLES                       THEN YES ELSE NO)
 
 # ========================== auxiliary ==========================
 status("")

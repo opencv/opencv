@@ -352,8 +352,8 @@ namespace sum
         }
     };
 
-    template <int BLOCK_SIZE, typename src_type, typename result_type, class Op>
-    __global__ void kernel(const PtrStepSz<src_type> src, result_type* result, const Op op, const int twidth, const int theight)
+    template <int BLOCK_SIZE, typename src_type, typename result_type, class Mask, class Op>
+    __global__ void kernel(const PtrStepSz<src_type> src, result_type* result, const Mask mask, const Op op, const int twidth, const int theight)
     {
         typedef typename VecTraits<src_type>::elem_type T;
         typedef typename VecTraits<result_type>::elem_type R;
@@ -375,9 +375,11 @@ namespace sum
 
             for (int j = 0, x = x0; j < twidth && x < src.cols; ++j, x += blockDim.x)
             {
-                const src_type srcVal = ptr[x];
-
-                sum = sum + op(saturate_cast<result_type>(srcVal));
+                if (mask(y, x))
+                {
+                    const src_type srcVal = ptr[x];
+                    sum = sum + op(saturate_cast<result_type>(srcVal));
+                }
             }
         }
 
@@ -410,7 +412,7 @@ namespace sum
     }
 
     template <typename T, typename R, int cn, template <typename> class Op>
-    void caller(PtrStepSzb src_, void* buf_, double* out)
+    void caller(PtrStepSzb src_, void* buf_, double* out, PtrStepSzb mask)
     {
         typedef typename TypeVec<T, cn>::vec_type src_type;
         typedef typename TypeVec<R, cn>::vec_type result_type;
@@ -426,7 +428,10 @@ namespace sum
 
         Op<result_type> op;
 
-        kernel<threads_x * threads_y><<<grid, block>>>(src, buf, op, twidth, theight);
+        if (mask.data)
+            kernel<threads_x * threads_y><<<grid, block>>>(src, buf, SingleMask(mask), op, twidth, theight);
+        else
+            kernel<threads_x * threads_y><<<grid, block>>>(src, buf, WithOutMask(), op, twidth, theight);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -450,88 +455,88 @@ namespace sum
     template <> struct SumType<double> { typedef double R; };
 
     template <typename T, int cn>
-    void run(PtrStepSzb src, void* buf, double* out)
+    void run(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask)
     {
         typedef typename SumType<T>::R R;
-        caller<T, R, cn, identity>(src, buf, out);
+        caller<T, R, cn, identity>(src, buf, out, mask);
     }
 
-    template void run<uchar, 1>(PtrStepSzb src, void* buf, double* out);
-    template void run<uchar, 2>(PtrStepSzb src, void* buf, double* out);
-    template void run<uchar, 3>(PtrStepSzb src, void* buf, double* out);
-    template void run<uchar, 4>(PtrStepSzb src, void* buf, double* out);
+    template void run<uchar, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<uchar, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<uchar, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<uchar, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void run<schar, 1>(PtrStepSzb src, void* buf, double* out);
-    template void run<schar, 2>(PtrStepSzb src, void* buf, double* out);
-    template void run<schar, 3>(PtrStepSzb src, void* buf, double* out);
-    template void run<schar, 4>(PtrStepSzb src, void* buf, double* out);
+    template void run<schar, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<schar, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<schar, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<schar, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void run<ushort, 1>(PtrStepSzb src, void* buf, double* out);
-    template void run<ushort, 2>(PtrStepSzb src, void* buf, double* out);
-    template void run<ushort, 3>(PtrStepSzb src, void* buf, double* out);
-    template void run<ushort, 4>(PtrStepSzb src, void* buf, double* out);
+    template void run<ushort, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<ushort, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<ushort, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<ushort, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void run<short, 1>(PtrStepSzb src, void* buf, double* out);
-    template void run<short, 2>(PtrStepSzb src, void* buf, double* out);
-    template void run<short, 3>(PtrStepSzb src, void* buf, double* out);
-    template void run<short, 4>(PtrStepSzb src, void* buf, double* out);
+    template void run<short, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<short, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<short, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<short, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void run<int, 1>(PtrStepSzb src, void* buf, double* out);
-    template void run<int, 2>(PtrStepSzb src, void* buf, double* out);
-    template void run<int, 3>(PtrStepSzb src, void* buf, double* out);
-    template void run<int, 4>(PtrStepSzb src, void* buf, double* out);
+    template void run<int, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<int, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<int, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<int, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void run<float, 1>(PtrStepSzb src, void* buf, double* out);
-    template void run<float, 2>(PtrStepSzb src, void* buf, double* out);
-    template void run<float, 3>(PtrStepSzb src, void* buf, double* out);
-    template void run<float, 4>(PtrStepSzb src, void* buf, double* out);
+    template void run<float, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<float, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<float, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<float, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void run<double, 1>(PtrStepSzb src, void* buf, double* out);
-    template void run<double, 2>(PtrStepSzb src, void* buf, double* out);
-    template void run<double, 3>(PtrStepSzb src, void* buf, double* out);
-    template void run<double, 4>(PtrStepSzb src, void* buf, double* out);
+    template void run<double, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<double, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<double, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void run<double, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
     template <typename T, int cn>
-    void runAbs(PtrStepSzb src, void* buf, double* out)
+    void runAbs(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask)
     {
         typedef typename SumType<T>::R R;
-        caller<T, R, cn, abs_func>(src, buf, out);
+        caller<T, R, cn, abs_func>(src, buf, out, mask);
     }
 
-    template void runAbs<uchar, 1>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<uchar, 2>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<uchar, 3>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<uchar, 4>(PtrStepSzb src, void* buf, double* out);
+    template void runAbs<uchar, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<uchar, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<uchar, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<uchar, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void runAbs<schar, 1>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<schar, 2>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<schar, 3>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<schar, 4>(PtrStepSzb src, void* buf, double* out);
+    template void runAbs<schar, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<schar, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<schar, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<schar, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void runAbs<ushort, 1>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<ushort, 2>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<ushort, 3>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<ushort, 4>(PtrStepSzb src, void* buf, double* out);
+    template void runAbs<ushort, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<ushort, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<ushort, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<ushort, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void runAbs<short, 1>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<short, 2>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<short, 3>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<short, 4>(PtrStepSzb src, void* buf, double* out);
+    template void runAbs<short, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<short, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<short, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<short, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void runAbs<int, 1>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<int, 2>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<int, 3>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<int, 4>(PtrStepSzb src, void* buf, double* out);
+    template void runAbs<int, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<int, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<int, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<int, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void runAbs<float, 1>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<float, 2>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<float, 3>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<float, 4>(PtrStepSzb src, void* buf, double* out);
+    template void runAbs<float, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<float, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<float, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<float, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void runAbs<double, 1>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<double, 2>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<double, 3>(PtrStepSzb src, void* buf, double* out);
-    template void runAbs<double, 4>(PtrStepSzb src, void* buf, double* out);
+    template void runAbs<double, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<double, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<double, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runAbs<double, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
     template <typename T> struct Sqr : unary_function<T, T>
     {
@@ -542,45 +547,45 @@ namespace sum
     };
 
     template <typename T, int cn>
-    void runSqr(PtrStepSzb src, void* buf, double* out)
+    void runSqr(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask)
     {
-        caller<T, double, cn, Sqr>(src, buf, out);
+        caller<T, double, cn, Sqr>(src, buf, out, mask);
     }
 
-    template void runSqr<uchar, 1>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<uchar, 2>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<uchar, 3>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<uchar, 4>(PtrStepSzb src, void* buf, double* out);
+    template void runSqr<uchar, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<uchar, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<uchar, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<uchar, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void runSqr<schar, 1>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<schar, 2>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<schar, 3>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<schar, 4>(PtrStepSzb src, void* buf, double* out);
+    template void runSqr<schar, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<schar, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<schar, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<schar, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void runSqr<ushort, 1>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<ushort, 2>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<ushort, 3>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<ushort, 4>(PtrStepSzb src, void* buf, double* out);
+    template void runSqr<ushort, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<ushort, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<ushort, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<ushort, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void runSqr<short, 1>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<short, 2>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<short, 3>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<short, 4>(PtrStepSzb src, void* buf, double* out);
+    template void runSqr<short, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<short, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<short, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<short, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void runSqr<int, 1>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<int, 2>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<int, 3>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<int, 4>(PtrStepSzb src, void* buf, double* out);
+    template void runSqr<int, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<int, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<int, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<int, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void runSqr<float, 1>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<float, 2>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<float, 3>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<float, 4>(PtrStepSzb src, void* buf, double* out);
+    template void runSqr<float, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<float, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<float, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<float, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 
-    template void runSqr<double, 1>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<double, 2>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<double, 3>(PtrStepSzb src, void* buf, double* out);
-    template void runSqr<double, 4>(PtrStepSzb src, void* buf, double* out);
+    template void runSqr<double, 1>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<double, 2>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<double, 3>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
+    template void runSqr<double, 4>(PtrStepSzb src, void* buf, double* out, PtrStepSzb mask);
 }
 
 /////////////////////////////////////////////////////////////
