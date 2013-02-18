@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -2124,32 +2125,82 @@ void cv::ocl::bitwise_xor(const oclMat &src1, const Scalar &src2, oclMat &dst, c
         bitwise_scalar( src1, src2, dst, mask, kernelName, &arithm_bitwise_xor_scalar);
 }
 
-cv::ocl::oclMat cv::ocl::operator ~ (const oclMat &src)
+oclMatExpr cv::ocl::operator ~ (const oclMat &src)
 {
-    oclMat dst;
-    bitwise_not(src, dst);
-    return dst;
+    return oclMatExpr(src, oclMat(), MAT_NOT);
 }
 
-cv::ocl::oclMat cv::ocl::operator | (const oclMat &src1, const oclMat &src2)
+oclMatExpr cv::ocl::operator | (const oclMat &src1, const oclMat &src2)
 {
-    oclMat dst;
-    bitwise_or(src1, src2, dst);
-    return dst;
+    return oclMatExpr(src1, src2, MAT_OR);
 }
 
-cv::ocl::oclMat cv::ocl::operator & (const oclMat &src1, const oclMat &src2)
+oclMatExpr cv::ocl::operator & (const oclMat &src1, const oclMat &src2)
 {
-    oclMat dst;
-    bitwise_and(src1, src2, dst);
-    return dst;
+    return oclMatExpr(src1, src2, MAT_AND);
 }
 
-cv::ocl::oclMat cv::ocl::operator ^ (const oclMat &src1, const oclMat &src2)
+oclMatExpr cv::ocl::operator ^ (const oclMat &src1, const oclMat &src2)
 {
-    oclMat dst;
-    bitwise_xor(src1, src2, dst);
-    return dst;
+    return oclMatExpr(src1, src2, MAT_XOR);
+}
+
+cv::ocl::oclMatExpr cv::ocl::operator + (const oclMat &src1, const oclMat &src2)
+{
+    return oclMatExpr(src1, src2, cv::ocl::MAT_ADD);
+}
+
+cv::ocl::oclMatExpr cv::ocl::operator - (const oclMat &src1, const oclMat &src2)
+{
+    return oclMatExpr(src1, src2, cv::ocl::MAT_SUB);
+}
+
+cv::ocl::oclMatExpr cv::ocl::operator * (const oclMat &src1, const oclMat &src2)
+{
+    return oclMatExpr(src1, src2, cv::ocl::MAT_MUL);
+}
+
+cv::ocl::oclMatExpr cv::ocl::operator / (const oclMat &src1, const oclMat &src2)
+{
+    return oclMatExpr(src1, src2, cv::ocl::MAT_DIV);
+}
+
+void oclMatExpr::assign(oclMat& m) const
+{
+    switch (op)
+    {
+        case MAT_ADD:
+            add(a, b, m);
+            break;
+        case MAT_SUB:
+            subtract(a, b, m);
+            break;
+        case MAT_MUL:
+            multiply(a, b, m);
+            break;
+        case MAT_DIV:
+            divide(a, b, m);
+            break;
+        case MAT_NOT:
+            bitwise_not(a, m);
+            break;
+        case MAT_AND:
+            bitwise_and(a, b, m);
+            break;
+        case MAT_OR:
+            bitwise_or(a, b, m);
+            break;
+        case MAT_XOR:
+            bitwise_xor(a, b, m);
+            break;
+    }
+}
+
+oclMatExpr::operator oclMat() const
+{
+    oclMat m;
+    assign(m);
+    return m;
 }
 
 //////////////////////////////////////////////////////////////////////////////
