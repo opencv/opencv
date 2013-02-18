@@ -833,8 +833,7 @@ namespace cv
         /*
          * Converts the contents of a file into a string
          */
-        int
-        convertToString(const char *filename, std::string& s)
+        static int convertToString(const char *filename, std::string& s)
         {
             size_t size;
             char*  str;
