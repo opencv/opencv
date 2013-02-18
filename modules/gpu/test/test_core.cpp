@@ -1124,7 +1124,7 @@ GPU_TEST_P(Divide_Scalar, WithOutScale)
         cv::Mat dst_gold;
         cv::divide(mat, val, dst_gold, 1, depth.second);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 1.0);
     }
 }
 
@@ -1154,7 +1154,7 @@ GPU_TEST_P(Divide_Scalar, WithScale)
         cv::Mat dst_gold;
         cv::divide(mat, val, dst_gold, scale, depth.second);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-2 : 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-2 : 1.0);
     }
 }
 
@@ -1210,7 +1210,7 @@ GPU_TEST_P(Divide_Scalar_Inv, Accuracy)
         cv::Mat dst_gold;
         cv::divide(scale, mat, dst_gold, depth.second);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 1.0);
     }
 }
 
