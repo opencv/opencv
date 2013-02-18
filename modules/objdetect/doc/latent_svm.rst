@@ -31,7 +31,7 @@ The detector was dramatically speeded-up with cascade algorithm
 proposed by P.F. Felzenszwalb in [Felzenszwalb2010b]_. The algorithm
 prunes partial hypotheses using thresholds on their scores.The basic
 idea of the algorithm is to use a hierarchy of models defined by an
-ordering of the original model’s parts. For a model with (n+1)
+ordering of the original model's parts. For a model with (n+1)
 parts, including the root, a sequence of (n+1) models is obtained.
 The i-th model in this sequence is defined by the first i parts from
 the original model. Using this hierarchy, low scoring hypotheses can be

@@ -66,16 +66,16 @@
 #define EPCACOEFF     (STEP_END + PCACOEFF)
 
     int loadModel(
-             // Входные параметры
-              const char *modelPath,// - путь до файла с моделью
+             // input parametr
+              const char *modelPath,// model path
              
-              // Выходные параметры
-              CvLSVMFilterObject ***filters,// - массив указателей на фильтры компонент
-              int *kFilters, //- общее количество фильтров во всех моделях
-              int *kComponents, //- количество компонент
-              int **kPartFilters, //- массив, содержащий количество точных фильтров в каждой компоненте
-              float **b, //- массив линейных членов в оценочной функции
+              // output parametrs
+              CvLSVMFilterObject ***filters,
+              int *kFilters, 
+              int *kComponents, 
+              int **kPartFilters, 
+              float **b,
               float *scoreThreshold,
-              float ** PCAcoeff); //- порог для score)
+              float ** PCAcoeff);
 //};
 #endif

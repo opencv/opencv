@@ -304,7 +304,6 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
   int     *tmpLevels;
     float   **tmpAScore;
 
-//PSA отсечение объектов
     int flag,flag2;
 
     CvPoint *PCAPoints;
@@ -365,7 +364,6 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
         }
         // fclose(dump);
 
-        //очистка кеша
         sizeM  = maxPathX * maxPathY;
         for(path = 0 ; path < n; path++){
             memset(maskM[path], 0, sizeof(int) * (sizeM/(sizeof(int) * 8) + 1));
@@ -423,7 +421,6 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
                     PCAAScore[PCAkPoints][n + 1] = PCAScore;
             PCAkPoints ++;
             if(PCAkPoints >= tmpSize){
-              //перевыделение памяти
                         tmpPoints = (CvPoint*)malloc(sizeof(CvPoint) * (tmpSize + tmpStep));
                         tmpLevels = (int*)malloc(sizeof(int)     * (tmpSize + tmpStep));
                         tmpAScore = (float **)malloc(sizeof(float *) * (tmpSize + tmpStep));
@@ -450,7 +447,6 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
         free (rootScoreForLevel);
     }
 
-//Выявление объектов
   (*points) = (CvPoint *)malloc(sizeof(CvPoint) * PCAkPoints);
   (*levels) = (int    *)malloc(sizeof(int    ) * PCAkPoints);
   (*score ) = (float  *)malloc(sizeof(float  ) * PCAkPoints);

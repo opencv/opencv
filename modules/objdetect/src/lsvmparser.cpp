@@ -987,17 +987,15 @@ void LSVMparser(const char * filename,
 }
 
 int loadModel(
-             // Входные параметры
-              const char *modelPath,// - путь до файла с моделью
+              const char *modelPath,
              
-              // Выходные параметры
-              CvLSVMFilterObject ***filters,// - массив указателей на фильтры компонент
-              int *kFilters, //- общее количество фильтров во всех моделях
-              int *kComponents, //- количество компонент
-              int **kPartFilters, //- массив, содержащий количество точных фильтров в каждой компоненте
-              float **b, //- массив линейных членов в оценочной функции
+              CvLSVMFilterObject ***filters,
+              int *kFilters, 
+              int *kComponents, 
+              int **kPartFilters, 
+              float **b, 
               float *scoreThreshold,
-              float ** PCAcoeff){ //- порог для score)
+              float ** PCAcoeff){ 
     int last;
     int max;
     int *comp;
