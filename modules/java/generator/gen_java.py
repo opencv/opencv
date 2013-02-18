@@ -559,6 +559,15 @@ func_arg_fix = {
     }, # '', i.e. no class
 } # func_arg_fix
 
+
+def getLibVersion(version_hpp_path):
+    version_file = open(version_hpp_path, "rt").read()
+    epoch = re.search("^W*#\W*define\W+CV_VERSION_EPOCH\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
+    major = re.search("^W*#\W*define\W+CV_VERSION_MAJOR\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
+    minor = re.search("^W*#\W*define\W+CV_VERSION_MINOR\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
+    patch = re.search("^W*#\W*define\W+CV_VERSION_REVISION\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
+    return (epoch, major, minor, patch)
+
 class ConstInfo(object):
     def __init__(self, cname, name, val, addedManually=False):
         self.cname = cname
@@ -721,13 +730,17 @@ $imports
 public class %(jc)s {
 """ % { 'm' : self.module, 'jc' : jname } )
 
-#        self.java_code[class_name]["jn_code"].write("""
-#    //
-#    // native stuff
-#    //
-#    static { System.loadLibrary("opencv_java"); }
-#""" )
-
+        if class_name == 'Core':
+            (epoch, major, minor, patch) = getLibVersion(
+                (os.path.dirname(__file__) or '.') + '/../../core/include/opencv2/core/version.hpp')
+            version_str    = '.'.join( (epoch, major, minor, patch) )
+            version_suffix =  ''.join( (epoch, major, minor) )
+            #if version_suffix.endswith('0'):
+            #    version_suffix = version_suffix[0 : -1]
+            self.classes[class_name].imports.add("java.lang.String")
+            self.java_code[class_name]["j_code"].write("""
+    public static final String VERSION = "%(v)s", VERSION_SUFFIX = "%(vs)s";
+""" % { 'v' : version_str, 'vs' : version_suffix } )
 
 
     def add_class(self, decl):
