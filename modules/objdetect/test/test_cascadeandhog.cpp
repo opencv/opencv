@@ -87,11 +87,15 @@ protected:
     vector<string> imageFilenames;
     vector<Mat> images;
     string validationFilename;
+    string configFilename;
     FileStorage validationFS;
+    bool write_results;
 };
 
 CV_DetectorTest::CV_DetectorTest()
 {
+    configFilename = "dummy";
+    write_results = false;
 }
 
 string& CV_DetectorTest::getValidationFilename()
@@ -146,86 +150,99 @@ int CV_DetectorTest::prepareData( FileStorage& _fs )
 void CV_DetectorTest::run( int )
 {
     string dataPath = ts->get_data_path();
-    validationFS.open( dataPath + getValidationFilename(), FileStorage::READ );
-    int code = prepareData( validationFS );
+    string vs_filename = dataPath + getValidationFilename();
+
+    write_results = !validationFS.open( vs_filename, FileStorage::READ );
+
+    int code;
+    if( !write_results )
+    {
+        code = prepareData( validationFS );
+    }
+    else
+    {
+        FileStorage fs0(dataPath + configFilename, FileStorage::READ );
+        code = prepareData(fs0);
+    }
+
     if( code < 0 )
     {
         ts->set_failed_test_info( code );
         return;
     }
 
-#ifdef GET_STAT
-    validationFS.release();
-    string filename = ts->get_data_path();
-    filename += getValidationFilename();
-    validationFS.open( filename, FileStorage::WRITE );
-    validationFS << FileStorage::getDefaultObjectName(validationFilename) << "{";
-
-    validationFS << DIST_E << eps.dist;
-    validationFS << S_E << eps.s;
-    validationFS << NO_PAIR_E << eps.noPair;
-//    validationFS << TOTAL_NO_PAIR_E << eps.totalNoPair;
-
-    // write detector names
-    validationFS << DETECTOR_NAMES << "[";
-    vector<string>::const_iterator nit = detectorNames.begin();
-    for( ; nit != detectorNames.end(); ++nit )
+    if( write_results )
     {
-        validationFS << *nit;
-    }
-    validationFS << "]"; // DETECTOR_NAMES
+        validationFS.release();
+        validationFS.open( vs_filename, FileStorage::WRITE );
+        validationFS << FileStorage::getDefaultObjectName(validationFilename) << "{";
 
-    // write detectors
-    validationFS << DETECTORS << "{";
-    assert( detectorNames.size() == detectorFilenames.size() );
-    nit = detectorNames.begin();
-    for( int di = 0; di < detectorNames.size(), nit != detectorNames.end(); ++nit, di++ )
-    {
-        validationFS << *nit << "{";
-        writeDetector( validationFS, di );
+        validationFS << DIST_E << eps.dist;
+        validationFS << S_E << eps.s;
+        validationFS << NO_PAIR_E << eps.noPair;
+    //    validationFS << TOTAL_NO_PAIR_E << eps.totalNoPair;
+
+        // write detector names
+        validationFS << DETECTOR_NAMES << "[";
+        vector<string>::const_iterator nit = detectorNames.begin();
+        for( ; nit != detectorNames.end(); ++nit )
+        {
+            validationFS << *nit;
+        }
+        validationFS << "]"; // DETECTOR_NAMES
+
+        // write detectors
+        validationFS << DETECTORS << "{";
+        assert( detectorNames.size() == detectorFilenames.size() );
+        nit = detectorNames.begin();
+        for( int di = 0; nit != detectorNames.end(); ++nit, di++ )
+        {
+            validationFS << *nit << "{";
+            writeDetector( validationFS, di );
+            validationFS << "}";
+        }
         validationFS << "}";
-    }
-    validationFS << "}";
 
-    // write image filenames
-    validationFS << IMAGE_FILENAMES << "[";
-    vector<string>::const_iterator it = imageFilenames.begin();
-    for( int ii = 0; it != imageFilenames.end(); ++it, ii++ )
-    {
-        char buf[10];
-        sprintf( buf, "%s%d", "img_", ii );
-        cvWriteComment( validationFS.fs, buf, 0 );
-        validationFS << *it;
-    }
-    validationFS << "]"; // IMAGE_FILENAMES
+        // write image filenames
+        validationFS << IMAGE_FILENAMES << "[";
+        vector<string>::const_iterator it = imageFilenames.begin();
+        for( int ii = 0; it != imageFilenames.end(); ++it, ii++ )
+        {
+            char buf[10];
+            sprintf( buf, "%s%d", "img_", ii );
+            cvWriteComment( validationFS.fs, buf, 0 );
+            validationFS << *it;
+        }
+        validationFS << "]"; // IMAGE_FILENAMES
 
-    validationFS << VALIDATION << "{";
-#endif
+        validationFS << VALIDATION << "{";
+    }
 
     int progress = 0;
     for( int di = 0; di < test_case_count; di++ )
     {
         progress = update_progress( progress, di, test_case_count, 0 );
-#ifdef GET_STAT
-        validationFS << detectorNames[di] << "{";
-#endif
+        if( write_results )
+            validationFS << detectorNames[di] << "{";
         vector<vector<Rect> > objects;
         int temp_code = runTestCase( di, objects );
-#ifndef GET_STAT
-        if (temp_code == cvtest::TS::OK)
+
+        if (!write_results && temp_code == cvtest::TS::OK)
             temp_code = validate( di, objects );
-#endif
+
         if (temp_code != cvtest::TS::OK)
             code = temp_code;
-#ifdef GET_STAT
-        validationFS << "}"; // detectorNames[di]
-#endif
+
+        if( write_results )
+            validationFS << "}"; // detectorNames[di]
     }
 
-#ifdef GET_STAT
-    validationFS << "}"; // VALIDATION
-    validationFS << "}"; // getDefaultObjectName
-#endif
+    if( write_results )
+    {
+        validationFS << "}"; // VALIDATION
+        validationFS << "}"; // getDefaultObjectName
+    }
+
     if ( test_case_count <= 0 || imageFilenames.size() <= 0 )
     {
         ts->printf( cvtest::TS::LOG, "validation file is not determined or not correct" );
@@ -257,18 +274,19 @@ int CV_DetectorTest::runTestCase( int detectorIdx, vector<vector<Rect> >& object
 
         objects.push_back( imgObjects );
 
-#ifdef GET_STAT
-        char buf[10];
-        sprintf( buf, "%s%d", "img_", ii );
-        string imageIdxStr = buf;
-        validationFS << imageIdxStr << "[:";
-        for( vector<Rect>::const_iterator it = imgObjects.begin();
-                it != imgObjects.end(); ++it )
+        if( write_results )
         {
-            validationFS << it->x << it->y << it->width << it->height;
+            char buf[10];
+            sprintf( buf, "%s%d", "img_", ii );
+            string imageIdxStr = buf;
+            validationFS << imageIdxStr << "[:";
+            for( vector<Rect>::const_iterator it = imgObjects.begin();
+                    it != imgObjects.end(); ++it )
+            {
+                validationFS << it->x << it->y << it->width << it->height;
+            }
+            validationFS << "]"; // imageIdxStr
         }
-        validationFS << "]"; // imageIdxStr
-#endif
     }
     return cvtest::TS::OK;
 }
@@ -345,22 +363,20 @@ int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
         }
         noPair += (int)count_if( map.begin(), map.end(), isZero );
         totalNoPair += noPair;
-        if( noPair > cvRound(valRects.size()*eps.noPair)+1 )
+
+        EXPECT_LE(noPair, cvRound(valRects.size()*eps.noPair)+1)
+            << "detector " << detectorNames[detectorIdx] << " has overrated count of rectangles without pair on "
+            << imageFilenames[imageIdx] << " image";
+
+        if (::testing::Test::HasFailure())
             break;
     }
-    if( imageIdx < (int)imageFilenames.size() )
-    {
-        char msg[500];
-        sprintf( msg, "detector %s has overrated count of rectangles without pair on %s-image\n",
-            detectorNames[detectorIdx].c_str(), imageFilenames[imageIdx].c_str() );
-        ts->printf( cvtest::TS::LOG, msg );
+
+    EXPECT_LE(totalNoPair, cvRound(totalValRectCount*eps./*total*/noPair)+1)
+        << "detector " << detectorNames[detectorIdx] << " has overrated count of rectangles without pair on all images set";
+
+    if (::testing::Test::HasFailure())
         return cvtest::TS::FAIL_BAD_ACCURACY;
-    }
-    if ( totalNoPair > cvRound(totalValRectCount*eps./*total*/noPair)+1 )
-    {
-        ts->printf( cvtest::TS::LOG, "overrated count of rectangles without pair on all images set" );
-        return cvtest::TS::FAIL_BAD_ACCURACY;
-    }
 
     return cvtest::TS::OK;
 }
@@ -374,12 +390,14 @@ protected:
     virtual void readDetector( const FileNode& fn );
     virtual void writeDetector( FileStorage& fs, int di );
     virtual int detectMultiScale( int di, const Mat& img, vector<Rect>& objects );
+    virtual int detectMultiScale_C( const string& filename, int di, const Mat& img, vector<Rect>& objects );
     vector<int> flags;
 };
 
 CV_CascadeDetectorTest::CV_CascadeDetectorTest()
 {
     validationFilename = "cascadeandhog/cascade.xml";
+    configFilename = "cascadeandhog/_cascade.xml";
 }
 
 void CV_CascadeDetectorTest::readDetector( const FileNode& fn )
@@ -402,11 +420,48 @@ void CV_CascadeDetectorTest::writeDetector( FileStorage& fs, int di )
     fs << C_SCALE_CASCADE << sc;
 }
 
+
+int CV_CascadeDetectorTest::detectMultiScale_C( const string& filename,
+                                                int di, const Mat& img,
+                                                vector<Rect>& objects )
+{
+    Ptr<CvHaarClassifierCascade> c_cascade = cvLoadHaarClassifierCascade(filename.c_str(), cvSize(0,0));
+    Ptr<CvMemStorage> storage = cvCreateMemStorage();
+
+    if( c_cascade.empty() )
+    {
+        ts->printf( cvtest::TS::LOG, "cascade %s can not be opened");
+        return cvtest::TS::FAIL_INVALID_TEST_DATA;
+    }
+    Mat grayImg;
+    cvtColor( img, grayImg, CV_BGR2GRAY );
+    equalizeHist( grayImg, grayImg );
+
+    CvMat c_gray = grayImg;
+    CvSeq* rs = cvHaarDetectObjects(&c_gray, c_cascade, storage, 1.1, 3, flags[di] );
+    
+    objects.clear();
+    for( int i = 0; i < rs->total; i++ )
+    {
+        Rect r = *(Rect*)cvGetSeqElem(rs, i);
+        objects.push_back(r);
+    }
+
+    return cvtest::TS::OK;
+}
+
 int CV_CascadeDetectorTest::detectMultiScale( int di, const Mat& img,
                                               vector<Rect>& objects)
 {
     string dataPath = ts->get_data_path(), filename;
     filename = dataPath + detectorFilenames[di];
+    const string pattern = "haarcascade_frontalface_default.xml";
+
+    if( filename.size() >= pattern.size() &&
+        strcmp(filename.c_str() + (filename.size() - pattern.size()),
+              pattern.c_str()) == 0 )
+        return detectMultiScale_C(filename, di, img, objects);
+
     CascadeClassifier cascade( filename );
     if( cascade.empty() )
     {
