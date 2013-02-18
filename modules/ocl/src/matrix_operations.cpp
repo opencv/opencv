@@ -12,10 +12,12 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
 //    Niko Li, newlife20080214@gmail.com
+//    Yao Wang, bitwangyaoyao@gmail.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -1020,4 +1022,27 @@ void cv::ocl::oclMat::release()
     refcount = 0;
 }
 
+oclMat& cv::ocl::oclMat::operator+=( const oclMat& m )
+{
+    add(*this, m, *this);
+    return *this;
+}
+
+oclMat& cv::ocl::oclMat::operator-=( const oclMat& m )
+{
+    subtract(*this, m, *this);
+    return *this;
+}
+
+oclMat& cv::ocl::oclMat::operator*=( const oclMat& m )
+{
+    multiply(*this, m, *this);
+    return *this;
+}
+
+oclMat& cv::ocl::oclMat::operator/=( const oclMat& m )
+{
+    divide(*this, m, *this);
+    return *this;
+}
 #endif /* !defined (HAVE_OPENCL) */
