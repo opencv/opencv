@@ -11789,19 +11789,19 @@
   <flow>
     <kind>65536</kind>
     <type>13</type>
-    <min>-3.6553812026977539e+00</min>
-    <max>3.6595113277435303e+00</max>
+    <min>-3.6378667354583740e+00</min>
+    <max>3.2285661697387695e+00</max>
     <last>
       <x>583</x>
       <y>387</y>
-      <val>-2.7028935030102730e-02</val></last>
+      <val>5.7944958098232746e-03</val></last>
     <rng1>
-      <x>226</x>
-      <y>35</y>
+      <x>62</x>
+      <y>32</y>
       <cn>1</cn>
-      <val>-3.7812042981386185e-02</val></rng1>
+      <val>-2.1195864304900169e-02</val></rng1>
     <rng2>
-      <x>581</x>
-      <y>276</y>
-      <val>1.0239248275756836e+00</val></rng2></flow></ImagePair_OpticalFlowDual_TVL1--OpticalFlowDual_TVL1----cv-optflow-RubberWhale1-png----cv-optflow-RubberWhale2-png-->
+      <x>378</x>
+      <y>317</y>
+      <val>-5.7515436410903931e-01</val></rng2></flow></ImagePair_OpticalFlowDual_TVL1--OpticalFlowDual_TVL1----cv-optflow-RubberWhale1-png----cv-optflow-RubberWhale2-png-->
 </opencv_storage>
