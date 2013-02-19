@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <map>
 #include "opencv2/core/opengl_interop.hpp"
 
 // in later times, use this file as a dispatcher to implementations like cvcap.cpp
@@ -240,94 +241,15 @@ void cv::updateWindow(const string& windowName)
 #ifdef HAVE_OPENGL
 namespace
 {
-    const int CV_TEXTURE_MAGIC_VAL        = 0x00287653;
-    const int CV_POINT_CLOUD_MAGIC_VAL    = 0x00287654;
-
-    struct GlObjBase
-    {
-        int flag;
-        GlObjBase* next;
-        GlObjBase* prev;
-        std::string winname;
-
-        virtual ~GlObjBase() {}
-    };
-
-    GlObjBase* g_glObjs = 0;
-
-    GlObjBase* findGlObjByName(const std::string& winname)
-    {
-        GlObjBase* obj = g_glObjs;
-
-        while(obj && obj->winname != winname)
-            obj = obj->next;
-
-        return obj;
-    }
-
-    void addGlObj(GlObjBase* glObj)
-    {
-        glObj->next = g_glObjs;
-        glObj->prev = 0;
-        if (g_glObjs)
-            g_glObjs->prev = glObj;
-        g_glObjs = glObj;
-    }
-
-    void removeGlObj(GlObjBase* glObj)
-    {
-        if (glObj->prev)
-            glObj->prev->next = glObj->next;
-        else
-            g_glObjs = glObj->next;
-
-        if (glObj->next)
-            glObj->next->prev = glObj->prev;
-
-        delete glObj;
-    }
-
-    struct GlObjTex : GlObjBase
-    {
-        cv::GlTexture tex;
-    };
+    std::map<std::string, cv::GlTexture> wndTexs;
+    std::map<std::string, cv::GlTexture> ownWndTexs;
+    std::map<std::string, cv::GlBuffer> ownWndBufs;
 
     void CV_CDECL glDrawTextureCallback(void* userdata)
     {
-        GlObjTex* texObj = static_cast<GlObjTex*>(userdata);
+        cv::GlTexture* texObj = static_cast<cv::GlTexture*>(userdata);
 
-        CV_DbgAssert(texObj->flag == CV_TEXTURE_MAGIC_VAL);
-
-        static cv::GlCamera glCamera;
-
-        glCamera.setupProjectionMatrix();
-
-        cv::render(texObj->tex);
-    }
-
-    struct GlObjPointCloud : GlObjBase
-    {
-        cv::GlArrays arr;
-        cv::GlCamera camera;
-    };
-
-    void CV_CDECL glDrawPointCloudCallback(void* userdata)
-    {
-        GlObjPointCloud* pointCloudObj = static_cast<GlObjPointCloud*>(userdata);
-
-        CV_DbgAssert(pointCloudObj->flag == CV_POINT_CLOUD_MAGIC_VAL);
-
-        pointCloudObj->camera.setupProjectionMatrix();
-        pointCloudObj->camera.setupModelViewMatrix();
-
-        cv::render(pointCloudObj->arr);
-    }
-
-    void CV_CDECL glCleanCallback(void* userdata)
-    {
-        GlObjBase* glObj = static_cast<GlObjBase*>(userdata);
-
-        removeGlObj(glObj);
+        cv::render(*texObj);
     }
 }
 #endif // HAVE_OPENGL
@@ -339,7 +261,8 @@ void cv::imshow( const string& winname, InputArray _img )
     CvMat c_img = img;
     cvShowImage(winname.c_str(), &c_img);
 #else
-    double useGl = getWindowProperty(winname, WND_PROP_OPENGL);
+    const double useGl = getWindowProperty(winname, WND_PROP_OPENGL);
+
     if (useGl <= 0)
     {
         Mat img = _img.getMat();
@@ -348,7 +271,7 @@ void cv::imshow( const string& winname, InputArray _img )
     }
     else
     {
-        double autoSize = getWindowProperty(winname, WND_PROP_AUTOSIZE);
+        const double autoSize = getWindowProperty(winname, WND_PROP_AUTOSIZE);
 
         if (autoSize > 0)
         {
@@ -358,142 +281,41 @@ void cv::imshow( const string& winname, InputArray _img )
 
         setOpenGlContext(winname);
 
-        GlObjBase* glObj = findGlObjByName(winname);
-
-        if (glObj && glObj->flag != CV_TEXTURE_MAGIC_VAL)
+        if (_img.kind() == _InputArray::OPENGL_TEXTURE)
         {
-            icvSetOpenGlCleanCallback(winname.c_str(), 0, 0);
-            glObj = 0;
-        }
+            cv::GlTexture& tex = wndTexs[winname];
 
-        if (glObj)
-        {
-            GlObjTex* texObj = static_cast<GlObjTex*>(glObj);
-            texObj->tex.copyFrom(_img);
+            tex = _img.getGlTexture();
+
+            tex.setAutoRelease(false);
+
+            setOpenGlDrawCallback(winname, glDrawTextureCallback, &tex);
         }
         else
         {
-            GlObjTex* texObj = new GlObjTex;
-            texObj->tex.copyFrom(_img);
+            cv::GlTexture& tex = ownWndTexs[winname];
 
-            glObj = texObj;
-            glObj->flag = CV_TEXTURE_MAGIC_VAL;
-            glObj->winname = winname;
+            if (_img.kind() == _InputArray::GPU_MAT)
+            {
+                cv::GlBuffer& buf = ownWndBufs[winname];
+                buf.copyFrom(_img);
+                buf.setAutoRelease(false);
 
-            addGlObj(glObj);
+                tex.copyFrom(buf);
+                tex.setAutoRelease(false);
+            }
+            else
+            {
+                tex.copyFrom(_img);
+            }
 
-            icvSetOpenGlCleanCallback(winname.c_str(), glCleanCallback, glObj);
+            tex.setAutoRelease(false);
+
+            setOpenGlDrawCallback(winname, glDrawTextureCallback, &tex);
         }
-
-        setOpenGlDrawCallback(winname, glDrawTextureCallback, glObj);
 
         updateWindow(winname);
     }
-#endif
-}
-
-void cv::pointCloudShow(const string& winname, const GlCamera& camera, const GlArrays& arr)
-{
-#ifndef HAVE_OPENGL
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
-    (void)winname;
-    (void)camera;
-    (void)arr;
-#else
-    namedWindow(winname, WINDOW_OPENGL);
-
-    setOpenGlContext(winname);
-
-    GlObjBase* glObj = findGlObjByName(winname);
-
-    if (glObj && glObj->flag != CV_POINT_CLOUD_MAGIC_VAL)
-    {
-        icvSetOpenGlCleanCallback(winname.c_str(), 0, 0);
-        glObj = 0;
-    }
-
-    if (glObj)
-    {
-        GlObjPointCloud* pointCloudObj = static_cast<GlObjPointCloud*>(glObj);
-        pointCloudObj->arr = arr;
-        pointCloudObj->camera = camera;
-    }
-    else
-    {
-        GlObjPointCloud* pointCloudObj = new GlObjPointCloud;
-        pointCloudObj->arr = arr;
-        pointCloudObj->camera = camera;
-
-        glObj = pointCloudObj;
-        glObj->flag = CV_POINT_CLOUD_MAGIC_VAL;
-        glObj->winname = winname;
-
-        addGlObj(glObj);
-
-        icvSetOpenGlCleanCallback(winname.c_str(), glCleanCallback, glObj);
-    }
-
-    setOpenGlDrawCallback(winname, glDrawPointCloudCallback, glObj);
-
-    updateWindow(winname);
-#endif
-}
-
-void cv::pointCloudShow(const std::string& winname, const cv::GlCamera& camera, InputArray points, InputArray colors)
-{
-#ifndef HAVE_OPENGL
-    (void)winname;
-    (void)camera;
-    (void)points;
-    (void)colors;
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
-#else
-    namedWindow(winname, WINDOW_OPENGL);
-
-    setOpenGlContext(winname);
-
-    GlObjBase* glObj = findGlObjByName(winname);
-
-    if (glObj && glObj->flag != CV_POINT_CLOUD_MAGIC_VAL)
-    {
-        icvSetOpenGlCleanCallback(winname.c_str(), 0, 0);
-        glObj = 0;
-    }
-
-    if (glObj)
-    {
-        GlObjPointCloud* pointCloudObj = static_cast<GlObjPointCloud*>(glObj);
-
-        pointCloudObj->arr.setVertexArray(points);
-        if (colors.empty())
-            pointCloudObj->arr.resetColorArray();
-        else
-            pointCloudObj->arr.setColorArray(colors);
-
-        pointCloudObj->camera = camera;
-    }
-    else
-    {
-        GlObjPointCloud* pointCloudObj = new GlObjPointCloud;
-
-        pointCloudObj->arr.setVertexArray(points);
-        if (!colors.empty())
-            pointCloudObj->arr.setColorArray(colors);
-
-        pointCloudObj->camera = camera;
-
-        glObj = pointCloudObj;
-        glObj->flag = CV_POINT_CLOUD_MAGIC_VAL;
-        glObj->winname = winname;
-
-        addGlObj(glObj);
-
-        icvSetOpenGlCleanCallback(winname.c_str(), glCleanCallback, glObj);
-    }
-
-    setOpenGlDrawCallback(winname, glDrawPointCloudCallback, glObj);
-
-    updateWindow(winname);
 #endif
 }
 
@@ -512,11 +334,6 @@ CV_IMPL void cvSetOpenGlContext(const char*)
 }
 
 CV_IMPL void cvUpdateWindow(const char*)
-{
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
-}
-
-void icvSetOpenGlCleanCallback(const char*, CvOpenGlCleanCallback, void*)
 {
     CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 }

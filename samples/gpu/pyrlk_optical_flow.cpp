@@ -3,7 +3,6 @@
 
 #include "cvconfig.h"
 #include "opencv2/core/core.hpp"
-#include "opencv2/core/opengl_interop.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/video/video.hpp"
@@ -65,40 +64,6 @@ static void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<
         }
     }
 }
-
-#ifdef HAVE_OPENGL
-
-struct DrawData
-{
-    GlTexture tex;
-    GlArrays arr;
-};
-
-static void drawCallback(void* userdata)
-{
-    DrawData* data = static_cast<DrawData*>(userdata);
-
-    if (data->tex.empty() || data->arr.empty())
-        return;
-
-    static GlCamera camera;
-    static bool init_camera = true;
-
-    if (init_camera)
-    {
-        camera.setOrthoProjection(0.0, 1.0, 1.0, 0.0, 0.0, 1.0);
-        camera.lookAt(Point3d(0.0, 0.0, 1.0), Point3d(0.0, 0.0, 0.0), Point3d(0.0, 1.0, 0.0));
-        init_camera = false;
-    }
-
-    camera.setupProjectionMatrix();
-    camera.setupModelViewMatrix();
-
-    render(data->tex);
-    render(data->arr, RenderMode::TRIANGLES);
-}
-
-#endif
 
 template <typename T> inline T clamp (T x, T a, T b)
 {
@@ -200,12 +165,6 @@ int main(int argc, const char* argv[])
     namedWindow("PyrLK [Sparse]", WINDOW_NORMAL);
     namedWindow("PyrLK [Dense] Flow Field", WINDOW_NORMAL);
 
-    #ifdef HAVE_OPENGL
-        namedWindow("PyrLK [Dense]", WINDOW_OPENGL);
-
-        setGlDevice();
-    #endif
-
     cout << "Image size : " << frame0.cols << " x " << frame0.rows << endl;
     cout << "Points count : " << points << endl;
 
@@ -270,21 +229,6 @@ int main(int argc, const char* argv[])
     getFlowField(Mat(d_u), Mat(d_v), flowField);
 
     imshow("PyrLK [Dense] Flow Field", flowField);
-
-    #ifdef HAVE_OPENGL
-        setOpenGlContext("PyrLK [Dense]");
-
-        GpuMat d_vertex, d_colors;
-        createOpticalFlowNeedleMap(d_u, d_v, d_vertex, d_colors);
-
-        DrawData drawData;
-
-        drawData.tex.copyFrom(d_frame0Gray);
-        drawData.arr.setVertexArray(d_vertex);
-        drawData.arr.setColorArray(d_colors, false);
-
-        setOpenGlDrawCallback("PyrLK [Dense]", drawCallback, &drawData);
-    #endif
 
     waitKey();
 
