@@ -1826,7 +1826,7 @@ void icvGetCutPiece(   CvVect64d areaLineCoef1,CvVect64d areaLineCoef2,
     /* Collect all candidate point */
 
     CvPoint2D64d candPoints[8];
-    CvPoint2D64d midPoint;
+    CvPoint2D64d midPoint = {0, 0};
     int numPoints = 0;
     int res;
     int i;
