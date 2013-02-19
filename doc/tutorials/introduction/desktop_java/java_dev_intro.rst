@@ -35,8 +35,8 @@ Starting from version 2.4.4 OpenCV includes desktop Java bindings.
 The most simple way to get it is downloading the appropriate package of **version 2.4.4 or higher** from the
 `OpenCV SourceForge repository <http://sourceforge.net/projects/opencvlibrary/files/>`_.
 
-.. note:: Windows users can find the prebuilt files needed for Java development in the
-          :file:`opencv/build/java/` folder inside the package.
+.. note:: Windows users can find the prebuilt files needed for Java development in
+          the :file:`opencv/build/java/` folder inside the package.
           For other OSes it's required to build OpenCV from sources.
 
 Another option to get OpenCV sources is to clone `OpenCV git repository
