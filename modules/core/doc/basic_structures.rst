@@ -2064,10 +2064,11 @@ SparseMat::SparseMat
 Various SparseMat constructors.
 
 .. ocv:function:: SparseMat::SparseMat()
-.. ocv:function:: SparseMat::SparseMat(int dims, const int* _sizes, int _type)
-.. ocv:function:: SparseMat::SparseMat(const SparseMat& m)
-.. ocv:function:: SparseMat::SparseMat(const Mat& m, bool try1d=false)
-.. ocv:function:: SparseMat::SparseMat(const CvSparseMat* m)
+.. ocv:function:: SparseMat::SparseMat( int dims, const int* _sizes, int _type )
+.. ocv:function:: SparseMat::SparseMat( const SparseMat& m )
+.. ocv:function:: SparseMat::SparseMat( const Mat& m )
+.. ocv:function:: SparseMat::SparseMat( const CvSparseMat* m )
+
 
     :param m: Source matrix for copy constructor. If m is dense matrix (ocv:class:`Mat`) then it will be converted to sparse representation.
     :param dims: Array dimensionality.
@@ -2081,12 +2082,12 @@ SparseMat object destructor.
 
 .. ocv:function:: SparseMat::~SparseMat()
 
-SparseMat::operator =
----------------------
+SparseMat::operator=
+--------------------
 Provides sparse matrix assignment operators.
 
-.. ocv:function:: SparseMat& SparseMat::operator=(const SparseMat& m)
-.. ocv:function:: SparseMat& SparseMat::operator=(const Mat& m)
+.. ocv:function:: SparseMat& SparseMat::operator = (const SparseMat& m)
+.. ocv:function:: SparseMat& SparseMat::operator = (const Mat& m)
 
 The last variant is equivalent to the corresponding constructor with try1d=false.
 

@@ -444,9 +444,9 @@ If ``threads == 0``, OpenCV will disable threading optimizations and run all it'
 functions sequentially. Passing ``threads < 0`` will reset threads number to system default.
 This function must be called outside of parallel region.
 
-.. ocv:function:: void setNumThreads(int threads)
+.. ocv:function:: void setNumThreads(int nthreads)
 
-    :param threads: Number of threads used by OpenCV.
+    :param nthreads: Number of threads used by OpenCV.
 
 OpenCV will try to run it's functions with specified threads number, but
 some behaviour differs from framework:
