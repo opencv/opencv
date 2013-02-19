@@ -992,6 +992,11 @@ class DefinitionParser(object):
         return rv
 
     def _parse_signature(self):
+        if r'CvStatModel::train' in self.definition:
+            # hack to skip parsing of problematic definition
+            self.pos = self.end
+            return [ArgumentDefExpr("const Mat&", "train_data", None), ArgumentDefExpr(None, self.definition[self.definition.find("["):-1], None)], False, True
+
         self.skip_ws()
         if not self.skip_string('('):
             self.fail('expected parentheses for function')
