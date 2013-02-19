@@ -210,9 +210,9 @@ You need the following software to be installed in order to develop for Android 
    .. note:: Before start you can read official Android NDK documentation which is in the Android
              NDK archive, in the folder :file:`docs/`.
              The main article about using Android NDK build system is in the :file:`ANDROID-MK.html` file.
-             Some additional information you can find in the :file:`APPLICATION-MK.html`,
-             :file:`NDK-BUILD.html` files, and :file:`CPU-ARM-NEON.html`, :file:`CPLUSPLUS-SUPPORT.html`,
-             :file:`PREBUILTS.html`.
+             Some additional information you can find in
+             the :file:`APPLICATION-MK.html`, :file:`NDK-BUILD.html` files,
+             and :file:`CPU-ARM-NEON.html`, :file:`CPLUSPLUS-SUPPORT.html`, :file:`PREBUILTS.html`.
 
 #. **CDT plugin for Eclipse**
 

@@ -169,11 +169,11 @@ CvBoost::predict
 ----------------
 Predicts a response for an input sample.
 
-.. ocv:function:: float CvBoost::predict(  const Mat& sample, const Mat& missing=Mat(), const Range& slice=Range::all(), bool raw_mode=false, bool return_sum=false ) const
+.. ocv:function:: float CvBoost::predict( const cv::Mat& sample, const cv::Mat& missing=Mat(), const cv::Range& slice=Range::all(), bool rawMode=false, bool returnSum=false ) const
 
 .. ocv:function:: float CvBoost::predict( const CvMat* sample, const CvMat* missing=0, CvMat* weak_responses=0, CvSlice slice=CV_WHOLE_SEQ, bool raw_mode=false, bool return_sum=false ) const
 
-.. ocv:pyfunction:: cv2.Boost.predict(sample[, missing[, slice[, raw_mode[, return_sum]]]]) -> retval
+.. ocv:pyfunction:: cv2.Boost.predict(sample[, missing[, slice[, rawMode[, returnSum]]]]) -> retval
 
     :param sample: Input sample.
 
@@ -183,9 +183,9 @@ Predicts a response for an input sample.
 
     :param slice: Continuous subset of the sequence of weak classifiers to be used for prediction. By default, all the weak classifiers are used.
 
-    :param raw_mode: Normally, it should be set to ``false``.
+    :param rawMode: Normally, it should be set to ``false``.
 
-    :param return_sum: If ``true`` then return sum of votes instead of the class label.
+    :param returnSum: If ``true`` then return sum of votes instead of the class label.
 
 The method runs the sample through the trees in the ensemble and returns the output class label based on the weighted voting.
 

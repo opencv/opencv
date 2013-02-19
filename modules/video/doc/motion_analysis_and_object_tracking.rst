@@ -650,9 +650,9 @@ createOptFlow_DualTVL1
 .. ocv:function:: Ptr<DenseOpticalFlow> createOptFlow_DualTVL1()
 
 
-The class implements the "Dual TV L1" optical flow algorithm described in [Zach2007]_ and [Javier2012]_ .
+  The class implements the "Dual TV L1" optical flow algorithm described in [Zach2007]_ and [Javier2012]_ .
 
-Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
+  Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
 
     .. ocv:member:: double tau
 
