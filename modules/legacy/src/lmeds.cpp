@@ -1615,7 +1615,7 @@ CvStatus
 icvPoint7( int *ml, int *mr, double *F, int *amount )
 {
     double A[63], B[7];
-    double *solutions;
+    double *solutions = 0;
     double a2, a1, a0;
     double squares[6];
     int i, j;
