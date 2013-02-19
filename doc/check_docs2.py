@@ -38,7 +38,7 @@ doc_signatures_whitelist = [
 "CvArr", "CvFileStorage",
 # other
 "InputArray", "OutputArray",
-]
+] + ["CvSubdiv2D", "CvQuadEdge2D", "CvSubdiv2DPoint", "cvDrawContours"]
 
 defines = ["cvGraphEdgeIdx", "cvFree", "CV_Assert", "cvSqrt", "cvGetGraphVtx", "cvGraphVtxIdx",
 "cvCaptureFromFile", "cvCaptureFromCAM", "cvCalcBackProjectPatch", "cvCalcBackProject",
