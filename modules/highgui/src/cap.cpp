@@ -90,7 +90,7 @@ CV_IMPL IplImage* cvRetrieveFrame( CvCapture* capture, int idx )
 
 CV_IMPL double cvGetCaptureProperty( CvCapture* capture, int id )
 {
-    return capture ? capture->getProperty(id) : 0;
+    return capture ? capture->getProperty(id) : 0.0;
 }
 
 CV_IMPL int cvSetCaptureProperty( CvCapture* capture, int id, double value )
@@ -168,46 +168,20 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
     // try every possibly installed camera API
     for (int i = 0; domains[i] >= 0; i++)
     {
-#if defined(HAVE_VIDEOINPUT)   || \
-    defined(HAVE_TYZX)         || \
-    defined(HAVE_VFW)          || \
-    defined(HAVE_LIBV4L)       || \
-    defined(HAVE_CAMV4L)       || \
-    defined(HAVE_CAMV4L2)      || \
-    defined(HAVE_VIDEOIO)      || \
-    defined(HAVE_GSTREAMER)    || \
-    defined(HAVE_DC1394_2)     || \
-    defined(HAVE_DC1394)       || \
-    defined(HAVE_CMU1394)      || \
-    defined(HAVE_MIL)          || \
-    defined(HAVE_QUICKTIME)    || \
-    defined(HAVE_UNICAP)       || \
-    defined(HAVE_PVAPI)        || \
-    defined(HAVE_OPENNI)       || \
-    defined(HAVE_XIMEA)        || \
-    defined(HAVE_AVFOUNDATION) || \
-    defined(HAVE_ANDROID_NATIVE_CAMERA) || \
-    defined(HAVE_GIGE_API) || \
-    (0)
         // local variable to memorize the captured device
-        CvCapture *capture;
-#endif
+        CvCapture *capture(0);
 
         switch (domains[i])
         {
 #ifdef HAVE_VIDEOINPUT
         case CV_CAP_DSHOW:
             capture = cvCreateCameraCapture_DShow (index);
-            if (capture)
-                return capture;
             break;
 #endif
 
 #ifdef HAVE_TYZX
         case CV_CAP_STEREO:
             capture = cvCreateCameraCapture_TYZX (index);
-            if (capture)
-                return capture;
             break;
 #endif
 
@@ -229,8 +203,6 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
             if (capture)
                 return capture;
             capture = cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_V4L, 0);
-            if (capture)
-                return capture;
 #endif
             break; //CV_CAP_VFW
 
@@ -256,84 +228,66 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #if defined(HAVE_GSTREAMER) && 0
             //Re-enable again when gstreamer 1394 support will land in the backend code
             capture = cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_1394, 0);
-            if (capture)
-                return capture;
 #endif
             break; //CV_CAP_FIREWIRE
 
 #ifdef HAVE_MIL
         case CV_CAP_MIL:
             capture = cvCreateCameraCapture_MIL (index);
-            if (capture)
-                return capture;
             break;
 #endif
 
 #ifdef HAVE_QUICKTIME
         case CV_CAP_QT:
             capture = cvCreateCameraCapture_QT (index);
-            if (capture)
-                return capture;
             break;
 #endif
 
 #ifdef HAVE_UNICAP
         case CV_CAP_UNICAP:
             capture = cvCreateCameraCapture_Unicap (index);
-            if (capture)
-                return capture;
         break;
 #endif
 
 #ifdef HAVE_PVAPI
         case CV_CAP_PVAPI:
             capture = cvCreateCameraCapture_PvAPI (index);
-            if (capture)
-                return capture;
         break;
 #endif
 
 #ifdef HAVE_OPENNI
         case CV_CAP_OPENNI:
             capture = cvCreateCameraCapture_OpenNI (index);
-            if (capture)
-                return capture;
         break;
 #endif
 
 #ifdef HAVE_ANDROID_NATIVE_CAMERA
         case CV_CAP_ANDROID:
             capture = cvCreateCameraCapture_Android (index);
-            if (capture)
-                return capture;
         break;
 #endif
 
 #ifdef HAVE_XIMEA
         case CV_CAP_XIAPI:
             capture = cvCreateCameraCapture_XIMEA (index);
-            if (capture)
-                return capture;
         break;
 #endif
 
 #ifdef HAVE_AVFOUNDATION
         case CV_CAP_AVFOUNDATION:
             capture = cvCreateCameraCapture_AVFoundation (index);
-            if (capture)
-                return capture;
         break;
 #endif
 
 #ifdef HAVE_GIGE_API
         case CV_CAP_GIGANETIX:
             capture = cvCreateCameraCapture_Giganetix (index);
-            if (capture)
-                return capture;
         break; // CV_CAP_GIGANETIX
 #endif
 
-        }
+       }
+       if (capture)
+           return capture;  
     }
 
     // failed open a camera
@@ -346,10 +300,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
  */
 CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
 {
-    CvCapture * result = 0;
-
-    if (! result)
-        result = cvCreateFileCapture_FFMPEG_proxy (filename);
+    CvCapture * result = cvCreateFileCapture_FFMPEG_proxy (filename);
 
 #ifdef HAVE_XINE
     if (! result)
@@ -463,14 +414,14 @@ VideoCapture::~VideoCapture()
 bool VideoCapture::open(const string& filename)
 {
     if (!isOpened())
-    cap = cvCreateFileCapture(filename.c_str());
+        cap = cvCreateFileCapture(filename.c_str());
     return isOpened();
 }
 
 bool VideoCapture::open(int device)
 {
     if (!isOpened())
-    cap = cvCreateCameraCapture(device);
+        cap = cvCreateCameraCapture(device);
     return isOpened();
 }
 
