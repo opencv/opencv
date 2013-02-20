@@ -560,6 +560,10 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
         if( AVMEDIA_TYPE_VIDEO == enc->codec_type && video_stream < 0)
         {
+            // backup encoder' width/height  
+            int enc_width = enc->width;
+            int enc_height = enc->height;
+          
             AVCodec *codec = avcodec_find_decoder(enc->codec_id);
             if (!codec ||
 #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
@@ -569,6 +573,10 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 #endif
                 < 0)
                 goto exit_func;
+
+            // checking width/height (since decoder can sometimes alter it, eg. vp6f)
+            if (enc_width && (enc->width != enc_width)) { enc->width = enc_width; }
+            if (enc_height && (enc->height != enc_height)) { enc->height = enc_height; }
 
             video_stream = i;
             video_st = ic->streams[i];
