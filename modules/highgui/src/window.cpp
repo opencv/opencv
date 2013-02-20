@@ -39,9 +39,65 @@
 //
 //M*/
 
+
+// ------------------- window.cpp ---------------------
+// changes by HS :
+//
+// -setting window position+size by percentage of screen resolution:
+// void cv::adjustWindowPos( const string& winname, int xp, int xwp, int yp, int yhp )
+//
+// - messagebox display
+// void cv::dispInfoBox( const string winname, const char* caption, const string& text )
+//
+// - get the content of a single control inside buttonbar (Qt only, other cases dummy)
+// int cv::getButtonBarContent(const string winname, int idx, char * txt )
+//
+// - set the content of a buttonbar control, e.g. transfer filename to QLabel (Qt only, other cases dummy)
+// int cv::setButtonBarContent(const string winname, int etype, int idx, const char * txt )
+//
+// - create a element inside a map and fill it with text (Qt only, other cases dummy)
+// reading of this map is only done inside window_QT.cpp in the moment ( CvWindow::getMapContent )
+// int cv::setMapContent(const string winname, const string& varname, const char * text )
+//
+// - Reading of a new config file .cfg which contains data for window positioning and
+// additional the configuration of several controls (Qt only). In the first step
+// only a structure is filled with:
+// int cv::readConfig( const char file, const char * name, ConfigBase * cfg )
+//
+// - New Interface function for communication between an OpenCV application and the HighGUI module
+// If this function is called inside a time loop, you get information about pressed buttons
+// or you get the content of several controls inside buttonbar. ( Dummy if not QT )
+// bool cv::getCommandVec( const string& winname, vector & stringVec, char * cmd )
+
+
 #include "precomp.hpp"
 #include <map>
 #include "opencv2/core/opengl_interop.hpp"
+
+
+// Split string into parts, see:
+// http://www.codeproject.com/Articles/1114/STL-Split-String
+// used by cv::readConfig here
+class SplitList : public std::vector<std::string>
+{
+public:
+    SplitList(const std::string& str, const char* delimList)
+    {
+        size_t lastPos = 0;
+        size_t pos = str.find_first_of(delimList);
+ 
+        while (pos != std::string::npos)
+        {
+            if (pos != lastPos)
+                push_back(str.substr(lastPos, pos-lastPos));
+            lastPos = pos + 1;
+            pos = str.find_first_of(delimList, lastPos);
+        }
+        if (lastPos < str.length())
+            push_back(str.substr(lastPos, pos-lastPos));
+    }
+};
+
 
 // in later times, use this file as a dispatcher to implementations like cvcap.cpp
 
@@ -178,6 +234,87 @@ void cv::moveWindow( const string& winname, int x, int y )
     cvMoveWindow( winname.c_str(), x, y );
 }
 
+// -----------------------------------
+
+void cv::adjustWindowPos( const string& winname, int xp, int xwp, int yp, int yhp )
+{
+   // set window pos+size with params in percentage of screen width/height
+   #ifdef _WIN32
+      int cx,cy;
+      cx = GetSystemMetrics(SM_CXSCREEN);
+      cy = GetSystemMetrics(SM_CYSCREEN);
+      int    x = (int) (0.01 * ( xp * cx ));
+      int    y = (int) (0.01 * ( yp * cy ));
+      int neww = (int) (0.01 * (xwp * cx ));
+      int newh = (int) (0.01 * (yhp * cy ));
+      cvMoveWindow( winname.c_str(), x, y );
+      cvResizeWindow( winname.c_str(),neww, newh );
+   #else
+       #if defined(HAVE_QT)
+          cvAdjustWindowPos_QT( winname.c_str(),  xp, xwp, yp,  yhp );
+       #endif
+		(void) winname;
+		(void) xp;
+		(void) xwp;
+		(void) yp;
+		(void) yhp;
+       // Dummy calls if Qt is not available:
+      #if defined(HAVE_GTK)
+		// TODO: 
+		// cvAdjustWindowPos_GTK( winname.c_str(),  xp, xwp, yp,  yhp );
+      #endif
+   #endif
+}
+
+
+#if defined(HAVE_QT)
+
+void cv::dispInfoBox( const string winname, const char* caption, const string& text ) 
+{
+    cvDispInfoBox_QT( winname.c_str(), caption, text.c_str() );
+}
+
+int cv::getButtonBarContent(const string winname, int idx, char * txt )
+{
+       return cvGetButtonBarContent( winname.c_str(), idx, txt );
+}
+
+int cv::setButtonBarContent(const string winname, int etype, int idx, const char * txt )
+{
+       return cvSetButtonBarContent( winname.c_str(), etype, idx,  txt );
+}
+
+int cv::setMapContent(const string winname, const string& varname, const char * text )
+{
+      return cvSetMapContent( winname.c_str(), varname.c_str(), text );
+}
+
+#else
+
+// some dummy definitions in case of missing QT   (window.cpp)
+void cv::dispInfoBox( const string , const char* , const string&  ) 
+{
+}
+
+int cv::getButtonBarContent(const string , int , char * )
+{
+   return 0;
+}
+
+int cv::setButtonBarContent(const string , int , int , const char *  )
+{
+   return 0;
+}
+
+int cv::setMapContent(const string , const string& , const char *  )
+{
+   return 0;
+}
+
+#endif
+
+// -----------------------------------
+
 void cv::setWindowProperty(const string& winname, int prop_id, double prop_value)
 {
     cvSetWindowProperty( winname.c_str(), prop_id, prop_value);
@@ -221,6 +358,155 @@ int cv::startWindowThread()
     return cvStartWindowThread();
 }
 
+
+
+
+int cv::readConfig( const char* file, const char * name, ConfigBase * cfg  )
+{
+  // read some basic data from *.cfg but no controls here
+  // this function is called by window_QT.cpp only in the moment
+  
+  cfg->initWidth  = -1;
+  cfg->initHeight = -1;
+  cfg->initPosX   = -1;
+  cfg->initPosY   = -1;
+  cfg->WindowMode = -1;
+  cfg->wndname = std::string(name);
+  
+  char csCfgFile[512];
+  strcpy( csCfgFile, file); 
+  char * p = strstr( csCfgFile,".exe");
+
+  if ( p != NULL )
+  {
+    *p = 0;  // Windows
+  } 
+
+  strcat( csCfgFile, ".cfg") ;
+
+  
+  // TODO: 
+  // - use GetModuleFileName(NULL, szFilename, MAX_PATH) to get executable name
+  //   in window_w32.cpp 
+  // - use  QString exe_name = QFileInfo(QApplication::applicationFilePath()).fileName();
+  //   in window_QT.cpp for the same purpose (this is done)
+  // - how to do it with GTK ? 
+  //   Call cvInitSystem before cvNamedWindow in your application - otherwise 
+  //   g_get_prgname() or g_get_application_name()  will deliver the name of 
+  //   the window and not the name of the executable !
+  
+  cfg->fs.open(csCfgFile, cv::FileStorage::READ);
+  if (!cfg->fs.isOpened())
+  {
+      return -1;
+  }
+    
+  cv::FileNode n = cfg->fs["verboseLevel"];
+  cv::FileNodeIterator it = n.begin(), it_end = n.end(); // Go through the node
+  for (; it != it_end; ++it) {
+    cv::FileNode node = *it;
+    if ( node.type() == CV_NODE_INTEGER )
+    {
+      cfg->m_verboseLevel = (int) *it;    
+    }
+  }        
+  
+  std::string CfgWndName = "";
+  
+  //---------------------------------------- cv::readConfig
+  for ( int cnt=0; cnt <= 20 ; cnt++ )
+  {
+      std::string CfgWndN = cv::format("Wnd%d",cnt);
+         
+      n = cfg->fs[CfgWndN];
+      if (  n.size() <= 0 ) continue;
+	
+      int linecnt = -1;
+      it = n.begin(), it_end = n.end(); // Go through the node
+      for (; it != it_end; ++it) {
+	
+	cv::FileNode node = *it;
+	std::string content = "?";
+	if ( node.type() == CV_NODE_INTEGER )
+	{
+	    content = cv::format("%d (integer)", (int) *it);
+	}	
+	if ( node.type() == cv::FileNode::STRING )
+	{
+	    content = (std::string) *it;
+	    char csBuffer[512];
+	    strcpy(csBuffer, content.c_str() );
+	    if (csBuffer[0] == '#') content = "";
+	    if ( content.length() > 0 )
+	    {   
+		linecnt++;
+		if ( linecnt == 0 )
+		{	
+			CfgWndName = std::string(csBuffer);	
+			if ( CfgWndName != cfg->wndname ) {
+			  linecnt = -5000;
+			} 
+		}
+
+		if ( linecnt > 0 )
+		{
+		
+		  if ( cfg->m_verboseLevel > 2 )
+		  {
+		      printf("\n   [%s]", content.c_str() );
+		  }  
+		
+		  if ( strstr(csBuffer,"CV_WINDOW_") != NULL )
+		  { 
+		    // may be there is a window position or size behind the window mode in *.cfg
+		    std::string sizestr(csBuffer);		  
+		    std::string strBase(csBuffer);		  
+		    
+		    SplitList baselist(sizestr," ");
+  
+		    if ( baselist.size() >= 2 )
+		    {
+		        std::string Mode = baselist[0];
+			if ( Mode == "CV_WINDOW_NORMAL"   ) cfg->WindowMode = CV_WINDOW_NORMAL;
+			if ( Mode == "CV_WINDOW_AUTOSIZE" ) cfg->WindowMode = CV_WINDOW_AUTOSIZE;
+		
+			SplitList poslist(baselist[1],",");
+			if ( poslist.size() == 2 )
+			{
+			  cfg->initPosX = atoi( poslist[0].c_str() );
+			  cfg->initPosY = atoi( poslist[1].c_str() );
+			}
+			if ( baselist.size() == 3 )
+			{
+			  SplitList sizelist(baselist[2],"*");
+			  if ( sizelist.size() == 2 )
+			  {
+			    cfg->initWidth = atoi( sizelist[0].c_str() );
+			    cfg->initHeight = atoi( sizelist[1].c_str() );
+			  }
+			}
+		    }
+
+		    if ( cfg->m_verboseLevel > 1 )
+		    {
+			  printf("\n%s:[%s]  %d,%d (%d*%d Pixel) WindowMode=%d  (cv::readConfig)", 
+				CfgWndN.c_str(), cfg->wndname.c_str(), cfg->initPosX, cfg->initPosY , cfg->initWidth, cfg->initHeight, cfg->WindowMode );
+		    }	    
+		  }
+		  	  
+		}		
+	    }
+	}
+		
+      }
+  }
+     
+  return 0;   
+}
+
+
+
+
 // OpenGL support
 
 void cv::setOpenGlDrawCallback(const string& name, OpenGlDrawCallback callback, void* userdata)
@@ -245,14 +531,19 @@ namespace
     std::map<std::string, cv::GlTexture2D> ownWndTexs;
     std::map<std::string, cv::GlBuffer> ownWndBufs;
 
+
+
     void CV_CDECL glDrawTextureCallback(void* userdata)
     {
-        cv::GlTexture2D* texObj = static_cast<cv::GlTexture2D*>(userdata);
+	cv::GlTexture2D* texObj = static_cast<cv::GlTexture2D*>(userdata);
 
         cv::render(*texObj);
     }
+
 }
 #endif // HAVE_OPENGL
+
+
 
 void cv::imshow( const string& winname, InputArray _img )
 {
@@ -338,6 +629,7 @@ CV_IMPL void cvUpdateWindow(const char*)
     CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
+
 #endif // !HAVE_OPENGL
 
 #if defined (HAVE_QT)
@@ -388,6 +680,30 @@ int cv::createButton(const string& button_name, ButtonCallback on_change, void* 
     return cvCreateButton(button_name.c_str(), on_change, userdata, button_type , initial_button_state );
 }
 
+//--------- Get events+content from buttonbar in case of HAVE_QT :
+bool cv::getCommandVec( const string& winname, vector<string> & stringVec,  char * cmd )
+{
+	// All controls inside a buttonbar are configured by a *.cfg file
+    stringVec.clear();  // clear content vector
+  
+	// read last command (e.g. pressed button ) and content of buttonbar    
+    if ( cmd != NULL ) cvGetCommand( winname.c_str(), cmd ); 
+	
+    char buffer[512];
+    int idx = 0;
+    int iRet = 1;
+    while ( iRet == 1 ) 
+    {
+      iRet = cvGetButtonBarContent( winname.c_str(), idx, buffer );
+      if ( iRet == 1 ) stringVec.push_back( string(buffer) );
+      idx++;
+    }
+    return true;
+}
+//---------
+
+
+
 #else
 
 CvFont cv::fontQt(const string&, int, Scalar, int,  int, int)
@@ -437,6 +753,15 @@ int cv::createButton(const string&, ButtonCallback, void*, int , bool )
     CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
     return 0;
 }
+
+// Dummy function in case of Qt switched off,
+// but application with Qt scpecific calls....
+bool cv::getCommandVec( const string& , vector<string> & ,  char* )
+{
+    return false;
+}
+
+
 
 #endif
 
@@ -606,6 +931,28 @@ CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
     CV_NO_GUI_ERROR("cvCreateButton");
     return -1;
 }
+
+// Some dummy functions in case of Qt switched off,
+// but application with Qt specific calls....
+
+CV_IMPL int cvGetButtonBarContent(const char *, int, char * )
+{
+    // CV_NO_GUI_ERROR("cvGetButtonBarContent");
+    return -1;
+}
+
+CV_IMPL int cvSetButtonBarContent(const char *, int, int, const char * )
+{
+    // CV_NO_GUI_ERROR("cvSetButtonBarContent");
+    return -1;
+}
+
+CV_IMPL void cvDispInfoBox_QT(const char*, const char* , const char * )
+{
+    // CV_NO_GUI_ERROR("cvDispInfoBox_QT");
+    return;
+}
+
 
 
 #endif

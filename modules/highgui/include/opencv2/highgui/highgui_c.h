@@ -116,6 +116,13 @@ enum
     CV_WINDOW_KEEPRATIO    = 0x00000000//the ration image is respected.
 };
 
+// ---------  HS ---------
+/* some additional modes for button bar config */
+enum { EMOD_PropWnd, EMOD_Zoom, EMOD_Panning, EMOD_SaveImg, 
+       EMOD_TxtButton, EMOD_Label, EMOD_Edit, EMOD_Combo, 
+       EMOD_Slider, EMOD_Pulldown,
+       EMOD_CheckBox, EMOD_CheckText, EMOD_PushText, EMOD_Spin };
+
 /* create window */
 CVAPI(int) cvNamedWindow( const char* name, int flags CV_DEFAULT(CV_WINDOW_AUTOSIZE) );
 
@@ -135,6 +142,19 @@ CVAPI(void) cvMoveWindow( const char* name, int x, int y );
 CVAPI(void) cvDestroyWindow( const char* name );
 
 CVAPI(void) cvDestroyAllWindows(void);
+
+/* some additional functions for button bar config */
+CVAPI(int)  cvGetCommand( const char* WndName, char* cmd );
+CVAPI(int)  cvGetButtonBarContent(const char * WndName, int idx, char * txt );
+CVAPI(int)  cvSetButtonBarContent(const char * WndName, int etype, int idx, const char * txt );
+CVAPI(int)  cvSetMapContent(const char * WndName, const char * varname, const char * txt );
+
+CVAPI(void) cvDispInfoBox_QT( const char* WndName, const char* caption, const char * csTxt );
+
+/* adjust window in relation to screen resolution; all int values as percentage */
+CVAPI(void) cvAdjustWindowPos_QT( const char * name, int xp, int xwp, int yp, int yhp );
+// ---------------------
+
 
 /* get native window handle (HWND in case of Win32 and Widget in case of X Window) */
 CVAPI(void*) cvGetWindowHandle( const char* name );
