@@ -232,6 +232,8 @@ Predicts the response for input sample(s).
 
 .. ocv:pyfunction:: cv2.SVM.predict(sample[, returnDFVal]) -> retval
 
+.. ocv:pyfunction:: cv2.SVM.predict_all(samples[, results]) -> results
+
     :param sample: Input sample for prediction.
 
     :param samples: Input samples for prediction.

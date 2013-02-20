@@ -531,7 +531,7 @@ StarAdjuster
 
 SurfAdjuster
 ------------
-.. ocv:class:: SurfAdjuster: public AdjusterAdapter
+.. ocv:class:: SurfAdjuster : public AdjusterAdapter
 
 :ocv:class:`AdjusterAdapter` for ``SurfFeatureDetector``.  ::
 

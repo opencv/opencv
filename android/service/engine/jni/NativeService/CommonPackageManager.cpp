@@ -80,17 +80,21 @@ string CommonPackageManager::GetPackagePathByVersion(int version, int platform, 
 
     if (!packages.empty())
     {
-        int OptRating = -1;
-        int OptVersion = 0;
-        std::vector<std::pair<int, int> >& group = CommonPackageManager::ArmRating;
+        int platform_group = 0;
 
         if ((cpu_id & ARCH_X86) || (cpu_id & ARCH_X64))
-            group = CommonPackageManager::IntelRating;
+            platform_group = 1;
 
-        int HardwareRating = GetHardwareRating(platform, cpu_id, group);
-        LOGD("Current hardware platform rating %d for (%d,%d)", HardwareRating, platform, cpu_id);
+        if (cpu_id & ARCH_MIPS)
+            platform_group = 2;
 
-        if (-1 == HardwareRating)
+        int opt_rating = -1;
+        int opt_version = 0;
+
+        const int hardware_rating = GetHardwareRating(platform, cpu_id, ArchRatings[platform_group]);
+        LOGD("Current hardware platform rating %d for (%d,%d)", hardware_rating, platform, cpu_id);
+
+        if (-1 == hardware_rating)
         {
             LOGE("Cannot calculate rating for current hardware platform!");
         }
@@ -99,26 +103,38 @@ string CommonPackageManager::GetPackagePathByVersion(int version, int platform, 
             vector<PackageInfo>::iterator found = packages.end();
             for (vector<PackageInfo>::iterator it = packages.begin(); it != packages.end(); ++it)
             {
-                int PackageRating = GetHardwareRating(it->GetPlatform(), it->GetCpuID(), group);
-                LOGD("Package \"%s\" rating %d for (%d,%d)", it->GetFullName().c_str(), PackageRating, it->GetPlatform(), it->GetCpuID());
-                if ((PackageRating >= 0) && (PackageRating <= HardwareRating))
+                int package_group = 0;
+
+                if ((it->GetCpuID() & ARCH_X86) || (it->GetCpuID() & ARCH_X64))
+                    package_group = 1;
+
+                if (it->GetCpuID() & ARCH_MIPS)
+                    package_group = 2;
+
+                if (package_group != platform_group)
+                    continue;
+
+                const int package_rating = GetHardwareRating(it->GetPlatform(), it->GetCpuID(), ArchRatings[package_group]);
+
+                LOGD("Package \"%s\" rating %d for (%d,%d)", it->GetFullName().c_str(), package_rating, it->GetPlatform(), it->GetCpuID());
+                if ((package_rating >= 0) && (package_rating <= hardware_rating))
                 {
-                    if (((it->GetVersion() >= OptVersion) && (PackageRating >= OptRating)) || (it->GetVersion() > OptVersion))
+                    if (((it->GetVersion() >= opt_version) && (package_rating >= opt_rating)) || (it->GetVersion() > opt_version))
                     {
-                        OptRating = PackageRating;
-                        OptVersion = it->GetVersion();
+                        opt_rating = package_rating;
+                        opt_version = it->GetVersion();
                         found = it;
                     }
                 }
             }
 
-            if ((-1 != OptRating) && (packages.end() != found))
+            if ((-1 != opt_rating) && (packages.end() != found))
             {
                 result = found->GetInstalationPath();
             }
             else
             {
-                LOGI("Found package is incompatible with current hardware platform");
+                LOGI("No compatible packages found!");
             }
         }
     }
@@ -146,10 +162,13 @@ int CommonPackageManager::GetHardwareRating(int platform, int cpu_id, const std:
     else
     {
         // Calculate rating for Arm
+        LOGD("!!! Calculating rating for ARM\n");
         for (size_t i = 0; i < group.size(); i++)
         {
+            LOGD("Checking (%d, %d) against (%d,%d)\n", group[i].first, group[i].second, platform, cpu_id);
             if (group[i] == std::pair<int, int>(platform, cpu_id))
             {
+                LOGD("Rating found: %d\n", i);
                 result = i;
                 break;
             }
@@ -182,21 +201,27 @@ std::vector<std::pair<int, int> > CommonPackageManager::InitArmRating()
     return result;
 }
 
+// Stub for Intel platforms rating initialization. Common package for all Intel based devices is used now
 std::vector<std::pair<int, int> > CommonPackageManager::InitIntelRating()
 {
     std::vector<std::pair<int, int> > result;
 
-    result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_X64));
-    result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_X86 | FEATURES_HAS_SSSE3));
-    result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_X86 | FEATURES_HAS_SSE2));
-    result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_X86 | FEATURES_HAS_SSE));
-    result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_X86));
+    return result;
+}
+
+// Stub for MIPS platforms rating initialization. Common package for all MIPS based devices is used now
+std::vector<std::pair<int, int> > CommonPackageManager::InitMipsRating()
+{
+    std::vector<std::pair<int, int> > result;
 
     return result;
 }
 
-std::vector<std::pair<int, int> > CommonPackageManager::IntelRating = CommonPackageManager::InitIntelRating();
-std::vector<std::pair<int, int> > CommonPackageManager::ArmRating = InitArmRating();
+const std::vector<std::pair<int, int> > CommonPackageManager::ArchRatings[] = {
+                                           CommonPackageManager::InitArmRating(), 
+                                           CommonPackageManager::InitIntelRating(), 
+                                           CommonPackageManager::InitMipsRating()
+                                        };
 
 CommonPackageManager::~CommonPackageManager()
 {

@@ -3549,7 +3549,7 @@ enum { HASH_SIZE0 = 8 };
 static inline void copyElem(const uchar* from, uchar* to, size_t elemSize)
 {
     size_t i;
-    for( i = 0; (int)i <= (int)(elemSize - sizeof(int)); i += sizeof(int) )
+    for( i = 0; i + sizeof(int) <= elemSize; i += sizeof(int) )
         *(int*)(to + i) = *(const int*)(from + i);
     for( ; i < elemSize; i++ )
         to[i] = from[i];
@@ -3558,7 +3558,7 @@ static inline void copyElem(const uchar* from, uchar* to, size_t elemSize)
 static inline bool isZeroElem(const uchar* data, size_t elemSize)
 {
     size_t i;
-    for( i = 0; i <= elemSize - sizeof(int); i += sizeof(int) )
+    for( i = 0; i + sizeof(int) <= elemSize; i += sizeof(int) )
         if( *(int*)(data + i) != 0 )
             return false;
     for( ; i < elemSize; i++ )

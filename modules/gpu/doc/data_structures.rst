@@ -352,9 +352,9 @@ gpu::Stream::enqueueMemSet
 --------------------------
 Initializes or sets device memory to a value.
 
-.. ocv:function:: void gpu::Stream::enqueueMemSet(const GpuMat& src, Scalar val)
+.. ocv:function:: void gpu::Stream::enqueueMemSet( GpuMat& src, Scalar val )
 
-.. ocv:function:: void gpu::Stream::enqueueMemSet(const GpuMat& src, Scalar val, const GpuMat& mask)
+.. ocv:function:: void gpu::Stream::enqueueMemSet( GpuMat& src, Scalar val, const GpuMat& mask )
 
 
 
@@ -362,7 +362,7 @@ gpu::Stream::enqueueConvert
 ---------------------------
 Converts matrix type, ex from float to uchar depending on type.
 
-.. ocv:function:: void gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int type, double a = 1, double b = 0)
+.. ocv:function:: void gpu::Stream::enqueueConvert( const GpuMat& src, GpuMat& dst, int dtype, double a=1, double b=0 )
 
 
 
