@@ -161,6 +161,13 @@ CV_INIT_ALGORITHM(GridAdaptedFeatureDetector, "Feature2D.Grid",
                   obj.info()->addParam(obj, "gridRows", obj.gridRows);
                   obj.info()->addParam(obj, "gridCols", obj.gridCols));
 
+CV_INIT_ALGORITHM(DynamicAdaptedFeatureDetector, "Feature2D.Dynamic",
+                  obj.info()->addParam(obj, "adjuster", obj.adjuster_);
+                  obj.info()->addParam(obj, "min_features", obj.min_features_);
+                  obj.info()->addParam(obj, "max_features", obj.max_features_);
+                  obj.info()->addParam(obj, "max_iters", obj.escape_iters_);
+                  obj.info()->addParam(obj, "save_adjusted_parameters", obj.save_adjusted_parameters_));
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CV_INIT_ALGORITHM(BFMatcher, "DescriptorMatcher.BFMatcher",
@@ -185,6 +192,7 @@ bool cv::initModule_features2d(void)
     all &= !HarrisDetector_info_auto.name().empty();
     all &= !DenseFeatureDetector_info_auto.name().empty();
     all &= !GridAdaptedFeatureDetector_info_auto.name().empty();
+    all &= !DynamicAdaptedFeatureDetector_info_auto.name().empty();
     all &= !BFMatcher_info_auto.name().empty();
     all &= !FlannBasedMatcher_info_auto.name().empty();
 
