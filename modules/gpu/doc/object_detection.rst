@@ -220,10 +220,6 @@ After each weak classifier evaluation, the sample trace at the point :math:`t` i
 
 The sample has been rejected if it fall rejection threshold. So stageless cascade allows to reject not-object sample as soon as possible. Another meaning of the sample trace is a confidence with that sample recognized as desired object. At each :math:`t` that confidence depend on all previous weak classifier. This feature of soft cascade is resulted in more accurate detection. The original formulation of soft cascade can be found in [BJ05]_.
 
-.. [BJ05] Lubomir Bourdev and Jonathan Brandt. tRobust Object Detection Via Soft Cascade. IEEE CVPR, 2005.
-.. [BMTG12] Rodrigo Benenson, Markus Mathias, Radu Timofte and Luc Van Gool. Pedestrian detection at 100 frames per second. IEEE CVPR, 2012.
-
-
 gpu::SCascade
 -----------------------------------------------
 .. ocv:class:: gpu::SCascade : public Algorithm

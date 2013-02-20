@@ -38,7 +38,7 @@ doc_signatures_whitelist = [
 "CvArr", "CvFileStorage",
 # other
 "InputArray", "OutputArray",
-] + ["CvSubdiv2D", "CvQuadEdge2D", "CvSubdiv2DPoint", "cvDrawContours"]
+]
 
 defines = ["cvGraphEdgeIdx", "cvFree", "CV_Assert", "cvSqrt", "cvGetGraphVtx", "cvGraphVtxIdx",
 "cvCaptureFromFile", "cvCaptureFromCAM", "cvCalcBackProjectPatch", "cvCalcBackProject",
@@ -156,9 +156,10 @@ def formatSignature(s):
             argtype = re.sub(r"\s+(\*|&)$", "\\1", arg[0])
             bidx = argtype.find('[')
             if bidx < 0:
-                _str += argtype + " "
+                _str += argtype
             else:
-                _srt += argtype[:bidx]
+                _str += argtype[:bidx]
+            _str += " "
             if arg[1]:
                 _str += arg[1]
             else:
@@ -326,6 +327,7 @@ def process_module(module, path):
             flookup[fn[0]] = flookup_entry
 
     if do_python_crosscheck:
+        pyclsnamespaces = ["cv." + x[3:].replace(".", "_") for x in clsnamespaces]
         for name, doc in rst.iteritems():
             decls = doc.get("decls")
             if not decls:
@@ -394,7 +396,7 @@ def process_module(module, path):
                     pname = signature[1][4:signature[1].find('(')]
                     cvname = "cv." + pname
                     parent = None
-                    for cl in clsnamespaces:
+                    for cl in pyclsnamespaces:
                         if cvname.startswith(cl + "."):
                             if cl.startswith(parent or ""):
                                 parent = cl
