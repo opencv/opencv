@@ -692,7 +692,7 @@ cvarrToMat
 ----------
 Converts ``CvMat``, ``IplImage`` , or ``CvMatND`` to ``Mat``.
 
-.. ocv:function:: Mat cvarrToMat( const CvArr* arr, bool copyData=false, bool allowND=true, int coiMode=0 )
+.. ocv:function:: Mat cvarrToMat( const CvArr* arr, bool copyData=false, bool allowND=true, int coiMode=0, AutoBuffer<double>* buf=0 )
 
     :param arr: input ``CvMat``, ``IplImage`` , or  ``CvMatND``.
 

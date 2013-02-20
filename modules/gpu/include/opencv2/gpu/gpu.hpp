@@ -881,7 +881,7 @@ CV_EXPORTS void HoughCirclesDownload(const GpuMat& d_circles, OutputArray h_circ
 //! finds arbitrary template in the grayscale image using Generalized Hough Transform
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
 //! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
-class CV_EXPORTS GeneralizedHough_GPU : public Algorithm
+class CV_EXPORTS GeneralizedHough_GPU : public cv::Algorithm
 {
 public:
     static Ptr<GeneralizedHough_GPU> create(int method);
@@ -1554,7 +1554,7 @@ protected:
 };
 
 // Implementation of soft (stage-less) cascaded detector.
-class CV_EXPORTS SCascade : public Algorithm
+class CV_EXPORTS SCascade : public cv::Algorithm
 {
 public:
 
