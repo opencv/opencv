@@ -285,9 +285,9 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         break; // CV_CAP_GIGANETIX
 #endif
 
-       }
-       if (capture)
-           return capture;  
+        }
+        if (capture)
+            return capture;  
     }
 
     // failed open a camera
