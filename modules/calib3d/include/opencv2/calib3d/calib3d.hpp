@@ -234,6 +234,9 @@ CVAPI(void) cvDrawChessboardCorners( CvArr* image, CvSize pattern_size,
 #define CV_CALIB_FIX_K5  4096
 #define CV_CALIB_FIX_K6  8192
 #define CV_CALIB_RATIONAL_MODEL 16384
+#define CV_CALIB_THIN_PRISM_MODEL 32768
+#define CV_CALIB_FIX_S1_S2_S3_S4  65536
+
 
 /* Finds intrinsic and extrinsic camera parameters
    from a few views of known calibration pattern */
@@ -534,6 +537,8 @@ enum
     CALIB_FIX_K5 = CV_CALIB_FIX_K5,
     CALIB_FIX_K6 = CV_CALIB_FIX_K6,
     CALIB_RATIONAL_MODEL = CV_CALIB_RATIONAL_MODEL,
+	CALIB_THIN_PRISM_MODEL = CV_CALIB_THIN_PRISM_MODEL,
+	CALIB_FIX_S1_S2_S3_S4=CV_CALIB_FIX_S1_S2_S3_S4,
     // only for stereo
     CALIB_FIX_INTRINSIC = CV_CALIB_FIX_INTRINSIC,
     CALIB_SAME_FOCAL_LENGTH = CV_CALIB_SAME_FOCAL_LENGTH,
