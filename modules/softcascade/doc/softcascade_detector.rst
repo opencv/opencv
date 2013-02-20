@@ -26,8 +26,8 @@ The sample has been rejected if it fall rejection threshold. So stageless cascad
 
 
 softcascade::Detector
--------------------
-.. ocv:class:: Detector : public Algorithm
+---------------------
+.. ocv:class:: softcascade::Detector : public Algorithm
 
 Implementation of soft (stageless) cascaded detector. ::
 
