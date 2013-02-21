@@ -4,19 +4,19 @@ Changelog
 Release 0.05
 ------------
 
-This library is now included in the official OpenCV distribution (from 2.4 on). 
+This library is now included in the official OpenCV distribution (from 2.4 on).
 The :ocv:class`FaceRecognizer` is now an :ocv:class:`Algorithm`, which better fits into the overall
-OpenCV API. 
+OpenCV API.
 
-To reduce the confusion on user side and minimize my work, libfacerec and OpenCV 
-have been synchronized and are now based on the same interfaces and implementation. 
+To reduce the confusion on user side and minimize my work, libfacerec and OpenCV
+have been synchronized and are now based on the same interfaces and implementation.
 
 The library now has an extensive documentation:
 
 * The API is explained in detail and with a lot of code examples.
-* The face recognition guide I had written for Python and GNU Octave/MATLAB has been adapted to the new OpenCV C++ ``cv::FaceRecognizer``. 
+* The face recognition guide I had written for Python and GNU Octave/MATLAB has been adapted to the new OpenCV C++ ``cv::FaceRecognizer``.
 * A tutorial for gender classification with Fisherfaces.
-* A tutorial for face recognition in videos (e.g. webcam). 
+* A tutorial for face recognition in videos (e.g. webcam).
 
 
 Release highlights
@@ -27,8 +27,8 @@ Release highlights
 Release 0.04
 ------------
 
-This version is fully Windows-compatible and works with OpenCV 2.3.1. Several 
-bugfixes, but none influenced the recognition rate. 
+This version is fully Windows-compatible and works with OpenCV 2.3.1. Several
+bugfixes, but none influenced the recognition rate.
 
 Release highlights
 ++++++++++++++++++
@@ -40,9 +40,9 @@ Release highlights
 Release 0.03
 ------------
 
-Reworked the library to provide separate implementations in cpp files, because 
-it's the preferred way of contributing OpenCV libraries. This means the library 
-is not header-only anymore. Slight API changes were done, please see the 
+Reworked the library to provide separate implementations in cpp files, because
+it's the preferred way of contributing OpenCV libraries. This means the library
+is not header-only anymore. Slight API changes were done, please see the
 documentation for details.
 
 Release highlights
@@ -55,9 +55,9 @@ Release highlights
 Release 0.02
 ------------
 
-Reworked the library to provide separate implementations in cpp files, because 
-it's the preferred way of contributing OpenCV libraries. This means the library 
-is not header-only anymore. Slight API changes were done, please see the 
+Reworked the library to provide separate implementations in cpp files, because
+it's the preferred way of contributing OpenCV libraries. This means the library
+is not header-only anymore. Slight API changes were done, please see the
 documentation for details.
 
 Release highlights
@@ -80,7 +80,7 @@ Release highlights
   * Eigenfaces [TP91]_
   * Fisherfaces [BHK97]_
   * Local Binary Patterns Histograms [AHP04]_
-  
+
 * Added persistence facilities to store the models with a common API.
 * Unit Tests (using `gtest <http://code.google.com/p/googletest/>`_).
 * Providing a CMakeLists.txt to enable easy cross-platform building.

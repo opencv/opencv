@@ -6,7 +6,7 @@ import os
 
 
 architecture = 'armeabi'
-excludedHeaders = set(['hdf5.h', 'cap_ios.h', 
+excludedHeaders = set(['hdf5.h', 'cap_ios.h',
     'eigen.hpp', 'cxeigen.hpp' #TOREMOVE
     ])
 systemIncludes = ['sources/cxx-stl/gnu-libstdc++/4.6/include', \
@@ -113,7 +113,7 @@ def FindHeaders():
             if f == m:
                 moduleHeaders += GetHeaderFiles(os.path.join(cppHeadersFolder, f))
                 if m == 'flann':
-                    flann = os.path.join(cppHeadersFolder, f, 'flann.hpp') 
+                    flann = os.path.join(cppHeadersFolder, f, 'flann.hpp')
                     moduleHeaders.remove(flann)
                     moduleHeaders.insert(0, flann)
                 cppHeaders += moduleHeaders

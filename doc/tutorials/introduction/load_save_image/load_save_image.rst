@@ -5,8 +5,8 @@ Load, Modify, and Save an Image
 
 .. note::
 
-   We assume that by now you know how to load an image using :imread:`imread <>` and to display it in a window (using :imshow:`imshow <>`). Read the :ref:`Display_Image` tutorial otherwise. 
- 
+   We assume that by now you know how to load an image using :imread:`imread <>` and to display it in a window (using :imshow:`imshow <>`). Read the :ref:`Display_Image` tutorial otherwise.
+
 Goals
 ======
 
@@ -35,9 +35,9 @@ Here it is:
    {
     char* imageName = argv[1];
 
-    Mat image; 
+    Mat image;
     image = imread( imageName, 1 );
-  
+
     if( argc != 2 || !image.data )
     {
       printf( " No image data \n " );
@@ -53,7 +53,7 @@ Here it is:
     namedWindow( "Gray image", CV_WINDOW_AUTOSIZE );
 
     imshow( imageName, image );
-    imshow( "Gray image", gray_image ); 
+    imshow( "Gray image", gray_image );
 
     waitKey(0);
 
@@ -67,18 +67,18 @@ Explanation
 
    * Creating a Mat object to store the image information
    * Load an image using :imread:`imread <>`, located in the path given by *imageName*. Fort this example, assume you are loading a RGB image.
-   
-#. Now we are going to convert our image from BGR to Grayscale format. OpenCV has a really nice function to do this kind of transformations: 
+
+#. Now we are going to convert our image from BGR to Grayscale format. OpenCV has a really nice function to do this kind of transformations:
 
    .. code-block:: cpp
-     
+
       cvtColor( image, gray_image, CV_BGR2GRAY );
 
    As you can see, :cvt_color:`cvtColor <>` takes as arguments:
 
    .. container:: enumeratevisibleitemswithsquare
 
-      * a source image (*image*) 
+      * a source image (*image*)
       * a destination image (*gray_image*), in which we will save the converted image.
       * an additional parameter that indicates what kind of transformation will be performed. In this case we use **CV_BGR2GRAY** (because of :imread:`imread <>` has BGR default channel order in case of color images).
 
@@ -86,7 +86,7 @@ Explanation
 
    .. code-block:: cpp
 
-      imwrite( "../../images/Gray_Image.jpg", gray_image );   
+      imwrite( "../../images/Gray_Image.jpg", gray_image );
 
    Which will save our *gray_image* as *Gray_Image.jpg* in the folder *images* located two levels up of my current location.
 

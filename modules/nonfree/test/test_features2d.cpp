@@ -1145,4 +1145,3 @@ protected:
 
 TEST(Features2d_SIFTHomographyTest, regression) { CV_DetectPlanarTest test("SIFT", 80); test.safe_run(); }
 TEST(Features2d_SURFHomographyTest, regression) { CV_DetectPlanarTest test("SURF", 80); test.safe_run(); }
-

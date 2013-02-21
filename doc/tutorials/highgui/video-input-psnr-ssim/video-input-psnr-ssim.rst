@@ -64,7 +64,7 @@ Closing the video is automatic when the objects destructor is called. However, i
    captRefrnc >> frameReference;
    captUndTst.open(frameUnderTest);
 
-The upper read operations will leave empty the *Mat* objects if no frame could be acquired (either cause the video stream was closed or you got to the end of the video file). We can check this with a simple if: 
+The upper read operations will leave empty the *Mat* objects if no frame could be acquired (either cause the video stream was closed or you got to the end of the video file). We can check this with a simple if:
 
 .. code-block:: cpp
 
@@ -111,7 +111,7 @@ Then the PSNR is expressed as:
 
    PSNR = 10 \cdot \log_{10} \left( \frac{MAX_I^2}{MSE} \right)
 
-Here the :math:`MAX_I^2` is the maximum valid value for a pixel. In case of the simple single byte image per pixel per channel this is 255. When two images are the same the MSE will give zero, resulting in an invalid divide by zero operation in the PSNR formula. In this case the PSNR is undefined and as we'll need to handle this case separately. The transition to a logarithmic scale is made because the pixel values have a very wide dynamic range. All this translated to OpenCV and a C++ function looks like: 
+Here the :math:`MAX_I^2` is the maximum valid value for a pixel. In case of the simple single byte image per pixel per channel this is 255. When two images are the same the MSE will give zero, resulting in an invalid divide by zero operation in the PSNR formula. In this case the PSNR is undefined and as we'll need to handle this case separately. The transition to a logarithmic scale is made because the pixel values have a very wide dynamic range. All this translated to OpenCV and a C++ function looks like:
 
 .. code-block:: cpp
 
@@ -136,13 +136,13 @@ Here the :math:`MAX_I^2` is the maximum valid value for a pixel. In case of the 
     }
    }
 
-Typically result values are anywhere between 30 and 50 for video compression, where higher is better. If the images significantly differ you'll get much lower ones like 15 and so. This similarity check is easy and fast to calculate, however in practice it may turn out somewhat inconsistent with human eye perception. The **structural similarity** algorithm aims to correct this. 
+Typically result values are anywhere between 30 and 50 for video compression, where higher is better. If the images significantly differ you'll get much lower ones like 15 and so. This similarity check is easy and fast to calculate, however in practice it may turn out somewhat inconsistent with human eye perception. The **structural similarity** algorithm aims to correct this.
 
-Describing the methods goes well beyond the purpose of this tutorial. For that I invite you to read the article introducing it. Nevertheless, you can get a good image of it by looking at the OpenCV implementation below. 
+Describing the methods goes well beyond the purpose of this tutorial. For that I invite you to read the article introducing it. Nevertheless, you can get a good image of it by looking at the OpenCV implementation below.
 
 .. seealso::
 
-   SSIM is described more in-depth in the: "Z. Wang, A. C. Bovik, H. R. Sheikh and E. P. Simoncelli, "Image quality assessment: From error visibility to structural similarity," IEEE Transactions on Image Processing, vol. 13, no. 4, pp. 600-612, Apr. 2004." article. 
+   SSIM is described more in-depth in the: "Z. Wang, A. C. Bovik, H. R. Sheikh and E. P. Simoncelli, "Image quality assessment: From error visibility to structural similarity," IEEE Transactions on Image Processing, vol. 13, no. 4, pp. 600-612, Apr. 2004." article.
 
 .. code-block:: cpp
 
@@ -162,7 +162,7 @@ Describing the methods goes well beyond the purpose of this tutorial. For that I
 
     /***********************PRELIMINARY COMPUTING ******************************/
 
-    Mat mu1, mu2;   // 
+    Mat mu1, mu2;   //
     GaussianBlur(I1, mu1, Size(11, 11), 1.5);
     GaussianBlur(I2, mu2, Size(11, 11), 1.5);
 
@@ -199,7 +199,7 @@ Describing the methods goes well beyond the purpose of this tutorial. For that I
     return mssim;
    }
 
-This will return a similarity index for each channel of the image. This value is between zero and one, where one corresponds to perfect fit. Unfortunately, the many Gaussian blurring is quite costly, so while the PSNR may work in a real time like environment (24 frame per second) this will take significantly more than to accomplish similar performance results. 
+This will return a similarity index for each channel of the image. This value is between zero and one, where one corresponds to perfect fit. Unfortunately, the many Gaussian blurring is quite costly, so while the PSNR may work in a real time like environment (24 frame per second) this will take significantly more than to accomplish similar performance results.
 
 Therefore, the source code presented at the start of the tutorial will perform the PSNR measurement for each frame, and the SSIM only for the frames where the PSNR falls below an input value. For visualization purpose we show both images in an OpenCV window and print the PSNR and MSSIM values to the console. Expect to see something like:
 
@@ -207,7 +207,7 @@ Therefore, the source code presented at the start of the tutorial will perform t
    :alt: A sample output
    :align: center
 
-You may observe a runtime instance of this on the `YouTube here <https://www.youtube.com/watch?v=iOcNljutOgg>`_. 
+You may observe a runtime instance of this on the `YouTube here <https://www.youtube.com/watch?v=iOcNljutOgg>`_.
 
 .. raw:: html
 

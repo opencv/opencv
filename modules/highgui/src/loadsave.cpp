@@ -84,12 +84,6 @@ struct ImageCodecInitializer
         decoders.push_back( new ExrDecoder );
         encoders.push_back( new ExrEncoder );
     #endif
-    // because it is a generic image I/O API, supporting many formats,
-    // it should be last in the list.
-    #ifdef HAVE_IMAGEIO
-        decoders.push_back( new ImageIODecoder );
-        encoders.push_back( new ImageIOEncoder );
-    #endif
     }
 
     vector<ImageDecoder> decoders;

@@ -1,4 +1,4 @@
-SET(OPENCV_TRAINCASCADE_DEPS opencv_core opencv_ml opencv_imgproc opencv_objdetect opencv_highgui opencv_calib3d opencv_video opencv_features2d opencv_flann opencv_legacy)
+set(OPENCV_TRAINCASCADE_DEPS opencv_core opencv_ml opencv_imgproc opencv_objdetect opencv_highgui opencv_calib3d opencv_video opencv_features2d opencv_flann opencv_legacy)
 ocv_check_dependencies(${OPENCV_TRAINCASCADE_DEPS})
 
 if(NOT OCV_DEPENDENCIES_FOUND)

@@ -5,9 +5,9 @@ Detection of planar objects
 
 .. highlight:: cpp
 
-The goal of this tutorial is to learn how to use *features2d* and *calib3d* modules for detecting known planar objects in scenes. 
+The goal of this tutorial is to learn how to use *features2d* and *calib3d* modules for detecting known planar objects in scenes.
 
-*Test data*: use images in your data folder, for instance, ``box.png`` and ``box_in_scene.png``. 
+*Test data*: use images in your data folder, for instance, ``box.png`` and ``box_in_scene.png``.
 
 #.
     Create a new console project. Read two input images. ::
@@ -22,7 +22,7 @@ The goal of this tutorial is to learn how to use *features2d* and *calib3d* modu
         FastFeatureDetector detector(15);
         vector<KeyPoint> keypoints1;
         detector.detect(img1, keypoints1);
-        
+
         ... // do the same for the second image
 
 #.
@@ -32,7 +32,7 @@ The goal of this tutorial is to learn how to use *features2d* and *calib3d* modu
         SurfDescriptorExtractor extractor;
         Mat descriptors1;
         extractor.compute(img1, keypoints1, descriptors1);
-        
+
         ... // process keypoints from the second image as well
 
 #.
@@ -69,4 +69,4 @@ The goal of this tutorial is to learn how to use *features2d* and *calib3d* modu
         perspectiveTransform(Mat(points1), points1Projected, H);
 
 #.
-    Use ``drawMatches`` for drawing inliers. 
+    Use ``drawMatches`` for drawing inliers.

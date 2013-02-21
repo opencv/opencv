@@ -176,10 +176,27 @@ void cv::gpu::FastNonLocalMeansDenoising::simpleMethod(const GpuMat& src, GpuMat
 
 void cv::gpu::FastNonLocalMeansDenoising::labMethod( const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window, int block_window, Stream& s)
 {
+#if (CUDA_VERSION < 5000)
+    (void)src;
+    (void)dst;
+    (void)h_luminance;
+    (void)h_color;
+    (void)search_window;
+    (void)block_window;
+    (void)s;
+
+    CV_Error( CV_GpuApiCallError, "Lab method required CUDA 5.0 and higher" );
+#else
+
+
     CV_Assert(src.type() == CV_8UC3);
 
     lab.create(src.size(), src.type());
     cv::gpu::cvtColor(src, lab, CV_BGR2Lab, 0, s);
+
+    /*Mat t;
+    cv::cvtColor(Mat(src), t, CV_BGR2Lab);
+    lab.upload(t);*/
 
     l.create(src.size(), CV_8U);
     ab.create(src.size(), CV_8UC2);
@@ -190,6 +207,11 @@ void cv::gpu::FastNonLocalMeansDenoising::labMethod( const GpuMat& src, GpuMat& 
 
     device::imgproc::fnlm_merge_channels(l, ab, lab, StreamAccessor::getStream(s));
     cv::gpu::cvtColor(lab, dst, CV_Lab2BGR, 0, s);
+
+    /*cv::cvtColor(Mat(lab), t, CV_Lab2BGR);
+    dst.upload(t);*/
+
+#endif
 }
 
 

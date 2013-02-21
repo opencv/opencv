@@ -505,7 +505,7 @@ public:
                             CvParamGrid degreeGrid = CvSVM::get_default_grid(CvSVM::DEGREE),
                             bool balanced=false);
     CV_WRAP virtual float predict( const cv::Mat& sample, bool returnDFVal=false ) const;
-    CV_WRAP_AS(predict_all) void predict( cv::InputArray samples, cv::OutputArray results ) const;
+    CV_WRAP_AS(predict_all) virtual void predict( cv::InputArray samples, cv::OutputArray results ) const;
 
     CV_WRAP virtual int get_support_vector_count() const;
     virtual const float* get_support_vector(int i) const;
@@ -1256,6 +1256,8 @@ protected:
     virtual void trim_weights();
     virtual void write_params( CvFileStorage* fs ) const;
     virtual void read_params( CvFileStorage* fs, CvFileNode* node );
+
+    virtual void initialize_weights(double (&p)[2]);
 
     CvDTreeTrainData* data;
     CvBoostParams params;
@@ -2032,6 +2034,9 @@ public:
     const CvMat* get_responses();
     const CvMat* get_missing() const;
 
+    void set_header_lines_number( int n );
+    int get_header_lines_number() const;
+
     void set_response_idx( int idx ); // old response become predictors, new response_idx = idx
                                       // if idx < 0 there will be no response
     int get_response_idx() const;
@@ -2083,6 +2088,8 @@ protected:
     CvMat* var_idx_out; // mat
     CvMat* var_types_out; // mat
 
+    int header_lines_number;
+
     int response_idx;
 
     int train_sample_count;
@@ -2130,7 +2137,6 @@ typedef CvGBTrees GradientBoostingTrees;
 template<> CV_EXPORTS void Ptr<CvDTreeSplit>::delete_obj();
 
 CV_EXPORTS bool initModule_ml(void);
-
 }
 
 #endif // __cplusplus

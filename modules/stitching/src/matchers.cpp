@@ -219,7 +219,7 @@ void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     descriptors1_.upload(features1.descriptors);
     descriptors2_.upload(features2.descriptors);
 
-    BruteForceMatcher_GPU_base matcher(BruteForceMatcher_GPU_base::L2Dist);
+    BFMatcher_GPU matcher(NORM_L2);
     MatchesSet matches;
 
     // Find 1->2 matches
@@ -350,7 +350,7 @@ void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     Mat gray_image;
     CV_Assert(image.type() == CV_8UC3);
     cvtColor(image, gray_image, CV_BGR2GRAY);
-    if (surf == 0)
+    if (surf.empty())
     {
         detector_->detect(gray_image, features.keypoints);
         extractor_->compute(gray_image, features.keypoints, features.descriptors);

@@ -332,6 +332,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
         break; // CV_CAP_GIGANETIX
 #endif
+
         }
     }
 

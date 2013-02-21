@@ -415,8 +415,6 @@ void AlgorithmInfo::write(const Algorithm* algo, FileStorage& fs) const
             cv::write(fs, pname, algo->get<int>(pname));
         else if( p.type == Param::BOOLEAN )
             cv::write(fs, pname, (int)algo->get<bool>(pname));
-        else if( p.type == Param::SHORT )
-            cv::write(fs, pname, (int)algo->get<short>(pname));
         else if( p.type == Param::REAL )
             cv::write(fs, pname, algo->get<double>(pname));
         else if( p.type == Param::STRING )
@@ -451,7 +449,7 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
         const FileNode n = fn[pname];
         if( n.empty() )
             continue;
-        if( p.type == Param::INT || p.type == Param::SHORT )
+        if( p.type == Param::INT )
         {
             int val = (int)n;
             info->set(algo, pname.c_str(), p.type, &val, true);
@@ -529,7 +527,6 @@ static string getNameOfType(int argType)
     switch(argType)
     {
         case Param::INT: return "integer";
-        case Param::SHORT: return "short";
         case Param::BOOLEAN: return "boolean";
         case Param::REAL: return "double";
         case Param::STRING: return "string";
@@ -551,10 +548,6 @@ static string getErrorMessageForWrongArgumentInSetter(string algoName, string pa
     {
         message += "so it should be set by integer, boolean, or double value, ";
     }
-    else if (paramType == Param::SHORT)
-    {
-        message += "so it should be set by integer value, ";
-    }
     message += "but the setter was called with " + getNameOfType(argType) + " value";
 
     return message;
@@ -575,10 +568,6 @@ static string getErrorMessageForWrongArgumentInGetter(string algoName, string pa
     {
         message += "so it should be get as integer or double value, ";
     }
-    else if (paramType == Param::SHORT)
-    {
-        message += "so it should be get as integer value, ";
-    }
     message += "but the getter was called to get a " + getNameOfType(argType) + " value";
 
     return message;
@@ -597,9 +586,9 @@ void AlgorithmInfo::set(Algorithm* algo, const char* parameter, int argType, con
     GetSetParam f;
     f.set_int = p->setter;
 
-    if( argType == Param::INT || argType == Param::BOOLEAN || argType == Param::REAL || argType == Param::SHORT )
+    if( argType == Param::INT || argType == Param::BOOLEAN || argType == Param::REAL )
     {
-        if ( !( p->type == Param::INT || p->type == Param::REAL || p->type == Param::BOOLEAN || (p->type == Param::SHORT && argType == Param::INT)) )
+        if ( !( p->type == Param::INT || p->type == Param::REAL || p->type == Param::BOOLEAN) )
         {
             string message = getErrorMessageForWrongArgumentInSetter(algo->name(), parameter, p->type, argType);
             CV_Error(CV_StsBadArg, message);
@@ -608,20 +597,12 @@ void AlgorithmInfo::set(Algorithm* algo, const char* parameter, int argType, con
         if( p->type == Param::INT )
         {
             int val = argType == Param::INT ? *(const int*)value :
-            argType == Param::BOOLEAN ? (int)*(const bool*)value :
-            saturate_cast<int>(*(const double*)value);
+                argType == Param::BOOLEAN ? (int)*(const bool*)value :
+                saturate_cast<int>(*(const double*)value);
             if( p->setter )
                 (algo->*f.set_int)(val);
             else
                 *(int*)((uchar*)algo + p->offset) = val;
-        }
-        else if( p->type == Param::SHORT )
-        {
-            int val = *(const int*)value;
-            if( p->setter )
-                (algo->*f.set_int)(val);
-            else
-                *(short*)((uchar*)algo + p->offset) = (short)val;
         }
         else if( p->type == Param::BOOLEAN )
         {
@@ -728,17 +709,6 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
                 *(int*)value = val;
             else
                 *(double*)value = val;
-        }
-        else if( p->type == Param::SHORT )
-        {
-            if( argType != Param::INT )
-            {
-                string message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
-                CV_Error(CV_StsBadArg, message);
-            }
-            int val = p->getter ? (algo->*f.get_int)() : *(short*)((uchar*)algo + p->offset);
-
-            *(int*)value = val;
         }
         else if( p->type == Param::BOOLEAN )
         {
@@ -852,7 +822,7 @@ void AlgorithmInfo::addParam_(Algorithm& algo, const char* parameter, int argTyp
     CV_Assert( argType == Param::INT || argType == Param::BOOLEAN ||
                argType == Param::REAL || argType == Param::STRING ||
                argType == Param::MAT || argType == Param::MAT_VECTOR ||
-               argType == Param::ALGORITHM || argType == Param::SHORT );
+               argType == Param::ALGORITHM );
     data->params.add(string(parameter), Param(argType, readOnly,
                      (int)((size_t)value - (size_t)(void*)&algo),
                      getter, setter, help));
@@ -866,16 +836,6 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                              const string& help)
 {
     addParam_(algo, parameter, ParamType<int>::type, &value, readOnly,
-              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
-}
-
-void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
-                             short& value, bool readOnly,
-                             int (Algorithm::*getter)(),
-                             void (Algorithm::*setter)(int),
-                             const string& help)
-{
-    addParam_(algo, parameter, ParamType<short>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
 }
 

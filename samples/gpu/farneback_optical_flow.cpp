@@ -43,18 +43,18 @@ static void colorizeFlow(const Mat &u, const Mat &v, Mat &dst)
 int main(int argc, char **argv)
 {
     CommandLineParser cmd(argc, argv,
-            "{ l | left | | specify left image }"
-            "{ r | right | | specify right image }"
-            "{ h | help | false | print help message }");
+            "{ l left  | | specify left image }"
+            "{ r right | | specify right image }"
+            "{ h help  | | print help message }");
 
-    if (cmd.get<bool>("help"))
+    cmd.about("Farneback's optical flow sample.");
+    if (cmd.has("help") || !cmd.check())
     {
-        cout << "Farneback's optical flow sample.\n\n"
-             << "Usage: farneback_optical_flow_gpu [arguments]\n\n"
-             << "Arguments:\n";
-        cmd.printParams();
+        cmd.printMessage();
+        cmd.printErrors();
         return 0;
     }
+
 
     string pathL = cmd.get<string>("left");
     string pathR = cmd.get<string>("right");

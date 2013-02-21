@@ -166,7 +166,7 @@ struct Labeling : testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-GPU_TEST_P(Labeling, DISABLED_ConnectedComponents)
+GPU_TEST_P(Labeling, ConnectedComponents)
 {
     cv::Mat image;
     cvtColor(loat_image(), image, CV_BGR2GRAY);
@@ -186,7 +186,7 @@ GPU_TEST_P(Labeling, DISABLED_ConnectedComponents)
 
     cv::gpu::connectivityMask(cv::gpu::GpuMat(image), mask, cv::Scalar::all(0), cv::Scalar::all(2));
 
-    cv::gpu::labelComponents(mask, components);
+    ASSERT_NO_THROW(cv::gpu::labelComponents(mask, components));
 
     host.checkCorrectness(cv::Mat(components));
 }

@@ -1241,27 +1241,217 @@ static void resizeGeneric_( const Mat& src, Mat& dst,
 template <typename T, typename WT>
 struct ResizeAreaFastNoVec
 {
-    ResizeAreaFastNoVec(int /*_scale_x*/, int /*_scale_y*/,
-        int /*_cn*/, int /*_step*//*, const int**/ /*_ofs*/) { }
-    int operator() (const T* /*S*/, T* /*D*/, int /*w*/) const { return 0; }
+    ResizeAreaFastNoVec(int, int) { }
+    ResizeAreaFastNoVec(int, int, int, int) { }
+    int operator() (const T*, T*, int) const
+    { return 0; }
 };
 
-template<typename T>
+#if CV_SSE2
+class ResizeAreaFastVec_SIMD_8u
+{
+public:
+    ResizeAreaFastVec_SIMD_8u(int _cn, int _step) :
+        cn(_cn), step(_step)
+    {
+        use_simd = checkHardwareSupport(CV_CPU_SSE2);
+    }
+
+    int operator() (const uchar* S, uchar* D, int w) const
+    {
+        if (!use_simd)
+            return 0;
+
+        int dx = 0;
+        const uchar* S0 = S;
+        const uchar* S1 = S0 + step;
+        __m128i zero = _mm_setzero_si128();
+        __m128i delta2 = _mm_set1_epi16(2);
+
+        if (cn == 1)
+        {
+            __m128i masklow = _mm_set1_epi16(0x00ff);
+            for ( ; dx <= w - 8; dx += 8, S0 += 16, S1 += 16, D += 8)
+            {
+                __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
+                __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
+
+                __m128i s0 = _mm_add_epi16(_mm_srli_epi16(r0, 8), _mm_and_si128(r0, masklow));
+                __m128i s1 = _mm_add_epi16(_mm_srli_epi16(r1, 8), _mm_and_si128(r1, masklow));
+                s0 = _mm_add_epi16(_mm_add_epi16(s0, s1), delta2);
+                s0 = _mm_packus_epi16(_mm_srli_epi16(s0, 2), zero);
+
+                _mm_storel_epi64((__m128i*)D, s0);
+            }
+        }
+        else if (cn == 3)
+            for ( ; dx <= w - 6; dx += 6, S0 += 12, S1 += 12, D += 6)
+            {
+                __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
+                __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
+
+                __m128i r0_16l = _mm_unpacklo_epi8(r0, zero);
+                __m128i r0_16h = _mm_unpacklo_epi8(_mm_srli_si128(r0, 6), zero);
+                __m128i r1_16l = _mm_unpacklo_epi8(r1, zero);
+                __m128i r1_16h = _mm_unpacklo_epi8(_mm_srli_si128(r1, 6), zero);
+
+                __m128i s0 = _mm_add_epi16(r0_16l, _mm_srli_si128(r0_16l, 6));
+                __m128i s1 = _mm_add_epi16(r1_16l, _mm_srli_si128(r1_16l, 6));
+                s0 = _mm_add_epi16(s1, _mm_add_epi16(s0, delta2));
+                s0 = _mm_packus_epi16(_mm_srli_epi16(s0, 2), zero);
+                _mm_storel_epi64((__m128i*)D, s0);
+
+                s0 = _mm_add_epi16(r0_16h, _mm_srli_si128(r0_16h, 6));
+                s1 = _mm_add_epi16(r1_16h, _mm_srli_si128(r1_16h, 6));
+                s0 = _mm_add_epi16(s1, _mm_add_epi16(s0, delta2));
+                s0 = _mm_packus_epi16(_mm_srli_epi16(s0, 2), zero);
+                _mm_storel_epi64((__m128i*)(D+3), s0);
+            }
+        else
+        {
+            CV_Assert(cn == 4);
+            for ( ; dx <= w - 8; dx += 8, S0 += 16, S1 += 16, D += 8)
+            {
+                __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
+                __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
+
+                __m128i r0_16l = _mm_unpacklo_epi8(r0, zero);
+                __m128i r0_16h = _mm_unpackhi_epi8(r0, zero);
+                __m128i r1_16l = _mm_unpacklo_epi8(r1, zero);
+                __m128i r1_16h = _mm_unpackhi_epi8(r1, zero);
+
+                __m128i s0 = _mm_add_epi16(r0_16l, _mm_srli_si128(r0_16l, 8));
+                __m128i s1 = _mm_add_epi16(r1_16l, _mm_srli_si128(r1_16l, 8));
+                s0 = _mm_add_epi16(s1, _mm_add_epi16(s0, delta2));
+                s0 = _mm_packus_epi16(_mm_srli_epi16(s0, 2), zero);
+                _mm_storel_epi64((__m128i*)D, s0);
+
+                s0 = _mm_add_epi16(r0_16h, _mm_srli_si128(r0_16h, 8));
+                s1 = _mm_add_epi16(r1_16h, _mm_srli_si128(r1_16h, 8));
+                s0 = _mm_add_epi16(s1, _mm_add_epi16(s0, delta2));
+                s0 = _mm_packus_epi16(_mm_srli_epi16(s0, 2), zero);
+                _mm_storel_epi64((__m128i*)(D+4), s0);
+            }
+        }
+
+        return dx;
+    }
+
+private:
+    int cn;
+    bool use_simd;
+    int step;
+};
+
+class ResizeAreaFastVec_SIMD_16u
+{
+public:
+    ResizeAreaFastVec_SIMD_16u(int _cn, int _step) :
+        cn(_cn), step(_step)
+    {
+        use_simd = checkHardwareSupport(CV_CPU_SSE2);
+    }
+
+    int operator() (const ushort* S, ushort* D, int w) const
+    {
+        if (!use_simd)
+            return 0;
+
+        int dx = 0;
+        const ushort* S0 = (const ushort*)S;
+        const ushort* S1 = (const ushort*)((const uchar*)(S) + step);
+        __m128i masklow = _mm_set1_epi32(0x0000ffff);
+        __m128i zero = _mm_setzero_si128();
+        __m128i delta2 = _mm_set1_epi32(2);
+
+#define _mm_packus_epi32(a, zero) _mm_packs_epi32(_mm_srai_epi32(_mm_slli_epi32(a, 16), 16), zero)
+
+        if (cn == 1)
+        {
+            for ( ; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4)
+            {
+                __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
+                __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
+
+                __m128i s0 = _mm_add_epi32(_mm_srli_epi32(r0, 16), _mm_and_si128(r0, masklow));
+                __m128i s1 = _mm_add_epi32(_mm_srli_epi32(r1, 16), _mm_and_si128(r1, masklow));
+                s0 = _mm_add_epi32(_mm_add_epi32(s0, s1), delta2);
+                s0 = _mm_srli_epi32(s0, 2);
+                s0 = _mm_packus_epi32(s0, zero);
+
+                _mm_storel_epi64((__m128i*)D, s0);
+            }
+        }
+        else if (cn == 3)
+            for ( ; dx <= w - 3; dx += 3, S0 += 6, S1 += 6, D += 3)
+            {
+                __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
+                __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
+
+                __m128i r0_16l = _mm_unpacklo_epi16(r0, zero);
+                __m128i r0_16h = _mm_unpacklo_epi16(_mm_srli_si128(r0, 6), zero);
+                __m128i r1_16l = _mm_unpacklo_epi16(r1, zero);
+                __m128i r1_16h = _mm_unpacklo_epi16(_mm_srli_si128(r1, 6), zero);
+
+                __m128i s0 = _mm_add_epi32(r0_16l, r0_16h);
+                __m128i s1 = _mm_add_epi32(r1_16l, r1_16h);
+                s0 = _mm_add_epi32(delta2, _mm_add_epi32(s0, s1));
+                s0 = _mm_packus_epi32(_mm_srli_epi32(s0, 2), zero);
+                _mm_storel_epi64((__m128i*)D, s0);
+            }
+        else
+        {
+            CV_Assert(cn == 4);
+            for ( ; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4)
+            {
+                __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
+                __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
+
+                __m128i r0_32l = _mm_unpacklo_epi16(r0, zero);
+                __m128i r0_32h = _mm_unpackhi_epi16(r0, zero);
+                __m128i r1_32l = _mm_unpacklo_epi16(r1, zero);
+                __m128i r1_32h = _mm_unpackhi_epi16(r1, zero);
+
+                __m128i s0 = _mm_add_epi32(r0_32l, r0_32h);
+                __m128i s1 = _mm_add_epi32(r1_32l, r1_32h);
+                s0 = _mm_add_epi32(s1, _mm_add_epi32(s0, delta2));
+                s0 = _mm_packus_epi32(_mm_srli_epi32(s0, 2), zero);
+                _mm_storel_epi64((__m128i*)D, s0);
+            }
+        }
+
+#undef _mm_packus_epi32
+
+        return dx;
+    }
+
+private:
+    int cn;
+    int step;
+    bool use_simd;
+};
+
+#else
+typedef ResizeAreaFastNoVec<uchar, uchar> ResizeAreaFastVec_SIMD_8u;
+typedef ResizeAreaFastNoVec<ushort, ushort> ResizeAreaFastVec_SIMD_16u;
+#endif
+
+template<typename T, typename SIMDVecOp>
 struct ResizeAreaFastVec
 {
-    ResizeAreaFastVec(int _scale_x, int _scale_y, int _cn, int _step/*, const int* _ofs*/) :
-        scale_x(_scale_x), scale_y(_scale_y), cn(_cn), step(_step)/*, ofs(_ofs)*/
+    ResizeAreaFastVec(int _scale_x, int _scale_y, int _cn, int _step) :
+        scale_x(_scale_x), scale_y(_scale_y), cn(_cn), step(_step), vecOp(_cn, _step)
     {
         fast_mode = scale_x == 2 && scale_y == 2 && (cn == 1 || cn == 3 || cn == 4);
     }
 
     int operator() (const T* S, T* D, int w) const
     {
-        if( !fast_mode )
+        if (!fast_mode)
             return 0;
 
         const T* nextS = (const T*)((const uchar*)S + step);
-        int dx = 0;
+        int dx = vecOp(S, D, w);
 
         if (cn == 1)
             for( ; dx < w; ++dx )
@@ -1279,7 +1469,7 @@ struct ResizeAreaFastVec
             }
         else
             {
-                assert(cn == 4);
+                CV_Assert(cn == 4);
                 for( ; dx < w; dx += 4 )
                 {
                     int index = dx*2;
@@ -1298,6 +1488,7 @@ private:
     int cn;
     bool fast_mode;
     int step;
+    SIMDVecOp vecOp;
 };
 
 template <typename T, typename WT, typename VecOp>
@@ -1702,10 +1893,10 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
     static ResizeAreaFastFunc areafast_tab[] =
     {
-        resizeAreaFast_<uchar, int, ResizeAreaFastVec<uchar> >,
+        resizeAreaFast_<uchar, int, ResizeAreaFastVec<uchar, ResizeAreaFastVec_SIMD_8u> >,
         0,
-        resizeAreaFast_<ushort, float, ResizeAreaFastVec<ushort> >,
-        resizeAreaFast_<short, float, ResizeAreaFastVec<short> >,
+        resizeAreaFast_<ushort, float, ResizeAreaFastVec<ushort, ResizeAreaFastVec_SIMD_16u> >,
+        resizeAreaFast_<short, float, ResizeAreaFastVec<short, ResizeAreaFastNoVec<short, float> > >,
         0,
         resizeAreaFast_<float, float, ResizeAreaFastNoVec<float, float> >,
         resizeAreaFast_<double, double, ResizeAreaFastNoVec<double, double> >,
@@ -1764,9 +1955,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         // in case of scale_x && scale_y is equal to 2
         // INTER_AREA (fast) also is equal to INTER_LINEAR
         if( interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 )
-        {
             interpolation = INTER_AREA;
-        }
 
         // true "area" interpolation is only implemented for the case (scale_x <= 1 && scale_y <= 1).
         // In other cases it is emulated using some variant of bilinear interpolation
@@ -2702,10 +2891,10 @@ class RemapInvoker :
 {
 public:
     RemapInvoker(const Mat& _src, Mat& _dst, const Mat *_m1,
-                 const Mat *_m2, int _interpolation, int _borderType, const Scalar &_borderValue,
+                 const Mat *_m2, int _borderType, const Scalar &_borderValue,
                  int _planar_input, RemapNNFunc _nnfunc, RemapFunc _ifunc, const void *_ctab) :
         ParallelLoopBody(), src(&_src), dst(&_dst), m1(_m1), m2(_m2),
-        interpolation(_interpolation), borderType(_borderType), borderValue(_borderValue),
+        borderType(_borderType), borderValue(_borderValue),
         planar_input(_planar_input), nnfunc(_nnfunc), ifunc(_ifunc), ctab(_ctab)
     {
     }
@@ -2888,7 +3077,7 @@ private:
     const Mat* src;
     Mat* dst;
     const Mat *m1, *m2;
-    int interpolation, borderType;
+    int borderType;
     Scalar borderValue;
     int planar_input;
     RemapNNFunc nnfunc;
@@ -2989,7 +3178,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
         planar_input = map1.channels() == 1;
     }
 
-    RemapInvoker invoker(src, dst, m1, m2, interpolation,
+    RemapInvoker invoker(src, dst, m1, m2,
                          borderType, borderValue, planar_input, nnfunc, ifunc,
                          ctab);
     parallel_for_(Range(0, dst.rows), invoker, dst.total()/(double)(1<<16));

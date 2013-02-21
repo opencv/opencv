@@ -152,6 +152,18 @@ bool CvModelEstimator2::runRANSAC( const CvMat* m1, const CvMat* m2, CvMat* mode
                     return false;
                 break;
             }
+
+            // Here we check for model specific geometrical 
+            // constraints that allow to avoid "runKernel" 
+            // and not checking for inliers if not fulfilled. 
+            //
+            // The usefullness of this constraint for homographies is explained in the paper: 
+            //
+            // "Speeding-up homography estimation in mobile devices"
+            // Journal of Real-Time Image Processing. 2013. DOI: 10.1007/s11554-012-0314-1
+            // Pablo Márquez-Neila, Javier López-Alberca, José M. Buenaposada, Luis Baumela
+            if ( !isMinimalSetConsistent( ms1, ms2 ) )
+                continue;
         }
 
         nmodels = runKernel( ms1, ms2, models );

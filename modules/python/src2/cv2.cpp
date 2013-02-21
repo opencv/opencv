@@ -16,6 +16,7 @@
 #include "opencv2/ml/ml.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/softcascade/softcascade.hpp"
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include "opencv2/photo/photo.hpp"
@@ -96,6 +97,7 @@ catch (const cv::Exception &e) \
 }
 
 using namespace cv;
+typedef cv::softcascade::ChannelFeatureBuilder softcascade_ChannelFeatureBuilder;
 
 typedef vector<uchar> vector_uchar;
 typedef vector<int> vector_int;
@@ -123,6 +125,8 @@ typedef Ptr<FeatureDetector> Ptr_FeatureDetector;
 typedef Ptr<DescriptorExtractor> Ptr_DescriptorExtractor;
 typedef Ptr<Feature2D> Ptr_Feature2D;
 typedef Ptr<DescriptorMatcher> Ptr_DescriptorMatcher;
+
+typedef Ptr<cv::softcascade::ChannelFeatureBuilder> Ptr_ChannelFeatureBuilder;
 
 typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
 
@@ -444,7 +448,7 @@ static bool pyopencv_to(PyObject* obj, bool& value, const char* name = "<unknown
 
 static PyObject* pyopencv_from(size_t value)
 {
-    return PyLong_FromUnsignedLong((unsigned long)value);
+    return PyLong_FromSize_t(value);
 }
 
 static bool pyopencv_to(PyObject* obj, size_t& value, const char* name = "<unknown>")
@@ -536,8 +540,15 @@ static bool pyopencv_to(PyObject* obj, float& value, const char* name = "<unknow
 
 static PyObject* pyopencv_from(int64 value)
 {
-    return PyFloat_FromDouble((double)value);
+    return PyLong_FromLongLong(value);
 }
+
+#if !defined(__LP64__)
+static PyObject* pyopencv_from(uint64 value)
+{
+    return PyLong_FromUnsignedLongLong(value);
+}
+#endif
 
 static PyObject* pyopencv_from(const string& value)
 {

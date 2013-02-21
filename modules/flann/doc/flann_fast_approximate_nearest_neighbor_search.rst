@@ -68,11 +68,11 @@ The method constructs a fast search structure from a set of features using the s
 
            * **branching**  The branching factor to use for the hierarchical k-means tree
 
-           * **iterations**  The maximum number of iterations to use in the k-means clustering stage when building the k-means tree. A value of -1 used here means that the k-means clustering should be iterated until convergence 
+           * **iterations**  The maximum number of iterations to use in the k-means clustering stage when building the k-means tree. A value of -1 used here means that the k-means clustering should be iterated until convergence
 
-           * **centers_init** The algorithm to use for selecting the initial centers when performing a k-means clustering step. The possible values are  ``CENTERS_RANDOM``  (picks the initial cluster centers randomly),  ``CENTERS_GONZALES``  (picks the initial centers using Gonzales' algorithm) and  ``CENTERS_KMEANSPP``  (picks the initial centers using the algorithm suggested in  arthur_kmeanspp_2007 ) 
+           * **centers_init** The algorithm to use for selecting the initial centers when performing a k-means clustering step. The possible values are  ``CENTERS_RANDOM``  (picks the initial cluster centers randomly),  ``CENTERS_GONZALES``  (picks the initial centers using Gonzales' algorithm) and  ``CENTERS_KMEANSPP``  (picks the initial centers using the algorithm suggested in  arthur_kmeanspp_2007 )
 
-           * **cb_index** This parameter (cluster boundary index) influences the way exploration is performed in the hierarchical kmeans tree. When  ``cb_index``  is zero the next kmeans domain to be explored is chosen to be the one with the closest center. A value greater then zero also takes into account the size of the domain. 
+           * **cb_index** This parameter (cluster boundary index) influences the way exploration is performed in the hierarchical kmeans tree. When  ``cb_index``  is zero the next kmeans domain to be explored is chosen to be the one with the closest center. A value greater then zero also takes into account the size of the domain.
 
     *
        **CompositeIndexParams** When using a parameters object of this type the index created combines the randomized kd-trees  and the hierarchical k-means tree. ::
@@ -122,16 +122,16 @@ The method constructs a fast search structure from a set of features using the s
 
        ..
 
-           * **target_precision**  Is a number between 0 and 1 specifying the percentage of the approximate nearest-neighbor searches that return the exact nearest-neighbor. Using a higher value for this parameter gives more accurate results, but the search takes longer. The optimum value usually depends on the application.  
+           * **target_precision**  Is a number between 0 and 1 specifying the percentage of the approximate nearest-neighbor searches that return the exact nearest-neighbor. Using a higher value for this parameter gives more accurate results, but the search takes longer. The optimum value usually depends on the application.
 
 
-           * **build_weight**  Specifies the importance of the index build time raported to the nearest-neighbor search time. In some applications it's acceptable for the index build step to take a long time if the subsequent searches in the index can be performed very fast. In other applications it's required that the index be build as fast as possible even if that leads to slightly longer search times. 
+           * **build_weight**  Specifies the importance of the index build time raported to the nearest-neighbor search time. In some applications it's acceptable for the index build step to take a long time if the subsequent searches in the index can be performed very fast. In other applications it's required that the index be build as fast as possible even if that leads to slightly longer search times.
 
 
            * **memory_weight** Is used to specify the tradeoff between time (index build time and search time) and memory used by the index. A value less than 1 gives more importance to the time spent and a value greater than 1 gives more importance to the memory usage.
 
 
-           * **sample_fraction** Is a number between 0 and 1 indicating what fraction of the dataset to use in the automatic parameter configuration algorithm. Running the algorithm on the full dataset gives the most accurate results, but for very large datasets can take longer than desired. In such case using just a fraction of the data helps speeding up this algorithm while still giving good approximations of the optimum parameters. 
+           * **sample_fraction** Is a number between 0 and 1 indicating what fraction of the dataset to use in the automatic parameter configuration algorithm. Running the algorithm on the full dataset gives the most accurate results, but for very large datasets can take longer than desired. In such case using just a fraction of the data helps speeding up this algorithm while still giving good approximations of the optimum parameters.
 
     *
        **SavedIndexParams** This object type is used for loading a previously saved index from the disk. ::

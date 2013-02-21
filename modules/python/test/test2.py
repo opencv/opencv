@@ -35,14 +35,14 @@ class NewOpenCVTests(unittest.TestCase):
 # Tests to run first; check the handful of basic operations that the later tests rely on
 
 class Hackathon244Tests(NewOpenCVTests):
-    
+
     def test_int_array(self):
         a = np.array([-1, 2, -3, 4, -5])
         absa0 = np.abs(a)
         self.assert_(cv2.norm(a, cv2.NORM_L1) == 15)
         absa1 = cv2.absdiff(a, 0)
         self.assertEqual(cv2.norm(absa1, absa0, cv2.NORM_INF), 0)
-        
+
     def test_imencode(self):
         a = np.zeros((480, 640), dtype=np.uint8)
         flag, ajpg = cv2.imencode("img_q90.jpg", a, [cv2.IMWRITE_JPEG_QUALITY, 90])
@@ -50,7 +50,7 @@ class Hackathon244Tests(NewOpenCVTests):
         self.assertEqual(ajpg.dtype, np.uint8)
         self.assertGreater(ajpg.shape[0], 1)
         self.assertEqual(ajpg.shape[1], 1)
-    
+
     def test_projectPoints(self):
         objpt = np.float64([[1,2,3]])
         imgpt0, jac0 = cv2.projectPoints(objpt, np.zeros(3), np.zeros(3), np.eye(3), np.float64([]))
@@ -59,7 +59,7 @@ class Hackathon244Tests(NewOpenCVTests):
         self.assertEqual(imgpt1.shape, imgpt0.shape)
         self.assertEqual(jac0.shape, jac1.shape)
         self.assertEqual(jac0.shape[0], 2*objpt.shape[0])
-        
+
     def test_estimateAffine3D(self):
         pattern_size = (11, 8)
         pattern_points = np.zeros((np.prod(pattern_size), 3), np.float32)
@@ -71,7 +71,7 @@ class Hackathon244Tests(NewOpenCVTests):
             out[2,2]=1
         self.assertLess(cv2.norm(out, np.float64([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]])), 1e-3)
         self.assertEqual(cv2.countNonZero(inliers), pattern_size[0]*pattern_size[1])
-        
+
     def test_fast(self):
         fd = cv2.FastFeatureDetector(30, True)
         img = self.get_sample("samples/cpp/right02.jpg", 0)
@@ -104,11 +104,11 @@ class Hackathon244Tests(NewOpenCVTests):
         be = cv2.fitEllipse(a)
         br = cv2.minAreaRect(a)
         mc, mr = cv2.minEnclosingCircle(a)
-        
+
         be0 = ((150.2511749267578, 150.77322387695312), (158.024658203125, 197.57696533203125), 37.57804489135742)
         br0 = ((161.2974090576172, 154.41793823242188), (199.2301483154297, 207.7177734375), -9.164555549621582)
         mc0, mr0 = (160.41790771484375, 144.55152893066406), 136.713500977
-        
+
         self.check_close_boxes(be, be0, 5, 15)
         self.check_close_boxes(br, br0, 5, 15)
         self.check_close_pairs(mc, mc0, 5)

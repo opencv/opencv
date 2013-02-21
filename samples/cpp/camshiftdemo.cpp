@@ -64,7 +64,7 @@ static void help()
 
 const char* keys =
 {
-    "{1|  | 0 | camera number}"
+    "{@camera_number| 0 | camera number}"
 };
 
 int main( int argc, const char** argv )
@@ -77,7 +77,7 @@ int main( int argc, const char** argv )
     float hranges[] = {0,180};
     const float* phranges = hranges;
     CommandLineParser parser(argc, argv, keys);
-    int camNum = parser.get<int>("1");
+    int camNum = parser.get<int>(0);
 
     cap.open(camNum);
 
@@ -86,7 +86,7 @@ int main( int argc, const char** argv )
         help();
         cout << "***Could not initialize capturing...***\n";
         cout << "Current parameter's value: \n";
-        parser.printParams();
+        parser.printMessage();
         return -1;
     }
 

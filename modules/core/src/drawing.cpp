@@ -1730,7 +1730,7 @@ void fillPoly( Mat& img, const Point** pts, const int* npts, int ncontours,
 }
 
 
-void polylines( Mat& img, const Point** pts, const int* npts, int ncontours, bool isClosed,
+void polylines( Mat& img, const Point* const* pts, const int* npts, int ncontours, bool isClosed,
                 const Scalar& color, int thickness, int line_type, int shift )
 {
     if( line_type == CV_AA && img.depth() != CV_8U )
@@ -2068,6 +2068,116 @@ void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
     }
     polylines(img, (const Point**)ptsptr, npts, (int)ncontours, isClosed, color, thickness, lineType, shift);
 }
+
+namespace
+{
+using namespace cv;
+
+static void addChildContour(InputArrayOfArrays contours,
+                            size_t ncontours,
+                            const Vec4i* hierarchy,
+                            int i, vector<CvSeq>& seq,
+                            vector<CvSeqBlock>& block)
+{
+    for( ; i >= 0; i = hierarchy[i][0] )
+    {
+        Mat ci = contours.getMat(i);
+        cvMakeSeqHeaderForArray(CV_SEQ_POLYGON, sizeof(CvSeq), sizeof(Point),
+                                !ci.empty() ? (void*)ci.data : 0, (int)ci.total(),
+                                &seq[i], &block[i] );
+
+        int h_next = hierarchy[i][0], h_prev = hierarchy[i][1],
+            v_next = hierarchy[i][2], v_prev = hierarchy[i][3];
+        seq[i].h_next = (size_t)h_next < ncontours ? &seq[h_next] : 0;
+        seq[i].h_prev = (size_t)h_prev < ncontours ? &seq[h_prev] : 0;
+        seq[i].v_next = (size_t)v_next < ncontours ? &seq[v_next] : 0;
+        seq[i].v_prev = (size_t)v_prev < ncontours ? &seq[v_prev] : 0;
+
+        if( v_next >= 0 )
+            addChildContour(contours, ncontours, hierarchy, v_next, seq, block);
+    }
+}
+}
+
+void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
+                   int contourIdx, const Scalar& color, int thickness,
+                   int lineType, InputArray _hierarchy,
+                   int maxLevel, Point offset )
+{
+    Mat image = _image.getMat(), hierarchy = _hierarchy.getMat();
+    CvMat _cimage = image;
+
+    size_t ncontours = _contours.total();
+    size_t i = 0, first = 0, last = ncontours;
+    vector<CvSeq> seq;
+    vector<CvSeqBlock> block;
+
+    if( !last )
+        return;
+
+    seq.resize(last);
+    block.resize(last);
+
+    for( i = first; i < last; i++ )
+        seq[i].first = 0;
+
+    if( contourIdx >= 0 )
+    {
+        CV_Assert( 0 <= contourIdx && contourIdx < (int)last );
+        first = contourIdx;
+        last = contourIdx + 1;
+    }
+
+    for( i = first; i < last; i++ )
+    {
+        Mat ci = _contours.getMat((int)i);
+        if( ci.empty() )
+            continue;
+        int npoints = ci.checkVector(2, CV_32S);
+        CV_Assert( npoints > 0 );
+        cvMakeSeqHeaderForArray( CV_SEQ_POLYGON, sizeof(CvSeq), sizeof(Point),
+                                 ci.data, npoints, &seq[i], &block[i] );
+    }
+
+    if( hierarchy.empty() || maxLevel == 0 )
+        for( i = first; i < last; i++ )
+        {
+            seq[i].h_next = i < last-1 ? &seq[i+1] : 0;
+            seq[i].h_prev = i > first ? &seq[i-1] : 0;
+        }
+    else
+    {
+        size_t count = last - first;
+        CV_Assert(hierarchy.total() == ncontours && hierarchy.type() == CV_32SC4 );
+        const Vec4i* h = hierarchy.ptr<Vec4i>();
+
+        if( count == ncontours )
+        {
+            for( i = first; i < last; i++ )
+            {
+                int h_next = h[i][0], h_prev = h[i][1],
+                    v_next = h[i][2], v_prev = h[i][3];
+                seq[i].h_next = (size_t)h_next < count ? &seq[h_next] : 0;
+                seq[i].h_prev = (size_t)h_prev < count ? &seq[h_prev] : 0;
+                seq[i].v_next = (size_t)v_next < count ? &seq[v_next] : 0;
+                seq[i].v_prev = (size_t)v_prev < count ? &seq[v_prev] : 0;
+            }
+        }
+        else
+        {
+            int child = h[first][2];
+            if( child >= 0 )
+            {
+                addChildContour(_contours, ncontours, h, child, seq, block);
+                seq[first].v_next = &seq[child];
+            }
+        }
+    }
+
+    cvDrawContours( &_cimage, &seq[first], color, color, contourIdx >= 0 ?
+                   -maxLevel : maxLevel, thickness, lineType, offset );
+}
+
 
 
 static const int CodeDeltas[8][2] =

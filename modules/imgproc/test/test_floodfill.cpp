@@ -490,6 +490,7 @@ _exit_:
     comp[2] = r.y;
     comp[3] = r.width - r.x + 1;
     comp[4] = r.height - r.y + 1;
+#if 0
     if( mask_only )
     {
         double t = area ? 1./area : 0;
@@ -500,6 +501,11 @@ _exit_:
     comp[5] = s0;
     comp[6] = s1;
     comp[7] = s2;
+#else
+    comp[5] = new_val.val[0];
+    comp[6] = new_val.val[1];
+    comp[7] = new_val.val[2];
+#endif
     comp[8] = 0;
 }
 
