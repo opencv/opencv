@@ -563,7 +563,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             // backup encoder' width/height
             int enc_width = enc->width;
             int enc_height = enc->height;
-            
+
             AVCodec *codec = avcodec_find_decoder(enc->codec_id);
             if (!codec ||
 #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
