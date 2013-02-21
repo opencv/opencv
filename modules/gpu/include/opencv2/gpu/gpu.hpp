@@ -804,30 +804,23 @@ private:
     GpuMat lab, l, ab;
 };
 
+struct CV_EXPORTS CannyBuf
+{
+    void create(const Size& image_size, int apperture_size = 3);
+    void release();
 
-struct CV_EXPORTS CannyBuf;
+    GpuMat dx, dy;
+    GpuMat mag;
+    GpuMat map;
+    GpuMat st1, st2;
+    GpuMat unused;
+    Ptr<FilterEngine_GPU> filterDX, filterDY;
+};
 
 CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
 CV_EXPORTS void Canny(const GpuMat& image, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
 CV_EXPORTS void Canny(const GpuMat& dx, const GpuMat& dy, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false);
 CV_EXPORTS void Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false);
-
-struct CV_EXPORTS CannyBuf
-{
-    CannyBuf() {}
-    explicit CannyBuf(const Size& image_size, int apperture_size = 3) {create(image_size, apperture_size);}
-    CannyBuf(const GpuMat& dx_, const GpuMat& dy_);
-
-    void create(const Size& image_size, int apperture_size = 3);
-
-    void release();
-
-    GpuMat dx, dy;
-    GpuMat dx_buf, dy_buf;
-    GpuMat edgeBuf;
-    GpuMat trackBuf1, trackBuf2;
-    Ptr<FilterEngine_GPU> filterDX, filterDY;
-};
 
 class CV_EXPORTS ImagePyramid
 {
@@ -1504,6 +1497,12 @@ public:
     explicit BruteForceMatcher_GPU(Hamming /*d*/) : BruteForceMatcher_GPU_base(HammingDist) {}
 };
 
+class CV_EXPORTS BFMatcher_GPU : public BruteForceMatcher_GPU_base
+{
+public:
+    explicit BFMatcher_GPU(int norm = NORM_L2) : BruteForceMatcher_GPU_base(norm == NORM_L1 ? L1Dist : norm == NORM_L2 ? L2Dist : HammingDist) {}
+};
+
 ////////////////////////////////// CascadeClassifier_GPU //////////////////////////////////////////
 // The cascade classifier class for object detection: supports old haar and new lbp xlm formats and nvbin for haar cascades olny.
 class CV_EXPORTS CascadeClassifier_GPU
@@ -1518,7 +1517,8 @@ public:
     void release();
 
     /* returns number of detected objects */
-    int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor = 1.1, int minNeighbors = 4, Size minSize = Size());
+    int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor = 1.2, int minNeighbors = 4, Size minSize = Size());
+    int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize = Size(), double scaleFactor = 1.1, int minNeighbors = 4);
 
     bool findLargestObject;
     bool visualizeInPlace;
@@ -1526,7 +1526,6 @@ public:
     Size getClassifierSize() const;
 
 private:
-
     struct CascadeClassifierImpl;
     CascadeClassifierImpl* impl;
     struct HaarCascade;
@@ -1858,64 +1857,33 @@ inline GoodFeaturesToTrackDetector_GPU::GoodFeaturesToTrackDetector_GPU(int maxC
 class CV_EXPORTS PyrLKOpticalFlow
 {
 public:
-    PyrLKOpticalFlow()
-    {
-        winSize = Size(21, 21);
-        maxLevel = 3;
-        iters = 30;
-        derivLambda = 0.5;
-        useInitialFlow = false;
-        minEigThreshold = 1e-4f;
-        getMinEigenVals = false;
-        isDeviceArch11_ = !DeviceInfo().supports(FEATURE_SET_COMPUTE_12);
-    }
+    PyrLKOpticalFlow();
 
     void sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
         GpuMat& status, GpuMat* err = 0);
 
     void dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err = 0);
 
+    void releaseMemory();
+
     Size winSize;
     int maxLevel;
     int iters;
-    double derivLambda;
+    double derivLambda; //unused
     bool useInitialFlow;
-    float minEigThreshold;
-    bool getMinEigenVals;
-
-    void releaseMemory()
-    {
-        dx_calcBuf_.release();
-        dy_calcBuf_.release();
-
-        prevPyr_.clear();
-        nextPyr_.clear();
-
-        dx_buf_.release();
-        dy_buf_.release();
-
-        uPyr_.clear();
-        vPyr_.clear();
-    }
+    float minEigThreshold; //unused
+    bool getMinEigenVals;  //unused
 
 private:
-    void calcSharrDeriv(const GpuMat& src, GpuMat& dx, GpuMat& dy);
-
-    void buildImagePyramid(const GpuMat& img0, vector<GpuMat>& pyr, bool withBorder);
-
-    GpuMat dx_calcBuf_;
-    GpuMat dy_calcBuf_;
-
+    GpuMat uPyr_[2];
     vector<GpuMat> prevPyr_;
     vector<GpuMat> nextPyr_;
+    GpuMat vPyr_[2];
+    vector<GpuMat> unused1;
+    vector<GpuMat> unused2;
+    bool unused3;
 
-    GpuMat dx_buf_;
-    GpuMat dy_buf_;
-
-    vector<GpuMat> uPyr_;
-    vector<GpuMat> vPyr_;
-
-    bool isDeviceArch11_;
+    GpuMat buf_;
 };
 
 
