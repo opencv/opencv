@@ -1074,7 +1074,7 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
                                 dpdk_p[dpdk_step+10] = fy*r2; //s3
                                 dpdk_p[dpdk_step+11] = fy*r4; //s4
                             }
-						}
+                        }
                     }
                 }
                 dpdk_p += dpdk_step*2;
@@ -1495,7 +1495,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
     //when the thin prism model is used the distortion coefficients matrix must have 12 parameters
     if((flags & CV_CALIB_THIN_PRISM_MODEL) && (distCoeffs->cols*distCoeffs->rows != 12))
         CV_Error( CV_StsBadArg, "Thin prism model must have 12 parameters in the distortion matrix" );
-	
+    
     nimages = npoints->rows*npoints->cols;
     npstep = npoints->rows == 1 ? 1 : npoints->step/CV_ELEM_SIZE(npoints->type);
 
