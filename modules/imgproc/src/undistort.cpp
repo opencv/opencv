@@ -109,7 +109,7 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
     CV_Assert( distCoeffs.size() == Size(1, 4) || distCoeffs.size() == Size(4, 1) ||
                distCoeffs.size() == Size(1, 5) || distCoeffs.size() == Size(5, 1) ||
                distCoeffs.size() == Size(1, 8) || distCoeffs.size() == Size(8, 1) ||
-               distCoeffs.size() == Size(1, 12) || distCoeffs.size() == Size(12, 1);
+               distCoeffs.size() == Size(1, 12) || distCoeffs.size() == Size(12, 1));
 
     if( distCoeffs.rows != 1 && !distCoeffs.isContinuous() )
         distCoeffs = distCoeffs.t();
