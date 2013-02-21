@@ -611,7 +611,7 @@ static string getErrorMessageForWrongArgumentInGetter(string algoName, string pa
 
     if (paramType == Param::BOOLEAN)
     {
-        message += "so it should be get as integer, unsigned integer, uint64, boolean, float or double value, ";
+        message += "so it should be get as integer, unsigned integer, uint64, boolean, unsigned char, float or double value, ";
     }
     else if (paramType == Param::INT || paramType == Param::UNSIGNED_INT || paramType == Param::UINT64 || paramType == Param::UCHAR)
     {
