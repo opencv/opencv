@@ -45,6 +45,9 @@
 using namespace cv;
 using namespace cv::gpu;
 
+/*stub for deprecated constructor*/
+cv::gpu::CannyBuf::CannyBuf(const GpuMat&, const GpuMat&) { }
+
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 void cv::gpu::meanShiftFiltering(const GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_nogpu(); }
