@@ -1063,19 +1063,18 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
                             dpdk_p[dpdk_step+6] = fy*y*cdist*(-icdist2)*icdist2*r4;
                             dpdk_p[7] = fx*x*icdist2*cdist*(-icdist2)*icdist2*r6;
                             dpdk_p[dpdk_step+7] = fy*y*cdist*(-icdist2)*icdist2*r6;
-                        }
-
-							if( _dpdk->cols > 8 )
-							   {
-									dpdk_p[8] = fx*r2; //s1 
-									dpdk_p[9] = fx*r4; //s2
-									dpdk_p[10] = 0;//s3
-									dpdk_p[11] = 0;//s4
-									dpdk_p[dpdk_step+8] = 0; //s1
-									dpdk_p[dpdk_step+9] = 0; //s2
-									dpdk_p[dpdk_step+10] = fy*r2; //s3
-									dpdk_p[dpdk_step+11] = fy*r4; //s4
-								}
+                            if( _dpdk->cols > 8 )
+                            {
+                                dpdk_p[8] = fx*r2; //s1 
+                                dpdk_p[9] = fx*r4; //s2
+                                dpdk_p[10] = 0;//s3
+                                dpdk_p[11] = 0;//s4
+                                dpdk_p[dpdk_step+8] = 0; //s1
+                                dpdk_p[dpdk_step+9] = 0; //s2
+                                dpdk_p[dpdk_step+10] = fy*r2; //s3
+                                dpdk_p[dpdk_step+11] = fy*r4; //s4
+                            }
+						}
                     }
                 }
                 dpdk_p += dpdk_step*2;
@@ -1091,9 +1090,9 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
                     double dicdist2_dt = -icdist2*icdist2*(k[5]*dr2dt + 2*k[6]*r2*dr2dt + 3*k[7]*r4*dr2dt);
                     double da1dt = 2*(x*dydt[j] + y*dxdt[j]);
                     double dmxdt = fx*(dxdt[j]*cdist*icdist2 + x*dcdist_dt*icdist2 + x*cdist*dicdist2_dt +
-                                       k[2]*da1dt + k[3]*(dr2dt + 2*x*dxdt[j])+k[8]*dr2dt+2*r2*k[9]*dr2dt);
+                                       k[2]*da1dt + k[3]*(dr2dt + 2*x*dxdt[j]) + k[8]*dr2dt + 2*r2*k[9]*dr2dt);
                     double dmydt = fy*(dydt[j]*cdist*icdist2 + y*dcdist_dt*icdist2 + y*cdist*dicdist2_dt +
-                                       k[2]*(dr2dt + 2*y*dydt[j]) + k[3]*da1dt+k[10]*dr2dt+2*r2*k[11]*dr2dt);
+                                       k[2]*(dr2dt + 2*y*dydt[j]) + k[3]*da1dt + k[10]*dr2dt + 2*r2*k[11]*dr2dt);
                     dpdt_p[j] = dmxdt;
                     dpdt_p[dpdt_step+j] = dmydt;
                 }
@@ -1129,9 +1128,9 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
                     double dicdist2_dr = -icdist2*icdist2*(k[5]*dr2dr + 2*k[6]*r2*dr2dr + 3*k[7]*r4*dr2dr);
                     double da1dr = 2*(x*dydr + y*dxdr);
                     double dmxdr = fx*(dxdr*cdist*icdist2 + x*dcdist_dr*icdist2 + x*cdist*dicdist2_dr +
-                                       k[2]*da1dr + k[3]*(dr2dr + 2*x*dxdr)+(k[8]*dr2dr+2*r2*k[9]*dr2dr));
+                                       k[2]*da1dr + k[3]*(dr2dr + 2*x*dxdr) + k[8]*dr2dr + 2*r2*k[9]*dr2dr);
                     double dmydr = fy*(dydr*cdist*icdist2 + y*dcdist_dr*icdist2 + y*cdist*dicdist2_dr +
-                                       k[2]*(dr2dr + 2*y*dydr) + k[3]*da1dr+(k[10]*dr2dr+2*r2*k[11]*dr2dr));
+                                       k[2]*(dr2dr + 2*y*dydr) + k[3]*da1dr + k[10]*dr2dr + 2*r2*k[11]*dr2dr);
                     dpdr_p[j] = dmxdr;
                     dpdr_p[dpdr_step+j] = dmydr;
                 }
@@ -1493,9 +1492,9 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         (npoints->rows != 1 && npoints->cols != 1) )
         CV_Error( CV_StsUnsupportedFormat,
             "the array of point counters must be 1-dimensional integer vector" );
-	//when the thin prism model is used the distortion coefficients matrix must have 12 parameters
-	if((flags & CV_CALIB_THIN_PRISM_MODEL) && (distCoeffs->cols*distCoeffs->rows != 12))
-		CV_Error( CV_StsBadArg, "Thin prism model must have 12 parameters in the distortion matrix" );
+    //when the thin prism model is used the distortion coefficients matrix must have 12 parameters
+    if((flags & CV_CALIB_THIN_PRISM_MODEL) && (distCoeffs->cols*distCoeffs->rows != 12))
+        CV_Error( CV_StsBadArg, "Thin prism model must have 12 parameters in the distortion matrix" );
 	
     nimages = npoints->rows*npoints->cols;
     npstep = npoints->rows == 1 ? 1 : npoints->step/CV_ELEM_SIZE(npoints->type);
@@ -1630,7 +1629,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
     param[0] = A[0]; param[1] = A[4]; param[2] = A[2]; param[3] = A[5];
     param[4] = k[0]; param[5] = k[1]; param[6] = k[2]; param[7] = k[3];
     param[8] = k[4]; param[9] = k[5]; param[10] = k[6]; param[11] = k[7];
-	param[12] = k[8]; param[13] = k[9]; param[14] = k[10]; param[15] = k[11];
+    param[12] = k[8]; param[13] = k[9]; param[14] = k[10]; param[15] = k[11];
 
     if( flags & CV_CALIB_FIX_FOCAL_LENGTH )
         mask[0] = mask[1] = 0;
@@ -1655,16 +1654,16 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         mask[10] = 0;
     if( flags & CV_CALIB_FIX_K6 )
         mask[11] = 0;
-	if(!(flags & CV_CALIB_THIN_PRISM_MODEL))
-		flags |= CALIB_FIX_S1_S2_S3_S4;
+    if(!(flags & CV_CALIB_THIN_PRISM_MODEL))
+        flags |= CALIB_FIX_S1_S2_S3_S4;
 
-	if(flags & CALIB_FIX_S1_S2_S3_S4)
-	{
-		mask[12] = 0;
-		mask[13] = 0;
-		mask[14] = 0;
-		mask[15] = 0;
-	}
+    if(flags & CALIB_FIX_S1_S2_S3_S4)
+    {
+        mask[12] = 0;
+        mask[13] = 0;
+        mask[14] = 0;
+        mask[15] = 0;
+    }
     }
 
     // 2. initialize extrinsic parameters
@@ -1700,7 +1699,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         A[0] = param[0]; A[4] = param[1]; A[2] = param[2]; A[5] = param[3];
         k[0] = param[4]; k[1] = param[5]; k[2] = param[6]; k[3] = param[7];
         k[4] = param[8]; k[5] = param[9]; k[6] = param[10]; k[7] = param[11];
-		k[8] = param[12];k[9] = param[13];k[10] = param[14];k[11] = param[15];
+        k[8] = param[12];k[9] = param[13];k[10] = param[14];k[11] = param[15];
 
         if( !proceed )
             break;
@@ -1728,7 +1727,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
 
             if( _JtJ || _JtErr )
             {
-                cvProjectPoints2( &_Mi, &_ri, &_ti, &matA, &_k, &_mp, &_dpdr, &_dpdt,
+                 cvProjectPoints2( &_Mi, &_ri, &_ti, &matA, &_k, &_mp, &_dpdr, &_dpdt,
                                   (flags & CV_CALIB_FIX_FOCAL_LENGTH) ? 0 : &_dpdf,
                                   (flags & CV_CALIB_FIX_PRINCIPAL_POINT) ? 0 : &_dpdc, &_dpdk,
                                   (flags & CV_CALIB_FIX_ASPECT_RATIO) ? aspectRatio : 0);

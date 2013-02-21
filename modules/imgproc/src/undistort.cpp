@@ -122,10 +122,10 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
     double k4 = distCoeffs.cols + distCoeffs.rows - 1 >= 8 ? ((double*)distCoeffs.data)[5] : 0.;
     double k5 = distCoeffs.cols + distCoeffs.rows - 1 >= 8 ? ((double*)distCoeffs.data)[6] : 0.;
     double k6 = distCoeffs.cols + distCoeffs.rows - 1 >= 8 ? ((double*)distCoeffs.data)[7] : 0.;
-	double s1 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? ((double*)distCoeffs.data)[8] : 0.;
-	double s2 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? ((double*)distCoeffs.data)[9] : 0.;
-	double s3 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? ((double*)distCoeffs.data)[10] : 0.;
-	double s4 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? ((double*)distCoeffs.data)[11] : 0.;
+    double s1 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? ((double*)distCoeffs.data)[8] : 0.;
+    double s2 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? ((double*)distCoeffs.data)[9] : 0.;
+    double s3 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? ((double*)distCoeffs.data)[10] : 0.;
+    double s4 = distCoeffs.cols + distCoeffs.rows - 1 >= 12 ? ((double*)distCoeffs.data)[11] : 0.;
 
     for( int i = 0; i < size.height; i++ )
     {
