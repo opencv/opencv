@@ -58,6 +58,7 @@ bool cv::gpu::CascadeClassifier_GPU::load(const string&)              { throw_no
 Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const        { throw_nogpu(); return Size();}
 void cv::gpu::CascadeClassifier_GPU::release()                        { throw_nogpu(); }
 int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, double, int, Size)       {throw_nogpu(); return -1;}
+int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, Size, Size, double, int) {throw_nogpu(); return -1;}
 
 #else
 
@@ -682,6 +683,12 @@ int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat& image, GpuMa
     return impl->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, minSize, cv::Size());
 }
 
+int cv::gpu::CascadeClassifier_GPU::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize, double scaleFactor, int minNeighbors)
+{
+    CV_Assert( !this->empty());
+    return impl->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, minSize, maxObjectSize);
+}
+
 bool cv::gpu::CascadeClassifier_GPU::load(const string& filename)
 {
     release();
@@ -770,6 +777,8 @@ NCVStatus loadFromXML(const std::string &filename,
     haar.bHasStumpsOnly = true;
     haar.bNeedsTiltedII = false;
     Ncv32u curMaxTreeDepth;
+
+    std::vector<char> xmlFileCont;
 
     std::vector<HaarClassifierNode128> h_TmpClassifierNotRootNodes;
     haarStages.resize(0);

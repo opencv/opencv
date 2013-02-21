@@ -361,13 +361,13 @@ size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const
     return deviceProps.get(device_id_)->sharedMemPerBlock;
 }
 
-void cv::gpu::DeviceInfo::queryMemory(size_t& totalMemory, size_t& freeMemory) const
+void cv::gpu::DeviceInfo::queryMemory(size_t& _totalMemory, size_t& _freeMemory) const
 {
     int prevDeviceID = getDevice();
     if (prevDeviceID != device_id_)
         setDevice(device_id_);
 
-    cudaSafeCall( cudaMemGetInfo(&freeMemory, &totalMemory) );
+    cudaSafeCall( cudaMemGetInfo(&_freeMemory, &_totalMemory) );
 
     if (prevDeviceID != device_id_)
         setDevice(prevDeviceID);
@@ -375,16 +375,16 @@ void cv::gpu::DeviceInfo::queryMemory(size_t& totalMemory, size_t& freeMemory) c
 
 size_t cv::gpu::DeviceInfo::freeMemory() const
 {
-    size_t totalMemory, freeMemory;
-    queryMemory(totalMemory, freeMemory);
-    return freeMemory;
+    size_t _totalMemory, _freeMemory;
+    queryMemory(_totalMemory, _freeMemory);
+    return _freeMemory;
 }
 
 size_t cv::gpu::DeviceInfo::totalMemory() const
 {
-    size_t totalMemory, freeMemory;
-    queryMemory(totalMemory, freeMemory);
-    return totalMemory;
+    size_t _totalMemory, _freeMemory;
+    queryMemory(_totalMemory, _freeMemory);
+    return _totalMemory;
 }
 
 bool cv::gpu::DeviceInfo::supports(FeatureSet feature_set) const

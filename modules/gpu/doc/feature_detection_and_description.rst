@@ -640,4 +640,3 @@ Converts matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU_base::radiu
 .. ocv:function:: void gpu::BruteForceMatcher_GPU_base::radiusMatchConvert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, const Mat& nMatches, std::vector< std::vector<DMatch> >& matches, bool compactResult = false)
 
 If ``compactResult`` is ``true`` , the ``matches`` vector does not contain matches for fully masked-out query descriptors.
-

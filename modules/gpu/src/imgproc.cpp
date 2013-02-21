@@ -91,7 +91,6 @@ void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int, bool) { throw_n
 void cv::gpu::Canny(const GpuMat&, CannyBuf&, GpuMat&, double, double, int, bool) { throw_nogpu(); }
 void cv::gpu::Canny(const GpuMat&, const GpuMat&, GpuMat&, double, double, bool) { throw_nogpu(); }
 void cv::gpu::Canny(const GpuMat&, const GpuMat&, CannyBuf&, GpuMat&, double, double, bool) { throw_nogpu(); }
-cv::gpu::CannyBuf::CannyBuf(const GpuMat&, const GpuMat&) { throw_nogpu(); }
 void cv::gpu::CannyBuf::create(const Size&, int) { throw_nogpu(); }
 void cv::gpu::CannyBuf::release() { throw_nogpu(); }
 
@@ -1429,12 +1428,6 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
 //////////////////////////////////////////////////////////////////////////////
 // Canny
 
-cv::gpu::CannyBuf::CannyBuf(const GpuMat& dx_, const GpuMat& dy_)
-{
-    (void) dx_;
-    (void) dy_;
-}
-
 void cv::gpu::CannyBuf::create(const Size& image_size, int apperture_size)
 {
     if (apperture_size > 0)
@@ -1449,22 +1442,21 @@ void cv::gpu::CannyBuf::create(const Size& image_size, int apperture_size)
         }
     }
 
-    ensureSizeIsEnough(image_size, CV_32FC1, edgeBuf);
-    ensureSizeIsEnough(image_size, CV_32SC1, dx_buf);
+    ensureSizeIsEnough(image_size, CV_32FC1, mag);
+    ensureSizeIsEnough(image_size, CV_32SC1, map);
 
-    ensureSizeIsEnough(1, image_size.area(), CV_16UC2, trackBuf1);
-    ensureSizeIsEnough(1, image_size.area(), CV_16UC2, trackBuf2);
+    ensureSizeIsEnough(1, image_size.area(), CV_16UC2, st1);
+    ensureSizeIsEnough(1, image_size.area(), CV_16UC2, st2);
 }
 
 void cv::gpu::CannyBuf::release()
 {
     dx.release();
     dy.release();
-    dx_buf.release();
-    dy_buf.release();
-    edgeBuf.release();
-    trackBuf1.release();
-    trackBuf2.release();
+    mag.release();
+    map.release();
+    st1.release();
+    st2.release();
 }
 
 namespace canny
@@ -1487,13 +1479,14 @@ namespace
     {
         using namespace canny;
 
-        calcMap(dx, dy, buf.edgeBuf, buf.dx_buf, low_thresh, high_thresh);
+        buf.map.setTo(Scalar::all(0));
+        calcMap(dx, dy, buf.mag, buf.map, low_thresh, high_thresh);
 
-        edgesHysteresisLocal(buf.dx_buf, buf.trackBuf1.ptr<ushort2>());
+        edgesHysteresisLocal(buf.map, buf.st1.ptr<ushort2>());
 
-        edgesHysteresisGlobal(buf.dx_buf, buf.trackBuf1.ptr<ushort2>(), buf.trackBuf2.ptr<ushort2>());
+        edgesHysteresisGlobal(buf.map, buf.st1.ptr<ushort2>(), buf.st2.ptr<ushort2>());
 
-        getEdges(buf.dx_buf, dst);
+        getEdges(buf.map, dst);
     }
 }
 
@@ -1525,14 +1518,14 @@ void cv::gpu::Canny(const GpuMat& src, CannyBuf& buf, GpuMat& dst, double low_th
         src.locateROI(wholeSize, ofs);
         GpuMat srcWhole(wholeSize, src.type(), src.datastart, src.step);
 
-        calcMagnitude(srcWhole, ofs.x, ofs.y, buf.dx, buf.dy, buf.edgeBuf, L2gradient);
+        calcMagnitude(srcWhole, ofs.x, ofs.y, buf.dx, buf.dy, buf.mag, L2gradient);
     }
     else
     {
         buf.filterDX->apply(src, buf.dx, Rect(0, 0, src.cols, src.rows));
         buf.filterDY->apply(src, buf.dy, Rect(0, 0, src.cols, src.rows));
 
-        calcMagnitude(buf.dx, buf.dy, buf.edgeBuf, L2gradient);
+        calcMagnitude(buf.dx, buf.dy, buf.mag, L2gradient);
     }
 
     CannyCaller(buf.dx, buf.dy, buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
@@ -1557,7 +1550,7 @@ void cv::gpu::Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& d
     dst.create(dx.size(), CV_8U);
     buf.create(dx.size(), -1);
 
-    calcMagnitude(dx, dy, buf.edgeBuf, L2gradient);
+    calcMagnitude(dx, dy, buf.mag, L2gradient);
 
     CannyCaller(dx, dy, buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
 }

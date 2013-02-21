@@ -48,8 +48,10 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
+cv::gpu::PyrLKOpticalFlow::PyrLKOpticalFlow() { throw_nogpu(); }
 void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_nogpu(); }
 void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_nogpu(); }
+void cv::gpu::PyrLKOpticalFlow::releaseMemory() {}
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -64,6 +66,14 @@ namespace pyrlk
 
     void dense(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
                PtrStepSzf err, int2 winSize, cudaStream_t stream = 0);
+}
+
+cv::gpu::PyrLKOpticalFlow::PyrLKOpticalFlow()
+{
+    winSize = Size(21, 21);
+    maxLevel = 3;
+    iters = 30;
+    useInitialFlow = false;
 }
 
 namespace
@@ -137,11 +147,11 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
     }
     else
     {
-        cvtColor(prevImg, dx_calcBuf_, COLOR_BGR2BGRA);
-        dx_calcBuf_.convertTo(prevPyr_[0], CV_32F);
+        cvtColor(prevImg, buf_, COLOR_BGR2BGRA);
+        buf_.convertTo(prevPyr_[0], CV_32F);
 
-        cvtColor(nextImg, dx_calcBuf_, COLOR_BGR2BGRA);
-        dx_calcBuf_.convertTo(nextPyr_[0], CV_32F);
+        cvtColor(nextImg, buf_, COLOR_BGR2BGRA);
+        buf_.convertTo(nextPyr_[0], CV_32F);
     }
 
     for (int level = 1; level <= maxLevel; ++level)
@@ -193,9 +203,6 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
         pyrDown(nextPyr_[level - 1], nextPyr_[level]);
     }
 
-    uPyr_.resize(2);
-    vPyr_.resize(2);
-
     ensureSizeIsEnough(prevImg.size(), CV_32FC1, uPyr_[0]);
     ensureSizeIsEnough(prevImg.size(), CV_32FC1, vPyr_[0]);
     ensureSizeIsEnough(prevImg.size(), CV_32FC1, uPyr_[1]);
@@ -223,6 +230,20 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
 
     uPyr_[idx].copyTo(u);
     vPyr_[idx].copyTo(v);
+}
+
+void cv::gpu::PyrLKOpticalFlow::releaseMemory()
+{
+    prevPyr_.clear();
+    nextPyr_.clear();
+
+    buf_.release();
+
+    uPyr_[0].release();
+    vPyr_[0].release();
+
+    uPyr_[1].release();
+    vPyr_[1].release();
 }
 
 #endif /* !defined (HAVE_CUDA) */
