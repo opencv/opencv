@@ -84,7 +84,7 @@ namespace
     #endif
 }
 
-bool cv::checkGlError(const char* file, const int line, const char* func)
+bool cv::ogl::checkError(const char* file, const int line, const char* func)
 {
 #ifndef HAVE_OPENGL
     (void) file;
@@ -311,17 +311,17 @@ namespace
 #endif
 
 ////////////////////////////////////////////////////////////////////////
-// GlBuffer
+// ogl::Buffer
 
 #ifndef HAVE_OPENGL
 
-class cv::GlBuffer::Impl
+class cv::ogl::Buffer::Impl
 {
 };
 
 #else
 
-class cv::GlBuffer::Impl
+class cv::ogl::Buffer::Impl
 {
 public:
     static const Ptr<Impl>& empty();
@@ -363,21 +363,21 @@ private:
 #endif
 };
 
-const Ptr<cv::GlBuffer::Impl>& cv::GlBuffer::Impl::empty()
+const Ptr<cv::ogl::Buffer::Impl>& cv::ogl::Buffer::Impl::empty()
 {
     static Ptr<Impl> p(new Impl);
     return p;
 }
 
-cv::GlBuffer::Impl::Impl() : bufId_(0), autoRelease_(true)
+cv::ogl::Buffer::Impl::Impl() : bufId_(0), autoRelease_(true)
 {
 }
 
-cv::GlBuffer::Impl::Impl(GLuint abufId, bool autoRelease) : bufId_(abufId), autoRelease_(autoRelease)
+cv::ogl::Buffer::Impl::Impl(GLuint abufId, bool autoRelease) : bufId_(abufId), autoRelease_(autoRelease)
 {
 }
 
-cv::GlBuffer::Impl::Impl(GLsizeiptr size, const GLvoid* data, GLenum target, bool autoRelease) : bufId_(0), autoRelease_(autoRelease)
+cv::ogl::Buffer::Impl::Impl(GLsizeiptr size, const GLvoid* data, GLenum target, bool autoRelease) : bufId_(0), autoRelease_(autoRelease)
 {
     gl::GenBuffers(1, &bufId_);
     CV_CheckGlError();
@@ -394,19 +394,19 @@ cv::GlBuffer::Impl::Impl(GLsizeiptr size, const GLvoid* data, GLenum target, boo
     CV_CheckGlError();
 }
 
-cv::GlBuffer::Impl::~Impl()
+cv::ogl::Buffer::Impl::~Impl()
 {
     if (autoRelease_ && bufId_)
         gl::DeleteBuffers(1, &bufId_);
 }
 
-void cv::GlBuffer::Impl::bind(GLenum target) const
+void cv::ogl::Buffer::Impl::bind(GLenum target) const
 {
     gl::BindBuffer(target, bufId_);
     CV_CheckGlError();
 }
 
-void cv::GlBuffer::Impl::copyFrom(GLuint srcBuf, GLsizeiptr size)
+void cv::ogl::Buffer::Impl::copyFrom(GLuint srcBuf, GLsizeiptr size)
 {
     gl::BindBuffer(gl::COPY_WRITE_BUFFER, bufId_);
     CV_CheckGlError();
@@ -418,7 +418,7 @@ void cv::GlBuffer::Impl::copyFrom(GLuint srcBuf, GLsizeiptr size)
     CV_CheckGlError();
 }
 
-void cv::GlBuffer::Impl::copyFrom(GLsizeiptr size, const GLvoid* data)
+void cv::ogl::Buffer::Impl::copyFrom(GLsizeiptr size, const GLvoid* data)
 {
     gl::BindBuffer(gl::COPY_WRITE_BUFFER, bufId_);
     CV_CheckGlError();
@@ -427,7 +427,7 @@ void cv::GlBuffer::Impl::copyFrom(GLsizeiptr size, const GLvoid* data)
     CV_CheckGlError();
 }
 
-void cv::GlBuffer::Impl::copyTo(GLsizeiptr size, GLvoid* data) const
+void cv::ogl::Buffer::Impl::copyTo(GLsizeiptr size, GLvoid* data) const
 {
     gl::BindBuffer(gl::COPY_READ_BUFFER, bufId_);
     CV_CheckGlError();
@@ -436,7 +436,7 @@ void cv::GlBuffer::Impl::copyTo(GLsizeiptr size, GLvoid* data) const
     CV_CheckGlError();
 }
 
-void* cv::GlBuffer::Impl::mapHost(GLenum access)
+void* cv::ogl::Buffer::Impl::mapHost(GLenum access)
 {
     gl::BindBuffer(gl::COPY_READ_BUFFER, bufId_);
     CV_CheckGlError();
@@ -447,31 +447,31 @@ void* cv::GlBuffer::Impl::mapHost(GLenum access)
     return data;
 }
 
-void cv::GlBuffer::Impl::unmapHost()
+void cv::ogl::Buffer::Impl::unmapHost()
 {
     gl::UnmapBuffer(gl::COPY_READ_BUFFER);
 }
 
 #ifdef HAVE_CUDA
-    void cv::GlBuffer::Impl::copyFrom(const void* src, size_t spitch, size_t width, size_t height, cudaStream_t stream)
+    void cv::ogl::Buffer::Impl::copyFrom(const void* src, size_t spitch, size_t width, size_t height, cudaStream_t stream)
     {
         cudaResource_.registerBuffer(bufId_);
         cudaResource_.copyFrom(src, spitch, width, height, stream);
     }
 
-    void cv::GlBuffer::Impl::copyTo(void* dst, size_t dpitch, size_t width, size_t height, cudaStream_t stream) const
+    void cv::ogl::Buffer::Impl::copyTo(void* dst, size_t dpitch, size_t width, size_t height, cudaStream_t stream) const
     {
         cudaResource_.registerBuffer(bufId_);
         cudaResource_.copyTo(dst, dpitch, width, height, stream);
     }
 
-    void* cv::GlBuffer::Impl::mapDevice(cudaStream_t stream)
+    void* cv::ogl::Buffer::Impl::mapDevice(cudaStream_t stream)
     {
         cudaResource_.registerBuffer(bufId_);
         return cudaResource_.map(stream);
     }
 
-    void cv::GlBuffer::Impl::unmapDevice(cudaStream_t stream)
+    void cv::ogl::Buffer::Impl::unmapDevice(cudaStream_t stream)
     {
         cudaResource_.unmap(stream);
     }
@@ -479,7 +479,7 @@ void cv::GlBuffer::Impl::unmapHost()
 
 #endif // HAVE_OPENGL
 
-cv::GlBuffer::GlBuffer() : rows_(0), cols_(0), type_(0)
+cv::ogl::Buffer::Buffer() : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -488,7 +488,7 @@ cv::GlBuffer::GlBuffer() : rows_(0), cols_(0), type_(0)
 #endif
 }
 
-cv::GlBuffer::GlBuffer(int arows, int acols, int atype, unsigned int abufId, bool autoRelease) : rows_(0), cols_(0), type_(0)
+cv::ogl::Buffer::Buffer(int arows, int acols, int atype, unsigned int abufId, bool autoRelease) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     (void) arows;
@@ -505,7 +505,7 @@ cv::GlBuffer::GlBuffer(int arows, int acols, int atype, unsigned int abufId, boo
 #endif
 }
 
-cv::GlBuffer::GlBuffer(Size asize, int atype, unsigned int abufId, bool autoRelease) : rows_(0), cols_(0), type_(0)
+cv::ogl::Buffer::Buffer(Size asize, int atype, unsigned int abufId, bool autoRelease) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     (void) asize;
@@ -521,17 +521,17 @@ cv::GlBuffer::GlBuffer(Size asize, int atype, unsigned int abufId, bool autoRele
 #endif
 }
 
-cv::GlBuffer::GlBuffer(int arows, int acols, int atype, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
+cv::ogl::Buffer::Buffer(int arows, int acols, int atype, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
 {
     create(arows, acols, atype, target, autoRelease);
 }
 
-cv::GlBuffer::GlBuffer(Size asize, int atype, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
+cv::ogl::Buffer::Buffer(Size asize, int atype, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
 {
     create(asize, atype, target, autoRelease);
 }
 
-cv::GlBuffer::GlBuffer(InputArray arr, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
+cv::ogl::Buffer::Buffer(InputArray arr, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -576,7 +576,7 @@ cv::GlBuffer::GlBuffer(InputArray arr, Target target, bool autoRelease) : rows_(
 #endif
 }
 
-void cv::GlBuffer::create(int arows, int acols, int atype, Target target, bool autoRelease)
+void cv::ogl::Buffer::create(int arows, int acols, int atype, Target target, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     (void) arows;
@@ -597,7 +597,7 @@ void cv::GlBuffer::create(int arows, int acols, int atype, Target target, bool a
 #endif
 }
 
-void cv::GlBuffer::release()
+void cv::ogl::Buffer::release()
 {
 #ifdef HAVE_OPENGL
     if (*impl_.refcount == 1)
@@ -609,7 +609,7 @@ void cv::GlBuffer::release()
 #endif
 }
 
-void cv::GlBuffer::setAutoRelease(bool flag)
+void cv::ogl::Buffer::setAutoRelease(bool flag)
 {
 #ifndef HAVE_OPENGL
     (void) flag;
@@ -619,7 +619,7 @@ void cv::GlBuffer::setAutoRelease(bool flag)
 #endif
 }
 
-void cv::GlBuffer::copyFrom(InputArray arr, Target target, bool autoRelease)
+void cv::ogl::Buffer::copyFrom(InputArray arr, Target target, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -631,7 +631,7 @@ void cv::GlBuffer::copyFrom(InputArray arr, Target target, bool autoRelease)
 
     if (kind == _InputArray::OPENGL_TEXTURE)
     {
-        GlTexture tex = arr.getGlTexture();
+        ogl::Texture2D tex = arr.getOGlTexture2D();
         tex.copyTo(*this);
         setAutoRelease(autoRelease);
         return;
@@ -645,7 +645,7 @@ void cv::GlBuffer::copyFrom(InputArray arr, Target target, bool autoRelease)
     {
     case _InputArray::OPENGL_BUFFER:
         {
-            GlBuffer buf = arr.getGlBuffer();
+            ogl::Buffer buf = arr.getOGlBuffer();
             impl_->copyFrom(buf.bufId(), asize.area() * CV_ELEM_SIZE(atype));
             break;
         }
@@ -672,7 +672,7 @@ void cv::GlBuffer::copyFrom(InputArray arr, Target target, bool autoRelease)
 #endif
 }
 
-void cv::GlBuffer::copyTo(OutputArray arr, Target target, bool autoRelease) const
+void cv::ogl::Buffer::copyTo(OutputArray arr, Target target, bool autoRelease) const
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -686,13 +686,13 @@ void cv::GlBuffer::copyTo(OutputArray arr, Target target, bool autoRelease) cons
     {
     case _InputArray::OPENGL_BUFFER:
         {
-            arr.getGlBufferRef().copyFrom(*this, target, autoRelease);
+            arr.getOGlBufferRef().copyFrom(*this, target, autoRelease);
             break;
         }
 
     case _InputArray::OPENGL_TEXTURE:
         {
-            arr.getGlTextureRef().copyFrom(*this, autoRelease);
+            arr.getOGlTexture2DRef().copyFrom(*this, autoRelease);
             break;
         }
 
@@ -720,21 +720,21 @@ void cv::GlBuffer::copyTo(OutputArray arr, Target target, bool autoRelease) cons
 #endif
 }
 
-GlBuffer cv::GlBuffer::clone(Target target, bool autoRelease) const
+cv::ogl::Buffer cv::ogl::Buffer::clone(Target target, bool autoRelease) const
 {
 #ifndef HAVE_OPENGL
     (void) target;
     (void) autoRelease;
     throw_nogl();
-    return GlBuffer();
+    return cv::ogl::Buffer();
 #else
-    GlBuffer buf;
+    ogl::Buffer buf;
     buf.copyFrom(*this, target, autoRelease);
     return buf;
 #endif
 }
 
-void cv::GlBuffer::bind(Target target) const
+void cv::ogl::Buffer::bind(Target target) const
 {
 #ifndef HAVE_OPENGL
     (void) target;
@@ -744,7 +744,7 @@ void cv::GlBuffer::bind(Target target) const
 #endif
 }
 
-void cv::GlBuffer::unbind(Target target)
+void cv::ogl::Buffer::unbind(Target target)
 {
 #ifndef HAVE_OPENGL
     (void) target;
@@ -755,7 +755,7 @@ void cv::GlBuffer::unbind(Target target)
 #endif
 }
 
-Mat cv::GlBuffer::mapHost(Access access)
+Mat cv::ogl::Buffer::mapHost(Access access)
 {
 #ifndef HAVE_OPENGL
     (void) access;
@@ -766,7 +766,7 @@ Mat cv::GlBuffer::mapHost(Access access)
 #endif
 }
 
-void cv::GlBuffer::unmapHost()
+void cv::ogl::Buffer::unmapHost()
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -775,7 +775,7 @@ void cv::GlBuffer::unmapHost()
 #endif
 }
 
-GpuMat cv::GlBuffer::mapDevice()
+GpuMat cv::ogl::Buffer::mapDevice()
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -790,7 +790,7 @@ GpuMat cv::GlBuffer::mapDevice()
 #endif
 }
 
-void cv::GlBuffer::unmapDevice()
+void cv::ogl::Buffer::unmapDevice()
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -803,7 +803,7 @@ void cv::GlBuffer::unmapDevice()
 #endif
 }
 
-unsigned int cv::GlBuffer::bufId() const
+unsigned int cv::ogl::Buffer::bufId() const
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -813,23 +813,23 @@ unsigned int cv::GlBuffer::bufId() const
 #endif
 }
 
-template <> void cv::Ptr<cv::GlBuffer::Impl>::delete_obj()
+template <> void cv::Ptr<cv::ogl::Buffer::Impl>::delete_obj()
 {
     if (obj) delete obj;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// GlTexture
+// ogl::Texture
 
 #ifndef HAVE_OPENGL
 
-class cv::GlTexture::Impl
+class cv::ogl::Texture2D::Impl
 {
 };
 
 #else
 
-class cv::GlTexture::Impl
+class cv::ogl::Texture2D::Impl
 {
 public:
     static const Ptr<Impl> empty();
@@ -854,21 +854,21 @@ private:
     bool autoRelease_;
 };
 
-const Ptr<cv::GlTexture::Impl> cv::GlTexture::Impl::empty()
+const Ptr<cv::ogl::Texture2D::Impl> cv::ogl::Texture2D::Impl::empty()
 {
     static Ptr<Impl> p(new Impl);
     return p;
 }
 
-cv::GlTexture::Impl::Impl() : texId_(0), autoRelease_(true)
+cv::ogl::Texture2D::Impl::Impl() : texId_(0), autoRelease_(true)
 {
 }
 
-cv::GlTexture::Impl::Impl(GLuint atexId, bool autoRelease) : texId_(atexId), autoRelease_(autoRelease)
+cv::ogl::Texture2D::Impl::Impl(GLuint atexId, bool autoRelease) : texId_(atexId), autoRelease_(autoRelease)
 {
 }
 
-cv::GlTexture::Impl::Impl(GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* pixels, bool autoRelease) : texId_(0), autoRelease_(autoRelease)
+cv::ogl::Texture2D::Impl::Impl(GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* pixels, bool autoRelease) : texId_(0), autoRelease_(autoRelease)
 {
     gl::GenTextures(1, &texId_);
     CV_CheckGlError();
@@ -888,13 +888,13 @@ cv::GlTexture::Impl::Impl(GLint internalFormat, GLsizei width, GLsizei height, G
     CV_CheckGlError();
 }
 
-cv::GlTexture::Impl::~Impl()
+cv::ogl::Texture2D::Impl::~Impl()
 {
     if (autoRelease_ && texId_)
         gl::DeleteTextures(1, &texId_);
 }
 
-void cv::GlTexture::Impl::copyFrom(GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels)
+void cv::ogl::Texture2D::Impl::copyFrom(GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels)
 {
     gl::BindTexture(gl::TEXTURE_2D, texId_);
     CV_CheckGlError();
@@ -909,7 +909,7 @@ void cv::GlTexture::Impl::copyFrom(GLsizei width, GLsizei height, GLenum format,
     CV_CheckGlError();
 }
 
-void cv::GlTexture::Impl::copyTo(GLenum format, GLenum type, GLvoid* pixels) const
+void cv::ogl::Texture2D::Impl::copyTo(GLenum format, GLenum type, GLvoid* pixels) const
 {
     gl::BindTexture(gl::TEXTURE_2D, texId_);
     CV_CheckGlError();
@@ -921,7 +921,7 @@ void cv::GlTexture::Impl::copyTo(GLenum format, GLenum type, GLvoid* pixels) con
     CV_CheckGlError();
 }
 
-void cv::GlTexture::Impl::bind() const
+void cv::ogl::Texture2D::Impl::bind() const
 {
     gl::BindTexture(gl::TEXTURE_2D, texId_);
     CV_CheckGlError();
@@ -929,7 +929,7 @@ void cv::GlTexture::Impl::bind() const
 
 #endif // HAVE_OPENGL
 
-cv::GlTexture::GlTexture() : rows_(0), cols_(0), format_(NONE)
+cv::ogl::Texture2D::Texture2D() : rows_(0), cols_(0), format_(NONE)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -938,7 +938,7 @@ cv::GlTexture::GlTexture() : rows_(0), cols_(0), format_(NONE)
 #endif
 }
 
-cv::GlTexture::GlTexture(int arows, int acols, Format aformat, unsigned int atexId, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
+cv::ogl::Texture2D::Texture2D(int arows, int acols, Format aformat, unsigned int atexId, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
 {
 #ifndef HAVE_OPENGL
     (void) arows;
@@ -955,7 +955,7 @@ cv::GlTexture::GlTexture(int arows, int acols, Format aformat, unsigned int atex
 #endif
 }
 
-cv::GlTexture::GlTexture(Size asize, Format aformat, unsigned int atexId, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
+cv::ogl::Texture2D::Texture2D(Size asize, Format aformat, unsigned int atexId, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
 {
 #ifndef HAVE_OPENGL
     (void) asize;
@@ -971,17 +971,17 @@ cv::GlTexture::GlTexture(Size asize, Format aformat, unsigned int atexId, bool a
 #endif
 }
 
-cv::GlTexture::GlTexture(int arows, int acols, Format aformat, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
+cv::ogl::Texture2D::Texture2D(int arows, int acols, Format aformat, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
 {
     create(arows, acols, aformat, autoRelease);
 }
 
-cv::GlTexture::GlTexture(Size asize, Format aformat, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
+cv::ogl::Texture2D::Texture2D(Size asize, Format aformat, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
 {
     create(asize, aformat, autoRelease);
 }
 
-cv::GlTexture::GlTexture(InputArray arr, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
+cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -1012,10 +1012,10 @@ cv::GlTexture::GlTexture(InputArray arr, bool autoRelease) : rows_(0), cols_(0),
     {
     case _InputArray::OPENGL_BUFFER:
         {
-            GlBuffer buf = arr.getGlBuffer();
-            buf.bind(GlBuffer::PIXEL_UNPACK_BUFFER);
+            ogl::Buffer buf = arr.getOGlBuffer();
+            buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
             impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease);
-            GlBuffer::unbind(GlBuffer::PIXEL_UNPACK_BUFFER);
+            ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
             break;
         }
 
@@ -1025,10 +1025,10 @@ cv::GlTexture::GlTexture(InputArray arr, bool autoRelease) : rows_(0), cols_(0),
                 throw_nocuda();
             #else
                 GpuMat dmat = arr.getGpuMat();
-                GlBuffer buf(dmat, GlBuffer::PIXEL_UNPACK_BUFFER);
-                buf.bind(GlBuffer::PIXEL_UNPACK_BUFFER);
+                ogl::Buffer buf(dmat, ogl::Buffer::PIXEL_UNPACK_BUFFER);
+                buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
                 impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease);
-                GlBuffer::unbind(GlBuffer::PIXEL_UNPACK_BUFFER);
+                ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
             #endif
 
             break;
@@ -1038,7 +1038,7 @@ cv::GlTexture::GlTexture(InputArray arr, bool autoRelease) : rows_(0), cols_(0),
         {
             Mat mat = arr.getMat();
             CV_Assert( mat.isContinuous() );
-            GlBuffer::unbind(GlBuffer::PIXEL_UNPACK_BUFFER);
+            ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
             impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], mat.data, autoRelease);
             break;
         }
@@ -1050,7 +1050,7 @@ cv::GlTexture::GlTexture(InputArray arr, bool autoRelease) : rows_(0), cols_(0),
 #endif
 }
 
-void cv::GlTexture::create(int arows, int acols, Format aformat, bool autoRelease)
+void cv::ogl::Texture2D::create(int arows, int acols, Format aformat, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     (void) arows;
@@ -1061,7 +1061,7 @@ void cv::GlTexture::create(int arows, int acols, Format aformat, bool autoReleas
 #else
     if (rows_ != arows || cols_ != acols || format_ != aformat)
     {
-        GlBuffer::unbind(GlBuffer::PIXEL_UNPACK_BUFFER);
+        ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
         impl_ = new Impl(aformat, acols, arows, aformat, gl::FLOAT, 0, autoRelease);
         rows_ = arows;
         cols_ = acols;
@@ -1070,7 +1070,7 @@ void cv::GlTexture::create(int arows, int acols, Format aformat, bool autoReleas
 #endif
 }
 
-void cv::GlTexture::release()
+void cv::ogl::Texture2D::release()
 {
 #ifdef HAVE_OPENGL
     if (*impl_.refcount == 1)
@@ -1082,7 +1082,7 @@ void cv::GlTexture::release()
 #endif
 }
 
-void cv::GlTexture::setAutoRelease(bool flag)
+void cv::ogl::Texture2D::setAutoRelease(bool flag)
 {
 #ifndef HAVE_OPENGL
     (void) flag;
@@ -1092,7 +1092,7 @@ void cv::GlTexture::setAutoRelease(bool flag)
 #endif
 }
 
-void cv::GlTexture::copyFrom(InputArray arr, bool autoRelease)
+void cv::ogl::Texture2D::copyFrom(InputArray arr, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -1125,10 +1125,10 @@ void cv::GlTexture::copyFrom(InputArray arr, bool autoRelease)
     {
     case _InputArray::OPENGL_BUFFER:
         {
-            GlBuffer buf = arr.getGlBuffer();
-            buf.bind(GlBuffer::PIXEL_UNPACK_BUFFER);
+            ogl::Buffer buf = arr.getOGlBuffer();
+            buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
             impl_->copyFrom(asize.width, asize.height, srcFormats[cn], gl_types[depth], 0);
-            GlBuffer::unbind(GlBuffer::PIXEL_UNPACK_BUFFER);
+            ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
             break;
         }
 
@@ -1138,10 +1138,10 @@ void cv::GlTexture::copyFrom(InputArray arr, bool autoRelease)
                 throw_nocuda();
             #else
                 GpuMat dmat = arr.getGpuMat();
-                GlBuffer buf(dmat, GlBuffer::PIXEL_UNPACK_BUFFER);
-                buf.bind(GlBuffer::PIXEL_UNPACK_BUFFER);
+                ogl::Buffer buf(dmat, ogl::Buffer::PIXEL_UNPACK_BUFFER);
+                buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
                 impl_->copyFrom(asize.width, asize.height, srcFormats[cn], gl_types[depth], 0);
-                GlBuffer::unbind(GlBuffer::PIXEL_UNPACK_BUFFER);
+                ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
             #endif
 
             break;
@@ -1151,14 +1151,14 @@ void cv::GlTexture::copyFrom(InputArray arr, bool autoRelease)
         {
             Mat mat = arr.getMat();
             CV_Assert( mat.isContinuous() );
-            GlBuffer::unbind(GlBuffer::PIXEL_UNPACK_BUFFER);
+            ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
             impl_->copyFrom(asize.width, asize.height, srcFormats[cn], gl_types[depth], mat.data);
         }
     }
 #endif
 }
 
-void cv::GlTexture::copyTo(OutputArray arr, int ddepth, bool autoRelease) const
+void cv::ogl::Texture2D::copyTo(OutputArray arr, int ddepth, bool autoRelease) const
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -1175,11 +1175,11 @@ void cv::GlTexture::copyTo(OutputArray arr, int ddepth, bool autoRelease) const
     {
     case _InputArray::OPENGL_BUFFER:
         {
-            GlBuffer& buf = arr.getGlBufferRef();
-            buf.create(rows_, cols_, CV_MAKE_TYPE(ddepth, cn), GlBuffer::PIXEL_PACK_BUFFER, autoRelease);
-            buf.bind(GlBuffer::PIXEL_PACK_BUFFER);
+            ogl::Buffer& buf = arr.getOGlBufferRef();
+            buf.create(rows_, cols_, CV_MAKE_TYPE(ddepth, cn), ogl::Buffer::PIXEL_PACK_BUFFER, autoRelease);
+            buf.bind(ogl::Buffer::PIXEL_PACK_BUFFER);
             impl_->copyTo(dstFormat, gl_types[ddepth], 0);
-            GlBuffer::unbind(GlBuffer::PIXEL_PACK_BUFFER);
+            ogl::Buffer::unbind(ogl::Buffer::PIXEL_PACK_BUFFER);
             break;
         }
 
@@ -1188,10 +1188,10 @@ void cv::GlTexture::copyTo(OutputArray arr, int ddepth, bool autoRelease) const
             #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
                 throw_nocuda();
             #else
-                GlBuffer buf(rows_, cols_, CV_MAKE_TYPE(ddepth, cn), GlBuffer::PIXEL_PACK_BUFFER);
-                buf.bind(GlBuffer::PIXEL_PACK_BUFFER);
+                ogl::Buffer buf(rows_, cols_, CV_MAKE_TYPE(ddepth, cn), ogl::Buffer::PIXEL_PACK_BUFFER);
+                buf.bind(ogl::Buffer::PIXEL_PACK_BUFFER);
                 impl_->copyTo(dstFormat, gl_types[ddepth], 0);
-                GlBuffer::unbind(GlBuffer::PIXEL_PACK_BUFFER);
+                ogl::Buffer::unbind(ogl::Buffer::PIXEL_PACK_BUFFER);
                 buf.copyTo(arr);
             #endif
 
@@ -1203,14 +1203,14 @@ void cv::GlTexture::copyTo(OutputArray arr, int ddepth, bool autoRelease) const
             arr.create(rows_, cols_, CV_MAKE_TYPE(ddepth, cn));
             Mat mat = arr.getMat();
             CV_Assert( mat.isContinuous() );
-            GlBuffer::unbind(GlBuffer::PIXEL_PACK_BUFFER);
+            ogl::Buffer::unbind(ogl::Buffer::PIXEL_PACK_BUFFER);
             impl_->copyTo(dstFormat, gl_types[ddepth], mat.data);
         }
     }
 #endif
 }
 
-void cv::GlTexture::bind() const
+void cv::ogl::Texture2D::bind() const
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -1219,7 +1219,7 @@ void cv::GlTexture::bind() const
 #endif
 }
 
-unsigned int cv::GlTexture::texId() const
+unsigned int cv::ogl::Texture2D::texId() const
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -1229,19 +1229,19 @@ unsigned int cv::GlTexture::texId() const
 #endif
 }
 
-template <> void cv::Ptr<cv::GlTexture::Impl>::delete_obj()
+template <> void cv::Ptr<cv::ogl::Texture2D::Impl>::delete_obj()
 {
     if (obj) delete obj;
 }
 
 ////////////////////////////////////////////////////////////////////////
-// GlArrays
+// ogl::Arrays
 
-cv::GlArrays::GlArrays() : size_(0)
+cv::ogl::Arrays::Arrays() : size_(0)
 {
 }
 
-void cv::GlArrays::setVertexArray(InputArray vertex)
+void cv::ogl::Arrays::setVertexArray(InputArray vertex)
 {
     const int cn = vertex.channels();
     const int depth = vertex.depth();
@@ -1250,37 +1250,37 @@ void cv::GlArrays::setVertexArray(InputArray vertex)
     CV_Assert( depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F );
 
     if (vertex.kind() == _InputArray::OPENGL_BUFFER)
-        vertex_ = vertex.getGlBuffer();
+        vertex_ = vertex.getOGlBuffer();
     else
         vertex_.copyFrom(vertex);
 
     size_ = vertex_.size().area();
 }
 
-void cv::GlArrays::resetVertexArray()
+void cv::ogl::Arrays::resetVertexArray()
 {
     vertex_.release();
     size_ = 0;
 }
 
-void cv::GlArrays::setColorArray(InputArray color)
+void cv::ogl::Arrays::setColorArray(InputArray color)
 {
     const int cn = color.channels();
 
     CV_Assert( cn == 3 || cn == 4 );
 
     if (color.kind() == _InputArray::OPENGL_BUFFER)
-        color_ = color.getGlBuffer();
+        color_ = color.getOGlBuffer();
     else
         color_.copyFrom(color);
 }
 
-void cv::GlArrays::resetColorArray()
+void cv::ogl::Arrays::resetColorArray()
 {
     color_.release();
 }
 
-void cv::GlArrays::setNormalArray(InputArray normal)
+void cv::ogl::Arrays::setNormalArray(InputArray normal)
 {
     const int cn = normal.channels();
     const int depth = normal.depth();
@@ -1289,17 +1289,17 @@ void cv::GlArrays::setNormalArray(InputArray normal)
     CV_Assert( depth == CV_8S || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F );
 
     if (normal.kind() == _InputArray::OPENGL_BUFFER)
-        normal_ = normal.getGlBuffer();
+        normal_ = normal.getOGlBuffer();
     else
         normal_.copyFrom(normal);
 }
 
-void cv::GlArrays::resetNormalArray()
+void cv::ogl::Arrays::resetNormalArray()
 {
     normal_.release();
 }
 
-void cv::GlArrays::setTexCoordArray(InputArray texCoord)
+void cv::ogl::Arrays::setTexCoordArray(InputArray texCoord)
 {
     const int cn = texCoord.channels();
     const int depth = texCoord.depth();
@@ -1308,17 +1308,17 @@ void cv::GlArrays::setTexCoordArray(InputArray texCoord)
     CV_Assert( depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F );
 
     if (texCoord.kind() == _InputArray::OPENGL_BUFFER)
-        texCoord_ = texCoord.getGlBuffer();
+        texCoord_ = texCoord.getOGlBuffer();
     else
         texCoord_.copyFrom(texCoord);
 }
 
-void cv::GlArrays::resetTexCoordArray()
+void cv::ogl::Arrays::resetTexCoordArray()
 {
     texCoord_.release();
 }
 
-void cv::GlArrays::release()
+void cv::ogl::Arrays::release()
 {
     resetVertexArray();
     resetColorArray();
@@ -1326,7 +1326,7 @@ void cv::GlArrays::release()
     resetTexCoordArray();
 }
 
-void cv::GlArrays::setAutoRelease(bool flag)
+void cv::ogl::Arrays::setAutoRelease(bool flag)
 {
     vertex_.setAutoRelease(flag);
     color_.setAutoRelease(flag);
@@ -1334,7 +1334,7 @@ void cv::GlArrays::setAutoRelease(bool flag)
     texCoord_.setAutoRelease(flag);
 }
 
-void cv::GlArrays::bind() const
+void cv::ogl::Arrays::bind() const
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -1353,7 +1353,7 @@ void cv::GlArrays::bind() const
         gl::EnableClientState(gl::TEXTURE_COORD_ARRAY);
         CV_CheckGlError();
 
-        texCoord_.bind(GlBuffer::ARRAY_BUFFER);
+        texCoord_.bind(ogl::Buffer::ARRAY_BUFFER);
 
         gl::TexCoordPointer(texCoord_.channels(), gl_types[texCoord_.depth()], 0, 0);
         CV_CheckGlError();
@@ -1369,7 +1369,7 @@ void cv::GlArrays::bind() const
         gl::EnableClientState(gl::NORMAL_ARRAY);
         CV_CheckGlError();
 
-        normal_.bind(GlBuffer::ARRAY_BUFFER);
+        normal_.bind(ogl::Buffer::ARRAY_BUFFER);
 
         gl::NormalPointer(gl_types[normal_.depth()], 0, 0);
         CV_CheckGlError();
@@ -1385,7 +1385,7 @@ void cv::GlArrays::bind() const
         gl::EnableClientState(gl::COLOR_ARRAY);
         CV_CheckGlError();
 
-        color_.bind(GlBuffer::ARRAY_BUFFER);
+        color_.bind(ogl::Buffer::ARRAY_BUFFER);
 
         const int cn = color_.channels();
 
@@ -1403,20 +1403,20 @@ void cv::GlArrays::bind() const
         gl::EnableClientState(gl::VERTEX_ARRAY);
         CV_CheckGlError();
 
-        vertex_.bind(GlBuffer::ARRAY_BUFFER);
+        vertex_.bind(ogl::Buffer::ARRAY_BUFFER);
 
         gl::VertexPointer(vertex_.channels(), gl_types[vertex_.depth()], 0, 0);
         CV_CheckGlError();
     }
 
-    GlBuffer::unbind(GlBuffer::ARRAY_BUFFER);
+    ogl::Buffer::unbind(ogl::Buffer::ARRAY_BUFFER);
 #endif
 }
 
 ////////////////////////////////////////////////////////////////////////
 // Rendering
 
-void cv::render(const GlTexture& tex, Rect_<double> wndRect, Rect_<double> texRect)
+void cv::ogl::render(const ogl::Texture2D& tex, Rect_<double> wndRect, Rect_<double> texRect)
 {
 #ifndef HAVE_OPENGL
     (void) tex;
@@ -1464,7 +1464,7 @@ void cv::render(const GlTexture& tex, Rect_<double> wndRect, Rect_<double> texRe
             texRect.x + texRect.width, texRect.y
         };
 
-        GlBuffer::unbind(GlBuffer::ARRAY_BUFFER);
+        ogl::Buffer::unbind(ogl::Buffer::ARRAY_BUFFER);
 
         gl::EnableClientState(gl::TEXTURE_COORD_ARRAY);
         CV_CheckGlError();
@@ -1482,13 +1482,13 @@ void cv::render(const GlTexture& tex, Rect_<double> wndRect, Rect_<double> texRe
         gl::VertexPointer(3, gl::FLOAT, 0, vertex);
         CV_CheckGlError();
 
-        gl::DrawArrays(cv::RenderMode::QUADS, 0, 4);
+        gl::DrawArrays(gl::QUADS, 0, 4);
         CV_CheckGlError();
     }
 #endif
 }
 
-void cv::render(const GlArrays& arr, int mode, Scalar color)
+void cv::ogl::render(const ogl::Arrays& arr, int mode, Scalar color)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -1507,7 +1507,7 @@ void cv::render(const GlArrays& arr, int mode, Scalar color)
 #endif
 }
 
-void cv::render(const GlArrays& arr, InputArray indices, int mode, Scalar color)
+void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scalar color)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -1528,7 +1528,7 @@ void cv::render(const GlArrays& arr, InputArray indices, int mode, Scalar color)
         {
         case _InputArray::OPENGL_BUFFER :
             {
-                GlBuffer buf = indices.getGlBuffer();
+                ogl::Buffer buf = indices.getOGlBuffer();
 
                 const int depth = buf.depth();
 
@@ -1543,11 +1543,11 @@ void cv::render(const GlArrays& arr, InputArray indices, int mode, Scalar color)
                 else
                     type = gl::UNSIGNED_INT;
 
-                buf.bind(GlBuffer::ELEMENT_ARRAY_BUFFER);
+                buf.bind(ogl::Buffer::ELEMENT_ARRAY_BUFFER);
 
                 gl::DrawElements(mode, buf.size().area(), type, 0);
 
-                GlBuffer::unbind(GlBuffer::ELEMENT_ARRAY_BUFFER);
+                ogl::Buffer::unbind(ogl::Buffer::ELEMENT_ARRAY_BUFFER);
 
                 break;
             }
@@ -1570,7 +1570,7 @@ void cv::render(const GlArrays& arr, InputArray indices, int mode, Scalar color)
                 else
                     type = gl::UNSIGNED_INT;
 
-                GlBuffer::unbind(GlBuffer::ELEMENT_ARRAY_BUFFER);
+                ogl::Buffer::unbind(ogl::Buffer::ELEMENT_ARRAY_BUFFER);
 
                 gl::DrawElements(mode, mat.size().area(), type, mat.data);
             }

@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include "opencv2/core/gpumat.hpp"
 #include "opencv2/core/opengl_interop.hpp"
+#include "opencv2/core/opengl_interop_deprecated.hpp"
 
 /****************************************************************************************\
 *                           [scaled] Identity matrix initialization                      *
@@ -925,9 +926,13 @@ _InputArray::_InputArray(const Mat& m) : flags(MAT), obj((void*)&m) {}
 _InputArray::_InputArray(const vector<Mat>& vec) : flags(STD_VECTOR_MAT), obj((void*)&vec) {}
 _InputArray::_InputArray(const double& val) : flags(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F), obj((void*)&val), sz(Size(1,1)) {}
 _InputArray::_InputArray(const MatExpr& expr) : flags(FIXED_TYPE + FIXED_SIZE + EXPR), obj((void*)&expr) {}
-_InputArray::_InputArray(const GlBuffer& buf) : flags(OPENGL_BUFFER), obj((void*)&buf) {}
-_InputArray::_InputArray(const GlTexture& tex) : flags(OPENGL_TEXTURE), obj((void*)&tex) {}
+// < Deprecated
+_InputArray::_InputArray(const GlBuffer&) : flags(0), obj(0) {}
+_InputArray::_InputArray(const GlTexture&) : flags(0), obj(0) {}
+// >
 _InputArray::_InputArray(const gpu::GpuMat& d_mat) : flags(GPU_MAT), obj((void*)&d_mat) {}
+_InputArray::_InputArray(const ogl::Buffer& buf) : flags(OPENGL_BUFFER), obj((void*)&buf) {}
+_InputArray::_InputArray(const ogl::Texture2D& tex) : flags(OPENGL_TEXTURE), obj((void*)&tex) {}
 
 Mat _InputArray::getMat(int i) const
 {
@@ -1069,26 +1074,14 @@ void _InputArray::getMatVector(vector<Mat>& mv) const
 
 GlBuffer _InputArray::getGlBuffer() const
 {
-    int k = kind();
-
-    CV_Assert(k == OPENGL_BUFFER);
-    //if( k == OPENGL_BUFFER )
-    {
-        const GlBuffer* buf = (const GlBuffer*)obj;
-        return *buf;
-    }
+    CV_Error(CV_StsNotImplemented, "This function in deprecated, do not use it");
+    return GlBuffer(GlBuffer::ARRAY_BUFFER);
 }
 
 GlTexture _InputArray::getGlTexture() const
 {
-    int k = kind();
-
-    CV_Assert(k == OPENGL_TEXTURE);
-    //if( k == OPENGL_TEXTURE )
-    {
-        const GlTexture* tex = (const GlTexture*)obj;
-        return *tex;
-    }
+    CV_Error(CV_StsNotImplemented, "This function in deprecated, do not use it");
+    return GlTexture();
 }
 
 gpu::GpuMat _InputArray::getGpuMat() const
@@ -1096,11 +1089,29 @@ gpu::GpuMat _InputArray::getGpuMat() const
     int k = kind();
 
     CV_Assert(k == GPU_MAT);
-    //if( k == GPU_MAT )
-    {
-        const gpu::GpuMat* d_mat = (const gpu::GpuMat*)obj;
-        return *d_mat;
-    }
+
+    const gpu::GpuMat* d_mat = (const gpu::GpuMat*)obj;
+    return *d_mat;
+}
+
+ogl::Buffer _InputArray::getOGlBuffer() const
+{
+    int k = kind();
+
+    CV_Assert(k == OPENGL_BUFFER);
+
+    const ogl::Buffer* gl_buf = (const ogl::Buffer*)obj;
+    return *gl_buf;
+}
+
+ogl::Texture2D _InputArray::getOGlTexture2D() const
+{
+    int k = kind();
+
+    CV_Assert(k == OPENGL_TEXTURE);
+
+    const ogl::Texture2D* gl_tex = (const ogl::Texture2D*)obj;
+    return *gl_tex;
 }
 
 int _InputArray::kind() const
@@ -1167,14 +1178,14 @@ Size _InputArray::size(int i) const
     if( k == OPENGL_BUFFER )
     {
         CV_Assert( i < 0 );
-        const GlBuffer* buf = (const GlBuffer*)obj;
+        const ogl::Buffer* buf = (const ogl::Buffer*)obj;
         return buf->size();
     }
 
     if( k == OPENGL_TEXTURE )
     {
         CV_Assert( i < 0 );
-        const GlTexture* tex = (const GlTexture*)obj;
+        const ogl::Texture2D* tex = (const ogl::Texture2D*)obj;
         return tex->size();
     }
 
@@ -1235,7 +1246,7 @@ int _InputArray::type(int i) const
     }
 
     if( k == OPENGL_BUFFER )
-        return ((const GlBuffer*)obj)->type();
+        return ((const ogl::Buffer*)obj)->type();
 
     CV_Assert( k == GPU_MAT );
     //if( k == GPU_MAT )
@@ -1287,10 +1298,10 @@ bool _InputArray::empty() const
     }
 
     if( k == OPENGL_BUFFER )
-        return ((const GlBuffer*)obj)->empty();
+        return ((const ogl::Buffer*)obj)->empty();
 
     if( k == OPENGL_TEXTURE )
-        return ((const GlTexture*)obj)->empty();
+        return ((const ogl::Texture2D*)obj)->empty();
 
     CV_Assert( k == GPU_MAT );
     //if( k == GPU_MAT )
@@ -1305,14 +1316,14 @@ _OutputArray::~_OutputArray() {}
 _OutputArray::_OutputArray(Mat& m) : _InputArray(m) {}
 _OutputArray::_OutputArray(vector<Mat>& vec) : _InputArray(vec) {}
 _OutputArray::_OutputArray(gpu::GpuMat& d_mat) : _InputArray(d_mat) {}
-_OutputArray::_OutputArray(GlBuffer& buf) : _InputArray(buf) {}
-_OutputArray::_OutputArray(GlTexture& tex) : _InputArray(tex) {}
+_OutputArray::_OutputArray(ogl::Buffer& buf) : _InputArray(buf) {}
+_OutputArray::_OutputArray(ogl::Texture2D& tex) : _InputArray(tex) {}
 
 _OutputArray::_OutputArray(const Mat& m) : _InputArray(m) {flags |= FIXED_SIZE|FIXED_TYPE;}
 _OutputArray::_OutputArray(const vector<Mat>& vec) : _InputArray(vec) {flags |= FIXED_SIZE;}
 _OutputArray::_OutputArray(const gpu::GpuMat& d_mat) : _InputArray(d_mat) {flags |= FIXED_SIZE|FIXED_TYPE;}
-_OutputArray::_OutputArray(const GlBuffer& buf) : _InputArray(buf) {flags |= FIXED_SIZE|FIXED_TYPE;}
-_OutputArray::_OutputArray(const GlTexture& tex) : _InputArray(tex) {flags |= FIXED_SIZE|FIXED_TYPE;}
+_OutputArray::_OutputArray(const ogl::Buffer& buf) : _InputArray(buf) {flags |= FIXED_SIZE|FIXED_TYPE;}
+_OutputArray::_OutputArray(const ogl::Texture2D& tex) : _InputArray(tex) {flags |= FIXED_SIZE|FIXED_TYPE;}
 
 
 bool _OutputArray::fixedSize() const
@@ -1344,9 +1355,9 @@ void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, int 
     }
     if( k == OPENGL_BUFFER && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
-        CV_Assert(!fixedSize() || ((GlBuffer*)obj)->size() == _sz);
-        CV_Assert(!fixedType() || ((GlBuffer*)obj)->type() == mtype);
-        ((GlBuffer*)obj)->create(_sz, mtype);
+        CV_Assert(!fixedSize() || ((ogl::Buffer*)obj)->size() == _sz);
+        CV_Assert(!fixedType() || ((ogl::Buffer*)obj)->type() == mtype);
+        ((ogl::Buffer*)obj)->create(_sz, mtype);
         return;
     }
     int sizes[] = {_sz.height, _sz.width};
@@ -1372,9 +1383,9 @@ void _OutputArray::create(int rows, int cols, int mtype, int i, bool allowTransp
     }
     if( k == OPENGL_BUFFER && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
-        CV_Assert(!fixedSize() || ((GlBuffer*)obj)->size() == Size(cols, rows));
-        CV_Assert(!fixedType() || ((GlBuffer*)obj)->type() == mtype);
-        ((GlBuffer*)obj)->create(rows, cols, mtype);
+        CV_Assert(!fixedSize() || ((ogl::Buffer*)obj)->size() == Size(cols, rows));
+        CV_Assert(!fixedType() || ((ogl::Buffer*)obj)->type() == mtype);
+        ((ogl::Buffer*)obj)->create(rows, cols, mtype);
         return;
     }
     int sizes[] = {rows, cols};
@@ -1598,13 +1609,13 @@ void _OutputArray::release() const
 
     if( k == OPENGL_BUFFER )
     {
-        ((GlBuffer*)obj)->release();
+        ((ogl::Buffer*)obj)->release();
         return;
     }
 
     if( k == OPENGL_TEXTURE )
     {
-        ((GlTexture*)obj)->release();
+        ((ogl::Texture2D*)obj)->release();
         return;
     }
 
@@ -1673,18 +1684,18 @@ gpu::GpuMat& _OutputArray::getGpuMatRef() const
     return *(gpu::GpuMat*)obj;
 }
 
-GlBuffer& _OutputArray::getGlBufferRef() const
+ogl::Buffer& _OutputArray::getOGlBufferRef() const
 {
     int k = kind();
     CV_Assert( k == OPENGL_BUFFER );
-    return *(GlBuffer*)obj;
+    return *(ogl::Buffer*)obj;
 }
 
-GlTexture& _OutputArray::getGlTextureRef() const
+ogl::Texture2D& _OutputArray::getOGlTexture2DRef() const
 {
     int k = kind();
     CV_Assert( k == OPENGL_TEXTURE );
-    return *(GlTexture*)obj;
+    return *(ogl::Texture2D*)obj;
 }
 
 static _OutputArray _none;

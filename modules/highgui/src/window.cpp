@@ -241,15 +241,15 @@ void cv::updateWindow(const string& windowName)
 #ifdef HAVE_OPENGL
 namespace
 {
-    std::map<std::string, cv::GlTexture> wndTexs;
-    std::map<std::string, cv::GlTexture> ownWndTexs;
-    std::map<std::string, cv::GlBuffer> ownWndBufs;
+    std::map<std::string, cv::ogl::Texture2D> wndTexs;
+    std::map<std::string, cv::ogl::Texture2D> ownWndTexs;
+    std::map<std::string, cv::ogl::Buffer> ownWndBufs;
 
-    void CV_CDECL glDrawTextureCallback(void* userdata)
+    void glDrawTextureCallback(void* userdata)
     {
-        cv::GlTexture* texObj = static_cast<cv::GlTexture*>(userdata);
+        cv::ogl::Texture2D* texObj = static_cast<cv::ogl::Texture2D*>(userdata);
 
-        cv::render(*texObj);
+        cv::ogl::render(*texObj);
     }
 }
 #endif // HAVE_OPENGL
@@ -283,9 +283,9 @@ void cv::imshow( const string& winname, InputArray _img )
 
         if (_img.kind() == _InputArray::OPENGL_TEXTURE)
         {
-            cv::GlTexture& tex = wndTexs[winname];
+            cv::ogl::Texture2D& tex = wndTexs[winname];
 
-            tex = _img.getGlTexture();
+            tex = _img.getOGlTexture2D();
 
             tex.setAutoRelease(false);
 
@@ -293,11 +293,11 @@ void cv::imshow( const string& winname, InputArray _img )
         }
         else
         {
-            cv::GlTexture& tex = ownWndTexs[winname];
+            cv::ogl::Texture2D& tex = ownWndTexs[winname];
 
             if (_img.kind() == _InputArray::GPU_MAT)
             {
-                cv::GlBuffer& buf = ownWndBufs[winname];
+                cv::ogl::Buffer& buf = ownWndBufs[winname];
                 buf.copyFrom(_img);
                 buf.setAutoRelease(false);
 
@@ -317,6 +317,16 @@ void cv::imshow( const string& winname, InputArray _img )
         updateWindow(winname);
     }
 #endif
+}
+
+void cv::pointCloudShow(const string&, const GlCamera&, const GlArrays&)
+{
+    CV_Error(CV_StsNotImplemented, "This function in deprecated, do not use it");
+}
+
+void cv::pointCloudShow(const string&, const GlCamera&, InputArray, InputArray)
+{
+    CV_Error(CV_StsNotImplemented, "This function in deprecated, do not use it");
 }
 
 // Without OpenGL

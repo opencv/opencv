@@ -37,39 +37,20 @@ const int win_height = 640;
 
 struct DrawData
 {
-    GlArrays arr;
-    GlTexture tex;
-    GlBuffer indices;
+    ogl::Arrays arr;
+    ogl::Texture2D tex;
+    ogl::Buffer indices;
 };
 
-void CV_CDECL draw(void* userdata);
+void draw(void* userdata);
 
-void CV_CDECL draw(void* userdata)
+void draw(void* userdata)
 {
-    static double angle = 0.0;
-
     DrawData* data = static_cast<DrawData*>(userdata);
 
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(45.0, (double)win_width / win_height, 0.1, 100.0);
+    glRotated(0.6, 0, 1, 0);
 
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    gluLookAt(0, 0, 3, 0, 0, 0, 0, 1, 0);
-    glRotated(angle, 0, 1, 0);
-
-    glEnable(GL_TEXTURE_2D);
-    data->tex.bind();
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexEnvi(GL_TEXTURE_2D, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-
-    glDisable(GL_CULL_FACE);
-
-    render(data->arr, data->indices, RenderMode::TRIANGLES);
-
-    angle += 0.3;
+    ogl::render(data->arr, data->indices, ogl::TRIANGLES);
 }
 
 int main(int argc, char* argv[])
@@ -106,12 +87,28 @@ int main(int argc, char* argv[])
     data.indices.copyFrom(indices);
     data.tex.copyFrom(img);
 
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45.0, (double)win_width / win_height, 0.1, 100.0);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    gluLookAt(0, 0, 3, 0, 0, 0, 0, 1, 0);
+
+    glEnable(GL_TEXTURE_2D);
+    data.tex.bind();
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexEnvi(GL_TEXTURE_2D, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+    glDisable(GL_CULL_FACE);
+
     setOpenGlDrawCallback("OpenGL", draw, &data);
 
     for (;;)
     {
         updateWindow("OpenGL");
-        int key = waitKey(10);
+        int key = waitKey(40);
         if ((key & 0xff) == 27)
             break;
     }

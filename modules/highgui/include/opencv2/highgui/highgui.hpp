@@ -125,12 +125,17 @@ CV_EXPORTS_W void setTrackbarPos(const string& trackbarname, const string& winna
 
 // OpenGL support
 
-typedef void (CV_CDECL *OpenGlDrawCallback)(void* userdata);
+typedef void (*OpenGlDrawCallback)(void* userdata);
 CV_EXPORTS void setOpenGlDrawCallback(const string& winname, OpenGlDrawCallback onOpenGlDraw, void* userdata = 0);
 
 CV_EXPORTS void setOpenGlContext(const string& winname);
 
 CV_EXPORTS void updateWindow(const string& winname);
+
+// < Deperecated
+CV_EXPORTS void pointCloudShow(const string& winname, const GlCamera& camera, const GlArrays& arr);
+CV_EXPORTS void pointCloudShow(const string& winname, const GlCamera& camera, InputArray points, InputArray colors = noArray());
+// >
 
 //Only for Qt
 

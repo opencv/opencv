@@ -750,4 +750,35 @@ typedef struct CvBigFuncTable
     (tab).fn_2d[CV_32F] = (void*)FUNCNAME##_32f##FLAG;  \
     (tab).fn_2d[CV_64F] = (void*)FUNCNAME##_64f##FLAG
 
+#ifdef __cplusplus
+
+// Deprecated
+
+class CV_EXPORTS CvOpenGlFuncTab
+{
+public:
+    virtual ~CvOpenGlFuncTab();
+
+    virtual void genBuffers(int n, unsigned int* buffers) const = 0;
+    virtual void deleteBuffers(int n, const unsigned int* buffers) const = 0;
+
+    virtual void bufferData(unsigned int target, ptrdiff_t size, const void* data, unsigned int usage) const = 0;
+    virtual void bufferSubData(unsigned int target, ptrdiff_t offset, ptrdiff_t size, const void* data) const = 0;
+
+    virtual void bindBuffer(unsigned int target, unsigned int buffer) const = 0;
+
+    virtual void* mapBuffer(unsigned int target, unsigned int access) const = 0;
+    virtual void unmapBuffer(unsigned int target) const = 0;
+
+    virtual void generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool underline, int start, int count, int base) const = 0;
+
+    virtual bool isGlContextInitialized() const = 0;
+};
+
+CV_EXPORTS void icvSetOpenGlFuncTab(const CvOpenGlFuncTab* tab);
+
+CV_EXPORTS bool icvCheckGlError(const char* file, const int line, const char* func = "");
+
+#endif //__cplusplus
+
 #endif // __OPENCV_CORE_INTERNAL_HPP__
