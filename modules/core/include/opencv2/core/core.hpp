@@ -4340,8 +4340,6 @@ public:
     CV_WRAP Mat getMat(const string& name) const;
     CV_WRAP vector<Mat> getMatVector(const string& name) const;
     CV_WRAP Ptr<Algorithm> getAlgorithm(const string& name) const;
-    CV_WRAP float getFloat(const string& name) const;
-    CV_WRAP uint64 getUInt64(const string& name) const;
 
     void set(const string& name, int value);
     void set(const string& name, double value);
@@ -4378,8 +4376,6 @@ public:
     void setMatVector(const char* name, const vector<Mat>& value);
     void setAlgorithm(const char* name, const Ptr<Algorithm>& value);
     template<typename _Tp> void setAlgorithm(const char* name, const Ptr<_Tp>& value);
-    void setFloat(const char* name, float value);
-    void setUInt64(const char* name, uint64 value);
 
     CV_WRAP string paramHelp(const string& name) const;
     int paramType(const char* name) const;

@@ -322,16 +322,6 @@ void Algorithm::setAlgorithm(const char* parameter, const Ptr<Algorithm>& value)
     info()->set(this, parameter, ParamType<Algorithm>::type, &value);
 }
 
-void Algorithm::setFloat(const char* parameter, float value)
-{
-    info()->set(this, parameter, ParamType<float>::type, &value);
-}
-
-void Algorithm::setUInt64(const char* parameter, uint64 value)
-{
-    info()->set(this, parameter, ParamType<uint64>::type, &value);
-}
-
 
 
 
@@ -368,15 +358,6 @@ vector<Mat> Algorithm::getMatVector(const string& parameter) const
 Ptr<Algorithm> Algorithm::getAlgorithm(const string& parameter) const
 {
     return get<Algorithm>(parameter);
-}
-
-float Algorithm::getFloat(const string& parameter) const
-{
-    return get<float>(parameter);
-}
-uint64 Algorithm::getUInt64(const string& parameter) const
-{
-    return get<uint64>(parameter);
 }
 
 string Algorithm::paramHelp(const string& parameter) const
@@ -452,7 +433,7 @@ void AlgorithmInfo::write(const Algorithm* algo, FileStorage& fs) const
             nestedAlgo->write(fs);
         }
         else if( p.type == Param::FLOAT)
-            cv::write(fs, pname, algo->getFloat(pname));
+            cv::write(fs, pname, algo->getDouble(pname));
         else if( p.type == Param::UNSIGNED_INT)
             cv::write(fs, pname, algo->getInt(pname));//TODO: implement cv::write(, , unsigned int)
         else if( p.type == Param::UINT64)
