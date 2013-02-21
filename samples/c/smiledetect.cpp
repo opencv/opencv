@@ -14,12 +14,12 @@ static void help()
     cout << "\nThis program demonstrates the smile detector.\n"
             "Usage:\n"
             "./smiledetect [--cascade=<cascade_path> this is the frontal face classifier]\n"
-            "   [--smile-cascade[=smile_cascade_path]]\n"
-            "   [--scale=<image scale greater or equal to 1, try 1.3 for example. The larger the faster the processing>]\n"
+            "   [--smile-cascade=[<smile_cascade_path>]]\n"
+            "   [--scale=<image scale greater or equal to 1, try 2.0 for example. The larger the faster the processing>]\n"
             "   [--try-flip]\n"
-            "   [filename|camera_index]\n\n"
+            "   [video_filename|camera_index]\n\n"
             "Example:\n"
-            "./smiledetect --cascade=\"../../data/haarcascades/haarcascade_frontalface_alt.xml\" --smile-cascade=\"../../data/haarcascades/haarcascade_smile.xml\" --scale=1.3\n\n"
+            "./smiledetect --cascade=\"../../data/haarcascades/haarcascade_frontalface_alt.xml\" --smile-cascade=\"../../data/haarcascades/haarcascade_smile.xml\" --scale=2.0\n\n"
             "During execution:\n\tHit any key to quit.\n"
             "\tUsing OpenCV version " << CV_VERSION << "\n" << endl;
 }
@@ -30,10 +30,6 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
 
 string cascadeName = "../../data/haarcascades/haarcascade_frontalface_alt.xml";
 string nestedCascadeName = "../../data/haarcascades/haarcascade_smile.xml";
-
-// The number of detected neighbors depends on image size, these are for performing an approximate mapping to a maximum number of neighbors 
-const float coef1 = 0.3190; 
-const float coef2 = -48.7187;
 
 
 int main( int argc, const char** argv )
@@ -68,8 +64,6 @@ int main( int argc, const char** argv )
         {
             if( argv[i][nestedCascadeOpt.length()] == '=' )
                 nestedCascadeName.assign( argv[i] + nestedCascadeOpt.length() + 1 );
-            if( !nestedCascade.load( nestedCascadeName ) )
-                cerr << "WARNING: Could not load classifier cascade for nested objects" << endl;
         }
         else if( scaleOpt.compare( 0, scaleOptLen, argv[i], scaleOptLen ) == 0 )
         {
@@ -92,7 +86,13 @@ int main( int argc, const char** argv )
 
     if( !cascade.load( cascadeName ) )
     {
-        cerr << "ERROR: Could not load classifier cascade" << endl;
+        cerr << "ERROR: Could not load face cascade" << endl;
+        help();
+        return -1;
+    }
+    if( !nestedCascade.load( nestedCascadeName ) )
+    {
+        cerr << "ERROR: Could not load smile cascade" << endl;
         help();
         return -1;
     }
@@ -105,17 +105,8 @@ int main( int argc, const char** argv )
     }
     else if( inputName.size() )
     {
-        image = imread( inputName, 1 );
-        if( image.empty() )
-        {
-            capture = cvCaptureFromAVI( inputName.c_str() );
-            if(!capture) cout << "Capture from AVI didn't work" << endl;
-        }
-    }
-    else
-    {
-        image = imread( "lena.jpg", 1 );
-        if(image.empty()) cout << "Couldn't read lena.jpg" << endl;
+        capture = cvCaptureFromAVI( inputName.c_str() );
+        if(!capture) cout << "Capture from AVI didn't work" << endl;
     }
 
     cvNamedWindow( "result", 1 );
@@ -123,6 +114,8 @@ int main( int argc, const char** argv )
     if( capture )
     {
         cout << "In capture ..." << endl;
+        cout << endl << "NOTE: Smile intensity will only be valid after a first smile has been detected" << endl;
+        
         for(;;)
         {
             IplImage* iplImg = cvQueryFrame( capture );
@@ -147,43 +140,9 @@ _cleanup_:
     }
     else
     {
-        cout << "In image read" << endl;
-        if( !image.empty() )
-        {
-            detectAndDraw( image, cascade, nestedCascade, scale, tryflip );
-            waitKey(0);
-        }
-        else if( !inputName.empty() )
-        {
-            /* assume it is a text file containing the
-            list of the image filenames to be processed - one per line */
-            FILE* f = fopen( inputName.c_str(), "rt" );
-            if( f )
-            {
-                char buf[1000+1];
-                while( fgets( buf, 1000, f ) )
-                {
-                    int len = (int)strlen(buf), c;
-                    while( len > 0 && isspace(buf[len-1]) )
-                        len--;
-                    buf[len] = '\0';
-                    cout << "file " << buf << endl;
-                    image = imread( buf, 1 );
-                    if( !image.empty() )
-                    {
-                        detectAndDraw( image, cascade, nestedCascade, scale, tryflip );
-                        c = waitKey(0);
-                        if( c == 27 || c == 'q' || c == 'Q' )
-                            break;
-                    }
-					else
-					{	
-                        cerr << "Aw snap, couldn't read image " << buf << endl;
-                    }
-                }
-                fclose(f);
-            }
-        }
+        cerr << "ERROR: Could not initiate capture" << endl;
+        help();
+        return -1;
     }
 
     cvDestroyWindow("result");
@@ -205,8 +164,6 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
         CV_RGB(255,0,0),
         CV_RGB(255,0,255)} ;
     Mat gray, smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
-
-    const int max_neighbors = MAX(0, cvRound((float)coef1*smallImg.cols + coef2)); 
 
     cvtColor( img, gray, CV_BGR2GRAY );
     resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
@@ -234,6 +191,7 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
             faces.push_back(Rect(smallImg.cols - r->x - r->width, r->y, r->width, r->height));
         }
     }
+
     for( vector<Rect>::iterator r = faces.begin(); r != faces.end(); r++, i++ )
     {
         Mat smallImgROI;
@@ -254,8 +212,6 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
             rectangle( img, cvPoint(cvRound(r->x*scale), cvRound(r->y*scale)),
                        cvPoint(cvRound((r->x + r->width-1)*scale), cvRound((r->y + r->height-1)*scale)),
                        color, 3, 8, 0);
-        if( nestedCascade.empty() )
-            continue;
 
         const int half_height=cvRound((float)r->height/2);
         r->y=r->y + half_height;
@@ -270,13 +226,21 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
             ,
             Size(30, 30) );
 
-        // Draw rectangle reflecting confidence
+        // The number of detected neighbors depends on image size (and also illumination, etc.). The
+        // following steps use a floating minimum and maximum of neighbors. Intensity thus estimated will be
+        //accurate only after a first smile has been displayed by the user. 
         const int smile_neighbors = nestedObjects.size();
-        cout << "Detected " << smile_neighbors << " smile neighbors" << endl;
-        const int rect_height = cvRound((float)img.rows * smile_neighbors / max_neighbors);
-        CvScalar col = CV_RGB((float)255 * smile_neighbors / max_neighbors, 0, 0);
-        rectangle(img, cvPoint(0, img.rows), cvPoint(img.cols/10, img.rows - rect_height), col, -1);
-	}
+        static int max_neighbors=-1;
+        static int min_neighbors=-1;
+        if (min_neighbors == -1) min_neighbors = smile_neighbors;
+        max_neighbors = MAX(max_neighbors, smile_neighbors);
 
-	cv::imshow( "result", img );
+        // Draw rectangle on the left side of the image reflecting smile intensity
+        float intensityZeroOne = ((float)smile_neighbors - min_neighbors) / (max_neighbors - min_neighbors + 1);
+        int rect_height = cvRound((float)img.rows * intensityZeroOne);
+        CvScalar col = CV_RGB((float)255 * intensityZeroOne, 0, 0);
+        rectangle(img, cvPoint(0, img.rows), cvPoint(img.cols/10, img.rows - rect_height), col, -1);
+    }
+
+    cv::imshow( "result", img );
 }
