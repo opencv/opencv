@@ -152,12 +152,12 @@ class CvCapture_FFMPEG_proxy :
     public CvCapture
 {
 public:
-    CvCapture_FFMPEG_proxy() { ffmpegCapture = 0; }
+    CvCapture_FFMPEG_proxy() : ffmpegCapture(0) { }
     virtual ~CvCapture_FFMPEG_proxy() { close(); }
 
     virtual double getProperty(int propId)
     {
-        return ffmpegCapture ? icvGetCaptureProperty_FFMPEG_p(ffmpegCapture, propId) : 0;
+        return ffmpegCapture ? icvGetCaptureProperty_FFMPEG_p(ffmpegCapture, propId) : 0.0;
     }
     virtual bool setProperty(int propId, double value)
     {
@@ -220,7 +220,7 @@ class CvVideoWriter_FFMPEG_proxy :
     public CvVideoWriter
 {
 public:
-    CvVideoWriter_FFMPEG_proxy() { ffmpegWriter = 0; }
+    CvVideoWriter_FFMPEG_proxy() : ffmpegWriter(0) { }
     virtual ~CvVideoWriter_FFMPEG_proxy() { close(); }
 
     virtual bool writeFrame( const IplImage* image )
