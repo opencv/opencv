@@ -132,8 +132,10 @@ CV_EXPORTS void setOpenGlContext(const string& winname);
 
 CV_EXPORTS void updateWindow(const string& winname);
 
+// < Deperecated
 CV_EXPORTS void pointCloudShow(const string& winname, const GlCamera& camera, const GlArrays& arr);
 CV_EXPORTS void pointCloudShow(const string& winname, const GlCamera& camera, InputArray points, InputArray colors = noArray());
+// >
 
 //Only for Qt
 
