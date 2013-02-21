@@ -33,7 +33,8 @@ PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateSmall,
     declare
         .in(img, WARMUP_RNG)
         .in(tmpl, WARMUP_RNG)
-        .out(result);
+        .out(result)
+        .time(30);
 
     TEST_CYCLE() matchTemplate(img, tmpl, result, method);
 
@@ -66,7 +67,8 @@ PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateBig,
     declare
         .in(img, WARMUP_RNG)
         .in(tmpl, WARMUP_RNG)
-        .out(result);
+        .out(result)
+        .time(30);
 
     TEST_CYCLE() matchTemplate(img, tmpl, result, method);
 
