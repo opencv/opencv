@@ -69,6 +69,7 @@ protected:
     virtual bool getSubset( const CvMat* m1, const CvMat* m2,
                             CvMat* ms1, CvMat* ms2, int maxAttempts=1000 );
     virtual bool checkSubset( const CvMat* ms1, int count );
+    virtual bool isMinimalSetConsistent( const CvMat* /*m1*/, const CvMat* /*m2*/ ) { return true; };
 
     CvRNG rng;
     int modelPoints;

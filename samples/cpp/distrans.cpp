@@ -104,14 +104,14 @@ static void help()
 
 const char* keys =
 {
-    "{1| |stuff.jpg|input image file}"
+    "{@image |stuff.jpg|input image file}"
 };
 
 int main( int argc, const char** argv )
 {
     help();
     CommandLineParser parser(argc, argv, keys);
-    string filename = parser.get<string>("1");
+    string filename = parser.get<string>(0);
     gray = imread(filename.c_str(), 0);
     if(gray.empty())
     {

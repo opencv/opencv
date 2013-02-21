@@ -15,26 +15,26 @@ unsigned int TestBase::iterationsLimitDefault = (unsigned int)(-1);
 int64 TestBase::_timeadjustment = 0;
 
 const std::string command_line_keys =
-    "{   |perf_max_outliers   |8        |percent of allowed outliers}"
-    "{   |perf_min_samples    |10       |minimal required numer of samples}"
-    "{   |perf_force_samples  |100      |force set maximum number of samples for all tests}"
-    "{   |perf_seed           |809564   |seed for random numbers generator}"
-    "{   |perf_threads        |-1       |the number of worker threads, if parallel execution is enabled}"
-    "{   |perf_write_sanity   |false    |create new records for sanity checks}"
-    "{   |perf_verify_sanity  |false    |fail tests having no regression data for sanity checks}"
+    "{   perf_max_outliers   |8        |percent of allowed outliers}"
+    "{   perf_min_samples    |10       |minimal required numer of samples}"
+    "{   perf_force_samples  |100      |force set maximum number of samples for all tests}"
+    "{   perf_seed           |809564   |seed for random numbers generator}"
+    "{   perf_threads        |-1       |the number of worker threads, if parallel execution is enabled}"
+    "{   perf_write_sanity   |         |create new records for sanity checks}"
+    "{   perf_verify_sanity  |         |fail tests having no regression data for sanity checks}"
 #ifdef ANDROID
-    "{   |perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
-    "{   |perf_affinity_mask  |0        |set affinity mask for the main thread}"
-    "{   |perf_log_power_checkpoints  | |additional xml logging for power measurement}"
+    "{   perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
+    "{   perf_affinity_mask  |0        |set affinity mask for the main thread}"
+    "{   perf_log_power_checkpoints  | |additional xml logging for power measurement}"
 #else
-    "{   |perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
+    "{   perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
 #endif
-    "{   |perf_max_deviation  |1.0      |}"
-    "{h  |help                |false    |print help info}"
+    "{   perf_max_deviation  |1.0      |}"
+    "{   help h              |         |print help info}"
 #ifdef HAVE_CUDA
-    "{   |perf_run_cpu        |false    |run GPU performance tests for analogical CPU functions}"
-    "{   |perf_cuda_device    |0        |run GPU test suite onto specific CUDA capable device}"
-    "{   |perf_cuda_info_only |false    |print an information about system and an available CUDA devices and then exit.}"
+    "{   perf_run_cpu        |false    |run GPU performance tests for analogical CPU functions}"
+    "{   perf_cuda_device    |0        |run GPU test suite onto specific CUDA capable device}"
+    "{   perf_cuda_info_only |false    |print an information about system and an available CUDA devices and then exit.}"
 #endif
 ;
 
@@ -156,7 +156,7 @@ Regression& Regression::addKeypoints(TestBase* test, const std::string& name, co
 
 Regression& Regression::addMatches(TestBase* test, const std::string& name, const std::vector<cv::DMatch>& array, double eps, ERROR_TYPE err)
 {
-    int len = (int)array.size();      
+    int len = (int)array.size();
     cv::Mat queryIdx(len, 1, CV_32SC1, len ? (void*)&array[0].queryIdx : 0, sizeof(cv::DMatch));
     cv::Mat trainIdx(len, 1, CV_32SC1, len ? (void*)&array[0].trainIdx : 0, sizeof(cv::DMatch));
     cv::Mat imgIdx  (len, 1, CV_32SC1, len ? (void*)&array[0].imgIdx : 0,   sizeof(cv::DMatch));
@@ -646,11 +646,10 @@ performance_metrics::performance_metrics()
 
 void TestBase::Init(int argc, const char* const argv[])
 {
-    cv::CommandLineParser args(argc, argv, command_line_keys.c_str());
-    if (args.get<bool>("help"))
+    cv::CommandLineParser args(argc, argv, command_line_keys);
+    if (args.has("help"))
     {
-        args.printParams();
-        printf("\n\n");
+        args.printMessage();
         return;
     }
 
@@ -659,25 +658,25 @@ void TestBase::Init(int argc, const char* const argv[])
     param_max_outliers  = std::min(100., std::max(0., args.get<double>("perf_max_outliers")));
     param_min_samples   = std::max(1u, args.get<unsigned int>("perf_min_samples"));
     param_max_deviation = std::max(0., args.get<double>("perf_max_deviation"));
-    param_seed          = args.get<uint64>("perf_seed");
+    param_seed          = args.get<unsigned int>("perf_seed");
     param_time_limit    = std::max(0., args.get<double>("perf_time_limit"));
     param_force_samples = args.get<unsigned int>("perf_force_samples");
-    param_write_sanity  = args.get<bool>("perf_write_sanity");
-    param_verify_sanity = args.get<bool>("perf_verify_sanity");
+    param_write_sanity  = args.has("perf_write_sanity");
+    param_verify_sanity = args.has("perf_verify_sanity");
     param_threads  = args.get<int>("perf_threads");
 #ifdef ANDROID
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
-    log_power_checkpoints = args.get<bool>("perf_log_power_checkpoints");
+    log_power_checkpoints = args.has("perf_log_power_checkpoints");
 #endif
 
 #ifdef HAVE_CUDA
 
-    bool printOnly        = args.get<bool>("perf_cuda_info_only");
+    bool printOnly        = args.has("perf_cuda_info_only");
 
     if (printOnly)
         exit(0);
 
-    param_run_cpu         = args.get<bool>("perf_run_cpu");
+    param_run_cpu         = args.has("perf_run_cpu");
     param_cuda_device      = std::max(0, std::min(cv::gpu::getCudaEnabledDeviceCount(), args.get<int>("perf_cuda_device")));
 
     if (param_run_cpu)
@@ -697,11 +696,11 @@ void TestBase::Init(int argc, const char* const argv[])
     }
 #endif
 
-//    if (!args.check())
-//    {
-//        args.printErrors();
-//        return;
-//    }
+    if (!args.check())
+    {
+        args.printErrors();
+        return;
+    }
 
     timeLimitDefault = param_time_limit == 0.0 ? 1 : (int64)(param_time_limit * cv::getTickFrequency());
     iterationsLimitDefault = param_force_samples == 0 ? (unsigned)(-1) : param_force_samples;

@@ -376,6 +376,7 @@ void cv::gpu::DeviceInfo::query()
     multi_processor_count_ = prop.multiProcessorCount;
     majorVersion_ = prop.major;
     minorVersion_ = prop.minor;
+    sharedMemPerBlock_ = prop.sharedMemPerBlock;
 }
 
 void cv::gpu::DeviceInfo::queryMemory(size_t& free_memory, size_t& total_memory) const
@@ -762,6 +763,43 @@ GpuMat cv::gpu::GpuMat::reshape(int new_cn, int new_rows) const
 cv::Mat::Mat(const GpuMat& m) : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
 {
     m.download(*this);
+}
+
+void cv::gpu::createContinuous(int rows, int cols, int type, GpuMat& m)
+{
+    int area = rows * cols;
+    if (m.empty() || m.type() != type || !m.isContinuous() || m.size().area() < area)
+        m.create(1, area, type);
+
+    m.cols = cols;
+    m.rows = rows;
+    m.step = m.elemSize() * cols;
+    m.flags |= Mat::CONTINUOUS_FLAG;
+}
+
+void cv::gpu::ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
+{
+    if (m.empty() || m.type() != type || m.data != m.datastart)
+        m.create(rows, cols, type);
+    else
+    {
+        const size_t esz = m.elemSize();
+        const ptrdiff_t delta2 = m.dataend - m.datastart;
+
+        const size_t minstep = m.cols * esz;
+
+        Size wholeSize;
+        wholeSize.height = std::max(static_cast<int>((delta2 - minstep) / m.step + 1), m.rows);
+        wholeSize.width = std::max(static_cast<int>((delta2 - m.step * (wholeSize.height - 1)) / esz), m.cols);
+
+        if (wholeSize.height < rows || wholeSize.width < cols)
+            m.create(rows, cols, type);
+        else
+        {
+            m.cols = cols;
+            m.rows = rows;
+        }
+    }
 }
 
 namespace

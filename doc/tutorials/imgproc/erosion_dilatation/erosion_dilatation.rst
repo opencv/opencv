@@ -39,7 +39,7 @@ Morphological Operations
      :align: center
 
 Dilation
-^^^^^^^^^
+~~~~~~~~
 
 * This operations consists of convoluting an image :math:`A` with some kernel (:math:`B`), which can have any shape or size, usually a square or circle.
 
@@ -54,7 +54,7 @@ Dilation
 The background (bright) dilates around the black regions of the letter.
 
 Erosion
-^^^^^^^^
+~~~~~~~
 
 * This operation is the sister of dilation. What this does is to compute a local minimum over the area of the kernel.
 
@@ -112,21 +112,21 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
      /// Create Erosion Trackbar
      createTrackbar( "Element:\n 0: Rect \n 1: Cross \n 2: Ellipse", "Erosion Demo",
-     		     &erosion_elem, max_elem,
-		     Erosion );
+                 &erosion_elem, max_elem,
+             Erosion );
 
      createTrackbar( "Kernel size:\n 2n +1", "Erosion Demo",
-		     &erosion_size, max_kernel_size,
-		     Erosion );
+             &erosion_size, max_kernel_size,
+             Erosion );
 
      /// Create Dilation Trackbar
      createTrackbar( "Element:\n 0: Rect \n 1: Cross \n 2: Ellipse", "Dilation Demo",
-		     &dilation_elem, max_elem,
-		     Dilation );
+             &dilation_elem, max_elem,
+             Dilation );
 
      createTrackbar( "Kernel size:\n 2n +1", "Dilation Demo",
-		     &dilation_size, max_kernel_size,
-		     Dilation );
+             &dilation_size, max_kernel_size,
+             Dilation );
 
      /// Default start
      Erosion( 0, 0 );
@@ -145,8 +145,8 @@ This tutorial code's is shown lines below. You can also download it from `here <
      else if( erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
 
      Mat element = getStructuringElement( erosion_type,
-     	  				  Size( 2*erosion_size + 1, 2*erosion_size+1 ),
-				       	  Point( erosion_size, erosion_size ) );
+                          Size( 2*erosion_size + 1, 2*erosion_size+1 ),
+                          Point( erosion_size, erosion_size ) );
 
      /// Apply the erosion operation
      erode( src, erosion_dst, element );
@@ -162,8 +162,8 @@ This tutorial code's is shown lines below. You can also download it from `here <
      else if( dilation_elem == 2) { dilation_type = MORPH_ELLIPSE; }
 
      Mat element = getStructuringElement( dilation_type,
-				       	  Size( 2*dilation_size + 1, 2*dilation_size+1 ),
-				       	  Point( dilation_size, dilation_size ) );
+                          Size( 2*dilation_size + 1, 2*dilation_size+1 ),
+                          Point( dilation_size, dilation_size ) );
      /// Apply the dilation operation
      dilate( src, dilation_dst, element );
      imshow( "Dilation Demo", dilation_dst );
@@ -201,8 +201,8 @@ Explanation
         else if( erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
 
         Mat element = getStructuringElement( erosion_type,
-     	    				     Size( 2*erosion_size + 1, 2*erosion_size+1 ),
-				       	     Point( erosion_size, erosion_size ) );
+                                 Size( 2*erosion_size + 1, 2*erosion_size+1 ),
+                             Point( erosion_size, erosion_size ) );
         /// Apply the erosion operation
         erode( src, erosion_dst, element );
         imshow( "Erosion Demo", erosion_dst );
@@ -216,17 +216,17 @@ Explanation
 
         .. code-block:: cpp
 
- 	   Mat element = getStructuringElement( erosion_type,
-     	    				        Size( 2*erosion_size + 1, 2*erosion_size+1 ),
-				       	        Point( erosion_size, erosion_size ) );
+            Mat element = getStructuringElement( erosion_type,
+                                          Size( 2*erosion_size + 1, 2*erosion_size+1 ),
+                                          Point( erosion_size, erosion_size ) );
 
        We can choose any of three shapes for our kernel:
 
        .. container:: enumeratevisibleitemswithsquare
 
-	  + Rectangular box: MORPH_RECT
- 	  + Cross:  MORPH_CROSS
-	  + Ellipse: MORPH_ELLIPSE
+           + Rectangular box: MORPH_RECT
+           + Cross:  MORPH_CROSS
+           + Ellipse: MORPH_ELLIPSE
 
        Then, we just have to specify the size of our kernel and the *anchor point*. If not specified, it is assumed to be in the center.
 
@@ -251,8 +251,8 @@ The code is below. As you can see, it is completely similar to the snippet of co
      else if( dilation_elem == 2) { dilation_type = MORPH_ELLIPSE; }
 
      Mat element = getStructuringElement( dilation_type,
-       	       	                          Size( 2*dilation_size + 1, 2*dilation_size+1 ),
-				       	  Point( dilation_size, dilation_size ) );
+                                          Size( 2*dilation_size + 1, 2*dilation_size+1 ),
+                          Point( dilation_size, dilation_size ) );
      /// Apply the dilation operation
      dilate( src, dilation_dst, element );
      imshow( "Dilation Demo", dilation_dst );

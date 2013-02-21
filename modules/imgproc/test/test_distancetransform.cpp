@@ -90,30 +90,20 @@ void CV_DisTransTest::get_test_array_types_and_sizes( int test_case_idx,
     if( cvtest::randInt(rng) & 1 )
     {
         mask_size = 3;
-        dist_type = cvtest::randInt(rng) % 4;
-        dist_type = dist_type == 0 ? CV_DIST_C : dist_type == 1 ? CV_DIST_L1 :
-                    dist_type == 2 ? CV_DIST_L2 : CV_DIST_USER;
     }
     else
     {
         mask_size = 5;
-        dist_type = cvtest::randInt(rng) % 10;
-        dist_type = dist_type == 0 ? CV_DIST_C : dist_type == 1 ? CV_DIST_L1 :
-                    dist_type < 6 ? CV_DIST_L2 : CV_DIST_USER;
     }
+
+    dist_type = cvtest::randInt(rng) % 3;
+    dist_type = dist_type == 0 ? CV_DIST_C : dist_type == 1 ? CV_DIST_L1 : CV_DIST_L2;
 
     // for now, check only the "labeled" distance transform mode
     fill_labels = 0;
 
     if( !fill_labels )
         sizes[OUTPUT][1] = sizes[REF_OUTPUT][1] = cvSize(0,0);
-
-    if( dist_type == CV_DIST_USER )
-    {
-        mask[0] = (float)(1.1 - cvtest::randReal(rng)*0.2);
-        mask[1] = (float)(1.9 - cvtest::randReal(rng)*0.8);
-        mask[2] = (float)(3. - cvtest::randReal(rng));
-    }
 }
 
 

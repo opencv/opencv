@@ -334,7 +334,7 @@ public:
 **Extend this if necessary later.
 **Note that the kernel need to be further refined.
 */
-static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, 
+static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
                          Size &ksize, const Point anchor, bool rectKernel, bool useROI)
 {
     //Normalize the result by default
@@ -391,11 +391,11 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     }
 
     char compile_option[128];
-    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D ERODE %s %s %s", 
-        anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], 
-	    rectKernel?"-D RECTKERNEL":"",
-	    useROI?"-D USEROI":"",
-	    s);
+    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D ERODE %s %s %s",
+        anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1],
+        rectKernel?"-D RECTKERNEL":"",
+        useROI?"-D USEROI":"",
+        s);
     vector< pair<size_t, const void *> > args;
     args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
     args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
@@ -414,7 +414,7 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
 
 
 //! data type supported: CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4
-static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, 
+static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
                           Size &ksize, const Point anchor, bool rectKernel, bool useROI)
 {
     //Normalize the result by default
@@ -434,7 +434,7 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     Context *clCxt = src.clCxt;
     string kernelName;
     size_t localThreads[3] = {16, 16, 1};
-    size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0], 
+    size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0],
                                (src.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1};
 
     if (src.type() == CV_8UC1)
@@ -472,8 +472,8 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     }
 
     char compile_option[128];
-    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D DILATE %s %s %s", 
-        anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], 
+    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D DILATE %s %s %s",
+        anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1],
         rectKernel?"-D RECTKERNEL":"",
         useROI?"-D USEROI":"",
         s);

@@ -202,9 +202,9 @@ bool  PxMDecoder::readData( Mat& img )
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
 
-    AutoBuffer<uchar,1024> _src(src_pitch + 32);
+    AutoBuffer<uchar> _src(src_pitch + 32);
     uchar* src = _src;
-    AutoBuffer<uchar,1024> _gray_palette;
+    AutoBuffer<uchar> _gray_palette;
     uchar* gray_palette = _gray_palette;
 
     // create LUT for converting colors

@@ -13,7 +13,7 @@ static void help()
             "Random points are generated and then enclosed.\n"
             "Call:\n"
             "./minarea\n"
-            "Using OpenCV version %s\n" << CV_VERSION << "\n" << endl;
+            "Using OpenCV v" << CV_VERSION << "\n" << endl;
 }
 
 int main( int /*argc*/, char** /*argv*/ )

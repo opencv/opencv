@@ -22,10 +22,10 @@ public class HighguiTest extends OpenCVTestCase {
     public void testImencodeStringMatListOfByteListOfInteger() {
         MatOfInt  params40 = new MatOfInt(Highgui.IMWRITE_JPEG_QUALITY, 40);
         MatOfInt  params90 = new MatOfInt(Highgui.IMWRITE_JPEG_QUALITY, 90);
-    /* or
+        /* or
         MatOfInt  params = new MatOfInt();
-    params.fromArray(Highgui.IMWRITE_JPEG_QUALITY, 40);
-    */
+        params.fromArray(Highgui.IMWRITE_JPEG_QUALITY, 40);
+        */
         MatOfByte buff40 = new MatOfByte();
         MatOfByte buff90 = new MatOfByte();
 

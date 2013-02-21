@@ -335,9 +335,9 @@ void CvCapture_FFMPEG::close()
 class ImplMutex
 {
 public:
-	ImplMutex() { init(); }
-	~ImplMutex() { destroy(); }
-	
+    ImplMutex() { init(); }
+    ~ImplMutex() { destroy(); }
+
     void init();
     void destroy();
 
@@ -431,14 +431,14 @@ struct ImplMutex::Impl
 
 void ImplMutex::init()
 {
-	impl = (Impl*)malloc(sizeof(Impl));
-	impl->init();
+    impl = (Impl*)malloc(sizeof(Impl));
+    impl->init();
 }
-void ImplMutex::destroy() 
+void ImplMutex::destroy()
 {
-	impl->destroy();
-	free(impl);
-	impl = NULL;
+    impl->destroy();
+    free(impl);
+    impl = NULL;
 }
 void ImplMutex::lock() { impl->lock(); }
 void ImplMutex::unlock() { impl->unlock(); }

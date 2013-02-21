@@ -295,7 +295,7 @@ namespace cv { namespace gpu { namespace device
             int grid = divUp(workAmount, block);
             cudaFuncSetCacheConfig(lbp_cascade, cudaFuncCachePreferL1);
             Cascade cascade((Stage*)mstages.ptr(), nstages, (ClNode*)mnodes.ptr(), mleaves.ptr(), msubsets.ptr(), (uchar4*)mfeatures.ptr(), subsetSize);
-            lbp_cascade<<<grid, block>>>(cascade, frameW, frameH, windowW, windowH, initialScale, factor, workAmount, integral.ptr(), (int)integral.step / sizeof(int), objects, classified);
+            lbp_cascade<<<grid, block>>>(cascade, frameW, frameH, windowW, windowH, initialScale, factor, workAmount, integral.ptr(), integral.step / sizeof(int), objects, classified);
         }
     }
 }}}

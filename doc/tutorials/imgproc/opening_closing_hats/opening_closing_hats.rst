@@ -154,13 +154,13 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
     /// Create Trackbar to select kernel type
     createTrackbar( "Element:\n 0: Rect - 1: Cross - 2: Ellipse", window_name,
-		    &morph_elem, max_elem,
-		    Morphology_Operations );
+            &morph_elem, max_elem,
+            Morphology_Operations );
 
     /// Create Trackbar to choose kernel size
     createTrackbar( "Kernel size:\n 2n +1", window_name,
-		    &morph_size, max_kernel_size,
-		    Morphology_Operations );
+            &morph_size, max_kernel_size,
+            Morphology_Operations );
 
     /// Default start
     Morphology_Operations( 0, 0 );
@@ -211,16 +211,16 @@ Explanation
        .. code-block:: cpp
 
           createTrackbar( "Element:\n 0: Rect - 1: Cross - 2: Ellipse", window_name,
-		          &morph_elem, max_elem,
-		          Morphology_Operations );
+                  &morph_elem, max_elem,
+                  Morphology_Operations );
 
      * The final trackbar **"Kernel Size"** returns the size of the kernel to be used (**morph_size**)
 
        .. code-block:: cpp
 
           createTrackbar( "Kernel size:\n 2n +1", window_name,
-		          &morph_size, max_kernel_size,
-		          Morphology_Operations );
+                  &morph_size, max_kernel_size,
+                  Morphology_Operations );
 
 
    * Every time we move any slider, the user's function **Morphology_Operations** will be called to effectuate a new morphology operation and it will update the output image based on the current trackbar values.

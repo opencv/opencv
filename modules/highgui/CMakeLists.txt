@@ -179,13 +179,6 @@ if(HAVE_GIGE_API)
   list(APPEND highgui_srcs src/cap_giganetix.cpp)
 endif(HAVE_GIGE_API)
 
-if(WITH_IMAGEIO)
-  add_definitions(-DHAVE_IMAGEIO=1)
-  if(IOS)
-    list(APPEND HIGHGUI_LIBRARIES "-framework ImageIO")
-  endif()
-endif(WITH_IMAGEIO)
-
 if(WITH_AVFOUNDATION)
   add_definitions(-DHAVE_AVFOUNDATION=1)
   list(APPEND highgui_srcs src/cap_avfoundation.mm)

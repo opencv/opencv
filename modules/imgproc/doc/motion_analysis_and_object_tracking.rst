@@ -151,9 +151,7 @@ The function is used to detect translational shifts that occur between two image
 
 Calculates the cross-power spectrum of two supplied source arrays. The arrays are padded if needed with :ocv:func:`getOptimalDFTSize`.
 
-.. ocv:function:: Point2d phaseCorrelate(InputArray src1, InputArray src2, InputArray window = noArray())
-
-.. ocv:function:: Point2d phaseCorrelateRes(InputArray src1, InputArray src2, InputArray window, double* response = 0)
+.. ocv:function:: Point2d phaseCorrelate(InputArray src1, InputArray src2, InputArray window = noArray(), double* response = 0)
 
     :param src1: Source floating point array (CV_32FC1 or CV_64FC1)
     :param src2: Source floating point array (CV_32FC1 or CV_64FC1)

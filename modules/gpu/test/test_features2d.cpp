@@ -583,8 +583,7 @@ PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, NormCode, DescriptorSize
 
 GPU_TEST_P(BruteForceMatcher, Match_Single)
 {
-    cv::gpu::BruteForceMatcher_GPU_base matcher(
-                cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
     cv::gpu::GpuMat mask;
     if (useMask)
@@ -611,8 +610,7 @@ GPU_TEST_P(BruteForceMatcher, Match_Single)
 
 GPU_TEST_P(BruteForceMatcher, Match_Collection)
 {
-    cv::gpu::BruteForceMatcher_GPU_base matcher(
-                        cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
     cv::gpu::GpuMat d_train(train);
 
@@ -666,8 +664,7 @@ GPU_TEST_P(BruteForceMatcher, Match_Collection)
 
 GPU_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
 {
-    cv::gpu::BruteForceMatcher_GPU_base matcher(
-                        cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
     const int knn = 2;
 
@@ -706,8 +703,7 @@ GPU_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
 
 GPU_TEST_P(BruteForceMatcher, KnnMatch_3_Single)
 {
-    cv::gpu::BruteForceMatcher_GPU_base matcher(
-                        cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
     const int knn = 3;
 
@@ -746,8 +742,7 @@ GPU_TEST_P(BruteForceMatcher, KnnMatch_3_Single)
 
 GPU_TEST_P(BruteForceMatcher, KnnMatch_2_Collection)
 {
-    cv::gpu::BruteForceMatcher_GPU_base matcher(
-                        cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
     const int knn = 2;
 
@@ -809,8 +804,7 @@ GPU_TEST_P(BruteForceMatcher, KnnMatch_2_Collection)
 
 GPU_TEST_P(BruteForceMatcher, KnnMatch_3_Collection)
 {
-    cv::gpu::BruteForceMatcher_GPU_base matcher(
-                        cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
     const int knn = 3;
 
@@ -872,8 +866,7 @@ GPU_TEST_P(BruteForceMatcher, KnnMatch_3_Collection)
 
 GPU_TEST_P(BruteForceMatcher, RadiusMatch_Single)
 {
-    cv::gpu::BruteForceMatcher_GPU_base matcher(
-                        cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
     const float radius = 1.f / countFactor;
 
@@ -922,8 +915,7 @@ GPU_TEST_P(BruteForceMatcher, RadiusMatch_Single)
 
 GPU_TEST_P(BruteForceMatcher, RadiusMatch_Collection)
 {
-    cv::gpu::BruteForceMatcher_GPU_base matcher(
-                        cv::gpu::BruteForceMatcher_GPU_base::DistType((normCode -2) / 2));
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
     const int n = 3;
     const float radius = 1.f / countFactor * n;

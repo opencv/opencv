@@ -11,7 +11,7 @@ Using OpenCV with gcc and CMake
    * The easiest way of using OpenCV in your code is to use `CMake <http://www.cmake.org/>`_. A few advantages (taken from the Wiki):
 
      #. No need to change anything when porting between Linux and Windows
-     #. Can easily be combined with other tools by CMake( i.e. Qt, ITK and VTK ) 
+     #. Can easily be combined with other tools by CMake( i.e. Qt, ITK and VTK )
 
    * If you are not familiar with CMake, checkout the `tutorial <http://www.cmake.org/cmake/help/cmake_tutorial.html>`_ on its website.
 
@@ -21,7 +21,7 @@ Steps
 Create a program using OpenCV
 -------------------------------
 
-Let's use a simple program such as DisplayImage.cpp shown below. 
+Let's use a simple program such as DisplayImage.cpp shown below.
 
 .. code-block:: cpp
 
@@ -36,9 +36,9 @@ Let's use a simple program such as DisplayImage.cpp shown below.
      image = imread( argv[1], 1 );
 
      if( argc != 2 || !image.data )
-       { 
+       {
          printf( "No image data \n" );
-         return -1; 
+         return -1;
        }
 
      namedWindow( "Display Image", CV_WINDOW_AUTOSIZE );

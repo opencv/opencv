@@ -118,6 +118,38 @@ These values are proved to be invariants to the image scale, rotation, and refle
 
 .. seealso:: :ocv:func:`matchShapes`
 
+connectedComponents
+-----------------------
+computes the connected components labeled image of boolean image ``image`` with 4 or 8 way connectivity - returns N, the total number of labels [0, N-1] where 0 represents the background label.  ltype specifies the output label image type, an important consideration based on the total number of labels or alternatively the total number of pixels in the source image.
+
+.. ocv:function:: int connectedComponents(InputArray image, OutputArray labels, int connectivity = 8, int ltype=CV_32S)
+
+.. ocv:function:: int connectedComponentsWithStats(InputArray image, OutputArray labels, OutputArray stats, OutputArray centroids, int connectivity = 8, int ltype=CV_32S)
+
+    :param image: the image to be labeled
+
+    :param labels: destination labeled image
+
+    :param connectivity: 8 or 4 for 8-way or 4-way connectivity respectively
+
+    :param ltype: output image label type.  Currently CV_32S and CV_16U are supported.
+
+    :param statsv: statistics output for each label, including the background label, see below for available statistics.  Statistics are accessed via statsv(label, COLUMN) where available columns are defined below.
+
+        * **CC_STAT_LEFT** The leftmost (x) coordinate which is the inclusive start of the bounding box in the horizontal
+          direction.
+
+        * **CC_STAT_TOP**  The topmost (y) coordinate which is the inclusive start of the bounding box in the vertical
+          direction.
+
+        * **CC_STAT_WIDTH** The horizontal size of the bounding box
+
+        * **CC_STAT_HEIGHT** The vertical size of the bounding box
+
+        * **CC_STAT_AREA** The total area (in pixels) of the connected component
+
+    :param centroids: floating point centroid (x,y) output for each label, including the background label
+
 
 findContours
 ----------------
@@ -165,87 +197,6 @@ The function retrieves contours from the binary image using the algorithm
 .. note:: Source ``image`` is modified by this function. Also, the function does not take into account 1-pixel border of the image (it's filled with 0's and used for neighbor analysis in the algorithm), therefore the contours touching the image border will be clipped.
 
 .. note:: If you use the new Python interface then the ``CV_`` prefix has to be omitted in contour retrieval mode and contour approximation method parameters (for example, use ``cv2.RETR_LIST`` and ``cv2.CHAIN_APPROX_NONE`` parameters). If you use the old Python interface then these parameters have the ``CV_`` prefix (for example, use ``cv.CV_RETR_LIST`` and ``cv.CV_CHAIN_APPROX_NONE``).
-
-drawContours
-----------------
-Draws contours outlines or filled contours.
-
-.. ocv:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours,                   int contourIdx, const Scalar& color, int thickness=1, int lineType=8, InputArray hierarchy=noArray(), int maxLevel=INT_MAX, Point offset=Point() )
-
-.. ocv:pyfunction:: cv2.drawContours(image, contours, contourIdx, color[, thickness[, lineType[, hierarchy[, maxLevel[, offset]]]]]) -> None
-
-.. ocv:cfunction:: void cvDrawContours( CvArr *img, CvSeq* contour, CvScalar externalColor, CvScalar holeColor, int maxLevel, int thickness=1, int lineType=8 )
-.. ocv:pyoldfunction:: cv.DrawContours(img, contour, external_color, hole_color, max_level, thickness=1, lineType=8, offset=(0, 0))-> None
-
-    :param image: Destination image.
-
-    :param contours: All the input contours. Each contour is stored as a point vector.
-
-    :param contourIdx: Parameter indicating a contour to draw. If it is negative, all the contours are drawn.
-
-    :param color: Color of the contours.
-
-    :param thickness: Thickness of lines the contours are drawn with. If it is negative (for example,  ``thickness=CV_FILLED`` ), the contour interiors are
-        drawn.
-
-    :param lineType: Line connectivity. See  :ocv:func:`line`  for details.
-
-    :param hierarchy: Optional information about hierarchy. It is only needed if you want to draw only some of the  contours (see  ``maxLevel`` ).
-
-    :param maxLevel: Maximal level for drawn contours. If it is 0, only
-        the specified contour is drawn. If it is 1, the function draws the contour(s) and all the nested contours. If it is 2, the function draws the contours, all the nested contours, all the nested-to-nested contours, and so on. This parameter is only taken into account when there is  ``hierarchy``  available.
-
-    :param offset: Optional contour shift parameter. Shift all the drawn contours by the specified  :math:`\texttt{offset}=(dx,dy)` .
-
-    :param contour: Pointer to the first contour.
-
-    :param externalColor: Color of external contours.
-
-    :param holeColor: Color of internal contours (holes).
-
-The function draws contour outlines in the image if
-:math:`\texttt{thickness} \ge 0` or fills the area bounded by the contours if
-:math:`\texttt{thickness}<0` . The example below shows how to retrieve connected components from the binary image and label them: ::
-
-    #include "cv.h"
-    #include "highgui.h"
-
-    using namespace cv;
-
-    int main( int argc, char** argv )
-    {
-        Mat src;
-        // the first command-line parameter must be a filename of the binary
-        // (black-n-white) image
-        if( argc != 2 || !(src=imread(argv[1], 0)).data)
-            return -1;
-
-        Mat dst = Mat::zeros(src.rows, src.cols, CV_8UC3);
-
-        src = src > 1;
-        namedWindow( "Source", 1 );
-        imshow( "Source", src );
-
-        vector<vector<Point> > contours;
-        vector<Vec4i> hierarchy;
-
-        findContours( src, contours, hierarchy,
-            CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
-
-        // iterate through all the top-level contours,
-        // draw each connected component with its own random color
-        int idx = 0;
-        for( ; idx >= 0; idx = hierarchy[idx][0] )
-        {
-            Scalar color( rand()&255, rand()&255, rand()&255 );
-            drawContours( dst, contours, idx, color, CV_FILLED, 8, hierarchy );
-        }
-
-        namedWindow( "Components", 1 );
-        imshow( "Components", dst );
-        waitKey(0);
-    }
-
 
 
 approxPolyDP

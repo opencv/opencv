@@ -328,16 +328,16 @@ CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst,
                                          bool fullAffine);
 
 //! computes dense optical flow using Simple Flow algorithm
-CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
-                                    Mat& to,
-                                    Mat& flow,
+CV_EXPORTS_W void calcOpticalFlowSF(InputArray from,
+                                    InputArray to,
+                                    OutputArray flow,
                                     int layers,
                                     int averaging_block_size,
                                     int max_flow);
 
-CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
-                                    Mat& to,
-                                    Mat& flow,
+CV_EXPORTS_W void calcOpticalFlowSF(InputArray from,
+                                    InputArray to,
+                                    OutputArray flow,
                                     int layers,
                                     int averaging_block_size,
                                     int max_flow,

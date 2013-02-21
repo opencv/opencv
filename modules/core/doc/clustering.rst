@@ -66,8 +66,8 @@ Splits an element set into equivalency classes.
 
     :param vec: Set of elements stored as a vector.
 
-    :param labels: Output vector of labels. It contains as many elements as  ``vec``. Each label  ``labels[i]``  is a 0-based cluster index of  ``vec[i]`` .   
-    
+    :param labels: Output vector of labels. It contains as many elements as  ``vec``. Each label  ``labels[i]``  is a 0-based cluster index of  ``vec[i]`` .
+
     :param predicate: Equivalence predicate (pointer to a boolean function of two arguments or an instance of the class that has the method  ``bool operator()(const _Tp& a, const _Tp& b)`` ). The predicate returns ``true`` when the elements are certainly in the same class, and returns ``false`` if they may or may not be in the same class.
 
 The generic function ``partition`` implements an

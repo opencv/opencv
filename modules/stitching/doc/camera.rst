@@ -9,7 +9,7 @@ detail::CameraParams
 
 Describes camera parameters.
 
-.. note:: Translation is assumed to be zero during the whole stitching pipeline. 
+.. note:: Translation is assumed to be zero during the whole stitching pipeline.
 
 ::
 

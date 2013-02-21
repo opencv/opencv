@@ -53,7 +53,7 @@ void cv::gpu::gammaCorrection(const GpuMat&, GpuMat&, bool, Stream&) { throw_nog
 
 #else /* !defined (HAVE_CUDA) */
 
-#include "cvt_color_internal.h"
+#include <cvt_colot_internal.h>
 
 namespace cv { namespace gpu {
     namespace device
@@ -69,7 +69,7 @@ using namespace ::cv::gpu::device;
 
 namespace
 {
-    typedef void (*gpu_func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+    typedef void (*gpu_func_t)(const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
 
     void bgr_to_rgb(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
@@ -1155,420 +1155,154 @@ namespace
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
 
-    void bgr_to_lab(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    void bgr_to_lab(const GpuMat& src, GpuMat& dst, int dcn, Stream& st)
     {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {bgr_to_lab_8u, bgr_to_lab_32f},
-                {bgra_to_lab_8u, bgra_to_lab_32f}
-            },
-            {
-                {bgr_to_lab4_8u, bgr_to_lab4_32f},
-                {bgra_to_lab4_8u, bgra_to_lab4_32f}
-            }
-        };
+        #if (CUDA_VERSION < 5000)
+            (void)src;
+            (void)dst;
+            (void)dcn;
+            (void)st;
+            CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+        #else
+            CV_Assert(src.depth() == CV_8U);
+            CV_Assert(src.channels() == 3);
 
-        if (dcn <= 0) dcn = 3;
+            dcn = src.channels();
 
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
+            dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
+            cudaStream_t stream = StreamAccessor::getStream(st);
+            NppStreamHandler h(stream);
 
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
+            NppiSize oSizeROI;
+            oSizeROI.width = src.cols;
+            oSizeROI.height = src.rows;
+
+            nppSafeCall( nppiBGRToLab_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        #endif
     }
 
-    void rgb_to_lab(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    void rgb_to_lab(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {rgb_to_lab_8u, rgb_to_lab_32f},
-                {rgba_to_lab_8u, rgba_to_lab_32f}
-            },
-            {
-                {rgb_to_lab4_8u, rgb_to_lab4_32f},
-                {rgba_to_lab4_8u, rgba_to_lab4_32f}
-            }
-        };
-
-        if (dcn <= 0) dcn = 3;
-
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
-
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
-
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
+        bgr_to_rgb(src, dst, -1, stream);
+        bgr_to_lab(dst, dst, -1, stream);
     }
 
-    void lbgr_to_lab(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    void lab_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& st)
     {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {lbgr_to_lab_8u, lbgr_to_lab_32f},
-                {lbgra_to_lab_8u, lbgra_to_lab_32f}
-            },
-            {
-                {lbgr_to_lab4_8u, lbgr_to_lab4_32f},
-                {lbgra_to_lab4_8u, lbgra_to_lab4_32f}
-            }
-        };
+        #if (CUDA_VERSION < 5000)
+            (void)src;
+            (void)dst;
+            (void)dcn;
+            (void)st;
+            CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+        #else
+            CV_Assert(src.depth() == CV_8U);
+            CV_Assert(src.channels() == 3);
 
-        if (dcn <= 0) dcn = 3;
+            dcn = src.channels();
 
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
+            dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
+            cudaStream_t stream = StreamAccessor::getStream(st);
+            NppStreamHandler h(stream);
 
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
+            NppiSize oSizeROI;
+            oSizeROI.width = src.cols;
+            oSizeROI.height = src.rows;
+
+            nppSafeCall( nppiLabToBGR_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        #endif
     }
 
-    void lrgb_to_lab(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    void lab_to_rgb(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {lrgb_to_lab_8u, lrgb_to_lab_32f},
-                {lrgba_to_lab_8u, lrgba_to_lab_32f}
-            },
-            {
-                {lrgb_to_lab4_8u, lrgb_to_lab4_32f},
-                {lrgba_to_lab4_8u, lrgba_to_lab4_32f}
-            }
-        };
-
-        if (dcn <= 0) dcn = 3;
-
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
-
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
-
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
+        lab_to_bgr(src, dst, -1, stream);
+        bgr_to_rgb(dst, dst, -1, stream);
     }
 
-    void lab_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    void rgb_to_luv(const GpuMat& src, GpuMat& dst, int dcn, Stream& st)
     {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {lab_to_bgr_8u, lab_to_bgr_32f},
-                {lab4_to_bgr_8u, lab4_to_bgr_32f}
-            },
-            {
-                {lab_to_bgra_8u, lab_to_bgra_32f},
-                {lab4_to_bgra_8u, lab4_to_bgra_32f}
-            }
-        };
+        #if (CUDA_VERSION < 5000)
+            (void)src;
+            (void)dst;
+            (void)dcn;
+            (void)st;
+            CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+        #else
+            CV_Assert(src.depth() == CV_8U);
+            CV_Assert(src.channels() == 3 || src.channels() == 4);
 
-        if (dcn <= 0) dcn = 3;
+            dcn = src.channels();
 
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
+            dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
+            cudaStream_t stream = StreamAccessor::getStream(st);
+            NppStreamHandler h(stream);
 
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
+            NppiSize oSizeROI;
+            oSizeROI.width = src.cols;
+            oSizeROI.height = src.rows;
+
+            if (dcn == 3)
+                nppSafeCall( nppiRGBToLUV_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
+            else
+                nppSafeCall( nppiRGBToLUV_8u_AC4R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        #endif
     }
 
-    void lab_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    void bgr_to_luv(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {lab_to_rgb_8u, lab_to_rgb_32f},
-                {lab4_to_rgb_8u, lab4_to_rgb_32f}
-            },
-            {
-                {lab_to_rgba_8u, lab_to_rgba_32f},
-                {lab4_to_rgba_8u, lab4_to_rgba_32f}
-            }
-        };
-
-        if (dcn <= 0) dcn = 3;
-
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
-
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
-
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
+        bgr_to_rgb(src, dst, -1, stream);
+        rgb_to_luv(dst, dst, -1, stream);
     }
 
-    void lab_to_lbgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    void luv_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& st)
     {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {lab_to_lbgr_8u, lab_to_lbgr_32f},
-                {lab4_to_lbgr_8u, lab4_to_lbgr_32f}
-            },
-            {
-                {lab_to_lbgra_8u, lab_to_lbgra_32f},
-                {lab4_to_lbgra_8u, lab4_to_lbgra_32f}
-            }
-        };
+        #if (CUDA_VERSION < 5000)
+            (void)src;
+            (void)dst;
+            (void)dcn;
+            (void)st;
+            CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+        #else
+            CV_Assert(src.depth() == CV_8U);
+            CV_Assert(src.channels() == 3 || src.channels() == 4);
 
-        if (dcn <= 0) dcn = 3;
+            dcn = src.channels();
 
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
+            dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
+            cudaStream_t stream = StreamAccessor::getStream(st);
+            NppStreamHandler h(stream);
 
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
+            NppiSize oSizeROI;
+            oSizeROI.width = src.cols;
+            oSizeROI.height = src.rows;
+
+            if (dcn == 3)
+                nppSafeCall( nppiLUVToRGB_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
+            else
+                nppSafeCall( nppiLUVToRGB_8u_AC4R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        #endif
     }
 
-    void lab_to_lrgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    void luv_to_bgr(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {lab_to_lrgb_8u, lab_to_lrgb_32f},
-                {lab4_to_lrgb_8u, lab4_to_lrgb_32f}
-            },
-            {
-                {lab_to_lrgba_8u, lab_to_lrgba_32f},
-                {lab4_to_lrgba_8u, lab4_to_lrgba_32f}
-            }
-        };
-
-        if (dcn <= 0) dcn = 3;
-
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
-
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
-
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
-    }
-
-    void bgr_to_luv(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
-    {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {bgr_to_luv_8u, bgr_to_luv_32f},
-                {bgra_to_luv_8u, bgra_to_luv_32f}
-            },
-            {
-                {bgr_to_luv4_8u, bgr_to_luv4_32f},
-                {bgra_to_luv4_8u, bgra_to_luv4_32f}
-            }
-        };
-
-        if (dcn <= 0) dcn = 3;
-
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
-
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
-
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
-    }
-
-    void rgb_to_luv(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
-    {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {rgb_to_luv_8u, rgb_to_luv_32f},
-                {rgba_to_luv_8u, rgba_to_luv_32f}
-            },
-            {
-                {rgb_to_luv4_8u, rgb_to_luv4_32f},
-                {rgba_to_luv4_8u, rgba_to_luv4_32f}
-            }
-        };
-
-        if (dcn <= 0) dcn = 3;
-
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
-
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
-
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
-    }
-
-    void lbgr_to_luv(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
-    {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {lbgr_to_luv_8u, lbgr_to_luv_32f},
-                {lbgra_to_luv_8u, lbgra_to_luv_32f}
-            },
-            {
-                {lbgr_to_luv4_8u, lbgr_to_luv4_32f},
-                {lbgra_to_luv4_8u, lbgra_to_luv4_32f}
-            }
-        };
-
-        if (dcn <= 0) dcn = 3;
-
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
-
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
-
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
-    }
-
-    void lrgb_to_luv(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
-    {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {lrgb_to_luv_8u, lrgb_to_luv_32f},
-                {lrgba_to_luv_8u, lrgba_to_luv_32f}
-            },
-            {
-                {lrgb_to_luv4_8u, lrgb_to_luv4_32f},
-                {lrgba_to_luv4_8u, lrgba_to_luv4_32f}
-            }
-        };
-
-        if (dcn <= 0) dcn = 3;
-
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
-
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
-
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
-    }
-
-    void luv_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
-    {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {luv_to_bgr_8u, luv_to_bgr_32f},
-                {luv4_to_bgr_8u, luv4_to_bgr_32f}
-            },
-            {
-                {luv_to_bgra_8u, luv_to_bgra_32f},
-                {luv4_to_bgra_8u, luv4_to_bgra_32f}
-            }
-        };
-
-        if (dcn <= 0) dcn = 3;
-
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
-
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
-
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
-    }
-
-    void luv_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
-    {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {luv_to_rgb_8u, luv_to_rgb_32f},
-                {luv4_to_rgb_8u, luv4_to_rgb_32f}
-            },
-            {
-                {luv_to_rgba_8u, luv_to_rgba_32f},
-                {luv4_to_rgba_8u, luv4_to_rgba_32f}
-            }
-        };
-
-        if (dcn <= 0) dcn = 3;
-
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
-
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
-
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
-    }
-
-    void luv_to_lbgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
-    {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {luv_to_lbgr_8u, luv_to_lbgr_32f},
-                {luv4_to_lbgr_8u, luv4_to_lbgr_32f}
-            },
-            {
-                {luv_to_lbgra_8u, luv_to_lbgra_32f},
-                {luv4_to_lbgra_8u, luv4_to_lbgra_32f}
-            }
-        };
-
-        if (dcn <= 0) dcn = 3;
-
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
-
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
-
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
-    }
-
-    void luv_to_lrgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
-    {
-        using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][2] =
-        {
-            {
-                {luv_to_lrgb_8u, luv_to_lrgb_32f},
-                {luv4_to_lrgb_8u, luv4_to_lrgb_32f}
-            },
-            {
-                {luv_to_lrgba_8u, luv_to_lrgba_32f},
-                {luv4_to_lrgba_8u, luv4_to_lrgba_32f}
-            }
-        };
-
-        if (dcn <= 0) dcn = 3;
-
-        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
-        CV_Assert(src.channels() == 3 || src.channels() == 4);
-        CV_Assert(dcn == 3 || dcn == 4);
-
-        dst.create(src.size(), CV_MAKE_TYPE(src.depth(), dcn));
-
-        funcs[dcn == 4][src.channels() == 4][src.depth() == CV_32F](src, dst, StreamAccessor::getStream(stream));
+        luv_to_rgb(src, dst, -1, stream);
+        bgr_to_rgb(dst, dst, -1, stream);
     }
 
     void rgba_to_mbgra(const GpuMat& src, GpuMat& dst, int, Stream& st)
@@ -1741,15 +1475,15 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
         hls_to_bgr_full,        // CV_HLS2BGR_FULL = 72
         hls_to_rgb_full,        // CV_HLS2RGB_FULL = 73
 
-        lbgr_to_lab,            // CV_LBGR2Lab     = 74
-        lrgb_to_lab,            // CV_LRGB2Lab     = 75
-        lbgr_to_luv,            // CV_LBGR2Luv     = 76
-        lrgb_to_luv,            // CV_LRGB2Luv     = 77
+        0,                      // CV_LBGR2Lab     = 74
+        0,                      // CV_LRGB2Lab     = 75
+        0,                      // CV_LBGR2Luv     = 76
+        0,                      // CV_LRGB2Luv     = 77
 
-        lab_to_lbgr,            // CV_Lab2LBGR     = 78
-        lab_to_lrgb,            // CV_Lab2LRGB     = 79
-        luv_to_lbgr,            // CV_Luv2LBGR     = 80
-        luv_to_lrgb,            // CV_Luv2LRGB     = 81
+        0,                      // CV_Lab2LBGR     = 78
+        0,                      // CV_Lab2LRGB     = 79
+        0,                      // CV_Luv2LBGR     = 80
+        0,                      // CV_Luv2LRGB     = 81
 
         bgr_to_yuv,             // CV_BGR2YUV      = 82
         rgb_to_yuv,             // CV_RGB2YUV      = 83

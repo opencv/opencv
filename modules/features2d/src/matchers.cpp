@@ -531,7 +531,7 @@ void FlannBasedMatcher::train()
 
 void FlannBasedMatcher::read( const FileNode& fn)
 {
-     if (indexParams == 0)
+     if (indexParams.empty())
          indexParams = new flann::IndexParams();
 
      FileNode ip = fn["indexParams"];
@@ -570,7 +570,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
         };
      }
 
-     if (searchParams == 0)
+     if (searchParams.empty())
          searchParams = new flann::SearchParams();
 
      FileNode sp = fn["searchParams"];
@@ -616,7 +616,7 @@ void FlannBasedMatcher::write( FileStorage& fs) const
 {
      fs << "indexParams" << "[";
 
-     if (indexParams != 0)
+     if (indexParams)
      {
          std::vector<std::string> names;
          std::vector<int> types;
@@ -667,7 +667,7 @@ void FlannBasedMatcher::write( FileStorage& fs) const
 
      fs << "]" << "searchParams" << "[";
 
-     if (searchParams != 0)
+     if (searchParams)
      {
          std::vector<std::string> names;
          std::vector<int> types;
