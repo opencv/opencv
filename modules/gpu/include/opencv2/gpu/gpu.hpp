@@ -815,6 +815,10 @@ struct CV_EXPORTS CannyBuf
     GpuMat st1, st2;
     GpuMat unused;
     Ptr<FilterEngine_GPU> filterDX, filterDY;
+
+    CannyBuf() {}
+    explicit CannyBuf(const Size& image_size, int apperture_size = 3) {create(image_size, apperture_size);}
+    CannyBuf(const GpuMat& dx_, const GpuMat& dy_);
 };
 
 CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
@@ -1879,11 +1883,9 @@ private:
     vector<GpuMat> prevPyr_;
     vector<GpuMat> nextPyr_;
     GpuMat vPyr_[2];
-    vector<GpuMat> unused1;
-    vector<GpuMat> unused2;
-    bool unused3;
-
-    GpuMat buf_;
+    vector<GpuMat> buf_;
+    vector<GpuMat> unused;
+    bool isDeviceArch11_;
 };
 
 

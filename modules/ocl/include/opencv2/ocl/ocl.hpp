@@ -102,7 +102,7 @@ namespace cv
 
         //this function enable ocl module to use customized cl_context and cl_command_queue
         //getDevice also need to be called before this function
-        CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0); 
+        CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0);
 
         //////////////////////////////// Error handling ////////////////////////
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
@@ -126,21 +126,21 @@ namespace cv
         };
 
         //! Calls a kernel, by string. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
-        CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt , 
+        CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
                                                         const char **source, string kernelName,
                                                         size_t globalThreads[3], size_t localThreads[3],
-                                                        std::vector< std::pair<size_t, const void *> > &args, 
-                                                        int channels, int depth, const char *build_options, 
-                                                        bool finish = true, bool measureKernelTime = false, 
+                                                        std::vector< std::pair<size_t, const void *> > &args,
+                                                        int channels, int depth, const char *build_options,
+                                                        bool finish = true, bool measureKernelTime = false,
                                                         bool cleanUp = true);
 
         //! Calls a kernel, by file. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
-        CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt , 
+        CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
                                                         const char **fileName, const int numFiles, string kernelName,
                                                         size_t globalThreads[3], size_t localThreads[3],
-                                                        std::vector< std::pair<size_t, const void *> > &args, 
-                                                        int channels, int depth, const char *build_options, 
-                                                        bool finish = true, bool measureKernelTime = false, 
+                                                        std::vector< std::pair<size_t, const void *> > &args,
+                                                        int channels, int depth, const char *build_options,
+                                                        bool finish = true, bool measureKernelTime = false,
                                                         bool cleanUp = true);
 
         class CV_EXPORTS oclMatExpr;
@@ -487,21 +487,22 @@ namespace cv
         CV_EXPORTS void bitwise_xor(const oclMat &src1, const Scalar &s, oclMat &dst, const oclMat &mask = oclMat());
 
         //! Logical operators
-        CV_EXPORTS oclMatExpr operator ~ (const oclMat &src);
-        CV_EXPORTS oclMatExpr operator | (const oclMat &src1, const oclMat &src2);
-        CV_EXPORTS oclMatExpr operator & (const oclMat &src1, const oclMat &src2);
-        CV_EXPORTS oclMatExpr operator ^ (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMat operator ~ (const oclMat &);
+        CV_EXPORTS oclMat operator | (const oclMat &, const oclMat &);
+        CV_EXPORTS oclMat operator & (const oclMat &, const oclMat &);
+        CV_EXPORTS oclMat operator ^ (const oclMat &, const oclMat &);
+
 
         //! Mathematics operators
         CV_EXPORTS oclMatExpr operator + (const oclMat &src1, const oclMat &src2);
         CV_EXPORTS oclMatExpr operator - (const oclMat &src1, const oclMat &src2);
         CV_EXPORTS oclMatExpr operator * (const oclMat &src1, const oclMat &src2);
         CV_EXPORTS oclMatExpr operator / (const oclMat &src1, const oclMat &src2);
- 
+
         //! computes convolution of two images
         //! support only CV_32FC1 type
         CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result);
- 
+
         CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0);
 
         //////////////////////////////// Filter Engine ////////////////////////////////
