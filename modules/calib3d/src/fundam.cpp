@@ -40,11 +40,39 @@
 //M*/
 
 #include "precomp.hpp"
-#include "_modelest.h"
 
-using namespace cv;
+namespace cv
+{
 
-template<typename T> int icvCompressPoints( T* ptr, const uchar* mask, int mstep, int count )
+static bool checkNonSingularity( const Mat& m, int count )
+{
+    if( count <= 2 )
+        return true;
+
+    int j, k, i;
+    const Point2f* ptr = m.ptr<Point2f>();
+
+    // check that the i-th selected point does not belong
+    // to a line connecting some previously selected points
+    for( j = 0; j < i; j++ )
+    {
+        double dx1 = ptr[j].x - ptr[i].x;
+        double dy1 = ptr[j].y - ptr[i].y;
+        for( k = 0; k < j; k++ )
+        {
+            double dx2 = ptr[k].x - ptr[i].x;
+            double dy2 = ptr[k].y - ptr[i].y;
+            if( fabs(dx2*dy1 - dy2*dx1) <= FLT_EPSILON*(fabs(dx1) + fabs(dy1) + fabs(dx2) + fabs(dy2)))
+                break;
+        }
+        if( k < j )
+            break;
+    }
+    return j == i;
+}
+
+
+static template<typename T> int compressPoints( T* ptr, const uchar* mask, int mstep, int count )
 {
     int i, j;
     for( i = j = 0; i < count; i++ )
@@ -57,19 +85,151 @@ template<typename T> int icvCompressPoints( T* ptr, const uchar* mask, int mstep
     return j;
 }
 
-class CvHomographyEstimator : public CvModelEstimator2
+
+class HomographyEstimatorCallback : public PointSetRegistrator::Callback
 {
 public:
-    CvHomographyEstimator( int modelPoints );
+    // We check whether the minimal set of points for the homography estimation
+    // are geometrically consistent. We check if every 3 correspondences sets
+    // fulfills the constraint.
+    //
+    // The usefullness of this constraint is explained in the paper:
+    //
+    // "Speeding-up homography estimation in mobile devices"
+    // Journal of Real-Time Image Processing. 2013. DOI: 10.1007/s11554-012-0314-1
+    // Pablo Marquez-Neila, Javier Lopez-Alberca, Jose M. Buenaposada, Luis Baumela
+    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const
+    {
+        srcPoints, const CvMat* dstPoints
 
-    virtual int runKernel( const CvMat* m1, const CvMat* m2, CvMat* model );
-    virtual bool refine( const CvMat* m1, const CvMat* m2,
-                         CvMat* model, int maxIters );
-protected:
-    virtual void computeReprojError( const CvMat* m1, const CvMat* m2,
-                                     const CvMat* model, CvMat* error );
-    virtual bool isMinimalSetConsistent( const CvMat* m1, const CvMat* m2 );
-    virtual bool weakConstraint ( const CvMat* srcPoints, const CvMat* dstPoints, int t1, int t2, int t3 );
+        return weakConstraint(srcPoints, dstPoints, 0, 1, 2) &&
+        weakConstraint(srcPoints, dstPoints, 1, 2, 3) &&
+        weakConstraint(srcPoints, dstPoints, 0, 2, 3) &&
+        weakConstraint(srcPoints, dstPoints, 0, 1, 3);
+    }
+
+    // We check whether three correspondences for the homography estimation
+    // are geometrically consistent (the points in the source image should
+    // maintain the same circular order than in the destination image).
+    //
+    // The usefullness of this constraint is explained in the paper:
+    //
+    // "Speeding-up homography estimation in mobile devices"
+    // Journal of Real-Time Image Processing. 2013. DOI: 10.1007/s11554-012-0314-1
+    // Pablo Marquez-Neila, Javier Lopez-Alberca, Jose M. Buenaposada, Luis Baumela
+    bool
+    CvHomographyEstimator::weakConstraint ( const CvMat* srcPoints, const CvMat* dstPoints, int t1, int t2, int t3 )
+    {
+        const CvPoint2D64f* src = (const CvPoint2D64f*)srcPoints->data.ptr;
+        const CvPoint2D64f* dst = (const CvPoint2D64f*)dstPoints->data.ptr;
+
+        CvMat* A = cvCreateMat( 3, 3, CV_64F );
+        CvMat* B = cvCreateMat( 3, 3, CV_64F );
+
+        double detA;
+        double detB;
+
+        cvmSet(A, 0, 0, src[t1].x);
+        cvmSet(A, 0, 1, src[t1].y);
+        cvmSet(A, 0, 2, 1);
+        cvmSet(A, 1, 0, src[t2].x);
+        cvmSet(A, 1, 1, src[t2].y);
+        cvmSet(A, 1, 2, 1);
+        cvmSet(A, 2, 0, src[t3].x);
+        cvmSet(A, 2, 1, src[t3].y);
+        cvmSet(A, 2, 2, 1);
+
+        cvmSet(B, 0, 0, dst[t1].x);
+        cvmSet(B, 0, 1, dst[t1].y);
+        cvmSet(B, 0, 2, 1);
+        cvmSet(B, 1, 0, dst[t2].x);
+        cvmSet(B, 1, 1, dst[t2].y);
+        cvmSet(B, 1, 2, 1);
+        cvmSet(B, 2, 0, dst[t3].x);
+        cvmSet(B, 2, 1, dst[t3].y);
+        cvmSet(B, 2, 2, 1);
+
+        detA = cvDet(A);
+        detB = cvDet(B);
+
+        cvReleaseMat(&A);
+        cvReleaseMat(&B);
+
+        return (detA*detB >= 0);
+    };
+
+    
+
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    {
+        Mat m1 = _m1.getMat(), m2 = _m2.getMat();
+        int i, count = m1.checkVector(2);
+        const Point2f* M = m1.ptr<Point2f>();
+        const Point2f* m = m2.ptr<Point2f>();
+
+        double LtL[9][9], W[9][1], V[9][9];
+        Mat _LtL = cvMat( 9, 9, CV_64F, LtL );
+        Mat matW = cvMat( 9, 1, CV_64F, W );
+        Mat matV = cvMat( 9, 9, CV_64F, V );
+        Mat _H0 = cvMat( 3, 3, CV_64F, V[8] );
+        Mat _Htemp = cvMat( 3, 3, CV_64F, V[7] );
+        Point2d cM, cm, sM, sm;
+
+        for( i = 0; i < count; i++ )
+        {
+            cm.x += m[i].x; cm.y += m[i].y;
+            cM.x += M[i].x; cM.y += M[i].y;
+        }
+
+        cm.x /= count; cm.y /= count;
+        cM.x /= count; cM.y /= count;
+
+        for( i = 0; i < count; i++ )
+        {
+            sm.x += fabs(m[i].x - cm.x);
+            sm.y += fabs(m[i].y - cm.y);
+            sM.x += fabs(M[i].x - cM.x);
+            sM.y += fabs(M[i].y - cM.y);
+        }
+
+        if( fabs(sm.x) < DBL_EPSILON || fabs(sm.y) < DBL_EPSILON ||
+           fabs(sM.x) < DBL_EPSILON || fabs(sM.y) < DBL_EPSILON )
+            return 0;
+        sm.x = count/sm.x; sm.y = count/sm.y;
+        sM.x = count/sM.x; sM.y = count/sM.y;
+
+        double invHnorm[9] = { 1./sm.x, 0, cm.x, 0, 1./sm.y, cm.y, 0, 0, 1 };
+        double Hnorm2[9] = { sM.x, 0, -cM.x*sM.x, 0, sM.y, -cM.y*sM.y, 0, 0, 1 };
+        CvMat _invHnorm = cvMat( 3, 3, CV_64FC1, invHnorm );
+        CvMat _Hnorm2 = cvMat( 3, 3, CV_64FC1, Hnorm2 );
+
+        cvZero( &_LtL );
+        for( i = 0; i < count; i++ )
+        {
+            double x = (m[i].x - cm.x)*sm.x, y = (m[i].y - cm.y)*sm.y;
+            double X = (M[i].x - cM.x)*sM.x, Y = (M[i].y - cM.y)*sM.y;
+            double Lx[] = { X, Y, 1, 0, 0, 0, -x*X, -x*Y, -x };
+            double Ly[] = { 0, 0, 0, X, Y, 1, -y*X, -y*Y, -y };
+            int j, k;
+            for( j = 0; j < 9; j++ )
+                for( k = j; k < 9; k++ )
+                    LtL[j][k] += Lx[j]*Lx[k] + Ly[j]*Ly[k];
+        }
+        cvCompleteSymm( &_LtL );
+
+        //cvSVD( &_LtL, &matW, 0, &matV, CV_SVD_MODIFY_A + CV_SVD_V_T );
+        cvEigenVV( &_LtL, &matV, &matW );
+        cvMatMul( &_invHnorm, &_H0, &_Htemp );
+        cvMatMul( &_Htemp, &_Hnorm2, &_H0 );
+        cvConvertScale( &_H0, H, 1./_H0.data.db[8] );
+        
+        return 1;
+    }
+
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
+    {
+
+    }
 };
 
 
@@ -289,73 +449,7 @@ cvFindHomography( const CvMat* objectPoints, const CvMat* imagePoints,
     return (int)result;
 }
 
-// We check whether three correspondences for the homography estimation
-// are geometrically consistent (the points in the source image should 
-// maintain the same circular order than in the destination image).
-//
-// The usefullness of this constraint is explained in the paper:
-//
-// "Speeding-up homography estimation in mobile devices"
-// Journal of Real-Time Image Processing. 2013. DOI: 10.1007/s11554-012-0314-1
-// Pablo Marquez-Neila, Javier Lopez-Alberca, Jose M. Buenaposada, Luis Baumela
-bool
-CvHomographyEstimator::weakConstraint ( const CvMat* srcPoints, const CvMat* dstPoints, int t1, int t2, int t3 )
-{
-  const CvPoint2D64f* src = (const CvPoint2D64f*)srcPoints->data.ptr;
-  const CvPoint2D64f* dst = (const CvPoint2D64f*)dstPoints->data.ptr;
 
-  CvMat* A = cvCreateMat( 3, 3, CV_64F );
-  CvMat* B = cvCreateMat( 3, 3, CV_64F );
-
-  double detA;
-  double detB;
-
-  cvmSet(A, 0, 0, src[t1].x);
-  cvmSet(A, 0, 1, src[t1].y);
-  cvmSet(A, 0, 2, 1);
-  cvmSet(A, 1, 0, src[t2].x);
-  cvmSet(A, 1, 1, src[t2].y);
-  cvmSet(A, 1, 2, 1);
-  cvmSet(A, 2, 0, src[t3].x);
-  cvmSet(A, 2, 1, src[t3].y);
-  cvmSet(A, 2, 2, 1);
-
-  cvmSet(B, 0, 0, dst[t1].x);
-  cvmSet(B, 0, 1, dst[t1].y);
-  cvmSet(B, 0, 2, 1);
-  cvmSet(B, 1, 0, dst[t2].x);
-  cvmSet(B, 1, 1, dst[t2].y);
-  cvmSet(B, 1, 2, 1);
-  cvmSet(B, 2, 0, dst[t3].x);
-  cvmSet(B, 2, 1, dst[t3].y);
-  cvmSet(B, 2, 2, 1);
-
-  detA = cvDet(A);
-  detB = cvDet(B);
-
-  cvReleaseMat(&A);
-  cvReleaseMat(&B);
-
-  return (detA*detB >= 0);
-};
-
-// We check whether the minimal set of points for the homography estimation
-// are geometrically consistent. We check if every 3 correspondences sets
-// fulfills the constraint.
-//
-// The usefullness of this constraint is explained in the paper:
-//
-// "Speeding-up homography estimation in mobile devices"
-// Journal of Real-Time Image Processing. 2013. DOI: 10.1007/s11554-012-0314-1
-// Pablo Marquez-Neila, Javier Lopez-Alberca, Jose M. Buenaposada, Luis Baumela
-bool
-CvHomographyEstimator::isMinimalSetConsistent ( const CvMat* srcPoints, const CvMat* dstPoints )
-{
-  return weakConstraint(srcPoints, dstPoints, 0, 1, 2) &&
-         weakConstraint(srcPoints, dstPoints, 1, 2, 3) &&
-         weakConstraint(srcPoints, dstPoints, 0, 2, 3) &&
-         weakConstraint(srcPoints, dstPoints, 0, 1, 3);
-}
 
 
 /* Evaluation of Fundamental Matrix from point correspondences.
@@ -1253,5 +1347,7 @@ void cv::convertPointsHomogeneous( InputArray _src, OutputArray _dst )
     else
         convertPointsToHomogeneous(_src, _dst);
 }
+
+#endif
 
 /* End of file. */

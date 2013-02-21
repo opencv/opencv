@@ -59,4 +59,46 @@
 #define GET_OPTIMIZED(func) (func)
 #endif
 
+
+namespace cv
+{
+
+class CV_EXPORTS LMSolver : public Algorithm
+{
+public:
+    class CV_EXPORTS Callback
+    {
+    public:
+        virtual bool compute(InputArray param, OutputArray err, OutputArray J) const = 0;
+    };
+
+    virtual void setCallback(const Ptr<LMSolver::Callback>& cb) = 0;
+    virtual int run(InputOutputArray _param0) const = 0;
+};
+
+CV_EXPORTS Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb);
+
+class PointSetRegistrator : public Algorithm
+{
+public:
+    class CV_EXPORTS Callback
+    {
+    public:
+        virtual int runKernel(InputArray m1, InputArray m2, OutputArray model) const = 0;
+        virtual void computeError(InputArray m1, InputArray m2, InputArray model, OutputArray err) const = 0;
+        virtual bool checkSubset(InputArray, InputArray, int) const { return true; }
+    };
+
+    virtual void setCallback(const Ptr<PointSetRegistrator::Callback>& cb) = 0;
+    virtual bool run(InputArray m1, InputArray m2, OutputArray model, OutputArray mask) const = 0;
+};
+
+CV_EXPORTS Ptr<PointSetRegistrator> createRANSACPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& cb,
+                                                                    double threshold, double confidence=0.99, int maxIters=1000 );
+
+CV_EXPORTS Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& cb,
+                                                                   double confidence=0.99, int maxIters=1000 );
+
+}
+
 #endif

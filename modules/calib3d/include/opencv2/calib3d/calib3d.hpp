@@ -418,6 +418,8 @@ enum
     RANSAC=CV_RANSAC //!< RANSAC algorithm
 };
 
+CV_EXPORTS_W int RANSACUpdateNumIters( double p, double ep, int modelPoints, int maxIters );
+
 //! computes the best-fit perspective transformation mapping srcPoints to dstPoints.
 CV_EXPORTS_W Mat findHomography( InputArray srcPoints, InputArray dstPoints,
                                  int method=0, double ransacReprojThreshold=3,
