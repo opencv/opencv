@@ -134,6 +134,7 @@ int main( int argc, char** argv )
             needToInit = true;
             break;
         case 'c':
+            points[0].clear();
             points[1].clear();
             break;
         case 'n':
