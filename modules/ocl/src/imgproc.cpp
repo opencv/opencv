@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -23,6 +24,7 @@
 //    Zhang Ying, zhangying913@gmail.com
 //    Xu Pang, pangxu010@163.com
 //    Wu Zailong, bullet@yeah.net
+//    Wenju He, wenju@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -1524,7 +1526,7 @@ namespace cv
             mat_dst.create(mat_src.rows, mat_src.cols, CV_8UC1);
 
             oclMat mat_hist(1, 256, CV_32SC1);
-            //mat_hist.setTo(0);
+
             calcHist(mat_src, mat_hist);
 
             Context *clCxt = mat_src.clCxt;
@@ -1533,10 +1535,10 @@ namespace cv
             size_t globalThreads[3] = { 256, 1, 1};
             oclMat lut(1, 256, CV_8UC1);
             vector<pair<size_t , const void *> > args;
-            float scale = 255.f / (mat_src.rows * mat_src.cols);
+            int total = mat_src.rows * mat_src.cols;
             args.push_back( make_pair( sizeof(cl_mem), (void *)&lut.data));
             args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_hist.data));
-            args.push_back( make_pair( sizeof(cl_float), (void *)&scale));
+            args.push_back( make_pair( sizeof(int), (void *)&total));
             openCLExecuteKernel(clCxt, &imgproc_histogram, kernelName, globalThreads, localThreads, args, -1, -1);
             LUT(mat_src, lut, mat_dst);
         }

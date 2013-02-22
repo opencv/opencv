@@ -3,12 +3,14 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
 //    Niko Li, newlife20080214@gmail.com
 //    Jia Haipeng, jiahaipeng95@gmail.com
 //    Xu Pang, pangxu010@163.com
+//    Wenju He, wenju@multicorewareinc.com
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
@@ -189,24 +191,27 @@ __kernel __attribute__((reqd_work_group_size(256,1,1)))void merge_hist(__global 
 __kernel __attribute__((reqd_work_group_size(256,1,1)))void calLUT(
                             __global uchar * dst,
                             __constant int * hist,
-                            float scale)
+                            int total)
 {
     int lid = get_local_id(0);
-    __local int sumhist[HISTOGRAM256_BIN_COUNT];
-    //__local uchar lut[HISTOGRAM256_BIN_COUNT+1];
+    __local int sumhist[HISTOGRAM256_BIN_COUNT+1];
 
     sumhist[lid]=hist[lid];
     barrier(CLK_LOCAL_MEM_FENCE);
     if(lid==0)
     {
         int sum = 0;
-        for(int i=0;i<HISTOGRAM256_BIN_COUNT;i++)
+        int i = 0;
+        while (!sumhist[i]) ++i;
+        sumhist[HISTOGRAM256_BIN_COUNT] = sumhist[i];
+        for(sumhist[i++] = 0; i<HISTOGRAM256_BIN_COUNT; i++)
         {
             sum+=sumhist[i];
             sumhist[i]=sum;
         }
     }
     barrier(CLK_LOCAL_MEM_FENCE);
+    float scale = 255.f/(total - sumhist[HISTOGRAM256_BIN_COUNT]);
     dst[lid]= lid == 0 ? 0 : convert_uchar_sat(convert_float(sumhist[lid])*scale);
 }
 /*
