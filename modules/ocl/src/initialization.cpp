@@ -47,6 +47,7 @@
 
 #include "precomp.hpp"
 #include <iomanip>
+#include <fstream>
 #include "binarycaching.hpp"
 
 using namespace cv;
@@ -730,7 +731,138 @@ namespace cv
 #endif
         }
 
-        cl_mem load_constant(cl_context context, cl_command_queue command_queue, const void *value,
+       double openCLExecuteKernelInterop(Context *clCxt , const char **source, string kernelName,
+                                 size_t globalThreads[3], size_t localThreads[3],
+                                 vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
+                                 bool finish, bool measureKernelTime, bool cleanUp)
+
+        {
+            //construct kernel name
+            //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
+            //for exmaple split_C2_D2, represent the split kernel with channels =2 and dataType Depth = 2(Data type is char)
+            stringstream idxStr;
+            if(channels != -1)
+                idxStr << "_C" << channels;
+            if(depth != -1)
+                idxStr << "_D" << depth;
+            kernelName += idxStr.str();
+
+            cl_kernel kernel;
+            kernel = openCLGetKernelFromSource(clCxt, source, kernelName, build_options);
+
+            double kernelTime = 0.0;
+
+            if( globalThreads != NULL)
+            {
+                if ( localThreads != NULL)
+                {
+                    globalThreads[0] = divUp(globalThreads[0], localThreads[0]) * localThreads[0];
+                    globalThreads[1] = divUp(globalThreads[1], localThreads[1]) * localThreads[1];
+                    globalThreads[2] = divUp(globalThreads[2], localThreads[2]) * localThreads[2];
+
+                    //size_t blockSize = localThreads[0] * localThreads[1] * localThreads[2];
+                    cv::ocl::openCLVerifyKernel(clCxt, kernel, localThreads);
+                }
+                for(size_t i = 0; i < args.size(); i ++)
+                    openCLSafeCall(clSetKernelArg(kernel, i, args[i].first, args[i].second));
+
+                if(measureKernelTime == false)
+                {
+                    openCLSafeCall(clEnqueueNDRangeKernel(clCxt->impl->clCmdQueue, kernel, 3, NULL, globalThreads,
+                                    localThreads, 0, NULL, NULL));
+                }
+                else
+                {
+                    cl_event event = NULL;
+                    openCLSafeCall(clEnqueueNDRangeKernel(clCxt->impl->clCmdQueue, kernel, 3, NULL, globalThreads,
+                                    localThreads, 0, NULL, &event));
+
+                    cl_ulong end_time, queue_time;
+
+                    openCLSafeCall(clWaitForEvents(1, &event));
+
+                    openCLSafeCall(clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END,
+                                    sizeof(cl_ulong), &end_time, 0));
+
+                    openCLSafeCall(clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_QUEUED,
+                                    sizeof(cl_ulong), &queue_time, 0));
+
+                    kernelTime = (double)(end_time - queue_time) / (1000 * 1000);
+
+                    clReleaseEvent(event);
+                }
+            }
+
+            if(finish)
+            {
+                clFinish(clCxt->impl->clCmdQueue);
+            }
+
+            if(cleanUp)
+            {
+                openCLSafeCall(clReleaseKernel(kernel));
+            }
+
+            return kernelTime;
+        }
+
+        // Converts the contents of a file into a string
+        static int convertToString(const char *filename, std::string& s)
+        {
+            size_t size;
+            char*  str;
+
+            std::fstream f(filename, (std::fstream::in | std::fstream::binary));
+            if(f.is_open())
+            {
+                size_t fileSize;
+                f.seekg(0, std::fstream::end);
+                size = fileSize = (size_t)f.tellg();
+                f.seekg(0, std::fstream::beg);
+
+                str = new char[size+1];
+                if(!str)
+                {
+                    f.close();
+                    return -1;
+                }
+
+                f.read(str, fileSize);
+                f.close();
+                str[size] = '\0';
+
+                s = str;
+                delete[] str;
+                return 0;
+            }
+            printf("Error: Failed to open file %s\n", filename);
+            return -1;
+        }
+
+        double openCLExecuteKernelInterop(Context *clCxt , const char **fileName, const int numFiles, string kernelName,
+                                 size_t globalThreads[3], size_t localThreads[3],
+                                 vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
+                                 bool finish, bool measureKernelTime, bool cleanUp)
+
+        {
+            std::vector<std::string> fsource;
+            for (int i = 0 ; i < numFiles ; i++)
+            {
+                std::string str;
+                if (convertToString(fileName[i], str) >= 0)
+                    fsource.push_back(str);
+            }
+            const char **source = new const char *[numFiles];
+            for (int i = 0 ; i < numFiles ; i++)
+                source[i] = fsource[i].c_str();
+            double kernelTime = openCLExecuteKernelInterop(clCxt ,source, kernelName, globalThreads, localThreads,
+                                 args, channels, depth, build_options, finish, measureKernelTime, cleanUp);
+            fsource.clear();
+            delete []source;
+            return kernelTime;
+        }
+
+       cl_mem load_constant(cl_context context, cl_command_queue command_queue, const void *value,
                              const size_t size)
         {
             int status;

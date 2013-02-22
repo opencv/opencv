@@ -48,8 +48,8 @@
     #include <cuda_runtime.h>
     #include <npp.h>
 
-    #define CUDART_MINIMUM_REQUIRED_VERSION 4010
-    #define NPP_MINIMUM_REQUIRED_VERSION 4100
+    #define CUDART_MINIMUM_REQUIRED_VERSION 4020
+    #define NPP_MINIMUM_REQUIRED_VERSION 4200
 
     #if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
         #error "Insufficient Cuda Runtime library version, please update it."

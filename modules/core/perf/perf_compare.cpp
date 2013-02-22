@@ -52,7 +52,8 @@ PERF_TEST_P( Size_MatType_CmpType, compareScalar,
 
     declare.in(src1, src2, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() cv::compare(src1, src2, dst, cmpType);
+    int runs = (sz.width <= 640) ? 8 : 1;
+    TEST_CYCLE_MULTIRUN(runs) cv::compare(src1, src2, dst, cmpType);
 
     SANITY_CHECK(dst);
 }

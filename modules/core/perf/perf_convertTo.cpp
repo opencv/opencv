@@ -29,9 +29,9 @@ PERF_TEST_P( Size_DepthSrc_DepthDst_Channels_alpha, convertTo,
     Mat src(sz, CV_MAKETYPE(depthSrc, channels));
     randu(src, 0, 255);
     Mat dst(sz, CV_MAKETYPE(depthDst, channels));
-    declare.iterations(500);
 
-    TEST_CYCLE() src.convertTo(dst, depthDst, alpha);
+    int runs = (sz.width <= 640) ? 8 : 1;
+    TEST_CYCLE_MULTIRUN(runs) src.convertTo(dst, depthDst, alpha);
 
     SANITY_CHECK(dst, alpha == 1.0 ? 1e-12 : 1e-7);
 }

@@ -125,7 +125,7 @@ CV_EXPORTS_W void setTrackbarPos(const string& trackbarname, const string& winna
 
 // OpenGL support
 
-typedef void (CV_CDECL *OpenGlDrawCallback)(void* userdata);
+typedef void (*OpenGlDrawCallback)(void* userdata);
 CV_EXPORTS void setOpenGlDrawCallback(const string& winname, OpenGlDrawCallback onOpenGlDraw, void* userdata = 0);
 
 CV_EXPORTS void setOpenGlContext(const string& winname);

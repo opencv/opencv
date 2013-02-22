@@ -109,5 +109,5 @@ TEST_P(Gemm, Performance)
 INSTANTIATE_TEST_CASE_P(ocl_gemm, Gemm, testing::Combine(
                             testing::Values(CV_32FC1, CV_32FC2/* , CV_64FC1, CV_64FC2*/),
                             testing::Values(cv::Size(512, 512), cv::Size(1024, 1024)),
-                            testing::Values(0, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_1_T + cv::GEMM_2_T)));
+                            testing::Values(0, (int)cv::GEMM_1_T, (int)cv::GEMM_2_T, (int)(cv::GEMM_1_T + cv::GEMM_2_T))));
 #endif

@@ -2125,22 +2125,22 @@ void cv::ocl::bitwise_xor(const oclMat &src1, const Scalar &src2, oclMat &dst, c
         bitwise_scalar( src1, src2, dst, mask, kernelName, &arithm_bitwise_xor_scalar);
 }
 
-oclMatExpr cv::ocl::operator ~ (const oclMat &src)
+oclMat cv::ocl::operator ~ (const oclMat &src)
 {
     return oclMatExpr(src, oclMat(), MAT_NOT);
 }
 
-oclMatExpr cv::ocl::operator | (const oclMat &src1, const oclMat &src2)
+oclMat cv::ocl::operator | (const oclMat &src1, const oclMat &src2)
 {
     return oclMatExpr(src1, src2, MAT_OR);
 }
 
-oclMatExpr cv::ocl::operator & (const oclMat &src1, const oclMat &src2)
+oclMat cv::ocl::operator & (const oclMat &src1, const oclMat &src2)
 {
     return oclMatExpr(src1, src2, MAT_AND);
 }
 
-oclMatExpr cv::ocl::operator ^ (const oclMat &src1, const oclMat &src2)
+oclMat cv::ocl::operator ^ (const oclMat &src1, const oclMat &src2)
 {
     return oclMatExpr(src1, src2, MAT_XOR);
 }

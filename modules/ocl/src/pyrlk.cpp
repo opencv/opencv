@@ -10,9 +10,14 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
+//
+// @Authors
+//		Dachuan Zhao, dachuan@multicorewareinc.com
+//		Yao Wang, yao@multicorewareinc.com
+//      Nathan, liujun@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -22,13 +27,13 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other oclMaterials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -39,6 +44,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 
 #include "precomp.hpp"
 #include "mcwutil.hpp"
@@ -568,197 +574,16 @@ static void pyrDown_cus(const oclMat &src, oclMat &dst)
     pyrdown_run_cus(src, dst);
 }
 
-
-//struct MultiplyScalar
-//{
-//    MultiplyScalar(double val_, double scale_) : val(val_), scale(scale_) {}
-//    double operator ()(double a) const
-//    {
-//        return (scale * a * val);
-//    }
-//    const double val;
-//    const double scale;
-//};
-//
-//void callF(const oclMat& src, oclMat& dst, MultiplyScalar op, int mask)
-//{
-//	Mat srcTemp;
-//	Mat dstTemp;
-//	src.download(srcTemp);
-//	dst.download(dstTemp);
-//
-//	int i;
-//	int j;
-//	int k;
-//	for(i = 0; i < srcTemp.rows; i++)
-//	{
-//		for(j = 0; j < srcTemp.cols; j++)
-//		{
-//			for(k = 0; k < srcTemp.channels(); k++)
-//			{
-//				((float*)dstTemp.data)[srcTemp.channels() * (i * srcTemp.rows + j) + k] = (float)op(((float*)srcTemp.data)[srcTemp.channels() * (i * srcTemp.rows + j) + k]);
-//			}
-//		}
-//	}
-//
-//	dst = dstTemp;
-//}
-//
-//static inline bool isAligned(const unsigned char* ptr, size_t size)
-//{
-//    return reinterpret_cast<size_t>(ptr) % size == 0;
-//}
-//
-//static inline bool isAligned(size_t step, size_t size)
-//{
-//    return step % size == 0;
-//}
-//
-//void callT(const oclMat& src, oclMat& dst, MultiplyScalar op, int mask)
-//{
-//    if (!isAligned(src.data, 4 * sizeof(double)) || !isAligned(src.step, 4 * sizeof(double)) ||
-//        !isAligned(dst.data, 4 * sizeof(double)) || !isAligned(dst.step, 4 * sizeof(double)))
-//    {
-//        callF(src, dst, op, mask);
-//        return;
-//    }
-//
-//	Mat srcTemp;
-//	Mat dstTemp;
-//	src.download(srcTemp);
-//	dst.download(dstTemp);
-//
-//	int x_shifted;
-//
-//	int i;
-//	int j;
-//	for(i = 0; i < srcTemp.rows; i++)
-//	{
-//		const double* srcRow = (const double*)srcTemp.data + i * srcTemp.rows;
-//        double* dstRow = (double*)dstTemp.data + i * dstTemp.rows;;
-//
-//		for(j = 0; j < srcTemp.cols; j++)
-//		{
-//			x_shifted = j * 4;
-//
-//			if(x_shifted + 4 - 1 < srcTemp.cols)
-//			{
-//				dstRow[x_shifted    ] = op(srcRow[x_shifted    ]);
-//				dstRow[x_shifted + 1] = op(srcRow[x_shifted + 1]);
-//				dstRow[x_shifted + 2] = op(srcRow[x_shifted + 2]);
-//				dstRow[x_shifted + 3] = op(srcRow[x_shifted + 3]);
-//			}
-//			else
-//			{
-//				for (int real_x = x_shifted; real_x < srcTemp.cols; ++real_x)
-//				{
-//					((float*)dstTemp.data)[i * srcTemp.rows + real_x] = op(((float*)srcTemp.data)[i * srcTemp.rows + real_x]);
-//				}
-//			}
-//		}
-//	}
-//}
-//
-//void multiply(const oclMat& src1, double val, oclMat& dst, double scale = 1.0f);
-//void multiply(const oclMat& src1, double val, oclMat& dst, double scale)
-//{
-//    MultiplyScalar op(val, scale);
-//	//if(src1.channels() == 1 && dst.channels() == 1)
-//	//{
-//	//    callT(src1, dst, op, 0);
-//	//}
-//	//else
-//	//{
-//	    callF(src1, dst, op, 0);
-//	//}
-//}
-
-static cl_mem bindTexture(const oclMat &mat, int depth, int channels)
-{
-    cl_mem texture;
-    cl_image_format format;
-    int err;
-    if(depth == 0)
-    {
-        format.image_channel_data_type = CL_UNSIGNED_INT8;
-    }
-    else if(depth == 5)
-    {
-        format.image_channel_data_type = CL_FLOAT;
-    }
-    if(channels == 1)
-    {
-        format.image_channel_order     = CL_R;
-    }
-    else if(channels == 3)
-    {
-        format.image_channel_order     = CL_RGB;
-    }
-    else if(channels == 4)
-    {
-        format.image_channel_order     = CL_RGBA;
-    }
-#ifdef CL_VERSION_1_2
-    cl_image_desc desc;
-    desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
-    desc.image_width      = mat.step / mat.elemSize();
-    desc.image_height     = mat.rows;
-    desc.image_depth      = 0;
-    desc.image_array_size = 1;
-    desc.image_row_pitch  = 0;
-    desc.image_slice_pitch = 0;
-    desc.buffer           = NULL;
-    desc.num_mip_levels   = 0;
-    desc.num_samples      = 0;
-    texture = clCreateImage(mat.clCxt->impl->clContext, CL_MEM_READ_WRITE, &format, &desc, NULL, &err);
-#else
-    texture = clCreateImage2D(
-                  mat.clCxt->impl->clContext,
-                  CL_MEM_READ_WRITE,
-                  &format,
-                  mat.step / mat.elemSize(),
-                  mat.rows,
-                  0,
-                  NULL,
-                  &err);
-#endif
-    size_t origin[] = { 0, 0, 0 };
-    size_t region[] = { mat.step / mat.elemSize(), mat.rows, 1 };
-    clEnqueueCopyBufferToImage(mat.clCxt->impl->clCmdQueue, (cl_mem)mat.data, texture, 0, origin, region, 0, NULL, 0);
-    openCLSafeCall(err);
-
-    return texture;
-}
-
-static void releaseTexture(cl_mem texture)
-{
-    openCLFree(texture);
-}
-
 static void lkSparse_run(oclMat &I, oclMat &J,
                   const oclMat &prevPts, oclMat &nextPts, oclMat &status, oclMat& err, bool /*GET_MIN_EIGENVALS*/, int ptcount,
                   int level, /*dim3 block, */dim3 patch, Size winSize, int iters)
 {
     Context  *clCxt = I.clCxt;
-    char platform[256] = {0};
-    cl_platform_id pid;
-    clGetDeviceInfo(clCxt->impl->devices, CL_DEVICE_PLATFORM, sizeof(pid), &pid, NULL);
-    clGetPlatformInfo(pid, CL_PLATFORM_NAME, 256, platform, NULL);
-    std::string namestr = platform;
-    bool isImageSupported = true;
-    if(namestr.find("NVIDIA")!=string::npos || namestr.find("Intel")!=string::npos)
-        isImageSupported = false;
-
     int elemCntPerRow = I.step / I.elemSize();
-
     string kernelName = "lkSparse";
-
-
-    size_t localThreads[3]  = { 8, isImageSupported?8:32, 1 };
-    size_t globalThreads[3] = { 8 * ptcount, isImageSupported?8:32, 1};
-
+    size_t localThreads[3]  = { 8, 8, 1 };
+    size_t globalThreads[3] = { 8 * ptcount, 8, 1};
     int cn = I.oclchannels();
-
     char calcErr;
     if (level == 0)
     {
@@ -770,22 +595,11 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     }
 
     vector<pair<size_t , const void *> > args;
-    cl_mem ITex;
-    cl_mem JTex;
-    if (isImageSupported)
-    {
-        ITex = bindTexture(I, I.depth(), cn);
-        JTex = bindTexture(J, J.depth(), cn);
-    }
-    else
-    {
-        ITex = (cl_mem)I.data;
-        JTex = (cl_mem)J.data;
-    }
+    cl_mem ITex = bindTexture(I);
+    cl_mem JTex = bindTexture(J);
 
     args.push_back( make_pair( sizeof(cl_mem), (void *)&ITex ));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&JTex ));
-    //cl_mem clmD = clCreateBuffer(clCxt, CL_MEM_READ_WRITE, ptcount * sizeof(float), NULL, NULL);
     args.push_back( make_pair( sizeof(cl_mem), (void *)&prevPts.data ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&prevPts.step ));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&nextPts.data ));
@@ -795,10 +609,6 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     args.push_back( make_pair( sizeof(cl_int), (void *)&level ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&I.rows ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&I.cols ));
-    if (!isImageSupported)
-    {
-        args.push_back( make_pair( sizeof(cl_int), (void *)&elemCntPerRow ) );
-    }
     args.push_back( make_pair( sizeof(cl_int), (void *)&patch.x ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&patch.y ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cn ));
@@ -806,18 +616,20 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     args.push_back( make_pair( sizeof(cl_int), (void *)&winSize.height ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&iters ));
     args.push_back( make_pair( sizeof(cl_char), (void *)&calcErr ));
-    //args.push_back( make_pair( sizeof(cl_char), (void *)&GET_MIN_EIGENVALS ));
 
-    if (isImageSupported)
+    try
     {
         openCLExecuteKernel2(clCxt, &pyrlk, kernelName, globalThreads, localThreads, args, I.oclchannels(), I.depth(), CLFLUSH);
-
+    }
+    catch(Exception&)
+    {
+        printf("Warning: The image2d_t is not supported by the device. Using alternative method!\n");
         releaseTexture(ITex);
         releaseTexture(JTex);
-    }
-    else
-    {
-        //printf("Warning: The image2d_t is not supported by the device. Using alternative method!\n");
+        ITex = (cl_mem)I.data;
+        JTex = (cl_mem)J.data;
+        localThreads[1] = globalThreads[1] = 32;
+        args.insert( args.begin()+11, make_pair( sizeof(cl_int), (void *)&elemCntPerRow ) );
         openCLExecuteKernel2(clCxt, &pyrlk_no_image, kernelName, globalThreads, localThreads, args, I.oclchannels(), I.depth(), CLFLUSH);
     }
 }
@@ -927,8 +739,6 @@ static void lkDense_run(oclMat &I, oclMat &J, oclMat &u, oclMat &v,
     size_t localThreads[3]  = { 16, 16, 1 };
     size_t globalThreads[3] = { I.cols, I.rows, 1};
 
-    int cn = I.oclchannels();
-
     bool calcErr;
     if (err)
     {
@@ -944,8 +754,8 @@ static void lkDense_run(oclMat &I, oclMat &J, oclMat &u, oclMat &v,
 
     if (isImageSupported)
     {
-        ITex = bindTexture(I, I.depth(), cn);
-        JTex = bindTexture(J, J.depth(), cn);
+        ITex = bindTexture(I);
+        JTex = bindTexture(J);
     }
     else
     {
