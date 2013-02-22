@@ -147,11 +147,13 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
     }
     else
     {
-        cvtColor(prevImg, buf_, COLOR_BGR2BGRA);
-        buf_.convertTo(prevPyr_[0], CV_32F);
+        buf_.resize(1);
 
-        cvtColor(nextImg, buf_, COLOR_BGR2BGRA);
-        buf_.convertTo(nextPyr_[0], CV_32F);
+        cvtColor(prevImg, buf_[0], COLOR_BGR2BGRA);
+        buf_[0].convertTo(prevPyr_[0], CV_32F);
+
+        cvtColor(nextImg, buf_[0], COLOR_BGR2BGRA);
+        buf_[0].convertTo(nextPyr_[0], CV_32F);
     }
 
     for (int level = 1; level <= maxLevel; ++level)
@@ -237,7 +239,7 @@ void cv::gpu::PyrLKOpticalFlow::releaseMemory()
     prevPyr_.clear();
     nextPyr_.clear();
 
-    buf_.release();
+    buf_.clear();
 
     uPyr_[0].release();
     vPyr_[0].release();
