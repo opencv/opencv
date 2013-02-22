@@ -67,7 +67,13 @@ namespace cv { namespace softcascade { namespace internal
 struct Random
 {
     typedef std::mt19937 engine;
+// True if we're using C++11.
+#if __cplusplus >= 201103L
+    // C++11 removes uniform_int.
+    typedef std::uniform_int_distribution<int> uniform;
+#else
     typedef std::uniform_int<int> uniform;
+#endif
 };
 }}}
 
