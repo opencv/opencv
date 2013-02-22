@@ -12,11 +12,13 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
 //    Shengen Yan,yanshengen@gmail.com
 //    Xu Pang, pangxu010@163.com
+//    Wenju He, wenju@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -43,12 +45,6 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#if defined (DOUBLE_SUPPORT)
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-typedef double F;
-#else
-typedef float F;
-#endif
 
 short2 do_mean_shift(int x0, int y0, __global uchar4* out,int out_step,
                __global uchar4* in, int in_step, int dst_off, int src_off,
@@ -184,12 +180,11 @@ short2 do_mean_shift(int x0, int y0, __global uchar4* out,int out_step,
         if( count == 0 )
             break;
 
-        F  icount = 1.0/count;
-        int x1 = convert_int_rtz(sx*icount);
-        int y1 = convert_int_rtz(sy*icount);
-        s.x = convert_int_rtz(s.x*icount);
-        s.y = convert_int_rtz(s.y*icount);
-        s.z = convert_int_rtz(s.z*icount);
+        int x1 = sx/count;
+        int y1 = sy/count;
+        s.x = s.x/count;
+        s.y = s.y/count;
+        s.z = s.z/count;
 
         int4 tmp = s - convert_int4(c);
         int norm2 = tmp.x * tmp.x + tmp.y *  tmp.y +
