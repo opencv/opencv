@@ -351,7 +351,7 @@ void CvSVMKernel::calc_chi2( int vcount, int var_count, const float** vecs,
         double chi2 = 0;
         for(k = 0 ; k < var_count; k++ ) 
 	{
-            double d = sample[k]*another[k];
+            double d = sample[k]-another[k];
 	    double devisor = sample[k]+another[k];
 	    /// if devisor == 0, the Chi2 distance would be zero, but calculation would rise an error because of deviding by zero
 	    if (devisor != 0) 
@@ -359,7 +359,7 @@ void CvSVMKernel::calc_chi2( int vcount, int var_count, const float** vecs,
 	      chi2 += d*d/devisor;
 	    } 
 	}
-        results[j] = (Qfloat) (gamma*(1.0-2*chi2));
+        results[j] = (Qfloat) (gamma*chi2);
     } 
     if( vcount > 0 )
       cvExp( &R, &R );   
