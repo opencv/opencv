@@ -46,6 +46,9 @@
 #include "mcwutil.hpp"
 
 #if defined (HAVE_OPENCL)
+#ifndef CL_VERSION_1_2
+#define CL_VERSION_1_2 0
+#endif
 
 using namespace std;
 
