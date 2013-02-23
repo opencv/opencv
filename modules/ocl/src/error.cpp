@@ -46,12 +46,6 @@
 using namespace cv;
 using namespace cv::ocl;
 
-#if !defined (HAVE_OPENCL)
-
-// do nothing
-
-#else /* !defined (HAVE_OPENCL) */
-
 namespace cv
 {
     namespace ocl
@@ -194,5 +188,3 @@ namespace cv
         }
     }
 }
-
-#endif
