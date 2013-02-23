@@ -50,17 +50,6 @@ using namespace std;
 using std::cout;
 using std::endl;
 
-#if !defined (HAVE_OPENCL)
-namespace cv
-{
-    namespace ocl
-    {
-        //nothing
-    }//namespace ocl
-}//namespace cv
-
-#else /* !defined (HAVE_OPENCL) */
-
 namespace cv
 {
     namespace ocl
@@ -99,4 +88,3 @@ namespace cv
     }//namespace ocl
 
 }//namespace cv
-#endif

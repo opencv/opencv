@@ -47,9 +47,6 @@
 #define _OPENCV_MCWUTIL_
 
 #include "precomp.hpp"
-
-#if defined (HAVE_OPENCL)
-
 using namespace std;
 
 namespace cv
@@ -76,5 +73,5 @@ namespace cv
     }//namespace ocl
 
 }//namespace cv
-#endif // HAVE_OPENCL
+
 #endif //_OPENCV_MCWUTIL_

@@ -52,13 +52,6 @@ using namespace std;
 using namespace cv;
 using namespace cv::ocl;
 
-#if !defined (HAVE_OPENCL)
-
-void cv::ocl::PyrLKOpticalFlow::sparse(const oclMat &, const oclMat &, const oclMat &, oclMat &, oclMat &, oclMat &) {  }
-void cv::ocl::PyrLKOpticalFlow::dense(const oclMat &, const oclMat &, oclMat &, oclMat &, oclMat *) {  }
-
-#else /* !defined (HAVE_OPENCL) */
-
 namespace cv
 {
 namespace ocl
@@ -862,5 +855,3 @@ void cv::ocl::PyrLKOpticalFlow::dense(const oclMat &prevImg, const oclMat &nextI
 
     clFinish(prevImg.clCxt->impl->clCmdQueue);
 }
-
-#endif /* !defined (HAVE_CUDA) */

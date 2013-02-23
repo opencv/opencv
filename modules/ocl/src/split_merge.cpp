@@ -58,34 +58,6 @@ using std::endl;
 ///////////////// oclMat merge and split ///////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 
-#if !defined (HAVE_OPENCL)
-
-namespace cv
-{
-    namespace ocl
-    {
-        void cv::ocl::merge(const oclMat *src_mat, size_t count, oclMat &dst_mat)
-        {
-            throw_nogpu();
-        }
-        void cv::ocl::merge(const vector<oclMat> &src_mat, oclMat &dst_mat)
-        {
-            throw_nogpu();
-        }
-
-        void cv::ocl::split(const oclMat &src, oclMat *dst)
-        {
-            throw_nogpu();
-        }
-        void cv::ocl::split(const oclMat &src, vector<oclMat> &dst)
-        {
-            throw_nogpu();
-        }
-    }
-}
-
-#else /* !defined (HAVE_OPENCL) */
-
 namespace cv
 {
     namespace ocl
@@ -417,4 +389,3 @@ void cv::ocl::split(const oclMat &src, vector<oclMat> &dst)
     if(src.oclchannels() > 0)
         split_merge::split(src, &dst[0]);
 }
-#endif /* !defined (HAVE_OPENCL) */
