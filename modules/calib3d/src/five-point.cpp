@@ -11,8 +11,8 @@ public:
     int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
     {
         Mat q1 = _m1.getMat(), q2 = _m2.getMat();
-        Mat Q1 = q1.reshape(1, (int)(q1.channels()*q1.total()));
-        Mat Q2 = q2.reshape(1, (int)(q2.channels()*q2.total()));
+        Mat Q1 = q1.reshape(1, (int)q1.total());
+        Mat Q2 = q2.reshape(1, (int)q2.total());
 
         int n = Q1.rows;
         Mat Q(n, 9, CV_64F);
@@ -520,9 +520,9 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double f
 
     Mat E;
     if( method == CV_RANSAC )
-        createRANSACPointSetRegistrator(new EMEstimatorCallback, threshold, prob)->run(points1, points2, E, _mask);
+        createRANSACPointSetRegistrator(new EMEstimatorCallback, 5, threshold, prob)->run(points1, points2, E, _mask);
     else
-        createLMeDSPointSetRegistrator(new EMEstimatorCallback, prob)->run(points1, points2, E, _mask);
+        createLMeDSPointSetRegistrator(new EMEstimatorCallback, 5, prob)->run(points1, points2, E, _mask);
 
 	return E; 
 }

@@ -69,6 +69,7 @@ public:
     class CV_EXPORTS Callback
     {
     public:
+        virtual ~Callback() {}
         virtual bool compute(InputArray param, OutputArray err, OutputArray J) const = 0;
     };
 
@@ -76,7 +77,7 @@ public:
     virtual int run(InputOutputArray _param0) const = 0;
 };
 
-CV_EXPORTS Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb);
+CV_EXPORTS Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters);
 
 class PointSetRegistrator : public Algorithm
 {
@@ -84,6 +85,7 @@ public:
     class CV_EXPORTS Callback
     {
     public:
+        virtual ~Callback() {}
         virtual int runKernel(InputArray m1, InputArray m2, OutputArray model) const = 0;
         virtual void computeError(InputArray m1, InputArray m2, InputArray model, OutputArray err) const = 0;
         virtual bool checkSubset(InputArray, InputArray, int) const { return true; }
@@ -94,10 +96,11 @@ public:
 };
 
 CV_EXPORTS Ptr<PointSetRegistrator> createRANSACPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& cb,
-                                                                    double threshold, double confidence=0.99, int maxIters=1000 );
+                                                                    int modelPoints, double threshold,
+                                                                    double confidence=0.99, int maxIters=1000 );
 
 CV_EXPORTS Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& cb,
-                                                                   double confidence=0.99, int maxIters=1000 );
+                                                                   int modelPoints, double confidence=0.99, int maxIters=1000 );
 
 }
 

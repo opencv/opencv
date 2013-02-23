@@ -1020,7 +1020,7 @@ void CV_FundamentalMatTest::prepare_to_validation( int test_case_idx )
     F0 *= 1./f0[8];
 
     uchar* status = test_mat[TEMP][1].data;
-    double err_level = get_success_error_level( test_case_idx, OUTPUT, 1 );
+    double err_level = method <= CV_FM_8POINT ? 1 : get_success_error_level( test_case_idx, OUTPUT, 1 );
     uchar* mtfm1 = test_mat[REF_OUTPUT][1].data;
     uchar* mtfm2 = test_mat[OUTPUT][1].data;
     double* f_prop1 = (double*)test_mat[REF_OUTPUT][0].data;
@@ -1288,6 +1288,8 @@ int CV_EssentialMatTest::prepare_test_case( int test_case_idx )
 
 void CV_EssentialMatTest::run_func()
 {
+    putchar('.');
+    fflush(stdout);
     Mat _input0(test_mat[INPUT][0]), _input1(test_mat[INPUT][1]);
     Mat K(test_mat[INPUT][4]); 
     double focal(K.at<double>(0, 0)); 

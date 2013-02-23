@@ -88,8 +88,20 @@ public:
     int findInliers( const Mat& m1, const Mat& m2, const Mat& model, Mat& err, Mat& mask, double threshold ) const
     {
         cb->computeError( m1, m2, model, err );
-        compare(err, threshold*threshold, mask, CMP_LE);
-        return countNonZero(mask);
+        mask.create(err.size(), CV_8U);
+
+        CV_Assert( err.isContinuous() && err.type() == CV_32F && mask.isContinuous() && mask.type() == CV_8U);
+        const float* errptr = err.ptr<float>();
+        uchar* maskptr = mask.ptr<uchar>();
+        float t = (float)(threshold*threshold);
+        int i, n = (int)err.total(), nz = 0;
+        for( i = 0; i < n; i++ )
+        {
+            int f = errptr[i] <= t;
+            maskptr[i] = (uchar)f;
+            nz += f;
+        }
+        return nz;
     }
 
     bool getSubset( const Mat& m1, const Mat& m2,
@@ -168,8 +180,10 @@ public:
 
         if( _mask.needed() )
         {
-            _mask.create(count, 1, CV_8U);
+            if( !_mask.fixedSize() )
+                _mask.create(count, 1, CV_8U);
             bestMask0 = bestMask = _mask.getMat();
+            CV_Assert( (bestMask.cols == 1 || bestMask.rows == 1) && (int)bestMask.total() == count );
         }
         else
         {
@@ -213,6 +227,7 @@ public:
 
                 if( goodCount > MAX(maxGoodCount, modelPoints-1) )
                 {
+                    //printf("iter = %d. good count = %d\n", iter, goodCount);
                     std::swap(mask, bestMask);
                     model_i.copyTo(bestModel);
                     maxGoodCount = goodCount;
@@ -224,7 +239,12 @@ public:
         if( maxGoodCount > 0 )
         {
             if( bestMask.data != bestMask0.data )
-                bestMask.copyTo(bestMask0);
+            {
+                if( bestMask.size() == bestMask0.size() )
+                    bestMask.copyTo(bestMask0);
+                else
+                    transpose(bestMask, bestMask0);
+            }
             bestModel.copyTo(_model);
             result = true;
         }
@@ -255,14 +275,14 @@ class LMeDSPointSetRegistrator : public RANSACPointSetRegistrator
 public:
     LMeDSPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& _cb=Ptr<PointSetRegistrator::Callback>(),
                               int _modelPoints=0, double _confidence=0.99, int _maxIters=1000)
-    : RANSACPointSetRegistrator(_cb, _modelPoints, 0, confidence, maxIters) {}
+    : RANSACPointSetRegistrator(_cb, _modelPoints, 0, _confidence, _maxIters) {}
 
     bool run(InputArray _m1, InputArray _m2, OutputArray _model, OutputArray _mask) const
     {
         const double outlierRatio = 0.45;
         bool result = false;
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
-        Mat ms1, ms2, err, errf, model, bestModel, mask;
+        Mat ms1, ms2, err, errf, model, bestModel, mask, mask0;
 
         int d1 = m1.channels() > 1 ? m1.channels() : m1.cols;
         int d2 = m2.channels() > 1 ? m2.channels() : m2.cols;
@@ -280,8 +300,10 @@ public:
 
         if( _mask.needed() )
         {
-            _mask.create(count, 1, CV_8U);
-            mask = _mask.getMat();
+            if( !_mask.fixedSize() )
+                _mask.create(count, 1, CV_8U);
+            mask0 = mask = _mask.getMat();
+            CV_Assert( (mask.cols == 1 || mask.rows == 1) && (int)mask.total() == count );
         }
 
         if( count == modelPoints )
@@ -345,6 +367,13 @@ public:
             sigma = MAX( sigma, 0.001 );
 
             count = findInliers( m1, m2, bestModel, err, mask, sigma );
+            if( _mask.needed() && mask0.data != mask.data )
+            {
+                if( mask0.size() == mask.size() )
+                    mask.copyTo(mask0);
+                else
+                    transpose(mask, mask0);
+            }
             bestModel.copyTo(_model);
             result = count >= modelPoints;
         }
@@ -356,6 +385,21 @@ public:
 
     AlgorithmInfo* info() const;
 };
+
+
+Ptr<PointSetRegistrator> createRANSACPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& _cb,
+                                                         int _modelPoints, double _threshold,
+                                                         double _confidence, int _maxIters)
+{
+    return new RANSACPointSetRegistrator(_cb, _modelPoints, _threshold, _confidence, _maxIters);
+}
+
+
+Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& _cb,
+                             int _modelPoints, double _confidence, int _maxIters)
+{
+    return new LMeDSPointSetRegistrator(_cb, _modelPoints, _confidence, _maxIters);
+}
 
 
 CV_INIT_ALGORITHM(RANSACPointSetRegistrator, "PointSetRegistrator.RANSAC",
@@ -404,7 +448,7 @@ public:
         }
 
         solve(A, B, X, DECOMP_SVD);
-        X.reshape(1, 3).convertTo(_model, CV_32F);
+        X.reshape(1, 3).copyTo(_model);
 
         return 1;
     }
@@ -414,7 +458,7 @@ public:
         Mat m1 = _m1.getMat(), m2 = _m2.getMat(), model = _model.getMat();
         const Point3f* from = m1.ptr<Point3f>();
         const Point3f* to   = m2.ptr<Point3f>();
-        const float* F = model.ptr<float>();
+        const double* F = model.ptr<double>();
 
         int count = m1.checkVector(3);
         CV_Assert( count > 0 );
@@ -428,9 +472,9 @@ public:
             const Point3f& f = from[i];
             const Point3f& t = to[i];
 
-            float a = F[0]*f.x + F[1]*f.y + F[ 2]*f.z + F[ 3] - t.x;
-            float b = F[4]*f.x + F[5]*f.y + F[ 6]*f.z + F[ 7] - t.y;
-            float c = F[8]*f.x + F[9]*f.y + F[10]*f.z + F[11] - t.z;
+            double a = F[0]*f.x + F[1]*f.y + F[ 2]*f.z + F[ 3] - t.x;
+            double b = F[4]*f.x + F[5]*f.y + F[ 6]*f.z + F[ 7] - t.y;
+            double c = F[8]*f.x + F[9]*f.y + F[10]*f.z + F[11] - t.z;
 
             errptr[i] = (float)std::sqrt(a*a + b*b + c*c);
         }
@@ -441,10 +485,10 @@ public:
         const float threshold = 0.996f;
         Mat ms1 = _ms1.getMat(), ms2 = _ms2.getMat();
 
-        for( int inp = 0; inp < 2; inp++ )
+        for( int inp = 1; inp <= 2; inp++ )
         {
             int j, k, i = count - 1;
-            const Mat* msi = inp == 0 ? &ms1 : &ms2;
+            const Mat* msi = inp == 1 ? &ms1 : &ms2;
             const Point3f* ptr = msi->ptr<Point3f>();
 
             CV_Assert( count <= msi->rows );
@@ -460,17 +504,12 @@ public:
                 {
                     Point3f d2 = ptr[k] - ptr[i];
                     float denom = (d2.x*d2.x + d2.y*d2.y)*n1;
-                    float num = d1.dot(d2);
+                    float num = d1.x*d2.x + d1.y*d2.y;
 
-                    if( (num*num / denom) > threshold*threshold )
-                        break;
+                    if( num*num > threshold*threshold*denom )
+                        return false;
                 }
-                if( k < j )
-                    break;
             }
-            
-            if( j < i )
-                return false;
         }
         return true;
     }
@@ -487,14 +526,11 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
 
     CV_Assert( count >= 0 && to.checkVector(3) == count );
 
-    _out.create(3, 4, CV_64F);
-    Mat out = _out.getMat();
-
     Mat dFrom, dTo;
     from.convertTo(dFrom, CV_32F);
     to.convertTo(dTo, CV_32F);
-    dFrom = dFrom.reshape(3, 1);
-    dTo = dTo.reshape(3, 1);
+    dFrom = dFrom.reshape(3, count);
+    dTo = dTo.reshape(3, count);
 
     const double epsilon = DBL_EPSILON;
     param1 = param1 <= 0 ? 3 : param1;
