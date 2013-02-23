@@ -926,7 +926,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
     if( gimg.cols < minSize.width || gimg.rows < minSize.height )
         CV_Error(CV_StsError, "Image too small");
 
-    if( (flags & CV_HAAR_SCALE_IMAGE) && gimg.clCxt->impl->devName.find("Intel(R) HD Graphics") == string::npos )
+    if( (flags & CV_HAAR_SCALE_IMAGE) )
     {
         CvSize winSize0 = cascade->orig_window_size;
         //float scalefactor = 1.1f;
