@@ -91,7 +91,7 @@ if(WITH_WEBP)
   if(BUILD_WEBP)
     ocv_clear_vars(WEBP_FOUND)
   else()
-    include(FindWebP)
+    include(cmake/OpenCVFindWebP.cmake)
   endif()
 endif()
 

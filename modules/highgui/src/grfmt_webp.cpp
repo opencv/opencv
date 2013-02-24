@@ -205,7 +205,26 @@ bool WebPEncoder::write(const Mat& img, const vector<int>& params)
 
 	const Mat *image = &img;
 	Mat temp;
-	int quality = 95, size = 0;
+	int size = 0;
+
+	bool comp_lossless = true;
+	int quality = 100;
+	if (params.size() > 1)
+	{
+		if (params[0] == CV_IMWRITE_WEBP_QUALITY)
+		{
+			comp_lossless = false;
+			quality = params[1];
+			if (quality < 1)
+			{
+				quality = 1;
+			}
+			if (quality > 100)
+			{
+				quality = 100;
+			}
+		}
+	}
 
 	uint8_t *out = NULL;
 
@@ -221,8 +240,15 @@ bool WebPEncoder::write(const Mat& img, const vector<int>& params)
 		channels = 3;
 	}
 
-	size = WebPEncodeBGR(image->data, width, height, ((width * 3 + 3) & ~3),
-		(float) quality, &out);
+	if (comp_lossless)
+	{
+		size = WebPEncodeLosslessBGR(image->data, width, height, ((width * 3 + 3) & ~3), &out);
+	}
+	else
+	{
+		size = WebPEncodeBGR(image->data, width, height, ((width * 3 + 3) & ~3),
+			(float) quality, &out);
+	}
 
 	if(size > 0)
 	{
