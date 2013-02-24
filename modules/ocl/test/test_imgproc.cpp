@@ -791,8 +791,8 @@ TEST_P(WarpAffine, Mat)
 {
     static const double coeffs[2][3] =
     {
-        {cos(3.14 / 6), -sin(3.14 / 6), 100.0},
-        {sin(3.14 / 6), cos(3.14 / 6), -100.0}
+        {cos(CV_PI / 6), -sin(CV_PI / 6), 100.0},
+        {sin(CV_PI / 6), cos(CV_PI / 6), -100.0}
     };
     Mat M(2, 3, CV_64F, (void *)coeffs);
 
