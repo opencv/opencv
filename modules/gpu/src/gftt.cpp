@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
@@ -94,11 +93,11 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
         tmpCorners_.colRange(0, maxCorners > 0 ? std::min(maxCorners, total) : total).copyTo(corners);
     else
     {
-        vector<Point2f> tmp(total);
+        std::vector<Point2f> tmp(total);
         Mat tmpMat(1, total, CV_32FC2, (void*)&tmp[0]);
         tmpCorners_.colRange(0, total).download(tmpMat);
 
-        vector<Point2f> tmp2;
+        std::vector<Point2f> tmp2;
         tmp2.reserve(total);
 
         const int cell_size = cvRound(minDistance);
@@ -131,7 +130,7 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
             {
                 for (int xx = x1; xx <= x2; xx++)
                 {
-                    vector<Point2f>& m = grid[yy * grid_width + xx];
+                    std::vector<Point2f>& m = grid[yy * grid_width + xx];
 
                     if (!m.empty())
                     {

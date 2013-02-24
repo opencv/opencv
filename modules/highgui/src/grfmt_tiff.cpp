@@ -94,7 +94,7 @@ size_t TiffDecoder::signatureLength() const
     return 4;
 }
 
-bool TiffDecoder::checkSignature( const string& signature ) const
+bool TiffDecoder::checkSignature( const std::string& signature ) const
 {
     return signature.size() >= 4 &&
         (memcmp(signature.c_str(), fmtSignTiffII, 4) == 0 ||
@@ -402,7 +402,7 @@ void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
 
 #ifdef HAVE_TIFF
 
-static void readParam(const vector<int>& params, int key, int& value)
+static void readParam(const std::vector<int>& params, int key, int& value)
 {
     for(size_t i = 0; i + 1 < params.size(); i += 2)
         if(params[i] == key)
@@ -412,7 +412,7 @@ static void readParam(const vector<int>& params, int key, int& value)
         }
 }
 
-bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& params)
+bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
 {
     int channels = img.channels();
     int width = img.cols, height = img.rows;
@@ -542,9 +542,9 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& params)
 #endif
 
 #ifdef HAVE_TIFF
-bool  TiffEncoder::write( const Mat& img, const vector<int>& params)
+bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
 #else
-bool  TiffEncoder::write( const Mat& img, const vector<int>& /*params*/)
+bool  TiffEncoder::write( const Mat& img, const std::vector<int>& /*params*/)
 #endif
 {
     int channels = img.channels();

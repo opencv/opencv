@@ -42,6 +42,7 @@
 #include "test_precomp.hpp"
 #include "_modelest.h"
 
+using namespace std;
 using namespace cv;
 
 class BareModelEstimator : public CvModelEstimator2

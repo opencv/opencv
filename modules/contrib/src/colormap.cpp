@@ -42,7 +42,7 @@ static void sortMatrixRowsByIndices(InputArray _src, InputArray _indices, Output
     if(_indices.getMat().type() != CV_32SC1)
         CV_Error(CV_StsUnsupportedFormat, "cv::sortRowsByIndices only works on integer indices!");
     Mat src = _src.getMat();
-    vector<int> indices = _indices.getMat();
+    std::vector<int> indices = _indices.getMat();
     _dst.create(src.rows, src.cols, src.type());
     Mat dst = _dst.getMat();
     for(size_t idx = 0; idx < indices.size(); idx++) {
@@ -76,7 +76,7 @@ Mat interp1_(const Mat& X_, const Mat& Y_, const Mat& XI)
 {
     int n = XI.rows;
     // sort input table
-    vector<int> sort_indices = argsort(X_);
+    std::vector<int> sort_indices = argsort(X_);
 
     Mat X = sortMatrixRowsByIndices(X_,sort_indices);
     Mat Y = sortMatrixRowsByIndices(Y_,sort_indices);

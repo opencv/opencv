@@ -282,7 +282,7 @@ const Formatter* Formatter::setDefault(const Formatter* fmt)
 }
 
 Formatted::Formatted(const Mat& _m, const Formatter* _fmt,
-                     const vector<int>& _params)
+                     const std::vector<int>& _params)
 {
     mtx = _m;
     fmt = _fmt ? _fmt : Formatter::get();

@@ -1,7 +1,3 @@
-/*! \file tracking.hpp
- \brief The Object and Feature Tracking
- */
-
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
@@ -244,7 +240,7 @@ CV_EXPORTS_W double calcGlobalOrientation( InputArray orientation, InputArray ma
                                            double duration );
 
 CV_EXPORTS_W void segmentMotion(InputArray mhi, OutputArray segmask,
-                                CV_OUT vector<Rect>& boundingRects,
+                                CV_OUT std::vector<Rect>& boundingRects,
                                 double timestamp, double segThresh);
 
 //! updates the object tracking window using CAMSHIFT algorithm

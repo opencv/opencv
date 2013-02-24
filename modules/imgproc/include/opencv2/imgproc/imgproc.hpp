@@ -1,7 +1,3 @@
-/*! \file imgproc.hpp
- \brief The Image Processing
- */
-
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
@@ -268,14 +264,14 @@ public:
     Rect roi;
     int dx1, dx2;
     int rowBorderType, columnBorderType;
-    vector<int> borderTab;
+    std::vector<int> borderTab;
     int borderElemSize;
-    vector<uchar> ringBuf;
-    vector<uchar> srcRow;
-    vector<uchar> constBorderValue;
-    vector<uchar> constBorderRow;
+    std::vector<uchar> ringBuf;
+    std::vector<uchar> srcRow;
+    std::vector<uchar> constBorderValue;
+    std::vector<uchar> constBorderRow;
     int bufStep, startY, startY0, endY, rowCount, dstY;
-    vector<uchar*> rows;
+    std::vector<uchar*> rows;
 
     Ptr<BaseFilter> filter2D;
     Ptr<BaseRowFilter> rowFilter;
@@ -717,10 +713,10 @@ CV_EXPORTS void calcHist( const Mat* images, int nimages,
                           bool uniform=true, bool accumulate=false );
 
 CV_EXPORTS_W void calcHist( InputArrayOfArrays images,
-                            const vector<int>& channels,
+                            const std::vector<int>& channels,
                             InputArray mask, OutputArray hist,
-                            const vector<int>& histSize,
-                            const vector<float>& ranges,
+                            const std::vector<int>& histSize,
+                            const std::vector<float>& ranges,
                             bool accumulate=false );
 
 //! computes back projection for the set of images
@@ -735,16 +731,16 @@ CV_EXPORTS void calcBackProject( const Mat* images, int nimages,
                                  OutputArray backProject, const float** ranges,
                                  double scale=1, bool uniform=true );
 
-CV_EXPORTS_W void calcBackProject( InputArrayOfArrays images, const vector<int>& channels,
+CV_EXPORTS_W void calcBackProject( InputArrayOfArrays images, const std::vector<int>& channels,
                                    InputArray hist, OutputArray dst,
-                                   const vector<float>& ranges,
+                                   const std::vector<float>& ranges,
                                    double scale );
 
 /*CV_EXPORTS void calcBackProjectPatch( const Mat* images, int nimages, const int* channels,
                                       InputArray hist, OutputArray dst, Size patchSize,
                                       int method, double factor=1 );
 
-CV_EXPORTS_W void calcBackProjectPatch( InputArrayOfArrays images, const vector<int>& channels,
+CV_EXPORTS_W void calcBackProjectPatch( InputArrayOfArrays images, const std::vector<int>& channels,
                                         InputArray hist, OutputArray dst, Size patchSize,
                                         int method, double factor=1 );*/
 
@@ -1215,14 +1211,14 @@ public:
     CV_WRAP void initDelaunay(Rect rect);
 
     CV_WRAP int insert(Point2f pt);
-    CV_WRAP void insert(const vector<Point2f>& ptvec);
+    CV_WRAP void insert(const std::vector<Point2f>& ptvec);
     CV_WRAP int locate(Point2f pt, CV_OUT int& edge, CV_OUT int& vertex);
 
     CV_WRAP int findNearest(Point2f pt, CV_OUT Point2f* nearestPt=0);
-    CV_WRAP void getEdgeList(CV_OUT vector<Vec4f>& edgeList) const;
-    CV_WRAP void getTriangleList(CV_OUT vector<Vec6f>& triangleList) const;
-    CV_WRAP void getVoronoiFacetList(const vector<int>& idx, CV_OUT vector<vector<Point2f> >& facetList,
-                                     CV_OUT vector<Point2f>& facetCenters);
+    CV_WRAP void getEdgeList(CV_OUT std::vector<Vec4f>& edgeList) const;
+    CV_WRAP void getTriangleList(CV_OUT std::vector<Vec6f>& triangleList) const;
+    CV_WRAP void getVoronoiFacetList(const std::vector<int>& idx, CV_OUT std::vector<std::vector<Point2f> >& facetList,
+                                     CV_OUT std::vector<Point2f>& facetCenters);
 
     CV_WRAP Point2f getVertex(int vertex, CV_OUT int* firstEdge=0) const;
 
@@ -1266,8 +1262,8 @@ protected:
         int pt[4];
     };
 
-    vector<Vertex> vtx;
-    vector<QuadEdge> qedges;
+    std::vector<Vertex> vtx;
+    std::vector<QuadEdge> qedges;
     int freeQEdge;
     int freePoint;
     bool validGeometry;

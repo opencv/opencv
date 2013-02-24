@@ -74,17 +74,11 @@ namespace cv {
 #undef max
 #undef Complex
 
-using std::vector;
-using std::string;
-using std::ptrdiff_t;
-
 template<typename _Tp> class CV_EXPORTS Size_;
 template<typename _Tp> class CV_EXPORTS Point_;
 template<typename _Tp> class CV_EXPORTS Rect_;
 template<typename _Tp, int cn> class CV_EXPORTS Vec;
 template<typename _Tp, int m, int n> class CV_EXPORTS Matx;
-
-typedef std::string String;
 
 class Mat;
 class SparseMat;
@@ -111,8 +105,8 @@ template<typename _Tp> class CV_EXPORTS MatCommaInitializer_;
 
 template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class CV_EXPORTS AutoBuffer;
 
-CV_EXPORTS string format( const char* fmt, ... );
-CV_EXPORTS string tempfile( const char* suffix CV_DEFAULT(0));
+CV_EXPORTS std::string format( const char* fmt, ... );
+CV_EXPORTS std::string tempfile( const char* suffix CV_DEFAULT(0));
 
 // matrix decomposition types
 enum { DECOMP_LU=0, DECOMP_SVD=1, DECOMP_EIG=2, DECOMP_CHOLESKY=3, DECOMP_QR=4, DECOMP_NORMAL=16 };
@@ -138,7 +132,7 @@ public:
      Full constructor. Normally the constuctor is not called explicitly.
      Instead, the macros CV_Error(), CV_Error_() and CV_Assert() are used.
     */
-    Exception(int _code, const string& _err, const string& _func, const string& _file, int _line);
+    Exception(int _code, const std::string& _err, const std::string& _func, const std::string& _file, int _line);
     virtual ~Exception() throw();
 
     /*!
@@ -147,12 +141,12 @@ public:
     virtual const char *what() const throw();
     void formatMessage();
 
-    string msg; ///< the formatted error message
+    std::string msg; ///< the formatted error message
 
     int code; ///< error code @see CVStatus
-    string err; ///< error description
-    string func; ///< function name. Available only when the compiler supports __func__ macro
-    string file; ///< source file name where the error has occured
+    std::string err; ///< error description
+    std::string func; ///< function name. Available only when the compiler supports __func__ macro
+    std::string file; ///< source file name where the error has occured
     int line; ///< line number in the source file where the error has occured
 };
 
@@ -216,7 +210,7 @@ CV_EXPORTS void setNumThreads(int nthreads);
 CV_EXPORTS int getNumThreads();
 CV_EXPORTS int getThreadNum();
 
-CV_EXPORTS_W const string& getBuildInformation();
+CV_EXPORTS_W const std::string& getBuildInformation();
 
 //! Returns the number of ticks.
 
@@ -1317,10 +1311,10 @@ public:
     _InputArray(const Mat& m);
     _InputArray(const MatExpr& expr);
     template<typename _Tp> _InputArray(const _Tp* vec, int n);
-    template<typename _Tp> _InputArray(const vector<_Tp>& vec);
-    template<typename _Tp> _InputArray(const vector<vector<_Tp> >& vec);
-    _InputArray(const vector<Mat>& vec);
-    template<typename _Tp> _InputArray(const vector<Mat_<_Tp> >& vec);
+    template<typename _Tp> _InputArray(const std::vector<_Tp>& vec);
+    template<typename _Tp> _InputArray(const std::vector<std::vector<_Tp> >& vec);
+    _InputArray(const std::vector<Mat>& vec);
+    template<typename _Tp> _InputArray(const std::vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _InputArray(const Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _InputArray(const Matx<_Tp, m, n>& matx);
     _InputArray(const Scalar& s);
@@ -1330,7 +1324,7 @@ public:
     _InputArray(const gpu::GpuMat& d_mat);
 
     virtual Mat getMat(int i=-1) const;
-    virtual void getMatVector(vector<Mat>& mv) const;
+    virtual void getMatVector(std::vector<Mat>& mv) const;
     virtual GlBuffer getGlBuffer() const;
     virtual GlTexture2D getGlTexture2D() const;
     virtual gpu::GpuMat getGpuMat() const;
@@ -1375,10 +1369,10 @@ public:
     _OutputArray();
 
     _OutputArray(Mat& m);
-    template<typename _Tp> _OutputArray(vector<_Tp>& vec);
-    template<typename _Tp> _OutputArray(vector<vector<_Tp> >& vec);
-    _OutputArray(vector<Mat>& vec);
-    template<typename _Tp> _OutputArray(vector<Mat_<_Tp> >& vec);
+    template<typename _Tp> _OutputArray(std::vector<_Tp>& vec);
+    template<typename _Tp> _OutputArray(std::vector<std::vector<_Tp> >& vec);
+    _OutputArray(std::vector<Mat>& vec);
+    template<typename _Tp> _OutputArray(std::vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _OutputArray(Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _OutputArray(Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(_Tp* vec, int n);
@@ -1387,10 +1381,10 @@ public:
     _OutputArray(GlTexture2D& tex);
 
     _OutputArray(const Mat& m);
-    template<typename _Tp> _OutputArray(const vector<_Tp>& vec);
-    template<typename _Tp> _OutputArray(const vector<vector<_Tp> >& vec);
-    _OutputArray(const vector<Mat>& vec);
-    template<typename _Tp> _OutputArray(const vector<Mat_<_Tp> >& vec);
+    template<typename _Tp> _OutputArray(const std::vector<_Tp>& vec);
+    template<typename _Tp> _OutputArray(const std::vector<std::vector<_Tp> >& vec);
+    _OutputArray(const std::vector<Mat>& vec);
+    template<typename _Tp> _OutputArray(const std::vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _OutputArray(const Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _OutputArray(const Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(const _Tp* vec, int n);
@@ -1690,7 +1684,7 @@ public:
     //! converts old-style IplImage to the new matrix; the data is not copied by default
     Mat(const IplImage* img, bool copyData=false);
     //! builds matrix from std::vector with or without copying the data
-    template<typename _Tp> explicit Mat(const vector<_Tp>& vec, bool copyData=false);
+    template<typename _Tp> explicit Mat(const std::vector<_Tp>& vec, bool copyData=false);
     //! builds matrix from cv::Vec; the data is copied by default
     template<typename _Tp, int n> explicit Mat(const Vec<_Tp, n>& vec, bool copyData=true);
     //! builds matrix from cv::Matx; the data is copied by default
@@ -1821,7 +1815,7 @@ public:
     //! converts header to IplImage; no data is copied
     operator IplImage() const;
 
-    template<typename _Tp> operator vector<_Tp>() const;
+    template<typename _Tp> operator std::vector<_Tp>() const;
     template<typename _Tp, int n> operator Vec<_Tp, n>() const;
     template<typename _Tp, int m, int n> operator Matx<_Tp, m, n>() const;
 
@@ -2155,10 +2149,10 @@ CV_EXPORTS_W void split(InputArray m, OutputArrayOfArrays mv);
 //! copies selected channels from the input arrays to the selected channels of the output arrays
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
                             const int* fromTo, size_t npairs);
-CV_EXPORTS void mixChannels(const vector<Mat>& src, vector<Mat>& dst,
+CV_EXPORTS void mixChannels(const std::vector<Mat>& src, std::vector<Mat>& dst,
                             const int* fromTo, size_t npairs);
 CV_EXPORTS_W void mixChannels(InputArrayOfArrays src, InputArrayOfArrays dst,
-                              const vector<int>& fromTo);
+                              const std::vector<int>& fromTo);
 
 //! extracts a single channel from src (coi is 0-based index)
 CV_EXPORTS_W void extractChannel(InputArray src, OutputArray dst, int coi);
@@ -2620,7 +2614,7 @@ public:
 //! converts elliptic arc to a polygonal curve
 CV_EXPORTS_W void ellipse2Poly( Point center, Size axes, int angle,
                                 int arcStart, int arcEnd, int delta,
-                                CV_OUT vector<Point>& pts );
+                                CV_OUT std::vector<Point>& pts );
 
 enum
 {
@@ -2636,13 +2630,13 @@ enum
 };
 
 //! renders text string in the image
-CV_EXPORTS_W void putText( Mat& img, const string& text, Point org,
+CV_EXPORTS_W void putText( Mat& img, const std::string& text, Point org,
                          int fontFace, double fontScale, Scalar color,
                          int thickness=1, int lineType=8,
                          bool bottomLeftOrigin=false );
 
 //! returns bounding box of the text string
-CV_EXPORTS_W Size getTextSize(const string& text, int fontFace,
+CV_EXPORTS_W Size getTextSize(const std::string& text, int fontFace,
                             double fontScale, int thickness,
                             CV_OUT int* baseLine);
 
@@ -2732,7 +2726,7 @@ public:
     //! from a matrix expression
     explicit Mat_(const MatExpr& e);
     //! makes a matrix out of Vec, std::vector, Point_ or Point3_. The matrix will have a single column
-    explicit Mat_(const vector<_Tp>& vec, bool copyData=false);
+    explicit Mat_(const std::vector<_Tp>& vec, bool copyData=false);
     template<int n> explicit Mat_(const Vec<typename DataType<_Tp>::channel_type, n>& vec, bool copyData=true);
     template<int m, int n> explicit Mat_(const Matx<typename DataType<_Tp>::channel_type, m, n>& mtx, bool copyData=true);
     explicit Mat_(const Point_<typename DataType<_Tp>::channel_type>& pt, bool copyData=true);
@@ -2825,7 +2819,7 @@ public:
     const _Tp& operator ()(Point pt) const;
 
     //! conversion to vector.
-    operator vector<_Tp>() const;
+    operator std::vector<_Tp>() const;
     //! conversion to Vec
     template<int n> operator Vec<typename DataType<_Tp>::channel_type, n>() const;
     //! conversion to Matx
@@ -3339,8 +3333,8 @@ public:
         size_t nodeSize;
         size_t nodeCount;
         size_t freeList;
-        vector<uchar> pool;
-        vector<size_t> hashtab;
+        std::vector<uchar> pool;
+        std::vector<size_t> hashtab;
         int size[CV_MAX_DIM];
     };
 
@@ -3878,9 +3872,9 @@ public:
     //! returns the search space dimensionality
     CV_WRAP int dims() const;
 
-    vector<Node> nodes; //!< all the tree nodes
+    std::vector<Node> nodes; //!< all the tree nodes
     CV_PROP Mat points; //!< all the points. It can be a reordered copy of the input vector set or the original vector set.
-    CV_PROP vector<int> labels; //!< the parallel array of labels.
+    CV_PROP std::vector<int> labels; //!< the parallel array of labels.
     CV_PROP int maxDepth; //!< maximum depth of the search tree. Do not modify it
     CV_PROP_RW int normType; //!< type of the distance (cv::NORM_L1 or cv::NORM_L2) used for search. Initially set to cv::NORM_L2, but you can modify it
 };
@@ -3954,7 +3948,7 @@ class CV_EXPORTS FileNode;
  FileStorage fs("test.yml", FileStorage::READ);
  int test_int = (int)fs["test_int"];
  double test_real = (double)fs["test_real"];
- string test_string = (string)fs["test_string"];
+ std::string test_string = (std::string)fs["test_string"];
 
  Mat M;
  fs["test_mat"] >> M;
@@ -3965,7 +3959,7 @@ class CV_EXPORTS FileNode;
  int tl1 = (int)tl[1];
  double tl2 = (double)tl[2];
  int tl3 = (int)tl[3];
- string tl4 = (string)tl[4];
+ std::string tl4 = (std::string)tl[4];
  CV_Assert(tl[5].type() == FileNode::MAP && tl[5].size() == 3);
 
  int month = (int)tl[5]["month"];
@@ -4011,27 +4005,27 @@ public:
     //! the default constructor
     CV_WRAP FileStorage();
     //! the full constructor that opens file storage for reading or writing
-    CV_WRAP FileStorage(const string& source, int flags, const string& encoding=string());
+    CV_WRAP FileStorage(const std::string& source, int flags, const std::string& encoding=std::string());
     //! the constructor that takes pointer to the C FileStorage structure
     FileStorage(CvFileStorage* fs);
     //! the destructor. calls release()
     virtual ~FileStorage();
 
     //! opens file storage for reading or writing. The previous storage is closed with release()
-    CV_WRAP virtual bool open(const string& filename, int flags, const string& encoding=string());
+    CV_WRAP virtual bool open(const std::string& filename, int flags, const std::string& encoding=std::string());
     //! returns true if the object is associated with currently opened file.
     CV_WRAP virtual bool isOpened() const;
     //! closes the file and releases all the memory buffers
     CV_WRAP virtual void release();
     //! closes the file, releases all the memory buffers and returns the text string
-    CV_WRAP virtual string releaseAndGetString();
+    CV_WRAP virtual std::string releaseAndGetString();
 
     //! returns the first element of the top-level mapping
     CV_WRAP FileNode getFirstTopLevelNode() const;
     //! returns the top-level mapping. YAML supports multiple streams
     CV_WRAP FileNode root(int streamidx=0) const;
     //! returns the specified element of the top-level mapping
-    FileNode operator[](const string& nodename) const;
+    FileNode operator[](const std::string& nodename) const;
     //! returns the specified element of the top-level mapping
     CV_WRAP FileNode operator[](const char* nodename) const;
 
@@ -4040,16 +4034,16 @@ public:
     //! returns pointer to the underlying C FileStorage structure
     const CvFileStorage* operator *() const { return fs; }
     //! writes one or more numbers of the specified format to the currently written structure
-    void writeRaw( const string& fmt, const uchar* vec, size_t len );
+    void writeRaw( const std::string& fmt, const uchar* vec, size_t len );
     //! writes the registered C structure (CvMat, CvMatND, CvSeq). See cvWrite()
-    void writeObj( const string& name, const void* obj );
+    void writeObj( const std::string& name, const void* obj );
 
     //! returns the normalized object name for the specified file name
-    static string getDefaultObjectName(const string& filename);
+    static std::string getDefaultObjectName(const std::string& filename);
 
     Ptr<CvFileStorage> fs; //!< the underlying C FileStorage structure
-    string elname; //!< the currently written element
-    vector<char> structs; //!< the stack of written structures
+    std::string elname; //!< the currently written element
+    std::vector<char> structs; //!< the stack of written structures
     int state; //!< the writer state
 };
 
@@ -4093,7 +4087,7 @@ public:
     //! the copy constructor
     FileNode(const FileNode& node);
     //! returns element of a mapping node
-    FileNode operator[](const string& nodename) const;
+    FileNode operator[](const std::string& nodename) const;
     //! returns element of a mapping node
     CV_WRAP FileNode operator[](const char* nodename) const;
     //! returns element of a sequence node
@@ -4118,7 +4112,7 @@ public:
     //! returns true if the node has a name
     CV_WRAP bool isNamed() const;
     //! returns the node name or an empty string if the node is nameless
-    CV_WRAP string name() const;
+    CV_WRAP std::string name() const;
     //! returns the number of elements in the node, if it is a sequence or mapping, or 1 otherwise.
     CV_WRAP size_t size() const;
     //! returns the node content as an integer. If the node stores floating-point number, it is rounded.
@@ -4128,7 +4122,7 @@ public:
     //! returns the node content as double
     operator double() const;
     //! returns the node content as text string
-    operator string() const;
+    operator std::string() const;
 
     //! returns pointer to the underlying file node
     CvFileNode* operator *();
@@ -4141,7 +4135,7 @@ public:
     FileNodeIterator end() const;
 
     //! reads node elements to the buffer with the specified format
-    void readRaw( const string& fmt, uchar* vec, size_t len ) const;
+    void readRaw( const std::string& fmt, uchar* vec, size_t len ) const;
     //! reads the registered object and returns pointer to it
     void* readObj() const;
 
@@ -4184,7 +4178,7 @@ public:
     FileNodeIterator& operator -= (int ofs);
 
     //! reads the next maxCount elements (or less, if the sequence/mapping last element occurs earlier) to the buffer with the specified format
-    FileNodeIterator& readRaw( const string& fmt, uchar* vec,
+    FileNodeIterator& readRaw( const std::string& fmt, uchar* vec,
                                size_t maxCount=(size_t)INT_MAX );
 
     const CvFileStorage* fs;
@@ -4281,9 +4275,9 @@ public:
     void pop_back(_Tp* elems, size_t count);
 
     //! copies the whole sequence or the sequence slice to the specified vector
-    void copyTo(vector<_Tp>& vec, const Range& range=Range::all()) const;
+    void copyTo(std::vector<_Tp>& vec, const Range& range=Range::all()) const;
     //! returns the vector containing all the sequence elements
-    operator vector<_Tp>() const;
+    operator std::vector<_Tp>() const;
 
     CvSeq* seq;
 };
@@ -4340,59 +4334,59 @@ class CV_EXPORTS_W Algorithm
 public:
     Algorithm();
     virtual ~Algorithm();
-    string name() const;
+    std::string name() const;
 
-    template<typename _Tp> typename ParamType<_Tp>::member_type get(const string& name) const;
+    template<typename _Tp> typename ParamType<_Tp>::member_type get(const std::string& name) const;
     template<typename _Tp> typename ParamType<_Tp>::member_type get(const char* name) const;
 
-    CV_WRAP int getInt(const string& name) const;
-    CV_WRAP double getDouble(const string& name) const;
-    CV_WRAP bool getBool(const string& name) const;
-    CV_WRAP string getString(const string& name) const;
-    CV_WRAP Mat getMat(const string& name) const;
-    CV_WRAP vector<Mat> getMatVector(const string& name) const;
-    CV_WRAP Ptr<Algorithm> getAlgorithm(const string& name) const;
+    CV_WRAP int getInt(const std::string& name) const;
+    CV_WRAP double getDouble(const std::string& name) const;
+    CV_WRAP bool getBool(const std::string& name) const;
+    CV_WRAP std::string getString(const std::string& name) const;
+    CV_WRAP Mat getMat(const std::string& name) const;
+    CV_WRAP std::vector<Mat> getMatVector(const std::string& name) const;
+    CV_WRAP Ptr<Algorithm> getAlgorithm(const std::string& name) const;
 
-    void set(const string& name, int value);
-    void set(const string& name, double value);
-    void set(const string& name, bool value);
-    void set(const string& name, const string& value);
-    void set(const string& name, const Mat& value);
-    void set(const string& name, const vector<Mat>& value);
-    void set(const string& name, const Ptr<Algorithm>& value);
-    template<typename _Tp> void set(const string& name, const Ptr<_Tp>& value);
+    void set(const std::string& name, int value);
+    void set(const std::string& name, double value);
+    void set(const std::string& name, bool value);
+    void set(const std::string& name, const std::string& value);
+    void set(const std::string& name, const Mat& value);
+    void set(const std::string& name, const std::vector<Mat>& value);
+    void set(const std::string& name, const Ptr<Algorithm>& value);
+    template<typename _Tp> void set(const std::string& name, const Ptr<_Tp>& value);
 
-    CV_WRAP void setInt(const string& name, int value);
-    CV_WRAP void setDouble(const string& name, double value);
-    CV_WRAP void setBool(const string& name, bool value);
-    CV_WRAP void setString(const string& name, const string& value);
-    CV_WRAP void setMat(const string& name, const Mat& value);
-    CV_WRAP void setMatVector(const string& name, const vector<Mat>& value);
-    CV_WRAP void setAlgorithm(const string& name, const Ptr<Algorithm>& value);
-    template<typename _Tp> void setAlgorithm(const string& name, const Ptr<_Tp>& value);
+    CV_WRAP void setInt(const std::string& name, int value);
+    CV_WRAP void setDouble(const std::string& name, double value);
+    CV_WRAP void setBool(const std::string& name, bool value);
+    CV_WRAP void setString(const std::string& name, const std::string& value);
+    CV_WRAP void setMat(const std::string& name, const Mat& value);
+    CV_WRAP void setMatVector(const std::string& name, const std::vector<Mat>& value);
+    CV_WRAP void setAlgorithm(const std::string& name, const Ptr<Algorithm>& value);
+    template<typename _Tp> void setAlgorithm(const std::string& name, const Ptr<_Tp>& value);
 
     void set(const char* name, int value);
     void set(const char* name, double value);
     void set(const char* name, bool value);
-    void set(const char* name, const string& value);
+    void set(const char* name, const std::string& value);
     void set(const char* name, const Mat& value);
-    void set(const char* name, const vector<Mat>& value);
+    void set(const char* name, const std::vector<Mat>& value);
     void set(const char* name, const Ptr<Algorithm>& value);
     template<typename _Tp> void set(const char* name, const Ptr<_Tp>& value);
 
     void setInt(const char* name, int value);
     void setDouble(const char* name, double value);
     void setBool(const char* name, bool value);
-    void setString(const char* name, const string& value);
+    void setString(const char* name, const std::string& value);
     void setMat(const char* name, const Mat& value);
-    void setMatVector(const char* name, const vector<Mat>& value);
+    void setMatVector(const char* name, const std::vector<Mat>& value);
     void setAlgorithm(const char* name, const Ptr<Algorithm>& value);
     template<typename _Tp> void setAlgorithm(const char* name, const Ptr<_Tp>& value);
 
-    CV_WRAP string paramHelp(const string& name) const;
+    CV_WRAP std::string paramHelp(const std::string& name) const;
     int paramType(const char* name) const;
-    CV_WRAP int paramType(const string& name) const;
-    CV_WRAP void getParams(CV_OUT vector<string>& names) const;
+    CV_WRAP int paramType(const std::string& name) const;
+    CV_WRAP void getParams(CV_OUT std::vector<std::string>& names) const;
 
 
     virtual void write(FileStorage& fs) const;
@@ -4402,9 +4396,9 @@ public:
     typedef int (Algorithm::*Getter)() const;
     typedef void (Algorithm::*Setter)(int);
 
-    CV_WRAP static void getList(CV_OUT vector<string>& algorithms);
-    CV_WRAP static Ptr<Algorithm> _create(const string& name);
-    template<typename _Tp> static Ptr<_Tp> create(const string& name);
+    CV_WRAP static void getList(CV_OUT std::vector<std::string>& algorithms);
+    CV_WRAP static Ptr<Algorithm> _create(const std::string& name);
+    template<typename _Tp> static Ptr<_Tp> create(const std::string& name);
 
     virtual AlgorithmInfo* info() const /* TODO: make it = 0;*/ { return 0; }
 };
@@ -4414,66 +4408,66 @@ class CV_EXPORTS AlgorithmInfo
 {
 public:
     friend class Algorithm;
-    AlgorithmInfo(const string& name, Algorithm::Constructor create);
+    AlgorithmInfo(const std::string& name, Algorithm::Constructor create);
     ~AlgorithmInfo();
     void get(const Algorithm* algo, const char* name, int argType, void* value) const;
     void addParam_(Algorithm& algo, const char* name, int argType,
                    void* value, bool readOnly,
                    Algorithm::Getter getter, Algorithm::Setter setter,
-                   const string& help=string());
-    string paramHelp(const char* name) const;
+                   const std::string& help=std::string());
+    std::string paramHelp(const char* name) const;
     int paramType(const char* name) const;
-    void getParams(vector<string>& names) const;
+    void getParams(std::vector<std::string>& names) const;
 
     void write(const Algorithm* algo, FileStorage& fs) const;
     void read(Algorithm* algo, const FileNode& fn) const;
-    string name() const;
+    std::string name() const;
 
     void addParam(Algorithm& algo, const char* name,
                   int& value, bool readOnly=false,
                   int (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(int)=0,
-                  const string& help=string());
+                  const std::string& help=std::string());
     void addParam(Algorithm& algo, const char* name,
                   bool& value, bool readOnly=false,
                   int (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(int)=0,
-                  const string& help=string());
+                  const std::string& help=std::string());
     void addParam(Algorithm& algo, const char* name,
                   double& value, bool readOnly=false,
                   double (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(double)=0,
-                  const string& help=string());
+                  const std::string& help=std::string());
     void addParam(Algorithm& algo, const char* name,
-                  string& value, bool readOnly=false,
-                  string (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(const string&)=0,
-                  const string& help=string());
+                  std::string& value, bool readOnly=false,
+                  std::string (Algorithm::*getter)()=0,
+                  void (Algorithm::*setter)(const std::string&)=0,
+                  const std::string& help=std::string());
     void addParam(Algorithm& algo, const char* name,
                   Mat& value, bool readOnly=false,
                   Mat (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(const Mat&)=0,
-                  const string& help=string());
+                  const std::string& help=std::string());
     void addParam(Algorithm& algo, const char* name,
-                  vector<Mat>& value, bool readOnly=false,
-                  vector<Mat> (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(const vector<Mat>&)=0,
-                  const string& help=string());
+                  std::vector<Mat>& value, bool readOnly=false,
+                  std::vector<Mat> (Algorithm::*getter)()=0,
+                  void (Algorithm::*setter)(const std::vector<Mat>&)=0,
+                  const std::string& help=std::string());
     void addParam(Algorithm& algo, const char* name,
                   Ptr<Algorithm>& value, bool readOnly=false,
                   Ptr<Algorithm> (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(const Ptr<Algorithm>&)=0,
-                  const string& help=string());
+                  const std::string& help=std::string());
     template<typename _Tp, typename _Base> void addParam(Algorithm& algo, const char* name,
                   Ptr<_Tp>& value, bool readOnly=false,
                   Ptr<_Tp> (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(const Ptr<_Tp>&)=0,
-                  const string& help=string());
+                  const std::string& help=std::string());
     template<typename _Tp> void addParam(Algorithm& algo, const char* name,
                   Ptr<_Tp>& value, bool readOnly=false,
                   Ptr<_Tp> (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(const Ptr<_Tp>&)=0,
-                  const string& help=string());
+                  const std::string& help=std::string());
 protected:
     AlgorithmInfoData* data;
     void set(Algorithm* algo, const char* name, int argType,
@@ -4489,13 +4483,13 @@ struct CV_EXPORTS Param
     Param(int _type, bool _readonly, int _offset,
           Algorithm::Getter _getter=0,
           Algorithm::Setter _setter=0,
-          const string& _help=string());
+          const std::string& _help=std::string());
     int type;
     int offset;
     bool readonly;
     Algorithm::Getter getter;
     Algorithm::Setter setter;
-    string help;
+    std::string help;
 };
 
 template<> struct ParamType<bool>
@@ -4522,10 +4516,10 @@ template<> struct ParamType<double>
     enum { type = Param::REAL };
 };
 
-template<> struct ParamType<string>
+template<> struct ParamType<std::string>
 {
-    typedef const string& const_param_type;
-    typedef string member_type;
+    typedef const std::string& const_param_type;
+    typedef std::string member_type;
 
     enum { type = Param::STRING };
 };
@@ -4538,10 +4532,10 @@ template<> struct ParamType<Mat>
     enum { type = Param::MAT };
 };
 
-template<> struct ParamType<vector<Mat> >
+template<> struct ParamType<std::vector<Mat> >
 {
-    typedef const vector<Mat>& const_param_type;
-    typedef vector<Mat> member_type;
+    typedef const std::vector<Mat>& const_param_type;
+    typedef std::vector<Mat> member_type;
 
     enum { type = Param::MAT_VECTOR };
 };
@@ -4584,14 +4578,14 @@ template<> struct ParamType<uint64>
 class CV_EXPORTS CommandLineParser
 {
 public:
-    CommandLineParser(int argc, const char* const argv[], const string& keys);
+    CommandLineParser(int argc, const char* const argv[], const std::string& keys);
     CommandLineParser(const CommandLineParser& parser);
     CommandLineParser& operator = (const CommandLineParser& parser);
 
-    string getPathToApplication() const;
+    std::string getPathToApplication() const;
 
     template <typename T>
-    T get(const string& name, bool space_delete = true) const
+    T get(const std::string& name, bool space_delete = true) const
     {
         T val = T();
         getByName(name, space_delete, ParamType<T>::type, (void*)&val);
@@ -4606,17 +4600,17 @@ public:
         return val;
     }
 
-    bool has(const string& name) const;
+    bool has(const std::string& name) const;
 
     bool check() const;
 
-    void about(const string& message);
+    void about(const std::string& message);
 
     void printMessage() const;
     void printErrors() const;
 
 protected:
-    void getByName(const string& name, bool space_delete, int type, void* dst) const;
+    void getByName(const std::string& name, bool space_delete, int type, void* dst) const;
     void getByIndex(int index, bool space_delete, int type, void* dst) const;
 
     struct Impl;

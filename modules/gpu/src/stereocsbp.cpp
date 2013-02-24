@@ -44,7 +44,6 @@
 
 using namespace cv;
 using namespace cv::gpu;
-using namespace std;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
@@ -105,7 +104,7 @@ void cv::gpu::StereoConstantSpaceBP::estimateRecommendedParams(int width, int he
     if ((ndisp & 1) != 0)
         ndisp++;
 
-    int mm = ::max(width, height);
+    int mm = std::max(width, height);
     iters = mm / 100 + ((mm > 1200)? - 4 : 4);
 
     levels = (int)::log(static_cast<double>(mm)) * 2 / 3;
@@ -154,7 +153,7 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat& mbuf, GpuMat& te
     int rows = left.rows;
     int cols = left.cols;
 
-    rthis.levels = min(rthis.levels, int(log((double)rthis.ndisp) / log(2.0)));
+    rthis.levels = std::min(rthis.levels, int(log((double)rthis.ndisp) / log(2.0)));
     int levels = rthis.levels;
 
     // compute sizes

@@ -120,7 +120,7 @@ bool HOGDescriptor::read(FileNode& obj)
     return true;
 }
 
-void HOGDescriptor::write(FileStorage& fs, const String& objName) const
+void HOGDescriptor::write(FileStorage& fs, const std::string& objName) const
 {
     if( !objName.empty() )
         fs << objName;
@@ -142,14 +142,14 @@ void HOGDescriptor::write(FileStorage& fs, const String& objName) const
     fs << "}";
 }
 
-bool HOGDescriptor::load(const String& filename, const String& objname)
+bool HOGDescriptor::load(const std::string& filename, const std::string& objname)
 {
     FileStorage fs(filename, FileStorage::READ);
     FileNode obj = !objname.empty() ? fs[objname] : fs.getFirstTopLevelNode();
     return read(obj);
 }
 
-void HOGDescriptor::save(const String& filename, const String& objName) const
+void HOGDescriptor::save(const std::string& filename, const std::string& objName) const
 {
     FileStorage fs(filename, FileStorage::WRITE);
     write(fs, !objName.empty() ? objName : FileStorage::getDefaultObjectName(filename));
@@ -409,11 +409,11 @@ struct HOGCache
     const float* getBlock(Point pt, float* buf);
     virtual void normalizeBlockHistogram(float* histogram) const;
 
-    vector<PixData> pixData;
-    vector<BlockData> blockData;
+    std::vector<PixData> pixData;
+    std::vector<BlockData> blockData;
 
     bool useCache;
-    vector<int> ymaxCached;
+    std::vector<int> ymaxCached;
     Size winSize, cacheStride;
     Size nblocks, ncells;
     int blockHistogramSize;
@@ -791,9 +791,9 @@ Rect HOGCache::getWindow(Size imageSize, Size winStride, int idx) const
 }
 
 
-void HOGDescriptor::compute(const Mat& img, vector<float>& descriptors,
+void HOGDescriptor::compute(const Mat& img, std::vector<float>& descriptors,
                             Size winStride, Size padding,
-                            const vector<Point>& locations) const
+                            const std::vector<Point>& locations) const
 {
     if( winStride == Size() )
         winStride = cellSize;
@@ -854,8 +854,8 @@ void HOGDescriptor::compute(const Mat& img, vector<float>& descriptors,
 
 
 void HOGDescriptor::detect(const Mat& img,
-    vector<Point>& hits, vector<double>& weights, double hitThreshold,
-    Size winStride, Size padding, const vector<Point>& locations) const
+    std::vector<Point>& hits, std::vector<double>& weights, double hitThreshold,
+    Size winStride, Size padding, const std::vector<Point>& locations) const
 {
     hits.clear();
     if( svmDetector.empty() )
@@ -882,7 +882,7 @@ void HOGDescriptor::detect(const Mat& img,
     size_t dsize = getDescriptorSize();
 
     double rho = svmDetector.size() > dsize ? svmDetector[dsize] : 0;
-    vector<float> blockHist(blockHistogramSize);
+    std::vector<float> blockHist(blockHistogramSize);
 
     for( size_t i = 0; i < nwindows; i++ )
     {
@@ -932,10 +932,10 @@ void HOGDescriptor::detect(const Mat& img,
     }
 }
 
-void HOGDescriptor::detect(const Mat& img, vector<Point>& hits, double hitThreshold,
-                           Size winStride, Size padding, const vector<Point>& locations) const
+void HOGDescriptor::detect(const Mat& img, std::vector<Point>& hits, double hitThreshold,
+                           Size winStride, Size padding, const std::vector<Point>& locations) const
 {
-    vector<double> weightsV;
+    std::vector<double> weightsV;
     detect(img, hits, weightsV, hitThreshold, winStride, padding, locations);
 }
 
@@ -965,8 +965,8 @@ public:
         double minScale = i1 > 0 ? levelScale[i1] : i2 > 1 ? levelScale[i1+1] : std::max(img.cols, img.rows);
         Size maxSz(cvCeil(img.cols/minScale), cvCeil(img.rows/minScale));
         Mat smallerImgBuf(maxSz, img.type());
-        vector<Point> locations;
-        vector<double> hitsWeights;
+        std::vector<Point> locations;
+        std::vector<double> hitsWeights;
 
         for( i = i1; i < i2; i++ )
         {
@@ -1019,14 +1019,14 @@ public:
 
 
 void HOGDescriptor::detectMultiScale(
-    const Mat& img, vector<Rect>& foundLocations, vector<double>& foundWeights,
+    const Mat& img, std::vector<Rect>& foundLocations, std::vector<double>& foundWeights,
     double hitThreshold, Size winStride, Size padding,
     double scale0, double finalThreshold, bool useMeanshiftGrouping) const
 {
     double scale = 1.;
     int levels = 0;
 
-    vector<double> levelScale;
+    std::vector<double> levelScale;
     for( levels = 0; levels < nlevels; levels++ )
     {
         levelScale.push_back(scale);
@@ -1064,11 +1064,11 @@ void HOGDescriptor::detectMultiScale(
     }
 }
 
-void HOGDescriptor::detectMultiScale(const Mat& img, vector<Rect>& foundLocations,
+void HOGDescriptor::detectMultiScale(const Mat& img, std::vector<Rect>& foundLocations,
                                      double hitThreshold, Size winStride, Size padding,
                                      double scale0, double finalThreshold, bool useMeanshiftGrouping) const
 {
-    vector<double> foundWeights;
+    std::vector<double> foundWeights;
     detectMultiScale(img, foundLocations, foundWeights, hitThreshold, winStride,
                      padding, scale0, finalThreshold, useMeanshiftGrouping);
 }
@@ -1078,7 +1078,7 @@ typedef RTTIImpl<HOGDescriptor> HOGRTTI;
 CvType hog_type( CV_TYPE_NAME_HOG_DESCRIPTOR, HOGRTTI::isInstance,
                  HOGRTTI::release, HOGRTTI::read, HOGRTTI::write, HOGRTTI::clone);
 
-vector<float> HOGDescriptor::getDefaultPeopleDetector()
+std::vector<float> HOGDescriptor::getDefaultPeopleDetector()
 {
     static const float detector[] = {
        0.05359386f, -0.14721455f, -0.05532170f, 0.05077307f,
@@ -1886,11 +1886,11 @@ vector<float> HOGDescriptor::getDefaultPeopleDetector()
        -0.01612278f, -1.46097376e-003f, 0.14013411f, -8.96181818e-003f,
        -0.03250246f, 3.38630192e-003f, 2.64779478e-003f, 0.03359732f,
        -0.02411991f, -0.04229729f, 0.10666174f, -6.66579151f };
-    return vector<float>(detector, detector + sizeof(detector)/sizeof(detector[0]));
+    return std::vector<float>(detector, detector + sizeof(detector)/sizeof(detector[0]));
 }
 //This function renurn 1981 SVM coeffs obtained from daimler's base.
 //To use these coeffs the detection window size should be (48,96)
-vector<float> HOGDescriptor::getDaimlerPeopleDetector()
+std::vector<float> HOGDescriptor::getDaimlerPeopleDetector()
 {
     static const float detector[] = {
         0.294350f, -0.098796f, -0.129522f, 0.078753f,
@@ -2389,7 +2389,7 @@ vector<float> HOGDescriptor::getDaimlerPeopleDetector()
         -0.025054f, -0.093026f, -0.035372f, -0.233209f,
         -0.049869f, -0.039151f, -0.022279f, -0.065380f,
         -9.063785f};
-        return vector<float>(detector, detector + sizeof(detector)/sizeof(detector[0]));
+        return std::vector<float>(detector, detector + sizeof(detector)/sizeof(detector[0]));
 }
 
 class HOGConfInvoker : public ParallelLoopBody
@@ -2415,7 +2415,7 @@ public:
 
                Size maxSz(cvCeil(img.cols/(*locations)[0].scale), cvCeil(img.rows/(*locations)[0].scale));
                Mat smallerImgBuf(maxSz, img.type());
-               vector<Point> dets;
+               std::vector<Point> dets;
 
                for( i = i1; i < i2; i++ )
                {
@@ -2451,7 +2451,7 @@ public:
        Mutex* mtx;
 };
 
-void HOGDescriptor::detectROI(const cv::Mat& img, const vector<cv::Point> &locations,
+void HOGDescriptor::detectROI(const cv::Mat& img, const std::vector<cv::Point> &locations,
                                        CV_OUT std::vector<cv::Point>& foundLocations, CV_OUT std::vector<double>& confidences,
                                        double hitThreshold, cv::Size winStride,
                                        cv::Size padding) const
@@ -2489,7 +2489,7 @@ void HOGDescriptor::detectROI(const cv::Mat& img, const vector<cv::Point> &locat
    size_t dsize = getDescriptorSize();
 
    double rho = svmDetector.size() > dsize ? svmDetector[dsize] : 0;
-   vector<float> blockHist(blockHistogramSize);
+   std::vector<float> blockHist(blockHistogramSize);
 
    for( size_t i = 0; i < nwindows; i++ )
    {

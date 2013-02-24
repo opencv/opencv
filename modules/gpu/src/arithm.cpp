@@ -44,7 +44,6 @@
 
 using namespace cv;
 using namespace cv::gpu;
-using namespace std;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
@@ -549,13 +548,13 @@ void cv::gpu::normalize(const GpuMat& src, GpuMat& dst, double a, double b, int 
         double smin = 0, smax = 0;
         double dmin = std::min(a, b), dmax = std::max(a, b);
         minMax(src, &smin, &smax, mask, norm_buf);
-        scale = (dmax - dmin) * (smax - smin > numeric_limits<double>::epsilon() ? 1.0 / (smax - smin) : 0.0);
+        scale = (dmax - dmin) * (smax - smin > std::numeric_limits<double>::epsilon() ? 1.0 / (smax - smin) : 0.0);
         shift = dmin - smin * scale;
     }
     else if (norm_type == NORM_L2 || norm_type == NORM_L1 || norm_type == NORM_INF)
     {
         scale = norm(src, norm_type, mask, norm_buf);
-        scale = scale > numeric_limits<double>::epsilon() ? a / scale : 0.0;
+        scale = scale > std::numeric_limits<double>::epsilon() ? a / scale : 0.0;
         shift = 0;
     }
     else

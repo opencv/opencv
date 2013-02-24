@@ -193,7 +193,7 @@ template<typename ST, typename T> struct ColumnSum : public BaseColumnFilter
 
     double scale;
     int sumCount;
-    vector<ST> sum;
+    std::vector<ST> sum;
 };
 
 
@@ -335,7 +335,7 @@ template<> struct ColumnSum<int, uchar> : public BaseColumnFilter
 
     double scale;
     int sumCount;
-    vector<int> sum;
+    std::vector<int> sum;
 };
 
 template<> struct ColumnSum<int, short> : public BaseColumnFilter
@@ -472,7 +472,7 @@ template<> struct ColumnSum<int, short> : public BaseColumnFilter
 
     double scale;
     int sumCount;
-    vector<int> sum;
+    std::vector<int> sum;
 };
 
 
@@ -607,7 +607,7 @@ template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
 
     double scale;
     int sumCount;
-    vector<int> sum;
+    std::vector<int> sum;
 };
 
 
@@ -957,8 +957,8 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
 
     int STRIPE_SIZE = std::min( _dst.cols, 512/cn );
 
-    vector<HT> _h_coarse(1 * 16 * (STRIPE_SIZE + 2*r) * cn + 16);
-    vector<HT> _h_fine(16 * 16 * (STRIPE_SIZE + 2*r) * cn + 16);
+    std::vector<HT> _h_coarse(1 * 16 * (STRIPE_SIZE + 2*r) * cn + 16);
+    std::vector<HT> _h_fine(16 * 16 * (STRIPE_SIZE + 2*r) * cn + 16);
     HT* h_coarse = alignPtr(&_h_coarse[0], 16);
     HT* h_fine = alignPtr(&_h_fine[0], 16);
 #if MEDIAN_HAVE_SIMD
@@ -1891,9 +1891,9 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
 
-    vector<float> _color_weight(cn*256);
-    vector<float> _space_weight(d*d);
-    vector<int> _space_ofs(d*d);
+    std::vector<float> _color_weight(cn*256);
+    std::vector<float> _space_weight(d*d);
+    std::vector<int> _space_ofs(d*d);
     float* color_weight = &_color_weight[0];
     float* space_weight = &_space_weight[0];
     int* space_ofs = &_space_ofs[0];
@@ -2149,15 +2149,15 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     patchNaNs( temp, insteadNaNValue ); // this replacement of NaNs makes the assumption that depth values are nonnegative
                                         // TODO: make insteadNaNValue avalible in the outside function interface to control the cases breaking the assumption
     // allocate lookup tables
-    vector<float> _space_weight(d*d);
-    vector<int> _space_ofs(d*d);
+    std::vector<float> _space_weight(d*d);
+    std::vector<int> _space_ofs(d*d);
     float* space_weight = &_space_weight[0];
     int* space_ofs = &_space_ofs[0];
 
     // assign a length which is slightly more than needed
     len = (float)(maxValSrc - minValSrc) * cn;
     kExpNumBins = kExpNumBinsPerChannel * cn;
-    vector<float> _expLUT(kExpNumBins+2);
+    std::vector<float> _expLUT(kExpNumBins+2);
     float* expLUT = &_expLUT[0];
 
     scale_index = kExpNumBins/len;

@@ -50,7 +50,6 @@
 // leads to an inefficient code. It's for debug purposes only.
 #define ENABLE_GPU_RESIZE 1
 
-using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
@@ -153,7 +152,7 @@ void cv::gpu::FarnebackOpticalFlow::prepareGaussian(
 
 void cv::gpu::FarnebackOpticalFlow::setPolynomialExpansionConsts(int n, double sigma)
 {
-    vector<float> buf(n*6 + 3);
+    std::vector<float> buf(n*6 + 3);
     float* g = &buf[0] + n;
     float* xg = g + n*2 + 1;
     float* xxg = xg + n*2 + 1;

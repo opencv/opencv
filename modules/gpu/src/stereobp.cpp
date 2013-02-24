@@ -44,7 +44,6 @@
 
 using namespace cv;
 using namespace cv::gpu;
-using namespace std;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
@@ -95,7 +94,7 @@ void cv::gpu::StereoBeliefPropagation::estimateRecommendedParams(int width, int 
     if ((ndisp & 1) != 0)
         ndisp++;
 
-    int mm = ::max(width, height);
+    int mm = std::max(width, height);
     iters = mm / 100 + 2;
 
     levels = (int)(::log(static_cast<double>(mm)) + 1) * 4 / 5;
@@ -126,13 +125,13 @@ namespace
         StereoBeliefPropagationImpl(StereoBeliefPropagation& rthis_,
                                     GpuMat& u_, GpuMat& d_, GpuMat& l_, GpuMat& r_,
                                     GpuMat& u2_, GpuMat& d2_, GpuMat& l2_, GpuMat& r2_,
-                                    vector<GpuMat>& datas_, GpuMat& out_)
+                                    std::vector<GpuMat>& datas_, GpuMat& out_)
             : rthis(rthis_), u(u_), d(d_), l(l_), r(r_), u2(u2_), d2(d2_), l2(l2_), r2(r2_), datas(datas_), out(out_),
               zero(Scalar::all(0)), scale(rthis_.msg_type == CV_32F ? 1.0f : 10.0f)
         {
             CV_Assert(0 < rthis.ndisp && 0 < rthis.iters && 0 < rthis.levels);
             CV_Assert(rthis.msg_type == CV_32F || rthis.msg_type == CV_16S);
-            CV_Assert(rthis.msg_type == CV_32F || (1 << (rthis.levels - 1)) * scale * rthis.max_data_term < numeric_limits<short>::max());
+            CV_Assert(rthis.msg_type == CV_32F || (1 << (rthis.levels - 1)) * scale * rthis.max_data_term < std::numeric_limits<short>::max());
         }
 
         void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, Stream& stream)
@@ -154,7 +153,7 @@ namespace
             int lowest_cols = cols / divisor;
             int lowest_rows = rows / divisor;
             const int min_image_dim_size = 2;
-            CV_Assert(min(lowest_cols, lowest_rows) > min_image_dim_size);
+            CV_Assert(std::min(lowest_cols, lowest_rows) > min_image_dim_size);
 
             init(stream);
 
@@ -176,7 +175,7 @@ namespace
             int lowest_cols = cols / divisor;
             int lowest_rows = rows / divisor;
             const int min_image_dim_size = 2;
-            CV_Assert(min(lowest_cols, lowest_rows) > min_image_dim_size);
+            CV_Assert(std::min(lowest_cols, lowest_rows) > min_image_dim_size);
 
             init(stream);
 
@@ -342,7 +341,7 @@ namespace
         GpuMat& l2;
         GpuMat& r2;
 
-        vector<GpuMat>& datas;
+        std::vector<GpuMat>& datas;
         GpuMat& out;
 
         const Scalar zero;
@@ -350,7 +349,7 @@ namespace
 
         int rows, cols;
 
-        vector<int> cols_all, rows_all;
+        std::vector<int> cols_all, rows_all;
     };
 }
 

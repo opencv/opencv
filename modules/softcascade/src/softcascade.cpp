@@ -53,7 +53,7 @@ namespace {
 struct SOctave
 {
     SOctave(const int i, const cv::Size& origObjSize, const cv::FileNode& fn)
-    : index(i), weaks((int)fn[SC_OCT_WEAKS]), scale(pow(2,(float)fn[SC_OCT_SCALE])),
+    : index(i), weaks((int)fn[SC_OCT_WEAKS]), scale(std::pow(2,(float)fn[SC_OCT_SCALE])),
       size(cvRound(origObjSize.width * scale), cvRound(origObjSize.height * scale)) {}
 
     int   index;
@@ -146,7 +146,7 @@ struct Level
        workRect(cv::Size(cvRound(w / (float)shrinkage),cvRound(h / (float)shrinkage))),
        objSize(cv::Size(cvRound(oct.size.width * relScale), cvRound(oct.size.height * relScale)))
     {
-        scaling[0] = ((relScale >= 1.f)? 1.f : (0.89f * pow(relScale, 1.099f / log(2.f)))) / (relScale * relScale);
+        scaling[0] = ((relScale >= 1.f)? 1.f : (0.89f * std::pow(relScale, 1.099f / std::log(2.f)))) / (relScale * relScale);
         scaling[1] = 1.f;
         scaleshift = static_cast<int>(relScale * (1 << 16));
     }
@@ -287,7 +287,7 @@ struct Detector::Fields
         for (octIt_t oct = octaves.begin(); oct < octaves.end(); ++oct)
         {
             const SOctave& octave =*oct;
-            float logOctave = log(octave.scale);
+            float logOctave = std::log(octave.scale);
             float logAbsScale = fabs(logFactor - logOctave);
 
             if(logAbsScale < minAbsLog)
@@ -309,7 +309,7 @@ struct Detector::Fields
         CV_Assert(scales > 1);
 
         levels.clear();
-        float logFactor = (log(maxScale) - log(minScale)) / (scales -1);
+        float logFactor = (std::log(maxScale) - std::log(minScale)) / (scales -1);
 
         float scale = minScale;
         for (int sc = 0; sc < scales; ++sc)
@@ -317,7 +317,7 @@ struct Detector::Fields
             int width  = static_cast<int>(std::max(0.0f, frameSize.width  - (origObjWidth  * scale)));
             int height = static_cast<int>(std::max(0.0f, frameSize.height - (origObjHeight * scale)));
 
-            float logScale = log(scale);
+            float logScale = std::log(scale);
             octIt_t fit = fitOctave(logScale);
 
 
@@ -329,7 +329,7 @@ struct Detector::Fields
                 levels.push_back(level);
 
             if (fabs(scale - maxScale) < FLT_EPSILON) break;
-            scale = std::min(maxScale, expf(log(scale) + logFactor));
+            scale = std::min(maxScale, expf(std::log(scale) + logFactor));
         }
     }
 
@@ -357,14 +357,14 @@ struct Detector::Fields
         static const char *const FEATURE_FORMAT      = "featureFormat";
 
         // only Ada Boost supported
-        std::string stageTypeStr = (string)root[SC_STAGE_TYPE];
+        std::string stageTypeStr = (std::string)root[SC_STAGE_TYPE];
         CV_Assert(stageTypeStr == SC_BOOST);
 
-        std::string fformat = (string)root[FEATURE_FORMAT];
+        std::string fformat = (std::string)root[FEATURE_FORMAT];
         bool useBoxes = (fformat == "BOX");
 
         // only HOG-like integral channel features supported
-        string featureTypeStr = (string)root[SC_FEATURE_TYPE];
+        std::string featureTypeStr = (std::string)root[SC_FEATURE_TYPE];
         CV_Assert(featureTypeStr == SC_ICF);
 
         origObjWidth  = (int)root[SC_ORIG_W];

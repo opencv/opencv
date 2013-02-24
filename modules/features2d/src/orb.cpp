@@ -50,7 +50,7 @@ const int DESCRIPTOR_SIZE = 32;
  * blockSize x blockSize patch at given points in an image
  */
 static void
-HarrisResponses(const Mat& img, vector<KeyPoint>& pts, int blockSize, float harris_k)
+HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float harris_k)
 {
     CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
 
@@ -95,7 +95,7 @@ HarrisResponses(const Mat& img, vector<KeyPoint>& pts, int blockSize, float harr
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static float IC_Angle(const Mat& image, const int half_k, Point2f pt,
-                      const vector<int> & u_max)
+                      const std::vector<int> & u_max)
 {
     int m_01 = 0, m_10 = 0;
 
@@ -246,7 +246,7 @@ static void computeOrbDescriptor(const KeyPoint& kpt,
 }
 
 
-static void initializeOrbPattern( const Point* pattern0, vector<Point>& pattern, int ntuples, int tupleSize, int poolSize )
+static void initializeOrbPattern( const Point* pattern0, std::vector<Point>& pattern, int ntuples, int tupleSize, int poolSize )
 {
     RNG rng(0x12345678);
     int i, k, k1;
@@ -577,7 +577,7 @@ int ORB::descriptorType() const
  * @param mask the mask to apply
  * @param keypoints the resulting keypoints
  */
-void ORB::operator()(InputArray image, InputArray mask, vector<KeyPoint>& keypoints) const
+void ORB::operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const
 {
     (*this)(image, mask, keypoints, noArray(), false);
 }
@@ -589,11 +589,11 @@ void ORB::operator()(InputArray image, InputArray mask, vector<KeyPoint>& keypoi
  * @param scale the scale at which we compute the orientation
  * @param keypoints the resulting keypoints
  */
-static void computeOrientation(const Mat& image, vector<KeyPoint>& keypoints,
-                               int halfPatchSize, const vector<int>& umax)
+static void computeOrientation(const Mat& image, std::vector<KeyPoint>& keypoints,
+                               int halfPatchSize, const std::vector<int>& umax)
 {
     // Process each keypoint
-    for (vector<KeyPoint>::iterator keypoint = keypoints.begin(),
+    for (std::vector<KeyPoint>::iterator keypoint = keypoints.begin(),
          keypointEnd = keypoints.end(); keypoint != keypointEnd; ++keypoint)
     {
         keypoint->angle = IC_Angle(image, halfPatchSize, keypoint->pt, umax);
@@ -606,18 +606,18 @@ static void computeOrientation(const Mat& image, vector<KeyPoint>& keypoints,
  * @param mask_pyramid the masks to apply at every level
  * @param keypoints the resulting keypoints, clustered per level
  */
-static void computeKeyPoints(const vector<Mat>& imagePyramid,
-                             const vector<Mat>& maskPyramid,
-                             vector<vector<KeyPoint> >& allKeypoints,
+static void computeKeyPoints(const std::vector<Mat>& imagePyramid,
+                             const std::vector<Mat>& maskPyramid,
+                             std::vector<std::vector<KeyPoint> >& allKeypoints,
                              int nfeatures, int firstLevel, double scaleFactor,
                              int edgeThreshold, int patchSize, int scoreType )
 {
     int nlevels = (int)imagePyramid.size();
-    vector<int> nfeaturesPerLevel(nlevels);
+    std::vector<int> nfeaturesPerLevel(nlevels);
 
     // fill the extractors and descriptors for the corresponding scales
     float factor = (float)(1.0 / scaleFactor);
-    float ndesiredFeaturesPerScale = nfeatures*(1 - factor)/(1 - (float)pow((double)factor, (double)nlevels));
+    float ndesiredFeaturesPerScale = nfeatures*(1 - factor)/(1 - (float)std::pow((double)factor, (double)nlevels));
 
     int sumFeatures = 0;
     for( int level = 0; level < nlevels-1; level++ )
@@ -633,12 +633,12 @@ static void computeKeyPoints(const vector<Mat>& imagePyramid,
 
     // pre-compute the end of a row in a circular patch
     int halfPatchSize = patchSize / 2;
-    vector<int> umax(halfPatchSize + 2);
+    std::vector<int> umax(halfPatchSize + 2);
 
-    int v, v0, vmax = cvFloor(halfPatchSize * sqrt(2.f) / 2 + 1);
-    int vmin = cvCeil(halfPatchSize * sqrt(2.f) / 2);
+    int v, v0, vmax = cvFloor(halfPatchSize * std::sqrt(2.f) / 2 + 1);
+    int vmin = cvCeil(halfPatchSize * std::sqrt(2.f) / 2);
     for (v = 0; v <= vmax; ++v)
-        umax[v] = cvRound(sqrt((double)halfPatchSize * halfPatchSize - v * v));
+        umax[v] = cvRound(std::sqrt((double)halfPatchSize * halfPatchSize - v * v));
 
     // Make sure we are symmetric
     for (v = halfPatchSize, v0 = 0; v >= vmin; --v)
@@ -656,7 +656,7 @@ static void computeKeyPoints(const vector<Mat>& imagePyramid,
         int featuresNum = nfeaturesPerLevel[level];
         allKeypoints[level].reserve(featuresNum*2);
 
-        vector<KeyPoint> & keypoints = allKeypoints[level];
+        std::vector<KeyPoint> & keypoints = allKeypoints[level];
 
         // Detect FAST features, 20 is a good threshold
         FastFeatureDetector fd(20, true);
@@ -680,7 +680,7 @@ static void computeKeyPoints(const vector<Mat>& imagePyramid,
         float sf = getScale(level, firstLevel, scaleFactor);
 
         // Set the level of the coordinates
-        for (vector<KeyPoint>::iterator keypoint = keypoints.begin(),
+        for (std::vector<KeyPoint>::iterator keypoint = keypoints.begin(),
              keypointEnd = keypoints.end(); keypoint != keypointEnd; ++keypoint)
         {
             keypoint->octave = level;
@@ -699,8 +699,8 @@ static void computeKeyPoints(const vector<Mat>& imagePyramid,
  * @param keypoints the keypoints to use
  * @param descriptors the resulting descriptors
  */
-static void computeDescriptors(const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors,
-                               const vector<Point>& pattern, int dsize, int WTA_K)
+static void computeDescriptors(const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors,
+                               const std::vector<Point>& pattern, int dsize, int WTA_K)
 {
     //convert to grayscale if more than one color
     CV_Assert(image.type() == CV_8UC1);
@@ -720,7 +720,7 @@ static void computeDescriptors(const Mat& image, vector<KeyPoint>& keypoints, Ma
  * @param do_keypoints if true, the keypoints are computed, otherwise used as an input
  * @param do_descriptors if true, also computes the descriptors
  */
-void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _keypoints,
+void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>& _keypoints,
                       OutputArray _descriptors, bool useProvidedKeypoints) const
 {
     CV_Assert(patchSize >= 2);
@@ -760,7 +760,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
     }
 
     // Pre-compute the scale pyramids
-    vector<Mat> imagePyramid(levelsNum), maskPyramid(levelsNum);
+    std::vector<Mat> imagePyramid(levelsNum), maskPyramid(levelsNum);
     for (int level = 0; level < levelsNum; ++level)
     {
         float scale = 1/getScale(level, firstLevel, scaleFactor);
@@ -811,7 +811,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
     }
 
     // Pre-compute the keypoints (we keep the best over all scales, so this has to be done beforehand
-    vector < vector<KeyPoint> > allKeypoints;
+    std::vector < std::vector<KeyPoint> > allKeypoints;
     if( do_keypoints )
     {
         // Get keypoints, those will be far enough from the border that no check will be required for the descriptor
@@ -820,18 +820,18 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
                          edgeThreshold, patchSize, scoreType);
 
         // make sure we have the right number of keypoints keypoints
-        /*vector<KeyPoint> temp;
+        /*std::vector<KeyPoint> temp;
 
         for (int level = 0; level < n_levels; ++level)
         {
-            vector<KeyPoint>& keypoints = all_keypoints[level];
+            std::vector<KeyPoint>& keypoints = all_keypoints[level];
             temp.insert(temp.end(), keypoints.begin(), keypoints.end());
             keypoints.clear();
         }
 
         KeyPoint::retainBest(temp, n_features_);
 
-        for (vector<KeyPoint>::iterator keypoint = temp.begin(),
+        for (std::vector<KeyPoint>::iterator keypoint = temp.begin(),
              keypoint_end = temp.end(); keypoint != keypoint_end; ++keypoint)
             all_keypoints[keypoint->octave].push_back(*keypoint);*/
     }
@@ -842,7 +842,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
 
         // Cluster the input keypoints depending on the level they were computed at
         allKeypoints.resize(levelsNum);
-        for (vector<KeyPoint>::iterator keypoint = _keypoints.begin(),
+        for (std::vector<KeyPoint>::iterator keypoint = _keypoints.begin(),
              keypointEnd = _keypoints.end(); keypoint != keypointEnd; ++keypoint)
             allKeypoints[keypoint->octave].push_back(*keypoint);
 
@@ -852,16 +852,16 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
             if (level == firstLevel)
                 continue;
 
-            vector<KeyPoint> & keypoints = allKeypoints[level];
+            std::vector<KeyPoint> & keypoints = allKeypoints[level];
             float scale = 1/getScale(level, firstLevel, scaleFactor);
-            for (vector<KeyPoint>::iterator keypoint = keypoints.begin(),
+            for (std::vector<KeyPoint>::iterator keypoint = keypoints.begin(),
                  keypointEnd = keypoints.end(); keypoint != keypointEnd; ++keypoint)
                 keypoint->pt *= scale;
         }
     }
 
     Mat descriptors;
-    vector<Point> pattern;
+    std::vector<Point> pattern;
 
     if( do_descriptors )
     {
@@ -902,7 +902,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
     for (int level = 0; level < levelsNum; ++level)
     {
         // Get the features and compute their orientation
-        vector<KeyPoint>& keypoints = allKeypoints[level];
+        std::vector<KeyPoint>& keypoints = allKeypoints[level];
         int nkeypoints = (int)keypoints.size();
 
         // Compute the descriptors
@@ -926,7 +926,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
         if (level != firstLevel)
         {
             float scale = getScale(level, firstLevel, scaleFactor);
-            for (vector<KeyPoint>::iterator keypoint = keypoints.begin(),
+            for (std::vector<KeyPoint>::iterator keypoint = keypoints.begin(),
                  keypointEnd = keypoints.end(); keypoint != keypointEnd; ++keypoint)
                 keypoint->pt *= scale;
         }
@@ -935,12 +935,12 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
     }
 }
 
-void ORB::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
+void ORB::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
 {
     (*this)(image, mask, keypoints, noArray(), false);
 }
 
-void ORB::computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const
+void ORB::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
 }

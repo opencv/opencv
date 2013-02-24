@@ -46,7 +46,6 @@
 #include <iomanip>
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace cv::ocl;
 
@@ -133,17 +132,17 @@ void cv::ocl::interpolateFrames(const oclMat &frame0, const oclMat &frame1,
 void interpolate::memsetKernel(float val, oclMat &img, int height, int offset)
 {
     Context *clCxt = Context::getContext();
-    string kernelName = "memsetKernel";
-    vector< pair<size_t, const void *> > args;
+    std::string kernelName = "memsetKernel";
+    std::vector< std::pair<size_t, const void *> > args;
     int step = img.step / sizeof(float);
     offset = step * height * offset;
 
-    args.push_back( make_pair( sizeof(cl_float), (void *)&val));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&img.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&height));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&offset));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&val));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&img.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&height));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&offset));
 
     size_t globalThreads[3] = {img.cols, height, 1};
     size_t localThreads[3]  = {16, 16, 1};
@@ -152,18 +151,18 @@ void interpolate::memsetKernel(float val, oclMat &img, int height, int offset)
 void interpolate::normalizeKernel(oclMat &buffer, int height, int factor_offset, int dst_offset)
 {
     Context *clCxt = Context::getContext();
-    string kernelName = "normalizeKernel";
-    vector< pair<size_t, const void *> > args;
+    std::string kernelName = "normalizeKernel";
+    std::vector< std::pair<size_t, const void *> > args;
     int step   = buffer.step / sizeof(float);
     factor_offset = step * height * factor_offset;
     dst_offset    = step * height * dst_offset;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&buffer.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&buffer.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&height));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&factor_offset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_offset));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&buffer.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&buffer.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&height));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&factor_offset));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_offset));
 
     size_t globalThreads[3] = {buffer.cols, height, 1};
     size_t localThreads[3]  = {16, 16, 1};
@@ -174,25 +173,25 @@ void interpolate::forwardWarpKernel(const oclMat &src, oclMat &buffer, const ocl
                                     int b_offset, int d_offset)
 {
     Context *clCxt = Context::getContext();
-    string kernelName = "forwardWarpKernel";
-    vector< pair<size_t, const void *> > args;
+    std::string kernelName = "forwardWarpKernel";
+    std::vector< std::pair<size_t, const void *> > args;
     int f_step  = u.step / sizeof(float); // flow step
     int b_step  = buffer.step / sizeof(float);
 
     b_offset  = b_step * src.rows * b_offset;
     d_offset  = b_step * src.rows * d_offset;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&buffer.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&u.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&v.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&f_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&b_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&b_offset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&d_offset));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&time_scale));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&buffer.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&u.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&v.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&f_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&b_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&b_offset));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&d_offset));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&time_scale));
 
     size_t globalThreads[3] = {src.cols, src.rows, 1};
     size_t localThreads[3]  = {16, 16, 1};
@@ -212,17 +211,17 @@ void interpolate::blendFrames(const oclMat &frame0, const oclMat &/*frame1*/, co
     int step = buffer.step / sizeof(float);
 
     Context *clCxt = Context::getContext();
-    string kernelName = "blendFramesKernel";
-    vector< pair<size_t, const void *> > args;
+    std::string kernelName = "blendFramesKernel";
+    std::vector< std::pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&tex_src0));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&tex_src1));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&buffer.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&newFrame.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&frame0.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&frame0.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&step));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&pos));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&tex_src0));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&tex_src1));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&buffer.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&newFrame.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&frame0.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&frame0.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&step));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&pos));
 
     size_t globalThreads[3] = {frame0.cols, frame0.rows, 1};
     size_t localThreads[3]  = {16, 16, 1};

@@ -51,7 +51,6 @@
 #include "fast_nlmeans_denoising_invoker_commons.hpp"
 #include "arrays.hpp"
 
-using namespace std;
 using namespace cv;
 
 template <typename T>
@@ -79,7 +78,7 @@ struct FastNlMeansDenoisingInvoker {
 
         int fixed_point_mult_;
         int almost_template_window_size_sq_bin_shift_;
-        vector<int> almost_dist2weight_;
+        std::vector<int> almost_dist2weight_;
 
         void calcDistSumsForFirstElementInRow(
             int i,
@@ -123,7 +122,7 @@ FastNlMeansDenoisingInvoker<T>::FastNlMeansDenoisingInvoker(
         border_size_, border_size_, border_size_, border_size_, cv::BORDER_DEFAULT);
 
     const int max_estimate_sum_value = search_window_size_ * search_window_size_ * 255;
-    fixed_point_mult_ = numeric_limits<int>::max() / max_estimate_sum_value;
+    fixed_point_mult_ = std::numeric_limits<int>::max() / max_estimate_sum_value;
 
     // precalc weight for every possible l2 dist between blocks
     // additional optimization of precalced weights to replace division(averaging) by binary shift

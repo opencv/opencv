@@ -52,7 +52,6 @@
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
 namespace cv
 {
@@ -67,17 +66,17 @@ namespace cv
 
             const std::string kernelName = "pyrUp";
 
-            std::vector< pair<size_t, const void *> > args;
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&src.offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&src.step));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step));
+            std::vector< std::pair<size_t, const void *> > args;
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.step));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step));
 
             size_t globalThreads[3] = {dst.cols, dst.rows, 1};
             size_t localThreads[3]  = {16, 16, 1};

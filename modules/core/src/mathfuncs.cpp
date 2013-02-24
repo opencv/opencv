@@ -1991,7 +1991,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
 
 void sqrt(InputArray a, OutputArray b)
 {
-    pow(a, 0.5, b);
+    cv::pow(a, 0.5, b);
 }
 
 /************************** CheckArray for NaN's, Inf's *********************************/
@@ -2396,7 +2396,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
             double d = a2*a2 - 4*a1*a3;
             if( d >= 0 )
             {
-                d = sqrt(d);
+                d = std::sqrt(d);
                 double q1 = (-a2 + d) * 0.5;
                 double q2 = (a2 + d) * -0.5;
                 if( fabs(q1) > fabs(q2) )
@@ -2427,8 +2427,8 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
 
         if( d >= 0 )
         {
-            double theta = acos(R / sqrt(Qcubed));
-            double sqrtQ = sqrt(Q);
+            double theta = acos(R / std::sqrt(Qcubed));
+            double sqrtQ = std::sqrt(Q);
             double t0 = -2 * sqrtQ;
             double t1 = theta * (1./3);
             double t2 = a1 * (1./3);
@@ -2440,8 +2440,8 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         else
         {
             double e;
-            d = sqrt(-d);
-            e = pow(d + fabs(R), 0.333333333333);
+            d = std::sqrt(-d);
+            e = std::pow(d + fabs(R), 0.333333333333);
             if( R > 0 )
                 e = -e;
             x0 = (e + Q / e) - a1 * (1./3);
@@ -2519,7 +2519,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
             }
             num /= denom;
             roots[i] = p - num;
-            maxDiff = max(maxDiff, abs(num));
+            maxDiff = std::max(maxDiff, cv::abs(num));
         }
         if( maxDiff <= 0 )
             break;

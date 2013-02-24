@@ -2181,7 +2181,7 @@ CvDTreeSplit* CvDTree::find_split_cat_class( CvDTreeNode* node, int vi, float in
 
     int base_size = m*(3 + mi)*sizeof(int) + (mi+1)*sizeof(double);
     if( m > 2 && mi > data->params.max_categories )
-        base_size += (m*min(data->params.max_categories, n) + mi)*sizeof(int);
+        base_size += (m*std::min(data->params.max_categories, n) + mi)*sizeof(int);
     else
         base_size += mi*sizeof(int*);
     cv::AutoBuffer<uchar> inn_buf(base_size);
@@ -3300,7 +3300,7 @@ void CvDTree::split_node_data( CvDTreeNode* node )
     data->free_node_data(node);
 }
 
-float CvDTree::calc_error( CvMLData* _data, int type, vector<float> *resp )
+float CvDTree::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
 {
     float err = 0;
     const CvMat* values = _data->get_values();

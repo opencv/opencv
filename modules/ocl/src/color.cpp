@@ -69,106 +69,106 @@ namespace
 {
 void RGB2Gray_caller(const oclMat &src, oclMat &dst, int bidx)
 {
-    vector<pair<size_t , const void *> > args;
+    std::vector<std::pair<size_t , const void *> > args;
     int channels = src.oclchannels();
     char build_options[50];
     sprintf(build_options, "-D DEPTH_%d", src.depth());
     //printf("depth:%d,channels:%d,bidx:%d\n",src.depth(),src.oclchannels(),bidx);
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.step));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&channels));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&bidx));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.step));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&channels));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&bidx));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data));
     size_t gt[3] = {src.cols, src.rows, 1}, lt[3] = {16, 16, 1};
     openCLExecuteKernel(src.clCxt, &cvt_color, "RGB2Gray", gt, lt, args, -1, -1, build_options);
 }
 void Gray2RGB_caller(const oclMat &src, oclMat &dst)
 {
-    vector<pair<size_t , const void *> > args;
+    std::vector<std::pair<size_t , const void *> > args;
     char build_options[50];
     sprintf(build_options, "-D DEPTH_%d", src.depth());
     //printf("depth:%d,channels:%d,bidx:%d\n",src.depth(),src.oclchannels(),bidx);
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.step));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.step));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data));
     size_t gt[3] = {src.cols, src.rows, 1}, lt[3] = {16, 16, 1};
     openCLExecuteKernel(src.clCxt, &cvt_color, "Gray2RGB", gt, lt, args, -1, -1, build_options);
 }
 void RGB2YUV_caller(const oclMat &src, oclMat &dst, int bidx)
 {
-    vector<pair<size_t , const void *> > args;
+    std::vector<std::pair<size_t , const void *> > args;
     int channels = src.oclchannels();
     char build_options[50];
     sprintf(build_options, "-D DEPTH_%d", src.depth());
     //printf("depth:%d,channels:%d,bidx:%d\n",src.depth(),src.oclchannels(),bidx);
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.step));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&channels));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&bidx));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.step));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&channels));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&bidx));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data));
     size_t gt[3] = {src.cols, src.rows, 1}, lt[3] = {16, 16, 1};
     openCLExecuteKernel(src.clCxt, &cvt_color, "RGB2YUV", gt, lt, args, -1, -1, build_options);
 }
 void YUV2RGB_caller(const oclMat &src, oclMat &dst, int bidx)
 {
-    vector<pair<size_t , const void *> > args;
+    std::vector<std::pair<size_t , const void *> > args;
     int channels = src.oclchannels();
     char build_options[50];
     sprintf(build_options, "-D DEPTH_%d", src.depth());
     //printf("depth:%d,channels:%d,bidx:%d\n",src.depth(),src.oclchannels(),bidx);
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.step));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&channels));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&bidx));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.step));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&channels));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&bidx));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data));
     size_t gt[3] = {src.cols, src.rows, 1}, lt[3] = {16, 16, 1};
     openCLExecuteKernel(src.clCxt, &cvt_color, "YUV2RGB", gt, lt, args, -1, -1, build_options);
 }
 void YUV2RGB_NV12_caller(const oclMat &src, oclMat &dst, int bidx)
 {
-    vector<pair<size_t , const void *> > args;
+    std::vector<std::pair<size_t , const void *> > args;
     char build_options[50];
     sprintf(build_options, "-D DEPTH_%d", src.depth());
     //printf("depth:%d,channels:%d,bidx:%d\n",src.depth(),src.oclchannels(),bidx);
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.step));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&bidx));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.rows));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.step));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&bidx));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.cols));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.rows));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data));
     size_t gt[3] = {dst.cols / 2, dst.rows / 2, 1}, lt[3] = {16, 16, 1};
     openCLExecuteKernel(src.clCxt, &cvt_color, "YUV2RGBA_NV12", gt, lt, args, -1, -1, build_options);
 }
 void RGB2YCrCb_caller(const oclMat &src, oclMat &dst, int bidx)
 {
-    vector<pair<size_t , const void *> > args;
+    std::vector<std::pair<size_t , const void *> > args;
     int channels = src.oclchannels();
     char build_options[50];
     sprintf(build_options, "-D DEPTH_%d", src.depth());
     //printf("depth:%d,channels:%d,bidx:%d\n",src.depth(),src.oclchannels(),bidx);
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.step));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&channels));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&bidx));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.step));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&channels));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&bidx));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data));
     size_t gt[3] = {src.cols, src.rows, 1}, lt[3] = {16, 16, 1};
     openCLExecuteKernel(src.clCxt, &cvt_color, "RGB2YCrCb", gt, lt, args, -1, -1, build_options);
 }

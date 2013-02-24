@@ -44,7 +44,6 @@
 
 using namespace cv;
 using namespace cv::gpu;
-using namespace std;
 
 #ifdef HAVE_CUDA
 
@@ -55,7 +54,7 @@ namespace
     struct ErrorEntry
     {
         int code;
-        string str;
+        std::string str;
     };
 
     struct ErrorEntryComparer
@@ -65,13 +64,13 @@ namespace
         bool operator()(const ErrorEntry& e) const { return e.code == code; }
     };
 
-    string getErrorString(int code, const ErrorEntry* errors, size_t n)
+    std::string getErrorString(int code, const ErrorEntry* errors, size_t n)
     {
-        size_t idx = find_if(errors, errors + n, ErrorEntryComparer(code)) - errors;
+        size_t idx = std::find_if(errors, errors + n, ErrorEntryComparer(code)) - errors;
 
-        const string& msg = (idx != n) ? errors[idx].str : string("Unknown error code");
+        const std::string& msg = (idx != n) ? errors[idx].str : std::string("Unknown error code");
 
-        ostringstream ostr;
+        std::ostringstream ostr;
         ostr << msg << " [Code = " << code << "]";
 
         return ostr.str();
@@ -222,25 +221,25 @@ namespace cv
     {
         void nppError(int code, const char *file, const int line, const char *func)
         {
-            string msg = getErrorString(code, npp_errors, npp_error_num);
+            std::string msg = getErrorString(code, npp_errors, npp_error_num);
             cv::gpu::error(msg.c_str(), file, line, func);
         }
 
         void ncvError(int code, const char *file, const int line, const char *func)
         {
-            string msg = getErrorString(code, ncv_errors, ncv_error_num);
+            std::string msg = getErrorString(code, ncv_errors, ncv_error_num);
             cv::gpu::error(msg.c_str(), file, line, func);
         }
 
         void cufftError(int code, const char *file, const int line, const char *func)
         {
-            string msg = getErrorString(code, cufft_errors, cufft_error_num);
+            std::string msg = getErrorString(code, cufft_errors, cufft_error_num);
             cv::gpu::error(msg.c_str(), file, line, func);
         }
 
         void cublasError(int code, const char *file, const int line, const char *func)
         {
-            string msg = getErrorString(code, cublas_errors, cublas_error_num);
+            std::string msg = getErrorString(code, cublas_errors, cublas_error_num);
             cv::gpu::error(msg.c_str(), file, line, func);
         }
     }

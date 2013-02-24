@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
@@ -311,7 +310,7 @@ void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& 
             {
                 for (int xx = x1; xx <= x2; ++xx)
                 {
-                    vector<ushort2>& m = grid[yy * gridWidth + xx];
+                    std::vector<ushort2>& m = grid[yy * gridWidth + xx];
 
                     for(size_t j = 0; j < m.size(); ++j)
                     {
@@ -434,9 +433,9 @@ namespace
     /////////////////////////////////////
     // Common
 
-    template <typename T, class A> void releaseVector(vector<T, A>& v)
+    template <typename T, class A> void releaseVector(std::vector<T, A>& v)
     {
-        vector<T, A> empty;
+        std::vector<T, A> empty;
         empty.swap(v);
     }
 
@@ -476,11 +475,11 @@ namespace
         GpuMat outBuf;
         int posCount;
 
-        vector<float4> oldPosBuf;
-        vector<int3> oldVoteBuf;
-        vector<float4> newPosBuf;
-        vector<int3> newVoteBuf;
-        vector<int> indexies;
+        std::vector<float4> oldPosBuf;
+        std::vector<int3> oldVoteBuf;
+        std::vector<float4> newPosBuf;
+        std::vector<int3> newVoteBuf;
+        std::vector<int> indexies;
     };
 
     GHT_Pos::GHT_Pos()
@@ -610,7 +609,7 @@ namespace
         const int gridWidth = (imageSize.width + cellSize - 1) / cellSize;
         const int gridHeight = (imageSize.height + cellSize - 1) / cellSize;
 
-        vector< vector<Point2f> > grid(gridWidth * gridHeight);
+        std::vector< std::vector<Point2f> > grid(gridWidth * gridHeight);
 
         const double minDist2 = minDist * minDist;
 
@@ -640,7 +639,7 @@ namespace
             {
                 for (int xx = x1; xx <= x2; ++xx)
                 {
-                    const vector<Point2f>& m = grid[yy * gridWidth + xx];
+                    const std::vector<Point2f>& m = grid[yy * gridWidth + xx];
 
                     for(size_t j = 0; j < m.size(); ++j)
                     {
@@ -1060,11 +1059,11 @@ namespace
         Feature templFeatures;
         Feature imageFeatures;
 
-        vector< pair<double, int> > angles;
-        vector< pair<double, int> > scales;
+        std::vector< std::pair<double, int> > angles;
+        std::vector< std::pair<double, int> > scales;
 
         GpuMat hist;
-        vector<int> h_buf;
+        std::vector<int> h_buf;
     };
 
     CV_INIT_ALGORITHM(GHT_Guil_Full, "GeneralizedHough_GPU.POSITION_SCALE_ROTATION",
@@ -1278,7 +1277,7 @@ namespace
             if (h_buf[n] >= angleThresh)
             {
                 const double angle = minAngle + n * angleStep;
-                angles.push_back(make_pair(angle, h_buf[n]));
+                angles.push_back(std::make_pair(angle, h_buf[n]));
             }
         }
     }
@@ -1302,7 +1301,7 @@ namespace
             if (h_buf[s] >= scaleThresh)
             {
                 const double scale = minScale + s * scaleStep;
-                scales.push_back(make_pair(scale, h_buf[s]));
+                scales.push_back(std::make_pair(scale, h_buf[s]));
             }
         }
     }

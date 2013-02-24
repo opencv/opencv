@@ -34,7 +34,7 @@ protected:
         Rect rect;
         int p[16];
     };
-    vector<Feature> features;
+    std::vector<Feature> features;
 
     Mat sum;
 };

@@ -604,7 +604,7 @@ protected:
     virtual void setTrainData(int startStep, const Mat& samples,
                               const Mat* probs0,
                               const Mat* means0,
-                              const vector<Mat>* covs0,
+                              const std::vector<Mat>* covs0,
                               const Mat* weights0);
 
     bool doTrain(int startStep,
@@ -633,11 +633,11 @@ protected:
 
     CV_PROP Mat weights;
     CV_PROP Mat means;
-    CV_PROP vector<Mat> covs;
+    CV_PROP std::vector<Mat> covs;
 
-    vector<Mat> covsEigenValues;
-    vector<Mat> covsRotateMats;
-    vector<Mat> invCovsEigenValues;
+    std::vector<Mat> covsEigenValues;
+    std::vector<Mat> covsRotateMats;
+    std::vector<Mat> invCovsEigenValues;
     Mat logWeightDivDet;
 };
 } // namespace cv

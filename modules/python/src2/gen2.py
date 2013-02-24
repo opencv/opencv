@@ -214,7 +214,8 @@ simple_argtype_mapping = {
     "int": ("int", "i", "0"),
     "float": ("float", "f", "0.f"),
     "double": ("double", "d", "0"),
-    "c_string": ("char*", "s", '(char*)""')
+    "c_string": ("char*", "s", '(char*)""'),
+    "string": ("std::string", "s", None)
 }
 
 def normalize_class_name(name):
@@ -569,7 +570,7 @@ class FuncInfo(object):
             else:
                 code_fcall = "ERRWRAP2( "
                 if v.rettype:
-                    code_decl += "    " + v.rettype + " retval;\n"
+                    code_decl += "    " + simple_argtype_mapping.get(v.rettype, (v.rettype, None, None))[0]  + " retval;\n"
                     code_fcall += "retval = "
                 if ismethod:
                     code_fcall += "_self_->" + self.cname

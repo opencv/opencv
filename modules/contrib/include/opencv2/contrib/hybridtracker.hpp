@@ -76,9 +76,9 @@ struct CV_EXPORTS CvMeanShiftTrackerParams
             CvTermCriteria term_crit = CvTermCriteria());
 
     int tracking_type;
-    vector<float> h_range;
-    vector<float> s_range;
-    vector<float> v_range;
+    std::vector<float> h_range;
+    std::vector<float> s_range;
+    std::vector<float> v_range;
     CvTermCriteria term_crit;
 };
 
@@ -145,7 +145,7 @@ class CV_EXPORTS CvFeatureTracker
 private:
     Ptr<Feature2D> dd;
     Ptr<DescriptorMatcher> matcher;
-    vector<DMatch> matches;
+    std::vector<DMatch> matches;
 
     Mat prev_image;
     Mat prev_image_bw;
@@ -153,7 +153,7 @@ private:
     Point2d prev_center;
 
     int ittr;
-    vector<Point2f> features[2];
+    std::vector<Point2f> features[2];
 
 public:
     Mat disp_matches;

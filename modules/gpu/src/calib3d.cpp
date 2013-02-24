@@ -44,7 +44,6 @@
 
 using namespace cv;
 using namespace cv::gpu;
-using namespace std;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
@@ -52,7 +51,7 @@ void cv::gpu::transformPoints(const GpuMat&, const Mat&, const Mat&, GpuMat&, St
 
 void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_nogpu(); }
 
-void cv::gpu::solvePnPRansac(const Mat&, const Mat&, const Mat&, const Mat&, Mat&, Mat&, bool, int, float, int, vector<int>*) { throw_nogpu(); }
+void cv::gpu::solvePnPRansac(const Mat&, const Mat&, const Mat&, const Mat&, Mat&, Mat&, bool, int, float, int, std::vector<int>*) { throw_nogpu(); }
 
 #else
 
@@ -130,7 +129,7 @@ void cv::gpu::projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
 namespace
 {
     // Selects subset_size random different points from [0, num_points - 1] range
-    void selectRandom(int subset_size, int num_points, vector<int>& subset)
+    void selectRandom(int subset_size, int num_points, std::vector<int>& subset)
     {
         subset.resize(subset_size);
         for (int i = 0; i < subset_size; ++i)
@@ -164,7 +163,7 @@ namespace
         void operator()(const BlockedRange& range) const
         {
             // Input data for generation of the current hypothesis
-            vector<int> subset_indices(subset_size);
+            std::vector<int> subset_indices(subset_size);
             Mat_<Point3f> object_subset(1, subset_size);
             Mat_<Point2f> image_subset(1, subset_size);
 
@@ -212,7 +211,7 @@ namespace
 void cv::gpu::solvePnPRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
                              const Mat& dist_coef, Mat& rvec, Mat& tvec, bool use_extrinsic_guess,
                              int num_iters, float max_dist, int min_inlier_count,
-                             vector<int>* inliers)
+                             std::vector<int>* inliers)
 {
     (void)min_inlier_count;
     CV_Assert(object.rows == 1 && object.cols > 0 && object.type() == CV_32FC3);

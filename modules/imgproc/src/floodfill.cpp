@@ -457,7 +457,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
                   Scalar loDiff, Scalar upDiff, int flags )
 {
     ConnectedComp comp;
-    vector<FFillSegment> buffer;
+    std::vector<FFillSegment> buffer;
 
     if( rect )
         *rect = Rect();

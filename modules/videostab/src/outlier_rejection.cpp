@@ -44,8 +44,6 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/videostab/outlier_rejection.hpp"
 
-using namespace std;
-
 namespace cv
 {
 namespace videostab
@@ -105,7 +103,7 @@ void TranslationBasedLocalOutlierRejector::process(
     RNG rng(0);
     int niters = ransacParams_.niters();
     int ninliers, ninliersMax;
-    vector<int> inliers;
+    std::vector<int> inliers;
     float dx, dy, dxBest, dyBest;
     float x1, y1;
     int idx;

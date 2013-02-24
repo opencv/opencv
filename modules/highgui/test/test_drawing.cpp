@@ -43,6 +43,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
+using namespace std;
 using namespace cv;
 
 //#define DRAW_TEST_IMAGE

@@ -103,7 +103,7 @@ public:
                     {
                         ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ext_from_int(ext).c_str());
                         Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
-                        circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+                        circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), std::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
 
                         string img_path = cv::tempfile(ext_from_int(ext).c_str());
                         ts->printf(ts->LOG, "writing      image : %s\n", img_path.c_str());
@@ -132,7 +132,7 @@ public:
                     // jpeg
                     ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ".jpg");
                     Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
-                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), std::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
 
                     string filename = cv::tempfile(".jpg");
                     imwrite(filename, img);
@@ -162,7 +162,7 @@ public:
                     // tiff
                     ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_16U, num_channels, ".tiff");
                     Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_16U, num_channels), Scalar::all(0));
-                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), std::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
 
                     string filename = cv::tempfile(".tiff");
                     imwrite(filename, img);

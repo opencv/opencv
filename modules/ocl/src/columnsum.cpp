@@ -48,7 +48,6 @@
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
 namespace cv
 {
@@ -68,14 +67,14 @@ void cv::ocl::columnSum(const oclMat &src, oclMat &dst)
 
     const std::string kernelName = "columnSum";
 
-    std::vector< pair<size_t, const void *> > args;
+    std::vector< std::pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step));
 
     size_t globalThreads[3] = {dst.cols, 1, 1};
     size_t localThreads[3]  = {256, 1, 1};

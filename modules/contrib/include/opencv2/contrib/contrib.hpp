@@ -270,17 +270,17 @@ namespace cv
         };
 
         Octree();
-        Octree( const vector<Point3f>& points, int maxLevels = 10, int minPoints = 20 );
+        Octree( const std::vector<Point3f>& points, int maxLevels = 10, int minPoints = 20 );
         virtual ~Octree();
 
-        virtual void buildTree( const vector<Point3f>& points, int maxLevels = 10, int minPoints = 20 );
+        virtual void buildTree( const std::vector<Point3f>& points, int maxLevels = 10, int minPoints = 20 );
         virtual void getPointsWithinSphere( const Point3f& center, float radius,
-                                           vector<Point3f>& points ) const;
-        const vector<Node>& getNodes() const { return nodes; }
+                                           std::vector<Point3f>& points ) const;
+        const std::vector<Node>& getNodes() const { return nodes; }
     private:
         int minPoints;
-        vector<Point3f> points;
-        vector<Node> nodes;
+        std::vector<Point3f> points;
+        std::vector<Node> nodes;
 
         virtual void buildNext(size_t node_ind);
     };
@@ -292,19 +292,19 @@ namespace cv
         struct EmptyMeshException {};
 
         Mesh3D();
-        Mesh3D(const vector<Point3f>& vtx);
+        Mesh3D(const std::vector<Point3f>& vtx);
         ~Mesh3D();
 
         void buildOctree();
         void clearOctree();
         float estimateResolution(float tryRatio = 0.1f);
         void computeNormals(float normalRadius, int minNeighbors = 20);
-        void computeNormals(const vector<int>& subset, float normalRadius, int minNeighbors = 20);
+        void computeNormals(const std::vector<int>& subset, float normalRadius, int minNeighbors = 20);
 
-        void writeAsVrml(const String& file, const vector<Scalar>& colors = vector<Scalar>()) const;
+        void writeAsVrml(const std::string& file, const std::vector<Scalar>& colors = std::vector<Scalar>()) const;
 
-        vector<Point3f> vtx;
-        vector<Point3f> normals;
+        std::vector<Point3f> vtx;
+        std::vector<Point3f> normals;
         float resolution;
         Octree octree;
 
@@ -335,10 +335,10 @@ namespace cv
 
         void setLogger(std::ostream* log);
         void selectRandomSubset(float ratio);
-        void setSubset(const vector<int>& subset);
+        void setSubset(const std::vector<int>& subset);
         void compute();
 
-        void match(const SpinImageModel& scene, vector< vector<Vec2i> >& result);
+        void match(const SpinImageModel& scene, std::vector< std::vector<Vec2i> >& result);
 
         Mat packRandomScaledSpins(bool separateScale = false, size_t xCount = 10, size_t yCount = 10) const;
 
@@ -368,12 +368,12 @@ namespace cv
     protected:
         void defaultParams();
 
-        void matchSpinToModel(const Mat& spin, vector<int>& indeces,
-                              vector<float>& corrCoeffs, bool useExtremeOutliers = true) const;
+        void matchSpinToModel(const Mat& spin, std::vector<int>& indeces,
+                              std::vector<float>& corrCoeffs, bool useExtremeOutliers = true) const;
 
-        void repackSpinImages(const vector<uchar>& mask, Mat& spinImages, bool reAlloc = true) const;
+        void repackSpinImages(const std::vector<uchar>& mask, Mat& spinImages, bool reAlloc = true) const;
 
-        vector<int> subset;
+        std::vector<int> subset;
         Mesh3D mesh;
         Mat spinImages;
         std::ostream* out;
@@ -416,8 +416,8 @@ namespace cv
         size_t getDescriptorSize() const;
         Size getGridSize( Size imgsize, Size winStride ) const;
 
-        virtual void compute(const Mat& img, vector<float>& descriptors, Size winStride=Size(),
-                             const vector<Point>& locations=vector<Point>()) const;
+        virtual void compute(const Mat& img, std::vector<float>& descriptors, Size winStride=Size(),
+                             const std::vector<Point>& locations=std::vector<Point>()) const;
         virtual void computeLogPolarMapping(Mat& mappingMask) const;
         virtual void SSD(const Mat& img, Point pt, Mat& ssd) const;
 
@@ -486,13 +486,13 @@ namespace cv
         virtual void clear();
 
         // useful function to do simple bundle adjustment tasks
-        static void bundleAdjust(vector<Point3d>& points, // positions of points in global coordinate system (input and output)
-                                 const vector<vector<Point2d> >& imagePoints, // projections of 3d points for every camera
-                                 const vector<vector<int> >& visibility, // visibility of 3d points for every camera
-                                 vector<Mat>& cameraMatrix, // intrinsic matrices of all cameras (input and output)
-                                 vector<Mat>& R, // rotation matrices of all cameras (input and output)
-                                 vector<Mat>& T, // translation vector of all cameras (input and output)
-                                 vector<Mat>& distCoeffs, // distortion coefficients of all cameras (input and output)
+        static void bundleAdjust(std::vector<Point3d>& points, // positions of points in global coordinate system (input and output)
+                                 const std::vector<std::vector<Point2d> >& imagePoints, // projections of 3d points for every camera
+                                 const std::vector<std::vector<int> >& visibility, // visibility of 3d points for every camera
+                                 std::vector<Mat>& cameraMatrix, // intrinsic matrices of all cameras (input and output)
+                                 std::vector<Mat>& R, // rotation matrices of all cameras (input and output)
+                                 std::vector<Mat>& T, // translation vector of all cameras (input and output)
+                                 std::vector<Mat>& distCoeffs, // distortion coefficients of all cameras (input and output)
                                  const TermCriteria& criteria=
                                  TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, DBL_EPSILON),
                                  BundleAdjustCallback cb = 0, void* user_data = 0);
@@ -558,7 +558,7 @@ namespace cv
     };
 
     CV_EXPORTS_W int chamerMatching( Mat& img, Mat& templ,
-                                  CV_OUT vector<vector<Point> >& results, CV_OUT vector<float>& cost,
+                                  CV_OUT std::vector<std::vector<Point> >& results, CV_OUT std::vector<float>& cost,
                                   double templScale=1, int maxMatches = 20,
                                   double minMatchDistance = 1.0, int padX = 3,
                                   int padY = 3, int scales = 5, double minScale = 0.6, double maxScale = 1.6,
@@ -757,9 +757,9 @@ namespace cv
 
         Mat Rsri;
         Mat Csri;
-        vector<int> Rsr;
-        vector<int> Csr;
-        vector<double> Wsr;
+        std::vector<int> Rsr;
+        std::vector<int> Csr;
+        std::vector<double> Wsr;
 
         int S, R, M, N, ind1;
         int top, bottom,left,right;
@@ -768,13 +768,13 @@ namespace cv
         struct kernel
         {
             kernel() { w = 0; }
-            vector<double> weights;
+            std::vector<double> weights;
             int w;
         };
 
         Mat ETAyx;
         Mat CSIyx;
-        vector<kernel> w_ker_2D;
+        std::vector<kernel> w_ker_2D;
 
         void create_map(int M, int N, int R, int S, double ro0);
     };
@@ -838,8 +838,8 @@ namespace cv
         int S, R, M, N;
         int top, bottom,left,right;
         double ro0, romax, a, q;
-        vector<vector<pixel> > L;
-        vector<double> A;
+        std::vector<std::vector<pixel> > L;
+        std::vector<double> A;
 
         void subdivide_recursively(double x, double y, int i, int j, double length, double smin);
         bool get_uv(double x, double y, int&u, int&v);
@@ -869,10 +869,10 @@ namespace cv
         }
 
         // Serializes this object to a given filename.
-        void save(const string& filename) const;
+        void save(const std::string& filename) const;
 
         // Deserializes this object from a given filename.
-        void load(const string& filename);
+        void load(const std::string& filename);
 
         // Serializes this object to a given cv::FileStorage.
         void save(FileStorage& fs) const;
@@ -926,10 +926,10 @@ namespace cv
         CV_WRAP virtual void predict(InputArray src, CV_OUT int &label, CV_OUT double &confidence) const = 0;
 
         // Serializes this object to a given filename.
-        CV_WRAP virtual void save(const string& filename) const;
+        CV_WRAP virtual void save(const std::string& filename) const;
 
         // Deserializes this object from a given filename.
-        CV_WRAP virtual void load(const string& filename);
+        CV_WRAP virtual void load(const std::string& filename);
 
         // Serializes this object to a given cv::FileStorage.
         virtual void save(FileStorage& fs) const = 0;

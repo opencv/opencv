@@ -33,8 +33,6 @@
 #include <iostream>
 #import <QTKit/QTKit.h>
 
-using namespace std;
-
 /********************** Declaration of class headers ************************/
 
 /*****************************************************************************
@@ -248,7 +246,7 @@ CvCaptureCAM::CvCaptureCAM(int cameraNum) {
     camNum = cameraNum;
 
     if (!startCaptureDevice(camNum)) {
-        cout << "Warning, camera failed to properly initialize!" << endl;
+        std::cout << "Warning, camera failed to properly initialize!" << std::endl;
         started = 0;
     } else {
         started = 1;
@@ -259,7 +257,7 @@ CvCaptureCAM::CvCaptureCAM(int cameraNum) {
 CvCaptureCAM::~CvCaptureCAM() {
     stopCaptureDevice();
 
-    cout << "Cleaned up camera." << endl;
+    std::cout << "Cleaned up camera." << std::endl;
 }
 
 int CvCaptureCAM::didStart() {
@@ -320,7 +318,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
             arrayByAddingObjectsFromArray:[QTCaptureDevice inputDevicesWithMediaType:QTMediaTypeMuxed]] retain];
 
     if ([devices count] == 0) {
-        cout << "QTKit didn't find any attached Video Input Devices!" << endl;
+        std::cout << "QTKit didn't find any attached Video Input Devices!" << std::endl;
         [localpool drain];
         return 0;
     }
@@ -340,7 +338,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 
         success = [device open:&error];
         if (!success) {
-            cout << "QTKit failed to open a Video Capture Device" << endl;
+            std::cout << "QTKit failed to open a Video Capture Device" << std::endl;
             [localpool drain];
             return 0;
         }
@@ -351,7 +349,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
         success = [mCaptureSession addInput:mCaptureDeviceInput error:&error];
 
         if (!success) {
-            cout << "QTKit failed to start capture session with opened Capture Device" << endl;
+            std::cout << "QTKit failed to start capture session with opened Capture Device" << std::endl;
             [localpool drain];
             return 0;
         }
@@ -383,7 +381,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 
         success = [mCaptureSession addOutput:mCaptureDecompressedVideoOutput error:&error];
         if (!success) {
-            cout << "QTKit failed to add Output to Capture Session" << endl;
+            std::cout << "QTKit failed to add Output to Capture Session" << std::endl;
             [localpool drain];
             return 0;
         }
@@ -525,7 +523,7 @@ didDropVideoFrameWithSampleBuffer:(QTSampleBuffer *)sampleBuffer
     (void)captureOutput;
     (void)sampleBuffer;
     (void)connection;
-    cout << "Camera dropped frame!" << endl;
+    std::cout << "Camera dropped frame!" << std::endl;
 }
 
 -(IplImage*) getOutput {
@@ -634,7 +632,7 @@ CvCaptureFile::CvCaptureFile(const char* filename) {
                            forKey:QTMovieLoopsAttribute];
 
     if (mCaptureSession == nil) {
-        cout << "WARNING: Couldn't read movie file " << filename << endl;
+        std::cout << "WARNING: Couldn't read movie file " << filename << std::endl;
         [localpool drain];
         started = 0;
         return;
@@ -803,7 +801,7 @@ double CvCaptureFile::getProperty(int property_id){
     double retval;
     QTTime t;
 
-    //cerr << "get_prop"<<endl;
+    //cerr << "get_prop"<<std::endl;
     switch (property_id) {
         case CV_CAP_PROP_POS_MSEC:
             [[mCaptureSession attributeForKey:QTMovieCurrentTimeAttribute] getValue:&t];
@@ -926,8 +924,8 @@ CvVideoWriter_QT::CvVideoWriter_QT(const char* filename, int fourcc,
     cc[4] = 0;
     int cc2 = CV_FOURCC(cc[0], cc[1], cc[2], cc[3]);
     if (cc2!=fourcc) {
-        cout << "WARNING: Didn't properly encode FourCC. Expected " << fourcc
-        << " but got " << cc2 << "." << endl;
+        std::cout << "WARNING: Didn't properly encode FourCC. Expected " << fourcc
+        << " but got " << cc2 << "." << std::endl;
     }
 
     codec = [[NSString stringWithCString:cc encoding:NSASCIIStringEncoding] retain];
@@ -938,13 +936,13 @@ CvVideoWriter_QT::CvVideoWriter_QT(const char* filename, int fourcc,
         NSFileManager* files = [NSFileManager defaultManager];
         if ([files fileExistsAtPath:path]) {
             if (![files removeItemAtPath:path error:nil]) {
-                cout << "WARNING: Failed to remove existing file " << [path cStringUsingEncoding:NSASCIIStringEncoding] << endl;
+                std::cout << "WARNING: Failed to remove existing file " << [path cStringUsingEncoding:NSASCIIStringEncoding] << std::endl;
             }
         }
 
         mMovie = [[QTMovie alloc] initToWritableFile:path error:&error];
         if (!mMovie) {
-            cout << "WARNING: Could not create empty movie file container." << endl;
+            std::cout << "WARNING: Could not create empty movie file container." << std::endl;
             [localpool drain];
             return;
         }
@@ -1019,7 +1017,7 @@ bool CvVideoWriter_QT::writeFrame(const IplImage* image) {
                                                                                       [NSNumber numberWithInt:100*movieFPS], QTTrackTimeScaleAttribute,nil]];
 
     if (![mMovie updateMovieFile]) {
-        cout << "Didn't successfully update movie file." << endl;
+        std::cout << "Didn't successfully update movie file." << std::endl;
     }
 
     [imageRep release];

@@ -57,7 +57,7 @@
 #include "opencv2/core/internal.hpp"
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
 #  ifdef ANDROID
-     template <typename Scalar> Scalar log2(Scalar v) { using std::log; return log(v)/log(Scalar(2)); }
+     template <typename Scalar> Scalar log2(Scalar v) { return std::log(v)/std::log(Scalar(2)); }
 #  endif
 #  if defined __GNUC__ && defined __APPLE__
 #    pragma GCC diagnostic ignored "-Wshadow"
@@ -172,7 +172,7 @@ static void warpImage( const Mat& image, const Mat& depth,
 {
     const Rect rect = Rect(0, 0, image.cols, image.rows);
 
-    vector<Point2f> points2d;
+    std::vector<Point2f> points2d;
     Mat cloud, transformedCloud;
 
     cvtDepth2Cloud( depth, cloud, cameraMatrix );
@@ -310,11 +310,11 @@ static
 void buildPyramids( const Mat& image0, const Mat& image1,
                     const Mat& depth0, const Mat& depth1,
                     const Mat& cameraMatrix, int sobelSize, double sobelScale,
-                    const vector<float>& minGradMagnitudes,
-                    vector<Mat>& pyramidImage0, vector<Mat>& pyramidDepth0,
-                    vector<Mat>& pyramidImage1, vector<Mat>& pyramidDepth1,
-                    vector<Mat>& pyramid_dI_dx1, vector<Mat>& pyramid_dI_dy1,
-                    vector<Mat>& pyramidTexturedMask1, vector<Mat>& pyramidCameraMatrix )
+                    const std::vector<float>& minGradMagnitudes,
+                    std::vector<Mat>& pyramidImage0, std::vector<Mat>& pyramidDepth0,
+                    std::vector<Mat>& pyramidImage1, std::vector<Mat>& pyramidDepth1,
+                    std::vector<Mat>& pyramid_dI_dx1, std::vector<Mat>& pyramid_dI_dy1,
+                    std::vector<Mat>& pyramidTexturedMask1, std::vector<Mat>& pyramidCameraMatrix )
 {
     const int pyramidMaxLevel = (int)minGradMagnitudes.size() - 1;
 
@@ -535,10 +535,10 @@ bool cv::RGBDOdometry( cv::Mat& Rt, const Mat& initRt,
                minGradientMagnitudes.size() == iterCounts.size() );
     CV_Assert( initRt.empty() || (initRt.type()==CV_64FC1 && initRt.size()==Size(4,4) ) );
 
-    vector<int> defaultIterCounts;
-    vector<float> defaultMinGradMagnitudes;
-    vector<int> const* iterCountsPtr = &iterCounts;
-    vector<float> const* minGradientMagnitudesPtr = &minGradientMagnitudes;
+    std::vector<int> defaultIterCounts;
+    std::vector<float> defaultMinGradMagnitudes;
+    std::vector<int> const* iterCountsPtr = &iterCounts;
+    std::vector<float> const* minGradientMagnitudesPtr = &minGradientMagnitudes;
 
     if( iterCounts.empty() || minGradientMagnitudes.empty() )
     {
@@ -560,7 +560,7 @@ bool cv::RGBDOdometry( cv::Mat& Rt, const Mat& initRt,
 
     preprocessDepth( depth0, depth1, validMask0, validMask1, minDepth, maxDepth );
 
-    vector<Mat> pyramidImage0, pyramidDepth0,
+    std::vector<Mat> pyramidImage0, pyramidDepth0,
                 pyramidImage1, pyramidDepth1, pyramid_dI_dx1, pyramid_dI_dy1, pyramidTexturedMask1,
                 pyramidCameraMatrix;
     buildPyramids( image0, image1, depth0, depth1, cameraMatrix, sobelSize, sobelScale, *minGradientMagnitudesPtr,

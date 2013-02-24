@@ -43,7 +43,6 @@
 #include "opencv2/contrib/hybridtracker.hpp"
 
 using namespace cv;
-using namespace std;
 
 CvMeanShiftTracker::CvMeanShiftTracker(CvMeanShiftTrackerParams _params) : params(_params)
 {

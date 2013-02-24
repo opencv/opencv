@@ -154,7 +154,7 @@ float ChannelFeature::operator() (const cv::Mat& integrals, const cv::Size& mode
     return (float)(a - b + c - d);
 }
 
-void cv::softcascade::write(cv::FileStorage& fs, const string&, const ChannelFeature& f)
+void cv::softcascade::write(cv::FileStorage& fs, const std::string&, const ChannelFeature& f)
 {
     fs << "{" << "channel" << f.channel << "rect" << f.bb << "}";
 }

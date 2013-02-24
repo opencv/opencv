@@ -9,7 +9,7 @@ using std::tr1::make_tuple;
 using std::tr1::get;
 
 
-typedef perf::TestBaseWithParam<String> VideoCapture_Reading;
+typedef perf::TestBaseWithParam<std::string> VideoCapture_Reading;
 
 PERF_TEST_P(VideoCapture_Reading, ReadFile, testing::Values( "highgui/video/big_buck_bunny.avi",
                                                "highgui/video/big_buck_bunny.mov",

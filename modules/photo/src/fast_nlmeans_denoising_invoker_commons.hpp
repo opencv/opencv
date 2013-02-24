@@ -46,7 +46,6 @@
 #include <opencv2/core/internal.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-using namespace std;
 using namespace cv;
 
 template <typename T> static inline int calcDist(const T a, const T b);

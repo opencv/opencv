@@ -54,8 +54,6 @@
 namespace cv
 {
 
-using std::queue;
-
 typedef std::pair<int,int> coordinate_t;
 typedef float orientation_t;
 typedef std::vector<coordinate_t> template_coords_t;
@@ -824,7 +822,7 @@ ChamferMatcher::Template::Template(Mat& edge_image, float scale_) : addr_width(-
 }
 
 
-vector<int>& ChamferMatcher::Template::getTemplateAddresses(int width)
+std::vector<int>& ChamferMatcher::Template::getTemplateAddresses(int width)
 {
     if (addr_width!=width) {
         addr.resize(coords.size());
