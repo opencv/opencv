@@ -26,13 +26,13 @@ public:
     virtual void writeFeatures( FileStorage &fs, const Mat& featureMap ) const;
 protected:
     virtual void generateFeatures();
-    virtual void integralHistogram(const Mat &img, vector<Mat> &histogram, Mat &norm, int nbins) const;
+    virtual void integralHistogram(const Mat &img, std::vector<Mat> &histogram, Mat &norm, int nbins) const;
     class Feature
     {
     public:
         Feature();
         Feature( int offset, int x, int y, int cellW, int cellH );
-        float calc( const vector<Mat> &_hists, const Mat &_normSum, size_t y, int featComponent ) const;
+        float calc( const std::vector<Mat> &_hists, const Mat &_normSum, size_t y, int featComponent ) const;
         void write( FileStorage &fs ) const;
         void write( FileStorage &fs, int varIdx ) const;
 
@@ -43,10 +43,10 @@ protected:
             int p0, p1, p2, p3;
         } fastRect[N_CELLS];
     };
-    vector<Feature> features;
+    std::vector<Feature> features;
 
     Mat normSum; //for nomalization calculation (L1 or L2)
-    vector<Mat> hist;
+    std::vector<Mat> hist;
 };
 
 inline float CvHOGEvaluator::operator()(int varIdx, int sampleIdx) const
@@ -57,7 +57,7 @@ inline float CvHOGEvaluator::operator()(int varIdx, int sampleIdx) const
     return features[featureIdx].calc( hist, normSum, sampleIdx, componentIdx);
 }
 
-inline float CvHOGEvaluator::Feature::calc( const vector<Mat>& _hists, const Mat& _normSum, size_t y, int featComponent ) const
+inline float CvHOGEvaluator::Feature::calc( const std::vector<Mat>& _hists, const Mat& _normSum, size_t y, int featComponent ) const
 {
     float normFactor;
     float res;

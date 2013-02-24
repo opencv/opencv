@@ -24,7 +24,7 @@ CvParams::CvParams() : name( "params" ) {}
 void CvParams::printDefaults() const
 { cout << "--" << name << "--" << endl; }
 void CvParams::printAttrs() const {}
-bool CvParams::scanAttr( const String, const String ) { return false; }
+bool CvParams::scanAttr( const string, const string ) { return false; }
 
 
 //---------------------------- FeatureParams --------------------------------------
