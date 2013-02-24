@@ -8,7 +8,7 @@ using namespace cv;
 class CvCascadeImageReader
 {
 public:
-    bool create( const String _posFilename, const String _negFilename, Size _winSize );
+    bool create( const std::string _posFilename, const std::string _negFilename, Size _winSize );
     void restart() { posReader.restart(); }
     bool getNeg(Mat &_img) { return negReader.get( _img ); }
     bool getPos(Mat &_img) { return posReader.get( _img ); }
@@ -19,7 +19,7 @@ private:
     public:
         PosReader();
         virtual ~PosReader();
-        bool create( const String _filename );
+        bool create( const std::string _filename );
         bool get( Mat &_img );
         void restart();
 
@@ -35,12 +35,12 @@ private:
     {
     public:
         NegReader();
-        bool create( const String _filename, Size _winSize );
+        bool create( const std::string _filename, Size _winSize );
         bool get( Mat& _img );
         bool nextImg();
 
         Mat     src, img;
-        vector<String> imgFilenames;
+        std::vector<std::string> imgFilenames;
         Point   offset, point;
         float   scale;
         float   scaleFactor;

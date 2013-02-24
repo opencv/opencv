@@ -33,7 +33,7 @@
 float calcNormFactor( const Mat& sum, const Mat& sqSum );
 
 template<class Feature>
-void _writeFeatures( const vector<Feature> features, FileStorage &fs, const Mat& featureMap )
+void _writeFeatures( const std::vector<Feature> features, FileStorage &fs, const Mat& featureMap )
 {
     fs << FEATURES << "[";
     const Mat_<int>& featureMap_ = (const Mat_<int>&)featureMap;
@@ -58,8 +58,8 @@ public:
     // from|to screen
     virtual void printDefaults() const;
     virtual void printAttrs() const;
-    virtual bool scanAttr( const String prmName, const String val );
-    String name;
+    virtual bool scanAttr( const std::string prmName, const std::string val );
+    std::string name;
 };
 
 class CvFeatureParams : public CvParams
