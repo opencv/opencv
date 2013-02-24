@@ -190,6 +190,7 @@ where
 
 (the equation holds with homogeneous coordinates for homography). It returns the final enhanced correlation coefficient, that is the correlation coefficient between the template image and the final warped input image. When a :math:`3\times 3` matrix is given with ``motionType`` =0, 1 or 2, the third row is ignored.
 
+
 Unlike :ocv:func:`findHomography` and :ocv:func:`estimateRigidTransform`, the function :ocv:func:`findTransformECC` implements an area-based alignment that builds on intensity similarities. In essence, the function updates the initial transformation that roughly aligns the images. If this information is missing, the identity warp (unity matrix) should be given as input. Note that if images undergo strong displacements/rotations, an initial transformation that roughly aligns the images is necessary (e.g., a simple euclidean/similarity transform that allows for the images showing the same image content approximately). Use inverse warping in the second image to take an image close to the first one, i.e. use the flag ``WARP_INVERSE_MAP`` with :ocv:func:`warpAffine` or :ocv:func:`warpPerspective`. See also the OpenCV sample ``image_alignment.cpp`` that demonstrates the use of the function. Note that the function throws an exception if algorithm does not converges.
 
 .. seealso::

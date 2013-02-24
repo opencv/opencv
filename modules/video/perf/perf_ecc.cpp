@@ -17,7 +17,6 @@ PERF_TEST_P(TransformationType, findTransformECC, /*testing::ValuesIn(MotionType
             (int) MOTION_AFFINE, (int) MOTION_HOMOGRAPHY)
             )
 {
-
     Mat inputImage = imread(getDataPath("cv/shared/fruits.png"),0);
     Mat img;
     resize(inputImage, img, Size(216,216));

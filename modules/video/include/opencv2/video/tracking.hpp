@@ -360,6 +360,7 @@ CV_EXPORTS_W double findTransformECC(InputArray templateImage,
                                      TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001));
 
 
+
 //! computes dense optical flow using Simple Flow algorithm
 CV_EXPORTS_W void calcOpticalFlowSF(InputArray from,
                                     InputArray to,

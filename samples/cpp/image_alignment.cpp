@@ -55,7 +55,6 @@ const std::string keys =
     "{w warpedImfile | warpedECC.png | warped input image }"
 ;
 
-
 static void help(void)
 {
 

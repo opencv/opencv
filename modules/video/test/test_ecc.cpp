@@ -54,7 +54,6 @@ protected:
     double computeRMS(const Mat& mat1, const Mat& mat2);
     bool isMapCorrect(const Mat& mat);
 
-
     double MAX_RMS_ECC;//upper bound for RMS error
     int ntests;//number of tests per motion type
     int ECC_iterations;//number of iterations for ECC
