@@ -59,62 +59,6 @@ using namespace cv;
 using namespace cv::ocl;
 using namespace std;
 
-#if !defined (HAVE_OPENCL)
-
-
-void cv::ocl::meanShiftFiltering(const oclMat &, oclMat &, int, int, TermCriteria)
-{
-    throw_nogpu();
-}
-void cv::ocl::meanShiftProc(const oclMat &, oclMat &, oclMat &, int, int, TermCriteria)
-{
-    throw_nogpu();
-}
-double cv::ocl::threshold(const oclMat &, oclMat &, double, int)
-{
-    throw_nogpu();
-    return 0.0;
-}
-void cv::ocl::resize(const oclMat &, oclMat &, Size, double, double, int)
-{
-    throw_nogpu();
-}
-void cv::ocl::remap(const oclMat &, oclMat &, oclMat &, oclMat &, int, int , const Scalar &)
-{
-    throw_nogpu();
-}
-
-void cv::ocl::copyMakeBorder(const oclMat &, oclMat &, int, int, int, int, const Scalar &)
-{
-    throw_nogpu();
-}
-void cv::ocl::warpAffine(const oclMat &, oclMat &, const Mat &, Size, int)
-{
-    throw_nogpu();
-}
-void cv::ocl::warpPerspective(const oclMat &, oclMat &, const Mat &, Size, int)
-{
-    throw_nogpu();
-}
-void cv::ocl::integral(const oclMat &, oclMat &, oclMat &)
-{
-    throw_nogpu();
-}
-void cv::ocl::calcHist(const oclMat &, oclMat &hist)
-{
-    throw_nogpu();
-}
-void cv::ocl::bilateralFilter(const oclMat &, oclMat &, int, double, double, int)
-{
-    throw_nogpu();
-}
-void cv::ocl::convolve(const oclMat &, const oclMat &, oclMat &)
-{
-    throw_nogpu();
-}
-
-#else /* !defined (HAVE_OPENCL) */
-
 namespace cv
 {
     namespace ocl
@@ -1696,4 +1640,3 @@ void cv::ocl::convolve(const oclMat &x, const oclMat &t, oclMat &y)
 
     convolve_run(x, t, y, kernelName, &imgproc_convolve);
 }
-#endif /* !defined (HAVE_OPENCL) */

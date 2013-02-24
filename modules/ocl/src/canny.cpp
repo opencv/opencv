@@ -51,25 +51,6 @@ using namespace cv;
 using namespace cv::ocl;
 using namespace std;
 
-#if !defined (HAVE_OPENCL)
-void cv::ocl::Canny(const oclMat &image, oclMat &edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false)
-{
-    throw_nogpu();
-}
-void cv::ocl::Canny(const oclMat &image, CannyBuf &buf, oclMat &edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false)
-{
-    throw_nogpu();
-}
-void cv::ocl::Canny(const oclMat &dx, const oclMat &dy, oclMat &edges, double low_thresh, double high_thresh, bool L2gradient = false)
-{
-    throw_nogpu();
-}
-void cv::ocl::Canny(const oclMat &dx, const oclMat &dy, CannyBuf &buf, oclMat &edges, double low_thresh, double high_thresh, bool L2gradient = false)
-{
-    throw_nogpu();
-}
-#else
-
 namespace cv
 {
     namespace ocl
@@ -426,5 +407,3 @@ void canny::getEdges_gpu(oclMat &map, oclMat &dst, int rows, int cols)
 
     openCLExecuteKernel2(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
-
-#endif // HAVE_OPENCL
