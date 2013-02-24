@@ -3076,6 +3076,58 @@ inline void cvtYUV420p2RGBA(Mat& _dst, int _stride, const uchar* _y1, const ucha
         converter(BlockedRange(0, _dst.rows/2));
 }
 
+///////////////////////////////////// RGB -> YUV420p /////////////////////////////////////
+
+template<int bIdx, int uIdx>
+static void cvtRGBtoYUV420p(const Mat& src, Mat& dst)
+{
+    //const float coeffs[] = {  0.257f,  0.504f, 0.098f,
+    //                         -0.148f, -0.291f, 0.439f,
+    //                         -0.368f, -0.071f };
+    const int coeffs[] = {  269484,  528482, 102760,
+                           -155188, -305135, 460324,
+                           -385875, -74448 };
+
+    const int w = src.cols;
+    const int h = src.rows;
+
+    const int cn = src.channels();
+    for( int i = 0; i < h / 2; i++ )
+    {
+        const uchar* row0 = src.ptr<uchar>(2*i);
+        const uchar* row1 = src.ptr<uchar>(2*i + 1);
+
+        uchar* y = dst.ptr<uchar>(2*i);
+        uchar* u = dst.ptr<uchar>(h + i/2) + (i % 2) * (w/2);
+        uchar* v = dst.ptr<uchar>(h + (i + h/2)/2) + ((i + h/2) % 2) * (w/2);
+        if( uIdx == 2 ) std::swap(u, v);
+
+        for( int j = 0, k = 0; j < w * cn; j += 2*cn, k++ )
+        {
+            int r00 = row0[2-bIdx + j];      int g00 = row0[1 + j];      int b00 = row0[bIdx + j];
+            int r01 = row0[2-bIdx + cn + j]; int g01 = row0[1 + cn + j]; int b01 = row0[bIdx + cn + j];
+            int r10 = row1[2-bIdx + j];      int g10 = row1[1 + j];      int b10 = row1[bIdx + j];
+            int r11 = row1[2-bIdx + cn + j]; int g11 = row1[1 + cn + j]; int b11 = row1[bIdx + cn + j];
+            
+            int y00 = coeffs[0]*r00 + coeffs[1]*g00 + coeffs[2]*b00 + (1 << (ITUR_BT_601_SHIFT - 1)) + (16 << ITUR_BT_601_SHIFT);
+            int y01 = coeffs[0]*r01 + coeffs[1]*g01 + coeffs[2]*b01 + (1 << (ITUR_BT_601_SHIFT - 1)) + (16 << ITUR_BT_601_SHIFT);
+            int y10 = coeffs[0]*r10 + coeffs[1]*g10 + coeffs[2]*b10 + (1 << (ITUR_BT_601_SHIFT - 1)) + (16 << ITUR_BT_601_SHIFT);
+            int y11 = coeffs[0]*r11 + coeffs[1]*g11 + coeffs[2]*b11 + (1 << (ITUR_BT_601_SHIFT - 1)) + (16 << ITUR_BT_601_SHIFT);
+            
+            y[2*k + 0]            = saturate_cast<uchar>(y00 >> ITUR_BT_601_SHIFT);
+            y[2*k + 1]            = saturate_cast<uchar>(y01 >> ITUR_BT_601_SHIFT);
+            y[2*k + dst.step + 0] = saturate_cast<uchar>(y10 >> ITUR_BT_601_SHIFT);
+            y[2*k + dst.step + 1] = saturate_cast<uchar>(y11 >> ITUR_BT_601_SHIFT);
+
+            int u00 = coeffs[3]*r00 + coeffs[4]*g00 + coeffs[5]*b00 + (1 << (ITUR_BT_601_SHIFT - 1)) + (128 << ITUR_BT_601_SHIFT);
+            int v00 = coeffs[5]*r00 + coeffs[6]*g00 + coeffs[7]*b00 + (1 << (ITUR_BT_601_SHIFT - 1)) + (128 << ITUR_BT_601_SHIFT);
+
+            u[k] = saturate_cast<uchar>(u00 >> ITUR_BT_601_SHIFT);
+            v[k] = saturate_cast<uchar>(v00 >> ITUR_BT_601_SHIFT);
+        }
+    }
+}
+
 ///////////////////////////////////// YUV422 -> RGB /////////////////////////////////////
 
 template<int bIdx, int uIdx, int yIdx>
@@ -3713,6 +3765,31 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 src(Range(0, dstSz.height), Range::all()).copyTo(dst);
             }
             break;
+        case CV_RGB2YUV_YV12: case CV_BGR2YUV_YV12: case CV_RGBA2YUV_YV12: case CV_BGRA2YUV_YV12:
+        case CV_RGB2YUV_IYUV: case CV_BGR2YUV_IYUV: case CV_RGBA2YUV_IYUV: case CV_BGRA2YUV_IYUV:
+            {
+                if (dcn <= 0) dcn = 1;
+                const int bIdx = (code == CV_BGR2YUV_IYUV || code == CV_BGRA2YUV_IYUV || code == CV_BGR2YUV_YV12 || code == CV_BGRA2YUV_YV12) ? 0 : 2;
+                const int uIdx = (code == CV_BGR2YUV_IYUV || code == CV_BGRA2YUV_IYUV || code == CV_RGB2YUV_IYUV || code == CV_RGBA2YUV_IYUV) ? 1 : 2;
+
+                CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
+                CV_Assert( dcn == 1 );
+                CV_Assert( sz.width % 2 == 0 && sz.height % 2 == 0 );
+
+                Size dstSz(sz.width, sz.height / 2 * 3);
+                _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
+                dst = _dst.getMat();
+
+                switch(bIdx + uIdx*10)
+                {
+                    case 10: cvtRGBtoYUV420p<0, 1>(src, dst); break;
+                    case 12: cvtRGBtoYUV420p<2, 1>(src, dst); break;
+                    case 20: cvtRGBtoYUV420p<0, 2>(src, dst); break;
+                    case 22: cvtRGBtoYUV420p<2, 2>(src, dst); break;
+                    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+                };
+            }
+            break;
         case CV_YUV2RGB_UYVY: case CV_YUV2BGR_UYVY: case CV_YUV2RGBA_UYVY: case CV_YUV2BGRA_UYVY:
         case CV_YUV2RGB_YUY2: case CV_YUV2BGR_YUY2: case CV_YUV2RGB_YVYU: case CV_YUV2BGR_YVYU:
         case CV_YUV2RGBA_YUY2: case CV_YUV2BGRA_YUY2: case CV_YUV2RGBA_YVYU: case CV_YUV2BGRA_YVYU:
@@ -3795,7 +3872,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                     CV_Error( CV_StsBadArg, "Unsupported image depth" );
                 }
             }
-            break;
+            break;   
         default:
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
     }
