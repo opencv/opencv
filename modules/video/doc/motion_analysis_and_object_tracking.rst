@@ -153,6 +153,50 @@ In case of point sets, the problem is formulated as follows: you need to find a 
     :ocv:func:`getPerspectiveTransform`,
     :ocv:func:`findHomography`
 
+findTransformECC
+------------------------
+Finds the geometric transform (warp) between two images in terms of the ECC criterion [EP08]_.
+
+.. ocv:function:: double findTransformECC( InputArray templateImage, InputArray inputImage, InputOutputArray warpMatrix, int motionType=2, TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001))
+.. ocv:cfunction:: double cvFindTransformECC( const CvArr* templateImage, const CvArr* inputImage, CvArr* warpMatrix, const int motionType, CvTermCriteria criteria)
+
+    :param templateImage: single-channel template image; ``CV_8U`` or ``CV_32F`` array.
+
+    :param inputImage: single-channel input image which should be warped with the final ``warpMatrix`` in order to provide an image similar to ``templateImage``, same type as ``temlateImage``.
+
+    :param warpMatrix: floating-point :math:`2\times 3` or :math:`3\times 3` mapping matrix (warp).
+
+    :param motionType: parameter, specifying the type of motion:
+        * **MOTION_TRANSLATION** sets a translational motion model; ``warpMatrix`` is :math:`2\times 3` with the first :math:`2\times 2` part being the unity matrix and the rest two parameters being estimated.
+        * **MOTION_EUCLIDEAN** sets a Euclidean (rigid) transformation as motion model; three parameters are estimated; ``warpMatrix`` is :math:`2\times 3`.
+        * **MOTION_AFFINE** sets an affine motion model (DEFAULT); six parameters are estimated; ``warpMatrix`` is :math:`2\times 3`.
+        * **MOTION_HOMOGRAPHY** sets a homography as a motion model; eight parameters are estimated;``warpMatrix`` is :math:`3\times 3`.
+
+    :param criteria: parameter, specifying the termination criteria of the ECC algorithm; ``criteria.epsilon`` defines the threshold of the increment in the correlation coefficient between two iterations (a negative ``criteria.epsilon`` makes ``criteria.maxcount`` the only termination criterion). Default values are shown in the declaration above.
+
+
+The function estimates the optimum transformation (``warpMatrix``) with respect to ECC criterion ([EP08]_), that is
+
+..math::
+
+\texttt{warpMatrix} =
+  \texttt{warpMatrix} = \arg\max_{W} \texttt{ECC}(\texttt{templateImage}(x,y),\texttt{inputImage}(x',y'))
+
+where
+
+..math::
+
+    \begin{bmatrix} x' \\ y' \end{bmatrix} = W \cdot \begin{bmatrix} x \\ y \\ 1 \end{bmatrix}
+
+(the equation holds with homogeneous coordinates for homography). It returns the final enhanced correlation coefficient, that is the correlation coefficient between the template image and the final warped input image. When a :math:`3\times 3` matrix is given with ``motionType`` =0, 1 or 2, the third row is ignored.
+
+
+Unlike :ocv:func:`findHomography` and :ocv:func:`estimateRigidTransform`, the function :ocv:func:`findTransformECC` implements an area-based alignment that builds on intensity similarities. In essence, the function updates the initial transformation that roughly aligns the images. If this information is missing, the identity warp (unity matrix) should be given as input. Note that if images undergo strong displacements/rotations, an initial transformation that roughly aligns the images is necessary (e.g., a simple euclidean/similarity transform that allows for the images showing the same image content approximately). Use inverse warping in the second image to take an image close to the first one, i.e. use the flag ``WARP_INVERSE_MAP`` with :ocv:func:`warpAffine` or :ocv:func:`warpPerspective`. See also the OpenCV sample ``image_alignment.cpp`` that demonstrates the use of the function. Note that the function throws an exception if algorithm does not converges.
+
+.. seealso::
+
+    :ocv:func:`estimateRigidTransform`,
+    :ocv:func:`findHomography`
 
 
 updateMotionHistory
@@ -726,3 +770,5 @@ Releases all inner buffers.
 .. [Zach2007] C. Zach, T. Pock and H. Bischof. "A Duality Based Approach for Realtime TV-L1 Optical Flow", In Proceedings of Pattern Recognition (DAGM), Heidelberg, Germany, pp. 214-223, 2007
 
 .. [Javier2012] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
+
+.. [EP08] Evangelidis, G.D. and Psarakis E.Z. "Parametric Image Alignment using Enhanced Correlation Coefficient Maximization", IEEE Transactions on PAMI, vol. 32, no. 10, 2008
