@@ -46,24 +46,14 @@
 #include <iomanip>
 #include "precomp.hpp"
 
-#ifdef HAVE_CLAMDBLAS
-
-#include "clAmdBlas.h"
-
-#if !defined HAVE_OPENCL
-void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
-                   const oclMat &src3, double beta, oclMat &dst, int flags)
-{
-    throw_nogpu();
-}
-#elif !defined HAVE_CLAMDBLAS
-void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
-                   const oclMat &src3, double beta, oclMat &dst, int flags)
+#if !defined HAVE_CLAMDBLAS
+void cv::ocl::gemm(const oclMat&, const oclMat&, double,
+                   const oclMat&, double, oclMat&, int)
 {
     CV_Error(CV_StsNotImplemented, "OpenCL BLAS is not implemented");
 }
 #else
-
+#include "clAmdBlas.h"
 using namespace cv;
 
 void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
@@ -167,5 +157,4 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
     }
     clAmdBlasTeardown();
 }
-#endif
 #endif

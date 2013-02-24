@@ -58,60 +58,6 @@ using namespace std;
 //////////////////////////////// oclMat ////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 
-#if !defined (HAVE_OPENCL)
-
-namespace cv
-{
-    namespace ocl
-    {
-        void oclMat::upload(const Mat & /*m*/)
-        {
-            throw_nogpu();
-        }
-        void oclMat::download(cv::Mat & /*m*/) const
-        {
-            throw_nogpu();
-        }
-        void oclMat::copyTo( oclMat & /*m*/ ) const
-        {
-            throw_nogpu();
-        }
-        void oclMat::copyTo( oclMat & /*m*/, const oclMat &/* mask */) const
-        {
-            throw_nogpu();
-        }
-        void oclMat::convertTo( oclMat & /*m*/, int /*rtype*/, double /*alpha*/, double /*beta*/ ) const
-        {
-            throw_nogpu();
-        }
-        oclMat &oclMat::operator = (const Scalar & /*s*/)
-        {
-            throw_nogpu();
-            return *this;
-        }
-        oclMat &oclMat::setTo(const Scalar & /*s*/, const oclMat & /*mask*/)
-        {
-            throw_nogpu();
-            return *this;
-        }
-        oclMat oclMat::reshape(int /*new_cn*/, int /*new_rows*/) const
-        {
-            throw_nogpu();
-            return oclMat();
-        }
-        void oclMat::create(int /*_rows*/, int /*_cols*/, int /*_type*/)
-        {
-            throw_nogpu();
-        }
-        void oclMat::release()
-        {
-            throw_nogpu();
-        }
-    }
-}
-
-#else /* !defined (HAVE_OPENCL) */
-
 //helper routines
 namespace cv
 {
@@ -1045,4 +991,3 @@ oclMat& cv::ocl::oclMat::operator/=( const oclMat& m )
     divide(*this, m, *this);
     return *this;
 }
-#endif /* !defined (HAVE_OPENCL) */

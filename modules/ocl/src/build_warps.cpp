@@ -49,21 +49,6 @@ using namespace cv;
 using namespace cv::ocl;
 using namespace std;
 
-#if !defined (HAVE_OPENCL)
-void cv::ocl::buildWarpPlaneMaps(Size, Rect, const Mat &, const Mat &, const Mat &, float, oclMat &, oclMat &, Stream &)
-{
-    throw_nogpu();
-}
-void cv::ocl::buildWarpCylindricalMaps(Size, Rect, const Mat &, const Mat &, float, oclMat &, oclMat &, Stream &)
-{
-    throw_nogpu();
-}
-void cv::ocl::buildWarpSphericalMaps(Size, Rect, const Mat &, const Mat &, float, oclMat &, oclMat &, Stream &)
-{
-    throw_nogpu();
-}
-#else
-
 namespace cv
 {
     namespace ocl
@@ -275,6 +260,3 @@ void cv::ocl::buildWarpPerspectiveMaps(const Mat &M, bool inverse, Size dsize, o
     size_t localThreads[3]  = {32, 8, 1};
     openCLExecuteKernel(clCxt, &build_warps, kernelName, globalThreads, localThreads, args, -1, -1);
 }
-
-
-#endif // HAVE_OPENCL

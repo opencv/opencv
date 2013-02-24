@@ -50,16 +50,6 @@ using namespace cv;
 using namespace cv::ocl;
 using namespace std;
 
-
-#if !defined(HAVE_OPENCL)
-
-void cv::ocl::columnSum(const oclMat &src, oclMat &dst)
-{
-    throw_nogpu();
-}
-
-#else /*!HAVE_OPENCL */
-
 namespace cv
 {
     namespace ocl
@@ -93,4 +83,3 @@ void cv::ocl::columnSum(const oclMat &src, oclMat &dst)
     openCLExecuteKernel(clCxt, &imgproc_columnsum, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
 
 }
-#endif

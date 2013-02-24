@@ -51,12 +51,6 @@ using namespace cv;
 using namespace cv::ocl;
 using namespace std;
 
-#if !defined (HAVE_OPENCL)
-void cv::ocl::matchTemplate(const oclMat &, const oclMat &, oclMat &)
-{
-    throw_nogpu();
-}
-#else
 //helper routines
 namespace cv
 {
@@ -498,4 +492,3 @@ void cv::ocl::matchTemplate(const oclMat &image, const oclMat &templ, oclMat &re
     CV_Assert(caller);
     caller(image, templ, result, buf);
 }
-#endif //

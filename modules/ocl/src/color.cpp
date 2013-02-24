@@ -49,18 +49,6 @@
 using namespace cv;
 using namespace cv::ocl;
 
-#if !defined (HAVE_OPENCL)
-
-void cv::ocl::cvtColor(const oclMat &, oclMat &, int, int)
-{
-    throw_nogpu();
-}
-void cv::ocl::cvtColor(const oclMat &, oclMat &, int, int, const Stream &)
-{
-    throw_nogpu();
-}
-
-#else /* !defined (HAVE_OPENCL) */
 #ifndef CV_DESCALE
 #define CV_DESCALE(x, n) (((x) + (1 << ((n)-1))) >> (n))
 #endif
@@ -289,5 +277,3 @@ void cv::ocl::cvtColor(const oclMat &src, oclMat &dst, int code, int dcn)
 {
     cvtColor_caller(src, dst, code, dcn);
 }
-
-#endif /* !defined (HAVE_OPENCL) */

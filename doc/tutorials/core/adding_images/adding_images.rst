@@ -53,8 +53,8 @@ As usual, after the not-so-lengthy explanation, let's go to the code:
     std::cout<<"* Enter alpha [0-1]: ";
     std::cin>>input;
 
-    /// We use the alpha provided by the user iff it is between 0 and 1
-    if( alpha >= 0 && alpha <= 1 )
+    /// We use the alpha provided by the user if it is between 0 and 1
+    if( input >= 0.0 && input <= 1.0 )
       { alpha = input; }
 
     /// Read image ( same size, same type )

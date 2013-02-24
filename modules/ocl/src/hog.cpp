@@ -49,69 +49,6 @@ using namespace cv;
 using namespace cv::ocl;
 using namespace std;
 
-#if !defined (HAVE_OPENCL)
-
-cv::ocl::HOGDescriptor::HOGDescriptor(Size, Size, Size, Size, int, double, double, bool, int)
-{
-    throw_nogpu();
-}
-size_t cv::ocl::HOGDescriptor::getDescriptorSize() const
-{
-    throw_nogpu();
-    return 0;
-}
-size_t cv::ocl::HOGDescriptor::getBlockHistogramSize() const
-{
-    throw_nogpu();
-    return 0;
-}
-double cv::ocl::HOGDescriptor::getWinSigma() const
-{
-    throw_nogpu();
-    return 0;
-}
-bool cv::ocl::HOGDescriptor::checkDetectorSize() const
-{
-    throw_nogpu();
-    return false;
-}
-void cv::ocl::HOGDescriptor::setSVMDetector(const vector<float> &)
-{
-    throw_nogpu();
-}
-void cv::ocl::HOGDescriptor::detect(const oclMat &, vector<Point> &, double, Size, Size)
-{
-    throw_nogpu();
-}
-void cv::ocl::HOGDescriptor::detectMultiScale(const oclMat &, vector<Rect> &, double, Size, Size, double, int)
-{
-    throw_nogpu();
-}
-void cv::ocl::HOGDescriptor::computeBlockHistograms(const oclMat &)
-{
-    throw_nogpu();
-}
-void cv::ocl::HOGDescriptor::getDescriptors(const oclMat &, Size, oclMat &, int)
-{
-    throw_nogpu();
-}
-std::vector<float> cv::ocl::HOGDescriptor::getDefaultPeopleDetector()
-{
-    throw_nogpu();
-    return std::vector<float>();
-}
-std::vector<float> cv::ocl::HOGDescriptor::getPeopleDetector48x96()
-{
-    throw_nogpu();
-    return std::vector<float>();
-}
-std::vector<float> cv::ocl::HOGDescriptor::getPeopleDetector64x128()
-{
-    throw_nogpu();
-    return std::vector<float>();
-}
-
-#else
 
 #define CELL_WIDTH 8
 #define CELL_HEIGHT 8
@@ -1895,5 +1832,3 @@ void cv::ocl::device::hog::resize( const oclMat &src, oclMat &dst, const Size sz
 
     openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args, -1, -1);
 }
-
-#endif

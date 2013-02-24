@@ -50,13 +50,6 @@ using namespace cv;
 using namespace cv::ocl;
 using namespace std;
 
-#if !defined (HAVE_OPENCL)
-void cv::ocl::blendLinear(const oclMat &img1, const oclMat &img2, const oclMat &weights1, const oclMat &weights2,
-                          oclMat &result)
-{
-    throw_nogpu();
-}
-#else
 namespace cv
 {
     namespace ocl
@@ -98,4 +91,3 @@ void cv::ocl::blendLinear(const oclMat &img1, const oclMat &img2, const oclMat &
         openCLExecuteKernel(ctx, &blend_linear, kernelName, globalSize, localSize, args, channels, depth);
     }
 }
-#endif

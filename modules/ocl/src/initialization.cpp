@@ -61,82 +61,6 @@ using std::endl;
 
 //#define AMD_DOUBLE_DIFFER
 
-#if !defined (HAVE_OPENCL)
-
-namespace cv
-{
-    namespace ocl
-    {
-
-        cl_device_id getDevice()
-        {
-            throw_nogpu();
-            return 0;
-        }
-
-        void getComputeCapability(cl_device_id, int &major, int &minor)
-        {
-            throw_nogpu();
-        }
-
-        void openCLMallocPitch(Context * /*clCxt*/, void ** /*dev_ptr*/, size_t * /*pitch*/,
-                               size_t /*widthInBytes*/, size_t /*height*/)
-        {
-            throw_nogpu();
-        }
-
-        void openCLMemcpy2D(Context * /*clCxt*/, void * /*dst*/, size_t /*dpitch*/,
-                            const void * /*src*/, size_t /*spitch*/,
-                            size_t /*width*/, size_t /*height*/, enum openCLMemcpyKind /*kind*/)
-        {
-            throw_nogpu();
-        }
-
-        void openCLCopyBuffer2D(Context * /*clCxt*/, void * /*dst*/, size_t /*dpitch*/,
-                                const void * /*src*/, size_t /*spitch*/,
-                                size_t /*width*/, size_t /*height*/, enum openCLMemcpyKind /*kind*/)
-        {
-            throw_nogpu();
-        }
-
-        cl_mem openCLCreateBuffer(Context *, size_t, size_t)
-        {
-            throw_nogpu();
-        }
-
-        void openCLReadBuffer(Context *, cl_mem, void *, size_t)
-        {
-            throw_nogpu();
-        }
-
-        void openCLFree(void * /*devPtr*/)
-        {
-            throw_nogpu();
-        }
-
-        cl_kernel openCLGetKernelFromSource(const Context * /*clCxt*/,
-                                            const char ** /*fileName*/, string /*kernelName*/)
-        {
-            throw_nogpu();
-        }
-
-        void openCLVerifyKernel(const Context * /*clCxt*/, cl_kernel /*kernel*/, size_t * /*blockSize*/,
-                                size_t * /*globalThreads*/, size_t * /*localThreads*/)
-        {
-            throw_nogpu();
-        }
-
-        cl_mem load_constant(cl_context context, cl_command_queue command_queue, const void *value,
-                             const size_t size)
-        {
-            throw_nogpu();
-        }
-
-    }//namespace ocl
-}//namespace cv
-
-#else /* !defined (HAVE_OPENCL) */
-
 namespace cv
 {
     namespace ocl
@@ -1013,4 +937,3 @@ namespace cv
     }//namespace ocl
 
 }//namespace cv
-#endif

@@ -50,17 +50,6 @@ using namespace std;
 using namespace cv;
 using namespace cv::ocl;
 
-
-#if !defined (HAVE_OPENCL)
-void cv::ocl::interpolateFrames(const oclMat &frame0, const oclMat &frame1,
-                                const oclMat &fu, const oclMat &fv,
-                                const oclMat &bu, const oclMat &bv,
-                                float pos, oclMat &newFrame, oclMat &buf)
-{
-    throw_nogpu();
-}
-#else
-
 namespace cv
 {
     namespace ocl
@@ -311,5 +300,4 @@ void interpolate::bindImgTex(const oclMat &img, cl_mem &texture)
     clEnqueueCopyBufferToImage(img.clCxt->impl->clCmdQueue, (cl_mem)img.data, texture, 0, origin, region, 0, NULL, 0);
     openCLSafeCall(err);
 }
-#endif//(HAVE_OPENCL)
 
