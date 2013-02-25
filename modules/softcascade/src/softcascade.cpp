@@ -189,11 +189,12 @@ struct ChannelStorage
 
     ChannelStorage(const cv::Mat& colored, int shr) : shrinkage(shr)
     {
+        model_height = cvRound(colored.rows / (float)shrinkage);
+
         builder = ChannelFeatureBuilder::create();
-        (*builder)(colored, hog);
+        (*builder)(colored, hog, cv::Size(cvRound(colored.cols / (float)shrinkage), model_height));
 
         step = hog.step1();
-        model_height = colored.rows / shrinkage;
     }
 
     float get(const int channel, const cv::Rect& area) const

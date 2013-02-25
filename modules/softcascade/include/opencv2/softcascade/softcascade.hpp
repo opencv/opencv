@@ -126,7 +126,7 @@ public:
     virtual ~ChannelFeatureBuilder();
 
     // apply channels to source frame
-    CV_WRAP_AS(compute) virtual void operator()(InputArray src, CV_OUT OutputArray channels) const = 0;
+    CV_WRAP_AS(compute) virtual void operator()(InputArray src, CV_OUT OutputArray channels, cv::Size channelsSize = cv::Size()) const = 0;
 
     CV_WRAP static cv::Ptr<ChannelFeatureBuilder> create();
 };
