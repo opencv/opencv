@@ -386,21 +386,6 @@ public:
 };
 
 
-Ptr<PointSetRegistrator> createRANSACPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& _cb,
-                                                         int _modelPoints, double _threshold,
-                                                         double _confidence, int _maxIters)
-{
-    return new RANSACPointSetRegistrator(_cb, _modelPoints, _threshold, _confidence, _maxIters);
-}
-
-
-Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& _cb,
-                             int _modelPoints, double _confidence, int _maxIters)
-{
-    return new LMeDSPointSetRegistrator(_cb, _modelPoints, _confidence, _maxIters);
-}
-
-
 CV_INIT_ALGORITHM(RANSACPointSetRegistrator, "PointSetRegistrator.RANSAC",
                   obj.info()->addParam(obj, "threshold", obj.threshold);
                   obj.info()->addParam(obj, "confidence", obj.confidence);
@@ -410,6 +395,21 @@ CV_INIT_ALGORITHM(LMeDSPointSetRegistrator, "PointSetRegistrator.LMeDS",
                   obj.info()->addParam(obj, "confidence", obj.confidence);
                   obj.info()->addParam(obj, "maxIters", obj.maxIters));
 
+Ptr<PointSetRegistrator> createRANSACPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& _cb,
+                                                         int _modelPoints, double _threshold,
+                                                         double _confidence, int _maxIters)
+{
+    CV_Assert( !RANSACPointSetRegistrator_info_auto.name().empty() );
+    return new RANSACPointSetRegistrator(_cb, _modelPoints, _threshold, _confidence, _maxIters);
+}
+
+
+Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& _cb,
+                             int _modelPoints, double _confidence, int _maxIters)
+{
+    CV_Assert( !LMeDSPointSetRegistrator_info_auto.name().empty() );
+    return new LMeDSPointSetRegistrator(_cb, _modelPoints, _confidence, _maxIters);
+}
 
 class Affine3DEstimatorCallback : public PointSetRegistrator::Callback
 {

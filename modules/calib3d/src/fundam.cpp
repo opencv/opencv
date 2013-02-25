@@ -886,7 +886,7 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
             Point3d* dptr = (Point3d*)dst.data;
             for( i = 0; i < npoints; i++ )
             {
-                float scale = sptr[i][3] != 0.f ? 1.f/sptr[i][3] : 1.f;
+                double scale = sptr[i][3] != 0.f ? 1./sptr[i][3] : 1.;
                 dptr[i] = Point3d(sptr[i][0]*scale, sptr[i][1]*scale, sptr[i][2]*scale);
             }
         }

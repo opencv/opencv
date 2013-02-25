@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <stdio.h>
 
 /*
    This is translation to C++ of the Matlab's LMSolve package by Miroslav Balda.
@@ -218,6 +219,7 @@ CV_INIT_ALGORITHM(LMSolverImpl, "LMSolver",
 
 CV_EXPORTS Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters)
 {
+    CV_Assert( !LMSolverImpl_info_auto.name().empty() );
     return new LMSolverImpl(cb, maxIters);
 }
     
