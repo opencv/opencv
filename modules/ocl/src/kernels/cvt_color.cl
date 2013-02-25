@@ -203,8 +203,8 @@ __kernel void YUV2RGB(int cols,int rows,int src_step,int dst_step,int channels,
 
 __constant int ITUR_BT_601_CY = 1220542;
 __constant int ITUR_BT_601_CUB = 2116026;
-__constant int ITUR_BT_601_CUG = -409993;
-__constant int ITUR_BT_601_CVG = -852492;
+__constant int ITUR_BT_601_CUG = 409993;
+__constant int ITUR_BT_601_CVG = 852492;
 __constant int ITUR_BT_601_CVR = 1673527;
 __constant int ITUR_BT_601_SHIFT = 20;
 
@@ -229,7 +229,7 @@ __kernel void YUV2RGBA_NV12(int cols,int rows,int src_step,int dst_step,
         int V  = usrc[1] - 128;
 
         int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * V;
-        int guv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVG * V + ITUR_BT_601_CUG * U;
+        int guv = (1 << (ITUR_BT_601_SHIFT - 1)) - ITUR_BT_601_CVG * V - ITUR_BT_601_CUG * U;
         int buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * U;
 
         Y1 = max(0, Y1 - 16) * ITUR_BT_601_CY;
