@@ -106,6 +106,7 @@ public:
             static const int tt[][3] = {{0, 1, 2}, {1, 2, 3}, {0, 2, 3}, {0, 1, 3}};
             const Point2f* src = ms1.ptr<Point2f>();
             const Point2f* dst = ms2.ptr<Point2f>();
+            int negative = 0;
 
             for( int i = 0; i < 4; i++ )
             {
@@ -113,9 +114,10 @@ public:
                 Matx33d A(src[t[0]].x, src[t[0]].y, 1., src[t[1]].x, src[t[1]].y, 1., src[t[2]].x, src[t[2]].y, 1.);
                 Matx33d B(dst[t[0]].x, dst[t[0]].y, 1., dst[t[1]].x, dst[t[1]].y, 1., dst[t[2]].x, dst[t[2]].y, 1.);
 
-                if( determinant(A)*determinant(B) < 0 )
-                    return false;
+                negative += determinant(A)*determinant(B) < 0;
             }
+            if( negative != 0 && negative != 4 )
+                return false;
         }
 
         return true;

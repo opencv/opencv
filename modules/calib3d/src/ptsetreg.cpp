@@ -85,7 +85,7 @@ public:
 
     virtual ~RANSACPointSetRegistrator() {}
 
-    int findInliers( const Mat& m1, const Mat& m2, const Mat& model, Mat& err, Mat& mask, double threshold ) const
+    int findInliers( const Mat& m1, const Mat& m2, const Mat& model, Mat& err, Mat& mask, double thresh ) const
     {
         cb->computeError( m1, m2, model, err );
         mask.create(err.size(), CV_8U);
@@ -93,7 +93,7 @@ public:
         CV_Assert( err.isContinuous() && err.type() == CV_32F && mask.isContinuous() && mask.type() == CV_8U);
         const float* errptr = err.ptr<float>();
         uchar* maskptr = mask.ptr<uchar>();
-        float t = (float)(threshold*threshold);
+        float t = (float)(thresh*thresh);
         int i, n = (int)err.total(), nz = 0;
         for( i = 0; i < n; i++ )
         {
@@ -131,12 +131,16 @@ public:
         {
             for( i = 0; i < modelPoints && iters < maxAttempts; )
             {
-                int idx_i = idx[i] = rng.uniform(0, count);
-                for( j = 0; j < i; j++ )
-                    if( idx_i == idx[j] )
+                int idx_i = 0;
+                for(;;)
+                {
+                    idx_i = idx[i] = rng.uniform(0, count);
+                    for( j = 0; j < i; j++ )
+                        if( idx_i == idx[j] )
+                            break;
+                    if( j == i )
                         break;
-                if( j < i )
-                    continue;
+                }
                 for( k = 0; k < esz1; k++ )
                     ms1ptr[i*esz1 + k] = m1ptr[idx_i*esz1 + k];
                 for( k = 0; k < esz2; k++ )
@@ -205,7 +209,7 @@ public:
             int i, goodCount, nmodels;
             if( count > modelPoints )
             {
-                bool found = getSubset( m1, m2, ms1, ms2, rng, 300 );
+                bool found = getSubset( m1, m2, ms1, ms2, rng );
                 if( !found )
                 {
                     if( iter == 0 )
@@ -322,7 +326,7 @@ public:
             int i, nmodels;
             if( count > modelPoints )
             {
-                bool found = getSubset( m1, m2, ms1, ms2, rng, 300 );
+                bool found = getSubset( m1, m2, ms1, ms2, rng );
                 if( !found )
                 {
                     if( iter == 0 )
