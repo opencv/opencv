@@ -658,6 +658,7 @@ protected:
   virtual void findBlobs(const Mat &image, const Mat &binaryImage, vector<Center> &centers) const;
 
   Params params;
+  AlgorithmInfo* info() const;
 };
 
 
