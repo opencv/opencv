@@ -40,6 +40,8 @@
 //
 //M*/
 
+#include <cstdio>
+#include <iterator>
 #include "precomp.hpp"
 
 #ifdef HAVE_IPP
@@ -765,7 +767,7 @@ const float* HOGCache::getBlock(Point pt, float* buf)
     float* blockHist = buf;
     assert(descriptor != 0);
 
-    Size blockSize = descriptor->blockSize;
+//    Size blockSize = descriptor->blockSize;
     pt += imgoffset;
 
 //    CV_Assert( (unsigned)pt.x <= (unsigned)(grad.cols - blockSize.width) &&
