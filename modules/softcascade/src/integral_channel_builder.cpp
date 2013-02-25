@@ -51,14 +51,20 @@ class ICFBuilder : public ChannelFeatureBuilder
     virtual ~ICFBuilder() {}
     virtual cv::AlgorithmInfo* info() const;
 
-    virtual void operator()(cv::InputArray _frame, CV_OUT cv::OutputArray _integrals) const
+    virtual void operator()(cv::InputArray _frame, CV_OUT cv::OutputArray _integrals, cv::Size channelsSize) const
     {
         CV_Assert(_frame.type() == CV_8UC3);
 
         cv::Mat frame      = _frame.getMat();
         int h = frame.rows;
         int w = frame.cols;
-        _integrals.create(h / 4 * 10 + 1, w / 4 + 1, CV_32SC1);
+
+        if (channelsSize != cv::Size())
+            _integrals.create(channelsSize.height * 10 + 1, channelsSize.width + 1, CV_32SC1);
+
+        if(_integrals.empty())
+            _integrals.create(frame.rows * 10 + 1, frame.cols + 1, CV_32SC1);
+
         cv::Mat& integrals = _integrals.getMatRef();
 
         cv::Mat channels, gray;
@@ -98,12 +104,7 @@ class ICFBuilder : public ChannelFeatureBuilder
         for (int i = 0; i < 3; ++i)
             splited.push_back(channels(cv::Rect(0, h * (7 + i), w, h)));
         split(luv, splited);
-
-        float shrinkage = static_cast<float>(integrals.cols - 1) / channels.cols;
-
-        CV_Assert(shrinkage == 0.25);
-
-        cv::resize(channels, shrunk, cv::Size(), shrinkage, shrinkage, CV_INTER_AREA);
+        cv::resize(channels, shrunk, cv::Size(integrals.cols - 1, integrals.rows - 1), -1 , -1, CV_INTER_AREA);
         cv::integral(shrunk, integrals, cv::noArray(), CV_32S);
     }
 };
