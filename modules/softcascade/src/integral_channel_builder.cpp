@@ -217,7 +217,7 @@ void ChannelFeaturePool::fill(int desired)
     int nfeatures = std::min(desired, maxPoolSize);
     pool.reserve(nfeatures);
 
-    Random::engine eng(FEATURE_RECT_SEED);
+    Random::engine eng((Random::seed_type)FEATURE_RECT_SEED);
     Random::engine eng_ch(DCHANNELS_SEED);
 
     Random::uniform chRand(0, N_CHANNELS - 1);

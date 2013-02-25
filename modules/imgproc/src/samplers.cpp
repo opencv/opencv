@@ -46,7 +46,7 @@ namespace cv
 {
 
 static const uchar*
-adjustRect( const uchar* src, int src_step, int pix_size,
+adjustRect( const uchar* src, size_t src_step, int pix_size,
            Size src_size, Size win_size,
            Point ip, Rect* pRect )
 {
@@ -127,8 +127,8 @@ struct nop
 
 
 template<typename _Tp, typename _DTp, typename _WTp, class ScaleOp, class CastOp>
-void getRectSubPix_Cn_(const _Tp* src, int src_step, Size src_size,
-                       _DTp* dst, int dst_step, Size win_size, Point2f center, int cn )
+void getRectSubPix_Cn_(const _Tp* src, size_t src_step, Size src_size,
+                       _DTp* dst, size_t dst_step, Size win_size, Point2f center, int cn )
 {
     ScaleOp scale_op;
     CastOp cast_op;
@@ -217,8 +217,8 @@ void getRectSubPix_Cn_(const _Tp* src, int src_step, Size src_size,
 
 
 static void getRectSubPix_8u32f
-( const uchar* src, int src_step, Size src_size,
- float* dst, int dst_step, Size win_size, Point2f center0, int cn )
+( const uchar* src, size_t src_step, Size src_size,
+ float* dst, size_t dst_step, Size win_size, Point2f center0, int cn )
 {
     Point2f center = center0;
     Point ip;
@@ -269,8 +269,8 @@ static void getRectSubPix_8u32f
 
 
 static void
-getQuadrangleSubPix_8u32f_CnR( const uchar* src, int src_step, Size src_size,
-                               float* dst, int dst_step, Size win_size,
+getQuadrangleSubPix_8u32f_CnR( const uchar* src, size_t src_step, Size src_size,
+                               float* dst, size_t dst_step, Size win_size,
                                const double *matrix, int cn )
 {
     int x, y, k;

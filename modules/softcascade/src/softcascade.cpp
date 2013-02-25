@@ -180,7 +180,7 @@ struct ChannelStorage
     cv::Mat hog;
     int shrinkage;
     int offset;
-    int step;
+    size_t step;
     int model_height;
 
     cv::Ptr<ChannelFeatureBuilder> builder;
@@ -398,7 +398,7 @@ struct Detector::Fields
                 fns = (*st)[SC_INTERNAL];
                 FileNodeIterator inIt = fns.begin(), inIt_end = fns.end();
                 for (; inIt != inIt_end;)
-                    nodes.push_back(Node(features.size(), inIt));
+                    nodes.push_back(Node((int)features.size(), inIt));
 
                 fns = (*st)[SC_LEAF];
                 inIt = fns.begin(), inIt_end = fns.end();
@@ -504,7 +504,7 @@ void Detector::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects
         {
             for (int dx = 0; dx < level.workRect.width; ++dx)
             {
-                storage.offset = dy * storage.step + dx;
+                storage.offset = (int)(dy * storage.step + dx);
                 fld.detectAt(dx, dy, level, storage, objects);
             }
         }
@@ -555,7 +555,7 @@ void Detector::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<D
              {
                  if (m[dx])
                  {
-                     storage.offset = dy * storage.step + dx;
+                     storage.offset = (int)(dy * storage.step + dx);
                      fld.detectAt(dx, dy, level, storage, objects);
                  }
              }
@@ -570,11 +570,11 @@ void Detector::detect(InputArray _image, InputArray _rois,  OutputArray _rects, 
     std::vector<Detection> objects;
     detect( _image, _rois, objects);
 
-    _rects.create(1, objects.size(), CV_32SC4);
+    _rects.create(1, (int)objects.size(), CV_32SC4);
     cv::Mat_<cv::Rect> rects = (cv::Mat_<cv::Rect>)_rects.getMat();
     cv::Rect* rectPtr = rects.ptr<cv::Rect>(0);
 
-    _confs.create(1, objects.size(), CV_32F);
+    _confs.create(1, (int)objects.size(), CV_32F);
     cv::Mat confs = _confs.getMat();
     float* confPtr = confs.ptr<float>(0);
 

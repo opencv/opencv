@@ -148,9 +148,9 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
     CV_Assert( src.size() == dst.size() );
 
     const uchar* img = src.data;
-    int istep = src.step/sizeof(img[0]);
+    int istep = int(src.step/sizeof(img[0]));
     int* mask = dst.ptr<int>();
-    int mstep = dst.step / sizeof(mask[0]);
+    int mstep = int(dst.step / sizeof(mask[0]));
 
     for( i = 0; i < 256; i++ )
         subs_tab[i] = 0;

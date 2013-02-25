@@ -505,14 +505,15 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
 
     if( is_simple )
     {
-        int elem_size = img.elemSize();
+        size_t elem_size = img.elemSize();
         const uchar* seed_ptr = img.data + img.step*seedPoint.y + elem_size*seedPoint.x;
 
-        for(i = 0; i < elem_size; i++)
-            if (seed_ptr[i] != nv_buf.b[i])
+        size_t k = 0;
+        for(; k < elem_size; k++)
+            if (seed_ptr[k] != nv_buf.b[k])
                 break;
 
-        if( i != elem_size )
+        if( k != elem_size )
         {
             if( type == CV_8UC1 )
                 floodFill_CnIR(img, seedPoint, nv_buf.b[0], &comp, flags, &buffer);
