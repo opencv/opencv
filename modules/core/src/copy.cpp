@@ -222,10 +222,20 @@ void Mat::copyTo( OutputArray _dst ) const
 
     if( dims <= 2 )
     {
-        _dst.create( rows, cols, type() );
+        if( !_dst.fixedSize() )
+            _dst.create( rows, cols, type() );
         Mat dst = _dst.getMat();
         if( data == dst.data )
             return;
+        if( rows != dst.rows || cols != dst.cols )
+        {
+            if( rows == dst.cols && cols == dst.rows )
+            {
+                transpose(*this, dst);
+                return;
+            }
+            CV_Error(CV_StsUnmatchedSizes, "");
+        }
 
         if( rows > 0 && cols > 0 )
         {
