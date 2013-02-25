@@ -897,17 +897,17 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
             int val = p->getter ? (algo->*f.get_int)() : *(int*)((uchar*)algo + p->offset);
 
             if( argType == Param::INT )
-                *(int*)value = val;
+                *(int*)value = (int)val;
             else if ( argType == Param::REAL )
-                *(double*)value = val;
+                *(double*)value = (double)val;
             else if ( argType == Param::FLOAT)
-                *(float*)value = val;
+                *(float*)value = (float)val;
             else if ( argType == Param::UNSIGNED_INT )
-                *(unsigned int*)value = val;
+                *(unsigned int*)value = (unsigned int)val;
             else if ( argType == Param::UINT64 )
-                *(uint64*)value = val;
+                *(uint64*)value = (uint64)val;
             else if ( argType == Param::UCHAR)
-                *(uchar*)value = val;
+                *(uchar*)value = (uchar)val;
             else
                 CV_Error(CV_StsBadArg, "Wrong argument type");
 
@@ -939,13 +939,13 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
             else if ( argType == Param::REAL )
                 *(double*)value = (int)val;
             else if ( argType == Param::FLOAT)
-                *(float*)value = (int)val;
+                *(float*)value = (float)((int)val);
             else if ( argType == Param::UNSIGNED_INT )
-                *(unsigned int*)value = (int)val;
+                *(unsigned int*)value = (unsigned int)val;
             else if ( argType == Param::UINT64 )
                 *(uint64*)value = (int)val;
             else if ( argType == Param::UCHAR)
-                *(uchar*)value = (int)val;
+                *(uchar*)value = (uchar)val;
             else
                 CV_Error(CV_StsBadArg, "Wrong argument type");
         }
@@ -991,17 +991,17 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
             unsigned int val = p->getter ? (algo->*f.get_uint)() : *(unsigned int*)((uchar*)algo + p->offset);
 
             if( argType == Param::INT )
-                *(int*)value = val;
+                *(int*)value = (int)val;
             else if ( argType == Param::REAL )
-                *(double*)value = val;
+                *(double*)value = (double)val;
             else if ( argType == Param::FLOAT)
-                *(float*)value = val;
+                *(float*)value = (float)val;
             else if ( argType == Param::UNSIGNED_INT )
-                *(unsigned int*)value = val;
+                *(unsigned int*)value = (unsigned int)val;
             else if ( argType == Param::UINT64 )
-                *(uint64*)value = val;
+                *(uint64*)value = (uint64)val;
             else if ( argType == Param::UCHAR)
-                *(uchar*)value = val;
+                *(uchar*)value = (uchar)val;
             else
                 CV_Error(CV_StsBadArg, "Wrong argument type");
         }
@@ -1015,20 +1015,19 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
             uint64 val = p->getter ? (algo->*f.get_uint64)() : *(uint64*)((uchar*)algo + p->offset);
 
             if( argType == Param::INT )
-                *(int*)value = val;
+                *(int*)value = (int)val;
             else if ( argType == Param::REAL )
-                *(double*)value = val;
+                *(double*)value = (double)val;
             else if ( argType == Param::FLOAT)
-                *(float*)value = val;
+                *(float*)value = (float)val;
             else if ( argType == Param::UNSIGNED_INT )
-                *(unsigned int*)value = val;
+                *(unsigned int*)value = (unsigned int)val;
             else if ( argType == Param::UINT64 )
-                *(uint64*)value = val;
+                *(uint64*)value = (uint64)val;
             else if ( argType == Param::UCHAR)
-                *(uchar*)value = val;
+                *(uchar*)value = (uchar)val;
             else
                 CV_Error(CV_StsBadArg, "Wrong argument type");
-
         }
         else if( p->type == Param::UCHAR )
         {
