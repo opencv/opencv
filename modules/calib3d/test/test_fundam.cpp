@@ -1288,8 +1288,6 @@ int CV_EssentialMatTest::prepare_test_case( int test_case_idx )
 
 void CV_EssentialMatTest::run_func()
 {
-    putchar('.');
-    fflush(stdout);
     Mat _input0(test_mat[INPUT][0]), _input1(test_mat[INPUT][1]);
     Mat K(test_mat[INPUT][4]); 
     double focal(K.at<double>(0, 0)); 

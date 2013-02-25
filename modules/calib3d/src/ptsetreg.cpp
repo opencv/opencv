@@ -227,7 +227,6 @@ public:
 
                 if( goodCount > MAX(maxGoodCount, modelPoints-1) )
                 {
-                    //printf("iter = %d. good count = %d\n", iter, goodCount);
                     std::swap(mask, bestMask);
                     model_i.copyTo(bestModel);
                     maxGoodCount = goodCount;
