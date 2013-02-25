@@ -9,6 +9,10 @@ ocv_include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 file(GLOB lib_srcs dec/*.c dsp/*.c enc/*.c mux/*.c utils/*.c webp/*.c)
 file(GLOB lib_hdrs dec/*.h dsp/*.h enc/*.h mux/*.h utils/*.h webp/*.h)
 
+if(NOT ANDROID)
+	ocv_list_filterout(lib_srcs cpu-features.c)
+endif()
+
 # ----------------------------------------------------------------------------------
 #         Define the library target:
 # ----------------------------------------------------------------------------------

@@ -12,7 +12,7 @@
 #include "./dsp.h"
 
 #if defined(__ANDROID__)
-#include "cpu-features.h"
+  //#include "cpu-features.h"
 #endif
 
 #if defined(__cplusplus) || defined(c_plusplus)
