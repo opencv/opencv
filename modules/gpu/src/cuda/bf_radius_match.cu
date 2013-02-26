@@ -42,11 +42,11 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/utility.hpp"
-#include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/vec_distance.hpp"
-#include "opencv2/gpu/device/datamov_utils.hpp"
+#include "opencv2/cudevice/common.hpp"
+#include "opencv2/cudevice/utility.hpp"
+#include "opencv2/cudevice/limits.hpp"
+#include "opencv2/cudevice/vec_distance.hpp"
+#include "opencv2/cudevice/datamov_utils.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

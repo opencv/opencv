@@ -42,10 +42,10 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/reduce.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/warp_shuffle.hpp"
+#include "opencv2/cudevice/common.hpp"
+#include "opencv2/cudevice/reduce.hpp"
+#include "opencv2/cudevice/functional.hpp"
+#include "opencv2/cudevice/warp_shuffle.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

@@ -46,7 +46,7 @@
 #ifdef __cplusplus
 
 #include "opencv2/core/core.hpp"
-#include "opencv2/core/cuda_devptrs.hpp"
+#include "opencv2/cudevice/devptrs.hpp"
 
 namespace cv { namespace gpu
 {

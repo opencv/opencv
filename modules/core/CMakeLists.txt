@@ -1,5 +1,5 @@
 set(the_description "The Core Functionality")
-ocv_add_module(core ${ZLIB_LIBRARIES})
+ocv_add_module(core ${ZLIB_LIBRARIES} OPTIONAL opencv_cudevice)
 ocv_module_include_directories(${ZLIB_INCLUDE_DIR})
 
 if(HAVE_CUDA)

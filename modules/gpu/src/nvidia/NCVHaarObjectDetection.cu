@@ -65,8 +65,8 @@
 #include "NPP_staging/NPP_staging.hpp"
 #include "NCVRuntimeTemplates.hpp"
 #include "NCVHaarObjectDetection.hpp"
-#include "opencv2/gpu/device/warp.hpp"
-#include "opencv2/gpu/device/warp_shuffle.hpp"
+#include "opencv2/cudevice/warp.hpp"
+#include "opencv2/cudevice/warp_shuffle.hpp"
 
 
 //==============================================================================

@@ -42,9 +42,9 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/border_interpolate.hpp"
-#include "opencv2/gpu/device/limits.hpp"
+#include "opencv2/cudevice/common.hpp"
+#include "opencv2/cudevice/border_interpolate.hpp"
+#include "opencv2/cudevice/limits.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;

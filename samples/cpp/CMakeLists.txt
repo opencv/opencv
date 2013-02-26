@@ -14,7 +14,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   project(cpp_samples)
 
   ocv_include_directories("${OpenCV_SOURCE_DIR}/include")#for opencv.hpp
-  ocv_include_modules(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
+  ocv_include_modules(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS} OPTIONAL opencv_cudevice)
 
   if (HAVE_opencv_gpu)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include")

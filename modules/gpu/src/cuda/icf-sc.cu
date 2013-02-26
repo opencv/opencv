@@ -40,8 +40,8 @@
 //
 //M*/
 
-#include <opencv2/gpu/device/common.hpp>
-#include <opencv2/gpu/device/saturate_cast.hpp>
+#include <opencv2/cudevice/common.hpp>
+#include <opencv2/cudevice/saturate_cast.hpp>
 
 #include <icf.hpp>
 #include <float.h>

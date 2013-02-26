@@ -45,9 +45,9 @@
 
 #include "internal_shared.hpp"
 
-#include "opencv2/gpu/device/vec_traits.hpp"
-#include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/border_interpolate.hpp"
+#include "opencv2/cudevice/vec_traits.hpp"
+#include "opencv2/cudevice/vec_math.hpp"
+#include "opencv2/cudevice/border_interpolate.hpp"
 
 using namespace cv::gpu;
 

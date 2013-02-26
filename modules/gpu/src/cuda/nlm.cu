@@ -43,12 +43,12 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/vec_traits.hpp"
-#include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/reduce.hpp"
-#include "opencv2/gpu/device/border_interpolate.hpp"
+#include "opencv2/cudevice/common.hpp"
+#include "opencv2/cudevice/vec_traits.hpp"
+#include "opencv2/cudevice/vec_math.hpp"
+#include "opencv2/cudevice/functional.hpp"
+#include "opencv2/cudevice/reduce.hpp"
+#include "opencv2/cudevice/border_interpolate.hpp"
 
 using namespace cv::gpu;
 
