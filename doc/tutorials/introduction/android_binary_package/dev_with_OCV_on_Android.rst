@@ -55,14 +55,14 @@ Manager to access OpenCV libraries externally installed in the target system.
    :guilabel:`File -> Import -> Existing project in your workspace`.
 
    Press :guilabel:`Browse`  button and locate OpenCV4Android SDK 
-   (:file:`OpenCV-2.4.3-android-sdk/sdk`).
+   (:file:`OpenCV-2.4.4-android-sdk/sdk`).
 
    .. image:: images/eclipse_opencv_dependency0.png
         :alt: Add dependency from OpenCV library
         :align: center
 
 #. In application project add a reference to the OpenCV Java SDK in 
-   :guilabel:`Project -> Properties -> Android -> Library -> Add` select ``OpenCV Library - 2.4.3``.
+   :guilabel:`Project -> Properties -> Android -> Library -> Add` select ``OpenCV Library - 2.4.4``.
 
    .. image:: images/eclipse_opencv_dependency1.png
         :alt: Add dependency from OpenCV library
@@ -128,27 +128,27 @@ described above.
 #. Add the OpenCV library project to your workspace the same way as for the async initialization 
    above. Use menu :guilabel:`File -> Import -> Existing project in your workspace`, 
    press :guilabel:`Browse` button and select OpenCV SDK path 
-   (:file:`OpenCV-2.4.3-android-sdk/sdk`).
+   (:file:`OpenCV-2.4.4-android-sdk/sdk`).
 
    .. image:: images/eclipse_opencv_dependency0.png
         :alt: Add dependency from OpenCV library
         :align: center
 
 #. In the application project add a reference to the OpenCV4Android SDK in 
-   :guilabel:`Project -> Properties -> Android -> Library -> Add` select ``OpenCV Library - 2.4.3``;
+   :guilabel:`Project -> Properties -> Android -> Library -> Add` select ``OpenCV Library - 2.4.4``;
 
    .. image:: images/eclipse_opencv_dependency1.png
        :alt: Add dependency from OpenCV library
        :align: center
 
 #. If your application project **doesn't have a JNI part**, just copy the corresponding OpenCV 
-   native libs from :file:`<OpenCV-2.4.3-android-sdk>/sdk/native/libs/<target_arch>` to your 
+   native libs from :file:`<OpenCV-2.4.4-android-sdk>/sdk/native/libs/<target_arch>` to your
    project directory to folder :file:`libs/<target_arch>`.
 
    In case of the application project **with a JNI part**, instead of manual libraries copying you 
    need to modify your ``Android.mk`` file:
    add the following two code lines after the ``"include $(CLEAR_VARS)"`` and before 
-   ``"include path_to_OpenCV-2.4.3-android-sdk/sdk/native/jni/OpenCV.mk"``
+   ``"include path_to_OpenCV-2.4.4-android-sdk/sdk/native/jni/OpenCV.mk"``
 
    .. code-block:: make
       :linenos:
@@ -221,7 +221,7 @@ taken:
 
    .. code-block:: make
 
-      include C:\Work\OpenCV4Android\OpenCV-2.4.3-android-sdk\sdk\native\jni\OpenCV.mk
+      include C:\Work\OpenCV4Android\OpenCV-2.4.4-android-sdk\sdk\native\jni\OpenCV.mk
 
    Should be inserted into the :file:`jni/Android.mk` file **after** this line:
 
@@ -382,7 +382,7 @@ result.
            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, this, mLoaderCallback);
        }
 
-#. Defines that your activity implements CvViewFrameListener interface and fix activity related
+#. Defines that your activity implements ``CvViewFrameListener2`` interface and fix activity related
    errors by defining missed methods. For this activity define ``onCreate``, ``onDestroy`` and
    ``onPause`` and implement them according code snippet bellow. Fix errors by adding requited
    imports.
@@ -423,8 +423,8 @@ result.
        public void onCameraViewStopped() {
        }
 
-       public Mat onCameraFrame(Mat inputFrame) {
-           return inputFrame;
+       public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+           return inputFrame.rgba();
        }
 
 #. Run your application on device or emulator.
@@ -432,7 +432,7 @@ result.
 Lets discuss some most important steps. Every Android application with UI must implement Activity
 and View. By the first steps we create blank activity and default view layout. The simplest
 OpenCV-centric application must implement OpenCV initialization, create its own view to show
-preview from camera and implements ``CvViewFrameListener`` interface to get frames from camera and
+preview from camera and implements ``CvViewFrameListener2`` interface to get frames from camera and
 process it.
 
 First of all we create our application view using xml layout. Our layout consists of the only
@@ -448,8 +448,13 @@ After creating layout we need to implement ``Activity`` class. OpenCV initializa
 been already discussed above. In this sample we use asynchronous initialization. Implementation of
 ``CvCameraViewListener`` interface allows you to add processing steps after frame grabbing from
 camera and before its rendering on screen. The most important function is ``onCameraFrame``. It is
-callback function and it is called on retrieving frame from camera. The callback input is frame
-from camera. RGBA format is used by default. You can change this behavior by ``SetCaptureFormat``
-method of ``View`` class. ``Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA`` and
-``Highgui.CV_CAP_ANDROID_GREY_FRAME`` are supported. It expects that function returns RGBA frame
-that will be drawn on the screen.
+callback function and it is called on retrieving frame from camera. The callback input is object
+of ``CvCameraViewFrame`` class that represents frame from camera.
+
+.. note::
+    Do not save or use ``CvCameraViewFrame`` object out of ``onCameraFrame`` callback. This object
+    does not have its own state and its behavior out of callback is unpredictable!
+
+It has ``rgba()`` and ``gray()`` methods that allows to get frame as RGBA and one channel gray scale
+``Mat`` respectively. It expects that ``onCameraFrame`` function returns RGBA frame that will be
+drawn on the screen.
