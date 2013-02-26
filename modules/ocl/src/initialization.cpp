@@ -65,6 +65,7 @@ namespace cv
 {
     namespace ocl
     {
+        extern void fft_teardown();
         /*
          * The binary caching system to eliminate redundant program source compilation.
          * Strictly, this is not a cache because we do not implement evictions right now.
@@ -877,6 +878,7 @@ namespace cv
         }
         void Info::release()
         {
+            fft_teardown();
             if(impl->oclplatform)
             {
                 impl->oclplatform = 0;
