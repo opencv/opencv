@@ -330,18 +330,18 @@ void CvSVMKernel::calc_intersec( int vcount, int var_count, const float** vecs,
         const float* sample = vecs[j];
         double s = 0;
         for( k = 0; k <= var_count - 4; k += 4 )
-            s += min(sample[k],another[k]) + min(sample[k+1],another[k+1]) +
-                 min(sample[k+2],another[k+2]) + min(sample[k+3],another[k+3]);
+            s += std::min(sample[k],another[k]) + std::min(sample[k+1],another[k+1]) +
+                 std::min(sample[k+2],another[k+2]) + std::min(sample[k+3],another[k+3]);
         for( ; k < var_count; k++ )
-            s += min(sample[k],another[k]);
+            s += std::min(sample[k],another[k]);
         results[j] = (Qfloat)(s);
-    }    
+    }
 }
 
 /// Exponential chi2 kernel
 void CvSVMKernel::calc_chi2( int vcount, int var_count, const float** vecs,
                             const float* another, Qfloat* results )
-{	  
+{
     CvMat R = cvMat( 1, vcount, QFLOAT_TYPE, results );
     double gamma = -params->gamma;
     int j, k;
@@ -349,22 +349,22 @@ void CvSVMKernel::calc_chi2( int vcount, int var_count, const float** vecs,
     {
         const float* sample = vecs[j];
         double chi2 = 0;
-        for(k = 0 ; k < var_count; k++ ) 
-	{
+        for(k = 0 ; k < var_count; k++ )
+    {
             double d = sample[k]-another[k];
-	    double devisor = sample[k]+another[k];
-	    /// if devisor == 0, the Chi2 distance would be zero, but calculation would rise an error because of deviding by zero
-	    if (devisor != 0) 
-	    {	      
-	      chi2 += d*d/devisor;
-	    } 
-	}
+        double devisor = sample[k]+another[k];
+        /// if devisor == 0, the Chi2 distance would be zero, but calculation would rise an error because of deviding by zero
+        if (devisor != 0)
+        {
+          chi2 += d*d/devisor;
+        }
+    }
         results[j] = (Qfloat) (gamma*chi2);
-    } 
+    }
     if( vcount > 0 )
-      cvExp( &R, &R );   
-    
-    
+      cvExp( &R, &R );
+
+
 }
 
 void CvSVMKernel::calc( int vcount, int var_count, const float** vecs,
@@ -1262,7 +1262,7 @@ bool CvSVM::set_params( const CvSVMParams& _params )
     svm_type = params.svm_type;
 
     if( kernel_type != LINEAR && kernel_type != POLY &&
-        kernel_type != SIGMOID && kernel_type != RBF && 
+        kernel_type != SIGMOID && kernel_type != RBF &&
         kernel_type != INTER && kernel_type != CHI2)
         CV_ERROR( CV_StsBadArg, "Unknown/unsupported kernel type" );
 
