@@ -42,6 +42,10 @@
 
 #include "precomp.hpp"
 
+#if defined _M_IX86 && defined _MSC_VER && _MSC_VER < 1700
+#pragma float_control(precise, on)
+#endif
+
 namespace cv
 {
 
@@ -1096,29 +1100,27 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
             {
                 double d = det3(Sf);
 
-                if( fabs(d) < 1e-4 || fabs(d) > 1e4 )
-                    result = invert(src, dst, DECOMP_SVD) > 0;
-                else
+                if( d != 0. )
                 {
-                    float t[12];
-                    float df = (float)(1./d);
+                    double t[12];
+
                     result = true;
+                    d = 1./d;
+                    t[0] = (((double)Sf(1,1) * Sf(2,2) - (double)Sf(1,2) * Sf(2,1)) * d);
+                    t[1] = (((double)Sf(0,2) * Sf(2,1) - (double)Sf(0,1) * Sf(2,2)) * d);
+                    t[2] = (((double)Sf(0,1) * Sf(1,2) - (double)Sf(0,2) * Sf(1,1)) * d);
 
-                    t[0] = (Sf(1,1) * Sf(2,2) - Sf(1,2) * Sf(2,1)) * df;
-                    t[1] = (Sf(0,2) * Sf(2,1) - Sf(0,1) * Sf(2,2)) * df;
-                    t[2] = (Sf(0,1) * Sf(1,2) - Sf(0,2) * Sf(1,1)) * df;
+                    t[3] = (((double)Sf(1,2) * Sf(2,0) - (double)Sf(1,0) * Sf(2,2)) * d);
+                    t[4] = (((double)Sf(0,0) * Sf(2,2) - (double)Sf(0,2) * Sf(2,0)) * d);
+                    t[5] = (((double)Sf(0,2) * Sf(1,0) - (double)Sf(0,0) * Sf(1,2)) * d);
 
-                    t[3] = (Sf(1,2) * Sf(2,0) - Sf(1,0) * Sf(2,2)) * df;
-                    t[4] = (Sf(0,0) * Sf(2,2) - Sf(0,2) * Sf(2,0)) * df;
-                    t[5] = (Sf(0,2) * Sf(1,0) - Sf(0,0) * Sf(1,2)) * df;
+                    t[6] = (((double)Sf(1,0) * Sf(2,1) - (double)Sf(1,1) * Sf(2,0)) * d);
+                    t[7] = (((double)Sf(0,1) * Sf(2,0) - (double)Sf(0,0) * Sf(2,1)) * d);
+                    t[8] = (((double)Sf(0,0) * Sf(1,1) - (double)Sf(0,1) * Sf(1,0)) * d);
 
-                    t[6] = (Sf(1,0) * Sf(2,1) - Sf(1,1) * Sf(2,0)) * df;
-                    t[7] = (Sf(0,1) * Sf(2,0) - Sf(0,0) * Sf(2,1)) * df;
-                    t[8] = (Sf(0,0) * Sf(1,1) - Sf(0,1) * Sf(1,0)) * df;
-
-                    Df(0,0) = t[0]; Df(0,1) = t[1]; Df(0,2) = t[2];
-                    Df(1,0) = t[3]; Df(1,1) = t[4]; Df(1,2) = t[5];
-                    Df(2,0) = t[6]; Df(2,1) = t[7]; Df(2,2) = t[8];
+                    Df(0,0) = (float)t[0]; Df(0,1) = (float)t[1]; Df(0,2) = (float)t[2];
+                    Df(1,0) = (float)t[3]; Df(1,1) = (float)t[4]; Df(1,2) = (float)t[5];
+                    Df(2,0) = (float)t[6]; Df(2,1) = (float)t[7]; Df(2,2) = (float)t[8];
                 }
             }
             else
