@@ -2,7 +2,6 @@ package org.opencv.android;
 
 import java.util.List;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
@@ -11,7 +10,6 @@ import android.hardware.Camera.PreviewCallback;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.SurfaceHolder;
 
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -64,7 +62,6 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
         Log.d(TAG, "Java camera view ctor");
     }
 
-    @TargetApi(11)
     protected boolean initializeCamera(int width, int height) {
         Log.d(TAG, "Initialize java camera");
         boolean result = true;
@@ -154,7 +151,6 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                         mSurfaceTexture = new SurfaceTexture(MAGIC_TEXTURE_ID);
-                        getHolder().setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
                         mCamera.setPreviewTexture(mSurfaceTexture);
                     } else
                        mCamera.setPreviewDisplay(null);
@@ -234,7 +230,6 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
         releaseCamera();
     }
 
-    @TargetApi(Build.VERSION_CODES.FROYO)
     public void onPreviewFrame(byte[] frame, Camera arg1) {
         Log.i(TAG, "Preview Frame received. Need to create MAT and deliver it to clients");
         Log.i(TAG, "Frame size  is " + frame.length);
