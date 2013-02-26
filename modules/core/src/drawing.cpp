@@ -57,11 +57,11 @@ struct PolyEdge
 
 static void
 CollectPolyEdges( Mat& img, const Point* v, int npts,
-                  vector<PolyEdge>& edges, const void* color, int line_type,
+                  std::vector<PolyEdge>& edges, const void* color, int line_type,
                   int shift, Point offset=Point() );
 
 static void
-FillEdgeCollection( Mat& img, vector<PolyEdge>& edges, const void* color );
+FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color );
 
 static void
 PolyLine( Mat& img, const Point* v, int npts, bool closed,
@@ -835,7 +835,7 @@ sincos( int angle, float& cosval, float& sinval )
 */
 void ellipse2Poly( Point center, Size axes, int angle,
                    int arc_start, int arc_end,
-                   int delta, vector<Point>& pts )
+                   int delta, std::vector<Point>& pts )
 {
     float alpha, beta;
     double size_a = axes.width, size_b = axes.height;
@@ -904,7 +904,7 @@ EllipseEx( Mat& img, Point center, Size axes,
     int delta = (std::max(axes.width,axes.height)+(XY_ONE>>1))>>XY_SHIFT;
     delta = delta < 3 ? 90 : delta < 10 ? 30 : delta < 15 ? 18 : 5;
 
-    vector<Point> v;
+    std::vector<Point> v;
     ellipse2Poly( center, axes, angle, arc_start, arc_end, delta, v );
 
     if( thickness >= 0 )
@@ -914,7 +914,7 @@ EllipseEx( Mat& img, Point center, Size axes,
     else
     {
         v.push_back(center);
-        vector<PolyEdge> edges;
+        std::vector<PolyEdge> edges;
         CollectPolyEdges( img,  &v[0], (int)v.size(), edges, color, line_type, XY_SHIFT );
         FillEdgeCollection( img, edges, color );
     }
@@ -1104,7 +1104,7 @@ FillConvexPoly( Mat& img, const Point* v, int npts, const void* color, int line_
 /******** Arbitrary polygon **********/
 
 static void
-CollectPolyEdges( Mat& img, const Point* v, int count, vector<PolyEdge>& edges,
+CollectPolyEdges( Mat& img, const Point* v, int count, std::vector<PolyEdge>& edges,
                   const void* color, int line_type, int shift, Point offset )
 {
     int i, delta = offset.y + (shift ? 1 << (shift - 1) : 0);
@@ -1170,7 +1170,7 @@ struct CmpEdges
 /**************** helper macros and functions for sequence/contour processing ***********/
 
 static void
-FillEdgeCollection( Mat& img, vector<PolyEdge>& edges, const void* color )
+FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
 {
     PolyEdge tmp;
     int i, y, total = (int)edges.size();
@@ -1716,7 +1716,7 @@ void fillPoly( Mat& img, const Point** pts, const int* npts, int ncontours,
     double buf[4];
     scalarToRawData(color, buf, img.type(), 0);
 
-    vector<PolyEdge> edges;
+    std::vector<PolyEdge> edges;
 
     int i, total = 0;
     for( i = 0; i < ncontours; i++ )
@@ -1914,7 +1914,7 @@ static const int* getFontData(int fontFace)
 }
 
 
-void putText( Mat& img, const string& text, Point org,
+void putText( Mat& img, const std::string& text, Point org,
               int fontFace, double fontScale, Scalar color,
               int thickness, int line_type, bool bottomLeftOrigin )
 
@@ -1935,7 +1935,7 @@ void putText( Mat& img, const string& text, Point org,
 
     int view_x = org.x << XY_SHIFT;
     int view_y = (org.y << XY_SHIFT) + base_line*vscale;
-    vector<Point> pts;
+    std::vector<Point> pts;
     pts.reserve(1 << 10);
     const char **faces = cv::g_HersheyGlyphs;
 
@@ -1976,7 +1976,7 @@ void putText( Mat& img, const string& text, Point org,
     }
 }
 
-Size getTextSize( const string& text, int fontFace, double fontScale, int thickness, int* _base_line)
+Size getTextSize( const std::string& text, int fontFace, double fontScale, int thickness, int* _base_line)
 {
     Size size;
     double view_x = 0;
@@ -2076,8 +2076,8 @@ using namespace cv;
 static void addChildContour(InputArrayOfArrays contours,
                             size_t ncontours,
                             const Vec4i* hierarchy,
-                            int i, vector<CvSeq>& seq,
-                            vector<CvSeqBlock>& block)
+                            int i, std::vector<CvSeq>& seq,
+                            std::vector<CvSeqBlock>& block)
 {
     for( ; i >= 0; i = hierarchy[i][0] )
     {
@@ -2109,8 +2109,8 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
 
     size_t ncontours = _contours.total();
     size_t i = 0, first = 0, last = ncontours;
-    vector<CvSeq> seq;
-    vector<CvSeqBlock> block;
+    std::vector<CvSeq> seq;
+    std::vector<CvSeqBlock> block;
 
     if( !last )
         return;
@@ -2194,8 +2194,8 @@ cvDrawContours( void* _img, CvSeq* contour,
 {
     CvSeq *contour0 = contour, *h_next = 0;
     CvTreeNodeIterator iterator;
-    cv::vector<cv::PolyEdge> edges;
-    cv::vector<cv::Point> pts;
+    std::vector<cv::PolyEdge> edges;
+    std::vector<cv::Point> pts;
     cv::Scalar externalColor = _externalColor, holeColor = _holeColor;
     cv::Mat img = cv::cvarrToMat(_img);
     cv::Point offset = _offset;
@@ -2318,7 +2318,7 @@ CV_IMPL int
 cvEllipse2Poly( CvPoint center, CvSize axes, int angle,
                 int arc_start, int arc_end, CvPoint* _pts, int delta )
 {
-    cv::vector<cv::Point> pts;
+    std::vector<cv::Point> pts;
     cv::ellipse2Poly( center, axes, angle, arc_start, arc_end, delta, pts );
     memcpy( _pts, &pts[0], pts.size()*sizeof(_pts[0]) );
     return (int)pts.size();

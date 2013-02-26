@@ -559,7 +559,7 @@ void BackgroundSubtractorMOG2::operator()(InputArray _image, OutputArray _fgmask
     Mat fgmask = _fgmask.getMat();
 
     ++nframes;
-    learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./min( 2*nframes, history );
+    learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
 
     parallel_for(BlockedRange(0, image.rows),
@@ -609,7 +609,7 @@ void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) c
     {
     case 1:
     {
-        vector<Mat> channels;
+        std::vector<Mat> channels;
         split(meanBackground, channels);
         channels[0].copyTo(backgroundImage);
         break;

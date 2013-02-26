@@ -44,7 +44,7 @@
 
 using namespace cv;
 
-Ptr<Feature2D> Feature2D::create( const string& feature2DType )
+Ptr<Feature2D> Feature2D::create( const std::string& feature2DType )
 {
     return Algorithm::create<Feature2D>("Feature2D." + feature2DType);
 }

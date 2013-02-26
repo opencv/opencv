@@ -98,8 +98,8 @@ Rect CvFeatureTracker::updateTrackingWindow(Mat image)
 Rect CvFeatureTracker::updateTrackingWindowWithSIFT(Mat image)
 {
     ittr++;
-    vector<KeyPoint> prev_keypoints, curr_keypoints;
-    vector<Point2f> prev_keys, curr_keys;
+    std::vector<KeyPoint> prev_keypoints, curr_keypoints;
+    std::vector<Point2f> prev_keys, curr_keys;
     Mat prev_desc, curr_desc;
 
     Rect window = prev_trackwindow;
@@ -149,8 +149,8 @@ Rect CvFeatureTracker::updateTrackingWindowWithFlow(Mat image)
     Size subPixWinSize(10,10), winSize(31,31);
     Mat image_bw;
     TermCriteria termcrit(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.03);
-    vector<uchar> status;
-    vector<float> err;
+    std::vector<uchar> status;
+    std::vector<float> err;
 
     cvtColor(image, image_bw, CV_BGR2GRAY);
     cvtColor(prev_image, prev_image_bw, CV_BGR2GRAY);

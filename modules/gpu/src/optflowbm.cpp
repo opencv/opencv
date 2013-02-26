@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
@@ -72,7 +71,7 @@ void cv::gpu::calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr, Size blo
     vely.create(velSize, CV_32FC1);
 
     // scanning scheme coordinates
-    vector<short2> ss((2 * maxRange.width + 1) * (2 * maxRange.height + 1));
+    std::vector<short2> ss((2 * maxRange.width + 1) * (2 * maxRange.height + 1));
     int ssCount = 0;
 
     // Calculate scanning scheme

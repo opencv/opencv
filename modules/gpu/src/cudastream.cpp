@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
@@ -256,7 +255,8 @@ void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int dtype, 
             CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
     }
 
-    bool noScale = fabs(alpha - 1) < numeric_limits<double>::epsilon() && fabs(beta) < numeric_limits<double>::epsilon();
+    bool noScale = fabs(alpha - 1) < std::numeric_limits<double>::epsilon()
+                && fabs(beta) < std::numeric_limits<double>::epsilon();
 
     if (sdepth == ddepth && noScale)
     {

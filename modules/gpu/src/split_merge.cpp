@@ -44,14 +44,13 @@
 
 using namespace cv;
 using namespace cv::gpu;
-using namespace std;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 void cv::gpu::merge(const GpuMat* /*src*/, size_t /*count*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
-void cv::gpu::merge(const vector<GpuMat>& /*src*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
+void cv::gpu::merge(const std::vector<GpuMat>& /*src*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
 void cv::gpu::split(const GpuMat& /*src*/, GpuMat* /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
-void cv::gpu::split(const GpuMat& /*src*/, vector<GpuMat>& /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
+void cv::gpu::split(const GpuMat& /*src*/, std::vector<GpuMat>& /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -152,7 +151,7 @@ void cv::gpu::merge(const GpuMat* src, size_t n, GpuMat& dst, Stream& stream)
 }
 
 
-void cv::gpu::merge(const vector<GpuMat>& src, GpuMat& dst, Stream& stream)
+void cv::gpu::merge(const std::vector<GpuMat>& src, GpuMat& dst, Stream& stream)
 {
     ::merge(&src[0], src.size(), dst, StreamAccessor::getStream(stream));
 }
@@ -162,7 +161,7 @@ void cv::gpu::split(const GpuMat& src, GpuMat* dst, Stream& stream)
     ::split(src, dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::split(const GpuMat& src, vector<GpuMat>& dst, Stream& stream)
+void cv::gpu::split(const GpuMat& src, std::vector<GpuMat>& dst, Stream& stream)
 {
     dst.resize(src.channels());
     if(src.channels() > 0)

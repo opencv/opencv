@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace cv::ocl;
 
@@ -90,13 +89,13 @@ namespace
         const size_t glbSizeY = src.rows % blkSizeY == 0 ? src.rows : MUL_UP(src.rows, blkSizeY);
         size_t globalThreads[3] = { glbSizeX, glbSizeY, 1 };
 
-        vector<pair<size_t , const void *> > args;
-        args.push_back( make_pair( sizeof(cl_mem)  , (void *)&src.data ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&src.cols ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&src.rows ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&src.step ));
-        args.push_back( make_pair( sizeof(cl_mem)  , (void *)&list.data ));
-        args.push_back( make_pair( sizeof(cl_mem)  , (void *)&counter ));
+        std::vector<std::pair<size_t , const void *> > args;
+        args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&src.data ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&src.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&src.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&src.step ));
+        args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&list.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&counter ));
 
         openCLExecuteKernel(src.clCxt, &imgproc_hough, "buildPointList", globalThreads, localThreads, args, -1, -1);
         openCLSafeCall(clEnqueueReadBuffer(src.clCxt->impl->clCmdQueue, counter, CL_TRUE, 0, sizeof(int), &totalCount, 0, NULL, NULL));
@@ -122,20 +121,20 @@ namespace
         const int width  = accum.cols - 2;
         const int height = accum.rows - 2;
 
-        vector<pair<size_t , const void *> > args;
-        args.push_back( make_pair( sizeof(cl_mem)  , (void *)&list.data ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&count ));
-        args.push_back( make_pair( sizeof(cl_mem)  , (void *)&dx.data ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&dx.step ));
-        args.push_back( make_pair( sizeof(cl_mem)  , (void *)&dy.data ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&dy.step ));
-        args.push_back( make_pair( sizeof(cl_mem)  , (void *)&accum.data ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&accum.step ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&width ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&height ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&minRadius));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&maxRadius));
-        args.push_back( make_pair( sizeof(cl_float), (void *)&idp));
+        std::vector<std::pair<size_t , const void *> > args;
+        args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&list.data ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&count ));
+        args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&dx.data ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&dx.step ));
+        args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&dy.data ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&dy.step ));
+        args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&accum.data ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&accum.step ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&width ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&height ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&minRadius));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&maxRadius));
+        args.push_back( std::make_pair( sizeof(cl_float), (void *)&idp));
 
         openCLExecuteKernel(accum.clCxt, &imgproc_hough, "circlesAccumCenters", globalThreads, localThreads, args, -1, -1);
     }
@@ -159,14 +158,14 @@ namespace
         const size_t glbSizeY = (accum.rows - 2) % blkSizeY == 0 ? accum.rows - 2 : MUL_UP(accum.rows - 2, blkSizeY);
         size_t globalThreads[3] = { glbSizeX, glbSizeY, 1 };
 
-        vector<pair<size_t , const void *> > args;
-        args.push_back( make_pair( sizeof(cl_mem)  , (void *)&accum.data ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&accum.cols ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&accum.rows ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&accum.step ));
-        args.push_back( make_pair( sizeof(cl_mem)  , (void *)&centers.data ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&threshold ));
-        args.push_back( make_pair( sizeof(cl_mem)  , (void *)&counter ));
+        std::vector<std::pair<size_t , const void *> > args;
+        args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&accum.data ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&accum.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&accum.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&accum.step ));
+        args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&centers.data ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&threshold ));
+        args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&counter ));
 
         openCLExecuteKernel(accum.clCxt, &imgproc_hough, "buildCentersList", globalThreads, localThreads, args, -1, -1);
 
@@ -199,19 +198,19 @@ namespace
         const int histSize = maxRadius - minRadius + 1;
         size_t smemSize = (histSize + 2) * sizeof(int);
 
-        vector<pair<size_t , const void *> > args;
-        args.push_back( make_pair( sizeof(cl_mem)  , (void *)&centers.data ));
-        args.push_back( make_pair( sizeof(cl_mem)  , (void *)&list.data ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&count ));
-        args.push_back( make_pair( sizeof(cl_mem)  , (void *)&circles.data ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&maxCircles ));
-        args.push_back( make_pair( sizeof(cl_float), (void *)&dp ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&minRadius ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&maxRadius ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&histSize ));
-        args.push_back( make_pair( sizeof(cl_int)  , (void *)&threshold ));
-        args.push_back( make_pair( smemSize        , (void *)NULL ));
-        args.push_back( make_pair( sizeof(cl_mem)  , (void *)&counter ));
+        std::vector<std::pair<size_t , const void *> > args;
+        args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&centers.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&list.data ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&count ));
+        args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&circles.data ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&maxCircles ));
+        args.push_back( std::make_pair( sizeof(cl_float), (void *)&dp ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&minRadius ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&maxRadius ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&histSize ));
+        args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&threshold ));
+        args.push_back( std::make_pair( smemSize        , (void *)NULL ));
+        args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&counter ));
 
         CV_Assert(circles.offset == 0);
 
@@ -221,7 +220,7 @@ namespace
 
         openCLSafeCall(clReleaseMemObject(counter));
 
-        totalCount = ::min(totalCount, maxCircles);
+        totalCount = std::min(totalCount, maxCircles);
 
         return totalCount;
     }
@@ -329,7 +328,7 @@ void cv::ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& 
             {
                 for (int xx = x1; xx <= x2; ++xx)
                 {
-                    vector<unsigned int>& m = grid[yy * gridWidth + xx];
+                    std::vector<unsigned int>& m = grid[yy * gridWidth + xx];
 
                     for(size_t j = 0; j < m.size(); ++j)
                     {

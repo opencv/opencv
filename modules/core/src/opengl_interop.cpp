@@ -53,10 +53,6 @@
     #endif
 #endif
 
-using namespace std;
-using namespace cv;
-using namespace cv::gpu;
-
 namespace
 {
     #ifndef HAVE_OPENGL
@@ -363,7 +359,7 @@ private:
 #endif
 };
 
-const Ptr<cv::GlBuffer::Impl>& cv::GlBuffer::Impl::empty()
+const cv::Ptr<cv::GlBuffer::Impl>& cv::GlBuffer::Impl::empty()
 {
     static Ptr<Impl> p(new Impl);
     return p;
@@ -720,7 +716,7 @@ void cv::GlBuffer::copyTo(OutputArray arr, Target target, bool autoRelease) cons
 #endif
 }
 
-GlBuffer cv::GlBuffer::clone(Target target, bool autoRelease) const
+cv::GlBuffer cv::GlBuffer::clone(Target target, bool autoRelease) const
 {
 #ifndef HAVE_OPENGL
     (void) target;
@@ -755,14 +751,14 @@ void cv::GlBuffer::unbind(Target target)
 #endif
 }
 
-Mat cv::GlBuffer::mapHost(Access access)
+cv::Mat cv::GlBuffer::mapHost(Access access)
 {
 #ifndef HAVE_OPENGL
     (void) access;
     throw_nogl();
-    return Mat();
+    return cv::Mat();
 #else
-    return Mat(rows_, cols_, type_, impl_->mapHost(access));
+    return cv::Mat(rows_, cols_, type_, impl_->mapHost(access));
 #endif
 }
 
@@ -775,17 +771,17 @@ void cv::GlBuffer::unmapHost()
 #endif
 }
 
-GpuMat cv::GlBuffer::mapDevice()
+cv::gpu::GpuMat cv::GlBuffer::mapDevice()
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
-    return GpuMat();
+    return cv::gpu::GpuMat();
 #else
     #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
         throw_nocuda();
-        return GpuMat();
+        return cv::gpu::GpuMat();
     #else
-        return GpuMat(rows_, cols_, type_, impl_->mapDevice());
+        return cv::gpu::GpuMat(rows_, cols_, type_, impl_->mapDevice());
     #endif
 #endif
 }
@@ -854,7 +850,7 @@ private:
     bool autoRelease_;
 };
 
-const Ptr<cv::GlTexture2D::Impl> cv::GlTexture2D::Impl::empty()
+const cv::Ptr<cv::GlTexture2D::Impl> cv::GlTexture2D::Impl::empty()
 {
     static Ptr<Impl> p(new Impl);
     return p;

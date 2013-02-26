@@ -86,8 +86,6 @@
 
 #include "safe_call.hpp"
 
-using namespace std;
-
 namespace cv
 {
     namespace ocl
@@ -105,19 +103,19 @@ namespace cv
         cl_mem openCLCreateBuffer(Context *clCxt, size_t flag, size_t size);
         void openCLReadBuffer(Context *clCxt, cl_mem dst_buffer, void *host_buffer, size_t size);
         cl_kernel openCLGetKernelFromSource(const Context *clCxt,
-                                            const char **source, string kernelName);
+                                            const char **source, std::string kernelName);
         cl_kernel openCLGetKernelFromSource(const Context *clCxt,
-                                            const char **source, string kernelName, const char *build_options);
+                                            const char **source, std::string kernelName, const char *build_options);
         void openCLVerifyKernel(const Context *clCxt, cl_kernel kernel, size_t *localThreads);
-        void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, vector< std::pair<size_t, const void *> > &args,
+        void openCLExecuteKernel(Context *clCxt , const char **source, std::string kernelName, std::vector< std::pair<size_t, const void *> > &args,
                                  int globalcols , int globalrows, size_t blockSize = 16, int kernel_expand_depth = -1, int kernel_expand_channel = -1);
-        void openCLExecuteKernel_(Context *clCxt , const char **source, string kernelName,
+        void openCLExecuteKernel_(Context *clCxt , const char **source, std::string kernelName,
                                   size_t globalThreads[3], size_t localThreads[3],
-                                  vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options);
-        void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
-                                 size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels, int depth);
-        void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
-                                 size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
+                                  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options);
+        void openCLExecuteKernel(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
+                                 size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth);
+        void openCLExecuteKernel(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
+                                 size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
                                  int depth, const char *build_options);
 
         cl_mem load_constant(cl_context context, cl_command_queue command_queue, const void *value,
@@ -134,7 +132,7 @@ namespace cv
             cl_context clContext;
             cl_command_queue clCmdQueue;
             cl_device_id devices;
-            string devName;
+            std::string devName;
             cl_uint maxDimensions;
             size_t maxWorkGroupSize;
             size_t maxWorkItemSizes[4];
@@ -142,7 +140,7 @@ namespace cv
             int double_support;
             //extra options to recognize vendor specific fp64 extensions
             char extra_options[512];
-            string Binpath;
+            std::string Binpath;
         };
     }
 }

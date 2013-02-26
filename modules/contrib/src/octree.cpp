@@ -101,7 +101,7 @@ namespace
         return true;
     }
 
-    void fillMinMax(const vector<Point3f>& points, Octree::Node& node)
+    void fillMinMax(const std::vector<Point3f>& points, Octree::Node& node)
     {
         node.x_max = node.y_max = node.z_max = std::numeric_limits<float>::min();
         node.x_min = node.y_min = node.z_min = std::numeric_limits<float>::max();
@@ -171,7 +171,7 @@ namespace cv
     {
     }
 
-    Octree::Octree(const vector<Point3f>& points3d, int maxLevels, int _minPoints)
+    Octree::Octree(const std::vector<Point3f>& points3d, int maxLevels, int _minPoints)
     {
         buildTree(points3d, maxLevels, _minPoints);
     }
@@ -180,7 +180,7 @@ namespace cv
     {
     }
 
-    void Octree::getPointsWithinSphere(const Point3f& center, float radius, vector<Point3f>& out) const
+    void Octree::getPointsWithinSphere(const Point3f& center, float radius, std::vector<Point3f>& out) const
     {
         out.clear();
 
@@ -256,7 +256,7 @@ namespace cv
         }
     }
 
-    void Octree::buildTree(const vector<Point3f>& points3d, int maxLevels, int _minPoints)
+    void Octree::buildTree(const std::vector<Point3f>& points3d, int maxLevels, int _minPoints)
     {
         assert((size_t)maxLevels * 8 < MAX_STACK_SIZE);
         points.resize(points3d.size());
@@ -286,9 +286,9 @@ namespace cv
     {
         size_t size = nodes[nodeInd].end - nodes[nodeInd].begin;
 
-        vector<size_t> boxBorders(MAX_LEAFS+1, 0);
-        vector<size_t> boxIndices(size);
-        vector<Point3f> tempPoints(size);
+        std::vector<size_t> boxBorders(MAX_LEAFS+1, 0);
+        std::vector<size_t> boxIndices(size);
+        std::vector<Point3f> tempPoints(size);
 
         for (int i = nodes[nodeInd].begin, j = 0; i < nodes[nodeInd].end; ++i, ++j)
         {
@@ -304,7 +304,7 @@ namespace cv
         for (size_t i = 1; i < boxBorders.size(); ++i)
             boxBorders[i] += boxBorders[i-1];
 
-        vector<size_t> writeInds(boxBorders.begin(), boxBorders.end());
+        std::vector<size_t> writeInds(boxBorders.begin(), boxBorders.end());
 
         for (size_t i = 0; i < size; ++i)
         {

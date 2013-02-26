@@ -56,7 +56,6 @@ namespace cv
 {
     namespace ocl
     {
-        using std::auto_ptr;
         enum
         {
             CVCL_DEVICE_TYPE_DEFAULT     = (1 << 0),
@@ -78,7 +77,7 @@ namespace cv
             ~Info();
             void release();
             Info &operator = (const Info &m);
-            std::vector<string> DeviceName;
+            std::vector<std::string> DeviceName;
         };
         //////////////////////////////// Initialization & Info ////////////////////////
         //this function may be obsoleted
@@ -113,8 +112,8 @@ namespace cv
         {
         protected:
             Context();
-            friend class auto_ptr<Context>;
-            static auto_ptr<Context> clCxt;
+            friend class std::auto_ptr<Context>;
+            static std::auto_ptr<Context> clCxt;
 
         public:
             ~Context();
@@ -127,7 +126,7 @@ namespace cv
 
         //! Calls a kernel, by string. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
         CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
-                                                        const char **source, string kernelName,
+                                                        const char **source, std::string kernelName,
                                                         size_t globalThreads[3], size_t localThreads[3],
                                                         std::vector< std::pair<size_t, const void *> > &args,
                                                         int channels, int depth, const char *build_options,
@@ -136,7 +135,7 @@ namespace cv
 
         //! Calls a kernel, by file. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
         CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
-                                                        const char **fileName, const int numFiles, string kernelName,
+                                                        const char **fileName, const int numFiles, std::string kernelName,
                                                         size_t globalThreads[3], size_t localThreads[3],
                                                         std::vector< std::pair<size_t, const void *> > &args,
                                                         int channels, int depth, const char *build_options,
@@ -326,12 +325,12 @@ namespace cv
         //! Compose a multi-channel array from several single-channel arrays
         // Support all types
         CV_EXPORTS void merge(const oclMat *src, size_t n, oclMat &dst);
-        CV_EXPORTS void merge(const vector<oclMat> &src, oclMat &dst);
+        CV_EXPORTS void merge(const std::vector<oclMat> &src, oclMat &dst);
 
         //! Divides multi-channel array into several single-channel arrays
         // Support all types
         CV_EXPORTS void split(const oclMat &src, oclMat *dst);
-        CV_EXPORTS void split(const oclMat &src, vector<oclMat> &dst);
+        CV_EXPORTS void split(const oclMat &src, std::vector<oclMat> &dst);
 
         ////////////////////////////// Arithmetics ///////////////////////////////////
         //#if defined DOUBLE_SUPPORT
@@ -933,19 +932,19 @@ namespace cv
 
 
 
-            void setSVMDetector(const vector<float> &detector);
+            void setSVMDetector(const std::vector<float> &detector);
 
 
 
-            static vector<float> getDefaultPeopleDetector();
+            static std::vector<float> getDefaultPeopleDetector();
 
-            static vector<float> getPeopleDetector48x96();
+            static std::vector<float> getPeopleDetector48x96();
 
-            static vector<float> getPeopleDetector64x128();
+            static std::vector<float> getPeopleDetector64x128();
 
 
 
-            void detect(const oclMat &img, vector<Point> &found_locations,
+            void detect(const oclMat &img, std::vector<Point> &found_locations,
 
                         double hit_threshold = 0, Size win_stride = Size(),
 
@@ -953,7 +952,7 @@ namespace cv
 
 
 
-            void detectMultiScale(const oclMat &img, vector<Rect> &found_locations,
+            void detectMultiScale(const oclMat &img, std::vector<Rect> &found_locations,
 
                                   double hit_threshold = 0, Size win_stride = Size(),
 
@@ -1112,17 +1111,17 @@ namespace cv
 
             //! upload host keypoints to device memory
 
-            void uploadKeypoints(const vector<cv::KeyPoint> &keypoints, oclMat &keypointsocl);
+            void uploadKeypoints(const std::vector<cv::KeyPoint> &keypoints, oclMat &keypointsocl);
 
             //! download keypoints from device to host memory
 
-            void downloadKeypoints(const oclMat &keypointsocl, vector<KeyPoint> &keypoints);
+            void downloadKeypoints(const oclMat &keypointsocl, std::vector<KeyPoint> &keypoints);
 
 
 
             //! download descriptors from device to host memory
 
-            void downloadDescriptors(const oclMat &descriptorsocl, vector<float> &descriptors);
+            void downloadDescriptors(const oclMat &descriptorsocl, std::vector<float> &descriptors);
 
 
 
@@ -1264,7 +1263,7 @@ namespace cv
 
             ResultType operator()( const T *a, const T *b, int size ) const
             {
-                return (ResultType)sqrt((double)normL2Sqr<ValueType, ResultType>(a, b, size));
+                return (ResultType)std::sqrt((double)normL2Sqr<ValueType, ResultType>(a, b, size));
             }
         };
 
@@ -1725,7 +1724,7 @@ namespace cv
 
 
 
-            void buildImagePyramid(const oclMat &img0, vector<oclMat> &pyr, bool withBorder);
+            void buildImagePyramid(const oclMat &img0, std::vector<oclMat> &pyr, bool withBorder);
 
 
 
@@ -1735,9 +1734,9 @@ namespace cv
 
 
 
-            vector<oclMat> prevPyr_;
+            std::vector<oclMat> prevPyr_;
 
-            vector<oclMat> nextPyr_;
+            std::vector<oclMat> nextPyr_;
 
 
 

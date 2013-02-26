@@ -44,7 +44,6 @@
 
 using namespace cv;
 using namespace cv::gpu;
-using namespace std;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
@@ -107,7 +106,7 @@ namespace
                                    GpuMat& table_color, GpuMat& table_space,
                                    const GpuMat& disp, const GpuMat& img, GpuMat& dst, Stream& stream)
     {
-        short edge_disc = max<short>(short(1), short(ndisp * edge_threshold + 0.5));
+        short edge_disc = std::max<short>(short(1), short(ndisp * edge_threshold + 0.5));
         short max_disc = short(ndisp * max_disc_threshold + 0.5);
 
         disp_load_constants(table_color.ptr<float>(), table_space, ndisp, radius, edge_disc, max_disc);

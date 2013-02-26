@@ -46,9 +46,6 @@
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
-using std::cout;
-using std::endl;
 
 namespace cv
 {
@@ -58,8 +55,8 @@ namespace cv
         {
         protected:
             ProgramCache();
-            friend class auto_ptr<ProgramCache>;
-            static auto_ptr<ProgramCache> programCache;
+            friend class std::auto_ptr<ProgramCache>;
+            static std::auto_ptr<ProgramCache> programCache;
 
         public:
             ~ProgramCache();
@@ -71,13 +68,13 @@ namespace cv
             }
 
             //lookup the binary given the file name
-            cl_program progLookup(string srcsign);
+            cl_program progLookup(std::string srcsign);
 
             //add program to the cache
-            void addProgram(string srcsign, cl_program program);
+            void addProgram(std::string srcsign, cl_program program);
             void releaseProgram();
 
-            map <string, cl_program> codeCache;
+            std::map <std::string, cl_program> codeCache;
             unsigned int cacheSize;
             //The presumed watermark for the cache volume (256MB). Is it enough?
             //We may need more delicate algorithms when necessary later.

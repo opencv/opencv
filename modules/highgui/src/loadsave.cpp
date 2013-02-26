@@ -86,13 +86,13 @@ struct ImageCodecInitializer
     #endif
     }
 
-    vector<ImageDecoder> decoders;
-    vector<ImageEncoder> encoders;
+    std::vector<ImageDecoder> decoders;
+    std::vector<ImageEncoder> encoders;
 };
 
 static ImageCodecInitializer codecs;
 
-static ImageDecoder findDecoder( const string& filename )
+static ImageDecoder findDecoder( const std::string& filename )
 {
     size_t i, maxlen = 0;
     for( i = 0; i < codecs.decoders.size(); i++ )
@@ -104,7 +104,7 @@ static ImageDecoder findDecoder( const string& filename )
     FILE* f= fopen( filename.c_str(), "rb" );
     if( !f )
         return ImageDecoder();
-    string signature(maxlen, ' ');
+    std::string signature(maxlen, ' ');
     maxlen = fread( &signature[0], 1, maxlen, f );
     fclose(f);
     signature = signature.substr(0, maxlen);
@@ -133,7 +133,7 @@ static ImageDecoder findDecoder( const Mat& buf )
 
     size_t bufSize = buf.rows*buf.cols*buf.elemSize();
     maxlen = std::min(maxlen, bufSize);
-    string signature(maxlen, ' ');
+    std::string signature(maxlen, ' ');
     memcpy( &signature[0], buf.data, maxlen );
 
     for( i = 0; i < codecs.decoders.size(); i++ )
@@ -145,7 +145,7 @@ static ImageDecoder findDecoder( const Mat& buf )
     return ImageDecoder();
 }
 
-static ImageEncoder findEncoder( const string& _ext )
+static ImageEncoder findEncoder( const std::string& _ext )
 {
     if( _ext.size() <= 1 )
         return ImageEncoder();
@@ -159,7 +159,7 @@ static ImageEncoder findEncoder( const string& _ext )
 
     for( size_t i = 0; i < codecs.encoders.size(); i++ )
     {
-        string description = codecs.encoders[i]->getDescription();
+        std::string description = codecs.encoders[i]->getDescription();
         const char* descr = strchr( description.c_str(), '(' );
 
         while( descr )
@@ -187,7 +187,7 @@ static ImageEncoder findEncoder( const string& _ext )
 enum { LOAD_CVMAT=0, LOAD_IMAGE=1, LOAD_MAT=2 };
 
 static void*
-imread_( const string& filename, int flags, int hdrtype, Mat* mat=0 )
+imread_( const std::string& filename, int flags, int hdrtype, Mat* mat=0 )
 {
     IplImage* image = 0;
     CvMat *matrix = 0;
@@ -249,15 +249,15 @@ imread_( const string& filename, int flags, int hdrtype, Mat* mat=0 )
         hdrtype == LOAD_IMAGE ? (void*)image : (void*)mat;
 }
 
-Mat imread( const string& filename, int flags )
+Mat imread( const std::string& filename, int flags )
 {
     Mat img;
     imread_( filename, flags, LOAD_MAT, &img );
     return img;
 }
 
-static bool imwrite_( const string& filename, const Mat& image,
-                      const vector<int>& params, bool flipv )
+static bool imwrite_( const std::string& filename, const Mat& image,
+                      const std::vector<int>& params, bool flipv )
 {
     Mat temp;
     const Mat* pimage = &image;
@@ -288,8 +288,8 @@ static bool imwrite_( const string& filename, const Mat& image,
     return code;
 }
 
-bool imwrite( const string& filename, InputArray _img,
-              const vector<int>& params )
+bool imwrite( const std::string& filename, InputArray _img,
+              const std::vector<int>& params )
 {
     Mat img = _img.getMat();
     return imwrite_(filename, img, params, false);
@@ -302,7 +302,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     IplImage* image = 0;
     CvMat *matrix = 0;
     Mat temp, *data = &temp;
-    string filename;
+    std::string filename;
 
     ImageDecoder decoder = findDecoder(buf);
     if( decoder.empty() )
@@ -396,8 +396,8 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     return *dst;
 }
 
-bool imencode( const string& ext, InputArray _image,
-               vector<uchar>& buf, const vector<int>& params )
+bool imencode( const std::string& ext, InputArray _image,
+               std::vector<uchar>& buf, const std::vector<int>& params )
 {
     Mat image = _image.getMat();
 
@@ -425,7 +425,7 @@ bool imencode( const string& ext, InputArray _image,
     }
     else
     {
-        string filename = tempfile();
+        std::string filename = tempfile();
         code = encoder->setDestination(filename);
         CV_Assert( code );
 
@@ -487,7 +487,7 @@ cvSaveImage( const char* filename, const CvArr* arr, const int* _params )
             ;
     }
     return cv::imwrite_(filename, cv::cvarrToMat(arr),
-        i > 0 ? cv::vector<int>(_params, _params+i) : cv::vector<int>(),
+        i > 0 ? std::vector<int>(_params, _params+i) : std::vector<int>(),
         CV_IS_IMAGE(arr) && ((const IplImage*)arr)->origin == IPL_ORIGIN_BL );
 }
 
@@ -524,7 +524,7 @@ cvEncodeImage( const char* ext, const CvArr* arr, const int* _params )
         cv::flip(img, temp, 0);
         img = temp;
     }
-    cv::vector<uchar> buf;
+    std::vector<uchar> buf;
 
     bool code = cv::imencode(ext, img, buf,
         i > 0 ? std::vector<int>(_params, _params+i) : std::vector<int>() );

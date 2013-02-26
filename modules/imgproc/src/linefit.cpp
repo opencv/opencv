@@ -189,7 +189,7 @@ static void fitLine3D_wods( const Point3f * points, int count, float *weights, f
     i = evl[0] < evl[1] ? (evl[0] < evl[2] ? 0 : 2) : (evl[1] < evl[2] ? 1 : 2);
 
     v = &evc[i * 3];
-    n = (float) sqrt( (double)v[0] * v[0] + (double)v[1] * v[1] + (double)v[2] * v[2] );
+    n = (float) std::sqrt( (double)v[0] * v[0] + (double)v[1] * v[1] + (double)v[2] * v[2] );
     n = (float)MAX(n, eps);
     line[0] = v[0] / n;
     line[1] = v[1] / n;
@@ -240,7 +240,7 @@ static double calcDist3D( const Point3f* points, int count, float *_line, float 
         p2 = vz * x - vx * z;
         p3 = vx * y - vy * x;
 
-        dist[j] = (float) sqrt( p1*p1 + p2*p2 + p3*p3 );
+        dist[j] = (float) std::sqrt( p1*p1 + p2*p2 + p3*p3 );
         sum_dist += dist[j];
     }
 
@@ -264,7 +264,7 @@ static void weightL12( float *d, int count, float *w )
 
     for( i = 0; i < count; i++ )
     {
-        w[i] = 1.0f / (float) sqrt( 1 + (double) (d[i] * d[i] * 0.5) );
+        w[i] = 1.0f / (float) std::sqrt( 1 + (double) (d[i] * d[i] * 0.5) );
     }
 }
 

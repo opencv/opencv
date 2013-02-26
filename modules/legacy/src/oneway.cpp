@@ -145,9 +145,9 @@ namespace cv{
     void readPCAFeatures(const char *filename, CvMat** avg, CvMat** eigenvectors, const char *postfix = "");
     void readPCAFeatures(const FileNode &fn, CvMat** avg, CvMat** eigenvectors, const char* postfix = "");
     void savePCAFeatures(FileStorage &fs, const char* postfix, CvMat* avg, CvMat* eigenvectors);
-    void calcPCAFeatures(vector<IplImage*>& patches, FileStorage &fs, const char* postfix, CvMat** avg,
+    void calcPCAFeatures(std::vector<IplImage*>& patches, FileStorage &fs, const char* postfix, CvMat** avg,
                          CvMat** eigenvectors);
-    void loadPCAFeatures(const char* path, const char* images_list, vector<IplImage*>& patches, CvSize patch_size);
+    void loadPCAFeatures(const char* path, const char* images_list, std::vector<IplImage*>& patches, CvSize patch_size);
     void generatePCAFeatures(const char* path, const char* img_filename, FileStorage& fs, const char* postfix,
                              CvSize patch_size, CvMat** avg, CvMat** eigenvectors);
 
@@ -1287,8 +1287,8 @@ namespace cv{
 
     }
 
-    OneWayDescriptorBase::OneWayDescriptorBase(CvSize patch_size, int pose_count, const string &pca_filename,
-                                               const string &train_path, const string &images_list, float _scale_min, float _scale_max,
+    OneWayDescriptorBase::OneWayDescriptorBase(CvSize patch_size, int pose_count, const std::string &pca_filename,
+                                               const std::string &train_path, const std::string &images_list, float _scale_min, float _scale_max,
                                                float _scale_step, int pyr_levels,
                                                int pca_dim_high, int pca_dim_low)
     : m_pca_dim_high(pca_dim_high), m_pca_dim_low(pca_dim_low), scale_min(_scale_min), scale_max(_scale_max), scale_step(_scale_step)
@@ -1695,7 +1695,7 @@ namespace cv{
         fs.writeObj(buf, eigenvectors);
     }
 
-    void calcPCAFeatures(vector<IplImage*>& patches, FileStorage &fs, const char* postfix, CvMat** avg,
+    void calcPCAFeatures(std::vector<IplImage*>& patches, FileStorage &fs, const char* postfix, CvMat** avg,
                          CvMat** eigenvectors)
     {
         int width = patches[0]->width;
@@ -1732,9 +1732,9 @@ namespace cv{
         cvReleaseMat(&eigenvalues);
     }
 
-    static void extractPatches (IplImage *img, vector<IplImage*>& patches, CvSize patch_size)
+    static void extractPatches (IplImage *img, std::vector<IplImage*>& patches, CvSize patch_size)
     {
-        vector<KeyPoint> features;
+        std::vector<KeyPoint> features;
         Ptr<FeatureDetector> surf_extractor = FeatureDetector::create("SURF");
         if( surf_extractor.empty() )
             CV_Error(CV_StsNotImplemented, "OpenCV was built without SURF support");
@@ -1767,7 +1767,7 @@ namespace cv{
     }
 
 /*
-    void loadPCAFeatures(const FileNode &fn, vector<IplImage*>& patches, CvSize patch_size)
+    void loadPCAFeatures(const FileNode &fn, std::vector<IplImage*>& patches, CvSize patch_size)
     {
         FileNodeIterator begin = fn.begin();
         for (FileNodeIterator i = fn.begin(); i != fn.end(); i++)
@@ -1779,7 +1779,7 @@ namespace cv{
     }
 */
 
-    void loadPCAFeatures(const char* path, const char* images_list, vector<IplImage*>& patches, CvSize patch_size)
+    void loadPCAFeatures(const char* path, const char* images_list, std::vector<IplImage*>& patches, CvSize patch_size)
     {
         char images_filename[1024];
         sprintf(images_filename, "%s/%s", path, images_list);
@@ -1819,7 +1819,7 @@ namespace cv{
     void generatePCAFeatures(const char* path, const char* img_filename, FileStorage& fs, const char* postfix,
                              CvSize patch_size, CvMat** avg, CvMat** eigenvectors)
     {
-        vector<IplImage*> patches;
+        std::vector<IplImage*> patches;
         loadPCAFeatures(path, img_filename, patches, patch_size);
         calcPCAFeatures(patches, fs, postfix, avg, eigenvectors);
     }
@@ -1828,7 +1828,7 @@ namespace cv{
     void generatePCAFeatures(const FileNode &fn, const char* postfix,
                              CvSize patch_size, CvMat** avg, CvMat** eigenvectors)
     {
-        vector<IplImage*> patches;
+        std::vector<IplImage*> patches;
         loadPCAFeatures(fn, patches, patch_size);
         calcPCAFeatures(patches, fs, postfix, avg, eigenvectors);
     }
@@ -1951,7 +1951,7 @@ namespace cv{
         }
     }
 
-    void OneWayDescriptorBase::InitializeDescriptors(IplImage* train_image, const vector<KeyPoint>& features,
+    void OneWayDescriptorBase::InitializeDescriptors(IplImage* train_image, const std::vector<KeyPoint>& features,
                                                      const char* feature_label, int desc_start_idx)
     {
         for(int i = 0; i < (int)features.size(); i++)
@@ -2027,7 +2027,7 @@ namespace cv{
     }
 
 
-    void OneWayDescriptorObject::InitializeObjectDescriptors(IplImage* train_image, const vector<KeyPoint>& features,
+    void OneWayDescriptorObject::InitializeObjectDescriptors(IplImage* train_image, const std::vector<KeyPoint>& features,
                                                              const char* feature_label, int desc_start_idx, float scale, int is_background)
     {
         InitializeDescriptors(train_image, features, feature_label, desc_start_idx);
@@ -2080,8 +2080,8 @@ namespace cv{
         m_part_id = 0;
     }
 
-    OneWayDescriptorObject::OneWayDescriptorObject(CvSize patch_size, int pose_count, const string &pca_filename,
-                                                   const string &train_path, const string &images_list, float _scale_min, float _scale_max, float _scale_step, int pyr_levels) :
+    OneWayDescriptorObject::OneWayDescriptorObject(CvSize patch_size, int pose_count, const std::string &pca_filename,
+                                                   const std::string &train_path, const std::string &images_list, float _scale_min, float _scale_max, float _scale_step, int pyr_levels) :
     OneWayDescriptorBase(patch_size, pose_count, pca_filename, train_path, images_list, _scale_min, _scale_max, _scale_step, pyr_levels)
     {
         m_part_id = 0;
@@ -2093,9 +2093,9 @@ namespace cv{
             delete []m_part_id;
     }
 
-    vector<KeyPoint> OneWayDescriptorObject::_GetLabeledFeatures() const
+    std::vector<KeyPoint> OneWayDescriptorObject::_GetLabeledFeatures() const
     {
-        vector<KeyPoint> features;
+        std::vector<KeyPoint> features;
         for(size_t i = 0; i < m_train_features.size(); i++)
         {
             features.push_back(m_train_features[i]);
@@ -2166,8 +2166,8 @@ namespace cv{
      *                                OneWayDescriptorMatcher                                  *
      \****************************************************************************************/
 
-    OneWayDescriptorMatcher::Params::Params( int _poseCount, Size _patchSize, string _pcaFilename,
-                                            string _trainPath, string _trainImagesList,
+    OneWayDescriptorMatcher::Params::Params( int _poseCount, Size _patchSize, std::string _pcaFilename,
+                                            std::string _trainPath, std::string _trainImagesList,
                                             float _minScale, float _maxScale, float _stepScale ) :
     poseCount(_poseCount), patchSize(_patchSize), pcaFilename(_pcaFilename),
     trainPath(_trainPath), trainImagesList(_trainImagesList),
@@ -2212,7 +2212,7 @@ namespace cv{
             base->Allocate( (int)trainPointCollection.keypointCount() );
             prevTrainCount = (int)trainPointCollection.keypointCount();
 
-            const vector<vector<KeyPoint> >& points = trainPointCollection.getKeypoints();
+            const std::vector<std::vector<KeyPoint> >& points = trainPointCollection.getKeypoints();
             int count = 0;
             for( size_t i = 0; i < points.size(); i++ )
             {
@@ -2232,9 +2232,9 @@ namespace cv{
         return false;
     }
 
-    void OneWayDescriptorMatcher::knnMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                               vector<vector<DMatch> >& matches, int knn,
-                                               const vector<Mat>& /*masks*/, bool /*compactResult*/ )
+    void OneWayDescriptorMatcher::knnMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                               std::vector<std::vector<DMatch> >& matches, int knn,
+                                               const std::vector<Mat>& /*masks*/, bool /*compactResult*/ )
     {
         train();
 
@@ -2251,9 +2251,9 @@ namespace cv{
         }
     }
 
-    void OneWayDescriptorMatcher::radiusMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                                  vector<vector<DMatch> >& matches, float maxDistance,
-                                                  const vector<Mat>& /*masks*/, bool /*compactResult*/ )
+    void OneWayDescriptorMatcher::radiusMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                                  std::vector<std::vector<DMatch> >& matches, float maxDistance,
+                                                  const std::vector<Mat>& /*masks*/, bool /*compactResult*/ )
     {
         train();
 
@@ -2271,7 +2271,7 @@ namespace cv{
 
     void OneWayDescriptorMatcher::read( const FileNode &fn )
     {
-        base = new OneWayDescriptorObject( params.patchSize, params.poseCount, string (), string (), string (),
+        base = new OneWayDescriptorObject( params.patchSize, params.poseCount, std::string (), std::string (), std::string (),
                                           params.minScale, params.maxScale, params.stepScale );
         base->Read (fn);
     }

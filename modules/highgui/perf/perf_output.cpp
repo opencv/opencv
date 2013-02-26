@@ -8,7 +8,7 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-typedef std::tr1::tuple<String, bool> VideoWriter_Writing_t;
+typedef std::tr1::tuple<std::string, bool> VideoWriter_Writing_t;
 typedef perf::TestBaseWithParam<VideoWriter_Writing_t> VideoWriter_Writing;
 
 PERF_TEST_P(VideoWriter_Writing, WriteFrame,

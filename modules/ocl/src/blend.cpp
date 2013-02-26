@@ -48,7 +48,6 @@
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
 namespace cv
 {
@@ -73,19 +72,19 @@ void cv::ocl::blendLinear(const oclMat &img1, const oclMat &img2, const oclMat &
     size_t globalSize[] = {cols * channels / 4, rows, 1};
     size_t localSize[] = {256, 1, 1};
 
-    vector< pair<size_t, const void *> > args;
+    std::vector< std::pair<size_t, const void *> > args;
 
     if(globalSize[0] != 0)
     {
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&result.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&img1.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&img2.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&weights1.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&weights2.data ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&istep ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&wstep ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&result.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&img1.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&img2.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&weights1.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&weights2.data ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&istep ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&wstep ));
         std::string kernelName = "BlendLinear";
 
         openCLExecuteKernel(ctx, &blend_linear, kernelName, globalSize, localSize, args, channels, depth);

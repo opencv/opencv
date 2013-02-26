@@ -113,7 +113,7 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
             stack[stacksize-1] = pnext;
         }
     }
-    
+
     return --stacksize;
 }
 
@@ -210,7 +210,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         for( i = tr_count - 1; i > 0; i-- )
             hullbuf[nout++] = pointer[tr_stack[i]] - data0;
         int stop_idx = tr_count > 2 ? tr_stack[1] : tl_count > 2 ? tl_stack[tl_count - 2] : -1;
-        
+
         // lower half
         int *bl_stack = stack;
         int bl_count = !is_float ?
@@ -280,7 +280,7 @@ void convexityDefects( InputArray _points, InputArray _hull, OutputArray _defect
 
     const Point* ptr = (const Point*)points.data;
     const int* hptr = hull.ptr<int>();
-    vector<Vec4i> defects;
+    std::vector<Vec4i> defects;
 
     // 1. recognize co-orientation of the contour and its hull
     bool rev_orientation = ((hptr[1] > hptr[0]) + (hptr[2] > hptr[1]) + (hptr[0] > hptr[2])) != 2;
@@ -297,7 +297,7 @@ void convexityDefects( InputArray _points, InputArray _hull, OutputArray _defect
         Point pt0 = ptr[hcurr], pt1 = ptr[hnext];
         double dx0 = pt1.x - pt0.x;
         double dy0 = pt1.y - pt0.y;
-        double scale = dx0 == 0 && dy0 == 0 ? 0. : 1./sqrt(dx0*dx0 + dy0*dy0);
+        double scale = dx0 == 0 && dy0 == 0 ? 0. : 1./std::sqrt(dx0*dx0 + dy0*dy0);
 
         int defect_deepest_point = -1;
         double defect_depth = 0;
@@ -380,10 +380,10 @@ bool isContourConvex( InputArray _contour )
     Mat contour = _contour.getMat();
     int total = contour.checkVector(2), depth = contour.depth();
     CV_Assert(total >= 0 && (depth == CV_32F || depth == CV_32S));
-    
+
     if( total == 0 )
         return false;
-    
+
     return depth == CV_32S ?
     isContourConvex_((const Point*)contour.data, total ) :
     isContourConvex_((const Point2f*)contour.data, total );
@@ -502,7 +502,7 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
                                        ptseq->header_size < (int)sizeof(CvContour) ||
                                        &ptseq->flags == &contour_header.flags );
     }
-    
+
     return hull.s;
 }
 
@@ -658,7 +658,7 @@ CV_IMPL CvSeq* cvConvexityDefects( const CvArr* array,
         dx0 = (double)hull_next->x - (double)hull_cur->x;
         dy0 = (double)hull_next->y - (double)hull_cur->y;
         assert( dx0 != 0 || dy0 != 0 );
-        scale = 1./sqrt(dx0*dx0 + dy0*dy0);
+        scale = 1./std::sqrt(dx0*dx0 + dy0*dy0);
 
         defect.start = hull_cur;
         defect.end = hull_next;

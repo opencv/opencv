@@ -2151,7 +2151,7 @@ void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray 
         Mat _data(static_cast<int>(src.size()), size.area(), type);
 
         int i = 0;
-        for(vector<cv::Mat>::iterator each = src.begin(); each != src.end(); each++, i++ )
+        for(std::vector<cv::Mat>::iterator each = src.begin(); each != src.end(); each++, i++ )
         {
             CV_Assert( (*each).size() == size && (*each).type() == type );
             Mat dataRow(size.height, size.width, type, _data.ptr(i));

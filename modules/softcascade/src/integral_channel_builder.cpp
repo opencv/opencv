@@ -155,7 +155,7 @@ float ChannelFeature::operator() (const cv::Mat& integrals, const cv::Size& mode
     return (float)(a - b + c - d);
 }
 
-void cv::softcascade::write(cv::FileStorage& fs, const string&, const ChannelFeature& f)
+void cv::softcascade::write(cv::FileStorage& fs, const std::string&, const ChannelFeature& f)
 {
     fs << "{" << "channel" << f.channel << "rect" << f.bb << "}";
 }
@@ -218,7 +218,7 @@ void ChannelFeaturePool::fill(int desired)
     int nfeatures = std::min(desired, maxPoolSize);
     pool.reserve(nfeatures);
 
-    Random::engine eng(FEATURE_RECT_SEED);
+    Random::engine eng((Random::seed_type)FEATURE_RECT_SEED);
     Random::engine eng_ch(DCHANNELS_SEED);
 
     Random::uniform chRand(0, N_CHANNELS - 1);

@@ -1763,7 +1763,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
     {
         double fsx1 = dx * scale;
         double fsx2 = fsx1 + scale;
-        double cellWidth = min(scale, ssize - fsx1);
+        double cellWidth = std::min(scale, ssize - fsx1);
 
         int sx1 = cvCeil(fsx1), sx2 = cvFloor(fsx2);
 
@@ -1791,7 +1791,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
             assert( k < ssize*2 );
             tab[k].di = dx * cn;
             tab[k].si = sx2 * cn;
-            tab[k++].alpha = (float)(min(min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
+            tab[k++].alpha = (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
         }
     }
     return k;
@@ -4009,7 +4009,7 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
                 double xx = bufx.data.fl[x];
                 double yy = bufy.data.fl[x];
 
-                double p = log(sqrt(xx*xx + yy*yy) + 1.)*M;
+                double p = log(std::sqrt(xx*xx + yy*yy) + 1.)*M;
                 double a = atan2(yy,xx);
                 if( a < 0 )
                     a = 2*CV_PI + a;

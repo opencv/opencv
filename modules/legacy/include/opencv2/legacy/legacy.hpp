@@ -1877,17 +1877,17 @@ public:
     LDetector(int _radius, int _threshold, int _nOctaves,
               int _nViews, double _baseFeatureSize, double _clusteringDistance);
     void operator()(const Mat& image,
-                    CV_OUT vector<KeyPoint>& keypoints,
+                    CV_OUT std::vector<KeyPoint>& keypoints,
                     int maxCount=0, bool scaleCoords=true) const;
-    void operator()(const vector<Mat>& pyr,
-                    CV_OUT vector<KeyPoint>& keypoints,
+    void operator()(const std::vector<Mat>& pyr,
+                    CV_OUT std::vector<KeyPoint>& keypoints,
                     int maxCount=0, bool scaleCoords=true) const;
-    void getMostStable2D(const Mat& image, CV_OUT vector<KeyPoint>& keypoints,
+    void getMostStable2D(const Mat& image, CV_OUT std::vector<KeyPoint>& keypoints,
                          int maxCount, const PatchGenerator& patchGenerator) const;
     void setVerbose(bool verbose);
 
     void read(const FileNode& node);
-    void write(FileStorage& fs, const String& name=String()) const;
+    void write(FileStorage& fs, const std::string& name=std::string()) const;
 
     int radius;
     int threshold;
@@ -1906,9 +1906,9 @@ class CV_EXPORTS FernClassifier
 public:
     FernClassifier();
     FernClassifier(const FileNode& node);
-    FernClassifier(const vector<vector<Point2f> >& points,
-                   const vector<Mat>& refimgs,
-                   const vector<vector<int> >& labels=vector<vector<int> >(),
+    FernClassifier(const std::vector<std::vector<Point2f> >& points,
+                   const std::vector<Mat>& refimgs,
+                   const std::vector<std::vector<int> >& labels=std::vector<std::vector<int> >(),
                    int _nclasses=0, int _patchSize=PATCH_SIZE,
                    int _signatureSize=DEFAULT_SIGNATURE_SIZE,
                    int _nstructs=DEFAULT_STRUCTS,
@@ -1918,9 +1918,9 @@ public:
                    const PatchGenerator& patchGenerator=PatchGenerator());
     virtual ~FernClassifier();
     virtual void read(const FileNode& n);
-    virtual void write(FileStorage& fs, const String& name=String()) const;
+    virtual void write(FileStorage& fs, const std::string& name=std::string()) const;
     virtual void trainFromSingleView(const Mat& image,
-                                     const vector<KeyPoint>& keypoints,
+                                     const std::vector<KeyPoint>& keypoints,
                                      int _patchSize=PATCH_SIZE,
                                      int _signatureSize=DEFAULT_SIGNATURE_SIZE,
                                      int _nstructs=DEFAULT_STRUCTS,
@@ -1928,9 +1928,9 @@ public:
                                      int _nviews=DEFAULT_VIEWS,
                                      int _compressionMethod=COMPRESSION_NONE,
                                      const PatchGenerator& patchGenerator=PatchGenerator());
-    virtual void train(const vector<vector<Point2f> >& points,
-                       const vector<Mat>& refimgs,
-                       const vector<vector<int> >& labels=vector<vector<int> >(),
+    virtual void train(const std::vector<std::vector<Point2f> >& points,
+                       const std::vector<Mat>& refimgs,
+                       const std::vector<std::vector<int> >& labels=std::vector<std::vector<int> >(),
                        int _nclasses=0, int _patchSize=PATCH_SIZE,
                        int _signatureSize=DEFAULT_SIGNATURE_SIZE,
                        int _nstructs=DEFAULT_STRUCTS,
@@ -1938,8 +1938,8 @@ public:
                        int _nviews=DEFAULT_VIEWS,
                        int _compressionMethod=COMPRESSION_NONE,
                        const PatchGenerator& patchGenerator=PatchGenerator());
-    virtual int operator()(const Mat& img, Point2f kpt, vector<float>& signature) const;
-    virtual int operator()(const Mat& patch, vector<float>& signature) const;
+    virtual int operator()(const Mat& img, Point2f kpt, std::vector<float>& signature) const;
+    virtual int operator()(const Mat& patch, std::vector<float>& signature) const;
     virtual void clear();
     virtual bool empty() const;
     void setVerbose(bool verbose);
@@ -1990,9 +1990,9 @@ protected:
     int compressionMethod;
     int leavesPerStruct;
     Size patchSize;
-    vector<Feature> features;
-    vector<int> classCounters;
-    vector<float> posteriors;
+    std::vector<Feature> features;
+    std::vector<int> classCounters;
+    std::vector<float> posteriors;
 };
 
 
@@ -2032,9 +2032,9 @@ public:
     RandomizedTree();
     ~RandomizedTree();
 
-    void train(vector<BaseKeypoint> const& base_set, RNG &rng,
+    void train(std::vector<BaseKeypoint> const& base_set, RNG &rng,
                int depth, int views, size_t reduced_num_dim, int num_quant_bits);
-    void train(vector<BaseKeypoint> const& base_set, RNG &rng,
+    void train(std::vector<BaseKeypoint> const& base_set, RNG &rng,
                PatchGenerator &make_patch, int depth, int views, size_t reduced_num_dim,
                int num_quant_bits);
 
@@ -2069,10 +2069,10 @@ private:
     int classes_;
     int depth_;
     int num_leaves_;
-    vector<RTreeNode> nodes_;
+    std::vector<RTreeNode> nodes_;
     float **posteriors_;        // 16-bytes aligned posteriors
     uchar **posteriors2_;     // 16-bytes aligned posteriors
-    vector<int> leaf_counts_;
+    std::vector<int> leaf_counts_;
 
     void createNodes(int num_nodes, RNG &rng);
     void allocPosteriorsAligned(int num_leaves, int num_classes);
@@ -2142,14 +2142,14 @@ public:
     static const size_t DEFAULT_NUM_QUANT_BITS = 4;
 
     RTreeClassifier();
-    void train(vector<BaseKeypoint> const& base_set,
+    void train(std::vector<BaseKeypoint> const& base_set,
                RNG &rng,
                int num_trees = RTreeClassifier::DEFAULT_TREES,
                int depth = RandomizedTree::DEFAULT_DEPTH,
                int views = RandomizedTree::DEFAULT_VIEWS,
                size_t reduced_num_dim = RandomizedTree::DEFAULT_REDUCED_NUM_DIM,
                int num_quant_bits = DEFAULT_NUM_QUANT_BITS);
-    void train(vector<BaseKeypoint> const& base_set,
+    void train(std::vector<BaseKeypoint> const& base_set,
                RNG &rng,
                PatchGenerator &make_patch,
                int num_trees = RTreeClassifier::DEFAULT_TREES,
@@ -2186,7 +2186,7 @@ public:
     void setFloatPosteriorsFromTextfile_176(std::string url);
     float countZeroElements();
 
-    vector<RandomizedTree> trees_;
+    std::vector<RandomizedTree> trees_;
 
 private:
     int classes_;
@@ -2356,7 +2356,7 @@ protected:
     CvAffinePose* m_affine_poses; // an array of poses
     CvMat** m_transforms; // an array of affine transforms corresponding to poses
 
-    string m_feature_name; // the name of the feature associated with the descriptor
+    std::string m_feature_name; // the name of the feature associated with the descriptor
     CvPoint m_center; // the coordinates of the feature (the center of the input image ROI)
 
     int m_pca_dim_high; // the number of descriptor pca components to use for generating affine poses
@@ -2382,7 +2382,7 @@ public:
                          const char* pca_hr_config = 0, const char* pca_desc_config = 0, int pyr_levels = 1,
                          int pca_dim_high = 100, int pca_dim_low = 100);
 
-    OneWayDescriptorBase(CvSize patch_size, int pose_count, const string &pca_filename, const string &train_path = string(), const string &images_list = string(),
+    OneWayDescriptorBase(CvSize patch_size, int pose_count, const std::string &pca_filename, const std::string &train_path = std::string(), const std::string &images_list = std::string(),
                          float _scale_min = 0.7f, float _scale_max=1.5f, float _scale_step=1.2f, int pyr_levels = 1,
                          int pca_dim_high = 100, int pca_dim_low = 100);
 
@@ -2412,7 +2412,7 @@ public:
     // - src: input image
     // - features: input features
     // - pyr_levels: the number of pyramid levels
-    void CreateDescriptorsFromImage(IplImage* src, const vector<KeyPoint>& features);
+    void CreateDescriptorsFromImage(IplImage* src, const std::vector<KeyPoint>& features);
 
     // CreatePCADescriptors: generates descriptors for PCA components, needed for fast generation of feature descriptors
     void CreatePCADescriptors();
@@ -2436,8 +2436,8 @@ public:
     // - distances: distance from the input patch to the closest feature pose (n)
     // - _scales: scales of the input patch
     // - scale_ranges: input scales variation (float[2])
-    void FindDescriptor(IplImage* patch, int n, vector<int>& desc_idxs, vector<int>& pose_idxs,
-                        vector<float>& distances, vector<float>& _scales, float* scale_ranges = 0) const;
+    void FindDescriptor(IplImage* patch, int n, std::vector<int>& desc_idxs, std::vector<int>& pose_idxs,
+                        std::vector<float>& distances, std::vector<float>& _scales, float* scale_ranges = 0) const;
 
     // FindDescriptor: finds the closest descriptor
     // - src: input image
@@ -2465,7 +2465,7 @@ public:
     void InitializeDescriptor(int desc_idx, IplImage* train_image, const KeyPoint& keypoint, const char* feature_label);
 
     // InitializeDescriptors: load features from an image and create descriptors for each of them
-    void InitializeDescriptors(IplImage* train_image, const vector<KeyPoint>& features,
+    void InitializeDescriptors(IplImage* train_image, const std::vector<KeyPoint>& features,
                                const char* feature_label = "", int desc_start_idx = 0);
 
     // Write: writes this object to a file storage
@@ -2516,7 +2516,7 @@ public:
     void ConvertDescriptorsArrayToTree(); // Converting pca_descriptors array to KD tree
 
     // GetPCAFilename: get default PCA filename
-    static string GetPCAFilename () { return "pca.yml"; }
+    static std::string GetPCAFilename () { return "pca.yml"; }
 
     virtual bool empty() const { return m_train_feature_count <= 0 ? true : false; }
 
@@ -2568,8 +2568,8 @@ public:
     OneWayDescriptorObject(CvSize patch_size, int pose_count, const char* train_path, const char* pca_config,
                            const char* pca_hr_config = 0, const char* pca_desc_config = 0, int pyr_levels = 1);
 
-    OneWayDescriptorObject(CvSize patch_size, int pose_count, const string &pca_filename,
-                           const string &train_path = string (), const string &images_list = string (),
+    OneWayDescriptorObject(CvSize patch_size, int pose_count, const std::string &pca_filename,
+                           const std::string &train_path = std::string (), const std::string &images_list = std::string (),
                            float _scale_min = 0.7f, float _scale_max=1.5f, float _scale_step=1.2f, int pyr_levels = 1);
 
 
@@ -2581,10 +2581,10 @@ public:
     void Allocate(int train_feature_count, int object_feature_count);
 
 
-    void SetLabeledFeatures(const vector<KeyPoint>& features) {m_train_features = features;};
-    vector<KeyPoint>& GetLabeledFeatures() {return m_train_features;};
-    const vector<KeyPoint>& GetLabeledFeatures() const {return m_train_features;};
-    vector<KeyPoint> _GetLabeledFeatures() const;
+    void SetLabeledFeatures(const std::vector<KeyPoint>& features) {m_train_features = features;};
+    std::vector<KeyPoint>& GetLabeledFeatures() {return m_train_features;};
+    const std::vector<KeyPoint>& GetLabeledFeatures() const {return m_train_features;};
+    std::vector<KeyPoint> _GetLabeledFeatures() const;
 
     // IsDescriptorObject: returns 1 if descriptor with specified index is positive, otherwise 0
     int IsDescriptorObject(int desc_idx) const;
@@ -2597,7 +2597,7 @@ public:
     int GetDescriptorPart(int desc_idx) const;
 
 
-    void InitializeObjectDescriptors(IplImage* train_image, const vector<KeyPoint>& features,
+    void InitializeObjectDescriptors(IplImage* train_image, const std::vector<KeyPoint>& features,
                                      const char* feature_label, int desc_start_idx = 0, float scale = 1.0f,
                                      int is_background = 0);
 
@@ -2606,7 +2606,7 @@ public:
 
 protected:
     int* m_part_id; // contains part id for each of object descriptors
-    vector<KeyPoint> m_train_features; // train features
+    std::vector<KeyPoint> m_train_features; // train features
     int m_object_feature_count; // the number of the positive features
 
 };
@@ -2633,16 +2633,16 @@ public:
 
         Params( int poseCount = POSE_COUNT,
                Size patchSize = Size(PATCH_WIDTH, PATCH_HEIGHT),
-               string pcaFilename = string(),
-               string trainPath = string(), string trainImagesList = string(),
+               std::string pcaFilename = std::string(),
+               std::string trainPath = std::string(), std::string trainImagesList = std::string(),
                float minScale = GET_MIN_SCALE(), float maxScale = GET_MAX_SCALE(),
                float stepScale = GET_STEP_SCALE() );
 
         int poseCount;
         Size patchSize;
-        string pcaFilename;
-        string trainPath;
-        string trainImagesList;
+        std::string pcaFilename;
+        std::string trainPath;
+        std::string trainImagesList;
 
         float minScale, maxScale, stepScale;
     };
@@ -2673,12 +2673,12 @@ protected:
     // The minimum distance to each training patch with all its affine poses is found over all scales.
     // The class ID of a match is returned for each keypoint. The distance is calculated over PCA components
     // loaded with DescriptorOneWay::Initialize, kd tree is used for finding minimum distances.
-    virtual void knnMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                              vector<vector<DMatch> >& matches, int k,
-                              const vector<Mat>& masks, bool compactResult );
-    virtual void radiusMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                 vector<vector<DMatch> >& matches, float maxDistance,
-                                 const vector<Mat>& masks, bool compactResult );
+    virtual void knnMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                              std::vector<std::vector<DMatch> >& matches, int k,
+                              const std::vector<Mat>& masks, bool compactResult );
+    virtual void radiusMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                 std::vector<std::vector<DMatch> >& matches, float maxDistance,
+                                 const std::vector<Mat>& masks, bool compactResult );
 
     Ptr<OneWayDescriptorBase> base;
     Params params;
@@ -2706,7 +2706,7 @@ public:
                int compressionMethod=FernClassifier::COMPRESSION_NONE,
                const PatchGenerator& patchGenerator=PatchGenerator() );
 
-        Params( const string& filename );
+        Params( const std::string& filename );
 
         int nclasses;
         int patchSize;
@@ -2717,7 +2717,7 @@ public:
         int compressionMethod;
         PatchGenerator patchGenerator;
 
-        string filename;
+        std::string filename;
     };
 
     FernDescriptorMatcher( const Params& params=Params() );
@@ -2736,16 +2736,16 @@ public:
     virtual Ptr<GenericDescriptorMatcher> clone( bool emptyTrainData=false ) const;
 
 protected:
-    virtual void knnMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                              vector<vector<DMatch> >& matches, int k,
-                              const vector<Mat>& masks, bool compactResult );
-    virtual void radiusMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                 vector<vector<DMatch> >& matches, float maxDistance,
-                                 const vector<Mat>& masks, bool compactResult );
+    virtual void knnMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                              std::vector<std::vector<DMatch> >& matches, int k,
+                              const std::vector<Mat>& masks, bool compactResult );
+    virtual void radiusMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                 std::vector<std::vector<DMatch> >& matches, float maxDistance,
+                                 const std::vector<Mat>& masks, bool compactResult );
 
     void trainFernClassifier();
     void calcBestProbAndMatchIdx( const Mat& image, const Point2f& pt,
-                                 float& bestProb, int& bestMatchIdx, vector<float>& signature );
+                                 float& bestProb, int& bestMatchIdx, std::vector<float>& signature );
     Ptr<FernClassifier> classifier;
     Params params;
     int prevTrainCount;
@@ -2759,7 +2759,7 @@ template<typename T>
 class CV_EXPORTS CalonderDescriptorExtractor : public DescriptorExtractor
 {
 public:
-    CalonderDescriptorExtractor( const string& classifierFile );
+    CalonderDescriptorExtractor( const std::string& classifierFile );
 
     virtual void read( const FileNode &fn );
     virtual void write( FileStorage &fs ) const;
@@ -2770,7 +2770,7 @@ public:
     virtual bool empty() const;
 
 protected:
-    virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    virtual void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
 
     RTreeClassifier classifier_;
     static const int BORDER_SIZE = 16;
@@ -2784,7 +2784,7 @@ CalonderDescriptorExtractor<T>::CalonderDescriptorExtractor(const std::string& c
 
 template<typename T>
 void CalonderDescriptorExtractor<T>::computeImpl( const Mat& image,
-                                                 vector<KeyPoint>& keypoints,
+                                                 std::vector<KeyPoint>& keypoints,
                                                  Mat& descriptors) const
 {
     // Cannot compute descriptors for keypoints on the image border.
@@ -2838,7 +2838,7 @@ class CV_EXPORTS PlanarObjectDetector
 public:
     PlanarObjectDetector();
     PlanarObjectDetector(const FileNode& node);
-    PlanarObjectDetector(const vector<Mat>& pyr, int _npoints=300,
+    PlanarObjectDetector(const std::vector<Mat>& pyr, int _npoints=300,
                          int _patchSize=FernClassifier::PATCH_SIZE,
                          int _nstructs=FernClassifier::DEFAULT_STRUCTS,
                          int _structSize=FernClassifier::DEFAULT_STRUCT_SIZE,
@@ -2846,14 +2846,14 @@ public:
                          const LDetector& detector=LDetector(),
                          const PatchGenerator& patchGenerator=PatchGenerator());
     virtual ~PlanarObjectDetector();
-    virtual void train(const vector<Mat>& pyr, int _npoints=300,
+    virtual void train(const std::vector<Mat>& pyr, int _npoints=300,
                        int _patchSize=FernClassifier::PATCH_SIZE,
                        int _nstructs=FernClassifier::DEFAULT_STRUCTS,
                        int _structSize=FernClassifier::DEFAULT_STRUCT_SIZE,
                        int _nviews=FernClassifier::DEFAULT_VIEWS,
                        const LDetector& detector=LDetector(),
                        const PatchGenerator& patchGenerator=PatchGenerator());
-    virtual void train(const vector<Mat>& pyr, const vector<KeyPoint>& keypoints,
+    virtual void train(const std::vector<Mat>& pyr, const std::vector<KeyPoint>& keypoints,
                        int _patchSize=FernClassifier::PATCH_SIZE,
                        int _nstructs=FernClassifier::DEFAULT_STRUCTS,
                        int _structSize=FernClassifier::DEFAULT_STRUCT_SIZE,
@@ -2861,22 +2861,22 @@ public:
                        const LDetector& detector=LDetector(),
                        const PatchGenerator& patchGenerator=PatchGenerator());
     Rect getModelROI() const;
-    vector<KeyPoint> getModelPoints() const;
+    std::vector<KeyPoint> getModelPoints() const;
     const LDetector& getDetector() const;
     const FernClassifier& getClassifier() const;
     void setVerbose(bool verbose);
 
     void read(const FileNode& node);
-    void write(FileStorage& fs, const String& name=String()) const;
-    bool operator()(const Mat& image, CV_OUT Mat& H, CV_OUT vector<Point2f>& corners) const;
-    bool operator()(const vector<Mat>& pyr, const vector<KeyPoint>& keypoints,
-                    CV_OUT Mat& H, CV_OUT vector<Point2f>& corners,
-                    CV_OUT vector<int>* pairs=0) const;
+    void write(FileStorage& fs, const std::string& name=std::string()) const;
+    bool operator()(const Mat& image, CV_OUT Mat& H, CV_OUT std::vector<Point2f>& corners) const;
+    bool operator()(const std::vector<Mat>& pyr, const std::vector<KeyPoint>& keypoints,
+                    CV_OUT Mat& H, CV_OUT std::vector<Point2f>& corners,
+                    CV_OUT std::vector<int>* pairs=0) const;
 
 protected:
     bool verbose;
     Rect modelROI;
-    vector<KeyPoint> modelPoints;
+    std::vector<KeyPoint> modelPoints;
     LDetector ldetector;
     FernClassifier fernClassifier;
 };

@@ -231,13 +231,13 @@ double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
                     dist_num = -dist_num;
                 counter += dist_num > 0;
             }
-            
-            result = sqrt(min_dist_num/min_dist_denom);
+
+            result = std::sqrt(min_dist_num/min_dist_denom);
             if( counter % 2 == 0 )
                 result = -result;
         }
     }
-    
+
     return result;
 }
 

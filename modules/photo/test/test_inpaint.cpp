@@ -43,6 +43,7 @@
 #include "test_precomp.hpp"
 #include <string>
 
+using namespace std;
 using namespace cv;
 
 class CV_InpaintTest : public cvtest::BaseTest

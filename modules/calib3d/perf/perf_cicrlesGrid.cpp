@@ -22,7 +22,7 @@ PERF_TEST_P(String_Size, asymm_circles_grid, testing::Values(
                 )
             )
 {
-    String filename = getDataPath(get<0>(GetParam()));
+    string filename = getDataPath(get<0>(GetParam()));
     Size gridSize = get<1>(GetParam());
 
     Mat frame = imread(filename);

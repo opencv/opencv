@@ -52,9 +52,6 @@
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
-using std::cout;
-using std::endl;
 
 //#define PRINT_KERNEL_RUN_TIME
 #define RUN_TIMES 100
@@ -70,7 +67,7 @@ namespace cv
          * Strictly, this is not a cache because we do not implement evictions right now.
          * We shall add such features to trade-off memory consumption and performance when necessary.
          */
-        auto_ptr<ProgramCache> ProgramCache::programCache;
+        std::auto_ptr<ProgramCache> ProgramCache::programCache;
         ProgramCache *programCache = NULL;
         ProgramCache::ProgramCache()
         {
@@ -83,9 +80,9 @@ namespace cv
             releaseProgram();
         }
 
-        cl_program ProgramCache::progLookup(string srcsign)
+        cl_program ProgramCache::progLookup(std::string srcsign)
         {
-            map<string, cl_program>::iterator iter;
+            std::map<std::string, cl_program>::iterator iter;
             iter = codeCache.find(srcsign);
             if(iter != codeCache.end())
                 return iter->second;
@@ -93,17 +90,17 @@ namespace cv
                 return NULL;
         }
 
-        void ProgramCache::addProgram(string srcsign , cl_program program)
+        void ProgramCache::addProgram(std::string srcsign , cl_program program)
         {
             if(!progLookup(srcsign))
             {
-                codeCache.insert(map<string, cl_program>::value_type(srcsign, program));
+                codeCache.insert(std::map<std::string, cl_program>::value_type(srcsign, program));
             }
         }
 
         void ProgramCache::releaseProgram()
         {
-            map<string, cl_program>::iterator iter;
+            std::map<std::string, cl_program>::iterator iter;
             for(iter = codeCache.begin(); iter != codeCache.end(); iter++)
             {
                 openCLSafeCall(clReleaseProgram(iter->second));
@@ -246,7 +243,7 @@ namespace cv
             extends_set[EXT_LEN - 1] = 0;
             memset(oclinfo.impl->extra_options, 0, 512);
             oclinfo.impl->double_support = 0;
-            int fp64_khr = string(extends_set).find("cl_khr_fp64");
+            int fp64_khr = std::string(extends_set).find("cl_khr_fp64");
 
             if(fp64_khr >= 0 && fp64_khr < EXT_LEN)
             {
@@ -379,7 +376,7 @@ namespace cv
         {
             openCLSafeCall(clReleaseMemObject((cl_mem)devPtr));
         }
-        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, string kernelName)
+        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, std::string kernelName)
         {
             return openCLGetKernelFromSource(clCxt, source, kernelName, NULL);
         }
@@ -419,15 +416,15 @@ namespace cv
             return 1;
         }
 
-        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, string kernelName,
+        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, std::string kernelName,
                                             const char *build_options)
         {
             cl_kernel kernel;
             cl_program program ;
             cl_int status = 0;
-            stringstream src_sign;
-            string srcsign;
-            string filename;
+            std::stringstream src_sign;
+            std::string srcsign;
+            std::string filename;
             CV_Assert(programCache != NULL);
 
             if(NULL != build_options)
@@ -508,14 +505,14 @@ namespace cv
                                                           clCxt->impl->devices, CL_PROGRAM_BUILD_LOG, buildLogSize,
                                                           buildLog, &buildLogSize);
                         if(logStatus != CL_SUCCESS)
-                            cout << "Failed to build the program and get the build info." << endl;
+                            std::cout << "Failed to build the program and get the build info." << std::endl;
                         buildLog = new char[buildLogSize];
                         CV_DbgAssert(!!buildLog);
                         memset(buildLog, 0, buildLogSize);
                         openCLSafeCall(clGetProgramBuildInfo(program, clCxt->impl->devices,
                                                              CL_PROGRAM_BUILD_LOG, buildLogSize, buildLog, NULL));
-                        cout << "\n\t\t\tBUILD LOG\n";
-                        cout << buildLog << endl;
+                        std::cout << "\n\t\t\tBUILD LOG\n";
+                        std::cout << buildLog << std::endl;
                         delete [] buildLog;
                     }
                     openCLVerifyCall(status);
@@ -524,7 +521,7 @@ namespace cv
                 if( (programCache->cacheSize += 1) < programCache->MAX_PROG_CACHE_SIZE)
                     programCache->addProgram(srcsign, program);
                 else
-                    cout << "Warning: code cache has been full.\n";
+                    std::cout << "Warning: code cache has been full.\n";
             }
             kernel = clCreateKernel(program, kernelName.c_str(), &status);
             openCLVerifyCall(status);
@@ -547,14 +544,14 @@ namespace cv
         static double total_execute_time = 0;
         static double total_kernel_time = 0;
 #endif
-        void openCLExecuteKernel_(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
-                                  size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
+        void openCLExecuteKernel_(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
+                                  size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
                                   int depth, const char *build_options)
         {
             //construct kernel name
             //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
             //for exmaple split_C2_D2, represent the split kernel with channels =2 and dataType Depth = 2(Data type is char)
-            stringstream idxStr;
+            std::stringstream idxStr;
             if(channels != -1)
                 idxStr << "_C" << channels;
             if(depth != -1)
@@ -601,9 +598,9 @@ namespace cv
             execute_time = (double)(end_time - start_time) / (1000 * 1000);
             total_time = (double)(end_time - queue_time) / (1000 * 1000);
 
-            //	cout << setiosflags(ios::left) << setw(15) << execute_time;
-            //	cout << setiosflags(ios::left) << setw(15) << total_time - execute_time;
-            //	cout << setiosflags(ios::left) << setw(15) << total_time << endl;
+            //	std::cout << setiosflags(ios::left) << setw(15) << execute_time;
+            //	std::cout << setiosflags(ios::left) << setw(15) << total_time - execute_time;
+            //	std::cout << setiosflags(ios::left) << setw(15) << total_time << std::endl;
 
             total_execute_time += execute_time;
             total_kernel_time += total_time;
@@ -614,57 +611,57 @@ namespace cv
             openCLSafeCall(clReleaseKernel(kernel));
         }
 
-        void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName,
+        void openCLExecuteKernel(Context *clCxt , const char **source, std::string kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
-                                 vector< pair<size_t, const void *> > &args, int channels, int depth)
+                                 std::vector< std::pair<size_t, const void *> > &args, int channels, int depth)
         {
             openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args,
                                 channels, depth, NULL);
         }
-        void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName,
+        void openCLExecuteKernel(Context *clCxt , const char **source, std::string kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
-                                 vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
+                                 std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
 
         {
 #ifndef PRINT_KERNEL_RUN_TIME
             openCLExecuteKernel_(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth,
                                  build_options);
 #else
-            string data_type[] = { "uchar", "char", "ushort", "short", "int", "float", "double"};
-            cout << endl;
-            cout << "Function Name: " << kernelName;
+            std::string data_type[] = { "uchar", "char", "ushort", "short", "int", "float", "double"};
+            std::cout << std::endl;
+            std::cout << "Function Name: " << kernelName;
             if(depth >= 0)
-                cout << " |data type: " << data_type[depth];
-            cout << " |channels: " << channels;
-            cout << " |Time Unit: " << "ms" << endl;
+                std::cout << " |data type: " << data_type[depth];
+            std::cout << " |channels: " << channels;
+            std::cout << " |Time Unit: " << "ms" << std::endl;
 
             total_execute_time = 0;
             total_kernel_time = 0;
-            cout << "-------------------------------------" << endl;
+            std::cout << "-------------------------------------" << std::endl;
 
-            cout << setiosflags(ios::left) << setw(15) << "excute time";
-            cout << setiosflags(ios::left) << setw(15) << "lauch time";
-            cout << setiosflags(ios::left) << setw(15) << "kernel time" << endl;
+            std::cout << setiosflags(ios::left) << setw(15) << "excute time";
+            std::cout << setiosflags(ios::left) << setw(15) << "lauch time";
+            std::cout << setiosflags(ios::left) << setw(15) << "kernel time" << std::endl;
             int i = 0;
             for(i = 0; i < RUN_TIMES; i++)
                 openCLExecuteKernel_(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth,
                                      build_options);
 
-            cout << "average kernel excute time: " << total_execute_time / RUN_TIMES << endl; // "ms" << endl;
-            cout << "average kernel total time:  " << total_kernel_time / RUN_TIMES << endl; // "ms" << endl;
+            std::cout << "average kernel excute time: " << total_execute_time / RUN_TIMES << std::endl; // "ms" << std::endl;
+            std::cout << "average kernel total time:  " << total_kernel_time / RUN_TIMES << std::endl; // "ms" << std::endl;
 #endif
         }
 
-       double openCLExecuteKernelInterop(Context *clCxt , const char **source, string kernelName,
+       double openCLExecuteKernelInterop(Context *clCxt , const char **source, std::string kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
-                                 vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
+                                 std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
                                  bool finish, bool measureKernelTime, bool cleanUp)
 
         {
             //construct kernel name
             //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
             //for exmaple split_C2_D2, represent the split kernel with channels =2 and dataType Depth = 2(Data type is char)
-            stringstream idxStr;
+            std::stringstream idxStr;
             if(channels != -1)
                 idxStr << "_C" << channels;
             if(depth != -1)
@@ -763,9 +760,9 @@ namespace cv
             return -1;
         }
 
-        double openCLExecuteKernelInterop(Context *clCxt , const char **fileName, const int numFiles, string kernelName,
+        double openCLExecuteKernelInterop(Context *clCxt , const char **fileName, const int numFiles, std::string kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
-                                 vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
+                                 std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
                                  bool finish, bool measureKernelTime, bool cleanUp)
 
         {
@@ -803,7 +800,7 @@ namespace cv
         }
 
         /////////////////////////////OpenCL initialization/////////////////
-        auto_ptr<Context> Context::clCxt;
+        std::auto_ptr<Context> Context::clCxt;
         int Context::val = 0;
         Mutex cs;
         Context *Context::getContext()
