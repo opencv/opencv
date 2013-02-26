@@ -12,7 +12,7 @@ file(GLOB lib_hdrs dec/*.h dsp/*.h enc/*.h mux/*.h utils/*.h webp/*.h)
 if(NOT ANDROID)
 	ocv_list_filterout(lib_srcs cpu-features.c)
 endif()
-
+ 
 # ----------------------------------------------------------------------------------
 #         Define the library target:
 # ----------------------------------------------------------------------------------
@@ -26,6 +26,8 @@ if(UNIX)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
   endif()
 endif()
+
+ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-variable -Wshadow)
 
 set_target_properties(${WEBP_LIBRARY}
   PROPERTIES OUTPUT_NAME ${WEBP_LIBRARY}
