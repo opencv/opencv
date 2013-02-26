@@ -44,23 +44,6 @@
 
 #include "precomp.hpp"
 
-#if !defined(HAVE_OPENCL)
-
-namespace cv
-{
-    namespace ocl
-    {
-
-        void meanShiftSegmentation(const oclMat &, Mat &, int, int, int, TermCriteria)
-        {
-            throw_nogpu();
-        }
-
-    }
-}
-
-#else
-
 using namespace std;
 
 // Auxiliray stuff
@@ -411,4 +394,3 @@ namespace cv
 
     }
 }
-#endif // #if !defined (HAVE_OPENCL)

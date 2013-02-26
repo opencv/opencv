@@ -54,13 +54,6 @@ using namespace cv;
 using namespace cv::ocl;
 using namespace std;
 
-#ifndef HAVE_OPENCL
-void cv::ocl::pyrUp(const oclMat &, GpuMat &, oclMat &)
-{
-    throw_nogpu();
-}
-#else
-
 namespace cv
 {
     namespace ocl
@@ -93,5 +86,4 @@ namespace cv
             openCLExecuteKernel(clCxt, &pyr_up, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
         }
     }
-};
-#endif // HAVE_OPENCL
+}

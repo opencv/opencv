@@ -379,6 +379,8 @@ void cv::gpu::DeviceInfo::query()
     sharedMemPerBlock_ = prop.sharedMemPerBlock;
 }
 
+size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const {return sharedMemPerBlock_;}
+
 void cv::gpu::DeviceInfo::queryMemory(size_t& free_memory, size_t& total_memory) const
 {
     int prev_device_id = getDevice();
@@ -800,6 +802,13 @@ void cv::gpu::ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
             m.rows = rows;
         }
     }
+}
+
+GpuMat cv::gpu::allocMatFromBuf(int rows, int cols, int type, GpuMat &mat)
+{
+    if (!mat.empty() && mat.type() == type && mat.rows >= rows && mat.cols >= cols)
+        return mat(Rect(0, 0, cols, rows));
+    return mat = GpuMat(rows, cols, type);
 }
 
 namespace

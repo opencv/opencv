@@ -143,6 +143,7 @@ namespace cv { namespace gpu
         int multi_processor_count_;
         int majorVersion_;
         int minorVersion_;
+        size_t sharedMemPerBlock_;
     };
 
     CV_EXPORTS void printCudaDeviceInfo(int device);
