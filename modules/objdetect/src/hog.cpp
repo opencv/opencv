@@ -194,7 +194,7 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
     const int indeces[] = { 0, 1, 2, 3 };
     __m128i idx = _mm_loadu_si128((const __m128i*)indeces);
     __m128i ifour = _mm_set1_epi32(4);
-    
+
     float* const _data = &_lut(0, 0);
     if( gammaCorrection )
         for( i = 0; i < 256; i += 4 )
@@ -220,165 +220,116 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
     AutoBuffer<int> mapbuf(gradsize.width + gradsize.height + 4);
     int* xmap = (int*)mapbuf + 1;
     int* ymap = xmap + gradsize.width + 2;
-    const int borderType = (int)BORDER_REFLECT_101;
-    for( x = -1; x < gradsize.width + 1; x++ )
-        xmap[x] = borderInterpolate(x - paddingTL.width + roiofs.x, wholeSize.width, borderType) - roiofs.x;
-    for( y = -1; y < gradsize.height + 1; y++ )
-        ymap[y] = borderInterpolate(y - paddingTL.height + roiofs.y, wholeSize.height, borderType) - roiofs.y;
 
-    // derivative buffers
+    const int borderType = (int)BORDER_REFLECT_101;
+
+    for( x = -1; x < gradsize.width + 1; x++ )
+        xmap[x] = borderInterpolate(x - paddingTL.width + roiofs.x,
+        wholeSize.width, borderType) - roiofs.x;
+    for( y = -1; y < gradsize.height + 1; y++ )
+        ymap[y] = borderInterpolate(y - paddingTL.height + roiofs.y,
+        wholeSize.height, borderType) - roiofs.y;
+
     // x- & y- derivatives for the whole row
     int width = gradsize.width;
     AutoBuffer<float> _dbuf(width*4);
-    float* dbuf = _dbuf;
+    float* const dbuf = _dbuf;
     Mat Dx(1, width, CV_32F, dbuf);
     Mat Dy(1, width, CV_32F, dbuf + width);
     Mat Mag(1, width, CV_32F, dbuf + width*2);
     Mat Angle(1, width, CV_32F, dbuf + width*3);
 
-    float angleScale = (float)(nbins/CV_PI);
+    if (cn == 3)
+    {
+        int end = gradsize.width + 2;
+        xmap -= 1, x = 0;
+#if CV_SSE2
+        __m128i ithree = _mm_set1_epi32(3);
+        for ( ; x <= end - 4; x += 4)
+            _mm_storeu_si128((__m128i*)(xmap + x), _mm_mullo_epi16(ithree,
+                _mm_loadu_si128((const __m128i*)(xmap + x))));
+#endif
+        for ( ; x < end; ++x)
+            xmap[x] *= 3;
+        xmap += 1;
+    }
 
-    // removing indirect addression and next we will use nimg instead of img
-    Mat nimg(Size(img.cols + 2, img.rows + 2), CV_MAKE_TYPE(CV_32F, img.channels()));
-    if (cn == 1)
-        for (y = 0; y < nimg.rows; ++y)
-        {
-            const uchar* src = img.data + img.step * ymap[y - 1];
-            float* dst = (float*)(nimg.data + nimg.step * y);
-            for (x = 0; x < nimg.cols; ++x)
-                dst[x] = lut[src[xmap[x - 1]]];
-        }
-    else
-        for (y = 0; y < nimg.rows; ++y)
-        {
-            const uchar* src = img.data + img.step * ymap[y - 1];
-            float* dst = (float*)(nimg.data + nimg.step * y);
-            for (x = 0; x < nimg.cols; ++x)
-            {
-                int x1 = x * 3, x2 = xmap[x - 1] * 3;
-                dst[x1] = lut[src[x2]];
-                dst[x1 + 1] = lut[src[x2 + 1]];
-                dst[x1 + 2] = lut[src[x2 + 2]];
-            }
-        }
-    
-    // computing gradients
+    float angleScale = (float)(nbins/CV_PI);
     for( y = 0; y < gradsize.height; y++ )
     {
-        const float* imgPtr  = (float*)(nimg.data + nimg.step*(y+1))+cn;
-        const float* prevPtr = (float*)(nimg.data + nimg.step*y)+cn;
-        const float* nextPtr = (float*)(nimg.data + nimg.step*(y+2))+cn;
+        const uchar* imgPtr  = img.data + img.step*ymap[y];
+        const uchar* prevPtr = img.data + img.step*ymap[y-1];
+        const uchar* nextPtr = img.data + img.step*ymap[y+1];
 
-        float* gradPtr = (float*)(grad.data  + grad.step * y);
-        uchar* qanglePtr = (uchar*)(qangle.data + qangle.step * y);
+        float* gradPtr = (float*)grad.ptr(y);
+        uchar* qanglePtr = (uchar*)qangle.ptr(y);
 
-        // in case of one-channel image
         if( cn == 1 )
+        {
+            for( x = 0; x < width; x++ )
+            {
+                int x1 = xmap[x];
+                dbuf[x] = (float)(lut[imgPtr[xmap[x+1]]] - lut[imgPtr[xmap[x-1]]]);
+                dbuf[width + x] = (float)(lut[nextPtr[x1]] - lut[prevPtr[x1]]);
+            }
+        }
+        else
         {
             x = 0;
 #if CV_SSE2
             for( ; x <= width - 4; x += 4 )
             {
-                __m128 i2 = _mm_loadu_ps(imgPtr + x + 1);
-                __m128 i0 = _mm_loadu_ps(imgPtr + x - 1);
-                __m128 nxt = _mm_loadu_ps(nextPtr + x);
-                __m128 prv = _mm_loadu_ps(prevPtr + x);
+                int x0 = xmap[x], x1 = xmap[x+1], x2 = xmap[x+2], x3 = xmap[x+3];
+                typedef const uchar* const T;
+                T p02 = imgPtr + xmap[x+1], p00 = imgPtr + xmap[x-1];
+                T p12 = imgPtr + xmap[x+2], p10 = imgPtr + xmap[x];
+                T p22 = imgPtr + xmap[x+3], p20 = p02;
+                T p32 = imgPtr + xmap[x+4], p30 = p12;
 
-                i0 =  _mm_sub_ps(i2, i0);
-                i2 = _mm_sub_ps(nxt, prv);
+                __m128 _dx0 = _mm_sub_ps(_mm_set_ps(lut[p32[0]], lut[p22[0]], lut[p12[0]], lut[p02[0]]),
+                                         _mm_set_ps(lut[p30[0]], lut[p20[0]], lut[p10[0]], lut[p00[0]]));
+                __m128 _dx1 = _mm_sub_ps(_mm_set_ps(lut[p32[1]], lut[p22[1]], lut[p12[1]], lut[p02[1]]),
+                                         _mm_set_ps(lut[p30[1]], lut[p20[1]], lut[p10[1]], lut[p00[1]]));
+                __m128 _dx2 = _mm_sub_ps(_mm_set_ps(lut[p32[2]], lut[p22[2]], lut[p12[2]], lut[p02[2]]),
+                                         _mm_set_ps(lut[p30[2]], lut[p20[2]], lut[p10[2]], lut[p00[2]]));
 
-                _mm_storeu_ps(dbuf + x, i0);
-                _mm_storeu_ps(dbuf + x + width, i2);
+                __m128 _dy0 = _mm_sub_ps(_mm_set_ps(lut[nextPtr[x3]], lut[nextPtr[x2]], lut[nextPtr[x1]], lut[nextPtr[x0]]),
+                                         _mm_set_ps(lut[prevPtr[x3]], lut[prevPtr[x2]], lut[prevPtr[x1]], lut[prevPtr[x0]]));
+                __m128 _dy1 = _mm_sub_ps(_mm_set_ps(lut[nextPtr[x3+1]], lut[nextPtr[x2+1]], lut[nextPtr[x1+1]], lut[nextPtr[x0+1]]),
+                                         _mm_set_ps(lut[prevPtr[x3+1]], lut[prevPtr[x2+1]], lut[prevPtr[x1+1]], lut[prevPtr[x0+1]]));
+                __m128 _dy2 = _mm_sub_ps(_mm_set_ps(lut[nextPtr[x3+2]], lut[nextPtr[x2+2]], lut[nextPtr[x1+2]], lut[nextPtr[x0+2]]),
+                                         _mm_set_ps(lut[prevPtr[x3+2]], lut[prevPtr[x2+2]], lut[prevPtr[x1+2]], lut[prevPtr[x0+2]]));
+
+                __m128 _mag0 = _mm_add_ps(_mm_mul_ps(_dx0, _dx0), _mm_mul_ps(_dy0, _dy0));
+                __m128 _mag1 = _mm_add_ps(_mm_mul_ps(_dx1, _dx1), _mm_mul_ps(_dy1, _dy1));
+                __m128 _mag2 = _mm_add_ps(_mm_mul_ps(_dx2, _dx2), _mm_mul_ps(_dy2, _dy2));
+
+                __m128 mask = _mm_cmpgt_ps(_mag2, _mag1);
+                _dx2 = _mm_or_ps(_mm_and_ps(_dx2, mask), _mm_andnot_ps(mask, _dx1));
+                _dy2 = _mm_or_ps(_mm_and_ps(_dy2, mask), _mm_andnot_ps(mask, _dy1));
+
+                mask = _mm_cmpgt_ps(_mm_max_ps(_mag2, _mag1), _mag0);
+                _dx2 = _mm_or_ps(_mm_and_ps(_dx2, mask), _mm_andnot_ps(mask, _dx0));
+                _dy2 = _mm_or_ps(_mm_and_ps(_dy2, mask), _mm_andnot_ps(mask, _dy0));
+
+                _mm_storeu_ps(dbuf + x, _dx2);
+                _mm_storeu_ps(dbuf + x + width, _dy2);
             }
 #endif
             for( ; x < width; x++ )
             {
-                dbuf[x] = imgPtr[x+1] - imgPtr[x-1];
-                dbuf[width + x] = nextPtr[x] - prevPtr[x];
-            }
-        }
-        else // 3-channel image
-        {
-            x = 0;
-#if CV_SSE2
-            for ( ; x <= width - 4; x += 4)
-            {
-                int x1 = x*3;
-                const float* p2 = imgPtr + (x+1)*3;
-                const float* p0 = imgPtr + (x-1)*3;
-
-                __m128 gx0 = _mm_sub_ps(_mm_loadu_ps(p2), _mm_loadu_ps(p0));
-                __m128 gy0 = _mm_sub_ps(_mm_loadu_ps(nextPtr + x1), _mm_loadu_ps(prevPtr + x1));
-                __m128 mag0 = _mm_add_ps(_mm_mul_ps(gx0, gx0), _mm_mul_ps(gy0, gy0));
-
-                __m128 gx1 = _mm_sub_ps(_mm_loadu_ps(p2 + 3), _mm_loadu_ps(p0 + 3));
-                __m128 gy1 = _mm_sub_ps(_mm_loadu_ps(nextPtr + x1 + 3), _mm_loadu_ps(prevPtr + x1 + 3));
-                __m128 mag1 = _mm_add_ps(_mm_mul_ps(gx1, gx1), _mm_mul_ps(gy1, gy1));
-
-                __m128 gx2 = _mm_sub_ps(_mm_loadu_ps(p2 + 6), _mm_loadu_ps(p0 + 6));
-                __m128 gy2 = _mm_sub_ps(_mm_loadu_ps(nextPtr + x1 + 6), _mm_loadu_ps(prevPtr + x1 + 6));
-                __m128 mag2 = _mm_add_ps(_mm_mul_ps(gx2, gx2), _mm_mul_ps(gy2, gy2));
-
-                __m128 gx3 = _mm_sub_ps(_mm_loadu_ps(p2 + 9), _mm_loadu_ps(p0 + 9));
-                __m128 gy3 = _mm_sub_ps(_mm_loadu_ps(nextPtr + x1 + 9), _mm_loadu_ps(prevPtr + x1 + 9));
-                __m128 mag3 = _mm_add_ps(_mm_mul_ps(gx3, gx3), _mm_mul_ps(gy3, gy3));
-                
-                _MM_TRANSPOSE4_PS(mag0, mag1, mag2, mag3);
-                _MM_TRANSPOSE4_PS(gx0, gx1, gx2, gx3);
-                _MM_TRANSPOSE4_PS(gy0, gy1, gy2, gy3);
-                __m128 mask = _mm_cmpge_ps(mag2, mag1);
-                __m128 rx = _mm_or_ps(_mm_and_ps(mask, gx2), _mm_andnot_ps(mask, gx1));
-                __m128 ry = _mm_or_ps(_mm_and_ps(mask, gy2), _mm_andnot_ps(mask, gy1));
-
-                mask = _mm_cmpge_ps(_mm_max_ps(mag2, mag1), mag0);
-                rx = _mm_or_ps(_mm_and_ps(mask, rx), _mm_andnot_ps(mask, gx0));
-                ry = _mm_or_ps(_mm_and_ps(mask, ry), _mm_andnot_ps(mask, gy0));
-
-                _mm_storeu_ps(dbuf + x, rx);
-                _mm_storeu_ps(dbuf + width + x, ry);
-            }
-
-            // last 1-3 pixels
-            for ( ; x < width; ++x )
-            {
-                int x1 = x*3; 
-                const float* p2 = imgPtr + (x+1)*3;
-                const float* p0 = imgPtr + (x-1)*3;
-                float _Dx[4], _Dy[4], _Mag[4];
-
-                __m128 gx0 = _mm_sub_ps(_mm_loadu_ps(p2), _mm_loadu_ps(p0));
-                __m128 gy0 = _mm_sub_ps(_mm_loadu_ps(nextPtr + x1), _mm_loadu_ps(prevPtr + x1));
-                __m128 mag0 = _mm_add_ps(_mm_mul_ps(gx0, gx0), _mm_mul_ps(gy0, gy0));
-                _mm_storeu_ps(_Dx, gx0);
-                _mm_storeu_ps(_Dy, gy0);
-                _mm_storeu_ps(_Mag, mag0);
-
-                int index = 2;
-                if (_Mag[1] > _Mag[index])
-                    index = 1;
-                if (_Mag[0] > _Mag[index])
-                    index = 0;
-                
-                dbuf[x] = _Dx[index];
-                dbuf[x+width] = _Dy[index];
-            }
-#endif
-            for( ; x < width; x++ )
-            {
-                // computing the biggest gradient
-                int x1 = x*3;
+                int x1 = xmap[x];
                 float dx0, dy0, dx, dy, mag0, mag;
-                const float* p2 = imgPtr + (x+1)*3;
-                const float* p0 = imgPtr + (x-1)*3;
+                const uchar* p2 = imgPtr + xmap[x+1];
+                const uchar* p0 = imgPtr + xmap[x-1];
 
-                dx0 = p2[2] - p0[2];
-                dy0 = nextPtr[x1+2] - prevPtr[x1+2];
+                dx0 = lut[p2[2]] - lut[p0[2]];
+                dy0 = lut[nextPtr[x1+2]] - lut[prevPtr[x1+2]];
                 mag0 = dx0*dx0 + dy0*dy0;
 
-                dx = p2[1] - p0[1];
-                dy = nextPtr[x1+1] - prevPtr[x1+1];
+                dx = lut[p2[1]] - lut[p0[1]];
+                dy = lut[nextPtr[x1+1]] - lut[prevPtr[x1+1]];
                 mag = dx*dx + dy*dy;
-
                 if( mag0 < mag )
                 {
                     dx0 = dx;
@@ -386,10 +337,9 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
                     mag0 = mag;
                 }
 
-                dx = p2[0] - p0[0];
-                dy = nextPtr[x1] - prevPtr[x1];
+                dx = lut[p2[0]] - lut[p0[0]];
+                dy = lut[nextPtr[x1]] - lut[prevPtr[x1]];
                 mag = dx*dx + dy*dy;
-
                 if( mag0 < mag )
                 {
                     dx0 = dx;
