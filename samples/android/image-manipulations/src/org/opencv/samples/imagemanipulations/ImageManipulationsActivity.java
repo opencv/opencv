@@ -68,7 +68,6 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
     private float                mBuff[];
     private Mat                  mRgbaInnerWindow;
     private Mat                  mGrayInnerWindow;
-    private Mat                  mBlurWindow;
     private Mat                  mZoomWindow;
     private Mat                  mZoomCorner;
     private Mat                  mSepiaKernel;
@@ -220,9 +219,6 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
         if (mGrayInnerWindow == null && !mGray.empty())
             mGrayInnerWindow = mGray.submat(top, top + height, left, left + width);
 
-        if (mBlurWindow == null)
-            mBlurWindow = mRgba.submat(0, rows, cols / 3, cols * 2 / 3);
-
         if (mZoomCorner == null)
             mZoomCorner = mRgba.submat(0, rows / 2 - rows / 10, 0, cols / 2 - cols / 10);
 
@@ -236,8 +232,6 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
             mZoomWindow.release();
         if (mZoomCorner != null)
             mZoomCorner.release();
-        if (mBlurWindow != null)
-            mBlurWindow.release();
         if (mGrayInnerWindow != null)
             mGrayInnerWindow.release();
         if (mRgbaInnerWindow != null)
@@ -254,7 +248,6 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
         mIntermediateMat = null;
         mRgbaInnerWindow = null;
         mGrayInnerWindow = null;
-        mBlurWindow = null;
         mZoomCorner = null;
         mZoomWindow = null;
     }
@@ -327,7 +320,9 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_SEPIA:
-            Core.transform(mRgba, mRgba, mSepiaKernel);
+            if ((mRgbaInnerWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
+                CreateAuxiliaryMats();
+            Core.transform(mRgbaInnerWindow, mRgbaInnerWindow, mSepiaKernel);
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_ZOOM:
