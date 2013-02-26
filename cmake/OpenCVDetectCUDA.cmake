@@ -33,8 +33,48 @@ if(CUDA_FOUND)
 
   message(STATUS "CUDA detected: " ${CUDA_VERSION})
 
-  set(CUDA_ARCH_BIN "1.1 1.2 1.3 2.0 2.1(2.0) 3.0" CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
-  set(CUDA_ARCH_PTX "2.0 3.0" CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")
+  set(_generations "Fermi" "Kepler")
+  if(NOT CMAKE_CROSSCOMPILING)
+    list(APPEND _generations "Auto")
+  endif()
+  set(CUDA_GENERATION "" CACHE STRING "Build CUDA device code only for specific GPU architecture. Leave empty to build for all architectures.")
+  if( CMAKE_VERSION VERSION_GREATER "2.8" )
+    set_property( CACHE CUDA_GENERATION PROPERTY STRINGS "" ${_generations} )
+  endif()
+
+  if(CUDA_GENERATION)
+    if(NOT ";${_generations};" MATCHES ";${CUDA_GENERATION};")
+      string(REPLACE ";" ", " _generations "${_generations}")
+      message(FATAL_ERROR "ERROR: ${_generations} Generations are suppered.")
+    endif()
+    unset(CUDA_ARCH_BIN CACHE)
+    unset(CUDA_ARCH_PTX CACHE)
+  endif()
+
+  set(__cuda_arch_ptx "")
+  if(CUDA_GENERATION STREQUAL "Fermi")
+    set(__cuda_arch_bin "2.0 2.1(2.0)")
+  elseif(CUDA_GENERATION STREQUAL "Kepler")
+    set(__cuda_arch_bin "3.0")
+  elseif(CUDA_GENERATION STREQUAL "Auto")
+    execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" "${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCudaArch.cu" "--run"
+                     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
+                     RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
+                     ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(NOT _nvcc_res EQUAL 0)
+      message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
+    else()
+      set(__cuda_arch_bin "${_nvcc_out}")
+    endif()
+  endif()
+
+  if(NOT DEFINED __cuda_arch_bin)
+    set(__cuda_arch_bin "1.1 1.2 1.3 2.0 2.1(2.0) 3.0")
+    set(__cuda_arch_ptx "2.0 3.0")
+  endif()
+
+  set(CUDA_ARCH_BIN ${__cuda_arch_bin} CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
+  set(CUDA_ARCH_PTX ${__cuda_arch_ptx} CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")
 
   string(REGEX REPLACE "\\." "" ARCH_BIN_NO_POINTS "${CUDA_ARCH_BIN}")
   string(REGEX REPLACE "\\." "" ARCH_PTX_NO_POINTS "${CUDA_ARCH_PTX}")
