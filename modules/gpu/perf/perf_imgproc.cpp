@@ -1773,3 +1773,44 @@ PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough,
         CPU_SANITY_CHECK(positions);
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// BuildNonZeroPointList
+
+namespace
+{
+    struct Vec2wComparator
+    {
+        bool operator ()(cv::Vec2w a, cv::Vec2w b) const
+        {
+            return (a[1] < b[1]) || (a[1] == b[1] && a[0] < b[0]);
+        }
+    };
+}
+
+PERF_TEST_P(Sz, ImgProc_BuildNonZeroPointList,
+            GPU_TYPICAL_MAT_SIZES)
+{
+    const cv::Size size = GetParam();
+
+    cv::Mat src(size, CV_8UC1);
+    cv::randu(src, 0, 2);
+
+    if (PERF_RUN_GPU())
+    {
+        const cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_points;
+
+        TEST_CYCLE() cv::gpu::buildNonZeroPointList(d_src, d_points);
+
+        cv::Mat gpu_points(d_points);
+        cv::Vec2w* begin = gpu_points.ptr<cv::Vec2w>(0);
+        cv::Vec2w* end = begin + gpu_points.cols;
+        std::sort(begin, end, Vec2wComparator());
+        SANITY_CHECK(gpu_points);
+    }
+    else
+    {
+        FAIL_NO_CPU();
+    }
+}

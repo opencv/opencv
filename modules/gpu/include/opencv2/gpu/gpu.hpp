@@ -852,6 +852,9 @@ private:
     int nLayers_;
 };
 
+//! build list of non-zero points coordinates (CV_16UC2)
+CV_EXPORTS void buildNonZeroPointList(const GpuMat& src, GpuMat& ptList);
+
 //! HoughLines
 
 struct HoughLinesBuf

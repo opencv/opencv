@@ -48,6 +48,8 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
+void cv::gpu::buildNonZeroPointList(const GpuMat&, GpuMat&) { throw_nogpu(); }
+
 void cv::gpu::HoughLines(const GpuMat&, GpuMat&, float, float, int, bool, int) { throw_nogpu(); }
 void cv::gpu::HoughLines(const GpuMat&, GpuMat&, HoughLinesBuf&, float, float, int, bool, int) { throw_nogpu(); }
 void cv::gpu::HoughLinesDownload(const GpuMat&, OutputArray, OutputArray) { throw_nogpu(); }
@@ -69,6 +71,9 @@ void cv::gpu::GeneralizedHough_GPU::release() {}
 
 #else /* !defined (HAVE_CUDA) */
 
+//////////////////////////////////////////////////////////
+// buildNonZeroPointList
+
 namespace cv { namespace gpu { namespace device
 {
     namespace hough
@@ -76,6 +81,25 @@ namespace cv { namespace gpu { namespace device
         int buildPointList_gpu(PtrStepSzb src, unsigned int* list);
     }
 }}}
+
+void cv::gpu::buildNonZeroPointList(const GpuMat& src, GpuMat& ptList)
+{
+    using namespace cv::gpu::device::hough;
+
+    CV_Assert(src.type() == CV_8UC1);
+    CV_Assert(src.cols < std::numeric_limits<unsigned short>::max());
+    CV_Assert(src.rows < std::numeric_limits<unsigned short>::max());
+
+    ensureSizeIsEnough(1, src.size().area(), CV_16UC2, ptList);
+    unsigned int* srcPoints = ptList.ptr<unsigned int>();
+
+    const int pointsCount = buildPointList_gpu(src, srcPoints);
+
+    if (pointsCount > 0)
+        ptList.cols = pointsCount;
+    else
+        ptList.release();
+}
 
 //////////////////////////////////////////////////////////
 // HoughLines
