@@ -346,18 +346,14 @@ TEST(Highgui_WebP, encode_decode_webp)
         params.push_back(CV_IMWRITE_WEBP_QUALITY);
         params.push_back(100);
 
-        for (int q = 100; q >=50 ; q-=5)
+        for (int q = 100; q >=10 ; q-=5)
         {
             params[1] = q;
             output = string(ts.get_data_path()) + cv::format("/../cv/shared/lena_q%d.webp", q);
             EXPECT_NO_THROW(cv::imwrite(output, img, params));
         }
     }
-    catch(...)
-    {
-
-    }
+    catch(...){}
 }
 
 #endif
-

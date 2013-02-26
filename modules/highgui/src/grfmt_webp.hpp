@@ -70,12 +70,12 @@ protected:
 class WebPEncoder : public BaseImageEncoder
 {
 public:
-	WebPEncoder();
-	~WebPEncoder();
+    WebPEncoder();
+    ~WebPEncoder();
 
-	bool write(const Mat& img, const vector<int>& params);
+    bool write(const Mat& img, const vector<int>& params);
 
-	ImageEncoder newEncoder() const;
+    ImageEncoder newEncoder() const;
 };
 
 }
@@ -83,12 +83,3 @@ public:
 #endif
 
 #endif /* _GRFMT_WEBP_H_ */
-
-
-
-
-
-
-
-
-

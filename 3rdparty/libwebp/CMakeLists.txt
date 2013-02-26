@@ -10,9 +10,9 @@ file(GLOB lib_srcs dec/*.c dsp/*.c enc/*.c mux/*.c utils/*.c webp/*.c)
 file(GLOB lib_hdrs dec/*.h dsp/*.h enc/*.h mux/*.h utils/*.h webp/*.h)
 
 if(NOT ANDROID)
-	ocv_list_filterout(lib_srcs cpu-features.c)
+  ocv_list_filterout(lib_srcs cpu-features.c)
 endif()
- 
+
 # ----------------------------------------------------------------------------------
 #         Define the library target:
 # ----------------------------------------------------------------------------------
