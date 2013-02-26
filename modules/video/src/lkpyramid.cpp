@@ -626,7 +626,7 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         err = (float*)errMat.data;
     }
 
-    vector<Mat> prevPyr, nextPyr;
+    std::vector<Mat> prevPyr, nextPyr;
     int levels1 = -1;
     int lvlStep1 = 1;
     int levels2 = -1;
@@ -1569,7 +1569,7 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
                         err += t * t;
                     }
                 }
-                error[i] = (float)sqrt(err);
+                error[i] = (float)std::sqrt(err);
             }
         }
     }
@@ -1856,8 +1856,8 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
                     double dbx2 = b[2].x - b[0].x, dby2 = b[2].y - b[0].y;
                     const double eps = 0.01;
 
-                    if( fabs(dax1*day2 - day1*dax2) < eps*sqrt(dax1*dax1+day1*day1)*sqrt(dax2*dax2+day2*day2) ||
-                        fabs(dbx1*dby2 - dby1*dbx2) < eps*sqrt(dbx1*dbx1+dby1*dby1)*sqrt(dbx2*dbx2+dby2*dby2) )
+                    if( fabs(dax1*day2 - day1*dax2) < eps*std::sqrt(dax1*dax1+day1*day1)*std::sqrt(dax2*dax2+day2*day2) ||
+                        fabs(dbx1*dby2 - dby1*dbx2) < eps*std::sqrt(dbx1*dbx1+dby1*dby1)*std::sqrt(dbx2*dbx2+dby2*dby2) )
                         continue;
                 }
                 break;

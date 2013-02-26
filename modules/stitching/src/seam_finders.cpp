@@ -43,13 +43,11 @@
 #include "precomp.hpp"
 #include <map>
 
-using namespace std;
-
 namespace cv {
 namespace detail {
 
-void PairwiseSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners,
-                              vector<Mat> &masks)
+void PairwiseSeamFinder::find(const std::vector<Mat> &src, const std::vector<Point> &corners,
+                              std::vector<Mat> &masks)
 {
     LOGLN("Finding seams...");
     if (src.size() == 0)
@@ -85,8 +83,8 @@ void PairwiseSeamFinder::run()
 }
 
 
-void VoronoiSeamFinder::find(const vector<Size> &sizes, const vector<Point> &corners,
-                             vector<Mat> &masks)
+void VoronoiSeamFinder::find(const std::vector<Size> &sizes, const std::vector<Point> &corners,
+                             std::vector<Mat> &masks)
 {
     LOGLN("Finding seams...");
     if (sizes.size() == 0)
@@ -162,7 +160,7 @@ void VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
 DpSeamFinder::DpSeamFinder(CostFunction costFunc) : costFunc_(costFunc) {}
 
 
-void DpSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners, vector<Mat> &masks)
+void DpSeamFinder::find(const std::vector<Mat> &src, const std::vector<Point> &corners, std::vector<Mat> &masks)
 {
     LOGLN("Finding seams...");
 #if ENABLE_LOG
@@ -172,14 +170,14 @@ void DpSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners, ve
     if (src.size() == 0)
         return;
 
-    vector<pair<size_t, size_t> > pairs;
+    std::vector<std::pair<size_t, size_t> > pairs;
 
     for (size_t i = 0; i+1 < src.size(); ++i)
         for (size_t j = i+1; j < src.size(); ++j)
-            pairs.push_back(make_pair(i, j));
+            pairs.push_back(std::make_pair(i, j));
 
     sort(pairs.begin(), pairs.end(), ImagePairLess(src, corners));
-    reverse(pairs.begin(), pairs.end());
+    std::reverse(pairs.begin(), pairs.end());
 
     for (size_t i = 0; i < pairs.size(); ++i)
     {
@@ -271,11 +269,11 @@ void DpSeamFinder::findComponents()
         for (int x = 0; x < unionSize_.width; ++x)
         {
             if (mask1_(y, x) && mask2_(y, x))
-                labels_(y, x) = numeric_limits<int>::max();
+                labels_(y, x) = std::numeric_limits<int>::max();
             else if (mask1_(y, x))
-                labels_(y, x) = numeric_limits<int>::max()-1;
+                labels_(y, x) = std::numeric_limits<int>::max()-1;
             else if (mask2_(y, x))
-                labels_(y, x) = numeric_limits<int>::max()-2;
+                labels_(y, x) = std::numeric_limits<int>::max()-2;
             else
                 labels_(y, x) = 0;
         }
@@ -285,19 +283,19 @@ void DpSeamFinder::findComponents()
     {
         for (int x = 0; x < unionSize_.width; ++x)
         {
-            if (labels_(y, x) >= numeric_limits<int>::max()-2)
+            if (labels_(y, x) >= std::numeric_limits<int>::max()-2)
             {
-                if (labels_(y, x) == numeric_limits<int>::max())
+                if (labels_(y, x) == std::numeric_limits<int>::max())
                     states_.push_back(INTERS);
-                else if (labels_(y, x) == numeric_limits<int>::max()-1)
+                else if (labels_(y, x) == std::numeric_limits<int>::max()-1)
                     states_.push_back(FIRST);
-                else if (labels_(y, x) == numeric_limits<int>::max()-2)
+                else if (labels_(y, x) == std::numeric_limits<int>::max()-2)
                     states_.push_back(SECOND);
 
                 floodFill(labels_, Point(x, y), ++ncomps_);
                 tls_.push_back(Point(x, y));
                 brs_.push_back(Point(x+1, y+1));
-                contours_.push_back(vector<Point>());
+                contours_.push_back(std::vector<Point>());
             }
 
             if (labels_(y, x))
@@ -325,14 +323,14 @@ void DpSeamFinder::findEdges()
 {
     // find edges between components
 
-    map<pair<int, int>, int> wedges; // weighted edges
+    std::map<std::pair<int, int>, int> wedges; // weighted edges
 
     for (int ci = 0; ci < ncomps_-1; ++ci)
     {
         for (int cj = ci+1; cj < ncomps_; ++cj)
         {
-            wedges[make_pair(ci, cj)] = 0;
-            wedges[make_pair(cj, ci)] = 0;
+            wedges[std::make_pair(ci, cj)] = 0;
+            wedges[std::make_pair(cj, ci)] = 0;
         }
     }
 
@@ -346,26 +344,26 @@ void DpSeamFinder::findEdges()
 
             if (x > 0 && labels_(y, x-1) && labels_(y, x-1) != l)
             {
-                wedges[make_pair(ci, labels_(y, x-1)-1)]++;
-                wedges[make_pair(labels_(y, x-1)-1, ci)]++;
+                wedges[std::make_pair(ci, labels_(y, x-1)-1)]++;
+                wedges[std::make_pair(labels_(y, x-1)-1, ci)]++;
             }
 
             if (y > 0 && labels_(y-1, x) && labels_(y-1, x) != l)
             {
-                wedges[make_pair(ci, labels_(y-1, x)-1)]++;
-                wedges[make_pair(labels_(y-1, x)-1, ci)]++;
+                wedges[std::make_pair(ci, labels_(y-1, x)-1)]++;
+                wedges[std::make_pair(labels_(y-1, x)-1, ci)]++;
             }
 
             if (x < unionSize_.width-1 && labels_(y, x+1) && labels_(y, x+1) != l)
             {
-                wedges[make_pair(ci, labels_(y, x+1)-1)]++;
-                wedges[make_pair(labels_(y, x+1)-1, ci)]++;
+                wedges[std::make_pair(ci, labels_(y, x+1)-1)]++;
+                wedges[std::make_pair(labels_(y, x+1)-1, ci)]++;
             }
 
             if (y < unionSize_.height-1 && labels_(y+1, x) && labels_(y+1, x) != l)
             {
-                wedges[make_pair(ci, labels_(y+1, x)-1)]++;
-                wedges[make_pair(labels_(y+1, x)-1, ci)]++;
+                wedges[std::make_pair(ci, labels_(y+1, x)-1)]++;
+                wedges[std::make_pair(labels_(y+1, x)-1, ci)]++;
             }
         }
     }
@@ -376,11 +374,11 @@ void DpSeamFinder::findEdges()
     {
         for (int cj = ci+1; cj < ncomps_; ++cj)
         {
-            map<pair<int, int>, int>::iterator itr = wedges.find(make_pair(ci, cj));
+            std::map<std::pair<int, int>, int>::iterator itr = wedges.find(std::make_pair(ci, cj));
             if (itr != wedges.end() && itr->second > 0)
                 edges_.insert(itr->first);
 
-            itr = wedges.find(make_pair(cj, ci));
+            itr = wedges.find(std::make_pair(cj, ci));
             if (itr != wedges.end() && itr->second > 0)
                 edges_.insert(itr->first);
         }
@@ -402,7 +400,7 @@ void DpSeamFinder::resolveConflicts(
         int c1 = 0, c2 = 0;
         hasConflict = false;
 
-        for (set<pair<int, int> >::iterator itr = edges_.begin(); itr != edges_.end(); ++itr)
+        for (std::set<std::pair<int, int> >::iterator itr = edges_.begin(); itr != edges_.end(); ++itr)
         {
             c1 = itr->first;
             c2 = itr->second;
@@ -436,7 +434,7 @@ void DpSeamFinder::resolveConflicts(
                 Point p1, p2;
                 if (getSeamTips(c1, c2, p1, p2))
                 {
-                    vector<Point> seam;
+                    std::vector<Point> seam;
                     bool isHorizontalSeam;
 
                     if (estimateSeam(image1, image2, tl1, tl2, c1, p1, p2, seam, isHorizontalSeam))
@@ -456,8 +454,8 @@ void DpSeamFinder::resolveConflicts(
                 int x0 = tls_[c[i]].x, x1 = brs_[c[i]].x;
                 int y0 = tls_[c[i]].y, y1 = brs_[c[i]].y;
 
-                tls_[c[i]] = Point(numeric_limits<int>::max(), numeric_limits<int>::max());
-                brs_[c[i]] = Point(numeric_limits<int>::min(), numeric_limits<int>::min());
+                tls_[c[i]] = Point(std::numeric_limits<int>::max(), std::numeric_limits<int>::max());
+                brs_[c[i]] = Point(std::numeric_limits<int>::min(), std::numeric_limits<int>::min());
                 contours_[c[i]].clear();
 
                 for (int y = y0; y < y1; ++y)
@@ -483,8 +481,8 @@ void DpSeamFinder::resolveConflicts(
 
             // remove edges
 
-            edges_.erase(make_pair(c1, c2));
-            edges_.erase(make_pair(c2, c1));
+            edges_.erase(std::make_pair(c1, c2));
+            edges_.erase(std::make_pair(c2, c1));
         }
     }
 
@@ -543,9 +541,9 @@ void DpSeamFinder::computeGradients(const Mat &image1, const Mat &image2)
 
 bool DpSeamFinder::hasOnlyOneNeighbor(int comp)
 {
-    set<pair<int, int> >::iterator begin, end;
-    begin = lower_bound(edges_.begin(), edges_.end(), make_pair(comp, numeric_limits<int>::min()));
-    end = upper_bound(edges_.begin(), edges_.end(), make_pair(comp, numeric_limits<int>::max()));
+    std::set<std::pair<int, int> >::iterator begin, end;
+    begin = lower_bound(edges_.begin(), edges_.end(), std::make_pair(comp, std::numeric_limits<int>::min()));
+    end = upper_bound(edges_.begin(), edges_.end(), std::make_pair(comp, std::numeric_limits<int>::max()));
     return ++begin == end;
 }
 
@@ -579,7 +577,7 @@ bool DpSeamFinder::getSeamTips(int comp1, int comp2, Point &p1, Point &p2)
 
     // find special points
 
-    vector<Point> specialPoints;
+    std::vector<Point> specialPoints;
     int l2 = comp2+1;
 
     for (size_t i = 0; i < contours_[comp1].size(); ++i)
@@ -603,15 +601,15 @@ bool DpSeamFinder::getSeamTips(int comp1, int comp2, Point &p1, Point &p2)
 
     // find clusters
 
-    vector<int> labels;
+    std::vector<int> labels;
     cv::partition(specialPoints, labels, ClosePoints(10));
 
-    int nlabels = *max_element(labels.begin(), labels.end()) + 1;
+    int nlabels = *std::max_element(labels.begin(), labels.end()) + 1;
     if (nlabels < 2)
         return false;
 
-    vector<Point> sum(nlabels);
-    vector<vector<Point> > points(nlabels);
+    std::vector<Point> sum(nlabels);
+    std::vector<std::vector<Point> > points(nlabels);
 
     for (size_t i = 0; i < specialPoints.size(); ++i)
     {
@@ -622,7 +620,7 @@ bool DpSeamFinder::getSeamTips(int comp1, int comp2, Point &p1, Point &p2)
     // select two most distant clusters
 
     int idx[2] = {-1,-1};
-    double maxDist = -numeric_limits<double>::max();
+    double maxDist = -std::numeric_limits<double>::max();
 
     for (int i = 0; i < nlabels-1; ++i)
     {
@@ -653,7 +651,7 @@ bool DpSeamFinder::getSeamTips(int comp1, int comp2, Point &p1, Point &p2)
         double cy = cvRound(sum[idx[i]].y / size);
 
         size_t closest = points[idx[i]].size();
-        double minDist = numeric_limits<double>::max();
+        double minDist = std::numeric_limits<double>::max();
 
         for (size_t j = 0; j < points[idx[i]].size(); ++j)
         {
@@ -781,7 +779,7 @@ void DpSeamFinder::computeCosts(
 
 bool DpSeamFinder::estimateSeam(
         const Mat &image1, const Mat &image2, Point tl1, Point tl2, int comp,
-        Point p1, Point p2, vector<Point> &seam, bool &isHorizontal)
+        Point p1, Point p2, std::vector<Point> &seam, bool &isHorizontal)
 {
     CV_Assert(states_[comp] & INTERS);
 
@@ -822,7 +820,7 @@ bool DpSeamFinder::estimateSeam(
     cost(src) = 0.f;
 
     int nsteps;
-    pair<float, int> steps[3];
+    std::pair<float, int> steps[3];
 
     if (isHorizontal)
     {
@@ -837,16 +835,16 @@ bool DpSeamFinder::estimateSeam(
                 if (labels_(y + roi.y, x + roi.x) == l)
                 {
                     if (reachable(y, x-1))
-                        steps[nsteps++] = make_pair(cost(y, x-1) + costH(y, x-1), 1);
+                        steps[nsteps++] = std::make_pair(cost(y, x-1) + costH(y, x-1), 1);
                     if (y > 0 && reachable(y-1, x-1))
-                        steps[nsteps++] = make_pair(cost(y-1, x-1) + costH(y-1, x-1) + costV(y-1, x), 2);
+                        steps[nsteps++] = std::make_pair(cost(y-1, x-1) + costH(y-1, x-1) + costV(y-1, x), 2);
                     if (y < roi.height-1 && reachable(y+1, x-1))
-                        steps[nsteps++] = make_pair(cost(y+1, x-1) + costH(y+1, x-1) + costV(y, x), 3);
+                        steps[nsteps++] = std::make_pair(cost(y+1, x-1) + costH(y+1, x-1) + costV(y, x), 3);
                 }
 
                 if (nsteps)
                 {
-                    pair<float, int> opt = *min_element(steps, steps + nsteps);
+                    std::pair<float, int> opt = *min_element(steps, steps + nsteps);
                     cost(y, x) = opt.first;
                     control(y, x) = (uchar)opt.second;
                     reachable(y, x) = 255;
@@ -867,16 +865,16 @@ bool DpSeamFinder::estimateSeam(
                 if (labels_(y + roi.y, x + roi.x) == l)
                 {
                     if (reachable(y-1, x))
-                        steps[nsteps++] = make_pair(cost(y-1, x) + costV(y-1, x), 1);
+                        steps[nsteps++] = std::make_pair(cost(y-1, x) + costV(y-1, x), 1);
                     if (x > 0 && reachable(y-1, x-1))
-                        steps[nsteps++] = make_pair(cost(y-1, x-1) + costV(y-1, x-1) + costH(y, x-1), 2);
+                        steps[nsteps++] = std::make_pair(cost(y-1, x-1) + costV(y-1, x-1) + costH(y, x-1), 2);
                     if (x < roi.width-1 && reachable(y-1, x+1))
-                        steps[nsteps++] = make_pair(cost(y-1, x+1) + costV(y-1, x+1) + costH(y, x), 3);
+                        steps[nsteps++] = std::make_pair(cost(y-1, x+1) + costV(y-1, x+1) + costH(y, x), 3);
                 }
 
                 if (nsteps)
                 {
-                    pair<float, int> opt = *min_element(steps, steps + nsteps);
+                    std::pair<float, int> opt = *min_element(steps, steps + nsteps);
                     cost(y, x) = opt.first;
                     control(y, x) = (uchar)opt.second;
                     reachable(y, x) = 255;
@@ -914,7 +912,7 @@ bool DpSeamFinder::estimateSeam(
     }
 
     if (!swapped)
-        reverse(seam.begin(), seam.end());
+        std::reverse(seam.begin(), seam.end());
 
     CV_Assert(seam.front() == p1);
     CV_Assert(seam.back() == p2);
@@ -923,7 +921,7 @@ bool DpSeamFinder::estimateSeam(
 
 
 void DpSeamFinder::updateLabelsUsingSeam(
-        int comp1, int comp2, const vector<Point> &seam, bool isHorizontalSeam)
+        int comp1, int comp2, const std::vector<Point> &seam, bool isHorizontalSeam)
 {
     Mat_<int> mask = Mat::zeros(brs_[comp1].y - tls_[comp1].y,
                                 brs_[comp1].x - tls_[comp1].x, CV_32S);
@@ -1001,13 +999,13 @@ void DpSeamFinder::updateLabelsUsingSeam(
     // find new components connected with the second component and
     // with other components except the ones we are working with
 
-    map<int, int> connect2;
-    map<int, int> connectOther;
+    std::map<int, int> connect2;
+    std::map<int, int> connectOther;
 
     for (int i = 1; i <= ncomps; ++i)
     {
-        connect2.insert(make_pair(i, 0));
-        connectOther.insert(make_pair(i, 0));
+        connect2.insert(std::make_pair(i, 0));
+        connectOther.insert(std::make_pair(i, 0));
     }
 
     for (size_t i = 0; i < contours_[comp1].size(); ++i)
@@ -1032,9 +1030,9 @@ void DpSeamFinder::updateLabelsUsingSeam(
         }
     }
 
-    vector<int> isAdjComp(ncomps + 1, 0);
+    std::vector<int> isAdjComp(ncomps + 1, 0);
 
-    for (map<int, int>::iterator itr = connect2.begin(); itr != connect2.end(); ++itr)
+    for (std::map<int, int>::iterator itr = connect2.begin(); itr != connect2.end(); ++itr)
     {
         double len = static_cast<double>(contours_[comp1].size());
         isAdjComp[itr->first] = itr->second / len > 0.05 && connectOther.find(itr->first)->second / len < 0.1;
@@ -1057,7 +1055,7 @@ public:
 
     ~Impl() {}
 
-    void find(const vector<Mat> &src, const vector<Point> &corners, vector<Mat> &masks);
+    void find(const std::vector<Mat> &src, const std::vector<Point> &corners, std::vector<Mat> &masks);
     void findInPair(size_t first, size_t second, Rect roi);
 
 private:
@@ -1067,15 +1065,15 @@ private:
                                   const Mat &dy1, const Mat &dy2, const Mat &mask1, const Mat &mask2,
                                   GCGraph<float> &graph);
 
-    vector<Mat> dx_, dy_;
+    std::vector<Mat> dx_, dy_;
     int cost_type_;
     float terminal_cost_;
     float bad_region_penalty_;
 };
 
 
-void GraphCutSeamFinder::Impl::find(const vector<Mat> &src, const vector<Point> &corners,
-                                    vector<Mat> &masks)
+void GraphCutSeamFinder::Impl::find(const std::vector<Mat> &src, const std::vector<Point> &corners,
+                                    std::vector<Mat> &masks)
 {
     // Compute gradients
     dx_.resize(src.size());
@@ -1311,16 +1309,16 @@ GraphCutSeamFinder::GraphCutSeamFinder(int cost_type, float terminal_cost, float
 GraphCutSeamFinder::~GraphCutSeamFinder() {}
 
 
-void GraphCutSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners,
-                              vector<Mat> &masks)
+void GraphCutSeamFinder::find(const std::vector<Mat> &src, const std::vector<Point> &corners,
+                              std::vector<Mat> &masks)
 {
     impl_->find(src, corners, masks);
 }
 
 
 #ifdef HAVE_OPENCV_GPU
-void GraphCutSeamFinderGpu::find(const vector<Mat> &src, const vector<Point> &corners,
-                                 vector<Mat> &masks)
+void GraphCutSeamFinderGpu::find(const std::vector<Mat> &src, const std::vector<Point> &corners,
+                                 std::vector<Mat> &masks)
 {
     // Compute gradients
     dx_.resize(src.size());

@@ -45,9 +45,6 @@
 #include <iterator>
 #include <limits>
 
-using namespace std;
-
-
 CvModelEstimator2::CvModelEstimator2(int _modelPoints, CvSize _modelSize, int _maxBasicSolutions)
 {
     modelPoints = _modelPoints;
@@ -272,7 +269,7 @@ bool CvModelEstimator2::runLMeDS( const CvMat* m1, const CvMat* m2, CvMat* model
 
     if( minMedian < DBL_MAX )
     {
-        sigma = 2.5*1.4826*(1 + 5./(count - modelPoints))*sqrt(minMedian);
+        sigma = 2.5*1.4826*(1 + 5./(count - modelPoints))*std::sqrt(minMedian);
         sigma = MAX( sigma, 0.001 );
 
         count = findInliers( m1, m2, model, err, mask, sigma );
@@ -433,7 +430,7 @@ void cv::Affine3DEstimator::computeReprojError( const CvMat* m1, const CvMat* m2
         double b = F[4]*f.x + F[5]*f.y + F[ 6]*f.z + F[ 7] - t.y;
         double c = F[8]*f.x + F[9]*f.y + F[10]*f.z + F[11] - t.z;
 
-        err[i] = (float)sqrt(a*a + b*b + c*c);
+        err[i] = (float)std::sqrt(a*a + b*b + c*c);
     }
 }
 
@@ -493,7 +490,7 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
     CvMat m1 = dFrom;
     CvMat m2 = dTo;
 
-    const double epsilon = numeric_limits<double>::epsilon();
+    const double epsilon = std::numeric_limits<double>::epsilon();
     param1 = param1 <= 0 ? 3 : param1;
     param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
 

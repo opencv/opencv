@@ -869,7 +869,7 @@ int calcDiffElemCountImpl(const vector<Mat>& mv, const Mat& m)
         for(int x = 0; x < m.cols; x++)
         {
             const ElemType* mElem = &m.at<ElemType>(y,x*mChannels);
-            int loc = 0;
+            size_t loc = 0;
             for(size_t i = 0; i < mv.size(); i++)
             {
                 const size_t mvChannel = mv[i].channels();
@@ -879,7 +879,7 @@ int calcDiffElemCountImpl(const vector<Mat>& mv, const Mat& m)
                         diffElemCount++;
                 loc += mvChannel;
             }
-            CV_Assert(loc == mChannels);
+            CV_Assert(loc == (size_t)mChannels);
         }
     }
     return diffElemCount;

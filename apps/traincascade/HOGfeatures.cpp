@@ -4,6 +4,7 @@
 #include "HOGfeatures.h"
 #include "cascadeclassifier.h"
 
+using namespace std;
 
 CvHOGFeatureParams::CvHOGFeatureParams()
 {

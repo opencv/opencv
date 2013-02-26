@@ -64,7 +64,7 @@ struct WSQueue
 
 
 static int
-allocWSNodes( vector<WSNode>& storage )
+allocWSNodes( std::vector<WSNode>& storage )
 {
     int sz = (int)storage.size();
     int newsz = MAX(128, sz*3/2);
@@ -93,7 +93,7 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
     Mat src = _src.getMat(), dst = _markers.getMat();
     Size size = src.size();
 
-    vector<WSNode> storage;
+    std::vector<WSNode> storage;
     int free_node = 0, node;
     WSQueue q[NQ];
     int active_queue;
@@ -148,9 +148,9 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
     CV_Assert( src.size() == dst.size() );
 
     const uchar* img = src.data;
-    int istep = src.step/sizeof(img[0]);
+    int istep = int(src.step/sizeof(img[0]));
     int* mask = dst.ptr<int>();
-    int mstep = dst.step / sizeof(mask[0]);
+    int mstep = int(dst.step / sizeof(mask[0]));
 
     for( i = 0; i < 256; i++ )
         subs_tab[i] = 0;

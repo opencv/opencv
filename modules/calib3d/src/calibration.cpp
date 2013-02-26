@@ -546,7 +546,7 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
             ry = src->data.db[step];
             rz = src->data.db[step*2];
         }
-        theta = sqrt(rx*rx + ry*ry + rz*rz);
+        theta = std::sqrt(rx*rx + ry*ry + rz*rz);
 
         if( theta < DBL_EPSILON )
         {
@@ -632,7 +632,7 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
         ry = R[2] - R[6];
         rz = R[3] - R[1];
 
-        s = sqrt((rx*rx + ry*ry + rz*rz)*0.25);
+        s = std::sqrt((rx*rx + ry*ry + rz*rz)*0.25);
         c = (R[0] + R[4] + R[8] - 1)*0.5;
         c = c > 1. ? 1. : c < -1. ? -1. : c;
         theta = acos(c);
@@ -646,14 +646,14 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
             else
             {
                 t = (R[0] + 1)*0.5;
-                rx = sqrt(MAX(t,0.));
+                rx = std::sqrt(MAX(t,0.));
                 t = (R[4] + 1)*0.5;
-                ry = sqrt(MAX(t,0.))*(R[1] < 0 ? -1. : 1.);
+                ry = std::sqrt(MAX(t,0.))*(R[1] < 0 ? -1. : 1.);
                 t = (R[8] + 1)*0.5;
-                rz = sqrt(MAX(t,0.))*(R[2] < 0 ? -1. : 1.);
+                rz = std::sqrt(MAX(t,0.))*(R[2] < 0 ? -1. : 1.);
                 if( fabs(rx) < fabs(ry) && fabs(rx) < fabs(rz) && (R[5] > 0) != (ry*rz > 0) )
                     rz = -rz;
-                theta /= sqrt(rx*rx + ry*ry + rz*rz);
+                theta /= std::sqrt(rx*rx + ry*ry + rz*rz);
                 rx *= theta;
                 ry *= theta;
                 rz *= theta;
@@ -1249,8 +1249,8 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
                 cvGetCol( &matH, &_h1, 0 );
                 _h2 = _h1; _h2.data.db++;
                 _h3 = _h2; _h3.data.db++;
-                h1_norm = sqrt(h[0]*h[0] + h[3]*h[3] + h[6]*h[6]);
-                h2_norm = sqrt(h[1]*h[1] + h[4]*h[4] + h[7]*h[7]);
+                h1_norm = std::sqrt(h[0]*h[0] + h[3]*h[3] + h[6]*h[6]);
+                h2_norm = std::sqrt(h[1]*h[1] + h[4]*h[4] + h[7]*h[7]);
 
                 cvScale( &_h1, &_h1, 1./MAX(h1_norm, DBL_EPSILON) );
                 cvScale( &_h2, &_h2, 1./MAX(h2_norm, DBL_EPSILON) );
@@ -1424,7 +1424,7 @@ CV_IMPL void cvInitIntrinsicParams2D( const CvMat* objectPoints,
         }
 
         for( j = 0; j < 4; j++ )
-            n[j] = 1./sqrt(n[j]);
+            n[j] = 1./std::sqrt(n[j]);
 
         for( j = 0; j < 3; j++ )
         {
@@ -1438,8 +1438,8 @@ CV_IMPL void cvInitIntrinsicParams2D( const CvMat* objectPoints,
     }
 
     cvSolve( matA, _b, &_f, CV_NORMAL + CV_SVD );
-    a[0] = sqrt(fabs(1./f[0]));
-    a[4] = sqrt(fabs(1./f[1]));
+    a[0] = std::sqrt(fabs(1./f[0]));
+    a[4] = std::sqrt(fabs(1./f[1]));
     if( aspectRatio != 0 )
     {
         double tf = (a[0] + a[4])/(aspectRatio + 1.);
@@ -2721,7 +2721,7 @@ CV_IMPL int cvStereoRectifyUncalibrated(
     cvMatMul( &T, &E2, &E2 );
 
     int mirror = e2[0] < 0;
-    double d = MAX(sqrt(e2[0]*e2[0] + e2[1]*e2[1]),DBL_EPSILON);
+    double d = MAX(std::sqrt(e2[0]*e2[0] + e2[1]*e2[1]),DBL_EPSILON);
     double alpha = e2[0]/d;
     double beta = e2[1]/d;
     double r[] =
@@ -2841,7 +2841,7 @@ void cv::reprojectImageTo3D( InputArray _disparity,
     int x, cols = disparity.cols;
     CV_Assert( cols >= 0 );
 
-    vector<float> _sbuf(cols+1), _dbuf(cols*3+1);
+    std::vector<float> _sbuf(cols+1), _dbuf(cols*3+1);
     float* sbuf = &_sbuf[0], *dbuf = &_dbuf[0];
     double minDisparity = FLT_MAX;
 
@@ -2958,7 +2958,7 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
     */
     s = matM[2][1];
     c = matM[2][2];
-    z = 1./sqrt(c * c + s * s + DBL_EPSILON);
+    z = 1./std::sqrt(c * c + s * s + DBL_EPSILON);
     c *= z;
     s *= z;
 
@@ -2977,7 +2977,7 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
     */
     s = -matR[2][0];
     c = matR[2][2];
-    z = 1./sqrt(c * c + s * s + DBL_EPSILON);
+    z = 1./std::sqrt(c * c + s * s + DBL_EPSILON);
     c *= z;
     s *= z;
 
@@ -2997,7 +2997,7 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
 
     s = matM[1][0];
     c = matM[1][1];
-    z = 1./sqrt(c * c + s * s + DBL_EPSILON);
+    z = 1./std::sqrt(c * c + s * s + DBL_EPSILON);
     c *= z;
     s *= z;
 
@@ -3683,7 +3683,7 @@ static void adjust3rdMatrix(InputArrayOfArrays _imgpt1_0,
                             const Mat& R1, const Mat& R3, const Mat& P1, Mat& P3 )
 {
     size_t n1 = _imgpt1_0.total(), n3 = _imgpt3_0.total();
-    vector<Point2f> imgpt1, imgpt3;
+    std::vector<Point2f> imgpt1, imgpt3;
 
     for( int i = 0; i < (int)std::min(n1, n3); i++ )
     {

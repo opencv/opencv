@@ -8,7 +8,7 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-typedef std::tr1::tuple<String, double, double, int> Image_RhoStep_ThetaStep_Threshold_t;
+typedef std::tr1::tuple<string, double, double, int> Image_RhoStep_ThetaStep_Threshold_t;
 typedef perf::TestBaseWithParam<Image_RhoStep_ThetaStep_Threshold_t> Image_RhoStep_ThetaStep_Threshold;
 
 PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
@@ -20,7 +20,7 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
                 )
             )
 {
-    String filename = getDataPath(get<0>(GetParam()));
+    string filename = getDataPath(get<0>(GetParam()));
     double rhoStep = get<1>(GetParam());
     double thetaStep = get<2>(GetParam());
     int threshold = get<3>(GetParam());

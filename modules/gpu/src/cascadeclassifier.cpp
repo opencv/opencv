@@ -46,15 +46,14 @@
 
 using namespace cv;
 using namespace cv::gpu;
-using namespace std;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU()               { throw_nogpu(); }
-cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const string&)  { throw_nogpu(); }
+cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const std::string&)  { throw_nogpu(); }
 cv::gpu::CascadeClassifier_GPU::~CascadeClassifier_GPU()              { throw_nogpu(); }
 bool cv::gpu::CascadeClassifier_GPU::empty() const                    { throw_nogpu(); return true; }
-bool cv::gpu::CascadeClassifier_GPU::load(const string&)              { throw_nogpu(); return true; }
+bool cv::gpu::CascadeClassifier_GPU::load(const std::string&)              { throw_nogpu(); return true; }
 Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const        { throw_nogpu(); return Size();}
 void cv::gpu::CascadeClassifier_GPU::release()                        { throw_nogpu(); }
 int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, double, int, Size)       {throw_nogpu(); return -1;}
@@ -72,7 +71,7 @@ public:
                       bool findLargestObject, bool visualizeInPlace, cv::Size ncvMinSize, cv::Size maxObjectSize) = 0;
 
     virtual cv::Size getClassifierCvSize() const = 0;
-    virtual bool read(const string& classifierAsXml) = 0;
+    virtual bool read(const std::string& classifierAsXml) = 0;
 };
 
 struct cv::gpu::CascadeClassifier_GPU::HaarCascade : cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
@@ -83,7 +82,7 @@ public:
         ncvSetDebugOutputHandler(NCVDebugOutputHandler);
     }
 
-    bool read(const string& filename)
+    bool read(const std::string& filename)
     {
         ncvSafeCall( load(filename) );
         return true;
@@ -172,7 +171,7 @@ public:
 private:
     static void NCVDebugOutputHandler(const std::string &msg) { CV_Error(CV_GpuApiCallError, msg.c_str()); }
 
-    NCVStatus load(const string& classifierFile)
+    NCVStatus load(const std::string& classifierFile)
     {
         int devId = cv::gpu::getDevice();
         ncvAssertCUDAReturn(cudaGetDeviceProperties(&devProp, devId), NCV_CUDA_ERROR);
@@ -459,7 +458,7 @@ public:
 
     virtual cv::Size getClassifierCvSize() const { return NxM; }
 
-    bool read(const string& classifierAsXml)
+    bool read(const std::string& classifierAsXml)
     {
         FileStorage fs(classifierAsXml, FileStorage::READ);
         return fs.isOpened() ? read(fs.getFirstTopLevelNode()) : false;
@@ -513,10 +512,10 @@ private:
         const char *GPU_CC_FEATURES         = "features";
         const char *GPU_CC_RECT             = "rect";
 
-        std::string stageTypeStr = (string)root[GPU_CC_STAGE_TYPE];
+        std::string stageTypeStr = (std::string)root[GPU_CC_STAGE_TYPE];
         CV_Assert(stageTypeStr == GPU_CC_BOOST);
 
-        string featureTypeStr = (string)root[GPU_CC_FEATURE_TYPE];
+        std::string featureTypeStr = (std::string)root[GPU_CC_FEATURE_TYPE];
         CV_Assert(featureTypeStr == GPU_CC_LBP);
 
         NxM.width =  (int)root[GPU_CC_WIDTH];
@@ -663,7 +662,7 @@ private:
 cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU()
 : findLargestObject(false), visualizeInPlace(false), impl(0) {}
 
-cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const string& filename)
+cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const std::string& filename)
 : findLargestObject(false), visualizeInPlace(false), impl(0) { load(filename); }
 
 cv::gpu::CascadeClassifier_GPU::~CascadeClassifier_GPU() { release(); }
@@ -689,7 +688,7 @@ int cv::gpu::CascadeClassifier_GPU::detectMultiScale(const GpuMat& image, GpuMat
     return impl->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, minSize, maxObjectSize);
 }
 
-bool cv::gpu::CascadeClassifier_GPU::load(const string& filename)
+bool cv::gpu::CascadeClassifier_GPU::load(const std::string& filename)
 {
     release();
 
@@ -711,7 +710,7 @@ bool cv::gpu::CascadeClassifier_GPU::load(const string& filename)
     }
 
     const char *GPU_CC_LBP = "LBP";
-    string featureTypeStr = (string)fs.getFirstTopLevelNode()["featureType"];
+    std::string featureTypeStr = (std::string)fs.getFirstTopLevelNode()["featureType"];
     if (featureTypeStr == GPU_CC_LBP)
         impl = new LbpCascade();
     else
@@ -743,12 +742,12 @@ struct RectConvert
 
 void groupRectangles(std::vector<NcvRect32u> &hypotheses, int groupThreshold, double eps, std::vector<Ncv32u> *weights)
 {
-    vector<Rect> rects(hypotheses.size());
+    std::vector<Rect> rects(hypotheses.size());
     std::transform(hypotheses.begin(), hypotheses.end(), rects.begin(), RectConvert());
 
     if (weights)
     {
-        vector<int> weights_int;
+        std::vector<int> weights_int;
         weights_int.assign(weights->begin(), weights->end());
         cv::groupRectangles(rects, weights_int, groupThreshold, eps);
     }

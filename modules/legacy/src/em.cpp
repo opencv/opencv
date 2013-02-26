@@ -123,7 +123,7 @@ void CvEM::set_mat_hdrs()
         int K = emObj.get<int>("nclusters");
         covsHdrs.resize(K);
         covsPtrs.resize(K);
-        const std::vector<Mat>& covs = emObj.get<vector<Mat> >("covs");
+        const std::vector<Mat>& covs = emObj.get<std::vector<Mat> >("covs");
         for(size_t i = 0; i < covsHdrs.size(); i++)
         {
             covsHdrs[i] = covs[i];
@@ -137,7 +137,7 @@ void CvEM::set_mat_hdrs()
 static
 void init_params(const CvEMParams& src,
                  Mat& prbs, Mat& weights,
-                 Mat& means, vector<Mat>& covsHdrs)
+                 Mat& means, std::vector<Mat>& covsHdrs)
 {
     prbs = src.probs;
     weights = src.weights;
@@ -244,9 +244,9 @@ Mat CvEM::getMeans() const
     return emObj.get<Mat>("means");
 }
 
-void CvEM::getCovs(vector<Mat>& _covs) const
+void CvEM::getCovs(std::vector<Mat>& _covs) const
 {
-    _covs = emObj.get<vector<Mat> >("covs");
+    _covs = emObj.get<std::vector<Mat> >("covs");
 }
 
 Mat CvEM::getWeights() const

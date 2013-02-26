@@ -24,20 +24,15 @@
 namespace cv
 {
 
-using std::map;
-using std::set;
-using std::cout;
-using std::endl;
-
 // Removes duplicate elements in a given vector.
 template<typename _Tp>
-inline vector<_Tp> remove_dups(const vector<_Tp>& src) {
-    typedef typename set<_Tp>::const_iterator constSetIterator;
-    typedef typename vector<_Tp>::const_iterator constVecIterator;
-    set<_Tp> set_elems;
+inline std::vector<_Tp> remove_dups(const std::vector<_Tp>& src) {
+    typedef typename std::set<_Tp>::const_iterator constSetIterator;
+    typedef typename std::vector<_Tp>::const_iterator constVecIterator;
+    std::set<_Tp> set_elems;
     for (constVecIterator it = src.begin(); it != src.end(); ++it)
         set_elems.insert(*it);
-    vector<_Tp> elems;
+    std::vector<_Tp> elems;
     for (constSetIterator it = set_elems.begin(); it != set_elems.end(); ++it)
         elems.push_back(*it);
     return elems;
@@ -47,7 +42,7 @@ static Mat argsort(InputArray _src, bool ascending=true)
 {
     Mat src = _src.getMat();
     if (src.rows != 1 && src.cols != 1) {
-        string error_message = "Wrong shape of input matrix! Expected a matrix with one row or column.";
+        std::string error_message = "Wrong shape of input matrix! Expected a matrix with one row or column.";
         CV_Error(CV_StsBadArg, error_message);
     }
     int flags = CV_SORT_EVERY_ROW+(ascending ? CV_SORT_ASCENDING : CV_SORT_DESCENDING);
@@ -59,7 +54,7 @@ static Mat argsort(InputArray _src, bool ascending=true)
 static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double beta=0) {
     // make sure the input data is a vector of matrices or vector of vector
     if(src.kind() != _InputArray::STD_VECTOR_MAT && src.kind() != _InputArray::STD_VECTOR_VECTOR) {
-        string error_message = "The data is expected as InputArray::STD_VECTOR_MAT (a std::vector<Mat>) or _InputArray::STD_VECTOR_VECTOR (a std::vector< vector<...> >).";
+        std::string error_message = "The data is expected as InputArray::STD_VECTOR_MAT (a std::vector<Mat>) or _InputArray::STD_VECTOR_VECTOR (a std::vector< std::vector<...> >).";
         CV_Error(CV_StsBadArg, error_message);
     }
     // number of samples
@@ -75,7 +70,7 @@ static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double
     for(int i = 0; i < (int)n; i++) {
         // make sure data can be reshaped, throw exception if not!
         if(src.getMat(i).total() != d) {
-            string error_message = format("Wrong number of elements in matrix #%d! Expected %d was %d.", i, (int)d, (int)src.getMat(i).total());
+            std::string error_message = format("Wrong number of elements in matrix #%d! Expected %d was %d.", i, (int)d, (int)src.getMat(i).total());
             CV_Error(CV_StsBadArg, error_message);
         }
         // get a hold of the current row
@@ -95,7 +90,7 @@ static void sortMatrixColumnsByIndices(InputArray _src, InputArray _indices, Out
         CV_Error(CV_StsUnsupportedFormat, "cv::sortColumnsByIndices only works on integer indices!");
     }
     Mat src = _src.getMat();
-    vector<int> indices = _indices.getMat();
+    std::vector<int> indices = _indices.getMat();
     _dst.create(src.rows, src.cols, src.type());
     Mat dst = _dst.getMat();
     for(size_t idx = 0; idx < indices.size(); idx++) {
@@ -183,12 +178,12 @@ Mat subspaceProject(InputArray _W, InputArray _mean, InputArray _src) {
     int d = src.cols;
     // make sure the data has the correct shape
     if(W.rows != d) {
-        string error_message = format("Wrong shapes for given matrices. Was size(src) = (%d,%d), size(W) = (%d,%d).", src.rows, src.cols, W.rows, W.cols);
+        std::string error_message = format("Wrong shapes for given matrices. Was size(src) = (%d,%d), size(W) = (%d,%d).", src.rows, src.cols, W.rows, W.cols);
         CV_Error(CV_StsBadArg, error_message);
     }
     // make sure mean is correct if not empty
     if(!mean.empty() && (mean.total() != (size_t) d)) {
-        string error_message = format("Wrong mean shape for the given data matrix. Expected %d, but was %d.", d, mean.total());
+        std::string error_message = format("Wrong mean shape for the given data matrix. Expected %d, but was %d.", d, mean.total());
         CV_Error(CV_StsBadArg, error_message);
     }
     // create temporary matrices
@@ -221,12 +216,12 @@ Mat subspaceReconstruct(InputArray _W, InputArray _mean, InputArray _src)
     int d = src.cols;
     // make sure the data has the correct shape
     if(W.cols != d) {
-        string error_message = format("Wrong shapes for given matrices. Was size(src) = (%d,%d), size(W) = (%d,%d).", src.rows, src.cols, W.rows, W.cols);
+        std::string error_message = format("Wrong shapes for given matrices. Was size(src) = (%d,%d), size(W) = (%d,%d).", src.rows, src.cols, W.rows, W.cols);
         CV_Error(CV_StsBadArg, error_message);
     }
     // make sure mean is correct if not empty
     if(!mean.empty() && (mean.total() != (size_t) W.rows)) {
-        string error_message = format("Wrong mean shape for the given eigenvector matrix. Expected %d, but was %d.", W.cols, mean.total());
+        std::string error_message = format("Wrong mean shape for the given eigenvector matrix. Expected %d, but was %d.", W.cols, mean.total());
         CV_Error(CV_StsBadArg, error_message);
     }
     // initalize temporary matrices
@@ -330,7 +325,7 @@ private:
         int n1 = nn - 1;
         int low = 0;
         int high = nn - 1;
-        double eps = pow(2.0, -52.0);
+        double eps = std::pow(2.0, -52.0);
         double exshift = 0.0;
         double p = 0, q = 0, r = 0, s = 0, z = 0, t, w, x, y;
 
@@ -342,7 +337,7 @@ private:
                 d[i] = H[i][i];
                 e[i] = 0.0;
             }
-            for (int j = max(i - 1, 0); j < nn; j++) {
+            for (int j = std::max(i - 1, 0); j < nn; j++) {
                 norm = norm + std::abs(H[i][j]);
             }
         }
@@ -380,7 +375,7 @@ private:
                 w = H[n1][n1 - 1] * H[n1 - 1][n1];
                 p = (H[n1 - 1][n1 - 1] - H[n1][n1]) / 2.0;
                 q = p * p + w;
-                z = sqrt(std::abs(q));
+                z = std::sqrt(std::abs(q));
                 H[n1][n1] = H[n1][n1] + exshift;
                 H[n1 - 1][n1 - 1] = H[n1 - 1][n1 - 1] + exshift;
                 x = H[n1][n1];
@@ -404,7 +399,7 @@ private:
                     s = std::abs(x) + std::abs(z);
                     p = x / s;
                     q = z / s;
-                    r = sqrt(p * p + q * q);
+                    r = std::sqrt(p * p + q * q);
                     p = p / r;
                     q = q / r;
 
@@ -475,7 +470,7 @@ private:
                     s = (y - x) / 2.0;
                     s = s * s + w;
                     if (s > 0) {
-                        s = sqrt(s);
+                        s = std::sqrt(s);
                         if (y < x) {
                             s = -s;
                         }
@@ -539,7 +534,7 @@ private:
                     if (x == 0.0) {
                         break;
                     }
-                    s = sqrt(p * p + q * q + r * r);
+                    s = std::sqrt(p * p + q * q + r * r);
                     if (p < 0) {
                         s = -s;
                     }
@@ -570,7 +565,7 @@ private:
 
                         // Column modification
 
-                        for (int i = 0; i <= min(n1, k + 3); i++) {
+                        for (int i = 0; i <= std::min(n1, k + 3); i++) {
                             p = x * H[i][k] + y * H[i][k + 1];
                             if (notlast) {
                                 p = p + z * H[i][k + 2];
@@ -721,7 +716,7 @@ private:
 
                         // Overflow control
 
-                        t = max(std::abs(H[i][n1 - 1]), std::abs(H[i][n1]));
+                        t = std::max(std::abs(H[i][n1 - 1]), std::abs(H[i][n1]));
                         if ((eps * t) * t > 1) {
                             for (int j = i; j <= n1; j++) {
                                 H[j][n1 - 1] = H[j][n1 - 1] / t;
@@ -748,7 +743,7 @@ private:
         for (int j = nn - 1; j >= low; j--) {
             for (int i = low; i <= high; i++) {
                 z = 0.0;
-                for (int k = low; k <= min(j, high); k++) {
+                for (int k = low; k <= std::min(j, high); k++) {
                     z = z + V[i][k] * H[k][j];
                 }
                 V[i][j] = z;
@@ -782,7 +777,7 @@ private:
                     ort[i] = H[i][m - 1] / scale;
                     h += ort[i] * ort[i];
                 }
-                double g = sqrt(h);
+                double g = std::sqrt(h);
                 if (ort[m] > 0) {
                     g = -g;
                 }
@@ -941,7 +936,7 @@ public:
 //------------------------------------------------------------------------------
 // Linear Discriminant Analysis implementation
 //------------------------------------------------------------------------------
-void LDA::save(const string& filename) const {
+void LDA::save(const std::string& filename) const {
     FileStorage fs(filename, FileStorage::WRITE);
     if (!fs.isOpened()) {
         CV_Error(CV_StsError, "File can't be opened for writing!");
@@ -951,7 +946,7 @@ void LDA::save(const string& filename) const {
 }
 
 // Deserializes this object from a given filename.
-void LDA::load(const string& filename) {
+void LDA::load(const std::string& filename) {
     FileStorage fs(filename, FileStorage::READ);
     if (!fs.isOpened())
        CV_Error(CV_StsError, "File can't be opened for writing!");
@@ -978,7 +973,7 @@ void LDA::load(const FileStorage& fs) {
 void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     // get data
     Mat src = _src.getMat();
-    vector<int> labels;
+    std::vector<int> labels;
     // safely copy the labels
     {
         Mat tmp = _lbls.getMat();
@@ -991,9 +986,9 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     // ensure working matrix is double precision
     src.convertTo(data, CV_64FC1);
     // maps the labels, so they're ascending: [0,1,...,C]
-    vector<int> mapped_labels(labels.size());
-    vector<int> num2label = remove_dups(labels);
-    map<int, int> label2num;
+    std::vector<int> mapped_labels(labels.size());
+    std::vector<int> num2label = remove_dups(labels);
+    std::map<int, int> label2num;
     for (int i = 0; i < (int)num2label.size(); i++)
         label2num[num2label[i]] = i;
     for (size_t i = 0; i < labels.size(); i++)
@@ -1006,19 +1001,19 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     // we can't do a LDA on one class, what do you
     // want to separate from each other then?
     if(C == 1) {
-        string error_message = "At least two classes are needed to perform a LDA. Reason: Only one class was given!";
+        std::string error_message = "At least two classes are needed to perform a LDA. Reason: Only one class was given!";
         CV_Error(CV_StsBadArg, error_message);
     }
     // throw error if less labels, than samples
     if (labels.size() != static_cast<size_t>(N)) {
-        string error_message = format("The number of samples must equal the number of labels. Given %d labels, %d samples. ", labels.size(), N);
+        std::string error_message = format("The number of samples must equal the number of labels. Given %d labels, %d samples. ", labels.size(), N);
         CV_Error(CV_StsBadArg, error_message);
     }
     // warn if within-classes scatter matrix becomes singular
     if (N < D) {
-        cout << "Warning: Less observations than feature dimension given!"
-             << "Computation will probably fail."
-             << endl;
+        std::cout << "Warning: Less observations than feature dimension given!"
+                  << "Computation will probably fail."
+                  << std::endl;
     }
     // clip number of components to be a valid number
     if ((_num_components <= 0) || (_num_components > (C - 1))) {
@@ -1027,8 +1022,8 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     // holds the mean over all classes
     Mat meanTotal = Mat::zeros(1, D, data.type());
     // holds the mean for each class
-    vector<Mat> meanClass(C);
-    vector<int> numClass(C);
+    std::vector<Mat> meanClass(C);
+    std::vector<int> numClass(C);
     // initialize
     for (int i = 0; i < C; i++) {
         numClass[i] = 0;
@@ -1076,7 +1071,7 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     // reshape eigenvalues, so they are stored by column
     _eigenvalues = _eigenvalues.reshape(1, 1);
     // get sorted indices descending by their eigenvalue
-    vector<int> sorted_indices = argsort(_eigenvalues, false);
+    std::vector<int> sorted_indices = argsort(_eigenvalues, false);
     // now sort eigenvalues and eigenvectors accordingly
     _eigenvalues = sortMatrixColumnsByIndices(_eigenvalues, sorted_indices);
     _eigenvectors = sortMatrixColumnsByIndices(_eigenvectors, sorted_indices);
@@ -1094,7 +1089,7 @@ void LDA::compute(InputArrayOfArrays _src, InputArray _lbls) {
         lda(_src.getMat(), _lbls);
         break;
     default:
-        string error_message= format("InputArray Datatype %d is not supported.", _src.kind());
+        std::string error_message= format("InputArray Datatype %d is not supported.", _src.kind());
         CV_Error(CV_StsBadArg, error_message);
         break;
     }

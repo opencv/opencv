@@ -790,7 +790,7 @@ template<class Op, class VecOp> struct MorphFilter : BaseFilter
         ksize = _kernel.size();
         CV_Assert( _kernel.type() == CV_8U );
 
-        vector<uchar> coeffs; // we do not really the values of non-zero
+        std::vector<uchar> coeffs; // we do not really the values of non-zero
         // kernel elements, just their locations
         preprocess2DKernel( _kernel, coords, coeffs );
         ptrs.resize( coords.size() );
@@ -839,8 +839,8 @@ template<class Op, class VecOp> struct MorphFilter : BaseFilter
         }
     }
 
-    vector<Point> coords;
-    vector<uchar*> ptrs;
+    std::vector<Point> coords;
+    std::vector<uchar*> ptrs;
     VecOp vecOp;
 };
 
@@ -1104,8 +1104,8 @@ public:
 
     void operator () ( const BlockedRange& range ) const
     {
-        int row0 = min(cvRound(range.begin() * src.rows / nStripes), src.rows);
-        int row1 = min(cvRound(range.end() * src.rows / nStripes), src.rows);
+        int row0 = std::min(cvRound(range.begin() * src.rows / nStripes), src.rows);
+        int row1 = std::min(cvRound(range.end() * src.rows / nStripes), src.rows);
 
         /*if(0)
             printf("Size = (%d, %d), range[%d,%d), row0 = %d, row1 = %d\n",

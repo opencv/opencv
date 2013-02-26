@@ -54,7 +54,7 @@
 namespace cv {
 
 
-// static void drawCircles(Mat& img, const vector<Point2f>& corners, const vector<float>& radius)
+// static void drawCircles(Mat& img, const std::vector<Point2f>& corners, const std::vector<float>& radius)
 // {
 //     for(size_t i = 0; i < corners.size(); i++)
 //     {
@@ -86,7 +86,7 @@ inline bool is_smaller(const std::pair<int, float>& p1, const std::pair<int, flo
     return p1.second < p2.second;
 }
 
-static void orderContours(const vector<vector<Point> >& contours, Point2f point, vector<std::pair<int, float> >& order)
+static void orderContours(const std::vector<std::vector<Point> >& contours, Point2f point, std::vector<std::pair<int, float> >& order)
 {
     order.clear();
     size_t i, j, n = contours.size();
@@ -106,12 +106,12 @@ static void orderContours(const vector<vector<Point> >& contours, Point2f point,
 }
 
 // fit second order curve to a set of 2D points
-inline void fitCurve2Order(const vector<Point2f>& /*points*/, vector<float>& /*curve*/)
+inline void fitCurve2Order(const std::vector<Point2f>& /*points*/, std::vector<float>& /*curve*/)
 {
     // TBD
 }
 
-inline void findCurvesCross(const vector<float>& /*curve1*/, const vector<float>& /*curve2*/, Point2f& /*cross_point*/)
+inline void findCurvesCross(const std::vector<float>& /*curve1*/, const std::vector<float>& /*curve2*/, Point2f& /*cross_point*/)
 {
 }
 
@@ -124,7 +124,7 @@ static void findLinesCrossPoint(Point2f origin1, Point2f dir1, Point2f origin2, 
     cross_point = origin1 + dir1*alpha;
 }
 
-// static void findCorner(const vector<Point>& contour, Point2f point, Point2f& corner)
+// static void findCorner(const std::vector<Point>& contour, Point2f point, Point2f& corner)
 // {
 //     // find the nearest point
 //     double min_dist = std::numeric_limits<double>::max();
@@ -147,7 +147,7 @@ static void findLinesCrossPoint(Point2f origin1, Point2f dir1, Point2f origin2, 
 //     return;
 // }
 
-static void findCorner(const vector<Point2f>& contour, Point2f point, Point2f& corner)
+static void findCorner(const std::vector<Point2f>& contour, Point2f point, Point2f& corner)
 {
     // find the nearest point
     double min_dist = std::numeric_limits<double>::max();
@@ -234,7 +234,7 @@ bool cv::find4QuadCornerSubpix(InputArray _img, InputOutputArray _corners, Size 
     Mat hist;
 
 #if defined(_SUBPIX_VERBOSE)
-    vector<float> radius;
+    std::vector<float> radius;
     radius.assign(corners.size(), 0.0f);
 #endif //_SUBPIX_VERBOSE
 
@@ -277,15 +277,15 @@ bool cv::find4QuadCornerSubpix(InputArray _img, InputOutputArray _corners, Size 
 #endif
 
 
-        vector<vector<Point> > white_contours, black_contours;
-        vector<Vec4i> white_hierarchy, black_hierarchy;
+        std::vector<std::vector<Point> > white_contours, black_contours;
+        std::vector<Vec4i> white_hierarchy, black_hierarchy;
         findContours(black_comp, black_contours, black_hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
         findContours(white_comp, white_contours, white_hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
 
         if(black_contours.size() < 5 || white_contours.size() < 5) continue;
 
         // find two white and black blobs that are close to the input point
-        vector<std::pair<int, float> > white_order, black_order;
+        std::vector<std::pair<int, float> > white_order, black_order;
         orderContours(black_contours, corners[i], black_order);
         orderContours(white_contours, corners[i], white_order);
 
@@ -296,14 +296,14 @@ bool cv::find4QuadCornerSubpix(InputArray _img, InputOutputArray _corners, Size 
             continue; // there will be no improvement in this corner position
         }
 
-        const vector<Point>* quads[4] = {&black_contours[black_order[0].first], &black_contours[black_order[1].first],
+        const std::vector<Point>* quads[4] = {&black_contours[black_order[0].first], &black_contours[black_order[1].first],
                                          &white_contours[white_order[0].first], &white_contours[white_order[1].first]};
-        vector<Point2f> quads_approx[4];
+        std::vector<Point2f> quads_approx[4];
         Point2f quad_corners[4];
         for(int k = 0; k < 4; k++)
         {
 #if 1
-            vector<Point2f> temp;
+            std::vector<Point2f> temp;
             for(size_t j = 0; j < quads[k]->size(); j++) temp.push_back((*quads[k])[j]);
             approxPolyDP(Mat(temp), quads_approx[k], 0.5, true);
 
@@ -332,14 +332,14 @@ bool cv::find4QuadCornerSubpix(InputArray _img, InputOutputArray _corners, Size 
         cvtColor(img, test, CV_GRAY2RGB);
 //        line(test, quad_corners[0] - corners[i] + Point2f(30, 30), quad_corners[1] - corners[i] + Point2f(30, 30), cvScalar(0, 255, 0));
 //        line(test, quad_corners[2] - corners[i] + Point2f(30, 30), quad_corners[3] - corners[i] + Point2f(30, 30), cvScalar(0, 255, 0));
-        vector<vector<Point> > contrs;
+        std::vector<std::vector<Point> > contrs;
         contrs.resize(1);
         for(int k = 0; k < 4; k++)
         {
             //contrs[0] = quads_approx[k];
             contrs[0].clear();
             for(size_t j = 0; j < quads_approx[k].size(); j++) contrs[0].push_back(quads_approx[k][j]);
-            drawContours(test, contrs, 0, CV_RGB(0, 0, 255), 1, 1, vector<Vec4i>(), 2);
+            drawContours(test, contrs, 0, CV_RGB(0, 0, 255), 1, 1, std::vector<Vec4i>(), 2);
             circle(test, quad_corners[k], 0.5, CV_RGB(255, 0, 0));
         }
         Mat test1 = test(Rect(corners[i].x - 30, corners[i].y - 30, 60, 60));

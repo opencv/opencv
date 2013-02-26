@@ -82,7 +82,7 @@ static JasperInitializer initialize_jasper;
 
 Jpeg2KDecoder::Jpeg2KDecoder()
 {
-    m_signature = '\0' + string() + '\0' + string() + '\0' + string("\x0cjP  \r\n\x87\n");
+    m_signature = '\0' + std::string() + '\0' + std::string() + '\0' + std::string("\x0cjP  \r\n\x87\n");
     m_stream = 0;
     m_image = 0;
 }
@@ -418,7 +418,7 @@ bool  Jpeg2KEncoder::isFormatSupported( int depth ) const
 }
 
 
-bool  Jpeg2KEncoder::write( const Mat& _img, const vector<int>& )
+bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
 {
     int width = _img.cols, height = _img.rows;
     int depth = _img.depth(), channels = _img.channels();

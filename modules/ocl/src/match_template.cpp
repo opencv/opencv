@@ -49,7 +49,6 @@
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
 //helper routines
 namespace cv
@@ -140,20 +139,20 @@ namespace cv
             unsigned long long templ_sqsum = (unsigned long long)sqrSum(templ.reshape(1))[0];
 
             Context *clCxt = image.clCxt;
-            string kernelName = "matchTemplate_Prepared_SQDIFF_NORMED";
-            vector< pair<size_t, const void *> > args;
+            std::string kernelName = "matchTemplate_Prepared_SQDIFF_NORMED";
+            std::vector< std::pair<size_t, const void *> > args;
 
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&buf.image_sums[0].data));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&result.data));
-            args.push_back( make_pair( sizeof(cl_ulong), (void *)&templ_sqsum));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&buf.image_sums[0].offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&buf.image_sums[0].step));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.step));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&buf.image_sums[0].data));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&result.data));
+            args.push_back( std::make_pair( sizeof(cl_ulong), (void *)&templ_sqsum));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&buf.image_sums[0].offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&buf.image_sums[0].step));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.step));
 
             size_t globalThreads[3] = {result.cols, result.rows, 1};
             size_t localThreads[3]  = {32, 8, 1};
@@ -170,25 +169,25 @@ namespace cv
             CV_Assert(result.rows == image.rows - templ.rows + 1 && result.cols == image.cols - templ.cols + 1);
 
             Context *clCxt = image.clCxt;
-            string kernelName = "matchTemplate_Naive_SQDIFF";
+            std::string kernelName = "matchTemplate_Naive_SQDIFF";
 
-            vector< pair<size_t, const void *> > args;
+            std::vector< std::pair<size_t, const void *> > args;
 
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&image.data));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&templ.data));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&result.data));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&image.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&image.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&image.offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&image.step));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.step));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.step));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&image.data));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&templ.data));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&result.data));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&image.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&image.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&image.offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&image.step));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.step));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.step));
 
             size_t globalThreads[3] = {result.cols, result.rows, 1};
             size_t localThreads[3]  = {32, 8, 1};
@@ -233,20 +232,20 @@ namespace cv
             unsigned long long templ_sqsum = (unsigned long long)sqrSum(templ.reshape(1))[0];
 
             Context *clCxt = image.clCxt;
-            string kernelName = "normalizeKernel";
-            vector< pair<size_t, const void *> > args;
+            std::string kernelName = "normalizeKernel";
+            std::vector< std::pair<size_t, const void *> > args;
 
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&buf.image_sqsums[0].data));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&result.data));
-            args.push_back( make_pair( sizeof(cl_ulong), (void *)&templ_sqsum));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&buf.image_sqsums[0].offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&buf.image_sqsums[0].step));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.step));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&buf.image_sqsums[0].data));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&result.data));
+            args.push_back( std::make_pair( sizeof(cl_ulong), (void *)&templ_sqsum));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&buf.image_sqsums[0].offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&buf.image_sqsums[0].step));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.step));
 
             size_t globalThreads[3] = {result.cols, result.rows, 1};
             size_t localThreads[3]  = {32, 8, 1};
@@ -263,25 +262,25 @@ namespace cv
             CV_Assert(result.rows == image.rows - templ.rows + 1 && result.cols == image.cols - templ.cols + 1);
 
             Context *clCxt = image.clCxt;
-            string kernelName = "matchTemplate_Naive_CCORR";
+            std::string kernelName = "matchTemplate_Naive_CCORR";
 
-            vector< pair<size_t, const void *> > args;
+            std::vector< std::pair<size_t, const void *> > args;
 
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&image.data));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&templ.data));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&result.data));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&image.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&image.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&image.offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&image.step));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.step));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.step));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&image.data));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&templ.data));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&result.data));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&image.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&image.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&image.offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&image.step));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.step));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.step));
 
             size_t globalThreads[3] = {result.cols, result.rows, 1};
             size_t localThreads[3]  = {32, 8, 1};
@@ -297,22 +296,22 @@ namespace cv
             matchTemplate_CCORR(image, templ, result, buf);
 
             Context *clCxt = image.clCxt;
-            string kernelName;
+            std::string kernelName;
 
             kernelName = "matchTemplate_Prepared_CCOFF";
             size_t globalThreads[3] = {result.cols, result.rows, 1};
             size_t localThreads[3]  = {32, 8, 1};
 
-            vector< pair<size_t, const void *> > args;
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&result.data) );
-            args.push_back( make_pair( sizeof(cl_int), (void *)&image.rows) );
-            args.push_back( make_pair( sizeof(cl_int), (void *)&image.cols) );
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.rows) );
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.cols) );
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.rows) );
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.cols) );
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.step));
+            std::vector< std::pair<size_t, const void *> > args;
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&result.data) );
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&image.rows) );
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&image.cols) );
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.rows) );
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.cols) );
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.rows) );
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.cols) );
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.step));
             // to be continued in the following section
             if(image.oclchannels() == 1)
             {
@@ -321,10 +320,10 @@ namespace cv
 
                 float templ_sum = 0;
                 templ_sum = (float)sum(templ)[0] / templ.size().area();
-                args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[0].data) );
-                args.push_back( make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].offset) );
-                args.push_back( make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].step) );
-                args.push_back( make_pair( sizeof(cl_float), (void *)&templ_sum) );
+                args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[0].data) );
+                args.push_back( std::make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].offset) );
+                args.push_back( std::make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].step) );
+                args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sum) );
             }
             else
             {
@@ -341,16 +340,16 @@ namespace cv
                 switch(image.oclchannels())
                 {
                 case 4:
-                    args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[0].data) );
-                    args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[1].data) );
-                    args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[2].data) );
-                    args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[3].data) );
-                    args.push_back( make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].offset) );
-                    args.push_back( make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].step) );
-                    args.push_back( make_pair( sizeof(cl_float), (void *)&templ_sum[0]) );
-                    args.push_back( make_pair( sizeof(cl_float), (void *)&templ_sum[1]) );
-                    args.push_back( make_pair( sizeof(cl_float), (void *)&templ_sum[2]) );
-                    args.push_back( make_pair( sizeof(cl_float), (void *)&templ_sum[3]) );
+                    args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[0].data) );
+                    args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[1].data) );
+                    args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[2].data) );
+                    args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[3].data) );
+                    args.push_back( std::make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].offset) );
+                    args.push_back( std::make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].step) );
+                    args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sum[0]) );
+                    args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sum[1]) );
+                    args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sum[2]) );
+                    args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sum[3]) );
                     break;
                 default:
                     CV_Error(CV_StsBadArg, "matchTemplate: unsupported number of channels");
@@ -370,23 +369,23 @@ namespace cv
             float scale = 1.f / templ.size().area();
 
             Context *clCxt = image.clCxt;
-            string kernelName;
+            std::string kernelName;
 
             kernelName = "matchTemplate_Prepared_CCOFF_NORMED";
             size_t globalThreads[3] = {result.cols, result.rows, 1};
             size_t localThreads[3]  = {32, 8, 1};
 
-            vector< pair<size_t, const void *> > args;
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&result.data) );
-            args.push_back( make_pair( sizeof(cl_int), (void *)&image.rows) );
-            args.push_back( make_pair( sizeof(cl_int), (void *)&image.cols) );
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.rows) );
-            args.push_back( make_pair( sizeof(cl_int), (void *)&templ.cols) );
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.rows) );
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.cols) );
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&result.step));
-            args.push_back( make_pair( sizeof(cl_float), (void *)&scale) );
+            std::vector< std::pair<size_t, const void *> > args;
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&result.data) );
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&image.rows) );
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&image.cols) );
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.rows) );
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&templ.cols) );
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.rows) );
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.cols) );
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&result.step));
+            args.push_back( std::make_pair( sizeof(cl_float), (void *)&scale) );
             // to be continued in the following section
             if(image.oclchannels() == 1)
             {
@@ -402,14 +401,14 @@ namespace cv
                 templ_sqsum -= scale * templ_sum * templ_sum;
                 templ_sum   *= scale;
 
-                args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[0].data) );
-                args.push_back( make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].offset) );
-                args.push_back( make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].step) );
-                args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sqsums[0].data) );
-                args.push_back( make_pair( sizeof(cl_int),  (void *)&buf.image_sqsums[0].offset) );
-                args.push_back( make_pair( sizeof(cl_int),  (void *)&buf.image_sqsums[0].step) );
-                args.push_back( make_pair( sizeof(cl_float), (void *)&templ_sum) );
-                args.push_back( make_pair( sizeof(cl_float), (void *)&templ_sqsum) );
+                args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[0].data) );
+                args.push_back( std::make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].offset) );
+                args.push_back( std::make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].step) );
+                args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sqsums[0].data) );
+                args.push_back( std::make_pair( sizeof(cl_int),  (void *)&buf.image_sqsums[0].offset) );
+                args.push_back( std::make_pair( sizeof(cl_int),  (void *)&buf.image_sqsums[0].step) );
+                args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sum) );
+                args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sqsum) );
             }
             else
             {
@@ -440,23 +439,23 @@ namespace cv
                 switch(image.oclchannels())
                 {
                 case 4:
-                    args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[0].data) );
-                    args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[1].data) );
-                    args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[2].data) );
-                    args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[3].data) );
-                    args.push_back( make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].offset) );
-                    args.push_back( make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].step) );
-                    args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sqsums[0].data) );
-                    args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sqsums[1].data) );
-                    args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sqsums[2].data) );
-                    args.push_back( make_pair( sizeof(cl_mem),  (void *)&buf.image_sqsums[3].data) );
-                    args.push_back( make_pair( sizeof(cl_int),  (void *)&buf.image_sqsums[0].offset) );
-                    args.push_back( make_pair( sizeof(cl_int),  (void *)&buf.image_sqsums[0].step) );
-                    args.push_back( make_pair( sizeof(cl_float), (void *)&templ_sum[0]) );
-                    args.push_back( make_pair( sizeof(cl_float), (void *)&templ_sum[1]) );
-                    args.push_back( make_pair( sizeof(cl_float), (void *)&templ_sum[2]) );
-                    args.push_back( make_pair( sizeof(cl_float), (void *)&templ_sum[3]) );
-                    args.push_back( make_pair( sizeof(cl_float), (void *)&templ_sqsum_sum) );
+                    args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[0].data) );
+                    args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[1].data) );
+                    args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[2].data) );
+                    args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sums[3].data) );
+                    args.push_back( std::make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].offset) );
+                    args.push_back( std::make_pair( sizeof(cl_int),  (void *)&buf.image_sums[0].step) );
+                    args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sqsums[0].data) );
+                    args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sqsums[1].data) );
+                    args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sqsums[2].data) );
+                    args.push_back( std::make_pair( sizeof(cl_mem),  (void *)&buf.image_sqsums[3].data) );
+                    args.push_back( std::make_pair( sizeof(cl_int),  (void *)&buf.image_sqsums[0].offset) );
+                    args.push_back( std::make_pair( sizeof(cl_int),  (void *)&buf.image_sqsums[0].step) );
+                    args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sum[0]) );
+                    args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sum[1]) );
+                    args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sum[2]) );
+                    args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sum[3]) );
+                    args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sqsum_sum) );
                     break;
                 default:
                     CV_Error(CV_StsBadArg, "matchTemplate: unsupported number of channels");

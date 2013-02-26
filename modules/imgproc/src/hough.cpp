@@ -60,7 +60,7 @@ struct hough_cmp_gt
     const int* aux;
 };
 
-    
+
 /*
 Here image is an input raster;
 step is it's step; size characterizes it's ROI;
@@ -72,7 +72,7 @@ Functions return the actual number of found lines.
 */
 static void
 HoughLinesStandard( const Mat& img, float rho, float theta,
-                    int threshold, vector<Vec2f>& lines, int linesMax )
+                    int threshold, std::vector<Vec2f>& lines, int linesMax )
 {
     int i, j;
     float irho = 1 / rho;
@@ -88,7 +88,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
     AutoBuffer<int> _accum((numangle+2) * (numrho+2));
-    vector<int> _sort_buf;
+    std::vector<int> _sort_buf;
     AutoBuffer<float> _tabSin(numangle);
     AutoBuffer<float> _tabCos(numangle);
     int *accum = _accum;
@@ -131,7 +131,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     cv::sort(_sort_buf, hough_cmp_gt(accum));
 
     // stage 4. store the first min(total,linesMax) lines to the output buffer
-    linesMax = min(linesMax, (int)_sort_buf.size());
+    linesMax = std::min(linesMax, (int)_sort_buf.size());
     double scale = 1./(numrho+2);
     for( i = 0; i < linesMax; i++ )
     {
@@ -153,17 +153,17 @@ struct hough_index
     hough_index() : value(0), rho(0.f), theta(0.f) {}
     hough_index(int _val, float _rho, float _theta)
     : value(_val), rho(_rho), theta(_theta) {}
-    
+
     int value;
     float rho, theta;
 };
 
-    
+
 static void
 HoughLinesSDiv( const Mat& img,
                 float rho, float theta, int threshold,
                 int srn, int stn,
-                vector<Vec2f>& lines, int linesMax )
+                std::vector<Vec2f>& lines, int linesMax )
 {
     #define _POINT(row, column)\
         (image_src[(row)*step+(column)])
@@ -183,7 +183,7 @@ HoughLinesSDiv( const Mat& img,
     int count;
     int cmax = 0;
 
-    vector<hough_index> lst;
+    std::vector<hough_index> lst;
 
     CV_Assert( img.type() == CV_8UC1 );
     CV_Assert( linesMax > 0 && rho > 0 && theta > 0 );
@@ -202,19 +202,19 @@ HoughLinesSDiv( const Mat& img,
     float isrho = 1 / srho;
     float istheta = 1 / stheta;
 
-    int rn = cvFloor( sqrt( (double)w * w + (double)h * h ) * irho );
+    int rn = cvFloor( std::sqrt( (double)w * w + (double)h * h ) * irho );
     int tn = cvFloor( 2 * CV_PI * itheta );
 
     lst.push_back(hough_index(threshold, -1.f, 0.f));
 
     // Precalculate sin table
-    vector<float> _sinTable( 5 * tn * stn );
+    std::vector<float> _sinTable( 5 * tn * stn );
     float* sinTable = &_sinTable[0];
 
     for( index = 0; index < 5 * tn * stn; index++ )
         sinTable[index] = (float)cos( stheta * index * 0.2f );
 
-    vector<uchar> _caccum(rn * tn, (uchar)0);
+    std::vector<uchar> _caccum(rn * tn, (uchar)0);
     uchar* caccum = &_caccum[0];
 
     // Counting all feature pixels
@@ -222,7 +222,7 @@ HoughLinesSDiv( const Mat& img,
         for( col = 0; col < w; col++ )
             fn += _POINT( row, col ) != 0;
 
-    vector<int> _x(fn), _y(fn);
+    std::vector<int> _x(fn), _y(fn);
     int* x = &_x[0], *y = &_y[0];
 
     // Full Hough Transform (it's accumulator update part)
@@ -250,7 +250,7 @@ HoughLinesSDiv( const Mat& img,
 
                 /* Update the accumulator */
                 t = (float) fabs( cvFastArctan( yc, xc ) * d2r );
-                r = (float) sqrt( (double)xc * xc + (double)yc * yc );
+                r = (float) std::sqrt( (double)xc * xc + (double)yc * yc );
                 r0 = r * irho;
                 ti0 = cvFloor( (t + CV_PI*0.5) * itheta );
 
@@ -294,7 +294,7 @@ HoughLinesSDiv( const Mat& img,
         return;
     }
 
-    vector<uchar> _buffer(srn * stn + 2);
+    std::vector<uchar> _buffer(srn * stn + 2);
     uchar* buffer = &_buffer[0];
     uchar* mcaccum = buffer + 1;
 
@@ -318,7 +318,7 @@ HoughLinesSDiv( const Mat& img,
 
                     // Update the accumulator
                     t = (float) fabs( cvFastArctan( yc, xc ) * d2r );
-                    r = (float) sqrt( (double)xc * xc + (double)yc * yc ) * isrho;
+                    r = (float) std::sqrt( (double)xc * xc + (double)yc * yc ) * isrho;
                     ti0 = cvFloor( (t + CV_PI * 0.5) * istheta );
                     ti2 = (ti * stn - ti0) * 5;
                     r0 = (float) ri *srn;
@@ -379,7 +379,7 @@ static void
 HoughLinesProbabilistic( Mat& image,
                          float rho, float theta, int threshold,
                          int lineLength, int lineGap,
-                         vector<Vec4i>& lines, int linesMax )
+                         std::vector<Vec4i>& lines, int linesMax )
 {
     Point pt;
     float irho = 1 / rho;
@@ -395,7 +395,7 @@ HoughLinesProbabilistic( Mat& image,
 
     Mat accum = Mat::zeros( numangle, numrho, CV_32SC1 );
     Mat mask( height, width, CV_8UC1 );
-    vector<float> trigtab(numangle*2);
+    std::vector<float> trigtab(numangle*2);
 
     for( int n = 0; n < numangle; n++ )
     {
@@ -404,7 +404,7 @@ HoughLinesProbabilistic( Mat& image,
     }
     const float* ttab = &trigtab[0];
     uchar* mdata0 = mask.data;
-    vector<Point> nzloc;
+    std::vector<Point> nzloc;
 
     // stage 1. collect non-zero image points
     for( pt.y = 0; pt.y < height; pt.y++ )
@@ -601,7 +601,7 @@ void cv::HoughLines( InputArray _image, OutputArray _lines,
                     double srn, double stn )
 {
     Mat image = _image.getMat();
-    vector<Vec2f> lines;
+    std::vector<Vec2f> lines;
 
     if( srn == 0 && stn == 0 )
         HoughLinesStandard(image, (float)rho, (float)theta, threshold, lines, INT_MAX);
@@ -617,7 +617,7 @@ void cv::HoughLinesP(InputArray _image, OutputArray _lines,
                      double minLineLength, double maxGap )
 {
     Mat image = _image.getMat();
-    vector<Vec4i> lines;
+    std::vector<Vec4i> lines;
     HoughLinesProbabilistic(image, (float)rho, (float)theta, threshold, cvRound(minLineLength), cvRound(maxGap), lines, INT_MAX);
     Mat(lines).copyTo(_lines);
 }
@@ -806,7 +806,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
             if( !edges_row[x] || (vx == 0 && vy == 0) )
                 continue;
 
-            float mag = sqrt(vx*vx+vy*vy);
+            float mag = std::sqrt(vx*vx+vy*vy);
             assert( mag >= 1 );
             sx = cvRound((vx*idp)*ONE/mag);
             sy = cvRound((vy*idp)*ONE/mag);

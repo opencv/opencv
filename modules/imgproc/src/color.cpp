@@ -1256,8 +1256,8 @@ static void initLabTabs()
         for(i = 0; i <= GAMMA_TAB_SIZE; i++)
         {
             float x = i*scale;
-            g[i] = x <= 0.04045f ? x*(1.f/12.92f) : (float)pow((double)(x + 0.055)*(1./1.055), 2.4);
-            ig[i] = x <= 0.0031308 ? x*12.92f : (float)(1.055*pow((double)x, 1./2.4) - 0.055);
+            g[i] = x <= 0.04045f ? x*(1.f/12.92f) : (float)std::pow((double)(x + 0.055)*(1./1.055), 2.4);
+            ig[i] = x <= 0.0031308 ? x*12.92f : (float)(1.055*std::pow((double)x, 1./2.4) - 0.055);
         }
         splineBuild(g, GAMMA_TAB_SIZE, sRGBGammaTab);
         splineBuild(ig, GAMMA_TAB_SIZE, sRGBInvGammaTab);
@@ -1265,7 +1265,7 @@ static void initLabTabs()
         for(i = 0; i < 256; i++)
         {
             float x = i*(1.f/255.f);
-            sRGBGammaTab_b[i] = saturate_cast<ushort>(255.f*(1 << gamma_shift)*(x <= 0.04045f ? x*(1.f/12.92f) : (float)pow((double)(x + 0.055)*(1./1.055), 2.4)));
+            sRGBGammaTab_b[i] = saturate_cast<ushort>(255.f*(1 << gamma_shift)*(x <= 0.04045f ? x*(1.f/12.92f) : (float)std::pow((double)(x + 0.055)*(1./1.055), 2.4)));
             linearGammaTab_b[i] = (ushort)(i*(1 << gamma_shift));
         }
 
@@ -1408,9 +1408,9 @@ struct RGB2Lab_f
             float Y = R*C3 + G*C4 + B*C5;
             float Z = R*C6 + G*C7 + B*C8;
 
-            float FX = X > 0.008856f ? pow(X, _1_3) : (7.787f * X + _a);
-            float FY = Y > 0.008856f ? pow(Y, _1_3) : (7.787f * Y + _a);
-            float FZ = Z > 0.008856f ? pow(Z, _1_3) : (7.787f * Z + _a);
+            float FX = X > 0.008856f ? std::pow(X, _1_3) : (7.787f * X + _a);
+            float FY = Y > 0.008856f ? std::pow(Y, _1_3) : (7.787f * Y + _a);
+            float FZ = Z > 0.008856f ? std::pow(Z, _1_3) : (7.787f * Z + _a);
 
             float L = Y > 0.008856f ? (116.f * FY - 16.f) : (903.3f * Y);
             float a = 500.f * (FX - FY);

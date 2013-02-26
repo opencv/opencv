@@ -102,7 +102,7 @@ public:
     void  close();
 
     size_t signatureLength() const;
-    bool checkSignature( const string& signature ) const;
+    bool checkSignature( const std::string& signature ) const;
     ImageDecoder newDecoder() const;
 
 protected:
@@ -120,7 +120,7 @@ public:
 
     bool isFormatSupported( int depth ) const;
 
-    bool  write( const Mat& img, const vector<int>& params );
+    bool  write( const Mat& img, const std::vector<int>& params );
     ImageEncoder newEncoder() const;
 
 protected:
@@ -128,7 +128,7 @@ protected:
                     TiffFieldType fieldType,
                     int count, int value );
 
-    bool writeLibTiff( const Mat& img, const vector<int>& params );
+    bool writeLibTiff( const Mat& img, const std::vector<int>& params );
 };
 
 }

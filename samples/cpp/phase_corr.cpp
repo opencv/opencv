@@ -25,14 +25,14 @@ int main(int, char* [])
         curr.convertTo(curr64f, CV_64F);
 
         Point2d shift = phaseCorrelate(prev64f, curr64f, hann);
-        double radius = cv::sqrt(shift.x*shift.x + shift.y*shift.y);
+        double radius = std::sqrt(shift.x*shift.x + shift.y*shift.y);
 
         if(radius > 5)
         {
             // draw a circle and line indicating the shift direction...
             Point center(curr.cols >> 1, curr.rows >> 1);
-            cv::circle(frame, center, (int)radius, cv::Scalar(0, 255, 0), 3, CV_AA);
-            cv::line(frame, center, Point(center.x + (int)shift.x, center.y + (int)shift.y), cv::Scalar(0, 255, 0), 3, CV_AA);
+            circle(frame, center, (int)radius, Scalar(0, 255, 0), 3, CV_AA);
+            line(frame, center, Point(center.x + (int)shift.x, center.y + (int)shift.y), Scalar(0, 255, 0), 3, CV_AA);
         }
 
         imshow("phase shift", frame);

@@ -209,18 +209,18 @@ static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma
 }
 
 
-void SIFT::buildGaussianPyramid( const Mat& base, vector<Mat>& pyr, int nOctaves ) const
+void SIFT::buildGaussianPyramid( const Mat& base, std::vector<Mat>& pyr, int nOctaves ) const
 {
-    vector<double> sig(nOctaveLayers + 3);
+    std::vector<double> sig(nOctaveLayers + 3);
     pyr.resize(nOctaves*(nOctaveLayers + 3));
 
     // precompute Gaussian sigmas using the following formula:
     //  \sigma_{total}^2 = \sigma_{i}^2 + \sigma_{i-1}^2
     sig[0] = sigma;
-    double k = pow( 2., 1. / nOctaveLayers );
+    double k = std::pow( 2., 1. / nOctaveLayers );
     for( int i = 1; i < nOctaveLayers + 3; i++ )
     {
-        double sig_prev = pow(k, (double)(i-1))*sigma;
+        double sig_prev = std::pow(k, (double)(i-1))*sigma;
         double sig_total = sig_prev*k;
         sig[i] = std::sqrt(sig_total*sig_total - sig_prev*sig_prev);
     }
@@ -249,7 +249,7 @@ void SIFT::buildGaussianPyramid( const Mat& base, vector<Mat>& pyr, int nOctaves
 }
 
 
-void SIFT::buildDoGPyramid( const vector<Mat>& gpyr, vector<Mat>& dogpyr ) const
+void SIFT::buildDoGPyramid( const std::vector<Mat>& gpyr, std::vector<Mat>& dogpyr ) const
 {
     int nOctaves = (int)gpyr.size()/(nOctaveLayers + 3);
     dogpyr.resize( nOctaves*(nOctaveLayers + 2) );
@@ -341,7 +341,7 @@ static float calcOrientationHist( const Mat& img, Point pt, int radius,
 // Interpolates a scale-space extremum's location and scale to subpixel
 // accuracy to form an image feature. Rejects features with low contrast.
 // Based on Section 4 of Lowe's paper.
-static bool adjustLocalExtrema( const vector<Mat>& dog_pyr, KeyPoint& kpt, int octv,
+static bool adjustLocalExtrema( const std::vector<Mat>& dog_pyr, KeyPoint& kpt, int octv,
                                 int& layer, int& r, int& c, int nOctaveLayers,
                                 float contrastThreshold, float edgeThreshold, float sigma )
 {
@@ -447,8 +447,8 @@ static bool adjustLocalExtrema( const vector<Mat>& dog_pyr, KeyPoint& kpt, int o
 //
 // Detects features at extrema in DoG scale space.  Bad features are discarded
 // based on contrast and ratio of principal curvatures.
-void SIFT::findScaleSpaceExtrema( const vector<Mat>& gauss_pyr, const vector<Mat>& dog_pyr,
-                                  vector<KeyPoint>& keypoints ) const
+void SIFT::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const std::vector<Mat>& dog_pyr,
+                                  std::vector<KeyPoint>& keypoints ) const
 {
     int nOctaves = (int)gauss_pyr.size()/(nOctaveLayers + 3);
     int threshold = cvFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * SIFT_FIXPT_SCALE);
@@ -673,7 +673,7 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
 #endif
 }
 
-static void calcDescriptors(const vector<Mat>& gpyr, const vector<KeyPoint>& keypoints,
+static void calcDescriptors(const std::vector<Mat>& gpyr, const std::vector<KeyPoint>& keypoints,
                             Mat& descriptors, int nOctaveLayers, int firstOctave )
 {
     int d = SIFT_DESCR_WIDTH, n = SIFT_DESCR_HIST_BINS;
@@ -717,14 +717,14 @@ int SIFT::descriptorType() const
 
 
 void SIFT::operator()(InputArray _image, InputArray _mask,
-                      vector<KeyPoint>& keypoints) const
+                      std::vector<KeyPoint>& keypoints) const
 {
     (*this)(_image, _mask, keypoints, noArray());
 }
 
 
 void SIFT::operator()(InputArray _image, InputArray _mask,
-                      vector<KeyPoint>& keypoints,
+                      std::vector<KeyPoint>& keypoints,
                       OutputArray _descriptors,
                       bool useProvidedKeypoints) const
 {
@@ -757,8 +757,8 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
     }
 
     Mat base = createInitialImage(image, firstOctave < 0, (float)sigma);
-    vector<Mat> gpyr, dogpyr;
-    int nOctaves = actualNOctaves > 0 ? actualNOctaves : cvRound(log( (double)std::min( base.cols, base.rows ) ) / log(2.) - 2) - firstOctave;
+    std::vector<Mat> gpyr, dogpyr;
+    int nOctaves = actualNOctaves > 0 ? actualNOctaves : cvRound(std::log( (double)std::min( base.cols, base.rows ) ) / std::log(2.) - 2) - firstOctave;
 
     //double t, tf = getTickFrequency();
     //t = (double)getTickCount();
@@ -811,12 +811,12 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
     }
 }
 
-void SIFT::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
+void SIFT::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
 {
     (*this)(image, mask, keypoints, noArray());
 }
 
-void SIFT::computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const
+void SIFT::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
 }

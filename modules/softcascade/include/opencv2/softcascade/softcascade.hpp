@@ -204,7 +204,7 @@ public:
     virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth) = 0;
     virtual void setRejectThresholds(OutputArray thresholds) = 0;
     virtual void write( cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const = 0;
-    virtual void write( CvFileStorage* fs, string name) const = 0;
+    virtual void write( CvFileStorage* fs, std::string name) const = 0;
 };
 
 CV_EXPORTS bool initModule_softcascade(void);

@@ -114,8 +114,8 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
                             int tabOfs, int )
 {
     int x, c, width = img1.cols, cn = img1.channels();
-    int minX1 = max(maxD, 0), maxX1 = width + min(minD, 0);
-    int minX2 = max(minX1 - maxD, 0), maxX2 = min(maxX1 - minD, width);
+    int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
+    int minX2 = std::max(minX1 - maxD, 0), maxX2 = std::min(maxX1 - minD, width);
     int D = maxD - minD, width1 = maxX1 - minX1, width2 = maxX2 - minX2;
     const PixType *row1 = img1.ptr<PixType>(y), *row2 = img2.ptr<PixType>(y);
     PixType *prow1 = buffer + width2*2, *prow2 = prow1 + width*cn*2;
@@ -186,8 +186,8 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
             int v = prow2[x];
             int vl = x > 0 ? (v + prow2[x-1])/2 : v;
             int vr = x < width-1 ? (v + prow2[x+1])/2 : v;
-            int v0 = min(vl, vr); v0 = min(v0, v);
-            int v1 = max(vl, vr); v1 = max(v1, v);
+            int v0 = std::min(vl, vr); v0 = std::min(v0, v);
+            int v1 = std::max(vl, vr); v1 = std::max(v1, v);
             buffer[x] = (PixType)v0;
             buffer[x + width2] = (PixType)v1;
         }
@@ -197,8 +197,8 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
             int u = prow1[x];
             int ul = x > 0 ? (u + prow1[x-1])/2 : u;
             int ur = x < width-1 ? (u + prow1[x+1])/2 : u;
-            int u0 = min(ul, ur); u0 = min(u0, u);
-            int u1 = max(ul, ur); u1 = max(u1, u);
+            int u0 = std::min(ul, ur); u0 = std::min(u0, u);
+            int u1 = std::max(ul, ur); u1 = std::max(u1, u);
 
         #if CV_SSE2
             if( useSIMD )
@@ -231,10 +231,10 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
                     int v = prow2[width-x-1 + d];
                     int v0 = buffer[width-x-1 + d];
                     int v1 = buffer[width-x-1 + d + width2];
-                    int c0 = max(0, u - v1); c0 = max(c0, v0 - u);
-                    int c1 = max(0, v - u1); c1 = max(c1, u0 - v);
+                    int c0 = std::max(0, u - v1); c0 = std::max(c0, v0 - u);
+                    int c1 = std::max(0, v - u1); c1 = std::max(c1, u0 - v);
 
-                    cost[x*D + d] = (CostType)(cost[x*D+d] + (min(c0, c1) >> diff_scale));
+                    cost[x*D + d] = (CostType)(cost[x*D+d] + (std::min(c0, c1) >> diff_scale));
                 }
             }
         }
@@ -324,12 +324,12 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     int minD = params.minDisparity, maxD = minD + params.numberOfDisparities;
     Size SADWindowSize;
     SADWindowSize.width = SADWindowSize.height = params.SADWindowSize > 0 ? params.SADWindowSize : 5;
-    int ftzero = max(params.preFilterCap, 15) | 1;
+    int ftzero = std::max(params.preFilterCap, 15) | 1;
     int uniquenessRatio = params.uniquenessRatio >= 0 ? params.uniquenessRatio : 10;
     int disp12MaxDiff = params.disp12MaxDiff > 0 ? params.disp12MaxDiff : 1;
-    int P1 = params.P1 > 0 ? params.P1 : 2, P2 = max(params.P2 > 0 ? params.P2 : 5, P1+1);
+    int P1 = params.P1 > 0 ? params.P1 : 2, P2 = std::max(params.P2 > 0 ? params.P2 : 5, P1+1);
     int k, width = disp1.cols, height = disp1.rows;
-    int minX1 = max(maxD, 0), maxX1 = width + min(minD, 0);
+    int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
     int D = maxD - minD, width1 = maxX1 - minX1;
     int INVALID_DISP = minD - 1, INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;
     int SW2 = SADWindowSize.width/2, SH2 = SADWindowSize.height/2;
@@ -338,7 +338,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     PixType clipTab[TAB_SIZE];
 
     for( k = 0; k < TAB_SIZE; k++ )
-        clipTab[k] = (PixType)(min(max(k - TAB_OFS, -ftzero), ftzero) + ftzero);
+        clipTab[k] = (PixType)(std::min(std::max(k - TAB_OFS, -ftzero), ftzero) + ftzero);
 
     if( minX1 >= maxX1 )
     {
@@ -432,7 +432,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 
                 for( k = dy1; k <= dy2; k++ )
                 {
-                    CostType* hsumAdd = hsumBuf + (min(k, height-1) % hsumBufNRows)*costBufSize;
+                    CostType* hsumAdd = hsumBuf + (std::min(k, height-1) % hsumBufNRows)*costBufSize;
 
                     if( k < height )
                     {
@@ -448,13 +448,13 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 
                         if( y > 0 )
                         {
-                            const CostType* hsumSub = hsumBuf + (max(y - SH2 - 1, 0) % hsumBufNRows)*costBufSize;
+                            const CostType* hsumSub = hsumBuf + (std::max(y - SH2 - 1, 0) % hsumBufNRows)*costBufSize;
                             const CostType* Cprev = !params.fullDP || y == 0 ? C : C - costBufSize;
 
                             for( x = D; x < width1*D; x += D )
                             {
-                                const CostType* pixAdd = pixDiff + min(x + SW2*D, (width1-1)*D);
-                                const CostType* pixSub = pixDiff + max(x - (SW2+1)*D, 0);
+                                const CostType* pixAdd = pixDiff + std::min(x + SW2*D, (width1-1)*D);
+                                const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*D, 0);
 
                             #if CV_SSE2
                                 if( useSIMD )
@@ -488,8 +488,8 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                         {
                             for( x = D; x < width1*D; x += D )
                             {
-                                const CostType* pixAdd = pixDiff + min(x + SW2*D, (width1-1)*D);
-                                const CostType* pixSub = pixDiff + max(x - (SW2+1)*D, 0);
+                                const CostType* pixAdd = pixDiff + std::min(x + SW2*D, (width1-1)*D);
+                                const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*D, 0);
 
                                 for( d = 0; d < D; d++ )
                                     hsumAdd[x + d] = (CostType)(hsumAdd[x - D + d] + pixAdd[d] - pixSub[d]);
@@ -630,22 +630,22 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                     {
                         int Cpd = Cp[d], L0, L1, L2, L3;
 
-                        L0 = Cpd + min((int)Lr_p0[d], min(Lr_p0[d-1] + P1, min(Lr_p0[d+1] + P1, delta0))) - delta0;
-                        L1 = Cpd + min((int)Lr_p1[d], min(Lr_p1[d-1] + P1, min(Lr_p1[d+1] + P1, delta1))) - delta1;
-                        L2 = Cpd + min((int)Lr_p2[d], min(Lr_p2[d-1] + P1, min(Lr_p2[d+1] + P1, delta2))) - delta2;
-                        L3 = Cpd + min((int)Lr_p3[d], min(Lr_p3[d-1] + P1, min(Lr_p3[d+1] + P1, delta3))) - delta3;
+                        L0 = Cpd + std::min((int)Lr_p0[d], std::min(Lr_p0[d-1] + P1, std::min(Lr_p0[d+1] + P1, delta0))) - delta0;
+                        L1 = Cpd + std::min((int)Lr_p1[d], std::min(Lr_p1[d-1] + P1, std::min(Lr_p1[d+1] + P1, delta1))) - delta1;
+                        L2 = Cpd + std::min((int)Lr_p2[d], std::min(Lr_p2[d-1] + P1, std::min(Lr_p2[d+1] + P1, delta2))) - delta2;
+                        L3 = Cpd + std::min((int)Lr_p3[d], std::min(Lr_p3[d-1] + P1, std::min(Lr_p3[d+1] + P1, delta3))) - delta3;
 
                         Lr_p[d] = (CostType)L0;
-                        minL0 = min(minL0, L0);
+                        minL0 = std::min(minL0, L0);
 
                         Lr_p[d + D2] = (CostType)L1;
-                        minL1 = min(minL1, L1);
+                        minL1 = std::min(minL1, L1);
 
                         Lr_p[d + D2*2] = (CostType)L2;
-                        minL2 = min(minL2, L2);
+                        minL2 = std::min(minL2, L2);
 
                         Lr_p[d + D2*3] = (CostType)L3;
-                        minL3 = min(minL3, L3);
+                        minL3 = std::min(minL3, L3);
 
                         Sp[d] = saturate_cast<CostType>(Sp[d] + L0 + L1 + L2 + L3);
                     }
@@ -737,10 +737,10 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                         {
                             for( d = 0; d < D; d++ )
                             {
-                                int L0 = Cp[d] + min((int)Lr_p0[d], min(Lr_p0[d-1] + P1, min(Lr_p0[d+1] + P1, delta0))) - delta0;
+                                int L0 = Cp[d] + std::min((int)Lr_p0[d], std::min(Lr_p0[d-1] + P1, std::min(Lr_p0[d+1] + P1, delta0))) - delta0;
 
                                 Lr_p[d] = (CostType)L0;
-                                minL0 = min(minL0, L0);
+                                minL0 = std::min(minL0, L0);
 
                                 int Sval = Sp[d] = saturate_cast<CostType>(Sp[d] + L0);
                                 if( Sval < minS )
@@ -785,7 +785,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                         // do subpixel quadratic interpolation:
                         //   fit parabola into (x1=d-1, y1=Sp[d-1]), (x2=d, y2=Sp[d]), (x3=d+1, y3=Sp[d+1])
                         //   then find minimum of the parabola.
-                        int denom2 = max(Sp[d-1] + Sp[d+1] - 2*Sp[d], 1);
+                        int denom2 = std::max(Sp[d-1] + Sp[d+1] - 2*Sp[d], 1);
                         d = d*DISP_SCALE + ((Sp[d-1] - Sp[d+1])*DISP_SCALE + denom2)/(denom2*2);
                     }
                     else
@@ -845,10 +845,10 @@ Rect getValidDisparityROI( Rect roi1, Rect roi2,
     int SW2 = SADWindowSize/2;
     int minD = minDisparity, maxD = minDisparity + numberOfDisparities - 1;
 
-    int xmin = max(roi1.x, roi2.x + maxD) + SW2;
-    int xmax = min(roi1.x + roi1.width, roi2.x + roi2.width - minD) - SW2;
-    int ymin = max(roi1.y, roi2.y) + SW2;
-    int ymax = min(roi1.y + roi1.height, roi2.y + roi2.height) - SW2;
+    int xmin = std::max(roi1.x, roi2.x + maxD) + SW2;
+    int xmax = std::min(roi1.x + roi1.width, roi2.x + roi2.width - minD) - SW2;
+    int ymin = std::max(roi1.y, roi2.y) + SW2;
+    int ymax = std::min(roi1.y + roi1.height, roi2.y + roi2.height) - SW2;
 
     Rect r(xmin, ymin, xmax - xmin, ymax - ymin);
 
@@ -979,7 +979,7 @@ void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDis
     Mat disp = _disp.getMat(), cost = _cost.getMat();
     int cols = disp.cols, rows = disp.rows;
     int minD = minDisparity, maxD = minDisparity + numberOfDisparities;
-    int x, minX1 = max(maxD, 0), maxX1 = cols + min(minD, 0);
+    int x, minX1 = std::max(maxD, 0), maxX1 = cols + std::min(minD, 0);
     AutoBuffer<int> _disp2buf(cols*2);
     int* disp2buf = _disp2buf;
     int* disp2cost = disp2buf + cols;

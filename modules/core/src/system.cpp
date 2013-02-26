@@ -113,7 +113,7 @@ namespace cv
 
 Exception::Exception() { code = 0; line = 0; }
 
-Exception::Exception(int _code, const string& _err, const string& _func, const string& _file, int _line)
+Exception::Exception(int _code, const std::string& _err, const std::string& _func, const std::string& _file, int _line)
 : code(_code), err(_err), func(_func), file(_file), line(_line)
 {
     formatMessage();
@@ -348,19 +348,19 @@ const std::string& getBuildInformation()
     return build_info;
 }
 
-string format( const char* fmt, ... )
+std::string format( const char* fmt, ... )
 {
     char buf[1 << 16];
     va_list args;
     va_start( args, fmt );
     vsprintf( buf, fmt, args );
-    return string(buf);
+    return std::string(buf);
 }
 
-string tempfile( const char* suffix )
+std::string tempfile( const char* suffix )
 {
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
-    string fname;
+    std::string fname;
 
 #if defined WIN32 || defined _WIN32
     char temp_dir2[MAX_PATH + 1] = { 0 };
@@ -372,7 +372,7 @@ string tempfile( const char* suffix )
         temp_dir = temp_dir2;
     }
     if(0 == ::GetTempFileNameA(temp_dir, "ocv", 0, temp_file))
-        return string();
+        return std::string();
 
     DeleteFileA(temp_file);
 
@@ -397,7 +397,7 @@ string tempfile( const char* suffix )
     }
 
     const int fd = mkstemp((char*)fname.c_str());
-    if (fd == -1) return string();
+    if (fd == -1) return std::string();
 
     close(fd);
     remove(fname.c_str());

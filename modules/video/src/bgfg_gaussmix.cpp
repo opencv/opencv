@@ -95,10 +95,10 @@ BackgroundSubtractorMOG::BackgroundSubtractorMOG(int _history, int _nmixtures,
     frameType = 0;
 
     nframes = 0;
-    nmixtures = min(_nmixtures > 0 ? _nmixtures : defaultNMixtures, 8);
+    nmixtures = std::min(_nmixtures > 0 ? _nmixtures : defaultNMixtures, 8);
     history = _history > 0 ? _history : defaultHistory;
     varThreshold = defaultVarThreshold;
-    backgroundRatio = min(_backgroundRatio > 0 ? _backgroundRatio : 0.95, 1.);
+    backgroundRatio = std::min(_backgroundRatio > 0 ? _backgroundRatio : 0.95, 1.);
     noiseSigma = _noiseSigma <= 0 ? defaultNoiseSigma : _noiseSigma;
 }
 
@@ -177,9 +177,9 @@ static void process8uC1( const Mat& image, Mat& fgmask, double learningRate,
                         float dw = alpha*(1.f - w);
                         mptr[k].weight = w + dw;
                         mptr[k].mean = mu + alpha*diff;
-                        var = max(var + alpha*(d2 - var), minVar);
+                        var = std::max(var + alpha*(d2 - var), minVar);
                         mptr[k].var = var;
-                        mptr[k].sortKey = w/sqrt(var);
+                        mptr[k].sortKey = w/std::sqrt(var);
 
                         for( k1 = k-1; k1 >= 0; k1-- )
                         {
@@ -195,7 +195,7 @@ static void process8uC1( const Mat& image, Mat& fgmask, double learningRate,
 
                 if( kHit < 0 ) // no appropriate gaussian mixture found at all, remove the weakest mixture and create a new one
                 {
-                    kHit = k = min(k, K-1);
+                    kHit = k = std::min(k, K-1);
                     wsum += w0 - mptr[k].weight;
                     mptr[k].weight = w0;
                     mptr[k].mean = pix;
@@ -271,7 +271,7 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
     int K = nmixtures;
 
     const float w0 = (float)defaultInitialWeight;
-    const float sk0 = (float)(w0/(defaultNoiseSigma*2*sqrt(3.)));
+    const float sk0 = (float)(w0/(defaultNoiseSigma*2*std::sqrt(3.)));
     const float var0 = (float)(defaultNoiseSigma*defaultNoiseSigma*4);
     const float minVar = (float)(noiseSigma*noiseSigma);
     MixData<Vec3f>* mptr = (MixData<Vec3f>*)bgmodel.data;
@@ -305,11 +305,11 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
                         float dw = alpha*(1.f - w);
                         mptr[k].weight = w + dw;
                         mptr[k].mean = mu + alpha*diff;
-                        var = Vec3f(max(var[0] + alpha*(diff[0]*diff[0] - var[0]), minVar),
-                                    max(var[1] + alpha*(diff[1]*diff[1] - var[1]), minVar),
-                                    max(var[2] + alpha*(diff[2]*diff[2] - var[2]), minVar));
+                        var = Vec3f(std::max(var[0] + alpha*(diff[0]*diff[0] - var[0]), minVar),
+                                    std::max(var[1] + alpha*(diff[1]*diff[1] - var[1]), minVar),
+                                    std::max(var[2] + alpha*(diff[2]*diff[2] - var[2]), minVar));
                         mptr[k].var = var;
-                        mptr[k].sortKey = w/sqrt(var[0] + var[1] + var[2]);
+                        mptr[k].sortKey = w/std::sqrt(var[0] + var[1] + var[2]);
 
                         for( k1 = k-1; k1 >= 0; k1-- )
                         {
@@ -325,7 +325,7 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
 
                 if( kHit < 0 ) // no appropriate gaussian mixture found at all, remove the weakest mixture and create a new one
                 {
-                    kHit = k = min(k, K-1);
+                    kHit = k = std::min(k, K-1);
                     wsum += w0 - mptr[k].weight;
                     mptr[k].weight = w0;
                     mptr[k].mean = pix;
@@ -404,7 +404,7 @@ void BackgroundSubtractorMOG::operator()(InputArray _image, OutputArray _fgmask,
     Mat fgmask = _fgmask.getMat();
 
     ++nframes;
-    learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./min( nframes, history );
+    learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( nframes, history );
     CV_Assert(learningRate >= 0);
 
     if( image.type() == CV_8UC1 )

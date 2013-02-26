@@ -74,7 +74,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
 
 namespace {
@@ -637,7 +636,7 @@ void EstimateVBody::operator() (const Range& range) const
                 d1 = -l_t * I1wxRow[x];
                 d2 = -l_t * I1wyRow[x];
             }
-            else if (gradRow[x] > numeric_limits<float>::epsilon())
+            else if (gradRow[x] > std::numeric_limits<float>::epsilon())
             {
                 float fi = -rho / gradRow[x];
                 d1 = fi * I1wxRow[x];
@@ -852,7 +851,7 @@ void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>
 
         calcGradRho(I0, I1w, I1wx, I1wy, u1, u2, grad, rho_c);
 
-        float error = numeric_limits<float>::max();
+        float error = std::numeric_limits<float>::max();
         for (int n = 0; error > scaledEpsilon && n < iterations; ++n)
         {
             // estimate the values of the variable (v1, v2) (thresholding operator TH)

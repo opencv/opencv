@@ -43,7 +43,6 @@
 #include "opencv2/contrib/hybridtracker.hpp"
 
 using namespace cv;
-using namespace std;
 
 CvHybridTrackerParams::CvHybridTrackerParams(float _ft_tracker_weight, float _ms_tracker_weight,
             CvFeatureTrackerParams _ft_params,
@@ -83,7 +82,7 @@ CvHybridTracker::~CvHybridTracker() {
 inline float CvHybridTracker::getL2Norm(Point2f p1, Point2f p2) {
     float distance = (p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y
             - p2.y);
-    return sqrt(distance);
+    return std::sqrt(distance);
 }
 
 Mat CvHybridTracker::getDistanceProjection(Mat image, Point2f center) {

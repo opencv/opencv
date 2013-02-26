@@ -43,6 +43,7 @@
 #include <limits>
 #include "test_chessboardgenerator.hpp"
 
+using namespace std;
 using namespace cv;
 
 class CV_ChessboardSubpixelTest : public cvtest::BaseTest
