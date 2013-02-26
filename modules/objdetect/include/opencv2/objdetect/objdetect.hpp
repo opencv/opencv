@@ -556,27 +556,26 @@ public:
     //with found weights output
     CV_WRAP virtual void detect(const Mat& img, CV_OUT vector<Point>& foundLocations,
                         CV_OUT vector<double>& weights,
-                        double hitThreshold=0, Size winStride=Size(),
-                        Size padding=Size(),
+                        double hitThreshold=0, Size winStride=Size(), Size padding=Size(),
                         const vector<Point>& searchLocations=vector<Point>()) const;
     //without found weights output
     virtual void detect(const Mat& img, CV_OUT vector<Point>& foundLocations,
-                        double hitThreshold=0, Size winStride=Size(),
-                        Size padding=Size(),
+                        double hitThreshold=0, const Size &winStride=Size(),
+                        const Size &padding=Size(),
                         const vector<Point>& searchLocations=vector<Point>()) const;
     //with result weights output
     CV_WRAP virtual void detectMultiScale(const Mat& img, CV_OUT vector<Rect>& foundLocations,
                                   CV_OUT vector<double>& foundWeights, double hitThreshold=0,
-                                  Size winStride=Size(), Size padding=Size(), double scale=1.05,
+                                  const Size &winStride=Size(), const Size &padding=Size(), double scale=1.05,
                                   double finalThreshold=2.0,bool useMeanshiftGrouping = false) const;
     //without found weights output
     virtual void detectMultiScale(const Mat& img, CV_OUT vector<Rect>& foundLocations,
-                                  double hitThreshold=0, Size winStride=Size(),
-                                  Size padding=Size(), double scale=1.05,
+                                  double hitThreshold=0, const Size &winStride=Size(),
+                                  const Size &padding=Size(), double scale=1.05,
                                   double finalThreshold=2.0, bool useMeanshiftGrouping = false) const;
 
     CV_WRAP virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
-                                 Size paddingTL=Size(), Size paddingBR=Size()) const;
+                                 const Size &paddingTL=Size(), const Size &paddingBR=Size()) const;
 
     CV_WRAP static vector<float> getDefaultPeopleDetector();
     CV_WRAP static vector<float> getDaimlerPeopleDetector();
@@ -609,7 +608,7 @@ public:
                                                        int groupThreshold = 0) const;
 
    // read/parse Dalal's alt model file
-   void readALTModel(std::string modelfile);
+   void readALTModel(const std::string &modelfile);
 };
 
 
