@@ -4317,11 +4317,11 @@ INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(
-                            Values(CV_32FC1, CV_64FC1),
+                            Values(CV_32FC1, CV_32FC1),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(
-                            Values(CV_32FC1, CV_64FC1),
+                            Values(CV_32FC1, CV_32FC1),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(
