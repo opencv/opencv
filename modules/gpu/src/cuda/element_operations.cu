@@ -2284,15 +2284,18 @@ namespace arithm
 
     template void bitScalarAnd<uchar>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
     template void bitScalarAnd<ushort>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
-    template void bitScalarAnd<uint>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
+    template void bitScalarAnd<int>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
+    template void bitScalarAnd<unsigned int>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
 
     template void bitScalarOr<uchar>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
     template void bitScalarOr<ushort>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
-    template void bitScalarOr<uint>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
+    template void bitScalarOr<int>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
+    template void bitScalarOr<unsigned int>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
 
     template void bitScalarXor<uchar>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
     template void bitScalarXor<ushort>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
-    template void bitScalarXor<uint>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
+    template void bitScalarXor<int>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
+    template void bitScalarXor<unsigned int>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
 }
 
 //////////////////////////////////////////////////////////////////////////

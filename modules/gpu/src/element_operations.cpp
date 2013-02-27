@@ -2280,11 +2280,11 @@ namespace
 {
     typedef void (*bit_scalar_func_t)(PtrStepSzb src1, unsigned int src2, PtrStepSzb dst, cudaStream_t stream);
 
-    template <bit_scalar_func_t func> struct BitScalar
+    template <typename T, bit_scalar_func_t func> struct BitScalar
     {
         static void call(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream)
         {
-            func(src, static_cast<unsigned int>(sc.val[0]), dst, stream);
+            func(src, saturate_cast<T>(sc.val[0]), dst, stream);
         }
     };
 
@@ -2292,14 +2292,12 @@ namespace
     {
         static void call(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream)
         {
-            Scalar_<unsigned int> isc = sc;
-
             unsigned int packedVal = 0;
 
-            packedVal |= (isc.val[0] & 0xffff);
-            packedVal |= (isc.val[1] & 0xffff) << 8;
-            packedVal |= (isc.val[2] & 0xffff) << 16;
-            packedVal |= (isc.val[3] & 0xffff) << 24;
+            packedVal |= (saturate_cast<unsigned char>(sc.val[0]) & 0xffff);
+            packedVal |= (saturate_cast<unsigned char>(sc.val[1]) & 0xffff) << 8;
+            packedVal |= (saturate_cast<unsigned char>(sc.val[2]) & 0xffff) << 16;
+            packedVal |= (saturate_cast<unsigned char>(sc.val[3]) & 0xffff) << 24;
 
             func(src, packedVal, dst, stream);
         }
@@ -2330,7 +2328,7 @@ namespace
             oSizeROI.width = src.cols;
             oSizeROI.height = src.rows;
 
-            const npp_t pConstants[] = {static_cast<npp_t>(sc.val[0]), static_cast<npp_t>(sc.val[1]), static_cast<npp_t>(sc.val[2]), static_cast<npp_t>(sc.val[3])};
+            const npp_t pConstants[] = {saturate_cast<npp_t>(sc.val[0]), saturate_cast<npp_t>(sc.val[1]), saturate_cast<npp_t>(sc.val[2]), saturate_cast<npp_t>(sc.val[3])};
 
             nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step), pConstants, dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI) );
 
@@ -2350,7 +2348,7 @@ namespace
             oSizeROI.width = src.cols;
             oSizeROI.height = src.rows;
 
-            nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step), static_cast<npp_t>(sc.val[0]), dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI) );
+            nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step), saturate_cast<npp_t>(sc.val[0]), dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -2365,11 +2363,11 @@ void cv::gpu::bitwise_and(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stre
     typedef void (*func_t)(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[5][4] =
     {
-        {BitScalar< bitScalarAnd<unsigned char> >::call , 0, NppBitwiseC<CV_8U , 3, nppiAndC_8u_C3R >::call, BitScalar4< bitScalarAnd<unsigned int> >::call},
+        {BitScalar<unsigned char, bitScalarAnd<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiAndC_8u_C3R >::call, BitScalar4< bitScalarAnd<unsigned int> >::call},
         {0,0,0,0},
-        {BitScalar< bitScalarAnd<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiAndC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiAndC_16u_C4R>::call},
+        {BitScalar<unsigned short, bitScalarAnd<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiAndC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiAndC_16u_C4R>::call},
         {0,0,0,0},
-        {BitScalar< bitScalarAnd<unsigned int> >::call  , 0, NppBitwiseC<CV_32S, 3, nppiAndC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiAndC_32s_C4R>::call}
+        {BitScalar<int, bitScalarAnd<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiAndC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiAndC_32s_C4R>::call}
     };
 
     const int depth = src.depth();
@@ -2390,11 +2388,11 @@ void cv::gpu::bitwise_or(const GpuMat& src, const Scalar& sc, GpuMat& dst, Strea
     typedef void (*func_t)(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[5][4] =
     {
-        {BitScalar< bitScalarOr<unsigned char> >::call , 0, NppBitwiseC<CV_8U , 3, nppiOrC_8u_C3R >::call, BitScalar4< bitScalarOr<unsigned int> >::call},
+        {BitScalar<unsigned char, bitScalarOr<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiOrC_8u_C3R >::call, BitScalar4< bitScalarOr<unsigned int> >::call},
         {0,0,0,0},
-        {BitScalar< bitScalarOr<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiOrC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiOrC_16u_C4R>::call},
+        {BitScalar<unsigned short, bitScalarOr<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiOrC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiOrC_16u_C4R>::call},
         {0,0,0,0},
-        {BitScalar< bitScalarOr<unsigned int> >::call  , 0, NppBitwiseC<CV_32S, 3, nppiOrC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiOrC_32s_C4R>::call}
+        {BitScalar<int, bitScalarOr<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiOrC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiOrC_32s_C4R>::call}
     };
 
     const int depth = src.depth();
@@ -2415,11 +2413,11 @@ void cv::gpu::bitwise_xor(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stre
     typedef void (*func_t)(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[5][4] =
     {
-        {BitScalar< bitScalarXor<unsigned char> >::call , 0, NppBitwiseC<CV_8U , 3, nppiXorC_8u_C3R >::call, BitScalar4< bitScalarXor<unsigned int> >::call},
+        {BitScalar<unsigned char, bitScalarXor<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiXorC_8u_C3R >::call, BitScalar4< bitScalarXor<unsigned int> >::call},
         {0,0,0,0},
-        {BitScalar< bitScalarXor<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiXorC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiXorC_16u_C4R>::call},
+        {BitScalar<unsigned short, bitScalarXor<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiXorC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiXorC_16u_C4R>::call},
         {0,0,0,0},
-        {BitScalar< bitScalarXor<unsigned int> >::call  , 0, NppBitwiseC<CV_32S, 3, nppiXorC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiXorC_32s_C4R>::call}
+        {BitScalar<int, bitScalarXor<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiXorC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiXorC_32s_C4R>::call}
     };
 
     const int depth = src.depth();

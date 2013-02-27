@@ -232,10 +232,8 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
     };
 
     bool useNpp = borderMode == BORDER_CONSTANT && ofs.x == 0 && ofs.y == 0 && useNppTab[src.depth()][src.channels() - 1][interpolation];
-    #ifdef linux
-        // NPP bug on float data
-        useNpp = useNpp && src.depth() != CV_32F;
-    #endif
+    // NPP bug on float data
+    useNpp = useNpp && src.depth() != CV_32F;
 
     if (useNpp)
     {
@@ -372,10 +370,8 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
     };
 
     bool useNpp = borderMode == BORDER_CONSTANT && ofs.x == 0 && ofs.y == 0 && useNppTab[src.depth()][src.channels() - 1][interpolation];
-    #ifdef linux
-        // NPP bug on float data
-        useNpp = useNpp && src.depth() != CV_32F;
-    #endif
+    // NPP bug on float data
+    useNpp = useNpp && src.depth() != CV_32F;
 
     if (useNpp)
     {
