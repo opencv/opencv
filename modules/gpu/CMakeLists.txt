@@ -65,8 +65,6 @@ else()
   set(ncv_files "")
 endif()
 
-message("!!!!!!!!!!! ${lib_device_hdrs}")
-
 ocv_set_module_sources(
   HEADERS ${lib_hdrs} ${lib_device_hdrs} ${lib_device_hdrs_detail}
   SOURCES ${lib_int_hdrs} ${lib_cuda_hdrs} ${lib_srcs} ${lib_cuda} ${ncv_files} ${cuda_objs}
