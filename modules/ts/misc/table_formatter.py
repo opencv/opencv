@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, re, os.path, cgi, stat
+import sys, re, os.path, cgi, stat, math
 from optparse import OptionParser
 from color import getColorizer
 
@@ -627,6 +627,21 @@ def getCycleReduction(test, test0, metric):
         return None
     return (1.0-float(val)/val0)*100
 
+def getScore(test, test0, metric):
+    if not test or not test0:
+        return None
+    m0 = float(test.get("gmean", None))
+    m1 = float(test0.get("gmean", None))
+    if m0 == 0 or m1 == 0:
+        return None
+    s0 = float(test.get("gstddev", None))
+    s1 = float(test0.get("gstddev", None))
+    s = math.sqrt(s0*s0 + s1*s1)
+    m0 = math.log(m0)
+    m1 = math.log(m1)
+    if s == 0:
+        return None
+    return (m0-m1)/s
 
 metrix_table = \
 {
@@ -655,6 +670,8 @@ metrix_table = \
     "median$": ("Median (cycle reduction)", lambda test,test0,units: getCycleReduction(test, test0, "median")),
     "stddev$": ("Standard deviation (cycle reduction)", lambda test,test0,units: getCycleReduction(test, test0, "stddev")),
     "gstddev$": ("Standard deviation of Ln(time) (cycle reduction)", lambda test,test0,units: getCycleReduction(test, test0, "gstddev")),
+
+    "score": ("SCORE", lambda test,test0,units: getScore(test, test0, "gstddev")),
 }
 
 def formatValue(val, metric, units = None):
@@ -664,6 +681,18 @@ def formatValue(val, metric, units = None):
         return "%.2f" % val
     if metric.endswith("$"):
         return "%.2f%%" % val
+    if metric.endswith("S"):
+        if val > 3.5:
+            return "SLOWER"
+        if val < -3.5:
+            return "FASTER"
+        if val > -1.5 and val < 1.5:
+            return " "
+        if val < 0:
+            return "faster"
+        if val > 0:
+            return "slower"
+        #return "%.4f" % val
     return "%.3f %s" % (val, units)
 
 if __name__ == "__main__":
