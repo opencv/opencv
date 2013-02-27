@@ -1787,6 +1787,7 @@ public:
                     #if CV_SSE3
                     if( haveSSE3 )
                     {
+                        const __m128i izero = _mm_setzero_si128();
                         const __m128 _b0 = _mm_set1_ps(static_cast<float>(b0));
                         const __m128 _g0 = _mm_set1_ps(static_cast<float>(g0));
                         const __m128 _r0 = _mm_set1_ps(static_cast<float>(r0));
@@ -1794,14 +1795,17 @@ public:
 
                         for( ; k <= maxk - 4; k += 4 )
                         {
-                            const uchar* sptr_k  = sptr + j + space_ofs[k];
-                            const uchar* sptr_k1 = sptr + j + space_ofs[k+1];
-                            const uchar* sptr_k2 = sptr + j + space_ofs[k+2];
-                            const uchar* sptr_k3 = sptr + j + space_ofs[k+3];
+                            const int* const sptr_k0  = reinterpret_cast<const int*>(sptr + j + space_ofs[k]);
+                            const int* const sptr_k1  = reinterpret_cast<const int*>(sptr + j + space_ofs[k+1]);
+                            const int* const sptr_k2  = reinterpret_cast<const int*>(sptr + j + space_ofs[k+2]);
+                            const int* const sptr_k3  = reinterpret_cast<const int*>(sptr + j + space_ofs[k+3]);
 
-                            __m128 _b = _mm_set_ps(sptr_k3[0],sptr_k2[0],sptr_k1[0],sptr_k[0]);
-                            __m128 _g = _mm_set_ps(sptr_k3[1],sptr_k2[1],sptr_k1[1],sptr_k[1]);
-                            __m128 _r = _mm_set_ps(sptr_k3[2],sptr_k2[2],sptr_k1[2],sptr_k[2]);
+                            __m128 _b = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_unpacklo_epi8(_mm_cvtsi32_si128(sptr_k0[0]), izero), izero));
+                            __m128 _g = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_unpacklo_epi8(_mm_cvtsi32_si128(sptr_k1[0]), izero), izero));
+                            __m128 _r = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_unpacklo_epi8(_mm_cvtsi32_si128(sptr_k2[0]), izero), izero));
+                            __m128 _z = _mm_cvtepi32_ps(_mm_unpacklo_epi16(_mm_unpacklo_epi8(_mm_cvtsi32_si128(sptr_k3[0]), izero), izero));
+
+                            _MM_TRANSPOSE4_PS(_b, _g, _r, _z);
 
                             __m128 bt = _mm_andnot_ps(_signMask, _mm_sub_ps(_b,_b0));
                             __m128 gt = _mm_andnot_ps(_signMask, _mm_sub_ps(_g,_g0));
