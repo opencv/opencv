@@ -86,6 +86,24 @@ endif()
 
 ocv_parse_header("${JPEG_INCLUDE_DIR}/jpeglib.h" JPEG_VERSION_LINES JPEG_LIB_VERSION)
 
+# --- libwebp (optional) ---
+if(WITH_WEBP)
+  if(BUILD_WEBP)
+    ocv_clear_vars(WEBP_LIBRARY WEBP_LIBRARIES WEBP_INCLUDE_DIR)
+  else()
+    include(cmake/OpenCVFindWebP.cmake)
+  endif()
+endif()
+
+# --- Add libwebp to 3rdparty/libwebp and compile it if not available ---
+if(WITH_WEBP AND NOT WEBP_FOUND)
+  ocv_clear_vars(WEBP_LIBRARY WEBP_LIBRARIES WEBP_INCLUDE_DIR)
+
+  set(WEBP_LIBRARY libwebp)
+  set(WEBP_LIBRARIES ${WEBP_LIBRARY})
+  add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libwebp")
+  set(WEBP_INCLUDE_DIR "${${WEBP_LIBRARY}_SOURCE_DIR}")
+endif()
 
 # --- libjasper (optional, should be searched after libjpeg) ---
 if(WITH_JASPER)

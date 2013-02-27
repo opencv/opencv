@@ -134,6 +134,8 @@ Saves an image to a specified file.
 
         *  For JPEG, it can be a quality ( ``CV_IMWRITE_JPEG_QUALITY`` ) from 0 to 100 (the higher is the better). Default value is 95.
 
+        *  For WEBP, it can be a quality ( ``CV_IMWRITE_WEBP_QUALITY`` ) from 0 to 100 (the higher is the better). Default value is lossless(params=vector<int>()).
+
         *  For PNG, it can be the compression level ( ``CV_IMWRITE_PNG_COMPRESSION`` ) from 0 to 9. A higher value means a smaller size and longer compression time. Default value is 3.
 
         *  For PPM, PGM, or PBM, it can be a binary format flag ( ``CV_IMWRITE_PXM_BINARY`` ), 0 or 1. Default value is 1.

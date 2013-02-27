@@ -328,3 +328,32 @@ TEST(Highgui_Tiff, decode_tile16384x16384)
     remove(file4.c_str());
 }
 #endif
+
+#ifdef HAVE_WEBP
+
+TEST(Highgui_WebP, encode_decode_webp)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    string input = string(ts.get_data_path()) + "/../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+
+    string output = string(ts.get_data_path()) + "/../cv/shared/lena.webp";
+    EXPECT_NO_THROW(cv::imwrite(output, img)); // lossless
+
+    try
+    {
+        cv::vector<int> params;
+        params.push_back(CV_IMWRITE_WEBP_QUALITY);
+        params.push_back(100);
+
+        for (int q = 100; q >=10 ; q-=5)
+        {
+            params[1] = q;
+            output = string(ts.get_data_path()) + cv::format("/../cv/shared/lena_q%d.webp", q);
+            EXPECT_NO_THROW(cv::imwrite(output, img, params));
+        }
+    }
+    catch(...){}
+}
+
+#endif
