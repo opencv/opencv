@@ -707,7 +707,7 @@ TEST(matchTemplate)
 
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
-            for(templ_size = 5; templ_size < 200; templ_size *= 5)
+            for(templ_size = 5; templ_size <=5; templ_size *= 5)
             {
                 gen(src, size, size, all_type[j], 0, 1);
 
