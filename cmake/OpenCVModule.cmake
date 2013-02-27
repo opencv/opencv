@@ -439,6 +439,29 @@ macro(ocv_glob_module_sources)
   ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail} SOURCES ${lib_srcs} ${lib_int_hdrs})
 endmacro()
 
+macro(ocv_glob_cuda_module_sources)
+
+  # ugly but temporal only
+  file(GLOB_RECURSE lib_srcs "src/*.cpp")
+  file(GLOB_RECURSE lib_int_hdrs "src/*.hpp" "src/*.h")
+  file(GLOB lib_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
+  file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.hpp" "include/opencv2/${name}/detail/*.h")
+
+  source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
+  source_group("Include" FILES ${lib_hdrs})
+  source_group("Include\\detail" FILES ${lib_hdrs_detail})
+
+  file(GLOB_RECURSE lib_device_srcs "src/cuda/*.cu")
+  file(GLOB_RECURSE lib_device_hdrs "src/cuda/*.hpp")
+  source_group("Src\\Cuda"      FILES ${lib_device_srcs} ${lib_device_hdrs})
+
+  message("@@ ${OPENCV_MODULE_opencv_cudevice_HEADERS}")
+  ocv_cuda_compile(device_objs ${lib_device_hdrs} ${lib_device_srcs} ${OPENCV_MODULE_opencv_cudevice_HEADERS})
+
+  ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
+                                 SOURCES ${lib_srcs} ${lib_int_hdrs} ${device_objs} ${lib_device_srcs} ${lib_device_hdrs})
+endmacro()
+
 # creates OpenCV module in current folder
 # creates new target, configures standard dependencies, compilers flags, install rules
 # Usage:
@@ -533,6 +556,20 @@ macro(ocv_define_module module_name)
   ocv_glob_module_sources()
   ocv_module_include_directories()
   ocv_create_module()
+  ocv_add_precompiled_headers(${the_module})
+
+  ocv_add_accuracy_tests()
+  ocv_add_perf_tests()
+endmacro()
+
+# short command for adding CUDA accelerated OpenCV module
+# Usage:
+# ocv_define_module(module_name  [INTERNAL] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>])
+macro(ocv_define_cuda_module module_name)
+  ocv_add_module(${module_name} ${ARGN})
+  ocv_glob_cuda_module_sources()
+  ocv_module_include_directories()
+  ocv_create_module(${CUDA_LIBRARIES})
   ocv_add_precompiled_headers(${the_module})
 
   ocv_add_accuracy_tests()
