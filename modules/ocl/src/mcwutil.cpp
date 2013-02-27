@@ -221,6 +221,36 @@ namespace cv
         {
             openCLFree(texture);
         }
+
+        bool support_image2d(Context *clCxt)
+        {
+            static const char * _kernel_string = "__kernel void test_func(image2d_t img) {}";
+            static bool _isTested = false;
+            static bool _support = false;
+            if(_isTested)
+            {
+                return _support;
+            }
+            try
+            {
+                cv::ocl::openCLGetKernelFromSource(clCxt, &_kernel_string, "test_func");
+                _support = true;
+            }
+            catch (const cv::Exception& e)
+            {
+                if(e.code == -217)
+                {
+                    _support = false;
+                }
+                else
+                {
+                    // throw e once again
+                    throw e;
+                }
+            }
+            _isTested = true;
+            return _support;
+        }
     }//namespace ocl
 
 }//namespace cv

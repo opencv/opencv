@@ -83,36 +83,6 @@ static inline int calcSize(int octave, int layer)
 namespace
 {
     const char* noImage2dOption = "-D DISABLE_IMAGE2D";
-
-    // default kernel name can be any kernel in nonfree_surf.cl
-    bool support_image2d(const char* kernel_name = "icvCalcLayerDetAndTrace")
-    {
-        static bool _isTested = false;
-        static bool _support = false;
-        if(_isTested)
-        {
-            return _support;
-        }
-        try
-        {
-            cv::ocl::openCLGetKernelFromSource(Context::getContext(), &nonfree_surf, kernel_name);
-            _support = true;
-        }
-        catch (cv::Exception& e)
-        {
-            if(e.code == -217)
-            {
-                _support = false;
-            }
-            else
-            {
-                // throw e once again
-                cv::error(e);
-            }
-        }
-        _isTested = true;
-        return _support;
-    }
 }
 
 class SURF_OCL_Invoker
