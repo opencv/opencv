@@ -165,6 +165,8 @@ missing_consts = \
             ('CV_CALIB_FIX_K5',           4096),
             ('CV_CALIB_FIX_K6',           8192),
             ('CV_CALIB_RATIONAL_MODEL',  16384),
+            ('CV_CALIB_THIN_PRISM_MODEL',32768),
+            ('CV_CALIB_FIX_S1_S2_S3_S4', 65536),
             ('CV_CALIB_FIX_INTRINSIC',     256),
             ('CV_CALIB_SAME_FOCAL_LENGTH', 512),
             ('CV_CALIB_ZERO_DISPARITY',   1024),
