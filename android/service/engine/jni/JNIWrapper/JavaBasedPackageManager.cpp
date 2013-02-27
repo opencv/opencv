@@ -40,13 +40,16 @@ bool JavaBasedPackageManager::InstallPackage(const PackageInfo& package)
     if (!jmethod)
     {
         LOGE("MarketConnector::GetAppFormMarket method was not found!");
+        jenv->DeleteLocalRef(jclazz);
         return false;
     }
 
     LOGD("Calling java package manager with package name %s\n", package.GetFullName().c_str());
     jobject jpkgname = jenv->NewStringUTF(package.GetFullName().c_str());
     bool result = jenv->CallNonvirtualBooleanMethod(JavaPackageManager, jclazz, jmethod, jpkgname);
+
     jenv->DeleteLocalRef(jpkgname);
+    jenv->DeleteLocalRef(jclazz);
 
     if (self_attached)
     {
@@ -72,7 +75,6 @@ vector<PackageInfo> JavaBasedPackageManager::GetInstalledPackages()
         JavaContext->AttachCurrentThread(&jenv, NULL);
     }
 
-    LOGD("GetObjectClass call");
     jclass jclazz = jenv->GetObjectClass(JavaPackageManager);
     if (!jclazz)
     {
@@ -80,15 +82,14 @@ vector<PackageInfo> JavaBasedPackageManager::GetInstalledPackages()
         return result;
     }
 
-    LOGD("GetMethodID call");
     jmethodID jmethod = jenv->GetMethodID(jclazz, "GetInstalledOpenCVPackages", "()[Landroid/content/pm/PackageInfo;");
     if (!jmethod)
     {
         LOGE("MarketConnector::GetInstalledOpenCVPackages method was not found!");
+        jenv->DeleteLocalRef(jclazz);
         return result;
     }
 
-    LOGD("Java package manager call");
     jobjectArray jpkgs = static_cast<jobjectArray>(jenv->CallNonvirtualObjectMethod(JavaPackageManager, jclazz, jmethod));
     jsize size = jenv->GetArrayLength(jpkgs);
 
@@ -100,13 +101,15 @@ vector<PackageInfo> JavaBasedPackageManager::GetInstalledPackages()
     {
         jobject jtmp = jenv->GetObjectArrayElement(jpkgs, i);
         PackageInfo tmp = ConvertPackageFromJava(jtmp, jenv);
-        jenv->DeleteLocalRef(jtmp);
 
         if (tmp.IsValid())
             result.push_back(tmp);
+
+        jenv->DeleteLocalRef(jtmp);
     }
 
     jenv->DeleteLocalRef(jpkgs);
+    jenv->DeleteLocalRef(jclazz);
 
     if (self_attached)
     {
@@ -118,10 +121,21 @@ vector<PackageInfo> JavaBasedPackageManager::GetInstalledPackages()
     return result;
 }
 
+static jint GetAndroidVersion(JNIEnv* jenv)
+{
+    jclass jclazz = jenv->FindClass("android/os/Build$VERSION");
+    jfieldID jfield = jenv->GetStaticFieldID(jclazz, "SDK_INT", "I");
+    jint api_level = jenv->GetStaticIntField(jclazz, jfield);
+    jenv->DeleteLocalRef(jclazz);
+
+    return api_level;
+}
+
 // IMPORTANT: This method can be called only if thread is attached to Dalvik
 PackageInfo JavaBasedPackageManager::ConvertPackageFromJava(jobject package, JNIEnv* jenv)
 {
     jclass jclazz = jenv->GetObjectClass(package);
+
     jfieldID jfield = jenv->GetFieldID(jclazz, "packageName", "Ljava/lang/String;");
     jstring jnameobj = static_cast<jstring>(jenv->GetObjectField(package, jfield));
     const char* jnamestr = jenv->GetStringUTFChars(jnameobj, NULL);
@@ -134,22 +148,27 @@ PackageInfo JavaBasedPackageManager::ConvertPackageFromJava(jobject package, JNI
     string verison(jversionstr);
     jenv->DeleteLocalRef(jversionobj);
 
+    jenv->DeleteLocalRef(jclazz);
+
+    static const jint api_level = GetAndroidVersion(jenv);
     string path;
-    jclazz = jenv->FindClass("android/os/Build$VERSION");
-    jfield = jenv->GetStaticFieldID(jclazz, "SDK_INT", "I");
-    jint api_level = jenv->GetStaticIntField(jclazz, jfield);
     if (api_level > 8)
     {
         jclazz = jenv->GetObjectClass(package);
         jfield = jenv->GetFieldID(jclazz, "applicationInfo", "Landroid/content/pm/ApplicationInfo;");
         jobject japp_info = jenv->GetObjectField(package, jfield);
+        jenv->DeleteLocalRef(jclazz);
+
         jclazz = jenv->GetObjectClass(japp_info);
         jfield = jenv->GetFieldID(jclazz, "nativeLibraryDir", "Ljava/lang/String;");
         jstring jpathobj = static_cast<jstring>(jenv->GetObjectField(japp_info, jfield));
         const char* jpathstr = jenv->GetStringUTFChars(jpathobj, NULL);
         path = string(jpathstr);
         jenv->ReleaseStringUTFChars(jpathobj, jpathstr);
+
+        jenv->DeleteLocalRef(japp_info);
         jenv->DeleteLocalRef(jpathobj);
+        jenv->DeleteLocalRef(jclazz);
     }
     else
     {

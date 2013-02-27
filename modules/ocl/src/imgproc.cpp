@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -23,6 +24,7 @@
 //    Zhang Ying, zhangying913@gmail.com
 //    Xu Pang, pangxu010@163.com
 //    Wu Zailong, bullet@yeah.net
+//    Wenju He, wenju@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -55,63 +57,6 @@
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
-
-#if !defined (HAVE_OPENCL)
-
-
-void cv::ocl::meanShiftFiltering(const oclMat &, oclMat &, int, int, TermCriteria)
-{
-    throw_nogpu();
-}
-void cv::ocl::meanShiftProc(const oclMat &, oclMat &, oclMat &, int, int, TermCriteria)
-{
-    throw_nogpu();
-}
-double cv::ocl::threshold(const oclMat &, oclMat &, double, int)
-{
-    throw_nogpu();
-    return 0.0;
-}
-void cv::ocl::resize(const oclMat &, oclMat &, Size, double, double, int)
-{
-    throw_nogpu();
-}
-void cv::ocl::remap(const oclMat &, oclMat &, oclMat &, oclMat &, int, int , const Scalar &)
-{
-    throw_nogpu();
-}
-
-void cv::ocl::copyMakeBorder(const oclMat &, oclMat &, int, int, int, int, const Scalar &)
-{
-    throw_nogpu();
-}
-void cv::ocl::warpAffine(const oclMat &, oclMat &, const Mat &, Size, int)
-{
-    throw_nogpu();
-}
-void cv::ocl::warpPerspective(const oclMat &, oclMat &, const Mat &, Size, int)
-{
-    throw_nogpu();
-}
-void cv::ocl::integral(const oclMat &, oclMat &, oclMat &)
-{
-    throw_nogpu();
-}
-void cv::ocl::calcHist(const oclMat &, oclMat &hist)
-{
-    throw_nogpu();
-}
-void cv::ocl::bilateralFilter(const oclMat &, oclMat &, int, double, double, int)
-{
-    throw_nogpu();
-}
-void cv::ocl::convolve(const oclMat &, const oclMat &, oclMat &)
-{
-    throw_nogpu();
-}
-
-#else /* !defined (HAVE_OPENCL) */
 
 namespace cv
 {
@@ -178,7 +123,7 @@ namespace cv
 
             uchar thresh_uchar = cvFloor(thresh);
             uchar max_val = cvRound(maxVal);
-            string kernelName = "threshold";
+            std::string kernelName = "threshold";
 
             size_t cols = (dst.cols + (dst.offset % 16) + 15) / 16;
             size_t bSizeX = 16, bSizeY = 16;
@@ -187,18 +132,18 @@ namespace cv
             size_t globalThreads[3] = {gSizeX, gSizeY, 1};
             size_t localThreads[3] = {bSizeX, bSizeY, 1};
 
-            vector< pair<size_t, const void *> > args;
-            args.push_back( make_pair(sizeof(cl_mem), &src.data));
-            args.push_back( make_pair(sizeof(cl_mem), &dst.data));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&src.offset));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&src.step));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.offset));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.step));
-            args.push_back( make_pair(sizeof(cl_uchar), (void *)&thresh_uchar));
-            args.push_back( make_pair(sizeof(cl_uchar), (void *)&max_val));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&type));
+            std::vector< std::pair<size_t, const void *> > args;
+            args.push_back( std::make_pair(sizeof(cl_mem), &src.data));
+            args.push_back( std::make_pair(sizeof(cl_mem), &dst.data));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.offset));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.step));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.offset));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.step));
+            args.push_back( std::make_pair(sizeof(cl_uchar), (void *)&thresh_uchar));
+            args.push_back( std::make_pair(sizeof(cl_uchar), (void *)&max_val));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&type));
             openCLExecuteKernel(clCxt, &imgproc_threshold, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
         }
 
@@ -214,7 +159,7 @@ namespace cv
             int src_offset = (src.offset >> 2);
             int src_step = (src.step >> 2);
 
-            string kernelName = "threshold";
+            std::string kernelName = "threshold";
 
             size_t cols = (dst.cols + (dst_offset & 3) + 3) / 4;
             //size_t cols = dst.cols;
@@ -224,18 +169,18 @@ namespace cv
             size_t globalThreads[3] = {gSizeX, gSizeY, 1};
             size_t localThreads[3] = {bSizeX, bSizeY, 1};
 
-            vector< pair<size_t, const void *> > args;
-            args.push_back( make_pair(sizeof(cl_mem), &src.data));
-            args.push_back( make_pair(sizeof(cl_mem), &dst.data));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&src_offset));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&src_step));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&dst_offset));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&dst_step));
-            args.push_back( make_pair(sizeof(cl_float), (void *)&thresh_f));
-            args.push_back( make_pair(sizeof(cl_float), (void *)&max_val));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&type));
+            std::vector< std::pair<size_t, const void *> > args;
+            args.push_back( std::make_pair(sizeof(cl_mem), &src.data));
+            args.push_back( std::make_pair(sizeof(cl_mem), &dst.data));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&src_offset));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&src_step));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst_offset));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst_step));
+            args.push_back( std::make_pair(sizeof(cl_float), (void *)&thresh_f));
+            args.push_back( std::make_pair(sizeof(cl_float), (void *)&max_val));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&type));
             openCLExecuteKernel(clCxt, &imgproc_threshold, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
 
         }
@@ -271,7 +216,7 @@ namespace cv
             dst.create(map1.size(), src.type());
 
 
-            string kernelName;
+            std::string kernelName;
 
             if( map1.type() == CV_32FC2 && !map2.data )
             {
@@ -324,62 +269,62 @@ namespace cv
             size_t localThreads[3] = {blkSizeX, blkSizeY, 1};
 
 
-            vector< pair<size_t, const void *> > args;
+            std::vector< std::pair<size_t, const void *> > args;
             if(map1.channels() == 2)
             {
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&map1.data));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.offset));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.offset));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.offset));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.step));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.step));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.step));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.cols));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.cols));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.rows));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
+                args.push_back( std::make_pair(sizeof(cl_mem), (void *)&dst.data));
+                args.push_back( std::make_pair(sizeof(cl_mem), (void *)&src.data));
+                args.push_back( std::make_pair(sizeof(cl_mem), (void *)&map1.data));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.offset));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.offset));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&map1.offset));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.step));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.step));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&map1.step));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.cols));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.rows));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&map1.cols));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&map1.rows));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&cols));
                 if(src.clCxt -> impl -> double_support != 0)
                 {
-                    args.push_back( make_pair(sizeof(cl_double4), (void *)&borderValue));
+                    args.push_back( std::make_pair(sizeof(cl_double4), (void *)&borderValue));
                 }
                 else
                 {
                     float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
-                    args.push_back( make_pair(sizeof(cl_float4), (void *)&borderFloat));
+                    args.push_back( std::make_pair(sizeof(cl_float4), (void *)&borderFloat));
                 }
             }
             if(map1.channels() == 1)
             {
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&map1.data));
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&map2.data));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.offset));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.offset));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.offset));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.step));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.step));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.step));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.cols));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.cols));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.rows));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
+                args.push_back( std::make_pair(sizeof(cl_mem), (void *)&dst.data));
+                args.push_back( std::make_pair(sizeof(cl_mem), (void *)&src.data));
+                args.push_back( std::make_pair(sizeof(cl_mem), (void *)&map1.data));
+                args.push_back( std::make_pair(sizeof(cl_mem), (void *)&map2.data));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.offset));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.offset));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&map1.offset));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.step));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.step));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&map1.step));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.cols));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.rows));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&map1.cols));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&map1.rows));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&cols));
                 if(src.clCxt -> impl -> double_support != 0)
                 {
-                    args.push_back( make_pair(sizeof(cl_double4), (void *)&borderValue));
+                    args.push_back( std::make_pair(sizeof(cl_double4), (void *)&borderValue));
                 }
                 else
                 {
                     float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
-                    args.push_back( make_pair(sizeof(cl_float4), (void *)&borderFloat));
+                    args.push_back( std::make_pair(sizeof(cl_float4), (void *)&borderFloat));
                 }
             }
             openCLExecuteKernel(clCxt, &imgproc_remap, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
@@ -401,7 +346,7 @@ namespace cv
             int dstStep_in_pixel = dst.step1() / dst.oclchannels();
             int dstoffset_in_pixel = dst.offset / dst.elemSize();
             //printf("%d %d\n",src.step1() , dst.elemSize());
-            string kernelName;
+            std::string kernelName;
             if(interpolation == INTER_LINEAR)
                 kernelName = "resizeLN";
             else if(interpolation == INTER_NEAREST)
@@ -423,44 +368,44 @@ namespace cv
             size_t globalThreads[3] = {glbSizeX, glbSizeY, 1};
             size_t localThreads[3] = {blkSizeX, blkSizeY, 1};
 
-            vector< pair<size_t, const void *> > args;
+            std::vector< std::pair<size_t, const void *> > args;
             if(interpolation == INTER_NEAREST)
             {
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dstoffset_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&srcoffset_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dstStep_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&srcStep_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.cols));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
+                args.push_back( std::make_pair(sizeof(cl_mem), (void *)&dst.data));
+                args.push_back( std::make_pair(sizeof(cl_mem), (void *)&src.data));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dstoffset_in_pixel));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&srcoffset_in_pixel));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dstStep_in_pixel));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&srcStep_in_pixel));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.cols));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.rows));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.rows));
                 if(src.clCxt -> impl -> double_support != 0)
                 {
-                    args.push_back( make_pair(sizeof(cl_double), (void *)&ifx_d));
-                    args.push_back( make_pair(sizeof(cl_double), (void *)&ify_d));
+                    args.push_back( std::make_pair(sizeof(cl_double), (void *)&ifx_d));
+                    args.push_back( std::make_pair(sizeof(cl_double), (void *)&ify_d));
                 }
                 else
                 {
-                    args.push_back( make_pair(sizeof(cl_float), (void *)&ifx));
-                    args.push_back( make_pair(sizeof(cl_float), (void *)&ify));
+                    args.push_back( std::make_pair(sizeof(cl_float), (void *)&ifx));
+                    args.push_back( std::make_pair(sizeof(cl_float), (void *)&ify));
                 }
             }
             else
             {
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dstoffset_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&srcoffset_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dstStep_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&srcStep_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.cols));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
-                args.push_back( make_pair(sizeof(cl_float), (void *)&ifx));
-                args.push_back( make_pair(sizeof(cl_float), (void *)&ify));
+                args.push_back( std::make_pair(sizeof(cl_mem), (void *)&dst.data));
+                args.push_back( std::make_pair(sizeof(cl_mem), (void *)&src.data));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dstoffset_in_pixel));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&srcoffset_in_pixel));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dstStep_in_pixel));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&srcStep_in_pixel));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.cols));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.rows));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+                args.push_back( std::make_pair(sizeof(cl_float), (void *)&ifx));
+                args.push_back( std::make_pair(sizeof(cl_float), (void *)&ify));
             }
 
             openCLExecuteKernel(clCxt, &imgproc_resize, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
@@ -525,37 +470,37 @@ namespace cv
             int dstOffset = dst.offset / dst.oclchannels() / dst.elemSize1();
 
             Context *clCxt = src.clCxt;
-            string kernelName = "medianFilter";
+            std::string kernelName = "medianFilter";
 
 
-            vector< pair<size_t, const void *> > args;
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&srcOffset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dstOffset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&srcStep));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dstStep));
+            std::vector< std::pair<size_t, const void *> > args;
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&srcOffset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dstOffset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&srcStep));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dstStep));
 
             size_t globalThreads[3] = {(src.cols + 18) / 16 * 16, (src.rows + 15) / 16 * 16, 1};
             size_t localThreads[3] = {16, 16, 1};
 
             if(m == 3)
             {
-                string kernelName = "medianFilter3";
+                std::string kernelName = "medianFilter3";
                 openCLExecuteKernel(clCxt, &imgproc_median, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
             }
             else if(m == 5)
             {
-                string kernelName = "medianFilter5";
+                std::string kernelName = "medianFilter5";
                 openCLExecuteKernel(clCxt, &imgproc_median, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
             }
             else
             {
                 CV_Error(CV_StsUnsupportedFormat, "Non-supported filter length");
-                //string kernelName = "medianFilter";
-                //args.push_back( make_pair( sizeof(cl_int),(void*)&m));
+                //std::string kernelName = "medianFilter";
+                //args.push_back( std::make_pair( sizeof(cl_int),(void*)&m));
 
                 //openCLExecuteKernel(clCxt,&imgproc_median,kernelName,globalThreads,localThreads,args,src.oclchannels(),-1);
             }
@@ -603,25 +548,25 @@ namespace cv
             {
                 CV_Error(CV_StsBadArg, "unsupported border type");
             }
-            string kernelName = "copymakeborder";
+            std::string kernelName = "copymakeborder";
             size_t localThreads[3] = {16, 16, 1};
             size_t globalThreads[3] = {(dst.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0],
                                        (dst.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1
                                       };
 
-            vector< pair<size_t, const void *> > args;
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&srcStep));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&srcOffset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dstStep));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dstOffset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&top));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&left));
+            std::vector< std::pair<size_t, const void *> > args;
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&srcStep));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&srcOffset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dstStep));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dstOffset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&top));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&left));
             char compile_option[64];
             union sc
             {
@@ -644,7 +589,7 @@ namespace cv
                 {
                 case 1:
                     sprintf(compile_option, "-D GENTYPE=uchar -D %s", borderstr[bordertype_index]);
-                    args.push_back( make_pair( sizeof(cl_uchar) , (void *)&val.uval.s[0] ));
+                    args.push_back( std::make_pair( sizeof(cl_uchar) , (void *)&val.uval.s[0] ));
                     if(((dst.offset & 3) == 0) && ((dst.cols & 3) == 0))
                     {
                         kernelName = "copymakeborder_C1_D0";
@@ -653,7 +598,7 @@ namespace cv
                     break;
                 case 4:
                     sprintf(compile_option, "-D GENTYPE=uchar4 -D %s", borderstr[bordertype_index]);
-                    args.push_back( make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
+                    args.push_back( std::make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
                     break;
                 default:
                     CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
@@ -668,11 +613,11 @@ namespace cv
                 {
                 case 1:
                     sprintf(compile_option, "-D GENTYPE=char -D %s", borderstr[bordertype_index]);
-                    args.push_back( make_pair( sizeof(cl_char) , (void *)&val.cval.s[0] ));
+                    args.push_back( std::make_pair( sizeof(cl_char) , (void *)&val.cval.s[0] ));
                     break;
                 case 4:
                     sprintf(compile_option, "-D GENTYPE=char4 -D %s", borderstr[bordertype_index]);
-                    args.push_back( make_pair( sizeof(cl_char4) , (void *)&val.cval ));
+                    args.push_back( std::make_pair( sizeof(cl_char4) , (void *)&val.cval ));
                     break;
                 default:
                     CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
@@ -687,11 +632,11 @@ namespace cv
                 {
                 case 1:
                     sprintf(compile_option, "-D GENTYPE=ushort -D %s", borderstr[bordertype_index]);
-                    args.push_back( make_pair( sizeof(cl_ushort) , (void *)&val.usval.s[0] ));
+                    args.push_back( std::make_pair( sizeof(cl_ushort) , (void *)&val.usval.s[0] ));
                     break;
                 case 4:
                     sprintf(compile_option, "-D GENTYPE=ushort4 -D %s", borderstr[bordertype_index]);
-                    args.push_back( make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
+                    args.push_back( std::make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
                     break;
                 default:
                     CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
@@ -706,11 +651,11 @@ namespace cv
                 {
                 case 1:
                     sprintf(compile_option, "-D GENTYPE=short -D %s", borderstr[bordertype_index]);
-                    args.push_back( make_pair( sizeof(cl_short) , (void *)&val.shval.s[0] ));
+                    args.push_back( std::make_pair( sizeof(cl_short) , (void *)&val.shval.s[0] ));
                     break;
                 case 4:
                     sprintf(compile_option, "-D GENTYPE=short4 -D %s", borderstr[bordertype_index]);
-                    args.push_back( make_pair( sizeof(cl_short4) , (void *)&val.shval ));
+                    args.push_back( std::make_pair( sizeof(cl_short4) , (void *)&val.shval ));
                     break;
                 default:
                     CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
@@ -725,18 +670,18 @@ namespace cv
                 {
                 case 1:
                     sprintf(compile_option, "-D GENTYPE=int -D %s", borderstr[bordertype_index]);
-                    args.push_back( make_pair( sizeof(cl_int) , (void *)&val.ival.s[0] ));
+                    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&val.ival.s[0] ));
                     break;
                 case 2:
                     sprintf(compile_option, "-D GENTYPE=int2 -D %s", borderstr[bordertype_index]);
                     cl_int2 i2val;
                     i2val.s[0] = val.ival.s[0];
                     i2val.s[1] = val.ival.s[1];
-                    args.push_back( make_pair( sizeof(cl_int2) , (void *)&i2val ));
+                    args.push_back( std::make_pair( sizeof(cl_int2) , (void *)&i2val ));
                     break;
                 case 4:
                     sprintf(compile_option, "-D GENTYPE=int4 -D %s", borderstr[bordertype_index]);
-                    args.push_back( make_pair( sizeof(cl_int4) , (void *)&val.ival ));
+                    args.push_back( std::make_pair( sizeof(cl_int4) , (void *)&val.ival ));
                     break;
                 default:
                     CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
@@ -751,11 +696,11 @@ namespace cv
                 {
                 case 1:
                     sprintf(compile_option, "-D GENTYPE=float -D %s", borderstr[bordertype_index]);
-                    args.push_back( make_pair( sizeof(cl_float) , (void *)&val.fval.s[0] ));
+                    args.push_back( std::make_pair( sizeof(cl_float) , (void *)&val.fval.s[0] ));
                     break;
                 case 4:
                     sprintf(compile_option, "-D GENTYPE=float4 -D %s", borderstr[bordertype_index]);
-                    args.push_back( make_pair( sizeof(cl_float4) , (void *)&val.fval ));
+                    args.push_back( std::make_pair( sizeof(cl_float4) , (void *)&val.fval ));
                     break;
                 default:
                     CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
@@ -770,11 +715,11 @@ namespace cv
                 {
                 case 1:
                     sprintf(compile_option, "-D GENTYPE=double -D %s", borderstr[bordertype_index]);
-                    args.push_back( make_pair( sizeof(cl_double) , (void *)&val.dval.s[0] ));
+                    args.push_back( std::make_pair( sizeof(cl_double) , (void *)&val.dval.s[0] ));
                     break;
                 case 4:
                     sprintf(compile_option, "-D GENTYPE=double4 -D %s", borderstr[bordertype_index]);
-                    args.push_back( make_pair( sizeof(cl_double4) , (void *)&val.dval ));
+                    args.push_back( std::make_pair( sizeof(cl_double4) , (void *)&val.dval ));
                     break;
                 default:
                     CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
@@ -793,9 +738,9 @@ namespace cv
             //{
             //	for(int j=0;j<dst.wholecols;j++)
             //	{
-            //		cout<< (int)cputemp[i*32+j]<<" ";
+            //		std::cout<< (int)cputemp[i*32+j]<<" ";
             //	}
-            //	cout<<endl;
+            //	std::cout<<std::endl;
             //}
             //delete []cputemp;
         }
@@ -873,8 +818,8 @@ namespace cv
                 cl_mem coeffs_cm;
 
                 Context *clCxt = src.clCxt;
-                string s[3] = {"NN", "Linear", "Cubic"};
-                string kernelName = "warpAffine" + s[interpolation];
+                std::string s[3] = {"NN", "Linear", "Cubic"};
+                std::string kernelName = "warpAffine" + s[interpolation];
 
 
                 if(src.clCxt -> impl -> double_support != 0)
@@ -915,20 +860,20 @@ namespace cv
                 size_t globalThreads[3] = {glbSizeX, glbSizeY, 1};
                 size_t localThreads[3] = {blkSizeX, blkSizeY, 1};
 
-                vector< pair<size_t, const void *> > args;
+                std::vector< std::pair<size_t, const void *> > args;
 
-                args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
-                args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&src.cols));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&src.rows));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&dst.cols));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&dst.rows));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&srcStep));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&dstStep));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&src.offset));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&dst.offset));
-                args.push_back(make_pair(sizeof(cl_mem), (void *)&coeffs_cm));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&cols));
+                args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
+                args.push_back(std::make_pair(sizeof(cl_mem), (void *)&dst.data));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.cols));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.rows));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&srcStep));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&dstStep));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.offset));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.offset));
+                args.push_back(std::make_pair(sizeof(cl_mem), (void *)&coeffs_cm));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&cols));
 
                 openCLExecuteKernel(clCxt, &imgproc_warpAffine, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
                 openCLSafeCall(clReleaseMemObject(coeffs_cm));
@@ -944,8 +889,8 @@ namespace cv
                 cl_mem coeffs_cm;
 
                 Context *clCxt = src.clCxt;
-                string s[3] = {"NN", "Linear", "Cubic"};
-                string kernelName = "warpPerspective" + s[interpolation];
+                std::string s[3] = {"NN", "Linear", "Cubic"};
+                std::string kernelName = "warpPerspective" + s[interpolation];
 
                 if(src.clCxt -> impl -> double_support != 0)
                 {
@@ -985,20 +930,20 @@ namespace cv
                 size_t globalThreads[3] = {glbSizeX, glbSizeY, 1};
                 size_t localThreads[3] = {blkSizeX, blkSizeY, 1};
 
-                vector< pair<size_t, const void *> > args;
+                std::vector< std::pair<size_t, const void *> > args;
 
-                args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
-                args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&src.cols));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&src.rows));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&dst.cols));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&dst.rows));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&srcStep));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&dstStep));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&src.offset));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&dst.offset));
-                args.push_back(make_pair(sizeof(cl_mem), (void *)&coeffs_cm));
-                args.push_back(make_pair(sizeof(cl_int), (void *)&cols));
+                args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
+                args.push_back(std::make_pair(sizeof(cl_mem), (void *)&dst.data));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.cols));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.rows));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&srcStep));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&dstStep));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.offset));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.offset));
+                args.push_back(std::make_pair(sizeof(cl_mem), (void *)&coeffs_cm));
+                args.push_back(std::make_pair(sizeof(cl_int), (void *)&cols));
 
                 openCLExecuteKernel(clCxt, &imgproc_warpPerspective, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
                 openCLSafeCall(clReleaseMemObject(coeffs_cm));
@@ -1089,33 +1034,33 @@ namespace cv
             sqsum.create(h, w, CV_32FC1);
             int sum_offset = sum.offset / vlen, sqsum_offset = sqsum.offset / vlen;
 
-            vector<pair<size_t , const void *> > args;
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&t_sum.data ));
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&t_sqsum.data ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&offset ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&pre_invalid ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&t_sum.step));
+            std::vector<std::pair<size_t , const void *> > args;
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data ));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&t_sum.data ));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&t_sqsum.data ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&offset ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&pre_invalid ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&t_sum.step));
             size_t gt[3] = {((vcols + 1) / 2) * 256, 1, 1}, lt[3] = {256, 1, 1};
             openCLExecuteKernel(src.clCxt, &imgproc_integral, "integral_cols", gt, lt, args, -1, -1);
             args.clear();
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&t_sum.data ));
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&t_sqsum.data ));
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&sum.data ));
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&sqsum.data ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&t_sum.rows ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&t_sum.cols ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&t_sum.step ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&sum.step));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&sqsum.step));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&sum_offset));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&sqsum_offset));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&t_sum.data ));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&t_sqsum.data ));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&sum.data ));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&sqsum.data ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&t_sum.rows ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&t_sum.cols ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&t_sum.step ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&sum.step));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&sqsum.step));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&sum_offset));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&sqsum_offset));
             size_t gt2[3] = {t_sum.cols  * 32, 1, 1}, lt2[3] = {256, 1, 1};
             openCLExecuteKernel(src.clCxt, &imgproc_integral, "integral_rows", gt2, lt2, args, -1, -1);
-            //cout << "tested" << endl;
+            //std::cout << "tested" << std::endl;
         }
         void integral(const oclMat &src, oclMat &sum)
         {
@@ -1132,28 +1077,28 @@ namespace cv
             sum.create(h, w, CV_32SC1);
             int sum_offset = sum.offset / vlen;
 
-            vector<pair<size_t , const void *> > args;
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&t_sum.data ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&offset ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&pre_invalid ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&t_sum.step));
+            std::vector<std::pair<size_t , const void *> > args;
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data ));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&t_sum.data ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&offset ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&pre_invalid ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&t_sum.step));
             size_t gt[3] = {((vcols + 1) / 2) * 256, 1, 1}, lt[3] = {256, 1, 1};
             openCLExecuteKernel(src.clCxt, &imgproc_integral_sum, "integral_sum_cols", gt, lt, args, -1, -1);
             args.clear();
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&t_sum.data ));
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&sum.data ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&t_sum.rows ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&t_sum.cols ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&t_sum.step ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&sum.step));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&sum_offset));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&t_sum.data ));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&sum.data ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&t_sum.rows ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&t_sum.cols ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&t_sum.step ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&sum.step));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&sum_offset));
             size_t gt2[3] = {t_sum.cols  * 32, 1, 1}, lt2[3] = {256, 1, 1};
             openCLExecuteKernel(src.clCxt, &imgproc_integral_sum, "integral_sum_rows", gt2, lt2, args, -1, -1);
-            //cout << "tested" << endl;
+            //std::cout << "tested" << std::endl;
         }
 
         /////////////////////// corner //////////////////////////////
@@ -1187,7 +1132,7 @@ namespace cv
             CV_Assert(Dx.offset == 0 && Dy.offset == 0);
         }
 
-        static void corner_ocl(const char *src_str, string kernelName, int block_size, float k, oclMat &Dx, oclMat &Dy,
+        static void corner_ocl(const char *src_str, std::string kernelName, int block_size, float k, oclMat &Dx, oclMat &Dy,
                         oclMat &dst, int border_type)
         {
             char borderType[30];
@@ -1206,7 +1151,7 @@ namespace cv
                 sprintf(borderType, "BORDER_REPLICATE");
                 break;
             default:
-                cout << "BORDER type is not supported!" << endl;
+                std::cout << "BORDER type is not supported!" << std::endl;
             }
             char build_options[150];
             sprintf(build_options, "-D anX=%d -D anY=%d -D ksX=%d -D ksY=%d -D %s",
@@ -1222,23 +1167,23 @@ namespace cv
 
             size_t gt[3] = { globalSizeX, globalSizeY, 1 };
             size_t lt[3]  = { blockSizeX, blockSizeY, 1 };
-            vector<pair<size_t , const void *> > args;
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&Dx.data ));
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&Dy.data));
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&Dx.offset ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&Dx.wholerows ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&Dx.wholecols ));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&Dx.step));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&Dy.offset ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&Dy.wholerows ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&Dy.wholecols ));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&Dy.step));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.offset));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.step));
-            args.push_back( make_pair( sizeof(cl_float) , (void *)&k));
+            std::vector<std::pair<size_t , const void *> > args;
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&Dx.data ));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&Dy.data));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&Dx.offset ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&Dx.wholerows ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&Dx.wholecols ));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&Dx.step));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&Dy.offset ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&Dy.wholerows ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&Dy.wholecols ));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&Dy.step));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.offset));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.step));
+            args.push_back( std::make_pair( sizeof(cl_float) , (void *)&k));
             openCLExecuteKernel(dst.clCxt, &src_str, kernelName, gt, lt, args, -1, -1, build_options);
         }
 
@@ -1289,19 +1234,19 @@ namespace cv
             size_t localThreads[3]  = {ltx, lty, 1};
 
             //set args
-            vector<pair<size_t , const void *> > args;
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.step ));
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.offset ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.offset ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.rows ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&sp ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&sr ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&maxIter ));
-            args.push_back( make_pair( sizeof(cl_float) , (void *)&eps ));
+            std::vector<std::pair<size_t , const void *> > args;
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.step ));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.offset ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.offset ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.cols ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.rows ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&sp ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&sr ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&maxIter ));
+            args.push_back( std::make_pair( sizeof(cl_float) , (void *)&eps ));
             openCLExecuteKernel(clCxt, &meanShift, "meanshift_kernel", globalThreads, localThreads, args, -1, -1);
         }
 
@@ -1354,22 +1299,22 @@ namespace cv
             size_t localThreads[3]  = {ltx, lty, 1};
 
             //set args
-            vector<pair<size_t , const void *> > args;
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&dstr.data ));
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&dstsp.data ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dstr.step ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dstsp.step ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.offset ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dstr.offset ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dstsp.offset ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dstr.cols ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dstr.rows ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&sp ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&sr ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&maxIter ));
-            args.push_back( make_pair( sizeof(cl_float) , (void *)&eps ));
+            std::vector<std::pair<size_t , const void *> > args;
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data ));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dstr.data ));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dstsp.data ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dstr.step ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dstsp.step ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.offset ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dstr.offset ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dstsp.offset ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dstr.cols ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dstr.rows ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&sp ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&sr ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&maxIter ));
+            args.push_back( std::make_pair( sizeof(cl_float) , (void *)&eps ));
             openCLExecuteKernel(clCxt, &meanShift, "meanshiftproc_kernel", globalThreads, localThreads, args, -1, -1);
         }
 
@@ -1418,7 +1363,7 @@ namespace cv
             Context  *clCxt = mat_src.clCxt;
             int depth = mat_src.depth();
 
-            string kernelName = "calc_sub_hist";
+            std::string kernelName = "calc_sub_hist";
 
             size_t localThreads[3]  = { HISTOGRAM256_BIN_COUNT, 1, 1 };
             size_t globalThreads[3] = { PARTIAL_HISTOGRAM256_COUNT *localThreads[0], 1, 1};
@@ -1449,7 +1394,7 @@ namespace cv
                 globalThreads[0] = 0;
             }
 
-            vector<pair<size_t , const void *> > args;
+            std::vector<std::pair<size_t , const void *> > args;
             if(globalThreads[0] != 0)
             {
                 int tempcols = cols >> dataWidth_bits;
@@ -1458,15 +1403,15 @@ namespace cv
                 src_offset >>= dataWidth_bits;
                 int src_step = mat_src.step >> dataWidth_bits;
                 int datacount = tempcols * mat_src.rows;
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src.data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&src_step));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&src_offset));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_sub_hist.data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&datacount));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&tempcols));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&inc_x));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&inc_y));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&hist_step));
+                args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mat_src.data));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&src_step));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&src_offset));
+                args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mat_sub_hist.data));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&datacount));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&tempcols));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&inc_x));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&inc_y));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&hist_step));
                 openCLExecuteKernel(clCxt, &imgproc_histogram, kernelName, globalThreads, localThreads, args, -1, depth);
             }
             if(left_col != 0 || right_col != 0)
@@ -1479,14 +1424,14 @@ namespace cv
                 globalThreads[1] = (mat_src.rows + localThreads[1] - 1) / localThreads[1] * localThreads[1];
 
                 args.clear();
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src.data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src.step));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&src_offset));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_sub_hist.data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&left_col));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src.rows));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&hist_step));
+                args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mat_src.data));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&mat_src.step));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&src_offset));
+                args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mat_sub_hist.data));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&left_col));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&mat_src.rows));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&hist_step));
                 openCLExecuteKernel(clCxt, &imgproc_histogram, kernelName, globalThreads, localThreads, args, -1, depth);
             }
         }
@@ -1495,15 +1440,15 @@ namespace cv
             using namespace histograms;
 
             Context  *clCxt = sub_hist.clCxt;
-            string kernelName = "merge_hist";
+            std::string kernelName = "merge_hist";
 
             size_t localThreads[3]  = { 256, 1, 1 };
             size_t globalThreads[3] = { HISTOGRAM256_BIN_COUNT *localThreads[0], 1, 1};
             int src_step = sub_hist.step >> 2;
-            vector<pair<size_t , const void *> > args;
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&sub_hist.data));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_hist.data));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&src_step));
+            std::vector<std::pair<size_t , const void *> > args;
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&sub_hist.data));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mat_hist.data));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src_step));
             openCLExecuteKernel(clCxt, &imgproc_histogram, kernelName, globalThreads, localThreads, args, -1, -1);
         }
         void calcHist(const oclMat &mat_src, oclMat &mat_hist)
@@ -1524,19 +1469,19 @@ namespace cv
             mat_dst.create(mat_src.rows, mat_src.cols, CV_8UC1);
 
             oclMat mat_hist(1, 256, CV_32SC1);
-            //mat_hist.setTo(0);
+
             calcHist(mat_src, mat_hist);
 
             Context *clCxt = mat_src.clCxt;
-            string kernelName = "calLUT";
+            std::string kernelName = "calLUT";
             size_t localThreads[3] = { 256, 1, 1};
             size_t globalThreads[3] = { 256, 1, 1};
             oclMat lut(1, 256, CV_8UC1);
-            vector<pair<size_t , const void *> > args;
-            float scale = 255.f / (mat_src.rows * mat_src.cols);
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&lut.data));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_hist.data));
-            args.push_back( make_pair( sizeof(cl_float), (void *)&scale));
+            std::vector<std::pair<size_t , const void *> > args;
+            int total = mat_src.rows * mat_src.cols;
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&lut.data));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mat_hist.data));
+            args.push_back( std::make_pair( sizeof(int), (void *)&total));
             openCLExecuteKernel(clCxt, &imgproc_histogram, kernelName, globalThreads, localThreads, args, -1, -1);
             LUT(mat_src, lut, mat_dst);
         }
@@ -1571,9 +1516,9 @@ namespace cv
             oclMat temp;
             copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
 
-            vector<float> _color_weight(cn * 256);
-            vector<float> _space_weight(d * d);
-            vector<int> _space_ofs(d * d);
+            std::vector<float> _color_weight(cn * 256);
+            std::vector<float> _space_weight(d * d);
+            std::vector<int> _space_ofs(d * d);
             float *color_weight = &_color_weight[0];
             float *space_weight = &_space_weight[0];
             int *space_ofs = &_space_ofs[0];
@@ -1598,7 +1543,7 @@ namespace cv
             oclMat oclspace_weight(1, d * d, CV_32FC1, space_weight);
             oclMat oclspace_ofs(1, d * d, CV_32SC1, space_ofs);
 
-            string kernelName = "bilateral";
+            std::string kernelName = "bilateral";
             size_t localThreads[3]  = { 16, 16, 1 };
             size_t globalThreads[3] = { (dst.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0],
                                         (dst.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1],
@@ -1609,21 +1554,21 @@ namespace cv
                 kernelName = "bilateral2";
                 globalThreads[0] = (dst.cols / 4 + localThreads[0] - 1) / localThreads[0] * localThreads[0];
             }
-            vector<pair<size_t , const void *> > args;
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&temp.data ));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows ));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols ));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&maxk ));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&radius ));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step_in_pixel ));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dst_offset_in_pixel ));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&temp_step_in_pixel ));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&temp.rows ));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&temp.cols ));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&oclcolor_weight.data ));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&oclspace_weight.data ));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&oclspace_ofs.data ));
+            std::vector<std::pair<size_t , const void *> > args;
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data ));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&temp.data ));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.rows ));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.cols ));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&maxk ));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&radius ));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step_in_pixel ));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_offset_in_pixel ));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&temp_step_in_pixel ));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&temp.rows ));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&temp.cols ));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&oclcolor_weight.data ));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&oclspace_weight.data ));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&oclspace_ofs.data ));
             openCLExecuteKernel(src.clCxt, &imgproc_bilateral, kernelName, globalThreads, localThreads, args, dst.oclchannels(), dst.depth());
         }
         void bilateralFilter(const oclMat &src, oclMat &dst, int radius, double sigmaclr, double sigmaspc, int borderType)
@@ -1644,7 +1589,7 @@ inline int divUp(int total, int grain)
 {
     return (total + grain - 1) / grain;
 }
-static void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, string kernelName, const char **kernelString)
+static void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, std::string kernelName, const char **kernelString)
 {
     CV_Assert(src.depth() == CV_32FC1);
     CV_Assert(temp1.depth() == CV_32F);
@@ -1670,17 +1615,17 @@ static void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, st
                                 1
                               };
 
-    vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&temp1.data ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&temp1.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&temp1.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&temp1.cols ));
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&temp1.data ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.rows ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&temp1.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&temp1.rows ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&temp1.cols ));
 
     openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
 }
@@ -1690,8 +1635,7 @@ void cv::ocl::convolve(const oclMat &x, const oclMat &t, oclMat &y)
     CV_Assert(t.depth() == CV_32F);
     CV_Assert(x.type() == y.type() && x.size() == y.size());
     y.create(x.size(), x.type());
-    string kernelName = "convolve";
+    std::string kernelName = "convolve";
 
     convolve_run(x, t, y, kernelName, &imgproc_convolve);
 }
-#endif /* !defined (HAVE_OPENCL) */

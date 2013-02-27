@@ -48,10 +48,6 @@
 
 #include "precomp.hpp"
 
-#if defined (HAVE_OPENCL)
-
-using namespace std;
-
 namespace cv
 {
     namespace ocl
@@ -62,13 +58,19 @@ namespace cv
             CLFLUSH,
             DISABLE
         };
-        void openCLExecuteKernel2(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
-                                  size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels, int depth, FLUSH_MODE finish_mode = DISABLE);
-        void openCLExecuteKernel2(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
-                                  size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
+        void openCLExecuteKernel2(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
+                                  size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, FLUSH_MODE finish_mode = DISABLE);
+        void openCLExecuteKernel2(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
+                                  size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
                                   int depth, char *build_options, FLUSH_MODE finish_mode = DISABLE);
+        // bind oclMat to OpenCL image textures
+        // note:
+        //   1. there is no memory management. User need to explicitly release the resource
+        //   2. for faster clamping, there is no buffer padding for the constructed texture
+        cl_mem bindTexture(const oclMat &mat);
+        void releaseTexture(cl_mem& texture);
     }//namespace ocl
 
 }//namespace cv
-#endif // HAVE_OPENCL
+
 #endif //_OPENCV_MCWUTIL_

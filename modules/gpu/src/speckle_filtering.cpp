@@ -64,7 +64,7 @@ void cv::filterSpeckles( Mat& img, uchar newVal, int maxSpeckleSize, uchar maxDi
         (img.rows + WinSz + 2)*sizeof(int) +
         (img.rows+WinSz+2)*MaxD*(WinSz+1)*sizeof(uchar) + 256;
     int bufSize1 = (img.cols + 9 + 2) * sizeof(int) + 256;
-    int bufSz = max(bufSize0 * 1, bufSize1 * 2);
+    int bufSz = std::max(bufSize0 * 1, bufSize1 * 2);
 
     _buf.create(1, bufSz, CV_8U);
 

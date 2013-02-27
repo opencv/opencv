@@ -238,7 +238,7 @@ The constructors.
     :param epsilon: The desired accuracy or change in parameters at which the iterative algorithm stops.
 
     :param criteria: Termination criteria in the deprecated ``CvTermCriteria`` format.
-   
+
 TermCriteria::operator CvTermCriteria
 -------------------------------------
 Converts to the deprecated ``CvTermCriteria`` format.
@@ -418,27 +418,47 @@ Template class for smart reference-counting pointers ::
     };
 
 
-The ``Ptr<_Tp>`` class is a template class that wraps pointers of the corresponding type. It is similar to ``shared_ptr`` that is part of the Boost library (
-http://www.boost.org/doc/libs/1_40_0/libs/smart_ptr/shared_ptr.htm
-) and also part of the `C++0x <http://en.wikipedia.org/wiki/C++0x>`_
-standard.
+The ``Ptr<_Tp>`` class is a template class that wraps pointers of the corresponding type. It is
+similar to ``shared_ptr`` that is part of the Boost library
+(http://www.boost.org/doc/libs/1_40_0/libs/smart_ptr/shared_ptr.htm) and also part of the
+`C++0x <http://en.wikipedia.org/wiki/C++0x>`_ standard.
 
 This class provides the following options:
 
 *
-    Default constructor, copy constructor, and assignment operator for an arbitrary C++ class or a C structure. For some objects, like files, windows, mutexes, sockets, and others, a copy constructor or an assignment operator are difficult to define. For some other objects, like complex classifiers in OpenCV, copy constructors are absent and not easy to implement. Finally, some of complex OpenCV and your own data structures may be written in C. However, copy constructors and default constructors can simplify programming a lot. Besides, they are often required (for example, by STL containers). By wrapping a pointer to such a complex object ``TObj``     to ``Ptr<TObj>`` , you automatically get all of the necessary constructors and the assignment operator.
+    Default constructor, copy constructor, and assignment operator for an arbitrary C++ class
+    or a C structure. For some objects, like files, windows, mutexes, sockets, and others, a copy
+    constructor or an assignment operator are difficult to define. For some other objects, like
+    complex classifiers in OpenCV, copy constructors are absent and not easy to implement. Finally,
+    some of complex OpenCV and your own data structures may be written in C.
+    However, copy constructors and default constructors can simplify programming a lot.Besides,
+    they are often required (for example, by STL containers). By wrapping a pointer to such a
+    complex object ``TObj`` to ``Ptr<TObj>``, you automatically get all of the necessary
+    constructors and the assignment operator.
 
 *
-    *O(1)* complexity of the above-mentioned operations. While some structures, like ``std::vector``,   provide a copy constructor and an assignment operator, the operations may take a considerable amount of time if the data structures are large. But if the structures are put into ``Ptr<>``     , the overhead is small and independent of the data size.
+    *O(1)* complexity of the above-mentioned operations. While some structures, like ``std::vector``,
+    provide a copy constructor and an assignment operator, the operations may take a considerable
+    amount of time if the data structures are large. But if the structures are put into ``Ptr<>``,
+    the overhead is small and independent of the data size.
 
 *
-    Automatic destruction, even for C structures. See the example below with ``FILE*``     .
+    Automatic destruction, even for C structures. See the example below with ``FILE*``.
 
 *
-    Heterogeneous collections of objects. The standard STL and most other C++ and OpenCV containers can store only objects of the same type and the same size. The classical solution to store objects of different types in the same container is to store pointers to the base class ``base_class_t*``     instead but then you loose the automatic memory management. Again, by using ``Ptr<base_class_t>()``     instead of the raw pointers, you can solve the problem.
+    Heterogeneous collections of objects. The standard STL and most other C++ and OpenCV containers
+    can store only objects of the same type and the same size. The classical solution to store objects
+    of different types in the same container is to store pointers to the base class ``base_class_t*``
+    instead but then you loose the automatic memory management. Again, by using ``Ptr<base_class_t>()``
+    instead of the raw pointers, you can solve the problem.
 
-The ``Ptr`` class treats the wrapped object as a black box. The reference counter is allocated and managed separately. The only thing the pointer class needs to know about the object is how to deallocate it. This knowledge is encapsulated in the ``Ptr::delete_obj()`` method that is called when the reference counter becomes 0. If the object is a C++ class instance, no additional coding is needed, because the default implementation of this method calls ``delete obj;`` .
-However, if the object is deallocated in a different way, the specialized method should be created. For example, if you want to wrap ``FILE`` , the ``delete_obj`` may be implemented as follows: ::
+The ``Ptr`` class treats the wrapped object as a black box. The reference counter is allocated and
+managed separately. The only thing the pointer class needs to know about the object is how to
+deallocate it. This knowledge is encapsulated in the ``Ptr::delete_obj()`` method that is called when
+the reference counter becomes 0. If the object is a C++ class instance, no additional coding is
+needed, because the default implementation of this method calls ``delete obj;``. However, if the
+object is deallocated in a different way, the specialized method should be created. For example,
+if you want to wrap ``FILE``, the ``delete_obj`` may be implemented as follows: ::
 
     template<> inline void Ptr<FILE>::delete_obj()
     {
@@ -456,7 +476,73 @@ However, if the object is deallocated in a different way, the specialized method
     // the file will be closed automatically by the Ptr<FILE> destructor.
 
 
-.. note:: The reference increment/decrement operations are implemented as atomic operations, and therefore it is normally safe to use the classes in multi-threaded applications. The same is true for :ocv:class:`Mat` and other C++ OpenCV classes that operate on the reference counters.
+.. note:: The reference increment/decrement operations are implemented as atomic operations,
+          and therefore it is normally safe to use the classes in multi-threaded applications.
+          The same is true for :ocv:class:`Mat` and other C++ OpenCV classes that operate on
+          the reference counters.
+
+Ptr::Ptr
+--------
+Various Ptr constructors.
+
+.. ocv:function:: Ptr::Ptr()
+.. ocv:function:: Ptr::Ptr(_Tp* _obj)
+.. ocv:function:: Ptr::Ptr(const Ptr& ptr)
+
+Ptr::~Ptr
+---------
+The Ptr destructor.
+
+.. ocv:function:: Ptr::~Ptr()
+
+Ptr::operator =
+----------------
+Assignment operator.
+
+.. ocv:function:: Ptr& Ptr::operator = (const Ptr& ptr)
+
+Decrements own reference counter (with ``release()``) and increments ptr's reference counter.
+
+Ptr::addref
+-----------
+Increments reference counter.
+
+.. ocv:function:: void Ptr::addref()
+
+Ptr::release
+------------
+Decrements reference counter; when it becomes 0, ``delete_obj()`` is called.
+
+.. ocv:function:: void Ptr::release()
+
+Ptr::delete_obj
+---------------
+User-specified custom object deletion operation. By default, ``delete obj;`` is called.
+
+.. ocv:function:: void Ptr::delete_obj()
+
+Ptr::empty
+----------
+Returns true if obj == 0;
+
+bool empty() const;
+
+Ptr::operator ->
+----------------
+Provide access to the object fields and methods.
+
+ .. ocv:function:: template<typename _Tp> _Tp* Ptr::operator -> ()
+ .. ocv:function:: template<typename _Tp> const _Tp* Ptr::operator -> () const
+
+
+Ptr::operator _Tp*
+------------------
+Returns the underlying object pointer. Thanks to the methods, the ``Ptr<_Tp>`` can be used instead
+of ``_Tp*``.
+
+ .. ocv:function:: template<typename _Tp> Ptr::operator _Tp* ()
+ .. ocv:function:: template<typename _Tp> Ptr::operator const _Tp*() const
+
 
 Mat
 ---
@@ -494,9 +580,9 @@ OpenCV C++ n-dimensional dense array class ::
 
 
 The class ``Mat`` represents an n-dimensional dense numerical single-channel or multi-channel array. It can be used to store real or complex-valued vectors and matrices, grayscale or color images, voxel volumes, vector fields, point clouds, tensors, histograms (though, very high-dimensional histograms may be better stored in a ``SparseMat`` ). The data layout of the array
-:math:`M` is defined by the array ``M.step[]`` , so that the address of element
-:math:`(i_0,...,i_{M.dims-1})` , where
-:math:`0\leq i_k<M.size[k]` , is computed as:
+:math:`M` is defined by the array ``M.step[]``, so that the address of element
+:math:`(i_0,...,i_{M.dims-1})`, where
+:math:`0\leq i_k<M.size[k]`, is computed as:
 
 .. math::
 
@@ -529,7 +615,7 @@ There are many different ways to create a ``Mat`` object. The most popular optio
 
     ..
 
-    As noted in the introduction to this chapter, ``create()``      allocates only  a new array when the shape or type of the current array are different from the specified ones.
+    As noted in the introduction to this chapter, ``create()`` allocates only  a new array when the shape or type of the current array are different from the specified ones.
 
 *
 
@@ -543,7 +629,7 @@ There are many different ways to create a ``Mat`` object. The most popular optio
 
     ..
 
-    It passes the number of dimensions =1 to the ``Mat``     constructor but the created array will be 2-dimensional with the number of columns set to 1. So, ``Mat::dims``     is always >= 2 (can also be 0 when the array is empty).
+    It passes the number of dimensions =1 to the ``Mat`` constructor but the created array will be 2-dimensional with the number of columns set to 1. So, ``Mat::dims``     is always >= 2 (can also be 0 when the array is empty).
 
 *
 
@@ -573,7 +659,7 @@ There are many different ways to create a ``Mat`` object. The most popular optio
 
     ..
 
-    Due to the additional ``datastart``     and ``dataend``     members, it is possible to compute a relative sub-array position in the main *container* array using ``locateROI()``:
+    Due to the additional ``datastart`` and ``dataend`` members, it is possible to compute a relative sub-array position in the main *container* array using ``locateROI()``:
 
     ::
 
@@ -589,7 +675,7 @@ There are many different ways to create a ``Mat`` object. The most popular optio
 
     ..
 
-    As in case of whole matrices, if you need a deep copy, use the ``clone()``     method of the extracted sub-matrices.
+    As in case of whole matrices, if you need a deep copy, use the ``clone()`` method of the extracted sub-matrices.
 
 *
 
@@ -619,7 +705,7 @@ There are many different ways to create a ``Mat`` object. The most popular optio
 
         ..
 
-    Partial yet very common cases of this *user-allocated data* case are conversions from ``CvMat``     and ``IplImage`` to ``Mat``. For this purpose, there are special constructors taking pointers to ``CvMat``     or ``IplImage`` and the optional flag indicating whether to copy the data or not.
+    Partial yet very common cases of this *user-allocated data* case are conversions from ``CvMat`` and ``IplImage`` to ``Mat``. For this purpose, there are special constructors taking pointers to ``CvMat``     or ``IplImage`` and the optional flag indicating whether to copy the data or not.
 
         Backward conversion from ``Mat`` to ``CvMat`` or ``IplImage`` is provided via cast operators ``Mat::operator CvMat() const`` and ``Mat::operator IplImage()``. The operators do NOT copy the data.
 
@@ -905,7 +991,7 @@ Provides matrix assignment operators.
 
     :param m: Assigned, right-hand-side matrix. Matrix assignment is an O(1) operation. This means that no data is copied but the data is shared and the reference counter, if any, is incremented. Before assigning new data, the old data is de-referenced via  :ocv:func:`Mat::release` .
 
-    :param expr: Assigned matrix expression object. As opposite to the first form of the assignment operation, the second form can reuse already allocated matrix if it has the right size and type to fit the matrix expression result. It is automatically handled by the real function that the matrix expressions is expanded to. For example,  ``C=A+B``  is expanded to  ``add(A, B, C)`` , and  :func:`add`  takes care of automatic  ``C``  reallocation.
+    :param expr: Assigned matrix expression object. As opposite to the first form of the assignment operation, the second form can reuse already allocated matrix if it has the right size and type to fit the matrix expression result. It is automatically handled by the real function that the matrix expressions is expanded to. For example,  ``C=A+B``  is expanded to  ``add(A, B, C)``, and  :func:`add`  takes care of automatic  ``C``  reallocation.
 
     :param s: Scalar assigned to each matrix element. The matrix size or type is not changed.
 
@@ -970,7 +1056,7 @@ Creates a matrix header for the specified row span.
 
     :param endrow: An exclusive 0-based ending index of the row span.
 
-    :param r: :ocv:class:`Range`  structure containing both the start and the end indices.
+    :param r: :ocv:class:`Range` structure containing both the start and the end indices.
 
 The method makes a new header for the specified row span of the matrix. Similarly to
 :ocv:func:`Mat::row` and
@@ -1983,7 +2069,7 @@ The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Su
 :ocv:class:`Mat` can store. *Sparse* means that only non-zero elements are stored (though, as a result of operations on a sparse matrix, some of its stored elements can actually become 0. It is up to you to detect such elements and delete them using ``SparseMat::erase`` ). The non-zero elements are stored in a hash table that grows when it is filled so that the search time is O(1) in average (regardless of whether element is there or not). Elements can be accessed using the following methods:
 
 *
-    Query operations ( ``SparseMat::ptr``     and the higher-level ``SparseMat::ref``,    ``SparseMat::value``     and ``SparseMat::find``     ), for example:
+    Query operations (``SparseMat::ptr`` and the higher-level ``SparseMat::ref``, ``SparseMat::value`` and ``SparseMat::find``), for example:
 
     ::
 
@@ -2001,7 +2087,7 @@ The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Su
     ..
 
 *
-    Sparse matrix iterators. They are similar to ``MatIterator`` but different from :ocv:class:`NAryMatIterator`.     That is, the iteration loop is familiar to STL users:
+    Sparse matrix iterators. They are similar to ``MatIterator`` but different from :ocv:class:`NAryMatIterator`. That is, the iteration loop is familiar to STL users:
 
     ::
 
@@ -2064,10 +2150,11 @@ SparseMat::SparseMat
 Various SparseMat constructors.
 
 .. ocv:function:: SparseMat::SparseMat()
-.. ocv:function:: SparseMat::SparseMat(int dims, const int* _sizes, int _type)
-.. ocv:function:: SparseMat::SparseMat(const SparseMat& m)
-.. ocv:function:: SparseMat::SparseMat(const Mat& m, bool try1d=false)
-.. ocv:function:: SparseMat::SparseMat(const CvSparseMat* m)
+.. ocv:function:: SparseMat::SparseMat( int dims, const int* _sizes, int _type )
+.. ocv:function:: SparseMat::SparseMat( const SparseMat& m )
+.. ocv:function:: SparseMat::SparseMat( const Mat& m )
+.. ocv:function:: SparseMat::SparseMat( const CvSparseMat* m )
+
 
     :param m: Source matrix for copy constructor. If m is dense matrix (ocv:class:`Mat`) then it will be converted to sparse representation.
     :param dims: Array dimensionality.
@@ -2081,12 +2168,12 @@ SparseMat object destructor.
 
 .. ocv:function:: SparseMat::~SparseMat()
 
-SparseMat::operator =
----------------------
+SparseMat::operator=
+--------------------
 Provides sparse matrix assignment operators.
 
-.. ocv:function:: SparseMat& SparseMat::operator=(const SparseMat& m)
-.. ocv:function:: SparseMat& SparseMat::operator=(const Mat& m)
+.. ocv:function:: SparseMat& SparseMat::operator = (const SparseMat& m)
+.. ocv:function:: SparseMat& SparseMat::operator = (const Mat& m)
 
 The last variant is equivalent to the corresponding constructor with try1d=false.
 

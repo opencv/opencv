@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -48,9 +49,32 @@ namespace cv
 
     namespace ocl
     {
-        ////////////////////////////////////OpenCL kernel strings//////////////////////////
-        //extern const char *convertC3C4;
 
+        enum
+        {
+            MAT_ADD = 1,
+            MAT_SUB,
+            MAT_MUL,
+            MAT_DIV,
+            MAT_NOT,
+            MAT_AND,
+            MAT_OR,
+            MAT_XOR
+        };
+
+        class CV_EXPORTS oclMatExpr
+        {
+            public:
+                oclMatExpr() : a(oclMat()), b(oclMat()), op(0) {}
+                oclMatExpr(const oclMat& _a, const oclMat& _b, int _op)
+                    : a(_a), b(_b), op(_op) {}
+                operator oclMat() const;
+                void assign(oclMat& m) const;
+
+            protected:
+                oclMat a, b;
+                int op;
+        };
         ////////////////////////////////////////////////////////////////////////
         //////////////////////////////// oclMat ////////////////////////////////
         ////////////////////////////////////////////////////////////////////////
@@ -234,6 +258,12 @@ namespace cv
         {
             //clCxt = Context::getContext();
             upload(m);
+            return *this;
+        }
+
+        inline oclMat& oclMat::operator = (const oclMatExpr& expr)
+        {
+            expr.assign(*this);
             return *this;
         }
 

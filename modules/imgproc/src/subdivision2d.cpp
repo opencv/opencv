@@ -477,7 +477,7 @@ int Subdiv2D::insert(Point2f pt)
     return curr_point;
 }
 
-void Subdiv2D::insert(const vector<Point2f>& ptvec)
+void Subdiv2D::insert(const std::vector<Point2f>& ptvec)
 {
     for( size_t i = 0; i < ptvec.size(); i++ )
         insert(ptvec[i]);
@@ -706,7 +706,7 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
     return vertex;
 }
 
-void Subdiv2D::getEdgeList(vector<Vec4f>& edgeList) const
+void Subdiv2D::getEdgeList(std::vector<Vec4f>& edgeList) const
 {
     edgeList.clear();
 
@@ -723,11 +723,11 @@ void Subdiv2D::getEdgeList(vector<Vec4f>& edgeList) const
     }
 }
 
-void Subdiv2D::getTriangleList(vector<Vec6f>& triangleList) const
+void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
 {
     triangleList.clear();
     int i, total = (int)(qedges.size()*4);
-    vector<bool> edgemask(total, false);
+    std::vector<bool> edgemask(total, false);
 
     for( i = 4; i < total; i += 2 )
     {
@@ -747,15 +747,15 @@ void Subdiv2D::getTriangleList(vector<Vec6f>& triangleList) const
     }
 }
 
-void Subdiv2D::getVoronoiFacetList(const vector<int>& idx,
-                                   CV_OUT vector<vector<Point2f> >& facetList,
-                                   CV_OUT vector<Point2f>& facetCenters)
+void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
+                                   CV_OUT std::vector<std::vector<Point2f> >& facetList,
+                                   CV_OUT std::vector<Point2f>& facetCenters)
 {
     calcVoronoi();
     facetList.clear();
     facetCenters.clear();
 
-    vector<Point2f> buf;
+    std::vector<Point2f> buf;
 
     size_t i, total;
     if( idx.empty() )

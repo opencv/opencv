@@ -27,7 +27,7 @@ def hist_curve(im):
     elif im.shape[2] == 3:
         color = [ (255,0,0),(0,255,0),(0,0,255) ]
     for ch, col in enumerate(color):
-        hist_item = cv2.calcHist([im],[ch],None,[256],[0,255])
+        hist_item = cv2.calcHist([im],[ch],None,[256],[0,256])
         cv2.normalize(hist_item,hist_item,0,255,cv2.NORM_MINMAX)
         hist=np.int32(np.around(hist_item))
         pts = np.int32(np.column_stack((bins,hist)))
@@ -41,7 +41,7 @@ def hist_lines(im):
         print "hist_lines applicable only for grayscale images"
         #print "so converting image to grayscale for representation"
         im = cv2.cvtColor(im,cv2.COLOR_BGR2GRAY)
-    hist_item = cv2.calcHist([im],[0],None,[256],[0,255])
+    hist_item = cv2.calcHist([im],[0],None,[256],[0,256])
     cv2.normalize(hist_item,hist_item,0,255,cv2.NORM_MINMAX)
     hist=np.int32(np.around(hist_item))
     for x,y in enumerate(hist):

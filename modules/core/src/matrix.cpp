@@ -931,7 +931,7 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
 _InputArray::_InputArray() : flags(0), obj(0) {}
 _InputArray::~_InputArray() {}
 _InputArray::_InputArray(const Mat& m) : flags(MAT), obj((void*)&m) {}
-_InputArray::_InputArray(const vector<Mat>& vec) : flags(STD_VECTOR_MAT), obj((void*)&vec) {}
+_InputArray::_InputArray(const std::vector<Mat>& vec) : flags(STD_VECTOR_MAT), obj((void*)&vec) {}
 _InputArray::_InputArray(const double& val) : flags(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F), obj((void*)&val), sz(Size(1,1)) {}
 _InputArray::_InputArray(const MatExpr& expr) : flags(FIXED_TYPE + FIXED_SIZE + EXPR), obj((void*)&expr) {}
 _InputArray::_InputArray(const GlBuffer& buf) : flags(OPENGL_BUFFER), obj((void*)&buf) {}
@@ -966,7 +966,7 @@ Mat _InputArray::getMat(int i) const
     {
         CV_Assert( i < 0 );
         int t = CV_MAT_TYPE(flags);
-        const vector<uchar>& v = *(const vector<uchar>*)obj;
+        const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
 
         return !v.empty() ? Mat(size(), t, (void*)&v[0]) : Mat();
     }
@@ -977,9 +977,9 @@ Mat _InputArray::getMat(int i) const
     if( k == STD_VECTOR_VECTOR )
     {
         int t = type(i);
-        const vector<vector<uchar> >& vv = *(const vector<vector<uchar> >*)obj;
+        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
         CV_Assert( 0 <= i && i < (int)vv.size() );
-        const vector<uchar>& v = vv[i];
+        const std::vector<uchar>& v = vv[i];
 
         return !v.empty() ? Mat(size(i), t, (void*)&v[0]) : Mat();
     }
@@ -987,7 +987,7 @@ Mat _InputArray::getMat(int i) const
     CV_Assert( k == STD_VECTOR_MAT );
     //if( k == STD_VECTOR_MAT )
     {
-        const vector<Mat>& v = *(const vector<Mat>*)obj;
+        const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
         CV_Assert( 0 <= i && i < (int)v.size() );
 
         return v[i];
@@ -995,7 +995,7 @@ Mat _InputArray::getMat(int i) const
 }
 
 
-void _InputArray::getMatVector(vector<Mat>& mv) const
+void _InputArray::getMatVector(std::vector<Mat>& mv) const
 {
     int k = kind();
 
@@ -1034,7 +1034,7 @@ void _InputArray::getMatVector(vector<Mat>& mv) const
 
     if( k == STD_VECTOR )
     {
-        const vector<uchar>& v = *(const vector<uchar>*)obj;
+        const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
 
         size_t i, n = v.size(), esz = CV_ELEM_SIZE(flags);
         int t = CV_MAT_DEPTH(flags), cn = CV_MAT_CN(flags);
@@ -1053,14 +1053,14 @@ void _InputArray::getMatVector(vector<Mat>& mv) const
 
     if( k == STD_VECTOR_VECTOR )
     {
-        const vector<vector<uchar> >& vv = *(const vector<vector<uchar> >*)obj;
+        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
         int i, n = (int)vv.size();
         int t = CV_MAT_TYPE(flags);
         mv.resize(n);
 
         for( i = 0; i < n; i++ )
         {
-            const vector<uchar>& v = vv[i];
+            const std::vector<uchar>& v = vv[i];
             mv[i] = Mat(size(i), t, (void*)&v[0]);
         }
         return;
@@ -1069,7 +1069,7 @@ void _InputArray::getMatVector(vector<Mat>& mv) const
     CV_Assert( k == STD_VECTOR_MAT );
     //if( k == STD_VECTOR_MAT )
     {
-        const vector<Mat>& v = *(const vector<Mat>*)obj;
+        const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
         mv.resize(v.size());
         std::copy(v.begin(), v.end(), mv.begin());
         return;
@@ -1142,8 +1142,8 @@ Size _InputArray::size(int i) const
     if( k == STD_VECTOR )
     {
         CV_Assert( i < 0 );
-        const vector<uchar>& v = *(const vector<uchar>*)obj;
-        const vector<int>& iv = *(const vector<int>*)obj;
+        const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
+        const std::vector<int>& iv = *(const std::vector<int>*)obj;
         size_t szb = v.size(), szi = iv.size();
         return szb == szi ? Size((int)szb, 1) : Size((int)(szb/CV_ELEM_SIZE(flags)), 1);
     }
@@ -1153,11 +1153,11 @@ Size _InputArray::size(int i) const
 
     if( k == STD_VECTOR_VECTOR )
     {
-        const vector<vector<uchar> >& vv = *(const vector<vector<uchar> >*)obj;
+        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
         if( i < 0 )
             return vv.empty() ? Size() : Size((int)vv.size(), 1);
         CV_Assert( i < (int)vv.size() );
-        const vector<vector<int> >& ivv = *(const vector<vector<int> >*)obj;
+        const std::vector<std::vector<int> >& ivv = *(const std::vector<std::vector<int> >*)obj;
 
         size_t szb = vv[i].size(), szi = ivv[i].size();
         return szb == szi ? Size((int)szb, 1) : Size((int)(szb/CV_ELEM_SIZE(flags)), 1);
@@ -1165,7 +1165,7 @@ Size _InputArray::size(int i) const
 
     if( k == STD_VECTOR_MAT )
     {
-        const vector<Mat>& vv = *(const vector<Mat>*)obj;
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
         if( i < 0 )
             return vv.empty() ? Size() : Size((int)vv.size(), 1);
         CV_Assert( i < (int)vv.size() );
@@ -1208,7 +1208,7 @@ size_t _InputArray::total(int i) const
 
     if( k == STD_VECTOR_MAT )
     {
-        const vector<Mat>& vv = *(const vector<Mat>*)obj;
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
         if( i < 0 )
             return vv.size();
 
@@ -1237,7 +1237,7 @@ int _InputArray::type(int i) const
 
     if( k == STD_VECTOR_MAT )
     {
-        const vector<Mat>& vv = *(const vector<Mat>*)obj;
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
         CV_Assert( i < (int)vv.size() );
 
         return vv[i >= 0 ? i : 0].type();
@@ -1276,7 +1276,7 @@ bool _InputArray::empty() const
 
     if( k == STD_VECTOR )
     {
-        const vector<uchar>& v = *(const vector<uchar>*)obj;
+        const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
         return v.empty();
     }
 
@@ -1285,13 +1285,13 @@ bool _InputArray::empty() const
 
     if( k == STD_VECTOR_VECTOR )
     {
-        const vector<vector<uchar> >& vv = *(const vector<vector<uchar> >*)obj;
+        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
         return vv.empty();
     }
 
     if( k == STD_VECTOR_MAT )
     {
-        const vector<Mat>& vv = *(const vector<Mat>*)obj;
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
         return vv.empty();
     }
 
@@ -1310,13 +1310,13 @@ bool _InputArray::empty() const
 _OutputArray::_OutputArray() {}
 _OutputArray::~_OutputArray() {}
 _OutputArray::_OutputArray(Mat& m) : _InputArray(m) {}
-_OutputArray::_OutputArray(vector<Mat>& vec) : _InputArray(vec) {}
+_OutputArray::_OutputArray(std::vector<Mat>& vec) : _InputArray(vec) {}
 _OutputArray::_OutputArray(gpu::GpuMat& d_mat) : _InputArray(d_mat) {}
 _OutputArray::_OutputArray(GlBuffer& buf) : _InputArray(buf) {}
 _OutputArray::_OutputArray(GlTexture2D& tex) : _InputArray(tex) {}
 
 _OutputArray::_OutputArray(const Mat& m) : _InputArray(m) {flags |= FIXED_SIZE|FIXED_TYPE;}
-_OutputArray::_OutputArray(const vector<Mat>& vec) : _InputArray(vec) {flags |= FIXED_SIZE;}
+_OutputArray::_OutputArray(const std::vector<Mat>& vec) : _InputArray(vec) {flags |= FIXED_SIZE;}
 _OutputArray::_OutputArray(const gpu::GpuMat& d_mat) : _InputArray(d_mat) {flags |= FIXED_SIZE|FIXED_TYPE;}
 _OutputArray::_OutputArray(const GlBuffer& buf) : _InputArray(buf) {flags |= FIXED_SIZE|FIXED_TYPE;}
 _OutputArray::_OutputArray(const GlTexture2D& tex) : _InputArray(tex) {flags |= FIXED_SIZE|FIXED_TYPE;}
@@ -1441,11 +1441,11 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i, bool all
     {
         CV_Assert( dims == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
         size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0;
-        vector<uchar>* v = (vector<uchar>*)obj;
+        std::vector<uchar>* v = (std::vector<uchar>*)obj;
 
         if( k == STD_VECTOR_VECTOR )
         {
-            vector<vector<uchar> >& vv = *(vector<vector<uchar> >*)obj;
+            std::vector<std::vector<uchar> >& vv = *(std::vector<std::vector<uchar> >*)obj;
             if( i < 0 )
             {
                 CV_Assert(!fixedSize() || len == vv.size());
@@ -1462,56 +1462,56 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i, bool all
         CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0) );
 
         int esz = CV_ELEM_SIZE(type0);
-        CV_Assert(!fixedSize() || len == ((vector<uchar>*)v)->size() / esz);
+        CV_Assert(!fixedSize() || len == ((std::vector<uchar>*)v)->size() / esz);
         switch( esz )
         {
         case 1:
-            ((vector<uchar>*)v)->resize(len);
+            ((std::vector<uchar>*)v)->resize(len);
             break;
         case 2:
-            ((vector<Vec2b>*)v)->resize(len);
+            ((std::vector<Vec2b>*)v)->resize(len);
             break;
         case 3:
-            ((vector<Vec3b>*)v)->resize(len);
+            ((std::vector<Vec3b>*)v)->resize(len);
             break;
         case 4:
-            ((vector<int>*)v)->resize(len);
+            ((std::vector<int>*)v)->resize(len);
             break;
         case 6:
-            ((vector<Vec3s>*)v)->resize(len);
+            ((std::vector<Vec3s>*)v)->resize(len);
             break;
         case 8:
-            ((vector<Vec2i>*)v)->resize(len);
+            ((std::vector<Vec2i>*)v)->resize(len);
             break;
         case 12:
-            ((vector<Vec3i>*)v)->resize(len);
+            ((std::vector<Vec3i>*)v)->resize(len);
             break;
         case 16:
-            ((vector<Vec4i>*)v)->resize(len);
+            ((std::vector<Vec4i>*)v)->resize(len);
             break;
         case 24:
-            ((vector<Vec6i>*)v)->resize(len);
+            ((std::vector<Vec6i>*)v)->resize(len);
             break;
         case 32:
-            ((vector<Vec8i>*)v)->resize(len);
+            ((std::vector<Vec8i>*)v)->resize(len);
             break;
         case 36:
-            ((vector<Vec<int, 9> >*)v)->resize(len);
+            ((std::vector<Vec<int, 9> >*)v)->resize(len);
             break;
         case 48:
-            ((vector<Vec<int, 12> >*)v)->resize(len);
+            ((std::vector<Vec<int, 12> >*)v)->resize(len);
             break;
         case 64:
-            ((vector<Vec<int, 16> >*)v)->resize(len);
+            ((std::vector<Vec<int, 16> >*)v)->resize(len);
             break;
         case 128:
-            ((vector<Vec<int, 32> >*)v)->resize(len);
+            ((std::vector<Vec<int, 32> >*)v)->resize(len);
             break;
         case 256:
-            ((vector<Vec<int, 64> >*)v)->resize(len);
+            ((std::vector<Vec<int, 64> >*)v)->resize(len);
             break;
         case 512:
-            ((vector<Vec<int, 128> >*)v)->resize(len);
+            ((std::vector<Vec<int, 128> >*)v)->resize(len);
             break;
         default:
             CV_Error_(CV_StsBadArg, ("Vectors with element size %d are not supported. Please, modify OutputArray::create()\n", esz));
@@ -1528,7 +1528,7 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i, bool all
     CV_Assert( k == STD_VECTOR_MAT );
     //if( k == STD_VECTOR_MAT )
     {
-        vector<Mat>& v = *(vector<Mat>*)obj;
+        std::vector<Mat>& v = *(std::vector<Mat>*)obj;
 
         if( i < 0 )
         {
@@ -1626,14 +1626,14 @@ void _OutputArray::release() const
 
     if( k == STD_VECTOR_VECTOR )
     {
-        ((vector<vector<uchar> >*)obj)->clear();
+        ((std::vector<std::vector<uchar> >*)obj)->clear();
         return;
     }
 
     CV_Assert( k == STD_VECTOR_MAT );
     //if( k == STD_VECTOR_MAT )
     {
-        ((vector<Mat>*)obj)->clear();
+        ((std::vector<Mat>*)obj)->clear();
     }
 }
 
@@ -1667,7 +1667,7 @@ Mat& _OutputArray::getMatRef(int i) const
     else
     {
         CV_Assert( k == STD_VECTOR_MAT );
-        vector<Mat>& v = *(vector<Mat>*)obj;
+        std::vector<Mat>& v = *(std::vector<Mat>*)obj;
         CV_Assert( i < (int)v.size() );
         return v[i];
     }
@@ -1738,7 +1738,7 @@ void cv::hconcat(InputArray src1, InputArray src2, OutputArray dst)
 
 void cv::hconcat(InputArray _src, OutputArray dst)
 {
-    vector<Mat> src;
+    std::vector<Mat> src;
     _src.getMatVector(src);
     hconcat(!src.empty() ? &src[0] : 0, src.size(), dst);
 }
@@ -1778,7 +1778,7 @@ void cv::vconcat(InputArray src1, InputArray src2, OutputArray dst)
 
 void cv::vconcat(InputArray _src, OutputArray dst)
 {
-    vector<Mat> src;
+    std::vector<Mat> src;
     _src.getMatVector(src);
     vconcat(!src.empty() ? &src[0] : 0, src.size(), dst);
 }
@@ -1969,6 +1969,11 @@ static TransposeInplaceFunc transposeInplaceTab[] =
 void cv::transpose( InputArray _src, OutputArray _dst )
 {
     Mat src = _src.getMat();
+    if( src.empty() )
+    {
+        _dst.release();
+        return;
+    }
     size_t esz = src.elemSize();
     CV_Assert( src.dims <= 2 && esz <= (size_t)32 );
 
@@ -2499,7 +2504,7 @@ void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
 namespace cv
 {
 
-static void generateRandomCenter(const vector<Vec2f>& box, float* center, RNG& rng)
+static void generateRandomCenter(const std::vector<Vec2f>& box, float* center, RNG& rng)
 {
     size_t j, dims = box.size();
     float margin = 1.f/dims;
@@ -2555,9 +2560,9 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
     int i, j, k, dims = _data.cols, N = _data.rows;
     const float* data = _data.ptr<float>(0);
     size_t step = _data.step/sizeof(data[0]);
-    vector<int> _centers(K);
+    std::vector<int> _centers(K);
     int* centers = &_centers[0];
-    vector<float> _dist(N*3);
+    std::vector<float> _dist(N*3);
     float* dist = &_dist[0], *tdist = dist + N, *tdist2 = tdist + N;
     double sum0 = 0;
 
@@ -2705,8 +2710,8 @@ double cv::kmeans( InputArray _data, int K,
     int* labels = _labels.ptr<int>();
 
     Mat centers(K, dims, type), old_centers(K, dims, type), temp(1, dims, type);
-    vector<int> counters(K);
-    vector<Vec2f> _box(dims);
+    std::vector<int> counters(K);
+    std::vector<Vec2f> _box(dims);
     Vec2f* box = &_box[0];
     double best_compactness = DBL_MAX, compactness = 0;
     RNG& rng = theRNG();
@@ -3544,7 +3549,7 @@ enum { HASH_SIZE0 = 8 };
 static inline void copyElem(const uchar* from, uchar* to, size_t elemSize)
 {
     size_t i;
-    for( i = 0; (int)i <= (int)(elemSize - sizeof(int)); i += sizeof(int) )
+    for( i = 0; i + sizeof(int) <= elemSize; i += sizeof(int) )
         *(int*)(to + i) = *(const int*)(from + i);
     for( ; i < elemSize; i++ )
         to[i] = from[i];
@@ -3553,7 +3558,7 @@ static inline void copyElem(const uchar* from, uchar* to, size_t elemSize)
 static inline bool isZeroElem(const uchar* data, size_t elemSize)
 {
     size_t i;
-    for( i = 0; i <= elemSize - sizeof(int); i += sizeof(int) )
+    for( i = 0; i + sizeof(int) <= elemSize; i += sizeof(int) )
         if( *(int*)(data + i) != 0 )
             return false;
     for( ; i < elemSize; i++ )
@@ -3968,7 +3973,7 @@ void SparseMat::resizeHashTab(size_t newsize)
         newsize = (size_t)1 << cvCeil(std::log((double)newsize)/CV_LOG2);
 
     size_t i, hsize = hdr->hashtab.size();
-    vector<size_t> _newh(newsize);
+    std::vector<size_t> _newh(newsize);
     size_t* newh = &_newh[0];
     for( i = 0; i < newsize; i++ )
         newh[i] = 0;
@@ -4057,7 +4062,7 @@ SparseMatConstIterator::SparseMatConstIterator(const SparseMat* _m)
     if(!_m || !_m->hdr)
         return;
     SparseMat::Hdr& hdr = *m->hdr;
-    const vector<size_t>& htab = hdr.hashtab;
+    const std::vector<size_t>& htab = hdr.hashtab;
     size_t i, hsize = htab.size();
     for( i = 0; i < hsize; i++ )
     {
@@ -4247,10 +4252,10 @@ Rect RotatedRect::boundingRect() const
 {
     Point2f pt[4];
     points(pt);
-    Rect r(cvFloor(min(min(min(pt[0].x, pt[1].x), pt[2].x), pt[3].x)),
-           cvFloor(min(min(min(pt[0].y, pt[1].y), pt[2].y), pt[3].y)),
-           cvCeil(max(max(max(pt[0].x, pt[1].x), pt[2].x), pt[3].x)),
-           cvCeil(max(max(max(pt[0].y, pt[1].y), pt[2].y), pt[3].y)));
+    Rect r(cvFloor(std::min(std::min(std::min(pt[0].x, pt[1].x), pt[2].x), pt[3].x)),
+           cvFloor(std::min(std::min(std::min(pt[0].y, pt[1].y), pt[2].y), pt[3].y)),
+           cvCeil(std::max(std::max(std::max(pt[0].x, pt[1].x), pt[2].x), pt[3].x)),
+           cvCeil(std::max(std::max(std::max(pt[0].y, pt[1].y), pt[2].y), pt[3].y)));
     r.width -= r.x - 1;
     r.height -= r.y - 1;
     return r;

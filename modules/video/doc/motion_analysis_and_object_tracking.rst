@@ -685,16 +685,16 @@ See [Tao2012]_. And site of project - http://graphics.berkeley.edu/papers/Tao-SA
 
 
 
-OpticalFlowDual_TVL1
---------------------
+createOptFlow_DualTVL1
+----------------------
 "Dual TV L1" Optical Flow Algorithm.
 
-.. ocv:class:: OpticalFlowDual_TVL12
+.. ocv:function:: Ptr<DenseOpticalFlow> createOptFlow_DualTVL1()
 
 
-The class implements the "Dual TV L1" optical flow algorithm described in [Zach2007]_ and [Javier2012]_ .
+  The class implements the "Dual TV L1" optical flow algorithm described in [Zach2007]_ and [Javier2012]_ .
 
-Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
+  Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
 
     .. ocv:member:: double tau
 
@@ -727,11 +727,11 @@ Here are important members of the class that control the algorithm, which you ca
 
 
 
-OpticalFlowDual_TVL1::operator()
---------------------------------
+DenseOpticalFlow::calc
+--------------------------
 Calculates an optical flow.
 
-.. ocv:function:: void OpticalFlowDual_TVL1::operator ()(InputArray I0, InputArray I1, InputOutputArray flow)
+.. ocv:function:: void DenseOpticalFlow::calc(InputArray I0, InputArray I1, InputOutputArray flow)
 
     :param prev: first 8-bit single-channel input image.
 
@@ -741,11 +741,11 @@ Calculates an optical flow.
 
 
 
-OpticalFlowDual_TVL1::collectGarbage
-------------------------------------
+DenseOpticalFlow::collectGarbage
+--------------------------------
 Releases all inner buffers.
 
-.. ocv:function:: void OpticalFlowDual_TVL1::collectGarbage()
+.. ocv:function:: void DenseOpticalFlow::collectGarbage()
 
 
 

@@ -37,7 +37,7 @@ public class NativeCameraView extends CameraBridgeViewBase {
          * 2. We need to start thread which will be getting frames
          */
         /* First step - initialize camera connection */
-        if (!initializeCamera(getWidth(), getHeight()))
+        if (!initializeCamera(width, height))
             return false;
 
         /* now we can start update thread */
@@ -125,6 +125,31 @@ public class NativeCameraView extends CameraBridgeViewBase {
         }
     }
 
+    private class NativeCameraFrame implements CvCameraViewFrame {
+
+        @Override
+        public Mat rgba() {
+            mCamera.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+            return mRgba;
+        }
+
+        @Override
+        public Mat gray() {
+            mCamera.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
+            return mGray;
+        }
+
+        public NativeCameraFrame(VideoCapture capture) {
+            mCapture = capture;
+            mGray = new Mat();
+            mRgba = new Mat();
+        }
+
+        private VideoCapture mCapture;
+        private Mat mRgba;
+        private Mat mGray;
+    };
+
     private class CameraWorker implements Runnable {
 
         private Mat mRgba = new Mat();
@@ -137,22 +162,9 @@ public class NativeCameraView extends CameraBridgeViewBase {
                     break;
                 }
 
-                switch (mPreviewFormat) {
-                    case Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA:
-                    {
-                        mCamera.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-                        deliverAndDrawFrame(mRgba);
-                    } break;
-                    case Highgui.CV_CAP_ANDROID_GREY_FRAME:
-                        mCamera.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
-                        deliverAndDrawFrame(mGray);
-                        break;
-                    default:
-                        Log.e(TAG, "Invalid frame format! Only RGBA and Gray Scale are supported!");
-                }
+                deliverAndDrawFrame(new NativeCameraFrame(mCamera));
 
             } while (!mStopThread);
-
         }
     }
 

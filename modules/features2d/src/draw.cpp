@@ -41,8 +41,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
-
 const int draw_shift_bits = 4;
 const int draw_multiplier = 1 << draw_shift_bits;
 
@@ -90,7 +88,7 @@ static inline void _drawKeypoint( Mat& img, const KeyPoint& p, const Scalar& col
     }
 }
 
-void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, Mat& outImage,
+void drawKeypoints( const Mat& image, const std::vector<KeyPoint>& keypoints, Mat& outImage,
                     const Scalar& _color, int flags )
 {
     if( !(flags & DrawMatchesFlags::DRAW_OVER_OUTIMG) )
@@ -113,7 +111,7 @@ void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, Mat& ou
     bool isRandColor = _color == Scalar::all(-1);
 
     CV_Assert( !outImage.empty() );
-    vector<KeyPoint>::const_iterator it = keypoints.begin(),
+    std::vector<KeyPoint>::const_iterator it = keypoints.begin(),
                                      end = keypoints.end();
     for( ; it != end; ++it )
     {
@@ -122,8 +120,8 @@ void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, Mat& ou
     }
 }
 
-static void _prepareImgAndDrawKeypoints( const Mat& img1, const vector<KeyPoint>& keypoints1,
-                                         const Mat& img2, const vector<KeyPoint>& keypoints2,
+static void _prepareImgAndDrawKeypoints( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
+                                         const Mat& img2, const std::vector<KeyPoint>& keypoints2,
                                          Mat& outImg, Mat& outImg1, Mat& outImg2,
                                          const Scalar& singlePointColor, int flags )
 {
@@ -184,11 +182,11 @@ static inline void _drawMatch( Mat& outImg, Mat& outImg1, Mat& outImg2 ,
           color, 1, CV_AA, draw_shift_bits );
 }
 
-void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
-                  const Mat& img2, const vector<KeyPoint>& keypoints2,
-                  const vector<DMatch>& matches1to2, Mat& outImg,
+void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
+                  const Mat& img2, const std::vector<KeyPoint>& keypoints2,
+                  const std::vector<DMatch>& matches1to2, Mat& outImg,
                   const Scalar& matchColor, const Scalar& singlePointColor,
-                  const vector<char>& matchesMask, int flags )
+                  const std::vector<char>& matchesMask, int flags )
 {
     if( !matchesMask.empty() && matchesMask.size() != matches1to2.size() )
         CV_Error( CV_StsBadSize, "matchesMask must have the same size as matches1to2" );
@@ -213,11 +211,11 @@ void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
     }
 }
 
-void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
-                  const Mat& img2, const vector<KeyPoint>& keypoints2,
-                  const vector<vector<DMatch> >& matches1to2, Mat& outImg,
+void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
+                  const Mat& img2, const std::vector<KeyPoint>& keypoints2,
+                  const std::vector<std::vector<DMatch> >& matches1to2, Mat& outImg,
                   const Scalar& matchColor, const Scalar& singlePointColor,
-                  const vector<vector<char> >& matchesMask, int flags )
+                  const std::vector<std::vector<char> >& matchesMask, int flags )
 {
     if( !matchesMask.empty() && matchesMask.size() != matches1to2.size() )
         CV_Error( CV_StsBadSize, "matchesMask must have the same size as matches1to2" );

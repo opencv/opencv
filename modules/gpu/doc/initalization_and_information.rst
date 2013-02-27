@@ -47,20 +47,19 @@ Any subsequent API call to this device will reinitialize the device.
 
 gpu::FeatureSet
 ---------------
-Enumeration providing GPU computing features. ::
+Enumeration providing GPU computing features.
 
-    enum FeatureSet
-    {
-        FEATURE_SET_COMPUTE_10,
-        FEATURE_SET_COMPUTE_11,
-        FEATURE_SET_COMPUTE_12,
-        FEATURE_SET_COMPUTE_13,
-        FEATURE_SET_COMPUTE_20,
-        FEATURE_SET_COMPUTE_21,
-        GLOBAL_ATOMICS,
-        SHARED_ATOMICS,
-        NATIVE_DOUBLE
-    };
+.. ocv:enum:: gpu::FeatureSet
+
+  .. ocv:emember:: FEATURE_SET_COMPUTE_10
+  .. ocv:emember:: FEATURE_SET_COMPUTE_11
+  .. ocv:emember:: FEATURE_SET_COMPUTE_12
+  .. ocv:emember:: FEATURE_SET_COMPUTE_13
+  .. ocv:emember:: FEATURE_SET_COMPUTE_20
+  .. ocv:emember:: FEATURE_SET_COMPUTE_21
+  .. ocv:emember:: GLOBAL_ATOMICS
+  .. ocv:emember:: SHARED_ATOMICS
+  .. ocv:emember:: NATIVE_DOUBLE
 
 
 gpu::TargetArchs
@@ -73,7 +72,7 @@ The following method checks whether the module was built with the support of the
 
     .. ocv:function:: static bool gpu::TargetArchs::builtWith( FeatureSet feature_set )
 
-        :param feature_set: Features to be checked. See :ocv:class:`gpu::FeatureSet`.
+        :param feature_set: Features to be checked. See :ocv:enum:`gpu::FeatureSet`.
 
 There is a set of methods to check whether the module contains intermediate (PTX) or binary GPU code for the given architecture(s):
 
@@ -197,7 +196,7 @@ Provides information on GPU feature support.
 
 .. ocv:function:: bool gpu::DeviceInfo::supports( FeatureSet feature_set ) const
 
-    :param feature_set: Features to be checked. See :ocv:class:`gpu::FeatureSet`.
+    :param feature_set: Features to be checked. See :ocv:enum:`gpu::FeatureSet`.
 
 This function returns ``true`` if the device has the specified GPU feature. Otherwise, it returns ``false`` .
 

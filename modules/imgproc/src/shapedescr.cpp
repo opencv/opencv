@@ -284,7 +284,7 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
             radius = MAX(radius, t);
         }
 
-        radius = (float)(sqrt(radius)*(1 + eps));
+        radius = (float)(std::sqrt(radius)*(1 + eps));
     }
 
     _center = center;
@@ -428,7 +428,7 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
     bd[0] = gfp[3];
     bd[1] = gfp[4];
     solve( A, b, x, DECOMP_SVD );
-    
+
     // re-fit for parameters A - C with those center coordinates
     A = Mat( n, 3, CV_64F, Ad );
     b = Mat( n, 1, CV_64F, bd );
@@ -443,7 +443,7 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
         Ad[i * 3 + 2] = (p.x - rp[0]) * (p.y - rp[1]);
     }
     solve(A, b, x, DECOMP_SVD);
-    
+
     // store angle and radii
     rp[4] = -0.5 * atan2(gfp[2], gfp[1] - gfp[0]); // convert from APP angle usage
     t = sin(-2.0 * rp[4]);
@@ -453,11 +453,11 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
         t = gfp[1] - gfp[0];
     rp[2] = fabs(gfp[0] + gfp[1] - t);
     if( rp[2] > min_eps )
-        rp[2] = sqrt(2.0 / rp[2]);
+        rp[2] = std::sqrt(2.0 / rp[2]);
     rp[3] = fabs(gfp[0] + gfp[1] + t);
     if( rp[3] > min_eps )
-        rp[3] = sqrt(2.0 / rp[3]);
-    
+        rp[3] = std::sqrt(2.0 / rp[3]);
+
     box.center.x = (float)rp[0] + c.x;
     box.center.y = (float)rp[1] + c.y;
     box.size.width = (float)(rp[2]*2);
@@ -472,7 +472,7 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
         box.angle += 360;
     if( box.angle > 360 )
         box.angle -= 360;
-    
+
     return box;
 }
 
@@ -596,7 +596,7 @@ static Rect pointSetBoundingRect( const Mat& points )
             v.i = CV_TOGGLE_FLT(ymax); ymax = cvFloor(v.f);
         }
     }
-    
+
     return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
 }
 
@@ -688,7 +688,7 @@ static Rect maskBoundingRect( const Mat& img )
             ymax = i;
         }
     }
-    
+
     if( xmin >= size.width )
         xmin = ymin = 0;
     return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
@@ -1029,7 +1029,7 @@ cvArcLength( const void *array, CvSlice slice, int is_closed )
             }
         }
     }
-    
+
     return perimeter;
 }
 

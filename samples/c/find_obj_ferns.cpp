@@ -10,7 +10,9 @@
 #include <vector>
 #include <stdio.h>
 
+using namespace std;
 using namespace cv;
+
 static void help()
 {
     printf( "This program shows the use of the \"fern\" plannar PlanarObjectDetector point\n"

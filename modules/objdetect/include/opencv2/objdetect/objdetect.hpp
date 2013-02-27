@@ -307,32 +307,32 @@ public:
     };
 
     LatentSvmDetector();
-    LatentSvmDetector( const vector<string>& filenames, const vector<string>& classNames=vector<string>() );
+    LatentSvmDetector( const std::vector<std::string>& filenames, const std::vector<std::string>& classNames=std::vector<std::string>() );
     virtual ~LatentSvmDetector();
 
     virtual void clear();
     virtual bool empty() const;
-    bool load( const vector<string>& filenames, const vector<string>& classNames=vector<string>() );
+    bool load( const std::vector<std::string>& filenames, const std::vector<std::string>& classNames=std::vector<std::string>() );
 
     virtual void detect( const Mat& image,
-                         vector<ObjectDetection>& objectDetections,
+                         std::vector<ObjectDetection>& objectDetections,
                          float overlapThreshold=0.5f,
                          int numThreads=-1 );
 
-    const vector<string>& getClassNames() const;
+    const std::vector<std::string>& getClassNames() const;
     size_t getClassCount() const;
 
 private:
-    vector<CvLatentSvmDetector*> detectors;
-    vector<string> classNames;
+    std::vector<CvLatentSvmDetector*> detectors;
+    std::vector<std::string> classNames;
 };
 
-CV_EXPORTS void groupRectangles(CV_OUT CV_IN_OUT vector<Rect>& rectList, int groupThreshold, double eps=0.2);
-CV_EXPORTS_W void groupRectangles(CV_OUT CV_IN_OUT vector<Rect>& rectList, CV_OUT vector<int>& weights, int groupThreshold, double eps=0.2);
-CV_EXPORTS void groupRectangles( vector<Rect>& rectList, int groupThreshold, double eps, vector<int>* weights, vector<double>* levelWeights );
-CV_EXPORTS void groupRectangles(vector<Rect>& rectList, vector<int>& rejectLevels,
-                                vector<double>& levelWeights, int groupThreshold, double eps=0.2);
-CV_EXPORTS void groupRectangles_meanshift(vector<Rect>& rectList, vector<double>& foundWeights, vector<double>& foundScales,
+CV_EXPORTS void groupRectangles(CV_OUT CV_IN_OUT std::vector<Rect>& rectList, int groupThreshold, double eps=0.2);
+CV_EXPORTS_W void groupRectangles(CV_OUT CV_IN_OUT std::vector<Rect>& rectList, CV_OUT std::vector<int>& weights, int groupThreshold, double eps=0.2);
+CV_EXPORTS void groupRectangles( std::vector<Rect>& rectList, int groupThreshold, double eps, std::vector<int>* weights, std::vector<double>* levelWeights );
+CV_EXPORTS void groupRectangles(std::vector<Rect>& rectList, std::vector<int>& rejectLevels,
+                                std::vector<double>& levelWeights, int groupThreshold, double eps=0.2);
+CV_EXPORTS void groupRectangles_meanshift(std::vector<Rect>& rectList, std::vector<double>& foundWeights, std::vector<double>& foundScales,
                                           double detectThreshold = 0.0, Size winDetSize = Size(64, 128));
 
 
@@ -369,23 +369,23 @@ class CV_EXPORTS_W CascadeClassifier
 {
 public:
     CV_WRAP CascadeClassifier();
-    CV_WRAP CascadeClassifier( const string& filename );
+    CV_WRAP CascadeClassifier( const std::string& filename );
     virtual ~CascadeClassifier();
 
     CV_WRAP virtual bool empty() const;
-    CV_WRAP bool load( const string& filename );
+    CV_WRAP bool load( const std::string& filename );
     virtual bool read( const FileNode& node );
     CV_WRAP virtual void detectMultiScale( const Mat& image,
-                                   CV_OUT vector<Rect>& objects,
+                                   CV_OUT std::vector<Rect>& objects,
                                    double scaleFactor=1.1,
                                    int minNeighbors=3, int flags=0,
                                    Size minSize=Size(),
                                    Size maxSize=Size() );
 
     CV_WRAP virtual void detectMultiScale( const Mat& image,
-                                   CV_OUT vector<Rect>& objects,
-                                   vector<int>& rejectLevels,
-                                   vector<double>& levelWeights,
+                                   CV_OUT std::vector<Rect>& objects,
+                                   std::vector<int>& rejectLevels,
+                                   std::vector<double>& levelWeights,
                                    double scaleFactor=1.1,
                                    int minNeighbors=3, int flags=0,
                                    Size minSize=Size(),
@@ -400,11 +400,11 @@ public:
 
 protected:
     //virtual bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
-    //                                int stripSize, int yStep, double factor, vector<Rect>& candidates );
+    //                                int stripSize, int yStep, double factor, std::vector<Rect>& candidates );
 
     virtual bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
-                                    int stripSize, int yStep, double factor, vector<Rect>& candidates,
-                                    vector<int>& rejectLevels, vector<double>& levelWeights, bool outputRejectLevels=false);
+                                    int stripSize, int yStep, double factor, std::vector<Rect>& candidates,
+                                    std::vector<int>& rejectLevels, std::vector<double>& levelWeights, bool outputRejectLevels=false);
 
 protected:
     enum { BOOST = 0 };
@@ -460,11 +460,11 @@ protected:
         int ncategories;
         Size origWinSize;
 
-        vector<Stage> stages;
-        vector<DTree> classifiers;
-        vector<DTreeNode> nodes;
-        vector<float> leaves;
-        vector<int> subsets;
+        std::vector<Stage> stages;
+        std::vector<DTree> classifiers;
+        std::vector<DTreeNode> nodes;
+        std::vector<float> leaves;
+        std::vector<int> subsets;
     };
 
     Data data;
@@ -496,9 +496,9 @@ struct DetectionROI
    // scale(size) of the bounding box
    double scale;
    // set of requrested locations to be evaluated
-   vector<cv::Point> locations;
+   std::vector<cv::Point> locations;
    // vector that will contain confidence values for each location
-   vector<double> confidences;
+   std::vector<double> confidences;
 };
 
 struct CV_EXPORTS_W HOGDescriptor
@@ -524,7 +524,7 @@ public:
     gammaCorrection(_gammaCorrection), nlevels(_nlevels)
     {}
 
-    CV_WRAP HOGDescriptor(const String& filename)
+    CV_WRAP HOGDescriptor(const std::string& filename)
     {
         load(filename);
     }
@@ -543,34 +543,34 @@ public:
     CV_WRAP virtual void setSVMDetector(InputArray _svmdetector);
 
     virtual bool read(FileNode& fn);
-    virtual void write(FileStorage& fs, const String& objname) const;
+    virtual void write(FileStorage& fs, const std::string& objname) const;
 
-    CV_WRAP virtual bool load(const String& filename, const String& objname=String());
-    CV_WRAP virtual void save(const String& filename, const String& objname=String()) const;
+    CV_WRAP virtual bool load(const std::string& filename, const std::string& objname=std::string());
+    CV_WRAP virtual void save(const std::string& filename, const std::string& objname=std::string()) const;
     virtual void copyTo(HOGDescriptor& c) const;
 
     CV_WRAP virtual void compute(const Mat& img,
-                         CV_OUT vector<float>& descriptors,
+                         CV_OUT std::vector<float>& descriptors,
                          Size winStride=Size(), Size padding=Size(),
-                         const vector<Point>& locations=vector<Point>()) const;
+                         const std::vector<Point>& locations=std::vector<Point>()) const;
     //with found weights output
-    CV_WRAP virtual void detect(const Mat& img, CV_OUT vector<Point>& foundLocations,
-                        CV_OUT vector<double>& weights,
+    CV_WRAP virtual void detect(const Mat& img, CV_OUT std::vector<Point>& foundLocations,
+                        CV_OUT std::vector<double>& weights,
                         double hitThreshold=0, Size winStride=Size(),
                         Size padding=Size(),
-                        const vector<Point>& searchLocations=vector<Point>()) const;
+                        const std::vector<Point>& searchLocations=std::vector<Point>()) const;
     //without found weights output
-    virtual void detect(const Mat& img, CV_OUT vector<Point>& foundLocations,
+    virtual void detect(const Mat& img, CV_OUT std::vector<Point>& foundLocations,
                         double hitThreshold=0, Size winStride=Size(),
                         Size padding=Size(),
-                        const vector<Point>& searchLocations=vector<Point>()) const;
+                        const std::vector<Point>& searchLocations=std::vector<Point>()) const;
     //with result weights output
-    CV_WRAP virtual void detectMultiScale(const Mat& img, CV_OUT vector<Rect>& foundLocations,
-                                  CV_OUT vector<double>& foundWeights, double hitThreshold=0,
+    CV_WRAP virtual void detectMultiScale(const Mat& img, CV_OUT std::vector<Rect>& foundLocations,
+                                  CV_OUT std::vector<double>& foundWeights, double hitThreshold=0,
                                   Size winStride=Size(), Size padding=Size(), double scale=1.05,
                                   double finalThreshold=2.0,bool useMeanshiftGrouping = false) const;
     //without found weights output
-    virtual void detectMultiScale(const Mat& img, CV_OUT vector<Rect>& foundLocations,
+    virtual void detectMultiScale(const Mat& img, CV_OUT std::vector<Rect>& foundLocations,
                                   double hitThreshold=0, Size winStride=Size(),
                                   Size padding=Size(), double scale=1.05,
                                   double finalThreshold=2.0, bool useMeanshiftGrouping = false) const;
@@ -578,8 +578,8 @@ public:
     CV_WRAP virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
                                  Size paddingTL=Size(), Size paddingBR=Size()) const;
 
-    CV_WRAP static vector<float> getDefaultPeopleDetector();
-    CV_WRAP static vector<float> getDaimlerPeopleDetector();
+    CV_WRAP static std::vector<float> getDefaultPeopleDetector();
+    CV_WRAP static std::vector<float> getDaimlerPeopleDetector();
 
     CV_PROP Size winSize;
     CV_PROP Size blockSize;
@@ -591,12 +591,12 @@ public:
     CV_PROP int histogramNormType;
     CV_PROP double L2HysThreshold;
     CV_PROP bool gammaCorrection;
-    CV_PROP vector<float> svmDetector;
+    CV_PROP std::vector<float> svmDetector;
     CV_PROP int nlevels;
 
 
    // evaluate specified ROI and return confidence value for each location
-   virtual void detectROI(const cv::Mat& img, const vector<cv::Point> &locations,
+   virtual void detectROI(const cv::Mat& img, const std::vector<cv::Point> &locations,
                                    CV_OUT std::vector<cv::Point>& foundLocations, CV_OUT std::vector<double>& confidences,
                                    double hitThreshold = 0, cv::Size winStride = Size(),
                                    cv::Size padding = Size()) const;
@@ -614,11 +614,11 @@ public:
 
 
 CV_EXPORTS_W void findDataMatrix(InputArray image,
-                                 CV_OUT vector<string>& codes,
+                                 CV_OUT std::vector<std::string>& codes,
                                  OutputArray corners=noArray(),
                                  OutputArrayOfArrays dmtx=noArray());
 CV_EXPORTS_W void drawDataMatrixCodes(InputOutputArray image,
-                                      const vector<string>& codes,
+                                      const std::vector<std::string>& codes,
                                       InputArray corners);
 }
 
@@ -640,16 +640,6 @@ CV_EXPORTS std::deque<CvDataMatrixCode> cvFindDataMatrix(CvMat *im);
 
 namespace cv {
 namespace linemod {
-
-using cv::FileNode;
-using cv::FileStorage;
-using cv::Mat;
-using cv::noArray;
-using cv::OutputArrayOfArrays;
-using cv::Point;
-using cv::Ptr;
-using cv::Rect;
-using cv::Size;
 
 /// @todo Convert doxy comments to rst
 

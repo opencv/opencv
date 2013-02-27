@@ -107,7 +107,7 @@ size_t PxMDecoder::signatureLength() const
     return 3;
 }
 
-bool PxMDecoder::checkSignature( const string& signature ) const
+bool PxMDecoder::checkSignature( const std::string& signature ) const
 {
     return signature.size() >= 3 && signature[0] == 'P' &&
            '1' <= signature[1] && signature[1] <= '6' &&
@@ -367,7 +367,7 @@ bool  PxMEncoder::isFormatSupported( int depth ) const
 }
 
 
-bool  PxMEncoder::write( const Mat& img, const vector<int>& params )
+bool  PxMEncoder::write( const Mat& img, const std::vector<int>& params )
 {
     bool isBinary = true;
 

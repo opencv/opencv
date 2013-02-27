@@ -77,7 +77,7 @@ public:
 
     void printDefaults() const;
     void printAttrs() const;
-    bool scanAttr( const String prmName, const String val );
+    bool scanAttr( const std::string prmName, const std::string val );
 
     int stageType;
     int featureType;
@@ -87,9 +87,9 @@ public:
 class CvCascadeClassifier
 {
 public:
-    bool train( const String _cascadeDirName,
-                const String _posFilename,
-                const String _negFilename,
+    bool train( const std::string _cascadeDirName,
+                const std::string _posFilename,
+                const std::string _negFilename,
                 int _numPos, int _numNeg,
                 int _precalcValBufSize, int _precalcIdxBufSize,
                 int _numStages,
@@ -99,8 +99,8 @@ public:
                 bool baseFormatSave = false );
 private:
     int predict( int sampleIdx );
-    void save( const String cascadeDirName, bool baseFormat = false );
-    bool load( const String cascadeDirName );
+    void save( const std::string cascadeDirName, bool baseFormat = false );
+    bool load( const std::string cascadeDirName );
     bool updateTrainingSet( double& acceptanceRatio );
     int fillPassedSamples( int first, int count, bool isPositive, int64& consumed );
 
@@ -117,7 +117,7 @@ private:
     Ptr<CvCascadeBoostParams> stageParams;
 
     Ptr<CvFeatureEvaluator> featureEvaluator;
-    vector< Ptr<CvCascadeBoost> > stageClassifiers;
+    std::vector< Ptr<CvCascadeBoost> > stageClassifiers;
     CvCascadeImageReader imgReader;
     int numStages, curNumSamples;
     int numPos, numNeg;

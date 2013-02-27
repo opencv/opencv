@@ -103,7 +103,7 @@ public:
 
 protected:
     Size origWinSize;
-    Ptr<vector<Feature> > features;
+    Ptr<std::vector<Feature> > features;
     Feature* featuresPtr; // optimization
     bool hasTiltedFeatures;
 
@@ -194,7 +194,7 @@ public:
     { return (*this)(featureIdx); }
 protected:
     Size origWinSize;
-    Ptr<vector<Feature> > features;
+    Ptr<std::vector<Feature> > features;
     Feature* featuresPtr; // optimization
     Mat sum0, sum;
     Rect normrect;
@@ -247,7 +247,7 @@ public:
     {
         Feature();
         float calc( int offset ) const;
-        void updatePtrs( const vector<Mat>& _hist, const Mat &_normSum );
+        void updatePtrs( const std::vector<Mat>& _hist, const Mat &_normSum );
         bool read( const FileNode& node );
 
         enum { CELL_NUM = 4, BIN_NUM = 9 };
@@ -274,12 +274,12 @@ public:
     }
 
 private:
-    virtual void integralHistogram( const Mat& srcImage, vector<Mat> &histogram, Mat &norm, int nbins ) const;
+    virtual void integralHistogram( const Mat& srcImage, std::vector<Mat> &histogram, Mat &norm, int nbins ) const;
 
     Size origWinSize;
-    Ptr<vector<Feature> > features;
+    Ptr<std::vector<Feature> > features;
     Feature* featuresPtr;
-    vector<Mat> hist;
+    std::vector<Mat> hist;
     Mat normSum;
     int offset;
 };
@@ -300,7 +300,7 @@ inline float HOGEvaluator::Feature :: calc( int _offset ) const
     return res;
 }
 
-inline void HOGEvaluator::Feature :: updatePtrs( const vector<Mat> &_hist, const Mat &_normSum )
+inline void HOGEvaluator::Feature :: updatePtrs( const std::vector<Mat> &_hist, const Mat &_normSum )
 {
     int binIdx = featComponent % BIN_NUM;
     int cellIdx = featComponent / BIN_NUM;

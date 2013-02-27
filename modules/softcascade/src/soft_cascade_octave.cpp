@@ -116,7 +116,7 @@ BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, 
         _params.truncate_pruned_tree = false;
         _params.use_surrogates       = false;
         _params.use_1se_rule         = false;
-        _params.regression_accuracy  = 1.0e-6;
+        _params.regression_accuracy  = 1.0e-6f;
 
         // boost params
         _params.boost_type           = CvBoost::GENTLE;
@@ -221,7 +221,7 @@ void BoostedSoftCascadeOctave::generateNegatives(const Dataset* dataset)
     using namespace cv::softcascade::internal;
     // ToDo: set seed, use offsets
     Random::engine eng(DX_DY_SEED);
-    Random::engine idxEng(INDEX_ENGINE_SEED);
+    Random::engine idxEng((Random::seed_type)INDEX_ENGINE_SEED);
 
     int h = boundingBox.height;
 

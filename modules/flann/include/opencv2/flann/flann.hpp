@@ -103,12 +103,12 @@ public:
 
         ~GenericIndex();
 
-        void knnSearch(const vector<ElementType>& query, vector<int>& indices,
-                       vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& params);
+        void knnSearch(const std::vector<ElementType>& query, std::vector<int>& indices,
+                       std::vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& params);
         void knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, const ::cvflann::SearchParams& params);
 
-        int radiusSearch(const vector<ElementType>& query, vector<int>& indices,
-                         vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& params);
+        int radiusSearch(const std::vector<ElementType>& query, std::vector<int>& indices,
+                         std::vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& params);
         int radiusSearch(const Mat& query, Mat& indices, Mat& dists,
                          DistanceType radius, const ::cvflann::SearchParams& params);
 
@@ -157,7 +157,7 @@ GenericIndex<Distance>::~GenericIndex()
 }
 
 template <typename Distance>
-void GenericIndex<Distance>::knnSearch(const vector<ElementType>& query, vector<int>& indices, vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& searchParams)
+void GenericIndex<Distance>::knnSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& searchParams)
 {
     ::cvflann::Matrix<ElementType> m_query((ElementType*)&query[0], 1, query.size());
     ::cvflann::Matrix<int> m_indices(&indices[0], 1, indices.size());
@@ -190,7 +190,7 @@ void GenericIndex<Distance>::knnSearch(const Mat& queries, Mat& indices, Mat& di
 }
 
 template <typename Distance>
-int GenericIndex<Distance>::radiusSearch(const vector<ElementType>& query, vector<int>& indices, vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& searchParams)
+int GenericIndex<Distance>::radiusSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& searchParams)
 {
     ::cvflann::Matrix<ElementType> m_query((ElementType*)&query[0], 1, query.size());
     ::cvflann::Matrix<int> m_indices(&indices[0], 1, indices.size());
@@ -238,10 +238,10 @@ public:
 
     ~Index_();
 
-    void knnSearch(const vector<ElementType>& query, vector<int>& indices, vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& params);
+    void knnSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& params);
     void knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, const ::cvflann::SearchParams& params);
 
-    int radiusSearch(const vector<ElementType>& query, vector<int>& indices, vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& params);
+    int radiusSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& params);
     int radiusSearch(const Mat& query, Mat& indices, Mat& dists, DistanceType radius, const ::cvflann::SearchParams& params);
 
     void save(std::string filename)
@@ -320,7 +320,7 @@ Index_<T>::~Index_()
 }
 
 template <typename T>
-void Index_<T>::knnSearch(const vector<ElementType>& query, vector<int>& indices, vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& searchParams)
+void Index_<T>::knnSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& searchParams)
 {
     ::cvflann::Matrix<ElementType> m_query((ElementType*)&query[0], 1, query.size());
     ::cvflann::Matrix<int> m_indices(&indices[0], 1, indices.size());
@@ -351,7 +351,7 @@ void Index_<T>::knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn,
 }
 
 template <typename T>
-int Index_<T>::radiusSearch(const vector<ElementType>& query, vector<int>& indices, vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& searchParams)
+int Index_<T>::radiusSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& searchParams)
 {
     ::cvflann::Matrix<ElementType> m_query((ElementType*)&query[0], 1, query.size());
     ::cvflann::Matrix<int> m_indices(&indices[0], 1, indices.size());

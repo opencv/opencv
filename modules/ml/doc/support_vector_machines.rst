@@ -115,9 +115,13 @@ The constructors.
 
         * **CvSVM::SIGMOID** Sigmoid kernel: :math:`K(x_i, x_j) = \tanh(\gamma x_i^T x_j + coef0)`.
 
+        * **CvSVM::CHI2** Exponential Chi2 kernel, similar to the RBF kernel: :math:`K(x_i, x_j) = e^{-\gamma \chi^2(x_i,x_j)}, \chi^2(x_i,x_j) = (x_i-x_j)^2/(x_i+x_j), \gamma > 0`.
+
+        * **CvSVM::INTER** Histogram intersection kernel. A fast kernel. :math:`K(x_i, x_j) = min(x_i,x_j)`.
+
     :param degree: Parameter ``degree`` of a kernel function (POLY).
 
-    :param gamma: Parameter :math:`\gamma` of a kernel function (POLY / RBF / SIGMOID).
+    :param gamma: Parameter :math:`\gamma` of a kernel function (POLY / RBF / SIGMOID / CHI2).
 
     :param coef0: Parameter ``coef0`` of a kernel function (POLY / SIGMOID).
 
@@ -141,6 +145,10 @@ The default constructor initialize the structure with following values:
     {
         term_crit = cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 1000, FLT_EPSILON );
     }
+
+A comparison of different kernels on the following 2D test case with four classes. Four C_SVC SVMs have been trained (one against rest) with auto_train. Evaluation on three different kernels (CHI2, INTER, RBF). The color depicts the class with max score. Bright means max-score > 0, dark means max-score < 0.
+
+.. image:: pics/SVM_Comparison.png
 
 
 
@@ -231,6 +239,8 @@ Predicts the response for input sample(s).
 .. ocv:function:: float CvSVM::predict( const CvMat* samples, CvMat* results ) const
 
 .. ocv:pyfunction:: cv2.SVM.predict(sample[, returnDFVal]) -> retval
+
+.. ocv:pyfunction:: cv2.SVM.predict_all(samples[, results]) -> results
 
     :param sample: Input sample for prediction.
 

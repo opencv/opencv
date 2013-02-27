@@ -716,8 +716,8 @@ struct FindStereoCorrespInvoker
     void operator()( const BlockedRange& range ) const
     {
         int cols = left->cols, rows = left->rows;
-        int _row0 = min(cvRound(range.begin() * rows / nstripes), rows);
-        int _row1 = min(cvRound(range.end() * rows / nstripes), rows);
+        int _row0 = std::min(cvRound(range.begin() * rows / nstripes), rows);
+        int _row1 = std::min(cvRound(range.end() * rows / nstripes), rows);
         uchar *ptr = state->slidingSumBuf->data.ptr + range.begin() * stripeBufSize;
         int FILTERED = (state->minDisparity - 1)*16;
 
@@ -801,7 +801,7 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
         CV_Error( CV_StsOutOfRange, "preFilterCap must be within 1..63" );
 
     if( state->SADWindowSize < 5 || state->SADWindowSize > 255 || state->SADWindowSize % 2 == 0 ||
-        state->SADWindowSize >= min(left0.cols, left0.rows) )
+        state->SADWindowSize >= std::min(left0.cols, left0.rows) )
         CV_Error( CV_StsOutOfRange, "SADWindowSize must be odd, be within 5..255 and be not larger than image width or height" );
 
     if( state->numberOfDisparities <= 0 || state->numberOfDisparities % 16 != 0 )
@@ -831,8 +831,8 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
 
     int width = left0.cols;
     int height = left0.rows;
-    int lofs = max(ndisp - 1 + mindisp, 0);
-    int rofs = -min(ndisp - 1 + mindisp, 0);
+    int lofs = std::max(ndisp - 1 + mindisp, 0);
+    int rofs = -std::min(ndisp - 1 + mindisp, 0);
     int width1 = width - rofs - ndisp + 1;
     int FILTERED = (state->minDisparity - 1) << DISPARITY_SHIFT;
 
@@ -874,13 +874,13 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
 #ifdef HAVE_TBB
     const double SAD_overhead_coeff = 10.0;
     double N0 = 8000000 / (useShorts ? 1 : 4);  // approx tbb's min number instructions reasonable for one thread
-    double maxStripeSize = min(max(N0 / (width * ndisp), (wsz-1) * SAD_overhead_coeff), (double)height);
+    double maxStripeSize = std::min(std::max(N0 / (width * ndisp), (wsz-1) * SAD_overhead_coeff), (double)height);
     int nstripes = cvCeil(height / maxStripeSize);
 #else
     const int nstripes = 1;
 #endif
 
-    int bufSize = max(bufSize0 * nstripes, max(bufSize1 * 2, bufSize2));
+    int bufSize = std::max(bufSize0 * nstripes, std::max(bufSize1 * 2, bufSize2));
 
     if( !state->slidingSumBuf || state->slidingSumBuf->cols < bufSize )
     {

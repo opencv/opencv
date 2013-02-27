@@ -48,61 +48,7 @@
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
-#if !defined (HAVE_OPENCL)
-
-cv::ocl::SURF_OCL::SURF_OCL()
-{
-    throw_nogpu();
-}
-cv::ocl::SURF_OCL::SURF_OCL(double, int, int, bool, float, bool)
-{
-    throw_nogpu();
-}
-int cv::ocl::SURF_OCL::descriptorSize() const
-{
-    throw_nogpu();
-    return 0;
-}
-void cv::ocl::SURF_OCL::uploadKeypoints(const vector<KeyPoint> &, oclMat &)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::downloadKeypoints(const oclMat &, vector<KeyPoint> &)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::downloadDescriptors(const oclMat &, vector<float> &)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::operator()(const oclMat &, const oclMat &, oclMat &)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::operator()(const oclMat &, const oclMat &, oclMat &, oclMat &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::operator()(const oclMat &, const oclMat &, vector<KeyPoint> &)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::operator()(const oclMat &, const oclMat &, vector<KeyPoint> &, oclMat &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::operator()(const oclMat &, const oclMat &, vector<KeyPoint> &, vector<float> &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::releaseMemory()
-{
-    throw_nogpu();
-}
-
-#else /* !defined (HAVE_OPENCL) */
 namespace cv
 {
     namespace ocl
@@ -329,7 +275,7 @@ int cv::ocl::SURF_OCL::descriptorSize() const
     return extended ? 128 : 64;
 }
 
-void cv::ocl::SURF_OCL::uploadKeypoints(const vector<KeyPoint> &keypoints, oclMat &keypointsGPU)
+void cv::ocl::SURF_OCL::uploadKeypoints(const std::vector<KeyPoint> &keypoints, oclMat &keypointsGPU)
 {
     if (keypoints.empty())
         keypointsGPU.release();
@@ -361,7 +307,7 @@ void cv::ocl::SURF_OCL::uploadKeypoints(const vector<KeyPoint> &keypoints, oclMa
     }
 }
 
-void cv::ocl::SURF_OCL::downloadKeypoints(const oclMat &keypointsGPU, vector<KeyPoint> &keypoints)
+void cv::ocl::SURF_OCL::downloadKeypoints(const oclMat &keypointsGPU, std::vector<KeyPoint> &keypoints)
 {
     const int nFeatures = keypointsGPU.cols;
 
@@ -397,7 +343,7 @@ void cv::ocl::SURF_OCL::downloadKeypoints(const oclMat &keypointsGPU, vector<Key
     }
 }
 
-void cv::ocl::SURF_OCL::downloadDescriptors(const oclMat &descriptorsGPU, vector<float> &descriptors)
+void cv::ocl::SURF_OCL::downloadDescriptors(const oclMat &descriptorsGPU, std::vector<float> &descriptors)
 {
     if (descriptorsGPU.empty())
         descriptors.clear();
@@ -415,9 +361,9 @@ void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, oclMat
 {
     if (!img.empty())
     {
-        if (img.clCxt->impl->devName.find("Intel(R) HD Graphics") != string::npos)
+        if (img.clCxt->impl->devName.find("Intel(R) HD Graphics") != std::string::npos)
         {
-            cout << " Intel HD GPU device unsupported " << endl;
+            std::cout << " Intel HD GPU device unsupported " << std::endl;
             return;
         }
         SURF_OCL_Invoker surf(*this, img, mask);
@@ -431,9 +377,9 @@ void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, oclMat
 {
     if (!img.empty())
     {
-        if (img.clCxt->impl->devName.find("Intel(R) HD Graphics") != string::npos)
+        if (img.clCxt->impl->devName.find("Intel(R) HD Graphics") != std::string::npos)
         {
-            cout << " Intel HD GPU device unsupported " << endl;
+            std::cout << " Intel HD GPU device unsupported " << std::endl;
             return;
         }
         SURF_OCL_Invoker surf(*this, img, mask);
@@ -449,7 +395,7 @@ void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, oclMat
     }
 }
 
-void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, vector<KeyPoint> &keypoints)
+void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, std::vector<KeyPoint> &keypoints)
 {
     oclMat keypointsGPU;
 
@@ -458,7 +404,7 @@ void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, vector
     downloadKeypoints(keypointsGPU, keypoints);
 }
 
-void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, vector<KeyPoint> &keypoints,
+void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, std::vector<KeyPoint> &keypoints,
                                    oclMat &descriptors, bool useProvidedKeypoints)
 {
     oclMat keypointsGPU;
@@ -471,8 +417,8 @@ void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, vector
     downloadKeypoints(keypointsGPU, keypoints);
 }
 
-void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, vector<KeyPoint> &keypoints,
-                                   vector<float> &descriptors, bool useProvidedKeypoints)
+void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, std::vector<KeyPoint> &keypoints,
+                                   std::vector<float> &descriptors, bool useProvidedKeypoints)
 {
     oclMat descriptorsGPU;
 
@@ -575,19 +521,19 @@ void SURF_OCL_Invoker::icvCalcLayerDetAndTrace_gpu(oclMat &det, oclMat &trace, i
     const int max_samples_j = 1 + ((img_cols - min_size) >> octave);
 
     Context *clCxt = det.clCxt;
-    string kernelName = "icvCalcLayerDetAndTrace";
-    vector< pair<size_t, const void *> > args;
+    std::string kernelName = "icvCalcLayerDetAndTrace";
+    std::vector< std::pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&sumTex));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&det.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&trace.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&det.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&trace.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&nOctaveLayers));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&octave));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&c_layer_rows));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&sumTex));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&det.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trace.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&det.step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&trace.step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&nOctaveLayers));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&octave));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&c_layer_rows));
 
     size_t localThreads[3]  = {16, 16, 1};
     size_t globalThreads[3] =
@@ -605,28 +551,28 @@ void SURF_OCL_Invoker::icvFindMaximaInLayer_gpu(const oclMat &det, const oclMat 
     const int min_margin = ((calcSize(octave, 2) >> 1) >> octave) + 1;
 
     Context *clCxt = det.clCxt;
-    string kernelName = use_mask ? "icvFindMaximaInLayer_withmask" : "icvFindMaximaInLayer";
-    vector< pair<size_t, const void *> > args;
+    std::string kernelName = use_mask ? "icvFindMaximaInLayer_withmask" : "icvFindMaximaInLayer";
+    std::vector< std::pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&det.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&trace.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&maxPosBuffer.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&maxCounter.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&counterOffset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&det.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&trace.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&nLayers));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&octave));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&layer_rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&layer_cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&maxCandidates));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&surf_.hessianThreshold));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&det.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trace.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&maxPosBuffer.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&maxCounter.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&counterOffset));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&det.step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&trace.step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&nLayers));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&octave));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&layer_rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&layer_cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&maxCandidates));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&surf_.hessianThreshold));
 
     if(use_mask)
     {
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&maskSumTex));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&maskSumTex));
     }
 
     size_t localThreads[3]  = {16, 16, 1};
@@ -642,20 +588,20 @@ void SURF_OCL_Invoker::icvInterpolateKeypoint_gpu(const oclMat &det, const oclMa
         oclMat &keypoints, oclMat &counters, int octave, int layer_rows, int maxFeatures)
 {
     Context *clCxt = det.clCxt;
-    string kernelName = "icvInterpolateKeypoint";
-    vector< pair<size_t, const void *> > args;
+    std::string kernelName = "icvInterpolateKeypoint";
+    std::vector< std::pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&det.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&maxPosBuffer.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&keypoints.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&counters.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&det.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&keypoints.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&octave));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&layer_rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&maxFeatures));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&det.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&maxPosBuffer.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&keypoints.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&counters.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&det.step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&keypoints.step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&octave));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&layer_rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&maxFeatures));
 
     size_t localThreads[3]  = {3, 3, 3};
     size_t globalThreads[3] = {maxCounter *localThreads[0], localThreads[1], 1};
@@ -666,15 +612,15 @@ void SURF_OCL_Invoker::icvInterpolateKeypoint_gpu(const oclMat &det, const oclMa
 void SURF_OCL_Invoker::icvCalcOrientation_gpu(const oclMat &keypoints, int nFeatures)
 {
     Context *clCxt = counters.clCxt;
-    string kernelName = "icvCalcOrientation";
+    std::string kernelName = "icvCalcOrientation";
 
-    vector< pair<size_t, const void *> > args;
+    std::vector< std::pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&sumTex));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&keypoints.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&keypoints.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_cols));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&sumTex));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&keypoints.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&keypoints.step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_cols));
 
     size_t localThreads[3]  = {32, 4, 1};
     size_t globalThreads[3] = {nFeatures *localThreads[0], localThreads[1], 1};
@@ -686,8 +632,8 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
 {
     // compute unnormalized descriptors, then normalize them - odd indexing since grid must be 2D
     Context *clCxt = descriptors.clCxt;
-    string kernelName = "";
-    vector< pair<size_t, const void *> > args;
+    std::string kernelName = "";
+    std::vector< std::pair<size_t, const void *> > args;
     size_t localThreads[3]  = {1, 1, 1};
     size_t globalThreads[3] = {1, 1, 1};
 
@@ -702,11 +648,11 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
         globalThreads[1] = 16 * localThreads[1];
 
         args.clear();
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&imgTex));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&descriptors.data));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&keypoints.data));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&descriptors.step));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&keypoints.step));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&imgTex));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&descriptors.data));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&keypoints.data));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&descriptors.step));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&keypoints.step));
         openCLExecuteKernel(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
 
         kernelName = "normalize_descriptors64";
@@ -718,8 +664,8 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
         globalThreads[1] = localThreads[1];
 
         args.clear();
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&descriptors.data));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&descriptors.step));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&descriptors.data));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&descriptors.step));
         openCLExecuteKernel(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
     }
     else
@@ -733,11 +679,11 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
         globalThreads[1] = 16 * localThreads[1];
 
         args.clear();
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&imgTex));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&descriptors.data));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&keypoints.data));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&descriptors.step));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&keypoints.step));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&imgTex));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&descriptors.data));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&keypoints.data));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&descriptors.step));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&keypoints.step));
         openCLExecuteKernel(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
 
         kernelName = "normalize_descriptors128";
@@ -749,11 +695,9 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
         globalThreads[1] = localThreads[1];
 
         args.clear();
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&descriptors.data));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&descriptors.step));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&descriptors.data));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&descriptors.step));
         openCLExecuteKernel(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
     }
 }
-
-#endif // /* !defined (HAVE_OPENCL) */
 

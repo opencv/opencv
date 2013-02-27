@@ -43,6 +43,9 @@
 
 #include <limits>
 
+using namespace std;
+using namespace cv;
+
 #if 0
 class CV_ProjectPointsTest : public cvtest::ArrayTest
 {
@@ -240,8 +243,6 @@ void CV_ProjectPointsTest::prepare_to_validation( int /*test_case_idx*/ )
 CV_ProjectPointsTest ProjectPoints_test;
 
 #endif
-
-using namespace cv;
 
 // --------------------------------- CV_CameraCalibrationTest --------------------------------------------
 

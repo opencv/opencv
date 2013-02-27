@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 
+using namespace std;
 using namespace cv;
 
 int maskSize0 = CV_DIST_MASK_5;

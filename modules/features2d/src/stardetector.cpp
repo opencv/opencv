@@ -334,7 +334,7 @@ static bool StarDetectorSuppressLines( const Mat& responses, const Mat& sizes, P
 
 static void
 StarDetectorSuppressNonmax( const Mat& responses, const Mat& sizes,
-                            vector<KeyPoint>& keypoints, int border,
+                            std::vector<KeyPoint>& keypoints, int border,
                             int responseThreshold,
                             int lineThresholdProjected,
                             int lineThresholdBinarized,
@@ -426,7 +426,7 @@ StarDetector::StarDetector(int _maxSize, int _responseThreshold,
 {}
 
 
-void StarDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+void StarDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
@@ -435,7 +435,7 @@ void StarDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, co
     KeyPointsFilter::runByPixelsMask( keypoints, mask );
 }
 
-void StarDetector::operator()(const Mat& img, vector<KeyPoint>& keypoints) const
+void StarDetector::operator()(const Mat& img, std::vector<KeyPoint>& keypoints) const
 {
     Mat responses, sizes;
     int border = StarDetectorComputeResponses( img, responses, sizes, maxSize );

@@ -51,14 +51,20 @@ class ICFBuilder : public ChannelFeatureBuilder
     virtual ~ICFBuilder() {}
     virtual cv::AlgorithmInfo* info() const;
 
-    virtual void operator()(cv::InputArray _frame, CV_OUT cv::OutputArray _integrals) const
+    virtual void operator()(cv::InputArray _frame, CV_OUT cv::OutputArray _integrals, cv::Size channelsSize) const
     {
         CV_Assert(_frame.type() == CV_8UC3);
 
         cv::Mat frame      = _frame.getMat();
         int h = frame.rows;
         int w = frame.cols;
-        _integrals.create(h / 4 * 10 + 1, w / 4 + 1, CV_32SC1);
+
+        if (channelsSize != cv::Size())
+            _integrals.create(channelsSize.height * 10 + 1, channelsSize.width + 1, CV_32SC1);
+
+        if(_integrals.empty())
+            _integrals.create(frame.rows * 10 + 1, frame.cols + 1, CV_32SC1);
+
         cv::Mat& integrals = _integrals.getMatRef();
 
         cv::Mat channels, gray;
@@ -98,12 +104,7 @@ class ICFBuilder : public ChannelFeatureBuilder
         for (int i = 0; i < 3; ++i)
             splited.push_back(channels(cv::Rect(0, h * (7 + i), w, h)));
         split(luv, splited);
-
-        float shrinkage = static_cast<float>(integrals.cols - 1) / channels.cols;
-
-        CV_Assert(shrinkage == 0.25);
-
-        cv::resize(channels, shrunk, cv::Size(), shrinkage, shrinkage, CV_INTER_AREA);
+        cv::resize(channels, shrunk, cv::Size(integrals.cols - 1, integrals.rows - 1), -1 , -1, CV_INTER_AREA);
         cv::integral(shrunk, integrals, cv::noArray(), CV_32S);
     }
 };
@@ -154,7 +155,7 @@ float ChannelFeature::operator() (const cv::Mat& integrals, const cv::Size& mode
     return (float)(a - b + c - d);
 }
 
-void cv::softcascade::write(cv::FileStorage& fs, const string&, const ChannelFeature& f)
+void cv::softcascade::write(cv::FileStorage& fs, const std::string&, const ChannelFeature& f)
 {
     fs << "{" << "channel" << f.channel << "rect" << f.bb << "}";
 }
@@ -217,7 +218,7 @@ void ChannelFeaturePool::fill(int desired)
     int nfeatures = std::min(desired, maxPoolSize);
     pool.reserve(nfeatures);
 
-    Random::engine eng(FEATURE_RECT_SEED);
+    Random::engine eng((Random::seed_type)FEATURE_RECT_SEED);
     Random::engine eng_ch(DCHANNELS_SEED);
 
     Random::uniform chRand(0, N_CHANNELS - 1);
@@ -233,8 +234,22 @@ void ChannelFeaturePool::fill(int desired)
         int x = xRand(eng);
         int y = yRand(eng);
 
+#if __cplusplus >= 201103L
+        // The interface changed slightly going from uniform_int to
+        // uniform_int_distribution. See this page to understand
+        // the old behavior:
+        // http://www.boost.org/doc/libs/1_47_0/boost/random/uniform_int.hpp
+        int w = 1 + wRand(
+	  eng,
+          // This extra "- 1" appears to be necessary, based on the Boost docs.
+	  Random::uniform::param_type(0, (model.width  - x - 1) - 1));
+        int h = 1 + hRand(
+	  eng,
+	  Random::uniform::param_type(0, (model.height  - y - 1) - 1));
+#else
         int w = 1 + wRand(eng, model.width  - x - 1);
         int h = 1 + hRand(eng, model.height - y - 1);
+#endif
 
         CV_Assert(w > 0);
         CV_Assert(h > 0);

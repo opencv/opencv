@@ -49,17 +49,9 @@
 #include <set>
 
 using namespace cv;
-using namespace std;
 
 /********************************* local utility *********************************/
 
-namespace cv
-{
-    using std::log;
-    using std::max;
-    using std::min;
-    using std::sqrt;
-}
 namespace
 {
     const static Scalar colors[] =
@@ -85,13 +77,20 @@ namespace
     };
     size_t colors_mum = sizeof(colors)/sizeof(colors[0]);
 
-#if (defined __cplusplus  && __cplusplus > 199711L) || defined _STLPORT_MAJOR
-#else
-template<class FwIt, class T> void iota(FwIt first, FwIt last, T value) { while(first != last) *first++ = value++; }
-#endif
+namespace {
 
-void computeNormals( const Octree& Octree, const vector<Point3f>& centers, vector<Point3f>& normals,
-                    vector<uchar>& mask, float normalRadius, int minNeighbors = 20)
+template<class FwIt, class T> inline void _iota(FwIt first, FwIt last, T value)
+{
+#if (defined __cplusplus  && __cplusplus > 199711L) || defined _STLPORT_MAJOR
+    std::iota(first, last, value);
+#else
+    while(first != last) *first++ = value++;
+#endif
+}
+}
+
+void computeNormals( const Octree& Octree, const std::vector<Point3f>& centers, std::vector<Point3f>& normals,
+                    std::vector<uchar>& mask, float normalRadius, int minNeighbors = 20)
 {
     size_t normals_size = centers.size();
     normals.resize(normals_size);
@@ -105,7 +104,7 @@ void computeNormals( const Octree& Octree, const vector<Point3f>& centers, vecto
                 mask[m] = 1;
     }
 
-    vector<Point3f> buffer;
+    std::vector<Point3f> buffer;
     buffer.reserve(128);
     SVD svd;
 
@@ -223,8 +222,8 @@ inline __m128i _mm_mullo_epi32_emul(const __m128i& a, __m128i& b)
 
 #endif
 
-void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, const vector<Point3f>& normals,
-                       vector<uchar>& mask, Mat& spinImages, int imageWidth, float binSize)
+void computeSpinImages( const Octree& Octree, const std::vector<Point3f>& points, const std::vector<Point3f>& normals,
+                       std::vector<uchar>& mask, Mat& spinImages, int imageWidth, float binSize)
 {
     float pixelsPerMeter = 1.f / binSize;
     float support = imageWidth * binSize;
@@ -243,12 +242,12 @@ void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, con
     int nthreads = getNumThreads();
     int i;
 
-    vector< vector<Point3f> > pointsInSpherePool(nthreads);
+    std::vector< std::vector<Point3f> > pointsInSpherePool(nthreads);
     for(i = 0; i < nthreads; i++)
         pointsInSpherePool[i].reserve(2048);
 
     float halfSuppport = support / 2;
-    float searchRad = support * sqrt(5.f) / 2;  //  sqrt(sup*sup + (sup/2) * (sup/2) )
+    float searchRad = support * std::sqrt(5.f) / 2;  //  std::sqrt(sup*sup + (sup/2) * (sup/2) )
 
 #ifdef _OPENMP
     #pragma omp parallel for num_threads(nthreads)
@@ -259,7 +258,7 @@ void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, con
             continue;
 
         int t = cvGetThreadNum();
-        vector<Point3f>& pointsInSphere = pointsInSpherePool[t];
+        std::vector<Point3f>& pointsInSphere = pointsInSpherePool[t];
 
         const Point3f& center = points[i];
         Octree.getPointsWithinSphere(center, searchRad, pointsInSphere);
@@ -398,7 +397,7 @@ void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, con
             if (beta >= support || beta < 0)
                 continue;
 
-            alpha = sqrt( (new_center.x - pt.x) * (new_center.x - pt.x) +
+            alpha = std::sqrt( (new_center.x - pt.x) * (new_center.x - pt.x) +
                           (new_center.y - pt.y) * (new_center.y - pt.y) );
 
             float n1f = beta  * pixelsPerMeter;
@@ -432,7 +431,7 @@ void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, con
 const Point3f cv::Mesh3D::allzero(0.f, 0.f, 0.f);
 
 cv::Mesh3D::Mesh3D() { resolution = -1; }
-cv::Mesh3D::Mesh3D(const vector<Point3f>& _vtx)
+cv::Mesh3D::Mesh3D(const std::vector<Point3f>& _vtx)
 {
     resolution = -1;
     vtx.resize(_vtx.size());
@@ -450,14 +449,14 @@ float cv::Mesh3D::estimateResolution(float /*tryRatio*/)
     const int minReasonable = 10;
 
     int tryNum = static_cast<int>(tryRatio * vtx.size());
-    tryNum = min(max(tryNum, minReasonable), (int)vtx.size());
+    tryNum = std::min(std::max(tryNum, minReasonable), (int)vtx.size());
 
     CvMat desc = cvMat((int)vtx.size(), 3, CV_32F, &vtx[0]);
     CvFeatureTree* tr = cvCreateKDTree(&desc);
 
-    vector<double> dist(tryNum * neighbors);
-    vector<int>    inds(tryNum * neighbors);
-    vector<Point3f> query;
+    std::vector<double> dist(tryNum * neighbors);
+    std::vector<int>    inds(tryNum * neighbors);
+    std::vector<Point3f> query;
 
     RNG& rng = theRNG();
     for(int i = 0; i < tryNum; ++i)
@@ -476,7 +475,7 @@ float cv::Mesh3D::estimateResolution(float /*tryRatio*/)
 
     dist.resize(remove(dist.begin(), dist.end(), invalid_dist) - dist.begin());
 
-    sort(dist, less<double>());
+    sort(dist, std::less<double>());
 
     return resolution = (float)dist[ dist.size() / 2 ];
 #else
@@ -489,49 +488,49 @@ float cv::Mesh3D::estimateResolution(float /*tryRatio*/)
 void cv::Mesh3D::computeNormals(float normalRadius, int minNeighbors)
 {
     buildOctree();
-    vector<uchar> mask;
+    std::vector<uchar> mask;
     ::computeNormals(octree, vtx, normals, mask, normalRadius, minNeighbors);
 }
 
-void cv::Mesh3D::computeNormals(const vector<int>& subset, float normalRadius, int minNeighbors)
+void cv::Mesh3D::computeNormals(const std::vector<int>& subset, float normalRadius, int minNeighbors)
 {
     buildOctree();
-    vector<uchar> mask(vtx.size(), 0);
+    std::vector<uchar> mask(vtx.size(), 0);
     for(size_t i = 0; i < subset.size(); ++i)
         mask[subset[i]] = 1;
     ::computeNormals(octree, vtx, normals, mask, normalRadius, minNeighbors);
 }
 
-void cv::Mesh3D::writeAsVrml(const String& file, const vector<Scalar>& _colors) const
+void cv::Mesh3D::writeAsVrml(const std::string& file, const std::vector<Scalar>& _colors) const
 {
-    ofstream ofs(file.c_str());
+    std::ofstream ofs(file.c_str());
 
-    ofs << "#VRML V2.0 utf8" << endl;
-    ofs << "Shape" << std::endl << "{" << endl;
-    ofs << "geometry PointSet" << endl << "{" << endl;
-    ofs << "coord Coordinate" << endl << "{" << endl;
-    ofs << "point[" << endl;
+    ofs << "#VRML V2.0 utf8" << std::endl;
+    ofs << "Shape" << std::endl << "{" << std::endl;
+    ofs << "geometry PointSet" << std::endl << "{" << std::endl;
+    ofs << "coord Coordinate" << std::endl << "{" << std::endl;
+    ofs << "point[" << std::endl;
 
     for(size_t i = 0; i < vtx.size(); ++i)
-        ofs << vtx[i].x << " " << vtx[i].y << " " << vtx[i].z << endl;
+        ofs << vtx[i].x << " " << vtx[i].y << " " << vtx[i].z << std::endl;
 
-    ofs << "]" << endl; //point[
-    ofs << "}" << endl; //Coordinate{
+    ofs << "]" << std::endl; //point[
+    ofs << "}" << std::endl; //Coordinate{
 
     if (vtx.size() == _colors.size())
     {
-        ofs << "color Color" << endl << "{" << endl;
-        ofs << "color[" << endl;
+        ofs << "color Color" << std::endl << "{" << std::endl;
+        ofs << "color[" << std::endl;
 
         for(size_t i = 0; i < _colors.size(); ++i)
-            ofs << (float)_colors[i][2] << " " << (float)_colors[i][1] << " " << (float)_colors[i][0] << endl;
+            ofs << (float)_colors[i][2] << " " << (float)_colors[i][1] << " " << (float)_colors[i][0] << std::endl;
 
-        ofs << "]" << endl; //color[
-        ofs << "}" << endl; //color Color{
+        ofs << "]" << std::endl; //color[
+        ofs << "}" << std::endl; //color Color{
     }
 
-    ofs << "}" << endl; //PointSet{
-    ofs << "}" << endl; //Shape{
+    ofs << "}" << std::endl; //PointSet{
+    ofs << "}" << std::endl; //Shape{
 }
 
 
@@ -624,7 +623,7 @@ bool cv::SpinImageModel::spinCorrelation(const Mat& spin1, const Mat& spin2, flo
     if (Nsum11 == sum1sum1 || Nsum22 == sum2sum2)
         return false;
 
-    double corr = (Nsum12 - sum1 * sum2) / sqrt( (Nsum11 - sum1sum1) * (Nsum22 - sum2sum2) );
+    double corr = (Nsum12 - sum1 * sum2) / std::sqrt( (Nsum11 - sum1sum1) * (Nsum22 - sum2sum2) );
     double atanh = Math::atanh(corr);
     result = (float)( atanh * atanh - lambda * ( 1.0 / (N - 3) ) );
     return true;
@@ -636,13 +635,13 @@ inline Point2f cv::SpinImageModel::calcSpinMapCoo(const Point3f& p, const Point3
     float normalNorm = (float)norm(n);
     float beta = PmV.dot(n) / normalNorm;
     float pmcNorm = (float)norm(PmV);
-    float alpha = sqrt( pmcNorm * pmcNorm - beta * beta);
+    float alpha = std::sqrt( pmcNorm * pmcNorm - beta * beta);
     return Point2f(alpha, beta);*/
 
     float pmv_x = p.x - v.x, pmv_y = p.y - v.y, pmv_z = p.z - v.z;
 
-    float beta = (pmv_x * n.x + pmv_y + n.y + pmv_z * n.z) / sqrt(n.x * n.x + n.y * n.y + n.z * n.z);
-    float alpha = sqrt( pmv_x * pmv_x + pmv_y * pmv_y + pmv_z * pmv_z - beta * beta);
+    float beta = (pmv_x * n.x + pmv_y + n.y + pmv_z * n.z) / std::sqrt(n.x * n.x + n.y * n.y + n.z * n.z);
+    float alpha = std::sqrt( pmv_x * pmv_x + pmv_y * pmv_y + pmv_z * pmv_z - beta * beta);
     return Point2f(alpha, beta);
 }
 
@@ -664,7 +663,7 @@ inline float cv::SpinImageModel::geometricConsistency(const Point3f& pointScene1
 
     double gc12 = 2 * norm(Sm1_to_m2 - Ss1_to_s2) / (n_Sm1_to_m2 + n_Ss1_to_s2 ) ;
 
-    return (float)max(gc12, gc21);
+    return (float)std::max(gc12, gc21);
 }
 
 inline float cv::SpinImageModel::groupingCreteria(const Point3f& pointScene1, const Point3f& normalScene1,
@@ -682,15 +681,15 @@ inline float cv::SpinImageModel::groupingCreteria(const Point3f& pointScene1, co
     double n_Ss2_to_s1 = norm(Ss2_to_s1 = calcSpinMapCoo(pointScene2, pointScene1, normalScene1));
 
     double gc21 = 2 * norm(Sm2_to_m1 - Ss2_to_s1) / (n_Sm2_to_m1 + n_Ss2_to_s1 );
-    double wgc21 = gc21 / (1 - exp( -(n_Sm2_to_m1 + n_Ss2_to_s1) * gamma05_inv ) );
+    double wgc21 = gc21 / (1 - std::exp( -(n_Sm2_to_m1 + n_Ss2_to_s1) * gamma05_inv ) );
 
     double n_Sm1_to_m2 = norm(Sm1_to_m2 = calcSpinMapCoo(pointModel1, pointModel2, normalModel2));
     double n_Ss1_to_s2 = norm(Ss1_to_s2 = calcSpinMapCoo(pointScene1, pointScene2, normalScene2));
 
     double gc12 = 2 * norm(Sm1_to_m2 - Ss1_to_s2) / (n_Sm1_to_m2 + n_Ss1_to_s2 );
-    double wgc12 = gc12 / (1 - exp( -(n_Sm1_to_m2 + n_Ss1_to_s2) * gamma05_inv ) );
+    double wgc12 = gc12 / (1 - std::exp( -(n_Sm1_to_m2 + n_Ss1_to_s2) * gamma05_inv ) );
 
-    return (float)max(wgc12, wgc21);
+    return (float)std::max(wgc12, wgc21);
 }
 
 
@@ -703,7 +702,7 @@ cv::SpinImageModel::SpinImageModel(const Mesh3D& _mesh) : mesh(_mesh) , out(0)
 cv::SpinImageModel::SpinImageModel() : out(0) { defaultParams(); }
 cv::SpinImageModel::~SpinImageModel() {}
 
-void cv::SpinImageModel::setLogger(ostream* log) { out = log; }
+void cv::SpinImageModel::setLogger(std::ostream* log) { out = log; }
 
 void cv::SpinImageModel::defaultParams()
 {
@@ -723,14 +722,14 @@ void cv::SpinImageModel::defaultParams()
 Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount, size_t yCount) const
 {
     int spinNum = (int)getSpinCount();
-    int num = min(spinNum, (int)(xCount * yCount));
+    int num = std::min(spinNum, (int)(xCount * yCount));
 
     if (num == 0)
         return Mat();
 
     RNG& rng = theRNG();
 
-    vector<Mat> spins;
+    std::vector<Mat> spins;
     for(int i = 0; i < num; ++i)
         spins.push_back(getSpinImage( rng.next() % spinNum ).reshape(1, imageWidth));
 
@@ -750,7 +749,7 @@ Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount,
         {
             double m;
             minMaxLoc(spins[i], 0, &m);
-            totalMax = max(m, totalMax);
+            totalMax = std::max(m, totalMax);
         }
 
         for(int i = 0; i < num; ++i)
@@ -787,7 +786,7 @@ Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount,
 
 void cv::SpinImageModel::selectRandomSubset(float ratio)
 {
-    ratio = min(max(ratio, 0.f), 1.f);
+    ratio = std::min(std::max(ratio, 0.f), 1.f);
 
     size_t vtxSize = mesh.vtx.size();
     size_t setSize  = static_cast<size_t>(vtxSize * ratio);
@@ -799,14 +798,14 @@ void cv::SpinImageModel::selectRandomSubset(float ratio)
     else if (setSize == vtxSize)
     {
         subset.resize(vtxSize);
-        iota(subset.begin(), subset.end(), 0);
+        _iota(subset.begin(), subset.end(), 0);
     }
     else
     {
         RNG& rnd = theRNG();
 
-        vector<size_t> left(vtxSize);
-        iota(left.begin(), left.end(), (size_t)0);
+        std::vector<size_t> left(vtxSize);
+        _iota(left.begin(), left.end(), (size_t)0);
 
         subset.resize(setSize);
         for(size_t i = 0; i < setSize; ++i)
@@ -817,20 +816,20 @@ void cv::SpinImageModel::selectRandomSubset(float ratio)
             left[pos] = left.back();
             left.resize(left.size() - 1);
         }
-        sort(subset, less<int>());
+        sort(subset, std::less<int>());
     }
 }
 
-void cv::SpinImageModel::setSubset(const vector<int>& ss)
+void cv::SpinImageModel::setSubset(const std::vector<int>& ss)
 {
     subset = ss;
 }
 
-void cv::SpinImageModel::repackSpinImages(const vector<uchar>& mask, Mat& _spinImages, bool reAlloc) const
+void cv::SpinImageModel::repackSpinImages(const std::vector<uchar>& mask, Mat& _spinImages, bool reAlloc) const
 {
     if (reAlloc)
     {
-        size_t spinCount = mask.size() - count(mask.begin(), mask.end(), (uchar)0);
+        size_t spinCount = mask.size() - std::count(mask.begin(), mask.end(), (uchar)0);
         Mat newImgs((int)spinCount, _spinImages.cols, _spinImages.type());
 
         int pos = 0;
@@ -846,7 +845,7 @@ void cv::SpinImageModel::repackSpinImages(const vector<uchar>& mask, Mat& _spinI
     {
         int last = (int)mask.size();
 
-        int dest = (int)(find(mask.begin(), mask.end(), (uchar)0) - mask.begin());
+        int dest = (int)(std::find(mask.begin(), mask.end(), (uchar)0) - mask.begin());
         if (dest == last)
             return;
 
@@ -879,21 +878,21 @@ void cv::SpinImageModel::compute()
     {
         mesh.computeNormals(normalRadius, minNeighbors);
         subset.resize(mesh.vtx.size());
-        iota(subset.begin(), subset.end(), 0);
+        _iota(subset.begin(), subset.end(), 0);
     }
     else
         mesh.computeNormals(subset, normalRadius, minNeighbors);
 
-    vector<uchar> mask(mesh.vtx.size(), 0);
+    std::vector<uchar> mask(mesh.vtx.size(), 0);
     for(size_t i = 0; i < subset.size(); ++i)
         if (mesh.normals[subset[i]] == Mesh3D::allzero)
             subset[i] = -1;
         else
             mask[subset[i]] = 1;
-    subset.resize( remove(subset.begin(), subset.end(), -1) - subset.begin() );
+    subset.resize( std::remove(subset.begin(), subset.end(), -1) - subset.begin() );
 
-    vector<Point3f> vtx;
-    vector<Point3f> normals;
+    std::vector<Point3f> vtx;
+    std::vector<Point3f> normals;
     for(size_t i = 0; i < mask.size(); ++i)
         if(mask[i])
         {
@@ -901,7 +900,7 @@ void cv::SpinImageModel::compute()
             normals.push_back(mesh.normals[i]);
         }
 
-    vector<uchar> spinMask(vtx.size(), 1);
+    std::vector<uchar> spinMask(vtx.size(), 1);
     computeSpinImages( mesh.octree, vtx, normals, spinMask, spinImages, imageWidth, binSize);
     repackSpinImages(spinMask, spinImages);
 
@@ -909,19 +908,19 @@ void cv::SpinImageModel::compute()
     for(size_t i = 0; i < mask.size(); ++i)
         if(mask[i])
             if (spinMask[mask_pos++] == 0)
-                subset.resize( remove(subset.begin(), subset.end(), (int)i) - subset.begin() );
+                subset.resize( std::remove(subset.begin(), subset.end(), (int)i) - subset.begin() );
 }
 
-void cv::SpinImageModel::matchSpinToModel(const Mat& spin, vector<int>& indeces, vector<float>& corrCoeffs, bool useExtremeOutliers) const
+void cv::SpinImageModel::matchSpinToModel(const Mat& spin, std::vector<int>& indeces, std::vector<float>& corrCoeffs, bool useExtremeOutliers) const
 {
     const SpinImageModel& model = *this;
 
     indeces.clear();
     corrCoeffs.clear();
 
-    vector<float> corrs(model.spinImages.rows);
-    vector<uchar>  masks(model.spinImages.rows);
-    vector<float> cleanCorrs;
+    std::vector<float> corrs(model.spinImages.rows);
+    std::vector<uchar>  masks(model.spinImages.rows);
+    std::vector<float> cleanCorrs;
     cleanCorrs.reserve(model.spinImages.rows);
 
     for(int i = 0; i < model.spinImages.rows; ++i)
@@ -936,7 +935,7 @@ void cv::SpinImageModel::matchSpinToModel(const Mat& spin, vector<int>& indeces,
     if(total < 5)
         return;
 
-    sort(cleanCorrs, less<float>());
+    sort(cleanCorrs, std::less<float>());
 
     float lower_fourth = cleanCorrs[(1 * total) / 4 - 1];
     float upper_fourth = cleanCorrs[(3 * total) / 4 - 0];
@@ -971,7 +970,7 @@ struct Match
     operator float() const { return measure; }
 };
 
-typedef set<size_t> group_t;
+typedef std::set<size_t> group_t;
 typedef group_t::iterator iter;
 typedef group_t::const_iterator citer;
 
@@ -986,10 +985,10 @@ struct WgcHelper
     float Wgc(const size_t corespInd, const group_t& group) const
     {
         const float* wgcLine = mat.ptr<float>((int)corespInd);
-        float maximum = numeric_limits<float>::min();
+        float maximum = std::numeric_limits<float>::min();
 
         for(citer pos = group.begin(); pos != group.end(); ++pos)
-            maximum = max(wgcLine[*pos], maximum);
+            maximum = std::max(wgcLine[*pos], maximum);
 
         return maximum;
     }
@@ -999,7 +998,7 @@ private:
 
 }
 
- void cv::SpinImageModel::match(const SpinImageModel& scene, vector< vector<Vec2i> >& result)
+ void cv::SpinImageModel::match(const SpinImageModel& scene, std::vector< std::vector<Vec2i> >& result)
 {
     if (mesh.vtx.empty())
         throw Mesh3D::EmptyMeshException();
@@ -1007,8 +1006,8 @@ private:
     result.clear();
 
     SpinImageModel& model = *this;
-    const float infinity = numeric_limits<float>::infinity();
-    const float float_max = numeric_limits<float>::max();
+    const float infinity = std::numeric_limits<float>::infinity();
+    const float float_max = std::numeric_limits<float>::max();
 
     /* estimate gamma */
     if (model.gamma == 0.f)
@@ -1021,40 +1020,40 @@ private:
     /* estimate lambda */
     if (model.lambda == 0.f)
     {
-        vector<int> nonzero(model.spinImages.rows);
+        std::vector<int> nonzero(model.spinImages.rows);
         for(int i = 0; i < model.spinImages.rows; ++i)
             nonzero[i] = countNonZero(model.spinImages.row(i));
-        sort(nonzero, less<int>());
+        sort(nonzero, std::less<int>());
         model.lambda = static_cast<float>( nonzero[ nonzero.size()/2 ] ) / 2;
     }
 
     TickMeter corr_timer;
     corr_timer.start();
-    vector<Match> allMatches;
+    std::vector<Match> allMatches;
     for(int i = 0; i < scene.spinImages.rows; ++i)
     {
-        vector<int> indeces;
-        vector<float> coeffs;
+        std::vector<int> indeces;
+        std::vector<float> coeffs;
         matchSpinToModel(scene.spinImages.row(i), indeces, coeffs);
         for(size_t t = 0; t < indeces.size(); ++t)
             allMatches.push_back(Match(i, indeces[t], coeffs[t]));
 
-        if (out) if (i % 100 == 0) *out << "Comparing scene spinimage " << i << " of " << scene.spinImages.rows << endl;
+        if (out) if (i % 100 == 0) *out << "Comparing scene spinimage " << i << " of " << scene.spinImages.rows << std::endl;
     }
     corr_timer.stop();
-    if (out) *out << "Spin correlation time  = " << corr_timer << endl;
-    if (out) *out << "Matches number = " << allMatches.size() << endl;
+    if (out) *out << "Spin correlation time  = " << corr_timer << std::endl;
+    if (out) *out << "Matches number = " << allMatches.size() << std::endl;
 
     if(allMatches.empty())
         return;
 
     /* filtering by similarity measure */
     const float fraction = 0.5f;
-    float maxMeasure = max_element(allMatches.begin(), allMatches.end(), less<float>())->measure;
+    float maxMeasure = max_element(allMatches.begin(), allMatches.end(), std::less<float>())->measure;
     allMatches.erase(
-        remove_if(allMatches.begin(), allMatches.end(), bind2nd(less<float>(), maxMeasure * fraction)),
+        remove_if(allMatches.begin(), allMatches.end(), bind2nd(std::less<float>(), maxMeasure * fraction)),
         allMatches.end());
-    if (out) *out << "Matches number [filtered by similarity measure] = " << allMatches.size() << endl;
+    if (out) *out << "Matches number [filtered by similarity measure] = " << allMatches.size() << std::endl;
 
     int matchesSize = (int)allMatches.size();
     if(matchesSize == 0)
@@ -1101,16 +1100,16 @@ private:
             allMatches[i].measure = infinity;
     }
     allMatches.erase(
-      remove_if(allMatches.begin(), allMatches.end(), bind2nd(equal_to<float>(), infinity)),
+      std::remove_if(allMatches.begin(), allMatches.end(), std::bind2nd(std::equal_to<float>(), infinity)),
       allMatches.end());
-    if (out) *out << "Matches number [filtered by geometric consistency] = " << allMatches.size() << endl;
+    if (out) *out << "Matches number [filtered by geometric consistency] = " << allMatches.size() << std::endl;
 
 
     matchesSize = (int)allMatches.size();
     if(matchesSize == 0)
         return;
 
-    if (out) *out << "grouping ..." << endl;
+    if (out) *out << "grouping ..." << std::endl;
 
     Mat groupingMat((int)matchesSize, (int)matchesSize, CV_32F);
     groupingMat = Scalar(0);
@@ -1153,13 +1152,13 @@ private:
     for(int i = 0; i < matchesSize; ++i)
         allMatchesInds.insert(i);
 
-    vector<float> buf(matchesSize);
+    std::vector<float> buf(matchesSize);
     float *buf_beg = &buf[0];
-    vector<group_t> groups;
+    std::vector<group_t> groups;
 
     for(int g = 0; g < matchesSize; ++g)
     {
-        if (out) if (g % 100 == 0) *out << "G = " << g << endl;
+        if (out) if (g % 100 == 0) *out << "G = " << g << std::endl;
 
         group_t left = allMatchesInds;
         group_t group;
@@ -1174,7 +1173,7 @@ private:
                 break;
 
             std::transform(left.begin(), left.end(), buf_beg,  WgcHelper(group, groupingMat));
-            size_t minInd = min_element(buf_beg, buf_beg + left_size) - buf_beg;
+            size_t minInd = std::min_element(buf_beg, buf_beg + left_size) - buf_beg;
 
             if (buf[minInd] < model.T_GroupingCorespondances) /* can add corespondance to group */
             {
@@ -1197,7 +1196,7 @@ private:
     {
         const group_t& group = groups[i];
 
-        vector< Vec2i > outgrp;
+        std::vector< Vec2i > outgrp;
         for(citer pos = group.begin(); pos != group.end(); ++pos)
         {
             const Match& m = allMatches[*pos];

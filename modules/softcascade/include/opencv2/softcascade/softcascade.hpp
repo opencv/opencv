@@ -126,7 +126,7 @@ public:
     virtual ~ChannelFeatureBuilder();
 
     // apply channels to source frame
-    CV_WRAP_AS(compute) virtual void operator()(InputArray src, CV_OUT OutputArray channels) const = 0;
+    CV_WRAP_AS(compute) virtual void operator()(InputArray src, CV_OUT OutputArray channels, cv::Size channelsSize = cv::Size()) const = 0;
 
     CV_WRAP static cv::Ptr<ChannelFeatureBuilder> create();
 };
@@ -204,7 +204,7 @@ public:
     virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth) = 0;
     virtual void setRejectThresholds(OutputArray thresholds) = 0;
     virtual void write( cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const = 0;
-    virtual void write( CvFileStorage* fs, string name) const = 0;
+    virtual void write( CvFileStorage* fs, std::string name) const = 0;
 };
 
 CV_EXPORTS bool initModule_softcascade(void);

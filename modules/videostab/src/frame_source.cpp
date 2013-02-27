@@ -49,8 +49,6 @@
 #  include "opencv2/highgui/highgui.hpp"
 #endif
 
-using namespace std;
-
 namespace cv
 {
 namespace videostab
@@ -70,7 +68,7 @@ public:
         vc.release();
         vc.open(path_);
         if (!vc.isOpened())
-            throw runtime_error("can't open file: " + path_);
+            throw std::runtime_error("can't open file: " + path_);
 #else
         CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without video I/O support");
 #endif
@@ -107,7 +105,7 @@ private:
 
 }//namespace
 
-VideoFileSource::VideoFileSource(const string &path, bool volatileFrame)
+VideoFileSource::VideoFileSource(const std::string &path, bool volatileFrame)
     : impl(new VideoFileSourceImpl(path, volatileFrame)) {}
 
 void VideoFileSource::reset() { impl->reset(); }

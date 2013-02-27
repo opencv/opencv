@@ -52,6 +52,7 @@
 #include "tbb/task_scheduler_init.h"
 #endif
 
+using namespace std;
 using namespace cv;
 
 const int num_detections = 3;

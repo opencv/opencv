@@ -854,7 +854,7 @@ cvRunHaarClassifierCascadeSum( const CvHaarClassifierCascade* _cascade,
                            cascade->pq2[pq_offset] + cascade->pq3[pq_offset];
     variance_norm_factor = variance_norm_factor*cascade->inv_window_area - mean*mean;
     if( variance_norm_factor >= 0. )
-        variance_norm_factor = sqrt(variance_norm_factor);
+        variance_norm_factor = std::sqrt(variance_norm_factor);
     else
         variance_norm_factor = 1.;
 
@@ -1305,7 +1305,7 @@ public:
     {
         Size winSize0 = cascade->orig_window_size;
         Size winSize(cvRound(winSize0.width*factor), cvRound(winSize0.height*factor));
-        int y1 = range.start*stripSize, y2 = min(range.end*stripSize, sum1.rows - 1 - winSize0.height);
+        int y1 = range.start*stripSize, y2 = std::min(range.end*stripSize, sum1.rows - 1 - winSize0.height);
 
         if (y2 <= y1 || sum1.cols <= 1 + winSize0.width)
             return;

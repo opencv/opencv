@@ -10,9 +10,14 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
+//
+// @Authors
+//		Dachuan Zhao, dachuan@multicorewareinc.com
+//		Yao Wang, yao@multicorewareinc.com
+//      Nathan, liujun@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -22,13 +27,13 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other oclMaterials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -40,18 +45,11 @@
 //
 //M*/
 
+
 #include "precomp.hpp"
 #include "mcwutil.hpp"
-using namespace std;
 using namespace cv;
 using namespace cv::ocl;
-
-#if !defined (HAVE_OPENCL)
-
-void cv::ocl::PyrLKOpticalFlow::sparse(const oclMat &, const oclMat &, const oclMat &, oclMat &, oclMat &, oclMat &) {  }
-void cv::ocl::PyrLKOpticalFlow::dense(const oclMat &, const oclMat &, oclMat &, oclMat &, oclMat *) {  }
-
-#else /* !defined (HAVE_OPENCL) */
 
 namespace cv
 {
@@ -117,13 +115,13 @@ inline int divUp(int total, int grain)
 ///////////////////////////////////////////////////////////////////////////
 static void convert_run_cus(const oclMat &src, oclMat &dst, double alpha, double beta)
 {
-    string kernelName = "convert_to_S";
-    stringstream idxStr;
+    std::string kernelName = "convert_to_S";
+    std::stringstream idxStr;
     idxStr << src.depth();
     kernelName += idxStr.str();
     float alpha_f = (float)alpha, beta_f = (float)beta;
     CV_DbgAssert(src.rows == dst.rows && src.cols == dst.cols);
-    vector<pair<size_t , const void *> > args;
+    std::vector<std::pair<size_t , const void *> > args;
     size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3];
     globalThreads[0] = (dst.cols + localThreads[0] - 1) / localThreads[0] * localThreads[0];
@@ -135,16 +133,16 @@ static void convert_run_cus(const oclMat &src, oclMat &dst, double alpha, double
     {
         globalThreads[0] = ((dst.cols + 4) / 4 + localThreads[0]) / localThreads[0] * localThreads[0];
     }
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&srcstep_in_pixel ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&srcoffset_in_pixel ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dststep_in_pixel ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dstoffset_in_pixel ));
-    args.push_back( make_pair( sizeof(cl_float) , (void *)&alpha_f ));
-    args.push_back( make_pair( sizeof(cl_float) , (void *)&beta_f ));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data ));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&srcstep_in_pixel ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&srcoffset_in_pixel ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dststep_in_pixel ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dstoffset_in_pixel ));
+    args.push_back( std::make_pair( sizeof(cl_float) , (void *)&alpha_f ));
+    args.push_back( std::make_pair( sizeof(cl_float) , (void *)&beta_f ));
     openCLExecuteKernel2(dst.clCxt , &operator_convertTo, kernelName, globalThreads,
                          localThreads, args, dst.oclchannels(), dst.depth(), CLFLUSH);
 }
@@ -186,9 +184,9 @@ void convertTo( const oclMat &src, oclMat &dst, int rtype, double alpha, double 
 //    setTo(s);
 //    return *this;
 //}
-static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, string kernelName)
+static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, std::string kernelName)
 {
-    vector<pair<size_t , const void *> > args;
+    std::vector<std::pair<size_t , const void *> > args;
 
     size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3];
@@ -222,11 +220,11 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
         {
         case 1:
             sprintf(compile_option, "-D GENTYPE=uchar");
-            args.push_back( make_pair( sizeof(cl_uchar) , (void *)&val.uval.s[0] ));
+            args.push_back( std::make_pair( sizeof(cl_uchar) , (void *)&val.uval.s[0] ));
             break;
         case 4:
             sprintf(compile_option, "-D GENTYPE=uchar4");
-            args.push_back( make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
+            args.push_back( std::make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
             break;
         default:
             CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
@@ -241,11 +239,11 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
         {
         case 1:
             sprintf(compile_option, "-D GENTYPE=char");
-            args.push_back( make_pair( sizeof(cl_char) , (void *)&val.cval.s[0] ));
+            args.push_back( std::make_pair( sizeof(cl_char) , (void *)&val.cval.s[0] ));
             break;
         case 4:
             sprintf(compile_option, "-D GENTYPE=char4");
-            args.push_back( make_pair( sizeof(cl_char4) , (void *)&val.cval ));
+            args.push_back( std::make_pair( sizeof(cl_char4) , (void *)&val.cval ));
             break;
         default:
             CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
@@ -260,11 +258,11 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
         {
         case 1:
             sprintf(compile_option, "-D GENTYPE=ushort");
-            args.push_back( make_pair( sizeof(cl_ushort) , (void *)&val.usval.s[0] ));
+            args.push_back( std::make_pair( sizeof(cl_ushort) , (void *)&val.usval.s[0] ));
             break;
         case 4:
             sprintf(compile_option, "-D GENTYPE=ushort4");
-            args.push_back( make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
+            args.push_back( std::make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
             break;
         default:
             CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
@@ -279,11 +277,11 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
         {
         case 1:
             sprintf(compile_option, "-D GENTYPE=short");
-            args.push_back( make_pair( sizeof(cl_short) , (void *)&val.shval.s[0] ));
+            args.push_back( std::make_pair( sizeof(cl_short) , (void *)&val.shval.s[0] ));
             break;
         case 4:
             sprintf(compile_option, "-D GENTYPE=short4");
-            args.push_back( make_pair( sizeof(cl_short4) , (void *)&val.shval ));
+            args.push_back( std::make_pair( sizeof(cl_short4) , (void *)&val.shval ));
             break;
         default:
             CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
@@ -298,18 +296,18 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
         {
         case 1:
             sprintf(compile_option, "-D GENTYPE=int");
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&val.ival.s[0] ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&val.ival.s[0] ));
             break;
         case 2:
             sprintf(compile_option, "-D GENTYPE=int2");
             cl_int2 i2val;
             i2val.s[0] = val.ival.s[0];
             i2val.s[1] = val.ival.s[1];
-            args.push_back( make_pair( sizeof(cl_int2) , (void *)&i2val ));
+            args.push_back( std::make_pair( sizeof(cl_int2) , (void *)&i2val ));
             break;
         case 4:
             sprintf(compile_option, "-D GENTYPE=int4");
-            args.push_back( make_pair( sizeof(cl_int4) , (void *)&val.ival ));
+            args.push_back( std::make_pair( sizeof(cl_int4) , (void *)&val.ival ));
             break;
         default:
             CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
@@ -324,11 +322,11 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
         {
         case 1:
             sprintf(compile_option, "-D GENTYPE=float");
-            args.push_back( make_pair( sizeof(cl_float) , (void *)&val.fval.s[0] ));
+            args.push_back( std::make_pair( sizeof(cl_float) , (void *)&val.fval.s[0] ));
             break;
         case 4:
             sprintf(compile_option, "-D GENTYPE=float4");
-            args.push_back( make_pair( sizeof(cl_float4) , (void *)&val.fval ));
+            args.push_back( std::make_pair( sizeof(cl_float4) , (void *)&val.fval ));
             break;
         default:
             CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
@@ -343,11 +341,11 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
         {
         case 1:
             sprintf(compile_option, "-D GENTYPE=double");
-            args.push_back( make_pair( sizeof(cl_double) , (void *)&val.dval.s[0] ));
+            args.push_back( std::make_pair( sizeof(cl_double) , (void *)&val.dval.s[0] ));
             break;
         case 4:
             sprintf(compile_option, "-D GENTYPE=double4");
-            args.push_back( make_pair( sizeof(cl_double4) , (void *)&val.dval ));
+            args.push_back( std::make_pair( sizeof(cl_double4) , (void *)&val.dval ));
             break;
         default:
             CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
@@ -363,20 +361,20 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
     }
     else
     {
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols ));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.rows ));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&step_in_pixel ));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
+        args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data ));
+        args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int) , (void *)&step_in_pixel ));
+        args.push_back( std::make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
         openCLExecuteKernel2(dst.clCxt , &operator_setTo, kernelName, globalThreads,
                              localThreads, args, -1, -1, compile_option, CLFLUSH);
     }
 #else
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.rows ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&step_in_pixel ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.cols ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.rows ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&step_in_pixel ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
     openCLExecuteKernel2(dst.clCxt , &operator_setTo, kernelName, globalThreads,
                          localThreads, args, -1, -1, compile_option, CLFLUSH);
 #endif
@@ -402,13 +400,13 @@ static oclMat &setTo(oclMat &src, const Scalar &scalar)
 ///////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// CopyTo /////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
-// static void copy_to_with_mask_cus(const oclMat &src, oclMat &dst, const oclMat &mask, string kernelName)
+// static void copy_to_with_mask_cus(const oclMat &src, oclMat &dst, const oclMat &mask, std::string kernelName)
 // {
 //     CV_DbgAssert( dst.rows == mask.rows && dst.cols == mask.cols &&
 //                   src.rows == dst.rows && src.cols == dst.cols
 //                   && mask.type() == CV_8UC1);
 
-//     vector<pair<size_t , const void *> > args;
+//     std::vector<std::pair<size_t , const void *> > args;
 
 //     std::string string_types[4][7] = {{"uchar", "char", "ushort", "short", "int", "float", "double"},
 //         {"uchar2", "char2", "ushort2", "short2", "int2", "float2", "double2"},
@@ -427,17 +425,17 @@ static oclMat &setTo(oclMat &src, const Scalar &scalar)
 //     int dststep_in_pixel = dst.step / dst.elemSize(), dstoffset_in_pixel = dst.offset / dst.elemSize();
 //     int srcstep_in_pixel = src.step / src.elemSize(), srcoffset_in_pixel = src.offset / src.elemSize();
 
-//     args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
-//     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
-//     args.push_back( make_pair( sizeof(cl_mem) , (void *)&mask.data ));
-//     args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols ));
-//     args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
-//     args.push_back( make_pair( sizeof(cl_int) , (void *)&srcstep_in_pixel ));
-//     args.push_back( make_pair( sizeof(cl_int) , (void *)&srcoffset_in_pixel ));
-//     args.push_back( make_pair( sizeof(cl_int) , (void *)&dststep_in_pixel ));
-//     args.push_back( make_pair( sizeof(cl_int) , (void *)&dstoffset_in_pixel ));
-//     args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.step ));
-//     args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.offset ));
+//     args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data ));
+//     args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data ));
+//     args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&mask.data ));
+//     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols ));
+//     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows ));
+//     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&srcstep_in_pixel ));
+//     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&srcoffset_in_pixel ));
+//     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dststep_in_pixel ));
+//     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dstoffset_in_pixel ));
+//     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&mask.step ));
+//     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&mask.offset ));
 
 //     openCLExecuteKernel2(dst.clCxt , &operator_copyToM, kernelName, globalThreads,
 //                          localThreads, args, -1, -1, compile_option, CLFLUSH);
@@ -464,7 +462,7 @@ static void copyTo(const oclMat &src, oclMat &m )
 //     }
 // }
 
-static void arithmetic_run(const oclMat &src1, oclMat &dst, string kernelName, const char **kernelString, void *_scalar)
+static void arithmetic_run(const oclMat &src1, oclMat &dst, std::string kernelName, const char **kernelString, void *_scalar)
 {
     if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
@@ -506,24 +504,24 @@ static void arithmetic_run(const oclMat &src1, oclMat &dst, string kernelName, c
                               };
 
     int dst_step1 = dst.cols * dst.elemSize();
-    vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.offset ));
-    //args.push_back( make_pair( sizeof(cl_mem), (void *)&src2.data ));
-    //args.push_back( make_pair( sizeof(cl_int), (void *)&src2.step ));
-    //args.push_back( make_pair( sizeof(cl_int), (void *)&src2.offset ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src1.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.offset ));
+    //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src2.data ));
+    //args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2.step ));
+    //args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2.offset ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.rows ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.cols ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step1 ));
 
     //if(_scalar != NULL)
     //{
     float scalar1 = *((float *)_scalar);
-    args.push_back( make_pair( sizeof(float), (float *)&scalar1 ));
+    args.push_back( std::make_pair( sizeof(float), (float *)&scalar1 ));
     //}
 
     openCLExecuteKernel2(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, src1.depth(), CLFLUSH);
@@ -542,19 +540,19 @@ static void pyrdown_run_cus(const oclMat &src, const oclMat &dst)
 
     Context  *clCxt = src.clCxt;
 
-    string kernelName = "pyrDown";
+    std::string kernelName = "pyrDown";
 
     size_t localThreads[3]  = { 256, 1, 1 };
     size_t globalThreads[3] = { src.cols, dst.rows, 1};
 
-    vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols));
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.cols));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.cols));
 
     openCLExecuteKernel2(clCxt, &pyr_down, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth(), CLFLUSH);
 }
@@ -568,197 +566,16 @@ static void pyrDown_cus(const oclMat &src, oclMat &dst)
     pyrdown_run_cus(src, dst);
 }
 
-
-//struct MultiplyScalar
-//{
-//    MultiplyScalar(double val_, double scale_) : val(val_), scale(scale_) {}
-//    double operator ()(double a) const
-//    {
-//        return (scale * a * val);
-//    }
-//    const double val;
-//    const double scale;
-//};
-//
-//void callF(const oclMat& src, oclMat& dst, MultiplyScalar op, int mask)
-//{
-//	Mat srcTemp;
-//	Mat dstTemp;
-//	src.download(srcTemp);
-//	dst.download(dstTemp);
-//
-//	int i;
-//	int j;
-//	int k;
-//	for(i = 0; i < srcTemp.rows; i++)
-//	{
-//		for(j = 0; j < srcTemp.cols; j++)
-//		{
-//			for(k = 0; k < srcTemp.channels(); k++)
-//			{
-//				((float*)dstTemp.data)[srcTemp.channels() * (i * srcTemp.rows + j) + k] = (float)op(((float*)srcTemp.data)[srcTemp.channels() * (i * srcTemp.rows + j) + k]);
-//			}
-//		}
-//	}
-//
-//	dst = dstTemp;
-//}
-//
-//static inline bool isAligned(const unsigned char* ptr, size_t size)
-//{
-//    return reinterpret_cast<size_t>(ptr) % size == 0;
-//}
-//
-//static inline bool isAligned(size_t step, size_t size)
-//{
-//    return step % size == 0;
-//}
-//
-//void callT(const oclMat& src, oclMat& dst, MultiplyScalar op, int mask)
-//{
-//    if (!isAligned(src.data, 4 * sizeof(double)) || !isAligned(src.step, 4 * sizeof(double)) ||
-//        !isAligned(dst.data, 4 * sizeof(double)) || !isAligned(dst.step, 4 * sizeof(double)))
-//    {
-//        callF(src, dst, op, mask);
-//        return;
-//    }
-//
-//	Mat srcTemp;
-//	Mat dstTemp;
-//	src.download(srcTemp);
-//	dst.download(dstTemp);
-//
-//	int x_shifted;
-//
-//	int i;
-//	int j;
-//	for(i = 0; i < srcTemp.rows; i++)
-//	{
-//		const double* srcRow = (const double*)srcTemp.data + i * srcTemp.rows;
-//        double* dstRow = (double*)dstTemp.data + i * dstTemp.rows;;
-//
-//		for(j = 0; j < srcTemp.cols; j++)
-//		{
-//			x_shifted = j * 4;
-//
-//			if(x_shifted + 4 - 1 < srcTemp.cols)
-//			{
-//				dstRow[x_shifted    ] = op(srcRow[x_shifted    ]);
-//				dstRow[x_shifted + 1] = op(srcRow[x_shifted + 1]);
-//				dstRow[x_shifted + 2] = op(srcRow[x_shifted + 2]);
-//				dstRow[x_shifted + 3] = op(srcRow[x_shifted + 3]);
-//			}
-//			else
-//			{
-//				for (int real_x = x_shifted; real_x < srcTemp.cols; ++real_x)
-//				{
-//					((float*)dstTemp.data)[i * srcTemp.rows + real_x] = op(((float*)srcTemp.data)[i * srcTemp.rows + real_x]);
-//				}
-//			}
-//		}
-//	}
-//}
-//
-//void multiply(const oclMat& src1, double val, oclMat& dst, double scale = 1.0f);
-//void multiply(const oclMat& src1, double val, oclMat& dst, double scale)
-//{
-//    MultiplyScalar op(val, scale);
-//	//if(src1.channels() == 1 && dst.channels() == 1)
-//	//{
-//	//    callT(src1, dst, op, 0);
-//	//}
-//	//else
-//	//{
-//	    callF(src1, dst, op, 0);
-//	//}
-//}
-
-static cl_mem bindTexture(const oclMat &mat, int depth, int channels)
-{
-    cl_mem texture;
-    cl_image_format format;
-    int err;
-    if(depth == 0)
-    {
-        format.image_channel_data_type = CL_UNSIGNED_INT8;
-    }
-    else if(depth == 5)
-    {
-        format.image_channel_data_type = CL_FLOAT;
-    }
-    if(channels == 1)
-    {
-        format.image_channel_order     = CL_R;
-    }
-    else if(channels == 3)
-    {
-        format.image_channel_order     = CL_RGB;
-    }
-    else if(channels == 4)
-    {
-        format.image_channel_order     = CL_RGBA;
-    }
-#ifdef CL_VERSION_1_2
-    cl_image_desc desc;
-    desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
-    desc.image_width      = mat.step / mat.elemSize();
-    desc.image_height     = mat.rows;
-    desc.image_depth      = NULL;
-    desc.image_array_size = 1;
-    desc.image_row_pitch  = 0;
-    desc.image_slice_pitch = 0;
-    desc.buffer           = NULL;
-    desc.num_mip_levels   = 0;
-    desc.num_samples      = 0;
-    texture = clCreateImage(mat.clCxt->impl->clContext, CL_MEM_READ_WRITE, &format, &desc, NULL, &err);
-#else
-    texture = clCreateImage2D(
-                  mat.clCxt->impl->clContext,
-                  CL_MEM_READ_WRITE,
-                  &format,
-                  mat.step / mat.elemSize(),
-                  mat.rows,
-                  0,
-                  NULL,
-                  &err);
-#endif
-    size_t origin[] = { 0, 0, 0 };
-    size_t region[] = { mat.step / mat.elemSize(), mat.rows, 1 };
-    clEnqueueCopyBufferToImage(mat.clCxt->impl->clCmdQueue, (cl_mem)mat.data, texture, 0, origin, region, 0, NULL, 0);
-    openCLSafeCall(err);
-
-    return texture;
-}
-
-static void releaseTexture(cl_mem texture)
-{
-    openCLFree(texture);
-}
-
 static void lkSparse_run(oclMat &I, oclMat &J,
                   const oclMat &prevPts, oclMat &nextPts, oclMat &status, oclMat& err, bool /*GET_MIN_EIGENVALS*/, int ptcount,
                   int level, /*dim3 block, */dim3 patch, Size winSize, int iters)
 {
     Context  *clCxt = I.clCxt;
-    char platform[256] = {0};
-    cl_platform_id pid;
-    clGetDeviceInfo(clCxt->impl->devices, CL_DEVICE_PLATFORM, sizeof(pid), &pid, NULL);
-    clGetPlatformInfo(pid, CL_PLATFORM_NAME, 256, platform, NULL);
-    std::string namestr = platform;
-    bool isImageSupported = true;
-    if(namestr.find("NVIDIA")!=string::npos || namestr.find("Intel")!=string::npos)
-        isImageSupported = false;
-
     int elemCntPerRow = I.step / I.elemSize();
-
-    string kernelName = "lkSparse";
-
-
-    size_t localThreads[3]  = { 8, isImageSupported?8:32, 1 };
-    size_t globalThreads[3] = { 8 * ptcount, isImageSupported?8:32, 1};
-
+    std::string kernelName = "lkSparse";
+    size_t localThreads[3]  = { 8, 8, 1 };
+    size_t globalThreads[3] = { 8 * ptcount, 8, 1};
     int cn = I.oclchannels();
-
     char calcErr;
     if (level == 0)
     {
@@ -769,55 +586,42 @@ static void lkSparse_run(oclMat &I, oclMat &J,
         calcErr = 0;
     }
 
-    vector<pair<size_t , const void *> > args;
-    cl_mem ITex;
-    cl_mem JTex;
-    if (isImageSupported)
-    {
-        ITex = bindTexture(I, I.depth(), cn);
-        JTex = bindTexture(J, J.depth(), cn);
-    }
-    else
-    {
-        ITex = (cl_mem)I.data;
-        JTex = (cl_mem)J.data;
-    }
+    std::vector<std::pair<size_t , const void *> > args;
+    cl_mem ITex = bindTexture(I);
+    cl_mem JTex = bindTexture(J);
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&ITex ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&JTex ));
-    //cl_mem clmD = clCreateBuffer(clCxt, CL_MEM_READ_WRITE, ptcount * sizeof(float), NULL, NULL);
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&prevPts.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&prevPts.step ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&nextPts.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&nextPts.step ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&status.data ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&err.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&level ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&I.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&I.cols ));
-    if (!isImageSupported)
-    {
-        args.push_back( make_pair( sizeof(cl_int), (void *)&elemCntPerRow ) );
-    }
-    args.push_back( make_pair( sizeof(cl_int), (void *)&patch.x ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&patch.y ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cn ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&winSize.width ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&winSize.height ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&iters ));
-    args.push_back( make_pair( sizeof(cl_char), (void *)&calcErr ));
-    //args.push_back( make_pair( sizeof(cl_char), (void *)&GET_MIN_EIGENVALS ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&ITex ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&JTex ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&prevPts.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&prevPts.step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&nextPts.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&nextPts.step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&status.data ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&err.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&level ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&I.rows ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&I.cols ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&patch.x ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&patch.y ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cn ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&winSize.width ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&winSize.height ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&iters ));
+    args.push_back( std::make_pair( sizeof(cl_char), (void *)&calcErr ));
 
-    if (isImageSupported)
+    try
     {
         openCLExecuteKernel2(clCxt, &pyrlk, kernelName, globalThreads, localThreads, args, I.oclchannels(), I.depth(), CLFLUSH);
-
+    }
+    catch(Exception&)
+    {
+        printf("Warning: The image2d_t is not supported by the device. Using alternative method!\n");
         releaseTexture(ITex);
         releaseTexture(JTex);
-    }
-    else
-    {
-        //printf("Warning: The image2d_t is not supported by the device. Using alternative method!\n");
+        ITex = (cl_mem)I.data;
+        JTex = (cl_mem)J.data;
+        localThreads[1] = globalThreads[1] = 32;
+        args.insert( args.begin()+11, std::make_pair( sizeof(cl_int), (void *)&elemCntPerRow ) );
         openCLExecuteKernel2(clCxt, &pyrlk_no_image, kernelName, globalThreads, localThreads, args, I.oclchannels(), I.depth(), CLFLUSH);
     }
 }
@@ -919,15 +723,13 @@ static void lkDense_run(oclMat &I, oclMat &J, oclMat &u, oclMat &v,
                  oclMat &prevU, oclMat &prevV, oclMat *err, Size winSize, int iters)
 {
     Context  *clCxt = I.clCxt;
-    bool isImageSupported = clCxt->impl->devName.find("Intel(R) HD Graphics") == string::npos;
+    bool isImageSupported = clCxt->impl->devName.find("Intel(R) HD Graphics") == std::string::npos;
     int elemCntPerRow = I.step / I.elemSize();
 
-    string kernelName = "lkDense";
+    std::string kernelName = "lkDense";
 
     size_t localThreads[3]  = { 16, 16, 1 };
     size_t globalThreads[3] = { I.cols, I.rows, 1};
-
-    int cn = I.oclchannels();
 
     bool calcErr;
     if (err)
@@ -944,8 +746,8 @@ static void lkDense_run(oclMat &I, oclMat &J, oclMat &u, oclMat &v,
 
     if (isImageSupported)
     {
-        ITex = bindTexture(I, I.depth(), cn);
-        JTex = bindTexture(J, J.depth(), cn);
+        ITex = bindTexture(I);
+        JTex = bindTexture(J);
     }
     else
     {
@@ -958,31 +760,31 @@ static void lkDense_run(oclMat &I, oclMat &J, oclMat &u, oclMat &v,
     //const int patchHeight = 16 + 2 * halfWin.y;
     //size_t smem_size = 3 * patchWidth * patchHeight * sizeof(int);
 
-    vector<pair<size_t , const void *> > args;
+    std::vector<std::pair<size_t , const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&ITex ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&JTex ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&ITex ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&JTex ));
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&u.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&u.step ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&v.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&v.step ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&prevU.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&prevU.step ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&prevV.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&prevV.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&I.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&I.cols ));
-    //args.push_back( make_pair( sizeof(cl_mem), (void *)&(*err).data ));
-    //args.push_back( make_pair( sizeof(cl_int), (void *)&(*err).step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&u.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&u.step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&v.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&v.step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&prevU.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&prevU.step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&prevV.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&prevV.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&I.rows ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&I.cols ));
+    //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&(*err).data ));
+    //args.push_back( std::make_pair( sizeof(cl_int), (void *)&(*err).step ));
     if (!isImageSupported)
     {
-        args.push_back( make_pair( sizeof(cl_int), (void *)&elemCntPerRow ) );
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&elemCntPerRow ) );
     }
-    args.push_back( make_pair( sizeof(cl_int), (void *)&winSize.width ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&winSize.height ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&iters ));
-    args.push_back( make_pair( sizeof(cl_char), (void *)&calcErr ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&winSize.width ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&winSize.height ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&iters ));
+    args.push_back( std::make_pair( sizeof(cl_char), (void *)&calcErr ));
 
     if (isImageSupported)
     {
@@ -1052,5 +854,3 @@ void cv::ocl::PyrLKOpticalFlow::dense(const oclMat &prevImg, const oclMat &nextI
 
     clFinish(prevImg.clCxt->impl->clCmdQueue);
 }
-
-#endif /* !defined (HAVE_CUDA) */

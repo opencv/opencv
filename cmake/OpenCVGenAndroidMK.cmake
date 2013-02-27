@@ -20,7 +20,7 @@ if(ANDROID)
   endif()
 
   # setup lists of camera libs
-  foreach(abi ARMEABI ARMEABI_V7A X86)
+  foreach(abi ARMEABI ARMEABI_V7A X86 MIPS)
     ANDROID_GET_ABI_RAWNAME(${abi} ndkabi)
     if(BUILD_ANDROID_CAMERA_WRAPPER)
       if(ndkabi STREQUAL ANDROID_NDK_ABI_NAME)

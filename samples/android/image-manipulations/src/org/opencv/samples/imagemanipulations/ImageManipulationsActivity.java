@@ -3,6 +3,7 @@ package org.opencv.samples.imagemanipulations;
 import java.util.Arrays;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
@@ -14,7 +15,7 @@ import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 import org.opencv.imgproc.Imgproc;
 
 import android.app.Activity;
@@ -24,7 +25,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
 
-public class ImageManipulationsActivity extends Activity implements CvCameraViewListener {
+public class ImageManipulationsActivity extends Activity implements CvCameraViewListener2 {
     private static final String  TAG                 = "OCVSample::Activity";
 
     public static final int      VIEW_MODE_RGBA      = 0;
@@ -111,9 +112,9 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
     @Override
     public void onPause()
     {
+        super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-        super.onPause();
     }
 
     @Override
@@ -258,8 +259,8 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
         mZoomWindow = null;
     }
 
-    public Mat onCameraFrame(Mat inputFrame) {
-        inputFrame.copyTo(mRgba);
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+        mRgba = inputFrame.rgba();
 
         switch (ImageManipulationsActivity.viewMode) {
         case ImageManipulationsActivity.VIEW_MODE_RGBA:
@@ -315,7 +316,7 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_SOBEL:
-            Imgproc.cvtColor(mRgba, mGray, Imgproc.COLOR_RGBA2GRAY);
+            mGray = inputFrame.gray();
 
             if ((mRgbaInnerWindow == null) || (mGrayInnerWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
                 CreateAuxiliaryMats();

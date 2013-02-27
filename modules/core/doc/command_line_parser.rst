@@ -4,24 +4,24 @@ Command Line Parser
 .. highlight:: cpp
 
 CommandLineParser
---------
+-----------------
 .. ocv:class:: CommandLineParser
 
 The CommandLineParser class is designed for command line arguments parsing
 
 
-    .. ocv:function:: CommandLineParser::CommandLineParser(int argc, const char * const argv[], const std::string keys)
+    .. ocv:function:: CommandLineParser::CommandLineParser( int argc, const char* const argv[], const string& keys )
 
         :param argc:
         :param argv:
         :param keys:
 
-    .. ocv:function:: T CommandLineParser::get<T>(const std::string& name, bool space_delete = true)
+    .. ocv:function:: template<typename T> T CommandLineParser::get<T>(const std::string& name, bool space_delete = true)
 
         :param name:
         :param space_delete:
 
-    .. ocv:function:: T CommandLineParser::get<T>(int index, bool space_delete = true)
+    .. ocv:function:: template<typename T> T CommandLineParser::get<T>(int index, bool space_delete = true)
 
         :param index:
         :param space_delete:
@@ -33,7 +33,7 @@ The CommandLineParser class is designed for command line arguments parsing
     .. ocv:function:: bool CommandLineParser::check()
 
 
-    .. ocv:function:: void CommandLineParser::about(std::string message)
+    .. ocv:function:: void CommandLineParser::about( const string& message )
 
         :param message:
 

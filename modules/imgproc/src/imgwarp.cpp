@@ -1763,7 +1763,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
     {
         double fsx1 = dx * scale;
         double fsx2 = fsx1 + scale;
-        double cellWidth = min(scale, ssize - fsx1);
+        double cellWidth = std::min(scale, ssize - fsx1);
 
         int sx1 = cvCeil(fsx1), sx2 = cvFloor(fsx2);
 
@@ -1791,7 +1791,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
             assert( k < ssize*2 );
             tab[k].di = dx * cn;
             tab[k].si = sx2 * cn;
-            tab[k++].alpha = (float)(min(min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
+            tab[k++].alpha = (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
         }
     }
     return k;
@@ -2891,10 +2891,10 @@ class RemapInvoker :
 {
 public:
     RemapInvoker(const Mat& _src, Mat& _dst, const Mat *_m1,
-                 const Mat *_m2, int _interpolation, int _borderType, const Scalar &_borderValue,
+                 const Mat *_m2, int _borderType, const Scalar &_borderValue,
                  int _planar_input, RemapNNFunc _nnfunc, RemapFunc _ifunc, const void *_ctab) :
         ParallelLoopBody(), src(&_src), dst(&_dst), m1(_m1), m2(_m2),
-        interpolation(_interpolation), borderType(_borderType), borderValue(_borderValue),
+        borderType(_borderType), borderValue(_borderValue),
         planar_input(_planar_input), nnfunc(_nnfunc), ifunc(_ifunc), ctab(_ctab)
     {
     }
@@ -3077,7 +3077,7 @@ private:
     const Mat* src;
     Mat* dst;
     const Mat *m1, *m2;
-    int interpolation, borderType;
+    int borderType;
     Scalar borderValue;
     int planar_input;
     RemapNNFunc nnfunc;
@@ -3178,7 +3178,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
         planar_input = map1.channels() == 1;
     }
 
-    RemapInvoker invoker(src, dst, m1, m2, interpolation,
+    RemapInvoker invoker(src, dst, m1, m2,
                          borderType, borderValue, planar_input, nnfunc, ifunc,
                          ctab);
     parallel_for_(Range(0, dst.rows), invoker, dst.total()/(double)(1<<16));
@@ -4009,7 +4009,7 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
                 double xx = bufx.data.fl[x];
                 double yy = bufy.data.fl[x];
 
-                double p = log(sqrt(xx*xx + yy*yy) + 1.)*M;
+                double p = log(std::sqrt(xx*xx + yy*yy) + 1.)*M;
                 double a = atan2(yy,xx);
                 if( a < 0 )
                     a = 2*CV_PI + a;

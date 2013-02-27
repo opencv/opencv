@@ -26,6 +26,7 @@ static void help()
     printf("For example: ./one_way_sample . ../c/scene_l.bmp ../c/scene_r.bmp\n");
 }
 
+using namespace std;
 using namespace cv;
 
 Mat DrawCorrespondences(const Mat& img1, const vector<KeyPoint>& features1, const Mat& img2,

@@ -1,7 +1,7 @@
 #/usr/bin/env python
 
 import os, sys, re, string, fnmatch
-allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "java", "python", "stitching", "ts", "photo", "nonfree", "videostab", "ocl"]
+allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "java", "python", "stitching", "ts", "photo", "nonfree", "videostab", "ocl", "softcascade"]
 verbose = False
 show_warnings = True
 show_errors = True

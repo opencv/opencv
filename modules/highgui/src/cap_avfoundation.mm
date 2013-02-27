@@ -36,10 +36,6 @@
 #import <Foundation/NSException.h>
 
 
-//#import <QTKit/QTKit.h>
-
-using namespace std;
-
 /********************** Declaration of class headers ************************/
 
 /*****************************************************************************

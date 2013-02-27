@@ -468,7 +468,7 @@ double cv::calcGlobalOrientation( InputArray _orientation, InputArray _mask,
 }
 
 void cv::segmentMotion(InputArray _mhi, OutputArray _segmask,
-                       vector<Rect>& boundingRects,
+                       std::vector<Rect>& boundingRects,
                        double timestamp, double segThresh)
 {
     Mat mhi = _mhi.getMat();

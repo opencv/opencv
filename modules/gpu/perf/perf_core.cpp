@@ -1631,7 +1631,7 @@ PERF_TEST_P(Sz_Depth_Norm, Core_Norm, Combine(
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() dst = cv::gpu::norm(d_src, normType, d_buf);
+        TEST_CYCLE() dst = cv::gpu::norm(d_src, normType, cv::gpu::GpuMat(), d_buf);
     }
     else
     {
@@ -1701,7 +1701,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_Sum, Combine(
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() dst = cv::gpu::sum(d_src, d_buf);
+        TEST_CYCLE() dst = cv::gpu::sum(d_src, cv::gpu::GpuMat(), d_buf);
     }
     else
     {
@@ -1736,7 +1736,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_SumAbs, Combine(
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() dst = cv::gpu::absSum(d_src, d_buf);
+        TEST_CYCLE() dst = cv::gpu::absSum(d_src, cv::gpu::GpuMat(), d_buf);
 
         SANITY_CHECK(dst, 1e-6);
     }
@@ -1770,7 +1770,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_SumSqr, Combine(
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() dst = cv::gpu::sqrSum(d_src, d_buf);
+        TEST_CYCLE() dst = cv::gpu::sqrSum(d_src, cv::gpu::GpuMat(), d_buf);
 
         SANITY_CHECK(dst, 1e-6);
     }
@@ -1921,6 +1921,50 @@ PERF_TEST_P(Sz_Depth_Cn_Code_Dim, Core_Reduce, Combine(
         cv::Mat dst;
 
         TEST_CYCLE() cv::reduce(src, dst, dim, reduceOp);
+
+        CPU_SANITY_CHECK(dst, 1);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// Normalize
+
+DEF_PARAM_TEST(Sz_Depth_NormType, cv::Size, MatDepth, NormType);
+
+PERF_TEST_P(Sz_Depth_NormType, Core_Normalize, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8U, CV_16U, CV_32F, CV_64F),
+    Values(NormType(cv::NORM_INF),
+           NormType(cv::NORM_L1),
+           NormType(cv::NORM_L2),
+           NormType(cv::NORM_MINMAX))
+    ))
+{
+    cv::Size size = GET_PARAM(0);
+    int type = GET_PARAM(1);
+    int norm_type = GET_PARAM(2);
+
+    double alpha = 1;
+    double beta = 0;
+
+    cv::Mat src(size, type);
+    fillRandom(src);
+
+    if (PERF_RUN_GPU())
+    {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+        cv::gpu::GpuMat d_norm_buf, d_cvt_buf;
+
+        TEST_CYCLE() cv::gpu::normalize(d_src, d_dst, alpha, beta, norm_type, type, cv::gpu::GpuMat(), d_norm_buf, d_cvt_buf);
+
+        GPU_SANITY_CHECK(d_dst, 1);
+    }
+    else
+    {
+        cv::Mat dst;
+
+        TEST_CYCLE() cv::normalize(src, dst, alpha, beta, norm_type, type);
 
         CPU_SANITY_CHECK(dst, 1);
     }

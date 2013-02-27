@@ -43,83 +43,6 @@
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 static IppStatus sts = ippInit();
 #endif
-/****************************************************************************************/
-
-/* lightweight convolution with 3x3 kernel */
-void icvSepConvSmall3_32f( float* src, int src_step, float* dst, int dst_step,
-            CvSize src_size, const float* kx, const float* ky, float* buffer )
-{
-    int  dst_width, buffer_step = 0;
-    int  x, y;
-    bool fast_kx = true, fast_ky = true;
-
-    assert( src && dst && src_size.width > 2 && src_size.height > 2 &&
-            (src_step & 3) == 0 && (dst_step & 3) == 0 &&
-            (kx || ky) && (buffer || !kx || !ky));
-
-    src_step /= sizeof(src[0]);
-    dst_step /= sizeof(dst[0]);
-
-    dst_width = src_size.width - 2;
-
-    if( !kx )
-    {
-        /* set vars, so that vertical convolution
-           will write results into destination ROI and
-           horizontal convolution won't run */
-        src_size.width = dst_width;
-        buffer_step = dst_step;
-        buffer = dst;
-        dst_width = 0;
-    }
-    else
-        fast_kx = kx[1] == 0.f && kx[0] == -kx[2] && kx[0] == -1.f;
-
-    assert( src_step >= src_size.width && dst_step >= dst_width );
-
-    src_size.height -= 2;
-    if( !ky )
-    {
-        /* set vars, so that vertical convolution won't run and
-           horizontal convolution will write results into destination ROI */
-        src_size.height += 2;
-        buffer_step = src_step;
-        buffer = src;
-        src_size.width = 0;
-    }
-    else
-        fast_ky = ky[1] == 0.f && ky[0] == -ky[2] && ky[0] == -1.f;
-
-    for( y = 0; y < src_size.height; y++, src += src_step,
-                                          dst += dst_step,
-                                          buffer += buffer_step )
-    {
-        float* src2 = src + src_step;
-        float* src3 = src + src_step*2;
-        if( fast_ky )
-            for( x = 0; x < src_size.width; x++ )
-            {
-                buffer[x] = (float)(src3[x] - src[x]);
-            }
-        else
-            for( x = 0; x < src_size.width; x++ )
-            {
-                buffer[x] = (float)(ky[0]*src[x] + ky[1]*src2[x] + ky[2]*src3[x]);
-            }
-
-        if( fast_kx )
-            for( x = 0; x < dst_width; x++ )
-            {
-                dst[x] = (float)(buffer[x+2] - buffer[x]);
-            }
-        else
-            for( x = 0; x < dst_width; x++ )
-            {
-                dst[x] = (float)(kx[0]*buffer[x] + kx[1]*buffer[x+1] + kx[2]*buffer[x+2]);
-            }
-    }
-}
-
 
 /****************************************************************************************\
                              Sobel & Scharr Derivative Filters
@@ -177,7 +100,7 @@ static void getSobelKernels( OutputArray _kx, OutputArray _ky,
 
     if( _ksize % 2 == 0 || _ksize > 31 )
         CV_Error( CV_StsOutOfRange, "The kernel size must be odd and not larger than 31" );
-    vector<int> kerI(std::max(ksizeX, ksizeY) + 1);
+    std::vector<int> kerI(std::max(ksizeX, ksizeY) + 1);
 
     CV_Assert( dx >= 0 && dy >= 0 && dx+dy > 0 );
 

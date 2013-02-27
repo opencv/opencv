@@ -47,3 +47,7 @@ OpenCV version constants
 .. data:: OPENCV_VERSION_2_4_3
 
     OpenCV Library version 2.4.3
+
+.. data:: OPENCV_VERSION_2_4_4
+
+    OpenCV Library version 2.4.4

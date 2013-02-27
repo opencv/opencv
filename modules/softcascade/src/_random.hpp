@@ -52,6 +52,7 @@ namespace cv { namespace softcascade { namespace internal
 struct Random
 {
     typedef std::mt19937 engine;
+    typedef engine::result_type seed_type;
     typedef std::uniform_int<int> uniform;
 };
 
@@ -67,7 +68,14 @@ namespace cv { namespace softcascade { namespace internal
 struct Random
 {
     typedef std::mt19937 engine;
+    typedef engine::result_type seed_type;
+// True if we're using C++11.
+#if __cplusplus >= 201103L
+    // C++11 removes uniform_int.
+    typedef std::uniform_int_distribution<int> uniform;
+#else
     typedef std::uniform_int<int> uniform;
+#endif
 };
 }}}
 
@@ -80,6 +88,7 @@ namespace cv { namespace softcascade { namespace internal
 struct Random
 {
     typedef std::tr1::mt19937 engine;
+    typedef engine::result_type seed_type;
     typedef std::tr1::uniform_int<int> uniform;
 };
 
@@ -119,6 +128,7 @@ private:
 struct Random
 {
     typedef rnd::engine engine;
+    typedef uint64 seed_type;
     typedef rnd::uniform_int<int> uniform;
 };
 

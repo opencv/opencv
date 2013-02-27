@@ -65,21 +65,21 @@ public:
     int height() const { return m_height; };
     virtual int type() const { return m_type; };
 
-    virtual bool setSource( const string& filename );
+    virtual bool setSource( const std::string& filename );
     virtual bool setSource( const Mat& buf );
     virtual bool readHeader() = 0;
     virtual bool readData( Mat& img ) = 0;
 
     virtual size_t signatureLength() const;
-    virtual bool checkSignature( const string& signature ) const;
+    virtual bool checkSignature( const std::string& signature ) const;
     virtual ImageDecoder newDecoder() const;
 
 protected:
     int  m_width;  // width  of the image ( filled by readHeader )
     int  m_height; // height of the image ( filled by readHeader )
     int  m_type;
-    string m_filename;
-    string m_signature;
+    std::string m_filename;
+    std::string m_signature;
     Mat m_buf;
     bool m_buf_supported;
 };
@@ -93,23 +93,23 @@ public:
     virtual ~BaseImageEncoder() {};
     virtual bool isFormatSupported( int depth ) const;
 
-    virtual bool setDestination( const string& filename );
-    virtual bool setDestination( vector<uchar>& buf );
-    virtual bool write( const Mat& img, const vector<int>& params ) = 0;
+    virtual bool setDestination( const std::string& filename );
+    virtual bool setDestination( std::vector<uchar>& buf );
+    virtual bool write( const Mat& img, const std::vector<int>& params ) = 0;
 
-    virtual string getDescription() const;
+    virtual std::string getDescription() const;
     virtual ImageEncoder newEncoder() const;
 
     virtual void throwOnEror() const;
 
 protected:
-    string m_description;
+    std::string m_description;
 
-    string m_filename;
-    vector<uchar>* m_buf;
+    std::string m_filename;
+    std::vector<uchar>* m_buf;
     bool m_buf_supported;
 
-    string m_last_error;
+    std::string m_last_error;
 };
 
 }

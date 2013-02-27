@@ -296,37 +296,15 @@ int ArrayTest::validate_test_results( int test_case_idx )
         for( j = 0; j < sizei; j++ )
         {
             double err_level;
-            vector<int> idx;
-            double max_diff = 0;
             int code;
-            char msg[100];
 
             if( !test_array[i1][j] )
                 continue;
 
             err_level = get_success_error_level( test_case_idx, i0, (int)j );
-            code = cmpEps( test_mat[i0][j], test_mat[i1][j], &max_diff, err_level, &idx, element_wise_relative_error );
+            code = cmpEps2(ts, test_mat[i0][j], test_mat[i1][j], err_level, element_wise_relative_error, arr_names[i0]);
 
-            switch( code )
-            {
-            case -1:
-                sprintf( msg, "Too big difference (=%g)", max_diff );
-                code = TS::FAIL_BAD_ACCURACY;
-                break;
-            case -2:
-                strcpy( msg, "Invalid output" );
-                code = TS::FAIL_INVALID_OUTPUT;
-                break;
-            case -3:
-                strcpy( msg, "Invalid output in the reference array" );
-                code = TS::FAIL_INVALID_OUTPUT;
-                break;
-            default:
-                continue;
-            }
-            string idxstr = vec2str(", ", &idx[0], idx.size());
-
-            ts->printf( TS::LOG, "%s in %s array %d at (%s)", msg, arr_names[i0], j, idxstr.c_str() );
+            if (code == 0) continue;
 
             for( i0 = 0; i0 < (int)test_array.size(); i0++ )
             {

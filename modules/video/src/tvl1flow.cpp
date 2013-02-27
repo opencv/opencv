@@ -74,10 +74,69 @@
 
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
 
-cv::OpticalFlowDual_TVL1::OpticalFlowDual_TVL1()
+namespace {
+
+class OpticalFlowDual_TVL1 : public DenseOpticalFlow
+{
+public:
+    OpticalFlowDual_TVL1();
+
+    void calc(InputArray I0, InputArray I1, InputOutputArray flow);
+    void collectGarbage();
+
+    AlgorithmInfo* info() const;
+
+protected:
+    double tau;
+    double lambda;
+    double theta;
+    int nscales;
+    int warps;
+    double epsilon;
+    int iterations;
+    bool useInitialFlow;
+
+private:
+    void procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2);
+
+    std::vector<Mat_<float> > I0s;
+    std::vector<Mat_<float> > I1s;
+    std::vector<Mat_<float> > u1s;
+    std::vector<Mat_<float> > u2s;
+
+    Mat_<float> I1x_buf;
+    Mat_<float> I1y_buf;
+
+    Mat_<float> flowMap1_buf;
+    Mat_<float> flowMap2_buf;
+
+    Mat_<float> I1w_buf;
+    Mat_<float> I1wx_buf;
+    Mat_<float> I1wy_buf;
+
+    Mat_<float> grad_buf;
+    Mat_<float> rho_c_buf;
+
+    Mat_<float> v1_buf;
+    Mat_<float> v2_buf;
+
+    Mat_<float> p11_buf;
+    Mat_<float> p12_buf;
+    Mat_<float> p21_buf;
+    Mat_<float> p22_buf;
+
+    Mat_<float> div_p1_buf;
+    Mat_<float> div_p2_buf;
+
+    Mat_<float> u1x_buf;
+    Mat_<float> u1y_buf;
+    Mat_<float> u2x_buf;
+    Mat_<float> u2y_buf;
+};
+
+OpticalFlowDual_TVL1::OpticalFlowDual_TVL1()
 {
     tau            = 0.25;
     lambda         = 0.15;
@@ -89,7 +148,7 @@ cv::OpticalFlowDual_TVL1::OpticalFlowDual_TVL1()
     useInitialFlow = false;
 }
 
-void cv::OpticalFlowDual_TVL1::operator ()(InputArray _I0, InputArray _I1, InputOutputArray _flow)
+void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray _flow)
 {
     Mat I0 = _I0.getMat();
     Mat I1 = _I1.getMat();
@@ -195,542 +254,539 @@ void cv::OpticalFlowDual_TVL1::operator ()(InputArray _I0, InputArray _I1, Input
     merge(uxy, 2, _flow);
 }
 
-namespace
+////////////////////////////////////////////////////////////
+// buildFlowMap
+
+struct BuildFlowMapBody : ParallelLoopBody
 {
-    ////////////////////////////////////////////////////////////
-    // buildFlowMap
+    void operator() (const Range& range) const;
 
-    struct BuildFlowMapBody : ParallelLoopBody
+    Mat_<float> u1;
+    Mat_<float> u2;
+    mutable Mat_<float> map1;
+    mutable Mat_<float> map2;
+};
+
+void BuildFlowMapBody::operator() (const Range& range) const
+{
+    for (int y = range.start; y < range.end; ++y)
     {
-        void operator() (const Range& range) const;
+        const float* u1Row = u1[y];
+        const float* u2Row = u2[y];
 
-        Mat_<float> u1;
-        Mat_<float> u2;
-        mutable Mat_<float> map1;
-        mutable Mat_<float> map2;
-    };
+        float* map1Row = map1[y];
+        float* map2Row = map2[y];
 
-    void BuildFlowMapBody::operator() (const Range& range) const
-    {
-        for (int y = range.start; y < range.end; ++y)
+        for (int x = 0; x < u1.cols; ++x)
         {
-            const float* u1Row = u1[y];
-            const float* u2Row = u2[y];
-
-            float* map1Row = map1[y];
-            float* map2Row = map2[y];
-
-            for (int x = 0; x < u1.cols; ++x)
-            {
-                map1Row[x] = x + u1Row[x];
-                map2Row[x] = y + u2Row[x];
-            }
+            map1Row[x] = x + u1Row[x];
+            map2Row[x] = y + u2Row[x];
         }
-    }
-
-    void buildFlowMap(const Mat_<float>& u1, const Mat_<float>& u2, Mat_<float>& map1, Mat_<float>& map2)
-    {
-        CV_DbgAssert( u2.size() == u1.size() );
-        CV_DbgAssert( map1.size() == u1.size() );
-        CV_DbgAssert( map2.size() == u1.size() );
-
-        BuildFlowMapBody body;
-
-        body.u1 = u1;
-        body.u2 = u2;
-        body.map1 = map1;
-        body.map2 = map2;
-
-        parallel_for_(Range(0, u1.rows), body);
-    }
-
-    ////////////////////////////////////////////////////////////
-    // centeredGradient
-
-    struct CenteredGradientBody : ParallelLoopBody
-    {
-        void operator() (const Range& range) const;
-
-        Mat_<float> src;
-        mutable Mat_<float> dx;
-        mutable Mat_<float> dy;
-    };
-
-    void CenteredGradientBody::operator() (const Range& range) const
-    {
-        const int last_col = src.cols - 1;
-
-        for (int y = range.start; y < range.end; ++y)
-        {
-            const float* srcPrevRow = src[y - 1];
-            const float* srcCurRow = src[y];
-            const float* srcNextRow = src[y + 1];
-
-            float* dxRow = dx[y];
-            float* dyRow = dy[y];
-
-            for (int x = 1; x < last_col; ++x)
-            {
-                dxRow[x] = 0.5f * (srcCurRow[x + 1] - srcCurRow[x - 1]);
-                dyRow[x] = 0.5f * (srcNextRow[x] - srcPrevRow[x]);
-            }
-        }
-    }
-
-    void centeredGradient(const Mat_<float>& src, Mat_<float>& dx, Mat_<float>& dy)
-    {
-        CV_DbgAssert( src.rows > 2 && src.cols > 2 );
-        CV_DbgAssert( dx.size() == src.size() );
-        CV_DbgAssert( dy.size() == src.size() );
-
-        const int last_row = src.rows - 1;
-        const int last_col = src.cols - 1;
-
-        // compute the gradient on the center body of the image
-        {
-            CenteredGradientBody body;
-
-            body.src = src;
-            body.dx = dx;
-            body.dy = dy;
-
-            parallel_for_(Range(1, last_row), body);
-        }
-
-        // compute the gradient on the first and last rows
-        for (int x = 1; x < last_col; ++x)
-        {
-            dx(0, x) = 0.5f * (src(0, x + 1) - src(0, x - 1));
-            dy(0, x) = 0.5f * (src(1, x) - src(0, x));
-
-            dx(last_row, x) = 0.5f * (src(last_row, x + 1) - src(last_row, x - 1));
-            dy(last_row, x) = 0.5f * (src(last_row, x) - src(last_row - 1, x));
-        }
-
-        // compute the gradient on the first and last columns
-        for (int y = 1; y < last_row; ++y)
-        {
-            dx(y, 0) = 0.5f * (src(y, 1) - src(y, 0));
-            dy(y, 0) = 0.5f * (src(y + 1, 0) - src(y - 1, 0));
-
-            dx(y, last_col) = 0.5f * (src(y, last_col) - src(y, last_col - 1));
-            dy(y, last_col) = 0.5f * (src(y + 1, last_col) - src(y - 1, last_col));
-        }
-
-        // compute the gradient at the four corners
-        dx(0, 0) = 0.5f * (src(0, 1) - src(0, 0));
-        dy(0, 0) = 0.5f * (src(1, 0) - src(0, 0));
-
-        dx(0, last_col) = 0.5f * (src(0, last_col) - src(0, last_col - 1));
-        dy(0, last_col) = 0.5f * (src(1, last_col) - src(0, last_col));
-
-        dx(last_row, 0) = 0.5f * (src(last_row, 1) - src(last_row, 0));
-        dy(last_row, 0) = 0.5f * (src(last_row, 0) - src(last_row - 1, 0));
-
-        dx(last_row, last_col) = 0.5f * (src(last_row, last_col) - src(last_row, last_col - 1));
-        dy(last_row, last_col) = 0.5f * (src(last_row, last_col) - src(last_row - 1, last_col));
-    }
-
-    ////////////////////////////////////////////////////////////
-    // forwardGradient
-
-    struct ForwardGradientBody : ParallelLoopBody
-    {
-        void operator() (const Range& range) const;
-
-        Mat_<float> src;
-        mutable Mat_<float> dx;
-        mutable Mat_<float> dy;
-    };
-
-    void ForwardGradientBody::operator() (const Range& range) const
-    {
-        const int last_col = src.cols - 1;
-
-        for (int y = range.start; y < range.end; ++y)
-        {
-            const float* srcCurRow = src[y];
-            const float* srcNextRow = src[y + 1];
-
-            float* dxRow = dx[y];
-            float* dyRow = dy[y];
-
-            for (int x = 0; x < last_col; ++x)
-            {
-                dxRow[x] = srcCurRow[x + 1] - srcCurRow[x];
-                dyRow[x] = srcNextRow[x] - srcCurRow[x];
-            }
-        }
-    }
-
-    void forwardGradient(const Mat_<float>& src, Mat_<float>& dx, Mat_<float>& dy)
-    {
-        CV_DbgAssert( src.rows > 2 && src.cols > 2 );
-        CV_DbgAssert( dx.size() == src.size() );
-        CV_DbgAssert( dy.size() == src.size() );
-
-        const int last_row = src.rows - 1;
-        const int last_col = src.cols - 1;
-
-        // compute the gradient on the central body of the image
-        {
-            ForwardGradientBody body;
-
-            body.src = src;
-            body.dx = dx;
-            body.dy = dy;
-
-            parallel_for_(Range(0, last_row), body);
-        }
-
-        // compute the gradient on the last row
-        for (int x = 0; x < last_col; ++x)
-        {
-            dx(last_row, x) = src(last_row, x + 1) - src(last_row, x);
-            dy(last_row, x) = 0.0f;
-        }
-
-        // compute the gradient on the last column
-        for (int y = 0; y < last_row; ++y)
-        {
-            dx(y, last_col) = 0.0f;
-            dy(y, last_col) = src(y + 1, last_col) - src(y, last_col);
-        }
-
-        dx(last_row, last_col) = 0.0f;
-        dy(last_row, last_col) = 0.0f;
-    }
-
-    ////////////////////////////////////////////////////////////
-    // divergence
-
-    struct DivergenceBody : ParallelLoopBody
-    {
-        void operator() (const Range& range) const;
-
-        Mat_<float> v1;
-        Mat_<float> v2;
-        mutable Mat_<float> div;
-    };
-
-    void DivergenceBody::operator() (const Range& range) const
-    {
-        for (int y = range.start; y < range.end; ++y)
-        {
-            const float* v1Row = v1[y];
-            const float* v2PrevRow = v2[y - 1];
-            const float* v2CurRow = v2[y];
-
-            float* divRow = div[y];
-
-            for(int x = 1; x < v1.cols; ++x)
-            {
-                const float v1x = v1Row[x] - v1Row[x - 1];
-                const float v2y = v2CurRow[x] - v2PrevRow[x];
-
-                divRow[x] = v1x + v2y;
-            }
-        }
-    }
-
-    void divergence(const Mat_<float>& v1, const Mat_<float>& v2, Mat_<float>& div)
-    {
-        CV_DbgAssert( v1.rows > 2 && v1.cols > 2 );
-        CV_DbgAssert( v2.size() == v1.size() );
-        CV_DbgAssert( div.size() == v1.size() );
-
-        {
-            DivergenceBody body;
-
-            body.v1 = v1;
-            body.v2 = v2;
-            body.div = div;
-
-            parallel_for_(Range(1, v1.rows), body);
-        }
-
-        // compute the divergence on the first row
-        for(int x = 1; x < v1.cols; ++x)
-            div(0, x) = v1(0, x) - v1(0, x - 1) + v2(0, x);
-
-        // compute the divergence on the first column
-        for (int y = 1; y < v1.rows; ++y)
-            div(y, 0) = v1(y, 0) + v2(y, 0) - v2(y - 1, 0);
-
-        div(0, 0) = v1(0, 0) + v2(0, 0);
-    }
-
-    ////////////////////////////////////////////////////////////
-    // calcGradRho
-
-    struct CalcGradRhoBody : ParallelLoopBody
-    {
-        void operator() (const Range& range) const;
-
-        Mat_<float> I0;
-        Mat_<float> I1w;
-        Mat_<float> I1wx;
-        Mat_<float> I1wy;
-        Mat_<float> u1;
-        Mat_<float> u2;
-        mutable Mat_<float> grad;
-        mutable Mat_<float> rho_c;
-    };
-
-    void CalcGradRhoBody::operator() (const Range& range) const
-    {
-        for (int y = range.start; y < range.end; ++y)
-        {
-            const float* I0Row = I0[y];
-            const float* I1wRow = I1w[y];
-            const float* I1wxRow = I1wx[y];
-            const float* I1wyRow = I1wy[y];
-            const float* u1Row = u1[y];
-            const float* u2Row = u2[y];
-
-            float* gradRow = grad[y];
-            float* rhoRow = rho_c[y];
-
-            for (int x = 0; x < I0.cols; ++x)
-            {
-                const float Ix2 = I1wxRow[x] * I1wxRow[x];
-                const float Iy2 = I1wyRow[x] * I1wyRow[x];
-
-                // store the |Grad(I1)|^2
-                gradRow[x] = Ix2 + Iy2;
-
-                // compute the constant part of the rho function
-                rhoRow[x] = (I1wRow[x] - I1wxRow[x] * u1Row[x] - I1wyRow[x] * u2Row[x] - I0Row[x]);
-            }
-        }
-    }
-
-    void calcGradRho(const Mat_<float>& I0, const Mat_<float>& I1w, const Mat_<float>& I1wx, const Mat_<float>& I1wy, const Mat_<float>& u1, const Mat_<float>& u2,
-        Mat_<float>& grad, Mat_<float>& rho_c)
-    {
-        CV_DbgAssert( I1w.size() == I0.size() );
-        CV_DbgAssert( I1wx.size() == I0.size() );
-        CV_DbgAssert( I1wy.size() == I0.size() );
-        CV_DbgAssert( u1.size() == I0.size() );
-        CV_DbgAssert( u2.size() == I0.size() );
-        CV_DbgAssert( grad.size() == I0.size() );
-        CV_DbgAssert( rho_c.size() == I0.size() );
-
-        CalcGradRhoBody body;
-
-        body.I0 = I0;
-        body.I1w = I1w;
-        body.I1wx = I1wx;
-        body.I1wy = I1wy;
-        body.u1 = u1;
-        body.u2 = u2;
-        body.grad = grad;
-        body.rho_c = rho_c;
-
-        parallel_for_(Range(0, I0.rows), body);
-    }
-
-    ////////////////////////////////////////////////////////////
-    // estimateV
-
-    struct EstimateVBody : ParallelLoopBody
-    {
-        void operator() (const Range& range) const;
-
-        Mat_<float> I1wx;
-        Mat_<float> I1wy;
-        Mat_<float> u1;
-        Mat_<float> u2;
-        Mat_<float> grad;
-        Mat_<float> rho_c;
-        mutable Mat_<float> v1;
-        mutable Mat_<float> v2;
-        float l_t;
-    };
-
-    void EstimateVBody::operator() (const Range& range) const
-    {
-        for (int y = range.start; y < range.end; ++y)
-        {
-            const float* I1wxRow = I1wx[y];
-            const float* I1wyRow = I1wy[y];
-            const float* u1Row = u1[y];
-            const float* u2Row = u2[y];
-            const float* gradRow = grad[y];
-            const float* rhoRow = rho_c[y];
-
-            float* v1Row = v1[y];
-            float* v2Row = v2[y];
-
-            for (int x = 0; x < I1wx.cols; ++x)
-            {
-                const float rho = rhoRow[x] + (I1wxRow[x] * u1Row[x] + I1wyRow[x] * u2Row[x]);
-
-                float d1 = 0.0f;
-                float d2 = 0.0f;
-
-                if (rho < -l_t * gradRow[x])
-                {
-                    d1 = l_t * I1wxRow[x];
-                    d2 = l_t * I1wyRow[x];
-                }
-                else if (rho > l_t * gradRow[x])
-                {
-                    d1 = -l_t * I1wxRow[x];
-                    d2 = -l_t * I1wyRow[x];
-                }
-                else if (gradRow[x] > numeric_limits<float>::epsilon())
-                {
-                    float fi = -rho / gradRow[x];
-                    d1 = fi * I1wxRow[x];
-                    d2 = fi * I1wyRow[x];
-                }
-
-                v1Row[x] = u1Row[x] + d1;
-                v2Row[x] = u2Row[x] + d2;
-            }
-        }
-    }
-
-    void estimateV(const Mat_<float>& I1wx, const Mat_<float>& I1wy, const Mat_<float>& u1, const Mat_<float>& u2, const Mat_<float>& grad, const Mat_<float>& rho_c,
-                   Mat_<float>& v1, Mat_<float>& v2, float l_t)
-    {
-        CV_DbgAssert( I1wy.size() == I1wx.size() );
-        CV_DbgAssert( u1.size() == I1wx.size() );
-        CV_DbgAssert( u2.size() == I1wx.size() );
-        CV_DbgAssert( grad.size() == I1wx.size() );
-        CV_DbgAssert( rho_c.size() == I1wx.size() );
-        CV_DbgAssert( v1.size() == I1wx.size() );
-        CV_DbgAssert( v2.size() == I1wx.size() );
-
-        EstimateVBody body;
-
-        body.I1wx = I1wx;
-        body.I1wy = I1wy;
-        body.u1 = u1;
-        body.u2 = u2;
-        body.grad = grad;
-        body.rho_c = rho_c;
-        body.v1 = v1;
-        body.v2 = v2;
-        body.l_t = l_t;
-
-        parallel_for_(Range(0, I1wx.rows), body);
-    }
-
-    ////////////////////////////////////////////////////////////
-    // estimateU
-
-    float estimateU(const Mat_<float>& v1, const Mat_<float>& v2, const Mat_<float>& div_p1, const Mat_<float>& div_p2, Mat_<float>& u1, Mat_<float>& u2, float theta)
-    {
-        CV_DbgAssert( v2.size() == v1.size() );
-        CV_DbgAssert( div_p1.size() == v1.size() );
-        CV_DbgAssert( div_p2.size() == v1.size() );
-        CV_DbgAssert( u1.size() == v1.size() );
-        CV_DbgAssert( u2.size() == v1.size() );
-
-        float error = 0.0f;
-        for (int y = 0; y < v1.rows; ++y)
-        {
-            const float* v1Row = v1[y];
-            const float* v2Row = v2[y];
-            const float* divP1Row = div_p1[y];
-            const float* divP2Row = div_p2[y];
-
-            float* u1Row = u1[y];
-            float* u2Row = u2[y];
-
-            for (int x = 0; x < v1.cols; ++x)
-            {
-                const float u1k = u1Row[x];
-                const float u2k = u2Row[x];
-
-                u1Row[x] = v1Row[x] + theta * divP1Row[x];
-                u2Row[x] = v2Row[x] + theta * divP2Row[x];
-
-                error += (u1Row[x] - u1k) * (u1Row[x] - u1k) + (u2Row[x] - u2k) * (u2Row[x] - u2k);
-            }
-        }
-
-        return error;
-    }
-
-    ////////////////////////////////////////////////////////////
-    // estimateDualVariables
-
-    struct EstimateDualVariablesBody : ParallelLoopBody
-    {
-        void operator() (const Range& range) const;
-
-        Mat_<float> u1x;
-        Mat_<float> u1y;
-        Mat_<float> u2x;
-        Mat_<float> u2y;
-        mutable Mat_<float> p11;
-        mutable Mat_<float> p12;
-        mutable Mat_<float> p21;
-        mutable Mat_<float> p22;
-        float taut;
-    };
-
-    void EstimateDualVariablesBody::operator() (const Range& range) const
-    {
-        for (int y = range.start; y < range.end; ++y)
-        {
-            const float* u1xRow = u1x[y];
-            const float* u1yRow = u1y[y];
-            const float* u2xRow = u2x[y];
-            const float* u2yRow = u2y[y];
-
-            float* p11Row = p11[y];
-            float* p12Row = p12[y];
-            float* p21Row = p21[y];
-            float* p22Row = p22[y];
-
-            for (int x = 0; x < u1x.cols; ++x)
-            {
-                const float g1 = static_cast<float>(hypot(u1xRow[x], u1yRow[x]));
-                const float g2 = static_cast<float>(hypot(u2xRow[x], u2yRow[x]));
-
-                const float ng1  = 1.0f + taut * g1;
-                const float ng2  = 1.0f + taut * g2;
-
-                p11Row[x] = (p11Row[x] + taut * u1xRow[x]) / ng1;
-                p12Row[x] = (p12Row[x] + taut * u1yRow[x]) / ng1;
-                p21Row[x] = (p21Row[x] + taut * u2xRow[x]) / ng2;
-                p22Row[x] = (p22Row[x] + taut * u2yRow[x]) / ng2;
-            }
-        }
-    }
-
-    void estimateDualVariables(const Mat_<float>& u1x, const Mat_<float>& u1y, const Mat_<float>& u2x, const Mat_<float>& u2y,
-                               Mat_<float>& p11, Mat_<float>& p12, Mat_<float>& p21, Mat_<float>& p22, float taut)
-    {
-        CV_DbgAssert( u1y.size() == u1x.size() );
-        CV_DbgAssert( u2x.size() == u1x.size() );
-        CV_DbgAssert( u2y.size() == u1x.size() );
-        CV_DbgAssert( p11.size() == u1x.size() );
-        CV_DbgAssert( p12.size() == u1x.size() );
-        CV_DbgAssert( p21.size() == u1x.size() );
-        CV_DbgAssert( p22.size() == u1x.size() );
-
-        EstimateDualVariablesBody body;
-
-        body.u1x = u1x;
-        body.u1y = u1y;
-        body.u2x = u2x;
-        body.u2y = u2y;
-        body.p11 = p11;
-        body.p12 = p12;
-        body.p21 = p21;
-        body.p22 = p22;
-        body.taut = taut;
-
-        parallel_for_(Range(0, u1x.rows), body);
     }
 }
 
-void cv::OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2)
+void buildFlowMap(const Mat_<float>& u1, const Mat_<float>& u2, Mat_<float>& map1, Mat_<float>& map2)
+{
+    CV_DbgAssert( u2.size() == u1.size() );
+    CV_DbgAssert( map1.size() == u1.size() );
+    CV_DbgAssert( map2.size() == u1.size() );
+
+    BuildFlowMapBody body;
+
+    body.u1 = u1;
+    body.u2 = u2;
+    body.map1 = map1;
+    body.map2 = map2;
+
+    parallel_for_(Range(0, u1.rows), body);
+}
+
+////////////////////////////////////////////////////////////
+// centeredGradient
+
+struct CenteredGradientBody : ParallelLoopBody
+{
+    void operator() (const Range& range) const;
+
+    Mat_<float> src;
+    mutable Mat_<float> dx;
+    mutable Mat_<float> dy;
+};
+
+void CenteredGradientBody::operator() (const Range& range) const
+{
+    const int last_col = src.cols - 1;
+
+    for (int y = range.start; y < range.end; ++y)
+    {
+        const float* srcPrevRow = src[y - 1];
+        const float* srcCurRow = src[y];
+        const float* srcNextRow = src[y + 1];
+
+        float* dxRow = dx[y];
+        float* dyRow = dy[y];
+
+        for (int x = 1; x < last_col; ++x)
+        {
+            dxRow[x] = 0.5f * (srcCurRow[x + 1] - srcCurRow[x - 1]);
+            dyRow[x] = 0.5f * (srcNextRow[x] - srcPrevRow[x]);
+        }
+    }
+}
+
+void centeredGradient(const Mat_<float>& src, Mat_<float>& dx, Mat_<float>& dy)
+{
+    CV_DbgAssert( src.rows > 2 && src.cols > 2 );
+    CV_DbgAssert( dx.size() == src.size() );
+    CV_DbgAssert( dy.size() == src.size() );
+
+    const int last_row = src.rows - 1;
+    const int last_col = src.cols - 1;
+
+    // compute the gradient on the center body of the image
+    {
+        CenteredGradientBody body;
+
+        body.src = src;
+        body.dx = dx;
+        body.dy = dy;
+
+        parallel_for_(Range(1, last_row), body);
+    }
+
+    // compute the gradient on the first and last rows
+    for (int x = 1; x < last_col; ++x)
+    {
+        dx(0, x) = 0.5f * (src(0, x + 1) - src(0, x - 1));
+        dy(0, x) = 0.5f * (src(1, x) - src(0, x));
+
+        dx(last_row, x) = 0.5f * (src(last_row, x + 1) - src(last_row, x - 1));
+        dy(last_row, x) = 0.5f * (src(last_row, x) - src(last_row - 1, x));
+    }
+
+    // compute the gradient on the first and last columns
+    for (int y = 1; y < last_row; ++y)
+    {
+        dx(y, 0) = 0.5f * (src(y, 1) - src(y, 0));
+        dy(y, 0) = 0.5f * (src(y + 1, 0) - src(y - 1, 0));
+
+        dx(y, last_col) = 0.5f * (src(y, last_col) - src(y, last_col - 1));
+        dy(y, last_col) = 0.5f * (src(y + 1, last_col) - src(y - 1, last_col));
+    }
+
+    // compute the gradient at the four corners
+    dx(0, 0) = 0.5f * (src(0, 1) - src(0, 0));
+    dy(0, 0) = 0.5f * (src(1, 0) - src(0, 0));
+
+    dx(0, last_col) = 0.5f * (src(0, last_col) - src(0, last_col - 1));
+    dy(0, last_col) = 0.5f * (src(1, last_col) - src(0, last_col));
+
+    dx(last_row, 0) = 0.5f * (src(last_row, 1) - src(last_row, 0));
+    dy(last_row, 0) = 0.5f * (src(last_row, 0) - src(last_row - 1, 0));
+
+    dx(last_row, last_col) = 0.5f * (src(last_row, last_col) - src(last_row, last_col - 1));
+    dy(last_row, last_col) = 0.5f * (src(last_row, last_col) - src(last_row - 1, last_col));
+}
+
+////////////////////////////////////////////////////////////
+// forwardGradient
+
+struct ForwardGradientBody : ParallelLoopBody
+{
+    void operator() (const Range& range) const;
+
+    Mat_<float> src;
+    mutable Mat_<float> dx;
+    mutable Mat_<float> dy;
+};
+
+void ForwardGradientBody::operator() (const Range& range) const
+{
+    const int last_col = src.cols - 1;
+
+    for (int y = range.start; y < range.end; ++y)
+    {
+        const float* srcCurRow = src[y];
+        const float* srcNextRow = src[y + 1];
+
+        float* dxRow = dx[y];
+        float* dyRow = dy[y];
+
+        for (int x = 0; x < last_col; ++x)
+        {
+            dxRow[x] = srcCurRow[x + 1] - srcCurRow[x];
+            dyRow[x] = srcNextRow[x] - srcCurRow[x];
+        }
+    }
+}
+
+void forwardGradient(const Mat_<float>& src, Mat_<float>& dx, Mat_<float>& dy)
+{
+    CV_DbgAssert( src.rows > 2 && src.cols > 2 );
+    CV_DbgAssert( dx.size() == src.size() );
+    CV_DbgAssert( dy.size() == src.size() );
+
+    const int last_row = src.rows - 1;
+    const int last_col = src.cols - 1;
+
+    // compute the gradient on the central body of the image
+    {
+        ForwardGradientBody body;
+
+        body.src = src;
+        body.dx = dx;
+        body.dy = dy;
+
+        parallel_for_(Range(0, last_row), body);
+    }
+
+    // compute the gradient on the last row
+    for (int x = 0; x < last_col; ++x)
+    {
+        dx(last_row, x) = src(last_row, x + 1) - src(last_row, x);
+        dy(last_row, x) = 0.0f;
+    }
+
+    // compute the gradient on the last column
+    for (int y = 0; y < last_row; ++y)
+    {
+        dx(y, last_col) = 0.0f;
+        dy(y, last_col) = src(y + 1, last_col) - src(y, last_col);
+    }
+
+    dx(last_row, last_col) = 0.0f;
+    dy(last_row, last_col) = 0.0f;
+}
+
+////////////////////////////////////////////////////////////
+// divergence
+
+struct DivergenceBody : ParallelLoopBody
+{
+    void operator() (const Range& range) const;
+
+    Mat_<float> v1;
+    Mat_<float> v2;
+    mutable Mat_<float> div;
+};
+
+void DivergenceBody::operator() (const Range& range) const
+{
+    for (int y = range.start; y < range.end; ++y)
+    {
+        const float* v1Row = v1[y];
+        const float* v2PrevRow = v2[y - 1];
+        const float* v2CurRow = v2[y];
+
+        float* divRow = div[y];
+
+        for(int x = 1; x < v1.cols; ++x)
+        {
+            const float v1x = v1Row[x] - v1Row[x - 1];
+            const float v2y = v2CurRow[x] - v2PrevRow[x];
+
+            divRow[x] = v1x + v2y;
+        }
+    }
+}
+
+void divergence(const Mat_<float>& v1, const Mat_<float>& v2, Mat_<float>& div)
+{
+    CV_DbgAssert( v1.rows > 2 && v1.cols > 2 );
+    CV_DbgAssert( v2.size() == v1.size() );
+    CV_DbgAssert( div.size() == v1.size() );
+
+    {
+        DivergenceBody body;
+
+        body.v1 = v1;
+        body.v2 = v2;
+        body.div = div;
+
+        parallel_for_(Range(1, v1.rows), body);
+    }
+
+    // compute the divergence on the first row
+    for(int x = 1; x < v1.cols; ++x)
+        div(0, x) = v1(0, x) - v1(0, x - 1) + v2(0, x);
+
+    // compute the divergence on the first column
+    for (int y = 1; y < v1.rows; ++y)
+        div(y, 0) = v1(y, 0) + v2(y, 0) - v2(y - 1, 0);
+
+    div(0, 0) = v1(0, 0) + v2(0, 0);
+}
+
+////////////////////////////////////////////////////////////
+// calcGradRho
+
+struct CalcGradRhoBody : ParallelLoopBody
+{
+    void operator() (const Range& range) const;
+
+    Mat_<float> I0;
+    Mat_<float> I1w;
+    Mat_<float> I1wx;
+    Mat_<float> I1wy;
+    Mat_<float> u1;
+    Mat_<float> u2;
+    mutable Mat_<float> grad;
+    mutable Mat_<float> rho_c;
+};
+
+void CalcGradRhoBody::operator() (const Range& range) const
+{
+    for (int y = range.start; y < range.end; ++y)
+    {
+        const float* I0Row = I0[y];
+        const float* I1wRow = I1w[y];
+        const float* I1wxRow = I1wx[y];
+        const float* I1wyRow = I1wy[y];
+        const float* u1Row = u1[y];
+        const float* u2Row = u2[y];
+
+        float* gradRow = grad[y];
+        float* rhoRow = rho_c[y];
+
+        for (int x = 0; x < I0.cols; ++x)
+        {
+            const float Ix2 = I1wxRow[x] * I1wxRow[x];
+            const float Iy2 = I1wyRow[x] * I1wyRow[x];
+
+            // store the |Grad(I1)|^2
+            gradRow[x] = Ix2 + Iy2;
+
+            // compute the constant part of the rho function
+            rhoRow[x] = (I1wRow[x] - I1wxRow[x] * u1Row[x] - I1wyRow[x] * u2Row[x] - I0Row[x]);
+        }
+    }
+}
+
+void calcGradRho(const Mat_<float>& I0, const Mat_<float>& I1w, const Mat_<float>& I1wx, const Mat_<float>& I1wy, const Mat_<float>& u1, const Mat_<float>& u2,
+    Mat_<float>& grad, Mat_<float>& rho_c)
+{
+    CV_DbgAssert( I1w.size() == I0.size() );
+    CV_DbgAssert( I1wx.size() == I0.size() );
+    CV_DbgAssert( I1wy.size() == I0.size() );
+    CV_DbgAssert( u1.size() == I0.size() );
+    CV_DbgAssert( u2.size() == I0.size() );
+    CV_DbgAssert( grad.size() == I0.size() );
+    CV_DbgAssert( rho_c.size() == I0.size() );
+
+    CalcGradRhoBody body;
+
+    body.I0 = I0;
+    body.I1w = I1w;
+    body.I1wx = I1wx;
+    body.I1wy = I1wy;
+    body.u1 = u1;
+    body.u2 = u2;
+    body.grad = grad;
+    body.rho_c = rho_c;
+
+    parallel_for_(Range(0, I0.rows), body);
+}
+
+////////////////////////////////////////////////////////////
+// estimateV
+
+struct EstimateVBody : ParallelLoopBody
+{
+    void operator() (const Range& range) const;
+
+    Mat_<float> I1wx;
+    Mat_<float> I1wy;
+    Mat_<float> u1;
+    Mat_<float> u2;
+    Mat_<float> grad;
+    Mat_<float> rho_c;
+    mutable Mat_<float> v1;
+    mutable Mat_<float> v2;
+    float l_t;
+};
+
+void EstimateVBody::operator() (const Range& range) const
+{
+    for (int y = range.start; y < range.end; ++y)
+    {
+        const float* I1wxRow = I1wx[y];
+        const float* I1wyRow = I1wy[y];
+        const float* u1Row = u1[y];
+        const float* u2Row = u2[y];
+        const float* gradRow = grad[y];
+        const float* rhoRow = rho_c[y];
+
+        float* v1Row = v1[y];
+        float* v2Row = v2[y];
+
+        for (int x = 0; x < I1wx.cols; ++x)
+        {
+            const float rho = rhoRow[x] + (I1wxRow[x] * u1Row[x] + I1wyRow[x] * u2Row[x]);
+
+            float d1 = 0.0f;
+            float d2 = 0.0f;
+
+            if (rho < -l_t * gradRow[x])
+            {
+                d1 = l_t * I1wxRow[x];
+                d2 = l_t * I1wyRow[x];
+            }
+            else if (rho > l_t * gradRow[x])
+            {
+                d1 = -l_t * I1wxRow[x];
+                d2 = -l_t * I1wyRow[x];
+            }
+            else if (gradRow[x] > std::numeric_limits<float>::epsilon())
+            {
+                float fi = -rho / gradRow[x];
+                d1 = fi * I1wxRow[x];
+                d2 = fi * I1wyRow[x];
+            }
+
+            v1Row[x] = u1Row[x] + d1;
+            v2Row[x] = u2Row[x] + d2;
+        }
+    }
+}
+
+void estimateV(const Mat_<float>& I1wx, const Mat_<float>& I1wy, const Mat_<float>& u1, const Mat_<float>& u2, const Mat_<float>& grad, const Mat_<float>& rho_c,
+               Mat_<float>& v1, Mat_<float>& v2, float l_t)
+{
+    CV_DbgAssert( I1wy.size() == I1wx.size() );
+    CV_DbgAssert( u1.size() == I1wx.size() );
+    CV_DbgAssert( u2.size() == I1wx.size() );
+    CV_DbgAssert( grad.size() == I1wx.size() );
+    CV_DbgAssert( rho_c.size() == I1wx.size() );
+    CV_DbgAssert( v1.size() == I1wx.size() );
+    CV_DbgAssert( v2.size() == I1wx.size() );
+
+    EstimateVBody body;
+
+    body.I1wx = I1wx;
+    body.I1wy = I1wy;
+    body.u1 = u1;
+    body.u2 = u2;
+    body.grad = grad;
+    body.rho_c = rho_c;
+    body.v1 = v1;
+    body.v2 = v2;
+    body.l_t = l_t;
+
+    parallel_for_(Range(0, I1wx.rows), body);
+}
+
+////////////////////////////////////////////////////////////
+// estimateU
+
+float estimateU(const Mat_<float>& v1, const Mat_<float>& v2, const Mat_<float>& div_p1, const Mat_<float>& div_p2, Mat_<float>& u1, Mat_<float>& u2, float theta)
+{
+    CV_DbgAssert( v2.size() == v1.size() );
+    CV_DbgAssert( div_p1.size() == v1.size() );
+    CV_DbgAssert( div_p2.size() == v1.size() );
+    CV_DbgAssert( u1.size() == v1.size() );
+    CV_DbgAssert( u2.size() == v1.size() );
+
+    float error = 0.0f;
+    for (int y = 0; y < v1.rows; ++y)
+    {
+        const float* v1Row = v1[y];
+        const float* v2Row = v2[y];
+        const float* divP1Row = div_p1[y];
+        const float* divP2Row = div_p2[y];
+
+        float* u1Row = u1[y];
+        float* u2Row = u2[y];
+
+        for (int x = 0; x < v1.cols; ++x)
+        {
+            const float u1k = u1Row[x];
+            const float u2k = u2Row[x];
+
+            u1Row[x] = v1Row[x] + theta * divP1Row[x];
+            u2Row[x] = v2Row[x] + theta * divP2Row[x];
+
+            error += (u1Row[x] - u1k) * (u1Row[x] - u1k) + (u2Row[x] - u2k) * (u2Row[x] - u2k);
+        }
+    }
+
+    return error;
+}
+
+////////////////////////////////////////////////////////////
+// estimateDualVariables
+
+struct EstimateDualVariablesBody : ParallelLoopBody
+{
+    void operator() (const Range& range) const;
+
+    Mat_<float> u1x;
+    Mat_<float> u1y;
+    Mat_<float> u2x;
+    Mat_<float> u2y;
+    mutable Mat_<float> p11;
+    mutable Mat_<float> p12;
+    mutable Mat_<float> p21;
+    mutable Mat_<float> p22;
+    float taut;
+};
+
+void EstimateDualVariablesBody::operator() (const Range& range) const
+{
+    for (int y = range.start; y < range.end; ++y)
+    {
+        const float* u1xRow = u1x[y];
+        const float* u1yRow = u1y[y];
+        const float* u2xRow = u2x[y];
+        const float* u2yRow = u2y[y];
+
+        float* p11Row = p11[y];
+        float* p12Row = p12[y];
+        float* p21Row = p21[y];
+        float* p22Row = p22[y];
+
+        for (int x = 0; x < u1x.cols; ++x)
+        {
+            const float g1 = static_cast<float>(hypot(u1xRow[x], u1yRow[x]));
+            const float g2 = static_cast<float>(hypot(u2xRow[x], u2yRow[x]));
+
+            const float ng1  = 1.0f + taut * g1;
+            const float ng2  = 1.0f + taut * g2;
+
+            p11Row[x] = (p11Row[x] + taut * u1xRow[x]) / ng1;
+            p12Row[x] = (p12Row[x] + taut * u1yRow[x]) / ng1;
+            p21Row[x] = (p21Row[x] + taut * u2xRow[x]) / ng2;
+            p22Row[x] = (p22Row[x] + taut * u2yRow[x]) / ng2;
+        }
+    }
+}
+
+void estimateDualVariables(const Mat_<float>& u1x, const Mat_<float>& u1y, const Mat_<float>& u2x, const Mat_<float>& u2y,
+                           Mat_<float>& p11, Mat_<float>& p12, Mat_<float>& p21, Mat_<float>& p22, float taut)
+{
+    CV_DbgAssert( u1y.size() == u1x.size() );
+    CV_DbgAssert( u2x.size() == u1x.size() );
+    CV_DbgAssert( u2y.size() == u1x.size() );
+    CV_DbgAssert( p11.size() == u1x.size() );
+    CV_DbgAssert( p12.size() == u1x.size() );
+    CV_DbgAssert( p21.size() == u1x.size() );
+    CV_DbgAssert( p22.size() == u1x.size() );
+
+    EstimateDualVariablesBody body;
+
+    body.u1x = u1x;
+    body.u1y = u1y;
+    body.u2x = u2x;
+    body.u2y = u2y;
+    body.p11 = p11;
+    body.p12 = p12;
+    body.p21 = p21;
+    body.p22 = p22;
+    body.taut = taut;
+
+    parallel_for_(Range(0, u1x.rows), body);
+}
+
+void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2)
 {
     const float scaledEpsilon = static_cast<float>(epsilon * epsilon * I0.size().area());
 
@@ -795,7 +851,7 @@ void cv::OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<fl
 
         calcGradRho(I0, I1w, I1wx, I1wy, u1, u2, grad, rho_c);
 
-        float error = numeric_limits<float>::max();
+        float error = std::numeric_limits<float>::max();
         for (int n = 0; error > scaledEpsilon && n < iterations; ++n)
         {
             // estimate the values of the variable (v1, v2) (thresholding operator TH)
@@ -818,21 +874,12 @@ void cv::OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<fl
     }
 }
 
-namespace
+void OpticalFlowDual_TVL1::collectGarbage()
 {
-    template <typename T> void releaseVector(vector<T>& v)
-    {
-        vector<T> empty;
-        empty.swap(v);
-    }
-}
-
-void cv::OpticalFlowDual_TVL1::collectGarbage()
-{
-    releaseVector(I0s);
-    releaseVector(I1s);
-    releaseVector(u1s);
-    releaseVector(u2s);
+    I0s.clear();
+    I1s.clear();
+    u1s.clear();
+    u2s.clear();
 
     I1x_buf.release();
     I1y_buf.release();
@@ -862,4 +909,28 @@ void cv::OpticalFlowDual_TVL1::collectGarbage()
     u1y_buf.release();
     u2x_buf.release();
     u2y_buf.release();
+}
+
+CV_INIT_ALGORITHM(OpticalFlowDual_TVL1, "DenseOpticalFlow.DualTVL1",
+                  obj.info()->addParam(obj, "tau", obj.tau, false, 0, 0,
+                                       "Time step of the numerical scheme");
+                  obj.info()->addParam(obj, "lambda", obj.lambda, false, 0, 0,
+                                       "Weight parameter for the data term, attachment parameter");
+                  obj.info()->addParam(obj, "theta", obj.theta, false, 0, 0,
+                                       "Weight parameter for (u - v)^2, tightness parameter");
+                  obj.info()->addParam(obj, "nscales", obj.nscales, false, 0, 0,
+                                       "Number of scales used to create the pyramid of images");
+                  obj.info()->addParam(obj, "warps", obj.warps, false, 0, 0,
+                                       "Number of warpings per scale");
+                  obj.info()->addParam(obj, "epsilon", obj.epsilon, false, 0, 0,
+                                       "Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time");
+                  obj.info()->addParam(obj, "iterations", obj.iterations, false, 0, 0,
+                                       "Stopping criterion iterations number used in the numerical scheme");
+                  obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow));
+
+} // namespace
+
+Ptr<DenseOpticalFlow> cv::createOptFlow_DualTVL1()
+{
+    return new OpticalFlowDual_TVL1;
 }

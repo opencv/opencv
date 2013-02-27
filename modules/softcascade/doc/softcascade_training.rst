@@ -7,13 +7,13 @@ Soft Cascade Detector Training
 --------------------------------------------
 
 
-Octave
------------------
-.. ocv:class:: Octave
+softcascade::Octave
+-------------------
+.. ocv:class:: softcascade::Octave : public Algorithm
 
 Public interface for soft cascade training algorithm. ::
 
-    class CV_EXPORTS Octave : public Algorithm
+    class Octave : public Algorithm
     {
     public:
 
@@ -37,17 +37,17 @@ Public interface for soft cascade training algorithm. ::
 
 
 
-Octave::~Octave
+softcascade::Octave::~Octave
 ---------------------------------------
 Destructor for Octave.
 
-.. ocv:function:: Octave::~Octave()
+.. ocv:function:: softcascade::Octave::~Octave()
 
 
-Octave::train
-------------------------
+softcascade::Octave::train
+--------------------------
 
-.. ocv:function:: bool Octave::train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth)
+.. ocv:function:: bool softcascade::Octave::train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth)
 
     :param dataset an object that allows communicate for training set.
 
@@ -59,19 +59,19 @@ Octave::train
 
 
 
-Octave::setRejectThresholds
---------------------------------------
+softcascade::Octave::setRejectThresholds
+----------------------------------------
 
-.. ocv:function:: void Octave::setRejectThresholds(OutputArray thresholds)
+.. ocv:function:: void softcascade::Octave::setRejectThresholds(OutputArray thresholds)
 
     :param thresholds an output array of resulted rejection vector. Have same size as number of trained stages.
 
 
-Octave::write
-------------------------
+softcascade::Octave::write
+--------------------------
 
-.. ocv:function:: void Octave::train(cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const
-.. ocv:function:: void Octave::train( CvFileStorage* fs, string name) const
+.. ocv:function:: void softcascade::Octave::train(cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const
+.. ocv:function:: void softcascade::Octave::train( CvFileStorage* fs, string name) const
 
     :param fs an output file storage to store trained detector.
 
@@ -82,13 +82,13 @@ Octave::write
     :param name a name of root node for trained detector.
 
 
-FeaturePool
------------
-.. ocv:class:: FeaturePool
+softcascade::FeaturePool
+------------------------
+.. ocv:class:: softcascade::FeaturePool
 
 Public interface for feature pool. This is a hight level abstraction for training random feature pool. ::
 
-    class CV_EXPORTS FeaturePool
+    class FeaturePool
     {
     public:
 
@@ -99,42 +99,42 @@ Public interface for feature pool. This is a hight level abstraction for trainin
 
     };
 
-FeaturePool::size
------------------
+softcascade::FeaturePool::size
+------------------------------
 
 Returns size of feature pool.
 
-.. ocv:function:: int FeaturePool::size() const
+.. ocv:function:: int softcascade::FeaturePool::size() const
 
 
 
-FeaturePool::~FeaturePool
--------------------------
+softcascade::FeaturePool::~FeaturePool
+--------------------------------------
 
 FeaturePool destructor.
 
-.. ocv:function:: int FeaturePool::~FeaturePool()
+.. ocv:function:: softcascade::FeaturePool::~FeaturePool()
 
 
 
-FeaturePool::write
-------------------
+softcascade::FeaturePool::write
+-------------------------------
 
 Write specified feature from feature pool to file storage.
 
-.. ocv:function:: void FeaturePool::write( cv::FileStorage& fs, int index) const
+.. ocv:function:: void softcascade::FeaturePool::write( cv::FileStorage& fs, int index) const
 
     :param fs an output file storage to store feature.
 
     :param index an index of feature that should be stored.
 
 
-FeaturePool::apply
-------------------
+softcascade::FeaturePool::apply
+-------------------------------
 
 Compute feature on integral channel image.
 
-.. ocv:function:: float FeaturePool::apply(int fi, int si, const Mat& channels) const
+.. ocv:function:: float softcascade::FeaturePool::apply(int fi, int si, const Mat& channels) const
 
     :param fi an index of feature that should be computed.
 

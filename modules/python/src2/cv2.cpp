@@ -99,26 +99,26 @@ catch (const cv::Exception &e) \
 using namespace cv;
 typedef cv::softcascade::ChannelFeatureBuilder softcascade_ChannelFeatureBuilder;
 
-typedef vector<uchar> vector_uchar;
-typedef vector<int> vector_int;
-typedef vector<float> vector_float;
-typedef vector<double> vector_double;
-typedef vector<Point> vector_Point;
-typedef vector<Point2f> vector_Point2f;
-typedef vector<Vec2f> vector_Vec2f;
-typedef vector<Vec3f> vector_Vec3f;
-typedef vector<Vec4f> vector_Vec4f;
-typedef vector<Vec6f> vector_Vec6f;
-typedef vector<Vec4i> vector_Vec4i;
-typedef vector<Rect> vector_Rect;
-typedef vector<KeyPoint> vector_KeyPoint;
-typedef vector<Mat> vector_Mat;
-typedef vector<DMatch> vector_DMatch;
-typedef vector<string> vector_string;
-typedef vector<vector<Point> > vector_vector_Point;
-typedef vector<vector<Point2f> > vector_vector_Point2f;
-typedef vector<vector<Point3f> > vector_vector_Point3f;
-typedef vector<vector<DMatch> > vector_vector_DMatch;
+typedef std::vector<uchar> vector_uchar;
+typedef std::vector<int> vector_int;
+typedef std::vector<float> vector_float;
+typedef std::vector<double> vector_double;
+typedef std::vector<Point> vector_Point;
+typedef std::vector<Point2f> vector_Point2f;
+typedef std::vector<Vec2f> vector_Vec2f;
+typedef std::vector<Vec3f> vector_Vec3f;
+typedef std::vector<Vec4f> vector_Vec4f;
+typedef std::vector<Vec6f> vector_Vec6f;
+typedef std::vector<Vec4i> vector_Vec4i;
+typedef std::vector<Rect> vector_Rect;
+typedef std::vector<KeyPoint> vector_KeyPoint;
+typedef std::vector<Mat> vector_Mat;
+typedef std::vector<DMatch> vector_DMatch;
+typedef std::vector<std::string> vector_string;
+typedef std::vector<std::vector<Point> > vector_vector_Point;
+typedef std::vector<std::vector<Point2f> > vector_vector_Point2f;
+typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
+typedef std::vector<std::vector<DMatch> > vector_vector_DMatch;
 
 typedef Ptr<Algorithm> Ptr_Algorithm;
 typedef Ptr<FeatureDetector> Ptr_FeatureDetector;
@@ -136,7 +136,7 @@ typedef Ptr<flann::IndexParams> Ptr_flann_IndexParams;
 typedef Ptr<flann::SearchParams> Ptr_flann_SearchParams;
 
 typedef Ptr<FaceRecognizer> Ptr_FaceRecognizer;
-typedef vector<Scalar> vector_Scalar;
+typedef std::vector<Scalar> vector_Scalar;
 
 static PyObject* failmsgp(const char *fmt, ...)
 {
@@ -543,19 +543,12 @@ static PyObject* pyopencv_from(int64 value)
     return PyLong_FromLongLong(value);
 }
 
-#if !defined(__LP64__)
-static PyObject* pyopencv_from(uint64 value)
-{
-    return PyLong_FromUnsignedLongLong(value);
-}
-#endif
-
-static PyObject* pyopencv_from(const string& value)
+static PyObject* pyopencv_from(const std::string& value)
 {
     return PyString_FromString(value.empty() ? "" : value.c_str());
 }
 
-static bool pyopencv_to(PyObject* obj, string& value, const char* name = "<unknown>")
+static bool pyopencv_to(PyObject* obj, std::string& value, const char* name = "<unknown>")
 {
     (void)name;
     if(!obj || obj == Py_None)
@@ -563,7 +556,7 @@ static bool pyopencv_to(PyObject* obj, string& value, const char* name = "<unkno
     char* str = PyString_AsString(obj);
     if(!str)
         return false;
-    value = string(str);
+    value = std::string(str);
     return true;
 }
 
@@ -689,7 +682,7 @@ static inline PyObject* pyopencv_from(const Point2d& p)
 
 template<typename _Tp> struct pyopencvVecConverter
 {
-    static bool to(PyObject* obj, vector<_Tp>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<_Tp>& value, const ArgInfo info)
     {
         typedef typename DataType<_Tp>::channel_type _Cp;
         if(!obj || obj == Py_None)
@@ -787,7 +780,7 @@ template<typename _Tp> struct pyopencvVecConverter
         return i == n;
     }
 
-    static PyObject* from(const vector<_Tp>& value)
+    static PyObject* from(const std::vector<_Tp>& value)
     {
         if(value.empty())
             return PyTuple_New(0);
@@ -797,12 +790,12 @@ template<typename _Tp> struct pyopencvVecConverter
 };
 
 
-template<typename _Tp> static inline bool pyopencv_to(PyObject* obj, vector<_Tp>& value, const ArgInfo info)
+template<typename _Tp> static inline bool pyopencv_to(PyObject* obj, std::vector<_Tp>& value, const ArgInfo info)
 {
     return pyopencvVecConverter<_Tp>::to(obj, value, info);
 }
 
-template<typename _Tp> static inline PyObject* pyopencv_from(const vector<_Tp>& value)
+template<typename _Tp> static inline PyObject* pyopencv_from(const std::vector<_Tp>& value)
 {
     return pyopencvVecConverter<_Tp>::from(value);
 }
@@ -810,7 +803,7 @@ template<typename _Tp> static inline PyObject* pyopencv_from(const vector<_Tp>& 
 static PyObject* pyopencv_from(const KeyPoint&);
 static PyObject* pyopencv_from(const DMatch&);
 
-template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj, vector<_Tp>& value, const ArgInfo info)
+template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj, std::vector<_Tp>& value, const ArgInfo info)
 {
     if(!obj || obj == Py_None)
        return true;
@@ -834,7 +827,7 @@ template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj,
     return i == n;
 }
 
-template<typename _Tp> static inline PyObject* pyopencv_from_generic_vec(const vector<_Tp>& value)
+template<typename _Tp> static inline PyObject* pyopencv_from_generic_vec(const std::vector<_Tp>& value)
 {
     int i, n = (int)value.size();
     PyObject* seq = PyList_New(n);
@@ -854,14 +847,14 @@ template<typename _Tp> static inline PyObject* pyopencv_from_generic_vec(const v
 }
 
 
-template<typename _Tp> struct pyopencvVecConverter<vector<_Tp> >
+template<typename _Tp> struct pyopencvVecConverter<std::vector<_Tp> >
 {
-    static bool to(PyObject* obj, vector<vector<_Tp> >& value, const char* name="<unknown>")
+    static bool to(PyObject* obj, std::vector<std::vector<_Tp> >& value, const char* name="<unknown>")
     {
         return pyopencv_to_generic_vec(obj, value, name);
     }
 
-    static PyObject* from(const vector<vector<_Tp> >& value)
+    static PyObject* from(const std::vector<std::vector<_Tp> >& value)
     {
         return pyopencv_from_generic_vec(value);
     }
@@ -869,12 +862,12 @@ template<typename _Tp> struct pyopencvVecConverter<vector<_Tp> >
 
 template<> struct pyopencvVecConverter<Mat>
 {
-    static bool to(PyObject* obj, vector<Mat>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<Mat>& value, const ArgInfo info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
 
-    static PyObject* from(const vector<Mat>& value)
+    static PyObject* from(const std::vector<Mat>& value)
     {
         return pyopencv_from_generic_vec(value);
     }
@@ -882,12 +875,12 @@ template<> struct pyopencvVecConverter<Mat>
 
 template<> struct pyopencvVecConverter<KeyPoint>
 {
-    static bool to(PyObject* obj, vector<KeyPoint>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<KeyPoint>& value, const ArgInfo info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
 
-    static PyObject* from(const vector<KeyPoint>& value)
+    static PyObject* from(const std::vector<KeyPoint>& value)
     {
         return pyopencv_from_generic_vec(value);
     }
@@ -895,25 +888,25 @@ template<> struct pyopencvVecConverter<KeyPoint>
 
 template<> struct pyopencvVecConverter<DMatch>
 {
-    static bool to(PyObject* obj, vector<DMatch>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<DMatch>& value, const ArgInfo info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
 
-    static PyObject* from(const vector<DMatch>& value)
+    static PyObject* from(const std::vector<DMatch>& value)
     {
         return pyopencv_from_generic_vec(value);
     }
 };
 
-template<> struct pyopencvVecConverter<string>
+template<> struct pyopencvVecConverter<std::string>
 {
-    static bool to(PyObject* obj, vector<string>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<std::string>& value, const ArgInfo info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
 
-    static PyObject* from(const vector<string>& value)
+    static PyObject* from(const std::vector<std::string>& value)
     {
         return pyopencv_from_generic_vec(value);
     }

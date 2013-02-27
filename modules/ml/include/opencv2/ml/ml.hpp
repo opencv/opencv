@@ -297,7 +297,7 @@ struct CV_EXPORTS_W_MAP CvSVMParams
     CV_PROP_RW int         svm_type;
     CV_PROP_RW int         kernel_type;
     CV_PROP_RW double      degree; // for poly
-    CV_PROP_RW double      gamma;  // for poly/rbf/sigmoid
+    CV_PROP_RW double      gamma;  // for poly/rbf/sigmoid/chi2
     CV_PROP_RW double      coef0;  // for poly/sigmoid
 
     CV_PROP_RW double      C;  // for CV_SVM_C_SVC, CV_SVM_EPS_SVR and CV_SVM_NU_SVR
@@ -326,7 +326,10 @@ struct CV_EXPORTS CvSVMKernel
     virtual void calc_non_rbf_base( int vec_count, int vec_size, const float** vecs,
                                     const float* another, float* results,
                                     double alpha, double beta );
-
+    virtual void calc_intersec( int vcount, int var_count, const float** vecs,
+                            const float* another, float* results );    
+    virtual void calc_chi2( int vec_count, int vec_size, const float** vecs,
+                              const float* another, float* results );
     virtual void calc_linear( int vec_count, int vec_size, const float** vecs,
                               const float* another, float* results );
     virtual void calc_rbf( int vec_count, int vec_size, const float** vecs,
@@ -456,7 +459,7 @@ public:
     enum { C_SVC=100, NU_SVC=101, ONE_CLASS=102, EPS_SVR=103, NU_SVR=104 };
 
     // SVM kernel type
-    enum { LINEAR=0, POLY=1, RBF=2, SIGMOID=3 };
+    enum { LINEAR=0, POLY=1, RBF=2, SIGMOID=3, CHI2=4, INTER=5 };
 
     // SVM params type
     enum { C=0, GAMMA=1, P=2, NU=3, COEF=4, DEGREE=5 };
@@ -604,7 +607,7 @@ protected:
     virtual void setTrainData(int startStep, const Mat& samples,
                               const Mat* probs0,
                               const Mat* means0,
-                              const vector<Mat>* covs0,
+                              const std::vector<Mat>* covs0,
                               const Mat* weights0);
 
     bool doTrain(int startStep,
@@ -633,11 +636,11 @@ protected:
 
     CV_PROP Mat weights;
     CV_PROP Mat means;
-    CV_PROP vector<Mat> covs;
+    CV_PROP std::vector<Mat> covs;
 
-    vector<Mat> covsEigenValues;
-    vector<Mat> covsRotateMats;
-    vector<Mat> invCovsEigenValues;
+    std::vector<Mat> covsEigenValues;
+    std::vector<Mat> covsRotateMats;
+    std::vector<Mat> invCovsEigenValues;
     Mat logWeightDivDet;
 };
 } // namespace cv
