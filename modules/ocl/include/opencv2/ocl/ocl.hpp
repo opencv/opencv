@@ -66,6 +66,32 @@ namespace cv
             //CVCL_DEVICE_TYPE_CUSTOM      = (1 << 4)
             CVCL_DEVICE_TYPE_ALL         = 0xFFFFFFFF
         };
+
+        enum DevMemRW
+        {
+            DEVICE_MEM_R_W = 0, 
+            DEVICE_MEM_R_ONLY, 
+            DEVICE_MEM_W_ONLY
+        };
+ 
+        enum DevMemType
+        { 
+            DEVICE_MEM_DEFAULT = 0, 
+            DEVICE_MEM_AHP,         //alloc host pointer
+            DEVICE_MEM_UHP,         //use host pointer
+            DEVICE_MEM_CHP,         //copy host pointer
+            DEVICE_MEM_PM           //persistent memory
+        };
+
+        //Get the global device memory and read/write type	
+        //return 1 if unified memory system supported, otherwise return 0
+        CV_EXPORTS int getDevMemType(DevMemRW& rw_type, DevMemType& mem_type);
+
+        //Set the global device memory and read/write type, 
+        //the newly generated oclMat will all use this type
+        //return -1 if the target type is unsupported, otherwise return 0
+        CV_EXPORTS int setDevMemType(DevMemRW rw_type = DEVICE_MEM_R_W, DevMemType mem_type = DEVICE_MEM_DEFAULT); 
+
         //this class contains ocl runtime information
         class CV_EXPORTS Info
         {
@@ -228,6 +254,11 @@ namespace cv
             // previous data is unreferenced if needed.
             void create(int rows, int cols, int type);
             void create(Size size, int type);
+
+            //! allocates new oclMatrix with specified device memory type.
+            void createEx(int rows, int cols, int type, DevMemRW rw_type, DevMemType mem_type);
+            void createEx(Size size, int type, DevMemRW rw_type, DevMemType mem_type);
+
             //! decreases reference counter;
             // deallocate the data when reference counter reaches 0.
             void release();

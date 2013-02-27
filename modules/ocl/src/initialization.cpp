@@ -72,6 +72,15 @@ namespace cv
          */
         auto_ptr<ProgramCache> ProgramCache::programCache;
         ProgramCache *programCache = NULL;
+        DevMemType gDeviceMemType = DEVICE_MEM_DEFAULT;
+        DevMemRW gDeviceMemRW = DEVICE_MEM_R_W;
+        int gDevMemTypeValueMap[5] = {0, 
+                                      CL_MEM_ALLOC_HOST_PTR,
+                                      CL_MEM_USE_HOST_PTR,
+                                      CL_MEM_COPY_HOST_PTR,
+                                      CL_MEM_USE_PERSISTENT_MEM_AMD};
+        int gDevMemRWValueMap[3] = {CL_MEM_READ_WRITE, CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY};
+
         ProgramCache::ProgramCache()
         {
             codeCache.clear();
@@ -113,30 +122,25 @@ namespace cv
         }
 
         ////////////////////////Common OpenCL specific calls///////////////
-        //Info::Info()
-        //{
-        //	oclplatform = 0;
-        //	oclcontext = 0;
-        //	devnum = 0;
-        //}
-        //Info::~Info()
-        //{
-        //	release();
-        //}
-        //void Info::release()
-        //{
-        //	if(oclplatform)
-        //	{
-        //		oclplatform = 0;
-        //	}
-        //	if(oclcontext)
-        //	{
-        //		openCLSafeCall(clReleaseContext(oclcontext));
-        //	}
-        //	devices.empty();
-        //	devName.empty();
-        //}
-        struct Info::Impl
+        int getDevMemType(DevMemRW& rw_type, DevMemType& mem_type)
+        { 
+            rw_type = gDeviceMemRW; 
+            mem_type = gDeviceMemType; 
+            return Context::getContext()->impl->unified_memory;
+        }
+
+        int setDevMemType(DevMemRW rw_type, DevMemType mem_type)
+        { 
+            if( (mem_type == DEVICE_MEM_PM && Context::getContext()->impl->unified_memory == 0) ||
+                 mem_type == DEVICE_MEM_UHP ||
+                 mem_type == DEVICE_MEM_CHP )
+                return -1;
+            gDeviceMemRW = rw_type;
+            gDeviceMemType = mem_type;
+            return 0; 
+        }
+ 
+       struct Info::Impl
         {
             cl_platform_id oclplatform;
             std::vector<cl_device_id> devices;
@@ -290,11 +294,8 @@ namespace cv
          }
 
         void *getoclContext()
-
         {
-
             return &(Context::getContext()->impl->clContext);
-
         }
 
         void *getoclCommandQueue()
@@ -320,9 +321,15 @@ namespace cv
         void openCLMallocPitch(Context *clCxt, void **dev_ptr, size_t *pitch,
                                size_t widthInBytes, size_t height)
         {
+            openCLMallocPitchEx(clCxt, dev_ptr, pitch, widthInBytes, height, gDeviceMemRW, gDeviceMemType);
+        }
+
+        void openCLMallocPitchEx(Context *clCxt, void **dev_ptr, size_t *pitch,
+                               size_t widthInBytes, size_t height, DevMemRW rw_type, DevMemType mem_type)
+        {
             cl_int status;
 
-            *dev_ptr = clCreateBuffer(clCxt->impl->clContext, CL_MEM_READ_WRITE,
+            *dev_ptr = clCreateBuffer(clCxt->impl->clContext, gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
                                       widthInBytes * height, 0, &status);
             openCLVerifyCall(status);
             *pitch = widthInBytes;
@@ -837,6 +844,11 @@ namespace cv
             clcxt->impl->double_support = oclinfo.impl->double_support;
             //extra options to recognize compiler options
             memcpy(clcxt->impl->extra_options, oclinfo.impl->extra_options, 512);
+            cl_bool unfymem = false;
+            openCLSafeCall(clGetDeviceInfo(clcxt->impl->devices, CL_DEVICE_HOST_UNIFIED_MEMORY,
+                                           sizeof(cl_bool), (void *)&unfymem, NULL));
+            if(unfymem)
+                clcxt->impl->unified_memory = 1;
         }
         Context::Context()
         {
@@ -853,6 +865,7 @@ namespace cv
             impl->double_support = 0;
             //extra options to recognize vendor specific fp64 extensions
             memset(impl->extra_options, 0, 512);
+            impl->unified_memory = 0; 
             programCache = ProgramCache::getProgramCache();
         }
 
