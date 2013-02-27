@@ -158,7 +158,7 @@ findTransformECC
 Finds the geometric transform (warp) between two images in terms of the ECC criterion [EP08]_.
 
 .. ocv:function:: double findTransformECC( InputArray templateImage, InputArray inputImage, InputOutputArray warpMatrix, int motionType=MOTION_AFFINE, TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001))
-.. ocv:cfunction:: double cvFindTransformECC( const CvArr* templateImage, const CvArr* inputImage, CvArr* warpMatrix, const int motionType, const CvTermCriteria criteria)
+.. ocv:cfunction:: double cvFindTransformECC( const CvArr* templateImage, const CvArr* inputImage, CvMat* warpMatrix, const int motionType, const CvTermCriteria criteria)
 
     :param templateImage: single-channel template image; ``CV_8U`` or ``CV_32F`` array.
 

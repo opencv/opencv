@@ -309,7 +309,7 @@ static void update_warping_matrix_ECC (Mat& map_matrix, const Mat& update, const
 }
 
 CV_IMPL double cvFindTransformECC (const CvArr* _image1, const CvArr* _image2,
-                                   CvMat * _map_matrix,
+                                   CvMat* _map_matrix,
                                    const int motionType,
                                    const CvTermCriteria _criteria)
 {
