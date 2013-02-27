@@ -43,6 +43,7 @@
 #include "test_precomp.hpp"
 
 using namespace cv;
+using namespace std;
 
 class CV_ECC_BaseTest : public cvtest::BaseTest
 {
