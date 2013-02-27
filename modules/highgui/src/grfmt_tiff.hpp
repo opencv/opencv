@@ -107,6 +107,7 @@ public:
 
 protected:
     void* m_tif;
+    int normalizeChannelsNumber(int channels) const;
 };
 
 #endif
