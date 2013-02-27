@@ -823,93 +823,45 @@ oclMat &cv::ocl::oclMat::setTo(const Scalar &scalar, const oclMat &mask)
 oclMat cv::ocl::oclMat::reshape(int new_cn, int new_rows) const
 {
     if( new_rows != 0 && new_rows != rows)
-
     {
-
         CV_Error( CV_StsBadFunc,
-
                   "oclMat's number of rows can not be changed for current version" );
-
     }
-
     oclMat hdr = *this;
-
     int cn = oclchannels();
-
     if (new_cn == 0)
-
         new_cn = cn;
 
-
-
     int total_width = cols * cn;
-
-
-
     if ((new_cn > total_width || total_width % new_cn != 0) && new_rows == 0)
-
         new_rows = rows * total_width / new_cn;
 
-
-
     if (new_rows != 0 && new_rows != rows)
-
     {
-
         int total_size = total_width * rows;
-
-
-
         if (!isContinuous())
-
             CV_Error(CV_BadStep, "The matrix is not continuous, thus its number of rows can not be changed");
 
-
-
         if ((unsigned)new_rows > (unsigned)total_size)
-
             CV_Error(CV_StsOutOfRange, "Bad new number of rows");
-
-
 
         total_width = total_size / new_rows;
 
-
-
         if (total_width * new_rows != total_size)
-
             CV_Error(CV_StsBadArg, "The total number of matrix elements is not divisible by the new number of rows");
 
-
-
         hdr.rows = new_rows;
-
         hdr.step = total_width * elemSize1();
-
     }
 
-
-
     int new_width = total_width / new_cn;
-
-
-
     if (new_width * new_cn != total_width)
-
         CV_Error(CV_BadNumChannels, "The total width is not divisible by the new number of channels");
 
-
-
     hdr.cols = new_width;
-
     hdr.wholecols = new_width;
-
     hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn - 1) << CV_CN_SHIFT);
-
-
-
     return hdr;
-
 }
 
 void cv::ocl::oclMat::create(int _rows, int _cols, int _type)
@@ -937,7 +889,7 @@ void cv::ocl::oclMat::create(int _rows, int _cols, int _type)
         size_t esz = elemSize();
 
         void *dev_ptr;
-        openCLMallocPitch(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols), rows);
+        openCLMallocPitch(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols), rows, rw_type, mem_type);
         //openCLMallocPitch(clCxt,&dev_ptr, &step, esz * cols, rows);
 
         if (esz * cols == step)
@@ -990,4 +942,45 @@ oclMat& cv::ocl::oclMat::operator/=( const oclMat& m )
 {
     divide(*this, m, *this);
     return *this;
+}
+
+// some of the constructors that can't be put in matrix_operations.hpp
+namespace cv{
+    namespace ocl{
+        extern int gDeviceMemType;
+        extern int gDeviceMemRW;
+
+        oclMat::oclMat() 
+        { 
+            new (this)oclMat(gDeviceMemRW, gDeviceMemType);
+        }
+        oclMat::oclMat(int rows, int cols, int type)
+        {
+            new (this)oclMat(rows, cols, type, gDeviceMemRW, gDeviceMemType);
+        }
+        oclMat::oclMat(Size size, int type)
+        {
+            new (this)oclMat(size, type, gDeviceMemRW, gDeviceMemType);
+        }
+        oclMat::oclMat(int rows, int cols, int type, const Scalar &s)
+        {
+            new (this)oclMat(rows, cols, type, s, gDeviceMemRW, gDeviceMemType);
+        }
+        oclMat::oclMat(Size size, int type, const Scalar &s)
+        {
+            new (this)oclMat(size, type, s, gDeviceMemRW, gDeviceMemType);
+        }
+        oclMat::oclMat(int rows, int cols, int type, void *data, size_t step)
+        {
+            new (this)oclMat(rows, cols, type, data, step, gDeviceMemRW, gDeviceMemType);
+        }
+        oclMat::oclMat(Size size, int type, void *data, size_t step)
+        {
+            new (this)oclMat(size, type, data, step, gDeviceMemRW, gDeviceMemType);
+        }
+        oclMat::oclMat(const Mat &m)
+        {
+            new (this)oclMat(m, gDeviceMemRW, gDeviceMemType);
+        }
+    }
 }

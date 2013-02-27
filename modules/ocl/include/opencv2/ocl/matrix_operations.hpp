@@ -78,23 +78,36 @@ namespace cv
         ////////////////////////////////////////////////////////////////////////
         //////////////////////////////// oclMat ////////////////////////////////
         ////////////////////////////////////////////////////////////////////////
+ 
+       inline oclMat::oclMat(int _rw, int _mem) 
+            : flags(0), rows(0), cols(0), step(0), 
+              data(0), refcount(0), datastart(0), dataend(0), 
+              offset(0), wholerows(0), wholecols(0), rw_type(_rw), mem_type(_mem) 
+        {
+        }
 
-        inline oclMat::oclMat() : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0) {}
-
-        inline oclMat::oclMat(int _rows, int _cols, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
+        inline oclMat::oclMat(int _rows, int _cols, int _type, int _rw, int _mem) 
+            : flags(0), rows(0), cols(0), step(0), 
+              data(0), refcount(0), datastart(0), dataend(0),
+              offset(0), wholerows(0), wholecols(0), rw_type(_rw), mem_type(_mem) 
         {
             if( _rows > 0 && _cols > 0 )
                 create( _rows, _cols, _type );
         }
 
-        inline oclMat::oclMat(Size _size, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
+        inline oclMat::oclMat(Size _size, int _type, int _rw, int _mem) 
+            : flags(0), rows(0), cols(0), step(0), 
+              data(0), refcount(0), datastart(0), dataend(0), 
+              offset(0), wholerows(0), wholecols(0), rw_type(_rw), mem_type(_mem)
         {
             if( _size.height > 0 && _size.width > 0 )
                 create( _size.height, _size.width, _type );
         }
 
-        inline oclMat::oclMat(int _rows, int _cols, int _type, const Scalar &_s)
-            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
+        inline oclMat::oclMat(int _rows, int _cols, int _type, const Scalar &_s, int _rw, int _mem)
+            : flags(0), rows(0), cols(0), step(0), 
+              data(0), refcount(0), datastart(0), dataend(0), 
+              offset(0), wholerows(0), wholecols(0), rw_type(_rw), mem_type(_mem)
         {
             if(_rows > 0 && _cols > 0)
             {
@@ -103,8 +116,10 @@ namespace cv
             }
         }
 
-        inline oclMat::oclMat(Size _size, int _type, const Scalar &_s)
-            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
+        inline oclMat::oclMat(Size _size, int _type, const Scalar &_s, int _rw, int _mem)
+            : flags(0), rows(0), cols(0), step(0), 
+              data(0), refcount(0), datastart(0), dataend(0), 
+              offset(0), wholerows(0), wholecols(0), rw_type(_rw), mem_type(_mem)
         {
             if( _size.height > 0 && _size.width > 0 )
             {
@@ -115,67 +130,40 @@ namespace cv
 
         inline oclMat::oclMat(const oclMat &m)
             : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data),
-              refcount(m.refcount), datastart(m.datastart), dataend(m.dataend), clCxt(m.clCxt), offset(m.offset), wholerows(m.wholerows), wholecols(m.wholecols)
+              refcount(m.refcount), datastart(m.datastart), dataend(m.dataend), 
+              clCxt(m.clCxt), offset(m.offset), wholerows(m.wholerows), wholecols(m.wholecols),
+              rw_type(m.rw_type), mem_type(m.mem_type)
         {
             if( refcount )
                 CV_XADD(refcount, 1);
         }
 
-        inline oclMat::oclMat(int _rows, int _cols, int _type, void *_data, size_t _step)
+        inline oclMat::oclMat(int _rows, int _cols, int _type, void *_data, size_t _step, int _rw, int _mem)
             : flags(0), rows(0), cols(0), step(0), data(0), refcount(0),
-              datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
+              datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0),
+              rw_type(_rw), mem_type(_mem)  
         {
             cv::Mat m(_rows, _cols, _type, _data, _step);
             upload(m);
-            //size_t minstep = cols * elemSize();
-            //if( step == Mat::AUTO_STEP )
-            //{
-            //    step = minstep;
-            //    flags |= Mat::CONTINUOUS_FLAG;
-            //}
-            //else
-            //{
-            //    if( rows == 1 ) step = minstep;
-            //    CV_DbgAssert( step >= minstep );
-            //    flags |= step == minstep ? Mat::CONTINUOUS_FLAG : 0;
-            //}
-            //dataend += step * (rows - 1) + minstep;
         }
 
-        inline oclMat::oclMat(Size _size, int _type, void *_data, size_t _step)
+        inline oclMat::oclMat(Size _size, int _type, void *_data, size_t _step, int _rw, int _mem)
             : flags(0), rows(0), cols(0),
               step(0), data(0), refcount(0),
-              datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
+              datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0),
+              rw_type(_rw), mem_type(_mem)
         {
             cv::Mat m(_size, _type, _data, _step);
             upload(m);
-            //size_t minstep = cols * elemSize();
-            //if( step == Mat::AUTO_STEP )
-            //{
-            //    step = minstep;
-            //    flags |= Mat::CONTINUOUS_FLAG;
-            //}
-            //else
-            //{
-            //    if( rows == 1 ) step = minstep;
-            //    CV_DbgAssert( step >= minstep );
-            //    flags |= step == minstep ? Mat::CONTINUOUS_FLAG : 0;
-            //}
-            //dataend += step * (rows - 1) + minstep;
         }
 
 
-        inline oclMat::oclMat(const oclMat &m, const Range &rRange, const Range &cRange)
+        inline oclMat::oclMat(const oclMat &m, const Range &rRange, const Range &cRange) 
+            : flags(m.flags), step(m.step), data(m.data), refcount(m.refcount),
+              datastart(m.datastart), dataend(m.dataend), offset(m.offset),
+              wholerows(m.wholerows), wholecols(m.wholecols),
+              rw_type(m.rw_type), mem_type(m.mem_type)
         {
-            flags = m.flags;
-            step = m.step;
-            refcount = m.refcount;
-            data = m.data;
-            datastart = m.datastart;
-            dataend = m.dataend;
-            wholerows = m.wholerows;
-            wholecols = m.wholecols;
-            offset = m.offset;
             if( rRange == Range::all() )
                 rows = m.rows;
             else
@@ -207,7 +195,9 @@ namespace cv
         inline oclMat::oclMat(const oclMat &m, const Rect &roi)
             : flags(m.flags), rows(roi.height), cols(roi.width),
               step(m.step), data(m.data), refcount(m.refcount),
-              datastart(m.datastart), dataend(m.dataend), clCxt(m.clCxt), offset(m.offset), wholerows(m.wholerows), wholecols(m.wholecols)
+              datastart(m.datastart), dataend(m.dataend), clCxt(m.clCxt), 
+              offset(m.offset), wholerows(m.wholerows), wholecols(m.wholecols),
+              rw_type(m.rw_type), mem_type(m.mem_type)
         {
             flags &= roi.width < m.cols ? ~Mat::CONTINUOUS_FLAG : -1;
             offset += roi.y * step + roi.x * elemSize();
@@ -219,8 +209,10 @@ namespace cv
                 rows = cols = 0;
         }
 
-        inline oclMat::oclMat(const Mat &m)
-            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) , offset(0), wholerows(0), wholecols(0)
+        inline oclMat::oclMat(const Mat &m, int _rw, int _mem)
+            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), 
+              datastart(0), dataend(0) , offset(0), wholerows(0), wholecols(0),
+              rw_type(_rw), mem_type(_mem)
         {
             //clCxt = Context::getContext();
             upload(m);
@@ -250,6 +242,8 @@ namespace cv
                 wholerows = m.wholerows;
                 wholecols = m.wholecols;
                 refcount = m.refcount;
+                rw_type = m.rw_type;
+                mem_type = m.mem_type;
             }
             return *this;
         }
@@ -317,7 +311,7 @@ namespace cv
 
         inline oclMat oclMat::clone() const
         {
-            oclMat m;
+            oclMat m(rw_type, mem_type);
             copyTo(m);
             return m;
         }
@@ -358,6 +352,8 @@ namespace cv
             std::swap( clCxt,  b.clCxt );
             std::swap( wholerows, b.wholerows );
             std::swap( wholecols, b.wholecols );
+            std::swap( rw_type, b.rw_type);
+            std::swap( mem_type, b.mem_type);
         }
 
         inline void oclMat::locateROI( Size &wholeSize, Point &ofs ) const
@@ -486,7 +482,7 @@ namespace cv
 
         inline oclMat oclMat::t() const
         {
-            oclMat tmp;
+            oclMat tmp(rw_type, mem_type);
             transpose(*this, tmp);
             return tmp;
         }

@@ -59,13 +59,29 @@ namespace cv
         using std::auto_ptr;
         enum
         {
-            CVCL_DEVICE_TYPE_DEFAULT     = (1 << 0),
-            CVCL_DEVICE_TYPE_CPU         = (1 << 1),
-            CVCL_DEVICE_TYPE_GPU         = (1 << 2),
-            CVCL_DEVICE_TYPE_ACCELERATOR = (1 << 3),
-            //CVCL_DEVICE_TYPE_CUSTOM      = (1 << 4)
-            CVCL_DEVICE_TYPE_ALL         = 0xFFFFFFFF
+            CVCL_DEVICE_TYPE_DEFAULT = 0,
+            CVCL_DEVICE_TYPE_CPU,
+            CVCL_DEVICE_TYPE_GPU,
+            CVCL_DEVICE_TYPE_ACCELERATOR,
+            CVCL_DEVICE_TYPE_ALL
         };
+
+        enum 
+        {
+            DEVICE_MEM_R_W = 0, 
+            DEVICE_MEM_R_ONLY, 
+            DEVICE_MEM_W_ONLY
+        };
+ 
+        enum 
+        { 
+            DEVICE_MEM_DEFAULT = 0, 
+            DEVICE_MEM_AHP,         //alloc host pointer
+            DEVICE_MEM_UHP,         //use host pointer
+            DEVICE_MEM_CHP,         //copy host pointer
+            DEVICE_MEM_PM           //persistent memory
+        };
+
         //this class contains ocl runtime information
         class CV_EXPORTS Info
         {
@@ -89,8 +105,17 @@ namespace cv
         CV_EXPORTS int getDevice(std::vector<Info> &oclinfo, int devicetype = CVCL_DEVICE_TYPE_GPU);
 
         //set device you want to use, optional function after getDevice be called
-        //the devnum is the index of the selected device in DeviceName vector of INfo
+        //the devnum is the index of the selected device in DeviceName vector of Info
         CV_EXPORTS void setDevice(Info &oclinfo, int devnum = 0);
+
+        //get the default device memory and read/write type
+        //return 1 if unified memory system supported, otherwise return 0
+        CV_EXPORTS int getDevMemType(int& rw_type, int& mem_type);
+
+        //set the default device memory and read/write type, 
+        //the newly generated oclMat will all use this type unless you specify them
+        //return -1 if the target type is unsupported, otherwise return 0
+        CV_EXPORTS int setDevMemType(int rw_type, int mem_type);
 
         //optional function, if you want save opencl binary kernel to the file, set its path
         CV_EXPORTS  void setBinpath(const char *path);
@@ -150,18 +175,37 @@ namespace cv
         public:
             //! default constructor
             oclMat();
+            oclMat(int rw_type, int mem_type);
+
             //! constructs oclMatrix of the specified size and type (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
             oclMat(int rows, int cols, int type);
+            oclMat(int rows, int cols, int type, 
+                   int rw_type, int mem_type);
+
             oclMat(Size size, int type);
+            oclMat(Size size, int type, 
+                   int rw_type, int mem_type);
+
             //! constucts oclMatrix and fills it with the specified value _s.
             oclMat(int rows, int cols, int type, const Scalar &s);
+            oclMat(int rows, int cols, int type, const Scalar &s, 
+                   int rw_type, int mem_type);
+
             oclMat(Size size, int type, const Scalar &s);
+            oclMat(Size size, int type, const Scalar &s, 
+                   int rw_type, int mem_type);
+
             //! copy constructor
             oclMat(const oclMat &m);
 
             //! constructor for oclMatrix headers pointing to user-allocated data
             oclMat(int rows, int cols, int type, void *data, size_t step = Mat::AUTO_STEP);
+            oclMat(int rows, int cols, int type, void *data, size_t step,
+                   int rw_type, int mem_type);
+
             oclMat(Size size, int type, void *data, size_t step = Mat::AUTO_STEP);
+            oclMat(Size size, int type, void *data, size_t step, 
+                   int rw_type, int mem_type);
 
             //! creates a matrix header for a part of the bigger matrix
             oclMat(const oclMat &m, const Range &rowRange, const Range &colRange);
@@ -169,6 +213,8 @@ namespace cv
 
             //! builds oclMat from Mat. Perfom blocking upload to device.
             explicit oclMat (const Mat &m);
+            explicit oclMat (const Mat &m,
+                             int rw_type, int mem_type);
 
             //! destructor - calls release()
             ~oclMat();
@@ -319,6 +365,8 @@ namespace cv
             //add wholerows and wholecols for the whole matrix, datastart and dataend are no longer used
             int wholerows;
             int wholecols;
+            int rw_type;
+            int mem_type;
         };
 
 
