@@ -24,13 +24,26 @@ using namespace std;
 using namespace cv;
 
 // This program test most of the functions in ocl module and generate data metrix of x-factor in .csv files
-// All images needed in this test are in samples/gpu folder. 
+// All images needed in this test are in samples/gpu folder.
 // For haar template, please rename it to facedetect.xml
+
+void gen(Mat &mat, int rows, int cols, int type, Scalar low, Scalar high);
+string abspath(const string &relpath);
+int CV_CDECL cvErrorCallback(int, const char *, const char *, const char *, int, void *);
+typedef struct
+{
+    short x;
+    short y;
+} COOR;
+COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep,
+                  cv::Size size, int sp, int sr, int maxIter, float eps, int *tab);
+void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi,
+                    int sp, int sr, cv::TermCriteria crit);
 
 class Runnable
 {
 public:
-    explicit Runnable(const std::string &name): name_(name) {}
+    explicit Runnable(const std::string &runname): name_(runname) {}
     virtual ~Runnable() {}
 
     const std::string &name() const
@@ -43,8 +56,6 @@ public:
 private:
     std::string name_;
 };
-
-
 
 class TestSystem
 {
@@ -209,11 +220,11 @@ private:
     TestSystem():
         cur_subtest_is_empty_(true), cpu_elapsed_(0),
         gpu_elapsed_(0), gpu_full_elapsed_(0), speedup_total_(0.0),
-        num_subtests_called_(0), is_list_mode_(false),
-        num_iters_(10), cur_iter_idx_(0),
-        cpu_num_iters_(2), gpu_warmup_iters_(1), cur_warmup_idx_(0),
+        num_subtests_called_(0),
         speedup_faster_count_(0), speedup_slower_count_(0), speedup_equal_count_(0),
-        speedup_full_faster_count_(0), speedup_full_slower_count_(0), speedup_full_equal_count_(0),
+        speedup_full_faster_count_(0), speedup_full_slower_count_(0), speedup_full_equal_count_(0), is_list_mode_(false),
+        num_iters_(10), cpu_num_iters_(2),
+        gpu_warmup_iters_(1), cur_iter_idx_(0), cur_warmup_idx_(0),
         record_(0), recordname_("performance"), itname_changed_(true)
     {
         cpu_times_.reserve(num_iters_);
@@ -456,9 +467,9 @@ void TestSystem::finishCurrentSubtest()
     {
         double sum = 0;
 
-        for (int i = 0; i < gpu_times_.size(); i++)
+        for (size_t i = 0; i < gpu_times_.size(); i++)
         {
-            int64 diff = gpu_times_[i] - gpu_elapsed_;
+            int64 diff = gpu_times_[i] - static_cast<int64>(gpu_elapsed_);
             double diff_time = diff * 1000 / getTickFrequency();
             sum += diff_time * diff_time;
         }
@@ -672,17 +683,15 @@ int CV_CDECL cvErrorCallback(int /*status*/, const char * /*func_name*/,
 }
 
 /////////// matchTemplate ////////////////////////
-void InitMatchTemplate()
-{
-    Mat src;
-    gen(src, 500, 500, CV_32F, 0, 1);
-    Mat templ;
-    gen(templ, 500, 500, CV_32F, 0, 1);
-#ifdef USE_OPENCL
-    ocl::oclMat d_src(src), d_templ(templ), d_dst;
-    ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
-#endif
-}
+//void InitMatchTemplate()
+//{
+//	Mat src; gen(src, 500, 500, CV_32F, 0, 1);
+//	Mat templ; gen(templ, 500, 500, CV_32F, 0, 1);
+//#ifdef USE_OPENCL
+//	ocl::oclMat d_src(src), d_templ(templ), d_dst;
+//	ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
+//#endif
+//}
 TEST(matchTemplate)
 {
     //InitMatchTemplate();
@@ -696,7 +705,7 @@ TEST(matchTemplate)
         int all_type[] = {CV_32FC1, CV_32FC4};
         std::string type_name[] = {"CV_32FC1", "CV_32FC4"};
 
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             for(templ_size = 5; templ_size < 200; templ_size *= 5)
             {
@@ -738,7 +747,7 @@ TEST(matchTemplate)
         int all_type_8U[] = {CV_8UC1};
         std::string type_name_8U[] = {"CV_8UC1"};
 
-        for (int j = 0; j < sizeof(all_type_8U) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type_8U) / sizeof(int); j++)
         {
             for(templ_size = 5; templ_size < 200; templ_size *= 5)
             {
@@ -784,7 +793,7 @@ TEST(PyrLKOpticalFlow)
     std::string images1[] = {"rubberwhale1.png", "aloeL.jpg"};
     std::string images2[] = {"rubberwhale2.png", "aloeR.jpg"};
 
-    for (int i = 0; i < sizeof(images1) / sizeof(std::string); i++)
+    for (size_t i = 0; i < sizeof(images1) / sizeof(std::string); i++)
     {
         Mat frame0 = imread(abspath(images1[i]), i == 0 ? IMREAD_COLOR : IMREAD_GRAYSCALE);
 
@@ -887,7 +896,7 @@ TEST(pyrDown)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -930,7 +939,7 @@ TEST(pyrUp)
 
     for (int size = 500; size <= 2000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -1028,6 +1037,7 @@ public:
                           Size minSize = Size(),
                           Size maxSize = Size())
     {
+        (void)maxSize;
         MemStorage storage(cvCreateMemStorage(0));
         //CvMat img=image;
         CvSeq *objs = oclHaarDetectObjects(image, storage, scaleFactor, minNeighbors, flags, minSize);
@@ -1133,7 +1143,7 @@ TEST(blend)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] << " and CV_32FC1";
 
@@ -1440,7 +1450,7 @@ TEST(lut)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j];
 
@@ -1569,7 +1579,7 @@ TEST(Add)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j];
 
@@ -1616,7 +1626,7 @@ TEST(Mul)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -1666,7 +1676,7 @@ TEST(Div)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j];
 
@@ -1716,7 +1726,7 @@ TEST(Absdiff)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -1766,7 +1776,7 @@ TEST(CartToPolar)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j];
 
@@ -1818,7 +1828,7 @@ TEST(PolarToCart)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -1870,7 +1880,7 @@ TEST(magnitude)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j];
 
@@ -1918,7 +1928,7 @@ TEST(Transpose)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j];
 
@@ -1964,7 +1974,7 @@ TEST(Flip)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] << " ; FLIP_BOTH";
 
@@ -2012,7 +2022,7 @@ TEST(minMax)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j];
 
@@ -2056,7 +2066,7 @@ TEST(minMaxLoc)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -2098,7 +2108,7 @@ TEST(Sum)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -2133,7 +2143,6 @@ TEST(Sum)
 TEST(countNonZero)
 {
     Mat src;
-    int cpures, gpures;
 #ifdef USE_OPENCL
     ocl::oclMat d_src;
 #endif
@@ -2142,31 +2151,31 @@ TEST(countNonZero)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
             gen(src, size, size, all_type[j], 0, 256);
 
-            cpures = countNonZero(src);
+            countNonZero(src);
 
             CPU_ON;
-            cpures = countNonZero(src);
+            countNonZero(src);
             CPU_OFF;
 #ifdef USE_OPENCL
             d_src.upload(src);
 
             WARMUP_ON;
-            gpures = ocl::countNonZero(d_src);
+            ocl::countNonZero(d_src);
             WARMUP_OFF;
 
             GPU_ON;
-            gpures = ocl::countNonZero(d_src);
+            ocl::countNonZero(d_src);
             GPU_OFF;
 
             GPU_FULL_ON;
             d_src.upload(src);
-            gpures = ocl::countNonZero(d_src);
+            ocl::countNonZero(d_src);
             GPU_FULL_OFF;
 #endif
         }
@@ -2185,7 +2194,7 @@ TEST(Phase)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -2235,7 +2244,7 @@ TEST(bitwise_and)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -2284,7 +2293,7 @@ TEST(bitwise_or)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j];
 
@@ -2333,7 +2342,7 @@ TEST(bitwise_xor)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j];
 
@@ -2382,7 +2391,7 @@ TEST(bitwise_not)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -2430,7 +2439,7 @@ TEST(compare)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -2480,7 +2489,7 @@ TEST(pow)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -2527,13 +2536,13 @@ TEST(MagnitudeSqr)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t t = 0; t < sizeof(all_type) / sizeof(int); t++)
         {
-            SUBTEST << size << 'x' << size << "; " << type_name[j];
+            SUBTEST << size << 'x' << size << "; " << type_name[t];
 
-            gen(src1, size, size, all_type[j], 0, 256);
-            gen(src2, size, size, all_type[j], 0, 256);
-            gen(dst, size, size, all_type[j], 0, 256);
+            gen(src1, size, size, all_type[t], 0, 256);
+            gen(src2, size, size, all_type[t], 0, 256);
+            gen(dst, size, size, all_type[t], 0, 256);
 
 
             for (int i = 0; i < src1.rows; ++i)
@@ -2597,7 +2606,7 @@ TEST(AddWeighted)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -2648,7 +2657,7 @@ TEST(Blur)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -2695,7 +2704,7 @@ TEST(Laplacian)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -2730,66 +2739,6 @@ TEST(Laplacian)
     }
 }
 
-/////////////stereo match///////////////
-/*
-TEST(Stereo)
-{
-	Mat left_src, right_src;
-	Mat left, right, disp;
-	ocl::StereoBM_GPU bm_gpu;
-	StereoBM bm_cpu;
-#ifdef USE_OPENCL
-	ocl::oclMat d_left,d_right;
-	//please make sure that you set currect directory path
-	string left_str = "..\\..\\..\\samples\\gpu\\tsucuba_left.png";
-	string right_str = "..\\..\\..\\samples\\gpu\\tsucuba_right.png";
-
-#endif
-	std::vector<cv::ocl::Info> oclinfo;
-	cv::ocl::getDevice(oclinfo);
-
-	//set the correct argument
-	bm_cpu.state->numberOfDisparities = 32;
-	bm_cpu.state->SADWindowSize = 5;
-
-	bm_gpu.ndisp = 32;
-	bm_gpu.winSize = 5;
-
-    left_src  = imread(left_str);
-	right_src = imread(right_str);
-    if (left_src.empty()) throw runtime_error("can't open file \"" + left_str + "\"");
-    if (right_src.empty()) throw runtime_error("can't open file \"" + right_str + "\"");
-    cvtColor(left_src, left, CV_BGR2GRAY);
-    cvtColor(right_src, right, CV_BGR2GRAY);
-
-	bm_cpu(left,right,disp);
-
-	CPU_ON;
-	bm_cpu(left,right,disp);
-	CPU_OFF;
-#ifdef USE_OPENCL
-    d_left.upload(left);
-    d_right.upload(right);
-	ocl::oclMat d_disp(left.size(), CV_8U);
-
-	WARMUP_ON;
-	bm_gpu(d_left, d_right, d_disp);
-	WARMUP_OFF;
-
-	GPU_ON;
-	bm_gpu(d_left, d_right, d_disp);
-	GPU_OFF;
-
-	GPU_FULL_ON;
-	d_left.upload(left);
-	d_right.upload(right);
-	bm_gpu(d_left, d_right, d_disp);
-	d_left.download(left);
-	d_right.download(right);
-	GPU_FULL_OFF;
-#endif
-}
-*/
 ///////////// Erode ////////////////////
 TEST(Erode)
 {
@@ -2802,7 +2751,7 @@ TEST(Erode)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -2850,7 +2799,7 @@ TEST(Sobel)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -2896,7 +2845,7 @@ TEST(Scharr)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -2938,7 +2887,7 @@ TEST(GaussianBlur)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -2981,7 +2930,7 @@ TEST(equalizeHist)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -3021,7 +2970,7 @@ TEST(CopyMakeBorder)
 {
     Mat src, dst;
 #ifdef USE_OPENCL
-    ocl::oclMat d_src, d_dst;
+    ocl::oclMat d_dst;
 #endif
     int bordertype = BORDER_CONSTANT;
     int all_type[] = {CV_8UC1, CV_8UC4};
@@ -3029,7 +2978,7 @@ TEST(CopyMakeBorder)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -3067,7 +3016,7 @@ TEST(cornerMinEigenVal)
 {
     Mat src, dst;
 #ifdef USE_OPENCL
-    ocl::oclMat d_src, d_dst;
+    ocl::oclMat d_dst;
 #endif
     int blockSize = 7, apertureSize = 1 + 2 * (rand() % 4);
     int borderType = BORDER_REFLECT;
@@ -3076,7 +3025,7 @@ TEST(cornerMinEigenVal)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -3121,7 +3070,7 @@ TEST(cornerHarris)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] << " ; BORDER_REFLECT";
 
@@ -3166,7 +3115,7 @@ TEST(integral)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j]  ;
 
@@ -3219,7 +3168,7 @@ TEST(WarpAffine)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -3274,7 +3223,7 @@ TEST(WarpPerspective)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -3322,7 +3271,7 @@ TEST(resize)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] << " ; up";
 
@@ -3356,7 +3305,7 @@ TEST(resize)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] << " ; down";
 
@@ -3499,11 +3448,6 @@ TEST(meanShiftFiltering)
     }
 }
 ///////////// meanShiftProc////////////////////////
-typedef struct
-{
-    short x;
-    short y;
-} COOR;
 COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size size, int sp, int sr, int maxIter, float eps, int *tab)
 {
 
@@ -3647,12 +3591,11 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
             break;
         }
 
-        double icount = 1.0 / count;
-        int x1 = cvFloor(sx * icount);
-        int y1 = cvFloor(sy * icount);
-        s0 = cvFloor(s0 * icount);
-        s1 = cvFloor(s1 * icount);
-        s2 = cvFloor(s2 * icount);
+        int x1 = sx / count;
+        int y1 = sy / count;
+        s0 = s0 / count;
+        s1 = s1 / count;
+        s2 = s2 / count;
 
         bool stopFlag = (x0 == x1 && y0 == y1) || (abs(x1 - x0) + abs(y1 - y0) +
                         tab[s0 - c0 + 255] + tab[s1 - c1 + 255] + tab[s2 - c2 + 255] <= eps);
@@ -3679,8 +3622,8 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
     dptr[3] = (uchar)c3;
 
     COOR coor;
-    coor.x = x0;
-    coor.y = y0;
+    coor.x = static_cast<short>(x0);
+    coor.y = static_cast<short>(y0);
     return coor;
 }
 
@@ -3794,7 +3737,7 @@ TEST(ConvertTo)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] << " to 32FC1";
 
@@ -3841,7 +3784,7 @@ TEST(copyTo)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -3890,7 +3833,7 @@ TEST(setTo)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
@@ -3934,7 +3877,7 @@ TEST(Merge)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
             Size size1 = Size(size, size);
@@ -3992,7 +3935,7 @@ TEST(Split)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j];
             Size size1 = Size(size, size);
@@ -4085,11 +4028,11 @@ TEST(remap)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t t = 0; t < sizeof(all_type) / sizeof(int); t++)
         {
-            SUBTEST << size << 'x' << size << "; src " << type_name[j] << "; map CV_32FC1";
+            SUBTEST << size << 'x' << size << "; src " << type_name[t] << "; map CV_32FC1";
 
-            gen(src, size, size, all_type[j], 0, 256);
+            gen(src, size, size, all_type[t], 0, 256);
 
             xmap.create(size, size, CV_32FC1);
             dst.create(size, size, CV_32FC1);
@@ -4150,7 +4093,7 @@ TEST(cvtColor)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             gen(src, size, size, all_type[j], 0, 256);
             SUBTEST << size << "x" << size << "; " << type_name[j] << " ; CV_RGBA2GRAY";
@@ -4195,7 +4138,7 @@ TEST(filter2D)
         int all_type[] = {CV_8UC1, CV_8UC4};
         std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             gen(src, size, size, all_type[j], 0, 256);
 
@@ -4252,7 +4195,7 @@ TEST(dft)
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
-        for (int j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] << " ; complex-to-complex";
 
@@ -4346,9 +4289,9 @@ int main(int argc, const char *argv[])
 
     int devidx = 0;
 
-    for (int i = 0; i < oclinfo.size(); i++)
+    for (size_t i = 0; i < oclinfo.size(); i++)
     {
-        for (int j = 0; j < oclinfo[i].DeviceName.size(); j++)
+        for (size_t j = 0; j < oclinfo[i].DeviceName.size(); j++)
         {
             printf("device %d: %s\n", devidx++, oclinfo[i].DeviceName[j].c_str());
         }
@@ -4365,8 +4308,8 @@ int main(int argc, const char *argv[])
         "{ d | device  | 0     | device id }"
         "{ i | iters   | 10    | iteration count }"
         "{ m | warmup  | 1     | gpu warm up iteration count}"
-        "{ t | xtop    | 1.1   | xfactor top boundary}"
-        "{ b | xbottom | 0.9   | xfactor bottom boundary}"
+        "{ t | xtop    | 1.1	  | xfactor top boundary}"
+        "{ b | xbottom | 0.9	  | xfactor bottom boundary}"
         "{ v | verify  | false | only run gpu once to verify if problems occur}";
 
     CommandLineParser cmd(argc, argv, keys);
@@ -4396,9 +4339,9 @@ int main(int argc, const char *argv[])
 
     devidx = 0;
 
-    for (int i = 0; i < oclinfo.size(); i++)
+    for (size_t i = 0; i < oclinfo.size(); i++)
     {
-        for (int j = 0; j < oclinfo[i].DeviceName.size(); j++, devidx++)
+        for (size_t j = 0; j < oclinfo[i].DeviceName.size(); j++, devidx++)
         {
             if (device == devidx)
             {
