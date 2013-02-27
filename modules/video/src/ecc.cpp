@@ -477,8 +477,8 @@ double cv::findTransformECC(InputArray templateImage,
         subtract(imageWarped,   imgMean, imageWarped, imageMask);//zero-mean input
         subtract(templateFloat, tmpMean, templateZM,  imageMask);//zero-mean template
 
-        const double tmpNorm = sqrt(countNonZero(imageMask)*(tmpStd.val[0])*(tmpStd.val[0]));
-        const double imgNorm = sqrt(countNonZero(imageMask)*(imgStd.val[0])*(imgStd.val[0]));
+        const double tmpNorm = std::sqrt(countNonZero(imageMask)*(tmpStd.val[0])*(tmpStd.val[0]));
+        const double imgNorm = std::sqrt(countNonZero(imageMask)*(imgStd.val[0])*(imgStd.val[0]));
 
         // calculate jacobian of image wrt parameters
         switch (motionType){
