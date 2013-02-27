@@ -42,6 +42,7 @@ if __name__ == "__main__":
     parser.add_option("", "--show-all", action="store_true", dest="showall", default=False, help="also include empty and \"notrun\" lines")
     parser.add_option("", "--match", dest="match", default=None)
     parser.add_option("", "--match-replace", dest="match_replace", default="")
+    parser.add_option("", "--regressions-only", dest="regressionsOnly", default=None, metavar="X-FACTOR", help="show only tests with performance regressions not")
     (options, args) = parser.parse_args()
 
     options.generateHtml = detectHtmlOutputType(options.format)
@@ -212,6 +213,18 @@ if __name__ == "__main__":
     if not needNewRow:
         tbl.trimLastRow()
 
+    if options.regressionsOnly:
+        for r in reversed(range(len(tbl.rows))):
+            delete = True
+            i = 1
+            for set in metric_sets:
+                val = tbl.rows[r].cells[len(tbl.rows[r].cells)-i].value
+                if val is not None and val < float(options.regressionsOnly):
+                    delete = False
+                i += 1
+            if (delete):
+                tbl.rows.pop(r)
+
     # output table
     if options.generateHtml:
         if options.format == "moinwiki":
@@ -222,3 +235,6 @@ if __name__ == "__main__":
             htmlPrintFooter(sys.stdout)
     else:
         tbl.consolePrintTable(sys.stdout)
+
+    if options.regressionsOnly:
+        sys.exit(len(tbl.rows))
