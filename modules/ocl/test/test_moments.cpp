@@ -30,7 +30,7 @@ PARAM_TEST_CASE(MomentsTestBase, MatType, bool)
         Mat gpu_dst, cpu_dst;
         HuMoments(cpu, cpu_dst);
         HuMoments(gpu, gpu_dst);
-        EXPECT_MAT_NEAR(gpu_dst,cpu_dst, .5, NULL);
+        EXPECT_MAT_NEAR(gpu_dst,cpu_dst, .5, "");
     }
 
 };
