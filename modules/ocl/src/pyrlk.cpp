@@ -574,8 +574,9 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     Context  *clCxt = I.clCxt;
     int elemCntPerRow = I.step / I.elemSize();
     string kernelName = "lkSparse";
-    size_t localThreads[3]  = { 8, 8, 1 };
-    size_t globalThreads[3] = { 8 * ptcount, 8, 1};
+    bool isImageSupported = support_image2d();
+    size_t localThreads[3]  = { 8, isImageSupported ? 8 : 32, 1 };
+    size_t globalThreads[3] = { 8 * ptcount, isImageSupported ? 8 : 32, 1};
     int cn = I.oclchannels();
     char calcErr;
     if (level == 0)
@@ -588,8 +589,9 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     }
 
     vector<pair<size_t , const void *> > args;
-    cl_mem ITex = bindTexture(I);
-    cl_mem JTex = bindTexture(J);
+
+    cl_mem ITex = isImageSupported ? bindTexture(I) : (cl_mem)I.data;
+    cl_mem JTex = isImageSupported ? bindTexture(J) : (cl_mem)J.data;
 
     args.push_back( make_pair( sizeof(cl_mem), (void *)&ITex ));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&JTex ));
@@ -602,6 +604,8 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     args.push_back( make_pair( sizeof(cl_int), (void *)&level ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&I.rows ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&I.cols ));
+    if (!isImageSupported)	
+        args.push_back( make_pair( sizeof(cl_int), (void *)&elemCntPerRow ) );
     args.push_back( make_pair( sizeof(cl_int), (void *)&patch.x ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&patch.y ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cn ));
@@ -610,19 +614,14 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     args.push_back( make_pair( sizeof(cl_int), (void *)&iters ));
     args.push_back( make_pair( sizeof(cl_char), (void *)&calcErr ));
 
-    try
+    if(isImageSupported)
     {
         openCLExecuteKernel2(clCxt, &pyrlk, kernelName, globalThreads, localThreads, args, I.oclchannels(), I.depth(), CLFLUSH);
-    }
-    catch(Exception&)
-    {
-        printf("Warning: The image2d_t is not supported by the device. Using alternative method!\n");
         releaseTexture(ITex);
         releaseTexture(JTex);
-        ITex = (cl_mem)I.data;
-        JTex = (cl_mem)J.data;
-        localThreads[1] = globalThreads[1] = 32;
-        args.insert( args.begin()+11, make_pair( sizeof(cl_int), (void *)&elemCntPerRow ) );
+    }
+    else
+    {
         openCLExecuteKernel2(clCxt, &pyrlk_no_image, kernelName, globalThreads, localThreads, args, I.oclchannels(), I.depth(), CLFLUSH);
     }
 }
@@ -724,7 +723,7 @@ static void lkDense_run(oclMat &I, oclMat &J, oclMat &u, oclMat &v,
                  oclMat &prevU, oclMat &prevV, oclMat *err, Size winSize, int iters)
 {
     Context  *clCxt = I.clCxt;
-    bool isImageSupported = clCxt->impl->devName.find("Intel(R) HD Graphics") == string::npos;
+    bool isImageSupported = support_image2d();
     int elemCntPerRow = I.step / I.elemSize();
 
     string kernelName = "lkDense";
