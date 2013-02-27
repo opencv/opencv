@@ -232,7 +232,7 @@ enum
 
 /* Estimate the geometric transformation between 2 images (area-based alignment) */
 CVAPI(double)  cvFindTransformECC (const CvArr* templateImage, const CvArr* inputImage,
-                                   CvMat * warpMatrix,
+                                   CvArr * warpMatrix,
                                    const int motionType,
                                    const CvTermCriteria criteria);
 
