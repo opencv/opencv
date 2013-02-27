@@ -1799,9 +1799,12 @@ public:
                             const uchar* sptr_k2 = sptr + j + space_ofs[k+2];
                             const uchar* sptr_k3 = sptr + j + space_ofs[k+3];
 
-                            __m128 _b = _mm_set_ps(sptr_k3[0],sptr_k2[0],sptr_k1[0],sptr_k[0]);
-                            __m128 _g = _mm_set_ps(sptr_k3[1],sptr_k2[1],sptr_k1[1],sptr_k[1]);
-                            __m128 _r = _mm_set_ps(sptr_k3[2],sptr_k2[2],sptr_k1[2],sptr_k[2]);
+                            __m128 _b = _mm_cvtpu8_ps(_mm_cvtsi64_m64(*((unsigned long long int*)sptr_k)));
+                            __m128 _g = _mm_cvtpu8_ps(_mm_cvtsi64_m64(*((unsigned long long int*)sptr_k1)));
+                            __m128 _r = _mm_cvtpu8_ps(_mm_cvtsi64_m64(*((unsigned long long int*)sptr_k2)));
+                            __m128 _z = _mm_cvtpu8_ps(_mm_cvtsi64_m64(*((unsigned long long int*)sptr_k3)));
+
+                            _MM_TRANSPOSE4_PS(_b, _g, _r, _z);
 
                             __m128 bt = _mm_andnot_ps(_signMask, _mm_sub_ps(_b,_b0));
                             __m128 gt = _mm_andnot_ps(_signMask, _mm_sub_ps(_g,_g0));
