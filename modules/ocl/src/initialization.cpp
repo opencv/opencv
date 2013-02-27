@@ -58,7 +58,9 @@ using std::endl;
 
 //#define PRINT_KERNEL_RUN_TIME
 #define RUN_TIMES 100
-
+#ifndef CL_MEM_USE_PERSISTENT_MEM_AMD
+#define CL_MEM_USE_PERSISTENT_MEM_AMD 0
+#endif
 //#define AMD_DOUBLE_DIFFER
 
 namespace cv
