@@ -5,7 +5,7 @@ import org.opencv.core.Scalar;
 
 class SimpleSample {
 
-  static{ System.loadLibrary("opencv_java" + Core.VERSION_SUFFIX); }
+  static{ System.loadLibrary(Core.NATIVE_LIBRARY_NAME); }
 
   public static void main(String[] args) {
     System.out.println("Welcome to OpenCV " + Core.VERSION);

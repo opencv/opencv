@@ -739,8 +739,9 @@ public class %(jc)s {
             #    version_suffix = version_suffix[0 : -1]
             self.classes[class_name].imports.add("java.lang.String")
             self.java_code[class_name]["j_code"].write("""
-    public static final String VERSION = "%(v)s", VERSION_SUFFIX = "%(vs)s";
-""" % { 'v' : version_str, 'vs' : version_suffix } )
+    public static final String VERSION = "%(v)s", NATIVE_LIBRARY_NAME = "opencv_java%(vs)s";
+    public static final int VERSION_EPOCH = %(ep)s, VERSION_MAJOR = %(ma)s, VERSION_MINOR = %(mi)s, VERSION_PATCH = %(pa)s;
+""" % { 'v' : version_str, 'vs' : version_suffix, 'ep' : epoch, 'ma' : major, 'mi' : minor, 'pa' : patch } )
 
 
     def add_class(self, decl):
