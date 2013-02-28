@@ -3,8 +3,6 @@
 using namespace std;
 using namespace testing;
 
-namespace {
-
 DEF_PARAM_TEST_1(Image, string);
 
 struct GreedyLabeling
@@ -100,28 +98,45 @@ struct GreedyLabeling
     dot* stack;
 };
 
-PERF_TEST_P(Image, Labeling_ConnectedComponents, Values<string>("gpu/labeling/aloe-disp.png"))
+PERF_TEST_P(Image, Labeling_ConnectivityMask,
+            Values<string>("gpu/labeling/aloe-disp.png"))
 {
     declare.time(1.0);
 
-    cv::Mat image = readImage(GetParam(), cv::IMREAD_GRAYSCALE);
+    const cv::Mat image = readImage(GetParam(), cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
 
     if (PERF_RUN_GPU())
     {
+        cv::gpu::GpuMat d_image(image);
         cv::gpu::GpuMat mask;
-        mask.create(image.rows, image.cols, CV_8UC1);
+
+        TEST_CYCLE() cv::gpu::connectivityMask(d_image, mask, cv::Scalar::all(0), cv::Scalar::all(2));
+
+        GPU_SANITY_CHECK(mask);
+    }
+    else
+    {
+        FAIL_NO_CPU();
+    }
+}
+
+PERF_TEST_P(Image, Labeling_ConnectedComponents,
+            Values<string>("gpu/labeling/aloe-disp.png"))
+{
+    declare.time(1.0);
+
+    const cv::Mat image = readImage(GetParam(), cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
+
+    if (PERF_RUN_GPU())
+    {
+        cv::gpu::GpuMat d_mask;
+        cv::gpu::connectivityMask(cv::gpu::GpuMat(image), d_mask, cv::Scalar::all(0), cv::Scalar::all(2));
 
         cv::gpu::GpuMat components;
-        components.create(image.rows, image.cols, CV_32SC1);
 
-        cv::gpu::connectivityMask(cv::gpu::GpuMat(image), mask, cv::Scalar::all(0), cv::Scalar::all(2));
-
-        ASSERT_NO_THROW(cv::gpu::labelComponents(mask, components));
-
-        TEST_CYCLE()
-        {
-            cv::gpu::labelComponents(mask, components);
-        }
+        TEST_CYCLE() cv::gpu::labelComponents(d_mask, components);
 
         GPU_SANITY_CHECK(components);
     }
@@ -129,17 +144,9 @@ PERF_TEST_P(Image, Labeling_ConnectedComponents, Values<string>("gpu/labeling/al
     {
         GreedyLabeling host(image);
 
-        host(host._labels);
+        TEST_CYCLE() host(host._labels);
 
-        declare.time(1.0);
-
-        TEST_CYCLE()
-        {
-            host(host._labels);
-        }
-
-        CPU_SANITY_CHECK(host._labels);
+        cv::Mat components = host._labels;
+        CPU_SANITY_CHECK(components);
     }
 }
-
-} // namespace
