@@ -35,7 +35,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_Merge,
 
         TEST_CYCLE() cv::gpu::merge(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
@@ -72,8 +72,8 @@ PERF_TEST_P(Sz_Depth_Cn, Core_Split,
         const cv::gpu::GpuMat& dst0 = dst[0];
         const cv::gpu::GpuMat& dst1 = dst[1];
 
-        GPU_SANITY_CHECK(dst0);
-        GPU_SANITY_CHECK(dst1);
+        GPU_SANITY_CHECK(dst0, 1e-10);
+        GPU_SANITY_CHECK(dst1, 1e-10);
     }
     else
     {
@@ -113,7 +113,7 @@ PERF_TEST_P(Sz_Depth, Core_AddMat,
 
         TEST_CYCLE() cv::gpu::add(d_src1, d_src2, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
@@ -148,7 +148,7 @@ PERF_TEST_P(Sz_Depth, Core_AddScalar,
 
         TEST_CYCLE() cv::gpu::add(d_src, s, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
@@ -184,7 +184,7 @@ PERF_TEST_P(Sz_Depth, Core_SubtractMat,
 
         TEST_CYCLE() cv::gpu::subtract(d_src1, d_src2, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
@@ -219,7 +219,7 @@ PERF_TEST_P(Sz_Depth, Core_SubtractScalar,
 
         TEST_CYCLE() cv::gpu::subtract(d_src, s, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
@@ -255,7 +255,7 @@ PERF_TEST_P(Sz_Depth, Core_MultiplyMat,
 
         TEST_CYCLE() cv::gpu::multiply(d_src1, d_src2, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-6);
     }
     else
     {
@@ -290,7 +290,7 @@ PERF_TEST_P(Sz_Depth, Core_MultiplyScalar,
 
         TEST_CYCLE() cv::gpu::multiply(d_src, s, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-6);
     }
     else
     {
@@ -326,7 +326,7 @@ PERF_TEST_P(Sz_Depth, Core_DivideMat,
 
         TEST_CYCLE() cv::gpu::divide(d_src1, d_src2, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-6);
     }
     else
     {
@@ -361,7 +361,7 @@ PERF_TEST_P(Sz_Depth, Core_DivideScalar,
 
         TEST_CYCLE() cv::gpu::divide(d_src, s, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-6);
     }
     else
     {
@@ -396,7 +396,7 @@ PERF_TEST_P(Sz_Depth, Core_DivideScalarInv,
 
         TEST_CYCLE() cv::gpu::divide(s[0], d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-6);
     }
     else
     {
@@ -432,7 +432,7 @@ PERF_TEST_P(Sz_Depth, Core_AbsDiffMat,
 
         TEST_CYCLE() cv::gpu::absdiff(d_src1, d_src2, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
@@ -467,7 +467,7 @@ PERF_TEST_P(Sz_Depth, Core_AbsDiffScalar,
 
         TEST_CYCLE() cv::gpu::absdiff(d_src, s, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
@@ -1247,7 +1247,7 @@ PERF_TEST_P(Sz_3Depth, Core_AddWeighted,
 
         TEST_CYCLE() cv::gpu::addWeighted(d_src1, 0.5, d_src2, 0.5, 10.0, dst, dst_depth);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
@@ -1296,7 +1296,7 @@ PERF_TEST_P(Sz_Type_Flags, Core_GEMM,
 
         TEST_CYCLE() cv::gpu::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, dst, flags);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-6);
     }
     else
     {
@@ -1330,7 +1330,7 @@ PERF_TEST_P(Sz_Type, Core_Transpose,
 
         TEST_CYCLE() cv::gpu::transpose(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
@@ -1605,7 +1605,7 @@ PERF_TEST_P(Sz_AngleInDegrees, Core_Phase,
 
         TEST_CYCLE() cv::gpu::phase(d_src1, d_src2, dst, angleInDegrees);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
     }
     else
     {
@@ -1643,7 +1643,7 @@ PERF_TEST_P(Sz_AngleInDegrees, Core_CartToPolar,
         TEST_CYCLE() cv::gpu::cartToPolar(d_src1, d_src2, magnitude, angle, angleInDegrees);
 
         GPU_SANITY_CHECK(magnitude);
-        GPU_SANITY_CHECK(angle);
+        GPU_SANITY_CHECK(angle, 1e-6, ERROR_RELATIVE);
     }
     else
     {
@@ -1933,8 +1933,8 @@ PERF_TEST_P(Sz_Depth, Core_MinMax,
 
         TEST_CYCLE() cv::gpu::minMax(d_src, &gpu_minVal, &gpu_maxVal, cv::gpu::GpuMat(), d_buf);
 
-        SANITY_CHECK(gpu_minVal);
-        SANITY_CHECK(gpu_maxVal);
+        SANITY_CHECK(gpu_minVal, 1e-10);
+        SANITY_CHECK(gpu_maxVal, 1e-10);
     }
     else
     {
@@ -1969,8 +1969,8 @@ PERF_TEST_P(Sz_Depth, Core_MinMaxLoc,
 
         TEST_CYCLE() cv::gpu::minMaxLoc(d_src, &gpu_minVal, &gpu_maxVal, &gpu_minLoc, &gpu_maxLoc, cv::gpu::GpuMat(), d_valbuf, d_locbuf);
 
-        SANITY_CHECK(gpu_minVal);
-        SANITY_CHECK(gpu_maxVal);
+        SANITY_CHECK(gpu_minVal, 1e-10);
+        SANITY_CHECK(gpu_maxVal, 1e-10);
     }
     else
     {

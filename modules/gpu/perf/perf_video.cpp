@@ -372,8 +372,8 @@ PERF_TEST_P(ImagePair, Video_OpticalFlowDual_TVL1,
 
         TEST_CYCLE() d_alg(d_frame0, d_frame1, u, v);
 
-        GPU_SANITY_CHECK(u);
-        GPU_SANITY_CHECK(v);
+        GPU_SANITY_CHECK(u, 1e-4);
+        GPU_SANITY_CHECK(v, 1e-4);
     }
     else
     {
@@ -470,8 +470,8 @@ PERF_TEST_P(ImagePair, Video_FastOpticalFlowBM,
 
         TEST_CYCLE() fastBM(d_frame0, d_frame1, u, v, max_range.width, block_size.width);
 
-        GPU_SANITY_CHECK(u);
-        GPU_SANITY_CHECK(v);
+        GPU_SANITY_CHECK(u, 2);
+        GPU_SANITY_CHECK(v, 2);
     }
     else
     {
@@ -675,8 +675,10 @@ PERF_TEST_P(Video_Cn, Video_MOG2,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_frame(frame);
         cv::gpu::MOG2_GPU d_mog2;
+        d_mog2.bShadowDetection = false;
+
+        cv::gpu::GpuMat d_frame(frame);
         cv::gpu::GpuMat foreground;
 
         d_mog2(d_frame, foreground);
@@ -708,6 +710,8 @@ PERF_TEST_P(Video_Cn, Video_MOG2,
     else
     {
         cv::BackgroundSubtractorMOG2 mog2;
+        mog2.set("detectShadows", false);
+
         cv::Mat foreground;
 
         mog2(frame, foreground);
