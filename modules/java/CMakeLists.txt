@@ -217,6 +217,12 @@ endif(ANDROID AND ANDROID_EXECUTABLE)
 
 set(step3_depends ${step2_depends} ${step3_input_files} ${copied_files})
 
+if(ANDROID)
+  set(LIB_NAME_SUFIX "")
+else()
+  set(LIB_NAME_SUFIX "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
+endif()
+
 # step 4: build jar
 if(ANDROID)
   set(JAR_FILE "${OpenCV_BINARY_DIR}/bin/classes.jar")
@@ -241,7 +247,7 @@ if(ANDROID)
                       )
   endif()
 else(ANDROID)
-  set(JAR_NAME opencv-${OPENCV_VERSION}.jar)
+  set(JAR_NAME opencv-${LIB_NAME_SUFIX}.jar)
   set(JAR_FILE "${OpenCV_BINARY_DIR}/bin/${JAR_NAME}")
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.xml.in" "${OpenCV_BINARY_DIR}/build.xml" IMMEDIATE @ONLY)
   list(APPEND step3_depends "${OpenCV_BINARY_DIR}/build.xml")
@@ -294,8 +300,8 @@ endif()
 
 # Additional target properties
 set_target_properties(${the_module} PROPERTIES
-    OUTPUT_NAME "${the_module}${OPENCV_DLLVERSION}"
-    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+    OUTPUT_NAME "${the_module}${LIB_NAME_SUFIX}"
+    #DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
     INSTALL_NAME_DIR ${OPENCV_LIB_INSTALL_PATH}
