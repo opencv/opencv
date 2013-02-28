@@ -25,7 +25,7 @@ using namespace cv;
 
 // This program test most of the functions in ocl module and generate data metrix of x-factor in .csv files
 // All images needed in this test are in samples/gpu folder.
-// For haar template, please rename it to facedetect.xml
+// For haar template, haarcascade_frontalface_alt.xml shouold be in working directory
 
 void gen(Mat &mat, int rows, int cols, int type, Scalar low, Scalar high);
 string abspath(const string &relpath);
@@ -707,7 +707,7 @@ TEST(matchTemplate)
 
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
-            for(templ_size = 5; templ_size <=5; templ_size *= 5)
+            for(templ_size = 5; templ_size <= 5; templ_size *= 5)
             {
                 gen(src, size, size, all_type[j], 0, 1);
 
@@ -749,7 +749,7 @@ TEST(matchTemplate)
 
         for (size_t j = 0; j < sizeof(all_type_8U) / sizeof(int); j++)
         {
-            for(templ_size = 5; templ_size < 200; templ_size *= 5)
+            for(templ_size = 5; templ_size <= 5; templ_size *= 5)
             {
                 SUBTEST << src.cols << 'x' << src.rows << "; " << type_name_8U[j] << "; templ " << templ_size << 'x' << templ_size << "; CCORR_NORMED";
 
@@ -1063,9 +1063,9 @@ TEST(Haar)
 
     CascadeClassifier faceCascadeCPU;
 
-    if (!faceCascadeCPU.load(abspath("facedetect.xml")))
+    if (!faceCascadeCPU.load(abspath("haarcascade_frontalface_alt.xml")))
     {
-        throw runtime_error("can't load facedetect.xml");
+        throw runtime_error("can't load haarcascade_frontalface_alt.xml");
     }
 
     vector<Rect> faces;
@@ -1079,9 +1079,9 @@ TEST(Haar)
 #ifdef USE_OPENCL
     ocl::CascadeClassifier_GPU faceCascade;
 
-    if (!faceCascade.load(abspath("facedetect.xml")))
+    if (!faceCascade.load(abspath("haarcascade_frontalface_alt.xml")))
     {
-        throw runtime_error("can't load facedetect.xml");
+        throw runtime_error("can't load haarcascade_frontalface_alt.xml");
     }
 
     ocl::oclMat d_img(img);
