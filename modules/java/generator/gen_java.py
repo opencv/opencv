@@ -565,8 +565,8 @@ def getLibVersion(version_hpp_path):
     epoch = re.search("^W*#\W*define\W+CV_VERSION_EPOCH\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
     major = re.search("^W*#\W*define\W+CV_VERSION_MAJOR\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
     minor = re.search("^W*#\W*define\W+CV_VERSION_MINOR\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
-    patch = re.search("^W*#\W*define\W+CV_VERSION_REVISION\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
-    return (epoch, major, minor, patch)
+    revision = re.search("^W*#\W*define\W+CV_VERSION_REVISION\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
+    return (epoch, major, minor, revision)
 
 class ConstInfo(object):
     def __init__(self, cname, name, val, addedManually=False):
@@ -731,17 +731,15 @@ public class %(jc)s {
 """ % { 'm' : self.module, 'jc' : jname } )
 
         if class_name == 'Core':
-            (epoch, major, minor, patch) = getLibVersion(
+            (epoch, major, minor, revision) = getLibVersion(
                 (os.path.dirname(__file__) or '.') + '/../../core/include/opencv2/core/version.hpp')
-            version_str    = '.'.join( (epoch, major, minor, patch) )
+            version_str    = '.'.join( (epoch, major, minor, revision) )
             version_suffix =  ''.join( (epoch, major, minor) )
-            #if version_suffix.endswith('0'):
-            #    version_suffix = version_suffix[0 : -1]
             self.classes[class_name].imports.add("java.lang.String")
             self.java_code[class_name]["j_code"].write("""
     public static final String VERSION = "%(v)s", NATIVE_LIBRARY_NAME = "opencv_java%(vs)s";
-    public static final int VERSION_EPOCH = %(ep)s, VERSION_MAJOR = %(ma)s, VERSION_MINOR = %(mi)s, VERSION_PATCH = %(pa)s;
-""" % { 'v' : version_str, 'vs' : version_suffix, 'ep' : epoch, 'ma' : major, 'mi' : minor, 'pa' : patch } )
+    public static final int VERSION_EPOCH = %(ep)s, VERSION_MAJOR = %(ma)s, VERSION_MINOR = %(mi)s, VERSION_REVISION = %(re)s;
+""" % { 'v' : version_str, 'vs' : version_suffix, 'ep' : epoch, 'ma' : major, 'mi' : minor, 're' : revision } )
 
 
     def add_class(self, decl):
