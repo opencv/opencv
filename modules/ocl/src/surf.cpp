@@ -60,7 +60,7 @@ namespace cv
 
         const char* noImage2dOption = "-D DISABLE_IMAGE2D";
 
-        void openCLExecuteKernelSURF(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
+        static void openCLExecuteKernelSURF(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
             size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels, int depth)
         {
             if(support_image2d())
