@@ -8,11 +8,14 @@
  * You're invited to submit your own examples, in any JVM language of
  * your choosing so long as you can get them to build.
  */
+
+import org.opencv.core.Core
+
 object Main extends App {
   // We must load the native library before using any OpenCV functions.
   // You must load this library _exactly once_ per Java invocation.
   // If you load it more than once, you will get a java.lang.UnsatisfiedLinkError.
-  System.loadLibrary("opencv_java")
+  System.loadLibrary("opencv_java" + Core.VERSION_SUFFIX)
 
   ScalaCorrespondenceMatchingDemo.run()
   ScalaDetectFaceDemo.run()
