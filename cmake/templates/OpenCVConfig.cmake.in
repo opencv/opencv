@@ -151,6 +151,7 @@ endif()
 # ==============================================================
 if(NOT OpenCV_FIND_COMPONENTS)
   set(OpenCV_FIND_COMPONENTS ${OpenCV_LIB_COMPONENTS})
+  list(REMOVE_ITEM OpenCV_FIND_COMPONENTS opencv_java)
   if(GTest_FOUND OR GTEST_FOUND)
     list(REMOVE_ITEM OpenCV_FIND_COMPONENTS opencv_ts)
   endif()
