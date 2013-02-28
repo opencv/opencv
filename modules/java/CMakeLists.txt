@@ -16,6 +16,7 @@ endif()
 # output locations
 set(JAVA_INSTALL_ROOT "sdk/java")
 set(JNI_INSTALL_ROOT  "sdk/native")
+set(native_module_output_name ${the_module}${OPENCV_DLLVERSION})
 
 # get list of modules to wrap
 string(REPLACE "opencv_" "" OPENCV_JAVA_MODULES "${OPENCV_MODULE_${the_module}_REQ_DEPS};${OPENCV_MODULE_${the_module}_OPT_DEPS}")
@@ -33,10 +34,27 @@ set(scripts_hdr_parser "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py
 set(scripts_gen_javadoc "${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_javadoc.py")
 set(scripts_rst_parser "${CMAKE_CURRENT_SOURCE_DIR}/generator/rst_parser.py")
 
+# arguments for gen_java
+if(ANDROID)
+	set(arguments_gen_java "true")
+else()
+	set(arguments_gen_java "false")
+endif()
+
+# handwritten Java sources which need configuration
+file(GLOB handwritten_java_config_sources "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/java/*.java")
+set(configured_java_source_dir "${CMAKE_CURRENT_BINARY_DIR}/configured_java_out")
+file(REMOVE_RECURSE "${configured_java_source_dir}/")
+file(MAKE_DIRECTORY "${configured_java_source_dir}")
+foreach(config_source ${handwritten_java_config_sources})
+  get_filename_component(config_source_name "${config_source}" NAME)
+  configure_file("${config_source}" "${configured_java_source_dir}/${config_source_name}")
+endforeach()
+
 # handwritten C/C++ and Java sources
 file(GLOB handwrittren_h_sources "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp/*.hpp")
 file(GLOB handwrittren_cpp_sources "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp/*.cpp")
-file(GLOB handwrittren_java_sources "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/java/*.java")
+file(GLOB handwrittren_java_sources "${configured_java_source_dir}/*.java")
 file(GLOB handwrittren_aidl_sources  "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/java/*.aidl")
 if(NOT ANDROID)
   ocv_list_filterout(handwrittren_java_sources "/(engine|android)\\\\+")
@@ -100,7 +118,7 @@ foreach(module ${OPENCV_JAVA_MODULES})
   # first run of gen_java.py (to get list of generated files)
   file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/")
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out")
-  execute_process(COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
+  execute_process(COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" ${arguments_gen_java} ${native_module_output_name} "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
                   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out"
                   OUTPUT_QUIET ERROR_QUIET)
   unset(generated_java_sources_${module})
@@ -124,7 +142,7 @@ set(step1_depends "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_
 foreach(module ${OPENCV_JAVA_MODULES})
   # second run of gen_java.py (at build time)
   add_custom_command(OUTPUT ${generated_java_sources_${module}} "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
-                     COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
+                     COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" ${arguments_gen_java} ${native_module_output_name} "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                      DEPENDS "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers_${module}}
                     )
@@ -134,7 +152,7 @@ endforeach()
 set(step2_depends ${step1_depends} ${scripts_gen_javadoc} ${scripts_rst_parser} ${javadoc_rst_sources} ${generated_java_sources} ${handwrittren_java_sources})
 string(REPLACE ";" "," OPENCV_JAVA_MODULES_STR "${OPENCV_JAVA_MODULES}")
 add_custom_command(OUTPUT ${documented_java_files}
-                   COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_javadoc}" --modules ${OPENCV_JAVA_MODULES_STR} "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/java" "${CMAKE_CURRENT_BINARY_DIR}" 2>"${CMAKE_CURRENT_BINARY_DIR}/get_javadoc_errors.log"
+                   COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_javadoc}" --modules ${OPENCV_JAVA_MODULES_STR} "${configured_java_source_dir}/java" "${CMAKE_CURRENT_BINARY_DIR}" 2>"${CMAKE_CURRENT_BINARY_DIR}/get_javadoc_errors.log"
                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                    DEPENDS ${step2_depends}
                   )
@@ -294,7 +312,7 @@ endif()
 
 # Additional target properties
 set_target_properties(${the_module} PROPERTIES
-    OUTPUT_NAME "${the_module}${OPENCV_DLLVERSION}"
+    OUTPUT_NAME "${native_module_output_name}"
     DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}

@@ -1081,6 +1081,17 @@ public class Mat {
     public long getNativeObjAddr() {
         return nativeObj;
     }
+	
+    private static boolean isAndroid() {
+        try {
+            Class.forName("org.opencv.android.OpenCVLoader");
+            return true;
+        } catch(ClassNotFoundException e) {
+            return false;
+        }
+    }
+    
+    static { if (!isAndroid()) { System.loadLibrary("@native_module_output_name@"); } }
 
     // C++: Mat::Mat()
     private static native long n_Mat();
