@@ -188,7 +188,7 @@ namespace
 
         dst.create(src.size(), CV_8UC4);
 
-        drawColorDisp_gpu((PtrStepSz<T>)src, dst, ndisp, stream);
+        drawColorDisp_gpu((cv::gpu::PtrStepSz<T>)src, dst, ndisp, stream);
     }
 
     typedef void (*drawColorDisp_caller_t)(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream);

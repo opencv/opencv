@@ -58,13 +58,13 @@ namespace pyrlk
 {
     void loadConstants(int2 winSize, int iters);
 
-    void sparse1(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+    void sparse1(cv::gpu::PtrStepSzf I, cv::gpu::PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
                  int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
-    void sparse4(PtrStepSz<float4> I, PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+    void sparse4(cv::gpu::PtrStepSz<float4> I, cv::gpu::PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
                  int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
 
-    void dense(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
-               PtrStepSzf err, int2 winSize, cudaStream_t stream = 0);
+    void dense(cv::gpu::PtrStepSzb I, cv::gpu::PtrStepSzf J, cv::gpu::PtrStepSzf u, cv::gpu::PtrStepSzf v, cv::gpu::PtrStepSzf prevU, cv::gpu::PtrStepSzf prevV,
+               cv::gpu::PtrStepSzf err, int2 winSize, cudaStream_t stream = 0);
 }
 
 cv::gpu::PyrLKOpticalFlow::PyrLKOpticalFlow()

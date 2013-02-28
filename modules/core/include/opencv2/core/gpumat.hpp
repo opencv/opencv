@@ -46,7 +46,28 @@
 #ifdef __cplusplus
 
 #include "opencv2/core/core.hpp"
+
+#ifdef HAVE_CUDA
 #include "opencv2/cudevice/devptrs.hpp"
+#else
+
+#if defined __GNUC__
+    #define __CV_GPU_DEPR_BEFORE__
+    #define __CV_GPU_DEPR_AFTER__ __attribute__ ((deprecated))
+#elif defined(__MSVC__) //|| defined(__CUDACC__)
+    #pragma deprecated(DevMem2D_)
+    #define __CV_GPU_DEPR_BEFORE__ __declspec(deprecated)
+    #define __CV_GPU_DEPR_AFTER__
+#else
+    #define __CV_GPU_DEPR_BEFORE__
+    #define __CV_GPU_DEPR_AFTER__
+#endif
+
+#endif
+
+template <typename T> struct PtrStep;
+template <typename T> struct PtrStepSz;
+template <typename T> struct DevMem2D_;
 
 namespace cv { namespace gpu
 {

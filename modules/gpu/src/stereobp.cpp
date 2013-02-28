@@ -270,7 +270,8 @@ namespace
                 calc_all_iterations_gpu<short>, calc_all_iterations_gpu<float>
             };
 
-            typedef void (*output_t)(const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, const PtrStepSz<short>& disp, cudaStream_t stream);
+            typedef void (*output_t)(const cv::gpu::PtrStepSzb& u, const cv::gpu::PtrStepSzb& d, const cv::gpu::PtrStepSzb& l,
+                const cv::gpu::PtrStepSzb& r, const cv::gpu::PtrStepSzb& data, const cv::gpu::PtrStepSz<short>& disp, cudaStream_t stream);
             static const output_t output_callers[2] =
             {
                 output_gpu<short>, output_gpu<float>

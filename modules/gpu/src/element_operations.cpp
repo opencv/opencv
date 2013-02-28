@@ -946,15 +946,14 @@ void cv::gpu::subtract(const GpuMat& src, const Scalar& sc, GpuMat& dst, const G
 
 ////////////////////////////////////////////////////////////////////////
 // multiply
-
 namespace arithm
 {
-    void mulMat_8uc4_32f(PtrStepSz<unsigned int> src1, PtrStepSzf src2, PtrStepSz<unsigned int> dst, cudaStream_t stream);
+    void mulMat_8uc4_32f(cv::gpu::PtrStepSz<unsigned int> src1, cv::gpu::PtrStepSzf src2, cv::gpu::PtrStepSz<unsigned int> dst, cudaStream_t stream);
 
-    void mulMat_16sc4_32f(PtrStepSz<short4> src1, PtrStepSzf src2, PtrStepSz<short4> dst, cudaStream_t stream);
+    void mulMat_16sc4_32f(cv::gpu::PtrStepSz<short4> src1, cv::gpu::PtrStepSzf src2, cv::gpu::PtrStepSz<short4> dst, cudaStream_t stream);
 
     template <typename T, typename S, typename D>
-    void mulMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
+    void mulMat(cv::gpu::PtrStepSzb src1, cv::gpu::PtrStepSzb src2, cv::gpu::PtrStepSzb dst, double scale, cudaStream_t stream);
 }
 
 void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double scale, int dtype, Stream& s)
@@ -1214,12 +1213,12 @@ void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst, double 
 
 namespace arithm
 {
-    void divMat_8uc4_32f(PtrStepSz<unsigned int> src1, PtrStepSzf src2, PtrStepSz<unsigned int> dst, cudaStream_t stream);
+    void divMat_8uc4_32f(cv::gpu::PtrStepSz<unsigned int> src1, cv::gpu::PtrStepSzf src2, cv::gpu::PtrStepSz<unsigned int> dst, cudaStream_t stream);
 
-    void divMat_16sc4_32f(PtrStepSz<short4> src1, PtrStepSzf src2, PtrStepSz<short4> dst, cudaStream_t stream);
+    void divMat_16sc4_32f(cv::gpu::PtrStepSz<short4> src1, cv::gpu::PtrStepSzf src2, cv::gpu::PtrStepSz<short4> dst, cudaStream_t stream);
 
     template <typename T, typename S, typename D>
-    void divMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
+    void divMat(cv::gpu::PtrStepSzb src1, cv::gpu::PtrStepSzb src2, cv::gpu::PtrStepSzb dst, double scale, cudaStream_t stream);
 }
 
 void cv::gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double scale, int dtype, Stream& s)
