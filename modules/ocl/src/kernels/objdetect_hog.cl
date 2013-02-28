@@ -140,6 +140,10 @@ float reduce_smem(volatile __local float* smem, int size)
     if (tid < 32)
     {
         if (size >= 64) smem[tid] = sum = sum + smem[tid + 32];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 16)
+    {
         if (size >= 32) smem[tid] = sum = sum + smem[tid + 16];
         if (size >= 16) smem[tid] = sum = sum + smem[tid + 8];
         if (size >= 8) smem[tid] = sum = sum + smem[tid + 4];
@@ -224,6 +228,11 @@ __kernel void classify_hists_kernel(const int cblock_hist_size, const int cdescr
     {
         volatile __local float* smem = products;
         smem[tid] = product = product + smem[tid + 32];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 16)
+    {
+        volatile __local float* smem = products;
         smem[tid] = product = product + smem[tid + 16];
         smem[tid] = product = product + smem[tid + 8];
         smem[tid] = product = product + smem[tid + 4];
