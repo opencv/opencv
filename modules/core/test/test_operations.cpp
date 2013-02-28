@@ -487,7 +487,7 @@ bool CV_OperationsTest::TestSubMatAccess()
             coords.push_back(T_bs(i));
             //std::cout << T_bs1(i) << std::endl;
         }
-        CV_Assert( norm(coords, T_bs.reshape(1,1), NORM_INF) == 0 );
+        CV_Assert( norm(coords, T_bs.reshape(1,1).t(), NORM_INF) == 0 );
     }
     catch (const test_excep& e)
     {

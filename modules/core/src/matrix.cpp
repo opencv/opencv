@@ -1145,7 +1145,7 @@ Size _InputArray::size(int i) const
         const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
         const std::vector<int>& iv = *(const std::vector<int>*)obj;
         size_t szb = v.size(), szi = iv.size();
-        return szb == szi ? Size((int)szb, 1) : Size((int)(szb/CV_ELEM_SIZE(flags)), 1);
+        return szb == szi ? Size(1, (int)szb) : Size(1, (int)(szb/CV_ELEM_SIZE(flags)));
     }
 
     if( k == NONE )
@@ -1155,19 +1155,19 @@ Size _InputArray::size(int i) const
     {
         const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
         if( i < 0 )
-            return vv.empty() ? Size() : Size((int)vv.size(), 1);
+            return vv.empty() ? Size() : Size(1, (int)vv.size());
         CV_Assert( i < (int)vv.size() );
         const std::vector<std::vector<int> >& ivv = *(const std::vector<std::vector<int> >*)obj;
 
         size_t szb = vv[i].size(), szi = ivv[i].size();
-        return szb == szi ? Size((int)szb, 1) : Size((int)(szb/CV_ELEM_SIZE(flags)), 1);
+        return szb == szi ? Size(1, (int)szb) : Size(1, (int)(szb/CV_ELEM_SIZE(flags)));
     }
 
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
         if( i < 0 )
-            return vv.empty() ? Size() : Size((int)vv.size(), 1);
+            return vv.empty() ? Size() : Size(1, (int)vv.size());
         CV_Assert( i < (int)vv.size() );
 
         return vv[i].size();
