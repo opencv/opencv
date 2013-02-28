@@ -74,7 +74,7 @@ void cv::ocl::blendLinear(const oclMat &img1, const oclMat &img2, const oclMat &
     size_t localSize[] = {256, 1, 1};
 
     vector< pair<size_t, const void *> > args;
-
+    result.create(img1.size(), CV_MAKE_TYPE(depth,img1.channels()));
     if(globalSize[0] != 0)
     {
         args.push_back( make_pair( sizeof(cl_mem), (void *)&result.data ));
