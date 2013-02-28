@@ -106,7 +106,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Scale, ImgProc_Resize,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4,
-                    ALL_INTERPOLATIONS,
+                    Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
                     Values(0.5, 0.3, 2.0)))
 {
     declare.time(20.0);
@@ -129,7 +129,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Scale, ImgProc_Resize,
 
         TEST_CYCLE() cv::gpu::resize(d_src, dst, cv::Size(), f, f, interpolation);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-3, ERROR_RELATIVE);
     }
     else
     {
@@ -224,7 +224,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpAffine,
 
         TEST_CYCLE() cv::gpu::warpAffine(d_src, dst, M, size, interpolation, borderMode);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1);
     }
     else
     {
@@ -272,7 +272,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpPerspective,
 
         TEST_CYCLE() cv::gpu::warpPerspective(d_src, dst, M, size, interpolation, borderMode);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1);
     }
     else
     {
@@ -351,7 +351,7 @@ PERF_TEST_P(Sz_Depth_Op, ImgProc_Threshold,
 
         TEST_CYCLE() cv::gpu::threshold(d_src, dst, 100.0, 255.0, threshOp);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
@@ -1199,7 +1199,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter, ImgProc_Rotate,
 
         TEST_CYCLE() cv::gpu::rotate(d_src, dst, size, 30.0, 0, 0, interpolation);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-3, ERROR_RELATIVE);
     }
     else
     {
@@ -1425,7 +1425,7 @@ PERF_TEST_P(Sz_Type_Op, ImgProc_AlphaComp,
 
         TEST_CYCLE() cv::gpu::alphaComp(d_img1, d_img2, dst, alpha_op);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-3, ERROR_RELATIVE);
     }
     else
     {

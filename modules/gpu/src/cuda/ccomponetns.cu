@@ -194,10 +194,10 @@ namespace cv { namespace gpu { namespace device
             if ( y > 0 && connected(intensity, image(y - 1, x)))
                 c |= UP;
 
-            if ( x - 1 < image.cols && connected(intensity, image(y, x + 1)))
+            if ( x + 1 < image.cols && connected(intensity, image(y, x + 1)))
                 c |= RIGHT;
 
-            if ( y - 1 < image.rows && connected(intensity, image(y + 1, x)))
+            if ( y + 1 < image.rows && connected(intensity, image(y + 1, x)))
                 c |= DOWN;
 
             components(y, x) = c;

@@ -86,7 +86,7 @@ PERF_TEST_P(Image, Features2D_SURF,
         sortKeyPoints(gpu_keypoints, gpu_descriptors);
 
         SANITY_CHECK_KEYPOINTS(gpu_keypoints);
-        SANITY_CHECK(gpu_descriptors);
+        SANITY_CHECK(gpu_descriptors, 1e-3);
     }
     else
     {
