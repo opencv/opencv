@@ -69,6 +69,10 @@ namespace cv
         //   2. for faster clamping, there is no buffer padding for the constructed texture
         cl_mem bindTexture(const oclMat &mat);
         void releaseTexture(cl_mem& texture);
+
+        // returns whether the current context supports image2d_t format or not
+        bool support_image2d(Context *clCxt = Context::getContext());
+
     }//namespace ocl
 
 }//namespace cv

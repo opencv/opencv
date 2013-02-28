@@ -419,7 +419,9 @@ static void fixCCS( Mat& mat, int cols, int flags )
     }
 }
 
-
+#if defined _MSC_VER &&  _MSC_VER >= 1700
+#pragma optimize("", off)
+#endif
 static void mulComplex( const Mat& src1, const Mat& src2, Mat& dst, int flags )
 {
     dst.create(src1.rows, src1.cols, src1.type());
@@ -439,8 +441,8 @@ static void mulComplex( const Mat& src1, const Mat& src2, Mat& dst, int flags )
             if( !(flags & CV_DXT_MUL_CONJ) )
                 for( j = 0; j < cols; j += 2 )
                 {
-                    double re = (double)a[j]*b[j] - (double)a[j+1]*b[j+1];
-                    double im = (double)a[j+1]*b[j] + (double)a[j]*b[j+1];
+                    double re = (double)a[j]*(double)b[j] - (double)a[j+1]*(double)b[j+1];
+                    double im = (double)a[j+1]*(double)b[j] + (double)a[j]*(double)b[j+1];
 
                     c[j] = (float)re;
                     c[j+1] = (float)im;
@@ -448,8 +450,8 @@ static void mulComplex( const Mat& src1, const Mat& src2, Mat& dst, int flags )
             else
                 for( j = 0; j < cols; j += 2 )
                 {
-                    double re = (double)a[j]*b[j] + (double)a[j+1]*b[j+1];
-                    double im = (double)a[j+1]*b[j] - (double)a[j]*b[j+1];
+                    double re = (double)a[j]*(double)b[j] + (double)a[j+1]*(double)b[j+1];
+                    double im = (double)a[j+1]*(double)b[j] - (double)a[j]*(double)b[j+1];
 
                     c[j] = (float)re;
                     c[j+1] = (float)im;
@@ -482,6 +484,9 @@ static void mulComplex( const Mat& src1, const Mat& src2, Mat& dst, int flags )
         }
     }
 }
+#if defined _MSC_VER &&  _MSC_VER >= 1700
+#pragma optimize("", on)
+#endif
 
 }
 

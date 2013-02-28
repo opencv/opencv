@@ -42,6 +42,10 @@
 
 #include "precomp.hpp"
 
+#if defined _M_IX86 && defined _MSC_VER && _MSC_VER < 1700
+#pragma float_control(precise, on)
+#endif
+
 namespace cv
 {
 
@@ -1095,6 +1099,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
             if( type == CV_32FC1 )
             {
                 double d = det3(Sf);
+
                 if( d != 0. )
                 {
                     double t[12];

@@ -218,6 +218,66 @@ TEST(OpenCVEngineTest, InstallAndGetVersion)
     #endif
     #endif
 }
+
+TEST(OpenCVEngineTest, GetPathFor2_4_2)
+{
+    sp<IOpenCVEngine> Engine = InitConnect();
+    Starter.PackageManager->InstalledPackages.clear();
+    Starter.PackageManager->InstallVersion(2040200, PLATFORM_UNKNOWN, ARCH_ARMv7);
+    EXPECT_FALSE(NULL == Engine.get());
+    String16 result = Engine->GetLibPathByVersion(String16("2.4.2"));
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a/lib", String8(result).string());
+}
+
+TEST(OpenCVEngineTest, GetPathFor2_4_3)
+{
+    sp<IOpenCVEngine> Engine = InitConnect();
+    Starter.PackageManager->InstalledPackages.clear();
+    Starter.PackageManager->InstallVersion(2040300, PLATFORM_UNKNOWN, ARCH_ARMv7);
+    EXPECT_FALSE(NULL == Engine.get());
+    String16 result = Engine->GetLibPathByVersion(String16("2.4.3"));
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a/lib", String8(result).string());
+}
+
+TEST(OpenCVEngineTest, GetPathFor2_4_3_1)
+{
+    sp<IOpenCVEngine> Engine = InitConnect();
+    Starter.PackageManager->InstalledPackages.clear();
+    Starter.PackageManager->InstallVersion(2040301, PLATFORM_UNKNOWN, ARCH_ARMv7);
+    EXPECT_FALSE(NULL == Engine.get());
+    String16 result = Engine->GetLibPathByVersion(String16("2.4.3.1"));
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a/lib", String8(result).string());
+}
+
+TEST(OpenCVEngineTest, GetPathFor2_4_3_2)
+{
+    sp<IOpenCVEngine> Engine = InitConnect();
+    Starter.PackageManager->InstalledPackages.clear();
+    Starter.PackageManager->InstallVersion(2040302, PLATFORM_UNKNOWN, ARCH_ARMv7);
+    EXPECT_FALSE(NULL == Engine.get());
+    String16 result = Engine->GetLibPathByVersion(String16("2.4.3.2"));
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a/lib", String8(result).string());
+}
+
+TEST(OpenCVEngineTest, GetPathFor2_4_4)
+{
+    sp<IOpenCVEngine> Engine = InitConnect();
+    Starter.PackageManager->InstalledPackages.clear();
+    Starter.PackageManager->InstallVersion(2040400, PLATFORM_UNKNOWN, ARCH_ARMv7);
+    EXPECT_FALSE(NULL == Engine.get());
+    String16 result = Engine->GetLibPathByVersion(String16("2.4.4"));
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a/lib", String8(result).string());
+}
+
+TEST(OpenCVEngineTest, GetPathFor2_4_5)
+{
+    sp<IOpenCVEngine> Engine = InitConnect();
+    Starter.PackageManager->InstalledPackages.clear();
+    Starter.PackageManager->InstallVersion(2040500, PLATFORM_UNKNOWN, ARCH_ARMv7);
+    EXPECT_FALSE(NULL == Engine.get());
+    String16 result = Engine->GetLibPathByVersion(String16("2.4.5"));
+    EXPECT_EQ(0, result.size()); // 2.4.5 is not published yet
+}
 #endif
 
 #ifndef __i386__

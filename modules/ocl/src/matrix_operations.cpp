@@ -68,6 +68,8 @@ namespace cv
         extern const char *operator_setTo;
         extern const char *operator_setToM;
         extern const char *convertC3C4;
+        extern DevMemType gDeviceMemType;
+        extern DevMemRW gDeviceMemRW;
     }
 }
 
@@ -911,7 +913,17 @@ oclMat cv::ocl::oclMat::reshape(int new_cn, int new_rows) const
 
 }
 
+void cv::ocl::oclMat::createEx(Size size, int type, DevMemRW rw_type, DevMemType mem_type)
+{
+    createEx(size.height, size.width, type, rw_type, mem_type);
+}
+
 void cv::ocl::oclMat::create(int _rows, int _cols, int _type)
+{
+    createEx(_rows, _cols, _type, gDeviceMemRW, gDeviceMemType);
+}
+
+void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type, DevMemRW rw_type, DevMemType mem_type)
 {
     clCxt = Context::getContext();
     /* core logic */
@@ -936,7 +948,7 @@ void cv::ocl::oclMat::create(int _rows, int _cols, int _type)
         size_t esz = elemSize();
 
         void *dev_ptr;
-        openCLMallocPitch(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols), rows);
+        openCLMallocPitchEx(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols), rows, rw_type, mem_type);
         //openCLMallocPitch(clCxt,&dev_ptr, &step, esz * cols, rows);
 
         if (esz * cols == step)

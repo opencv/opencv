@@ -93,6 +93,8 @@ namespace cv
         ///////////////////////////OpenCL call wrappers////////////////////////////
         void openCLMallocPitch(Context *clCxt, void **dev_ptr, size_t *pitch,
                                size_t widthInBytes, size_t height);
+        void openCLMallocPitchEx(Context *clCxt, void **dev_ptr, size_t *pitch,
+                               size_t widthInBytes, size_t height, DevMemRW rw_type, DevMemType mem_type);
         void openCLMemcpy2D(Context *clCxt, void *dst, size_t dpitch,
                             const void *src, size_t spitch,
                             size_t width, size_t height, enum openCLMemcpyKind kind, int channels = -1);
@@ -141,6 +143,7 @@ namespace cv
             //extra options to recognize vendor specific fp64 extensions
             char extra_options[512];
             std::string Binpath;
+            int unified_memory; //1 means integrated GPU, otherwise this value is 0
         };
     }
 }

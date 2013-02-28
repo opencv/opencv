@@ -53,6 +53,10 @@ void cv::ocl::dft(const oclMat&, oclMat&, Size, int)
 {
     CV_Error(CV_StsNotImplemented, "OpenCL DFT is not implemented");
 }
+namespace cv { namespace ocl {
+    void fft_teardown();
+}}
+void cv::ocl::fft_teardown(){}
 #else
 #include "clAmdFft.h"
 namespace cv

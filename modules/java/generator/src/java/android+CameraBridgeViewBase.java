@@ -156,9 +156,21 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         private CvCameraViewListener mOldStyleListener;
     };
 
+    /**
+     * This class interface is abstract representation of single frame from camera for onCameraFrame callback
+     * Attention: Do not use objects, that represents this interface out of onCameraFrame callback!
+     */
     public interface CvCameraViewFrame {
-        public abstract Mat rgba();
-        public abstract Mat gray();
+
+        /**
+         * This method returns RGBA Mat with frame
+         */
+        public Mat rgba();
+
+        /**
+         * This method returns single channel gray scale Mat with frame
+         */
+        public Mat gray();
     };
 
     public void surfaceChanged(SurfaceHolder arg0, int arg1, int arg2, int arg3) {
