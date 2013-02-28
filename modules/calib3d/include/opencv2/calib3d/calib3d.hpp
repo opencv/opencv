@@ -669,18 +669,35 @@ CV_EXPORTS_W void triangulatePoints( InputArray projMatr1, InputArray projMatr2,
 CV_EXPORTS_W void correctMatches( InputArray F, InputArray points1, InputArray points2,
                                   OutputArray newPoints1, OutputArray newPoints2 );
 
+
+class CV_EXPORTS_W StereoMatcher : public Algorithm
+{
+public:
+    CV_WRAP virtual void compute( InputArray left, InputArray right,
+                                  OutputArray disparity ) = 0;
+};
+
+enum { STEREO_DISP_SCALE=16, STEREO_PREFILTER_NORMALIZED_RESPONSE = 0, STEREO_PREFILTER_XSOBEL = 1,
+    STEREOBM_BASIC_PRESET=0, STEREOBM_FISH_EYE_PRESET=1, STEREOBM_NARROW_PRESET=2 };
+
+CV_EXPORTS Ptr<StereoMatcher> createStereoBM(int preset, int numDisparities=0, int SADWindowSize=21);
+    
+CV_EXPORTS Ptr<StereoMatcher> createStereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
+                                               int P1=0, int P2=0, int disp12MaxDiff=0,
+                                               int preFilterCap=0, int uniquenessRatio=0,
+                                               int speckleWindowSize=0, int speckleRange=0,
+                                               bool fullDP=false);
+
 template<> CV_EXPORTS void Ptr<CvStereoBMState>::delete_obj();
 
-/*!
- Block Matching Stereo Correspondence Algorithm
-
- The class implements BM stereo correspondence algorithm by K. Konolige.
-*/
+// to be moved to "compat" module
 class CV_EXPORTS_W StereoBM
 {
 public:
     enum { PREFILTER_NORMALIZED_RESPONSE = 0, PREFILTER_XSOBEL = 1,
-        BASIC_PRESET=0, FISH_EYE_PRESET=1, NARROW_PRESET=2 };
+        BASIC_PRESET=STEREOBM_BASIC_PRESET,
+        FISH_EYE_PRESET=STEREOBM_FISH_EYE_PRESET,
+        NARROW_PRESET=STEREOBM_NARROW_PRESET };
 
     //! the default constructor
     CV_WRAP StereoBM();
@@ -697,11 +714,7 @@ public:
 };
 
 
-/*!
- Semi-Global Block Matching Stereo Correspondence Algorithm
-
- The class implements the original SGBM stereo correspondence algorithm by H. Hirschmuller and some its modification.
- */
+// to be moved to "compat" module
 class CV_EXPORTS_W StereoSGBM
 {
 public:
@@ -736,7 +749,7 @@ public:
     CV_PROP_RW bool fullDP;
 
 protected:
-    Mat buffer;
+    Ptr<StereoMatcher> sm;
 };
 
 //! filters off speckles (small regions of incorrectly computed disparity)
