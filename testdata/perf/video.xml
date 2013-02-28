@@ -11804,4 +11804,50 @@
       <x>378</x>
       <y>317</y>
       <val>-5.7515436410903931e-01</val></rng2></flow></ImagePair_OpticalFlowDual_TVL1--OpticalFlowDual_TVL1----cv-optflow-RubberWhale1-png----cv-optflow-RubberWhale2-png-->
+ <!-- resumed -->
+
+<TransformationType_findTransformECC--findTransformECC---MOTION_TRANSLATION->
+  <warpMat>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        1. 0. 5.66389656e+000 0. 1. 7.19798422e+000</data></val></warpMat></TransformationType_findTransformECC--findTransformECC---MOTION_TRANSLATION->
+<TransformationType_findTransformECC--findTransformECC---MOTION_EUCLIDEAN->
+  <warpMat>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        9.99999940e-001 -3.88255343e-004 -1.39792752e+000
+        3.88255343e-004 9.99999940e-001 6.30980778e+000</data></val></warpMat></TransformationType_findTransformECC--findTransformECC---MOTION_EUCLIDEAN->
+<TransformationType_findTransformECC--findTransformECC---MOTION_AFFINE->
+  <warpMat>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        1.02630842e+000 1.80521496e-002 6.01230431e+000 6.76868670e-003
+        9.77226019e-001 2.78535128e+000</data></val></warpMat></TransformationType_findTransformECC--findTransformECC---MOTION_AFFINE->
+<TransformationType_findTransformECC--findTransformECC---MOTION_HOMOGRAPHY->
+  <warpMat>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        1.14262736e+000 -9.49624646e-003 3.55638385e+000 1.69198997e-002
+        9.79395330e-001 5.60501623e+000 7.35170324e-004 1.47713399e-005
+        1.</data></val></warpMat></TransformationType_findTransformECC--findTransformECC---MOTION_HOMOGRAPHY->
 </opencv_storage>
