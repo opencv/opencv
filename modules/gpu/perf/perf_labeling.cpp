@@ -98,7 +98,7 @@ struct GreedyLabeling
     dot* stack;
 };
 
-PERF_TEST_P(Image, Labeling_ConnectivityMask,
+PERF_TEST_P(Image, DISABLED_Labeling_ConnectivityMask,
             Values<string>("gpu/labeling/aloe-disp.png"))
 {
     declare.time(1.0);
@@ -121,7 +121,7 @@ PERF_TEST_P(Image, Labeling_ConnectivityMask,
     }
 }
 
-PERF_TEST_P(Image, Labeling_ConnectedComponents,
+PERF_TEST_P(Image, DISABLED_Labeling_ConnectedComponents,
             Values<string>("gpu/labeling/aloe-disp.png"))
 {
     declare.time(1.0);

@@ -64,7 +64,7 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_SetToMasked,
 
         TEST_CYCLE() dst.setTo(val, d_mask);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
@@ -102,7 +102,7 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_CopyToMasked,
 
         TEST_CYCLE() d_src.copyTo(dst, d_mask);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
@@ -141,7 +141,7 @@ PERF_TEST_P(Sz_2Depth, MatOp_ConvertTo,
 
         TEST_CYCLE() d_src.convertTo(dst, depth2, a, b);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
