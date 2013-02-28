@@ -78,7 +78,7 @@ uchar read_imgTex(IMAGE_INT8 img, sampler_t sam, float2 coord, int rows, int col
 
 // dynamically change the precision used for floating type
 
-#if defined (__ATI__) || defined (__NVIDIA__)
+#if defined DOUBLE_SUPPORT
 #define F double
 #else
 #define F float
@@ -299,7 +299,7 @@ __kernel
     __global const float * det, 
     __global const float * trace, 
     __global int4 * maxPosBuffer, 
-    volatile __global unsigned int* maxCounter,
+    volatile __global int* maxCounter,
     int counter_offset,
     int det_step,     // the step of det in bytes
     int trace_step,   // the step of trace in bytes
@@ -408,7 +408,7 @@ __kernel
 
                 if(condmax)
                 {
-                    unsigned int ind = atomic_inc(maxCounter);
+                    int ind = atomic_inc(maxCounter);
 
                     if (ind < c_max_candidates)
                     {
@@ -427,7 +427,7 @@ __kernel
     __global float * det, 
     __global float * trace, 
     __global int4 * maxPosBuffer, 
-    volatile __global unsigned int* maxCounter,
+    volatile __global  int* maxCounter,
     int counter_offset,
     int det_step,     // the step of det in bytes
     int trace_step,   // the step of trace in bytes
@@ -525,7 +525,7 @@ __kernel
 
             if(condmax)
             {
-                unsigned int ind = atomic_inc(maxCounter);
+                 int ind = atomic_inc(maxCounter);
 
                 if (ind < c_max_candidates)
                 {
@@ -585,7 +585,7 @@ __kernel
     __global const float * det, 
     __global const int4 * maxPosBuffer,
     __global float * keypoints,
-    volatile __global unsigned int * featureCounter,
+    volatile __global  int * featureCounter,
     int det_step,
     int keypoints_step,
     int c_img_rows,
@@ -684,7 +684,7 @@ __kernel
                 if ((c_img_rows + 1) >= grad_wav_size && (c_img_cols + 1) >= grad_wav_size)
                 {
                     // Get a new feature index.
-                    unsigned int ind = atomic_inc(featureCounter);
+                     int ind = atomic_inc(featureCounter);
 
                     if (ind < c_max_features)
                     {
@@ -737,19 +737,19 @@ __constant float c_aptW[ORI_SAMPLES] = {0.001455130288377404f, 0.001707611023448
 __constant float c_NX[2][5] = {{0, 0, 2, 4, -1}, {2, 0, 4, 4, 1}};
 __constant float c_NY[2][5] = {{0, 0, 4, 2, 1}, {0, 2, 4, 4, -1}};
 
-void reduce_32_sum(volatile __local  float * data, float partial_reduction, int tid)
+void reduce_32_sum(volatile __local  float * data, volatile float* partial_reduction, int tid)
 {
-#define op(A, B) (A)+(B)
-    data[tid] = partial_reduction;
+#define op(A, B) (*A)+(B)
+    data[tid] = *partial_reduction;
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 16) 
     {
-        data[tid] = partial_reduction = op(partial_reduction, data[tid + 16]);
-        data[tid] = partial_reduction = op(partial_reduction, data[tid + 8 ]);
-        data[tid] = partial_reduction = op(partial_reduction, data[tid + 4 ]);
-        data[tid] = partial_reduction = op(partial_reduction, data[tid + 2 ]);
-        data[tid] = partial_reduction = op(partial_reduction, data[tid + 1 ]); 
+        data[tid] = *partial_reduction = op(partial_reduction, data[tid + 16]);
+        data[tid] = *partial_reduction = op(partial_reduction, data[tid + 8 ]);
+        data[tid] = *partial_reduction = op(partial_reduction, data[tid + 4 ]);
+        data[tid] = *partial_reduction = op(partial_reduction, data[tid + 2 ]);
+        data[tid] = *partial_reduction = op(partial_reduction, data[tid + 1 ]); 
     }
 #undef op
 }
@@ -831,7 +831,7 @@ __kernel
     {
         const int dir = (i * 4 + get_local_id(1)) * ORI_SEARCH_INC;
 
-        float sumx = 0.0f, sumy = 0.0f;
+        volatile float sumx = 0.0f, sumy = 0.0f;
         int d = abs(convert_int_rte(s_angle[get_local_id(0)]) - dir);
         if (d < ORI_WIN / 2 || d > 360 - ORI_WIN / 2)
         {
@@ -856,8 +856,8 @@ __kernel
             sumx += s_X[get_local_id(0) + 96];
             sumy += s_Y[get_local_id(0) + 96];
         }
-        reduce_32_sum(s_sumx + get_local_id(1) * 32, sumx, get_local_id(0));
-        reduce_32_sum(s_sumy + get_local_id(1) * 32, sumy, get_local_id(0));
+        reduce_32_sum(s_sumx + get_local_id(1) * 32, &sumx, get_local_id(0));
+        reduce_32_sum(s_sumy + get_local_id(1) * 32, &sumy, get_local_id(0));
 
         const float temp_mod = sumx * sumx + sumy * sumy;
         if (temp_mod > best_mod)
@@ -892,13 +892,31 @@ __kernel
             kp_dir += 2.0f * CV_PI_F;
         kp_dir *= 180.0f / CV_PI_F;
 
-        kp_dir = 360.0f - kp_dir;
-        if (fabs(kp_dir - 360.f) < FLT_EPSILON)
-            kp_dir = 0.f;
+        //kp_dir = 360.0f - kp_dir;
+        //if (fabs(kp_dir - 360.f) < FLT_EPSILON)
+        //    kp_dir = 0.f;
 
         featureDir[get_group_id(0)] = kp_dir;
     }
 }
+
+
+__kernel
+    void icvSetUpright(
+    __global float * keypoints,
+    int keypoints_step,
+    int nFeatures
+    )
+{
+    keypoints_step /= sizeof(*keypoints);
+    __global float* featureDir  = keypoints + ANGLE_ROW * keypoints_step;
+
+    if(get_global_id(0) <= nFeatures)
+    {
+        featureDir[get_global_id(0)] = 90.0f;
+    }
+}
+
 
 #undef ORI_SEARCH_INC
 #undef ORI_WIN
@@ -993,10 +1011,7 @@ void calc_dx_dy(
     const float centerX = featureX[get_group_id(0)];
     const float centerY = featureY[get_group_id(0)];
     const float size = featureSize[get_group_id(0)];
-    float descriptor_dir = 360.0f - featureDir[get_group_id(0)];
-    if (fabs(descriptor_dir - 360.f) < FLT_EPSILON)
-        descriptor_dir = 0.f;
-    descriptor_dir *= (float)(CV_PI_F / 180.0f);
+    float descriptor_dir = featureDir[get_group_id(0)] * (float)(CV_PI_F / 180.0f);
 
     /* The sampling intervals and wavelet sized for selecting an orientation
     and building the keypoint descriptor are defined relative to 's' */
@@ -1125,11 +1140,15 @@ __kernel
     {
         sdxabs[tid] = fabs(sdx[tid]); // |dx| array
         sdyabs[tid] = fabs(sdy[tid]); // |dy| array
-        //barrier(CLK_LOCAL_MEM_FENCE);
-
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 25)
+    {
         reduce_sum25(sdx, sdy, sdxabs, sdyabs, tid);
-        //barrier(CLK_LOCAL_MEM_FENCE);
-
+    }    
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 25)
+    {
         volatile __global float* descriptors_block = descriptors + descriptors_step * get_group_id(0) + (get_group_id(1) << 2);
 
         // write dx, dy, |dx|, |dy|
