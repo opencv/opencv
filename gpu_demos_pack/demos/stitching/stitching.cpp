@@ -39,7 +39,6 @@ struct StitchingTask : tbb::task
         {
             cv::Stitcher stitcher = cv::Stitcher::createDefault(useGpu);
 
-
             stitcher.estimateTransform(imgs);
 
             stitcher.composePanorama(imgs, final_pano);
@@ -78,7 +77,7 @@ private:
 
 App::App()
 {
-    panoSources.push_back(std::make_pair("data/IMG_0%d.JPG", 9));
+    panoSources.push_back(std::make_pair("data/stitching_0%d.jpg", 9));
     panoIdx = 0;
 }
 

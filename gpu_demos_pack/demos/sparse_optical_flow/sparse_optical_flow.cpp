@@ -100,7 +100,7 @@ void App::process()
     {
         cout << "Loading default frames source..." << endl;
 
-        sources.push_back(new VideoSource("data/8sec_Toys_Kirill_1920x1080_xvid_L.avi"));
+        sources.push_back(new VideoSource("data/sparse_optical_flow.avi"));
     }
 
     for (size_t i = 0; i < sources.size(); ++i)

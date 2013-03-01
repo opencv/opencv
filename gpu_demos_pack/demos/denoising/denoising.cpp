@@ -54,7 +54,7 @@ void App::process()
     if (sources.empty())
     {
         cout << "Using default frames source..." << endl;
-        sources.push_back(new ImageSource("data/lena_noised.png"));
+        sources.push_back(new ImageSource("data/denoising.jpg"));
     }
 
     Mat frame;
@@ -62,9 +62,6 @@ void App::process()
     GpuMat d_src, d_dst;
 
     Mat img_to_show;
-
-    namedWindow("Denoising Demo", WINDOW_NORMAL);
-    setWindowProperty("Denoising Demo", WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
 
     const float h = 20;
 
@@ -101,20 +98,20 @@ void App::process()
 
         double proc_fps = getTickFrequency()  / (getTickCount() - proc_start);
 
-        img_to_show.create(frame.rows * 2, frame.cols, CV_8UC3);
+        img_to_show.create(frame.rows, frame.cols * 2, CV_8UC3);
 
-        Mat top = img_to_show(Rect(0, 0, frame.cols, frame.rows));
-        Mat bottom = img_to_show(Rect(0, frame.rows, frame.cols, frame.rows));
+        Mat left = img_to_show(Rect(0, 0, frame.cols, frame.rows));
+        Mat right = img_to_show(Rect(frame.cols, 0, frame.cols, frame.rows));
 
         if (colorInput)
         {
-            src.copyTo(top);
-            dst.copyTo(bottom);
+            src.copyTo(left);
+            dst.copyTo(right);
         }
         else
         {
-            cvtColor(src, top, COLOR_GRAY2BGR);
-            cvtColor(dst, bottom, COLOR_GRAY2BGR);
+            cvtColor(src, left, COLOR_GRAY2BGR);
+            cvtColor(dst, right, COLOR_GRAY2BGR);
         }
 
         double total_fps = getTickFrequency()  / (getTickCount() - start);

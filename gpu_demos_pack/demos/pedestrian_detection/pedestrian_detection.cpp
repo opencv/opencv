@@ -72,7 +72,7 @@ void App::process()
     if (sources.empty())
     {
         cout << "Loading default frames source..." << endl;
-        sources.push_back(new VideoSource("data/mitsubishi.avi"));
+        sources.push_back(new VideoSource("data/pedestrian_detection.avi"));
     }
 
     if (hit_threshold_auto)

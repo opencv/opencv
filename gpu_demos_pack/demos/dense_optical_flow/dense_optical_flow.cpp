@@ -198,12 +198,9 @@ void App::process()
     {
         cout << "Using default frames source..." << endl;
 
-        pairSources.push_back(PairFrameSource::get(new ImageSource("data/backyard1.png"),
-                                                   new ImageSource("data/backyard2.png")));
-        pairSources.push_back(PairFrameSource::get(new ImageSource("data/basketball1.png"),
-                                                   new ImageSource("data/basketball2.png")));
-        pairSources.push_back(PairFrameSource::get(new ImageSource("data/dumptruck1.png"),
-                                                   new ImageSource("data/dumptruck2.png")));
+        pairSources.push_back(PairFrameSource::get(new ImageSource("data/dense_optical_flow_1.jpg"),
+                                                   new ImageSource("data/dense_optical_flow_2.jpg")));
+    }
 
     Mat frame0, frame1;
     Mat frame0_32F, frame1_32F;
