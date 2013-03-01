@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, os, os.path, glob, math, cv2
+import sys, os, os.path, glob, math, cv2, sft
 from datetime import datetime
 from optparse import OptionParser
 import re
