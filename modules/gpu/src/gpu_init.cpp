@@ -52,7 +52,7 @@ CV_INIT_ALGORITHM(SCascade, "CascadeDetector.SCascade",
 
 bool initModule_gpu(void)
 {
-    Ptr<Algorithm> sc = createSCascade();
+    Ptr<Algorithm> sc = createSCascade_hidden();
     return sc->info() != 0;
 }
 

@@ -254,14 +254,14 @@ namespace cv
 } //namespace cv
 
 #define CV_INIT_ALGORITHM(classname, algname, memberinit) \
-    static ::cv::Algorithm* create##classname() \
+    static ::cv::Algorithm* create##classname##_hidden() \
     { \
         return new classname; \
     } \
     \
     static ::cv::AlgorithmInfo& classname##_info() \
     { \
-        static ::cv::AlgorithmInfo classname##_info_var(algname, create##classname); \
+        static ::cv::AlgorithmInfo classname##_info_var(algname, create##classname##_hidden); \
         return classname##_info_var; \
     } \
     \

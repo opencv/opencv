@@ -54,7 +54,7 @@ CV_INIT_ALGORITHM(Detector, "SoftCascade.Detector",
 
 bool initModule_softcascade(void)
 {
-    Ptr<Algorithm> sc1 = createDetector();
+    Ptr<Algorithm> sc1 = createDetector_hidden();
     return (sc1->info() != 0);
 }
 
