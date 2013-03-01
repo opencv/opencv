@@ -41,20 +41,10 @@ else()
 	set(arguments_gen_java "false")
 endif()
 
-# handwritten Java sources which need configuration
-file(GLOB handwritten_java_config_sources "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/java/*.java")
-set(configured_java_source_dir "${CMAKE_CURRENT_BINARY_DIR}/configured_java_out")
-file(REMOVE_RECURSE "${configured_java_source_dir}/")
-file(MAKE_DIRECTORY "${configured_java_source_dir}")
-foreach(config_source ${handwritten_java_config_sources})
-  get_filename_component(config_source_name "${config_source}" NAME)
-  configure_file("${config_source}" "${configured_java_source_dir}/${config_source_name}")
-endforeach()
-
 # handwritten C/C++ and Java sources
 file(GLOB handwrittren_h_sources "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp/*.hpp")
 file(GLOB handwrittren_cpp_sources "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp/*.cpp")
-file(GLOB handwrittren_java_sources "${configured_java_source_dir}/*.java")
+file(GLOB handwrittren_java_sources "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/java/*.java")
 file(GLOB handwrittren_aidl_sources  "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/java/*.aidl")
 if(NOT ANDROID)
   ocv_list_filterout(handwrittren_java_sources "/(engine|android)\\\\+")
@@ -152,12 +142,12 @@ endforeach()
 set(step2_depends ${step1_depends} ${scripts_gen_javadoc} ${scripts_rst_parser} ${javadoc_rst_sources} ${generated_java_sources} ${handwrittren_java_sources})
 string(REPLACE ";" "," OPENCV_JAVA_MODULES_STR "${OPENCV_JAVA_MODULES}")
 add_custom_command(OUTPUT ${documented_java_files}
-                   COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_javadoc}" --modules ${OPENCV_JAVA_MODULES_STR} "${configured_java_source_dir}/java" "${CMAKE_CURRENT_BINARY_DIR}" 2>"${CMAKE_CURRENT_BINARY_DIR}/get_javadoc_errors.log"
+                   COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_javadoc}" --modules ${OPENCV_JAVA_MODULES_STR} "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/java" "${CMAKE_CURRENT_BINARY_DIR}" 2>"${CMAKE_CURRENT_BINARY_DIR}/get_javadoc_errors.log"
                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                    DEPENDS ${step2_depends}
                   )
 
-# step 3: copy files to destination
+# step 3: copy files to destination (replacing %native_module_output_name% with "java_opencvNNN")
 set(step3_input_files ${documented_java_files} ${handwrittren_aidl_sources})
 set(copied_files "")
 foreach(java_file ${step3_input_files})
@@ -167,7 +157,11 @@ foreach(java_file ${step3_input_files})
   set(output_name "${OpenCV_BINARY_DIR}/src/org/opencv/${java_file_name}")
 
   add_custom_command(OUTPUT "${output_name}"
-                     COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${output_name}"
+                     COMMAND ${CMAKE_COMMAND} 
+                        -D INPUT_FILE="${java_file}" 
+                        -D OUTPUT_FILE="${output_name}" 
+                        -D native_module_output_name="${native_module_output_name}"
+                        -P "${CMAKE_CURRENT_SOURCE_DIR}/ConfigureJavaSourceFile.cmake"
                      MAIN_DEPENDENCY "${java_file}"
                      DEPENDS ${step2_depends}
                      COMMENT "Generating src/org/opencv/${java_file_name}"
