@@ -329,7 +329,6 @@ Well, running samples from Eclipse is very simple:
 * Here is ``Sample - image-manipulations`` sample, running on top of stock camera-preview of the emulator.
 
   .. image:: images/emulator_canny.png
-     :height: 600px
      :alt: 'Sample - image-manipulations' running Canny
      :align: center
 
