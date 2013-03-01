@@ -202,7 +202,7 @@ foreach(__opttype OPT DBG)
         #indicate that this module is also found
         string(TOUPPER "${__cvdep}" __cvdep)
         set(${__cvdep}_FOUND 1)
-      else()
+      elseif(EXISTS "${OpenCV_3RDPARTY_LIB_DIR_${__opttype}}/${OpenCV_${__cvdep}_LIBNAME_${__opttype}}")
         list(APPEND OpenCV_LIBS_${__opttype} "${OpenCV_3RDPARTY_LIB_DIR_${__opttype}}/${OpenCV_${__cvdep}_LIBNAME_${__opttype}}")
       endif()
     endforeach()
