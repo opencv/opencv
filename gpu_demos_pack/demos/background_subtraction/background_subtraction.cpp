@@ -81,7 +81,7 @@ void App::process()
     if (sources.empty())
     {
         cout << "Using default frames source..." << endl;
-        sources.push_back(new VideoSource("data/bgfg/haut-640x480.avi"));
+        sources.push_back(new VideoSource("data/haut-640x480.avi"));
     }
 
     Mat frame;

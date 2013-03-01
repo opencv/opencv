@@ -19,7 +19,6 @@ add_subdirectory(demos)
 set(README_FILE "${CMAKE_SOURCE_DIR}/README.txt")
 set(LICENSE_FILE "${CMAKE_SOURCE_DIR}/LICENSE.txt")
 
-install(DIRECTORY "data" DESTINATION ".")
 install(FILES ${README_FILE} ${LICENSE_FILE} DESTINATION ".")
 
 if(WIN32)

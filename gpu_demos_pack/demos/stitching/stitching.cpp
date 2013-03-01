@@ -78,9 +78,7 @@ private:
 
 App::App()
 {
-    panoSources.push_back(std::make_pair("data/stitching/2/IMG_0%d.JPG", 9));
-    panoSources.push_back(std::make_pair("data/stitching/3/IMG_0%d.JPG", 6));
-    panoSources.push_back(std::make_pair("data/stitching/4/IMG_c500d_%02d.jpg", 10));
+    panoSources.push_back(std::make_pair("data/IMG_0%d.JPG", 9));
     panoIdx = 0;
 }
 

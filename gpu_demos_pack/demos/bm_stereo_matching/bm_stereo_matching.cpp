@@ -66,16 +66,8 @@ void App::process()
     {
         cout << "Using default frames source..." << endl;
 
-        stereoSources.push_back(PairFrameSource::get(new VideoSource("data/stereo_matching/8sec_Toys_Kirill_1920x1080_xvid_L.avi"),
-                                                     new VideoSource("data/stereo_matching/8sec_Toys_Kirill_1920x1080_xvid_R.avi")));
-        stereoSources.push_back(PairFrameSource::get(new ImageSource("data/stereo_matching/aloeL.png"),
-                                                     new ImageSource("data/stereo_matching/aloeR.png")));
-        stereoSources.push_back(PairFrameSource::get(new ImageSource("data/stereo_matching/babyL.png"),
-                                                     new ImageSource("data/stereo_matching/babyR.png")));
-        stereoSources.push_back(PairFrameSource::get(new ImageSource("data/stereo_matching/conesL.png"),
-                                                     new ImageSource("data/stereo_matching/conesR.png")));
-        stereoSources.push_back(PairFrameSource::get(new ImageSource("data/stereo_matching/teddyL.png"),
-                                                     new ImageSource("data/stereo_matching/teddyR.png")));
+        stereoSources.push_back(PairFrameSource::get(new VideoSource("data/8sec_Toys_Kirill_1920x1080_xvid_L.avi"),
+                                                     new VideoSource("data/8sec_Toys_Kirill_1920x1080_xvid_R.avi")));
     }
 
     Mat left_src, right_src;

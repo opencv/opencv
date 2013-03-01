@@ -72,7 +72,7 @@ void App::process()
     if (cascade_name.empty())
     {
         cout << "Using default cascade file..." << endl;
-        cascade_name = "data/face_detect/haarcascade_frontalface_alt.xml";
+        cascade_name = "data/haarcascade_frontalface_alt.xml";
     }
 
     if (!cascade_gpu.load(cascade_name) || !cascade_cpu.load(cascade_name))
@@ -81,7 +81,7 @@ void App::process()
     if (sources.empty())
     {
         cout << "Using default frames source..." << endl;
-        sources.push_back(new VideoSource("data/face_detect/browser.flv"));
+        sources.push_back(new VideoSource("data/browser.flv"));
     }
 
     Mat frame, frame_cpu, gray_cpu, resized_cpu, img_to_show;

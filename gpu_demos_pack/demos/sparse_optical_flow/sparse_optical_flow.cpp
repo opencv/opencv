@@ -100,9 +100,7 @@ void App::process()
     {
         cout << "Loading default frames source..." << endl;
 
-        sources.push_back(new VideoSource("data/pedestrian_detect/mitsubishi.avi"));
-        sources.push_back(new VideoSource("data/optical_flow/plush1_720p_10s.m2v"));
-        sources.push_back(new VideoSource("data/stereo_matching/8sec_Toys_Kirill_1920x1080_xvid_L.avi"));
+        sources.push_back(new VideoSource("data/8sec_Toys_Kirill_1920x1080_xvid_L.avi"));
     }
 
     for (size_t i = 0; i < sources.size(); ++i)

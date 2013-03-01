@@ -54,9 +54,7 @@ void App::process()
     if (sources.empty())
     {
         cout << "Using default frames source..." << endl;
-        sources.push_back(new VideoSource("data/face_detect/browser.flv"));
-        sources.push_back(new VideoSource("data/pedestrian_detect/mitsubishi.avi"));
-        sources.push_back(new VideoSource("data/optical_flow/plush1_720p_10s.m2v"));
+        sources.push_back(new ImageSource("data/lena_noised.png"));
     }
 
     Mat frame;

@@ -719,9 +719,9 @@ TEST(bilateralFilter)
 
 TEST(Canny)
 {
-    Mat img = imread(abspath("stereo_matching/aloeL.png"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
     if (img.empty())
-        throw runtime_error("can't open aloeL.png");
+        throw runtime_error("can't open aloeL.jpg");
 
     SUBTEST << img.cols << 'x' << img.rows;
 

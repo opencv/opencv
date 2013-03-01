@@ -85,14 +85,14 @@ void App::process()
     {
         cout << "Loading default frames source..." << endl;
 
-        stereoSources.push_back(PairFrameSource::get(new ImageSource("data/stereo_matching/aloeL_small.png"),
-                                                     new ImageSource("data/stereo_matching/aloeR_small.png")));
-        stereoSources.push_back(PairFrameSource::get(new ImageSource("data/stereo_matching/babyL_small.png"),
-                                                     new ImageSource("data/stereo_matching/babyR_small.png")));
-        stereoSources.push_back(PairFrameSource::get(new ImageSource("data/stereo_matching/conesL_small.png"),
-                                                     new ImageSource("data/stereo_matching/conesR_small.png")));
-        stereoSources.push_back(PairFrameSource::get(new ImageSource("data/stereo_matching/teddyL_small.png"),
-                                                     new ImageSource("data/stereo_matching/teddyR_small.png")));
+        stereoSources.push_back(PairFrameSource::get(new ImageSource("data/aloeL_small.png"),
+                                                     new ImageSource("data/aloeR_small.png")));
+        stereoSources.push_back(PairFrameSource::get(new ImageSource("data/babyL_small.png"),
+                                                     new ImageSource("data/babyR_small.png")));
+        stereoSources.push_back(PairFrameSource::get(new ImageSource("data/conesL_small.png"),
+                                                     new ImageSource("data/conesR_small.png")));
+        stereoSources.push_back(PairFrameSource::get(new ImageSource("data/teddyL_small.png"),
+                                                     new ImageSource("data/teddyR_small.png")));
     }
 
     cout << "ndisp: " << bm.ndisp << endl;

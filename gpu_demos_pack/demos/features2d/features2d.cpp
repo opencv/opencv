@@ -91,22 +91,22 @@ void App::process()
     {
         cout << "Loading default objects..." << endl;
 
-        objects.push_back(Object("opengl", imread("data/features2d/objects/opengl.jpg"), CV_RGB(0, 255, 0)));
-        objects.push_back(Object("java", imread("data/features2d/objects/java.jpg"), CV_RGB(255, 0, 0)));
-        objects.push_back(Object("qt4", imread("data/features2d/objects/qt4.jpg"), CV_RGB(0, 0, 255)));
+        objects.push_back(Object("opengl", imread("data/opengl.jpg"), CV_RGB(0, 255, 0)));
+        objects.push_back(Object("java", imread("data/java.jpg"), CV_RGB(255, 0, 0)));
+        objects.push_back(Object("qt4", imread("data/qt4.jpg"), CV_RGB(0, 0, 255)));
     }
 
     if (sources.empty())
     {
         cout << "Loading default frames source..." << endl;
 
-        sources.push_back(new ImageSource("data/features2d/frames/1.jpg"));
-        sources.push_back(new ImageSource("data/features2d/frames/2.jpg"));
-        sources.push_back(new ImageSource("data/features2d/frames/3.jpg"));
-        sources.push_back(new ImageSource("data/features2d/frames/4.jpg"));
-        sources.push_back(new ImageSource("data/features2d/frames/5.jpg"));
-        sources.push_back(new ImageSource("data/features2d/frames/6.jpg"));
-        sources.push_back(new ImageSource("data/features2d/frames/7.jpg"));
+        sources.push_back(new ImageSource("data/features2d-1.jpg"));
+        sources.push_back(new ImageSource("data/features2d-2.jpg"));
+        sources.push_back(new ImageSource("data/features2d-3.jpg"));
+        sources.push_back(new ImageSource("data/features2d-4.jpg"));
+        sources.push_back(new ImageSource("data/features2d-5.jpg"));
+        sources.push_back(new ImageSource("data/features2d-6.jpg"));
+        sources.push_back(new ImageSource("data/features2d-7.jpg"));
     }
 
     Mat frame;

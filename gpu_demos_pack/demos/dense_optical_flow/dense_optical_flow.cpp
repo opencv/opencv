@@ -198,19 +198,12 @@ void App::process()
     {
         cout << "Using default frames source..." << endl;
 
-        pairSources.push_back(PairFrameSource::get(new ImageSource("data/optical_flow/army1.png"),
-                                                   new ImageSource("data/optical_flow/army2.png")));
-        pairSources.push_back(PairFrameSource::get(new ImageSource("data/optical_flow/backyard1.png"),
-                                                   new ImageSource("data/optical_flow/backyard2.png")));
-        pairSources.push_back(PairFrameSource::get(new ImageSource("data/optical_flow/basketball1.png"),
-                                                   new ImageSource("data/optical_flow/basketball2.png")));
-        pairSources.push_back(PairFrameSource::get(new ImageSource("data/optical_flow/dumptruck1.png"),
-                                                   new ImageSource("data/optical_flow/dumptruck2.png")));
-        pairSources.push_back(PairFrameSource::get(new ImageSource("data/optical_flow/mequon1.png"),
-                                                   new ImageSource("data/optical_flow/mequon2.png")));
-        pairSources.push_back(PairFrameSource::get(new ImageSource("data/optical_flow/teddy1.png"),
-                                                   new ImageSource("data/optical_flow/teddy2.png")));
-    }
+        pairSources.push_back(PairFrameSource::get(new ImageSource("data/backyard1.png"),
+                                                   new ImageSource("data/backyard2.png")));
+        pairSources.push_back(PairFrameSource::get(new ImageSource("data/basketball1.png"),
+                                                   new ImageSource("data/basketball2.png")));
+        pairSources.push_back(PairFrameSource::get(new ImageSource("data/dumptruck1.png"),
+                                                   new ImageSource("data/dumptruck2.png")));
 
     Mat frame0, frame1;
     Mat frame0_32F, frame1_32F;

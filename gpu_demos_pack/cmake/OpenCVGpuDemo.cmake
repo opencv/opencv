@@ -43,6 +43,7 @@ function(ocv_define_gpu_demo DEMO_NAME)
         target_link_libraries(${target} ${OpenCV_LIBS} utility ${DEMO_LINK_LIBRARIES})
 
         install(TARGETS ${target} RUNTIME DESTINATION ".")
+        install(DIRECTORY "data" DESTINATION ".")
 
         if(WIN32)
             set(CPACK_PACKAGE_EXECUTABLES ${CPACK_PACKAGE_EXECUTABLES} "${target};${DEMO_DESCRIPTION}" CACHE INTERNAL "")
