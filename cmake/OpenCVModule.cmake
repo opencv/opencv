@@ -432,11 +432,27 @@ macro(ocv_glob_module_sources)
   file(GLOB lib_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
   file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.hpp" "include/opencv2/${name}/detail/*.h")
 
+  file(GLOB_RECURSE lib_device_srcs "src/*.cu")
+  set(device_objs "")
+  set(lib_device_hdrs "")
+
+  if (HAVE_CUDA AND lib_device_srcs)
+    ocv_include_directories(${CUDA_INCLUDE_DIRS})
+    file(GLOB_RECURSE lib_device_hdrs "src/cuda/*.hpp")
+
+    ocv_cuda_compile(device_objs ${lib_device_srcs})
+    source_group("Src\\Cuda"      FILES ${lib_device_srcs} ${lib_device_hdrs})
+    if (lib_device_hdrs)
+      list(REMOVE_ITEM lib_int_hdrs ${lib_device_hdrs})
+    endif()
+  endif()
+
+  ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
+                                 SOURCES ${lib_srcs} ${lib_int_hdrs} ${device_objs} ${lib_device_srcs} ${lib_device_hdrs})
+
   source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
   source_group("Include" FILES ${lib_hdrs})
   source_group("Include\\detail" FILES ${lib_hdrs_detail})
-
-  ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail} SOURCES ${lib_srcs} ${lib_int_hdrs})
 endmacro()
 
 # creates OpenCV module in current folder
@@ -446,9 +462,14 @@ endmacro()
 #   ocv_create_module(SKIP_LINK)
 macro(ocv_create_module)
   add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES})
+  set(cuda_libs "")
+
+  if (HAVE_CUDA)
+    set(cuda_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  endif()
 
   if(NOT "${ARGN}" STREQUAL "SKIP_LINK")
-    target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
+    target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${cuda_libs} ${ARGN})
   endif()
 
   add_dependencies(opencv_modules ${the_module})
@@ -530,8 +551,8 @@ endmacro()
 # ocv_define_module(module_name  [INTERNAL] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>])
 macro(ocv_define_module module_name)
   ocv_add_module(${module_name} ${ARGN})
-  ocv_glob_module_sources()
   ocv_module_include_directories()
+  ocv_glob_module_sources()
   ocv_create_module()
   ocv_add_precompiled_headers(${the_module})
 
