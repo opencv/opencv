@@ -1,6 +1,7 @@
 #include <iomanip>
 #include <stdexcept>
 #include <string>
+
 #include "performance.h"
 
 using namespace std;
@@ -165,17 +166,17 @@ int main(int argc, const char* argv[])
     redirectError(cvErrorCallback);
 
     const char* keys =
-       "{ h help    | false | print help message }"
-       "{ f filter  |       | filter for test }"
-       "{ l list    | false | show all tests }"
-       "{ d device  | 0     | device id }"
-       "{ i iters   | 5     | iteration count }";
+       "{ h | help    |   | print help message }"
+       "{ f | filter  |   | filter for test }"
+       "{ l | list    |   | show all tests }"
+       "{ d | device  | 0 | device id }"
+       "{ i | iters   | 5 | iteration count }";
 
     CommandLineParser cmd(argc, argv, keys);
 
-    if (cmd.has("help"))
+    if (cmd.get<bool>("help"))
     {
-        cmd.printMessage();
+        cmd.printParams();
         return 0;
     }
 
@@ -200,7 +201,7 @@ int main(int argc, const char* argv[])
     printShortCudaDeviceInfo(device);
 
     string filter = cmd.get<string>("filter");
-    bool list = cmd.has("list");
+    bool list = cmd.get<bool>("list");
     int iters = cmd.get<int>("iters");
 
     if (!filter.empty())

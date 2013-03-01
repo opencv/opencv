@@ -7,7 +7,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/gpu/gpu.hpp>
 
-#include "utility_lib/utility_lib.h"
+#include "utility.h"
 
 using namespace std;
 using namespace cv;
@@ -37,8 +37,8 @@ public:
 
 protected:
     void process();
-    bool parseCmdArgs(int& i, int argc, const char* argv[]);
     bool processKey(int key);
+    bool parseCmdArgs(int& i, int argc, const char* argv[]);
     void printHelp();
 
 private:
@@ -48,12 +48,13 @@ private:
     CascadeClassifier_GPU cascade_gpu;
     CascadeClassifier cascade_cpu;
 
-    /* parameters */
     bool useGPU;
     double scaleFactor;
     bool findLargestObject;
     bool filterRects;
     bool showHelp;
+
+    size_t curSource;
 };
 
 App::App()
@@ -63,37 +64,25 @@ App::App()
     findLargestObject = false;
     filterRects = true;
     showHelp = false;
+    curSource = 0;
 }
 
 void App::process()
 {
     if (cascade_name.empty())
     {
-        cout << "Using default cascade file...\n";
+        cout << "Using default cascade file..." << endl;
         cascade_name = "data/face_detect/haarcascade_frontalface_alt.xml";
     }
 
     if (!cascade_gpu.load(cascade_name) || !cascade_cpu.load(cascade_name))
-    {
-        ostringstream msg;
-        msg << "Could not load cascade classifier \"" << cascade_name << "\"";
-        throw runtime_error(msg.str());
-    }
+        THROW_EXCEPTION("Could not load cascade classifier [" << cascade_name << "]");
 
-    if (sources.size() != 1)
+    if (sources.empty())
     {
-        cout << "Loading default frames source...\n";
-        sources.resize(1);
-        sources[0] = new VideoSource("data/face_detect/browser.flv");
+        cout << "Using default frames source..." << endl;
+        sources.push_back(new VideoSource("data/face_detect/browser.flv"));
     }
-
-    cout << "\nControls:\n"
-         << "\tESC - exit\n"
-         << "\tSpace - change mode GPU <-> CPU\n"
-         << "\t1/Q - increase/decrease scale\n"
-         << "\tM - switch OneFace / MultiFace\n"
-         << "\tF - toggle rectangles filter\n"
-         << endl;
 
     Mat frame, frame_cpu, gray_cpu, resized_cpu, img_to_show;
     GpuMat frame_gpu, gray_gpu, resized_gpu, facesBuf_gpu;
@@ -104,7 +93,7 @@ void App::process()
     {
         int64 start = getTickCount();
 
-        sources[0]->next(frame_cpu);
+        sources[curSource]->next(frame_cpu);
 
         double proc_fps;
         if (useGPU)
@@ -117,15 +106,14 @@ void App::process()
 
             int64 proc_start = getTickCount();
 
-            int detections_num = cascade_gpu.detectMultiScale(gray_gpu, facesBuf_gpu, 1.2,
-                                                          (filterRects || findLargestObject) ? 4 : 0);
+            int detections_num = cascade_gpu.detectMultiScale(gray_gpu, facesBuf_gpu, 1.2, (filterRects || findLargestObject) ? 4 : 0);
 
             if (detections_num == 0)
                 faces.clear();
             else
             {
                 faces.resize(detections_num);
-                cv::Mat facesMat(1, detections_num, DataType<Rect>::type, &faces[0]);
+                Mat facesMat(1, detections_num, DataType<Rect>::type, &faces[0]);
                 facesBuf_gpu.colRange(0, detections_num).download(facesMat);
             }
 
@@ -160,7 +148,7 @@ void App::process()
 
         displayState(img_to_show, proc_fps, total_fps);
 
-        imshow("face_detect_demo", img_to_show);
+        imshow("Face Detection Demo", img_to_show);
 
         processKey(waitKey(3) & 0xff);
     }
@@ -194,24 +182,9 @@ void App::displayState(Mat& frame, double proc_fps, double total_fps)
         printText(frame, "1/Q - increase/decrease scale", i++, fontColorRed);
         printText(frame, "M - switch OneFace / MultiFace", i++, fontColorRed);
         printText(frame, "F - toggle rectangles filter", i++, fontColorRed);
+        if (sources.size() > 1)
+            printText(frame, "N - next source", i++, fontColorRed);
     }
-}
-
-bool App::parseCmdArgs(int& i, int argc, const char* argv[])
-{
-    if (string(argv[i]) == "--cascade")
-    {
-        ++i;
-
-        if (i >= argc)
-            throw runtime_error("Missing file name after --cascade");
-
-        cascade_name = argv[i];
-
-        return true;
-    }
-
-    return false;
 }
 
 bool App::processKey(int key)
@@ -256,6 +229,12 @@ bool App::processKey(int key)
             cout << "Disable rectangles filter" << endl;
         break;
 
+    case 'N':
+        curSource = (curSource + 1) % sources.size();
+        sources[curSource]->reset();
+        cout << "Switch source to " << curSource << endl;
+        break;
+
     default:
         return false;
     }
@@ -263,9 +242,30 @@ bool App::processKey(int key)
     return true;
 }
 
+bool App::parseCmdArgs(int& i, int argc, const char* argv[])
+{
+    string arg(argv[i]);
+
+    if (arg == "--cascade")
+    {
+        ++i;
+
+        if (i >= argc)
+            THROW_EXCEPTION("Missing file name after " << arg);
+
+        cascade_name = argv[i];
+
+        return true;
+    }
+
+    return false;
+}
+
 void App::printHelp()
 {
-    cout << "Usage: demo_face_detect --cascade <cascade_file> <frames_source>\n";
+    cout << "This sample demonstrates Face Detection algorithm" << endl;
+    cout << "Usage: demo_face_detection [--cascade <cascade_file>] [options]" << endl;
+    cout << "Options:" << endl;
     BaseApp::printHelp();
 }
 

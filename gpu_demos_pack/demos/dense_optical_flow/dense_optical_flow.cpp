@@ -7,7 +7,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/gpu/gpu.hpp>
 
-#include "utility_lib/utility_lib.h"
+#include "utility.h"
 
 using namespace std;
 using namespace cv;
@@ -40,7 +40,7 @@ protected:
     void printHelp();
 
 private:
-    void displayState(cv::Mat& frame, double proc_fps, double total_fps);
+    void displayState(Mat& frame, double proc_fps, double total_fps);
 
     Method method;
     float timeStep;
@@ -49,7 +49,7 @@ private:
     FarnebackOpticalFlow farneback;
     PyrLKOpticalFlow pyrlk;
 
-    std::vector< cv::Ptr<PairFrameSource> > pairSources;
+    vector< Ptr<PairFrameSource> > pairSources;
     size_t curSource;
 
     bool calcFlow;
@@ -70,37 +70,119 @@ App::App() :
     calcFlow = true;
 }
 
-template <typename T> inline T clamp (T x, T a, T b)
+inline bool isFlowCorrect(Point2f u)
 {
-    return ((x) > (a) ? ((x) < (b) ? (x) : (b)) : (a));
+    return !cvIsNaN(u.x) && !cvIsNaN(u.y) && fabs(u.x) < 1e9 && fabs(u.y) < 1e9;
 }
 
-template <typename T> inline T mapValue(T x, T a, T b, T c, T d)
+Vec3b computeColor(float fx, float fy)
 {
-    x = clamp(x, a, b);
-    return c + (d - c) * (x - a) / (b - a);
-}
+    static bool first = true;
 
-void getFlowField(const Mat& u, const Mat& v, Mat& flowField)
-{
-    const float maxDisplacement = 40.0f;
+    // relative lengths of color transitions:
+    // these are chosen based on perceptual similarity
+    // (e.g. one can distinguish more shades between red and yellow
+    //  than between yellow and green)
+    const int RY = 15;
+    const int YG = 6;
+    const int GC = 4;
+    const int CB = 11;
+    const int BM = 13;
+    const int MR = 6;
+    const int NCOLS = RY + YG + GC + CB + BM + MR;
+    static Vec3i colorWheel[NCOLS];
 
-    flowField.create(u.size(), CV_8UC4);
-
-    for (int i = 0; i < flowField.rows; ++i)
+    if (first)
     {
-        const float* ptr_u = u.ptr<float>(i);
-        const float* ptr_v = v.ptr<float>(i);
+        int k = 0;
 
+        for (int i = 0; i < RY; ++i, ++k)
+            colorWheel[k] = Vec3i(255, 255 * i / RY, 0);
 
-        Vec4b* row = flowField.ptr<Vec4b>(i);
+        for (int i = 0; i < YG; ++i, ++k)
+            colorWheel[k] = Vec3i(255 - 255 * i / YG, 255, 0);
 
-        for (int j = 0; j < flowField.cols; ++j)
+        for (int i = 0; i < GC; ++i, ++k)
+            colorWheel[k] = Vec3i(0, 255, 255 * i / GC);
+
+        for (int i = 0; i < CB; ++i, ++k)
+            colorWheel[k] = Vec3i(0, 255 - 255 * i / CB, 255);
+
+        for (int i = 0; i < BM; ++i, ++k)
+            colorWheel[k] = Vec3i(255 * i / BM, 0, 255);
+
+        for (int i = 0; i < MR; ++i, ++k)
+            colorWheel[k] = Vec3i(255, 0, 255 - 255 * i / MR);
+
+        first = false;
+    }
+
+    const double rad = sqrt(fx * fx + fy * fy);
+    const double a = atan2(-fy, -fx) / CV_PI;
+
+    const double fk = (a + 1.0) / 2.0 * (NCOLS - 1);
+    const int k0 = static_cast<int>(fk);
+    const int k1 = (k0 + 1) % NCOLS;
+    const double f = fk - k0;
+
+    Vec3b pix;
+
+    for (int b = 0; b < 3; b++)
+    {
+        const double col0 = colorWheel[k0][b] / 255.0;
+        const double col1 = colorWheel[k1][b] / 255.0;
+
+        double col = (1 - f) * col0 + f * col1;
+
+        if (rad <= 1)
+            col = 1 - rad * (1 - col); // increase saturation with radius
+        else
+            col *= .75; // out of range
+
+        pix[2 - b] = static_cast<int>(255.0 * col);
+    }
+
+    return pix;
+}
+
+void getFlowField(const Mat& u, const Mat& v, Mat& flowField, float maxrad = -1)
+{
+    flowField.create(u.size(), CV_8UC3);
+    flowField.setTo(Scalar::all(0));
+
+    // determine motion range:
+    if (maxrad < 0)
+    {
+        maxrad = 1;
+        for (int y = 0; y < u.rows; ++y)
         {
-            row[j][0] = 0;
-            row[j][1] = static_cast<unsigned char> (mapValue (-ptr_v[j], -maxDisplacement, maxDisplacement, 0.0f, 255.0f));
-            row[j][2] = static_cast<unsigned char> (mapValue ( ptr_u[j], -maxDisplacement, maxDisplacement, 0.0f, 255.0f));
-            row[j][3] = 255;
+            const float* uPtr = u.ptr<float>(y);
+            const float* vPtr = v.ptr<float>(y);
+
+            for (int x = 0; x < u.cols; ++x)
+            {
+                Point2f flow(uPtr[x], vPtr[x]);
+
+                if (!isFlowCorrect(flow))
+                    continue;
+
+                maxrad = max(maxrad, sqrt(flow.x * flow.x + flow.y * flow.y));
+            }
+        }
+    }
+
+    for (int y = 0; y < u.rows; ++y)
+    {
+        const float* uPtr = u.ptr<float>(y);
+        const float* vPtr = v.ptr<float>(y);
+        Vec3b* dstPtr = flowField.ptr<Vec3b>(y);
+
+        for (int x = 0; x < u.cols; ++x)
+        {
+            Point2f flow(uPtr[x], vPtr[x]);
+
+            if (isFlowCorrect(flow))
+                dstPtr[x] = computeColor(flow.x / maxrad, flow.y / maxrad);
         }
     }
 }
@@ -114,7 +196,7 @@ void App::process()
     }
     else
     {
-        cout << "Loading default frames source...\n";
+        cout << "Using default frames source..." << endl;
 
         pairSources.push_back(PairFrameSource::get(new ImageSource("data/optical_flow/army1.png"),
                                                    new ImageSource("data/optical_flow/army2.png")));
@@ -160,7 +242,7 @@ void App::process()
     int currentFrame = 0;
     bool forward = true;
 
-    cv::Mat img_to_show;
+    Mat img_to_show;
 
     double proc_fps, total_fps;
 
@@ -269,16 +351,16 @@ void App::process()
                 }
             };
 
-            getFlowField(fu, fv, flowFieldForward);
-            getFlowField(bu, bv, flowFieldBackward);
+            getFlowField(fu, fv, flowFieldForward, 30);
+            getFlowField(bu, bv, flowFieldBackward, 30);
 
-            cv::split(frame0_32F, channels);
+            split(frame0_32F, channels);
 
             d_b0.upload(channels[0]);
             d_g0.upload(channels[1]);
             d_r0.upload(channels[2]);
 
-            cv::split(frame1_32F, channels);
+            split(frame1_32F, channels);
 
             d_b1.upload(channels[0]);
             d_g1.upload(channels[1]);
@@ -323,7 +405,7 @@ void App::process()
 
         imshow("Interpolated Frames", img_to_show);
 
-        processKey(waitKey(100) & 0xff);
+        processKey(waitKey(100));
 
         if (forward)
         {
@@ -360,7 +442,8 @@ void App::displayState(Mat& frame, double proc_fps, double total_fps)
     printText(frame, txt.str(), i++);
 
     printText(frame, "Space - switch method", i++, fontColorRed);
-    printText(frame, "I - switch source", i++, fontColorRed);
+    if (pairSources.size() > 1)
+        printText(frame, "N - next source", i++, fontColorRed);
 }
 
 bool App::processKey(int key)
@@ -368,7 +451,7 @@ bool App::processKey(int key)
     if (BaseApp::processKey(key))
         return true;
 
-    switch (toupper(key))
+    switch (toupper(key & 0xff))
     {
     case 32:
         switch (method)
@@ -390,7 +473,7 @@ bool App::processKey(int key)
         calcFlow = true;
         break;
 
-    case 'I':
+    case 'N':
         curSource = (curSource + 1) % pairSources.size();
         calcFlow = true;
         break;
@@ -404,7 +487,9 @@ bool App::processKey(int key)
 
 void App::printHelp()
 {
-    cout << "Usage: demo_dense_optical_flow <frame sources>\n";
+    cout << "This sample demonstrates different Dense Optical Flow algorithms" << endl;
+    cout << "Usage: demo_dense_optical_flow [options]" << endl;
+    cout << "Options:" << endl;
     BaseApp::printHelp();
 }
 

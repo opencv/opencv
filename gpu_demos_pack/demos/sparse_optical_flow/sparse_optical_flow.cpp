@@ -7,7 +7,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/gpu/gpu.hpp>
 
-#include "utility_lib/utility_lib.h"
+#include "utility.h"
 
 using namespace std;
 using namespace cv;
@@ -20,16 +20,16 @@ public:
 
 protected:
     void process();
-    void printHelp();
     bool processKey(int key);
+    void printHelp();
 
 private:
-    void displayState(cv::Mat& frame, double proc_fps, double total_fps);
+    void displayState(Mat& frame, double proc_fps, double total_fps);
 
     bool useGPU;
 
-    std::vector< cv::Ptr<PairFrameSource> > pairSources;
-    size_t curSource;
+    vector< Ptr<PairFrameSource> > pairSources;
+    int curSource;
 };
 
 App::App()
@@ -96,22 +96,17 @@ void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<Point2f
 
 void App::process()
 {
-    if (sources.size() == 1)
+    if (sources.empty())
     {
-        pairSources.push_back(PairFrameSource::get(sources[0], 2));
-    }
-    else if (sources.size() == 2)
-    {
-        pairSources.push_back(PairFrameSource::get(sources[0], sources[1]));
-    }
-    else
-    {
-        cout << "Loading default frames source...\n";
+        cout << "Loading default frames source..." << endl;
 
-        pairSources.push_back(PairFrameSource::get(new VideoSource("data/pedestrian_detect/mitsubishi.avi"), 2));
-        pairSources.push_back(PairFrameSource::get(new VideoSource("data/optical_flow/plush1_720p_10s.m2v"), 2));
-        pairSources.push_back(PairFrameSource::get(new VideoSource("data/stereo_matching/8sec_Toys_Kirill_1920x1080_xvid_L.avi"), 2));
+        sources.push_back(new VideoSource("data/pedestrian_detect/mitsubishi.avi"));
+        sources.push_back(new VideoSource("data/optical_flow/plush1_720p_10s.m2v"));
+        sources.push_back(new VideoSource("data/stereo_matching/8sec_Toys_Kirill_1920x1080_xvid_L.avi"));
     }
+
+    for (size_t i = 0; i < sources.size(); ++i)
+        pairSources.push_back(PairFrameSource::get(sources[i], 2));
 
     Mat frame0, frame1;
     Mat gray;
@@ -131,6 +126,9 @@ void App::process()
 
     GoodFeaturesToTrackDetector_GPU detector(4000, 0.01, 10.0);
     PyrLKOpticalFlow lk;
+
+    namedWindow("Sparse Optical Flow Demo", WINDOW_NORMAL);
+    setWindowProperty("Sparse Optical Flow Demo", WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
 
     while (!exited)
     {
@@ -178,9 +176,9 @@ void App::process()
 
         displayState(img_to_show, proc_fps, total_fps);
 
-        imshow("demo_sparse_optical_flow", img_to_show);
+        imshow("Sparse Optical Flow Demo", img_to_show);
 
-        processKey(waitKey(3) & 0xff);
+        processKey(waitKey(30) & 0xff);
     }
 }
 
@@ -203,7 +201,7 @@ void App::displayState(Mat& frame, double proc_fps, double total_fps)
     printText(frame, txt.str(), i++);
 
     printText(frame, "Space - switch GPU / CPU", i++, fontColorRed);
-    printText(frame, "I - switch source", i++, fontColorRed);
+    printText(frame, "N - next source", i++, fontColorRed);
 }
 
 bool App::processKey(int key)
@@ -218,8 +216,9 @@ bool App::processKey(int key)
         cout << "Switched to " << (useGPU ? "CUDA" : "CPU") << " mode\n";
         break;
 
-    case 'I':
+    case 'N':
         curSource = (curSource + 1) % pairSources.size();
+        pairSources[curSource]->reset();
         break;
     }
 
@@ -228,9 +227,10 @@ bool App::processKey(int key)
 
 void App::printHelp()
 {
-    cout << "Usage: demo_sparse_optical_flow <frames_source>\n";
+    cout << "This sample demonstrates different Sparse Optical Flow algorithms" << endl;
+    cout << "Usage: demo_sparse_optical_flow [options]" << endl;
+    cout << "Options:" << endl;
     BaseApp::printHelp();
 }
-
 
 RUN_APP(App)

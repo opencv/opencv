@@ -14,8 +14,8 @@ if(TBB_FOUND AND NOT TBB_INTERFACE_VERSION LESS 5000)
 endif()
 
 add_executable(${target} ${sources})
-add_dependencies(${target} utility_lib)
-target_link_libraries(${target} ${OpenCV_LIBS} utility_lib tbb)
+add_dependencies(${target} utility)
+target_link_libraries(${target} ${OpenCV_LIBS} utility tbb)
 set_target_properties(${target} PROPERTIES DEBUG_POSTFIX d)
 
 set_target_properties(

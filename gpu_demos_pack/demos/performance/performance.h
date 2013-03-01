@@ -1,30 +1,30 @@
 #ifndef OPENCV_GPU_SAMPLE_PERFORMANCE_H_
 #define OPENCV_GPU_SAMPLE_PERFORMANCE_H_
 
-#include <iostream>
 #include <cstdio>
+#include <iostream>
 #include <vector>
 #include <numeric>
 #include <string>
-#include "opencv2/core/core.hpp"
-#include "opencv2/gpu/gpu.hpp"
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/gpu/gpu.hpp>
 
 #define TAB "    "
 
 class Runnable
 {
 public:
-    explicit Runnable(const std::string& name): name_(name) {}  
+    explicit Runnable(const std::string& name): name_(name) {}
     virtual ~Runnable() {}
-    
-    const std::string& name() const { return name_; }    
-    
+
+    const std::string& name() const { return name_; }
+
     virtual void run() = 0;
 
 private:
     std::string name_;
 };
-
 
 class TestSystem
 {
@@ -59,7 +59,7 @@ public:
     bool stop() const { return cur_iter_idx_ >= num_iters_; }
 
     void cpuOn() { cpu_started_ = cv::getTickCount(); }
-    void cpuOff() 
+    void cpuOff()
     {
         int64 delta = cv::getTickCount() - cpu_started_;
         cpu_times_.push_back(delta);
@@ -73,7 +73,7 @@ public:
     }
 
     void gpuOn() { gpu_started_ = cv::getTickCount(); }
-    void gpuOff() 
+    void gpuOff()
     {
         int64 delta = cv::getTickCount() - gpu_started_;
         gpu_times_.push_back(delta);
@@ -98,10 +98,10 @@ private:
     {
         cpu_times_.reserve(num_iters_);
         gpu_times_.reserve(num_iters_);
-    }   
+    }
 
     void finishCurrentSubtest();
-    void resetCurrentSubtest() 
+    void resetCurrentSubtest()
     {
         cpu_elapsed_ = 0;
         gpu_elapsed_ = 0;
@@ -180,7 +180,7 @@ private:
     } TestSystem::instance().gpuComplete()
 
 // Generates a matrix
-void gen(cv::Mat& mat, int rows, int cols, int type, cv::Scalar low, 
+void gen(cv::Mat& mat, int rows, int cols, int type, cv::Scalar low,
          cv::Scalar high);
 
 // Returns abs path taking into account test system working dir

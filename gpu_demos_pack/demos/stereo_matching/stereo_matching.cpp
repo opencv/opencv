@@ -8,7 +8,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/gpu/gpu.hpp>
 
-#include "utility_lib/utility_lib.h"
+#include "utility.h"
 
 using namespace std;
 using namespace cv;
@@ -21,7 +21,7 @@ enum Method
     CSBP
 };
 
-const char* method_str[] = 
+const char* method_str[] =
 {
     "BM",
     "BP",
@@ -35,11 +35,11 @@ public:
 
 protected:
     void process();
-    void printHelp();
     bool processKey(int key);
+    void printHelp();
 
 private:
-    void displayState(cv::Mat& frame, double proc_fps, double total_fps);
+    void displayState(Mat& frame, double proc_fps, double total_fps);
 
     Method method;
     bool colorOutput;
@@ -50,8 +50,8 @@ private:
     StereoBeliefPropagation bp;
     StereoConstantSpaceBP csbp;
 
-    std::vector< cv::Ptr<PairFrameSource> > stereoSources;
-    size_t curSource;
+    vector< Ptr<PairFrameSource> > stereoSources;
+    int curSource;
 };
 
 App::App()
@@ -76,14 +76,14 @@ App::App()
 
 void App::process()
 {
-    if ((sources.size() > 0) && (sources.size() % 2 == 0))
+    if (!sources.empty() && sources.size() % 2 == 0)
     {
         for (size_t i = 0; i < sources.size(); i += 2)
             stereoSources.push_back(PairFrameSource::get(sources[i], sources[i+1]));
     }
     else
     {
-        cout << "Loading default frames source...\n";
+        cout << "Loading default frames source..." << endl;
 
         stereoSources.push_back(PairFrameSource::get(new ImageSource("data/stereo_matching/aloeL_small.png"),
                                                      new ImageSource("data/stereo_matching/aloeR_small.png")));
@@ -94,18 +94,6 @@ void App::process()
         stereoSources.push_back(PairFrameSource::get(new ImageSource("data/stereo_matching/teddyL_small.png"),
                                                      new ImageSource("data/stereo_matching/teddyR_small.png")));
     }
-
-    cout << "\nControls:\n"
-         << "\tESC - exit\n"
-         << "\tSpace - switch method\n"
-         << "\t1/Q - increase/decrease disparities number\n"
-         << "\t2/W - increase/decrease window size (BM)\n"
-         << "\t3/E - increase/decrease iterations count (BP and CSBP)\n"
-         << "\t4/R - increase/decrease levels count (BP and CSBP)\n"
-         << "\tC - switch color/gray output\n"
-         << "\tI - switch source\n"
-         << "\tS - show/hide source frame\n"
-         << endl;
 
     cout << "ndisp: " << bm.ndisp << endl;
     cout << "winSize: " << bm.winSize << endl;
@@ -118,9 +106,12 @@ void App::process()
     GpuMat d_left, d_right;
     Mat small_image;
 
-    gpu::GpuMat d_disp, d_img_to_show;
+    GpuMat d_disp, d_img_to_show;
 
-    Mat img_to_show;
+    Mat img_to_show, img_to_show_scaled;
+
+    namedWindow("Stereo Matching Demo", WINDOW_NORMAL);
+    setWindowProperty("Stereo Matching Demo", WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
 
     while (!exited)
     {
@@ -146,7 +137,7 @@ void App::process()
 
         if (colorOutput)
         {
-            cv::gpu::drawColorDisp(d_disp, d_img_to_show, bm.ndisp);
+            drawColorDisp(d_disp, d_img_to_show, bm.ndisp);
         }
         else
         {
@@ -158,27 +149,28 @@ void App::process()
         if (showSource)
         {
             resize(left_src, small_image, cv::Size(), 0.25, 0.25);
-            cv::Mat roi = img_to_show(cv::Rect(img_to_show.cols - small_image.cols, 0, small_image.cols, small_image.rows));
+            Mat roi = img_to_show(cv::Rect(img_to_show.cols - small_image.cols, 0, small_image.cols, small_image.rows));
 
             if (colorOutput)
-                cv::cvtColor(small_image, roi, cv::COLOR_BGR2BGRA);
+                cvtColor(small_image, roi, cv::COLOR_BGR2BGRA);
             else
                 small_image.copyTo(roi);
         }
 
         double total_fps = getTickFrequency()  / (getTickCount() - start);
 
-        displayState(img_to_show, proc_fps, total_fps);
+        resize(img_to_show, img_to_show_scaled, Size(), 2, 2);
+        displayState(img_to_show_scaled, proc_fps, total_fps);
 
-        imshow("stereo_matching_demo", img_to_show);
+        imshow("Stereo Matching Demo", img_to_show_scaled);
 
-        processKey(waitKey(3) & 0xff);
+        processKey(waitKey(30));
     }
 }
 
 void App::displayState(cv::Mat& frame, double proc_fps, double total_fps)
 {
-    const cv::Scalar fontColor = CV_RGB(118, 185, 0);
+    const Scalar fontColor = CV_RGB(118, 185, 0);
     const Scalar fontColorRed = CV_RGB(255, 0, 0);
     const double fontScale = 0.6;
 
@@ -209,15 +201,9 @@ void App::displayState(cv::Mat& frame, double proc_fps, double total_fps)
         printText(frame, "3/E - increase/decrease iterations count", i++, fontColorRed, fontScale);
         printText(frame, "4/R - increase/decrease levels count", i++, fontColorRed, fontScale);
         printText(frame, "C - switch color/gray output", i++, fontColorRed, fontScale);
-        printText(frame, "I - switch source", i++, fontColorRed, fontScale);
         printText(frame, "S - show/hide source frame", i++, fontColorRed, fontScale);
+        printText(frame, "N - next source", i++, fontColorRed, fontScale);
     }
-}
-
-void App::printHelp()
-{
-    cout << "Usage: demo_stereo_matching <left_frame_source> <right_frame_source>\n";
-    BaseApp::printHelp();
 }
 
 bool App::processKey(int key)
@@ -225,7 +211,7 @@ bool App::processKey(int key)
     if (BaseApp::processKey(key))
         return true;
 
-    switch (toupper(key))
+    switch (toupper(key & 0xff))
     {
     case 32:
         switch (method)
@@ -323,8 +309,9 @@ bool App::processKey(int key)
         cout << (showSource ? "Show source" : "Hide source") << endl;
         break;
 
-    case 'I':
+    case 'N':
         curSource = (curSource + 1) % stereoSources.size();
+        stereoSources[curSource]->reset();
         break;
 
     default:
@@ -332,6 +319,14 @@ bool App::processKey(int key)
     }
 
     return true;
+}
+
+void App::printHelp()
+{
+    cout << "This sample demonstrates different Stereo Matching algorithms" << endl;
+    cout << "Usage: demo_stereo_matching [options]" << endl;
+    cout << "Options:" << endl;
+    BaseApp::printHelp();
 }
 
 RUN_APP(App)

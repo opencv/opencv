@@ -6,8 +6,8 @@ include_directories(${OpenCV_INCLUDE_DIR} ${CMAKE_SOURCE_DIR})
 file(GLOB sources "*.h*" "*.cpp")
 
 add_executable(${target} ${sources})
-add_dependencies(${target} utility_lib)
-target_link_libraries(${target} ${OpenCV_LIBS} utility_lib)
+add_dependencies(${target} utility)
+target_link_libraries(${target} ${OpenCV_LIBS} utility)
 set_target_properties(${target} PROPERTIES DEBUG_POSTFIX d)
 
 set_target_properties(

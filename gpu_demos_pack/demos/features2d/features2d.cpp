@@ -11,43 +11,31 @@
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
-#include "utility_lib/utility_lib.h"
+#include "utility.h"
 
-enum Method
-{
-    SURF_GPU,
-    SURF_CPU,
-    ORB_GPU,
-    ORB_CPU
-};
-
-const char* method_str[] =
-{
-    "SURF CUDA",
-    "SURF CPU",
-    "ORB CUDA",
-    "ORB CPU"
-};
+using namespace std;
+using namespace cv;
+using namespace cv::gpu;
 
 struct Object
 {
-    std::string name;
+    string name;
 
-    cv::Mat imgColor;
-    cv::Mat imgGray;
-    cv::gpu::GpuMat d_imgGray;
+    Mat imgColor;
+    Mat imgGray;
+    GpuMat d_imgGray;
 
-    cv::Scalar color;
+    Scalar color;
 
-    std::vector<cv::KeyPoint> keypoints;
+    vector<KeyPoint> keypoints;
 
-    cv::Mat descriptors;
-    cv::gpu::GpuMat d_descriptors;
+    Mat descriptors;
+    GpuMat d_descriptors;
 
-    Object(const std::string& name_, const cv::Mat& imgColor_, cv::Scalar color_) :
+    Object(const string& name_, const Mat& imgColor_, Scalar color_) :
         name(name_), imgColor(imgColor_), color(color_)
     {
-        cv::cvtColor(imgColor, imgGray, cv::COLOR_BGR2GRAY);
+        cvtColor(imgColor, imgGray, COLOR_BGR2GRAY);
         d_imgGray.upload(imgGray);
     }
 };
@@ -64,61 +52,53 @@ protected:
     void printHelp();
 
 private:
-    void calcKeypoints(const cv::Mat& img, const cv::gpu::GpuMat& d_img, std::vector<cv::KeyPoint>& keypoints,
-                       cv::Mat& descriptors, cv::gpu::GpuMat& d_descriptors);
+    void calcKeypoints(const Mat& img, const GpuMat& d_img, vector<KeyPoint>& keypoints, Mat& descriptors, GpuMat& d_descriptors);
 
-    void match(const cv::Mat& descriptors1, const cv::gpu::GpuMat& d_descriptors1,
-               const cv::Mat& descriptors2, const cv::gpu::GpuMat& d_descriptors2,
-               std::vector<cv::DMatch>& matches);
+    void match(const Mat& descriptors1, const GpuMat& d_descriptors1,
+               const Mat& descriptors2, const GpuMat& d_descriptors2,
+               vector<DMatch>& matches);
 
-    void displayState(cv::Mat& frame, double detect_fps, double match_fps, double total_fps);
+    void displayState(Mat& frame, double detect_fps, double match_fps, double total_fps);
 
-    std::vector<Object> objects_;
+    vector<Object> objects;
 
-    Method method;
+    bool useGPU;
     bool showCorrespondences;
+    int curSource;
 
-    cv::gpu::SURF_GPU d_surf_;
-    cv::SURF surf_;
-    cv::gpu::ORB_GPU d_orb_;
-    cv::ORB orb_;
+    SURF_GPU d_surf;
+    SURF surf;
 
-    cv::BFMatcher matcher_;
-    cv::gpu::BFMatcher_GPU d_matcher_;
-    cv::gpu::GpuMat trainIdx_, distance_, allDist_;
-
-    int sourceIdx;
+    BFMatcher matcher;
+    BFMatcher_GPU d_matcher;
+    GpuMat trainIdx, distance, allDist;
 };
 
 App::App() :
-    d_surf_(500),
-    surf_(500),
-    d_orb_(5000),
-    orb_(5000),
-
-    matcher_(cv::NORM_L2),
-    d_matcher_(cv::NORM_L2)
+    d_surf(500),
+    surf(500),
+    matcher(NORM_L2),
+    d_matcher(NORM_L2)
 {
-    method = SURF_GPU;
-    showCorrespondences = false;
-
-    sourceIdx = 0;
+    useGPU = true;
+    showCorrespondences = true;
+    curSource = 0;
 }
 
 void App::process()
 {
-    if (objects_.empty())
+    if (objects.empty())
     {
-        std::cout << "Loading default objects..." << std::endl;
+        cout << "Loading default objects..." << endl;
 
-        objects_.push_back(Object("opengl", cv::imread("data/features2d/objects/opengl.jpg"), CV_RGB(0, 255, 0)));
-        objects_.push_back(Object("java", cv::imread("data/features2d/objects/java.jpg"), CV_RGB(255, 0, 0)));
-        objects_.push_back(Object("qt4", cv::imread("data/features2d/objects/qt4.jpg"), CV_RGB(0, 0, 255)));
+        objects.push_back(Object("opengl", imread("data/features2d/objects/opengl.jpg"), CV_RGB(0, 255, 0)));
+        objects.push_back(Object("java", imread("data/features2d/objects/java.jpg"), CV_RGB(255, 0, 0)));
+        objects.push_back(Object("qt4", imread("data/features2d/objects/qt4.jpg"), CV_RGB(0, 0, 255)));
     }
 
     if (sources.empty())
     {
-        std::cout << "Loading default frames source..." << std::endl;
+        cout << "Loading default frames source..." << endl;
 
         sources.push_back(new ImageSource("data/features2d/frames/1.jpg"));
         sources.push_back(new ImageSource("data/features2d/frames/2.jpg"));
@@ -129,112 +109,112 @@ void App::process()
         sources.push_back(new ImageSource("data/features2d/frames/7.jpg"));
     }
 
-    cv::Mat frame;
-    cv::Mat frameGray;
-    cv::gpu::GpuMat d_frameGray;
+    Mat frame;
+    Mat frameGray;
+    GpuMat d_frameGray;
 
-    std::vector<cv::KeyPoint> frameKeypoints;
-    cv::Mat frameDescriptors;
-    cv::gpu::GpuMat d_frameDescriptors;
+    vector<KeyPoint> frameKeypoints;
+    Mat frameDescriptors;
+    GpuMat d_frameDescriptors;
 
-    std::vector< std::vector<cv::DMatch> > matches(objects_.size());
+    vector< vector<DMatch> > matches(objects.size());
 
-    cv::Mat img_to_show;
+    Mat img_to_show;
 
-    cv::namedWindow("demo_features2d", cv::WINDOW_NORMAL);
-    cv::setWindowProperty("demo_features2d", cv::WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
-    cv::setWindowProperty("demo_features2d", cv::WND_PROP_ASPECT_RATIO, CV_WINDOW_FREERATIO);
+    namedWindow("Features2D Demo", WINDOW_NORMAL);
+    setWindowProperty("Features2D Demo", WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+    setWindowProperty("Features2D Demo", WND_PROP_ASPECT_RATIO, CV_WINDOW_FREERATIO);
 
     while (!exited)
     {
-        int64 start = cv::getTickCount();
+        int64 start = getTickCount();
 
-        sources[sourceIdx]->next(frame);
-        cv::cvtColor(frame, frameGray, cv::COLOR_BGR2GRAY);
+        sources[curSource]->next(frame);
+        cvtColor(frame, frameGray, COLOR_BGR2GRAY);
         d_frameGray.upload(frameGray);
 
-        int64 detect_start = cv::getTickCount();
+        int64 detect_start = getTickCount();
         {
-            for (size_t i = 0; i < objects_.size(); ++i)
-                calcKeypoints(objects_[i].imgGray, objects_[i].d_imgGray, objects_[i].keypoints, objects_[i].descriptors, objects_[i].d_descriptors);
+            for (size_t i = 0; i < objects.size(); ++i)
+                calcKeypoints(objects[i].imgGray, objects[i].d_imgGray, objects[i].keypoints, objects[i].descriptors, objects[i].d_descriptors);
 
             calcKeypoints(frameGray, d_frameGray, frameKeypoints, frameDescriptors, d_frameDescriptors);
         }
-        double detect_fps = cv::getTickFrequency() / (cv::getTickCount() - detect_start);
+        double detect_fps = getTickFrequency() / (getTickCount() - detect_start);
 
         int64 match_start = cv::getTickCount();
         {
-            for (size_t i = 0; i < objects_.size(); ++i)
-                match(objects_[i].descriptors, objects_[i].d_descriptors, frameDescriptors, d_frameDescriptors, matches[i]);
+            for (size_t i = 0; i < objects.size(); ++i)
+                match(objects[i].descriptors, objects[i].d_descriptors, frameDescriptors, d_frameDescriptors, matches[i]);
         }
-        double match_fps = cv::getTickFrequency() / (cv::getTickCount() - match_start);
+        double match_fps = getTickFrequency() / (getTickCount() - match_start);
 
         const int offset = 350;
 
-        cv::Size outSize = frame.size();
+        Size outSize = frame.size();
         int max_height = 0;
         int sum_width = offset;
-        for (size_t i = 0; i < objects_.size(); ++i)
+        for (size_t i = 0; i < objects.size(); ++i)
         {
-            sum_width += objects_[i].imgColor.cols;
-            max_height = std::max(max_height, objects_[i].imgColor.rows);
+            sum_width += objects[i].imgColor.cols;
+            max_height = std::max(max_height, objects[i].imgColor.rows);
         }
         outSize.height += max_height;
         outSize.width = std::max(outSize.width, sum_width);
 
         img_to_show.create(outSize, CV_8UC3);
         img_to_show.setTo(0);
-        frame.copyTo(img_to_show(cv::Rect(0, max_height, frame.cols, frame.rows)));
+        frame.copyTo(img_to_show(Rect(0, max_height, frame.cols, frame.rows)));
 
         int objX = offset;
-        for (size_t i = 0; i < objects_.size(); ++i)
+        for (size_t i = 0; i < objects.size(); ++i)
         {
-            objects_[i].imgColor.copyTo(img_to_show(cv::Rect(objX, 0, objects_[i].imgColor.cols, objects_[i].imgColor.rows)));
+            objects[i].imgColor.copyTo(img_to_show(Rect(objX, 0, objects[i].imgColor.cols, objects[i].imgColor.rows)));
 
-            cv::putText(img_to_show, objects_[i].name, cv::Point(objX, 15), cv::FONT_HERSHEY_DUPLEX, 0.8, objects_[i].color);
+            putText(img_to_show, objects[i].name, Point(objX, 15), FONT_HERSHEY_DUPLEX, 0.8, objects[i].color);
 
             if (matches[i].size() >= 10)
             {
-                static std::vector<cv::Point2f> pt1;
-                static std::vector<cv::Point2f> pt2;
+                static vector<Point2f> pt1;
+                static vector<Point2f> pt2;
 
                 pt1.resize(matches[i].size());
                 pt2.resize(matches[i].size());
 
                 for (size_t j = 0; j < matches[i].size(); ++j)
                 {
-                    cv::DMatch m = matches[i][j];
+                    DMatch m = matches[i][j];
 
-                    cv::KeyPoint objKp = objects_[i].keypoints[m.queryIdx];
-                    cv::KeyPoint frameKp = frameKeypoints[m.trainIdx];
+                    KeyPoint objKp = objects[i].keypoints[m.queryIdx];
+                    KeyPoint frameKp = frameKeypoints[m.trainIdx];
 
                     pt1[j] = objKp.pt;
                     pt2[j] = frameKp.pt;
 
                     if (showCorrespondences)
                     {
-                        cv::Point objCenter(cvRound(objKp.pt.x) + objX, cvRound(objKp.pt.y));
-                        cv::Point frameCenter(cvRound(frameKp.pt.x), cvRound(frameKp.pt.y) + max_height);
+                        Point objCenter(cvRound(objKp.pt.x) + objX, cvRound(objKp.pt.y));
+                        Point frameCenter(cvRound(frameKp.pt.x), cvRound(frameKp.pt.y) + max_height);
 
-                        cv::circle(img_to_show, objCenter, 3, objects_[i].color);
-                        cv::circle(img_to_show, frameCenter, 3, objects_[i].color);
-                        cv::line(img_to_show, objCenter, frameCenter, objects_[i].color);
+                        circle(img_to_show, objCenter, 3, objects[i].color);
+                        circle(img_to_show, frameCenter, 3, objects[i].color);
+                        line(img_to_show, objCenter, frameCenter, objects[i].color);
                     }
                 }
 
-                cv::Mat H = cv::findHomography(pt1, pt2, cv::RANSAC);
+                Mat H = findHomography(pt1, pt2, RANSAC);
 
                 if (H.empty())
                     continue;
 
-                cv::Point src_corners[] =
+                Point src_corners[] =
                 {
-                    cv::Point(0, 0),
-                    cv::Point(objects_[i].imgColor.cols, 0),
-                    cv::Point(objects_[i].imgColor.cols, objects_[i].imgColor.rows),
-                    cv::Point(0, objects_[i].imgColor.rows)
+                    Point(0, 0),
+                    Point(objects[i].imgColor.cols, 0),
+                    Point(objects[i].imgColor.cols, objects[i].imgColor.rows),
+                    Point(0, objects[i].imgColor.rows)
                 };
-                cv::Point dst_corners[5];
+                Point dst_corners[5];
 
                 for (int j = 0; j < 4; ++j)
                 {
@@ -245,90 +225,67 @@ void App::process()
                     double X = (H.at<double>(0, 0) * x + H.at<double>(0, 1) * y + H.at<double>(0, 2)) * Z;
                     double Y = (H.at<double>(1, 0) * x + H.at<double>(1, 1) * y + H.at<double>(1, 2)) * Z;
 
-                    dst_corners[j] = cv::Point(cvRound(X), cvRound(Y));
+                    dst_corners[j] = Point(cvRound(X), cvRound(Y));
                 }
 
                 for (int j = 0; j < 4; ++j)
                 {
-                    cv::Point r1 = dst_corners[j % 4];
-                    cv::Point r2 = dst_corners[(j + 1) % 4];
+                    Point r1 = dst_corners[j % 4];
+                    Point r2 = dst_corners[(j + 1) % 4];
 
-                    cv::line(img_to_show, cv::Point(r1.x, r1.y + max_height), cv::Point(r2.x, r2.y + max_height), objects_[i].color, 3);
+                    line(img_to_show, Point(r1.x, r1.y + max_height), Point(r2.x, r2.y + max_height), objects[i].color, 3);
                 }
 
-                cv::putText(img_to_show, objects_[i].name, cv::Point(dst_corners[0].x, dst_corners[0].y + max_height), cv::FONT_HERSHEY_DUPLEX, 0.8,
-                            objects_[i].color);
+                putText(img_to_show, objects[i].name, Point(dst_corners[0].x, dst_corners[0].y + max_height), FONT_HERSHEY_DUPLEX, 0.8, objects[i].color);
             }
 
-            objX += objects_[i].imgColor.cols;
+            objX += objects[i].imgColor.cols;
         }
 
-        double total_fps = cv::getTickFrequency() / (cv::getTickCount() - start);
+        double total_fps = getTickFrequency() / (getTickCount() - start);
 
         displayState(img_to_show, detect_fps, match_fps, total_fps);
 
-        cv::imshow("demo_features2d", img_to_show);
+        imshow("Features2D Demo", img_to_show);
 
-        processKey(cv::waitKey(3) & 0xff);
+        processKey(waitKey(3));
     }
 }
 
-void App::calcKeypoints(const cv::Mat& img, const cv::gpu::GpuMat& d_img, std::vector<cv::KeyPoint>& keypoints,
-                       cv::Mat& descriptors, cv::gpu::GpuMat& d_descriptors)
+void App::calcKeypoints(const Mat& img, const GpuMat& d_img, vector<KeyPoint>& keypoints, Mat& descriptors, GpuMat& d_descriptors)
 {
     keypoints.clear();
 
-    switch (method)
-    {
-    case SURF_GPU:
-        d_surf_(d_img, cv::gpu::GpuMat(), keypoints, d_descriptors);
-        break;
-
-    case SURF_CPU:
-        surf_(img, cv::noArray(), keypoints, descriptors);
-        break;
-
-    case ORB_GPU:
-        d_orb_(d_img, cv::gpu::GpuMat(), keypoints, d_descriptors);
-        break;
-
-    case ORB_CPU:
-        orb_(img, cv::noArray(), keypoints, descriptors);
-        break;
-    }
+    if (useGPU)
+        d_surf(d_img, GpuMat(), keypoints, d_descriptors);
+    else
+        surf(img, noArray(), keypoints, descriptors);
 }
 
-void App::match(const cv::Mat& descriptors1, const cv::gpu::GpuMat& d_descriptors1,
-                const cv::Mat& descriptors2, const cv::gpu::GpuMat& d_descriptors2,
-                std::vector<cv::DMatch>& matches)
+struct DMatchCmp
 {
-    static std::vector< std::vector<cv::DMatch> > temp;
+    inline bool operator ()(const DMatch& m1, const DMatch& m2) const
+    {
+        return m1.distance < m2.distance;
+    }
+};
+
+void App::match(const Mat& descriptors1, const GpuMat& d_descriptors1,
+                const Mat& descriptors2, const GpuMat& d_descriptors2,
+                vector<DMatch>& matches)
+{
+    static vector< vector<DMatch> > temp;
 
     matches.clear();
 
-    switch (method)
+    if (useGPU)
     {
-    case SURF_GPU:
-        d_matcher_.norm = cv::NORM_L2;
-        d_matcher_.knnMatchSingle(d_descriptors1, d_descriptors2, trainIdx_, distance_, allDist_, 2);
-        d_matcher_.knnMatchDownload(trainIdx_, distance_, temp);
-        break;
-
-    case SURF_CPU:
-        matcher_ = cv::BFMatcher(cv::NORM_L2);
-        matcher_.knnMatch(descriptors1, descriptors2, temp, 2);
-        break;
-
-    case ORB_GPU:
-        d_matcher_.norm = cv::NORM_HAMMING;
-        d_matcher_.knnMatchSingle(d_descriptors1, d_descriptors2, trainIdx_, distance_, allDist_, 2);
-        d_matcher_.knnMatchDownload(trainIdx_, distance_, temp);
-        break;
-
-    case ORB_CPU:
-        matcher_ = cv::BFMatcher(cv::NORM_HAMMING);
-        matcher_.knnMatch(descriptors1, descriptors2, temp, 2);
-        break;
+        d_matcher.knnMatchSingle(d_descriptors1, d_descriptors2, trainIdx, distance, allDist, 2);
+        d_matcher.knnMatchDownload(trainIdx, distance, temp);
+    }
+    else
+    {
+        matcher.knnMatch(descriptors1, descriptors2, temp, 2);
     }
 
     for (size_t i = 0; i < temp.size(); ++i)
@@ -336,38 +293,28 @@ void App::match(const cv::Mat& descriptors1, const cv::gpu::GpuMat& d_descriptor
         if (temp[i].size() != 2)
             continue;
 
-        cv::DMatch m1 = temp[i][0];
-        cv::DMatch m2 = temp[i][1];
+        DMatch m1 = temp[i][0];
+        DMatch m2 = temp[i][1];
 
-        switch (method)
-        {
-        case SURF_GPU:
-        case SURF_CPU:
-            if (m1.distance < 0.55 * m2.distance)
-                matches.push_back(m1);
-            break;
-
-        case ORB_CPU:
-        case ORB_GPU:
-            if (std::abs(m1.distance - m2.distance) > 30)
-                matches.push_back(m1);
-            break;
-        }
+        if (m1.distance < 0.55 * m2.distance)
+            matches.push_back(m1);
     }
+
+    if (useGPU)
+        sort(matches.begin(), matches.end(), DMatchCmp());
 }
 
-void App::displayState(cv::Mat& frame, double detect_fps, double match_fps, double total_fps)
+void App::displayState(Mat& frame, double detect_fps, double match_fps, double total_fps)
 {
-    const cv::Scalar fontColorRed = CV_RGB(255, 0, 0);
+    const Scalar fontColorRed = CV_RGB(255, 0, 0);
 
     int i = 0;
 
-    std::ostringstream txt;
+    ostringstream txt;
     txt.str(""); txt << "Source size: " << frame.cols << 'x' << frame.rows;
     printText(frame, txt.str(), i++);
 
-    txt.str(""); txt << "Method: " << method_str[method];
-    printText(frame, txt.str(), i++);
+    printText(frame, useGPU ? "Mode: CUDA" : "Mode: CPU", i++);
 
     txt.str(""); txt << "FPS (Detect): " << std::fixed << std::setprecision(1) << detect_fps;
     printText(frame, txt.str(), i++);
@@ -380,7 +327,7 @@ void App::displayState(cv::Mat& frame, double detect_fps, double match_fps, doub
 
     printText(frame, "Space - switch method", i++, fontColorRed);
     printText(frame, "S - show correspondences", i++, fontColorRed);
-    printText(frame, "I - swith source", i++, fontColorRed);
+    printText(frame, "N - next source", i++, fontColorRed);
 }
 
 bool App::processKey(int key)
@@ -390,31 +337,19 @@ bool App::processKey(int key)
 
     switch (toupper(key & 0xff))
     {
-    case 32:
-        switch (method)
-        {
-        case SURF_GPU:
-            method = SURF_CPU;
-            break;
-        case SURF_CPU:
-            method = ORB_GPU;
-            break;
-        case ORB_GPU:
-            method = ORB_CPU;
-            break;
-        case ORB_CPU:
-            method = SURF_GPU;
-            break;
-        }
-        std::cout << "method: " << method_str[method] << std::endl;
+    case 32 /*space*/:
+        useGPU = !useGPU;
+        cout << "Switched to " << (useGPU ? "CUDA" : "CPU") << " mode\n";
         break;
 
     case 'S':
         showCorrespondences = !showCorrespondences;
         break;
 
-    case 'I':
-        sourceIdx = (sourceIdx + 1) % sources.size();
+    case 'N':
+        curSource = (curSource + 1) % sources.size();
+        sources[curSource]->reset();
+        cout << "Switch source to " << curSource << endl;
         break;
 
     default:
@@ -426,17 +361,17 @@ bool App::processKey(int key)
 
 bool App::parseCmdArgs(int& i, int argc, const char* argv[])
 {
-    std::string key = argv[i];
+    string arg = argv[i];
 
-     if (key == "--object")
+    if (arg == "--object")
     {
         ++i;
 
         if (i >= argc)
-            throw std::runtime_error("Missing value after --object");
+            THROW_EXCEPTION("Missing file name after " << arg);
 
-        cv::RNG& rng = cv::theRNG();
-        objects_.push_back(Object(argv[i], cv::imread(argv[i]), CV_RGB(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255))));
+        RNG& rng = theRNG();
+        objects.push_back(Object(argv[i], imread(argv[i]), CV_RGB(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255))));
     }
     else
         return false;
@@ -446,8 +381,9 @@ bool App::parseCmdArgs(int& i, int argc, const char* argv[])
 
 void App::printHelp()
 {
-    std::cout << "\nUsage: demo_features2d <frames_source>\n"
-              << "  [--object <image>] # object image\n";
+    cout << "This sample demonstrates Object Detection via keypoints matching" << endl;
+    cout << "Usage: demo_features2d [--object <image>]* [options]" << endl;
+    cout << "Options:" << endl;
     BaseApp::printHelp();
 }
 

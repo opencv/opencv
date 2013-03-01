@@ -1,9 +1,15 @@
-#ifndef __UTILITY_LIB_H__
-#define __UTILITY_LIB_H__
+#ifndef __UTILITY_H__
+#define __UTILITY_H__
 
 #include <string>
+#include <sstream>
+#include <stdexcept>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+
+////////////////////////////////////
+// FrameSource
 
 class FrameSource
 {
@@ -11,6 +17,7 @@ public:
     virtual ~FrameSource() {}
 
     virtual void next(cv::Mat& frame) = 0;
+    virtual void reset() = 0;
 };
 
 class ImageSource : public FrameSource
@@ -19,6 +26,7 @@ public:
     explicit ImageSource(const std::string& path, int flags = 1);
 
     void next(cv::Mat& frame);
+    void reset();
 
 private:
     cv::Mat img_;
@@ -30,6 +38,7 @@ public:
     explicit VideoSource(const std::string& path);
 
     void next(cv::Mat& frame);
+    void reset();
 
 protected:
     cv::VideoCapture vc_;
@@ -39,7 +48,7 @@ protected:
 class ImagesVideoSource : public VideoSource
 {
 public:
-    explicit ImagesVideoSource(const std::string& path) : VideoSource(path), looped(false), prev(0.0){}
+    explicit ImagesVideoSource(const std::string& path);
 
     void next(cv::Mat& frame);
 
@@ -54,6 +63,7 @@ public:
     explicit CameraSource(int device, int width = -1, int height = -1);
 
     void next(cv::Mat& frame);
+    void reset();
 
 private:
     cv::VideoCapture vc_;
@@ -65,20 +75,34 @@ public:
     virtual ~PairFrameSource() {}
 
     virtual void next(cv::Mat& frame0, cv::Mat& frame1) = 0;
-    
+    virtual void reset() = 0;
+
     static cv::Ptr<PairFrameSource> get(const cv::Ptr<FrameSource>& source0, const cv::Ptr<FrameSource>& source1);
 
     static cv::Ptr<PairFrameSource> get(const cv::Ptr<FrameSource>& source, int offset);
 };
 
+////////////////////////////////////
+// Auxiliary functions
+
 void makeGray(const cv::Mat& src, cv::Mat& dst);
 
 void printText(cv::Mat& img, const std::string& msg, int lineOffsY, cv::Scalar fontColor = CV_RGB(118, 185, 0), double fontScale = 0.8);
 
+#define THROW_EXCEPTION(msg) \
+    do { \
+        std::ostringstream ostr_; \
+        ostr_ << msg ; \
+        throw std::runtime_error(ostr_.str()); \
+    } while(0)
+
+////////////////////////////////////
+// BaseApp
+
 class BaseApp
 {
 public:
-    BaseApp() : exited(false), frame_width(-1), frame_height(-1), device_(0) {}
+    BaseApp();
 
     void run(int argc, const char* argv[]);
 
@@ -90,16 +114,15 @@ protected:
 
     bool exited;
     std::vector< cv::Ptr<FrameSource> > sources;
-    
-    int frame_width;
-    int frame_height;
 
-    virtual bool parseFrameSourcesCmdArgs(int& i, int argc, const char* argv[]);
 private:
-    bool parseHelpCmdArg(int& i, int argc, const char* argv[]);
+    bool parseFrameSourcesCmdArgs(int& i, int argc, const char* argv[]);
     bool parseGpuDeviceCmdArgs(int& i, int argc, const char* argv[]);
+    bool parseHelpCmdArg(int& i, int argc, const char* argv[]);
 
     int device_;
+    int frame_width_;
+    int frame_height_;
 };
 
 #define RUN_APP(App) \
@@ -118,4 +141,4 @@ private:
         return 0; \
     }
 
-#endif // __UTILITY_LIB_H__
+#endif // __UTILITY_H__
