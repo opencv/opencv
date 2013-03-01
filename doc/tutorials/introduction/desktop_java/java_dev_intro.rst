@@ -5,7 +5,7 @@
 Introduction to Java Development
 ********************************
 
-Last updated: 12 February, 2013.
+Last updated: 28 February, 2013.
 
 As of OpenCV 2.4.4, OpenCV supports desktop Java development using nearly the same interface as for
 Android development. This guide will help you to create your first Java (or Scala) application using OpenCV.
@@ -28,10 +28,14 @@ In this guide, we will:
 The same process was used to create the samples in the :file:`samples/java` folder of the OpenCV repository,
 so consult those files if you get lost.
 
-Get OpenCV with desktop Java support
-************************************
+Get proper OpenCV
+*****************
 
 Starting from version 2.4.4 OpenCV includes desktop Java bindings.
+
+Download
+########
+
 The most simple way to get it is downloading the appropriate package of **version 2.4.4 or higher** from the
 `OpenCV SourceForge repository <http://sourceforge.net/projects/opencvlibrary/files/>`_.
 
@@ -45,8 +49,8 @@ In order to build OpenCV with Java bindings you need :abbr:`JDK (Java Developmen
 (we recommend `Oracle/Sun JDK 6 or 7 <http://www.oracle.com/technetwork/java/javase/downloads/>`_),
 `Apache Ant <http://ant.apache.org/>`_ and `Python` v2.6 or higher to be installed.
 
-Build OpenCV
-############
+Build
+#####
 
 Let's build OpenCV:
 
@@ -83,6 +87,16 @@ through the CMake output for any Java-related tools that aren't found and instal
         :alt: CMake output
         :align: center
 
+.. note:: If ``CMake`` can't find Java in your system set the ``JAVA_HOME``
+          environment variable with the path to installed JDK
+          before running it. E.g.:
+
+          .. code-block:: bash
+
+             export JAVA_HOME=/usr/lib/jvm/java-6-oracle
+             cmake -DBUILD_SHARED_LIBS=OFF ..
+
+
 Now start the build:
 
         .. code-block:: bash
@@ -95,20 +109,20 @@ or
 
            msbuild /m OpenCV.sln /t:Build /p:Configuration=Release /v:m
 
-Besides all this will create a ``jar`` containing the Java interface (:file:`bin/opencv_2.4.4.jar`)
+Besides all this will create a ``jar`` containing the Java interface (:file:`bin/opencv-244.jar`)
 and a native dynamic library containing Java bindings and all the OpenCV stuff
-(:file:`bin/Release/opencv_java244.dll` or :file:`bin/libopencv_java244.so` respectively).
+(:file:`bin/Release/opencv_java244.dll` or :file:`lib/libopencv_java244.so` respectively).
 We'll use these files later.
 
-Create a simple Java sample and an Ant build file for it
-********************************************************
+Java sample with Ant
+********************
 
 .. note::
     The described sample is provided with OpenCV library in the :file:`opencv/samples/java/ant` folder.
 
 * Create a folder where you'll develop this sample application.
 
-* In this folder create an XML file with the following content using any text editor:
+* In this folder create the :file:`build.xml` file with the following content using any text editor:
 
     .. code-block:: xml
         :linenos:
@@ -135,7 +149,7 @@ Create a simple Java sample and an Ant build file for it
 
             <target name="compile">
                 <mkdir dir="${classes.dir}"/>
-                <javac srcdir="${src.dir}" destdir="${classes.dir}" classpathref="classpath"/>
+                <javac includeantruntime="false" srcdir="${src.dir}" destdir="${classes.dir}" classpathref="classpath"/>
             </target>
 
             <target name="jar" depends="compile">
@@ -181,15 +195,17 @@ Create a simple Java sample and an Ant build file for it
 * Put the following Java code into the :file:`SimpleSample.java` file:
     .. code-block:: java
 
+        import org.opencv.core.Core;
         import org.opencv.core.Mat;
         import org.opencv.core.CvType;
         import org.opencv.core.Scalar;
 
         class SimpleSample {
 
-          static{ System.loadLibrary("opencv_java244"); }
+          static{ System.loadLibrary(Core.NATIVE_LIBRARY_NAME); }
 
           public static void main(String[] args) {
+            System.out.println("Welcome to OpenCV " + Core.VERSION);
             Mat m = new Mat(5, 10, CvType.CV_8UC1, new Scalar(0));
             System.out.println("OpenCV Mat: " + m);
             Mat mr1 = m.row(1);
@@ -219,8 +235,8 @@ Create a simple Java sample and an Ant build file for it
         :alt: run app with Ant
         :align: center
 
-Create a simple Java project in Eclipse
-***************************************
+Java project in Eclipse
+***********************
 
 Now let's look at the possiblity of using OpenCV in Java when developing in Eclipse IDE.
 
@@ -293,12 +309,13 @@ Now let's look at the possiblity of using OpenCV in Java when developing in Ecli
 * Put some simple OpenCV calls there, e.g.:
     .. code-block:: java
 
+        import org.opencv.core.Core;
         import org.opencv.core.CvType;
         import org.opencv.core.Mat;
 
         public class Main {
             public static void main(String[] args) {
-                System.loadLibrary("opencv_java244");
+                System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
                 Mat m  = Mat.eye(3, 3, CvType.CV_8UC1);
                 System.out.println("m = " + m.dump());
             }
@@ -310,8 +327,8 @@ Now let's look at the possiblity of using OpenCV in Java when developing in Ecli
         :alt: Eclipse: run
         :align: center
 
-Create an SBT project and samples in Java and Scala
-***************************************************
+SBT project for Java and Scala
+******************************
 
 Now we'll create a simple Java application using SBT. This serves as a brief introduction to
 those unfamiliar with this build tool. We're using SBT because it is particularly easy and powerful.
@@ -409,8 +426,8 @@ You should see something like this:
         :alt: SBT run
         :align: center
 
-Copy the OpenCV jar and write a simple application
-********************************************************
+Running SBT samples
+###################
 
 Now we'll create a simple face detection application using OpenCV.
 
@@ -424,7 +441,7 @@ You can optionally rerun ``sbt eclipse`` to update your Eclipse project.
            cp <opencv_dir>/build/bin/opencv_<version>.jar lib/
            sbt eclipse
 
-Next, create the directory src/main/resources and download this Lena image into it:
+Next, create the directory :file:`src/main/resources` and download this Lena image into it:
 
      .. image:: images/lena.png
         :alt: Lena
@@ -433,7 +450,7 @@ Next, create the directory src/main/resources and download this Lena image into 
 Make sure it's called :file:`"lena.png"`.
 Items in the resources directory are available to the Java application at runtime.
 
-Next, copy :file:`lbpcascade_frontalface.xml` from :file:`opencv/data/` into the :file:`resources`
+Next, copy :file:`lbpcascade_frontalface.xml` from :file:`opencv/data/lbpcascades/` into the :file:`resources`
 directory:
 
         .. code-block:: bash
@@ -490,12 +507,12 @@ Now modify src/main/java/HelloOpenCV.java so it contains the following Java code
        System.out.println("Hello, OpenCV");
 
        // Load the native library.
-       System.loadLibrary("opencv_java244");
+       System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
        new DetectFaceDemo().run();
      }
    }
 
-Note the call to ``System.loadLibrary("opencv_java244")``.
+Note the call to ``System.loadLibrary(Core.NATIVE_LIBRARY_NAME)``.
 This command must be executed exactly once per Java process prior to using any native OpenCV methods.
 If you don't call it, you will get ``UnsatisfiedLink errors``.
 You will also get errors if you try to load OpenCV when it has already been loaded.
