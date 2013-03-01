@@ -97,7 +97,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   endif()
 
   # We need pthread's
-  if(UNIX AND NOT ANDROID)
+  if(UNIX AND NOT ANDROID AND NOT (APPLE AND CMAKE_COMPILER_IS_CLANGCXX))
     add_extra_compiler_option(-pthread)
   endif()
 
