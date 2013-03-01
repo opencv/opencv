@@ -222,14 +222,6 @@ Import OpenCV library and samples to the Eclipse
               Open :guilabel:`Project Properties -> C/C++ Build`, and replace "Build command" text
               to ``"${NDKROOT}/ndk-build"`` (remove .cmd at the end).
 
-   .. note :: In some cases the build errors don't disappear, then try the following actions:
-
-              * right click on ``OpenCV Library`` project -> :guilabel:`Android Tools -> Fix Project Properties`,
-                then menu :guilabel:`Project -> Clean... -> Clean all`
-              * right click on the project with errors -> :guilabel:`Properties -> Android`, make sure the
-                ``Target`` is selected and is ``Android 3.0`` or higher
-              * check the build errors in the :guilabel:`Problems` view window and try to resolve them by yourselves
-
    .. image:: images/eclipse_cdt_cfg4.png
       :alt: Configure CDT
       :align: center
