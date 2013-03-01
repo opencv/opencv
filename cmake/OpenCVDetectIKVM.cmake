@@ -1,0 +1,26 @@
+file(TO_CMAKE_PATH "$ENV{IKVM_DIR}" IKVM_DIR_ENV_PATH)
+
+set(IKVM_NAME ikvm.exe)
+set(IKVMC_NAME ikvmc.exe)
+
+find_host_program(IKVM_EXECUTABLE NAMES ${IKVM_NAME}
+  PATHS "${IKVM_DIR_ENV_PATH}/bin"
+  NO_DEFAULT_PATH
+  )
+find_host_program(IKVM_EXECUTABLE NAMES ${IKVM_NAME})
+find_host_program(IKVMC_EXECUTABLE NAMES ${IKVMC_NAME}
+  PATHS "${IKVM_DIR_ENV_PATH}/bin"
+  NO_DEFAULT_PATH
+  )
+find_host_program(IKVMC_EXECUTABLE NAMES ${IKVMC_NAME})
+
+if(IKVM_EXECUTABLE)
+  get_filename_component(IKVM_DIR ${IKVM_EXECUTABLE} PATH)
+  execute_process(COMMAND ${IKVM_EXECUTABLE} -version
+    OUTPUT_VARIABLE IKVM_VERSION_FULL
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REGEX REPLACE ".*ikvm: ([0-9]+.[0-9]+.[0-9]+.[0-9]+).*" "\\1" IKVM_VERSION "${IKVM_VERSION_FULL}" )
+  set(IKVM_VERSION "${IKVM_VERSION}" CACHE INTERNAL "Detected ikvm version")
+
+  message(STATUS "Found ikvm ${IKVM_VERSION}: ${IKVM_DIR}")
+endif()
