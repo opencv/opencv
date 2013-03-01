@@ -63,7 +63,8 @@ class BoostedSoftCascadeOctave : public cv::Boost, public Octave
 public:
 
     BoostedSoftCascadeOctave(cv::Rect boundingBox = cv::Rect(), int npositives = 0, int nnegatives = 0, int logScale = 0,
-        int shrinkage = 1, int poolSize = 0);
+        int shrinkage = 1, int poolSize = 0,
+        cv::Ptr<ChannelFeatureBuilder> builder = ChannelFeatureBuilder::create("HOG6MagLuv"));
     virtual ~BoostedSoftCascadeOctave();
     virtual cv::AlgorithmInfo* info() const;
     virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth);
@@ -101,7 +102,8 @@ private:
     cv::Ptr<ChannelFeatureBuilder> builder;
 };
 
-BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, int ls, int shr, int poolSize)
+BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, int ls, int shr, int poolSize,
+    cv::Ptr<ChannelFeatureBuilder> _builder)
 : logScale(ls), boundingBox(bb), npositives(np), nnegatives(nn), shrinkage(shr)
 {
     int maxSample = npositives + nnegatives;
@@ -130,7 +132,7 @@ BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, 
 
     params = _params;
 
-    builder = ChannelFeatureBuilder::create();
+    builder = _builder;
 
     int w = boundingBox.width;
     int h = boundingBox.height;
@@ -204,7 +206,7 @@ void BoostedSoftCascadeOctave::processPositives(const Dataset* dataset)
     {
         cv::Mat sample = dataset->get( Dataset::POSITIVE, curr);
 
-        cv::Mat channels = integrals.row(total).reshape(0, h / shrinkage * 10 + 1);
+        cv::Mat channels = integrals.row(total).reshape(0, h / shrinkage * builder->totalChannels() + 1);
         sample = sample(boundingBox);
 
         _builder(sample, channels);
@@ -249,7 +251,7 @@ void BoostedSoftCascadeOctave::generateNegatives(const Dataset* dataset)
 
         frame = frame(cv::Rect(dx, dy, boundingBox.width, boundingBox.height));
 
-        cv::Mat channels = integrals.row(i).reshape(0, h / shrinkage * 10 + 1);
+        cv::Mat channels = integrals.row(i).reshape(0, h / shrinkage * builder->totalChannels() + 1);
         _builder(frame, channels);
 
         // // if (predict(sum))
@@ -442,14 +444,14 @@ void BoostedSoftCascadeOctave::write( CvFileStorage* fs, std::string _name) cons
 
 }
 
-CV_INIT_ALGORITHM(BoostedSoftCascadeOctave, "SoftCascadeOctave.BoostedSoftCascadeOctave", );
+CV_INIT_ALGORITHM(BoostedSoftCascadeOctave, "Octave.BoostedSoftCascadeOctave", );
 
 Octave::~Octave(){}
 
 cv::Ptr<Octave> Octave::create(cv::Rect boundingBox, int npositives, int nnegatives,
-        int logScale, int shrinkage, int poolSize)
+        int logScale, int shrinkage, int poolSize, cv::Ptr<ChannelFeatureBuilder> builder)
 {
     cv::Ptr<Octave> octave(
-        new BoostedSoftCascadeOctave(boundingBox, npositives, nnegatives, logScale, shrinkage, poolSize));
+        new BoostedSoftCascadeOctave(boundingBox, npositives, nnegatives, logScale, shrinkage, poolSize, builder));
     return octave;
 }
