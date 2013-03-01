@@ -85,7 +85,7 @@ public:
         cv::cartToPolar(df_dx, df_dy, mag, angle, true);
         mag *= (1.f / (8 * sqrt(2.f)));
 
-        cv::Mat nmag;
+        cv::Mat nmag = channels(cv::Rect(0, h * (N_CHANNELS - 4), w, h));
         mag.convertTo(nmag, CV_8UC1);
 
         angle *=  6 / 360.f;
