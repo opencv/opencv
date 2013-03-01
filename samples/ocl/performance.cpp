@@ -4345,7 +4345,7 @@ int main(int argc, const char *argv[])
         {
             if (device == devidx)
             {
-                ocl::setDevice(oclinfo[i], j);
+                ocl::setDevice(oclinfo[i], (int)j);
                 TestSystem::instance().setRecordName(oclinfo[i].DeviceName[j]);
                 printf("\nuse %d: %s\n", devidx, oclinfo[i].DeviceName[j].c_str());
                 goto END_DEV;
