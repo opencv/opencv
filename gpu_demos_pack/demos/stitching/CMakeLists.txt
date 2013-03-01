@@ -1,34 +1,19 @@
-cmake_minimum_required(VERSION 2.8.3)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 
-set(target demo_stitching)
+find_package(TBB)
 
-include_directories(${OpenCV_INCLUDE_DIR} ${CMAKE_SOURCE_DIR})
-file(GLOB sources "*.h*" "*.cpp")
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}")
-find_package(TBB REQUIRED)
-if(TBB_FOUND AND NOT TBB_INTERFACE_VERSION LESS 5000)
-    set(HAVE_TBB 1)
-    include_directories(${TBB_INCLUDE_DIRS})
-    link_directories(${TBB_LIBRARY_DIRS})
+if(NOT TBB_FOUND)
+    ocv_disable_gpu_demo(stitching)
 endif()
 
-add_executable(${target} ${sources})
-add_dependencies(${target} utility)
-target_link_libraries(${target} ${OpenCV_LIBS} utility tbb)
-set_target_properties(${target} PROPERTIES DEBUG_POSTFIX d)
+ocv_define_gpu_demo(stitching DESCRIPTION "Stitching" INCLUDE_DIRS ${TBB_INCLUDE_DIRS} LINK_LIBRARIES ${TBB_LIBRARIES})
 
-set_target_properties(
-		${target} PROPERTIES 
-		RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-		ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+if(BUILD_demo_stitching AND WIN32)
+    string(REPLACE "lib" "bin" TBB_BINARY_DIR ${TBB_LIBRARY_DIR})
+    set(ALL_TBB_DLLS "${TBB_BINARY_DIR}/tbb.dll" "${TBB_BINARY_DIR}/tbbmalloc.dll")
+    install(FILES ${ALL_TBB_DLLS} DESTINATION ".")
 
-foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
-    string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-	set_target_properties(
-			${target} PROPERTIES 
-			RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/bin
-			LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/bin
-			ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/bin)
-endforeach(OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES)
+    find_package(Qt4 REQUIRED)
+    set(ALL_Qt_DLLS ${QT_BINARY_DIR}/QtCore4.dll ${QT_BINARY_DIR}/QtGui4.dll ${QT_BINARY_DIR}/QtOpenGL4.dll ${QT_BINARY_DIR}/QtTest4.dll)
+    install(FILES ${ALL_Qt_DLLS} DESTINATION ".")
+endif()

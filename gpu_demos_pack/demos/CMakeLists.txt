@@ -1,0 +1,6 @@
+file(GLOB ocvdemos RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/*")
+foreach(demo ${ocvdemos})
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${demo}/CMakeLists.txt")
+        add_subdirectory("${demo}")
+    endif()
+endforeach()
