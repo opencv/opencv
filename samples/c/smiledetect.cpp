@@ -116,7 +116,7 @@ int main( int argc, const char** argv )
     {
         cout << "In capture ..." << endl;
         cout << endl << "NOTE: Smile intensity will only be valid after a first smile has been detected" << endl;
-        
+
         for(;;)
         {
             IplImage* iplImg = cvQueryFrame( capture );
@@ -229,8 +229,8 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
 
         // The number of detected neighbors depends on image size (and also illumination, etc.). The
         // following steps use a floating minimum and maximum of neighbors. Intensity thus estimated will be
-        //accurate only after a first smile has been displayed by the user. 
-        const int smile_neighbors = nestedObjects.size();
+        //accurate only after a first smile has been displayed by the user.
+        const int smile_neighbors = (int)nestedObjects.size();
         static int max_neighbors=-1;
         static int min_neighbors=-1;
         if (min_neighbors == -1) min_neighbors = smile_neighbors;
