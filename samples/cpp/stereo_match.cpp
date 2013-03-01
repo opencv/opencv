@@ -66,8 +66,8 @@ int main(int argc, char** argv)
     bool no_display = false;
     float scale = 1.f;
 
-    StereoBM bm;
-    StereoSGBM sgbm;
+    Ptr<StereoMatcher> bm = createStereoBM(16,9);
+    Ptr<StereoMatcher> sgbm = createStereoSGBM(0,16,3);
     StereoVar var;
 
     for( int i = 1; i < argc; i++ )
@@ -220,32 +220,33 @@ int main(int argc, char** argv)
 
     numberOfDisparities = numberOfDisparities > 0 ? numberOfDisparities : ((img_size.width/8) + 15) & -16;
 
-    bm.state->roi1 = roi1;
-    bm.state->roi2 = roi2;
-    bm.state->preFilterCap = 31;
-    bm.state->SADWindowSize = SADWindowSize > 0 ? SADWindowSize : 9;
-    bm.state->minDisparity = 0;
-    bm.state->numberOfDisparities = numberOfDisparities;
-    bm.state->textureThreshold = 10;
-    bm.state->uniquenessRatio = 15;
-    bm.state->speckleWindowSize = 100;
-    bm.state->speckleRange = 32;
-    bm.state->disp12MaxDiff = 1;
+    //bm->set("roi1", roi1);
+    //bm->set("roi2", roi2);
+    bm->set("preFilterCap", 31);
+    bm->set("SADWindowSize", SADWindowSize > 0 ? SADWindowSize : 9);
+    bm->set("minDisparity", 0);
+    bm->set("numDisparities", numberOfDisparities);
+    bm->set("textureThreshold", 10);
+    bm->set("uniquenessRatio", 15);
+    bm->set("speckleWindowSize", 100);
+    bm->set("speckleRange", 32);
+    bm->set("disp12MaxDiff", 1);
 
-    sgbm.preFilterCap = 63;
-    sgbm.SADWindowSize = SADWindowSize > 0 ? SADWindowSize : 3;
+    sgbm->set("preFilterCap", 63);
+    int sgbmWinSize = SADWindowSize > 0 ? SADWindowSize : 3;
+    sgbm->set("SADWindowSize", sgbmWinSize);
 
     int cn = img1.channels();
 
-    sgbm.P1 = 8*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
-    sgbm.P2 = 32*cn*sgbm.SADWindowSize*sgbm.SADWindowSize;
-    sgbm.minDisparity = 0;
-    sgbm.numberOfDisparities = numberOfDisparities;
-    sgbm.uniquenessRatio = 10;
-    sgbm.speckleWindowSize = bm.state->speckleWindowSize;
-    sgbm.speckleRange = bm.state->speckleRange;
-    sgbm.disp12MaxDiff = 1;
-    sgbm.fullDP = alg == STEREO_HH;
+    sgbm->set("P1", 8*cn*sgbmWinSize*sgbmWinSize);
+    sgbm->set("P2", 32*cn*sgbmWinSize*sgbmWinSize);
+    sgbm->set("minDisparity", 0);
+    sgbm->set("numDisparities", numberOfDisparities);
+    sgbm->set("uniquenessRatio", 10);
+    sgbm->set("speckleWindowSize", 100);
+    sgbm->set("speckleRange", 32);
+    sgbm->set("disp12MaxDiff", 1);
+    sgbm->set("fullDP", alg == STEREO_HH);
 
     var.levels = 3;                                 // ignored with USE_AUTO_PARAMS
     var.pyrScale = 0.5;                             // ignored with USE_AUTO_PARAMS
@@ -267,12 +268,12 @@ int main(int argc, char** argv)
 
     int64 t = getTickCount();
     if( alg == STEREO_BM )
-        bm(img1, img2, disp);
+        bm->compute(img1, img2, disp);
     else if( alg == STEREO_VAR ) {
         var(img1, img2, disp);
     }
     else if( alg == STEREO_SGBM || alg == STEREO_HH )
-        sgbm(img1, img2, disp);
+        sgbm->compute(img1, img2, disp);
     t = getTickCount() - t;
     printf("Time elapsed: %fms\n", t*1000/getTickFrequency());
 

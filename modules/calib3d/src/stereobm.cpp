@@ -54,7 +54,7 @@ namespace cv
 
 struct StereoBMParams
 {
-    StereoBMParams(int _preset=STEREOBM_BASIC_PRESET, int _numDisparities=64, int _SADWindowSize=21)
+    StereoBMParams(int _numDisparities=64, int _SADWindowSize=21)
     {
         preFilterType = STEREO_PREFILTER_XSOBEL;
         preFilterSize = 9;
@@ -780,9 +780,9 @@ public:
         params = StereoBMParams();
     }
 
-    StereoBMImpl( int _preset, int _numDisparities, int _SADWindowSize )
+    StereoBMImpl( int _numDisparities, int _SADWindowSize )
     {
-        params = StereoBMParams(_preset, _numDisparities, _SADWindowSize);
+        params = StereoBMParams(_numDisparities, _SADWindowSize);
     }
     
     void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr )
@@ -927,9 +927,9 @@ CV_INIT_ALGORITHM(StereoBMImpl, "StereoMatcher.BM",
 
 }
 
-cv::Ptr<cv::StereoMatcher> cv::createStereoBM(int _preset, int _numDisparities, int _SADWindowSize)
+cv::Ptr<cv::StereoMatcher> cv::createStereoBM(int _numDisparities, int _SADWindowSize)
 {
-    return new StereoBMImpl(_preset, _numDisparities, _SADWindowSize);
+    return new StereoBMImpl(_numDisparities, _SADWindowSize);
 }
 
 /* End of file. */

@@ -677,10 +677,9 @@ public:
                                   OutputArray disparity ) = 0;
 };
 
-enum { STEREO_DISP_SCALE=16, STEREO_PREFILTER_NORMALIZED_RESPONSE = 0, STEREO_PREFILTER_XSOBEL = 1,
-    STEREOBM_BASIC_PRESET=0, STEREOBM_FISH_EYE_PRESET=1, STEREOBM_NARROW_PRESET=2 };
+enum { STEREO_DISP_SCALE=16, STEREO_PREFILTER_NORMALIZED_RESPONSE = 0, STEREO_PREFILTER_XSOBEL = 1 };
 
-CV_EXPORTS Ptr<StereoMatcher> createStereoBM(int preset, int numDisparities=0, int SADWindowSize=21);
+CV_EXPORTS Ptr<StereoMatcher> createStereoBM(int numDisparities=0, int SADWindowSize=21);
     
 CV_EXPORTS Ptr<StereoMatcher> createStereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
                                                int P1=0, int P2=0, int disp12MaxDiff=0,
@@ -695,9 +694,7 @@ class CV_EXPORTS_W StereoBM
 {
 public:
     enum { PREFILTER_NORMALIZED_RESPONSE = 0, PREFILTER_XSOBEL = 1,
-        BASIC_PRESET=STEREOBM_BASIC_PRESET,
-        FISH_EYE_PRESET=STEREOBM_FISH_EYE_PRESET,
-        NARROW_PRESET=STEREOBM_NARROW_PRESET };
+           BASIC_PRESET=0, FISH_EYE_PRESET=1, NARROW_PRESET=2 };
 
     //! the default constructor
     CV_WRAP StereoBM();

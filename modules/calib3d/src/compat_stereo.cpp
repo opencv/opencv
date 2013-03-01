@@ -95,8 +95,7 @@ void cvFindStereoCorrespondenceBM( const CvArr* leftarr, const CvArr* rightarr,
 
     CV_Assert( state != 0 );
 
-    cv::Ptr<cv::StereoMatcher> sm = cv::createStereoBM(cv::STEREOBM_BASIC_PRESET,
-                                                       state->numberOfDisparities,
+    cv::Ptr<cv::StereoMatcher> sm = cv::createStereoBM(state->numberOfDisparities,
                                                        state->SADWindowSize);
     sm->set("preFilterType", state->preFilterType);
     sm->set("preFilterSize", state->preFilterSize);
@@ -130,7 +129,7 @@ namespace cv
 {
 
 StereoBM::StereoBM()
-{ init(STEREOBM_BASIC_PRESET); }
+{ init(BASIC_PRESET); }
 
 StereoBM::StereoBM(int _preset, int _ndisparities, int _SADWindowSize)
 { init(_preset, _ndisparities, _SADWindowSize); }
