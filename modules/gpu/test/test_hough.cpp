@@ -44,6 +44,72 @@
 #ifdef HAVE_CUDA
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
+// BuildNonZeroPointList
+
+namespace
+{
+    struct Vec2wCompare
+    {
+        bool operator ()(cv::Vec2w a, cv::Vec2w b) const
+        {
+            return (a[1] < b[1]) || (a[1] == b[1] && a[0] < b[0]);
+        }
+    };
+}
+
+PARAM_TEST_CASE(BuildNonZeroPointList, cv::gpu::DeviceInfo, cv::Size, UseRoi)
+{
+    static void goldImpl(const cv::Mat& src, cv::Mat& dst)
+    {
+        dst.create(1, src.size().area(), CV_16UC2);
+
+        cv::Vec2w* points = dst.ptr<cv::Vec2w>();
+        int pointsCount = 0;
+        for (int y = 0; y < src.rows; ++y)
+        {
+            for (int x = 0; x < src.cols; ++x)
+            {
+                if (src.at<unsigned char>(y, x))
+                {
+                    points[pointsCount++] = cv::Vec2w(x, y);
+                }
+            }
+        }
+
+        if (pointsCount > 0)
+            dst.cols = pointsCount;
+        else
+            dst.release();
+    }
+};
+
+GPU_TEST_P(BuildNonZeroPointList, Accuracy)
+{
+    const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::gpu::setDevice(devInfo.deviceID());
+    const cv::Size size = GET_PARAM(1);
+    const bool useRoi = GET_PARAM(2);
+
+    cv::Mat src = randomMat(size, CV_8UC1, 0, 2);
+
+    cv::gpu::GpuMat d_points;
+    cv::gpu::buildNonZeroPointList(loadMat(src, useRoi), d_points);
+
+    cv::Mat points(d_points);
+    std::sort(points.ptr<cv::Vec2w>(), points.ptr<cv::Vec2w>() + points.cols, Vec2wCompare());
+
+    cv::Mat points_gold;
+    goldImpl(src, points_gold);
+
+    ASSERT_MAT_NEAR(points_gold, points, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, BuildNonZeroPointList, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    WHOLE_SUBMAT));
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 // HoughLines
 
 PARAM_TEST_CASE(HoughLines, cv::gpu::DeviceInfo, cv::Size, UseRoi)
