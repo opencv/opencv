@@ -236,8 +236,8 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpAffine, Combine(
     fillRandom(src);
 
     const double aplha = CV_PI / 4;
-    double mat[2][3] = { {std::cos(aplha), -std::sin(aplha), src.cols / 2},
-                         {std::sin(aplha),  std::cos(aplha), 0}};
+    double mat[2][3] = { {std::cos(aplha), -std::sin(aplha), src.cols / 2.0},
+                         {std::sin(aplha),  std::cos(aplha), 0.0}};
     cv::Mat M(2, 3, CV_64F, (void*) mat);
 
     if (PERF_RUN_GPU())
@@ -291,8 +291,8 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpPerspective, Combine(
     fillRandom(src);
 
     const double aplha = CV_PI / 4;
-    double mat[3][3] = { {std::cos(aplha), -std::sin(aplha), src.cols / 2},
-                         {std::sin(aplha),  std::cos(aplha), 0},
+    double mat[3][3] = { {std::cos(aplha), -std::sin(aplha), src.cols / 2.0},
+                         {std::sin(aplha),  std::cos(aplha), 0.0},
                          {0.0,              0.0,             1.0}};
     cv::Mat M(3, 3, CV_64F, (void*) mat);
 
