@@ -116,7 +116,7 @@ BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, 
         _params.truncate_pruned_tree = false;
         _params.use_surrogates       = false;
         _params.use_1se_rule         = false;
-        _params.regression_accuracy  = 1.0e-6f;
+        _params.regression_accuracy  = 0;
 
         // boost params
         _params.boost_type           = CvBoost::GENTLE;
@@ -124,7 +124,7 @@ BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, 
         _params.weight_trim_rate     = 0.95;
 
         // simple defaults
-        _params.min_sample_count     = 2;
+        _params.min_sample_count     = 0;
         _params.weak_count           = 1;
     }
 
