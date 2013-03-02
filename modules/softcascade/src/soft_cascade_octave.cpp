@@ -137,7 +137,7 @@ BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, 
     int w = boundingBox.width;
     int h = boundingBox.height;
 
-    integrals.create(poolSize, (w / shrinkage + 1) * (h / shrinkage * builder->totalChannels() + 1), CV_32SC1);
+    integrals.create(npositives + nnegatives, (w / shrinkage + 1) * (h / shrinkage * builder->totalChannels() + 1), CV_32SC1);
 }
 
 BoostedSoftCascadeOctave::~BoostedSoftCascadeOctave(){}
