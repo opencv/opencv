@@ -104,7 +104,7 @@ int main(int argc, char** argv)
     fso << cfg.cascadeName
         << "{"
         << "stageType"   << "BOOST"
-        << "featureType" << "ICF"
+        << "featureType" << cfg.featureType
         << "octavesNum"  << (int)cfg.octaves.size()
         << "width"       << cfg.modelWinSize.width
         << "height"      << cfg.modelWinSize.height
@@ -118,7 +118,12 @@ int main(int argc, char** argv)
         int nfeatures  = cfg.poolSize;
         cv::Size model = cfg.model(it);
         std::cout << "Model " << model << std::endl;
-        cv::Ptr<cv::FeaturePool> pool = cv::FeaturePool::create(model, nfeatures);
+
+        int nchannels = (cfg.featureType == "HOG6MagLuv") ? 10: 8;
+
+        std::cout << "number of feature channels is " << nchannels << std::endl;
+
+        cv::Ptr<cv::FeaturePool> pool = cv::FeaturePool::create(model, nfeatures, nchannels);
         nfeatures = pool->size();
 
 
@@ -130,7 +135,9 @@ int main(int argc, char** argv)
 
         typedef cv::Octave Octave;
 
-        cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage, nfeatures);
+        cv::Ptr<cv::ChannelFeatureBuilder> builder = cv::ChannelFeatureBuilder::create(cfg.featureType);
+        std::cout << "Channel builder " << builder->info()->name() << std::endl;
+        cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage, nfeatures, builder);
 
         std::string path = cfg.trainPath;
         sft::ScaledDataset dataset(path, *it);
