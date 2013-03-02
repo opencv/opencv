@@ -217,7 +217,7 @@ CV_INIT_ALGORITHM(LMSolverImpl, "LMSolver",
                   obj.info()->addParam(obj, "maxIters", obj.maxIters);
                   obj.info()->addParam(obj, "printInterval", obj.printInterval));
 
-CV_EXPORTS Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters)
+Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters)
 {
     CV_Assert( !LMSolverImpl_info_auto.name().empty() );
     return new LMSolverImpl(cb, maxIters);

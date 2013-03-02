@@ -131,7 +131,7 @@ public:
         const Point2f* m = m2.ptr<Point2f>();
 
         double LtL[9][9], W[9][1], V[9][9];
-        Mat _LtL( 9, 9, CV_64F, LtL );
+        Mat _LtL( 9, 9, CV_64F, &LtL[0][0] );
         Mat matW( 9, 1, CV_64F, W );
         Mat matV( 9, 9, CV_64F, V );
         Mat _H0( 3, 3, CV_64F, V[8] );

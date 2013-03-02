@@ -81,7 +81,7 @@ public:
 
 CV_EXPORTS Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters);
 
-class PointSetRegistrator : public Algorithm
+class CV_EXPORTS PointSetRegistrator : public Algorithm
 {
 public:
     class CV_EXPORTS Callback

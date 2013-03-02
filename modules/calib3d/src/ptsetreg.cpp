@@ -83,8 +83,6 @@ public:
         checkPartialSubsets = true;
     }
 
-    virtual ~RANSACPointSetRegistrator() {}
-
     int findInliers( const Mat& m1, const Mat& m2, const Mat& model, Mat& err, Mat& mask, double thresh ) const
     {
         cb->computeError( m1, m2, model, err );
@@ -318,9 +316,8 @@ public:
             return true;
         }
 
-        int iter, niters = cvRound(std::log(1-confidence)/
-                                   std::log(1-std::pow(1-outlierRatio,(double)modelPoints)));
-        niters = MIN( MAX(niters, 3), maxIters );
+        int iter, niters = RANSACUpdateNumIters(confidence, outlierRatio, modelPoints, maxIters);
+        niters = MAX(niters, 3);
 
         for( iter = 0; iter < niters; iter++ )
         {

@@ -403,15 +403,15 @@ void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f>
         idealPt = Point2f(j*squareSize, i*squareSize);
 
       Mat query(1, 2, CV_32F, &idealPt);
-      int knn = 1;
-      int indicesbuf = 0;
-      float distsbuf = 0.f;
+      const int knn = 1;
+      int indicesbuf[knn] = {0};
+      float distsbuf[knn] = {0.f};
       Mat indices(1, knn, CV_32S, &indicesbuf);
       Mat dists(1, knn, CV_32F, &distsbuf);
       flannIndex.knnSearch(query, indices, dists, knn, flann::SearchParams());
-      centers.push_back(patternPoints.at(indicesbuf));
+      centers.push_back(patternPoints.at(indicesbuf[0]));
 
-      if(distsbuf > maxRectifiedDistance)
+      if(distsbuf[0] > maxRectifiedDistance)
       {
 #ifdef DEBUG_CIRCLES
         cout << "Pattern not detected: too large rectified distance" << endl;
