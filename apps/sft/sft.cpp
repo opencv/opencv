@@ -137,7 +137,7 @@ int main(int argc, char** argv)
 
         cv::Ptr<cv::ChannelFeatureBuilder> builder = cv::ChannelFeatureBuilder::create(cfg.featureType);
         std::cout << "Channel builder " << builder->info()->name() << std::endl;
-        cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage, nfeatures, builder);
+        cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage, builder);
 
         std::string path = cfg.trainPath;
         sft::ScaledDataset dataset(path, *it);

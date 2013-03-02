@@ -63,8 +63,7 @@ class BoostedSoftCascadeOctave : public cv::Boost, public Octave
 public:
 
     BoostedSoftCascadeOctave(cv::Rect boundingBox = cv::Rect(), int npositives = 0, int nnegatives = 0, int logScale = 0,
-        int shrinkage = 1, int poolSize = 0,
-        cv::Ptr<ChannelFeatureBuilder> builder = ChannelFeatureBuilder::create("HOG6MagLuv"));
+        int shrinkage = 1, cv::Ptr<ChannelFeatureBuilder> builder = ChannelFeatureBuilder::create("HOG6MagLuv"));
     virtual ~BoostedSoftCascadeOctave();
     virtual cv::AlgorithmInfo* info() const;
     virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth);
@@ -102,7 +101,7 @@ private:
     cv::Ptr<ChannelFeatureBuilder> builder;
 };
 
-BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, int ls, int shr, int poolSize,
+BoostedSoftCascadeOctave::BoostedSoftCascadeOctave(cv::Rect bb, int np, int nn, int ls, int shr,
     cv::Ptr<ChannelFeatureBuilder> _builder)
 : logScale(ls), boundingBox(bb), npositives(np), nnegatives(nn), shrinkage(shr)
 {
@@ -449,9 +448,9 @@ CV_INIT_ALGORITHM(BoostedSoftCascadeOctave, "Octave.BoostedSoftCascadeOctave", )
 Octave::~Octave(){}
 
 cv::Ptr<Octave> Octave::create(cv::Rect boundingBox, int npositives, int nnegatives,
-        int logScale, int shrinkage, int poolSize, cv::Ptr<ChannelFeatureBuilder> builder)
+        int logScale, int shrinkage, cv::Ptr<ChannelFeatureBuilder> builder)
 {
     cv::Ptr<Octave> octave(
-        new BoostedSoftCascadeOctave(boundingBox, npositives, nnegatives, logScale, shrinkage, poolSize, builder));
+        new BoostedSoftCascadeOctave(boundingBox, npositives, nnegatives, logScale, shrinkage, builder));
     return octave;
 }

@@ -202,7 +202,7 @@ public:
 
     virtual ~Octave();
     static cv::Ptr<Octave> create(cv::Rect boundingBox, int npositives, int nnegatives,
-        int logScale, int shrinkage, int poolSize, cv::Ptr<ChannelFeatureBuilder> builder);
+        int logScale, int shrinkage, cv::Ptr<ChannelFeatureBuilder> builder);
 
     virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth) = 0;
     virtual void setRejectThresholds(OutputArray thresholds) = 0;

@@ -221,7 +221,7 @@ TEST(DISABLED_SoftCascade, training)
                                          cvRound(64 * octave), cvRound(128 * octave));
 
         cv::Ptr<ChannelFeatureBuilder> builder = ChannelFeatureBuilder::create("HOG6MagLuv");
-        cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage, nfeatures, builder);
+        cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage, builder);
 
         std::string path = cvtest::TS::ptr()->get_data_path() + "softcascade/sample_training_set";
         ScaledDataset dataset(path, *it);
