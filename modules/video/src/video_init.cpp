@@ -49,9 +49,10 @@ namespace cv
 bool initModule_video(void)
 {
     bool all = true;
-    all &= !createBackgroundSubtractorMOG();
-    all &= !createBackgroundSubtractorMOG2();
-    all &= !createBackgroundSubtractorGMG();
+    all &= !createBackgroundSubtractorMOG().empty();
+    all &= !createBackgroundSubtractorMOG2().empty();
+    all &= !createBackgroundSubtractorGMG().empty();
+    all &= !createOptFlow_DualTVL1().empty();
 
     return all;
 }

@@ -193,47 +193,4 @@ cv::RotatedRect cv::CamShift( InputArray _probImage, Rect& window,
     return box;
 }
 
-
-
-CV_IMPL int
-cvMeanShift( const void* imgProb, CvRect windowIn,
-             CvTermCriteria criteria, CvConnectedComp* comp )
-{
-    cv::Mat img = cv::cvarrToMat(imgProb);
-    cv::Rect window = windowIn;
-    int iters = cv::meanShift(img, window, criteria);
-
-    if( comp )
-    {
-        comp->rect = window;
-        comp->area = cvRound(cv::sum(img(window))[0]);
-    }
-
-    return iters;
-}
-
-
-CV_IMPL int
-cvCamShift( const void* imgProb, CvRect windowIn,
-            CvTermCriteria criteria,
-            CvConnectedComp* comp,
-            CvBox2D* box )
-{
-    cv::Mat img = cv::cvarrToMat(imgProb);
-    cv::Rect window = windowIn;
-    cv::RotatedRect rr = cv::CamShift(img, window, criteria);
-
-    if( comp )
-    {
-        comp->rect = window;
-        cv::Rect roi = rr.boundingRect() & cv::Rect(0, 0, img.cols, img.rows);
-        comp->area = cvRound(cv::sum(img(roi))[0]);
-    }
-
-    if( box )
-        *box = rr;
-
-    return rr.size.width*rr.size.height > 0.f ? 1 : -1;
-}
-
 /* End of file. */
