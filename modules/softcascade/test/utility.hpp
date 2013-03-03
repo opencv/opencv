@@ -52,6 +52,8 @@
 //! return true if device supports specified feature and gpu module was built with support the feature.
 bool supportFeature(const cv::gpu::DeviceInfo& info, cv::gpu::FeatureSet feature);
 
+
+#if defined(HAVE_CUDA)
 class DeviceManager
 {
 public:
@@ -66,8 +68,9 @@ private:
     std::vector<cv::gpu::DeviceInfo> devices_;
     DeviceManager() {loadAll();}
 };
-
-#define ALL_DEVICES testing::ValuesIn(DeviceManager::instance().values())
-
+# define ALL_DEVICES testing::ValuesIn(DeviceManager::instance().values())
+#else
+# define ALL_DEVICES testing::ValuesIn(std::vector<cv::gpu::DeviceInfo>())
+#endif
 
 #endif // __OPENCV_GPU_TEST_UTILITY_HPP__

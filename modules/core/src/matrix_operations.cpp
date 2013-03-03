@@ -181,12 +181,13 @@ bool cv::gpu::CudaMem::empty() const
 
 #if !defined (HAVE_CUDA)
 
-void cv::gpu::registerPageLocked(Mat&) { throw_nogpu(); }
-void cv::gpu::unregisterPageLocked(Mat&) { throw_nogpu(); }
-void cv::gpu::CudaMem::create(int /*_rows*/, int /*_cols*/, int /*_type*/, int /*type_alloc*/) { throw_nogpu(); }
-bool cv::gpu::CudaMem::canMapHostMemory() { throw_nogpu(); return false; }
-void cv::gpu::CudaMem::release() { throw_nogpu(); }
-GpuMat cv::gpu::CudaMem::createGpuMatHeader () const { throw_nogpu(); return GpuMat(); }
+void cv::gpu::registerPageLocked(Mat&) { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
+void cv::gpu::unregisterPageLocked(Mat&) { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
+void cv::gpu::CudaMem::create(int /*_rows*/, int /*_cols*/, int /*_type*/, int /*type_alloc*/)
+{ CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
+bool cv::gpu::CudaMem::canMapHostMemory() { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); return false; }
+void cv::gpu::CudaMem::release() { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
+GpuMat cv::gpu::CudaMem::createGpuMatHeader () const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); return GpuMat(); }
 
 #else /* !defined (HAVE_CUDA) */
 #include <cuda_runtime_api.h>

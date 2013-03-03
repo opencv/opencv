@@ -43,6 +43,8 @@
 #include "test_precomp.hpp"
 #include "opencv2/core/gpumat.hpp"
 
+
+#ifdef HAVE_CUDA
 using std::tr1::get;
 
 // show detection results on input image with cv::imshow
@@ -210,7 +212,7 @@ TEST_P(SCascadeTestRoi, Detect)
 }
 
 INSTANTIATE_TEST_CASE_P(cuda_accelerated, SCascadeTestRoi, testing::Combine(
-    testing::ValuesIn(DeviceManager::instance().values()),
+    ALL_DEVICES,
     testing::Values(std::string("cascades/inria_caltech-17.01.2013.xml"),
                     std::string("cascades/sc_cvpr_2012_to_opencv_new_format.xml")),
     testing::Values(std::string("images/image_00000000_0.png")),
@@ -310,3 +312,5 @@ TEST_P(SCascadeTestAll, detectStream)
 INSTANTIATE_TEST_CASE_P(cuda_accelerated, SCascadeTestAll, testing::Combine( ALL_DEVICES,
                     testing::Values(Fixture("cascades/inria_caltech-17.01.2013.xml", 7),
                                     Fixture("cascades/sc_cvpr_2012_to_opencv_new_format.xml", 1291))));
+
+#endif

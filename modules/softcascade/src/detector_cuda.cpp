@@ -41,9 +41,9 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/gpu/stream_accessor.hpp"
 
 #if !defined (HAVE_CUDA)
+#define throw_nogpu() CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
 cv::softcascade::SCascade::SCascade(const double, const double, const int, const int) { throw_nogpu(); }
 
 cv::softcascade::SCascade::~SCascade() { throw_nogpu(); }
@@ -54,14 +54,28 @@ void cv::softcascade::SCascade::detect(InputArray, InputArray, OutputArray, cv::
 
 void cv::softcascade::SCascade::read(const FileNode& fn) { Algorithm::read(fn); }
 
-cv::gpu::ChannelsProcessor::ChannelsProcessor() { throw_nogpu(); }
- cv::gpu::ChannelsProcessor::~ChannelsProcessor() { throw_nogpu(); }
+cv::softcascade::ChannelsProcessor::ChannelsProcessor() { throw_nogpu(); }
+ cv::softcascade::ChannelsProcessor::~ChannelsProcessor() { throw_nogpu(); }
 
-cv::Ptr<cv::gpu::ChannelsProcessor> cv::gpu::ChannelsProcessor::create(const int, const int, const int)
-{ throw_nogpu(); return cv::Ptr<cv::gpu::ChannelsProcessor>(0); }
+cv::Ptr<cv::softcascade::ChannelsProcessor> cv::softcascade::ChannelsProcessor::create(const int, const int, const int)
+{ throw_nogpu(); return cv::Ptr<cv::softcascade::ChannelsProcessor>(0); }
 
 #else
 # include "cuda_invoker.hpp"
+# include "opencv2/core/stream_accessor.hpp"
+namespace
+{
+#if defined(__GNUC__)
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
+#else /* defined(__CUDACC__) || defined(__MSVC__) */
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
+#endif
+
+    inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
+    {
+        //if (cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), file, line, func);
+    }
+}
 
 cv::softcascade::device::Level::Level(int idx, const Octave& oct, const float scale, const int w, const int h)
 :  octave(idx), step(oct.stages), relScale(scale / oct.scale)

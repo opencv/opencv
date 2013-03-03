@@ -44,9 +44,9 @@
 #ifndef __OPENCV_ICF_HPP__
 #define __OPENCV_ICF_HPP__
 
-#include <opencv2/gpu/device/common.hpp>
-
-using namespace cv::gpu::device;
+// #include <opencv2/gpu/device/common.hpp>
+#include "opencv2/core/cuda_devptrs.hpp"
+#include "cuda_runtime_api.h"
 
 #if defined __CUDACC__
 # define __device_inline__ __device__ __forceinline__
@@ -56,6 +56,8 @@ using namespace cv::gpu::device;
 
 
 namespace cv { namespace softcascade { namespace device {
+
+typedef unsigned char uchar;
 
 struct Octave
 {

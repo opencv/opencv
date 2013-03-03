@@ -40,12 +40,27 @@
 //
 //M*/
 
-#include <opencv2/gpu/device/common.hpp>
-#include <opencv2/gpu/device/saturate_cast.hpp>
-
 #include <cuda_invoker.hpp>
 #include <float.h>
 #include <stdio.h>
+
+namespace
+{
+#if defined(__GNUC__)
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
+#else /* defined(__CUDACC__) || defined(__MSVC__) */
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
+#endif
+
+    inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
+    {
+        //if (cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), file, line, func);
+    }
+}
+
+#ifndef CV_PI
+    #define CV_PI   3.1415926535897932384626433832795
+#endif
 
 namespace cv { namespace softcascade { namespace device {
 
@@ -126,7 +141,7 @@ typedef unsigned char uchar;
         luvg[luvgPitch * (y + 2 * 480) + x] = v;
     }
 
-    void bgr2Luv(const PtrStepSzb& bgr, PtrStepSzb luv)
+    void bgr2Luv(const cv::gpu::PtrStepSzb& bgr, cv::gpu::PtrStepSzb luv)
     {
         dim3 block(32, 8);
         dim3 grid(bgr.cols / 32, bgr.rows / 8);
@@ -208,7 +223,7 @@ typedef unsigned char uchar;
     texture<uchar,  cudaTextureType2D, cudaReadModeElementType> tgray;
 
     template<bool isDefaultNum>
-    __global__ void gray2hog(PtrStepSzb mag)
+    __global__ void gray2hog(cv::gpu::PtrStepSzb mag)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -223,7 +238,7 @@ typedef unsigned char uchar;
         mag( 480 * fast_angle_bin<isDefaultNum>(dy, dx) + y, x) = cmag;
     }
 
-    void gray2hog(const PtrStepSzb& gray, PtrStepSzb mag, const int bins)
+    void gray2hog(const cv::gpu::PtrStepSzb& gray, cv::gpu::PtrStepSzb mag, const int bins)
     {
         dim3 block(32, 8);
         dim3 grid(gray.cols / 32, gray.rows / 8);
@@ -326,8 +341,8 @@ typedef unsigned char uchar;
         }
     }
 
-    void suppress(const PtrStepSzb& objects, PtrStepSzb overlaps, PtrStepSzi ndetections,
-        PtrStepSzb suppressed, cudaStream_t stream)
+    void suppress(const cv::gpu::PtrStepSzb& objects, cv::gpu::PtrStepSzb overlaps, cv::gpu::PtrStepSzi ndetections,
+        cv::gpu::PtrStepSzb suppressed, cudaStream_t stream)
     {
         int block = 192;
         int grid = 1;
@@ -529,8 +544,8 @@ __global__ void soft_cascade(const CascadeInvoker<Policy> invoker, Detection* ob
 }
 
 template<typename Policy>
-void CascadeInvoker<Policy>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
-    PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const
+void CascadeInvoker<Policy>::operator()(const cv::gpu::PtrStepSzb& roi, const cv::gpu::PtrStepSzi& hogluv,
+    cv::gpu::PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const
 {
     int fw = roi.rows;
     int fh = roi.cols;
@@ -562,7 +577,7 @@ void CascadeInvoker<Policy>::operator()(const PtrStepSzb& roi, const PtrStepSzi&
     }
 }
 
-template void CascadeInvoker<GK107PolicyX4>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
-    PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const;
+template void CascadeInvoker<GK107PolicyX4>::operator()(const cv::gpu::PtrStepSzb& roi, const cv::gpu::PtrStepSzi& hogluv,
+    cv::gpu::PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const;
 
 }}}
