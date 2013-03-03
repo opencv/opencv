@@ -187,11 +187,12 @@ struct ChannelStorage
 
     enum {HOG_BINS = 6, HOG_LUV_BINS = 10};
 
-    ChannelStorage(const cv::Mat& colored, int shr) : shrinkage(shr)
+    ChannelStorage(const cv::Mat& colored, int shr, std::string featureTypeStr) : shrinkage(shr)
     {
         model_height = cvRound(colored.rows / (float)shrinkage);
+        if (featureTypeStr == "ICF") featureTypeStr = "HOG6MagLuv";
 
-        builder = ChannelFeatureBuilder::create();
+        builder = ChannelFeatureBuilder::create(featureTypeStr);
         (*builder)(colored, hog, cv::Size(cvRound(colored.cols / (float)shrinkage), model_height));
 
         step = hog.step1();
@@ -201,8 +202,8 @@ struct ChannelStorage
     {
         const int *ptr = hog.ptr<const int>(0) + model_height * channel * step + offset;
 
-        int a = ptr[area.y * step + area.x];
-        int b = ptr[area.y * step + area.width];
+        int a = ptr[area.y      * step + area.x];
+        int b = ptr[area.y      * step + area.width];
         int c = ptr[area.height * step + area.width];
         int d = ptr[area.height * step + area.x];
 
@@ -224,7 +225,7 @@ struct Detector::Fields
 
     int shrinkage;
 
-    std::vector<SOctave>  octaves;
+    std::vector<SOctave> octaves;
     std::vector<Weak>    weaks;
     std::vector<Node>    nodes;
     std::vector<float>   leaves;
@@ -236,6 +237,8 @@ struct Detector::Fields
 
     typedef std::vector<SOctave>::iterator  octIt_t;
     typedef std::vector<Detection> dvector;
+
+    std::string featureTypeStr;
 
     void detectAt(const int dx, const int dy, const Level& level, const ChannelStorage& storage, dvector& detections) const
     {
@@ -341,6 +344,7 @@ struct Detector::Fields
         static const char *const SC_BOOST            = "BOOST";
 
         static const char *const SC_FEATURE_TYPE     = "featureType";
+        static const char *const SC_HOG6_MAG_LUV     = "HOG6MagLuv";
         static const char *const SC_ICF              = "ICF";
 
         static const char *const SC_ORIG_W           = "width";
@@ -365,8 +369,8 @@ struct Detector::Fields
         bool useBoxes = (fformat == "BOX");
 
         // only HOG-like integral channel features supported
-        std::string featureTypeStr = (std::string)root[SC_FEATURE_TYPE];
-        CV_Assert(featureTypeStr == SC_ICF);
+        featureTypeStr = (std::string)root[SC_FEATURE_TYPE];
+        CV_Assert(featureTypeStr == SC_ICF || featureTypeStr == SC_HOG6_MAG_LUV);
 
         origObjWidth  = (int)root[SC_ORIG_W];
         origObjHeight = (int)root[SC_ORIG_H];
@@ -491,7 +495,7 @@ void Detector::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects
 {
     Fields& fld = *fields;
     // create integrals
-    ChannelStorage storage(image, fld.shrinkage);
+    ChannelStorage storage(image, fld.shrinkage, fld.featureTypeStr);
 
     typedef std::vector<Level>::const_iterator lIt;
     for (lIt it = fld.levels.begin(); it != fld.levels.end(); ++it)
@@ -539,7 +543,7 @@ void Detector::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<D
         cv::Mat(mask, cv::Rect(r[i].x / shr, r[i].y / shr, r[i].width / shr , r[i].height / shr)).setTo(cv::Scalar::all(1));
 
     // create integrals
-    ChannelStorage storage(image, shr);
+    ChannelStorage storage(image, shr, fld.featureTypeStr);
 
     typedef std::vector<Level>::const_iterator lIt;
     for (lIt it = fld.levels.begin(); it != fld.levels.end(); ++it)

@@ -121,6 +121,9 @@ struct Config
     // seed for random generation
     int seed;
 
+    // channel feature type
+    string featureType;
+
     // // bounding rectangle for actual example into example window
     // cv::Rect exampleWindow;
 };
