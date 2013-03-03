@@ -11,7 +11,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
   project("${project}_samples")
 
-  ocv_include_modules(${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
+  ocv_include_modules(${OPENCV_GPU_SAMPLES_REQUIRED_DEPS} opencv_cudevice)
   ocv_include_directories(
     "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia"
     "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core"

@@ -44,7 +44,7 @@
 #ifndef __OPENCV_ICF_HPP__
 #define __OPENCV_ICF_HPP__
 
-#include <opencv2/gpu/device/common.hpp>
+#include <opencv2/cudevice/common.hpp>
 
 #if defined __CUDACC__
 # define __device __device__ __forceinline__

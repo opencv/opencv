@@ -436,7 +436,19 @@ macro(ocv_glob_module_sources)
   source_group("Include" FILES ${lib_hdrs})
   source_group("Include\\detail" FILES ${lib_hdrs_detail})
 
-  ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail} SOURCES ${lib_srcs} ${lib_int_hdrs})
+  file(GLOB_RECURSE lib_device_srcs "src/*.cu")
+
+  if (HAVE_CUDA AND lib_device_srcs)
+    ocv_include_directories(${CUDA_INCLUDE_DIRS})
+    file(GLOB_RECURSE lib_device_hdrs "src/cuda/*.hpp")
+    source_group("Src\\Cuda"      FILES ${lib_device_srcs} ${lib_device_hdrs})
+    ocv_cuda_compile(device_objs ${lib_device_srcs})
+  else()
+    set(device_objs "")
+  endif()
+
+  ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
+                                 SOURCES ${lib_srcs} ${lib_int_hdrs} ${device_objs} ${lib_device_srcs})
 endmacro()
 
 # creates OpenCV module in current folder
@@ -447,8 +459,14 @@ endmacro()
 macro(ocv_create_module)
   add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES})
 
+  if (HAVE_CUDA)
+    set(cuda_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  else()
+    set(cuda_libs "")
+  endif()
+
   if(NOT "${ARGN}" STREQUAL "SKIP_LINK")
-    target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
+    target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${cuda_libs} ${ARGN})
   endif()
 
   add_dependencies(opencv_modules ${the_module})
@@ -530,8 +548,8 @@ endmacro()
 # ocv_define_module(module_name  [INTERNAL] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>])
 macro(ocv_define_module module_name)
   ocv_add_module(${module_name} ${ARGN})
-  ocv_glob_module_sources()
   ocv_module_include_directories()
+  ocv_glob_module_sources()
   ocv_create_module()
   ocv_add_precompiled_headers(${the_module})
 

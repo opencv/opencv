@@ -41,10 +41,10 @@
 //
 //M*/
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/border_interpolate.hpp"
+#include "opencv2/cudevice/common.hpp"
+#include "opencv2/cudevice/saturate_cast.hpp"
+#include "opencv2/cudevice/vec_math.hpp"
+#include "opencv2/cudevice/border_interpolate.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;

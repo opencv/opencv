@@ -43,8 +43,8 @@
 #if !defined CUDA_DISABLER
 
 #include <internal_shared.hpp>
-#include <opencv2/gpu/device/transform.hpp>
-#include <opencv2/gpu/device/color.hpp>
+#include <opencv2/cudevice/transform.hpp>
+#include <opencv2/cudevice/color.hpp>
 #include <cvt_colot_internal.h>
 
 namespace cv { namespace gpu { namespace device

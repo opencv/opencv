@@ -47,7 +47,7 @@
 #include "NCVAlg.hpp"
 #include "NCVPyramid.hpp"
 #include "NCVPixelOperations.hpp"
-#include "opencv2/gpu/device/common.hpp"
+#include "opencv2/cudevice/common.hpp"
 
 template<typename T, Ncv32u CN> struct __average4_CN {static __host__ __device__ T _average4_CN(const T &p00, const T &p01, const T &p10, const T &p11);};
 

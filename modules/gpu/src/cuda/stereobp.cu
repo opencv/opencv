@@ -43,8 +43,8 @@
 #if !defined CUDA_DISABLER
 
 #include "internal_shared.hpp"
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/limits.hpp"
+#include "opencv2/cudevice/saturate_cast.hpp"
+#include "opencv2/cudevice/limits.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

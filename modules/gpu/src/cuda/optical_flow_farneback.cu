@@ -43,8 +43,8 @@
 #if !defined CUDA_DISABLER
 
 #include "internal_shared.hpp"
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/border_interpolate.hpp"
+#include "opencv2/cudevice/common.hpp"
+#include "opencv2/cudevice/border_interpolate.hpp"
 
 #define tx threadIdx.x
 #define ty threadIdx.y

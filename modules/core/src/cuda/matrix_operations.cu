@@ -41,10 +41,10 @@
 //M*/
 
 
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/transform.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/type_traits.hpp"
+#include "opencv2/cudevice/saturate_cast.hpp"
+#include "opencv2/cudevice/transform.hpp"
+#include "opencv2/cudevice/functional.hpp"
+#include "opencv2/cudevice/type_traits.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

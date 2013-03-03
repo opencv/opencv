@@ -424,7 +424,8 @@ namespace minMaxLoc
     void getBufSize(int cols, int rows, size_t elem_size, int& b1cols, int& b1rows, int& b2cols, int& b2rows);
 
     template <typename T>
-    void run(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc, PtrStepb valbuf, PtrStep<unsigned int> locbuf);
+    void run(const cv::gpu::PtrStepSzb src, const cv::gpu::PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc,
+        cv::gpu::PtrStepb valbuf, cv::gpu::PtrStep<unsigned int> locbuf);
 }
 
 void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc, const GpuMat& mask)
@@ -477,7 +478,7 @@ namespace countNonZero
     void getBufSize(int cols, int rows, int& bufcols, int& bufrows);
 
     template <typename T>
-    int run(const PtrStepSzb src, PtrStep<unsigned int> buf);
+    int run(const cv::gpu::PtrStepSzb src, cv::gpu::PtrStep<unsigned int> buf);
 }
 
 int cv::gpu::countNonZero(const GpuMat& src)
