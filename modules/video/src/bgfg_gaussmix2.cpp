@@ -85,6 +85,11 @@
 namespace cv
 {
 
+void BackgroundSubtractor::operator()(InputArray image, OutputArray fgmask, double learningRate)
+{
+    apply(image, fgmask, learningRate);
+}
+
 /*
  Interface of Gaussian mixture algorithm from:
 
