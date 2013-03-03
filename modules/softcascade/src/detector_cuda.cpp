@@ -41,17 +41,18 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/gpu/stream_accessor.hpp"
 
 #if !defined (HAVE_CUDA)
-cv::gpu::SCascade::SCascade(const double, const double, const int, const int) { throw_nogpu(); }
+cv::softcascade::SCascade::SCascade(const double, const double, const int, const int) { throw_nogpu(); }
 
-cv::gpu::SCascade::~SCascade() { throw_nogpu(); }
+cv::softcascade::SCascade::~SCascade() { throw_nogpu(); }
 
-bool cv::gpu::SCascade::load(const FileNode&) { throw_nogpu(); return false;}
+bool cv::softcascade::SCascade::load(const FileNode&) { throw_nogpu(); return false;}
 
-void cv::gpu::SCascade::detect(InputArray, InputArray, OutputArray, Stream&) const { throw_nogpu(); }
+void cv::softcascade::SCascade::detect(InputArray, InputArray, OutputArray, cv::gpu::Stream&) const { throw_nogpu(); }
 
-void cv::gpu::SCascade::read(const FileNode& fn) { Algorithm::read(fn); }
+void cv::softcascade::SCascade::read(const FileNode& fn) { Algorithm::read(fn); }
 
 cv::gpu::ChannelsProcessor::ChannelsProcessor() { throw_nogpu(); }
  cv::gpu::ChannelsProcessor::~ChannelsProcessor() { throw_nogpu(); }
@@ -60,9 +61,9 @@ cv::Ptr<cv::gpu::ChannelsProcessor> cv::gpu::ChannelsProcessor::create(const int
 { throw_nogpu(); return cv::Ptr<cv::gpu::ChannelsProcessor>(0); }
 
 #else
-# include "icf.hpp"
+# include "cuda_invoker.hpp"
 
-cv::gpu::device::icf::Level::Level(int idx, const Octave& oct, const float scale, const int w, const int h)
+cv::softcascade::device::Level::Level(int idx, const Octave& oct, const float scale, const int w, const int h)
 :  octave(idx), step(oct.stages), relScale(scale / oct.scale)
 {
     workRect.x = cvRound(w / (float)oct.shrinkage);
@@ -81,23 +82,20 @@ cv::gpu::device::icf::Level::Level(int idx, const Octave& oct, const float scale
     }
 }
 
-namespace cv { namespace gpu { namespace device {
+namespace cv { namespace softcascade { namespace device {
 
-namespace icf {
     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
         const int fw, const int fh, const int bins, cudaStream_t stream);
 
-    void suppress(const PtrStepSzb& objects, PtrStepSzb overlaps, PtrStepSzi ndetections,
-        PtrStepSzb suppressed, cudaStream_t stream);
+    void suppress(const cv::gpu::PtrStepSzb& objects, cv::gpu::PtrStepSzb overlaps, cv::gpu::PtrStepSzi ndetections,
+        cv::gpu::PtrStepSzb suppressed, cudaStream_t stream);
 
-    void bgr2Luv(const PtrStepSzb& bgr, PtrStepSzb luv);
-    void gray2hog(const PtrStepSzb& gray, PtrStepSzb mag, const int bins);
+    void bgr2Luv(const cv::gpu::PtrStepSzb& bgr, cv::gpu::PtrStepSzb luv);
+    void gray2hog(const cv::gpu::PtrStepSzb& gray, cv::gpu::PtrStepSzb mag, const int bins);
     void shrink(const cv::gpu::PtrStepSzb& channels, cv::gpu::PtrStepSzb shrunk);
-}
-
 }}}
 
-struct cv::gpu::SCascade::Fields
+struct cv::softcascade::SCascade::Fields
 {
     static Fields* parseCascade(const FileNode &root, const float mins, const float maxs, const int totals, const int method)
     {
@@ -138,11 +136,9 @@ struct cv::gpu::SCascade::Fields
         FileNode fn = root[SC_OCTAVES];
         if (fn.empty()) return 0;
 
-        using namespace device::icf;
-
-        std::vector<Octave>  voctaves;
+        std::vector<device::Octave>  voctaves;
         std::vector<float>   vstages;
-        std::vector<Node>    vnodes;
+        std::vector<device::Node>    vnodes;
         std::vector<float>   vleaves;
 
         FileNodeIterator it = fn.begin(), it_end = fn.end();
@@ -158,7 +154,7 @@ struct cv::gpu::SCascade::Fields
             size.x = cvRound(origWidth * scale);
             size.y = cvRound(origHeight * scale);
 
-            Octave octave(octIndex, nweaks, shrinkage, size, scale);
+            device::Octave octave(octIndex, nweaks, shrinkage, size, scale);
             CV_Assert(octave.stages > 0);
             voctaves.push_back(octave);
 
@@ -227,7 +223,7 @@ struct cv::gpu::SCascade::Fields
                     rect.w = saturate_cast<uchar>(r.height);
 
                     unsigned int channel = saturate_cast<unsigned int>(feature_channels[featureIdx]);
-                    vnodes.push_back(Node(rect, channel, th));
+                    vnodes.push_back(device::Node(rect, channel, th));
                 }
 
                 intfns = octfn[SC_LEAF];
@@ -239,13 +235,13 @@ struct cv::gpu::SCascade::Fields
             }
         }
 
-        cv::Mat hoctaves(1, (int) (voctaves.size() * sizeof(Octave)), CV_8UC1, (uchar*)&(voctaves[0]));
+        cv::Mat hoctaves(1, (int) (voctaves.size() * sizeof(device::Octave)), CV_8UC1, (uchar*)&(voctaves[0]));
         CV_Assert(!hoctaves.empty());
 
         cv::Mat hstages(cv::Mat(vstages).reshape(1,1));
         CV_Assert(!hstages.empty());
 
-        cv::Mat hnodes(1, (int) (vnodes.size() * sizeof(Node)), CV_8UC1, (uchar*)&(vnodes[0]) );
+        cv::Mat hnodes(1, (int) (vnodes.size() * sizeof(device::Node)), CV_8UC1, (uchar*)&(vnodes[0]) );
         CV_Assert(!hnodes.empty());
 
         cv::Mat hleaves(cv::Mat(vleaves).reshape(1,1));
@@ -272,8 +268,7 @@ struct cv::gpu::SCascade::Fields
 
     int createLevels(const int fh, const int fw)
     {
-        using namespace device::icf;
-        std::vector<Level> vlevels;
+        std::vector<device::Level> vlevels;
         float logFactor = (::log(maxScale) - ::log(minScale)) / (totals -1);
 
         float scale = minScale;
@@ -286,7 +281,7 @@ struct cv::gpu::SCascade::Fields
             float logScale = ::log(scale);
             int fit = fitOctave(voctaves, logScale);
 
-            Level level(fit, voctaves[fit], scale, width, height);
+            device::Level level(fit, voctaves[fit], scale, width, height);
 
             if (!width || !height)
                 break;
@@ -300,7 +295,7 @@ struct cv::gpu::SCascade::Fields
             scale = ::std::min(maxScale, ::expf(::log(scale) + logFactor));
         }
 
-        cv::Mat hlevels = cv::Mat(1, (int) (vlevels.size() * sizeof(Level)), CV_8UC1, (uchar*)&(vlevels[0]) );
+        cv::Mat hlevels = cv::Mat(1, (int) (vlevels.size() * sizeof(device::Level)), CV_8UC1, (uchar*)&(vlevels[0]) );
         CV_Assert(!hlevels.empty());
         levels.upload(hlevels);
         downscales = dcs;
@@ -334,7 +329,7 @@ struct cv::gpu::SCascade::Fields
         preprocessor = ChannelsProcessor::create(shrinkage, 6, method);
     }
 
-    void detect(cv::gpu::GpuMat& objects, Stream& s) const
+    void detect(cv::gpu::GpuMat& objects, cv::gpu::Stream& s) const
     {
         if (s)
             s.enqueueMemSet(objects, 0);
@@ -343,16 +338,16 @@ struct cv::gpu::SCascade::Fields
 
         cudaSafeCall( cudaGetLastError());
 
-        device::icf::CascadeInvoker<device::icf::GK107PolicyX4> invoker
-        = device::icf::CascadeInvoker<device::icf::GK107PolicyX4>(levels, stages, nodes, leaves);
+        device::CascadeInvoker<device::GK107PolicyX4> invoker
+        = device::CascadeInvoker<device::GK107PolicyX4>(levels, stages, nodes, leaves);
 
-        cudaStream_t stream = StreamAccessor::getStream(s);
+        cudaStream_t stream = cv::gpu::StreamAccessor::getStream(s);
         invoker(mask, hogluv, objects, downscales, stream);
     }
 
-    void suppress(GpuMat& objects, Stream& s)
+    void suppress(cv::gpu::GpuMat& objects, cv::gpu::Stream& s)
     {
-        GpuMat ndetections = GpuMat(objects, cv::Rect(0, 0, sizeof(Detection), 1));
+        cv::gpu::GpuMat ndetections = cv::gpu::GpuMat(objects, cv::Rect(0, 0, sizeof(Detection), 1));
         ensureSizeIsEnough(objects.rows, objects.cols, CV_8UC1, overlaps);
 
         if (s)
@@ -366,20 +361,20 @@ struct cv::gpu::SCascade::Fields
             suppressed.setTo(0);
         }
 
-        cudaStream_t stream = StreamAccessor::getStream(s);
-        device::icf::suppress(objects, overlaps, ndetections, suppressed, stream);
+        cudaStream_t stream = cv::gpu::StreamAccessor::getStream(s);
+        device::suppress(objects, overlaps, ndetections, suppressed, stream);
     }
 
 private:
 
-    typedef std::vector<device::icf::Octave>::const_iterator  octIt_t;
-    static int fitOctave(const std::vector<device::icf::Octave>& octs, const float& logFactor)
+    typedef std::vector<device::Octave>::const_iterator  octIt_t;
+    static int fitOctave(const std::vector<device::Octave>& octs, const float& logFactor)
     {
         float minAbsLog = FLT_MAX;
         int res =  0;
         for (int oct = 0; oct < (int)octs.size(); ++oct)
         {
-            const device::icf::Octave& octave =octs[oct];
+            const device::Octave& octave =octs[oct];
             float logOctave = ::log(octave.scale);
             float logAbsScale = ::fabs(logFactor - logOctave);
 
@@ -410,37 +405,37 @@ public:
 
 
     // 160x120x10
-    GpuMat shrunk;
+    cv::gpu::GpuMat shrunk;
 
     // temporal mat for integral
-    GpuMat integralBuffer;
+    cv::gpu::GpuMat integralBuffer;
 
     // 161x121x10
-    GpuMat hogluv;
+    cv::gpu::GpuMat hogluv;
 
 
     // used for suppression
-    GpuMat suppressed;
+    cv::gpu::GpuMat suppressed;
     // used for area overlap computing during
-    GpuMat overlaps;
+    cv::gpu::GpuMat overlaps;
 
 
     // Cascade from xml
-    GpuMat octaves;
-    GpuMat stages;
-    GpuMat nodes;
-    GpuMat leaves;
-    GpuMat levels;
+    cv::gpu::GpuMat octaves;
+    cv::gpu::GpuMat stages;
+    cv::gpu::GpuMat nodes;
+    cv::gpu::GpuMat leaves;
+    cv::gpu::GpuMat levels;
 
 
     // For ROI
-    GpuMat mask;
-    GpuMat genRoiTmp;
+    cv::gpu::GpuMat mask;
+    cv::gpu::GpuMat genRoiTmp;
 
-//     GpuMat collected;
+//     cv::gpu::GpuMat collected;
 
 
-    std::vector<device::icf::Octave> voctaves;
+    std::vector<device::Octave> voctaves;
 
 //     DeviceInfo info;
 
@@ -453,19 +448,19 @@ public:
     };
 };
 
-cv::gpu::SCascade::SCascade(const double mins, const double maxs, const int sc, const int fl)
+cv::softcascade::SCascade::SCascade(const double mins, const double maxs, const int sc, const int fl)
 : fields(0),  minScale(mins), maxScale(maxs), scales(sc), flags(fl) {}
 
-cv::gpu::SCascade::~SCascade() { delete fields; }
+cv::softcascade::SCascade::~SCascade() { delete fields; }
 
-bool cv::gpu::SCascade::load(const FileNode& fn)
+bool cv::softcascade::SCascade::load(const FileNode& fn)
 {
     if (fields) delete fields;
     fields = Fields::parseCascade(fn, (float)minScale, (float)maxScale, scales, flags);
     return fields != 0;
 }
 
-void cv::gpu::SCascade::detect(InputArray _image, InputArray _rois, OutputArray _objects, Stream& s) const
+void cv::softcascade::SCascade::detect(InputArray _image, InputArray _rois, OutputArray _objects, cv::gpu::Stream& s) const
 {
     CV_Assert(fields);
 
@@ -473,11 +468,11 @@ void cv::gpu::SCascade::detect(InputArray _image, InputArray _rois, OutputArray 
     int type = _image.type();
     CV_Assert(type == CV_8UC3 || type == CV_32SC1 || (!_rois.empty()));
 
-    const GpuMat image = _image.getGpuMat();
+    const cv::gpu::GpuMat image = _image.getGpuMat();
 
     if (_objects.empty()) _objects.create(1, 4096 * sizeof(Detection), CV_8UC1);
 
-    GpuMat rois = _rois.getGpuMat(), objects = _objects.getGpuMat();
+    cv::gpu::GpuMat rois = _rois.getGpuMat(), objects = _objects.getGpuMat();
 
     /// roi
     Fields& flds = *fields;
@@ -510,13 +505,13 @@ void cv::gpu::SCascade::detect(InputArray _image, InputArray _rois, OutputArray 
 
     if ( (flags && NMS_MASK) != NO_REJECT)
     {
-        GpuMat spr(objects, cv::Rect(0, 0, flds.suppressed.cols, flds.suppressed.rows));
+        cv::gpu::GpuMat spr(objects, cv::Rect(0, 0, flds.suppressed.cols, flds.suppressed.rows));
         flds.suppress(objects, s);
         flds.suppressed.copyTo(spr);
     }
 }
 
-void cv::gpu::SCascade::read(const FileNode& fn)
+void cv::softcascade::SCascade::read(const FileNode& fn)
 {
     Algorithm::read(fn);
 }
@@ -528,7 +523,7 @@ using cv::OutputArray;
 using cv::gpu::Stream;
 using cv::gpu::GpuMat;
 
-inline void setZero(cv::gpu::GpuMat& m, Stream& s)
+inline void setZero(cv::gpu::GpuMat& m, cv::gpu::Stream& s)
 {
     if (s)
         s.enqueueMemSet(m, 0);
@@ -536,17 +531,17 @@ inline void setZero(cv::gpu::GpuMat& m, Stream& s)
         m.setTo(0);
 }
 
-struct GenricPreprocessor : public cv::gpu::ChannelsProcessor
+struct GenricPreprocessor : public cv::softcascade::ChannelsProcessor
 {
-    GenricPreprocessor(const int s, const int b) : cv::gpu::ChannelsProcessor(), shrinkage(s), bins(b) {}
+    GenricPreprocessor(const int s, const int b) : cv::softcascade::ChannelsProcessor(), shrinkage(s), bins(b) {}
     virtual ~GenricPreprocessor() {}
 
-    virtual void apply(InputArray _frame, OutputArray _shrunk, Stream& s = Stream::Null())
+    virtual void apply(InputArray _frame, OutputArray _shrunk, cv::gpu::Stream& s = cv::gpu::Stream::Null())
     {
-        const GpuMat frame = _frame.getGpuMat();
+        const cv::gpu::GpuMat frame = _frame.getGpuMat();
 
         _shrunk.create(frame.rows * (4 + bins) / shrinkage, frame.cols / shrinkage, CV_8UC1);
-        GpuMat shrunk = _shrunk.getGpuMat();
+        cv::gpu::GpuMat shrunk = _shrunk.getGpuMat();
 
         channels.create(frame.rows * (4 + bins), frame.cols, CV_8UC1);
         setZero(channels, s);
@@ -561,53 +556,53 @@ struct GenricPreprocessor : public cv::gpu::ChannelsProcessor
 
 private:
 
-    void createHogBins(Stream& s)
+    void createHogBins(cv::gpu::Stream& s)
     {
         static const int fw = gray.cols;
         static const int fh = gray.rows;
 
         fplane.create(fh * HOG_BINS, fw, CV_32FC1);
 
-        GpuMat dfdx(fplane, cv::Rect(0,  0, fw, fh));
-        GpuMat dfdy(fplane, cv::Rect(0, fh, fw, fh));
+        cv::gpu::GpuMat dfdx(fplane, cv::Rect(0,  0, fw, fh));
+        cv::gpu::GpuMat dfdy(fplane, cv::Rect(0, fh, fw, fh));
 
         cv::gpu::Sobel(gray, dfdx, CV_32F, 1, 0, sobelBuf, 3, 1, cv::BORDER_DEFAULT, -1, s);
         cv::gpu::Sobel(gray, dfdy, CV_32F, 0, 1, sobelBuf, 3, 1, cv::BORDER_DEFAULT, -1, s);
 
-        GpuMat mag(fplane, cv::Rect(0, 2 * fh, fw, fh));
-        GpuMat ang(fplane, cv::Rect(0, 3 * fh, fw, fh));
+        cv::gpu::GpuMat mag(fplane, cv::Rect(0, 2 * fh, fw, fh));
+        cv::gpu::GpuMat ang(fplane, cv::Rect(0, 3 * fh, fw, fh));
 
         cv::gpu::cartToPolar(dfdx, dfdy, mag, ang, true, s);
 
         // normalize magnitude to uchar interval and angles to 6 bins
-        GpuMat nmag(fplane, cv::Rect(0, 4 * fh, fw, fh));
-        GpuMat nang(fplane, cv::Rect(0, 5 * fh, fw, fh));
+        cv::gpu::GpuMat nmag(fplane, cv::Rect(0, 4 * fh, fw, fh));
+        cv::gpu::GpuMat nang(fplane, cv::Rect(0, 5 * fh, fw, fh));
 
         cv::gpu::multiply(mag, cv::Scalar::all(1.f / (8 *::log(2.0f))), nmag, 1, -1, s);
         cv::gpu::multiply(ang, cv::Scalar::all(1.f / 60.f),     nang, 1, -1, s);
 
         //create uchar magnitude
-        GpuMat cmag(channels, cv::Rect(0, fh * HOG_BINS, fw, fh));
+        cv::gpu::GpuMat cmag(channels, cv::Rect(0, fh * HOG_BINS, fw, fh));
         if (s)
             s.enqueueConvert(nmag, cmag, CV_8UC1);
         else
             nmag.convertTo(cmag, CV_8UC1);
 
         cudaStream_t stream = cv::gpu::StreamAccessor::getStream(s);
-        cv::gpu::device::icf::fillBins(channels, nang, fw, fh, HOG_BINS, stream);
+        cv::softcascade::device::fillBins(channels, nang, fw, fh, HOG_BINS, stream);
     }
 
-    void createLuvBins(const cv::gpu::GpuMat& colored, Stream& s)
+    void createLuvBins(const cv::gpu::GpuMat& colored, cv::gpu::Stream& s)
     {
         static const int fw = colored.cols;
         static const int fh = colored.rows;
 
         cv::gpu::cvtColor(colored, luv, CV_BGR2Luv, s);
 
-        std::vector<GpuMat> splited;
+        std::vector<cv::gpu::GpuMat> splited;
         for(int i = 0; i < LUV_BINS; ++i)
         {
-            splited.push_back(GpuMat(channels, cv::Rect(0, fh * (7 + i), fw, fh)));
+            splited.push_back(cv::gpu::GpuMat(channels, cv::Rect(0, fh * (7 + i), fw, fh)));
         }
 
         cv::gpu::split(luv, splited, s);
@@ -618,62 +613,62 @@ private:
     const int shrinkage;
     const int bins;
 
-    GpuMat gray;
-    GpuMat luv;
-    GpuMat channels;
+    cv::gpu::GpuMat gray;
+    cv::gpu::GpuMat luv;
+    cv::gpu::GpuMat channels;
 
     // preallocated buffer for floating point operations
-    GpuMat fplane;
-    GpuMat sobelBuf;
+    cv::gpu::GpuMat fplane;
+    cv::gpu::GpuMat sobelBuf;
 };
 
 
-struct SeparablePreprocessor : public cv::gpu::ChannelsProcessor
+struct SeparablePreprocessor : public cv::softcascade::ChannelsProcessor
 {
-    SeparablePreprocessor(const int s, const int b) : cv::gpu::ChannelsProcessor(), shrinkage(s), bins(b) {}
+    SeparablePreprocessor(const int s, const int b) : cv::softcascade::ChannelsProcessor(), shrinkage(s), bins(b) {}
     virtual ~SeparablePreprocessor() {}
 
-    virtual void apply(InputArray _frame, OutputArray _shrunk, Stream& s = Stream::Null())
+    virtual void apply(InputArray _frame, OutputArray _shrunk, cv::gpu::Stream& s = cv::gpu::Stream::Null())
     {
-        const GpuMat frame = _frame.getGpuMat();
+        const cv::gpu::GpuMat frame = _frame.getGpuMat();
         cv::gpu::GaussianBlur(frame, bgr, cv::Size(3, 3), -1.0);
 
         _shrunk.create(frame.rows * (4 + bins) / shrinkage, frame.cols / shrinkage, CV_8UC1);
-        GpuMat shrunk = _shrunk.getGpuMat();
+        cv::gpu::GpuMat shrunk = _shrunk.getGpuMat();
 
         channels.create(frame.rows * (4 + bins), frame.cols, CV_8UC1);
         setZero(channels, s);
 
         cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
-        cv::gpu::device::icf::gray2hog(gray, channels(cv::Rect(0, 0, bgr.cols, bgr.rows * (bins + 1))), bins);
+        cv::softcascade::device::gray2hog(gray, channels(cv::Rect(0, 0, bgr.cols, bgr.rows * (bins + 1))), bins);
 
         cv::gpu::GpuMat luv(channels, cv::Rect(0, bgr.rows * (bins + 1), bgr.cols, bgr.rows * 3));
-        cv::gpu::device::icf::bgr2Luv(bgr, luv);
-        cv::gpu::device::icf::shrink(channels, shrunk);
+        cv::softcascade::device::bgr2Luv(bgr, luv);
+        cv::softcascade::device::shrink(channels, shrunk);
     }
 
 private:
     const int shrinkage;
     const int bins;
 
-    GpuMat bgr;
-    GpuMat gray;
-    GpuMat channels;
+    cv::gpu::GpuMat bgr;
+    cv::gpu::GpuMat gray;
+    cv::gpu::GpuMat channels;
 };
 
 }
 
-cv::Ptr<cv::gpu::ChannelsProcessor> cv::gpu::ChannelsProcessor::create(const int s, const int b, const int m)
+cv::Ptr<cv::softcascade::ChannelsProcessor> cv::softcascade::ChannelsProcessor::create(const int s, const int b, const int m)
 {
     CV_Assert((m && SEPARABLE) || (m && GENERIC));
 
     if (m && GENERIC)
-        return cv::Ptr<cv::gpu::ChannelsProcessor>(new GenricPreprocessor(s, b));
+        return cv::Ptr<cv::softcascade::ChannelsProcessor>(new GenricPreprocessor(s, b));
 
-    return cv::Ptr<cv::gpu::ChannelsProcessor>(new SeparablePreprocessor(s, b));
+    return cv::Ptr<cv::softcascade::ChannelsProcessor>(new SeparablePreprocessor(s, b));
 }
 
-cv::gpu::ChannelsProcessor::ChannelsProcessor() { }
-cv::gpu::ChannelsProcessor::~ChannelsProcessor() { }
+cv::softcascade::ChannelsProcessor::ChannelsProcessor() { }
+cv::softcascade::ChannelsProcessor::~ChannelsProcessor() { }
 
 #endif

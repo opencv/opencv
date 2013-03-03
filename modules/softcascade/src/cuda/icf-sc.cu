@@ -43,12 +43,11 @@
 #include <opencv2/gpu/device/common.hpp>
 #include <opencv2/gpu/device/saturate_cast.hpp>
 
-#include <icf.hpp>
+#include <cuda_invoker.hpp>
 #include <float.h>
 #include <stdio.h>
 
-namespace cv { namespace gpu { namespace device {
-namespace icf {
+namespace cv { namespace softcascade { namespace device {
 
     template <int FACTOR>
     __device__ __forceinline__ uchar shrink(const uchar* ptr, const int pitch, const int y, const int x)
@@ -303,7 +302,7 @@ namespace icf {
                     excluded = excluded || (suppessed == i);
                 }
 
-            #if __CUDA_ARCH__ >= 120
+            #if defined __CUDA_ARCH__ && (__CUDA_ARCH__ >= 120)
                 if (__all(excluded)) break;
             #endif
             }
@@ -348,7 +347,7 @@ namespace icf {
     template<typename Policy>
     struct PrefixSum
     {
-    __device static void apply(float& impact)
+    __device_inline__ static void apply(float& impact)
         {
     #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 300
     #pragma unroll
@@ -442,6 +441,7 @@ namespace icf {
     {
         x += area.x;
         y += area.y;
+
         int a = tex2D(thogluv, x, y);
         int b = tex2D(thogluv, x + area.z, y);
         int c = tex2D(thogluv, x + area.z, y + area.w);
@@ -454,7 +454,7 @@ namespace icf {
 
 template<typename Policy>
 template<bool isUp>
-__device void CascadeInvoker<Policy>::detect(Detection* objects, const uint ndetections, uint* ctr, const int downscales) const
+__device_inline__ void CascadeInvoker<Policy>::detect(Detection* objects, const uint ndetections, uint* ctr, const int downscales) const
 {
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
     const int x = blockIdx.x;
@@ -563,5 +563,4 @@ void CascadeInvoker<Policy>::operator()(const PtrStepSzb& roi, const PtrStepSzi&
 template void CascadeInvoker<GK107PolicyX4>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
     PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const;
 
-}
 }}}

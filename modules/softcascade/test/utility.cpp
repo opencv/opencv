@@ -7,11 +7,10 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                        Intel License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2013, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -22,9 +21,9 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and / or other materials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
-//   * The name of the copyright holders may not be used to endorse or promote products
+//   * The name of Intel Corporation may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -40,27 +39,71 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
-namespace cv { namespace softcascade
+#ifdef HAVE_CUDA
+
+
+using namespace std;
+using namespace cv;
+using namespace cv::gpu;
+using namespace cvtest;
+using namespace testing;
+using namespace testing::internal;
+
+//////////////////////////////////////////////////////////////////////
+// Gpu devices
+
+bool supportFeature(const DeviceInfo& info, FeatureSet feature)
 {
-
-CV_INIT_ALGORITHM(Detector, "SoftCascade.Detector",
-                  obj.info()->addParam(obj, "minScale",    obj.minScale);
-                  obj.info()->addParam(obj, "maxScale",    obj.maxScale);
-                  obj.info()->addParam(obj, "scales",      obj.scales);
-                  obj.info()->addParam(obj, "rejCriteria", obj.rejCriteria));
-
-CV_INIT_ALGORITHM(SCascade, "CascadeDetector.SCascade",
-                  obj.info()->addParam(obj, "minScale", obj.minScale);
-                  obj.info()->addParam(obj, "maxScale", obj.maxScale);
-                  obj.info()->addParam(obj, "scales",   obj.scales));
-
-bool initModule_softcascade(void)
-{
-    Ptr<Algorithm> sc = createSCascade();
-    Ptr<Algorithm> sc1 = createDetector();
-    return (sc1->info() != 0) && (sc->info() != 0);
+    return TargetArchs::builtWith(feature) && info.supports(feature);
 }
 
-} }
+DeviceManager& DeviceManager::instance()
+{
+    static DeviceManager obj;
+    return obj;
+}
+
+void DeviceManager::load(int i)
+{
+    devices_.clear();
+    devices_.reserve(1);
+
+    std::ostringstream msg;
+
+    if (i < 0 || i >= getCudaEnabledDeviceCount())
+    {
+        msg << "Incorrect device number - " << i;
+        CV_Error(CV_StsBadArg, msg.str());
+    }
+
+    DeviceInfo info(i);
+
+    if (!info.isCompatible())
+    {
+        msg << "Device " << i << " [" << info.name() << "] is NOT compatible with current GPU module build";
+        CV_Error(CV_StsBadArg, msg.str());
+    }
+
+    devices_.push_back(info);
+}
+
+void DeviceManager::loadAll()
+{
+    int deviceCount = getCudaEnabledDeviceCount();
+
+    devices_.clear();
+    devices_.reserve(deviceCount);
+
+    for (int i = 0; i < deviceCount; ++i)
+    {
+        DeviceInfo info(i);
+        if (info.isCompatible())
+        {
+            devices_.push_back(info);
+        }
+    }
+}
+
+#endif // HAVE_CUDA

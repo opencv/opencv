@@ -1,7 +1,7 @@
 set(name sft)
 set(the_target opencv_${name})
 
-set(OPENCV_${the_target}_DEPS opencv_core opencv_softcascade opencv_highgui opencv_imgproc opencv_ml)
+set(OPENCV_${the_target}_DEPS opencv_core opencv_softcascade opencv_highgui opencv_imgproc opencv_ml OPTIONAL opencv_gpu opencv_objdetect opencv_featurest2d)
 ocv_check_dependencies(${OPENCV_${the_target}_DEPS})
 
 if(NOT OCV_DEPENDENCIES_FOUND)

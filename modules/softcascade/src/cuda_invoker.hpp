@@ -22,7 +22,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and / or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -46,15 +46,16 @@
 
 #include <opencv2/gpu/device/common.hpp>
 
+using namespace cv::gpu::device;
+
 #if defined __CUDACC__
-# define __device __device__ __forceinline__
+# define __device_inline__ __device__ __forceinline__
 #else
-# define __device
+# define __device_inline__
 #endif
 
 
-namespace cv { namespace gpu { namespace device {
-namespace icf {
+namespace cv { namespace softcascade { namespace device {
 
 struct Octave
 {
@@ -68,20 +69,19 @@ struct Octave
     : index(i), stages(s), shrinkage(sh), size(sz), scale(sc) {}
 };
 
-struct Level //is actually 24 bytes
+struct Level
 {
     int octave;
     int step;
 
     float relScale;
-    float scaling[2]; // calculated according to Dollal paper
+    float scaling[2];// calculated according to Dollar paper
 
-    // for 640x480 we can not get overflow
     uchar2 workRect;
     uchar2 objSize;
 
     Level(int idx, const Octave& oct, const float scale, const int w, const int h);
-    __device Level(){}
+    __device_inline__ Level(){}
 };
 
 struct Node
@@ -106,7 +106,7 @@ struct Detection
     int kind;
 
     Detection(){}
-    __device Detection(int _x, int _y, uchar _w, uchar _h, float c)
+    __device_inline__ Detection(int _x, int _y, uchar _w, uchar _h, float c)
     : x(_x), y(_y), w(_w), h(_h), confidence(c), kind(0) {};
 };
 
@@ -125,8 +125,8 @@ struct CascadeInvoker
 {
     CascadeInvoker(): levels(0), stages(0), nodes(0), leaves(0), scales(0) {}
 
-    CascadeInvoker(const PtrStepSzb& _levels, const PtrStepSzf& _stages,
-                   const PtrStepSzb& _nodes,  const PtrStepSzf& _leaves)
+    CascadeInvoker(const cv::gpu::PtrStepSzb& _levels, const cv::gpu::PtrStepSzf& _stages,
+                   const cv::gpu::PtrStepSzb& _nodes,  const cv::gpu::PtrStepSzf& _leaves)
     : levels((const Level*)_levels.ptr()),
       stages((const float*)_stages.ptr()),
       nodes((const Node*)_nodes.ptr()), leaves((const float*)_leaves.ptr()),
@@ -141,14 +141,13 @@ struct CascadeInvoker
 
     int scales;
 
-    void operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects,
+    void operator()(const cv::gpu::PtrStepSzb& roi, const cv::gpu::PtrStepSzi& hogluv, cv::gpu::PtrStepSz<uchar4> objects,
         const int downscales, const cudaStream_t& stream = 0) const;
 
     template<bool isUp>
-    __device void detect(Detection* objects, const unsigned int ndetections, unsigned int* ctr, const int downscales) const;
+    __device_inline__ void detect(Detection* objects, const unsigned int ndetections, unsigned int* ctr, const int downscales) const;
 };
 
-}
 }}}
 
 #endif
