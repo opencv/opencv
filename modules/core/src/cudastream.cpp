@@ -72,6 +72,33 @@ void cv::gpu::Stream::release() { throw_nogpu(); }
 
 #include "opencv2/gpu/stream_accessor.hpp"
 
+namespace
+{
+#if defined(__GNUC__)
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
+    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__, __func__)
+#else /* defined(__CUDACC__) || defined(__MSVC__) */
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
+    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__)
+#endif
+
+    inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
+    {
+        if (cudaSuccess != err)
+            cv::gpu::error(cudaGetErrorString(err), file, line, func);
+    }
+
+    inline void ___nppSafeCall(int err, const char *file, const int line, const char *func = "")
+    {
+        if (err < 0)
+        {
+            std::ostringstream msg;
+            msg << "NPP API Call Error: " << err;
+            cv::gpu::error(msg.str().c_str(), file, line, func);
+        }
+    }
+}
+
 namespace cv { namespace gpu
 {
     void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream);

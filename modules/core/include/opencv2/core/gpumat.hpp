@@ -50,6 +50,141 @@
 
 namespace cv { namespace gpu
 {
+    //////////////////////////////// CudaMem ////////////////////////////////
+    // CudaMem is limited cv::Mat with page locked memory allocation.
+    // Page locked memory is only needed for async and faster coping to GPU.
+    // It is convertable to cv::Mat header without reference counting
+    // so you can use it with other opencv functions.
+
+    // Page-locks the matrix m memory and maps it for the device(s)
+    CV_EXPORTS void registerPageLocked(Mat& m);
+    // Unmaps the memory of matrix m, and makes it pageable again.
+    CV_EXPORTS void unregisterPageLocked(Mat& m);
+
+    class CV_EXPORTS CudaMem
+    {
+    public:
+        enum  { ALLOC_PAGE_LOCKED = 1, ALLOC_ZEROCOPY = 2, ALLOC_WRITE_COMBINED = 4 };
+
+        CudaMem();
+        CudaMem(const CudaMem& m);
+
+        CudaMem(int rows, int cols, int type, int _alloc_type = ALLOC_PAGE_LOCKED);
+        CudaMem(Size size, int type, int alloc_type = ALLOC_PAGE_LOCKED);
+
+
+        //! creates from cv::Mat with coping data
+        explicit CudaMem(const Mat& m, int alloc_type = ALLOC_PAGE_LOCKED);
+
+        ~CudaMem();
+
+        CudaMem& operator = (const CudaMem& m);
+
+        //! returns deep copy of the matrix, i.e. the data is copied
+        CudaMem clone() const;
+
+        //! allocates new matrix data unless the matrix already has specified size and type.
+        void create(int rows, int cols, int type, int alloc_type = ALLOC_PAGE_LOCKED);
+        void create(Size size, int type, int alloc_type = ALLOC_PAGE_LOCKED);
+
+        //! decrements reference counter and released memory if needed.
+        void release();
+
+        //! returns matrix header with disabled reference counting for CudaMem data.
+        Mat createMatHeader() const;
+        operator Mat() const;
+
+        //! maps host memory into device address space and returns GpuMat header for it. Throws exception if not supported by hardware.
+        GpuMat createGpuMatHeader() const;
+        operator GpuMat() const;
+
+        //returns if host memory can be mapperd to gpu address space;
+        static bool canMapHostMemory();
+
+        // Please see cv::Mat for descriptions
+        bool isContinuous() const;
+        size_t elemSize() const;
+        size_t elemSize1() const;
+        int type() const;
+        int depth() const;
+        int channels() const;
+        size_t step1() const;
+        Size size() const;
+        bool empty() const;
+
+
+        // Please see cv::Mat for descriptions
+        int flags;
+        int rows, cols;
+        size_t step;
+
+        uchar* data;
+        int* refcount;
+
+        uchar* datastart;
+        uchar* dataend;
+
+        int alloc_type;
+    };
+
+
+    //////////////////////////////// CudaStream ////////////////////////////////
+    // Encapculates Cuda Stream. Provides interface for async coping.
+    // Passed to each function that supports async kernel execution.
+    // Reference counting is enabled
+
+    class CV_EXPORTS Stream
+    {
+    public:
+        Stream();
+        ~Stream();
+
+        Stream(const Stream&);
+        Stream& operator =(const Stream&);
+
+        bool queryIfComplete();
+        void waitForCompletion();
+
+        //! downloads asynchronously
+        // Warning! cv::Mat must point to page locked memory (i.e. to CudaMem data or to its subMat)
+        void enqueueDownload(const GpuMat& src, CudaMem& dst);
+        void enqueueDownload(const GpuMat& src, Mat& dst);
+
+        //! uploads asynchronously
+        // Warning! cv::Mat must point to page locked memory (i.e. to CudaMem data or to its ROI)
+        void enqueueUpload(const CudaMem& src, GpuMat& dst);
+        void enqueueUpload(const Mat& src, GpuMat& dst);
+
+        //! copy asynchronously
+        void enqueueCopy(const GpuMat& src, GpuMat& dst);
+
+        //! memory set asynchronously
+        void enqueueMemSet(GpuMat& src, Scalar val);
+        void enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask);
+
+        //! converts matrix type, ex from float to uchar depending on type
+        void enqueueConvert(const GpuMat& src, GpuMat& dst, int dtype, double a = 1, double b = 0);
+
+        //! adds a callback to be called on the host after all currently enqueued items in the stream have completed
+        typedef void (*StreamCallback)(Stream& stream, int status, void* userData);
+        void enqueueHostCallback(StreamCallback callback, void* userData);
+
+        static Stream& Null();
+
+        operator bool() const;
+
+    private:
+        struct Impl;
+
+        explicit Stream(Impl* impl);
+        void create();
+        void release();
+
+        Impl *impl;
+
+        friend struct StreamAccessor;
+    };
+
     //////////////////////////////// Initialization & Info ////////////////////////
 
     //! This is the only function that do not throw exceptions if the library is compiled without Cuda.

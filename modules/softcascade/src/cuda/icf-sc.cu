@@ -49,6 +49,8 @@
 
 namespace cv { namespace softcascade { namespace device {
 
+typedef unsigned char uchar;
+
     template <int FACTOR>
     __device__ __forceinline__ uchar shrink(const uchar* ptr, const int pitch, const int y, const int x)
     {

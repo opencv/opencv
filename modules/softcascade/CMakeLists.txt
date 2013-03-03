@@ -9,7 +9,7 @@ macro(ocv_glob_cuda_powered_module_sources)
   set(lib_device_hdrs "")
 
   if (HAVE_CUDA AND lib_device_srcs)
-  ocv_include_directories(${CUDA_INCLUDE_DIRS})
+  ocv_include_directories(${CUDA_INCLUDE_DIRS} "${OpenCV_SOURCE_DIR}/modules/gpu/include")
   file(GLOB_RECURSE lib_device_hdrs "src/cuda/*.hpp")
 
   ocv_cuda_compile(device_objs ${lib_device_srcs})
@@ -35,7 +35,7 @@ set(cuda_include "")
 if (NAVE_CUDA)
   set(cuda_deps ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
 endif()
-ocv_add_module(softcascade opencv_core opencv_imgproc opencv_ml OPTIONAL opencv_gpu ${cuda_deps})
+ocv_add_module(softcascade opencv_core opencv_imgproc opencv_ml OPTIONAL ${cuda_deps})
 
 if(HAVE_CUDA)
   ocv_module_include_directories(${CUDA_INCLUDE_DIRS})

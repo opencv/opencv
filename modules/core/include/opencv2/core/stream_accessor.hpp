@@ -43,7 +43,7 @@
 #ifndef __OPENCV_GPU_STREAM_ACCESSOR_HPP__
 #define __OPENCV_GPU_STREAM_ACCESSOR_HPP__
 
-#include "opencv2/gpu.hpp"
+#include "opencv2/gpu/gpu.hpp"
 #include "cuda_runtime_api.h"
 
 namespace cv
@@ -56,7 +56,7 @@ namespace cv
         // In this case you have to install Cuda Toolkit.
         struct StreamAccessor
         {
-            CV_EXPORTS static cudaStream_t getStream(const cv::gpu::Stream& stream);
+            CV_EXPORTS static cudaStream_t getStream(const Stream& stream);
         };
     }
 }

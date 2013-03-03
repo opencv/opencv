@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/gpumat.hpp"
 
 using namespace cv;
 using namespace cv::gpu;
@@ -178,7 +179,7 @@ bool cv::gpu::CudaMem::empty() const
     return data == 0;
 }
 
-#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
+#if !defined (HAVE_CUDA)
 
 void cv::gpu::registerPageLocked(Mat&) { throw_nogpu(); }
 void cv::gpu::unregisterPageLocked(Mat&) { throw_nogpu(); }
@@ -188,6 +189,33 @@ void cv::gpu::CudaMem::release() { throw_nogpu(); }
 GpuMat cv::gpu::CudaMem::createGpuMatHeader () const { throw_nogpu(); return GpuMat(); }
 
 #else /* !defined (HAVE_CUDA) */
+#include <cuda_runtime_api.h>
+namespace
+{
+#if defined(__GNUC__)
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
+    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__, __func__)
+#else /* defined(__CUDACC__) || defined(__MSVC__) */
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
+    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__)
+#endif
+
+    inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
+    {
+        if (cudaSuccess != err)
+            cv::gpu::error(cudaGetErrorString(err), file, line, func);
+    }
+
+    inline void ___nppSafeCall(int err, const char *file, const int line, const char *func = "")
+    {
+        if (err < 0)
+        {
+            std::ostringstream msg;
+            msg << "NPP API Call Error: " << err;
+            cv::gpu::error(msg.str().c_str(), file, line, func);
+        }
+    }
+}
 
 void cv::gpu::registerPageLocked(Mat& m)
 {

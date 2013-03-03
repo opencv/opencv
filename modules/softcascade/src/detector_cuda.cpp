@@ -480,8 +480,8 @@ void cv::softcascade::SCascade::detect(InputArray _image, InputArray _rois, Outp
 
     flds.mask.create( rois.cols / shr, rois.rows / shr, rois.type());
 
-    cv::gpu::resize(rois, flds.genRoiTmp, cv::Size(), 1.f / shr, 1.f / shr, CV_INTER_AREA, s);
-    cv::gpu::transpose(flds.genRoiTmp, flds.mask, s);
+    //cv::gpu::resize(rois, flds.genRoiTmp, cv::Size(), 1.f / shr, 1.f / shr, CV_INTER_AREA, s);
+    //cv::gpu::transpose(flds.genRoiTmp, flds.mask, s);
 
     if (type == CV_8UC3)
     {
@@ -491,7 +491,7 @@ void cv::softcascade::SCascade::detect(InputArray _image, InputArray _rois, Outp
             flds.createLevels(image.rows, image.cols);
 
         flds.preprocessor->apply(image, flds.shrunk);
-        cv::gpu::integralBuffered(flds.shrunk, flds.hogluv, flds.integralBuffer, s);
+        //cv::gpu::integralBuffered(flds.shrunk, flds.hogluv, flds.integralBuffer, s);
     }
     else
     {
@@ -546,12 +546,12 @@ struct GenricPreprocessor : public cv::softcascade::ChannelsProcessor
         channels.create(frame.rows * (4 + bins), frame.cols, CV_8UC1);
         setZero(channels, s);
 
-        cv::gpu::cvtColor(frame, gray, CV_BGR2GRAY, s);
+        //cv::gpu::cvtColor(frame, gray, CV_BGR2GRAY, s);
         createHogBins(s);
 
         createLuvBins(frame, s);
 
-        cv::gpu::resize(channels, shrunk, cv::Size(), 1.f / shrinkage, 1.f / shrinkage, CV_INTER_AREA, s);
+        //cv::gpu::resize(channels, shrunk, cv::Size(), 1.f / shrinkage, 1.f / shrinkage, CV_INTER_AREA, s);
     }
 
 private:
@@ -566,20 +566,20 @@ private:
         cv::gpu::GpuMat dfdx(fplane, cv::Rect(0,  0, fw, fh));
         cv::gpu::GpuMat dfdy(fplane, cv::Rect(0, fh, fw, fh));
 
-        cv::gpu::Sobel(gray, dfdx, CV_32F, 1, 0, sobelBuf, 3, 1, cv::BORDER_DEFAULT, -1, s);
-        cv::gpu::Sobel(gray, dfdy, CV_32F, 0, 1, sobelBuf, 3, 1, cv::BORDER_DEFAULT, -1, s);
+        //cv::gpu::Sobel(gray, dfdx, CV_32F, 1, 0, sobelBuf, 3, 1, cv::BORDER_DEFAULT, -1, s);
+        //cv::gpu::Sobel(gray, dfdy, CV_32F, 0, 1, sobelBuf, 3, 1, cv::BORDER_DEFAULT, -1, s);
 
         cv::gpu::GpuMat mag(fplane, cv::Rect(0, 2 * fh, fw, fh));
         cv::gpu::GpuMat ang(fplane, cv::Rect(0, 3 * fh, fw, fh));
 
-        cv::gpu::cartToPolar(dfdx, dfdy, mag, ang, true, s);
+        //cv::gpu::cartToPolar(dfdx, dfdy, mag, ang, true, s);
 
         // normalize magnitude to uchar interval and angles to 6 bins
         cv::gpu::GpuMat nmag(fplane, cv::Rect(0, 4 * fh, fw, fh));
         cv::gpu::GpuMat nang(fplane, cv::Rect(0, 5 * fh, fw, fh));
 
-        cv::gpu::multiply(mag, cv::Scalar::all(1.f / (8 *::log(2.0f))), nmag, 1, -1, s);
-        cv::gpu::multiply(ang, cv::Scalar::all(1.f / 60.f),     nang, 1, -1, s);
+        //cv::gpu::multiply(mag, cv::Scalar::all(1.f / (8 *::log(2.0f))), nmag, 1, -1, s);
+        //cv::gpu::multiply(ang, cv::Scalar::all(1.f / 60.f),     nang, 1, -1, s);
 
         //create uchar magnitude
         cv::gpu::GpuMat cmag(channels, cv::Rect(0, fh * HOG_BINS, fw, fh));
@@ -597,7 +597,7 @@ private:
         static const int fw = colored.cols;
         static const int fh = colored.rows;
 
-        cv::gpu::cvtColor(colored, luv, CV_BGR2Luv, s);
+        //cv::gpu::cvtColor(colored, luv, CV_BGR2Luv, s);
 
         std::vector<cv::gpu::GpuMat> splited;
         for(int i = 0; i < LUV_BINS; ++i)
@@ -605,7 +605,7 @@ private:
             splited.push_back(cv::gpu::GpuMat(channels, cv::Rect(0, fh * (7 + i), fw, fh)));
         }
 
-        cv::gpu::split(luv, splited, s);
+        //cv::gpu::split(luv, splited, s);
     }
 
     enum {HOG_BINS = 6, LUV_BINS = 3};
@@ -631,7 +631,7 @@ struct SeparablePreprocessor : public cv::softcascade::ChannelsProcessor
     virtual void apply(InputArray _frame, OutputArray _shrunk, cv::gpu::Stream& s = cv::gpu::Stream::Null())
     {
         const cv::gpu::GpuMat frame = _frame.getGpuMat();
-        cv::gpu::GaussianBlur(frame, bgr, cv::Size(3, 3), -1.0);
+        //cv::gpu::GaussianBlur(frame, bgr, cv::Size(3, 3), -1.0);
 
         _shrunk.create(frame.rows * (4 + bins) / shrinkage, frame.cols / shrinkage, CV_8UC1);
         cv::gpu::GpuMat shrunk = _shrunk.getGpuMat();
@@ -639,7 +639,7 @@ struct SeparablePreprocessor : public cv::softcascade::ChannelsProcessor
         channels.create(frame.rows * (4 + bins), frame.cols, CV_8UC1);
         setZero(channels, s);
 
-        cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
+        //cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
         cv::softcascade::device::gray2hog(gray, channels(cv::Rect(0, 0, bgr.cols, bgr.rows * (bins + 1))), bins);
 
         cv::gpu::GpuMat luv(channels, cv::Rect(0, bgr.rows * (bins + 1), bgr.cols, bgr.rows * 3));
