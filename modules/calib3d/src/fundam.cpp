@@ -130,12 +130,8 @@ public:
         const Point2f* M = m1.ptr<Point2f>();
         const Point2f* m = m2.ptr<Point2f>();
 
-        double LtL[9][9], W[9][1], V[9][9];
-        Mat _LtL( 9, 9, CV_64F, &LtL[0][0] );
-        Mat matW( 9, 1, CV_64F, W );
-        Mat matV( 9, 9, CV_64F, V );
-        Mat _H0( 3, 3, CV_64F, V[8] );
-        Mat _Htemp( 3, 3, CV_64F, V[7] );
+        Matx<double, 9, 9> LtL, V;
+        Vec<double, 9> W;
         Point2d cM(0,0), cm(0,0), sM(0,0), sm(0,0);
 
         for( i = 0; i < count; i++ )
@@ -163,12 +159,9 @@ public:
         sm.x = count/sm.x; sm.y = count/sm.y;
         sM.x = count/sM.x; sM.y = count/sM.y;
 
-        double invHnorm[9] = { 1./sm.x, 0, cm.x, 0, 1./sm.y, cm.y, 0, 0, 1 };
-        double Hnorm2[9] = { sM.x, 0, -cM.x*sM.x, 0, sM.y, -cM.y*sM.y, 0, 0, 1 };
-        Mat _invHnorm( 3, 3, CV_64FC1, invHnorm );
-        Mat _Hnorm2( 3, 3, CV_64FC1, Hnorm2 );
+        Matx33d invHnorm( 1./sm.x, 0, cm.x, 0, 1./sm.y, cm.y, 0, 0, 1 );
+        Matx33d Hnorm2( sM.x, 0, -cM.x*sM.x, 0, sM.y, -cM.y*sM.y, 0, 0, 1 );
 
-        _LtL.setTo(Scalar::all(0));
         for( i = 0; i < count; i++ )
         {
             double x = (m[i].x - cm.x)*sm.x, y = (m[i].y - cm.y)*sm.y;
@@ -178,14 +171,14 @@ public:
             int j, k;
             for( j = 0; j < 9; j++ )
                 for( k = j; k < 9; k++ )
-                    LtL[j][k] += Lx[j]*Lx[k] + Ly[j]*Ly[k];
+                    LtL(j, k) += Lx[j]*Lx[k] + Ly[j]*Ly[k];
         }
-        completeSymm( _LtL );
-        
-        eigen( _LtL, matW, matV );
-        _Htemp = _invHnorm*_H0;
-        _H0 = _Htemp*_Hnorm2;
-        _H0.convertTo(_model, _H0.type(), 1./_H0.at<double>(2,2) );
+        completeSymm( LtL );
+        eigen( LtL, W, V );
+
+        Matx33d Htemp = invHnorm*Matx33d(&V(8,0));
+        Matx33d H0 = Htemp*Hnorm2;
+        Mat(H0).convertTo(_model, CV_64F, 1./H0(2,2) );
         
         return 1;
     }
@@ -197,7 +190,12 @@ public:
         const Point2f* M = m1.ptr<Point2f>();
         const Point2f* m = m2.ptr<Point2f>();
         const double* H = model.ptr<double>();
-        float Hf[] = { (float)H[0], (float)H[1], (float)H[2], (float)H[3], (float)H[4], (float)H[5], (float)H[6], (float)H[7] };
+        float Hf[] =
+        {
+            (float)H[0], (float)H[1], (float)H[2],
+            (float)H[3], (float)H[4], (float)H[5],
+            (float)H[6], (float)H[7]
+        };
 
         _err.create(count, 1, CV_32F);
         float* err = _err.getMat().ptr<float>();
@@ -692,8 +690,7 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
         result = cb->runKernel(m1, m2, F);
         if( _mask.needed() )
         {
-            if( !_mask.fixedSize() )
-                _mask.create(npoints, 1, CV_8U);
+            _mask.create(npoints, 1, CV_8U, -1, true);
             Mat mask = _mask.getMat();
             CV_Assert( (mask.cols == 1 || mask.rows == 1) && (int)mask.total() == npoints );
             mask.setTo(Scalar::all(1));

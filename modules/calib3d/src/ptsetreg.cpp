@@ -182,8 +182,7 @@ public:
 
         if( _mask.needed() )
         {
-            if( !_mask.fixedSize() )
-                _mask.create(count, 1, CV_8U);
+            _mask.create(count, 1, CV_8U, -1, true);
             bestMask0 = bestMask = _mask.getMat();
             CV_Assert( (bestMask.cols == 1 || bestMask.rows == 1) && (int)bestMask.total() == count );
         }
@@ -301,8 +300,7 @@ public:
 
         if( _mask.needed() )
         {
-            if( !_mask.fixedSize() )
-                _mask.create(count, 1, CV_8U);
+            _mask.create(count, 1, CV_8U, -1, true);
             mask0 = mask = _mask.getMat();
             CV_Assert( (mask.cols == 1 || mask.rows == 1) && (int)mask.total() == count );
         }
