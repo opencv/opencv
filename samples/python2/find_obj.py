@@ -9,7 +9,7 @@ USAGE
   --feature  - Feature to use. Can be sift, surf of orb. Append '-flann' to feature name
                 to use Flann-based matcher instead bruteforce.
 
-  Press left mouse button on a feature point to see its mathcing point.
+  Press left mouse button on a feature point to see its matching point.
 '''
 
 import numpy as np
@@ -130,7 +130,8 @@ if __name__ == '__main__':
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
     feature_name = opts.get('--feature', 'sift')
-    try: fn1, fn2 = args
+    try:
+        fn1, fn2 = args
     except:
         fn1 = '../c/box.png'
         fn2 = '../c/box_in_scene.png'
