@@ -7,9 +7,9 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/gpu/gpu.hpp>
 #include <opencv2/video/video.hpp>
-#include <opencv2/legacy/legacy.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 
-#include "utility.h"
+#include "utility.hpp"
 
 using namespace std;
 using namespace cv;
@@ -18,7 +18,6 @@ using namespace cv::gpu;
 enum Method
 {
     MOG,
-    FGD,
     VIBE,
     METHOD_MAX
 };
@@ -26,19 +25,8 @@ enum Method
 const char* method_str[] =
 {
     "MOG",
-    "FGD",
     "VIBE"
 };
-
-namespace cv
-{
-    template <>
-    void Ptr<CvBGStatModel>::delete_obj()
-    {
-        cvReleaseBGStatModel(&obj);
-        obj = 0;
-    }
-}
 
 class App : public BaseApp
 {
@@ -46,246 +34,205 @@ public:
     App();
 
 protected:
-    void process();
-    bool processKey(int key);
-    void printHelp();
+    void runAppLogic();
+    void processAppKey(int key);
+    void printAppHelp();
+    bool parseAppCmdArgs(int& i, int argc, const char* argv[]);
 
 private:
     void displayState(Mat& outImg, double proc_fps, double total_fps);
 
-    Method method;
-    bool useGPU;
-    bool reinitialize;
-
-    int curSource;
-
-    BackgroundSubtractorMOG mog_cpu;
-    MOG_GPU mog_gpu;
-
-    FGDStatModel fgd_gpu;
-    Ptr<CvBGStatModel> fgd_cpu;
-
-    VIBE_GPU vibe_gpu;
+    Method method_;
+    bool useGpu_;
+    int curSource_;
+    bool fullscreen_;
+    bool reinitialize_;
 };
 
 App::App()
 {
-    method = MOG;
-    useGPU = true;
-    reinitialize = true;
-    curSource = 0;
+    method_ = MOG;
+    useGpu_ = true;
+    curSource_ = 0;
+    fullscreen_ = false;
+    reinitialize_ = true;
 }
 
-void App::process()
+void App::runAppLogic()
 {
-    if (sources.empty())
+    if (sources_.empty())
     {
-        cout << "Using default frames source..." << endl;
-        sources.push_back(new VideoSource("data/background_subtraction.avi"));
+        cout << "Using default frames source... \n" << endl;
+        sources_.push_back(FrameSource::video("data/background_subtraction.avi"));
     }
 
-    Mat frame;
-    GpuMat d_frame;
-    IplImage ipl_frame;
+    BackgroundSubtractorMOG mog_cpu;
+    MOG_GPU mog_gpu;
 
-    Mat fgmask;
-    GpuMat d_fgmask;
-    Mat buf;
+    VIBE_GPU vibe_gpu;
 
-    Mat outImg;
-    Mat foreground;
+    Mat frame, fgmask, filterBuf, outImg;
+    GpuMat d_frame, d_fgmask;
 
-    while (!exited)
+    const string wndName = "Background Subtraction Demo";
+
+    if (fullscreen_)
     {
-        int64 total_time = getTickCount();
+        namedWindow(wndName, WINDOW_NORMAL);
+        setWindowProperty(wndName, WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+        setWindowProperty(wndName, WND_PROP_ASPECT_RATIO, CV_WINDOW_FREERATIO);
+    }
 
-        if (reinitialize)
+    while (isActive())
+    {
+        const int64 total_start = getTickCount();
+
+        if (reinitialize_)
         {
-            mog_cpu = cv::BackgroundSubtractorMOG();
+            mog_cpu = BackgroundSubtractorMOG();
             mog_gpu.release();
-
-            fgd_gpu.release();
-            fgd_cpu.release();
 
             vibe_gpu.release();
 
-            sources[curSource]->reset();
+            sources_[curSource_]->reset();
+
+            reinitialize_ = false;
         }
 
-        sources[curSource]->next(frame);
-        d_frame.upload(frame);
-        ipl_frame = frame;
-        frame.copyTo(outImg);
+        sources_[curSource_]->next(frame);
 
-        double total_fps = 0.0;
-        double proc_fps = 0.0;
+        if (useGpu_)
+            d_frame.upload(frame);
 
-        try
+        const int64 proc_start = getTickCount();
+
+        switch (method_)
         {
-            int64 proc_time = getTickCount();
-
-            switch (method)
-            {
-            case MOG:
-                {
-                    if (useGPU)
-                    {
-                        if (reinitialize)
-                            mog_gpu.initialize(d_frame.size(), d_frame.type());
-                        mog_gpu(d_frame, d_fgmask, 0.01f);
-                    }
-                    else
-                    {
-                        if (reinitialize)
-                            mog_cpu.initialize(frame.size(), frame.type());
-                        mog_cpu(frame, fgmask, 0.01);
-                    }
-                    break;
-                }
-            case FGD:
-                {
-                    if (useGPU)
-                    {
-                        if (reinitialize)
-                            fgd_gpu.create(d_frame);
-                        fgd_gpu.update(d_frame);
-                        fgd_gpu.foreground.copyTo(d_fgmask);
-                    }
-                    else
-                    {
-                        if (reinitialize)
-                            fgd_cpu = cvCreateFGDStatModel(&ipl_frame);
-                        cvUpdateBGStatModel(&ipl_frame, fgd_cpu);
-                        Mat(fgd_cpu->foreground).copyTo(fgmask);
-                    }
-                    break;
-                }
-            case VIBE:
-                {
-                    if (useGPU)
-                    {
-                        if (reinitialize)
-                            vibe_gpu.initialize(d_frame);
-                        vibe_gpu(d_frame, d_fgmask);
-                    }
-                    break;
-                }
-            }
-
-            proc_fps = getTickFrequency() / (getTickCount() - proc_time);
-
-            if (useGPU)
-                d_fgmask.download(fgmask);
-
-            filterSpeckles(fgmask, 0, 100, 1, buf);
-
-            add(outImg, cv::Scalar(100, 100, 0), outImg, fgmask);
-
-            foreground.create(frame.size(), frame.type());
-            foreground.setTo(0);
-            frame.copyTo(foreground, fgmask);
-
-            total_fps = getTickFrequency() / (getTickCount() - total_time);
-
-            reinitialize = false;
-        }
-        catch (const cv::Exception&)
+        case MOG:
         {
-            string msg = "Not enough memory";
-
-            int fontFace = cv::FONT_HERSHEY_DUPLEX;
-            int fontThickness = 2;
-            double fontScale = 0.8;
-
-            Size msgSize = getTextSize(msg, fontFace, fontScale, fontThickness, 0);
-
-            Point org(outImg.cols / 2 - msgSize.width / 2, outImg.rows / 2 - msgSize.height / 2);
-
-            putText(outImg, msg, org, fontFace, fontScale, CV_RGB(0, 0, 0), 5 * fontThickness / 2, 16);
-            putText(outImg, msg, org, fontFace, fontScale, CV_RGB(255, 0, 0), fontThickness, 16);
-
-            foreground.create(frame.size(), frame.type());
-            foreground.setTo(0);
-            cv::putText(foreground, msg, org, fontFace, fontScale, CV_RGB(0, 0, 0), 5 * fontThickness / 2, 16);
-            cv::putText(foreground, msg, org, fontFace, fontScale, CV_RGB(255, 0, 0), fontThickness, 16);
+            if (useGpu_)
+                mog_gpu(d_frame, d_fgmask, 0.01f);
+            else
+                mog_cpu(frame, fgmask, 0.01);
+            break;
         }
+        case VIBE:
+        {
+            if (useGpu_)
+                vibe_gpu(d_frame, d_fgmask);
+            break;
+        }
+        default:
+            ;
+        }
+
+        const double proc_fps = getTickFrequency() / (getTickCount() - proc_start);
+
+        if (useGpu_)
+            d_fgmask.download(fgmask);
+
+        filterSpeckles(fgmask, 0, 100, 1, filterBuf);
+
+        outImg.create(frame.rows, frame.cols * 2, CV_8UC3);
+
+        Mat left = outImg(Rect(0, 0, frame.cols, frame.rows));
+        Mat right = outImg(Rect(frame.cols, 0, frame.cols, frame.rows));
+
+        frame.copyTo(left);
+        add(left, cv::Scalar(100, 100, 0), left, fgmask);
+
+        right.setTo(0);
+        frame.copyTo(right, fgmask);
+
+        const double total_fps = getTickFrequency() / (getTickCount() - total_start);
 
         displayState(outImg, proc_fps, total_fps);
 
-        imshow("Background Subtraction Demo", outImg);
-        imshow("Foreground", foreground);
+        imshow(wndName, outImg);
 
-        processKey(waitKey(30));
+        wait(30);
     }
 }
 
-void App::displayState(Mat& frame, double proc_fps, double total_fps)
+void App::displayState(Mat& outImg, double proc_fps, double total_fps)
 {
     const Scalar fontColorRed = CV_RGB(255, 0, 0);
 
+    ostringstream txt;
     int i = 0;
 
-    ostringstream txt;
-    txt.str(""); txt << "Source size: " << frame.cols << 'x' << frame.rows;
-    printText(frame, txt.str(), i++);
+    txt.str(""); txt << "Source size: " << outImg.cols / 2 << 'x' << outImg.rows;
+    printText(outImg, txt.str(), i++);
 
-    txt.str(""); txt << "Method: " << method_str[method] << (useGPU ? " CUDA" : " CPU");
-    printText(frame, txt.str(), i++);
+    txt.str(""); txt << "Method: " << method_str[method_] << (useGpu_ ? " CUDA" : " CPU");
+    printText(outImg, txt.str(), i++);
 
-    txt.str(""); txt << "Process FPS: " << fixed << setprecision(1) << proc_fps;
-    printText(frame, txt.str(), i++);
+    txt.str(""); txt << "FPS (BG only): " << fixed << setprecision(1) << proc_fps;
+    printText(outImg, txt.str(), i++);
 
-    txt.str(""); txt << "Total FPS: " << fixed << setprecision(1) << total_fps;
-    printText(frame, txt.str(), i++);
+    txt.str(""); txt << "FPS (Total): " << fixed << setprecision(1) << total_fps;
+    printText(outImg, txt.str(), i++);
 
-    printText(frame, "M - switch method", i++, fontColorRed);
-    printText(frame, "Space - switch CUDA/CPU mode", i++, fontColorRed);
-    if (sources.size() > 1)
-        printText(frame, "N - next source", i++, fontColorRed);
+    printText(outImg, "Space - switch CUDA / CPU mode", i++, fontColorRed);
+    printText(outImg, "M - switch method", i++, fontColorRed);
+    if (sources_.size() > 1)
+        printText(outImg, "N - switch source", i++, fontColorRed);
 }
 
-bool App::processKey(int key)
+void App::processAppKey(int key)
 {
-    if (BaseApp::processKey(key))
-        return true;
-
     switch (toupper(key & 0xff))
     {
+    case 32 /*space*/:
+        if (method_ != VIBE)
+        {
+            useGpu_ = !useGpu_;
+            reinitialize_ = true;
+            cout << "Switch mode to " << (useGpu_ ? "CUDA" : "CPU") << endl;
+        }
+        break;
+
     case 'M':
-        method = static_cast<Method>((method + 1) % METHOD_MAX);
-        if (method == VIBE)
-            useGPU = true;
-        reinitialize = true;
-        cout << "Switch method to " << method_str[method] << endl;
+        method_ = static_cast<Method>((method_ + 1) % METHOD_MAX);
+        if (method_ == VIBE)
+            useGpu_ = true;
+        reinitialize_ = true;
+        cout << "Switch method to " << method_str[method_] << endl;
         break;
 
     case 'N':
-        curSource = (curSource + 1) % sources.size();
-        reinitialize = true;
-        cout << "Switch source to " << curSource << endl;
-        break;
-
-    case 32 /*space*/:
-        if (method != VIBE)
+        if (sources_.size() > 1)
         {
-            useGPU = !useGPU;
-            reinitialize = true;
-            cout << "Switch mode to " << (useGPU ? " CUDA" : " CPU") << endl;
+            curSource_ = (curSource_ + 1) % sources_.size();
+            reinitialize_ = true;
+            cout << "Switch source to " << curSource_ << endl;
         }
-
-    default:
-        return false;
+        break;
     }
-
-    return true;
 }
 
-void App::printHelp()
+void App::printAppHelp()
 {
-    cout << "This sample demonstrates different Background Subtraction Algoritms" << endl;
-    cout << "Usage: demo_background_subtraction [options]" << endl;
-    cout << "Options:" << endl;
-    BaseApp::printHelp();
+    cout << "This sample demonstrates different Background Subtraction algorithms \n" << endl;
+
+    cout << "Usage: demo_background_subtraction [options] \n" << endl;
+
+    cout << "Launch Options: \n"
+         << "  --fullscreen \n"
+         << "       Launch in fullscreen mode \n" << endl;
+}
+
+bool App::parseAppCmdArgs(int& i, int, const char* argv[])
+{
+    string arg(argv[i]);
+
+    if (arg == "--fullscreen")
+    {
+        fullscreen_ = true;
+        return true;
+    }
+
+    return false;
 }
 
 RUN_APP(App)

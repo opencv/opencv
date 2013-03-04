@@ -9,7 +9,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/gpu/gpu.hpp>
 
-#include "utility.h"
+#include "utility.hpp"
 
 using namespace std;
 using namespace cv;
@@ -21,54 +21,51 @@ public:
     App();
 
 protected:
-    void process();
-    bool processKey(int key);
-    void printHelp();
+    void runAppLogic();
+    void processAppKey(int key);
+    void printAppHelp();
+    bool parseAppCmdArgs(int& i, int argc, const char* argv[]);
 
 private:
-    void displayState(Mat& frame, double proc_fps, double total_fps);
+    void displayState(Mat& outImg, double proc_fps, double total_fps);
 
-    bool useGPU;
-    bool colorOutput;
-    bool showHelp;
-    bool showSource;
-    bool videoSource;
+    vector< Ptr<PairFrameSource> > pairSources_;
 
-    StereoBM     bm_cpu;
-    StereoBM_GPU bm_gpu;
-
-    vector< Ptr<PairFrameSource> > stereoSources;
-    size_t curSource;
+    bool useGpu_;
+    bool colorOutput_;
+    bool showSource_;
+    int curSource_;
+    bool fullscreen_;
 };
 
 App::App()
 {
-    useGPU = true;
-    colorOutput = false;
-    showHelp = false;
-    showSource = false;
-    videoSource = true;
-
-    bm_gpu.ndisp = 256;
-    bm_cpu.init(StereoBM::BASIC_PRESET, bm_gpu.ndisp, bm_gpu.winSize);
-
-    curSource = 0;
+    useGpu_ = true;
+    colorOutput_ = true;
+    showSource_ = true;
+    curSource_ = 0;
+    fullscreen_ = true;
 }
 
-void App::process()
+void App::runAppLogic()
 {
-    if (!sources.empty() && (sources.size() % 2 == 0))
+    if (sources_.size() > 1)
     {
-        for (size_t i = 0; i < sources.size(); i += 2)
-            stereoSources.push_back(PairFrameSource::get(sources[i], sources[i+1]));
+        for (size_t i = 0; (i + 1) < sources_.size(); i += 2)
+            pairSources_.push_back(PairFrameSource::create(sources_[i], sources_[i+1]));
     }
     else
     {
-        cout << "Using default frames source..." << endl;
+        cout << "Using default frames source... \n" << endl;
 
-        stereoSources.push_back(PairFrameSource::get(new VideoSource("data/stereo_matching_L.avi"),
-                                                     new VideoSource("data/stereo_matching_R.avi")));
+        pairSources_.push_back(PairFrameSource::create(FrameSource::video("data/stereo_matching_L.avi"),
+                                                       FrameSource::video("data/stereo_matching_R.avi")));
     }
+
+    StereoBM_GPU bm_gpu;
+    bm_gpu.ndisp = 256;
+    StereoBM bm_cpu;
+    bm_cpu.init(StereoBM::BASIC_PRESET, bm_gpu.ndisp, bm_gpu.winSize);
 
     Mat left_src, right_src;
     Mat left, right;
@@ -78,178 +75,167 @@ void App::process()
     Mat disp, disp_16s;
     GpuMat d_disp, d_img_to_show;
 
-    Mat img_to_show;
+    Mat outImg;
 
-    namedWindow("BM Stereo Matching Demo", WINDOW_NORMAL);
-    setWindowProperty("BM Stereo Matching Demo", WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+    const string wndName = "Stereo Matching Demo";
 
-    while (!exited)
+    if (fullscreen_)
     {
-        int64 start = getTickCount();
+        namedWindow(wndName, WINDOW_NORMAL);
+        setWindowProperty(wndName, WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+        setWindowProperty(wndName, WND_PROP_ASPECT_RATIO, CV_WINDOW_FREERATIO);
+    }
 
-        stereoSources[curSource]->next(left_src, right_src);
+    while (isActive())
+    {
+        const int64 total_start = getTickCount();
+
+        pairSources_[curSource_]->next(left_src, right_src);
 
         makeGray(left_src, left);
         makeGray(right_src, right);
 
-        d_left.upload(left);
-        d_right.upload(right);
+        if (useGpu_)
+        {
+            d_left.upload(left);
+            d_right.upload(right);
+        }
 
-        int64 proc_start = getTickCount();
-        if (useGPU)
+        const int64 proc_start = getTickCount();
+
+        if (useGpu_)
             bm_gpu(d_left, d_right, d_disp);
         else
             bm_cpu(left, right, disp_16s);
-        double proc_fps = getTickFrequency()  / (getTickCount() - proc_start);
 
-        if (colorOutput)
+        const double proc_fps = getTickFrequency()  / (getTickCount() - proc_start);
+
+        if (colorOutput_)
         {
-            if (!useGPU)
+            if (!useGpu_)
             {
                 disp_16s.convertTo(disp, CV_8U, 1.0 / 16.0);
                 d_disp.upload(disp);
             }
 
             drawColorDisp(d_disp, d_img_to_show, bm_gpu.ndisp);
-            d_img_to_show.download(img_to_show);
+            d_img_to_show.download(outImg);
         }
         else
         {
-            if (!useGPU)
+            if (!useGpu_)
             {
                 disp_16s.convertTo(disp, CV_8U, 255.0 / (16.0 * bm_gpu.ndisp));
-                cvtColor(disp, img_to_show, COLOR_GRAY2BGR);
+                cvtColor(disp, outImg, COLOR_GRAY2BGR);
             }
             else
             {
                 d_disp.convertTo(d_disp, d_disp.depth(), 255.0 / bm_gpu.ndisp);
                 gpu::cvtColor(d_disp, d_img_to_show, COLOR_GRAY2BGR);
-                d_img_to_show.download(img_to_show);
+                d_img_to_show.download(outImg);
             }
         }
 
-        if (showSource)
+        if (showSource_)
         {
             resize(left_src, small_image, cv::Size(), 0.25, 0.25);
-            Mat roi = img_to_show(cv::Rect(img_to_show.cols - small_image.cols, 0, small_image.cols, small_image.rows));
+            Mat roi = outImg(cv::Rect(outImg.cols - small_image.cols, 0, small_image.cols, small_image.rows));
 
-            if (colorOutput)
+            if (colorOutput_)
                 cvtColor(small_image, roi, cv::COLOR_BGR2BGRA);
             else
                 small_image.copyTo(roi);
         }
 
-        double total_fps = getTickFrequency()  / (getTickCount() - start);
+        const double total_fps = getTickFrequency()  / (getTickCount() - total_start);
 
-        displayState(img_to_show, proc_fps, total_fps);
+        displayState(outImg, proc_fps, total_fps);
 
-        imshow("BM Stereo Matching Demo", img_to_show);
+        imshow(wndName, outImg);
 
-        processKey(waitKey(3));
+        wait(30);
     }
 }
 
-void App::displayState(cv::Mat& frame, double proc_fps, double total_fps)
+void App::displayState(cv::Mat& outImg, double proc_fps, double total_fps)
 {
     const Scalar fontColorRed = CV_RGB(255, 0, 0);
 
+    ostringstream txt;
     int i = 0;
 
-    ostringstream txt;
-    txt.str(""); txt << "Source size: " << frame.cols << 'x' << frame.rows;
-    printText(frame, txt.str(), i++);
+    txt.str(""); txt << "Source size: " << outImg.cols << 'x' << outImg.rows;
+    printText(outImg, txt.str(), i++);
 
-    printText(frame, useGPU ? "Mode: CUDA" : "Mode: CPU", i++);
+    printText(outImg, useGpu_ ? "Mode: CUDA" : "Mode: CPU", i++);
 
     txt.str(""); txt << "FPS (Stereo only): " << fixed << setprecision(1) << proc_fps;
-    printText(frame, txt.str(), i++);
+    printText(outImg, txt.str(), i++);
 
     txt.str(""); txt << "FPS (total): " << fixed << setprecision(1) << total_fps;
-    printText(frame, txt.str(), i++);
+    printText(outImg, txt.str(), i++);
 
-    if (!showHelp)
-        printText(frame, "H - toggle hotkeys help", i++, fontColorRed);
-    else
-    {
-        printText(frame, "Space - switch GPU / CPU", i++, fontColorRed);
-        printText(frame, "1/Q - increase/decrease disparities number", i++, fontColorRed);
-        printText(frame, "2/W - increase/decrease window size", i++, fontColorRed);
-        printText(frame, "C - switch color/gray output", i++, fontColorRed);
-        printText(frame, "S - show/hide source frame", i++, fontColorRed);
-        if (stereoSources.size() > 1)
-            printText(frame, "N - next source", i++, fontColorRed);
-    }
+    printText(outImg, "Space - switch CUDA / CPU mode", i++, fontColorRed);
+    printText(outImg, "C - switch Color / Gray mode", i++, fontColorRed);
+    printText(outImg, "S - show / hide source frame", i++, fontColorRed);
+    if (pairSources_.size() > 1)
+        printText(outImg, "N - switch source", i++, fontColorRed);
 }
 
-bool App::processKey(int key)
+void App::processAppKey(int key)
 {
-    if (BaseApp::processKey(key))
-        return true;
-
     switch (toupper(key & 0xff))
     {
-    case 32:
-        useGPU = !useGPU;
-        cout << "Switched to " << (useGPU ? "CUDA" : "CPU") << " mode" << endl;
-        break;
-
-    case 'H':
-        showHelp = !showHelp;
-        break;
-
-    case '1':
-        bm_gpu.ndisp = min(bm_gpu.ndisp + 16, 256);
-        cout << "ndisp: " << bm_gpu.ndisp << endl;
-        bm_cpu.init(StereoBM::BASIC_PRESET, bm_gpu.ndisp, bm_gpu.winSize);
-        break;
-
-    case 'Q':
-        bm_gpu.ndisp = max(bm_gpu.ndisp - 16, 16);
-        cout << "ndisp: " << bm_gpu.ndisp << endl;
-        bm_cpu.init(StereoBM::BASIC_PRESET, bm_gpu.ndisp, bm_gpu.winSize);
-        break;
-
-    case '2':
-        bm_gpu.winSize = min(bm_gpu.winSize + 2, 51);
-        bm_cpu.init(StereoBM::BASIC_PRESET, bm_gpu.ndisp, bm_gpu.winSize);
-        cout << "win_size: " << bm_gpu.winSize << endl;
-        break;
-
-    case 'W':
-        bm_gpu.winSize = max(bm_gpu.winSize - 2, 5);
-        bm_cpu.init(StereoBM::BASIC_PRESET, bm_gpu.ndisp, bm_gpu.winSize);
-        cout << "win_size: " << bm_gpu.winSize << endl;
+    case 32 /*space*/:
+        useGpu_ = !useGpu_;
+        cout << "Switch mode to " << (useGpu_ ? "CUDA" : "CPU") << endl;
         break;
 
     case 'C':
-        colorOutput = !colorOutput;
-        cout << (colorOutput ? "Color output" : "Gray output") << endl;
+        colorOutput_ = !colorOutput_;
+        cout << "Switch mode to " << (colorOutput_ ? "Color" : "Gray") << endl;
         break;
 
     case 'S':
-        showSource = !showSource;
-        cout << (showSource ? "Show source" : "Hide source") << endl;
+        showSource_ = !showSource_;
+        cout << (showSource_ ? "Show source" : "Hide source") << endl;
         break;
 
     case 'N':
-        curSource = (curSource + 1) % stereoSources.size();
-        stereoSources[curSource]->reset();
-        cout << "Switch source to " << curSource << endl;
+        if (pairSources_.size() > 1)
+        {
+            curSource_ = (curSource_ + 1) % pairSources_.size();
+            pairSources_[curSource_]->reset();
+            cout << "Switch source to " << curSource_ << endl;
+        }
         break;
-
-    default:
-        return false;
     }
-
-    return true;
 }
 
-void App::printHelp()
+void App::printAppHelp()
 {
-    cout << "This sample demonstrates BM Stereo Matching algorithm" << endl;
-    cout << "Usage: demo_bm_stereo_matching [options]" << endl;
-    cout << "Options:" << endl;
-    BaseApp::printHelp();
+    cout << "This sample demonstrates Stereo Matching algorithm \n" << endl;
+
+    cout << "Usage: demo_stereo_matching [options] \n" << endl;
+
+    cout << "Launch Options: \n"
+         << "  --windowed \n"
+         << "       Launch in windowed mode\n" << endl;
+}
+
+bool App::parseAppCmdArgs(int& i, int, const char* argv[])
+{
+    string arg = argv[i];
+
+    if (arg == "--windowed")
+    {
+        fullscreen_ = false;
+        return true;
+    }
+    else
+        return false;
+
+    return true;
 }
 
 RUN_APP(App)

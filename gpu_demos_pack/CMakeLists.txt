@@ -9,7 +9,10 @@ include_directories("${CMAKE_SOURCE_DIR}/utility")
 
 add_subdirectory(utility)
 
-set(CPACK_PACKAGE_EXECUTABLES "" CACHE INTERNAL "" FORCE)
+if(WIN32)
+    set(CPACK_PACKAGE_EXECUTABLES "" CACHE INTERNAL "" FORCE)
+endif()
+
 include(cmake/OpenCVGpuDemo.cmake)
 
 add_subdirectory(demos)

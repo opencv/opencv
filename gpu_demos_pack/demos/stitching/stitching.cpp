@@ -9,18 +9,24 @@
 
 #include <tbb/tbb.h>
 
-#include "utility.h"
+#include "utility.hpp"
+
+using namespace std;
+using namespace cv;
+using namespace cv::gpu;
+using namespace tbb;
 
 // 0 - wait
 // 1 - process
 // 2 - finished
-tbb::atomic<int> taskState;
-tbb::atomic<int> stopThread;
+atomic<int> taskState;
 
-std::vector<cv::Mat> imgs;
-cv::Mat final_pano;
+atomic<int> stopThread;
 
-struct StitchingTask : tbb::task
+vector<Mat> imgs;
+Mat final_pano;
+
+struct StitchingTask : task
 {
     volatile bool useGpu;
     volatile double gpu_time;
@@ -30,21 +36,21 @@ struct StitchingTask : tbb::task
     {
     }
 
-    tbb::task* execute()
+    task* execute()
     {
         while (taskState != 1)
-            tbb::this_tbb_thread::sleep(tbb::tick_count::interval_t(0.03));
+            this_tbb_thread::sleep(tick_count::interval_t(0.03));
 
-        int64 proc_start = cv::getTickCount();
+        const int64 proc_start = getTickCount();
         {
-            cv::Stitcher stitcher = cv::Stitcher::createDefault(useGpu);
+            Stitcher stitcher = Stitcher::createDefault(useGpu);
 
             stitcher.estimateTransform(imgs);
 
             stitcher.composePanorama(imgs, final_pano);
         }
 
-        double pano_time = (cv::getTickCount() - proc_start) / cv::getTickFrequency();
+        const double pano_time = (getTickCount() - proc_start) / getTickFrequency();
         if (useGpu)
             gpu_time = pano_time;
         else
@@ -66,56 +72,58 @@ public:
     App();
 
 protected:
-    void process();
-    bool processKey(int key);
-    void printHelp();
+    void runAppLogic();
+    void printAppHelp();
 
 private:
-    std::vector< std::pair<std::string, int> > panoSources;
-    int panoIdx;
+    std::vector< std::pair<std::string, int> > panoSources_;
+    int panoIdx_;
 };
 
 App::App()
 {
-    panoSources.push_back(std::make_pair("data/stitching_0%d.jpg", 9));
-    panoIdx = 0;
+    panoSources_.push_back(make_pair("data/stitching_0%d.jpg", 9));
+    panoIdx_ = 0;
 }
 
-void App::process()
+void App::runAppLogic()
 {
-    sources.clear();
-    for (size_t i = 0; i < panoSources.size(); ++i)
-        sources.push_back(new ImagesVideoSource(panoSources[i].first));
+    sources_.clear();
+    for (size_t i = 0; i < panoSources_.size(); ++i)
+        sources_.push_back(FrameSource::imagesPattern(panoSources_[i].first));
 
     const int w_width = 1920;
     const int w_height = 1080;
     const int w_grid_border = 30;
     const int w_half_border = w_grid_border >> 1;
 
-    cv::namedWindow("Stitching Demo", CV_WINDOW_NORMAL);
-    cvSetWindowProperty("Stitching Demo", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
-    cvSetWindowProperty("Stitching Demo", CV_WND_PROP_ASPECTRATIO, CV_WINDOW_KEEPRATIO);
-
     int track = 10;
 
     taskState.store(0);
     stopThread.store(0);
-    StitchingTask* task = new(tbb::task::allocate_root()) StitchingTask;
-    tbb::task::enqueue(*task);
 
-    cv::Mat imgGrid(w_height, w_width, CV_8UC3, cv::Scalar::all(0));
-    cv::Mat imgGridForDraw;
+    StitchingTask* task = new(task::allocate_root()) StitchingTask;
+    task::enqueue(*task);
 
-    while(!exited)
+    Mat imgGrid(w_height, w_width, CV_8UC3, Scalar::all(0));
+    Mat imgGridForDraw;
+
+    const string wndName = "Stitching Demo";
+
+    namedWindow(wndName, WINDOW_NORMAL);
+    setWindowProperty(wndName, WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+    setWindowProperty(wndName, WND_PROP_ASPECT_RATIO, CV_WINDOW_KEEPRATIO);
+
+    while(isActive())
     {
         if (taskState == 0)
         {
             imgs.clear();
             int frames_counter = 0;
-            while (frames_counter++ < panoSources[panoIdx].second)
+            while (frames_counter++ < panoSources_[panoIdx_].second)
             {
-                cv::Mat frame;
-                sources[panoIdx]->next(frame);
+                Mat frame;
+                sources_[panoIdx_]->next(frame);
                 if (frame.empty()) break;
                 imgs.push_back(frame.clone());
             }
@@ -127,7 +135,7 @@ void App::process()
             int t = static_cast<int>(src_size) - w * h;
             int t_com = 0;
 
-            imgGrid.setTo(cv::Scalar::all(0));
+            imgGrid.setTo(Scalar::all(0));
 
             int w_cell = (w_width - 2 * w_grid_border) / (w + (t ? 1 : 0));
             int h_cell = (w_height - 2 * w_grid_border) / h;
@@ -140,84 +148,87 @@ void App::process()
                 {
                     int start_sub_pos = ( t > 0 && t_com >= t) ? (w_cell >> 1): 0;
                     if (k >= src_size ) break;
-                    const cv::Mat sub(imgGrid, cv::Rect(i + w_half_border  + start_sub_pos, j + w_half_border, w_cell - w_half_border, h_cell - w_half_border));
-                    cv::resize(imgs[k++], sub, sub.size());
+                    const Mat sub(imgGrid, Rect(i + w_half_border  + start_sub_pos, j + w_half_border, w_cell - w_half_border, h_cell - w_half_border));
+                    resize(imgs[k++], sub, sub.size());
                     if (t) t_com++;
                 }
             }
 
-            panoIdx = (panoIdx + 1) % panoSources.size();
+            panoIdx_ = (panoIdx_ + 1) % panoSources_.size();
 
             imgGrid.copyTo(imgGridForDraw);
 
             taskState.store(1);
         }
 
-        std::ostringstream msg;
+        ostringstream msg;
         if (track <= 10)
         {
-            cv::imshow("Stitching Demo", imgGridForDraw);
-            cv::displayOverlay("Stitching Demo", "GTC presentation stitching OpenCV GPU vs. CPU comparison", 1);
+            imshow(wndName, imgGridForDraw);
+            displayOverlay(wndName, "GTC presentation stitching OpenCV GPU vs. CPU comparison", 1);
 
             msg << "Sources images: " << imgs.size();
 
-            addText(imgGridForDraw, msg.str(), cv::Point(w_width >> 2 , w_height >> 2 ),
-                    cv::fontQt("CV_FONT_BLACK", 40, cv::Scalar(255, 255, 255, 0)));
+            addText(imgGridForDraw, msg.str(), Point(w_width >> 2 , w_height >> 2 ),
+                    fontQt("CV_FONT_BLACK", 40, Scalar(255, 255, 255, 0)));
             msg.str("");
 
             msg << "Images resolution: " << cvRound(imgs[0].cols * imgs[0].rows / 100000)/10.0f << " Mp";
-            addText(imgGridForDraw, msg.str(), cv::Point( w_width >> 2, (w_height >> 2) + 70),
-                    cv::fontQt("CV_FONT_BLACK", 40, cv::Scalar(255, 255, 255, 0)));
+            addText(imgGridForDraw, msg.str(), Point( w_width >> 2, (w_height >> 2) + 70),
+                    fontQt("CV_FONT_BLACK", 40, Scalar(255, 255, 255, 0)));
             msg.str("");
 
             msg << "Used " << ( task->useGpu ? "GPU" : "CPU") << " version";
-            addText(imgGridForDraw, msg.str(), cv::Point(w_width >> 2, (w_height >> 2) + 140),
-                    cv::fontQt("CV_FONT_BLACK", 40, cv::Scalar(255, 255, 255, 0)));
+            addText(imgGridForDraw, msg.str(), Point(w_width >> 2, (w_height >> 2) + 140),
+                    fontQt("CV_FONT_BLACK", 40, Scalar(255, 255, 255, 0)));
             msg.str("");
-            cv::imshow("Stitching Demo", imgGridForDraw);
+
+            imshow(wndName, imgGridForDraw);
         }
 
-        cv::Mat prog(imgGridForDraw, cv::Rect(w_width >> 2, (w_height >> 2) + 210, track, 40));
-        prog.setTo(cv::Scalar(255,255,255,0));
-        cv::imshow("Stitching Demo", imgGridForDraw);
+        Mat prog(imgGridForDraw, Rect(w_width >> 2, (w_height >> 2) + 210, track, 40));
+        prog.setTo(Scalar(255,255,255,0));
+        imshow(wndName, imgGridForDraw);
 
-        processKey(cv::waitKey(300));
+        wait(300);
+
         track +=10;
         if (track >= (w_width >> 1))
             track = w_width >> 1;
 
         if (taskState == 2)
         {
-            cv::Mat dst(w_height, w_width, CV_8UC3, cv::Scalar::all(0));
+            Mat dst(w_height, w_width, CV_8UC3, Scalar::all(0));
             int sub_rows = (w_height * final_pano.rows) / final_pano.cols;
-            cv::Mat sub_dst(dst, cv::Rect(0, (w_height - sub_rows) >> 1, w_width, sub_rows ));
-            cv::resize(final_pano, sub_dst, sub_dst.size());
+            Mat sub_dst(dst, Rect(0, (w_height - sub_rows) >> 1, w_width, sub_rows ));
+            resize(final_pano, sub_dst, sub_dst.size());
 
             msg << "Panorama resolution: " << cvRound(final_pano.cols * final_pano.rows / 100000)/10.0f << " Mp";
-            addText(dst, msg.str(), cv::Point(w_width >> 2 , w_height >> 4 ),
-                    cv::fontQt("CV_FONT_BLACK", 40, cv::Scalar(255, 255, 255, 0)));
+            addText(dst, msg.str(), Point(w_width >> 2 , w_height >> 4 ),
+                    fontQt("CV_FONT_BLACK", 40, Scalar(255, 255, 255, 0)));
             msg.str("");
-            cv::Scalar time_color;
+
+            Scalar time_color;
             if (task->useGpu)
-                time_color = cv::Scalar(124,250,0,0);
+                time_color = Scalar(124,250,0,0);
             else
-                time_color = cv::Scalar(255,19,19,0);
+                time_color = Scalar(255,19,19,0);
 
             msg << "Panorama composition time: " << (task->useGpu ? task->gpu_time : task->cpu_time)  << " sec";
-            addText(dst, msg.str(), cv::Point( w_width >> 2, (w_height >> 4) + 70),
-                    cv::fontQt("CV_FONT_BLACK", 40, time_color));
+            addText(dst, msg.str(), Point( w_width >> 2, (w_height >> 4) + 70),
+                    fontQt("CV_FONT_BLACK", 40, time_color));
             msg.str("");
 
             if (task->useGpu)
             {
                 msg << "GPU optimization speedup: " << task->cpu_time / task->gpu_time << "x";
-                addText(dst, msg.str(), cv::Point(w_width >> 2, (w_height >> 4) + 140),
-                    cv::fontQt("CV_FONT_BLACK", 40, cv::Scalar(255, 19, 19, 0)));
+                addText(dst, msg.str(), Point(w_width >> 2, (w_height >> 4) + 140),
+                        fontQt("CV_FONT_BLACK", 40, Scalar(255, 19, 19, 0)));
                 msg.str("");
             }
 
-            cv::imshow("Stitching Demo", dst);
-            processKey(cv::waitKey(10000));
+            imshow(wndName, dst);
+            wait(10000);
 
             track = 10;
 
@@ -231,30 +242,15 @@ void App::process()
             }
         }
     }
+
+    stopThread.store(1);
 }
 
-bool App::processKey(int key)
+void App::printAppHelp()
 {
-    switch (key & 0xff)
-    {
-    case 27:
-        exited = true;
-        stopThread.store(1);
-        break;
+    cout << "This sample demonstrates Rotation model images stitcher \n" << endl;
 
-    default:
-        return BaseApp::processKey(key);
-    }
-
-    return true;
-}
-
-void App::printHelp()
-{
-    std::cout << "This sample demonstrates Rotation model images stitcher" << std::endl;
-    std::cout << "Usage: demo_stereo_matching [options]" << std::endl;
-    std::cout << "Options:" << std::endl;
-    BaseApp::printHelp();
+    cout << "Usage: demo_stereo_matching [options] \n" << endl;
 }
 
 RUN_APP(App)

@@ -11,7 +11,7 @@
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
-#include "utility.h"
+#include "utility.hpp"
 
 using namespace std;
 using namespace cv;
@@ -46,10 +46,10 @@ public:
     App();
 
 protected:
-    void process();
-    bool processKey(int key);
-    bool parseCmdArgs(int& i, int argc, const char* argv[]);
-    void printHelp();
+    void runAppLogic();
+    void processAppKey(int key);
+    void printAppHelp();
+    bool parseAppCmdArgs(int& i, int argc, const char* argv[]);
 
 private:
     void calcKeypoints(const Mat& img, const GpuMat& d_img, vector<KeyPoint>& keypoints, Mat& descriptors, GpuMat& d_descriptors);
@@ -58,120 +58,125 @@ private:
                const Mat& descriptors2, const GpuMat& d_descriptors2,
                vector<DMatch>& matches);
 
-    void displayState(Mat& frame, double detect_fps, double match_fps, double total_fps);
+    void displayState(Mat& outImg, Size size, double detect_fps, double match_fps, double total_fps);
 
-    vector<Object> objects;
+    vector<Object> objects_;
 
-    bool useGPU;
-    bool showCorrespondences;
-    int curSource;
+    bool useGpu_;
+    bool showCorrespondences_;
+    int curSource_;
+    bool fullscreen_;
 
-    SURF_GPU d_surf;
-    SURF surf;
+    SURF cpu_surf_;
+    SURF_GPU gpu_surf_;
 
-    BFMatcher matcher;
-    BFMatcher_GPU d_matcher;
-    GpuMat trainIdx, distance, allDist;
+    BFMatcher cpu_matcher_;
+    BFMatcher_GPU gpu_matcher_;
+    GpuMat trainIdx_, distance_, allDist_;
+
+    vector< vector<DMatch> > matchesTbl_;
 };
 
 App::App() :
-    d_surf(500),
-    surf(500),
-    matcher(NORM_L2),
-    d_matcher(NORM_L2)
+    gpu_surf_(500),
+    cpu_surf_(500),
+    cpu_matcher_(NORM_L2),
+    gpu_matcher_(NORM_L2)
 {
-    useGPU = true;
-    showCorrespondences = true;
-    curSource = 0;
+    useGpu_ = true;
+    showCorrespondences_ = true;
+    curSource_ = 0;
+    fullscreen_ = true;
 }
 
-void App::process()
+void App::runAppLogic()
 {
-    if (objects.empty())
+    if (objects_.empty())
     {
-        cout << "Loading default objects..." << endl;
+        cout << "Loading default objects... \n" << endl;
 
-        objects.push_back(Object("opengl", imread("data/features2d_opengl.jpg"), CV_RGB(0, 255, 0)));
-        objects.push_back(Object("java", imread("data/features2d_java.jpg"), CV_RGB(255, 0, 0)));
-        objects.push_back(Object("qt4", imread("data/features2d_qt4.jpg"), CV_RGB(0, 0, 255)));
+        objects_.push_back(Object("opengl", imread("data/features2d_opengl.jpg"), CV_RGB(0, 255, 0)));
+        objects_.push_back(Object("java", imread("data/features2d_java.jpg"), CV_RGB(255, 0, 0)));
+        objects_.push_back(Object("qt4", imread("data/features2d_qt4.jpg"), CV_RGB(0, 0, 255)));
     }
 
-    if (sources.empty())
+    if (sources_.empty())
     {
-        cout << "Loading default frames source..." << endl;
+        cout << "Loading default frames source... \n" << endl;
 
-        sources.push_back(new ImageSource("data/features2d_1.jpg"));
-        sources.push_back(new ImageSource("data/features2d_2.jpg"));
-        sources.push_back(new ImageSource("data/features2d_3.jpg"));
-        sources.push_back(new ImageSource("data/features2d_4.jpg"));
-        sources.push_back(new ImageSource("data/features2d_5.jpg"));
-        sources.push_back(new ImageSource("data/features2d_6.jpg"));
-        sources.push_back(new ImageSource("data/features2d_7.jpg"));
+        sources_.push_back(FrameSource::image("data/features2d_1.jpg"));
+        sources_.push_back(FrameSource::image("data/features2d_2.jpg"));
+        sources_.push_back(FrameSource::image("data/features2d_3.jpg"));
+        sources_.push_back(FrameSource::image("data/features2d_4.jpg"));
+        sources_.push_back(FrameSource::image("data/features2d_5.jpg"));
+        sources_.push_back(FrameSource::image("data/features2d_6.jpg"));
+        sources_.push_back(FrameSource::image("data/features2d_7.jpg"));
     }
 
-    Mat frame;
-    Mat frameGray;
-    GpuMat d_frameGray;
+    Mat frame, frameGray, outImg, frameDescriptors;
+    GpuMat d_frameGray, d_frameDescriptors;
 
     vector<KeyPoint> frameKeypoints;
-    Mat frameDescriptors;
-    GpuMat d_frameDescriptors;
 
-    vector< vector<DMatch> > matches(objects.size());
+    vector< vector<DMatch> > matches(objects_.size());
 
-    Mat img_to_show;
+    const string wndName = "Features2D Demo";
 
-    namedWindow("Features2D Demo", WINDOW_NORMAL);
-    setWindowProperty("Features2D Demo", WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
-    setWindowProperty("Features2D Demo", WND_PROP_ASPECT_RATIO, CV_WINDOW_FREERATIO);
-
-    while (!exited)
+    if (fullscreen_)
     {
-        int64 start = getTickCount();
+        namedWindow(wndName, WINDOW_NORMAL);
+        setWindowProperty(wndName, WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+        setWindowProperty(wndName, WND_PROP_ASPECT_RATIO, CV_WINDOW_FREERATIO);
+    }
 
-        sources[curSource]->next(frame);
+    while (isActive())
+    {
+        const int64 total_start = getTickCount();
+
+        sources_[curSource_]->next(frame);
+
         cvtColor(frame, frameGray, COLOR_BGR2GRAY);
         d_frameGray.upload(frameGray);
 
-        int64 detect_start = getTickCount();
+        const int64 detect_start = getTickCount();
         {
-            for (size_t i = 0; i < objects.size(); ++i)
-                calcKeypoints(objects[i].imgGray, objects[i].d_imgGray, objects[i].keypoints, objects[i].descriptors, objects[i].d_descriptors);
+            for (size_t i = 0; i < objects_.size(); ++i)
+                calcKeypoints(objects_[i].imgGray, objects_[i].d_imgGray, objects_[i].keypoints, objects_[i].descriptors, objects_[i].d_descriptors);
 
             calcKeypoints(frameGray, d_frameGray, frameKeypoints, frameDescriptors, d_frameDescriptors);
         }
-        double detect_fps = getTickFrequency() / (getTickCount() - detect_start);
+        const double detect_fps = getTickFrequency() / (getTickCount() - detect_start);
 
-        int64 match_start = cv::getTickCount();
+        const int64 match_start = cv::getTickCount();
         {
-            for (size_t i = 0; i < objects.size(); ++i)
-                match(objects[i].descriptors, objects[i].d_descriptors, frameDescriptors, d_frameDescriptors, matches[i]);
+            for (size_t i = 0; i < objects_.size(); ++i)
+                match(objects_[i].descriptors, objects_[i].d_descriptors, frameDescriptors, d_frameDescriptors, matches[i]);
         }
-        double match_fps = getTickFrequency() / (getTickCount() - match_start);
+        const double match_fps = getTickFrequency() / (getTickCount() - match_start);
 
         const int offset = 350;
 
         Size outSize = frame.size();
         int max_height = 0;
         int sum_width = offset;
-        for (size_t i = 0; i < objects.size(); ++i)
+        for (size_t i = 0; i < objects_.size(); ++i)
         {
-            sum_width += objects[i].imgColor.cols;
-            max_height = std::max(max_height, objects[i].imgColor.rows);
+            sum_width += objects_[i].imgColor.cols;
+            max_height = std::max(max_height, objects_[i].imgColor.rows);
         }
         outSize.height += max_height;
         outSize.width = std::max(outSize.width, sum_width);
 
-        img_to_show.create(outSize, CV_8UC3);
-        img_to_show.setTo(0);
-        frame.copyTo(img_to_show(Rect(0, max_height, frame.cols, frame.rows)));
+        outImg.create(outSize, CV_8UC3);
+        outImg.setTo(0);
+        frame.copyTo(outImg(Rect(0, max_height, frame.cols, frame.rows)));
 
         int objX = offset;
-        for (size_t i = 0; i < objects.size(); ++i)
+        for (size_t i = 0; i < objects_.size(); ++i)
         {
-            objects[i].imgColor.copyTo(img_to_show(Rect(objX, 0, objects[i].imgColor.cols, objects[i].imgColor.rows)));
+            objects_[i].imgColor.copyTo(outImg(Rect(objX, 0, objects_[i].imgColor.cols, objects_[i].imgColor.rows)));
 
-            putText(img_to_show, objects[i].name, Point(objX, 15), FONT_HERSHEY_DUPLEX, 0.8, objects[i].color);
+            putText(outImg, objects_[i].name, Point(objX, 15), FONT_HERSHEY_DUPLEX, 0.8, objects_[i].color);
 
             if (matches[i].size() >= 10)
             {
@@ -185,20 +190,20 @@ void App::process()
                 {
                     DMatch m = matches[i][j];
 
-                    KeyPoint objKp = objects[i].keypoints[m.queryIdx];
+                    KeyPoint objKp = objects_[i].keypoints[m.queryIdx];
                     KeyPoint frameKp = frameKeypoints[m.trainIdx];
 
                     pt1[j] = objKp.pt;
                     pt2[j] = frameKp.pt;
 
-                    if (showCorrespondences)
+                    if (showCorrespondences_)
                     {
                         Point objCenter(cvRound(objKp.pt.x) + objX, cvRound(objKp.pt.y));
                         Point frameCenter(cvRound(frameKp.pt.x), cvRound(frameKp.pt.y) + max_height);
 
-                        circle(img_to_show, objCenter, 3, objects[i].color);
-                        circle(img_to_show, frameCenter, 3, objects[i].color);
-                        line(img_to_show, objCenter, frameCenter, objects[i].color);
+                        circle(outImg, objCenter, 3, objects_[i].color);
+                        circle(outImg, frameCenter, 3, objects_[i].color);
+                        line(outImg, objCenter, frameCenter, objects_[i].color);
                     }
                 }
 
@@ -210,9 +215,9 @@ void App::process()
                 Point src_corners[] =
                 {
                     Point(0, 0),
-                    Point(objects[i].imgColor.cols, 0),
-                    Point(objects[i].imgColor.cols, objects[i].imgColor.rows),
-                    Point(0, objects[i].imgColor.rows)
+                    Point(objects_[i].imgColor.cols, 0),
+                    Point(objects_[i].imgColor.cols, objects_[i].imgColor.rows),
+                    Point(0, objects_[i].imgColor.rows)
                 };
                 Point dst_corners[5];
 
@@ -233,22 +238,22 @@ void App::process()
                     Point r1 = dst_corners[j % 4];
                     Point r2 = dst_corners[(j + 1) % 4];
 
-                    line(img_to_show, Point(r1.x, r1.y + max_height), Point(r2.x, r2.y + max_height), objects[i].color, 3);
+                    line(outImg, Point(r1.x, r1.y + max_height), Point(r2.x, r2.y + max_height), objects_[i].color, 3);
                 }
 
-                putText(img_to_show, objects[i].name, Point(dst_corners[0].x, dst_corners[0].y + max_height), FONT_HERSHEY_DUPLEX, 0.8, objects[i].color);
+                putText(outImg, objects_[i].name, Point(dst_corners[0].x, dst_corners[0].y + max_height), FONT_HERSHEY_DUPLEX, 0.8, objects_[i].color);
             }
 
-            objX += objects[i].imgColor.cols;
+            objX += objects_[i].imgColor.cols;
         }
 
-        double total_fps = getTickFrequency() / (getTickCount() - start);
+        double total_fps = getTickFrequency() / (getTickCount() - total_start);
 
-        displayState(img_to_show, detect_fps, match_fps, total_fps);
+        displayState(outImg, frame.size(), detect_fps, match_fps, total_fps);
 
-        imshow("Features2D Demo", img_to_show);
+        imshow(wndName, outImg);
 
-        processKey(waitKey(3));
+        wait(30);
     }
 }
 
@@ -256,15 +261,15 @@ void App::calcKeypoints(const Mat& img, const GpuMat& d_img, vector<KeyPoint>& k
 {
     keypoints.clear();
 
-    if (useGPU)
-        d_surf(d_img, GpuMat(), keypoints, d_descriptors);
+    if (useGpu_)
+        gpu_surf_(d_img, GpuMat(), keypoints, d_descriptors);
     else
-        surf(img, noArray(), keypoints, descriptors);
+        cpu_surf_(img, noArray(), keypoints, descriptors);
 }
 
 struct DMatchCmp
 {
-    inline bool operator ()(const DMatch& m1, const DMatch& m2) const
+    bool operator ()(const DMatch& m1, const DMatch& m2) const
     {
         return m1.distance < m2.distance;
     }
@@ -274,92 +279,105 @@ void App::match(const Mat& descriptors1, const GpuMat& d_descriptors1,
                 const Mat& descriptors2, const GpuMat& d_descriptors2,
                 vector<DMatch>& matches)
 {
-    static vector< vector<DMatch> > temp;
-
     matches.clear();
 
-    if (useGPU)
+    if (useGpu_)
     {
-        d_matcher.knnMatchSingle(d_descriptors1, d_descriptors2, trainIdx, distance, allDist, 2);
-        d_matcher.knnMatchDownload(trainIdx, distance, temp);
+        gpu_matcher_.knnMatchSingle(d_descriptors1, d_descriptors2, trainIdx_, distance_, allDist_, 2);
+        gpu_matcher_.knnMatchDownload(trainIdx_, distance_, matchesTbl_);
     }
     else
     {
-        matcher.knnMatch(descriptors1, descriptors2, temp, 2);
+        cpu_matcher_.knnMatch(descriptors1, descriptors2, matchesTbl_, 2);
     }
 
-    for (size_t i = 0; i < temp.size(); ++i)
+    for (size_t i = 0; i < matchesTbl_.size(); ++i)
     {
-        if (temp[i].size() != 2)
+        if (matchesTbl_[i].size() != 2)
             continue;
 
-        DMatch m1 = temp[i][0];
-        DMatch m2 = temp[i][1];
+        DMatch m1 = matchesTbl_[i][0];
+        DMatch m2 = matchesTbl_[i][1];
 
         if (m1.distance < 0.55 * m2.distance)
             matches.push_back(m1);
     }
 
-    if (useGPU)
+    if (useGpu_)
         sort(matches.begin(), matches.end(), DMatchCmp());
 }
 
-void App::displayState(Mat& frame, double detect_fps, double match_fps, double total_fps)
+void App::displayState(Mat& outImg, Size size, double detect_fps, double match_fps, double total_fps)
 {
     const Scalar fontColorRed = CV_RGB(255, 0, 0);
 
+    ostringstream txt;
     int i = 0;
 
-    ostringstream txt;
-    txt.str(""); txt << "Source size: " << frame.cols << 'x' << frame.rows;
-    printText(frame, txt.str(), i++);
+    txt.str(""); txt << "Source size: " << size;
+    printText(outImg, txt.str(), i++);
 
-    printText(frame, useGPU ? "Mode: CUDA" : "Mode: CPU", i++);
+    printText(outImg, useGpu_ ? "Mode: CUDA" : "Mode: CPU", i++);
 
-    txt.str(""); txt << "FPS (Detect): " << std::fixed << std::setprecision(1) << detect_fps;
-    printText(frame, txt.str(), i++);
+    txt.str(""); txt << "FPS (Detect only): " << std::fixed << std::setprecision(1) << detect_fps;
+    printText(outImg, txt.str(), i++);
 
-    txt.str(""); txt << "FPS (Match): " << std::fixed << std::setprecision(1) << match_fps;
-    printText(frame, txt.str(), i++);
+    txt.str(""); txt << "FPS (Match only): " << std::fixed << std::setprecision(1) << match_fps;
+    printText(outImg, txt.str(), i++);
 
     txt.str(""); txt << "FPS (Total): " << std::fixed << std::setprecision(1) << total_fps;
-    printText(frame, txt.str(), i++);
+    printText(outImg, txt.str(), i++);
 
-    printText(frame, "Space - switch method", i++, fontColorRed);
-    printText(frame, "S - show correspondences", i++, fontColorRed);
-    printText(frame, "N - next source", i++, fontColorRed);
+    printText(outImg, "Space - switch CUDA / CPU mode", i++, fontColorRed);
+    printText(outImg, "S - show / hide correspondences", i++, fontColorRed);
+    if (sources_.size() > 1)
+        printText(outImg, "N - switch source", i++, fontColorRed);
 }
 
-bool App::processKey(int key)
+void App::processAppKey(int key)
 {
-    if (BaseApp::processKey(key))
-        return true;
-
     switch (toupper(key & 0xff))
     {
     case 32 /*space*/:
-        useGPU = !useGPU;
-        cout << "Switched to " << (useGPU ? "CUDA" : "CPU") << " mode\n";
+        useGpu_ = !useGpu_;
+        cout << "Switch mode to " << (useGpu_ ? "CUDA" : "CPU") << endl;
         break;
 
     case 'S':
-        showCorrespondences = !showCorrespondences;
+        showCorrespondences_ = !showCorrespondences_;
+        if (showCorrespondences_)
+            cout << "Show correspondences" << endl;
+        else
+            cout << "Hide correspondences" << endl;
         break;
 
     case 'N':
-        curSource = (curSource + 1) % sources.size();
-        sources[curSource]->reset();
-        cout << "Switch source to " << curSource << endl;
+        if (sources_.size() > 1)
+        {
+            curSource_ = (curSource_ + 1) % sources_.size();
+            sources_[curSource_]->reset();
+            cout << "Switch source to " << curSource_ << endl;
+        }
         break;
-
-    default:
-        return false;
     }
-
-    return true;
 }
 
-bool App::parseCmdArgs(int& i, int argc, const char* argv[])
+void App::printAppHelp()
+{
+    cout << "This sample demonstrates Object Detection via keypoints matching \n" << endl;
+
+    cout << "Usage: demo_features2d [options] \n" << endl;
+
+    cout << "Demo Options: \n"
+         << "  --object <path to image> \n"
+         << "       Object image \n" << endl;
+
+    cout << "Launch Options: \n"
+         << "  --windowed \n"
+         << "       Launch in windowed mode\n" << endl;
+}
+
+bool App::parseAppCmdArgs(int& i, int argc, const char* argv[])
 {
     string arg = argv[i];
 
@@ -371,20 +389,17 @@ bool App::parseCmdArgs(int& i, int argc, const char* argv[])
             THROW_EXCEPTION("Missing file name after " << arg);
 
         RNG& rng = theRNG();
-        objects.push_back(Object(argv[i], imread(argv[i]), CV_RGB(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255))));
+        objects_.push_back(Object(argv[i], imread(argv[i]), CV_RGB(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255))));
+    }
+    else if (arg == "--windowed")
+    {
+        fullscreen_ = false;
+        return true;
     }
     else
         return false;
 
     return true;
-}
-
-void App::printHelp()
-{
-    cout << "This sample demonstrates Object Detection via keypoints matching" << endl;
-    cout << "Usage: demo_features2d [--object <image>]* [options]" << endl;
-    cout << "Options:" << endl;
-    BaseApp::printHelp();
 }
 
 RUN_APP(App)

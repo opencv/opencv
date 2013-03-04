@@ -2,9 +2,10 @@
 #include <deque>
 
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/gpu/gpu.hpp>
 
-#include "utility.h"
+#include "utility.hpp"
 
 using namespace std;
 using namespace cv;
@@ -13,89 +14,193 @@ using namespace cv::gpu;
 ////////////////////////////////////
 // ImageSource
 
-ImageSource::ImageSource(const string& path, int flags)
+namespace
 {
-    img_ = imread(path, flags);
+    class ImageSource : public FrameSource
+    {
+    public:
+        explicit ImageSource(const string& fileName, int flags = 1);
 
-    if (img_.empty())
-        THROW_EXCEPTION("Can't open " << path << " image");
+        void next(Mat& frame);
+
+        void reset();
+
+    private:
+        Mat img_;
+    };
+
+    ImageSource::ImageSource(const string& fileName, int flags)
+    {
+        img_ = imread(fileName, flags);
+
+        if (img_.empty())
+            THROW_EXCEPTION("Can't open " << fileName << " image");
+    }
+
+    void ImageSource::next(Mat& frame)
+    {
+        frame = img_;
+    }
+
+    void ImageSource::reset()
+    {
+    }
 }
 
-void ImageSource::next(Mat& frame)
+Ptr<FrameSource> FrameSource::image(const string& fileName, int flags)
 {
-    frame = img_;
-}
-
-void ImageSource::reset()
-{
+    return new ImageSource(fileName, flags);
 }
 
 ////////////////////////////////////
 // VideoSource
 
-VideoSource::VideoSource(const string& path) : vc_(path), path_(path)
+namespace
 {
-    if (!vc_.isOpened())
-        THROW_EXCEPTION("Can't open " << path << " video");
-}
-
-void VideoSource::next(Mat& frame)
-{
-    vc_ >> frame;
-
-    if (frame.empty())
+    class VideoSource : public FrameSource
     {
-        reset();
+    public:
+        explicit VideoSource(const string& fileName);
+
+        void next(Mat& frame);
+
+        void reset();
+
+    protected:
+        string fileName_;
+        VideoCapture vc_;
+    };
+
+    VideoSource::VideoSource(const string& fileName) : fileName_(fileName)
+    {
+        if (!vc_.open(fileName))
+            THROW_EXCEPTION("Can't open " << fileName << " video");
+    }
+
+    void VideoSource::next(Mat& frame)
+    {
         vc_ >> frame;
+
+        if (frame.empty())
+        {
+            reset();
+            vc_ >> frame;
+        }
+    }
+
+    void VideoSource::reset()
+    {
+        vc_.release();
+        vc_.open(fileName_);
     }
 }
 
-void VideoSource::reset()
+Ptr<FrameSource> FrameSource::video(const string& fileName)
 {
-    vc_.release();
-    vc_.open(path_);
-}
-
-////////////////////////////////////
-// ImagesVideoSource
-
-ImagesVideoSource::ImagesVideoSource(const string& path) : VideoSource(path), looped(false), prev(0.0)
-{
-}
-
-void ImagesVideoSource::next(Mat& frame)
-{
-    if (!looped)
-        VideoSource::next(frame);
-
-    if (prev >= 1)
-        looped = true;
-
-    prev = vc_.get(CV_CAP_PROP_POS_AVI_RATIO);
+    return new VideoSource(fileName);
 }
 
 ////////////////////////////////////
 // CameraSource
 
-CameraSource::CameraSource(int device, int width, int height) : vc_(device)
+namespace
 {
-    if (!vc_.isOpened())
-        THROW_EXCEPTION("Can't open camera with ID = " << device);
+    class CameraSource : public FrameSource
+    {
+    public:
+        explicit CameraSource(int device, int width = -1, int height = -1);
 
-    if (width != -1)
-        vc_.set(CV_CAP_PROP_FRAME_WIDTH, width);
+        void next(Mat& frame);
 
-    if (height != -1)
-        vc_.set(CV_CAP_PROP_FRAME_HEIGHT, height);
+        void reset();
+
+    private:
+        VideoCapture vc_;
+    };
+
+    CameraSource::CameraSource(int device, int width, int height)
+    {
+        if (!vc_.open(device))
+            THROW_EXCEPTION("Can't open camera with ID = " << device);
+
+        if (width > 0)
+            vc_.set(CV_CAP_PROP_FRAME_WIDTH, width);
+
+        if (height > 0)
+            vc_.set(CV_CAP_PROP_FRAME_HEIGHT, height);
+    }
+
+    void CameraSource::next(Mat& frame)
+    {
+        vc_ >> frame;
+    }
+
+    void CameraSource::reset()
+    {
+    }
 }
 
-void CameraSource::next(Mat& frame)
+Ptr<FrameSource> FrameSource::camera(int device, int width, int height)
 {
-    vc_ >> frame;
+    return new CameraSource(device, width, height);
 }
 
-void CameraSource::reset()
+////////////////////////////////////
+// ImagesVideoSource
+
+namespace
 {
+    class ImagesPatternSource : public FrameSource
+    {
+    public:
+        explicit ImagesPatternSource(const string& pattern);
+
+        void next(Mat& frame);
+
+        void reset();
+
+    private:
+        string pattern_;
+        VideoCapture vc_;
+        bool looped_;
+        double prev_;
+    };
+
+    ImagesPatternSource::ImagesPatternSource(const string& pattern) : pattern_(pattern), looped_(false), prev_(0.0)
+    {
+        if (!vc_.open(pattern))
+            THROW_EXCEPTION("Can't open " << pattern << " pattern");
+    }
+
+    void ImagesPatternSource::next(Mat& frame)
+    {
+        if (!looped_)
+        {
+            vc_ >> frame;
+
+            if (frame.empty())
+            {
+                reset();
+                vc_ >> frame;
+            }
+        }
+
+        if (prev_ >= 1)
+            looped_ = true;
+
+        prev_ = vc_.get(CV_CAP_PROP_POS_AVI_RATIO);
+    }
+
+    void ImagesPatternSource::reset()
+    {
+        vc_.release();
+        vc_.open(pattern_);
+    }
+}
+
+Ptr<FrameSource> FrameSource::imagesPattern(const string& pattern)
+{
+    return new ImagesPatternSource(pattern);
 }
 
 ////////////////////////////////////
@@ -109,6 +214,7 @@ namespace
         PairFrameSource_2(const Ptr<FrameSource>& source0, const Ptr<FrameSource>& source1);
 
         void next(Mat& frame0, Mat& frame1);
+
         void reset();
 
     private:
@@ -141,6 +247,7 @@ namespace
         PairFrameSource_1(const Ptr<FrameSource>& source, int offset);
 
         void next(Mat& frame0, Mat& frame1);
+
         void reset();
 
     private:
@@ -178,12 +285,12 @@ namespace
     }
 }
 
-Ptr<PairFrameSource> PairFrameSource::get(const Ptr<FrameSource>& source0, const Ptr<FrameSource>& source1)
+Ptr<PairFrameSource> PairFrameSource::create(const Ptr<FrameSource>& source0, const Ptr<FrameSource>& source1)
 {
     return new PairFrameSource_2(source0, source1);
 }
 
-Ptr<PairFrameSource> PairFrameSource::get(const Ptr<FrameSource>& source, int offset)
+Ptr<PairFrameSource> PairFrameSource::create(const Ptr<FrameSource>& source, int offset)
 {
     return new PairFrameSource_1(source, offset);
 }
@@ -191,24 +298,38 @@ Ptr<PairFrameSource> PairFrameSource::get(const Ptr<FrameSource>& source, int of
 ////////////////////////////////////
 // Auxiliary functions
 
-void makeGray(const Mat& src, Mat& dst)
+void makeGray(const InputArray src, OutputArray dst)
 {
-    CV_Assert( src.channels() == 1 || src.channels() == 3 || src.channels() == 4 );
+    const int scn = src.channels();
 
-    if (src.channels() == 1)
-        dst = src;
-    else if (src.channels() == 3)
-        cvtColor(src, dst, COLOR_BGR2GRAY);
+    CV_DbgAssert( scn == 1 || scn == 3 || scn == 4 );
+
+    if (src.kind() == _InputArray::GPU_MAT)
+    {
+        if (scn == 1)
+            dst.getGpuMatRef() = src.getGpuMat();
+        else if (scn == 3)
+            gpu::cvtColor(src.getGpuMat(), dst.getGpuMatRef(), COLOR_BGR2GRAY);
+        else
+            gpu::cvtColor(src.getGpuMat(), dst.getGpuMatRef(), COLOR_BGRA2GRAY);
+    }
     else
-        cvtColor(src, dst, COLOR_BGRA2GRAY);
+    {
+        if (scn == 1)
+            dst.getMatRef() = src.getMat();
+        else if (scn == 3)
+            cvtColor(src, dst, COLOR_BGR2GRAY);
+        else
+            cvtColor(src, dst, COLOR_BGRA2GRAY);
+    }
 }
 
 void printText(Mat& img, const string& msg, int lineOffsY, Scalar fontColor, double fontScale)
 {
-    int fontFace = FONT_HERSHEY_DUPLEX;
-    int fontThickness = 2;
+    const int fontFace = FONT_HERSHEY_DUPLEX;
+    const int fontThickness = 2;
 
-    Size fontSize = getTextSize("T[]", fontFace, fontScale, fontThickness, 0);
+    const Size fontSize = getTextSize("T[]", fontFace, fontScale, fontThickness, 0);
 
     Point org;
     org.x = 1;
@@ -221,7 +342,7 @@ void printText(Mat& img, const string& msg, int lineOffsY, Scalar fontColor, dou
 ////////////////////////////////////
 // BaseApp
 
-BaseApp::BaseApp() : exited(false), frame_width_(-1), frame_height_(-1), device_(0)
+BaseApp::BaseApp() : frame_width_(-1), frame_height_(-1), device_(0), active_(true)
 {
 }
 
@@ -229,7 +350,7 @@ void BaseApp::run(int argc, const char* argv[])
 {
     for (int i = 1; i < argc; ++i)
     {
-        if (parseCmdArgs(i, argc, argv))
+        if (parseAppCmdArgs(i, argc, argv))
             continue;
 
         if (parseFrameSourcesCmdArgs(i, argc, argv))
@@ -244,8 +365,8 @@ void BaseApp::run(int argc, const char* argv[])
         THROW_EXCEPTION("Unknown command line argument: " << argv[i]);
     }
 
-    int num_devices = getCudaEnabledDeviceCount();
-    if (num_devices == 0)
+    const int num_devices = getCudaEnabledDeviceCount();
+    if (num_devices <= 0)
         THROW_EXCEPTION("No GPU found or the OpenCV library was compiled without CUDA support");
 
     if (device_ < 0 || device_ >= num_devices)
@@ -255,19 +376,37 @@ void BaseApp::run(int argc, const char* argv[])
     if (!dev_info.isCompatible())
         THROW_EXCEPTION("GPU module wasn't built for GPU #" << device_ << " " << dev_info.name() << ", CC " << dev_info.majorVersion() << '.' << dev_info.minorVersion());
 
-    cout << "Initializing device...\n" << endl;
+    cout << "Initializing device... \n" << endl;
     setDevice(device_);
-    GpuMat m(10, 10, CV_8U);
-    m.release();
-
     printShortCudaDeviceInfo(device_);
 
     cout << endl;
 
-    process();
+    runAppLogic();
 }
 
-bool BaseApp::parseCmdArgs(int& i, int argc, const char* argv[])
+void BaseApp::wait(int delay)
+{
+    const int key = waitKey(delay);
+
+    if ((key & 0xff) == 27 /*escape*/)
+    {
+        active_ = false;
+        return;
+    }
+
+    processAppKey(key);
+}
+
+void BaseApp::processAppKey(int)
+{
+}
+
+void BaseApp::printAppHelp()
+{
+}
+
+bool BaseApp::parseAppCmdArgs(int&, int, const char*[])
 {
     return false;
 }
@@ -276,25 +415,25 @@ bool BaseApp::parseFrameSourcesCmdArgs(int& i, int argc, const char* argv[])
 {
     string arg(argv[i]);
 
-    if (arg == "-i" || arg == "--image")
+    if (arg == "--image")
     {
         ++i;
 
         if (i >= argc)
             THROW_EXCEPTION("Missing file name after " << arg);
 
-        sources.push_back(new ImageSource(argv[i]));
+        sources_.push_back(FrameSource::image(argv[i]));
     }
-    else if (arg == "-v" || arg == "--video")
+    else if (arg == "--video")
     {
         ++i;
 
         if (i >= argc)
             THROW_EXCEPTION("Missing file name after " << arg);
 
-        sources.push_back(new VideoSource(argv[i]));
+        sources_.push_back(FrameSource::video(argv[i]));
     }
-    else if (arg == "-fw" || arg == "--frame-width")
+    else if (arg == "--frame-width")
     {
         ++i;
 
@@ -303,7 +442,7 @@ bool BaseApp::parseFrameSourcesCmdArgs(int& i, int argc, const char* argv[])
 
         frame_width_ = atoi(argv[i]);
     }
-    else if (arg == "-fh" || arg == "--frame-height")
+    else if (arg == "--frame-height")
     {
         ++i;
 
@@ -312,14 +451,14 @@ bool BaseApp::parseFrameSourcesCmdArgs(int& i, int argc, const char* argv[])
 
         frame_height_ = atoi(argv[i]);
     }
-    else if (arg == "-c" || arg == "--camera")
+    else if (arg == "--camera")
     {
         ++i;
 
         if (i >= argc)
             THROW_EXCEPTION("Missing value after " << arg);
 
-        sources.push_back(new CameraSource(atoi(argv[i]), frame_width_, frame_height_));
+        sources_.push_back(FrameSource::camera(atoi(argv[i]), frame_width_, frame_height_));
     }
     else
         return false;
@@ -331,7 +470,7 @@ bool BaseApp::parseGpuDeviceCmdArgs(int& i, int argc, const char* argv[])
 {
     string arg(argv[i]);
 
-    if (arg == "-d" || arg == "--device")
+    if (arg == "--device")
     {
         ++i;
 
@@ -361,31 +500,21 @@ bool BaseApp::parseHelpCmdArg(int& i, int argc, const char* argv[])
 
 void BaseApp::printHelp()
 {
-    cout << endl
-         << "Frame Source Flags:" << endl
-         << "  -i|--image <img_path>" << endl
-         << "       Image source path." << endl
-         << "  -v|--video <video_path>" << endl
-         << "       Video source path." << endl
-         << "  -c|--camera <device_ID>" << endl
-         << "       Camera device ID" << endl
-         << "  -fw|--frame-width <camera_frame_width>" << endl
-         << "       Camera frame width" << endl
-         << "  -fh|--frame-height <camera_frame_height>" << endl
-         << "       Camera frame height" << endl
-         << endl
-         << "Device Flags:" << endl
-         << "  -d|--device <device_id>" << endl
+    printAppHelp();
+
+    cout << "Source Options: \n"
+         << "  --image <img_path> \n"
+         << "       Image source path. \n"
+         << "  --video <video_path> \n"
+         << "       Video source path. \n"
+         << "  --camera <device_ID> \n"
+         << "       Camera device ID \n"
+         << "  --frame-width <camera_frame_width> \n"
+         << "       Camera frame width \n"
+         << "  --frame-height <camera_frame_height> \n"
+         << "       Camera frame height \n" << endl;
+
+    cout << "Device Options: \n"
+         << "  --device <device_id> \n"
          << "       Device ID" << endl;
-}
-
-bool BaseApp::processKey(int key)
-{
-    if ((key & 0xff) == 27 /*escape*/)
-    {
-        exited = true;
-        return true;
-    }
-
-    return false;
 }

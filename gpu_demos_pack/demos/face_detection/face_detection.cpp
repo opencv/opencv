@@ -7,28 +7,24 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/gpu/gpu.hpp>
 
-#include "utility.h"
+#include "utility.hpp"
 
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-template<class T> void resizeAndConvert(const T& src, T& resized, T& gray, double scale)
+enum Method
 {
-    Size sz(cvRound(src.cols * scale), cvRound(src.rows * scale));
+    HAAR,
+    LBP,
+    METHOD_MAX
+};
 
-    if (scale != 1)
-        resize(src, resized, sz);
-    else
-        resized = src;
-
-    if (resized.channels() == 3)
-        cvtColor(resized, gray, COLOR_BGR2GRAY);
-    else if (resized.channels() == 4)
-        cvtColor(resized, gray, COLOR_BGRA2GRAY);
-    else
-        gray = resized;
-}
+const char* method_str[] =
+{
+    "HAAR",
+    "LBP"
+};
 
 class App : public BaseApp
 {
@@ -36,77 +32,90 @@ public:
     App();
 
 protected:
-    void process();
-    bool processKey(int key);
-    bool parseCmdArgs(int& i, int argc, const char* argv[]);
-    void printHelp();
+    void runAppLogic();
+    void processAppKey(int key);
+    void printAppHelp();
+    bool parseAppCmdArgs(int& i, int argc, const char* argv[]);
 
 private:
-    void displayState(cv::Mat& frame, double proc_fps, double total_fps);
+    void displayState(cv::Mat& outImg, double proc_fps, double total_fps);
 
-    string cascade_name;
-    CascadeClassifier_GPU cascade_gpu;
-    CascadeClassifier cascade_cpu;
+    string haarCascadeName_;
+    string lbpCascadeName_;
 
-    bool useGPU;
-    double scaleFactor;
-    bool findLargestObject;
-    bool filterRects;
-    bool showHelp;
-
-    size_t curSource;
+    Method method_;
+    bool useGpu_;
+    int curSource_;
+    bool fullscreen_;
+    bool reloadCascade_;
 };
 
 App::App()
 {
-    useGPU = true;
-    scaleFactor = 1.4;
-    findLargestObject = false;
-    filterRects = true;
-    showHelp = false;
-    curSource = 0;
+    haarCascadeName_ = "data/face_detection_haar.xml";
+    lbpCascadeName_ = "data/face_detection_lbp.xml";
+
+    method_ = HAAR;
+    useGpu_ = true;
+    curSource_ = 0;
+    fullscreen_ = false;
+    reloadCascade_ = true;
 }
 
-void App::process()
+void App::runAppLogic()
 {
-    if (cascade_name.empty())
+    if (sources_.empty())
     {
-        cout << "Using default cascade file..." << endl;
-        cascade_name = "data/face_detection.xml";
+        cout << "Using default frames source... \n" << endl;
+        sources_.push_back(FrameSource::video("data/face_detection.avi"));
     }
 
-    if (!cascade_gpu.load(cascade_name) || !cascade_cpu.load(cascade_name))
-        THROW_EXCEPTION("Could not load cascade classifier [" << cascade_name << "]");
+    CascadeClassifier cascade_cpu;
+    CascadeClassifier_GPU cascade_gpu;
 
-    if (sources.empty())
-    {
-        cout << "Using default frames source..." << endl;
-        sources.push_back(new VideoSource("data/face_detection.avi"));
-    }
-
-    Mat frame, frame_cpu, gray_cpu, resized_cpu, img_to_show;
-    GpuMat frame_gpu, gray_gpu, resized_gpu, facesBuf_gpu;
+    Mat frame_cpu, gray_cpu, outImg;
+    GpuMat frame_gpu, gray_gpu, facesBuf_gpu;
 
     vector<Rect> faces;
 
-    while (!exited)
+    const string wndName = "Face Detection Demo";
+
+    if (fullscreen_)
     {
-        int64 start = getTickCount();
+        namedWindow(wndName, WINDOW_NORMAL);
+        setWindowProperty(wndName, WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+        setWindowProperty(wndName, WND_PROP_ASPECT_RATIO, CV_WINDOW_FREERATIO);
+    }
 
-        sources[curSource]->next(frame_cpu);
+    while (isActive())
+    {
+        if (reloadCascade_)
+        {
+            const string& cascadeName = method_ == HAAR ? haarCascadeName_ : lbpCascadeName_;
+            cascade_gpu.load(cascadeName);
+            cascade_cpu.load(cascadeName);
+            reloadCascade_ = false;
+        }
 
-        double proc_fps;
-        if (useGPU)
+        const int64 total_start = getTickCount();
+
+        sources_[curSource_]->next(frame_cpu);
+
+        double proc_fps = 0.0;
+
+        if (useGpu_)
         {
             frame_gpu.upload(frame_cpu);
-            resizeAndConvert(frame_gpu, resized_gpu, gray_gpu, scaleFactor);
+            makeGray(frame_gpu, gray_gpu);
 
             cascade_gpu.visualizeInPlace = false;
-            cascade_gpu.findLargestObject = findLargestObject;
+            cascade_gpu.findLargestObject = false;
 
-            int64 proc_start = getTickCount();
+            const int64 proc_start = getTickCount();
 
-            int detections_num = cascade_gpu.detectMultiScale(gray_gpu, facesBuf_gpu, 1.2, (filterRects || findLargestObject) ? 4 : 0);
+            const int detections_num = cascade_gpu.detectMultiScale(gray_gpu, facesBuf_gpu, 1.2, 4);
+
+            proc_fps = getTickFrequency() / (getTickCount() - proc_start);
 
             if (detections_num == 0)
                 faces.clear();
@@ -116,157 +125,108 @@ void App::process()
                 Mat facesMat(1, detections_num, DataType<Rect>::type, &faces[0]);
                 facesBuf_gpu.colRange(0, detections_num).download(facesMat);
             }
-
-            proc_fps = getTickFrequency() / (getTickCount() - proc_start);
         }
         else
         {
-            resizeAndConvert(frame_cpu, resized_cpu, gray_cpu, scaleFactor);
+            makeGray(frame_cpu, gray_cpu);
 
-            Size minSize = cascade_gpu.getClassifierSize();
+            const Size minSize = cascade_gpu.getClassifierSize();
 
-            int64 proc_start = getTickCount();
+            const int64 proc_start = getTickCount();
 
-            cascade_cpu.detectMultiScale(gray_cpu, faces, 1.2,
-                                         (filterRects || findLargestObject) ? 4 : 0,
-                                         (findLargestObject ? CV_HAAR_FIND_BIGGEST_OBJECT : 0)
-                                            | CV_HAAR_SCALE_IMAGE,
-                                         minSize);
+            cascade_cpu.detectMultiScale(gray_cpu, faces, 1.2, 4, CV_HAAR_SCALE_IMAGE, minSize);
 
             proc_fps = getTickFrequency() / (getTickCount() - proc_start);
         }
 
-        if (useGPU)
-            resized_gpu.download(img_to_show);
-        else
-            img_to_show = resized_cpu;
+        frame_cpu.copyTo(outImg);
 
         for (size_t i = 0; i < faces.size(); i++)
-            rectangle(img_to_show, faces[i], CV_RGB(0, 255, 0), 3);
+            rectangle(outImg, faces[i], CV_RGB(0, 255, 0), 3);
 
-        double total_fps = getTickFrequency() / (getTickCount() - start);
+        const double total_fps = getTickFrequency() / (getTickCount() - total_start);
 
-        displayState(img_to_show, proc_fps, total_fps);
+        displayState(outImg, proc_fps, total_fps);
 
-        imshow("Face Detection Demo", img_to_show);
+        imshow(wndName, outImg);
 
-        processKey(waitKey(3) & 0xff);
+        wait(30);
     }
 }
 
-void App::displayState(Mat& frame, double proc_fps, double total_fps)
+void App::displayState(Mat& outImg, double proc_fps, double total_fps)
 {
     const Scalar fontColorRed = CV_RGB(255, 0, 0);
 
+    ostringstream txt;
     int i = 0;
 
-    ostringstream txt;
-    txt.str(""); txt << "Source size: " << frame.cols << 'x' << frame.rows;
-    printText(frame, txt.str(), i++);
+    txt.str(""); txt << "Source size: " << outImg.cols << 'x' << outImg.rows;
+    printText(outImg, txt.str(), i++);
 
-    printText(frame, useGPU ? "Mode: CUDA" : "Mode: CPU", i++);
+    txt.str(""); txt << "Method: " << method_str[method_] << (useGpu_ ? " CUDA" : " CPU");
+    printText(outImg, txt.str(), i++);
 
     txt.str(""); txt << "FPS (FD only): " << fixed << setprecision(1) << proc_fps;
-    printText(frame, txt.str(), i++);
+    printText(outImg, txt.str(), i++);
 
     txt.str(""); txt << "FPS (total): " << fixed << setprecision(1) << total_fps;
-    printText(frame, txt.str(), i++);
+    printText(outImg, txt.str(), i++);
 
-    if (!showHelp)
-    {
-        printText(frame, "H - toggle hotkeys help", i++, fontColorRed);
-    }
-    else
-    {
-        printText(frame, "Space - switch GPU / CPU", i++, fontColorRed);
-        printText(frame, "1/Q - increase/decrease scale", i++, fontColorRed);
-        printText(frame, "M - switch OneFace / MultiFace", i++, fontColorRed);
-        printText(frame, "F - toggle rectangles filter", i++, fontColorRed);
-        if (sources.size() > 1)
-            printText(frame, "N - next source", i++, fontColorRed);
-    }
+    printText(outImg, "Space - switch CUDA / CPU mode", i++, fontColorRed);
+    printText(outImg, "M - switch method", i++, fontColorRed);
+    if (sources_.size() > 1)
+        printText(outImg, "N - switch source", i++, fontColorRed);
 }
 
-bool App::processKey(int key)
+void App::processAppKey(int key)
 {
-    if (BaseApp::processKey(key))
-        return true;
-
     switch (toupper(key & 0xff))
     {
     case 32 /*space*/:
-        useGPU = !useGPU;
-        cout << "Switched to " << (useGPU ? "CUDA" : "CPU") << " mode\n";
-        break;
-
-    case 'H':
-        showHelp = !showHelp;
-        break;
-
-    case '1':
-        scaleFactor *= 1.05;
-        cout << "Scale: " << scaleFactor << endl;
-        break;
-
-    case 'Q':
-        scaleFactor /= 1.05;
-        cout << "Scale: " << scaleFactor << endl;
+        useGpu_ = !useGpu_;
+        cout << "Switch mode to " << (useGpu_ ? "CUDA" : "CPU") << endl;
         break;
 
     case 'M':
-        findLargestObject = !findLargestObject;
-        if (findLargestObject)
-            cout << "OneFace mode" << endl;
-        else
-            cout << "MultiFace mode" << endl;
-        break;
-
-    case 'F':
-        filterRects = !filterRects;
-        if (filterRects)
-            cout << "Enable rectangles filter" << endl;
-        else
-            cout << "Disable rectangles filter" << endl;
+        method_ = static_cast<Method>((method_ + 1) % METHOD_MAX);
+        reloadCascade_ = true;
+        cout << "Switch method to " << method_str[method_] << endl;
         break;
 
     case 'N':
-        curSource = (curSource + 1) % sources.size();
-        sources[curSource]->reset();
-        cout << "Switch source to " << curSource << endl;
+        if (sources_.size() > 1)
+        {
+            curSource_ = (curSource_ + 1) % sources_.size();
+            sources_[curSource_]->reset();
+            cout << "Switch source to " << curSource_ << endl;
+        }
         break;
-
-    default:
-        return false;
     }
-
-    return true;
 }
 
-bool App::parseCmdArgs(int& i, int argc, const char* argv[])
+void App::printAppHelp()
+{
+    cout << "This sample demonstrates different Face Detection algorithms \n" << endl;
+
+    cout << "Usage: demo_face_detection [options] \n" << endl;
+
+    cout << "Launch Options: \n"
+         << "  --fullscreen \n"
+         << "       Launch in fullscreen mode \n" << endl;
+}
+
+bool App::parseAppCmdArgs(int& i, int, const char* argv[])
 {
     string arg(argv[i]);
 
-    if (arg == "--cascade")
+    if (arg == "--fullscreen")
     {
-        ++i;
-
-        if (i >= argc)
-            THROW_EXCEPTION("Missing file name after " << arg);
-
-        cascade_name = argv[i];
-
+        fullscreen_ = true;
         return true;
     }
 
     return false;
-}
-
-void App::printHelp()
-{
-    cout << "This sample demonstrates Face Detection algorithm" << endl;
-    cout << "Usage: demo_face_detection [--cascade <cascade_file>] [options]" << endl;
-    cout << "Options:" << endl;
-    BaseApp::printHelp();
 }
 
 RUN_APP(App)

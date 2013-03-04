@@ -7,7 +7,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/gpu/gpu.hpp>
 
-#include "utility.h"
+#include "utility.hpp"
 
 using namespace std;
 using namespace cv;
@@ -19,41 +19,43 @@ public:
     App();
 
 protected:
-    void process();
-    bool processKey(int key);
-    void printHelp();
+    void runAppLogic();
+    void processAppKey(int key);
+    void printAppHelp();
+    bool parseAppCmdArgs(int& i, int argc, const char* argv[]);
 
 private:
-    void displayState(Mat& frame, double proc_fps, double total_fps);
+    void displayState(Mat& outImg, double proc_fps, double total_fps);
 
-    bool useGPU;
+    vector< Ptr<PairFrameSource> > pairSources_;
 
-    vector< Ptr<PairFrameSource> > pairSources;
-    int curSource;
+    bool useGpu_;
+    int curSource_;
+    bool fullscreen_;
 };
 
 App::App()
 {
-    useGPU = true;
-
-    curSource = 0;
+    useGpu_ = true;
+    curSource_ = 0;
+    fullscreen_ = true;
 }
 
-void download(const GpuMat& d_mat, vector<Point2f>& vec)
+static void download(const GpuMat& d_mat, vector<Point2f>& vec)
 {
     vec.resize(d_mat.cols);
     Mat mat(1, d_mat.cols, CV_32FC2, (void*)&vec[0]);
     d_mat.download(mat);
 }
 
-void download(const GpuMat& d_mat, vector<uchar>& vec)
+static void download(const GpuMat& d_mat, vector<uchar>& vec)
 {
     vec.resize(d_mat.cols);
     Mat mat(1, d_mat.cols, CV_8UC1, (void*)&vec[0]);
     d_mat.download(mat);
 }
 
-void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<Point2f>& nextPts, const vector<uchar>& status, Scalar line_color = Scalar(0, 0, 255))
+static void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<Point2f>& nextPts, const vector<uchar>& status, Scalar line_color = Scalar(0, 0, 255))
 {
     for (size_t i = 0; i < prevPts.size(); ++i)
     {
@@ -81,7 +83,7 @@ void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<Point2f
             // Now draw the tips of the arrow. I do some scaling so that the
             // tips look proportional to the main line of the arrow.
 
-            double tips_length = 9.0 * hypotenuse / 50.0 + 2.0;
+            double tips_length = 9.0 * hypotenuse / 50.0 + 5.0;
 
             p.x = (int) (q.x + tips_length * cos(angle + CV_PI / 6));
             p.y = (int) (q.y + tips_length * sin(angle + CV_PI / 6));
@@ -94,25 +96,25 @@ void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<Point2f
     }
 }
 
-void App::process()
+void App::runAppLogic()
 {
-    if (sources.empty())
+    if (sources_.empty())
     {
-        cout << "Loading default frames source..." << endl;
+        cout << "Loading default frames source... \n" << endl;
 
-        sources.push_back(new VideoSource("data/sparse_optical_flow.avi"));
+        sources_.push_back(FrameSource::video("data/sparse_optical_flow.avi"));
     }
 
-    for (size_t i = 0; i < sources.size(); ++i)
-        pairSources.push_back(PairFrameSource::get(sources[i], 2));
+    for (size_t i = 0; i < sources_.size(); ++i)
+        pairSources_.push_back(PairFrameSource::create(sources_[i], 2));
+
+    GoodFeaturesToTrackDetector_GPU detector(8000, 0.01, 10.0);
+    PyrLKOpticalFlow lk;
 
     Mat frame0, frame1;
     Mat gray;
     GpuMat d_frame0, d_frame1;
     GpuMat d_gray;
-
-    Mat u, v;
-    GpuMat d_u, d_v;
 
     GpuMat d_prevPts;
     GpuMat d_nextPts;
@@ -122,28 +124,33 @@ void App::process()
     vector<Point2f> nextPts;
     vector<uchar> status;
 
-    GoodFeaturesToTrackDetector_GPU detector(4000, 0.01, 10.0);
-    PyrLKOpticalFlow lk;
+    Mat outImg;
 
-    namedWindow("Sparse Optical Flow Demo", WINDOW_NORMAL);
-    setWindowProperty("Sparse Optical Flow Demo", WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+    const string wndName = "Sparse Optical Flow Demo";
 
-    while (!exited)
+    if (fullscreen_)
     {
-        int64 start = getTickCount();
+        namedWindow(wndName, WINDOW_NORMAL);
+        setWindowProperty(wndName, WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+        setWindowProperty(wndName, WND_PROP_ASPECT_RATIO, CV_WINDOW_FREERATIO);
+    }
 
-        pairSources[curSource]->next(frame0, frame1);
+    while (isActive())
+    {
+        const int64 total_start = getTickCount();
 
-        d_frame0.upload(frame0);
-        d_frame1.upload(frame1);
+        pairSources_[curSource_]->next(frame0, frame1);
 
-        double proc_fps;
+        double proc_fps = 0.0;
 
-        if (useGPU)
+        if (useGpu_)
         {
+            d_frame0.upload(frame0);
+            d_frame1.upload(frame1);
+
             cvtColor(d_frame0, d_gray, COLOR_BGR2GRAY);
 
-            int64 proc_start = getTickCount();
+            const int64 proc_start = getTickCount();
 
             detector(d_gray, d_prevPts);
             lk.sparse(d_frame0, d_frame1, d_prevPts, d_nextPts, d_status);
@@ -158,7 +165,7 @@ void App::process()
         {
             cvtColor(frame0, gray, COLOR_BGR2GRAY);
 
-            int64 proc_start = getTickCount();
+            const int64 proc_start = getTickCount();
 
             goodFeaturesToTrack(gray, prevPts, detector.maxCorners, detector.qualityLevel, detector.minDistance);
             calcOpticalFlowPyrLK(frame0, frame1, prevPts, nextPts, status, noArray());
@@ -166,69 +173,86 @@ void App::process()
             proc_fps = getTickFrequency()  / (getTickCount() - proc_start);
         }
 
-        Mat img_to_show = frame0.clone();
+        frame0.copyTo(outImg);
+        drawArrows(outImg, prevPts, nextPts, status, Scalar(255, 0, 0));
 
-        drawArrows(img_to_show, prevPts, nextPts, status, Scalar(255, 0, 0));
+        const double total_fps = getTickFrequency()  / (getTickCount() - total_start);
 
-        double total_fps = getTickFrequency()  / (getTickCount() - start);
+        displayState(outImg, proc_fps, total_fps);
 
-        displayState(img_to_show, proc_fps, total_fps);
+        imshow(wndName, outImg);
 
-        imshow("Sparse Optical Flow Demo", img_to_show);
-
-        processKey(waitKey(30) & 0xff);
+        wait(30);
     }
 }
 
-void App::displayState(Mat& frame, double proc_fps, double total_fps)
+void App::displayState(Mat& outImg, double proc_fps, double total_fps)
 {
     const Scalar fontColorRed = CV_RGB(255, 0, 0);
 
+    ostringstream txt;
     int i = 0;
 
-    ostringstream txt;
-    txt.str(""); txt << "Source size: " << frame.cols << 'x' << frame.rows;
-    printText(frame, txt.str(), i++);
+    txt.str(""); txt << "Source size: " << outImg.cols << 'x' << outImg.rows;
+    printText(outImg, txt.str(), i++);
 
-    printText(frame, useGPU ? "Mode: CUDA" : "Mode: CPU", i++);
+    printText(outImg, useGpu_ ? "Mode: CUDA" : "Mode: CPU", i++);
 
     txt.str(""); txt << "FPS (OptFlow only): " << fixed << setprecision(1) << proc_fps;
-    printText(frame, txt.str(), i++);
+    printText(outImg, txt.str(), i++);
 
     txt.str(""); txt << "FPS (total): " << fixed << setprecision(1) << total_fps;
-    printText(frame, txt.str(), i++);
+    printText(outImg, txt.str(), i++);
 
-    printText(frame, "Space - switch GPU / CPU", i++, fontColorRed);
-    printText(frame, "N - next source", i++, fontColorRed);
+    printText(outImg, "Space - switch CUDA / CPU mode", i++, fontColorRed);
+    if (pairSources_.size() > 1)
+        printText(outImg, "N - next source", i++, fontColorRed);
 }
 
-bool App::processKey(int key)
+void App::processAppKey(int key)
 {
-    if (BaseApp::processKey(key))
-        return true;
-
     switch (toupper(key & 0xff))
     {
     case 32 /*space*/:
-        useGPU = !useGPU;
-        cout << "Switched to " << (useGPU ? "CUDA" : "CPU") << " mode\n";
+        useGpu_ = !useGpu_;
+        cout << "Switch mode to " << (useGpu_ ? "CUDA" : "CPU") << endl;
         break;
 
     case 'N':
-        curSource = (curSource + 1) % pairSources.size();
-        pairSources[curSource]->reset();
+        if (pairSources_.size() > 1)
+        {
+            curSource_ = (curSource_ + 1) % pairSources_.size();
+            pairSources_[curSource_]->reset();
+            cout << "Switch source to " << curSource_ << endl;
+        }
         break;
     }
-
-    return false;
 }
 
-void App::printHelp()
+void App::printAppHelp()
 {
-    cout << "This sample demonstrates different Sparse Optical Flow algorithms" << endl;
-    cout << "Usage: demo_sparse_optical_flow [options]" << endl;
-    cout << "Options:" << endl;
-    BaseApp::printHelp();
+    cout << "This sample demonstrates different Sparse Optical Flow algorithms \n" << endl;
+
+    cout << "Usage: demo_sparse_optical_flow [options] \n" << endl;
+
+    cout << "Launch Options: \n"
+         << "  --windowed \n"
+         << "       Launch in windowed mode\n" << endl;
+}
+
+bool App::parseAppCmdArgs(int& i, int, const char* argv[])
+{
+    string arg = argv[i];
+
+    if (arg == "--windowed")
+    {
+        fullscreen_ = false;
+        return true;
+    }
+    else
+        return false;
+
+    return true;
 }
 
 RUN_APP(App)

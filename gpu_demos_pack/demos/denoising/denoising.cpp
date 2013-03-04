@@ -8,7 +8,7 @@
 #include <opencv2/gpu/gpu.hpp>
 #include <opencv2/photo/photo.hpp>
 
-#include "utility.h"
+#include "utility.hpp"
 
 using namespace std;
 using namespace cv;
@@ -20,90 +20,97 @@ public:
     App();
 
 protected:
-    void process();
-    bool processKey(int key);
-    void printHelp();
+    void runAppLogic();
+    void processAppKey(int key);
+    void printAppHelp();
+    bool parseAppCmdArgs(int& i, int argc, const char* argv[]);
 
 private:
-    void displayState(Mat& frame, double proc_fps, double total_fps);
+    void displayState(Mat& outImg, double proc_fps, double total_fps);
+    void addGaussNoise(Mat& image, double sigma);
 
-    bool useGPU;
-    bool colorInput;
-    int curSource;
+    bool useGpu_;
+    bool colorInput_;
+    int curSource_;
+    bool fullscreen_;
 
-    FastNonLocalMeansDenoising d_nlm;
+    Mat noise_;
 };
 
 App::App()
 {
-    useGPU = true;
-    colorInput = false;
-    curSource = 0;
+    useGpu_ = true;
+    colorInput_ = true;
+    curSource_ = 0;
+    fullscreen_ = false;
 }
 
-void addGaussNoise(Mat& image, double sigma)
+void App::runAppLogic()
 {
-    Mat noise(image.size(), CV_32FC(image.channels()));
-    theRNG().fill(noise, RNG::NORMAL, 0.0, sigma);
-
-    addWeighted(image, 1.0, noise, 1.0, 0.0, image, image.depth());
-}
-
-void App::process()
-{
-    if (sources.empty())
+    if (sources_.empty())
     {
-        cout << "Using default frames source..." << endl;
-        sources.push_back(new ImageSource("data/denoising.jpg"));
+        cout << "Using default frames source... \n" << endl;
+        sources_.push_back(FrameSource::image("data/denoising.jpg"));
     }
 
-    Mat frame;
-    Mat src, dst;
+    FastNonLocalMeansDenoising d_nlm;
+
+    Mat frame, src, dst, outImg;
     GpuMat d_src, d_dst;
 
-    Mat img_to_show;
+    const string wndName = "Denoising Demo";
 
-    const float h = 20;
-
-    while (!exited)
+    if (fullscreen_)
     {
-        int64 start = getTickCount();
+        namedWindow(wndName, WINDOW_NORMAL);
+        setWindowProperty(wndName, WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+        setWindowProperty(wndName, WND_PROP_ASPECT_RATIO, CV_WINDOW_FREERATIO);
+    }
 
-        sources[curSource]->next(frame);
+    while (isActive())
+    {
+        const int64 total_start = getTickCount();
 
-        if (colorInput)
-            src = frame;
+        sources_[curSource_]->next(frame);
+
+        if (colorInput_)
+            frame.copyTo(src);
         else
             cvtColor(frame, src, COLOR_BGR2GRAY);
 
         addGaussNoise(src, 20.0);
 
-        int64 proc_start = getTickCount();
-
-        if (useGPU)
-        {
+        if (useGpu_)
             d_src.upload(src);
 
-            d_nlm.simpleMethod(d_src, d_dst, h);
+        const int64 proc_start = getTickCount();
 
-            d_dst.download(dst);
+        if (useGpu_)
+        {
+            if (colorInput_)
+                d_nlm.labMethod(d_src, d_dst, 20, 10);
+            else
+                d_nlm.simpleMethod(d_src, d_dst, 20);
         }
         else
         {
-            if (colorInput)
-                fastNlMeansDenoisingColored(src, dst, h, 10);
+            if (colorInput_)
+                fastNlMeansDenoisingColored(src, dst, 20, 10);
             else
-                fastNlMeansDenoising(src, dst, h);
+                fastNlMeansDenoising(src, dst, 20);
         }
 
-        double proc_fps = getTickFrequency()  / (getTickCount() - proc_start);
+        const double proc_fps = getTickFrequency()  / (getTickCount() - proc_start);
 
-        img_to_show.create(frame.rows, frame.cols * 2, CV_8UC3);
+        if (useGpu_)
+            d_dst.download(dst);
 
-        Mat left = img_to_show(Rect(0, 0, frame.cols, frame.rows));
-        Mat right = img_to_show(Rect(frame.cols, 0, frame.cols, frame.rows));
+        outImg.create(frame.rows, frame.cols * 2, CV_8UC3);
 
-        if (colorInput)
+        Mat left = outImg(Rect(0, 0, frame.cols, frame.rows));
+        Mat right = outImg(Rect(frame.cols, 0, frame.cols, frame.rows));
+
+        if (colorInput_)
         {
             src.copyTo(left);
             dst.copyTo(right);
@@ -114,75 +121,95 @@ void App::process()
             cvtColor(dst, right, COLOR_GRAY2BGR);
         }
 
-        double total_fps = getTickFrequency()  / (getTickCount() - start);
+        const double total_fps = getTickFrequency()  / (getTickCount() - total_start);
 
-        displayState(img_to_show, proc_fps, total_fps);
+        displayState(outImg, proc_fps, total_fps);
 
-        imshow("Denoising Demo", img_to_show);
+        imshow(wndName, outImg);
 
-        processKey(waitKey(30));
+        wait(30);
     }
 }
 
-void App::displayState(Mat& frame, double proc_fps, double total_fps)
+void App::displayState(Mat& outImg, double proc_fps, double total_fps)
 {
     const Scalar fontColorRed = CV_RGB(255, 0, 0);
 
+    ostringstream txt;
     int i = 0;
 
-    ostringstream txt;
-    txt.str(""); txt << "Source size: " << frame.cols << 'x' << frame.rows / 2;
-    printText(frame, txt.str(), i++);
+    txt.str(""); txt << "Source size: " << outImg.cols / 2 << 'x' << outImg.rows;
+    printText(outImg, txt.str(), i++);
 
-    printText(frame, useGPU ? "Mode: CUDA" : "Mode: CPU", i++);
+    printText(outImg, useGpu_ ? "Mode: CUDA" : "Mode: CPU", i++);
 
     txt.str(""); txt << "FPS (Denoising only): " << fixed << setprecision(1) << proc_fps;
-    printText(frame, txt.str(), i++);
+    printText(outImg, txt.str(), i++);
 
     txt.str(""); txt << "FPS (total): " << fixed << setprecision(1) << total_fps;
-    printText(frame, txt.str(), i++);
+    printText(outImg, txt.str(), i++);
 
-    printText(frame, "Space - switch GPU / CPU", i++, fontColorRed);
-    printText(frame, "C - switch Color / Gray", i++, fontColorRed);
-    printText(frame, "N - next source", i++, fontColorRed);
+    printText(outImg, "Space - switch CUDA / CPU mode", i++, fontColorRed);
+    printText(outImg, "C - switch Color / Gray mode", i++, fontColorRed);
+    if (sources_.size() > 1)
+        printText(outImg, "N - switch source", i++, fontColorRed);
 }
 
-bool App::processKey(int key)
+void App::addGaussNoise(Mat& image, double sigma)
 {
-    if (BaseApp::processKey(key))
-        return true;
+    noise_.create(image.size(), CV_32FC(image.channels()));
+    theRNG().fill(noise_, RNG::NORMAL, 0.0, sigma);
 
+    addWeighted(image, 1.0, noise_, 1.0, 0.0, image, image.depth());
+}
+
+void App::processAppKey(int key)
+{
     switch (toupper(key & 0xff))
     {
-    case 32:
-        useGPU = !useGPU;
-        cout << "Switched to " << (useGPU ? "CUDA" : "CPU") << " mode" << endl;
+    case 32 /*space*/:
+        useGpu_ = !useGpu_;
+        cout << "Switch mode to " << (useGpu_ ? "CUDA" : "CPU") << endl;
         break;
 
     case 'C':
-        colorInput = !colorInput;
-        cout << "Switched to " << (colorInput ? "Color" : "Gray") << " mode" << endl;
+        colorInput_ = !colorInput_;
+        cout << "Switch mode to " << (colorInput_ ? "Color" : "Gray") << endl;
         break;
 
     case 'N':
-        curSource = (curSource + 1) % sources.size();
-        sources[curSource]->reset();
-        cout << "Switch source to " << curSource << endl;
+        if (sources_.size() > 1)
+        {
+            curSource_ = (curSource_ + 1) % sources_.size();
+            sources_[curSource_]->reset();
+            cout << "Switch source to " << curSource_ << endl;
+        }
         break;
-
-    default:
-        return false;
     }
-
-    return true;
 }
 
-void App::printHelp()
+void App::printAppHelp()
 {
-    cout << "This sample demonstrates Non-Local_means Denoising algorithm" << endl;
-    cout << "Usage: demo_denoising [options]" << endl;
-    cout << "Options:" << endl;
-    BaseApp::printHelp();
+    cout << "This sample demonstrates Non-Local-Means Denoising algorithm \n" << endl;
+
+    cout << "Usage: demo_denoising [options] \n" << endl;
+
+    cout << "Launch Options: \n"
+         << "  --fullscreen \n"
+         << "       Launch in fullscreen mode \n" << endl;
+}
+
+bool App::parseAppCmdArgs(int& i, int, const char* argv[])
+{
+    string arg(argv[i]);
+
+    if (arg == "--fullscreen")
+    {
+        fullscreen_ = true;
+        return true;
+    }
+
+    return false;
 }
 
 RUN_APP(App)
