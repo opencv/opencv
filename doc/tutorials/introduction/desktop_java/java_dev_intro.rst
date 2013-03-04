@@ -5,8 +5,6 @@
 Introduction to Java Development
 ********************************
 
-Last updated: 28 February, 2013.
-
 As of OpenCV 2.4.4, OpenCV supports desktop Java development using nearly the same interface as for
 Android development. This guide will help you to create your first Java (or Scala) application using OpenCV.
 We will use either `Eclipse <http://eclipse.org/>`_, `Apache Ant <http://ant.apache.org/>`_ or the
@@ -111,7 +109,7 @@ or
 
 Besides all this will create a ``jar`` containing the Java interface (:file:`bin/opencv-244.jar`)
 and a native dynamic library containing Java bindings and all the OpenCV stuff
-(:file:`bin/Release/opencv_java244.dll` or :file:`lib/libopencv_java244.so` respectively).
+(:file:`bin/libopencv_java244.so` or :file:`bin/Release/opencv_java244.dll` respectively).
 We'll use these files later.
 
 Java sample with Ant
@@ -250,55 +248,54 @@ Now let's look at the possiblity of using OpenCV in Java when developing in Ecli
     Call it say "HelloCV".
 
 * Open :guilabel:`Java Build Path` tab on :guilabel:`Project Properties` dialog
-    and configure additional library (OpenCV) reference (jar and native library location):
+  and configure additional library (OpenCV) reference (jar and native library location):
 
     .. image:: images/eclipse_user_lib.png
         :alt: Eclipse: external JAR
         :align: center
 
-   ` `
+   |
 
     .. image:: images/eclipse_user_lib2.png
         :alt: Eclipse: external JAR
         :align: center
 
-   ` `
+   |
 
     .. image:: images/eclipse_user_lib3.png
         :alt: Eclipse: external JAR
         :align: center
 
-   ` `
+   |
 
     .. image:: images/eclipse_user_lib4.png
         :alt: Eclipse: external JAR
         :align: center
 
-   ` `
+   |
 
     .. image:: images/eclipse_user_lib5.png
         :alt: Eclipse: external JAR
         :align: center
 
-   ` `
+   |
 
     .. image:: images/eclipse_user_lib6.png
         :alt: Eclipse: external JAR
         :align: center
 
-   ` `
+   |
 
     .. image:: images/eclipse_user_lib7.png
         :alt: Eclipse: external JAR
         :align: center
 
-   ` `
+   |
 
     .. image:: images/eclipse_user_lib8.png
         :alt: Eclipse: external JAR
         :align: center
 
-   ` `
 
 * Add a new Java class (say ``Main``) containing the application entry:
 
