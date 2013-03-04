@@ -692,8 +692,7 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
         result = cb->runKernel(m1, m2, F);
         if( _mask.needed() )
         {
-            if( !_mask.fixedSize() )
-                _mask.create(npoints, 1, CV_8U);
+            _mask.create(npoints, 1, CV_8U, -1, true);
             Mat mask = _mask.getMat();
             CV_Assert( (mask.cols == 1 || mask.rows == 1) && (int)mask.total() == npoints );
             mask.setTo(Scalar::all(1));
