@@ -85,6 +85,11 @@
 namespace cv
 {
 
+void BackgroundSubtractor::operator()(InputArray image, OutputArray fgmask, double learningRate)
+{
+    apply(image, fgmask, learningRate);
+}
+
 /*
  Interface of Gaussian mixture algorithm from:
 
@@ -113,6 +118,140 @@ static const float defaultVarMin2 = 4.0f;
 static const float defaultfCT2 = 0.05f; // complexity reduction prior constant 0 - no reduction of number of components
 static const unsigned char defaultnShadowDetection2 = (unsigned char)127; // value to use in the segmentation mask for shadows, set 0 not to do shadow detection
 static const float defaultfTau = 0.5f; // Tau - shadow threshold, see the paper for explanation
+
+
+class CV_EXPORTS BackgroundSubtractorMOG2 : public BackgroundSubtractor
+{
+public:
+    //! the default constructor
+    BackgroundSubtractorMOG2()
+    {
+        frameSize = Size(0,0);
+        frameType = 0;
+
+        nframes = 0;
+        history = defaultHistory2;
+        varThreshold = defaultVarThreshold2;
+        bShadowDetection = 1;
+
+        nmixtures = defaultNMixtures2;
+        backgroundRatio = defaultBackgroundRatio2;
+        fVarInit = defaultVarInit2;
+        fVarMax  = defaultVarMax2;
+        fVarMin = defaultVarMin2;
+
+        varThresholdGen = defaultVarThresholdGen2;
+        fCT = defaultfCT2;
+        nShadowDetection =  defaultnShadowDetection2;
+        fTau = defaultfTau;
+    }
+    //! the full constructor that takes the length of the history,
+    // the number of gaussian mixtures, the background ratio parameter and the noise strength
+    BackgroundSubtractorMOG2(int _history,  float _varThreshold, bool _bShadowDetection=true)
+    {
+        frameSize = Size(0,0);
+        frameType = 0;
+
+        nframes = 0;
+        history = _history > 0 ? _history : defaultHistory2;
+        varThreshold = (_varThreshold>0)? _varThreshold : defaultVarThreshold2;
+        bShadowDetection = _bShadowDetection;
+
+        nmixtures = defaultNMixtures2;
+        backgroundRatio = defaultBackgroundRatio2;
+        fVarInit = defaultVarInit2;
+        fVarMax  = defaultVarMax2;
+        fVarMin = defaultVarMin2;
+
+        varThresholdGen = defaultVarThresholdGen2;
+        fCT = defaultfCT2;
+        nShadowDetection =  defaultnShadowDetection2;
+        fTau = defaultfTau;
+    }
+    //! the destructor
+    ~BackgroundSubtractorMOG2() {}
+    //! the update operator
+    void apply(InputArray image, OutputArray fgmask, double learningRate=-1);
+
+    //! computes a background image which are the mean of all background gaussians
+    virtual void getBackgroundImage(OutputArray backgroundImage) const;
+
+    //! re-initiaization method
+    void initialize(Size _frameSize, int _frameType)
+    {
+        frameSize = _frameSize;
+        frameType = _frameType;
+        nframes = 0;
+
+        int nchannels = CV_MAT_CN(frameType);
+        CV_Assert( nchannels <= CV_CN_MAX );
+
+        // for each gaussian mixture of each pixel bg model we store ...
+        // the mixture weight (w),
+        // the mean (nchannels values) and
+        // the covariance
+        bgmodel.create( 1, frameSize.height*frameSize.width*nmixtures*(2 + nchannels), CV_32F );
+        //make the array for keeping track of the used modes per pixel - all zeros at start
+        bgmodelUsedModes.create(frameSize,CV_8U);
+        bgmodelUsedModes = Scalar::all(0);
+    }
+
+    virtual AlgorithmInfo* info() const;
+
+protected:
+    Size frameSize;
+    int frameType;
+    Mat bgmodel;
+    Mat bgmodelUsedModes;//keep track of number of modes per pixel
+    int nframes;
+    int history;
+    int nmixtures;
+    //! here it is the maximum allowed number of mixture components.
+    //! Actual number is determined dynamically per pixel
+    double varThreshold;
+    // threshold on the squared Mahalanobis distance to decide if it is well described
+    // by the background model or not. Related to Cthr from the paper.
+    // This does not influence the update of the background. A typical value could be 4 sigma
+    // and that is varThreshold=4*4=16; Corresponds to Tb in the paper.
+
+    /////////////////////////
+    // less important parameters - things you might change but be carefull
+    ////////////////////////
+    float backgroundRatio;
+    // corresponds to fTB=1-cf from the paper
+    // TB - threshold when the component becomes significant enough to be included into
+    // the background model. It is the TB=1-cf from the paper. So I use cf=0.1 => TB=0.
+    // For alpha=0.001 it means that the mode should exist for approximately 105 frames before
+    // it is considered foreground
+    // float noiseSigma;
+    float varThresholdGen;
+    //correspondts to Tg - threshold on the squared Mahalan. dist. to decide
+    //when a sample is close to the existing components. If it is not close
+    //to any a new component will be generated. I use 3 sigma => Tg=3*3=9.
+    //Smaller Tg leads to more generated components and higher Tg might make
+    //lead to small number of components but they can grow too large
+    float fVarInit;
+    float fVarMin;
+    float fVarMax;
+    //initial variance  for the newly generated components.
+    //It will will influence the speed of adaptation. A good guess should be made.
+    //A simple way is to estimate the typical standard deviation from the images.
+    //I used here 10 as a reasonable value
+    // min and max can be used to further control the variance
+    float fCT;//CT - complexity reduction prior
+    //this is related to the number of samples needed to accept that a component
+    //actually exists. We use CT=0.05 of all the samples. By setting CT=0 you get
+    //the standard Stauffer&Grimson algorithm (maybe not exact but very similar)
+
+    //shadow detection parameters
+    bool bShadowDetection;//default 1 - do shadow detection
+    unsigned char nShadowDetection;//do shadow detection - insert this value as the detection result - 127 default value
+    float fTau;
+    // Tau - shadow threshold. The shadow is detected if the pixel is darker
+    //version of the background. Tau is a threshold on how much darker the shadow can be.
+    //Tau= 0.5 means that if pixel is more than 2 times darker then it is not shadow
+    //See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
+};
 
 struct GaussBGStatModel2Params
 {
@@ -248,8 +387,9 @@ detectShadowGMM(const float* data, int nchannels, int nmodes,
 //IEEE Trans. on Pattern Analysis and Machine Intelligence, vol.26, no.5, pages 651-656, 2004
 //http://www.zoranz.net/Publications/zivkovic2004PAMI.pdf
 
-struct MOG2Invoker
+class MOG2Invoker : public ParallelLoopBody
 {
+public:
     MOG2Invoker(const Mat& _src, Mat& _dst,
                 GMM* _gmm, float* _mean,
                 uchar* _modesUsed,
@@ -280,9 +420,9 @@ struct MOG2Invoker
         cvtfunc = src->depth() != CV_32F ? getConvertFunc(src->depth(), CV_32F) : 0;
     }
 
-    void operator()(const BlockedRange& range) const
+    void operator()(const Range& range) const
     {
-        int y0 = range.begin(), y1 = range.end();
+        int y0 = range.start, y1 = range.end;
         int ncols = src->cols, nchannels = src->channels();
         AutoBuffer<float> buf(src->cols*nchannels);
         float alpha1 = 1.f - alphaT;
@@ -479,75 +619,7 @@ struct MOG2Invoker
     BinaryFunc cvtfunc;
 };
 
-BackgroundSubtractorMOG2::BackgroundSubtractorMOG2()
-{
-    frameSize = Size(0,0);
-    frameType = 0;
-
-    nframes = 0;
-    history = defaultHistory2;
-    varThreshold = defaultVarThreshold2;
-    bShadowDetection = 1;
-
-    nmixtures = defaultNMixtures2;
-    backgroundRatio = defaultBackgroundRatio2;
-    fVarInit = defaultVarInit2;
-    fVarMax  = defaultVarMax2;
-    fVarMin = defaultVarMin2;
-
-    varThresholdGen = defaultVarThresholdGen2;
-    fCT = defaultfCT2;
-    nShadowDetection =  defaultnShadowDetection2;
-    fTau = defaultfTau;
-}
-
-BackgroundSubtractorMOG2::BackgroundSubtractorMOG2(int _history,  float _varThreshold, bool _bShadowDetection)
-{
-    frameSize = Size(0,0);
-    frameType = 0;
-
-    nframes = 0;
-    history = _history > 0 ? _history : defaultHistory2;
-    varThreshold = (_varThreshold>0)? _varThreshold : defaultVarThreshold2;
-    bShadowDetection = _bShadowDetection;
-
-    nmixtures = defaultNMixtures2;
-    backgroundRatio = defaultBackgroundRatio2;
-    fVarInit = defaultVarInit2;
-    fVarMax  = defaultVarMax2;
-    fVarMin = defaultVarMin2;
-
-    varThresholdGen = defaultVarThresholdGen2;
-    fCT = defaultfCT2;
-    nShadowDetection =  defaultnShadowDetection2;
-    fTau = defaultfTau;
-}
-
-BackgroundSubtractorMOG2::~BackgroundSubtractorMOG2()
-{
-}
-
-
-void BackgroundSubtractorMOG2::initialize(Size _frameSize, int _frameType)
-{
-    frameSize = _frameSize;
-    frameType = _frameType;
-    nframes = 0;
-
-    int nchannels = CV_MAT_CN(frameType);
-    CV_Assert( nchannels <= CV_CN_MAX );
-
-    // for each gaussian mixture of each pixel bg model we store ...
-    // the mixture weight (w),
-    // the mean (nchannels values) and
-    // the covariance
-    bgmodel.create( 1, frameSize.height*frameSize.width*nmixtures*(2 + nchannels), CV_32F );
-    //make the array for keeping track of the used modes per pixel - all zeros at start
-    bgmodelUsedModes.create(frameSize,CV_8U);
-    bgmodelUsedModes = Scalar::all(0);
-}
-
-void BackgroundSubtractorMOG2::operator()(InputArray _image, OutputArray _fgmask, double learningRate)
+void BackgroundSubtractorMOG2::apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
     Mat image = _image.getMat();
     bool needToInitialize = nframes == 0 || learningRate >= 1 || image.size() != frameSize || image.type() != frameType;
@@ -562,15 +634,16 @@ void BackgroundSubtractorMOG2::operator()(InputArray _image, OutputArray _fgmask
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
 
-    parallel_for(BlockedRange(0, image.rows),
-                 MOG2Invoker(image, fgmask,
+    parallel_for_(Range(0, image.rows),
+                  MOG2Invoker(image, fgmask,
                              (GMM*)bgmodel.data,
                              (float*)(bgmodel.data + sizeof(GMM)*nmixtures*image.rows*image.cols),
                              bgmodelUsedModes.data, nmixtures, (float)learningRate,
                              (float)varThreshold,
                              backgroundRatio, varThresholdGen,
                              fVarInit, fVarMin, fVarMax, float(-learningRate*fCT), fTau,
-                             bShadowDetection, nShadowDetection));
+                             bShadowDetection, nShadowDetection),
+                  image.total()/(double)(1 << 16));
 }
 
 void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) const
@@ -624,6 +697,22 @@ void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) c
     default:
         CV_Error(CV_StsUnsupportedFormat, "");
     }
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+CV_INIT_ALGORITHM(BackgroundSubtractorMOG2, "BackgroundSubtractor.MOG2",
+                  obj.info()->addParam(obj, "history", obj.history);
+                  obj.info()->addParam(obj, "nmixtures", obj.nmixtures);
+                  obj.info()->addParam(obj, "varThreshold", obj.varThreshold);
+                  obj.info()->addParam(obj, "detectShadows", obj.bShadowDetection));
+
+Ptr<BackgroundSubtractor> createBackgroundSubtractorMOG2(int _history, double _varThreshold,
+                                                         bool _bShadowDetection)
+{
+    CV_Assert( !BackgroundSubtractorMOG2_info_auto.name().empty());
+    return new BackgroundSubtractorMOG2(_history, (float)_varThreshold, _bShadowDetection);
 }
 
 }

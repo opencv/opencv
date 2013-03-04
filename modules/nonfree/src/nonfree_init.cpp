@@ -67,7 +67,7 @@ CV_INIT_ALGORITHM(SIFT, "Feature2D.SIFT",
 
 bool initModule_nonfree(void)
 {
-    Ptr<Algorithm> sift = createSIFT(), surf = createSURF();
+    Ptr<Algorithm> sift = createSIFT_hidden(), surf = createSURF_hidden();
     return sift->info() != 0 && surf->info() != 0;
 }
 
