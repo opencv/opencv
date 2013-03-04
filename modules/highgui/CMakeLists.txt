@@ -275,7 +275,7 @@ if(WIN32 AND WITH_FFMPEG)
                        COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Release/${ffmpeg_bare_name_ver}"
                        COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Debug/${ffmpeg_bare_name_ver}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
-  elseif(MSVC)
+  elseif(MSVC AND (CMAKE_GENERATOR MATCHES "Visual"))
     add_custom_command(TARGET ${the_module} POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}/${ffmpeg_bare_name_ver}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")

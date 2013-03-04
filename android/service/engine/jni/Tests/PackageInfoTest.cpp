@@ -157,6 +157,20 @@ TEST(PackageInfo, MipsFromFullName)
 }
 #endif
 
+TEST(PackageInfo, Check2DigitRevision)
+{
+    PackageInfo info("org.opencv.lib_v23_armv7a_neon", "/data/data/org.opencv.lib_v23_armv7_neon", "4.1");
+    EXPECT_EQ(2030400, info.GetVersion());
+    EXPECT_EQ(ARCH_ARMv7 | FEATURES_HAS_NEON, info.GetCpuID());
+}
+
+TEST(PackageInfo, Check3DigitRevision)
+{
+    PackageInfo info("org.opencv.lib_v23_armv7a_neon", "/data/data/org.opencv.lib_v23_armv7_neon", "4.1.5");
+    EXPECT_EQ(2030401, info.GetVersion());
+    EXPECT_EQ(ARCH_ARMv7 | FEATURES_HAS_NEON, info.GetCpuID());
+}
+
 TEST(PackageInfo, Comparator1)
 {
     PackageInfo info1(2040000, PLATFORM_UNKNOWN, ARCH_X86);

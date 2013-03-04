@@ -206,6 +206,8 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
     ensureSizeIsEnough(prevImg.size(), CV_32FC1, vPyr_[0]);
     ensureSizeIsEnough(prevImg.size(), CV_32FC1, uPyr_[1]);
     ensureSizeIsEnough(prevImg.size(), CV_32FC1, vPyr_[1]);
+    uPyr_[0].setTo(Scalar::all(0));
+    vPyr_[0].setTo(Scalar::all(0));
     uPyr_[1].setTo(Scalar::all(0));
     vPyr_[1].setTo(Scalar::all(0));
 

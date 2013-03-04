@@ -92,7 +92,7 @@ define add_opencv_camera_module
     include $(PREBUILT_SHARED_LIBRARY)
 endef
 
-ifeq ($(OPENCV_MK_ALREADY_INCLUDED),)
+ifeq ($(OPENCV_MK_$(OPENCV_TARGET_ARCH_ABI)_ALREADY_INCLUDED),)
     ifeq ($(OPENCV_INSTALL_MODULES),on)
         $(foreach module,$(OPENCV_LIBS),$(eval $(call add_opencv_module,$(module))))
     endif
@@ -105,7 +105,7 @@ ifeq ($(OPENCV_MK_ALREADY_INCLUDED),)
     endif
 
     #turn off module installation to prevent their redefinition
-    OPENCV_MK_ALREADY_INCLUDED:=on
+    OPENCV_MK_$(OPENCV_TARGET_ARCH_ABI)_ALREADY_INCLUDED:=on
 endif
 
 ifeq ($(OPENCV_LOCAL_CFLAGS),)

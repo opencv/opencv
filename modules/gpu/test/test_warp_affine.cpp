@@ -252,6 +252,8 @@ PARAM_TEST_CASE(WarpAffineNPP, cv::gpu::DeviceInfo, MatType, Inverse, Interpolat
 GPU_TEST_P(WarpAffineNPP, Accuracy)
 {
     cv::Mat src = readImageType("stereobp/aloe-L.png", type);
+    ASSERT_FALSE(src.empty());
+
     cv::Mat M = createTransfomMatrix(src.size(), CV_PI / 4);
     int flags = interpolation;
     if (inverse)

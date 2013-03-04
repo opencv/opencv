@@ -2,13 +2,6 @@
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
-
-void fillRandom(Mat& m, double a, double b)
-{
-    RNG rng(123456789);
-    rng.fill(m, RNG::UNIFORM, Scalar::all(a), Scalar::all(b));
-}
 
 Mat readImage(const string& fileName, int flags)
 {

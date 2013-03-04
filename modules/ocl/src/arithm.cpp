@@ -2122,12 +2122,16 @@ void cv::ocl::addWeighted(const oclMat &src1, double alpha, const oclMat &src2, 
                               };
 
     int dst_step1 = dst.cols * dst.elemSize();
+    int src1_step = (int) src1.step;
+    int src2_step = (int) src2.step;
+    int dst_step  = (int) dst.step;
+    float alpha_f = alpha, beta_f = beta, gama_f = gama;
     std::vector<std::pair<size_t , const void *> > args;
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1_step ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.offset));
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src2.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2_step ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2.offset));
 
     if(src1.clCxt -> impl -> double_support != 0)
@@ -2138,14 +2142,13 @@ void cv::ocl::addWeighted(const oclMat &src1, double alpha, const oclMat &src2, 
     }
     else
     {
-        float alpha_f = alpha, beta_f = beta, gama_f = gama;
         args.push_back( std::make_pair( sizeof(cl_float), (void *)&alpha_f ));
         args.push_back( std::make_pair( sizeof(cl_float), (void *)&beta_f ));
         args.push_back( std::make_pair( sizeof(cl_float), (void *)&gama_f ));
     }
 
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.offset));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.rows ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));

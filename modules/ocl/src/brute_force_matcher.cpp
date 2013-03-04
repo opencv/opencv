@@ -60,7 +60,7 @@ namespace cv
 }
 
 template < int BLOCK_SIZE, int MAX_DESC_LEN,  typename T/*, typename Mask*/ >
-void matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat &mask,
+void matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
                          const oclMat &trainIdx, const oclMat &distance, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
@@ -75,7 +75,7 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat 
     {
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
-        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&distance.data ));
         args.push_back( std::make_pair( smemSize, (void *)NULL));
@@ -101,7 +101,7 @@ void matchUnrolledCached(const oclMat /*query*/, const oclMat * /*trains*/, int 
 }
 
 template < int BLOCK_SIZE,  typename T/*, typename Mask*/ >
-void match(const oclMat &query, const oclMat &train, const oclMat &mask,
+void match(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
            const oclMat &trainIdx, const oclMat &distance, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
@@ -115,7 +115,7 @@ void match(const oclMat &query, const oclMat &train, const oclMat &mask,
     {
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
-        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&distance.data ));
         args.push_back( std::make_pair( smemSize, (void *)NULL));
@@ -141,7 +141,7 @@ void match(const oclMat /*query*/, const oclMat * /*trains*/, int /*n*/, const o
 
 //radius_matchUnrolledCached
 template < int BLOCK_SIZE, int MAX_DESC_LEN,  typename T/*, typename Mask*/ >
-void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDistance, const oclMat &mask,
+void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDistance, const oclMat &/*mask*/,
                          const oclMat &trainIdx, const oclMat &distance, const oclMat &nMatches, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
@@ -157,7 +157,7 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDist
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
         args.push_back( std::make_pair( sizeof(cl_float), (void *)&maxDistance ));
-        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&distance.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&nMatches.data ));
@@ -181,7 +181,7 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDist
 
 //radius_match
 template < int BLOCK_SIZE, typename T/*, typename Mask*/ >
-void radius_match(const oclMat &query, const oclMat &train, float maxDistance, const oclMat &mask,
+void radius_match(const oclMat &query, const oclMat &train, float maxDistance, const oclMat &/*mask*/,
                   const oclMat &trainIdx, const oclMat &distance, const oclMat &nMatches, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
@@ -196,7 +196,7 @@ void radius_match(const oclMat &query, const oclMat &train, float maxDistance, c
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
         args.push_back( std::make_pair( sizeof(cl_float), (void *)&maxDistance ));
-        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&distance.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&nMatches.data ));
@@ -470,7 +470,7 @@ void matchDispatcher(const oclMat &query, const oclMat &train, int n, float maxD
 
 //knn match Dispatcher
 template < int BLOCK_SIZE, int MAX_DESC_LEN,  typename T/*, typename Mask*/ >
-void knn_matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat &mask,
+void knn_matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
                              const oclMat &trainIdx, const oclMat &distance, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
@@ -485,7 +485,7 @@ void knn_matchUnrolledCached(const oclMat &query, const oclMat &train, const ocl
     {
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
-        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&distance.data ));
         args.push_back( std::make_pair( smemSize, (void *)NULL));
@@ -505,7 +505,7 @@ void knn_matchUnrolledCached(const oclMat &query, const oclMat &train, const ocl
 }
 
 template < int BLOCK_SIZE,  typename T/*, typename Mask*/ >
-void knn_match(const oclMat &query, const oclMat &train, const oclMat &mask,
+void knn_match(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
                const oclMat &trainIdx, const oclMat &distance, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
@@ -519,7 +519,7 @@ void knn_match(const oclMat &query, const oclMat &train, const oclMat &mask,
     {
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
-        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&distance.data ));
         args.push_back( std::make_pair( smemSize, (void *)NULL));
@@ -538,7 +538,7 @@ void knn_match(const oclMat &query, const oclMat &train, const oclMat &mask,
 }
 
 template < int BLOCK_SIZE, int MAX_DESC_LEN, typename T/*, typename Mask*/ >
-void calcDistanceUnrolled(const oclMat &query, const oclMat &train, const oclMat &mask, const oclMat &allDist, int distType)
+void calcDistanceUnrolled(const oclMat &query, const oclMat &train, const oclMat &/*mask*/, const oclMat &allDist, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
     size_t globalSize[] = {(query.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
@@ -552,7 +552,7 @@ void calcDistanceUnrolled(const oclMat &query, const oclMat &train, const oclMat
     {
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
-        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&allDist.data ));
         args.push_back( std::make_pair( smemSize, (void *)NULL));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&block_size ));
@@ -571,7 +571,7 @@ void calcDistanceUnrolled(const oclMat &query, const oclMat &train, const oclMat
 }
 
 template < int BLOCK_SIZE, typename T/*, typename Mask*/ >
-void calcDistance(const oclMat &query, const oclMat &train, const oclMat &mask, const oclMat &allDist, int distType)
+void calcDistance(const oclMat &query, const oclMat &train, const oclMat &/*mask*/, const oclMat &allDist, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
     size_t globalSize[] = {(query.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
@@ -584,7 +584,7 @@ void calcDistance(const oclMat &query, const oclMat &train, const oclMat &mask, 
     {
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
-        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&allDist.data ));
         args.push_back( std::make_pair( smemSize, (void *)NULL));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&block_size ));
@@ -1005,6 +1005,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchConvert(const Mat &trainIdx, cons
 
 void cv::ocl::BruteForceMatcher_OCL_base::match(const oclMat &query, const oclMat &train, std::vector<DMatch> &matches, const oclMat &mask)
 {
+    assert(mask.empty()); // mask is not supported at the moment
     oclMat trainIdx, distance;
     matchSingle(query, train, trainIdx, distance, mask);
     matchDownload(trainIdx, distance, matches);
@@ -1448,7 +1449,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, std::vec
 
 // radiusMatchSingle
 void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchSingle(const oclMat &query, const oclMat &train,
-        oclMat &trainIdx,	oclMat &distance, oclMat &nMatches, float maxDistance, const oclMat &mask)
+        oclMat &trainIdx,   oclMat &distance, oclMat &nMatches, float maxDistance, const oclMat &mask)
 {
     if (query.empty() || train.empty())
         return;

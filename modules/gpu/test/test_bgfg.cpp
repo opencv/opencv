@@ -207,11 +207,17 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, MOG, testing::Combine(
 //////////////////////////////////////////////////////
 // MOG2
 
-PARAM_TEST_CASE(MOG2, cv::gpu::DeviceInfo, std::string, UseGray, UseRoi)
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(DetectShadow, bool)
+}
+
+PARAM_TEST_CASE(MOG2, cv::gpu::DeviceInfo, std::string, UseGray, DetectShadow, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     std::string inputFile;
     bool useGray;
+    bool detectShadow;
     bool useRoi;
 
     virtual void SetUp()
@@ -220,10 +226,9 @@ PARAM_TEST_CASE(MOG2, cv::gpu::DeviceInfo, std::string, UseGray, UseRoi)
         cv::gpu::setDevice(devInfo.deviceID());
 
         inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
-
         useGray = GET_PARAM(2);
-
-        useRoi = GET_PARAM(3);
+        detectShadow = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
     }
 };
 
@@ -237,9 +242,11 @@ GPU_TEST_P(MOG2, Update)
     ASSERT_FALSE(frame.empty());
 
     cv::gpu::MOG2_GPU mog2;
+    mog2.bShadowDetection = detectShadow;
     cv::gpu::GpuMat foreground = createMat(frame.size(), CV_8UC1, useRoi);
 
     cv::BackgroundSubtractorMOG2 mog2_gold;
+    mog2_gold.set("detectShadows", detectShadow);
     cv::Mat foreground_gold;
 
     for (int i = 0; i < 10; ++i)
@@ -258,11 +265,14 @@ GPU_TEST_P(MOG2, Update)
 
         mog2_gold(frame, foreground_gold);
 
-        double norm = cv::norm(foreground_gold, cv::Mat(foreground), cv::NORM_L1);
-
-        norm /= foreground_gold.size().area();
-
-        ASSERT_LE(norm, 0.09);
+        if (detectShadow)
+        {
+            ASSERT_MAT_SIMILAR(foreground_gold, foreground, 1e-2);
+        }
+        else
+        {
+            ASSERT_MAT_NEAR(foreground_gold, foreground, 0);
+        }
     }
 }
 
@@ -277,9 +287,11 @@ GPU_TEST_P(MOG2, getBackgroundImage)
     cv::Mat frame;
 
     cv::gpu::MOG2_GPU mog2;
+    mog2.bShadowDetection = detectShadow;
     cv::gpu::GpuMat foreground;
 
     cv::BackgroundSubtractorMOG2 mog2_gold;
+    mog2_gold.set("detectShadows", detectShadow);
     cv::Mat foreground_gold;
 
     for (int i = 0; i < 10; ++i)
@@ -305,6 +317,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, MOG2, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi")),
     testing::Values(UseGray(true), UseGray(false)),
+    testing::Values(DetectShadow(true), DetectShadow(false)),
     WHOLE_SUBMAT));
 
 //////////////////////////////////////////////////////
