@@ -104,10 +104,7 @@ public:
         backgroundRatio = std::min(_backgroundRatio > 0 ? _backgroundRatio : 0.95, 1.);
         noiseSigma = _noiseSigma <= 0 ? defaultNoiseSigma : _noiseSigma;
     }
-    
-    //! the destructor
-    ~BackgroundSubtractorMOG() {}
-    
+
     //! the update operator
     virtual void apply(InputArray image, OutputArray fgmask, double learningRate=0);
 

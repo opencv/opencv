@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
-// Copyright (C) 2013, OpenCV Foundation, all rights reserved. 
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -137,7 +137,7 @@ cvSegmentMotion( const CvArr* mhimg, CvArr* segmaskimg, CvMemStorage* storage,
         cv::Rect roi = brs[i];
         float compLabel = (float)(i+1);
         int x, y, area = 0;
-        
+
         cv::Mat part = segmask(roi);
         for( y = 0; y < roi.height; y++ )
         {
@@ -145,7 +145,7 @@ cvSegmentMotion( const CvArr* mhimg, CvArr* segmaskimg, CvMemStorage* storage,
             for( x = 0; x < roi.width; x++ )
                 area += partptr[x] == compLabel;
         }
-        
+
         comp.value = cv::Scalar(compLabel);
         comp.rect = roi;
         comp.area = area;
@@ -375,7 +375,7 @@ cvEstimateRigidTransform( const CvArr* arrA, const CvArr* arrB, CvMat* arrM, int
 {
     cv::Mat matA = cv::cvarrToMat(arrA), matB = cv::cvarrToMat(arrB);
     const cv::Mat matM0 = cv::cvarrToMat(arrM);
-    
+
     cv::Mat matM = cv::estimateRigidTransform(matA, matB, full_affine != 0);
     if( matM.empty() )
     {

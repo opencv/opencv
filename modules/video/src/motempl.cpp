@@ -55,7 +55,7 @@ void cv::updateMotionHistory( InputArray _silhouette, InputOutputArray _mhi,
         size.width *= size.height;
         size.height = 1;
     }
-    
+
     float ts = (float)timestamp;
     float delbound = (float)(timestamp - duration);
     int x, y;
@@ -297,11 +297,11 @@ double cv::calcGlobalOrientation( InputArray _orientation, InputArray _mask,
     fbaseOrient += shiftOrient / shiftWeight;
     fbaseOrient -= (fbaseOrient < 360 ? 0 : 360);
     fbaseOrient += (fbaseOrient >= 0 ? 0 : 360);
-    
+
     return fbaseOrient;
 }
 
-    
+
 void cv::segmentMotion(InputArray _mhi, OutputArray _segmask,
                        std::vector<Rect>& boundingRects,
                        double timestamp, double segThresh)
@@ -334,7 +334,7 @@ void cv::segmentMotion(InputArray _mhi, OutputArray _segmask,
 
     float ts = (float)timestamp;
     float comp_idx = 1.f;
-    
+
     for( y = 0; y < mhi.rows; y++ )
     {
         float* mhiptr = mhi.ptr<float>(y);

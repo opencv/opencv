@@ -189,7 +189,7 @@ cv::RotatedRect cv::CamShift( InputArray _probImage, Rect& window,
     if(box.angle >= 180)
         box.angle -= 180;
     box.center = Point2f( window.x + window.width*0.5f, window.y + window.height*0.5f);
-    
+
     return box;
 }
 

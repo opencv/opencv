@@ -96,18 +96,18 @@ public:
     int     smoothingRadius;
     //! Perform background model update
     bool updateBackgroundModel;
-    
+
 private:
     double maxVal_;
     double minVal_;
-    
+
     Size frameSize_;
     int frameNum_;
-    
+
     Mat_<int> nfeatures_;
     Mat_<unsigned int> colors_;
     Mat_<float> weights_;
-    
+
     Mat buf_;
 };
 
@@ -445,9 +445,8 @@ Ptr<BackgroundSubtractor> createBackgroundSubtractorGMG(int initializationFrames
     Ptr<BackgroundSubtractor> bgfg = new BackgroundSubtractorGMG;
     bgfg->set("initializationFrames", initializationFrames);
     bgfg->set("decisionThreshold", decisionThreshold);
-    
+
     return bgfg;
 }
 
 }
-
