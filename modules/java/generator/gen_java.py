@@ -655,7 +655,9 @@ class FuncFamilyInfo(object):
 
 
 class JavaWrapperGenerator(object):
-    def __init__(self):
+    def __init__(self, generate_for_android, native_module_name):
+        self.generate_for_android = generate_for_android
+        self.native_module_name = native_module_name
         self.clear()
 
     def clear(self):
@@ -719,12 +721,13 @@ $imports
 public class %(jc)s {
 """ % { 'm' : self.module, 'jc' : jname } )
 
-#        self.java_code[class_name]["jn_code"].write("""
-#    //
-#    // native stuff
-#    //
-#    static { System.loadLibrary("opencv_java"); }
-#""" )
+        if not self.generate_for_android:
+            self.java_code[class_name]["jn_code"].write("""
+    //
+    // native stuff
+    //
+    static { System.loadLibrary("%(n)s"); }
+""" % { 'n' : self.native_module_name } )
 
 
 
@@ -1388,19 +1391,21 @@ if __name__ == "__main__":
     if len(sys.argv) < 4:
         print "Usage:\n", \
             os.path.basename(sys.argv[0]), \
-            "<full path to hdr_parser.py> <module name> <C++ header> [<C++ header>...]"
+            "<android> <native module name> <full path to hdr_parser.py> <module name> <C++ header> [<C++ header>...]"
         print "Current args are: ", ", ".join(["'"+a+"'" for a in sys.argv])
         exit(0)
 
+    generate_for_android = sys.argv[1].lower() == "true"
+    native_module_name = sys.argv[2]
     dstdir = "."
-    hdr_parser_path = os.path.abspath(sys.argv[1])
+    hdr_parser_path = os.path.abspath(sys.argv[3])
     if hdr_parser_path.endswith(".py"):
         hdr_parser_path = os.path.dirname(hdr_parser_path)
     sys.path.append(hdr_parser_path)
     import hdr_parser
-    module = sys.argv[2]
-    srcfiles = sys.argv[3:]
+    module = sys.argv[4]
+    srcfiles = sys.argv[5:]
     #print "Generating module '" + module + "' from headers:\n\t" + "\n\t".join(srcfiles)
-    generator = JavaWrapperGenerator()
+    generator = JavaWrapperGenerator(generate_for_android, native_module_name)
     generator.gen(srcfiles, module, dstdir)
 

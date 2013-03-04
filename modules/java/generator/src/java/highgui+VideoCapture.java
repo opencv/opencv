@@ -193,6 +193,17 @@ public class VideoCapture {
         n_delete(nativeObj);
         super.finalize();
     }
+    
+    private static boolean isAndroid() {
+        try {
+            Class.forName("org.opencv.android.OpenCVLoader");
+            return true;
+        } catch(ClassNotFoundException e) {
+            return false;
+        }
+    }
+    
+    static { if (!isAndroid()) { System.loadLibrary("%native_module_output_name%"); } }
 
     // C++: VideoCapture::VideoCapture()
     private static native long n_VideoCapture();

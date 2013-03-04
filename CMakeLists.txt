@@ -409,6 +409,10 @@ else()
   SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
 endif()
 
+# --- Mono Support ---
+# --- IKVM Support ---
+include(cmake/OpenCVDetectIKVM.cmake)
+
 # --- OpenCL ---
 if(WITH_OPENCL)
   include(cmake/OpenCVDetectOpenCL.cmake)
@@ -826,6 +830,12 @@ if(NOT ANDROID)
   status("    JNI:"         JNI_INCLUDE_DIRS    THEN "${JNI_INCLUDE_DIRS}"                                       ELSE NO)
 endif()
 status("    Java tests:"    BUILD_TESTS AND (NOT ANDROID OR CAN_BUILD_ANDROID_PROJECTS)                 THEN YES ELSE NO)
+
+# ========================== mono / .net ==========================
+status("")
+status("  .NET / Mono:")
+status("    ikvm:"          IKVM_EXECUTABLE     THEN "${IKVM_EXECUTABLE} (ver ${IKVM_VERSION})"                  ELSE NO)
+status("    Mono tests:"    BUILD_TESTS AND IKVM_EXECUTABLE                                             THEN YES ELSE NO)
 
 # ========================== documentation ==========================
 if(BUILD_DOCS)

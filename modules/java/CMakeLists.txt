@@ -16,6 +16,7 @@ endif()
 # output locations
 set(JAVA_INSTALL_ROOT "sdk/java")
 set(JNI_INSTALL_ROOT  "sdk/native")
+set(native_module_output_name ${the_module}${OPENCV_DLLVERSION})
 
 # get list of modules to wrap
 string(REPLACE "opencv_" "" OPENCV_JAVA_MODULES "${OPENCV_MODULE_${the_module}_REQ_DEPS};${OPENCV_MODULE_${the_module}_OPT_DEPS}")
@@ -32,6 +33,13 @@ set(scripts_gen_java "${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_java.py")
 set(scripts_hdr_parser "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
 set(scripts_gen_javadoc "${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_javadoc.py")
 set(scripts_rst_parser "${CMAKE_CURRENT_SOURCE_DIR}/generator/rst_parser.py")
+
+# arguments for gen_java
+if(ANDROID)
+	set(arguments_gen_java "true")
+else()
+	set(arguments_gen_java "false")
+endif()
 
 # handwritten C/C++ and Java sources
 file(GLOB handwrittren_h_sources "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp/*.hpp")
@@ -100,7 +108,7 @@ foreach(module ${OPENCV_JAVA_MODULES})
   # first run of gen_java.py (to get list of generated files)
   file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/")
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out")
-  execute_process(COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
+  execute_process(COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" ${arguments_gen_java} ${native_module_output_name} "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
                   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out"
                   OUTPUT_QUIET ERROR_QUIET)
   unset(generated_java_sources_${module})
@@ -124,7 +132,7 @@ set(step1_depends "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_
 foreach(module ${OPENCV_JAVA_MODULES})
   # second run of gen_java.py (at build time)
   add_custom_command(OUTPUT ${generated_java_sources_${module}} "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
-                     COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
+                     COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" ${arguments_gen_java} ${native_module_output_name} "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                      DEPENDS "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers_${module}}
                     )
@@ -139,7 +147,7 @@ add_custom_command(OUTPUT ${documented_java_files}
                    DEPENDS ${step2_depends}
                   )
 
-# step 3: copy files to destination
+# step 3: copy files to destination (replacing %native_module_output_name% with "java_opencvNNN")
 set(step3_input_files ${documented_java_files} ${handwrittren_aidl_sources})
 set(copied_files "")
 foreach(java_file ${step3_input_files})
@@ -149,7 +157,11 @@ foreach(java_file ${step3_input_files})
   set(output_name "${OpenCV_BINARY_DIR}/src/org/opencv/${java_file_name}")
 
   add_custom_command(OUTPUT "${output_name}"
-                     COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${output_name}"
+                     COMMAND ${CMAKE_COMMAND} 
+                        -D INPUT_FILE="${java_file}" 
+                        -D OUTPUT_FILE="${output_name}" 
+                        -D native_module_output_name="${native_module_output_name}"
+                        -P "${CMAKE_CURRENT_SOURCE_DIR}/ConfigureJavaSourceFile.cmake"
                      MAIN_DEPENDENCY "${java_file}"
                      DEPENDS ${step2_depends}
                      COMMENT "Generating src/org/opencv/${java_file_name}"
@@ -269,6 +281,7 @@ add_library(${the_module} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_so
 if(BUILD_FAT_JAVA_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
   list(REMOVE_ITEM __deps ${the_module} opencv_ts)
+  list(REMOVE_ITEM __deps ${the_module} opencv_mono)
   ocv_list_unique(__deps)
   set(__extradeps ${__deps})
   ocv_list_filterout(__extradeps "^opencv_")
@@ -294,7 +307,7 @@ endif()
 
 # Additional target properties
 set_target_properties(${the_module} PROPERTIES
-    OUTPUT_NAME "${the_module}${OPENCV_DLLVERSION}"
+    OUTPUT_NAME "${native_module_output_name}"
     DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
