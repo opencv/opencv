@@ -138,12 +138,20 @@ if __name__ == '__main__':
     img1 = cv2.imread(fn1, 0)
     img2 = cv2.imread(fn2, 0)
     detector, matcher = init_feature(feature_name)
-    if detector != None:
-        print 'using', feature_name
-    else:
+
+    if img1 is None:
+        print 'Failed to load fn1:', fn1
+        sys.exit(1)
+        
+    if img2 is None:
+        print 'Failed to load fn2:', fn2
+        sys.exit(1)
+    
+    if detector is None:
         print 'unknown feature:', feature_name
         sys.exit(1)
-
+    
+    print 'using', feature_name
 
     kp1, desc1 = detector.detectAndCompute(img1, None)
     kp2, desc2 = detector.detectAndCompute(img2, None)
