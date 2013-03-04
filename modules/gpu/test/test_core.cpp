@@ -1873,7 +1873,7 @@ PARAM_TEST_CASE(Bitwise_Scalar, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channel
         cv::gpu::setDevice(devInfo.deviceID());
 
         src = randomMat(size, CV_MAKE_TYPE(depth, channels));
-        cv::Scalar_<int> ival = randomScalar(0.0, 255.0);
+        cv::Scalar_<int> ival = randomScalar(0.0, std::numeric_limits<int>::max());
         val = ival;
     }
 };

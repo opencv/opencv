@@ -212,7 +212,7 @@ TEST(DISABLED_SoftCascade, training)
         float octave = powf(2.f, (float)(*it));
         cv::Size model = cv::Size( cvRound(64 * octave) / shrinkage, cvRound(128 * octave) / shrinkage );
 
-        cv::Ptr<FeaturePool> pool = FeaturePool::create(model, nfeatures);
+        cv::Ptr<FeaturePool> pool = FeaturePool::create(model, nfeatures, 10);
         nfeatures = pool->size();
         int npositives = 20;
         int nnegatives = 40;
@@ -220,7 +220,8 @@ TEST(DISABLED_SoftCascade, training)
         cv::Rect boundingBox = cv::Rect( cvRound(20 * octave), cvRound(20  * octave),
                                          cvRound(64 * octave), cvRound(128 * octave));
 
-        cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage, nfeatures);
+        cv::Ptr<ChannelFeatureBuilder> builder = ChannelFeatureBuilder::create("HOG6MagLuv");
+        cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage, builder);
 
         std::string path = cvtest::TS::ptr()->get_data_path() + "softcascade/sample_training_set";
         ScaledDataset dataset(path, *it);

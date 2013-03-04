@@ -648,7 +648,7 @@ namespace cv { namespace gpu { namespace device
                     tWeight += gmm_weight(mode * frame.rows + y, x);
                     if (tWeight > c_TB)
                         break;
-                };
+                }
             }
 
             fgmask(y, x) = background ? 0 : isShadow ? c_shadowVal : 255;

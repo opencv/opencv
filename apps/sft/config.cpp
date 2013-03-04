@@ -69,6 +69,7 @@ void sft::Config::write(cv::FileStorage& fs) const
        << "outXmlPath"   << outXmlPath
 
        << "seed"         << seed
+       << "featureType"  << featureType
        << "}";
 }
 
@@ -99,6 +100,7 @@ void sft::Config::read(const cv::FileNode& node)
     outXmlPath =  (std::string)node["outXmlPath"];
 
     seed = (int)node["seed"];
+    featureType = (std::string)node["featureType"];
 }
 
 void sft::write(cv::FileStorage& fs, const string&, const Config& x)
@@ -153,7 +155,8 @@ std::ostream& sft::operator<<(std::ostream& out, const Config& m)
 
         << std::setw(14) << std::left  << "cascadeName"  << m.cascadeName  << std::endl
         << std::setw(14) << std::left  << "outXmlPath"   << m.outXmlPath   << std::endl
-        << std::setw(14) << std::left  << "seed"         << m.seed         << std::endl;
+        << std::setw(14) << std::left  << "seed"         << m.seed         << std::endl
+        << std::setw(14) << std::left  << "featureType"  << m.featureType  << std::endl;
 
     return out;
 }

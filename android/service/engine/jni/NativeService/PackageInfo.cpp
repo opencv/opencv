@@ -136,7 +136,17 @@ inline int SplitVersion(const vector<string>& features, const string& package_ve
 
         // Taking release and build number from package revision
         vector<string> tmp2 = SplitStringVector(package_version, '.');
-        result += atoi(tmp2[0].c_str())*100 + atoi(tmp2[1].c_str());
+        if (tmp2.size() == 2)
+        {
+            // the 2nd digit is revision
+            result += atoi(tmp2[0].c_str())*100 + 00;
+        }
+        else
+        {
+            // the 2nd digit is part of library version
+            // the 3rd digit is revision
+            result += atoi(tmp2[0].c_str())*100 + atoi(tmp2[1].c_str());
+        }
     }
     else
     {
@@ -194,10 +204,10 @@ inline int SplitPlatfrom(const vector<string>& features)
  * Example: armv7_neon
  */
 PackageInfo::PackageInfo(int version, int platform, int cpu_id, std::string install_path):
-Version(version),
-Platform(platform),
-CpuID(cpu_id),
-InstallPath("")
+    Version(version),
+    Platform(platform),
+    CpuID(cpu_id),
+    InstallPath("")
 {
     #ifndef __SUPPORT_TEGRA3
     Platform = PLATFORM_UNKNOWN;

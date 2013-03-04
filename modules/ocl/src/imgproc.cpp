@@ -288,13 +288,14 @@ namespace cv
                 args.push_back( std::make_pair(sizeof(cl_int), (void *)&map1.cols));
                 args.push_back( std::make_pair(sizeof(cl_int), (void *)&map1.rows));
                 args.push_back( std::make_pair(sizeof(cl_int), (void *)&cols));
-                if(src.clCxt -> impl -> double_support != 0)
+                float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
+
+               if(src.clCxt -> impl -> double_support != 0)
                 {
                     args.push_back( std::make_pair(sizeof(cl_double4), (void *)&borderValue));
                 }
                 else
                 {
-                    float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
                     args.push_back( std::make_pair(sizeof(cl_float4), (void *)&borderFloat));
                 }
             }
