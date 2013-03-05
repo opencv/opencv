@@ -2,10 +2,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 
 find_package(TBB)
 
-if(NOT TBB_FOUND)
-    ocv_disable_gpu_demo(stitching)
-endif()
-
+ocv_disable_gpu_demo(stitching)
 ocv_define_gpu_demo(stitching DESCRIPTION "Stitching" INCLUDE_DIRS ${TBB_INCLUDE_DIRS} LINK_LIBRARIES ${TBB_LIBRARIES})
 
 if(BUILD_demo_stitching AND WIN32)
