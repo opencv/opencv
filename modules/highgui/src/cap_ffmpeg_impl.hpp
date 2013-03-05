@@ -59,6 +59,7 @@ extern "C" {
 
 #include "ffmpeg_codecs.hpp"
 
+#include <libavutil/opt.h>
 #include <libavutil/mathematics.h>
 
 #ifdef WIN32
@@ -1114,6 +1115,14 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
     c->codec_type = AVMEDIA_TYPE_VIDEO;
 
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54,25,0)
+    // Set per-codec defaults
+    AVCodecID c_id = c->codec_id;
+    avcodec_get_context_defaults3(c, codec);
+    // avcodec_get_context_defaults3 erases codec_id for some reason
+    c->codec_id = c_id;
+#endif
+
     /* put sample parameters */
     int64_t lbit_rate = (int64_t)bitrate;
     lbit_rate += (bitrate / 2);
@@ -1176,6 +1185,20 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
         /* avoid FFMPEG warning 'clipping 1 dct coefficients...' */
         c->mb_decision=2;
     }
+
+#if LIBAVUTIL_BUILD > CALC_FFMPEG_VERSION(51,11,0)
+    /* Some settings for libx264 encoding, restore dummy values for gop_size
+     and qmin since they will be set to reasonable defaults by the libx264
+     preset system. Also, use a crf encode with the default quality rating, 
+     this seems easier than finding an appropriate default bitrate. */
+    if (c->codec_id == CODEC_ID_H264) {
+      c->gop_size = -1;
+      c->qmin = -1;
+      c->bit_rate = 0;
+      av_opt_set(c->priv_data,"crf","23", 0);
+    }
+#endif
+
 #if LIBAVCODEC_VERSION_INT>0x000409
     // some formats want stream headers to be seperate
     if(oc->oformat->flags & AVFMT_GLOBALHEADER)

@@ -200,6 +200,7 @@ public:
     void multiply(const MatExpr& e, double s, MatExpr& res) const;
 
     static void makeExpr(MatExpr& res, int method, Size sz, int type, double alpha=1);
+    static void makeExpr(MatExpr& res, int method, int ndims, const int* sizes, int type, double alpha=1);
 };
 
 static MatOp_Initializer g_MatOp_Initializer;
@@ -1551,8 +1552,13 @@ void MatOp_Initializer::assign(const MatExpr& e, Mat& m, int _type) const
 {
     if( _type == -1 )
         _type = e.a.type();
-    m.create(e.a.size(), _type);
-    if( e.flags == 'I' )
+
+    if( e.a.dims <= 2 )
+        m.create(e.a.size(), _type);
+    else
+        m.create(e.a.dims, e.a.size, _type);
+
+    if( e.flags == 'I' && e.a.dims <= 2 )
         setIdentity(m, Scalar(e.alpha));
     else if( e.flags == '0' )
         m = Scalar();
@@ -1573,6 +1579,10 @@ inline void MatOp_Initializer::makeExpr(MatExpr& res, int method, Size sz, int t
     res = MatExpr(&g_MatOp_Initializer, method, Mat(sz, type, (void*)0), Mat(), Mat(), alpha, 0);
 }
 
+inline void MatOp_Initializer::makeExpr(MatExpr& res, int method, int ndims, const int* sizes, int type, double alpha)
+{
+    res = MatExpr(&g_MatOp_Initializer, method, Mat(ndims, sizes, type, (void*)0), Mat(), Mat(), alpha, 0);
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1618,6 +1628,13 @@ MatExpr Mat::zeros(Size size, int type)
     return e;
 }
 
+MatExpr Mat::zeros(int ndims, const int* sizes, int type)
+{
+    MatExpr e;
+    MatOp_Initializer::makeExpr(e, '0', ndims, sizes, type);
+    return e;
+}
+
 MatExpr Mat::ones(int rows, int cols, int type)
 {
     MatExpr e;
@@ -1629,6 +1646,13 @@ MatExpr Mat::ones(Size size, int type)
 {
     MatExpr e;
     MatOp_Initializer::makeExpr(e, '1', size, type);
+    return e;
+}
+
+MatExpr Mat::ones(int ndims, const int* sizes, int type)
+{
+    MatExpr e;
+    MatOp_Initializer::makeExpr(e, '1', ndims, sizes, type);
     return e;
 }
 
