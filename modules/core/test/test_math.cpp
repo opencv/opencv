@@ -2536,12 +2536,30 @@ TYPED_TEST_P(Core_CheckRange, Zero)
     double min_bound = 0.0;
     double max_bound = 0.1;
 
-    cv::Mat src = cv::Mat::zeros(3,3, cv::DataDepth<TypeParam>::value);
+    cv::Mat src1 = cv::Mat::zeros(3, 3, cv::DataDepth<TypeParam>::value);
 
-    ASSERT_TRUE( checkRange(src, true, NULL, min_bound, max_bound) );
+    int sizes[] = {5, 6, 7};
+    cv::Mat src2 = cv::Mat::zeros(3, sizes, cv::DataDepth<TypeParam>::value);
+
+    ASSERT_TRUE( checkRange(src1, true, NULL, min_bound, max_bound) );
+    ASSERT_TRUE( checkRange(src2, true, NULL, min_bound, max_bound) );
 }
 
-REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Positive, Bounds, Zero);
+TYPED_TEST_P(Core_CheckRange, One)
+{
+    double min_bound = 1.0;
+    double max_bound = 1.1;
+
+    cv::Mat src1 = cv::Mat::ones(3, 3, cv::DataDepth<TypeParam>::value);
+
+    int sizes[] = {5, 6, 7};
+    cv::Mat src2 = cv::Mat::ones(3, sizes, cv::DataDepth<TypeParam>::value);
+
+    ASSERT_TRUE( checkRange(src1, true, NULL, min_bound, max_bound) );
+    ASSERT_TRUE( checkRange(src2, true, NULL, min_bound, max_bound) );
+}
+
+REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Positive, Bounds, Zero, One);
 
 typedef ::testing::Types<signed char,unsigned char, signed short, unsigned short, signed int> mat_data_types;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Core_CheckRange, mat_data_types);
