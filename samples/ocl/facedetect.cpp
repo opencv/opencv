@@ -107,7 +107,9 @@ int main( int argc, const char** argv )
     }
     //if you want to use undefault device, set it here
     //setDevice(oclinfo[0]);
-    //setBinpath(CLBINPATH);
+
+    //set this to save kernel compile time from second time you run
+    ocl::setBinpath("./");
     if( capture )
     {
         cout << "In capture ..." << endl;
