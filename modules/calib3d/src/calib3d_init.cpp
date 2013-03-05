@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -39,44 +40,27 @@
 //
 //M*/
 
+#include "precomp.hpp"
 
-#ifndef _CV_MODEL_EST_H_
-#define _CV_MODEL_EST_H_
+using namespace cv;
 
-#include "opencv2/calib3d/calib3d.hpp"
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class CV_EXPORTS CvModelEstimator2
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////                  
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#if 0
+bool cv::initModule_calib3d(void)
 {
-public:
-    CvModelEstimator2(int _modelPoints, CvSize _modelSize, int _maxBasicSolutions);
-    virtual ~CvModelEstimator2();
+    bool all = true;
+    all &= !RANSACPointSetRegistrator_info_auto.name().empty();
+    all &= !LMeDSPointSetRegistrator_info_auto.name().empty();
+    all &= !LMSolverImpl_info_auto.name().empty();
 
-    virtual int runKernel( const CvMat* m1, const CvMat* m2, CvMat* model )=0;
-    virtual bool runLMeDS( const CvMat* m1, const CvMat* m2, CvMat* model,
-                           CvMat* mask, double confidence=0.99, int maxIters=2000 );
-    virtual bool runRANSAC( const CvMat* m1, const CvMat* m2, CvMat* model,
-                            CvMat* mask, double threshold,
-                            double confidence=0.99, int maxIters=2000 );
-    virtual bool refine( const CvMat*, const CvMat*, CvMat*, int ) { return true; }
-    virtual void setSeed( int64 seed );
-
-protected:
-    virtual void computeReprojError( const CvMat* m1, const CvMat* m2,
-                                     const CvMat* model, CvMat* error ) = 0;
-    virtual int findInliers( const CvMat* m1, const CvMat* m2,
-                             const CvMat* model, CvMat* error,
-                             CvMat* mask, double threshold );
-    virtual bool getSubset( const CvMat* m1, const CvMat* m2,
-                            CvMat* ms1, CvMat* ms2, int maxAttempts=1000 );
-    virtual bool checkSubset( const CvMat* ms1, int count );
-    virtual bool isMinimalSetConsistent( const CvMat* /*m1*/, const CvMat* /*m2*/ ) { return true; };
-
-    CvRNG rng;
-    int modelPoints;
-    CvSize modelSize;
-    int maxBasicSolutions;
-    bool checkPartialSubsets;
-};
-
-#endif // _CV_MODEL_EST_H_
-
+    return all;
+}
+#endif
