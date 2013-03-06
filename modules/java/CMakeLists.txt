@@ -301,7 +301,6 @@ endif()
 # Additional target properties
 set_target_properties(${the_module} PROPERTIES
     OUTPUT_NAME "${the_module}${LIB_NAME_SUFIX}"
-    #DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
@@ -311,8 +310,6 @@ set_target_properties(${the_module} PROPERTIES
 
 if(WIN32)
   set_target_properties(${the_module} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
-else()
-  set_target_properties(${the_module} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH})
 endif()
 
 if(ENABLE_SOLUTION_FOLDERS)
