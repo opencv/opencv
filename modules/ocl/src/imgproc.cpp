@@ -269,7 +269,7 @@ namespace cv
             size_t globalThreads[3] = {glbSizeX, glbSizeY, 1};
             size_t localThreads[3] = {blkSizeX, blkSizeY, 1};
 
-
+            float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
             vector< pair<size_t, const void *> > args;
             if(map1.channels() == 2)
             {
@@ -289,16 +289,7 @@ namespace cv
                 args.push_back( make_pair(sizeof(cl_int), (void *)&map1.cols));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&map1.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
-                float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
- 
-               if(src.clCxt -> impl -> double_support != 0)
-                {
-                    args.push_back( make_pair(sizeof(cl_double4), (void *)&borderValue));
-                }
-                else
-                {
-                    args.push_back( make_pair(sizeof(cl_float4), (void *)&borderFloat));
-                }
+                args.push_back( make_pair(sizeof(cl_float4), (void *)&borderFloat));
             }
             if(map1.channels() == 1)
             {
@@ -319,15 +310,7 @@ namespace cv
                 args.push_back( make_pair(sizeof(cl_int), (void *)&map1.cols));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&map1.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
-                if(src.clCxt -> impl -> double_support != 0)
-                {
-                    args.push_back( make_pair(sizeof(cl_double4), (void *)&borderValue));
-                }
-                else
-                {
-                    float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
-                    args.push_back( make_pair(sizeof(cl_float4), (void *)&borderFloat));
-                }
+                args.push_back( make_pair(sizeof(cl_float4), (void *)&borderFloat));
             }
             openCLExecuteKernel(clCxt, &imgproc_remap, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
         }
@@ -1234,13 +1217,15 @@ namespace cv
 
             size_t globalThreads[3] = {col, row, 1};
             size_t localThreads[3]  = {ltx, lty, 1};
+            int src_step = static_cast<int>(src.step);
+            int dst_step = static_cast<int>(dst.step);
 
             //set args
             vector<pair<size_t , const void *> > args;
             args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.step ));
+            args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_step ));
             args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step ));
+            args.push_back( make_pair( sizeof(cl_int) , (void *)&src_step ));
             args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.offset ));
             args.push_back( make_pair( sizeof(cl_int) , (void *)&src.offset ));
             args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols ));
@@ -1299,15 +1284,18 @@ namespace cv
 
             size_t globalThreads[3] = {col, row, 1};
             size_t localThreads[3]  = {ltx, lty, 1};
+            int src_step = static_cast<int>(src.step);
+            int dstr_step = static_cast<int>(dstr.step);
+            int dstsp_step = static_cast<int>(dstsp.step);
 
             //set args
             vector<pair<size_t , const void *> > args;
             args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
             args.push_back( make_pair( sizeof(cl_mem) , (void *)&dstr.data ));
             args.push_back( make_pair( sizeof(cl_mem) , (void *)&dstsp.data ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dstr.step ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dstsp.step ));
+            args.push_back( make_pair( sizeof(cl_int) , (void *)&src_step ));
+            args.push_back( make_pair( sizeof(cl_int) , (void *)&dstr_step ));
+            args.push_back( make_pair( sizeof(cl_int) , (void *)&dstsp_step ));
             args.push_back( make_pair( sizeof(cl_int) , (void *)&src.offset ));
             args.push_back( make_pair( sizeof(cl_int) , (void *)&dstr.offset ));
             args.push_back( make_pair( sizeof(cl_int) , (void *)&dstsp.offset ));

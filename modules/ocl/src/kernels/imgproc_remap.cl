@@ -45,24 +45,13 @@
 //M*/
 //#pragma OPENCL EXTENSION cl_amd_printf : enable
 
-#if defined (DOUBLE_SUPPORT)
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#elif defined (cl_amd_fp64)
-#pragma OPENCL EXTENSION cl_amd_fp64:enable
-#endif
-typedef double4 F4 ;
-#else 
-typedef float4 F4;
-#endif
-
 
 /////////////////////////////////////////////////////////
 ///////////////////////using buffer//////////////////////
 /////////////////////////////////////////////////////////
 __kernel void remapNNSConstant_C1_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
         __global short * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, float4 nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -113,7 +102,7 @@ __kernel void remapNNSConstant_C1_D0(__global unsigned char* dst, __global unsig
 
 __kernel void remapNNFConstant_C1_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
         __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, float4 nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -162,7 +151,7 @@ __kernel void remapNNFConstant_C1_D0(__global unsigned char* dst, __global unsig
 
 __kernel void remapNNF1Constant_C1_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
         __global float * map1,  __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, float4 nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -216,7 +205,7 @@ __kernel void remapNNF1Constant_C1_D0(__global unsigned char* dst, __global unsi
 
 __kernel void remapNNSConstant_C4_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
         __global short * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, float4 nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -243,7 +232,7 @@ __kernel void remapNNSConstant_C4_D0(__global unsigned char* dst, __global unsig
 
 __kernel void remapNNFConstant_C4_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
         __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, float4 nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -270,7 +259,7 @@ __kernel void remapNNFConstant_C4_D0(__global unsigned char* dst, __global unsig
 
 __kernel void remapNNF1Constant_C4_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
         __global float * map1,  __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, float4 nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -294,7 +283,7 @@ __kernel void remapNNF1Constant_C4_D0(__global unsigned char* dst, __global unsi
 
 __kernel void remapNNSConstant_C1_D5(__global float* dst, __global float const * restrict  src,
         __global short * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows ,int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows ,int threadCols, float4 nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -321,7 +310,7 @@ __kernel void remapNNSConstant_C1_D5(__global float* dst, __global float const *
 
 __kernel void remapNNFConstant_C1_D5(__global float* dst, __global float const * restrict  src,
         __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows ,int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows ,int threadCols, float4 nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -348,7 +337,7 @@ __kernel void remapNNFConstant_C1_D5(__global float* dst, __global float const *
 
 __kernel void remapNNF1Constant_C1_D5(__global float* dst, __global float const * restrict  src,
         __global float * map1, __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows ,int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows ,int threadCols, float4 nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -378,7 +367,7 @@ __kernel void remapNNF1Constant_C1_D5(__global float* dst, __global float const 
 
 __kernel void remapNNSConstant_C4_D5(__global float * dst, __global float const * restrict  src,
         __global short * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, float4 nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -403,7 +392,7 @@ __kernel void remapNNSConstant_C4_D5(__global float * dst, __global float const 
 
 __kernel void remapNNFConstant_C4_D5(__global float * dst, __global float const * restrict  src,
         __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, float4 nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -425,7 +414,7 @@ __kernel void remapNNFConstant_C4_D5(__global float * dst, __global float const 
 
 __kernel void remapNNF1Constant_C4_D5(__global float * dst, __global float const * restrict  src,
         __global float * map1,  __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, float4 nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -451,7 +440,7 @@ __kernel void remapNNF1Constant_C4_D5(__global float * dst, __global float const
 
 __kernel void remapLNFConstant_C1_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
         __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, float4 nVal)
 {
 
     int x = get_global_id(0);
@@ -537,7 +526,7 @@ __kernel void remapLNFConstant_C1_D0(__global unsigned char* dst, __global unsig
 
 __kernel void remapLNF1Constant_C1_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
         __global float * map1,  __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, float4 nVal)
 {
 
     int x = get_global_id(0);
@@ -629,7 +618,7 @@ __kernel void remapLNF1Constant_C1_D0(__global unsigned char* dst, __global unsi
 
 __kernel void remapLNFConstant_C4_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
         __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, float4 nVal)
 {
 
     int x = get_global_id(0);
@@ -673,7 +662,7 @@ __kernel void remapLNFConstant_C4_D0(__global unsigned char* dst, __global unsig
 }
 __kernel void remapLNF1Constant_C4_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
         __global float * map1,  __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, float4 nVal)
 {
 
     int x = get_global_id(0);
@@ -722,7 +711,7 @@ __kernel void remapLNF1Constant_C4_D0(__global unsigned char* dst, __global unsi
 
 __kernel void remapLNFConstant_C1_D5(__global float* dst, __global float const * restrict  src,
         __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, float4 nVal)
 {
 
     int x = get_global_id(0);
@@ -806,7 +795,7 @@ __kernel void remapLNFConstant_C1_D5(__global float* dst, __global float const *
 
 __kernel void remapLNF1Constant_C1_D5(__global float* dst, __global float const * restrict  src,
         __global float * map1, __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, float4 nVal)
 {
 
     int x = get_global_id(0);
@@ -896,7 +885,7 @@ __kernel void remapLNF1Constant_C1_D5(__global float* dst, __global float const 
 
 __kernel void remapLNFConstant_C4_D5(__global float * dst, __global float const * restrict  src,
         __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, float4 nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -940,7 +929,7 @@ __kernel void remapLNFConstant_C4_D5(__global float * dst, __global float const 
 
 __kernel void remapLNF1Constant_C4_D5(__global float * dst, __global float const * restrict  src,
         __global float * map1, __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
+        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, float4 nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
