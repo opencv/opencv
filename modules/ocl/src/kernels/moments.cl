@@ -1,5 +1,9 @@
 #if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 #else
 typedef float double;
 typedef float4 double4;
@@ -22,6 +26,8 @@ __kernel void icvContourMoments(int contour_total,
 {
     double xi_1, yi_1, xi_12, yi_12, xi, yi, xi2, yi2, dxy, xii_1, yii_1;
     int idx = get_global_id(0);
+    if (idx < 0 || idx >= contour_total)
+        return;
 
     xi_1 = *(reader_oclmat_data + (get_global_id(0) << 1));
     yi_1 = *(reader_oclmat_data + (get_global_id(0) << 1) + 1);

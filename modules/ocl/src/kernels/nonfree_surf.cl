@@ -78,7 +78,12 @@ uchar read_imgTex(IMAGE_INT8 img, sampler_t sam, float2 coord, int rows, int col
 
 // dynamically change the precision used for floating type
 
-#if defined DOUBLE_SUPPORT
+#if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 #define F double
 #else
 #define F float
