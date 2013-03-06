@@ -907,7 +907,7 @@ namespace minMaxLoc
         getLaunchCfg(cols, rows, block, grid);
 
         // For values
-        b1cols = grid.x * grid.y * elem_size;
+        b1cols = (int)(grid.x * grid.y * elem_size);
         b1rows = 2;
 
         // For locations

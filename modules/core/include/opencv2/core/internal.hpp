@@ -750,4 +750,14 @@ typedef struct CvBigFuncTable
     (tab).fn_2d[CV_32F] = (void*)FUNCNAME##_32f##FLAG;  \
     (tab).fn_2d[CV_64F] = (void*)FUNCNAME##_64f##FLAG
 
+namespace cv { namespace ogl {
+CV_EXPORTS bool checkError(const char* file, const int line, const char* func = "");
+}}
+
+#if defined(__GNUC__)
+    #define CV_CheckGlError() CV_DbgAssert( (cv::ogl::checkError(__FILE__, __LINE__, __func__)) )
+#else
+    #define CV_CheckGlError() CV_DbgAssert( (cv::ogl::checkError(__FILE__, __LINE__)) )
+#endif
+
 #endif // __OPENCV_CORE_INTERNAL_HPP__

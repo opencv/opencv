@@ -71,9 +71,9 @@ void cv::gpu::VideoWriter_GPU::EncoderParams::save(const std::string&) const { t
 #else // !defined HAVE_CUDA || !defined WIN32
 
 #ifdef HAVE_FFMPEG
-    #include "cap_ffmpeg_impl.hpp"
+    #include "../src/cap_ffmpeg_impl.hpp"
 #else
-    #include "cap_ffmpeg_api.hpp"
+    #include "../src/cap_ffmpeg_api.hpp"
 #endif
 
 
