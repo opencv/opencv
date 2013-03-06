@@ -354,8 +354,8 @@ It defines your project:
 
 .. code-block:: scala
 
-    import sbt._
-    import Keys._
+   import sbt._
+   import Keys._
 
    object JavaSampleBuild extends Build {
      def scalaSettings = Seq(
