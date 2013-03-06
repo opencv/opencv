@@ -45,7 +45,11 @@
 
 /**************************************PUBLICFUNC*************************************/
 #if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 #define RES_TYPE double4
 #define CONVERT_RES_TYPE convert_double4
 #else
@@ -108,6 +112,11 @@
 #define CONDITION_FUNC(a,b,c) ((a) ? b : c)
 #define MIN_VAL (-DBL_MAX)
 #define MAX_VAL DBL_MAX
+#endif
+#if defined (DEPTH_6)
+#define CONDITION_RES convert_long4
+#else
+#define CONDITION_RES convert_int4
 #endif
 
 #if defined (REPEAT_S0)
@@ -203,7 +212,7 @@ __kernel void arithm_op_minMaxLoc (int cols,int invalid_cols,int offset,int elem
        minloc = CONDITION_FUNC(minval == temp, temploc , minloc);
        maxloc = CONDITION_FUNC(maxval == temp, temploc , maxloc);
        aaa= convert_float4(maxval == temp);
-       maxloc = convert_int4(aaa) ? temploc : maxloc;
+       maxloc = CONDITION_RES(aaa) ? temploc : maxloc;
    }
    if(lid > 127)
    {

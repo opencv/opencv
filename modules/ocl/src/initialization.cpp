@@ -250,9 +250,9 @@ namespace cv
             extends_set[EXT_LEN - 1] = 0;
             memset(oclinfo.impl->extra_options, 0, 512);
             oclinfo.impl->double_support = 0;
-            int fp64_khr = std::string(extends_set).find("cl_khr_fp64");
+            std::string::size_type fp64_ = std::min(std::string(extends_set).find("cl_khr_fp64"), std::string(extends_set).find("cl_amd_fp64"));
 
-            if(fp64_khr >= 0 && fp64_khr < EXT_LEN)
+            if(fp64_ < EXT_LEN)
             {
                 sprintf(oclinfo.impl->extra_options , "-D DOUBLE_SUPPORT");
                 oclinfo.impl -> double_support = 1;
