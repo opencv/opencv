@@ -241,15 +241,15 @@ void cv::updateWindow(const std::string& windowName)
 #ifdef HAVE_OPENGL
 namespace
 {
-    std::map<std::string, cv::GlTexture2D> wndTexs;
-    std::map<std::string, cv::GlTexture2D> ownWndTexs;
-    std::map<std::string, cv::GlBuffer> ownWndBufs;
+    std::map<std::string, cv::ogl::Texture2D> wndTexs;
+    std::map<std::string, cv::ogl::Texture2D> ownWndTexs;
+    std::map<std::string, cv::ogl::Buffer> ownWndBufs;
 
-    void CV_CDECL glDrawTextureCallback(void* userdata)
+    void glDrawTextureCallback(void* userdata)
     {
-        cv::GlTexture2D* texObj = static_cast<cv::GlTexture2D*>(userdata);
+        cv::ogl::Texture2D* texObj = static_cast<cv::ogl::Texture2D*>(userdata);
 
-        cv::render(*texObj);
+        cv::ogl::render(*texObj);
     }
 }
 #endif // HAVE_OPENGL
@@ -281,11 +281,11 @@ void cv::imshow( const std::string& winname, InputArray _img )
 
         setOpenGlContext(winname);
 
-        if (_img.kind() == _InputArray::OPENGL_TEXTURE2D)
+        if (_img.kind() == _InputArray::OPENGL_TEXTURE)
         {
-            cv::GlTexture2D& tex = wndTexs[winname];
+            cv::ogl::Texture2D& tex = wndTexs[winname];
 
-            tex = _img.getGlTexture2D();
+            tex = _img.getOGlTexture2D();
 
             tex.setAutoRelease(false);
 
@@ -293,11 +293,11 @@ void cv::imshow( const std::string& winname, InputArray _img )
         }
         else
         {
-            cv::GlTexture2D& tex = ownWndTexs[winname];
+            cv::ogl::Texture2D& tex = ownWndTexs[winname];
 
             if (_img.kind() == _InputArray::GPU_MAT)
             {
-                cv::GlBuffer& buf = ownWndBufs[winname];
+                cv::ogl::Buffer& buf = ownWndBufs[winname];
                 buf.copyFrom(_img);
                 buf.setAutoRelease(false);
 

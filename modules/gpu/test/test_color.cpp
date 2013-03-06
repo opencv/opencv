@@ -1609,71 +1609,443 @@ GPU_TEST_P(CvtColor, RGBA2YUV4)
     EXPECT_MAT_NEAR(dst_gold, h_dst, 1e-5);
 }
 
-#if defined (CUDA_VERSION) && (CUDA_VERSION >= 5000)
-
 GPU_TEST_P(CvtColor, BGR2Lab)
 {
-    if (depth != CV_8U)
+    if (depth == CV_16U)
         return;
 
-    cv::Mat src = readImage("stereobm/aloe-L.png");
+    cv::Mat src = img;
 
-    cv::gpu::GpuMat dst_lab = createMat(src.size(), src.type(), useRoi);
-    cv::gpu::cvtColor(loadMat(src, useRoi), dst_lab, cv::COLOR_BGR2Lab);
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BGR2Lab);
 
-    cv::gpu::GpuMat dst_bgr = createMat(src.size(), src.type(), useRoi);
-    cv::gpu::cvtColor(dst_lab, dst_bgr, cv::COLOR_Lab2BGR);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2Lab);
 
-    EXPECT_MAT_NEAR(src, dst_bgr, 10);
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-3);
 }
 
 GPU_TEST_P(CvtColor, RGB2Lab)
 {
-    if (depth != CV_8U)
+    if (depth == CV_16U)
         return;
 
-    cv::Mat src = readImage("stereobm/aloe-L.png");
+    cv::Mat src = img;
 
-    cv::gpu::GpuMat dst_lab = createMat(src.size(), src.type(), useRoi);
-    cv::gpu::cvtColor(loadMat(src, useRoi), dst_lab, cv::COLOR_RGB2Lab);
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_RGB2Lab);
 
-    cv::gpu::GpuMat dst_bgr = createMat(src.size(), src.type(), useRoi);
-    cv::gpu::cvtColor(dst_lab, dst_bgr, cv::COLOR_Lab2RGB);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2Lab);
 
-    EXPECT_MAT_NEAR(src, dst_bgr, 10);
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-3);
+}
+
+GPU_TEST_P(CvtColor, BGRA2Lab4)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGBA);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BGR2Lab, 4);
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2Lab);
+
+    cv::Mat h_dst(dst);
+
+    cv::Mat channels[4];
+    cv::split(h_dst, channels);
+    cv::merge(channels, 3, h_dst);
+
+    EXPECT_MAT_NEAR(dst_gold, h_dst, depth == CV_8U ? 1 : 1e-3);
+}
+
+GPU_TEST_P(CvtColor, LBGR2Lab)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src = img;
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_LBGR2Lab);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_LBGR2Lab);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-3);
+}
+
+GPU_TEST_P(CvtColor, LRGB2Lab)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src = img;
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_LRGB2Lab);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_LRGB2Lab);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-3);
+}
+
+GPU_TEST_P(CvtColor, LBGRA2Lab4)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGBA);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_LBGR2Lab, 4);
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_LBGR2Lab);
+
+    cv::Mat h_dst(dst);
+
+    cv::Mat channels[4];
+    cv::split(h_dst, channels);
+    cv::merge(channels, 3, h_dst);
+
+    EXPECT_MAT_NEAR(dst_gold, h_dst, depth == CV_8U ? 1 : 1e-3);
+}
+
+GPU_TEST_P(CvtColor, Lab2BGR)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2Lab);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_Lab2BGR);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_Lab2BGR);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-5);
+}
+
+GPU_TEST_P(CvtColor, Lab2RGB)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2Lab);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_Lab2RGB);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_Lab2RGB);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-5);
+}
+
+GPU_TEST_P(CvtColor, Lab2BGRA)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2Lab);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_Lab2BGR, 4);
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_Lab2BGR, 4);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-5);
+}
+
+GPU_TEST_P(CvtColor, Lab2LBGR)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2Lab);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_Lab2LBGR);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_Lab2LBGR);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-5);
+}
+
+GPU_TEST_P(CvtColor, Lab2LRGB)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2Lab);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_Lab2LRGB);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_Lab2LRGB);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-5);
+}
+
+GPU_TEST_P(CvtColor, Lab2LRGBA)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2Lab);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_Lab2LRGB, 4);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_Lab2LRGB, 4);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-5);
 }
 
 GPU_TEST_P(CvtColor, BGR2Luv)
 {
-    if (depth != CV_8U)
+    if (depth == CV_16U)
         return;
 
     cv::Mat src = img;
 
-    cv::gpu::GpuMat dst_luv = createMat(src.size(), src.type(), useRoi);
-    cv::gpu::cvtColor(loadMat(src, useRoi), dst_luv, cv::COLOR_BGR2Luv);
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BGR2Luv);
 
-    cv::gpu::GpuMat dst_rgb = createMat(src.size(), src.type(), useRoi);
-    cv::gpu::cvtColor(dst_luv, dst_rgb, cv::COLOR_Luv2BGR);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2Luv);
 
-    EXPECT_MAT_NEAR(src, dst_rgb, 10);
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-3);
 }
 
 GPU_TEST_P(CvtColor, RGB2Luv)
 {
-    if (depth != CV_8U)
+    if (depth == CV_16U)
         return;
 
     cv::Mat src = img;
 
-    cv::gpu::GpuMat dst_luv = createMat(src.size(), src.type(), useRoi);
-    cv::gpu::cvtColor(loadMat(src, useRoi), dst_luv, cv::COLOR_RGB2Luv);
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_RGB2Luv);
 
-    cv::gpu::GpuMat dst_rgb = createMat(src.size(), src.type(), useRoi);
-    cv::gpu::cvtColor(dst_luv, dst_rgb, cv::COLOR_Luv2RGB);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2Luv);
 
-    EXPECT_MAT_NEAR(src, dst_rgb, 10);
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-3);
 }
+
+GPU_TEST_P(CvtColor, BGRA2Luv4)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGBA);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BGR2Luv, 4);
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2Luv);
+
+    cv::Mat h_dst(dst);
+
+    cv::Mat channels[4];
+    cv::split(h_dst, channels);
+    cv::merge(channels, 3, h_dst);
+
+    EXPECT_MAT_NEAR(dst_gold, h_dst, depth == CV_8U ? 1 : 1e-3);
+}
+
+GPU_TEST_P(CvtColor, LBGR2Luv)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src = img;
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_LBGR2Luv);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_LBGR2Luv);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-3);
+}
+
+GPU_TEST_P(CvtColor, LRGB2Luv)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src = img;
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_LRGB2Luv);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_LRGB2Luv);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-3);
+}
+
+GPU_TEST_P(CvtColor, LBGRA2Luv4)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGBA);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_LBGR2Luv, 4);
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_LBGR2Luv);
+
+    cv::Mat h_dst(dst);
+
+    cv::Mat channels[4];
+    cv::split(h_dst, channels);
+    cv::merge(channels, 3, h_dst);
+
+    EXPECT_MAT_NEAR(dst_gold, h_dst, depth == CV_8U ? 1 : 1e-3);
+}
+
+GPU_TEST_P(CvtColor, Luv2BGR)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2Luv);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_Luv2BGR);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_Luv2BGR);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-4);
+}
+
+GPU_TEST_P(CvtColor, Luv2RGB)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2Luv);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_Luv2RGB);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_Luv2RGB);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-4);
+}
+
+GPU_TEST_P(CvtColor, Luv2BGRA)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2Luv);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_Luv2BGR, 4);
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_Luv2BGR, 4);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-4);
+}
+
+GPU_TEST_P(CvtColor, Luv2LBGR)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2Luv);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_Luv2LBGR);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_Luv2LBGR);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-4);
+}
+
+GPU_TEST_P(CvtColor, Luv2LRGB)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2Luv);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_Luv2LRGB);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_Luv2LRGB);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-4);
+}
+
+GPU_TEST_P(CvtColor, Luv2LRGBA)
+{
+    if (depth == CV_16U)
+        return;
+
+    cv::Mat src;
+    cv::cvtColor(img, src, cv::COLOR_BGR2Luv);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_Luv2LRGB, 4);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_Luv2LRGB, 4);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-4);
+}
+
+#if defined (CUDA_VERSION) && (CUDA_VERSION >= 5000)
 
 GPU_TEST_P(CvtColor, RGBA2mRGBA)
 {
