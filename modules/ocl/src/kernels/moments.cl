@@ -1,5 +1,9 @@
 #if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 #else
 typedef float double;
 typedef float4 double4;
@@ -7,8 +11,8 @@ typedef float4 double4;
 #endif
 //#pragma OPENCL EXTENSION cl_amd_printf:enable
 //#if defined (DOUBLE_SUPPORT)
-__kernel void icvContourMoments(int contour_total, 
-								__global float* reader_oclmat_data, 
+__kernel void icvContourMoments(int contour_total,
+                                __global float* reader_oclmat_data,
                                 __global double* dst_a00,
                                 __global double* dst_a10,
                                 __global double* dst_a01,
@@ -22,6 +26,8 @@ __kernel void icvContourMoments(int contour_total,
 {
     double xi_1, yi_1, xi_12, yi_12, xi, yi, xi2, yi2, dxy, xii_1, yii_1;
     int idx = get_global_id(0);
+    if (idx < 0 || idx >= contour_total)
+        return;
 
     xi_1 = *(reader_oclmat_data + (get_global_id(0) << 1));
     yi_1 = *(reader_oclmat_data + (get_global_id(0) << 1) + 1);
@@ -96,7 +102,7 @@ __kernel void CvMoments_D0(__global uchar16* src_data, int src_rows, int src_col
     if( tileSize_width < TILE_SIZE )
         for(int i = tileSize_width; i < rstep; i++ )
             *((__global uchar*)src_data+(y+lidy)*src_step+x+i) = 0;
-    if( coi > 0 )	//channel of interest
+    if( coi > 0 )   //channel of interest
         for(int i = 0; i < tileSize_width; i += VLEN_C)
         {
             for(int j=0; j<VLEN_C; j++)
