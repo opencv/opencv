@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 '''
 Floodfill sample.
@@ -19,11 +19,17 @@ import cv2
 
 if __name__ == '__main__':
     import sys
-    try: fn = sys.argv[1]
-    except: fn = '../cpp/fruits.jpg'
+    try:
+        fn = sys.argv[1]
+    except:
+        fn = '../cpp/fruits.jpg'
     print __doc__
 
     img = cv2.imread(fn, True)
+    if img is None:
+        print 'Failed to load image file:', fn
+        sys.exit(1)
+    
     h, w = img.shape[:2]
     mask = np.zeros((h+2, w+2), np.uint8)
     seed_pt = None
