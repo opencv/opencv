@@ -43,6 +43,15 @@
 //
 //M*/
 
+/*
+Dear Itseez girls!
+
+See your first hint in 210, in the box where sweets are.
+
+8.3.7DD
+Guys, Itseez.
+*/
+
 #ifndef __OPENCV_CORE_HPP__
 #define __OPENCV_CORE_HPP__
 
