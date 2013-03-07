@@ -4300,7 +4300,6 @@ int main(int argc, const char *argv[])
 
 #endif
     redirectError(cvErrorCallback);
-    ocl::setDevMemType(ocl::DEVICE_MEM_R_W, ocl::DEVICE_MEM_UHP);
     const char *keys =
         "{ h | help    | false | print help message }"
         "{ f | filter  |       | filter for test }"
