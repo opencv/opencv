@@ -259,12 +259,14 @@ make & enjoy!
 
 
 // default and maximum number of V4L buffers, not including last, 'special' buffer
-#define MAX_V4L_BUFFERS 10
-#define DEFAULT_V4L_BUFFERS 4
+#define MAX_V4L_BUFFERS 8
+#define DEFAULT_V4L_BUFFERS 1
 
 // if enabled, copies data from the buffer. this uses a bit more memory,
 //  but much more reliable for some UVC cameras
-#define USE_TEMP_BUFFER
+//#define USE_TEMP_BUFFER
+// do not copy data, but use a pointer
+#define NOCP
 
 #define MAX_DEVICE_DRIVER_NAME 80
 
@@ -842,7 +844,10 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
                               capture->captureWindow.height ),
                       IPL_DEPTH_8U, 3, IPL_ORIGIN_TL, 4 );
    /* Allocate space for RGBA data */
+#ifdef NOCP
+#else
    capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
+#endif
 
    return 1;
 }; /* End _capture_V4L2 */
@@ -981,7 +986,10 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
                               capture->captureWindow.height ),
                       IPL_DEPTH_8U, 3, IPL_ORIGIN_TL, 4 );
    /* Allocate space for RGBA data */
-   capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
+#ifdef NOCP
+#else
+	capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
+#endif
 
    return 1;
 }; /* End _capture_V4L */
@@ -1251,25 +1259,38 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 
     if(((unsigned long)capture->frame.width != capture->form.fmt.pix.width)
        || ((unsigned long)capture->frame.height != capture->form.fmt.pix.height)) {
-        cvFree(&capture->frame.imageData);
-        cvInitImageHeader( &capture->frame,
+#ifdef NOCP
+#else
+	cvFree(&capture->frame.imageData);
+#endif
+	cvInitImageHeader( &capture->frame,
               cvSize( capture->form.fmt.pix.width,
                   capture->form.fmt.pix.height ),
               IPL_DEPTH_8U, 3, IPL_ORIGIN_TL, 4 );
-       capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
-    }
+#ifdef NOCP
+#else
+capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
+#endif
+
+	  }
 
   } else
   {
 
     if((capture->frame.width != capture->mmaps[capture->bufferIndex].width)
       || (capture->frame.height != capture->mmaps[capture->bufferIndex].height)) {
-       cvFree(&capture->frame.imageData);
+#ifdef NOCP
+#else
+    cvFree(&capture->frame.imageData);
+#endif		
        cvInitImageHeader( &capture->frame,
               cvSize( capture->captureWindow.width,
                   capture->captureWindow.height ),
               IPL_DEPTH_8U, 3, IPL_ORIGIN_TL, 4 );
+#ifdef NOCP
+#else
        capture->frame.imageData = (char *)cvAlloc(capture->frame.imageSize);
+#endif
     }
 
   }
@@ -1278,9 +1299,13 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
   {
 
     if(capture->buffers[capture->bufferIndex].start){
+#ifdef NOCP
+		  capture->frame.imageData = (char *)capture->buffers[capture->bufferIndex].start;
+#else
       memcpy((char *)capture->frame.imageData,
          (char *)capture->buffers[capture->bufferIndex].start,
          capture->frame.imageSize);
+#endif
     }
 
   } else
@@ -1289,9 +1314,13 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 
     switch(capture->imageProperties.palette) {
       case VIDEO_PALETTE_RGB24:
+#ifdef NOCP
+		  capture->frame.imageData = (char *)capture->memoryMap + capture->memoryBuffer.offsets[capture->bufferIndex];
+#else
         memcpy((char *)capture->frame.imageData,
            (char *)(capture->memoryMap + capture->memoryBuffer.offsets[capture->bufferIndex]),
-           capture->frame.imageSize);
+           capture->frame.imageSize); 
+#endif
         break;
       default:
         fprintf( stderr,
@@ -1703,9 +1732,12 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
        }
      }
 
+#ifdef NOCP
+#else
      if (capture->frame.imageData)
        cvFree(&capture->frame.imageData);
-
+#endif
+	   
 #ifdef USE_TEMP_BUFFER
      if (capture->buffers[MAX_V4L_BUFFERS].start) {
        free(capture->buffers[MAX_V4L_BUFFERS].start);
