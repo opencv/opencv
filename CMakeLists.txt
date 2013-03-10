@@ -113,7 +113,7 @@ endif()
 OCV_OPTION(WITH_1394           "Include IEEE1394 support"                    ON   IF (UNIX AND NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_AVFOUNDATION   "Use AVFoundation for Video I/O"              ON   IF IOS)
 OCV_OPTION(WITH_CARBON         "Use Carbon for UI instead of Cocoa"          OFF  IF APPLE )
-OCV_OPTION(WITH_CUDA           "Include NVidia Cuda Runtime support"         ON   IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_CUDA           "Include NVidia Cuda Runtime support"         OFF  IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_CUFFT          "Include NVidia Cuda Fast Fourier Transform (FFT) library support"            ON  IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_CUBLAS         "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" OFF IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_NVCUVID        "Include NVidia Video Decoding library support"                               OFF IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS AND NOT APPLE) )
@@ -390,7 +390,6 @@ include(cmake/OpenCVFindLibsPerf.cmake)
 # ----------------------------------------------------------------------------
 #  Detect other 3rd-party libraries/tools
 # ----------------------------------------------------------------------------
-
 # --- LATEX for pdf documentation ---
 if(BUILD_DOCS)
   include(cmake/OpenCVFindLATEX.cmake)
@@ -421,6 +420,9 @@ endif()
 if(WITH_OPENCL)
   include(cmake/OpenCVDetectOpenCL.cmake)
 endif()
+
+# --- Matlab/Octave ---
+include(cmake/OpenCVFindMatlab.cmake)
 
 # ----------------------------------------------------------------------------
 # Solution folders:
@@ -846,6 +848,15 @@ if(NOT ANDROID)
 endif()
 status("    Java tests:"    BUILD_TESTS AND (CAN_BUILD_ANDROID_PROJECTS OR HAVE_opencv_java)            THEN YES ELSE NO)
 
+# ========================== java ==========================
+status("")
+status("  Matlab:")
+if(NOT MATLAB_FOUND)
+  status("    NOT FOUND")
+else()
+  status("    MEX:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"                                    ELSE NO)
+endif()
+
 # ========================== documentation ==========================
 if(BUILD_DOCS)
   status("")
@@ -882,4 +893,3 @@ ocv_finalize_status()
 if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
   message(WARNING "The source directory is the same as binary directory. \"make clean\" may damage the source tree")
 endif()
-
