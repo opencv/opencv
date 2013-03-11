@@ -2218,6 +2218,70 @@ GPU_TEST_P(CvtColor, BayerGR2BGR4)
     EXPECT_MAT_NEAR(dst_gold(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), dst3(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), 0);
 }
 
+GPU_TEST_P(CvtColor, BayerBG2Gray)
+{
+    if ((depth != CV_8U && depth != CV_16U) || useRoi)
+        return;
+
+    cv::Mat src = randomMat(size, depth);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BayerBG2GRAY);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BayerBG2GRAY);
+
+    EXPECT_MAT_NEAR(dst_gold(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), dst(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), 2);
+}
+
+GPU_TEST_P(CvtColor, BayerGB2Gray)
+{
+    if ((depth != CV_8U && depth != CV_16U) || useRoi)
+        return;
+
+    cv::Mat src = randomMat(size, depth);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BayerGB2GRAY);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BayerGB2GRAY);
+
+    EXPECT_MAT_NEAR(dst_gold(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), dst(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), 2);
+}
+
+GPU_TEST_P(CvtColor, BayerRG2Gray)
+{
+    if ((depth != CV_8U && depth != CV_16U) || useRoi)
+        return;
+
+    cv::Mat src = randomMat(size, depth);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BayerRG2GRAY);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BayerRG2GRAY);
+
+    EXPECT_MAT_NEAR(dst_gold(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), dst(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), 2);
+}
+
+GPU_TEST_P(CvtColor, BayerGR2Gray)
+{
+    if ((depth != CV_8U && depth != CV_16U) || useRoi)
+        return;
+
+    cv::Mat src = randomMat(size, depth);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BayerGR2GRAY);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BayerGR2GRAY);
+
+    EXPECT_MAT_NEAR(dst_gold(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), dst(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), 2);
+}
+
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CvtColor, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
