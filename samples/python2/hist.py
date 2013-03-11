@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 ''' This is a sample for histogram plotting for RGB images and grayscale images for better understanding of colour distribution
 
@@ -55,11 +55,16 @@ if __name__ == '__main__':
     import sys
 
     if len(sys.argv)>1:
-        im = cv2.imread(sys.argv[1])
+        fname = sys.argv[1]
     else :
-        im = cv2.imread('../cpp/lena.jpg')
+        fname = '../cpp/lena.jpg'
         print "usage : python hist.py <image_file>"
 
+    im = cv2.imread(fname)
+    
+    if im is None:
+        print 'Failed to load image file:', fname
+        sys.exit(1)
 
     gray = cv2.cvtColor(im,cv2.COLOR_BGR2GRAY)
 

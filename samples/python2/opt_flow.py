@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 import numpy as np
 import cv2
@@ -48,8 +48,10 @@ def warp_flow(img, flow):
 if __name__ == '__main__':
     import sys
     print help_message
-    try: fn = sys.argv[1]
-    except: fn = 0
+    try:
+        fn = sys.argv[1]
+    except:
+        fn = 0
 
     cam = video.create_capture(fn)
     ret, prev = cam.read()

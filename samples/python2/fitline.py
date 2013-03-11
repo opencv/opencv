@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 '''
 Robust line fitting.
@@ -24,7 +24,11 @@ ESC   - exit
 
 import numpy as np
 import cv2
+
+# built-in modules
 import itertools as it
+
+# local modules
 from common import draw_str
 
 
