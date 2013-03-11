@@ -1640,6 +1640,43 @@ namespace
     {
         bayer_to_bgr(src, dst, dcn, true, true, stream);
     }
+    void bayer_to_gray(const GpuMat& src, GpuMat& dst, bool blue_last, bool start_with_green, Stream& stream)
+    {
+        typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        static const func_t funcs[3] =
+        {
+            Bayer2BGR_8u_gpu<1>,
+            0,
+            Bayer2BGR_16u_gpu<1>,
+        };
+
+        CV_Assert(src.type() == CV_8UC1 || src.type() == CV_16UC1);
+        CV_Assert(src.rows > 2 && src.cols > 2);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));
+
+        funcs[src.depth()](src, dst, blue_last, start_with_green, StreamAccessor::getStream(stream));
+    }
+
+    void bayerBG_to_gray(const GpuMat& src, GpuMat& dst, int /*dcn*/, Stream& stream)
+    {
+        bayer_to_gray(src, dst, false, false, stream);
+    }
+
+    void bayerGB_to_gray(const GpuMat& src, GpuMat& dst, int /*dcn*/, Stream& stream)
+    {
+        bayer_to_gray(src, dst, false, true, stream);
+    }
+
+    void bayerRG_to_gray(const GpuMat& src, GpuMat& dst, int /*dcn*/, Stream& stream)
+    {
+        bayer_to_gray(src, dst, true, false, stream);
+    }
+
+    void bayerGR_to_gray(const GpuMat& src, GpuMat& dst, int /*dcn*/, Stream& stream)
+    {
+        bayer_to_gray(src, dst, true, true, stream);
+    }
 }
 
 void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream& stream)
@@ -1756,10 +1793,10 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
         yuv_to_bgr,             // CV_YUV2BGR      = 84
         yuv_to_rgb,             // CV_YUV2RGB      = 85
 
-        0,                      // CV_BayerBG2GRAY = 86
-        0,                      // CV_BayerGB2GRAY = 87
-        0,                      // CV_BayerRG2GRAY = 88
-        0,                      // CV_BayerGR2GRAY = 89
+        bayerBG_to_gray,        // CV_BayerBG2GRAY = 86
+        bayerGB_to_gray,        // CV_BayerGB2GRAY = 87
+        bayerRG_to_gray,        // CV_BayerRG2GRAY = 88
+        bayerGR_to_gray,        // CV_BayerGR2GRAY = 89
 
         //YUV 4:2:0 formats family
         0,                      // CV_YUV2RGB_NV12 = 90,

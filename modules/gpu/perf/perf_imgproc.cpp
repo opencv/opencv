@@ -1341,7 +1341,12 @@ PERF_TEST_P(Sz_Depth_Code, ImgProc_CvtColorBayer,
                     Values(CvtColorInfo(1, 3, cv::COLOR_BayerBG2BGR),
                            CvtColorInfo(1, 3, cv::COLOR_BayerGB2BGR),
                            CvtColorInfo(1, 3, cv::COLOR_BayerRG2BGR),
-                           CvtColorInfo(1, 3, cv::COLOR_BayerGR2BGR))))
+                           CvtColorInfo(1, 3, cv::COLOR_BayerGR2BGR),
+
+                           CvtColorInfo(1, 1, cv::COLOR_BayerBG2GRAY),
+                           CvtColorInfo(1, 1, cv::COLOR_BayerGB2GRAY),
+                           CvtColorInfo(1, 1, cv::COLOR_BayerRG2GRAY),
+                           CvtColorInfo(1, 1, cv::COLOR_BayerGR2GRAY))))
 {
     const cv::Size size = GET_PARAM(0);
     const int depth = GET_PARAM(1);
