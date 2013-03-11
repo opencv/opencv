@@ -58,7 +58,7 @@ struct Random
 
 }}}
 
-#elif (__GNUC__) && __GNUC__ > 3 && __GNUC_MINOR__ > 1 && !defined(__ANDROID__) && !defined(__APPLE__)
+#elif (__GNUC__) && __GNUC__ > 3 && __GNUC_MINOR__ > 1 && !defined(__ANDROID__)
 # if defined (__cplusplus) && __cplusplus > 201100L
 #  include <random>
 
