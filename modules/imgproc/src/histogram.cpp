@@ -1996,6 +1996,16 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
                     result += a*a/b;
             }
         }
+        else if( method == CV_COMP_CHISQR_ALT )
+        {
+            for( j = 0; j < len; j++ )
+            {
+                double a = h1[j] - h2[j];
+                double b = h1[j] + h2[j];
+                if( fabs(b) > DBL_EPSILON )
+                    result += a*a/b;
+            }
+        }
         else if( method == CV_COMP_CORREL )
         {
             for( j = 0; j < len; j++ )
@@ -2030,7 +2040,9 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             CV_Error( CV_StsBadArg, "Unknown comparison method" );
     }
 
-    if( method == CV_COMP_CORREL )
+    if( method == CV_COMP_CHISQR_ALT )
+        result *= 0.5;
+    else if( method == CV_COMP_CORREL )
     {
         size_t total = H1.total();
         double scale = 1./total;
@@ -2065,7 +2077,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
     SparseMatConstIterator it = PH1->begin();
     int N1 = (int)PH1->nzcount(), N2 = (int)PH2->nzcount();
 
-    if( method == CV_COMP_CHISQR )
+    if( (method == CV_COMP_CHISQR) || (method == CV_COMP_CHISQR_ALT) )
     {
         for( i = 0; i < N1; i++, ++it )
         {
@@ -2073,7 +2085,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
             const SparseMat::Node* node = it.node();
             float v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
             double a = v1 - v2;
-            double b = v1;
+            double b = (method == CV_COMP_CHISQR) ? v1 : v1 + v2;
             if( fabs(b) > DBL_EPSILON )
                 result += a*a/b;
         }
@@ -2141,6 +2153,9 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
     }
     else
         CV_Error( CV_StsBadArg, "Unknown comparison method" );
+
+    if( method == CV_COMP_CHISQR_ALT )
+        result *= 0.5;
 
     return result;
 }
@@ -2486,7 +2501,7 @@ cvCompareHist( const CvHistogram* hist1,
         CV_SWAP( mat1, mat2, t );
     }
 
-    if( method == CV_COMP_CHISQR )
+    if( (method == CV_COMP_CHISQR) || (method == CV_COMP_CHISQR_ALT) )
     {
         for( node1 = cvInitSparseMatIterator( mat1, &iterator );
              node1 != 0; node1 = cvGetNextSparseNode( &iterator ))
@@ -2495,7 +2510,7 @@ cvCompareHist( const CvHistogram* hist1,
             uchar* node2_data = cvPtrND( mat2, CV_NODE_IDX(mat1,node1), 0, 0, &node1->hashval );
             double v2 = node2_data ? *(float*)node2_data : 0.f;
             double a = v1 - v2;
-            double b = v1;
+            double b = (method == CV_COMP_CHISQR) ? v1 : v1 + v2;
             if( fabs(b) > DBL_EPSILON )
                 result += a*a/b;
         }
@@ -2584,6 +2599,9 @@ cvCompareHist( const CvHistogram* hist1,
     }
     else
         CV_Error( CV_StsBadArg, "Unknown comparison method" );
+
+    if( method == CV_COMP_CHISQR_ALT )
+        result *= 0.5;
 
     return result;
 }
