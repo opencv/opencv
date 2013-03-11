@@ -1,17 +1,23 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 import numpy as np
 import cv2
+
+# built-in modules
 import os
 import sys
+
+# local modules
 import video
 from common import mosaic
 
 from digits import *
 
 def main():
-    try: src = sys.argv[1]
-    except: src = 0
+    try: 
+        src = sys.argv[1]
+    except: 
+        src = 0
     cap = video.create_capture(src)
 
     classifier_fn = 'digits_svm.dat'
@@ -30,8 +36,10 @@ def main():
         bin = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 31, 10)
         bin = cv2.medianBlur(bin, 3)
         contours, heirs = cv2.findContours( bin.copy(), cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-        try: heirs = heirs[0]
-        except: heirs = []
+        try:
+            heirs = heirs[0]
+        except:
+            heirs = []
 
         for cnt, heir in zip(contours, heirs):
             _, _, _, outer_i = heir

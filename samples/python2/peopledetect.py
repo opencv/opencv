@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 import numpy as np
 import cv2
@@ -36,6 +36,9 @@ if __name__ == '__main__':
         print fn, ' - ',
         try:
             img = cv2.imread(fn)
+            if img is None:
+                print 'Failed to load image file:', fn
+                continue
         except:
             print 'loading error'
             continue

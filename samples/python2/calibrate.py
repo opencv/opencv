@@ -1,9 +1,14 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 import numpy as np
 import cv2
-import os
+
+# local modules
 from common import splitfn
+
+# built-in modules
+import os
+
 
 USAGE = '''
 USAGE: calib.py [--save <filename>] [--debug <output path>] [--square_size] [<image mask>]
@@ -12,13 +17,17 @@ USAGE: calib.py [--save <filename>] [--debug <output path>] [--square_size] [<im
 
 
 if __name__ == '__main__':
-    import sys, getopt
+    import sys
+    import getopt
     from glob import glob
 
     args, img_mask = getopt.getopt(sys.argv[1:], '', ['save=', 'debug=', 'square_size='])
     args = dict(args)
-    try: img_mask = img_mask[0]
-    except: img_mask = '../cpp/left*.jpg'
+    try:
+        img_mask = img_mask[0]
+    except:
+        img_mask = '../cpp/left*.jpg'
+    
     img_names = glob(img_mask)
     debug_dir = args.get('--debug')
     square_size = float(args.get('--square_size', 1.0))
@@ -34,6 +43,10 @@ if __name__ == '__main__':
     for fn in img_names:
         print 'processing %s...' % fn,
         img = cv2.imread(fn, 0)
+        if img is None:
+          print "Failed to load", fn
+          continue
+        
         h, w = img.shape[:2]
         found, corners = cv2.findChessboardCorners(img, pattern_size)
         if found:
