@@ -12,10 +12,12 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
 //    Jia Haipeng, jiahaipeng95@gmail.com
+//    Xiaopeng Fu, xiaopeng@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -50,37 +52,6 @@ using namespace cv;
 using namespace cv::ocl;
 using namespace std;
 
-////////////////////////////////////////////////////////////////////////
-///////////////// stereoBM /////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-
-#if !defined (HAVE_OPENCL)
-
-namespace cv
-{
-namespace ocl
-{
-cv::ocl::StereoBM_OCL::StereoBM_OCL()
-{
-    throw_nogpu();
-}
-cv::ocl::StereoBM_OCL::StereoBM_OCL(int, int, int)
-{
-    throw_nogpu();
-}
-bool cv::ocl::StereoBM_OCL::checkIfGpuCallReasonable()
-{
-    throw_nogpu();
-    return false;
-}
-void cv::ocl::StereoBM_OCL::operator() ( const oclMat &, const oclMat &, oclMat &)
-{
-    throw_nogpu();
-}
-}
-}
-
-#else /* !defined (HAVE_OPENCL) */
 
 namespace cv
 {
@@ -290,4 +261,3 @@ void cv::ocl::StereoBM_OCL::operator() ( const oclMat &left, const oclMat &right
     cv::ocl::stereoBM::operator_(minSSD, leBuf, riBuf, preset, ndisp, winSize, avergeTexThreshold, left, right, disparity);
 }
 
-#endif /* !defined (HAVE_OPENCL) */
