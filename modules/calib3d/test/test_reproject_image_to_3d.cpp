@@ -137,7 +137,7 @@ protected:
             {
                 InT d = disp(y, x);
 
-                double from[4] = { x, y, d, 1 };
+                double from[4] = { (double)x, (double)y, (double)d, 1.0 };
                 Mat_<double> res = Q * Mat_<double>(4, 1, from);
                 res /= res(3, 0);
 

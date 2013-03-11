@@ -441,7 +441,7 @@ struct _VSub64f { __m128d operator()(const __m128d& a, const __m128d& b) const {
 struct _VMin64f { __m128d operator()(const __m128d& a, const __m128d& b) const { return _mm_min_pd(a,b); }};
 struct _VMax64f { __m128d operator()(const __m128d& a, const __m128d& b) const { return _mm_max_pd(a,b); }};
 
-static int CV_DECL_ALIGNED(16) v64f_absmask[] = { 0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff };
+static unsigned int CV_DECL_ALIGNED(16) v64f_absmask[] = { 0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff };
 struct _VAbsDiff64f
 {
     __m128d operator()(const __m128d& a, const __m128d& b) const
