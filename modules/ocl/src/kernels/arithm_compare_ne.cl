@@ -43,7 +43,11 @@
 //
 //M*/
 #if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 #endif
 /***********************************Compare NE*******************************/
 __kernel void arithm_compare_ne_D0 (__global uchar *src1, int src1_step, int src1_offset,

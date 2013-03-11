@@ -42,9 +42,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#if defined (DOUBLE_SUPPORT)
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#endif
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////BITWISE_OR////////////////////////////////////////////////////
@@ -254,7 +252,6 @@ __kernel void arithm_bitwise_or_D5 (__global char *src1, int src1_step, int src1
     }
 }
 
-#if defined (DOUBLE_SUPPORT)
 __kernel void arithm_bitwise_or_D6 (__global char *src1, int src1_step, int src1_offset,
                              __global char *src2, int src2_step, int src2_offset,
                              __global char *dst,  int dst_step,  int dst_offset,
@@ -275,5 +272,4 @@ __kernel void arithm_bitwise_or_D6 (__global char *src1, int src1_step, int src1
         *((__global char8 *)((__global char *)dst + dst_index)) = data1 | data2;
     }
 }
-#endif
 

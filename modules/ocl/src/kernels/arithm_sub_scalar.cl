@@ -44,7 +44,11 @@
 //M*/
 
 #if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 #endif
 /**************************************sub with scalar without mask**************************************/
 __kernel void arithm_s_sub_C1_D0 (__global   uchar *src1, int src1_step, int src1_offset,
