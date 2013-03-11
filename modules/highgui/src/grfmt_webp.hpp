@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -39,18 +40,47 @@
 //
 //M*/
 
-#ifndef _GRFMTS_H_
-#define _GRFMTS_H_
+#ifndef _GRFMT_WEBP_H_
+#define _GRFMT_WEBP_H_
 
 #include "grfmt_base.hpp"
-#include "grfmt_bmp.hpp"
-#include "grfmt_sunras.hpp"
-#include "grfmt_jpeg.hpp"
-#include "grfmt_pxm.hpp"
-#include "grfmt_tiff.hpp"
-#include "grfmt_png.hpp"
-#include "grfmt_jpeg2000.hpp"
-#include "grfmt_exr.hpp"
-#include "grfmt_webp.hpp"
 
-#endif/*_GRFMTS_H_*/
+#ifdef HAVE_WEBP
+
+namespace cv
+{
+
+class WebPDecoder : public BaseImageDecoder
+{
+public:
+
+    WebPDecoder();
+    ~WebPDecoder();
+
+    bool readData( Mat& img );
+    bool readHeader();
+    void close();
+    bool checkSignature( const std::string& signature ) const;
+
+    ImageDecoder newDecoder() const;
+
+protected:
+    Mat data;
+};
+
+class WebPEncoder : public BaseImageEncoder
+{
+public:
+    WebPEncoder();
+    ~WebPEncoder();
+
+    bool write(const Mat& img, const std::vector<int>& params);
+
+    ImageEncoder newEncoder() const;
+};
+
+}
+
+#endif
+
+#endif /* _GRFMT_WEBP_H_ */
