@@ -7,8 +7,8 @@
 #   MATLAB_FOUND:       true/false
 #   MATLAB_ROOT_DIR:    Root of Matlab installation
 #   MATLAB_MEX_SCRIPT   The mex script used to compile mex files
-#   MATLAB_INCLUDE_DIRS Path to "mex.h"
-#   MATLAB_LIBRARY_DIRS Path to mex and matrix libraries
+#   MATLAB_INCLUDE_DIR  Path to "mex.h"
+#   MATLAB_LIBRARY_DIR  Path to mex and matrix libraries
 #   MATLAB_LIBS         The Matlab libs, usually mx, mex, mat
 #   MATLAB_MEXEXT       The mex library extension. It will be one of:
 #                         mexwin32, mexwin64,  mexglx, mexa64, mexmac, 
@@ -76,6 +76,10 @@ MACRO(locate_matlab_root)
     endforeach()
   endif()
   # unset local variables
+  unset(REG_ROOTS_)
+  unset(REG_ROOT_)
+  unset(VERSIONS_)
+  unset(VERSION_)
   unset(SEARCH_DIRS_)
   unset(DIR_)
 endMACRO()
@@ -99,16 +103,16 @@ MACRO(locate_matlab_components MATLAB_ROOT_DIR)
   string(REPLACE "mex" "" MATLAB_ARCH ${MATLAB_MEXEXT})
 
   # get the path to the libraries
-  set(MATLAB_LIBRARY_DIRS ${MATLAB_ROOT_DIR}/bin/${MATLAB_ARCH})
+  set(MATLAB_LIBRARY_DIR ${MATLAB_ROOT_DIR}/bin/${MATLAB_ARCH})
 
   # get the libraries
-  find_library(MATLAB_LIB_MX  mx  PATHS ${MATLAB_LIBRARY_DIRS} NO_DEFAULT_PATH)
-  find_library(MATLAB_LIB_MEX mex PATHS ${MATLAB_LIBRARY_DIRS} NO_DEFAULT_PATH)
-  find_library(MATLAB_LIB_MAT mat PATHS ${MATLAB_LIBRARY_DIRS} NO_DEFAULT_PATH)
+  find_library(MATLAB_LIB_MX  mx  PATHS ${MATLAB_LIBRARY_DIR} NO_DEFAULT_PATH)
+  find_library(MATLAB_LIB_MEX mex PATHS ${MATLAB_LIBRARY_DIR} NO_DEFAULT_PATH)
+  find_library(MATLAB_LIB_MAT mat PATHS ${MATLAB_LIBRARY_DIR} NO_DEFAULT_PATH)
   set(MATLAB_LIBS ${MATLAB_LIB_MX} ${MATLAB_LIB_MEX} ${MATLAB_LIB_MAT})
 
   # get the include path
-  find_path(MATLAB_INCLUDE_DIRS mex.h ${MATLAB_ROOT_DIR}/extern/include) 
+  find_path(MATLAB_INCLUDE_DIR mex.h ${MATLAB_ROOT_DIR}/extern/include) 
 
   # get the mex shell script
   find_file(MATLAB_MEX_SCRIPT NAMES mex mex.bat PATHS ${MATLAB_ROOT_DIR}/bin NO_DEFAULT_PATH)
@@ -133,8 +137,9 @@ if (NOT MATLAB_FOUND)
   if (MATLAB_ROOT_DIR)
     locate_matlab_components(${MATLAB_ROOT_DIR})
   endif()
-  FIND_PACKAGE_HANDLE_STANDARD_ARGS(Matlab DEFAULT_MSG MATLAB_MEX_SCRIPT MATLAB_INCLUDE_DIRS 
-                                           MATLAB_LIBS MATLAB_LIBRARY_DIRS MATLAB_MEXEXT MATLAB_ARCH)
+  find_package_handle_standard_args(Matlab DEFAULT_MSG MATLAB_MEX_SCRIPT MATLAB_INCLUDE_DIR 
+                                           MATLAB_ROOT_DIR MATLAB_LIBS   MATLAB_LIBRARY_DIR 
+                                           MATLAB_MEXEXT MATLAB_ARCH)
 
   # if Matlab was not found, unset the local variables
   if (NOT MATLAB_FOUND)
