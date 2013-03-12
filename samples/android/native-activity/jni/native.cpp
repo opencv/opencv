@@ -28,14 +28,14 @@ struct Engine
     cv::Ptr<cv::VideoCapture> capture;
 };
 
-cv::Size calcOptimalResolution(const char* supported, int width, int height)
+cv::Size calc_optimal_camera_resolution(const char* supported, int width, int height)
 {
-    int frameWidth = 0;
-    int frameHeight = 0;
+    int frame_width = 0;
+    int frame_height = 0;
 
     size_t prev_idx = 0;
     size_t idx = 0;
-    float minDiff = FLT_MAX;
+    float min_diff = FLT_MAX;
 
     do
     {
@@ -52,11 +52,11 @@ cv::Size calcOptimalResolution(const char* supported, int width, int height)
         int h_diff = height - tmp_height;
         if ((h_diff >= 0) && (w_diff >= 0))
         {
-            if ((h_diff <= minDiff) && (tmp_height <= 720))
+            if ((h_diff <= min_diff) && (tmp_height <= 720))
             {
-                frameWidth = tmp_width;
-                frameHeight = tmp_height;
-                minDiff = h_diff;
+                frame_width = tmp_width;
+                frame_height = tmp_height;
+                min_diff = h_diff;
             }
         }
 
@@ -64,15 +64,13 @@ cv::Size calcOptimalResolution(const char* supported, int width, int height)
 
     } while(supported[idx-1] != '\0');
 
-    return cv::Size(frameWidth, frameHeight);
+    return cv::Size(frame_width, frame_height);
 }
 
 static void engine_draw_frame(Engine* engine, const cv::Mat& frame)
 {
     if (engine->app->window == NULL)
-    {
         return; // No window.
-    }
 
     ANativeWindow_Buffer buffer;
     if (ANativeWindow_lock(engine->app->window, &buffer, NULL) < 0)
@@ -83,10 +81,13 @@ static void engine_draw_frame(Engine* engine, const cv::Mat& frame)
 
     void* pixels = buffer.bits;
 
-    for (int yy = 0; yy < std::min(frame.rows, buffer.height); yy++)
+    int left_indent = (buffer.width-frame.cols)/2;
+    int top_indent = (buffer.height-frame.rows)/2;
+
+    for (int yy = top_indent; yy < std::min(frame.rows+top_indent, buffer.height); yy++)
     {
         unsigned char* line = (unsigned char*)pixels;
-        memcpy(line, frame.ptr<unsigned char>(yy),
+        memcpy(line+left_indent*4*sizeof(unsigned char), frame.ptr<unsigned char>(yy),
                std::min(frame.cols, buffer.width)*4*sizeof(unsigned char));
         // go to next line
         pixels = (int32_t*)pixels + buffer.stride;
@@ -109,32 +110,36 @@ static void engine_handle_cmd(android_app* app, int32_t cmd)
                 union {double prop; const char* name;} u;
                 u.prop = engine->capture->get(CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING);
 
-                cv::Size resolution;
+                int view_width = ANativeWindow_getWidth(app->window);
+                int view_height = ANativeWindow_getHeight(app->window);
+
+                cv::Size camera_resolution;
                 if (u.name)
-                    resolution = calcOptimalResolution(u.name,
-                                                       ANativeWindow_getWidth(app->window),
-                                                       ANativeWindow_getHeight(app->window));
+                    camera_resolution = calc_optimal_camera_resolution(u.name, 640, 480);
                 else
                 {
-                    LOGE("Cannot get supported camera resolutions");
-                    resolution = cv::Size(ANativeWindow_getWidth(app->window),
+                    LOGE("Cannot get supported camera camera_resolutions");
+                    camera_resolution = cv::Size(ANativeWindow_getWidth(app->window),
                                           ANativeWindow_getHeight(app->window));
                 }
 
-                if ((resolution.width != 0) && (resolution.height != 0))
+                if ((camera_resolution.width != 0) && (camera_resolution.height != 0))
                 {
-                    engine->capture->set(CV_CAP_PROP_FRAME_WIDTH, resolution.width);
-                    engine->capture->set(CV_CAP_PROP_FRAME_HEIGHT, resolution.height);
+                    engine->capture->set(CV_CAP_PROP_FRAME_WIDTH, camera_resolution.width);
+                    engine->capture->set(CV_CAP_PROP_FRAME_HEIGHT, camera_resolution.height);
                 }
 
-                if (ANativeWindow_setBuffersGeometry(app->window, resolution.width,
-                    resolution.height, WINDOW_FORMAT_RGBA_8888) < 0)
+                float scale = std::min((float)view_width/camera_resolution.width,
+                                       (float)view_height/camera_resolution.height);
+
+                if (ANativeWindow_setBuffersGeometry(app->window, (int)(view_width/scale),
+                    int(view_height/scale), WINDOW_FORMAT_RGBA_8888) < 0)
                 {
                     LOGE("Cannot set pixel format!");
                     return;
                 }
 
-                LOGI("Camera initialized at resoution %dx%d", resolution.width, resolution.height);
+                LOGI("Camera initialized at resoution %dx%d", camera_resolution.width, camera_resolution.height);
             }
             break;
         case APP_CMD_TERM_WINDOW:
@@ -158,9 +163,8 @@ void android_main(android_app* app)
     engine.app = app;
 
     float fps = 0;
-    cv::Mat drawingFrame;
-    bool firstFrame = true;
-    std::queue<int64> timeQueue;
+    cv::Mat drawing_frame;
+    std::queue<int64> time_queue;
 
     // loop waiting for stuff to do.
     while (1)
@@ -189,34 +193,29 @@ void android_main(android_app* app)
 
         int64 then;
         int64 now = cv::getTickCount();
-        timeQueue.push(now);
+        time_queue.push(now);
 
         // Capture frame from camera and draw it
         if (!engine.capture.empty())
         {
             if (engine.capture->grab())
-            {
-                engine.capture->retrieve(drawingFrame, CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-//                 if (firstFrame)
-//                 {
-//                     firstFrame = false;
-//                     engine.capture->set(CV_CAP_PROP_AUTOGRAB, 1);
-//                 }
-            }
+                engine.capture->retrieve(drawing_frame, CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+
              char buffer[256];
-             sprintf(buffer, "Display performance: %dx%d @ %.3f", drawingFrame.cols, drawingFrame.rows, fps);
-             cv::putText(drawingFrame, std::string(buffer), cv::Point(8,64), cv::FONT_HERSHEY_COMPLEX_SMALL, 1, cv::Scalar(0,255,0,255));
-             engine_draw_frame(&engine, drawingFrame);
+             sprintf(buffer, "Display performance: %dx%d @ %.3f", drawing_frame.cols, drawing_frame.rows, fps);
+             cv::putText(drawing_frame, std::string(buffer), cv::Point(8,64),
+                         cv::FONT_HERSHEY_COMPLEX_SMALL, 1, cv::Scalar(0,255,0,255));
+             engine_draw_frame(&engine, drawing_frame);
         }
 
-        if (timeQueue.size() >= 2)
-            then = timeQueue.front();
+        if (time_queue.size() >= 2)
+            then = time_queue.front();
         else
             then = 0;
 
-        if (timeQueue.size() >= 25)
-            timeQueue.pop();
+        if (time_queue.size() >= 25)
+            time_queue.pop();
 
-        fps = 1.f*timeQueue.size()*(float)cv::getTickFrequency()/(float)(now-then);
+        fps = time_queue.size() * (float)cv::getTickFrequency() / (now-then);
     }
 }
