@@ -145,6 +145,13 @@ namespace cv
             std::string Binpath;
             int unified_memory; //1 means integrated GPU, otherwise this value is 0
         };
+
+#ifdef HAVE_OPENGL
+        // initialize OpenGL context before creating OpenCL context
+        bool initOpenGLContext( cl_context_properties *cps );
+        // release OpenGL context after releasing OpenCL context
+        void releaseOpenGLContext();
+#endif
     }
 }
 
