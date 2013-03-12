@@ -51,57 +51,6 @@ using namespace cv;
 using namespace cv::ocl;
 using namespace std;
 
-#if !defined (HAVE_OPENCL)
-cv::ocl::SURF_OCL::SURF_OCL()
-{
-    throw_nogpu();
-}
-cv::ocl::SURF_OCL::SURF_OCL(double, int, int, bool, float, bool)
-{
-    throw_nogpu();
-}
-int cv::ocl::SURF_OCL::descriptorSize() const
-{
-    throw_nogpu();
-    return 0;
-}
-void cv::ocl::SURF_OCL::uploadKeypoints(const vector<KeyPoint> &, oclMat &)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::downloadKeypoints(const oclMat &, vector<KeyPoint> &)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::downloadDescriptors(const oclMat &, vector<float> &)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::operator()(const oclMat &, const oclMat &, oclMat &)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::operator()(const oclMat &, const oclMat &, oclMat &, oclMat &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::operator()(const oclMat &, const oclMat &, vector<KeyPoint> &)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::operator()(const oclMat &, const oclMat &, vector<KeyPoint> &, oclMat &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::operator()(const oclMat &, const oclMat &, vector<KeyPoint> &, vector<float> &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::SURF_OCL::releaseMemory()
-{
-    throw_nogpu();
-}
-#else /* !defined (HAVE_OPENCL) */
 namespace cv
 {
     namespace ocl
@@ -211,7 +160,7 @@ public:
 
         if (use_mask)
         {
-            throw std::exception();
+            CV_Error(CV_StsBadFunc, "Masked SURF detector is not implemented yet");
             //!FIXME
             // temp fix for missing min overload
             //oclMat temp(mask.size(), mask.type());
@@ -776,5 +725,3 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
         openCLExecuteKernelSURF(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
     }
 }
-
-#endif // /* !defined (HAVE_OPENCL) */
