@@ -72,7 +72,7 @@ namespace stereoBM
 /////////////////////////////////////////////////////////////////////////
 //////////////////////////prefilter_xsbel////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
-void prefilter_xsobel(const oclMat &input, oclMat &output, int prefilterCap)
+static void prefilter_xsobel(const oclMat &input, oclMat &output, int prefilterCap)
 {
     Context *clCxt = input.clCxt;
 
@@ -110,7 +110,7 @@ static inline int divUp(int total, int grain)
 ////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////stereoBM_GPU////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
+static void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
                int maxdisp, int winSize,  oclMat &minSSD_buf)
 {
     int winsz2 = winSize >> 1;
@@ -160,7 +160,7 @@ void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
 ////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////postfilter_textureness///////////////////////
 ////////////////////////////////////////////////////////////////////////////
-void postfilter_textureness(oclMat &left, int winSize,
+static void postfilter_textureness(oclMat &left, int winSize,
                             float avergeTexThreshold, oclMat &disparity)
 {
     Context *clCxt = left.clCxt;
@@ -197,7 +197,7 @@ void postfilter_textureness(oclMat &left, int winSize,
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////operator/////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
-void operator_(oclMat &minSSD, oclMat &leBuf, oclMat &riBuf, int preset, int ndisp,
+static void operator_(oclMat &minSSD, oclMat &leBuf, oclMat &riBuf, int preset, int ndisp,
                int winSize, float avergeTexThreshold, const oclMat &left,
                const oclMat &right, oclMat &disparity)
 
