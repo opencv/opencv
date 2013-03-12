@@ -36,6 +36,9 @@ MACRO(locate_matlab_root)
     foreach (DIR_ ${SEARCH_DIRS_})
       file(GLOB MATLAB_ROOT_DIR ${DIR_}/*matlab*)
       if (MATLAB_ROOT_DIR)
+        list(SORT MATLAB_ROOT_DIR)
+        list(REVERSE MATLAB_ROOT_DIR)
+        list(GET MATLAB_ROOT_DIR 0 MATLAB_ROOT_DIR)
         break()
       endif()
     endforeach()
@@ -47,12 +50,30 @@ MACRO(locate_matlab_root)
     foreach (DIR_ ${SEARCH_DIRS_})
       file(GLOB MATLAB_ROOT_DIR ${DIR_}/*matlab*)
       if (MATLAB_ROOT_DIR)
+        list(SORT MATLAB_ROOT_DIR)
+        list(REVERSE MATLAB_ROOT_DIR)
+        list(GET MATLAB_ROOT_DIR 0 MATLAB_ROOT_DIR)
         break()
       endif()
     endforeach()
 
   # --- WINDOWS ---
   elseif (WIN32)
+    # query the registry
+    set(REG_ROOTS_ "HKEY_LOCAL_MACHINE" "HKEY_CURRENT_USER")
+    foreach(REG_ROOT_ REG_ROOTS_)
+      execute_process(COMMAND reg query ${REG_ROOT_}\\SOFTWARE\\MathWorks\\MATLAB /f * /k OUTPUT_VARIABLE VERSIONS_)
+      if (VERSIONS_)
+        # sort in order from highest to lowest
+        list(SORT VERSIONS_)
+        list(REVERSE VERSIONS_)
+        list(GET VERSIONS_ 0 VERSION_)
+        get_filename_component(MATLAB_ROOT_DIR [${REG_ROOT_}\\SOFTWARE\\MathWorks\\MATLAB\\${VERSION_};Install_Dir] ABSOLUTE PATH)
+        if (MATLAB_ROOT_DIR)
+          break()
+        endif()
+      endif()
+    endforeach()
   endif()
   # unset local variables
   unset(SEARCH_DIRS_)
@@ -67,30 +88,31 @@ endMACRO()
 # (include directory and libraries) under the root. If everything is found,
 # sets the variable MATLAB_FOUND to TRUE
 MACRO(locate_matlab_components MATLAB_ROOT_DIR)
+  # get the mex extension
   if (UNIX)
-    # get the mex extension
     execute_process(COMMAND ${MATLAB_ROOT_DIR}/bin/mexext OUTPUT_VARIABLE MATLAB_MEXEXT)
-    string(STRIP ${MATLAB_MEXEXT} MATLAB_MEXEXT)
-    string(REPLACE "mex" "" MATLAB_ARCH ${MATLAB_MEXEXT})
-
-    # get the path to the libraries
-    set(MATLAB_LIBRARY_DIRS ${MATLAB_ROOT_DIR}/bin/${MATLAB_ARCH})
-
-    # get the libraries
-    find_library(MATLAB_LIB_MX  mx  PATHS ${MATLAB_LIBRARY_DIRS} NO_DEFAULT_PATH)
-    find_library(MATLAB_LIB_MEX mex PATHS ${MATLAB_LIBRARY_DIRS} NO_DEFAULT_PATH)
-    find_library(MATLAB_LIB_MAT mat PATHS ${MATLAB_LIBRARY_DIRS} NO_DEFAULT_PATH)
-    set(MATLAB_LIBS ${MATLAB_LIB_MX} ${MATLAB_LIB_MEX} ${MATLAB_LIB_MAT})
-
-    # get the include path
-    find_path(MATLAB_INCLUDE_DIRS mex.h ${MATLAB_ROOT_DIR}/extern/include) 
-
-    # get the mex shell script
-    find_file(MATLAB_MEX_SCRIPT NAMES mex mex.bat PATHS ${MATLAB_ROOT_DIR}/bin NO_DEFAULT_PATH)
-    
   elseif (WIN32)
+    execute_process(COMMAND ${MATLAB_ROOT_DIR}/bin/mexext.bat OUTPUT_VARIABLE MATLAB_MEXEXT)
   endif()
+    
+  string(STRIP ${MATLAB_MEXEXT} MATLAB_MEXEXT)
+  string(REPLACE "mex" "" MATLAB_ARCH ${MATLAB_MEXEXT})
 
+  # get the path to the libraries
+  set(MATLAB_LIBRARY_DIRS ${MATLAB_ROOT_DIR}/bin/${MATLAB_ARCH})
+
+  # get the libraries
+  find_library(MATLAB_LIB_MX  mx  PATHS ${MATLAB_LIBRARY_DIRS} NO_DEFAULT_PATH)
+  find_library(MATLAB_LIB_MEX mex PATHS ${MATLAB_LIBRARY_DIRS} NO_DEFAULT_PATH)
+  find_library(MATLAB_LIB_MAT mat PATHS ${MATLAB_LIBRARY_DIRS} NO_DEFAULT_PATH)
+  set(MATLAB_LIBS ${MATLAB_LIB_MX} ${MATLAB_LIB_MEX} ${MATLAB_LIB_MAT})
+
+  # get the include path
+  find_path(MATLAB_INCLUDE_DIRS mex.h ${MATLAB_ROOT_DIR}/extern/include) 
+
+  # get the mex shell script
+  find_file(MATLAB_MEX_SCRIPT NAMES mex mex.bat PATHS ${MATLAB_ROOT_DIR}/bin NO_DEFAULT_PATH)
+  
   # verify that everything has been found successfully
   if (MATLAB_LIB_MX AND MATLAB_LIB_MEX AND MATLAB_LIB_MAT AND MATLAB_INCLUDE_DIRS AND MATLAB_MEX_SCRIPT)
     set(MATLAB_FOUND TRUE)
