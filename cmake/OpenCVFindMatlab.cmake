@@ -113,21 +113,6 @@ MACRO(locate_matlab_components MATLAB_ROOT_DIR)
   # get the mex shell script
   find_file(MATLAB_MEX_SCRIPT NAMES mex mex.bat PATHS ${MATLAB_ROOT_DIR}/bin NO_DEFAULT_PATH)
   
-  # verify that everything has been found successfully
-  if (MATLAB_LIB_MX AND MATLAB_LIB_MEX AND MATLAB_LIB_MAT AND MATLAB_INCLUDE_DIRS AND MATLAB_MEX_SCRIPT)
-    set(MATLAB_FOUND TRUE)
-  else()
-    unset(MATLAB_LIB_MX)
-    unset(MATLAB_LIB_MEX)
-    unset(MATLAB_LIB_MAT)
-    unset(MATLAB_LIBS)
-    unset(MATLAB_LIBRARY_DIRS)
-    unset(MATLAB_INCLUDE_DIRS)
-    unset(MATLAB_ROOT_DIR)
-    unset(MATLAB_MEXEXT)
-    unset(MATLAB_MEX_SCRIPT)
-    unset(MATLAB_ARCH)
-  endif()
 endMACRO()
 
 
@@ -148,6 +133,8 @@ if (NOT MATLAB_FOUND)
   if (MATLAB_ROOT_DIR)
     locate_matlab_components(${MATLAB_ROOT_DIR})
   endif()
+  FIND_PACKAGE_HANDLE_STANDARD_ARGS(Matlab DEFAULT_MSG MATLAB_MEX_SCRIPT MATLAB_INCLUDE_DIRS 
+                                           MATLAB_LIBS MATLAB_LIBRARY_DIRS MATLAB_MEXEXT MATLAB_ARCH)
 
   # if Matlab was not found, unset the local variables
   if (NOT MATLAB_FOUND)
