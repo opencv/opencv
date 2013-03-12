@@ -2014,6 +2014,35 @@ public:
     uint64 state;
 };
 
+class CV_EXPORTS RNG_MT19937
+{
+public:
+    RNG_MT19937();
+    RNG_MT19937(unsigned s);
+    void seed(unsigned s);
+
+    unsigned next();
+
+    operator int();
+    operator unsigned();
+    operator float();
+    operator double();
+
+    unsigned operator ()(unsigned N);
+    unsigned operator ()();
+
+    // returns uniformly distributed integer random number from [a,b) range
+    int uniform(int a, int b);
+    // returns uniformly distributed floating-point random number from [a,b) range
+    float uniform(float a, float b);
+    // returns uniformly distributed double-precision floating-point random number from [a,b) range
+    double uniform(double a, double b);
+
+private:
+    enum PeriodParameters {N = 624, M = 397};
+    unsigned state[N];
+    int mti;
+};
 
 /*!
  Termination criteria in iterative algorithms
