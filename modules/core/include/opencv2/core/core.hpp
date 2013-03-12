@@ -108,6 +108,8 @@ template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class CV_EXPORTS 
 CV_EXPORTS std::string format( const char* fmt, ... );
 CV_EXPORTS std::string tempfile( const char* suffix CV_DEFAULT(0));
 
+CV_EXPORTS void glob(std::string pattern, std::vector<std::string>& result, bool recursive = false);
+
 // matrix decomposition types
 enum { DECOMP_LU=0, DECOMP_SVD=1, DECOMP_EIG=2, DECOMP_CHOLESKY=3, DECOMP_QR=4, DECOMP_NORMAL=16 };
 enum { NORM_INF=1, NORM_L1=2, NORM_L2=4, NORM_L2SQR=5, NORM_HAMMING=6, NORM_HAMMING2=7, NORM_TYPE_MASK=7, NORM_RELATIVE=8, NORM_MINMAX=32 };
