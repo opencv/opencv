@@ -230,7 +230,7 @@ foreach(__opttype OPT DBG)
       endif()
     endif()
 
-    list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY} ${CUDA_nvcuvid_LIBRARY} ${CUDA_nvcuvenc_LIBRARY})
+    list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
 
     if(OpenCV_USE_CUBLAS)
       list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_CUBLAS_LIBRARIES})

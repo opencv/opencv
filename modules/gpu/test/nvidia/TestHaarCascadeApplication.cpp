@@ -13,9 +13,49 @@
 
 #include <float.h>
 
-#if defined(__GNUC__) && !defined(__APPLE__)
+#if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__)
     #include <fpu_control.h>
 #endif
+
+namespace
+{
+    // http://www.christian-seiler.de/projekte/fpmath/
+    class FpuControl
+    {
+    public:
+        FpuControl();
+        ~FpuControl();
+
+    private:
+    #if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__)
+        fpu_control_t fpu_oldcw, fpu_cw;
+    #elif defined(_WIN32) && !defined(_WIN64)
+        unsigned int fpu_oldcw, fpu_cw;
+    #endif
+    };
+
+    FpuControl::FpuControl()
+    {
+    #if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__)
+        _FPU_GETCW(fpu_oldcw);
+        fpu_cw = (fpu_oldcw & ~_FPU_EXTENDED & ~_FPU_DOUBLE & ~_FPU_SINGLE) | _FPU_SINGLE;
+        _FPU_SETCW(fpu_cw);
+    #elif defined(_WIN32) && !defined(_WIN64)
+        _controlfp_s(&fpu_cw, 0, 0);
+        fpu_oldcw = fpu_cw;
+        _controlfp_s(&fpu_cw, _PC_24, _MCW_PC);
+    #endif
+    }
+
+    FpuControl::~FpuControl()
+    {
+    #if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__)
+        _FPU_SETCW(fpu_oldcw);
+    #elif defined(_WIN32) && !defined(_WIN64)
+        _controlfp_s(&fpu_cw, fpu_oldcw, _MCW_PC);
+    #endif
+    }
+}
 
 #include "TestHaarCascadeApplication.h"
 #include "NCVHaarObjectDetection.hpp"
@@ -47,12 +87,8 @@ bool TestHaarCascadeApplication::init()
     return true;
 }
 
-
 bool TestHaarCascadeApplication::process()
 {
-#if defined(__APPLE)
-    return true;
-#endif
     NCVStatus ncvStat;
     bool rcode = false;
 
@@ -205,56 +241,19 @@ bool TestHaarCascadeApplication::process()
     }
     ncvAssertReturn(cudaSuccess == cudaStreamSynchronize(0), false);
 
-#if !defined(__APPLE__)
+    {
+        // calculations here
+        FpuControl fpu;
+        (void) fpu;
 
-#if defined(__GNUC__)
-    //http://www.christian-seiler.de/projekte/fpmath/
+        ncvStat = ncvApplyHaarClassifierCascade_host(
+            h_integralImage, h_rectStdDev, h_pixelMask,
+            detectionsOnThisScale_h,
+            haar, h_HaarStages, h_HaarNodes, h_HaarFeatures, false,
+            searchRoiU, 1, 1.0f);
+        ncvAssertReturn(ncvStat == NCV_SUCCESS, false);
+    }
 
-    #ifndef _FPU_EXTENDED
-    #define _FPU_EXTENDED 0
-    #endif
-
-    #ifndef _FPU_DOUBLE
-    #define _FPU_DOUBLE 0
-    #endif
-
-    #ifndef _FPU_SINGLE
-    #define _FPU_SINGLE 0
-    #endif
-
-    fpu_control_t fpu_oldcw, fpu_cw;
-    _FPU_GETCW(fpu_oldcw); // store old cw
-     fpu_cw = (fpu_oldcw & ~_FPU_EXTENDED & ~_FPU_DOUBLE & ~_FPU_SINGLE) | _FPU_SINGLE;
-    _FPU_SETCW(fpu_cw);
-
-    // calculations here
-    ncvStat = ncvApplyHaarClassifierCascade_host(
-        h_integralImage, h_rectStdDev, h_pixelMask,
-        detectionsOnThisScale_h,
-        haar, h_HaarStages, h_HaarNodes, h_HaarFeatures, false,
-        searchRoiU, 1, 1.0f);
-    ncvAssertReturn(ncvStat == NCV_SUCCESS, false);
-
-    _FPU_SETCW(fpu_oldcw); // restore old cw
-#else
-#ifndef _WIN64
-    Ncv32u fpu_oldcw, fpu_cw;
-    _controlfp_s(&fpu_cw, 0, 0);
-    fpu_oldcw = fpu_cw;
-    _controlfp_s(&fpu_cw, _PC_24, _MCW_PC);
-#endif
-    ncvStat = ncvApplyHaarClassifierCascade_host(
-        h_integralImage, h_rectStdDev, h_pixelMask,
-        detectionsOnThisScale_h,
-        haar, h_HaarStages, h_HaarNodes, h_HaarFeatures, false,
-        searchRoiU, 1, 1.0f);
-    ncvAssertReturn(ncvStat == NCV_SUCCESS, false);
-#ifndef _WIN64
-    _controlfp_s(&fpu_cw, fpu_oldcw, _MCW_PC);
-#endif
-#endif
-
-#endif
     NCV_SKIP_COND_END
 
     int devId;
