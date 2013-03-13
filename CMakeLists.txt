@@ -59,7 +59,6 @@ if(DEFINED CMAKE_BUILD_TYPE AND CMAKE_VERSION VERSION_GREATER "2.8")
 endif()
 
 project(OpenCV CXX C)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake/Modules)
 include(cmake/OpenCVUtils.cmake)
 
 # ----------------------------------------------------------------------------
@@ -422,8 +421,7 @@ if(WITH_OPENCL)
 endif()
 
 # --- Matlab/Octave ---
-find_package(matlab)
-#include(cmake/OpenCVFindMatlab.cmake)
+include(cmake/OpenCVFindMatlab.cmake)
 
 # ----------------------------------------------------------------------------
 # Solution folders:

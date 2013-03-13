@@ -28,17 +28,17 @@
 #
 # Attempt to find the path to the Matlab installation. If successful, sets
 # the absolute path in the variable MATLAB_ROOT_DIR
-MACRO(locate_matlab_root)
+function(locate_matlab_root)
   # --- LINUX ---
   if (UNIX AND NOT APPLE)
     # possible root locations, in order of likelihood
     set(SEARCH_DIRS_ /usr/local /opt/local /usr /opt)
     foreach (DIR_ ${SEARCH_DIRS_})
-      file(GLOB MATLAB_ROOT_DIR ${DIR_}/*matlab*)
-      if (MATLAB_ROOT_DIR)
-        list(SORT MATLAB_ROOT_DIR)
-        list(REVERSE MATLAB_ROOT_DIR)
-        list(GET MATLAB_ROOT_DIR 0 MATLAB_ROOT_DIR)
+      file(GLOB MATLAB_ROOT_DIR_ ${DIR_}/*matlab*)
+      if (MATLAB_ROOT_DIR_)
+        list(SORT MATLAB_ROOT_DIR_)
+        list(REVERSE MATLAB_ROOT_DIR_)
+        list(GET MATLAB_ROOT_DIR_ 0 MATLAB_ROOT_DIR_)
         break()
       endif()
     endforeach()
@@ -48,11 +48,11 @@ MACRO(locate_matlab_root)
     # possible root locations, in order of likelihood
     set(SEARCH_DIRS_ /Applications /usr/local /opt/local /usr /opt)
     foreach (DIR_ ${SEARCH_DIRS_})
-      file(GLOB MATLAB_ROOT_DIR ${DIR_}/*matlab*)
-      if (MATLAB_ROOT_DIR)
-        list(SORT MATLAB_ROOT_DIR)
-        list(REVERSE MATLAB_ROOT_DIR)
-        list(GET MATLAB_ROOT_DIR 0 MATLAB_ROOT_DIR)
+      file(GLOB MATLAB_ROOT_DIR_ ${DIR_}/*matlab*)
+      if (MATLAB_ROOT_DIR_)
+        list(SORT MATLAB_ROOT_DIR_)
+        list(REVERSE MATLAB_ROOT_DIR_)
+        list(GET MATLAB_ROOT_DIR_ 0 MATLAB_ROOT_DIR_)
         break()
       endif()
     endforeach()
@@ -68,21 +68,20 @@ MACRO(locate_matlab_root)
         list(SORT VERSIONS_)
         list(REVERSE VERSIONS_)
         list(GET VERSIONS_ 0 VERSION_)
-        get_filename_component(MATLAB_ROOT_DIR [${REG_ROOT_}\\SOFTWARE\\MathWorks\\MATLAB\\${VERSION_};Install_Dir] ABSOLUTE PATH)
-        if (MATLAB_ROOT_DIR)
+        get_filename_component(MATLAB_ROOT_DIR_ [${REG_ROOT_}\\SOFTWARE\\MathWorks\\MATLAB\\${VERSION_};Install_Dir] ABSOLUTE PATH)
+        if (MATLAB_ROOT_DIR_)
           break()
         endif()
       endif()
     endforeach()
   endif()
-  # unset local variables
-  unset(REG_ROOTS_)
-  unset(REG_ROOT_)
-  unset(VERSIONS_)
-  unset(VERSION_)
-  unset(SEARCH_DIRS_)
-  unset(DIR_)
-endMACRO()
+  
+  # export output into parent scope
+  if (MATLAB_ROOT_DIR_)
+    set(MATLAB_ROOT_DIR ${MATLAB_ROOT_DIR_} PARENT_SCOPE)
+  endif()
+  return()
+endfunction()
 
 
 
@@ -91,33 +90,46 @@ endMACRO()
 # Given a directory MATLAB_ROOT_DIR, attempt to find the Matlab components
 # (include directory and libraries) under the root. If everything is found,
 # sets the variable MATLAB_FOUND to TRUE
-MACRO(locate_matlab_components MATLAB_ROOT_DIR)
+function(locate_matlab_components MATLAB_ROOT_DIR)
   # get the mex extension
   if (UNIX)
-    execute_process(COMMAND ${MATLAB_ROOT_DIR}/bin/mexext OUTPUT_VARIABLE MATLAB_MEXEXT)
+    execute_process(COMMAND ${MATLAB_ROOT_DIR}/bin/mexext OUTPUT_VARIABLE MATLAB_MEXEXT_)
   elseif (WIN32)
-    execute_process(COMMAND ${MATLAB_ROOT_DIR}/bin/mexext.bat OUTPUT_VARIABLE MATLAB_MEXEXT)
+    execute_process(COMMAND ${MATLAB_ROOT_DIR}/bin/mexext.bat OUTPUT_VARIABLE MATLAB_MEXEXT_)
   endif()
-    
-  string(STRIP ${MATLAB_MEXEXT} MATLAB_MEXEXT)
-  string(REPLACE "mex" "" MATLAB_ARCH ${MATLAB_MEXEXT})
+  if (NOT MATLAB_MEXEXT_)
+    return()
+  endif()
+
+  string(STRIP ${MATLAB_MEXEXT_} MATLAB_MEXEXT_)
+  string(REPLACE "mex" "" MATLAB_ARCH_ ${MATLAB_MEXEXT_})
 
   # get the path to the libraries
-  set(MATLAB_LIBRARY_DIR ${MATLAB_ROOT_DIR}/bin/${MATLAB_ARCH})
+  set(MATLAB_LIBRARY_DIR_ ${MATLAB_ROOT_DIR}/bin/${MATLAB_ARCH_})
 
   # get the libraries
-  find_library(MATLAB_LIB_MX  mx  PATHS ${MATLAB_LIBRARY_DIR} NO_DEFAULT_PATH)
-  find_library(MATLAB_LIB_MEX mex PATHS ${MATLAB_LIBRARY_DIR} NO_DEFAULT_PATH)
-  find_library(MATLAB_LIB_MAT mat PATHS ${MATLAB_LIBRARY_DIR} NO_DEFAULT_PATH)
-  set(MATLAB_LIBS ${MATLAB_LIB_MX} ${MATLAB_LIB_MEX} ${MATLAB_LIB_MAT})
+  find_library(MATLAB_LIB_MX_  mx  PATHS ${MATLAB_LIBRARY_DIR_} NO_DEFAULT_PATH)
+  find_library(MATLAB_LIB_MEX_ mex PATHS ${MATLAB_LIBRARY_DIR_} NO_DEFAULT_PATH)
+  find_library(MATLAB_LIB_MAT_ mat PATHS ${MATLAB_LIBRARY_DIR_} NO_DEFAULT_PATH)
+  set(MATLAB_LIBS_ ${MATLAB_LIB_MX_} ${MATLAB_LIB_MEX_} ${MATLAB_LIB_MAT_})
 
   # get the include path
-  find_path(MATLAB_INCLUDE_DIR mex.h ${MATLAB_ROOT_DIR}/extern/include) 
+  find_path(MATLAB_INCLUDE_DIR_ mex.h ${MATLAB_ROOT_DIR}/extern/include) 
 
   # get the mex shell script
-  find_file(MATLAB_MEX_SCRIPT NAMES mex mex.bat PATHS ${MATLAB_ROOT_DIR}/bin NO_DEFAULT_PATH)
-  
-endMACRO()
+  find_file(MATLAB_MEX_SCRIPT_ NAMES mex mex.bat PATHS ${MATLAB_ROOT_DIR}/bin NO_DEFAULT_PATH)
+
+  # export into parent scope
+  if (MATLAB_MEX_SCRIPT_ AND MATLAB_LIBS_ AND MATLAB_INCLUDE_DIR_)
+    set(MATLAB_MEX_SCRIPT  ${MATLAB_MEX_SCRIPT_}  PARENT_SCOPE)
+    set(MATLAB_INCLUDE_DIR ${MATLAB_INCLUDE_DIR_} PARENT_SCOPE)
+    set(MATLAB_LIBS        ${MATLAB_LIBS_}        PARENT_SCOPE)
+    set(MATLAB_LIBRARY_DIR ${MATLAB_LIBRARY_DIR_} PARENT_SCOPE)
+    set(MATLAB_MEXEXT      ${MATLAB_MEXEXT_}      PARENT_SCOPE)
+    set(MATLAB_ARCH        ${MATLAB_ARCH_}        PARENT_SCOPE)
+  endif()
+  return()
+endfunction()
 
 
 # ----------------------------------------------------------------------------
