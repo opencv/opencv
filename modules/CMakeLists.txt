@@ -1,4 +1,4 @@
-add_definition(-D__OPENCV_BUILD=1)
+add_definitions(-D__OPENCV_BUILD=1)
 
 if(NOT OPENCV_MODULES_PATH)
   set(OPENCV_MODULES_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
