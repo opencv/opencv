@@ -429,7 +429,7 @@ endmacro()
 macro(ocv_glob_module_sources)
   file(GLOB lib_srcs     "src/*.cpp")
   file(GLOB lib_int_hdrs "src/*.hpp" "src/*.h")
-  file(GLOB lib_hdrs     "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
+  file(GLOB lib_hdrs     "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
   file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.hpp" "include/opencv2/${name}/detail/*.h")
 
   file(GLOB lib_device_srcs "src/cuda/*.cu")

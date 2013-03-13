@@ -39,7 +39,6 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "opencv2/core/core.hpp"
 #include "precomp.hpp"
 
 #include <iostream>

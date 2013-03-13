@@ -44,11 +44,11 @@
 
 #define SHOW_DEBUG_IMAGES 0
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/calib3d.hpp"
 
 #if SHOW_DEBUG_IMAGES
-#  include "opencv2/highgui/highgui.hpp"
+#  include "opencv2/highgui.hpp"
 #endif
 
 #include <iostream>

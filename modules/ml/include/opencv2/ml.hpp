@@ -41,7 +41,7 @@
 #ifndef __OPENCV_ML_HPP__
 #define __OPENCV_ML_HPP__
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include <limits.h>
 
 #ifdef __cplusplus
@@ -327,7 +327,7 @@ struct CV_EXPORTS CvSVMKernel
                                     const float* another, float* results,
                                     double alpha, double beta );
     virtual void calc_intersec( int vcount, int var_count, const float** vecs,
-                            const float* another, float* results );    
+                            const float* another, float* results );
     virtual void calc_chi2( int vec_count, int vec_size, const float** vecs,
                               const float* another, float* results );
     virtual void calc_linear( int vec_count, int vec_size, const float** vecs,

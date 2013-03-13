@@ -51,9 +51,9 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-# include "opencv2/ts/ts.hpp"
-# include "opencv2/softcascade/softcascade.hpp"
-# include "opencv2/imgproc/imgproc.hpp"
-# include "opencv2/highgui/highgui.hpp"
+# include "opencv2/ts.hpp"
+# include "opencv2/softcascade.hpp"
+# include "opencv2/imgproc.hpp"
+# include "opencv2/highgui.hpp"
 
 #endif

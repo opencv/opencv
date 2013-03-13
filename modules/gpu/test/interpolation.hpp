@@ -42,8 +42,8 @@
 #ifndef __OPENCV_TEST_INTERPOLATION_HPP__
 #define __OPENCV_TEST_INTERPOLATION_HPP__
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
 
 template <typename T> T readVal(const cv::Mat& src, int y, int x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
 {

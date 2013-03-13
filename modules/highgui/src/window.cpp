@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 #include <map>
-#include "opencv2/core/opengl_interop.hpp"
+#include "opencv2/core/opengl.hpp"
 
 // in later times, use this file as a dispatcher to implementations like cvcap.cpp
 

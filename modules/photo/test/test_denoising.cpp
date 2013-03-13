@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/photo/photo.hpp"
+#include "opencv2/photo.hpp"
 #include <string>
 
 using namespace cv;

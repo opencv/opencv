@@ -47,15 +47,15 @@
 #include "cvconfig.h"
 #endif
 
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/objdetect.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/internal.hpp"
 
 #include "opencv2/opencv_modules.hpp"
 #ifdef HAVE_OPENCV_HIGHGUI
-#  include "opencv2/highgui/highgui.hpp"
+#  include "opencv2/highgui.hpp"
 #endif
 
 #ifdef HAVE_TEGRA_OPTIMIZATION

@@ -3,11 +3,11 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
-#include "opencv2/core/core.hpp"
-#include "opencv2/video/video.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/videostab/videostab.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/video.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/videostab.hpp"
 #include "opencv2/opencv_modules.hpp"
 
 #define arg(name) cmd.get<string>(name)

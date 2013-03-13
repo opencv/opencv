@@ -3143,8 +3143,8 @@ public:
     void deallocate();
     //! resizes the buffer and preserves the content
     void resize(size_t _size);
-	//! returns the current buffer size
-	size_t size() const;
+    //! returns the current buffer size
+    size_t size() const;
     //! returns pointer to the real buffer, stack-allocated or head-allocated
     operator _Tp* ();
     //! returns read-only pointer to the real buffer, stack-allocated or head-allocated

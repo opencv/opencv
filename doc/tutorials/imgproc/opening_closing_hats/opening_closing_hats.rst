@@ -115,8 +115,8 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
 .. code-block:: cpp
 
-   #include "opencv2/imgproc/imgproc.hpp"
-   #include "opencv2/highgui/highgui.hpp"
+   #include "opencv2/imgproc.hpp"
+   #include "opencv2/highgui.hpp"
    #include <stdlib.h>
    #include <stdio.h>
 

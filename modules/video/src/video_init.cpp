@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/video/video.hpp"
+#include "opencv2/video.hpp"
 
 namespace cv
 {

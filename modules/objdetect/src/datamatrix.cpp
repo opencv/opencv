@@ -483,7 +483,7 @@ endo: ; // end search for this o
 #endif
 }
 
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/imgproc.hpp>
 
 namespace cv
 {

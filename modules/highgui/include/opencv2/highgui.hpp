@@ -43,7 +43,7 @@
 #ifndef __OPENCV_HIGHGUI_HPP__
 #define __OPENCV_HIGHGUI_HPP__
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/highgui/highgui_c.h"
 
 #ifdef __cplusplus

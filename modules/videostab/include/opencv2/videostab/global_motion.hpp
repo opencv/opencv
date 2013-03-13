@@ -46,15 +46,15 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include "opencv2/core/core.hpp"
-#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/features2d.hpp"
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/videostab/optical_flow.hpp"
 #include "opencv2/videostab/motion_core.hpp"
 #include "opencv2/videostab/outlier_rejection.hpp"
 
 #ifdef HAVE_OPENCV_GPU
-  #include "opencv2/gpu/gpu.hpp"
+  #include "opencv2/gpu.hpp"
 #endif
 
 namespace cv

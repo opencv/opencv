@@ -35,7 +35,7 @@
 #  define GTEST_USES_POSIX_RE 0
 #endif
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 
 namespace cvtest
 {
@@ -578,4 +578,4 @@ int main(int argc, char **argv) \
 
 #endif
 
-#include "ts_perf.hpp"
+#include "opencv2/ts/ts_perf.hpp"

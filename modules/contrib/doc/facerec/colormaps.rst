@@ -42,9 +42,9 @@ In OpenCV 2.4 you only need :ocv:func:`applyColorMap` to apply a colormap on a g
 
 .. code-block:: cpp
 
-    #include <opencv2/contrib/contrib.hpp>
-    #include <opencv2/core/core.hpp>
-    #include <opencv2/highgui/highgui.hpp>
+    #include <opencv2/contrib.hpp>
+    #include <opencv2/core.hpp>
+    #include <opencv2/highgui.hpp>
 
     using namespace cv;
 
