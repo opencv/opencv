@@ -219,7 +219,7 @@ class CV_EXPORTS ChannelsProcessor
 public:
     enum
     {
-        GENERIC   = 1 << 4,
+        // GENERIC   = 1 << 4, does not supported
         SEPARABLE = 2 << 4
     };
 
@@ -233,7 +233,7 @@ public:
     // Param shrinkage is a resizing factor. Resize is applied before the computing integral sum
     // Param bins is a number of HOG-like channels.
     // Param flags is a channel computing extra flags.
-    static cv::Ptr<ChannelsProcessor> create(const int shrinkage, const int bins, const int flags = GENERIC);
+    static cv::Ptr<ChannelsProcessor> create(const int shrinkage, const int bins, const int flags = SEPARABLE);
 
     virtual ~ChannelsProcessor();
 
@@ -267,7 +267,7 @@ public:
     // Param scales is a number of scales from minScale to maxScale.
     // Param flags is an extra tuning flags.
     SCascade(const double minScale = 0.4, const double maxScale = 5., const int scales = 55,
-        const int flags = NO_REJECT || ChannelsProcessor::GENERIC);
+        const int flags = NO_REJECT | ChannelsProcessor::SEPARABLE);
 
     virtual ~SCascade();
 

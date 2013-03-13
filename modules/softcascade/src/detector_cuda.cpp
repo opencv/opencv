@@ -73,7 +73,7 @@ namespace
 
     inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
     {
-        //if (cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), file, line, func);
+        if (cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), file, line, func);
     }
 }
 
@@ -545,98 +545,6 @@ inline void setZero(cv::gpu::GpuMat& m, cv::gpu::Stream& s)
         m.setTo(0);
 }
 
-struct GenricPreprocessor : public cv::softcascade::ChannelsProcessor
-{
-    GenricPreprocessor(const int s, const int b) : cv::softcascade::ChannelsProcessor(), shrinkage(s), bins(b) {}
-    virtual ~GenricPreprocessor() {}
-
-    virtual void apply(InputArray _frame, OutputArray _shrunk, cv::gpu::Stream& s = cv::gpu::Stream::Null())
-    {
-        const cv::gpu::GpuMat frame = _frame.getGpuMat();
-
-        _shrunk.create(frame.rows * (4 + bins) / shrinkage, frame.cols / shrinkage, CV_8UC1);
-        cv::gpu::GpuMat shrunk = _shrunk.getGpuMat();
-
-        channels.create(frame.rows * (4 + bins), frame.cols, CV_8UC1);
-        setZero(channels, s);
-
-        //cv::gpu::cvtColor(frame, gray, CV_BGR2GRAY, s);
-        createHogBins(s);
-
-        createLuvBins(frame, s);
-
-        //cv::gpu::resize(channels, shrunk, cv::Size(), 1.f / shrinkage, 1.f / shrinkage, CV_INTER_AREA, s);
-    }
-
-private:
-
-    void createHogBins(cv::gpu::Stream& s)
-    {
-        static const int fw = gray.cols;
-        static const int fh = gray.rows;
-
-        fplane.create(fh * HOG_BINS, fw, CV_32FC1);
-
-        cv::gpu::GpuMat dfdx(fplane, cv::Rect(0,  0, fw, fh));
-        cv::gpu::GpuMat dfdy(fplane, cv::Rect(0, fh, fw, fh));
-
-        //cv::gpu::Sobel(gray, dfdx, CV_32F, 1, 0, sobelBuf, 3, 1, cv::BORDER_DEFAULT, -1, s);
-        //cv::gpu::Sobel(gray, dfdy, CV_32F, 0, 1, sobelBuf, 3, 1, cv::BORDER_DEFAULT, -1, s);
-
-        cv::gpu::GpuMat mag(fplane, cv::Rect(0, 2 * fh, fw, fh));
-        cv::gpu::GpuMat ang(fplane, cv::Rect(0, 3 * fh, fw, fh));
-
-        //cv::gpu::cartToPolar(dfdx, dfdy, mag, ang, true, s);
-
-        // normalize magnitude to uchar interval and angles to 6 bins
-        cv::gpu::GpuMat nmag(fplane, cv::Rect(0, 4 * fh, fw, fh));
-        cv::gpu::GpuMat nang(fplane, cv::Rect(0, 5 * fh, fw, fh));
-
-        //cv::gpu::multiply(mag, cv::Scalar::all(1.f / (8 *::log(2.0f))), nmag, 1, -1, s);
-        //cv::gpu::multiply(ang, cv::Scalar::all(1.f / 60.f),     nang, 1, -1, s);
-
-        //create uchar magnitude
-        cv::gpu::GpuMat cmag(channels, cv::Rect(0, fh * HOG_BINS, fw, fh));
-        if (s)
-            s.enqueueConvert(nmag, cmag, CV_8UC1);
-        else
-            nmag.convertTo(cmag, CV_8UC1);
-
-        cudaStream_t stream = cv::gpu::StreamAccessor::getStream(s);
-        cv::softcascade::device::fillBins(channels, nang, fw, fh, HOG_BINS, stream);
-    }
-
-    void createLuvBins(const cv::gpu::GpuMat& colored, cv::gpu::Stream& s)
-    {
-        static const int fw = colored.cols;
-        static const int fh = colored.rows;
-
-        //cv::gpu::cvtColor(colored, luv, CV_BGR2Luv, s);
-
-        std::vector<cv::gpu::GpuMat> splited;
-        for(int i = 0; i < LUV_BINS; ++i)
-        {
-            splited.push_back(cv::gpu::GpuMat(channels, cv::Rect(0, fh * (7 + i), fw, fh)));
-        }
-
-        //cv::gpu::split(luv, splited, s);
-    }
-
-    enum {HOG_BINS = 6, LUV_BINS = 3};
-
-    const int shrinkage;
-    const int bins;
-
-    cv::gpu::GpuMat gray;
-    cv::gpu::GpuMat luv;
-    cv::gpu::GpuMat channels;
-
-    // preallocated buffer for floating point operations
-    cv::gpu::GpuMat fplane;
-    cv::gpu::GpuMat sobelBuf;
-};
-
-
 struct SeparablePreprocessor : public cv::softcascade::ChannelsProcessor
 {
     SeparablePreprocessor(const int s, const int b) : cv::softcascade::ChannelsProcessor(), shrinkage(s), bins(b) {}
@@ -674,11 +582,7 @@ private:
 
 cv::Ptr<cv::softcascade::ChannelsProcessor> cv::softcascade::ChannelsProcessor::create(const int s, const int b, const int m)
 {
-    CV_Assert((m && SEPARABLE) || (m && GENERIC));
-
-    if (m && GENERIC)
-        return cv::Ptr<cv::softcascade::ChannelsProcessor>(new GenricPreprocessor(s, b));
-
+    CV_Assert((m && SEPARABLE));
     return cv::Ptr<cv::softcascade::ChannelsProcessor>(new SeparablePreprocessor(s, b));
 }
 
