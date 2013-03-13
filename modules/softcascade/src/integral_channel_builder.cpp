@@ -238,22 +238,8 @@ void ChannelFeaturePool::fill(int desired)
         int x = xRand(eng);
         int y = yRand(eng);
 
-#if __cplusplus >= 201103L
-        // The interface changed slightly going from uniform_int to
-        // uniform_int_distribution. See this page to understand
-        // the old behavior:
-        // http://www.boost.org/doc/libs/1_47_0/boost/random/uniform_int.hpp
-        int w = 1 + wRand(
-        eng,
-          // This extra "- 1" appears to be necessary, based on the Boost docs.
-        Random::uniform::param_type(0, (model.width  - x - 1) - 1));
-        int h = 1 + hRand(
-        eng,
-        Random::uniform::param_type(0, (model.height  - y - 1) - 1));
-#else
         int w = 1 + wRand(eng, model.width  - x - 1);
         int h = 1 + hRand(eng, model.height - y - 1);
-#endif
 
         CV_Assert(w > 0);
         CV_Assert(h > 0);
