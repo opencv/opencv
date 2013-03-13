@@ -58,6 +58,43 @@
 # pragma warning(disable:4127) //conditional expression is constant
 #endif
 
+//////////////// static assert /////////////////
+
+#define CVAUX_CONCAT_EXP(a, b) a##b
+#define CVAUX_CONCAT(a, b) CVAUX_CONCAT_EXP(a,b)
+
+#ifdef __cplusplus
+#  if defined(__clang__)
+#    ifndef __has_extension
+#      define __has_extension __has_feature /* compatibility, for older versions of clang */
+#    endif
+#    if __has_extension(cxx_static_assert)
+#      define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
+#    endif
+#  elif defined(__GNUC__)
+#    if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L)
+#      define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
+#    endif
+#  elif defined(_MSC_VER)
+#    if _MSC_VER >= 1600 /* MSVC 10 */
+#      define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
+#    endif
+#  endif
+#  ifndef CV_StaticAssert
+#    if defined(__GNUC__) && (__GNUC__ > 3) && (__GNUC_MINOR__ > 2)
+#      define CV_StaticAssert(condition, reason) ({ extern int __attribute__((error("CV_StaticAssert: " reason " " #condition))) CV_StaticAssert(); ((condition) ? 0 : CV_StaticAssert()), 0; })
+#    else
+       namespace cv {
+         template <bool x> struct CV_StaticAssert_failed;
+         template <> struct CV_StaticAssert_failed<true> { enum { val = 1 }; };
+         template<int x> struct CV_StaticAssert_test{};
+       }
+#      define CV_StaticAssert(condition, reason)\
+         typedef cv::CV_StaticAssert_test< sizeof(cv::CV_StaticAssert_failed< static_cast<bool>(condition) >) > CVAUX_CONCAT(CV_StaticAssert_failed_at_, __LINE__)
+#    endif
+#  endif
+#endif
+
 namespace cv
 {
 
