@@ -176,7 +176,7 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
 
     const Mat *image = &img;
     Mat temp;
-    int size = 0;
+    size_t size = 0;
 
     bool comp_lossless = true;
     int quality = 100;
