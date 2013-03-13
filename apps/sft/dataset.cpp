@@ -46,116 +46,32 @@
 #include <iostream>
 #include <queue>
 
-inline std::string itoa(long i) { return cv::format("%ld", i); }
-
-#if !defined (_WIN32) && ! defined(__MINGW32__)
-# include <glob.h>
-
-namespace {
-using namespace sft;
-void glob(const string& path, svector& ret)
-{
-    glob_t glob_result;
-    glob(path.c_str(), GLOB_TILDE, 0, &glob_result);
-
-    ret.clear();
-    ret.reserve(glob_result.gl_pathc);
-
-    for(unsigned int i = 0; i < glob_result.gl_pathc; ++i)
-    {
-        ret.push_back(std::string(glob_result.gl_pathv[i]));
-        dprintf("%s\n", ret[i].c_str());
-    }
-
-    globfree(&glob_result);
-}
-
-}
-#else
-
-# include <windows.h>
-namespace {
-using namespace sft;
-void glob(const string& refRoot, const string& refExt, svector &refvecFiles)
-{
-    std::string     strFilePath;             // File path
-    std::string     strExtension;            // Extension
-
-    std::string strPattern = refRoot + "\\*.*";
-
-    WIN32_FIND_DATA FileInformation;         // File information
-    HANDLE hFile = ::FindFirstFile(strPattern.c_str(), &FileInformation);
-
-    if(hFile == INVALID_HANDLE_VALUE)
-        CV_Error(CV_StsBadArg, "Your dataset search path is incorrect");
-
-    do
-    {
-        if(FileInformation.cFileName[0] != '.')
-        {
-            strFilePath.erase();
-            strFilePath = refRoot + "\\" + FileInformation.cFileName;
-
-            if( !(FileInformation.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) )
-            {
-                // Check extension
-                strExtension = FileInformation.cFileName;
-                strExtension = strExtension.substr(strExtension.rfind(".") + 1);
-
-                if(strExtension == refExt)
-                    // Save filename
-                    refvecFiles.push_back(strFilePath);
-            }
-        }
-    }
-    while(::FindNextFile(hFile, &FileInformation) == TRUE);
-
-    // Close handle
-    ::FindClose(hFile);
-
-    DWORD dwError = ::GetLastError();
-    if(dwError != ERROR_NO_MORE_FILES)
-        CV_Error(CV_StsBadArg, "Your dataset search path is incorrect");
-}
-}
-
-#endif
-
 // in the default case data folders should be aligned as following:
 // 1. positives: <train or test path>/octave_<octave number>/pos/*.png
 // 2. negatives: <train or test path>/octave_<octave number>/neg/*.png
-ScaledDataset::ScaledDataset(const string& path, const int oct)
+sft::ScaledDataset::ScaledDataset(const string& path, const int oct)
 {
     dprintf("%s\n", "get dataset file names...");
     dprintf("%s\n", "Positives globing...");
-
-#if !defined (_WIN32) && ! defined(__MINGW32__)
-    glob(path + "/pos/octave_" + itoa(oct) + "/*.png", pos);
-#else
-    glob(path + "/pos/octave_" + itoa(oct),     "png", pos);
-#endif
+    cv::glob(path + "/pos/octave_" + cv::format("%d", oct) + "/*.png", pos);
 
     dprintf("%s\n", "Negatives globing...");
-#if !defined (_WIN32) && ! defined(__MINGW32__)
-    glob(path + "/neg/octave_" + itoa(oct) + "/*.png", neg);
-#else
-    glob(path + "/neg/octave_" + itoa(oct),     "png", neg);
-#endif
+    cv::glob(path + "/neg/octave_" + cv::format("%d", oct) + "/*.png", neg);
 
     // Check: files not empty
     CV_Assert(pos.size() != size_t(0));
     CV_Assert(neg.size() != size_t(0));
 }
 
-cv::Mat ScaledDataset::get(SampleType type, int idx) const
+cv::Mat sft::ScaledDataset::get(SampleType type, int idx) const
 {
     const std::string& src = (type == POSITIVE)? pos[idx]: neg[idx];
     return cv::imread(src);
 }
 
-int ScaledDataset::available(SampleType type) const
+int sft::ScaledDataset::available(SampleType type) const
 {
     return (int)((type == POSITIVE)? pos.size():neg.size());
 }
 
-ScaledDataset::~ScaledDataset(){}
+sft::ScaledDataset::~ScaledDataset(){}
