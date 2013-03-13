@@ -1821,6 +1821,9 @@ namespace cv
 
         //! computes moments of the rasterized shape or a vector of points
         CV_EXPORTS Moments ocl_moments(InputArray _array, bool binaryImage);
+
+        ///////////////////////// display image using cl_khr_gl_sharing extension /////////////////////////////
+        CV_EXPORTS void imshow( const std::string& winname, const oclMat& _img );
     }
 }
 #if defined _MSC_VER && _MSC_VER >= 1200
