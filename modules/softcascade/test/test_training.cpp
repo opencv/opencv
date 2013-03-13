@@ -42,6 +42,7 @@
 
 #if !defined(ANDROID)
 
+#include <test_precomp.hpp>
 #include <string>
 #include <fstream>
 #include <vector>

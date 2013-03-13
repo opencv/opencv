@@ -53,6 +53,46 @@
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/internal.hpp"
 #include "opencv2/ml/ml.hpp"
-#include "_random.hpp"
+
+namespace cv { namespace softcascade { namespace internal
+{
+namespace rnd {
+
+typedef cv::RNG_MT19937 engine;
+
+template<typename T>
+struct uniform_int
+{
+    uniform_int(const int _min, const int _max) : min(_min), max(_max) {}
+    T operator() (engine& eng, const int bound) const
+    {
+        return (T)eng.uniform(min, bound);
+    }
+
+    T operator() (engine& eng) const
+    {
+        return (T)eng.uniform(min, max);
+    }
+
+private:
+    int min;
+    int max;
+};
+
+}
+
+struct Random
+{
+    typedef rnd::engine engine;
+    typedef uint64 seed_type;
+    typedef rnd::uniform_int<int> uniform;
+};
+
+}}}
+
+#define FEATURE_RECT_SEED      88543422U
+#define INDEX_ENGINE_SEED      76422434U
+#define DCHANNELS_SEED         314152314U
+#define DX_DY_SEED             65633343U
 
 #endif
