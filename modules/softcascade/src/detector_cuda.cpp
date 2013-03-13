@@ -105,8 +105,11 @@ namespace cv { namespace softcascade { namespace device {
         cv::gpu::PtrStepSzb suppressed, cudaStream_t stream);
 
     void bgr2Luv(const cv::gpu::PtrStepSzb& bgr, cv::gpu::PtrStepSzb luv);
+    void transform(const cv::gpu::PtrStepSz<uchar3>& bgr, cv::gpu::PtrStepSzb gray);
     void gray2hog(const cv::gpu::PtrStepSzb& gray, cv::gpu::PtrStepSzb mag, const int bins);
     void shrink(const cv::gpu::PtrStepSzb& channels, cv::gpu::PtrStepSzb shrunk);
+
+    void shfl_integral(const cv::gpu::PtrStepSzb& img, cv::gpu::PtrStepSz<unsigned int> integral, cudaStream_t stream);
 }}}
 
 struct cv::softcascade::SCascade::Fields
@@ -474,6 +477,45 @@ bool cv::softcascade::SCascade::load(const FileNode& fn)
     return fields != 0;
 }
 
+namespace {
+
+void integral(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& sum, cv::gpu::GpuMat& buffer, cv::gpu::Stream& s)
+{
+    CV_Assert(src.type() == CV_8UC1);
+
+    cudaStream_t stream = cv::gpu::StreamAccessor::getStream(s);
+
+    cv::Size whole;
+    cv::Point offset;
+
+    src.locateROI(whole, offset);
+
+    if (cv::gpu::deviceSupports(cv::gpu::WARP_SHUFFLE_FUNCTIONS) && src.cols <= 2048
+        && offset.x % 16 == 0 && ((src.cols + 63) / 64) * 64 <= (static_cast<int>(src.step) - offset.x))
+    {
+        ensureSizeIsEnough(((src.rows + 7) / 8) * 8, ((src.cols + 63) / 64) * 64, CV_32SC1, buffer);
+
+        cv::softcascade::device::shfl_integral(src, buffer, stream);
+
+        sum.create(src.rows + 1, src.cols + 1, CV_32SC1);
+        if (s)
+            s.enqueueMemSet(sum, cv::Scalar::all(0));
+        else
+            sum.setTo(cv::Scalar::all(0));
+
+        cv::gpu::GpuMat inner = sum(cv::Rect(1, 1, src.cols, src.rows));
+        cv::gpu::GpuMat res = buffer(cv::Rect(0, 0, src.cols, src.rows));
+
+        if (s)
+            s.enqueueCopy(res, inner);
+        else
+            res.copyTo(inner);
+    }
+    else {CV_Error(CV_GpuNotSupported, ": CC 3.x required.");}
+}
+
+}
+
 void cv::softcascade::SCascade::detect(InputArray _image, InputArray _rois, OutputArray _objects, cv::gpu::Stream& s) const
 {
     CV_Assert(fields);
@@ -494,7 +536,7 @@ void cv::softcascade::SCascade::detect(InputArray _image, InputArray _rois, Outp
 
     flds.mask.create( rois.cols / shr, rois.rows / shr, rois.type());
 
-    //cv::gpu::resize(rois, flds.genRoiTmp, cv::Size(), 1.f / shr, 1.f / shr, CV_INTER_AREA, s);
+    device::shrink(rois, flds.genRoiTmp);
     //cv::gpu::transpose(flds.genRoiTmp, flds.mask, s);
 
     if (type == CV_8UC3)
@@ -505,7 +547,7 @@ void cv::softcascade::SCascade::detect(InputArray _image, InputArray _rois, Outp
             flds.createLevels(image.rows, image.cols);
 
         flds.preprocessor->apply(image, flds.shrunk);
-        //cv::gpu::integralBuffered(flds.shrunk, flds.hogluv, flds.integralBuffer, s);
+        integral(flds.shrunk, flds.hogluv, flds.integralBuffer, s);
     }
     else
     {
@@ -561,7 +603,7 @@ struct SeparablePreprocessor : public cv::softcascade::ChannelsProcessor
         channels.create(frame.rows * (4 + bins), frame.cols, CV_8UC1);
         setZero(channels, s);
 
-        //cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
+        cv::softcascade::device::transform(bgr, gray); //cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
         cv::softcascade::device::gray2hog(gray, channels(cv::Rect(0, 0, bgr.cols, bgr.rows * (bins + 1))), bins);
 
         cv::gpu::GpuMat luv(channels, cv::Rect(0, bgr.rows * (bins + 1), bgr.cols, bgr.rows * 3));

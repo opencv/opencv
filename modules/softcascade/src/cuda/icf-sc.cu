@@ -54,7 +54,7 @@ namespace
 
     inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
     {
-        //if (cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), file, line, func);
+        // if (cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), file, line, func);
     }
 }
 
