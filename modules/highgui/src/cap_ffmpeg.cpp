@@ -209,11 +209,11 @@ CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char * filename)
     if( result->open( filename ))
         return result;
     delete result;
-#if defined WIN32 || defined _WIN32
-    return cvCreateFileCapture_VFW(filename);
-#else
+//#if defined WIN32 || defined _WIN32
+//    return cvCreateFileCapture_VFW(filename);
+//#else
     return 0;
-#endif
+//#endif
 }
 
 class CvVideoWriter_FFMPEG_proxy : 
@@ -263,9 +263,9 @@ CvVideoWriter* cvCreateVideoWriter_FFMPEG_proxy( const char* filename, int fourc
     if( result->open( filename, fourcc, fps, frameSize, isColor != 0 ))
         return result;
     delete result;
-#if defined WIN32 || defined _WIN32
-    return cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, isColor);
-#else
+// #if defined WIN32 || defined _WIN32
+//     return cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, isColor);
+// #else
     return 0;
-#endif
+//#endif
 }

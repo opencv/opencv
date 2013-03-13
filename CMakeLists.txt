@@ -60,6 +60,8 @@ endif()
 
 project(OpenCV CXX C)
 
+add_definitions(-D_ARM_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE)
+
 include(cmake/OpenCVUtils.cmake)
 
 # ----------------------------------------------------------------------------
@@ -608,7 +610,7 @@ else()
     status("    QT 4.x:" NO)
   endif()
   if(WIN32)
-    status("    Win32 UI:" YES)
+    status("    Win32 UI:" NO)
   else()
     if(APPLE)
       if(WITH_CARBON)
