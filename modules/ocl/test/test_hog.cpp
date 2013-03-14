@@ -44,7 +44,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 using namespace std;
 #ifdef HAVE_OPENCL
 

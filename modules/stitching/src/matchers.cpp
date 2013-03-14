@@ -50,7 +50,7 @@ using namespace cv::gpu;
 #endif
 
 #ifdef HAVE_OPENCV_NONFREE
-#include "opencv2/nonfree/nonfree.hpp"
+#include "opencv2/nonfree.hpp"
 
 static bool makeUseOfNonfree = initModule_nonfree();
 #endif
@@ -573,7 +573,7 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
 
     // Find pair-wise motion
     matches_info.H = findHomography(src_points, dst_points, matches_info.inliers_mask, CV_RANSAC);
-    if (std::abs(determinant(matches_info.H)) < std::numeric_limits<double>::epsilon())
+    if (matches_info.H.empty() || std::abs(determinant(matches_info.H)) < std::numeric_limits<double>::epsilon())
         return;
 
     // Find number of inliers

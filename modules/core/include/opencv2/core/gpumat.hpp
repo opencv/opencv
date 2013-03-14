@@ -45,7 +45,7 @@
 
 #ifdef __cplusplus
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/core/cuda_devptrs.hpp"
 
 namespace cv { namespace gpu
@@ -143,7 +143,6 @@ namespace cv { namespace gpu
         int multi_processor_count_;
         int majorVersion_;
         int minorVersion_;
-        size_t sharedMemPerBlock_;
     };
 
     CV_EXPORTS void printCudaDeviceInfo(int device);

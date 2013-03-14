@@ -4,17 +4,17 @@ import os, sys, re, string
 
 # the list only for debugging. The real list, used in the real OpenCV build, is specified in CMakeLists.txt
 opencv_hdr_list = [
-"../../core/include/opencv2/core/core.hpp",
+"../../core/include/opencv2/core.hpp",
 "../../flann/include/opencv2/flann/miniflann.hpp",
-"../../ml/include/opencv2/ml/ml.hpp",
-"../../imgproc/include/opencv2/imgproc/imgproc.hpp",
-"../../calib3d/include/opencv2/calib3d/calib3d.hpp",
-"../../features2d/include/opencv2/features2d/features2d.hpp",
+"../../ml/include/opencv2/ml.hpp",
+"../../imgproc/include/opencv2/imgproc.hpp",
+"../../calib3d/include/opencv2/calib3d.hpp",
+"../../features2d/include/opencv2/features2d.hpp",
 "../../video/include/opencv2/video/tracking.hpp",
 "../../video/include/opencv2/video/background_segm.hpp",
-"../../objdetect/include/opencv2/objdetect/objdetect.hpp",
-"../../contrib/include/opencv2/contrib/contrib.hpp",
-"../../highgui/include/opencv2/highgui/highgui.hpp"
+"../../objdetect/include/opencv2/objdetect.hpp",
+"../../contrib/include/opencv2/contrib.hpp",
+"../../highgui/include/opencv2/highgui.hpp"
 ]
 
 """

@@ -66,12 +66,12 @@
 #include <memory>
 #include <string>
 
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/gpu.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/calib3d.hpp"
 #include "opencv2/core/internal.hpp"
-#include "opencv2/video/video.hpp"
+#include "opencv2/video.hpp"
 
 #if defined WIN32 || defined WINCE
     #include <windows.h>

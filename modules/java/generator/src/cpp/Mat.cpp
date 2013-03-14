@@ -1,7 +1,7 @@
 #define LOG_TAG "org.opencv.core.Mat"
 
 #include "common.h"
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 
 using namespace cv;
 

@@ -43,11 +43,11 @@
 #ifndef __OPENCV_STITCHING_WARPERS_HPP__
 #define __OPENCV_STITCHING_WARPERS_HPP__
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/opencv_modules.hpp"
 #ifdef HAVE_OPENCV_GPU
-# include "opencv2/gpu/gpu.hpp"
+# include "opencv2/gpu.hpp"
 #endif
 
 namespace cv {

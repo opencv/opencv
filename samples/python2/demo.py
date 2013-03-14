@@ -1,15 +1,20 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 '''
 Sample-launcher application.
 '''
 
-import Tkinter as tk
-from ScrolledText import ScrolledText
-from glob import glob
+# local modules
 from common import splitfn
+
+# built-in modules
+import sys
 import webbrowser
+import Tkinter as tk
+from glob import glob
 from subprocess import Popen
+from ScrolledText import ScrolledText
+
 
 #from IPython.Shell import IPShellEmbed
 #ipshell = IPShellEmbed()
@@ -136,7 +141,8 @@ class App:
         count = tk.IntVar()
         while True:
             match_index = text.search(pattern, 'matchPos', count=count, regexp=regexp, stopindex='end')
-            if not match_index: break
+            if not match_index: 
+                break
             end_index = text.index( "%s+%sc" % (match_index, count.get()) )
             text.mark_set('matchPos', end_index)
             if callable(tag_proc):
@@ -147,7 +153,7 @@ class App:
     def on_run(self, *args):
         cmd = self.cmd_entry.get()
         print 'running:', cmd
-        Popen("python " + cmd, shell=True)
+        Popen(sys.executable + ' ' + cmd, shell=True)
 
     def run(self):
         tk.mainloop()

@@ -1,7 +1,7 @@
 #include <string>
 #include <sstream>
 #include "cvconfig.h"
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "gl_core_3_1.hpp"
 
 #ifdef HAVE_OPENGL

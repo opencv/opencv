@@ -1960,7 +1960,7 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
     int dcn = dst.channels();
     CV_Assert(dcn == 3);
 
-    int step = src.step;
+    int step = (int)src.step;
     const uchar* S = src.ptr<uchar>(1) + 1;
     uchar* D = dst.ptr<uchar>(1) + dcn;
 

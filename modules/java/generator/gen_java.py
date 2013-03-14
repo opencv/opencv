@@ -884,7 +884,7 @@ public class %(jc)s {
 #define LOG_TAG "org.opencv.%(m)s"
 
 #include "common.h"
-#include "opencv2/%(m)s/%(m)s.hpp"
+#include "opencv2/%(m)s.hpp"
 
 using namespace cv;
 

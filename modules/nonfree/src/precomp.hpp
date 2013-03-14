@@ -47,8 +47,8 @@
 #include "cvconfig.h"
 #endif
 
-#include "opencv2/nonfree/nonfree.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/nonfree.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/core/internal.hpp"
 
 #endif

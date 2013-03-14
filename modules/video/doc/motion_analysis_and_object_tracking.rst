@@ -179,8 +179,7 @@ The function estimates the optimum transformation (``warpMatrix``) with respect 
 
 ..math::
 
-\texttt{warpMatrix} =
-  \texttt{warpMatrix} = \arg\max_{W} \texttt{ECC}(\texttt{templateImage}(x,y),\texttt{inputImage}(x',y'))
+    \texttt{warpMatrix} = \texttt{warpMatrix} = \arg\max_{W} \texttt{ECC}(\texttt{templateImage}(x,y),\texttt{inputImage}(x',y'))
 
 where
 

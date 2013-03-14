@@ -1,8 +1,8 @@
 #define LOG_TAG "org.opencv.android.Utils"
 #include "common.h"
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
 
 #ifdef __ANDROID__
 #include <android/bitmap.h>

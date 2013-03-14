@@ -878,6 +878,7 @@ double cv::determinant( InputArray _mat )
     size_t step = mat.step;
     const uchar* m = mat.data;
 
+    CV_Assert( !mat.empty() );
     CV_Assert( mat.rows == mat.cols && (type == CV_32F || type == CV_64F));
 
     #define Mf(y, x) ((float*)(m + y*step))[x]

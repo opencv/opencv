@@ -115,6 +115,9 @@ CV_ENUM(CvtMode2, CV_YUV2BGR_NV12, CV_YUV2BGRA_NV12, CV_YUV2RGB_NV12, CV_YUV2RGB
                   COLOR_YUV2GRAY_420, CV_YUV2RGB_UYVY, CV_YUV2BGR_UYVY, CV_YUV2RGBA_UYVY, CV_YUV2BGRA_UYVY, CV_YUV2RGB_YUY2, CV_YUV2BGR_YUY2, CV_YUV2RGB_YVYU,
                   CV_YUV2BGR_YVYU, CV_YUV2RGBA_YUY2, CV_YUV2BGRA_YUY2, CV_YUV2RGBA_YVYU, CV_YUV2BGRA_YVYU)
 
+CV_ENUM(CvtMode3, CV_RGB2YUV_IYUV, CV_BGR2YUV_IYUV, CV_RGBA2YUV_IYUV, CV_BGRA2YUV_IYUV,
+                  CV_RGB2YUV_YV12, CV_BGR2YUV_YV12, CV_RGBA2YUV_YV12, CV_BGRA2YUV_YV12)
+
 struct ChPair
 {
     ChPair(int _scn, int _dcn): scn(_scn), dcn(_dcn) {}
@@ -162,6 +165,8 @@ ChPair getConversionInfo(int cvtMode)
     case CV_BGR5652BGRA: case CV_BGR5652RGBA:
         return ChPair(2,4);
     case CV_BGR2GRAY: case CV_RGB2GRAY:
+    case CV_RGB2YUV_IYUV: case CV_RGB2YUV_YV12:
+    case CV_BGR2YUV_IYUV: case CV_BGR2YUV_YV12:
         return ChPair(3,1);
     case CV_BGR2BGR555: case CV_BGR2BGR565:
     case CV_RGB2BGR555: case CV_RGB2BGR565:
@@ -204,6 +209,8 @@ ChPair getConversionInfo(int cvtMode)
     case CX_YUV2BGRA: case CX_YUV2RGBA:
         return ChPair(3,4);
     case CV_BGRA2GRAY: case CV_RGBA2GRAY:
+    case CV_RGBA2YUV_IYUV: case CV_RGBA2YUV_YV12:
+    case CV_BGRA2YUV_IYUV: case CV_BGRA2YUV_YV12:
         return ChPair(4,1);
     case CV_BGRA2BGR555: case CV_BGRA2BGR565:
     case CV_RGBA2BGR555: case CV_RGBA2BGR565:
@@ -303,6 +310,31 @@ PERF_TEST_P(Size_CvtMode2, cvtColorYUV420,
 
     int runs = (sz.width <= 640) ? 8 : 1;
     TEST_CYCLE_MULTIRUN(runs) cvtColor(src, dst, mode, ch.dcn);
+
+    SANITY_CHECK(dst, 1);
+}
+
+typedef std::tr1::tuple<Size, CvtMode3> Size_CvtMode3_t;
+typedef perf::TestBaseWithParam<Size_CvtMode3_t> Size_CvtMode3;
+
+PERF_TEST_P(Size_CvtMode3, cvtColorRGB2YUV420p,
+            testing::Combine(
+                testing::Values(szVGA, sz720p, sz1080p, Size(130, 60)),
+                testing::ValuesIn(CvtMode3::all())
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int mode = get<1>(GetParam());
+    ChPair ch = getConversionInfo(mode);
+
+    Mat src(sz, CV_8UC(ch.scn));
+    Mat dst(sz.height + sz.height / 2, sz.width, CV_8UC(ch.dcn));
+
+    declare.time(100);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() cvtColor(src, dst, mode, ch.dcn);
 
     SANITY_CHECK(dst, 1);
 }

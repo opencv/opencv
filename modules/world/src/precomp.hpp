@@ -49,18 +49,18 @@
 
 #include "opencv2/opencv_modules.hpp"
 #ifdef HAVE_OPENCV_VIDEO
-#include "opencv2/video/video.hpp"
+#include "opencv2/video.hpp"
 #endif
 #ifdef HAVE_OPENCV_FEATURES2D
-#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/features2d.hpp"
 #endif
 #ifdef HAVE_OPENCV_NONFREE
-#include "opencv2/nonfree/nonfree.hpp"
+#include "opencv2/nonfree.hpp"
 #endif
 #ifdef HAVE_OPENCV_ML
-#include "opencv2/ml/ml.hpp"
+#include "opencv2/ml.hpp"
 #endif
 
-#include "opencv2/world/world.hpp"
+#include "opencv2/world.hpp"
 
 #endif

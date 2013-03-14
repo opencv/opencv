@@ -2425,7 +2425,7 @@ The class provides the following features for all derived classes:
 Here is example of SIFT use in your application via Algorithm interface: ::
 
     #include "opencv2/opencv.hpp"
-    #include "opencv2/nonfree/nonfree.hpp"
+    #include "opencv2/nonfree.hpp"
 
     ...
 

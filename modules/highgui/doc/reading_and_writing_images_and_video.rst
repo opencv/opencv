@@ -98,6 +98,8 @@ The function ``imread`` loads an image from the specified file and returns it. I
 
  * Portable Network Graphics - ``*.png`` (see the *Notes* section)
 
+ * WebP - ``*.webp`` (see the *Notes* section)
+
  * Portable image format - ``*.pbm, *.pgm, *.ppm``     (always supported)
 
  * Sun rasters - ``*.sr, *.ras``     (always supported)
@@ -133,6 +135,9 @@ Saves an image to a specified file.
     :param params: Format-specific save parameters encoded as pairs  ``paramId_1, paramValue_1, paramId_2, paramValue_2, ...`` . The following parameters are currently supported:
 
         *  For JPEG, it can be a quality ( ``CV_IMWRITE_JPEG_QUALITY`` ) from 0 to 100 (the higher is the better). Default value is 95.
+
+        *  For WEBP, it can be a quality ( CV_IMWRITE_WEBP_QUALITY ) from 1 to 100 (the higher is the better).
+           By default (without any parameter) and for quality above 100 the lossless compression is used.
 
         *  For PNG, it can be the compression level ( ``CV_IMWRITE_PNG_COMPRESSION`` ) from 0 to 9. A higher value means a smaller size and longer compression time. Default value is 3.
 
