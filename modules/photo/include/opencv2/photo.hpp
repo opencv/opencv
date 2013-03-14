@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2010, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2008-2012, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,19 +40,52 @@
 //
 //M*/
 
-#ifndef __OPENCV_WORLD_HPP__
-#define __OPENCV_WORLD_HPP__
+#ifndef __OPENCV_PHOTO_HPP__
+#define __OPENCV_PHOTO_HPP__
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+
+#include "opencv2/photo/photo_c.h"
 
 #ifdef __cplusplus
+
+/*! \namespace cv
+ Namespace where all the C++ OpenCV functionality resides
+ */
 namespace cv
 {
 
-CV_EXPORTS_W bool initAll();
+//! the inpainting algorithm
+enum
+{
+    INPAINT_NS=CV_INPAINT_NS, // Navier-Stokes algorithm
+    INPAINT_TELEA=CV_INPAINT_TELEA // A. Telea algorithm
+};
+
+//! restores the damaged image areas using one of the available intpainting algorithms
+CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
+                           OutputArray dst, double inpaintRadius, int flags );
+
+
+CV_EXPORTS_W void fastNlMeansDenoising( InputArray src, OutputArray dst, float h = 3,
+                                        int templateWindowSize = 7, int searchWindowSize = 21);
+
+CV_EXPORTS_W void fastNlMeansDenoisingColored( InputArray src, OutputArray dst,
+                                               float h = 3, float hColor = 3,
+                                               int templateWindowSize = 7, int searchWindowSize = 21);
+
+CV_EXPORTS_W void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs, OutputArray dst,
+                                             int imgToDenoiseIndex, int temporalWindowSize,
+                                             float h = 3, int templateWindowSize = 7, int searchWindowSize = 21);
+
+CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, OutputArray dst,
+                                                    int imgToDenoiseIndex, int temporalWindowSize,
+                                                    float h = 3, float hColor = 3,
+                                                    int templateWindowSize = 7, int searchWindowSize = 21);
 
 }
 
-#endif
+#endif //__cplusplus
 
 #endif

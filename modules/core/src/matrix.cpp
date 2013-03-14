@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/core/gpumat.hpp"
-#include "opencv2/core/opengl_interop.hpp"
+#include "opencv2/core/opengl.hpp"
 
 /****************************************************************************************\
 *                           [scaled] Identity matrix initialization                      *

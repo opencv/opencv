@@ -8,24 +8,24 @@
 
 #include "numpy/ndarrayobject.h"
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/contrib/contrib.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/contrib.hpp"
 #include "opencv2/flann/miniflann.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/ml/ml.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/softcascade/softcascade.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/ml.hpp"
+#include "opencv2/features2d.hpp"
+#include "opencv2/objdetect.hpp"
+#include "opencv2/softcascade.hpp"
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/video/background_segm.hpp"
-#include "opencv2/photo/photo.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/photo.hpp"
+#include "opencv2/highgui.hpp"
 
 #include "opencv2/opencv_modules.hpp"
 
 #ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/nonfree.hpp"
+#  include "opencv2/nonfree.hpp"
 #endif
 
 using cv::flann::IndexParams;

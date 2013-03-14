@@ -1,7 +1,7 @@
 #include "perf_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 #include "opencv2/core/internal.hpp"
-#include "opencv2/flann/flann.hpp"
+#include "opencv2/flann.hpp"
 #include "opencv2/opencv_modules.hpp"
 
 using namespace std;

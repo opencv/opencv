@@ -69,7 +69,7 @@
 #ifdef DEBUG_CHESSBOARD
 #  include "opencv2/opencv_modules.hpp"
 #  ifdef HAVE_OPENCV_HIGHGUI
-#    include "opencv2/highgui/highgui.hpp"
+#    include "opencv2/highgui.hpp"
 #  else
 #    undef DEBUG_CHESSBOARD
 #  endif

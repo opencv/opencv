@@ -51,7 +51,7 @@
 
 #include "grfmt_webp.hpp"
 
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 
 namespace cv
 {

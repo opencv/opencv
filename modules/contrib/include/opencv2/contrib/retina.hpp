@@ -72,7 +72,7 @@
  *      Author: Alexandre Benoit
  */
 
-#include "opencv2/core/core.hpp" // for all OpenCV core functionalities access, including cv::Exception support
+#include "opencv2/core.hpp" // for all OpenCV core functionalities access, including cv::Exception support
 #include <valarray>
 
 namespace cv

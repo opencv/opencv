@@ -40,8 +40,8 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/photo/photo.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/photo.hpp"
+#include "opencv2/imgproc.hpp"
 #include "fast_nlmeans_denoising_invoker.hpp"
 #include "fast_nlmeans_multi_denoising_invoker.hpp"
 

@@ -45,7 +45,6 @@
 #include <iomanip>
 #include "precomp.hpp"
 #include "mcwutil.hpp"
-//#include "opencv2/highgui/highgui.hpp"
 
 using namespace cv;
 using namespace cv::ocl;

@@ -44,7 +44,7 @@
 #define __OPENCV_STITCHING_SEAM_FINDERS_HPP__
 
 #include <set>
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/opencv_modules.hpp"
 
 namespace cv {

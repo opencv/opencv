@@ -43,8 +43,8 @@
 #ifndef __OPENCV_STITCHING_STITCHER_HPP__
 #define __OPENCV_STITCHING_STITCHER_HPP__
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/features2d.hpp"
 #include "opencv2/stitching/warpers.hpp"
 #include "opencv2/stitching/detail/matchers.hpp"
 #include "opencv2/stitching/detail/motion_estimators.hpp"

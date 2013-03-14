@@ -43,7 +43,7 @@
 #ifndef __OPENCV_GPU_STREAM_ACCESSOR_HPP__
 #define __OPENCV_GPU_STREAM_ACCESSOR_HPP__
 
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/gpu.hpp"
 #include "cuda_runtime_api.h"
 
 namespace cv
