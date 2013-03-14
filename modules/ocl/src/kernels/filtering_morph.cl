@@ -120,8 +120,7 @@ __kernel void morph_C1_D0(__global const uchar * restrict src,
     int gidy = get_global_id(1);
     int out_addr = mad24(gidy,dst_step_in_pixel,gidx+dst_offset_in_pixel);
 
-#ifdef USEROI
-    if(gidx+3<cols && gidy<rows && (dst_offset_in_pixel&3==0))
+    if(gidx+3<cols && gidy<rows && (dst_offset_in_pixel&3)==0)
     {
         *(__global uchar4*)&dst[out_addr] = res;
     }
@@ -150,9 +149,6 @@ __kernel void morph_C1_D0(__global const uchar * restrict src,
             dst[out_addr] = res.x;
         }
     }
-#else
-    *(__global uchar4*)&dst[out_addr] = res;
-#endif
 }
 #else
 __kernel void morph(__global const GENTYPE * restrict src,

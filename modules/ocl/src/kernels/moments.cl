@@ -1,10 +1,12 @@
 #if defined (DOUBLE_SUPPORT)
+
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #elif defined (cl_amd_fp64)
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
 #endif
 typedef double T;
+
 #else
 typedef float double;
 typedef float4 double4;
@@ -13,36 +15,42 @@ typedef long T;
 #endif
 //#pragma OPENCL EXTENSION cl_amd_printf:enable
 //#if defined (DOUBLE_SUPPORT)
-__kernel void icvContourMoments(int contour_total, 
+#define DST_ROW_A00     0
+#define DST_ROW_A10     1
+#define DST_ROW_A01     2
+#define DST_ROW_A20     3
+#define DST_ROW_A11     4
+#define DST_ROW_A02     5
+#define DST_ROW_A30     6
+#define DST_ROW_A21     7
+#define DST_ROW_A12     8
+#define DST_ROW_A03     9
+
+__kernel void icvContourMoments(int contour_total,
 								__global float* reader_oclmat_data, 
-                                __global double* dst_a00,
-                                __global double* dst_a10,
-                                __global double* dst_a01,
-                                __global double* dst_a20,
-                                __global double* dst_a11,
-                                __global double* dst_a02,
-                                __global double* dst_a30,
-                                __global double* dst_a21,
-                                __global double* dst_a12,
-                                __global double* dst_a03)
+                                __global T* dst_a,
+                                int dst_step)
 {
-    double xi_1, yi_1, xi_12, yi_12, xi, yi, xi2, yi2, dxy, xii_1, yii_1;
+    T xi_1, yi_1, xi_12, yi_12, xi, yi, xi2, yi2, dxy, xii_1, yii_1;
     int idx = get_global_id(0);
 
-    xi_1 = *(reader_oclmat_data + (get_global_id(0) << 1));
-    yi_1 = *(reader_oclmat_data + (get_global_id(0) << 1) + 1);
+    if (idx < 0 || idx >= contour_total)
+        return;
+
+    xi_1 = (T)(*(reader_oclmat_data + (get_global_id(0) << 1)));
+    yi_1 = (T)(*(reader_oclmat_data + (get_global_id(0) << 1) + 1));
     xi_12 = xi_1 * xi_1;
     yi_12 = yi_1 * yi_1;
 
     if(idx == contour_total - 1)
     {
-        xi = *(reader_oclmat_data);
-        yi = *(reader_oclmat_data + 1);
+        xi = (T)(*(reader_oclmat_data));
+        yi = (T)(*(reader_oclmat_data + 1));
     }
     else
     {
-        xi = *(reader_oclmat_data + (idx + 1) * 2);
-        yi = *(reader_oclmat_data + (idx + 1) * 2 + 1);
+        xi = (T)(*(reader_oclmat_data + (idx + 1) * 2));
+        yi = (T)(*(reader_oclmat_data + (idx + 1) * 2 + 1));
     }
 
     xi2 = xi * xi;
@@ -50,19 +58,20 @@ __kernel void icvContourMoments(int contour_total,
     dxy = xi_1 * yi - xi * yi_1;
     xii_1 = xi_1 + xi;
     yii_1 = yi_1 + yi;
-
-    dst_a00[idx] = dxy;
-    dst_a10[idx] = dxy * xii_1;
-    dst_a01[idx] = dxy * yii_1;
-    dst_a20[idx] = dxy * (xi_1 * xii_1 + xi2);
-    dst_a11[idx] = dxy * (xi_1 * (yii_1 + yi_1) + xi * (yii_1 + yi));
-    dst_a02[idx] = dxy * (yi_1 * yii_1 + yi2);
-    dst_a30[idx] = dxy * xii_1 * (xi_12 + xi2);
-    dst_a03[idx] = dxy * yii_1 * (yi_12 + yi2);
-    dst_a21[idx] =
+    
+    dst_step /= sizeof(T);
+    *( dst_a + DST_ROW_A00 * dst_step + idx) = dxy;
+    *( dst_a + DST_ROW_A10 * dst_step + idx) = dxy * xii_1;
+    *( dst_a + DST_ROW_A01 * dst_step + idx) = dxy * yii_1;
+    *( dst_a + DST_ROW_A20 * dst_step + idx) = dxy * (xi_1 * xii_1 + xi2);
+    *( dst_a + DST_ROW_A11 * dst_step + idx) = dxy * (xi_1 * (yii_1 + yi_1) + xi * (yii_1 + yi));
+    *( dst_a + DST_ROW_A02 * dst_step + idx) = dxy * (yi_1 * yii_1 + yi2);
+    *( dst_a + DST_ROW_A30 * dst_step + idx) = dxy * xii_1 * (xi_12 + xi2);
+    *( dst_a + DST_ROW_A03 * dst_step + idx) = dxy * yii_1 * (yi_12 + yi2);
+    *( dst_a + DST_ROW_A21 * dst_step + idx) =
         dxy * (xi_12 * (3 * yi_1 + yi) + 2 * xi * xi_1 * yii_1 +
                xi2 * (yi_1 + 3 * yi));
-    dst_a12[idx] =
+    *( dst_a + DST_ROW_A12 * dst_step + idx) =
         dxy * (yi_12 * (3 * xi_1 + xi) + 2 * yi * yi_1 * xii_1 +
                yi2 * (xi_1 + 3 * xi));
 }

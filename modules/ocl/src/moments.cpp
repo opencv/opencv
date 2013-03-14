@@ -98,24 +98,18 @@ static void icvContourMoments( CvSeq* contour, CvMoments* mom )
         CvSeqReader reader;
         int lpt = contour->total;
         double a00, a10, a01, a20, a11, a02, a30, a21, a12, a03;
-        int dst_type = cv::ocl::Context::getContext()->impl->double_support ? CV_64FC1 : CV_32FC1;
 
         cvStartReadSeq( contour, &reader, 0 );
 
-        cv::ocl::oclMat dst_a00(1,lpt,dst_type);
-        cv::ocl::oclMat dst_a10(1,lpt,dst_type);
-        cv::ocl::oclMat dst_a01(1,lpt,dst_type);
-        cv::ocl::oclMat dst_a20(1,lpt,dst_type);
-        cv::ocl::oclMat dst_a11(1,lpt,dst_type);
-        cv::ocl::oclMat dst_a02(1,lpt,dst_type);
-        cv::ocl::oclMat dst_a30(1,lpt,dst_type);
-        cv::ocl::oclMat dst_a21(1,lpt,dst_type);
-        cv::ocl::oclMat dst_a12(1,lpt,dst_type);
-        cv::ocl::oclMat dst_a03(1,lpt,dst_type);
         size_t reader_size = lpt << 1;
         cv::Mat reader_mat(1,reader_size,CV_32FC1);
 
         bool is_float = CV_SEQ_ELTYPE(contour) == CV_32FC2;
+
+        if (!cv::ocl::Context::getContext()->impl->double_support && is_float)
+        {
+            CV_Error(CV_StsUnsupportedFormat, "Moments - double is not supported by your GPU!");
+        }
 
         if( is_float )
         {
@@ -136,6 +130,7 @@ static void icvContourMoments( CvSeq* contour, CvMoments* mom )
             }
         }
 
+        cv::ocl::oclMat dst_a(10, lpt, CV_64FC1);
         cv::ocl::oclMat reader_oclmat(reader_mat);
         int llength = std::min(lpt,128);
         size_t localThreads[3]  = { llength, 1, 1};
@@ -143,48 +138,43 @@ static void icvContourMoments( CvSeq* contour, CvMoments* mom )
         vector<pair<size_t , const void *> > args;
         args.push_back( make_pair( sizeof(cl_int) , (void *)&contour->total ));
         args.push_back( make_pair( sizeof(cl_mem) , (void *)&reader_oclmat.data ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_a00.data ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_a10.data ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_a01.data ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_a20.data ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_a11.data ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_a02.data ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_a30.data ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_a21.data ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_a12.data ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_a03.data ));
-        openCLExecuteKernel(dst_a00.clCxt, &moments, "icvContourMoments", globalThreads, localThreads, args, -1, -1);
+        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_a.data ));
+        cl_int dst_step = (cl_int)dst_a.step;
+        args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_step ));
 
-        cv::Mat dst(dst_a00);
-        cv::Scalar s = cv::sum(dst);
-        a00 = s[0];
-        dst = dst_a10;
-        s = cv::sum(dst);
-        a10 = s[0];//dstsum[1];
-        dst = dst_a01;
-        s = cv::sum(dst);
-        a01 = s[0];//dstsum[2];
-        dst = dst_a20;
-        s = cv::sum(dst);
-        a20 = s[0];//dstsum[3];
-        dst = dst_a11;
-        s = cv::sum(dst);
-        a11 = s[0];//dstsum[4];
-        dst = dst_a02;
-        s = cv::sum(dst);
-        a02 = s[0];//dstsum[5];
-        dst = dst_a30;
-        s = cv::sum(dst);
-        a30 = s[0];//dstsum[6];
-        dst = dst_a21;
-        s = cv::sum(dst);
-        a21 = s[0];//dstsum[7];
-        dst = dst_a12;
-        s = cv::sum(dst);
-        a12 = s[0];//dstsum[8];
-        dst = dst_a03;
-        s = cv::sum(dst);
-        a03 = s[0];//dstsum[9];
+        openCLExecuteKernel(dst_a.clCxt, &moments, "icvContourMoments", globalThreads, localThreads, args, -1, -1);
+
+        cv::Mat dst(dst_a);
+        a00 = a10 = a01 = a20 = a11 = a02 = a30 = a21 = a12 = a03 = 0.0;
+        if (!cv::ocl::Context::getContext()->impl->double_support)
+        {
+            for (int i = 0; i < contour->total; ++i)
+            {
+                a00 += dst.at<cl_long>(0, i);
+                a10 += dst.at<cl_long>(1, i);
+                a01 += dst.at<cl_long>(2, i);
+                a20 += dst.at<cl_long>(3, i);
+                a11 += dst.at<cl_long>(4, i);
+                a02 += dst.at<cl_long>(5, i);
+                a30 += dst.at<cl_long>(6, i);
+                a21 += dst.at<cl_long>(7, i);
+                a12 += dst.at<cl_long>(8, i);
+                a03 += dst.at<cl_long>(9, i);
+            }
+        }
+        else
+        {
+            a00 = cv::sum(dst.row(0))[0];
+            a10 = cv::sum(dst.row(1))[0];
+            a01 = cv::sum(dst.row(2))[0];
+            a20 = cv::sum(dst.row(3))[0];
+            a11 = cv::sum(dst.row(4))[0];
+            a02 = cv::sum(dst.row(5))[0];
+            a30 = cv::sum(dst.row(6))[0];
+            a21 = cv::sum(dst.row(7))[0];
+            a12 = cv::sum(dst.row(8))[0];
+            a03 = cv::sum(dst.row(9))[0];
+        }
 
         double db1_2, db1_6, db1_12, db1_24, db1_20, db1_60;
         if( fabs(a00) > FLT_EPSILON )
