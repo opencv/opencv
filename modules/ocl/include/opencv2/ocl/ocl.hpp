@@ -1806,6 +1806,40 @@ namespace cv
 
         //! computes moments of the rasterized shape or a vector of points
         CV_EXPORTS Moments ocl_moments(InputArray _array, bool binaryImage);
+
+        class CV_EXPORTS StereoBM_OCL
+        {
+        public:
+            enum { BASIC_PRESET = 0, PREFILTER_XSOBEL = 1 };
+
+            enum { DEFAULT_NDISP = 64, DEFAULT_WINSZ = 19 };
+
+            //! the default constructor
+            StereoBM_OCL();
+            //! the full constructor taking the camera-specific preset, number of disparities and the SAD window size. ndisparities must be multiple of 8.
+            StereoBM_OCL(int preset, int ndisparities = DEFAULT_NDISP, int winSize = DEFAULT_WINSZ);
+
+            //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
+            //! Output disparity has CV_8U type.
+            void operator() ( const oclMat &left, const oclMat &right, oclMat &disparity);
+
+            //! Some heuristics that tries to estmate
+            // if current GPU will be faster then CPU in this algorithm.
+            // It queries current active device.
+            static bool checkIfGpuCallReasonable();
+
+            int preset;
+            int ndisp;
+            int winSize;
+
+            // If avergeTexThreshold  == 0 => post procesing is disabled
+            // If avergeTexThreshold != 0 then disparity is set 0 in each point (x,y) where for left image
+            // SumOfHorizontalGradiensInWindow(x, y, winSize) < (winSize * winSize) * avergeTexThreshold
+            // i.e. input left image is low textured.
+            float avergeTexThreshold;
+        private:
+            oclMat minSSD, leBuf, riBuf;
+        };
     }
 }
 #if defined _MSC_VER && _MSC_VER >= 1200
