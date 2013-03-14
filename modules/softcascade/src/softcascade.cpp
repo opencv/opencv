@@ -53,7 +53,7 @@ namespace {
 struct SOctave
 {
     SOctave(const int i, const cv::Size& origObjSize, const cv::FileNode& fn)
-    : index(i), weaks((int)fn[SC_OCT_WEAKS]), scale(std::pow(2,(float)fn[SC_OCT_SCALE])),
+    : index(i), weaks((int)fn[SC_OCT_WEAKS]), scale((float)std::pow(2,(float)fn[SC_OCT_SCALE])),
       size(cvRound(origObjSize.width * scale), cvRound(origObjSize.height * scale)) {}
 
     int   index;
