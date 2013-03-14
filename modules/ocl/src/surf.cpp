@@ -160,7 +160,7 @@ public:
 
         if (use_mask)
         {
-            throw std::exception();
+            CV_Error(CV_StsBadFunc, "Masked SURF detector is not implemented yet");
             //!FIXME
             // temp fix for missing min overload
             //oclMat temp(mask.size(), mask.type());
@@ -623,7 +623,7 @@ void SURF_OCL_Invoker::icvSetUpright_gpu(const oclMat &keypoints, int nFeatures)
     args.push_back( make_pair( sizeof(cl_int), (void *)&nFeatures));
 
     size_t localThreads[3]  = {256, 1, 1};
-    size_t globalThreads[3] = {nFeatures, 1, 1};
+    size_t globalThreads[3] = {saturate_cast<size_t>(nFeatures), 1, 1};
 
     openCLExecuteKernelSURF(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
 }
@@ -725,4 +725,3 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
         openCLExecuteKernelSURF(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
     }
 }
-
