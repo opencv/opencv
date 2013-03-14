@@ -199,6 +199,7 @@ def process_module(module, path):
     if module == "gpu":
         hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "cuda_devptrs.hpp"))
         hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "gpumat.hpp"))
+        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "stream_accessor.hpp"))
 
     decls = []
     for hname in hdrlist:

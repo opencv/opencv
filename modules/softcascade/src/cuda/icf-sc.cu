@@ -44,18 +44,18 @@
 #include <float.h>
 #include <stdio.h>
 
-namespace
-{
+namespace cv { namespace softcascade { namespace internal {
+void error(const char *error_string, const char *file, const int line, const char *func);
+}}}
 #if defined(__GNUC__)
     #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
 #else /* defined(__CUDACC__) || defined(__MSVC__) */
     #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
 #endif
 
-    inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
-    {
-        // if (cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), file, line, func);
-    }
+static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
+{
+    if (cudaSuccess != err) cv::softcascade::internal::error(cudaGetErrorString(err), file, line, func);
 }
 
 #ifndef CV_PI
