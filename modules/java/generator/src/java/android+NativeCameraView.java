@@ -8,6 +8,7 @@ import org.opencv.highgui.VideoCapture;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.ViewGroup.LayoutParams;
 
 /**
  * This class is an implementation of a bridge between SurfaceView and native OpenCV camera.
@@ -101,6 +102,11 @@ public class NativeCameraView extends CameraBridgeViewBase {
 
             mFrameWidth = (int)frameSize.width;
             mFrameHeight = (int)frameSize.height;
+
+            if ((getLayoutParams().width == LayoutParams.MATCH_PARENT) && (getLayoutParams().height == LayoutParams.MATCH_PARENT))
+                mScale = Math.min(((float)height)/mFrameHeight, ((float)width)/mFrameWidth);
+            else
+                mScale = 0;
 
             if (mFpsMeter != null) {
                 mFpsMeter.setResolution(mFrameWidth, mFrameHeight);
