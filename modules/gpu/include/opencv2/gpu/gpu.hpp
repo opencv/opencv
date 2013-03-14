@@ -629,7 +629,7 @@ CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0, 
 
 enum
 {
-    // Bayer Demosaicing (Malvar, He, and Cutler)
+    // Malvar, He, and Cutler Demosaicing
     COLOR_BayerBG2BGR_MHT = 256,
     COLOR_BayerGB2BGR_MHT = 257,
     COLOR_BayerRG2BGR_MHT = 258,
@@ -643,7 +643,10 @@ enum
     COLOR_BayerBG2GRAY_MHT = 260,
     COLOR_BayerGB2GRAY_MHT = 261,
     COLOR_BayerRG2GRAY_MHT = 262,
-    COLOR_BayerGR2GRAY_MHT = 263
+    COLOR_BayerGR2GRAY_MHT = 263,
+
+    // red clear demosaicing
+    COLOR_BayerLLRL2GRAY = 264
 };
 CV_EXPORTS void demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn = -1, Stream& stream = Stream::Null());
 

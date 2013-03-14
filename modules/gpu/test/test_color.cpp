@@ -2349,6 +2349,40 @@ struct Demosaicing : testing::TestWithParam<cv::gpu::DeviceInfo>
             }
         }
     }
+
+    static void redclear(const cv::Mat_<cv::Vec3b>& src, cv::Mat_<uchar>& dst)
+    {
+        const int yuv_shift = 14, R2Y = 4899, G2Y = 9617, B2Y = 1868;
+
+        int b = 0, g = 0, r = (1 << (yuv_shift - 1));
+        int db = B2Y, dg = G2Y, dr = R2Y;
+
+        int tab[256*3];
+        for( int i = 0; i < 256; i++, b += db, g += dg, r += dr )
+        {
+            tab[i] = b;
+            tab[i+256] = g;
+            tab[i+512] = r;
+        }
+
+        dst.create(src.size());
+
+        for (int y = 0; y < src.rows; ++y)
+        {
+            for (int x = 0; x < src.cols; ++x)
+            {
+                cv::Vec3b pix = src(y, x);
+
+                const int red = pix[2];
+                const int gray = (tab[pix[0]] + tab[pix[1]+256] + tab[pix[2]+512]) >> yuv_shift;
+
+                if (y % 2 == 0 || x % 2 != 0)
+                    dst(y, x) = gray;
+                else
+                    dst(y, x) = red;
+            }
+        }
+    }
 };
 
 GPU_TEST_P(Demosaicing, BayerBG2BGR)
@@ -2453,6 +2487,22 @@ GPU_TEST_P(Demosaicing, BayerGR2BGR_MHT)
     cv::gpu::demosaicing(loadMat(src), dst, cv::gpu::COLOR_BayerGR2BGR_MHT);
 
     EXPECT_MAT_SIMILAR(img, dst, 5e-3);
+}
+
+GPU_TEST_P(Demosaicing, BayerLLRL2GRAY)
+{
+    cv::Mat img = readImage("denoising/nlm_denoised_lena_bgr.png");
+
+    cv::Mat_<uchar> src;
+    redclear(img, src);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::demosaicing(loadMat(src), dst, cv::gpu::COLOR_BayerLLRL2GRAY);
+
+    cv::Mat gray_gold;
+    cv::cvtColor(img, gray_gold, cv::COLOR_BGR2GRAY);
+
+    EXPECT_MAT_SIMILAR(gray_gold, dst, 1e-3);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Demosaicing, ALL_DEVICES);

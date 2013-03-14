@@ -65,7 +65,9 @@ namespace cv { namespace gpu {
         void Bayer2BGR_16u_gpu(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
 
         template <int cn>
-        void MHCdemosaic(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream);
+        void MHCdemosaic_gpu(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream);
+
+        void bayerLLRL_to_gray_gpu(PtrStepSz<uchar4> src, PtrStepSz<uchar4> dst, cudaStream_t stream);
     }
 }}
 
@@ -1883,7 +1885,7 @@ void cv::gpu::demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn, Str
         CV_Assert( depth == CV_8U );
         CV_Assert( dcn == 3 || dcn == 4 );
 
-        dst.create(src.size(), CV_MAKETYPE(depth, dcn));
+        dst.create(src.size(), CV_MAKE_TYPE(depth, dcn));
         dst.setTo(Scalar::all(0));
 
         Size wholeSize;
@@ -1895,9 +1897,9 @@ void cv::gpu::demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn, Str
                                         code == COLOR_BayerRG2BGR_MHT || code == COLOR_BayerGR2BGR_MHT ? 0 : 1);
 
         if (dcn == 3)
-            device::MHCdemosaic<3>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
+            device::MHCdemosaic_gpu<3>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
         else
-            device::MHCdemosaic<4>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
+            device::MHCdemosaic_gpu<4>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
 
         break;
     }
@@ -1906,7 +1908,7 @@ void cv::gpu::demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn, Str
     {
         CV_Assert( depth == CV_8U );
 
-        dst.create(src.size(), CV_MAKETYPE(depth, 1));
+        dst.create(src.size(), CV_MAKE_TYPE(depth, 1));
         dst.setTo(Scalar::all(0));
 
         Size wholeSize;
@@ -1917,10 +1919,20 @@ void cv::gpu::demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn, Str
         const int2 firstRed = make_int2(code == COLOR_BayerRG2BGR_MHT || code == COLOR_BayerGB2BGR_MHT ? 0 : 1,
                                         code == COLOR_BayerRG2BGR_MHT || code == COLOR_BayerGR2BGR_MHT ? 0 : 1);
 
-        device::MHCdemosaic<1>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
+        device::MHCdemosaic_gpu<1>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
 
         break;
     }
+
+    case COLOR_BayerLLRL2GRAY:
+        CV_Assert( depth == CV_8U );
+        CV_Assert( (src.cols % 4) == 0 && (src.rows % 2) == 0 );
+
+        dst.create(src.size(), CV_MAKE_TYPE(depth, 1));
+
+        device::bayerLLRL_to_gray_gpu(src, dst, StreamAccessor::getStream(stream));
+
+        break;
 
     default:
         CV_Error( CV_StsBadFlag, "Unknown / unsupported color conversion code" );
