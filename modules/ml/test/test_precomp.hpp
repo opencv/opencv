@@ -9,11 +9,11 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
+#include <iostream>
+#include <map>
 #include "opencv2/ts.hpp"
 #include "opencv2/ml.hpp"
 #include "opencv2/core/core_c.h"
-#include <iostream>
-#include <map>
 
 #define CV_NBAYES   "nbayes"
 #define CV_KNEAREST "knearest"

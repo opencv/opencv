@@ -321,9 +321,7 @@ int BaseTest::update_progress( int progress, int test_case_idx, int count, doubl
 
 BadArgTest::BadArgTest()
 {
-    progress        = -1;
     test_case_idx   = -1;
-    freq            = cv::getTickFrequency();
     // oldErrorCbk     = 0;
     // oldErrorCbkData = 0;
 }
@@ -334,20 +332,6 @@ BadArgTest::~BadArgTest(void)
 
 int BadArgTest::run_test_case( int expected_code, const string& _descr )
 {
-    double new_t = (double)cv::getTickCount(), dt;
-    if( test_case_idx < 0 )
-    {
-        test_case_idx = 0;
-        progress      = 0;
-        dt            = 0;
-    }
-    else
-    {
-        dt = (new_t - t)/(freq*1000);
-        t  = new_t;
-    }
-    progress = update_progress(progress, test_case_idx, 0, dt);
-
     int errcount = 0;
     bool thrown = false;
     const char* descr = _descr.c_str() ? _descr.c_str() : "";

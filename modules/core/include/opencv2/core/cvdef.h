@@ -97,7 +97,20 @@
 #  endif
 #endif
 
-/* intrinsics support */
+/* CPU features and intrinsics support */
+#define CV_CPU_NONE    0
+#define CV_CPU_MMX     1
+#define CV_CPU_SSE     2
+#define CV_CPU_SSE2    3
+#define CV_CPU_SSE3    4
+#define CV_CPU_SSSE3   5
+#define CV_CPU_SSE4_1  6
+#define CV_CPU_SSE4_2  7
+#define CV_CPU_POPCNT  8
+#define CV_CPU_AVX    10
+#define CV_CPU_NEON   11
+#define CV_HARDWARE_MAX_FEATURE 255
+
 #if defined __SSE2__ || defined _M_X64  || (defined _M_IX86_FP && _M_IX86_FP >= 2)
 #  include "emmintrin.h"
 #  define CV_SSE 1
