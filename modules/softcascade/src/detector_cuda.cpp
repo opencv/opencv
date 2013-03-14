@@ -536,7 +536,7 @@ void cv::softcascade::SCascade::detect(InputArray _image, InputArray _rois, Outp
 
     flds.mask.create( rois.cols / shr, rois.rows / shr, rois.type());
 
-    device::shrink(rois, flds.genRoiTmp);
+    device::shrink(rois, flds.mask);
     //cv::gpu::transpose(flds.genRoiTmp, flds.mask, s);
 
     if (type == CV_8UC3)
@@ -594,15 +594,16 @@ struct SeparablePreprocessor : public cv::softcascade::ChannelsProcessor
 
     virtual void apply(InputArray _frame, OutputArray _shrunk, cv::gpu::Stream& s = cv::gpu::Stream::Null())
     {
-        const cv::gpu::GpuMat frame = _frame.getGpuMat();
+        bgr = _frame.getGpuMat();
         //cv::gpu::GaussianBlur(frame, bgr, cv::Size(3, 3), -1.0);
 
-        _shrunk.create(frame.rows * (4 + bins) / shrinkage, frame.cols / shrinkage, CV_8UC1);
+        _shrunk.create(bgr.rows * (4 + bins) / shrinkage, bgr.cols / shrinkage, CV_8UC1);
         cv::gpu::GpuMat shrunk = _shrunk.getGpuMat();
 
-        channels.create(frame.rows * (4 + bins), frame.cols, CV_8UC1);
+        channels.create(bgr.rows * (4 + bins), bgr.cols, CV_8UC1);
         setZero(channels, s);
 
+        gray.create(bgr.size(), CV_8UC1);
         cv::softcascade::device::transform(bgr, gray); //cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
         cv::softcascade::device::gray2hog(gray, channels(cv::Rect(0, 0, bgr.cols, bgr.rows * (bins + 1))), bins);
 

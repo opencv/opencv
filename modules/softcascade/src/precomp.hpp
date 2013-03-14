@@ -56,6 +56,7 @@
 
 namespace cv { namespace softcascade { namespace internal
 {
+
 namespace rnd {
 
 typedef cv::RNG_MT19937 engine;

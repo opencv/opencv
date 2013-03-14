@@ -44,6 +44,7 @@
 #define __OPENCV_SOFTCASCADE_HPP__
 
 #include "opencv2/core.hpp"
+#include "opencv2/core/gpumat.hpp"
 
 namespace cv { namespace softcascade {
 

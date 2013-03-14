@@ -30,28 +30,28 @@ Implementation of soft (stageless) cascaded detector. ::
 
 
 softcascade::SCascade::~SCascade
----------------------------
+---------------------------------
 Destructor for SCascade.
 
-.. ocv:function:: gpu::SCascade::~SCascade()
+.. ocv:function:: softcascade::SCascade::~SCascade()
 
 
 
 softcascade::SCascade::load
---------------------------
+----------------------------
 Load cascade from FileNode.
 
-.. ocv:function:: bool gpu::SCascade::load(const FileNode& fn)
+.. ocv:function:: bool softcascade::SCascade::load(const FileNode& fn)
 
     :param fn: File node from which the soft cascade are read.
 
 
 
 softcascade::SCascade::detect
---------------------------
+------------------------------
 Apply cascade to an input frame and return the vector of Decection objcts.
 
-.. ocv:function:: void gpu::SCascade::detect(InputArray image, InputArray rois, OutputArray objects, Stream& stream = Stream::Null()) const
+.. ocv:function:: void softcascade::SCascade::detect(InputArray image, InputArray rois, OutputArray objects, cv::gpu::Stream& stream = cv::gpu::Stream::Null()) const
 
     :param image: a frame on which detector will be applied.
 

@@ -1,6 +1,6 @@
-#include <opencv2/gpu/gpu.hpp>
-#include <opencv2/softcascade/softcascade.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/gpu.hpp>
+#include <opencv2/softcascade.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
 
 int main(int argc, char** argv)

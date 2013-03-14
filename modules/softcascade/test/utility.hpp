@@ -42,10 +42,9 @@
 #ifndef __OPENCV_SOFTCASCADE_TEST_UTILITY_HPP__
 #define __OPENCV_SOFTCASCADE_TEST_UTILITY_HPP__
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/core/gpumat.hpp"
-#include "opencv2/ts/ts.hpp"
-#include "opencv2/ts/ts_perf.hpp"
+#include "opencv2/ts.hpp"
 
 //////////////////////////////////////////////////////////////////////
 // Gpu devices

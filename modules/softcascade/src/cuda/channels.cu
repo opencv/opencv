@@ -42,6 +42,9 @@
 
 #include "opencv2/core/cuda_devptrs.hpp"
 
+namespace cv { namespace softcascade { namespace internal {
+void error(const char *error_string, const char *file, const int line, const char *func);
+}}}
 #if defined(__GNUC__)
     #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
 #else /* defined(__CUDACC__) || defined(__MSVC__) */
@@ -50,7 +53,7 @@
 
 static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
 {
-    // if (cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), file, line, func);
+    if (cudaSuccess != err) cv::softcascade::internal::error(cudaGetErrorString(err), file, line, func);
 }
 
 __host__ __device__ __forceinline__ int divUp(int total, int grain)
@@ -490,16 +493,30 @@ namespace cv { namespace softcascade { namespace device
         B2Y        = 1868
     };
 
-    template <int bidx> static __device__ __forceinline__ unsigned char RGB2GrayConvert(uint src)
+    template <int bidx> static __device__ __forceinline__ unsigned char RGB2GrayConvert(unsigned char b, unsigned char g, unsigned char r)
     {
-        uint b = 0xffu & (src >> (bidx * 8));
-        uint g = 0xffu & (src >> 8);
-        uint r = 0xffu & (src >> ((bidx ^ 2) * 8));
+        // uint b = 0xffu & (src >> (bidx * 8));
+        // uint g = 0xffu & (src >> 8);
+        // uint r = 0xffu & (src >> ((bidx ^ 2) * 8));
         return CV_DESCALE((uint)(b * B2Y + g * G2Y + r * R2Y), yuv_shift);
     }
 
+    __global__ void device_transform(const cv::gpu::PtrStepSz<uchar3> bgr, cv::gpu::PtrStepSzb gray)
+    {
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+
+        const uchar3 colored = (uchar3)(bgr.ptr(y))[x];
+
+        gray.ptr(y)[x] = RGB2GrayConvert<0>(colored.x, colored.y, colored.z);
+    }
+
+    ///////
     void transform(const cv::gpu::PtrStepSz<uchar3>& bgr, cv::gpu::PtrStepSzb gray)
     {
-
+        const dim3 block(32, 8);
+        const dim3 grid(divUp(bgr.cols, block.x), divUp(bgr.rows, block.y));
+        device_transform<<<grid, block>>>(bgr, gray);
+        cudaSafeCall(cudaDeviceSynchronize());
     }
 }}}
