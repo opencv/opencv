@@ -316,7 +316,7 @@ public:
             _mm_storel_epi64((__m128i*)(dst+6*6), g1);
         }
 
-        return bayer - (bayer_end - width);
+        return int(bayer - (bayer_end - width));
     }
 
     bool use_simd;
