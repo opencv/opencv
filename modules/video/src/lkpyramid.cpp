@@ -45,7 +45,8 @@
 
 namespace
 {
-static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
+static void calcScharrDeriv(const cv::Mat& src, cv::Mat& dst,
+                            int left=0, int right=0, int top=0, int bottom=0)
 {
     using namespace cv;
     using cv::detail::deriv_type;
@@ -59,6 +60,11 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
 #endif
 
     int x, y, delta = (int)alignSize((cols + 2)*cn, 16);
+    int zleft = std::min(std::max(-left*cn, 0), colsn);
+    int zright = std::max(std::min(colsn+right*cn, colsn), 0);
+
+    CV_Assert( zleft >= 0 && zleft <= colsn && zright >= 0 && zright <= colsn );
+
     AutoBuffer<deriv_type> _tempBuf(delta*2 + 64);
     deriv_type *trow0 = alignPtr(_tempBuf + cn, 16), *trow1 = alignPtr(trow0 + delta, 16);
 
@@ -68,26 +74,35 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
 
     for( y = 0; y < rows; y++ )
     {
-        const uchar* srow0 = src.ptr<uchar>(y > 0 ? y-1 : rows > 1 ? 1 : 0);
-        const uchar* srow1 = src.ptr<uchar>(y);
-        const uchar* srow2 = src.ptr<uchar>(y < rows-1 ? y+1 : rows > 1 ? rows-2 : 0);
+        const uchar* srow0 = src.data + src.step*((top > 0 || y > 0) ? y-1 : rows > 1 ? 1 : 0);
+        const uchar* srow1 = src.data + src.step*y;
+        const uchar* srow2 = src.data + src.step*((bottom > 0 || y < rows-1) ? y+1 : rows > 1 ? rows-2 : 0);
         deriv_type* drow = dst.ptr<deriv_type>(y);
 
+        if( y < -top || y >= rows + bottom )
+        {
+            for( x = 0; x < colsn*2; x++ )
+                drow[x] = 0;
+            continue;
+        }
+
         // do vertical convolution
-        x = 0;
+        x = left > 0 ? -cn : 0;
+        int colsn_vert = right > 0 ? colsn + cn : colsn;
+
 #if CV_SSE2
-        for( ; x <= colsn - 8; x += 8 )
+        for( ; x <= colsn_vert - 8; x += 8 )
         {
             __m128i s0 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(srow0 + x)), z);
             __m128i s1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(srow1 + x)), z);
             __m128i s2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(srow2 + x)), z);
             __m128i t0 = _mm_add_epi16(_mm_mullo_epi16(_mm_add_epi16(s0, s2), c3), _mm_mullo_epi16(s1, c10));
             __m128i t1 = _mm_sub_epi16(s2, s0);
-            _mm_store_si128((__m128i*)(trow0 + x), t0);
-            _mm_store_si128((__m128i*)(trow1 + x), t1);
+            _mm_storeu_si128((__m128i*)(trow0 + x), t0);
+            _mm_storeu_si128((__m128i*)(trow1 + x), t1);
         }
 #endif
-        for( ; x < colsn; x++ )
+        for( ; x < colsn_vert; x++ )
         {
             int t0 = (srow0[x] + srow2[x])*3 + srow1[x]*10;
             int t1 = srow2[x] - srow0[x];
@@ -96,22 +111,33 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
         }
 
         // make border
-        int x0 = (cols > 1 ? 1 : 0)*cn, x1 = (cols > 1 ? cols-2 : 0)*cn;
-        for( int k = 0; k < cn; k++ )
+        int k, x0 = (cols > 1 ? 1 : 0)*cn, x1 = (cols > 1 ? cols-2 : 0)*cn;
+        for( k = 0; k < cn; k++ )
         {
-            trow0[-cn + k] = trow0[x0 + k]; trow0[colsn + k] = trow0[x1 + k];
-            trow1[-cn + k] = trow1[x0 + k]; trow1[colsn + k] = trow1[x1 + k];
+            if( left <= 0 )
+            {
+                trow0[-cn + k] = trow0[x0 + k];
+                trow1[-cn + k] = trow1[x0 + k];
+            }
+            if( right <= 0 )
+            {
+                trow0[colsn + k] = trow0[x1 + k];
+                trow1[colsn + k] = trow1[x1 + k];
+            }
         }
 
         // do horizontal convolution, interleave the results and store them to dst
         x = 0;
+        for( ; x < zleft; x++ )
+            drow[x*2] = drow[x*2+1] = 0;
+
 #if CV_SSE2
-        for( ; x <= colsn - 8; x += 8 )
+        for( ; x <= zright - 8; x += 8 )
         {
             __m128i s0 = _mm_loadu_si128((const __m128i*)(trow0 + x - cn));
             __m128i s1 = _mm_loadu_si128((const __m128i*)(trow0 + x + cn));
             __m128i s2 = _mm_loadu_si128((const __m128i*)(trow1 + x - cn));
-            __m128i s3 = _mm_load_si128((const __m128i*)(trow1 + x));
+            __m128i s3 = _mm_loadu_si128((const __m128i*)(trow1 + x));
             __m128i s4 = _mm_loadu_si128((const __m128i*)(trow1 + x + cn));
 
             __m128i t0 = _mm_sub_epi16(s1, s0);
@@ -123,12 +149,15 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
             _mm_storeu_si128((__m128i*)(drow + x*2 + 8), t0);
         }
 #endif
-        for( ; x < colsn; x++ )
+        for( ; x < zright; x++ )
         {
             deriv_type t0 = (deriv_type)(trow0[x+cn] - trow0[x-cn]);
             deriv_type t1 = (deriv_type)((trow1[x+cn] + trow1[x-cn])*3 + trow1[x]*10);
             drow[x*2] = t0; drow[x*2+1] = t1;
         }
+
+        for( ; x < colsn; x++ )
+            drow[x*2] = drow[x*2+1] = 0;
     }
 }
 
@@ -139,7 +168,8 @@ cv::detail::LKTrackerInvoker::LKTrackerInvoker(
                       const Point2f* _prevPts, Point2f* _nextPts,
                       uchar* _status, float* _err,
                       Size _winSize, TermCriteria _criteria,
-                      int _level, int _maxLevel, int _flags, float _minEigThreshold )
+                      int _level, int _maxLevel,
+                      int _flags, float _minEigThreshold )
 {
     prevImg = &_prevImg;
     prevDeriv = &_prevDeriv;
@@ -156,19 +186,30 @@ cv::detail::LKTrackerInvoker::LKTrackerInvoker(
     minEigThreshold = _minEigThreshold;
 }
 
+
+#if CV_SSE2
+typedef float itemtype;
+typedef float acctype;
+#else
+typedef int itemtype;
+typedef int64 acctype;
+#endif
+
 void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
 {
     Point2f halfWin((winSize.width-1)*0.5f, (winSize.height-1)*0.5f);
     const Mat& I = *prevImg;
     const Mat& J = *nextImg;
-    const Mat& derivI = *prevDeriv;
 
-    int j, cn = I.channels(), cn2 = cn*2;
-    cv::AutoBuffer<deriv_type> _buf(winSize.area()*(cn + cn2));
+    int x, y, j, cn = I.channels(), cn2 = cn*2;
+    cv::AutoBuffer<deriv_type> _buf(winSize.area()*(cn + cn2)+(winSize.width+1)*(winSize.height+1)*cn2);
     int derivDepth = DataType<deriv_type>::depth;
 
     Mat IWinBuf(winSize, CV_MAKETYPE(derivDepth, cn), (deriv_type*)_buf);
     Mat derivIWinBuf(winSize, CV_MAKETYPE(derivDepth, cn2), (deriv_type*)_buf + winSize.area()*cn);
+    Mat derivIWinBuf0(winSize.height+1, winSize.width+1, CV_MAKETYPE(derivDepth, cn2),
+                      (deriv_type*)_buf + winSize.area()*(cn+cn2));
+    Mat& derivI = !prevDeriv->empty() ? (Mat&)*prevDeriv : derivIWinBuf0;
 
     for( int ptidx = range.begin(); ptidx < range.end(); ptidx++ )
     {
@@ -190,8 +231,8 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
         iprevPt.x = cvFloor(prevPt.x);
         iprevPt.y = cvFloor(prevPt.y);
 
-        if( iprevPt.x < -winSize.width || iprevPt.x >= derivI.cols ||
-            iprevPt.y < -winSize.height || iprevPt.y >= derivI.rows )
+        if( iprevPt.x < -winSize.width || iprevPt.x >= I.cols-1 ||
+            iprevPt.y < -winSize.height || iprevPt.y >= I.rows-1 )
         {
             if( level == 0 )
             {
@@ -205,7 +246,7 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
 
         float a = prevPt.x - iprevPt.x;
         float b = prevPt.y - iprevPt.y;
-        const int W_BITS = 14, W_BITS1 = 14;
+        const int W_BITS = 14, W_DELTA1 = 5, W_BITS1 = W_BITS - W_DELTA1;
         const float FLT_SCALE = 1.f/(1 << 20);
         int iw00 = cvRound((1.f - a)*(1.f - b)*(1 << W_BITS));
         int iw01 = cvRound(a*(1.f - b)*(1 << W_BITS));
@@ -215,23 +256,33 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
         int dstep = (int)(derivI.step/derivI.elemSize1());
         int stepI = (int)(I.step/I.elemSize1());
         int stepJ = (int)(J.step/J.elemSize1());
-        float A11 = 0, A12 = 0, A22 = 0;
+        acctype iA11 = 0, iA12 = 0, iA22 = 0;
 
 #if CV_SSE2
         __m128i qw0 = _mm_set1_epi32(iw00 + (iw01 << 16));
         __m128i qw1 = _mm_set1_epi32(iw10 + (iw11 << 16));
         __m128i z = _mm_setzero_si128();
-        __m128i qdelta_d = _mm_set1_epi32(1 << (W_BITS1-1));
-        __m128i qdelta = _mm_set1_epi32(1 << (W_BITS1-5-1));
+        __m128i qdelta_d = _mm_set1_epi32(1 << (W_BITS-1));
+        __m128i qdelta = _mm_set1_epi32(1 << (W_BITS1-1));
         __m128 qA11 = _mm_setzero_ps(), qA12 = _mm_setzero_ps(), qA22 = _mm_setzero_ps();
 #endif
 
+        if( prevDeriv->empty() )
+            calcScharrDeriv(Mat(winSize.height+1, winSize.width+1, I.type(),
+                                I.data + iprevPt.y*I.step + iprevPt.x*I.elemSize(), I.step),
+                            derivI,
+                            iprevPt.x,
+                            I.cols - iprevPt.x - winSize.width - 1,
+                            iprevPt.y,
+                            I.rows - iprevPt.y - winSize.height - 1);
+
         // extract the patch from the first image, compute covariation matrix of derivatives
-        int x, y;
         for( y = 0; y < winSize.height; y++ )
         {
             const uchar* src = (const uchar*)I.data + (y + iprevPt.y)*stepI + iprevPt.x*cn;
-            const deriv_type* dsrc = (const deriv_type*)derivI.data + (y + iprevPt.y)*dstep + iprevPt.x*cn2;
+            const deriv_type* dsrc = derivI.data == prevDeriv->data ?
+                (const deriv_type*)derivI.data + (y + iprevPt.y)*dstep + iprevPt.x*cn2 :
+                (const deriv_type*)derivI.data + y*dstep;
 
             deriv_type* Iptr = (deriv_type*)(IWinBuf.data + y*IWinBuf.step);
             deriv_type* dIptr = (deriv_type*)(derivIWinBuf.data + y*derivIWinBuf.step);
@@ -250,7 +301,7 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
 
                 t0 = _mm_add_epi32(_mm_madd_epi16(_mm_unpacklo_epi16(v00, v01), qw0),
                                    _mm_madd_epi16(_mm_unpacklo_epi16(v10, v11), qw1));
-                t0 = _mm_srai_epi32(_mm_add_epi32(t0, qdelta), W_BITS1-5);
+                t0 = _mm_srai_epi32(_mm_add_epi32(t0, qdelta), W_BITS1);
                 _mm_storel_epi64((__m128i*)(Iptr + x), _mm_packs_epi32(t0,t0));
 
                 v00 = _mm_loadu_si128((const __m128i*)(dsrc));
@@ -262,55 +313,52 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
                                    _mm_madd_epi16(_mm_unpacklo_epi16(v10, v11), qw1));
                 t1 = _mm_add_epi32(_mm_madd_epi16(_mm_unpackhi_epi16(v00, v01), qw0),
                                    _mm_madd_epi16(_mm_unpackhi_epi16(v10, v11), qw1));
-                t0 = _mm_srai_epi32(_mm_add_epi32(t0, qdelta_d), W_BITS1);
-                t1 = _mm_srai_epi32(_mm_add_epi32(t1, qdelta_d), W_BITS1);
+                t0 = _mm_srai_epi32(_mm_add_epi32(t0, qdelta_d), W_BITS);
+                t1 = _mm_srai_epi32(_mm_add_epi32(t1, qdelta_d), W_BITS);
                 v00 = _mm_packs_epi32(t0, t1); // Ix0 Iy0 Ix1 Iy1 ...
 
                 _mm_storeu_si128((__m128i*)dIptr, v00);
-                t0 = _mm_srai_epi32(v00, 16); // Iy0 Iy1 Iy2 Iy3
-                t1 = _mm_srai_epi32(_mm_slli_epi32(v00, 16), 16); // Ix0 Ix1 Ix2 Ix3
+                t1 = _mm_srli_epi32(v00, 16); // Iy0 Iy1 Iy2 Iy3
+                t0 = _mm_srli_epi32(_mm_slli_epi32(v00, 16), 16); // Ix0 Ix1 Ix2 Ix3
 
-                __m128 fy = _mm_cvtepi32_ps(t0);
-                __m128 fx = _mm_cvtepi32_ps(t1);
-
-                qA22 = _mm_add_ps(qA22, _mm_mul_ps(fy, fy));
-                qA12 = _mm_add_ps(qA12, _mm_mul_ps(fx, fy));
-                qA11 = _mm_add_ps(qA11, _mm_mul_ps(fx, fx));
+                qA22 = _mm_add_ps(qA22, _mm_cvtepi32_ps(_mm_madd_epi16(t1, t1)));
+                qA12 = _mm_add_ps(qA12, _mm_cvtepi32_ps(_mm_madd_epi16(t1, t0)));
+                qA11 = _mm_add_ps(qA11, _mm_cvtepi32_ps(_mm_madd_epi16(t0, t0)));
             }
 #endif
 
             for( ; x < winSize.width*cn; x++, dsrc += 2, dIptr += 2 )
             {
                 int ival = CV_DESCALE(src[x]*iw00 + src[x+cn]*iw01 +
-                                      src[x+stepI]*iw10 + src[x+stepI+cn]*iw11, W_BITS1-5);
+                                      src[x+stepI]*iw10 + src[x+stepI+cn]*iw11, W_BITS1);
                 int ixval = CV_DESCALE(dsrc[0]*iw00 + dsrc[cn2]*iw01 +
-                                       dsrc[dstep]*iw10 + dsrc[dstep+cn2]*iw11, W_BITS1);
+                                       dsrc[dstep]*iw10 + dsrc[dstep+cn2]*iw11, W_BITS);
                 int iyval = CV_DESCALE(dsrc[1]*iw00 + dsrc[cn2+1]*iw01 + dsrc[dstep+1]*iw10 +
-                                       dsrc[dstep+cn2+1]*iw11, W_BITS1);
+                                       dsrc[dstep+cn2+1]*iw11, W_BITS);
 
                 Iptr[x] = (short)ival;
                 dIptr[0] = (short)ixval;
                 dIptr[1] = (short)iyval;
 
-                A11 += (float)(ixval*ixval);
-                A12 += (float)(ixval*iyval);
-                A22 += (float)(iyval*iyval);
+                iA11 += (itemtype)(ixval*ixval);
+                iA12 += (itemtype)(ixval*iyval);
+                iA22 += (itemtype)(iyval*iyval);
             }
         }
 
 #if CV_SSE2
         float CV_DECL_ALIGNED(16) A11buf[4], A12buf[4], A22buf[4];
-        _mm_store_ps(A11buf, qA11);
-        _mm_store_ps(A12buf, qA12);
-        _mm_store_ps(A22buf, qA22);
-        A11 += A11buf[0] + A11buf[1] + A11buf[2] + A11buf[3];
-        A12 += A12buf[0] + A12buf[1] + A12buf[2] + A12buf[3];
-        A22 += A22buf[0] + A22buf[1] + A22buf[2] + A22buf[3];
+        _mm_store_ps(&A11buf[0], qA11);
+        _mm_store_ps(&A12buf[0], qA12);
+        _mm_store_ps(&A22buf[0], qA22);
+        iA11 += A11buf[0] + A11buf[1] + A11buf[2] + A11buf[3];
+        iA12 += A12buf[0] + A12buf[1] + A12buf[2] + A12buf[3];
+        iA22 += A22buf[0] + A22buf[1] + A22buf[2] + A22buf[3];
 #endif
 
-        A11 *= FLT_SCALE;
-        A12 *= FLT_SCALE;
-        A22 *= FLT_SCALE;
+        float A11 = iA11*FLT_SCALE;
+        float A12 = iA12*FLT_SCALE;
+        float A22 = iA22*FLT_SCALE;
 
         float D = A11*A22 - A12*A12;
         float minEig = (A22 + A11 - std::sqrt((A11-A22)*(A11-A22) +
@@ -350,7 +398,7 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
             iw01 = cvRound(a*(1.f - b)*(1 << W_BITS));
             iw10 = cvRound((1.f - a)*b*(1 << W_BITS));
             iw11 = (1 << W_BITS) - iw00 - iw01 - iw10;
-            float b1 = 0, b2 = 0;
+            acctype ib1 = 0, ib2 = 0;
 #if CV_SSE2
             qw0 = _mm_set1_epi32(iw00 + (iw01 << 16));
             qw1 = _mm_set1_epi32(iw10 + (iw11 << 16));
@@ -378,8 +426,8 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
                                                _mm_madd_epi16(_mm_unpacklo_epi16(v10, v11), qw1));
                     __m128i t1 = _mm_add_epi32(_mm_madd_epi16(_mm_unpackhi_epi16(v00, v01), qw0),
                                                _mm_madd_epi16(_mm_unpackhi_epi16(v10, v11), qw1));
-                    t0 = _mm_srai_epi32(_mm_add_epi32(t0, qdelta), W_BITS1-5);
-                    t1 = _mm_srai_epi32(_mm_add_epi32(t1, qdelta), W_BITS1-5);
+                    t0 = _mm_srai_epi32(_mm_add_epi32(t0, qdelta), W_BITS1);
+                    t1 = _mm_srai_epi32(_mm_add_epi32(t1, qdelta), W_BITS1);
                     diff0 = _mm_subs_epi16(_mm_packs_epi32(t0, t1), diff0);
                     diff1 = _mm_unpackhi_epi16(diff0, diff0);
                     diff0 = _mm_unpacklo_epi16(diff0, diff0); // It0 It0 It1 It1 ...
@@ -387,16 +435,14 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
                     v01 = _mm_loadu_si128((const __m128i*)(dIptr + 8));
                     v10 = _mm_mullo_epi16(v00, diff0);
                     v11 = _mm_mulhi_epi16(v00, diff0);
-                    v00 = _mm_unpacklo_epi16(v10, v11);
-                    v10 = _mm_unpackhi_epi16(v10, v11);
-                    qb0 = _mm_add_ps(qb0, _mm_cvtepi32_ps(v00));
-                    qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(v10));
+                    t0 = _mm_unpacklo_epi16(v10, v11);
+                    t1 = _mm_unpackhi_epi16(v10, v11);
                     v10 = _mm_mullo_epi16(v01, diff1);
                     v11 = _mm_mulhi_epi16(v01, diff1);
-                    v00 = _mm_unpacklo_epi16(v10, v11);
-                    v10 = _mm_unpackhi_epi16(v10, v11);
-                    qb0 = _mm_add_ps(qb0, _mm_cvtepi32_ps(v00));
-                    qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(v10));
+                    t0 = _mm_add_epi32(t0, _mm_unpacklo_epi16(v10, v11));
+                    t1 = _mm_add_epi32(t1, _mm_unpackhi_epi16(v10, v11));
+                    qb0 = _mm_add_ps(qb0, _mm_cvtepi32_ps(t0));
+                    qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(t1));
                 }
 #endif
 
@@ -404,25 +450,24 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
                 {
                     int diff = CV_DESCALE(Jptr[x]*iw00 + Jptr[x+cn]*iw01 +
                                           Jptr[x+stepJ]*iw10 + Jptr[x+stepJ+cn]*iw11,
-                                          W_BITS1-5) - Iptr[x];
-                    b1 += (float)(diff*dIptr[0]);
-                    b2 += (float)(diff*dIptr[1]);
+                                          W_BITS1) - Iptr[x];
+                    ib1 += (itemtype)(diff*dIptr[0]);
+                    ib2 += (itemtype)(diff*dIptr[1]);
                 }
             }
 
 #if CV_SSE2
             float CV_DECL_ALIGNED(16) bbuf[4];
-            _mm_store_ps(bbuf, _mm_add_ps(qb0, qb1));
-            b1 += bbuf[0] + bbuf[2];
-            b2 += bbuf[1] + bbuf[3];
+            _mm_store_ps(&bbuf[0], _mm_add_ps(qb0, qb1));
+            ib1 += bbuf[0] + bbuf[2];
+            ib2 += bbuf[1] + bbuf[3];
 #endif
 
-            b1 *= FLT_SCALE;
-            b2 *= FLT_SCALE;
+            float b1 = ib1*(FLT_SCALE*32/(1<<W_DELTA1));
+            float b2 = ib2*(FLT_SCALE*32/(1<<W_DELTA1));
 
             Point2f delta( (float)((A12*b2 - A22*b1) * D),
                           (float)((A12*b1 - A11*b2) * D));
-            //delta = -delta;
 
             nextPt += delta;
             nextPts[ptidx] = nextPt + halfWin;
@@ -472,7 +517,7 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
                 {
                     int diff = CV_DESCALE(Jptr[x]*iw00 + Jptr[x+cn]*iw01 +
                                           Jptr[x+stepJ]*iw10 + Jptr[x+stepJ+cn]*iw11,
-                                          W_BITS1-5) - Iptr[x];
+                                          W_BITS1) - Iptr[x];
                     errval += std::abs((float)diff);
                 }
             }
@@ -557,7 +602,7 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
                 deriv.create(sz.height + winSize.height*2, sz.width + winSize.width*2, derivType);
 
             Mat derivI = deriv(Rect(winSize.width, winSize.height, sz.width, sz.height));
-            calcSharrDeriv(thisLevel, derivI);
+            calcScharrDeriv(thisLevel, derivI);
 
             if(derivBorder != BORDER_TRANSPARENT)
                 copyMakeBorder(derivI, deriv, winSize.height, winSize.height, winSize.width, winSize.width, derivBorder|BORDER_ISOLATED);
@@ -715,11 +760,18 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         if(lvlStep1 == 1)
         {
             Size imgSize = prevPyr[level * lvlStep1].size();
-            Mat _derivI( imgSize.height + winSize.height*2,
-                imgSize.width + winSize.width*2, derivIBuf.type(), derivIBuf.data );
-            derivI = _derivI(Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
-            calcSharrDeriv(prevPyr[level * lvlStep1], derivI);
-            copyMakeBorder(derivI, _derivI, winSize.height, winSize.height, winSize.width, winSize.width, BORDER_CONSTANT|BORDER_ISOLATED);
+
+#ifndef HAVE_TEGRA_OPTIMIZATION
+            if( (double)imgSize.width*imgSize.height <= (double)winSize.width*winSize.height*npoints*2 )
+#endif
+            {
+                Mat _derivI( imgSize.height + winSize.height*2,
+                    imgSize.width + winSize.width*2, derivIBuf.type(), derivIBuf.data );
+                derivI = _derivI(Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
+                calcScharrDeriv(prevPyr[level * lvlStep1], derivI);
+                copyMakeBorder(derivI, _derivI, winSize.height, winSize.height,
+                               winSize.width, winSize.width, BORDER_CONSTANT|BORDER_ISOLATED);
+            }
         }
         else
             derivI = prevPyr[level * lvlStep1 + 1];
