@@ -127,7 +127,7 @@ public:
     virtual ~ChannelFeatureBuilder();
 
     // apply channels to source frame
-    CV_WRAP_AS(compute) virtual void operator()(InputArray src, CV_OUT OutputArray channels, cv::Size channelsSize = cv::Size()) const = 0;
+    CV_WRAP_AS(compute) virtual void operator()(InputArray src, OutputArray channels, cv::Size channelsSize = cv::Size()) const = 0;
 
     CV_WRAP virtual int totalChannels() const = 0;
     virtual cv::AlgorithmInfo* info() const = 0;
@@ -170,7 +170,7 @@ public:
 
     // Param rects is an output array of bounding rectangles for detected objects.
     // Param confs is an output array of confidence for detected objects. i-th bounding rectangle corresponds i-th confidence.
-    CV_WRAP virtual void detect(InputArray image, InputArray rois, CV_OUT OutputArray rects, CV_OUT OutputArray confs) const;
+    CV_WRAP virtual void detect(InputArray image, InputArray rois, OutputArray rects, OutputArray confs) const;
 
 private:
     void detectNoRoi(const Mat& image, std::vector<Detection>& objects) const;

@@ -400,7 +400,7 @@ class CppHeaderParser(object):
         # note that we do not strip "static" prefix, which does matter;
         # it means class methods, not instance methods
         decl_str = self.batch_replace(decl_str, [("virtual", ""), ("static inline", ""), ("inline", ""),\
-            ("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("CV_CDECL", ""), ("CV_WRAP ", " "), ("static CV_INLINE", ""), ("CV_INLINE", "")]).strip()
+            ("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("CV_CDECL", ""), ("CV_WRAP ", " "), ("CV_INLINE", "")]).strip()
 
         static_method = False
         context = top[0]

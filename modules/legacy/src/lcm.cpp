@@ -199,7 +199,7 @@ int _cvNodeMultyplicity(CvVoronoiSite2D* pSite,
 //      pLCM : in, information about graph
 //    Returns: pointer to graph node
 //F*/
-CV_IMPL
+CV_INLINE
 CvLCMNode* _cvCreateLCMNode(CvLCM* pLCM);
 
 /*F///////////////////////////////////////////////////////////////////////////////////////
@@ -211,7 +211,7 @@ CvLCMNode* _cvCreateLCMNode(CvLCM* pLCM);
 //      pLCM : in, information about graph
 //    Returns: pointer to graph edge
 //F*/
-CV_IMPL
+CV_INLINE
 CvLCMEdge* _cvCreateLCMEdge(CvLCM* pLCM);
 
 /*F///////////////////////////////////////////////////////////////////////////////////////
@@ -228,7 +228,7 @@ CvLCMEdge* _cvCreateLCMEdge(CvLCM* pLCM);
 //             =1, if node  is terminal for edge
 //    Returns:
 //F*/
-CV_IMPL
+CV_INLINE
 void _cvAttachLCMEdgeToLCMNode(CvLCMNode* LCMNode,
                                CvLCMEdge* LCMEdge,
                                CvLCMEdge* &LCMEdge_prev,
@@ -263,7 +263,7 @@ void _cvProjectionPointToSegment(CvPoint2D32f* PointO,
 //      pLCMCCNData : out
 //    Returns:
 //F*/
-CV_IMPL
+CV_INLINE
 void _cvPrepareData(CvLCMComplexNodeData* pLCMCCNData,
                     CvLCMData* pLCMData);
 

@@ -46,6 +46,8 @@
 #ifndef __OPENCV_CORE_HPP__
 #define __OPENCV_CORE_HPP__
 
+#include "opencv2/core/cvdef.h"
+
 #include "opencv2/core/types_c.h"
 #include "opencv2/core/version.hpp"
 
@@ -68,11 +70,6 @@
     Namespace where all the C++ OpenCV functionality resides
 */
 namespace cv {
-
-#undef abs
-#undef min
-#undef max
-#undef Complex
 
 template<typename _Tp> class CV_EXPORTS Size_;
 template<typename _Tp> class CV_EXPORTS Point_;
@@ -2426,10 +2423,10 @@ public:
     Mat mean; //!< mean value subtracted before the projection and added after the back projection
 };
 
-CV_EXPORTS_W void PCACompute(InputArray data, CV_OUT InputOutputArray mean,
+CV_EXPORTS_W void PCACompute(InputArray data, InputOutputArray mean,
                              OutputArray eigenvectors, int maxComponents=0);
 
-CV_EXPORTS_W void PCACompute(InputArray data, CV_OUT InputOutputArray mean,
+CV_EXPORTS_W void PCACompute(InputArray data, InputOutputArray mean,
                              OutputArray eigenvectors, double retainedVariance);
 
 CV_EXPORTS_W void PCAProject(InputArray data, InputArray mean,
@@ -2489,12 +2486,11 @@ public:
 };
 
 //! computes SVD of src
-CV_EXPORTS_W void SVDecomp( InputArray src, CV_OUT OutputArray w,
-    CV_OUT OutputArray u, CV_OUT OutputArray vt, int flags=0 );
+CV_EXPORTS_W void SVDecomp( InputArray src, OutputArray w, OutputArray u, OutputArray vt, int flags=0 );
 
 //! performs back substitution for the previously computed SVD
 CV_EXPORTS_W void SVBackSubst( InputArray w, InputArray u, InputArray vt,
-                               InputArray rhs, CV_OUT OutputArray dst );
+                               InputArray rhs, OutputArray dst );
 
 //! computes Mahalanobis distance between two vectors: sqrt((v1-v2)'*icovar*(v1-v2)), where icovar is the inverse covariation matrix
 CV_EXPORTS_W double Mahalanobis(InputArray v1, InputArray v2, InputArray icovar);
@@ -2525,7 +2521,7 @@ enum
     KMEANS_USE_INITIAL_LABELS=1 // Uses the user-provided labels for K-Means initialization
 };
 //! clusters the input data using k-Means algorithm
-CV_EXPORTS_W double kmeans( InputArray data, int K, CV_OUT InputOutputArray bestLabels,
+CV_EXPORTS_W double kmeans( InputArray data, int K, InputOutputArray bestLabels,
                             TermCriteria criteria, int attempts,
                             int flags, OutputArray centers=noArray() );
 
