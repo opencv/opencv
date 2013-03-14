@@ -106,9 +106,9 @@ class Namespace(object):
 
     def __str__(self):
         return 'namespace '+self.name+' {\n\n'+\
-          (join((c.__str__() for c in self.constants), '\n')+'\n\n' if self.constants else '')+\
           (join((f.__str__() for f in self.functions), '\n')+'\n\n' if self.functions else '')+\
-          (join((c.__str__() for c in self.classes), '\n\n')          if self.classes   else '')+'\n};'
+          (join((c.__str__() for c in self.constants), '\n')+'\n\n' if self.constants else '')+\
+          (join((o.__str__() for o in self.classes), '\n\n')        if self.classes   else '')+'\n};'
 
 class Class(object):
     def __init__(self, name='', namespace='', constants=None, functions=None):
@@ -133,7 +133,7 @@ class Function(object):
         self.opt = opt if opt else []
 
     def __str__(self):
-        return fill((self.rtp+' ' if self.rtp else '')+(self.clss+'::' if self.clss else '')+self.name+'('+\
+        return fill((self.rtp+' ' if self.rtp else '')+self.name+'('+\
           join((arg.__str__() for arg in self.req+self.opt), ', ')+\
           ')'+(' const' if self.const else '')+';', 80, subsequent_indent=('\t\t' if self.clss else '\t'))
 
