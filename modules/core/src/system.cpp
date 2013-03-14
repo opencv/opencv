@@ -811,17 +811,6 @@ struct Mutex::Impl
     int refcount;
 };
 
-#ifndef __GNUC__
-int _interlockedExchangeAdd(int* addr, int delta)
-{
-#if defined _MSC_VER && _MSC_VER >= 1500
-    return (int)_InterlockedExchangeAdd((long volatile*)addr, delta);
-#else
-    return (int)InterlockedExchangeAdd((long volatile*)addr, delta);
-#endif
-}
-#endif // __GNUC__
-
 #elif defined __APPLE__
 
 #include <libkern/OSAtomic.h>
