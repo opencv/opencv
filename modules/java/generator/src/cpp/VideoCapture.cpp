@@ -5,7 +5,7 @@
 #ifdef HAVE_OPENCV_HIGHGUI
 
 #include "opencv2/highgui/highgui_c.h"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 using namespace cv;
 
 

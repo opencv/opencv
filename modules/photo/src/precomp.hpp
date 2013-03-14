@@ -47,7 +47,7 @@
 #include "cvconfig.h"
 #endif
 
-#include "opencv2/photo/photo.hpp"
+#include "opencv2/photo.hpp"
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
 #include "opencv2/photo/photo_tegra.hpp"

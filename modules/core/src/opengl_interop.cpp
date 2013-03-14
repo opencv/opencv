@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/opengl_interop.hpp"
+#include "opencv2/core/opengl.hpp"
 #include "opencv2/core/gpumat.hpp"
 
 #ifdef HAVE_OPENGL

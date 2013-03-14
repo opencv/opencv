@@ -59,11 +59,11 @@ extern "C" {
 
 #include "ffmpeg_codecs.hpp"
 
-#include <libavutil/opt.h>
 #include <libavutil/mathematics.h>
 
 #ifdef WIN32
   #define HAVE_FFMPEG_SWSCALE 1
+  #include <libavutil/opt.h>
   #include <libavcodec/avcodec.h>
   #include <libswscale/swscale.h>
 #else

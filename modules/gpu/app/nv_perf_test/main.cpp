@@ -1,12 +1,11 @@
 #include <cstdio>
 #define HAVE_CUDA 1
-#include <opencv2/core/core.hpp>
-#include <opencv2/gpu/gpu.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/video/video.hpp>
-#include <opencv2/legacy/legacy.hpp>
-#include <opencv2/ts/ts.hpp>
-#include <opencv2/ts/ts_perf.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/gpu.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/video.hpp>
+#include <opencv2/legacy.hpp>
+#include <opencv2/ts.hpp>
 
 static void printOsInfo()
 {

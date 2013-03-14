@@ -1,4 +1,4 @@
-#include "opencv2/legacy/legacy.hpp"
+#include "opencv2/legacy.hpp"
 #include "opencv2/legacy/compat.hpp"
 
 #define OLD_MODULESTR "cv2.cv"
@@ -3882,23 +3882,23 @@ static PyMethodDef old_methods[] = {
 #include "opencv2/opencv_modules.hpp"
 
 #ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/nonfree.hpp"
+#  include "opencv2/nonfree.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_FEATURES2D
-#  include "opencv2/features2d/features2d.hpp"
+#  include "opencv2/features2d.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_VIDEO
-#  include "opencv2/video/video.hpp"
+#  include "opencv2/video.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_ML
-#  include "opencv2/ml/ml.hpp"
+#  include "opencv2/ml.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_CONTRIB
-#  include "opencv2/contrib/contrib.hpp"
+#  include "opencv2/contrib.hpp"
 #endif
 
 static PyObject* init_cv()

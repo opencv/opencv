@@ -75,7 +75,7 @@
 #include <algorithm>
 #include <vector>
 #include <functional>
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 #include <GL\gl.h>
 #endif
 

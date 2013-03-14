@@ -4,7 +4,7 @@
 #include "opencv2/opencv_modules.hpp"
 
 #ifdef HAVE_OPENCV_FEATURES2D
-#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/features2d.hpp"
 
 #undef SIMPLEBLOB // to solve conflict with wincrypt.h on windows
 

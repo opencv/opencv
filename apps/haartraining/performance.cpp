@@ -44,7 +44,7 @@
  *
  * Measure performance of classifier
  */
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/core/internal.hpp"
 
 #include "cv.h"

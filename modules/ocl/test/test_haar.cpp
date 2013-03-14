@@ -43,7 +43,7 @@
 //
 //M*/
 
-#include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/objdetect.hpp"
 #include "precomp.hpp"
 
 #ifdef HAVE_OPENCL

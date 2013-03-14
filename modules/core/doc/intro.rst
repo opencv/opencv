@@ -30,14 +30,14 @@ All the OpenCV classes and functions are placed into the ``cv`` namespace. There
 
 .. code-block:: c
 
-    #include "opencv2/core/core.hpp"
+    #include "opencv2/core.hpp"
     ...
     cv::Mat H = cv::findHomography(points1, points2, CV_RANSAC, 5);
     ...
 
 or ::
 
-    #include "opencv2/core/core.hpp"
+    #include "opencv2/core.hpp"
     using namespace cv;
     ...
     Mat H = findHomography(points1, points2, CV_RANSAC, 5 );

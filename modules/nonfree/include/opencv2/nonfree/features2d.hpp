@@ -43,7 +43,7 @@
 #ifndef __OPENCV_NONFREE_FEATURES_2D_HPP__
 #define __OPENCV_NONFREE_FEATURES_2D_HPP__
 
-#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/features2d.hpp"
 
 #ifdef __cplusplus
 
