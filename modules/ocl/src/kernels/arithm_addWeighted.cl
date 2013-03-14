@@ -42,8 +42,12 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#if defined DOUBLE_SUPPORT
+#if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 typedef double F;
 #else
 typedef float F;

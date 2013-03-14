@@ -78,7 +78,12 @@ uchar read_imgTex(IMAGE_INT8 img, sampler_t sam, float2 coord, int rows, int col
 
 // dynamically change the precision used for floating type
 
-#if defined DOUBLE_SUPPORT
+#if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 #define F double
 #else
 #define F float
@@ -892,9 +897,9 @@ __kernel
             kp_dir += 2.0f * CV_PI_F;
         kp_dir *= 180.0f / CV_PI_F;
 
-        //kp_dir = 360.0f - kp_dir;
-        //if (fabs(kp_dir - 360.f) < FLT_EPSILON)
-        //    kp_dir = 0.f;
+        kp_dir = 360.0f - kp_dir;
+        if (fabs(kp_dir - 360.f) < FLT_EPSILON)
+            kp_dir = 0.f;
 
         featureDir[get_group_id(0)] = kp_dir;
     }
@@ -913,7 +918,7 @@ __kernel
 
     if(get_global_id(0) <= nFeatures)
     {
-        featureDir[get_global_id(0)] = 90.0f;
+        featureDir[get_global_id(0)] = 270.0f;
     }
 }
 
@@ -1011,7 +1016,12 @@ void calc_dx_dy(
     const float centerX = featureX[get_group_id(0)];
     const float centerY = featureY[get_group_id(0)];
     const float size = featureSize[get_group_id(0)];
-    float descriptor_dir = featureDir[get_group_id(0)] * (float)(CV_PI_F / 180.0f);
+    float descriptor_dir = 360.0f - featureDir[get_group_id(0)];
+    if(fabs(descriptor_dir - 360.0f) < FLT_EPSILON)
+    {
+        descriptor_dir = 0.0f;
+    }
+    descriptor_dir *= (float)(CV_PI_F / 180.0f);
 
     /* The sampling intervals and wavelet sized for selecting an orientation
     and building the keypoint descriptor are defined relative to 's' */

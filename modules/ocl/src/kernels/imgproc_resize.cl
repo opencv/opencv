@@ -48,8 +48,12 @@
 // Currently, CV_8UC1  CV_8UC4  CV_32FC1 and CV_32FC4are supported.
 // We shall support other types later if necessary.
 
-#if defined DOUBLE_SUPPORT
+#if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 #define F double
 #else
 #define F float

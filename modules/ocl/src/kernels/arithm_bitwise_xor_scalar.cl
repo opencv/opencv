@@ -42,11 +42,6 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //
-#if defined (__ATI__)
-#pragma OPENCL EXTENSION cl_amd_fp64:enable
-#elif defined (__NVIDIA__)
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////BITWISE_XOR////////////////////////////////////////////////////
@@ -233,7 +228,7 @@ __kernel void arithm_s_bitwise_xor_C1_D5 (__global   char *src1, int src1_step, 
     }
 }
 
-#if defined (DOUBLE_SUPPORT)
+
 __kernel void arithm_s_bitwise_xor_C1_D6 (__global short *src1, int src1_step, int src1_offset,
                                   __global short *dst,  int dst_step,  int dst_offset,
                                   short16 src2, int rows, int cols, int dst_step1)
@@ -255,7 +250,7 @@ __kernel void arithm_s_bitwise_xor_C1_D6 (__global short *src1, int src1_step, i
         *((__global short4 *)((__global char *)dst + dst_index)) = tmp_data;
     }
 }
-#endif
+
 __kernel void arithm_s_bitwise_xor_C2_D0 (__global   uchar *src1, int src1_step, int src1_offset,
                                   __global   uchar *dst,  int dst_step,  int dst_offset,
                                   uchar4 src2, int rows, int cols, int dst_step1)
@@ -405,7 +400,7 @@ __kernel void arithm_s_bitwise_xor_C2_D5 (__global   char *src1, int src1_step, 
         *((__global char8 *)((__global char *)dst + dst_index)) = tmp_data;
       }
 }
-#if defined (DOUBLE_SUPPORT)
+
 __kernel void arithm_s_bitwise_xor_C2_D6 (__global short *src1, int src1_step, int src1_offset,
                                   __global short *dst,  int dst_step,  int dst_offset,
                                   short16 src2, int rows, int cols, int dst_step1)
@@ -427,7 +422,7 @@ __kernel void arithm_s_bitwise_xor_C2_D6 (__global short *src1, int src1_step, i
         *((__global short8 *)((__global char *)dst + dst_index)) = tmp_data;
     }
 }
-#endif
+
 __kernel void arithm_s_bitwise_xor_C3_D0 (__global   uchar *src1, int src1_step, int src1_offset,
                                   __global   uchar *dst,  int dst_step,  int dst_offset,
                                   uchar4 src2, int rows, int cols, int dst_step1)
@@ -707,7 +702,7 @@ __kernel void arithm_s_bitwise_xor_C3_D5 (__global   char *src1, int src1_step, 
        *((__global char4 *)((__global char *)dst + dst_index + 8))= tmp_data_2;
     }
 }
-#if defined (DOUBLE_SUPPORT)
+
 __kernel void arithm_s_bitwise_xor_C3_D6 (__global short *src1, int src1_step, int src1_offset,
                                           __global short *dst,  int dst_step,  int dst_offset,
                                           short16 src2, int rows, int cols, int dst_step1)
@@ -742,7 +737,7 @@ __kernel void arithm_s_bitwise_xor_C3_D6 (__global short *src1, int src1_step, i
        *((__global short4 *)((__global char *)dst + dst_index + 16))= tmp_data_2;
     }
 }
-#endif
+
 __kernel void arithm_s_bitwise_xor_C4_D0 (__global   uchar *src1, int src1_step, int src1_offset,
                                   __global   uchar *dst,  int dst_step,  int dst_offset,
                                   uchar4 src2, int rows, int cols, int dst_step1)
@@ -868,7 +863,7 @@ __kernel void arithm_s_bitwise_xor_C4_D5 (__global   char *src1, int src1_step, 
         *((__global char16 *)((__global char *)dst + dst_index)) = tmp_data;
     }
 }
-#if defined (DOUBLE_SUPPORT)
+
 __kernel void arithm_s_bitwise_xor_C4_D6 (__global short *src1, int src1_step, int src1_offset,
                                           __global short *dst,  int dst_step,  int dst_offset,
                                           short16 src2, int rows, int cols, int dst_step1)
@@ -904,4 +899,3 @@ __kernel void arithm_s_bitwise_xor_C4_D6 (__global short *src1, int src1_step, i
 
     }
 }
-#endif

@@ -45,7 +45,11 @@
 
 /**************************************PUBLICFUNC*************************************/
 #if defined (DOUBLE_SUPPORT)
+    #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+    #elif defined (cl_amd_fp64)
+        #pragma OPENCL EXTENSION cl_amd_fp64:enable
+    #endif
 #define RES_TYPE double4
 #define CONVERT_RES_TYPE convert_double4
 #else

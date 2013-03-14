@@ -1,8 +1,14 @@
 #if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
+typedef double T;
 #else
 typedef float double;
 typedef float4 double4;
+typedef long T;
 #define convert_double4 convert_float4
 #endif
 //#pragma OPENCL EXTENSION cl_amd_printf:enable
