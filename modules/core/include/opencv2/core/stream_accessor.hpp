@@ -40,10 +40,10 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_STREAM_ACCESSOR_HPP__
-#define __OPENCV_GPU_STREAM_ACCESSOR_HPP__
+#ifndef __OPENCV_CUDA_STREAM_ACCESSOR_HPP__
+#define __OPENCV_CUDA_STREAM_ACCESSOR_HPP__
 
-#include "opencv2/gpu.hpp"
+#include "opencv2/core/gpumat.hpp"
 #include "cuda_runtime_api.h"
 
 namespace cv
@@ -61,4 +61,4 @@ namespace cv
     }
 }
 
-#endif /* __OPENCV_GPU_STREAM_ACCESSOR_HPP__ */
+#endif /* __OPENCV_CUDA_STREAM_ACCESSOR_HPP__ */

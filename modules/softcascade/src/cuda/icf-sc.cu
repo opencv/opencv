@@ -40,15 +40,31 @@
 //
 //M*/
 
-#include <opencv2/gpu/device/common.hpp>
-#include <opencv2/gpu/device/saturate_cast.hpp>
-
-#include <icf.hpp>
+#include <cuda_invoker.hpp>
 #include <float.h>
 #include <stdio.h>
 
-namespace cv { namespace gpu { namespace device {
-namespace icf {
+namespace cv { namespace softcascade { namespace internal {
+void error(const char *error_string, const char *file, const int line, const char *func);
+}}}
+#if defined(__GNUC__)
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
+#else /* defined(__CUDACC__) || defined(__MSVC__) */
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
+#endif
+
+static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
+{
+    if (cudaSuccess != err) cv::softcascade::internal::error(cudaGetErrorString(err), file, line, func);
+}
+
+#ifndef CV_PI
+    #define CV_PI   3.1415926535897932384626433832795
+#endif
+
+namespace cv { namespace softcascade { namespace device {
+
+typedef unsigned char uchar;
 
     template <int FACTOR>
     __device__ __forceinline__ uchar shrink(const uchar* ptr, const int pitch, const int y, const int x)
@@ -125,7 +141,7 @@ namespace icf {
         luvg[luvgPitch * (y + 2 * 480) + x] = v;
     }
 
-    void bgr2Luv(const PtrStepSzb& bgr, PtrStepSzb luv)
+    void bgr2Luv(const cv::gpu::PtrStepSzb& bgr, cv::gpu::PtrStepSzb luv)
     {
         dim3 block(32, 8);
         dim3 grid(bgr.cols / 32, bgr.rows / 8);
@@ -207,7 +223,7 @@ namespace icf {
     texture<uchar,  cudaTextureType2D, cudaReadModeElementType> tgray;
 
     template<bool isDefaultNum>
-    __global__ void gray2hog(PtrStepSzb mag)
+    __global__ void gray2hog(cv::gpu::PtrStepSzb mag)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -222,7 +238,7 @@ namespace icf {
         mag( 480 * fast_angle_bin<isDefaultNum>(dy, dx) + y, x) = cmag;
     }
 
-    void gray2hog(const PtrStepSzb& gray, PtrStepSzb mag, const int bins)
+    void gray2hog(const cv::gpu::PtrStepSzb& gray, cv::gpu::PtrStepSzb mag, const int bins)
     {
         dim3 block(32, 8);
         dim3 grid(gray.cols / 32, gray.rows / 8);
@@ -303,7 +319,7 @@ namespace icf {
                     excluded = excluded || (suppessed == i);
                 }
 
-            #if __CUDA_ARCH__ >= 120
+            #if defined __CUDA_ARCH__ && (__CUDA_ARCH__ >= 120)
                 if (__all(excluded)) break;
             #endif
             }
@@ -325,8 +341,8 @@ namespace icf {
         }
     }
 
-    void suppress(const PtrStepSzb& objects, PtrStepSzb overlaps, PtrStepSzi ndetections,
-        PtrStepSzb suppressed, cudaStream_t stream)
+    void suppress(const cv::gpu::PtrStepSzb& objects, cv::gpu::PtrStepSzb overlaps, cv::gpu::PtrStepSzi ndetections,
+        cv::gpu::PtrStepSzb suppressed, cudaStream_t stream)
     {
         int block = 192;
         int grid = 1;
@@ -348,7 +364,7 @@ namespace icf {
     template<typename Policy>
     struct PrefixSum
     {
-    __device static void apply(float& impact)
+    __device_inline__ static void apply(float& impact)
         {
     #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 300
     #pragma unroll
@@ -442,6 +458,7 @@ namespace icf {
     {
         x += area.x;
         y += area.y;
+
         int a = tex2D(thogluv, x, y);
         int b = tex2D(thogluv, x + area.z, y);
         int c = tex2D(thogluv, x + area.z, y + area.w);
@@ -454,7 +471,7 @@ namespace icf {
 
 template<typename Policy>
 template<bool isUp>
-__device void CascadeInvoker<Policy>::detect(Detection* objects, const uint ndetections, uint* ctr, const int downscales) const
+__device_inline__ void CascadeInvoker<Policy>::detect(Detection* objects, const uint ndetections, uint* ctr, const int downscales) const
 {
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
     const int x = blockIdx.x;
@@ -527,8 +544,8 @@ __global__ void soft_cascade(const CascadeInvoker<Policy> invoker, Detection* ob
 }
 
 template<typename Policy>
-void CascadeInvoker<Policy>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
-    PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const
+void CascadeInvoker<Policy>::operator()(const cv::gpu::PtrStepSzb& roi, const cv::gpu::PtrStepSzi& hogluv,
+    cv::gpu::PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const
 {
     int fw = roi.rows;
     int fh = roi.cols;
@@ -560,8 +577,7 @@ void CascadeInvoker<Policy>::operator()(const PtrStepSzb& roi, const PtrStepSzi&
     }
 }
 
-template void CascadeInvoker<GK107PolicyX4>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
-    PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const;
+template void CascadeInvoker<GK107PolicyX4>::operator()(const cv::gpu::PtrStepSzb& roi, const cv::gpu::PtrStepSzi& hogluv,
+    cv::gpu::PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const;
 
-}
 }}}

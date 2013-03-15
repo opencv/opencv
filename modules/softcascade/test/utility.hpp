@@ -7,11 +7,10 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                        Intel License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2013, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -22,9 +21,9 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and / or other materials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
-//   * The name of the copyright holders may not be used to endorse or promote products
+//   * The name of Intel Corporation may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -40,60 +39,37 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef __OPENCV_SOFTCASCADE_TEST_UTILITY_HPP__
+#define __OPENCV_SOFTCASCADE_TEST_UTILITY_HPP__
 
-#ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
-#endif
+#include "opencv2/core.hpp"
+#include "opencv2/core/gpumat.hpp"
+#include "opencv2/ts.hpp"
 
-#include "opencv2/softcascade.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/core/core_c.h"
-#include "opencv2/core/internal.hpp"
-#include "opencv2/ml.hpp"
+//////////////////////////////////////////////////////////////////////
+// Gpu devices
+//! return true if device supports specified feature and gpu module was built with support the feature.
+bool supportFeature(const cv::gpu::DeviceInfo& info, cv::gpu::FeatureSet feature);
 
-namespace cv { namespace softcascade { namespace internal
+
+#if defined(HAVE_CUDA)
+class DeviceManager
 {
+public:
+    static DeviceManager& instance();
 
-namespace rnd {
+    void load(int i);
+    void loadAll();
 
-typedef cv::RNG_MT19937 engine;
-
-template<typename T>
-struct uniform_int
-{
-    uniform_int(const int _min, const int _max) : min(_min), max(_max) {}
-    T operator() (engine& eng, const int bound) const
-    {
-        return (T)eng.uniform(min, bound);
-    }
-
-    T operator() (engine& eng) const
-    {
-        return (T)eng.uniform(min, max);
-    }
+    const std::vector<cv::gpu::DeviceInfo>& values() const { return devices_; }
 
 private:
-    int min;
-    int max;
+    std::vector<cv::gpu::DeviceInfo> devices_;
+    DeviceManager() {loadAll();}
 };
-
-}
-
-struct Random
-{
-    typedef rnd::engine engine;
-    typedef uint64 seed_type;
-    typedef rnd::uniform_int<int> uniform;
-};
-
-}}}
-
-#define FEATURE_RECT_SEED      88543422U
-#define INDEX_ENGINE_SEED      76422434U
-#define DCHANNELS_SEED         314152314U
-#define DX_DY_SEED             65633343U
-
+# define ALL_DEVICES testing::ValuesIn(DeviceManager::instance().values())
+#else
+# define ALL_DEVICES testing::ValuesIn(std::vector<cv::gpu::DeviceInfo>())
 #endif
+
+#endif // __OPENCV_GPU_TEST_UTILITY_HPP__
