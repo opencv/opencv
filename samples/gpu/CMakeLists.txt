@@ -1,7 +1,7 @@
 SET(OPENCV_GPU_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc opencv_highgui
                                      opencv_ml opencv_video opencv_objdetect opencv_features2d
                                      opencv_calib3d opencv_legacy opencv_contrib opencv_gpu
-                                     opencv_nonfree opencv_superres)
+                                     opencv_superres)
 
 ocv_check_dependencies(${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
 
@@ -16,6 +16,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia"
     "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core"
     )
+
+  if(HAVE_opencv_gpunonfree)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpunonfree/include")
+  endif()
 
   if(HAVE_CUDA)
     ocv_include_directories(${CUDA_INCLUDE_DIRS})
@@ -33,6 +37,9 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     add_executable(${the_target} ${srcs})
 
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
+    if(HAVE_opencv_gpunonfree)
+      target_link_libraries(${the_target} opencv_gpunonfree)
+    endif()
 
     set_target_properties(${the_target} PROPERTIES
       OUTPUT_NAME "${project}-example-${name}"

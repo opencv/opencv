@@ -7,11 +7,10 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                        Intel License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -24,7 +23,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of the copyright holders may not be used to endorse or promote products
+//   * The name of Intel Corporation may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -40,47 +39,4 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_PRECOMP_H__
-#define __OPENCV_STITCHING_PRECOMP_H__
-
-#ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
-#endif
-#include "opencv2/opencv_modules.hpp"
-
-#include <vector>
-#include <algorithm>
-#include <utility>
-#include <set>
-#include <functional>
-#include <sstream>
-#include <cmath>
-#include "opencv2/core/core.hpp"
-#include "opencv2/core/internal.hpp"
-#include "opencv2/stitching/stitcher.hpp"
-#include "opencv2/stitching/detail/autocalib.hpp"
-#include "opencv2/stitching/detail/blenders.hpp"
-#include "opencv2/stitching/detail/camera.hpp"
-#include "opencv2/stitching/detail/exposure_compensate.hpp"
-#include "opencv2/stitching/detail/matchers.hpp"
-#include "opencv2/stitching/detail/motion_estimators.hpp"
-#include "opencv2/stitching/detail/seam_finders.hpp"
-#include "opencv2/stitching/detail/util.hpp"
-#include "opencv2/stitching/detail/warpers.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#ifdef HAVE_OPENCV_GPU
-# include "opencv2/gpu/gpu.hpp"
-#endif
-#ifdef HAVE_OPENCV_GPUNONFREE
-# include "opencv2/gpunonfree/gpunonfree.hpp"
-#endif
-
-#include "../../imgproc/src/gcgraph.hpp"
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-# include "opencv2/stitching/stitching_tegra.hpp"
-#endif
-
-#endif
+#include "test_precomp.hpp"

@@ -355,7 +355,7 @@ int main(int argc, char* argv[])
     Ptr<FeaturesFinder> finder;
     if (features_type == "surf")
     {
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPUNONFREE
         if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
             finder = new SurfFeaturesFinderGpu();
         else

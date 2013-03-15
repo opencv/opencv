@@ -40,47 +40,32 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_PRECOMP_H__
-#define __OPENCV_STITCHING_PRECOMP_H__
+#ifndef __OPENCV_PRECOMP_H__
+#define __OPENCV_PRECOMP_H__
+
+#if defined _MSC_VER && _MSC_VER >= 1200
+    #pragma warning( disable: 4251 4710 4711 4514 4996 )
+#endif
 
 #ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
+    #include "cvconfig.h"
 #endif
-#include "opencv2/opencv_modules.hpp"
 
 #include <vector>
-#include <algorithm>
-#include <utility>
-#include <set>
-#include <functional>
-#include <sstream>
-#include <cmath>
-#include "opencv2/core/core.hpp"
-#include "opencv2/core/internal.hpp"
-#include "opencv2/stitching/stitcher.hpp"
-#include "opencv2/stitching/detail/autocalib.hpp"
-#include "opencv2/stitching/detail/blenders.hpp"
-#include "opencv2/stitching/detail/camera.hpp"
-#include "opencv2/stitching/detail/exposure_compensate.hpp"
-#include "opencv2/stitching/detail/matchers.hpp"
-#include "opencv2/stitching/detail/motion_estimators.hpp"
-#include "opencv2/stitching/detail/seam_finders.hpp"
-#include "opencv2/stitching/detail/util.hpp"
-#include "opencv2/stitching/detail/warpers.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#ifdef HAVE_OPENCV_GPU
-# include "opencv2/gpu/gpu.hpp"
-#endif
-#ifdef HAVE_OPENCV_GPUNONFREE
-# include "opencv2/gpunonfree/gpunonfree.hpp"
-#endif
 
-#include "../../imgproc/src/gcgraph.hpp"
+#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/gpunonfree/gpunonfree.hpp"
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-# include "opencv2/stitching/stitching_tegra.hpp"
-#endif
+#ifdef HAVE_CUDA
+    #include "opencv2/gpu/stream_accessor.hpp"
+    #include "opencv2/gpu/device/common.hpp"
 
-#endif
+    static inline void throw_nogpu() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }
+
+#else /* defined(HAVE_CUDA) */
+
+    static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support"); }
+
+#endif /* defined(HAVE_CUDA) */
+
+#endif /* __OPENCV_PRECOMP_H__ */

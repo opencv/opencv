@@ -4,9 +4,14 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/video/video.hpp"
 #include "opencv2/gpu/gpu.hpp"
-#include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/legacy/legacy.hpp"
 #include "performance.h"
+
+#include "opencv2/opencv_modules.hpp"
+#ifdef HAVE_OPENCV_GPUNONFREE
+#include "opencv2/gpunonfree/gpunonfree.hpp"
+#include "opencv2/nonfree/nonfree.hpp"
+#endif
 
 using namespace std;
 using namespace cv;
@@ -266,6 +271,7 @@ TEST(meanShift)
     }
 }
 
+#ifdef HAVE_OPENCV_GPUNONFREE
 
 TEST(SURF)
 {
@@ -293,6 +299,8 @@ TEST(SURF)
     d_surf(d_src, gpu::GpuMat(), d_keypoints, d_descriptors);
     GPU_OFF;
 }
+
+#endif
 
 
 TEST(FAST)

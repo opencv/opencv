@@ -323,47 +323,6 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, MOG2, testing::Combine(
     WHOLE_SUBMAT));
 
 //////////////////////////////////////////////////////
-// VIBE
-
-PARAM_TEST_CASE(VIBE, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
-{
-};
-
-GPU_TEST_P(VIBE, Accuracy)
-{
-    const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-    const cv::Size size = GET_PARAM(1);
-    const int type = GET_PARAM(2);
-    const bool useRoi = GET_PARAM(3);
-
-    const cv::Mat fullfg(size, CV_8UC1, cv::Scalar::all(255));
-
-    cv::Mat frame = randomMat(size, type, 0.0, 100);
-    cv::gpu::GpuMat d_frame = loadMat(frame, useRoi);
-
-    cv::gpu::VIBE_GPU vibe;
-    cv::gpu::GpuMat d_fgmask = createMat(size, CV_8UC1, useRoi);
-    vibe.initialize(d_frame);
-
-    for (int i = 0; i < 20; ++i)
-        vibe(d_frame, d_fgmask);
-
-    frame = randomMat(size, type, 160, 255);
-    d_frame = loadMat(frame, useRoi);
-    vibe(d_frame, d_fgmask);
-
-    // now fgmask should be entirely foreground
-    ASSERT_MAT_NEAR(fullfg, d_fgmask, 0);
-}
-
-INSTANTIATE_TEST_CASE_P(GPU_Video, VIBE, testing::Combine(
-    ALL_DEVICES,
-    DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4)),
-    WHOLE_SUBMAT));
-
-//////////////////////////////////////////////////////
 // GMG
 
 PARAM_TEST_CASE(GMG, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi)
