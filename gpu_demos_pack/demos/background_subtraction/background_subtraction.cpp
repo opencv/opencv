@@ -3,11 +3,15 @@
 #include <stdexcept>
 #include <vector>
 
+#include <opencv2/opencv_modules.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/gpu/gpu.hpp>
 #include <opencv2/video/video.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+#ifdef HAVE_OPENCV_GPUNONFREE
+    #include <opencv2/gpunonfree/gpunonfree.hpp>
+#endif
 
 #include "utility.hpp"
 
@@ -18,7 +22,9 @@ using namespace cv::gpu;
 enum Method
 {
     MOG,
+#ifdef HAVE_OPENCV_GPUNONFREE
     VIBE,
+#endif
     METHOD_MAX
 };
 
@@ -69,7 +75,9 @@ void App::runAppLogic()
     BackgroundSubtractorMOG mog_cpu;
     MOG_GPU mog_gpu;
 
+#ifdef HAVE_OPENCV_GPUNONFREE
     VIBE_GPU vibe_gpu;
+#endif
 
     Mat frame, fgmask, filterBuf, outImg;
     GpuMat d_frame, d_fgmask;
@@ -92,7 +100,9 @@ void App::runAppLogic()
             mog_cpu = BackgroundSubtractorMOG();
             mog_gpu.release();
 
+#ifdef HAVE_OPENCV_GPUNONFREE
             vibe_gpu.release();
+#endif
 
             sources_[curSource_]->reset();
 
@@ -116,12 +126,14 @@ void App::runAppLogic()
                 mog_cpu(frame, fgmask, 0.01);
             break;
         }
+#ifdef HAVE_OPENCV_GPUNONFREE
         case VIBE:
         {
             if (useGpu_)
                 vibe_gpu(d_frame, d_fgmask);
             break;
         }
+#endif
         default:
             ;
         }
@@ -184,7 +196,9 @@ void App::processAppKey(int key)
     switch (toupper(key & 0xff))
     {
     case 32 /*space*/:
+#ifdef HAVE_OPENCV_GPUNONFREE
         if (method_ != VIBE)
+#endif
         {
             useGpu_ = !useGpu_;
             reinitialize_ = true;
@@ -194,8 +208,10 @@ void App::processAppKey(int key)
 
     case 'M':
         method_ = static_cast<Method>((method_ + 1) % METHOD_MAX);
+#ifdef HAVE_OPENCV_GPUNONFREE
         if (method_ == VIBE)
             useGpu_ = true;
+#endif
         reinitialize_ = true;
         cout << "Switch method to " << method_str[method_] << endl;
         break;
