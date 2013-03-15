@@ -1,12 +1,10 @@
-# Will be modified later
 if(NOT HAVE_OPENCL)
   ocv_module_disable(ocl)
 endif()
 
 set(the_description "OpenCL-accelerated Computer Vision")
 ocv_add_module(ocl opencv_core opencv_imgproc opencv_features2d opencv_objdetect opencv_video opencv_nonfree)
-
-ocv_module_include_directories()
+ocv_module_include_directories(${OPENCL_INCLUDE_DIRS})
 
 file(GLOB CL_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels/*.cl")
 set(kernels_cpp "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp")
@@ -24,30 +22,10 @@ file(GLOB lib_int_hdrs "src/*.h*")
 source_group("Include"   FILES ${lib_hdrs})
 source_group("Src\\Host" FILES ${lib_srcs} ${lib_int_hdrs} ${kernels_cpp})
 
-if (HAVE_OPENCL)
-  set(ocl_link_libs ${OPENCL_LIBRARIES})
-  if(OPENCL_INCLUDE_DIR)
-    ocv_include_directories(${OPENCL_INCLUDE_DIR})
-  endif()
-  if (HAVE_CLAMDFFT)
-    set(ocl_link_libs ${ocl_link_libs} ${CLAMDFFT_LIBRARIES})
-    ocv_include_directories(${CLAMDFFT_INCLUDE_DIR})
-  endif()
-  if (HAVE_CLAMDBLAS)
-    set(ocl_link_libs ${ocl_link_libs} ${CLAMDBLAS_LIBRARIES})
-    ocv_include_directories(${CLAMDBLAS_INCLUDE_DIR})
-  endif()
-endif()
-
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
 
 ocv_set_module_sources(HEADERS ${lib_hdrs} SOURCES ${lib_int_hdrs} ${lib_srcs} ${kernels_cpp})
-ocv_create_module(${ocl_link_libs})
-
-install(FILES ${lib_hdrs}
-  DESTINATION include/opencv2/${name}
-  COMPONENT main)
-
+ocv_create_module(${OPENCL_LIBRARIES})
 ocv_add_precompiled_headers(${the_module})
 
 ################################################################################################################
