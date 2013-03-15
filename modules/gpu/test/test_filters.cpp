@@ -43,6 +43,8 @@
 
 #ifdef HAVE_CUDA
 
+using namespace cvtest;
+
 namespace
 {
     IMPLEMENT_PARAM_CLASS(KSize, cv::Size)

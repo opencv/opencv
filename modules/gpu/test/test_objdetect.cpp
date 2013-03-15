@@ -43,6 +43,8 @@
 
 #ifdef HAVE_CUDA
 
+using namespace cvtest;
+
 //#define DUMP
 
 struct HOG : testing::TestWithParam<cv::gpu::DeviceInfo>, cv::gpu::HOGDescriptor
