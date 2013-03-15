@@ -131,7 +131,7 @@ Destructor for ChannelFeatureBuilder.
 
 .. ocv:function:: softcascade::ChannelFeatureBuilder::~ChannelFeatureBuilder()
 
-.. ocv:pyfunction:: cv2.softcascade_ChannelFeatureBuilder_create() -> retval
+.. ocv:pyfunction:: cv2.softcascade_ChannelFeatureBuilder_create(featureType) -> retval
 
 
 softcascade::ChannelFeatureBuilder::operator()

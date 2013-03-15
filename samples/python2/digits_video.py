@@ -14,9 +14,9 @@ from common import mosaic
 from digits import *
 
 def main():
-    try: 
+    try:
         src = sys.argv[1]
-    except: 
+    except:
         src = 0
     cap = video.create_capture(src)
 
@@ -35,7 +35,7 @@ def main():
 
         bin = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 31, 10)
         bin = cv2.medianBlur(bin, 3)
-        contours, heirs = cv2.findContours( bin.copy(), cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+        _, contours, heirs = cv2.findContours( bin.copy(), cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
         try:
             heirs = heirs[0]
         except:
