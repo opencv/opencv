@@ -782,7 +782,7 @@ if(HAVE_CUDA)
   status("    Use fast math:"        CUDA_FAST_MATH THEN YES ELSE NO)
 endif()
 
-if(HAVE_OPENCL AND BUILD_opencv_ocl)
+if(HAVE_OPENCL)
   status("")
   status("  OpenCL")
   if(OPENCL_INCLUDE_DIR)
