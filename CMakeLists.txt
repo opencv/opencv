@@ -141,9 +141,9 @@ OCV_OPTION(WITH_V4L            "Include Video 4 Linux support"               ON 
 OCV_OPTION(WITH_VIDEOINPUT     "Build HighGUI with DirectShow support"       ON   IF WIN32 )
 OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF (NOT ANDROID AND NOT APPLE) )
 OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
-OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              OFF  IF (NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      OFF  IF (NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     OFF  IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              ON   IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      ON   IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON   IF (NOT ANDROID AND NOT IOS) )
 
 
 # OpenCV build components
@@ -795,13 +795,13 @@ if(HAVE_OPENCL AND BUILD_opencv_ocl)
   status("")
   status("  OpenCL")
   if(OPENCL_INCLUDE_DIR)
-    status("    Include:"            ${OPENCL_INCLUDE_DIR})
+    status("    Include path:"       ${OPENCL_INCLUDE_DIR})
   endif()
   if(OPENCL_LIBRARIES)
     status("    libraries:"          ${OPENCL_LIBRARIES})
   endif()
-  status("    Use AMDFFT:"           HAVE_CLAMDFFT  THEN YES ELSE NO)
-  status("    Use AMDBLAS:"          HAVE_CLAMDBLAS THEN YES ELSE NO)
+  status("    Use AMD FFT:"          HAVE_CLAMDFFT  THEN YES ELSE NO)
+  status("    Use AMD BLAS:"         HAVE_CLAMDBLAS THEN YES ELSE NO)
 endif()
 
 # ========================== python ==========================
