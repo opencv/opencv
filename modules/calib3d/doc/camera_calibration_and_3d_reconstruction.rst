@@ -715,7 +715,7 @@ Calculates an essential matrix from the corresponding points in two images.
 
     :param mask: Output array of N elements, every element of which is set to 0 for outliers and to 1 for the other points. The array is computed only in the RANSAC and LMedS methods.
 
-This function estimates essential matrix based on an implementation of five-point algorithm [Nister03]_ [SteweniusCFS]_.
+This function estimates essential matrix based on the five-point algorithm solver in [Nister03]_. [SteweniusCFS]_ is also a related.
 The epipolar geometry is described by the following equation:
 
 .. math::
