@@ -47,6 +47,7 @@
 #include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/color.hpp"
+#include "opencv2/gpu/device/saturate_cast.hpp"
 
 namespace cv { namespace gpu { namespace device
 {
@@ -379,6 +380,165 @@ namespace cv { namespace gpu { namespace device
     template void Bayer2BGR_16u_gpu<1>(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
     template void Bayer2BGR_16u_gpu<3>(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
     template void Bayer2BGR_16u_gpu<4>(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+
+    //////////////////////////////////////////////////////////////
+    // Bayer Demosaicing (Malvar, He, and Cutler)
+    //
+    // by Morgan McGuire, Williams College
+    // http://graphics.cs.williams.edu/papers/BayerJGT09/#shaders
+    //
+    // ported to CUDA
+
+    texture<uchar, cudaTextureType2D, cudaReadModeElementType> sourceTex(false, cudaFilterModePoint, cudaAddressModeClamp);
+
+    template <typename DstType>
+    __global__ void MHCdemosaic(PtrStepSz<DstType> dst, const int2 sourceOffset, const int2 firstRed)
+    {
+        const float   kAx = -1.0f / 8.0f,     kAy = -1.5f / 8.0f,     kAz =  0.5f / 8.0f    /*kAw = -1.0f / 8.0f*/;
+        const float   kBx =  2.0f / 8.0f,   /*kBy =  0.0f / 8.0f,*/ /*kBz =  0.0f / 8.0f,*/   kBw =  4.0f / 8.0f  ;
+        const float   kCx =  4.0f / 8.0f,     kCy =  6.0f / 8.0f,     kCz =  5.0f / 8.0f    /*kCw =  5.0f / 8.0f*/;
+        const float /*kDx =  0.0f / 8.0f,*/   kDy =  2.0f / 8.0f,     kDz = -1.0f / 8.0f    /*kDw = -1.0f / 8.0f*/;
+        const float   kEx = -1.0f / 8.0f,     kEy = -1.5f / 8.0f,   /*kEz = -1.0f / 8.0f,*/   kEw =  0.5f / 8.0f  ;
+        const float   kFx =  2.0f / 8.0f,   /*kFy =  0.0f / 8.0f,*/   kFz =  4.0f / 8.0f    /*kFw =  0.0f / 8.0f*/;
+
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x == 0 || x >= dst.cols - 1 || y == 0 || y >= dst.rows - 1)
+            return;
+
+        int2 center;
+        center.x = x + sourceOffset.x;
+        center.y = y + sourceOffset.y;
+
+        int4 xCoord;
+        xCoord.x = center.x - 2;
+        xCoord.y = center.x - 1;
+        xCoord.z = center.x + 1;
+        xCoord.w = center.x + 2;
+
+        int4 yCoord;
+        yCoord.x = center.y - 2;
+        yCoord.y = center.y - 1;
+        yCoord.z = center.y + 1;
+        yCoord.w = center.y + 2;
+
+        float C = tex2D(sourceTex, center.x, center.y); // ( 0, 0)
+
+        float4 Dvec;
+        Dvec.x = tex2D(sourceTex, xCoord.y, yCoord.y); // (-1,-1)
+        Dvec.y = tex2D(sourceTex, xCoord.y, yCoord.z); // (-1, 1)
+        Dvec.z = tex2D(sourceTex, xCoord.z, yCoord.y); // ( 1,-1)
+        Dvec.w = tex2D(sourceTex, xCoord.z, yCoord.z); // ( 1, 1)
+
+        float4 value;
+        value.x = tex2D(sourceTex, center.x, yCoord.x); // ( 0,-2) A0
+        value.y = tex2D(sourceTex, center.x, yCoord.y); // ( 0,-1) B0
+        value.z = tex2D(sourceTex, xCoord.x, center.y); // (-2, 0) E0
+        value.w = tex2D(sourceTex, xCoord.y, center.y); // (-1, 0) F0
+
+        // (A0 + A1), (B0 + B1), (E0 + E1), (F0 + F1)
+        value.x += tex2D(sourceTex, center.x, yCoord.w); // ( 0, 2) A1
+        value.y += tex2D(sourceTex, center.x, yCoord.z); // ( 0, 1) B1
+        value.z += tex2D(sourceTex, xCoord.w, center.y); // ( 2, 0) E1
+        value.w += tex2D(sourceTex, xCoord.z, center.y); // ( 1, 0) F1
+
+        float4 PATTERN;
+        PATTERN.x = kCx * C;
+        PATTERN.y = kCy * C;
+        PATTERN.z = kCz * C;
+        PATTERN.w = PATTERN.z;
+
+        float D = Dvec.x + Dvec.y + Dvec.z + Dvec.w;
+
+        // There are five filter patterns (identity, cross, checker,
+        // theta, phi). Precompute the terms from all of them and then
+        // use swizzles to assign to color channels.
+        //
+        // Channel Matches
+        // x cross (e.g., EE G)
+        // y checker (e.g., EE B)
+        // z theta (e.g., EO R)
+        // w phi (e.g., EO B)
+
+        #define A value.x  // A0 + A1
+        #define B value.y  // B0 + B1
+        #define E value.z  // E0 + E1
+        #define F value.w  // F0 + F1
+
+        float3 temp;
+
+        // PATTERN.yzw += (kD.yz * D).xyy;
+        temp.x = kDy * D;
+        temp.y = kDz * D;
+        PATTERN.y += temp.x;
+        PATTERN.z += temp.y;
+        PATTERN.w += temp.y;
+
+        // PATTERN += (kA.xyz * A).xyzx;
+        temp.x = kAx * A;
+        temp.y = kAy * A;
+        temp.z = kAz * A;
+        PATTERN.x += temp.x;
+        PATTERN.y += temp.y;
+        PATTERN.z += temp.z;
+        PATTERN.w += temp.x;
+
+        // PATTERN += (kE.xyw * E).xyxz;
+        temp.x = kEx * E;
+        temp.y = kEy * E;
+        temp.z = kEw * E;
+        PATTERN.x += temp.x;
+        PATTERN.y += temp.y;
+        PATTERN.z += temp.x;
+        PATTERN.w += temp.z;
+
+        // PATTERN.xw += kB.xw * B;
+        PATTERN.x += kBx * B;
+        PATTERN.w += kBw * B;
+
+        // PATTERN.xz += kF.xz * F;
+        PATTERN.x += kFx * F;
+        PATTERN.z += kFz * F;
+
+        // Determine which of four types of pixels we are on.
+        int2 alternate;
+        alternate.x = (x + firstRed.x) % 2;
+        alternate.y = (y + firstRed.y) % 2;
+
+        // in BGR sequence;
+        uchar3 pixelColor =
+            (alternate.y == 0) ?
+                ((alternate.x == 0) ?
+                    make_uchar3(saturate_cast<uchar>(PATTERN.y), saturate_cast<uchar>(PATTERN.x), saturate_cast<uchar>(C)) :
+                    make_uchar3(saturate_cast<uchar>(PATTERN.w), saturate_cast<uchar>(C), saturate_cast<uchar>(PATTERN.z))) :
+                ((alternate.x == 0) ?
+                    make_uchar3(saturate_cast<uchar>(PATTERN.z), saturate_cast<uchar>(C), saturate_cast<uchar>(PATTERN.w)) :
+                    make_uchar3(saturate_cast<uchar>(C), saturate_cast<uchar>(PATTERN.x), saturate_cast<uchar>(PATTERN.y)));
+
+        dst(y, x) = toDst<DstType>(pixelColor);
+    }
+
+    template <int cn>
+    void MHCdemosaic(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream)
+    {
+        typedef typename TypeVec<uchar, cn>::vec_type dst_t;
+
+        const dim3 block(32, 8);
+        const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
+
+        bindTexture(&sourceTex, src);
+
+        MHCdemosaic<dst_t><<<grid, block, 0, stream>>>((PtrStepSz<dst_t>)dst, sourceOffset, firstRed);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+
+    template void MHCdemosaic<1>(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream);
+    template void MHCdemosaic<3>(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream);
+    template void MHCdemosaic<4>(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream);
 }}}
 
 #endif /* CUDA_DISABLER */

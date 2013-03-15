@@ -627,6 +627,26 @@ CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& 
 //! converts image from one color space to another
 CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0, Stream& stream = Stream::Null());
 
+enum
+{
+    // Bayer Demosaicing (Malvar, He, and Cutler)
+    COLOR_BayerBG2BGR_MHT = 256,
+    COLOR_BayerGB2BGR_MHT = 257,
+    COLOR_BayerRG2BGR_MHT = 258,
+    COLOR_BayerGR2BGR_MHT = 259,
+
+    COLOR_BayerBG2RGB_MHT = COLOR_BayerRG2BGR_MHT,
+    COLOR_BayerGB2RGB_MHT = COLOR_BayerGR2BGR_MHT,
+    COLOR_BayerRG2RGB_MHT = COLOR_BayerBG2BGR_MHT,
+    COLOR_BayerGR2RGB_MHT = COLOR_BayerGB2BGR_MHT,
+
+    COLOR_BayerBG2GRAY_MHT = 260,
+    COLOR_BayerGB2GRAY_MHT = 261,
+    COLOR_BayerRG2GRAY_MHT = 262,
+    COLOR_BayerGR2GRAY_MHT = 263
+};
+CV_EXPORTS void demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn = -1, Stream& stream = Stream::Null());
+
 //! swap channels
 //! dstOrder - Integer array describing how channel values are permutated. The n-th entry
 //!            of the array contains the number of the channel that is stored in the n-th channel of
