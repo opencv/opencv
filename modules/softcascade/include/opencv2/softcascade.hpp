@@ -49,18 +49,21 @@
 namespace cv { namespace softcascade {
 
 // Representation of detectors result.
+// We assume that image is less then 2^16x2^16.
 struct CV_EXPORTS Detection
 {
-    // Default object type.
-    enum {PEDESTRIAN = 1};
-
     // Creates Detection from an object bounding box and confidence.
     // Param b is a bounding box
     // Param c is a confidence that object belongs to class k
     // Param k is an object class
-    Detection(const cv::Rect& b, const float c, int k = PEDESTRIAN) : bb(b), confidence(c), kind(k) {}
+    Detection(const cv::Rect& b, const float c, int k = PEDESTRIAN);
+    cv::Rect bb() const;
+    enum {PEDESTRIAN = 1};
 
-    cv::Rect bb;
+    ushort x;
+    ushort y;
+    ushort w;
+    ushort h;
     float confidence;
     int kind;
 };
@@ -246,19 +249,6 @@ protected:
 class CV_EXPORTS SCascade : public cv::Algorithm
 {
 public:
-
-    // Representation of detectors result.
-    struct CV_EXPORTS Detection
-    {
-        ushort x;
-        ushort y;
-        ushort w;
-        ushort h;
-        float confidence;
-        int kind;
-
-        enum {PEDESTRIAN = 0};
-    };
 
     enum { NO_REJECT = 1, DOLLAR = 2, /*PASCAL = 4,*/ DEFAULT = NO_REJECT, NMS_MASK = 0xF};
 

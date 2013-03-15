@@ -473,7 +473,7 @@ void DollarNMS(dvector& objects)
         {
             const Detection &b = *next;
 
-            const float ovl =  overlap(a.bb, b.bb) / std::min(a.bb.area(), b.bb.area());
+            const float ovl =  overlap(a.bb(), b.bb()) / std::min(a.bb().area(), b.bb().area());
 
             if (ovl > DollarThreshold)
                 next = objects.erase(next);
@@ -588,7 +588,7 @@ void Detector::detect(InputArray _image, InputArray _rois,  OutputArray _rects, 
     int i = 0;
     for (IDet it = objects.begin(); it != objects.end(); ++it, ++i)
     {
-        rectPtr[i] = (*it).bb;
+        rectPtr[i] = (*it).bb();
         confPtr[i] = (*it).confidence;
     }
 }
