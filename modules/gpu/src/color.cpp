@@ -48,6 +48,7 @@ using namespace cv::gpu;
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 void cv::gpu::cvtColor(const GpuMat&, GpuMat&, int, int, Stream&) { throw_nogpu(); }
+void cv::gpu::demosaicing(const GpuMat&, GpuMat&, int, int, Stream&) { throw_nogpu(); }
 void cv::gpu::swapChannels(GpuMat&, const int[], Stream&) { throw_nogpu(); }
 void cv::gpu::gammaCorrection(const GpuMat&, GpuMat&, bool, Stream&) { throw_nogpu(); }
 
@@ -62,6 +63,9 @@ namespace cv { namespace gpu {
         void Bayer2BGR_8u_gpu(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
         template <int cn>
         void Bayer2BGR_16u_gpu(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+
+        template <int cn>
+        void MHCdemosaic(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream);
     }
 }}
 
@@ -1620,26 +1624,23 @@ namespace
 
         funcs[src.depth()][dcn - 1](src, dst, blue_last, start_with_green, StreamAccessor::getStream(stream));
     }
-
     void bayerBG_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         bayer_to_bgr(src, dst, dcn, false, false, stream);
     }
-
     void bayerGB_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         bayer_to_bgr(src, dst, dcn, false, true, stream);
     }
-
     void bayerRG_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         bayer_to_bgr(src, dst, dcn, true, false, stream);
     }
-
     void bayerGR_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         bayer_to_bgr(src, dst, dcn, true, true, stream);
     }
+
     void bayer_to_gray(const GpuMat& src, GpuMat& dst, bool blue_last, bool start_with_green, Stream& stream)
     {
         typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
@@ -1657,22 +1658,18 @@ namespace
 
         funcs[src.depth()](src, dst, blue_last, start_with_green, StreamAccessor::getStream(stream));
     }
-
     void bayerBG_to_gray(const GpuMat& src, GpuMat& dst, int /*dcn*/, Stream& stream)
     {
         bayer_to_gray(src, dst, false, false, stream);
     }
-
     void bayerGB_to_gray(const GpuMat& src, GpuMat& dst, int /*dcn*/, Stream& stream)
     {
         bayer_to_gray(src, dst, false, true, stream);
     }
-
     void bayerRG_to_gray(const GpuMat& src, GpuMat& dst, int /*dcn*/, Stream& stream)
     {
         bayer_to_gray(src, dst, true, false, stream);
     }
-
     void bayerGR_to_gray(const GpuMat& src, GpuMat& dst, int /*dcn*/, Stream& stream)
     {
         bayer_to_gray(src, dst, true, true, stream);
@@ -1860,6 +1857,74 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
         CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
 
     func(src, dst, dcn, stream);
+}
+
+void cv::gpu::demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream& stream)
+{
+    const int depth = src.depth();
+
+    CV_Assert( src.channels() == 1 );
+
+    switch (code)
+    {
+    case CV_BayerBG2GRAY: case CV_BayerGB2GRAY: case CV_BayerRG2GRAY: case CV_BayerGR2GRAY:
+        bayer_to_gray(src, dst, code == CV_BayerBG2GRAY || code == CV_BayerGB2GRAY, code == CV_BayerGB2GRAY || code == CV_BayerGR2GRAY, stream);
+        break;
+
+    case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
+        bayer_to_bgr(src, dst, dcn, code == CV_BayerBG2BGR || code == CV_BayerGB2BGR, code == CV_BayerGB2BGR || code == CV_BayerGR2BGR, stream);
+        break;
+
+    case COLOR_BayerBG2BGR_MHT: case COLOR_BayerGB2BGR_MHT: case COLOR_BayerRG2BGR_MHT: case COLOR_BayerGR2BGR_MHT:
+    {
+        if (dcn <= 0)
+            dcn = 3;
+
+        CV_Assert( depth == CV_8U );
+        CV_Assert( dcn == 3 || dcn == 4 );
+
+        dst.create(src.size(), CV_MAKETYPE(depth, dcn));
+        dst.setTo(Scalar::all(0));
+
+        Size wholeSize;
+        Point ofs;
+        src.locateROI(wholeSize, ofs);
+        PtrStepSzb srcWhole(wholeSize.height, wholeSize.width, src.datastart, src.step);
+
+        const int2 firstRed = make_int2(code == COLOR_BayerRG2BGR_MHT || code == COLOR_BayerGB2BGR_MHT ? 0 : 1,
+                                        code == COLOR_BayerRG2BGR_MHT || code == COLOR_BayerGR2BGR_MHT ? 0 : 1);
+
+        if (dcn == 3)
+            device::MHCdemosaic<3>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
+        else
+            device::MHCdemosaic<4>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
+
+        break;
+    }
+
+    case COLOR_BayerBG2GRAY_MHT: case COLOR_BayerGB2GRAY_MHT: case COLOR_BayerRG2GRAY_MHT: case COLOR_BayerGR2GRAY_MHT:
+    {
+        CV_Assert( depth == CV_8U );
+
+        dst.create(src.size(), CV_MAKETYPE(depth, 1));
+        dst.setTo(Scalar::all(0));
+
+        Size wholeSize;
+        Point ofs;
+        src.locateROI(wholeSize, ofs);
+        PtrStepSzb srcWhole(wholeSize.height, wholeSize.width, src.datastart, src.step);
+
+        const int2 firstRed = make_int2(code == COLOR_BayerRG2BGR_MHT || code == COLOR_BayerGB2BGR_MHT ? 0 : 1,
+                                        code == COLOR_BayerRG2BGR_MHT || code == COLOR_BayerGR2BGR_MHT ? 0 : 1);
+
+        device::MHCdemosaic<1>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
+
+        break;
+    }
+
+    default:
+        CV_Error( CV_StsBadFlag, "Unknown / unsupported color conversion code" );
+    }
 }
 
 void cv::gpu::swapChannels(GpuMat& image, const int dstOrder[4], Stream& s)

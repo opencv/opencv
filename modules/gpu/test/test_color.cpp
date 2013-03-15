@@ -2289,6 +2289,175 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CvtColor, testing::Combine(
     WHOLE_SUBMAT));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
+// Demosaicing
+
+struct Demosaicing : testing::TestWithParam<cv::gpu::DeviceInfo>
+{
+    cv::gpu::DeviceInfo devInfo;
+
+    virtual void SetUp()
+    {
+        devInfo = GetParam();
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+
+    static void mosaic(const cv::Mat_<cv::Vec3b>& src, cv::Mat_<uchar>& dst, cv::Point firstRed)
+    {
+        dst.create(src.size());
+
+        for (int y = 0; y < src.rows; ++y)
+        {
+            for (int x = 0; x < src.cols; ++x)
+            {
+                cv::Vec3b pix = src(y, x);
+
+                cv::Point alternate;
+                alternate.x = (x + firstRed.x) % 2;
+                alternate.y = (y + firstRed.y) % 2;
+
+                if (alternate.y == 0)
+                {
+                    if (alternate.x == 0)
+                    {
+                        // RG
+                        // GB
+                        dst(y, x) = pix[2];
+                    }
+                    else
+                    {
+                        // GR
+                        // BG
+                        dst(y, x) = pix[1];
+                    }
+                }
+                else
+                {
+                    if (alternate.x == 0)
+                    {
+                        // GB
+                        // RG
+                        dst(y, x) = pix[1];
+                    }
+                    else
+                    {
+                        // BG
+                        // GR
+                        dst(y, x) = pix[0];
+                    }
+                }
+            }
+        }
+    }
+};
+
+GPU_TEST_P(Demosaicing, BayerBG2BGR)
+{
+    cv::Mat img = readImage("stereobm/aloe-L.png");
+
+    cv::Mat_<uchar> src;
+    mosaic(img, src, cv::Point(1, 1));
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::demosaicing(loadMat(src), dst, cv::COLOR_BayerBG2BGR);
+
+    EXPECT_MAT_SIMILAR(img, dst, 2e-2);
+}
+
+GPU_TEST_P(Demosaicing, BayerGB2BGR)
+{
+    cv::Mat img = readImage("stereobm/aloe-L.png");
+
+    cv::Mat_<uchar> src;
+    mosaic(img, src, cv::Point(0, 1));
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::demosaicing(loadMat(src), dst, cv::COLOR_BayerGB2BGR);
+
+    EXPECT_MAT_SIMILAR(img, dst, 2e-2);
+}
+
+GPU_TEST_P(Demosaicing, BayerRG2BGR)
+{
+    cv::Mat img = readImage("stereobm/aloe-L.png");
+
+    cv::Mat_<uchar> src;
+    mosaic(img, src, cv::Point(0, 0));
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::demosaicing(loadMat(src), dst, cv::COLOR_BayerRG2BGR);
+
+    EXPECT_MAT_SIMILAR(img, dst, 2e-2);
+}
+
+GPU_TEST_P(Demosaicing, BayerGR2BGR)
+{
+    cv::Mat img = readImage("stereobm/aloe-L.png");
+
+    cv::Mat_<uchar> src;
+    mosaic(img, src, cv::Point(1, 0));
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::demosaicing(loadMat(src), dst, cv::COLOR_BayerGR2BGR);
+
+    EXPECT_MAT_SIMILAR(img, dst, 2e-2);
+}
+
+GPU_TEST_P(Demosaicing, BayerBG2BGR_MHT)
+{
+    cv::Mat img = readImage("stereobm/aloe-L.png");
+
+    cv::Mat_<uchar> src;
+    mosaic(img, src, cv::Point(1, 1));
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::demosaicing(loadMat(src), dst, cv::gpu::COLOR_BayerBG2BGR_MHT);
+
+    EXPECT_MAT_SIMILAR(img, dst, 5e-3);
+}
+
+GPU_TEST_P(Demosaicing, BayerGB2BGR_MHT)
+{
+    cv::Mat img = readImage("stereobm/aloe-L.png");
+
+    cv::Mat_<uchar> src;
+    mosaic(img, src, cv::Point(0, 1));
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::demosaicing(loadMat(src), dst, cv::gpu::COLOR_BayerGB2BGR_MHT);
+
+    EXPECT_MAT_SIMILAR(img, dst, 5e-3);
+}
+
+GPU_TEST_P(Demosaicing, BayerRG2BGR_MHT)
+{
+    cv::Mat img = readImage("stereobm/aloe-L.png");
+
+    cv::Mat_<uchar> src;
+    mosaic(img, src, cv::Point(0, 0));
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::demosaicing(loadMat(src), dst, cv::gpu::COLOR_BayerRG2BGR_MHT);
+
+    EXPECT_MAT_SIMILAR(img, dst, 5e-3);
+}
+
+GPU_TEST_P(Demosaicing, BayerGR2BGR_MHT)
+{
+    cv::Mat img = readImage("stereobm/aloe-L.png");
+
+    cv::Mat_<uchar> src;
+    mosaic(img, src, cv::Point(1, 0));
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::demosaicing(loadMat(src), dst, cv::gpu::COLOR_BayerGR2BGR_MHT);
+
+    EXPECT_MAT_SIMILAR(img, dst, 5e-3);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Demosaicing, ALL_DEVICES);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 // swapChannels
 
 PARAM_TEST_CASE(SwapChannels, cv::gpu::DeviceInfo, cv::Size, UseRoi)
