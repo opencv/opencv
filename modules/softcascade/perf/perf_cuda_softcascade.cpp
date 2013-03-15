@@ -1,5 +1,7 @@
 #include "perf_precomp.hpp"
 
+using std::tr1::get;
+
 #define SC_PERF_TEST_P(fixture, name, params)  \
     class fixture##_##name : public fixture {\
      public:\
@@ -25,8 +27,8 @@ void fixture##_##name::__cpu() { FAIL() << "No such CPU implementation analogy";
 namespace {
     struct DetectionLess
     {
-        bool operator()(const cv::gpu::SCascade::Detection& a,
-            const cv::gpu::SCascade::Detection& b) const
+        bool operator()(const cv::softcascade::SCascade::Detection& a,
+            const cv::softcascade::SCascade::Detection& b) const
         {
             if (a.x != b.x)      return a.x < b.x;
             else if (a.y != b.y) return a.y < b.y;
@@ -39,7 +41,7 @@ namespace {
     {
         cv::Mat detections(objects);
 
-        typedef cv::gpu::SCascade::Detection Detection;
+        typedef cv::softcascade::SCascade::Detection Detection;
         Detection* begin = (Detection*)(detections.ptr<char>(0));
         Detection* end = (Detection*)(detections.ptr<char>(0) + detections.cols);
         std::sort(begin, end, DetectionLess());
@@ -60,18 +62,18 @@ SC_PERF_TEST_P(SCascadeTest, detect,
 
 RUN_GPU(SCascadeTest, detect)
 {
-    cv::Mat cpu = readImage (GET_PARAM(1));
+    cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));;
     ASSERT_FALSE(cpu.empty());
     cv::gpu::GpuMat colored(cpu);
 
-    cv::gpu::SCascade cascade;
+    cv::softcascade::SCascade cascade;
 
-    cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
+    cv::FileStorage fs(getDataPath(get<0>(GetParam())), cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::softcascade::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(1);
 
     cascade.detect(colored, rois, objectBoxes);
@@ -118,13 +120,13 @@ SC_PERF_TEST_P(SCascadeTestRoi, detectInRoi,
 
 RUN_GPU(SCascadeTestRoi, detectInRoi)
 {
-    cv::Mat cpu = readImage (GET_PARAM(1));
+    cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(cpu.empty());
     cv::gpu::GpuMat colored(cpu);
 
-    cv::gpu::SCascade cascade;
+    cv::softcascade::SCascade cascade;
 
-    cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
+    cv::FileStorage fs(getDataPath(get<0>(GetParam())), cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
@@ -132,7 +134,7 @@ RUN_GPU(SCascadeTestRoi, detectInRoi)
     cv::gpu::GpuMat objectBoxes(1, 16384 * 20, CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(0);
 
-    int nroi = GET_PARAM(2);
+    int nroi = get<2>(GetParam());
     cv::RNG rng;
     for (int i = 0; i < nroi; ++i)
     {
@@ -163,13 +165,13 @@ SC_PERF_TEST_P(SCascadeTestRoi, detectEachRoi,
 
 RUN_GPU(SCascadeTestRoi, detectEachRoi)
 {
-    cv::Mat cpu = readImage (GET_PARAM(1));
+    cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(cpu.empty());
     cv::gpu::GpuMat colored(cpu);
 
-    cv::gpu::SCascade cascade;
+    cv::softcascade::SCascade cascade;
 
-    cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
+    cv::FileStorage fs(getDataPath(get<0>(GetParam())), cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
@@ -177,7 +179,7 @@ RUN_GPU(SCascadeTestRoi, detectEachRoi)
     cv::gpu::GpuMat objectBoxes(1, 16384 * 20, CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(0);
 
-    int idx = GET_PARAM(2);
+    int idx = get<2>(GetParam());
     cv::Rect r = getFromTable(idx);
     cv::gpu::GpuMat sub(rois, r);
     sub.setTo(1);
@@ -202,18 +204,18 @@ SC_PERF_TEST_P(SCascadeTest, detectStream,
 
 RUN_GPU(SCascadeTest, detectStream)
 {
-    cv::Mat cpu = readImage (GET_PARAM(1));
+    cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(cpu.empty());
     cv::gpu::GpuMat colored(cpu);
 
-    cv::gpu::SCascade cascade;
+    cv::softcascade::SCascade cascade;
 
-    cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
+    cv::FileStorage fs(getDataPath(get<0>(GetParam())), cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::softcascade::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(1);
 
     cv::gpu::Stream s;

@@ -41,11 +41,13 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/gpumat.hpp"
 
 using namespace cv;
 using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
+#define throw_nogpu() CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
 
 cv::gpu::Stream::Stream() { throw_nogpu(); }
 cv::gpu::Stream::~Stream() {}
@@ -70,7 +72,7 @@ void cv::gpu::Stream::release() { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-#include "opencv2/gpu/stream_accessor.hpp"
+#include "opencv2/core/stream_accessor.hpp"
 
 namespace cv { namespace gpu
 {

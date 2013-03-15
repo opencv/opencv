@@ -106,7 +106,7 @@
     #endif
 
     #include "internal_shared.hpp"
-    #include "opencv2/gpu/stream_accessor.hpp"
+    #include "opencv2/core/stream_accessor.hpp"
 
     #include "nvidia/core/NCV.hpp"
     #include "nvidia/NPP_staging/NPP_staging.hpp"

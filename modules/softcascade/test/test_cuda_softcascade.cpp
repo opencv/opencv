@@ -41,10 +41,11 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/core/gpumat.hpp"
+
 
 #ifdef HAVE_CUDA
-
-using cv::gpu::GpuMat;
+using std::tr1::get;
 
 // show detection results on input image with cv::imshow
 //#define SHOW_DETECTIONS
@@ -59,7 +60,7 @@ using cv::gpu::GpuMat;
 
 static std::string path(std::string relative)
 {
-    return cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/" + relative;
+    return cvtest::TS::ptr()->get_data_path() + "cascadeandhog/" + relative;
 }
 
 TEST(SCascadeTest, readCascade)
@@ -67,7 +68,7 @@ TEST(SCascadeTest, readCascade)
     std::string xml = path("cascades/inria_caltech-17.01.2013.xml");
     cv::FileStorage fs(xml, cv::FileStorage::READ);
 
-    cv::gpu::SCascade cascade;
+    cv::softcascade::SCascade cascade;
 
     ASSERT_TRUE(fs.isOpened());
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
@@ -75,7 +76,7 @@ TEST(SCascadeTest, readCascade)
 
 namespace
 {
-    typedef cv::gpu::SCascade::Detection Detection;
+    typedef cv::softcascade::SCascade::Detection Detection;
 
     cv::Rect getFromTable(int idx)
     {
@@ -96,7 +97,6 @@ namespace
 
         return rois[idx];
     }
-
 
     void print(std::ostream &out, const Detection& d)
     {
@@ -156,36 +156,36 @@ namespace
 #endif
 }
 
-PARAM_TEST_CASE(SCascadeTestRoi, cv::gpu::DeviceInfo, std::string, std::string, int)
+class SCascadeTestRoi : public ::testing::TestWithParam<std::tr1::tuple<cv::gpu::DeviceInfo, std::string, std::string, int> >
 {
     virtual void SetUp()
     {
-        cv::gpu::setDevice(GET_PARAM(0).deviceID());
+        cv::gpu::setDevice(get<0>(GetParam()).deviceID());
     }
 };
 
-GPU_TEST_P(SCascadeTestRoi, Detect)
+TEST_P(SCascadeTestRoi, Detect)
 {
-    cv::Mat coloredCpu = cv::imread(path(GET_PARAM(2)));
+    cv::Mat coloredCpu = cv::imread(path(get<2>(GetParam())));
     ASSERT_FALSE(coloredCpu.empty());
 
-    cv::gpu::SCascade cascade;
+    cv::softcascade::SCascade cascade;
 
-    cv::FileStorage fs(path(GET_PARAM(1)), cv::FileStorage::READ);
+    cv::FileStorage fs(path(get<1>(GetParam())), cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    GpuMat colored(coloredCpu), objectBoxes(1, 16384, CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::gpu::GpuMat colored(coloredCpu), objectBoxes(1, 16384, CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(0);
 
-    int nroi = GET_PARAM(3);
+    int nroi = get<3>(GetParam());
     cv::Mat result(coloredCpu);
     cv::RNG rng;
     for (int i = 0; i < nroi; ++i)
     {
         cv::Rect r = getFromTable(rng(10));
-        GpuMat sub(rois, r);
+        cv::gpu::GpuMat sub(rois, r);
         sub.setTo(1);
         cv::rectangle(result, r, cv::Scalar(0, 0, 255, 255), 1);
     }
@@ -194,7 +194,7 @@ GPU_TEST_P(SCascadeTestRoi, Detect)
     cascade.detect(colored, rois, objectBoxes);
 
     cv::Mat dt(objectBoxes);
-    typedef cv::gpu::SCascade::Detection Detection;
+    typedef cv::softcascade::SCascade::Detection Detection;
 
     Detection* dts = ((Detection*)dt.data) + 1;
     int* count = dt.ptr<int>(0);
@@ -211,14 +211,12 @@ GPU_TEST_P(SCascadeTestRoi, Detect)
     SHOW(result);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_SoftCascade, SCascadeTestRoi, testing::Combine(
+INSTANTIATE_TEST_CASE_P(cuda_accelerated, SCascadeTestRoi, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("cascades/inria_caltech-17.01.2013.xml"),
                     std::string("cascades/sc_cvpr_2012_to_opencv_new_format.xml")),
     testing::Values(std::string("images/image_00000000_0.png")),
     testing::Range(0, 5)));
-
-////////////////////////////////////////
 
 namespace {
 
@@ -232,23 +230,24 @@ struct Fixture
 };
 }
 
-PARAM_TEST_CASE(SCascadeTestAll, cv::gpu::DeviceInfo, Fixture)
+typedef std::tr1::tuple<cv::gpu::DeviceInfo, Fixture> SCascadeTestAllFixture;
+class SCascadeTestAll : public ::testing::TestWithParam<SCascadeTestAllFixture>
 {
-
+protected:
     std::string xml;
     int expected;
 
     virtual void SetUp()
     {
-        cv::gpu::setDevice(GET_PARAM(0).deviceID());
-        xml = path(GET_PARAM(1).path);
-        expected = GET_PARAM(1).expected;
+        cv::gpu::setDevice(get<0>(GetParam()).deviceID());
+        xml = path(get<1>(GetParam()).path);
+        expected = get<1>(GetParam()).expected;
     }
 };
 
-GPU_TEST_P(SCascadeTestAll, detect)
+TEST_P(SCascadeTestAll, detect)
 {
-    cv::gpu::SCascade cascade;
+    cv::softcascade::SCascade cascade;
 
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
@@ -258,12 +257,12 @@ GPU_TEST_P(SCascadeTestAll, detect)
     cv::Mat coloredCpu = cv::imread(path("images/image_00000000_0.png"));
     ASSERT_FALSE(coloredCpu.empty());
 
-    GpuMat colored(coloredCpu), objectBoxes, rois(colored.size(), CV_8UC1);
+    cv::gpu::GpuMat colored(coloredCpu), objectBoxes, rois(colored.size(), CV_8UC1);
     rois.setTo(1);
 
     cascade.detect(colored, rois, objectBoxes);
 
-    typedef cv::gpu::SCascade::Detection Detection;
+    typedef cv::softcascade::SCascade::Detection Detection;
     cv::Mat dt(objectBoxes);
 
 
@@ -283,9 +282,9 @@ GPU_TEST_P(SCascadeTestAll, detect)
     ASSERT_EQ(*count, expected);
 }
 
-GPU_TEST_P(SCascadeTestAll, detectStream)
+TEST_P(SCascadeTestAll, detectStream)
 {
-    cv::gpu::SCascade cascade;
+    cv::softcascade::SCascade cascade;
 
     cv::FileStorage fs(xml, cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
@@ -295,7 +294,7 @@ GPU_TEST_P(SCascadeTestAll, detectStream)
     cv::Mat coloredCpu = cv::imread(path("images/image_00000000_0.png"));
     ASSERT_FALSE(coloredCpu.empty());
 
-    GpuMat colored(coloredCpu), objectBoxes(1, 100000, CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::gpu::GpuMat colored(coloredCpu), objectBoxes(1, 100000, CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(cv::Scalar::all(1));
 
     cv::gpu::Stream s;
@@ -304,13 +303,13 @@ GPU_TEST_P(SCascadeTestAll, detectStream)
     cascade.detect(colored, rois, objectBoxes, s);
     s.waitForCompletion();
 
-    typedef cv::gpu::SCascade::Detection Detection;
+    typedef cv::softcascade::SCascade::Detection Detection;
     cv::Mat detections(objectBoxes);
     int a = *(detections.ptr<int>(0));
     ASSERT_EQ(a, expected);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_SoftCascade, SCascadeTestAll, testing::Combine( ALL_DEVICES,
+INSTANTIATE_TEST_CASE_P(cuda_accelerated, SCascadeTestAll, testing::Combine( ALL_DEVICES,
                     testing::Values(Fixture("cascades/inria_caltech-17.01.2013.xml", 7),
                                     Fixture("cascades/sc_cvpr_2012_to_opencv_new_format.xml", 1291))));
 

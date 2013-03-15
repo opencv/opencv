@@ -7,11 +7,10 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                        Intel License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2013, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -22,9 +21,9 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and / or other materials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
-//   * The name of the copyright holders may not be used to endorse or promote products
+//   * The name of Intel Corporation may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -40,60 +39,71 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "test_precomp.hpp"
 
-#ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
-#endif
+#ifdef HAVE_CUDA
 
-#include "opencv2/softcascade.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/core/core_c.h"
-#include "opencv2/core/internal.hpp"
-#include "opencv2/ml.hpp"
 
-namespace cv { namespace softcascade { namespace internal
+using namespace std;
+using namespace cv;
+using namespace cv::gpu;
+using namespace cvtest;
+using namespace testing;
+using namespace testing::internal;
+
+//////////////////////////////////////////////////////////////////////
+// Gpu devices
+
+bool supportFeature(const DeviceInfo& info, FeatureSet feature)
 {
-
-namespace rnd {
-
-typedef cv::RNG_MT19937 engine;
-
-template<typename T>
-struct uniform_int
-{
-    uniform_int(const int _min, const int _max) : min(_min), max(_max) {}
-    T operator() (engine& eng, const int bound) const
-    {
-        return (T)eng.uniform(min, bound);
-    }
-
-    T operator() (engine& eng) const
-    {
-        return (T)eng.uniform(min, max);
-    }
-
-private:
-    int min;
-    int max;
-};
-
+    return TargetArchs::builtWith(feature) && info.supports(feature);
 }
 
-struct Random
+DeviceManager& DeviceManager::instance()
 {
-    typedef rnd::engine engine;
-    typedef uint64 seed_type;
-    typedef rnd::uniform_int<int> uniform;
-};
+    static DeviceManager obj;
+    return obj;
+}
 
-}}}
+void DeviceManager::load(int i)
+{
+    devices_.clear();
+    devices_.reserve(1);
 
-#define FEATURE_RECT_SEED      88543422U
-#define INDEX_ENGINE_SEED      76422434U
-#define DCHANNELS_SEED         314152314U
-#define DX_DY_SEED             65633343U
+    std::ostringstream msg;
 
-#endif
+    if (i < 0 || i >= getCudaEnabledDeviceCount())
+    {
+        msg << "Incorrect device number - " << i;
+        CV_Error(CV_StsBadArg, msg.str());
+    }
+
+    DeviceInfo info(i);
+
+    if (!info.isCompatible())
+    {
+        msg << "Device " << i << " [" << info.name() << "] is NOT compatible with current GPU module build";
+        CV_Error(CV_StsBadArg, msg.str());
+    }
+
+    devices_.push_back(info);
+}
+
+void DeviceManager::loadAll()
+{
+    int deviceCount = getCudaEnabledDeviceCount();
+
+    devices_.clear();
+    devices_.reserve(deviceCount);
+
+    for (int i = 0; i < deviceCount; ++i)
+    {
+        DeviceInfo info(i);
+        if (info.isCompatible())
+        {
+            devices_.push_back(info);
+        }
+    }
+}
+
+#endif // HAVE_CUDA
