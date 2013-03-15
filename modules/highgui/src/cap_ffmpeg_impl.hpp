@@ -45,6 +45,8 @@
 #include <algorithm>
 #include <limits>
 
+#define CALC_FFMPEG_VERSION(a,b,c) ( a<<16 | b<<8 | c )
+
 #if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4244 4510 4512 4610 )
 #endif
@@ -61,9 +63,12 @@ extern "C" {
 
 #include <libavutil/mathematics.h>
 
+#if LIBAVUTIL_BUILD > CALC_FFMPEG_VERSION(51,11,0)
+  #include <libavutil/opt.h>
+#endif
+
 #ifdef WIN32
   #define HAVE_FFMPEG_SWSCALE 1
-  #include <libavutil/opt.h>
   #include <libavcodec/avcodec.h>
   #include <libswscale/swscale.h>
 #else
@@ -124,7 +129,6 @@ extern "C" {
 #define PIX_FMT_RGBA32 PIX_FMT_RGB32
 #endif
 
-#define CALC_FFMPEG_VERSION(a,b,c) ( a<<16 | b<<8 | c )
 
 #if defined WIN32 || defined _WIN32
     #include <windows.h>
