@@ -43,13 +43,12 @@
 //
 //M*/
 
+#include "test_precomp.hpp"
 
-#include "precomp.hpp"
-#ifdef HAVE_OPENCL
-
-extern std::string workdir;
+#ifdef HAVE_OPENCV_OCL
 
 using namespace std;
+using std::tr1::get;
 
 static bool keyPointsEquals(const cv::KeyPoint& p1, const cv::KeyPoint& p2)
 {
@@ -73,22 +72,12 @@ static bool keyPointsEquals(const cv::KeyPoint& p1, const cv::KeyPoint& p2)
     return false;
 }
 
-
-struct KeyPointLess : std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
-{
-    bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
-    {
-        return kp1.pt.y < kp2.pt.y || (kp1.pt.y == kp2.pt.y && kp1.pt.x < kp2.pt.x);
-    }
-};
-
-
 #define ASSERT_KEYPOINTS_EQ(gold, actual) EXPECT_PRED_FORMAT2(assertKeyPointsEquals, gold, actual);
 
 static int getMatchedPointsCount(std::vector<cv::KeyPoint>& gold, std::vector<cv::KeyPoint>& actual)
 {
-    std::sort(actual.begin(), actual.end(), KeyPointLess());
-    std::sort(gold.begin(), gold.end(), KeyPointLess());
+    std::sort(actual.begin(), actual.end(), perf::comparators::KeypointGreater());
+    std::sort(gold.begin(), gold.end(), perf::comparators::KeypointGreater());
 
     int validCount = 0;
 
@@ -122,13 +111,29 @@ static int getMatchedPointsCount(const std::vector<cv::KeyPoint>& keypoints1, co
     return validCount;
 }
 
-IMPLEMENT_PARAM_CLASS(SURF_HessianThreshold, double)
-IMPLEMENT_PARAM_CLASS(SURF_Octaves, int)
-IMPLEMENT_PARAM_CLASS(SURF_OctaveLayers, int)
-IMPLEMENT_PARAM_CLASS(SURF_Extended, bool)
-IMPLEMENT_PARAM_CLASS(SURF_Upright, bool)
+#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
+#define IMPLEMENT_PARAM_CLASS(name, type) \
+    namespace { \
+    class name \
+    { \
+    public: \
+        name ( type arg = type ()) : val_(arg) {} \
+        operator type () const {return val_;} \
+    private: \
+        type val_; \
+    }; \
+    inline void PrintTo( name param, std::ostream* os) \
+    { \
+        *os << #name <<  "(" << testing::PrintToString(static_cast< type >(param)) << ")"; \
+    }}
 
-PARAM_TEST_CASE(SURF, SURF_HessianThreshold, SURF_Octaves, SURF_OctaveLayers, SURF_Extended, SURF_Upright)
+IMPLEMENT_PARAM_CLASS(HessianThreshold, double)
+IMPLEMENT_PARAM_CLASS(Octaves, int)
+IMPLEMENT_PARAM_CLASS(OctaveLayers, int)
+IMPLEMENT_PARAM_CLASS(Extended, bool)
+IMPLEMENT_PARAM_CLASS(Upright, bool)
+
+PARAM_TEST_CASE(SURF, HessianThreshold, Octaves, OctaveLayers, Extended, Upright)
 {
     double hessianThreshold;
     int nOctaves;
@@ -138,16 +143,17 @@ PARAM_TEST_CASE(SURF, SURF_HessianThreshold, SURF_Octaves, SURF_OctaveLayers, SU
 
     virtual void SetUp()
     {
-        hessianThreshold = GET_PARAM(0);
-        nOctaves = GET_PARAM(1);
-        nOctaveLayers = GET_PARAM(2);
-        extended = GET_PARAM(3);
-        upright = GET_PARAM(4);
+        hessianThreshold = get<0>(GetParam());
+        nOctaves = get<1>(GetParam());
+        nOctaveLayers = get<2>(GetParam());
+        extended = get<3>(GetParam());
+        upright = get<4>(GetParam());
     }
 };
+
 TEST_P(SURF, Detector)
 {
-    cv::Mat image = readImage(workdir + "fruits.jpg", cv::IMREAD_GRAYSCALE);
+    cv::Mat image  = cv::imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/fruits.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
     cv::ocl::SURF_OCL surf;
@@ -180,7 +186,7 @@ TEST_P(SURF, Detector)
 
 TEST_P(SURF, Descriptor)
 {
-    cv::Mat image = readImage(workdir + "fruits.jpg", cv::IMREAD_GRAYSCALE);
+    cv::Mat image  = cv::imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/fruits.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
     cv::ocl::SURF_OCL surf;
@@ -218,10 +224,10 @@ TEST_P(SURF, Descriptor)
 }
 
 INSTANTIATE_TEST_CASE_P(OCL_Features2D, SURF, testing::Combine(
-    testing::Values(/*SURF_HessianThreshold(100.0), */SURF_HessianThreshold(500.0), SURF_HessianThreshold(1000.0)),
-    testing::Values(SURF_Octaves(3), SURF_Octaves(4)),
-    testing::Values(SURF_OctaveLayers(2), SURF_OctaveLayers(3)),
-    testing::Values(SURF_Extended(false), SURF_Extended(true)),
-    testing::Values(SURF_Upright(false), SURF_Upright(true))));
+    testing::Values(HessianThreshold(500.0), HessianThreshold(1000.0)),
+    testing::Values(Octaves(3), Octaves(4)),
+    testing::Values(OctaveLayers(2), OctaveLayers(3)),
+    testing::Values(Extended(false), Extended(true)),
+    testing::Values(Upright(false), Upright(true))));
 
-#endif
+#endif // HAVE_OPENCV_OCL

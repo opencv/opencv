@@ -331,7 +331,6 @@ namespace cv
                                size_t widthInBytes, size_t height, DevMemRW rw_type, DevMemType mem_type)
         {
             cl_int status;
-
             *dev_ptr = clCreateBuffer(clCxt->impl->clContext, gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
                                       widthInBytes * height, 0, &status);
             openCLVerifyCall(status);
