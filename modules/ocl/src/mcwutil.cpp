@@ -223,7 +223,7 @@ namespace cv
         }
 
         bool support_image2d(Context *clCxt)
-        {
+        {return false;
             static const char * _kernel_string = "__kernel void test_func(image2d_t img) {}";
             static bool _isTested = false;
             static bool _support = false;

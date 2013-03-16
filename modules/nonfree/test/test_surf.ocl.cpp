@@ -52,10 +52,10 @@ using std::tr1::get;
 
 static bool keyPointsEquals(const cv::KeyPoint& p1, const cv::KeyPoint& p2)
 {
-    const double maxPtDif = 1.0;
-    const double maxSizeDif = 1.0;
-    const double maxAngleDif = 2.0;
-    const double maxResponseDif = 0.1;
+    const double maxPtDif = 0.1;
+    const double maxSizeDif = 0.1;
+    const double maxAngleDif = 0.1;
+    const double maxResponseDif = 0.01;
 
     double dist = cv::norm(p1.pt - p2.pt);
 
@@ -71,8 +71,6 @@ static bool keyPointsEquals(const cv::KeyPoint& p1, const cv::KeyPoint& p2)
 
     return false;
 }
-
-#define ASSERT_KEYPOINTS_EQ(gold, actual) EXPECT_PRED_FORMAT2(assertKeyPointsEquals, gold, actual);
 
 static int getMatchedPointsCount(std::vector<cv::KeyPoint>& gold, std::vector<cv::KeyPoint>& actual)
 {
@@ -113,19 +111,14 @@ static int getMatchedPointsCount(const std::vector<cv::KeyPoint>& keypoints1, co
 
 #define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
 #define IMPLEMENT_PARAM_CLASS(name, type) \
-    namespace { \
-    class name \
-    { \
+    namespace { class name { \
     public: \
         name ( type arg = type ()) : val_(arg) {} \
         operator type () const {return val_;} \
     private: \
         type val_; \
     }; \
-    inline void PrintTo( name param, std::ostream* os) \
-    { \
-        *os << #name <<  "(" << testing::PrintToString(static_cast< type >(param)) << ")"; \
-    }}
+    inline void PrintTo( name param, std::ostream* os) {*os << #name <<  "=" << testing::PrintToString(static_cast< type >(param));}}
 
 IMPLEMENT_PARAM_CLASS(HessianThreshold, double)
 IMPLEMENT_PARAM_CLASS(Octaves, int)
@@ -181,10 +174,10 @@ TEST_P(SURF, Detector)
     int matchedCount = getMatchedPointsCount(keypoints_gold, keypoints);
     double matchedRatio = static_cast<double>(matchedCount) / keypoints_gold.size();
 
-    EXPECT_GT(matchedRatio, 0.95);
+    EXPECT_GT(matchedRatio, 0.99);
 }
 
-TEST_P(SURF, Descriptor)
+TEST_P(SURF, DISABLED_Descriptor)
 {
     cv::Mat image  = cv::imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/fruits.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());

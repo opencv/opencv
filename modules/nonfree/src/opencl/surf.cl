@@ -749,13 +749,19 @@ void reduce_32_sum(volatile __local  float * data, volatile float* partial_reduc
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 16)
-    {
         data[tid] = *partial_reduction = op(partial_reduction, data[tid + 16]);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 8)
         data[tid] = *partial_reduction = op(partial_reduction, data[tid + 8 ]);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 4)
         data[tid] = *partial_reduction = op(partial_reduction, data[tid + 4 ]);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 2)
         data[tid] = *partial_reduction = op(partial_reduction, data[tid + 2 ]);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 1)
         data[tid] = *partial_reduction = op(partial_reduction, data[tid + 1 ]);
-    }
 #undef op
 }
 
