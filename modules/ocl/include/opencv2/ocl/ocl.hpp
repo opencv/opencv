@@ -69,28 +69,28 @@ namespace cv
 
         enum DevMemRW
         {
-            DEVICE_MEM_R_W = 0, 
-            DEVICE_MEM_R_ONLY, 
+            DEVICE_MEM_R_W = 0,
+            DEVICE_MEM_R_ONLY,
             DEVICE_MEM_W_ONLY
         };
- 
+
         enum DevMemType
-        { 
-            DEVICE_MEM_DEFAULT = 0, 
+        {
+            DEVICE_MEM_DEFAULT = 0,
             DEVICE_MEM_AHP,         //alloc host pointer
             DEVICE_MEM_UHP,         //use host pointer
             DEVICE_MEM_CHP,         //copy host pointer
             DEVICE_MEM_PM           //persistent memory
         };
 
-        //Get the global device memory and read/write type	
+        //Get the global device memory and read/write type
         //return 1 if unified memory system supported, otherwise return 0
         CV_EXPORTS int getDevMemType(DevMemRW& rw_type, DevMemType& mem_type);
 
-        //Set the global device memory and read/write type, 
+        //Set the global device memory and read/write type,
         //the newly generated oclMat will all use this type
         //return -1 if the target type is unsupported, otherwise return 0
-        CV_EXPORTS int setDevMemType(DevMemRW rw_type = DEVICE_MEM_R_W, DevMemType mem_type = DEVICE_MEM_DEFAULT); 
+        CV_EXPORTS int setDevMemType(DevMemRW rw_type = DEVICE_MEM_R_W, DevMemType mem_type = DEVICE_MEM_DEFAULT);
 
         //this class contains ocl runtime information
         class CV_EXPORTS Info
@@ -135,7 +135,7 @@ namespace cv
 
         //////////////////////////////// OpenCL context ////////////////////////
         //This is a global singleton class used to represent a OpenCL context.
-        class Context
+        class CV_EXPORTS Context
         {
         protected:
             Context();
@@ -1072,156 +1072,6 @@ namespace cv
 
         };
 
-
-
-        //! Speeded up robust features, port from GPU module.
-        ////////////////////////////////// SURF //////////////////////////////////////////
-
-        class CV_EXPORTS SURF_OCL
-
-        {
-
-        public:
-
-            enum KeypointLayout
-
-            {
-
-                X_ROW = 0,
-
-                Y_ROW,
-
-                LAPLACIAN_ROW,
-
-                OCTAVE_ROW,
-
-                SIZE_ROW,
-
-                ANGLE_ROW,
-
-                HESSIAN_ROW,
-
-                ROWS_COUNT
-
-            };
-
-
-
-            //! the default constructor
-
-            SURF_OCL();
-
-            //! the full constructor taking all the necessary parameters
-
-            explicit SURF_OCL(double _hessianThreshold, int _nOctaves = 4,
-
-                              int _nOctaveLayers = 2, bool _extended = false, float _keypointsRatio = 0.01f, bool _upright = false);
-
-
-
-            //! returns the descriptor size in float's (64 or 128)
-
-            int descriptorSize() const;
-
-
-
-            //! upload host keypoints to device memory
-
-            void uploadKeypoints(const vector<cv::KeyPoint> &keypoints, oclMat &keypointsocl);
-
-            //! download keypoints from device to host memory
-
-            void downloadKeypoints(const oclMat &keypointsocl, vector<KeyPoint> &keypoints);
-
-
-
-            //! download descriptors from device to host memory
-
-            void downloadDescriptors(const oclMat &descriptorsocl, vector<float> &descriptors);
-
-
-
-            //! finds the keypoints using fast hessian detector used in SURF
-
-            //! supports CV_8UC1 images
-
-            //! keypoints will have nFeature cols and 6 rows
-
-            //! keypoints.ptr<float>(X_ROW)[i] will contain x coordinate of i'th feature
-
-            //! keypoints.ptr<float>(Y_ROW)[i] will contain y coordinate of i'th feature
-
-            //! keypoints.ptr<float>(LAPLACIAN_ROW)[i] will contain laplacian sign of i'th feature
-
-            //! keypoints.ptr<float>(OCTAVE_ROW)[i] will contain octave of i'th feature
-
-            //! keypoints.ptr<float>(SIZE_ROW)[i] will contain size of i'th feature
-
-            //! keypoints.ptr<float>(ANGLE_ROW)[i] will contain orientation of i'th feature
-
-            //! keypoints.ptr<float>(HESSIAN_ROW)[i] will contain response of i'th feature
-
-            void operator()(const oclMat &img, const oclMat &mask, oclMat &keypoints);
-
-            //! finds the keypoints and computes their descriptors.
-
-            //! Optionally it can compute descriptors for the user-provided keypoints and recompute keypoints direction
-
-            void operator()(const oclMat &img, const oclMat &mask, oclMat &keypoints, oclMat &descriptors,
-
-                            bool useProvidedKeypoints = false);
-
-
-
-            void operator()(const oclMat &img, const oclMat &mask, std::vector<KeyPoint> &keypoints);
-
-            void operator()(const oclMat &img, const oclMat &mask, std::vector<KeyPoint> &keypoints, oclMat &descriptors,
-
-                            bool useProvidedKeypoints = false);
-
-
-
-            void operator()(const oclMat &img, const oclMat &mask, std::vector<KeyPoint> &keypoints, std::vector<float> &descriptors,
-
-                            bool useProvidedKeypoints = false);
-
-
-
-            void releaseMemory();
-
-
-
-            // SURF parameters
-
-            float hessianThreshold;
-
-            int nOctaves;
-
-            int nOctaveLayers;
-
-            bool extended;
-
-            bool upright;
-
-
-
-            //! max keypoints = min(keypointsRatio * img.size().area(), 65535)
-
-            float keypointsRatio;
-
-
-
-            oclMat sum, mask1, maskSum, intBuffer;
-
-
-
-            oclMat det, trace;
-
-
-
-            oclMat maxPosBuffer;
-
-        };
 
         ////////////////////////feature2d_ocl/////////////////
         /****************************************************************************************\

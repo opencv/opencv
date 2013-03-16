@@ -78,12 +78,7 @@
 
 #if defined (HAVE_OPENCL)
 
-#if defined __APPLE__
-#include <OpenCL/OpenCL.h>
-#else
-#include <CL/opencl.h>
-#endif
-
+#include "opencv2/ocl/private/util.hpp"
 #include "safe_call.hpp"
 
 using namespace std;
@@ -92,44 +87,6 @@ namespace cv
 {
     namespace ocl
     {
-        ///////////////////////////OpenCL call wrappers////////////////////////////
-        void openCLMallocPitch(Context *clCxt, void **dev_ptr, size_t *pitch,
-                               size_t widthInBytes, size_t height);
-        void openCLMallocPitchEx(Context *clCxt, void **dev_ptr, size_t *pitch,
-                               size_t widthInBytes, size_t height, DevMemRW rw_type, DevMemType mem_type);
-        void openCLMemcpy2D(Context *clCxt, void *dst, size_t dpitch,
-                            const void *src, size_t spitch,
-                            size_t width, size_t height, enum openCLMemcpyKind kind, int channels = -1);
-        void openCLCopyBuffer2D(Context *clCxt, void *dst, size_t dpitch, int dst_offset,
-                                const void *src, size_t spitch,
-                                size_t width, size_t height, int src_offset);
-        void openCLFree(void *devPtr);
-        cl_mem openCLCreateBuffer(Context *clCxt, size_t flag, size_t size);
-        void openCLReadBuffer(Context *clCxt, cl_mem dst_buffer, void *host_buffer, size_t size);
-        cl_kernel openCLGetKernelFromSource(const Context *clCxt,
-                                            const char **source, string kernelName);
-        cl_kernel openCLGetKernelFromSource(const Context *clCxt,
-                                            const char **source, string kernelName, const char *build_options);
-        void openCLVerifyKernel(const Context *clCxt, cl_kernel kernel, size_t *localThreads);
-        void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, vector< std::pair<size_t, const void *> > &args,
-                                 int globalcols , int globalrows, size_t blockSize = 16, int kernel_expand_depth = -1, int kernel_expand_channel = -1);
-        void openCLExecuteKernel_(Context *clCxt , const char **source, string kernelName,
-                                  size_t globalThreads[3], size_t localThreads[3],
-                                  vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options);
-        void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
-                                 size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels, int depth);
-        void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
-                                 size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
-                                 int depth, const char *build_options);
-
-        cl_mem load_constant(cl_context context, cl_command_queue command_queue, const void *value,
-                             const size_t size);
-
-        cl_mem openCLMalloc(cl_context clCxt, size_t size, cl_mem_flags flags, void *host_ptr);
-
-        //void openCLMemcpy2DWithNoPadding(cl_command_queue command_queue, cl_mem buffer, size_t size, size_t offset, void *ptr,
-        //                                 enum openCLMemcpyKind kind, cl_bool blocking_write);
-        int savetofile(const Context *clcxt,  cl_program &program, const char *fileName);
         struct Context::Impl
         {
             //Information of the OpenCL context

@@ -42,10 +42,9 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include <iomanip>
 #include "precomp.hpp"
-#include "mcwutil.hpp"
-//#include "opencv2/highgui/highgui.hpp"
+
+#ifdef HAVE_OPENCV_OCL
 
 using namespace cv;
 using namespace cv::ocl;
@@ -56,7 +55,7 @@ namespace cv
     namespace ocl
     {
         ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *nonfree_surf;
+        extern const char *surf;
 
         const char* noImage2dOption = "-D DISABLE_IMAGE2D";
 
@@ -268,7 +267,7 @@ private:
     int maxFeatures;
 
     oclMat counters;
-    
+
     // texture buffers
     cl_mem imgTex;
     cl_mem sumTex;
@@ -510,7 +509,7 @@ void SURF_OCL_Invoker::icvCalcLayerDetAndTrace_gpu(oclMat &det, oclMat &trace, i
         divUp(max_samples_i, localThreads[1]) *localThreads[1] *(nOctaveLayers + 2),
         1
     };
-    openCLExecuteKernelSURF(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void SURF_OCL_Invoker::icvFindMaximaInLayer_gpu(const oclMat &det, const oclMat &trace, oclMat &maxPosBuffer, oclMat &maxCounter, int counterOffset,
@@ -556,7 +555,7 @@ void SURF_OCL_Invoker::icvFindMaximaInLayer_gpu(const oclMat &det, const oclMat 
                                1
                               };
 
-    openCLExecuteKernelSURF(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void SURF_OCL_Invoker::icvInterpolateKeypoint_gpu(const oclMat &det, const oclMat &maxPosBuffer, int maxCounter,
@@ -581,7 +580,7 @@ void SURF_OCL_Invoker::icvInterpolateKeypoint_gpu(const oclMat &det, const oclMa
     size_t localThreads[3]  = {3, 3, 3};
     size_t globalThreads[3] = {maxCounter *localThreads[0], localThreads[1], 1};
 
-    openCLExecuteKernelSURF(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void SURF_OCL_Invoker::icvCalcOrientation_gpu(const oclMat &keypoints, int nFeatures)
@@ -608,7 +607,7 @@ void SURF_OCL_Invoker::icvCalcOrientation_gpu(const oclMat &keypoints, int nFeat
     size_t localThreads[3]  = {32, 4, 1};
     size_t globalThreads[3] = {nFeatures *localThreads[0], localThreads[1], 1};
 
-    openCLExecuteKernelSURF(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void SURF_OCL_Invoker::icvSetUpright_gpu(const oclMat &keypoints, int nFeatures)
@@ -625,7 +624,7 @@ void SURF_OCL_Invoker::icvSetUpright_gpu(const oclMat &keypoints, int nFeatures)
     size_t localThreads[3]  = {256, 1, 1};
     size_t globalThreads[3] = {saturate_cast<size_t>(nFeatures), 1, 1};
 
-    openCLExecuteKernelSURF(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 
@@ -665,7 +664,7 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
         args.push_back( make_pair( sizeof(cl_int), (void *)&_img.cols));
         args.push_back( make_pair( sizeof(cl_int), (void *)&_img.step));
 
-        openCLExecuteKernelSURF(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
+        openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
 
         kernelName = "normalize_descriptors64";
 
@@ -679,7 +678,7 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
         args.push_back( make_pair( sizeof(cl_mem), (void *)&descriptors.data));
         args.push_back( make_pair( sizeof(cl_int), (void *)&descriptors.step));
 
-        openCLExecuteKernelSURF(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
+        openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
     }
     else
     {
@@ -707,8 +706,8 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
         args.push_back( make_pair( sizeof(cl_int), (void *)&_img.rows));
         args.push_back( make_pair( sizeof(cl_int), (void *)&_img.cols));
         args.push_back( make_pair( sizeof(cl_int), (void *)&_img.step));
-       
-        openCLExecuteKernelSURF(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
+
+        openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
 
         kernelName = "normalize_descriptors128";
 
@@ -721,7 +720,9 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
         args.clear();
         args.push_back( make_pair( sizeof(cl_mem), (void *)&descriptors.data));
         args.push_back( make_pair( sizeof(cl_int), (void *)&descriptors.step));
-        
-        openCLExecuteKernelSURF(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
+
+        openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
     }
 }
+
+#endif //HAVE_OPENCV_OCL

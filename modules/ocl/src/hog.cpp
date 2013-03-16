@@ -44,7 +44,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "mcwutil.hpp"
+
 using namespace cv;
 using namespace cv::ocl;
 using namespace std;

@@ -43,7 +43,7 @@
 //
 //M*/
 
-#include "mcwutil.hpp"
+#include "opencv2/ocl/private/util.hpp"
 
 #if defined (HAVE_OPENCL)
 #ifndef CL_VERSION_1_2
