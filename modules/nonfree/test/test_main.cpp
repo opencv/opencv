@@ -7,7 +7,7 @@ using namespace cv::gpu;
 using namespace cvtest;
 using namespace testing;
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     try
     {
@@ -50,8 +50,8 @@ int main(int argc, char** argv)
         TS::ptr()->init("cv");
         InitGoogleTest(&argc, argv);
 
-        return RUN_ALL_TESTS();
-    }
+    return RUN_ALL_TESTS();
+}
     catch (const std::exception& e)
     {
         std::cerr << e.what() << std::endl;

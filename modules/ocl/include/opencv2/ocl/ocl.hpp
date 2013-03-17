@@ -140,15 +140,23 @@ namespace cv
         protected:
             Context();
             friend class auto_ptr<Context>;
-            static auto_ptr<Context> clCxt;
 
+        private:
+            static auto_ptr<Context> clCxt;
+            static int val;
         public:
             ~Context();
-            static int val;
-            static Context *getContext();
+            void release();
+            Info::Impl* impl;
+
+            static Context* getContext();
             static void setContext(Info &oclinfo);
-            struct Impl;
-            Impl *impl;
+
+            enum {CL_DOUBLE, CL_UNIFIED_MEM};
+            bool supportsFeature(int ftype);
+            size_t computeUnits();
+            void* oclContext();
+            void* oclCommandQueue();
         };
 
         //! Calls a kernel, by string. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.

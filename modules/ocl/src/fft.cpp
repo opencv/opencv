@@ -206,7 +206,7 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
     clStridesIn[2]  = is_row_dft ? clStridesIn[1]  : dft_size.width * clStridesIn[1];
     clStridesOut[2] = is_row_dft ? clStridesOut[1] : dft_size.width * clStridesOut[1];
 
-    openCLSafeCall( clAmdFftCreateDefaultPlan( &plHandle, Context::getContext()->impl->clContext, dim, clLengthsIn ) );
+    openCLSafeCall( clAmdFftCreateDefaultPlan( &plHandle, (cl_context)getoclContext(), dim, clLengthsIn ) );
 
     openCLSafeCall( clAmdFftSetResultLocation( plHandle, CLFFT_OUTOFPLACE ) );
     openCLSafeCall( clAmdFftSetLayout( plHandle, inLayout, outLayout ) );
@@ -220,7 +220,8 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
     openCLSafeCall( clAmdFftSetPlanScale  ( plHandle, is_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD, scale_ ) );
 
     //ready to bake
-    openCLSafeCall( clAmdFftBakePlan( plHandle, 1, &(Context::getContext()->impl->clCmdQueue), NULL, NULL ) );
+    cl_command_queue clq = (cl_command_queue)getoclCommandQueue();
+    openCLSafeCall( clAmdFftBakePlan( plHandle, 1, &clq, NULL, NULL ) );
 }
 cv::ocl::FftPlan::~FftPlan()
 {
@@ -338,16 +339,17 @@ void cv::ocl::dft(const oclMat &src, oclMat &dst, Size dft_size, int flags)
     if (buffersize)
     {
         cl_int medstatus;
-        clMedBuffer = clCreateBuffer ( src.clCxt->impl->clContext, CL_MEM_READ_WRITE, buffersize, 0, &medstatus);
+        clMedBuffer = clCreateBuffer ( (cl_context)src.clCxt->oclContext(), CL_MEM_READ_WRITE, buffersize, 0, &medstatus);
         openCLSafeCall( medstatus );
     }
+    cl_command_queue clq = (cl_command_queue)src.clCxt->oclCommandQueue();
     openCLSafeCall( clAmdFftEnqueueTransform( plHandle,
         is_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD,
         1,
-        &src.clCxt->impl->clCmdQueue,
+        &clq,
         0, NULL, NULL,
         (cl_mem *)&src.data, (cl_mem *)&dst.data, clMedBuffer ) );
-    openCLSafeCall( clFinish(src.clCxt->impl->clCmdQueue) );
+    openCLSafeCall( clFinish(clq) );
     if(clMedBuffer)
     {
         openCLFree(clMedBuffer);

@@ -81,33 +81,6 @@
 #include "opencv2/ocl/private/util.hpp"
 #include "safe_call.hpp"
 
-using namespace std;
-
-namespace cv
-{
-    namespace ocl
-    {
-        struct Context::Impl
-        {
-            //Information of the OpenCL context
-            cl_context clContext;
-            cl_command_queue clCmdQueue;
-            cl_device_id devices;
-            string devName;
-            cl_uint maxDimensions;
-            size_t maxWorkGroupSize;
-            size_t maxWorkItemSizes[4];
-            cl_uint maxComputeUnits;
-            int double_support;
-            //extra options to recognize vendor specific fp64 extensions
-            char extra_options[512];
-            string Binpath;
-            int unified_memory; //1 means integrated GPU, otherwise this value is 0
-        };
-    }
-}
-
-
 #else /* defined(HAVE_OPENCL) */
 
 static inline void throw_nogpu()
@@ -116,5 +89,7 @@ static inline void throw_nogpu()
 }
 
 #endif /* defined(HAVE_OPENCL) */
+
+using namespace std;
 
 #endif /* __OPENCV_PRECOMP_H__ */

@@ -90,10 +90,10 @@ static void prefilter_xsobel(const oclMat &input, oclMat &output, int prefilterC
     openCLSafeCall(clSetKernelArg(kernel, 3, sizeof(cl_int), (void *)&input.cols));
     openCLSafeCall(clSetKernelArg(kernel, 4, sizeof(cl_int), (void *)&prefilterCap));
 
-    openCLSafeCall(clEnqueueNDRangeKernel(clCxt->impl->clCmdQueue, kernel, 3, NULL,
+    openCLSafeCall(clEnqueueNDRangeKernel((cl_command_queue)clCxt->oclCommandQueue(), kernel, 3, NULL,
                                           globalThreads, localThreads, 0, NULL, NULL));
 
-    clFinish(clCxt->impl->clCmdQueue);
+    clFinish((cl_command_queue)clCxt->oclCommandQueue());
     openCLSafeCall(clReleaseKernel(kernel));
 
 }
@@ -150,11 +150,11 @@ static void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
     openCLSafeCall(clSetKernelArg(kernel, 10, sizeof(cl_int), (void *)&winsz2));
     openCLSafeCall(clSetKernelArg(kernel, 11, local_mem_size, (void *)NULL));
 
-    openCLSafeCall(clEnqueueNDRangeKernel(clCxt->impl->clCmdQueue, kernel, 2, NULL,
+    openCLSafeCall(clEnqueueNDRangeKernel((cl_command_queue)clCxt->oclCommandQueue(), kernel, 2, NULL,
                                           globalThreads, localThreads, 0, NULL, NULL));
 
 
-    clFinish(clCxt->impl->clCmdQueue);
+    clFinish((cl_command_queue)clCxt->oclCommandQueue());
     openCLSafeCall(clReleaseKernel(kernel));
 }
 ////////////////////////////////////////////////////////////////////////////
@@ -188,10 +188,10 @@ static void postfilter_textureness(oclMat &left, int winSize,
     openCLSafeCall(clSetKernelArg(kernel, 7, sizeof(cl_int), (void *)&winSize));
     openCLSafeCall(clSetKernelArg(kernel, 8, sizeof(cl_float), (void *)&avergeTexThreshold));
     openCLSafeCall(clSetKernelArg(kernel, 9, local_mem_size, NULL));
-    openCLSafeCall(clEnqueueNDRangeKernel(clCxt->impl->clCmdQueue, kernel, 2, NULL,
+    openCLSafeCall(clEnqueueNDRangeKernel((cl_command_queue)clCxt->oclCommandQueue(), kernel, 2, NULL,
                                           globalThreads, localThreads, 0, NULL, NULL));
 
-    clFinish(clCxt->impl->clCmdQueue);
+    clFinish((cl_command_queue)clCxt->oclCommandQueue());
     openCLSafeCall(clReleaseKernel(kernel));
 }
 //////////////////////////////////////////////////////////////////////////////
