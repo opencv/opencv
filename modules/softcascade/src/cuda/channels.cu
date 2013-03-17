@@ -63,6 +63,9 @@ __host__ __device__ __forceinline__ int divUp(int total, int grain)
 
 namespace cv { namespace softcascade { namespace device
 {
+    typedef unsigned int uint;
+    typedef unsigned short ushort;
+
     // Utility function to extract unsigned chars from an unsigned integer
     __device__ uchar4 int_to_uchar4(unsigned int in)
     {
