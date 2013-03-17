@@ -477,7 +477,7 @@ namespace cv { namespace softcascade { namespace device
             const dim3 block(32, 8);
             const dim3 grid(divUp(integral.cols, block.x), 1);
 
-            shfl_integral_vertical<<<grid, block, 0, stream>>>((cv::gpu::PtrStepSz<uint>)buffer, integral);
+            shfl_integral_vertical<<<grid, block, 0, stream>>>((cv::gpu::PtrStepSz<unsigned int>)buffer, integral);
             cudaSafeCall( cudaGetLastError() );
         }
     }
@@ -498,7 +498,7 @@ namespace cv { namespace softcascade { namespace device
         // uint b = 0xffu & (src >> (bidx * 8));
         // uint g = 0xffu & (src >> 8);
         // uint r = 0xffu & (src >> ((bidx ^ 2) * 8));
-        return CV_DESCALE((uint)(b * B2Y + g * G2Y + r * R2Y), yuv_shift);
+        return CV_DESCALE((unsigned int)(b * B2Y + g * G2Y + r * R2Y), yuv_shift);
     }
 
     __global__ void device_transform(const cv::gpu::PtrStepSz<uchar3> bgr, cv::gpu::PtrStepSzb gray)

@@ -250,7 +250,7 @@ void cv::gpu::CudaMem::create(int _rows, int _cols, int _type, int _alloc_type)
 
         //datastart = data = (uchar*)fastMalloc(datasize + sizeof(*refcount));
         alloc_type = _alloc_type;
-        void *ptr;
+        void *ptr = 0;
 
         switch (alloc_type)
         {
