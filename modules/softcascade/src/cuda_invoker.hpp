@@ -58,6 +58,8 @@
 namespace cv { namespace softcascade { namespace device {
 
 typedef unsigned char uchar;
+typedef unsigned int uint;
+typedef unsigned short ushort;
 
 struct Octave
 {
