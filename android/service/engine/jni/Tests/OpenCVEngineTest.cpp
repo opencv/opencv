@@ -201,6 +201,24 @@ TEST(OpenCVEngineTest, GetPathForCompatiblePackage2)
 #endif
 }
 
+TEST(OpenCVEngineTest, GetPathForCompatiblePackage3)
+{
+    sp<IOpenCVEngine> Engine = InitConnect();
+    Starter.PackageManager->InstalledPackages.clear();
+    Starter.PackageManager->InstallVersion(2040400, PLATFORM_TEGRA4, ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON);
+    EXPECT_FALSE(NULL == Engine.get());
+    String16 result = Engine->GetLibPathByVersion(String16("2.4"));
+    #ifdef __SUPPORT_TEGRA3
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_tegra4/lib", String8(result).string());
+    #else
+    #ifdef __SUPPORT_ARMEABI_V7A_FEATURES
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a_neon/lib", String8(result).string());
+    #else
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a/lib", String8(result).string());
+    #endif
+    #endif
+}
+
 TEST(OpenCVEngineTest, InstallAndGetVersion)
 {
     sp<IOpenCVEngine> Engine = InitConnect();

@@ -18,6 +18,7 @@ map<int, string> PackageInfo::InitPlatformNameMap()
     result[PLATFORM_TEGRA] = PLATFORM_TEGRA_NAME;
     result[PLATFORM_TEGRA2] = PLATFORM_TEGRA2_NAME;
     result[PLATFORM_TEGRA3] = PLATFORM_TEGRA3_NAME;
+    result[PLATFORM_TEGRA4] = PLATFORM_TEGRA4_NAME;
 
     return result;
 }
@@ -185,6 +186,10 @@ inline int SplitPlatfrom(const vector<string>& features)
         else if (PLATFORM_TEGRA3_NAME == tmp)
         {
             result = PLATFORM_TEGRA3;
+        }
+        else if (PLATFORM_TEGRA4_NAME == tmp)
+        {
+            result = PLATFORM_TEGRA4;
         }
     }
     else
@@ -422,6 +427,10 @@ InstallPath(install_path)
                     CpuID = ARCH_ARMv7 | FEATURES_HAS_VFPv3d16;
                 } break;
                 case PLATFORM_TEGRA3:
+                {
+                    CpuID = ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON;
+                } break;
+                case PLATFORM_TEGRA4:
                 {
                     CpuID = ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON;
                 } break;
