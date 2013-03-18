@@ -1103,7 +1103,7 @@ CV_EXPORTS_W Moments moments( InputArray array, bool binaryImage=false );
 
 //! computes 7 Hu invariants from the moments
 CV_EXPORTS void HuMoments( const Moments& moments, double hu[7] );
-CV_EXPORTS_W void HuMoments( const Moments& m, CV_OUT OutputArray hu );
+CV_EXPORTS_W void HuMoments( const Moments& m, OutputArray hu );
 
 //! type of the template matching operation
 enum { TM_SQDIFF=0, TM_SQDIFF_NORMED=1, TM_CCORR=2, TM_CCORR_NORMED=3, TM_CCOEFF=4, TM_CCOEFF_NORMED=5 };

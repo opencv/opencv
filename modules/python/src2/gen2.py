@@ -354,6 +354,7 @@ class ArgInfo(object):
             elif m == "/IO":
                 self.inputarg = True
                 self.outputarg = True
+                self.returnarg = True
             elif m.startswith("/A"):
                 self.isarray = True
                 self.arraylen = m[2:].strip()
@@ -427,7 +428,7 @@ class FuncVariant(object):
                 continue
             if a.returnarg:
                 outlist.append((a.name, argno))
-            if (not a.inputarg or a.returnarg) and a.isbig():
+            if (not a.inputarg) and a.isbig():
                 outarr_list.append((a.name, argno))
                 continue
             if not a.inputarg:

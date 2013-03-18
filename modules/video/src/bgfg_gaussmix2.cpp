@@ -187,7 +187,7 @@ struct GMM
 // shadow detection performed per pixel
 // should work for rgb data, could be usefull for gray scale and depth data as well
 // See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
-static CV_INLINE bool
+CV_INLINE bool
 detectShadowGMM(const float* data, int nchannels, int nmodes,
                 const GMM* gmm, const float* mean,
                 float Tb, float TB, float tau)

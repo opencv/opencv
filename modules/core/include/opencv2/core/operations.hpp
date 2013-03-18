@@ -51,40 +51,6 @@
 
 #ifdef __cplusplus
 
-/////// exchange-add operation for atomic operations on reference counters ///////
-#if defined __INTEL_COMPILER && !(defined WIN32 || defined _WIN32)
-    // atomic increment on the linux version of the Intel(tm) compiler
-    #define CV_XADD(addr, delta) (int)_InterlockedExchangeAdd(const_cast<void*>(reinterpret_cast<volatile void*>(addr)), delta)
-#elif defined __GNUC__
-  #if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__
-    #ifdef __ATOMIC_ACQ_REL
-        #define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), delta, __ATOMIC_ACQ_REL)
-    #else
-        #define CV_XADD(addr, delta) __atomic_fetch_add((_Atomic(int)*)(addr), delta, 4)
-    #endif
-  #else
-    #ifdef __ATOMIC_ACQ_REL
-        // version for gcc >= 4.7
-        #define CV_XADD(addr, delta) __atomic_fetch_add(addr, delta, __ATOMIC_ACQ_REL)
-    #else
-        #define CV_XADD(addr, delta) __sync_fetch_and_add(addr, delta)
-    #endif
-  #endif
-#elif (defined WIN32 || defined _WIN32 || defined WINCE) && (!defined RC_INVOKED)
-    #if !defined(_M_AMD64) && !defined(_M_IA64) && !defined(_M_ARM)
-        extern "C" __declspec(dllimport) long __stdcall InterlockedExchangeAdd(long volatile *Addend, long Value);
-        #define CV_XADD(addr, delta) (int)InterlockedExchangeAdd((long volatile*)addr, delta)
-    #else
-        extern "C" long _InterlockedExchangeAdd (long volatile *Addend, long Value);
-        #pragma intrinsic(_InterlockedExchangeAdd)
-        #define CV_XADD(addr, delta) (int)_InterlockedExchangeAdd((long volatile*)addr, delta)
-    #endif
-#else
-  static inline CV_XADD(int* addr, int delta) { int tmp = *addr; *addr += delta; return tmp; }
-#endif
-
-
-
 #include <limits>
 
 #ifdef _MSC_VER
