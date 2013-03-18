@@ -17,7 +17,7 @@ void extractRacts(std::vector<Detection> objectBoxes, std::vector<Rect>& rects)
 {
     rects.clear();
     for (int i = 0; i < (int)objectBoxes.size(); ++i)
-        rects.push_back(objectBoxes[i].bb);
+        rects.push_back(objectBoxes[i].bb());
 }
 
 }

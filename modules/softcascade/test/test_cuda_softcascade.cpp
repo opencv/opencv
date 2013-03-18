@@ -76,7 +76,7 @@ TEST(SCascadeTest, readCascade)
 
 namespace
 {
-    typedef cv::softcascade::SCascade::Detection Detection;
+    typedef cv::softcascade::Detection Detection;
 
     cv::Rect getFromTable(int idx)
     {
@@ -194,7 +194,7 @@ TEST_P(SCascadeTestRoi, Detect)
     cascade.detect(colored, rois, objectBoxes);
 
     cv::Mat dt(objectBoxes);
-    typedef cv::softcascade::SCascade::Detection Detection;
+    typedef cv::softcascade::Detection Detection;
 
     Detection* dts = ((Detection*)dt.data) + 1;
     int* count = dt.ptr<int>(0);
@@ -262,7 +262,7 @@ TEST_P(SCascadeTestAll, detect)
 
     cascade.detect(colored, rois, objectBoxes);
 
-    typedef cv::softcascade::SCascade::Detection Detection;
+    typedef cv::softcascade::Detection Detection;
     cv::Mat dt(objectBoxes);
 
 
@@ -303,7 +303,7 @@ TEST_P(SCascadeTestAll, detectStream)
     cascade.detect(colored, rois, objectBoxes, s);
     s.waitForCompletion();
 
-    typedef cv::softcascade::SCascade::Detection Detection;
+    typedef cv::softcascade::Detection Detection;
     cv::Mat detections(objectBoxes);
     int a = *(detections.ptr<int>(0));
     ASSERT_EQ(a, expected);
