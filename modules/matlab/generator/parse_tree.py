@@ -2,8 +2,8 @@ from string import join
 from textwrap import fill
 
 class ParseTree(object):
-    def __init__(self, namespaces=[]):
-        self.namespaces = namespaces
+    def __init__(self, namespaces=None):
+        self.namespaces = namespaces if namespaces else []
 
     def __str__(self):
         return join((ns.__str__() for ns in self.namespaces), '\n\n\n')
@@ -24,7 +24,7 @@ class ParseTree(object):
                     constants.append(obj)
                 else:
                     raise TypeError('Unexpected object type: '+str(type(obj)))
-            self.namespaces.append(Namespace(name, class_tree.values(), functions, constants))
+            self.namespaces.append(Namespace(name, constants, class_tree.values(), functions))
 
     def insertIntoClassTree(self, obj, class_tree):
         cname = obj.name if type(obj) is Class else obj.clss
@@ -106,8 +106,8 @@ class Namespace(object):
 
     def __str__(self):
         return 'namespace '+self.name+' {\n\n'+\
-          (join((f.__str__() for f in self.functions), '\n')+'\n\n' if self.functions else '')+\
           (join((c.__str__() for c in self.constants), '\n')+'\n\n' if self.constants else '')+\
+          (join((f.__str__() for f in self.functions), '\n')+'\n\n' if self.functions else '')+\
           (join((o.__str__() for o in self.classes), '\n\n')        if self.classes   else '')+'\n};'
 
 class Class(object):

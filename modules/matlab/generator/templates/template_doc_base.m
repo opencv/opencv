@@ -3,4 +3,4 @@
 %
 % See also: {{ fun.doc.see_also }} 
 %
-% Copyright {{ time.strftime("%Y", gmtime()) }} The OpenCV Foundation
+% Copyright {{ time.strftime("%Y", localtime()) }} The OpenCV Foundation

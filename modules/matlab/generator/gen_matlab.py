@@ -1,6 +1,6 @@
 #/usr/bin/env python
 
-import sys, re, os.path
+import sys, re, os, time
 from string import Template
 from hdr_parser import CppHeaderParser
 from parse_tree import ParseTree, todict
@@ -9,7 +9,7 @@ from jinja2 import Environment, PackageLoader
 
 class MatlabWrapperGenerator(object):
 
-    def gen(self, input_files, output_files):
+    def gen(self, input_files, output_dir):
         # parse each of the files and store in a dictionary
         # as a separate "namespace"
         parser = CppHeaderParser()
@@ -24,7 +24,7 @@ class MatlabWrapperGenerator(object):
         parse_tree.build(ns)
        
         # setup the template engine
-        jtemplate = Environment(loader=PackageLoader('templates', ''))
+        jtemplate = Environment(loader=PackageLoader('templates', ''), trim_blocks=True)
 
         # add the custom filters
         jtemplate.filters['toUpperCamelCase'] = toUpperCamelCase
@@ -33,9 +33,23 @@ class MatlabWrapperGenerator(object):
         jtemplate.filters['comment'] = comment
 
         # load the templates
-        function  = jtemplate.get_template('template_function_base.cpp')
-        classm    = jtemplate.get_template('template_class_base.m')
-        classc    = jtemplate.get_template('template_class_base.cpp')
-        doc       = jtemplate.get_template('template_doc_base.m')
+        tfunction  = jtemplate.get_template('template_function_base.cpp')
+        tclassm    = jtemplate.get_template('template_class_base.m')
+        tclassc    = jtemplate.get_template('template_class_base.cpp')
+        tdoc       = jtemplate.get_template('template_doc_base.m')
+
+        # create the build directory
+        if not os.path.isdir(output_dir):
+          os.mkdir(output_dir)
 
         # populate!
+        function  = parse_tree.namespaces[0].functions[0]
+        print function
+        populated = tfunction.render(fun=function, time=time)
+        with open(output_dir+'/'+function.name+'.cpp', 'wb') as f:
+          f.write(populated)
+        #for name, namespace in ns:
+        #  for function in namespace.functions:
+        #    print 'populating function tempaltes from '+name
+        #    populated = tfunction.render(function)
+
