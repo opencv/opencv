@@ -51,7 +51,6 @@ class MatlabWrapperGenerator(object):
 
         # populate templates
         for namespace in parse_tree.namespaces:
-            print 'populating function templates from '+namespace.name
             # functions
             for function in namespace.functions:
                 populated = tfunction.render(fun=function, time=time)
@@ -60,8 +59,6 @@ class MatlabWrapperGenerator(object):
             # classes
             for clss in namespace.classes:
                 # cpp converter
-                if len(clss.functions) > 2:
-                    print clss.functions[1].__str__()
                 populated = tclassc.render(clss=clss, time=time)
                 with open(output_private_dir+'/'+clss.name+'Bridge.cpp', 'wb') as f:
                     f.write(populated)
@@ -69,4 +66,3 @@ class MatlabWrapperGenerator(object):
                 populated = tclassm.render(clss=clss, time=time)
                 with open(output_class_dir+'/'+clss.name+'.m', 'wb') as f:
                     f.write(populated)
-
