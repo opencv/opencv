@@ -75,10 +75,11 @@ namespace cv
 }
 
 
-static inline int divUp(int total, int grain)
+static inline int divUp(size_t total, size_t grain)
 {
     return (total + grain - 1) / grain;
 }
+
 static inline int calcSize(int octave, int layer)
 {
     /* Wavelet size at first layer of first octave. */
@@ -505,20 +506,20 @@ void SURF_OCL_Invoker::icvCalcLayerDetAndTrace_gpu(oclMat &det, oclMat &trace, i
     size_t localThreads[3]  = {16, 16, 1};
     size_t globalThreads[3] =
     {
-        divUp(max_samples_j, localThreads[0]) *localThreads[0],
-        divUp(max_samples_i, localThreads[1]) *localThreads[1] *(nOctaveLayers + 2),
+        divUp(max_samples_j, localThreads[0]) * localThreads[0],
+        divUp(max_samples_i, localThreads[1]) * localThreads[1] *(nOctaveLayers + 2),
         1
     };
     openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void SURF_OCL_Invoker::icvFindMaximaInLayer_gpu(const oclMat &det, const oclMat &trace, oclMat &maxPosBuffer, oclMat &maxCounter, int counterOffset,
-        int octave, bool use_mask, int nLayers, int layer_rows, int layer_cols)
+        int octave, bool useMask, int nLayers, int layer_rows, int layer_cols)
 {
     const int min_margin = ((calcSize(octave, 2) >> 1) >> octave) + 1;
 
     Context *clCxt = det.clCxt;
-    string kernelName = use_mask ? "icvFindMaximaInLayer_withmask" : "icvFindMaximaInLayer";
+    string kernelName = useMask ? "icvFindMaximaInLayer_withmask" : "icvFindMaximaInLayer";
     vector< pair<size_t, const void *> > args;
 
     args.push_back( make_pair( sizeof(cl_mem), (void *)&det.data));
@@ -537,7 +538,7 @@ void SURF_OCL_Invoker::icvFindMaximaInLayer_gpu(const oclMat &det, const oclMat 
     args.push_back( make_pair( sizeof(cl_int), (void *)&maxCandidates));
     args.push_back( make_pair( sizeof(cl_float), (void *)&surf_.hessianThreshold));
 
-    if(use_mask)
+    if(useMask)
     {
         if(maskSumTex)
         {
@@ -559,7 +560,7 @@ void SURF_OCL_Invoker::icvFindMaximaInLayer_gpu(const oclMat &det, const oclMat 
 }
 
 void SURF_OCL_Invoker::icvInterpolateKeypoint_gpu(const oclMat &det, const oclMat &maxPosBuffer, int maxCounter,
-        oclMat &keypoints, oclMat &counters, int octave, int layer_rows, int maxFeatures)
+        oclMat &keypoints, oclMat &counters_, int octave, int layer_rows, int max_features)
 {
     Context *clCxt = det.clCxt;
     string kernelName = "icvInterpolateKeypoint";
@@ -568,14 +569,14 @@ void SURF_OCL_Invoker::icvInterpolateKeypoint_gpu(const oclMat &det, const oclMa
     args.push_back( make_pair( sizeof(cl_mem), (void *)&det.data));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&maxPosBuffer.data));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&keypoints.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&counters.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&counters_.data));
     args.push_back( make_pair( sizeof(cl_int), (void *)&det.step));
     args.push_back( make_pair( sizeof(cl_int), (void *)&keypoints.step));
     args.push_back( make_pair( sizeof(cl_int), (void *)&img_rows));
     args.push_back( make_pair( sizeof(cl_int), (void *)&img_cols));
     args.push_back( make_pair( sizeof(cl_int), (void *)&octave));
     args.push_back( make_pair( sizeof(cl_int), (void *)&layer_rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&maxFeatures));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&max_features));
 
     size_t localThreads[3]  = {3, 3, 3};
     size_t globalThreads[3] = {maxCounter *localThreads[0], localThreads[1], 1};

@@ -121,4 +121,4 @@ namespace cv
     }
 }
 
-#endif __OPENCV_NONFREE_OCL_HPP__
+#endif //__OPENCV_NONFREE_OCL_HPP__

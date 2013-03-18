@@ -69,3 +69,5 @@ int main(int argc, char **argv)
 #else // HAVE_CUDA
 
 CV_TEST_MAIN("cv")
+
+#endif // HAVE_CUDA

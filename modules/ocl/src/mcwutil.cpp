@@ -43,16 +43,13 @@
 //
 //M*/
 
-#include "opencv2/ocl/private/util.hpp"
+#include "precomp.hpp"
 
-#if defined (HAVE_OPENCL)
 #ifndef CL_VERSION_1_2
 #define CL_VERSION_1_2 0
 #endif
 
 using namespace std;
-
-
 
 namespace cv
 {
@@ -180,7 +177,7 @@ namespace cv
             texture = clCreateImage((cl_context)mat.clCxt->oclContext(), CL_MEM_READ_WRITE, &format, &desc, NULL, &err);
 #else
             texture = clCreateImage2D(
-                mat.clCxt->impl->clContext,
+                (cl_context)mat.clCxt->oclContext(),
                 CL_MEM_READ_WRITE,
                 &format,
                 mat.cols,
@@ -254,4 +251,3 @@ namespace cv
     }//namespace ocl
 
 }//namespace cv
-#endif

@@ -144,7 +144,7 @@ PARAM_TEST_CASE(SURF, HessianThreshold, Octaves, OctaveLayers, Extended, Upright
     }
 };
 
-TEST_P(SURF, Detector)
+TEST_P(SURF, DISABLED_Detector)
 {
     cv::Mat image  = cv::imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/fruits.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());

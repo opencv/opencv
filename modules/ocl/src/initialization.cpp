@@ -387,7 +387,7 @@ namespace cv
 
         void openCLMemcpy2D(Context *clCxt, void *dst, size_t dpitch,
                             const void *src, size_t spitch,
-                            size_t width, size_t height, enum openCLMemcpyKind kind, int channels)
+                            size_t width, size_t height, openCLMemcpyKind kind, int channels)
         {
             size_t buffer_origin[3] = {0, 0, 0};
             size_t host_origin[3] = {0, 0, 0};
@@ -593,11 +593,11 @@ namespace cv
             size_t kernelWorkGroupSize;
             openCLSafeCall(clGetKernelWorkGroupInfo(kernel, clCxt->impl->devices[clCxt->impl->devnum],
                                                     CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &kernelWorkGroupSize, 0));
-            CV_Assert( (localThreads[0] <= clCxt->impl->maxWorkItemSizes[0]) &&
-                          (localThreads[1] <= clCxt->impl->maxWorkItemSizes[1]) &&
-                          (localThreads[2] <= clCxt->impl->maxWorkItemSizes[2]) &&
-                          ((localThreads[0] * localThreads[1] * localThreads[2]) <= kernelWorkGroupSize) &&
-                          (localThreads[0] * localThreads[1] * localThreads[2]) <= clCxt->impl->maxWorkGroupSize);
+            CV_Assert( localThreads[0] <= clCxt->impl->maxWorkItemSizes[0] );
+            CV_Assert( localThreads[1] <= clCxt->impl->maxWorkItemSizes[1] );
+            CV_Assert( localThreads[2] <= clCxt->impl->maxWorkItemSizes[2] );
+            CV_Assert( localThreads[0] * localThreads[1] * localThreads[2] <= kernelWorkGroupSize );
+            CV_Assert( localThreads[0] * localThreads[1] * localThreads[2] <= clCxt->impl->maxWorkGroupSize );
         }
 
 #ifdef PRINT_KERNEL_RUN_TIME

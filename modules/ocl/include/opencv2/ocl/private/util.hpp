@@ -58,6 +58,12 @@ namespace cv
 {
     namespace ocl
     {
+        enum openCLMemcpyKind
+        {
+            clMemcpyHostToDevice = 0,
+            clMemcpyDeviceToHost,
+            clMemcpyDeviceToDevice
+        };
         ///////////////////////////OpenCL call wrappers////////////////////////////
         void CV_EXPORTS openCLMallocPitch(Context *clCxt, void **dev_ptr, size_t *pitch,
                                           size_t widthInBytes, size_t height);
@@ -65,7 +71,7 @@ namespace cv
                                             size_t widthInBytes, size_t height, DevMemRW rw_type, DevMemType mem_type);
         void CV_EXPORTS openCLMemcpy2D(Context *clCxt, void *dst, size_t dpitch,
                                        const void *src, size_t spitch,
-                                       size_t width, size_t height, enum openCLMemcpyKind kind, int channels = -1);
+                                       size_t width, size_t height, openCLMemcpyKind kind, int channels = -1);
         void CV_EXPORTS openCLCopyBuffer2D(Context *clCxt, void *dst, size_t dpitch, int dst_offset,
                                            const void *src, size_t spitch,
                                            size_t width, size_t height, int src_offset);
