@@ -36,7 +36,7 @@ if(HAVE_opencv_nonfree)
 
 # add the python generator to the python path
 set(PYPATH_CACHE $ENV{PYTHONPATH})
-set(ENV{PYTHONPATH} ${OPENCV_MODULE_opencv_python_LOCATION}/src2 $ENV{PYTHONPATH})
+set(ENV{PYTHONPATH} ${OPENCV_MODULE_opencv_python_LOCATION}/src2:$ENV{PYTHONPATH})
 
 # synthesise the matlab sources
 execute_process(

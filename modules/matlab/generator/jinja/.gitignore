@@ -1,8 +1,0 @@
-*.so
-docs/_build
-*.pyc
-*.pyo
-*.egg-info
-build
-dist
-.DS_Store
