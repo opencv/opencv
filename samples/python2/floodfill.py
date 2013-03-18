@@ -29,7 +29,7 @@ if __name__ == '__main__':
     if img is None:
         print 'Failed to load image file:', fn
         sys.exit(1)
-    
+
     h, w = img.shape[:2]
     mask = np.zeros((h+2, w+2), np.uint8)
     seed_pt = None

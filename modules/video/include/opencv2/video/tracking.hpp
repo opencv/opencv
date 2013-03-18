@@ -325,7 +325,7 @@ CV_EXPORTS_W int buildOpticalFlowPyramid(InputArray img, OutputArrayOfArrays pyr
 
 //! computes sparse optical flow using multi-scale Lucas-Kanade algorithm
 CV_EXPORTS_W void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg,
-                           InputArray prevPts, CV_OUT InputOutputArray nextPts,
+                           InputArray prevPts, InputOutputArray nextPts,
                            OutputArray status, OutputArray err,
                            Size winSize=Size(21,21), int maxLevel=3,
                            TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),
@@ -333,7 +333,7 @@ CV_EXPORTS_W void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg,
 
 //! computes dense optical flow using Farneback algorithm
 CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next,
-                           CV_OUT InputOutputArray flow, double pyr_scale, int levels, int winsize,
+                           InputOutputArray flow, double pyr_scale, int levels, int winsize,
                            int iterations, int poly_n, double poly_sigma, int flags );
 
 //! estimates the best-fit Euqcidean, similarity, affine or perspective transformation

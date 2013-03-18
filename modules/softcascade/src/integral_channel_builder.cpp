@@ -55,7 +55,7 @@ public:
 
     virtual int totalChannels() const {return N_CHANNELS; }
 
-    virtual void operator()(cv::InputArray _frame, CV_OUT cv::OutputArray _integrals, cv::Size channelsSize) const
+    virtual void operator()(cv::InputArray _frame, cv::OutputArray _integrals, cv::Size channelsSize) const
     {
         CV_Assert(_frame.type() == CV_8UC3);
 

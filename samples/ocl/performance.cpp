@@ -1031,7 +1031,7 @@ class CascadeClassifier_GPU : public OclCascadeClassifier
 {
 public:
     void detectMultiScale(oclMat &image,
-                          CV_OUT std::vector<cv::Rect>& faces,
+                          std::vector<cv::Rect>& faces,
                           double scaleFactor = 1.1,
                           int minNeighbors = 3, int flags = 0,
                           Size minSize = Size(),

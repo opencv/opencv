@@ -27,7 +27,7 @@ if __name__ == '__main__':
         img_mask = img_mask[0]
     except:
         img_mask = '../cpp/left*.jpg'
-    
+
     img_names = glob(img_mask)
     debug_dir = args.get('--debug')
     square_size = float(args.get('--square_size', 1.0))
@@ -46,7 +46,7 @@ if __name__ == '__main__':
         if img is None:
           print "Failed to load", fn
           continue
-        
+
         h, w = img.shape[:2]
         found, corners = cv2.findChessboardCorners(img, pattern_size)
         if found:
@@ -65,7 +65,7 @@ if __name__ == '__main__':
 
         print 'ok'
 
-    rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, (w, h))
+    rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, (w, h), None, None)
     print "RMS:", rms
     print "camera matrix:\n", camera_matrix
     print "distortion coefficients: ", dist_coefs.ravel()

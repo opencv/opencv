@@ -43,7 +43,7 @@ Implementation of soft (stageless) cascaded detector. ::
         virtual bool load(const FileNode& fileNode);
         virtual void read(const FileNode& fileNode);
         virtual void detect(InputArray image, InputArray rois, std::vector<Detection>& objects) const;
-        virtual void detect(InputArray image, InputArray rois, CV_OUT OutputArray rects, CV_OUT OutputArray confs) const;
+        virtual void detect(InputArray image, InputArray rois, OutputArray rects, OutputArray confs) const;
 
     }
 
@@ -119,7 +119,7 @@ Public interface for of soft (stageless) cascaded detector. ::
     public:
         virtual ~ChannelFeatureBuilder();
 
-        virtual void operator()(InputArray src, CV_OUT OutputArray channels) const = 0;
+        virtual void operator()(InputArray src, OutputArray channels) const = 0;
 
         static cv::Ptr<ChannelFeatureBuilder> create();
     };
@@ -131,7 +131,7 @@ Destructor for ChannelFeatureBuilder.
 
 .. ocv:function:: softcascade::ChannelFeatureBuilder::~ChannelFeatureBuilder()
 
-.. ocv:pyfunction:: cv2.softcascade_ChannelFeatureBuilder_create() -> retval
+.. ocv:pyfunction:: cv2.softcascade_ChannelFeatureBuilder_create(featureType) -> retval
 
 
 softcascade::ChannelFeatureBuilder::operator()
