@@ -2282,9 +2282,10 @@ static void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, string
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
+    float pf;
     if(src1.clCxt -> impl -> double_support == 0)
     {
-        float pf = p;
+        pf = p;
         args.push_back( make_pair( sizeof(cl_float), (void *)&pf ));
     }
     else

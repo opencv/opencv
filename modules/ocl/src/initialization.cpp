@@ -244,18 +244,18 @@ namespace cv
             //initialize extra options for compilation. Currently only fp64 is included.
             //Assume 4KB is enough to store all possible extensions.
 
-            const int EXT_LEN = 4096 + 1 ;
+            const size_t EXT_LEN = 4096 + 1 ;
             char extends_set[EXT_LEN];
             size_t extends_size;
             openCLSafeCall(clGetDeviceInfo(oclinfo.impl->devices[devnum], CL_DEVICE_EXTENSIONS,
                                            EXT_LEN, (void *)extends_set, &extends_size));
-            CV_Assert(extends_size < (size_t)EXT_LEN);
+            CV_Assert(extends_size < EXT_LEN);
             extends_set[EXT_LEN - 1] = 0;
             memset(oclinfo.impl->extra_options, 0, 512);
             oclinfo.impl->double_support = 0;
-            int fp64_khr = string(extends_set).find("cl_khr_fp64");
+            string::size_type fp64 = string(extends_set).find("cl_khr_fp64");
 
-            if(fp64_khr >= 0 && fp64_khr < EXT_LEN)
+            if(fp64 < EXT_LEN)
             {
                 sprintf(oclinfo.impl->extra_options , "-D DOUBLE_SUPPORT");
                 oclinfo.impl -> double_support = 1;

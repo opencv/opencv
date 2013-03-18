@@ -27,7 +27,7 @@ typedef long T;
 #define DST_ROW_A03     9
 
 __kernel void icvContourMoments(int contour_total,
-                                __global float* reader_oclmat_data, 
+								__global float* reader_oclmat_data, 
                                 __global T* dst_a,
                                 int dst_step)
 {

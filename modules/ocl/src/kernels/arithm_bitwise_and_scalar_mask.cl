@@ -42,11 +42,6 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#if defined (__ATI__)
-#pragma OPENCL EXTENSION cl_amd_fp64:enable
-#elif defined (__NVIDIA__)
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////BITWISE_AND////////////////////////////////////////////////////
@@ -251,7 +246,7 @@ __kernel void arithm_s_bitwise_and_with_mask_C1_D5 (__global char *src1, int src
     }
 }
 
-#if defined (DOUBLE_SUPPORT)
+
 __kernel void arithm_s_bitwise_and_with_mask_C1_D6 (__global short *src1, int src1_step, int src1_offset,
                                             __global short *dst,  int dst_step,  int dst_offset,
                                             __global   uchar *mask, int mask_step, int mask_offset,
@@ -279,7 +274,7 @@ __kernel void arithm_s_bitwise_and_with_mask_C1_D6 (__global short *src1, int sr
         *((__global short4 *)((__global char *)dst + dst_index)) = data;
     }
 }
-#endif
+
 __kernel void arithm_s_bitwise_and_with_mask_C2_D0 (__global   uchar *src1, int src1_step, int src1_offset,
                                             __global   uchar *dst,  int dst_step,  int dst_offset,
                                             __global   uchar *mask, int mask_step, int mask_offset,
@@ -460,7 +455,7 @@ __kernel void arithm_s_bitwise_and_with_mask_C2_D5 (__global   char *src1, int s
         *((__global char8 *)((__global char *)dst + dst_index)) = data;
     }
 }
-#if defined (DOUBLE_SUPPORT)
+
 __kernel void arithm_s_bitwise_and_with_mask_C2_D6 (__global short *src1, int src1_step, int src1_offset,
                                                     __global short *dst,  int dst_step,  int dst_offset,
                                                     __global uchar *mask, int mask_step, int mask_offset,
@@ -488,7 +483,7 @@ __kernel void arithm_s_bitwise_and_with_mask_C2_D6 (__global short *src1, int sr
         *((__global short8 *)((__global char *)dst + dst_index)) = data;
     }
 }
-#endif
+
 __kernel void arithm_s_bitwise_and_with_mask_C3_D0 (__global   uchar *src1, int src1_step, int src1_offset,
                                             __global   uchar *dst,  int dst_step,  int dst_offset,
                                             __global   uchar *mask, int mask_step, int mask_offset,
@@ -800,7 +795,7 @@ __kernel void arithm_s_bitwise_and_with_mask_C3_D5 (__global   char *src1, int s
        *((__global char4 *)((__global char *)dst + dst_index + 8))= data_2;
     }
 }
-#if defined (DOUBLE_SUPPORT)
+
 __kernel void arithm_s_bitwise_and_with_mask_C3_D6 (__global short *src1, int src1_step, int src1_offset,
                                                     __global short *dst,  int dst_step,  int dst_offset,
                                                     __global uchar  *mask, int mask_step, int mask_offset,
@@ -843,7 +838,7 @@ __kernel void arithm_s_bitwise_and_with_mask_C3_D6 (__global short *src1, int sr
        *((__global short4 *)((__global char *)dst + dst_index + 16))= data_2;
     }
 }
-#endif
+
 __kernel void arithm_s_bitwise_and_with_mask_C4_D0 (__global   uchar *src1, int src1_step, int src1_offset,
                                             __global   uchar *dst,  int dst_step,  int dst_offset,
                                             __global   uchar *mask, int mask_step, int mask_offset,
@@ -1005,7 +1000,7 @@ __kernel void arithm_s_bitwise_and_with_mask_C4_D5 (__global   char *src1, int s
         *((__global char16 *)((__global char *)dst + dst_index)) = data;
     }
 }
-#if defined (DOUBLE_SUPPORT)
+
 __kernel void arithm_s_bitwise_and_with_mask_C4_D6 (__global short *src1, int src1_step, int src1_offset,
                                                     __global short *dst,  int dst_step,  int dst_offset,
                                                     __global uchar *mask, int mask_step, int mask_offset,
@@ -1054,5 +1049,5 @@ __kernel void arithm_s_bitwise_and_with_mask_C4_D6 (__global short *src1, int sr
         *((__global short4 *)((__global char *)dst + dst_index + 24)) = data_3;
     }
 }
-#endif
+
 

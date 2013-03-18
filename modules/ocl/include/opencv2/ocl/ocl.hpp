@@ -130,6 +130,21 @@ namespace cv
         //getDevice also need to be called before this function
         CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0);
 
+        // the double precision floating point mode enum
+        //   NO            = do not enable FP64 usage in kernel, prefer performance
+        //   OPTIMAL       = automatically choose the optimal mode, balance performance and accuracy
+        //   WHEN_POSSIBLE = enable fp64 whenever possible, prefer accuracy
+        enum FP64_MODE
+        {
+            NO,         
+            OPTIMAL,
+            DEFUALT = OPTIMAL,
+            WHEN_POSSIBLE         
+        };
+        // set optional float precision to use in kernels
+        // this is particular useful for increasing algorithm accuracy on APUs with cl_amd_fp64 extension
+        //   return true if double support is enabled
+        CV_EXPORTS bool setFloatPrecision(FP64_MODE mode = OPTIMAL);
         //////////////////////////////// Error handling ////////////////////////
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
 
