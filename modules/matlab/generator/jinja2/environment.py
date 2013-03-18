@@ -265,7 +265,6 @@ class Environment(object):
 
         # defaults
         self.filters = DEFAULT_FILTERS.copy()
-        self.tests = DEFAULT_TESTS.copy()
         self.globals = DEFAULT_NAMESPACE.copy()
 
         # set the loader provided

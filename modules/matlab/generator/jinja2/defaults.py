@@ -26,7 +26,6 @@ NEWLINE_SEQUENCE = '\n'
 
 # default filters, tests and namespace
 from jinja2.filters import FILTERS as DEFAULT_FILTERS
-from jinja2.tests import TESTS as DEFAULT_TESTS
 DEFAULT_NAMESPACE = {
     'range':        xrange,
     'dict':         lambda **kw: kw,

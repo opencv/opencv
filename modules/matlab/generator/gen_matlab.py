@@ -39,17 +39,34 @@ class MatlabWrapperGenerator(object):
         tdoc       = jtemplate.get_template('template_doc_base.m')
 
         # create the build directory
-        if not os.path.isdir(output_dir):
-          os.mkdir(output_dir)
+        output_source_dir  = output_dir+'/src'
+        output_private_dir = output_source_dir+'/private' 
+        output_class_dir   = output_dir+'/+cv'
+        if not os.path.isdir(output_source_dir):
+          os.mkdir(output_source_dir)
+        if not os.path.isdir(output_private_dir):
+          os.mkdir(output_private_dir)
+        if not os.path.isdir(output_class_dir):
+          os.mkdir(output_class_dir)
 
-        # populate!
-        function  = parse_tree.namespaces[0].functions[0]
-        print function
-        populated = tfunction.render(fun=function, time=time)
-        with open(output_dir+'/'+function.name+'.cpp', 'wb') as f:
-          f.write(populated)
-        #for name, namespace in ns:
-        #  for function in namespace.functions:
-        #    print 'populating function tempaltes from '+name
-        #    populated = tfunction.render(function)
+        # populate templates
+        for namespace in parse_tree.namespaces:
+            print 'populating function templates from '+namespace.name
+            # functions
+            for function in namespace.functions:
+                populated = tfunction.render(fun=function, time=time)
+                with open(output_source_dir+'/'+function.name+'.cpp', 'wb') as f:
+                    f.write(populated)
+            # classes
+            for clss in namespace.classes:
+                # cpp converter
+                if len(clss.functions) > 2:
+                    print clss.functions[1].__str__()
+                populated = tclassc.render(clss=clss, time=time)
+                with open(output_private_dir+'/'+clss.name+'Bridge.cpp', 'wb') as f:
+                    f.write(populated)
+                # matlab classdef
+                populated = tclassm.render(clss=clss, time=time)
+                with open(output_class_dir+'/'+clss.name+'.m', 'wb') as f:
+                    f.write(populated)
 

@@ -1,5 +1,5 @@
 /*
- * file:   {{class.name}}Bridge.cpp
+ * file:   {{clss.name}}Bridge.cpp
  * author: A trusty code generator
  * date:   {{time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())}}
  * 
@@ -18,34 +18,35 @@
 namespace {
 
 typedef std::unordered_map Map;
-typedef std::vector<Bridge> (*)({{class.name}}&, const std::vector<Bridge>&) MethodSignature;
+typedef std::vector<Bridge> (*)({{clss.name}}&, const std::vector<Bridge>&) MethodSignature;
 
-{% for function in class.functions %}
+{% for function in clss.functions %}
 // wrapper for {{function.name}}() method
-std::vector<Bridge> {{function.name}}({{class.name}}& inst, const std::vector<Bridge>& args) {
+std::vector<Bridge> {{function.name}}({{clss.name}}& inst, const std::vector<Bridge>& args) {
   // setup
 
   // invoke
-  
 
   // setdown
 }
+
 {% endfor %}
 
 map<std::string, MethodSignature> createMethodMap() {
   Map<std::string, MethodSignature> m;
-  {% for function in class.functions %}
+  {% for function in clss.functions -%}
   m["{{function.name}}"] = &{{function.name}};
   {% endfor %}
+
   return m;
 }
 static const Map<std::string, MethodSignature> methods = createMethodMap();
 
-// map of created {{class.name}} instances. Don't trust the user to keep them safe...
-static Map<void *, {{class.name}}> instances;
+// map of created {{clss.name}} instances. Don't trust the user to keep them safe...
+static Map<void *, {{clss.name}}> instances;
 
 /* 
- * {{ class.name }}
+ * {{ clss.name }}
  * Gateway routine
  *   nlhs - number of return arguments
  *   plhs - pointers to return arguments
@@ -63,7 +64,7 @@ void mexFunction(int nlhs, mxArray* plhs[],
 
   // retrieve the instance of interest
   try {
-    {{class.name}}& inst = instances.at(handle.address());
+    {{clss.name}}& inst = instances.at(handle.address());
   } catch (const std::out_of_range& e) {
     mexErrMsgTxt("Invalid object instance provided");
   }
@@ -80,6 +81,7 @@ void mexFunction(int nlhs, mxArray* plhs[],
 
   {% block cleanup %}
   {% endblock %}
+
 }
 
 }; // end namespace

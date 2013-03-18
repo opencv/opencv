@@ -133,9 +133,9 @@ class Function(object):
         self.opt = opt if opt else []
 
     def __str__(self):
-        return fill((self.rtp+' ' if self.rtp else '')+self.name+'('+\
+        return (self.rtp+' ' if self.rtp else '')+self.name+'('+\
           join((arg.__str__() for arg in self.req+self.opt), ', ')+\
-          ')'+(' const' if self.const else '')+';', 80, subsequent_indent=('\t\t' if self.clss else '\t'))
+          ')'+(' const' if self.const else '')+';'
 
 class Argument(object):
     def __init__(self, name='', tp='', const=False, ref='', default=''):
