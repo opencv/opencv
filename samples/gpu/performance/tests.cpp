@@ -8,8 +8,8 @@
 #include "performance.h"
 
 #include "opencv2/opencv_modules.hpp"
-#ifdef HAVE_OPENCV_GPUNONFREE
-#include "opencv2/gpunonfree/gpunonfree.hpp"
+#ifdef HAVE_OPENCV_NONFREE
+#include "opencv2/nonfree/gpu.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
 #endif
 
@@ -271,7 +271,7 @@ TEST(meanShift)
     }
 }
 
-#ifdef HAVE_OPENCV_GPUNONFREE
+#ifdef HAVE_OPENCV_NONFREE
 
 TEST(SURF)
 {

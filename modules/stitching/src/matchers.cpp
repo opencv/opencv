@@ -429,7 +429,7 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     }
 }
 
-#ifdef HAVE_OPENCV_GPUNONFREE
+#if defined(HAVE_OPENCV_NONFREE) && defined(HAVE_OPENCV_GPU)
 SurfFeaturesFinderGpu::SurfFeaturesFinderGpu(double hess_thresh, int num_octaves, int num_layers,
                                              int num_octaves_descr, int num_layers_descr)
 {

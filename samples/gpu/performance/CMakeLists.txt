@@ -10,8 +10,8 @@ endif()
 add_executable(${the_target} ${sources} ${headers})
 target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
 
-if(HAVE_opencv_gpunonfree)
-  target_link_libraries(${the_target} opencv_gpunonfree opencv_nonfree)
+if(HAVE_opencv_nonfree)
+  target_link_libraries(${the_target} opencv_nonfree)
 endif()
 
 set_target_properties(${the_target} PROPERTIES

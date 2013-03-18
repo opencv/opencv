@@ -9,10 +9,19 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
+#include <iostream>
+
+#include "cvconfig.h"
+#include "opencv2/opencv_modules.hpp"
+
 #include "opencv2/ts/ts.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
-#include <iostream>
+
+#if defined(HAVE_OPENCV_GPU) && defined(HAVE_CUDA)
+    #include "opencv2/ts/gpu_test.hpp"
+    #include "opencv2/nonfree/gpu.hpp"
+#endif
 
 #endif

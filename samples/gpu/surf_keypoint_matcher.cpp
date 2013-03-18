@@ -2,13 +2,13 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_GPUNONFREE
+#ifdef HAVE_OPENCV_NONFREE
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/gpu/gpu.hpp"
-#include "opencv2/gpunonfree/gpunonfree.hpp"
+#include "opencv2/nonfree/gpu.hpp"
 
 using namespace std;
 using namespace cv;
@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
 
 int main()
 {
-    std::cerr << "OpenCV was built without gpunonfree module" << std::endl;
+    std::cerr << "OpenCV was built without nonfree module" << std::endl;
     return 0;
 }
 

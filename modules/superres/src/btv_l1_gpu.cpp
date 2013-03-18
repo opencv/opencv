@@ -51,7 +51,7 @@ using namespace cv::gpu;
 using namespace cv::superres;
 using namespace cv::superres::detail;
 
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || !defined(HAVE_OPENCV_GPU)
 
 Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1_GPU()
 {

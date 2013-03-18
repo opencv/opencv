@@ -4,12 +4,14 @@ using namespace std;
 using namespace testing;
 using namespace perf;
 
+#if defined(HAVE_OPENCV_GPU) && defined(HAVE_CUDA)
+
 //////////////////////////////////////////////////////////////////////
 // SURF
 
 DEF_PARAM_TEST_1(Image, string);
 
-PERF_TEST_P(Image, Features2D_SURF,
+PERF_TEST_P(Image, GPU_SURF,
             Values<string>("gpu/perf/aloe.png"))
 {
     declare.time(50.0);
@@ -55,7 +57,7 @@ PERF_TEST_P(Image, Features2D_SURF,
 
 DEF_PARAM_TEST(Video_Cn, string, int);
 
-PERF_TEST_P(Video_Cn, Video_VIBE,
+PERF_TEST_P(Video_Cn, GPU_VIBE,
             Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
                     GPU_CHANNELS_1_3_4))
 {
@@ -116,3 +118,5 @@ PERF_TEST_P(Video_Cn, Video_VIBE,
         FAIL_NO_CPU();
     }
 }
+
+#endif

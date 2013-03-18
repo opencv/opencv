@@ -41,7 +41,7 @@
 
 #include "test_precomp.hpp"
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_OPENCV_GPU) && defined(HAVE_CUDA)
 
 using namespace cvtest;
 
@@ -81,7 +81,7 @@ PARAM_TEST_CASE(SURF, cv::gpu::DeviceInfo, SURF_HessianThreshold, SURF_Octaves, 
 
 GPU_TEST_P(SURF, Detector)
 {
-    cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat image = readImage("../gpu/features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
     cv::gpu::SURF_GPU surf;
@@ -129,7 +129,7 @@ GPU_TEST_P(SURF, Detector)
 
 GPU_TEST_P(SURF, Detector_Masked)
 {
-    cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat image = readImage("../gpu/features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
     cv::Mat mask(image.size(), CV_8UC1, cv::Scalar::all(1));
@@ -180,7 +180,7 @@ GPU_TEST_P(SURF, Detector_Masked)
 
 GPU_TEST_P(SURF, Descriptor)
 {
-    cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat image = readImage("../gpu/features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
     cv::gpu::SURF_GPU surf;
@@ -282,5 +282,4 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, VIBE, testing::Combine(
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4)),
     WHOLE_SUBMAT));
 
-#endif // HAVE_CUDA
-
+#endif

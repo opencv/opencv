@@ -17,8 +17,8 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core"
     )
 
-  if(HAVE_opencv_gpunonfree)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpunonfree/include")
+  if(HAVE_opencv_nonfree)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/nonfree/include")
   endif()
 
   if(HAVE_CUDA)
@@ -37,8 +37,8 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     add_executable(${the_target} ${srcs})
 
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
-    if(HAVE_opencv_gpunonfree)
-      target_link_libraries(${the_target} opencv_gpunonfree)
+    if(HAVE_opencv_nonfree)
+      target_link_libraries(${the_target} opencv_nonfree)
     endif()
 
     set_target_properties(${the_target} PROPERTIES

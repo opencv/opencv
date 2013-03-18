@@ -1,5 +1,5 @@
-Video Analysis
-==============
+Background Subtraction
+======================
 
 .. highlight:: cpp
 

@@ -20,10 +20,6 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include")
   endif()
 
-  if(HAVE_opencv_gpunonfree)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpunonfree/include")
-  endif()
-
   if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
   endif()
@@ -47,9 +43,6 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
     if(HAVE_opencv_gpu)
       target_link_libraries(${the_target} opencv_gpu)
-    endif()
-    if(HAVE_opencv_gpunonfree)
-      target_link_libraries(${the_target} opencv_gpunonfree)
     endif()
 
     set_target_properties(${the_target} PROPERTIES

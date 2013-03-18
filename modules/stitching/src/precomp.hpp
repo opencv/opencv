@@ -71,10 +71,11 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #ifdef HAVE_OPENCV_GPU
-# include "opencv2/gpu/gpu.hpp"
-#endif
-#ifdef HAVE_OPENCV_GPUNONFREE
-# include "opencv2/gpunonfree/gpunonfree.hpp"
+    #include "opencv2/gpu/gpu.hpp"
+
+    #ifdef HAVE_OPENCV_NONFREE
+        #include "opencv2/nonfree/gpu.hpp"
+    #endif
 #endif
 
 #include "../../imgproc/src/gcgraph.hpp"

@@ -1,3 +1,3 @@
 #include "perf_precomp.hpp"
 
-CV_PERF_TEST_MAIN(nonfree)
+CV_PERF_TEST_MAIN(nonfree, perf::printCudaInfo())
