@@ -43,7 +43,8 @@
 #include "precomp.hpp"
 
 cv::softcascade::Detection::Detection(const cv::Rect& b, const float c, int k)
-: x(b.x), y(b.y), w(b.width), h(b.height), confidence(c), kind(k) {}
+: x(static_cast<ushort>(b.x)), y(static_cast<ushort>(b.y)),
+  w(static_cast<ushort>(b.width)), h(static_cast<ushort>(b.height)), confidence(c), kind(k) {}
 
 cv::Rect cv::softcascade::Detection::bb() const
 {
