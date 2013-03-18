@@ -8,6 +8,7 @@
     <!-- http://stackoverflow.com/questions/3584968/ant-how-to-compile-jar-that-includes-source-attachment -->
     <javac sourcepath="" srcdir="src" destdir="src" debug="on" includeantruntime="false" >
       <include name="**/*.java"/>
+      <compilerarg line="-encoding utf-8"/>
     </javac>
 
     <jar basedir="src" destfile="bin/@JAR_NAME@"/>
