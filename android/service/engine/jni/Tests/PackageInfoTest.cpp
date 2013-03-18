@@ -85,6 +85,21 @@ TEST(PackageInfo, FullNameTegra3)
     #endif
 }
 
+TEST(PackageInfo, FullNameTegra4)
+{
+    PackageInfo info(2040400, PLATFORM_TEGRA4, ARCH_ARMv7 | FEATURES_HAS_NEON);
+    string name = info.GetFullName();
+    #ifdef __SUPPORT_TEGRA3
+    EXPECT_STREQ("org.opencv.lib_v24_tegra4", name.c_str());
+    #else
+    #ifdef __SUPPORT_ARMEABI_V7A_FEATURES
+    EXPECT_STREQ("org.opencv.lib_v24_armv7a_neon", name.c_str());
+    #else
+    EXPECT_STREQ("org.opencv.lib_v24_armv7a", name.c_str());
+    #endif
+    #endif
+}
+
 TEST(PackageInfo, FullNameX86SSE2)
 {
     PackageInfo info(2030000, PLATFORM_UNKNOWN, ARCH_X86 | FEATURES_HAS_SSE2);
@@ -146,6 +161,13 @@ TEST(PackageInfo, Tegra3FromFullName)
     PackageInfo info("org.opencv.lib_v24_tegra3", "/data/data/org.opencv.lib_v24_tegra3");
     EXPECT_EQ(2040000, info.GetVersion());
     EXPECT_EQ(PLATFORM_TEGRA3, info.GetPlatform());
+}
+
+TEST(PackageInfo, Tegra4FromFullName)
+{
+    PackageInfo info("org.opencv.lib_v24_tegra4", "/data/data/org.opencv.lib_v24_tegra4");
+    EXPECT_EQ(2040000, info.GetVersion());
+    EXPECT_EQ(PLATFORM_TEGRA4, info.GetPlatform());
 }
 
 #ifdef __SUPPORT_MIPS
