@@ -109,6 +109,8 @@ namespace cv
 
         template <typename Y> operator Affine3<Y>() const;
 
+        operator cv::Mat();
+
         Mat4 matrix;
 
 #if defined EIGEN_WORLD_VERSION && defined EIGEN_GEOMETRY_MODULE_H
@@ -314,6 +316,8 @@ template<typename T> template <typename Y> inline cv::Affine3<T>::operator Affin
     return Affine3<Y>(matrix);
 }
 
+template<typename T> inline cv::Affine3<T>::operator cv::Mat() { return cv::Mat(matrix, false); }
+
 template<typename T> inline cv::Affine3<T> cv::operator*(const cv::Affine3<T>& affine1, const cv::Affine3<T>& affine2)
 {
     return affine2.concatenate(affine1);
@@ -350,7 +354,7 @@ inline cv::Vec3d cv::operator*(const cv::Affine3d& affine, const cv::Vec3d& v)
     return r;
 }
 
-#if defined EIGEN_WORLD_VERSION && defined EIGEN_GEOMETRY_MODULE_H
+#if (defined EIGEN_WORLD_VERSION && defined EIGEN_GEOMETRY_MODULE_H) || defined CV_AFFINE_FORCE_EIGEN_PLUGIN
 
 template<typename T> inline cv::Affine3<T>::Affine3(const Eigen::Transform<T, 3, Eigen::Affine, (Eigen::RowMajor)>& affine)
 {
