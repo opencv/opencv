@@ -1,7 +1,7 @@
 #include <opencv2/opencv_modules.hpp>
 
-#ifndef HAVE_OPENCV_GPUNONFREE
-#error "GPU non free module is required"
+#ifndef HAVE_OPENCV_NONFREE
+#error "Non free module is required"
 #else
 
 #include <iostream>
@@ -13,7 +13,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/gpu/gpu.hpp>
-#include <opencv2/gpunonfree/gpunonfree.hpp>
+#include <opencv2/nonfree/gpu.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
