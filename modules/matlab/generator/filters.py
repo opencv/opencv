@@ -1,6 +1,17 @@
 from textwrap import TextWrapper
 from string import split, join
+import re
 
+def toUpperCamelCase(text):
+    return text[0].upper() + text[1:]
+
+def toLowerCamelCase(text):
+    return text[0].lower() + text[1:]
+
+def toUnderCase(text):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', text)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+    
 def comment(text, wrap=80, escape='% ', escape_first='', escape_last=''):
     '''comment filter
     Takes a string in text, and wraps it to wrap characters in length with

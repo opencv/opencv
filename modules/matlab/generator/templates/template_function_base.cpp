@@ -15,7 +15,7 @@
 
 /* 
  * {{ fun.name }}
- * Main mex entry point
+ * Gateway routine
  *   nlhs - number of return arguments
  *   plhs - pointers to return arguments
  *   nrhs - number of input arguments
