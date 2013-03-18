@@ -8,18 +8,6 @@ using namespace cv;
 using namespace cv::superres;
 using namespace cv::gpu;
 
-#define GPU_SANITY_CHECK(mat, ...) \
-    do{ \
-        Mat gpu_##mat(mat); \
-        SANITY_CHECK(gpu_##mat, ## __VA_ARGS__); \
-    } while(0)
-
-#define CPU_SANITY_CHECK(mat, ...) \
-    do{ \
-        Mat cpu_##mat(mat); \
-        SANITY_CHECK(cpu_##mat, ## __VA_ARGS__); \
-    } while(0)
-
 namespace
 {
     class OneFrameSource_CPU : public FrameSource

@@ -9,9 +9,17 @@
 #ifndef __OPENCV_PERF_PRECOMP_HPP__
 #define __OPENCV_PERF_PRECOMP_HPP__
 
+#include "cvconfig.h"
+#include "opencv2/opencv_modules.hpp"
+
 #include "opencv2/ts/ts.hpp"
+#include "opencv2/ts/gpu_perf.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/highgui/highgui.hpp"
+
+#if defined(HAVE_OPENCV_GPU) && defined(HAVE_CUDA)
+    #include "opencv2/nonfree/gpu.hpp"
+#endif
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY
 #error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined

@@ -43,6 +43,8 @@
 
 #ifdef HAVE_CUDA
 
+using namespace cvtest;
+
 namespace
 {
     cv::Mat createTransfomMatrix(cv::Size srcSize, double angle)

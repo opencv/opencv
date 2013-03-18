@@ -2,6 +2,7 @@
 
 using namespace std;
 using namespace testing;
+using namespace perf;
 
 DEF_PARAM_TEST_1(Image, string);
 

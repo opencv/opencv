@@ -48,6 +48,18 @@ namespace cv { namespace gpu { namespace device
 {
     namespace vibe
     {
+        void loadConstants(int nbSamples, int reqMatches, int radius, int subsamplingFactor);
+
+        void init_gpu(PtrStepSzb frame, int cn, PtrStepSzb samples, PtrStepSz<unsigned int> randStates, cudaStream_t stream);
+
+        void update_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzb samples, PtrStepSz<unsigned int> randStates, cudaStream_t stream);
+    }
+}}}
+
+namespace cv { namespace gpu { namespace device
+{
+    namespace vibe
+    {
         __constant__ int c_nbSamples;
         __constant__ int c_reqMatches;
         __constant__ int c_radius;

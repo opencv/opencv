@@ -16,7 +16,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   ocv_include_directories("${OpenCV_SOURCE_DIR}/include")#for opencv.hpp
   ocv_include_modules(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
-  if (HAVE_opencv_gpu)
+  if(HAVE_opencv_gpu)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include")
   endif()
 
@@ -41,7 +41,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     add_executable(${the_target} ${srcs})
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
-    if (HAVE_opencv_gpu)
+    if(HAVE_opencv_gpu)
       target_link_libraries(${the_target} opencv_gpu)
     endif()
 

@@ -43,6 +43,8 @@
 
 #if defined(HAVE_CUDA) && defined(HAVE_OPENGL)
 
+using namespace cvtest;
+
 /////////////////////////////////////////////
 // Buffer
 

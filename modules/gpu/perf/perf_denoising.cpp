@@ -2,6 +2,7 @@
 
 using namespace std;
 using namespace testing;
+using namespace perf;
 
 #define GPU_DENOISING_IMAGE_SIZES testing::Values(perf::szVGA, perf::sz720p)
 
