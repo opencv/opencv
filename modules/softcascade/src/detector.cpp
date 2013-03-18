@@ -42,11 +42,14 @@
 
 #include "precomp.hpp"
 
-using cv::softcascade::Detection;
-using cv::softcascade::Detector;
-using cv::softcascade::ChannelFeatureBuilder;
+cv::softcascade::Detection::Detection(const cv::Rect& b, const float c, int k)
+: x(static_cast<ushort>(b.x)), y(static_cast<ushort>(b.y)),
+  w(static_cast<ushort>(b.width)), h(static_cast<ushort>(b.height)), confidence(c), kind(k) {}
 
-using namespace cv;
+cv::Rect cv::softcascade::Detection::bb() const
+{
+    return cv::Rect(x, y, w, h);
+}
 
 namespace {
 
@@ -151,13 +154,13 @@ struct Level
         scaleshift = static_cast<int>(relScale * (1 << 16));
     }
 
-    void addDetection(const int x, const int y, float confidence, std::vector<Detection>& detections) const
+    void addDetection(const int x, const int y, float confidence, std::vector<cv::softcascade::Detection>& detections) const
     {
         // fix me
         int shrinkage = 4;//(*octave).shrinkage;
         cv::Rect rect(cvRound(x * shrinkage), cvRound(y * shrinkage), objSize.width, objSize.height);
 
-        detections.push_back(Detection(rect, confidence));
+        detections.push_back(cv::softcascade::Detection(rect, confidence));
     }
 
     float rescale(cv::Rect& scaledRect, const float threshold, int idx) const
@@ -183,7 +186,7 @@ struct ChannelStorage
     size_t step;
     int model_height;
 
-    cv::Ptr<ChannelFeatureBuilder> builder;
+    cv::Ptr<cv::softcascade::ChannelFeatureBuilder> builder;
 
     enum {HOG_BINS = 6, HOG_LUV_BINS = 10};
 
@@ -192,7 +195,7 @@ struct ChannelStorage
         model_height = cvRound(colored.rows / (float)shrinkage);
         if (featureTypeStr == "ICF") featureTypeStr = "HOG6MagLuv";
 
-        builder = ChannelFeatureBuilder::create(featureTypeStr);
+        builder = cv::softcascade::ChannelFeatureBuilder::create(featureTypeStr);
         (*builder)(colored, hog, cv::Size(cvRound(colored.cols / (float)shrinkage), model_height));
 
         step = hog.step1();
@@ -213,8 +216,7 @@ struct ChannelStorage
 
 }
 
-
-struct Detector::Fields
+struct cv::softcascade::Detector::Fields
 {
     float minScale;
     float maxScale;
@@ -421,17 +423,17 @@ struct Detector::Fields
     }
 };
 
-Detector::Detector(const double mins, const double maxs, const int nsc, const int rej)
+cv::softcascade::Detector::Detector(const double mins, const double maxs, const int nsc, const int rej)
 : fields(0), minScale(mins), maxScale(maxs), scales(nsc), rejCriteria(rej) {}
 
-Detector::~Detector() { delete fields;}
+cv::softcascade::Detector::~Detector() { delete fields;}
 
-void Detector::read(const cv::FileNode& fn)
+void cv::softcascade::Detector::read(const cv::FileNode& fn)
 {
     Algorithm::read(fn);
 }
 
-bool Detector::load(const cv::FileNode& fn)
+bool cv::softcascade::Detector::load(const cv::FileNode& fn)
 {
     if (fields) delete fields;
 
@@ -473,7 +475,7 @@ void DollarNMS(dvector& objects)
         {
             const Detection &b = *next;
 
-            const float ovl =  overlap(a.bb, b.bb) / std::min(a.bb.area(), b.bb.area());
+            const float ovl =  overlap(a.bb(), b.bb()) / std::min(a.bb().area(), b.bb().area());
 
             if (ovl > DollarThreshold)
                 next = objects.erase(next);
@@ -485,13 +487,13 @@ void DollarNMS(dvector& objects)
 
 static void suppress(int type, std::vector<Detection>& objects)
 {
-    CV_Assert(type == Detector::DOLLAR);
+    CV_Assert(type == cv::softcascade::Detector::DOLLAR);
     DollarNMS(objects);
 }
 
 }
 
-void Detector::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects) const
+void cv::softcascade::Detector::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects) const
 {
     Fields& fld = *fields;
     // create integrals
@@ -518,7 +520,7 @@ void Detector::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects
     if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
 }
 
-void Detector::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<Detection>& objects) const
+void cv::softcascade::Detector::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<Detection>& objects) const
 {
     // only color images are suppered
     cv::Mat image = _image.getMat();
@@ -570,7 +572,7 @@ void Detector::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<D
     if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
 }
 
-void Detector::detect(InputArray _image, InputArray _rois,  OutputArray _rects, OutputArray _confs) const
+void cv::softcascade::Detector::detect(InputArray _image, InputArray _rois,  OutputArray _rects, OutputArray _confs) const
 {
     std::vector<Detection> objects;
     detect( _image, _rois, objects);
@@ -588,7 +590,7 @@ void Detector::detect(InputArray _image, InputArray _rois,  OutputArray _rects, 
     int i = 0;
     for (IDet it = objects.begin(); it != objects.end(); ++it, ++i)
     {
-        rectPtr[i] = (*it).bb;
+        rectPtr[i] = (*it).bb();
         confPtr[i] = (*it).confidence;
     }
 }

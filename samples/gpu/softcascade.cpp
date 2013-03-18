@@ -3,6 +3,8 @@
 #include <opencv2/highgui.hpp>
 #include <iostream>
 
+typedef cv::softcascade::Detection Detection;
+
 int main(int argc, char** argv)
 {
     const std::string keys =
@@ -64,7 +66,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    cv::gpu::GpuMat objects(1, sizeof(SCascade::Detection) * 10000, CV_8UC1);
+    cv::gpu::GpuMat objects(1, sizeof(Detection) * 10000, CV_8UC1);
     cv::gpu::printShortCudaDeviceInfo(parser.get<int>("device"));
     for (;;)
     {
@@ -80,7 +82,6 @@ int main(int argc, char** argv)
         cascade.detect(dframe, roi, objects);
 
         cv::Mat dt(objects);
-        typedef cv::softcascade::SCascade::Detection Detection;
 
         Detection* dts = ((Detection*)dt.data) + 1;
         int* count = dt.ptr<int>(0);

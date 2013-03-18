@@ -27,8 +27,8 @@ void fixture##_##name::__cpu() { FAIL() << "No such CPU implementation analogy";
 namespace {
     struct DetectionLess
     {
-        bool operator()(const cv::softcascade::SCascade::Detection& a,
-            const cv::softcascade::SCascade::Detection& b) const
+        bool operator()(const cv::softcascade::Detection& a,
+            const cv::softcascade::Detection& b) const
         {
             if (a.x != b.x)      return a.x < b.x;
             else if (a.y != b.y) return a.y < b.y;
@@ -41,7 +41,7 @@ namespace {
     {
         cv::Mat detections(objects);
 
-        typedef cv::softcascade::SCascade::Detection Detection;
+        typedef cv::softcascade::Detection Detection;
         Detection* begin = (Detection*)(detections.ptr<char>(0));
         Detection* end = (Detection*)(detections.ptr<char>(0) + detections.cols);
         std::sort(begin, end, DetectionLess());
@@ -73,7 +73,7 @@ RUN_GPU(SCascadeTest, detect)
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::softcascade::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::softcascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(1);
 
     cascade.detect(colored, rois, objectBoxes);
@@ -215,7 +215,7 @@ RUN_GPU(SCascadeTest, detectStream)
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::softcascade::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::softcascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(1);
 
     cv::gpu::Stream s;
