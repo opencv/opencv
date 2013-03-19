@@ -536,7 +536,7 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
     VBLAS<_Tp> vblas;
     AutoBuffer<double> Wbuf(n);
     double* W = Wbuf;
-    _Tp eps = DBL_EPSILON*10;
+     _Tp eps = std::numeric_limits<_Tp>::epsilon()*10;
     int i, j, k, iter, max_iter = std::max(m, 30);
     _Tp c, s;
     double sd;
