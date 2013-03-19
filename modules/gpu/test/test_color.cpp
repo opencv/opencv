@@ -2505,6 +2505,22 @@ GPU_TEST_P(Demosaicing, BayerLLRL2GRAY)
     EXPECT_MAT_SIMILAR(gray_gold, dst, 1e-3);
 }
 
+GPU_TEST_P(Demosaicing, BayerLLRL2GRAY_ES)
+{
+    cv::Mat img = readImage("denoising/nlm_denoised_lena_bgr.png");
+
+    cv::Mat_<uchar> src;
+    redclear(img, src);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::demosaicing(loadMat(src), dst, cv::gpu::COLOR_BayerLLRL2GRAY_ES);
+
+    cv::Mat gray_gold;
+    cv::cvtColor(img, gray_gold, cv::COLOR_BGR2GRAY);
+
+    EXPECT_MAT_SIMILAR(gray_gold, dst, 1e-3);
+}
+
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Demosaicing, ALL_DEVICES);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////

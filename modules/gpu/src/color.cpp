@@ -68,6 +68,7 @@ namespace cv { namespace gpu {
         void MHCdemosaic_gpu(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream);
 
         void bayerLLRL_to_gray_gpu(PtrStepSz<uchar4> src, PtrStepSz<uchar4> dst, cudaStream_t stream);
+        void bayerLLRL_to_gray_ES_gpu(PtrStepSz<uchar4> src, PtrStepSz<uchar4> dst, cudaStream_t stream);
     }
 }}
 
@@ -1931,6 +1932,16 @@ void cv::gpu::demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn, Str
         dst.create(src.size(), CV_MAKE_TYPE(depth, 1));
 
         device::bayerLLRL_to_gray_gpu(src, dst, StreamAccessor::getStream(stream));
+
+        break;
+
+    case COLOR_BayerLLRL2GRAY_ES:
+        CV_Assert( depth == CV_8U );
+        CV_Assert( (src.cols % 4) == 0 && (src.rows % 2) == 0 );
+
+        dst.create(src.size(), CV_MAKE_TYPE(depth, 1));
+
+        device::bayerLLRL_to_gray_ES_gpu(src, dst, StreamAccessor::getStream(stream));
 
         break;
 

@@ -646,7 +646,8 @@ enum
     COLOR_BayerGR2GRAY_MHT = 263,
 
     // red clear demosaicing
-    COLOR_BayerLLRL2GRAY = 264
+    COLOR_BayerLLRL2GRAY    = 264, // simple
+    COLOR_BayerLLRL2GRAY_ES = 265  // edge sensitive
 };
 CV_EXPORTS void demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn = -1, Stream& stream = Stream::Null());
 
