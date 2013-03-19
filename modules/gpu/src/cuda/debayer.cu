@@ -520,7 +520,7 @@ namespace cv { namespace gpu { namespace device
     }
 
     template <int cn>
-    void MHCdemosaic(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream)
+    void MHCdemosaic_gpu(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream)
     {
         typedef typename TypeVec<uchar, cn>::vec_type dst_t;
 
@@ -536,9 +536,150 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    template void MHCdemosaic<1>(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream);
-    template void MHCdemosaic<3>(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream);
-    template void MHCdemosaic<4>(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream);
+    template void MHCdemosaic_gpu<1>(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream);
+    template void MHCdemosaic_gpu<3>(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream);
+    template void MHCdemosaic_gpu<4>(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream);
+
+    //////////////////////////////////////////////////////////////
+    // red clear debayering
+
+    __global__ void bayerLLRL_to_gray(const PtrStep<uchar4> src, PtrStep<uchar4> dst, const int cols_4, const int rows)
+    {
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = (blockIdx.y * blockDim.y + threadIdx.y) * 2;
+
+        if (x >= cols_4 || y >= rows)
+            return;
+
+        const int prev_x = ::max(x - 1, 0);
+        const int next_y = ::min(y + 2, rows - 1);
+
+        uchar4 patch[3][2];
+        patch[0][1] = src(y, x);
+        patch[1][1] = src(y + 1, x);
+        patch[2][1] = src(next_y, x);
+
+        patch[0][0] = src(y, prev_x);
+        patch[1][0] = src(y + 1, prev_x);
+        patch[2][0] = src(next_y, prev_x);
+
+        uchar4 res0 = patch[0][1];
+        uchar4 res1 = patch[1][1];
+
+        res1.x = (patch[0][0].w + patch[0][1].x + patch[0][1].y + patch[1][0].w + patch[1][1].y + patch[2][0].w + patch[2][1].x + patch[2][1].y) / 8;
+        res1.z = (patch[0][1].y + patch[0][1].z + patch[0][1].w + patch[1][1].y + patch[1][1].w + patch[2][1].y + patch[2][1].z + patch[2][1].w) / 8;
+
+        dst(y, x) = res0;
+        dst(y + 1, x) = res1;
+    }
+
+    void bayerLLRL_to_gray_gpu(PtrStepSz<uchar4> src, PtrStepSz<uchar4> dst, cudaStream_t stream)
+    {
+        const int cols_4 = src.cols / 4;
+
+        const dim3 block(32, 8);
+        const dim3 grid(divUp(cols_4, block.x), divUp(src.rows, 2 * block.y));
+
+        cudaSafeCall( cudaFuncSetCacheConfig(bayerLLRL_to_gray, cudaFuncCachePreferL1) );
+
+        bayerLLRL_to_gray<<<grid, block, 0, stream>>>(src, dst, cols_4, src.rows);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+
+    // Edge Sensitive
+    __global__ void bayerLLRL_to_gray_ES(const PtrStep<uchar4> src, PtrStep<uchar4> dst, const int cols_4, const int rows)
+    {
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = (blockIdx.y * blockDim.y + threadIdx.y) * 2;
+
+        if (x >= cols_4 || y >= rows)
+            return;
+
+        const int prev_x = ::max(x - 1, 0);
+        const int next_y = ::min(y + 2, rows - 1);
+
+        uchar4 patch[3][2];
+        patch[0][1] = src(y, x);
+        patch[1][1] = src(y + 1, x);
+        patch[2][1] = src(next_y, x);
+
+        patch[0][0] = src(y, prev_x);
+        patch[1][0] = src(y + 1, prev_x);
+        patch[2][0] = src(next_y, prev_x);
+
+        uchar4 res0 = patch[0][1];
+        uchar4 res1 = patch[1][1];
+
+        // first luma
+
+        int dh = ::abs(patch[1][0].w - patch[1][1].y);
+        int dv = ::abs(patch[0][1].x - patch[2][1].x);
+        int dl = ::abs(patch[0][1].y - patch[2][0].w);
+        int dr = ::abs(patch[0][0].w - patch[2][1].y);
+        int mind = ::min(::min(dh, dv), ::min(dl, dr));
+
+        int4 coeffs = make_int4(1, 1, 1, 1);
+        if (mind <= 60)
+        {
+            coeffs.x = dh <= 60 ? 1 : 0;
+            coeffs.y = dv <= 60 ? 1 : 0;
+            coeffs.z = dl <= 60 ? 1 : 0;
+            coeffs.w = dr <= 60 ? 1 : 0;
+        }
+
+        int sum = 2 * (coeffs.x + coeffs.y + coeffs.z + coeffs.w);
+
+        res1.x = ((patch[1][0].w + patch[1][1].y) * coeffs.x +
+                  (patch[0][1].x + patch[2][1].x) * coeffs.y +
+                  (patch[0][1].y + patch[2][0].w) * coeffs.z +
+                  (patch[0][0].w + patch[2][1].y) * coeffs.w) / sum;
+
+        // second luma
+
+        dh = ::abs(patch[1][1].y - patch[1][1].w);
+        dv = ::abs(patch[0][1].z - patch[2][1].z);
+        dl = ::abs(patch[0][1].w - patch[2][1].y);
+        dr = ::abs(patch[0][1].y - patch[2][1].w);
+        mind = ::min(::min(dh, dv), ::min(dl, dr));
+
+        coeffs = make_int4(1, 1, 1, 1);
+        if (mind <= 60)
+        {
+            coeffs.x = dh <= 60 ? 1 : 0;
+            coeffs.y = dv <= 60 ? 1 : 0;
+            coeffs.z = dl <= 60 ? 1 : 0;
+            coeffs.w = dr <= 60 ? 1 : 0;
+        }
+
+        sum = 2 * (coeffs.x + coeffs.y + coeffs.z + coeffs.w);
+
+        res1.z = ((patch[1][1].y + patch[1][1].w) * coeffs.x +
+                  (patch[0][1].z + patch[2][1].z) * coeffs.y +
+                  (patch[0][1].w + patch[2][1].y) * coeffs.z +
+                  (patch[0][1].y + patch[2][1].w) * coeffs.w) / sum;
+
+        dst(y, x) = res0;
+        dst(y + 1, x) = res1;
+    }
+
+    void bayerLLRL_to_gray_ES_gpu(PtrStepSz<uchar4> src, PtrStepSz<uchar4> dst, cudaStream_t stream)
+    {
+        const int cols_4 = src.cols / 4;
+
+        const dim3 block(32, 8);
+        const dim3 grid(divUp(cols_4, block.x), divUp(src.rows, 2 * block.y));
+
+        cudaSafeCall( cudaFuncSetCacheConfig(bayerLLRL_to_gray, cudaFuncCachePreferL1) );
+
+        bayerLLRL_to_gray_ES<<<grid, block, 0, stream>>>(src, dst, cols_4, src.rows);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
 }}}
 
 #endif /* CUDA_DISABLER */

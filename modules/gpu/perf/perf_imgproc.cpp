@@ -1378,7 +1378,8 @@ CV_ENUM(DemosaicingCode,
         cv::COLOR_BayerBG2BGR, cv::COLOR_BayerGB2BGR, cv::COLOR_BayerRG2BGR, cv::COLOR_BayerGR2BGR,
         cv::COLOR_BayerBG2GRAY, cv::COLOR_BayerGB2GRAY, cv::COLOR_BayerRG2GRAY, cv::COLOR_BayerGR2GRAY,
         cv::gpu::COLOR_BayerBG2BGR_MHT, cv::gpu::COLOR_BayerGB2BGR_MHT, cv::gpu::COLOR_BayerRG2BGR_MHT, cv::gpu::COLOR_BayerGR2BGR_MHT,
-        cv::gpu::COLOR_BayerBG2GRAY_MHT, cv::gpu::COLOR_BayerGB2GRAY_MHT, cv::gpu::COLOR_BayerRG2GRAY_MHT, cv::gpu::COLOR_BayerGR2GRAY_MHT)
+        cv::gpu::COLOR_BayerBG2GRAY_MHT, cv::gpu::COLOR_BayerGB2GRAY_MHT, cv::gpu::COLOR_BayerRG2GRAY_MHT, cv::gpu::COLOR_BayerGR2GRAY_MHT,
+        cv::gpu::COLOR_BayerLLRL2GRAY, cv::gpu::COLOR_BayerLLRL2GRAY_ES)
 
 DEF_PARAM_TEST(Sz_Code, cv::Size, DemosaicingCode);
 
