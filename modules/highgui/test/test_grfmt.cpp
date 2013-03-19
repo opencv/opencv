@@ -373,6 +373,8 @@ TEST(Highgui_WebP, encode_decode_lossless_webp)
         }
     }
 
+    remove(output.c_str());
+
     cv::Mat decode = cv::imdecode(buf, CV_LOAD_IMAGE_COLOR);
     ASSERT_FALSE(decode.empty());
     EXPECT_TRUE(cv::norm(decode, img_webp, NORM_INF) == 0);
@@ -389,7 +391,7 @@ TEST(Highgui_WebP, encode_decode_lossy_webp)
     cv::Mat img = cv::imread(input);
     ASSERT_FALSE(img.empty());
 
-    for(int q = 100; q>=0; q-=5)
+    for(int q = 100; q>=0; q-=10)
     {
         std::vector<int> params;
         params.push_back(CV_IMWRITE_WEBP_QUALITY);
@@ -398,28 +400,9 @@ TEST(Highgui_WebP, encode_decode_lossy_webp)
 
         EXPECT_NO_THROW(cv::imwrite(output, img, params));
         cv::Mat img_webp = cv::imread(output);
+        remove(output.c_str());
         EXPECT_FALSE(img_webp.empty());
     }
-}
-
-TEST(Highgui_WebP, encode_big_image_webp)
-{
-    cvtest::TS& ts = *cvtest::TS::ptr();
-    std::string input = std::string(ts.get_data_path()) + "/../cv/shared/lena.png";
-    cv::Mat img = cv::imread(input);
-    cv::resize(img, img, cv::Size(8192, 8192));
-
-    std::vector<int> params;
-    params.push_back(CV_IMWRITE_WEBP_QUALITY);
-    params.push_back(95);
-
-    std::string output = cv::tempfile(".webp");
-    EXPECT_NO_THROW(cv::imwrite(output, img, params));
-
-    img.create(10000, 10000, CV_8UC3);
-    cv::randu(img, 0, 256);
-    output = cv::tempfile(".webp");
-    EXPECT_NO_THROW(cv::imwrite(output, img));
 }
 
 #endif
