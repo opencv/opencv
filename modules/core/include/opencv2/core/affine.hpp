@@ -68,7 +68,7 @@ namespace cv
 
         //Rodrigues vector
         Affine3(const Vec3& rvec, const Vec3& t = Vec3::all(0));
-        
+
         //Combines all contructors above. Supports 4x4, 3x3, 1x3, 3x1 sizes of data matrix
         explicit Affine3(const cv::Mat& data, const Vec3& t = Vec3::all(0));
 
@@ -79,13 +79,13 @@ namespace cv
 
         //Rotation matrix
         void rotation(const Mat3& R);
-        
+
         //Rodrigues vector
         void rotation(const Vec3& rvec);
-        
+
         //Combines rotation methods above. Suports 3x3, 1x3, 3x1 sizes of data matrix;
         void rotation(const Mat& data);
-        
+
         //Euler angles
         void rotation(float_type alpha, float_type beta, float_type gamma);
 
@@ -218,7 +218,7 @@ template<typename T> inline void cv::Affine3<T>::rotation(const Vec3& rvec)
 template<typename T> inline void cv::Affine3<T>::rotation(const cv::Mat& data)
 {
     CV_Assert(data.type() == cv::DataType<T>::type);
-    
+
     if (data.cols == 3 && data.rows == 3)
     {
         Mat3 R;

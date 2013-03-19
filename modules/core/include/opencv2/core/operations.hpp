@@ -82,7 +82,7 @@
 #  endif
 #  ifndef CV_StaticAssert
 #    if defined(__GNUC__) && (__GNUC__ > 3) && (__GNUC_MINOR__ > 2)
-#      define CV_StaticAssert(condition, reason) ({ extern int __attribute__((error("CV_StaticAssert: " reason " " #condition))) CV_StaticAssert(); ((condition) ? 0 : CV_StaticAssert()), 0; })
+#      define CV_StaticAssert(condition, reason) ({ extern int __attribute__((error("CV_StaticAssert: " reason " " #condition))) CV_StaticAssert(); ((condition) ? 0 : CV_StaticAssert()); })
 #    else
        namespace cv {
          template <bool x> struct CV_StaticAssert_failed;
@@ -201,28 +201,28 @@ template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0)
 
 template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1)
 {
-    assert(channels >= 2);
+    CV_StaticAssert(channels >= 2, "Matx should have at least 2 elaments.");
     val[0] = v0; val[1] = v1;
     for(int i = 2; i < channels; i++) val[i] = _Tp(0);
 }
 
 template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2)
 {
-    assert(channels >= 3);
+    CV_StaticAssert(channels >= 3, "Matx should have at least 3 elaments.");
     val[0] = v0; val[1] = v1; val[2] = v2;
     for(int i = 3; i < channels; i++) val[i] = _Tp(0);
 }
 
 template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3)
 {
-    assert(channels >= 4);
+    CV_StaticAssert(channels >= 4, "Matx should have at least 4 elaments.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
     for(int i = 4; i < channels; i++) val[i] = _Tp(0);
 }
 
 template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4)
 {
-    assert(channels >= 5);
+    CV_StaticAssert(channels >= 5, "Matx should have at least 5 elaments.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3; val[4] = v4;
     for(int i = 5; i < channels; i++) val[i] = _Tp(0);
 }
@@ -230,7 +230,7 @@ template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1
 template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
                                                         _Tp v4, _Tp v5)
 {
-    assert(channels >= 6);
+    CV_StaticAssert(channels >= 6, "Matx should have at least 6 elaments.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
     val[4] = v4; val[5] = v5;
     for(int i = 6; i < channels; i++) val[i] = _Tp(0);
@@ -239,7 +239,7 @@ template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1
 template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
                                                         _Tp v4, _Tp v5, _Tp v6)
 {
-    assert(channels >= 7);
+    CV_StaticAssert(channels >= 7, "Matx should have at least 7 elaments.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
     val[4] = v4; val[5] = v5; val[6] = v6;
     for(int i = 7; i < channels; i++) val[i] = _Tp(0);
@@ -248,7 +248,7 @@ template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1
 template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
                                                         _Tp v4, _Tp v5, _Tp v6, _Tp v7)
 {
-    assert(channels >= 8);
+    CV_StaticAssert(channels >= 8, "Matx should have at least 8 elaments.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
     val[4] = v4; val[5] = v5; val[6] = v6; val[7] = v7;
     for(int i = 8; i < channels; i++) val[i] = _Tp(0);
@@ -258,7 +258,7 @@ template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1
                                                         _Tp v4, _Tp v5, _Tp v6, _Tp v7,
                                                         _Tp v8)
 {
-    assert(channels >= 9);
+    CV_StaticAssert(channels >= 9, "Matx should have at least 9 elaments.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
     val[4] = v4; val[5] = v5; val[6] = v6; val[7] = v7;
     val[8] = v8;
@@ -269,7 +269,7 @@ template<typename _Tp, int m, int n> inline Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1
                                                         _Tp v4, _Tp v5, _Tp v6, _Tp v7,
                                                         _Tp v8, _Tp v9)
 {
-    assert(channels >= 10);
+    CV_StaticAssert(channels >= 10, "Matx should have at least 10 elaments.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
     val[4] = v4; val[5] = v5; val[6] = v6; val[7] = v7;
     val[8] = v8; val[9] = v9;
@@ -282,7 +282,7 @@ inline Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
                             _Tp v4, _Tp v5, _Tp v6, _Tp v7,
                             _Tp v8, _Tp v9, _Tp v10, _Tp v11)
 {
-    assert(channels == 12);
+    CV_StaticAssert(channels == 12, "Matx should have at least 12 elaments.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
     val[4] = v4; val[5] = v5; val[6] = v6; val[7] = v7;
     val[8] = v8; val[9] = v9; val[10] = v10; val[11] = v11;
@@ -294,7 +294,7 @@ inline Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3,
                            _Tp v8, _Tp v9, _Tp v10, _Tp v11,
                            _Tp v12, _Tp v13, _Tp v14, _Tp v15)
 {
-    assert(channels == 16);
+    CV_StaticAssert(channels == 16, "Matx should have at least 16 elaments.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
     val[4] = v4; val[5] = v5; val[6] = v6; val[7] = v7;
     val[8] = v8; val[9] = v9; val[10] = v10; val[11] = v11;
