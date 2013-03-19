@@ -255,7 +255,7 @@ template<typename T> inline void cv::Affine3<T>::translation(const Vec3& t)
 template<typename T> inline typename cv::Affine3<T>::Mat3 cv::Affine3<T>::rotation() const { return linear(); }
 template<typename T> inline typename cv::Affine3<T>::Mat3 cv::Affine3<T>::linear() const
 {
-    cv::Affine3<T>::Mat3 R;
+    typename cv::Affine3<T>::Mat3 R;
     R.val[0] = matrix.val[0];  R.val[1] = matrix.val[1];  R.val[2] = matrix.val[ 2];
     R.val[3] = matrix.val[4];  R.val[4] = matrix.val[5];  R.val[5] = matrix.val[ 6];
     R.val[6] = matrix.val[8];  R.val[7] = matrix.val[9];  R.val[8] = matrix.val[10];
