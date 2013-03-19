@@ -80,8 +80,8 @@ namespace
 cv::softcascade::device::Level::Level(int idx, const Octave& oct, const float scale, const int w, const int h)
 :  octave(idx), step(oct.stages), relScale(scale / oct.scale)
 {
-    workRect.x = cvRound(w / (float)oct.shrinkage);
-    workRect.y = cvRound(h / (float)oct.shrinkage);
+    workRect.x = (unsigned char)cvRound(w / (float)oct.shrinkage);
+    workRect.y = (unsigned char)cvRound(h / (float)oct.shrinkage);
 
     objSize.x  = cv::saturate_cast<uchar>(oct.size.x * relScale);
     objSize.y  = cv::saturate_cast<uchar>(oct.size.y * relScale);
@@ -168,8 +168,8 @@ struct cv::softcascade::SCascade::Fields
             ushort nweaks = saturate_cast<ushort>((int)fns[SC_OCT_WEAKS]);
 
             ushort2 size;
-            size.x = cvRound(origWidth * scale);
-            size.y = cvRound(origHeight * scale);
+            size.x = (unsigned short)cvRound(origWidth * scale);
+            size.y = (unsigned short)cvRound(origHeight * scale);
 
             device::Octave octave(octIndex, nweaks, shrinkage, size, scale);
             CV_Assert(octave.stages > 0);
@@ -274,7 +274,7 @@ struct cv::softcascade::SCascade::Fields
 
     bool check(float mins,float  maxs, int scales)
     {
-        bool updated = (minScale == mins) || (maxScale == maxs) || (totals = scales);
+        bool updated = ((minScale == mins) || (maxScale == maxs) || (totals = scales));
 
         minScale = mins;
         maxScale = maxScale;
@@ -463,6 +463,9 @@ public:
         DEFAULT_FRAME_HEIGHT       = 480,
         HOG_LUV_BINS               = 10
     };
+
+private:
+    cv::softcascade::SCascade::Fields& operator=( const cv::softcascade::SCascade::Fields & );
 };
 
 cv::softcascade::SCascade::SCascade(const double mins, const double maxs, const int sc, const int fl)
@@ -619,6 +622,7 @@ private:
     cv::gpu::GpuMat bgr;
     cv::gpu::GpuMat gray;
     cv::gpu::GpuMat channels;
+    SeparablePreprocessor& operator=( const SeparablePreprocessor& );
 };
 
 }
