@@ -2850,7 +2850,7 @@ TIFFReadRGBATile(TIFF* tif, uint32 col, uint32 row, uint32 * raster)
     }
 
     for( i_row = read_ysize; i_row < tile_ysize; i_row++ ) {
-        _TIFFmemset( raster + (tile_ysize - i_row - 1) * tile_xsize,
+        _TIFFmemset( raster + i_row * tile_xsize,
                      0, sizeof(uint32) * tile_xsize );
     }
 

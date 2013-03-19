@@ -248,11 +248,11 @@ bool  TiffDecoder::readData( Mat& img )
 
                             for( i = 0; i < tile_height; i++ )
                                 if( color )
-                                    icvCvt_BGRA2BGR_8u_C4C3R( buffer + i*tile_width*4, 0,
+                                    icvCvt_BGRA2BGR_8u_C4C3R( buffer + i*tile_width0*4, 0,
                                                              data + x*3 + img.step*(tile_height - i - 1), 0,
                                                              cvSize(tile_width,1), 2 );
                                 else
-                                    icvCvt_BGRA2Gray_8u_C4C1R( buffer + i*tile_width*4, 0,
+                                    icvCvt_BGRA2Gray_8u_C4C1R( buffer + i*tile_width0*4, 0,
                                                               data + x + img.step*(tile_height - i - 1), 0,
                                                               cvSize(tile_width,1), 2 );
                             break;
