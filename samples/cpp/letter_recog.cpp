@@ -691,7 +691,10 @@ int build_svm_classifier( char* data_filename )
     CvMat *result = cvCreateMat(1, nsamples_all - ntrain_samples, CV_32FC1);
 
     printf("Classification (may take a few minutes)...\n");
+    double t = (double)cvGetTickCount();
     svm.predict(&sample, result);
+    t = (double)cvGetTickCount() - t;
+    printf("Prediction type: %gms\n", t/(cvGetTickFrequency()*1000.));
 
     int true_resp = 0;
     for (int i = 0; i < nsamples_all - ntrain_samples; i++)
