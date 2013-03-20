@@ -335,7 +335,7 @@ class CppHeaderParser(object):
                 if pos >= 0:
                     aname = arg[pos+1:].strip()
                     atype = arg[:pos+1].strip()
-                    if aname.endswith("&") or aname.endswith("*") or (aname in ["int", "string", "Mat"]):
+                    if aname.endswith("&") or aname.endswith("*") or (aname in ["int", "String", "Mat"]):
                         atype = (atype + " " + aname).strip()
                         aname = ""
                 else:
