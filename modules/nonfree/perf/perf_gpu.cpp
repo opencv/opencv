@@ -4,6 +4,18 @@ using namespace std;
 using namespace testing;
 using namespace perf;
 
+#if defined(HAVE_XINE)         || \
+    defined(HAVE_GSTREAMER)    || \
+    defined(HAVE_QUICKTIME)    || \
+    defined(HAVE_AVFOUNDATION) || \
+    defined(HAVE_FFMPEG)       || \
+    defined(WIN32) /* assume that we have ffmpeg */
+
+#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
+#else
+#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
+#endif
+
 #if defined(HAVE_OPENCV_GPU) && defined(HAVE_CUDA)
 
 //////////////////////////////////////////////////////////////////////
@@ -54,6 +66,8 @@ PERF_TEST_P(Image, GPU_SURF,
 
 //////////////////////////////////////////////////////
 // VIBE
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 DEF_PARAM_TEST(Video_Cn, string, int);
 
@@ -118,5 +132,7 @@ PERF_TEST_P(Video_Cn, GPU_VIBE,
         FAIL_NO_CPU();
     }
 }
+
+#endif
 
 #endif
