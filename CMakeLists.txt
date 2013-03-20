@@ -60,11 +60,6 @@ endif()
 
 project(OpenCV CXX C)
 
-if ((${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm") AND WIN32)
-  set(CMAKE_REQUIRED_DEFINITIONS -D_ARM_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE)
-  add_definitions(-D_ARM_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE)
-endif()
-
 include(cmake/OpenCVUtils.cmake)
 
 # ----------------------------------------------------------------------------
@@ -613,7 +608,7 @@ else()
     status("    QT 4.x:" NO)
   endif()
   if(WIN32)
-    status("    Win32 UI:" NO)
+    status("    Win32 UI:" ARM THEN NO ELSE YES)
   else()
     if(APPLE)
       if(WITH_CARBON)

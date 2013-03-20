@@ -123,7 +123,7 @@ file(GLOB lib_hdrs "${tbb_src_dir}/src/tbb/*.h")
 list(APPEND lib_srcs "${tbb_src_dir}/src/rml/client/rml_tbb.cpp")
 
 if (WIN32)
-add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0
+  add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0
                 -D__TBB_BUILD=1
                 -D_UNICODE
                 -DUNICODE
@@ -162,7 +162,7 @@ endif()
 
 set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs})
 
-if ((${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm") AND NOT WIN32)
+if (ARM AND NOT WIN32)
   if (NOT ANDROID)
     set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/arm_linux_stub.cpp")
   endif()
