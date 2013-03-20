@@ -507,6 +507,8 @@ macro(ocv_create_module)
     )
   endif()
 
+  set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
+
   if(BUILD_SHARED_LIBS)
     if(MSVC)
       set_target_properties(${the_module} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)

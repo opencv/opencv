@@ -2902,9 +2902,9 @@ static inline void read(const FileNode& node, double& value, double default_valu
         CV_NODE_IS_REAL(node.node->tag) ? node.node->data.f : 1e300;
 }
 
-static inline void read(const FileNode& node, std::string& value, const std::string& default_value)
+static inline void read(const FileNode& node, cv::String& value, const cv::String& default_value)
 {
-    value = !node.node ? default_value : CV_NODE_IS_STRING(node.node->tag) ? std::string(node.node->data.str.ptr) : std::string("");
+    value = !node.node ? default_value : CV_NODE_IS_STRING(node.node->tag) ? cv::String(node.node->data.str.ptr) : cv::String();
 }
 
 CV_EXPORTS_W void read(const FileNode& node, Mat& mat, const Mat& default_mat=Mat() );
@@ -2935,7 +2935,12 @@ inline FileNode::operator std::string() const
     return value;
 }
 
-inline void FileNode::readRaw( const std::string& fmt, uchar* vec, size_t len ) const
+inline String::String(const FileNode& fn): cstr_(0), len_(0)
+{
+    read(fn, *this, *this);
+}
+
+inline void FileNode::readRaw( const cv::String& fmt, uchar* vec, size_t len ) const
 {
     begin().readRaw( fmt, vec, len );
 }

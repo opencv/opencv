@@ -143,14 +143,14 @@ typedef int (CV_CDECL *ErrorCallback)( int status, const char* func_name,
 */
 CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback, void* userdata=0, void** prevUserdata=0);
 
-CV_EXPORTS std::string format( const char* fmt, ... );
-CV_EXPORTS std::string tempfile( const char* suffix CV_DEFAULT(0));
-CV_EXPORTS void glob(std::string pattern, std::vector<std::string>& result, bool recursive = false);
+CV_EXPORTS cv::String format( const char* fmt, ... );
+CV_EXPORTS cv::String tempfile( const char* suffix CV_DEFAULT(0));
+CV_EXPORTS void glob(cv::String pattern, std::vector<cv::String>& result, bool recursive = false);
 CV_EXPORTS void setNumThreads(int nthreads);
 CV_EXPORTS int getNumThreads();
 CV_EXPORTS int getThreadNum();
 
-CV_EXPORTS_W const std::string& getBuildInformation();
+CV_EXPORTS_W const cv::String& getBuildInformation();
 
 //! Returns the number of ticks.
 
@@ -297,19 +297,19 @@ protected:
 class CV_EXPORTS CommandLineParser
 {
     public:
-    CommandLineParser(int argc, const char* const argv[], const std::string& keys);
+    CommandLineParser(int argc, const char* const argv[], const cv::String& keys);
     CommandLineParser(const CommandLineParser& parser);
     CommandLineParser& operator = (const CommandLineParser& parser);
 
-    std::string getPathToApplication() const;
+    cv::String getPathToApplication() const;
 
     template <typename T>
-    T get(const std::string& name, bool space_delete = true) const
-        {
+    T get(const cv::String& name, bool space_delete = true) const
+    {
         T val = T();
         getByName(name, space_delete, ParamType<T>::type, (void*)&val);
         return val;
-        }
+    }
 
     template <typename T>
     T get(int index, bool space_delete = true) const
@@ -319,17 +319,17 @@ class CV_EXPORTS CommandLineParser
         return val;
     }
 
-    bool has(const std::string& name) const;
+    bool has(const cv::String& name) const;
 
     bool check() const;
 
-    void about(const std::string& message);
+    void about(const cv::String& message);
 
     void printMessage() const;
     void printErrors() const;
 
 protected:
-    void getByName(const std::string& name, bool space_delete, int type, void* dst) const;
+    void getByName(const cv::String& name, bool space_delete, int type, void* dst) const;
     void getByIndex(int index, bool space_delete, int type, void* dst) const;
 
     struct Impl;
@@ -453,6 +453,17 @@ static inline Mat cvarrToMatND(const CvArr* arr, bool copyData=false, int coiMod
 {
     return cvarrToMat(arr, copyData, true, coiMode);
 }
+
+#ifndef OPENCV_NOSTL
+template<> inline std::string CommandLineParser::get<std::string>(int index, bool space_delete) const
+{
+    return get<String>(index, space_delete);
+}
+template<> inline std::string CommandLineParser::get<std::string>(const cv::String& name, bool space_delete) const
+{
+    return get<String>(name, space_delete);
+}
+#endif // OPENCV_NOSTL
 
 } //namespace cv
 

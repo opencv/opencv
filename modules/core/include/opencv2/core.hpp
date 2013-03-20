@@ -47,11 +47,12 @@
 #define __OPENCV_CORE_HPP__
 
 #include "opencv2/core/cvdef.h"
-
-#include "opencv2/core/types_c.h"
 #include "opencv2/core/version.hpp"
 
+#include "opencv2/core/types_c.h"
+
 #ifdef __cplusplus
+#include "opencv2/core/cvstd.hpp"
 
 #ifndef SKIP_INCLUDES
 #include <limits.h>
@@ -3939,7 +3940,10 @@ public:
     //! returns the node content as double
     operator double() const;
     //! returns the node content as text string
+    operator String() const;
+#ifndef OPENCV_NOSTL
     operator std::string() const;
+#endif
 
     //! returns pointer to the underlying file node
     CvFileNode* operator *();
@@ -4419,9 +4423,11 @@ template<> struct ParamType<uchar>
 
 } //namespace cv
 
-#endif // __cplusplus
-
 #include "opencv2/core/operations.hpp"
 #include "opencv2/core/mat.hpp"
+
+#include "opencv2/core/cvstd.inl.hpp"
+#endif // __cplusplus
+
 
 #endif /*__OPENCV_CORE_HPP__*/
