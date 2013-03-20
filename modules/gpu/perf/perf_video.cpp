@@ -614,10 +614,10 @@ PERF_TEST_P(Video_Cn_LearningRate, Video_MOG,
     }
     else
     {
-        cv::BackgroundSubtractorMOG mog;
+        cv::Ptr<cv::BackgroundSubtractor> mog = cv::createBackgroundSubtractorMOG();
         cv::Mat foreground;
 
-        mog(frame, foreground, learningRate);
+        mog->apply(frame, foreground, learningRate);
 
         for (int i = 0; i < 10; ++i)
         {
@@ -635,7 +635,7 @@ PERF_TEST_P(Video_Cn_LearningRate, Video_MOG,
             }
 
             startTimer(); next();
-            mog(frame, foreground, learningRate);
+            mog->apply(frame, foreground, learningRate);
             stopTimer();
         }
 
@@ -709,12 +709,12 @@ PERF_TEST_P(Video_Cn, Video_MOG2,
     }
     else
     {
-        cv::BackgroundSubtractorMOG2 mog2;
-        mog2.set("detectShadows", false);
+        cv::Ptr<cv::BackgroundSubtractor> mog2 = cv::createBackgroundSubtractorMOG2();
+        mog2->set("detectShadows", false);
 
         cv::Mat foreground;
 
-        mog2(frame, foreground);
+        mog2->apply(frame, foreground);
 
         for (int i = 0; i < 10; ++i)
         {
@@ -732,7 +732,7 @@ PERF_TEST_P(Video_Cn, Video_MOG2,
             }
 
             startTimer(); next();
-            mog2(frame, foreground);
+            mog2->apply(frame, foreground);
             stopTimer();
         }
 
@@ -789,7 +789,7 @@ PERF_TEST_P(Video_Cn, Video_MOG2GetBackgroundImage,
     }
     else
     {
-        cv::BackgroundSubtractorMOG2 mog2;
+        cv::Ptr<cv::BackgroundSubtractor> mog2 = cv::createBackgroundSubtractorMOG2();
         cv::Mat foreground;
 
         for (int i = 0; i < 10; ++i)
@@ -807,12 +807,12 @@ PERF_TEST_P(Video_Cn, Video_MOG2GetBackgroundImage,
                 cv::swap(temp, frame);
             }
 
-            mog2(frame, foreground);
+            mog2->apply(frame, foreground);
         }
 
         cv::Mat background;
 
-        TEST_CYCLE() mog2.getBackgroundImage(background);
+        TEST_CYCLE() mog2->getBackgroundImage(background);
 
         CPU_SANITY_CHECK(background);
     }
@@ -958,11 +958,11 @@ PERF_TEST_P(Video_Cn_MaxFeatures, Video_GMG,
         cv::Mat foreground;
         cv::Mat zeros(frame.size(), CV_8UC1, cv::Scalar::all(0));
 
-        cv::BackgroundSubtractorGMG gmg;
-        gmg.set("maxFeatures", maxFeatures);
-        gmg.initialize(frame.size(), 0.0, 255.0);
+        cv::Ptr<cv::BackgroundSubtractor> gmg = cv::createBackgroundSubtractorGMG();
+        gmg->set("maxFeatures", maxFeatures);
+        //gmg.initialize(frame.size(), 0.0, 255.0);
 
-        gmg(frame, foreground);
+        gmg->apply(frame, foreground);
 
         for (int i = 0; i < 150; ++i)
         {
@@ -985,7 +985,7 @@ PERF_TEST_P(Video_Cn_MaxFeatures, Video_GMG,
             }
 
             startTimer(); next();
-            gmg(frame, foreground);
+            gmg->apply(frame, foreground);
             stopTimer();
         }
 

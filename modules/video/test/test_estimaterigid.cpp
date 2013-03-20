@@ -153,7 +153,7 @@ bool CV_RigidTransform_Test::testImage()
 
     Mat aff_est = estimateRigidTransform(img, rotated, true);
 
-    const double thres = 0.03;
+    const double thres = 0.033;
     if (norm(aff_est, aff, NORM_INF) > thres)
     {
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
