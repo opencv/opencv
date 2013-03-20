@@ -19,7 +19,8 @@
 #endif
 
 #define TAB "    "
-
+#define IMG_MIN 1024
+#define IMG_MAX 4096
 using namespace std;
 using namespace cv;
 
@@ -700,7 +701,7 @@ TEST(matchTemplate)
     int templ_size = 5;
 
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         int all_type[] = {CV_32FC1, CV_32FC4};
         std::string type_name[] = {"CV_32FC1", "CV_32FC4"};
@@ -818,7 +819,7 @@ TEST(PyrLKOpticalFlow)
             cvtColor(frame0, gray_frame, COLOR_BGR2GRAY);
         }
 
-        for (int points = 1000; points <= 4000; points *= 2)
+        for (int points = IMG_MIN; points <= IMG_MAX; points *= 2)
         {
             if (i == 0)
                 SUBTEST << frame0.cols << "x" << frame0.rows << "; color; " << points << " points";
@@ -894,7 +895,7 @@ TEST(pyrDown)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -937,7 +938,7 @@ TEST(pyrUp)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 500; size <= 2000; size *= 2)
+    for (int size = (IMG_MIN/2); size <= (IMG_MAX/2); size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -1141,7 +1142,7 @@ TEST(blend)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -1192,7 +1193,7 @@ TEST(columnSum)
     ocl::oclMat d_src, d_dst;
 #endif
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         SUBTEST << size << 'x' << size << "; CV_32FC1";
 
@@ -1245,7 +1246,7 @@ TEST(HOG)
     hog.setSVMDetector(hog.getDefaultPeopleDetector());
     std::vector<cv::Rect> found_locations;
 
-    SUBTEST << 768 << 'x' << 576 << "; road.png";
+    SUBTEST << src.cols << 'x' << src.rows << "; road.png";
 
     hog.detectMultiScale(src, found_locations);
 
@@ -1339,7 +1340,7 @@ TEST(BruteForceMatcher)
     Mat allDist_cpu;
     Mat nMatches_cpu;
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         // Init CPU matcher
         int desc_len = 64;
@@ -1448,7 +1449,7 @@ TEST(lut)
     int all_type[] = {CV_8UC1, CV_8UC3};
     std::string type_name[] = {"CV_8UC1", "CV_8UC3"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -1495,7 +1496,7 @@ TEST(Exp)
     ocl::oclMat d_src, d_dst;
 #endif
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         SUBTEST << size << 'x' << size << "; CV_32FC1";
 
@@ -1535,7 +1536,7 @@ TEST(Log)
     ocl::oclMat d_src, d_dst;
 #endif
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         SUBTEST << size << 'x' << size << "; 32F";
 
@@ -1577,7 +1578,7 @@ TEST(Add)
     int all_type[] = {CV_8UC1, CV_32FC1};
     std::string type_name[] = {"CV_8UC1", "CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -1624,7 +1625,7 @@ TEST(Mul)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -1674,7 +1675,7 @@ TEST(Div)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -1724,7 +1725,7 @@ TEST(Absdiff)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -1774,7 +1775,7 @@ TEST(CartToPolar)
     int all_type[] = {CV_32FC1};
     std::string type_name[] = {"CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -1826,7 +1827,7 @@ TEST(PolarToCart)
     int all_type[] = {CV_32FC1};
     std::string type_name[] = {"CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -1878,7 +1879,7 @@ TEST(magnitude)
     int all_type[] = {CV_32FC1};
     std::string type_name[] = {"CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -1926,7 +1927,7 @@ TEST(Transpose)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -1972,7 +1973,7 @@ TEST(Flip)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2020,7 +2021,7 @@ TEST(minMax)
     int all_type[] = {CV_8UC1, CV_32FC1};
     std::string type_name[] = {"CV_8UC1", "CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2064,7 +2065,7 @@ TEST(minMaxLoc)
     int all_type[] = {CV_8UC1, CV_32FC1};
     std::string type_name[] = {"CV_8UC1", "CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2106,7 +2107,7 @@ TEST(Sum)
     int all_type[] = {CV_8UC1, CV_32SC1};
     std::string type_name[] = {"CV_8UC1", "CV_32SC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2149,7 +2150,7 @@ TEST(countNonZero)
     int all_type[] = {CV_8UC1, CV_32FC1};
     std::string type_name[] = {"CV_8UC1", "CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2192,7 +2193,7 @@ TEST(Phase)
     int all_type[] = {CV_32FC1};
     std::string type_name[] = {"CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2242,7 +2243,7 @@ TEST(bitwise_and)
     int all_type[] = {CV_8UC1, CV_32SC1};
     std::string type_name[] = {"CV_8UC1", "CV_32SC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2291,7 +2292,7 @@ TEST(bitwise_or)
     int all_type[] = {CV_8UC1, CV_32SC1};
     std::string type_name[] = {"CV_8UC1", "CV_32SC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2340,7 +2341,7 @@ TEST(bitwise_xor)
     int all_type[] = {CV_8UC1, CV_32SC1};
     std::string type_name[] = {"CV_8UC1", "CV_32SC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2389,7 +2390,7 @@ TEST(bitwise_not)
     int all_type[] = {CV_8UC1, CV_32SC1};
     std::string type_name[] = {"CV_8UC1", "CV_32SC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2437,7 +2438,7 @@ TEST(compare)
     int all_type[] = {CV_8UC1, CV_32FC1};
     std::string type_name[] = {"CV_8UC1", "CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2487,7 +2488,7 @@ TEST(pow)
     int all_type[] = {CV_32FC1};
     std::string type_name[] = {"CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2534,7 +2535,7 @@ TEST(MagnitudeSqr)
     int all_type[] = {CV_32FC1};
     std::string type_name[] = {"CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t t = 0; t < sizeof(all_type) / sizeof(int); t++)
         {
@@ -2604,7 +2605,7 @@ TEST(AddWeighted)
     int all_type[] = {CV_8UC1, CV_32FC1};
     std::string type_name[] = {"CV_8UC1", "CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2655,7 +2656,7 @@ TEST(Blur)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2702,7 +2703,7 @@ TEST(Laplacian)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2749,7 +2750,7 @@ TEST(Erode)
     int all_type[] = {CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4", "CV_32FC1", "CV_32FC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2797,7 +2798,7 @@ TEST(Sobel)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2843,7 +2844,7 @@ TEST(Scharr)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2885,7 +2886,7 @@ TEST(GaussianBlur)
     int all_type[] = {CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4", "CV_32FC1", "CV_32FC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = 1024; size <= 4096; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2928,7 +2929,7 @@ TEST(equalizeHist)
     int all_type[] = {CV_8UC1};
     std::string type_name[] = {"CV_8UC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = 1024; size <= 4096; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -2976,7 +2977,7 @@ TEST(CopyMakeBorder)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = 1024; size <= 4096; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -3023,7 +3024,7 @@ TEST(cornerMinEigenVal)
     int all_type[] = {CV_8UC1, CV_32FC1};
     std::string type_name[] = {"CV_8UC1", "CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = 1024; size <= 4096; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -3068,7 +3069,7 @@ TEST(cornerHarris)
     int all_type[] = {CV_8UC1, CV_32FC1};
     std::string type_name[] = {"CV_8UC1", "CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -3113,7 +3114,7 @@ TEST(integral)
     int all_type[] = {CV_8UC1};
     std::string type_name[] = {"CV_8UC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -3166,7 +3167,7 @@ TEST(WarpAffine)
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -3221,7 +3222,7 @@ TEST(WarpPerspective)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -3269,7 +3270,7 @@ TEST(resize)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -3303,7 +3304,7 @@ TEST(resize)
 
     }
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -3345,7 +3346,7 @@ TEST(threshold)
     ocl::oclMat d_src, d_dst;
 #endif
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         SUBTEST << size << 'x' << size << "; 8UC1; THRESH_BINARY";
 
@@ -3375,7 +3376,7 @@ TEST(threshold)
 #endif
     }
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         SUBTEST << size << 'x' << size << "; 32FC1; THRESH_TRUNC [NPP]";
 
@@ -3415,7 +3416,7 @@ TEST(meanShiftFiltering)
     ocl::oclMat d_src, d_dst;
 #endif
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         SUBTEST << size << 'x' << size << "; 8UC3 vs 8UC4";
 
@@ -3692,7 +3693,7 @@ TEST(meanShiftProc)
 #endif
     TermCriteria crit(TermCriteria::COUNT + TermCriteria::EPS, 5, 1);
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         SUBTEST << size << 'x' << size << "; 8UC4 and CV_16SC2 ";
 
@@ -3735,7 +3736,7 @@ TEST(ConvertTo)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -3782,7 +3783,7 @@ TEST(copyTo)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -3831,7 +3832,7 @@ TEST(setTo)
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -3875,7 +3876,7 @@ TEST(Merge)
     int all_type[] = {CV_8UC1, CV_32FC1};
     std::string type_name[] = {"CV_8UC1", "CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -3933,7 +3934,7 @@ TEST(Split)
     int all_type[] = {CV_8UC1, CV_32FC1};
     std::string type_name[] = {"CV_8UC1", "CV_32FC1"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -3981,7 +3982,7 @@ TEST(norm)
     ocl::oclMat d_src, d_buf;
 #endif
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         SUBTEST << size << 'x' << size << "; CV_8UC1; NORM_INF";
 
@@ -4026,7 +4027,7 @@ TEST(remap)
     int interpolation = INTER_LINEAR;
     int borderMode = BORDER_CONSTANT;
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t t = 0; t < sizeof(all_type) / sizeof(int); t++)
         {
@@ -4091,7 +4092,7 @@ TEST(cvtColor)
     int all_type[] = {CV_8UC4};
     std::string type_name[] = {"CV_8UC4"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -4133,7 +4134,7 @@ TEST(filter2D)
 {
     Mat src;
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         int all_type[] = {CV_8UC1, CV_8UC4};
         std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
@@ -4193,7 +4194,7 @@ TEST(dft)
     int all_type[] = {CV_32FC1, CV_32FC2};
     std::string type_name[] = {"CV_32FC1", "CV_32FC2"};
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
@@ -4237,7 +4238,7 @@ TEST(gemm)
     ocl::oclMat d_src1, d_src2, d_src3, d_dst;
 #endif
 
-    for (int size = 1000; size <= 4000; size *= 2)
+    for (int size = IMG_MIN; size <= IMG_MAX; size *= 2)
     {
         SUBTEST << size << 'x' << size;
 
@@ -4299,7 +4300,6 @@ int main(int argc, const char *argv[])
 
 #endif
     redirectError(cvErrorCallback);
-
     const char *keys =
         "{ h | help    | false | print help message }"
         "{ f | filter  |       | filter for test }"
@@ -4308,8 +4308,8 @@ int main(int argc, const char *argv[])
         "{ d | device  | 0     | device id }"
         "{ i | iters   | 10    | iteration count }"
         "{ m | warmup  | 1     | gpu warm up iteration count}"
-        "{ t | xtop    | 1.1	  | xfactor top boundary}"
-        "{ b | xbottom | 0.9	  | xfactor bottom boundary}"
+        "{ t | xtop    | 1.1   | xfactor top boundary}"
+        "{ b | xbottom | 0.9   | xfactor bottom boundary}"
         "{ v | verify  | false | only run gpu once to verify if problems occur}";
 
     CommandLineParser cmd(argc, argv, keys);
