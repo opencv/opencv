@@ -890,8 +890,10 @@ void ellipse2Poly( Point center, Size axes, int angle,
             pts.push_back(pt);
     }
 
-    if( pts.size() < 2 )
-        pts.push_back(pts[0]);
+    // If there are no points, it's a zero-size polygon
+    if( pts.size() < 2) {
+        pts.assign(2,center);
+    }
 }
 
 
