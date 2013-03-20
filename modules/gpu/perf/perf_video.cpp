@@ -142,7 +142,7 @@ PERF_TEST_P(Image_MinDistance, Video_GoodFeaturesToTrack,
 PERF_TEST_P(ImagePair, Video_BroxOpticalFlow,
             Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
-    declare.time(10);
+    declare.time(300);
 
     cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());

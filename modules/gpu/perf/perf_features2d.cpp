@@ -55,6 +55,8 @@ PERF_TEST_P(Image_NFeatures, Features2D_ORB,
             Combine(Values<string>("gpu/perf/aloe.png"),
                     Values(4000)))
 {
+    declare.time(300.0);
+
     const cv::Mat img = readImage(GET_PARAM(0), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 

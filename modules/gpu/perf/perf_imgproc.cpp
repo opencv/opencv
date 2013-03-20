@@ -632,7 +632,7 @@ DEF_PARAM_TEST_1(Image, string);
 PERF_TEST_P(Image, ImgProc_MeanShiftFiltering,
             Values<string>("gpu/meanshift/cones.png"))
 {
-    declare.time(15.0);
+    declare.time(300.0);
 
     const cv::Mat img = readImage(GetParam());
     ASSERT_FALSE(img.empty());
@@ -668,7 +668,7 @@ PERF_TEST_P(Image, ImgProc_MeanShiftFiltering,
 PERF_TEST_P(Image, ImgProc_MeanShiftProc,
             Values<string>("gpu/meanshift/cones.png"))
 {
-    declare.time(5.0);
+    declare.time(300.0);
 
     const cv::Mat img = readImage(GetParam());
     ASSERT_FALSE(img.empty());
@@ -702,7 +702,7 @@ PERF_TEST_P(Image, ImgProc_MeanShiftProc,
 PERF_TEST_P(Image, ImgProc_MeanShiftSegmentation,
             Values<string>("gpu/meanshift/cones.png"))
 {
-    declare.time(5.0);
+    declare.time(300.0);
 
     const cv::Mat img = readImage(GetParam());
     ASSERT_FALSE(img.empty());
@@ -830,6 +830,8 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate8U,
                     GPU_CHANNELS_1_3_4,
                     ALL_TEMPLATE_METHODS))
 {
+    declare.time(300.0);
+
     const cv::Size size = GET_PARAM(0);
     const cv::Size templ_size = GET_PARAM(1);
     const int cn = GET_PARAM(2);
@@ -868,6 +870,8 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate32F,
                     GPU_CHANNELS_1_3_4,
                     Values(TemplateMethod(cv::TM_SQDIFF), TemplateMethod(cv::TM_CCORR))))
 {
+    declare.time(300.0);
+
     const cv::Size size = GET_PARAM(0);
     const cv::Size templ_size = GET_PARAM(1);
     const int cn = GET_PARAM(2);
