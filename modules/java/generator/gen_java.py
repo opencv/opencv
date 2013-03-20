@@ -285,13 +285,13 @@ type_dict = {
     "CvSlice" : { "j_type" : "Range",  "jn_args" : (("int", ".start"), ("int", ".end")),
                   "jni_var" : "Range %(n)s(%(n)s_start, %(n)s_end)", "jni_type" : "jdoubleArray",
                   "suffix" : "II"},
-    "string"  : { "j_type" : "String",  "jn_type" : "String",
+    "String"  : { "j_type" : "String",  "jn_type" : "String",
                   "jni_type" : "jstring", "jni_name" : "n_%(n)s",
-                  "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); std::string n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
+                  "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); cv::String n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
                   "suffix" : "Ljava_lang_String_2"},
     "c_string": { "j_type" : "String",  "jn_type" : "String",
                   "jni_type" : "jstring", "jni_name" : "n_%(n)s.c_str()",
-                  "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); std::string n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
+                  "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); cv::String n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
                   "suffix" : "Ljava_lang_String_2"},
 "TermCriteria": { "j_type" : "TermCriteria",  "jn_args" : (("int", ".type"), ("int", ".maxCount"), ("double", ".epsilon")),
                   "jni_var" : "TermCriteria %(n)s(%(n)s_type, %(n)s_maxCount, %(n)s_epsilon)", "jni_type" : "jdoubleArray",
@@ -417,7 +417,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
         {
             'j_code'   :
 """
-    // C++: Size getTextSize(const std::string& text, int fontFace, double fontScale, int thickness, int* baseLine);
+    // C++: Size getTextSize(const cv::String& text, int fontFace, double fontScale, int thickness, int* baseLine);
     //javadoc:getTextSize(text, fontFace, fontScale, thickness, baseLine)
     public static Size getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine) {
         if(baseLine != null && baseLine.length != 1)
@@ -430,7 +430,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
 """    private static native double[] n_getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine);\n""",
             'cpp_code' :
 """
-// C++: Size getTextSize(const std::string& text, int fontFace, double fontScale, int thickness, int* baseLine);
+// C++: Size getTextSize(const cv::String& text, int fontFace, double fontScale, int thickness, int* baseLine);
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize (JNIEnv*, jclass, jstring, jint, jdouble, jint, jintArray);
 
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
@@ -445,7 +445,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
         }
 
         const char* utf_text = env->GetStringUTFChars(text, 0);
-        std::string n_text( utf_text ? utf_text : "" );
+        cv::String n_text( utf_text ? utf_text : "" );
         env->ReleaseStringUTFChars(text, utf_text);
 
         int _baseLine;
@@ -1196,7 +1196,7 @@ extern "C" {
                 ret = "return (jlong) _retval_;"
             elif fi.ctype.startswith('vector'): # c-tor
                 ret = "return (jlong) _retval_;"
-            elif fi.ctype == "string":
+            elif fi.ctype == "String":
                 ret = "return env->NewStringUTF(_retval_.c_str());"
                 default = 'return env->NewStringUTF("");'
             elif fi.ctype in self.classes: # wrapped class:
@@ -1218,8 +1218,8 @@ extern "C" {
             retval = fi.ctype + " _retval_ = "
             if fi.ctype == "void":
                 retval = ""
-            elif fi.ctype == "string":
-                retval = "std::" + retval
+            elif fi.ctype == "String":
+                retval = "cv::" + retval
             elif fi.ctype.startswith('vector'):
                 retval = type_dict[fi.ctype]['jni_var'] % {"n" : '_ret_val_vector_'} + " = "
                 c_epilogue.append("Mat* _retval_ = new Mat();")
