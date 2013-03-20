@@ -470,3 +470,13 @@ TEST(Core_globbing, accurasy)
         ASSERT_NE(std::find(lenas.begin(), lenas.end(), pngLenas[i]), lenas.end());
     }
 }
+
+TEST(Core_InputOutput, DISABLED_FileStorage)
+{
+    std::string file = cv::tempfile(".xml");
+    cv::FileStorage f(file, cv::FileStorage::WRITE);
+
+    char arr[66];
+    sprintf(arr, "sprintf is hell %d", 666);
+    EXPECT_NO_THROW(f << arr);
+}
