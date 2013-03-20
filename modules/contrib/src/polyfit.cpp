@@ -47,26 +47,51 @@
 
 #include "precomp.hpp"
 
+typedef double polyfit_type;
+
 void cv::polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order)
 {
-    CV_Assert((src_x.rows>0)&&(src_y.rows>0)&&(src_x.cols==1)&&(src_y.cols==1)
-            &&(dst.cols==1)&&(dst.rows==(order+1))&&(order>=1));
-    Mat X;
-    X = Mat::zeros(src_x.rows, order+1,CV_32FC1);
-    Mat copy;
-    for(int i = 0; i <=order;i++)
+    CV_Assert(src_x.rows == src_y.rows && src_x.cols ==1 && src_y.cols == 1 
+    && order >= 1 && src_x.channels() == 1 && src_y.channels() == 1);
+
+    if(dst.empty())
+        dst.create(order + 1, 1, CV_MAKETYPE(DataType<polyfit_type>::depth, 1));
+    CV_Assert(dst.rows == (order + 1) && dst.cols == 1 && dst.depth() == CV_MAKETYPE(DataType<polyfit_type>::depth, 1));
+
+    Mat srcX, srcY;
+    if(src_y.depth() != CV_MAKETYPE(DataType<polyfit_type>::depth, 1))
+        src_y.convertTo(srcY, CV_MAKETYPE(DataType<polyfit_type>::depth, 1));
+    else srcY = src_y;
+
+    if(src_x.depth() != CV_MAKETYPE(DataType<polyfit_type>::depth, 1))
+        src_x.convertTo(srcX, CV_MAKETYPE(DataType<polyfit_type>::depth, 1));
+    else srcX = src_x;
+
+    int npoints;
+    CV_Assert((npoints = srcX.checkVector(1,CV_MAKETYPE(DataType<polyfit_type>::depth, 1),false)) >= (order+1));
+
+    Mat X = Mat::zeros(order + 1, npoints, CV_MAKETYPE(DataType<polyfit_type>::depth, 1));
+    polyfit_type* pSrcX = (polyfit_type*)srcX.data;
+    polyfit_type* pXData = (polyfit_type*)X.data;
+    int stepX = (int)(X.step/X.elemSize1());
+    for (int y = 0; y < order + 1; ++y)
     {
-        copy = src_x.clone();
-        pow(copy,i,copy);
-        Mat M1 = X.col(i);
-        copy.col(0).copyTo(M1);
+        for (int x = 0; x < npoints; ++x)
+        {
+            if (y == 0)
+                pXData[x] = 1;
+            else if (y == 1)
+                pXData[x + stepX] = pSrcX[x];
+            else pXData[x + y*stepX] = pSrcX[x]* pXData[x + (y-1)*stepX];
+        }
     }
+
     Mat X_t, X_inv;
     transpose(X,X_t);
-    Mat temp = X_t*X;
+    Mat temp = X*X_t;
     Mat temp2;
     invert (temp,temp2);
-    Mat temp3 = temp2*X_t;
-    Mat W = temp3*src_y;
+    Mat temp3 = temp2*X;
+    Mat W = temp3*srcY;
     W.copyTo(dst);
 }
