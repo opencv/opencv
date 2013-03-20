@@ -103,7 +103,7 @@ namespace cv
             ~Info();
             void release();
             Info &operator = (const Info &m);
-            std::vector<std::string> DeviceName;
+            std::vector<cv::String> DeviceName;
         };
         //////////////////////////////// Initialization & Info ////////////////////////
         //this function may be obsoleted
@@ -161,7 +161,7 @@ namespace cv
 
         //! Calls a kernel, by string. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
         CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
-                                                        const char **source, std::string kernelName,
+                                                        const char **source, cv::String kernelName,
                                                         size_t globalThreads[3], size_t localThreads[3],
                                                         std::vector< std::pair<size_t, const void *> > &args,
                                                         int channels, int depth, const char *build_options,
@@ -170,7 +170,7 @@ namespace cv
 
         //! Calls a kernel, by file. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
         CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
-                                                        const char **fileName, const int numFiles, std::string kernelName,
+                                                        const char **fileName, const int numFiles, cv::String kernelName,
                                                         size_t globalThreads[3], size_t localThreads[3],
                                                         std::vector< std::pair<size_t, const void *> > &args,
                                                         int channels, int depth, const char *build_options,

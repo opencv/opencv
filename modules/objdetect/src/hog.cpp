@@ -121,7 +121,7 @@ bool HOGDescriptor::read(FileNode& obj)
     return true;
 }
 
-void HOGDescriptor::write(FileStorage& fs, const std::string& objName) const
+void HOGDescriptor::write(FileStorage& fs, const cv::String& objName) const
 {
     if( !objName.empty() )
         fs << objName;
@@ -143,14 +143,14 @@ void HOGDescriptor::write(FileStorage& fs, const std::string& objName) const
     fs << "}";
 }
 
-bool HOGDescriptor::load(const std::string& filename, const std::string& objname)
+bool HOGDescriptor::load(const cv::String& filename, const cv::String& objname)
 {
     FileStorage fs(filename, FileStorage::READ);
     FileNode obj = !objname.empty() ? fs[objname] : fs.getFirstTopLevelNode();
     return read(obj);
 }
 
-void HOGDescriptor::save(const std::string& filename, const std::string& objName) const
+void HOGDescriptor::save(const cv::String& filename, const cv::String& objName) const
 {
     FileStorage fs(filename, FileStorage::WRITE);
     write(fs, !objName.empty() ? objName : FileStorage::getDefaultObjectName(filename));
@@ -2788,29 +2788,29 @@ void HOGDescriptor::detectMultiScaleROI(const cv::Mat& img,
     cv::groupRectangles(foundLocations, groupThreshold, 0.2);
 }
 
-void HOGDescriptor::readALTModel(std::string modelfile)
+void HOGDescriptor::readALTModel(cv::String modelfile)
 {
     // read model from SVMlight format..
     FILE *modelfl;
     if ((modelfl = fopen(modelfile.c_str(), "rb")) == NULL)
     {
-        std::string eerr("file not exist");
-        std::string efile(__FILE__);
-        std::string efunc(__FUNCTION__);
+        cv::String eerr("file not exist");
+        cv::String efile(__FILE__);
+        cv::String efunc(__FUNCTION__);
         throw Exception(CV_StsError, eerr, efile, efunc, __LINE__);
     }
     char version_buffer[10];
     if (!fread (&version_buffer,sizeof(char),10,modelfl))
     {
-        std::string eerr("version?");
-        std::string efile(__FILE__);
-        std::string efunc(__FUNCTION__);
+        cv::String eerr("version?");
+        cv::String efile(__FILE__);
+        cv::String efunc(__FUNCTION__);
         throw Exception(CV_StsError, eerr, efile, efunc, __LINE__);
     }
     if(strcmp(version_buffer,"V6.01")) {
-        std::string eerr("version doesnot match");
-        std::string efile(__FILE__);
-        std::string efunc(__FUNCTION__);
+        cv::String eerr("version doesnot match");
+        cv::String efile(__FILE__);
+        cv::String efunc(__FUNCTION__);
         throw Exception(CV_StsError, eerr, efile, efunc, __LINE__);
     }
     /* read version number */
@@ -2819,9 +2819,9 @@ void HOGDescriptor::readALTModel(std::string modelfile)
     { throw Exception(); }
     if (version < 200)
     {
-        std::string eerr("version doesnot match");
-        std::string efile(__FILE__);
-        std::string efunc(__FUNCTION__);
+        cv::String eerr("version doesnot match");
+        cv::String efile(__FILE__);
+        cv::String efunc(__FUNCTION__);
         throw Exception();
     }
     int kernel_type;

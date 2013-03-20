@@ -146,7 +146,7 @@ private:
 class CV_EXPORTS FromFileMotionReader : public ImageMotionEstimatorBase
 {
 public:
-    FromFileMotionReader(const std::string &path);
+    FromFileMotionReader(const cv::String &path);
 
     virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
 
@@ -157,7 +157,7 @@ private:
 class CV_EXPORTS ToFileMotionWriter : public ImageMotionEstimatorBase
 {
 public:
-    ToFileMotionWriter(const std::string &path, Ptr<ImageMotionEstimatorBase> estimator);
+    ToFileMotionWriter(const cv::String &path, Ptr<ImageMotionEstimatorBase> estimator);
 
     virtual void setMotionModel(MotionModel val) { motionEstimator_->setMotionModel(val); }
     virtual MotionModel motionModel() const { return motionEstimator_->motionModel(); }

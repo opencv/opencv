@@ -113,7 +113,7 @@ Since every :ocv:class:`FaceRecognizer` is a :ocv:class:`Algorithm`, you can use
     // Create a FaceRecognizer:
     Ptr<FaceRecognizer> model = createEigenFaceRecognizer();
     // And here's how to get its name:
-    std::string name = model->name();
+    cv::String name = model->name();
 
 
 FaceRecognizer::train

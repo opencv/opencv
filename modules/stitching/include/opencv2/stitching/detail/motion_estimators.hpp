@@ -190,7 +190,7 @@ void CV_EXPORTS waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind);
 // Auxiliary functions
 
 // Returns matches graph representation in DOT language
-std::string CV_EXPORTS matchesGraphAsString(std::vector<std::string> &pathes, std::vector<MatchesInfo> &pairwise_matches,
+cv::String CV_EXPORTS matchesGraphAsString(std::vector<cv::String> &pathes, std::vector<MatchesInfo> &pairwise_matches,
                                             float conf_threshold);
 
 std::vector<int> CV_EXPORTS leaveBiggestComponent(std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,

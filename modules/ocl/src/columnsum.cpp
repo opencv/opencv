@@ -65,7 +65,7 @@ void cv::ocl::columnSum(const oclMat &src, oclMat &dst)
 
     Context *clCxt = src.clCxt;
 
-    const std::string kernelName = "columnSum";
+    const cv::String kernelName = "columnSum";
 
     std::vector< std::pair<size_t, const void *> > args;
 

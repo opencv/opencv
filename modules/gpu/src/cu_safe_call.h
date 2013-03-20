@@ -50,7 +50,7 @@
 namespace cv { namespace gpu {
     namespace detail
     {
-        std::string cuGetErrString(CUresult res);
+        cv::String cuGetErrString(CUresult res);
 
         inline void cuSafeCall_impl(CUresult res, const char* file, int line)
         {

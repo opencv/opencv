@@ -1537,7 +1537,7 @@ CvERTrees::~CvERTrees()
 {
 }
 
-std::string CvERTrees::getName() const
+cv::String CvERTrees::getName() const
 {
     return CV_TYPE_NAME_ML_ERTREES;
 }

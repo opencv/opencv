@@ -190,7 +190,7 @@ struct ChannelStorage
 
     enum {HOG_BINS = 6, HOG_LUV_BINS = 10};
 
-    ChannelStorage(const cv::Mat& colored, int shr, std::string featureTypeStr) : shrinkage(shr)
+    ChannelStorage(const cv::Mat& colored, int shr, cv::String featureTypeStr) : shrinkage(shr)
     {
         model_height = cvRound(colored.rows / (float)shrinkage);
         if (featureTypeStr == "ICF") featureTypeStr = "HOG6MagLuv";
@@ -240,7 +240,7 @@ struct cv::softcascade::Detector::Fields
     typedef std::vector<SOctave>::iterator  octIt_t;
     typedef std::vector<Detection> dvector;
 
-    std::string featureTypeStr;
+    cv::String featureTypeStr;
 
     void detectAt(const int dx, const int dy, const Level& level, const ChannelStorage& storage, dvector& detections) const
     {
@@ -364,14 +364,14 @@ struct cv::softcascade::Detector::Fields
         static const char *const FEATURE_FORMAT      = "featureFormat";
 
         // only Ada Boost supported
-        std::string stageTypeStr = (std::string)root[SC_STAGE_TYPE];
+        cv::String stageTypeStr = (cv::String)root[SC_STAGE_TYPE];
         CV_Assert(stageTypeStr == SC_BOOST);
 
-        std::string fformat = (std::string)root[FEATURE_FORMAT];
+        cv::String fformat = (cv::String)root[FEATURE_FORMAT];
         bool useBoxes = (fformat == "BOX");
 
         // only HOG-like integral channel features supported
-        featureTypeStr = (std::string)root[SC_FEATURE_TYPE];
+        featureTypeStr = (cv::String)root[SC_FEATURE_TYPE];
         CV_Assert(featureTypeStr == SC_ICF || featureTypeStr == SC_HOG6_MAG_LUV);
 
         origObjWidth  = (int)root[SC_ORIG_W];

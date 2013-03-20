@@ -70,7 +70,7 @@
  */
 #include "precomp.hpp"
 #include "retinafilter.hpp"
-#include <iostream>
+#include <cstdio>
 
 namespace cv
 {
@@ -112,25 +112,26 @@ void Retina::setColorSaturation(const bool saturateColors, const float colorSatu
 struct Retina::RetinaParameters Retina::getParameters(){return _retinaParameters;}
 
 
-void Retina::setup(std::string retinaParameterFile, const bool applyDefaultSetupOnFailure)
+void Retina::setup(cv::String retinaParameterFile, const bool applyDefaultSetupOnFailure)
 {
     try
     {
         // opening retinaParameterFile in read mode
         cv::FileStorage fs(retinaParameterFile, cv::FileStorage::READ);
         setup(fs, applyDefaultSetupOnFailure);
-    }catch(Exception &e)
-    {
-    std::cout<<"Retina::setup: wrong/unappropriate xml parameter file : error report :`n=>"<<e.what()<<std::endl;
-    if (applyDefaultSetupOnFailure)
-    {
-            std::cout<<"Retina::setup: resetting retina with default parameters"<<std::endl;
-        setupOPLandIPLParvoChannel();
-        setupIPLMagnoChannel();
     }
+    catch(Exception &e)
+    {
+        printf("Retina::setup: wrong/unappropriate xml parameter file : error report :`n=>%s\n", e.what());
+        if (applyDefaultSetupOnFailure)
+        {
+            printf("Retina::setup: resetting retina with default parameters\n");
+            setupOPLandIPLParvoChannel();
+            setupIPLMagnoChannel();
+        }
         else
         {
-        std::cout<<"=> keeping current parameters"<<std::endl;
+            printf("=> keeping current parameters\n");
         }
     }
 }
@@ -142,7 +143,7 @@ void Retina::setup(cv::FileStorage &fs, const bool applyDefaultSetupOnFailure)
         // read parameters file if it exists or apply default setup if asked for
         if (!fs.isOpened())
         {
-            std::cout<<"Retina::setup: provided parameters file could not be open... skeeping configuration"<<std::endl;
+            printf("Retina::setup: provided parameters file could not be open... skeeping configuration\n");
             return;
             // implicit else case : retinaParameterFile could be open (it exists at least)
         }
@@ -174,18 +175,18 @@ void Retina::setup(cv::FileStorage &fs, const bool applyDefaultSetupOnFailure)
 
     }catch(Exception &e)
     {
-        std::cout<<"Retina::setup: resetting retina with default parameters"<<std::endl;
+        printf("Retina::setup: resetting retina with default parameters\n");
         if (applyDefaultSetupOnFailure)
         {
             setupOPLandIPLParvoChannel();
             setupIPLMagnoChannel();
         }
-        std::cout<<"Retina::setup: wrong/unappropriate xml parameter file : error report :`n=>"<<e.what()<<std::endl;
-        std::cout<<"=> keeping current parameters"<<std::endl;
+        printf("Retina::setup: wrong/unappropriate xml parameter file : error report :`n=>%s\n", e.what());
+        printf("=> keeping current parameters\n");
     }
 
     // report current configuration
-    std::cout<<printSetup()<<std::endl;
+    printf("%s\n", printSetup().c_str());
 }
 
 void Retina::setup(cv::Retina::RetinaParameters newConfiguration)
@@ -199,7 +200,7 @@ void Retina::setup(cv::Retina::RetinaParameters newConfiguration)
 
 }
 
-const std::string Retina::printSetup()
+const cv::String Retina::printSetup()
 {
     std::stringstream outmessage;
 
@@ -229,10 +230,10 @@ const std::string Retina::printSetup()
             << "\n==> localAdaptintegration_tau : " << _retinaParameters.IplMagno.localAdaptintegration_tau
             << "\n==> localAdaptintegration_k : " << _retinaParameters.IplMagno.localAdaptintegration_k
             <<"}";
-    return outmessage.str();
+    return outmessage.str().c_str();
 }
 
-void Retina::write( std::string fs ) const
+void Retina::write( cv::String fs ) const
 {
     FileStorage parametersSaveFile(fs, cv::FileStorage::WRITE );
     write(parametersSaveFile);
@@ -364,7 +365,7 @@ void Retina::_init(const cv::Size inputSz, const bool colorMode, RETINA_COLORSAM
     _retinaFilter->clearAllBuffers();
 
     // report current configuration
-    std::cout<<printSetup()<<std::endl;
+    printf("%s\n", printSetup().c_str());
 }
 
 void Retina::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, cv::Mat &outBuffer)

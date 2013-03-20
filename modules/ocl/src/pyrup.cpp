@@ -64,7 +64,7 @@ namespace cv
 
             Context *clCxt = src.clCxt;
 
-            const std::string kernelName = "pyrUp";
+            const cv::String kernelName = "pyrUp";
 
             std::vector< std::pair<size_t, const void *> > args;
             args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data));

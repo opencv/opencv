@@ -129,15 +129,15 @@ namespace
     class VideoFrameSource : public CaptureFrameSource
     {
     public:
-        VideoFrameSource(const std::string& fileName);
+        VideoFrameSource(const cv::String& fileName);
 
         void reset();
 
     private:
-        std::string fileName_;
+        cv::String fileName_;
     };
 
-    VideoFrameSource::VideoFrameSource(const std::string& fileName) : fileName_(fileName)
+    VideoFrameSource::VideoFrameSource(const cv::String& fileName) : fileName_(fileName)
     {
         reset();
     }
@@ -173,7 +173,7 @@ namespace
     }
 }
 
-Ptr<FrameSource> cv::superres::createFrameSource_Video(const std::string& fileName)
+Ptr<FrameSource> cv::superres::createFrameSource_Video(const cv::String& fileName)
 {
     return new VideoFrameSource(fileName);
 }
@@ -204,18 +204,18 @@ namespace
     class VideoFrameSource_GPU : public FrameSource
     {
     public:
-        VideoFrameSource_GPU(const std::string& fileName);
+        VideoFrameSource_GPU(const cv::String& fileName);
 
         void nextFrame(OutputArray frame);
         void reset();
 
     private:
-        std::string fileName_;
+        cv::String fileName_;
         VideoReader_GPU reader_;
         GpuMat frame_;
     };
 
-    VideoFrameSource_GPU::VideoFrameSource_GPU(const std::string& fileName) : fileName_(fileName)
+    VideoFrameSource_GPU::VideoFrameSource_GPU(const cv::String& fileName) : fileName_(fileName)
     {
         reset();
     }
@@ -246,7 +246,7 @@ namespace
     }
 }
 
-Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const std::string& fileName)
+Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const cv::String& fileName)
 {
     return new VideoFrameSource(fileName);
 }

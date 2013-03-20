@@ -48,7 +48,7 @@ Class for loading the data from a ``.csv`` file.
         void set_miss_ch( char ch );
         char get_miss_ch() const;
 
-        const std::map<std::string, int>& get_class_labels_map() const;
+        const std::map<cv::String, int>& get_class_labels_map() const;
 
     protected:
         ...
@@ -245,7 +245,7 @@ CvMLData::get_class_labels_map
 -------------------------------
 Returns a map that converts strings to labels.
 
-.. ocv:function:: const std::map<std::string, int>& CvMLData::get_class_labels_map() const
+.. ocv:function:: const std::map<cv::String, int>& CvMLData::get_class_labels_map() const
 
 The method returns a map that converts string class labels to the numerical class labels. It can be used to get an original class label as in a file.
 

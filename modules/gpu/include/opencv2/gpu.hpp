@@ -1384,11 +1384,11 @@ class CV_EXPORTS CascadeClassifier_GPU
 {
 public:
     CascadeClassifier_GPU();
-    CascadeClassifier_GPU(const std::string& filename);
+    CascadeClassifier_GPU(const cv::String& filename);
     ~CascadeClassifier_GPU();
 
     bool empty() const;
-    bool load(const std::string& filename);
+    bool load(const cv::String& filename);
     void release();
 
     /* returns number of detected objects */
@@ -2170,15 +2170,15 @@ public:
     };
 
     VideoWriter_GPU();
-    VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
-    VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
+    VideoWriter_GPU(const cv::String& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
+    VideoWriter_GPU(const cv::String& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
     VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
     VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
     ~VideoWriter_GPU();
 
     // all methods throws cv::Exception if error occurs
-    void open(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
-    void open(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
+    void open(const cv::String& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
+    void open(const cv::String& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
     void open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
     void open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
 
@@ -2210,10 +2210,10 @@ public:
         int       DisableSPSPPS;   //    NVVE_DISABLE_SPS_PPS
 
         EncoderParams();
-        explicit EncoderParams(const std::string& configFile);
+        explicit EncoderParams(const cv::String& configFile);
 
-        void load(const std::string& configFile);
-        void save(const std::string& configFile) const;
+        void load(const cv::String& configFile);
+        void save(const cv::String& configFile) const;
     };
 
     EncoderParams getParams() const;
@@ -2301,12 +2301,12 @@ public:
     class VideoSource;
 
     VideoReader_GPU();
-    explicit VideoReader_GPU(const std::string& filename);
+    explicit VideoReader_GPU(const cv::String& filename);
     explicit VideoReader_GPU(const cv::Ptr<VideoSource>& source);
 
     ~VideoReader_GPU();
 
-    void open(const std::string& filename);
+    void open(const cv::String& filename);
     void open(const cv::Ptr<VideoSource>& source);
     bool isOpened() const;
 

@@ -494,7 +494,7 @@ void cv::Mesh3D::computeNormals(const std::vector<int>& subset, float normalRadi
     ::computeNormals(octree, vtx, normals, mask, normalRadius, minNeighbors);
 }
 
-void cv::Mesh3D::writeAsVrml(const std::string& file, const std::vector<Scalar>& _colors) const
+void cv::Mesh3D::writeAsVrml(const cv::String& file, const std::vector<Scalar>& _colors) const
 {
     std::ofstream ofs(file.c_str());
 

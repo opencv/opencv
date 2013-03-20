@@ -243,10 +243,10 @@ const Ncv32u K_LOG2_WARP_SIZE = 5;
 //==============================================================================
 
 
-NCV_EXPORTS void ncvDebugOutput(const std::string &msg);
+NCV_EXPORTS void ncvDebugOutput(const cv::String &msg);
 
 
-typedef void NCVDebugOutputHandler(const std::string &msg);
+typedef void NCVDebugOutputHandler(const cv::String &msg);
 
 
 NCV_EXPORTS void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);

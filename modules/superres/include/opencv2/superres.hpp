@@ -62,8 +62,8 @@ namespace cv
 
         CV_EXPORTS Ptr<FrameSource> createFrameSource_Empty();
 
-        CV_EXPORTS Ptr<FrameSource> createFrameSource_Video(const std::string& fileName);
-        CV_EXPORTS Ptr<FrameSource> createFrameSource_Video_GPU(const std::string& fileName);
+        CV_EXPORTS Ptr<FrameSource> createFrameSource_Video(const cv::String& fileName);
+        CV_EXPORTS Ptr<FrameSource> createFrameSource_Video_GPU(const cv::String& fileName);
 
         CV_EXPORTS Ptr<FrameSource> createFrameSource_Camera(int deviceId = 0);
 
