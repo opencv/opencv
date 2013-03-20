@@ -103,12 +103,12 @@ struct CvVideoWriter
     virtual bool writeFrame(const IplImage*) { return false; }
 };
 
-//#if defined WIN32 || defined _WIN32
-//#define HAVE_VFW 1
+#if (defined WIN32 || defined _WIN32) && !defined _M_ARM
+#define HAVE_VFW 1
 
 /* uncomment to enable CMUCamera1394 fireware camera module */
 //#define HAVE_CMU1394 1
-//#endif
+#endif
 
 
 CvCapture * cvCreateCameraCapture_V4L( int index );

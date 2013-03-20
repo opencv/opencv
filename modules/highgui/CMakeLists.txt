@@ -106,7 +106,8 @@ elseif(APPLE)
 endif()
 
 #if(WIN32)
-#  list(APPEND highgui_srcs src/cap_vfw.cpp src/cap_cmu.cpp src/cap_dshow.cpp)
+  list(APPEND highgui_srcs src/cap_dshow.cpp)
+  #list(APPEND highgui_srcs src/cap_vfw.cpp src/cap_cmu.cpp)
 #endif(WIN32)
 
 if(HAVE_XINE)

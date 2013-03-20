@@ -197,9 +197,9 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         {
 #ifdef HAVE_VIDEOINPUT
         case CV_CAP_DSHOW:
-            // capture = cvCreateCameraCapture_DShow (index);
-            // if (capture)
-            //     return capture;
+             capture = cvCreateCameraCapture_DShow (index);
+             if (capture)
+                 return capture;
             return NULL;
             break;
 #endif

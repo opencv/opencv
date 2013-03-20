@@ -60,7 +60,10 @@ endif()
 
 project(OpenCV CXX C)
 
-add_definitions(-D_ARM_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE)
+if ((${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm") AND WIN32)
+  set(CMAKE_REQUIRED_DEFINITIONS -D_ARM_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE)
+  add_definitions(-D_ARM_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE)
+endif()
 
 include(cmake/OpenCVUtils.cmake)
 
@@ -171,7 +174,7 @@ OCV_OPTION(BUILD_JASPER             "Build libjasper from source"        WIN32 O
 OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"          WIN32 OR ANDROID OR APPLE )
 OCV_OPTION(BUILD_PNG                "Build libpng from source"           WIN32 OR ANDROID OR APPLE )
 OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"          WIN32 OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_TBB                "Download and build TBB from source" ANDROID IF CMAKE_COMPILER_IS_GNUCXX )
+OCV_OPTION(BUILD_TBB                "Download and build TBB from source" ANDROID )
 
 # OpenCV installation options
 # ===================================================
