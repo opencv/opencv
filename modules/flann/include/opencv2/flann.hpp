@@ -112,7 +112,7 @@ public:
         int radiusSearch(const Mat& query, Mat& indices, Mat& dists,
                          DistanceType radius, const ::cvflann::SearchParams& params);
 
-        void save(std::string filename) { nnIndex->save(filename); }
+        void save(cv::String filename) { nnIndex->save(filename); }
 
         int veclen() const { return nnIndex->veclen(); }
 
@@ -244,7 +244,7 @@ public:
     int radiusSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& params);
     int radiusSearch(const Mat& query, Mat& indices, Mat& dists, DistanceType radius, const ::cvflann::SearchParams& params);
 
-    void save(std::string filename)
+    void save(cv::String filename)
         {
             if (nnIndex_L1) nnIndex_L1->save(filename);
             if (nnIndex_L2) nnIndex_L2->save(filename);

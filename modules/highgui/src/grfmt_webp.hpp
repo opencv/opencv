@@ -60,7 +60,7 @@ public:
     bool readData( Mat& img );
     bool readHeader();
     void close();
-    bool checkSignature( const std::string& signature ) const;
+    bool checkSignature( const cv::String& signature ) const;
 
     ImageDecoder newDecoder() const;
 

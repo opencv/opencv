@@ -67,21 +67,21 @@ enum {
     WND_PROP_OPENGL       = CV_WND_PROP_OPENGL       // opengl support
 };
 
-CV_EXPORTS_W void namedWindow(const std::string& winname, int flags = WINDOW_AUTOSIZE);
-CV_EXPORTS_W void destroyWindow(const std::string& winname);
+CV_EXPORTS_W void namedWindow(const cv::String& winname, int flags = WINDOW_AUTOSIZE);
+CV_EXPORTS_W void destroyWindow(const cv::String& winname);
 CV_EXPORTS_W void destroyAllWindows();
 
 CV_EXPORTS_W int startWindowThread();
 
 CV_EXPORTS_W int waitKey(int delay = 0);
 
-CV_EXPORTS_W void imshow(const std::string& winname, InputArray mat);
+CV_EXPORTS_W void imshow(const cv::String& winname, InputArray mat);
 
-CV_EXPORTS_W void resizeWindow(const std::string& winname, int width, int height);
-CV_EXPORTS_W void moveWindow(const std::string& winname, int x, int y);
+CV_EXPORTS_W void resizeWindow(const cv::String& winname, int width, int height);
+CV_EXPORTS_W void moveWindow(const cv::String& winname, int x, int y);
 
-CV_EXPORTS_W void setWindowProperty(const std::string& winname, int prop_id, double prop_value);//YV
-CV_EXPORTS_W double getWindowProperty(const std::string& winname, int prop_id);//YV
+CV_EXPORTS_W void setWindowProperty(const cv::String& winname, int prop_id, double prop_value);//YV
+CV_EXPORTS_W double getWindowProperty(const cv::String& winname, int prop_id);//YV
 
 enum
 {
@@ -110,45 +110,45 @@ enum
 typedef void (*MouseCallback)(int event, int x, int y, int flags, void* userdata);
 
 //! assigns callback for mouse events
-CV_EXPORTS void setMouseCallback(const std::string& winname, MouseCallback onMouse, void* userdata = 0);
+CV_EXPORTS void setMouseCallback(const cv::String& winname, MouseCallback onMouse, void* userdata = 0);
 
 
 typedef void (CV_CDECL *TrackbarCallback)(int pos, void* userdata);
 
-CV_EXPORTS int createTrackbar(const std::string& trackbarname, const std::string& winname,
+CV_EXPORTS int createTrackbar(const cv::String& trackbarname, const cv::String& winname,
                               int* value, int count,
                               TrackbarCallback onChange = 0,
                               void* userdata = 0);
 
-CV_EXPORTS_W int getTrackbarPos(const std::string& trackbarname, const std::string& winname);
-CV_EXPORTS_W void setTrackbarPos(const std::string& trackbarname, const std::string& winname, int pos);
+CV_EXPORTS_W int getTrackbarPos(const cv::String& trackbarname, const cv::String& winname);
+CV_EXPORTS_W void setTrackbarPos(const cv::String& trackbarname, const cv::String& winname, int pos);
 
 // OpenGL support
 
 typedef void (*OpenGlDrawCallback)(void* userdata);
-CV_EXPORTS void setOpenGlDrawCallback(const std::string& winname, OpenGlDrawCallback onOpenGlDraw, void* userdata = 0);
+CV_EXPORTS void setOpenGlDrawCallback(const cv::String& winname, OpenGlDrawCallback onOpenGlDraw, void* userdata = 0);
 
-CV_EXPORTS void setOpenGlContext(const std::string& winname);
+CV_EXPORTS void setOpenGlContext(const cv::String& winname);
 
-CV_EXPORTS void updateWindow(const std::string& winname);
+CV_EXPORTS void updateWindow(const cv::String& winname);
 
 //Only for Qt
 
-CV_EXPORTS CvFont fontQt(const std::string& nameFont, int pointSize=-1,
+CV_EXPORTS CvFont fontQt(const cv::String& nameFont, int pointSize=-1,
                          Scalar color=Scalar::all(0), int weight=CV_FONT_NORMAL,
                          int style=CV_STYLE_NORMAL, int spacing=0);
-CV_EXPORTS void addText( const Mat& img, const std::string& text, Point org, CvFont font);
+CV_EXPORTS void addText( const Mat& img, const cv::String& text, Point org, CvFont font);
 
-CV_EXPORTS void displayOverlay(const std::string& winname, const std::string& text, int delayms CV_DEFAULT(0));
-CV_EXPORTS void displayStatusBar(const std::string& winname, const std::string& text, int delayms CV_DEFAULT(0));
+CV_EXPORTS void displayOverlay(const cv::String& winname, const cv::String& text, int delayms CV_DEFAULT(0));
+CV_EXPORTS void displayStatusBar(const cv::String& winname, const cv::String& text, int delayms CV_DEFAULT(0));
 
-CV_EXPORTS void saveWindowParameters(const std::string& windowName);
-CV_EXPORTS void loadWindowParameters(const std::string& windowName);
+CV_EXPORTS void saveWindowParameters(const cv::String& windowName);
+CV_EXPORTS void loadWindowParameters(const cv::String& windowName);
 CV_EXPORTS  int startLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
 CV_EXPORTS  void stopLoop();
 
 typedef void (CV_CDECL *ButtonCallback)(int state, void* userdata);
-CV_EXPORTS int createButton( const std::string& bar_name, ButtonCallback on_change,
+CV_EXPORTS int createButton( const cv::String& bar_name, ButtonCallback on_change,
                              void* userdata=NULL, int type=CV_PUSH_BUTTON,
                              bool initial_button_state=0);
 
@@ -182,12 +182,12 @@ enum
     IMWRITE_PXM_BINARY =32
 };
 
-CV_EXPORTS_W Mat imread( const std::string& filename, int flags=1 );
-CV_EXPORTS_W bool imwrite( const std::string& filename, InputArray img,
+CV_EXPORTS_W Mat imread( const cv::String& filename, int flags=1 );
+CV_EXPORTS_W bool imwrite( const cv::String& filename, InputArray img,
               const std::vector<int>& params=std::vector<int>());
 CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
 CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst );
-CV_EXPORTS_W bool imencode( const std::string& ext, InputArray img,
+CV_EXPORTS_W bool imencode( const cv::String& ext, InputArray img,
                             CV_OUT std::vector<uchar>& buf,
                             const std::vector<int>& params=std::vector<int>());
 
@@ -200,11 +200,11 @@ class CV_EXPORTS_W VideoCapture
 {
 public:
     CV_WRAP VideoCapture();
-    CV_WRAP VideoCapture(const std::string& filename);
+    CV_WRAP VideoCapture(const cv::String& filename);
     CV_WRAP VideoCapture(int device);
 
     virtual ~VideoCapture();
-    CV_WRAP virtual bool open(const std::string& filename);
+    CV_WRAP virtual bool open(const cv::String& filename);
     CV_WRAP virtual bool open(int device);
     CV_WRAP virtual bool isOpened() const;
     CV_WRAP virtual void release();
@@ -226,11 +226,11 @@ class CV_EXPORTS_W VideoWriter
 {
 public:
     CV_WRAP VideoWriter();
-    CV_WRAP VideoWriter(const std::string& filename, int fourcc, double fps,
+    CV_WRAP VideoWriter(const cv::String& filename, int fourcc, double fps,
                 Size frameSize, bool isColor=true);
 
     virtual ~VideoWriter();
-    CV_WRAP virtual bool open(const std::string& filename, int fourcc, double fps,
+    CV_WRAP virtual bool open(const cv::String& filename, int fourcc, double fps,
                       Size frameSize, bool isColor=true);
     CV_WRAP virtual bool isOpened() const;
     CV_WRAP virtual void release();

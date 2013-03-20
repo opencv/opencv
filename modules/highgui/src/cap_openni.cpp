@@ -66,7 +66,7 @@
 
 #include "XnCppWrapper.h"
 
-const std::string XMLConfig =
+const cv::String XMLConfig =
 "<OpenNI>"
         "<Licenses>"
         "<License vendor=\"PrimeSense\" key=\"0KOIk2JeIBYClPWVnMoRKn5cdY4=\"/>"
@@ -559,7 +559,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     if( status != XN_STATUS_OK )
     {
         std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to initialize the context: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+                  << cv::String(xnGetStatusString(status)) << std::endl;
         return;
     }
 
@@ -569,7 +569,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     if( status != XN_STATUS_OK )
     {
         std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate production trees: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+                  << cv::String(xnGetStatusString(status)) << std::endl;
         return;
     }
 
@@ -587,7 +587,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     if( status != XN_STATUS_OK )
     {
         std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create production tree: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+                  << cv::String(xnGetStatusString(status)) << std::endl;
         return;
     }
 
@@ -596,7 +596,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     if( status != XN_STATUS_OK )
     {
         std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to run xml script: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+                  << cv::String(xnGetStatusString(status)) << std::endl;
         return;
     }
 
@@ -607,7 +607,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     if( status != XN_STATUS_OK )
     {
         std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate depth generators: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+                  << cv::String(xnGetStatusString(status)) << std::endl;
         return;
     }
     if( depthList.IsEmpty() )
@@ -619,7 +619,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     if( status != XN_STATUS_OK )
     {
         std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create depth generator: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+                  << cv::String(xnGetStatusString(status)) << std::endl;
         return;
     }
 
@@ -629,7 +629,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     if( status != XN_STATUS_OK )
     {
         std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate image generators: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+                  << cv::String(xnGetStatusString(status)) << std::endl;
         return;
     }
 
@@ -639,7 +639,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
         if( status != XN_STATUS_OK )
         {
             std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create image generator: "
-                      <<  std::string(xnGetStatusString(status)) << std::endl;
+                      <<  cv::String(xnGetStatusString(status)) << std::endl;
             return;
         }
     }
@@ -667,7 +667,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     if( status != XN_STATUS_OK )
     {
         std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to start generating OpenNI data: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+                  << cv::String(xnGetStatusString(status)) << std::endl;
         return;
     }
 
@@ -698,7 +698,7 @@ CvCapture_OpenNI::CvCapture_OpenNI(const char * filename)
     if( status != XN_STATUS_OK )
     {
         std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to initialize the context: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+                  << cv::String(xnGetStatusString(status)) << std::endl;
         return;
     }
 
@@ -707,7 +707,7 @@ CvCapture_OpenNI::CvCapture_OpenNI(const char * filename)
     if( status != XN_STATUS_OK )
     {
         std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to open input file (" << filename << "): "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+                  << cv::String(xnGetStatusString(status)) << std::endl;
         return;
     }
 
@@ -862,7 +862,7 @@ double CvCapture_OpenNI::getCommonProperty( int propIdx )
         break;
     default :
     {
-        std::stringstream ss;
+        cv::Stringstream ss;
         ss << "Such parameter (propIdx=" << propIdx << ") isn't supported for getting.\n";
         CV_Error( CV_StsBadArg, ss.str().c_str() );
     }
@@ -923,7 +923,7 @@ bool CvCapture_OpenNI::setCommonProperty( int propIdx, double propValue )
         break;
     default:
     {
-        std::stringstream ss;
+        cv::Stringstream ss;
         ss << "Such parameter (propIdx=" << propIdx << ") isn't supported for setting.\n";
         CV_Error( CV_StsBadArg, ss.str().c_str() );
     }
@@ -978,7 +978,7 @@ double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
         break;
     default :
     {
-        std::stringstream ss;
+        cv::Stringstream ss;
         ss << "Depth generator does not support such parameter (propIdx=" << propIdx << ") for getting.\n";
         CV_Error( CV_StsBadArg, ss.str().c_str() );
     }
@@ -1032,7 +1032,7 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
         break;
     default:
     {
-        std::stringstream ss;
+        cv::Stringstream ss;
         ss << "Depth generator does not support such parameter (propIdx=" << propIdx << ") for setting.\n";
         CV_Error( CV_StsBadArg, ss.str().c_str() );
     }
@@ -1074,7 +1074,7 @@ double CvCapture_OpenNI::getImageGeneratorProperty( int propIdx )
         break;
     default :
     {
-        std::stringstream ss;
+        cv::Stringstream ss;
         ss << "Image generator does not support such parameter (propIdx=" << propIdx << ") for getting.\n";
         CV_Error( CV_StsBadArg, ss.str().c_str() );
     }
@@ -1135,7 +1135,7 @@ bool CvCapture_OpenNI::setImageGeneratorProperty( int propIdx, double propValue 
     }
     default:
     {
-        std::stringstream ss;
+        cv::Stringstream ss;
         ss << "Image generator does not support such parameter (propIdx=" << propIdx << ") for setting.\n";
         CV_Error( CV_StsBadArg, ss.str().c_str() );
     }

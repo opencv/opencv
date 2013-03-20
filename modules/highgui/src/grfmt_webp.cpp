@@ -71,7 +71,7 @@ ImageDecoder WebPDecoder::newDecoder() const
     return new WebPDecoder;
 }
 
-bool WebPDecoder::checkSignature( const std::string& signature ) const
+bool WebPDecoder::checkSignature( const cv::String& signature ) const
 {
     size_t len = signatureLength();
     bool ret = false;

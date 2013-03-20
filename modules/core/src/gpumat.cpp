@@ -172,7 +172,7 @@ namespace
         bool hasEqualOrGreaterBin(int major, int minor) const;
 
     private:
-        static void fromStr(const std::string& set_as_str, std::vector<int>& arr);
+        static void fromStr(const cv::String& set_as_str, std::vector<int>& arr);
 
         std::vector<int> bin;
         std::vector<int> ptx;
@@ -218,9 +218,9 @@ namespace
         return !bin.empty() && (bin.back() >= major * 10 + minor);
     }
 
-    void CudaArch::fromStr(const std::string& set_as_str, std::vector<int>& arr)
+    void CudaArch::fromStr(const cv::String& set_as_str, std::vector<int>& arr)
     {
-        if (set_as_str.find_first_not_of(" ") == std::string::npos)
+        if (set_as_str.find_first_not_of(" ") == cv::String::npos)
             return;
 
         std::istringstream stream(set_as_str);

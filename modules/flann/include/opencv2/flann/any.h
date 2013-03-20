@@ -106,6 +106,11 @@ template<> inline void big_any_policy<flann_algorithm_t>::print(std::ostream& ou
     out << int(*reinterpret_cast<flann_algorithm_t const*>(*src));
 }
 
+template<> inline void big_any_policy<cv::String>::print(std::ostream& out, void* const* src)
+{
+    out << (*reinterpret_cast<cv::String const*>(*src)).c_str();
+}
+
 template<typename T>
 struct choose_policy
 {

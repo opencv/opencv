@@ -2611,18 +2611,18 @@ template<> CV_EXPORTS void Ptr<CvFileStorage>::delete_obj();
 
 //////////////////////////////////////// XML & YAML I/O ////////////////////////////////////
 
-CV_EXPORTS_W void write( FileStorage& fs, const std::string& name, int value );
-CV_EXPORTS_W void write( FileStorage& fs, const std::string& name, float value );
-CV_EXPORTS_W void write( FileStorage& fs, const std::string& name, double value );
-CV_EXPORTS_W void write( FileStorage& fs, const std::string& name, const std::string& value );
+CV_EXPORTS_W void write( FileStorage& fs, const cv::String& name, int value );
+CV_EXPORTS_W void write( FileStorage& fs, const cv::String& name, float value );
+CV_EXPORTS_W void write( FileStorage& fs, const cv::String& name, double value );
+CV_EXPORTS_W void write( FileStorage& fs, const cv::String& name, const cv::String& value );
 
 template<typename _Tp> inline void write(FileStorage& fs, const _Tp& value)
-{ write(fs, std::string(), value); }
+{ write(fs, cv::String(), value); }
 
 CV_EXPORTS void writeScalar( FileStorage& fs, int value );
 CV_EXPORTS void writeScalar( FileStorage& fs, float value );
 CV_EXPORTS void writeScalar( FileStorage& fs, double value );
-CV_EXPORTS void writeScalar( FileStorage& fs, const std::string& value );
+CV_EXPORTS void writeScalar( FileStorage& fs, const cv::String& value );
 
 template<> inline void write( FileStorage& fs, const int& value )
 {
@@ -2639,7 +2639,7 @@ template<> inline void write( FileStorage& fs, const double& value )
     writeScalar(fs, value);
 }
 
-template<> inline void write( FileStorage& fs, const std::string& value )
+template<> inline void write( FileStorage& fs, const cv::String& value )
 {
     writeScalar(fs, value);
 }
@@ -2700,20 +2700,20 @@ inline void write(FileStorage& fs, const Range& r )
 class CV_EXPORTS WriteStructContext
 {
 public:
-    WriteStructContext(FileStorage& _fs, const std::string& name,
-        int flags, const std::string& typeName=std::string());
+    WriteStructContext(FileStorage& _fs, const cv::String& name,
+        int flags, const cv::String& typeName=cv::String());
     ~WriteStructContext();
     FileStorage* fs;
 };
 
-template<typename _Tp> inline void write(FileStorage& fs, const std::string& name, const Point_<_Tp>& pt )
+template<typename _Tp> inline void write(FileStorage& fs, const cv::String& name, const Point_<_Tp>& pt )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     write(fs, pt.x);
     write(fs, pt.y);
 }
 
-template<typename _Tp> inline void write(FileStorage& fs, const std::string& name, const Point3_<_Tp>& pt )
+template<typename _Tp> inline void write(FileStorage& fs, const cv::String& name, const Point3_<_Tp>& pt )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     write(fs, pt.x);
@@ -2721,21 +2721,21 @@ template<typename _Tp> inline void write(FileStorage& fs, const std::string& nam
     write(fs, pt.z);
 }
 
-template<typename _Tp> inline void write(FileStorage& fs, const std::string& name, const Size_<_Tp>& sz )
+template<typename _Tp> inline void write(FileStorage& fs, const cv::String& name, const Size_<_Tp>& sz )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     write(fs, sz.width);
     write(fs, sz.height);
 }
 
-template<typename _Tp> inline void write(FileStorage& fs, const std::string& name, const Complex<_Tp>& c )
+template<typename _Tp> inline void write(FileStorage& fs, const cv::String& name, const Complex<_Tp>& c )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     write(fs, c.re);
     write(fs, c.im);
 }
 
-template<typename _Tp> inline void write(FileStorage& fs, const std::string& name, const Rect_<_Tp>& r )
+template<typename _Tp> inline void write(FileStorage& fs, const cv::String& name, const Rect_<_Tp>& r )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     write(fs, r.x);
@@ -2744,14 +2744,14 @@ template<typename _Tp> inline void write(FileStorage& fs, const std::string& nam
     write(fs, r.height);
 }
 
-template<typename _Tp, int cn> inline void write(FileStorage& fs, const std::string& name, const Vec<_Tp, cn>& v )
+template<typename _Tp, int cn> inline void write(FileStorage& fs, const cv::String& name, const Vec<_Tp, cn>& v )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     for(int i = 0; i < cn; i++)
         write(fs, v.val[i]);
 }
 
-template<typename _Tp> inline void write(FileStorage& fs, const std::string& name, const Scalar_<_Tp>& s )
+template<typename _Tp> inline void write(FileStorage& fs, const cv::String& name, const Scalar_<_Tp>& s )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     write(fs, s.val[0]);
@@ -2760,7 +2760,7 @@ template<typename _Tp> inline void write(FileStorage& fs, const std::string& nam
     write(fs, s.val[3]);
 }
 
-inline void write(FileStorage& fs, const std::string& name, const Range& r )
+inline void write(FileStorage& fs, const cv::String& name, const Range& r )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     write(fs, r.start);
@@ -2788,7 +2788,7 @@ public:
     {
         int _fmt = DataType<_Tp>::fmt;
         char fmt[] = { (char)((_fmt>>8)+'1'), (char)_fmt, '\0' };
-        fs->writeRaw( std::string(fmt), !vec.empty() ? (uchar*)&vec[0] : 0, vec.size()*sizeof(_Tp) );
+        fs->writeRaw( cv::String(fmt), !vec.empty() ? (uchar*)&vec[0] : 0, vec.size()*sizeof(_Tp) );
     }
     FileStorage* fs;
 };
@@ -2799,15 +2799,15 @@ template<typename _Tp> static inline void write( FileStorage& fs, const std::vec
     w(vec);
 }
 
-template<typename _Tp> static inline void write( FileStorage& fs, const std::string& name,
+template<typename _Tp> static inline void write( FileStorage& fs, const cv::String& name,
                                                 const std::vector<_Tp>& vec )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+(DataType<_Tp>::fmt != 0 ? CV_NODE_FLOW : 0));
     write(fs, vec);
 }
 
-CV_EXPORTS_W void write( FileStorage& fs, const std::string& name, const Mat& value );
-CV_EXPORTS void write( FileStorage& fs, const std::string& name, const SparseMat& value );
+CV_EXPORTS_W void write( FileStorage& fs, const cv::String& name, const Mat& value );
+CV_EXPORTS void write( FileStorage& fs, const cv::String& name, const SparseMat& value );
 
 template<typename _Tp> static inline FileStorage& operator << (FileStorage& fs, const _Tp& value)
 {
@@ -2821,10 +2821,10 @@ template<typename _Tp> static inline FileStorage& operator << (FileStorage& fs, 
     return fs;
 }
 
-CV_EXPORTS FileStorage& operator << (FileStorage& fs, const std::string& str);
+CV_EXPORTS FileStorage& operator << (FileStorage& fs, const cv::String& str);
 
 static inline FileStorage& operator << (FileStorage& fs, const char* str)
-{ return (fs << std::string(str)); }
+{ return (fs << cv::String(str)); }
 
 inline FileNode::FileNode() : fs(0), node(0) {}
 inline FileNode::FileNode(const CvFileStorage* _fs, const CvFileNode* _node)
@@ -2928,9 +2928,9 @@ inline FileNode::operator double() const
     read(*this, value, 0.);
     return value;
 }
-inline FileNode::operator std::string() const
+inline FileNode::operator cv::String() const
 {
-    std::string value;
+    cv::String value;
     read(*this, value, value);
     return value;
 }
@@ -2971,7 +2971,7 @@ public:
         size_t remaining1 = remaining/cn;
         count = count < remaining1 ? count : remaining1;
         vec.resize(count);
-        it->readRaw( std::string(fmt), !vec.empty() ? (uchar*)&vec[0] : 0, count*sizeof(_Tp) );
+        it->readRaw( cv::String(fmt), !vec.empty() ? (uchar*)&vec[0] : 0, count*sizeof(_Tp) );
     }
     FileNodeIterator* it;
 };
@@ -3662,7 +3662,7 @@ public:
         {
             FileStorage fs(_fs);
             fs.fs.addref();
-            ((const _ClsName*)ptr)->write(fs, std::string(name));
+            ((const _ClsName*)ptr)->write(fs, cv::String(name));
         }
     }
 
@@ -3824,7 +3824,7 @@ template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const 
 }
 
 
-template<typename _Tp> inline Ptr<_Tp> Algorithm::create(const std::string& name)
+template<typename _Tp> inline Ptr<_Tp> Algorithm::create(const cv::String& name)
 {
     return _create(name).ptr<_Tp>();
 }
@@ -3840,7 +3840,7 @@ inline void Algorithm::set(const char* _name, const Ptr<_Tp>& value)
 }
 
 template<typename _Tp>
-inline void Algorithm::set(const std::string& _name, const Ptr<_Tp>& value)
+inline void Algorithm::set(const cv::String& _name, const Ptr<_Tp>& value)
 {
     this->set<_Tp>(_name.c_str(), value);
 }
@@ -3856,12 +3856,12 @@ inline void Algorithm::setAlgorithm(const char* _name, const Ptr<_Tp>& value)
 }
 
 template<typename _Tp>
-inline void Algorithm::setAlgorithm(const std::string& _name, const Ptr<_Tp>& value)
+inline void Algorithm::setAlgorithm(const cv::String& _name, const Ptr<_Tp>& value)
 {
     this->set<_Tp>(_name.c_str(), value);
 }
 
-template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const std::string& _name) const
+template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const cv::String& _name) const
 {
     typename ParamType<_Tp>::member_type value;
     info()->get(this, _name.c_str(), ParamType<_Tp>::type, &value);
@@ -3877,7 +3877,7 @@ template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::ge
 
 template<typename _Tp, typename _Base> inline void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                   Ptr<_Tp>& value, bool readOnly, Ptr<_Tp> (Algorithm::*getter)(), void (Algorithm::*setter)(const Ptr<_Tp>&),
-                  const std::string& help)
+                  const cv::String& help)
 {
     //TODO: static assert: _Tp inherits from _Base
     addParam_(algo, parameter, ParamType<_Base>::type, &value, readOnly,
@@ -3886,7 +3886,7 @@ template<typename _Tp, typename _Base> inline void AlgorithmInfo::addParam(Algor
 
 template<typename _Tp> inline void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                   Ptr<_Tp>& value, bool readOnly, Ptr<_Tp> (Algorithm::*getter)(), void (Algorithm::*setter)(const Ptr<_Tp>&),
-                  const std::string& help)
+                  const cv::String& help)
 {
     //TODO: static assert: _Tp inherits from Algorithm
     addParam_(algo, parameter, ParamType<Algorithm>::type, &value, readOnly,

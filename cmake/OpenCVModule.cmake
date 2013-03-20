@@ -471,6 +471,9 @@ endmacro()
 #   ocv_create_module(SKIP_LINK)
 macro(ocv_create_module)
   add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES})
+  if(NOT the_module STREQUAL opencv_ts)
+    set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
+  endif()
 
   if(NOT "${ARGN}" STREQUAL "SKIP_LINK")
     target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
@@ -506,8 +509,6 @@ macro(ocv_create_module)
       SOVERSION ${OPENCV_SOVERSION}
     )
   endif()
-
-  set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
   if(BUILD_SHARED_LIBS)
     if(MSVC)

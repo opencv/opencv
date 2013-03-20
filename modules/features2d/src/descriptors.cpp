@@ -92,12 +92,12 @@ void DescriptorExtractor::removeBorderKeypoints( std::vector<KeyPoint>& keypoint
     KeyPointsFilter::runByImageBorder( keypoints, imageSize, borderSize );
 }
 
-Ptr<DescriptorExtractor> DescriptorExtractor::create(const std::string& descriptorExtractorType)
+Ptr<DescriptorExtractor> DescriptorExtractor::create(const cv::String& descriptorExtractorType)
 {
     if( descriptorExtractorType.find("Opponent") == 0 )
     {
-        size_t pos = std::string("Opponent").size();
-        std::string type = descriptorExtractorType.substr(pos);
+        size_t pos = cv::String("Opponent").size();
+        cv::String type = descriptorExtractorType.substr(pos);
         return new OpponentColorDescriptorExtractor(DescriptorExtractor::create(type));
     }
 

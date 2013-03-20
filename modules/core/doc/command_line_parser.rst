@@ -16,7 +16,7 @@ The CommandLineParser class is designed for command line arguments parsing
         :param argv:
         :param keys:
 
-    .. ocv:function:: template<typename T> T CommandLineParser::get<T>(const std::string& name, bool space_delete = true)
+    .. ocv:function:: template<typename T> T CommandLineParser::get<T>(const cv::String& name, bool space_delete = true)
 
         :param name:
         :param space_delete:
@@ -26,7 +26,7 @@ The CommandLineParser class is designed for command line arguments parsing
         :param index:
         :param space_delete:
 
-    .. ocv:function:: bool CommandLineParser::has(const std::string& name)
+    .. ocv:function:: bool CommandLineParser::has(const cv::String& name)
 
         :param name:
 
@@ -41,7 +41,7 @@ The CommandLineParser class is designed for command line arguments parsing
 
     .. ocv:function:: void CommandLineParser::printErrors()
 
-    .. ocv:function:: std::string CommandLineParser::getPathToApplication()
+    .. ocv:function:: cv::String CommandLineParser::getPathToApplication()
 
 
 The sample below demonstrates how to use CommandLineParser:
@@ -59,12 +59,12 @@ The sample below demonstrates how to use CommandLineParser:
 
     int N = parser.get<int>("N");
     double fps = parser.get<double>("fps");
-    std::string path = parser.get<std::string>("path");
+    cv::String path = parser.get<cv::String>("path");
 
     use_time_stamp = parser.has("timestamp");
 
-    std::string img1 = parser.get<string>(0);
-    std::string img2 = parser.get<string>(1);
+    cv::String img1 = parser.get<string>(0);
+    cv::String img2 = parser.get<string>(1);
 
     int repeat = parser.get<int>(2);
 
@@ -78,7 +78,7 @@ Syntax:
 
 ::
 
-    const std::string keys =
+    const cv::String keys =
         "{help h usage ? |      | print this message   }"
         "{@image1        |      | image1 for compare   }"
         "{@image2        |      | image2 for compare   }"

@@ -61,7 +61,7 @@ public:
     void  close();
 
     size_t signatureLength() const;
-    bool checkSignature( const std::string& signature ) const;
+    bool checkSignature( const cv::String& signature ) const;
     ImageDecoder newDecoder() const;
 
 protected:

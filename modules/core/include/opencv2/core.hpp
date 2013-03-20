@@ -126,7 +126,7 @@ public:
      Full constructor. Normally the constuctor is not called explicitly.
      Instead, the macros CV_Error(), CV_Error_() and CV_Assert() are used.
     */
-    Exception(int _code, const std::string& _err, const std::string& _func, const std::string& _file, int _line);
+    Exception(int _code, const cv::String& _err, const cv::String& _func, const cv::String& _file, int _line);
     virtual ~Exception() throw();
 
     /*!
@@ -135,12 +135,12 @@ public:
     virtual const char *what() const throw();
     void formatMessage();
 
-    std::string msg; ///< the formatted error message
+    cv::String msg; ///< the formatted error message
 
     int code; ///< error code @see CVStatus
-    std::string err; ///< error description
-    std::string func; ///< function name. Available only when the compiler supports __func__ macro
-    std::string file; ///< source file name where the error has occured
+    cv::String err; ///< error description
+    cv::String func; ///< function name. Available only when the compiler supports __func__ macro
+    cv::String file; ///< source file name where the error has occured
     int line; ///< line number in the source file where the error has occured
 };
 
@@ -2515,13 +2515,13 @@ enum
 };
 
 //! renders text string in the image
-CV_EXPORTS_W void putText( Mat& img, const std::string& text, Point org,
+CV_EXPORTS_W void putText( Mat& img, const cv::String& text, Point org,
                          int fontFace, double fontScale, Scalar color,
                          int thickness=1, int lineType=8,
                          bool bottomLeftOrigin=false );
 
 //! returns bounding box of the text string
-CV_EXPORTS_W Size getTextSize(const std::string& text, int fontFace,
+CV_EXPORTS_W Size getTextSize(const cv::String& text, int fontFace,
                             double fontScale, int thickness,
                             CV_OUT int* baseLine);
 
@@ -3766,7 +3766,7 @@ class CV_EXPORTS FileNode;
  FileStorage fs("test.yml", FileStorage::READ);
  int test_int = (int)fs["test_int"];
  double test_real = (double)fs["test_real"];
- std::string test_string = (std::string)fs["test_string"];
+ cv::String test_string = (cv::String)fs["test_string"];
 
  Mat M;
  fs["test_mat"] >> M;
@@ -3777,7 +3777,7 @@ class CV_EXPORTS FileNode;
  int tl1 = (int)tl[1];
  double tl2 = (double)tl[2];
  int tl3 = (int)tl[3];
- std::string tl4 = (std::string)tl[4];
+ cv::String tl4 = (cv::String)tl[4];
  CV_Assert(tl[5].type() == FileNode::MAP && tl[5].size() == 3);
 
  int month = (int)tl[5]["month"];
@@ -3823,27 +3823,27 @@ public:
     //! the default constructor
     CV_WRAP FileStorage();
     //! the full constructor that opens file storage for reading or writing
-    CV_WRAP FileStorage(const std::string& source, int flags, const std::string& encoding=std::string());
+    CV_WRAP FileStorage(const cv::String& source, int flags, const cv::String& encoding=cv::String());
     //! the constructor that takes pointer to the C FileStorage structure
     FileStorage(CvFileStorage* fs);
     //! the destructor. calls release()
     virtual ~FileStorage();
 
     //! opens file storage for reading or writing. The previous storage is closed with release()
-    CV_WRAP virtual bool open(const std::string& filename, int flags, const std::string& encoding=std::string());
+    CV_WRAP virtual bool open(const cv::String& filename, int flags, const cv::String& encoding=cv::String());
     //! returns true if the object is associated with currently opened file.
     CV_WRAP virtual bool isOpened() const;
     //! closes the file and releases all the memory buffers
     CV_WRAP virtual void release();
     //! closes the file, releases all the memory buffers and returns the text string
-    CV_WRAP virtual std::string releaseAndGetString();
+    CV_WRAP virtual cv::String releaseAndGetString();
 
     //! returns the first element of the top-level mapping
     CV_WRAP FileNode getFirstTopLevelNode() const;
     //! returns the top-level mapping. YAML supports multiple streams
     CV_WRAP FileNode root(int streamidx=0) const;
     //! returns the specified element of the top-level mapping
-    FileNode operator[](const std::string& nodename) const;
+    FileNode operator[](const cv::String& nodename) const;
     //! returns the specified element of the top-level mapping
     CV_WRAP FileNode operator[](const char* nodename) const;
 
@@ -3852,15 +3852,15 @@ public:
     //! returns pointer to the underlying C FileStorage structure
     const CvFileStorage* operator *() const { return fs; }
     //! writes one or more numbers of the specified format to the currently written structure
-    void writeRaw( const std::string& fmt, const uchar* vec, size_t len );
+    void writeRaw( const cv::String& fmt, const uchar* vec, size_t len );
     //! writes the registered C structure (CvMat, CvMatND, CvSeq). See cvWrite()
-    void writeObj( const std::string& name, const void* obj );
+    void writeObj( const cv::String& name, const void* obj );
 
     //! returns the normalized object name for the specified file name
-    static std::string getDefaultObjectName(const std::string& filename);
+    static cv::String getDefaultObjectName(const cv::String& filename);
 
     Ptr<CvFileStorage> fs; //!< the underlying C FileStorage structure
-    std::string elname; //!< the currently written element
+    cv::String elname; //!< the currently written element
     std::vector<char> structs; //!< the stack of written structures
     int state; //!< the writer state
 };
@@ -3905,7 +3905,7 @@ public:
     //! the copy constructor
     FileNode(const FileNode& node);
     //! returns element of a mapping node
-    FileNode operator[](const std::string& nodename) const;
+    FileNode operator[](const cv::String& nodename) const;
     //! returns element of a mapping node
     CV_WRAP FileNode operator[](const char* nodename) const;
     //! returns element of a sequence node
@@ -3930,7 +3930,7 @@ public:
     //! returns true if the node has a name
     CV_WRAP bool isNamed() const;
     //! returns the node name or an empty string if the node is nameless
-    CV_WRAP std::string name() const;
+    CV_WRAP cv::String name() const;
     //! returns the number of elements in the node, if it is a sequence or mapping, or 1 otherwise.
     CV_WRAP size_t size() const;
     //! returns the node content as an integer. If the node stores floating-point number, it is rounded.
@@ -3956,7 +3956,7 @@ public:
     FileNodeIterator end() const;
 
     //! reads node elements to the buffer with the specified format
-    void readRaw( const std::string& fmt, uchar* vec, size_t len ) const;
+    void readRaw( const cv::String& fmt, uchar* vec, size_t len ) const;
     //! reads the registered object and returns pointer to it
     void* readObj() const;
 
@@ -3999,7 +3999,7 @@ public:
     FileNodeIterator& operator -= (int ofs);
 
     //! reads the next maxCount elements (or less, if the sequence/mapping last element occurs earlier) to the buffer with the specified format
-    FileNodeIterator& readRaw( const std::string& fmt, uchar* vec,
+    FileNodeIterator& readRaw( const cv::String& fmt, uchar* vec,
                                size_t maxCount=(size_t)INT_MAX );
 
     const CvFileStorage* fs;
@@ -4155,41 +4155,41 @@ class CV_EXPORTS_W Algorithm
 public:
     Algorithm();
     virtual ~Algorithm();
-    std::string name() const;
+    cv::String name() const;
 
-    template<typename _Tp> typename ParamType<_Tp>::member_type get(const std::string& name) const;
+    template<typename _Tp> typename ParamType<_Tp>::member_type get(const cv::String& name) const;
     template<typename _Tp> typename ParamType<_Tp>::member_type get(const char* name) const;
 
-    CV_WRAP int getInt(const std::string& name) const;
-    CV_WRAP double getDouble(const std::string& name) const;
-    CV_WRAP bool getBool(const std::string& name) const;
-    CV_WRAP std::string getString(const std::string& name) const;
-    CV_WRAP Mat getMat(const std::string& name) const;
-    CV_WRAP std::vector<Mat> getMatVector(const std::string& name) const;
-    CV_WRAP Ptr<Algorithm> getAlgorithm(const std::string& name) const;
+    CV_WRAP int getInt(const cv::String& name) const;
+    CV_WRAP double getDouble(const cv::String& name) const;
+    CV_WRAP bool getBool(const cv::String& name) const;
+    CV_WRAP cv::String getString(const cv::String& name) const;
+    CV_WRAP Mat getMat(const cv::String& name) const;
+    CV_WRAP std::vector<Mat> getMatVector(const cv::String& name) const;
+    CV_WRAP Ptr<Algorithm> getAlgorithm(const cv::String& name) const;
 
-    void set(const std::string& name, int value);
-    void set(const std::string& name, double value);
-    void set(const std::string& name, bool value);
-    void set(const std::string& name, const std::string& value);
-    void set(const std::string& name, const Mat& value);
-    void set(const std::string& name, const std::vector<Mat>& value);
-    void set(const std::string& name, const Ptr<Algorithm>& value);
-    template<typename _Tp> void set(const std::string& name, const Ptr<_Tp>& value);
+    void set(const cv::String& name, int value);
+    void set(const cv::String& name, double value);
+    void set(const cv::String& name, bool value);
+    void set(const cv::String& name, const cv::String& value);
+    void set(const cv::String& name, const Mat& value);
+    void set(const cv::String& name, const std::vector<Mat>& value);
+    void set(const cv::String& name, const Ptr<Algorithm>& value);
+    template<typename _Tp> void set(const cv::String& name, const Ptr<_Tp>& value);
 
-    CV_WRAP void setInt(const std::string& name, int value);
-    CV_WRAP void setDouble(const std::string& name, double value);
-    CV_WRAP void setBool(const std::string& name, bool value);
-    CV_WRAP void setString(const std::string& name, const std::string& value);
-    CV_WRAP void setMat(const std::string& name, const Mat& value);
-    CV_WRAP void setMatVector(const std::string& name, const std::vector<Mat>& value);
-    CV_WRAP void setAlgorithm(const std::string& name, const Ptr<Algorithm>& value);
-    template<typename _Tp> void setAlgorithm(const std::string& name, const Ptr<_Tp>& value);
+    CV_WRAP void setInt(const cv::String& name, int value);
+    CV_WRAP void setDouble(const cv::String& name, double value);
+    CV_WRAP void setBool(const cv::String& name, bool value);
+    CV_WRAP void setString(const cv::String& name, const cv::String& value);
+    CV_WRAP void setMat(const cv::String& name, const Mat& value);
+    CV_WRAP void setMatVector(const cv::String& name, const std::vector<Mat>& value);
+    CV_WRAP void setAlgorithm(const cv::String& name, const Ptr<Algorithm>& value);
+    template<typename _Tp> void setAlgorithm(const cv::String& name, const Ptr<_Tp>& value);
 
     void set(const char* name, int value);
     void set(const char* name, double value);
     void set(const char* name, bool value);
-    void set(const char* name, const std::string& value);
+    void set(const char* name, const cv::String& value);
     void set(const char* name, const Mat& value);
     void set(const char* name, const std::vector<Mat>& value);
     void set(const char* name, const Ptr<Algorithm>& value);
@@ -4198,16 +4198,16 @@ public:
     void setInt(const char* name, int value);
     void setDouble(const char* name, double value);
     void setBool(const char* name, bool value);
-    void setString(const char* name, const std::string& value);
+    void setString(const char* name, const cv::String& value);
     void setMat(const char* name, const Mat& value);
     void setMatVector(const char* name, const std::vector<Mat>& value);
     void setAlgorithm(const char* name, const Ptr<Algorithm>& value);
     template<typename _Tp> void setAlgorithm(const char* name, const Ptr<_Tp>& value);
 
-    CV_WRAP std::string paramHelp(const std::string& name) const;
+    CV_WRAP cv::String paramHelp(const cv::String& name) const;
     int paramType(const char* name) const;
-    CV_WRAP int paramType(const std::string& name) const;
-    CV_WRAP void getParams(CV_OUT std::vector<std::string>& names) const;
+    CV_WRAP int paramType(const cv::String& name) const;
+    CV_WRAP void getParams(CV_OUT std::vector<cv::String>& names) const;
 
 
     virtual void write(FileStorage& fs) const;
@@ -4217,9 +4217,9 @@ public:
     typedef int (Algorithm::*Getter)() const;
     typedef void (Algorithm::*Setter)(int);
 
-    CV_WRAP static void getList(CV_OUT std::vector<std::string>& algorithms);
-    CV_WRAP static Ptr<Algorithm> _create(const std::string& name);
-    template<typename _Tp> static Ptr<_Tp> create(const std::string& name);
+    CV_WRAP static void getList(CV_OUT std::vector<cv::String>& algorithms);
+    CV_WRAP static Ptr<Algorithm> _create(const cv::String& name);
+    template<typename _Tp> static Ptr<_Tp> create(const cv::String& name);
 
     virtual AlgorithmInfo* info() const /* TODO: make it = 0;*/ { return 0; }
 };
@@ -4229,86 +4229,86 @@ class CV_EXPORTS AlgorithmInfo
 {
 public:
     friend class Algorithm;
-    AlgorithmInfo(const std::string& name, Algorithm::Constructor create);
+    AlgorithmInfo(const cv::String& name, Algorithm::Constructor create);
     ~AlgorithmInfo();
     void get(const Algorithm* algo, const char* name, int argType, void* value) const;
     void addParam_(Algorithm& algo, const char* name, int argType,
                    void* value, bool readOnly,
                    Algorithm::Getter getter, Algorithm::Setter setter,
-                   const std::string& help=std::string());
-    std::string paramHelp(const char* name) const;
+                   const cv::String& help=cv::String());
+    cv::String paramHelp(const char* name) const;
     int paramType(const char* name) const;
-    void getParams(std::vector<std::string>& names) const;
+    void getParams(std::vector<cv::String>& names) const;
 
     void write(const Algorithm* algo, FileStorage& fs) const;
     void read(Algorithm* algo, const FileNode& fn) const;
-    std::string name() const;
+    cv::String name() const;
 
     void addParam(Algorithm& algo, const char* name,
                   int& value, bool readOnly=false,
                   int (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(int)=0,
-                  const std::string& help=std::string());
+                  const cv::String& help=cv::String());
     void addParam(Algorithm& algo, const char* name,
                   bool& value, bool readOnly=false,
                   int (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(int)=0,
-                  const std::string& help=std::string());
+                  const cv::String& help=cv::String());
     void addParam(Algorithm& algo, const char* name,
                   double& value, bool readOnly=false,
                   double (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(double)=0,
-                  const std::string& help=std::string());
+                  const cv::String& help=cv::String());
     void addParam(Algorithm& algo, const char* name,
-                  std::string& value, bool readOnly=false,
-                  std::string (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(const std::string&)=0,
-                  const std::string& help=std::string());
+                  cv::String& value, bool readOnly=false,
+                  cv::String (Algorithm::*getter)()=0,
+                  void (Algorithm::*setter)(const cv::String&)=0,
+                  const cv::String& help=cv::String());
     void addParam(Algorithm& algo, const char* name,
                   Mat& value, bool readOnly=false,
                   Mat (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(const Mat&)=0,
-                  const std::string& help=std::string());
+                  const cv::String& help=cv::String());
     void addParam(Algorithm& algo, const char* name,
                   std::vector<Mat>& value, bool readOnly=false,
                   std::vector<Mat> (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(const std::vector<Mat>&)=0,
-                  const std::string& help=std::string());
+                  const cv::String& help=cv::String());
     void addParam(Algorithm& algo, const char* name,
                   Ptr<Algorithm>& value, bool readOnly=false,
                   Ptr<Algorithm> (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(const Ptr<Algorithm>&)=0,
-                  const std::string& help=std::string());
+                  const cv::String& help=cv::String());
     void addParam(Algorithm& algo, const char* name,
                   float& value, bool readOnly=false,
                   float (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(float)=0,
-                  const std::string& help=std::string());
+                  const cv::String& help=cv::String());
     void addParam(Algorithm& algo, const char* name,
                   unsigned int& value, bool readOnly=false,
                   unsigned int (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(unsigned int)=0,
-                  const std::string& help=std::string());
+                  const cv::String& help=cv::String());
     void addParam(Algorithm& algo, const char* name,
                   uint64& value, bool readOnly=false,
                   uint64 (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(uint64)=0,
-                  const std::string& help=std::string());
+                  const cv::String& help=cv::String());
     void addParam(Algorithm& algo, const char* name,
                   uchar& value, bool readOnly=false,
                   uchar (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(uchar)=0,
-                  const std::string& help=std::string());
+                  const cv::String& help=cv::String());
     template<typename _Tp, typename _Base> void addParam(Algorithm& algo, const char* name,
                   Ptr<_Tp>& value, bool readOnly=false,
                   Ptr<_Tp> (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(const Ptr<_Tp>&)=0,
-                  const std::string& help=std::string());
+                  const cv::String& help=cv::String());
     template<typename _Tp> void addParam(Algorithm& algo, const char* name,
                   Ptr<_Tp>& value, bool readOnly=false,
                   Ptr<_Tp> (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(const Ptr<_Tp>&)=0,
-                  const std::string& help=std::string());
+                  const cv::String& help=cv::String());
 protected:
     AlgorithmInfoData* data;
     void set(Algorithm* algo, const char* name, int argType,
@@ -4324,13 +4324,13 @@ struct CV_EXPORTS Param
     Param(int _type, bool _readonly, int _offset,
           Algorithm::Getter _getter=0,
           Algorithm::Setter _setter=0,
-          const std::string& _help=std::string());
+          const cv::String& _help=cv::String());
     int type;
     int offset;
     bool readonly;
     Algorithm::Getter getter;
     Algorithm::Setter setter;
-    std::string help;
+    cv::String help;
 };
 
 template<> struct ParamType<bool>
@@ -4357,10 +4357,10 @@ template<> struct ParamType<double>
     enum { type = Param::REAL };
 };
 
-template<> struct ParamType<std::string>
+template<> struct ParamType<cv::String>
 {
-    typedef const std::string& const_param_type;
-    typedef std::string member_type;
+    typedef const cv::String& const_param_type;
+    typedef cv::String member_type;
 
     enum { type = Param::STRING };
 };

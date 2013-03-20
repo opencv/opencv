@@ -284,7 +284,7 @@ getBuildInformation
 -------------------
 Returns full configuration time cmake output.
 
-.. ocv:function:: const std::string& getBuildInformation()
+.. ocv:function:: const cv::String& getBuildInformation()
 
 Returned value is raw cmake output including version control system revision, compiler version, compiler flags, enabled modules and third party libraries, etc. Output format depends on target architecture.
 
