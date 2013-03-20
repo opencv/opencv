@@ -207,9 +207,9 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
                 d1 = _mm_sub_epi16(d1, c1);
 
                 __m128i c2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow2 + x - 1)), z);
-                __m128i c3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow2 + x - 1)), z);
+                __m128i c3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow3 + x - 1)), z);
                 __m128i d2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow2 + x + 1)), z);
-                __m128i d3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow2 + x + 1)), z);
+                __m128i d3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow3 + x + 1)), z);
 
                 d2 = _mm_sub_epi16(d2, c2);
                 d3 = _mm_sub_epi16(d3, c3);
