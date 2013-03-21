@@ -100,6 +100,8 @@ catch (const cv::Exception &e) \
 using namespace cv;
 typedef cv::softcascade::ChannelFeatureBuilder softcascade_ChannelFeatureBuilder;
 
+typedef std::string string;
+
 typedef std::vector<uchar> vector_uchar;
 typedef std::vector<int> vector_int;
 typedef std::vector<float> vector_float;
