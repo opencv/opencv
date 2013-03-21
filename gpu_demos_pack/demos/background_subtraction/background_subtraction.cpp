@@ -3,11 +3,15 @@
 #include <stdexcept>
 #include <vector>
 
+#include <opencv2/opencv_modules.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/gpu/gpu.hpp>
 #include <opencv2/video/video.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+#ifdef HAVE_OPENCV_NONFREE
+    #include <opencv2/nonfree/gpu.hpp>
+#endif
 
 #include "utility.hpp"
 
@@ -18,7 +22,9 @@ using namespace cv::gpu;
 enum Method
 {
     MOG,
+#ifdef HAVE_OPENCV_NONFREE
     VIBE,
+#endif
     METHOD_MAX
 };
 
@@ -69,7 +75,9 @@ void App::runAppLogic()
     BackgroundSubtractorMOG mog_cpu;
     MOG_GPU mog_gpu;
 
+#ifdef HAVE_OPENCV_NONFREE
     VIBE_GPU vibe_gpu;
+#endif
 
     Mat frame, fgmask, filterBuf, outImg;
     GpuMat d_frame, d_fgmask;
@@ -92,7 +100,9 @@ void App::runAppLogic()
             mog_cpu = BackgroundSubtractorMOG();
             mog_gpu.release();
 
+#ifdef HAVE_OPENCV_NONFREE
             vibe_gpu.release();
+#endif
 
             sources_[curSource_]->reset();
 
@@ -116,12 +126,14 @@ void App::runAppLogic()
                 mog_cpu(frame, fgmask, 0.01);
             break;
         }
+#ifdef HAVE_OPENCV_NONFREE
         case VIBE:
         {
             if (useGpu_)
                 vibe_gpu(d_frame, d_fgmask);
             break;
         }
+#endif
         default:
             ;
         }
@@ -174,7 +186,9 @@ void App::displayState(Mat& outImg, double proc_fps, double total_fps)
     printText(outImg, txt.str(), i++);
 
     printText(outImg, "Space - switch CUDA / CPU mode", i++, fontColorRed);
+#ifdef HAVE_OPENCV_NONFREE
     printText(outImg, "M - switch method", i++, fontColorRed);
+#endif
     if (sources_.size() > 1)
         printText(outImg, "N - switch source", i++, fontColorRed);
 }
@@ -184,7 +198,9 @@ void App::processAppKey(int key)
     switch (toupper(key & 0xff))
     {
     case 32 /*space*/:
+#ifdef HAVE_OPENCV_NONFREE
         if (method_ != VIBE)
+#endif
         {
             useGpu_ = !useGpu_;
             reinitialize_ = true;
@@ -192,6 +208,7 @@ void App::processAppKey(int key)
         }
         break;
 
+#ifdef HAVE_OPENCV_NONFREE
     case 'M':
         method_ = static_cast<Method>((method_ + 1) % METHOD_MAX);
         if (method_ == VIBE)
@@ -199,6 +216,7 @@ void App::processAppKey(int key)
         reinitialize_ = true;
         cout << "Switch method to " << method_str[method_] << endl;
         break;
+#endif
 
     case 'N':
         if (sources_.size() > 1)
