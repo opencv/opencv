@@ -7,7 +7,7 @@ using namespace cv::gpu;
 using namespace cvtest;
 using namespace testing;
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     try
     {
@@ -23,42 +23,42 @@ int main(int argc, char** argv)
         {
             cmd.printParams();
             return 0;
-        }
+    }
 
         printCudaInfo();
 
         if (cmd.get<bool>("info"))
-        {
+    {
             return 0;
-        }
+    }
 
         int device = cmd.get<int>("device");
         if (device < 0)
-        {
+    {
             DeviceManager::instance().loadAll();
 
             std::cout << "Run tests on all supported devices \n" << std::endl;
-        }
+    }
         else
-        {
+    {
             DeviceManager::instance().load(device);
 
             DeviceInfo info(device);
             std::cout << "Run tests on device " << device << " [" << info.name() << "] \n" << std::endl;
-        }
+}
 
         TS::ptr()->init("cv");
         InitGoogleTest(&argc, argv);
 
-        return RUN_ALL_TESTS();
-    }
+    return RUN_ALL_TESTS();
+}
     catch (const std::exception& e)
     {
         std::cerr << e.what() << std::endl;
         return -1;
     }
     catch (...)
-    {
+{
         std::cerr << "Unknown error" << std::endl;
         return -1;
     }

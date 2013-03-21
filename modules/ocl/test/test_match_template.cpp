@@ -75,7 +75,7 @@ PARAM_TEST_CASE(MatchTemplate8U, cv::Size, TemplateSize, Channels, TemplateMetho
     }
 };
 
-TEST_P(MatchTemplate8U, Accuracy)
+TEST_P(MatchTemplate8U, DISABLED_Accuracy)
 {
 
     std::cout << "Method: " << TEMPLATE_METHOD_NAMES[method] << std::endl;

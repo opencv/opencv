@@ -43,9 +43,7 @@
 //
 //M*/
 
-#include <iomanip>
 #include "precomp.hpp"
-#include "mcwutil.hpp"
 
 using namespace std;
 using namespace cv;

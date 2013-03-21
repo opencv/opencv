@@ -432,9 +432,21 @@ macro(ocv_glob_module_sources)
   file(GLOB lib_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
   file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.hpp" "include/opencv2/${name}/detail/*.h")
 
+  file(GLOB cl_kernels "src/opencl/*.cl")
+
   source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
   source_group("Include" FILES ${lib_hdrs})
   source_group("Include\\detail" FILES ${lib_hdrs_detail})
+
+  if(HAVE_OPENCL AND cl_kernels)
+    ocv_include_directories(${OPENCL_INCLUDE_DIRS})
+    add_custom_command(
+      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp"
+      COMMAND ${CMAKE_COMMAND} -DCL_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/opencl" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp" -P "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake"
+      DEPENDS ${cl_kernels} "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake")
+    source_group("Src\\OpenCL" FILES ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp")
+    list(APPEND lib_srcs ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp")
+  endif()
 
   ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail} SOURCES ${lib_srcs} ${lib_int_hdrs})
 endmacro()
@@ -449,6 +461,9 @@ macro(ocv_create_module)
 
   if(NOT "${ARGN}" STREQUAL "SKIP_LINK")
     target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
+    if(HAVE_OPENCL AND OPENCL_LIBRARIES)
+      target_link_libraries(${the_module} ${OPENCL_LIBRARIES})
+    endif()
   endif()
 
   add_dependencies(opencv_modules ${the_module})

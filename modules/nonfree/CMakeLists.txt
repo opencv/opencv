@@ -3,7 +3,7 @@ if(BUILD_ANDROID_PACKAGE)
 endif()
 
 set(the_description "Functionality with possible limitations on the use")
-ocv_add_module(nonfree opencv_imgproc opencv_features2d opencv_calib3d OPTIONAL opencv_gpu)
+ocv_add_module(nonfree opencv_imgproc opencv_features2d opencv_calib3d OPTIONAL opencv_gpu opencv_ocl)
 ocv_module_include_directories()
 
 if(HAVE_CUDA AND HAVE_opencv_gpu)
