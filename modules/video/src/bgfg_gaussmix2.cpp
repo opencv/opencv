@@ -245,7 +245,7 @@ public:
         << "varMax" << fVarMax
         << "complexityReductionThreshold" << fCT
         << "detectShadows" << (int)bShadowDetection
-        << "shadowValue" << nShadowDetection
+        << "shadowValue" << (int)nShadowDetection
         << "shadowThreshold" << fTau;
     }
 
@@ -262,7 +262,7 @@ public:
         fVarMax = (float)fn["varMax"];
         fCT = (float)fn["complexityReductionThreshold"];
         bShadowDetection = (int)fn["detectShadows"] != 0;
-        nShadowDetection = (int)fn["shadowValue"];
+        nShadowDetection = saturate_cast<uchar>((int)fn["shadowValue"]);
         fTau = (float)fn["shadowThreshold"];
     }
 

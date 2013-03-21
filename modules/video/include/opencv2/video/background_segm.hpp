@@ -108,13 +108,13 @@ class BackgroundSubtractorMOG2 : public BackgroundSubtractor
 {
 public:
     virtual int getHistory() const = 0;
-    virtual void setHistory(int nframes) = 0;
+    virtual void setHistory(int history) = 0;
 
     virtual int getNMixtures() const = 0;
-    virtual void setNMixtures(int nmix) = 0;
+    virtual void setNMixtures(int nmixtures) = 0;
 
     virtual double getBackgroundRatio() const = 0;
-    virtual void setBackgroundRatio(double backgroundRatio) = 0;
+    virtual void setBackgroundRatio(double ratio) = 0;
 
     virtual double getVarThreshold() const = 0;
     virtual void setVarThreshold(double varThreshold) = 0;
@@ -135,13 +135,13 @@ public:
     virtual void setComplexityReductionThreshold(double ct) = 0;
 
     virtual bool getDetectShadows() const = 0;
-    virtual void setDetectShadows(bool detectshadows) = 0;
+    virtual void setDetectShadows(bool detectShadows) = 0;
 
     virtual int getShadowValue() const = 0;
     virtual void setShadowValue(int value) = 0;
 
     virtual double getShadowThreshold() const = 0;
-    virtual void setShadowThreshold(double value) = 0;
+    virtual void setShadowThreshold(double threshold) = 0;
 };
 
 CV_EXPORTS Ptr<BackgroundSubtractorMOG2>

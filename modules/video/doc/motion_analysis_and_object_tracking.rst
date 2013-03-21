@@ -166,13 +166,13 @@ Finds the geometric transform (warp) between two images in terms of the ECC crit
     :param warpMatrix: floating-point :math:`2\times 3` or :math:`3\times 3` mapping matrix (warp).
 
     :param motionType: parameter, specifying the type of motion:
-    
+
         * **MOTION_TRANSLATION** sets a translational motion model; ``warpMatrix`` is :math:`2\times 3` with the first :math:`2\times 2` part being the unity matrix and the rest two parameters being estimated.
-        
+
         * **MOTION_EUCLIDEAN** sets a Euclidean (rigid) transformation as motion model; three parameters are estimated; ``warpMatrix`` is :math:`2\times 3`.
-        
+
         * **MOTION_AFFINE** sets an affine motion model (DEFAULT); six parameters are estimated; ``warpMatrix`` is :math:`2\times 3`.
-        
+
         * **MOTION_HOMOGRAPHY** sets a homography as a motion model; eight parameters are estimated;``warpMatrix`` is :math:`3\times 3`.
 
     :param criteria: parameter, specifying the termination criteria of the ECC algorithm; ``criteria.epsilon`` defines the threshold of the increment in the correlation coefficient between two iterations (a negative ``criteria.epsilon`` makes ``criteria.maxcount`` the only termination criterion). Default values are shown in the declaration above.
@@ -501,7 +501,7 @@ Computes a foreground mask.
     :param image: Next video frame.
 
     :param fgmask: The output foreground mask as an 8-bit binary image.
-    
+
     :param learningRate: The value between 0 and 1 that indicates how fast the background model is learnt. Negative parameter value makes the algorithm to use some automatically chosen learning rate. 0 means that the background model is not updated at all, 1 means that the background model is completely reinitialized from the last frame.
 
 BackgroundSubtractor::getBackgroundImage
@@ -673,21 +673,21 @@ BackgroundSubtractorMOG2::setShadowValue
 ---------------------------------------------
 Sets the shadow value
 
-.. ocv:function:: void BackgroundSubtractorMOG2::setShadowValue(int shadowValue)
+.. ocv:function:: void BackgroundSubtractorMOG2::setShadowValue(int value)
 
 BackgroundSubtractorMOG2::getShadowThreshold
 ---------------------------------------------
 Returns the shadow threshold
 
-.. ocv:function:: int BackgroundSubtractorMOG2::getShadowThreshold() const
+.. ocv:function:: double BackgroundSubtractorMOG2::getShadowThreshold() const
 
-A shadow is detected if the pixel is a darker version of the background. The shadow threshold (``Tau`` in the paper) is a threshold defining how much darker the shadow can be. ``Tau= 0.5`` means that if a pixel is more than twice darker then it is not shadow. See Prati, Mikic, Trivedi and Cucchiarra, *Detecting Moving Shadows...*, IEEE PAMI,2003.
+A shadow is detected if pixel is a darker version of the background. The shadow threshold (``Tau`` in the paper) is a threshold defining how much darker the shadow can be. ``Tau= 0.5`` means that if a pixel is more than twice darker then it is not shadow. See Prati, Mikic, Trivedi and Cucchiarra, *Detecting Moving Shadows...*, IEEE PAMI,2003.
 
 BackgroundSubtractorMOG2::setShadowThreshold
 ---------------------------------------------
 Sets the shadow threshold
 
-.. ocv:function:: void BackgroundSubtractorMOG2::setShadowThreshold(int shadowValue)
+.. ocv:function:: void BackgroundSubtractorMOG2::setShadowThreshold(double threshold)
 
 
 calcOpticalFlowSF
