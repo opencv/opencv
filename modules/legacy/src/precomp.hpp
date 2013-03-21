@@ -47,15 +47,14 @@
 
 #include "opencv2/legacy.hpp"
 
-#include "opencv2/core/internal.hpp"
 #include "opencv2/video.hpp"
-
 #include "opencv2/legacy/blobtrack.hpp"
 #include "opencv2/legacy/compat.hpp"
 
-#include "_matrix.h"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/core/internal.hpp"
 
-typedef unsigned short ushort;
+#include "_matrix.h"
 
 CV_INLINE bool operator == (CvSize size1, CvSize size2 );
 CV_INLINE bool operator == (CvSize size1, CvSize size2 )

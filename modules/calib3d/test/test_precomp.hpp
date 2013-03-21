@@ -9,12 +9,12 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
+#include <iostream>
 #include "opencv2/ts.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/calib3d.hpp"
 #include "opencv2/highgui.hpp"
-#include <iostream>
 
 namespace cvtest
 {

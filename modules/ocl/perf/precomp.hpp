@@ -62,14 +62,12 @@
 #include <string>
 #include <cstdarg>
 #include "cvconfig.h"
-#include "opencv2/core.hpp"
 #include "opencv2/highgui.hpp"
-//#include "opencv2/calib3d.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/video.hpp"
 #include "opencv2/ts.hpp"
-#include "opencv2/ts/ts_perf.hpp"
 #include "opencv2/ocl.hpp"
+//#include "opencv2/calib3d.hpp"
 //#include "opencv2/nonfree.hpp"
 
 #include "utility.hpp"

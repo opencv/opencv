@@ -101,13 +101,6 @@ template<typename _Tp> class CV_EXPORTS MatIterator_;
 template<typename _Tp> class CV_EXPORTS MatConstIterator_;
 template<typename _Tp> class CV_EXPORTS MatCommaInitializer_;
 
-template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class CV_EXPORTS AutoBuffer;
-
-CV_EXPORTS std::string format( const char* fmt, ... );
-CV_EXPORTS std::string tempfile( const char* suffix CV_DEFAULT(0));
-
-CV_EXPORTS void glob(std::string pattern, std::vector<std::string>& result, bool recursive = false);
-
 // matrix decomposition types
 enum { DECOMP_LU=0, DECOMP_SVD=1, DECOMP_EIG=2, DECOMP_CHOLESKY=3, DECOMP_QR=4, DECOMP_NORMAL=16 };
 enum { NORM_INF=1, NORM_L1=2, NORM_L2=4, NORM_L2SQR=5, NORM_HAMMING=6, NORM_HAMMING2=7, NORM_TYPE_MASK=7, NORM_RELATIVE=8, NORM_MINMAX=32 };
@@ -162,34 +155,6 @@ public:
  */
 CV_EXPORTS void error( const Exception& exc );
 
-//! Sets/resets the break-on-error mode.
-
-/*!
-  When the break-on-error mode is set, the default error handler
-  issues a hardware exception, which can make debugging more convenient.
-
-  \return the previous state
- */
-CV_EXPORTS bool setBreakOnError(bool flag);
-
-typedef int (CV_CDECL *ErrorCallback)( int status, const char* func_name,
-                                       const char* err_msg, const char* file_name,
-                                       int line, void* userdata );
-
-//! Sets the new error handler and the optional user data.
-
-/*!
-  The function sets the new error handler, called from cv::error().
-
-  \param errCallback the new error handler. If NULL, the default error handler is used.
-  \param userdata the optional user data pointer, passed to the callback.
-  \param prevUserdata the optional output parameter where the previous user data pointer is stored
-
-  \return the previous error handler
-*/
-CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback,
-                                        void* userdata=0, void** prevUserdata=0);
-
 #ifdef __GNUC__
 #define CV_Error( code, msg ) cv::error( cv::Exception(code, msg, __func__, __FILE__, __LINE__) )
 #define CV_Error_( code, args ) cv::error( cv::Exception(code, cv::format args, __func__, __FILE__, __LINE__) )
@@ -205,70 +170,6 @@ CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback,
 #else
 #define CV_DbgAssert(expr)
 #endif
-
-CV_EXPORTS void setNumThreads(int nthreads);
-CV_EXPORTS int getNumThreads();
-CV_EXPORTS int getThreadNum();
-
-CV_EXPORTS_W const std::string& getBuildInformation();
-
-//! Returns the number of ticks.
-
-/*!
-  The function returns the number of ticks since the certain event (e.g. when the machine was turned on).
-  It can be used to initialize cv::RNG or to measure a function execution time by reading the tick count
-  before and after the function call. The granularity of ticks depends on the hardware and OS used. Use
-  cv::getTickFrequency() to convert ticks to seconds.
-*/
-CV_EXPORTS_W int64 getTickCount();
-
-/*!
-  Returns the number of ticks per seconds.
-
-  The function returns the number of ticks (as returned by cv::getTickCount()) per second.
-  The following code computes the execution time in milliseconds:
-
-  \code
-  double exec_time = (double)getTickCount();
-  // do something ...
-  exec_time = ((double)getTickCount() - exec_time)*1000./getTickFrequency();
-  \endcode
-*/
-CV_EXPORTS_W double getTickFrequency();
-
-/*!
-  Returns the number of CPU ticks.
-
-  On platforms where the feature is available, the function returns the number of CPU ticks
-  since the certain event (normally, the system power-on moment). Using this function
-  one can accurately measure the execution time of very small code fragments,
-  for which cv::getTickCount() granularity is not enough.
-*/
-CV_EXPORTS_W int64 getCPUTickCount();
-
-/*!
-  Returns SSE etc. support status
-
-  The function returns true if certain hardware features are available.
-  Currently, the following features are recognized:
-  - CV_CPU_MMX - MMX
-  - CV_CPU_SSE - SSE
-  - CV_CPU_SSE2 - SSE 2
-  - CV_CPU_SSE3 - SSE 3
-  - CV_CPU_SSSE3 - SSSE 3
-  - CV_CPU_SSE4_1 - SSE 4.1
-  - CV_CPU_SSE4_2 - SSE 4.2
-  - CV_CPU_POPCNT - POPCOUNT
-  - CV_CPU_AVX - AVX
-
-  \note {Note that the function output is not static. Once you called cv::useOptimized(false),
-  most of the hardware acceleration is disabled and thus the function will returns false,
-  until you call cv::useOptimized(true)}
-*/
-CV_EXPORTS_W bool checkHardwareSupport(int feature);
-
-//! returns the number of CPUs (including hyper-threading)
-CV_EXPORTS_W int getNumberOfCPUs();
 
 /*!
   Allocates memory buffer
@@ -299,45 +200,6 @@ template<typename _Tp> static inline void deallocate(_Tp* ptr, size_t)
 {
     delete[] ptr;
 }
-
-/*!
-  Aligns pointer by the certain number of bytes
-
-  This small inline function aligns the pointer by the certian number of bytes by shifting
-  it forward by 0 or a positive offset.
-*/
-template<typename _Tp> static inline _Tp* alignPtr(_Tp* ptr, int n=(int)sizeof(_Tp))
-{
-    return (_Tp*)(((size_t)ptr + n-1) & -n);
-}
-
-/*!
-  Aligns buffer size by the certain number of bytes
-
-  This small inline function aligns a buffer size by the certian number of bytes by enlarging it.
-*/
-static inline size_t alignSize(size_t sz, int n)
-{
-    return (sz + n-1) & -n;
-}
-
-/*!
-  Turns on/off available optimization
-
-  The function turns on or off the optimized code in OpenCV. Some optimization can not be enabled
-  or disabled, but, for example, most of SSE code in OpenCV can be temporarily turned on or off this way.
-
-  \note{Since optimization may imply using special data structures, it may be unsafe
-  to call this function anywhere in the code. Instead, call it somewhere at the top level.}
-*/
-CV_EXPORTS_W void setUseOptimized(bool onoff);
-
-/*!
-  Returns the current optimization status
-
-  The function returns the current optimization status, which is controlled by cv::setUseOptimized().
-*/
-CV_EXPORTS_W bool useOptimized();
 
 /*!
   The STL-compilant memory Allocator based on cv::fastMalloc() and cv::fastFree()
@@ -1421,8 +1283,6 @@ CV_EXPORTS OutputArray noArray();
 
 enum { MAGIC_MASK=0xFFFF0000, TYPE_MASK=0x00000FFF, DEPTH_MASK=7 };
 
-static inline size_t getElemSize(int type) { return CV_ELEM_SIZE(type); }
-
 /*!
    Custom array allocator
 
@@ -2084,10 +1944,6 @@ CV_EXPORTS BinaryFunc getCopyMaskFunc(size_t esz);
 //! swaps two matrices
 CV_EXPORTS void swap(Mat& a, Mat& b);
 
-//! converts array (CvMat or IplImage) to cv::Mat
-CV_EXPORTS Mat cvarrToMat(const CvArr* arr, bool copyData=false,
-                          bool allowND=true, int coiMode=0,
-                          AutoBuffer<double>* buf=0);
 //! extracts Channel of Interest from CvMat or IplImage and makes cv::Mat out of it.
 CV_EXPORTS void extractImageCOI(const CvArr* arr, OutputArray coiimg, int coi=-1);
 //! inserts single-channel cv::Mat into a multi-channel CvMat or IplImage
@@ -3086,73 +2942,6 @@ public:
     VecCommaInitializer(Vec<_Tp, m>* _vec);
     template<typename T2> VecCommaInitializer<_Tp, m>& operator , (T2 val);
     Vec<_Tp, m> operator *() const;
-};
-
-/*!
- Automatically Allocated Buffer Class
-
- The class is used for temporary buffers in functions and methods.
- If a temporary buffer is usually small (a few K's of memory),
- but its size depends on the parameters, it makes sense to create a small
- fixed-size array on stack and use it if it's large enough. If the required buffer size
- is larger than the fixed size, another buffer of sufficient size is allocated dynamically
- and released after the processing. Therefore, in typical cases, when the buffer size is small,
- there is no overhead associated with malloc()/free().
- At the same time, there is no limit on the size of processed data.
-
- This is what AutoBuffer does. The template takes 2 parameters - type of the buffer elements and
- the number of stack-allocated elements. Here is how the class is used:
-
- \code
- void my_func(const cv::Mat& m)
- {
-    cv::AutoBuffer<float> buf; // create automatic buffer containing 1000 floats
-
-    buf.allocate(m.rows); // if m.rows <= 1000, the pre-allocated buffer is used,
-                          // otherwise the buffer of "m.rows" floats will be allocated
-                          // dynamically and deallocated in cv::AutoBuffer destructor
-    ...
- }
- \endcode
-*/
-template<typename _Tp, size_t fixed_size> class CV_EXPORTS AutoBuffer
-{
-public:
-    typedef _Tp value_type;
-
-    //! the default contructor
-    AutoBuffer();
-    //! constructor taking the real buffer size
-    AutoBuffer(size_t _size);
-
-    //! the copy constructor
-    AutoBuffer(const AutoBuffer<_Tp, fixed_size>& buf);
-    //! the assignment operator
-    AutoBuffer<_Tp, fixed_size>& operator = (const AutoBuffer<_Tp, fixed_size>& buf);
-
-    //! destructor. calls deallocate()
-    ~AutoBuffer();
-
-    //! allocates the new buffer of size _size. if the _size is small enough, stack-allocated buffer is used
-    void allocate(size_t _size);
-    //! deallocates the buffer if it was dynamically allocated
-    void deallocate();
-    //! resizes the buffer and preserves the content
-    void resize(size_t _size);
-    //! returns the current buffer size
-    size_t size() const;
-    //! returns pointer to the real buffer, stack-allocated or head-allocated
-    operator _Tp* ();
-    //! returns read-only pointer to the real buffer, stack-allocated or head-allocated
-    operator const _Tp* () const;
-
-protected:
-    //! pointer to the real buffer, can point to buf if the buffer is small enough
-    _Tp* ptr;
-    //! size of the real buffer
-    size_t sz;
-    //! pre-allocated buffer
-    _Tp buf[fixed_size];
 };
 
 /////////////////////////// multi-dimensional dense matrix //////////////////////////
@@ -4628,91 +4417,7 @@ template<> struct ParamType<uchar>
     enum { type = Param::UCHAR };
 };
 
-// The CommandLineParser class is designed for command line arguments parsing
-
-class CV_EXPORTS CommandLineParser
-{
-    public:
-    CommandLineParser(int argc, const char* const argv[], const std::string& keys);
-    CommandLineParser(const CommandLineParser& parser);
-    CommandLineParser& operator = (const CommandLineParser& parser);
-
-    std::string getPathToApplication() const;
-
-    template <typename T>
-    T get(const std::string& name, bool space_delete = true) const
-        {
-        T val = T();
-        getByName(name, space_delete, ParamType<T>::type, (void*)&val);
-        return val;
-        }
-
-    template <typename T>
-    T get(int index, bool space_delete = true) const
-    {
-        T val = T();
-        getByIndex(index, space_delete, ParamType<T>::type, (void*)&val);
-        return val;
-    }
-
-    bool has(const std::string& name) const;
-
-    bool check() const;
-
-    void about(const std::string& message);
-
-    void printMessage() const;
-    void printErrors() const;
-
-protected:
-    void getByName(const std::string& name, bool space_delete, int type, void* dst) const;
-    void getByIndex(int index, bool space_delete, int type, void* dst) const;
-
-    struct Impl;
-    Impl* impl;
-};
-
-/////////////////////////////// Parallel Primitives //////////////////////////////////
-
-// a base body class
-class CV_EXPORTS ParallelLoopBody
-{
-public:
-    virtual ~ParallelLoopBody();
-    virtual void operator() (const Range& range) const = 0;
-};
-
-CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
-
-/////////////////////////// Synchronization Primitives ///////////////////////////////
-
-class CV_EXPORTS Mutex
-{
-public:
-    Mutex();
-    ~Mutex();
-    Mutex(const Mutex& m);
-    Mutex& operator = (const Mutex& m);
-
-    void lock();
-    bool trylock();
-    void unlock();
-
-    struct Impl;
-protected:
-    Impl* impl;
-};
-
-class CV_EXPORTS AutoLock
-{
-public:
-    AutoLock(Mutex& m) : mutex(&m) { mutex->lock(); }
-    ~AutoLock() { mutex->unlock(); }
-protected:
-    Mutex* mutex;
-};
-
-}
+} //namespace cv
 
 #endif // __cplusplus
 

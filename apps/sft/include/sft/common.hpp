@@ -44,6 +44,7 @@
 #define __SFT_COMMON_HPP__
 
 #include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
 #include <opencv2/softcascade.hpp>
 
 namespace cv {using namespace softcascade;}

@@ -13,10 +13,10 @@
 * Authors: G. Evangelidis, INRIA, Grenoble, France
 *          M. Asbach, Fraunhofer IAIS, St. Augustin, Germany
 */
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/video/video.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/core/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/video.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/core/utility.hpp>
 
 #include <stdio.h>
 #include <string>
