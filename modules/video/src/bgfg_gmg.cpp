@@ -53,11 +53,30 @@
 namespace cv
 {
 
-class CV_EXPORTS BackgroundSubtractorGMGImpl : public BackgroundSubtractorGMG
+class BackgroundSubtractorGMGImpl : public BackgroundSubtractorGMG
 {
 public:
-    BackgroundSubtractorGMGImpl();
-    ~BackgroundSubtractorGMGImpl();
+    BackgroundSubtractorGMGImpl()
+    {
+        /*
+         * Default Parameter Values. Override with algorithm "set" method.
+         */
+        maxFeatures = 64;
+        learningRate = 0.025;
+        numInitializationFrames = 120;
+        quantizationLevels = 16;
+        backgroundPrior = 0.8;
+        decisionThreshold = 0.8;
+        smoothingRadius = 7;
+        updateBackgroundModel = true;
+        minVal_ = maxVal_ = 0;
+        name_ = "BackgroundSubtractor.GMG";
+    }
+    
+    ~BackgroundSubtractorGMGImpl()
+    {
+    }
+
     virtual AlgorithmInfo* info() const { return 0; }
 
     /**
@@ -117,6 +136,35 @@ public:
         CV_Error( CV_StsNotImplemented, "" );
     }
 
+    virtual void write(FileStorage& fs) const
+    {
+        fs << "name" << name_
+        << "maxFeatures" << maxFeatures
+        << "defaultLearningRate" << learningRate
+        << "numFrames" << numInitializationFrames
+        << "quantizationLevels" << quantizationLevels
+        << "backgroundPrior" << backgroundPrior
+        << "decisionThreshold" << decisionThreshold
+        << "smoothingRadius" << smoothingRadius
+        << "updateBackgroundModel" << (int)updateBackgroundModel;
+        // we do not save minVal_ & maxVal_, since they depend on the image type.
+    }
+
+    virtual void read(const FileNode& fn)
+    {
+        CV_Assert( (std::string)fn["name"] == name_ );
+        maxFeatures = (int)fn["maxFeatures"];
+        learningRate = (double)fn["defaultLearningRate"];
+        numInitializationFrames = (int)fn["numFrames"];
+        quantizationLevels = (int)fn["quantizationLevels"];
+        backgroundPrior = (double)fn["backgroundPrior"];
+        smoothingRadius = (int)fn["smoothingRadius"];
+        decisionThreshold = (double)fn["decisionThreshold"];
+        updateBackgroundModel = (int)fn["updateBackgroundModel"] != 0;
+        minVal_ = maxVal_ = 0;
+        frameSize_ = Size();
+    }
+
     //! Total number of distinct colors to maintain in histogram.
     int     maxFeatures;
     //! Set between 0.0 and 1.0, determines how quickly features are "forgotten" from histograms.
@@ -141,6 +189,8 @@ private:
     Size frameSize_;
     int frameNum_;
 
+    std::string name_;
+
     Mat_<int> nfeatures_;
     Mat_<unsigned int> colors_;
     Mat_<float> weights_;
@@ -148,25 +198,6 @@ private:
     Mat buf_;
 };
 
-BackgroundSubtractorGMGImpl::BackgroundSubtractorGMGImpl()
-{
-    /*
-     * Default Parameter Values. Override with algorithm "set" method.
-     */
-    maxFeatures = 64;
-    learningRate = 0.025;
-    numInitializationFrames = 120;
-    quantizationLevels = 16;
-    backgroundPrior = 0.8;
-    decisionThreshold = 0.8;
-    smoothingRadius = 7;
-    updateBackgroundModel = true;
-    minVal_ = maxVal_ = 0;
-}
-
-BackgroundSubtractorGMGImpl::~BackgroundSubtractorGMGImpl()
-{
-}
 
 void BackgroundSubtractorGMGImpl::initialize(Size frameSize, double minVal, double maxVal)
 {

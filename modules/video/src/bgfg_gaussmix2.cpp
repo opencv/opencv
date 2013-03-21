@@ -117,7 +117,7 @@ static const unsigned char defaultnShadowDetection2 = (unsigned char)127; // val
 static const float defaultfTau = 0.5f; // Tau - shadow threshold, see the paper for explanation
 
 
-class CV_EXPORTS BackgroundSubtractorMOG2Impl : public BackgroundSubtractorMOG2
+class BackgroundSubtractorMOG2Impl : public BackgroundSubtractorMOG2
 {
 public:
     //! the default constructor
@@ -164,6 +164,7 @@ public:
         fCT = defaultfCT2;
         nShadowDetection =  defaultnShadowDetection2;
         fTau = defaultfTau;
+        name_ = "BackgroundSubtractor.MOG2";
     }
     //! the destructor
     ~BackgroundSubtractorMOG2Impl() {}
@@ -231,6 +232,40 @@ public:
     virtual double getShadowThreshold() const { return fTau; }
     virtual void setShadowThreshold(double value) { fTau = (float)value; }
 
+    virtual void write(FileStorage& fs) const
+    {
+        fs << "name" << name_
+        << "history" << history
+        << "nmixtures" << nmixtures
+        << "backgroundRatio" << backgroundRatio
+        << "varThreshold" << varThreshold
+        << "varThresholdGen" << varThresholdGen
+        << "varInit" << fVarInit
+        << "varMin" << fVarMin
+        << "varMax" << fVarMax
+        << "complexityReductionThreshold" << fCT
+        << "detectShadows" << (int)bShadowDetection
+        << "shadowValue" << nShadowDetection
+        << "shadowThreshold" << fTau;
+    }
+
+    virtual void read(const FileNode& fn)
+    {
+        CV_Assert( (std::string)fn["name"] == name_ );
+        history = (int)fn["history"];
+        nmixtures = (int)fn["nmixtures"];
+        backgroundRatio = (float)fn["backgroundRatio"];
+        varThreshold = (double)fn["varThreshold"];
+        varThresholdGen = (float)fn["varThresholdGen"];
+        fVarInit = (float)fn["varInit"];
+        fVarMin = (float)fn["varMin"];
+        fVarMax = (float)fn["varMax"];
+        fCT = (float)fn["complexityReductionThreshold"];
+        bShadowDetection = (int)fn["detectShadows"] != 0;
+        nShadowDetection = (int)fn["shadowValue"];
+        fTau = (float)fn["shadowThreshold"];
+    }
+
 protected:
     Size frameSize;
     int frameType;
@@ -284,6 +319,8 @@ protected:
     //version of the background. Tau is a threshold on how much darker the shadow can be.
     //Tau= 0.5 means that if pixel is more than 2 times darker then it is not shadow
     //See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
+
+    std::string name_;
 };
 
 struct GaussBGStatModel2Params

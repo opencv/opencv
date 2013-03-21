@@ -82,6 +82,7 @@ public:
         varThreshold = defaultVarThreshold;
         backgroundRatio = defaultBackgroundRatio;
         noiseSigma = defaultNoiseSigma;
+        name_ = "BackgroundSubtractor.MOG";
     }
     // the full constructor that takes the length of the history,
     // the number of gaussian mixtures, the background ratio parameter and the noise strength
@@ -138,6 +139,24 @@ public:
     virtual double getNoiseSigma() const { return noiseSigma; }
     virtual void setNoiseSigma(double _noiseSigma) { noiseSigma = _noiseSigma; }
 
+    virtual void write(FileStorage& fs) const
+    {
+        fs << "name" << name_
+           << "history" << history
+           << "nmixtures" << nmixtures
+           << "backgroundRatio" << backgroundRatio
+           << "noiseSigma" << noiseSigma;
+    }
+
+    virtual void read(const FileNode& fn)
+    {
+        CV_Assert( (std::string)fn["name"] == name_ );
+        history = (int)fn["history"];
+        nmixtures = (int)fn["nmixtures"];
+        backgroundRatio = (double)fn["backgroundRatio"];
+        noiseSigma = (double)fn["noiseSigma"];
+    }
+
 protected:
     Size frameSize;
     int frameType;
@@ -148,6 +167,7 @@ protected:
     double varThreshold;
     double backgroundRatio;
     double noiseSigma;
+    std::string name_;
 };
 
 

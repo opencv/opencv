@@ -59,7 +59,7 @@ class BackgroundSubtractor : public Algorithm
 {
 public:
     //! the update operator that takes the next video frame and returns the current foreground mask as 8-bit binary image.
-    virtual void apply(InputArray image, OutputArray fgmask, double learningRate=0) = 0;
+    virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) = 0;
 
     //! computes a background image
     virtual void getBackgroundImage(OutputArray backgroundImage) const = 0;
