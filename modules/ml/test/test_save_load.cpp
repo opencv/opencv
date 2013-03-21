@@ -133,4 +133,32 @@ TEST(ML_Boost, save_load) { CV_SLMLTest test( CV_BOOST ); test.safe_run(); }
 TEST(ML_RTrees, save_load) { CV_SLMLTest test( CV_RTREES ); test.safe_run(); }
 TEST(ML_ERTrees, save_load) { CV_SLMLTest test( CV_ERTREES ); test.safe_run(); }
 
+
+TEST(DISABLED_ML_SVM, linear_save_load)
+{
+    CvSVM svm1, svm2, svm3;
+    svm1.load("SVM45_X_38-1.xml");
+    svm2.load("SVM45_X_38-2.xml");
+    string tname = tempfile("a.xml");
+    svm2.save(tname.c_str());
+    svm3.load(tname.c_str());
+
+    ASSERT_EQ(svm1.get_var_count(), svm2.get_var_count());
+    ASSERT_EQ(svm1.get_var_count(), svm3.get_var_count());
+
+    int m = 10000, n = svm1.get_var_count();
+    Mat samples(m, n, CV_32F), r1, r2, r3;
+    randu(samples, 0., 1.);
+
+    svm1.predict(samples, r1);
+    svm2.predict(samples, r2);
+    svm3.predict(samples, r3);
+
+    double eps = 1e-4;
+    EXPECT_LE(norm(r1, r2, NORM_INF), eps);
+    EXPECT_LE(norm(r1, r3, NORM_INF), eps);
+
+    remove(tname.c_str());
+}
+
 /* End of file. */
