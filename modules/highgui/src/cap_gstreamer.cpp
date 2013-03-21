@@ -83,7 +83,8 @@ static cv::Mutex gst_initializer_mutex;
 /*!
  * \brief The gst_initializer class
  * Initializes gstreamer once in the whole process
- */class gst_initializer
+ */
+class gst_initializer
 {
 public:
     static void init()
@@ -1007,9 +1008,9 @@ void CvVideoWriter_GStreamer::init()
  */
 void CvVideoWriter_GStreamer::close()
 {
-    if (pipeline) {
-        GstFlowReturn ret;
-        ret = gst_app_src_end_of_stream(GST_APP_SRC(source));
+    if (pipeline)
+    {
+        gst_app_src_end_of_stream(GST_APP_SRC(source));
 
         //wait for EOS to trickle down the pipeline. This will let all elements finish properly
         GstBus* bus = gst_element_get_bus(pipeline);
