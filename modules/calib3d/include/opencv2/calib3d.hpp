@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -372,6 +373,8 @@ CVAPI(void)  cvReprojectImageTo3D( const CvArr* disparityImage,
 #ifdef __cplusplus
 }
 
+template<> CV_EXPORTS void cv::Ptr<CvStereoBMState>::delete_obj();
+
 //////////////////////////////////////////////////////////////////////////////////////////
 class CV_EXPORTS CvLevMarq
 {
@@ -673,84 +676,95 @@ CV_EXPORTS_W void correctMatches( InputArray F, InputArray points1, InputArray p
 class CV_EXPORTS_W StereoMatcher : public Algorithm
 {
 public:
+    enum { DISP_SHIFT=4, DISP_SCALE=(1 << DISP_SHIFT) };
+
     CV_WRAP virtual void compute( InputArray left, InputArray right,
                                   OutputArray disparity ) = 0;
+
+    CV_WRAP virtual int getMinDisparity() const = 0;
+    CV_WRAP virtual void setMinDisparity(int minDisparity) = 0;
+
+    CV_WRAP virtual int getNumDisparities() const = 0;
+    CV_WRAP virtual void setNumDisparities(int numDisparities) = 0;
+
+    CV_WRAP virtual int getBlockSize() const = 0;
+    CV_WRAP virtual void setBlockSize(int blockSize) = 0;
+
+    CV_WRAP virtual int getSpeckleWindowSize() const = 0;
+    CV_WRAP virtual void setSpeckleWindowSize(int speckleWindowSize) = 0;
+
+    CV_WRAP virtual int getSpeckleRange() const = 0;
+    CV_WRAP virtual void setSpeckleRange(int speckleRange) = 0;
+
+    CV_WRAP virtual int getDisp12MaxDiff() const = 0;
+    CV_WRAP virtual void setDisp12MaxDiff(int disp12MaxDiff) = 0;
 };
 
-enum { STEREO_DISP_SCALE=16, STEREO_PREFILTER_NORMALIZED_RESPONSE = 0, STEREO_PREFILTER_XSOBEL = 1 };
-
-CV_EXPORTS Ptr<StereoMatcher> createStereoBM(int numDisparities=0, int SADWindowSize=21);
-
-CV_EXPORTS Ptr<StereoMatcher> createStereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
-                                               int P1=0, int P2=0, int disp12MaxDiff=0,
-                                               int preFilterCap=0, int uniquenessRatio=0,
-                                               int speckleWindowSize=0, int speckleRange=0,
-                                               bool fullDP=false);
-
-template<> CV_EXPORTS void Ptr<CvStereoBMState>::delete_obj();
-
-// to be moved to "compat" module
-class CV_EXPORTS_W StereoBM
+    
+class CV_EXPORTS_W StereoBM : public StereoMatcher
 {
 public:
-    enum { PREFILTER_NORMALIZED_RESPONSE = 0, PREFILTER_XSOBEL = 1,
-           BASIC_PRESET=0, FISH_EYE_PRESET=1, NARROW_PRESET=2 };
+    enum { PREFILTER_NORMALIZED_RESPONSE = 0, PREFILTER_XSOBEL = 1 };
 
-    //! the default constructor
-    CV_WRAP StereoBM();
-    //! the full constructor taking the camera-specific preset, number of disparities and the SAD window size
-    CV_WRAP StereoBM(int preset, int ndisparities=0, int SADWindowSize=21);
-    //! the method that reinitializes the state. The previous content is destroyed
-    void init(int preset, int ndisparities=0, int SADWindowSize=21);
-    //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
-    CV_WRAP_AS(compute) void operator()( InputArray left, InputArray right,
-                                         OutputArray disparity, int disptype=CV_16S );
+    CV_WRAP virtual int getPreFilterType() const = 0;
+    CV_WRAP virtual void setPreFilterType(int preFilterType) = 0;
 
-    //! pointer to the underlying CvStereoBMState
-    Ptr<CvStereoBMState> state;
+    CV_WRAP virtual int getPreFilterSize() const = 0;
+    CV_WRAP virtual void setPreFilterSize(int preFilterSize) = 0;
+
+    CV_WRAP virtual int getPreFilterCap() const = 0;
+    CV_WRAP virtual void setPreFilterCap(int preFilterCap) = 0;
+
+    CV_WRAP virtual int getTextureThreshold() const = 0;
+    CV_WRAP virtual void setTextureThreshold(int textureThreshold) = 0;
+
+    CV_WRAP virtual int getUniquenessRatio() const = 0;
+    CV_WRAP virtual void setUniquenessRatio(int uniquenessRatio) = 0;
+
+    CV_WRAP virtual int getSmallerBlockSize() const = 0;
+    CV_WRAP virtual void setSmallerBlockSize(int blockSize) = 0;
+
+    CV_WRAP virtual Rect getROI1() const = 0;
+    CV_WRAP virtual void setROI1(Rect roi1) = 0;
+
+    CV_WRAP virtual Rect getROI2() const = 0;
+    CV_WRAP virtual void setROI2(Rect roi2) = 0;
 };
 
+CV_EXPORTS Ptr<StereoBM> createStereoBM(int numDisparities=0, int blockSize=21);
 
-// to be moved to "compat" module
-class CV_EXPORTS_W StereoSGBM
+
+class CV_EXPORTS_W StereoSGBM : public StereoMatcher
 {
 public:
-    enum { DISP_SHIFT=4, DISP_SCALE = (1<<DISP_SHIFT) };
+    enum { MODE_SGBM=0, MODE_HH=1 };
 
-    //! the default constructor
-    CV_WRAP StereoSGBM();
+    CV_WRAP virtual int getPreFilterCap() const = 0;
+    CV_WRAP virtual void setPreFilterCap(int preFilterCap) = 0;
 
-    //! the full constructor taking all the necessary algorithm parameters
-    CV_WRAP StereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
-               int P1=0, int P2=0, int disp12MaxDiff=0,
-               int preFilterCap=0, int uniquenessRatio=0,
-               int speckleWindowSize=0, int speckleRange=0,
-               bool fullDP=false);
-    //! the destructor
-    virtual ~StereoSGBM();
+    CV_WRAP virtual int getUniquenessRatio() const = 0;
+    CV_WRAP virtual void setUniquenessRatio(int uniquenessRatio) = 0;
 
-    //! the stereo correspondence operator that computes disparity map for the specified rectified stereo pair
-    CV_WRAP_AS(compute) virtual void operator()(InputArray left, InputArray right,
-                                                OutputArray disp);
+    CV_WRAP virtual int getP1() const = 0;
+    CV_WRAP virtual void setP1(int P1) = 0;
 
-    CV_PROP_RW int minDisparity;
-    CV_PROP_RW int numberOfDisparities;
-    CV_PROP_RW int SADWindowSize;
-    CV_PROP_RW int preFilterCap;
-    CV_PROP_RW int uniquenessRatio;
-    CV_PROP_RW int P1;
-    CV_PROP_RW int P2;
-    CV_PROP_RW int speckleWindowSize;
-    CV_PROP_RW int speckleRange;
-    CV_PROP_RW int disp12MaxDiff;
-    CV_PROP_RW bool fullDP;
+    CV_WRAP virtual int getP2() const = 0;
+    CV_WRAP virtual void setP2(int P2) = 0;
 
-protected:
-    Ptr<StereoMatcher> sm;
+    CV_WRAP virtual int getMode() const = 0;
+    CV_WRAP virtual void setMode(int mode) = 0;
 };
+
+
+CV_EXPORTS Ptr<StereoSGBM> createStereoSGBM(int minDisparity, int numDisparities, int blockSize,
+                                            int P1=0, int P2=0, int disp12MaxDiff=0,
+                                            int preFilterCap=0, int uniquenessRatio=0,
+                                            int speckleWindowSize=0, int speckleRange=0,
+                                            int mode=StereoSGBM::MODE_SGBM);
 
 //! filters off speckles (small regions of incorrectly computed disparity)
-CV_EXPORTS_W void filterSpeckles( InputOutputArray img, double newVal, int maxSpeckleSize, double maxDiff,
+CV_EXPORTS_W void filterSpeckles( InputOutputArray img, double newVal,
+                                  int maxSpeckleSize, double maxDiff,
                                   InputOutputArray buf=noArray() );
 
 //! computes valid disparity ROI from the valid ROIs of the rectified images (that are returned by cv::stereoRectify())
