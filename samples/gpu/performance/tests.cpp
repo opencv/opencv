@@ -1324,10 +1324,10 @@ TEST(MOG)
     cv::Mat frame;
     cap >> frame;
 
-    cv::BackgroundSubtractorMOG mog;
+    cv::Ptr<cv::BackgroundSubtractor> mog = cv::createBackgroundSubtractorMOG();
     cv::Mat foreground;
 
-    mog(frame, foreground, 0.01);
+    mog->apply(frame, foreground, 0.01);
 
     while (!TestSystem::instance().stop())
     {
@@ -1335,7 +1335,7 @@ TEST(MOG)
 
         TestSystem::instance().cpuOn();
 
-        mog(frame, foreground, 0.01);
+        mog->apply(frame, foreground, 0.01);
 
         TestSystem::instance().cpuOff();
     }
@@ -1375,12 +1375,12 @@ TEST(MOG2)
     cv::Mat frame;
     cap >> frame;
 
-    cv::BackgroundSubtractorMOG2 mog2;
+    cv::Ptr<cv::BackgroundSubtractor> mog2 = cv::createBackgroundSubtractorMOG2();
     cv::Mat foreground;
     cv::Mat background;
 
-    mog2(frame, foreground);
-    mog2.getBackgroundImage(background);
+    mog2->apply(frame, foreground);
+    mog2->getBackgroundImage(background);
 
     while (!TestSystem::instance().stop())
     {
@@ -1388,8 +1388,8 @@ TEST(MOG2)
 
         TestSystem::instance().cpuOn();
 
-        mog2(frame, foreground);
-        mog2.getBackgroundImage(background);
+        mog2->apply(frame, foreground);
+        mog2->getBackgroundImage(background);
 
         TestSystem::instance().cpuOff();
     }
