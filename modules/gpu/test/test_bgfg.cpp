@@ -45,8 +45,22 @@
 
 using namespace cvtest;
 
+#if defined(HAVE_XINE)         || \
+    defined(HAVE_GSTREAMER)    || \
+    defined(HAVE_QUICKTIME)    || \
+    defined(HAVE_AVFOUNDATION) || \
+    defined(HAVE_FFMPEG)       || \
+    defined(WIN32) /* assume that we have ffmpeg */
+
+#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
+#else
+#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
+#endif
+
 //////////////////////////////////////////////////////
 // FGDStatModel
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 namespace cv
 {
@@ -132,8 +146,12 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, FGDStatModel, testing::Combine(
     testing::Values(std::string("768x576.avi")),
     testing::Values(Channels(3), Channels(4))));
 
+#endif
+
 //////////////////////////////////////////////////////
 // MOG
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 namespace
 {
@@ -206,8 +224,12 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, MOG, testing::Combine(
     testing::Values(LearningRate(0.0), LearningRate(0.01)),
     WHOLE_SUBMAT));
 
+#endif
+
 //////////////////////////////////////////////////////
 // MOG2
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 namespace
 {
@@ -321,6 +343,8 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, MOG2, testing::Combine(
     testing::Values(UseGray(true), UseGray(false)),
     testing::Values(DetectShadow(true), DetectShadow(false)),
     WHOLE_SUBMAT));
+
+#endif
 
 //////////////////////////////////////////////////////
 // GMG

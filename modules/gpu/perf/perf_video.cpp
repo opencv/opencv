@@ -4,6 +4,18 @@ using namespace std;
 using namespace testing;
 using namespace perf;
 
+#if defined(HAVE_XINE)         || \
+    defined(HAVE_GSTREAMER)    || \
+    defined(HAVE_QUICKTIME)    || \
+    defined(HAVE_AVFOUNDATION) || \
+    defined(HAVE_FFMPEG)       || \
+    defined(WIN32) /* assume that we have ffmpeg */
+
+#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
+#else
+#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
+#endif
+
 namespace cv
 {
     template<> void Ptr<CvBGStatModel>::delete_obj()
@@ -142,7 +154,7 @@ PERF_TEST_P(Image_MinDistance, Video_GoodFeaturesToTrack,
 PERF_TEST_P(ImagePair, Video_BroxOpticalFlow,
             Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
-    declare.time(10);
+    declare.time(300);
 
     cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -372,8 +384,8 @@ PERF_TEST_P(ImagePair, Video_OpticalFlowDual_TVL1,
 
         TEST_CYCLE() d_alg(d_frame0, d_frame1, u, v);
 
-        GPU_SANITY_CHECK(u, 1e-4);
-        GPU_SANITY_CHECK(v, 1e-4);
+        GPU_SANITY_CHECK(u, 1e-2);
+        GPU_SANITY_CHECK(v, 1e-2);
     }
     else
     {
@@ -482,6 +494,8 @@ PERF_TEST_P(ImagePair, Video_FastOpticalFlowBM,
 //////////////////////////////////////////////////////
 // FGDStatModel
 
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+
 DEF_PARAM_TEST_1(Video, string);
 
 PERF_TEST_P(Video, Video_FGDStatModel,
@@ -548,8 +562,12 @@ PERF_TEST_P(Video, Video_FGDStatModel,
     }
 }
 
+#endif
+
 //////////////////////////////////////////////////////
 // MOG
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 DEF_PARAM_TEST(Video_Cn_LearningRate, string, MatCn, double);
 
@@ -643,8 +661,12 @@ PERF_TEST_P(Video_Cn_LearningRate, Video_MOG,
     }
 }
 
+#endif
+
 //////////////////////////////////////////////////////
 // MOG2
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 DEF_PARAM_TEST(Video_Cn, string, int);
 
@@ -740,8 +762,12 @@ PERF_TEST_P(Video_Cn, Video_MOG2,
     }
 }
 
+#endif
+
 //////////////////////////////////////////////////////
 // MOG2GetBackgroundImage
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 PERF_TEST_P(Video_Cn, Video_MOG2GetBackgroundImage,
             Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
@@ -818,8 +844,12 @@ PERF_TEST_P(Video_Cn, Video_MOG2GetBackgroundImage,
     }
 }
 
+#endif
+
 //////////////////////////////////////////////////////
 // GMG
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 DEF_PARAM_TEST(Video_Cn_MaxFeatures, string, MatCn, int);
 
@@ -928,10 +958,12 @@ PERF_TEST_P(Video_Cn_MaxFeatures, Video_GMG,
     }
 }
 
-#ifdef HAVE_NVCUVID
+#endif
 
 //////////////////////////////////////////////////////
 // VideoReader
+
+#if defined(HAVE_NVCUVID) && BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 PERF_TEST_P(Video, Video_VideoReader, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
 {
@@ -963,10 +995,12 @@ PERF_TEST_P(Video, Video_VideoReader, Values("gpu/video/768x576.avi", "gpu/video
     }
 }
 
+#endif
+
 //////////////////////////////////////////////////////
 // VideoWriter
 
-#ifdef WIN32
+#if defined(HAVE_NVCUVID) && defined(WIN32)
 
 PERF_TEST_P(Video, Video_VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
 {
@@ -1024,6 +1058,4 @@ PERF_TEST_P(Video, Video_VideoWriter, Values("gpu/video/768x576.avi", "gpu/video
     SANITY_CHECK(frame);
 }
 
-#endif // WIN32
-
-#endif // HAVE_NVCUVID
+#endif

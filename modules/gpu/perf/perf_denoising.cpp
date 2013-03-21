@@ -64,7 +64,7 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_NonLocalMeans,
                     Values(21),
                     Values(5)))
 {
-    declare.time(60.0);
+    declare.time(600.0);
 
     const cv::Size size = GET_PARAM(0);
     const int depth = GET_PARAM(1);

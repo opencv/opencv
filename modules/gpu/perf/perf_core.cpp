@@ -1748,7 +1748,10 @@ PERF_TEST_P(Sz_Depth_Norm, Core_Norm,
     const int normType = GET_PARAM(2);
 
     cv::Mat src(size, depth);
-    declare.in(src, WARMUP_RNG);
+    if (depth == CV_8U)
+        cv::randu(src, 0, 254);
+    else
+        declare.in(src, WARMUP_RNG);
 
     if (PERF_RUN_GPU())
     {
@@ -1923,7 +1926,10 @@ PERF_TEST_P(Sz_Depth, Core_MinMax,
     const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
-    declare.in(src, WARMUP_RNG);
+    if (depth == CV_8U)
+        cv::randu(src, 0, 254);
+    else
+        declare.in(src, WARMUP_RNG);
 
     if (PERF_RUN_GPU())
     {
@@ -1958,7 +1964,10 @@ PERF_TEST_P(Sz_Depth, Core_MinMaxLoc,
     const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
-    declare.in(src, WARMUP_RNG);
+    if (depth == CV_8U)
+        cv::randu(src, 0, 254);
+    else
+        declare.in(src, WARMUP_RNG);
 
     if (PERF_RUN_GPU())
     {
