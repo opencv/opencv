@@ -1,3 +1,9 @@
+#include <opencv2/opencv_modules.hpp>
+
+#ifndef HAVE_OPENCV_NONFREE
+#error "Non free module is required"
+#else
+
 #include <iostream>
 #include <iomanip>
 #include <stdexcept>
@@ -7,6 +13,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/gpu/gpu.hpp>
+#include <opencv2/nonfree/gpu.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
@@ -403,3 +410,5 @@ bool App::parseAppCmdArgs(int& i, int argc, const char* argv[])
 }
 
 RUN_APP(App)
+
+#endif
