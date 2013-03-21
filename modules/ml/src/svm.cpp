@@ -1551,25 +1551,28 @@ void CvSVM::optimize_linear_svm()
         return;
 
     int var_count = get_var_count();
-    int sample_size = (int)(var_count*sizeof(sv[0][0]));
+    cv::AutoBuffer<double> vbuf(var_count);
+    double* v = vbuf;
     float** new_sv = (float**)cvMemStorageAlloc(storage, df_count*sizeof(new_sv[0]));
 
     for( i = 0; i < df_count; i++ )
     {
-        new_sv[i] = (float*)cvMemStorageAlloc(storage, sample_size);
+        new_sv[i] = (float*)cvMemStorageAlloc(storage, var_count*sizeof(new_sv[i][0]));
         float* dst = new_sv[i];
-        memset(dst, 0, sample_size);
+        memset(v, 0, var_count*sizeof(v[0]));
         int j, k, sv_count = df[i].sv_count;
         for( j = 0; j < sv_count; j++ )
         {
-            const float* src = class_count > 1 ? sv[df[i].sv_index[j]] : sv[j];
+            const float* src = class_count > 1 && df[i].sv_index ? sv[df[i].sv_index[j]] : sv[j];
             double a = df[i].alpha[j];
             for( k = 0; k < var_count; k++ )
-                dst[k] = (float)(dst[k] + src[k]*a);
+                v[k] += src[k]*a;
         }
+        for( k = 0; k < var_count; k++ )
+            dst[k] = (float)v[k];
         df[i].sv_count = 1;
         df[i].alpha[0] = 1.;
-        if( class_count > 1 )
+        if( class_count > 1 && df[i].sv_index )
             df[i].sv_index[0] = i;
     }
 
@@ -2570,7 +2573,8 @@ void CvSVM::read( CvFileStorage* fs, CvFileNode* svm_node )
         CV_NEXT_SEQ_ELEM( df_node->data.seq->elem_size, reader );
     }
 
-    optimize_linear_svm();
+    if( cvReadIntByName(fs, svm_node, "optimize_linear", 1) != 0 )
+        optimize_linear_svm();
     create_kernel();
 
     __END__;

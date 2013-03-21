@@ -769,7 +769,11 @@ void CV_MLBaseTest::load( const char* filename )
     else if( !modelName.compare(CV_KNEAREST) )
         knearest->load( filename );
     else if( !modelName.compare(CV_SVM) )
+    {
+        delete svm;
+        svm = new CvSVM;
         svm->load( filename );
+    }
     else if( !modelName.compare(CV_ANN) )
         ann->load( filename );
     else if( !modelName.compare(CV_DTREE) )
