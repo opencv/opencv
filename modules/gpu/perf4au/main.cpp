@@ -8,68 +8,18 @@
 #include "opencv2/video.hpp"
 #include "opencv2/legacy.hpp"
 #include "opencv2/ts.hpp"
-
-static void printOsInfo()
-{
-#if defined _WIN32
-#   if defined _WIN64
-        printf("[----------]\n[ GPU INFO ] \tRun on OS Windows x64.\n[----------]\n"); fflush(stdout);
-#   else
-        printf("[----------]\n[ GPU INFO ] \tRun on OS Windows x32.\n[----------]\n"); fflush(stdout);
-#   endif
-#elif defined linux
-#   if defined _LP64
-        printf("[----------]\n[ GPU INFO ] \tRun on OS Linux x64.\n[----------]\n"); fflush(stdout);
-#   else
-        printf("[----------]\n[ GPU INFO ] \tRun on OS Linux x32.\n[----------]\n"); fflush(stdout);
-#   endif
-#elif defined __APPLE__
-#   if defined _LP64
-        printf("[----------]\n[ GPU INFO ] \tRun on OS Apple x64.\n[----------]\n"); fflush(stdout);
-#   else
-        printf("[----------]\n[ GPU INFO ] \tRun on OS Apple x32.\n[----------]\n"); fflush(stdout);
-#   endif
-#endif
-}
-
-static void printCudaInfo()
-{
-    const int deviceCount = cv::gpu::getCudaEnabledDeviceCount();
-
-    printf("[----------]\n"); fflush(stdout);
-    printf("[ GPU INFO ] \tCUDA device count:: %d.\n", deviceCount); fflush(stdout);
-    printf("[----------]\n"); fflush(stdout);
-
-    for (int i = 0; i < deviceCount; ++i)
-    {
-        cv::gpu::DeviceInfo info(i);
-
-        printf("[----------]\n"); fflush(stdout);
-        printf("[ DEVICE   ] \t# %d %s.\n", i, info.name().c_str()); fflush(stdout);
-        printf("[          ] \tCompute capability: %d.%d\n", info.majorVersion(), info.minorVersion()); fflush(stdout);
-        printf("[          ] \tMulti Processor Count:  %d\n", info.multiProcessorCount()); fflush(stdout);
-        printf("[          ] \tTotal memory: %d Mb\n", static_cast<int>(static_cast<int>(info.totalMemory() / 1024.0) / 1024.0)); fflush(stdout);
-        printf("[          ] \tFree  memory: %d Mb\n", static_cast<int>(static_cast<int>(info.freeMemory()  / 1024.0) / 1024.0)); fflush(stdout);
-        if (!info.isCompatible())
-            printf("[ GPU INFO ] \tThis device is NOT compatible with current GPU module build\n");
-        printf("[----------]\n"); fflush(stdout);
-    }
-}
+#include "opencv2/ts/gpu_perf.hpp"
 
 int main(int argc, char* argv[])
 {
-    printOsInfo();
-    printCudaInfo();
+    perf::printCudaInfo();
 
-    perf::Regression::Init("nv_perf_test");
+    perf::Regression::Init("gpu_perf4au");
     perf::TestBase::Init(argc, argv);
     testing::InitGoogleTest(&argc, argv);
 
     return RUN_ALL_TESTS();
 }
-
-#define DEF_PARAM_TEST(name, ...) typedef ::perf::TestBaseWithParam< std::tr1::tuple< __VA_ARGS__ > > name
-#define DEF_PARAM_TEST_1(name, param_type) typedef ::perf::TestBaseWithParam< param_type > name
 
 //////////////////////////////////////////////////////////
 // HoughLinesP

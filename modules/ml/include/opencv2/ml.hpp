@@ -537,6 +537,8 @@ protected:
     virtual void write_params( CvFileStorage* fs ) const;
     virtual void read_params( CvFileStorage* fs, CvFileNode* node );
 
+    void optimize_linear_svm();
+
     CvSVMParams params;
     CvMat* class_labels;
     int var_all;

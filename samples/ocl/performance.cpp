@@ -16,6 +16,7 @@
 #define USE_OPENCL
 #ifdef USE_OPENCL
 #include "opencv2/ocl.hpp"
+#include "opencv2/nonfree/ocl.hpp"
 #endif
 
 #define TAB "    "

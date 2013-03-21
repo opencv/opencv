@@ -15,4 +15,14 @@
 #include "opencv2/highgui.hpp"
 #include "opencv2/nonfree.hpp"
 
+#include "opencv2/opencv_modules.hpp"
+#ifdef HAVE_OPENCV_OCL
+#  include "opencv2/nonfree/ocl.hpp"
+#endif
+
+#if defined(HAVE_OPENCV_GPU) && defined(HAVE_CUDA)
+    #include "opencv2/ts/gpu_test.hpp"
+    #include "opencv2/nonfree/gpu.hpp"
+#endif
+
 #endif

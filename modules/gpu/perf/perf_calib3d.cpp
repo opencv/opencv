@@ -2,6 +2,7 @@
 
 using namespace std;
 using namespace testing;
+using namespace perf;
 
 //////////////////////////////////////////////////////////////////////
 // StereoBM
@@ -12,7 +13,7 @@ DEF_PARAM_TEST_1(ImagePair, pair_string);
 PERF_TEST_P(ImagePair, Calib3D_StereoBM,
             Values(pair_string("gpu/perf/aloe.png", "gpu/perf/aloeR.png")))
 {
-    declare.time(5.0);
+    declare.time(300.0);
 
     const cv::Mat imgLeft = readImage(GET_PARAM(0), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(imgLeft.empty());
@@ -53,7 +54,7 @@ PERF_TEST_P(ImagePair, Calib3D_StereoBM,
 PERF_TEST_P(ImagePair, Calib3D_StereoBeliefPropagation,
             Values(pair_string("gpu/stereobp/aloe-L.png", "gpu/stereobp/aloe-R.png")))
 {
-    declare.time(10.0);
+    declare.time(300.0);
 
     const cv::Mat imgLeft = readImage(GET_PARAM(0));
     ASSERT_FALSE(imgLeft.empty());
@@ -87,7 +88,7 @@ PERF_TEST_P(ImagePair, Calib3D_StereoBeliefPropagation,
 PERF_TEST_P(ImagePair, Calib3D_StereoConstantSpaceBP,
             Values(pair_string("gpu/stereobm/aloe-L.png", "gpu/stereobm/aloe-R.png")))
 {
-    declare.time(10.0);
+    declare.time(300.0);
 
     const cv::Mat imgLeft = readImage(GET_PARAM(0), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(imgLeft.empty());

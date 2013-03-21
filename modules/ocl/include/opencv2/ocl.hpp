@@ -134,20 +134,29 @@ namespace cv
 
         //////////////////////////////// OpenCL context ////////////////////////
         //This is a global singleton class used to represent a OpenCL context.
-        class Context
+        class CV_EXPORTS Context
         {
         protected:
             Context();
             friend class std::auto_ptr<Context>;
-            static std::auto_ptr<Context> clCxt;
 
+        private:
+            static std::auto_ptr<Context> clCxt;
+            static int val;
         public:
             ~Context();
-            static int val;
+            void release();
+            Info::Impl* impl;
+
             static Context *getContext();
             static void setContext(Info &oclinfo);
-            struct Impl;
-            Impl *impl;
+
+            enum {CL_DOUBLE, CL_UNIFIED_MEM};
+            bool supportsFeature(int ftype);
+            size_t computeUnits();
+            size_t maxWorkGroupSize();
+            void* oclContext();
+            void* oclCommandQueue();
         };
 
         //! Calls a kernel, by string. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
@@ -1088,156 +1097,6 @@ namespace cv
         };
 
 
-
-        //! Speeded up robust features, port from GPU module.
-        ////////////////////////////////// SURF //////////////////////////////////////////
-
-        class CV_EXPORTS SURF_OCL
-
-        {
-
-        public:
-
-            enum KeypointLayout
-
-            {
-
-                X_ROW = 0,
-
-                Y_ROW,
-
-                LAPLACIAN_ROW,
-
-                OCTAVE_ROW,
-
-                SIZE_ROW,
-
-                ANGLE_ROW,
-
-                HESSIAN_ROW,
-
-                ROWS_COUNT
-
-            };
-
-
-
-            //! the default constructor
-
-            SURF_OCL();
-
-            //! the full constructor taking all the necessary parameters
-
-            explicit SURF_OCL(double _hessianThreshold, int _nOctaves = 4,
-
-                              int _nOctaveLayers = 2, bool _extended = false, float _keypointsRatio = 0.01f, bool _upright = false);
-
-
-
-            //! returns the descriptor size in float's (64 or 128)
-
-            int descriptorSize() const;
-
-
-
-            //! upload host keypoints to device memory
-
-            void uploadKeypoints(const std::vector<cv::KeyPoint> &keypoints, oclMat &keypointsocl);
-
-            //! download keypoints from device to host memory
-
-            void downloadKeypoints(const oclMat &keypointsocl, std::vector<KeyPoint> &keypoints);
-
-
-
-            //! download descriptors from device to host memory
-
-            void downloadDescriptors(const oclMat &descriptorsocl, std::vector<float> &descriptors);
-
-
-
-            //! finds the keypoints using fast hessian detector used in SURF
-
-            //! supports CV_8UC1 images
-
-            //! keypoints will have nFeature cols and 6 rows
-
-            //! keypoints.ptr<float>(X_ROW)[i] will contain x coordinate of i'th feature
-
-            //! keypoints.ptr<float>(Y_ROW)[i] will contain y coordinate of i'th feature
-
-            //! keypoints.ptr<float>(LAPLACIAN_ROW)[i] will contain laplacian sign of i'th feature
-
-            //! keypoints.ptr<float>(OCTAVE_ROW)[i] will contain octave of i'th feature
-
-            //! keypoints.ptr<float>(SIZE_ROW)[i] will contain size of i'th feature
-
-            //! keypoints.ptr<float>(ANGLE_ROW)[i] will contain orientation of i'th feature
-
-            //! keypoints.ptr<float>(HESSIAN_ROW)[i] will contain response of i'th feature
-
-            void operator()(const oclMat &img, const oclMat &mask, oclMat &keypoints);
-
-            //! finds the keypoints and computes their descriptors.
-
-            //! Optionally it can compute descriptors for the user-provided keypoints and recompute keypoints direction
-
-            void operator()(const oclMat &img, const oclMat &mask, oclMat &keypoints, oclMat &descriptors,
-
-                            bool useProvidedKeypoints = false);
-
-
-
-            void operator()(const oclMat &img, const oclMat &mask, std::vector<KeyPoint> &keypoints);
-
-            void operator()(const oclMat &img, const oclMat &mask, std::vector<KeyPoint> &keypoints, oclMat &descriptors,
-
-                            bool useProvidedKeypoints = false);
-
-
-
-            void operator()(const oclMat &img, const oclMat &mask, std::vector<KeyPoint> &keypoints, std::vector<float> &descriptors,
-
-                            bool useProvidedKeypoints = false);
-
-
-
-            void releaseMemory();
-
-
-
-            // SURF parameters
-
-            float hessianThreshold;
-
-            int nOctaves;
-
-            int nOctaveLayers;
-
-            bool extended;
-
-            bool upright;
-
-
-
-            //! max keypoints = min(keypointsRatio * img.size().area(), 65535)
-
-            float keypointsRatio;
-
-
-
-            oclMat sum, mask1, maskSum, intBuffer;
-
-
-
-            oclMat det, trace;
-
-
-
-            oclMat maxPosBuffer;
-
-        };
-
         ////////////////////////feature2d_ocl/////////////////
         /****************************************************************************************\
         *                                      Distance                                          *
@@ -1821,6 +1680,40 @@ namespace cv
 
         //! computes moments of the rasterized shape or a vector of points
         CV_EXPORTS Moments ocl_moments(InputArray _array, bool binaryImage);
+
+        class CV_EXPORTS StereoBM_OCL
+        {
+        public:
+            enum { BASIC_PRESET = 0, PREFILTER_XSOBEL = 1 };
+
+            enum { DEFAULT_NDISP = 64, DEFAULT_WINSZ = 19 };
+
+            //! the default constructor
+            StereoBM_OCL();
+            //! the full constructor taking the camera-specific preset, number of disparities and the SAD window size. ndisparities must be multiple of 8.
+            StereoBM_OCL(int preset, int ndisparities = DEFAULT_NDISP, int winSize = DEFAULT_WINSZ);
+
+            //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
+            //! Output disparity has CV_8U type.
+            void operator() ( const oclMat &left, const oclMat &right, oclMat &disparity);
+
+            //! Some heuristics that tries to estmate
+            // if current GPU will be faster then CPU in this algorithm.
+            // It queries current active device.
+            static bool checkIfGpuCallReasonable();
+
+            int preset;
+            int ndisp;
+            int winSize;
+
+            // If avergeTexThreshold  == 0 => post procesing is disabled
+            // If avergeTexThreshold != 0 then disparity is set 0 in each point (x,y) where for left image
+            // SumOfHorizontalGradiensInWindow(x, y, winSize) < (winSize * winSize) * avergeTexThreshold
+            // i.e. input left image is low textured.
+            float avergeTexThreshold;
+        private:
+            oclMat minSSD, leBuf, riBuf;
+        };
     }
 }
 #if defined _MSC_VER && _MSC_VER >= 1200

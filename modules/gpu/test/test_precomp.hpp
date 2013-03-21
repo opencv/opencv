@@ -76,11 +76,10 @@
     #include "opencv2/imgproc.hpp"
     #include "opencv2/video.hpp"
     #include "opencv2/ts.hpp"
+    #include "opencv2/ts/gpu_test.hpp"
     #include "opencv2/gpu.hpp"
-    #include "opencv2/nonfree.hpp"
     #include "opencv2/legacy.hpp"
 
-    #include "utility.hpp"
     #include "interpolation.hpp"
     #include "main_test_nvidia.h"
 #endif

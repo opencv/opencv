@@ -47,7 +47,6 @@
 
 
 #include "precomp.hpp"
-#include "mcwutil.hpp"
 using namespace cv;
 using namespace cv::ocl;
 
@@ -357,7 +356,7 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
 #ifdef CL_VERSION_1_2
     if(dst.offset == 0 && dst.cols == dst.wholecols)
     {
-        clEnqueueFillBuffer(dst.clCxt->impl->clCmdQueue, (cl_mem)dst.data, args[0].second, args[0].first, 0, dst.step * dst.rows, 0, NULL, NULL);
+        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(), (cl_mem)dst.data, args[0].second, args[0].first, 0, dst.step * dst.rows, 0, NULL, NULL);
     }
     else
     {
@@ -464,7 +463,7 @@ static void copyTo(const oclMat &src, oclMat &m )
 
 static void arithmetic_run(const oclMat &src1, oclMat &dst, std::string kernelName, const char **kernelString, void *_scalar)
 {
-    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
+    if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
     {
         CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
@@ -712,7 +711,7 @@ void cv::ocl::PyrLKOpticalFlow::sparse(const oclMat &prevImg, const oclMat &next
                      level, /*block, */patch, winSize, iters);
     }
 
-    clFinish(prevImg.clCxt->impl->clCmdQueue);
+    clFinish((cl_command_queue)prevImg.clCxt->oclCommandQueue());
 
     if(errMat)
         delete err;
@@ -851,5 +850,5 @@ void cv::ocl::PyrLKOpticalFlow::dense(const oclMat &prevImg, const oclMat &nextI
     copyTo(uPyr_[idx], u);
     copyTo(vPyr_[idx], v);
 
-    clFinish(prevImg.clCxt->impl->clCmdQueue);
+    clFinish((cl_command_queue)prevImg.clCxt->oclCommandQueue());
 }

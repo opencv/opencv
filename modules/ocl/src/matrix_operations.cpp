@@ -189,7 +189,7 @@ void cv::ocl::oclMat::upload(const Mat &m)
         int pitch = wholeSize.width * 3 * m.elemSize1();
         int tail_padding = m.elemSize1() * 3072;
         int err;
-        cl_mem temp = clCreateBuffer(clCxt->impl->clContext, CL_MEM_READ_WRITE,
+        cl_mem temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE,
                                      (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
         openCLVerifyCall(err);
 
@@ -241,7 +241,7 @@ void cv::ocl::oclMat::download(cv::Mat &m) const
         int pitch = wholecols * 3 * m.elemSize1();
         int tail_padding = m.elemSize1() * 3072;
         int err;
-        cl_mem temp = clCreateBuffer(clCxt->impl->clContext, CL_MEM_READ_WRITE,
+        cl_mem temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE,
                                      (pitch * wholerows + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
         openCLVerifyCall(err);
 
@@ -594,7 +594,7 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, std:
 #ifdef CL_VERSION_1_2
     if(dst.offset == 0 && dst.cols == dst.wholecols)
     {
-        clEnqueueFillBuffer(dst.clCxt->impl->clCmdQueue, (cl_mem)dst.data, args[0].second, args[0].first, 0, dst.step * dst.rows, 0, NULL, NULL);
+        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(), (cl_mem)dst.data, args[0].second, args[0].first, 0, dst.step * dst.rows, 0, NULL, NULL);
     }
     else
     {

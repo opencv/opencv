@@ -68,7 +68,6 @@
 #include "opencv2/video.hpp"
 #include "opencv2/ocl.hpp"
 //#include "opencv2/calib3d.hpp"
-//#include "opencv2/nonfree.hpp"
 
 #include "utility.hpp"
 #include "interpolation.hpp"

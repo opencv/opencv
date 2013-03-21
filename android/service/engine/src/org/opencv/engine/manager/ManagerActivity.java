@@ -83,9 +83,13 @@ public class ManagerActivity extends Activity
             {
                 HardwarePlatformView.setText("Tegra 2");
             }
-            else
+            else if (HardwareDetector.PLATFORM_TEGRA3 == Platfrom)
             {
                 HardwarePlatformView.setText("Tegra 3");
+            }
+            else
+            {
+                HardwarePlatformView.setText("Tegra 4");
             }
         }
         else
@@ -367,10 +371,10 @@ public class ManagerActivity extends Activity
                 temp.put("Version", NormalizeVersion(OpenCVersion, VersionName));
                 // HACK: OpenCV Manager for Armv7-a Neon already has Tegra3 optimizations
                 // that is enabled on proper hardware
-                if (HardwareDetector.DetectKnownPlatforms() == HardwareDetector.PLATFORM_TEGRA3 &&
+                if (HardwareDetector.DetectKnownPlatforms() >= HardwareDetector.PLATFORM_TEGRA3 &&
                   HardwareName.equals("armv7a neon ") &&  Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
                 {
-                    temp.put("Hardware", "Tegra 3");
+                    temp.put("Hardware", "Tegra");
                     if (Tags == null)
                     {
                         Tags = "optimized";
