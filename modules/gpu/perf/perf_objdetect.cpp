@@ -19,6 +19,8 @@ PERF_TEST_P(Image, ObjDetect_HOG,
                            "gpu/caltech/image_00000527_0.png",
                            "gpu/caltech/image_00000574_0.png"))
 {
+    declare.time(300.0);
+
     const cv::Mat img = readImage(GetParam(), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
