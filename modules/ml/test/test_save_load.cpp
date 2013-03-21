@@ -64,11 +64,11 @@ int CV_SLMLTest::run_test_case( int testCaseIdx )
             if( code == cvtest::TS::OK )
             {
                 get_error( testCaseIdx, CV_TEST_ERROR, &test_resps1 );
-                fname1 = tempfile(".yml.gz");
+                fname1 = tempfile(".yml");
                 save( fname1.c_str() );
                 load( fname1.c_str() );
                 get_error( testCaseIdx, CV_TEST_ERROR, &test_resps2 );
-                fname2 = tempfile(".yml.gz");
+                fname2 = tempfile(".yml");
                 save( fname2.c_str() );
             }
             else
@@ -84,30 +84,30 @@ int CV_SLMLTest::validate_test_results( int testCaseIdx )
     // 1. compare files
     ifstream f1( fname1.c_str() ), f2( fname2.c_str() );
     string s1, s2;
-    int lineIdx = 0;
+    int lineIdx = 1;
     CV_Assert( f1.is_open() && f2.is_open() );
     for( ; !f1.eof() && !f2.eof(); lineIdx++ )
     {
         getline( f1, s1 );
         getline( f2, s2 );
-        if( s1.compare(s2) )
+        if( s1.compare(s2) != 0 )
         {
-            ts->printf( cvtest::TS::LOG, "first and second saved files differ in %n-line; first %n line: %s; second %n-line: %s",
-               lineIdx, lineIdx, s1.c_str(), lineIdx, s2.c_str() );
+            ts->printf( cvtest::TS::LOG,
+                       "in test case %d first (%s) and second (%s) saved files differ in %d-th line:\n%s\n\tvs\n%s\n",
+                       testCaseIdx, fname1.c_str(), fname2.c_str(),
+                       lineIdx, s1.empty() ? "" : s1.c_str(), s2.empty() ? "" : s2.c_str() );
             code = cvtest::TS::FAIL_INVALID_OUTPUT;
+            break;
         }
-    }
-    if( !f1.eof() || !f2.eof() )
-    {
-        ts->printf( cvtest::TS::LOG, "in test case %d first and second saved files differ in %n-line; first %n line: %s; second %n-line: %s",
-            testCaseIdx, lineIdx, lineIdx, s1.c_str(), lineIdx, s2.c_str() );
-        code = cvtest::TS::FAIL_INVALID_OUTPUT;
     }
     f1.close();
     f2.close();
     // delete temporary files
-    remove( fname1.c_str() );
-    remove( fname2.c_str() );
+    if( code == cvtest::TS::OK )
+    {
+        remove( fname1.c_str() );
+        remove( fname2.c_str() );
+    }
 
     // 2. compare responses
     CV_Assert( test_resps1.size() == test_resps2.size() );
