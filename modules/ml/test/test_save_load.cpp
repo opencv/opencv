@@ -64,11 +64,11 @@ int CV_SLMLTest::run_test_case( int testCaseIdx )
             if( code == cvtest::TS::OK )
             {
                 get_error( testCaseIdx, CV_TEST_ERROR, &test_resps1 );
-                fname1 = tempfile(".yml");
+                fname1 = tempfile(".yml.gz");
                 save( fname1.c_str() );
                 load( fname1.c_str() );
                 get_error( testCaseIdx, CV_TEST_ERROR, &test_resps2 );
-                fname2 = tempfile(".yml");
+                fname2 = tempfile(".yml.gz");
                 save( fname2.c_str() );
             }
             else
@@ -82,28 +82,49 @@ int CV_SLMLTest::validate_test_results( int testCaseIdx )
     int code = cvtest::TS::OK;
 
     // 1. compare files
-    ifstream f1( fname1.c_str() ), f2( fname2.c_str() );
-    string s1, s2;
-    int lineIdx = 1;
-    CV_Assert( f1.is_open() && f2.is_open() );
-    for( ; !f1.eof() && !f2.eof(); lineIdx++ )
+    FILE *fs1 = fopen(fname1.c_str(), "rb"), *fs2 = fopen(fname2.c_str(), "rb");
+    size_t sz1 = 0, sz2 = 0;
+    if( !fs1 || !fs2 )
+        code = cvtest::TS::FAIL_MISSING_TEST_DATA;
+    if( code >= 0 )
     {
-        getline( f1, s1 );
-        getline( f2, s2 );
-        if( s1.compare(s2) != 0 )
+        fseek(fs1, 0, SEEK_END); fseek(fs2, 0, SEEK_END);
+        sz1 = ftell(fs1);
+        sz2 = ftell(fs2);
+        fseek(fs1, 0, SEEK_SET); fseek(fs2, 0, SEEK_SET);
+    }
+
+    if( sz1 != sz2 )
+        code = cvtest::TS::FAIL_INVALID_OUTPUT;
+
+    if( code >= 0 )
+    {
+        const int BUFSZ = 1024;
+        uchar buf1[BUFSZ], buf2[BUFSZ];
+        for( size_t pos = 0; pos < sz1;  )
         {
-            ts->printf( cvtest::TS::LOG,
-                       "in test case %d first (%s) and second (%s) saved files differ in %d-th line:\n%s\n\tvs\n%s\n",
-                       testCaseIdx, fname1.c_str(), fname2.c_str(),
-                       lineIdx, s1.empty() ? "" : s1.c_str(), s2.empty() ? "" : s2.c_str() );
-            code = cvtest::TS::FAIL_INVALID_OUTPUT;
-            break;
+            size_t r1 = fread(buf1, 1, BUFSZ, fs1);
+            size_t r2 = fread(buf2, 1, BUFSZ, fs2);
+            if( r1 != r2 || memcmp(buf1, buf2, r1) != 0 )
+            {
+                ts->printf( cvtest::TS::LOG,
+                           "in test case %d first (%s) and second (%s) saved files differ in %d-th kb\n",
+                           testCaseIdx, fname1.c_str(), fname2.c_str(),
+                           (int)pos );
+                code = cvtest::TS::FAIL_INVALID_OUTPUT;
+                break;
+            }
+            pos += r1;
         }
     }
-    f1.close();
-    f2.close();
+
+    if(fs1)
+        fclose(fs1);
+    if(fs2)
+        fclose(fs2);
+
     // delete temporary files
-    if( code == cvtest::TS::OK )
+    if( code >= 0 )
     {
         remove( fname1.c_str() );
         remove( fname2.c_str() );

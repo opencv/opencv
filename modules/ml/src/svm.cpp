@@ -1551,14 +1551,13 @@ void CvSVM::optimize_linear_svm()
         return;
 
     int var_count = get_var_count();
-    cv::AutoBuffer<double> vbuf;
+    cv::AutoBuffer<double> vbuf(var_count);
     double* v = vbuf;
-    int sample_size = (int)(var_count*sizeof(sv[0][0]));
     float** new_sv = (float**)cvMemStorageAlloc(storage, df_count*sizeof(new_sv[0]));
 
     for( i = 0; i < df_count; i++ )
     {
-        new_sv[i] = (float*)cvMemStorageAlloc(storage, sample_size);
+        new_sv[i] = (float*)cvMemStorageAlloc(storage, var_count*sizeof(new_sv[i][0]));
         float* dst = new_sv[i];
         memset(v, 0, var_count*sizeof(v[0]));
         int j, k, sv_count = df[i].sv_count;
