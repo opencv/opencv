@@ -531,12 +531,12 @@ template<> inline int VBLAS<double>::givensx(double* a, double* b, int n, double
 #endif
 
 template<typename _Tp> void
-JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int n, int n1, double minval)
+JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
+               int m, int n, int n1, double minval, _Tp eps)
 {
     VBLAS<_Tp> vblas;
     AutoBuffer<double> Wbuf(n);
     double* W = Wbuf;
-    _Tp eps = DBL_EPSILON*10;
     int i, j, k, iter, max_iter = std::max(m, 30);
     _Tp c, s;
     double sd;
@@ -729,12 +729,12 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
 
 static void JacobiSVD(float* At, size_t astep, float* W, float* Vt, size_t vstep, int m, int n, int n1=-1)
 {
-    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, FLT_MIN);
+    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, FLT_MIN, FLT_EPSILON*2);
 }
 
 static void JacobiSVD(double* At, size_t astep, double* W, double* Vt, size_t vstep, int m, int n, int n1=-1)
 {
-    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, DBL_MIN);
+    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, DBL_MIN, DBL_EPSILON*10);
 }
 
 /* y[0:m,0:n] += diag(a[0:1,0:m]) * x[0:m,0:n] */
