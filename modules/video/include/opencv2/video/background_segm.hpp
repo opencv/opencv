@@ -55,14 +55,14 @@ namespace cv
  The class is only used to define the common interface for
  the whole family of background/foreground segmentation algorithms.
 */
-class BackgroundSubtractor : public Algorithm
+class CV_EXPORTS_W BackgroundSubtractor : public Algorithm
 {
 public:
     //! the update operator that takes the next video frame and returns the current foreground mask as 8-bit binary image.
-    virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) = 0;
+    CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) = 0;
 
     //! computes a background image
-    virtual void getBackgroundImage(OutputArray backgroundImage) const = 0;
+    CV_WRAP virtual void getBackgroundImage(OutputArray backgroundImage) const = 0;
 };
 
 
@@ -76,23 +76,23 @@ public:
  http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
 
 */
-class BackgroundSubtractorMOG : public BackgroundSubtractor
+class CV_EXPORTS_W BackgroundSubtractorMOG : public BackgroundSubtractor
 {
 public:
-    virtual int getHistory() const = 0;
-    virtual void setHistory(int nframes) = 0;
+    CV_WRAP virtual int getHistory() const = 0;
+    CV_WRAP virtual void setHistory(int nframes) = 0;
 
-    virtual int getNMixtures() const = 0;
-    virtual void setNMixtures(int nmix) = 0;
+    CV_WRAP virtual int getNMixtures() const = 0;
+    CV_WRAP virtual void setNMixtures(int nmix) = 0;
 
-    virtual double getBackgroundRatio() const = 0;
-    virtual void setBackgroundRatio(double backgroundRatio) = 0;
+    CV_WRAP virtual double getBackgroundRatio() const = 0;
+    CV_WRAP virtual void setBackgroundRatio(double backgroundRatio) = 0;
 
-    virtual double getNoiseSigma() const = 0;
-    virtual void setNoiseSigma(double noiseSigma) = 0;
+    CV_WRAP virtual double getNoiseSigma() const = 0;
+    CV_WRAP virtual void setNoiseSigma(double noiseSigma) = 0;
 };
 
-CV_EXPORTS Ptr<BackgroundSubtractorMOG>
+CV_EXPORTS_W Ptr<BackgroundSubtractorMOG>
     createBackgroundSubtractorMOG(int history=200, int nmixtures=5,
                                   double backgroundRatio=0.7, double noiseSigma=0);
 
@@ -104,47 +104,47 @@ CV_EXPORTS Ptr<BackgroundSubtractorMOG>
  International Conference Pattern Recognition, UK, August, 2004.
  http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
  */
-class BackgroundSubtractorMOG2 : public BackgroundSubtractor
+class CV_EXPORTS_W BackgroundSubtractorMOG2 : public BackgroundSubtractor
 {
 public:
-    virtual int getHistory() const = 0;
-    virtual void setHistory(int history) = 0;
+    CV_WRAP virtual int getHistory() const = 0;
+    CV_WRAP virtual void setHistory(int history) = 0;
 
-    virtual int getNMixtures() const = 0;
-    virtual void setNMixtures(int nmixtures) = 0;
+    CV_WRAP virtual int getNMixtures() const = 0;
+    CV_WRAP virtual void setNMixtures(int nmixtures) = 0;
 
-    virtual double getBackgroundRatio() const = 0;
-    virtual void setBackgroundRatio(double ratio) = 0;
+    CV_WRAP virtual double getBackgroundRatio() const = 0;
+    CV_WRAP virtual void setBackgroundRatio(double ratio) = 0;
 
-    virtual double getVarThreshold() const = 0;
-    virtual void setVarThreshold(double varThreshold) = 0;
+    CV_WRAP virtual double getVarThreshold() const = 0;
+    CV_WRAP virtual void setVarThreshold(double varThreshold) = 0;
 
-    virtual double getVarThresholdGen() const = 0;
-    virtual void setVarThresholdGen(double varThresholdGen) = 0;
+    CV_WRAP virtual double getVarThresholdGen() const = 0;
+    CV_WRAP virtual void setVarThresholdGen(double varThresholdGen) = 0;
 
-    virtual double getVarInit() const = 0;
-    virtual void setVarInit(double varInit) = 0;
+    CV_WRAP virtual double getVarInit() const = 0;
+    CV_WRAP virtual void setVarInit(double varInit) = 0;
 
-    virtual double getVarMin() const = 0;
-    virtual void setVarMin(double varMin) = 0;
+    CV_WRAP virtual double getVarMin() const = 0;
+    CV_WRAP virtual void setVarMin(double varMin) = 0;
 
-    virtual double getVarMax() const = 0;
-    virtual void setVarMax(double varMax) = 0;
+    CV_WRAP virtual double getVarMax() const = 0;
+    CV_WRAP virtual void setVarMax(double varMax) = 0;
 
-    virtual double getComplexityReductionThreshold() const = 0;
-    virtual void setComplexityReductionThreshold(double ct) = 0;
+    CV_WRAP virtual double getComplexityReductionThreshold() const = 0;
+    CV_WRAP virtual void setComplexityReductionThreshold(double ct) = 0;
 
-    virtual bool getDetectShadows() const = 0;
-    virtual void setDetectShadows(bool detectShadows) = 0;
+    CV_WRAP virtual bool getDetectShadows() const = 0;
+    CV_WRAP virtual void setDetectShadows(bool detectShadows) = 0;
 
-    virtual int getShadowValue() const = 0;
-    virtual void setShadowValue(int value) = 0;
+    CV_WRAP virtual int getShadowValue() const = 0;
+    CV_WRAP virtual void setShadowValue(int value) = 0;
 
-    virtual double getShadowThreshold() const = 0;
-    virtual void setShadowThreshold(double threshold) = 0;
+    CV_WRAP virtual double getShadowThreshold() const = 0;
+    CV_WRAP virtual void setShadowThreshold(double threshold) = 0;
 };
 
-CV_EXPORTS Ptr<BackgroundSubtractorMOG2>
+CV_EXPORTS_W Ptr<BackgroundSubtractorMOG2>
     createBackgroundSubtractorMOG2(int history=500, double varThreshold=16,
                                    bool detectShadows=true);
 
@@ -155,42 +155,42 @@ CV_EXPORTS Ptr<BackgroundSubtractorMOG2>
  * Variable-Lighting Conditions for a Responsive Audio Art Installation," A. Godbehere,
  * A. Matsukawa, K. Goldberg, American Control Conference, Montreal, June 2012.
  */
-class BackgroundSubtractorGMG : public BackgroundSubtractor
+class CV_EXPORTS_W BackgroundSubtractorGMG : public BackgroundSubtractor
 {
 public:
-    virtual int getMaxFeatures() const = 0;
-    virtual void setMaxFeatures(int maxFeatures) = 0;
+    CV_WRAP virtual int getMaxFeatures() const = 0;
+    CV_WRAP virtual void setMaxFeatures(int maxFeatures) = 0;
 
-    virtual double getDefaultLearningRate() const = 0;
-    virtual void setDefaultLearningRate(double lr) = 0;
+    CV_WRAP virtual double getDefaultLearningRate() const = 0;
+    CV_WRAP virtual void setDefaultLearningRate(double lr) = 0;
 
-    virtual int getNumFrames() const = 0;
-    virtual void setNumFrames(int nframes) = 0;
+    CV_WRAP virtual int getNumFrames() const = 0;
+    CV_WRAP virtual void setNumFrames(int nframes) = 0;
 
-    virtual int getQuantizationLevels() const = 0;
-    virtual void setQuantizationLevels(int nlevels) = 0;
+    CV_WRAP virtual int getQuantizationLevels() const = 0;
+    CV_WRAP virtual void setQuantizationLevels(int nlevels) = 0;
 
-    virtual double getBackgroundPrior() const = 0;
-    virtual void setBackgroundPrior(double bgprior) = 0;
+    CV_WRAP virtual double getBackgroundPrior() const = 0;
+    CV_WRAP virtual void setBackgroundPrior(double bgprior) = 0;
 
-    virtual int getSmoothingRadius() const = 0;
-    virtual void setSmoothingRadius(int radius) = 0;
+    CV_WRAP virtual int getSmoothingRadius() const = 0;
+    CV_WRAP virtual void setSmoothingRadius(int radius) = 0;
 
-    virtual double getDecisionThreshold() const = 0;
-    virtual void setDecisionThreshold(double thresh) = 0;
+    CV_WRAP virtual double getDecisionThreshold() const = 0;
+    CV_WRAP virtual void setDecisionThreshold(double thresh) = 0;
 
-    virtual bool getUpdateBackgroundModel() const = 0;
-    virtual void setUpdateBackgroundModel(bool update) = 0;
+    CV_WRAP virtual bool getUpdateBackgroundModel() const = 0;
+    CV_WRAP virtual void setUpdateBackgroundModel(bool update) = 0;
 
-    virtual double getMinVal() const = 0;
-    virtual void setMinVal(double val) = 0;
+    CV_WRAP virtual double getMinVal() const = 0;
+    CV_WRAP virtual void setMinVal(double val) = 0;
 
-    virtual double getMaxVal() const = 0;
-    virtual void setMaxVal(double val) = 0;
+    CV_WRAP virtual double getMaxVal() const = 0;
+    CV_WRAP virtual void setMaxVal(double val) = 0;
 };
 
 
-CV_EXPORTS Ptr<BackgroundSubtractorGMG> createBackgroundSubtractorGMG(int initializationFrames=120,
+CV_EXPORTS_W Ptr<BackgroundSubtractorGMG> createBackgroundSubtractorGMG(int initializationFrames=120,
                                                                         double decisionThreshold=0.8);
 
 }
