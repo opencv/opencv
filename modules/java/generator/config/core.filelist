@@ -1,2 +1,3 @@
 include/opencv2/core.hpp
+include/opencv2/core/utility.hpp
 ../java/generator/src/cpp/core_manual.hpp

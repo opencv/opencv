@@ -6,6 +6,7 @@
  */
 
 #include <opencv2/opencv.hpp>
+#include <opencv2/core/utility.hpp>
 #include <iostream>
 
 using namespace cv;

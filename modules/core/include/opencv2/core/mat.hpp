@@ -748,11 +748,6 @@ inline Mat::MStep& Mat::MStep::operator = (size_t s)
     return *this;
 }
 
-static inline Mat cvarrToMatND(const CvArr* arr, bool copyData=false, int coiMode=0)
-{
-    return cvarrToMat(arr, copyData, true, coiMode);
-}
-
 ///////////////////////////////////////////// SVD //////////////////////////////////////////////////////
 
 inline SVD::SVD() {}

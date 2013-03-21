@@ -47,9 +47,10 @@
 #include "cvconfig.h"
 #endif
 
-#include "opencv2/video/tracking.hpp"
-#include "opencv2/video/background_segm.hpp"
+#include "opencv2/video.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
+
+#include "opencv2/core/utility.hpp"
 #include "opencv2/core/internal.hpp"
 
 #include <list>

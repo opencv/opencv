@@ -9,6 +9,7 @@
 #include "numpy/ndarrayobject.h"
 
 #include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
 #include "opencv2/contrib.hpp"
 #include "opencv2/flann/miniflann.hpp"
 #include "opencv2/imgproc.hpp"

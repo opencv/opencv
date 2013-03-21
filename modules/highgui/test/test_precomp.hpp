@@ -13,10 +13,10 @@
 # include "cvconfig.h"
 #endif
 
+#include <iostream>
 #include "opencv2/ts.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
-#include <iostream>
 
 #if defined(HAVE_VIDEOINPUT)   || \
     defined(HAVE_TYZX)         || \

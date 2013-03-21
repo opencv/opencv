@@ -36,6 +36,7 @@
 #endif
 
 #include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
 
 namespace cvtest
 {
@@ -478,26 +479,10 @@ protected:
     virtual int run_test_case( int expected_code, const string& descr );
     virtual void run_func(void) = 0;
     int test_case_idx;
-    int progress;
-    double t, freq;
 
     template<class F>
     int run_test_case( int expected_code, const string& _descr, F f)
     {
-        double new_t = (double)cv::getTickCount(), dt;
-        if( test_case_idx < 0 )
-        {
-            test_case_idx = 0;
-            progress = 0;
-            dt = 0;
-        }
-        else
-        {
-            dt = (new_t - t)/(freq*1000);
-            t = new_t;
-        }
-        progress = update_progress(progress, test_case_idx, 0, dt);
-
         int errcount = 0;
         bool thrown = false;
         const char* descr = _descr.c_str() ? _descr.c_str() : "";
