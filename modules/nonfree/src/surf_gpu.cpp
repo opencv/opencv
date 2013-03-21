@@ -42,11 +42,12 @@
 
 #include "precomp.hpp"
 
+#if defined(HAVE_OPENCV_GPU)
+
 using namespace cv;
 using namespace cv::gpu;
-using namespace std;
 
-#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
+#if !defined (HAVE_CUDA)
 
 cv::gpu::SURF_GPU::SURF_GPU() { throw_nogpu(); }
 cv::gpu::SURF_GPU::SURF_GPU(double, int, int, bool, float, bool) { throw_nogpu(); }
@@ -61,7 +62,7 @@ void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, vector<KeyPoint
 void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, vector<KeyPoint>&, vector<float>&, bool) { throw_nogpu(); }
 void cv::gpu::SURF_GPU::releaseMemory() { throw_nogpu(); }
 
-#else /* !defined (HAVE_CUDA) */
+#else // !defined (HAVE_CUDA)
 
 namespace cv { namespace gpu { namespace device
 {
@@ -416,4 +417,6 @@ void cv::gpu::SURF_GPU::releaseMemory()
     maxPosBuffer.release();
 }
 
-#endif /* !defined (HAVE_CUDA) */
+#endif // !defined (HAVE_CUDA)
+
+#endif // defined(HAVE_OPENCV_GPU)
