@@ -290,8 +290,8 @@ namespace cv
                 args.push_back( make_pair(sizeof(cl_int), (void *)&map1.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
                 float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
- 
-               if(src.clCxt -> impl -> double_support != 0)
+
+               if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
                 {
                     args.push_back( make_pair(sizeof(cl_double4), (void *)&borderValue));
                 }
@@ -319,7 +319,7 @@ namespace cv
                 args.push_back( make_pair(sizeof(cl_int), (void *)&map1.cols));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&map1.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
-                if(src.clCxt -> impl -> double_support != 0)
+                if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
                 {
                     args.push_back( make_pair(sizeof(cl_double4), (void *)&borderValue));
                 }
@@ -383,7 +383,7 @@ namespace cv
                 args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
-                if(src.clCxt -> impl -> double_support != 0)
+                if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
                 {
                     args.push_back( make_pair(sizeof(cl_double), (void *)&ifx_d));
                     args.push_back( make_pair(sizeof(cl_double), (void *)&ify_d));
@@ -824,12 +824,12 @@ namespace cv
                 string kernelName = "warpAffine" + s[interpolation];
 
 
-                if(src.clCxt -> impl -> double_support != 0)
+                if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
                 {
                     cl_int st;
-                    coeffs_cm = clCreateBuffer( clCxt->impl->clContext, CL_MEM_READ_WRITE, sizeof(F) * 2 * 3, NULL, &st );
+                    coeffs_cm = clCreateBuffer( (cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE, sizeof(F) * 2 * 3, NULL, &st );
                     openCLVerifyCall(st);
-                    openCLSafeCall(clEnqueueWriteBuffer(clCxt->impl->clCmdQueue, (cl_mem)coeffs_cm, 1, 0, sizeof(F) * 2 * 3, coeffs, 0, 0, 0));
+                    openCLSafeCall(clEnqueueWriteBuffer((cl_command_queue)clCxt->oclCommandQueue(), (cl_mem)coeffs_cm, 1, 0, sizeof(F) * 2 * 3, coeffs, 0, 0, 0));
                 }
                 else
                 {
@@ -839,8 +839,8 @@ namespace cv
                         {
                             float_coeffs[m][n] = coeffs[m][n];
                         }
-                    coeffs_cm = clCreateBuffer( clCxt->impl->clContext, CL_MEM_READ_WRITE, sizeof(float) * 2 * 3, NULL, &st );
-                    openCLSafeCall(clEnqueueWriteBuffer(clCxt->impl->clCmdQueue, (cl_mem)coeffs_cm, 1, 0, sizeof(float) * 2 * 3, float_coeffs, 0, 0, 0));
+                        coeffs_cm = clCreateBuffer( (cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE, sizeof(float) * 2 * 3, NULL, &st );
+                        openCLSafeCall(clEnqueueWriteBuffer((cl_command_queue)clCxt->oclCommandQueue(), (cl_mem)coeffs_cm, 1, 0, sizeof(float) * 2 * 3, float_coeffs, 0, 0, 0));
 
                 }
                 //TODO: improve this kernel
@@ -894,12 +894,12 @@ namespace cv
                 string s[3] = {"NN", "Linear", "Cubic"};
                 string kernelName = "warpPerspective" + s[interpolation];
 
-                if(src.clCxt -> impl -> double_support != 0)
+                if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
                 {
                     cl_int st;
-                    coeffs_cm = clCreateBuffer( clCxt->impl->clContext, CL_MEM_READ_WRITE, sizeof(double) * 3 * 3, NULL, &st );
+                    coeffs_cm = clCreateBuffer((cl_context) clCxt->oclContext(), CL_MEM_READ_WRITE, sizeof(double) * 3 * 3, NULL, &st );
                     openCLVerifyCall(st);
-                    openCLSafeCall(clEnqueueWriteBuffer(clCxt->impl->clCmdQueue, (cl_mem)coeffs_cm, 1, 0, sizeof(double) * 3 * 3, coeffs, 0, 0, 0));
+                    openCLSafeCall(clEnqueueWriteBuffer((cl_command_queue)clCxt->oclCommandQueue(), (cl_mem)coeffs_cm, 1, 0, sizeof(double) * 3 * 3, coeffs, 0, 0, 0));
                 }
                 else
                 {
@@ -908,9 +908,9 @@ namespace cv
                         for(int n = 0; n < 3; n++)
                             float_coeffs[m][n] = coeffs[m][n];
 
-                    coeffs_cm = clCreateBuffer( clCxt->impl->clContext, CL_MEM_READ_WRITE, sizeof(float) * 3 * 3, NULL, &st );
+                    coeffs_cm = clCreateBuffer((cl_context) clCxt->oclContext(), CL_MEM_READ_WRITE, sizeof(float) * 3 * 3, NULL, &st );
                     openCLVerifyCall(st);
-                    openCLSafeCall(clEnqueueWriteBuffer(clCxt->impl->clCmdQueue, (cl_mem)coeffs_cm, 1, 0, sizeof(float) * 3 * 3, float_coeffs, 0, 0, 0));
+                    openCLSafeCall(clEnqueueWriteBuffer((cl_command_queue)clCxt->oclCommandQueue(), (cl_mem)coeffs_cm, 1, 0, sizeof(float) * 3 * 3, float_coeffs, 0, 0, 0));
                 }
                 //TODO: improve this kernel
                 size_t blkSizeX = 16, blkSizeY = 16;
@@ -1018,7 +1018,7 @@ namespace cv
         void integral(const oclMat &src, oclMat &sum, oclMat &sqsum)
         {
             CV_Assert(src.type() == CV_8UC1);
-            if(src.clCxt->impl->double_support == 0 && src.depth() == CV_64F)
+            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
             {
                 CV_Error(CV_GpuNotSupported, "select device don't support double");
             }
@@ -1192,7 +1192,7 @@ namespace cv
         void cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize,
                           double k, int borderType)
         {
-            if(src.clCxt->impl->double_support == 0 && src.depth() == CV_64F)
+            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
             {
                 CV_Error(CV_GpuNotSupported, "select device don't support double");
             }
@@ -1206,7 +1206,7 @@ namespace cv
 
         void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int borderType)
         {
-            if(src.clCxt->impl->double_support == 0 && src.depth() == CV_64F)
+            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
             {
                 CV_Error(CV_GpuNotSupported, "select device don't support double");
             }
@@ -1260,7 +1260,7 @@ namespace cv
             if( src.depth() != CV_8U || src.oclchannels() != 4 )
                 CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
-            //            if(src.clCxt->impl->double_support == 0)
+            //            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE))
             //            {
             //                CV_Error( CV_GpuNotSupported, "Selected device doesn't support double, so a deviation exists.\nIf the accuracy is acceptable, the error can be ignored.\n");
             //            }
@@ -1328,7 +1328,7 @@ namespace cv
             if( src.depth() != CV_8U || src.oclchannels() != 4 )
                 CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
-            //            if(src.clCxt->impl->double_support == 0)
+            //            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE))
             //            {
             //                CV_Error( CV_GpuNotSupported, "Selected device doesn't support double, so a deviation exists.\nIf the accuracy is acceptable, the error can be ignored.\n");
             //            }
