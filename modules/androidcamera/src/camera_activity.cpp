@@ -12,6 +12,8 @@
 #include "camera_wrapper.h"
 #include "EngineCommon.h"
 
+#include "opencv2/core.hpp"
+
 #undef LOG_TAG
 #undef LOGE
 #undef LOGD
@@ -37,17 +39,17 @@ public:
     static CameraActivity::ErrorCode getProperty(void* camera, int propIdx, double* value);
     static CameraActivity::ErrorCode applyProperties(void** ppcamera);
 
-    static void setPathLibFolder(const std::string& path);
+    static void setPathLibFolder(const cv::String& path);
 
 private:
-    static std::string pathLibFolder;
+    static cv::String pathLibFolder;
     static bool isConnectedToLib;
 
-    static std::string getPathLibFolder();
-    static std::string getDefaultPathLibFolder();
+    static cv::String getPathLibFolder();
+    static cv::String getDefaultPathLibFolder();
     static CameraActivity::ErrorCode connectToLib();
     static CameraActivity::ErrorCode getSymbolFromLib(void * libHandle, const char* symbolName, void** ppSymbol);
-    static void fillListWrapperLibs(const std::string& folderPath, std::vector<std::string>& listLibs);
+    static void fillListWrapperLibs(const cv::String& folderPath, std::vector<cv::String>& listLibs);
 
     static InitCameraConnectC pInitCameraC;
     static CloseCameraConnectC pCloseCameraC;
@@ -58,7 +60,7 @@ private:
     friend bool nextFrame(void* buffer, size_t bufferSize, void* userData);
 };
 
-std::string CameraWrapperConnector::pathLibFolder;
+cv::String CameraWrapperConnector::pathLibFolder;
 
 bool CameraWrapperConnector::isConnectedToLib = false;
 InitCameraConnectC  CameraWrapperConnector::pInitCameraC = 0;
@@ -165,7 +167,7 @@ CameraActivity::ErrorCode CameraWrapperConnector::connectToLib()
     }
 
     dlerror();
-    std::string folderPath = getPathLibFolder();
+    cv::String folderPath = getPathLibFolder();
     if (folderPath.empty())
     {
         LOGD("Trying to find native camera in default OpenCV packages");
@@ -174,12 +176,12 @@ CameraActivity::ErrorCode CameraWrapperConnector::connectToLib()
 
     LOGD("CameraWrapperConnector::connectToLib: folderPath=%s", folderPath.c_str());
 
-    std::vector<std::string> listLibs;
+    std::vector<cv::String> listLibs;
     fillListWrapperLibs(folderPath, listLibs);
-    std::sort(listLibs.begin(), listLibs.end(), std::greater<std::string>());
+    std::sort(listLibs.begin(), listLibs.end(), std::greater<cv::String>());
 
     void * libHandle=0;
-    std::string cur_path;
+    cv::String cur_path;
     for(size_t i = 0; i < listLibs.size(); i++) {
         cur_path=folderPath + listLibs[i];
         LOGD("try to load library '%s'", listLibs[i].c_str());
@@ -245,7 +247,7 @@ CameraActivity::ErrorCode CameraWrapperConnector::getSymbolFromLib(void* libHand
     return CameraActivity::NO_ERROR;
 }
 
-void CameraWrapperConnector::fillListWrapperLibs(const std::string& folderPath, std::vector<std::string>& listLibs)
+void CameraWrapperConnector::fillListWrapperLibs(const cv::String& folderPath, std::vector<cv::String>& listLibs)
 {
     DIR *dp;
     struct dirent *ep;
@@ -264,7 +266,7 @@ void CameraWrapperConnector::fillListWrapperLibs(const std::string& folderPath, 
     }
 }
 
-std::string CameraWrapperConnector::getDefaultPathLibFolder()
+cv::String CameraWrapperConnector::getDefaultPathLibFolder()
 {
     #define BIN_PACKAGE_NAME(x) "org.opencv.lib_v" CVAUX_STR(CV_VERSION_EPOCH) CVAUX_STR(CV_VERSION_MAJOR) "_" x
     const char* const packageList[] = {BIN_PACKAGE_NAME("armv7a"), OPENCV_ENGINE_PACKAGE};
@@ -287,10 +289,10 @@ std::string CameraWrapperConnector::getDefaultPathLibFolder()
         }
     }
 
-    return std::string();
+    return cv::String();
 }
 
-std::string CameraWrapperConnector::getPathLibFolder()
+cv::String CameraWrapperConnector::getPathLibFolder()
 {
     if (!pathLibFolder.empty())
         return pathLibFolder;
@@ -358,10 +360,10 @@ std::string CameraWrapperConnector::getPathLibFolder()
         LOGE("Could not get library name and base address");
     }
 
-    return std::string();
+    return cv::String();
 }
 
-void CameraWrapperConnector::setPathLibFolder(const std::string& path)
+void CameraWrapperConnector::setPathLibFolder(const cv::String& path)
 {
     pathLibFolder=path;
 }
