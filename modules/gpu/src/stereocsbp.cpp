@@ -55,6 +55,7 @@ cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int, int, int, int, float,
 void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
+#include "opencv2/core/utility.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

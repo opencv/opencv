@@ -59,7 +59,7 @@
     #include "opencv2/nonfree/gpu.hpp"
 
     #if defined(HAVE_CUDA)
-        #include "opencv2/gpu/stream_accessor.hpp"
+        #include "opencv2/core/stream_accessor.hpp"
         #include "opencv2/gpu/device/common.hpp"
 
         static inline void throw_nogpu() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }

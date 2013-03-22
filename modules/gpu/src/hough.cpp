@@ -68,6 +68,8 @@ void cv::gpu::GeneralizedHough_GPU::release() {}
 
 #else /* !defined (HAVE_CUDA) */
 
+#include "opencv2/core/utility.hpp"
+
 namespace cv { namespace gpu { namespace device
 {
     namespace hough

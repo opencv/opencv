@@ -71,6 +71,7 @@ int cv::gpu::countNonZero(const GpuMat&, GpuMat&) { throw_nogpu(); return 0; }
 void cv::gpu::reduce(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_nogpu(); }
 
 #else
+#include "opencv2/core/utility.hpp"
 
 namespace
 {

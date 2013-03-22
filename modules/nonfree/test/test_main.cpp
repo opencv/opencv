@@ -21,7 +21,7 @@ int main(int argc, char **argv)
 
         if (cmd.get<bool>("help"))
         {
-            cmd.printParams();
+            cmd.printMessage();
             return 0;
     }
 
