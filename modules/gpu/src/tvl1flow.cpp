@@ -51,7 +51,6 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat&, const GpuMat
 
 #else
 
-using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
@@ -215,7 +214,7 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat& I0, const Gpu
     {
         warpBackward(I0, I1, I1x, I1y, u1, u2, I1w, I1wx, I1wy, grad, rho_c);
 
-        double error = numeric_limits<double>::max();
+        double error = std::numeric_limits<double>::max();
         for (int n = 0; error > scaledEpsilon && n < iterations; ++n)
         {
             estimateU(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, u1, u2, diff, l_t, static_cast<float>(theta));

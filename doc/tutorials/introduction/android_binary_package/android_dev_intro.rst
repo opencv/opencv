@@ -103,8 +103,8 @@ You need the following software to be installed in order to develop for Android 
 
    Here is Google's `install guide <http://developer.android.com/sdk/installing.html>`_ for the SDK.
 
-   .. note:: You can choose downloading ``ADT Bundle package`` that in addition to Android SDK Tools includes
-             Eclipse + ADT + CDT plugins, Android Platform-tools, the latest Android platform and the latest
+   .. note:: You can choose downloading **ADT Bundle package** that in addition to Android SDK Tools includes
+             Eclipse + ADT + NDK/CDT plugins, Android Platform-tools, the latest Android platform and the latest
              Android system image for the emulator - this is the best choice for those who is setting up Android
              development environment the first time!
 
@@ -112,15 +112,15 @@ You need the following software to be installed in order to develop for Android 
              for use on amd64 and ia64 systems to be installed. You can install them with the
              following command:
 
-      .. code-block:: bash
+             .. code-block:: bash
 
-         sudo apt-get install ia32-libs
+                 sudo apt-get install ia32-libs
 
-      For Red Hat based systems the following command might be helpful:
+             For Red Hat based systems the following command might be helpful:
 
-      .. code-block:: bash
+             .. code-block:: bash
 
-         sudo yum install libXtst.i386
+                 sudo yum install libXtst.i386
 
 #. **Android SDK components**
 
@@ -148,7 +148,7 @@ You need the following software to be installed in order to develop for Android 
 
    Check the `Android SDK System Requirements <http://developer.android.com/sdk/requirements.html>`_
    document for a list of Eclipse versions that are compatible with the Android SDK.
-   For OpenCV 2.4.x we recommend **Eclipse 3.7 (Indigo)** or later versions. They work well for
+   For OpenCV 2.4.x we recommend **Eclipse 3.7 (Indigo)** or **Eclipse 4.2 (Juno)**. They work well for
    OpenCV under both Windows and Linux.
 
    If you have no Eclipse installed, you can get it from the `official site <http://www.eclipse.org/downloads/>`_.
@@ -210,9 +210,9 @@ You need the following software to be installed in order to develop for Android 
    .. note:: Before start you can read official Android NDK documentation which is in the Android
              NDK archive, in the folder :file:`docs/`.
              The main article about using Android NDK build system is in the :file:`ANDROID-MK.html` file.
-             Some additional information you can find in the :file:`APPLICATION-MK.html`,
-             :file:`NDK-BUILD.html` files, and :file:`CPU-ARM-NEON.html`, :file:`CPLUSPLUS-SUPPORT.html`,
-             :file:`PREBUILTS.html`.
+             Some additional information you can find in
+             the :file:`APPLICATION-MK.html`, :file:`NDK-BUILD.html` files,
+             and :file:`CPU-ARM-NEON.html`, :file:`CPLUSPLUS-SUPPORT.html`, :file:`PREBUILTS.html`.
 
 #. **CDT plugin for Eclipse**
 

@@ -3,11 +3,11 @@ if(ANDROID OR IOS)
 endif()
 
 set(the_description "GPU-accelerated Computer Vision")
-ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_nonfree opencv_photo opencv_legacy)
+ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_photo opencv_legacy)
 
-ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda" "${CMAKE_CURRENT_SOURCE_DIR}/../highgui/src")
+ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")
 
-file(GLOB lib_hdrs               "include/opencv2/${name}/*.hpp"               "include/opencv2/${name}/*.h")
+file(GLOB lib_hdrs               "include/opencv2/*.hpp"                       "include/opencv2/${name}/*.hpp"               "include/opencv2/${name}/*.h")
 file(GLOB lib_device_hdrs        "include/opencv2/${name}/device/*.hpp"        "include/opencv2/${name}/device/*.h")
 file(GLOB lib_device_hdrs_detail "include/opencv2/${name}/device/detail/*.hpp" "include/opencv2/${name}/device/detail/*.h")
 file(GLOB lib_int_hdrs           "src/*.hpp"      "src/*.h")
@@ -21,7 +21,7 @@ source_group("Src\\Cuda"      FILES ${lib_cuda} ${lib_cuda_hdrs})
 source_group("Device"         FILES ${lib_device_hdrs})
 source_group("Device\\Detail" FILES ${lib_device_hdrs_detail})
 
-if (HAVE_CUDA)
+if(HAVE_CUDA)
   file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp" "src/nvidia/*.h*")
   file(GLOB_RECURSE ncv_cuda "src/nvidia/*.cu")
   set(ncv_files ${ncv_srcs} ${ncv_cuda})
@@ -104,3 +104,7 @@ ocv_add_accuracy_tests(FILES "Include" ${test_hdrs}
                        FILES "Src" ${test_srcs}
                        ${nvidia})
 ocv_add_perf_tests()
+
+if(HAVE_CUDA)
+  add_subdirectory(perf4au)
+endif()

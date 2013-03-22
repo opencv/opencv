@@ -56,6 +56,19 @@ if(WITH_PVAPI)
   endif(PVAPI_INCLUDE_PATH)
 endif(WITH_PVAPI)
 
+# --- GigEVisionSDK ---
+ocv_clear_vars(HAVE_GIGE_API)
+if(WITH_GIGEAPI)
+  find_path(GIGEAPI_INCLUDE_PATH "GigEVisionSDK.h"
+            PATHS /usr/local /var /opt /usr ENV ProgramFiles ENV ProgramW6432
+            PATH_SUFFIXES include "Smartek Vision Technologies/GigEVisionSDK/gige_cpp" "GigEVisionSDK/gige_cpp" "GigEVisionSDK/gige_c"
+            DOC "The path to Smartek GigEVisionSDK header")
+  FIND_LIBRARY(GIGEAPI_LIBRARIES NAMES GigEVisionSDK)
+  if(GIGEAPI_LIBRARIES AND GIGEAPI_INCLUDE_PATH)
+    set(HAVE_GIGE_API TRUE)
+  endif()
+endif(WITH_GIGEAPI)
+
 # --- Dc1394 ---
 ocv_clear_vars(HAVE_DC1394 HAVE_DC1394_2)
 if(WITH_1394)
@@ -72,11 +85,12 @@ if(WITH_XINE)
 endif(WITH_XINE)
 
 # --- V4L ---
-ocv_clear_vars(HAVE_LIBV4L HAVE_CAMV4L HAVE_CAMV4L2)
+ocv_clear_vars(HAVE_LIBV4L HAVE_CAMV4L HAVE_CAMV4L2 HAVE_VIDEOIO)
 if(WITH_V4L)
   CHECK_MODULE(libv4l1 HAVE_LIBV4L)
   CHECK_INCLUDE_FILE(linux/videodev.h HAVE_CAMV4L)
   CHECK_INCLUDE_FILE(linux/videodev2.h HAVE_CAMV4L2)
+  CHECK_INCLUDE_FILE(sys/videoio.h HAVE_VIDEOIO)
 endif(WITH_V4L)
 
 # --- OpenNI ---

@@ -43,6 +43,8 @@
 
 #ifdef HAVE_CUDA
 
+using namespace cvtest;
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // HoughLines
 
@@ -130,7 +132,7 @@ GPU_TEST_P(HoughCircles, Accuracy)
     const bool useRoi = GET_PARAM(2);
 
     const float dp = 2.0f;
-    const float minDist = 10.0f;
+    const float minDist = 0.0f;
     const int minRadius = 10;
     const int maxRadius = 20;
     const int cannyThreshold = 100;
@@ -163,7 +165,7 @@ GPU_TEST_P(HoughCircles, Accuracy)
         {
             cv::Vec3f gold = circles_gold[j];
 
-            if (std::fabs(cur[0] - gold[0]) < minDist && std::fabs(cur[1] - gold[1]) < minDist && std::fabs(cur[2] - gold[2]) < minDist)
+            if (std::fabs(cur[0] - gold[0]) < 5 && std::fabs(cur[1] - gold[1]) < 5 && std::fabs(cur[2] - gold[2]) < 5)
             {
                 found = true;
                 break;

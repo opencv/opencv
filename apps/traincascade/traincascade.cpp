@@ -1,4 +1,4 @@
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/core/internal.hpp"
 
 #include "cv.h"
@@ -9,7 +9,7 @@ using namespace std;
 int main( int argc, char* argv[] )
 {
     CvCascadeClassifier classifier;
-    String cascadeDirName, vecName, bgName;
+    string cascadeDirName, vecName, bgName;
     int numPos    = 2000;
     int numNeg    = 1000;
     int numStages = 20;

@@ -44,7 +44,7 @@
 #define __OPENCV_VIDEOSTAB_RING_BUFFER_HPP__
 
 #include <vector>
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 
 namespace cv
 {

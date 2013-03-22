@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 #if defined HAVE_GTK  || defined HAVE_QT || defined WIN32 || defined _WIN32 || defined HAVE_CARBON || defined HAVE_COCOA
 
@@ -58,6 +58,9 @@ void Foo(int /*k*/, void* /*z*/) {}
 
 void CV_HighGuiOnlyGuiTest::run( int /*start_from */)
 {
+    ts->printf(ts->LOG, "GUI 0\n");
+    cvDestroyAllWindows();
+
     ts->printf(ts->LOG, "GUI 1\n");
     namedWindow("Win");
 

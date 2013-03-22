@@ -252,6 +252,11 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     _result.create(corrSize, CV_32F);
     Mat result = _result.getMat();
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (tegra::matchTemplate(img, templ, result, method))
+        return;
+#endif
+
     int cn = img.channels();
     crossCorr( img, templ, result, result.size(), result.type(), Point(0,0), 0, 0);
 
@@ -295,8 +300,8 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         }
 
         templSum2 /= invArea;
-        templNorm = sqrt(templNorm);
-        templNorm /= sqrt(invArea); // care of accuracy here
+        templNorm = std::sqrt(templNorm);
+        templNorm /= std::sqrt(invArea); // care of accuracy here
 
         q0 = (double*)sqsum.data;
         q1 = q0 + templ.cols*cn;
@@ -346,12 +351,15 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
                 }
 
                 if( numType == 2 )
+                {
                     num = wndSum2 - 2*num + templSum2;
+                    num = MAX(num, 0.);
+                }
             }
 
             if( isNormed )
             {
-                t = sqrt(MAX(wndSum2 - wndMean2,0))*templNorm;
+                t = std::sqrt(MAX(wndSum2 - wndMean2,0))*templNorm;
                 if( fabs(num) < t )
                     num /= t;
                 else if( fabs(num) < t*1.125 )

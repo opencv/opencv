@@ -1,5 +1,6 @@
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <stdio.h>
 
@@ -39,7 +40,7 @@ int main( int argc, const char** argv )
     help();
 
     CommandLineParser parser(argc, argv, keys);
-    string filename = parser.get<string>(1);
+    string filename = parser.get<string>(0);
 
     image = imread(filename, 1);
     if(image.empty())

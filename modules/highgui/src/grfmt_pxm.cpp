@@ -107,7 +107,7 @@ size_t PxMDecoder::signatureLength() const
     return 3;
 }
 
-bool PxMDecoder::checkSignature( const string& signature ) const
+bool PxMDecoder::checkSignature( const std::string& signature ) const
 {
     return signature.size() >= 3 && signature[0] == 'P' &&
            '1' <= signature[1] && signature[1] <= '6' &&
@@ -202,9 +202,9 @@ bool  PxMDecoder::readData( Mat& img )
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
 
-    AutoBuffer<uchar,1024> _src(src_pitch + 32);
+    AutoBuffer<uchar> _src(src_pitch + 32);
     uchar* src = _src;
-    AutoBuffer<uchar,1024> _gray_palette;
+    AutoBuffer<uchar> _gray_palette;
     uchar* gray_palette = _gray_palette;
 
     // create LUT for converting colors
@@ -367,7 +367,7 @@ bool  PxMEncoder::isFormatSupported( int depth ) const
 }
 
 
-bool  PxMEncoder::write( const Mat& img, const vector<int>& params )
+bool  PxMEncoder::write( const Mat& img, const std::vector<int>& params )
 {
     bool isBinary = true;
 

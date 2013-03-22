@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace cv::detail;
 
@@ -50,7 +49,7 @@ namespace {
 
 struct IncDistance
 {
-    IncDistance(vector<int> &vdists) : dists(&vdists[0]) {}
+    IncDistance(std::vector<int> &vdists) : dists(&vdists[0]) {}
     void operator ()(const GraphEdge &edge) { dists[edge.to] = dists[edge.from] + 1; }
     int* dists;
 };
@@ -58,7 +57,7 @@ struct IncDistance
 
 struct CalcRotation
 {
-    CalcRotation(int _num_images, const vector<MatchesInfo> &_pairwise_matches, vector<CameraParams> &_cameras)
+    CalcRotation(int _num_images, const std::vector<MatchesInfo> &_pairwise_matches, std::vector<CameraParams> &_cameras)
         : num_images(_num_images), pairwise_matches(&_pairwise_matches[0]), cameras(&_cameras[0]) {}
 
     void operator ()(const GraphEdge &edge)
@@ -101,8 +100,8 @@ void calcDeriv(const Mat &err1, const Mat &err2, double h, Mat res)
 namespace cv {
 namespace detail {
 
-void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches,
-                                        vector<CameraParams> &cameras)
+void HomographyBasedEstimator::estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
+                                        std::vector<CameraParams> &cameras)
 {
     LOGLN("Estimating rotations...");
 #if ENABLE_LOG
@@ -113,11 +112,11 @@ void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, c
 
 #if 0
     // Robustly estimate focal length from rotating cameras
-    vector<Mat> Hs;
+    std::vector<Mat> Hs;
     for (int iter = 0; iter < 100; ++iter)
     {
         int len = 2 + rand()%(pairwise_matches.size() - 1);
-        vector<int> subset;
+        std::vector<int> subset;
         selectRandomSubset(len, pairwise_matches.size(), subset);
         Hs.clear();
         for (size_t i = 0; i < subset.size(); ++i)
@@ -135,7 +134,7 @@ void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, c
     if (!is_focals_estimated_)
     {
         // Estimate focal length and set it for all cameras
-        vector<double> focals;
+        std::vector<double> focals;
         estimateFocal(features, pairwise_matches, focals);
         cameras.assign(num_images, CameraParams());
         for (int i = 0; i < num_images; ++i)
@@ -152,7 +151,7 @@ void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, c
 
     // Restore global motion
     Graph span_tree;
-    vector<int> span_tree_centers;
+    std::vector<int> span_tree_centers;
     findMaxSpanningTree(num_images, pairwise_matches, span_tree, span_tree_centers);
     span_tree.walkBreadthFirst(span_tree_centers[0], CalcRotation(num_images, pairwise_matches, cameras));
 
@@ -169,9 +168,9 @@ void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, c
 
 //////////////////////////////////////////////////////////////////////////////
 
-void BundleAdjusterBase::estimate(const vector<ImageFeatures> &features,
-                                  const vector<MatchesInfo> &pairwise_matches,
-                                  vector<CameraParams> &cameras)
+void BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
+                                  const std::vector<MatchesInfo> &pairwise_matches,
+                                  std::vector<CameraParams> &cameras)
 {
     LOG_CHAT("Bundle adjustment");
 #if ENABLE_LOG
@@ -192,7 +191,7 @@ void BundleAdjusterBase::estimate(const vector<ImageFeatures> &features,
         {
             const MatchesInfo& matches_info = pairwise_matches_[i * num_images_ + j];
             if (matches_info.confidence > conf_thresh_)
-                edges_.push_back(make_pair(i, j));
+                edges_.push_back(std::make_pair(i, j));
         }
     }
 
@@ -242,14 +241,14 @@ void BundleAdjusterBase::estimate(const vector<ImageFeatures> &features,
     }
 
     LOGLN_CHAT("");
-    LOGLN_CHAT("Bundle adjustment, final RMS error: " << sqrt(err.dot(err) / total_num_matches_));
+    LOGLN_CHAT("Bundle adjustment, final RMS error: " << std::sqrt(err.dot(err) / total_num_matches_));
     LOGLN_CHAT("Bundle adjustment, iterations done: " << iter);
 
     obtainRefinedCameraParams(cameras);
 
     // Normalize motion to center image
     Graph span_tree;
-    vector<int> span_tree_centers;
+    std::vector<int> span_tree_centers;
     findMaxSpanningTree(num_images_, pairwise_matches, span_tree, span_tree_centers);
     Mat R_inv = cameras[span_tree_centers[0]].R.inv();
     for (int i = 0; i < num_images_; ++i)
@@ -261,7 +260,7 @@ void BundleAdjusterBase::estimate(const vector<ImageFeatures> &features,
 
 //////////////////////////////////////////////////////////////////////////////
 
-void BundleAdjusterReproj::setUpInitialCameraParams(const vector<CameraParams> &cameras)
+void BundleAdjusterReproj::setUpInitialCameraParams(const std::vector<CameraParams> &cameras)
 {
     cam_params_.create(num_images_ * 7, 1, CV_64F);
     SVD svd;
@@ -287,7 +286,7 @@ void BundleAdjusterReproj::setUpInitialCameraParams(const vector<CameraParams> &
 }
 
 
-void BundleAdjusterReproj::obtainRefinedCameraParams(vector<CameraParams> &cameras) const
+void BundleAdjusterReproj::obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const
 {
     for (int i = 0; i < num_images_; ++i)
     {
@@ -442,7 +441,7 @@ void BundleAdjusterReproj::calcJacobian(Mat &jac)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void BundleAdjusterRay::setUpInitialCameraParams(const vector<CameraParams> &cameras)
+void BundleAdjusterRay::setUpInitialCameraParams(const std::vector<CameraParams> &cameras)
 {
     cam_params_.create(num_images_ * 4, 1, CV_64F);
     SVD svd;
@@ -465,7 +464,7 @@ void BundleAdjusterRay::setUpInitialCameraParams(const vector<CameraParams> &cam
 }
 
 
-void BundleAdjusterRay::obtainRefinedCameraParams(vector<CameraParams> &cameras) const
+void BundleAdjusterRay::obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const
 {
     for (int i = 0; i < num_images_; ++i)
     {
@@ -537,17 +536,17 @@ void BundleAdjusterRay::calcError(Mat &err)
             double x1 = H1(0,0)*p1.x + H1(0,1)*p1.y + H1(0,2);
             double y1 = H1(1,0)*p1.x + H1(1,1)*p1.y + H1(1,2);
             double z1 = H1(2,0)*p1.x + H1(2,1)*p1.y + H1(2,2);
-            double len = sqrt(x1*x1 + y1*y1 + z1*z1);
+            double len = std::sqrt(x1*x1 + y1*y1 + z1*z1);
             x1 /= len; y1 /= len; z1 /= len;
 
             Point2f p2 = features2.keypoints[m.trainIdx].pt;
             double x2 = H2(0,0)*p2.x + H2(0,1)*p2.y + H2(0,2);
             double y2 = H2(1,0)*p2.x + H2(1,1)*p2.y + H2(1,2);
             double z2 = H2(2,0)*p2.x + H2(2,1)*p2.y + H2(2,2);
-            len = sqrt(x2*x2 + y2*y2 + z2*z2);
+            len = std::sqrt(x2*x2 + y2*y2 + z2*z2);
             x2 /= len; y2 /= len; z2 /= len;
 
-            double mult = sqrt(f1 * f2);
+            double mult = std::sqrt(f1 * f2);
             err.at<double>(3 * match_idx, 0) = mult * (x1 - x2);
             err.at<double>(3 * match_idx + 1, 0) = mult * (y1 - y2);
             err.at<double>(3 * match_idx + 2, 0) = mult * (z1 - z2);
@@ -583,7 +582,7 @@ void BundleAdjusterRay::calcJacobian(Mat &jac)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void waveCorrect(vector<Mat> &rmats, WaveCorrectKind kind)
+void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
 {
     LOGLN("Wave correcting...");
 #if ENABLE_LOG
@@ -654,14 +653,14 @@ void waveCorrect(vector<Mat> &rmats, WaveCorrectKind kind)
 
 //////////////////////////////////////////////////////////////////////////////
 
-string matchesGraphAsString(vector<string> &pathes, vector<MatchesInfo> &pairwise_matches,
+std::string matchesGraphAsString(std::vector<std::string> &pathes, std::vector<MatchesInfo> &pairwise_matches,
                                 float conf_threshold)
 {
-    stringstream str;
+    std::stringstream str;
     str << "graph matches_graph{\n";
 
     const int num_images = static_cast<int>(pathes.size());
-    set<pair<int,int> > span_tree_edges;
+    std::set<std::pair<int,int> > span_tree_edges;
     DisjointSets comps(num_images);
 
     for (int i = 0; i < num_images; ++i)
@@ -675,25 +674,25 @@ string matchesGraphAsString(vector<string> &pathes, vector<MatchesInfo> &pairwis
             if (comp1 != comp2)
             {
                 comps.mergeSets(comp1, comp2);
-                span_tree_edges.insert(make_pair(i, j));
+                span_tree_edges.insert(std::make_pair(i, j));
             }
         }
     }
 
-    for (set<pair<int,int> >::const_iterator itr = span_tree_edges.begin();
+    for (std::set<std::pair<int,int> >::const_iterator itr = span_tree_edges.begin();
          itr != span_tree_edges.end(); ++itr)
     {
-        pair<int,int> edge = *itr;
+        std::pair<int,int> edge = *itr;
         if (span_tree_edges.find(edge) != span_tree_edges.end())
         {
-            string name_src = pathes[edge.first];
+            std::string name_src = pathes[edge.first];
             size_t prefix_len = name_src.find_last_of("/\\");
-            if (prefix_len != string::npos) prefix_len++; else prefix_len = 0;
+            if (prefix_len != std::string::npos) prefix_len++; else prefix_len = 0;
             name_src = name_src.substr(prefix_len, name_src.size() - prefix_len);
 
-            string name_dst = pathes[edge.second];
+            std::string name_dst = pathes[edge.second];
             prefix_len = name_dst.find_last_of("/\\");
-            if (prefix_len != string::npos) prefix_len++; else prefix_len = 0;
+            if (prefix_len != std::string::npos) prefix_len++; else prefix_len = 0;
             name_dst = name_dst.substr(prefix_len, name_dst.size() - prefix_len);
 
             int pos = edge.first*num_images + edge.second;
@@ -708,9 +707,9 @@ string matchesGraphAsString(vector<string> &pathes, vector<MatchesInfo> &pairwis
     {
         if (comps.size[comps.findSetByElem((int)i)] == 1)
         {
-            string name = pathes[i];
+            std::string name = pathes[i];
             size_t prefix_len = name.find_last_of("/\\");
-            if (prefix_len != string::npos) prefix_len++; else prefix_len = 0;
+            if (prefix_len != std::string::npos) prefix_len++; else prefix_len = 0;
             name = name.substr(prefix_len, name.size() - prefix_len);
             str << "\"" << name << "\";\n";
         }
@@ -720,7 +719,7 @@ string matchesGraphAsString(vector<string> &pathes, vector<MatchesInfo> &pairwis
     return str.str();
 }
 
-vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<MatchesInfo> &pairwise_matches,
+std::vector<int> leaveBiggestComponent(std::vector<ImageFeatures> &features,  std::vector<MatchesInfo> &pairwise_matches,
                                       float conf_threshold)
 {
     const int num_images = static_cast<int>(features.size());
@@ -739,18 +738,18 @@ vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<Match
         }
     }
 
-    int max_comp = static_cast<int>(max_element(comps.size.begin(), comps.size.end()) - comps.size.begin());
+    int max_comp = static_cast<int>(std::max_element(comps.size.begin(), comps.size.end()) - comps.size.begin());
 
-    vector<int> indices;
-    vector<int> indices_removed;
+    std::vector<int> indices;
+    std::vector<int> indices_removed;
     for (int i = 0; i < num_images; ++i)
         if (comps.findSetByElem(i) == max_comp)
             indices.push_back(i);
         else
             indices_removed.push_back(i);
 
-    vector<ImageFeatures> features_subset;
-    vector<MatchesInfo> pairwise_matches_subset;
+    std::vector<ImageFeatures> features_subset;
+    std::vector<MatchesInfo> pairwise_matches_subset;
     for (size_t i = 0; i < indices.size(); ++i)
     {
         features_subset.push_back(features[indices[i]]);
@@ -779,11 +778,11 @@ vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<Match
 }
 
 
-void findMaxSpanningTree(int num_images, const vector<MatchesInfo> &pairwise_matches,
-                             Graph &span_tree, vector<int> &centers)
+void findMaxSpanningTree(int num_images, const std::vector<MatchesInfo> &pairwise_matches,
+                             Graph &span_tree, std::vector<int> &centers)
 {
     Graph graph(num_images);
-    vector<GraphEdge> edges;
+    std::vector<GraphEdge> edges;
 
     // Construct images graph and remember its edges
     for (int i = 0; i < num_images; ++i)
@@ -800,10 +799,10 @@ void findMaxSpanningTree(int num_images, const vector<MatchesInfo> &pairwise_mat
 
     DisjointSets comps(num_images);
     span_tree.create(num_images);
-    vector<int> span_tree_powers(num_images, 0);
+    std::vector<int> span_tree_powers(num_images, 0);
 
     // Find maximum spanning tree
-    sort(edges.begin(), edges.end(), greater<GraphEdge>());
+    sort(edges.begin(), edges.end(), std::greater<GraphEdge>());
     for (size_t i = 0; i < edges.size(); ++i)
     {
         int comp1 = comps.findSetByElem(edges[i].from);
@@ -819,20 +818,20 @@ void findMaxSpanningTree(int num_images, const vector<MatchesInfo> &pairwise_mat
     }
 
     // Find spanning tree leafs
-    vector<int> span_tree_leafs;
+    std::vector<int> span_tree_leafs;
     for (int i = 0; i < num_images; ++i)
         if (span_tree_powers[i] == 1)
             span_tree_leafs.push_back(i);
 
     // Find maximum distance from each spanning tree vertex
-    vector<int> max_dists(num_images, 0);
-    vector<int> cur_dists;
+    std::vector<int> max_dists(num_images, 0);
+    std::vector<int> cur_dists;
     for (size_t i = 0; i < span_tree_leafs.size(); ++i)
     {
         cur_dists.assign(num_images, 0);
         span_tree.walkBreadthFirst(span_tree_leafs[i], IncDistance(cur_dists));
         for (int j = 0; j < num_images; ++j)
-            max_dists[j] = max(max_dists[j], cur_dists[j]);
+            max_dists[j] = std::max(max_dists[j], cur_dists[j]);
     }
 
     // Find min-max distance

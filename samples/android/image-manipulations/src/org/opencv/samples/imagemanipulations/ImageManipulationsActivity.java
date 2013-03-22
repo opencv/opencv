@@ -3,6 +3,7 @@ package org.opencv.samples.imagemanipulations;
 import java.util.Arrays;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
@@ -14,7 +15,7 @@ import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 import org.opencv.imgproc.Imgproc;
 
 import android.app.Activity;
@@ -24,7 +25,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
 
-public class ImageManipulationsActivity extends Activity implements CvCameraViewListener {
+public class ImageManipulationsActivity extends Activity implements CvCameraViewListener2 {
     private static final String  TAG                 = "OCVSample::Activity";
 
     public static final int      VIEW_MODE_RGBA      = 0;
@@ -67,7 +68,6 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
     private float                mBuff[];
     private Mat                  mRgbaInnerWindow;
     private Mat                  mGrayInnerWindow;
-    private Mat                  mBlurWindow;
     private Mat                  mZoomWindow;
     private Mat                  mZoomCorner;
     private Mat                  mSepiaKernel;
@@ -111,9 +111,9 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
     @Override
     public void onPause()
     {
+        super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-        super.onPause();
     }
 
     @Override
@@ -219,9 +219,6 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
         if (mGrayInnerWindow == null && !mGray.empty())
             mGrayInnerWindow = mGray.submat(top, top + height, left, left + width);
 
-        if (mBlurWindow == null)
-            mBlurWindow = mRgba.submat(0, rows, cols / 3, cols * 2 / 3);
-
         if (mZoomCorner == null)
             mZoomCorner = mRgba.submat(0, rows / 2 - rows / 10, 0, cols / 2 - cols / 10);
 
@@ -235,8 +232,6 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
             mZoomWindow.release();
         if (mZoomCorner != null)
             mZoomCorner.release();
-        if (mBlurWindow != null)
-            mBlurWindow.release();
         if (mGrayInnerWindow != null)
             mGrayInnerWindow.release();
         if (mRgbaInnerWindow != null)
@@ -253,13 +248,12 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
         mIntermediateMat = null;
         mRgbaInnerWindow = null;
         mGrayInnerWindow = null;
-        mBlurWindow = null;
         mZoomCorner = null;
         mZoomWindow = null;
     }
 
-    public Mat onCameraFrame(Mat inputFrame) {
-        inputFrame.copyTo(mRgba);
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+        mRgba = inputFrame.rgba();
 
         switch (ImageManipulationsActivity.viewMode) {
         case ImageManipulationsActivity.VIEW_MODE_RGBA:
@@ -315,7 +309,7 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_SOBEL:
-            Imgproc.cvtColor(mRgba, mGray, Imgproc.COLOR_RGBA2GRAY);
+            mGray = inputFrame.gray();
 
             if ((mRgbaInnerWindow == null) || (mGrayInnerWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
                 CreateAuxiliaryMats();
@@ -326,7 +320,9 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_SEPIA:
-            Core.transform(mRgba, mRgba, mSepiaKernel);
+            if ((mRgbaInnerWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
+                CreateAuxiliaryMats();
+            Core.transform(mRgbaInnerWindow, mRgbaInnerWindow, mSepiaKernel);
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_ZOOM:

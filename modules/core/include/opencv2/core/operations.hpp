@@ -51,46 +51,6 @@
 
 #ifdef __cplusplus
 
-/////// exchange-add operation for atomic operations on reference counters ///////
-#if defined __INTEL_COMPILER && !(defined WIN32 || defined _WIN32)   // atomic increment on the linux version of the Intel(tm) compiler
-  #define CV_XADD(addr,delta) _InterlockedExchangeAdd(const_cast<void*>(reinterpret_cast<volatile void*>(addr)), delta)
-#elif defined __GNUC__
-
-  #if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__
-    #ifdef __ATOMIC_SEQ_CST
-        #define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), (delta), __ATOMIC_SEQ_CST)
-    #else
-        #define CV_XADD(addr, delta) __atomic_fetch_add((_Atomic(int)*)(addr), (delta), 5)
-    #endif
-  #elif __GNUC__*10 + __GNUC_MINOR__ >= 42
-
-    #if !(defined WIN32 || defined _WIN32) && (defined __i486__ || defined __i586__ || \
-        defined __i686__ || defined __MMX__ || defined __SSE__  || defined __ppc__) || \
-        (defined __GNUC__ && defined _STLPORT_MAJOR)
-      #define CV_XADD __sync_fetch_and_add
-    #else
-      #include <ext/atomicity.h>
-      #define CV_XADD __gnu_cxx::__exchange_and_add
-    #endif
-
-  #else
-    #include <bits/atomicity.h>
-    #if __GNUC__*10 + __GNUC_MINOR__ >= 34
-      #define CV_XADD __gnu_cxx::__exchange_and_add
-    #else
-      #define CV_XADD __exchange_and_add
-    #endif
-  #endif
-
-#elif defined WIN32 || defined _WIN32 || defined WINCE
-  namespace cv { CV_EXPORTS int _interlockedExchangeAdd(int* addr, int delta); }
-  #define CV_XADD cv::_interlockedExchangeAdd
-
-#else
-  static inline int CV_XADD(int* addr, int delta)
-  { int tmp = *addr; *addr += delta; return tmp; }
-#endif
-
 #include <limits>
 
 #ifdef _MSC_VER
@@ -100,16 +60,6 @@
 
 namespace cv
 {
-
-using std::cos;
-using std::sin;
-using std::max;
-using std::min;
-using std::exp;
-using std::log;
-using std::pow;
-using std::sqrt;
-
 
 /////////////// saturate_cast (used in image & signal processing) ///////////////////
 
@@ -716,12 +666,12 @@ template<typename _Tp, int m> struct CV_EXPORTS Matx_DetOp
     double operator ()(const Matx<_Tp, m, m>& a) const
     {
         Matx<_Tp, m, m> temp = a;
-        double p = LU(temp.val, m, m, 0, 0, 0);
+        double p = LU(temp.val, m*sizeof(_Tp), m, 0, 0, 0);
         if( p == 0 )
             return p;
         for( int i = 0; i < m; i++ )
             p *= temp(i, i);
-        return p;
+        return 1./p;
     }
 };
 
@@ -2532,53 +2482,6 @@ inline Point LineIterator::pos() const
     return p;
 }
 
-/////////////////////////////// AutoBuffer ////////////////////////////////////////
-
-template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::AutoBuffer()
-{
-    ptr = buf;
-    size = fixed_size;
-}
-
-template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::AutoBuffer(size_t _size)
-{
-    ptr = buf;
-    size = fixed_size;
-    allocate(_size);
-}
-
-template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::~AutoBuffer()
-{ deallocate(); }
-
-template<typename _Tp, size_t fixed_size> inline void AutoBuffer<_Tp, fixed_size>::allocate(size_t _size)
-{
-    if(_size <= size)
-        return;
-    deallocate();
-    if(_size > fixed_size)
-    {
-        ptr = cv::allocate<_Tp>(_size);
-        size = _size;
-    }
-}
-
-template<typename _Tp, size_t fixed_size> inline void AutoBuffer<_Tp, fixed_size>::deallocate()
-{
-    if( ptr != buf )
-    {
-        cv::deallocate<_Tp>(ptr, size);
-        ptr = buf;
-        size = fixed_size;
-    }
-}
-
-template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::operator _Tp* ()
-{ return ptr; }
-
-template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::operator const _Tp* () const
-{ return ptr; }
-
-
 /////////////////////////////////// Ptr ////////////////////////////////////////
 
 template<typename _Tp> inline Ptr<_Tp>::Ptr() : obj(0), refcount(0) {}
@@ -2691,10 +2594,11 @@ template<typename _Tp> template<typename _Tp2> inline const Ptr<_Tp2> Ptr<_Tp>::
     return p;
 }
 
-template<typename _Tp> inline bool Ptr<_Tp>::operator==(const Ptr<_Tp>& _ptr) const
-{
-    return refcount == _ptr.refcount;
-}
+template<class _Tp, class _Tp2> inline bool operator==(const Ptr<_Tp>& a, const Ptr<_Tp2>& b) { return a.refcount == b.refcount; }
+template<class _Tp, class _Tp2> inline bool operator!=(const Ptr<_Tp>& a, const Ptr<_Tp2>& b) { return a.refcount != b.refcount; }
+
+
+
 
 //// specializied implementations of Ptr::delete_obj() for classic OpenCV types
 
@@ -2707,18 +2611,18 @@ template<> CV_EXPORTS void Ptr<CvFileStorage>::delete_obj();
 
 //////////////////////////////////////// XML & YAML I/O ////////////////////////////////////
 
-CV_EXPORTS_W void write( FileStorage& fs, const string& name, int value );
-CV_EXPORTS_W void write( FileStorage& fs, const string& name, float value );
-CV_EXPORTS_W void write( FileStorage& fs, const string& name, double value );
-CV_EXPORTS_W void write( FileStorage& fs, const string& name, const string& value );
+CV_EXPORTS_W void write( FileStorage& fs, const std::string& name, int value );
+CV_EXPORTS_W void write( FileStorage& fs, const std::string& name, float value );
+CV_EXPORTS_W void write( FileStorage& fs, const std::string& name, double value );
+CV_EXPORTS_W void write( FileStorage& fs, const std::string& name, const std::string& value );
 
 template<typename _Tp> inline void write(FileStorage& fs, const _Tp& value)
-{ write(fs, string(), value); }
+{ write(fs, std::string(), value); }
 
 CV_EXPORTS void writeScalar( FileStorage& fs, int value );
 CV_EXPORTS void writeScalar( FileStorage& fs, float value );
 CV_EXPORTS void writeScalar( FileStorage& fs, double value );
-CV_EXPORTS void writeScalar( FileStorage& fs, const string& value );
+CV_EXPORTS void writeScalar( FileStorage& fs, const std::string& value );
 
 template<> inline void write( FileStorage& fs, const int& value )
 {
@@ -2735,7 +2639,7 @@ template<> inline void write( FileStorage& fs, const double& value )
     writeScalar(fs, value);
 }
 
-template<> inline void write( FileStorage& fs, const string& value )
+template<> inline void write( FileStorage& fs, const std::string& value )
 {
     writeScalar(fs, value);
 }
@@ -2796,20 +2700,20 @@ inline void write(FileStorage& fs, const Range& r )
 class CV_EXPORTS WriteStructContext
 {
 public:
-    WriteStructContext(FileStorage& _fs, const string& name,
-        int flags, const string& typeName=string());
+    WriteStructContext(FileStorage& _fs, const std::string& name,
+        int flags, const std::string& typeName=std::string());
     ~WriteStructContext();
     FileStorage* fs;
 };
 
-template<typename _Tp> inline void write(FileStorage& fs, const string& name, const Point_<_Tp>& pt )
+template<typename _Tp> inline void write(FileStorage& fs, const std::string& name, const Point_<_Tp>& pt )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     write(fs, pt.x);
     write(fs, pt.y);
 }
 
-template<typename _Tp> inline void write(FileStorage& fs, const string& name, const Point3_<_Tp>& pt )
+template<typename _Tp> inline void write(FileStorage& fs, const std::string& name, const Point3_<_Tp>& pt )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     write(fs, pt.x);
@@ -2817,21 +2721,21 @@ template<typename _Tp> inline void write(FileStorage& fs, const string& name, co
     write(fs, pt.z);
 }
 
-template<typename _Tp> inline void write(FileStorage& fs, const string& name, const Size_<_Tp>& sz )
+template<typename _Tp> inline void write(FileStorage& fs, const std::string& name, const Size_<_Tp>& sz )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     write(fs, sz.width);
     write(fs, sz.height);
 }
 
-template<typename _Tp> inline void write(FileStorage& fs, const string& name, const Complex<_Tp>& c )
+template<typename _Tp> inline void write(FileStorage& fs, const std::string& name, const Complex<_Tp>& c )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     write(fs, c.re);
     write(fs, c.im);
 }
 
-template<typename _Tp> inline void write(FileStorage& fs, const string& name, const Rect_<_Tp>& r )
+template<typename _Tp> inline void write(FileStorage& fs, const std::string& name, const Rect_<_Tp>& r )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     write(fs, r.x);
@@ -2840,14 +2744,14 @@ template<typename _Tp> inline void write(FileStorage& fs, const string& name, co
     write(fs, r.height);
 }
 
-template<typename _Tp, int cn> inline void write(FileStorage& fs, const string& name, const Vec<_Tp, cn>& v )
+template<typename _Tp, int cn> inline void write(FileStorage& fs, const std::string& name, const Vec<_Tp, cn>& v )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     for(int i = 0; i < cn; i++)
         write(fs, v.val[i]);
 }
 
-template<typename _Tp> inline void write(FileStorage& fs, const string& name, const Scalar_<_Tp>& s )
+template<typename _Tp> inline void write(FileStorage& fs, const std::string& name, const Scalar_<_Tp>& s )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     write(fs, s.val[0]);
@@ -2856,7 +2760,7 @@ template<typename _Tp> inline void write(FileStorage& fs, const string& name, co
     write(fs, s.val[3]);
 }
 
-inline void write(FileStorage& fs, const string& name, const Range& r )
+inline void write(FileStorage& fs, const std::string& name, const Range& r )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
     write(fs, r.start);
@@ -2867,7 +2771,7 @@ template<typename _Tp, int numflag> class CV_EXPORTS VecWriterProxy
 {
 public:
     VecWriterProxy( FileStorage* _fs ) : fs(_fs) {}
-    void operator()(const vector<_Tp>& vec) const
+    void operator()(const std::vector<_Tp>& vec) const
     {
         size_t i, count = vec.size();
         for( i = 0; i < count; i++ )
@@ -2880,30 +2784,30 @@ template<typename _Tp> class CV_EXPORTS VecWriterProxy<_Tp,1>
 {
 public:
     VecWriterProxy( FileStorage* _fs ) : fs(_fs) {}
-    void operator()(const vector<_Tp>& vec) const
+    void operator()(const std::vector<_Tp>& vec) const
     {
         int _fmt = DataType<_Tp>::fmt;
         char fmt[] = { (char)((_fmt>>8)+'1'), (char)_fmt, '\0' };
-        fs->writeRaw( string(fmt), !vec.empty() ? (uchar*)&vec[0] : 0, vec.size()*sizeof(_Tp) );
+        fs->writeRaw( std::string(fmt), !vec.empty() ? (uchar*)&vec[0] : 0, vec.size()*sizeof(_Tp) );
     }
     FileStorage* fs;
 };
 
-template<typename _Tp> static inline void write( FileStorage& fs, const vector<_Tp>& vec )
+template<typename _Tp> static inline void write( FileStorage& fs, const std::vector<_Tp>& vec )
 {
     VecWriterProxy<_Tp, DataType<_Tp>::fmt != 0> w(&fs);
     w(vec);
 }
 
-template<typename _Tp> static inline void write( FileStorage& fs, const string& name,
-                                                const vector<_Tp>& vec )
+template<typename _Tp> static inline void write( FileStorage& fs, const std::string& name,
+                                                const std::vector<_Tp>& vec )
 {
     WriteStructContext ws(fs, name, CV_NODE_SEQ+(DataType<_Tp>::fmt != 0 ? CV_NODE_FLOW : 0));
     write(fs, vec);
 }
 
-CV_EXPORTS_W void write( FileStorage& fs, const string& name, const Mat& value );
-CV_EXPORTS void write( FileStorage& fs, const string& name, const SparseMat& value );
+CV_EXPORTS_W void write( FileStorage& fs, const std::string& name, const Mat& value );
+CV_EXPORTS void write( FileStorage& fs, const std::string& name, const SparseMat& value );
 
 template<typename _Tp> static inline FileStorage& operator << (FileStorage& fs, const _Tp& value)
 {
@@ -2917,10 +2821,10 @@ template<typename _Tp> static inline FileStorage& operator << (FileStorage& fs, 
     return fs;
 }
 
-CV_EXPORTS FileStorage& operator << (FileStorage& fs, const string& str);
+CV_EXPORTS FileStorage& operator << (FileStorage& fs, const std::string& str);
 
 static inline FileStorage& operator << (FileStorage& fs, const char* str)
-{ return (fs << string(str)); }
+{ return (fs << std::string(str)); }
 
 inline FileNode::FileNode() : fs(0), node(0) {}
 inline FileNode::FileNode(const CvFileStorage* _fs, const CvFileNode* _node)
@@ -2998,9 +2902,9 @@ static inline void read(const FileNode& node, double& value, double default_valu
         CV_NODE_IS_REAL(node.node->tag) ? node.node->data.f : 1e300;
 }
 
-static inline void read(const FileNode& node, string& value, const string& default_value)
+static inline void read(const FileNode& node, std::string& value, const std::string& default_value)
 {
-    value = !node.node ? default_value : CV_NODE_IS_STRING(node.node->tag) ? string(node.node->data.str.ptr) : string("");
+    value = !node.node ? default_value : CV_NODE_IS_STRING(node.node->tag) ? std::string(node.node->data.str.ptr) : std::string("");
 }
 
 CV_EXPORTS_W void read(const FileNode& node, Mat& mat, const Mat& default_mat=Mat() );
@@ -3024,14 +2928,14 @@ inline FileNode::operator double() const
     read(*this, value, 0.);
     return value;
 }
-inline FileNode::operator string() const
+inline FileNode::operator std::string() const
 {
-    string value;
+    std::string value;
     read(*this, value, value);
     return value;
 }
 
-inline void FileNode::readRaw( const string& fmt, uchar* vec, size_t len ) const
+inline void FileNode::readRaw( const std::string& fmt, uchar* vec, size_t len ) const
 {
     begin().readRaw( fmt, vec, len );
 }
@@ -3040,7 +2944,7 @@ template<typename _Tp, int numflag> class CV_EXPORTS VecReaderProxy
 {
 public:
     VecReaderProxy( FileNodeIterator* _it ) : it(_it) {}
-    void operator()(vector<_Tp>& vec, size_t count) const
+    void operator()(std::vector<_Tp>& vec, size_t count) const
     {
         count = std::min(count, it->remaining);
         vec.resize(count);
@@ -3054,7 +2958,7 @@ template<typename _Tp> class CV_EXPORTS VecReaderProxy<_Tp,1>
 {
 public:
     VecReaderProxy( FileNodeIterator* _it ) : it(_it) {}
-    void operator()(vector<_Tp>& vec, size_t count) const
+    void operator()(std::vector<_Tp>& vec, size_t count) const
     {
         size_t remaining = it->remaining, cn = DataType<_Tp>::channels;
         int _fmt = DataType<_Tp>::fmt;
@@ -3062,20 +2966,20 @@ public:
         size_t remaining1 = remaining/cn;
         count = count < remaining1 ? count : remaining1;
         vec.resize(count);
-        it->readRaw( string(fmt), !vec.empty() ? (uchar*)&vec[0] : 0, count*sizeof(_Tp) );
+        it->readRaw( std::string(fmt), !vec.empty() ? (uchar*)&vec[0] : 0, count*sizeof(_Tp) );
     }
     FileNodeIterator* it;
 };
 
 template<typename _Tp> static inline void
-read( FileNodeIterator& it, vector<_Tp>& vec, size_t maxCount=(size_t)INT_MAX )
+read( FileNodeIterator& it, std::vector<_Tp>& vec, size_t maxCount=(size_t)INT_MAX )
 {
     VecReaderProxy<_Tp, DataType<_Tp>::fmt != 0> r(&it);
     r(vec, maxCount);
 }
 
 template<typename _Tp> static inline void
-read( const FileNode& node, vector<_Tp>& vec, const vector<_Tp>& default_value=vector<_Tp>() )
+read( const FileNode& node, std::vector<_Tp>& vec, const std::vector<_Tp>& default_value=std::vector<_Tp>() )
 {
     if(!node.node)
         vec = default_value;
@@ -3106,7 +3010,7 @@ template<typename _Tp> static inline FileNodeIterator& operator >> (FileNodeIter
 { read( *it, value, _Tp()); return ++it; }
 
 template<typename _Tp> static inline
-FileNodeIterator& operator >> (FileNodeIterator& it, vector<_Tp>& vec)
+FileNodeIterator& operator >> (FileNodeIterator& it, std::vector<_Tp>& vec)
 {
     VecReaderProxy<_Tp, DataType<_Tp>::fmt != 0> r(&it);
     r(vec, (size_t)INT_MAX);
@@ -3116,7 +3020,7 @@ FileNodeIterator& operator >> (FileNodeIterator& it, vector<_Tp>& vec)
 template<typename _Tp> static inline void operator >> (const FileNode& n, _Tp& value)
 { read( n, value, _Tp()); }
 
-template<typename _Tp> static inline void operator >> (const FileNode& n, vector<_Tp>& vec)
+template<typename _Tp> static inline void operator >> (const FileNode& n, std::vector<_Tp>& vec)
 { FileNodeIterator it = n.begin(); it >> vec; }
 
 static inline bool operator == (const FileNodeIterator& it1, const FileNodeIterator& it2)
@@ -3202,7 +3106,7 @@ template<typename _Tp> static inline _Tp gcd(_Tp a, _Tp b)
 
 \****************************************************************************************/
 
-template<typename _Tp, class _LT> void sort( vector<_Tp>& vec, _LT LT=_LT() )
+template<typename _Tp, class _LT> void sort( std::vector<_Tp>& vec, _LT LT=_LT() )
 {
     int isort_thresh = 7;
     int sp = 0;
@@ -3400,7 +3304,7 @@ public:
 // The algorithm is described in "Introduction to Algorithms"
 // by Cormen, Leiserson and Rivest, the chapter "Data structures for disjoint sets"
 template<typename _Tp, class _EqPredicate> int
-partition( const vector<_Tp>& _vec, vector<int>& labels,
+partition( const std::vector<_Tp>& _vec, std::vector<int>& labels,
            _EqPredicate predicate=_EqPredicate())
 {
     int i, j, N = (int)_vec.size();
@@ -3409,7 +3313,7 @@ partition( const vector<_Tp>& _vec, vector<int>& labels,
     const int PARENT=0;
     const int RANK=1;
 
-    vector<int> _nodes(N*2);
+    std::vector<int> _nodes(N*2);
     int (*nodes)[2] = (int(*)[2])&_nodes[0];
 
     // The first O(N) pass: create N single-vertex trees
@@ -3605,7 +3509,7 @@ template<typename _Tp> inline void Seq<_Tp>::remove(int idx)
 template<typename _Tp> inline void Seq<_Tp>::remove(const Range& r)
 { seqRemoveSlice(seq, r); }
 
-template<typename _Tp> inline void Seq<_Tp>::copyTo(vector<_Tp>& vec, const Range& range) const
+template<typename _Tp> inline void Seq<_Tp>::copyTo(std::vector<_Tp>& vec, const Range& range) const
 {
     size_t len = !seq ? 0 : range == Range::all() ? seq->total : range.end - range.start;
     vec.resize(len);
@@ -3613,9 +3517,9 @@ template<typename _Tp> inline void Seq<_Tp>::copyTo(vector<_Tp>& vec, const Rang
         cvCvtSeqToArray(seq, &vec[0], range);
 }
 
-template<typename _Tp> inline Seq<_Tp>::operator vector<_Tp>() const
+template<typename _Tp> inline Seq<_Tp>::operator std::vector<_Tp>() const
 {
-    vector<_Tp> vec;
+    std::vector<_Tp> vec;
     copyTo(vec);
     return vec;
 }
@@ -3753,7 +3657,7 @@ public:
         {
             FileStorage fs(_fs);
             fs.fs.addref();
-            ((const _ClsName*)ptr)->write(fs, string(name));
+            ((const _ClsName*)ptr)->write(fs, std::string(name));
         }
     }
 
@@ -3781,28 +3685,28 @@ public:
 struct CV_EXPORTS Formatted
 {
     Formatted(const Mat& m, const Formatter* fmt,
-              const vector<int>& params);
+              const std::vector<int>& params);
     Formatted(const Mat& m, const Formatter* fmt,
               const int* params=0);
     Mat mtx;
     const Formatter* fmt;
-    vector<int> params;
+    std::vector<int> params;
 };
 
 static inline Formatted format(const Mat& mtx, const char* fmt,
-                               const vector<int>& params=vector<int>())
+                               const std::vector<int>& params=std::vector<int>())
 {
     return Formatted(mtx, Formatter::get(fmt), params);
 }
 
-template<typename _Tp> static inline Formatted format(const vector<Point_<_Tp> >& vec,
-                                                      const char* fmt, const vector<int>& params=vector<int>())
+template<typename _Tp> static inline Formatted format(const std::vector<Point_<_Tp> >& vec,
+                                                      const char* fmt, const std::vector<int>& params=std::vector<int>())
 {
     return Formatted(Mat(vec), Formatter::get(fmt), params);
 }
 
-template<typename _Tp> static inline Formatted format(const vector<Point3_<_Tp> >& vec,
-                                                      const char* fmt, const vector<int>& params=vector<int>())
+template<typename _Tp> static inline Formatted format(const std::vector<Point3_<_Tp> >& vec,
+                                                      const char* fmt, const std::vector<int>& params=std::vector<int>())
 {
     return Formatted(Mat(vec), Formatter::get(fmt), params);
 }
@@ -3835,7 +3739,7 @@ static inline std::ostream& operator << (std::ostream& out, const Formatted& fmt
 
 
 template<typename _Tp> static inline std::ostream& operator << (std::ostream& out,
-                                                                const vector<Point_<_Tp> >& vec)
+                                                                const std::vector<Point_<_Tp> >& vec)
 {
     Formatter::get()->write(out, Mat(vec));
     return out;
@@ -3843,7 +3747,7 @@ template<typename _Tp> static inline std::ostream& operator << (std::ostream& ou
 
 
 template<typename _Tp> static inline std::ostream& operator << (std::ostream& out,
-                                                                const vector<Point3_<_Tp> >& vec)
+                                                                const std::vector<Point3_<_Tp> >& vec)
 {
     Formatter::get()->write(out, Mat(vec));
     return out;
@@ -3915,7 +3819,7 @@ template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const 
 }
 
 
-template<typename _Tp> inline Ptr<_Tp> Algorithm::create(const string& name)
+template<typename _Tp> inline Ptr<_Tp> Algorithm::create(const std::string& name)
 {
     return _create(name).ptr<_Tp>();
 }
@@ -3931,7 +3835,7 @@ inline void Algorithm::set(const char* _name, const Ptr<_Tp>& value)
 }
 
 template<typename _Tp>
-inline void Algorithm::set(const string& _name, const Ptr<_Tp>& value)
+inline void Algorithm::set(const std::string& _name, const Ptr<_Tp>& value)
 {
     this->set<_Tp>(_name.c_str(), value);
 }
@@ -3947,12 +3851,12 @@ inline void Algorithm::setAlgorithm(const char* _name, const Ptr<_Tp>& value)
 }
 
 template<typename _Tp>
-inline void Algorithm::setAlgorithm(const string& _name, const Ptr<_Tp>& value)
+inline void Algorithm::setAlgorithm(const std::string& _name, const Ptr<_Tp>& value)
 {
     this->set<_Tp>(_name.c_str(), value);
 }
 
-template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const string& _name) const
+template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const std::string& _name) const
 {
     typename ParamType<_Tp>::member_type value;
     info()->get(this, _name.c_str(), ParamType<_Tp>::type, &value);
@@ -3968,7 +3872,7 @@ template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::ge
 
 template<typename _Tp, typename _Base> inline void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                   Ptr<_Tp>& value, bool readOnly, Ptr<_Tp> (Algorithm::*getter)(), void (Algorithm::*setter)(const Ptr<_Tp>&),
-                  const string& help)
+                  const std::string& help)
 {
     //TODO: static assert: _Tp inherits from _Base
     addParam_(algo, parameter, ParamType<_Base>::type, &value, readOnly,
@@ -3977,7 +3881,7 @@ template<typename _Tp, typename _Base> inline void AlgorithmInfo::addParam(Algor
 
 template<typename _Tp> inline void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                   Ptr<_Tp>& value, bool readOnly, Ptr<_Tp> (Algorithm::*getter)(), void (Algorithm::*setter)(const Ptr<_Tp>&),
-                  const string& help)
+                  const std::string& help)
 {
     //TODO: static assert: _Tp inherits from Algorithm
     addParam_(algo, parameter, ParamType<Algorithm>::type, &value, readOnly,

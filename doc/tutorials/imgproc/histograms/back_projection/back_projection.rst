@@ -94,7 +94,7 @@ Code
         * Loads an image
         * Convert the original to HSV format and separate only *Hue* channel to be used for the Histogram (using the OpenCV function :mix_channels:`mixChannels <>`)
         * Let the user to enter the number of bins to be used in the calculation of the histogram.
-    * Calculate the histogram (and update it if the bins change) and the backprojection of the same image.
+        * Calculate the histogram (and update it if the bins change) and the backprojection of the same image.
         * Display the backprojection and the histogram in windows.
 
    * **Downloadable code**:
@@ -107,8 +107,8 @@ Code
 
 .. code-block:: cpp
 
-   #include "opencv2/imgproc/imgproc.hpp"
-   #include "opencv2/highgui/highgui.hpp"
+   #include "opencv2/imgproc.hpp"
+   #include "opencv2/highgui.hpp"
 
    #include <iostream>
 

@@ -43,8 +43,24 @@
 
 #ifdef HAVE_CUDA
 
+using namespace cvtest;
+
+#if defined(HAVE_XINE)         || \
+    defined(HAVE_GSTREAMER)    || \
+    defined(HAVE_QUICKTIME)    || \
+    defined(HAVE_AVFOUNDATION) || \
+    defined(HAVE_FFMPEG)       || \
+    defined(WIN32) /* assume that we have ffmpeg */
+
+#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
+#else
+#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
+#endif
+
 //////////////////////////////////////////////////////
 // FGDStatModel
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 namespace cv
 {
@@ -130,8 +146,12 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, FGDStatModel, testing::Combine(
     testing::Values(std::string("768x576.avi")),
     testing::Values(Channels(3), Channels(4))));
 
+#endif
+
 //////////////////////////////////////////////////////
 // MOG
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 namespace
 {
@@ -204,14 +224,24 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, MOG, testing::Combine(
     testing::Values(LearningRate(0.0), LearningRate(0.01)),
     WHOLE_SUBMAT));
 
+#endif
+
 //////////////////////////////////////////////////////
 // MOG2
 
-PARAM_TEST_CASE(MOG2, cv::gpu::DeviceInfo, std::string, UseGray, UseRoi)
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(DetectShadow, bool)
+}
+
+PARAM_TEST_CASE(MOG2, cv::gpu::DeviceInfo, std::string, UseGray, DetectShadow, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     std::string inputFile;
     bool useGray;
+    bool detectShadow;
     bool useRoi;
 
     virtual void SetUp()
@@ -220,10 +250,9 @@ PARAM_TEST_CASE(MOG2, cv::gpu::DeviceInfo, std::string, UseGray, UseRoi)
         cv::gpu::setDevice(devInfo.deviceID());
 
         inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
-
         useGray = GET_PARAM(2);
-
-        useRoi = GET_PARAM(3);
+        detectShadow = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
     }
 };
 
@@ -237,9 +266,11 @@ GPU_TEST_P(MOG2, Update)
     ASSERT_FALSE(frame.empty());
 
     cv::gpu::MOG2_GPU mog2;
+    mog2.bShadowDetection = detectShadow;
     cv::gpu::GpuMat foreground = createMat(frame.size(), CV_8UC1, useRoi);
 
-    cv::BackgroundSubtractorMOG2 mog2_gold;
+    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2_gold = cv::createBackgroundSubtractorMOG2();
+    mog2_gold.setDetectShadows(detectShadow);
     cv::Mat foreground_gold;
 
     for (int i = 0; i < 10; ++i)
@@ -256,13 +287,16 @@ GPU_TEST_P(MOG2, Update)
 
         mog2(loadMat(frame, useRoi), foreground);
 
-        mog2_gold(frame, foreground_gold);
+        mog2_gold->apply(frame, foreground_gold);
 
-        double norm = cv::norm(foreground_gold, cv::Mat(foreground), cv::NORM_L1);
-
-        norm /= foreground_gold.size().area();
-
-        ASSERT_LE(norm, 0.09);
+        if (detectShadow)
+        {
+            ASSERT_MAT_SIMILAR(foreground_gold, foreground, 1e-2);
+        }
+        else
+        {
+            ASSERT_MAT_NEAR(foreground_gold, foreground, 0);
+        }
     }
 }
 
@@ -277,9 +311,11 @@ GPU_TEST_P(MOG2, getBackgroundImage)
     cv::Mat frame;
 
     cv::gpu::MOG2_GPU mog2;
+    mog2.bShadowDetection = detectShadow;
     cv::gpu::GpuMat foreground;
 
-    cv::BackgroundSubtractorMOG2 mog2_gold;
+    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2_gold = cv::createBackgroundSubtractorMOG2();
+    mog2_gold.setDetectShadows(detectShadow);
     cv::Mat foreground_gold;
 
     for (int i = 0; i < 10; ++i)
@@ -289,14 +325,14 @@ GPU_TEST_P(MOG2, getBackgroundImage)
 
         mog2(loadMat(frame, useRoi), foreground);
 
-        mog2_gold(frame, foreground_gold);
+        mog2_gold->apply(frame, foreground_gold);
     }
 
     cv::gpu::GpuMat background = createMat(frame.size(), frame.type(), useRoi);
     mog2.getBackgroundImage(background);
 
     cv::Mat background_gold;
-    mog2_gold.getBackgroundImage(background_gold);
+    mog2_gold->getBackgroundImage(background_gold);
 
     ASSERT_MAT_NEAR(background_gold, background, 0);
 }
@@ -305,48 +341,10 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, MOG2, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi")),
     testing::Values(UseGray(true), UseGray(false)),
+    testing::Values(DetectShadow(true), DetectShadow(false)),
     WHOLE_SUBMAT));
 
-//////////////////////////////////////////////////////
-// VIBE
-
-PARAM_TEST_CASE(VIBE, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
-{
-};
-
-GPU_TEST_P(VIBE, Accuracy)
-{
-    const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-    const cv::Size size = GET_PARAM(1);
-    const int type = GET_PARAM(2);
-    const bool useRoi = GET_PARAM(3);
-
-    const cv::Mat fullfg(size, CV_8UC1, cv::Scalar::all(255));
-
-    cv::Mat frame = randomMat(size, type, 0.0, 100);
-    cv::gpu::GpuMat d_frame = loadMat(frame, useRoi);
-
-    cv::gpu::VIBE_GPU vibe;
-    cv::gpu::GpuMat d_fgmask = createMat(size, CV_8UC1, useRoi);
-    vibe.initialize(d_frame);
-
-    for (int i = 0; i < 20; ++i)
-        vibe(d_frame, d_fgmask);
-
-    frame = randomMat(size, type, 160, 255);
-    d_frame = loadMat(frame, useRoi);
-    vibe(d_frame, d_fgmask);
-
-    // now fgmask should be entirely foreground
-    ASSERT_MAT_NEAR(fullfg, d_fgmask, 0);
-}
-
-INSTANTIATE_TEST_CASE_P(GPU_Video, VIBE, testing::Combine(
-    ALL_DEVICES,
-    DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4)),
-    WHOLE_SUBMAT));
+#endif
 
 //////////////////////////////////////////////////////
 // GMG

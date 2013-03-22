@@ -10,7 +10,7 @@ if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_USE_NUMPY)
 endif()
 
 set(the_description "The python bindings")
-ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect opencv_contrib opencv_legacy OPTIONAL opencv_nonfree)
+ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect opencv_contrib opencv_legacy opencv_softcascade OPTIONAL opencv_nonfree)
 
 add_definitions(-DPYTHON_USE_NUMPY=1)
 
@@ -23,22 +23,24 @@ ocv_module_include_directories(
 
 
 set(opencv_hdrs
-    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/core.hpp"
+    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core.hpp"
+    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/utility.hpp"
     "${OPENCV_MODULE_opencv_flann_LOCATION}/include/opencv2/flann/miniflann.hpp"
-    "${OPENCV_MODULE_opencv_imgproc_LOCATION}/include/opencv2/imgproc/imgproc.hpp"
+    "${OPENCV_MODULE_opencv_imgproc_LOCATION}/include/opencv2/imgproc.hpp"
     "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/background_segm.hpp"
     "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/tracking.hpp"
-    "${OPENCV_MODULE_opencv_photo_LOCATION}/include/opencv2/photo/photo.hpp"
-    "${OPENCV_MODULE_opencv_highgui_LOCATION}/include/opencv2/highgui/highgui.hpp"
-    "${OPENCV_MODULE_opencv_ml_LOCATION}/include/opencv2/ml/ml.hpp"
-    "${OPENCV_MODULE_opencv_features2d_LOCATION}/include/opencv2/features2d/features2d.hpp"
-    "${OPENCV_MODULE_opencv_calib3d_LOCATION}/include/opencv2/calib3d/calib3d.hpp"
-    "${OPENCV_MODULE_opencv_objdetect_LOCATION}/include/opencv2/objdetect/objdetect.hpp"
-    "${OPENCV_MODULE_opencv_contrib_LOCATION}/include/opencv2/contrib/contrib.hpp")
+    "${OPENCV_MODULE_opencv_photo_LOCATION}/include/opencv2/photo.hpp"
+    "${OPENCV_MODULE_opencv_highgui_LOCATION}/include/opencv2/highgui.hpp"
+    "${OPENCV_MODULE_opencv_ml_LOCATION}/include/opencv2/ml.hpp"
+    "${OPENCV_MODULE_opencv_features2d_LOCATION}/include/opencv2/features2d.hpp"
+    "${OPENCV_MODULE_opencv_calib3d_LOCATION}/include/opencv2/calib3d.hpp"
+    "${OPENCV_MODULE_opencv_objdetect_LOCATION}/include/opencv2/objdetect.hpp"
+    "${OPENCV_MODULE_opencv_softcascade_LOCATION}/include/opencv2/softcascade.hpp"
+    "${OPENCV_MODULE_opencv_contrib_LOCATION}/include/opencv2/contrib.hpp")
 
 if(HAVE_opencv_nonfree)
   list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/features2d.hpp"
-                              "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/nonfree.hpp")
+                              "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree.hpp")
 endif()
 
 set(cv2_generated_hdrs
@@ -79,6 +81,10 @@ set_target_properties(${the_module} PROPERTIES
                       PREFIX ""
                       OUTPUT_NAME cv2
                       SUFFIX ${CVPY_SUFFIX})
+
+if(ENABLE_SOLUTION_FOLDERS)
+  set_target_properties(${the_module} PROPERTIES FOLDER "bindings")
+endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function")

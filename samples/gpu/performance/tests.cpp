@@ -4,9 +4,14 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/video/video.hpp"
 #include "opencv2/gpu/gpu.hpp"
-#include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/legacy/legacy.hpp"
 #include "performance.h"
+
+#include "opencv2/opencv_modules.hpp"
+#ifdef HAVE_OPENCV_NONFREE
+#include "opencv2/nonfree/gpu.hpp"
+#include "opencv2/nonfree/nonfree.hpp"
+#endif
 
 using namespace std;
 using namespace cv;
@@ -266,6 +271,7 @@ TEST(meanShift)
     }
 }
 
+#ifdef HAVE_OPENCV_NONFREE
 
 TEST(SURF)
 {
@@ -293,6 +299,8 @@ TEST(SURF)
     d_surf(d_src, gpu::GpuMat(), d_keypoints, d_descriptors);
     GPU_OFF;
 }
+
+#endif
 
 
 TEST(FAST)
@@ -1316,10 +1324,10 @@ TEST(MOG)
     cv::Mat frame;
     cap >> frame;
 
-    cv::BackgroundSubtractorMOG mog;
+    cv::Ptr<cv::BackgroundSubtractor> mog = cv::createBackgroundSubtractorMOG();
     cv::Mat foreground;
 
-    mog(frame, foreground, 0.01);
+    mog->apply(frame, foreground, 0.01);
 
     while (!TestSystem::instance().stop())
     {
@@ -1327,7 +1335,7 @@ TEST(MOG)
 
         TestSystem::instance().cpuOn();
 
-        mog(frame, foreground, 0.01);
+        mog->apply(frame, foreground, 0.01);
 
         TestSystem::instance().cpuOff();
     }
@@ -1367,12 +1375,12 @@ TEST(MOG2)
     cv::Mat frame;
     cap >> frame;
 
-    cv::BackgroundSubtractorMOG2 mog2;
+    cv::Ptr<cv::BackgroundSubtractor> mog2 = cv::createBackgroundSubtractorMOG2();
     cv::Mat foreground;
     cv::Mat background;
 
-    mog2(frame, foreground);
-    mog2.getBackgroundImage(background);
+    mog2->apply(frame, foreground);
+    mog2->getBackgroundImage(background);
 
     while (!TestSystem::instance().stop())
     {
@@ -1380,8 +1388,8 @@ TEST(MOG2)
 
         TestSystem::instance().cpuOn();
 
-        mog2(frame, foreground);
-        mog2.getBackgroundImage(background);
+        mog2->apply(frame, foreground);
+        mog2->getBackgroundImage(background);
 
         TestSystem::instance().cpuOff();
     }

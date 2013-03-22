@@ -28,9 +28,6 @@
 #include <sys/types.h>
 #include <dirent.h>
 
-
-using namespace std;
-
 class CameraWrapperConnector
 {
 public:
@@ -50,7 +47,7 @@ private:
     static std::string getDefaultPathLibFolder();
     static CameraActivity::ErrorCode connectToLib();
     static CameraActivity::ErrorCode getSymbolFromLib(void * libHandle, const char* symbolName, void** ppSymbol);
-    static void fillListWrapperLibs(const string& folderPath, vector<string>& listLibs);
+    static void fillListWrapperLibs(const std::string& folderPath, std::vector<std::string>& listLibs);
 
     static InitCameraConnectC pInitCameraC;
     static CloseCameraConnectC pCloseCameraC;
@@ -168,7 +165,7 @@ CameraActivity::ErrorCode CameraWrapperConnector::connectToLib()
     }
 
     dlerror();
-    string folderPath = getPathLibFolder();
+    std::string folderPath = getPathLibFolder();
     if (folderPath.empty())
     {
         LOGD("Trying to find native camera in default OpenCV packages");
@@ -177,12 +174,12 @@ CameraActivity::ErrorCode CameraWrapperConnector::connectToLib()
 
     LOGD("CameraWrapperConnector::connectToLib: folderPath=%s", folderPath.c_str());
 
-    vector<string> listLibs;
+    std::vector<std::string> listLibs;
     fillListWrapperLibs(folderPath, listLibs);
-    std::sort(listLibs.begin(), listLibs.end(), std::greater<string>());
+    std::sort(listLibs.begin(), listLibs.end(), std::greater<std::string>());
 
     void * libHandle=0;
-    string cur_path;
+    std::string cur_path;
     for(size_t i = 0; i < listLibs.size(); i++) {
         cur_path=folderPath + listLibs[i];
         LOGD("try to load library '%s'", listLibs[i].c_str());
@@ -248,7 +245,7 @@ CameraActivity::ErrorCode CameraWrapperConnector::getSymbolFromLib(void* libHand
     return CameraActivity::NO_ERROR;
 }
 
-void CameraWrapperConnector::fillListWrapperLibs(const string& folderPath, vector<string>& listLibs)
+void CameraWrapperConnector::fillListWrapperLibs(const std::string& folderPath, std::vector<std::string>& listLibs)
 {
     DIR *dp;
     struct dirent *ep;
@@ -269,7 +266,7 @@ void CameraWrapperConnector::fillListWrapperLibs(const string& folderPath, vecto
 
 std::string CameraWrapperConnector::getDefaultPathLibFolder()
 {
-    #define BIN_PACKAGE_NAME(x) "org.opencv.lib_v" CVAUX_STR(CV_MAJOR_VERSION) CVAUX_STR(CV_MINOR_VERSION) "_" x
+    #define BIN_PACKAGE_NAME(x) "org.opencv.lib_v" CVAUX_STR(CV_VERSION_EPOCH) CVAUX_STR(CV_VERSION_MAJOR) "_" x
     const char* const packageList[] = {BIN_PACKAGE_NAME("armv7a"), OPENCV_ENGINE_PACKAGE};
     for (size_t i = 0; i < sizeof(packageList)/sizeof(packageList[0]); i++)
     {
@@ -290,7 +287,7 @@ std::string CameraWrapperConnector::getDefaultPathLibFolder()
         }
     }
 
-    return string();
+    return std::string();
 }
 
 std::string CameraWrapperConnector::getPathLibFolder()
@@ -361,10 +358,10 @@ std::string CameraWrapperConnector::getPathLibFolder()
         LOGE("Could not get library name and base address");
     }
 
-    return string();
+    return std::string();
 }
 
-void CameraWrapperConnector::setPathLibFolder(const string& path)
+void CameraWrapperConnector::setPathLibFolder(const std::string& path)
 {
     pathLibFolder=path;
 }

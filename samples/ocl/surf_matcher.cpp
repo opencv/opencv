@@ -50,6 +50,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/ocl/ocl.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
+#include "opencv2/nonfree/ocl.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 
 using namespace std;
@@ -217,10 +218,10 @@ int main(int argc, char* argv[])
     perspectiveTransform( obj_corners, scene_corners, H);
 
     //-- Draw lines between the corners (the mapped object in the scene - image_2 )
-    line( img_matches, scene_corners[0] + Point2f( cpu_img1.cols, 0), scene_corners[1] + Point2f( cpu_img1.cols, 0), Scalar( 0, 255, 0), 4 );
-    line( img_matches, scene_corners[1] + Point2f( cpu_img1.cols, 0), scene_corners[2] + Point2f( cpu_img1.cols, 0), Scalar( 0, 255, 0), 4 );
-    line( img_matches, scene_corners[2] + Point2f( cpu_img1.cols, 0), scene_corners[3] + Point2f( cpu_img1.cols, 0), Scalar( 0, 255, 0), 4 );
-    line( img_matches, scene_corners[3] + Point2f( cpu_img1.cols, 0), scene_corners[0] + Point2f( cpu_img1.cols, 0), Scalar( 0, 255, 0), 4 );
+    line( img_matches, scene_corners[0] + Point2f( (float)cpu_img1.cols, 0), scene_corners[1] + Point2f( (float)cpu_img1.cols, 0), Scalar( 0, 255, 0), 4 );
+    line( img_matches, scene_corners[1] + Point2f( (float)cpu_img1.cols, 0), scene_corners[2] + Point2f( (float)cpu_img1.cols, 0), Scalar( 0, 255, 0), 4 );
+    line( img_matches, scene_corners[2] + Point2f( (float)cpu_img1.cols, 0), scene_corners[3] + Point2f( (float)cpu_img1.cols, 0), Scalar( 0, 255, 0), 4 );
+    line( img_matches, scene_corners[3] + Point2f( (float)cpu_img1.cols, 0), scene_corners[0] + Point2f( (float)cpu_img1.cols, 0), Scalar( 0, 255, 0), 4 );
 
     //-- Show detected matches
     namedWindow("ocl surf matches", 0);

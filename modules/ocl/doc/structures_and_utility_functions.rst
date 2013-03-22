@@ -35,7 +35,7 @@ ocl::setBinpath
 ------------------
 Returns void
 
-.. ocv:function:: void setBinpath(const char *path)
+.. ocv:function:: void ocl::setBinpath(const char *path)
 
     :param path: the path of OpenCL kernel binaries
 
@@ -45,7 +45,7 @@ ocl::getoclContext
 ------------------
 Returns the pointer to the opencl context
 
-.. ocv:function:: void *getoclContext()
+.. ocv:function:: void* ocl::getoclContext()
 
 Thefunction are used to get opencl context so that opencv can interactive with other opencl program.
 
@@ -53,6 +53,6 @@ ocl::getoclCommandQueue
 --------------------------
 Returns the pointer to the opencl command queue
 
-.. ocv:function:: void *getoclCommandQueue()
+.. ocv:function:: void* ocl::getoclCommandQueue()
 
 Thefunction are used to get opencl command queue so that opencv can interactive with other opencl program.

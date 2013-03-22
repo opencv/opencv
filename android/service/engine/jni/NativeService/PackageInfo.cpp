@@ -18,6 +18,7 @@ map<int, string> PackageInfo::InitPlatformNameMap()
     result[PLATFORM_TEGRA] = PLATFORM_TEGRA_NAME;
     result[PLATFORM_TEGRA2] = PLATFORM_TEGRA2_NAME;
     result[PLATFORM_TEGRA3] = PLATFORM_TEGRA3_NAME;
+    result[PLATFORM_TEGRA4] = PLATFORM_TEGRA4_NAME;
 
     return result;
 }
@@ -124,14 +125,29 @@ inline int SplitIntelFeatures(const vector<string>& features)
     return result;
 }
 
-inline string SplitVersion(const vector<string>& features, const string& package_version)
+inline int SplitVersion(const vector<string>& features, const string& package_version)
 {
-    string result;
+    int result = 0;
 
     if ((features.size() > 1) && ('v' == features[1][0]))
     {
-        result = features[1].substr(1);
-        result += SplitStringVector(package_version, '.')[0];
+        // Taking major and minor mart of library version from package name
+        string tmp1 = features[1].substr(1);
+        result += atoi(tmp1.substr(0,1).c_str())*1000000 + atoi(tmp1.substr(1,1).c_str())*10000;
+
+        // Taking release and build number from package revision
+        vector<string> tmp2 = SplitStringVector(package_version, '.');
+        if (tmp2.size() == 2)
+        {
+            // the 2nd digit is revision
+            result += atoi(tmp2[0].c_str())*100 + 00;
+        }
+        else
+        {
+            // the 2nd digit is part of library version
+            // the 3rd digit is revision
+            result += atoi(tmp2[0].c_str())*100 + atoi(tmp2[1].c_str());
+        }
     }
     else
     {
@@ -171,6 +187,10 @@ inline int SplitPlatfrom(const vector<string>& features)
         {
             result = PLATFORM_TEGRA3;
         }
+        else if (PLATFORM_TEGRA4_NAME == tmp)
+        {
+            result = PLATFORM_TEGRA4;
+        }
     }
     else
     {
@@ -186,19 +206,26 @@ inline int SplitPlatfrom(const vector<string>& features)
  * Second part is version. Version starts from "v" symbol. After "v" symbol version nomber without dot symbol added.
  * If platform is known third part is platform name
  * If platform is unknown it is defined by hardware capabilities using pattern: <arch>_<floating point and vectorization features>_<other features>
- * Example: armv7_neon, armv5_vfpv3
+ * Example: armv7_neon
  */
-PackageInfo::PackageInfo(const string& version, int platform, int cpu_id, std::string install_path):
-Version(version),
-Platform(platform),
-CpuID(cpu_id),
-InstallPath("")
+PackageInfo::PackageInfo(int version, int platform, int cpu_id, std::string install_path):
+    Version(version),
+    Platform(platform),
+    CpuID(cpu_id),
+    InstallPath("")
 {
     #ifndef __SUPPORT_TEGRA3
     Platform = PLATFORM_UNKNOWN;
     #endif
 
-    FullName = BasePackageName + "_v" + Version.substr(0, Version.size()-1);
+    int major_version = version/1000000;
+    int minor_version = version/10000 - major_version*100;
+
+    char tmp[32];
+
+    sprintf(tmp, "%d%d", major_version, minor_version);
+
+    FullName = BasePackageName + std::string("_v") + std::string(tmp);
     if (PLATFORM_UNKNOWN != Platform)
     {
         FullName += string("_") + JoinPlatform(platform);
@@ -296,7 +323,7 @@ InstallPath("")
             else
             {
                 LOGD("PackageInfo::PackageInfo: package arch unknown");
-                Version.clear();
+                Version = 0;
                 CpuID = ARCH_UNKNOWN;
                 Platform = PLATFORM_UNKNOWN;
             }
@@ -304,7 +331,7 @@ InstallPath("")
         else
         {
             LOGD("PackageInfo::PackageInfo: package arch unknown");
-            Version.clear();
+            Version = 0;
             CpuID = ARCH_UNKNOWN;
             Platform = PLATFORM_UNKNOWN;
         }
@@ -371,7 +398,7 @@ InstallPath(install_path)
             {
                 LOGI("Info library not found in package");
                 LOGI("OpenCV Manager package does not contain any verison of OpenCV library");
-                Version.clear();
+                Version = 0;
                 CpuID = ARCH_UNKNOWN;
                 Platform = PLATFORM_UNKNOWN;
                 return;
@@ -383,7 +410,7 @@ InstallPath(install_path)
     if (!features.empty() && (BasePackageName == features[0]))
     {
         Version = SplitVersion(features, package_version);
-        if (Version.empty())
+        if (0 == Version)
         {
             CpuID = ARCH_UNKNOWN;
             Platform = PLATFORM_UNKNOWN;
@@ -403,6 +430,10 @@ InstallPath(install_path)
                 {
                     CpuID = ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON;
                 } break;
+                case PLATFORM_TEGRA4:
+                {
+                    CpuID = ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON;
+                } break;
             }
         }
         else
@@ -410,7 +441,7 @@ InstallPath(install_path)
             if (features.size() < 3)
             {
                 LOGD("It is not OpenCV library package for this platform");
-                Version.clear();
+                Version = 0;
                 CpuID = ARCH_UNKNOWN;
                 Platform = PLATFORM_UNKNOWN;
                 return;
@@ -444,7 +475,7 @@ InstallPath(install_path)
             else
             {
                 LOGD("It is not OpenCV library package for this platform");
-                Version.clear();
+                Version = 0;
                 CpuID = ARCH_UNKNOWN;
                 Platform = PLATFORM_UNKNOWN;
                 return;
@@ -454,7 +485,7 @@ InstallPath(install_path)
     else
     {
         LOGD("It is not OpenCV library package for this platform");
-        Version.clear();
+        Version = 0;
         CpuID = ARCH_UNKNOWN;
         Platform = PLATFORM_UNKNOWN;
         return;
@@ -463,7 +494,7 @@ InstallPath(install_path)
 
 bool PackageInfo::IsValid() const
 {
-    return !(Version.empty() && (PLATFORM_UNKNOWN == Platform) && (ARCH_UNKNOWN == CpuID));
+    return !((0 == Version) && (PLATFORM_UNKNOWN == Platform) && (ARCH_UNKNOWN == CpuID));
 }
 
 int PackageInfo::GetPlatform() const
@@ -481,7 +512,7 @@ string PackageInfo::GetFullName() const
     return FullName;
 }
 
-string PackageInfo::GetVersion() const
+int PackageInfo::GetVersion() const
 {
     return Version;
 }

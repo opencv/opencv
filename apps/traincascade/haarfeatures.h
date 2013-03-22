@@ -23,7 +23,7 @@ public:
 
     virtual void printDefaults() const;
     virtual void printAttrs() const;
-    virtual bool scanAttr( const String prm, const String val);
+    virtual bool scanAttr( const std::string prm, const std::string val);
 
     int mode;
 };
@@ -64,7 +64,7 @@ protected:
         } fastRect[CV_HAAR_FEATURE_MAX];
     };
 
-    vector<Feature> features;
+    std::vector<Feature> features;
     Mat  sum;         /* sum images (each row represents image) */
     Mat  tilted;      /* tilted sum images (each row represents image) */
     Mat  normfactor;  /* normalization factor */

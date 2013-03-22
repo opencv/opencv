@@ -1,6 +1,7 @@
+#include <opencv2/core/utility.hpp>
 #include "opencv2/video/tracking.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <iostream>
 #include <ctype.h>
@@ -77,7 +78,7 @@ int main( int argc, const char** argv )
     float hranges[] = {0,180};
     const float* phranges = hranges;
     CommandLineParser parser(argc, argv, keys);
-    int camNum = parser.get<int>(1);
+    int camNum = parser.get<int>(0);
 
     cap.open(camNum);
 

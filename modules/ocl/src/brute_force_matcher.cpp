@@ -44,144 +44,12 @@
 //M*/
 
 #include "precomp.hpp"
-
+#include <functional>
 #include <iterator>
 #include <vector>
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
-#if !defined (HAVE_OPENCL)
-cv::ocl::BruteForceMatcher_OCL_base::BruteForceMatcher_OCL_base(DistType)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::add(const vector<oclMat> &)
-{
-    throw_nogpu();
-}
-const vector<oclMat> &cv::ocl::BruteForceMatcher_OCL_base::getTrainDescriptors() const
-{
-    throw_nogpu();
-    return trainDescCollection;
-}
-void cv::ocl::BruteForceMatcher_OCL_base::clear()
-{
-    throw_nogpu();
-}
-bool cv::ocl::BruteForceMatcher_OCL_base::empty() const
-{
-    throw_nogpu();
-    return true;
-}
-bool cv::ocl::BruteForceMatcher_OCL_base::isMaskSupported() const
-{
-    throw_nogpu();
-    return true;
-}
-void cv::ocl::BruteForceMatcher_OCL_base::matchSingle(const oclMat &, const oclMat &, oclMat &, oclMat &, const oclMat &)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::matchDownload(const oclMat &, const oclMat &, vector<DMatch> &)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::matchConvert(const Mat &, const Mat &, vector<DMatch> &)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::match(const oclMat &, const oclMat &, vector<DMatch> &, const oclMat &)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::makeGpuCollection(oclMat &, oclMat &, const vector<oclMat> &)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::matchCollection(const oclMat &, const oclMat &, oclMat &, oclMat &, oclMat &, const oclMat &)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::matchDownload(const oclMat &, const oclMat &, const oclMat &, vector<DMatch> &)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::matchConvert(const Mat &, const Mat &, const Mat &, vector<DMatch> &)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::match(const oclMat &, vector<DMatch> &, const vector<oclMat> &)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::knnMatchSingle(const oclMat &, const oclMat &, oclMat &, oclMat &, oclMat &, int, const oclMat &)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::knnMatchDownload(const oclMat &, const oclMat &, vector< vector<DMatch> > &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::knnMatchConvert(const Mat &, const Mat &, vector< vector<DMatch> > &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &, const oclMat &, vector< vector<DMatch> > &, int, const oclMat &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::knnMatch2Collection(const oclMat &, const oclMat &, oclMat &, oclMat &, oclMat &, const oclMat &)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::knnMatch2Download(const oclMat &, const oclMat &, const oclMat &, vector< vector<DMatch> > &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::knnMatch2Convert(const Mat &, const Mat &, const Mat &, vector< vector<DMatch> > &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &, vector< vector<DMatch> > &, int, const vector<oclMat> &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchSingle(const oclMat &, const oclMat &, oclMat &, oclMat &, oclMat &, float, const oclMat &)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchDownload(const oclMat &, const oclMat &, const oclMat &, vector< vector<DMatch> > &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchConvert(const Mat &, const Mat &, const Mat &, vector< vector<DMatch> > &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::radiusMatch(const oclMat &, const oclMat &, vector< vector<DMatch> > &, float, const oclMat &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchCollection(const oclMat &, oclMat &, oclMat &, oclMat &, oclMat &, float, const vector<oclMat> &)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchDownload(const oclMat &, const oclMat &, const oclMat &, const oclMat &, vector< vector<DMatch> > &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchConvert(const Mat &, const Mat &, const Mat &, const Mat &, vector< vector<DMatch> > &, bool)
-{
-    throw_nogpu();
-}
-void cv::ocl::BruteForceMatcher_OCL_base::radiusMatch(const oclMat &, vector< vector<DMatch> > &, float, const vector<oclMat> &, bool)
-{
-    throw_nogpu();
-}
-#else /* !defined (HAVE_OPENCL) */
-
-using namespace std;
 namespace cv
 {
     namespace ocl
@@ -192,7 +60,7 @@ namespace cv
 }
 
 template < int BLOCK_SIZE, int MAX_DESC_LEN,  typename T/*, typename Mask*/ >
-void matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat &mask,
+void matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
                          const oclMat &trainIdx, const oclMat &distance, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
@@ -201,24 +69,24 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat 
     const size_t smemSize = (BLOCK_SIZE * (MAX_DESC_LEN >= 2 * BLOCK_SIZE ? MAX_DESC_LEN : 2 * BLOCK_SIZE) + BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
     int block_size = BLOCK_SIZE;
     int m_size = MAX_DESC_LEN;
-    vector< pair<size_t, const void *> > args;
+    std::vector< std::pair<size_t, const void *> > args;
 
     if(globalSize[0] != 0)
     {
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&train.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&mask.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&distance.data ));
-        args.push_back( make_pair( smemSize, (void *)NULL));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&block_size ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&m_size ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&distance.data ));
+        args.push_back( std::make_pair( smemSize, (void *)NULL));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&block_size ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&m_size ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_UnrollMatch";
 
@@ -233,7 +101,7 @@ void matchUnrolledCached(const oclMat /*query*/, const oclMat * /*trains*/, int 
 }
 
 template < int BLOCK_SIZE,  typename T/*, typename Mask*/ >
-void match(const oclMat &query, const oclMat &train, const oclMat &mask,
+void match(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
            const oclMat &trainIdx, const oclMat &distance, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
@@ -241,23 +109,23 @@ void match(const oclMat &query, const oclMat &train, const oclMat &mask,
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
     const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
     int block_size = BLOCK_SIZE;
-    vector< pair<size_t, const void *> > args;
+    std::vector< std::pair<size_t, const void *> > args;
 
     if(globalSize[0] != 0)
     {
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&train.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&mask.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&distance.data ));
-        args.push_back( make_pair( smemSize, (void *)NULL));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&block_size ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&distance.data ));
+        args.push_back( std::make_pair( smemSize, (void *)NULL));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&block_size ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_Match";
 
@@ -273,7 +141,7 @@ void match(const oclMat /*query*/, const oclMat * /*trains*/, int /*n*/, const o
 
 //radius_matchUnrolledCached
 template < int BLOCK_SIZE, int MAX_DESC_LEN,  typename T/*, typename Mask*/ >
-void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDistance, const oclMat &mask,
+void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDistance, const oclMat &/*mask*/,
                          const oclMat &trainIdx, const oclMat &distance, const oclMat &nMatches, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
@@ -282,28 +150,28 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDist
     const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
     int block_size = BLOCK_SIZE;
     int m_size = MAX_DESC_LEN;
-    vector< pair<size_t, const void *> > args;
+    std::vector< std::pair<size_t, const void *> > args;
 
     if(globalSize[0] != 0)
     {
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&train.data ));
-        args.push_back( make_pair( sizeof(cl_float), (void *)&maxDistance ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&mask.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&distance.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&nMatches.data ));
-        args.push_back( make_pair( smemSize, (void *)NULL));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&block_size ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&m_size ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&trainIdx.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&trainIdx.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
+        args.push_back( std::make_pair( sizeof(cl_float), (void *)&maxDistance ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&distance.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&nMatches.data ));
+        args.push_back( std::make_pair( smemSize, (void *)NULL));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&block_size ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&m_size ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&trainIdx.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&trainIdx.step ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_RadiusUnrollMatch";
 
@@ -313,7 +181,7 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDist
 
 //radius_match
 template < int BLOCK_SIZE, typename T/*, typename Mask*/ >
-void radius_match(const oclMat &query, const oclMat &train, float maxDistance, const oclMat &mask,
+void radius_match(const oclMat &query, const oclMat &train, float maxDistance, const oclMat &/*mask*/,
                   const oclMat &trainIdx, const oclMat &distance, const oclMat &nMatches, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
@@ -321,27 +189,27 @@ void radius_match(const oclMat &query, const oclMat &train, float maxDistance, c
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
     const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
     int block_size = BLOCK_SIZE;
-    vector< pair<size_t, const void *> > args;
+    std::vector< std::pair<size_t, const void *> > args;
 
     if(globalSize[0] != 0)
     {
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&train.data ));
-        args.push_back( make_pair( sizeof(cl_float), (void *)&maxDistance ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&mask.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&distance.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&nMatches.data ));
-        args.push_back( make_pair( smemSize, (void *)NULL));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&block_size ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&trainIdx.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&trainIdx.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
+        args.push_back( std::make_pair( sizeof(cl_float), (void *)&maxDistance ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&distance.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&nMatches.data ));
+        args.push_back( std::make_pair( smemSize, (void *)NULL));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&block_size ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&trainIdx.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&trainIdx.step ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_RadiusMatch";
 
@@ -602,7 +470,7 @@ void matchDispatcher(const oclMat &query, const oclMat &train, int n, float maxD
 
 //knn match Dispatcher
 template < int BLOCK_SIZE, int MAX_DESC_LEN,  typename T/*, typename Mask*/ >
-void knn_matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat &mask,
+void knn_matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
                              const oclMat &trainIdx, const oclMat &distance, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
@@ -611,24 +479,24 @@ void knn_matchUnrolledCached(const oclMat &query, const oclMat &train, const ocl
     const size_t smemSize = (BLOCK_SIZE * (MAX_DESC_LEN >= BLOCK_SIZE ? MAX_DESC_LEN : BLOCK_SIZE) + BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
     int block_size = BLOCK_SIZE;
     int m_size = MAX_DESC_LEN;
-    vector< pair<size_t, const void *> > args;
+    std::vector< std::pair<size_t, const void *> > args;
 
     if(globalSize[0] != 0)
     {
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&train.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&mask.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&distance.data ));
-        args.push_back( make_pair( smemSize, (void *)NULL));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&block_size ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&m_size ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&distance.data ));
+        args.push_back( std::make_pair( smemSize, (void *)NULL));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&block_size ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&m_size ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_knnUnrollMatch";
 
@@ -637,7 +505,7 @@ void knn_matchUnrolledCached(const oclMat &query, const oclMat &train, const ocl
 }
 
 template < int BLOCK_SIZE,  typename T/*, typename Mask*/ >
-void knn_match(const oclMat &query, const oclMat &train, const oclMat &mask,
+void knn_match(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
                const oclMat &trainIdx, const oclMat &distance, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
@@ -645,23 +513,23 @@ void knn_match(const oclMat &query, const oclMat &train, const oclMat &mask,
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
     const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
     int block_size = BLOCK_SIZE;
-    vector< pair<size_t, const void *> > args;
+    std::vector< std::pair<size_t, const void *> > args;
 
     if(globalSize[0] != 0)
     {
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&train.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&mask.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&distance.data ));
-        args.push_back( make_pair( smemSize, (void *)NULL));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&block_size ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&distance.data ));
+        args.push_back( std::make_pair( smemSize, (void *)NULL));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&block_size ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_knnMatch";
 
@@ -670,7 +538,7 @@ void knn_match(const oclMat &query, const oclMat &train, const oclMat &mask,
 }
 
 template < int BLOCK_SIZE, int MAX_DESC_LEN, typename T/*, typename Mask*/ >
-void calcDistanceUnrolled(const oclMat &query, const oclMat &train, const oclMat &mask, const oclMat &allDist, int distType)
+void calcDistanceUnrolled(const oclMat &query, const oclMat &train, const oclMat &/*mask*/, const oclMat &allDist, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
     size_t globalSize[] = {(query.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
@@ -678,23 +546,23 @@ void calcDistanceUnrolled(const oclMat &query, const oclMat &train, const oclMat
     const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
     int block_size = BLOCK_SIZE;
     int m_size = MAX_DESC_LEN;
-    vector< pair<size_t, const void *> > args;
+    std::vector< std::pair<size_t, const void *> > args;
 
     if(globalSize[0] != 0)
     {
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&train.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&mask.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&allDist.data ));
-        args.push_back( make_pair( smemSize, (void *)NULL));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&block_size ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&m_size ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&allDist.data ));
+        args.push_back( std::make_pair( smemSize, (void *)NULL));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&block_size ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&m_size ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_calcDistanceUnrolled";
 
@@ -703,29 +571,29 @@ void calcDistanceUnrolled(const oclMat &query, const oclMat &train, const oclMat
 }
 
 template < int BLOCK_SIZE, typename T/*, typename Mask*/ >
-void calcDistance(const oclMat &query, const oclMat &train, const oclMat &mask, const oclMat &allDist, int distType)
+void calcDistance(const oclMat &query, const oclMat &train, const oclMat &/*mask*/, const oclMat &allDist, int distType)
 {
     cv::ocl::Context *ctx = query.clCxt;
     size_t globalSize[] = {(query.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
     const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
     int block_size = BLOCK_SIZE;
-    vector< pair<size_t, const void *> > args;
+    std::vector< std::pair<size_t, const void *> > args;
 
     if(globalSize[0] != 0)
     {
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&train.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&mask.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&allDist.data ));
-        args.push_back( make_pair( smemSize, (void *)NULL));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&block_size ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&query.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&train.data ));
+        //args.push_back( std::make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&allDist.data ));
+        args.push_back( std::make_pair( smemSize, (void *)NULL));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&block_size ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_calcDistance";
 
@@ -806,22 +674,22 @@ void findKnnMatch(int k, const oclMat &trainIdx, const oclMat &distance, const o
 
     for (int i = 0; i < k; ++i)
     {
-        vector< pair<size_t, const void *> > args;
+        std::vector< std::pair<size_t, const void *> > args;
 
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&allDist.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&distance.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&i));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&block_size ));
-        //args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
-        //args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
-        //args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&allDist.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&trainIdx.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&distance.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&i));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&block_size ));
+        //args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.rows ));
+        //args.push_back( std::make_pair( sizeof(cl_int), (void *)&train.cols ));
+        //args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
 
         openCLExecuteKernel(ctx, &brute_force_match, kernelName, globalSize, localSize, args, -1, -1);
     }
 }
 
-void findKnnMatchDispatcher(int k, const oclMat &trainIdx, const oclMat &distance, const oclMat &allDist, int distType)
+static void findKnnMatchDispatcher(int k, const oclMat &trainIdx, const oclMat &distance, const oclMat &allDist, int distType)
 {
     findKnnMatch<256>(k, trainIdx, distance, allDist, distType);
 }
@@ -1030,12 +898,12 @@ cv::ocl::BruteForceMatcher_OCL_base::BruteForceMatcher_OCL_base(DistType distTyp
 {
 }
 
-void cv::ocl::BruteForceMatcher_OCL_base::add(const vector<oclMat> &descCollection)
+void cv::ocl::BruteForceMatcher_OCL_base::add(const std::vector<oclMat> &descCollection)
 {
     trainDescCollection.insert(trainDescCollection.end(), descCollection.begin(), descCollection.end());
 }
 
-const vector<oclMat> &cv::ocl::BruteForceMatcher_OCL_base::getTrainDescriptors() const
+const std::vector<oclMat> &cv::ocl::BruteForceMatcher_OCL_base::getTrainDescriptors() const
 {
     return trainDescCollection;
 }
@@ -1094,7 +962,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchSingle(const oclMat &query, const
     func(query, train, mask, trainIdx, distance);
 }
 
-void cv::ocl::BruteForceMatcher_OCL_base::matchDownload(const oclMat &trainIdx, const oclMat &distance, vector<DMatch> &matches)
+void cv::ocl::BruteForceMatcher_OCL_base::matchDownload(const oclMat &trainIdx, const oclMat &distance, std::vector<DMatch> &matches)
 {
     if (trainIdx.empty() || distance.empty())
         return;
@@ -1105,7 +973,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchDownload(const oclMat &trainIdx, 
     matchConvert(trainIdxCPU, distanceCPU, matches);
 }
 
-void cv::ocl::BruteForceMatcher_OCL_base::matchConvert(const Mat &trainIdx, const Mat &distance, vector<DMatch> &matches)
+void cv::ocl::BruteForceMatcher_OCL_base::matchConvert(const Mat &trainIdx, const Mat &distance, std::vector<DMatch> &matches)
 {
     if (trainIdx.empty() || distance.empty())
         return;
@@ -1135,14 +1003,15 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchConvert(const Mat &trainIdx, cons
     }
 }
 
-void cv::ocl::BruteForceMatcher_OCL_base::match(const oclMat &query, const oclMat &train, vector<DMatch> &matches, const oclMat &mask)
+void cv::ocl::BruteForceMatcher_OCL_base::match(const oclMat &query, const oclMat &train, std::vector<DMatch> &matches, const oclMat &mask)
 {
+    assert(mask.empty()); // mask is not supported at the moment
     oclMat trainIdx, distance;
     matchSingle(query, train, trainIdx, distance, mask);
     matchDownload(trainIdx, distance, matches);
 }
 
-void cv::ocl::BruteForceMatcher_OCL_base::makeGpuCollection(oclMat &trainCollection, oclMat &maskCollection, const vector<oclMat> &masks)
+void cv::ocl::BruteForceMatcher_OCL_base::makeGpuCollection(oclMat &trainCollection, oclMat &maskCollection, const std::vector<oclMat> &masks)
 {
 
     if (empty())
@@ -1228,7 +1097,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchCollection(const oclMat &query, c
     func(query, trainCollection, masks, trainIdx, imgIdx, distance);
 }
 
-void cv::ocl::BruteForceMatcher_OCL_base::matchDownload(const oclMat &trainIdx, const oclMat &imgIdx, const oclMat &distance, vector<DMatch> &matches)
+void cv::ocl::BruteForceMatcher_OCL_base::matchDownload(const oclMat &trainIdx, const oclMat &imgIdx, const oclMat &distance, std::vector<DMatch> &matches)
 {
     if (trainIdx.empty() || imgIdx.empty() || distance.empty())
         return;
@@ -1240,7 +1109,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchDownload(const oclMat &trainIdx, 
     matchConvert(trainIdxCPU, imgIdxCPU, distanceCPU, matches);
 }
 
-void cv::ocl::BruteForceMatcher_OCL_base::matchConvert(const Mat &trainIdx, const Mat &imgIdx, const Mat &distance, vector<DMatch> &matches)
+void cv::ocl::BruteForceMatcher_OCL_base::matchConvert(const Mat &trainIdx, const Mat &imgIdx, const Mat &distance, std::vector<DMatch> &matches)
 {
     if (trainIdx.empty() || imgIdx.empty() || distance.empty())
         return;
@@ -1274,7 +1143,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchConvert(const Mat &trainIdx, cons
     }
 }
 
-void cv::ocl::BruteForceMatcher_OCL_base::match(const oclMat &query, vector<DMatch> &matches, const vector<oclMat> &masks)
+void cv::ocl::BruteForceMatcher_OCL_base::match(const oclMat &query, std::vector<DMatch> &matches, const std::vector<oclMat> &masks)
 {
     oclMat trainCollection;
     oclMat maskCollection;
@@ -1342,7 +1211,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatchSingle(const oclMat &query, co
     func(query, train, k, mask, trainIdx, distance, allDist);
 }
 
-void cv::ocl::BruteForceMatcher_OCL_base::knnMatchDownload(const oclMat &trainIdx, const oclMat &distance, vector< vector<DMatch> > &matches, bool compactResult)
+void cv::ocl::BruteForceMatcher_OCL_base::knnMatchDownload(const oclMat &trainIdx, const oclMat &distance, std::vector< std::vector<DMatch> > &matches, bool compactResult)
 {
     if (trainIdx.empty() || distance.empty())
         return;
@@ -1353,7 +1222,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatchDownload(const oclMat &trainId
     knnMatchConvert(trainIdxCPU, distanceCPU, matches, compactResult);
 }
 
-void cv::ocl::BruteForceMatcher_OCL_base::knnMatchConvert(const Mat &trainIdx, const Mat &distance, vector< vector<DMatch> > &matches, bool compactResult)
+void cv::ocl::BruteForceMatcher_OCL_base::knnMatchConvert(const Mat &trainIdx, const Mat &distance, std::vector< std::vector<DMatch> > &matches, bool compactResult)
 {
     if (trainIdx.empty() || distance.empty())
         return;
@@ -1374,8 +1243,8 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatchConvert(const Mat &trainIdx, c
 
     for (int queryIdx = 0; queryIdx < nQuery; ++queryIdx)
     {
-        matches.push_back(vector<DMatch>());
-        vector<DMatch> &curMatches = matches.back();
+        matches.push_back(std::vector<DMatch>());
+        std::vector<DMatch> &curMatches = matches.back();
         curMatches.reserve(k);
 
         for (int i = 0; i < k; ++i, ++trainIdx_ptr, ++distance_ptr)
@@ -1397,7 +1266,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatchConvert(const Mat &trainIdx, c
     }
 }
 
-void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, const oclMat &train, vector< vector<DMatch> > &matches
+void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, const oclMat &train, std::vector< std::vector<DMatch> > &matches
         , int k, const oclMat &mask, bool compactResult)
 {
     oclMat trainIdx, distance, allDist;
@@ -1450,7 +1319,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch2Collection(const oclMat &quer
 }
 
 void cv::ocl::BruteForceMatcher_OCL_base::knnMatch2Download(const oclMat &trainIdx, const oclMat &imgIdx,
-        const oclMat &distance, vector< vector<DMatch> > &matches, bool compactResult)
+        const oclMat &distance, std::vector< std::vector<DMatch> > &matches, bool compactResult)
 {
     if (trainIdx.empty() || imgIdx.empty() || distance.empty())
         return;
@@ -1463,7 +1332,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch2Download(const oclMat &trainI
 }
 
 void cv::ocl::BruteForceMatcher_OCL_base::knnMatch2Convert(const Mat &trainIdx, const Mat &imgIdx, const Mat &distance,
-        vector< vector<DMatch> > &matches, bool compactResult)
+        std::vector< std::vector<DMatch> > &matches, bool compactResult)
 {
     if (trainIdx.empty() || imgIdx.empty() || distance.empty())
         return;
@@ -1483,8 +1352,8 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch2Convert(const Mat &trainIdx, 
 
     for (int queryIdx = 0; queryIdx < nQuery; ++queryIdx)
     {
-        matches.push_back(vector<DMatch>());
-        vector<DMatch> &curMatches = matches.back();
+        matches.push_back(std::vector<DMatch>());
+        std::vector<DMatch> &curMatches = matches.back();
         curMatches.reserve(2);
 
         for (int i = 0; i < 2; ++i, ++trainIdx_ptr, ++imgIdx_ptr, ++distance_ptr)
@@ -1521,8 +1390,8 @@ namespace
     };
 }
 
-void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, vector< vector<DMatch> > &matches, int k,
-        const vector<oclMat> &masks, bool compactResult)
+void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, std::vector< std::vector<DMatch> > &matches, int k,
+        const std::vector<oclMat> &masks, bool compactResult)
 {
 
 
@@ -1543,12 +1412,12 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, vector< 
         if (query.empty() || empty())
             return;
 
-        vector< vector<DMatch> > curMatches;
-        vector<DMatch> temp;
+        std::vector< std::vector<DMatch> > curMatches;
+        std::vector<DMatch> temp;
         temp.reserve(2 * k);
 
         matches.resize(query.rows);
-        for_each(matches.begin(), matches.end(), bind2nd(mem_fun_ref(&vector<DMatch>::reserve), k));
+        std::for_each(matches.begin(), matches.end(), std::bind2nd(std::mem_fun_ref(&std::vector<DMatch>::reserve), k));
 
         for (size_t imgIdx = 0, size = trainDescCollection.size(); imgIdx < size; ++imgIdx)
         {
@@ -1556,8 +1425,8 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, vector< 
 
             for (int queryIdx = 0; queryIdx < query.rows; ++queryIdx)
             {
-                vector<DMatch> &localMatch = curMatches[queryIdx];
-                vector<DMatch> &globalMatch = matches[queryIdx];
+                std::vector<DMatch> &localMatch = curMatches[queryIdx];
+                std::vector<DMatch> &globalMatch = matches[queryIdx];
 
                 for_each(localMatch.begin(), localMatch.end(), ImgIdxSetter(static_cast<int>(imgIdx)));
 
@@ -1572,7 +1441,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, vector< 
 
         if (compactResult)
         {
-            vector< vector<DMatch> >::iterator new_end = remove_if(matches.begin(), matches.end(), mem_fun_ref(&vector<DMatch>::empty));
+            std::vector< std::vector<DMatch> >::iterator new_end = std::remove_if(matches.begin(), matches.end(), std::mem_fun_ref(&std::vector<DMatch>::empty));
             matches.erase(new_end, matches.end());
         }
     }
@@ -1580,7 +1449,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, vector< 
 
 // radiusMatchSingle
 void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchSingle(const oclMat &query, const oclMat &train,
-        oclMat &trainIdx,	oclMat &distance, oclMat &nMatches, float maxDistance, const oclMat &mask)
+        oclMat &trainIdx,   oclMat &distance, oclMat &nMatches, float maxDistance, const oclMat &mask)
 {
     if (query.empty() || train.empty())
         return;
@@ -1632,7 +1501,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchSingle(const oclMat &query,
 }
 
 void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchDownload(const oclMat &trainIdx, const oclMat &distance, const oclMat &nMatches,
-        vector< vector<DMatch> > &matches, bool compactResult)
+        std::vector< std::vector<DMatch> > &matches, bool compactResult)
 {
     if (trainIdx.empty() || distance.empty() || nMatches.empty())
         return;
@@ -1645,7 +1514,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchDownload(const oclMat &trai
 }
 
 void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchConvert(const Mat &trainIdx, const Mat &distance, const Mat &nMatches,
-        vector< vector<DMatch> > &matches, bool compactResult)
+        std::vector< std::vector<DMatch> > &matches, bool compactResult)
 {
     if (trainIdx.empty() || distance.empty() || nMatches.empty())
         return;
@@ -1671,12 +1540,12 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchConvert(const Mat &trainIdx
         if (nMatches == 0)
         {
             if (!compactResult)
-                matches.push_back(vector<DMatch>());
+                matches.push_back(std::vector<DMatch>());
             continue;
         }
 
-        matches.push_back(vector<DMatch>(nMatches));
-        vector<DMatch> &curMatches = matches.back();
+        matches.push_back(std::vector<DMatch>(nMatches));
+        std::vector<DMatch> &curMatches = matches.back();
 
         for (int i = 0; i < nMatches; ++i, ++trainIdx_ptr, ++distance_ptr)
         {
@@ -1693,7 +1562,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchConvert(const Mat &trainIdx
     }
 }
 
-void cv::ocl::BruteForceMatcher_OCL_base::radiusMatch(const oclMat &query, const oclMat &train, vector< vector<DMatch> > &matches,
+void cv::ocl::BruteForceMatcher_OCL_base::radiusMatch(const oclMat &query, const oclMat &train, std::vector< std::vector<DMatch> > &matches,
         float maxDistance, const oclMat &mask, bool compactResult)
 {
     oclMat trainIdx, distance, nMatches;
@@ -1702,7 +1571,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatch(const oclMat &query, const
 }
 
 void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchCollection(const oclMat &query, oclMat &trainIdx, oclMat &imgIdx, oclMat &distance,
-        oclMat &nMatches, float /*maxDistance*/, const vector<oclMat> &masks)
+        oclMat &nMatches, float /*maxDistance*/, const std::vector<oclMat> &masks)
 {
     if (query.empty() || empty())
         return;
@@ -1747,15 +1616,15 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchCollection(const oclMat &qu
     //caller_t func = callers[distType][query.depth()];
     //CV_Assert(func != 0);
 
-    vector<oclMat> trains_(trainDescCollection.begin(), trainDescCollection.end());
-    vector<oclMat> masks_(masks.begin(), masks.end());
+    std::vector<oclMat> trains_(trainDescCollection.begin(), trainDescCollection.end());
+    std::vector<oclMat> masks_(masks.begin(), masks.end());
 
     /*  func(query, &trains_[0], static_cast<int>(trains_.size()), maxDistance, masks_.size() == 0 ? 0 : &masks_[0],
           trainIdx, imgIdx, distance, nMatches));*/
 }
 
 void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchDownload(const oclMat &trainIdx, const oclMat &imgIdx, const oclMat &distance,
-        const oclMat &nMatches, vector< vector<DMatch> > &matches, bool compactResult)
+        const oclMat &nMatches, std::vector< std::vector<DMatch> > &matches, bool compactResult)
 {
     if (trainIdx.empty() || imgIdx.empty() || distance.empty() || nMatches.empty())
         return;
@@ -1769,7 +1638,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchDownload(const oclMat &trai
 }
 
 void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchConvert(const Mat &trainIdx, const Mat &imgIdx, const Mat &distance, const Mat &nMatches,
-        vector< vector<DMatch> > &matches, bool compactResult)
+        std::vector< std::vector<DMatch> > &matches, bool compactResult)
 {
     if (trainIdx.empty() || imgIdx.empty() || distance.empty() || nMatches.empty())
         return;
@@ -1797,12 +1666,12 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchConvert(const Mat &trainIdx
         if (nMatches == 0)
         {
             if (!compactResult)
-                matches.push_back(vector<DMatch>());
+                matches.push_back(std::vector<DMatch>());
             continue;
         }
 
-        matches.push_back(vector<DMatch>());
-        vector<DMatch> &curMatches = matches.back();
+        matches.push_back(std::vector<DMatch>());
+        std::vector<DMatch> &curMatches = matches.back();
         curMatches.reserve(nMatches);
 
         for (int i = 0; i < nMatches; ++i, ++trainIdx_ptr, ++imgIdx_ptr, ++distance_ptr)
@@ -1820,14 +1689,10 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchConvert(const Mat &trainIdx
     }
 }
 
-void cv::ocl::BruteForceMatcher_OCL_base::radiusMatch(const oclMat &query, vector< vector<DMatch> > &matches, float maxDistance,
-        const vector<oclMat> &masks, bool compactResult)
+void cv::ocl::BruteForceMatcher_OCL_base::radiusMatch(const oclMat &query, std::vector< std::vector<DMatch> > &matches, float maxDistance,
+        const std::vector<oclMat> &masks, bool compactResult)
 {
     oclMat trainIdx, imgIdx, distance, nMatches;
     radiusMatchCollection(query, trainIdx, imgIdx, distance, nMatches, maxDistance, masks);
     radiusMatchDownload(trainIdx, imgIdx, distance, nMatches, matches, compactResult);
 }
-
-#endif
-
-

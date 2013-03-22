@@ -48,8 +48,6 @@ void cv::gpu::meanShiftSegmentation(const GpuMat&, Mat&, int, int, int, TermCrit
 
 #else
 
-using namespace std;
-
 // Auxiliray stuff
 namespace
 {
@@ -65,9 +63,9 @@ public:
     int find(int elem);
     int merge(int set1, int set2);
 
-    vector<int> parent;
-    vector<int> rank;
-    vector<int> size;
+    std::vector<int> parent;
+    std::vector<int> rank;
+    std::vector<int> size;
 private:
     DjSets(const DjSets&);
     void operator =(const DjSets&);
@@ -95,8 +93,8 @@ public:
 
     void addEdge(int from, int to, const T& val=T());
 
-    vector<int> start;
-    vector<Edge> edges;
+    std::vector<int> start;
+    std::vector<Edge> edges;
 
     int numv;
     int nume_max;
@@ -324,7 +322,7 @@ void cv::gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr,
         }
     }
 
-    vector<SegmLink> edges;
+    std::vector<SegmLink> edges;
     edges.reserve(g.numv);
 
     // Prepare edges connecting differnet components
@@ -353,7 +351,7 @@ void cv::gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr,
 
     // Compute sum of the pixel's colors which are in the same segment
     Mat h_src(src);
-    vector<Vec4i> sumcols(nrows * ncols, Vec4i(0, 0, 0, 0));
+    std::vector<Vec4i> sumcols(nrows * ncols, Vec4i(0, 0, 0, 0));
     for (int y = 0; y < nrows; ++y)
     {
         Vec4b* h_srcy = h_src.ptr<Vec4b>(y);
@@ -382,6 +380,7 @@ void cv::gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr,
             dstcol[0] = static_cast<uchar>(sumcol[0] / comps.size[parent]);
             dstcol[1] = static_cast<uchar>(sumcol[1] / comps.size[parent]);
             dstcol[2] = static_cast<uchar>(sumcol[2] / comps.size[parent]);
+            dstcol[3] = 255;
         }
     }
 }

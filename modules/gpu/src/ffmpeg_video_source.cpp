@@ -45,9 +45,9 @@
 #if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
 
 #if defined(HAVE_FFMPEG) && defined(BUILD_SHARED_LIBS)
-    #include "cap_ffmpeg_impl.hpp"
+    #include "../src/cap_ffmpeg_impl.hpp"
 #else
-    #include "cap_ffmpeg_api.hpp"
+    #include "../src/cap_ffmpeg_api.hpp"
 #endif
 
 namespace
@@ -64,7 +64,7 @@ namespace
         {
             #if defined WIN32 || defined _WIN32
                 const char* module_name = "opencv_ffmpeg"
-                    CVAUX_STR(CV_MAJOR_VERSION) CVAUX_STR(CV_MINOR_VERSION) CVAUX_STR(CV_SUBMINOR_VERSION)
+                    CVAUX_STR(CV_VERSION_EPOCH) CVAUX_STR(CV_VERSION_MAJOR) CVAUX_STR(CV_VERSION_MINOR)
                 #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)
                     "_64"
                 #endif

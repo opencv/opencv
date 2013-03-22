@@ -47,22 +47,6 @@
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
-
-#if !defined (HAVE_OPENCL)
-void cv::ocl::buildWarpPlaneMaps(Size, Rect, const Mat &, const Mat &, const Mat &, float, oclMat &, oclMat &, Stream &)
-{
-    throw_nogpu();
-}
-void cv::ocl::buildWarpCylindricalMaps(Size, Rect, const Mat &, const Mat &, float, oclMat &, oclMat &, Stream &)
-{
-    throw_nogpu();
-}
-void cv::ocl::buildWarpSphericalMaps(Size, Rect, const Mat &, const Mat &, float, oclMat &, oclMat &, Stream &)
-{
-    throw_nogpu();
-}
-#else
 
 namespace cv
 {
@@ -99,19 +83,19 @@ void cv::ocl::buildWarpPlaneMaps(Size /*src_size*/, Rect dst_roi, const Mat &K, 
     int tl_v = dst_roi.tl().y;
 
     Context *clCxt = Context::getContext();
-    string kernelName = "buildWarpPlaneMaps";
-    vector< pair<size_t, const void *> > args;
+    std::string kernelName = "buildWarpPlaneMaps";
+    std::vector< std::pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&map_x.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&map_y.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&KRT_mat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_u));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_v));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_y.step));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&scale));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&map_x.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&map_y.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&KRT_mat.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&tl_u));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&tl_v));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&map_x.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&map_x.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&map_x.step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&map_y.step));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&scale));
 
     size_t globalThreads[3] = {map_x.cols, map_x.rows, 1};
     size_t localThreads[3]  = {32, 8, 1};
@@ -139,19 +123,19 @@ void cv::ocl::buildWarpCylindricalMaps(Size /*src_size*/, Rect dst_roi, const Ma
     int tl_v = dst_roi.tl().y;
 
     Context *clCxt = Context::getContext();
-    string kernelName = "buildWarpCylindricalMaps";
-    vector< pair<size_t, const void *> > args;
+    std::string kernelName = "buildWarpCylindricalMaps";
+    std::vector< std::pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&map_x.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&map_y.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&KR_oclMat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_u));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_v));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_y.step));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&scale));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&map_x.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&map_y.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&KR_oclMat.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&tl_u));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&tl_v));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&map_x.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&map_x.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&map_x.step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&map_y.step));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&scale));
 
     size_t globalThreads[3] = {map_x.cols, map_x.rows, 1};
     size_t localThreads[3]  = {32, 8, 1};
@@ -178,19 +162,19 @@ void cv::ocl::buildWarpSphericalMaps(Size /*src_size*/, Rect dst_roi, const Mat 
     int tl_v = dst_roi.tl().y;
 
     Context *clCxt = Context::getContext();
-    string kernelName = "buildWarpSphericalMaps";
-    vector< pair<size_t, const void *> > args;
+    std::string kernelName = "buildWarpSphericalMaps";
+    std::vector< std::pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&map_x.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&map_y.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&KR_oclMat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_u));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_v));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_x.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&map_y.step));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&scale));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&map_x.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&map_y.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&KR_oclMat.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&tl_u));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&tl_v));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&map_x.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&map_x.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&map_x.step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&map_y.step));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&scale));
 
     size_t globalThreads[3] = {map_x.cols, map_x.rows, 1};
     size_t localThreads[3]  = {32, 8, 1};
@@ -221,16 +205,16 @@ void cv::ocl::buildWarpAffineMaps(const Mat &M, bool inverse, Size dsize, oclMat
     oclMat coeffsOclMat(coeffsMat.reshape(1, 1));
 
     Context *clCxt = Context::getContext();
-    string kernelName = "buildWarpAffineMaps";
-    vector< pair<size_t, const void *> > args;
+    std::string kernelName = "buildWarpAffineMaps";
+    std::vector< std::pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&xmap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&ymap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&coeffsOclMat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&ymap.step));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&xmap.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&ymap.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&coeffsOclMat.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&ymap.step));
 
     size_t globalThreads[3] = {xmap.cols, xmap.rows, 1};
     size_t localThreads[3]  = {32, 8, 1};
@@ -260,21 +244,18 @@ void cv::ocl::buildWarpPerspectiveMaps(const Mat &M, bool inverse, Size dsize, o
     oclMat coeffsOclMat(coeffsMat.reshape(1, 1));
 
     Context *clCxt = Context::getContext();
-    string kernelName = "buildWarpPerspectiveMaps";
-    vector< pair<size_t, const void *> > args;
+    std::string kernelName = "buildWarpPerspectiveMaps";
+    std::vector< std::pair<size_t, const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&xmap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&ymap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&coeffsOclMat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&ymap.step));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&xmap.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&ymap.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&coeffsOclMat.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&ymap.step));
 
     size_t globalThreads[3] = {xmap.cols, xmap.rows, 1};
     size_t localThreads[3]  = {32, 8, 1};
     openCLExecuteKernel(clCxt, &build_warps, kernelName, globalThreads, localThreads, args, -1, -1);
 }
-
-
-#endif // HAVE_OPENCL

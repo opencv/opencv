@@ -216,7 +216,7 @@ int main(int argc, const char *argv[])
 
         if (useGPU)
         {
-            cascade_gpu.visualizeInPlace = true;
+            //cascade_gpu.visualizeInPlace = true;
             cascade_gpu.findLargestObject = findLargestObject;
 
             detections_num = cascade_gpu.detectMultiScale(resized_gpu, facesBuf_gpu, 1.2,
@@ -245,6 +245,11 @@ int main(int argc, const char *argv[])
         if (useGPU)
         {
             resized_gpu.download(resized_cpu);
+
+             for (int i = 0; i < detections_num; ++i)
+             {
+                rectangle(resized_cpu, faces_downloaded.ptr<cv::Rect>()[i], Scalar(255));
+             }
         }
 
         tm.stop();

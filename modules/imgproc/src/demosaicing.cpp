@@ -316,7 +316,7 @@ public:
             _mm_storel_epi64((__m128i*)(dst+6*6), g1);
         }
 
-        return bayer - (bayer_end - width);
+        return int(bayer - (bayer_end - width));
     }
 
     bool use_simd;
@@ -1306,7 +1306,7 @@ public:
         int dcn = dst.channels();
         int dcn2 = dcn<<1;
         int start_with_green = Start_with_green, blue = Blue;
-        int sstep = src.step / src.elemSize1(), dstep = dst.step / dst.elemSize1();
+        int sstep = int(src.step / src.elemSize1()), dstep = int(dst.step / dst.elemSize1());
         SIMDInterpolator vecOp;
 
         const T* S = reinterpret_cast<const T*>(src.data + (range.start + 1) * src.step) + 1;
@@ -1415,7 +1415,7 @@ static void Bayer2RGB_EdgeAware_T(const Mat& src, Mat& dst, int code)
     }
     size = dst.size();
     size.width *= dst.channels();
-    int dstep = dst.step / dst.elemSize1();
+    size_t dstep = dst.step / dst.elemSize1();
     T* firstRow = reinterpret_cast<T*>(dst.data);
     T* lastRow = reinterpret_cast<T*>(dst.data) + (size.height-1) * dstep;
 
@@ -1423,8 +1423,8 @@ static void Bayer2RGB_EdgeAware_T(const Mat& src, Mat& dst, int code)
     {
         for (int x = 0; x < size.width; ++x)
         {
-            firstRow[x] = firstRow[dstep+x];
-            lastRow[x] = lastRow[-dstep+x];
+            firstRow[x] = (firstRow+dstep)[x];
+            lastRow[x] = (lastRow-dstep)[x];
         }
     }
     else

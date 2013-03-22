@@ -44,9 +44,11 @@
 
 #include "cvconfig.h"
 
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 #include "opencv2/highgui/highgui_c.h"
 #include "opencv2/imgproc/imgproc_c.h"
+
+#include "opencv2/core/utility.hpp"
 #include "opencv2/core/internal.hpp"
 
 #include <stdlib.h>
@@ -115,6 +117,7 @@ CvCapture * cvCreateCameraCapture_V4L( int index );
 CvCapture * cvCreateCameraCapture_DC1394( int index );
 CvCapture * cvCreateCameraCapture_DC1394_2( int index );
 CvCapture* cvCreateCameraCapture_MIL( int index );
+CvCapture* cvCreateCameraCapture_Giganetix( int index );
 CvCapture * cvCreateCameraCapture_CMU( int index );
 CV_IMPL CvCapture * cvCreateCameraCapture_TYZX( int index );
 CvCapture* cvCreateFileCapture_Win32( const char* filename );

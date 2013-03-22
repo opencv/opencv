@@ -12,6 +12,7 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/nonfree/features2d.hpp"
 
+using namespace std;
 using namespace cv;
 
 void readme();

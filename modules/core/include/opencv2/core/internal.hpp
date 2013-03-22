@@ -254,14 +254,14 @@ namespace cv
 } //namespace cv
 
 #define CV_INIT_ALGORITHM(classname, algname, memberinit) \
-    static ::cv::Algorithm* create##classname() \
+    static ::cv::Algorithm* create##classname##_hidden() \
     { \
         return new classname; \
     } \
     \
     static ::cv::AlgorithmInfo& classname##_info() \
     { \
-        static ::cv::AlgorithmInfo classname##_info_var(algname, create##classname); \
+        static ::cv::AlgorithmInfo classname##_info_var(algname, create##classname##_hidden); \
         return classname##_info_var; \
     } \
     \
@@ -749,5 +749,15 @@ typedef struct CvBigFuncTable
     (tab).fn_2d[CV_32S] = (void*)FUNCNAME##_32s##FLAG;  \
     (tab).fn_2d[CV_32F] = (void*)FUNCNAME##_32f##FLAG;  \
     (tab).fn_2d[CV_64F] = (void*)FUNCNAME##_64f##FLAG
+
+namespace cv { namespace ogl {
+CV_EXPORTS bool checkError(const char* file, const int line, const char* func = "");
+}}
+
+#if defined(__GNUC__)
+    #define CV_CheckGlError() CV_DbgAssert( (cv::ogl::checkError(__FILE__, __LINE__, __func__)) )
+#else
+    #define CV_CheckGlError() CV_DbgAssert( (cv::ogl::checkError(__FILE__, __LINE__)) )
+#endif
 
 #endif // __OPENCV_CORE_INTERNAL_HPP__

@@ -46,11 +46,14 @@
 #include "cvconfig.h"
 #endif
 
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/features2d.hpp"
+
+#include "opencv2/core/utility.hpp"
 #include "opencv2/core/internal.hpp"
-#include "opencv2/features2d/features2d.hpp"
+
 #include <vector>
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
@@ -58,5 +61,52 @@
 #else
 #define GET_OPTIMIZED(func) (func)
 #endif
+
+
+namespace cv
+{
+
+int RANSACUpdateNumIters( double p, double ep, int modelPoints, int maxIters );
+
+class CV_EXPORTS LMSolver : public Algorithm
+{
+public:
+    class CV_EXPORTS Callback
+    {
+    public:
+        virtual ~Callback() {}
+        virtual bool compute(InputArray param, OutputArray err, OutputArray J) const = 0;
+    };
+
+    virtual void setCallback(const Ptr<LMSolver::Callback>& cb) = 0;
+    virtual int run(InputOutputArray _param0) const = 0;
+};
+
+CV_EXPORTS Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters);
+
+class CV_EXPORTS PointSetRegistrator : public Algorithm
+{
+public:
+    class CV_EXPORTS Callback
+    {
+    public:
+        virtual ~Callback() {}
+        virtual int runKernel(InputArray m1, InputArray m2, OutputArray model) const = 0;
+        virtual void computeError(InputArray m1, InputArray m2, InputArray model, OutputArray err) const = 0;
+        virtual bool checkSubset(InputArray, InputArray, int) const { return true; }
+    };
+
+    virtual void setCallback(const Ptr<PointSetRegistrator::Callback>& cb) = 0;
+    virtual bool run(InputArray m1, InputArray m2, OutputArray model, OutputArray mask) const = 0;
+};
+
+CV_EXPORTS Ptr<PointSetRegistrator> createRANSACPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& cb,
+                                                                    int modelPoints, double threshold,
+                                                                    double confidence=0.99, int maxIters=1000 );
+
+CV_EXPORTS Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& cb,
+                                                                   int modelPoints, double confidence=0.99, int maxIters=1000 );
+
+}
 
 #endif

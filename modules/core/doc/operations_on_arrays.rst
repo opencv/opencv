@@ -592,7 +592,7 @@ Copies the lower or the upper half of a square matrix to another half.
 
 .. ocv:function:: void completeSymm(InputOutputArray mtx, bool lowerToUpper=false)
 
-.. ocv:pyfunction:: cv2.completeSymm(mtx[, lowerToUpper]) -> None
+.. ocv:pyfunction:: cv2.completeSymm(mtx[, lowerToUpper]) -> mtx
 
     :param mtx: input-output floating-point square matrix.
 
@@ -692,7 +692,7 @@ cvarrToMat
 ----------
 Converts ``CvMat``, ``IplImage`` , or ``CvMatND`` to ``Mat``.
 
-.. ocv:function:: Mat cvarrToMat( const CvArr* arr, bool copyData=false, bool allowND=true, int coiMode=0 )
+.. ocv:function:: Mat cvarrToMat( const CvArr* arr, bool copyData=false, bool allowND=true, int coiMode=0, AutoBuffer<double>* buf=0 )
 
     :param arr: input ``CvMat``, ``IplImage`` , or  ``CvMatND``.
 
@@ -2299,7 +2299,9 @@ Performs Principal Component Analysis of the supplied dataset.
 
 .. ocv:function:: PCA& PCA::operator()(InputArray data, InputArray mean, int flags, double retainedVariance)
 
-.. ocv:pyfunction:: cv2.PCACompute(data[, mean[, eigenvectors[, maxComponents]]]) -> mean, eigenvectors
+.. ocv:pyfunction:: cv2.PCACompute(data, mean[, eigenvectors[, maxComponents]]) -> mean, eigenvectors
+
+.. ocv:pyfunction:: cv2.PCACompute(data, mean, retainedVariance[, eigenvectors]) -> mean, eigenvectors
 
     :param data: input samples stored as the matrix rows or as the matrix columns.
 
@@ -2670,7 +2672,7 @@ Generates a single uniformly-distributed random number or an array of random num
 
 .. ocv:function:: void randu( InputOutputArray dst, InputArray low, InputArray high )
 
-.. ocv:pyfunction:: cv2.randu(dst, low, high) -> None
+.. ocv:pyfunction:: cv2.randu(dst, low, high) -> dst
 
     :param dst: output array of random numbers; the array must be pre-allocated.
 
@@ -2701,7 +2703,7 @@ Fills the array with normally distributed random numbers.
 
 .. ocv:function:: void randn( InputOutputArray dst, InputArray mean, InputArray stddev )
 
-.. ocv:pyfunction:: cv2.randn(dst, mean, stddev) -> None
+.. ocv:pyfunction:: cv2.randn(dst, mean, stddev) -> dst
 
     :param dst: output array of random numbers; the array must be pre-allocated and have 1 to 4 channels.
 
@@ -2724,7 +2726,7 @@ Shuffles the array elements randomly.
 
 .. ocv:function:: void randShuffle( InputOutputArray dst, double iterFactor=1., RNG* rng=0 )
 
-.. ocv:pyfunction:: cv2.randShuffle(dst[, iterFactor]) -> None
+.. ocv:pyfunction:: cv2.randShuffle(dst[, iterFactor]) -> dst
 
     :param dst: input/output numerical 1D array.
 
@@ -2864,7 +2866,7 @@ Initializes a scaled identity matrix.
 
 .. ocv:function:: void setIdentity( InputOutputArray mtx, const Scalar& s=Scalar(1) )
 
-.. ocv:pyfunction:: cv2.setIdentity(mtx[, s]) -> None
+.. ocv:pyfunction:: cv2.setIdentity(mtx[, s]) -> mtx
 
 .. ocv:cfunction:: void cvSetIdentity(CvArr* mat, CvScalar value=cvRealScalar(1))
 
@@ -3241,7 +3243,7 @@ The constructors.
 
         * **SVD::NO_UV** indicates that only a vector of singular values ``w`` is to be processed, while ``u`` and ``vt`` will be set to empty matrices.
 
-        * **SVD::FULL_UV** when the matrix is not square, by default the algorithm produces ``u`` and ``vt`` matrices of sufficiently large size for the further ``A`` reconstruction; if, however, ``FULL_UV`` flag is specified, ``u`` and ``vt``will be full-size square orthogonal matrices.
+        * **SVD::FULL_UV** when the matrix is not square, by default the algorithm produces ``u`` and ``vt`` matrices of sufficiently large size for the further ``A`` reconstruction; if, however,   ``FULL_UV`` flag is specified, ``u`` and ``vt`` will be full-size square orthogonal matrices.
 
 The first constructor initializes an empty ``SVD`` structure. The second constructor initializes an empty ``SVD`` structure and then calls
 :ocv:funcx:`SVD::operator()` .

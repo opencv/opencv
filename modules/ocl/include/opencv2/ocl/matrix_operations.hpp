@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -48,9 +49,32 @@ namespace cv
 
     namespace ocl
     {
-        ////////////////////////////////////OpenCL kernel strings//////////////////////////
-        //extern const char *convertC3C4;
 
+        enum
+        {
+            MAT_ADD = 1,
+            MAT_SUB,
+            MAT_MUL,
+            MAT_DIV,
+            MAT_NOT,
+            MAT_AND,
+            MAT_OR,
+            MAT_XOR
+        };
+
+        class CV_EXPORTS oclMatExpr
+        {
+            public:
+                oclMatExpr() : a(oclMat()), b(oclMat()), op(0) {}
+                oclMatExpr(const oclMat& _a, const oclMat& _b, int _op)
+                    : a(_a), b(_b), op(_op) {}
+                operator oclMat() const;
+                void assign(oclMat& m) const;
+
+            protected:
+                oclMat a, b;
+                int op;
+        };
         ////////////////////////////////////////////////////////////////////////
         //////////////////////////////// oclMat ////////////////////////////////
         ////////////////////////////////////////////////////////////////////////
@@ -141,7 +165,7 @@ namespace cv
         }
 
 
-        inline oclMat::oclMat(const oclMat &m, const Range &rowRange, const Range &colRange)
+        inline oclMat::oclMat(const oclMat &m, const Range &rRange, const Range &cRange)
         {
             flags = m.flags;
             step = m.step;
@@ -152,22 +176,22 @@ namespace cv
             wholerows = m.wholerows;
             wholecols = m.wholecols;
             offset = m.offset;
-            if( rowRange == Range::all() )
+            if( rRange == Range::all() )
                 rows = m.rows;
             else
             {
-                CV_Assert( 0 <= rowRange.start && rowRange.start <= rowRange.end && rowRange.end <= m.rows );
-                rows = rowRange.size();
-                offset += step * rowRange.start;
+                CV_Assert( 0 <= rRange.start && rRange.start <= rRange.end && rRange.end <= m.rows );
+                rows = rRange.size();
+                offset += step * rRange.start;
             }
 
-            if( colRange == Range::all() )
+            if( cRange == Range::all() )
                 cols = m.cols;
             else
             {
-                CV_Assert( 0 <= colRange.start && colRange.start <= colRange.end && colRange.end <= m.cols );
-                cols = colRange.size();
-                offset += colRange.start * elemSize();
+                CV_Assert( 0 <= cRange.start && cRange.start <= cRange.end && cRange.end <= m.cols );
+                cols = cRange.size();
+                offset += cRange.start * elemSize();
                 flags &= cols < m.cols ? ~Mat::CONTINUOUS_FLAG : -1;
             }
 
@@ -237,6 +261,12 @@ namespace cv
             return *this;
         }
 
+        inline oclMat& oclMat::operator = (const oclMatExpr& expr)
+        {
+            expr.assign(*this);
+            return *this;
+        }
+
         /* Fixme! To be supported in OpenCL later. */
 #if 0
         template <class T> inline oclMat::operator DevMem2D_<T>() const
@@ -296,12 +326,12 @@ namespace cv
         //CPP void oclMat::copyTo( oclMat& m, const oclMat& mask  ) const;
         //CPP void oclMat::convertTo( oclMat& m, int rtype, double alpha=1, double beta=0 ) const;
 
-        inline void oclMat::assignTo( oclMat &m, int type ) const
+        inline void oclMat::assignTo( oclMat &m, int mtype ) const
         {
-            if( type < 0 )
+            if( mtype < 0 )
                 m = *this;
             else
-                convertTo(m, type);
+                convertTo(m, mtype);
         }
 
         //CPP oclMat& oclMat::operator = (const Scalar& s);
@@ -370,9 +400,9 @@ namespace cv
             return *this;
         }
 
-        inline oclMat oclMat::operator()( Range rowRange, Range colRange ) const
+        inline oclMat oclMat::operator()( Range rRange, Range cRange ) const
         {
-            return oclMat(*this, rowRange, colRange);
+            return oclMat(*this, rRange, cRange);
         }
         inline oclMat oclMat::operator()( const Rect &roi ) const
         {

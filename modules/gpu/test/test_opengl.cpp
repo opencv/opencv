@@ -43,10 +43,12 @@
 
 #if defined(HAVE_CUDA) && defined(HAVE_OPENGL)
 
-/////////////////////////////////////////////
-// GlBuffer
+using namespace cvtest;
 
-PARAM_TEST_CASE(GlBuffer, cv::Size, MatType)
+/////////////////////////////////////////////
+// Buffer
+
+PARAM_TEST_CASE(Buffer, cv::Size, MatType)
 {
     static void SetUpTestCase()
     {
@@ -68,29 +70,29 @@ PARAM_TEST_CASE(GlBuffer, cv::Size, MatType)
     }
 };
 
-GPU_TEST_P(GlBuffer, Constructor1)
+GPU_TEST_P(Buffer, Constructor1)
 {
-    cv::GlBuffer buf(size.height, size.width, type, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf(size.height, size.width, type, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
     EXPECT_EQ(size.height, buf.rows());
     EXPECT_EQ(size.width, buf.cols());
     EXPECT_EQ(type, buf.type());
 }
 
-GPU_TEST_P(GlBuffer, Constructor2)
+GPU_TEST_P(Buffer, Constructor2)
 {
-    cv::GlBuffer buf(size, type, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf(size, type, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
     EXPECT_EQ(size.height, buf.rows());
     EXPECT_EQ(size.width, buf.cols());
     EXPECT_EQ(type, buf.type());
 }
 
-GPU_TEST_P(GlBuffer, ConstructorFromMat)
+GPU_TEST_P(Buffer, ConstructorFromMat)
 {
     cv::Mat gold = randomMat(size, type);
 
-    cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf(gold, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
     cv::Mat bufData;
     buf.copyTo(bufData);
@@ -98,12 +100,12 @@ GPU_TEST_P(GlBuffer, ConstructorFromMat)
     EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
-GPU_TEST_P(GlBuffer, ConstructorFromGpuMat)
+GPU_TEST_P(Buffer, ConstructorFromGpuMat)
 {
     cv::Mat gold = randomMat(size, type);
     cv::gpu::GpuMat d_gold(gold);
 
-    cv::GlBuffer buf(d_gold, cv::GlBuffer::ARRAY_BUFFER);
+    cv::ogl::Buffer buf(d_gold, cv::ogl::Buffer::ARRAY_BUFFER);
 
     cv::Mat bufData;
     buf.copyTo(bufData);
@@ -111,11 +113,11 @@ GPU_TEST_P(GlBuffer, ConstructorFromGpuMat)
     EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
-GPU_TEST_P(GlBuffer, ConstructorFromGlBuffer)
+GPU_TEST_P(Buffer, ConstructorFromBuffer)
 {
-    cv::GlBuffer buf_gold(size, type, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf_gold(size, type, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
-    cv::GlBuffer buf(buf_gold);
+    cv::ogl::Buffer buf(buf_gold);
 
     EXPECT_EQ(buf_gold.bufId(), buf.bufId());
     EXPECT_EQ(buf_gold.rows(), buf.rows());
@@ -123,7 +125,7 @@ GPU_TEST_P(GlBuffer, ConstructorFromGlBuffer)
     EXPECT_EQ(buf_gold.type(), buf.type());
 }
 
-GPU_TEST_P(GlBuffer, ConstructorFromGlTexture2D)
+GPU_TEST_P(Buffer, ConstructorFromTexture2D)
 {
     const int depth = CV_MAT_DEPTH(type);
     const int cn = CV_MAT_CN(type);
@@ -132,9 +134,9 @@ GPU_TEST_P(GlBuffer, ConstructorFromGlTexture2D)
         return;
 
     cv::Mat gold = randomMat(size, type, 0, 1.0);
-    cv::GlTexture2D tex_gold(gold, true);
+    cv::ogl::Texture2D tex_gold(gold, true);
 
-    cv::GlBuffer buf(tex_gold, cv::GlBuffer::PIXEL_PACK_BUFFER, true);
+    cv::ogl::Buffer buf(tex_gold, cv::ogl::Buffer::PIXEL_PACK_BUFFER, true);
 
     cv::Mat bufData;
     buf.copyTo(bufData);
@@ -142,22 +144,22 @@ GPU_TEST_P(GlBuffer, ConstructorFromGlTexture2D)
     EXPECT_MAT_NEAR(gold, bufData, 1e-2);
 }
 
-GPU_TEST_P(GlBuffer, Create)
+GPU_TEST_P(Buffer, Create)
 {
-    cv::GlBuffer buf;
-    buf.create(size.height, size.width, type, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf;
+    buf.create(size.height, size.width, type, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
     EXPECT_EQ(size.height, buf.rows());
     EXPECT_EQ(size.width, buf.cols());
     EXPECT_EQ(type, buf.type());
 }
 
-GPU_TEST_P(GlBuffer, CopyFromMat)
+GPU_TEST_P(Buffer, CopyFromMat)
 {
     cv::Mat gold = randomMat(size, type);
 
-    cv::GlBuffer buf;
-    buf.copyFrom(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf;
+    buf.copyFrom(gold, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
     cv::Mat bufData;
     buf.copyTo(bufData);
@@ -165,13 +167,13 @@ GPU_TEST_P(GlBuffer, CopyFromMat)
     EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
-GPU_TEST_P(GlBuffer, CopyFromGpuMat)
+GPU_TEST_P(Buffer, CopyFromGpuMat)
 {
     cv::Mat gold = randomMat(size, type);
     cv::gpu::GpuMat d_gold(gold);
 
-    cv::GlBuffer buf;
-    buf.copyFrom(d_gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf;
+    buf.copyFrom(d_gold, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
     cv::Mat bufData;
     buf.copyTo(bufData);
@@ -179,13 +181,13 @@ GPU_TEST_P(GlBuffer, CopyFromGpuMat)
     EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
-GPU_TEST_P(GlBuffer, CopyFromGlBuffer)
+GPU_TEST_P(Buffer, CopyFromBuffer)
 {
     cv::Mat gold = randomMat(size, type);
-    cv::GlBuffer buf_gold(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf_gold(gold, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
-    cv::GlBuffer buf;
-    buf.copyFrom(buf_gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf;
+    buf.copyFrom(buf_gold, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
     EXPECT_NE(buf_gold.bufId(), buf.bufId());
 
@@ -195,7 +197,7 @@ GPU_TEST_P(GlBuffer, CopyFromGlBuffer)
     EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
-GPU_TEST_P(GlBuffer, CopyFromGlTexture2D)
+GPU_TEST_P(Buffer, CopyFromTexture2D)
 {
     const int depth = CV_MAT_DEPTH(type);
     const int cn = CV_MAT_CN(type);
@@ -204,10 +206,10 @@ GPU_TEST_P(GlBuffer, CopyFromGlTexture2D)
         return;
 
     cv::Mat gold = randomMat(size, type, 0, 1.0);
-    cv::GlTexture2D tex_gold(gold, true);
+    cv::ogl::Texture2D tex_gold(gold, true);
 
-    cv::GlBuffer buf;
-    buf.copyFrom(tex_gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf;
+    buf.copyFrom(tex_gold, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
     cv::Mat bufData;
     buf.copyTo(bufData);
@@ -215,11 +217,11 @@ GPU_TEST_P(GlBuffer, CopyFromGlTexture2D)
     EXPECT_MAT_NEAR(gold, bufData, 1e-2);
 }
 
-GPU_TEST_P(GlBuffer, CopyToGpuMat)
+GPU_TEST_P(Buffer, CopyToGpuMat)
 {
     cv::Mat gold = randomMat(size, type);
 
-    cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf(gold, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
     cv::gpu::GpuMat dst;
     buf.copyTo(dst);
@@ -227,14 +229,14 @@ GPU_TEST_P(GlBuffer, CopyToGpuMat)
     EXPECT_MAT_NEAR(gold, dst, 0);
 }
 
-GPU_TEST_P(GlBuffer, CopyToGlBuffer)
+GPU_TEST_P(Buffer, CopyToBuffer)
 {
     cv::Mat gold = randomMat(size, type);
 
-    cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf(gold, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
-    cv::GlBuffer dst;
-    buf.copyTo(dst, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer dst;
+    buf.copyTo(dst, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
     EXPECT_NE(buf.bufId(), dst.bufId());
 
@@ -244,7 +246,7 @@ GPU_TEST_P(GlBuffer, CopyToGlBuffer)
     EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
-GPU_TEST_P(GlBuffer, CopyToGlTexture2D)
+GPU_TEST_P(Buffer, CopyToTexture2D)
 {
     const int depth = CV_MAT_DEPTH(type);
     const int cn = CV_MAT_CN(type);
@@ -254,10 +256,10 @@ GPU_TEST_P(GlBuffer, CopyToGlTexture2D)
 
     cv::Mat gold = randomMat(size, type, 0, 1.0);
 
-    cv::GlBuffer buf(gold, cv::GlBuffer::PIXEL_PACK_BUFFER, true);
+    cv::ogl::Buffer buf(gold, cv::ogl::Buffer::PIXEL_PACK_BUFFER, true);
 
-    cv::GlTexture2D tex;
-    buf.copyTo(tex, cv::GlBuffer::PIXEL_PACK_BUFFER, true);
+    cv::ogl::Texture2D tex;
+    buf.copyTo(tex, cv::ogl::Buffer::PIXEL_PACK_BUFFER, true);
 
     cv::Mat texData;
     tex.copyTo(texData);
@@ -265,13 +267,13 @@ GPU_TEST_P(GlBuffer, CopyToGlTexture2D)
     EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
-GPU_TEST_P(GlBuffer, Clone)
+GPU_TEST_P(Buffer, Clone)
 {
     cv::Mat gold = randomMat(size, type);
 
-    cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf(gold, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
-    cv::GlBuffer dst = buf.clone(cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer dst = buf.clone(cv::ogl::Buffer::ARRAY_BUFFER, true);
 
     EXPECT_NE(buf.bufId(), dst.bufId());
 
@@ -281,26 +283,26 @@ GPU_TEST_P(GlBuffer, Clone)
     EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
-GPU_TEST_P(GlBuffer, MapHostRead)
+GPU_TEST_P(Buffer, MapHostRead)
 {
     cv::Mat gold = randomMat(size, type);
 
-    cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf(gold, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
-    cv::Mat dst = buf.mapHost(cv::GlBuffer::READ_ONLY);
+    cv::Mat dst = buf.mapHost(cv::ogl::Buffer::READ_ONLY);
 
     EXPECT_MAT_NEAR(gold, dst, 0);
 
     buf.unmapHost();
 }
 
-GPU_TEST_P(GlBuffer, MapHostWrite)
+GPU_TEST_P(Buffer, MapHostWrite)
 {
     cv::Mat gold = randomMat(size, type);
 
-    cv::GlBuffer buf(size, type, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf(size, type, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
-    cv::Mat dst = buf.mapHost(cv::GlBuffer::WRITE_ONLY);
+    cv::Mat dst = buf.mapHost(cv::ogl::Buffer::WRITE_ONLY);
     gold.copyTo(dst);
     buf.unmapHost();
     dst.release();
@@ -311,11 +313,11 @@ GPU_TEST_P(GlBuffer, MapHostWrite)
     EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
-GPU_TEST_P(GlBuffer, MapDevice)
+GPU_TEST_P(Buffer, MapDevice)
 {
     cv::Mat gold = randomMat(size, type);
 
-    cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::ogl::Buffer buf(gold, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
     cv::gpu::GpuMat dst = buf.mapDevice();
 
@@ -324,12 +326,12 @@ GPU_TEST_P(GlBuffer, MapDevice)
     buf.unmapDevice();
 }
 
-INSTANTIATE_TEST_CASE_P(OpenGL, GlBuffer, testing::Combine(DIFFERENT_SIZES, ALL_TYPES));
+INSTANTIATE_TEST_CASE_P(OpenGL, Buffer, testing::Combine(DIFFERENT_SIZES, ALL_TYPES));
 
 /////////////////////////////////////////////
-// GlTexture2D
+// Texture2D
 
-PARAM_TEST_CASE(GlTexture2D, cv::Size, MatType)
+PARAM_TEST_CASE(Texture2D, cv::Size, MatType)
 {
     static void SetUpTestCase()
     {
@@ -345,7 +347,7 @@ PARAM_TEST_CASE(GlTexture2D, cv::Size, MatType)
     int type;
     int depth;
     int cn;
-    cv::GlTexture2D::Format format;
+    cv::ogl::Texture2D::Format format;
 
     virtual void SetUp()
     {
@@ -354,33 +356,33 @@ PARAM_TEST_CASE(GlTexture2D, cv::Size, MatType)
 
         depth = CV_MAT_DEPTH(type);
         cn = CV_MAT_CN(type);
-        format = cn == 1 ? cv::GlTexture2D::DEPTH_COMPONENT : cn == 3 ? cv::GlTexture2D::RGB : cn == 4 ? cv::GlTexture2D::RGBA : cv::GlTexture2D::NONE;
+        format = cn == 1 ? cv::ogl::Texture2D::DEPTH_COMPONENT : cn == 3 ? cv::ogl::Texture2D::RGB : cn == 4 ? cv::ogl::Texture2D::RGBA : cv::ogl::Texture2D::NONE;
     }
 };
 
-GPU_TEST_P(GlTexture2D, Constructor1)
+GPU_TEST_P(Texture2D, Constructor1)
 {
-    cv::GlTexture2D tex(size.height, size.width, format, true);
+    cv::ogl::Texture2D tex(size.height, size.width, format, true);
 
     EXPECT_EQ(size.height, tex.rows());
     EXPECT_EQ(size.width, tex.cols());
     EXPECT_EQ(format, tex.format());
 }
 
-GPU_TEST_P(GlTexture2D, Constructor2)
+GPU_TEST_P(Texture2D, Constructor2)
 {
-    cv::GlTexture2D tex(size, format, true);
+    cv::ogl::Texture2D tex(size, format, true);
 
     EXPECT_EQ(size.height, tex.rows());
     EXPECT_EQ(size.width, tex.cols());
     EXPECT_EQ(format, tex.format());
 }
 
-GPU_TEST_P(GlTexture2D, ConstructorFromMat)
+GPU_TEST_P(Texture2D, ConstructorFromMat)
 {
     cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
 
-    cv::GlTexture2D tex(gold, true);
+    cv::ogl::Texture2D tex(gold, true);
 
     cv::Mat texData;
     tex.copyTo(texData, depth);
@@ -388,12 +390,12 @@ GPU_TEST_P(GlTexture2D, ConstructorFromMat)
     EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
-GPU_TEST_P(GlTexture2D, ConstructorFromGpuMat)
+GPU_TEST_P(Texture2D, ConstructorFromGpuMat)
 {
     cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
     cv::gpu::GpuMat d_gold(gold);
 
-    cv::GlTexture2D tex(d_gold, true);
+    cv::ogl::Texture2D tex(d_gold, true);
 
     cv::Mat texData;
     tex.copyTo(texData, depth);
@@ -401,12 +403,12 @@ GPU_TEST_P(GlTexture2D, ConstructorFromGpuMat)
     EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
-GPU_TEST_P(GlTexture2D, ConstructorFromGlBuffer)
+GPU_TEST_P(Texture2D, ConstructorFromBuffer)
 {
     cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
-    cv::GlBuffer buf_gold(gold, cv::GlBuffer::PIXEL_UNPACK_BUFFER, true);
+    cv::ogl::Buffer buf_gold(gold, cv::ogl::Buffer::PIXEL_UNPACK_BUFFER, true);
 
-    cv::GlTexture2D tex(buf_gold, true);
+    cv::ogl::Texture2D tex(buf_gold, true);
 
     cv::Mat texData;
     tex.copyTo(texData, depth);
@@ -414,10 +416,10 @@ GPU_TEST_P(GlTexture2D, ConstructorFromGlBuffer)
     EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
-GPU_TEST_P(GlTexture2D, ConstructorFromGlTexture2D)
+GPU_TEST_P(Texture2D, ConstructorFromTexture2D)
 {
-    cv::GlTexture2D tex_gold(size, format, true);
-    cv::GlTexture2D tex(tex_gold);
+    cv::ogl::Texture2D tex_gold(size, format, true);
+    cv::ogl::Texture2D tex(tex_gold);
 
     EXPECT_EQ(tex_gold.texId(), tex.texId());
     EXPECT_EQ(tex_gold.rows(), tex.rows());
@@ -425,9 +427,9 @@ GPU_TEST_P(GlTexture2D, ConstructorFromGlTexture2D)
     EXPECT_EQ(tex_gold.format(), tex.format());
 }
 
-GPU_TEST_P(GlTexture2D, Create)
+GPU_TEST_P(Texture2D, Create)
 {
-    cv::GlTexture2D tex;
+    cv::ogl::Texture2D tex;
     tex.create(size.height, size.width, format, true);
 
     EXPECT_EQ(size.height, tex.rows());
@@ -435,11 +437,11 @@ GPU_TEST_P(GlTexture2D, Create)
     EXPECT_EQ(format, tex.format());
 }
 
-GPU_TEST_P(GlTexture2D, CopyFromMat)
+GPU_TEST_P(Texture2D, CopyFromMat)
 {
     cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
 
-    cv::GlTexture2D tex;
+    cv::ogl::Texture2D tex;
     tex.copyFrom(gold, true);
 
     cv::Mat texData;
@@ -448,12 +450,12 @@ GPU_TEST_P(GlTexture2D, CopyFromMat)
     EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
-GPU_TEST_P(GlTexture2D, CopyFromGpuMat)
+GPU_TEST_P(Texture2D, CopyFromGpuMat)
 {
     cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
     cv::gpu::GpuMat d_gold(gold);
 
-    cv::GlTexture2D tex;
+    cv::ogl::Texture2D tex;
     tex.copyFrom(d_gold, true);
 
     cv::Mat texData;
@@ -462,12 +464,12 @@ GPU_TEST_P(GlTexture2D, CopyFromGpuMat)
     EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
-GPU_TEST_P(GlTexture2D, CopyFromGlBuffer)
+GPU_TEST_P(Texture2D, CopyFromBuffer)
 {
     cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
-    cv::GlBuffer buf_gold(gold, cv::GlBuffer::PIXEL_UNPACK_BUFFER, true);
+    cv::ogl::Buffer buf_gold(gold, cv::ogl::Buffer::PIXEL_UNPACK_BUFFER, true);
 
-    cv::GlTexture2D tex;
+    cv::ogl::Texture2D tex;
     tex.copyFrom(buf_gold, true);
 
     cv::Mat texData;
@@ -476,11 +478,11 @@ GPU_TEST_P(GlTexture2D, CopyFromGlBuffer)
     EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
-GPU_TEST_P(GlTexture2D, CopyToGpuMat)
+GPU_TEST_P(Texture2D, CopyToGpuMat)
 {
     cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
 
-    cv::GlTexture2D tex(gold, true);
+    cv::ogl::Texture2D tex(gold, true);
 
     cv::gpu::GpuMat dst;
     tex.copyTo(dst, depth);
@@ -488,13 +490,13 @@ GPU_TEST_P(GlTexture2D, CopyToGpuMat)
     EXPECT_MAT_NEAR(gold, dst, 1e-2);
 }
 
-GPU_TEST_P(GlTexture2D, CopyToGlBuffer)
+GPU_TEST_P(Texture2D, CopyToBuffer)
 {
     cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
 
-    cv::GlTexture2D tex(gold, true);
+    cv::ogl::Texture2D tex(gold, true);
 
-    cv::GlBuffer dst;
+    cv::ogl::Buffer dst;
     tex.copyTo(dst, depth, true);
 
     cv::Mat bufData;
@@ -503,6 +505,6 @@ GPU_TEST_P(GlTexture2D, CopyToGlBuffer)
     EXPECT_MAT_NEAR(gold, bufData, 1e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(OpenGL, GlTexture2D, testing::Combine(DIFFERENT_SIZES, testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4)));
+INSTANTIATE_TEST_CASE_P(OpenGL, Texture2D, testing::Combine(DIFFERENT_SIZES, testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4)));
 
 #endif

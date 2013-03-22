@@ -44,8 +44,6 @@
 #include <iostream>
 #include <fstream>
 
-using namespace std;
-
 class CSMatrixGenerator {
 public:
    typedef enum { PDT_GAUSS=1, PDT_BERNOULLI, PDT_DBFRIENDLY } PHI_DISTR_TYPE;

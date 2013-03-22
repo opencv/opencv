@@ -1,7 +1,7 @@
 #include "perf_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 #include "opencv2/core/internal.hpp"
-#include "opencv2/flann/flann.hpp"
+#include "opencv2/flann.hpp"
 #include "opencv2/opencv_modules.hpp"
 
 using namespace std;
@@ -14,15 +14,15 @@ using std::tr1::get;
 #define ORB_MATCH_CONFIDENCE  0.3f
 #define WORK_MEGAPIX 0.6
 
-typedef TestBaseWithParam<String> stitch;
-typedef TestBaseWithParam<String> match;
-typedef std::tr1::tuple<String, int> matchVector_t;
+typedef TestBaseWithParam<string> stitch;
+typedef TestBaseWithParam<string> match;
+typedef std::tr1::tuple<string, int> matchVector_t;
 typedef TestBaseWithParam<matchVector_t> matchVector;
 
 #ifdef HAVE_OPENCV_NONFREE_TODO_FIND_WHY_SURF_IS_NOT_ABLE_TO_STITCH_PANOS
 #define TEST_DETECTORS testing::Values("surf", "orb")
 #else
-#define TEST_DETECTORS testing::Values<String>("orb")
+#define TEST_DETECTORS testing::Values<string>("orb")
 #endif
 
 PERF_TEST_P(stitch, a123, TEST_DETECTORS)
@@ -154,7 +154,7 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
 
 PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
                  TEST_DETECTORS,
-                 testing::Values(2, 4, 6, 8))
+                 testing::Values(2, 4, 8))
              )
 {
     Mat img1, img1_full = imread( getDataPath("stitching/b1.png") );
@@ -166,7 +166,7 @@ PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
 
     Ptr<detail::FeaturesFinder> finder;
     Ptr<detail::FeaturesMatcher> matcher;
-    String detectorName = get<0>(GetParam());
+    string detectorName = get<0>(GetParam());
     int featuresVectorSize = get<1>(GetParam());
     if (detectorName == "surf")
     {

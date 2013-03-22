@@ -1,6 +1,7 @@
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <stdio.h>
 
@@ -24,7 +25,7 @@ int main(int argc, const char ** argv)
 {
     help();
     CommandLineParser parser(argc, argv, keys);
-    string filename = parser.get<string>(1);
+    string filename = parser.get<string>(0);
 
     Mat img = imread(filename.c_str(), CV_LOAD_IMAGE_GRAYSCALE);
     if( img.empty() )

@@ -82,7 +82,7 @@ static JasperInitializer initialize_jasper;
 
 Jpeg2KDecoder::Jpeg2KDecoder()
 {
-    m_signature = '\0' + string() + '\0' + string() + '\0' + string("\x0cjP  \r\n\x87\n");
+    m_signature = '\0' + std::string() + '\0' + std::string() + '\0' + std::string("\x0cjP  \r\n\x87\n");
     m_stream = 0;
     m_image = 0;
 }
@@ -212,7 +212,7 @@ bool  Jpeg2KDecoder::readData( Mat& img )
                 cmptlut[0] = jas_image_getcmptbytype( image, JAS_IMAGE_CT_RGB_B );
                 cmptlut[1] = jas_image_getcmptbytype( image, JAS_IMAGE_CT_RGB_G );
                 cmptlut[2] = jas_image_getcmptbytype( image, JAS_IMAGE_CT_RGB_R );
-                if( cmptlut[0] < 0 || cmptlut[1] < 0 || cmptlut[0] < 0 )
+                if( cmptlut[0] < 0 || cmptlut[1] < 0 || cmptlut[2] < 0 )
                     result = false;
                 ncmpts = 3;
             }
@@ -418,7 +418,7 @@ bool  Jpeg2KEncoder::isFormatSupported( int depth ) const
 }
 
 
-bool  Jpeg2KEncoder::write( const Mat& _img, const vector<int>& )
+bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
 {
     int width = _img.cols, height = _img.rows;
     int depth = _img.depth(), channels = _img.channels();

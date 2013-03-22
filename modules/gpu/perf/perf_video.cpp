@@ -2,6 +2,19 @@
 
 using namespace std;
 using namespace testing;
+using namespace perf;
+
+#if defined(HAVE_XINE)         || \
+    defined(HAVE_GSTREAMER)    || \
+    defined(HAVE_QUICKTIME)    || \
+    defined(HAVE_AVFOUNDATION) || \
+    defined(HAVE_FFMPEG)       || \
+    defined(WIN32) /* assume that we have ffmpeg */
+
+#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
+#else
+#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
+#endif
 
 namespace cv
 {
@@ -11,60 +24,15 @@ namespace cv
     }
 }
 
-namespace {
-
 //////////////////////////////////////////////////////
-// BroxOpticalFlow
+// InterpolateFrames
 
 typedef pair<string, string> pair_string;
 
 DEF_PARAM_TEST_1(ImagePair, pair_string);
 
-PERF_TEST_P(ImagePair, Video_BroxOpticalFlow,
-    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
-{
-    declare.time(10);
-
-    cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame0.empty());
-
-    cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame1.empty());
-
-    frame0.convertTo(frame0, CV_32FC1, 1.0 / 255.0);
-    frame1.convertTo(frame1, CV_32FC1, 1.0 / 255.0);
-
-    if (PERF_RUN_GPU())
-    {
-        cv::gpu::GpuMat d_frame0(frame0);
-        cv::gpu::GpuMat d_frame1(frame1);
-        cv::gpu::GpuMat d_u;
-        cv::gpu::GpuMat d_v;
-
-        cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                        10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
-
-        d_flow(d_frame0, d_frame1, d_u, d_v);
-
-        TEST_CYCLE()
-        {
-            d_flow(d_frame0, d_frame1, d_u, d_v);
-        }
-
-        GPU_SANITY_CHECK(d_u);
-        GPU_SANITY_CHECK(d_v);
-    }
-    else
-    {
-        FAIL() << "No such CPU implementation analogy";
-    }
-}
-
-//////////////////////////////////////////////////////
-// InterpolateFrames
-
 PERF_TEST_P(ImagePair, Video_InterpolateFrames,
-    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -77,8 +45,8 @@ PERF_TEST_P(ImagePair, Video_InterpolateFrames,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_frame0(frame0);
-        cv::gpu::GpuMat d_frame1(frame1);
+        const cv::gpu::GpuMat d_frame0(frame0);
+        const cv::gpu::GpuMat d_frame1(frame1);
         cv::gpu::GpuMat d_fu, d_fv;
         cv::gpu::GpuMat d_bu, d_bv;
 
@@ -88,24 +56,16 @@ PERF_TEST_P(ImagePair, Video_InterpolateFrames,
         d_flow(d_frame0, d_frame1, d_fu, d_fv);
         d_flow(d_frame1, d_frame0, d_bu, d_bv);
 
-        cv::gpu::GpuMat d_newFrame;
+        cv::gpu::GpuMat newFrame;
         cv::gpu::GpuMat d_buf;
 
-        cv::gpu::interpolateFrames(d_frame0, d_frame1, d_fu, d_fv, d_bu, d_bv, 0.5f, d_newFrame, d_buf);
+        TEST_CYCLE() cv::gpu::interpolateFrames(d_frame0, d_frame1, d_fu, d_fv, d_bu, d_bv, 0.5f, newFrame, d_buf);
 
-        TEST_CYCLE()
-        {
-            cv::gpu::interpolateFrames(d_frame0, d_frame1, d_fu, d_fv, d_bu, d_bv, 0.5f, d_newFrame, d_buf);
-        }
-
-        GPU_SANITY_CHECK(d_fu);
-        GPU_SANITY_CHECK(d_fv);
-        GPU_SANITY_CHECK(d_bu);
-        GPU_SANITY_CHECK(d_bv);
+        GPU_SANITY_CHECK(newFrame);
     }
     else
     {
-        FAIL() << "No such CPU implementation analogy";
+        FAIL_NO_CPU();
     }
 }
 
@@ -113,7 +73,7 @@ PERF_TEST_P(ImagePair, Video_InterpolateFrames,
 // CreateOpticalFlowNeedleMap
 
 PERF_TEST_P(ImagePair, Video_CreateOpticalFlowNeedleMap,
-    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -126,31 +86,26 @@ PERF_TEST_P(ImagePair, Video_CreateOpticalFlowNeedleMap,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_frame0(frame0);
-        cv::gpu::GpuMat d_frame1(frame1);
-        cv::gpu::GpuMat d_u;
-        cv::gpu::GpuMat d_v;
+        const cv::gpu::GpuMat d_frame0(frame0);
+        const cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat u;
+        cv::gpu::GpuMat v;
 
         cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
                                         10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
-        d_flow(d_frame0, d_frame1, d_u, d_v);
+        d_flow(d_frame0, d_frame1, u, v);
 
-        cv::gpu::GpuMat d_vertex, d_colors;
+        cv::gpu::GpuMat vertex, colors;
 
-        cv::gpu::createOpticalFlowNeedleMap(d_u, d_v, d_vertex, d_colors);
+        TEST_CYCLE() cv::gpu::createOpticalFlowNeedleMap(u, v, vertex, colors);
 
-        TEST_CYCLE()
-        {
-            cv::gpu::createOpticalFlowNeedleMap(d_u, d_v, d_vertex, d_colors);
-        }
-
-        GPU_SANITY_CHECK(d_vertex);
-        GPU_SANITY_CHECK(d_colors);
+        GPU_SANITY_CHECK(vertex);
+        GPU_SANITY_CHECK(colors);
     }
     else
     {
-        FAIL() << "No such CPU implementation analogy";
+        FAIL_NO_CPU();
     }
 }
 
@@ -160,42 +115,74 @@ PERF_TEST_P(ImagePair, Video_CreateOpticalFlowNeedleMap,
 DEF_PARAM_TEST(Image_MinDistance, string, double);
 
 PERF_TEST_P(Image_MinDistance, Video_GoodFeaturesToTrack,
-    Combine(Values<string>("gpu/perf/aloe.png"), Values(0.0, 3.0)))
+            Combine(Values<string>("gpu/perf/aloe.png"),
+                    Values(0.0, 3.0)))
 {
-    string fileName = GET_PARAM(0);
-    double minDistance = GET_PARAM(1);
+    const string fileName = GET_PARAM(0);
+    const double minDistance = GET_PARAM(1);
 
-    cv::Mat image = readImage(fileName, cv::IMREAD_GRAYSCALE);
+    const cv::Mat image = readImage(fileName, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
+
+    const int maxCorners = 8000;
+    const double qualityLevel = 0.01;
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GoodFeaturesToTrackDetector_GPU d_detector(8000, 0.01, minDistance);
+        cv::gpu::GoodFeaturesToTrackDetector_GPU d_detector(maxCorners, qualityLevel, minDistance);
 
-        cv::gpu::GpuMat d_image(image);
-        cv::gpu::GpuMat d_pts;
+        const cv::gpu::GpuMat d_image(image);
+        cv::gpu::GpuMat pts;
 
-        d_detector(d_image, d_pts);
+        TEST_CYCLE() d_detector(d_image, pts);
 
-        TEST_CYCLE()
-        {
-            d_detector(d_image, d_pts);
-        }
-
-        GPU_SANITY_CHECK(d_pts);
+        GPU_SANITY_CHECK(pts);
     }
     else
     {
         cv::Mat pts;
 
-        cv::goodFeaturesToTrack(image, pts, 8000, 0.01, minDistance);
-
-        TEST_CYCLE()
-        {
-            cv::goodFeaturesToTrack(image, pts, 8000, 0.01, minDistance);
-        }
+        TEST_CYCLE() cv::goodFeaturesToTrack(image, pts, maxCorners, qualityLevel, minDistance);
 
         CPU_SANITY_CHECK(pts);
+    }
+}
+
+//////////////////////////////////////////////////////
+// BroxOpticalFlow
+
+PERF_TEST_P(ImagePair, Video_BroxOpticalFlow,
+            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+{
+    declare.time(300);
+
+    cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame0.empty());
+
+    cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame1.empty());
+
+    frame0.convertTo(frame0, CV_32FC1, 1.0 / 255.0);
+    frame1.convertTo(frame1, CV_32FC1, 1.0 / 255.0);
+
+    if (PERF_RUN_GPU())
+    {
+        const cv::gpu::GpuMat d_frame0(frame0);
+        const cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat u;
+        cv::gpu::GpuMat v;
+
+        cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
+                                        10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
+
+        TEST_CYCLE() d_flow(d_frame0, d_frame1, u, v);
+
+        GPU_SANITY_CHECK(u);
+        GPU_SANITY_CHECK(v);
+    }
+    else
+    {
+        FAIL_NO_CPU();
     }
 }
 
@@ -204,27 +191,27 @@ PERF_TEST_P(Image_MinDistance, Video_GoodFeaturesToTrack,
 
 DEF_PARAM_TEST(ImagePair_Gray_NPts_WinSz_Levels_Iters, pair_string, bool, int, int, int, int);
 
-PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, Video_PyrLKOpticalFlowSparse, Combine(
-    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")),
-    Bool(),
-    Values(1000, 2000, 4000, 8000),
-    Values(9, 13, 17, 21),
-    Values(1, 2, 3),
-    Values(1, 10, 30)))
+PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, Video_PyrLKOpticalFlowSparse,
+            Combine(Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")),
+                    Bool(),
+                    Values(8000),
+                    Values(21),
+                    Values(1, 3),
+                    Values(1, 30)))
 {
     declare.time(20.0);
 
-    pair_string imagePair = GET_PARAM(0);
-    bool useGray = GET_PARAM(1);
-    int points = GET_PARAM(2);
-    int winSize = GET_PARAM(3);
-    int levels = GET_PARAM(4);
-    int iters = GET_PARAM(5);
+    const pair_string imagePair = GET_PARAM(0);
+    const bool useGray = GET_PARAM(1);
+    const int points = GET_PARAM(2);
+    const int winSize = GET_PARAM(3);
+    const int levels = GET_PARAM(4);
+    const int iters = GET_PARAM(5);
 
-    cv::Mat frame0 = readImage(imagePair.first, useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    const cv::Mat frame0 = readImage(imagePair.first, useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage(imagePair.second, useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    const cv::Mat frame1 = readImage(imagePair.second, useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame1.empty());
 
     cv::Mat gray_frame;
@@ -238,35 +225,27 @@ PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, Video_PyrLKOpticalFlowSparse
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_pts(pts.reshape(2, 1));
+        const cv::gpu::GpuMat d_pts(pts.reshape(2, 1));
 
         cv::gpu::PyrLKOpticalFlow d_pyrLK;
         d_pyrLK.winSize = cv::Size(winSize, winSize);
         d_pyrLK.maxLevel = levels - 1;
         d_pyrLK.iters = iters;
 
-        cv::gpu::GpuMat d_frame0(frame0);
-        cv::gpu::GpuMat d_frame1(frame1);
-        cv::gpu::GpuMat d_nextPts;
-        cv::gpu::GpuMat d_status;
+        const cv::gpu::GpuMat d_frame0(frame0);
+        const cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat nextPts;
+        cv::gpu::GpuMat status;
 
-        d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status);
+        TEST_CYCLE() d_pyrLK.sparse(d_frame0, d_frame1, d_pts, nextPts, status);
 
-        TEST_CYCLE()
-        {
-            d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status);
-        }
-
-        GPU_SANITY_CHECK(d_status);
+        GPU_SANITY_CHECK(nextPts);
+        GPU_SANITY_CHECK(status);
     }
     else
     {
         cv::Mat nextPts;
         cv::Mat status;
-
-        cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, cv::noArray(),
-                                 cv::Size(winSize, winSize), levels - 1,
-                                 cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, iters, 0.01));
 
         TEST_CYCLE()
         {
@@ -275,6 +254,7 @@ PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, Video_PyrLKOpticalFlowSparse
                                      cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, iters, 0.01));
         }
 
+        CPU_SANITY_CHECK(nextPts);
         CPU_SANITY_CHECK(status);
     }
 }
@@ -284,50 +264,45 @@ PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, Video_PyrLKOpticalFlowSparse
 
 DEF_PARAM_TEST(ImagePair_WinSz_Levels_Iters, pair_string, int, int, int);
 
-PERF_TEST_P(ImagePair_WinSz_Levels_Iters, Video_PyrLKOpticalFlowDense, Combine(
-    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")),
-    Values(3, 5, 7, 9, 13, 17, 21),
-    Values(1, 2, 3),
-    Values(1, 10)))
+PERF_TEST_P(ImagePair_WinSz_Levels_Iters, Video_PyrLKOpticalFlowDense,
+            Combine(Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")),
+                    Values(3, 5, 7, 9, 13, 17, 21),
+                    Values(1, 3),
+                    Values(1, 10)))
 {
     declare.time(30);
 
-    pair_string imagePair = GET_PARAM(0);
-    int winSize = GET_PARAM(1);
-    int levels = GET_PARAM(2);
-    int iters = GET_PARAM(3);
+    const pair_string imagePair = GET_PARAM(0);
+    const int winSize = GET_PARAM(1);
+    const int levels = GET_PARAM(2);
+    const int iters = GET_PARAM(3);
 
-    cv::Mat frame0 = readImage(imagePair.first, cv::IMREAD_GRAYSCALE);
+    const cv::Mat frame0 = readImage(imagePair.first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage(imagePair.second, cv::IMREAD_GRAYSCALE);
+    const cv::Mat frame1 = readImage(imagePair.second, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_frame0(frame0);
-        cv::gpu::GpuMat d_frame1(frame1);
-        cv::gpu::GpuMat d_u;
-        cv::gpu::GpuMat d_v;
+        const cv::gpu::GpuMat d_frame0(frame0);
+        const cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat u;
+        cv::gpu::GpuMat v;
 
         cv::gpu::PyrLKOpticalFlow d_pyrLK;
         d_pyrLK.winSize = cv::Size(winSize, winSize);
         d_pyrLK.maxLevel = levels - 1;
         d_pyrLK.iters = iters;
 
-        d_pyrLK.dense(d_frame0, d_frame1, d_u, d_v);
+        TEST_CYCLE() d_pyrLK.dense(d_frame0, d_frame1, u, v);
 
-        TEST_CYCLE()
-        {
-            d_pyrLK.dense(d_frame0, d_frame1, d_u, d_v);
-        }
-
-        GPU_SANITY_CHECK(d_u);
-        GPU_SANITY_CHECK(d_v);
+        GPU_SANITY_CHECK(u);
+        GPU_SANITY_CHECK(v);
     }
     else
     {
-        FAIL() << "No such CPU implementation analogy";
+        FAIL_NO_CPU();
     }
 }
 
@@ -335,30 +310,30 @@ PERF_TEST_P(ImagePair_WinSz_Levels_Iters, Video_PyrLKOpticalFlowDense, Combine(
 // FarnebackOpticalFlow
 
 PERF_TEST_P(ImagePair, Video_FarnebackOpticalFlow,
-    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     declare.time(10);
 
-    cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
+    const cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
+    const cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
-    int numLevels = 5;
-    double pyrScale = 0.5;
-    int winSize = 13;
-    int numIters = 10;
-    int polyN = 5;
-    double polySigma = 1.1;
-    int flags = 0;
+    const int numLevels = 5;
+    const double pyrScale = 0.5;
+    const int winSize = 13;
+    const int numIters = 10;
+    const int polyN = 5;
+    const double polySigma = 1.1;
+    const int flags = 0;
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_frame0(frame0);
-        cv::gpu::GpuMat d_frame1(frame1);
-        cv::gpu::GpuMat d_u;
-        cv::gpu::GpuMat d_v;
+        const cv::gpu::GpuMat d_frame0(frame0);
+        const cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat u;
+        cv::gpu::GpuMat v;
 
         cv::gpu::FarnebackOpticalFlow d_farneback;
         d_farneback.numLevels = numLevels;
@@ -369,26 +344,16 @@ PERF_TEST_P(ImagePair, Video_FarnebackOpticalFlow,
         d_farneback.polySigma = polySigma;
         d_farneback.flags = flags;
 
-        d_farneback(d_frame0, d_frame1, d_u, d_v);
+        TEST_CYCLE() d_farneback(d_frame0, d_frame1, u, v);
 
-        TEST_CYCLE()
-        {
-            d_farneback(d_frame0, d_frame1, d_u, d_v);
-        }
-
-        GPU_SANITY_CHECK(d_u);
-        GPU_SANITY_CHECK(d_v);
+        GPU_SANITY_CHECK(u, 1e-4);
+        GPU_SANITY_CHECK(v, 1e-4);
     }
     else
     {
         cv::Mat flow;
 
-        cv::calcOpticalFlowFarneback(frame0, frame1, flow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags);
-
-        TEST_CYCLE()
-        {
-            cv::calcOpticalFlowFarneback(frame0, frame1, flow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags);
-        }
+        TEST_CYCLE() cv::calcOpticalFlowFarneback(frame0, frame1, flow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags);
 
         CPU_SANITY_CHECK(flow);
     }
@@ -398,47 +363,37 @@ PERF_TEST_P(ImagePair, Video_FarnebackOpticalFlow,
 // OpticalFlowDual_TVL1
 
 PERF_TEST_P(ImagePair, Video_OpticalFlowDual_TVL1,
-    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     declare.time(20);
 
-    cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
+    const cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
+    const cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_frame0(frame0);
-        cv::gpu::GpuMat d_frame1(frame1);
-        cv::gpu::GpuMat d_flowx;
-        cv::gpu::GpuMat d_flowy;
+        const cv::gpu::GpuMat d_frame0(frame0);
+        const cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat u;
+        cv::gpu::GpuMat v;
 
         cv::gpu::OpticalFlowDual_TVL1_GPU d_alg;
 
-        d_alg(d_frame0, d_frame1, d_flowx, d_flowy);
+        TEST_CYCLE() d_alg(d_frame0, d_frame1, u, v);
 
-        TEST_CYCLE()
-        {
-            d_alg(d_frame0, d_frame1, d_flowx, d_flowy);
-        }
-
-        GPU_SANITY_CHECK(d_flowx);
-        GPU_SANITY_CHECK(d_flowy);
+        GPU_SANITY_CHECK(u, 1e-2);
+        GPU_SANITY_CHECK(v, 1e-2);
     }
     else
     {
         cv::Mat flow;
 
-        cv::OpticalFlowDual_TVL1 alg;
+        cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
 
-        alg(frame0, frame1, flow);
-
-        TEST_CYCLE()
-        {
-            alg(frame0, frame1, flow);
-        }
+        TEST_CYCLE() alg->calc(frame0, frame1, flow);
 
         CPU_SANITY_CHECK(flow);
     }
@@ -466,111 +421,89 @@ void calcOpticalFlowBM(const cv::Mat& prev, const cv::Mat& curr,
 }
 
 PERF_TEST_P(ImagePair, Video_OpticalFlowBM,
-    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     declare.time(400);
 
-    cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
+    const cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
+    const cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
-    cv::Size block_size(16, 16);
-    cv::Size shift_size(1, 1);
-    cv::Size max_range(16, 16);
+    const cv::Size block_size(16, 16);
+    const cv::Size shift_size(1, 1);
+    const cv::Size max_range(16, 16);
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_frame0(frame0);
-        cv::gpu::GpuMat d_frame1(frame1);
-        cv::gpu::GpuMat d_velx, d_vely, buf;
+        const cv::gpu::GpuMat d_frame0(frame0);
+        const cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat u, v, buf;
 
-        cv::gpu::calcOpticalFlowBM(d_frame0, d_frame1, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
+        TEST_CYCLE() cv::gpu::calcOpticalFlowBM(d_frame0, d_frame1, block_size, shift_size, max_range, false, u, v, buf);
 
-        TEST_CYCLE()
-        {
-            cv::gpu::calcOpticalFlowBM(d_frame0, d_frame1, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
-        }
-
-        GPU_SANITY_CHECK(d_velx);
-        GPU_SANITY_CHECK(d_vely);
+        GPU_SANITY_CHECK(u);
+        GPU_SANITY_CHECK(v);
     }
     else
     {
-        cv::Mat velx, vely;
+        cv::Mat u, v;
 
-        calcOpticalFlowBM(frame0, frame1, block_size, shift_size, max_range, false, velx, vely);
+        TEST_CYCLE() calcOpticalFlowBM(frame0, frame1, block_size, shift_size, max_range, false, u, v);
 
-        TEST_CYCLE()
-        {
-            calcOpticalFlowBM(frame0, frame1, block_size, shift_size, max_range, false, velx, vely);
-        }
-
-        CPU_SANITY_CHECK(velx);
-        CPU_SANITY_CHECK(vely);
+        CPU_SANITY_CHECK(u);
+        CPU_SANITY_CHECK(v);
     }
 }
 
 PERF_TEST_P(ImagePair, Video_FastOpticalFlowBM,
-    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+            Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
 {
     declare.time(400);
 
-    cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
+    const cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
+    const cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
-    cv::Size block_size(16, 16);
-    cv::Size shift_size(1, 1);
-    cv::Size max_range(16, 16);
+    const cv::Size block_size(16, 16);
+    const cv::Size shift_size(1, 1);
+    const cv::Size max_range(16, 16);
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_frame0(frame0);
-        cv::gpu::GpuMat d_frame1(frame1);
-        cv::gpu::GpuMat d_velx, d_vely;
+        const cv::gpu::GpuMat d_frame0(frame0);
+        const cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat u, v;
 
         cv::gpu::FastOpticalFlowBM fastBM;
 
-        fastBM(d_frame0, d_frame1, d_velx, d_vely, max_range.width, block_size.width);
+        TEST_CYCLE() fastBM(d_frame0, d_frame1, u, v, max_range.width, block_size.width);
 
-        TEST_CYCLE()
-        {
-            fastBM(d_frame0, d_frame1, d_velx, d_vely, max_range.width, block_size.width);
-        }
-
-        GPU_SANITY_CHECK(d_velx);
-        GPU_SANITY_CHECK(d_vely);
+        GPU_SANITY_CHECK(u, 2);
+        GPU_SANITY_CHECK(v, 2);
     }
     else
     {
-        cv::Mat velx, vely;
-
-        calcOpticalFlowBM(frame0, frame1, block_size, shift_size, max_range, false, velx, vely);
-
-        TEST_CYCLE()
-        {
-            calcOpticalFlowBM(frame0, frame1, block_size, shift_size, max_range, false, velx, vely);
-        }
-
-        CPU_SANITY_CHECK(velx);
-        CPU_SANITY_CHECK(vely);
+        FAIL_NO_CPU();
     }
 }
 
 //////////////////////////////////////////////////////
 // FGDStatModel
 
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+
 DEF_PARAM_TEST_1(Video, string);
 
-PERF_TEST_P(Video, DISABLED_Video_FGDStatModel, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
+PERF_TEST_P(Video, Video_FGDStatModel,
+            Values(string("gpu/video/768x576.avi")))
 {
     declare.time(60);
 
-    string inputFile = perf::TestBase::getDataPath(GetParam());
+    const string inputFile = perf::TestBase::getDataPath(GetParam());
 
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
@@ -597,6 +530,12 @@ PERF_TEST_P(Video, DISABLED_Video_FGDStatModel, Values("gpu/video/768x576.avi", 
             d_model.update(d_frame);
             stopTimer();
         }
+
+        const cv::gpu::GpuMat background = d_model.background;
+        const cv::gpu::GpuMat foreground = d_model.foreground;
+
+        GPU_SANITY_CHECK(background, 1e-2, ERROR_RELATIVE);
+        GPU_SANITY_CHECK(foreground, 1e-2, ERROR_RELATIVE);
     }
     else
     {
@@ -614,20 +553,32 @@ PERF_TEST_P(Video, DISABLED_Video_FGDStatModel, Values("gpu/video/768x576.avi", 
             cvUpdateBGStatModel(&ipl_frame, model);
             stopTimer();
         }
+
+        const cv::Mat background = model->background;
+        const cv::Mat foreground = model->foreground;
+
+        CPU_SANITY_CHECK(background);
+        CPU_SANITY_CHECK(foreground);
     }
 }
+
+#endif
 
 //////////////////////////////////////////////////////
 // MOG
 
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+
 DEF_PARAM_TEST(Video_Cn_LearningRate, string, MatCn, double);
 
-PERF_TEST_P(Video_Cn_LearningRate, DISABLED_Video_MOG,
-    Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), GPU_CHANNELS_1_3_4, Values(0.0, 0.01)))
+PERF_TEST_P(Video_Cn_LearningRate, Video_MOG,
+            Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
+                    GPU_CHANNELS_1_3_4,
+                    Values(0.0, 0.01)))
 {
-    string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
-    int cn = GET_PARAM(1);
-    float learningRate = static_cast<float>(GET_PARAM(2));
+    const string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
+    const int cn = GET_PARAM(1);
+    const float learningRate = static_cast<float>(GET_PARAM(2));
 
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
@@ -651,9 +602,9 @@ PERF_TEST_P(Video_Cn_LearningRate, DISABLED_Video_MOG,
     {
         cv::gpu::GpuMat d_frame(frame);
         cv::gpu::MOG_GPU d_mog;
-        cv::gpu::GpuMat d_foreground;
+        cv::gpu::GpuMat foreground;
 
-        d_mog(d_frame, d_foreground, learningRate);
+        d_mog(d_frame, foreground, learningRate);
 
         for (int i = 0; i < 10; ++i)
         {
@@ -673,16 +624,18 @@ PERF_TEST_P(Video_Cn_LearningRate, DISABLED_Video_MOG,
             d_frame.upload(frame);
 
             startTimer(); next();
-            d_mog(d_frame, d_foreground, learningRate);
+            d_mog(d_frame, foreground, learningRate);
             stopTimer();
         }
+
+        GPU_SANITY_CHECK(foreground);
     }
     else
     {
-        cv::BackgroundSubtractorMOG mog;
+        cv::Ptr<cv::BackgroundSubtractor> mog = cv::createBackgroundSubtractorMOG();
         cv::Mat foreground;
 
-        mog(frame, foreground, learningRate);
+        mog->apply(frame, foreground, learningRate);
 
         for (int i = 0; i < 10; ++i)
         {
@@ -700,22 +653,29 @@ PERF_TEST_P(Video_Cn_LearningRate, DISABLED_Video_MOG,
             }
 
             startTimer(); next();
-            mog(frame, foreground, learningRate);
+            mog->apply(frame, foreground, learningRate);
             stopTimer();
         }
+
+        CPU_SANITY_CHECK(foreground);
     }
 }
+
+#endif
 
 //////////////////////////////////////////////////////
 // MOG2
 
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+
 DEF_PARAM_TEST(Video_Cn, string, int);
 
-PERF_TEST_P(Video_Cn, DISABLED_Video_MOG2,
-    Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), GPU_CHANNELS_1_3_4))
+PERF_TEST_P(Video_Cn, Video_MOG2,
+            Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
+                    GPU_CHANNELS_1_3_4))
 {
-    string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
-    int cn = GET_PARAM(1);
+    const string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
+    const int cn = GET_PARAM(1);
 
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
@@ -737,11 +697,13 @@ PERF_TEST_P(Video_Cn, DISABLED_Video_MOG2,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_frame(frame);
         cv::gpu::MOG2_GPU d_mog2;
-        cv::gpu::GpuMat d_foreground;
+        d_mog2.bShadowDetection = false;
 
-        d_mog2(d_frame, d_foreground);
+        cv::gpu::GpuMat d_frame(frame);
+        cv::gpu::GpuMat foreground;
+
+        d_mog2(d_frame, foreground);
 
         for (int i = 0; i < 10; ++i)
         {
@@ -761,16 +723,20 @@ PERF_TEST_P(Video_Cn, DISABLED_Video_MOG2,
             d_frame.upload(frame);
 
             startTimer(); next();
-            d_mog2(d_frame, d_foreground);
+            d_mog2(d_frame, foreground);
             stopTimer();
         }
+
+        GPU_SANITY_CHECK(foreground);
     }
     else
     {
-        cv::BackgroundSubtractorMOG2 mog2;
+        cv::Ptr<cv::BackgroundSubtractor> mog2 = cv::createBackgroundSubtractorMOG2();
+        mog2->set("detectShadows", false);
+
         cv::Mat foreground;
 
-        mog2(frame, foreground);
+        mog2->apply(frame, foreground);
 
         for (int i = 0; i < 10; ++i)
         {
@@ -788,20 +754,27 @@ PERF_TEST_P(Video_Cn, DISABLED_Video_MOG2,
             }
 
             startTimer(); next();
-            mog2(frame, foreground);
+            mog2->apply(frame, foreground);
             stopTimer();
         }
+
+        CPU_SANITY_CHECK(foreground);
     }
 }
+
+#endif
 
 //////////////////////////////////////////////////////
 // MOG2GetBackgroundImage
 
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+
 PERF_TEST_P(Video_Cn, Video_MOG2GetBackgroundImage,
-    Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), GPU_CHANNELS_1_3_4))
+            Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
+                    GPU_CHANNELS_1_3_4))
 {
-    string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
-    int cn = GET_PARAM(1);
+    const string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
+    const int cn = GET_PARAM(1);
 
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
@@ -834,19 +807,15 @@ PERF_TEST_P(Video_Cn, Video_MOG2GetBackgroundImage,
             d_mog2(d_frame, d_foreground);
         }
 
-        cv::gpu::GpuMat d_background;
-        d_mog2.getBackgroundImage(d_background);
+        cv::gpu::GpuMat background;
 
-        TEST_CYCLE()
-        {
-            d_mog2.getBackgroundImage(d_background);
-        }
+        TEST_CYCLE() d_mog2.getBackgroundImage(background);
 
-        GPU_SANITY_CHECK(d_background);
+        GPU_SANITY_CHECK(background, 1);
     }
     else
     {
-        cv::BackgroundSubtractorMOG2 mog2;
+        cv::Ptr<cv::BackgroundSubtractor> mog2 = cv::createBackgroundSubtractorMOG2();
         cv::Mat foreground;
 
         for (int i = 0; i < 10; ++i)
@@ -864,94 +833,34 @@ PERF_TEST_P(Video_Cn, Video_MOG2GetBackgroundImage,
                 cv::swap(temp, frame);
             }
 
-            mog2(frame, foreground);
+            mog2->apply(frame, foreground);
         }
 
         cv::Mat background;
-        mog2.getBackgroundImage(background);
 
-        TEST_CYCLE()
-        {
-            mog2.getBackgroundImage(background);
-        }
+        TEST_CYCLE() mog2->getBackgroundImage(background);
 
         CPU_SANITY_CHECK(background);
     }
 }
 
-//////////////////////////////////////////////////////
-// VIBE
-
-PERF_TEST_P(Video_Cn, DISABLED_Video_VIBE,
-    Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), GPU_CHANNELS_1_3_4))
-{
-    string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
-    int cn = GET_PARAM(1);
-
-    cv::VideoCapture cap(inputFile);
-    ASSERT_TRUE(cap.isOpened());
-
-    cv::Mat frame;
-    cap >> frame;
-    ASSERT_FALSE(frame.empty());
-
-    if (cn != 3)
-    {
-        cv::Mat temp;
-        if (cn == 1)
-            cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-        else
-            cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-        cv::swap(temp, frame);
-    }
-
-    if (PERF_RUN_GPU())
-    {
-        cv::gpu::GpuMat d_frame(frame);
-        cv::gpu::VIBE_GPU d_vibe;
-        cv::gpu::GpuMat d_foreground;
-
-        d_vibe(d_frame, d_foreground);
-
-        for (int i = 0; i < 10; ++i)
-        {
-            cap >> frame;
-            ASSERT_FALSE(frame.empty());
-
-            if (cn != 3)
-            {
-                cv::Mat temp;
-                if (cn == 1)
-                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-                else
-                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-                cv::swap(temp, frame);
-            }
-
-            d_frame.upload(frame);
-
-            startTimer(); next();
-            d_vibe(d_frame, d_foreground);
-            stopTimer();
-        }
-    }
-    else
-    {
-        FAIL() << "No such CPU implementation analogy";
-    }
-}
+#endif
 
 //////////////////////////////////////////////////////
 // GMG
 
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+
 DEF_PARAM_TEST(Video_Cn_MaxFeatures, string, MatCn, int);
 
-PERF_TEST_P(Video_Cn_MaxFeatures, DISABLED_Video_GMG,
-    Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), GPU_CHANNELS_1_3_4, Values(20, 40, 60)))
+PERF_TEST_P(Video_Cn_MaxFeatures, Video_GMG,
+            Combine(Values(string("gpu/video/768x576.avi")),
+                    GPU_CHANNELS_1_3_4,
+                    Values(20, 40, 60)))
 {
-    std::string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
-    int cn = GET_PARAM(1);
-    int maxFeatures = GET_PARAM(2);
+    const std::string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
+    const int cn = GET_PARAM(1);
+    const int maxFeatures = GET_PARAM(2);
 
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
@@ -973,12 +882,12 @@ PERF_TEST_P(Video_Cn_MaxFeatures, DISABLED_Video_GMG,
     if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_frame(frame);
-        cv::gpu::GpuMat d_fgmask;
+        cv::gpu::GpuMat foreground;
 
         cv::gpu::GMG_GPU d_gmg;
         d_gmg.maxFeatures = maxFeatures;
 
-        d_gmg(d_frame, d_fgmask);
+        d_gmg(d_frame, foreground);
 
         for (int i = 0; i < 150; ++i)
         {
@@ -1003,20 +912,22 @@ PERF_TEST_P(Video_Cn_MaxFeatures, DISABLED_Video_GMG,
             d_frame.upload(frame);
 
             startTimer(); next();
-            d_gmg(d_frame, d_fgmask);
+            d_gmg(d_frame, foreground);
             stopTimer();
         }
+
+        GPU_SANITY_CHECK(foreground);
     }
     else
     {
-        cv::Mat fgmask;
+        cv::Mat foreground;
         cv::Mat zeros(frame.size(), CV_8UC1, cv::Scalar::all(0));
 
-        cv::BackgroundSubtractorGMG gmg;
-        gmg.set("maxFeatures", maxFeatures);
-        gmg.initialize(frame.size(), 0.0, 255.0);
+        cv::Ptr<cv::BackgroundSubtractor> gmg = cv::createBackgroundSubtractorGMG();
+        gmg->set("maxFeatures", maxFeatures);
+        //gmg.initialize(frame.size(), 0.0, 255.0);
 
-        gmg(frame, fgmask);
+        gmg->apply(frame, foreground);
 
         for (int i = 0; i < 150; ++i)
         {
@@ -1039,21 +950,64 @@ PERF_TEST_P(Video_Cn_MaxFeatures, DISABLED_Video_GMG,
             }
 
             startTimer(); next();
-            gmg(frame, fgmask);
+            gmg->apply(frame, foreground);
             stopTimer();
         }
+
+        CPU_SANITY_CHECK(foreground);
     }
 }
+
+#endif
+
+//////////////////////////////////////////////////////
+// VideoReader
+
+#if defined(HAVE_NVCUVID) && BUILD_WITH_VIDEO_INPUT_SUPPORT
+
+PERF_TEST_P(Video, Video_VideoReader, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
+{
+    declare.time(20);
+
+    const string inputFile = perf::TestBase::getDataPath(GetParam());
+
+    if (PERF_RUN_GPU())
+    {
+        cv::gpu::VideoReader_GPU d_reader(inputFile);
+        ASSERT_TRUE( d_reader.isOpened() );
+
+        cv::gpu::GpuMat frame;
+
+        TEST_CYCLE_N(10) d_reader.read(frame);
+
+        GPU_SANITY_CHECK(frame);
+    }
+    else
+    {
+        cv::VideoCapture reader(inputFile);
+        ASSERT_TRUE( reader.isOpened() );
+
+        cv::Mat frame;
+
+        TEST_CYCLE_N(10) reader >> frame;
+
+        CPU_SANITY_CHECK(frame);
+    }
+}
+
+#endif
 
 //////////////////////////////////////////////////////
 // VideoWriter
 
-PERF_TEST_P(Video, DISABLED_Video_VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
+#if defined(HAVE_NVCUVID) && defined(WIN32)
+
+PERF_TEST_P(Video, Video_VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
 {
     declare.time(30);
 
-    string inputFile = perf::TestBase::getDataPath(GetParam());
-    string outputFile = cv::tempfile(".avi");
+    const string inputFile = perf::TestBase::getDataPath(GetParam());
+    const string outputFile = cv::tempfile(".avi");
 
     const double FPS = 25.0;
 
@@ -1100,49 +1054,8 @@ PERF_TEST_P(Video, DISABLED_Video_VideoWriter, Values("gpu/video/768x576.avi", "
             stopTimer();
         }
     }
+
+    SANITY_CHECK(frame);
 }
 
-//////////////////////////////////////////////////////
-// VideoReader
-
-PERF_TEST_P(Video, Video_VideoReader, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
-{
-    declare.time(20);
-
-    string inputFile = perf::TestBase::getDataPath(GetParam());
-
-    if (PERF_RUN_GPU())
-    {
-        cv::gpu::VideoReader_GPU d_reader(inputFile);
-        ASSERT_TRUE( d_reader.isOpened() );
-
-        cv::gpu::GpuMat d_frame;
-
-        d_reader.read(d_frame);
-
-        TEST_CYCLE_N(10)
-        {
-            d_reader.read(d_frame);
-        }
-
-        GPU_SANITY_CHECK(d_frame);
-    }
-    else
-    {
-        cv::VideoCapture reader(inputFile);
-        ASSERT_TRUE( reader.isOpened() );
-
-        cv::Mat frame;
-
-        reader >> frame;
-
-        TEST_CYCLE_N(10)
-        {
-            reader >> frame;
-        }
-
-        CPU_SANITY_CHECK(frame);
-    }
-}
-
-} // namespace
+#endif

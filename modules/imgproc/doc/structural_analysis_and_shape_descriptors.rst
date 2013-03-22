@@ -118,6 +118,38 @@ These values are proved to be invariants to the image scale, rotation, and refle
 
 .. seealso:: :ocv:func:`matchShapes`
 
+connectedComponents
+-----------------------
+computes the connected components labeled image of boolean image ``image`` with 4 or 8 way connectivity - returns N, the total number of labels [0, N-1] where 0 represents the background label.  ltype specifies the output label image type, an important consideration based on the total number of labels or alternatively the total number of pixels in the source image.
+
+.. ocv:function:: int connectedComponents(InputArray image, OutputArray labels, int connectivity = 8, int ltype=CV_32S)
+
+.. ocv:function:: int connectedComponentsWithStats(InputArray image, OutputArray labels, OutputArray stats, OutputArray centroids, int connectivity = 8, int ltype=CV_32S)
+
+    :param image: the image to be labeled
+
+    :param labels: destination labeled image
+
+    :param connectivity: 8 or 4 for 8-way or 4-way connectivity respectively
+
+    :param ltype: output image label type.  Currently CV_32S and CV_16U are supported.
+
+    :param statsv: statistics output for each label, including the background label, see below for available statistics.  Statistics are accessed via statsv(label, COLUMN) where available columns are defined below.
+
+        * **CC_STAT_LEFT** The leftmost (x) coordinate which is the inclusive start of the bounding box in the horizontal
+          direction.
+
+        * **CC_STAT_TOP**  The topmost (y) coordinate which is the inclusive start of the bounding box in the vertical
+          direction.
+
+        * **CC_STAT_WIDTH** The horizontal size of the bounding box
+
+        * **CC_STAT_HEIGHT** The vertical size of the bounding box
+
+        * **CC_STAT_AREA** The total area (in pixels) of the connected component
+
+    :param centroids: floating point centroid (x,y) output for each label, including the background label
+
 
 findContours
 ----------------
@@ -127,7 +159,7 @@ Finds contours in a binary image.
 
 .. ocv:function:: void findContours( InputOutputArray image, OutputArrayOfArrays contours, int mode, int method, Point offset=Point())
 
-.. ocv:pyfunction:: cv2.findContours(image, mode, method[, contours[, hierarchy[, offset]]]) -> contours, hierarchy
+.. ocv:pyfunction:: cv2.findContours(image, mode, method[, contours[, hierarchy[, offset]]]) -> image, contours, hierarchy
 
 .. ocv:cfunction:: int cvFindContours( CvArr* image, CvMemStorage* storage, CvSeq** first_contour, int header_size=sizeof(CvContour), int mode=CV_RETR_LIST, int method=CV_CHAIN_APPROX_SIMPLE, CvPoint offset=cvPoint(0,0) )
 

@@ -8,7 +8,8 @@
 #ifdef HAVE_CVCONFIG_H
 # include "cvconfig.h"
 #endif
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
 #include "opencv2/core/internal.hpp"
 
 #include "opencv2/flann/miniflann.hpp"

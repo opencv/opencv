@@ -7,7 +7,7 @@ ocl::cornerHarris
 ------------------
 Returns void
 
-.. ocv:function:: void cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize, double k, int bordertype = cv::BORDER_DEFAULT)
+.. ocv:function:: void ocl::cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize, double k, int bordertype = cv::BORDER_DEFAULT)
 
     :param src: Source image. Only CV_8UC1 and CV_32FC1 images are supported now.
 
@@ -27,7 +27,7 @@ ocl::cornerMinEigenVal
 ------------------------
 Returns void
 
-.. ocv:function:: void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT)
+.. ocv:function:: void ocl::cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT)
 
     :param src: Source image. Only CV_8UC1 and CV_32FC1 images are supported now.
 
@@ -45,7 +45,7 @@ ocl::calcHist
 ------------------
 Returns void
 
-.. ocv:function:: void calcHist(const oclMat &mat_src, oclMat &mat_hist)
+.. ocv:function:: void ocl::calcHist(const oclMat &mat_src, oclMat &mat_hist)
 
     :param src: Source arrays. They all should have the same depth, CV 8U, and the same size. Each of them can have an arbitrary number of channels.
 
@@ -57,7 +57,7 @@ ocl::remap
 ------------------
 Returns void
 
-.. ocv:function:: void remap(const oclMat &src, oclMat &dst, oclMat &map1, oclMat &map2, int interpolation, int bordertype, const Scalar &value = Scalar())
+.. ocv:function:: void ocl::remap(const oclMat &src, oclMat &dst, oclMat &map1, oclMat &map2, int interpolation, int bordertype, const Scalar &value = Scalar())
 
     :param src: Source image. Only CV_8UC1 and CV_32FC1 images are supported now.
 
@@ -79,7 +79,7 @@ ocl::resize
 ------------------
 Returns void
 
-.. ocv:function:: void resize(const oclMat &src, oclMat &dst, Size dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR)
+.. ocv:function:: void ocl::resize(const oclMat &src, oclMat &dst, Size dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR)
 
     :param src: Source image.
 
@@ -99,7 +99,7 @@ ocl::warpAffine
 ------------------
 Returns void
 
-.. ocv:function:: void warpAffine(const oclMat &src, oclMat &dst, const Mat &M, Size dsize, int flags = INTER_LINEAR)
+.. ocv:function:: void ocl::warpAffine(const oclMat &src, oclMat &dst, const Mat &M, Size dsize, int flags = INTER_LINEAR)
 
     :param src: Source image.
 
@@ -117,7 +117,7 @@ ocl::warpPerspective
 ---------------------
 Returns void
 
-.. ocv:function:: void warpPerspective(const oclMat &src, oclMat &dst, const Mat &M, Size dsize, int flags = INTER_LINEAR)
+.. ocv:function:: void ocl::warpPerspective(const oclMat &src, oclMat &dst, const Mat &M, Size dsize, int flags = INTER_LINEAR)
 
     :param src: Source image.
 
@@ -135,7 +135,7 @@ ocl::cvtColor
 ------------------
 Returns void
 
-.. ocv:function:: void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0)
+.. ocv:function:: void ocl::cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0)
 
     :param src: Source image.
 
@@ -151,7 +151,7 @@ ocl::threshold
 ------------------
 Returns Threshold value
 
-.. ocv:function:: double threshold(const oclMat &src, oclMat &dst, double thresh, double maxVal, int type = THRESH_TRUNC)
+.. ocv:function:: double ocl::threshold(const oclMat &src, oclMat &dst, double thresh, double maxVal, int type = THRESH_TRUNC)
 
     :param src: The source array
 
@@ -169,7 +169,7 @@ ocl::buildWarpPlaneMaps
 -----------------------
 Builds plane warping maps.
 
-.. ocv:function:: void ocl::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, double dist, oclMat& map_x, oclMat& map_y)
+.. ocv:function:: void ocl::buildWarpPlaneMaps( Size src_size, Rect dst_roi, const Mat& K, const Mat& R, const Mat& T, float scale, oclMat& map_x, oclMat& map_y )
 
 
 
@@ -177,7 +177,7 @@ ocl::buildWarpCylindricalMaps
 -----------------------------
 Builds cylindrical warping maps.
 
-.. ocv:function:: void ocl::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, oclMat& map_x, oclMat& map_y)
+.. ocv:function:: void ocl::buildWarpCylindricalMaps( Size src_size, Rect dst_roi, const Mat& K, const Mat& R, float scale, oclMat& map_x, oclMat& map_y )
 
 
 
@@ -186,14 +186,14 @@ ocl::buildWarpSphericalMaps
 ---------------------------
 Builds spherical warping maps.
 
-.. ocv:function:: void ocl::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, oclMat& map_x, oclMat& map_y)
+.. ocv:function:: void ocl::buildWarpSphericalMaps( Size src_size, Rect dst_roi, const Mat& K, const Mat& R, float scale, oclMat& map_x, oclMat& map_y )
 
 
 ocl::buildWarpPerspectiveMaps
 -----------------------------
 Builds transformation maps for perspective transformation.
 
-.. ocv:function:: void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, oclMat& xmap, oclMat& ymap)
+.. ocv:function:: void ocl::buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, oclMat& xmap, oclMat& ymap)
 
     :param M: *3x3*  transformation matrix.
 
@@ -212,7 +212,7 @@ ocl::buildWarpAffineMaps
 ------------------------
 Builds transformation maps for affine transformation.
 
-.. ocv:function:: void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, oclMat& xmap, oclMat& ymap)
+.. ocv:function:: void ocl::buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, oclMat& xmap, oclMat& ymap)
 
     :param M: *2x3*  transformation matrix.
 
@@ -329,3 +329,38 @@ Interpolate frames (images) using provided optical flow (displacement field).
     :param newFrame: Output image.
 
     :param buf: Temporary buffer, will have width x 6*height size, CV_32FC1 type and contain 6 oclMat: occlusion masks for first frame, occlusion masks for second, interpolated forward horizontal flow, interpolated forward vertical flow, interpolated backward horizontal flow, interpolated backward vertical flow.
+
+
+ocl::HoughCircles
+-----------------
+Finds circles in a grayscale image using the Hough transform.
+
+.. ocv:function:: void ocl::HoughCircles(const oclMat& src, oclMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096)
+
+.. ocv:function:: void ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& buf, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096)
+
+    :param src: 8-bit, single-channel grayscale input image.
+
+    :param circles: Output vector of found circles. Each vector is encoded as a 3-element floating-point vector  :math:`(x, y, radius)` .
+
+    :param method: Detection method to use. Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  [Yuen90]_.
+
+    :param dp: Inverse ratio of the accumulator resolution to the image resolution. For example, if  ``dp=1`` , the accumulator has the same resolution as the input image. If  ``dp=2`` , the accumulator has half as big width and height.
+
+    :param minDist: Minimum distance between the centers of the detected circles. If the parameter is too small, multiple neighbor circles may be falsely detected in addition to a true one. If it is too large, some circles may be missed.
+
+    :param cannyThreshold: The higher threshold of the two passed to  the :ocv:func:`ocl::Canny`  edge detector (the lower one is twice smaller).
+
+    :param votesThreshold: The accumulator threshold for the circle centers at the detection stage. The smaller it is, the more false circles may be detected.
+
+    :param minRadius: Minimum circle radius.
+
+    :param maxRadius: Maximum circle radius.
+
+    :param maxCircles: Maximum number of output circles.
+
+    :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
+
+.. note:: Currently only non-ROI oclMat is supported for src.
+.. seealso:: :ocv:func:`HoughCircles`
+

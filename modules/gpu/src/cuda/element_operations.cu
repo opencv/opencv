@@ -48,6 +48,7 @@
 #include "opencv2/gpu/device/transform.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
+#include "opencv2/gpu/device/simd_functions.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
@@ -154,170 +155,28 @@ namespace arithm
 
 namespace arithm
 {
-    template <typename T, typename D> struct VAdd4;
-    template <> struct VAdd4<uint, uint> : binary_function<uint, uint, uint>
+    struct VAdd4 : binary_function<uint, uint, uint>
     {
         __device__ __forceinline__ uint operator ()(uint a, uint b) const
         {
-            uint res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vadd4.u32.u32.u32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vadd.u32.u32.u32.sat %0.b0, %1.b0, %2.b0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.u32.u32.u32.sat %0.b1, %1.b1, %2.b1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.u32.u32.u32.sat %0.b2, %1.b2, %2.b2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.u32.u32.u32.sat %0.b3, %1.b3, %2.b3, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
+            return vadd4(a, b);
         }
 
         __device__ __forceinline__ VAdd4() {}
-        __device__ __forceinline__ VAdd4(const VAdd4<uint, uint>& other) {}
-    };
-    template <> struct VAdd4<int, uint> : binary_function<int, int, uint>
-    {
-        __device__ __forceinline__ uint operator ()(int a, int b) const
-        {
-            uint res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vadd4.u32.s32.s32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vadd.u32.s32.s32.sat %0.b0, %1.b0, %2.b0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.u32.s32.s32.sat %0.b1, %1.b1, %2.b1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.u32.s32.s32.sat %0.b2, %1.b2, %2.b2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.u32.s32.s32.sat %0.b3, %1.b3, %2.b3, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VAdd4() {}
-        __device__ __forceinline__ VAdd4(const VAdd4<int, uint>& other) {}
-    };
-    template <> struct VAdd4<uint, int> : binary_function<uint, uint, int>
-    {
-        __device__ __forceinline__ int operator ()(uint a, uint b) const
-        {
-            int res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vadd4.s32.u32.u32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vadd.s32.u32.u32.sat %0.b0, %1.b0, %2.b0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.s32.u32.u32.sat %0.b1, %1.b1, %2.b1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.s32.u32.u32.sat %0.b2, %1.b2, %2.b2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.s32.u32.u32.sat %0.b3, %1.b3, %2.b3, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VAdd4() {}
-        __device__ __forceinline__ VAdd4(const VAdd4<uint, int>& other) {}
-    };
-    template <> struct VAdd4<int, int> : binary_function<int, int, int>
-    {
-        __device__ __forceinline__ int operator ()(int a, int b) const
-        {
-            int res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vadd4.s32.s32.s32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vadd.s32.s32.s32.sat %0.b0, %1.b0, %2.b0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.s32.s32.s32.sat %0.b1, %1.b1, %2.b1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.s32.s32.s32.sat %0.b2, %1.b2, %2.b2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.s32.s32.s32.sat %0.b3, %1.b3, %2.b3, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VAdd4() {}
-        __device__ __forceinline__ VAdd4(const VAdd4<int, int>& other) {}
+        __device__ __forceinline__ VAdd4(const VAdd4& other) {}
     };
 
     ////////////////////////////////////
 
-    template <typename T, typename D> struct VAdd2;
-    template <> struct VAdd2<uint, uint> : binary_function<uint, uint, uint>
+    struct VAdd2 : binary_function<uint, uint, uint>
     {
         __device__ __forceinline__ uint operator ()(uint a, uint b) const
         {
-            uint res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vadd2.u32.u32.u32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vadd.u32.u32.u32.sat %0.h0, %1.h0, %2.h0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.u32.u32.u32.sat %0.h1, %1.h1, %2.h1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
+            return vadd2(a, b);
         }
 
         __device__ __forceinline__ VAdd2() {}
-        __device__ __forceinline__ VAdd2(const VAdd2<uint, uint>& other) {}
-    };
-    template <> struct VAdd2<uint, int> : binary_function<uint, uint, int>
-    {
-        __device__ __forceinline__ int operator ()(uint a, uint b) const
-        {
-            int res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vadd2.s32.u32.u32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vadd.s32.u32.u32.sat %0.h0, %1.h0, %2.h0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.s32.u32.u32.sat %0.h1, %1.h1, %2.h1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VAdd2() {}
-        __device__ __forceinline__ VAdd2(const VAdd2<uint, int>& other) {}
-    };
-    template <> struct VAdd2<int, uint> : binary_function<int, int, uint>
-    {
-        __device__ __forceinline__ uint operator ()(int a, int b) const
-        {
-            uint res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vadd2.u32.s32.s32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vadd.u32.s32.s32.sat %0.h0, %1.h0, %2.h0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.u32.s32.s32.sat %0.h1, %1.h1, %2.h1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VAdd2() {}
-        __device__ __forceinline__ VAdd2(const VAdd2<int, uint>& other) {}
-    };
-    template <> struct VAdd2<int, int> : binary_function<int, int, int>
-    {
-        __device__ __forceinline__ int operator ()(int a, int b) const
-        {
-            int res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vadd2.s32.s32.s32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vadd.s32.s32.s32.sat %0.h0, %1.h0, %2.h0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vadd.s32.s32.s32.sat %0.h1, %1.h1, %2.h1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VAdd2() {}
-        __device__ __forceinline__ VAdd2(const VAdd2<int, int>& other) {}
+        __device__ __forceinline__ VAdd2(const VAdd2& other) {}
     };
 
     ////////////////////////////////////
@@ -336,13 +195,13 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename D> struct TransformFunctorTraits< arithm::VAdd4<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <> struct TransformFunctorTraits< arithm::VAdd4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T, typename D> struct TransformFunctorTraits< arithm::VAdd2<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <> struct TransformFunctorTraits< arithm::VAdd2 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
     };
 
@@ -355,27 +214,15 @@ namespace cv { namespace gpu { namespace device
 
 namespace arithm
 {
-    template <typename T, typename D>
-    void vadd4(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+    void addMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, VAdd4<T, D>(), WithOutMask(), stream);
+        transform(src1, src2, dst, VAdd4(), WithOutMask(), stream);
     }
 
-    template void vadd4<uint, uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vadd4<uint, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vadd4<int, uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vadd4<int, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-
-    template <typename T, typename D>
-    void vadd2(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+    void addMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, VAdd2<T, D>(), WithOutMask(), stream);
+        transform(src1, src2, dst, VAdd2(), WithOutMask(), stream);
     }
-
-    template void vadd2<uint, uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vadd2<uint, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vadd2<int, uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vadd2<int, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
 
     template <typename T, typename D>
     void addMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
@@ -543,170 +390,28 @@ namespace arithm
 
 namespace arithm
 {
-    template <typename T, typename D> struct VSub4;
-    template <> struct VSub4<uint, uint> : binary_function<uint, uint, uint>
+    struct VSub4 : binary_function<uint, uint, uint>
     {
         __device__ __forceinline__ uint operator ()(uint a, uint b) const
         {
-            uint res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vsub4.u32.u32.u32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vsub.u32.u32.u32.sat %0.b0, %1.b0, %2.b0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.u32.u32.u32.sat %0.b1, %1.b1, %2.b1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.u32.u32.u32.sat %0.b2, %1.b2, %2.b2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.u32.u32.u32.sat %0.b3, %1.b3, %2.b3, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
+            return vsub4(a, b);
         }
 
         __device__ __forceinline__ VSub4() {}
-        __device__ __forceinline__ VSub4(const VSub4<uint, uint>& other) {}
-    };
-    template <> struct VSub4<int, uint> : binary_function<int, int, uint>
-    {
-        __device__ __forceinline__ uint operator ()(int a, int b) const
-        {
-            uint res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vsub4.u32.s32.s32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vsub.u32.s32.s32.sat %0.b0, %1.b0, %2.b0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.u32.s32.s32.sat %0.b1, %1.b1, %2.b1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.u32.s32.s32.sat %0.b2, %1.b2, %2.b2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.u32.s32.s32.sat %0.b3, %1.b3, %2.b3, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VSub4() {}
-        __device__ __forceinline__ VSub4(const VSub4<int, uint>& other) {}
-    };
-    template <> struct VSub4<uint, int> : binary_function<uint, uint, int>
-    {
-        __device__ __forceinline__ int operator ()(uint a, uint b) const
-        {
-            int res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vsub4.s32.u32.u32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vsub.s32.u32.u32.sat %0.b0, %1.b0, %2.b0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.s32.u32.u32.sat %0.b1, %1.b1, %2.b1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.s32.u32.u32.sat %0.b2, %1.b2, %2.b2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.s32.u32.u32.sat %0.b3, %1.b3, %2.b3, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VSub4() {}
-        __device__ __forceinline__ VSub4(const VSub4<uint, int>& other) {}
-    };
-    template <> struct VSub4<int, int> : binary_function<int, int, int>
-    {
-        __device__ __forceinline__ int operator ()(int a, int b) const
-        {
-            int res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vsub4.s32.s32.s32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vsub.s32.s32.s32.sat %0.b0, %1.b0, %2.b0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.s32.s32.s32.sat %0.b1, %1.b1, %2.b1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.s32.s32.s32.sat %0.b2, %1.b2, %2.b2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.s32.s32.s32.sat %0.b3, %1.b3, %2.b3, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VSub4() {}
-        __device__ __forceinline__ VSub4(const VSub4<int, int>& other) {}
+        __device__ __forceinline__ VSub4(const VSub4& other) {}
     };
 
     ////////////////////////////////////
 
-    template <typename T, typename D> struct VSub2;
-    template <> struct VSub2<uint, uint> : binary_function<uint, uint, uint>
+    struct VSub2 : binary_function<uint, uint, uint>
     {
         __device__ __forceinline__ uint operator ()(uint a, uint b) const
         {
-            uint res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vsub2.u32.u32.u32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vsub.u32.u32.u32.sat %0.h0, %1.h0, %2.h0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.u32.u32.u32.sat %0.h1, %1.h1, %2.h1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
+            return vsub2(a, b);
         }
 
         __device__ __forceinline__ VSub2() {}
-        __device__ __forceinline__ VSub2(const VSub2<uint, uint>& other) {}
-    };
-    template <> struct VSub2<uint, int> : binary_function<uint, uint, int>
-    {
-        __device__ __forceinline__ int operator ()(uint a, uint b) const
-        {
-            int res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vsub2.s32.u32.u32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vsub.s32.u32.u32.sat %0.h0, %1.h0, %2.h0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.s32.u32.u32.sat %0.h1, %1.h1, %2.h1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VSub2() {}
-        __device__ __forceinline__ VSub2(const VSub2<uint, int>& other) {}
-    };
-    template <> struct VSub2<int, uint> : binary_function<int, int, uint>
-    {
-        __device__ __forceinline__ uint operator ()(int a, int b) const
-        {
-            uint res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vsub2.u32.s32.s32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vsub.u32.s32.s32.sat %0.h0, %1.h0, %2.h0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.u32.s32.s32.sat %0.h1, %1.h1, %2.h1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VSub2() {}
-        __device__ __forceinline__ VSub2(const VSub2<int, uint>& other) {}
-    };
-    template <> struct VSub2<int, int> : binary_function<int, int, int>
-    {
-        __device__ __forceinline__ int operator ()(int a, int b) const
-        {
-            int res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vsub2.s32.s32.s32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vsub.s32.s32.s32.sat %0.h0, %1.h0, %2.h0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vsub.s32.s32.s32.sat %0.h1, %1.h1, %2.h1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VSub2() {}
-        __device__ __forceinline__ VSub2(const VSub2<int, int>& other) {}
+        __device__ __forceinline__ VSub2(const VSub2& other) {}
     };
 
     ////////////////////////////////////
@@ -725,13 +430,13 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename D> struct TransformFunctorTraits< arithm::VSub4<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <> struct TransformFunctorTraits< arithm::VSub4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T, typename D> struct TransformFunctorTraits< arithm::VSub2<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <> struct TransformFunctorTraits< arithm::VSub2 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
     };
 
@@ -744,27 +449,15 @@ namespace cv { namespace gpu { namespace device
 
 namespace arithm
 {
-    template <typename T, typename D>
-    void vsub4(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+    void subMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, VSub4<T, D>(), WithOutMask(), stream);
+        transform(src1, src2, dst, VSub4(), WithOutMask(), stream);
     }
 
-    template void vsub4<uint, uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vsub4<uint, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vsub4<int, uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vsub4<int, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-
-    template <typename T, typename D>
-    void vsub2(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+    void subMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, VSub2<T, D>(), WithOutMask(), stream);
+        transform(src1, src2, dst, VSub2(), WithOutMask(), stream);
     }
-
-    template void vsub2<uint, uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vsub2<uint, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vsub2<int, uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vsub2<int, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
 
     template <typename T, typename D>
     void subMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
@@ -1496,90 +1189,28 @@ namespace arithm
 
 namespace arithm
 {
-    template <typename T, typename D> struct VAbsDiff4;
-    template <> struct VAbsDiff4<uint, uint> : binary_function<uint, uint, uint>
+    struct VAbsDiff4 : binary_function<uint, uint, uint>
     {
         __device__ __forceinline__ uint operator ()(uint a, uint b) const
         {
-            uint res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vabsdiff4.u32.u32.u32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vabsdiff.u32.u32.u32.sat %0.b0, %1.b0, %2.b0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vabsdiff.u32.u32.u32.sat %0.b1, %1.b1, %2.b1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vabsdiff.u32.u32.u32.sat %0.b2, %1.b2, %2.b2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vabsdiff.u32.u32.u32.sat %0.b3, %1.b3, %2.b3, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
+            return vabsdiff4(a, b);
         }
 
         __device__ __forceinline__ VAbsDiff4() {}
-        __device__ __forceinline__ VAbsDiff4(const VAbsDiff4<uint, uint>& other) {}
-    };
-    template <> struct VAbsDiff4<int, int> : binary_function<int, int, int>
-    {
-        __device__ __forceinline__ int operator ()(int a, int b) const
-        {
-            int res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vabsdiff4.s32.s32.s32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vabsdiff.s32.s32.s32.sat %0.b0, %1.b0, %2.b0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vabsdiff.s32.s32.s32.sat %0.b1, %1.b1, %2.b1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vabsdiff.s32.s32.s32.sat %0.b2, %1.b2, %2.b2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vabsdiff.s32.s32.s32.sat %0.b3, %1.b3, %2.b3, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VAbsDiff4() {}
-        __device__ __forceinline__ VAbsDiff4(const VAbsDiff4<int, int>& other) {}
+        __device__ __forceinline__ VAbsDiff4(const VAbsDiff4& other) {}
     };
 
     ////////////////////////////////////
 
-    template <typename T, typename D> struct VAbsDiff2;
-    template <> struct VAbsDiff2<uint, uint> : binary_function<uint, uint, uint>
+    struct VAbsDiff2 : binary_function<uint, uint, uint>
     {
         __device__ __forceinline__ uint operator ()(uint a, uint b) const
         {
-            uint res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vabsdiff2.u32.u32.u32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vabsdiff.u32.u32.u32.sat %0.h0, %1.h0, %2.h0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vabsdiff.u32.u32.u32.sat %0.h1, %1.h1, %2.h1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
+            return vabsdiff2(a, b);
         }
 
         __device__ __forceinline__ VAbsDiff2() {}
-        __device__ __forceinline__ VAbsDiff2(const VAbsDiff2<uint, uint>& other) {}
-    };
-    template <> struct VAbsDiff2<int, int> : binary_function<int, int, int>
-    {
-        __device__ __forceinline__ int operator ()(int a, int b) const
-        {
-            int res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vabsdiff2.s32.s32.s32.sat %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vabsdiff.s32.s32.s32.sat %0.h0, %1.h0, %2.h0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vabsdiff.s32.s32.s32.sat %0.h1, %1.h1, %2.h1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VAbsDiff2() {}
-        __device__ __forceinline__ VAbsDiff2(const VAbsDiff2<int, int>& other) {}
+        __device__ __forceinline__ VAbsDiff2(const VAbsDiff2& other) {}
     };
 
     ////////////////////////////////////
@@ -1611,13 +1242,13 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename D> struct TransformFunctorTraits< arithm::VAbsDiff4<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <> struct TransformFunctorTraits< arithm::VAbsDiff4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T, typename D> struct TransformFunctorTraits< arithm::VAbsDiff2<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <> struct TransformFunctorTraits< arithm::VAbsDiff2 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
     };
 
@@ -1630,23 +1261,15 @@ namespace cv { namespace gpu { namespace device
 
 namespace arithm
 {
-    template <typename T>
-    void vabsDiff4(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+    void absDiffMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, VAbsDiff4<T, T>(), WithOutMask(), stream);
+        transform(src1, src2, dst, VAbsDiff4(), WithOutMask(), stream);
     }
 
-    template void vabsDiff4<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vabsDiff4<int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-
-    template <typename T>
-    void vabsDiff2(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+    void absDiffMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, VAbsDiff2<T, T>(), WithOutMask(), stream);
+        transform(src1, src2, dst, VAbsDiff2(), WithOutMask(), stream);
     }
-
-    template void vabsDiff2<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vabsDiff2<int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
 
     template <typename T>
     void absDiffMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
@@ -1877,6 +1500,49 @@ namespace arithm
 
 namespace arithm
 {
+    struct VCmpEq4 : binary_function<uint, uint, uint>
+    {
+        __device__ __forceinline__ uint operator ()(uint a, uint b) const
+        {
+            return vcmpeq4(a, b);
+        }
+
+        __device__ __forceinline__ VCmpEq4() {}
+        __device__ __forceinline__ VCmpEq4(const VCmpEq4& other) {}
+    };
+    struct VCmpNe4 : binary_function<uint, uint, uint>
+    {
+        __device__ __forceinline__ uint operator ()(uint a, uint b) const
+        {
+            return vcmpne4(a, b);
+        }
+
+        __device__ __forceinline__ VCmpNe4() {}
+        __device__ __forceinline__ VCmpNe4(const VCmpNe4& other) {}
+    };
+    struct VCmpLt4 : binary_function<uint, uint, uint>
+    {
+        __device__ __forceinline__ uint operator ()(uint a, uint b) const
+        {
+            return vcmplt4(a, b);
+        }
+
+        __device__ __forceinline__ VCmpLt4() {}
+        __device__ __forceinline__ VCmpLt4(const VCmpLt4& other) {}
+    };
+    struct VCmpLe4 : binary_function<uint, uint, uint>
+    {
+        __device__ __forceinline__ uint operator ()(uint a, uint b) const
+        {
+            return vcmple4(a, b);
+        }
+
+        __device__ __forceinline__ VCmpLe4() {}
+        __device__ __forceinline__ VCmpLe4(const VCmpLe4& other) {}
+    };
+
+    ////////////////////////////////////
+
     template <class Op, typename T>
     struct Cmp : binary_function<T, T, uchar>
     {
@@ -1890,6 +1556,21 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
+    template <> struct TransformFunctorTraits< arithm::VCmpEq4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
+    {
+    };
+    template <> struct TransformFunctorTraits< arithm::VCmpNe4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
+    {
+    };
+    template <> struct TransformFunctorTraits< arithm::VCmpLt4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
+    {
+    };
+    template <> struct TransformFunctorTraits< arithm::VCmpLe4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
+    {
+    };
+
+    ////////////////////////////////////
+
     template <class Op, typename T> struct TransformFunctorTraits< arithm::Cmp<Op, T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(uchar)>
     {
     };
@@ -1897,6 +1578,23 @@ namespace cv { namespace gpu { namespace device
 
 namespace arithm
 {
+    void cmpMatEq_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
+    {
+        transform(src1, src2, dst, VCmpEq4(), WithOutMask(), stream);
+    }
+    void cmpMatNe_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
+    {
+        transform(src1, src2, dst, VCmpNe4(), WithOutMask(), stream);
+    }
+    void cmpMatLt_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
+    {
+        transform(src1, src2, dst, VCmpLt4(), WithOutMask(), stream);
+    }
+    void cmpMatLe_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
+    {
+        transform(src1, src2, dst, VCmpLe4(), WithOutMask(), stream);
+    }
+
     template <template <typename> class Op, typename T>
     void cmpMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
     {
@@ -2284,15 +1982,18 @@ namespace arithm
 
     template void bitScalarAnd<uchar>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
     template void bitScalarAnd<ushort>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
-    template void bitScalarAnd<uint>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
+    template void bitScalarAnd<int>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
+    template void bitScalarAnd<unsigned int>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
 
     template void bitScalarOr<uchar>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
     template void bitScalarOr<ushort>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
-    template void bitScalarOr<uint>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
+    template void bitScalarOr<int>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
+    template void bitScalarOr<unsigned int>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
 
     template void bitScalarXor<uchar>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
     template void bitScalarXor<ushort>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
-    template void bitScalarXor<uint>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
+    template void bitScalarXor<int>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
+    template void bitScalarXor<unsigned int>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -2300,44 +2001,11 @@ namespace arithm
 
 namespace arithm
 {
-    template <typename T> struct VMin4;
-    template <> struct VMin4<uint> : binary_function<uint, uint, uint>
+    struct VMin4 : binary_function<uint, uint, uint>
     {
         __device__ __forceinline__ uint operator ()(uint a, uint b) const
         {
-            uint res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vmin4.u32.u32.u32 %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vmin.u32.u32.u32 %0.b0, %1.b0, %2.b0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmin.u32.u32.u32 %0.b1, %1.b1, %2.b1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmin.u32.u32.u32 %0.b2, %1.b2, %2.b2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmin.u32.u32.u32 %0.b3, %1.b3, %2.b3, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VMin4() {}
-        __device__ __forceinline__ VMin4(const VMin4& other) {}
-    };
-    template <> struct VMin4<int> : binary_function<int, int, int>
-    {
-        __device__ __forceinline__ int operator ()(int a, int b) const
-        {
-            int res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vmin4.s32.s32.s32 %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vmin.s32.s32.s32 %0.b0, %1.b0, %2.b0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmin.s32.s32.s32 %0.b1, %1.b1, %2.b1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmin.s32.s32.s32 %0.b2, %1.b2, %2.b2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmin.s32.s32.s32 %0.b3, %1.b3, %2.b3, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
+            return vmin4(a, b);
         }
 
         __device__ __forceinline__ VMin4() {}
@@ -2346,40 +2014,11 @@ namespace arithm
 
     ////////////////////////////////////
 
-    template <typename T> struct VMin2;
-    template <> struct VMin2<uint> : binary_function<uint, uint, uint>
+    struct VMin2 : binary_function<uint, uint, uint>
     {
         __device__ __forceinline__ uint operator ()(uint a, uint b) const
         {
-            uint res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vmin2.u32.u32.u32 %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vmin.u32.u32.u32 %0.h0, %1.h0, %2.h0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmin.u32.u32.u32 %0.h1, %1.h1, %2.h1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VMin2() {}
-        __device__ __forceinline__ VMin2(const VMin2& other) {}
-    };
-    template <> struct VMin2<int> : binary_function<int, int, int>
-    {
-        __device__ __forceinline__ int operator ()(int a, int b) const
-        {
-            int res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vmin2.s32.s32.s32 %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vmin.s32.s32.s32 %0.h0, %1.h0, %2.h0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmin.s32.s32.s32 %0.h1, %1.h1, %2.h1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
+            return vmin2(a, b);
         }
 
         __device__ __forceinline__ VMin2() {}
@@ -2389,13 +2028,13 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< arithm::VMin4<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <> struct TransformFunctorTraits< arithm::VMin4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T> struct TransformFunctorTraits< arithm::VMin2<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <> struct TransformFunctorTraits< arithm::VMin2 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
     };
 
@@ -2412,26 +2051,20 @@ namespace cv { namespace gpu { namespace device
 
 namespace arithm
 {
-    template <typename T> void vmin4(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+    void minMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, VMin4<T>(), WithOutMask(), stream);
+        transform(src1, src2, dst, VMin4(), WithOutMask(), stream);
     }
 
-    template <typename T> void vmin2(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+    void minMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, VMin2<T>(), WithOutMask(), stream);
+        transform(src1, src2, dst, VMin2(), WithOutMask(), stream);
     }
 
     template <typename T> void minMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
     {
         transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, minimum<T>(), WithOutMask(), stream);
     }
-
-    template void vmin4<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vmin4<int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-
-    template void vmin2<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vmin2<int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
 
     template void minMat<uchar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
     template void minMat<schar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
@@ -2460,44 +2093,11 @@ namespace arithm
 
 namespace arithm
 {
-    template <typename T> struct VMax4;
-    template <> struct VMax4<uint> : binary_function<uint, uint, uint>
+    struct VMax4 : binary_function<uint, uint, uint>
     {
         __device__ __forceinline__ uint operator ()(uint a, uint b) const
         {
-            uint res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vmax4.u32.u32.u32 %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vmax.u32.u32.u32 %0.b0, %1.b0, %2.b0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmax.u32.u32.u32 %0.b1, %1.b1, %2.b1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmax.u32.u32.u32 %0.b2, %1.b2, %2.b2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmax.u32.u32.u32 %0.b3, %1.b3, %2.b3, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VMax4() {}
-        __device__ __forceinline__ VMax4(const VMax4& other) {}
-    };
-    template <> struct VMax4<int> : binary_function<int, int, int>
-    {
-        __device__ __forceinline__ int operator ()(int a, int b) const
-        {
-            int res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vmax4.s32.s32.s32 %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vmax.s32.s32.s32 %0.b0, %1.b0, %2.b0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmax.s32.s32.s32 %0.b1, %1.b1, %2.b1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmax.s32.s32.s32 %0.b2, %1.b2, %2.b2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmax.s32.s32.s32 %0.b3, %1.b3, %2.b3, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
+            return vmax4(a, b);
         }
 
         __device__ __forceinline__ VMax4() {}
@@ -2506,40 +2106,11 @@ namespace arithm
 
     ////////////////////////////////////
 
-    template <typename T> struct VMax2;
-    template <> struct VMax2<uint> : binary_function<uint, uint, uint>
+    struct VMax2 : binary_function<uint, uint, uint>
     {
         __device__ __forceinline__ uint operator ()(uint a, uint b) const
         {
-            uint res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vmax2.u32.u32.u32 %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vmax.u32.u32.u32 %0.h0, %1.h0, %2.h0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmax.u32.u32.u32 %0.h1, %1.h1, %2.h1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
-        }
-
-        __device__ __forceinline__ VMax2() {}
-        __device__ __forceinline__ VMax2(const VMax2& other) {}
-    };
-    template <> struct VMax2<int> : binary_function<int, int, int>
-    {
-        __device__ __forceinline__ int operator ()(int a, int b) const
-        {
-            int res = 0;
-
-        #if __CUDA_ARCH__ >= 300
-            asm("vmax2.s32.s32.s32 %0, %1, %2, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #elif __CUDA_ARCH__ >= 200
-            asm("vmax.s32.s32.s32 %0.h0, %1.h0, %2.h0, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-            asm("vmax.s32.s32.s32 %0.h1, %1.h1, %2.h1, %3;" : "=r"(res) : "r"(a), "r"(b), "r"(res));
-        #endif
-
-            return res;
+            return vmax2(a, b);
         }
 
         __device__ __forceinline__ VMax2() {}
@@ -2549,13 +2120,13 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< arithm::VMax4<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <> struct TransformFunctorTraits< arithm::VMax4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T> struct TransformFunctorTraits< arithm::VMax2<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <> struct TransformFunctorTraits< arithm::VMax2 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
     };
 
@@ -2572,26 +2143,20 @@ namespace cv { namespace gpu { namespace device
 
 namespace arithm
 {
-    template <typename T> void vmax4(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+    void maxMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, VMax4<T>(), WithOutMask(), stream);
+        transform(src1, src2, dst, VMax4(), WithOutMask(), stream);
     }
 
-    template <typename T> void vmax2(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+    void maxMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, VMax2<T>(), WithOutMask(), stream);
+        transform(src1, src2, dst, VMax2(), WithOutMask(), stream);
     }
 
     template <typename T> void maxMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
     {
         transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, maximum<T>(), WithOutMask(), stream);
     }
-
-    template void vmax4<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vmax4<int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-
-    template void vmax2<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void vmax2<int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
 
     template void maxMat<uchar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
     template void maxMat<schar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);

@@ -3,7 +3,9 @@
 Introduction to OpenCV
 -----------------------------------------------------------
 
-Here you can read tutorials about how to set up your computer to work with the OpenCV library. Additionaly you can find a few very basic sample source code that will let introduce you to the world of the OpenCV.
+Here you can read tutorials about how to set up your computer to work with the OpenCV library.
+Additionally you can find a few very basic sample source code that will let introduce you to the
+world of the OpenCV.
 
 .. include:: ../../definitions/tocDefinitions.rst
 
@@ -101,6 +103,26 @@ Here you can read tutorials about how to set up your computer to work with the O
                       :height: 90pt
                       :width:  90pt
 
+* **Desktop Java**
+
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ================ =================================================
+  |JavaLogo|       **Title:** :ref:`Java_Dev_Intro`
+
+                   *Compatibility:* > OpenCV 2.4.4
+
+                   *Authors:* |Author_EricCh| and |Author_AndreyP|
+
+                   Explains how to build and run a simple desktop Java application using Eclipse, Ant or the Simple Build Tool (SBT).
+
+  ================ =================================================
+
+     .. |JavaLogo| image:: images/Java_logo.png
+                        :height: 90pt
+                        :width:  90pt
+
 * **Android**
 
   .. tabularcolumns:: m{100pt} m{300pt}
@@ -137,7 +159,7 @@ Here you can read tutorials about how to set up your computer to work with the O
   ================ =================================================
   |AndroidLogo|    **Title:** :ref:`dev_with_OCV_on_Android`
 
-                   *Compatibility:* > OpenCV 2.4.2
+                   *Compatibility:* > OpenCV 2.4.3
 
                    *Author:* |Author_VsevolodG|
 
@@ -168,6 +190,24 @@ Here you can read tutorials about how to set up your computer to work with the O
 
      .. |Install_iOS| image:: images/opencv_ios.png
                  :width:  90pt
+
+* **Embedded Linux**
+
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  =========== ======================================================
+  |Usage_1|   **Title:** :ref:`ARM-Linux-cross-compile`
+
+              *Compatibility:* > OpenCV 2.4.4
+
+              *Author:* |Author_AlexS|
+
+              We will learn how to setup OpenCV cross compilation environment for ARM Linux.
+
+  =========== ======================================================
+
+* **Common**
 
   .. tabularcolumns:: m{100pt} m{300pt}
   .. cssclass:: toctableopencv
@@ -229,7 +269,7 @@ Here you can read tutorials about how to set up your computer to work with the O
 
    \pagebreak
 
-.. We use a custom table of content format and as the table of content only imforms Sphinx about the hierarchy of the files, no need to show it.
+.. We use a custom table of content format and as the table of content only informs Sphinx about the hierarchy of the files, no need to show it.
 .. toctree::
    :hidden:
 
@@ -238,10 +278,12 @@ Here you can read tutorials about how to set up your computer to work with the O
    ../linux_eclipse/linux_eclipse
    ../windows_install/windows_install
    ../windows_visual_studio_Opencv/windows_visual_studio_Opencv
+   ../desktop_java/java_dev_intro
    ../android_binary_package/android_dev_intro
    ../android_binary_package/O4A_SDK
    ../android_binary_package/dev_with_OCV_on_Android
    ../ios_install/ios_install
+   ../crosscompilation/arm_crosscompile_with_cmake
    ../display_image/display_image
    ../load_save_image/load_save_image
    ../how_to_write_a_tutorial/how_to_write_a_tutorial

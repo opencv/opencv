@@ -1,9 +1,10 @@
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/core/internal.hpp"
 
 #include "HOGfeatures.h"
 #include "cascadeclassifier.h"
 
+using namespace std;
 
 CvHOGFeatureParams::CvHOGFeatureParams()
 {

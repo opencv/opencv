@@ -36,8 +36,8 @@ Finds edges in an image using the [Canny86]_ algorithm.
 .. seealso:: :ocv:func:`Canny`
 
 
-ocl::BruteForceMatcher_OCL
---------------------------
+ocl::BruteForceMatcher_OCL_base
+-------------------------------
 .. ocv:class:: ocl::BruteForceMatcher_OCL_base
 
 Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest descriptor in the second set by trying each one. This descriptor matcher supports masking permissible matches between descriptor sets. ::
@@ -148,7 +148,7 @@ Brute-force descriptor matcher. For each descriptor in the first set, this match
 
 The class ``BruteForceMatcher_OCL_base`` has an interface similar to the class :ocv:class:`DescriptorMatcher`. It has two groups of ``match`` methods: for matching descriptors of one image with another image or with an image set. Also, all functions have an alternative to save results either to the GPU memory or to the CPU memory. ``BruteForceMatcher_OCL_base`` supports only the ``L1<float>``, ``L2<float>``, and ``Hamming`` distance types.
 
-.. seealso:: :ocv:class:`DescriptorMatcher`, :ocv:class:`BruteForceMatcher`
+.. seealso:: :ocv:class:`DescriptorMatcher`, :ocv:class:`BFMatcher`
 
 
 
@@ -162,7 +162,7 @@ Finds the best match for each descriptor from a query set with train descriptors
 
 .. ocv:function:: void ocl::BruteForceMatcher_OCL_base::match(const oclMat& query, std::vector<DMatch>& matches, const std::vector<oclMat>& masks = std::vector<oclMat>())
 
-.. ocv:function:: void ocl::BruteForceMatcher_OCL_base::matchCollection(const oclMat& query, const oclMat& trainCollection, oclMat& trainIdx, oclMat& imgIdx, oclMat& distance, const oclMat& masks)
+.. ocv:function:: void ocl::BruteForceMatcher_OCL_base::matchCollection( const oclMat& query, const oclMat& trainCollection, oclMat& trainIdx, oclMat& imgIdx, oclMat& distance, const oclMat& masks=oclMat() )
 
 .. seealso:: :ocv:func:`DescriptorMatcher::match`
 
@@ -175,15 +175,13 @@ Performs a GPU collection of train descriptors and masks in a suitable format fo
 .. ocv:function:: void ocl::BruteForceMatcher_OCL_base::makeGpuCollection(oclMat& trainCollection, oclMat& maskCollection, const vector<oclMat>& masks = std::vector<oclMat>())
 
 
-
 ocl::BruteForceMatcher_OCL_base::matchDownload
 ----------------------------------------------
 Downloads matrices obtained via :ocv:func:`ocl::BruteForceMatcher_OCL_base::matchSingle` or :ocv:func:`ocl::BruteForceMatcher_OCL_base::matchCollection` to vector with :ocv:class:`DMatch`.
 
-.. ocv:function:: void ocl::BruteForceMatcher_OCL_base::matchDownload(const oclMat& trainIdx, const oclMat& distance, std::vector<DMatch>&matches)
+.. ocv:function:: static void ocl::BruteForceMatcher_OCL_base::matchDownload( const oclMat& trainIdx, const oclMat& distance, std::vector<DMatch>& matches )
 
-.. ocv:function:: void ocl::BruteForceMatcher_OCL_base::matchDownload(const oclMat& trainIdx, oclMat& imgIdx, const oclMat& distance, std::vector<DMatch>&matches)
-
+.. ocv:function:: static void ocl::BruteForceMatcher_OCL_base::matchDownload( const oclMat& trainIdx, const oclMat& imgIdx, const oclMat& distance, std::vector<DMatch>& matches )
 
 
 ocl::BruteForceMatcher_OCL_base::matchConvert
@@ -310,7 +308,7 @@ If ``compactResult`` is ``true`` , the ``matches`` vector does not contain match
 ocl::HOGDescriptor
 ------------------
 
-.. ocv:class:: ocl::HOGDescriptor
+.. ocv:struct:: ocl::HOGDescriptor
 
 The class implements Histogram of Oriented Gradients ([Dalal2005]_) object detector. ::
 

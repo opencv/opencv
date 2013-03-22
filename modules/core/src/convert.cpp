@@ -344,7 +344,7 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
 
 void cv::merge(InputArrayOfArrays _mv, OutputArray _dst)
 {
-    vector<Mat> mv;
+    std::vector<Mat> mv;
     _mv.getMatVector(mv);
     merge(!mv.empty() ? &mv[0] : 0, mv.size(), _dst);
 }
@@ -505,7 +505,7 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
 }
 
 
-void cv::mixChannels(const vector<Mat>& src, vector<Mat>& dst,
+void cv::mixChannels(const std::vector<Mat>& src, std::vector<Mat>& dst,
                  const int* fromTo, size_t npairs)
 {
     mixChannels(!src.empty() ? &src[0] : 0, src.size(),
@@ -513,7 +513,7 @@ void cv::mixChannels(const vector<Mat>& src, vector<Mat>& dst,
 }
 
 void cv::mixChannels(InputArrayOfArrays src, InputArrayOfArrays dst,
-                     const vector<int>& fromTo)
+                     const std::vector<int>& fromTo)
 {
     if(fromTo.empty())
         return;
@@ -1247,8 +1247,8 @@ cvSplit( const void* srcarr, void* dstarr0, void* dstarr1, void* dstarr2, void* 
     for( i = 0; i < 4; i++ )
         nz += dptrs[i] != 0;
     CV_Assert( nz > 0 );
-    cv::vector<cv::Mat> dvec(nz);
-    cv::vector<int> pairs(nz*2);
+    std::vector<cv::Mat> dvec(nz);
+    std::vector<int> pairs(nz*2);
 
     for( i = j = 0; i < 4; i++ )
     {
@@ -1283,8 +1283,8 @@ cvMerge( const void* srcarr0, const void* srcarr1, const void* srcarr2,
     for( i = 0; i < 4; i++ )
         nz += sptrs[i] != 0;
     CV_Assert( nz > 0 );
-    cv::vector<cv::Mat> svec(nz);
-    cv::vector<int> pairs(nz*2);
+    std::vector<cv::Mat> svec(nz);
+    std::vector<int> pairs(nz*2);
 
     for( i = j = 0; i < 4; i++ )
     {
@@ -1314,7 +1314,7 @@ cvMixChannels( const CvArr** src, int src_count,
                CvArr** dst, int dst_count,
                const int* from_to, int pair_count )
 {
-    cv::AutoBuffer<cv::Mat, 32> buf(src_count + dst_count);
+    cv::AutoBuffer<cv::Mat> buf(src_count + dst_count);
 
     int i;
     for( i = 0; i < src_count; i++ )

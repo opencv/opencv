@@ -454,7 +454,7 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(cols, threads.x << 1);
             grid.y = divUp(rows, threads.y);
 
-            int elem_step = u.step/sizeof(T);
+            int elem_step = (int)(u.step / sizeof(T));
 
             for(int t = 0; t < iters; ++t)
             {

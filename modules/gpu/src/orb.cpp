@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
@@ -419,7 +418,7 @@ cv::gpu::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int edg
 
     // pre-compute the end of a row in a circular patch
     int half_patch_size = patchSize_ / 2;
-    vector<int> u_max(half_patch_size + 2);
+    std::vector<int> u_max(half_patch_size + 2);
     for (int v = 0; v <= half_patch_size * std::sqrt(2.f) / 2 + 1; ++v)
         u_max[v] = cvRound(std::sqrt(static_cast<float>(half_patch_size * half_patch_size - v * v)));
 

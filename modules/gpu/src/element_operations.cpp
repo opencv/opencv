@@ -263,11 +263,8 @@ namespace
 
 namespace arithm
 {
-    template <typename T, typename D>
-    void vadd4(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-
-    template <typename T, typename D>
-    void vadd2(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
+    void addMat_v4(PtrStepSz<unsigned int> src1, PtrStepSz<unsigned int> src2, PtrStepSz<unsigned int> dst, cudaStream_t stream);
+    void addMat_v2(PtrStepSz<unsigned int> src1, PtrStepSz<unsigned int> src2, PtrStepSz<unsigned int> dst, cudaStream_t stream);
 
     template <typename T, typename D>
     void addMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
@@ -345,62 +342,6 @@ void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Gpu
         }
     };
 
-    typedef void (*vfunc_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    static const vfunc_t vfuncs4[4][4] =
-    {
-        {
-            vadd4<unsigned int, unsigned int>,
-            vadd4<unsigned int, int>,
-            0,
-            0
-        },
-        {
-            vadd4<int, unsigned int>,
-            vadd4<int, int>,
-            0,
-            0
-        },
-        {
-            0,
-            0,
-            0,
-            0
-        },
-        {
-            0,
-            0,
-            0,
-            0
-        }
-    };
-    static const vfunc_t vfuncs2[4][4] =
-    {
-        {
-            0,
-            0,
-            0,
-            0
-        },
-        {
-            0,
-            0,
-            0,
-            0
-        },
-        {
-            0,
-            0,
-            vadd2<unsigned int, unsigned int>,
-            vadd2<unsigned int, int>
-        },
-        {
-            0,
-            0,
-            vadd2<int, unsigned int>,
-            vadd2<int, int>
-        }
-    };
-
     if (dtype < 0)
         dtype = src1.depth();
 
@@ -426,7 +367,7 @@ void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Gpu
     PtrStepSzb src2_(src1.rows, src1.cols * cn, src2.data, src2.step);
     PtrStepSzb dst_(src1.rows, src1.cols * cn, dst.data, dst.step);
 
-    if (mask.empty() && sdepth < CV_32S && ddepth < CV_32S)
+    if (mask.empty() && (sdepth == CV_8U || sdepth == CV_16U) && ddepth == sdepth)
     {
         const intptr_t src1ptr = reinterpret_cast<intptr_t>(src1_.data);
         const intptr_t src2ptr = reinterpret_cast<intptr_t>(src2_.data);
@@ -434,31 +375,27 @@ void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Gpu
 
         const bool isAllAligned = (src1ptr & 31) == 0 && (src2ptr & 31) == 0 && (dstptr & 31) == 0;
 
-        if (deviceSupports(FEATURE_SET_COMPUTE_20) && isAllAligned)
+        if (isAllAligned)
         {
-            const vfunc_t vfunc4 = vfuncs4[sdepth][ddepth];
-            const vfunc_t vfunc2 = vfuncs2[sdepth][ddepth];
-
-            if (vfunc4 != 0 && (src1_.cols & 3) == 0)
+            if (sdepth == CV_8U && (src1_.cols & 3) == 0)
             {
                 const int vcols = src1_.cols >> 2;
 
-                vfunc4(PtrStepSzb(src1_.rows, vcols, src1_.data, src1_.step),
-                       PtrStepSzb(src1_.rows, vcols, src2_.data, src2_.step),
-                       PtrStepSzb(src1_.rows, vcols, dst_.data, dst_.step),
-                       stream);
+                addMat_v4(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                          stream);
 
                 return;
             }
-
-            if (vfunc2 != 0 && (src1_.cols & 1) == 0)
+            else if (sdepth == CV_16U && (src1_.cols & 1) == 0)
             {
                 const int vcols = src1_.cols >> 1;
 
-                vfunc2(PtrStepSzb(src1_.rows, vcols, src1_.data, src1_.step),
-                       PtrStepSzb(src1_.rows, vcols, src2_.data, src2_.step),
-                       PtrStepSzb(src1_.rows, vcols, dst_.data, dst_.step),
-                       stream);
+                addMat_v2(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                          stream);
 
                 return;
             }
@@ -606,11 +543,8 @@ void cv::gpu::add(const GpuMat& src, const Scalar& sc, GpuMat& dst, const GpuMat
 
 namespace arithm
 {
-    template <typename T, typename D>
-    void vsub4(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-
-    template <typename T, typename D>
-    void vsub2(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
+    void subMat_v4(PtrStepSz<unsigned int> src1, PtrStepSz<unsigned int> src2, PtrStepSz<unsigned int> dst, cudaStream_t stream);
+    void subMat_v2(PtrStepSz<unsigned int> src1, PtrStepSz<unsigned int> src2, PtrStepSz<unsigned int> dst, cudaStream_t stream);
 
     template <typename T, typename D>
     void subMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
@@ -688,62 +622,6 @@ void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cons
         }
     };
 
-    typedef void (*vfunc_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    static const vfunc_t vfuncs4[4][4] =
-    {
-        {
-            vsub4<unsigned int, unsigned int>,
-            vsub4<unsigned int, int>,
-            0,
-            0
-        },
-        {
-            vsub4<int, unsigned int>,
-            vsub4<int, int>,
-            0,
-            0
-        },
-        {
-            0,
-            0,
-            0,
-            0
-        },
-        {
-            0,
-            0,
-            0,
-            0
-        }
-    };
-    static const vfunc_t vfuncs2[4][4] =
-    {
-        {
-            0,
-            0,
-            0,
-            0
-        },
-        {
-            0,
-            0,
-            0,
-            0
-        },
-        {
-            0,
-            0,
-            vsub2<unsigned int, unsigned int>,
-            vsub2<unsigned int, int>
-        },
-        {
-            0,
-            0,
-            vsub2<int, unsigned int>,
-            vsub2<int, int>
-        }
-    };
-
     if (dtype < 0)
         dtype = src1.depth();
 
@@ -769,7 +647,7 @@ void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cons
     PtrStepSzb src2_(src1.rows, src1.cols * cn, src2.data, src2.step);
     PtrStepSzb dst_(src1.rows, src1.cols * cn, dst.data, dst.step);
 
-    if (mask.empty() && sdepth < CV_32S && ddepth < CV_32S)
+    if (mask.empty() && (sdepth == CV_8U || sdepth == CV_16U) && ddepth == sdepth)
     {
         const intptr_t src1ptr = reinterpret_cast<intptr_t>(src1_.data);
         const intptr_t src2ptr = reinterpret_cast<intptr_t>(src2_.data);
@@ -777,31 +655,27 @@ void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cons
 
         const bool isAllAligned = (src1ptr & 31) == 0 && (src2ptr & 31) == 0 && (dstptr & 31) == 0;
 
-        if (deviceSupports(FEATURE_SET_COMPUTE_20) && isAllAligned)
+        if (isAllAligned)
         {
-            const vfunc_t vfunc4 = vfuncs4[sdepth][ddepth];
-            const vfunc_t vfunc2 = vfuncs2[sdepth][ddepth];
-
-            if (vfunc4 != 0 && (src1_.cols & 3) == 0)
+            if (sdepth == CV_8U && (src1_.cols & 3) == 0)
             {
                 const int vcols = src1_.cols >> 2;
 
-                vfunc4(PtrStepSzb(src1_.rows, vcols, src1_.data, src1_.step),
-                       PtrStepSzb(src1_.rows, vcols, src2_.data, src2_.step),
-                       PtrStepSzb(src1_.rows, vcols, dst_.data, dst_.step),
-                       stream);
+                subMat_v4(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                          stream);
 
                 return;
             }
-
-            if (vfunc2 != 0 && (src1_.cols & 1) == 0)
+            else if (sdepth == CV_16U && (src1_.cols & 1) == 0)
             {
                 const int vcols = src1_.cols >> 1;
 
-                vfunc2(PtrStepSzb(src1_.rows, vcols, src1_.data, src1_.step),
-                       PtrStepSzb(src1_.rows, vcols, src2_.data, src2_.step),
-                       PtrStepSzb(src1_.rows, vcols, dst_.data, dst_.step),
-                       stream);
+                subMat_v2(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                          stream);
 
                 return;
             }
@@ -1585,11 +1459,8 @@ void cv::gpu::divide(double scale, const GpuMat& src, GpuMat& dst, int dtype, St
 
 namespace arithm
 {
-    template <typename T>
-    void vabsDiff4(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-
-    template <typename T>
-    void vabsDiff2(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
+    void absDiffMat_v4(PtrStepSz<unsigned int> src1, PtrStepSz<unsigned int> src2, PtrStepSz<unsigned int> dst, cudaStream_t stream);
+    void absDiffMat_v2(PtrStepSz<unsigned int> src1, PtrStepSz<unsigned int> src2, PtrStepSz<unsigned int> dst, cudaStream_t stream);
 
     template <typename T>
     void absDiffMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
@@ -1609,20 +1480,6 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
         absDiffMat<int>,
         absDiffMat<float>,
         absDiffMat<double>
-    };
-    static const func_t vfuncs4[] =
-    {
-        vabsDiff4<unsigned int>,
-        vabsDiff4<int>,
-        0,
-        0
-    };
-    static const func_t vfuncs2[] =
-    {
-        0,
-        0,
-        vabsDiff2<unsigned int>,
-        vabsDiff2<int>
     };
 
     const int depth = src1.depth();
@@ -1645,7 +1502,7 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
     PtrStepSzb src2_(src1.rows, src1.cols * cn, src2.data, src2.step);
     PtrStepSzb dst_(src1.rows, src1.cols * cn, dst.data, dst.step);
 
-    if (depth < CV_32S)
+    if (depth == CV_8U || depth == CV_16U)
     {
         const intptr_t src1ptr = reinterpret_cast<intptr_t>(src1_.data);
         const intptr_t src2ptr = reinterpret_cast<intptr_t>(src2_.data);
@@ -1653,31 +1510,27 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
 
         const bool isAllAligned = (src1ptr & 31) == 0 && (src2ptr & 31) == 0 && (dstptr & 31) == 0;
 
-        if (deviceSupports(FEATURE_SET_COMPUTE_20) && isAllAligned)
+        if (isAllAligned)
         {
-            const func_t vfunc4 = vfuncs4[depth];
-            const func_t vfunc2 = vfuncs2[depth];
-
-            if (vfunc4 != 0 && (src1_.cols & 3) == 0)
+            if (depth == CV_8U && (src1_.cols & 3) == 0)
             {
                 const int vcols = src1_.cols >> 2;
 
-                vfunc4(PtrStepSzb(src1_.rows, vcols, src1_.data, src1_.step),
-                       PtrStepSzb(src1_.rows, vcols, src2_.data, src2_.step),
-                       PtrStepSzb(src1_.rows, vcols, dst_.data, dst_.step),
-                       stream);
+                absDiffMat_v4(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                              PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                              PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                              stream);
 
                 return;
             }
-
-            if (vfunc2 != 0 && (src1_.cols & 1) == 0)
+            else if (depth == CV_16U && (src1_.cols & 1) == 0)
             {
                 const int vcols = src1_.cols >> 1;
 
-                vfunc2(PtrStepSzb(src1_.rows, vcols, src1_.data, src1_.step),
-                       PtrStepSzb(src1_.rows, vcols, src2_.data, src2_.step),
-                       PtrStepSzb(src1_.rows, vcols, dst_.data, dst_.step),
-                       stream);
+                absDiffMat_v2(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                              PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                              PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                              stream);
 
                 return;
             }
@@ -1940,6 +1793,11 @@ void cv::gpu::exp(const GpuMat& src, GpuMat& dst, Stream& stream)
 
 namespace arithm
 {
+    void cmpMatEq_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream);
+    void cmpMatNe_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream);
+    void cmpMatLt_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream);
+    void cmpMatLe_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream);
+
     template <typename T> void cmpMatEq(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
     template <typename T> void cmpMatNe(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
     template <typename T> void cmpMatLt(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
@@ -1960,6 +1818,12 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
         {cmpMatEq<int>           , cmpMatNe<int>           , cmpMatLt<int>           , cmpMatLe<int>           },
         {cmpMatEq<float>         , cmpMatNe<float>         , cmpMatLt<float>         , cmpMatLe<float>         },
         {cmpMatEq<double>        , cmpMatNe<double>        , cmpMatLt<double>        , cmpMatLe<double>        }
+    };
+
+    typedef void (*func_v4_t)(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream);
+    static const func_v4_t funcs_v4[] =
+    {
+        cmpMatEq_v4, cmpMatNe_v4, cmpMatLt_v4, cmpMatLe_v4
     };
 
     const int depth = src1.depth();
@@ -1996,6 +1860,27 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
     PtrStepSzb src1_(src1.rows, src1.cols * cn, psrc1[cmpop]->data, psrc1[cmpop]->step);
     PtrStepSzb src2_(src1.rows, src1.cols * cn, psrc2[cmpop]->data, psrc2[cmpop]->step);
     PtrStepSzb dst_(src1.rows, src1.cols * cn, dst.data, dst.step);
+
+    if (depth == CV_8U && (src1_.cols & 3) == 0)
+    {
+        const intptr_t src1ptr = reinterpret_cast<intptr_t>(src1_.data);
+        const intptr_t src2ptr = reinterpret_cast<intptr_t>(src2_.data);
+        const intptr_t dstptr = reinterpret_cast<intptr_t>(dst_.data);
+
+        const bool isAllAligned = (src1ptr & 31) == 0 && (src2ptr & 31) == 0 && (dstptr & 31) == 0;
+
+        if (isAllAligned)
+        {
+            const int vcols = src1_.cols >> 2;
+
+            funcs_v4[code](PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                           PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                           PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                           stream);
+
+            return;
+        }
+    }
 
     const func_t func = funcs[depth][code];
 
@@ -2280,11 +2165,11 @@ namespace
 {
     typedef void (*bit_scalar_func_t)(PtrStepSzb src1, unsigned int src2, PtrStepSzb dst, cudaStream_t stream);
 
-    template <bit_scalar_func_t func> struct BitScalar
+    template <typename T, bit_scalar_func_t func> struct BitScalar
     {
         static void call(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream)
         {
-            func(src, static_cast<unsigned int>(sc.val[0]), dst, stream);
+            func(src, saturate_cast<T>(sc.val[0]), dst, stream);
         }
     };
 
@@ -2292,14 +2177,12 @@ namespace
     {
         static void call(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream)
         {
-            Scalar_<unsigned int> isc = sc;
-
             unsigned int packedVal = 0;
 
-            packedVal |= (isc.val[0] & 0xffff);
-            packedVal |= (isc.val[1] & 0xffff) << 8;
-            packedVal |= (isc.val[2] & 0xffff) << 16;
-            packedVal |= (isc.val[3] & 0xffff) << 24;
+            packedVal |= (saturate_cast<unsigned char>(sc.val[0]) & 0xffff);
+            packedVal |= (saturate_cast<unsigned char>(sc.val[1]) & 0xffff) << 8;
+            packedVal |= (saturate_cast<unsigned char>(sc.val[2]) & 0xffff) << 16;
+            packedVal |= (saturate_cast<unsigned char>(sc.val[3]) & 0xffff) << 24;
 
             func(src, packedVal, dst, stream);
         }
@@ -2330,7 +2213,7 @@ namespace
             oSizeROI.width = src.cols;
             oSizeROI.height = src.rows;
 
-            const npp_t pConstants[] = {static_cast<npp_t>(sc.val[0]), static_cast<npp_t>(sc.val[1]), static_cast<npp_t>(sc.val[2]), static_cast<npp_t>(sc.val[3])};
+            const npp_t pConstants[] = {saturate_cast<npp_t>(sc.val[0]), saturate_cast<npp_t>(sc.val[1]), saturate_cast<npp_t>(sc.val[2]), saturate_cast<npp_t>(sc.val[3])};
 
             nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step), pConstants, dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI) );
 
@@ -2350,7 +2233,7 @@ namespace
             oSizeROI.width = src.cols;
             oSizeROI.height = src.rows;
 
-            nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step), static_cast<npp_t>(sc.val[0]), dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI) );
+            nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step), saturate_cast<npp_t>(sc.val[0]), dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -2365,11 +2248,11 @@ void cv::gpu::bitwise_and(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stre
     typedef void (*func_t)(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[5][4] =
     {
-        {BitScalar< bitScalarAnd<unsigned char> >::call , 0, NppBitwiseC<CV_8U , 3, nppiAndC_8u_C3R >::call, BitScalar4< bitScalarAnd<unsigned int> >::call},
+        {BitScalar<unsigned char, bitScalarAnd<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiAndC_8u_C3R >::call, BitScalar4< bitScalarAnd<unsigned int> >::call},
         {0,0,0,0},
-        {BitScalar< bitScalarAnd<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiAndC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiAndC_16u_C4R>::call},
+        {BitScalar<unsigned short, bitScalarAnd<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiAndC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiAndC_16u_C4R>::call},
         {0,0,0,0},
-        {BitScalar< bitScalarAnd<unsigned int> >::call  , 0, NppBitwiseC<CV_32S, 3, nppiAndC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiAndC_32s_C4R>::call}
+        {BitScalar<int, bitScalarAnd<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiAndC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiAndC_32s_C4R>::call}
     };
 
     const int depth = src.depth();
@@ -2390,11 +2273,11 @@ void cv::gpu::bitwise_or(const GpuMat& src, const Scalar& sc, GpuMat& dst, Strea
     typedef void (*func_t)(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[5][4] =
     {
-        {BitScalar< bitScalarOr<unsigned char> >::call , 0, NppBitwiseC<CV_8U , 3, nppiOrC_8u_C3R >::call, BitScalar4< bitScalarOr<unsigned int> >::call},
+        {BitScalar<unsigned char, bitScalarOr<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiOrC_8u_C3R >::call, BitScalar4< bitScalarOr<unsigned int> >::call},
         {0,0,0,0},
-        {BitScalar< bitScalarOr<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiOrC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiOrC_16u_C4R>::call},
+        {BitScalar<unsigned short, bitScalarOr<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiOrC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiOrC_16u_C4R>::call},
         {0,0,0,0},
-        {BitScalar< bitScalarOr<unsigned int> >::call  , 0, NppBitwiseC<CV_32S, 3, nppiOrC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiOrC_32s_C4R>::call}
+        {BitScalar<int, bitScalarOr<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiOrC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiOrC_32s_C4R>::call}
     };
 
     const int depth = src.depth();
@@ -2415,11 +2298,11 @@ void cv::gpu::bitwise_xor(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stre
     typedef void (*func_t)(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[5][4] =
     {
-        {BitScalar< bitScalarXor<unsigned char> >::call , 0, NppBitwiseC<CV_8U , 3, nppiXorC_8u_C3R >::call, BitScalar4< bitScalarXor<unsigned int> >::call},
+        {BitScalar<unsigned char, bitScalarXor<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiXorC_8u_C3R >::call, BitScalar4< bitScalarXor<unsigned int> >::call},
         {0,0,0,0},
-        {BitScalar< bitScalarXor<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiXorC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiXorC_16u_C4R>::call},
+        {BitScalar<unsigned short, bitScalarXor<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiXorC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiXorC_16u_C4R>::call},
         {0,0,0,0},
-        {BitScalar< bitScalarXor<unsigned int> >::call  , 0, NppBitwiseC<CV_32S, 3, nppiXorC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiXorC_32s_C4R>::call}
+        {BitScalar<int, bitScalarXor<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiXorC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiXorC_32s_C4R>::call}
     };
 
     const int depth = src.depth();
@@ -2534,13 +2417,13 @@ void cv::gpu::lshift(const GpuMat& src, Scalar_<int> sc, GpuMat& dst, Stream& st
 
 namespace arithm
 {
-    template <typename T> void vmin4(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template <typename T> void vmin2(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
+    void minMat_v4(PtrStepSz<unsigned int> src1, PtrStepSz<unsigned int> src2, PtrStepSz<unsigned int> dst, cudaStream_t stream);
+    void minMat_v2(PtrStepSz<unsigned int> src1, PtrStepSz<unsigned int> src2, PtrStepSz<unsigned int> dst, cudaStream_t stream);
     template <typename T> void minMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
     template <typename T> void minScalar(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
 
-    template <typename T> void vmax4(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template <typename T> void vmax2(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
+    void maxMat_v4(PtrStepSz<unsigned int> src1, PtrStepSz<unsigned int> src2, PtrStepSz<unsigned int> dst, cudaStream_t stream);
+    void maxMat_v2(PtrStepSz<unsigned int> src1, PtrStepSz<unsigned int> src2, PtrStepSz<unsigned int> dst, cudaStream_t stream);
     template <typename T> void maxMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
     template <typename T> void maxScalar(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
 }
@@ -2559,20 +2442,6 @@ void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s
         minMat<int>,
         minMat<float>,
         minMat<double>
-    };
-    static const func_t vfuncs4[] =
-    {
-        vmin4<unsigned int>,
-        vmin4<int>,
-        0,
-        0
-    };
-    static const func_t vfuncs2[] =
-    {
-        0,
-        0,
-        vmin2<unsigned int>,
-        vmin2<int>
     };
 
     const int depth = src1.depth();
@@ -2595,7 +2464,7 @@ void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s
     PtrStepSzb src2_(src1.rows, src1.cols * cn, src2.data, src2.step);
     PtrStepSzb dst_(src1.rows, src1.cols * cn, dst.data, dst.step);
 
-    if (depth < CV_32S)
+    if (depth == CV_8U || depth == CV_16U)
     {
         const intptr_t src1ptr = reinterpret_cast<intptr_t>(src1_.data);
         const intptr_t src2ptr = reinterpret_cast<intptr_t>(src2_.data);
@@ -2603,31 +2472,27 @@ void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s
 
         const bool isAllAligned = (src1ptr & 31) == 0 && (src2ptr & 31) == 0 && (dstptr & 31) == 0;
 
-        if (deviceSupports(FEATURE_SET_COMPUTE_20) && isAllAligned)
+        if (isAllAligned)
         {
-            const func_t vfunc4 = vfuncs4[depth];
-            const func_t vfunc2 = vfuncs2[depth];
-
-            if (vfunc4 != 0 && (src1_.cols & 3) == 0)
+            if (depth == CV_8U && (src1_.cols & 3) == 0)
             {
                 const int vcols = src1_.cols >> 2;
 
-                vfunc4(PtrStepSzb(src1_.rows, vcols, src1_.data, src1_.step),
-                       PtrStepSzb(src1_.rows, vcols, src2_.data, src2_.step),
-                       PtrStepSzb(src1_.rows, vcols, dst_.data, dst_.step),
-                       stream);
+                minMat_v4(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                          stream);
 
                 return;
             }
-
-            if (vfunc2 != 0 && (src1_.cols & 1) == 0)
+            else if (depth == CV_16U && (src1_.cols & 1) == 0)
             {
                 const int vcols = src1_.cols >> 1;
 
-                vfunc2(PtrStepSzb(src1_.rows, vcols, src1_.data, src1_.step),
-                       PtrStepSzb(src1_.rows, vcols, src2_.data, src2_.step),
-                       PtrStepSzb(src1_.rows, vcols, dst_.data, dst_.step),
-                       stream);
+                minMat_v2(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                          stream);
 
                 return;
             }
@@ -2657,20 +2522,6 @@ void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s
         maxMat<float>,
         maxMat<double>
     };
-    static const func_t vfuncs4[] =
-    {
-        vmax4<unsigned int>,
-        vmax4<int>,
-        0,
-        0
-    };
-    static const func_t vfuncs2[] =
-    {
-        0,
-        0,
-        vmax2<unsigned int>,
-        vmax2<int>
-    };
 
     const int depth = src1.depth();
     const int cn = src1.channels();
@@ -2692,7 +2543,7 @@ void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s
     PtrStepSzb src2_(src1.rows, src1.cols * cn, src2.data, src2.step);
     PtrStepSzb dst_(src1.rows, src1.cols * cn, dst.data, dst.step);
 
-    if (depth < CV_32S)
+    if (depth == CV_8U || depth == CV_16U)
     {
         const intptr_t src1ptr = reinterpret_cast<intptr_t>(src1_.data);
         const intptr_t src2ptr = reinterpret_cast<intptr_t>(src2_.data);
@@ -2700,31 +2551,27 @@ void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s
 
         const bool isAllAligned = (src1ptr & 31) == 0 && (src2ptr & 31) == 0 && (dstptr & 31) == 0;
 
-        if (deviceSupports(FEATURE_SET_COMPUTE_20) && isAllAligned)
+        if (isAllAligned)
         {
-            const func_t vfunc4 = vfuncs4[depth];
-            const func_t vfunc2 = vfuncs2[depth];
-
-            if (vfunc4 != 0 && (src1_.cols & 3) == 0)
+            if (depth == CV_8U && (src1_.cols & 3) == 0)
             {
                 const int vcols = src1_.cols >> 2;
 
-                vfunc4(PtrStepSzb(src1_.rows, vcols, src1_.data, src1_.step),
-                       PtrStepSzb(src1_.rows, vcols, src2_.data, src2_.step),
-                       PtrStepSzb(src1_.rows, vcols, dst_.data, dst_.step),
-                       stream);
+                maxMat_v4(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                          stream);
 
                 return;
             }
-
-            if (vfunc2 != 0 && (src1_.cols & 1) == 0)
+            else if (depth == CV_16U && (src1_.cols & 1) == 0)
             {
                 const int vcols = src1_.cols >> 1;
 
-                vfunc2(PtrStepSzb(src1_.rows, vcols, src1_.data, src1_.step),
-                       PtrStepSzb(src1_.rows, vcols, src2_.data, src2_.step),
-                       PtrStepSzb(src1_.rows, vcols, dst_.data, dst_.step),
-                       stream);
+                maxMat_v2(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                          stream);
 
                 return;
             }

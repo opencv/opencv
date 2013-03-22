@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 
@@ -186,7 +186,7 @@ class CreateVideoWriterInvoker :
 public:
     const static Size FrameSize;
     static std::string TmpDirectory;
-    
+
     CreateVideoWriterInvoker(std::vector<VideoWriter*>& _writers, std::vector<std::string>& _files) :
         ParallelLoopBody(), writers(&_writers), files(&_files)
     {
@@ -207,7 +207,6 @@ public:
         }
     }
 
-
 private:
     std::vector<VideoWriter*>* writers;
     std::vector<std::string>* files;
@@ -221,7 +220,7 @@ class WriteVideo_Invoker :
 {
 public:
     enum { FrameCount = 300 };
-    
+
     static const Scalar ObjectColor;
     static const Point Center;
 
@@ -229,11 +228,11 @@ public:
         ParallelLoopBody(), writers(&_writers)
     {
     }
-    
+
     static void GenerateFrame(Mat& frame, unsigned int i)
     {
         frame = Scalar::all(i % 255);
-        
+
         std::string text = to_string(i);
         putText(frame, text, Point(50, Center.y), FONT_HERSHEY_SIMPLEX, 5.0, ObjectColor, 5, CV_AA);
         circle(frame, Center, i + 2, ObjectColor, 2, CV_AA);
@@ -241,19 +240,21 @@ public:
 
     virtual void operator() (const Range& range) const
     {
-        CV_Assert((range.start + 1) == range.end);
-        VideoWriter* writer = writers->operator[](range.start);
-        CV_Assert(writer != NULL);
-        CV_Assert(writer->isOpened());
-        
-        Mat frame(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
-        for (unsigned int i = 0; i < FrameCount; ++i)
+        for (int j = range.start; j < range.end; ++j)
         {
-            GenerateFrame(frame, i);
-            writer->operator<< (frame);
+            VideoWriter* writer = writers->operator[](j);
+            CV_Assert(writer != NULL);
+            CV_Assert(writer->isOpened());
+
+            Mat frame(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
+            for (unsigned int i = 0; i < FrameCount; ++i)
+            {
+                GenerateFrame(frame, i);
+                writer->operator<< (frame);
+            }
         }
     }
-    
+
 protected:
     static std::string to_string(unsigned int i)
     {
@@ -303,45 +304,47 @@ public:
 
     virtual void operator() (const Range& range) const
     {
-        CV_Assert(range.start + 1 == range.end);
-        VideoCapture* capture = readers->operator[](range.start);
-        CV_Assert(capture != NULL);
-        CV_Assert(capture->isOpened());
-
-        const static double eps = 23.0;
-        unsigned int frameCount = static_cast<unsigned int>(capture->get(CV_CAP_PROP_FRAME_COUNT));
-        CV_Assert(frameCount == WriteVideo_Invoker::FrameCount);
-        Mat reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
-
-        for (unsigned int i = 0; i < frameCount && next; ++i)
+        for (int j = range.start; j < range.end; ++j)
         {
-            Mat actual;
-            (*capture) >> actual;
+            VideoCapture* capture = readers->operator[](j);
+            CV_Assert(capture != NULL);
+            CV_Assert(capture->isOpened());
 
-            WriteVideo_Invoker::GenerateFrame(reference, i);
+            const static double eps = 23.0;
+            unsigned int frameCount = static_cast<unsigned int>(capture->get(CV_CAP_PROP_FRAME_COUNT));
+            CV_Assert(frameCount == WriteVideo_Invoker::FrameCount);
+            Mat reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
 
-            EXPECT_EQ(reference.cols, actual.cols);
-            EXPECT_EQ(reference.rows, actual.rows);
-            EXPECT_EQ(reference.depth(), actual.depth());
-            EXPECT_EQ(reference.channels(), actual.channels());
-
-            double psnr = PSNR(actual, reference);
-            if (psnr < eps)
+            for (unsigned int i = 0; i < frameCount && next; ++i)
             {
-#define SUM cvtest::TS::SUMMARY
-                ts->printf(SUM, "\nPSNR: %lf\n", psnr);
-                ts->printf(SUM, "Video #: %d\n", range.start);
-                ts->printf(SUM, "Frame #: %d\n", i);
-#undef SUM
-                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-                ts->set_gtest_status();
+                Mat actual;
+                (*capture) >> actual;
 
-                Mat diff;
-                absdiff(actual, reference, diff);
+                WriteVideo_Invoker::GenerateFrame(reference, i);
 
-                EXPECT_EQ(countNonZero(diff.reshape(1) > 1), 0);
+                EXPECT_EQ(reference.cols, actual.cols);
+                EXPECT_EQ(reference.rows, actual.rows);
+                EXPECT_EQ(reference.depth(), actual.depth());
+                EXPECT_EQ(reference.channels(), actual.channels());
 
-                next = false;
+                double psnr = PSNR(actual, reference);
+                if (psnr < eps)
+                {
+    #define SUM cvtest::TS::SUMMARY
+                    ts->printf(SUM, "\nPSNR: %lf\n", psnr);
+                    ts->printf(SUM, "Video #: %d\n", range.start);
+                    ts->printf(SUM, "Frame #: %d\n", i);
+    #undef SUM
+                    ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                    ts->set_gtest_status();
+
+                    Mat diff;
+                    absdiff(actual, reference, diff);
+
+                    EXPECT_EQ(countNonZero(diff.reshape(1) > 1), 0);
+
+                    next = false;
+                }
             }
         }
     }

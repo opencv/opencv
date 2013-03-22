@@ -1,5 +1,5 @@
 
-#include "opencv2/contrib/contrib.hpp"
+#include "opencv2/contrib.hpp"
 
 #ifdef WIN32
     #include <windows.h>

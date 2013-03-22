@@ -43,6 +43,8 @@
 
 #ifdef HAVE_CUDA
 
+using namespace cvtest;
+
 //////////////////////////////////////////////////////
 // BroxOpticalFlow
 
@@ -431,9 +433,9 @@ GPU_TEST_P(OpticalFlowDual_TVL1, Accuracy)
     cv::gpu::GpuMat d_flowy = createMat(frame0.size(), CV_32FC1, useRoi);
     d_alg(loadMat(frame0, useRoi), loadMat(frame1, useRoi), d_flowx, d_flowy);
 
-    cv::OpticalFlowDual_TVL1 alg;
+    cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
     cv::Mat flow;
-    alg(frame0, frame1, flow);
+    alg->calc(frame0, frame1, flow);
     cv::Mat gold[2];
     cv::split(flow, gold);
 

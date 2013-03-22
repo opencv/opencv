@@ -40,8 +40,8 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/photo/photo.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/photo.hpp"
+#include "opencv2/imgproc.hpp"
 #include "fast_nlmeans_denoising_invoker.hpp"
 #include "fast_nlmeans_multi_denoising_invoker.hpp"
 
@@ -147,7 +147,7 @@ void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _ds
                                     int imgToDenoiseIndex, int temporalWindowSize,
                                     float h, int templateWindowSize, int searchWindowSize)
 {
-    vector<Mat> srcImgs;
+    std::vector<Mat> srcImgs;
     _srcImgs.getMatVector(srcImgs);
 
     fastNlMeansDenoisingMultiCheckPreconditions(
@@ -187,7 +187,7 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
                                            float h, float hForColorComponents,
                                            int templateWindowSize, int searchWindowSize)
 {
-    vector<Mat> srcImgs;
+    std::vector<Mat> srcImgs;
     _srcImgs.getMatVector(srcImgs);
 
     fastNlMeansDenoisingMultiCheckPreconditions(
@@ -208,9 +208,9 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
     int from_to[] = { 0,0, 1,1, 2,2 };
 
     // TODO convert only required images
-    vector<Mat> src_lab(src_imgs_size);
-    vector<Mat> l(src_imgs_size);
-    vector<Mat> ab(src_imgs_size);
+    std::vector<Mat> src_lab(src_imgs_size);
+    std::vector<Mat> l(src_imgs_size);
+    std::vector<Mat> ab(src_imgs_size);
     for (int i = 0; i < src_imgs_size; i++) {
         src_lab[i] = Mat::zeros(srcImgs[0].size(), CV_8UC3);
         l[i] = Mat::zeros(srcImgs[0].size(), CV_8UC1);

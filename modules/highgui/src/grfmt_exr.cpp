@@ -580,7 +580,7 @@ bool  ExrEncoder::isFormatSupported( int depth ) const
 
 
 // TODO scale appropriately
-bool  ExrEncoder::write( const Mat& img, const vector<int>& )
+bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
 {
     int width = img.cols, height = img.rows;
     int depth = img.depth(), channels = img.channels();

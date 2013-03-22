@@ -43,15 +43,14 @@
 #define __OPENCV_FAST_NLMEANS_DENOISING_INVOKER_HPP__
 
 #include "precomp.hpp"
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/core/internal.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/imgproc.hpp>
 #include <limits>
 
 #include "fast_nlmeans_denoising_invoker_commons.hpp"
 #include "arrays.hpp"
 
-using namespace std;
 using namespace cv;
 
 template <typename T>
@@ -79,7 +78,7 @@ struct FastNlMeansDenoisingInvoker {
 
         int fixed_point_mult_;
         int almost_template_window_size_sq_bin_shift_;
-        vector<int> almost_dist2weight_;
+        std::vector<int> almost_dist2weight_;
 
         void calcDistSumsForFirstElementInRow(
             int i,
@@ -123,7 +122,7 @@ FastNlMeansDenoisingInvoker<T>::FastNlMeansDenoisingInvoker(
         border_size_, border_size_, border_size_, border_size_, cv::BORDER_DEFAULT);
 
     const int max_estimate_sum_value = search_window_size_ * search_window_size_ * 255;
-    fixed_point_mult_ = numeric_limits<int>::max() / max_estimate_sum_value;
+    fixed_point_mult_ = std::numeric_limits<int>::max() / max_estimate_sum_value;
 
     // precalc weight for every possible l2 dist between blocks
     // additional optimization of precalced weights to replace division(averaging) by binary shift
@@ -257,7 +256,7 @@ void FastNlMeansDenoisingInvoker<T>::operator() (const BlockedRange& range) cons
             }
 
             for (size_t channel_num = 0; channel_num < sizeof(T); channel_num++)
-                estimation[channel_num] = (estimation[channel_num] + weights_sum/2) / weights_sum;
+                estimation[channel_num] = ((unsigned)estimation[channel_num] + weights_sum/2) / weights_sum;
 
             dst_.at<T>(i,j) = saturateCastFromArray<T>(estimation);
         }

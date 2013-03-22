@@ -62,7 +62,7 @@ For every pixel
 
 .. math::
 
-    M =  \begin{bmatrix} \sum _{S(p)}(dI/dx)^2 &  \sum _{S(p)}(dI/dx dI/dy)^2  \\ \sum _{S(p)}(dI/dx dI/dy)^2 &  \sum _{S(p)}(dI/dy)^2 \end{bmatrix}
+    M =  \begin{bmatrix} \sum _{S(p)}(dI/dx)^2 &  \sum _{S(p)}dI/dx dI/dy  \\ \sum _{S(p)}dI/dx dI/dy &  \sum _{S(p)}(dI/dy)^2 \end{bmatrix}
 
 where the derivatives are computed using the
 :ocv:func:`Sobel` operator.
@@ -162,7 +162,7 @@ Refines the corner locations.
 
 .. ocv:function:: void cornerSubPix( InputArray image, InputOutputArray corners, Size winSize, Size zeroZone, TermCriteria criteria )
 
-.. ocv:pyfunction:: cv2.cornerSubPix(image, corners, winSize, zeroZone, criteria) -> None
+.. ocv:pyfunction:: cv2.cornerSubPix(image, corners, winSize, zeroZone, criteria) -> corners
 
 .. ocv:cfunction:: void cvFindCornerSubPix( const CvArr* image, CvPoint2D32f* corners, int count, CvSize win, CvSize zero_zone, CvTermCriteria criteria )
 

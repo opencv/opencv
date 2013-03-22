@@ -60,22 +60,23 @@ public:
     bool readData( Mat& img );
     bool readHeader();
     void close();
-    bool checkSignature( const string& signature ) const;
+    bool checkSignature( const std::string& signature ) const;
 
     ImageDecoder newDecoder() const;
 
 protected:
+    Mat data;
 };
 
 class WebPEncoder : public BaseImageEncoder
 {
 public:
-	WebPEncoder();
-	~WebPEncoder();
+    WebPEncoder();
+    ~WebPEncoder();
 
-	bool write(const Mat& img, const vector<int>& params);
+    bool write(const Mat& img, const std::vector<int>& params);
 
-	ImageEncoder newEncoder() const;
+    ImageEncoder newEncoder() const;
 };
 
 }
@@ -83,12 +84,3 @@ public:
 #endif
 
 #endif /* _GRFMT_WEBP_H_ */
-
-
-
-
-
-
-
-
-

@@ -1,6 +1,7 @@
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/contrib/contrib.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/contrib.hpp"
 
 #include <iostream>
 
@@ -29,8 +30,8 @@ int main( int argc, const char** argv )
     help();
     CommandLineParser parser(argc, argv, keys);
 
-    string image = parser.get<string>(1);
-    string templ = parser.get<string>(2);
+    string image = parser.get<string>(0);
+    string templ = parser.get<string>(1);
     Mat img = imread(image.c_str(), 0);
     Mat tpl = imread(templ.c_str(), 0);
 

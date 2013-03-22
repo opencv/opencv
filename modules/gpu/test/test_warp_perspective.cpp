@@ -43,6 +43,8 @@
 
 #ifdef HAVE_CUDA
 
+using namespace cvtest;
+
 namespace
 {
     cv::Mat createTransfomMatrix(cv::Size srcSize, double angle)
@@ -255,6 +257,8 @@ PARAM_TEST_CASE(WarpPerspectiveNPP, cv::gpu::DeviceInfo, MatType, Inverse, Inter
 GPU_TEST_P(WarpPerspectiveNPP, Accuracy)
 {
     cv::Mat src = readImageType("stereobp/aloe-L.png", type);
+    ASSERT_FALSE(src.empty());
+
     cv::Mat M = createTransfomMatrix(src.size(), CV_PI / 4);
     int flags = interpolation;
     if (inverse)

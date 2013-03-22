@@ -114,18 +114,24 @@ private:
             icvWriteFrame_FFMPEG_p =
                 (CvWriteFrame_Plugin)GetProcAddress(icvFFOpenCV, "cvWriteFrame_FFMPEG");
 
-            if( icvCreateFileCapture_FFMPEG_p == NULL ||
-                icvReleaseCapture_FFMPEG_p == NULL ||
-                icvGrabFrame_FFMPEG_p == NULL  ||
-                icvRetrieveFrame_FFMPEG_p == NULL ||
-                icvSetCaptureProperty_FFMPEG_p == NULL ||
-                icvGetCaptureProperty_FFMPEG_p == NULL ||
-                icvCreateVideoWriter_FFMPEG_p == NULL ||
-                icvReleaseVideoWriter_FFMPEG_p == NULL ||
-                icvWriteFrame_FFMPEG_p == NULL )
+#if 0
+            if( icvCreateFileCapture_FFMPEG_p != 0 &&
+                icvReleaseCapture_FFMPEG_p != 0 &&
+                icvGrabFrame_FFMPEG_p != 0 &&
+                icvRetrieveFrame_FFMPEG_p != 0 &&
+                icvSetCaptureProperty_FFMPEG_p != 0 &&
+                icvGetCaptureProperty_FFMPEG_p != 0 &&
+                icvCreateVideoWriter_FFMPEG_p != 0 &&
+                icvReleaseVideoWriter_FFMPEG_p != 0 &&
+                icvWriteFrame_FFMPEG_p != 0 )
             {
-                fprintf(stderr, "Failed to load FFMPEG plugin: module handle=%p\n", icvFFOpenCV);
+                printf("Successfully initialized ffmpeg plugin!\n");
             }
+            else
+            {
+                printf("Failed to load FFMPEG plugin: module handle=%p\n", icvFFOpenCV);
+            }
+#endif
         }
     #elif defined HAVE_FFMPEG
         icvCreateFileCapture_FFMPEG_p = (CvCreateFileCapture_Plugin)cvCreateFileCapture_FFMPEG;
@@ -142,7 +148,8 @@ private:
 };
 
 
-class CvCapture_FFMPEG_proxy : public CvCapture
+class CvCapture_FFMPEG_proxy :
+    public CvCapture
 {
 public:
     CvCapture_FFMPEG_proxy() { ffmpegCapture = 0; }
@@ -165,9 +172,9 @@ public:
         unsigned char* data = 0;
         int step=0, width=0, height=0, cn=0;
 
-        if(!ffmpegCapture ||
-           !icvRetrieveFrame_FFMPEG_p(ffmpegCapture,&data,&step,&width,&height,&cn))
-           return 0;
+        if (!ffmpegCapture ||
+           !icvRetrieveFrame_FFMPEG_p(ffmpegCapture, &data, &step, &width, &height, &cn))
+            return 0;
         cvInitImageHeader(&frame, cvSize(width, height), 8, cn);
         cvSetData(&frame, data, step);
         return &frame;
@@ -209,7 +216,8 @@ CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char * filename)
 #endif
 }
 
-class CvVideoWriter_FFMPEG_proxy : public CvVideoWriter
+class CvVideoWriter_FFMPEG_proxy :
+    public CvVideoWriter
 {
 public:
     CvVideoWriter_FFMPEG_proxy() { ffmpegWriter = 0; }

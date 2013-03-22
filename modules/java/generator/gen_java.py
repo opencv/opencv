@@ -165,6 +165,8 @@ missing_consts = \
             ('CV_CALIB_FIX_K5',           4096),
             ('CV_CALIB_FIX_K6',           8192),
             ('CV_CALIB_RATIONAL_MODEL',  16384),
+            ('CV_CALIB_THIN_PRISM_MODEL',32768),
+            ('CV_CALIB_FIX_S1_S2_S3_S4', 65536),
             ('CV_CALIB_FIX_INTRINSIC',     256),
             ('CV_CALIB_SAME_FOCAL_LENGTH', 512),
             ('CV_CALIB_ZERO_DISPARITY',   1024),
@@ -202,32 +204,32 @@ type_dict = {
 
 # "complex" : { j_type : "?", jn_args : (("", ""),), jn_name : "", jni_var : "", jni_name : "", "suffix" : "?" },
 
-    "vector_Point"    : { "j_type" : "MatOfPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point> %(n)s", "suffix" : "J" },
-    "vector_Point2f"  : { "j_type" : "MatOfPoint2f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point2f> %(n)s", "suffix" : "J" },
-    #"vector_Point2d"  : { "j_type" : "MatOfPoint2d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point2d> %(n)s", "suffix" : "J" },
-    "vector_Point3i"  : { "j_type" : "MatOfPoint3", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3i> %(n)s", "suffix" : "J" },
-    "vector_Point3f"  : { "j_type" : "MatOfPoint3f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3f> %(n)s", "suffix" : "J" },
-    #"vector_Point3d"  : { "j_type" : "MatOfPoint3d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3d> %(n)s", "suffix" : "J" },
-    "vector_KeyPoint" : { "j_type" : "MatOfKeyPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<KeyPoint> %(n)s", "suffix" : "J" },
-    "vector_DMatch"   : { "j_type" : "MatOfDMatch", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<DMatch> %(n)s", "suffix" : "J" },
-    "vector_Rect"     : { "j_type" : "MatOfRect",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Rect> %(n)s", "suffix" : "J" },
-    "vector_uchar"    : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<uchar> %(n)s", "suffix" : "J" },
-    "vector_char"     : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<char> %(n)s", "suffix" : "J" },
-    "vector_int"      : { "j_type" : "MatOfInt",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<int> %(n)s", "suffix" : "J" },
-    "vector_float"    : { "j_type" : "MatOfFloat",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<float> %(n)s", "suffix" : "J" },
-    "vector_double"   : { "j_type" : "MatOfDouble", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<double> %(n)s", "suffix" : "J" },
-    "vector_Vec4i"    : { "j_type" : "MatOfInt4",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec4i> %(n)s", "suffix" : "J" },
-    "vector_Vec4f"    : { "j_type" : "MatOfFloat4",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec4f> %(n)s", "suffix" : "J" },
-    "vector_Vec6f"    : { "j_type" : "MatOfFloat6",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec6f> %(n)s", "suffix" : "J" },
+    "vector_Point"    : { "j_type" : "MatOfPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point> %(n)s", "suffix" : "J" },
+    "vector_Point2f"  : { "j_type" : "MatOfPoint2f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point2f> %(n)s", "suffix" : "J" },
+    #"vector_Point2d"  : { "j_type" : "MatOfPoint2d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point2d> %(n)s", "suffix" : "J" },
+    "vector_Point3i"  : { "j_type" : "MatOfPoint3", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point3i> %(n)s", "suffix" : "J" },
+    "vector_Point3f"  : { "j_type" : "MatOfPoint3f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point3f> %(n)s", "suffix" : "J" },
+    #"vector_Point3d"  : { "j_type" : "MatOfPoint3d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point3d> %(n)s", "suffix" : "J" },
+    "vector_KeyPoint" : { "j_type" : "MatOfKeyPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<KeyPoint> %(n)s", "suffix" : "J" },
+    "vector_DMatch"   : { "j_type" : "MatOfDMatch", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<DMatch> %(n)s", "suffix" : "J" },
+    "vector_Rect"     : { "j_type" : "MatOfRect",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Rect> %(n)s", "suffix" : "J" },
+    "vector_uchar"    : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<uchar> %(n)s", "suffix" : "J" },
+    "vector_char"     : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<char> %(n)s", "suffix" : "J" },
+    "vector_int"      : { "j_type" : "MatOfInt",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<int> %(n)s", "suffix" : "J" },
+    "vector_float"    : { "j_type" : "MatOfFloat",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<float> %(n)s", "suffix" : "J" },
+    "vector_double"   : { "j_type" : "MatOfDouble", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<double> %(n)s", "suffix" : "J" },
+    "vector_Vec4i"    : { "j_type" : "MatOfInt4",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Vec4i> %(n)s", "suffix" : "J" },
+    "vector_Vec4f"    : { "j_type" : "MatOfFloat4",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Vec4f> %(n)s", "suffix" : "J" },
+    "vector_Vec6f"    : { "j_type" : "MatOfFloat6",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Vec6f> %(n)s", "suffix" : "J" },
 
-    "vector_Mat"      : { "j_type" : "List<Mat>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Mat> %(n)s", "suffix" : "J" },
+    "vector_Mat"      : { "j_type" : "List<Mat>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Mat> %(n)s", "suffix" : "J" },
 
-    "vector_vector_KeyPoint": { "j_type" : "List<MatOfKeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<KeyPoint> > %(n)s" },
-    "vector_vector_DMatch"  : { "j_type" : "List<MatOfDMatch>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<DMatch> > %(n)s" },
-    "vector_vector_char"    : { "j_type" : "List<MatOfByte>",     "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<char> > %(n)s" },
-    "vector_vector_Point"   : { "j_type" : "List<MatOfPoint>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point> > %(n)s" },
-    "vector_vector_Point2f" : { "j_type" : "List<MatOfPoint2f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point2f> > %(n)s" },
-    "vector_vector_Point3f" : { "j_type" : "List<MatOfPoint3f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point3f> > %(n)s" },
+    "vector_vector_KeyPoint": { "j_type" : "List<MatOfKeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<KeyPoint> > %(n)s" },
+    "vector_vector_DMatch"  : { "j_type" : "List<MatOfDMatch>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<DMatch> > %(n)s" },
+    "vector_vector_char"    : { "j_type" : "List<MatOfByte>",     "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<char> > %(n)s" },
+    "vector_vector_Point"   : { "j_type" : "List<MatOfPoint>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<Point> > %(n)s" },
+    "vector_vector_Point2f" : { "j_type" : "List<MatOfPoint2f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<Point2f> > %(n)s" },
+    "vector_vector_Point3f" : { "j_type" : "List<MatOfPoint3f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<Point3f> > %(n)s" },
 
     "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
                   "jni_var" : "Mat& %(n)s = *((Mat*)%(n)s_nativeObj)",
@@ -286,10 +288,6 @@ type_dict = {
     "string"  : { "j_type" : "String",  "jn_type" : "String",
                   "jni_type" : "jstring", "jni_name" : "n_%(n)s",
                   "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); std::string n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
-                  "suffix" : "Ljava_lang_String_2"},
-    "String"  : { "j_type" : "String",  "jn_type" : "String",
-                  "jni_type" : "jstring", "jni_name" : "n_%(n)s",
-                  "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); String n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
                   "suffix" : "Ljava_lang_String_2"},
     "c_string": { "j_type" : "String",  "jn_type" : "String",
                   "jni_type" : "jstring", "jni_name" : "n_%(n)s.c_str()",
@@ -419,7 +417,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
         {
             'j_code'   :
 """
-    // C++: Size getTextSize(const string& text, int fontFace, double fontScale, int thickness, int* baseLine);
+    // C++: Size getTextSize(const std::string& text, int fontFace, double fontScale, int thickness, int* baseLine);
     //javadoc:getTextSize(text, fontFace, fontScale, thickness, baseLine)
     public static Size getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine) {
         if(baseLine != null && baseLine.length != 1)
@@ -432,7 +430,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
 """    private static native double[] n_getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine);\n""",
             'cpp_code' :
 """
-// C++: Size getTextSize(const string& text, int fontFace, double fontScale, int thickness, int* baseLine);
+// C++: Size getTextSize(const std::string& text, int fontFace, double fontScale, int thickness, int* baseLine);
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize (JNIEnv*, jclass, jstring, jint, jdouble, jint, jintArray);
 
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
@@ -558,6 +556,15 @@ func_arg_fix = {
         'drawChessboardCorners' : { 'corners' : 'vector_Point2f' },
     }, # '', i.e. no class
 } # func_arg_fix
+
+
+def getLibVersion(version_hpp_path):
+    version_file = open(version_hpp_path, "rt").read()
+    epoch = re.search("^W*#\W*define\W+CV_VERSION_EPOCH\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
+    major = re.search("^W*#\W*define\W+CV_VERSION_MAJOR\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
+    minor = re.search("^W*#\W*define\W+CV_VERSION_MINOR\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
+    revision = re.search("^W*#\W*define\W+CV_VERSION_REVISION\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
+    return (epoch, major, minor, revision)
 
 class ConstInfo(object):
     def __init__(self, cname, name, val, addedManually=False):
@@ -721,13 +728,16 @@ $imports
 public class %(jc)s {
 """ % { 'm' : self.module, 'jc' : jname } )
 
-#        self.java_code[class_name]["jn_code"].write("""
-#    //
-#    // native stuff
-#    //
-#    static { System.loadLibrary("opencv_java"); }
-#""" )
-
+        if class_name == 'Core':
+            (epoch, major, minor, revision) = getLibVersion(
+                (os.path.dirname(__file__) or '.') + '/../../core/include/opencv2/core/version.hpp')
+            version_str    = '.'.join( (epoch, major, minor, revision) )
+            version_suffix =  ''.join( (epoch, major, minor) )
+            self.classes[class_name].imports.add("java.lang.String")
+            self.java_code[class_name]["j_code"].write("""
+    public static final String VERSION = "%(v)s", NATIVE_LIBRARY_NAME = "opencv_java%(vs)s";
+    public static final int VERSION_EPOCH = %(ep)s, VERSION_MAJOR = %(ma)s, VERSION_MINOR = %(mi)s, VERSION_REVISION = %(re)s;
+""" % { 'v' : version_str, 'vs' : version_suffix, 'ep' : epoch, 'ma' : major, 'mi' : minor, 're' : revision } )
 
 
     def add_class(self, decl):
@@ -871,23 +881,10 @@ public class %(jc)s {
 // This file is auto-generated, please don't edit!
 //
 
-#include <jni.h>
+#define LOG_TAG "org.opencv.%(m)s"
 
-#include "converters.h"
-
-#if defined DEBUG && defined ANDROID
-#  include <android/log.h>
-#  define MODULE_LOG_TAG "OpenCV.%(m)s"
-#  define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, MODULE_LOG_TAG, __VA_ARGS__))
-#else //DEBUG
-#  define LOGD(...)
-#endif //DEBUG
-
-#ifdef _MSC_VER
-#  pragma warning(disable:4800 4244)
-#endif
-
-#include "opencv2/%(m)s/%(m)s.hpp"
+#include "common.h"
+#include "opencv2/%(m)s.hpp"
 
 using namespace cv;
 
@@ -1221,6 +1218,8 @@ extern "C" {
             retval = fi.ctype + " _retval_ = "
             if fi.ctype == "void":
                 retval = ""
+            elif fi.ctype == "string":
+                retval = "std::" + retval
             elif fi.ctype.startswith('vector'):
                 retval = type_dict[fi.ctype]['jni_var'] % {"n" : '_ret_val_vector_'} + " = "
                 c_epilogue.append("Mat* _retval_ = new Mat();")
@@ -1243,6 +1242,10 @@ extern "C" {
                     jni_name = "&%(n)s"
                 else:
                     jni_name = "%(n)s"
+                    if not a.out and not "jni_var" in type_dict[a.ctype]:
+                        # explicit cast to C type to avoid ambiguous call error on platforms (mingw)
+                        # where jni types are different from native types (e.g. jint is not the same as int)
+                        jni_name  = "(%s)%s" % (a.ctype, jni_name)
                 if not a.ctype: # hidden
                     jni_name = a.defval
                 cvargs.append( type_dict[a.ctype].get("jni_name", jni_name) % {"n" : a.name})
@@ -1267,8 +1270,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         LOGD("$module::$fname()");
         $prologue
         $retval$cvname( $cvargs );
-        $epilogue
-        $ret
+        $epilogue$ret
     } catch(cv::Exception e) {
         LOGD("$module::$fname() catched cv::Exception: %s", e.what());
         jclass je = env->FindClass("org/opencv/core/CvException");
@@ -1292,7 +1294,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         args  = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
         argst = ", ".join([type_dict[a.ctype].get("jni_type") for a in jni_args]), \
         prologue = "\n        ".join(c_prologue), \
-        epilogue = "  ".join(c_epilogue), \
+        epilogue = "  ".join(c_epilogue) + ("\n        " if c_epilogue else ""), \
         ret = ret, \
         cvname = cvname, \
         cvargs = ", ".join(cvargs), \

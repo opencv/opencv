@@ -44,7 +44,6 @@
 #include <limits>
 
 using namespace cv;
-using namespace std;
 
 template<typename _Tp> static int solveQuadratic(_Tp a, _Tp b, _Tp c, _Tp& x1, _Tp& x2)
 {
@@ -89,7 +88,7 @@ static inline Point2f applyHomography( const Mat_<double>& H, const Point2f& pt 
         double w = 1./z;
         return Point2f( (float)((H(0,0)*pt.x + H(0,1)*pt.y + H(0,2))*w), (float)((H(1,0)*pt.x + H(1,1)*pt.y + H(1,2))*w) );
     }
-    return Point2f( numeric_limits<float>::max(), numeric_limits<float>::max() );
+    return Point2f( std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
 }
 
 static inline void linearizeHomographyAt( const Mat_<double>& H, const Point2f& pt, Mat_<double>& A )
@@ -108,7 +107,7 @@ static inline void linearizeHomographyAt( const Mat_<double>& H, const Point2f& 
         A(1,1) = H(1,1)/p3 - p2*H(2,1)/p3_2; // fydx
     }
     else
-        A.setTo(Scalar::all(numeric_limits<double>::max()));
+        A.setTo(Scalar::all(std::numeric_limits<double>::max()));
 }
 
 class EllipticKeyPoint
@@ -117,14 +116,14 @@ public:
     EllipticKeyPoint();
     EllipticKeyPoint( const Point2f& _center, const Scalar& _ellipse );
 
-    static void convert( const vector<KeyPoint>& src, vector<EllipticKeyPoint>& dst );
-    static void convert( const vector<EllipticKeyPoint>& src, vector<KeyPoint>& dst );
+    static void convert( const std::vector<KeyPoint>& src, std::vector<EllipticKeyPoint>& dst );
+    static void convert( const std::vector<EllipticKeyPoint>& src, std::vector<KeyPoint>& dst );
 
     static Mat_<double> getSecondMomentsMatrix( const Scalar& _ellipse );
     Mat_<double> getSecondMomentsMatrix() const;
 
     void calcProjection( const Mat_<double>& H, EllipticKeyPoint& projection ) const;
-    static void calcProjection( const vector<EllipticKeyPoint>& src, const Mat_<double>& H, vector<EllipticKeyPoint>& dst );
+    static void calcProjection( const std::vector<EllipticKeyPoint>& src, const Mat_<double>& H, std::vector<EllipticKeyPoint>& dst );
 
     Point2f center;
     Scalar ellipse; // 3 elements a, b, c: ax^2+2bxy+cy^2=1
@@ -178,7 +177,7 @@ void EllipticKeyPoint::calcProjection( const Mat_<double>& H, EllipticKeyPoint& 
     projection = EllipticKeyPoint( dstCenter, Scalar(dstM(0,0), dstM(0,1), dstM(1,1)) );
 }
 
-void EllipticKeyPoint::convert( const vector<KeyPoint>& src, vector<EllipticKeyPoint>& dst )
+void EllipticKeyPoint::convert( const std::vector<KeyPoint>& src, std::vector<EllipticKeyPoint>& dst )
 {
     if( !src.empty() )
     {
@@ -193,7 +192,7 @@ void EllipticKeyPoint::convert( const vector<KeyPoint>& src, vector<EllipticKeyP
     }
 }
 
-void EllipticKeyPoint::convert( const vector<EllipticKeyPoint>& src, vector<KeyPoint>& dst )
+void EllipticKeyPoint::convert( const std::vector<EllipticKeyPoint>& src, std::vector<KeyPoint>& dst )
 {
     if( !src.empty() )
     {
@@ -207,26 +206,26 @@ void EllipticKeyPoint::convert( const vector<EllipticKeyPoint>& src, vector<KeyP
     }
 }
 
-void EllipticKeyPoint::calcProjection( const vector<EllipticKeyPoint>& src, const Mat_<double>& H, vector<EllipticKeyPoint>& dst )
+void EllipticKeyPoint::calcProjection( const std::vector<EllipticKeyPoint>& src, const Mat_<double>& H, std::vector<EllipticKeyPoint>& dst )
 {
     if( !src.empty() )
     {
         assert( !H.empty() && H.cols == 3 && H.rows == 3);
         dst.resize(src.size());
-        vector<EllipticKeyPoint>::const_iterator srcIt = src.begin();
-        vector<EllipticKeyPoint>::iterator       dstIt = dst.begin();
+        std::vector<EllipticKeyPoint>::const_iterator srcIt = src.begin();
+        std::vector<EllipticKeyPoint>::iterator       dstIt = dst.begin();
         for( ; srcIt != src.end(); ++srcIt, ++dstIt )
             srcIt->calcProjection(H, *dstIt);
     }
 }
 
-static void filterEllipticKeyPointsByImageSize( vector<EllipticKeyPoint>& keypoints, const Size& imgSize )
+static void filterEllipticKeyPointsByImageSize( std::vector<EllipticKeyPoint>& keypoints, const Size& imgSize )
 {
     if( !keypoints.empty() )
     {
-        vector<EllipticKeyPoint> filtered;
+        std::vector<EllipticKeyPoint> filtered;
         filtered.reserve(keypoints.size());
-        vector<EllipticKeyPoint>::const_iterator it = keypoints.begin();
+        std::vector<EllipticKeyPoint>::const_iterator it = keypoints.begin();
         for( int i = 0; it != keypoints.end(); ++it, i++ )
         {
             if( it->center.x + it->boundingBox.width < imgSize.width &&
@@ -241,7 +240,6 @@ static void filterEllipticKeyPointsByImageSize( vector<EllipticKeyPoint>& keypoi
 
 struct IntersectAreaCounter
 {
-    IntersectAreaCounter() : bua(0), bna(0) {}
     IntersectAreaCounter( float _dr, int _minx,
                           int _miny, int _maxy,
                           const Point2f& _diff,
@@ -257,6 +255,9 @@ struct IntersectAreaCounter
 
     void operator()( const BlockedRange& range )
     {
+        CV_Assert( miny < maxy );
+        CV_Assert( dr > FLT_EPSILON );
+        
         int temp_bua = bua, temp_bna = bna;
         for( int i = range.begin(); i != range.end(); i++ )
         {
@@ -313,8 +314,8 @@ struct SIdx
     };
 };
 
-static void computeOneToOneMatchedOverlaps( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticKeyPoint>& keypoints2t,
-                                            bool commonPart, vector<SIdx>& overlaps, float minOverlap )
+static void computeOneToOneMatchedOverlaps( const std::vector<EllipticKeyPoint>& keypoints1, const std::vector<EllipticKeyPoint>& keypoints2t,
+                                            bool commonPart, std::vector<SIdx>& overlaps, float minOverlap )
 {
     CV_Assert( minOverlap >= 0.f );
     overlaps.clear();
@@ -372,9 +373,9 @@ static void computeOneToOneMatchedOverlaps( const vector<EllipticKeyPoint>& keyp
         }
     }
 
-    sort( overlaps.begin(), overlaps.end() );
+    std::sort( overlaps.begin(), overlaps.end() );
 
-    typedef vector<SIdx>::iterator It;
+    typedef std::vector<SIdx>::iterator It;
 
     It pos = overlaps.begin();
     It end = overlaps.end();
@@ -388,11 +389,11 @@ static void computeOneToOneMatchedOverlaps( const vector<EllipticKeyPoint>& keyp
 }
 
 static void calculateRepeatability( const Mat& img1, const Mat& img2, const Mat& H1to2,
-                                    const vector<KeyPoint>& _keypoints1, const vector<KeyPoint>& _keypoints2,
+                                    const std::vector<KeyPoint>& _keypoints1, const std::vector<KeyPoint>& _keypoints2,
                                     float& repeatability, int& correspondencesCount,
                                     Mat* thresholdedOverlapMask=0  )
 {
-    vector<EllipticKeyPoint> keypoints1, keypoints2, keypoints1t, keypoints2t;
+    std::vector<EllipticKeyPoint> keypoints1, keypoints2, keypoints1t, keypoints2t;
     EllipticKeyPoint::convert( _keypoints1, keypoints1 );
     EllipticKeyPoint::convert( _keypoints2, keypoints2 );
 
@@ -425,7 +426,7 @@ static void calculateRepeatability( const Mat& img1, const Mat& img2, const Mat&
     size_t minCount = MIN( size1, size2 );
 
     // calculate overlap errors
-    vector<SIdx> overlaps;
+    std::vector<SIdx> overlaps;
     computeOneToOneMatchedOverlaps( keypoints1, keypoints2t, ifEvaluateDetectors, overlaps, overlapThreshold/*min overlap*/ );
 
     correspondencesCount = -1;
@@ -451,17 +452,17 @@ static void calculateRepeatability( const Mat& img1, const Mat& img2, const Mat&
 }
 
 void cv::evaluateFeatureDetector( const Mat& img1, const Mat& img2, const Mat& H1to2,
-                              vector<KeyPoint>* _keypoints1, vector<KeyPoint>* _keypoints2,
+                              std::vector<KeyPoint>* _keypoints1, std::vector<KeyPoint>* _keypoints2,
                               float& repeatability, int& correspCount,
                               const Ptr<FeatureDetector>& _fdetector )
 {
     Ptr<FeatureDetector> fdetector(_fdetector);
-    vector<KeyPoint> *keypoints1, *keypoints2, buf1, buf2;
+    std::vector<KeyPoint> *keypoints1, *keypoints2, buf1, buf2;
     keypoints1 = _keypoints1 != 0 ? _keypoints1 : &buf1;
     keypoints2 = _keypoints2 != 0 ? _keypoints2 : &buf2;
 
     if( (keypoints1->empty() || keypoints2->empty()) && fdetector.empty() )
-        CV_Error( CV_StsBadArg, "fdetector must be no empty when keypoints1 or keypoints2 is empty" );
+        CV_Error( CV_StsBadArg, "fdetector must not be empty when keypoints1 or keypoints2 is empty" );
 
     if( keypoints1->empty() )
         fdetector->detect( img1, *keypoints1 );
@@ -487,13 +488,13 @@ static inline float precision( int correctMatchCount, int falseMatchCount )
     return correctMatchCount + falseMatchCount ? (float)correctMatchCount / (float)(correctMatchCount + falseMatchCount) : -1;
 }
 
-void cv::computeRecallPrecisionCurve( const vector<vector<DMatch> >& matches1to2,
-                                      const vector<vector<uchar> >& correctMatches1to2Mask,
-                                      vector<Point2f>& recallPrecisionCurve )
+void cv::computeRecallPrecisionCurve( const std::vector<std::vector<DMatch> >& matches1to2,
+                                      const std::vector<std::vector<uchar> >& correctMatches1to2Mask,
+                                      std::vector<Point2f>& recallPrecisionCurve )
 {
     CV_Assert( matches1to2.size() == correctMatches1to2Mask.size() );
 
-    vector<DMatchForEvaluation> allMatches;
+    std::vector<DMatchForEvaluation> allMatches;
     int correspondenceCount = 0;
     for( size_t i = 0; i < matches1to2.size(); i++ )
     {
@@ -523,7 +524,7 @@ void cv::computeRecallPrecisionCurve( const vector<vector<DMatch> >& matches1to2
     }
 }
 
-float cv::getRecall( const vector<Point2f>& recallPrecisionCurve, float l_precision )
+float cv::getRecall( const std::vector<Point2f>& recallPrecisionCurve, float l_precision )
 {
     int nearestPointIndex = getNearestPoint( recallPrecisionCurve, l_precision );
 
@@ -535,7 +536,7 @@ float cv::getRecall( const vector<Point2f>& recallPrecisionCurve, float l_precis
     return recall;
 }
 
-int cv::getNearestPoint( const vector<Point2f>& recallPrecisionCurve, float l_precision )
+int cv::getNearestPoint( const std::vector<Point2f>& recallPrecisionCurve, float l_precision )
 {
     int nearestPointIndex = -1;
 
@@ -557,25 +558,25 @@ int cv::getNearestPoint( const vector<Point2f>& recallPrecisionCurve, float l_pr
 }
 
 void cv::evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, const Mat& H1to2,
-                                           vector<KeyPoint>& keypoints1, vector<KeyPoint>& keypoints2,
-                                           vector<vector<DMatch> >* _matches1to2, vector<vector<uchar> >* _correctMatches1to2Mask,
-                                           vector<Point2f>& recallPrecisionCurve,
+                                           std::vector<KeyPoint>& keypoints1, std::vector<KeyPoint>& keypoints2,
+                                           std::vector<std::vector<DMatch> >* _matches1to2, std::vector<std::vector<uchar> >* _correctMatches1to2Mask,
+                                           std::vector<Point2f>& recallPrecisionCurve,
                                            const Ptr<GenericDescriptorMatcher>& _dmatcher )
 {
     Ptr<GenericDescriptorMatcher> dmatcher = _dmatcher;
     dmatcher->clear();
 
-    vector<vector<DMatch> > *matches1to2, buf1;
+    std::vector<std::vector<DMatch> > *matches1to2, buf1;
     matches1to2 = _matches1to2 != 0 ? _matches1to2 : &buf1;
 
-    vector<vector<uchar> > *correctMatches1to2Mask, buf2;
+    std::vector<std::vector<uchar> > *correctMatches1to2Mask, buf2;
     correctMatches1to2Mask = _correctMatches1to2Mask != 0 ? _correctMatches1to2Mask : &buf2;
 
     if( keypoints1.empty() )
-        CV_Error( CV_StsBadArg, "keypoints1 must be no empty" );
+        CV_Error( CV_StsBadArg, "keypoints1 must not be empty" );
 
     if( matches1to2->empty() && dmatcher.empty() )
-        CV_Error( CV_StsBadArg, "dmatch must be no empty when matches1to2 is empty" );
+        CV_Error( CV_StsBadArg, "dmatch must not be empty when matches1to2 is empty" );
 
     bool computeKeypoints2ByPrj = keypoints2.empty();
     if( computeKeypoints2ByPrj )

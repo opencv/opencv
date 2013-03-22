@@ -46,24 +46,14 @@
 #include <iomanip>
 #include "precomp.hpp"
 
-#ifdef HAVE_CLAMDBLAS
-
-#include "clAmdBlas.h"
-
-#if !defined HAVE_OPENCL
-void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
-                   const oclMat &src3, double beta, oclMat &dst, int flags)
-{
-    throw_nogpu();
-}
-#elif !defined HAVE_CLAMDBLAS
-void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
-                   const oclMat &src3, double beta, oclMat &dst, int flags)
+#if !defined HAVE_CLAMDBLAS
+void cv::ocl::gemm(const oclMat&, const oclMat&, double,
+                   const oclMat&, double, oclMat&, int)
 {
     CV_Error(CV_StsNotImplemented, "OpenCL BLAS is not implemented");
 }
 #else
-
+#include "clAmdBlas.h"
 using namespace cv;
 
 void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
@@ -97,7 +87,7 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
     int offb    = src2.offset;
     int offc    = dst.offset;
 
-
+    cl_command_queue clq = (cl_command_queue)src1.clCxt->oclCommandQueue();
     switch(src1.type())
     {
     case CV_32FC1:
@@ -107,11 +97,12 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
         offa /= sizeof(float);
         offb /= sizeof(float);
         offc /= sizeof(float);
+
         openCLSafeCall
         (
             clAmdBlasSgemmEx(order, transA, transB, M, N, K,
                              alpha, (const cl_mem)src1.data, offa, lda, (const cl_mem)src2.data, offb, ldb,
-                             beta, (cl_mem)dst.data, offc, ldc, 1, &src1.clCxt->impl->clCmdQueue, 0, NULL, NULL)
+                             beta, (cl_mem)dst.data, offc, ldc, 1, &clq, 0, NULL, NULL)
         );
         break;
     case CV_64FC1:
@@ -125,7 +116,7 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
         (
             clAmdBlasDgemmEx(order, transA, transB, M, N, K,
                              alpha, (const cl_mem)src1.data, offa, lda, (const cl_mem)src2.data, offb, ldb,
-                             beta, (cl_mem)dst.data, offc, ldc, 1, &src1.clCxt->impl->clCmdQueue, 0, NULL, NULL)
+                             beta, (cl_mem)dst.data, offc, ldc, 1, &clq, 0, NULL, NULL)
         );
         break;
     case CV_32FC2:
@@ -142,7 +133,7 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
         (
             clAmdBlasCgemmEx(order, transA, transB, M, N, K,
                              alpha_2, (const cl_mem)src1.data, offa, lda, (const cl_mem)src2.data, offb, ldb,
-                             beta_2, (cl_mem)dst.data, offc, ldc, 1, &src1.clCxt->impl->clCmdQueue, 0, NULL, NULL)
+                             beta_2, (cl_mem)dst.data, offc, ldc, 1, &clq, 0, NULL, NULL)
         );
     }
     break;
@@ -160,12 +151,11 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
         (
             clAmdBlasZgemmEx(order, transA, transB, M, N, K,
                              alpha_2, (const cl_mem)src1.data, offa, lda, (const cl_mem)src2.data, offb, ldb,
-                             beta_2, (cl_mem)dst.data, offc, ldc, 1, &src1.clCxt->impl->clCmdQueue, 0, NULL, NULL)
+                             beta_2, (cl_mem)dst.data, offc, ldc, 1, &clq, 0, NULL, NULL)
         );
     }
     break;
     }
     clAmdBlasTeardown();
 }
-#endif
 #endif

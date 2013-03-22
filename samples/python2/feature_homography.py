@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 '''
 Feature homography
@@ -24,6 +24,8 @@ Select a textured planar object to track by drawing a box with a mouse.
 
 import numpy as np
 import cv2
+
+# local modules
 import video
 import common
 from common import getsize, draw_keypoints
@@ -85,6 +87,8 @@ if __name__ == '__main__':
     print __doc__
 
     import sys
-    try: video_src = sys.argv[1]
-    except: video_src = 0
+    try:
+        video_src = sys.argv[1]
+    except:
+        video_src = 0
     App(video_src).run()

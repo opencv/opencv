@@ -85,18 +85,17 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
     }
 
     protected void setUp() throws Exception {
+        super.setUp();
         matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_SL2);
         matSize = 100;
 
         truth = new DMatch[] {
-                new DMatch(0, 0, 0, 1.1018573f),
-                new DMatch(1, 0, 0, 1.2066052f),
-                new DMatch(2, 1, 0, 0.2446168f),
-                new DMatch(3, 1, 0, 0.23459719f),
-                new DMatch(4, 0, 0, 1.174339f)
+                new DMatch(0, 0, 0, 0.3858146f),
+                new DMatch(1, 1, 0, 0.8421953f),
+                new DMatch(2, 1, 0, 0.0968556f),
+                new DMatch(3, 1, 0, 0.0855606f),
+                new DMatch(4, 1, 0, 0.8666080f)
                 };
-
-        super.setUp();
     }
 
     public void testAdd() {

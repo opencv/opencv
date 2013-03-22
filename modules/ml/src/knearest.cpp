@@ -100,9 +100,9 @@ bool CvKNearest::train( const CvMat* _train_data, const CvMat* _responses,
 
     __BEGIN__;
 
-    CvVectors* _samples;
-    float** _data;
-    int _count, _dims, _dims_all, _rsize;
+    CvVectors* _samples = 0;
+    float** _data = 0;
+    int _count = 0, _dims = 0, _dims_all = 0, _rsize = 0;
 
     if( !_update_base )
         clear();
@@ -114,6 +114,9 @@ bool CvKNearest::train( const CvMat* _train_data, const CvMat* _responses,
         _responses, CV_VAR_ORDERED, 0, _sample_idx, true, (const float***)&_data,
         &_count, &_dims, &_dims_all, &responses, 0, 0 ));
 
+    if( !responses )
+        CV_ERROR( CV_StsNoMem, "Could not allocate memory for responses" );
+        
     if( _update_base && _dims != var_count )
         CV_ERROR( CV_StsBadArg, "The newly added data have different dimensionality" );
 

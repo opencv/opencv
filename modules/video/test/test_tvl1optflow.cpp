@@ -152,9 +152,9 @@ TEST(Video_calcOpticalFlowDual_TVL1, Regression)
     ASSERT_FALSE(frame2.empty());
 
     Mat_<Point2f> flow;
-    OpticalFlowDual_TVL1 tvl1;
+    Ptr<DenseOpticalFlow> tvl1 = createOptFlow_DualTVL1();
 
-    tvl1(frame1, frame2, flow);
+    tvl1->calc(frame1, frame2, flow);
 
 #ifdef DUMP
     writeOpticalFlowToFile(flow, gold_flow_path);

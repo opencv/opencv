@@ -56,11 +56,6 @@ enum
 };
 
 CV_ENUM(CvtMode,
-    CV_BayerBG2BGR, CV_BayerBG2BGR_VNG, CV_BayerBG2GRAY,
-    CV_BayerGB2BGR, CV_BayerGB2BGR_VNG, CV_BayerGB2GRAY,
-    CV_BayerGR2BGR, CV_BayerGR2BGR_VNG, CV_BayerGR2GRAY,
-    CV_BayerRG2BGR, CV_BayerRG2BGR_VNG, CV_BayerRG2GRAY,
-
     CV_BGR2BGR555, CV_BGR2BGR565, CV_BGR2BGRA, CV_BGR2GRAY,
     CV_BGR2HLS, CV_BGR2HLS_FULL, CV_BGR2HSV, CV_BGR2HSV_FULL,
     CV_BGR2Lab, CV_BGR2Luv, CV_BGR2RGB, CV_BGR2RGBA, CV_BGR2XYZ,
@@ -106,10 +101,22 @@ CV_ENUM(CvtMode,
     CV_YUV2BGR, CV_YUV2RGB, CX_YUV2BGRA, CX_YUV2RGBA
     )
 
+
+CV_ENUM(CvtModeBayer,
+    CV_BayerBG2BGR, CV_BayerBG2BGR_VNG, CV_BayerBG2GRAY,
+    CV_BayerGB2BGR, CV_BayerGB2BGR_VNG, CV_BayerGB2GRAY,
+    CV_BayerGR2BGR, CV_BayerGR2BGR_VNG, CV_BayerGR2GRAY,
+    CV_BayerRG2BGR, CV_BayerRG2BGR_VNG, CV_BayerRG2GRAY
+    )
+
+
 CV_ENUM(CvtMode2, CV_YUV2BGR_NV12, CV_YUV2BGRA_NV12, CV_YUV2RGB_NV12, CV_YUV2RGBA_NV12, CV_YUV2BGR_NV21, CV_YUV2BGRA_NV21, CV_YUV2RGB_NV21, CV_YUV2RGBA_NV21,
                   CV_YUV2BGR_YV12, CV_YUV2BGRA_YV12, CV_YUV2RGB_YV12, CV_YUV2RGBA_YV12, CV_YUV2BGR_IYUV, CV_YUV2BGRA_IYUV, CV_YUV2RGB_IYUV, CV_YUV2RGBA_IYUV,
                   COLOR_YUV2GRAY_420, CV_YUV2RGB_UYVY, CV_YUV2BGR_UYVY, CV_YUV2RGBA_UYVY, CV_YUV2BGRA_UYVY, CV_YUV2RGB_YUY2, CV_YUV2BGR_YUY2, CV_YUV2RGB_YVYU,
                   CV_YUV2BGR_YVYU, CV_YUV2RGBA_YUY2, CV_YUV2BGRA_YUY2, CV_YUV2RGBA_YVYU, CV_YUV2BGRA_YVYU)
+
+CV_ENUM(CvtMode3, CV_RGB2YUV_IYUV, CV_BGR2YUV_IYUV, CV_RGBA2YUV_IYUV, CV_BGRA2YUV_IYUV,
+                  CV_RGB2YUV_YV12, CV_BGR2YUV_YV12, CV_RGBA2YUV_YV12, CV_BGRA2YUV_YV12)
 
 struct ChPair
 {
@@ -158,6 +165,8 @@ ChPair getConversionInfo(int cvtMode)
     case CV_BGR5652BGRA: case CV_BGR5652RGBA:
         return ChPair(2,4);
     case CV_BGR2GRAY: case CV_RGB2GRAY:
+    case CV_RGB2YUV_IYUV: case CV_RGB2YUV_YV12:
+    case CV_BGR2YUV_IYUV: case CV_BGR2YUV_YV12:
         return ChPair(3,1);
     case CV_BGR2BGR555: case CV_BGR2BGR565:
     case CV_RGB2BGR555: case CV_RGB2BGR565:
@@ -200,6 +209,8 @@ ChPair getConversionInfo(int cvtMode)
     case CX_YUV2BGRA: case CX_YUV2RGBA:
         return ChPair(3,4);
     case CV_BGRA2GRAY: case CV_RGBA2GRAY:
+    case CV_RGBA2YUV_IYUV: case CV_RGBA2YUV_YV12:
+    case CV_BGRA2YUV_IYUV: case CV_BGRA2YUV_YV12:
         return ChPair(4,1);
     case CV_BGRA2BGR555: case CV_BGRA2BGR565:
     case CV_RGBA2BGR555: case CV_RGBA2BGR565:
@@ -231,8 +242,34 @@ typedef perf::TestBaseWithParam<Size_CvtMode_t> Size_CvtMode;
 
 PERF_TEST_P(Size_CvtMode, cvtColor8u,
             testing::Combine(
-                testing::Values(TYPICAL_MAT_SIZES),
+                testing::Values(::perf::szODD, ::perf::szVGA, ::perf::sz1080p),
                 testing::ValuesIn(CvtMode::all())
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int mode = get<1>(GetParam());
+    ChPair ch = getConversionInfo(mode);
+    mode %= CV_COLORCVT_MAX;
+
+    Mat src(sz, CV_8UC(ch.scn));
+    Mat dst(sz, CV_8UC(ch.dcn));
+
+    declare.time(100);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() cvtColor(src, dst, mode, ch.dcn);
+
+    SANITY_CHECK(dst, 1);
+}
+
+typedef std::tr1::tuple<Size, CvtModeBayer> Size_CvtMode_Bayer_t;
+typedef perf::TestBaseWithParam<Size_CvtMode_Bayer_t> Size_CvtMode_Bayer;
+
+PERF_TEST_P(Size_CvtMode_Bayer, cvtColorBayer8u,
+            testing::Combine(
+                testing::Values(::perf::szODD, ::perf::szVGA),
+                testing::ValuesIn(CvtModeBayer::all())
                 )
             )
 {
@@ -257,7 +294,7 @@ typedef perf::TestBaseWithParam<Size_CvtMode2_t> Size_CvtMode2;
 
 PERF_TEST_P(Size_CvtMode2, cvtColorYUV420,
             testing::Combine(
-                testing::Values(szVGA, sz720p, sz1080p, Size(130, 60)),
+                testing::Values(szVGA, sz1080p, Size(130, 60)),
                 testing::ValuesIn(CvtMode2::all())
                 )
             )
@@ -268,6 +305,31 @@ PERF_TEST_P(Size_CvtMode2, cvtColorYUV420,
 
     Mat src(sz.height + sz.height / 2, sz.width, CV_8UC(ch.scn));
     Mat dst(sz, CV_8UC(ch.dcn));
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    int runs = (sz.width <= 640) ? 8 : 1;
+    TEST_CYCLE_MULTIRUN(runs) cvtColor(src, dst, mode, ch.dcn);
+
+    SANITY_CHECK(dst, 1);
+}
+
+typedef std::tr1::tuple<Size, CvtMode3> Size_CvtMode3_t;
+typedef perf::TestBaseWithParam<Size_CvtMode3_t> Size_CvtMode3;
+
+PERF_TEST_P(Size_CvtMode3, cvtColorRGB2YUV420p,
+            testing::Combine(
+                testing::Values(szVGA, sz720p, sz1080p, Size(130, 60)),
+                testing::ValuesIn(CvtMode3::all())
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int mode = get<1>(GetParam());
+    ChPair ch = getConversionInfo(mode);
+
+    Mat src(sz, CV_8UC(ch.scn));
+    Mat dst(sz.height + sz.height / 2, sz.width, CV_8UC(ch.dcn));
 
     declare.time(100);
     declare.in(src, WARMUP_RNG).out(dst);

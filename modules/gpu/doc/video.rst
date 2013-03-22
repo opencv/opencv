@@ -579,76 +579,6 @@ Releases all inner buffer's memory.
 
 
 
-gpu::VIBE_GPU
--------------
-.. ocv:class:: gpu::VIBE_GPU
-
-Class used for background/foreground segmentation. ::
-
-    class VIBE_GPU
-    {
-    public:
-        explicit VIBE_GPU(unsigned long rngSeed = 1234567);
-
-        void initialize(const GpuMat& firstFrame, Stream& stream = Stream::Null());
-
-        void operator()(const GpuMat& frame, GpuMat& fgmask, Stream& stream = Stream::Null());
-
-        void release();
-
-        ...
-    };
-
-The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [VIBE2011]_.
-
-
-
-gpu::VIBE_GPU::VIBE_GPU
------------------------
-The constructor.
-
-.. ocv:function:: gpu::VIBE_GPU::VIBE_GPU(unsigned long rngSeed = 1234567)
-
-    :param rngSeed: Value used to initiate a random sequence.
-
-Default constructor sets all parameters to default values.
-
-
-
-gpu::VIBE_GPU::initialize
--------------------------
-Initialize background model and allocates all inner buffers.
-
-.. ocv:function:: void gpu::VIBE_GPU::initialize(const GpuMat& firstFrame, Stream& stream = Stream::Null())
-
-    :param firstFrame: First frame from video sequence.
-
-    :param stream: Stream for the asynchronous version.
-
-
-
-gpu::VIBE_GPU::operator()
--------------------------
-Updates the background model and returns the foreground mask
-
-.. ocv:function:: void gpu::VIBE_GPU::operator()(const GpuMat& frame, GpuMat& fgmask, Stream& stream = Stream::Null())
-
-    :param frame: Next video frame.
-
-    :param fgmask: The output foreground mask as an 8-bit binary image.
-
-    :param stream: Stream for the asynchronous version.
-
-
-
-gpu::VIBE_GPU::release
-----------------------
-Releases all inner buffer's memory.
-
-.. ocv:function:: void gpu::VIBE_GPU::release()
-
-
-
 gpu::GMG_GPU
 ------------
 .. ocv:class:: gpu::GMG_GPU
@@ -785,7 +715,7 @@ Constructors.
 
     :param fps: Framerate of the created video stream.
 
-    :param params: Encoder parameters. See :ocv:class:`gpu::VideoWriter_GPU::EncoderParams` .
+    :param params: Encoder parameters. See :ocv:struct:`gpu::VideoWriter_GPU::EncoderParams` .
 
     :param format: Surface format of input frames ( ``SF_UYVY`` , ``SF_YUY2`` , ``SF_YV12`` , ``SF_NV12`` , ``SF_IYUV`` , ``SF_BGR`` or ``SF_GRAY``). BGR or gray frames will be converted to YV12 format before encoding, frames with other formats will be used as is.
 
@@ -985,41 +915,51 @@ Class for reading video from files.
 gpu::VideoReader_GPU::Codec
 ---------------------------
 
-Video codecs supported by :ocv:class:`gpu::VideoReader_GPU` . ::
+Video codecs supported by :ocv:class:`gpu::VideoReader_GPU` .
 
-    enum Codec
-    {
-        MPEG1 = 0,
-        MPEG2,
-        MPEG4,
-        VC1,
-        H264,
-        JPEG,
-        H264_SVC,
-        H264_MVC,
+.. ocv:enum:: gpu::VideoReader_GPU::Codec
 
-        Uncompressed_YUV420 = (('I'<<24)|('Y'<<16)|('U'<<8)|('V')),   // Y,U,V (4:2:0)
-        Uncompressed_YV12   = (('Y'<<24)|('V'<<16)|('1'<<8)|('2')),   // Y,V,U (4:2:0)
-        Uncompressed_NV12   = (('N'<<24)|('V'<<16)|('1'<<8)|('2')),   // Y,UV  (4:2:0)
-        Uncompressed_YUYV   = (('Y'<<24)|('U'<<16)|('Y'<<8)|('V')),   // YUYV/YUY2 (4:2:2)
-        Uncompressed_UYVY   = (('U'<<24)|('Y'<<16)|('V'<<8)|('Y')),   // UYVY (4:2:2)
-    };
+  .. ocv:emember:: MPEG1 = 0
+  .. ocv:emember:: MPEG2
+  .. ocv:emember:: MPEG4
+  .. ocv:emember:: VC1
+  .. ocv:emember:: H264
+  .. ocv:emember:: JPEG
+  .. ocv:emember:: H264_SVC
+  .. ocv:emember:: H264_MVC
 
+  .. ocv:emember:: Uncompressed_YUV420 = (('I'<<24)|('Y'<<16)|('U'<<8)|('V'))
+
+        Y,U,V (4:2:0)
+
+  .. ocv:emember:: Uncompressed_YV12   = (('Y'<<24)|('V'<<16)|('1'<<8)|('2'))
+
+        Y,V,U (4:2:0)
+
+  .. ocv:emember:: Uncompressed_NV12   = (('N'<<24)|('V'<<16)|('1'<<8)|('2'))
+
+        Y,UV  (4:2:0)
+
+  .. ocv:emember:: Uncompressed_YUYV   = (('Y'<<24)|('U'<<16)|('Y'<<8)|('V'))
+
+        YUYV/YUY2 (4:2:2)
+
+  .. ocv:emember:: Uncompressed_UYVY   = (('U'<<24)|('Y'<<16)|('V'<<8)|('Y'))
+
+        UYVY (4:2:2)
 
 
 gpu::VideoReader_GPU::ChromaFormat
 ----------------------------------
 
-Chroma formats supported by :ocv:class:`gpu::VideoReader_GPU` . ::
+Chroma formats supported by :ocv:class:`gpu::VideoReader_GPU` .
 
-    enum ChromaFormat
-    {
-        Monochrome=0,
-        YUV420,
-        YUV422,
-        YUV444,
-    };
+.. ocv:enum:: gpu::VideoReader_GPU::ChromaFormat
 
+  .. ocv:emember:: Monochrome = 0
+  .. ocv:emember:: YUV420
+  .. ocv:emember:: YUV422
+  .. ocv:emember:: YUV444
 
 
 gpu::VideoReader_GPU::FormatInfo
@@ -1035,7 +975,6 @@ Struct providing information about video file format. ::
         int width;
         int height;
     };
-
 
 
 gpu::VideoReader_GPU::VideoReader_GPU
@@ -1200,5 +1139,4 @@ Parse next video frame. Implementation must call this method after new frame was
 .. [MOG2001] P. KadewTraKuPong and R. Bowden. *An improved adaptive background mixture model for real-time tracking with shadow detection*. Proc. 2nd European Workshop on Advanced Video-Based Surveillance Systems, 2001
 .. [MOG2004] Z. Zivkovic. *Improved adaptive Gausian mixture model for background subtraction*. International Conference Pattern Recognition, UK, August, 2004
 .. [ShadowDetect2003] Prati, Mikic, Trivedi and Cucchiarra. *Detecting Moving Shadows...*. IEEE PAMI, 2003
-.. [VIBE2011] O. Barnich and M. Van D Roogenbroeck. *ViBe: A universal background subtraction algorithm for video sequences*. IEEE Transactions on Image Processing, 20(6) :1709-1724, June 2011
 .. [GMG2012] A. Godbehere, A. Matsukawa and K. Goldberg. *Visual Tracking of Human Visitors under Variable-Lighting Conditions for a Responsive Audio Art Installation*. American Control Conference, Montreal, June 2012

@@ -1,8 +1,8 @@
 #ifndef __OPENCV_TS_PERF_HPP__
 #define __OPENCV_TS_PERF_HPP__
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/features2d.hpp"
 #include "ts_gtest.h"
 
 #ifdef HAVE_TBB
@@ -471,21 +471,6 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
       virtual void PerfTestBody();\
     };\
     TEST_P(fixture##_##name, name /*perf*/){ RunPerfTestBody(); }\
-    INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
-    void fixture##_##name::PerfTestBody()
-
-#define GPU_PERF_TEST_P(fixture, name, params)  \
-    class fixture##_##name : public fixture {\
-     public:\
-      fixture##_##name() {}\
-     protected:\
-      virtual void PerfTestBody();\
-    };\
-    TEST_P(fixture##_##name, name /*perf*/) \
-    { \
-        try { RunPerfTestBody(); } \
-        catch (...) { cv::gpu::resetDevice(); throw; } \
-    } \
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
     void fixture##_##name::PerfTestBody()
 

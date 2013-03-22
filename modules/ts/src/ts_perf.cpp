@@ -139,12 +139,12 @@ Regression& Regression::add(TestBase* test, const std::string& name, cv::InputAr
 Regression& Regression::addKeypoints(TestBase* test, const std::string& name, const std::vector<cv::KeyPoint>& array, double eps, ERROR_TYPE err)
 {
     int len = (int)array.size();
-    cv::Mat pt      (len, 1, CV_32FC2, (void*)&array[0].pt,       sizeof(cv::KeyPoint));
-    cv::Mat size    (len, 1, CV_32FC1, (void*)&array[0].size,     sizeof(cv::KeyPoint));
-    cv::Mat angle   (len, 1, CV_32FC1, (void*)&array[0].angle,    sizeof(cv::KeyPoint));
-    cv::Mat response(len, 1, CV_32FC1, (void*)&array[0].response, sizeof(cv::KeyPoint));
-    cv::Mat octave  (len, 1, CV_32SC1, (void*)&array[0].octave,   sizeof(cv::KeyPoint));
-    cv::Mat class_id(len, 1, CV_32SC1, (void*)&array[0].class_id, sizeof(cv::KeyPoint));
+    cv::Mat pt      (len, 1, CV_32FC2, len ? (void*)&array[0].pt : 0,       sizeof(cv::KeyPoint));
+    cv::Mat size    (len, 1, CV_32FC1, len ? (void*)&array[0].size : 0,     sizeof(cv::KeyPoint));
+    cv::Mat angle   (len, 1, CV_32FC1, len ? (void*)&array[0].angle : 0,    sizeof(cv::KeyPoint));
+    cv::Mat response(len, 1, CV_32FC1, len ? (void*)&array[0].response : 0, sizeof(cv::KeyPoint));
+    cv::Mat octave  (len, 1, CV_32SC1, len ? (void*)&array[0].octave : 0,   sizeof(cv::KeyPoint));
+    cv::Mat class_id(len, 1, CV_32SC1, len ? (void*)&array[0].class_id : 0, sizeof(cv::KeyPoint));
 
     return Regression::add(test, name + "-pt",       pt,       eps, ERROR_ABSOLUTE)
                                 (name + "-size",     size,     eps, ERROR_ABSOLUTE)
@@ -157,10 +157,10 @@ Regression& Regression::addKeypoints(TestBase* test, const std::string& name, co
 Regression& Regression::addMatches(TestBase* test, const std::string& name, const std::vector<cv::DMatch>& array, double eps, ERROR_TYPE err)
 {
     int len = (int)array.size();
-    cv::Mat queryIdx(len, 1, CV_32SC1, (void*)&array[0].queryIdx, sizeof(cv::DMatch));
-    cv::Mat trainIdx(len, 1, CV_32SC1, (void*)&array[0].trainIdx, sizeof(cv::DMatch));
-    cv::Mat imgIdx  (len, 1, CV_32SC1, (void*)&array[0].imgIdx,   sizeof(cv::DMatch));
-    cv::Mat distance(len, 1, CV_32FC1, (void*)&array[0].distance, sizeof(cv::DMatch));
+    cv::Mat queryIdx(len, 1, CV_32SC1, len ? (void*)&array[0].queryIdx : 0, sizeof(cv::DMatch));
+    cv::Mat trainIdx(len, 1, CV_32SC1, len ? (void*)&array[0].trainIdx : 0, sizeof(cv::DMatch));
+    cv::Mat imgIdx  (len, 1, CV_32SC1, len ? (void*)&array[0].imgIdx : 0,   sizeof(cv::DMatch));
+    cv::Mat distance(len, 1, CV_32FC1, len ? (void*)&array[0].distance : 0, sizeof(cv::DMatch));
 
     return Regression::add(test, name + "-queryIdx", queryIdx, DBL_EPSILON, ERROR_ABSOLUTE)
                                 (name + "-trainIdx", trainIdx, DBL_EPSILON, ERROR_ABSOLUTE)
@@ -334,29 +334,21 @@ void Regression::write(cv::Mat m)
     write() << "val" << getElem(m, y, x, cn) << "}";
 }
 
-static double evalEps(double expected, double actual, double _eps, ERROR_TYPE err)
-{
-    if (err == ERROR_ABSOLUTE)
-        return _eps;
-    else if (err == ERROR_RELATIVE)
-        return std::max(std::abs(expected), std::abs(actual)) * err;
-    return 0;
-}
-
-void Regression::verify(cv::FileNode node, cv::Mat actual, double _eps, std::string argname, ERROR_TYPE err)
+void Regression::verify(cv::FileNode node, cv::Mat actual, double eps, std::string argname, ERROR_TYPE err)
 {
     if (!actual.empty() && actual.dims < 2) return;
+
+    double expect_min = (double)node["min"];
+    double expect_max = (double)node["max"];
+
+    if (err == ERROR_RELATIVE)
+        eps *= std::max(std::abs(expect_min), std::abs(expect_max));
 
     double actual_min, actual_max;
     cv::minMaxIdx(actual, &actual_min, &actual_max);
 
-    double expect_min = (double)node["min"];
-    double eps = evalEps(expect_min, actual_min, _eps, err);
     ASSERT_NEAR(expect_min, actual_min, eps)
             << argname << " has unexpected minimal value" << std::endl;
-
-    double expect_max = (double)node["max"];
-    eps = evalEps(expect_max, actual_max, _eps, err);
     ASSERT_NEAR(expect_max, actual_max, eps)
             << argname << " has unexpected maximal value" << std::endl;
 
@@ -370,7 +362,6 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double _eps, std::str
             << argname << " has unexpected number of rows" << std::endl;
 
     double expect_last = (double)last["val"];
-    eps = evalEps(expect_last, actual_last, _eps, err);
     ASSERT_NEAR(expect_last, actual_last, eps)
             << argname << " has unexpected value of the last element" << std::endl;
 
@@ -384,7 +375,6 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double _eps, std::str
     // verified that mat size is the same as recorded
     double actual_rng1 = getElem(actual, y1, x1, cn1);
 
-    eps = evalEps(expect_rng1, actual_rng1, _eps, err);
     ASSERT_NEAR(expect_rng1, actual_rng1, eps)
             << argname << " has unexpected value of the ["<< x1 << ":" << y1 << ":" << cn1 <<"] element" << std::endl;
 
@@ -396,7 +386,6 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double _eps, std::str
     double expect_rng2 = (double)rng2["val"];
     double actual_rng2 = getElem(actual, y2, x2, cn2);
 
-    eps = evalEps(expect_rng2, actual_rng2, _eps, err);
     ASSERT_NEAR(expect_rng2, actual_rng2, eps)
             << argname << " has unexpected value of the ["<< x2 << ":" << y2 << ":" << cn2 <<"] element" << std::endl;
 }

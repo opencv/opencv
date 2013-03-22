@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 '''
 Inpainting sample.
@@ -21,11 +21,18 @@ from common import Sketcher
 
 if __name__ == '__main__':
     import sys
-    try: fn = sys.argv[1]
-    except: fn = '../cpp/fruits.jpg'
+    try:
+        fn = sys.argv[1]
+    except: 
+        fn = '../cpp/fruits.jpg'
+        
     print __doc__
 
     img = cv2.imread(fn)
+    if img is None:
+        print 'Failed to load image file:', fn
+        sys.exit(1)
+        
     img_mark = img.copy()
     mark = np.zeros(img.shape[:2], np.uint8)
     sketch = Sketcher('img', [img_mark, mark], lambda : ((255, 255, 255), 255))

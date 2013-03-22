@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/calib3d.hpp"
 #include <iostream>
 
 using namespace cv;
@@ -989,13 +989,13 @@ static void func_new(int i, int j, Mat& point_params, Mat& cam_params, Mat& esti
   func(i,j,&_point_params,&_cam_params,&_estim,data);
 };
 
-void LevMarqSparse::bundleAdjust( vector<Point3d>& points, //positions of points in global coordinate system (input and output)
-          const vector<vector<Point2d> >& imagePoints, //projections of 3d points for every camera
-          const vector<vector<int> >& visibility, //visibility of 3d points for every camera
-          vector<Mat>& cameraMatrix, //intrinsic matrices of all cameras (input and output)
-          vector<Mat>& R, //rotation matrices of all cameras (input and output)
-          vector<Mat>& T, //translation vector of all cameras (input and output)
-          vector<Mat>& distCoeffs, //distortion coefficients of all cameras (input and output)
+void LevMarqSparse::bundleAdjust( std::vector<Point3d>& points, //positions of points in global coordinate system (input and output)
+          const std::vector<std::vector<Point2d> >& imagePoints, //projections of 3d points for every camera
+          const std::vector<std::vector<int> >& visibility, //visibility of 3d points for every camera
+          std::vector<Mat>& cameraMatrix, //intrinsic matrices of all cameras (input and output)
+          std::vector<Mat>& R, //rotation matrices of all cameras (input and output)
+          std::vector<Mat>& T, //translation vector of all cameras (input and output)
+          std::vector<Mat>& distCoeffs, //distortion coefficients of all cameras (input and output)
           const TermCriteria& criteria,
           BundleAdjustCallback cb, void* user_data) {
   //,enum{MOTION_AND_STRUCTURE,MOTION,STRUCTURE})
