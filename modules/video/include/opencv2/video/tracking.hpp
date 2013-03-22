@@ -219,23 +219,6 @@ CVAPI(const CvMat*)  cvKalmanCorrect( CvKalman* kalman, const CvMat* measurement
 #define cvKalmanUpdateByMeasurement cvKalmanCorrect
 
 
-/****************************************************************************************\
-*                                       Image Alignment (ECC algorithm)                  *
-\****************************************************************************************/
-enum
-{
-    MOTION_TRANSLATION,
-    MOTION_EUCLIDEAN,
-    MOTION_AFFINE,
-    MOTION_HOMOGRAPHY
-};
-
-/* Estimate the geometric transformation between 2 images (area-based alignment) */
-CVAPI(double)  cvFindTransformECC (const CvArr* templateImage, const CvArr* inputImage,
-                                   CvMat* warpMatrix,
-                                   const int motionType,
-                                   const CvTermCriteria criteria);
-
 #ifdef __cplusplus
 }
 
@@ -340,6 +323,14 @@ CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next,
 // that maps one 2D point set to another or one image to another.
 CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst,
                                          bool fullAffine);
+
+enum
+{
+    MOTION_TRANSLATION=0,
+    MOTION_EUCLIDEAN=1,
+    MOTION_AFFINE=2,
+    MOTION_HOMOGRAPHY=3
+};
 
 //! estimates the best-fit Translation, Euclidean, Affine or Perspective Transformation
 // with respect to Enhanced Correlation Coefficient criterion that maps one image to

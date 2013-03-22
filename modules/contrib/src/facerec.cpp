@@ -893,7 +893,7 @@ CV_INIT_ALGORITHM(LBPH, "FaceRecognizer.LBPH",
 
 bool initModule_contrib()
 {
-    Ptr<Algorithm> efaces = createEigenfaces(), ffaces = createFisherfaces(), lbph = createLBPH();
+    Ptr<Algorithm> efaces = createEigenfaces_hidden(), ffaces = createFisherfaces_hidden(), lbph = createLBPH_hidden();
     return efaces->info() != 0 && ffaces->info() != 0 && lbph->info() != 0;
 }
 
