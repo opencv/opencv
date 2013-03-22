@@ -95,8 +95,11 @@ protected:
     int nscales;
     int warps;
     double epsilon;
-    int iterations;
+    int innerIterations;
+    int outerIterations;
     bool useInitialFlow;
+    double scaleStep;
+    int medianFiltering;
 
 private:
     void procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2);
@@ -144,8 +147,11 @@ OpticalFlowDual_TVL1::OpticalFlowDual_TVL1()
     nscales        = 5;
     warps          = 5;
     epsilon        = 0.01;
-    iterations     = 300;
+    innerIterations = 30;
+    outerIterations = 10;
     useInitialFlow = false;
+    medianFiltering = 5;
+    scaleStep      = 0.8;
 }
 
 void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray _flow)
@@ -210,8 +216,8 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
     // create the scales
     for (int s = 1; s < nscales; ++s)
     {
-        pyrDown(I0s[s - 1], I0s[s]);
-        pyrDown(I1s[s - 1], I1s[s]);
+        resize(I0s[s-1], I0s[s], Size(), scaleStep, scaleStep);
+        resize(I1s[s-1], I1s[s], Size(), scaleStep, scaleStep);
 
         if (I0s[s].cols < 16 || I0s[s].rows < 16)
         {
@@ -221,11 +227,11 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
 
         if (useInitialFlow)
         {
-            pyrDown(u1s[s - 1], u1s[s]);
-            pyrDown(u2s[s - 1], u2s[s]);
+            resize(u1s[s-1], u1s[s], Size(), scaleStep, scaleStep);
+            resize(u2s[s-1], u2s[s], Size(), scaleStep, scaleStep);
 
-            multiply(u1s[s], Scalar::all(0.5), u1s[s]);
-            multiply(u2s[s], Scalar::all(0.5), u2s[s]);
+            multiply(u1s[s], Scalar::all(scaleStep), u1s[s]);
+            multiply(u2s[s], Scalar::all(scaleStep), u2s[s]);
         }
     }
 
@@ -246,8 +252,8 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
         resize(u2s[s], u2s[s - 1], I0s[s - 1].size());
 
         // scale the optical flow with the appropriate zoom factor
-        multiply(u1s[s - 1], Scalar::all(2), u1s[s - 1]);
-        multiply(u2s[s - 1], Scalar::all(2), u2s[s - 1]);
+        multiply(u1s[s - 1], Scalar::all(1/scaleStep), u1s[s - 1]);
+        multiply(u2s[s - 1], Scalar::all(1/scaleStep), u2s[s - 1]);
     }
 
     Mat uxy[] = {u1s[0], u2s[0]};
@@ -852,24 +858,31 @@ void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>
         calcGradRho(I0, I1w, I1wx, I1wy, u1, u2, grad, rho_c);
 
         float error = std::numeric_limits<float>::max();
-        for (int n = 0; error > scaledEpsilon && n < iterations; ++n)
+        for (int n_outer = 0; error > scaledEpsilon && n_outer < outerIterations; ++n_outer)
         {
-            // estimate the values of the variable (v1, v2) (thresholding operator TH)
-            estimateV(I1wx, I1wy, u1, u2, grad, rho_c, v1, v2, l_t);
+            if (medianFiltering > 1) {
+                cv::medianBlur(u1, u1, medianFiltering);
+                cv::medianBlur(u2, u2, medianFiltering);
+            }
+            for (int n_inner = 0; error > scaledEpsilon && n_inner < innerIterations; ++n_inner)
+            {
+                // estimate the values of the variable (v1, v2) (thresholding operator TH)
+                estimateV(I1wx, I1wy, u1, u2, grad, rho_c, v1, v2, l_t);
 
-            // compute the divergence of the dual variable (p1, p2)
-            divergence(p11, p12, div_p1);
-            divergence(p21, p22, div_p2);
+                // compute the divergence of the dual variable (p1, p2)
+                divergence(p11, p12, div_p1);
+                divergence(p21, p22, div_p2);
 
-            // estimate the values of the optical flow (u1, u2)
-            error = estimateU(v1, v2, div_p1, div_p2, u1, u2, static_cast<float>(theta));
+                // estimate the values of the optical flow (u1, u2)
+                error = estimateU(v1, v2, div_p1, div_p2, u1, u2, static_cast<float>(theta));
 
-            // compute the gradient of the optical flow (Du1, Du2)
-            forwardGradient(u1, u1x, u1y);
-            forwardGradient(u2, u2x, u2y);
+                // compute the gradient of the optical flow (Du1, Du2)
+                forwardGradient(u1, u1x, u1y);
+                forwardGradient(u2, u2x, u2y);
 
-            // estimate the values of the dual variable (p1, p2)
-            estimateDualVariables(u1x, u1y, u2x, u2y, p11, p12, p21, p22, taut);
+                // estimate the values of the dual variable (p1, p2)
+                estimateDualVariables(u1x, u1y, u2x, u2y, p11, p12, p21, p22, taut);
+            }
         }
     }
 }
@@ -922,10 +935,16 @@ CV_INIT_ALGORITHM(OpticalFlowDual_TVL1, "DenseOpticalFlow.DualTVL1",
                                        "Number of scales used to create the pyramid of images");
                   obj.info()->addParam(obj, "warps", obj.warps, false, 0, 0,
                                        "Number of warpings per scale");
+                  obj.info()->addParam(obj, "medianFiltering", obj.medianFiltering, false, 0, 0,
+                                       "Median filter kernel size (1 = no filter) (3 or 5)");
+                  obj.info()->addParam(obj, "scaleStep", obj.scaleStep, false, 0, 0,
+                                       "Step between scales (<1)");
                   obj.info()->addParam(obj, "epsilon", obj.epsilon, false, 0, 0,
                                        "Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time");
-                  obj.info()->addParam(obj, "iterations", obj.iterations, false, 0, 0,
-                                       "Stopping criterion iterations number used in the numerical scheme");
+                  obj.info()->addParam(obj, "innerIterations", obj.innerIterations, false, 0, 0,
+                                       "inner iterations (between outlier filtering) used in the numerical scheme");
+                  obj.info()->addParam(obj, "outerIterations", obj.outerIterations, false, 0, 0,
+                                       "outer iterations (number of inner loops) used in the numerical scheme");
                   obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow));
 
 } // namespace
