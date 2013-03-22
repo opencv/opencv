@@ -38,11 +38,6 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
-// Copyright (c) 2010, Paul Furgale, Chi Hay Tong
-//
-// The original code was written by Paul Furgale and Chi Hay Tong
-// and later optimized and prepared for integration into OpenCV by Itseez.
-//
 //M*/
 
 #if !defined CUDA_DISABLER
