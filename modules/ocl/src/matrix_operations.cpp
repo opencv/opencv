@@ -353,9 +353,9 @@ void cv::ocl::oclMat::copyTo( oclMat &mat, const oclMat &mask) const
 static void convert_run(const oclMat &src, oclMat &dst, double alpha, double beta)
 {
     String kernelName = "convert_to_S";
-    Stringstream idxStr;
+    std::stringstream idxStr;
     idxStr << src.depth();
-    kernelName += idxStr.str();
+    kernelName = kernelName + idxStr.str().c_str();
     float alpha_f = alpha, beta_f = beta;
     CV_DbgAssert(src.rows == dst.rows && src.cols == dst.cols);
     std::vector<std::pair<size_t , const void *> > args;

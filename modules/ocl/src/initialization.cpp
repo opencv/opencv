@@ -492,7 +492,7 @@ namespace cv
             {
                 src_sign << (int64)(*source) << clCxt->impl->oclcontext;
             }
-            srcsign = src_sign.str();
+            srcsign = src_sign.str().c_str();
 
             program = NULL;
             program = programCache->progLookup(srcsign);
@@ -613,7 +613,7 @@ namespace cv
                 idxStr << "_C" << channels;
             if(depth != -1)
                 idxStr << "_D" << depth;
-            kernelName += idxStr.str();
+            kernelName = kernelName + idxStr.str().c_str();
 
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, build_options);
@@ -723,7 +723,7 @@ namespace cv
                 idxStr << "_C" << channels;
             if(depth != -1)
                 idxStr << "_D" << depth;
-            kernelName += idxStr.str();
+            kernelName = kernelName + idxStr.str().c_str();
 
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, build_options);
