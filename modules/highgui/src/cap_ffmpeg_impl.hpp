@@ -1026,7 +1026,7 @@ static const char * icvFFMPEGErrStr(int err)
 
 /* function internal to FFMPEG (libavformat/riff.c) to lookup codec id by fourcc tag*/
 extern "C" {
-    enum CodecID codec_get_bmp_id(unsigned int tag);
+    enum AVCodecID codec_get_bmp_id(unsigned int tag);
 }
 
 void CvVideoWriter_FFMPEG::init()
@@ -1078,7 +1078,7 @@ static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bo
 
 /* add a video output stream to the container */
 static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
-                                             CodecID codec_id,
+                                             AVCodecID codec_id,
                                              int w, int h, int bitrate,
                                              double fps, int pixel_format)
 {
@@ -1477,7 +1477,7 @@ void CvVideoWriter_FFMPEG::close()
 bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                                  double fps, int width, int height, bool is_color )
 {
-    CodecID codec_id = CODEC_ID_NONE;
+    AVCodecID codec_id = CODEC_ID_NONE;
     int err, codec_pix_fmt;
     double bitrate_scale = 1;
 
@@ -1788,7 +1788,7 @@ struct OutputMediaStream_FFMPEG
     void write(unsigned char* data, int size, int keyFrame);
 
     // add a video output stream to the container
-    static AVStream* addVideoStream(AVFormatContext *oc, CodecID codec_id, int w, int h, int bitrate, double fps, PixelFormat pixel_format);
+    static AVStream* addVideoStream(AVFormatContext *oc, AVCodecID codec_id, int w, int h, int bitrate, double fps, PixelFormat pixel_format);
 
     AVOutputFormat* fmt_;
     AVFormatContext* oc_;
@@ -1835,7 +1835,7 @@ void OutputMediaStream_FFMPEG::close()
     }
 }
 
-AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CodecID codec_id, int w, int h, int bitrate, double fps, PixelFormat pixel_format)
+AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, AVCodecID codec_id, int w, int h, int bitrate, double fps, PixelFormat pixel_format)
 {
     #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 10, 0)
         AVStream* st = avformat_new_stream(oc, 0);
@@ -1955,7 +1955,7 @@ bool OutputMediaStream_FFMPEG::open(const char* fileName, int width, int height,
     if (!fmt_)
         return false;
 
-    CodecID codec_id = CODEC_ID_H264;
+    AVCodecID codec_id = CODEC_ID_H264;
 
     // alloc memory for context
     #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
