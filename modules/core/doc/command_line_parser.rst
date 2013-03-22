@@ -10,7 +10,7 @@ CommandLineParser
 The CommandLineParser class is designed for command line arguments parsing
 
 
-    .. ocv:function:: CommandLineParser::CommandLineParser( int argc, const char* const argv[], const string& keys )
+    .. ocv:function:: CommandLineParser::CommandLineParser( int argc, const char* const argv[], const String& keys )
 
         :param argc:
         :param argv:
@@ -33,7 +33,7 @@ The CommandLineParser class is designed for command line arguments parsing
     .. ocv:function:: bool CommandLineParser::check()
 
 
-    .. ocv:function:: void CommandLineParser::about( const string& message )
+    .. ocv:function:: void CommandLineParser::about( const String& message )
 
         :param message:
 

@@ -110,7 +110,7 @@ Class providing functionality for querying the specified GPU properties. ::
         DeviceInfo();
         DeviceInfo(int device_id);
 
-        string name() const;
+        String name() const;
 
         int majorVersion() const;
         int minorVersion() const;
@@ -146,7 +146,7 @@ gpu::DeviceInfo::name
 ---------------------
 Returns the device name.
 
-.. ocv:function:: string gpu::DeviceInfo::name() const
+.. ocv:function:: String gpu::DeviceInfo::name() const
 
 
 

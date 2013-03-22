@@ -218,19 +218,19 @@ Exception class passed to an error. ::
     public:
         // various constructors and the copy operation
         Exception() { code = 0; line = 0; }
-        Exception(int _code, const string& _err,
-                  const string& _func, const string& _file, int _line);
+        Exception(int _code, const String& _err,
+                  const String& _func, const String& _file, int _line);
         Exception(const Exception& exc);
         Exception& operator = (const Exception& exc);
 
         // the error code
         int code;
         // the error text message
-        string err;
+        String err;
         // function name where the error happened
-        string func;
+        String func;
         // the source file name where the error happened
-        string file;
+        String file;
         // the source file line where the error happened
         int line;
     };
@@ -272,7 +272,7 @@ format
 ------
 Returns a text string formatted using the ``printf``\ -like expression.
 
-.. ocv:function:: string format( const char* fmt, ... )
+.. ocv:function:: String format( const char* fmt, ... )
 
     :param fmt: ``printf`` -compatible formatting specifiers.
 
