@@ -96,7 +96,7 @@ namespace
     }
 }
 
-cv::gpu::detail::FFmpegVideoSource::FFmpegVideoSource(const cv::String& fname) :
+cv::gpu::detail::FFmpegVideoSource::FFmpegVideoSource(const String& fname) :
     stream_(0)
 {
     CV_Assert( init_MediaStream_FFMPEG() );

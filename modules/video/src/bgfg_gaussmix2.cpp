@@ -251,7 +251,7 @@ public:
 
     virtual void read(const FileNode& fn)
     {
-        CV_Assert( (cv::String)fn["name"] == name_ );
+        CV_Assert( (String)fn["name"] == name_ );
         history = (int)fn["history"];
         nmixtures = (int)fn["nmixtures"];
         backgroundRatio = (float)fn["backgroundRatio"];
@@ -320,7 +320,7 @@ protected:
     //Tau= 0.5 means that if pixel is more than 2 times darker then it is not shadow
     //See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
 
-    cv::String name_;
+    String name_;
 };
 
 struct GaussBGStatModel2Params

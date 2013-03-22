@@ -113,14 +113,14 @@ inline std::ostream& operator << (std::ostream& os, const String& str)
 
 inline FileNode::operator std::string() const
 {
-    cv::String value;
+    String value;
     read(*this, value, value);
     return value;
 }
 
 template<> inline void operator >> (const FileNode& n, std::string& value)
 {
-    cv::String val;
+    String val;
     read(n, val, val);
     value = val;
 }

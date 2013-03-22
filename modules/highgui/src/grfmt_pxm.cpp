@@ -107,7 +107,7 @@ size_t PxMDecoder::signatureLength() const
     return 3;
 }
 
-bool PxMDecoder::checkSignature( const cv::String& signature ) const
+bool PxMDecoder::checkSignature( const String& signature ) const
 {
     return signature.size() >= 3 && signature[0] == 'P' &&
            '1' <= signature[1] && signature[1] <= '6' &&

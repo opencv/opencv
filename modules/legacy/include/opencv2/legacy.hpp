@@ -1887,7 +1887,7 @@ public:
     void setVerbose(bool verbose);
 
     void read(const FileNode& node);
-    void write(FileStorage& fs, const cv::String& name=cv::String()) const;
+    void write(FileStorage& fs, const String& name=String()) const;
 
     int radius;
     int threshold;
@@ -1918,7 +1918,7 @@ public:
                    const PatchGenerator& patchGenerator=PatchGenerator());
     virtual ~FernClassifier();
     virtual void read(const FileNode& n);
-    virtual void write(FileStorage& fs, const cv::String& name=cv::String()) const;
+    virtual void write(FileStorage& fs, const String& name=String()) const;
     virtual void trainFromSingleView(const Mat& image,
                                      const std::vector<KeyPoint>& keypoints,
                                      int _patchSize=PATCH_SIZE,
@@ -2062,8 +2062,8 @@ public:
     inline void applyQuantization(int num_quant_bits) { makePosteriors2(num_quant_bits); }
 
     // debug
-    void savePosteriors(cv::String url, bool append=false);
-    void savePosteriors2(cv::String url, bool append=false);
+    void savePosteriors(String url, bool append=false);
+    void savePosteriors2(String url, bool append=false);
 
 private:
     int classes_;
@@ -2181,9 +2181,9 @@ public:
     void write(std::ostream &os) const;
 
     // experimental and debug
-    void saveAllFloatPosteriors(cv::String file_url);
-    void saveAllBytePosteriors(cv::String file_url);
-    void setFloatPosteriorsFromTextfile_176(cv::String url);
+    void saveAllFloatPosteriors(String file_url);
+    void saveAllBytePosteriors(String file_url);
+    void setFloatPosteriorsFromTextfile_176(String url);
     float countZeroElements();
 
     std::vector<RandomizedTree> trees_;
@@ -2356,7 +2356,7 @@ protected:
     CvAffinePose* m_affine_poses; // an array of poses
     CvMat** m_transforms; // an array of affine transforms corresponding to poses
 
-    cv::String m_feature_name; // the name of the feature associated with the descriptor
+    String m_feature_name; // the name of the feature associated with the descriptor
     CvPoint m_center; // the coordinates of the feature (the center of the input image ROI)
 
     int m_pca_dim_high; // the number of descriptor pca components to use for generating affine poses
@@ -2382,7 +2382,7 @@ public:
                          const char* pca_hr_config = 0, const char* pca_desc_config = 0, int pyr_levels = 1,
                          int pca_dim_high = 100, int pca_dim_low = 100);
 
-    OneWayDescriptorBase(CvSize patch_size, int pose_count, const cv::String &pca_filename, const cv::String &train_path = cv::String(), const cv::String &images_list = cv::String(),
+    OneWayDescriptorBase(CvSize patch_size, int pose_count, const String &pca_filename, const String &train_path = String(), const String &images_list = String(),
                          float _scale_min = 0.7f, float _scale_max=1.5f, float _scale_step=1.2f, int pyr_levels = 1,
                          int pca_dim_high = 100, int pca_dim_low = 100);
 
@@ -2516,7 +2516,7 @@ public:
     void ConvertDescriptorsArrayToTree(); // Converting pca_descriptors array to KD tree
 
     // GetPCAFilename: get default PCA filename
-    static cv::String GetPCAFilename () { return "pca.yml"; }
+    static String GetPCAFilename () { return "pca.yml"; }
 
     virtual bool empty() const { return m_train_feature_count <= 0 ? true : false; }
 
@@ -2568,8 +2568,8 @@ public:
     OneWayDescriptorObject(CvSize patch_size, int pose_count, const char* train_path, const char* pca_config,
                            const char* pca_hr_config = 0, const char* pca_desc_config = 0, int pyr_levels = 1);
 
-    OneWayDescriptorObject(CvSize patch_size, int pose_count, const cv::String &pca_filename,
-                           const cv::String &train_path = cv::String (), const cv::String &images_list = cv::String (),
+    OneWayDescriptorObject(CvSize patch_size, int pose_count, const String &pca_filename,
+                           const String &train_path = String (), const String &images_list = String (),
                            float _scale_min = 0.7f, float _scale_max=1.5f, float _scale_step=1.2f, int pyr_levels = 1);
 
 
@@ -2633,16 +2633,16 @@ public:
 
         Params( int poseCount = POSE_COUNT,
                Size patchSize = Size(PATCH_WIDTH, PATCH_HEIGHT),
-               cv::String pcaFilename = cv::String(),
-               cv::String trainPath = cv::String(), cv::String trainImagesList = cv::String(),
+               String pcaFilename = String(),
+               String trainPath = String(), String trainImagesList = String(),
                float minScale = GET_MIN_SCALE(), float maxScale = GET_MAX_SCALE(),
                float stepScale = GET_STEP_SCALE() );
 
         int poseCount;
         Size patchSize;
-        cv::String pcaFilename;
-        cv::String trainPath;
-        cv::String trainImagesList;
+        String pcaFilename;
+        String trainPath;
+        String trainImagesList;
 
         float minScale, maxScale, stepScale;
     };
@@ -2706,7 +2706,7 @@ public:
                int compressionMethod=FernClassifier::COMPRESSION_NONE,
                const PatchGenerator& patchGenerator=PatchGenerator() );
 
-        Params( const cv::String& filename );
+        Params( const String& filename );
 
         int nclasses;
         int patchSize;
@@ -2717,7 +2717,7 @@ public:
         int compressionMethod;
         PatchGenerator patchGenerator;
 
-        cv::String filename;
+        String filename;
     };
 
     FernDescriptorMatcher( const Params& params=Params() );
@@ -2759,7 +2759,7 @@ template<typename T>
 class CV_EXPORTS CalonderDescriptorExtractor : public DescriptorExtractor
 {
 public:
-    CalonderDescriptorExtractor( const cv::String& classifierFile );
+    CalonderDescriptorExtractor( const String& classifierFile );
 
     virtual void read( const FileNode &fn );
     virtual void write( FileStorage &fs ) const;
@@ -2777,7 +2777,7 @@ protected:
 };
 
 template<typename T>
-CalonderDescriptorExtractor<T>::CalonderDescriptorExtractor(const cv::String& classifier_file)
+CalonderDescriptorExtractor<T>::CalonderDescriptorExtractor(const String& classifier_file)
 {
     classifier_.read( classifier_file.c_str() );
 }
@@ -2867,7 +2867,7 @@ public:
     void setVerbose(bool verbose);
 
     void read(const FileNode& node);
-    void write(FileStorage& fs, const cv::String& name=cv::String()) const;
+    void write(FileStorage& fs, const String& name=String()) const;
     bool operator()(const Mat& image, CV_OUT Mat& H, CV_OUT std::vector<Point2f>& corners) const;
     bool operator()(const std::vector<Mat>& pyr, const std::vector<KeyPoint>& keypoints,
                     CV_OUT Mat& H, CV_OUT std::vector<Point2f>& corners,

@@ -16,7 +16,7 @@ Class which provides the main controls to the Gipsa/Listic labs human  retina mo
 
 **NOTE : See the Retina tutorial in the tutorial/contrib section for complementary explanations.**
 
-The retina can be settled up with various parameters, by default, the retina cancels mean luminance and enforces all details of the visual scene. In order to use your own parameters, you can use at least one time the *write(cv::String fs)* method which will write a proper XML file with all default parameters. Then, tweak it on your own and reload them at any time using method *setup(cv::String fs)*. These methods update a *Retina::RetinaParameters* member structure that is described hereafter. ::
+The retina can be settled up with various parameters, by default, the retina cancels mean luminance and enforces all details of the visual scene. In order to use your own parameters, you can use at least one time the *write(String fs)* method which will write a proper XML file with all default parameters. Then, tweak it on your own and reload them at any time using method *setup(String fs)*. These methods update a *Retina::RetinaParameters* member structure that is described hereafter. ::
 
   class Retina
   {
@@ -49,12 +49,12 @@ The retina can be settled up with various parameters, by default, the retina can
     Size outputSize ();
 
     // setup methods with specific parameters specification of global xml config file loading/write
-    void setup (cv::String retinaParameterFile="", const bool applyDefaultSetupOnFailure=true);
+    void setup (String retinaParameterFile="", const bool applyDefaultSetupOnFailure=true);
     void setup (FileStorage &fs, const bool applyDefaultSetupOnFailure=true);
     void setup (RetinaParameters newParameters);
     struct Retina::RetinaParameters getParameters ();
-    const cv::String printSetup ();
-    virtual void write (cv::String fs) const;
+    const String printSetup ();
+    virtual void write (String fs) const;
     virtual void write (FileStorage &fs) const;
     void setupOPLandIPLParvoChannel (const bool colorMode=true, const bool normaliseOutput=true, const float photoreceptorsLocalAdaptationSensitivity=0.7, const float photoreceptorsTemporalConstant=0.5, const float photoreceptorsSpatialConstant=0.53, const float horizontalCellsGain=0, const float HcellsTemporalConstant=1, const float HcellsSpatialConstant=7, const float ganglionCellsSensitivity=0.7);
     void setupIPLMagnoChannel (const bool normaliseOutput=true, const float parasolCells_beta=0, const float parasolCells_tau=0, const float parasolCells_k=7, const float amacrinCellsTemporalCutFrequency=1.2, const float V0CompressionParameter=0.95, const float localAdaptintegration_tau=0, const float localAdaptintegration_k=7);
@@ -235,7 +235,7 @@ Retina::outputSize
 Retina::printSetup
 ++++++++++++++++++
 
-.. ocv:function:: const cv::String Retina::printSetup()
+.. ocv:function:: const String Retina::printSetup()
 
     Outputs a string showing the used parameters setup
 
@@ -264,7 +264,7 @@ Retina::setColorSaturation
 Retina::setup
 +++++++++++++
 
-.. ocv:function:: void Retina::setup(cv::String retinaParameterFile = "", const bool applyDefaultSetupOnFailure = true )
+.. ocv:function:: void Retina::setup(String retinaParameterFile = "", const bool applyDefaultSetupOnFailure = true )
 .. ocv:function:: void Retina::setup(FileStorage & fs, const bool applyDefaultSetupOnFailure = true )
 .. ocv:function:: void Retina::setup(RetinaParameters newParameters)
 
@@ -278,7 +278,7 @@ Retina::setup
 Retina::write
 +++++++++++++
 
-.. ocv:function:: void Retina::write( cv::String fs ) const
+.. ocv:function:: void Retina::write( String fs ) const
 .. ocv:function:: void Retina::write( FileStorage& fs ) const
 
     Write xml/yml formated parameters information

@@ -52,7 +52,7 @@
 //==============================================================================
 
 
-static void stdDebugOutput(const cv::String &msg)
+static void stdDebugOutput(const String &msg)
 {
     std::cout << msg;
 }
@@ -61,7 +61,7 @@ static void stdDebugOutput(const cv::String &msg)
 static NCVDebugOutputHandler *debugOutputHandler = stdDebugOutput;
 
 
-void ncvDebugOutput(const cv::String &msg)
+void ncvDebugOutput(const String &msg)
 {
     debugOutputHandler(msg);
 }

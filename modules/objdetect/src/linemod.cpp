@@ -201,7 +201,7 @@ void QuantizedPyramid::selectScatteredFeatures(const std::vector<Candidate>& can
   }
 }
 
-Ptr<Modality> Modality::create(const cv::String& modality_type)
+Ptr<Modality> Modality::create(const String& modality_type)
 {
   if (modality_type == "ColorGradient")
     return new ColorGradient();
@@ -213,7 +213,7 @@ Ptr<Modality> Modality::create(const cv::String& modality_type)
 
 Ptr<Modality> Modality::create(const FileNode& fn)
 {
-  cv::String type = fn["type"];
+  String type = fn["type"];
   Ptr<Modality> modality = create(type);
   modality->read(fn);
   return modality;
@@ -566,7 +566,7 @@ ColorGradient::ColorGradient(float _weak_threshold, size_t _num_features, float 
 
 static const char CG_NAME[] = "ColorGradient";
 
-cv::String ColorGradient::name() const
+String ColorGradient::name() const
 {
   return CG_NAME;
 }
@@ -579,7 +579,7 @@ Ptr<QuantizedPyramid> ColorGradient::processImpl(const Mat& src,
 
 void ColorGradient::read(const FileNode& fn)
 {
-  cv::String type = fn["type"];
+  String type = fn["type"];
   CV_Assert(type == CG_NAME);
 
   weak_threshold = fn["weak_threshold"];
@@ -887,7 +887,7 @@ DepthNormal::DepthNormal(int _distance_threshold, int _difference_threshold, siz
 
 static const char DN_NAME[] = "DepthNormal";
 
-cv::String DepthNormal::name() const
+String DepthNormal::name() const
 {
   return DN_NAME;
 }
@@ -901,7 +901,7 @@ Ptr<QuantizedPyramid> DepthNormal::processImpl(const Mat& src,
 
 void DepthNormal::read(const FileNode& fn)
 {
-  cv::String type = fn["type"];
+  String type = fn["type"];
   CV_Assert(type == DN_NAME);
 
   distance_threshold = fn["distance_threshold"];
@@ -1397,7 +1397,7 @@ Detector::Detector(const std::vector< Ptr<Modality> >& _modalities,
 }
 
 void Detector::match(const std::vector<Mat>& sources, float threshold, std::vector<Match>& matches,
-                     const std::vector<cv::String>& class_ids, OutputArrayOfArrays quantized_images,
+                     const std::vector<String>& class_ids, OutputArrayOfArrays quantized_images,
                      const std::vector<Mat>& masks) const
 {
   matches.clear();
@@ -1488,7 +1488,7 @@ struct MatchPredicate
 void Detector::matchClass(const LinearMemoryPyramid& lm_pyramid,
                           const std::vector<Size>& sizes,
                           float threshold, std::vector<Match>& matches,
-                          const cv::String& class_id,
+                          const String& class_id,
                           const std::vector<TemplatePyramid>& template_pyramids) const
 {
   // For each template...
@@ -1613,7 +1613,7 @@ void Detector::matchClass(const LinearMemoryPyramid& lm_pyramid,
   }
 }
 
-int Detector::addTemplate(const std::vector<Mat>& sources, const cv::String& class_id,
+int Detector::addTemplate(const std::vector<Mat>& sources, const String& class_id,
                           const Mat& object_mask, Rect* bounding_box)
 {
   int num_modalities = static_cast<int>(modalities.size());
@@ -1649,7 +1649,7 @@ int Detector::addTemplate(const std::vector<Mat>& sources, const cv::String& cla
   return template_id;
 }
 
-int Detector::addSyntheticTemplate(const std::vector<Template>& templates, const cv::String& class_id)
+int Detector::addSyntheticTemplate(const std::vector<Template>& templates, const String& class_id)
 {
   std::vector<TemplatePyramid>& template_pyramids = class_templates[class_id];
   int template_id = static_cast<int>(template_pyramids.size());
@@ -1657,7 +1657,7 @@ int Detector::addSyntheticTemplate(const std::vector<Template>& templates, const
   return template_id;
 }
 
-const std::vector<Template>& Detector::getTemplates(const cv::String& class_id, int template_id) const
+const std::vector<Template>& Detector::getTemplates(const String& class_id, int template_id) const
 {
   TemplatesMap::const_iterator i = class_templates.find(class_id);
   CV_Assert(i != class_templates.end());
@@ -1674,7 +1674,7 @@ int Detector::numTemplates() const
   return ret;
 }
 
-int Detector::numTemplates(const cv::String& class_id) const
+int Detector::numTemplates(const String& class_id) const
 {
   TemplatesMap::const_iterator i = class_templates.find(class_id);
   if (i == class_templates.end())
@@ -1682,9 +1682,9 @@ int Detector::numTemplates(const cv::String& class_id) const
   return static_cast<int>(i->second.size());
 }
 
-std::vector<cv::String> Detector::classIds() const
+std::vector<String> Detector::classIds() const
 {
-  std::vector<cv::String> ids;
+  std::vector<String> ids;
   TemplatesMap::const_iterator i = class_templates.begin(), iend = class_templates.end();
   for ( ; i != iend; ++i)
   {
@@ -1724,7 +1724,7 @@ void Detector::write(FileStorage& fs) const
   fs << "]"; // modalities
 }
 
-  cv::String Detector::readClass(const FileNode& fn, const cv::String &class_id_override)
+  String Detector::readClass(const FileNode& fn, const String &class_id_override)
   {
   // Verify compatible with Detector settings
   FileNode mod_fn = fn["modalities"];
@@ -1732,14 +1732,14 @@ void Detector::write(FileStorage& fs) const
   FileNodeIterator mod_it = mod_fn.begin(), mod_it_end = mod_fn.end();
   int i = 0;
   for ( ; mod_it != mod_it_end; ++mod_it, ++i)
-    CV_Assert(modalities[i]->name() == (cv::String)(*mod_it));
+    CV_Assert(modalities[i]->name() == (String)(*mod_it));
   CV_Assert((int)fn["pyramid_levels"] == pyramid_levels);
 
   // Detector should not already have this class
-    cv::String class_id;
+    String class_id;
     if (class_id_override.empty())
     {
-      cv::String class_id_tmp = fn["class_id"];
+      String class_id_tmp = fn["class_id"];
       CV_Assert(class_templates.find(class_id_tmp) == class_templates.end());
       class_id = class_id_tmp;
     }
@@ -1774,7 +1774,7 @@ void Detector::write(FileStorage& fs) const
   return class_id;
 }
 
-void Detector::writeClass(const cv::String& class_id, FileStorage& fs) const
+void Detector::writeClass(const String& class_id, FileStorage& fs) const
 {
   TemplatesMap::const_iterator it = class_templates.find(class_id);
   CV_Assert(it != class_templates.end());
@@ -1805,25 +1805,25 @@ void Detector::writeClass(const cv::String& class_id, FileStorage& fs) const
   fs << "]"; // pyramids
 }
 
-void Detector::readClasses(const std::vector<cv::String>& class_ids,
-                           const cv::String& format)
+void Detector::readClasses(const std::vector<String>& class_ids,
+                           const String& format)
 {
   for (size_t i = 0; i < class_ids.size(); ++i)
   {
-    const cv::String& class_id = class_ids[i];
-    cv::String filename = cv::format(format.c_str(), class_id.c_str());
+    const String& class_id = class_ids[i];
+    String filename = cv::format(format.c_str(), class_id.c_str());
     FileStorage fs(filename, FileStorage::READ);
     readClass(fs.root());
   }
 }
 
-void Detector::writeClasses(const cv::String& format) const
+void Detector::writeClasses(const String& format) const
 {
   TemplatesMap::const_iterator it = class_templates.begin(), it_end = class_templates.end();
   for ( ; it != it_end; ++it)
   {
-    const cv::String& class_id = it->first;
-    cv::String filename = cv::format(format.c_str(), class_id.c_str());
+    const String& class_id = it->first;
+    String filename = cv::format(format.c_str(), class_id.c_str());
     FileStorage fs(filename, FileStorage::WRITE);
     writeClass(class_id, fs);
   }

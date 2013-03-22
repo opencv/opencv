@@ -59,20 +59,20 @@ struct CV_EXPORTS IndexParams
     IndexParams();
     ~IndexParams();
 
-    cv::String getString(const cv::String& key, const cv::String& defaultVal=cv::String()) const;
-    int getInt(const cv::String& key, int defaultVal=-1) const;
-    double getDouble(const cv::String& key, double defaultVal=-1) const;
+    String getString(const String& key, const String& defaultVal=String()) const;
+    int getInt(const String& key, int defaultVal=-1) const;
+    double getDouble(const String& key, double defaultVal=-1) const;
 
-    void setString(const cv::String& key, const cv::String& value);
-    void setInt(const cv::String& key, int value);
-    void setDouble(const cv::String& key, double value);
-    void setFloat(const cv::String& key, float value);
-    void setBool(const cv::String& key, bool value);
+    void setString(const String& key, const String& value);
+    void setInt(const String& key, int value);
+    void setDouble(const String& key, double value);
+    void setFloat(const String& key, float value);
+    void setBool(const String& key, bool value);
     void setAlgorithm(int value);
 
-    void getAll(std::vector<cv::String>& names,
+    void getAll(std::vector<String>& names,
                 std::vector<int>& types,
-                std::vector<cv::String>& strValues,
+                std::vector<String>& strValues,
                 std::vector<double>& numValues) const;
 
     void* params;
@@ -119,7 +119,7 @@ struct CV_EXPORTS LshIndexParams : public IndexParams
 
 struct CV_EXPORTS SavedIndexParams : public IndexParams
 {
-    SavedIndexParams(const cv::String& filename);
+    SavedIndexParams(const String& filename);
 };
 
 struct CV_EXPORTS SearchParams : public IndexParams
@@ -142,8 +142,8 @@ public:
                              OutputArray dists, double radius, int maxResults,
                              const SearchParams& params=SearchParams());
 
-    CV_WRAP virtual void save(const cv::String& filename) const;
-    CV_WRAP virtual bool load(InputArray features, const cv::String& filename);
+    CV_WRAP virtual void save(const String& filename) const;
+    CV_WRAP virtual bool load(InputArray features, const String& filename);
     CV_WRAP virtual void release();
     CV_WRAP cvflann::flann_distance_t getDistance() const;
     CV_WRAP cvflann::flann_algorithm_t getAlgorithm() const;

@@ -123,7 +123,7 @@ namespace cv
 
             uchar thresh_uchar = cvFloor(thresh);
             uchar max_val = cvRound(maxVal);
-            cv::String kernelName = "threshold";
+            String kernelName = "threshold";
 
             size_t cols = (dst.cols + (dst.offset % 16) + 15) / 16;
             size_t bSizeX = 16, bSizeY = 16;
@@ -159,7 +159,7 @@ namespace cv
             int src_offset = (src.offset >> 2);
             int src_step = (src.step >> 2);
 
-            cv::String kernelName = "threshold";
+            String kernelName = "threshold";
 
             size_t cols = (dst.cols + (dst_offset & 3) + 3) / 4;
             //size_t cols = dst.cols;
@@ -216,7 +216,7 @@ namespace cv
             dst.create(map1.size(), src.type());
 
 
-            cv::String kernelName;
+            String kernelName;
 
             if( map1.type() == CV_32FC2 && !map2.data )
             {
@@ -347,7 +347,7 @@ namespace cv
             int dstStep_in_pixel = dst.step1() / dst.oclchannels();
             int dstoffset_in_pixel = dst.offset / dst.elemSize();
             //printf("%d %d\n",src.step1() , dst.elemSize());
-            cv::String kernelName;
+            String kernelName;
             if(interpolation == INTER_LINEAR)
                 kernelName = "resizeLN";
             else if(interpolation == INTER_NEAREST)
@@ -471,7 +471,7 @@ namespace cv
             int dstOffset = dst.offset / dst.oclchannels() / dst.elemSize1();
 
             Context *clCxt = src.clCxt;
-            cv::String kernelName = "medianFilter";
+            String kernelName = "medianFilter";
 
 
             std::vector< std::pair<size_t, const void *> > args;
@@ -489,18 +489,18 @@ namespace cv
 
             if(m == 3)
             {
-                cv::String kernelName = "medianFilter3";
+                String kernelName = "medianFilter3";
                 openCLExecuteKernel(clCxt, &imgproc_median, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
             }
             else if(m == 5)
             {
-                cv::String kernelName = "medianFilter5";
+                String kernelName = "medianFilter5";
                 openCLExecuteKernel(clCxt, &imgproc_median, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
             }
             else
             {
                 CV_Error(CV_StsUnsupportedFormat, "Non-supported filter length");
-                //cv::String kernelName = "medianFilter";
+                //String kernelName = "medianFilter";
                 //args.push_back( std::make_pair( sizeof(cl_int),(void*)&m));
 
                 //openCLExecuteKernel(clCxt,&imgproc_median,kernelName,globalThreads,localThreads,args,src.oclchannels(),-1);
@@ -549,7 +549,7 @@ namespace cv
             {
                 CV_Error(CV_StsBadArg, "unsupported border type");
             }
-            cv::String kernelName = "copymakeborder";
+            String kernelName = "copymakeborder";
             size_t localThreads[3] = {16, 16, 1};
             size_t globalThreads[3] = {(dst.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0],
                                        (dst.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1
@@ -819,8 +819,8 @@ namespace cv
                 cl_mem coeffs_cm;
 
                 Context *clCxt = src.clCxt;
-                cv::String s[3] = {"NN", "Linear", "Cubic"};
-                cv::String kernelName = "warpAffine" + s[interpolation];
+                String s[3] = {"NN", "Linear", "Cubic"};
+                String kernelName = "warpAffine" + s[interpolation];
 
 
                 if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
@@ -890,8 +890,8 @@ namespace cv
                 cl_mem coeffs_cm;
 
                 Context *clCxt = src.clCxt;
-                cv::String s[3] = {"NN", "Linear", "Cubic"};
-                cv::String kernelName = "warpPerspective" + s[interpolation];
+                String s[3] = {"NN", "Linear", "Cubic"};
+                String kernelName = "warpPerspective" + s[interpolation];
 
                 if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
                 {
@@ -1133,7 +1133,7 @@ namespace cv
             CV_Assert(Dx.offset == 0 && Dy.offset == 0);
         }
 
-        static void corner_ocl(const char *src_str, cv::String kernelName, int block_size, float k, oclMat &Dx, oclMat &Dy,
+        static void corner_ocl(const char *src_str, String kernelName, int block_size, float k, oclMat &Dx, oclMat &Dy,
                         oclMat &dst, int border_type)
         {
             char borderType[30];
@@ -1364,7 +1364,7 @@ namespace cv
             Context  *clCxt = mat_src.clCxt;
             int depth = mat_src.depth();
 
-            cv::String kernelName = "calc_sub_hist";
+            String kernelName = "calc_sub_hist";
 
             size_t localThreads[3]  = { HISTOGRAM256_BIN_COUNT, 1, 1 };
             size_t globalThreads[3] = { PARTIAL_HISTOGRAM256_COUNT *localThreads[0], 1, 1};
@@ -1441,7 +1441,7 @@ namespace cv
             using namespace histograms;
 
             Context  *clCxt = sub_hist.clCxt;
-            cv::String kernelName = "merge_hist";
+            String kernelName = "merge_hist";
 
             size_t localThreads[3]  = { 256, 1, 1 };
             size_t globalThreads[3] = { HISTOGRAM256_BIN_COUNT *localThreads[0], 1, 1};
@@ -1474,7 +1474,7 @@ namespace cv
             calcHist(mat_src, mat_hist);
 
             Context *clCxt = mat_src.clCxt;
-            cv::String kernelName = "calLUT";
+            String kernelName = "calLUT";
             size_t localThreads[3] = { 256, 1, 1};
             size_t globalThreads[3] = { 256, 1, 1};
             oclMat lut(1, 256, CV_8UC1);
@@ -1544,7 +1544,7 @@ namespace cv
             oclMat oclspace_weight(1, d * d, CV_32FC1, space_weight);
             oclMat oclspace_ofs(1, d * d, CV_32SC1, space_ofs);
 
-            cv::String kernelName = "bilateral";
+            String kernelName = "bilateral";
             size_t localThreads[3]  = { 16, 16, 1 };
             size_t globalThreads[3] = { (dst.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0],
                                         (dst.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1],
@@ -1590,7 +1590,7 @@ inline int divUp(int total, int grain)
 {
     return (total + grain - 1) / grain;
 }
-static void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, cv::String kernelName, const char **kernelString)
+static void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, String kernelName, const char **kernelString)
 {
     CV_Assert(src.depth() == CV_32FC1);
     CV_Assert(temp1.depth() == CV_32F);
@@ -1636,7 +1636,7 @@ void cv::ocl::convolve(const oclMat &x, const oclMat &t, oclMat &y)
     CV_Assert(t.depth() == CV_32F);
     CV_Assert(x.type() == y.type() && x.size() == y.size());
     y.create(x.size(), x.type());
-    cv::String kernelName = "convolve";
+    String kernelName = "convolve";
 
     convolve_run(x, t, y, kernelName, &imgproc_convolve);
 }

@@ -199,7 +199,7 @@ Ptr<AdjusterAdapter> SurfAdjuster::clone() const
     return cloned_obj;
 }
 
-Ptr<AdjusterAdapter> AdjusterAdapter::create( const cv::String& detectorType )
+Ptr<AdjusterAdapter> AdjusterAdapter::create( const String& detectorType )
 {
     Ptr<AdjusterAdapter> adapter;
 

@@ -74,7 +74,7 @@ static void prefilter_xsobel(const oclMat &input, oclMat &output, int prefilterC
 {
     Context *clCxt = input.clCxt;
 
-    cv::String kernelName = "prefilter_xsobel";
+    String kernelName = "prefilter_xsobel";
     cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereobm, kernelName);
 
     size_t blockSize = 1;
@@ -118,7 +118,7 @@ static void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
 
     Context *clCxt = left.clCxt;
 
-    cv::String kernelName = "stereoKernel";
+    String kernelName = "stereoKernel";
     cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereobm, kernelName);
 
     disp.setTo(Scalar_<unsigned char>::all(0));
@@ -163,7 +163,7 @@ static void postfilter_textureness(oclMat &left, int winSize,
 {
     Context *clCxt = left.clCxt;
 
-    cv::String kernelName = "textureness_kernel";
+    String kernelName = "textureness_kernel";
     cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereobm, kernelName);
 
     size_t blockSize = 1;

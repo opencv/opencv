@@ -136,17 +136,17 @@ struct cv::softcascade::SCascade::Fields
         static const char *const SC_F_RECT              = "rect";
 
         // only Ada Boost supported
-        cv::String stageTypeStr = (cv::String)root[SC_STAGE_TYPE];
+        String stageTypeStr = (String)root[SC_STAGE_TYPE];
         CV_Assert(stageTypeStr == SC_BOOST);
 
         // only HOG-like integral channel features supported
-        cv::String featureTypeStr = (cv::String)root[SC_FEATURE_TYPE];
+        String featureTypeStr = (String)root[SC_FEATURE_TYPE];
         CV_Assert(featureTypeStr == SC_ICF);
 
         int origWidth  = (int)root[SC_ORIG_W];
         int origHeight = (int)root[SC_ORIG_H];
 
-        cv::String fformat = (cv::String)root[SC_FEATURE_FORMAT];
+        String fformat = (String)root[SC_FEATURE_FORMAT];
         bool useBoxes = (fformat == "BOX");
         ushort shrinkage = cv::saturate_cast<ushort>((int)root[SC_SHRINKAGE]);
 

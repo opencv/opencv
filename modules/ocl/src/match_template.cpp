@@ -139,7 +139,7 @@ namespace cv
             unsigned long long templ_sqsum = (unsigned long long)sqrSum(templ.reshape(1))[0];
 
             Context *clCxt = image.clCxt;
-            cv::String kernelName = "matchTemplate_Prepared_SQDIFF_NORMED";
+            String kernelName = "matchTemplate_Prepared_SQDIFF_NORMED";
             std::vector< std::pair<size_t, const void *> > args;
 
             args.push_back( std::make_pair( sizeof(cl_mem), (void *)&buf.image_sums[0].data));
@@ -169,7 +169,7 @@ namespace cv
             CV_Assert(result.rows == image.rows - templ.rows + 1 && result.cols == image.cols - templ.cols + 1);
 
             Context *clCxt = image.clCxt;
-            cv::String kernelName = "matchTemplate_Naive_SQDIFF";
+            String kernelName = "matchTemplate_Naive_SQDIFF";
 
             std::vector< std::pair<size_t, const void *> > args;
 
@@ -232,7 +232,7 @@ namespace cv
             unsigned long long templ_sqsum = (unsigned long long)sqrSum(templ.reshape(1))[0];
 
             Context *clCxt = image.clCxt;
-            cv::String kernelName = "normalizeKernel";
+            String kernelName = "normalizeKernel";
             std::vector< std::pair<size_t, const void *> > args;
 
             args.push_back( std::make_pair( sizeof(cl_mem), (void *)&buf.image_sqsums[0].data));
@@ -262,7 +262,7 @@ namespace cv
             CV_Assert(result.rows == image.rows - templ.rows + 1 && result.cols == image.cols - templ.cols + 1);
 
             Context *clCxt = image.clCxt;
-            cv::String kernelName = "matchTemplate_Naive_CCORR";
+            String kernelName = "matchTemplate_Naive_CCORR";
 
             std::vector< std::pair<size_t, const void *> > args;
 
@@ -296,7 +296,7 @@ namespace cv
             matchTemplate_CCORR(image, templ, result, buf);
 
             Context *clCxt = image.clCxt;
-            cv::String kernelName;
+            String kernelName;
 
             kernelName = "matchTemplate_Prepared_CCOFF";
             size_t globalThreads[3] = {result.cols, result.rows, 1};
@@ -369,7 +369,7 @@ namespace cv
             float scale = 1.f / templ.size().area();
 
             Context *clCxt = image.clCxt;
-            cv::String kernelName;
+            String kernelName;
 
             kernelName = "matchTemplate_Prepared_CCOFF_NORMED";
             size_t globalThreads[3] = {result.cols, result.rows, 1};

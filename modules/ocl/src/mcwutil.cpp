@@ -60,14 +60,14 @@ namespace cv
         }
 
         // provide additional methods for the user to interact with the command queue after a task is fired
-        static void openCLExecuteKernel_2(Context *clCxt , const char **source, cv::String kernelName, size_t globalThreads[3],
+        static void openCLExecuteKernel_2(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
                                    size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
                                    int depth, char *build_options, FLUSH_MODE finish_mode)
         {
             //construct kernel name
             //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
             //for exmaple split_C2_D2, represent the split kernel with channels =2 and dataType Depth = 2(Data type is char)
-            cv::Stringstream idxStr;
+            Stringstream idxStr;
             if(channels != -1)
                 idxStr << "_C" << channels;
             if(depth != -1)
@@ -106,14 +106,14 @@ namespace cv
             openCLSafeCall(clReleaseKernel(kernel));
         }
 
-        void openCLExecuteKernel2(Context *clCxt , const char **source, cv::String kernelName,
+        void openCLExecuteKernel2(Context *clCxt , const char **source, String kernelName,
                                   size_t globalThreads[3], size_t localThreads[3],
                                   std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, FLUSH_MODE finish_mode)
         {
             openCLExecuteKernel2(clCxt, source, kernelName, globalThreads, localThreads, args,
                                  channels, depth, NULL, finish_mode);
         }
-        void openCLExecuteKernel2(Context *clCxt , const char **source, cv::String kernelName,
+        void openCLExecuteKernel2(Context *clCxt , const char **source, String kernelName,
                                   size_t globalThreads[3], size_t localThreads[3],
                                   std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, char *build_options, FLUSH_MODE finish_mode)
 

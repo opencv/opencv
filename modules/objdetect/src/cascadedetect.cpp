@@ -852,7 +852,7 @@ CascadeClassifier::CascadeClassifier()
 {
 }
 
-CascadeClassifier::CascadeClassifier(const cv::String& filename)
+CascadeClassifier::CascadeClassifier(const String& filename)
 {
     load(filename);
 }
@@ -866,7 +866,7 @@ bool CascadeClassifier::empty() const
     return oldCascade.empty() && data.stages.empty();
 }
 
-bool CascadeClassifier::load(const cv::String& filename)
+bool CascadeClassifier::load(const String& filename)
 {
     oldCascade.release();
     data = Data();
@@ -1207,13 +1207,13 @@ bool CascadeClassifier::Data::read(const FileNode &root)
     static const float THRESHOLD_EPS = 1e-5f;
 
     // load stage params
-    cv::String stageTypeStr = (cv::String)root[CC_STAGE_TYPE];
+    String stageTypeStr = (String)root[CC_STAGE_TYPE];
     if( stageTypeStr == CC_BOOST )
         stageType = BOOST;
     else
         return false;
 
-    cv::String featureTypeStr = (cv::String)root[CC_FEATURE_TYPE];
+    String featureTypeStr = (String)root[CC_FEATURE_TYPE];
     if( featureTypeStr == CC_HAAR )
         featureType = FeatureEvaluator::HAAR;
     else if( featureTypeStr == CC_LBP )

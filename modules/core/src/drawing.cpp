@@ -1916,7 +1916,7 @@ static const int* getFontData(int fontFace)
 }
 
 
-void putText( Mat& img, const cv::String& text, Point org,
+void putText( Mat& img, const String& text, Point org,
               int fontFace, double fontScale, Scalar color,
               int thickness, int line_type, bool bottomLeftOrigin )
 
@@ -1978,7 +1978,7 @@ void putText( Mat& img, const cv::String& text, Point org,
     }
 }
 
-Size getTextSize( const cv::String& text, int fontFace, double fontScale, int thickness, int* _base_line)
+Size getTextSize( const String& text, int fontFace, double fontScale, int thickness, int* _base_line)
 {
     Size size;
     double view_x = 0;

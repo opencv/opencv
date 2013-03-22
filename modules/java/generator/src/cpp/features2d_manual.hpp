@@ -84,7 +84,7 @@ public:
     //not supported: SimpleBlob, Dense
     CV_WRAP static javaFeatureDetector* create( int detectorType )
     {
-        cv::String name;
+        String name;
         if (detectorType > DYNAMICDETECTOR)
         {
             name = "Dynamic";
@@ -146,14 +146,14 @@ public:
         return (javaFeatureDetector*)((FeatureDetector*) detector);
     }
 
-    CV_WRAP void write( const cv::String& fileName ) const
+    CV_WRAP void write( const String& fileName ) const
     {
         FileStorage fs(fileName, FileStorage::WRITE);
         ((FeatureDetector*)this)->write(fs);
         fs.release();
     }
 
-    CV_WRAP void read( const cv::String& fileName )
+    CV_WRAP void read( const String& fileName )
     {
         FileStorage fs(fileName, FileStorage::READ);
         ((FeatureDetector*)this)->read(fs.root());
@@ -208,7 +208,7 @@ public:
     //supported: FlannBased, BruteForce, BruteForce-L1, BruteForce-Hamming, BruteForce-HammingLUT
     CV_WRAP static javaDescriptorMatcher* create( int matcherType )
     {
-        cv::String name;
+        String name;
 
         switch(matcherType)
         {
@@ -240,14 +240,14 @@ public:
         return (javaDescriptorMatcher*)((DescriptorMatcher*) matcher);
     }
 
-    CV_WRAP void write( const cv::String& fileName ) const
+    CV_WRAP void write( const String& fileName ) const
     {
         FileStorage fs(fileName, FileStorage::WRITE);
         ((DescriptorMatcher*)this)->write(fs);
         fs.release();
     }
 
-    CV_WRAP void read( const cv::String& fileName )
+    CV_WRAP void read( const String& fileName )
     {
         FileStorage fs(fileName, FileStorage::READ);
         ((DescriptorMatcher*)this)->read(fs.root());
@@ -294,7 +294,7 @@ public:
     //not supported: Calonder
     CV_WRAP static javaDescriptorExtractor* create( int extractorType )
     {
-        cv::String name;
+        String name;
 
         if (extractorType > OPPONENTEXTRACTOR)
         {
@@ -332,14 +332,14 @@ public:
         return (javaDescriptorExtractor*)((DescriptorExtractor*) extractor);
     }
 
-    CV_WRAP void write( const cv::String& fileName ) const
+    CV_WRAP void write( const String& fileName ) const
     {
         FileStorage fs(fileName, FileStorage::WRITE);
         ((DescriptorExtractor*)this)->write(fs);
         fs.release();
     }
 
-    CV_WRAP void read( const cv::String& fileName )
+    CV_WRAP void read( const String& fileName )
     {
         FileStorage fs(fileName, FileStorage::READ);
         ((DescriptorExtractor*)this)->read(fs.root());
@@ -401,7 +401,7 @@ public:
     //unsupported: Vector
     CV_WRAP static javaGenericDescriptorMatcher* create( int matcherType )
     {
-        cv::String name;
+        String name;
 
         switch(matcherType)
         {
@@ -421,14 +421,14 @@ public:
         return (javaGenericDescriptorMatcher*)((GenericDescriptorMatcher*) matcher);
     }
 
-    CV_WRAP void write( const cv::String& fileName ) const
+    CV_WRAP void write( const String& fileName ) const
     {
         FileStorage fs(fileName, FileStorage::WRITE);
         ((GenericDescriptorMatcher*)this)->write(fs);
         fs.release();
     }
 
-    CV_WRAP void read( const cv::String& fileName )
+    CV_WRAP void read( const String& fileName )
     {
         FileStorage fs(fileName, FileStorage::READ);
         ((GenericDescriptorMatcher*)this)->read(fs.root());

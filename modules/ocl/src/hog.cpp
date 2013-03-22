@@ -1575,7 +1575,7 @@ void cv::ocl::device::hog::compute_hists(int nbins, int block_stride_x, int bloc
         const cv::ocl::oclMat &qangle, float sigma, cv::ocl::oclMat &block_hists)
 {
     Context *clCxt = Context::getContext();
-    cv::String kernelName = "compute_hists_kernel";
+    String kernelName = "compute_hists_kernel";
     std::vector< std::pair<size_t, const void *> > args;
 
     int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / block_stride_x;
@@ -1615,7 +1615,7 @@ void cv::ocl::device::hog::normalize_hists(int nbins, int block_stride_x, int bl
         int height, int width, cv::ocl::oclMat &block_hists, float threshold)
 {
     Context *clCxt = Context::getContext();
-    cv::String kernelName = "normalize_hists_kernel";
+    String kernelName = "normalize_hists_kernel";
     std::vector< std::pair<size_t, const void *> > args;
 
     int block_hist_size = nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y;
@@ -1645,7 +1645,7 @@ void cv::ocl::device::hog::classify_hists(int win_height, int win_width, int blo
         float threshold, cv::ocl::oclMat &labels)
 {
     Context *clCxt = Context::getContext();
-    cv::String kernelName = "classify_hists_kernel";
+    String kernelName = "classify_hists_kernel";
     std::vector< std::pair<size_t, const void *> > args;
 
     int win_block_stride_x = win_stride_x / block_stride_x;
@@ -1678,7 +1678,7 @@ void cv::ocl::device::hog::extract_descrs_by_rows(int win_height, int win_width,
         const cv::ocl::oclMat &block_hists, cv::ocl::oclMat &descriptors)
 {
     Context *clCxt = Context::getContext();
-    cv::String kernelName = "extract_descrs_by_rows_kernel";
+    String kernelName = "extract_descrs_by_rows_kernel";
     std::vector< std::pair<size_t, const void *> > args;
 
     int win_block_stride_x = win_stride_x / block_stride_x;
@@ -1709,7 +1709,7 @@ void cv::ocl::device::hog::extract_descrs_by_cols(int win_height, int win_width,
         const cv::ocl::oclMat &block_hists, cv::ocl::oclMat &descriptors)
 {
     Context *clCxt = Context::getContext();
-    cv::String kernelName = "extract_descrs_by_cols_kernel";
+    String kernelName = "extract_descrs_by_cols_kernel";
     std::vector< std::pair<size_t, const void *> > args;
 
     int win_block_stride_x = win_stride_x / block_stride_x;
@@ -1745,7 +1745,7 @@ void cv::ocl::device::hog::compute_gradients_8UC1(int height, int width, const c
         float angle_scale, cv::ocl::oclMat &grad, cv::ocl::oclMat &qangle, bool correct_gamma)
 {
     Context *clCxt = Context::getContext();
-    cv::String kernelName = "compute_gradients_8UC1_kernel";
+    String kernelName = "compute_gradients_8UC1_kernel";
     std::vector< std::pair<size_t, const void *> > args;
 
     size_t localThreads[3] = { NTHREADS, 1, 1 };
@@ -1774,7 +1774,7 @@ void cv::ocl::device::hog::compute_gradients_8UC4(int height, int width, const c
         float angle_scale, cv::ocl::oclMat &grad, cv::ocl::oclMat &qangle, bool correct_gamma)
 {
     Context *clCxt = Context::getContext();
-    cv::String kernelName = "compute_gradients_8UC4_kernel";
+    String kernelName = "compute_gradients_8UC4_kernel";
     std::vector< std::pair<size_t, const void *> > args;
 
     size_t localThreads[3] = { NTHREADS, 1, 1 };
@@ -1805,7 +1805,7 @@ void cv::ocl::device::hog::resize( const oclMat &src, oclMat &dst, const Size sz
     CV_Assert( (src.channels() == dst.channels()) );
     Context *clCxt = Context::getContext();
 
-    cv::String kernelName = (src.type() == CV_8UC1) ? "resize_8UC1_kernel" : "resize_8UC4_kernel";
+    String kernelName = (src.type() == CV_8UC1) ? "resize_8UC1_kernel" : "resize_8UC4_kernel";
     size_t blkSizeX = 16, blkSizeY = 16;
     size_t glbSizeX = sz.width % blkSizeX == 0 ? sz.width : (sz.width / blkSizeX + 1) * blkSizeX;
     size_t glbSizeY = sz.height % blkSizeY == 0 ? sz.height : (sz.height / blkSizeY + 1) * blkSizeY;

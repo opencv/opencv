@@ -113,7 +113,7 @@ namespace cv
 
 Exception::Exception() { code = 0; line = 0; }
 
-Exception::Exception(int _code, const cv::String& _err, const cv::String& _func, const cv::String& _file, int _line)
+Exception::Exception(int _code, const String& _err, const String& _func, const String& _file, int _line)
 : code(_code), err(_err), func(_func), file(_file), line(_line)
 {
     formatMessage();
@@ -340,27 +340,27 @@ int64 getCPUTickCount(void)
 
 #endif
 
-const cv::String& getBuildInformation()
+const String& getBuildInformation()
 {
-    static cv::String build_info =
+    static String build_info =
 #include "version_string.inc"
     ;
     return build_info;
 }
 
-cv::String format( const char* fmt, ... )
+String format( const char* fmt, ... )
 {
     char buf[1 << 16];
     va_list args;
     va_start( args, fmt );
     vsprintf( buf, fmt, args );
-    return cv::String(buf);
+    return String(buf);
 }
 
-cv::String tempfile( const char* suffix )
+String tempfile( const char* suffix )
 {
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
-    cv::String fname;
+    String fname;
 
 #if defined WIN32 || defined _WIN32
     char temp_dir2[MAX_PATH + 1] = { 0 };
@@ -372,7 +372,7 @@ cv::String tempfile( const char* suffix )
         temp_dir = temp_dir2;
     }
     if(0 == ::GetTempFileNameA(temp_dir, "ocv", 0, temp_file))
-        return cv::String();
+        return String();
 
     DeleteFileA(temp_file);
 
@@ -397,7 +397,7 @@ cv::String tempfile( const char* suffix )
     }
 
     const int fd = mkstemp((char*)fname.c_str());
-    if (fd == -1) return cv::String();
+    if (fd == -1) return String();
 
     close(fd);
     remove(fname.c_str());

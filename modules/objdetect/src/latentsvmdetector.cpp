@@ -158,7 +158,7 @@ LatentSvmDetector::ObjectDetection::ObjectDetection( const Rect& _rect, float _s
 LatentSvmDetector::LatentSvmDetector()
 {}
 
-LatentSvmDetector::LatentSvmDetector( const std::vector<cv::String>& filenames, const std::vector<cv::String>& _classNames )
+LatentSvmDetector::LatentSvmDetector( const std::vector<String>& filenames, const std::vector<String>& _classNames )
 {
     load( filenames, _classNames );
 }
@@ -182,7 +182,7 @@ bool LatentSvmDetector::empty() const
     return detectors.empty();
 }
 
-const std::vector<cv::String>& LatentSvmDetector::getClassNames() const
+const std::vector<String>& LatentSvmDetector::getClassNames() const
 {
     return classNames;
 }
@@ -192,13 +192,13 @@ size_t LatentSvmDetector::getClassCount() const
     return classNames.size();
 }
 
-static cv::String extractModelName( const cv::String& filename )
+static String extractModelName( const String& filename )
 {
     size_t startPos = filename.rfind('/');
-    if( startPos == cv::String::npos )
+    if( startPos == String::npos )
         startPos = filename.rfind('\\');
 
-    if( startPos == cv::String::npos )
+    if( startPos == String::npos )
         startPos = 0;
     else
         startPos++;
@@ -210,7 +210,7 @@ static cv::String extractModelName( const cv::String& filename )
     return filename.substr(startPos, substrLength);
 }
 
-bool LatentSvmDetector::load( const std::vector<cv::String>& filenames, const std::vector<cv::String>& _classNames )
+bool LatentSvmDetector::load( const std::vector<String>& filenames, const std::vector<String>& _classNames )
 {
     clear();
 
@@ -218,7 +218,7 @@ bool LatentSvmDetector::load( const std::vector<cv::String>& filenames, const st
 
     for( size_t i = 0; i < filenames.size(); i++ )
     {
-        const cv::String filename = filenames[i];
+        const String filename = filenames[i];
         if( filename.length() < 5 || filename.substr(filename.length()-4, 4) != ".xml" )
             continue;
 

@@ -617,7 +617,7 @@ void LDetector::read(const FileNode& objnode)
     clusteringDistance = (int)objnode["clustering-distance"];
 }
 
-void LDetector::write(FileStorage& fs, const cv::String& name) const
+void LDetector::write(FileStorage& fs, const String& name) const
 {
     WriteStructContext ws(fs, name, CV_NODE_MAP);
 
@@ -707,7 +707,7 @@ FernClassifier::FernClassifier(const std::vector<std::vector<Point2f> >& points,
 }
 
 
-void FernClassifier::write(FileStorage& fs, const cv::String& objname) const
+void FernClassifier::write(FileStorage& fs, const String& objname) const
 {
     WriteStructContext ws(fs, objname, CV_NODE_MAP);
 
@@ -1228,7 +1228,7 @@ nstructs(_nstructs), structSize(_structSize), nviews(_nviews),
 compressionMethod(_compressionMethod), patchGenerator(_patchGenerator)
 {}
 
-FernDescriptorMatcher::Params::Params( const cv::String& _filename )
+FernDescriptorMatcher::Params::Params( const String& _filename )
 {
     filename = _filename;
 }
@@ -1476,7 +1476,7 @@ void PlanarObjectDetector::read(const FileNode& node)
 }
 
 
-void PlanarObjectDetector::write(FileStorage& fs, const cv::String& objname) const
+void PlanarObjectDetector::write(FileStorage& fs, const String& objname) const
 {
     WriteStructContext ws(fs, objname, CV_NODE_MAP);
 

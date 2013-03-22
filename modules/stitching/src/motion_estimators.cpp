@@ -653,7 +653,7 @@ void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
 
 //////////////////////////////////////////////////////////////////////////////
 
-cv::String matchesGraphAsString(std::vector<cv::String> &pathes, std::vector<MatchesInfo> &pairwise_matches,
+String matchesGraphAsString(std::vector<String> &pathes, std::vector<MatchesInfo> &pairwise_matches,
                                 float conf_threshold)
 {
     std::stringstream str;
@@ -685,14 +685,14 @@ cv::String matchesGraphAsString(std::vector<cv::String> &pathes, std::vector<Mat
         std::pair<int,int> edge = *itr;
         if (span_tree_edges.find(edge) != span_tree_edges.end())
         {
-            cv::String name_src = pathes[edge.first];
+            String name_src = pathes[edge.first];
             size_t prefix_len = name_src.find_last_of("/\\");
-            if (prefix_len != cv::String::npos) prefix_len++; else prefix_len = 0;
+            if (prefix_len != String::npos) prefix_len++; else prefix_len = 0;
             name_src = name_src.substr(prefix_len, name_src.size() - prefix_len);
 
-            cv::String name_dst = pathes[edge.second];
+            String name_dst = pathes[edge.second];
             prefix_len = name_dst.find_last_of("/\\");
-            if (prefix_len != cv::String::npos) prefix_len++; else prefix_len = 0;
+            if (prefix_len != String::npos) prefix_len++; else prefix_len = 0;
             name_dst = name_dst.substr(prefix_len, name_dst.size() - prefix_len);
 
             int pos = edge.first*num_images + edge.second;
@@ -707,9 +707,9 @@ cv::String matchesGraphAsString(std::vector<cv::String> &pathes, std::vector<Mat
     {
         if (comps.size[comps.findSetByElem((int)i)] == 1)
         {
-            cv::String name = pathes[i];
+            String name = pathes[i];
             size_t prefix_len = name.find_last_of("/\\");
-            if (prefix_len != cv::String::npos) prefix_len++; else prefix_len = 0;
+            if (prefix_len != String::npos) prefix_len++; else prefix_len = 0;
             name = name.substr(prefix_len, name.size() - prefix_len);
             str << "\"" << name.c_str() << "\";\n";
         }

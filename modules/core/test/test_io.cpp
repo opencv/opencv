@@ -459,7 +459,7 @@ TEST(Core_globbing, accurasy)
     std::string patternLena    = cvtest::TS::ptr()->get_data_path() + "lena*.*";
     std::string patternLenaPng = cvtest::TS::ptr()->get_data_path() + "lena.png";
 
-    std::vector<cv::String> lenas, pngLenas;
+    std::vector<String> lenas, pngLenas;
     cv::glob(patternLena, lenas, true);
     cv::glob(patternLenaPng, pngLenas, true);
 

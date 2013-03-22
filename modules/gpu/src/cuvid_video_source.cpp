@@ -3,7 +3,7 @@
 
 #if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
 
-cv::gpu::detail::CuvidVideoSource::CuvidVideoSource(const cv::String& fname)
+cv::gpu::detail::CuvidVideoSource::CuvidVideoSource(const String& fname)
 {
     CUVIDSOURCEPARAMS params;
     std::memset(&params, 0, sizeof(CUVIDSOURCEPARAMS));

@@ -82,7 +82,7 @@ static JasperInitializer initialize_jasper;
 
 Jpeg2KDecoder::Jpeg2KDecoder()
 {
-    m_signature = '\0' + cv::String() + '\0' + cv::String() + '\0' + cv::String("\x0cjP  \r\n\x87\n");
+    m_signature = '\0' + String() + '\0' + String() + '\0' + String("\x0cjP  \r\n\x87\n");
     m_stream = 0;
     m_image = 0;
 }

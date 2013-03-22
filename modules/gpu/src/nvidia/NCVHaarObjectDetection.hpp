@@ -438,18 +438,18 @@ NCV_EXPORTS NCVStatus ncvGrowDetectionsVector_host(NCVVector<Ncv32u> &pixelMask,
                                                    Ncv32f curScale);
 
 
-NCV_EXPORTS NCVStatus ncvHaarGetClassifierSize(const cv::String &filename, Ncv32u &numStages,
+NCV_EXPORTS NCVStatus ncvHaarGetClassifierSize(const String &filename, Ncv32u &numStages,
                                                Ncv32u &numNodes, Ncv32u &numFeatures);
 
 
-NCV_EXPORTS NCVStatus ncvHaarLoadFromFile_host(const cv::String &filename,
+NCV_EXPORTS NCVStatus ncvHaarLoadFromFile_host(const String &filename,
                                                HaarClassifierCascadeDescriptor &haar,
                                                NCVVector<HaarStage64> &h_HaarStages,
                                                NCVVector<HaarClassifierNode128> &h_HaarNodes,
                                                NCVVector<HaarFeature64> &h_HaarFeatures);
 
 
-NCV_EXPORTS NCVStatus ncvHaarStoreNVBIN_host(const cv::String &filename,
+NCV_EXPORTS NCVStatus ncvHaarStoreNVBIN_host(const String &filename,
                                              HaarClassifierCascadeDescriptor haar,
                                              NCVVector<HaarStage64> &h_HaarStages,
                                              NCVVector<HaarClassifierNode128> &h_HaarNodes,

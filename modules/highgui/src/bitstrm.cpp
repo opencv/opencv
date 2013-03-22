@@ -110,7 +110,7 @@ void  RBaseStream::readBlock()
 }
 
 
-bool  RBaseStream::open( const cv::String& filename )
+bool  RBaseStream::open( const String& filename )
 {
     close();
     allocate();
@@ -388,7 +388,7 @@ void  WBaseStream::writeBlock()
 }
 
 
-bool  WBaseStream::open( const cv::String& filename )
+bool  WBaseStream::open( const String& filename )
 {
     close();
     allocate();

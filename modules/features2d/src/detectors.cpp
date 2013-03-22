@@ -86,7 +86,7 @@ void FeatureDetector::removeInvalidPoints( const Mat& mask, std::vector<KeyPoint
     KeyPointsFilter::runByPixelsMask( keypoints, mask );
 }
 
-Ptr<FeatureDetector> FeatureDetector::create( const cv::String& detectorType )
+Ptr<FeatureDetector> FeatureDetector::create( const String& detectorType )
 {
     if( detectorType.find("Grid") == 0 )
     {

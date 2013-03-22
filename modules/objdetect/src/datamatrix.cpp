@@ -489,7 +489,7 @@ namespace cv
 {
 
 void findDataMatrix(InputArray _image,
-                    std::vector<cv::String>& codes,
+                    std::vector<String>& codes,
                     OutputArray _corners,
                     OutputArrayOfArrays _dmtx)
 {
@@ -513,7 +513,7 @@ void findDataMatrix(InputArray _image,
     for( i = 0; i < n; i++ )
     {
         CvDataMatrixCode& rc_i = rc[i];
-        codes[i] = cv::String(rc_i.msg);
+        codes[i] = String(rc_i.msg);
 
         if( corners.data )
         {
@@ -535,7 +535,7 @@ void findDataMatrix(InputArray _image,
 }
 
 void drawDataMatrixCodes(InputOutputArray _image,
-                         const std::vector<cv::String>& codes,
+                         const std::vector<String>& codes,
                          InputArray _corners)
 {
     Mat image = _image.getMat();

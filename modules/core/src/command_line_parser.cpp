@@ -6,9 +6,9 @@ namespace cv
 struct CommandLineParserParams
 {
 public:
-    cv::String help_message;
-    cv::String def_value;
-    std::vector<cv::String> keys;
+    String help_message;
+    String def_value;
+    std::vector<String> keys;
     int number;
 };
 
@@ -16,27 +16,27 @@ public:
 struct CommandLineParser::Impl
 {
     bool error;
-    cv::String error_message;
-    cv::String about_message;
+    String error_message;
+    String about_message;
 
-    cv::String path_to_app;
-    cv::String app_name;
+    String path_to_app;
+    String app_name;
 
     std::vector<CommandLineParserParams> data;
 
-    std::vector<cv::String> split_range_string(const cv::String& str, char fs, char ss) const;
-    std::vector<cv::String> split_string(const cv::String& str, char symbol = ' ', bool create_empty_item = false) const;
-    cv::String cat_string(const cv::String& str) const;
+    std::vector<String> split_range_string(const String& str, char fs, char ss) const;
+    std::vector<String> split_string(const String& str, char symbol = ' ', bool create_empty_item = false) const;
+    String cat_string(const String& str) const;
 
-    void apply_params(const cv::String& key, const cv::String& value);
-    void apply_params(int i, cv::String value);
+    void apply_params(const String& key, const String& value);
+    void apply_params(int i, String value);
 
     void sort_params();
     int refcount;
 };
 
 
-static cv::String get_type_name(int type)
+static String get_type_name(int type)
 {
     if( type == Param::INT )
         return "int";
@@ -53,7 +53,7 @@ static cv::String get_type_name(int type)
     return "unknown";
 }
 
-static void from_str(const cv::String& str, int type, void* dst)
+static void from_str(const String& str, int type, void* dst)
 {
     std::stringstream ss(str.c_str());
     if( type == Param::INT )
@@ -67,20 +67,20 @@ static void from_str(const cv::String& str, int type, void* dst)
     else if( type == Param::REAL )
         ss >> *(double*)dst;
     else if( type == Param::STRING )
-        *(cv::String*)dst = str;
+        *(String*)dst = str;
     else
         throw cv::Exception(CV_StsBadArg, "unknown/unsupported parameter type", "", __FILE__, __LINE__);
 
     if (ss.fail())
     {
-        cv::String err_msg = "can not convert: [" + str +
+        String err_msg = "can not convert: [" + str +
         + "] to [" + get_type_name(type) + "]";
 
         throw cv::Exception(CV_StsBadArg, err_msg, "", __FILE__, __LINE__);
     }
 }
 
-void CommandLineParser::getByName(const cv::String& name, bool space_delete, int type, void* dst) const
+void CommandLineParser::getByName(const String& name, bool space_delete, int type, void* dst) const
 {
     try
     {
@@ -90,7 +90,7 @@ void CommandLineParser::getByName(const cv::String& name, bool space_delete, int
             {
                 if (name.compare(impl->data[i].keys[j]) == 0)
                 {
-                    cv::String v = impl->data[i].def_value;
+                    String v = impl->data[i].def_value;
                     if (space_delete)
                         v = impl->cat_string(v);
                     from_str(v, type, dst);
@@ -104,7 +104,7 @@ void CommandLineParser::getByName(const cv::String& name, bool space_delete, int
     catch (std::exception& e)
     {
         impl->error = true;
-        impl->error_message = impl->error_message + "Exception: " + cv::String(e.what()) + "\n";
+        impl->error_message = impl->error_message + "Exception: " + String(e.what()) + "\n";
     }
 }
 
@@ -117,7 +117,7 @@ void CommandLineParser::getByIndex(int index, bool space_delete, int type, void*
         {
             if (impl->data[i].number == index)
             {
-                cv::String v = impl->data[i].def_value;
+                String v = impl->data[i].def_value;
                 if (space_delete == true) v = impl->cat_string(v);
                 from_str(v, type, dst);
                 return;
@@ -129,7 +129,7 @@ void CommandLineParser::getByIndex(int index, bool space_delete, int type, void*
     catch(std::exception & e)
     {
         impl->error = true;
-        impl->error_message = impl->error_message + "Exception: " + cv::String(e.what()) + "\n";
+        impl->error_message = impl->error_message + "Exception: " + String(e.what()) + "\n";
     }
 }
 
@@ -149,34 +149,34 @@ static bool cmp_params(const CommandLineParserParams & p1, const CommandLinePars
     return true;
 }
 
-CommandLineParser::CommandLineParser(int argc, const char* const argv[], const cv::String& keys)
+CommandLineParser::CommandLineParser(int argc, const char* const argv[], const String& keys)
 {
     impl = new Impl;
     impl->refcount = 1;
 
     // path to application
-    size_t pos_s = cv::String(argv[0]).find_last_of("/\\");
-    if (pos_s == cv::String::npos)
+    size_t pos_s = String(argv[0]).find_last_of("/\\");
+    if (pos_s == String::npos)
     {
         impl->path_to_app = "";
-        impl->app_name = cv::String(argv[0]);
+        impl->app_name = String(argv[0]);
     }
     else
     {
-        impl->path_to_app = cv::String(argv[0]).substr(0, pos_s);
-        impl->app_name = cv::String(argv[0]).substr(pos_s + 1, cv::String(argv[0]).length() - pos_s);
+        impl->path_to_app = String(argv[0]).substr(0, pos_s);
+        impl->app_name = String(argv[0]).substr(pos_s + 1, String(argv[0]).length() - pos_s);
     }
 
     impl->error = false;
     impl->error_message = "";
 
     // parse keys
-    std::vector<cv::String> k = impl->split_range_string(keys, '{', '}');
+    std::vector<String> k = impl->split_range_string(keys, '{', '}');
 
     int jj = 0;
     for (size_t i = 0; i < k.size(); i++)
     {
-        std::vector<cv::String> l = impl->split_string(k[i], '|', true);
+        std::vector<String> l = impl->split_string(k[i], '|', true);
         CommandLineParserParams p;
         p.keys = impl->split_string(l[0]);
         p.def_value = l[1];
@@ -203,11 +203,11 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
     jj = 0;
     for (int i = 1; i < argc; i++)
     {
-        cv::String s = cv::String(argv[i]);
+        String s = String(argv[i]);
 
-        if (s.find('=') != cv::String::npos && s.find('=') < s.length())
+        if (s.find('=') != String::npos && s.find('=') < s.length())
         {
-            std::vector<cv::String> k_v = impl->split_string(s, '=', true);
+            std::vector<String> k_v = impl->split_string(s, '=', true);
             for (int h = 0; h < 2; h++)
             {
                 if (k_v[0][0] == '-')
@@ -253,12 +253,12 @@ CommandLineParser& CommandLineParser::operator = (const CommandLineParser& parse
     return *this;
 }
 
-void CommandLineParser::about(const cv::String& message)
+void CommandLineParser::about(const String& message)
 {
     impl->about_message = message;
 }
 
-void CommandLineParser::Impl::apply_params(const cv::String& key, const cv::String& value)
+void CommandLineParser::Impl::apply_params(const String& key, const String& value)
 {
     for (size_t i = 0; i < data.size(); i++)
     {
@@ -273,7 +273,7 @@ void CommandLineParser::Impl::apply_params(const cv::String& key, const cv::Stri
     }
 }
 
-void CommandLineParser::Impl::apply_params(int i, cv::String value)
+void CommandLineParser::Impl::apply_params(int i, String value)
 {
     for (size_t j = 0; j < data.size(); j++)
     {
@@ -295,28 +295,28 @@ void CommandLineParser::Impl::sort_params()
     std::sort (data.begin(), data.end(), cmp_params);
 }
 
-cv::String CommandLineParser::Impl::cat_string(const cv::String& str) const
+String CommandLineParser::Impl::cat_string(const String& str) const
 {
     int left = 0, right = (int)str.length();
     while( left <= right && str[left] == ' ' )
         left++;
     while( right > left && str[right-1] == ' ' )
         right--;
-    return left >= right ? cv::String("") : str.substr(left, right-left);
+    return left >= right ? String("") : str.substr(left, right-left);
 }
 
-cv::String CommandLineParser::getPathToApplication() const
+String CommandLineParser::getPathToApplication() const
 {
     return impl->path_to_app;
 }
 
-bool CommandLineParser::has(const cv::String& name) const
+bool CommandLineParser::has(const String& name) const
 {
     for (size_t i = 0; i < impl->data.size(); i++)
     {
         for (size_t j = 0; j < impl->data[i].keys.size(); j++)
         {
-            if (name.compare(impl->data[i].keys[j]) == 0 && cv::String("true").compare(impl->data[i].def_value) == 0)
+            if (name.compare(impl->data[i].keys[j]) == 0 && String("true").compare(impl->data[i].def_value) == 0)
             {
                 return true;
             }
@@ -350,7 +350,7 @@ void CommandLineParser::printMessage() const
     {
         if (impl->data[i].number > -1)
         {
-            cv::String name = impl->data[i].keys[0].substr(1, impl->data[i].keys[0].length() - 1);
+            String name = impl->data[i].keys[0].substr(1, impl->data[i].keys[0].length() - 1);
             printf("%s ", name.c_str());
         }
     }
@@ -364,7 +364,7 @@ void CommandLineParser::printMessage() const
             printf("\t");
             for (size_t j = 0; j < impl->data[i].keys.size(); j++)
             {
-                cv::String k = impl->data[i].keys[j];
+                String k = impl->data[i].keys[j];
                 if (k.length() > 1)
                 {
                     printf("--");
@@ -380,7 +380,7 @@ void CommandLineParser::printMessage() const
                     printf(", ");
                 }
             }
-            cv::String dv = impl->cat_string(impl->data[i].def_value);
+            String dv = impl->cat_string(impl->data[i].def_value);
             if (dv.compare("") != 0)
             {
                 printf(" (value:%s)", dv.c_str());
@@ -395,12 +395,12 @@ void CommandLineParser::printMessage() const
         if (impl->data[i].number != -1)
         {
             printf("\t");
-            cv::String k = impl->data[i].keys[0];
+            String k = impl->data[i].keys[0];
             k = k.substr(1, k.length() - 1);
 
             printf("%s", k.c_str());
 
-            cv::String dv = impl->cat_string(impl->data[i].def_value);
+            String dv = impl->cat_string(impl->data[i].def_value);
             if (dv.compare("") != 0)
             {
                 printf(" (value:%s)", dv.c_str());
@@ -410,11 +410,11 @@ void CommandLineParser::printMessage() const
     }
 }
 
-std::vector<cv::String> CommandLineParser::Impl::split_range_string(const cv::String& _str, char fs, char ss) const
+std::vector<String> CommandLineParser::Impl::split_range_string(const String& _str, char fs, char ss) const
 {
-    cv::String str = _str;
-    std::vector<cv::String> vec;
-    cv::String word = "";
+    String str = _str;
+    std::vector<String> vec;
+    String word = "";
     bool begin = false;
 
     while (!str.empty())
@@ -424,13 +424,13 @@ std::vector<cv::String> CommandLineParser::Impl::split_range_string(const cv::St
             if (begin == true)
             {
                 throw cv::Exception(CV_StsParseError,
-                         cv::String("error in split_range_string(")
+                         String("error in split_range_string(")
                          + str
-                         + cv::String(", ")
-                         + cv::String(1, fs)
-                         + cv::String(", ")
-                         + cv::String(1, ss)
-                         + cv::String(")"),
+                         + String(", ")
+                         + String(1, fs)
+                         + String(", ")
+                         + String(1, ss)
+                         + String(")"),
                          "", __FILE__, __LINE__
                          );
             }
@@ -444,13 +444,13 @@ std::vector<cv::String> CommandLineParser::Impl::split_range_string(const cv::St
             if (begin == false)
             {
                 throw cv::Exception(CV_StsParseError,
-                         cv::String("error in split_range_string(")
+                         String("error in split_range_string(")
                          + str
-                         + cv::String(", ")
-                         + cv::String(1, fs)
-                         + cv::String(", ")
-                         + cv::String(1, ss)
-                         + cv::String(")"),
+                         + String(", ")
+                         + String(1, fs)
+                         + String(", ")
+                         + String(1, ss)
+                         + String(")"),
                          "", __FILE__, __LINE__
                          );
             }
@@ -468,13 +468,13 @@ std::vector<cv::String> CommandLineParser::Impl::split_range_string(const cv::St
     if (begin == true)
     {
         throw cv::Exception(CV_StsParseError,
-                 cv::String("error in split_range_string(")
+                 String("error in split_range_string(")
                  + str
-                 + cv::String(", ")
-                 + cv::String(1, fs)
-                 + cv::String(", ")
-                 + cv::String(1, ss)
-                 + cv::String(")"),
+                 + String(", ")
+                 + String(1, fs)
+                 + String(", ")
+                 + String(1, ss)
+                 + String(")"),
                  "", __FILE__, __LINE__
                 );
     }
@@ -482,11 +482,11 @@ std::vector<cv::String> CommandLineParser::Impl::split_range_string(const cv::St
     return vec;
 }
 
-std::vector<cv::String> CommandLineParser::Impl::split_string(const cv::String& _str, char symbol, bool create_empty_item) const
+std::vector<String> CommandLineParser::Impl::split_string(const String& _str, char symbol, bool create_empty_item) const
 {
-    cv::String str = _str;
-    std::vector<cv::String> vec;
-    cv::String word = "";
+    String str = _str;
+    std::vector<String> vec;
+    String word = "";
 
     while (!str.empty())
     {

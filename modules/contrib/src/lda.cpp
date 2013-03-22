@@ -42,7 +42,7 @@ static Mat argsort(InputArray _src, bool ascending=true)
 {
     Mat src = _src.getMat();
     if (src.rows != 1 && src.cols != 1) {
-        cv::String error_message = "Wrong shape of input matrix! Expected a matrix with one row or column.";
+        String error_message = "Wrong shape of input matrix! Expected a matrix with one row or column.";
         CV_Error(CV_StsBadArg, error_message);
     }
     int flags = CV_SORT_EVERY_ROW+(ascending ? CV_SORT_ASCENDING : CV_SORT_DESCENDING);
@@ -54,7 +54,7 @@ static Mat argsort(InputArray _src, bool ascending=true)
 static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double beta=0) {
     // make sure the input data is a vector of matrices or vector of vector
     if(src.kind() != _InputArray::STD_VECTOR_MAT && src.kind() != _InputArray::STD_VECTOR_VECTOR) {
-        cv::String error_message = "The data is expected as InputArray::STD_VECTOR_MAT (a std::vector<Mat>) or _InputArray::STD_VECTOR_VECTOR (a std::vector< std::vector<...> >).";
+        String error_message = "The data is expected as InputArray::STD_VECTOR_MAT (a std::vector<Mat>) or _InputArray::STD_VECTOR_VECTOR (a std::vector< std::vector<...> >).";
         CV_Error(CV_StsBadArg, error_message);
     }
     // number of samples
@@ -70,7 +70,7 @@ static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double
     for(int i = 0; i < (int)n; i++) {
         // make sure data can be reshaped, throw exception if not!
         if(src.getMat(i).total() != d) {
-            cv::String error_message = format("Wrong number of elements in matrix #%d! Expected %d was %d.", i, (int)d, (int)src.getMat(i).total());
+            String error_message = format("Wrong number of elements in matrix #%d! Expected %d was %d.", i, (int)d, (int)src.getMat(i).total());
             CV_Error(CV_StsBadArg, error_message);
         }
         // get a hold of the current row
@@ -178,12 +178,12 @@ Mat subspaceProject(InputArray _W, InputArray _mean, InputArray _src) {
     int d = src.cols;
     // make sure the data has the correct shape
     if(W.rows != d) {
-        cv::String error_message = format("Wrong shapes for given matrices. Was size(src) = (%d,%d), size(W) = (%d,%d).", src.rows, src.cols, W.rows, W.cols);
+        String error_message = format("Wrong shapes for given matrices. Was size(src) = (%d,%d), size(W) = (%d,%d).", src.rows, src.cols, W.rows, W.cols);
         CV_Error(CV_StsBadArg, error_message);
     }
     // make sure mean is correct if not empty
     if(!mean.empty() && (mean.total() != (size_t) d)) {
-        cv::String error_message = format("Wrong mean shape for the given data matrix. Expected %d, but was %d.", d, mean.total());
+        String error_message = format("Wrong mean shape for the given data matrix. Expected %d, but was %d.", d, mean.total());
         CV_Error(CV_StsBadArg, error_message);
     }
     // create temporary matrices
@@ -216,12 +216,12 @@ Mat subspaceReconstruct(InputArray _W, InputArray _mean, InputArray _src)
     int d = src.cols;
     // make sure the data has the correct shape
     if(W.cols != d) {
-        cv::String error_message = format("Wrong shapes for given matrices. Was size(src) = (%d,%d), size(W) = (%d,%d).", src.rows, src.cols, W.rows, W.cols);
+        String error_message = format("Wrong shapes for given matrices. Was size(src) = (%d,%d), size(W) = (%d,%d).", src.rows, src.cols, W.rows, W.cols);
         CV_Error(CV_StsBadArg, error_message);
     }
     // make sure mean is correct if not empty
     if(!mean.empty() && (mean.total() != (size_t) W.rows)) {
-        cv::String error_message = format("Wrong mean shape for the given eigenvector matrix. Expected %d, but was %d.", W.cols, mean.total());
+        String error_message = format("Wrong mean shape for the given eigenvector matrix. Expected %d, but was %d.", W.cols, mean.total());
         CV_Error(CV_StsBadArg, error_message);
     }
     // initalize temporary matrices
@@ -936,7 +936,7 @@ public:
 //------------------------------------------------------------------------------
 // Linear Discriminant Analysis implementation
 //------------------------------------------------------------------------------
-void LDA::save(const cv::String& filename) const {
+void LDA::save(const String& filename) const {
     FileStorage fs(filename, FileStorage::WRITE);
     if (!fs.isOpened()) {
         CV_Error(CV_StsError, "File can't be opened for writing!");
@@ -946,7 +946,7 @@ void LDA::save(const cv::String& filename) const {
 }
 
 // Deserializes this object from a given filename.
-void LDA::load(const cv::String& filename) {
+void LDA::load(const String& filename) {
     FileStorage fs(filename, FileStorage::READ);
     if (!fs.isOpened())
        CV_Error(CV_StsError, "File can't be opened for writing!");
@@ -1001,12 +1001,12 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     // we can't do a LDA on one class, what do you
     // want to separate from each other then?
     if(C == 1) {
-        cv::String error_message = "At least two classes are needed to perform a LDA. Reason: Only one class was given!";
+        String error_message = "At least two classes are needed to perform a LDA. Reason: Only one class was given!";
         CV_Error(CV_StsBadArg, error_message);
     }
     // throw error if less labels, than samples
     if (labels.size() != static_cast<size_t>(N)) {
-        cv::String error_message = format("The number of samples must equal the number of labels. Given %d labels, %d samples. ", labels.size(), N);
+        String error_message = format("The number of samples must equal the number of labels. Given %d labels, %d samples. ", labels.size(), N);
         CV_Error(CV_StsBadArg, error_message);
     }
     // warn if within-classes scatter matrix becomes singular
@@ -1089,7 +1089,7 @@ void LDA::compute(InputArrayOfArrays _src, InputArray _lbls) {
         lda(_src.getMat(), _lbls);
         break;
     default:
-        cv::String error_message= format("InputArray Datatype %d is not supported.", _src.kind());
+        String error_message= format("InputArray Datatype %d is not supported.", _src.kind());
         CV_Error(CV_StsBadArg, error_message);
         break;
     }

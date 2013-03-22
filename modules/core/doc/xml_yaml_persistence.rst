@@ -113,7 +113,7 @@ Here is how to read the file created by the code sample above: ::
     // first method: use (type) operator on FileNode.
     int frameCount = (int)fs2["frameCount"];
 
-    cv::String date;
+    String date;
     // second method: use FileNode::operator >>
     fs2["calibrationDate"] >> date;
 
@@ -548,11 +548,11 @@ Returns the node content as double.
     :returns: The node content as double.
 
 
-FileNode::operator cv::String
+FileNode::operator String
 ------------------------------
 Returns the node content as text string.
 
-.. ocv:function:: FileNode::operator cv::String() const
+.. ocv:function:: FileNode::operator String() const
 
     :returns: The node content as a text string.
 

@@ -15,8 +15,8 @@
                 image = NSAddImage("/System/Library/Frameworks/OpenGL.framework/Versions/Current/OpenGL", NSADDIMAGE_OPTION_RETURN_ON_ERROR);
 
             // prepend a '_' for the Unix C symbol mangling convention
-            cv::String symbolName = "_";
-            symbolName += cv::String(name);
+            String symbolName = "_";
+            symbolName += String(name);
 
             NSSymbol symbol = image ? NSLookupSymbolInImage(image, &symbolName[0], NSLOOKUPSYMBOLINIMAGE_OPTION_BIND | NSLOOKUPSYMBOLINIMAGE_OPTION_RETURN_ON_ERROR) : 0;
 

@@ -59,7 +59,7 @@ namespace {
 class VideoFileSourceImpl : public IFrameSource
 {
 public:
-    VideoFileSourceImpl(const cv::String &path, bool volatileFrame)
+    VideoFileSourceImpl(const String &path, bool volatileFrame)
         : path_(path), volatileFrame_(volatileFrame) { reset(); }
 
     virtual void reset()
@@ -96,7 +96,7 @@ public:
 #endif
 
 private:
-    cv::String path_;
+    String path_;
     bool volatileFrame_;
 #ifdef HAVE_OPENCV_HIGHGUI
     VideoCapture vc;
@@ -105,7 +105,7 @@ private:
 
 }//namespace
 
-VideoFileSource::VideoFileSource(const cv::String &path, bool volatileFrame)
+VideoFileSource::VideoFileSource(const String &path, bool volatileFrame)
     : impl(new VideoFileSourceImpl(path, volatileFrame)) {}
 
 void VideoFileSource::reset() { impl->reset(); }

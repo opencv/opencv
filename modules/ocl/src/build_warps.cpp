@@ -83,7 +83,7 @@ void cv::ocl::buildWarpPlaneMaps(Size /*src_size*/, Rect dst_roi, const Mat &K, 
     int tl_v = dst_roi.tl().y;
 
     Context *clCxt = Context::getContext();
-    cv::String kernelName = "buildWarpPlaneMaps";
+    String kernelName = "buildWarpPlaneMaps";
     std::vector< std::pair<size_t, const void *> > args;
 
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&map_x.data));
@@ -123,7 +123,7 @@ void cv::ocl::buildWarpCylindricalMaps(Size /*src_size*/, Rect dst_roi, const Ma
     int tl_v = dst_roi.tl().y;
 
     Context *clCxt = Context::getContext();
-    cv::String kernelName = "buildWarpCylindricalMaps";
+    String kernelName = "buildWarpCylindricalMaps";
     std::vector< std::pair<size_t, const void *> > args;
 
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&map_x.data));
@@ -162,7 +162,7 @@ void cv::ocl::buildWarpSphericalMaps(Size /*src_size*/, Rect dst_roi, const Mat 
     int tl_v = dst_roi.tl().y;
 
     Context *clCxt = Context::getContext();
-    cv::String kernelName = "buildWarpSphericalMaps";
+    String kernelName = "buildWarpSphericalMaps";
     std::vector< std::pair<size_t, const void *> > args;
 
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&map_x.data));
@@ -205,7 +205,7 @@ void cv::ocl::buildWarpAffineMaps(const Mat &M, bool inverse, Size dsize, oclMat
     oclMat coeffsOclMat(coeffsMat.reshape(1, 1));
 
     Context *clCxt = Context::getContext();
-    cv::String kernelName = "buildWarpAffineMaps";
+    String kernelName = "buildWarpAffineMaps";
     std::vector< std::pair<size_t, const void *> > args;
 
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&xmap.data));
@@ -244,7 +244,7 @@ void cv::ocl::buildWarpPerspectiveMaps(const Mat &M, bool inverse, Size dsize, o
     oclMat coeffsOclMat(coeffsMat.reshape(1, 1));
 
     Context *clCxt = Context::getContext();
-    cv::String kernelName = "buildWarpPerspectiveMaps";
+    String kernelName = "buildWarpPerspectiveMaps";
     std::vector< std::pair<size_t, const void *> > args;
 
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&xmap.data));

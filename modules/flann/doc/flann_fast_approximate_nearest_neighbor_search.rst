@@ -138,7 +138,7 @@ The method constructs a fast search structure from a set of features using the s
 
             struct SavedIndexParams : public IndexParams
             {
-                SavedIndexParams( cv::String filename );
+                SavedIndexParams( String filename );
             };
 
 
@@ -199,7 +199,7 @@ flann::Index_<T>::save
 ------------------------------
 Saves the index to a file.
 
-.. ocv:function:: void flann::Index_<T>::save(cv::String filename)
+.. ocv:function:: void flann::Index_<T>::save(String filename)
 
     :param filename: The file to save the index to
 

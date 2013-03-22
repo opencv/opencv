@@ -208,10 +208,10 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
     else CV_Error(CV_StsObjectNotFound, cv::format("could not open directory: %s", directory.c_str()));
 }
 
-void cv::glob(cv::String pattern, std::vector<cv::String>& result, bool recursive)
+void cv::glob(String pattern, std::vector<String>& result, bool recursive)
 {
     result.clear();
-    cv::String path, wildchart;
+    String path, wildchart;
 
     if (isDir(pattern, 0))
     {
@@ -227,7 +227,7 @@ void cv::glob(cv::String pattern, std::vector<cv::String>& result, bool recursiv
     else
     {
         size_t pos = pattern.find_last_of(dir_separators);
-        if (pos == cv::String::npos)
+        if (pos == String::npos)
         {
             wildchart = pattern;
             path = ".";

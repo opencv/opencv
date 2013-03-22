@@ -626,7 +626,7 @@ void RandomizedTree::write(std::ostream &os) const
 }
 
 
-void RandomizedTree::savePosteriors(cv::String url, bool append)
+void RandomizedTree::savePosteriors(String url, bool append)
 {
    std::ofstream file(url.c_str(), (append?std::ios::app:std::ios::out));
    for (int i=0; i<num_leaves_; i++) {
@@ -641,7 +641,7 @@ void RandomizedTree::savePosteriors(cv::String url, bool append)
    file.close();
 }
 
-void RandomizedTree::savePosteriors2(cv::String url, bool append)
+void RandomizedTree::savePosteriors2(String url, bool append)
 {
    std::ofstream file(url.c_str(), (append?std::ios::app:std::ios::out));
    for (int i=0; i<num_leaves_; i++) {
@@ -915,7 +915,7 @@ printf("RTreeClassifier::write: num_quant_bits_=%i\n", num_quant_bits_);
     tree_it->write(os);
 }
 
-void RTreeClassifier::saveAllFloatPosteriors(cv::String url)
+void RTreeClassifier::saveAllFloatPosteriors(String url)
 {
   printf("[DEBUG] writing all float posteriors to %s...\n", url.c_str());
   for (int i=0; i<(int)trees_.size(); ++i)
@@ -923,7 +923,7 @@ void RTreeClassifier::saveAllFloatPosteriors(cv::String url)
   printf("[DEBUG] done\n");
 }
 
-void RTreeClassifier::saveAllBytePosteriors(cv::String url)
+void RTreeClassifier::saveAllBytePosteriors(String url)
 {
   printf("[DEBUG] writing all byte posteriors to %s...\n", url.c_str());
   for (int i=0; i<(int)trees_.size(); ++i)
@@ -932,7 +932,7 @@ void RTreeClassifier::saveAllBytePosteriors(cv::String url)
 }
 
 
-void RTreeClassifier::setFloatPosteriorsFromTextfile_176(cv::String url)
+void RTreeClassifier::setFloatPosteriorsFromTextfile_176(String url)
 {
    std::ifstream ifs(url.c_str());
 

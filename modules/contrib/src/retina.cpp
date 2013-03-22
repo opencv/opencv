@@ -112,7 +112,7 @@ void Retina::setColorSaturation(const bool saturateColors, const float colorSatu
 struct Retina::RetinaParameters Retina::getParameters(){return _retinaParameters;}
 
 
-void Retina::setup(cv::String retinaParameterFile, const bool applyDefaultSetupOnFailure)
+void Retina::setup(String retinaParameterFile, const bool applyDefaultSetupOnFailure)
 {
     try
     {
@@ -200,7 +200,7 @@ void Retina::setup(cv::Retina::RetinaParameters newConfiguration)
 
 }
 
-const cv::String Retina::printSetup()
+const String Retina::printSetup()
 {
     std::stringstream outmessage;
 
@@ -233,7 +233,7 @@ const cv::String Retina::printSetup()
     return outmessage.str().c_str();
 }
 
-void Retina::write( cv::String fs ) const
+void Retina::write( String fs ) const
 {
     FileStorage parametersSaveFile(fs, cv::FileStorage::WRITE );
     write(parametersSaveFile);

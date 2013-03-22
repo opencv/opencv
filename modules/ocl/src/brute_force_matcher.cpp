@@ -88,7 +88,7 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat 
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
-        cv::String kernelName = "BruteForceMatch_UnrollMatch";
+        String kernelName = "BruteForceMatch_UnrollMatch";
 
         openCLExecuteKernel(ctx, &brute_force_match, kernelName, globalSize, localSize, args, -1, -1);
     }
@@ -127,7 +127,7 @@ void match(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
-        cv::String kernelName = "BruteForceMatch_Match";
+        String kernelName = "BruteForceMatch_Match";
 
         openCLExecuteKernel(ctx, &brute_force_match, kernelName, globalSize, localSize, args, -1, -1);
     }
@@ -173,7 +173,7 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDist
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&trainIdx.step ));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
-        cv::String kernelName = "BruteForceMatch_RadiusUnrollMatch";
+        String kernelName = "BruteForceMatch_RadiusUnrollMatch";
 
         openCLExecuteKernel(ctx, &brute_force_match, kernelName, globalSize, localSize, args, -1, -1);
     }
@@ -211,7 +211,7 @@ void radius_match(const oclMat &query, const oclMat &train, float maxDistance, c
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&trainIdx.step ));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
-        cv::String kernelName = "BruteForceMatch_RadiusMatch";
+        String kernelName = "BruteForceMatch_RadiusMatch";
 
         openCLExecuteKernel(ctx, &brute_force_match, kernelName, globalSize, localSize, args, -1, -1);
         //float *dis = (float *)clEnqueueMapBuffer(ctx->impl->clCmdQueue, (cl_mem)distance.data, CL_TRUE, CL_MAP_READ, 0, 8, 0, NULL, NULL, NULL);
@@ -498,7 +498,7 @@ void knn_matchUnrolledCached(const oclMat &query, const oclMat &train, const ocl
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
-        cv::String kernelName = "BruteForceMatch_knnUnrollMatch";
+        String kernelName = "BruteForceMatch_knnUnrollMatch";
 
         openCLExecuteKernel(ctx, &brute_force_match, kernelName, globalSize, localSize, args, -1, -1);
     }
@@ -531,7 +531,7 @@ void knn_match(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
-        cv::String kernelName = "BruteForceMatch_knnMatch";
+        String kernelName = "BruteForceMatch_knnMatch";
 
         openCLExecuteKernel(ctx, &brute_force_match, kernelName, globalSize, localSize, args, -1, -1);
     }
@@ -564,7 +564,7 @@ void calcDistanceUnrolled(const oclMat &query, const oclMat &train, const oclMat
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
-        cv::String kernelName = "BruteForceMatch_calcDistanceUnrolled";
+        String kernelName = "BruteForceMatch_calcDistanceUnrolled";
 
         openCLExecuteKernel(ctx, &brute_force_match, kernelName, globalSize, localSize, args, -1, -1);
     }
@@ -595,7 +595,7 @@ void calcDistance(const oclMat &query, const oclMat &train, const oclMat &/*mask
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&query.step ));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&distType ));
 
-        cv::String kernelName = "BruteForceMatch_calcDistance";
+        String kernelName = "BruteForceMatch_calcDistance";
 
         openCLExecuteKernel(ctx, &brute_force_match, kernelName, globalSize, localSize, args, -1, -1);
     }
@@ -670,7 +670,7 @@ void findKnnMatch(int k, const oclMat &trainIdx, const oclMat &distance, const o
     size_t globalSize[] = {trainIdx.rows * BLOCK_SIZE, 1, 1};
     size_t localSize[] = {BLOCK_SIZE, 1, 1};
     int block_size = BLOCK_SIZE;
-    cv::String kernelName = "BruteForceMatch_findBestMatch";
+    String kernelName = "BruteForceMatch_findBestMatch";
 
     for (int i = 0; i < k; ++i)
     {

@@ -65,21 +65,21 @@ public:
     int height() const { return m_height; };
     virtual int type() const { return m_type; };
 
-    virtual bool setSource( const cv::String& filename );
+    virtual bool setSource( const String& filename );
     virtual bool setSource( const Mat& buf );
     virtual bool readHeader() = 0;
     virtual bool readData( Mat& img ) = 0;
 
     virtual size_t signatureLength() const;
-    virtual bool checkSignature( const cv::String& signature ) const;
+    virtual bool checkSignature( const String& signature ) const;
     virtual ImageDecoder newDecoder() const;
 
 protected:
     int  m_width;  // width  of the image ( filled by readHeader )
     int  m_height; // height of the image ( filled by readHeader )
     int  m_type;
-    cv::String m_filename;
-    cv::String m_signature;
+    String m_filename;
+    String m_signature;
     Mat m_buf;
     bool m_buf_supported;
 };
@@ -93,23 +93,23 @@ public:
     virtual ~BaseImageEncoder() {};
     virtual bool isFormatSupported( int depth ) const;
 
-    virtual bool setDestination( const cv::String& filename );
+    virtual bool setDestination( const String& filename );
     virtual bool setDestination( std::vector<uchar>& buf );
     virtual bool write( const Mat& img, const std::vector<int>& params ) = 0;
 
-    virtual cv::String getDescription() const;
+    virtual String getDescription() const;
     virtual ImageEncoder newEncoder() const;
 
     virtual void throwOnEror() const;
 
 protected:
-    cv::String m_description;
+    String m_description;
 
-    cv::String m_filename;
+    String m_filename;
     std::vector<uchar>* m_buf;
     bool m_buf_supported;
 
-    cv::String m_last_error;
+    String m_last_error;
 };
 
 }

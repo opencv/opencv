@@ -96,7 +96,7 @@ template<typename _KeyTp, typename _ValueTp> struct sorted_vector
 };
 
 
-template<typename _ValueTp> inline const _ValueTp* findstr(const sorted_vector<cv::String, _ValueTp>& vec,
+template<typename _ValueTp> inline const _ValueTp* findstr(const sorted_vector<String, _ValueTp>& vec,
                                                            const char* key)
 {
     if( !key )
@@ -130,7 +130,7 @@ Param::Param()
 
 Param::Param(int _type, bool _readonly, int _offset,
              Algorithm::Getter _getter, Algorithm::Setter _setter,
-             const cv::String& _help)
+             const String& _help)
 {
     type = _type;
     readonly = _readonly;
@@ -142,23 +142,23 @@ Param::Param(int _type, bool _readonly, int _offset,
 
 struct CV_EXPORTS AlgorithmInfoData
 {
-    sorted_vector<cv::String, Param> params;
-    cv::String _name;
+    sorted_vector<String, Param> params;
+    String _name;
 };
 
 
-static sorted_vector<cv::String, Algorithm::Constructor>& alglist()
+static sorted_vector<String, Algorithm::Constructor>& alglist()
 {
-    static sorted_vector<cv::String, Algorithm::Constructor> alglist_var;
+    static sorted_vector<String, Algorithm::Constructor> alglist_var;
     return alglist_var;
 }
 
-void Algorithm::getList(std::vector<cv::String>& algorithms)
+void Algorithm::getList(std::vector<String>& algorithms)
 {
     alglist().get_keys(algorithms);
 }
 
-Ptr<Algorithm> Algorithm::_create(const cv::String& name)
+Ptr<Algorithm> Algorithm::_create(const String& name)
 {
     Algorithm::Constructor c = 0;
     if( !alglist().find(name, c) )
@@ -174,42 +174,42 @@ Algorithm::~Algorithm()
 {
 }
 
-cv::String Algorithm::name() const
+String Algorithm::name() const
 {
     return info()->name();
 }
 
-void Algorithm::set(const cv::String& parameter, int value)
+void Algorithm::set(const String& parameter, int value)
 {
     info()->set(this, parameter.c_str(), ParamType<int>::type, &value);
 }
 
-void Algorithm::set(const cv::String& parameter, double value)
+void Algorithm::set(const String& parameter, double value)
 {
     info()->set(this, parameter.c_str(), ParamType<double>::type, &value);
 }
 
-void Algorithm::set(const cv::String& parameter, bool value)
+void Algorithm::set(const String& parameter, bool value)
 {
     info()->set(this, parameter.c_str(), ParamType<bool>::type, &value);
 }
 
-void Algorithm::set(const cv::String& parameter, const cv::String& value)
+void Algorithm::set(const String& parameter, const String& value)
 {
-    info()->set(this, parameter.c_str(), ParamType<cv::String>::type, &value);
+    info()->set(this, parameter.c_str(), ParamType<String>::type, &value);
 }
 
-void Algorithm::set(const cv::String& parameter, const Mat& value)
+void Algorithm::set(const String& parameter, const Mat& value)
 {
     info()->set(this, parameter.c_str(), ParamType<Mat>::type, &value);
 }
 
-void Algorithm::set(const cv::String& parameter, const std::vector<Mat>& value)
+void Algorithm::set(const String& parameter, const std::vector<Mat>& value)
 {
     info()->set(this, parameter.c_str(), ParamType<std::vector<Mat> >::type, &value);
 }
 
-void Algorithm::set(const cv::String& parameter, const Ptr<Algorithm>& value)
+void Algorithm::set(const String& parameter, const Ptr<Algorithm>& value)
 {
     info()->set(this, parameter.c_str(), ParamType<Algorithm>::type, &value);
 }
@@ -229,9 +229,9 @@ void Algorithm::set(const char* parameter, bool value)
     info()->set(this, parameter, ParamType<bool>::type, &value);
 }
 
-void Algorithm::set(const char* parameter, const cv::String& value)
+void Algorithm::set(const char* parameter, const String& value)
 {
-    info()->set(this, parameter, ParamType<cv::String>::type, &value);
+    info()->set(this, parameter, ParamType<String>::type, &value);
 }
 
 void Algorithm::set(const char* parameter, const Mat& value)
@@ -250,37 +250,37 @@ void Algorithm::set(const char* parameter, const Ptr<Algorithm>& value)
 }
 
 
-void Algorithm::setInt(const cv::String& parameter, int value)
+void Algorithm::setInt(const String& parameter, int value)
 {
     info()->set(this, parameter.c_str(), ParamType<int>::type, &value);
 }
 
-void Algorithm::setDouble(const cv::String& parameter, double value)
+void Algorithm::setDouble(const String& parameter, double value)
 {
     info()->set(this, parameter.c_str(), ParamType<double>::type, &value);
 }
 
-void Algorithm::setBool(const cv::String& parameter, bool value)
+void Algorithm::setBool(const String& parameter, bool value)
 {
     info()->set(this, parameter.c_str(), ParamType<bool>::type, &value);
 }
 
-void Algorithm::setString(const cv::String& parameter, const cv::String& value)
+void Algorithm::setString(const String& parameter, const String& value)
 {
-    info()->set(this, parameter.c_str(), ParamType<cv::String>::type, &value);
+    info()->set(this, parameter.c_str(), ParamType<String>::type, &value);
 }
 
-void Algorithm::setMat(const cv::String& parameter, const Mat& value)
+void Algorithm::setMat(const String& parameter, const Mat& value)
 {
     info()->set(this, parameter.c_str(), ParamType<Mat>::type, &value);
 }
 
-void Algorithm::setMatVector(const cv::String& parameter, const std::vector<Mat>& value)
+void Algorithm::setMatVector(const String& parameter, const std::vector<Mat>& value)
 {
     info()->set(this, parameter.c_str(), ParamType<std::vector<Mat> >::type, &value);
 }
 
-void Algorithm::setAlgorithm(const cv::String& parameter, const Ptr<Algorithm>& value)
+void Algorithm::setAlgorithm(const String& parameter, const Ptr<Algorithm>& value)
 {
     info()->set(this, parameter.c_str(), ParamType<Algorithm>::type, &value);
 }
@@ -300,9 +300,9 @@ void Algorithm::setBool(const char* parameter, bool value)
     info()->set(this, parameter, ParamType<bool>::type, &value);
 }
 
-void Algorithm::setString(const char* parameter, const cv::String& value)
+void Algorithm::setString(const char* parameter, const String& value)
 {
-    info()->set(this, parameter, ParamType<cv::String>::type, &value);
+    info()->set(this, parameter, ParamType<String>::type, &value);
 }
 
 void Algorithm::setMat(const char* parameter, const Mat& value)
@@ -322,47 +322,47 @@ void Algorithm::setAlgorithm(const char* parameter, const Ptr<Algorithm>& value)
 
 
 
-int Algorithm::getInt(const cv::String& parameter) const
+int Algorithm::getInt(const String& parameter) const
 {
     return get<int>(parameter);
 }
 
-double Algorithm::getDouble(const cv::String& parameter) const
+double Algorithm::getDouble(const String& parameter) const
 {
     return get<double>(parameter);
 }
 
-bool Algorithm::getBool(const cv::String& parameter) const
+bool Algorithm::getBool(const String& parameter) const
 {
     return get<bool>(parameter);
 }
 
-cv::String Algorithm::getString(const cv::String& parameter) const
+String Algorithm::getString(const String& parameter) const
 {
-    return get<cv::String>(parameter);
+    return get<String>(parameter);
 }
 
-Mat Algorithm::getMat(const cv::String& parameter) const
+Mat Algorithm::getMat(const String& parameter) const
 {
     return get<Mat>(parameter);
 }
 
-std::vector<Mat> Algorithm::getMatVector(const cv::String& parameter) const
+std::vector<Mat> Algorithm::getMatVector(const String& parameter) const
 {
     return get<std::vector<Mat> >(parameter);
 }
 
-Ptr<Algorithm> Algorithm::getAlgorithm(const cv::String& parameter) const
+Ptr<Algorithm> Algorithm::getAlgorithm(const String& parameter) const
 {
     return get<Algorithm>(parameter);
 }
 
-cv::String Algorithm::paramHelp(const cv::String& parameter) const
+String Algorithm::paramHelp(const String& parameter) const
 {
     return info()->paramHelp(parameter.c_str());
 }
 
-int Algorithm::paramType(const cv::String& parameter) const
+int Algorithm::paramType(const String& parameter) const
 {
     return info()->paramType(parameter.c_str());
 }
@@ -372,7 +372,7 @@ int Algorithm::paramType(const char* parameter) const
     return info()->paramType(parameter);
 }
 
-void Algorithm::getParams(std::vector<cv::String>& names) const
+void Algorithm::getParams(std::vector<String>& names) const
 {
     info()->getParams(names);
 }
@@ -388,7 +388,7 @@ void Algorithm::read(const FileNode& fn)
 }
 
 
-AlgorithmInfo::AlgorithmInfo(const cv::String& _name, Algorithm::Constructor create)
+AlgorithmInfo::AlgorithmInfo(const String& _name, Algorithm::Constructor create)
 {
     data = new AlgorithmInfoData;
     data->_name = _name;
@@ -408,7 +408,7 @@ void AlgorithmInfo::write(const Algorithm* algo, FileStorage& fs) const
     for( i = 0; i < nparams; i++ )
     {
         const Param& p = data->params.vec[i].second;
-        const cv::String& pname = data->params.vec[i].first;
+        const String& pname = data->params.vec[i].first;
         if( p.type == Param::INT )
             cv::write(fs, pname, algo->get<int>(pname));
         else if( p.type == Param::BOOLEAN )
@@ -416,7 +416,7 @@ void AlgorithmInfo::write(const Algorithm* algo, FileStorage& fs) const
         else if( p.type == Param::REAL )
             cv::write(fs, pname, algo->get<double>(pname));
         else if( p.type == Param::STRING )
-            cv::write(fs, pname, algo->get<cv::String>(pname));
+            cv::write(fs, pname, algo->get<String>(pname));
         else if( p.type == Param::MAT )
             cv::write(fs, pname, algo->get<Mat>(pname));
         else if( p.type == Param::MAT_VECTOR )
@@ -437,7 +437,7 @@ void AlgorithmInfo::write(const Algorithm* algo, FileStorage& fs) const
             cv::write(fs, pname, algo->getInt(pname));
         else
         {
-            cv::String msg = format("unknown/unsupported type of '%s' parameter == %d", pname.c_str(), p.type);
+            String msg = format("unknown/unsupported type of '%s' parameter == %d", pname.c_str(), p.type);
             CV_Error( CV_StsUnsupportedFormat, msg.c_str());
         }
     }
@@ -451,7 +451,7 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
     for( i = 0; i < nparams; i++ )
     {
         const Param& p = data->params.vec[i].second;
-        const cv::String& pname = data->params.vec[i].first;
+        const String& pname = data->params.vec[i].first;
         const FileNode n = fn[pname];
         if( n.empty() )
             continue;
@@ -472,7 +472,7 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
         }
         else if( p.type == Param::STRING )
         {
-            cv::String val = (cv::String)n;
+            String val = (String)n;
             info->set(algo, pname.c_str(), p.type, &val, true);
         }
         else if( p.type == Param::MAT )
@@ -489,7 +489,7 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
         }
         else if( p.type == Param::ALGORITHM )
         {
-            Ptr<Algorithm> nestedAlgo = Algorithm::_create((cv::String)n["name"]);
+            Ptr<Algorithm> nestedAlgo = Algorithm::_create((String)n["name"]);
             CV_Assert( !nestedAlgo.empty() );
             nestedAlgo->read(n);
             info->set(algo, pname.c_str(), p.type, &nestedAlgo, true);
@@ -516,13 +516,13 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
         }
         else
         {
-            cv::String msg = format("unknown/unsupported type of '%s' parameter == %d", pname.c_str(), p.type);
+            String msg = format("unknown/unsupported type of '%s' parameter == %d", pname.c_str(), p.type);
             CV_Error( CV_StsUnsupportedFormat, msg.c_str());
         }
     }
 }
 
-cv::String AlgorithmInfo::name() const
+String AlgorithmInfo::name() const
 {
     return data->_name;
 }
@@ -532,7 +532,7 @@ union GetSetParam
     int (Algorithm::*get_int)() const;
     bool (Algorithm::*get_bool)() const;
     double (Algorithm::*get_double)() const;
-    cv::String (Algorithm::*get_string)() const;
+    String (Algorithm::*get_string)() const;
     Mat (Algorithm::*get_mat)() const;
     std::vector<Mat> (Algorithm::*get_mat_vector)() const;
     Ptr<Algorithm> (Algorithm::*get_algo)() const;
@@ -544,7 +544,7 @@ union GetSetParam
     void (Algorithm::*set_int)(int);
     void (Algorithm::*set_bool)(bool);
     void (Algorithm::*set_double)(double);
-    void (Algorithm::*set_string)(const cv::String&);
+    void (Algorithm::*set_string)(const String&);
     void (Algorithm::*set_mat)(const Mat&);
     void (Algorithm::*set_mat_vector)(const std::vector<Mat>&);
     void (Algorithm::*set_algo)(const Ptr<Algorithm>&);
@@ -554,9 +554,9 @@ union GetSetParam
     void (Algorithm::*set_uchar)(uchar);
 };
 
-static cv::String getNameOfType(int argType);
+static String getNameOfType(int argType);
 
-static cv::String getNameOfType(int argType)
+static String getNameOfType(int argType)
 {
     switch(argType)
     {
@@ -576,9 +576,9 @@ static cv::String getNameOfType(int argType)
     return "";
 }
 
-static cv::String getErrorMessageForWrongArgumentInSetter(cv::String algoName, cv::String paramName, int paramType, int argType)
+static String getErrorMessageForWrongArgumentInSetter(String algoName, String paramName, int paramType, int argType)
 {
-    cv::String message = cv::String("Argument error: the setter")
+    String message = String("Argument error: the setter")
         + " method was called for the parameter '" + paramName + "' of the algorithm '" + algoName
         +"', the parameter has " + getNameOfType(paramType) + " type, ";
 
@@ -592,9 +592,9 @@ static cv::String getErrorMessageForWrongArgumentInSetter(cv::String algoName, c
     return message;
 }
 
-static cv::String getErrorMessageForWrongArgumentInGetter(cv::String algoName, cv::String paramName, int paramType, int argType)
+static String getErrorMessageForWrongArgumentInGetter(String algoName, String paramName, int paramType, int argType)
 {
-    cv::String message = cv::String("Argument error: the getter")
+    String message = String("Argument error: the getter")
         + " method was called for the parameter '" + paramName + "' of the algorithm '" + algoName
         +"', the parameter has " + getNameOfType(paramType) + " type, ";
 
@@ -630,7 +630,7 @@ void AlgorithmInfo::set(Algorithm* algo, const char* parameter, int argType, con
         if ( !( p->type == Param::INT || p->type == Param::REAL || p->type == Param::BOOLEAN
                 || p->type == Param::UNSIGNED_INT || p->type == Param::UINT64 || p->type == Param::FLOAT || argType == Param::UCHAR) )
         {
-            cv::String message = getErrorMessageForWrongArgumentInSetter(algo->name(), parameter, p->type, argType);
+            String message = getErrorMessageForWrongArgumentInSetter(algo->name(), parameter, p->type, argType);
             CV_Error(CV_StsBadArg, message);
         }
 
@@ -790,21 +790,21 @@ void AlgorithmInfo::set(Algorithm* algo, const char* parameter, int argType, con
     {
         if( p->type != Param::STRING )
         {
-            cv::String message = getErrorMessageForWrongArgumentInSetter(algo->name(), parameter, p->type, argType);
+            String message = getErrorMessageForWrongArgumentInSetter(algo->name(), parameter, p->type, argType);
             CV_Error(CV_StsBadArg, message);
         }
 
-        const cv::String& val = *(const cv::String*)value;
+        const String& val = *(const String*)value;
         if( p->setter )
             (algo->*f.set_string)(val);
         else
-            *(cv::String*)((uchar*)algo + p->offset) = val;
+            *(String*)((uchar*)algo + p->offset) = val;
     }
     else if( argType == Param::MAT )
     {
         if( p->type != Param::MAT )
         {
-            cv::String message = getErrorMessageForWrongArgumentInSetter(algo->name(), parameter, p->type, argType);
+            String message = getErrorMessageForWrongArgumentInSetter(algo->name(), parameter, p->type, argType);
             CV_Error(CV_StsBadArg, message);
         }
 
@@ -818,7 +818,7 @@ void AlgorithmInfo::set(Algorithm* algo, const char* parameter, int argType, con
     {
         if( p->type != Param::MAT_VECTOR )
         {
-            cv::String message = getErrorMessageForWrongArgumentInSetter(algo->name(), parameter, p->type, argType);
+            String message = getErrorMessageForWrongArgumentInSetter(algo->name(), parameter, p->type, argType);
             CV_Error(CV_StsBadArg, message);
         }
 
@@ -832,7 +832,7 @@ void AlgorithmInfo::set(Algorithm* algo, const char* parameter, int argType, con
     {
         if( p->type != Param::ALGORITHM )
         {
-            cv::String message = getErrorMessageForWrongArgumentInSetter(algo->name(), parameter, p->type, argType);
+            String message = getErrorMessageForWrongArgumentInSetter(algo->name(), parameter, p->type, argType);
             CV_Error(CV_StsBadArg, message);
         }
 
@@ -862,7 +862,7 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
         {
             if (!( argType == Param::INT || argType == Param::REAL || argType == Param::FLOAT || argType == Param::UNSIGNED_INT || argType == Param::UINT64 || argType == Param::UCHAR))
             {
-                cv::String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
+                String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
                 CV_Error(CV_StsBadArg, message);
             }
             int val = p->getter ? (algo->*f.get_int)() : *(int*)((uchar*)algo + p->offset);
@@ -887,7 +887,7 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
         {
             if (!( argType == Param::INT || argType == Param::BOOLEAN || argType == Param::REAL || argType == Param::FLOAT || argType == Param::UNSIGNED_INT || argType == Param::UINT64 || argType == Param::UCHAR))
             {
-                cv::String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
+                String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
                 CV_Error(CV_StsBadArg, message);
             }
             bool val = p->getter ? (algo->*f.get_bool)() : *(bool*)((uchar*)algo + p->offset);
@@ -913,7 +913,7 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
         {
             if(!( argType == Param::REAL || argType == Param::FLOAT))
             {
-                cv::String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
+                String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
                 CV_Error(CV_StsBadArg, message);
             }
             double val = p->getter ? (algo->*f.get_double)() : *(double*)((uchar*)algo + p->offset);
@@ -929,7 +929,7 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
         {
             if(!( argType == Param::REAL || argType == Param::FLOAT))
             {
-                cv::String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
+                String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
                 CV_Error(CV_StsBadArg, message);
             }
             float val = p->getter ? (algo->*f.get_float)() : *(float*)((uchar*)algo + p->offset);
@@ -945,7 +945,7 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
         {
             if (!( argType == Param::INT || argType == Param::REAL || argType == Param::FLOAT || argType == Param::UNSIGNED_INT || argType == Param::UINT64 || argType == Param::UCHAR))
             {
-                cv::String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
+                String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
                 CV_Error(CV_StsBadArg, message);
             }
             unsigned int val = p->getter ? (algo->*f.get_uint)() : *(unsigned int*)((uchar*)algo + p->offset);
@@ -969,7 +969,7 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
         {
             if (!( argType == Param::INT || argType == Param::REAL || argType == Param::FLOAT || argType == Param::UNSIGNED_INT || argType == Param::UINT64 || argType == Param::UCHAR))
             {
-                cv::String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
+                String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
                 CV_Error(CV_StsBadArg, message);
         }
             uint64 val = p->getter ? (algo->*f.get_uint64)() : *(uint64*)((uchar*)algo + p->offset);
@@ -993,7 +993,7 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
         {
             if (!( argType == Param::INT || argType == Param::REAL || argType == Param::FLOAT || argType == Param::UNSIGNED_INT || argType == Param::UINT64 || argType == Param::UCHAR))
             {
-                cv::String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
+                String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
                 CV_Error(CV_StsBadArg, message);
             }
             uchar val = p->getter ? (algo->*f.get_uchar)() : *(uchar*)((uchar*)algo + p->offset);
@@ -1021,18 +1021,18 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
     {
         if( p->type != Param::STRING )
         {
-            cv::String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
+            String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
             CV_Error(CV_StsBadArg, message);
         }
 
-        *(cv::String*)value = p->getter ? (algo->*f.get_string)() :
-            *(cv::String*)((uchar*)algo + p->offset);
+        *(String*)value = p->getter ? (algo->*f.get_string)() :
+            *(String*)((uchar*)algo + p->offset);
     }
     else if( argType == Param::MAT )
     {
         if( p->type != Param::MAT )
         {
-            cv::String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
+            String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
             CV_Error(CV_StsBadArg, message);
         }
 
@@ -1043,7 +1043,7 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
     {
         if( p->type != Param::MAT_VECTOR )
         {
-            cv::String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
+            String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
             CV_Error(CV_StsBadArg, message);
         }
 
@@ -1054,7 +1054,7 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
     {
         if( p->type != Param::ALGORITHM )
         {
-            cv::String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
+            String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
             CV_Error(CV_StsBadArg, message);
         }
 
@@ -1063,7 +1063,7 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
     }
     else
     {
-        cv::String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
+        String message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
         CV_Error(CV_StsBadArg, message);
     }
 }
@@ -1078,7 +1078,7 @@ int AlgorithmInfo::paramType(const char* parameter) const
 }
 
 
-cv::String AlgorithmInfo::paramHelp(const char* parameter) const
+String AlgorithmInfo::paramHelp(const char* parameter) const
 {
     const Param* p = findstr(data->params, parameter);
     if( !p )
@@ -1087,7 +1087,7 @@ cv::String AlgorithmInfo::paramHelp(const char* parameter) const
 }
 
 
-void AlgorithmInfo::getParams(std::vector<cv::String>& names) const
+void AlgorithmInfo::getParams(std::vector<String>& names) const
 {
     data->params.get_keys(names);
 }
@@ -1096,7 +1096,7 @@ void AlgorithmInfo::getParams(std::vector<cv::String>& names) const
 void AlgorithmInfo::addParam_(Algorithm& algo, const char* parameter, int argType,
                               void* value, bool readOnly,
                               Algorithm::Getter getter, Algorithm::Setter setter,
-                              const cv::String& help)
+                              const String& help)
 {
     CV_Assert( argType == Param::INT || argType == Param::BOOLEAN ||
                argType == Param::REAL || argType == Param::STRING ||
@@ -1104,7 +1104,7 @@ void AlgorithmInfo::addParam_(Algorithm& algo, const char* parameter, int argTyp
                argType == Param::ALGORITHM
                || argType == Param::FLOAT || argType == Param::UNSIGNED_INT || argType == Param::UINT64
                || argType == Param::UCHAR);
-    data->params.add(cv::String(parameter), Param(argType, readOnly,
+    data->params.add(String(parameter), Param(argType, readOnly,
                      (int)((size_t)value - (size_t)(void*)&algo),
                      getter, setter, help));
 }
@@ -1114,7 +1114,7 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                              int& value, bool readOnly,
                              int (Algorithm::*getter)(),
                              void (Algorithm::*setter)(int),
-                             const cv::String& help)
+                             const String& help)
 {
     addParam_(algo, parameter, ParamType<int>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
@@ -1124,7 +1124,7 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                              bool& value, bool readOnly,
                              int (Algorithm::*getter)(),
                              void (Algorithm::*setter)(int),
-                             const cv::String& help)
+                             const String& help)
 {
     addParam_(algo, parameter, ParamType<bool>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
@@ -1134,19 +1134,19 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                              double& value, bool readOnly,
                              double (Algorithm::*getter)(),
                              void (Algorithm::*setter)(double),
-                             const cv::String& help)
+                             const String& help)
 {
     addParam_(algo, parameter, ParamType<double>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
 }
 
 void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
-                             cv::String& value, bool readOnly,
-                             cv::String (Algorithm::*getter)(),
-                             void (Algorithm::*setter)(const cv::String&),
-                             const cv::String& help)
+                             String& value, bool readOnly,
+                             String (Algorithm::*getter)(),
+                             void (Algorithm::*setter)(const String&),
+                             const String& help)
 {
-    addParam_(algo, parameter, ParamType<cv::String>::type, &value, readOnly,
+    addParam_(algo, parameter, ParamType<String>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
 }
 
@@ -1154,7 +1154,7 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                              Mat& value, bool readOnly,
                              Mat (Algorithm::*getter)(),
                              void (Algorithm::*setter)(const Mat&),
-                             const cv::String& help)
+                             const String& help)
 {
     addParam_(algo, parameter, ParamType<Mat>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
@@ -1164,7 +1164,7 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                              std::vector<Mat>& value, bool readOnly,
                              std::vector<Mat> (Algorithm::*getter)(),
                              void (Algorithm::*setter)(const std::vector<Mat>&),
-                             const cv::String& help)
+                             const String& help)
 {
     addParam_(algo, parameter, ParamType<std::vector<Mat> >::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
@@ -1174,7 +1174,7 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                              Ptr<Algorithm>& value, bool readOnly,
                              Ptr<Algorithm> (Algorithm::*getter)(),
                              void (Algorithm::*setter)(const Ptr<Algorithm>&),
-                             const cv::String& help)
+                             const String& help)
 {
     addParam_(algo, parameter, ParamType<Algorithm>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
@@ -1184,7 +1184,7 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                              float& value, bool readOnly,
                              float (Algorithm::*getter)(),
                              void (Algorithm::*setter)(float),
-                             const cv::String& help)
+                             const String& help)
 {
     addParam_(algo, parameter, ParamType<float>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
@@ -1194,7 +1194,7 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                              unsigned int& value, bool readOnly,
                              unsigned int (Algorithm::*getter)(),
                              void (Algorithm::*setter)(unsigned int),
-                             const cv::String& help)
+                             const String& help)
 {
     addParam_(algo, parameter, ParamType<unsigned int>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
@@ -1204,7 +1204,7 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                              uint64& value, bool readOnly,
                              uint64 (Algorithm::*getter)(),
                              void (Algorithm::*setter)(uint64),
-                             const cv::String& help)
+                             const String& help)
 {
     addParam_(algo, parameter, ParamType<uint64>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
@@ -1214,7 +1214,7 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                              uchar& value, bool readOnly,
                              uchar (Algorithm::*getter)(),
                              void (Algorithm::*setter)(uchar),
-                             const cv::String& help)
+                             const String& help)
 {
     addParam_(algo, parameter, ParamType<uchar>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
