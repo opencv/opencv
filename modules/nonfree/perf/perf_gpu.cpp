@@ -1,4 +1,5 @@
 #include "perf_precomp.hpp"
+#include "opencv2/ts/gpu_perf.hpp"
 
 using namespace std;
 using namespace testing;
