@@ -2917,6 +2917,9 @@ CV_EXPORTS FileStorage& operator << (FileStorage& fs, const string& str);
 static inline FileStorage& operator << (FileStorage& fs, const char* str)
 { return (fs << string(str)); }
 
+static inline FileStorage& operator << (FileStorage& fs, char* value)
+{ return (fs << string(value)); }
+
 inline FileNode::FileNode() : fs(0), node(0) {}
 inline FileNode::FileNode(const CvFileStorage* _fs, const CvFileNode* _node)
     : fs(_fs), node(_node) {}

@@ -454,3 +454,12 @@ protected:
 TEST(Core_InputOutput, huge) { CV_BigMatrixIOTest test; test.safe_run(); }
 */
 
+TEST(Core_InputOutput, FileStorage)
+{
+    std::string file = cv::tempfile(".xml");
+    cv::FileStorage f(file, cv::FileStorage::WRITE);
+
+    char arr[66];
+    sprintf(arr, "sprintf is hell %d", 666);
+    EXPECT_NO_THROW(f << arr);
+}
