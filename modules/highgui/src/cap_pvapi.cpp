@@ -63,7 +63,6 @@
 #  include <unistd.h>
 #endif
 
-#include <string>
 //#include <arpa/inet.h>
 
 #define MAX_CAMERAS 10

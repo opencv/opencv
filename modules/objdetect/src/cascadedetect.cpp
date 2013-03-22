@@ -44,8 +44,6 @@
 
 #include "cascadedetect.hpp"
 
-#include <string>
-
 #if defined (LOG_CASCADE_STATISTIC)
 struct Logger
 {

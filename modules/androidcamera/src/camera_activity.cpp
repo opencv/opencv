@@ -4,7 +4,6 @@
 #include <dirent.h>
 #include <android/log.h>
 #include <cctype>
-#include <string>
 #include <vector>
 #include <algorithm>
 #include <opencv2/core/version.hpp>

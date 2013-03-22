@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 #include <queue>
-#include <string>
 
 using cv::InputArray;
 using cv::OutputArray;

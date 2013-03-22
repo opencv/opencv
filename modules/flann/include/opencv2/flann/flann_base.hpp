@@ -32,7 +32,6 @@
 #define OPENCV_FLANN_BASE_HPP_
 
 #include <vector>
-#include <string>
 #include <cassert>
 #include <cstdio>
 

@@ -44,7 +44,6 @@
 #define __OPENCV_VIDEOSTAB_GLOBAL_MOTION_HPP__
 
 #include <vector>
-#include <string>
 #include <fstream>
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"

@@ -83,7 +83,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Empty()
 
 #ifndef HAVE_OPENCV_HIGHGUI
 
-Ptr<FrameSource> cv::superres::createFrameSource_Video(const string& fileName)
+Ptr<FrameSource> cv::superres::createFrameSource_Video(const String& fileName)
 {
     (void) fileName;
     CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");
@@ -190,7 +190,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
 
 #ifndef HAVE_OPENCV_GPU
 
-Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const string& fileName)
+Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const String& fileName)
 {
     (void) fileName;
     CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");

@@ -63,8 +63,8 @@ The sample below demonstrates how to use CommandLineParser:
 
     use_time_stamp = parser.has("timestamp");
 
-    cv::String img1 = parser.get<string>(0);
-    cv::String img2 = parser.get<string>(1);
+    cv::String img1 = parser.get<cv::String>(0);
+    cv::String img2 = parser.get<cv::String>(1);
 
     int repeat = parser.get<int>(2);
 

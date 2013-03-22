@@ -58,7 +58,6 @@
 #ifndef _ncvhaarobjectdetection_hpp_
 #define _ncvhaarobjectdetection_hpp_
 
-#include <string>
 #include "NCV.hpp"
 
 

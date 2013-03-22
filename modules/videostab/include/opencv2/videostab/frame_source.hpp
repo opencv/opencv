@@ -44,7 +44,6 @@
 #define __OPENCV_VIDEOSTAB_FRAME_SOURCE_HPP__
 
 #include <vector>
-#include <string>
 #include "opencv2/core.hpp"
 
 namespace cv

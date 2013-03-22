@@ -2457,13 +2457,13 @@ Algorithm::name
 ---------------
 Returns the algorithm name
 
-.. ocv:function:: string Algorithm::name() const
+.. ocv:function:: String Algorithm::name() const
 
 Algorithm::get
 --------------
 Returns the algorithm parameter
 
-.. ocv:function:: template<typename _Tp> typename ParamType<_Tp>::member_type Algorithm::get(const string& name) const
+.. ocv:function:: template<typename _Tp> typename ParamType<_Tp>::member_type Algorithm::get(const String& name) const
 
     :param name: The parameter name.
 
@@ -2472,7 +2472,7 @@ The method returns value of the particular parameter. Since the compiler can not
     * myalgo.get<int>("param_name")
     * myalgo.get<double>("param_name")
     * myalgo.get<bool>("param_name")
-    * myalgo.get<string>("param_name")
+    * myalgo.get<String>("param_name")
     * myalgo.get<Mat>("param_name")
     * myalgo.get<vector<Mat> >("param_name")
     * myalgo.get<Algorithm>("param_name") (it returns Ptr<Algorithm>).
@@ -2529,13 +2529,13 @@ Algorithm::getList
 ------------------
 Returns the list of registered algorithms
 
-.. ocv:function:: void Algorithm::getList(vector<string>& algorithms)
+.. ocv:function:: void Algorithm::getList(vector<String>& algorithms)
 
     :param algorithms: The output vector of algorithm names.
 
 This static method returns the list of registered algorithms in alphabetical order. Here is how to use it ::
 
-    vector<string> algorithms;
+    vector<String> algorithms;
     Algorithm::getList(algorithms);
     cout << "Algorithms: " << algorithms.size() << endl;
     for (size_t i=0; i < algorithms.size(); i++)

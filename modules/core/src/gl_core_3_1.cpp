@@ -1,4 +1,3 @@
-#include <string>
 #include <sstream>
 #include "cvconfig.h"
 #include "opencv2/core.hpp"

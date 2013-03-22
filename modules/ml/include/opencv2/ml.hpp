@@ -47,7 +47,6 @@
 #ifdef __cplusplus
 
 #include <map>
-#include <string>
 #include <iostream>
 
 // Apple defines a check() macro somewhere in the debug headers
