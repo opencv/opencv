@@ -39,7 +39,6 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
 #include "precomp.hpp"
 #include "opencv2/core/opengl_interop_deprecated.hpp"
 #include "opencv2/core/gpumat.hpp"
