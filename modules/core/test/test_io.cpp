@@ -447,7 +447,7 @@ protected:
         catch(...)
         {
             ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        } 
+        }
     }
 };
 
@@ -463,5 +463,3 @@ TEST(Core_InputOutput, FileStorage)
     sprintf(arr, "sprintf is hell %d", 666);
     EXPECT_NO_THROW(f << arr);
 }
-
-
