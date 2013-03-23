@@ -104,6 +104,12 @@ Ptr<DescriptorExtractor> DescriptorExtractor::create(const std::string& descript
     return Algorithm::create<DescriptorExtractor>("Feature2D." + descriptorExtractorType);
 }
 
+
+CV_WRAP void Feature2D::compute( const Mat& image, CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints, CV_OUT Mat& descriptors ) const
+{
+   DescriptorExtractor::compute(image, keypoints, descriptors);
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /****************************************************************************************\

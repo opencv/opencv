@@ -263,6 +263,8 @@ public:
                                      OutputArray descriptors,
                                      bool useProvidedKeypoints=false ) const = 0;
 
+    CV_WRAP void compute( const Mat& image, CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints, CV_OUT Mat& descriptors ) const;
+
     // Create feature detector and descriptor extractor by name.
     CV_WRAP static Ptr<Feature2D> create( const std::string& name );
 };
