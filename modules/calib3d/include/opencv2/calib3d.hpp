@@ -373,8 +373,6 @@ CVAPI(void)  cvReprojectImageTo3D( const CvArr* disparityImage,
 #ifdef __cplusplus
 }
 
-template<> CV_EXPORTS void cv::Ptr<CvStereoBMState>::delete_obj();
-
 //////////////////////////////////////////////////////////////////////////////////////////
 class CV_EXPORTS CvLevMarq
 {
@@ -673,6 +671,8 @@ CV_EXPORTS_W void correctMatches( InputArray F, InputArray points1, InputArray p
                                   OutputArray newPoints1, OutputArray newPoints2 );
 
 
+template<> CV_EXPORTS void Ptr<CvStereoBMState>::delete_obj();
+
 class CV_EXPORTS_W StereoMatcher : public Algorithm
 {
 public:
@@ -700,7 +700,7 @@ public:
     CV_WRAP virtual void setDisp12MaxDiff(int disp12MaxDiff) = 0;
 };
 
-    
+
 class CV_EXPORTS_W StereoBM : public StereoMatcher
 {
 public:
