@@ -67,7 +67,7 @@ if(NOT TIFF_VERSION_STRING AND TIFF_INCLUDE_DIR)
 endif()
 
 # --- libjpeg (optional) ---
-if(WITH_JPEG)
+if(WITH_JPEG AND NOT IOS)
   if(BUILD_JPEG)
     ocv_clear_vars(JPEG_FOUND)
   else()
@@ -110,7 +110,7 @@ if(NOT JASPER_VERSION_STRING)
 endif()
 
 # --- libpng (optional, should be searched after zlib) ---
-if(WITH_PNG)
+if(WITH_PNG AND NOT IOS)
   if(BUILD_PNG)
     ocv_clear_vars(PNG_FOUND)
   else()
