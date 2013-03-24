@@ -1324,12 +1324,14 @@ void perf::sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors
 /*****************************************************************************************\
 *                                  ::perf::GpuPerf
 \*****************************************************************************************/
-#ifdef HAVE_CUDA
 bool perf::GpuPerf::targetDevice()
 {
+#ifdef HAVE_CUDA
     return !param_run_cpu;
-}
+#else
+    return false;
 #endif
+}
 
 /*****************************************************************************************\
 *                                  ::perf::PrintTo

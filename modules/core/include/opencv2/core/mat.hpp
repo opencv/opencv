@@ -764,7 +764,7 @@ inline void SVD::solveZ( InputArray m, OutputArray _dst )
 template<typename _Tp, int m, int n, int nm> inline void
     SVD::compute( const Matx<_Tp, m, n>& a, Matx<_Tp, nm, 1>& w, Matx<_Tp, m, nm>& u, Matx<_Tp, n, nm>& vt )
 {
-    assert( nm == MIN(m, n));
+    CV_StaticAssert( nm == MIN(m, n), "Invalid size of output vector.");
     Mat _a(a, false), _u(u, false), _w(w, false), _vt(vt, false);
     SVD::compute(_a, _w, _u, _vt);
     CV_Assert(_w.data == (uchar*)&w.val[0] && _u.data == (uchar*)&u.val[0] && _vt.data == (uchar*)&vt.val[0]);
@@ -773,7 +773,7 @@ template<typename _Tp, int m, int n, int nm> inline void
 template<typename _Tp, int m, int n, int nm> inline void
 SVD::compute( const Matx<_Tp, m, n>& a, Matx<_Tp, nm, 1>& w )
 {
-    assert( nm == MIN(m, n));
+    CV_StaticAssert( nm == MIN(m, n), "Invalid size of output vector.");
     Mat _a(a, false), _w(w, false);
     SVD::compute(_a, _w);
     CV_Assert(_w.data == (uchar*)&w.val[0]);
@@ -784,7 +784,7 @@ SVD::backSubst( const Matx<_Tp, nm, 1>& w, const Matx<_Tp, m, nm>& u,
                 const Matx<_Tp, n, nm>& vt, const Matx<_Tp, m, nb>& rhs,
                 Matx<_Tp, n, nb>& dst )
 {
-    assert( nm == MIN(m, n));
+    CV_StaticAssert( nm == MIN(m, n), "Invalid size of output vector.");
     Mat _u(u, false), _w(w, false), _vt(vt, false), _rhs(rhs, false), _dst(dst, false);
     SVD::backSubst(_w, _u, _vt, _rhs, _dst);
     CV_Assert(_dst.data == (uchar*)&dst.val[0]);
