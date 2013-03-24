@@ -1083,7 +1083,7 @@ Reprojects a disparity image to 3D space.
 
     :param Q: :math:`4 \times 4`  perspective transformation matrix that can be obtained with  :ocv:func:`stereoRectify`.
 
-    :param handleMissingValues: Indicates, whether the function should handle missing values (i.e. points where the disparity was not computed). If ``handleMissingValues=true``, then pixels with the minimal disparity that corresponds to the outliers (see  :ocv:funcx:`StereoBM::operator()` ) are transformed to 3D points with a very large Z value (currently set to 10000).
+    :param handleMissingValues: Indicates, whether the function should handle missing values (i.e. points where the disparity was not computed). If ``handleMissingValues=true``, then pixels with the minimal disparity that corresponds to the outliers (see  :ocv:funcx:`StereoMatcher::compute` ) are transformed to 3D points with a very large Z value (currently set to 10000).
 
     :param ddepth: The optional output array depth. If it is ``-1``, the output image will have ``CV_32F`` depth. ``ddepth`` can also be set to ``CV_16S``, ``CV_32S`` or ``CV_32F``.
 
@@ -1170,7 +1170,7 @@ StereoMatcher
 -------------
 .. ocv:class:: StereoMatcher : public Algorithm
 
-The base class for stereo correspondence algorithms. ::
+The base class for stereo correspondence algorithms.
 
 StereoMatcher::compute
 -----------------------

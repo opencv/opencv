@@ -731,7 +731,7 @@ public:
     CV_WRAP virtual void setROI2(Rect roi2) = 0;
 };
 
-CV_EXPORTS Ptr<StereoBM> createStereoBM(int numDisparities=0, int blockSize=21);
+CV_EXPORTS_W Ptr<StereoBM> createStereoBM(int numDisparities=0, int blockSize=21);
 
 
 class CV_EXPORTS_W StereoSGBM : public StereoMatcher
@@ -756,7 +756,7 @@ public:
 };
 
 
-CV_EXPORTS Ptr<StereoSGBM> createStereoSGBM(int minDisparity, int numDisparities, int blockSize,
+CV_EXPORTS_W Ptr<StereoSGBM> createStereoSGBM(int minDisparity, int numDisparities, int blockSize,
                                             int P1=0, int P2=0, int disp12MaxDiff=0,
                                             int preFilterCap=0, int uniquenessRatio=0,
                                             int speckleWindowSize=0, int speckleRange=0,

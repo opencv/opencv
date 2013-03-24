@@ -129,6 +129,10 @@ typedef Ptr<DescriptorExtractor> Ptr_DescriptorExtractor;
 typedef Ptr<Feature2D> Ptr_Feature2D;
 typedef Ptr<DescriptorMatcher> Ptr_DescriptorMatcher;
 
+typedef Ptr<StereoMatcher> Ptr_StereoMatcher;
+typedef Ptr<StereoBM> Ptr_StereoBM;
+typedef Ptr<StereoSGBM> Ptr_StereoSGBM;
+
 typedef Ptr<cv::softcascade::ChannelFeatureBuilder> Ptr_ChannelFeatureBuilder;
 
 typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
