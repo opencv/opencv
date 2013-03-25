@@ -51,7 +51,7 @@ namespace
     struct ErrorEntry
     {
         int code;
-        std::string str;
+        String str;
     };
 
     class ErrorEntryComparer
@@ -65,11 +65,11 @@ namespace
         int code_;
     };
 
-    std::string getErrorString(int code, const ErrorEntry* errors, size_t n)
+    String getErrorString(int code, const ErrorEntry* errors, size_t n)
     {
         size_t idx = std::find_if(errors, errors + n, ErrorEntryComparer(code)) - errors;
 
-        const std::string& msg = (idx != n) ? errors[idx].str : std::string("Unknown error code");
+        const String& msg = (idx != n) ? errors[idx].str : String("Unknown error code");
 
         std::ostringstream ostr;
         ostr << msg << " [Code = " << code << "]";
@@ -131,7 +131,7 @@ namespace
     const size_t cu_errors_num = sizeof(cu_errors) / sizeof(cu_errors[0]);
 }
 
-std::string cv::gpu::detail::cuGetErrString(CUresult res)
+String cv::gpu::detail::cuGetErrString(CUresult res)
 {
     return getErrorString(res, cu_errors, cu_errors_num);
 }

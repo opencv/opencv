@@ -49,13 +49,13 @@ class cv::gpu::VideoWriter_GPU::Impl
 };
 
 cv::gpu::VideoWriter_GPU::VideoWriter_GPU() { throw_nogpu(); }
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const String&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const String&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }
 cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
 cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }
 cv::gpu::VideoWriter_GPU::~VideoWriter_GPU() {}
-void cv::gpu::VideoWriter_GPU::open(const std::string&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
-void cv::gpu::VideoWriter_GPU::open(const std::string&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }
+void cv::gpu::VideoWriter_GPU::open(const String&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
+void cv::gpu::VideoWriter_GPU::open(const String&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }
 void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
 void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }
 bool cv::gpu::VideoWriter_GPU::isOpened() const { return false; }
@@ -64,9 +64,9 @@ void cv::gpu::VideoWriter_GPU::write(const cv::gpu::GpuMat&, bool) { throw_nogpu
 cv::gpu::VideoWriter_GPU::EncoderParams cv::gpu::VideoWriter_GPU::getParams() const { EncoderParams params; throw_nogpu(); return params; }
 
 cv::gpu::VideoWriter_GPU::EncoderParams::EncoderParams() { throw_nogpu(); }
-cv::gpu::VideoWriter_GPU::EncoderParams::EncoderParams(const std::string&) { throw_nogpu(); }
-void cv::gpu::VideoWriter_GPU::EncoderParams::load(const std::string&) { throw_nogpu(); }
-void cv::gpu::VideoWriter_GPU::EncoderParams::save(const std::string&) const { throw_nogpu(); }
+cv::gpu::VideoWriter_GPU::EncoderParams::EncoderParams(const String&) { throw_nogpu(); }
+void cv::gpu::VideoWriter_GPU::EncoderParams::load(const String&) { throw_nogpu(); }
+void cv::gpu::VideoWriter_GPU::EncoderParams::save(const String&) const { throw_nogpu(); }
 
 #else // !defined HAVE_CUDA || !defined WIN32
 
@@ -736,7 +736,7 @@ void NVENCAPI cv::gpu::VideoWriter_GPU::Impl::HandleOnEndFrame(const NVVE_EndFra
 class EncoderCallBackFFMPEG : public cv::gpu::VideoWriter_GPU::EncoderCallBack
 {
 public:
-    EncoderCallBackFFMPEG(const std::string& fileName, cv::Size frameSize, double fps);
+    EncoderCallBackFFMPEG(const String& fileName, cv::Size frameSize, double fps);
     ~EncoderCallBackFFMPEG();
 
     unsigned char* acquireBitStream(int* bufferSize);
@@ -799,7 +799,7 @@ namespace
     }
 }
 
-EncoderCallBackFFMPEG::EncoderCallBackFFMPEG(const std::string& fileName, cv::Size frameSize, double fps) :
+EncoderCallBackFFMPEG::EncoderCallBackFFMPEG(const String& fileName, cv::Size frameSize, double fps) :
     stream_(0), isKeyFrame_(false)
 {
     int buf_size = std::max(frameSize.area() * 4, 1024 * 1024);
@@ -843,12 +843,12 @@ cv::gpu::VideoWriter_GPU::VideoWriter_GPU()
 {
 }
 
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format)
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const String& fileName, cv::Size frameSize, double fps, SurfaceFormat format)
 {
     open(fileName, frameSize, fps, format);
 }
 
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format)
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const String& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format)
 {
     open(fileName, frameSize, fps, params, format);
 }
@@ -868,14 +868,14 @@ cv::gpu::VideoWriter_GPU::~VideoWriter_GPU()
     close();
 }
 
-void cv::gpu::VideoWriter_GPU::open(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format)
+void cv::gpu::VideoWriter_GPU::open(const String& fileName, cv::Size frameSize, double fps, SurfaceFormat format)
 {
     close();
     cv::Ptr<EncoderCallBack> encoderCallback(new EncoderCallBackFFMPEG(fileName, frameSize, fps));
     open(encoderCallback, frameSize, fps, format);
 }
 
-void cv::gpu::VideoWriter_GPU::open(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format)
+void cv::gpu::VideoWriter_GPU::open(const String& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format)
 {
     close();
     cv::Ptr<EncoderCallBack> encoderCallback(new EncoderCallBackFFMPEG(fileName, frameSize, fps));
@@ -944,12 +944,12 @@ cv::gpu::VideoWriter_GPU::EncoderParams::EncoderParams()
     DisableSPSPPS = 0;
 }
 
-cv::gpu::VideoWriter_GPU::EncoderParams::EncoderParams(const std::string& configFile)
+cv::gpu::VideoWriter_GPU::EncoderParams::EncoderParams(const String& configFile)
 {
     load(configFile);
 }
 
-void cv::gpu::VideoWriter_GPU::EncoderParams::load(const std::string& configFile)
+void cv::gpu::VideoWriter_GPU::EncoderParams::load(const String& configFile)
 {
     cv::FileStorage fs(configFile, cv::FileStorage::READ);
     CV_Assert( fs.isOpened() );
@@ -975,7 +975,7 @@ void cv::gpu::VideoWriter_GPU::EncoderParams::load(const std::string& configFile
     cv::read(fs["DisableSPSPPS"  ], DisableSPSPPS, 0);
 }
 
-void cv::gpu::VideoWriter_GPU::EncoderParams::save(const std::string& configFile) const
+void cv::gpu::VideoWriter_GPU::EncoderParams::save(const String& configFile) const
 {
     cv::FileStorage fs(configFile, cv::FileStorage::WRITE);
     CV_Assert( fs.isOpened() );

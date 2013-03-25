@@ -122,7 +122,7 @@ int CV_DetectorTest::prepareData( FileStorage& _fs )
             FileNodeIterator it = fn[DETECTOR_NAMES].begin();
             for( ; it != fn[DETECTOR_NAMES].end(); )
             {
-                string _name;
+                String _name;
                 it >> _name;
                 detectorNames.push_back(_name);
                 readDetector(fn[DETECTORS][_name]);
@@ -136,7 +136,7 @@ int CV_DetectorTest::prepareData( FileStorage& _fs )
         {
             for( FileNodeIterator it = fn[IMAGE_FILENAMES].begin(); it != fn[IMAGE_FILENAMES].end(); )
             {
-                string filename;
+                String filename;
                 it >> filename;
                 imageFilenames.push_back(filename);
                 Mat img = imread( dataPath+filename, 1 );
@@ -402,7 +402,7 @@ CV_CascadeDetectorTest::CV_CascadeDetectorTest()
 
 void CV_CascadeDetectorTest::readDetector( const FileNode& fn )
 {
-    string filename;
+    String filename;
     int flag;
     fn[FILENAME] >> filename;
     detectorFilenames.push_back(filename);
@@ -493,7 +493,7 @@ CV_HOGDetectorTest::CV_HOGDetectorTest()
 
 void CV_HOGDetectorTest::readDetector( const FileNode& fn )
 {
-    string filename;
+    String filename;
     if( fn[FILENAME].node->data.seq != 0 )
         fn[FILENAME] >> filename;
     detectorFilenames.push_back( filename);

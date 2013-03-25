@@ -121,7 +121,7 @@ static void printUsage()
 
 
 // Default command line args
-vector<string> img_names;
+vector<String> img_names;
 bool preview = false;
 bool try_gpu = false;
 double work_megapix = 0.6;
@@ -446,7 +446,7 @@ int main(int argc, char* argv[])
     // Leave only images we are sure are from the same panorama
     vector<int> indices = leaveBiggestComponent(features, pairwise_matches, conf_thresh);
     vector<Mat> img_subset;
-    vector<string> img_names_subset;
+    vector<String> img_names_subset;
     vector<Size> full_img_sizes_subset;
     for (size_t i = 0; i < indices.size(); ++i)
     {

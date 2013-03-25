@@ -58,7 +58,7 @@ size_t KeyPoint::hash() const
     return _Val;
 }
 
-void write(FileStorage& fs, const std::string& objname, const std::vector<KeyPoint>& keypoints)
+void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& keypoints)
 {
     WriteStructContext ws(fs, objname, CV_NODE_SEQ + CV_NODE_FLOW);
 

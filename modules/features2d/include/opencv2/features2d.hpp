@@ -109,7 +109,7 @@ public:
 };
 
 //! writes vector of keypoints to the file storage
-CV_EXPORTS void write(FileStorage& fs, const std::string& name, const std::vector<KeyPoint>& keypoints);
+CV_EXPORTS void write(FileStorage& fs, const String& name, const std::vector<KeyPoint>& keypoints);
 //! reads vector of keypoints from the specified file storage node
 CV_EXPORTS void read(const FileNode& node, CV_OUT std::vector<KeyPoint>& keypoints);
 
@@ -179,7 +179,7 @@ public:
     CV_WRAP virtual bool empty() const;
 
     // Create feature detector by detector name.
-    CV_WRAP static Ptr<FeatureDetector> create( const std::string& detectorType );
+    CV_WRAP static Ptr<FeatureDetector> create( const String& detectorType );
 
 protected:
     virtual void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const = 0;
@@ -229,7 +229,7 @@ public:
 
     CV_WRAP virtual bool empty() const;
 
-    CV_WRAP static Ptr<DescriptorExtractor> create( const std::string& descriptorExtractorType );
+    CV_WRAP static Ptr<DescriptorExtractor> create( const String& descriptorExtractorType );
 
 protected:
     virtual void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const = 0;
@@ -264,7 +264,7 @@ public:
                                      bool useProvidedKeypoints=false ) const = 0;
 
     // Create feature detector and descriptor extractor by name.
-    CV_WRAP static Ptr<Feature2D> create( const std::string& name );
+    CV_WRAP static Ptr<Feature2D> create( const String& name );
 };
 
 /*!
@@ -765,7 +765,7 @@ public:
 
     virtual Ptr<AdjusterAdapter> clone() const = 0;
 
-    static Ptr<AdjusterAdapter> create( const std::string& detectorType );
+    static Ptr<AdjusterAdapter> create( const String& detectorType );
 };
 /** \brief an adaptively adjusting detector that iteratively detects until the desired number
  * of features are detected.
@@ -1141,7 +1141,7 @@ public:
     // but with empty train data.
     virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
 
-    CV_WRAP static Ptr<DescriptorMatcher> create( const std::string& descriptorMatcherType );
+    CV_WRAP static Ptr<DescriptorMatcher> create( const String& descriptorMatcherType );
 protected:
     /*
      * Class to work with descriptors from several images as with one merged matrix.
@@ -1367,8 +1367,8 @@ public:
     // but with empty train data.
     virtual Ptr<GenericDescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
 
-    static Ptr<GenericDescriptorMatcher> create( const std::string& genericDescritptorMatcherType,
-                                                 const std::string &paramsFilename=std::string() );
+    static Ptr<GenericDescriptorMatcher> create( const String& genericDescritptorMatcherType,
+                                                 const String &paramsFilename=String() );
 
 protected:
     // In fact the matching is implemented only by the following two methods. These methods suppose

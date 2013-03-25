@@ -122,7 +122,7 @@ CV_INIT_ALGORITHM(HOG6MagLuv,  "ChannelFeatureBuilder.HOG6MagLuv", );
 
 ChannelFeatureBuilder::~ChannelFeatureBuilder() {}
 
-cv::Ptr<ChannelFeatureBuilder> ChannelFeatureBuilder::create(const std::string& featureType)
+cv::Ptr<ChannelFeatureBuilder> ChannelFeatureBuilder::create(const cv::String& featureType)
 {
     return Algorithm::create<ChannelFeatureBuilder>("ChannelFeatureBuilder." + featureType);
 }
@@ -158,7 +158,7 @@ float ChannelFeature::operator() (const cv::Mat& integrals, const cv::Size& mode
     return (float)(a - b + c - d);
 }
 
-void cv::softcascade::write(cv::FileStorage& fs, const std::string&, const ChannelFeature& f)
+void cv::softcascade::write(cv::FileStorage& fs, const cv::String&, const ChannelFeature& f)
 {
     fs << "{" << "channel" << f.channel << "rect" << f.bb << "}";
 }

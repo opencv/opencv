@@ -949,7 +949,7 @@ void GuiReceiver::showImage(QString name, void* arr)
         mat = cvGetMat(arr, &stub);
 
         cv::Mat im(mat);
-        cv::imshow(name.toStdString(), im);
+        cv::imshow(name.toUtf8().data(), im);
     }
     else
     {

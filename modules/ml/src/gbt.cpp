@@ -1117,7 +1117,7 @@ void CvGBTrees::write( CvFileStorage* fs, const char* name ) const
 
     CvSeqReader reader;
     int i;
-    std::string s;
+    cv::String s;
 
     cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_ML_GBT );
 
@@ -1167,7 +1167,7 @@ void CvGBTrees::read( CvFileStorage* fs, CvFileNode* node )
     CvFileNode* trees_fnode;
     CvMemStorage* storage;
     int i, ntrees;
-    std::string s;
+    cv::String s;
 
     clear();
     read_params( fs, node );

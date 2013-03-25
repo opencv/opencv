@@ -84,7 +84,7 @@ namespace cv
             //     int channels = mat_dst.oclchannels();
             //     int depth = mat_dst.depth();
 
-            //     std::string kernelName = "merge_vector";
+            //     String kernelName = "merge_vector";
 
             //     int indexes[4][7] = {{0, 0, 0, 0, 0, 0, 0},
             //         {4, 4, 2, 2, 1, 1, 1},
@@ -135,7 +135,7 @@ namespace cv
                 int channels = mat_dst.oclchannels();
                 int depth = mat_dst.depth();
 
-                std::string kernelName = "merge_vector";
+                String kernelName = "merge_vector";
 
                 int vector_lengths[4][7] = {{0, 0, 0, 0, 0, 0, 0},
                     {2, 2, 1, 1, 1, 1, 1},
@@ -233,7 +233,7 @@ namespace cv
             //     int channels = mat_src.oclchannels();
             //     int depth = mat_src.depth();
 
-            //     std::string kernelName = "split_vector";
+            //     String kernelName = "split_vector";
 
             //     int indexes[4][7] = {{0, 0, 0, 0, 0, 0, 0},
             //         {8, 8, 8, 8, 4, 4, 2},
@@ -284,7 +284,7 @@ namespace cv
                 int channels = mat_src.oclchannels();
                 int depth = mat_src.depth();
 
-                std::string kernelName = "split_vector";
+                String kernelName = "split_vector";
 
                 int vector_lengths[4][7] = {{0, 0, 0, 0, 0, 0, 0},
                     {4, 4, 2, 2, 1, 1, 1},

@@ -44,8 +44,6 @@
 
 #include "cascadedetect.hpp"
 
-#include <string>
-
 #if defined (LOG_CASCADE_STATISTIC)
 struct Logger
 {
@@ -854,7 +852,7 @@ CascadeClassifier::CascadeClassifier()
 {
 }
 
-CascadeClassifier::CascadeClassifier(const std::string& filename)
+CascadeClassifier::CascadeClassifier(const String& filename)
 {
     load(filename);
 }
@@ -868,7 +866,7 @@ bool CascadeClassifier::empty() const
     return oldCascade.empty() && data.stages.empty();
 }
 
-bool CascadeClassifier::load(const std::string& filename)
+bool CascadeClassifier::load(const String& filename)
 {
     oldCascade.release();
     data = Data();
@@ -1209,13 +1207,13 @@ bool CascadeClassifier::Data::read(const FileNode &root)
     static const float THRESHOLD_EPS = 1e-5f;
 
     // load stage params
-    std::string stageTypeStr = (std::string)root[CC_STAGE_TYPE];
+    String stageTypeStr = (String)root[CC_STAGE_TYPE];
     if( stageTypeStr == CC_BOOST )
         stageType = BOOST;
     else
         return false;
 
-    std::string featureTypeStr = (std::string)root[CC_FEATURE_TYPE];
+    String featureTypeStr = (String)root[CC_FEATURE_TYPE];
     if( featureTypeStr == CC_HAAR )
         featureType = FeatureEvaluator::HAAR;
     else if( featureTypeStr == CC_LBP )

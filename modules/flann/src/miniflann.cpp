@@ -26,7 +26,7 @@ IndexParams::IndexParams()
 }
 
 template<typename T>
-T getParam(const IndexParams& _p, const std::string& key, const T& defaultVal=T())
+T getParam(const IndexParams& _p, const String& key, const T& defaultVal=T())
 {
     ::cvflann::IndexParams& p = get_params(_p);
     ::cvflann::IndexParams::const_iterator it = p.find(key);
@@ -36,49 +36,49 @@ T getParam(const IndexParams& _p, const std::string& key, const T& defaultVal=T(
 }
 
 template<typename T>
-void setParam(IndexParams& _p, const std::string& key, const T& value)
+void setParam(IndexParams& _p, const String& key, const T& value)
 {
     ::cvflann::IndexParams& p = get_params(_p);
     p[key] = value;
 }
 
-std::string IndexParams::getString(const std::string& key, const std::string& defaultVal) const
+String IndexParams::getString(const String& key, const String& defaultVal) const
 {
     return getParam(*this, key, defaultVal);
 }
 
-int IndexParams::getInt(const std::string& key, int defaultVal) const
+int IndexParams::getInt(const String& key, int defaultVal) const
 {
     return getParam(*this, key, defaultVal);
 }
 
-double IndexParams::getDouble(const std::string& key, double defaultVal) const
+double IndexParams::getDouble(const String& key, double defaultVal) const
 {
     return getParam(*this, key, defaultVal);
 }
 
 
-void IndexParams::setString(const std::string& key, const std::string& value)
+void IndexParams::setString(const String& key, const String& value)
 {
     setParam(*this, key, value);
 }
 
-void IndexParams::setInt(const std::string& key, int value)
+void IndexParams::setInt(const String& key, int value)
 {
     setParam(*this, key, value);
 }
 
-void IndexParams::setDouble(const std::string& key, double value)
+void IndexParams::setDouble(const String& key, double value)
 {
     setParam(*this, key, value);
 }
 
-void IndexParams::setFloat(const std::string& key, float value)
+void IndexParams::setFloat(const String& key, float value)
 {
     setParam(*this, key, value);
 }
 
-void IndexParams::setBool(const std::string& key, bool value)
+void IndexParams::setBool(const String& key, bool value)
 {
     setParam(*this, key, value);
 }
@@ -88,9 +88,9 @@ void IndexParams::setAlgorithm(int value)
     setParam(*this, "algorithm", (cvflann::flann_algorithm_t)value);
 }
 
-void IndexParams::getAll(std::vector<std::string>& names,
+void IndexParams::getAll(std::vector<String>& names,
             std::vector<int>& types,
-            std::vector<std::string>& strValues,
+            std::vector<String>& strValues,
             std::vector<double>& numValues) const
 {
     names.clear();
@@ -106,7 +106,7 @@ void IndexParams::getAll(std::vector<std::string>& names,
         names.push_back(it->first);
         try
         {
-            std::string val = it->second.cast<std::string>();
+            String val = it->second.cast<String>();
             types.push_back(CV_USRTYPE1);
             strValues.push_back(val);
             numValues.push_back(-1);
@@ -285,9 +285,9 @@ LshIndexParams::LshIndexParams(int table_number, int key_size, int multi_probe_l
     p["multi_probe_level"] = multi_probe_level;
 }
 
-SavedIndexParams::SavedIndexParams(const std::string& _filename)
+SavedIndexParams::SavedIndexParams(const String& _filename)
 {
-    std::string filename = _filename;
+    String filename = _filename;
     ::cvflann::IndexParams& p = get_params(*this);
 
     p["algorithm"] = FLANN_INDEX_SAVED;
@@ -357,7 +357,7 @@ void Index::build(InputArray _data, const IndexParams& params, flann_distance_t 
     algo = getParam<flann_algorithm_t>(params, "algorithm", FLANN_INDEX_LINEAR);
     if( algo == FLANN_INDEX_SAVED )
     {
-        load(_data, getParam<std::string>(params, "filename", std::string()));
+        load(_data, getParam<String>(params, "filename", String()));
         return;
     }
 
@@ -654,7 +654,7 @@ template<typename Distance> void saveIndex(const Index* index0, const void* inde
     saveIndex_< ::cvflann::Index<Distance> >(index0, index, fout);
 }
 
-void Index::save(const std::string& filename) const
+void Index::save(const String& filename) const
 {
     FILE* fout = fopen(filename.c_str(), "wb");
     if (fout == NULL)
@@ -720,7 +720,7 @@ bool loadIndex(Index* index0, void*& index, const Mat& data, FILE* fin, const Di
     return loadIndex_<Distance, ::cvflann::Index<Distance> >(index0, index, data, fin, dist);
 }
 
-bool Index::load(InputArray _data, const std::string& filename)
+bool Index::load(InputArray _data, const String& filename)
 {
     Mat data = _data.getMat();
     bool ok = true;

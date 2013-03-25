@@ -59,7 +59,7 @@ namespace {
 class VideoFileSourceImpl : public IFrameSource
 {
 public:
-    VideoFileSourceImpl(const std::string &path, bool volatileFrame)
+    VideoFileSourceImpl(const String &path, bool volatileFrame)
         : path_(path), volatileFrame_(volatileFrame) { reset(); }
 
     virtual void reset()
@@ -68,7 +68,7 @@ public:
         vc.release();
         vc.open(path_);
         if (!vc.isOpened())
-            throw std::runtime_error("can't open file: " + path_);
+            CV_Error(0, "can't open file: " + path_);
 #else
         CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without video I/O support");
 #endif
@@ -96,7 +96,7 @@ public:
 #endif
 
 private:
-    std::string path_;
+    String path_;
     bool volatileFrame_;
 #ifdef HAVE_OPENCV_HIGHGUI
     VideoCapture vc;
@@ -105,7 +105,7 @@ private:
 
 }//namespace
 
-VideoFileSource::VideoFileSource(const std::string &path, bool volatileFrame)
+VideoFileSource::VideoFileSource(const String &path, bool volatileFrame)
     : impl(new VideoFileSourceImpl(path, volatileFrame)) {}
 
 void VideoFileSource::reset() { impl->reset(); }

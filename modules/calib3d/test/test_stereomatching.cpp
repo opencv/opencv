@@ -593,10 +593,10 @@ int CV_StereoMatchingTest::readDatasetsParams( FileStorage& fs )
     assert(fn.isSeq());
     for( int i = 0; i < (int)fn.size(); i+=3 )
     {
-        string _name = fn[i];
+        String _name = fn[i];
         DatasetParams params;
-        string sf = fn[i+1]; params.dispScaleFactor = atoi(sf.c_str());
-        string uv = fn[i+2]; params.dispUnknVal = atoi(uv.c_str());
+        String sf = fn[i+1]; params.dispScaleFactor = atoi(sf.c_str());
+        String uv = fn[i+2]; params.dispUnknVal = atoi(uv.c_str());
         datasetsParams[_name] = params;
     }
     return cvtest::TS::OK;
@@ -680,10 +680,10 @@ protected:
         assert(fn.isSeq());
         for( int i = 0; i < (int)fn.size(); i+=4 )
         {
-            string caseName = fn[i], datasetName = fn[i+1];
+            String caseName = fn[i], datasetName = fn[i+1];
             RunParams params;
-            string ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
-            string winSize = fn[i+3]; params.winSize = atoi(winSize.c_str());
+            String ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
+            String winSize = fn[i+3]; params.winSize = atoi(winSize.c_str());
             caseNames.push_back( caseName );
             caseDatasets.push_back( datasetName );
             caseRunParams.push_back( params );
@@ -734,11 +734,11 @@ protected:
         assert(fn.isSeq());
         for( int i = 0; i < (int)fn.size(); i+=5 )
         {
-            string caseName = fn[i], datasetName = fn[i+1];
+            String caseName = fn[i], datasetName = fn[i+1];
             RunParams params;
-            string ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
-            string winSize = fn[i+3]; params.winSize = atoi(winSize.c_str());
-            string fullDP = fn[i+4]; params.fullDP = atoi(fullDP.c_str()) == 0 ? false : true;
+            String ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
+            String winSize = fn[i+3]; params.winSize = atoi(winSize.c_str());
+            String fullDP = fn[i+4]; params.fullDP = atoi(fullDP.c_str()) == 0 ? false : true;
             caseNames.push_back( caseName );
             caseDatasets.push_back( datasetName );
             caseRunParams.push_back( params );

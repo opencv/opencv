@@ -44,7 +44,6 @@
 #define __OPENCV_VIDEOSTAB_GLOBAL_MOTION_HPP__
 
 #include <vector>
-#include <string>
 #include <fstream>
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"
@@ -146,7 +145,7 @@ private:
 class CV_EXPORTS FromFileMotionReader : public ImageMotionEstimatorBase
 {
 public:
-    FromFileMotionReader(const std::string &path);
+    FromFileMotionReader(const String &path);
 
     virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
 
@@ -157,7 +156,7 @@ private:
 class CV_EXPORTS ToFileMotionWriter : public ImageMotionEstimatorBase
 {
 public:
-    ToFileMotionWriter(const std::string &path, Ptr<ImageMotionEstimatorBase> estimator);
+    ToFileMotionWriter(const String &path, Ptr<ImageMotionEstimatorBase> estimator);
 
     virtual void setMotionModel(MotionModel val) { motionEstimator_->setMotionModel(val); }
     virtual MotionModel motionModel() const { return motionEstimator_->motionModel(); }

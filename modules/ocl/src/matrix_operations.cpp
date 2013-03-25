@@ -80,7 +80,7 @@ static void convert_C3C4(const cl_mem &src, oclMat &dst)
     int dstStep_in_pixel = dst.step1() / dst.oclchannels();
     int pixel_end = dst.wholecols * dst.wholerows - 1;
     Context *clCxt = dst.clCxt;
-    std::string kernelName = "convertC3C4";
+    String kernelName = "convertC3C4";
     char compile_option[32];
     switch(dst.depth())
     {
@@ -128,7 +128,7 @@ static void convert_C4C3(const oclMat &src, cl_mem &dst)
     int srcStep_in_pixel = src.step1() / src.oclchannels();
     int pixel_end = src.wholecols * src.wholerows - 1;
     Context *clCxt = src.clCxt;
-    std::string kernelName = "convertC4C3";
+    String kernelName = "convertC4C3";
     char compile_option[32];
     switch(src.depth())
     {
@@ -285,7 +285,7 @@ inline int divUp(int total, int grain)
 ///////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// CopyTo /////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
-static void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask, std::string kernelName)
+static void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask, String kernelName)
 {
     CV_DbgAssert( dst.rows == mask.rows && dst.cols == mask.cols &&
                   src.rows == dst.rows && src.cols == dst.cols
@@ -293,7 +293,7 @@ static void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask
 
     std::vector<std::pair<size_t , const void *> > args;
 
-    std::string string_types[4][7] = {{"uchar", "char", "ushort", "short", "int", "float", "double"},
+    String string_types[4][7] = {{"uchar", "char", "ushort", "short", "int", "float", "double"},
         {"uchar2", "char2", "ushort2", "short2", "int2", "float2", "double2"},
         {"uchar3", "char3", "ushort3", "short3", "int3", "float3", "double3"},
         {"uchar4", "char4", "ushort4", "short4", "int4", "float4", "double4"}
@@ -352,10 +352,10 @@ void cv::ocl::oclMat::copyTo( oclMat &mat, const oclMat &mask) const
 ///////////////////////////////////////////////////////////////////////////
 static void convert_run(const oclMat &src, oclMat &dst, double alpha, double beta)
 {
-    std::string kernelName = "convert_to_S";
+    String kernelName = "convert_to_S";
     std::stringstream idxStr;
     idxStr << src.depth();
-    kernelName += idxStr.str();
+    kernelName = kernelName + idxStr.str().c_str();
     float alpha_f = alpha, beta_f = beta;
     CV_DbgAssert(src.rows == dst.rows && src.cols == dst.cols);
     std::vector<std::pair<size_t , const void *> > args;
@@ -421,7 +421,7 @@ oclMat &cv::ocl::oclMat::operator = (const Scalar &s)
     setTo(s);
     return *this;
 }
-static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, std::string kernelName)
+static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, String kernelName)
 {
     std::vector<std::pair<size_t , const void *> > args;
 
@@ -617,7 +617,7 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, std:
 #endif
 }
 
-static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &mask, std::string kernelName)
+static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &mask, String kernelName)
 {
     CV_DbgAssert( dst.rows == mask.rows && dst.cols == mask.cols);
     std::vector<std::pair<size_t , const void *> > args;

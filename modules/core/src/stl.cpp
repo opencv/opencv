@@ -7,17 +7,13 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//		Zhang Chunpeng chunpeng@multicorewareinc.com
-//		Yao Wang, yao@multicorewareinc.com
-//
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -27,7 +23,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -45,44 +41,29 @@
 //
 //M*/
 
-/* Haar features calculation */
-//#define EMU
 
 #include "precomp.hpp"
 
-using namespace cv;
-using namespace cv::ocl;
-
-namespace cv
+char* cv::String::allocate(size_t len)
 {
-    namespace ocl
+    size_t totalsize = alignSize(len + 1, (int)sizeof(int));
+    int* data = (int*)cv::fastMalloc(totalsize + sizeof(int));
+    data[0] = 1;
+    cstr_ = (char*)(data + 1);
+    len_ = len;
+    cstr_[len] = 0;
+    return cstr_;
+}
+
+
+void cv::String::deallocate()
+{
+    int* data = (int*)cstr_;
+    len_ = 0;
+    cstr_ = 0;
+
+    if(data && 1 == CV_XADD(data-1, -1))
     {
-        extern const char *pyr_up;
-        void pyrUp(const cv::ocl::oclMat &src, cv::ocl::oclMat &dst)
-        {
-            dst.create(src.rows * 2, src.cols * 2, src.type());
-
-            Context *clCxt = src.clCxt;
-
-            const String kernelName = "pyrUp";
-
-            std::vector< std::pair<size_t, const void *> > args;
-            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data));
-            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data));
-            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.rows));
-            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.rows));
-            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.cols));
-            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.cols));
-            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.offset));
-            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.offset));
-            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.step));
-            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step));
-
-            size_t globalThreads[3] = {dst.cols, dst.rows, 1};
-            size_t localThreads[3]  = {16, 16, 1};
-
-
-            openCLExecuteKernel(clCxt, &pyr_up, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
-        }
+        cv::fastFree(data-1);
     }
 }

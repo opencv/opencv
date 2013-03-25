@@ -1924,7 +1924,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
         qsort(ratios, k_fold, sizeof(ratios[0]), icvCmpIndexedratio);
         double old_dist = 0.0;
         for (int k=0; k<k_fold; ++k)
-            old_dist += abs(ratios[k].val-class_ratio);
+            old_dist += cv::abs(ratios[k].val-class_ratio);
         double new_dist = 1.0;
         // iterate to make the folds more balanced
         while (new_dist > 0.0)
@@ -1941,7 +1941,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
             qsort(ratios, k_fold, sizeof(ratios[0]), icvCmpIndexedratio);
             new_dist = 0.0;
             for (int k=0; k<k_fold; ++k)
-                new_dist += abs(ratios[k].val-class_ratio);
+                new_dist += cv::abs(ratios[k].val-class_ratio);
             if (new_dist < old_dist)
             {
                 // swapping really improves, so swap the samples

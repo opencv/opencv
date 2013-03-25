@@ -235,7 +235,7 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int srcOffset_x = srcOffset % srcStep;
     int srcOffset_y = srcOffset / srcStep;
     Context *clCxt = src.clCxt;
-    std::string kernelName;
+    String kernelName;
     size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0], (src.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1};
 
@@ -314,7 +314,7 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int srcOffset_x = srcOffset % srcStep;
     int srcOffset_y = srcOffset / srcStep;
     Context *clCxt = src.clCxt;
-    std::string kernelName;
+    String kernelName;
     size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0],
                                (src.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1};
@@ -606,7 +606,7 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int cn =  src.oclchannels();
     int depth = src.depth();
 
-    std::string kernelName = "filter2D";
+    String kernelName = "filter2D";
 
     size_t src_offset_x = (src.offset % src.step) / src.elemSize();
     size_t src_offset_y = src.offset / src.step;
@@ -762,7 +762,7 @@ static void GPUFilterBox_8u_C1R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    std::string kernelName = "boxFilter_C1_D0";
+    String kernelName = "boxFilter_C1_D0";
 
     char btype[30];
 
@@ -824,7 +824,7 @@ static void GPUFilterBox_8u_C4R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    std::string kernelName = "boxFilter_C4_D0";
+    String kernelName = "boxFilter_C4_D0";
 
     char btype[30];
 
@@ -886,7 +886,7 @@ static void GPUFilterBox_32F_C1R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    std::string kernelName = "boxFilter_C1_D5";
+    String kernelName = "boxFilter_C1_D5";
 
     char btype[30];
 
@@ -949,7 +949,7 @@ static void GPUFilterBox_32F_C4R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    std::string kernelName = "boxFilter_C4_D5";
+    String kernelName = "boxFilter_C4_D5";
 
     char btype[30];
 
@@ -1095,7 +1095,7 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     int channels = src.oclchannels();
 
     size_t localThreads[3] = {16, 16, 1};
-    std::string kernelName = "row_filter";
+    String kernelName = "row_filter";
 
     char btype[30];
 
@@ -1227,7 +1227,7 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
     int channels = src.oclchannels();
 
     size_t localThreads[3] = {16, 16, 1};
-    std::string kernelName = "col_filter";
+    String kernelName = "col_filter";
 
     char btype[30];
 

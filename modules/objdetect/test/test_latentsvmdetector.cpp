@@ -232,9 +232,9 @@ void LatentSVMDetectorTest::run( int /* start_from */)
     // detector12 - to test case of two (several) classes 'cat' and car
 
     // Load detectors
-    LatentSvmDetector detector1( vector<string>(1,model_path_cat) );
+    LatentSvmDetector detector1( vector<String>(1,model_path_cat) );
 
-    vector<string> models_pathes(2);
+    vector<String> models_pathes(2);
     models_pathes[0] = model_path_cat;
     models_pathes[1] = model_path_car;
     LatentSvmDetector detector12( models_pathes );

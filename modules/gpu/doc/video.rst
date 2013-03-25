@@ -704,8 +704,8 @@ gpu::VideoWriter_GPU::VideoWriter_GPU
 Constructors.
 
 .. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU()
-.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR)
-.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
+.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const String& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR)
+.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const String& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
 .. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR)
 .. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
 
@@ -729,8 +729,8 @@ gpu::VideoWriter_GPU::open
 --------------------------
 Initializes or reinitializes video writer.
 
-.. ocv:function:: void gpu::VideoWriter_GPU::open(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR)
-.. ocv:function:: void gpu::VideoWriter_GPU::open(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
+.. ocv:function:: void gpu::VideoWriter_GPU::open(const String& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR)
+.. ocv:function:: void gpu::VideoWriter_GPU::open(const String& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
 .. ocv:function:: void gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR)
 .. ocv:function:: void gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
 
@@ -797,10 +797,10 @@ Different parameters for CUDA video encoder. ::
         int       DisableSPSPPS;   //    NVVE_DISABLE_SPS_PPS
 
         EncoderParams();
-        explicit EncoderParams(const std::string& configFile);
+        explicit EncoderParams(const String& configFile);
 
-        void load(const std::string& configFile);
-        void save(const std::string& configFile) const;
+        void load(const String& configFile);
+        void save(const String& configFile) const;
     };
 
 
@@ -810,7 +810,7 @@ gpu::VideoWriter_GPU::EncoderParams::EncoderParams
 Constructors.
 
 .. ocv:function:: gpu::VideoWriter_GPU::EncoderParams::EncoderParams()
-.. ocv:function:: gpu::VideoWriter_GPU::EncoderParams::EncoderParams(const std::string& configFile)
+.. ocv:function:: gpu::VideoWriter_GPU::EncoderParams::EncoderParams(const String& configFile)
 
     :param configFile: Config file name.
 
@@ -822,7 +822,7 @@ gpu::VideoWriter_GPU::EncoderParams::load
 -----------------------------------------
 Reads parameters from config file.
 
-.. ocv:function:: void gpu::VideoWriter_GPU::EncoderParams::load(const std::string& configFile)
+.. ocv:function:: void gpu::VideoWriter_GPU::EncoderParams::load(const String& configFile)
 
     :param configFile: Config file name.
 
@@ -832,7 +832,7 @@ gpu::VideoWriter_GPU::EncoderParams::save
 -----------------------------------------
 Saves parameters to config file.
 
-.. ocv:function:: void gpu::VideoWriter_GPU::EncoderParams::save(const std::string& configFile) const
+.. ocv:function:: void gpu::VideoWriter_GPU::EncoderParams::save(const String& configFile) const
 
     :param configFile: Config file name.
 
@@ -982,7 +982,7 @@ gpu::VideoReader_GPU::VideoReader_GPU
 Constructors.
 
 .. ocv:function:: gpu::VideoReader_GPU::VideoReader_GPU()
-.. ocv:function:: gpu::VideoReader_GPU::VideoReader_GPU(const std::string& filename)
+.. ocv:function:: gpu::VideoReader_GPU::VideoReader_GPU(const String& filename)
 .. ocv:function:: gpu::VideoReader_GPU::VideoReader_GPU(const cv::Ptr<VideoSource>& source)
 
     :param filename: Name of the input video file.
@@ -997,7 +997,7 @@ gpu::VideoReader_GPU::open
 --------------------------
 Initializes or reinitializes video reader.
 
-.. ocv:function:: void gpu::VideoReader_GPU::open(const std::string& filename)
+.. ocv:function:: void gpu::VideoReader_GPU::open(const String& filename)
 .. ocv:function:: void gpu::VideoReader_GPU::open(const cv::Ptr<VideoSource>& source)
 
 The method opens video reader. Parameters are the same as in the constructor :ocv:func:`gpu::VideoReader_GPU::VideoReader_GPU` . The method throws :ocv:class:`Exception` if error occurs.

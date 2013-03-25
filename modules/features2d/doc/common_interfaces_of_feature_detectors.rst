@@ -88,7 +88,7 @@ Abstract base class for 2D image feature detectors. ::
         virtual void read(const FileNode&);
         virtual void write(FileStorage&) const;
 
-        static Ptr<FeatureDetector> create( const string& detectorType );
+        static Ptr<FeatureDetector> create( const String& detectorType );
 
     protected:
     ...
@@ -116,7 +116,7 @@ FeatureDetector::create
 -----------------------
 Creates a feature detector by its name.
 
-.. ocv:function:: Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
+.. ocv:function:: Ptr<FeatureDetector> FeatureDetector::create( const String& detectorType )
 
     :param detectorType: Feature detector type.
 
@@ -439,7 +439,7 @@ Class providing an interface for adjusting parameters of a feature detector. Thi
         virtual void tooMany(int max, int n_detected) = 0;
         virtual bool good() const = 0;
         virtual Ptr<AdjusterAdapter> clone() const = 0;
-        static Ptr<AdjusterAdapter> create( const string& detectorType );
+        static Ptr<AdjusterAdapter> create( const String& detectorType );
      };
 
 
@@ -500,7 +500,7 @@ AdjusterAdapter::create
 -----------------------
 Creates an adjuster adapter by name
 
-.. ocv:function:: Ptr<AdjusterAdapter> AdjusterAdapter::create( const string& detectorType )
+.. ocv:function:: Ptr<AdjusterAdapter> AdjusterAdapter::create( const String& detectorType )
 
     Creates an adjuster adapter by name ``detectorType``. The detector name is the same as in :ocv:func:`FeatureDetector::create`, but now supports ``"FAST"``, ``"STAR"``, and ``"SURF"`` only.
 

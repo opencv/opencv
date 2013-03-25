@@ -49,7 +49,6 @@
 
 #include "precomp.hpp"
 #include <stdio.h>
-#include <string>
 
 using namespace cv;
 using namespace cv::ocl;

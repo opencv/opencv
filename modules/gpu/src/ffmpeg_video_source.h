@@ -57,7 +57,7 @@ namespace cv { namespace gpu
         class FFmpegVideoSource : public VideoReader_GPU::VideoSource
         {
         public:
-            FFmpegVideoSource(const std::string& fname);
+            FFmpegVideoSource(const String& fname);
             ~FFmpegVideoSource();
 
             VideoReader_GPU::FormatInfo format() const;
