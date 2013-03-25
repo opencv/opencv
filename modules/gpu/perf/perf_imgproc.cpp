@@ -600,6 +600,39 @@ PERF_TEST_P(Sz, ImgProc_EqualizeHist,
     }
 }
 
+DEF_PARAM_TEST(Sz_ClipLimit, cv::Size, double);
+
+PERF_TEST_P(Sz_ClipLimit, ImgProc_CLAHE,
+            Combine(GPU_TYPICAL_MAT_SIZES,
+                    Values(0.0, 40.0)))
+{
+    const cv::Size size = GET_PARAM(0);
+    const double clipLimit = GET_PARAM(1);
+
+    cv::Mat src(size, CV_8UC1);
+    declare.in(src, WARMUP_RNG);
+
+    if (PERF_RUN_GPU())
+    {
+        cv::Ptr<cv::gpu::CLAHE> clahe = cv::gpu::createCLAHE(clipLimit);
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat dst;
+
+        TEST_CYCLE() clahe->apply(d_src, dst);
+
+        GPU_SANITY_CHECK(dst);
+    }
+    else
+    {
+        cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(clipLimit);
+        cv::Mat dst;
+
+        TEST_CYCLE() clahe->apply(src, dst);
+
+        CPU_SANITY_CHECK(dst);
+    }
+}
+
 //////////////////////////////////////////////////////////////////////
 // ColumnSum
 

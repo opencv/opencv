@@ -1062,6 +1062,14 @@ CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, Stream& stream = St
 CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, Stream& stream = Stream::Null());
 CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null());
 
+class CV_EXPORTS CLAHE : public cv::CLAHE
+{
+public:
+    using cv::CLAHE::apply;
+    virtual void apply(InputArray src, OutputArray dst, Stream& stream) = 0;
+};
+CV_EXPORTS Ptr<cv::gpu::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+
 //////////////////////////////// StereoBM_GPU ////////////////////////////////
 
 class CV_EXPORTS StereoBM_GPU
