@@ -103,6 +103,21 @@ world of the OpenCV.
                       :height: 90pt
                       :width:  90pt
 
+  =========== ======================================================
+  |WinVSVis|  **Title:** :ref:`Windows_Visual_Studio_Image_Watch`
+
+              *Compatibility:* >= OpenCV 2.4
+
+              *Author:* Wolf Kienzle
+
+              You will learn how to visualize OpenCV matrices and images within Visual Studio 2012.
+
+  =========== ======================================================
+
+     .. |WinVSVis| image:: images/visual_studio_image_watch.png
+                        :height: 90pt
+                        :width:  90pt
+
 * **Desktop Java**
 
   .. tabularcolumns:: m{100pt} m{300pt}
@@ -278,6 +293,7 @@ world of the OpenCV.
    ../linux_eclipse/linux_eclipse
    ../windows_install/windows_install
    ../windows_visual_studio_Opencv/windows_visual_studio_Opencv
+   ../windows_visual_studio_image_watch/windows_visual_studio_image_watch
    ../desktop_java/java_dev_intro
    ../android_binary_package/android_dev_intro
    ../android_binary_package/O4A_SDK
