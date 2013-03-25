@@ -44,10 +44,14 @@
 #ifndef __OPENCV_CORE_CVSTD_HPP__
 #define __OPENCV_CORE_CVSTD_HPP__
 
-#include <cstddef>
-#include <cstring>
+#ifndef __cplusplus
+#  error cvstd.hpp header must be compiled as C++
+#endif
 
 #include "opencv2/core/cvdef.h"
+
+#include <cstddef>
+#include <cstring>
 
 #ifndef OPENCV_NOSTL
 #  include <string>
@@ -96,273 +100,65 @@ public:
     typedef const char* const_pointer;
     typedef ptrdiff_t difference_type;
     typedef size_t size_type;
-
     typedef char* iterator;
     typedef const char* const_iterator;
 
     static const size_t npos = size_t(-1);
 
-    explicit String() : cstr_(0), len_(0) {}
+    explicit String();
+    String(const String& str);
+    String(const String& str, size_t pos, size_t len = npos);
+    String(const char* s);
+    String(const char* s, size_t n);
+    String(size_t n, char c);
+    String(const char* first, const char* last);
+    template<typename Iterator> String(Iterator first, Iterator last);
+    explicit String(const FileNode& fn);
+    ~String();
 
-    String(const String& str) : cstr_(str.cstr_), len_(str.len_)
-    {
-        if (cstr_) CV_XADD(((int*)cstr_)-1, 1);
-    }
+    String& operator=(const String& str);
+    String& operator=(const char* s);
+    String& operator=(char c);
 
-    String(const String& str, size_t pos, size_t len = npos) : cstr_(0), len_(0)
-    {
-        pos = min(pos, str.len_);
-        len = min(str.len_ - pos, len);
-        if (!len) return;
-        if (len == str.len_)
-        {
-            CV_XADD(((int*)str.cstr_)-1, 1);
-            cstr_ = str.cstr_;
-            len_ = str.len_;
-            return;
-        }
-        memcpy(allocate(len), str.cstr_ + pos, len);
-    }
+    size_t size() const;
+    size_t length() const;
 
-    String(const char* s): cstr_(0), len_(0)
-    {
-        if (!s) return;
-        size_t len = strlen(s);
-        memcpy(allocate(len), s, len);
-    }
+    char operator[](size_t idx) const;
+    char operator[](int idx) const;
 
-    String(const char* s, size_t n): cstr_(0), len_(0)
-    {
-        if (!n) return;
-        memcpy(allocate(n), s, n);
-    }
+    const char* begin() const;
+    const char* end() const;
 
-    String(size_t n, char c): cstr_(0), len_(0)
-    {
-        memset(allocate(n), c, n);
-    }
+    const char* c_str() const;
 
-    String(const char* first, const char* last): cstr_(0), len_(0)
-    {
-        size_t len = (size_t)(last - first);
-        memcpy(allocate(len), first, len);
-    }
+    bool empty() const;
+    void clear();
 
-    template<typename Iterator>
-    String(Iterator first, Iterator last): cstr_(0), len_(0)
-    {
-        size_t len = (size_t)(last - first);
-        char* str = allocate(len);
-        while (first != last)
-        {
-            *str++ = *first;
-            ++first;
-        }
-    }
+    int compare(const char* s) const;
+    int compare(const String& str) const;
 
-    ~String() { deallocate(); }
+    void swap(String& str);
+    String substr(size_t pos = 0, size_t len = npos) const;
 
-    String& operator=(const String& str)
-    {
-        deallocate();
-        if (str.cstr_) CV_XADD(((int*)str.cstr_)-1, 1);
-        cstr_ = str.cstr_;
-        len_ = str.len_;
-        return *this;
-    }
+    size_t find(const char* s, size_t pos, size_t n) const;
+    size_t find(char c, size_t pos = 0) const;
+    size_t find(const String& str, size_t pos = 0) const;
+    size_t find(const char* s, size_t pos = 0) const;
 
-    String& operator=(const char* s)
-    {
-        deallocate();
-        if (!s) return *this;
-        size_t len = strlen(s);
-        memcpy(allocate(len), s, len);
-        return *this;
-    }
+    size_t rfind(const char* s, size_t pos, size_t n) const;
+    size_t rfind(char c, size_t pos = npos) const;
+    size_t rfind(const String& str, size_t pos = npos) const;
+    size_t rfind(const char* s, size_t pos = npos) const;
 
-    String& operator=(char c)
-    {
-        deallocate();
-        allocate(1)[0] = c;
-        return *this;
-    }
+    size_t find_first_of(const char* s, size_t pos, size_t n) const;
+    size_t find_first_of(char c, size_t pos = 0) const;
+    size_t find_first_of(const String& str, size_t pos = 0) const;
+    size_t find_first_of(const char* s, size_t pos = 0) const;
 
-    size_t size() const { return len_; }
-    size_t length() const { return len_; }
-
-    char operator[](size_t idx) const { return cstr_[idx]; }
-    char operator[](int idx) const    { return cstr_[idx]; }
-
-    const char* begin() const { return cstr_; }
-    const char* end() const { return len_ ? cstr_ + 1 : 0; }
-
-    bool empty() const { return len_ == 0; }
-
-    const char* c_str() const { return cstr_ ? cstr_ : ""; }
-
-    void swap(String& str)
-    {
-        cv::swap(cstr_, str.cstr_);
-        cv::swap(len_, str.len_);
-    }
-
-    void clear() { deallocate(); }
-
-    int compare(const char* s) const
-    {
-        if (cstr_ == s) return 0;
-
-        return strcmp(c_str(), s);
-    }
-
-    int compare(const String& str) const
-    {
-        if (cstr_ == str.cstr_) return 0;
-
-        return strcmp(c_str(), str.c_str());
-    }
-
-    String substr(size_t pos = 0, size_t len = npos) const
-    {
-        return String(*this, pos, len);
-    }
-
-    size_t find(const char* s, size_t pos, size_t n) const
-    {
-        if (n == 0 || pos + n > len_) return npos;
-        const char* lmax = cstr_ + len_ - n;
-        for (const char* i = cstr_ + pos; i <= lmax; ++i)
-        {
-            size_t j = 0;
-            while (j < n && s[j] == i[j]) ++j;
-            if (j == n) return (size_t)(i - cstr_);
-        }
-        return npos;
-    }
-
-    size_t find(char c, size_t pos = 0) const
-    {
-        return find(&c, pos, 1);
-    }
-
-    size_t find(const String& str, size_t pos = 0) const
-    {
-        return find(str.c_str(), pos, str.len_);
-    }
-
-    size_t find(const char* s, size_t pos = 0) const
-    {
-        if (pos >= len_ || !s[0]) return npos;
-        const char* lmax = cstr_ + len_;
-        for (const char* i = cstr_ + pos; i < lmax; ++i)
-        {
-            size_t j = 0;
-            while (s[j] && s[j] == i[j])
-            {   if(i + j >= lmax) return npos;
-                ++j;
-            }
-            if (!s[j]) return (size_t)(i - cstr_);
-        }
-        return npos;
-    }
-
-    size_t rfind(const char* s, size_t pos, size_t n) const
-    {
-        if (n > len_) return npos;
-        if (pos > len_ - n) pos = len_ - n;
-        for (const char* i = cstr_ + pos; i >= cstr_; --i)
-        {
-            size_t j = 0;
-            while (j < n && s[j] == i[j]) ++j;
-            if (j == n) return (size_t)(i - cstr_);
-        }
-        return npos;
-    }
-
-    size_t rfind(char c, size_t pos = npos) const
-    {
-        return rfind(&c, pos, 1);
-    }
-
-    size_t rfind(const String& str, size_t pos = npos) const
-    {
-        return rfind(str.c_str(), pos, str.len_);
-    }
-
-    size_t rfind(const char* s, size_t pos = npos) const
-    {
-        return rfind(s, pos, strlen(s));
-    }
-
-    size_t find_first_of(const char* s, size_t pos, size_t n) const
-    {
-        if (n == 0 || pos + n > len_) return npos;
-        const char* lmax = cstr_ + len_;
-        for (const char* i = cstr_ + pos; i < lmax; ++i)
-        {
-            for (size_t j = 0; j < n; ++j)
-                if (s[j] == *i)
-                    return (size_t)(i - cstr_);
-        }
-        return npos;
-    }
-
-    size_t find_first_of(char c, size_t pos = 0) const
-    {
-        return find_first_of(&c, pos, 1);
-    }
-
-    size_t find_first_of(const String& str, size_t pos = 0) const
-    {
-        return find_first_of(str.c_str(), pos, str.len_);
-    }
-
-    size_t find_first_of(const char* s, size_t pos = 0) const
-    {
-        if (pos >= len_ || !s[0]) return npos;
-        const char* lmax = cstr_ + len_;
-        for (const char* i = cstr_ + pos; i < lmax; ++i)
-        {
-            for (size_t j = 0; s[j]; ++j)
-                if (s[j] == *i)
-                    return (size_t)(i - cstr_);
-        }
-        return npos;
-    }
-
-    size_t find_last_of(const char* s, size_t pos, size_t n) const
-    {
-        if (pos >= len_) pos = len_ - 1;
-        for (const char* i = cstr_ + pos; i >= cstr_; --i)
-        {
-            for (size_t j = 0; j < n; ++j)
-                if (s[j] == *i)
-                    return (size_t)(i - cstr_);
-        }
-        return npos;
-    }
-
-    size_t find_last_of(char c, size_t pos = npos) const
-    {
-        return find_last_of(&c, pos, 1);
-    }
-
-    size_t find_last_of(const String& str, size_t pos = npos) const
-    {
-        return find_last_of(str.c_str(), pos, str.len_);
-    }
-
-    size_t find_last_of(const char* s, size_t pos = npos) const
-    {
-        if (pos >= len_) pos = len_ - 1;
-        for (const char* i = cstr_ + pos; i >= cstr_; --i)
-        {
-            for (size_t j = 0; s[j]; ++j)
-                if (s[j] == *i)
-                    return (size_t)(i - cstr_);
-        }
-        return npos;
-    }
+    size_t find_last_of(const char* s, size_t pos, size_t n) const;
+    size_t find_last_of(char c, size_t pos = npos) const;
+    size_t find_last_of(const String& str, size_t pos = npos) const;
+    size_t find_last_of(const char* s, size_t pos = npos) const;
 
     friend String operator+ (const String& lhs, const String& rhs);
     friend String operator+ (const String& lhs, const char*   rhs);
@@ -380,15 +176,313 @@ public:
     friend String operator+ (const std::string& lhs, const String& rhs);
 #endif
 
-    explicit String(const FileNode& fn);
-
 private:
     char*  cstr_;
     size_t len_;
 
-    char* allocate(size_t len); // len_ without trailing 0
+    char* allocate(size_t len); // len without trailing 0
     void deallocate();
 };
+
+// **************************** cv::String implementation ****************************
+
+inline String::String() : cstr_(0), len_(0)
+{
+}
+
+inline String::String(const String& str) : cstr_(str.cstr_), len_(str.len_)
+{
+    if (cstr_)
+        CV_XADD(((int*)cstr_)-1, 1);
+}
+
+inline String::String(const String& str, size_t pos, size_t len) : cstr_(0), len_(0)
+{
+    pos = min(pos, str.len_);
+    len = min(str.len_ - pos, len);
+    if (!len) return;
+    if (len == str.len_)
+    {
+        CV_XADD(((int*)str.cstr_)-1, 1);
+        cstr_ = str.cstr_;
+        len_ = str.len_;
+        return;
+    }
+    memcpy(allocate(len), str.cstr_ + pos, len);
+}
+
+inline String::String(const char* s) : cstr_(0), len_(0)
+{
+    if (!s) return;
+    size_t len = strlen(s);
+    memcpy(allocate(len), s, len);
+}
+
+inline String::String(const char* s, size_t n) : cstr_(0), len_(0)
+{
+    if (!n) return;
+    memcpy(allocate(n), s, n);
+}
+
+inline String::String(size_t n, char c) : cstr_(0), len_(0)
+{
+    memset(allocate(n), c, n);
+}
+
+inline String::String(const char* first, const char* last) : cstr_(0), len_(0)
+{
+    size_t len = (size_t)(last - first);
+    memcpy(allocate(len), first, len);
+}
+
+template<typename Iterator>
+inline String::String(Iterator first, Iterator last) : cstr_(0), len_(0)
+{
+    size_t len = (size_t)(last - first);
+    char* str = allocate(len);
+    while (first != last)
+    {
+        *str++ = *first;
+        ++first;
+    }
+}
+
+inline String::~String()
+{
+    deallocate();
+}
+
+inline String& String::operator=(const String& str)
+{
+    deallocate();
+    if (str.cstr_) CV_XADD(((int*)str.cstr_)-1, 1);
+    cstr_ = str.cstr_;
+    len_ = str.len_;
+    return *this;
+}
+
+inline String& String::operator=(const char* s)
+{
+    deallocate();
+    if (!s) return *this;
+    size_t len = strlen(s);
+    memcpy(allocate(len), s, len);
+    return *this;
+}
+
+inline String& String::operator=(char c)
+{
+    deallocate();
+    allocate(1)[0] = c;
+    return *this;
+}
+
+inline size_t String::size() const
+{
+    return len_;
+}
+
+inline size_t String::length() const
+{
+    return len_;
+}
+
+inline char String::operator[](size_t idx) const
+{
+    return cstr_[idx];
+}
+
+inline char String::operator[](int idx) const
+{
+    return cstr_[idx];
+}
+
+inline const char* String::begin() const
+{
+    return cstr_;
+}
+
+inline const char* String::end() const
+{
+    return len_ ? cstr_ + 1 : 0;
+}
+
+inline bool String::empty() const
+{
+    return len_ == 0;
+}
+
+inline const char* String::c_str() const
+{
+    return cstr_ ? cstr_ : "";
+}
+
+inline void String::swap(String& str)
+{
+    cv::swap(cstr_, str.cstr_);
+    cv::swap(len_, str.len_);
+}
+
+inline void String::clear()
+{
+    deallocate();
+}
+
+inline int String::compare(const char* s) const
+{
+    if (cstr_ == s) return 0;
+    return strcmp(c_str(), s);
+}
+
+inline int String::compare(const String& str) const
+{
+    if (cstr_ == str.cstr_) return 0;
+    return strcmp(c_str(), str.c_str());
+}
+
+inline String String::substr(size_t pos, size_t len) const
+{
+    return String(*this, pos, len);
+}
+
+inline size_t String::find(const char* s, size_t pos, size_t n) const
+{
+    if (n == 0 || pos + n > len_) return npos;
+    const char* lmax = cstr_ + len_ - n;
+    for (const char* i = cstr_ + pos; i <= lmax; ++i)
+    {
+        size_t j = 0;
+        while (j < n && s[j] == i[j]) ++j;
+        if (j == n) return (size_t)(i - cstr_);
+    }
+    return npos;
+}
+
+inline size_t String::find(char c, size_t pos) const
+{
+    return find(&c, pos, 1);
+}
+
+inline size_t String::find(const String& str, size_t pos) const
+{
+    return find(str.c_str(), pos, str.len_);
+}
+
+inline size_t String::find(const char* s, size_t pos) const
+{
+    if (pos >= len_ || !s[0]) return npos;
+    const char* lmax = cstr_ + len_;
+    for (const char* i = cstr_ + pos; i < lmax; ++i)
+    {
+        size_t j = 0;
+        while (s[j] && s[j] == i[j])
+        {   if(i + j >= lmax) return npos;
+            ++j;
+        }
+        if (!s[j]) return (size_t)(i - cstr_);
+    }
+    return npos;
+}
+
+inline size_t String::rfind(const char* s, size_t pos, size_t n) const
+{
+    if (n > len_) return npos;
+    if (pos > len_ - n) pos = len_ - n;
+    for (const char* i = cstr_ + pos; i >= cstr_; --i)
+    {
+        size_t j = 0;
+        while (j < n && s[j] == i[j]) ++j;
+        if (j == n) return (size_t)(i - cstr_);
+    }
+    return npos;
+}
+
+inline size_t String::rfind(char c, size_t pos) const
+{
+    return rfind(&c, pos, 1);
+}
+
+inline size_t String::rfind(const String& str, size_t pos) const
+{
+    return rfind(str.c_str(), pos, str.len_);
+}
+
+inline size_t String::rfind(const char* s, size_t pos) const
+{
+    return rfind(s, pos, strlen(s));
+}
+
+inline size_t String::find_first_of(const char* s, size_t pos, size_t n) const
+{
+    if (n == 0 || pos + n > len_) return npos;
+    const char* lmax = cstr_ + len_;
+    for (const char* i = cstr_ + pos; i < lmax; ++i)
+    {
+        for (size_t j = 0; j < n; ++j)
+            if (s[j] == *i)
+                return (size_t)(i - cstr_);
+    }
+    return npos;
+}
+
+inline size_t String::find_first_of(char c, size_t pos) const
+{
+    return find_first_of(&c, pos, 1);
+}
+
+inline size_t String::find_first_of(const String& str, size_t pos) const
+{
+    return find_first_of(str.c_str(), pos, str.len_);
+}
+
+inline size_t String::find_first_of(const char* s, size_t pos) const
+{
+    if (pos >= len_ || !s[0]) return npos;
+    const char* lmax = cstr_ + len_;
+    for (const char* i = cstr_ + pos; i < lmax; ++i)
+    {
+        for (size_t j = 0; s[j]; ++j)
+            if (s[j] == *i)
+                return (size_t)(i - cstr_);
+    }
+    return npos;
+}
+
+inline size_t String::find_last_of(const char* s, size_t pos, size_t n) const
+{
+    if (pos >= len_) pos = len_ - 1;
+    for (const char* i = cstr_ + pos; i >= cstr_; --i)
+    {
+        for (size_t j = 0; j < n; ++j)
+            if (s[j] == *i)
+                return (size_t)(i - cstr_);
+    }
+    return npos;
+}
+
+inline size_t String::find_last_of(char c, size_t pos) const
+{
+    return find_last_of(&c, pos, 1);
+}
+
+inline size_t String::find_last_of(const String& str, size_t pos) const
+{
+    return find_last_of(str.c_str(), pos, str.len_);
+}
+
+inline size_t String::find_last_of(const char* s, size_t pos) const
+{
+    if (pos >= len_) pos = len_ - 1;
+    for (const char* i = cstr_ + pos; i >= cstr_; --i)
+    {
+        for (size_t j = 0; s[j]; ++j)
+            if (s[j] == *i)
+                return (size_t)(i - cstr_);
+    }
+    return npos;
+}
+
+// ************************* cv::String non-member functions *************************
 
 inline String operator+ (const String& lhs, const String& rhs)
 {
