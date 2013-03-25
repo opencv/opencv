@@ -78,8 +78,8 @@ namespace btv_l1_device
 
 namespace
 {
-    void calcRelativeMotions(const vector<pair<GpuMat, GpuMat> >& forwardMotions, const vector<pair<GpuMat, GpuMat> >& backwardMotions,
-                             vector<pair<GpuMat, GpuMat> >& relForwardMotions, vector<pair<GpuMat, GpuMat> >& relBackwardMotions,
+    void calcRelativeMotions(const std::vector<std::pair<GpuMat, GpuMat> >& forwardMotions, const std::vector<std::pair<GpuMat, GpuMat> >& backwardMotions,
+                             std::vector<std::pair<GpuMat, GpuMat> >& relForwardMotions, std::vector<std::pair<GpuMat, GpuMat> >& relBackwardMotions,
                              int baseIdx, Size size)
     {
         const int count = static_cast<int>(forwardMotions.size());
@@ -115,7 +115,7 @@ namespace
         }
     }
 
-    void upscaleMotions(const vector<pair<GpuMat, GpuMat> >& lowResMotions, vector<pair<GpuMat, GpuMat> >& highResMotions, int scale)
+    void upscaleMotions(const std::vector<std::pair<GpuMat, GpuMat> >& lowResMotions, std::vector<std::pair<GpuMat, GpuMat> >& highResMotions, int scale)
     {
         highResMotions.resize(lowResMotions.size());
 
@@ -129,8 +129,8 @@ namespace
         }
     }
 
-    void buildMotionMaps(const pair<GpuMat, GpuMat>& forwardMotion, const pair<GpuMat, GpuMat>& backwardMotion,
-                         pair<GpuMat, GpuMat>& forwardMap, pair<GpuMat, GpuMat>& backwardMap)
+    void buildMotionMaps(const std::pair<GpuMat, GpuMat>& forwardMotion, const std::pair<GpuMat, GpuMat>& backwardMotion,
+                         std::pair<GpuMat, GpuMat>& forwardMap, std::pair<GpuMat, GpuMat>& backwardMap)
     {
         forwardMap.first.create(forwardMotion.first.size(), CV_32FC1);
         forwardMap.second.create(forwardMotion.first.size(), CV_32FC1);
@@ -169,7 +169,7 @@ namespace
         btv_l1_device::diffSign(src1.reshape(1), src2.reshape(1), dst.reshape(1), StreamAccessor::getStream(stream));
     }
 
-    void calcBtvWeights(int btvKernelSize, double alpha, vector<float>& btvWeights)
+    void calcBtvWeights(int btvKernelSize, double alpha, std::vector<float>& btvWeights)
     {
         const size_t size = btvKernelSize * btvKernelSize;
 
@@ -212,8 +212,8 @@ namespace
     public:
         BTVL1_GPU_Base();
 
-        void process(const vector<GpuMat>& src, GpuMat& dst,
-                     const vector<pair<GpuMat, GpuMat> >& forwardMotions, const vector<pair<GpuMat, GpuMat> >& backwardMotions,
+        void process(const std::vector<GpuMat>& src, GpuMat& dst,
+                     const std::vector<std::pair<GpuMat, GpuMat> >& forwardMotions, const std::vector<std::pair<GpuMat, GpuMat> >& backwardMotions,
                      int baseIdx);
 
         void collectGarbage();
@@ -230,29 +230,29 @@ namespace
         Ptr<DenseOpticalFlowExt> opticalFlow_;
 
     private:
-        vector<Ptr<FilterEngine_GPU> > filters_;
+        std::vector<Ptr<FilterEngine_GPU> > filters_;
         int curBlurKernelSize_;
         double curBlurSigma_;
         int curSrcType_;
 
-        vector<float> btvWeights_;
+        std::vector<float> btvWeights_;
         int curBtvKernelSize_;
         double curAlpha_;
 
-        vector<pair<GpuMat, GpuMat> > lowResForwardMotions_;
-        vector<pair<GpuMat, GpuMat> > lowResBackwardMotions_;
+        std::vector<std::pair<GpuMat, GpuMat> > lowResForwardMotions_;
+        std::vector<std::pair<GpuMat, GpuMat> > lowResBackwardMotions_;
 
-        vector<pair<GpuMat, GpuMat> > highResForwardMotions_;
-        vector<pair<GpuMat, GpuMat> > highResBackwardMotions_;
+        std::vector<std::pair<GpuMat, GpuMat> > highResForwardMotions_;
+        std::vector<std::pair<GpuMat, GpuMat> > highResBackwardMotions_;
 
-        vector<pair<GpuMat, GpuMat> > forwardMaps_;
-        vector<pair<GpuMat, GpuMat> > backwardMaps_;
+        std::vector<std::pair<GpuMat, GpuMat> > forwardMaps_;
+        std::vector<std::pair<GpuMat, GpuMat> > backwardMaps_;
 
         GpuMat highRes_;
 
-        vector<Stream> streams_;
-        vector<GpuMat> diffTerms_;
-        vector<GpuMat> a_, b_, c_;
+        std::vector<Stream> streams_;
+        std::vector<GpuMat> diffTerms_;
+        std::vector<GpuMat> a_, b_, c_;
         GpuMat regTerm_;
     };
 
@@ -276,8 +276,8 @@ namespace
         curAlpha_ = -1.0;
     }
 
-    void BTVL1_GPU_Base::process(const vector<GpuMat>& src, GpuMat& dst,
-                                 const vector<pair<GpuMat, GpuMat> >& forwardMotions, const vector<pair<GpuMat, GpuMat> >& backwardMotions,
+    void BTVL1_GPU_Base::process(const std::vector<GpuMat>& src, GpuMat& dst,
+                                 const std::vector<std::pair<GpuMat, GpuMat> >& forwardMotions, const std::vector<std::pair<GpuMat, GpuMat> >& backwardMotions,
                                  int baseIdx)
     {
         CV_Assert( scale_ > 1 );
@@ -418,18 +418,18 @@ namespace
         GpuMat curFrame_;
         GpuMat prevFrame_;
 
-        vector<GpuMat> frames_;
-        vector<pair<GpuMat, GpuMat> > forwardMotions_;
-        vector<pair<GpuMat, GpuMat> > backwardMotions_;
-        vector<GpuMat> outputs_;
+        std::vector<GpuMat> frames_;
+        std::vector<std::pair<GpuMat, GpuMat> > forwardMotions_;
+        std::vector<std::pair<GpuMat, GpuMat> > backwardMotions_;
+        std::vector<GpuMat> outputs_;
 
         int storePos_;
         int procPos_;
         int outPos_;
 
-        vector<GpuMat> srcFrames_;
-        vector<pair<GpuMat, GpuMat> > srcForwardMotions_;
-        vector<pair<GpuMat, GpuMat> > srcBackwardMotions_;
+        std::vector<GpuMat> srcFrames_;
+        std::vector<std::pair<GpuMat, GpuMat> > srcForwardMotions_;
+        std::vector<std::pair<GpuMat, GpuMat> > srcBackwardMotions_;
         GpuMat finalOutput_;
     };
 
@@ -530,8 +530,8 @@ namespace
 
         if (storePos_ > 0)
         {
-            pair<GpuMat, GpuMat>& forwardMotion = at(storePos_ - 1, forwardMotions_);
-            pair<GpuMat, GpuMat>& backwardMotion = at(storePos_, backwardMotions_);
+            std::pair<GpuMat, GpuMat>& forwardMotion = at(storePos_ - 1, forwardMotions_);
+            std::pair<GpuMat, GpuMat>& backwardMotion = at(storePos_, backwardMotions_);
 
             opticalFlow_->calc(prevFrame_, curFrame_, forwardMotion.first, forwardMotion.second);
             opticalFlow_->calc(curFrame_, prevFrame_, backwardMotion.first, backwardMotion.second);
@@ -542,9 +542,9 @@ namespace
 
     void BTVL1_GPU::processFrame(int idx)
     {
-        const int startIdx = max(idx - temporalAreaRadius_, 0);
+        const int startIdx = std::max(idx - temporalAreaRadius_, 0);
         const int procIdx = idx;
-        const int endIdx = min(startIdx + 2 * temporalAreaRadius_, storePos_);
+        const int endIdx = std::min(startIdx + 2 * temporalAreaRadius_, storePos_);
 
         const int count = endIdx - startIdx + 1;
 
