@@ -422,7 +422,7 @@ CV_INLINE int cvIsInf( double value )
 #      define CV_XADD(addr, delta) __atomic_fetch_add((_Atomic(int)*)(addr), delta, 4)
 #    endif
 #  else
-#    ifdef __ATOMIC_ACQ_REL
+#    if defined __ATOMIC_ACQ_REL && !defined __clang__
        // version for gcc >= 4.7
 #      define CV_XADD(addr, delta) __atomic_fetch_add(addr, delta, __ATOMIC_ACQ_REL)
 #    else
