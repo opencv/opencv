@@ -62,7 +62,7 @@
 #ifdef HAVE_OPENCV_GPU
     #include "opencv2/gpu.hpp"
     #ifdef HAVE_CUDA
-        #include "opencv2/gpu/stream_accessor.hpp"
+        #include "opencv2/core/stream_accessor.hpp"
     #endif
 #endif
 

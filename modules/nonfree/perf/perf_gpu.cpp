@@ -24,7 +24,7 @@ using namespace perf;
 DEF_PARAM_TEST_1(Image, string);
 
 PERF_TEST_P(Image, GPU_SURF,
-            Values<string>("gpu/perf/aloe.png"))
+            Values<std::string>("gpu/perf/aloe.png"))
 {
     declare.time(50.0);
 
