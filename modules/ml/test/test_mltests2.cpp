@@ -179,7 +179,7 @@ float knearest_calc_error( CvKNearest* knearest, CvMLData* _data, int k, int typ
 }
 
 // 3. svm
-int str_to_svm_type(string& str)
+int str_to_svm_type(String& str)
 {
     if( !str.compare("C_SVC") )
         return CvSVM::C_SVC;
@@ -194,7 +194,7 @@ int str_to_svm_type(string& str)
     CV_Error( CV_StsBadArg, "incorrect svm type string" );
     return -1;
 }
-int str_to_svm_kernel_type( string& str )
+int str_to_svm_kernel_type( String& str )
 {
     if( !str.compare("LINEAR") )
         return CvSVM::LINEAR;
@@ -297,7 +297,7 @@ float svm_calc_error( CvSVM* svm, CvMLData* _data, int type, vector<float> *resp
 
 // 4. em
 // 5. ann
-int str_to_ann_train_method( string& str )
+int str_to_ann_train_method( String& str )
 {
     if( !str.compare("BACKPROP") )
         return CvANN_MLP_TrainParams::BACKPROP;
@@ -412,7 +412,7 @@ float ann_calc_error( CvANN_MLP* ann, CvMLData* _data, map<int, int>& cls_map, i
 
 // 6. dtree
 // 7. boost
-int str_to_boost_type( string& str )
+int str_to_boost_type( String& str )
 {
     if ( !str.compare("DISCRETE") )
         return CvBoost::DISCRETE;
@@ -546,7 +546,7 @@ void CV_MLBaseTest::run( int )
 int CV_MLBaseTest::prepare_test_case( int test_case_idx )
 {
     int trainSampleCount, respIdx;
-    string varTypes;
+    String varTypes;
     clear();
 
     string dataPath = ts->get_data_path();
@@ -605,7 +605,7 @@ int CV_MLBaseTest::train( int testCaseIdx )
     }
     else if( !modelName.compare(CV_SVM) )
     {
-        string svm_type_str, kernel_type_str;
+        String svm_type_str, kernel_type_str;
         modelParamsNode["svm_type"] >> svm_type_str;
         modelParamsNode["kernel_type"] >> kernel_type_str;
         CvSVMParams params;
@@ -625,7 +625,7 @@ int CV_MLBaseTest::train( int testCaseIdx )
     }
     else if( !modelName.compare(CV_ANN) )
     {
-        string train_method_str;
+        String train_method_str;
         double param1, param2;
         modelParamsNode["train_method"] >> train_method_str;
         modelParamsNode["param1"] >> param1;
@@ -659,7 +659,7 @@ int CV_MLBaseTest::train( int testCaseIdx )
         int BOOST_TYPE, WEAK_COUNT, MAX_DEPTH;
         float WEIGHT_TRIM_RATE;
         bool USE_SURROGATE;
-        string typeStr;
+        String typeStr;
         modelParamsNode["type"] >> typeStr;
         BOOST_TYPE = str_to_boost_type( typeStr );
         modelParamsNode["weak_count"] >> WEAK_COUNT;

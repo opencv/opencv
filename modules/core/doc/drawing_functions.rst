@@ -225,7 +225,7 @@ getTextSize
 ---------------
 Calculates the width and height of a text string.
 
-.. ocv:function:: Size getTextSize(const string& text, int fontFace, double fontScale, int thickness, int* baseLine)
+.. ocv:function:: Size getTextSize(const String& text, int fontFace, double fontScale, int thickness, int* baseLine)
 
 .. ocv:pyfunction:: cv2.getTextSize(text, fontFace, fontScale, thickness) -> retval, baseLine
 
@@ -246,7 +246,7 @@ Calculates the width and height of a text string.
 The function ``getTextSize`` calculates and returns the size of a box that contains the specified text.
 That is, the following code renders some text, the tight box surrounding it, and the baseline: ::
 
-    string text = "Funny text inside the box";
+    String text = "Funny text inside the box";
     int fontFace = FONT_HERSHEY_SCRIPT_SIMPLEX;
     double fontScale = 2;
     int thickness = 3;
@@ -570,7 +570,7 @@ putText
 -----------
 Draws a text string.
 
-.. ocv:function:: void putText( Mat& img, const string& text, Point org,              int fontFace, double fontScale, Scalar color,              int thickness=1, int lineType=8,              bool bottomLeftOrigin=false )
+.. ocv:function:: void putText( Mat& img, const String& text, Point org, int fontFace, double fontScale, Scalar color, int thickness=1, int lineType=8, bool bottomLeftOrigin=false )
 
 .. ocv:pyfunction:: cv2.putText(img, text, org, fontFace, fontScale, color[, thickness[, lineType[, bottomLeftOrigin]]]) -> None
 

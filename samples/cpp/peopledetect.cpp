@@ -84,13 +84,13 @@ int main(int argc, char** argv)
     }
 
     std::string src = parser.get<std::string>("frame");
-    std::vector<std::string> frames;
+    std::vector<cv::String> frames;
     cv::glob(parser.get<std::string>("frame"), frames);
     std::cout << "collected " << src << " " << frames.size() << " frames." << std::endl;
 
     for (int i = 0; i < (int)frames.size(); ++i)
     {
-        std::string& frame_sourse = frames[i];
+        std::string frame_sourse = frames[i];
         cv::Mat frame = cv::imread(frame_sourse);
 
         if(frame.empty())

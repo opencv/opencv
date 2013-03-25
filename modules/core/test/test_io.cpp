@@ -191,7 +191,7 @@ protected:
 
             int real_int = (int)fs["test_int"];
             double real_real = (double)fs["test_real"];
-            string real_string = (string)fs["test_string"];
+            String real_string = (String)fs["test_string"];
 
             if( real_int != test_int ||
                fabs(real_real - test_real) > DBL_EPSILON*(fabs(test_real)+1) ||
@@ -292,7 +292,7 @@ protected:
                (int)tl[1] != 2 ||
                fabs((double)tl[2] - CV_PI) >= DBL_EPSILON ||
                (int)tl[3] != -3435345 ||
-               (string)tl[4] != "2-502 2-029 3egegeg" ||
+               (String)tl[4] != "2-502 2-029 3egegeg" ||
                tl[5].type() != FileNode::MAP || tl[5].size() != 3 ||
                (int)tl[5]["month"] != 12 ||
                (int)tl[5]["day"] != 31 ||
@@ -459,7 +459,7 @@ TEST(Core_globbing, accurasy)
     std::string patternLena    = cvtest::TS::ptr()->get_data_path() + "lena*.*";
     std::string patternLenaPng = cvtest::TS::ptr()->get_data_path() + "lena.png";
 
-    std::vector<std::string> lenas, pngLenas;
+    std::vector<String> lenas, pngLenas;
     cv::glob(patternLena, lenas, true);
     cv::glob(patternLenaPng, pngLenas, true);
 

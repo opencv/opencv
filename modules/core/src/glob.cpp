@@ -65,7 +65,7 @@ namespace
     {
         DIR* dir = new DIR;
         dir->ent.d_name = 0;
-        dir->handle = ::FindFirstFileA((std::string(path) + "\\*").c_str(), &dir->data);
+        dir->handle = ::FindFirstFileA((cv::String(path) + "\\*").c_str(), &dir->data);
         if(dir->handle == INVALID_HANDLE_VALUE)
         {
             /*closedir will do all cleanup*/
@@ -100,7 +100,7 @@ const char dir_separators[] = "/";
 const char native_separator = '/';
 #endif
 
-static bool isDir(const std::string& path, DIR* dir)
+static bool isDir(const cv::String& path, DIR* dir)
 {
 #if defined WIN32 || defined _WIN32 || defined WINCE
     DWORD attributes;
@@ -168,10 +168,11 @@ static bool wildcmp(const char *string, const char *wild)
     return *wild == 0;
 }
 
-static void glob_rec(const std::string& directory, const std::string& wildchart, std::vector<std::string>& result, bool recursive)
+static void glob_rec(const cv::String& directory, const cv::String& wildchart, std::vector<cv::String>& result, bool recursive)
 {
     DIR *dir;
     struct dirent *ent;
+
     if ((dir = opendir (directory.c_str())) != 0)
     {
         /* find all the files and directories within directory */
@@ -183,7 +184,7 @@ static void glob_rec(const std::string& directory, const std::string& wildchart,
                 if((name[0] == 0) || (name[0] == '.' && name[1] == 0) || (name[0] == '.' && name[1] == '.' && name[2] == 0))
                     continue;
 
-                std::string path = directory + native_separator + name;
+                cv::String path = directory + native_separator + name;
 
                 if (isDir(path, dir))
                 {
@@ -207,14 +208,13 @@ static void glob_rec(const std::string& directory, const std::string& wildchart,
     else CV_Error(CV_StsObjectNotFound, cv::format("could not open directory: %s", directory.c_str()));
 }
 
-void cv::glob(std::string pattern, std::vector<std::string>& result, bool recursive)
+void cv::glob(String pattern, std::vector<String>& result, bool recursive)
 {
     result.clear();
-    std::string path, wildchart;
+    String path, wildchart;
 
     if (isDir(pattern, 0))
     {
-        printf("WE ARE HERE: %s\n", pattern.c_str());
         if(strchr(dir_separators, pattern[pattern.size() - 1]) != 0)
         {
             path = pattern.substr(0, pattern.size() - 1);
@@ -227,7 +227,7 @@ void cv::glob(std::string pattern, std::vector<std::string>& result, bool recurs
     else
     {
         size_t pos = pattern.find_last_of(dir_separators);
-        if (pos == std::string::npos)
+        if (pos == String::npos)
         {
             wildchart = pattern;
             path = ".";

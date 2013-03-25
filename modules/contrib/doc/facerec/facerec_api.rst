@@ -30,10 +30,10 @@ a unified access to all face recongition algorithms in OpenCV. ::
       virtual void predict(InputArray src, int &label, double &confidence) const = 0;
 
       // Serializes this object to a given filename.
-      virtual void save(const string& filename) const;
+      virtual void save(const String& filename) const;
 
       // Deserializes this object from a given filename.
-      virtual void load(const string& filename);
+      virtual void load(const String& filename);
 
       // Serializes this object to a given cv::FileStorage.
       virtual void save(FileStorage& fs) const = 0;
@@ -52,7 +52,7 @@ I'll go a bit more into detail explaining :ocv:class:`FaceRecognizer`, because i
 
 * So called “virtual constructor”. That is, each Algorithm derivative is registered at program start and you can get the list of registered algorithms and create instance of a particular algorithm by its name (see :ocv:func:`Algorithm::create`). If you plan to add your own algorithms, it is good practice to add a unique prefix to your algorithms to distinguish them from other algorithms.
 
-* Setting/Retrieving algorithm parameters by name. If you used video capturing functionality from OpenCV highgui module, you are probably familar with :ocv:cfunc:`cvSetCaptureProperty`, :ocv:cfunc:`cvGetCaptureProperty`, :ocv:func:`VideoCapture::set` and :ocv:func:`VideoCapture::get`. :ocv:class:`Algorithm` provides similar method where instead of integer id's you specify the parameter names as text strings. See :ocv:func:`Algorithm::set` and :ocv:func:`Algorithm::get` for details.
+* Setting/Retrieving algorithm parameters by name. If you used video capturing functionality from OpenCV highgui module, you are probably familar with :ocv:cfunc:`cvSetCaptureProperty`, :ocv:cfunc:`cvGetCaptureProperty`, :ocv:func:`VideoCapture::set` and :ocv:func:`VideoCapture::get`. :ocv:class:`Algorithm` provides similar method where instead of integer id's you specify the parameter names as text Strings. See :ocv:func:`Algorithm::set` and :ocv:func:`Algorithm::get` for details.
 
 * Reading and writing parameters from/to XML or YAML files. Every Algorithm derivative can store all its parameters and then read them back. There is no need to re-implement it each time.
 
@@ -113,7 +113,7 @@ Since every :ocv:class:`FaceRecognizer` is a :ocv:class:`Algorithm`, you can use
     // Create a FaceRecognizer:
     Ptr<FaceRecognizer> model = createEigenFaceRecognizer();
     // And here's how to get its name:
-    std::string name = model->name();
+    String name = model->name();
 
 
 FaceRecognizer::train
@@ -251,7 +251,7 @@ FaceRecognizer::save
 
 Saves a :ocv:class:`FaceRecognizer` and its model state.
 
-.. ocv:function:: void FaceRecognizer::save(const string& filename) const
+.. ocv:function:: void FaceRecognizer::save(const String& filename) const
 
     Saves this model to a given filename, either as XML or YAML.
 
@@ -265,7 +265,7 @@ Saves a :ocv:class:`FaceRecognizer` and its model state.
 
 
 Every :ocv:class:`FaceRecognizer` overwrites ``FaceRecognizer::save(FileStorage& fs)``
-to save the internal model state. ``FaceRecognizer::save(const string& filename)`` saves
+to save the internal model state. ``FaceRecognizer::save(const String& filename)`` saves
 the state of a model to the given filename.
 
 The suffix ``const`` means that prediction does not affect the internal model
@@ -276,13 +276,13 @@ FaceRecognizer::load
 
 Loads a :ocv:class:`FaceRecognizer` and its model state.
 
-.. ocv:function:: void FaceRecognizer::load( const string& filename )
+.. ocv:function:: void FaceRecognizer::load( const String& filename )
 .. ocv:function:: void FaceRecognizer::load( const FileStorage& fs ) = 0
 
 Loads a persisted model and state from a given XML or YAML file . Every
 :ocv:class:`FaceRecognizer` has to overwrite ``FaceRecognizer::load(FileStorage& fs)``
 to enable loading the model state. ``FaceRecognizer::load(FileStorage& fs)`` in
-turn gets called by ``FaceRecognizer::load(const string& filename)``, to ease
+turn gets called by ``FaceRecognizer::load(const String& filename)``, to ease
 saving a model.
 
 createEigenFaceRecognizer

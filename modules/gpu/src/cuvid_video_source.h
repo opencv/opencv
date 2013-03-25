@@ -54,7 +54,7 @@ namespace cv { namespace gpu
         class CuvidVideoSource : public VideoReader_GPU::VideoSource
         {
         public:
-            explicit CuvidVideoSource(const std::string& fname);
+            explicit CuvidVideoSource(const String& fname);
             ~CuvidVideoSource() { cuvidDestroyVideoSource(videoSource_); }
 
             VideoReader_GPU::FormatInfo format() const;

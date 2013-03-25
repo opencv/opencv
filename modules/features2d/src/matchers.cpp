@@ -456,7 +456,7 @@ void BFMatcher::radiusMatchImpl( const Mat& queryDescriptors, std::vector<std::v
 /*
  * Factory function for DescriptorMatcher creating
  */
-Ptr<DescriptorMatcher> DescriptorMatcher::create( const std::string& descriptorMatcherType )
+Ptr<DescriptorMatcher> DescriptorMatcher::create( const String& descriptorMatcherType )
 {
     DescriptorMatcher* dm = 0;
     if( !descriptorMatcherType.compare( "FlannBased" ) )
@@ -540,7 +540,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
      for(int i = 0; i < (int)ip.size(); ++i)
      {
         CV_Assert(ip[i].type() == FileNode::MAP);
-        std::string _name =  (std::string)ip[i]["name"];
+        String _name =  (String)ip[i]["name"];
         int type =  (int)ip[i]["type"];
 
         switch(type)
@@ -559,7 +559,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
             indexParams->setDouble(_name, (double) ip[i]["value"]);
             break;
         case CV_USRTYPE1:
-            indexParams->setString(_name, (std::string) ip[i]["value"]);
+            indexParams->setString(_name, (String) ip[i]["value"]);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,2):
             indexParams->setBool(_name, (int) ip[i]["value"] != 0);
@@ -579,7 +579,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
      for(int i = 0; i < (int)sp.size(); ++i)
      {
         CV_Assert(sp[i].type() == FileNode::MAP);
-        std::string _name =  (std::string)sp[i]["name"];
+        String _name =  (String)sp[i]["name"];
         int type =  (int)sp[i]["type"];
 
         switch(type)
@@ -598,7 +598,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
             searchParams->setDouble(_name, (double) ip[i]["value"]);
             break;
         case CV_USRTYPE1:
-            searchParams->setString(_name, (std::string) ip[i]["value"]);
+            searchParams->setString(_name, (String) ip[i]["value"]);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,2):
             searchParams->setBool(_name, (int) ip[i]["value"] != 0);
@@ -618,9 +618,9 @@ void FlannBasedMatcher::write( FileStorage& fs) const
 
      if (indexParams)
      {
-         std::vector<std::string> names;
+         std::vector<String> names;
          std::vector<int> types;
-         std::vector<std::string> strValues;
+         std::vector<String> strValues;
          std::vector<double> numValues;
 
          indexParams->getAll(names, types, strValues, numValues);
@@ -669,9 +669,9 @@ void FlannBasedMatcher::write( FileStorage& fs) const
 
      if (searchParams)
      {
-         std::vector<std::string> names;
+         std::vector<String> names;
          std::vector<int> types;
-         std::vector<std::string> strValues;
+         std::vector<String> strValues;
          std::vector<double> numValues;
 
          searchParams->getAll(names, types, strValues, numValues);
@@ -1060,8 +1060,8 @@ bool GenericDescriptorMatcher::empty() const
 /*
  * Factory function for GenericDescriptorMatch creating
  */
-Ptr<GenericDescriptorMatcher> GenericDescriptorMatcher::create( const std::string& genericDescritptorMatcherType,
-                                                                const std::string &paramsFilename )
+Ptr<GenericDescriptorMatcher> GenericDescriptorMatcher::create( const String& genericDescritptorMatcherType,
+                                                                const String &paramsFilename )
 {
     Ptr<GenericDescriptorMatcher> descriptorMatcher =
         Algorithm::create<GenericDescriptorMatcher>("DescriptorMatcher." + genericDescritptorMatcherType);

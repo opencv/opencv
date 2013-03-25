@@ -53,7 +53,7 @@ namespace
                 break;
             cv::Mat gray;
             cv::cvtColor(frame,gray,CV_RGB2GRAY);
-            vector<string> codes;
+            vector<String> codes;
             Mat corners;
             findDataMatrix(gray, codes, corners);
             drawDataMatrixCodes(frame, codes, corners);

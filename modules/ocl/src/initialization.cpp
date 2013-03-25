@@ -92,9 +92,9 @@ namespace cv
             releaseProgram();
         }
 
-        cl_program ProgramCache::progLookup(std::string srcsign)
+        cl_program ProgramCache::progLookup(String srcsign)
         {
-            std::map<std::string, cl_program>::iterator iter;
+            std::map<String, cl_program>::iterator iter;
             iter = codeCache.find(srcsign);
             if(iter != codeCache.end())
                 return iter->second;
@@ -102,17 +102,17 @@ namespace cv
                 return NULL;
         }
 
-        void ProgramCache::addProgram(std::string srcsign , cl_program program)
+        void ProgramCache::addProgram(String srcsign , cl_program program)
         {
             if(!progLookup(srcsign))
             {
-                codeCache.insert(std::map<std::string, cl_program>::value_type(srcsign, program));
+                codeCache.insert(std::map<String, cl_program>::value_type(srcsign, program));
             }
         }
 
         void ProgramCache::releaseProgram()
         {
-            std::map<std::string, cl_program>::iterator iter;
+            std::map<String, cl_program>::iterator iter;
             for(iter = codeCache.begin(); iter != codeCache.end(); iter++)
             {
                 openCLSafeCall(clReleaseProgram(iter->second));
@@ -126,7 +126,7 @@ namespace cv
         {
             cl_platform_id oclplatform;
             std::vector<cl_device_id> devices;
-            std::vector<std::string> devName;
+            std::vector<String> devName;
 
             cl_context oclcontext;
             cl_command_queue clCmdQueue;
@@ -138,7 +138,7 @@ namespace cv
             char extra_options[512];
             int  double_support;
             int unified_memory; //1 means integrated GPU, otherwise this value is 0
-            std::string binpath;
+            String binpath;
             int refcounter;
 
             Impl()
@@ -236,9 +236,9 @@ namespace cv
             size_t extends_size;
             openCLSafeCall(clGetDeviceInfo(devices[devnum], CL_DEVICE_EXTENSIONS, EXT_LEN, (void *)extends_set, &extends_size));
             extends_set[EXT_LEN - 1] = 0;
-            size_t fp64_khr = std::string(extends_set).find("cl_khr_fp64");
+            size_t fp64_khr = String(extends_set).find("cl_khr_fp64");
 
-            if(fp64_khr != std::string::npos)
+            if(fp64_khr != String::npos)
             {
                 sprintf(extra_options, "-D DOUBLE_SUPPORT");
                 double_support = 1;
@@ -433,7 +433,7 @@ namespace cv
         {
             openCLSafeCall(clReleaseMemObject((cl_mem)devPtr));
         }
-        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, std::string kernelName)
+        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, String kernelName)
         {
             return openCLGetKernelFromSource(clCxt, source, kernelName, NULL);
         }
@@ -473,15 +473,15 @@ namespace cv
             return 1;
         }
 
-        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, std::string kernelName,
+        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, String kernelName,
                                             const char *build_options)
         {
             cl_kernel kernel;
             cl_program program ;
             cl_int status = 0;
             std::stringstream src_sign;
-            std::string srcsign;
-            std::string filename;
+            String srcsign;
+            String filename;
             CV_Assert(programCache != NULL);
 
             if(NULL != build_options)
@@ -492,7 +492,7 @@ namespace cv
             {
                 src_sign << (int64)(*source) << clCxt->impl->oclcontext;
             }
-            srcsign = src_sign.str();
+            srcsign = src_sign.str().c_str();
 
             program = NULL;
             program = programCache->progLookup(srcsign);
@@ -601,7 +601,7 @@ namespace cv
         static double total_execute_time = 0;
         static double total_kernel_time = 0;
 #endif
-        void openCLExecuteKernel_(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
+        void openCLExecuteKernel_(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
                                   size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
                                   int depth, const char *build_options)
         {
@@ -613,7 +613,7 @@ namespace cv
                 idxStr << "_C" << channels;
             if(depth != -1)
                 idxStr << "_D" << depth;
-            kernelName += idxStr.str();
+            kernelName = kernelName + idxStr.str().c_str();
 
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, build_options);
@@ -668,14 +668,14 @@ namespace cv
             openCLSafeCall(clReleaseKernel(kernel));
         }
 
-        void openCLExecuteKernel(Context *clCxt , const char **source, std::string kernelName,
+        void openCLExecuteKernel(Context *clCxt , const char **source, String kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
                                  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth)
         {
             openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args,
                                 channels, depth, NULL);
         }
-        void openCLExecuteKernel(Context *clCxt , const char **source, std::string kernelName,
+        void openCLExecuteKernel(Context *clCxt , const char **source, String kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
                                  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
 
@@ -684,7 +684,7 @@ namespace cv
             openCLExecuteKernel_(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth,
                                  build_options);
 #else
-            std::string data_type[] = { "uchar", "char", "ushort", "short", "int", "float", "double"};
+            String data_type[] = { "uchar", "char", "ushort", "short", "int", "float", "double"};
             std::cout << std::endl;
             std::cout << "Function Name: " << kernelName;
             if(depth >= 0)
@@ -709,7 +709,7 @@ namespace cv
 #endif
         }
 
-       double openCLExecuteKernelInterop(Context *clCxt , const char **source, std::string kernelName,
+       double openCLExecuteKernelInterop(Context *clCxt , const char **source, String kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
                                  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
                                  bool finish, bool measureKernelTime, bool cleanUp)
@@ -723,7 +723,7 @@ namespace cv
                 idxStr << "_C" << channels;
             if(depth != -1)
                 idxStr << "_D" << depth;
-            kernelName += idxStr.str();
+            kernelName = kernelName + idxStr.str().c_str();
 
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, build_options);
@@ -785,7 +785,7 @@ namespace cv
         }
 
         // Converts the contents of a file into a string
-        static int convertToString(const char *filename, std::string& s)
+        static int convertToString(const char *filename, String& s)
         {
             size_t size;
             char*  str;
@@ -817,16 +817,16 @@ namespace cv
             return -1;
         }
 
-        double openCLExecuteKernelInterop(Context *clCxt , const char **fileName, const int numFiles, std::string kernelName,
+        double openCLExecuteKernelInterop(Context *clCxt , const char **fileName, const int numFiles, String kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
                                  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
                                  bool finish, bool measureKernelTime, bool cleanUp)
 
         {
-            std::vector<std::string> fsource;
+            std::vector<String> fsource;
             for (int i = 0 ; i < numFiles ; i++)
             {
-                std::string str;
+                String str;
                 if (convertToString(fileName[i], str) >= 0)
                     fsource.push_back(str);
             }

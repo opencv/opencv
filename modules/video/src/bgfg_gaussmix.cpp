@@ -150,7 +150,7 @@ public:
 
     virtual void read(const FileNode& fn)
     {
-        CV_Assert( (std::string)fn["name"] == name_ );
+        CV_Assert( (String)fn["name"] == name_ );
         history = (int)fn["history"];
         nmixtures = (int)fn["nmixtures"];
         backgroundRatio = (double)fn["backgroundRatio"];
@@ -167,7 +167,7 @@ protected:
     double varThreshold;
     double backgroundRatio;
     double noiseSigma;
-    std::string name_;
+    String name_;
 };
 
 

@@ -2457,13 +2457,13 @@ Algorithm::name
 ---------------
 Returns the algorithm name
 
-.. ocv:function:: string Algorithm::name() const
+.. ocv:function:: String Algorithm::name() const
 
 Algorithm::get
 --------------
 Returns the algorithm parameter
 
-.. ocv:function:: template<typename _Tp> typename ParamType<_Tp>::member_type Algorithm::get(const string& name) const
+.. ocv:function:: template<typename _Tp> typename ParamType<_Tp>::member_type Algorithm::get(const String& name) const
 
     :param name: The parameter name.
 
@@ -2472,7 +2472,7 @@ The method returns value of the particular parameter. Since the compiler can not
     * myalgo.get<int>("param_name")
     * myalgo.get<double>("param_name")
     * myalgo.get<bool>("param_name")
-    * myalgo.get<string>("param_name")
+    * myalgo.get<String>("param_name")
     * myalgo.get<Mat>("param_name")
     * myalgo.get<vector<Mat> >("param_name")
     * myalgo.get<Algorithm>("param_name") (it returns Ptr<Algorithm>).
@@ -2484,13 +2484,13 @@ Algorithm::set
 --------------
 Sets the algorithm parameter
 
-.. ocv:function:: void Algorithm::set(const string& name, int value)
-.. ocv:function:: void Algorithm::set(const string& name, double value)
-.. ocv:function:: void Algorithm::set(const string& name, bool value)
-.. ocv:function:: void Algorithm::set(const string& name, const string& value)
-.. ocv:function:: void Algorithm::set(const string& name, const Mat& value)
-.. ocv:function:: void Algorithm::set(const string& name, const vector<Mat>& value)
-.. ocv:function:: void Algorithm::set(const string& name, const Ptr<Algorithm>& value)
+.. ocv:function:: void Algorithm::set(const String& name, int value)
+.. ocv:function:: void Algorithm::set(const String& name, double value)
+.. ocv:function:: void Algorithm::set(const String& name, bool value)
+.. ocv:function:: void Algorithm::set(const String& name, const String& value)
+.. ocv:function:: void Algorithm::set(const String& name, const Mat& value)
+.. ocv:function:: void Algorithm::set(const String& name, const vector<Mat>& value)
+.. ocv:function:: void Algorithm::set(const String& name, const Ptr<Algorithm>& value)
 
     :param name: The parameter name.
     :param value: The parameter value.
@@ -2529,13 +2529,13 @@ Algorithm::getList
 ------------------
 Returns the list of registered algorithms
 
-.. ocv:function:: void Algorithm::getList(vector<string>& algorithms)
+.. ocv:function:: void Algorithm::getList(vector<String>& algorithms)
 
     :param algorithms: The output vector of algorithm names.
 
 This static method returns the list of registered algorithms in alphabetical order. Here is how to use it ::
 
-    vector<string> algorithms;
+    vector<String> algorithms;
     Algorithm::getList(algorithms);
     cout << "Algorithms: " << algorithms.size() << endl;
     for (size_t i=0; i < algorithms.size(); i++)
@@ -2546,7 +2546,7 @@ Algorithm::create
 -----------------
 Creates algorithm instance by name
 
-.. ocv:function:: template<typename _Tp> Ptr<_Tp> Algorithm::create(const string& name)
+.. ocv:function:: template<typename _Tp> Ptr<_Tp> Algorithm::create(const String& name)
 
     :param name: The algorithm name, one of the names returned by ``Algorithm::getList()``.
 

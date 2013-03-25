@@ -307,24 +307,24 @@ public:
     };
 
     LatentSvmDetector();
-    LatentSvmDetector( const std::vector<std::string>& filenames, const std::vector<std::string>& classNames=std::vector<std::string>() );
+    LatentSvmDetector( const std::vector<String>& filenames, const std::vector<String>& classNames=std::vector<String>() );
     virtual ~LatentSvmDetector();
 
     virtual void clear();
     virtual bool empty() const;
-    bool load( const std::vector<std::string>& filenames, const std::vector<std::string>& classNames=std::vector<std::string>() );
+    bool load( const std::vector<String>& filenames, const std::vector<String>& classNames=std::vector<String>() );
 
     virtual void detect( const Mat& image,
                          std::vector<ObjectDetection>& objectDetections,
                          float overlapThreshold=0.5f,
                          int numThreads=-1 );
 
-    const std::vector<std::string>& getClassNames() const;
+    const std::vector<String>& getClassNames() const;
     size_t getClassCount() const;
 
 private:
     std::vector<CvLatentSvmDetector*> detectors;
-    std::vector<std::string> classNames;
+    std::vector<String> classNames;
 };
 
 CV_EXPORTS void groupRectangles(CV_OUT CV_IN_OUT std::vector<Rect>& rectList, int groupThreshold, double eps=0.2);
@@ -369,11 +369,11 @@ class CV_EXPORTS_W CascadeClassifier
 {
 public:
     CV_WRAP CascadeClassifier();
-    CV_WRAP CascadeClassifier( const std::string& filename );
+    CV_WRAP CascadeClassifier( const String& filename );
     virtual ~CascadeClassifier();
 
     CV_WRAP virtual bool empty() const;
-    CV_WRAP bool load( const std::string& filename );
+    CV_WRAP bool load( const String& filename );
     virtual bool read( const FileNode& node );
     CV_WRAP virtual void detectMultiScale( const Mat& image,
                                    CV_OUT std::vector<Rect>& objects,
@@ -524,7 +524,7 @@ public:
     gammaCorrection(_gammaCorrection), nlevels(_nlevels)
     {}
 
-    CV_WRAP HOGDescriptor(const std::string& filename)
+    CV_WRAP HOGDescriptor(const String& filename)
     {
         load(filename);
     }
@@ -543,10 +543,10 @@ public:
     CV_WRAP virtual void setSVMDetector(InputArray _svmdetector);
 
     virtual bool read(FileNode& fn);
-    virtual void write(FileStorage& fs, const std::string& objname) const;
+    virtual void write(FileStorage& fs, const String& objname) const;
 
-    CV_WRAP virtual bool load(const std::string& filename, const std::string& objname=std::string());
-    CV_WRAP virtual void save(const std::string& filename, const std::string& objname=std::string()) const;
+    CV_WRAP virtual bool load(const String& filename, const String& objname=String());
+    CV_WRAP virtual void save(const String& filename, const String& objname=String()) const;
     virtual void copyTo(HOGDescriptor& c) const;
 
     CV_WRAP virtual void compute(const Mat& img,
@@ -609,16 +609,16 @@ public:
                                                        int groupThreshold = 0) const;
 
    // read/parse Dalal's alt model file
-   void readALTModel(std::string modelfile);
+   void readALTModel(String modelfile);
 };
 
 
 CV_EXPORTS_W void findDataMatrix(InputArray image,
-                                 CV_OUT std::vector<std::string>& codes,
+                                 CV_OUT std::vector<String>& codes,
                                  OutputArray corners=noArray(),
                                  OutputArrayOfArrays dmtx=noArray());
 CV_EXPORTS_W void drawDataMatrixCodes(InputOutputArray image,
-                                      const std::vector<std::string>& codes,
+                                      const std::vector<String>& codes,
                                       InputArray corners);
 }
 
@@ -758,7 +758,7 @@ public:
     return processImpl(src, mask);
   }
 
-  virtual std::string name() const =0;
+  virtual String name() const =0;
 
   virtual void read(const FileNode& fn) =0;
   virtual void write(FileStorage& fs) const =0;
@@ -770,7 +770,7 @@ public:
    * - "ColorGradient"
    * - "DepthNormal"
    */
-  static Ptr<Modality> create(const std::string& modality_type);
+  static Ptr<Modality> create(const String& modality_type);
 
   /**
    * \brief Load a modality from file.
@@ -804,7 +804,7 @@ public:
    */
   ColorGradient(float weak_threshold, size_t num_features, float strong_threshold);
 
-  virtual std::string name() const;
+  virtual String name() const;
 
   virtual void read(const FileNode& fn);
   virtual void write(FileStorage& fs) const;
@@ -842,7 +842,7 @@ public:
   DepthNormal(int distance_threshold, int difference_threshold, size_t num_features,
               int extract_threshold);
 
-  virtual std::string name() const;
+  virtual String name() const;
 
   virtual void read(const FileNode& fn);
   virtual void write(FileStorage& fs) const;
@@ -871,7 +871,7 @@ struct CV_EXPORTS Match
   {
   }
 
-  Match(int x, int y, float similarity, const std::string& class_id, int template_id);
+  Match(int x, int y, float similarity, const String& class_id, int template_id);
 
   /// Sort matches with high similarity to the front
   bool operator<(const Match& rhs) const
@@ -891,11 +891,11 @@ struct CV_EXPORTS Match
   int x;
   int y;
   float similarity;
-  std::string class_id;
+  String class_id;
   int template_id;
 };
 
-inline  Match::Match(int _x, int _y, float _similarity, const std::string& _class_id, int _template_id)
+inline  Match::Match(int _x, int _y, float _similarity, const String& _class_id, int _template_id)
     : x(_x), y(_y), similarity(_similarity), class_id(_class_id), template_id(_template_id)
   {
   }
@@ -937,7 +937,7 @@ public:
    *                       empty or the same size as its corresponding source.
    */
   void match(const std::vector<Mat>& sources, float threshold, std::vector<Match>& matches,
-             const std::vector<std::string>& class_ids = std::vector<std::string>(),
+             const std::vector<String>& class_ids = std::vector<String>(),
              OutputArrayOfArrays quantized_images = noArray(),
              const std::vector<Mat>& masks = std::vector<Mat>()) const;
 
@@ -951,13 +951,13 @@ public:
    *
    * \return Template ID, or -1 if failed to extract a valid template.
    */
-  int addTemplate(const std::vector<Mat>& sources, const std::string& class_id,
+  int addTemplate(const std::vector<Mat>& sources, const String& class_id,
           const Mat& object_mask, Rect* bounding_box = NULL);
 
   /**
    * \brief Add a new object template computed by external means.
    */
-  int addSyntheticTemplate(const std::vector<Template>& templates, const std::string& class_id);
+  int addSyntheticTemplate(const std::vector<Template>& templates, const String& class_id);
 
   /**
    * \brief Get the modalities used by this detector.
@@ -983,23 +983,23 @@ public:
    * For example, with 2 modalities (Gradient, Normal) and two pyramid levels
    * (L0, L1), the order is (GradientL0, NormalL0, GradientL1, NormalL1).
    */
-  const std::vector<Template>& getTemplates(const std::string& class_id, int template_id) const;
+  const std::vector<Template>& getTemplates(const String& class_id, int template_id) const;
 
   int numTemplates() const;
-  int numTemplates(const std::string& class_id) const;
+  int numTemplates(const String& class_id) const;
   int numClasses() const { return static_cast<int>(class_templates.size()); }
 
-  std::vector<std::string> classIds() const;
+  std::vector<String> classIds() const;
 
   void read(const FileNode& fn);
   void write(FileStorage& fs) const;
 
-  std::string readClass(const FileNode& fn, const std::string &class_id_override = "");
-  void writeClass(const std::string& class_id, FileStorage& fs) const;
+  String readClass(const FileNode& fn, const String &class_id_override = "");
+  void writeClass(const String& class_id, FileStorage& fs) const;
 
-  void readClasses(const std::vector<std::string>& class_ids,
-                   const std::string& format = "templates_%s.yml.gz");
-  void writeClasses(const std::string& format = "templates_%s.yml.gz") const;
+  void readClasses(const std::vector<String>& class_ids,
+                   const String& format = "templates_%s.yml.gz");
+  void writeClasses(const String& format = "templates_%s.yml.gz") const;
 
 protected:
   std::vector< Ptr<Modality> > modalities;
@@ -1007,7 +1007,7 @@ protected:
   std::vector<int> T_at_level;
 
   typedef std::vector<Template> TemplatePyramid;
-  typedef std::map<std::string, std::vector<TemplatePyramid> > TemplatesMap;
+  typedef std::map<String, std::vector<TemplatePyramid> > TemplatesMap;
   TemplatesMap class_templates;
 
   typedef std::vector<Mat> LinearMemories;
@@ -1017,7 +1017,7 @@ protected:
   void matchClass(const LinearMemoryPyramid& lm_pyramid,
                   const std::vector<Size>& sizes,
                   float threshold, std::vector<Match>& matches,
-                  const std::string& class_id,
+                  const String& class_id,
                   const std::vector<TemplatePyramid>& template_pyramids) const;
 };
 

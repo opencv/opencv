@@ -465,7 +465,7 @@ namespace cv{
 
     void OneWayDescriptor::Initialize(int pose_count, IplImage* frontal, const char* feature_name, int norm)
     {
-        m_feature_name = std::string(feature_name);
+        m_feature_name = String(feature_name);
         CvRect roi = cvGetImageROI(frontal);
         m_center = rect_center(roi);
 
@@ -482,7 +482,7 @@ namespace cv{
             Initialize(pose_count, frontal, feature_name, 1);
             return;
         }
-        m_feature_name = std::string(feature_name);
+        m_feature_name = String(feature_name);
         CvRect roi = cvGetImageROI(frontal);
         m_center = rect_center(roi);
 
@@ -1287,8 +1287,8 @@ namespace cv{
 
     }
 
-    OneWayDescriptorBase::OneWayDescriptorBase(CvSize patch_size, int pose_count, const std::string &pca_filename,
-                                               const std::string &train_path, const std::string &images_list, float _scale_min, float _scale_max,
+    OneWayDescriptorBase::OneWayDescriptorBase(CvSize patch_size, int pose_count, const String &pca_filename,
+                                               const String &train_path, const String &images_list, float _scale_min, float _scale_max,
                                                float _scale_step, int pyr_levels,
                                                int pca_dim_high, int pca_dim_low)
     : m_pca_dim_high(pca_dim_high), m_pca_dim_low(pca_dim_low), scale_min(_scale_min), scale_max(_scale_max), scale_step(_scale_step)
@@ -2080,8 +2080,8 @@ namespace cv{
         m_part_id = 0;
     }
 
-    OneWayDescriptorObject::OneWayDescriptorObject(CvSize patch_size, int pose_count, const std::string &pca_filename,
-                                                   const std::string &train_path, const std::string &images_list, float _scale_min, float _scale_max, float _scale_step, int pyr_levels) :
+    OneWayDescriptorObject::OneWayDescriptorObject(CvSize patch_size, int pose_count, const String &pca_filename,
+                                                   const String &train_path, const String &images_list, float _scale_min, float _scale_max, float _scale_step, int pyr_levels) :
     OneWayDescriptorBase(patch_size, pose_count, pca_filename, train_path, images_list, _scale_min, _scale_max, _scale_step, pyr_levels)
     {
         m_part_id = 0;
@@ -2145,7 +2145,7 @@ namespace cv{
 
     void readPCAFeatures(const FileNode &fn, CvMat** avg, CvMat** eigenvectors, const char* postfix)
     {
-        std::string str = std::string ("avg") + postfix;
+        String str = String ("avg") + postfix;
         CvMat* _avg = reinterpret_cast<CvMat*> (fn[str].readObj());
         if (_avg != 0)
         {
@@ -2153,7 +2153,7 @@ namespace cv{
             cvReleaseMat(&_avg);
         }
 
-        str = std::string ("eigenvectors") + postfix;
+        str = String ("eigenvectors") + postfix;
         CvMat* _eigenvectors = reinterpret_cast<CvMat*> (fn[str].readObj());
         if (_eigenvectors != 0)
         {
@@ -2166,8 +2166,8 @@ namespace cv{
      *                                OneWayDescriptorMatcher                                  *
      \****************************************************************************************/
 
-    OneWayDescriptorMatcher::Params::Params( int _poseCount, Size _patchSize, std::string _pcaFilename,
-                                            std::string _trainPath, std::string _trainImagesList,
+    OneWayDescriptorMatcher::Params::Params( int _poseCount, Size _patchSize, String _pcaFilename,
+                                            String _trainPath, String _trainImagesList,
                                             float _minScale, float _maxScale, float _stepScale ) :
     poseCount(_poseCount), patchSize(_patchSize), pcaFilename(_pcaFilename),
     trainPath(_trainPath), trainImagesList(_trainImagesList),
@@ -2271,7 +2271,7 @@ namespace cv{
 
     void OneWayDescriptorMatcher::read( const FileNode &fn )
     {
-        base = new OneWayDescriptorObject( params.patchSize, params.poseCount, std::string (), std::string (), std::string (),
+        base = new OneWayDescriptorObject( params.patchSize, params.poseCount, String (), String (), String (),
                                           params.minScale, params.maxScale, params.stepScale );
         base->Read (fn);
     }

@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,50 +41,91 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_FRAME_SOURCE_HPP__
-#define __OPENCV_VIDEOSTAB_FRAME_SOURCE_HPP__
+#ifndef __OPENCV_CORE_CVSTDINL_HPP__
+#define __OPENCV_CORE_CVSTDINL_HPP__
 
-#include <vector>
-#include "opencv2/core.hpp"
+#ifndef OPENCV_NOSTL
+#  include <ostream>
+#endif
 
 namespace cv
 {
-namespace videostab
+#ifndef OPENCV_NOSTL
+
+inline String::String(const std::string& str) : cstr_(0), len_(0)
 {
+    if (!str.empty())
+    {
+        size_t len = str.size();
+        memcpy(allocate(len), str.c_str(), len);
+    }
+}
 
-class CV_EXPORTS IFrameSource
+inline String::String(const std::string& str, size_t pos, size_t len) : cstr_(0), len_(0)
 {
-public:
-    virtual ~IFrameSource() {}
-    virtual void reset() = 0;
-    virtual Mat nextFrame() = 0;
-};
+    size_t strlen = str.size();
+    pos = max(pos, strlen);
+    len = min(strlen - pos, len);
+    if (!len) return;
+    memcpy(allocate(len), str.c_str() + pos, len);
+}
 
-class CV_EXPORTS NullFrameSource : public IFrameSource
+inline String& String::operator=(const std::string& str)
 {
-public:
-    virtual void reset() {}
-    virtual Mat nextFrame() { return Mat(); }
-};
+    deallocate();
+    if (!str.empty())
+    {
+        size_t len = str.size();
+        memcpy(allocate(len), str.c_str(), len);
+    }
+    return *this;
+}
 
-class CV_EXPORTS VideoFileSource : public IFrameSource
+inline String::operator std::string() const
 {
-public:
-    VideoFileSource(const String &path, bool volatileFrame = false);
+    return std::string(cstr_, len_);
+}
 
-    virtual void reset();
-    virtual Mat nextFrame();
+inline String operator+ (const String& lhs, const std::string& rhs)
+{
+    String s;
+    size_t rhslen = rhs.size();
+    s.allocate(lhs.len_ + rhslen);
+    memcpy(s.cstr_, lhs.cstr_, lhs.len_);
+    memcpy(s.cstr_ + lhs.len_, rhs.c_str(), rhslen);
+    return s;
+}
 
-    int width();
-    int height();
-    int count();
-    double fps();
+inline String operator+ (const std::string& lhs, const String& rhs)
+{
+    String s;
+    size_t lhslen = lhs.size();
+    s.allocate(lhslen + rhs.len_);
+    memcpy(s.cstr_, lhs.c_str(), lhslen);
+    memcpy(s.cstr_ + lhslen, rhs.cstr_, rhs.len_);
+    return s;
+}
 
-private:
-    Ptr<IFrameSource> impl;
-};
+inline std::ostream& operator << (std::ostream& os, const String& str)
+{
+    return os << str.c_str();
+}
 
-} // namespace videostab
-} // namespace cv
+inline FileNode::operator std::string() const
+{
+    String value;
+    read(*this, value, value);
+    return value;
+}
 
-#endif
+template<> inline void operator >> (const FileNode& n, std::string& value)
+{
+    String val;
+    read(n, val, val);
+    value = val;
+}
+
+#endif // OPENCV_NOSTL
+} // cv
+
+#endif // __OPENCV_CORE_CVSTDINL_HPP__

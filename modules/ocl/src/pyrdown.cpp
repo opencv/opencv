@@ -72,7 +72,7 @@ static void pyrdown_run(const oclMat &src, const oclMat &dst)
     //int channels = dst.channels();
     //int depth = dst.depth();
 
-    std::string kernelName = "pyrDown";
+    String kernelName = "pyrDown";
 
     //int vector_lengths[4][7] = {{4, 0, 4, 4, 1, 1, 1},
     //    {4, 0, 4, 4, 1, 1, 1},

@@ -49,10 +49,10 @@ class cv::gpu::VideoReader_GPU::Impl
 };
 
 cv::gpu::VideoReader_GPU::VideoReader_GPU() { throw_nogpu(); }
-cv::gpu::VideoReader_GPU::VideoReader_GPU(const std::string&) { throw_nogpu(); }
+cv::gpu::VideoReader_GPU::VideoReader_GPU(const String&) { throw_nogpu(); }
 cv::gpu::VideoReader_GPU::VideoReader_GPU(const cv::Ptr<VideoSource>&) { throw_nogpu(); }
 cv::gpu::VideoReader_GPU::~VideoReader_GPU() { }
-void cv::gpu::VideoReader_GPU::open(const std::string&) { throw_nogpu(); }
+void cv::gpu::VideoReader_GPU::open(const String&) { throw_nogpu(); }
 void cv::gpu::VideoReader_GPU::open(const cv::Ptr<VideoSource>&) { throw_nogpu(); }
 bool cv::gpu::VideoReader_GPU::isOpened() const { return false; }
 void cv::gpu::VideoReader_GPU::close() { }
@@ -294,7 +294,7 @@ cv::gpu::VideoReader_GPU::VideoReader_GPU()
 {
 }
 
-cv::gpu::VideoReader_GPU::VideoReader_GPU(const std::string& filename)
+cv::gpu::VideoReader_GPU::VideoReader_GPU(const String& filename)
 {
     open(filename);
 }
@@ -309,7 +309,7 @@ cv::gpu::VideoReader_GPU::~VideoReader_GPU()
     close();
 }
 
-void cv::gpu::VideoReader_GPU::open(const std::string& filename)
+void cv::gpu::VideoReader_GPU::open(const String& filename)
 {
     CV_Assert( !filename.empty() );
 

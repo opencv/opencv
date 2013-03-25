@@ -146,7 +146,7 @@ CascadeClassifier::CascadeClassifier
 ----------------------------------------
 Loads a classifier from a file.
 
-.. ocv:function:: CascadeClassifier::CascadeClassifier(const string& filename)
+.. ocv:function:: CascadeClassifier::CascadeClassifier(const String& filename)
 
 .. ocv:pyfunction:: cv2.CascadeClassifier([filename]) -> <CascadeClassifier object>
 
@@ -167,7 +167,7 @@ CascadeClassifier::load
 ---------------------------
 Loads a classifier from a file.
 
-.. ocv:function:: bool CascadeClassifier::load(const string& filename)
+.. ocv:function:: bool CascadeClassifier::load(const String& filename)
 
 .. ocv:pyfunction:: cv2.CascadeClassifier.load(filename) -> retval
 

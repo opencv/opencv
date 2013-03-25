@@ -88,7 +88,7 @@ with an image set. ::
 
         virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
 
-        static Ptr<DescriptorMatcher> create( const string& descriptorMatcherType );
+        static Ptr<DescriptorMatcher> create( const String& descriptorMatcherType );
 
     protected:
         vector<Mat> trainDescCollection;
@@ -237,7 +237,7 @@ DescriptorMatcher::create
 -----------------------------
 Creates a descriptor matcher of a given type with the default parameters (using default constructor).
 
-.. ocv:function:: Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatcherType )
+.. ocv:function:: Ptr<DescriptorMatcher> DescriptorMatcher::create( const String& descriptorMatcherType )
 
     :param descriptorMatcherType: Descriptor matcher type. Now the following matcher types are supported:
 

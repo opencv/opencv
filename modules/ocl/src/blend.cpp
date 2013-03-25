@@ -85,7 +85,7 @@ void cv::ocl::blendLinear(const oclMat &img1, const oclMat &img2, const oclMat &
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&istep ));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&wstep ));
-        std::string kernelName = "BlendLinear";
+        String kernelName = "BlendLinear";
 
         openCLExecuteKernel(ctx, &blend_linear, kernelName, globalSize, localSize, args, channels, depth);
     }
