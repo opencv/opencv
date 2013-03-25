@@ -43,7 +43,10 @@
 #ifndef __OPENCV_GPU_SCAN_HPP__
 #define __OPENCV_GPU_SCAN_HPP__
 
-#include "common.hpp"
+#include "opencv2/gpu/device/common.hpp"
+#include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/gpu/device/warp.hpp"
+#include "opencv2/gpu/device/warp_shuffle.hpp"
 
 namespace cv { namespace gpu { namespace device
 {
@@ -166,6 +169,82 @@ namespace cv { namespace gpu { namespace device
         static const int warp_log  = 5;
         static const int warp_mask = 31;
     };
+
+    template <typename T>
+    __device__ T warpScanInclusive(T idata, volatile T* s_Data, unsigned int tid)
+    {
+    #if __CUDA_ARCH__ >= 300
+        const unsigned int laneId = cv::gpu::device::Warp::laneId();
+
+        // scan on shuffl functions
+        #pragma unroll
+        for (int i = 1; i <= (OPENCV_GPU_WARP_SIZE / 2); i *= 2)
+        {
+            const T n = cv::gpu::device::shfl_up(idata, i);
+            if (laneId >= i)
+                  idata += n;
+        }
+
+        return idata;
+    #else
+        unsigned int pos = 2 * tid - (tid & (OPENCV_GPU_WARP_SIZE - 1));
+        s_Data[pos] = 0;
+        pos += OPENCV_GPU_WARP_SIZE;
+        s_Data[pos] = idata;
+
+        s_Data[pos] += s_Data[pos - 1];
+        s_Data[pos] += s_Data[pos - 2];
+        s_Data[pos] += s_Data[pos - 4];
+        s_Data[pos] += s_Data[pos - 8];
+        s_Data[pos] += s_Data[pos - 16];
+
+        return s_Data[pos];
+    #endif
+    }
+
+    template <typename T>
+    __device__ __forceinline__ T warpScanExclusive(T idata, volatile T* s_Data, unsigned int tid)
+    {
+        return warpScanInclusive(idata, s_Data, tid) - idata;
+    }
+
+    template <int tiNumScanThreads, typename T>
+    __device__ T blockScanInclusive(T idata, volatile T* s_Data, unsigned int tid)
+    {
+        if (tiNumScanThreads > OPENCV_GPU_WARP_SIZE)
+        {
+            //Bottom-level inclusive warp scan
+            T warpResult = warpScanInclusive(idata, s_Data, tid);
+
+            //Save top elements of each warp for exclusive warp scan
+            //sync to wait for warp scans to complete (because s_Data is being overwritten)
+            __syncthreads();
+            if ((tid & (OPENCV_GPU_WARP_SIZE - 1)) == (OPENCV_GPU_WARP_SIZE - 1))
+            {
+                s_Data[tid >> OPENCV_GPU_LOG_WARP_SIZE] = warpResult;
+            }
+
+            //wait for warp scans to complete
+            __syncthreads();
+
+            if (tid < (tiNumScanThreads / OPENCV_GPU_WARP_SIZE) )
+            {
+                //grab top warp elements
+                T val = s_Data[tid];
+                //calculate exclusive scan and write back to shared memory
+                s_Data[tid] = warpScanExclusive(val, s_Data, tid);
+            }
+
+            //return updated warp scans with exclusive scan results
+            __syncthreads();
+
+            return warpResult + s_Data[tid >> OPENCV_GPU_LOG_WARP_SIZE];
+        }
+        else
+        {
+            return warpScanInclusive(idata, s_Data, tid);
+        }
+    }
 }}}
 
 #endif // __OPENCV_GPU_SCAN_HPP__
