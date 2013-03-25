@@ -80,7 +80,7 @@ class OpenCVTests(unittest.TestCase):
             cv.SetData(imagefiledata, filedata, len(filedata))
             self.image_cache[filename] = cv.DecodeImageM(imagefiledata, iscolor)
         return self.image_cache[filename]
-        
+
     def get_sample2(self, filename, iscolor = cv.CV_LOAD_IMAGE_COLOR):
         if not filename in self.image_cache:
             filedata = urllib.urlopen("https://raw.github.com/Itseez/opencv/master/" + filename).read()

@@ -1202,26 +1202,11 @@ Creates StereoBM object
 
 .. ocv:pyfunction:: cv2.createStereoBM([numDisparities[, blockSize]]) -> <StereoBM object>
 
-.. ocv:cfunction:: CvStereoBMState* cvCreateStereoBMState( int preset=CV_STEREO_BM_BASIC, int numDisparities=0 )
-
-.. ocv:pyoldfunction:: cv.CreateStereoBMState(preset=CV_STEREO_BM_BASIC, numDisparities=0)-> CvStereoBMState
-
-    :param preset: specifies the whole set of algorithm parameters, one of:
-
-            * BASIC_PRESET - parameters suitable for general cameras
-            * FISH_EYE_PRESET - parameters suitable for wide-angle cameras
-            * NARROW_PRESET - parameters suitable for narrow-angle cameras
-
-        After constructing the class, you can override any parameters set by the preset.
-
     :param numDisparities: the disparity search range. For each pixel algorithm will find the best disparity from 0 (default minimum disparity) to ``numDisparities``. The search range can then be shifted by changing the minimum disparity.
 
     :param blockSize: the linear size of the blocks compared by the algorithm. The size should be odd (as the block is centered at the current pixel). Larger block size implies smoother, though less accurate disparity map. Smaller block size gives more detailed disparity map, but there is higher chance for algorithm to find a wrong correspondence.
 
 The function create ``StereoBM`` object. You can then call ``StereoBM::compute()`` to compute disparity for a specific stereo pair.
-
-.. note:: In the C API you need to deallocate ``CvStereoBM`` state when it is not needed anymore using ``cvReleaseStereoBMState(&stereobm)``.
-
 
 
 StereoSGBM
