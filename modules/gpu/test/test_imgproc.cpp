@@ -217,6 +217,50 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, EqualizeHist, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES));
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// CLAHE
+
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(ClipLimit, double)
+}
+
+PARAM_TEST_CASE(CLAHE, cv::gpu::DeviceInfo, cv::Size, ClipLimit)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    double clipLimit;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        clipLimit = GET_PARAM(2);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+GPU_TEST_P(CLAHE, Accuracy)
+{
+    cv::Mat src = randomMat(size, CV_8UC1);
+
+    cv::Ptr<cv::gpu::CLAHE> clahe = cv::gpu::createCLAHE(clipLimit);
+    cv::gpu::GpuMat dst;
+    clahe->apply(loadMat(src), dst);
+
+    cv::Ptr<cv::CLAHE> clahe_gold = cv::createCLAHE(clipLimit);
+    cv::Mat dst_gold;
+    clahe_gold->apply(src, dst_gold);
+
+    ASSERT_MAT_NEAR(dst_gold, dst, 1.0);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CLAHE, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(0.0, 40.0)));
+
 ////////////////////////////////////////////////////////////////////////
 // ColumnSum
 
