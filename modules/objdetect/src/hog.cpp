@@ -2871,7 +2871,7 @@ void HOGDescriptor::readALTModel(String modelfile)
 
         detector.push_back((float)-linearbias);
         setSVMDetector(detector);
-        delete linearwt;
+        delete [] linearwt;
     } else {
         throw Exception();
     }
