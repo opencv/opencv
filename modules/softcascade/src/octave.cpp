@@ -320,6 +320,8 @@ void BoostedSoftCascadeOctave::traverse(const CvBoostTree* tree, cv::FileStorage
 
 
     fs << "}";
+    
+    delete [] leafs;
 }
 
 void BoostedSoftCascadeOctave::write( cv::FileStorage &fso, const FeaturePool* pool, InputArray _thresholds) const
