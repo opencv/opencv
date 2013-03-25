@@ -112,15 +112,15 @@
 #define CV_HARDWARE_MAX_FEATURE 255
 
 #if defined __SSE2__ || defined _M_X64  || (defined _M_IX86_FP && _M_IX86_FP >= 2)
-#  include "emmintrin.h"
+#  include <emmintrin.h>
 #  define CV_SSE 1
 #  define CV_SSE2 1
 #  if defined __SSE3__ || (defined _MSC_VER && _MSC_VER >= 1500)
-#    include "pmmintrin.h"
+#    include <pmmintrin.h>
 #    define CV_SSE3 1
 #  endif
 #  if defined __SSSE3__  || (defined _MSC_VER && _MSC_VER >= 1500)
-#    include "tmmintrin.h"
+#    include <tmmintrin.h>
 #    define CV_SSSE3 1
 #  endif
 #  if defined __SSE4_1__ || (defined _MSC_VER && _MSC_VER >= 1500)
@@ -187,7 +187,13 @@
 */
 
 #if !defined _MSC_VER && !defined __BORLANDC__
-#  include <stdint.h>
+#  if defined __cplusplus && __cplusplus >= 201103L
+#    include <cstdint>
+#  else
+#    include <stdint.h>
+#  endif
+#else
+   typedef unsigned uint;
 #endif
 
 typedef signed char schar;
@@ -318,6 +324,8 @@ typedef signed char schar;
 
 #if defined __BORLANDC__
 #  include <fastmath.h>
+#elif defined __cplusplus
+#  include <cmath>
 #else
 #  include <math.h>
 #endif
