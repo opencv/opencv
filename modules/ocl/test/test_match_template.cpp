@@ -75,7 +75,7 @@ PARAM_TEST_CASE(MatchTemplate8U, cv::Size, TemplateSize, Channels, TemplateMetho
     }
 };
 
-TEST_P(MatchTemplate8U, DISABLED_Accuracy)
+TEST_P(MatchTemplate8U, Accuracy)
 {
 
     std::cout << "Method: " << TEMPLATE_METHOD_NAMES[method] << std::endl;
@@ -138,18 +138,18 @@ TEST_P(MatchTemplate32F, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1, sss);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MatchTemplate8U,
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MatchTemplate8U,
                         testing::Combine(
                             MTEMP_SIZES,
-                            testing::Values(TemplateSize(cv::Size(5, 5)), TemplateSize(cv::Size(16, 16))/*, TemplateSize(cv::Size(30, 30))*/),
+                            testing::Values(TemplateSize(cv::Size(5, 5)), TemplateSize(cv::Size(16, 16)), TemplateSize(cv::Size(30, 30))),
                             testing::Values(Channels(1), Channels(3), Channels(4)),
                             ALL_TEMPLATE_METHODS
                         )
                        );
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MatchTemplate32F, testing::Combine(
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MatchTemplate32F, testing::Combine(
                             MTEMP_SIZES,
-                            testing::Values(TemplateSize(cv::Size(5, 5)), TemplateSize(cv::Size(16, 16))/*, TemplateSize(cv::Size(30, 30))*/),
+                            testing::Values(TemplateSize(cv::Size(5, 5)), TemplateSize(cv::Size(16, 16)), TemplateSize(cv::Size(30, 30))),
                             testing::Values(Channels(1), Channels(3), Channels(4)),
                             testing::Values(TemplateMethod(cv::TM_SQDIFF), TemplateMethod(cv::TM_CCORR))));
 #endif
