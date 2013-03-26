@@ -144,9 +144,10 @@ PARAM_TEST_CASE(SURF, HessianThreshold, Octaves, OctaveLayers, Extended, Upright
     }
 };
 
-TEST_P(SURF, DISABLED_Detector)
+TEST_P(SURF, Detector)
 {
-    cv::Mat image  = cv::imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/fruits.png", cv::IMREAD_GRAYSCALE);
+    // the data path should be opencv/samples
+    cv::Mat image  = cv::imread(string(cvtest::TS::ptr()->get_data_path()) + "c/fruits.jpg", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
     cv::ocl::SURF_OCL surf;
@@ -179,7 +180,7 @@ TEST_P(SURF, DISABLED_Detector)
 
 TEST_P(SURF, DISABLED_Descriptor)
 {
-    cv::Mat image  = cv::imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/fruits.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat image  = cv::imread(string(cvtest::TS::ptr()->get_data_path()) + "c/fruits.jpg", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
     cv::ocl::SURF_OCL surf;

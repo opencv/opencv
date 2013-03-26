@@ -75,7 +75,7 @@ namespace cv
 }
 
 
-static inline int divUp(size_t total, size_t grain)
+static inline size_t divUp(size_t total, size_t grain)
 {
     return (total + grain - 1) / grain;
 }
