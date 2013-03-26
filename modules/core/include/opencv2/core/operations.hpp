@@ -2084,11 +2084,6 @@ Scalar_<_Tp>& operator /= (Scalar_<_Tp>& a, const Scalar_<_Tp>& b)
 
 inline Range::Range() : start(0), end(0) {}
 inline Range::Range(int _start, int _end) : start(_start), end(_end) {}
-inline Range::Range(const CvSlice& slice) : start(slice.start_index), end(slice.end_index)
-{
-    if( start == 0 && end == CV_WHOLE_SEQ_END_INDEX )
-        *this = Range::all();
-}
 
 inline int Range::size() const { return end - start; }
 inline bool Range::empty() const { return start == end; }
@@ -2130,10 +2125,6 @@ static inline Range operator - (const Range& r1, int delta)
 {
     return r1 + (-delta);
 }
-
-inline Range::operator CvSlice() const
-{ return *this != Range::all() ? cvSlice(start, end) : CV_WHOLE_SEQ; }
-
 
 
 //////////////////////////////// Vector ////////////////////////////////

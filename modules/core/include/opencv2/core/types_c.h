@@ -983,10 +983,18 @@ CvLineIterator;
 
 
 /************************************* CvSlice ******************************************/
+#define CV_WHOLE_SEQ_END_INDEX 0x3fffffff
+#define CV_WHOLE_SEQ  cvSlice(0, CV_WHOLE_SEQ_END_INDEX)
 
 typedef struct CvSlice
 {
     int  start_index, end_index;
+
+#ifdef __cplusplus
+    CvSlice(int start = 0, int end = 0) : start_index(start), end_index(end) {}
+    CvSlice(const cv::Range& r) { *this = (r.start != INT_MIN && r.end != INT_MAX) ? CvSlice(r.start, r.end) : CvSlice(0, CV_WHOLE_SEQ_END_INDEX); }
+    operator cv::Range() const { return (start_index == 0 && end_index == CV_WHOLE_SEQ_END_INDEX ) ? cv::Range::all() : cv::Range(start_index, end_index); }
+#endif
 }
 CvSlice;
 
@@ -999,8 +1007,6 @@ CV_INLINE  CvSlice  cvSlice( int start, int end )
     return slice;
 }
 
-#define CV_WHOLE_SEQ_END_INDEX 0x3fffffff
-#define CV_WHOLE_SEQ  cvSlice(0, CV_WHOLE_SEQ_END_INDEX)
 
 
 /************************************* CvScalar *****************************************/
