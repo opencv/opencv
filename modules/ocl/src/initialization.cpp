@@ -353,6 +353,46 @@ namespace cv
         {
             return &(Context::getContext()->impl->clCmdQueue);
         }
+
+        void queryDeviceInfo(DEVICE_INFO info_type, void* info)
+        {
+            static Info::Impl* impl = Context::getContext()->impl;
+            switch(info_type)
+            {
+            case WAVEFRONT_SIZE:
+                {
+#ifndef CL_DEVICE_WAVEFRONT_WIDTH_AMD
+                    openCLSafeCall(clGetDeviceInfo(Context::getContext()->impl->devices[0], 
+                        CL_DEVICE_WAVEFRONT_WIDTH_AMD, sizeof(size_t), info, 0));
+#else
+                    const int EXT_LEN = 4096 + 1 ;
+                    char extends_set[EXT_LEN];
+                    size_t extends_size;
+                    openCLSafeCall(clGetDeviceInfo(impl->devices[impl->devnum], CL_DEVICE_EXTENSIONS, EXT_LEN, (void *)extends_set, &extends_size));
+                    extends_set[EXT_LEN - 1] = 0;
+                    if(std::string(extends_set).find("cl_nv_device_attribute_query") != std::string::npos)
+                    {
+                        openCLSafeCall(clGetDeviceInfo(Context::getContext()->impl->devices[0], 
+                            CL_DEVICE_WARP_SIZE_NV, sizeof(size_t), info, 0));
+                    }
+                    else
+                    {
+                        // if no way left for us to query the warp size, we can get it from kernel group info
+                        static const char * _kernel_string = "__kernel void test_func() {}";
+                        cl_kernel kernel;
+                        kernel = openCLGetKernelFromSource(Context::getContext(), &_kernel_string, "test_func");
+                        openCLSafeCall(clGetKernelWorkGroupInfo(kernel, impl->devices[impl->devnum],
+                            CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE, sizeof(size_t), info, NULL));
+                    }
+#endif
+                }
+                break;
+            default:
+                CV_Error(-1, "Invalid device info type");
+                break;
+            }
+        }
+
         void openCLReadBuffer(Context *clCxt, cl_mem dst_buffer, void *host_buffer, size_t size)
         {
             cl_int status;
