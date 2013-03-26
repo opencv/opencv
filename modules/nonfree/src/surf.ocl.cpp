@@ -69,14 +69,14 @@ namespace cv
             if(!OPTION_INIT)
             {
                 if( !USE_IMAGE2d )
-            {
+                {
                     strcat(pSURF_OPTIONS, noImage2dOption);
                     pSURF_OPTIONS += strlen(noImage2dOption);
                 }
 
                 size_t wave_size = 0;
-                queryDeviceInfo(DEVICE_INFO::WAVEFRONT_SIZE, &wave_size);
-                sprintf(pSURF_OPTIONS, " -D WAVE_SIZE=%d", static_cast<int>(wave_size));
+                queryDeviceInfo(WAVEFRONT_SIZE, &wave_size);
+                std::sprintf(pSURF_OPTIONS, " -D WAVE_SIZE=%d", static_cast<int>(wave_size));
                 OPTION_INIT = true;
             }
             openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth, SURF_OPTIONS);
