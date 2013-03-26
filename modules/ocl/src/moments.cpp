@@ -143,7 +143,7 @@ static void icvContourMoments( CvSeq* contour, CvMoments* mom )
         args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_step ));
 
         openCLExecuteKernel(dst_a.clCxt, &moments, "icvContourMoments", globalThreads, localThreads, args, -1, -1);
-
+        
         cv::Mat dst(dst_a);
         a00 = a10 = a01 = a20 = a11 = a02 = a30 = a21 = a12 = a03 = 0.0;
         if (!cv::ocl::Context::getContext()->supportsFeature(Context::CL_DOUBLE))
@@ -277,16 +277,7 @@ static void ocl_cvMoments( const void* array, CvMoments* mom, int binary )
         blocky = size.height/TILE_SIZE;
     else
         blocky = size.height/TILE_SIZE + 1;
-    cv::ocl::oclMat dst_m00(blocky, blockx, CV_64FC1);
-    cv::ocl::oclMat dst_m10(blocky, blockx, CV_64FC1);
-    cv::ocl::oclMat dst_m01(blocky, blockx, CV_64FC1);
-    cv::ocl::oclMat dst_m20(blocky, blockx, CV_64FC1);
-    cv::ocl::oclMat dst_m11(blocky, blockx, CV_64FC1);
-    cv::ocl::oclMat dst_m02(blocky, blockx, CV_64FC1);
-    cv::ocl::oclMat dst_m30(blocky, blockx, CV_64FC1);
-    cv::ocl::oclMat dst_m21(blocky, blockx, CV_64FC1);
-    cv::ocl::oclMat dst_m12(blocky, blockx, CV_64FC1);
-    cv::ocl::oclMat dst_m03(blocky, blockx, CV_64FC1);
+    cv::ocl::oclMat dst_m(blocky * 10, blockx, CV_64FC1);
     cl_mem sum = openCLCreateBuffer(src.clCxt,CL_MEM_READ_WRITE,10*sizeof(double));
     int tile_width  = std::min(size.width,TILE_SIZE);
     int tile_height = std::min(size.height,TILE_SIZE);
@@ -299,25 +290,17 @@ static void ocl_cvMoments( const void* array, CvMoments* mom, int binary )
     args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&tileSize.width ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&tileSize.height ));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m00.data ));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m10.data ));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m01.data ));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m20.data ));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m11.data ));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m02.data ));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m30.data ));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m21.data ));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m12.data ));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m03.data ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_m00.cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_m00.step ));
+    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m.data ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_m.cols ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_m.step ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&blocky ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&type ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&depth ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&cn ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&coi ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&binary ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&TILE_SIZE ));
-    openCLExecuteKernel(dst_m00.clCxt, &moments, "CvMoments", globalThreads, localThreads, args, -1, depth);
+    openCLExecuteKernel(dst_m.clCxt, &moments, "CvMoments", globalThreads, localThreads, args, -1, depth);
 
     size_t localThreadss[3]  = { 128, 1, 1};
     size_t globalThreadss[3] = { 128, 1, 1};
@@ -327,20 +310,12 @@ static void ocl_cvMoments( const void* array, CvMoments* mom, int binary )
     args_sum.push_back( make_pair( sizeof(cl_int) , (void *)&tile_width ));
     args_sum.push_back( make_pair( sizeof(cl_int) , (void *)&TILE_SIZE ));
     args_sum.push_back( make_pair( sizeof(cl_mem) , (void *)&sum ));
-    args_sum.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m00.data ));
-    args_sum.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m10.data ));
-    args_sum.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m01.data ));
-    args_sum.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m20.data ));
-    args_sum.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m11.data ));
-    args_sum.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m02.data ));
-    args_sum.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m30.data ));
-    args_sum.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m21.data ));
-    args_sum.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m12.data ));
-    args_sum.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m03.data ));
-    openCLExecuteKernel(dst_m00.clCxt, &moments, "dst_sum", globalThreadss, localThreadss, args_sum, -1, -1);
+    args_sum.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m.data ));
+    args_sum.push_back( make_pair( sizeof(cl_int) , (void *)&dst_m.step ));
+    openCLExecuteKernel(dst_m.clCxt, &moments, "dst_sum", globalThreadss, localThreadss, args_sum, -1, -1);
     double* dstsum = new double[10];
     memset(dstsum,0,10*sizeof(double));
-    openCLReadBuffer(dst_m00.clCxt,sum,(void *)dstsum,10*sizeof(double));
+    openCLReadBuffer(dst_m.clCxt,sum,(void *)dstsum,10*sizeof(double));
     mom->m00 = dstsum[0];
     mom->m10 = dstsum[1];
     mom->m01 = dstsum[2];
@@ -351,6 +326,7 @@ static void ocl_cvMoments( const void* array, CvMoments* mom, int binary )
     mom->m21 = dstsum[7];
     mom->m12 = dstsum[8];
     mom->m03 = dstsum[9];
+    delete [] dstsum;
 
     icvCompleteMomentState( mom );
 }

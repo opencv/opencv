@@ -18,6 +18,7 @@ foreach(cl ${cl_list})
   string(REPLACE "\t" "  " lines "${lines}")
 
   string(REGEX REPLACE "/\\*([^*]/|\\*[^/]|[^*/])*\\*/" ""   lines "${lines}") # multiline comments
+  string(REGEX REPLACE "/\\*([^\n])*\\*/"               ""   lines "${lines}") # single-line comments
   string(REGEX REPLACE "[ ]*//[^\n]*\n"                 "\n" lines "${lines}") # single-line comments
   string(REGEX REPLACE "\n[ ]*(\n[ ]*)*"                "\n" lines "${lines}") # empty lines & leading whitespace
   string(REGEX REPLACE "^\n"                            ""   lines "${lines}") # leading new line
