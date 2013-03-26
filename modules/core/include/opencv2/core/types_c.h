@@ -685,6 +685,14 @@ typedef struct CvRect
     int y;
     int width;
     int height;
+
+#ifdef __cplusplus
+    CvRect(int _x = 0, int _y = 0, int w = 0, int h = 0): x(_x), y(_y), width(w), height(h) {}
+    template<typename _Tp>
+    CvRect(const cv::Rect_<_Tp>& r): x(cv::saturate_cast<int>(r.x)), y(cv::saturate_cast<int>(r.y)), width(cv::saturate_cast<int>(r.width)), height(cv::saturate_cast<int>(r.height)) {}
+    template<typename _Tp>
+    operator cv::Rect_<_Tp>() const { return cv::Rect_<_Tp>((_Tp)x, (_Tp)y, (_Tp)width, (_Tp)height); }
+#endif
 }
 CvRect;
 

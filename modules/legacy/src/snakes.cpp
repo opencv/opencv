@@ -292,8 +292,8 @@ icvSnake8uC1R( unsigned char *src,
                             int leftshift = x ? 1 : 0;
                             int bottomshift = MIN( 1, roi.height - (y + 1)*WTILE_SIZE );
                             int rightshift = MIN( 1, roi.width - (x + 1)*WTILE_SIZE );
-                            CvRect g_roi = { x*WTILE_SIZE - leftshift, y*WTILE_SIZE - upshift,
-                                leftshift + WTILE_SIZE + rightshift, upshift + WTILE_SIZE + bottomshift };
+                            CvRect g_roi(x*WTILE_SIZE - leftshift, y*WTILE_SIZE - upshift,
+                                leftshift + WTILE_SIZE + rightshift, upshift + WTILE_SIZE + bottomshift);
                             CvMat _src1;
                             cvGetSubArr( &_src, &_src1, g_roi );
 

@@ -1785,7 +1785,6 @@ template<typename _Tp> static inline bool operator != (const Size_<_Tp>& a, cons
 template<typename _Tp> inline Rect_<_Tp>::Rect_() : x(0), y(0), width(0), height(0) {}
 template<typename _Tp> inline Rect_<_Tp>::Rect_(_Tp _x, _Tp _y, _Tp _width, _Tp _height) : x(_x), y(_y), width(_width), height(_height) {}
 template<typename _Tp> inline Rect_<_Tp>::Rect_(const Rect_<_Tp>& r) : x(r.x), y(r.y), width(r.width), height(r.height) {}
-template<typename _Tp> inline Rect_<_Tp>::Rect_(const CvRect& r) : x((_Tp)r.x), y((_Tp)r.y), width((_Tp)r.width), height((_Tp)r.height) {}
 template<typename _Tp> inline Rect_<_Tp>::Rect_(const Point_<_Tp>& org, const Size_<_Tp>& sz) :
     x(org.x), y(org.y), width(sz.width), height(sz.height) {}
 template<typename _Tp> inline Rect_<_Tp>::Rect_(const Point_<_Tp>& pt1, const Point_<_Tp>& pt2)
@@ -1836,9 +1835,6 @@ template<typename _Tp> inline _Tp Rect_<_Tp>::area() const { return width*height
 template<typename _Tp> template<typename _Tp2> inline Rect_<_Tp>::operator Rect_<_Tp2>() const
 { return Rect_<_Tp2>(saturate_cast<_Tp2>(x), saturate_cast<_Tp2>(y),
                      saturate_cast<_Tp2>(width), saturate_cast<_Tp2>(height)); }
-template<typename _Tp> inline Rect_<_Tp>::operator CvRect() const
-{ return cvRect(saturate_cast<int>(x), saturate_cast<int>(y),
-                saturate_cast<int>(width), saturate_cast<int>(height)); }
 
 template<typename _Tp> inline bool Rect_<_Tp>::contains(const Point_<_Tp>& pt) const
 { return x <= pt.x && pt.x < x + width && y <= pt.y && pt.y < y + height; }

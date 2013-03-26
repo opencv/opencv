@@ -529,7 +529,7 @@ namespace cv{
             }
             return;
         }
-        CvRect roi={0,0,0,0};
+        CvRect roi;
         if (!CV_IS_MAT(patch))
         {
             roi = cvGetImageROI((IplImage*)patch);

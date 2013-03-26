@@ -284,6 +284,53 @@ typedef Size_<int> Size2i;
 typedef Size_<float> Size2f;
 typedef Size2i Size;
 
+
+
+//////////////////////////////// Rect_ ////////////////////////////////
+
+/*!
+  The 2D up-right rectangle class
+
+  The class represents a 2D rectangle with coordinates of the specified data type.
+  Normally, cv::Rect ~ cv::Rect_<int> is used.
+*/
+template<typename _Tp> class CV_EXPORTS Rect_
+{
+public:
+    typedef _Tp value_type;
+
+    //! various constructors
+    Rect_();
+    Rect_(_Tp _x, _Tp _y, _Tp _width, _Tp _height);
+    Rect_(const Rect_& r);
+    Rect_(const Point_<_Tp>& org, const Size_<_Tp>& sz);
+    Rect_(const Point_<_Tp>& pt1, const Point_<_Tp>& pt2);
+
+    Rect_& operator = ( const Rect_& r );
+    //! the top-left corner
+    Point_<_Tp> tl() const;
+    //! the bottom-right corner
+    Point_<_Tp> br() const;
+
+    //! size (width, height) of the rectangle
+    Size_<_Tp> size() const;
+    //! area (width*height) of the rectangle
+    _Tp area() const;
+
+    //! conversion to another data type
+    template<typename _Tp2> operator Rect_<_Tp2>() const;
+
+    //! checks whether the rectangle contains the point
+    bool contains(const Point_<_Tp>& pt) const;
+
+    _Tp x, y, width, height; //< the top-left corner, as well as width and height of the rectangle
+};
+
+/*!
+  \typedef
+*/
+typedef Rect_<int> Rect;
+
 } // cv
 
 #endif //__OPENCV_CORE_TYPES_HPP__

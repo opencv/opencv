@@ -3052,7 +3052,7 @@ cvResetImageROI( IplImage* image )
 CV_IMPL CvRect
 cvGetImageROI( const IplImage* img )
 {
-    CvRect rect = { 0, 0, 0, 0 };
+    CvRect rect;
     if( !img )
         CV_Error( CV_StsNullPtr, "Null pointer to image" );
 
