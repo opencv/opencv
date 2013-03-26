@@ -1478,26 +1478,8 @@ CVAPI(int) cvKMeans2( const CvArr* samples, int cluster_count, CvArr* labels,
 *                                    System functions                                    *
 \****************************************************************************************/
 
-/* Add the function pointers table with associated information to the IPP primitives list */
-CVAPI(int)  cvRegisterModule( const CvModuleInfo* module_info );
-
 /* Loads optimized functions from IPP, MKL etc. or switches back to pure C code */
 CVAPI(int)  cvUseOptimized( int on_off );
-
-/* Retrieves information about the registered modules and loaded optimized plugins */
-CVAPI(void)  cvGetModuleInfo( const char* module_name,
-                              const char** version,
-                              const char** loaded_addon_plugins );
-
-typedef void* (CV_CDECL *CvAllocFunc)(size_t size, void* userdata);
-typedef int (CV_CDECL *CvFreeFunc)(void* pptr, void* userdata);
-
-/* Set user-defined memory managment functions (substitutors for malloc and free) that
-   will be called by cvAlloc, cvFree and higher-level functions (e.g. cvCreateImage) */
-CVAPI(void) cvSetMemoryManager( CvAllocFunc alloc_func CV_DEFAULT(NULL),
-                               CvFreeFunc free_func CV_DEFAULT(NULL),
-                               void* userdata CV_DEFAULT(NULL));
-
 
 typedef IplImage* (CV_STDCALL* Cv_iplCreateImageHeader)
                             (int,int,int,char*,char*,int,int,int,int,int,
@@ -1843,19 +1825,11 @@ static char cvFuncName[] = Name
 #define __CV_EXIT__        goto exit
 
 #ifdef __cplusplus
-}
+} // extern "C"
+#endif
 
-// classes for automatic module/RTTI data registration/unregistration
-struct CV_EXPORTS CvModule
-{
-    CvModule( CvModuleInfo* _info );
-    ~CvModule();
-    CvModuleInfo* info;
-
-    static CvModuleInfo* first;
-    static CvModuleInfo* last;
-};
-
+#ifdef __cplusplus
+// class for automatic module/RTTI data registration/unregistration
 struct CV_EXPORTS CvType
 {
     CvType( const char* type_name,
