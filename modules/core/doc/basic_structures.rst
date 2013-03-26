@@ -368,6 +368,95 @@ The static method ``Range::all()`` returns a special variable that means "the wh
     }
 
 
+KeyPoint
+--------
+.. ocv:class:: KeyPoint
+
+  Data structure for salient point detectors.
+
+  .. ocv:member:: Point2f pt
+
+     coordinates of the keypoint
+
+  .. ocv:member:: float size
+
+     diameter of the meaningful keypoint neighborhood
+
+  .. ocv:member:: float angle
+
+     computed orientation of the keypoint (-1 if not applicable). Its possible values are in a range [0,360) degrees. It is measured relative to image coordinate system (y-axis is directed downward), ie in clockwise.
+
+  .. ocv:member:: float response
+
+     the response by which the most strong keypoints have been selected. Can be used for further sorting or subsampling
+
+  .. ocv:member:: int octave
+
+     octave (pyramid layer) from which the keypoint has been extracted
+
+  .. ocv:member:: int class_id
+
+     object id that can be used to clustered keypoints by an object they belong to
+
+KeyPoint::KeyPoint
+------------------
+The keypoint constructors
+
+.. ocv:function:: KeyPoint::KeyPoint()
+
+.. ocv:function:: KeyPoint::KeyPoint(Point2f _pt, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
+
+.. ocv:function:: KeyPoint::KeyPoint(float x, float y, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
+
+.. ocv:pyfunction:: cv2.KeyPoint([x, y, _size[, _angle[, _response[, _octave[, _class_id]]]]]) -> <KeyPoint object>
+
+    :param x: x-coordinate of the keypoint
+
+    :param y: y-coordinate of the keypoint
+
+    :param _pt: x & y coordinates of the keypoint
+
+    :param _size: keypoint diameter
+
+    :param _angle: keypoint orientation
+
+    :param _response: keypoint detector response on the keypoint (that is, strength of the keypoint)
+
+    :param _octave: pyramid octave in which the keypoint has been detected
+
+    :param _class_id: object id
+
+
+DMatch
+------
+.. ocv:struct:: DMatch
+
+Class for matching keypoint descriptors: query descriptor index,
+train descriptor index, train image index, and distance between descriptors. ::
+
+    struct DMatch
+    {
+        DMatch() : queryIdx(-1), trainIdx(-1), imgIdx(-1),
+                   distance(std::numeric_limits<float>::max()) {}
+        DMatch( int _queryIdx, int _trainIdx, float _distance ) :
+                queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(-1),
+                distance(_distance) {}
+        DMatch( int _queryIdx, int _trainIdx, int _imgIdx, float _distance ) :
+                queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(_imgIdx),
+                distance(_distance) {}
+
+        int queryIdx; // query descriptor index
+        int trainIdx; // train descriptor index
+        int imgIdx;   // train image index
+
+        float distance;
+
+        // less is better
+        bool operator<( const DMatch &m ) const;
+    };
+
+
+
 .. _Ptr:
 
 Ptr
