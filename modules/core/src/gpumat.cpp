@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/core/gpumat.hpp"
-#include <iostream>
+#include <cctype>
 
 #ifdef HAVE_CUDA
     #include <cuda_runtime.h>
@@ -81,9 +81,8 @@ namespace
     {
         if (err < 0)
         {
-            std::ostringstream msg;
-            msg << "NPP API Call Error: " << err;
-            cv::gpu::error(msg.str().c_str(), file, line, func);
+            String msg = cv::format("NPP API Call Error: %d", err);
+            cv::gpu::error(msg.c_str(), file, line, func);
         }
     }
 }
@@ -220,16 +219,25 @@ namespace
 
     void CudaArch::fromStr(const String& set_as_str, std::vector<int>& arr)
     {
-        if (set_as_str.find_first_not_of(" ") == String::npos)
-            return;
+        arr.clear();
 
-        std::istringstream stream(set_as_str);
-        int cur_value;
-
-        while (!stream.eof())
+        size_t pos = 0;
+        while (pos < set_as_str.size())
         {
-            stream >> cur_value;
-            arr.push_back(cur_value);
+            if (isspace(set_as_str[pos]))
+            {
+                ++pos;
+            }
+            else
+            {
+                int cur_value;
+                int chars_read;
+                int args_read = sscanf(set_as_str.c_str() + pos, "%d%n", &cur_value, &chars_read);
+                CV_Assert(args_read == 2);
+
+                arr.push_back(cur_value);
+                pos += chars_read;
+            }
         }
 
         std::sort(arr.begin(), arr.end());
@@ -1570,8 +1578,8 @@ void cv::gpu::error(const char *error_string, const char *file, const int line, 
         const char* errorStr = cvErrorStr(code);
         const char* function = func ? func : "unknown function";
 
-        std::cerr << "OpenCV Error: " << errorStr << "(" << error_string << ") in " << function << ", file " << file << ", line " << line;
-        std::cerr.flush();
+        fprintf(stderr, "OpenCV Error: %s(%s) in %s, file %s, line %d", errorStr, error_string, function, file, line);
+        fflush(stderr);
     }
     else
         cv::error( cv::Exception(code, error_string, func, file, line) );
