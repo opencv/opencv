@@ -55,10 +55,11 @@
 #include "cvconfig.h"
 #endif
 
+#include "opencv2/ts/ts.hpp"
+#include "opencv2/ts/gpu_perf.hpp"
+
 #include "opencv2/core/core.hpp"
 #include "opencv2/core/gpumat.hpp"
-#include "opencv2/ts/ts_perf.hpp"
-#include "opencv2/ts/gpu_perf.hpp"
 #include "opencv2/superres/superres.hpp"
 #include "opencv2/superres/optical_flow.hpp"
 
