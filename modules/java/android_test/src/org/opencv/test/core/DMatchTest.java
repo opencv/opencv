@@ -1,6 +1,6 @@
-package org.opencv.test.features2d;
+package org.opencv.test.core;
 
-import org.opencv.features2d.DMatch;
+import org.opencv.core.DMatch;
 
 import junit.framework.TestCase;
 

@@ -10,7 +10,7 @@ except:
 
 class_ignore_list = (
     #core
-    "FileNode", "FileStorage", "KDTree",
+    "FileNode", "FileStorage", "KDTree", "KeyPoint", "DMatch",
     #highgui
     "VideoWriter", "VideoCapture",
 )

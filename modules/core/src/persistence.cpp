@@ -5522,6 +5522,37 @@ void read( const FileNode& node, SparseMat& mat, const SparseMat& default_mat )
     SparseMat(m).copyTo(mat);
 }
 
+void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& keypoints)
+{
+    WriteStructContext ws(fs, objname, CV_NODE_SEQ + CV_NODE_FLOW);
+
+    int i, npoints = (int)keypoints.size();
+    for( i = 0; i < npoints; i++ )
+    {
+        const KeyPoint& kpt = keypoints[i];
+        cv::write(fs, kpt.pt.x);
+        cv::write(fs, kpt.pt.y);
+        cv::write(fs, kpt.size);
+        cv::write(fs, kpt.angle);
+        cv::write(fs, kpt.response);
+        cv::write(fs, kpt.octave);
+        cv::write(fs, kpt.class_id);
+    }
+}
+
+
+void read(const FileNode& node, std::vector<KeyPoint>& keypoints)
+{
+    keypoints.resize(0);
+    FileNodeIterator it = node.begin(), it_end = node.end();
+    for( ; it != it_end; )
+    {
+        KeyPoint kpt;
+        it >> kpt.pt.x >> kpt.pt.y >> kpt.size >> kpt.angle >> kpt.response >> kpt.octave >> kpt.class_id;
+        keypoints.push_back(kpt);
+    }
+}
+
 }
 
 /* End of file. */
