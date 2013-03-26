@@ -246,6 +246,44 @@ typedef Point3_<int> Point3i;
 typedef Point3_<float> Point3f;
 typedef Point3_<double> Point3d;
 
+
+
+//////////////////////////////// Size_ ////////////////////////////////
+
+/*!
+  The 2D size class
+
+  The class represents the size of a 2D rectangle, image size, matrix size etc.
+  Normally, cv::Size ~ cv::Size_<int> is used.
+*/
+template<typename _Tp> class CV_EXPORTS Size_
+{
+public:
+    typedef _Tp value_type;
+
+    //! various constructors
+    Size_();
+    Size_(_Tp _width, _Tp _height);
+    Size_(const Size_& sz);
+    Size_(const Point_<_Tp>& pt);
+
+    Size_& operator = (const Size_& sz);
+    //! the area (width*height)
+    _Tp area() const;
+
+    //! conversion of another data type.
+    template<typename _Tp2> operator Size_<_Tp2>() const;
+
+    _Tp width, height; // the width and the height
+};
+
+/*!
+  \typedef
+*/
+typedef Size_<int> Size2i;
+typedef Size_<float> Size2f;
+typedef Size2i Size;
+
 } // cv
 
 #endif //__OPENCV_CORE_TYPES_HPP__

@@ -157,7 +157,7 @@ struct CvFaceTracker
     };
     int InitNextImage(IplImage* img)
     {
-        CvSize sz = {img->width, img->height};
+        CvSize sz(img->width, img->height);
         ReallocImage(&imgGray, sz, 1);
         ReallocImage(&imgThresh, sz, 1);
         ptRotate = face[MOUTH].ptCenter;

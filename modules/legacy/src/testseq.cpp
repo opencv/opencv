@@ -850,13 +850,13 @@ CvTestSeq* cvCreateTestSeq(char* pConfigfile, char** videos, int numvideo, float
     {   /* Calculate elements and image size and video length: */
         CvTestSeqElem*  p = pTS->pElemList;
         int             num = 0;
-        CvSize          MaxSize = {0,0};
+        CvSize          MaxSize;
         int             MaxFN = 0;
 
         for(p = pTS->pElemList; p; p=p->next, num++)
         {
             int     FN = p->FrameBegin+p->FrameNum;
-            CvSize  S = {0,0};
+            CvSize  S;
 
             if(p->pImg && p->BG)
             {

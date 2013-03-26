@@ -1210,7 +1210,7 @@ cvGetDimSize( const CvArr* arr, int index )
 CV_IMPL CvSize
 cvGetSize( const CvArr* arr )
 {
-    CvSize size = { 0, 0 };
+    CvSize size;
 
     if( CV_IS_MAT_HDR_Z( arr ))
     {

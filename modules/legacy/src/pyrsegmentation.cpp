@@ -287,7 +287,7 @@ icvPyrSegmentation8uC1R( uchar * src_image, int src_step,
     /* calculate initial pyramid */
     for( l = 1; l <= level; l++ )
     {
-        CvSize dst_size = { size.width/2+1, size.height/2+1 };
+        CvSize dst_size(size.width/2+1, size.height/2+1);
         CvMat prev_level = cvMat( size.height, size.width, CV_32FC1 );
         CvMat next_level = cvMat( dst_size.height, dst_size.width, CV_32FC1 );
 
@@ -706,7 +706,7 @@ icvPyrSegmentation8uC3R( uchar * src_image, int src_step,
     /* calculate initial pyramid */
     for( l = 1; l <= level; l++ )
     {
-        CvSize dst_size = { size.width/2 + 1, size.height/2 + 1 };
+        CvSize dst_size(size.width/2 + 1, size.height/2 + 1);
         CvMat prev_level = cvMat( size.height, size.width, CV_32FC3 );
         CvMat next_level = cvMat( dst_size.height, dst_size.width, CV_32FC3 );
 

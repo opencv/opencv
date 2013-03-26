@@ -524,41 +524,6 @@ typedef Vec<double, 4> Vec4d;
 typedef Vec<double, 6> Vec6d;
 
 
-//////////////////////////////// Size_ ////////////////////////////////
-
-/*!
-  The 2D size class
-
-  The class represents the size of a 2D rectangle, image size, matrix size etc.
-  Normally, cv::Size ~ cv::Size_<int> is used.
-*/
-template<typename _Tp> class CV_EXPORTS Size_
-{
-public:
-    typedef _Tp value_type;
-
-    //! various constructors
-    Size_();
-    Size_(_Tp _width, _Tp _height);
-    Size_(const Size_& sz);
-    Size_(const CvSize& sz);
-    Size_(const CvSize2D32f& sz);
-    Size_(const Point_<_Tp>& pt);
-
-    Size_& operator = (const Size_& sz);
-    //! the area (width*height)
-    _Tp area() const;
-
-    //! conversion of another data type.
-    template<typename _Tp2> operator Size_<_Tp2>() const;
-
-    //! conversion to the old-style OpenCV types
-    operator CvSize() const;
-    operator CvSize2D32f() const;
-
-    _Tp width, height; // the width and the height
-};
-
 //////////////////////////////// Rect_ ////////////////////////////////
 
 /*!
@@ -608,10 +573,7 @@ public:
 
   shorter aliases for the most popular cv::Point_<>, cv::Size_<> and cv::Rect_<> specializations
 */
-typedef Size_<int> Size2i;
-typedef Size2i Size;
 typedef Rect_<int> Rect;
-typedef Size_<float> Size2f;
 
 
 /*!

@@ -1754,18 +1754,10 @@ template<typename _Tp> inline Size_<_Tp>::Size_(_Tp _width, _Tp _height)
     : width(_width), height(_height) {}
 template<typename _Tp> inline Size_<_Tp>::Size_(const Size_& sz)
     : width(sz.width), height(sz.height) {}
-template<typename _Tp> inline Size_<_Tp>::Size_(const CvSize& sz)
-    : width(saturate_cast<_Tp>(sz.width)), height(saturate_cast<_Tp>(sz.height)) {}
-template<typename _Tp> inline Size_<_Tp>::Size_(const CvSize2D32f& sz)
-    : width(saturate_cast<_Tp>(sz.width)), height(saturate_cast<_Tp>(sz.height)) {}
 template<typename _Tp> inline Size_<_Tp>::Size_(const Point_<_Tp>& pt) : width(pt.x), height(pt.y) {}
 
 template<typename _Tp> template<typename _Tp2> inline Size_<_Tp>::operator Size_<_Tp2>() const
 { return Size_<_Tp2>(saturate_cast<_Tp2>(width), saturate_cast<_Tp2>(height)); }
-template<typename _Tp> inline Size_<_Tp>::operator CvSize() const
-{ return cvSize(saturate_cast<int>(width), saturate_cast<int>(height)); }
-template<typename _Tp> inline Size_<_Tp>::operator CvSize2D32f() const
-{ return cvSize2D32f((float)width, (float)height); }
 
 template<typename _Tp> inline Size_<_Tp>& Size_<_Tp>::operator = (const Size_<_Tp>& sz)
 { width = sz.width; height = sz.height; return *this; }

@@ -86,7 +86,7 @@ void CV_PyrSegmentationTest::run( int /*start_from*/ )
     int i, j, iter;
 
     IplImage *image, *image_f, *image_s;
-    CvSize size = {128, 128};
+    CvSize size(128, 128);
     const int threshold1 = 50, threshold2 = 50;
 
     rect[1].width = size.width;

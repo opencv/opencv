@@ -894,6 +894,14 @@ typedef struct CvSize
 {
     int width;
     int height;
+
+#ifdef __cplusplus
+    CvSize(int w = 0, int h = 0): width(w), height(h) {}
+    template<typename _Tp>
+    CvSize(const cv::Size_<_Tp>& sz): width(cv::saturate_cast<int>(sz.width)), height(cv::saturate_cast<int>(sz.height)) {}
+    template<typename _Tp>
+    operator cv::Size_<_Tp>() const { return cv::Size_<_Tp>(cv::saturate_cast<_Tp>(width), cv::saturate_cast<_Tp>(height)); }
+#endif
 }
 CvSize;
 
@@ -911,6 +919,14 @@ typedef struct CvSize2D32f
 {
     float width;
     float height;
+
+#ifdef __cplusplus
+    CvSize2D32f(float w = 0, float h = 0): width(w), height(h) {}
+    template<typename _Tp>
+    CvSize2D32f(const cv::Size_<_Tp>& sz): width(cv::saturate_cast<float>(sz.width)), height(cv::saturate_cast<float>(sz.height)) {}
+    template<typename _Tp>
+    operator cv::Size_<_Tp>() const { return cv::Size_<_Tp>(cv::saturate_cast<_Tp>(width), cv::saturate_cast<_Tp>(height)); }
+#endif
 }
 CvSize2D32f;
 

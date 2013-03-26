@@ -1569,10 +1569,10 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
 
         for( factor = 1; ; factor *= scaleFactor )
         {
-            CvSize winSize = { cvRound(winSize0.width*factor),
-                                cvRound(winSize0.height*factor) };
-            CvSize sz = { cvRound( img->cols/factor ), cvRound( img->rows/factor ) };
-            CvSize sz1 = { sz.width - winSize0.width + 1, sz.height - winSize0.height + 1 };
+            CvSize winSize(cvRound(winSize0.width*factor),
+                                cvRound(winSize0.height*factor));
+            CvSize sz(cvRound( img->cols/factor ), cvRound( img->rows/factor ));
+            CvSize sz1(sz.width - winSize0.width + 1, sz.height - winSize0.height + 1);
 
             CvRect equRect = { icv_object_win_border, icv_object_win_border,
                 winSize0.width - icv_object_win_border*2,
@@ -1656,8 +1656,8 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
         for( ; n_factors-- > 0; factor *= scaleFactor )
         {
             const double ystep = std::max( 2., factor );
-            CvSize winSize = { cvRound( cascade->orig_window_size.width * factor ),
-                                cvRound( cascade->orig_window_size.height * factor )};
+            CvSize winSize(cvRound( cascade->orig_window_size.width * factor ),
+                                cvRound( cascade->orig_window_size.height * factor ));
             CvRect equRect = { 0, 0, 0, 0 };
             int *p[4] = {0,0,0,0};
             int *pq[4] = {0,0,0,0};
