@@ -131,6 +131,10 @@ typedef Ptr<BackgroundSubtractorMOG> Ptr_BackgroundSubtractorMOG;
 typedef Ptr<BackgroundSubtractorMOG2> Ptr_BackgroundSubtractorMOG2;
 typedef Ptr<BackgroundSubtractorGMG> Ptr_BackgroundSubtractorGMG;
 
+typedef Ptr<StereoMatcher> Ptr_StereoMatcher;
+typedef Ptr<StereoBM> Ptr_StereoBM;
+typedef Ptr<StereoSGBM> Ptr_StereoSGBM;
+
 typedef Ptr<cv::softcascade::ChannelFeatureBuilder> Ptr_ChannelFeatureBuilder;
 
 typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;

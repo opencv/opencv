@@ -38,11 +38,11 @@ PERF_TEST_P(ImagePair, Calib3D_StereoBM,
     }
     else
     {
-        cv::StereoBM bm(preset, ndisp);
+        cv::Ptr<cv::StereoBM> bm = cv::createStereoBM(ndisp);
 
         cv::Mat dst;
 
-        TEST_CYCLE() bm(imgLeft, imgRight, dst);
+        TEST_CYCLE() bm->compute(imgLeft, imgRight, dst);
 
         CPU_SANITY_CHECK(dst);
     }

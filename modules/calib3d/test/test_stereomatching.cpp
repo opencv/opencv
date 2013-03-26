@@ -700,8 +700,10 @@ protected:
         Mat leftImg; cvtColor( _leftImg, leftImg, CV_BGR2GRAY );
         Mat rightImg; cvtColor( _rightImg, rightImg, CV_BGR2GRAY );
 
-        StereoBM bm( StereoBM::BASIC_PRESET, params.ndisp, params.winSize );
-        bm( leftImg, rightImg, leftDisp, CV_32F );
+        Ptr<StereoBM> bm = createStereoBM( params.ndisp, params.winSize );
+        Mat tempDisp;
+        bm->compute( leftImg, rightImg, tempDisp );
+        tempDisp.convertTo(leftDisp, CV_32F, 1./StereoMatcher::DISP_SCALE);
         return params.winSize/2;
     }
 };
@@ -751,10 +753,13 @@ protected:
     {
         RunParams params = caseRunParams[caseIdx];
         assert( params.ndisp%16 == 0 );
-        StereoSGBM sgbm( 0, params.ndisp, params.winSize, 10*params.winSize*params.winSize, 40*params.winSize*params.winSize,
-                         1, 63, 10, 100, 32, params.fullDP );
-        sgbm( leftImg, rightImg, leftDisp );
-        assert( leftDisp.type() == CV_16SC1 );
+        Ptr<StereoSGBM> sgbm = createStereoSGBM( 0, params.ndisp, params.winSize,
+                                                 10*params.winSize*params.winSize,
+                                                 40*params.winSize*params.winSize,
+                                                 1, 63, 10, 100, 32, params.fullDP ?
+                                                 StereoSGBM::MODE_HH : StereoSGBM::MODE_SGBM );
+        sgbm->compute( leftImg, rightImg, leftDisp );
+        CV_Assert( leftDisp.type() == CV_16SC1 );
         leftDisp/=16;
         return 0;
     }

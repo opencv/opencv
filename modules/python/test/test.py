@@ -14,6 +14,8 @@ import getopt
 import operator
 import functools
 
+import numpy as np
+import cv2
 import cv2.cv as cv
 
 from test2 import *
@@ -77,6 +79,12 @@ class OpenCVTests(unittest.TestCase):
             imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)
             cv.SetData(imagefiledata, filedata, len(filedata))
             self.image_cache[filename] = cv.DecodeImageM(imagefiledata, iscolor)
+        return self.image_cache[filename]
+
+    def get_sample2(self, filename, iscolor = cv.CV_LOAD_IMAGE_COLOR):
+        if not filename in self.image_cache:
+            filedata = urllib.urlopen("https://raw.github.com/Itseez/opencv/master/" + filename).read()
+            self.image_cache[filename] = cv2.imdecode(np.fromstring(filedata, dtype=np.uint8), iscolor)
         return self.image_cache[filename]
 
     def setUp(self):
@@ -987,47 +995,14 @@ class AreaTests(OpenCVTests):
             self.assertRaises(cv.error, lambda: l[tup2])
 
     def test_stereo(self):
-        bm = cv.CreateStereoBMState()
-        def illegal_delete():
-            bm = cv.CreateStereoBMState()
-            del bm.preFilterType
-        def illegal_assign():
-            bm = cv.CreateStereoBMState()
-            bm.preFilterType = "foo"
-
-        self.assertRaises(TypeError, illegal_delete)
-        self.assertRaises(TypeError, illegal_assign)
-
-        left = self.get_sample("samples/c/lena.jpg", 0)
-        right = self.get_sample("samples/c/lena.jpg", 0)
-        disparity = cv.CreateMat(512, 512, cv.CV_16SC1)
-        cv.FindStereoCorrespondenceBM(left, right, disparity, bm)
-
-        gc = cv.CreateStereoGCState(16, 2)
-        left_disparity = cv.CreateMat(512, 512, cv.CV_16SC1)
-        right_disparity = cv.CreateMat(512, 512, cv.CV_16SC1)
-
-    def test_stereo(self):
-        bm = cv.CreateStereoBMState()
-        def illegal_delete():
-            bm = cv.CreateStereoBMState()
-            del bm.preFilterType
-        def illegal_assign():
-            bm = cv.CreateStereoBMState()
-            bm.preFilterType = "foo"
-
-        self.assertRaises(TypeError, illegal_delete)
-        self.assertRaises(TypeError, illegal_assign)
-
-        left = self.get_sample("samples/c/lena.jpg", 0)
-        right = self.get_sample("samples/c/lena.jpg", 0)
-        disparity = cv.CreateMat(512, 512, cv.CV_16SC1)
-        cv.FindStereoCorrespondenceBM(left, right, disparity, bm)
-
-        gc = cv.CreateStereoGCState(16, 2)
-        left_disparity = cv.CreateMat(512, 512, cv.CV_16SC1)
-        right_disparity = cv.CreateMat(512, 512, cv.CV_16SC1)
-        cv.FindStereoCorrespondenceGC(left, right, left_disparity, right_disparity, gc)
+        left = self.get_sample2("samples/cpp/tsukuba_l.png", 0)
+        right = self.get_sample2("samples/cpp/tsukuba_r.png", 0)
+        bm = cv2.createStereoBM(32, 11)
+        disparity = bm.compute(left, right)
+        self.assertEqual(left.shape, disparity.shape)
+        sgbm = cv2.createStereoSGBM(0, 32, 5)
+        disparity2 = sgbm.compute(left, right)
+        self.assertEqual(left.shape, disparity2.shape)
 
     def test_kalman(self):
         k = cv.CreateKalman(2, 1, 0)

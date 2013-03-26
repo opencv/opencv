@@ -75,13 +75,13 @@ struct StereoSGBMParams
         uniquenessRatio = 0;
         speckleWindowSize = 0;
         speckleRange = 0;
-        fullDP = false;
+        mode = StereoSGBM::MODE_SGBM;
     }
 
     StereoSGBMParams( int _minDisparity, int _numDisparities, int _SADWindowSize,
                       int _P1, int _P2, int _disp12MaxDiff, int _preFilterCap,
                       int _uniquenessRatio, int _speckleWindowSize, int _speckleRange,
-                      bool _fullDP )
+                      int _mode )
     {
         minDisparity = _minDisparity;
         numDisparities = _numDisparities;
@@ -93,7 +93,7 @@ struct StereoSGBMParams
         uniquenessRatio = _uniquenessRatio;
         speckleWindowSize = _speckleWindowSize;
         speckleRange = _speckleRange;
-        fullDP = _fullDP;
+        mode = _mode;
     }
 
     int minDisparity;
@@ -106,7 +106,7 @@ struct StereoSGBMParams
     int speckleWindowSize;
     int speckleRange;
     int disp12MaxDiff;
-    bool fullDP;
+    int mode;
 };
 
 /*
@@ -328,8 +328,8 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 #endif
 
     const int ALIGN = 16;
-    const int DISP_SHIFT = StereoSGBM::DISP_SHIFT;
-    const int DISP_SCALE = StereoSGBM::DISP_SCALE;
+    const int DISP_SHIFT = StereoMatcher::DISP_SHIFT;
+    const int DISP_SCALE = (1 << DISP_SHIFT);
     const CostType MAX_COST = SHRT_MAX;
 
     int minD = params.minDisparity, maxD = minD + params.numDisparities;
@@ -344,7 +344,8 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     int D = maxD - minD, width1 = maxX1 - minX1;
     int INVALID_DISP = minD - 1, INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;
     int SW2 = SADWindowSize.width/2, SH2 = SADWindowSize.height/2;
-    int npasses = params.fullDP ? 2 : 1;
+    bool fullDP = params.mode == StereoSGBM::MODE_HH;
+    int npasses = fullDP ? 2 : 1;
     const int TAB_OFS = 256*4, TAB_SIZE = 256 + TAB_OFS*2;
     PixType clipTab[TAB_SIZE];
 
@@ -373,7 +374,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     // we keep pixel difference cost (C) and the summary cost over NR directions (S).
     // we also keep all the partial costs for the previous line L_r(x,d) and also min_k L_r(x, k)
     size_t costBufSize = width1*D;
-    size_t CSBufSize = costBufSize*(params.fullDP ? height : 1);
+    size_t CSBufSize = costBufSize*(fullDP ? height : 1);
     size_t minLrSize = (width1 + LrBorder*2)*NR2, LrSize = minLrSize*D2;
     int hsumBufNRows = SH2*2 + 2;
     size_t totalBufSize = (LrSize + minLrSize)*NLR*sizeof(CostType) + // minLr[] and Lr[]
@@ -434,8 +435,8 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
         {
             int x, d;
             DispType* disp1ptr = disp1.ptr<DispType>(y);
-            CostType* C = Cbuf + (!params.fullDP ? 0 : y*costBufSize);
-            CostType* S = Sbuf + (!params.fullDP ? 0 : y*costBufSize);
+            CostType* C = Cbuf + (!fullDP ? 0 : y*costBufSize);
+            CostType* S = Sbuf + (!fullDP ? 0 : y*costBufSize);
 
             if( pass == 1 ) // compute C on the first pass, and reuse it on the second pass, if any.
             {
@@ -460,7 +461,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                         if( y > 0 )
                         {
                             const CostType* hsumSub = hsumBuf + (std::max(y - SH2 - 1, 0) % hsumBufNRows)*costBufSize;
-                            const CostType* Cprev = !params.fullDP || y == 0 ? C : C - costBufSize;
+                            const CostType* Cprev = !fullDP || y == 0 ? C : C - costBufSize;
 
                             for( x = D; x < width1*D; x += D )
                             {
@@ -828,8 +829,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     }
 }
 
-
-class StereoSGBMImpl : public StereoMatcher
+class StereoSGBMImpl : public StereoSGBM
 {
 public:
     StereoSGBMImpl()
@@ -840,12 +840,12 @@ public:
     StereoSGBMImpl( int _minDisparity, int _numDisparities, int _SADWindowSize,
                     int _P1, int _P2, int _disp12MaxDiff, int _preFilterCap,
                     int _uniquenessRatio, int _speckleWindowSize, int _speckleRange,
-                    bool _fullDP )
+                    int _mode )
     {
         params = StereoSGBMParams( _minDisparity, _numDisparities, _SADWindowSize,
                                    _P1, _P2, _disp12MaxDiff, _preFilterCap,
                                    _uniquenessRatio, _speckleWindowSize, _speckleRange,
-                                   _fullDP );
+                                   _mode );
     }
 
     void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr )
@@ -861,46 +861,98 @@ public:
         medianBlur(disp, disp, 3);
 
         if( params.speckleWindowSize > 0 )
-            filterSpeckles(disp, (params.minDisparity - 1)*STEREO_DISP_SCALE, params.speckleWindowSize,
-                           STEREO_DISP_SCALE*params.speckleRange, buffer);
+            filterSpeckles(disp, (params.minDisparity - 1)*StereoMatcher::DISP_SCALE, params.speckleWindowSize,
+                           StereoMatcher::DISP_SCALE*params.speckleRange, buffer);
     }
 
-    AlgorithmInfo* info() const;
+    AlgorithmInfo* info() const { return 0; }
+
+    int getMinDisparity() const { return params.minDisparity; }
+    void setMinDisparity(int minDisparity) { params.minDisparity = minDisparity; }
+
+    int getNumDisparities() const { return params.numDisparities; }
+    void setNumDisparities(int numDisparities) { params.numDisparities = numDisparities; }
+
+    int getBlockSize() const { return params.SADWindowSize; }
+    void setBlockSize(int blockSize) { params.SADWindowSize = blockSize; }
+
+    int getSpeckleWindowSize() const { return params.speckleWindowSize; }
+    void setSpeckleWindowSize(int speckleWindowSize) { params.speckleWindowSize = speckleWindowSize; }
+
+    int getSpeckleRange() const { return params.speckleRange; }
+    void setSpeckleRange(int speckleRange) { params.speckleRange = speckleRange; }
+
+    int getDisp12MaxDiff() const { return params.disp12MaxDiff; }
+    void setDisp12MaxDiff(int disp12MaxDiff) { params.disp12MaxDiff = disp12MaxDiff; }
+
+    int getPreFilterCap() const { return params.preFilterCap; }
+    void setPreFilterCap(int preFilterCap) { params.preFilterCap = preFilterCap; }
+
+    int getUniquenessRatio() const { return params.uniquenessRatio; }
+    void setUniquenessRatio(int uniquenessRatio) { params.uniquenessRatio = uniquenessRatio; }
+
+    int getP1() const { return params.P1; }
+    void setP1(int P1) { params.P1 = P1; }
+
+    int getP2() const { return params.P2; }
+    void setP2(int P2) { params.P2 = P2; }
+
+    int getMode() const { return params.mode; }
+    void setMode(int mode) { params.mode = mode; }
+
+    void write(FileStorage& fs) const
+    {
+        fs << "name" << name_
+        << "minDisparity" << params.minDisparity
+        << "numDisparities" << params.numDisparities
+        << "blockSize" << params.SADWindowSize
+        << "speckleWindowSize" << params.speckleWindowSize
+        << "speckleRange" << params.speckleRange
+        << "disp12MaxDiff" << params.disp12MaxDiff
+        << "preFilterCap" << params.preFilterCap
+        << "uniquenessRatio" << params.uniquenessRatio
+        << "P1" << params.P1
+        << "P2" << params.P2
+        << "mode" << params.mode;
+    }
+
+    void read(const FileNode& fn)
+    {
+        FileNode n = fn["name"];
+        CV_Assert( n.isString() && strcmp(n.node->data.str.ptr, name_) == 0 );
+        params.minDisparity = (int)fn["minDisparity"];
+        params.numDisparities = (int)fn["numDisparities"];
+        params.SADWindowSize = (int)fn["blockSize"];
+        params.speckleWindowSize = (int)fn["speckleWindowSize"];
+        params.speckleRange = (int)fn["speckleRange"];
+        params.disp12MaxDiff = (int)fn["disp12MaxDiff"];
+        params.preFilterCap = (int)fn["preFilterCap"];
+        params.uniquenessRatio = (int)fn["uniquenessRatio"];
+        params.P1 = (int)fn["P1"];
+        params.P2 = (int)fn["P2"];
+        params.mode = (int)fn["mode"];
+    }
 
     StereoSGBMParams params;
     Mat buffer;
+    static const char* name_;
 };
 
+const char* StereoSGBMImpl::name_ = "StereoMatcher.SGBM";
 
-Ptr<StereoMatcher> createStereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
-                                    int P1, int P2, int disp12MaxDiff,
-                                    int preFilterCap, int uniquenessRatio,
-                                    int speckleWindowSize, int speckleRange,
-                                    bool fullDP)
+
+Ptr<StereoSGBM> createStereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
+                                 int P1, int P2, int disp12MaxDiff,
+                                 int preFilterCap, int uniquenessRatio,
+                                 int speckleWindowSize, int speckleRange,
+                                 int mode)
 {
     return new StereoSGBMImpl(minDisparity, numDisparities, SADWindowSize,
                               P1, P2, disp12MaxDiff,
                               preFilterCap, uniquenessRatio,
                               speckleWindowSize, speckleRange,
-                              fullDP);
+                              mode);
 }
-
-
-#define add_param(n) \
-    obj.info()->addParam(obj, #n, obj.params.n)
-
-CV_INIT_ALGORITHM(StereoSGBMImpl, "StereoMatcher.SGBM",
-                  add_param(minDisparity);
-                  add_param(numDisparities);
-                  add_param(SADWindowSize);
-                  add_param(preFilterCap);
-                  add_param(uniquenessRatio);
-                  add_param(P1);
-                  add_param(P2);
-                  add_param(speckleWindowSize);
-                  add_param(speckleRange);
-                  add_param(disp12MaxDiff);
-                  add_param(fullDP));
 
 Rect getValidDisparityROI( Rect roi1, Rect roi2,
                           int minDisparity,
