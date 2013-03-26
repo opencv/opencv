@@ -41,6 +41,9 @@
 //M*/
 
 #include "perf_precomp.hpp"
+
+#if defined(HAVE_OPENCV_GPU) && defined(HAVE_CUDA)
+
 #include "opencv2/ts/gpu_perf.hpp"
 
 using namespace std;
@@ -58,8 +61,6 @@ using namespace perf;
 #else
 #  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
 #endif
-
-#if defined(HAVE_OPENCV_GPU) && defined(HAVE_CUDA)
 
 //////////////////////////////////////////////////////////////////////
 // SURF

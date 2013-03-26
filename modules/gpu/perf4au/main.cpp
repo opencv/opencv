@@ -41,17 +41,19 @@
 //M*/
 
 #include <cstdio>
+
 #ifdef HAVE_CVCONFIG_H
 #include "cvconfig.h"
 #endif
+
+#include "opencv2/ts/ts.hpp"
+#include "opencv2/ts/gpu_perf.hpp"
+
 #include "opencv2/core/core.hpp"
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/video/video.hpp"
 #include "opencv2/legacy/legacy.hpp"
-#include "opencv2/ts/ts.hpp"
-#include "opencv2/ts/ts_perf.hpp"
-#include "opencv2/ts/gpu_perf.hpp"
 
 int main(int argc, char* argv[])
 {
