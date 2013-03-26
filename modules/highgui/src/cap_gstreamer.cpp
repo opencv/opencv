@@ -56,9 +56,15 @@
 #include <gst/app/gstappsink.h>
 #include <gst/app/gstappsrc.h>
 #include <gst/riff/riff-media.h>
-#include <gst/pbutils/encoding-profile.h>
 #include <gst/pbutils/missing-plugins.h>
+
+#define VERSION_NUM(major, minor, micro) (major * 1000000 + minor * 1000 + micro)
+#define FULL_GST_VERSION VERSION_NUM(GST_VERSION_MAJOR, GST_VERSION_MINOR, GST_VERSION_MICRO)
+
+#if FULL_GST_VERSION >= VERSION_NUM(0,10,32)
+#include <gst/pbutils/encoding-profile.h>
 //#include <gst/base/gsttypefindhelper.h>
+#endif
 
 
 #ifdef NDEBUG
@@ -1114,9 +1120,12 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
 
     GstCaps* caps = NULL;
     GstCaps* videocaps = NULL;
+
+#if FULL_GST_VERSION >= VERSION_NUM(0,10,32)
     GstCaps* containercaps = NULL;
     GstEncodingContainerProfile* containerprofile = NULL;
     GstEncodingVideoProfile* videoprofile = NULL;
+#endif
 
 #if GST_VERSION_MAJOR == 0
     GstIterator *it = NULL;
@@ -1178,16 +1187,21 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
         if (!mime) {
             CV_ERROR( CV_StsUnsupportedFormat, "Gstreamer Opencv backend does not support this file type.");
         }
+
+#if FULL_GST_VERSION >= VERSION_NUM(0,10,32)
         containercaps = gst_caps_from_string(mime);
 
         //create encodebin profile
         containerprofile = gst_encoding_container_profile_new("container", "container", containercaps, NULL);
         videoprofile = gst_encoding_video_profile_new(videocaps, NULL, NULL, 1);
         gst_encoding_container_profile_add_profile(containerprofile, (GstEncodingProfile *) videoprofile);
+#endif
 
         //create pipeline elements
         encodebin = gst_element_factory_make("encodebin", NULL);
+#if FULL_GST_VERSION >= VERSION_NUM(0,10,32)
         g_object_set(G_OBJECT(encodebin), "profile", containerprofile, NULL);
+#endif
         source = gst_element_factory_make("appsrc", NULL);
         file = gst_element_factory_make("filesink", NULL);
         g_object_set(G_OBJECT(file), "location", filename, NULL);
@@ -1218,6 +1232,7 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
     }
     else
     {
+#if FULL_GST_VERSION >= VERSION_NUM(0,10,29)
         input_pix_fmt = GST_VIDEO_FORMAT_GRAY8;
         bufsize = frameSize.width * frameSize.height;
 
@@ -1235,6 +1250,9 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
                                    "framerate", GST_TYPE_FRACTION, int(fps), 1,
                                    NULL);
         caps = gst_caps_fixate(caps);
+#endif
+#else
+        CV_Assert(!"Gstreamer 0.10.29 or newer is required for grayscale input");
 #endif
     }
 
@@ -1296,11 +1314,13 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
             CV_ERROR(CV_StsUnsupportedFormat, "cvWriteFrame() needs images with depth = IPL_DEPTH_8U and nChannels = 3.");
         }
     }
+#if FULL_GST_VERSION >= VERSION_NUM(0,10,29)
     else if (input_pix_fmt == GST_VIDEO_FORMAT_GRAY8) {
         if (image->nChannels != 1 || image->depth != IPL_DEPTH_8U) {
             CV_ERROR(CV_StsUnsupportedFormat, "cvWriteFrame() needs images with depth = IPL_DEPTH_8U and nChannels = 1.");
         }
     }
+#endif
     else {
         assert(false);
     }
