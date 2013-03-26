@@ -362,9 +362,13 @@ namespace cv
             case WAVEFRONT_SIZE:
                 {
 #ifdef CL_DEVICE_WAVEFRONT_WIDTH_AMD
-                    openCLSafeCall(clGetDeviceInfo(Context::getContext()->impl->devices[0], 
-                        CL_DEVICE_WAVEFRONT_WIDTH_AMD, sizeof(size_t), info, 0));
-#else
+                    try
+                    {
+                        openCLSafeCall(clGetDeviceInfo(Context::getContext()->impl->devices[0], 
+                            CL_DEVICE_WAVEFRONT_WIDTH_AMD, sizeof(size_t), info, 0));
+                    }
+                    catch(const cv::Exception&)
+#elif defined (CL_DEVICE_WARP_SIZE_NV)
                     const int EXT_LEN = 4096 + 1 ;
                     char extends_set[EXT_LEN];
                     size_t extends_size;
@@ -376,6 +380,7 @@ namespace cv
                             CL_DEVICE_WARP_SIZE_NV, sizeof(size_t), info, 0));
                     }
                     else
+#endif
                     {
                         // if no way left for us to query the warp size, we can get it from kernel group info
                         static const char * _kernel_string = "__kernel void test_func() {}";
@@ -384,7 +389,7 @@ namespace cv
                         openCLSafeCall(clGetKernelWorkGroupInfo(kernel, impl->devices[impl->devnum],
                             CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE, sizeof(size_t), info, NULL));
                     }
-#endif
+
                 }
                 break;
             default:
