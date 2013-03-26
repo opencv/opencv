@@ -524,33 +524,6 @@ typedef Vec<double, 4> Vec4d;
 typedef Vec<double, 6> Vec6d;
 
 
-/*!
-  The rotated 2D rectangle.
-
-  The class represents rotated (i.e. not up-right) rectangles on a plane.
-  Each rectangle is described by the center point (mass center), length of each side
-  (represented by cv::Size2f structure) and the rotation angle in degrees.
-*/
-class CV_EXPORTS RotatedRect
-{
-public:
-    //! various constructors
-    RotatedRect();
-    RotatedRect(const Point2f& center, const Size2f& size, float angle);
-    RotatedRect(const CvBox2D& box);
-
-    //! returns 4 vertices of the rectangle
-    void points(Point2f pts[]) const;
-    //! returns the minimal up-right rectangle containing the rotated rectangle
-    Rect boundingRect() const;
-    //! conversion to the old-style CvBox2D structure
-    operator CvBox2D() const;
-
-    Point2f center; //< the rectangle mass center
-    Size2f size;    //< width and height of the rectangle
-    float angle;    //< the rotation angle. When the angle is 0, 90, 180, 270 etc., the rectangle becomes an up-right rectangle.
-};
-
 //////////////////////////////// Scalar_ ///////////////////////////////
 
 /*!

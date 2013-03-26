@@ -1884,13 +1884,7 @@ template<typename _Tp> inline bool Point_<_Tp>::inside( const Rect_<_Tp>& r ) co
 inline RotatedRect::RotatedRect() { angle = 0; }
 inline RotatedRect::RotatedRect(const Point2f& _center, const Size2f& _size, float _angle)
     : center(_center), size(_size), angle(_angle) {}
-inline RotatedRect::RotatedRect(const CvBox2D& box)
-    : center(box.center), size(box.size), angle(box.angle) {}
-inline RotatedRect::operator CvBox2D() const
-{
-    CvBox2D box; box.center = center; box.size = size; box.angle = angle;
-    return box;
-}
+
 
 //////////////////////////////// Scalar_ ///////////////////////////////
 

@@ -955,6 +955,12 @@ typedef struct CvBox2D
     CvSize2D32f  size;    /* Box width and length.                       */
     float angle;          /* Angle between the horizontal axis           */
                           /* and the first side (i.e. length) in degrees */
+
+#ifdef __cplusplus
+    CvBox2D(CvPoint2D32f c = CvPoint2D32f(), CvSize2D32f s = CvSize2D32f(), float a = 0) : center(c), size(s), angle(a) {}
+    CvBox2D(const cv::RotatedRect& rr) : center(rr.center), size(rr.size), angle(rr.angle) {}
+    operator cv::RotatedRect() const { return cv::RotatedRect(center, size, angle); }
+#endif
 }
 CvBox2D;
 
