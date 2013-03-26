@@ -106,7 +106,7 @@ static void icvContourMoments( CvSeq* contour, CvMoments* mom )
 
         bool is_float = CV_SEQ_ELTYPE(contour) == CV_32FC2;
 
-        if (!cv::ocl::Context::getContext()->impl->double_support && is_float)
+        if (!cv::ocl::Context::getContext()->supportsFeature(Context::CL_DOUBLE) && is_float)
         {
             CV_Error(CV_StsUnsupportedFormat, "Moments - double is not supported by your GPU!");
         }
@@ -146,7 +146,7 @@ static void icvContourMoments( CvSeq* contour, CvMoments* mom )
         
         cv::Mat dst(dst_a);
         a00 = a10 = a01 = a20 = a11 = a02 = a30 = a21 = a12 = a03 = 0.0;
-        if (!cv::ocl::Context::getContext()->impl->double_support)
+        if (!cv::ocl::Context::getContext()->supportsFeature(Context::CL_DOUBLE))
         {
             for (int i = 0; i < contour->total; ++i)
             {
@@ -161,7 +161,7 @@ static void icvContourMoments( CvSeq* contour, CvMoments* mom )
                 a12 += dst.at<cl_long>(8, i);
                 a03 += dst.at<cl_long>(9, i);
             }
-        } 
+        }
         else
         {
             a00 = cv::sum(dst.row(0))[0];
