@@ -111,11 +111,11 @@ static bool isDir(const cv::String& path, DIR* dir)
 
     return (attributes != INVALID_FILE_ATTRIBUTES) && ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
 #else
-    struct stat stat_buf;
-    stat( path.c_str(), &stat_buf);
-    int is_dir = S_ISDIR( stat_buf.st_mode);
     (void)dir;
-
+    struct stat stat_buf;
+    if (0 != stat( path.c_str(), &stat_buf))
+        return false;
+    int is_dir = S_ISDIR( stat_buf.st_mode);
     return is_dir != 0;
 #endif
 }
