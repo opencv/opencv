@@ -81,7 +81,7 @@ is extended as:
 :math:`s_1`,
 :math:`s_2`,
 :math:`s_3`, and
-:math:`s_4`, are the thin prism distortion coefficients. 
+:math:`s_4`, are the thin prism distortion coefficients.
 Higher-order coefficients are not considered in OpenCV. In the functions below the coefficients are passed or returned as
 
 .. math::
@@ -156,9 +156,9 @@ Finds the camera intrinsic and extrinsic parameters from several views of a cali
         * **CV_CALIB_FIX_K1,...,CV_CALIB_FIX_K6** The corresponding radial distortion coefficient is not changed during the optimization. If  ``CV_CALIB_USE_INTRINSIC_GUESS``  is set, the coefficient from the supplied  ``distCoeffs``  matrix is used. Otherwise, it is set to 0.
 
         * **CV_CALIB_RATIONAL_MODEL** Coefficients k4, k5, and k6 are enabled. To provide the backward compatibility, this extra flag should be explicitly specified to make the calibration function use the rational model and return 8 coefficients. If the flag is not set, the function computes  and returns  only 5 distortion coefficients.
-        
+
         * **CALIB_THIN_PRISM_MODEL** Coefficients s1, s2, s3 and s4 are enabled. To provide the backward compatibility, this extra flag should be explicitly specified to make the calibration function use the thin prism model and return 12 coefficients. If the flag is not set, the function computes  and returns  only 5 distortion coefficients.
-        
+
         * **CALIB_FIX_S1_S2_S3_S4** The thin prism distortion coefficients are not changed during the optimization. If  ``CV_CALIB_USE_INTRINSIC_GUESS``  is set, the coefficient from the supplied  ``distCoeffs``  matrix is used. Otherwise, it is set to 0.
 
 
@@ -1083,7 +1083,7 @@ Reprojects a disparity image to 3D space.
 
     :param Q: :math:`4 \times 4`  perspective transformation matrix that can be obtained with  :ocv:func:`stereoRectify`.
 
-    :param handleMissingValues: Indicates, whether the function should handle missing values (i.e. points where the disparity was not computed). If ``handleMissingValues=true``, then pixels with the minimal disparity that corresponds to the outliers (see  :ocv:funcx:`StereoBM::operator()` ) are transformed to 3D points with a very large Z value (currently set to 10000).
+    :param handleMissingValues: Indicates, whether the function should handle missing values (i.e. points where the disparity was not computed). If ``handleMissingValues=true``, then pixels with the minimal disparity that corresponds to the outliers (see  :ocv:funcx:`StereoMatcher::compute` ) are transformed to 3D points with a very large Z value (currently set to 10000).
 
     :param ddepth: The optional output array depth. If it is ``-1``, the output image will have ``CV_32F`` depth. ``ddepth`` can also be set to ``CV_16S``, ``CV_32S`` or ``CV_32F``.
 
@@ -1166,155 +1166,78 @@ used in the global 3D geometry optimization procedures like
 :ocv:func:`solvePnP` .
 
 
+StereoMatcher
+-------------
+.. ocv:class:: StereoMatcher : public Algorithm
 
-StereoBM
---------
-.. ocv:class:: StereoBM
+The base class for stereo correspondence algorithms.
 
-Class for computing stereo correspondence using the block matching algorithm. ::
-
-    // Block matching stereo correspondence algorithm class StereoBM
-    {
-        enum { NORMALIZED_RESPONSE = CV_STEREO_BM_NORMALIZED_RESPONSE,
-            BASIC_PRESET=CV_STEREO_BM_BASIC,
-            FISH_EYE_PRESET=CV_STEREO_BM_FISH_EYE,
-            NARROW_PRESET=CV_STEREO_BM_NARROW };
-
-        StereoBM();
-        // the preset is one of ..._PRESET above.
-        // ndisparities is the size of disparity range,
-        // in which the optimal disparity at each pixel is searched for.
-        // SADWindowSize is the size of averaging window used to match pixel blocks
-        //    (larger values mean better robustness to noise, but yield blurry disparity maps)
-        StereoBM(int preset, int ndisparities=0, int SADWindowSize=21);
-        // separate initialization function
-        void init(int preset, int ndisparities=0, int SADWindowSize=21);
-        // computes the disparity for the two rectified 8-bit single-channel images.
-        // the disparity will be 16-bit signed (fixed-point) or 32-bit floating-point image of the same size as left.
-        void operator()( InputArray left, InputArray right, OutputArray disparity, int disptype=CV_16S );
-
-        Ptr<CvStereoBMState> state;
-    };
-
-The class is a C++ wrapper for the associated functions. In particular, :ocv:funcx:`StereoBM::operator()` is the wrapper for
-:ocv:cfunc:`cvFindStereoCorrespondenceBM`.
-
-
-StereoBM::StereoBM
-------------------
-The constructors.
-
-.. ocv:function:: StereoBM::StereoBM()
-.. ocv:function:: StereoBM::StereoBM(int preset, int ndisparities=0, int SADWindowSize=21)
-
-.. ocv:pyfunction:: cv2.StereoBM([preset[, ndisparities[, SADWindowSize]]]) -> <StereoBM object>
-
-.. ocv:cfunction:: CvStereoBMState* cvCreateStereoBMState( int preset=CV_STEREO_BM_BASIC, int numberOfDisparities=0 )
-
-.. ocv:pyoldfunction:: cv.CreateStereoBMState(preset=CV_STEREO_BM_BASIC, numberOfDisparities=0)-> CvStereoBMState
-
-    :param preset: specifies the whole set of algorithm parameters, one of:
-
-            * BASIC_PRESET - parameters suitable for general cameras
-            * FISH_EYE_PRESET - parameters suitable for wide-angle cameras
-            * NARROW_PRESET - parameters suitable for narrow-angle cameras
-
-        After constructing the class, you can override any parameters set by the preset.
-
-    :param ndisparities: the disparity search range. For each pixel algorithm will find the best disparity from 0 (default minimum disparity) to ``ndisparities``. The search range can then be shifted by changing the minimum disparity.
-
-    :param SADWindowSize: the linear size of the blocks compared by the algorithm. The size should be odd (as the block is centered at the current pixel). Larger block size implies smoother, though less accurate disparity map. Smaller block size gives more detailed disparity map, but there is higher chance for algorithm to find a wrong correspondence.
-
-The constructors initialize ``StereoBM`` state. You can then call ``StereoBM::operator()`` to compute disparity for a specific stereo pair.
-
-.. note:: In the C API you need to deallocate ``CvStereoBM`` state when it is not needed anymore using ``cvReleaseStereoBMState(&stereobm)``.
-
-StereoBM::operator()
+StereoMatcher::compute
 -----------------------
-Computes disparity using the BM algorithm for a rectified stereo pair.
+Computes disparity map for the specified stereo pair
 
-.. ocv:function:: void StereoBM::operator()( InputArray left, InputArray right, OutputArray disparity, int disptype=CV_16S )
+.. ocv:function:: void StereoMatcher::compute( InputArray left, InputArray right, OutputArray disparity )
 
 .. ocv:pyfunction:: cv2.StereoBM.compute(left, right[, disparity[, disptype]]) -> disparity
-
-.. ocv:cfunction:: void cvFindStereoCorrespondenceBM( const CvArr* left, const CvArr* right, CvArr* disparity, CvStereoBMState* state )
-
-.. ocv:pyoldfunction:: cv.FindStereoCorrespondenceBM(left, right, disparity, state)-> None
 
     :param left: Left 8-bit single-channel image.
 
     :param right: Right image of the same size and the same type as the left one.
 
-    :param disparity: Output disparity map. It has the same size as the input images. When ``disptype==CV_16S``, the map is a 16-bit signed single-channel image, containing disparity values scaled by 16. To get the true disparity values from such fixed-point representation, you will need to divide each  ``disp`` element by 16. If ``disptype==CV_32F``, the disparity map will already contain the real disparity values on output.
+    :param disparity: Output disparity map. It has the same size as the input images. Some algorithms, like StereoBM or StereoSGBM compute 16-bit fixed-point disparity map (where each disparity value has 4 fractional bits), whereas other algorithms output 32-bit floating-point disparity map.
 
-    :param disptype: Type of the output disparity map, ``CV_16S`` (default) or ``CV_32F``.
 
-    :param state: The pre-initialized ``CvStereoBMState`` structure in the case of the old API.
+StereoBM
+--------
+.. ocv:class:: StereoBM : public StereoMatcher
 
-The method executes the BM algorithm on a rectified stereo pair. See the ``stereo_match.cpp`` OpenCV sample on how to prepare images and call the method. Note that the method is not constant, thus you should not use the same ``StereoBM`` instance from within different threads simultaneously. The function is parallelized with the TBB library.
+Class for computing stereo correspondence using the block matching algorithm, introduced and contributed to OpenCV by K. Konolige.
 
+
+createStereoBM
+------------------
+Creates StereoBM object
+
+.. ocv:function:: Ptr<StereoBM> createStereoBM(int numDisparities=0, int blockSize=21)
+
+.. ocv:pyfunction:: cv2.createStereoBM([numDisparities[, blockSize]]) -> <StereoBM object>
+
+    :param numDisparities: the disparity search range. For each pixel algorithm will find the best disparity from 0 (default minimum disparity) to ``numDisparities``. The search range can then be shifted by changing the minimum disparity.
+
+    :param blockSize: the linear size of the blocks compared by the algorithm. The size should be odd (as the block is centered at the current pixel). Larger block size implies smoother, though less accurate disparity map. Smaller block size gives more detailed disparity map, but there is higher chance for algorithm to find a wrong correspondence.
+
+The function create ``StereoBM`` object. You can then call ``StereoBM::compute()`` to compute disparity for a specific stereo pair.
 
 
 StereoSGBM
 ----------
 
-.. ocv:class:: StereoSGBM
-
-Class for computing stereo correspondence using the semi-global block matching algorithm. ::
-
-    class StereoSGBM
-    {
-        StereoSGBM();
-        StereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
-                   int P1=0, int P2=0, int disp12MaxDiff=0,
-                   int preFilterCap=0, int uniquenessRatio=0,
-                   int speckleWindowSize=0, int speckleRange=0,
-                   bool fullDP=false);
-        virtual ~StereoSGBM();
-
-        virtual void operator()(InputArray left, InputArray right, OutputArray disp);
-
-        int minDisparity;
-        int numberOfDisparities;
-        int SADWindowSize;
-        int preFilterCap;
-        int uniquenessRatio;
-        int P1, P2;
-        int speckleWindowSize;
-        int speckleRange;
-        int disp12MaxDiff;
-        bool fullDP;
-
-        ...
-    };
+.. ocv:class:: StereoSGBM : public StereoMatcher
 
 The class implements the modified H. Hirschmuller algorithm [HH08]_ that differs from the original one as follows:
 
- * By default, the algorithm is single-pass, which means that you consider only 5 directions instead of 8. Set ``fullDP=true`` to run the full variant of the algorithm but beware that it may consume a lot of memory.
+ * By default, the algorithm is single-pass, which means that you consider only 5 directions instead of 8. Set ``mode=StereoSGBM::MODE_HH`` in ``createStereoSGBM`` to run the full variant of the algorithm but beware that it may consume a lot of memory.
 
- * The algorithm matches blocks, not individual pixels. Though, setting ``SADWindowSize=1`` reduces the blocks to single pixels.
+ * The algorithm matches blocks, not individual pixels. Though, setting ``blockSize=1`` reduces the blocks to single pixels.
 
  * Mutual information cost function is not implemented. Instead, a simpler Birchfield-Tomasi sub-pixel metric from [BT98]_ is used. Though, the color images are supported as well.
 
- * Some pre- and post- processing steps from K. Konolige algorithm :ocv:funcx:`StereoBM::operator()`  are included, for example: pre-filtering (``CV_STEREO_BM_XSOBEL`` type) and post-filtering (uniqueness check, quadratic interpolation and speckle filtering).
+ * Some pre- and post- processing steps from K. Konolige algorithm ``StereoBM``  are included, for example: pre-filtering (``StereoBM::PREFILTER_XSOBEL`` type) and post-filtering (uniqueness check, quadratic interpolation and speckle filtering).
 
 
-
-StereoSGBM::StereoSGBM
+createStereoSGBM
 --------------------------
-.. ocv:function:: StereoSGBM::StereoSGBM()
+Creates StereoSGBM object
 
-.. ocv:function:: StereoSGBM::StereoSGBM( int minDisparity, int numDisparities, int SADWindowSize, int P1=0, int P2=0, int disp12MaxDiff=0, int preFilterCap=0, int uniquenessRatio=0, int speckleWindowSize=0, int speckleRange=0, bool fullDP=false)
+.. ocv:function:: Ptr<StereoSGBM> createStereoSGBM( int minDisparity, int numDisparities, int blockSize, int P1=0, int P2=0, int disp12MaxDiff=0, int preFilterCap=0, int uniquenessRatio=0, int speckleWindowSize=0, int speckleRange=0, int mode=StereoSGBM::MODE_SGBM)
 
-.. ocv:pyfunction:: cv2.StereoSGBM([minDisparity, numDisparities, SADWindowSize[, P1[, P2[, disp12MaxDiff[, preFilterCap[, uniquenessRatio[, speckleWindowSize[, speckleRange[, fullDP]]]]]]]]]) -> <StereoSGBM object>
-
-    Initializes ``StereoSGBM`` and sets parameters to custom values.??
+.. ocv:pyfunction:: cv2.StereoSGBM([minDisparity, numDisparities, blockSize[, P1[, P2[, disp12MaxDiff[, preFilterCap[, uniquenessRatio[, speckleWindowSize[, speckleRange[, mode]]]]]]]]]) -> <StereoSGBM object>
 
     :param minDisparity: Minimum possible disparity value. Normally, it is zero but sometimes rectification algorithms can shift images, so this parameter needs to be adjusted accordingly.
 
     :param numDisparities: Maximum disparity minus minimum disparity. The value is always greater than zero. In the current implementation, this parameter must be divisible by 16.
 
-    :param SADWindowSize: Matched block size. It must be an odd number  ``>=1`` . Normally, it should be somewhere in  the ``3..11``  range.
+    :param blockSize: Matched block size. It must be an odd number  ``>=1`` . Normally, it should be somewhere in  the ``3..11``  range.
 
     :param P1: The first parameter controlling the disparity smoothness. See below.
 
@@ -1330,30 +1253,10 @@ StereoSGBM::StereoSGBM
 
     :param speckleRange: Maximum disparity variation within each connected component. If you do speckle filtering, set the parameter to a positive value, it will be implicitly multiplied by 16. Normally, 1 or 2 is good enough.
 
-    :param fullDP: Set it to  ``true``  to run the full-scale two-pass dynamic programming algorithm. It will consume O(W*H*numDisparities) bytes, which is large for 640x480 stereo and huge for HD-size pictures. By default, it is set to ``false`` .
+    :param mode: Set it to  ``StereoSGBM::MODE_HH``  to run the full-scale two-pass dynamic programming algorithm. It will consume O(W*H*numDisparities) bytes, which is large for 640x480 stereo and huge for HD-size pictures. By default, it is set to ``false`` .
 
-The first constructor initializes ``StereoSGBM`` with all the default parameters. So, you only have to set ``StereoSGBM::numberOfDisparities`` at minimum. The second constructor enables you to set each parameter to a custom value.
+The first constructor initializes ``StereoSGBM`` with all the default parameters. So, you only have to set ``StereoSGBM::numDisparities`` at minimum. The second constructor enables you to set each parameter to a custom value.
 
-
-
-StereoSGBM::operator ()
------------------------
-
-.. ocv:function:: void StereoSGBM::operator()(InputArray left, InputArray right, OutputArray disp)
-
-.. ocv:pyfunction:: cv2.StereoSGBM.compute(left, right[, disp]) -> disp
-
-    Computes disparity using the SGBM algorithm for a rectified stereo pair.
-
-    :param left: Left 8-bit single-channel or 3-channel image.
-
-    :param right: Right image of the same size and the same type as the left one.
-
-    :param disp: Output disparity map. It is a 16-bit signed single-channel image of the same size as the input image. It contains disparity values  scaled by 16. So, to get the floating-point disparity map, you need to divide each  ``disp``  element by 16.
-
-The method executes the SGBM algorithm on a rectified stereo pair. See ``stereo_match.cpp`` OpenCV sample on how to prepare images and call the method.
-
-.. note:: The method is not constant, so you should not use the same ``StereoSGBM`` instance from different threads simultaneously.
 
 
 stereoCalibrate
@@ -1413,9 +1316,9 @@ Calibrates the stereo camera.
             * **CV_CALIB_FIX_K1,...,CV_CALIB_FIX_K6** Do not change the corresponding radial distortion coefficient during the optimization. If  ``CV_CALIB_USE_INTRINSIC_GUESS``  is set, the coefficient from the supplied  ``distCoeffs``  matrix is used. Otherwise, it is set to 0.
 
             * **CV_CALIB_RATIONAL_MODEL** Enable coefficients k4, k5, and k6. To provide the backward compatibility, this extra flag should be explicitly specified to make the calibration function use the rational model and return 8 coefficients. If the flag is not set, the function computes  and returns only 5 distortion coefficients.
-            
+
             * **CALIB_THIN_PRISM_MODEL** Coefficients s1, s2, s3 and s4 are enabled. To provide the backward compatibility, this extra flag should be explicitly specified to make the calibration function use the thin prism model and return 12 coefficients. If the flag is not set, the function computes  and returns  only 5 distortion coefficients.
-        
+
             * **CALIB_FIX_S1_S2_S3_S4** The thin prism distortion coefficients are not changed during the optimization. If  ``CV_CALIB_USE_INTRINSIC_GUESS``  is set, the coefficient from the supplied  ``distCoeffs``  matrix is used. Otherwise, it is set to 0.
 
 The function estimates transformation between two cameras making a stereo pair. If you have a stereo camera where the relative position and orientation of two cameras is fixed, and if you computed poses of an object relative to the first camera and to the second camera, (R1, T1) and (R2, T2), respectively (this can be done with
