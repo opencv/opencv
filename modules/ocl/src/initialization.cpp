@@ -361,7 +361,7 @@ namespace cv
             {
             case WAVEFRONT_SIZE:
                 {
-#ifndef CL_DEVICE_WAVEFRONT_WIDTH_AMD
+#ifdef CL_DEVICE_WAVEFRONT_WIDTH_AMD
                     openCLSafeCall(clGetDeviceInfo(Context::getContext()->impl->devices[0], 
                         CL_DEVICE_WAVEFRONT_WIDTH_AMD, sizeof(size_t), info, 0));
 #else

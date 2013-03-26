@@ -178,7 +178,7 @@ TEST_P(SURF, Detector)
     EXPECT_GT(matchedRatio, 0.99);
 }
 
-TEST_P(SURF, DISABLED_Descriptor)
+TEST_P(SURF, Descriptor)
 {
     cv::Mat image  = cv::imread(string(cvtest::TS::ptr()->get_data_path()) + "c/fruits.jpg", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
