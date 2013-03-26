@@ -110,7 +110,7 @@ namespace
         }
     };
 
-    TEST_P(BruteForceMatcher, DISABLED_Match_Single)
+    TEST_P(BruteForceMatcher, Match_Single)
     {
         cv::ocl::BruteForceMatcher_OCL_base matcher(distType);
 
@@ -130,7 +130,7 @@ namespace
         ASSERT_EQ(0, badCount);
     }
 
-    TEST_P(BruteForceMatcher, DISABLED_KnnMatch_2_Single)
+    TEST_P(BruteForceMatcher, KnnMatch_2_Single)
     {
         const int knn = 2;
 

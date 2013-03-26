@@ -43,7 +43,7 @@ if(OPENCL_FOUND)
   set(OPENCL_LIBRARIES    ${OPENCL_LIBRARY})
 
   if (X86_64)
-    set(CLAMD_POSSIBLE_LIB_SUFFIXES lib32/import)
+    set(CLAMD_POSSIBLE_LIB_SUFFIXES lib64/import)
   elseif (X86)
     set(CLAMD_POSSIBLE_LIB_SUFFIXES lib32/import)
   endif()

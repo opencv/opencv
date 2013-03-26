@@ -323,7 +323,7 @@ float sobel(__global unsigned char *input, int x, int y, int rows, int cols)
     float conv = 0;
     int y1 = y==0? 0 : y-1;
     int x1 = x==0? 0 : x-1;
-    if(x < cols && y < rows)
+    if(x < cols && y < rows && x > 0 && y > 0)
     {
         conv = (float)input[(y1)  * cols + (x1)] * (-1) + (float)input[(y1)  * cols + (x+1)] * (1) +
                (float)input[(y)   * cols + (x1)] * (-2) + (float)input[(y)   * cols + (x+1)] * (2) +
