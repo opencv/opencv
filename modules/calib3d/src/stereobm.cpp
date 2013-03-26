@@ -962,7 +962,8 @@ public:
 
     void read(const FileNode& fn)
     {
-        CV_Assert( (std::string)fn["name"] == std::string(name_) );
+        FileNode n = fn["name"];
+        CV_Assert( n.isString() && strcmp(n.node->data.str.ptr, name_) == 0 );
         params.minDisparity = (int)fn["minDisparity"];
         params.numDisparities = (int)fn["numDisparities"];
         params.SADWindowSize = (int)fn["blockSize"];
