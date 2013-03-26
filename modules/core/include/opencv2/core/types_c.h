@@ -92,6 +92,10 @@
 #  define CVAPI(rettype) CV_EXTERN_C CV_EXPORTS rettype CV_CDECL
 #endif
 
+#ifdef __cplusplus
+#  include "opencv2/core/types.hpp"
+#endif
+
 /* CvArr* is used to pass arbitrary
  * array-like data structures
  * into functions where the particular
@@ -749,6 +753,14 @@ typedef struct CvPoint
 {
     int x;
     int y;
+
+#ifdef __cplusplus
+    CvPoint(int _x = 0, int _y = 0): x(_x), y(_y) {}
+    template<typename _Tp>
+    CvPoint(const cv::Point_<_Tp>& pt): x((int)pt.x), y((int)pt.y) {}
+    template<typename _Tp>
+    operator cv::Point_<_Tp>() const { return cv::Point_<_Tp>(cv::saturate_cast<_Tp>(x), cv::saturate_cast<_Tp>(y)); }
+#endif
 }
 CvPoint;
 
@@ -768,6 +780,14 @@ typedef struct CvPoint2D32f
 {
     float x;
     float y;
+
+#ifdef __cplusplus
+    CvPoint2D32f(float _x = 0, float _y = 0): x(_x), y(_y) {}
+    template<typename _Tp>
+    CvPoint2D32f(const cv::Point_<_Tp>& pt): x((float)pt.x), y((float)pt.y) {}
+    template<typename _Tp>
+    operator cv::Point_<_Tp>() const { return cv::Point_<_Tp>(cv::saturate_cast<_Tp>(x), cv::saturate_cast<_Tp>(y)); }
+#endif
 }
 CvPoint2D32f;
 
@@ -804,6 +824,14 @@ typedef struct CvPoint3D32f
     float x;
     float y;
     float z;
+
+#ifdef __cplusplus
+    CvPoint3D32f(float _x = 0, float _y = 0, float _z = 0): x(_x), y(_y), z(_z) {}
+    template<typename _Tp>
+    CvPoint3D32f(const cv::Point3_<_Tp>& pt): x((float)pt.x), y((float)pt.y), z((float)pt.z) {}
+    template<typename _Tp>
+    operator cv::Point3_<_Tp>() const { return cv::Point3_<_Tp>(cv::saturate_cast<_Tp>(x), cv::saturate_cast<_Tp>(y), cv::saturate_cast<_Tp>(z)); }
+#endif
 }
 CvPoint3D32f;
 

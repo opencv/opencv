@@ -66,8 +66,8 @@ void CV_PyrSegmentationTest::run( int /*start_from*/ )
 
     int code = cvtest::TS::OK;
 
-    CvPoint _cp[] ={{33,33}, {43,33}, {43,43}, {33,43}};
-    CvPoint _cp2[] ={{50,50}, {70,50}, {70,70}, {50,70}};
+    CvPoint _cp[] ={ CvPoint(33,33), CvPoint(43,33), CvPoint(43,43), CvPoint(33,43)};
+    CvPoint _cp2[] ={CvPoint(50,50), CvPoint(70,50), CvPoint(70,70), CvPoint(50,70)};
     CvPoint* cp = _cp;
     CvPoint* cp2 = _cp2;
     CvConnectedComp *dst_comp[3];

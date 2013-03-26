@@ -1095,7 +1095,7 @@ icvOrderQuad(CvCBQuad *quad, CvCBCorner *corner, int common)
 static int
 icvCleanFoundConnectedQuads( int quad_count, CvCBQuad **quad_group, CvSize pattern_size )
 {
-    CvPoint2D32f center = {0,0};
+    CvPoint2D32f center;
     int i, j, k;
     // number of quads this pattern should contain
     int count = ((pattern_size.width + 1)*(pattern_size.height + 1) + 1)/2;
@@ -1111,7 +1111,7 @@ icvCleanFoundConnectedQuads( int quad_count, CvCBQuad **quad_group, CvSize patte
 
     for( i = 0; i < quad_count; i++ )
     {
-        CvPoint2D32f ci = {0,0};
+        CvPoint2D32f ci;
         CvCBQuad* q = quad_group[i];
 
         for( j = 0; j < 4; j++ )
@@ -1856,7 +1856,7 @@ cvDrawChessboardCorners( CvArr* _image, CvSize pattern_size,
     else
     {
         int x, y;
-        CvPoint prev_pt = {0, 0};
+        CvPoint prev_pt;
         const int line_max = 7;
         static const CvScalar line_colors[line_max] =
         {

@@ -397,7 +397,7 @@ float ann_calc_error( CvANN_MLP* ann, CvMLData* _data, map<int, int>& cls_map, i
         int si = sidx ? sidx[i] : i;
         cvGetRow( &predictors, &sample, si );
         ann->predict( &sample, &_output );
-        CvPoint best_cls = {0,0};
+        CvPoint best_cls;
         cvMinMaxLoc( &_output, 0, 0, 0, &best_cls, 0 );
         int r = cvRound(responses->data.fl[si*r_step]);
         CV_DbgAssert( fabs(responses->data.fl[si*r_step]-r) < FLT_EPSILON );

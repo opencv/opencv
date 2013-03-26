@@ -558,7 +558,7 @@ void CvCalibFilter::DrawPoints( CvMat** dstarr )
                 const int colorCount = sizeof(line_colors)/sizeof(line_colors[0]);
                 const int r = 4;
                 CvScalar color = line_colors[0];
-                CvPoint prev_pt = { 0, 0};
+                CvPoint prev_pt;
 
                 for( j = 0; j < count; j++ )
                 {

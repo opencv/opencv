@@ -694,7 +694,7 @@ void _cvProjectionPointToSegment(CvPoint2D32f* PointO,
                                  float* dist)
 {
     float scal_AO_AB, scal_AB_AB;
-    CvPoint2D32f VectorAB = {PointB->x - PointA->x, PointB->y - PointA->y};
+    CvPoint2D32f VectorAB(PointB->x - PointA->x, PointB->y - PointA->y);
     scal_AB_AB = VectorAB.x*VectorAB.x + VectorAB.y*VectorAB.y;
     if(scal_AB_AB < LCM_CONST_ZERO)
     {
@@ -704,7 +704,7 @@ void _cvProjectionPointToSegment(CvPoint2D32f* PointO,
         return;
     }
 
-    CvPoint2D32f VectorAO = {PointO->x - PointA->x, PointO->y - PointA->y};
+    CvPoint2D32f VectorAO(PointO->x - PointA->x, PointO->y - PointA->y);
     scal_AO_AB = VectorAO.x*VectorAB.x + VectorAO.y*VectorAB.y;
 
     if(dist)

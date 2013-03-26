@@ -749,11 +749,11 @@ int ChoiceTrackingFace2(CvFaceTracker* pTF, const int nElements, const CvFaceEle
         face[element[0]] = *(new_face[element[0]]);
         face[element[1]] = *(new_face[element[1]]);
         // 3 element find by template
-        CvPoint templ_v01 = {pTF->ptTempl[element[1]].x - pTF->ptTempl[element[0]].x, pTF->ptTempl[element[1]].y - pTF->ptTempl[element[0]].y};
-        CvPoint templ_v02 = {pTF->ptTempl[element[2]].x - pTF->ptTempl[element[0]].x, pTF->ptTempl[element[2]].y - pTF->ptTempl[element[0]].y};
-        CvPoint prev_v01 = {pTF->face[element[1]].ptCenter.x - pTF->face[element[0]].ptCenter.x, pTF->face[element[1]].ptCenter.y - pTF->face[element[0]].ptCenter.y};
-        CvPoint prev_v02 = {pTF->face[element[2]].ptCenter.x - pTF->face[element[0]].ptCenter.x, pTF->face[element[2]].ptCenter.y - pTF->face[element[0]].ptCenter.y};
-        CvPoint new_v01 = {new_face[element[1]]->ptCenter.x - new_face[element[0]]->ptCenter.x, new_face[element[1]]->ptCenter.y - new_face[element[0]]->ptCenter.y};
+        CvPoint templ_v01(pTF->ptTempl[element[1]].x - pTF->ptTempl[element[0]].x, pTF->ptTempl[element[1]].y - pTF->ptTempl[element[0]].y);
+        CvPoint templ_v02(pTF->ptTempl[element[2]].x - pTF->ptTempl[element[0]].x, pTF->ptTempl[element[2]].y - pTF->ptTempl[element[0]].y);
+        CvPoint prev_v01(pTF->face[element[1]].ptCenter.x - pTF->face[element[0]].ptCenter.x, pTF->face[element[1]].ptCenter.y - pTF->face[element[0]].ptCenter.y);
+        CvPoint prev_v02(pTF->face[element[2]].ptCenter.x - pTF->face[element[0]].ptCenter.x, pTF->face[element[2]].ptCenter.y - pTF->face[element[0]].ptCenter.y);
+        CvPoint new_v01(new_face[element[1]]->ptCenter.x - new_face[element[0]]->ptCenter.x, new_face[element[1]]->ptCenter.y - new_face[element[0]]->ptCenter.y);
         double templ_d01 = sqrt((double)templ_v01.x*templ_v01.x + templ_v01.y*templ_v01.y);
         double templ_d02 = sqrt((double)templ_v02.x*templ_v02.x + templ_v02.y*templ_v02.y);
         double prev_d01 = sqrt((double)prev_v01.x*prev_v01.x + prev_v01.y*prev_v01.y);
@@ -767,7 +767,7 @@ int ChoiceTrackingFace2(CvFaceTracker* pTF, const int nElements, const CvFaceEle
         double y = double(new_v01.x) * sin_a + double(new_v01.y) * cos_a;
         x = x * new_d02 / new_d01;
         y = y * new_d02 / new_d01;
-        CvPoint new_v02 = {int(x + 0.5), int(y + 0.5)};
+        CvPoint new_v02(int(x + 0.5), int(y + 0.5));
         face[element[2]].iColor = 0;
         face[element[2]].iEnergy = 0;
         face[element[2]].nRectsInThis = 0;
@@ -818,10 +818,10 @@ inline int GetEnergy(CvTrackingRect** ppNew, const CvTrackingRect* pPrev, CvPoin
 
 inline int GetEnergy2(CvTrackingRect** ppNew, const CvTrackingRect* pPrev, CvPoint* ptTempl, CvRect* rTempl, int* element)
 {
-    CvPoint new_v = {ppNew[element[0]]->ptCenter.x - ppNew[element[1]]->ptCenter.x,
-        ppNew[element[0]]->ptCenter.y - ppNew[element[1]]->ptCenter.y};
-    CvPoint prev_v = {pPrev[element[0]].ptCenter.x - pPrev[element[1]].ptCenter.x,
-        pPrev[element[0]].ptCenter.y - pPrev[element[1]].ptCenter.y};
+    CvPoint new_v(ppNew[element[0]]->ptCenter.x - ppNew[element[1]]->ptCenter.x,
+        ppNew[element[0]]->ptCenter.y - ppNew[element[1]]->ptCenter.y);
+    CvPoint prev_v(pPrev[element[0]].ptCenter.x - pPrev[element[1]].ptCenter.x,
+        pPrev[element[0]].ptCenter.y - pPrev[element[1]].ptCenter.y);
     double new_d = sqrt((double)new_v.x*new_v.x + new_v.y*new_v.y);
     double prev_d = sqrt((double)prev_v.x*prev_v.x + prev_v.y*prev_v.y);
     double dx = ptTempl[element[0]].x - ptTempl[element[1]].x;

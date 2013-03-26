@@ -262,7 +262,7 @@ int main(int argc, char** argv)
 
     printf( "Extraction time = %gms\n", tt/(cvGetTickFrequency()*1000.));
 
-    CvPoint src_corners[4] = {{0,0}, {object->width,0}, {object->width, object->height}, {0, object->height}};
+    CvPoint src_corners[4] = {CvPoint(0,0), CvPoint(object->width,0), CvPoint(object->width, object->height), CvPoint(0, object->height)};
     CvPoint dst_corners[4];
     IplImage* correspond = cvCreateImage( cvSize(image->width, object->height+image->height), 8, 1 );
     cvSetImageROI( correspond, cvRect( 0, 0, object->width, object->height ) );

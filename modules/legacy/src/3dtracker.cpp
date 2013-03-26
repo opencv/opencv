@@ -321,7 +321,7 @@ static void DrawEtalon(IplImage *img, CvPoint2D32f *corners,
     const int r = 4;
     int i;
     int x, y;
-    CvPoint prev_pt = { 0, 0 };
+    CvPoint prev_pt;
     static const CvScalar rgb_colors[] = {
         {{0,0,255}},
         {{0,128,255}},

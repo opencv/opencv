@@ -463,7 +463,7 @@ int build_mlp_classifier( char* data_filename,
         int best_class;
         CvMat sample;
         cvGetRow( data, &sample, i );
-        CvPoint max_loc = {0,0};
+        CvPoint max_loc;
         mlp.predict( &sample, mlp_response );
         cvMinMaxLoc( mlp_response, 0, 0, 0, &max_loc, 0 );
         best_class = max_loc.x + 'A';

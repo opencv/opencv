@@ -53,6 +53,7 @@
 
 #ifdef __cplusplus
 #include "opencv2/core/cvstd.hpp"
+#include "opencv2/core/types.hpp"
 
 #ifndef SKIP_INCLUDES
 #include <limits.h>
@@ -523,125 +524,6 @@ typedef Vec<double, 4> Vec4d;
 typedef Vec<double, 6> Vec6d;
 
 
-//////////////////////////////// Complex //////////////////////////////
-
-/*!
-  A complex number class.
-
-  The template class is similar and compatible with std::complex, however it provides slightly
-  more convenient access to the real and imaginary parts using through the simple field access, as opposite
-  to std::complex::real() and std::complex::imag().
-*/
-template<typename _Tp> class CV_EXPORTS Complex
-{
-public:
-
-    //! constructors
-    Complex();
-    Complex( _Tp _re, _Tp _im=0 );
-    Complex( const std::complex<_Tp>& c );
-
-    //! conversion to another data type
-    template<typename T2> operator Complex<T2>() const;
-    //! conjugation
-    Complex conj() const;
-    //! conversion to std::complex
-    operator std::complex<_Tp>() const;
-
-    _Tp re, im; //< the real and the imaginary parts
-};
-
-
-/*!
-  \typedef
-*/
-typedef Complex<float> Complexf;
-typedef Complex<double> Complexd;
-
-
-//////////////////////////////// Point_ ////////////////////////////////
-
-/*!
-  template 2D point class.
-
-  The class defines a point in 2D space. Data type of the point coordinates is specified
-  as a template parameter. There are a few shorter aliases available for user convenience.
-  See cv::Point, cv::Point2i, cv::Point2f and cv::Point2d.
-*/
-template<typename _Tp> class CV_EXPORTS Point_
-{
-public:
-    typedef _Tp value_type;
-
-    // various constructors
-    Point_();
-    Point_(_Tp _x, _Tp _y);
-    Point_(const Point_& pt);
-    Point_(const CvPoint& pt);
-    Point_(const CvPoint2D32f& pt);
-    Point_(const Size_<_Tp>& sz);
-    Point_(const Vec<_Tp, 2>& v);
-
-    Point_& operator = (const Point_& pt);
-    //! conversion to another data type
-    template<typename _Tp2> operator Point_<_Tp2>() const;
-
-    //! conversion to the old-style C structures
-    operator CvPoint() const;
-    operator CvPoint2D32f() const;
-    operator Vec<_Tp, 2>() const;
-
-    //! dot product
-    _Tp dot(const Point_& pt) const;
-    //! dot product computed in double-precision arithmetics
-    double ddot(const Point_& pt) const;
-    //! cross-product
-    double cross(const Point_& pt) const;
-    //! checks whether the point is inside the specified rectangle
-    bool inside(const Rect_<_Tp>& r) const;
-
-    _Tp x, y; //< the point coordinates
-};
-
-/*!
-  template 3D point class.
-
-  The class defines a point in 3D space. Data type of the point coordinates is specified
-  as a template parameter.
-
-  \see cv::Point3i, cv::Point3f and cv::Point3d
-*/
-template<typename _Tp> class CV_EXPORTS Point3_
-{
-public:
-    typedef _Tp value_type;
-
-    // various constructors
-    Point3_();
-    Point3_(_Tp _x, _Tp _y, _Tp _z);
-    Point3_(const Point3_& pt);
-    explicit Point3_(const Point_<_Tp>& pt);
-    Point3_(const CvPoint3D32f& pt);
-    Point3_(const Vec<_Tp, 3>& v);
-
-    Point3_& operator = (const Point3_& pt);
-    //! conversion to another data type
-    template<typename _Tp2> operator Point3_<_Tp2>() const;
-    //! conversion to the old-style CvPoint...
-    operator CvPoint3D32f() const;
-    //! conversion to cv::Vec<>
-    operator Vec<_Tp, 3>() const;
-
-    //! dot product
-    _Tp dot(const Point3_& pt) const;
-    //! dot product computed in double-precision arithmetics
-    double ddot(const Point3_& pt) const;
-    //! cross product of the 2 3D points
-    Point3_ cross(const Point3_& pt) const;
-
-    _Tp x, y, z; //< the point coordinates
-};
-
 //////////////////////////////// Size_ ////////////////////////////////
 
 /*!
@@ -726,17 +608,10 @@ public:
 
   shorter aliases for the most popular cv::Point_<>, cv::Size_<> and cv::Rect_<> specializations
 */
-typedef Point_<int> Point2i;
-typedef Point2i Point;
 typedef Size_<int> Size2i;
 typedef Size2i Size;
 typedef Rect_<int> Rect;
-typedef Point_<float> Point2f;
-typedef Point_<double> Point2d;
 typedef Size_<float> Size2f;
-typedef Point3_<int> Point3i;
-typedef Point3_<float> Point3f;
-typedef Point3_<double> Point3d;
 
 
 /*!
