@@ -350,11 +350,23 @@ const String& getBuildInformation()
 
 String format( const char* fmt, ... )
 {
-    char buf[1 << 16];
-    va_list args;
-    va_start( args, fmt );
-    vsprintf( buf, fmt, args );
-    return String(buf);
+    char buf[1024];
+
+    va_list va;
+    va_start(va, fmt);
+    int len = vsnprintf(buf, sizeof(buf), fmt, va);
+    va_end(va);
+
+    if (len >= (int)sizeof(buf))
+    {
+        String s(len, '\0');
+        va_start(va, fmt);
+        len = vsnprintf((char*)s.c_str(), len + 1, fmt, va);
+        va_end(va);
+        return s;
+    }
+
+    return String(buf, len);
 }
 
 String tempfile( const char* suffix )
