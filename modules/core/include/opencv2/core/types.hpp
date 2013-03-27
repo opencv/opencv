@@ -53,6 +53,7 @@
 
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/cvstd.hpp"
+#include "opencv2/core/traits.hpp"
 
 namespace cv
 {
@@ -150,6 +151,43 @@ public:
 typedef Complex<float> Complexf;
 typedef Complex<double> Complexd;
 
+/*!
+  traits
+*/
+#ifndef OPENCV_NOSTL
+template<typename _Tp> class DataType< std::complex<_Tp> >
+{
+public:
+    typedef std::complex<_Tp>  value_type;
+    typedef value_type         work_type;
+    typedef _Tp                channel_type;
+
+    enum { generic_type = 0,
+           depth        = DataType<channel_type>::depth,
+           channels     = 2,
+           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
+           type         = CV_MAKETYPE(depth, channels) };
+
+    typedef Vec<channel_type, channels> vec_type;
+};
+#endif // OPENCV_NOSTL
+
+template<typename _Tp> class DataType< Complex<_Tp> >
+{
+public:
+    typedef Complex<_Tp> value_type;
+    typedef value_type   work_type;
+    typedef _Tp          channel_type;
+
+    enum { generic_type = 0,
+           depth        = DataType<channel_type>::depth,
+           channels     = 2,
+           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
+           type         = CV_MAKETYPE(depth, channels) };
+
+    typedef Vec<channel_type, channels> vec_type;
+};
+
 
 
 //////////////////////////////// Point_ ////////////////////////////////
@@ -200,6 +238,26 @@ typedef Point_<float> Point2f;
 typedef Point_<double> Point2d;
 typedef Point2i Point;
 
+/*!
+  traits
+*/
+template<typename _Tp> class DataType< Point_<_Tp> >
+{
+public:
+    typedef Point_<_Tp>                               value_type;
+    typedef Point_<typename DataType<_Tp>::work_type> work_type;
+    typedef _Tp                                       channel_type;
+
+    enum { generic_type = 0,
+           depth        = DataType<channel_type>::depth,
+           channels     = 2,
+           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
+           type         = CV_MAKETYPE(depth, channels)
+         };
+
+    typedef Vec<channel_type, channels> vec_type;
+};
+
 
 
 //////////////////////////////// Point3_ ////////////////////////////////
@@ -247,6 +305,26 @@ typedef Point3_<int> Point3i;
 typedef Point3_<float> Point3f;
 typedef Point3_<double> Point3d;
 
+/*!
+  traits
+*/
+template<typename _Tp> class DataType< Point3_<_Tp> >
+{
+public:
+    typedef Point3_<_Tp>                               value_type;
+    typedef Point3_<typename DataType<_Tp>::work_type> work_type;
+    typedef _Tp                                        channel_type;
+
+    enum { generic_type = 0,
+           depth        = DataType<channel_type>::depth,
+           channels     = 3,
+           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
+           type         = CV_MAKETYPE(depth, channels)
+         };
+
+    typedef Vec<channel_type, channels> vec_type;
+};
+
 
 
 //////////////////////////////// Size_ ////////////////////////////////
@@ -284,6 +362,26 @@ public:
 typedef Size_<int> Size2i;
 typedef Size_<float> Size2f;
 typedef Size2i Size;
+
+/*!
+  traits
+*/
+template<typename _Tp> class DataType< Size_<_Tp> >
+{
+public:
+    typedef Size_<_Tp>                               value_type;
+    typedef Size_<typename DataType<_Tp>::work_type> work_type;
+    typedef _Tp                                      channel_type;
+
+    enum { generic_type = 0,
+           depth        = DataType<channel_type>::depth,
+           channels     = 2,
+           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
+           type         = CV_MAKETYPE(depth, channels)
+         };
+
+    typedef Vec<channel_type, channels> vec_type;
+};
 
 
 
@@ -332,6 +430,26 @@ public:
 */
 typedef Rect_<int> Rect;
 
+/*!
+  traits
+*/
+template<typename _Tp> class DataType< Rect_<_Tp> >
+{
+public:
+    typedef Rect_<_Tp>                               value_type;
+    typedef Rect_<typename DataType<_Tp>::work_type> work_type;
+    typedef _Tp                                      channel_type;
+
+    enum { generic_type = 0,
+           depth        = DataType<channel_type>::depth,
+           channels     = 4,
+           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
+           type         = CV_MAKETYPE(depth, channels)
+         };
+
+    typedef Vec<channel_type, channels> vec_type;
+};
+
 
 
 ///////////////////////////// RotatedRect /////////////////////////////
@@ -374,13 +492,31 @@ class CV_EXPORTS Range
 public:
     Range();
     Range(int _start, int _end);
-    //Range(const CvSlice& slice);
     int size() const;
     bool empty() const;
     static Range all();
-    //operator CvSlice() const;
 
     int start, end;
+};
+
+/*!
+  traits
+*/
+template<> class DataType<Range>
+{
+public:
+    typedef Range      value_type;
+    typedef value_type work_type;
+    typedef int        channel_type;
+
+    enum { generic_type = 0,
+           depth        = DataType<channel_type>::depth,
+           channels     = 2,
+           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
+           type         = CV_MAKETYPE(depth, channels)
+         };
+
+    typedef Vec<channel_type, channels> vec_type;
 };
 
 
@@ -435,6 +571,27 @@ public:
     CV_PROP_RW int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to)
 };
 
+/*!
+  traits
+*/
+template<> class DataType<KeyPoint>
+{
+public:
+    typedef KeyPoint      value_type;
+    typedef float         work_type;
+    typedef float         channel_type;
+
+    enum { generic_type = 0,
+           depth        = DataType<channel_type>::depth,
+           channels     = (int)(sizeof(value_type)/sizeof(channel_type)), // 7
+           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
+           type         = CV_MAKETYPE(depth, channels)
+         };
+
+    typedef Vec<channel_type, channels> vec_type;
+};
+
+
 inline KeyPoint::KeyPoint() : pt(0,0), size(0), angle(-1), response(0), octave(0), class_id(-1) {}
 inline KeyPoint::KeyPoint(Point2f _pt, float _size, float _angle, float _response, int _octave, int _class_id)
                 : pt(_pt), size(_size), angle(_angle), response(_response), octave(_octave), class_id(_class_id) {}
@@ -462,6 +619,26 @@ struct CV_EXPORTS_W_SIMPLE DMatch
 
     // less is better
     bool operator<(const DMatch &m) const;
+};
+
+/*!
+  traits
+*/
+template<> class DataType<DMatch>
+{
+public:
+    typedef DMatch      value_type;
+    typedef int         work_type;
+    typedef int         channel_type;
+
+    enum { generic_type = 0,
+           depth        = DataType<channel_type>::depth,
+           channels     = (int)(sizeof(value_type)/sizeof(channel_type)), // 4
+           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
+           type         = CV_MAKETYPE(depth, channels)
+         };
+
+    typedef Vec<channel_type, channels> vec_type;
 };
 
 inline DMatch::DMatch() : queryIdx(-1), trainIdx(-1), imgIdx(-1), distance(FLT_MAX) {}
