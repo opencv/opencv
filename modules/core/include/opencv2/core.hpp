@@ -455,8 +455,6 @@ public:
     Vec cross(const Vec& v) const;
     //! convertion to another data type
     template<typename T2> operator Vec<T2, cn>() const;
-    //! conversion to 4-element CvScalar.
-    operator CvScalar() const;
 
     /*! element access */
     const _Tp& operator [](int i) const;
@@ -503,43 +501,6 @@ typedef Vec<double, 4> Vec4d;
 typedef Vec<double, 6> Vec6d;
 
 
-//////////////////////////////// Scalar_ ///////////////////////////////
-
-/*!
-   The template scalar class.
-
-   This is partially specialized cv::Vec class with the number of elements = 4, i.e. a short vector of four elements.
-   Normally, cv::Scalar ~ cv::Scalar_<double> is used.
-*/
-template<typename _Tp> class CV_EXPORTS Scalar_ : public Vec<_Tp, 4>
-{
-public:
-    //! various constructors
-    Scalar_();
-    Scalar_(_Tp v0, _Tp v1, _Tp v2=0, _Tp v3=0);
-    Scalar_(const CvScalar& s);
-    Scalar_(_Tp v0);
-
-    //! returns a scalar with all elements set to v0
-    static Scalar_<_Tp> all(_Tp v0);
-    //! conversion to the old-style CvScalar
-    operator CvScalar() const;
-
-    //! conversion to another data type
-    template<typename T2> operator Scalar_<T2>() const;
-
-    //! per-element product
-    Scalar_<_Tp> mul(const Scalar_<_Tp>& t, double scale=1 ) const;
-
-    // returns (v0, -v1, -v2, -v3)
-    Scalar_<_Tp> conj() const;
-
-    // returns true iff v1 == v2 == v3 == 0
-    bool isReal() const;
-};
-
-typedef Scalar_<double> Scalar;
-
 CV_EXPORTS void scalarToRawData(const Scalar& s, void* buf, int type, int unroll_to=0);
 
 
@@ -567,19 +528,6 @@ public:
     enum { generic_type = 0, depth = DataDepth<channel_type>::value, channels = cn,
            fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
            type = CV_MAKETYPE(depth, channels) };
-};
-
-
-template<typename _Tp> class DataType<Scalar_<_Tp> >
-{
-public:
-    typedef Scalar_<_Tp> value_type;
-    typedef Scalar_<typename DataType<_Tp>::work_type> work_type;
-    typedef _Tp channel_type;
-    enum { generic_type = 0, depth = DataDepth<channel_type>::value, channels = 4,
-           fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
-           type = CV_MAKETYPE(depth, channels) };
-    typedef Vec<channel_type, channels> vec_type;
 };
 
 

@@ -1014,6 +1014,22 @@ CV_INLINE  CvSlice  cvSlice( int start, int end )
 typedef struct CvScalar
 {
     double val[4];
+
+#ifdef __cplusplus
+    CvScalar() {}
+    CvScalar(double d0, double d1 = 0, double d2 = 0, double d3 = 0) { val[0] = d0; val[1] = d1; val[2] = d2; val[3] = d3; }
+    template<typename _Tp>
+    CvScalar(const cv::Scalar_<_Tp>& s) { val[0] = s.val[0]; val[1] = s.val[1]; val[2] = s.val[2]; val[3] = s.val[3]; }
+    template<typename _Tp>
+    operator cv::Scalar_<_Tp>() const { return cv::Scalar_<_Tp>(cv::saturate_cast<_Tp>(val[0]), cv::saturate_cast<_Tp>(val[1]), cv::saturate_cast<_Tp>(val[2]), cv::saturate_cast<_Tp>(val[3])); }
+    template<typename _Tp, int cn>
+    CvScalar(const cv::Vec<_Tp, cn>& v)
+    {
+        int i;
+        for( i = 0; i < (cn < 4 ? cn : 4); i++ ) val[i] = v.val[i];
+        for( ; i < 4; i++ ) val[i] = 0;
+    }
+#endif
 }
 CvScalar;
 

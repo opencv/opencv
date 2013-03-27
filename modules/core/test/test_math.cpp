@@ -545,7 +545,7 @@ void Core_CrossProductTest::run_func()
 
 void Core_CrossProductTest::prepare_to_validation( int )
 {
-    CvScalar a = {{0,0,0,0}}, b = {{0,0,0,0}}, c = {{0,0,0,0}};
+    CvScalar a(0), b(0), c(0);
 
     if( test_mat[INPUT][0].rows > 1 )
     {

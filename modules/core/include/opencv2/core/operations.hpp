@@ -1171,15 +1171,6 @@ inline Vec<_Tp, cn>::operator Vec<T2, cn>() const
     return v;
 }
 
-template<typename _Tp, int cn> inline Vec<_Tp, cn>::operator CvScalar() const
-{
-    CvScalar s = {{0,0,0,0}};
-    int i;
-    for( i = 0; i < std::min(cn, 4); i++ ) s.val[i] = this->val[i];
-    for( ; i < 4; i++ ) s.val[i] = 0;
-    return s;
-}
-
 template<typename _Tp, int cn> inline const _Tp& Vec<_Tp, cn>::operator [](int i) const
 {
     CV_DbgAssert( (unsigned)i < (unsigned)cn );
@@ -1894,12 +1885,11 @@ template<typename _Tp> inline Scalar_<_Tp>::Scalar_()
 template<typename _Tp> inline Scalar_<_Tp>::Scalar_(_Tp v0, _Tp v1, _Tp v2, _Tp v3)
 { this->val[0] = v0; this->val[1] = v1; this->val[2] = v2; this->val[3] = v3; }
 
-template<typename _Tp> inline Scalar_<_Tp>::Scalar_(const CvScalar& s)
+template<typename _Tp> template<typename _Tp2, int cn> inline Scalar_<_Tp>::Scalar_(const Vec<_Tp2, cn>& v)
 {
-    this->val[0] = saturate_cast<_Tp>(s.val[0]);
-    this->val[1] = saturate_cast<_Tp>(s.val[1]);
-    this->val[2] = saturate_cast<_Tp>(s.val[2]);
-    this->val[3] = saturate_cast<_Tp>(s.val[3]);
+    int i;
+    for( i = 0; i < (cn < 4 ? cn : 4); i++ ) this->val[i] = cv::saturate_cast<_Tp>(v.val[i]);
+    for( ; i < 4; i++ ) this->val[i] = 0;
 }
 
 template<typename _Tp> inline Scalar_<_Tp>::Scalar_(_Tp v0)
@@ -1907,8 +1897,6 @@ template<typename _Tp> inline Scalar_<_Tp>::Scalar_(_Tp v0)
 
 template<typename _Tp> inline Scalar_<_Tp> Scalar_<_Tp>::all(_Tp v0)
 { return Scalar_<_Tp>(v0, v0, v0, v0); }
-template<typename _Tp> inline Scalar_<_Tp>::operator CvScalar() const
-{ return cvScalar(this->val[0], this->val[1], this->val[2], this->val[3]); }
 
 template<typename _Tp> template<typename T2> inline Scalar_<_Tp>::operator Scalar_<T2>() const
 {

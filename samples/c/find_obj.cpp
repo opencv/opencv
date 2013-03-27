@@ -231,17 +231,17 @@ int main(int argc, char** argv)
     cvNamedWindow("Object", 1);
     cvNamedWindow("Object Correspond", 1);
 
-    static CvScalar colors[] =
+    static cv::Scalar colors[] =
     {
-        {{0,0,255}},
-        {{0,128,255}},
-        {{0,255,255}},
-        {{0,255,0}},
-        {{255,128,0}},
-        {{255,255,0}},
-        {{255,0,0}},
-        {{255,0,255}},
-        {{255,255,255}}
+        cv::Scalar(0,0,255),
+        cv::Scalar(0,128,255),
+        cv::Scalar(0,255,255),
+        cv::Scalar(0,255,0),
+        cv::Scalar(255,128,0),
+        cv::Scalar(255,255,0),
+        cv::Scalar(255,0,0),
+        cv::Scalar(255,0,255),
+        cv::Scalar(255,255,255)
     };
 
     IplImage* object_color = cvCreateImage(cvGetSize(object), 8, 3);

@@ -1910,7 +1910,7 @@ cvPtrND( const CvArr* arr, const int* idx, int* _type,
 CV_IMPL  CvScalar
 cvGet1D( const CvArr* arr, int idx )
 {
-    CvScalar scalar = {{0,0,0,0}};
+    CvScalar scalar(0);
     int type = 0;
     uchar* ptr;
 
@@ -1945,7 +1945,7 @@ cvGet1D( const CvArr* arr, int idx )
 CV_IMPL  CvScalar
 cvGet2D( const CvArr* arr, int y, int x )
 {
-    CvScalar scalar = {{0,0,0,0}};
+    CvScalar scalar(0);
     int type = 0;
     uchar* ptr;
 
@@ -1979,7 +1979,7 @@ cvGet2D( const CvArr* arr, int y, int x )
 CV_IMPL  CvScalar
 cvGet3D( const CvArr* arr, int z, int y, int x )
 {
-    CvScalar scalar = {{0,0,0,0}};
+    CvScalar scalar(0);
     int type = 0;
     uchar* ptr;
 
@@ -2001,7 +2001,7 @@ cvGet3D( const CvArr* arr, int z, int y, int x )
 CV_IMPL  CvScalar
 cvGetND( const CvArr* arr, const int* idx )
 {
-    CvScalar scalar = {{0,0,0,0}};
+    CvScalar scalar(0);
     int type = 0;
     uchar* ptr;
 

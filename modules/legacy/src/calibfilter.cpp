@@ -546,13 +546,13 @@ void CvCalibFilter::DrawPoints( CvMat** dstarr )
 
                 static const CvScalar line_colors[] =
                 {
-                    {{0,0,255}},
-                    {{0,128,255}},
-                    {{0,200,200}},
-                    {{0,255,0}},
-                    {{200,200,0}},
-                    {{255,0,0}},
-                    {{255,0,255}}
+                    CvScalar(0,0,255),
+                    CvScalar(0,128,255),
+                    CvScalar(0,200,200),
+                    CvScalar(0,255,0),
+                    CvScalar(200,200,0),
+                    CvScalar(255,0,0),
+                    CvScalar(255,0,255)
                 };
 
                 const int colorCount = sizeof(line_colors)/sizeof(line_colors[0]);
