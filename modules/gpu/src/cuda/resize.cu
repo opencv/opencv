@@ -42,14 +42,14 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
+#include <cfloat>
+#include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/border_interpolate.hpp"
 #include "opencv2/gpu/device/vec_traits.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/filters.hpp"
-#include <cfloat>
-#include <opencv2/gpu/device/scan.hpp>
+#include "opencv2/gpu/device/scan.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

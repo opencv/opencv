@@ -42,7 +42,7 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
+#include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
 
 namespace cv { namespace gpu { namespace device

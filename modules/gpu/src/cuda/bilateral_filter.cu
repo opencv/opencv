@@ -43,8 +43,7 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
-
+#include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/vec_traits.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/border_interpolate.hpp"
