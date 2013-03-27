@@ -353,6 +353,12 @@ namespace cv
         {
             return &(Context::getContext()->impl->clCmdQueue);
         }
+
+        void finish()
+        {
+            clFinish(Context::getContext()->impl->clCmdQueue);
+        }
+
         void openCLReadBuffer(Context *clCxt, cl_mem dst_buffer, void *host_buffer, size_t size)
         {
             cl_int status;
@@ -667,7 +673,7 @@ namespace cv
             clReleaseEvent(event);
 #endif
 
-            clFinish(clCxt->impl->clCmdQueue);
+            clFlush(clCxt->impl->clCmdQueue);
             openCLSafeCall(clReleaseKernel(kernel));
         }
 

@@ -126,6 +126,9 @@ namespace cv
 
         CV_EXPORTS void* getoclCommandQueue();
 
+        //explicit call clFinish. The global command queue will be used.
+        CV_EXPORTS void finish();
+
         //this function enable ocl module to use customized cl_context and cl_command_queue
         //getDevice also need to be called before this function
         CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0);
