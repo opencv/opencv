@@ -43,7 +43,7 @@
 //
 //M*/
 #include "precomp.hpp"
-#include <cstring>
+#include <cstdio>
 
 #ifdef HAVE_OPENCV_OCL
 

@@ -147,7 +147,7 @@ PARAM_TEST_CASE(SURF, HessianThreshold, Octaves, OctaveLayers, Extended, Upright
 TEST_P(SURF, Detector)
 {
     // the data path should be opencv/samples
-    cv::Mat image  = cv::imread(string(cvtest::TS::ptr()->get_data_path()) + "c/fruits.jpg", cv::IMREAD_GRAYSCALE);
+    cv::Mat image  = cv::imread("../../../samples/c/fruits.jpg", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
     cv::ocl::SURF_OCL surf;
@@ -180,7 +180,7 @@ TEST_P(SURF, Detector)
 
 TEST_P(SURF, Descriptor)
 {
-    cv::Mat image  = cv::imread(string(cvtest::TS::ptr()->get_data_path()) + "c/fruits.jpg", cv::IMREAD_GRAYSCALE);
+    cv::Mat image  = cv::imread("../../../samples/c/fruits.jpg", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
     cv::ocl::SURF_OCL surf;
