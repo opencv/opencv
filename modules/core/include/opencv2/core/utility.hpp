@@ -358,7 +358,7 @@ AutoBuffer<_Tp, fixed_size>::AutoBuffer(const AutoBuffer<_Tp, fixed_size>& abuf 
 {
     ptr = buf;
     sz = fixed_size;
-    allocate(abuf.size);
+    allocate(abuf.size());
     for( size_t i = 0; i < sz; i++ )
         ptr[i] = abuf.ptr[i];
 }
@@ -369,7 +369,7 @@ AutoBuffer<_Tp, fixed_size>::operator = (const AutoBuffer<_Tp, fixed_size>& abuf
     if( this != &abuf )
     {
         deallocate();
-        allocate(abuf.size);
+        allocate(abuf.size());
         for( size_t i = 0; i < sz; i++ )
             ptr[i] = abuf.ptr[i];
     }

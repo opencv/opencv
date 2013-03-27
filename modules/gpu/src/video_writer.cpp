@@ -736,7 +736,7 @@ void NVENCAPI cv::gpu::VideoWriter_GPU::Impl::HandleOnEndFrame(const NVVE_EndFra
 class EncoderCallBackFFMPEG : public cv::gpu::VideoWriter_GPU::EncoderCallBack
 {
 public:
-    EncoderCallBackFFMPEG(const String& fileName, cv::Size frameSize, double fps);
+    EncoderCallBackFFMPEG(const cv::String& fileName, cv::Size frameSize, double fps);
     ~EncoderCallBackFFMPEG();
 
     unsigned char* acquireBitStream(int* bufferSize);
@@ -799,7 +799,7 @@ namespace
     }
 }
 
-EncoderCallBackFFMPEG::EncoderCallBackFFMPEG(const String& fileName, cv::Size frameSize, double fps) :
+EncoderCallBackFFMPEG::EncoderCallBackFFMPEG(const cv::String& fileName, cv::Size frameSize, double fps) :
     stream_(0), isKeyFrame_(false)
 {
     int buf_size = std::max(frameSize.area() * 4, 1024 * 1024);

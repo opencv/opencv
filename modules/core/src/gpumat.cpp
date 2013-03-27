@@ -41,24 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/gpumat.hpp"
-#include <cctype>
-
-#ifdef HAVE_CUDA
-    #include <cuda_runtime.h>
-    #include <npp.h>
-
-    #define CUDART_MINIMUM_REQUIRED_VERSION 4020
-    #define NPP_MINIMUM_REQUIRED_VERSION 4200
-
-    #if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
-        #error "Insufficient Cuda Runtime library version, please update it."
-    #endif
-
-    #if (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
-        #error "Insufficient NPP version, please update it."
-    #endif
-#endif
 
 using namespace cv;
 using namespace cv::gpu;
@@ -233,7 +215,7 @@ namespace
                 int cur_value;
                 int chars_read;
                 int args_read = sscanf(set_as_str.c_str() + pos, "%d%n", &cur_value, &chars_read);
-                CV_Assert(args_read == 2);
+                CV_Assert(args_read == 1);
 
                 arr.push_back(cur_value);
                 pos += chars_read;
