@@ -261,8 +261,8 @@ class CV_EXPORTS_AS(DescriptorExtractor) javaDescriptorExtractor : public Descri
 public:
 #if 0
     //DO NOT REMOVE! The block is required for sources parser
-    CV_WRAP void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
-    CV_WRAP void compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, CV_OUT vector<Mat>& descriptors ) const;
+    CV_WRAP void compute( const Mat& image, CV_IN_OUT vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    CV_WRAP void compute( const vector<Mat>& images, CV_IN_OUT vector<vector<KeyPoint> >& keypoints, CV_OUT vector<Mat>& descriptors ) const;
     CV_WRAP virtual int descriptorSize() const;
     CV_WRAP virtual int descriptorType() const;
 
