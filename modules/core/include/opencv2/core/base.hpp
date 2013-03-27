@@ -282,6 +282,142 @@ CV_EXPORTS int normHamming(const uchar* a, const uchar* b, int n, int cellSize);
 
 
 
+/////////////////////////////////// inline norms ////////////////////////////////////
+
+template<typename _Tp, typename _AccTp> static inline
+_AccTp normL2Sqr(const _Tp* a, int n)
+{
+    _AccTp s = 0;
+    int i=0;
+#if CV_ENABLE_UNROLLED
+    for( ; i <= n - 4; i += 4 )
+    {
+        _AccTp v0 = a[i], v1 = a[i+1], v2 = a[i+2], v3 = a[i+3];
+        s += v0*v0 + v1*v1 + v2*v2 + v3*v3;
+    }
+#endif
+    for( ; i < n; i++ )
+    {
+        _AccTp v = a[i];
+        s += v*v;
+    }
+    return s;
+}
+
+template<typename _Tp, typename _AccTp> static inline
+_AccTp normL1(const _Tp* a, int n)
+{
+    _AccTp s = 0;
+    int i = 0;
+#if CV_ENABLE_UNROLLED
+    for(; i <= n - 4; i += 4 )
+    {
+        s += (_AccTp)std::abs(a[i]) + (_AccTp)std::abs(a[i+1]) +
+            (_AccTp)std::abs(a[i+2]) + (_AccTp)std::abs(a[i+3]);
+    }
+#endif
+    for( ; i < n; i++ )
+        s += fast_abs(a[i]);
+    return s;
+}
+
+template<typename _Tp, typename _AccTp> static inline
+_AccTp normInf(const _Tp* a, int n)
+{
+    _AccTp s = 0;
+    for( int i = 0; i < n; i++ )
+        s = std::max(s, (_AccTp)std::abs(a[i]));
+    return s;
+}
+
+template<typename _Tp, typename _AccTp> static inline
+_AccTp normL2Sqr(const _Tp* a, const _Tp* b, int n)
+{
+    _AccTp s = 0;
+    int i= 0;
+#if CV_ENABLE_UNROLLED
+    for(; i <= n - 4; i += 4 )
+    {
+        _AccTp v0 = _AccTp(a[i] - b[i]), v1 = _AccTp(a[i+1] - b[i+1]), v2 = _AccTp(a[i+2] - b[i+2]), v3 = _AccTp(a[i+3] - b[i+3]);
+        s += v0*v0 + v1*v1 + v2*v2 + v3*v3;
+    }
+#endif
+    for( ; i < n; i++ )
+    {
+        _AccTp v = _AccTp(a[i] - b[i]);
+        s += v*v;
+    }
+    return s;
+}
+
+template<> inline
+float normL2Sqr(const float* a, const float* b, int n)
+{
+    if( n >= 8 )
+        return normL2Sqr_(a, b, n);
+    float s = 0;
+    for( int i = 0; i < n; i++ )
+    {
+        float v = a[i] - b[i];
+        s += v*v;
+    }
+    return s;
+}
+
+template<typename _Tp, typename _AccTp> static inline
+_AccTp normL1(const _Tp* a, const _Tp* b, int n)
+{
+    _AccTp s = 0;
+    int i= 0;
+#if CV_ENABLE_UNROLLED
+    for(; i <= n - 4; i += 4 )
+    {
+        _AccTp v0 = _AccTp(a[i] - b[i]), v1 = _AccTp(a[i+1] - b[i+1]), v2 = _AccTp(a[i+2] - b[i+2]), v3 = _AccTp(a[i+3] - b[i+3]);
+        s += std::abs(v0) + std::abs(v1) + std::abs(v2) + std::abs(v3);
+    }
+#endif
+    for( ; i < n; i++ )
+    {
+        _AccTp v = _AccTp(a[i] - b[i]);
+        s += std::abs(v);
+    }
+    return s;
+}
+
+template<> inline
+float normL1(const float* a, const float* b, int n)
+{
+    if( n >= 8 )
+        return normL1_(a, b, n);
+    float s = 0;
+    for( int i = 0; i < n; i++ )
+    {
+        float v = a[i] - b[i];
+        s += std::abs(v);
+    }
+    return s;
+}
+
+template<> inline
+int normL1(const uchar* a, const uchar* b, int n)
+{
+    return normL1_(a, b, n);
+}
+
+template<typename _Tp, typename _AccTp> static inline
+_AccTp normInf(const _Tp* a, const _Tp* b, int n)
+{
+    _AccTp s = 0;
+    for( int i = 0; i < n; i++ )
+    {
+        _AccTp v0 = a[i] - b[i];
+        s = std::max(s, std::abs(v0));
+    }
+    return s;
+}
+
+
+
 ////////////////// forward declarations for important OpenCV types //////////////////
 
 template<typename _Tp, int cn> class CV_EXPORTS Vec;

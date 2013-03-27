@@ -255,6 +255,8 @@ public:
 */
 template<typename _Tp, int m> double determinant(const Matx<_Tp, m, m>& a);
 template<typename _Tp, int m, int n> double trace(const Matx<_Tp, m, n>& a);
+template<typename _Tp, int m, int n> double norm(const Matx<_Tp, m, n>& M);
+template<typename _Tp, int m, int n> double norm(const Matx<_Tp, m, n>& M, int normType);
 
 
 
@@ -389,6 +391,11 @@ public:
     template<typename T2> VecCommaInitializer<_Tp, m>& operator , (T2 val);
     Vec<_Tp, m> operator *() const;
 };
+
+/*!
+ Utility methods
+*/
+template<typename _Tp, int cn> Vec<_Tp, cn> normalize(const Vec<_Tp, cn>& v);
 
 
 
@@ -790,6 +797,20 @@ double trace(const Matx<_Tp, m, n>& a)
     return s;
 }
 
+template<typename _Tp, int m, int n> static inline
+double norm(const Matx<_Tp, m, n>& M)
+{
+    return std::sqrt(normL2Sqr<_Tp, double>(M.val, m*n));
+}
+
+template<typename _Tp, int m, int n> static inline
+double norm(const Matx<_Tp, m, n>& M, int normType)
+{
+    return normType == NORM_INF ? (double)normInf<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n) :
+        normType == NORM_L1 ? (double)normL1<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n) :
+        std::sqrt((double)normL2Sqr<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n));
+}
+
 
 
 //////////////////////////////// matx comma initializer //////////////////////////////////
@@ -985,6 +1006,13 @@ _Tp& Vec<_Tp, cn>::operator ()(int i)
 {
     CV_DbgAssert( (unsigned)i < (unsigned)cn );
     return this->val[i];
+}
+
+template<typename _Tp, int cn> inline
+Vec<_Tp, cn> normalize(const Vec<_Tp, cn>& v)
+{
+    double nv = norm(v);
+    return v * (nv ? 1./nv : 0.);
 }
 
 

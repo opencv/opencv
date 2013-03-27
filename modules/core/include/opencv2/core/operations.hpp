@@ -265,167 +265,17 @@ Matx<_Tp, 4, 1> operator * (const Matx<_Tp, 4, 4>& a, const Point3_<_Tp>& b)
 template<typename _Tp> static inline
 Scalar operator * (const Matx<_Tp, 4, 4>& a, const Scalar& b)
 {
+    Matx<double, 4, 1> c((Matx<double, 4, 4>)a, b, Matx_MatMulOp());
+    return reinterpret_cast<const Scalar&>(c);
+}
+
+template<> inline
+Scalar operator * (const Matx<double, 4, 4>& a, const Scalar& b)
+{
     Matx<double, 4, 1> c(a, b, Matx_MatMulOp());
     return reinterpret_cast<const Scalar&>(c);
 }
 
-template<typename _Tp, typename _AccTp> static inline
-_AccTp normL2Sqr(const _Tp* a, int n)
-{
-    _AccTp s = 0;
-    int i=0;
- #if CV_ENABLE_UNROLLED
-    for( ; i <= n - 4; i += 4 )
-    {
-        _AccTp v0 = a[i], v1 = a[i+1], v2 = a[i+2], v3 = a[i+3];
-        s += v0*v0 + v1*v1 + v2*v2 + v3*v3;
-    }
-#endif
-    for( ; i < n; i++ )
-    {
-        _AccTp v = a[i];
-        s += v*v;
-    }
-    return s;
-}
-
-
-template<typename _Tp, typename _AccTp> static inline
-_AccTp normL1(const _Tp* a, int n)
-{
-    _AccTp s = 0;
-    int i = 0;
-#if CV_ENABLE_UNROLLED
-    for(; i <= n - 4; i += 4 )
-    {
-        s += (_AccTp)fast_abs(a[i]) + (_AccTp)fast_abs(a[i+1]) +
-            (_AccTp)fast_abs(a[i+2]) + (_AccTp)fast_abs(a[i+3]);
-    }
-#endif
-    for( ; i < n; i++ )
-        s += fast_abs(a[i]);
-    return s;
-}
-
-
-template<typename _Tp, typename _AccTp> static inline
-_AccTp normInf(const _Tp* a, int n)
-{
-    _AccTp s = 0;
-    for( int i = 0; i < n; i++ )
-        s = std::max(s, (_AccTp)fast_abs(a[i]));
-    return s;
-}
-
-
-template<typename _Tp, typename _AccTp> static inline
-_AccTp normL2Sqr(const _Tp* a, const _Tp* b, int n)
-{
-    _AccTp s = 0;
-    int i= 0;
-#if CV_ENABLE_UNROLLED
-    for(; i <= n - 4; i += 4 )
-    {
-        _AccTp v0 = _AccTp(a[i] - b[i]), v1 = _AccTp(a[i+1] - b[i+1]), v2 = _AccTp(a[i+2] - b[i+2]), v3 = _AccTp(a[i+3] - b[i+3]);
-        s += v0*v0 + v1*v1 + v2*v2 + v3*v3;
-    }
-#endif
-    for( ; i < n; i++ )
-    {
-        _AccTp v = _AccTp(a[i] - b[i]);
-        s += v*v;
-    }
-    return s;
-}
-
-template<> inline float normL2Sqr(const float* a, const float* b, int n)
-{
-    if( n >= 8 )
-        return normL2Sqr_(a, b, n);
-    float s = 0;
-    for( int i = 0; i < n; i++ )
-    {
-        float v = a[i] - b[i];
-        s += v*v;
-    }
-    return s;
-}
-
-
-template<typename _Tp, typename _AccTp> static inline
-_AccTp normL1(const _Tp* a, const _Tp* b, int n)
-{
-    _AccTp s = 0;
-    int i= 0;
-#if CV_ENABLE_UNROLLED
-    for(; i <= n - 4; i += 4 )
-    {
-        _AccTp v0 = _AccTp(a[i] - b[i]), v1 = _AccTp(a[i+1] - b[i+1]), v2 = _AccTp(a[i+2] - b[i+2]), v3 = _AccTp(a[i+3] - b[i+3]);
-        s += std::abs(v0) + std::abs(v1) + std::abs(v2) + std::abs(v3);
-    }
-#endif
-    for( ; i < n; i++ )
-    {
-        _AccTp v = _AccTp(a[i] - b[i]);
-        s += std::abs(v);
-    }
-    return s;
-}
-
-template<> inline float normL1(const float* a, const float* b, int n)
-{
-    if( n >= 8 )
-        return normL1_(a, b, n);
-    float s = 0;
-    for( int i = 0; i < n; i++ )
-    {
-        float v = a[i] - b[i];
-        s += std::abs(v);
-    }
-    return s;
-}
-
-template<> inline int normL1(const uchar* a, const uchar* b, int n)
-{
-    return normL1_(a, b, n);
-}
-
-template<typename _Tp, typename _AccTp> static inline
-_AccTp normInf(const _Tp* a, const _Tp* b, int n)
-{
-    _AccTp s = 0;
-    for( int i = 0; i < n; i++ )
-    {
-        _AccTp v0 = a[i] - b[i];
-        s = std::max(s, std::abs(v0));
-    }
-    return s;
-}
-
-
-template<typename _Tp, int m, int n> static inline
-double norm(const Matx<_Tp, m, n>& M)
-{
-    return std::sqrt(normL2Sqr<_Tp, double>(M.val, m*n));
-}
-
-
-template<typename _Tp, int m, int n> static inline
-double norm(const Matx<_Tp, m, n>& M, int normType)
-{
-    return normType == NORM_INF ? (double)normInf<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n) :
-        normType == NORM_L1 ? (double)normL1<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n) :
-        std::sqrt((double)normL2Sqr<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n));
-}
-
-/////////////////////////// short vector (Vec) /////////////////////////////
-
-
-template<typename _Tp, int cn> inline Vec<_Tp, cn> normalize(const Vec<_Tp, cn>& v)
-{
-    double nv = norm(v);
-    return v * (nv ? 1./nv : 0.);
-}
 
 //////////////////////////////// Complex //////////////////////////////
 
