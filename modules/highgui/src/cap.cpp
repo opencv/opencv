@@ -200,7 +200,6 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
              capture = cvCreateCameraCapture_DShow (index);
              if (capture)
                  return capture;
-            return NULL;
             break;
 #endif
 

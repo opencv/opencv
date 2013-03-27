@@ -322,7 +322,6 @@ CV_INLINE  int  cvRound( double value )
     return (int)lrint(value);
 #  endif
 #else
-    // while this is not IEEE754-compliant rounding, it's usually a good enough approximation
     double intpart, fractpart;
     fractpart = modf(value, &intpart);
     if ((abs(fractpart) != 0.5) || ((((int)intpart) % 2) != 0))

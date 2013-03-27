@@ -2,6 +2,15 @@
 #  Detect 3rd-party video IO libraries
 # ----------------------------------------------------------------------------
 
+ocv_clear_vars(HAVE_VFW)
+if (WITH_VFW)
+  TRY_COMPILE(HAVE_VFW
+    "${OPENCV_BINARY_DIR}/CMakeFiles/CMakeTmp"
+    "${OpenCV_SOURCE_DIR}/cmake/checks/vfwtest.cpp"
+    CMAKE_FLAGS "-DLINK_LIBRARIES:STRING=vfw32"
+    OUTPUT_VARIABLE OUTPUT)
+ endif(WITH_VFW)
+
 # --- GStreamer ---
 ocv_clear_vars(HAVE_GSTREAMER)
 if(WITH_GSTREAMER)
@@ -37,7 +46,7 @@ if(WITH_PVAPI)
       set(PVAPI_SDK_SUBDIR x86)
     elseif(X86_64)
       set(PVAPI_SDK_SUBDIR x64)
-    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES arm)
+    elseif(ARM)
       set(PVAPI_SDK_SUBDIR arm)
     endif()
 

@@ -13,6 +13,9 @@
    */
 #cmakedefine HAVE_ALLOCA_H 1
 
+/* Video for Windows support */
+#cmakedefine HAVE_VFW
+
 /* V4L capturing support */
 #cmakedefine HAVE_CAMV4L
 
@@ -54,6 +57,9 @@
 
 /* GTK+ 2.0 Thread support */
 #cmakedefine  HAVE_GTHREAD
+
+/* Win32 UI */
+#cmakedefine HAVE_WIN32UI
 
 /* GTK+ 2.x toolkit */
 #cmakedefine  HAVE_GTK
