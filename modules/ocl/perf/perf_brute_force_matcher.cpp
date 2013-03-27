@@ -44,45 +44,107 @@
 //M*/
 #include "precomp.hpp"
 
-///////////// gemm ////////////////////////
-TEST(gemm)
+//////////////////// BruteForceMatch /////////////////
+TEST(BruteForceMatcher)
 {
-    Mat src1, src2, src3, dst;
-    ocl::oclMat d_src1, d_src2, d_src3, d_dst;
+    Mat trainIdx_cpu;
+    Mat distance_cpu;
+    Mat allDist_cpu;
+    Mat nMatches_cpu;
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {
-        SUBTEST << size << 'x' << size;
+        // Init CPU matcher
+        int desc_len = 64;
 
-        gen(src1, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
-        gen(src2, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
-        gen(src3, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
+        BFMatcher matcher(NORM_L2);
 
-        gemm(src1, src2, 1.0, src3, 1.0, dst);
+        Mat query;
+        gen(query, size, desc_len, CV_32F, 0, 1);
+
+        Mat train;
+        gen(train, size, desc_len, CV_32F, 0, 1);
+        // Output
+        vector< vector<DMatch> > matches(2);
+        // Init GPU matcher
+        ocl::BruteForceMatcher_OCL_base d_matcher(ocl::BruteForceMatcher_OCL_base::L2Dist);
+
+        ocl::oclMat d_query(query);
+        ocl::oclMat d_train(train);
+
+        ocl::oclMat d_trainIdx, d_distance, d_allDist, d_nMatches;
+
+        SUBTEST << size << "; match";
+
+        matcher.match(query, train, matches[0]);
 
         CPU_ON;
-        gemm(src1, src2, 1.0, src3, 1.0, dst);
+        matcher.match(query, train, matches[0]);
         CPU_OFF;
 
-        d_src1.upload(src1);
-        d_src2.upload(src2);
-        d_src3.upload(src3);
-
         WARMUP_ON;
-        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
+        d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
         WARMUP_OFF;
 
         GPU_ON;
-        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
+        d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
          ;
         GPU_OFF;
 
         GPU_FULL_ON;
-        d_src1.upload(src1);
-        d_src2.upload(src2);
-        d_src3.upload(src3);
-        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-        d_dst.download(dst);
+        d_query.upload(query);
+        d_train.upload(train);
+        d_matcher.match(d_query, d_train, matches[0]);
+        GPU_FULL_OFF;
+
+        SUBTEST << size << "; knnMatch";
+
+        matcher.knnMatch(query, train, matches, 2);
+
+        CPU_ON;
+        matcher.knnMatch(query, train, matches, 2);
+        CPU_OFF;
+
+        WARMUP_ON;
+        d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, 2);
+        WARMUP_OFF;
+
+        GPU_ON;
+        d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, 2);
+         ;
+        GPU_OFF;
+
+        GPU_FULL_ON;
+        d_query.upload(query);
+        d_train.upload(train);
+        d_matcher.knnMatch(d_query, d_train, matches, 2);
+        GPU_FULL_OFF;
+
+        SUBTEST << size << "; radiusMatch";
+
+        float max_distance = 2.0f;
+
+        matcher.radiusMatch(query, train, matches, max_distance);
+
+        CPU_ON;
+        matcher.radiusMatch(query, train, matches, max_distance);
+        CPU_OFF;
+
+        d_trainIdx.release();
+
+        WARMUP_ON;
+        d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, max_distance);
+        WARMUP_OFF;
+
+        GPU_ON;
+        d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, max_distance);
+         ;
+        GPU_OFF;
+
+        GPU_FULL_ON;
+        d_query.upload(query);
+        d_train.upload(train);
+        d_matcher.radiusMatch(d_query, d_train, matches, max_distance);
         GPU_FULL_OFF;
     }
 }
