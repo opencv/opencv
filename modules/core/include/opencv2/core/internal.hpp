@@ -136,7 +136,6 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #ifdef __ARM_NEON__
 #  include <arm_neon.h>
 #  define CV_NEON 1
-#  define CPU_HAS_NEON_FEATURE (true)
 #endif
 
 #ifndef CV_SSE
