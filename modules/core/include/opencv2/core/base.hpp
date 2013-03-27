@@ -44,10 +44,70 @@
 #ifndef __OPENCV_CORE_BASE_HPP__
 #define __OPENCV_CORE_BASE_HPP__
 
+#include <climits>
+
 #include "opencv2/core/cvdef.h"
+#include "opencv2/core/cvstd.hpp"
 
 namespace cv
 {
+
+// error codes
+namespace Error {
+enum {
+    StsOk=                       0,  /* everithing is ok                */
+    StsBackTrace=               -1,  /* pseudo error for back trace     */
+    StsError=                   -2,  /* unknown /unspecified error      */
+    StsInternal=                -3,  /* internal error (bad state)      */
+    StsNoMem=                   -4,  /* insufficient memory             */
+    StsBadArg=                  -5,  /* function arg/param is bad       */
+    StsBadFunc=                 -6,  /* unsupported function            */
+    StsNoConv=                  -7,  /* iter. didn't converge           */
+    StsAutoTrace=               -8,  /* tracing                         */
+    HeaderIsNull=               -9,  /* image header is NULL            */
+    BadImageSize=              -10,  /* image size is invalid           */
+    BadOffset=                 -11,  /* offset is invalid               */
+    BadDataPtr=                -12,  /**/
+    BadStep=                   -13,  /**/
+    BadModelOrChSeq=           -14,  /**/
+    BadNumChannels=            -15,  /**/
+    BadNumChannel1U=           -16,  /**/
+    BadDepth=                  -17,  /**/
+    BadAlphaChannel=           -18,  /**/
+    BadOrder=                  -19,  /**/
+    BadOrigin=                 -20,  /**/
+    BadAlign=                  -21,  /**/
+    BadCallBack=               -22,  /**/
+    BadTileSize=               -23,  /**/
+    BadCOI=                    -24,  /**/
+    BadROISize=                -25,  /**/
+    MaskIsTiled=               -26,  /**/
+    StsNullPtr=                -27,  /* null pointer */
+    StsVecLengthErr=           -28,  /* incorrect vector length */
+    StsFilterStructContentErr= -29,  /* incorr. filter structure content */
+    StsKernelStructContentErr= -30,  /* incorr. transform kernel content */
+    StsFilterOffsetErr=        -31,  /* incorrect filter ofset value */
+    StsBadSize=                -201, /* the input/output structure size is incorrect  */
+    StsDivByZero=              -202, /* division by zero */
+    StsInplaceNotSupported=    -203, /* in-place operation is not supported */
+    StsObjectNotFound=         -204, /* request can't be completed */
+    StsUnmatchedFormats=       -205, /* formats of input/output arrays differ */
+    StsBadFlag=                -206, /* flag is wrong or not supported */
+    StsBadPoint=               -207, /* bad CvPoint */
+    StsBadMask=                -208, /* bad format of mask (neither 8uC1 nor 8sC1)*/
+    StsUnmatchedSizes=         -209, /* sizes of input/output structures do not match */
+    StsUnsupportedFormat=      -210, /* the data format/type is not supported by the function*/
+    StsOutOfRange=             -211, /* some of parameters are out of range */
+    StsParseError=             -212, /* invalid syntax/structure of the parsed file */
+    StsNotImplemented=         -213, /* the requested function/feature is not implemented */
+    StsBadMemBlock=            -214, /* an allocated block has been corrupted */
+    StsAssert=                 -215, /* assertion failed */
+    GpuNotSupported=           -216,
+    GpuApiCallError=           -217,
+    OpenGlNotSupported=        -218,
+    OpenGlApiCallError=        -219
+};
+} //Error
 
 // matrix decomposition types
 enum { DECOMP_LU       = 0,
@@ -92,6 +152,71 @@ enum { DFT_INVERSE        = 1,
        DCT_INVERSE        = DFT_INVERSE,
        DCT_ROWS           = DFT_ROWS
      };
+
+
+
+//////////////// static assert /////////////////
+
+#define CVAUX_CONCAT_EXP(a, b) a##b
+#define CVAUX_CONCAT(a, b) CVAUX_CONCAT_EXP(a,b)
+
+#if defined(__clang__)
+#  ifndef __has_extension
+#    define __has_extension __has_feature /* compatibility, for older versions of clang */
+#  endif
+#  if __has_extension(cxx_static_assert)
+#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
+#  endif
+#elif defined(__GNUC__)
+#  if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L)
+#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
+#  endif
+#elif defined(_MSC_VER)
+#  if _MSC_VER >= 1600 /* MSVC 10 */
+#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
+#  endif
+#endif
+#ifndef CV_StaticAssert
+#  if defined(__GNUC__) && (__GNUC__ > 3) && (__GNUC_MINOR__ > 2)
+#    define CV_StaticAssert(condition, reason) ({ extern int __attribute__((error("CV_StaticAssert: " reason " " #condition))) CV_StaticAssert(); ((condition) ? 0 : CV_StaticAssert()); })
+#  else
+     namespace cv {
+       template <bool x> struct CV_StaticAssert_failed;
+       template <> struct CV_StaticAssert_failed<true> { enum { val = 1 }; };
+       template<int x> struct CV_StaticAssert_test{};
+     }
+#    define CV_StaticAssert(condition, reason)\
+       typedef cv::CV_StaticAssert_test< sizeof(cv::CV_StaticAssert_failed< static_cast<bool>(condition) >) > CVAUX_CONCAT(CV_StaticAssert_failed_at_, __LINE__)
+#  endif
+#endif
+
+
+
+//! Signals an error and raises the exception.
+/*!
+  By default the function prints information about the error to stderr,
+  then it either stops if setBreakOnError() had been called before or raises the exception.
+  It is possible to alternate error processing by using redirectError().
+
+  \param exc the exception raisen.
+ */
+CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
+
+#ifdef __GNUC__
+#  define CV_Error( code, msg ) cv::error( code, msg, __func__, __FILE__, __LINE__ )
+#  define CV_Error_( code, args ) cv::error( code, cv::format args, __func__, __FILE__, __LINE__ )
+#  define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, __func__, __FILE__, __LINE__ )
+#else
+#  define CV_Error( code, msg ) cv::error( code, msg, "", __FILE__, __LINE__ )
+#  define CV_Error_( code, args ) cv::error( code, cv::format args, "", __FILE__, __LINE__ )
+#  define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, "", __FILE__, __LINE__ )
+#endif
+
+#ifdef _DEBUG
+#  define CV_DbgAssert(expr) CV_Assert(expr)
+#else
+#  define CV_DbgAssert(expr)
+#endif
 
 
 
@@ -144,6 +269,19 @@ template<> inline unsigned saturate_cast<unsigned>(double v) { return cvRound(v)
 
 
 
+//////////////////////////////// low-level functions ////////////////////////////////
+CV_EXPORTS int LU(float* A, size_t astep, int m, float* b, size_t bstep, int n);
+CV_EXPORTS int LU(double* A, size_t astep, int m, double* b, size_t bstep, int n);
+CV_EXPORTS bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, int n);
+CV_EXPORTS bool Cholesky(double* A, size_t astep, int m, double* b, size_t bstep, int n);
+CV_EXPORTS float normL2Sqr_(const float* a, const float* b, int n);
+CV_EXPORTS float normL1_(const float* a, const float* b, int n);
+CV_EXPORTS int normL1_(const uchar* a, const uchar* b, int n);
+CV_EXPORTS int normHamming(const uchar* a, const uchar* b, int n);
+CV_EXPORTS int normHamming(const uchar* a, const uchar* b, int n, int cellSize);
+
+
+
 ////////////////// forward declarations for important OpenCV types //////////////////
 
 template<typename _Tp, int cn> class CV_EXPORTS Vec;
@@ -181,6 +319,8 @@ namespace gpu
 {
     class CV_EXPORTS GpuMat;
 }
+
+
 
 } // cv
 

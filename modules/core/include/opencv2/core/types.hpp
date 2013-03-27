@@ -45,6 +45,7 @@
 #define __OPENCV_CORE_TYPES_HPP__
 
 #include <climits>
+#include <cfloat>
 #include <vector>
 
 #ifndef OPENCV_NOSTL

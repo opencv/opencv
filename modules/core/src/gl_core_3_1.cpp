@@ -136,14 +136,14 @@
         void* func =  (void*) CV_GL_GET_PROC_ADDRESS(name);
         if (!func)
         {
-            CV_Error(CV_OpenGlApiCallError, cv::format("Can't load OpenGL extension [%s]", name) );
+            CV_Error(cv::Error::OpenGlApiCallError, cv::format("Can't load OpenGL extension [%s]", name) );
         }
         return func;
     }
 #else
     static void* IntGetProcAddress(const char*)
     {
-        CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+        CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
         return 0;
     }
 #endif

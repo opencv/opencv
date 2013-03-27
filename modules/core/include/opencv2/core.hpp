@@ -49,14 +49,17 @@
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/version.hpp"
 
-#include "opencv2/core/types_c.h"
-
 #ifdef __cplusplus
-#include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/base.hpp"
+#include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/traits.hpp"
 #include "opencv2/core/matx.hpp"
 #include "opencv2/core/types.hpp"
+#endif
+
+#include "opencv2/core/types_c.h"
+
+#ifdef __cplusplus
 
 #ifndef SKIP_INCLUDES
 #include <limits.h>
@@ -126,22 +129,6 @@ public:
   \param exc the exception raisen.
  */
 CV_EXPORTS void error( const Exception& exc );
-
-#ifdef __GNUC__
-#define CV_Error( code, msg ) cv::error( cv::Exception(code, msg, __func__, __FILE__, __LINE__) )
-#define CV_Error_( code, args ) cv::error( cv::Exception(code, cv::format args, __func__, __FILE__, __LINE__) )
-#define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Exception(CV_StsAssert, #expr, __func__, __FILE__, __LINE__) )
-#else
-#define CV_Error( code, msg ) cv::error( cv::Exception(code, msg, "", __FILE__, __LINE__) )
-#define CV_Error_( code, args ) cv::error( cv::Exception(code, cv::format args, "", __FILE__, __LINE__) )
-#define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Exception(CV_StsAssert, #expr, "", __FILE__, __LINE__) )
-#endif
-
-#ifdef _DEBUG
-#define CV_DbgAssert(expr) CV_Assert(expr)
-#else
-#define CV_DbgAssert(expr)
-#endif
 
 /*!
   Allocates memory buffer
@@ -2057,26 +2044,6 @@ public:
     operator Mat_<_Tp>() const;
 protected:
     MatIterator_<_Tp> it;
-};
-
-
-template<typename _Tp, int m, int n> class CV_EXPORTS MatxCommaInitializer
-{
-public:
-    MatxCommaInitializer(Matx<_Tp, m, n>* _mtx);
-    template<typename T2> MatxCommaInitializer<_Tp, m, n>& operator , (T2 val);
-    Matx<_Tp, m, n> operator *() const;
-
-    Matx<_Tp, m, n>* dst;
-    int idx;
-};
-
-template<typename _Tp, int m> class CV_EXPORTS VecCommaInitializer : public MatxCommaInitializer<_Tp, m, 1>
-{
-public:
-    VecCommaInitializer(Vec<_Tp, m>* _vec);
-    template<typename T2> VecCommaInitializer<_Tp, m>& operator , (T2 val);
-    Vec<_Tp, m> operator *() const;
 };
 
 /////////////////////////// multi-dimensional dense matrix //////////////////////////

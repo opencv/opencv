@@ -465,6 +465,11 @@ void error( const Exception& exc )
     throw exc;
 }
 
+void error(int _code, const String& _err, const char* _func, const char* _file, int _line)
+{
+    error(cv::Exception(_code, _err, _func, _file, _line));
+}
+
 CvErrorCallback
 redirectError( CvErrorCallback errCallback, void* userdata, void** prevUserdata)
 {
