@@ -270,6 +270,7 @@ template<> inline unsigned saturate_cast<unsigned>(double v) { return cvRound(v)
 
 
 //////////////////////////////// low-level functions ////////////////////////////////
+
 CV_EXPORTS int LU(float* A, size_t astep, int m, float* b, size_t bstep, int n);
 CV_EXPORTS int LU(double* A, size_t astep, int m, double* b, size_t bstep, int n);
 CV_EXPORTS bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, int n);

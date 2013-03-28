@@ -89,6 +89,129 @@ namespace cv
 
 namespace cv {
 
+//////////////////////////// memory management functions ////////////////////////////
+
+/*!
+  Allocates memory buffer
+
+  This is specialized OpenCV memory allocation function that returns properly aligned memory buffers.
+  The usage is identical to malloc(). The allocated buffers must be freed with cv::fastFree().
+  If there is not enough memory, the function calls cv::error(), which raises an exception.
+
+  \param bufSize buffer size in bytes
+  \return the allocated memory buffer.
+*/
+CV_EXPORTS void* fastMalloc(size_t bufSize);
+
+/*!
+  Frees the memory allocated with cv::fastMalloc
+
+  This is the corresponding deallocation function for cv::fastMalloc().
+  When ptr==NULL, the function has no effect.
+*/
+CV_EXPORTS void fastFree(void* ptr);
+
+/*!
+  The STL-compilant memory Allocator based on cv::fastMalloc() and cv::fastFree()
+*/
+template<typename _Tp> class CV_EXPORTS Allocator
+{
+public:
+    typedef _Tp value_type;
+    typedef value_type* pointer;
+    typedef const value_type* const_pointer;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
+    typedef size_t size_type;
+    typedef ptrdiff_t difference_type;
+    template<typename U> class rebind { typedef Allocator<U> other; };
+
+    explicit Allocator() {}
+    ~Allocator() {}
+    explicit Allocator(Allocator const&) {}
+    template<typename U>
+    explicit Allocator(Allocator<U> const&) {}
+
+    // address
+    pointer address(reference r) { return &r; }
+    const_pointer address(const_reference r) { return &r; }
+
+    pointer allocate(size_type count, const void* =0) { return reinterpret_cast<pointer>(fastMalloc(count * sizeof (_Tp))); }
+    void deallocate(pointer p, size_type) { fastFree(p); }
+
+    void construct(pointer p, const _Tp& v) { new(static_cast<void*>(p)) _Tp(v); }
+    void destroy(pointer p) { p->~_Tp(); }
+
+    size_type max_size() const { return cv::max(static_cast<_Tp>(-1)/sizeof(_Tp), 1); }
+};
+
+
+
+//////////////////// generic_type ref-counting pointer class for C/C++ objects ////////////////////////
+
+/*!
+  Smart pointer to dynamically allocated objects.
+
+  This is template pointer-wrapping class that stores the associated reference counter along with the
+  object pointer. The class is similar to std::smart_ptr<> from the recent addons to the C++ standard,
+  but is shorter to write :) and self-contained (i.e. does add any dependency on the compiler or an external library).
+
+  Basically, you can use "Ptr<MyObjectType> ptr" (or faster "const Ptr<MyObjectType>& ptr" for read-only access)
+  everywhere instead of "MyObjectType* ptr", where MyObjectType is some C structure or a C++ class.
+  To make it all work, you need to specialize Ptr<>::delete_obj(), like:
+
+  \code
+  template<> void Ptr<MyObjectType>::delete_obj() { call_destructor_func(obj); }
+  \endcode
+
+  \note{if MyObjectType is a C++ class with a destructor, you do not need to specialize delete_obj(),
+  since the default implementation calls "delete obj;"}
+
+  \note{Another good property of the class is that the operations on the reference counter are atomic,
+  i.e. it is safe to use the class in multi-threaded applications}
+*/
+template<typename _Tp> class CV_EXPORTS Ptr
+{
+public:
+    //! empty constructor
+    Ptr();
+    //! take ownership of the pointer. The associated reference counter is allocated and set to 1
+    Ptr(_Tp* _obj);
+    //! calls release()
+    ~Ptr();
+    //! copy constructor. Copies the members and calls addref()
+    Ptr(const Ptr& ptr);
+    template<typename _Tp2> Ptr(const Ptr<_Tp2>& ptr);
+    //! copy operator. Calls ptr.addref() and release() before copying the members
+    Ptr& operator = (const Ptr& ptr);
+    //! increments the reference counter
+    void addref();
+    //! decrements the reference counter. If it reaches 0, delete_obj() is called
+    void release();
+    //! deletes the object. Override if needed
+    void delete_obj();
+    //! returns true iff obj==NULL
+    bool empty() const;
+
+    //! cast pointer to another type
+    template<typename _Tp2> Ptr<_Tp2> ptr();
+    template<typename _Tp2> const Ptr<_Tp2> ptr() const;
+
+    //! helper operators making "Ptr<T> ptr" use very similar to "T* ptr".
+    _Tp* operator -> ();
+    const _Tp* operator -> () const;
+
+    operator _Tp* ();
+    operator const _Tp*() const;
+
+    _Tp* obj; //< the object pointer.
+    int* refcount; //< the associated reference counter
+};
+
+
+
+//////////////////////////////// string class ////////////////////////////////
+
 class CV_EXPORTS FileNode; //for string constructor from FileNode
 
 class CV_EXPORTS String
@@ -187,7 +310,178 @@ private:
     void deallocate();
 };
 
-// **************************** cv::String implementation ****************************
+
+
+/////////////////////////// cv::Ptr implementation ///////////////////////////
+
+template<typename _Tp> inline
+Ptr<_Tp>::Ptr()
+    : obj(0), refcount(0) {}
+
+template<typename _Tp> inline
+Ptr<_Tp>::Ptr(_Tp* _obj)
+    : obj(_obj)
+{
+    if(obj)
+    {
+        refcount = (int*)fastMalloc(sizeof(*refcount));
+        *refcount = 1;
+    }
+    else
+        refcount = 0;
+}
+
+template<typename _Tp> template<typename _Tp2>
+Ptr<_Tp>::Ptr(const Ptr<_Tp2>& p)
+    : obj(0), refcount(0)
+{
+    if (p.empty())
+        return;
+
+    _Tp* p_casted = dynamic_cast<_Tp*>(p.obj);
+    if (!p_casted)
+        return;
+
+    obj = p_casted;
+    refcount = p.refcount;
+    addref();
+}
+
+template<typename _Tp> inline
+Ptr<_Tp>::~Ptr()
+{
+    release();
+}
+
+template<typename _Tp> inline
+void Ptr<_Tp>::addref()
+{
+    if( refcount )
+        CV_XADD(refcount, 1);
+}
+
+template<typename _Tp> inline
+void Ptr<_Tp>::release()
+{
+    if( refcount && CV_XADD(refcount, -1) == 1 )
+    {
+        delete_obj();
+        fastFree(refcount);
+    }
+    refcount = 0;
+    obj = 0;
+}
+
+template<typename _Tp> inline
+void Ptr<_Tp>::delete_obj()
+{
+    if( obj )
+        delete obj;
+}
+
+template<typename _Tp> inline
+Ptr<_Tp>::Ptr(const Ptr<_Tp>& _ptr)
+{
+    obj = _ptr.obj;
+    refcount = _ptr.refcount;
+    addref();
+}
+
+template<typename _Tp> inline
+Ptr<_Tp>& Ptr<_Tp>::operator = (const Ptr<_Tp>& _ptr)
+{
+    int* _refcount = _ptr.refcount;
+    if( _refcount )
+        CV_XADD(_refcount, 1);
+    release();
+    obj = _ptr.obj;
+    refcount = _refcount;
+    return *this;
+}
+
+template<typename _Tp> inline
+_Tp* Ptr<_Tp>::operator -> ()
+{
+    return obj;
+}
+
+template<typename _Tp> inline
+const _Tp* Ptr<_Tp>::operator -> () const
+{
+    return obj;
+}
+
+template<typename _Tp> inline
+Ptr<_Tp>::operator _Tp* ()
+{
+    return obj;
+}
+
+template<typename _Tp> inline
+Ptr<_Tp>::operator const _Tp*() const
+{
+    return obj;
+}
+
+template<typename _Tp> inline
+bool Ptr<_Tp>::empty() const
+{
+    return obj == 0;
+}
+
+template<typename _Tp> template<typename _Tp2> inline
+Ptr<_Tp2> Ptr<_Tp>::ptr()
+{
+    Ptr<_Tp2> p;
+    if( !obj )
+        return p;
+
+    _Tp2* obj_casted = dynamic_cast<_Tp2*>(obj);
+    if (!obj_casted)
+        return p;
+
+    if( refcount )
+        CV_XADD(refcount, 1);
+
+    p.obj = obj_casted;
+    p.refcount = refcount;
+    return p;
+}
+
+template<typename _Tp> template<typename _Tp2> inline
+const Ptr<_Tp2> Ptr<_Tp>::ptr() const
+{
+    Ptr<_Tp2> p;
+    if( !obj )
+        return p;
+
+    _Tp2* obj_casted = dynamic_cast<_Tp2*>(obj);
+    if (!obj_casted)
+        return p;
+
+    if( refcount )
+        CV_XADD(refcount, 1);
+
+    p.obj = obj_casted;
+    p.refcount = refcount;
+    return p;
+}
+
+template<class _Tp, class _Tp2> static inline
+bool operator == (const Ptr<_Tp>& a, const Ptr<_Tp2>& b)
+{
+    return a.refcount == b.refcount;
+}
+
+template<class _Tp, class _Tp2> static inline
+bool operator != (const Ptr<_Tp>& a, const Ptr<_Tp2>& b)
+{
+    return a.refcount != b.refcount;
+}
+
+
+
+////////////////////////// cv::String implementation /////////////////////////
 
 inline String::String() : cstr_(0), len_(0)
 {
