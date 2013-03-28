@@ -52,6 +52,22 @@ namespace cv
 {
 #ifndef OPENCV_NOSTL
 
+template<typename _Tp> class DataType< std::complex<_Tp> >
+{
+public:
+    typedef std::complex<_Tp>  value_type;
+    typedef value_type         work_type;
+    typedef _Tp                channel_type;
+
+    enum { generic_type = 0,
+           depth        = DataType<channel_type>::depth,
+           channels     = 2,
+           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
+           type         = CV_MAKETYPE(depth, channels) };
+
+    typedef Vec<channel_type, channels> vec_type;
+};
+
 inline String::String(const std::string& str) : cstr_(0), len_(0)
 {
     if (!str.empty())
