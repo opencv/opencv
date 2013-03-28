@@ -896,34 +896,6 @@ private:
     int mti;
 };
 
-/*!
- Termination criteria in iterative algorithms
- */
-class CV_EXPORTS TermCriteria
-{
-public:
-    enum
-    {
-        COUNT=1, //!< the maximum number of iterations or elements to compute
-        MAX_ITER=COUNT, //!< ditto
-        EPS=2 //!< the desired accuracy or change in parameters at which the iterative algorithm stops
-    };
-
-    //! default constructor
-    TermCriteria();
-    //! full constructor
-    TermCriteria(int type, int maxCount, double epsilon);
-    //! conversion from CvTermCriteria
-    TermCriteria(const CvTermCriteria& criteria);
-    //! conversion to CvTermCriteria
-    operator CvTermCriteria() const;
-
-    int type; //!< the type of termination criteria: COUNT, EPS or COUNT + EPS
-    int maxCount; // the maximum number of iterations/elements
-    double epsilon; // the desired accuracy
-};
-
-
 typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
                            const uchar* src2, size_t step2,
                            uchar* dst, size_t step, Size sz,
@@ -3262,9 +3234,10 @@ template<> struct ParamType<uchar>
 } //namespace cv
 
 #include "opencv2/core/operations.hpp"
-#include "opencv2/core/mat.hpp"
+#include "opencv2/core/mat.inl.hpp"
 
 #include "opencv2/core/cvstd.inl.hpp"
+
 #endif // __cplusplus
 
 

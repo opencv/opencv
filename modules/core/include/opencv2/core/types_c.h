@@ -740,6 +740,13 @@ typedef struct CvTermCriteria
                      CV_TERMCRIT_EPS */
     int    max_iter;
     double epsilon;
+
+#ifdef __cplusplus
+    CvTermCriteria(int _type = 0, int _iter = 0, double _eps = 0) : type(_type), max_iter(_iter), epsilon(_eps)  {}
+    CvTermCriteria(const cv::TermCriteria& t) : type(t.type), max_iter(t.maxCount), epsilon(t.epsilon)  {}
+    operator cv::TermCriteria() const { return cv::TermCriteria(type, max_iter, epsilon); }
+#endif
+
 }
 CvTermCriteria;
 

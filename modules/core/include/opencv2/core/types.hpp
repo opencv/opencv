@@ -640,6 +640,32 @@ public:
 
 
 
+///////////////////////////// TermCriteria //////////////////////////////
+
+/*!
+ Termination criteria in iterative algorithms
+ */
+class CV_EXPORTS TermCriteria
+{
+public:
+    enum
+    {
+        COUNT=1, //!< the maximum number of iterations or elements to compute
+        MAX_ITER=COUNT, //!< ditto
+        EPS=2 //!< the desired accuracy or change in parameters at which the iterative algorithm stops
+    };
+
+    //! default constructor
+    TermCriteria();
+    //! full constructor
+    TermCriteria(int type, int maxCount, double epsilon);
+
+    int type; //!< the type of termination criteria: COUNT, EPS or COUNT + EPS
+    int maxCount; // the maximum number of iterations/elements
+    double epsilon; // the desired accuracy
+};
+
+
 
 /////////////////////////////////////////////////////////////////////////
 ///////////////////////////// Implementation ////////////////////////////
@@ -1836,6 +1862,18 @@ bool DMatch::operator < (const DMatch &m) const
 {
     return distance < m.distance;
 }
+
+
+
+////////////////////////////// TermCriteria /////////////////////////////
+
+inline
+TermCriteria::TermCriteria()
+    : type(0), maxCount(0), epsilon(0) {}
+
+inline
+TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
+    : type(_type), maxCount(_maxCount), epsilon(_epsilon) {}
 
 } // cv
 
