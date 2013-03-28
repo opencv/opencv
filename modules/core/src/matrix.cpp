@@ -2393,7 +2393,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
             for( j = 0; j < len; j++ )
                 ptr[j] = ((const T*)(src.data + src.step*j))[i];
         }
-        std::sort( ptr, ptr + len, LessThan<T>() );
+        std::sort( ptr, ptr + len );
         if( sortDescending )
             for( j = 0; j < len/2; j++ )
                 std::swap(ptr[j], ptr[len-1-j]);
@@ -2402,6 +2402,15 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
                 ((T*)(dst.data + dst.step*j))[i] = ptr[j];
     }
 }
+
+template<typename _Tp> class LessThanIdx
+{
+public:
+    LessThanIdx( const _Tp* _arr ) : arr(_arr) {}
+    bool operator()(int a, int b) const { return arr[a] < arr[b]; }
+    const _Tp* arr;
+};
+
 
 
 template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )

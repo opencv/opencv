@@ -18,12 +18,14 @@ logRatio( double val )
     return log( val/(1. - val) );
 }
 
-#define CV_CMP_FLT(i,j) (i < j)
-static CV_IMPLEMENT_QSORT_EX( icvSortFlt, float, CV_CMP_FLT, const float* )
-
-#define CV_CMP_NUM_IDX(i,j) (aux[i] < aux[j])
-static CV_IMPLEMENT_QSORT_EX( icvSortIntAux, int, CV_CMP_NUM_IDX, const float* )
-static CV_IMPLEMENT_QSORT_EX( icvSortUShAux, unsigned short, CV_CMP_NUM_IDX, const float* )
+template<typename T, typename Idx>
+class LessThanIdx
+{
+public:
+    LessThanIdx( const T* _arr ) : arr(_arr) {}
+    bool operator()(Idx a, Idx b) const { return arr[a] < arr[b]; }
+    const T* arr;
+};
 
 #define CV_THRESHOLD_EPS (0.00001F)
 
@@ -722,7 +724,7 @@ void CvCascadeBoostTrainData::get_ord_var_data( CvDTreeNode* n, int vi, float* o
                 sampleValues[i] = (*featureEvaluator)( vi, sampleIndices[i]);
             }
         }
-        icvSortIntAux( sortedIndicesBuf, nodeSampleCount, &sampleValues[0] );
+        std::sort(sortedIndicesBuf, sortedIndicesBuf + nodeSampleCount, LessThanIdx<float, int>(&sampleValues[0]) );
         for( int i = 0; i < nodeSampleCount; i++ )
             ordValuesBuf[i] = (&sampleValues[0])[sortedIndicesBuf[i]];
         *sortedIndices = sortedIndicesBuf;
@@ -791,9 +793,9 @@ struct FeatureIdxOnlyPrecalc
                     *(idst + fi*sample_count + si) = si;
             }
             if ( is_buf_16u )
-                icvSortUShAux( udst + fi*sample_count, sample_count, valCachePtr );
+                std::sort(udst + fi*sample_count, udst + (fi + 1)*sample_count, LessThanIdx<float, unsigned short>(valCachePtr) );
             else
-                icvSortIntAux( idst + fi*sample_count, sample_count, valCachePtr );
+                std::sort(idst + fi*sample_count, idst + (fi + 1)*sample_count, LessThanIdx<float, int>(valCachePtr) );
         }
     }
     const CvFeatureEvaluator* featureEvaluator;
@@ -827,9 +829,9 @@ struct FeatureValAndIdxPrecalc
                     *(idst + fi*sample_count + si) = si;
             }
             if ( is_buf_16u )
-                icvSortUShAux( udst + fi*sample_count, sample_count, valCache->ptr<float>(fi) );
+                std::sort(idst + fi*sample_count, idst + (fi + 1)*sample_count, LessThanIdx<float, unsigned short>(valCache->ptr<float>(fi)) );
             else
-                icvSortIntAux( idst + fi*sample_count, sample_count, valCache->ptr<float>(fi) );
+                std::sort(idst + fi*sample_count, idst + (fi + 1)*sample_count, LessThanIdx<float, int>(valCache->ptr<float>(fi)) );
         }
     }
     const CvFeatureEvaluator* featureEvaluator;
@@ -1602,7 +1604,7 @@ bool CvCascadeBoost::isErrDesired()
         if( ((CvCascadeBoostTrainData*)data)->featureEvaluator->getCls( i ) == 1.0F )
             eval[numPos++] = predict( i, true );
 
-    icvSortFlt( &eval[0], numPos, 0 );
+    std::sort(&eval[0], &eval[0] + numPos);
 
     int thresholdIdx = (int)((1.0F - minHitRate) * numPos);
 

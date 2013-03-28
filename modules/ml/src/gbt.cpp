@@ -5,9 +5,6 @@
 #define pCvSeq CvSeq*
 #define pCvDTreeNode CvDTreeNode*
 
-#define CV_CMP_FLOAT(a,b) ((a) < (b))
-static CV_IMPLEMENT_QSORT_EX( icvSortFloat, float, CV_CMP_FLOAT, float)
-
 //===========================================================================
 //----------------------------- CvGBTreesParams -----------------------------
 //===========================================================================
@@ -285,7 +282,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
             } break;
             default: CV_Error(CV_StsUnmatchedFormats, "_sample_idx should be a 32sC1, 8sC1 or 8uC1 vector.");
         }
-        icvSortFloat(sample_idx->data.fl, sample_idx_len, 0);
+        std::sort(sample_idx->data.fl, sample_idx->data.fl + sample_idx_len);
     }
     else
     {
@@ -470,7 +467,7 @@ void CvGBTrees::find_gradient(const int k)
                 int idx = *(sample_data + subsample_data[i]*s_step);
                 residuals[i] = fabs(resp_data[idx] - current_data[idx]);
             }
-            icvSortFloat(residuals, n, 0.0f);
+            std::sort(residuals, residuals + n);
 
             delta = residuals[int(ceil(n*alpha))];
 
@@ -693,7 +690,7 @@ float CvGBTrees::find_optimal_value( const CvMat* _Idx )
             float* residuals = new float[n];
             for (int i=0; i<n; ++i, ++idx)
                 residuals[i] = (resp_data[*idx] - cur_data[*idx]);
-            icvSortFloat(residuals, n, 0.0f);
+            std::sort(residuals, residuals + n);
             if (n % 2)
                 gamma = residuals[n/2];
             else gamma = (residuals[n/2-1] + residuals[n/2]) / 2.0f;
@@ -705,7 +702,7 @@ float CvGBTrees::find_optimal_value( const CvMat* _Idx )
             float* residuals = new float[n];
             for (int i=0; i<n; ++i, ++idx)
                 residuals[i] = (resp_data[*idx] - cur_data[*idx]);
-            icvSortFloat(residuals, n, 0.0f);
+            std::sort(residuals, residuals + n);
 
             int n_half = n >> 1;
             float r_median = (n == n_half<<1) ?
