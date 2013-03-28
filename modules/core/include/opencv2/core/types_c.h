@@ -94,6 +94,7 @@
 
 #ifdef __cplusplus
 #  include "opencv2/core/types.hpp"
+#  include "opencv2/core/mat.hpp"
 #endif
 
 /* CvArr* is used to pass arbitrary
@@ -307,6 +308,11 @@ typedef struct _IplImage
     char *imageDataOrigin;  /* Pointer to very origin of image data
                                (not necessarily aligned) -
                                needed for correct deallocation */
+
+#ifdef __cplusplus
+    _IplImage() {}
+    _IplImage(const cv::Mat& m);
+#endif
 }
 IplImage;
 
@@ -417,6 +423,12 @@ typedef struct CvMat
     int cols;
 #endif
 
+
+#ifdef __cplusplus
+    CvMat() {}
+    CvMat(const cv::Mat& m);
+#endif
+
 }
 CvMat;
 
@@ -477,6 +489,16 @@ CV_INLINE CvMat cvMat( int rows, int cols, int type, void* data CV_DEFAULT(NULL)
 
     return m;
 }
+
+#ifdef __cplusplus
+inline CvMat::CvMat(const cv::Mat& m)
+{
+    CV_DbgAssert(m.dims <= 2);
+    *this = cvMat(m.rows, m.dims == 1 ? 1 : m.cols, m.type(), m.data);
+    step = (int)m.step[0];
+    type = (type & ~cv::Mat::CONTINUOUS_FLAG) | (m.flags & cv::Mat::CONTINUOUS_FLAG);
+}
+#endif
 
 
 #define CV_MAT_ELEM_PTR_FAST( mat, row, col, pix_size )  \
@@ -567,6 +589,11 @@ typedef struct CvMatND
         int step;
     }
     dim[CV_MAX_DIM];
+
+#ifdef __cplusplus
+    CvMatND() {}
+    CvMatND(const cv::Mat& m);
+#endif
 }
 CvMatND;
 
@@ -586,7 +613,7 @@ CvMatND;
 
 struct CvSet;
 
-typedef struct CvSparseMat
+typedef struct CV_EXPORTS CvSparseMat
 {
     int type;
     int dims;
@@ -599,8 +626,16 @@ typedef struct CvSparseMat
     int valoffset;
     int idxoffset;
     int size[CV_MAX_DIM];
+
+#ifdef __cplusplus
+    void copyToSparseMat(cv::SparseMat& m) const;
+#endif
 }
 CvSparseMat;
+
+#ifdef __cplusplus
+    CvSparseMat* cvCreateSparseMat(const cv::SparseMat& m);
+#endif
 
 #define CV_IS_SPARSE_MAT_HDR(mat) \
     ((mat) != NULL && \

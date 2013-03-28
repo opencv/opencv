@@ -495,10 +495,10 @@ bool VideoCapture::retrieve(Mat& image, int channel)
         return false;
     }
     if(_img->origin == IPL_ORIGIN_TL)
-        image = Mat(_img);
+        image = cv::cvarrToMat(_img);
     else
     {
-        Mat temp(_img);
+        Mat temp = cv::cvarrToMat(_img);
         flip(temp, image, 0);
     }
     return true;

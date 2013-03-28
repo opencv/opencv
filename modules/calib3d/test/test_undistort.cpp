@@ -855,8 +855,8 @@ void CV_InitUndistortRectifyMapTest::prepare_to_validation(int/* test_case_idx*/
     //Applying precalculated undistort rectify map
     if (!useCPlus)
     {
-        mapx = cv::Mat(_mapx);
-        mapy = cv::Mat(_mapy);
+        mapx = cv::cvarrToMat(_mapx);
+        mapy = cv::cvarrToMat(_mapy);
     }
     cv::Mat map1,map2;
     cv::convertMaps(mapx,mapy,map1,map2,CV_32FC1);

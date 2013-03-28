@@ -4,6 +4,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/utility.hpp>"
 
 using namespace cv;  // The new C++ interface API is inside this namespace. Import it.
 using namespace std;
@@ -33,7 +34,7 @@ int main( int argc, char** argv )
         cerr << "Can not load image " <<  imagename << endl;
         return -1;
     }
-    Mat I(IplI); // Convert to the new style container. Only header created. Image not copied.
+    Mat I = cv::cvarrToMat(IplI); // Convert to the new style container. Only header created. Image not copied.
 #else
     Mat I = imread(imagename);        // the newer cvLoadImage alternative, MATLAB-style function
     if( I.empty() )                   // same as if( !I.data )

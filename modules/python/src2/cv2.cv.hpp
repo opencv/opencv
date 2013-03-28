@@ -253,7 +253,7 @@ static PyObject *iplimage_tostring(PyObject *self, PyObject *args)
     return NULL;
   if (i == NULL)
     return NULL;
-  cv::Mat img(i);
+  cv::Mat img = cvarrToMat(i);
   size_t esz = img.elemSize();
   int nrows = img.rows, ncols = img.cols;
 

@@ -596,8 +596,8 @@ PERF_TEST_P(Video, Video_FGDStatModel,
             stopTimer();
         }
 
-        const cv::Mat background = model->background;
-        const cv::Mat foreground = model->foreground;
+        const cv::Mat background = cv::cvarrToMat(model->background);
+        const cv::Mat foreground = cv::cvarrToMat(model->foreground);
 
         CPU_SANITY_CHECK(background);
         CPU_SANITY_CHECK(foreground);

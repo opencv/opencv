@@ -371,13 +371,14 @@ Mat::Mat(const Mat& m, const Range* ranges) : size(&rows)
 }
 
 
-Mat::Mat(const CvMatND* m, bool copyData) : size(&rows)
+static Mat cvMatNDToMat(const CvMatND* m, bool copyData)
 {
-    initEmpty();
+    Mat thiz;
+
     if( !m )
-        return;
-    data = datastart = m->data.ptr;
-    flags |= CV_MAT_TYPE(m->type);
+        return thiz;
+    thiz.data = thiz.datastart = m->data.ptr;
+    thiz.flags |= CV_MAT_TYPE(m->type);
     int _sizes[CV_MAX_DIM];
     size_t _steps[CV_MAX_DIM];
 
@@ -388,16 +389,107 @@ Mat::Mat(const CvMatND* m, bool copyData) : size(&rows)
         _steps[i] = m->dim[i].step;
     }
 
-    setSize(*this, d, _sizes, _steps);
-    finalizeHdr(*this);
+    setSize(thiz, d, _sizes, _steps);
+    finalizeHdr(thiz);
 
     if( copyData )
     {
-        Mat temp(*this);
-        temp.copyTo(*this);
+        Mat temp(thiz);
+        thiz.release();
+        temp.copyTo(thiz);
     }
+
+    return thiz;
 }
 
+static Mat cvMatToMat(const CvMat* m, bool copyData)
+{
+    Mat thiz;
+
+    if( !m )
+        return thiz;
+
+    if( !copyData )
+    {
+        thiz.flags = Mat::MAGIC_VAL + (m->type & (CV_MAT_TYPE_MASK|CV_MAT_CONT_FLAG));
+        thiz.dims = 2;
+        thiz.rows = m->rows;
+        thiz.cols = m->cols;
+        thiz.data = thiz.datastart = m->data.ptr;
+        size_t esz = CV_ELEM_SIZE(m->type), minstep = thiz.cols*esz, _step = m->step;
+        if( _step == 0 )
+            _step = minstep;
+        thiz.datalimit = thiz.datastart + _step*thiz.rows;
+        thiz.dataend = thiz.datalimit - _step + minstep;
+        thiz.step[0] = _step; thiz.step[1] = esz;
+    }
+    else
+    {
+        thiz.data = thiz.datastart = thiz.dataend = 0;
+        Mat(m->rows, m->cols, m->type, m->data.ptr, m->step).copyTo(thiz);
+    }
+
+    return thiz;
+}
+
+
+static Mat iplImageToMat(const IplImage* img, bool copyData)
+{
+    Mat m;
+
+    if( !img )
+        return m;
+
+    m.dims = 2;
+    CV_DbgAssert(CV_IS_IMAGE(img) && img->imageData != 0);
+
+    int imgdepth = IPL2CV_DEPTH(img->depth);
+    size_t esz;
+    m.step[0] = img->widthStep;
+
+    if(!img->roi)
+    {
+        CV_Assert(img->dataOrder == IPL_DATA_ORDER_PIXEL);
+        m.flags = Mat::MAGIC_VAL + CV_MAKETYPE(imgdepth, img->nChannels);
+        m.rows = img->height;
+        m.cols = img->width;
+        m.datastart = m.data = (uchar*)img->imageData;
+        esz = CV_ELEM_SIZE(m.flags);
+    }
+    else
+    {
+        CV_Assert(img->dataOrder == IPL_DATA_ORDER_PIXEL || img->roi->coi != 0);
+        bool selectedPlane = img->roi->coi && img->dataOrder == IPL_DATA_ORDER_PLANE;
+        m.flags = Mat::MAGIC_VAL + CV_MAKETYPE(imgdepth, selectedPlane ? 1 : img->nChannels);
+        m.rows = img->roi->height;
+        m.cols = img->roi->width;
+        esz = CV_ELEM_SIZE(m.flags);
+        m.data = m.datastart = (uchar*)img->imageData +
+            (selectedPlane ? (img->roi->coi - 1)*m.step*img->height : 0) +
+            img->roi->yOffset*m.step[0] + img->roi->xOffset*esz;
+    }
+    m.datalimit = m.datastart + m.step.p[0]*m.rows;
+    m.dataend = m.datastart + m.step.p[0]*(m.rows-1) + esz*m.cols;
+    m.flags |= (m.cols*esz == m.step.p[0] || m.rows == 1 ? Mat::CONTINUOUS_FLAG : 0);
+    m.step[1] = esz;
+
+    if( copyData )
+    {
+        Mat m2 = m;
+        m.release();
+        if( !img->roi || !img->roi->coi ||
+            img->dataOrder == IPL_DATA_ORDER_PLANE)
+            m2.copyTo(m);
+        else
+        {
+            int ch[] = {img->roi->coi - 1, 0};
+            m.create(m2.rows, m2.cols, m2.type());
+            mixChannels(&m2, 1, &m, 1, ch, 1);
+        }
+    }
+
+    return m;
+}
 
 Mat Mat::diag(int d) const
 {
@@ -432,101 +524,6 @@ Mat Mat::diag(int d) const
 
     return m;
 }
-
-
-Mat::Mat(const CvMat* m, bool copyData) : size(&rows)
-{
-    initEmpty();
-
-    if( !m )
-        return;
-
-    if( !copyData )
-    {
-        flags = MAGIC_VAL + (m->type & (CV_MAT_TYPE_MASK|CV_MAT_CONT_FLAG));
-        dims = 2;
-        rows = m->rows;
-        cols = m->cols;
-        data = datastart = m->data.ptr;
-        size_t esz = CV_ELEM_SIZE(m->type), minstep = cols*esz, _step = m->step;
-        if( _step == 0 )
-            _step = minstep;
-        datalimit = datastart + _step*rows;
-        dataend = datalimit - _step + minstep;
-        step[0] = _step; step[1] = esz;
-    }
-    else
-    {
-        data = datastart = dataend = 0;
-        Mat(m->rows, m->cols, m->type, m->data.ptr, m->step).copyTo(*this);
-    }
-}
-
-
-Mat::Mat(const IplImage* img, bool copyData) : size(&rows)
-{
-    initEmpty();
-
-    if( !img )
-        return;
-
-    dims = 2;
-    CV_DbgAssert(CV_IS_IMAGE(img) && img->imageData != 0);
-
-    int imgdepth = IPL2CV_DEPTH(img->depth);
-    size_t esz;
-    step[0] = img->widthStep;
-
-    if(!img->roi)
-    {
-        CV_Assert(img->dataOrder == IPL_DATA_ORDER_PIXEL);
-        flags = MAGIC_VAL + CV_MAKETYPE(imgdepth, img->nChannels);
-        rows = img->height; cols = img->width;
-        datastart = data = (uchar*)img->imageData;
-        esz = CV_ELEM_SIZE(flags);
-    }
-    else
-    {
-        CV_Assert(img->dataOrder == IPL_DATA_ORDER_PIXEL || img->roi->coi != 0);
-        bool selectedPlane = img->roi->coi && img->dataOrder == IPL_DATA_ORDER_PLANE;
-        flags = MAGIC_VAL + CV_MAKETYPE(imgdepth, selectedPlane ? 1 : img->nChannels);
-        rows = img->roi->height; cols = img->roi->width;
-        esz = CV_ELEM_SIZE(flags);
-        data = datastart = (uchar*)img->imageData +
-            (selectedPlane ? (img->roi->coi - 1)*step*img->height : 0) +
-            img->roi->yOffset*step[0] + img->roi->xOffset*esz;
-    }
-    datalimit = datastart + step.p[0]*rows;
-    dataend = datastart + step.p[0]*(rows-1) + esz*cols;
-    flags |= (cols*esz == step.p[0] || rows == 1 ? CONTINUOUS_FLAG : 0);
-    step[1] = esz;
-
-    if( copyData )
-    {
-        Mat m = *this;
-        release();
-        if( !img->roi || !img->roi->coi ||
-            img->dataOrder == IPL_DATA_ORDER_PLANE)
-            m.copyTo(*this);
-        else
-        {
-            int ch[] = {img->roi->coi - 1, 0};
-            create(m.rows, m.cols, m.type());
-            mixChannels(&m, 1, this, 1, ch, 1);
-        }
-    }
-}
-
-
-Mat::operator IplImage() const
-{
-    CV_Assert( dims <= 2 );
-    IplImage img;
-    cvInitImageHeader(&img, size(), cvIplDepth(flags), channels());
-    cvSetData(&img, data, (int)step[0]);
-    return img;
-}
-
 
 void Mat::pop_back(size_t nelems)
 {
@@ -673,16 +670,16 @@ Mat cvarrToMat(const CvArr* arr, bool copyData,
 {
     if( !arr )
         return Mat();
-    if( CV_IS_MAT(arr) )
-        return Mat((const CvMat*)arr, copyData );
+    if( CV_IS_MAT_HDR_Z(arr) )
+        return cvMatToMat((const CvMat*)arr, copyData);
     if( CV_IS_MATND(arr) )
-        return Mat((const CvMatND*)arr, copyData );
+        return cvMatNDToMat((const CvMatND*)arr, copyData );
     if( CV_IS_IMAGE(arr) )
     {
         const IplImage* iplimg = (const IplImage*)arr;
         if( coiMode == 0 && iplimg->roi && iplimg->roi->coi > 0 )
             CV_Error(CV_BadCOI, "COI is not supported by the function");
-        return Mat(iplimg, copyData);
+        return iplImageToMat(iplimg, copyData);
     }
     if( CV_IS_SEQ(arr) )
     {
@@ -2938,7 +2935,7 @@ CV_IMPL void cvTranspose( const CvArr* srcarr, CvArr* dstarr )
 
 CV_IMPL void cvCompleteSymm( CvMat* matrix, int LtoR )
 {
-    cv::Mat m(matrix);
+    cv::Mat m = cv::cvarrToMat(matrix);
     cv::completeSymm( m, LtoR != 0 );
 }
 
@@ -3107,17 +3104,6 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
     CV_Error(CV_StsNotImplemented, "");
     // TBD
     return Mat();
-}
-
-Mat::operator CvMatND() const
-{
-    CvMatND mat;
-    cvInitMatNDHeader( &mat, dims, size, type(), data );
-    int i, d = dims;
-    for( i = 0; i < d; i++ )
-        mat.dim[i].step = (int)step[i];
-    mat.type |= flags & CONTINUOUS_FLAG;
-    return mat;
 }
 
 NAryMatIterator::NAryMatIterator()
@@ -3630,24 +3616,6 @@ SparseMat::SparseMat(const Mat& m)
     }
 }
 
-SparseMat::SparseMat(const CvSparseMat* m)
-: flags(MAGIC_VAL), hdr(0)
-{
-    CV_Assert(m);
-    create( m->dims, &m->size[0], m->type );
-
-    CvSparseMatIterator it;
-    CvSparseNode* n = cvInitSparseMatIterator(m, &it);
-    size_t esz = elemSize();
-
-    for( ; n != 0; n = cvGetNextSparseNode(&it) )
-    {
-        const int* idx = CV_NODE_IDX(m, n);
-        uchar* to = newNode(idx, hash(idx));
-        copyElem((const uchar*)CV_NODE_VAL(m, n), to, esz);
-    }
-}
-
 void SparseMat::create(int d, const int* _sizes, int _type)
 {
     int i;
@@ -3793,24 +3761,6 @@ void SparseMat::clear()
 {
     if( hdr )
         hdr->clear();
-}
-
-SparseMat::operator CvSparseMat*() const
-{
-    if( !hdr )
-        return 0;
-    CvSparseMat* m = cvCreateSparseMat(hdr->dims, hdr->size, type());
-
-    SparseMatConstIterator from = begin();
-    size_t i, N = nzcount(), esz = elemSize();
-
-    for( i = 0; i < N; i++, ++from )
-    {
-        const Node* n = from.node();
-        uchar* to = cvPtrND(m, n->idx, 0, -2, 0);
-        copyElem(from.ptr, to, esz);
-    }
-    return m;
 }
 
 uchar* SparseMat::ptr(int i0, bool createMissing, size_t* hashval)
@@ -4265,5 +4215,59 @@ Rect RotatedRect::boundingRect() const
 }
 
 }
+
+// glue
+
+CvMatND::CvMatND(const cv::Mat& m)
+{
+    cvInitMatNDHeader(this, m.dims, m.size, m.type(), m.data );
+    int i, d = m.dims;
+    for( i = 0; i < d; i++ )
+        dim[i].step = (int)m.step[i];
+    type |= m.flags & cv::Mat::CONTINUOUS_FLAG;
+}
+
+_IplImage::_IplImage(const cv::Mat& m)
+{
+    CV_Assert( m.dims <= 2 );
+    cvInitImageHeader(this, m.size(), cvIplDepth(m.flags), m.channels());
+    cvSetData(this, m.data, (int)m.step[0]);
+}
+
+CvSparseMat* cvCreateSparseMat(const cv::SparseMat& sm)
+{
+    if( !sm.hdr )
+        return 0;
+
+    CvSparseMat* m = cvCreateSparseMat(sm.hdr->dims, sm.hdr->size, sm.type());
+
+    cv::SparseMatConstIterator from = sm.begin();
+    size_t i, N = sm.nzcount(), esz = sm.elemSize();
+
+    for( i = 0; i < N; i++, ++from )
+    {
+        const cv::SparseMat::Node* n = from.node();
+        uchar* to = cvPtrND(m, n->idx, 0, -2, 0);
+        cv::copyElem(from.ptr, to, esz);
+    }
+    return m;
+}
+
+void CvSparseMat::copyToSparseMat(cv::SparseMat& m) const
+{
+    m.create( dims, &size[0], type );
+
+    CvSparseMatIterator it;
+    CvSparseNode* n = cvInitSparseMatIterator(this, &it);
+    size_t esz = m.elemSize();
+
+    for( ; n != 0; n = cvGetNextSparseNode(&it) )
+    {
+        const int* idx = CV_NODE_IDX(this, n);
+        uchar* to = m.newNode(idx, m.hash(idx));
+        cv::copyElem((const uchar*)CV_NODE_VAL(this, n), to, esz);
+    }
+}
+
 
 /* End of file. */

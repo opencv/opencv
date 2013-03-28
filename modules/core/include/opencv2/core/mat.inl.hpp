@@ -383,15 +383,6 @@ inline Mat Mat::operator()(const Range* ranges) const
     return Mat(*this, ranges);
 }
 
-inline Mat::operator CvMat() const
-{
-    CV_DbgAssert(dims <= 2);
-    CvMat m = cvMat(rows, dims == 1 ? 1 : cols, type(), data);
-    m.step = (int)step[0];
-    m.type = (m.type & ~CONTINUOUS_FLAG) | (flags & CONTINUOUS_FLAG);
-    return m;
-}
-
 inline bool Mat::isContinuous() const { return (flags & CONTINUOUS_FLAG) != 0; }
 inline bool Mat::isSubmatrix() const { return (flags & SUBMATRIX_FLAG) != 0; }
 inline size_t Mat::elemSize() const { return dims > 0 ? step.p[dims-1] : 0; }
@@ -2411,11 +2402,11 @@ template<typename _Tp> inline SparseMat_<_Tp>::SparseMat_(const Mat& m)
     *this = sm;
 }
 
-template<typename _Tp> inline SparseMat_<_Tp>::SparseMat_(const CvSparseMat* m)
-{
-    SparseMat sm(m);
-    *this = sm;
-}
+// template<typename _Tp> inline SparseMat_<_Tp>::SparseMat_(const CvSparseMat* m)
+// {
+//     SparseMat sm(m);
+//     *this = sm;
+// }
 
 template<typename _Tp> inline SparseMat_<_Tp>&
 SparseMat_<_Tp>::operator = (const SparseMat_<_Tp>& m)
@@ -2457,11 +2448,11 @@ SparseMat_<_Tp>::create(int _dims, const int* _sizes)
     SparseMat::create(_dims, _sizes, DataType<_Tp>::type);
 }
 
-template<typename _Tp> inline
-SparseMat_<_Tp>::operator CvSparseMat*() const
-{
-    return SparseMat::operator CvSparseMat*();
-}
+// template<typename _Tp> inline
+// SparseMat_<_Tp>::operator CvSparseMat*() const
+// {
+//     return SparseMat::operator CvSparseMat*();
+// }
 
 template<typename _Tp> inline int SparseMat_<_Tp>::type() const
 { return DataType<_Tp>::type; }

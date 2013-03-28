@@ -441,9 +441,18 @@ class CV_EXPORTS Mat;
 class CV_EXPORTS SparseMat;
 typedef Mat MatND;
 
+class CV_EXPORTS MatExpr;
+
 template<typename _Tp> class CV_EXPORTS Mat_;
+template<typename _Tp> class CV_EXPORTS SparseMat_;
+
+class CV_EXPORTS MatConstIterator;
+class CV_EXPORTS SparseMatIterator;
+class CV_EXPORTS SparseMatConstIterator;
 template<typename _Tp> class CV_EXPORTS MatIterator_;
 template<typename _Tp> class CV_EXPORTS MatConstIterator_;
+template<typename _Tp> class CV_EXPORTS SparseMatIterator_;
+template<typename _Tp> class CV_EXPORTS SparseMatConstIterator_;
 
 namespace ogl
 {

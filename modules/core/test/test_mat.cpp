@@ -734,7 +734,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
             }
         }
 
-        Ptr<CvSparseMat> M2 = (CvSparseMat*)M;
+        Ptr<CvSparseMat> M2 = cvCreateSparseMat(M);
         MatND Md;
         M.copyTo(Md);
         SparseMat M3; SparseMat(Md).convertTo(M3, Md.type(), 2);

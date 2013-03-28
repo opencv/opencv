@@ -1611,17 +1611,17 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
             if( use_ipp )
             {
                 cv::Mat fsum(sum1.rows, sum1.cols, CV_32F, sum1.data.ptr, sum1.step);
-                cv::Mat(&sum1).convertTo(fsum, CV_32F, 1, -(1<<24));
+                cv::cvarrToMat(&sum1).convertTo(fsum, CV_32F, 1, -(1<<24));
             }
             else
 #endif
                 cvSetImagesForHaarClassifierCascade( cascade, &sum1, &sqsum1, _tilted, 1. );
 
-            cv::Mat _norm1(&norm1), _mask1(&mask1);
+            cv::Mat _norm1 = cv::cvarrToMat(&norm1), _mask1 = cv::cvarrToMat(&mask1);
             cv::parallel_for_(cv::Range(0, stripCount),
                          cv::HaarDetectObjects_ScaleImage_Invoker(cascade,
                                 (((sz1.height + stripCount - 1)/stripCount + ystep-1)/ystep)*ystep,
-                                factor, cv::Mat(&sum1), cv::Mat(&sqsum1), &_norm1, &_mask1,
+                                factor, cv::cvarrToMat(&sum1), cv::cvarrToMat(&sqsum1), &_norm1, &_mask1,
                                 cv::Rect(equRect), allCandidates, rejectLevels, levelWeights, outputRejectLevels, &mtx));
         }
     }

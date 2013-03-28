@@ -528,7 +528,7 @@ void findDataMatrix(InputArray _image,
         {
             _dmtx.create(rc_i.original->rows, rc_i.original->cols, rc_i.original->type, i);
             Mat dst = _dmtx.getMat(i);
-            Mat(rc_i.original).copyTo(dst);
+            cv::cvarrToMat(rc_i.original).copyTo(dst);
         }
         cvReleaseMat(&rc_i.original);
     }

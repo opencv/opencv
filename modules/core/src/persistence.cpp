@@ -5470,7 +5470,7 @@ void write( FileStorage& fs, const String& name, const Mat& value )
 // TODO: the 4 functions below need to be implemented more efficiently
 void write( FileStorage& fs, const String& name, const SparseMat& value )
 {
-    Ptr<CvSparseMat> mat = (CvSparseMat*)value;
+    Ptr<CvSparseMat> mat = cvCreateSparseMat(value);
     cvWrite( *fs, name.size() ? name.c_str() : 0, mat );
 }
 
@@ -5495,12 +5495,12 @@ void read( const FileNode& node, Mat& mat, const Mat& default_mat )
     void* obj = cvRead((CvFileStorage*)node.fs, (CvFileNode*)*node);
     if(CV_IS_MAT_HDR_Z(obj))
     {
-        Mat((const CvMat*)obj).copyTo(mat);
+        cvarrToMat(obj).copyTo(mat);
         cvReleaseMat((CvMat**)&obj);
     }
     else if(CV_IS_MATND_HDR(obj))
     {
-        Mat((const CvMatND*)obj).copyTo(mat);
+        cvarrToMat(obj).copyTo(mat);
         cvReleaseMatND((CvMatND**)&obj);
     }
     else
@@ -5519,7 +5519,7 @@ void read( const FileNode& node, SparseMat& mat, const SparseMat& default_mat )
     }
     Ptr<CvSparseMat> m = (CvSparseMat*)cvRead((CvFileStorage*)node.fs, (CvFileNode*)*node);
     CV_Assert(CV_IS_SPARSE_MAT(m.obj));
-    SparseMat(m).copyTo(mat);
+    m->copyToSparseMat(mat);
 }
 
 void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& keypoints)
