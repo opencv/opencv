@@ -37252,25 +37252,6 @@
       <y>0</y>
       <cn>1</cn>
       <val>11.</val></rng2></corners></Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris_goodFeaturesToTrack--goodFeaturesToTrack----cv-shared-pic5-png---500--0-01--5--true->
-<Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---1--0-01--300->
-  <lines>
-    <kind>65536</kind>
-    <type>13</type>
-    <min>-510.</min>
-    <max>595.</max>
-    <last>
-      <x>2512</x>
-      <y>0</y>
-      <val>5.7999998331069946e-01</val></last>
-    <rng1>
-      <x>2365</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>2.6799998283386230e+00</val></rng1>
-    <rng2>
-      <x>1614</x>
-      <y>0</y>
-      <val>-218.</val></rng2></lines></Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---1--0-01--300->
 <Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---1--0-01--500->
   <lines>
     <kind>65536</kind>
@@ -37280,26 +37261,6 @@
       <cols>0</cols>
       <dt>u</dt>
       <data></data></val></lines></Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---1--0-01--500->
-<Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---1--0-1--300->
-  <lines>
-    <kind>65536</kind>
-    <type>13</type>
-    <min>-480.</min>
-    <max>595.</max>
-    <last>
-      <x>301</x>
-      <y>0</y>
-      <val>2.6000001430511475e+00</val></last>
-    <rng1>
-      <x>128</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>1.0000000149011612e-01</val></rng1>
-    <rng2>
-      <x>32</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>0.</val></rng2></lines></Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---1--0-1--300->
 <Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---1--0-1--500->
   <lines>
     <kind>65536</kind>
@@ -37309,44 +37270,6 @@
       <cols>0</cols>
       <dt>u</dt>
       <data></data></val></lines></Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---1--0-1--500->
-<Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---10--0-01--300->
-  <lines>
-    <kind>65536</kind>
-    <type>13</type>
-    <min>-585.</min>
-    <max>795.</max>
-    <last>
-      <x>2013</x>
-      <y>0</y>
-      <val>2.7599999904632568e+00</val></last>
-    <rng1>
-      <x>678</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>3.9999999105930328e-02</val></rng1>
-    <rng2>
-      <x>1801</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>1.7799999713897705e+00</val></rng2></lines></Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---10--0-01--300->
-<Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---10--0-01--500->
-  <lines>
-    <kind>65536</kind>
-    <type>13</type>
-    <min>-585.</min>
-    <max>795.</max>
-    <last>
-      <x>2013</x>
-      <y>0</y>
-      <val>2.7599999904632568e+00</val></last>
-    <rng1>
-      <x>347</x>
-      <y>0</y>
-      <val>335.</val></rng1>
-    <rng2>
-      <x>548</x>
-      <y>0</y>
-      <val>5.</val></rng2></lines></Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---10--0-01--500->
 <Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---10--0-1--300->
   <lines>
     <kind>65536</kind>
@@ -50849,7 +50772,6 @@
       <cn>1</cn>
       <val>114.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_LINEAR--BORDER_REPLICATE--8UC4->
  <!-- resumed -->
-
 <ImgSize_TmplSize_Method_matchTemplateSmall--matchTemplateSmall---128x128--12x12--CV_TM_SQDIFF->
   <result>
     <kind>65536</kind>
@@ -53659,7 +53581,6 @@
       <y>2</y>
       <val>-5.6855322327464819e-04</val></rng2></result></ImgSize_TmplSize_Method_matchTemplateBig--matchTemplateBig---1280x1024--1261x1013--CV_TM_CCOEFF_NORMED->
  <!-- resumed -->
-
 <Size_CvtMode3_cvtColorRGB2YUV420p--cvtColorRGB2YUV420p---640x480--CV_RGB2YUV_IYUV->
   <dst>
     <kind>65536</kind>
@@ -54237,7 +54158,6 @@
       <y>65</y>
       <val>105.</val></rng2></dst></Size_CvtMode3_cvtColorRGB2YUV420p--cvtColorRGB2YUV420p---130x60--CV_BGRA2YUV_YV12->
  <!-- resumed -->
-
 <Sz_ClipLimit_CLAHE--CLAHE---640x480--0->
   <dst>
     <kind>65536</kind>
@@ -54346,4 +54266,81 @@
       <x>1816</x>
       <y>582</y>
       <val>89.</val></rng2></dst></Sz_ClipLimit_CLAHE--CLAHE---1920x1080--40->
+ <!-- resumed -->
+<Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---1--0-01--300->
+  <lines>
+    <kind>65536</kind>
+    <type>13</type>
+    <min>-510.</min>
+    <max>595.</max>
+    <last>
+      <x>2512</x>
+      <y>0</y>
+      <val>3.0799999237060547e+00</val></last>
+    <rng1>
+      <x>2424</x>
+      <y>0</y>
+      <val>497.</val></rng1>
+    <rng2>
+      <x>1711</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>6.8000000715255737e-01</val></rng2></lines></Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---1--0-01--300->
+<Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---1--0-1--300->
+  <lines>
+    <kind>65536</kind>
+    <type>13</type>
+    <min>-480.</min>
+    <max>595.</max>
+    <last>
+      <x>301</x>
+      <y>0</y>
+      <val>2.7999999523162842e+00</val></last>
+    <rng1>
+      <x>86</x>
+      <y>0</y>
+      <val>243.</val></rng1>
+    <rng2>
+      <x>56</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>0.</val></rng2></lines></Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---1--0-1--300->
+<Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---10--0-01--300->
+  <lines>
+    <kind>65536</kind>
+    <type>13</type>
+    <min>-585.</min>
+    <max>795.</max>
+    <last>
+      <x>2013</x>
+      <y>0</y>
+      <val>2.7599999904632568e+00</val></last>
+    <rng1>
+      <x>1244</x>
+      <y>0</y>
+      <val>495.</val></rng1>
+    <rng2>
+      <x>1157</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>2.</val></rng2></lines></Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---10--0-01--300->
+<Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---10--0-01--500->
+  <lines>
+    <kind>65536</kind>
+    <type>13</type>
+    <min>-585.</min>
+    <max>795.</max>
+    <last>
+      <x>2013</x>
+      <y>0</y>
+      <val>2.7599999904632568e+00</val></last>
+    <rng1>
+      <x>1047</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>1.0900000333786011e+00</val></rng1>
+    <rng2>
+      <x>293</x>
+      <y>0</y>
+      <val>-375.</val></rng2></lines></Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---10--0-01--500->
 </opencv_storage>
