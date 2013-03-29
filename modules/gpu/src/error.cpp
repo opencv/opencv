@@ -54,7 +54,7 @@ namespace
     struct ErrorEntry
     {
         int code;
-        String str;
+        const char* str;
     };
 
     struct ErrorEntryComparer
@@ -68,12 +68,10 @@ namespace
     {
         size_t idx = std::find_if(errors, errors + n, ErrorEntryComparer(code)) - errors;
 
-        const String& msg = (idx != n) ? errors[idx].str : String("Unknown error code");
+        const char* msg = (idx != n) ? errors[idx].str : "Unknown error code";
+        String str = cv::format("%s [Code = %d]", msg, code);
 
-        std::ostringstream ostr;
-        ostr << msg << " [Code = " << code << "]";
-
-        return ostr.str();
+        return str;
     }
 
     //////////////////////////////////////////////////////////////////////////

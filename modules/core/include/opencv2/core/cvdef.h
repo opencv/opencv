@@ -111,6 +111,9 @@
 #define CV_CPU_NEON   11
 #define CV_HARDWARE_MAX_FEATURE 255
 
+// disable SSE/AVX/NEON headers for NVCC compiler
+#ifndef __CUDACC__
+
 #if defined __SSE2__ || defined _M_X64  || (defined _M_IX86_FP && _M_IX86_FP >= 2)
 #  include <emmintrin.h>
 #  define CV_SSE 1
@@ -148,6 +151,8 @@
 #  include <arm_neon.h>
 #  define CV_NEON 1
 #endif
+
+#endif // __CUDACC__
 
 #ifndef CV_SSE
 #  define CV_SSE 0
@@ -336,7 +341,7 @@ typedef signed char schar;
 
 CV_INLINE int cvRound( double value )
 {
-#if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__ && defined __SSE2__ && !defined __APPLE__)
+#if ((defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__ && defined __SSE2__ && !defined __APPLE__)) && !defined(__CUDACC__)
     __m128d t = _mm_set_sd( value );
     return _mm_cvtsd_si32(t);
 #elif defined _MSC_VER && defined _M_IX86
@@ -361,7 +366,7 @@ CV_INLINE int cvRound( double value )
 
 CV_INLINE int cvFloor( double value )
 {
-#if defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__ && !defined __APPLE__)
+#if (defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__ && !defined __APPLE__)) && !defined(__CUDACC__)
     __m128d t = _mm_set_sd( value );
     int i = _mm_cvtsd_si32(t);
     return i - _mm_movemask_pd(_mm_cmplt_sd(t, _mm_cvtsi32_sd(t,i)));
@@ -377,7 +382,7 @@ CV_INLINE int cvFloor( double value )
 
 CV_INLINE int cvCeil( double value )
 {
-#if defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__&& !defined __APPLE__)
+#if (defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__&& !defined __APPLE__)) && !defined(__CUDACC__)
     __m128d t = _mm_set_sd( value );
     int i = _mm_cvtsd_si32(t);
     return i + _mm_movemask_pd(_mm_cmplt_sd(_mm_cvtsi32_sd(t,i), t));

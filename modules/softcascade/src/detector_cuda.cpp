@@ -274,7 +274,7 @@ struct cv::softcascade::SCascade::Fields
 
     bool check(float mins,float  maxs, int scales)
     {
-        bool updated = ((minScale == mins) || (maxScale == maxs) || (totals = scales));
+        bool updated = ((minScale == mins) || (maxScale == maxs) || (totals == scales));
 
         minScale = mins;
         maxScale = maxScale;

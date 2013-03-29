@@ -46,7 +46,7 @@
 
 using namespace cvtest;
 
-#if CUDA_VERSION >= 5000
+#if CUDART_VERSION >= 5000
 
 struct Async : testing::TestWithParam<cv::gpu::DeviceInfo>
 {

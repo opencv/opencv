@@ -42,7 +42,7 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
+#include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/transform.hpp"
 #include "opencv2/gpu/device/color.hpp"
 #include "cvt_color_internal.h"
