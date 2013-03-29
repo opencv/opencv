@@ -45,22 +45,28 @@
 
 #pragma OPENCL EXTENSION cl_amd_printf : enable
 
-#if defined (__ATI__)
-#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#if defined (DOUBLE_SUPPORT)
 
-#elif defined (__NVIDIA__)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
 #endif
 
-#if !defined(USE_SQR_INTEGRAL) && (defined (__ATI__) || defined (__NVIDIA__))
 #define TYPE_IMAGE_SQSUM double
 #else
-#define TYPE_IMAGE_SQSUM ulong
+#define TYPE_IMAGE_SQSUM float
+#endif
+
+#ifndef CN4
+#define CN4 1
+#else
+#define CN4 4
 #endif
 
 //////////////////////////////////////////////////
 // utilities
-#define SQSUMS_PTR(ox, oy) mad24(gidy + oy, img_sqsums_step, gidx + img_sqsums_offset + ox)
+#define SQSUMS_PTR(ox, oy) mad24(gidy + oy, img_sqsums_step, (gidx + img_sqsums_offset + ox) * CN4)
 #define SUMS_PTR(ox, oy) mad24(gidy + oy, img_sums_step, gidx + img_sums_offset + ox)
 // normAcc* are accurate normalization routines which make GPU matchTemplate
 // consistent with CPU one
@@ -95,7 +101,7 @@ float normAcc_SQDIFF(float num, float denum)
 __kernel
 void normalizeKernel_C1_D0
 (
-    __global const TYPE_IMAGE_SQSUM * img_sqsums,
+    __global const float * img_sqsums,
     __global float * res,
     ulong tpl_sqsum,
     int res_rows,
@@ -119,8 +125,8 @@ void normalizeKernel_C1_D0
     if(gidx < res_cols && gidy < res_rows)
     {
         float image_sqsum_ = (float)(
-            (img_sqsums[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums[SQSUMS_PTR(tpl_cols, 0)]) -
-            (img_sqsums[SQSUMS_PTR(0, tpl_rows)] - img_sqsums[SQSUMS_PTR(0, 0)]));
+                                 (img_sqsums[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums[SQSUMS_PTR(tpl_cols, 0)]) -
+                                 (img_sqsums[SQSUMS_PTR(0, tpl_rows)] - img_sqsums[SQSUMS_PTR(0, 0)]));
         res[res_idx] = normAcc(res[res_idx], sqrt(image_sqsum_ * tpl_sqsum));
     }
 }
@@ -152,8 +158,8 @@ void matchTemplate_Prepared_SQDIFF_C1_D0
     if(gidx < res_cols && gidy < res_rows)
     {
         float image_sqsum_ = (float)(
-            (img_sqsums[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums[SQSUMS_PTR(tpl_cols, 0)]) -
-            (img_sqsums[SQSUMS_PTR(0, tpl_rows)] - img_sqsums[SQSUMS_PTR(0, 0)]));
+                                 (img_sqsums[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums[SQSUMS_PTR(tpl_cols, 0)]) -
+                                 (img_sqsums[SQSUMS_PTR(0, tpl_rows)] - img_sqsums[SQSUMS_PTR(0, 0)]));
         res[res_idx] = image_sqsum_ - 2.f * res[res_idx] + tpl_sqsum;
     }
 }
@@ -161,7 +167,7 @@ void matchTemplate_Prepared_SQDIFF_C1_D0
 __kernel
 void matchTemplate_Prepared_SQDIFF_NORMED_C1_D0
 (
-    __global const TYPE_IMAGE_SQSUM * img_sqsums,
+    __global const float * img_sqsums,
     __global float * res,
     ulong tpl_sqsum,
     int res_rows,
@@ -185,10 +191,10 @@ void matchTemplate_Prepared_SQDIFF_NORMED_C1_D0
     if(gidx < res_cols && gidy < res_rows)
     {
         float image_sqsum_ = (float)(
-            (img_sqsums[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums[SQSUMS_PTR(tpl_cols, 0)]) -
-            (img_sqsums[SQSUMS_PTR(0, tpl_rows)] - img_sqsums[SQSUMS_PTR(0, 0)]));
+                                 (img_sqsums[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums[SQSUMS_PTR(tpl_cols, 0)]) -
+                                 (img_sqsums[SQSUMS_PTR(0, tpl_rows)] - img_sqsums[SQSUMS_PTR(0, 0)]));
         res[res_idx] = normAcc_SQDIFF(image_sqsum_ - 2.f * res[res_idx] + tpl_sqsum,
-                                        sqrt(image_sqsum_ * tpl_sqsum));
+                                      sqrt(image_sqsum_ * tpl_sqsum));
     }
 }
 
@@ -628,8 +634,8 @@ void matchTemplate_Prepared_CCOFF_C1_D0
     if(gidx < res_cols && gidy < res_rows)
     {
         float sum = (float)(
-            (img_sums[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums[SUMS_PTR(0, tpl_rows)] - img_sums[SUMS_PTR(0, 0)]));
+                        (img_sums[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums[SUMS_PTR(tpl_cols, 0)])
+                        - (img_sums[SUMS_PTR(0, tpl_rows)] - img_sums[SUMS_PTR(0, 0)]));
         res[res_idx] -= sum * tpl_sum;
     }
 }
@@ -671,17 +677,17 @@ void matchTemplate_Prepared_CCOFF_C4_D0
     {
         float ccorr = res[res_idx];
         ccorr -= tpl_sum_c0*(float)(
-            (img_sums_c0[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c0[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c0[SUMS_PTR(0, tpl_rows)] - img_sums_c0[SUMS_PTR(0, 0)]));
+                     (img_sums_c0[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c0[SUMS_PTR(tpl_cols, 0)])
+                     - (img_sums_c0[SUMS_PTR(0, tpl_rows)] - img_sums_c0[SUMS_PTR(0, 0)]));
         ccorr -= tpl_sum_c1*(float)(
-            (img_sums_c1[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c1[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c1[SUMS_PTR(0, tpl_rows)] - img_sums_c1[SUMS_PTR(0, 0)]));
+                     (img_sums_c1[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c1[SUMS_PTR(tpl_cols, 0)])
+                     - (img_sums_c1[SUMS_PTR(0, tpl_rows)] - img_sums_c1[SUMS_PTR(0, 0)]));
         ccorr -= tpl_sum_c2*(float)(
-            (img_sums_c2[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c2[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c2[SUMS_PTR(0, tpl_rows)] - img_sums_c2[SUMS_PTR(0, 0)]));
+                     (img_sums_c2[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c2[SUMS_PTR(tpl_cols, 0)])
+                     - (img_sums_c2[SUMS_PTR(0, tpl_rows)] - img_sums_c2[SUMS_PTR(0, 0)]));
         ccorr -= tpl_sum_c3*(float)(
-            (img_sums_c3[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c3[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c3[SUMS_PTR(0, tpl_rows)] - img_sums_c3[SUMS_PTR(0, 0)]));
+                     (img_sums_c3[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c3[SUMS_PTR(tpl_cols, 0)])
+                     - (img_sums_c3[SUMS_PTR(0, tpl_rows)] - img_sums_c3[SUMS_PTR(0, 0)]));
         res[res_idx] = ccorr;
     }
 }
@@ -702,7 +708,7 @@ void matchTemplate_Prepared_CCOFF_NORMED_C1_D0
     __global const uint * img_sums,
     int img_sums_offset,
     int img_sums_step,
-    __global const TYPE_IMAGE_SQSUM * img_sqsums,
+    __global const float * img_sqsums,
     int img_sqsums_offset,
     int img_sqsums_step,
     float tpl_sum,
@@ -725,12 +731,12 @@ void matchTemplate_Prepared_CCOFF_NORMED_C1_D0
     if(gidx < res_cols && gidy < res_rows)
     {
         float image_sum_ =  (float)(
-            (img_sums[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums[SUMS_PTR(0, tpl_rows)] - img_sums[SUMS_PTR(0, 0)]));
+                                (img_sums[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums[SUMS_PTR(tpl_cols, 0)])
+                                - (img_sums[SUMS_PTR(0, tpl_rows)] - img_sums[SUMS_PTR(0, 0)]));
 
         float image_sqsum_ = (float)(
-            (img_sqsums[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums[SQSUMS_PTR(tpl_cols, 0)]) -
-            (img_sqsums[SQSUMS_PTR(0, tpl_rows)] - img_sqsums[SQSUMS_PTR(0, 0)]));
+                                 (img_sqsums[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums[SQSUMS_PTR(tpl_cols, 0)]) -
+                                 (img_sqsums[SQSUMS_PTR(0, tpl_rows)] - img_sqsums[SQSUMS_PTR(0, 0)]));
         res[res_idx] = normAcc(res[res_idx] - image_sum_ * tpl_sum,
                                sqrt(tpl_sqsum * (image_sqsum_ - weight * image_sum_ * image_sum_)));
     }
@@ -754,10 +760,10 @@ void matchTemplate_Prepared_CCOFF_NORMED_C4_D0
     __global const uint * img_sums_c3,
     int img_sums_offset,
     int img_sums_step,
-    __global const TYPE_IMAGE_SQSUM * img_sqsums_c0,
-    __global const TYPE_IMAGE_SQSUM * img_sqsums_c1,
-    __global const TYPE_IMAGE_SQSUM * img_sqsums_c2,
-    __global const TYPE_IMAGE_SQSUM * img_sqsums_c3,
+    __global const float * img_sqsums_c0,
+    __global const float * img_sqsums_c1,
+    __global const float * img_sqsums_c2,
+    __global const float * img_sqsums_c3,
     int img_sqsums_offset,
     int img_sqsums_step,
     float tpl_sum_c0,
@@ -782,42 +788,71 @@ void matchTemplate_Prepared_CCOFF_NORMED_C4_D0
     if(gidx < res_cols && gidy < res_rows)
     {
         float image_sum_c0 =  (float)(
-            (img_sums_c0[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c0[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c0[SUMS_PTR(0, tpl_rows)] - img_sums_c0[SUMS_PTR(0, 0)]));
+                                  (img_sums_c0[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c0[SUMS_PTR(tpl_cols, 0)])
+                                  - (img_sums_c0[SUMS_PTR(0, tpl_rows)] - img_sums_c0[SUMS_PTR(0, 0)]));
         float image_sum_c1 =  (float)(
-            (img_sums_c1[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c1[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c1[SUMS_PTR(0, tpl_rows)] - img_sums_c1[SUMS_PTR(0, 0)]));
+                                  (img_sums_c1[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c1[SUMS_PTR(tpl_cols, 0)])
+                                  - (img_sums_c1[SUMS_PTR(0, tpl_rows)] - img_sums_c1[SUMS_PTR(0, 0)]));
         float image_sum_c2 =  (float)(
-            (img_sums_c2[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c2[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c2[SUMS_PTR(0, tpl_rows)] - img_sums_c2[SUMS_PTR(0, 0)]));
+                                  (img_sums_c2[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c2[SUMS_PTR(tpl_cols, 0)])
+                                  - (img_sums_c2[SUMS_PTR(0, tpl_rows)] - img_sums_c2[SUMS_PTR(0, 0)]));
         float image_sum_c3 =  (float)(
-            (img_sums_c3[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c3[SUMS_PTR(tpl_cols, 0)])
-          - (img_sums_c3[SUMS_PTR(0, tpl_rows)] - img_sums_c3[SUMS_PTR(0, 0)]));
+                                  (img_sums_c3[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums_c3[SUMS_PTR(tpl_cols, 0)])
+                                  - (img_sums_c3[SUMS_PTR(0, tpl_rows)] - img_sums_c3[SUMS_PTR(0, 0)]));
 
         float image_sqsum_c0 = (float)(
-            (img_sqsums_c0[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums_c0[SQSUMS_PTR(tpl_cols, 0)]) -
-            (img_sqsums_c0[SQSUMS_PTR(0, tpl_rows)] - img_sqsums_c0[SQSUMS_PTR(0, 0)]));
+                                   (img_sqsums_c0[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums_c0[SQSUMS_PTR(tpl_cols, 0)]) -
+                                   (img_sqsums_c0[SQSUMS_PTR(0, tpl_rows)] - img_sqsums_c0[SQSUMS_PTR(0, 0)]));
         float image_sqsum_c1 = (float)(
-            (img_sqsums_c1[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums_c1[SQSUMS_PTR(tpl_cols, 0)]) -
-            (img_sqsums_c1[SQSUMS_PTR(0, tpl_rows)] - img_sqsums_c1[SQSUMS_PTR(0, 0)]));
+                                   (img_sqsums_c1[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums_c1[SQSUMS_PTR(tpl_cols, 0)]) -
+                                   (img_sqsums_c1[SQSUMS_PTR(0, tpl_rows)] - img_sqsums_c1[SQSUMS_PTR(0, 0)]));
         float image_sqsum_c2 = (float)(
-            (img_sqsums_c2[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums_c2[SQSUMS_PTR(tpl_cols, 0)]) -
-            (img_sqsums_c2[SQSUMS_PTR(0, tpl_rows)] - img_sqsums_c2[SQSUMS_PTR(0, 0)]));
+                                   (img_sqsums_c2[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums_c2[SQSUMS_PTR(tpl_cols, 0)]) -
+                                   (img_sqsums_c2[SQSUMS_PTR(0, tpl_rows)] - img_sqsums_c2[SQSUMS_PTR(0, 0)]));
         float image_sqsum_c3 = (float)(
-            (img_sqsums_c3[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums_c3[SQSUMS_PTR(tpl_cols, 0)]) -
-            (img_sqsums_c3[SQSUMS_PTR(0, tpl_rows)] - img_sqsums_c3[SQSUMS_PTR(0, 0)]));
+                                   (img_sqsums_c3[SQSUMS_PTR(tpl_cols, tpl_rows)] - img_sqsums_c3[SQSUMS_PTR(tpl_cols, 0)]) -
+                                   (img_sqsums_c3[SQSUMS_PTR(0, tpl_rows)] - img_sqsums_c3[SQSUMS_PTR(0, 0)]));
 
         float num = res[res_idx] -
-            image_sum_c0 * tpl_sum_c0 -
-            image_sum_c1 * tpl_sum_c1 -
-            image_sum_c2 * tpl_sum_c2 -
-            image_sum_c3 * tpl_sum_c3;
+                    image_sum_c0 * tpl_sum_c0 -
+                    image_sum_c1 * tpl_sum_c1 -
+                    image_sum_c2 * tpl_sum_c2 -
+                    image_sum_c3 * tpl_sum_c3;
         float denum = sqrt( tpl_sqsum * (
-            image_sqsum_c0 - weight * image_sum_c0 * image_sum_c0 +
-            image_sqsum_c1 - weight * image_sum_c1 * image_sum_c1 +
-            image_sqsum_c2 - weight * image_sum_c2 * image_sum_c2 +
-            image_sqsum_c3 - weight * image_sum_c0 * image_sum_c3)
-            );
+                                image_sqsum_c0 - weight * image_sum_c0 * image_sum_c0 +
+                                image_sqsum_c1 - weight * image_sum_c1 * image_sum_c1 +
+                                image_sqsum_c2 - weight * image_sum_c2 * image_sum_c2 +
+                                image_sqsum_c3 - weight * image_sum_c0 * image_sum_c3)
+                          );
         res[res_idx] = normAcc(num, denum);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// extractFirstChannel
+__kernel
+void extractFirstChannel
+(
+    const __global float4* img,
+    __global float* res,
+    int rows,
+    int cols,
+    int img_offset,
+    int res_offset,
+    int img_step,
+    int res_step
+)
+{
+    img_step   /= sizeof(float4);
+    res_step   /= sizeof(float);
+    img_offset /= sizeof(float4);
+    res_offset /= sizeof(float);
+    img += img_offset;
+    res += res_offset;
+    int gidx = get_global_id(0);
+    int gidy = get_global_id(1);
+    if(gidx < cols && gidy < rows)
+    {
+        res[gidx + gidy * res_step] = img[gidx + gidy * img_step].x;
     }
 }

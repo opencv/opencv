@@ -97,7 +97,7 @@ void cv::ocl::CannyBuf::create(const Size &image_size, int apperture_size)
     {
         openCLFree(counter);
     }
-    counter = clCreateBuffer( (cl_context)getoclContext(), CL_MEM_COPY_HOST_PTR, sizeof(int), counter_i, &err );
+    counter = clCreateBuffer( *((cl_context*)getoclContext()), CL_MEM_COPY_HOST_PTR, sizeof(int), counter_i, &err );
     openCLSafeCall(err);
 }
 
@@ -353,7 +353,7 @@ void canny::edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, void *counter, in
 void canny::edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, void *counter, int rows, int cols)
 {
     unsigned int count;
-    openCLSafeCall(clEnqueueReadBuffer((cl_command_queue)getoclCommandQueue(), (cl_mem)counter, 1, 0, sizeof(float), &count, 0, NULL, NULL));
+    openCLSafeCall(clEnqueueReadBuffer(*(cl_command_queue*)getoclCommandQueue(), (cl_mem)counter, 1, 0, sizeof(float), &count, 0, NULL, NULL));
     Context *clCxt = map.clCxt;
     String kernelName = "edgesHysteresisGlobal";
     std::vector< std::pair<size_t, const void *> > args;
@@ -363,7 +363,7 @@ void canny::edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, voi
     int count_i[1] = {0};
     while(count > 0)
     {
-        openCLSafeCall(clEnqueueWriteBuffer((cl_command_queue)getoclCommandQueue(), (cl_mem)counter, 1, 0, sizeof(int), &count_i, 0, NULL, NULL));
+        openCLSafeCall(clEnqueueWriteBuffer(*(cl_command_queue*)getoclCommandQueue(), (cl_mem)counter, 1, 0, sizeof(int), &count_i, 0, NULL, NULL));
 
         args.clear();
         size_t globalThreads[3] = {std::min(count, 65535u) * 128, DIVUP(count, 65535), 1};
@@ -378,7 +378,7 @@ void canny::edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, voi
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&map.offset));
 
         openCLExecuteKernel2(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1, DISABLE);
-        openCLSafeCall(clEnqueueReadBuffer((cl_command_queue)getoclCommandQueue(), (cl_mem)counter, 1, 0, sizeof(int), &count, 0, NULL, NULL));
+        openCLSafeCall(clEnqueueReadBuffer(*(cl_command_queue*)getoclCommandQueue(), (cl_mem)counter, 1, 0, sizeof(int), &count, 0, NULL, NULL));
         std::swap(st1, st2);
     }
 #undef DIVUP

@@ -654,9 +654,6 @@ function(ocv_add_perf_tests)
 
       ocv_add_precompiled_headers(${the_target})
 
-      if (PYTHON_EXECUTABLE)
-        add_dependencies(perf ${the_target})
-      endif()
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)

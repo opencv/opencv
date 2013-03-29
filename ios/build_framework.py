@@ -103,10 +103,10 @@ def put_framework_together(srcroot, dstroot):
     # TODO ...
 
     # make symbolic links
-    os.symlink(dstdir + "/Headers", "Headers")
-    os.symlink(dstdir + "/Resources", "Resources")
-    os.symlink(dstdir + "/opencv2", "opencv2")
     os.symlink("A", "Versions/Current")
+    os.symlink("Versions/Current/Headers", "Headers")
+    os.symlink("Versions/Current/Resources", "Resources")
+    os.symlink("Versions/Current/opencv2", "opencv2")
 
 
 def build_framework(srcroot, dstroot):

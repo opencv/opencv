@@ -950,8 +950,8 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
         //int flag = 0;
 
         oclMat gimg1(gimg.rows, gimg.cols, CV_8UC1);
-        oclMat gsum(totalheight, gimg.cols + 1, CV_32SC1);
-        oclMat gsqsum(totalheight, gimg.cols + 1, CV_32FC1);
+        oclMat gsum(totalheight + 4, gimg.cols + 1, CV_32SC1);
+        oclMat gsqsum(totalheight + 4, gimg.cols + 1, CV_32FC1);
 
         //cl_mem cascadebuffer;
         cl_mem stagebuffer;

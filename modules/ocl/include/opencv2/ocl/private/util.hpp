@@ -123,6 +123,16 @@ namespace cv
         // returns whether the current context supports image2d_t format or not
         bool CV_EXPORTS support_image2d(Context *clCxt = Context::getContext());
 
+        // the enums are used to query device information
+        // currently only support wavefront size queries
+        enum DEVICE_INFO
+        {
+             WAVEFRONT_SIZE,            //in AMD speak
+             WARP_SIZE = WAVEFRONT_SIZE //in nvidia speak
+        };
+        //info should have been pre-allocated
+        void CV_EXPORTS queryDeviceInfo(DEVICE_INFO info_type, void* info);
+
     }//namespace ocl
 
 }//namespace cv

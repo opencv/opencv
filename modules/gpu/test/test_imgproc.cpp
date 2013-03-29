@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -215,6 +216,50 @@ GPU_TEST_P(EqualizeHist, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, EqualizeHist, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES));
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// CLAHE
+
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(ClipLimit, double)
+}
+
+PARAM_TEST_CASE(CLAHE, cv::gpu::DeviceInfo, cv::Size, ClipLimit)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    double clipLimit;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        clipLimit = GET_PARAM(2);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+GPU_TEST_P(CLAHE, Accuracy)
+{
+    cv::Mat src = randomMat(size, CV_8UC1);
+
+    cv::Ptr<cv::gpu::CLAHE> clahe = cv::gpu::createCLAHE(clipLimit);
+    cv::gpu::GpuMat dst;
+    clahe->apply(loadMat(src), dst);
+
+    cv::Ptr<cv::CLAHE> clahe_gold = cv::createCLAHE(clipLimit);
+    cv::Mat dst_gold;
+    clahe_gold->apply(src, dst_gold);
+
+    ASSERT_MAT_NEAR(dst_gold, dst, 1.0);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CLAHE, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(0.0, 40.0)));
 
 ////////////////////////////////////////////////////////////////////////
 // ColumnSum

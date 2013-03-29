@@ -753,6 +753,21 @@ CV_EXPORTS double compareHist( const SparseMat& H1, const SparseMat& H2, int met
 //! normalizes the grayscale image brightness and contrast by normalizing its histogram
 CV_EXPORTS_W void equalizeHist( InputArray src, OutputArray dst );
 
+class CV_EXPORTS CLAHE : public Algorithm
+{
+public:
+    virtual void apply(InputArray src, OutputArray dst) = 0;
+
+    virtual void setClipLimit(double clipLimit) = 0;
+    virtual double getClipLimit() const = 0;
+
+    virtual void setTilesGridSize(Size tileGridSize) = 0;
+    virtual Size getTilesGridSize() const = 0;
+
+    virtual void collectGarbage() = 0;
+};
+CV_EXPORTS Ptr<CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+
 CV_EXPORTS float EMD( InputArray signature1, InputArray signature2,
                       int distType, InputArray cost=noArray(),
                       float* lowerBound=0, OutputArray flow=noArray() );

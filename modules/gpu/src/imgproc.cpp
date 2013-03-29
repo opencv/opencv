@@ -91,6 +91,7 @@ void cv::gpu::Canny(const GpuMat&, const GpuMat&, GpuMat&, double, double, bool)
 void cv::gpu::Canny(const GpuMat&, const GpuMat&, CannyBuf&, GpuMat&, double, double, bool) { throw_nogpu(); }
 void cv::gpu::CannyBuf::create(const Size&, int) { throw_nogpu(); }
 void cv::gpu::CannyBuf::release() { throw_nogpu(); }
+cv::Ptr<cv::gpu::CLAHE> cv::gpu::createCLAHE(double, cv::Size) { throw_nogpu(); return cv::Ptr<cv::gpu::CLAHE>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -1540,6 +1541,138 @@ void cv::gpu::Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& d
     calcMagnitude(dx, dy, buf.mag, L2gradient);
 
     CannyCaller(dx, dy, buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
+}
+
+////////////////////////////////////////////////////////////////////////
+// CLAHE
+
+namespace clahe
+{
+    void calcLut(PtrStepSzb src, PtrStepb lut, int tilesX, int tilesY, int2 tileSize, int clipLimit, float lutScale, cudaStream_t stream);
+    void transform(PtrStepSzb src, PtrStepSzb dst, PtrStepb lut, int tilesX, int tilesY, int2 tileSize, cudaStream_t stream);
+}
+
+namespace
+{
+    class CLAHE_Impl : public cv::gpu::CLAHE
+    {
+    public:
+        CLAHE_Impl(double clipLimit = 40.0, int tilesX = 8, int tilesY = 8);
+
+        cv::AlgorithmInfo* info() const;
+
+        void apply(cv::InputArray src, cv::OutputArray dst);
+        void apply(InputArray src, OutputArray dst, Stream& stream);
+
+        void setClipLimit(double clipLimit);
+        double getClipLimit() const;
+
+        void setTilesGridSize(cv::Size tileGridSize);
+        cv::Size getTilesGridSize() const;
+
+        void collectGarbage();
+
+    private:
+        double clipLimit_;
+        int tilesX_;
+        int tilesY_;
+
+        GpuMat srcExt_;
+        GpuMat lut_;
+    };
+
+    CLAHE_Impl::CLAHE_Impl(double clipLimit, int tilesX, int tilesY) :
+        clipLimit_(clipLimit), tilesX_(tilesX), tilesY_(tilesY)
+    {
+    }
+
+    CV_INIT_ALGORITHM(CLAHE_Impl, "CLAHE_GPU",
+        obj.info()->addParam(obj, "clipLimit", obj.clipLimit_);
+        obj.info()->addParam(obj, "tilesX", obj.tilesX_);
+        obj.info()->addParam(obj, "tilesY", obj.tilesY_))
+
+    void CLAHE_Impl::apply(cv::InputArray _src, cv::OutputArray _dst)
+    {
+        apply(_src, _dst, Stream::Null());
+    }
+
+    void CLAHE_Impl::apply(InputArray _src, OutputArray _dst, Stream& s)
+    {
+        GpuMat src = _src.getGpuMat();
+
+        CV_Assert( src.type() == CV_8UC1 );
+
+        _dst.create( src.size(), src.type() );
+        GpuMat dst = _dst.getGpuMat();
+
+        const int histSize = 256;
+
+        ensureSizeIsEnough(tilesX_ * tilesY_, histSize, CV_8UC1, lut_);
+
+        cudaStream_t stream = StreamAccessor::getStream(s);
+
+        cv::Size tileSize;
+        GpuMat srcForLut;
+
+        if (src.cols % tilesX_ == 0 && src.rows % tilesY_ == 0)
+        {
+            tileSize = cv::Size(src.cols / tilesX_, src.rows / tilesY_);
+            srcForLut = src;
+        }
+        else
+        {
+            cv::gpu::copyMakeBorder(src, srcExt_, 0, tilesY_ - (src.rows % tilesY_), 0, tilesX_ - (src.cols % tilesX_), cv::BORDER_REFLECT_101, cv::Scalar(), s);
+
+            tileSize = cv::Size(srcExt_.cols / tilesX_, srcExt_.rows / tilesY_);
+            srcForLut = srcExt_;
+        }
+
+        const int tileSizeTotal = tileSize.area();
+        const float lutScale = static_cast<float>(histSize - 1) / tileSizeTotal;
+
+        int clipLimit = 0;
+        if (clipLimit_ > 0.0)
+        {
+            clipLimit = static_cast<int>(clipLimit_ * tileSizeTotal / histSize);
+            clipLimit = std::max(clipLimit, 1);
+        }
+
+        clahe::calcLut(srcForLut, lut_, tilesX_, tilesY_, make_int2(tileSize.width, tileSize.height), clipLimit, lutScale, stream);
+
+        clahe::transform(src, dst, lut_, tilesX_, tilesY_, make_int2(tileSize.width, tileSize.height), stream);
+    }
+
+    void CLAHE_Impl::setClipLimit(double clipLimit)
+    {
+        clipLimit_ = clipLimit;
+    }
+
+    double CLAHE_Impl::getClipLimit() const
+    {
+        return clipLimit_;
+    }
+
+    void CLAHE_Impl::setTilesGridSize(cv::Size tileGridSize)
+    {
+        tilesX_ = tileGridSize.width;
+        tilesY_ = tileGridSize.height;
+    }
+
+    cv::Size CLAHE_Impl::getTilesGridSize() const
+    {
+        return cv::Size(tilesX_, tilesY_);
+    }
+
+    void CLAHE_Impl::collectGarbage()
+    {
+        srcExt_.release();
+        lut_.release();
+    }
+}
+
+cv::Ptr<cv::gpu::CLAHE> cv::gpu::createCLAHE(double clipLimit, cv::Size tileGridSize)
+{
+    return new CLAHE_Impl(clipLimit, tileGridSize.width, tileGridSize.height);
 }
 
 #endif /* !defined (HAVE_CUDA) */

@@ -115,3 +115,25 @@ PERF_TEST_P(MatSize, equalizeHist,
 
     SANITY_CHECK(destination);
 }
+
+typedef tr1::tuple<Size, double> Sz_ClipLimit_t;
+typedef TestBaseWithParam<Sz_ClipLimit_t> Sz_ClipLimit;
+
+PERF_TEST_P(Sz_ClipLimit, CLAHE,
+            testing::Combine(testing::Values(::perf::szVGA, ::perf::sz720p, ::perf::sz1080p),
+                             testing::Values(0.0, 40.0))
+            )
+{
+    const Size size = get<0>(GetParam());
+    const double clipLimit = get<1>(GetParam());
+
+    Mat src(size, CV_8UC1);
+    declare.in(src, WARMUP_RNG);
+
+    Ptr<CLAHE> clahe = createCLAHE(clipLimit);
+    Mat dst;
+
+    TEST_CYCLE() clahe->apply(src, dst);
+
+    SANITY_CHECK(dst);
+}

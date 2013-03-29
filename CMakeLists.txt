@@ -124,12 +124,12 @@ OCV_OPTION(WITH_GSTREAMER_1_X  "Include Gstreamer 1.x support"               OFF
 OCV_OPTION(WITH_GTK            "Include GTK support"                         ON   IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_IPP            "Include Intel IPP support"                   OFF  IF (MSVC OR X86 OR X86_64) )
 OCV_OPTION(WITH_JASPER         "Include JPEG2K support"                      ON   IF (NOT IOS) )
-OCV_OPTION(WITH_JPEG           "Include JPEG support"                        ON   IF (NOT IOS) )
+OCV_OPTION(WITH_JPEG           "Include JPEG support"                        ON)
 OCV_OPTION(WITH_WEBP           "Include WebP support"                        ON   IF (NOT IOS) )
 OCV_OPTION(WITH_OPENEXR        "Include ILM support via OpenEXR"             ON   IF (NOT IOS) )
 OCV_OPTION(WITH_OPENGL         "Include OpenGL support"                      OFF  IF (NOT ANDROID AND NOT APPLE) )
 OCV_OPTION(WITH_OPENNI         "Include OpenNI support"                      OFF  IF (NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_PNG            "Include PNG support"                         ON   IF (NOT IOS) )
+OCV_OPTION(WITH_PNG            "Include PNG support"                         ON)
 OCV_OPTION(WITH_PVAPI          "Include Prosilica GigE support"              ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_GIGEAPI        "Include Smartek GigE support"                ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_QT             "Build with Qt Backend support"               OFF  IF (NOT ANDROID AND NOT IOS) )
@@ -143,9 +143,9 @@ OCV_OPTION(WITH_VIDEOINPUT     "Build HighGUI with DirectShow support"       ON 
 OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF (NOT ANDROID AND NOT APPLE) )
 OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_CLP            "Include Clp support (EPL)"                   OFF)
-OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              OFF  IF (NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      OFF  IF (NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     OFF  IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              ON  IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      ON  IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON  IF (NOT ANDROID AND NOT IOS) )
 
 
 # OpenCV build components

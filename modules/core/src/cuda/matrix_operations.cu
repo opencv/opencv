@@ -40,7 +40,6 @@
 //
 //M*/
 
-
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/transform.hpp"
 #include "opencv2/gpu/device/functional.hpp"
