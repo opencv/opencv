@@ -121208,4 +121208,114 @@
       <dt>d</dt>
       <data>
         3.4033175450010896e+06</data></val></gpu_dst></GPU_Sz_Depth_Norm_Core_Norm--Core_Norm---1920x1080--CV_32F--cv--NORM_L2->
+ <!-- resumed -->
+
+<GPU_Sz_ClipLimit_ImgProc_CLAHE--ImgProc_CLAHE---1280x720--0->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>179.</val></last>
+    <rng1>
+      <x>255</x>
+      <y>636</y>
+      <val>154.</val></rng1>
+    <rng2>
+      <x>338</x>
+      <y>575</y>
+      <val>160.</val></rng2></gpu_dst></GPU_Sz_ClipLimit_ImgProc_CLAHE--ImgProc_CLAHE---1280x720--0->
+<GPU_Sz_ClipLimit_ImgProc_CLAHE--ImgProc_CLAHE---1280x720--40->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>179.</val></last>
+    <rng1>
+      <x>358</x>
+      <y>472</y>
+      <val>19.</val></rng1>
+    <rng2>
+      <x>698</x>
+      <y>320</y>
+      <val>75.</val></rng2></gpu_dst></GPU_Sz_ClipLimit_ImgProc_CLAHE--ImgProc_CLAHE---1280x720--40->
+<GPU_Sz_ClipLimit_ImgProc_CLAHE--ImgProc_CLAHE---1280x1024--0->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>1023</y>
+      <val>251.</val></last>
+    <rng1>
+      <x>715</x>
+      <y>356</y>
+      <val>86.</val></rng1>
+    <rng2>
+      <x>1063</x>
+      <y>642</y>
+      <val>161.</val></rng2></gpu_dst></GPU_Sz_ClipLimit_ImgProc_CLAHE--ImgProc_CLAHE---1280x1024--0->
+<GPU_Sz_ClipLimit_ImgProc_CLAHE--ImgProc_CLAHE---1280x1024--40->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>1023</y>
+      <val>251.</val></last>
+    <rng1>
+      <x>582</x>
+      <y>254</y>
+      <val>238.</val></rng1>
+    <rng2>
+      <x>1026</x>
+      <y>946</y>
+      <val>98.</val></rng2></gpu_dst></GPU_Sz_ClipLimit_ImgProc_CLAHE--ImgProc_CLAHE---1280x1024--40->
+<GPU_Sz_ClipLimit_ImgProc_CLAHE--ImgProc_CLAHE---1920x1080--0->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.</val></last>
+    <rng1>
+      <x>827</x>
+      <y>200</y>
+      <val>213.</val></rng1>
+    <rng2>
+      <x>723</x>
+      <y>474</y>
+      <val>122.</val></rng2></gpu_dst></GPU_Sz_ClipLimit_ImgProc_CLAHE--ImgProc_CLAHE---1920x1080--0->
+<GPU_Sz_ClipLimit_ImgProc_CLAHE--ImgProc_CLAHE---1920x1080--40->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.</val></last>
+    <rng1>
+      <x>1169</x>
+      <y>247</y>
+      <val>6.</val></rng1>
+    <rng2>
+      <x>1031</x>
+      <y>667</y>
+      <val>46.</val></rng2></gpu_dst></GPU_Sz_ClipLimit_ImgProc_CLAHE--ImgProc_CLAHE---1920x1080--40->
 </opencv_storage>

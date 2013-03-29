@@ -54236,4 +54236,114 @@
       <x>15</x>
       <y>65</y>
       <val>105.</val></rng2></dst></Size_CvtMode3_cvtColorRGB2YUV420p--cvtColorRGB2YUV420p---130x60--CV_BGRA2YUV_YV12->
+ <!-- resumed -->
+
+<Sz_ClipLimit_CLAHE--CLAHE---640x480--0->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>142.</val></last>
+    <rng1>
+      <x>145</x>
+      <y>305</y>
+      <val>148.</val></rng1>
+    <rng2>
+      <x>578</x>
+      <y>52</y>
+      <val>246.</val></rng2></dst></Sz_ClipLimit_CLAHE--CLAHE---640x480--0->
+<Sz_ClipLimit_CLAHE--CLAHE---640x480--40->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>142.</val></last>
+    <rng1>
+      <x>366</x>
+      <y>156</y>
+      <val>78.</val></rng1>
+    <rng2>
+      <x>116</x>
+      <y>434</y>
+      <val>182.</val></rng2></dst></Sz_ClipLimit_CLAHE--CLAHE---640x480--40->
+<Sz_ClipLimit_CLAHE--CLAHE---1280x720--0->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>179.</val></last>
+    <rng1>
+      <x>147</x>
+      <y>633</y>
+      <val>24.</val></rng1>
+    <rng2>
+      <x>92</x>
+      <y>166</y>
+      <val>233.</val></rng2></dst></Sz_ClipLimit_CLAHE--CLAHE---1280x720--0->
+<Sz_ClipLimit_CLAHE--CLAHE---1280x720--40->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>179.</val></last>
+    <rng1>
+      <x>843</x>
+      <y>369</y>
+      <val>83.</val></rng1>
+    <rng2>
+      <x>1134</x>
+      <y>357</y>
+      <val>139.</val></rng2></dst></Sz_ClipLimit_CLAHE--CLAHE---1280x720--40->
+<Sz_ClipLimit_CLAHE--CLAHE---1920x1080--0->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.</val></last>
+    <rng1>
+      <x>707</x>
+      <y>881</y>
+      <val>173.</val></rng1>
+    <rng2>
+      <x>651</x>
+      <y>449</y>
+      <val>233.</val></rng2></dst></Sz_ClipLimit_CLAHE--CLAHE---1920x1080--0->
+<Sz_ClipLimit_CLAHE--CLAHE---1920x1080--40->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.</val></last>
+    <rng1>
+      <x>1452</x>
+      <y>535</y>
+      <val>186.</val></rng1>
+    <rng2>
+      <x>1816</x>
+      <y>582</y>
+      <val>89.</val></rng2></dst></Sz_ClipLimit_CLAHE--CLAHE---1920x1080--40->
 </opencv_storage>
