@@ -37176,24 +37176,6 @@
       <y>0</y>
       <cn>1</cn>
       <val>276.</val></rng2></corners></Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris_goodFeaturesToTrack--goodFeaturesToTrack----cv-shared-pic5-png---500--0-1--5--true->
-<Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris_goodFeaturesToTrack--goodFeaturesToTrack----cv-shared-pic5-png---500--0-01--3--false->
-  <corners>
-    <kind>196608</kind>
-    <type>13</type>
-    <min>10.</min>
-    <max>382.</max>
-    <last>
-      <x>49</x>
-      <y>0</y>
-      <val>64.</val></last>
-    <rng1>
-      <x>34</x>
-      <y>0</y>
-      <val>373.</val></rng1>
-    <rng2>
-      <x>1</x>
-      <y>0</y>
-      <val>240.</val></rng2></corners></Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris_goodFeaturesToTrack--goodFeaturesToTrack----cv-shared-pic5-png---500--0-01--3--false->
 <Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris_goodFeaturesToTrack--goodFeaturesToTrack----cv-shared-pic5-png---500--0-01--3--true->
   <corners>
     <kind>196608</kind>
@@ -54343,4 +54325,24 @@
       <x>293</x>
       <y>0</y>
       <val>-375.</val></rng2></lines></Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---10--0-01--500->
+ <!-- resumed -->
+<Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris_goodFeaturesToTrack--goodFeaturesToTrack----cv-shared-pic5-png---500--0-01--3--false->
+  <corners>
+    <kind>196608</kind>
+    <type>13</type>
+    <min>10.</min>
+    <max>382.</max>
+    <last>
+      <x>49</x>
+      <y>0</y>
+      <val>64.</val></last>
+    <rng1>
+      <x>42</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>123.</val></rng1>
+    <rng2>
+      <x>23</x>
+      <y>0</y>
+      <val>40.</val></rng2></corners></Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris_goodFeaturesToTrack--goodFeaturesToTrack----cv-shared-pic5-png---500--0-01--3--false->
 </opencv_storage>
