@@ -2947,6 +2947,9 @@ static inline void read(const FileNode& node, String& value, const String& defau
 CV_EXPORTS_W void read(const FileNode& node, Mat& mat, const Mat& default_mat=Mat() );
 CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat=SparseMat() );
 
+CV_EXPORTS void read(const FileNode& node, std::vector<KeyPoint>& keypoints);
+CV_EXPORTS void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& keypoints);
+
 inline FileNode::operator int() const
 {
     int value;

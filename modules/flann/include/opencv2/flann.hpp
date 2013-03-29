@@ -47,8 +47,8 @@
 
 #include "opencv2/core/types_c.h"
 #include "opencv2/core.hpp"
-#include "opencv2/flann/flann_base.hpp"
 #include "opencv2/flann/miniflann.hpp"
+#include "opencv2/flann/flann_base.hpp"
 
 namespace cvflann
 {

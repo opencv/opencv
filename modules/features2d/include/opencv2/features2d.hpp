@@ -54,64 +54,10 @@ namespace cv
 
 CV_EXPORTS bool initModule_features2d();
 
-/*!
- The Keypoint Class
-
- The class instance stores a keypoint, i.e. a point feature found by one of many available keypoint detectors, such as
- Harris corner detector, cv::FAST, cv::StarDetector, cv::SURF, cv::SIFT, cv::LDetector etc.
-
- The keypoint is characterized by the 2D position, scale
- (proportional to the diameter of the neighborhood that needs to be taken into account),
- orientation and some other parameters. The keypoint neighborhood is then analyzed by another algorithm that builds a descriptor
- (usually represented as a feature vector). The keypoints representing the same object in different images can then be matched using
- cv::KDTree or another method.
-*/
-class CV_EXPORTS_W_SIMPLE KeyPoint
-{
-public:
-    //! the default constructor
-    CV_WRAP KeyPoint() : pt(0,0), size(0), angle(-1), response(0), octave(0), class_id(-1) {}
-    //! the full constructor
-    KeyPoint(Point2f _pt, float _size, float _angle=-1,
-            float _response=0, int _octave=0, int _class_id=-1)
-            : pt(_pt), size(_size), angle(_angle),
-            response(_response), octave(_octave), class_id(_class_id) {}
-    //! another form of the full constructor
-    CV_WRAP KeyPoint(float x, float y, float _size, float _angle=-1,
-            float _response=0, int _octave=0, int _class_id=-1)
-            : pt(x, y), size(_size), angle(_angle),
-            response(_response), octave(_octave), class_id(_class_id) {}
-
-    size_t hash() const;
-
-    //! converts vector of keypoints to vector of points
-    static void convert(const std::vector<KeyPoint>& keypoints,
-                        CV_OUT std::vector<Point2f>& points2f,
-                        const std::vector<int>& keypointIndexes=std::vector<int>());
-    //! converts vector of points to the vector of keypoints, where each keypoint is assigned the same size and the same orientation
-    static void convert(const std::vector<Point2f>& points2f,
-                        CV_OUT std::vector<KeyPoint>& keypoints,
-                        float size=1, float response=1, int octave=0, int class_id=-1);
-
-    //! computes overlap for pair of keypoints;
-    //! overlap is a ratio between area of keypoint regions intersection and
-    //! area of keypoint regions union (now keypoint region is circle)
-    static float overlap(const KeyPoint& kp1, const KeyPoint& kp2);
-
-    CV_PROP_RW Point2f pt; //!< coordinates of the keypoints
-    CV_PROP_RW float size; //!< diameter of the meaningful keypoint neighborhood
-    CV_PROP_RW float angle; //!< computed orientation of the keypoint (-1 if not applicable);
-                            //!< it's in [0,360) degrees and measured relative to
-                            //!< image coordinate system, ie in clockwise.
-    CV_PROP_RW float response; //!< the response by which the most strong keypoints have been selected. Can be used for the further sorting or subsampling
-    CV_PROP_RW int octave; //!< octave (pyramid layer) from which the keypoint has been extracted
-    CV_PROP_RW int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to)
-};
-
-//! writes vector of keypoints to the file storage
-CV_EXPORTS void write(FileStorage& fs, const String& name, const std::vector<KeyPoint>& keypoints);
-//! reads vector of keypoints from the specified file storage node
-CV_EXPORTS void read(const FileNode& node, CV_OUT std::vector<KeyPoint>& keypoints);
+// //! writes vector of keypoints to the file storage
+// CV_EXPORTS void write(FileStorage& fs, const String& name, const std::vector<KeyPoint>& keypoints);
+// //! reads vector of keypoints from the specified file storage node
+// CV_EXPORTS void read(const FileNode& node, CV_OUT std::vector<KeyPoint>& keypoints);
 
 /*
  * A class filters a vector of keypoints.
@@ -1025,33 +971,6 @@ template<int cellsize> struct CV_EXPORTS HammingMultilevel
     ResultType operator()( const unsigned char* a, const unsigned char* b, int size ) const
     {
         return normHamming(a, b, size, cellsize);
-    }
-};
-
-/****************************************************************************************\
-*                                      DMatch                                            *
-\****************************************************************************************/
-/*
- * Struct for matching: query descriptor index, train descriptor index, train image index and distance between descriptors.
- */
-struct CV_EXPORTS_W_SIMPLE DMatch
-{
-    CV_WRAP DMatch() : queryIdx(-1), trainIdx(-1), imgIdx(-1), distance(FLT_MAX) {}
-    CV_WRAP DMatch( int _queryIdx, int _trainIdx, float _distance ) :
-            queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(-1), distance(_distance) {}
-    CV_WRAP DMatch( int _queryIdx, int _trainIdx, int _imgIdx, float _distance ) :
-            queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(_imgIdx), distance(_distance) {}
-
-    CV_PROP_RW int queryIdx; // query descriptor index
-    CV_PROP_RW int trainIdx; // train descriptor index
-    CV_PROP_RW int imgIdx;   // train image index
-
-    CV_PROP_RW float distance;
-
-    // less is better
-    bool operator<( const DMatch &m ) const
-    {
-        return distance < m.distance;
     }
 };
 

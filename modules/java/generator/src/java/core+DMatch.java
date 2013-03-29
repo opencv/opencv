@@ -1,4 +1,4 @@
-package org.opencv.features2d;
+package org.opencv.core;
 
 //C++: class DMatch
 
