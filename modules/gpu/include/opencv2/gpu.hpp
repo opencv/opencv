@@ -1810,6 +1810,8 @@ public:
      */
     int iterations;
 
+    double scaleStep;
+
     bool useInitialFlow;
 
 private:
