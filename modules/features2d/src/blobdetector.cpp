@@ -240,6 +240,13 @@ void SimpleBlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryIm
                 continue;
         }
 
+        bool blob_valid = true;
+
+        if (moms.m00 == 0.0)
+        {
+            blob_valid = false;
+        }
+        
         center.location = Point2d(moms.m10 / moms.m00, moms.m01 / moms.m00);
 
         if (params.filterByColor)
@@ -260,7 +267,10 @@ void SimpleBlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryIm
             center.radius = (dists[(dists.size() - 1) / 2] + dists[dists.size() / 2]) / 2.;
         }
 
-        centers.push_back(center);
+        if (blob_valid)
+        {
+            centers.push_back(center);
+        }
 
 #ifdef DEBUG_BLOB_DETECTOR
         //    circle( keypointsImage, center.location, 1, Scalar(0,0,255), 1 );
