@@ -47,6 +47,15 @@
 #include "opencv2/core/types_c.h"
 
 #ifdef __cplusplus
+#ifdef _MSC_VER
+/* disable warning C4190: 'function' has C-linkage specified, but returns UDT 'typename'
+                          which is incompatible with C
+
+   It is OK to disable it because we only extend few plain structures with
+   C++ construrtors for simpler interoperability with C++ API of the library
+*/
+#  pragma warning(disable:4190)
+#endif
 extern "C" {
 #endif
 

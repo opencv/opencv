@@ -257,10 +257,10 @@ public:
 /*!
  Utility methods
 */
-template<typename _Tp, int m> double determinant(const Matx<_Tp, m, m>& a);
-template<typename _Tp, int m, int n> double trace(const Matx<_Tp, m, n>& a);
-template<typename _Tp, int m, int n> double norm(const Matx<_Tp, m, n>& M);
-template<typename _Tp, int m, int n> double norm(const Matx<_Tp, m, n>& M, int normType);
+template<typename _Tp, int m> static double determinant(const Matx<_Tp, m, m>& a);
+template<typename _Tp, int m, int n> static double trace(const Matx<_Tp, m, n>& a);
+template<typename _Tp, int m, int n> static double norm(const Matx<_Tp, m, n>& M);
+template<typename _Tp, int m, int n> static double norm(const Matx<_Tp, m, n>& M, int normType);
 
 
 
@@ -399,7 +399,7 @@ public:
 /*!
  Utility methods
 */
-template<typename _Tp, int cn> Vec<_Tp, cn> normalize(const Vec<_Tp, cn>& v);
+template<typename _Tp, int cn> static Vec<_Tp, cn> normalize(const Vec<_Tp, cn>& v);
 
 
 

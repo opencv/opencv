@@ -517,7 +517,7 @@ public:
     typedef _Tp                                        channel_type;
 
     enum { generic_type = 0,
-           depth        = DataType<channel_type>::value,
+           depth        = DataType<channel_type>::depth,
            channels     = 4,
            fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
            type         = CV_MAKETYPE(depth, channels)
