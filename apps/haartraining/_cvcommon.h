@@ -43,7 +43,6 @@
 #define __CVCOMMON_H_
 
 #include "opencv2/core.hpp"
-#include "opencv2/core/internal.hpp"
 
 #include "cxcore.h"
 #include "cv.h"

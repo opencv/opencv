@@ -43,13 +43,15 @@
 #ifndef __OPENCV_CORE_OPERATIONS_HPP__
 #define __OPENCV_CORE_OPERATIONS_HPP__
 
+#ifndef __cplusplus
+#  error operations.hpp header must be compiled as C++
+#endif
+
 #ifndef SKIP_INCLUDES
   #include <string.h>
   #include <limits.h>
 #endif // SKIP_INCLUDES
 
-
-#ifdef __cplusplus
 
 #include <limits>
 
@@ -330,8 +332,8 @@ public:
             dst[i] = src[i];
     }
 
-    operator CvMat() const
-    { return cvMat((int)size(), 1, type(), (void*)hdr.data); }
+    // operator CvMat() const
+    // { return cvMat((int)size(), 1, type(), (void*)hdr.data); }
 
     _Tp& operator [] (size_t i) { CV_DbgAssert( i < size() ); return hdr.data[i]; }
     const _Tp& operator [] (size_t i) const { CV_DbgAssert( i < size() ); return hdr.data[i]; }
@@ -453,7 +455,7 @@ inline RNG::RNG() { state = 0xffffffff; }
 inline RNG::RNG(uint64 _state) { state = _state ? _state : 0xffffffff; }
 inline unsigned RNG::next()
 {
-    state = (uint64)(unsigned)state*CV_RNG_COEFF + (unsigned)(state >> 32);
+    state = (uint64)(unsigned)state* /*CV_RNG_COEFF*/ 4164903690U + (unsigned)(state >> 32);
     return (unsigned)state;
 }
 
@@ -597,14 +599,14 @@ public:
 
 template<typename _Tp> inline void write(FileStorage& fs, const String& name, const Point_<_Tp>& pt )
 {
-    WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
+    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, pt.x);
     write(fs, pt.y);
 }
 
 template<typename _Tp> inline void write(FileStorage& fs, const String& name, const Point3_<_Tp>& pt )
 {
-    WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
+    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, pt.x);
     write(fs, pt.y);
     write(fs, pt.z);
@@ -612,21 +614,21 @@ template<typename _Tp> inline void write(FileStorage& fs, const String& name, co
 
 template<typename _Tp> inline void write(FileStorage& fs, const String& name, const Size_<_Tp>& sz )
 {
-    WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
+    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, sz.width);
     write(fs, sz.height);
 }
 
 template<typename _Tp> inline void write(FileStorage& fs, const String& name, const Complex<_Tp>& c )
 {
-    WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
+    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, c.re);
     write(fs, c.im);
 }
 
 template<typename _Tp> inline void write(FileStorage& fs, const String& name, const Rect_<_Tp>& r )
 {
-    WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
+    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, r.x);
     write(fs, r.y);
     write(fs, r.width);
@@ -635,14 +637,14 @@ template<typename _Tp> inline void write(FileStorage& fs, const String& name, co
 
 template<typename _Tp, int cn> inline void write(FileStorage& fs, const String& name, const Vec<_Tp, cn>& v )
 {
-    WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
+    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     for(int i = 0; i < cn; i++)
         write(fs, v.val[i]);
 }
 
 template<typename _Tp> inline void write(FileStorage& fs, const String& name, const Scalar_<_Tp>& s )
 {
-    WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
+    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, s.val[0]);
     write(fs, s.val[1]);
     write(fs, s.val[2]);
@@ -651,7 +653,7 @@ template<typename _Tp> inline void write(FileStorage& fs, const String& name, co
 
 inline void write(FileStorage& fs, const String& name, const Range& r )
 {
-    WriteStructContext ws(fs, name, CV_NODE_SEQ+CV_NODE_FLOW);
+    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, r.start);
     write(fs, r.end);
 }
@@ -691,7 +693,7 @@ template<typename _Tp> static inline void write( FileStorage& fs, const std::vec
 template<typename _Tp> static inline void write( FileStorage& fs, const String& name,
                                                 const std::vector<_Tp>& vec )
 {
-    WriteStructContext ws(fs, name, CV_NODE_SEQ+(DataType<_Tp>::fmt != 0 ? CV_NODE_FLOW : 0));
+    WriteStructContext ws(fs, name, FileNode::SEQ+(DataType<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
     write(fs, vec);
 }
 
@@ -703,7 +705,7 @@ template<typename _Tp> static inline FileStorage& operator << (FileStorage& fs, 
     if( !fs.isOpened() )
         return fs;
     if( fs.state == FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP )
-        CV_Error( CV_StsError, "No element name has been given" );
+        CV_Error( Error::StsError, "No element name has been given" );
     write( fs, fs.elname, value );
     if( fs.state & FileStorage::INSIDE_MAP )
         fs.state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
@@ -724,7 +726,6 @@ inline FileNode::FileNode(const CvFileStorage* _fs, const CvFileNode* _node)
 
 inline FileNode::FileNode(const FileNode& _node) : fs(_node.fs), node(_node.node) {}
 
-inline int FileNode::type() const { return !node ? NONE : (node->tag & TYPE_MASK); }
 inline bool FileNode::empty() const { return node == 0; }
 inline bool FileNode::isNone() const { return type() == NONE; }
 inline bool FileNode::isSeq() const { return type() == SEQ; }
@@ -732,23 +733,19 @@ inline bool FileNode::isMap() const { return type() == MAP; }
 inline bool FileNode::isInt() const { return type() == INT; }
 inline bool FileNode::isReal() const { return type() == REAL; }
 inline bool FileNode::isString() const { return type() == STR; }
-inline bool FileNode::isNamed() const { return !node ? false : (node->tag & NAMED) != 0; }
-inline size_t FileNode::size() const
-{
-    int t = type();
-    return t == MAP ? (size_t)((CvSet*)node->data.map)->active_count :
-        t == SEQ ? (size_t)node->data.seq->total : (size_t)!isNone();
-}
 
 inline CvFileNode* FileNode::operator *() { return (CvFileNode*)node; }
 inline const CvFileNode* FileNode::operator* () const { return node; }
 
-static inline void read(const FileNode& node, int& value, int default_value)
-{
-    value = !node.node ? default_value :
-    CV_NODE_IS_INT(node.node->tag) ? node.node->data.i :
-    CV_NODE_IS_REAL(node.node->tag) ? cvRound(node.node->data.f) : 0x7fffffff;
-}
+CV_EXPORTS void read(const FileNode& node, int& value, int default_value);
+CV_EXPORTS void read(const FileNode& node, float& value, float default_value);
+CV_EXPORTS void read(const FileNode& node, double& value, double default_value);
+CV_EXPORTS void read(const FileNode& node, String& value, const String& default_value);
+CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat=SparseMat() );
+CV_EXPORTS_W void read(const FileNode& node, Mat& mat, const Mat& default_mat=Mat() );
+
+CV_EXPORTS void read(const FileNode& node, std::vector<KeyPoint>& keypoints);
+CV_EXPORTS void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& keypoints);
 
 static inline void read(const FileNode& node, bool& value, bool default_value)
 {
@@ -779,31 +776,6 @@ static inline void read(const FileNode& node, short& value, short default_value)
     int temp; read(node, temp, (int)default_value);
     value = saturate_cast<short>(temp);
 }
-
-static inline void read(const FileNode& node, float& value, float default_value)
-{
-    value = !node.node ? default_value :
-        CV_NODE_IS_INT(node.node->tag) ? (float)node.node->data.i :
-        CV_NODE_IS_REAL(node.node->tag) ? (float)node.node->data.f : 1e30f;
-}
-
-static inline void read(const FileNode& node, double& value, double default_value)
-{
-    value = !node.node ? default_value :
-        CV_NODE_IS_INT(node.node->tag) ? (double)node.node->data.i :
-        CV_NODE_IS_REAL(node.node->tag) ? node.node->data.f : 1e300;
-}
-
-static inline void read(const FileNode& node, String& value, const String& default_value)
-{
-    value = !node.node ? default_value : CV_NODE_IS_STRING(node.node->tag) ? String(node.node->data.str.ptr) : String();
-}
-
-CV_EXPORTS_W void read(const FileNode& node, Mat& mat, const Mat& default_mat=Mat() );
-CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat=SparseMat() );
-
-CV_EXPORTS void read(const FileNode& node, std::vector<KeyPoint>& keypoints);
-CV_EXPORTS void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& keypoints);
 
 inline FileNode::operator int() const
 {
@@ -1022,7 +994,7 @@ partition( const std::vector<_Tp>& _vec, std::vector<int>& labels,
                     nodes[root2][RANK] += rank == rank2;
                     root = root2;
                 }
-                assert( nodes[root][PARENT] < 0 );
+                CV_Assert( nodes[root][PARENT] < 0 );
 
                 int k = j, parent;
 
@@ -1224,7 +1196,7 @@ inline void Algorithm::set(const char* _name, const Ptr<_Tp>& value)
 {
     Ptr<Algorithm> algo_ptr = value. template ptr<cv::Algorithm>();
     if (algo_ptr.empty()) {
-        CV_Error( CV_StsUnsupportedFormat, "unknown/unsupported Ptr type of the second parameter of the method Algorithm::set");
+        CV_Error( Error::StsUnsupportedFormat, "unknown/unsupported Ptr type of the second parameter of the method Algorithm::set");
     }
     info()->set(this, _name, ParamType<Algorithm>::type, &algo_ptr);
 }
@@ -1240,7 +1212,7 @@ inline void Algorithm::setAlgorithm(const char* _name, const Ptr<_Tp>& value)
 {
     Ptr<Algorithm> algo_ptr = value. template ptr<cv::Algorithm>();
     if (algo_ptr.empty()) {
-        CV_Error( CV_StsUnsupportedFormat, "unknown/unsupported Ptr type of the second parameter of the method Algorithm::set");
+        CV_Error( Error::StsUnsupportedFormat, "unknown/unsupported Ptr type of the second parameter of the method Algorithm::set");
     }
     info()->set(this, _name, ParamType<Algorithm>::type, &algo_ptr);
 }
@@ -1289,5 +1261,4 @@ template<typename _Tp> inline void AlgorithmInfo::addParam(Algorithm& algo, cons
 # pragma warning(pop)
 #endif
 
-#endif // __cplusplus
 #endif

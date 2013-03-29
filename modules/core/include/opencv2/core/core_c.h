@@ -1842,12 +1842,32 @@ struct CV_EXPORTS CvType
     static CvTypeInfo* last;
 };
 
-#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
 
 namespace cv
 {
 
-//// specializied implementations of Ptr::delete_obj() for classic OpenCV types
+/////////////////////////////////////////// glue ///////////////////////////////////////////
+
+//! converts array (CvMat or IplImage) to cv::Mat
+CV_EXPORTS Mat cvarrToMat(const CvArr* arr, bool copyData=false,
+                          bool allowND=true, int coiMode=0,
+                          AutoBuffer<double>* buf=0);
+
+static inline Mat cvarrToMatND(const CvArr* arr, bool copyData=false, int coiMode=0)
+{
+    return cvarrToMat(arr, copyData, true, coiMode);
+}
+
+
+//! extracts Channel of Interest from CvMat or IplImage and makes cv::Mat out of it.
+CV_EXPORTS void extractImageCOI(const CvArr* arr, OutputArray coiimg, int coi=-1);
+//! inserts single-channel cv::Mat into a multi-channel CvMat or IplImage
+CV_EXPORTS void insertImageCOI(InputArray coiimg, CvArr* arr, int coi=-1);
+
+
+
+//////// specializied implementations of Ptr::delete_obj() for classic OpenCV types ////////
 
 template<> CV_EXPORTS void Ptr<CvMat>::delete_obj();
 template<> CV_EXPORTS void Ptr<IplImage>::delete_obj();

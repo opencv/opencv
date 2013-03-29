@@ -335,6 +335,14 @@ typedef signed char schar;
 #  include <math.h>
 #endif
 
+#ifndef MIN
+#  define MIN(a,b)  ((a) > (b) ? (b) : (a))
+#endif
+
+#ifndef MAX
+#  define MAX(a,b)  ((a) < (b) ? (b) : (a))
+#endif
+
 #ifdef HAVE_TEGRA_OPTIMIZATION
 #  include "tegra_round.hpp"
 #endif

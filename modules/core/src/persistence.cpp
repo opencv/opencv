@@ -5553,6 +5553,42 @@ void read(const FileNode& node, std::vector<KeyPoint>& keypoints)
     }
 }
 
+int FileNode::type() const { return !node ? NONE : (node->tag & TYPE_MASK); }
+bool FileNode::isNamed() const { return !node ? false : (node->tag & NAMED) != 0; }
+
+size_t FileNode::size() const
+{
+    int t = type();
+    return t == MAP ? (size_t)((CvSet*)node->data.map)->active_count :
+        t == SEQ ? (size_t)node->data.seq->total : (size_t)!isNone();
+}
+
+void read(const FileNode& node, int& value, int default_value)
+{
+    value = !node.node ? default_value :
+    CV_NODE_IS_INT(node.node->tag) ? node.node->data.i :
+    CV_NODE_IS_REAL(node.node->tag) ? cvRound(node.node->data.f) : 0x7fffffff;
+}
+
+void read(const FileNode& node, float& value, float default_value)
+{
+    value = !node.node ? default_value :
+        CV_NODE_IS_INT(node.node->tag) ? (float)node.node->data.i :
+        CV_NODE_IS_REAL(node.node->tag) ? (float)node.node->data.f : 1e30f;
+}
+
+void read(const FileNode& node, double& value, double default_value)
+{
+    value = !node.node ? default_value :
+        CV_NODE_IS_INT(node.node->tag) ? (double)node.node->data.i :
+        CV_NODE_IS_REAL(node.node->tag) ? node.node->data.f : 1e300;
+}
+
+void read(const FileNode& node, String& value, const String& default_value)
+{
+    value = !node.node ? default_value : CV_NODE_IS_STRING(node.node->tag) ? String(node.node->data.str.ptr) : String();
+}
+
 }
 
 /* End of file. */

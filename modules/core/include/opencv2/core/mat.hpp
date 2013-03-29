@@ -44,6 +44,10 @@
 #ifndef __OPENCV_CORE_MAT_HPP__
 #define __OPENCV_CORE_MAT_HPP__
 
+#ifndef __cplusplus
+#  error mat.hpp header must be compiled as C++
+#endif
+
 #include "opencv2/core/matx.hpp"
 #include "opencv2/core/types.hpp"
 

@@ -93,8 +93,7 @@
 #endif
 
 #ifdef __cplusplus
-#  include "opencv2/core/types.hpp"
-#  include "opencv2/core/mat.hpp"
+#  include "opencv2/core.hpp"
 #endif
 
 /* CvArr* is used to pass arbitrary
@@ -181,14 +180,6 @@ enum {
 \****************************************************************************************/
 
 #define CV_SWAP(a,b,t) ((t) = (a), (a) = (b), (b) = (t))
-
-#ifndef MIN
-#  define MIN(a,b)  ((a) > (b) ? (b) : (a))
-#endif
-
-#ifndef MAX
-#  define MAX(a,b)  ((a) < (b) ? (b) : (a))
-#endif
 
 /* min & max without jumps */
 #define  CV_IMIN(a, b)  ((a) ^ (((a)^(b)) & (((a) < (b)) - 1)))
@@ -426,6 +417,7 @@ typedef struct CvMat
 
 #ifdef __cplusplus
     CvMat() {}
+    CvMat(const CvMat& m) { memcpy(this, &m, sizeof(CvMat));}
     CvMat(const cv::Mat& m);
 #endif
 
@@ -1465,12 +1457,15 @@ CvSeqWriter;
     int          delta_index;/* = seq->first->start_index   */      \
     schar*       prev_elem;  /* pointer to previous element */
 
-
+#ifdef __cplusplus
+typedef cv::FileNodeIterator::SeqReader CvSeqReader;
+#else
 typedef struct CvSeqReader
 {
     CV_SEQ_READER_FIELDS()
 }
 CvSeqReader;
+#endif
 
 /****************************************************************************************/
 /*                                Operations on sequences                               */

@@ -46,21 +46,25 @@
 #ifndef __OPENCV_CORE_HPP__
 #define __OPENCV_CORE_HPP__
 
+#ifndef __cplusplus
+#  error core.hpp header must be compiled as C++
+#endif
+
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/version.hpp"
 
-#ifdef __cplusplus
+// Used by FileStorage
+typedef struct CvFileStorage CvFileStorage;
+struct CvFileNode;
+struct CvSeq;
+struct CvSeqBlock;
+
 #include "opencv2/core/base.hpp"
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/traits.hpp"
 #include "opencv2/core/matx.hpp"
 #include "opencv2/core/types.hpp"
 #include "opencv2/core/mat.hpp"
-#endif
-
-#include "opencv2/core/types_c.h"
-
-#ifdef __cplusplus
 
 #ifndef SKIP_INCLUDES
 #include <limits.h>
@@ -214,11 +218,6 @@ CV_EXPORTS BinaryFunc getCopyMaskFunc(size_t esz);
 
 //! swaps two matrices
 CV_EXPORTS void swap(Mat& a, Mat& b);
-
-//! extracts Channel of Interest from CvMat or IplImage and makes cv::Mat out of it.
-CV_EXPORTS void extractImageCOI(const CvArr* arr, OutputArray coiimg, int coi=-1);
-//! inserts single-channel cv::Mat into a multi-channel CvMat or IplImage
-CV_EXPORTS void insertImageCOI(InputArray coiimg, CvArr* arr, int coi=-1);
 
 //! adds one matrix to another (dst = src1 + src2)
 CV_EXPORTS_W void add(InputArray src1, InputArray src2, OutputArray dst,
@@ -1583,9 +1582,21 @@ public:
     FileNodeIterator& readRaw( const String& fmt, uchar* vec,
                                size_t maxCount=(size_t)INT_MAX );
 
+    struct SeqReader
+    {
+      int          header_size;
+      CvSeq*       seq;        /* sequence, beign read */
+      CvSeqBlock*  block;      /* current block */
+      schar*       ptr;        /* pointer to element be read next */
+      schar*       block_min;  /* pointer to the beginning of block */
+      schar*       block_max;  /* pointer to the end of block */
+      int          delta_index;/* = seq->first->start_index   */
+      schar*       prev_elem;  /* pointer to previous element */
+    };
+
     const CvFileStorage* fs;
     const CvFileNode* container;
-    CvSeqReader reader;
+    SeqReader reader;
     size_t remaining;
 };
 
@@ -1873,10 +1884,6 @@ template<> struct ParamType<uchar>
 
 #include "opencv2/core/operations.hpp"
 #include "opencv2/core/mat.inl.hpp"
-
 #include "opencv2/core/cvstd.inl.hpp"
-
-#endif // __cplusplus
-
 
 #endif /*__OPENCV_CORE_HPP__*/

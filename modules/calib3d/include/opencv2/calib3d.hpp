@@ -44,7 +44,10 @@
 #ifndef __OPENCV_CALIB3D_HPP__
 #define __OPENCV_CALIB3D_HPP__
 
-#include "opencv2/core.hpp"
+#ifdef __cplusplus
+#  include "opencv2/core.hpp"
+#endif
+#include "opencv2/core/core_c.h"
 #include "opencv2/features2d.hpp"
 
 #ifdef __cplusplus

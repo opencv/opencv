@@ -43,7 +43,10 @@
 #ifndef __OPENCV_OBJDETECT_HPP__
 #define __OPENCV_OBJDETECT_HPP__
 
-#include "opencv2/core.hpp"
+#ifdef __cplusplus
+#  include "opencv2/core.hpp"
+#endif
+#include "opencv2/core/core_c.h"
 
 #ifdef __cplusplus
 #include <map>

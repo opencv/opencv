@@ -43,12 +43,14 @@
 #ifndef __OPENCV_CORE_MATRIX_OPERATIONS_HPP__
 #define __OPENCV_CORE_MATRIX_OPERATIONS_HPP__
 
+#ifndef __cplusplus
+#  error mat.inl.hpp header must be compiled as C++
+#endif
+
 #ifndef SKIP_INCLUDES
 #include <limits.h>
 #include <string.h>
 #endif // SKIP_INCLUDES
-
-#ifdef __cplusplus
 
 namespace cv
 {
@@ -2587,5 +2589,4 @@ SparseMatIterator_<_Tp>::operator ++(int)
 
 }
 
-#endif
 #endif

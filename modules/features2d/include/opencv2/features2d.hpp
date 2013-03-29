@@ -43,10 +43,10 @@
 #ifndef __OPENCV_FEATURES_2D_HPP__
 #define __OPENCV_FEATURES_2D_HPP__
 
-#include "opencv2/core.hpp"
 #include "opencv2/flann/miniflann.hpp"
 
 #ifdef __cplusplus
+#include "opencv2/core.hpp"
 #include <limits>
 
 namespace cv

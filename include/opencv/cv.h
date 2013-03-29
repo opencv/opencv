@@ -61,8 +61,6 @@
 //CV_WARNING("This is a deprecated opencv header provided for compatibility. Please include a header from a corresponding opencv module")
 
 #include "opencv2/core/core_c.h"
-#include "opencv2/core.hpp"
-#include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/video.hpp"
@@ -75,10 +73,6 @@
 #if !defined(CV_IMPL)
 #define CV_IMPL extern "C"
 #endif //CV_IMPL
-
-#if defined(__cplusplus)
-#include "opencv2/core/internal.hpp"
-#endif //__cplusplus
 
 #endif // __OPENCV_OLD_CV_H_
 

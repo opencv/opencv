@@ -94,7 +94,7 @@ CV_EXPORTS void add(const Mat& a, double alpha, const Mat& b, double beta,
 CV_EXPORTS void multiply(const Mat& a, const Mat& b, Mat& c, double alpha=1);
 CV_EXPORTS void divide(const Mat& a, const Mat& b, Mat& c, double alpha=1);
 
-CV_EXPORTS void convert(const Mat& src, Mat& dst, int dtype, double alpha=1, double beta=0);
+CV_EXPORTS void convert(const Mat& src, cv::OutputArray dst, int dtype, double alpha=1, double beta=0);
 CV_EXPORTS void copy(const Mat& src, Mat& dst, const Mat& mask=Mat(), bool invertMask=false);
 CV_EXPORTS void set(Mat& dst, const Scalar& gamma, const Mat& mask=Mat());
 
@@ -111,9 +111,9 @@ CV_EXPORTS void  patchZeros( Mat& mat, double level );
 
 CV_EXPORTS void transpose(const Mat& src, Mat& dst);
 CV_EXPORTS void erode(const Mat& src, Mat& dst, const Mat& _kernel, Point anchor=Point(-1,-1),
-                      int borderType=IPL_BORDER_CONSTANT, const Scalar& borderValue=Scalar());
+                      int borderType=0, const Scalar& borderValue=Scalar());
 CV_EXPORTS void dilate(const Mat& src, Mat& dst, const Mat& _kernel, Point anchor=Point(-1,-1),
-                       int borderType=IPL_BORDER_CONSTANT, const Scalar& borderValue=Scalar());
+                       int borderType=0, const Scalar& borderValue=Scalar());
 CV_EXPORTS void filter2D(const Mat& src, Mat& dst, int ddepth, const Mat& kernel,
                          Point anchor, double delta, int borderType,
                          const Scalar& borderValue=Scalar());
@@ -540,18 +540,6 @@ CV_EXPORTS void fillGradient(Mat& img, int delta = 5);
 CV_EXPORTS void smoothBorder(Mat& img, const Scalar& color, int delta = 3);
 
 } //namespace cvtest
-
-// fills c with zeros
-CV_EXPORTS void cvTsZero( CvMat* c, const CvMat* mask=0 );
-
-// copies a to b (whole matrix or only the selected region)
-CV_EXPORTS void cvTsCopy( const CvMat* a, CvMat* b, const CvMat* mask=0 );
-
-// converts one array to another
-CV_EXPORTS void  cvTsConvert( const CvMat* src, CvMat* dst );
-
-CV_EXPORTS void cvTsGEMM( const CvMat* a, const CvMat* b, double alpha,
-                         const CvMat* c, double beta, CvMat* d, int flags );
 
 #define CV_TEST_MAIN(resourcesubdir) \
 int main(int argc, char **argv) \
