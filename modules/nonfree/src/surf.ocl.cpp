@@ -43,6 +43,7 @@
 //
 //M*/
 #include "precomp.hpp"
+#include <cstdio>
 
 #ifdef HAVE_OPENCV_OCL
 
@@ -57,25 +58,35 @@ namespace cv
         ///////////////////////////OpenCL kernel strings///////////////////////////
         extern const char *surf;
 
-        const char* noImage2dOption = "-D DISABLE_IMAGE2D";
+        const char noImage2dOption [] = "-D DISABLE_IMAGE2D";
 
+        static char SURF_OPTIONS [1024] = ""; 
+        static bool USE_IMAGE2d = false;
         static void openCLExecuteKernelSURF(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
             size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels, int depth)
         {
-            if(support_image2d())
+            char * pSURF_OPTIONS = SURF_OPTIONS;
+            static bool OPTION_INIT = false;
+            if(!OPTION_INIT)
             {
-                openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth);
+                if( !USE_IMAGE2d )
+                {
+                    strcat(pSURF_OPTIONS, noImage2dOption);
+                    pSURF_OPTIONS += strlen(noImage2dOption);
+                }
+
+                size_t wave_size = 0;
+                queryDeviceInfo(WAVEFRONT_SIZE, &wave_size);
+                std::sprintf(pSURF_OPTIONS, " -D WAVE_SIZE=%d", static_cast<int>(wave_size));
+                OPTION_INIT = true;
             }
-            else
-            {
-                openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth, noImage2dOption);
-            }
+            openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth, SURF_OPTIONS);
         }
     }
 }
 
 
-static inline int divUp(size_t total, size_t grain)
+static inline size_t divUp(size_t total, size_t grain)
 {
     return (total + grain - 1) / grain;
 }
@@ -152,8 +163,20 @@ public:
         integral(img, surf_.sum);
         if(support_image2d())
         {
-            bindImgTex(img, imgTex);
-            bindImgTex(surf_.sum, sumTex);
+            try
+            {
+                bindImgTex(img, imgTex);
+                bindImgTex(surf_.sum, sumTex);
+                USE_IMAGE2d = true;
+            }
+            catch (const cv::Exception& e)
+            {
+                USE_IMAGE2d = false;
+                if(e.code != CL_IMAGE_FORMAT_NOT_SUPPORTED && e.code != -217)
+                {
+                    throw e;
+                }
+            }
         }
 
         maskSumTex = 0;

@@ -747,21 +747,42 @@ void reduce_32_sum(volatile __local  float * data, volatile float* partial_reduc
 #define op(A, B) (*A)+(B)
     data[tid] = *partial_reduction;
     barrier(CLK_LOCAL_MEM_FENCE);
-
+#ifndef WAVE_SIZE
+#define WAVE_SIZE 1
+#endif
     if (tid < 16)
+    {
         data[tid] = *partial_reduction = op(partial_reduction, data[tid + 16]);
+#if WAVE_SIZE < 16
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 8)
+    {
+#endif
         data[tid] = *partial_reduction = op(partial_reduction, data[tid + 8 ]);
+#if WAVE_SIZE < 8
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 4)
+    {
+#endif
         data[tid] = *partial_reduction = op(partial_reduction, data[tid + 4 ]);
+#if WAVE_SIZE < 4
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 2)
+    {
+#endif
         data[tid] = *partial_reduction = op(partial_reduction, data[tid + 2 ]);
+#if WAVE_SIZE < 2
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 1)
+    {
+#endif
         data[tid] = *partial_reduction = op(partial_reduction, data[tid + 1 ]);
+    }
+#undef WAVE_SIZE
 #undef op
 }
 
@@ -1087,44 +1108,67 @@ void reduce_sum25(
     int tid
     )
 {
+#ifndef WAVE_SIZE
+#define WAVE_SIZE 1
+#endif
     // first step is to reduce from 25 to 16
-    if (tid < 9) // use 9 threads
+    if (tid < 9)
     {
         sdata1[tid] += sdata1[tid + 16];
         sdata2[tid] += sdata2[tid + 16];
         sdata3[tid] += sdata3[tid + 16];
         sdata4[tid] += sdata4[tid + 16];
+#if WAVE_SIZE < 16
     }
-
-    // sum (reduce) from 16 to 1 (unrolled - aligned to a half-warp)
+    barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 8)
     {
+#endif
         sdata1[tid] += sdata1[tid + 8];
-        sdata1[tid] += sdata1[tid + 4];
-        sdata1[tid] += sdata1[tid + 2];
-        sdata1[tid] += sdata1[tid + 1];
 
         sdata2[tid] += sdata2[tid + 8];
-        sdata2[tid] += sdata2[tid + 4];
-        sdata2[tid] += sdata2[tid + 2];
-        sdata2[tid] += sdata2[tid + 1];
 
         sdata3[tid] += sdata3[tid + 8];
-        sdata3[tid] += sdata3[tid + 4];
-        sdata3[tid] += sdata3[tid + 2];
-        sdata3[tid] += sdata3[tid + 1];
 
         sdata4[tid] += sdata4[tid + 8];
+#if WAVE_SIZE < 8
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 4)
+    {
+#endif
+        sdata1[tid] += sdata1[tid + 4];
+        sdata2[tid] += sdata2[tid + 4];
+        sdata3[tid] += sdata3[tid + 4];
         sdata4[tid] += sdata4[tid + 4];
+#if WAVE_SIZE < 4
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 2)
+    {
+#endif
+        sdata1[tid] += sdata1[tid + 2];
+        sdata2[tid] += sdata2[tid + 2];
+        sdata3[tid] += sdata3[tid + 2];
         sdata4[tid] += sdata4[tid + 2];
+#if WAVE_SIZE < 2
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 1)
+    {
+#endif
+        sdata1[tid] += sdata1[tid + 1];
+        sdata2[tid] += sdata2[tid + 1];
+        sdata3[tid] += sdata3[tid + 1];
         sdata4[tid] += sdata4[tid + 1];
     }
+#undef WAVE_SIZE
 }
 
 __kernel
     void compute_descriptors64(
     IMAGE_INT8 imgTex,
-    volatile __global float * descriptors,
+    __global float * descriptors,
     __global const float * keypoints,
     int descriptors_step,
     int keypoints_step,
@@ -1158,14 +1202,13 @@ __kernel
         sdyabs[tid] = fabs(sdy[tid]); // |dy| array
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 25)
-    {
+
         reduce_sum25(sdx, sdy, sdxabs, sdyabs, tid);
-    }
+ 
     barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 25)
     {
-        volatile __global float* descriptors_block = descriptors + descriptors_step * get_group_id(0) + (get_group_id(1) << 2);
+        __global float* descriptors_block = descriptors + descriptors_step * get_group_id(0) + (get_group_id(1) << 2);
 
         // write dx, dy, |dx|, |dy|
         if (tid == 0)
@@ -1180,7 +1223,7 @@ __kernel
 __kernel
     void compute_descriptors128(
     IMAGE_INT8 imgTex,
-    __global volatile float * descriptors,
+    __global float * descriptors,
     __global float * keypoints,
     int descriptors_step,
     int keypoints_step,
@@ -1229,13 +1272,15 @@ __kernel
             sd2[tid] = sdx[tid];
             sdabs2[tid] = fabs(sdx[tid]);
         }
-        //barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
 
         reduce_sum25(sd1, sd2, sdabs1, sdabs2, tid);
-        //barrier(CLK_LOCAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE);
 
-        volatile __global float* descriptors_block = descriptors + descriptors_step * get_group_id(0) + (get_group_id(1) << 3);
-
+    __global float* descriptors_block = descriptors + descriptors_step * get_group_id(0) + (get_group_id(1) << 3);
+    if (tid < 25)
+    {
         // write dx (dy >= 0), |dx| (dy >= 0), dx (dy < 0), |dx| (dy < 0)
         if (tid == 0)
         {
@@ -1259,11 +1304,14 @@ __kernel
             sd2[tid] = sdy[tid];
             sdabs2[tid] = fabs(sdy[tid]);
         }
-        //barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
 
         reduce_sum25(sd1, sd2, sdabs1, sdabs2, tid);
-        //barrier(CLK_LOCAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE);
 
+    if (tid < 25)
+    {
         // write dy (dx >= 0), |dy| (dx >= 0), dy (dx < 0), |dy| (dx < 0)
         if (tid == 0)
         {
@@ -1272,6 +1320,103 @@ __kernel
             descriptors_block[6] = sd2[0];
             descriptors_block[7] = sdabs2[0];
         }
+    }
+}
+void reduce_sum128(volatile __local  float* smem, int tid)
+{
+#ifndef WAVE_SIZE
+#define WAVE_SIZE 1
+#endif
+    if (tid < 64)
+    {
+        smem[tid] += smem[tid + 64];
+#if WAVE_SIZE < 64
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 32) 
+    {
+#endif
+        smem[tid] += smem[tid + 32];
+#if WAVE_SIZE < 32
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 16) 
+    {
+#endif
+        smem[tid] += smem[tid + 16];
+#if WAVE_SIZE < 16
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 8)
+    {
+#endif
+        smem[tid] += smem[tid + 8];
+#if WAVE_SIZE < 8
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 4)
+    {
+#endif
+        smem[tid] += smem[tid + 4];
+#if WAVE_SIZE < 4
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 2)
+    {
+#endif
+        smem[tid] += smem[tid + 2];
+#if WAVE_SIZE < 2
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 1)
+    {
+#endif
+        smem[tid] += smem[tid + 1];
+    }
+}
+void reduce_sum64(volatile __local  float* smem, int tid)
+{
+#ifndef WAVE_SIZE
+#define WAVE_SIZE 1
+#endif
+    if (tid < 32)
+    {
+        smem[tid] += smem[tid + 32];
+#if WAVE_SIZE < 32
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 16) 
+    {
+#endif
+        smem[tid] += smem[tid + 16];
+#if WAVE_SIZE < 16
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 8)
+    {
+#endif
+        smem[tid] += smem[tid + 8];
+#if WAVE_SIZE < 8
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 4)
+    {
+#endif
+        smem[tid] += smem[tid + 4];
+#if WAVE_SIZE < 4
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 2)
+    {
+#endif
+        smem[tid] += smem[tid + 2];
+#if WAVE_SIZE < 2
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 1)
+    {
+#endif
+        smem[tid] += smem[tid + 1];
     }
 }
 
@@ -1288,22 +1433,10 @@ __kernel
     sqDesc[get_local_id(0)] = lookup * lookup;
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (get_local_id(0) < 64)
-        sqDesc[get_local_id(0)] += sqDesc[get_local_id(0) + 64];
+    reduce_sum128(sqDesc, get_local_id(0));
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    // reduction to get total
-    if (get_local_id(0) < 32)
-    {
-        volatile __local  float* smem = sqDesc;
 
-        smem[get_local_id(0)] += smem[get_local_id(0) + 32];
-        smem[get_local_id(0)] += smem[get_local_id(0) + 16];
-        smem[get_local_id(0)] += smem[get_local_id(0) + 8];
-        smem[get_local_id(0)] += smem[get_local_id(0) + 4];
-        smem[get_local_id(0)] += smem[get_local_id(0) + 2];
-        smem[get_local_id(0)] += smem[get_local_id(0) + 1];
-    }
 
     // compute length (square root)
     volatile __local  float len;
@@ -1329,18 +1462,9 @@ __kernel
     sqDesc[get_local_id(0)] = lookup * lookup;
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    // reduction to get total
-    if (get_local_id(0) < 32)
-    {
-        volatile __local  float* smem = sqDesc;
 
-        smem[get_local_id(0)] += smem[get_local_id(0) + 32];
-        smem[get_local_id(0)] += smem[get_local_id(0) + 16];
-        smem[get_local_id(0)] += smem[get_local_id(0) + 8];
-        smem[get_local_id(0)] += smem[get_local_id(0) + 4];
-        smem[get_local_id(0)] += smem[get_local_id(0) + 2];
-        smem[get_local_id(0)] += smem[get_local_id(0) + 1];
-    }
+    reduce_sum64(sqDesc, get_local_id(0));
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     // compute length (square root)
     volatile __local  float len;
