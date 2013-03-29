@@ -43,8 +43,8 @@
 #ifndef __OPENCV_GPU_DEVICE_LBP_HPP_
 #define __OPENCV_GPU_DEVICE_LBP_HPP_
 
-#include "internal_shared.hpp"
-#include <opencv2/gpu/device/emulation.hpp>
+#include "opencv2/gpu/device/common.hpp"
+#include "opencv2/gpu/device/emulation.hpp"
 
 namespace cv { namespace gpu { namespace device {
 
@@ -72,10 +72,10 @@ namespace lbp {
 
         __device__ __forceinline__ bool operator()(const int4& r1, const int4& r2) const
         {
-            float delta = eps * (min(r1.z, r2.z) + min(r1.w, r2.w)) * 0.5f;
+            float delta = eps * (::min(r1.z, r2.z) + ::min(r1.w, r2.w)) * 0.5f;
 
-            return abs(r1.x - r2.x) <= delta && abs(r1.y - r2.y) <= delta
-                && abs(r1.x + r1.z - r2.x - r2.z) <= delta && abs(r1.y + r1.w - r2.y - r2.w) <= delta;
+            return ::abs(r1.x - r2.x) <= delta && ::abs(r1.y - r2.y) <= delta
+                && ::abs(r1.x + r1.z - r2.x - r2.z) <= delta && ::abs(r1.y + r1.w - r2.y - r2.w) <= delta;
         }
         float eps;
     };

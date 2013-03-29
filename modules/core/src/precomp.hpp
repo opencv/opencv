@@ -51,6 +51,7 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/internal.hpp"
+#include "opencv2/core/gpumat.hpp"
 
 #include <assert.h>
 #include <ctype.h>
@@ -68,8 +69,20 @@
 #endif
 
 #ifdef HAVE_CUDA
-#  include <cuda_runtime_api.h>
-#  include "opencv2/core/gpumat.hpp"
+
+#  include <cuda_runtime.h>
+#  include <npp.h>
+
+#  define CUDART_MINIMUM_REQUIRED_VERSION 4020
+#  define NPP_MINIMUM_REQUIRED_VERSION 4200
+
+#  if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
+#    error "Insufficient Cuda Runtime library version, please update it."
+#  endif
+
+#  if (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
+#    error "Insufficient NPP version, please update it."
+#  endif
 
 #  if defined(__GNUC__)
 #    define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)

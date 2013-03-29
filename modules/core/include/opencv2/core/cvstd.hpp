@@ -52,6 +52,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <cctype>
 
 #ifndef OPENCV_NOSTL
 #  include <string>
@@ -165,6 +166,8 @@ public:
     friend String operator+ (const char*   lhs, const String& rhs);
     friend String operator+ (const String& lhs, char          rhs);
     friend String operator+ (char          lhs, const String& rhs);
+
+    String toLowerCase() const;
 
 #ifndef OPENCV_NOSTL
     String(const std::string& str);
@@ -480,6 +483,16 @@ inline size_t String::find_last_of(const char* s, size_t pos) const
                 return (size_t)(i - cstr_);
     }
     return npos;
+}
+
+inline String String::toLowerCase() const
+{
+    String res(cstr_, len_);
+
+    for (size_t i = 0; i < len_; ++i)
+        res.cstr_[i] = (char) ::tolower(cstr_[i]);
+
+    return res;
 }
 
 // ************************* cv::String non-member functions *************************

@@ -52,16 +52,16 @@
 //==============================================================================
 
 
-static void stdDebugOutput(const String &msg)
+static void stdDebugOutput(const cv::String &msg)
 {
-    std::cout << msg;
+    std::cout << msg.c_str() << std::endl;
 }
 
 
 static NCVDebugOutputHandler *debugOutputHandler = stdDebugOutput;
 
 
-void ncvDebugOutput(const String &msg)
+void ncvDebugOutput(const cv::String &msg)
 {
     debugOutputHandler(msg);
 }

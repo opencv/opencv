@@ -693,7 +693,7 @@ bool cv::gpu::CascadeClassifier_GPU::load(const String& filename)
     release();
 
     String fext = filename.substr(filename.find_last_of(".") + 1);
-    std::transform(fext.begin(), fext.end(), fext.begin(), ::tolower);
+    fext = fext.toLowerCase();
 
     if (fext == "nvbin")
     {

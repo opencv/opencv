@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/gpumat.hpp"
 
 using namespace cv;
 using namespace cv::gpu;
@@ -272,7 +271,7 @@ void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int dtype, 
     convertTo(src, dst, alpha, beta, stream);
 }
 
-#if CUDA_VERSION >= 5000
+#if CUDART_VERSION >= 5000
 
 namespace
 {
@@ -295,7 +294,7 @@ namespace
 
 void cv::gpu::Stream::enqueueHostCallback(StreamCallback callback, void* userData)
 {
-#if CUDA_VERSION >= 5000
+#if CUDART_VERSION >= 5000
     CallbackData* data = new CallbackData;
     data->callback = callback;
     data->userData = userData;
