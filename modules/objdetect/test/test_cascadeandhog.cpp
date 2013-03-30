@@ -995,6 +995,8 @@ inline bool HOGDescriptorTester::is_failed() const
     return failed;
 }
 
+static inline int gcd(int a, int b) { return (a % b == 0) ? b : gcd (b, a % b); }
+
 void HOGDescriptorTester::detect(const Mat& img,
     vector<Point>& hits, vector<double>& weights, double hitThreshold,
     Size winStride, Size padding, const vector<Point>& locations) const

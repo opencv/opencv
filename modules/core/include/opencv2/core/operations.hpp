@@ -1036,18 +1036,7 @@ inline FileNode FileStorage::getFirstTopLevelNode() const
 
 //////////////////////////////////////// Various algorithms ////////////////////////////////////
 
-template<typename _Tp> static inline _Tp gcd(_Tp a, _Tp b)
-{
-    if( a < b )
-        std::swap(a, b);
-    while( b > 0 )
-    {
-        _Tp r = a % b;
-        a = b;
-        b = r;
-    }
-    return a;
-}
+
 
 // This function splits the input sequence or set into one or more equivalence classes and
 // returns the vector of labels - 0-based class indexes for each element.
