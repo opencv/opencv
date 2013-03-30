@@ -1111,7 +1111,7 @@ normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result = std::max(result, ST(fast_abs(src[k])));
+                    result = std::max(result, ST(std::abs(src[k])));
             }
     }
     *_result = result;
@@ -1132,7 +1132,7 @@ normL1_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result += fast_abs(src[k]);
+                    result += std::abs(src[k]);
             }
     }
     *_result = result;

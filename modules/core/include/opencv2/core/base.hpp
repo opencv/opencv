@@ -333,7 +333,7 @@ _AccTp normL1(const _Tp* a, int n)
     }
 #endif
     for( ; i < n; i++ )
-        s += fast_abs(a[i]);
+        s += std::abs(a[i]);
     return s;
 }
 
