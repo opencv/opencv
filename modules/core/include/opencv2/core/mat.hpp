@@ -91,7 +91,6 @@ public:
     template<typename _Tp> _InputArray(const std::vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _InputArray(const _Tp* vec, int n);
     template<typename _Tp, int m, int n> _InputArray(const Matx<_Tp, m, n>& matx);
-    _InputArray(const Scalar& s);
     _InputArray(const double& val);
     _InputArray(const gpu::GpuMat& d_mat);
     _InputArray(const ogl::Buffer& buf);
@@ -780,7 +779,6 @@ public:
     MStep step;
 
 protected:
-    void initEmpty();
 };
 
 
@@ -1345,7 +1343,7 @@ public:
 
 
 
-///////////////////////////////// Mat_<_Tp> ////////////////////////////////////
+///////////////////////////////// SparseMat_<_Tp> ////////////////////////////////////
 
 /*!
  The Template Sparse Matrix class derived from cv::SparseMat
@@ -1427,6 +1425,598 @@ public:
     SparseMatConstIterator_<_Tp> end() const;
 };
 
+
+
+////////////////////////////////// MatConstIterator //////////////////////////////////
+
+class CV_EXPORTS MatConstIterator
+{
+public:
+    typedef uchar* value_type;
+    typedef ptrdiff_t difference_type;
+    typedef const uchar** pointer;
+    typedef uchar* reference;
+
+#ifndef OPENCV_NOSTL
+    typedef std::random_access_iterator_tag iterator_category;
+#endif
+
+    //! default constructor
+    MatConstIterator();
+    //! constructor that sets the iterator to the beginning of the matrix
+    MatConstIterator(const Mat* _m);
+    //! constructor that sets the iterator to the specified element of the matrix
+    MatConstIterator(const Mat* _m, int _row, int _col=0);
+    //! constructor that sets the iterator to the specified element of the matrix
+    MatConstIterator(const Mat* _m, Point _pt);
+    //! constructor that sets the iterator to the specified element of the matrix
+    MatConstIterator(const Mat* _m, const int* _idx);
+    //! copy constructor
+    MatConstIterator(const MatConstIterator& it);
+
+    //! copy operator
+    MatConstIterator& operator = (const MatConstIterator& it);
+    //! returns the current matrix element
+    uchar* operator *() const;
+    //! returns the i-th matrix element, relative to the current
+    uchar* operator [](ptrdiff_t i) const;
+
+    //! shifts the iterator forward by the specified number of elements
+    MatConstIterator& operator += (ptrdiff_t ofs);
+    //! shifts the iterator backward by the specified number of elements
+    MatConstIterator& operator -= (ptrdiff_t ofs);
+    //! decrements the iterator
+    MatConstIterator& operator --();
+    //! decrements the iterator
+    MatConstIterator operator --(int);
+    //! increments the iterator
+    MatConstIterator& operator ++();
+    //! increments the iterator
+    MatConstIterator operator ++(int);
+    //! returns the current iterator position
+    Point pos() const;
+    //! returns the current iterator position
+    void pos(int* _idx) const;
+
+    ptrdiff_t lpos() const;
+    void seek(ptrdiff_t ofs, bool relative = false);
+    void seek(const int* _idx, bool relative = false);
+
+    const Mat* m;
+    size_t elemSize;
+    uchar* ptr;
+    uchar* sliceStart;
+    uchar* sliceEnd;
+};
+
+
+
+////////////////////////////////// MatConstIterator_ /////////////////////////////////
+
+/*!
+ Matrix read-only iterator
+ */
+template<typename _Tp>
+class MatConstIterator_ : public MatConstIterator
+{
+public:
+    typedef _Tp value_type;
+    typedef ptrdiff_t difference_type;
+    typedef const _Tp* pointer;
+    typedef const _Tp& reference;
+
+#ifndef OPENCV_NOSTL
+    typedef std::random_access_iterator_tag iterator_category;
+#endif
+
+    //! default constructor
+    MatConstIterator_();
+    //! constructor that sets the iterator to the beginning of the matrix
+    MatConstIterator_(const Mat_<_Tp>* _m);
+    //! constructor that sets the iterator to the specified element of the matrix
+    MatConstIterator_(const Mat_<_Tp>* _m, int _row, int _col=0);
+    //! constructor that sets the iterator to the specified element of the matrix
+    MatConstIterator_(const Mat_<_Tp>* _m, Point _pt);
+    //! constructor that sets the iterator to the specified element of the matrix
+    MatConstIterator_(const Mat_<_Tp>* _m, const int* _idx);
+    //! copy constructor
+    MatConstIterator_(const MatConstIterator_& it);
+
+    //! copy operator
+    MatConstIterator_& operator = (const MatConstIterator_& it);
+    //! returns the current matrix element
+    _Tp operator *() const;
+    //! returns the i-th matrix element, relative to the current
+    _Tp operator [](ptrdiff_t i) const;
+
+    //! shifts the iterator forward by the specified number of elements
+    MatConstIterator_& operator += (ptrdiff_t ofs);
+    //! shifts the iterator backward by the specified number of elements
+    MatConstIterator_& operator -= (ptrdiff_t ofs);
+    //! decrements the iterator
+    MatConstIterator_& operator --();
+    //! decrements the iterator
+    MatConstIterator_ operator --(int);
+    //! increments the iterator
+    MatConstIterator_& operator ++();
+    //! increments the iterator
+    MatConstIterator_ operator ++(int);
+    //! returns the current iterator position
+    Point pos() const;
+};
+
+
+
+//////////////////////////////////// MatIterator_ ////////////////////////////////////
+
+/*!
+ Matrix read-write iterator
+*/
+template<typename _Tp>
+class MatIterator_ : public MatConstIterator_<_Tp>
+{
+public:
+    typedef _Tp* pointer;
+    typedef _Tp& reference;
+
+#ifndef OPENCV_NOSTL
+    typedef std::random_access_iterator_tag iterator_category;
+#endif
+
+    //! the default constructor
+    MatIterator_();
+    //! constructor that sets the iterator to the beginning of the matrix
+    MatIterator_(Mat_<_Tp>* _m);
+    //! constructor that sets the iterator to the specified element of the matrix
+    MatIterator_(Mat_<_Tp>* _m, int _row, int _col=0);
+    //! constructor that sets the iterator to the specified element of the matrix
+    MatIterator_(const Mat_<_Tp>* _m, Point _pt);
+    //! constructor that sets the iterator to the specified element of the matrix
+    MatIterator_(const Mat_<_Tp>* _m, const int* _idx);
+    //! copy constructor
+    MatIterator_(const MatIterator_& it);
+    //! copy operator
+    MatIterator_& operator = (const MatIterator_<_Tp>& it );
+
+    //! returns the current matrix element
+    _Tp& operator *() const;
+    //! returns the i-th matrix element, relative to the current
+    _Tp& operator [](ptrdiff_t i) const;
+
+    //! shifts the iterator forward by the specified number of elements
+    MatIterator_& operator += (ptrdiff_t ofs);
+    //! shifts the iterator backward by the specified number of elements
+    MatIterator_& operator -= (ptrdiff_t ofs);
+    //! decrements the iterator
+    MatIterator_& operator --();
+    //! decrements the iterator
+    MatIterator_ operator --(int);
+    //! increments the iterator
+    MatIterator_& operator ++();
+    //! increments the iterator
+    MatIterator_ operator ++(int);
+};
+
+
+
+/////////////////////////////// SparseMatConstIterator ///////////////////////////////
+
+/*!
+ Read-Only Sparse Matrix Iterator.
+ Here is how to use the iterator to compute the sum of floating-point sparse matrix elements:
+
+ \code
+ SparseMatConstIterator it = m.begin(), it_end = m.end();
+ double s = 0;
+ CV_Assert( m.type() == CV_32F );
+ for( ; it != it_end; ++it )
+    s += it.value<float>();
+ \endcode
+*/
+class CV_EXPORTS SparseMatConstIterator
+{
+public:
+    //! the default constructor
+    SparseMatConstIterator();
+    //! the full constructor setting the iterator to the first sparse matrix element
+    SparseMatConstIterator(const SparseMat* _m);
+    //! the copy constructor
+    SparseMatConstIterator(const SparseMatConstIterator& it);
+
+    //! the assignment operator
+    SparseMatConstIterator& operator = (const SparseMatConstIterator& it);
+
+    //! template method returning the current matrix element
+    template<typename _Tp> const _Tp& value() const;
+    //! returns the current node of the sparse matrix. it.node->idx is the current element index
+    const SparseMat::Node* node() const;
+
+    //! moves iterator to the previous element
+    SparseMatConstIterator& operator --();
+    //! moves iterator to the previous element
+    SparseMatConstIterator operator --(int);
+    //! moves iterator to the next element
+    SparseMatConstIterator& operator ++();
+    //! moves iterator to the next element
+    SparseMatConstIterator operator ++(int);
+
+    //! moves iterator to the element after the last element
+    void seekEnd();
+
+    const SparseMat* m;
+    size_t hashidx;
+    uchar* ptr;
+};
+
+
+
+////////////////////////////////// SparseMatIterator /////////////////////////////////
+
+/*!
+ Read-write Sparse Matrix Iterator
+
+ The class is similar to cv::SparseMatConstIterator,
+ but can be used for in-place modification of the matrix elements.
+*/
+class CV_EXPORTS SparseMatIterator : public SparseMatConstIterator
+{
+public:
+    //! the default constructor
+    SparseMatIterator();
+    //! the full constructor setting the iterator to the first sparse matrix element
+    SparseMatIterator(SparseMat* _m);
+    //! the full constructor setting the iterator to the specified sparse matrix element
+    SparseMatIterator(SparseMat* _m, const int* idx);
+    //! the copy constructor
+    SparseMatIterator(const SparseMatIterator& it);
+
+    //! the assignment operator
+    SparseMatIterator& operator = (const SparseMatIterator& it);
+    //! returns read-write reference to the current sparse matrix element
+    template<typename _Tp> _Tp& value() const;
+    //! returns pointer to the current sparse matrix node. it.node->idx is the index of the current element (do not modify it!)
+    SparseMat::Node* node() const;
+
+    //! moves iterator to the next element
+    SparseMatIterator& operator ++();
+    //! moves iterator to the next element
+    SparseMatIterator operator ++(int);
+};
+
+
+
+/////////////////////////////// SparseMatConstIterator_ //////////////////////////////
+
+/*!
+ Template Read-Only Sparse Matrix Iterator Class.
+
+ This is the derived from SparseMatConstIterator class that
+ introduces more convenient operator *() for accessing the current element.
+*/
+template<typename _Tp> class SparseMatConstIterator_ : public SparseMatConstIterator
+{
+public:
+
+#ifndef OPENCV_NOSTL
+    typedef std::forward_iterator_tag iterator_category;
+#endif
+
+    //! the default constructor
+    SparseMatConstIterator_();
+    //! the full constructor setting the iterator to the first sparse matrix element
+    SparseMatConstIterator_(const SparseMat_<_Tp>* _m);
+    //! the copy constructor
+    SparseMatConstIterator_(const SparseMatConstIterator_& it);
+
+    //! the assignment operator
+    SparseMatConstIterator_& operator = (const SparseMatConstIterator_& it);
+    //! the element access operator
+    const _Tp& operator *() const;
+
+    //! moves iterator to the next element
+    SparseMatConstIterator_& operator ++();
+    //! moves iterator to the next element
+    SparseMatConstIterator_ operator ++(int);
+};
+
+
+
+///////////////////////////////// SparseMatIterator_ /////////////////////////////////
+
+/*!
+ Template Read-Write Sparse Matrix Iterator Class.
+
+ This is the derived from cv::SparseMatConstIterator_ class that
+ introduces more convenient operator *() for accessing the current element.
+*/
+template<typename _Tp> class CV_EXPORTS SparseMatIterator_ : public SparseMatConstIterator_<_Tp>
+{
+public:
+
+#ifndef OPENCV_NOSTL
+    typedef std::forward_iterator_tag iterator_category;
+#endif
+
+    //! the default constructor
+    SparseMatIterator_();
+    //! the full constructor setting the iterator to the first sparse matrix element
+    SparseMatIterator_(SparseMat_<_Tp>* _m);
+    //! the copy constructor
+    SparseMatIterator_(const SparseMatIterator_& it);
+
+    //! the assignment operator
+    SparseMatIterator_& operator = (const SparseMatIterator_& it);
+    //! returns the reference to the current element
+    _Tp& operator *() const;
+
+    //! moves the iterator to the next element
+    SparseMatIterator_& operator ++();
+    //! moves the iterator to the next element
+    SparseMatIterator_ operator ++(int);
+};
+
+
+
+/////////////////////////////////// NAryMatIterator //////////////////////////////////
+
+/*!
+ n-Dimensional Dense Matrix Iterator Class.
+
+ The class cv::NAryMatIterator is used for iterating over one or more n-dimensional dense arrays (cv::Mat's).
+
+ The iterator is completely different from cv::Mat_ and cv::SparseMat_ iterators.
+ It iterates through the slices (or planes), not the elements, where "slice" is a continuous part of the arrays.
+
+ Here is the example on how the iterator can be used to normalize 3D histogram:
+
+ \code
+ void normalizeColorHist(Mat& hist)
+ {
+ #if 1
+     // intialize iterator (the style is different from STL).
+     // after initialization the iterator will contain
+     // the number of slices or planes
+     // the iterator will go through
+     Mat* arrays[] = { &hist, 0 };
+     Mat planes[1];
+     NAryMatIterator it(arrays, planes);
+     double s = 0;
+     // iterate through the matrix. on each iteration
+     // it.planes[i] (of type Mat) will be set to the current plane of
+     // i-th n-dim matrix passed to the iterator constructor.
+     for(int p = 0; p < it.nplanes; p++, ++it)
+        s += sum(it.planes[0])[0];
+     it = NAryMatIterator(hist);
+     s = 1./s;
+     for(int p = 0; p < it.nplanes; p++, ++it)
+        it.planes[0] *= s;
+ #elif 1
+     // this is a shorter implementation of the above
+     // using built-in operations on Mat
+     double s = sum(hist)[0];
+     hist.convertTo(hist, hist.type(), 1./s, 0);
+ #else
+     // and this is even shorter one
+     // (assuming that the histogram elements are non-negative)
+     normalize(hist, hist, 1, 0, NORM_L1);
+ #endif
+ }
+ \endcode
+
+ You can iterate through several matrices simultaneously as long as they have the same geometry
+ (dimensionality and all the dimension sizes are the same), which is useful for binary
+ and n-ary operations on such matrices. Just pass those matrices to cv::MatNDIterator.
+ Then, during the iteration it.planes[0], it.planes[1], ... will
+ be the slices of the corresponding matrices
+*/
+class CV_EXPORTS NAryMatIterator
+{
+public:
+    //! the default constructor
+    NAryMatIterator();
+    //! the full constructor taking arbitrary number of n-dim matrices
+    NAryMatIterator(const Mat** arrays, uchar** ptrs, int narrays=-1);
+    //! the full constructor taking arbitrary number of n-dim matrices
+    NAryMatIterator(const Mat** arrays, Mat* planes, int narrays=-1);
+    //! the separate iterator initialization method
+    void init(const Mat** arrays, Mat* planes, uchar** ptrs, int narrays=-1);
+
+    //! proceeds to the next plane of every iterated matrix
+    NAryMatIterator& operator ++();
+    //! proceeds to the next plane of every iterated matrix (postfix increment operator)
+    NAryMatIterator operator ++(int);
+
+    //! the iterated arrays
+    const Mat** arrays;
+    //! the current planes
+    Mat* planes;
+    //! data pointers
+    uchar** ptrs;
+    //! the number of arrays
+    int narrays;
+    //! the number of hyper-planes that the iterator steps through
+    size_t nplanes;
+    //! the size of each segment (in elements)
+    size_t size;
+protected:
+    int iterdepth;
+    size_t idx;
+};
+
+
+
+///////////////////////////////// Matrix Expressions /////////////////////////////////
+
+class CV_EXPORTS MatOp
+{
+public:
+    MatOp();
+    virtual ~MatOp();
+
+    virtual bool elementWise(const MatExpr& expr) const;
+    virtual void assign(const MatExpr& expr, Mat& m, int type=-1) const = 0;
+    virtual void roi(const MatExpr& expr, const Range& rowRange,
+                     const Range& colRange, MatExpr& res) const;
+    virtual void diag(const MatExpr& expr, int d, MatExpr& res) const;
+    virtual void augAssignAdd(const MatExpr& expr, Mat& m) const;
+    virtual void augAssignSubtract(const MatExpr& expr, Mat& m) const;
+    virtual void augAssignMultiply(const MatExpr& expr, Mat& m) const;
+    virtual void augAssignDivide(const MatExpr& expr, Mat& m) const;
+    virtual void augAssignAnd(const MatExpr& expr, Mat& m) const;
+    virtual void augAssignOr(const MatExpr& expr, Mat& m) const;
+    virtual void augAssignXor(const MatExpr& expr, Mat& m) const;
+
+    virtual void add(const MatExpr& expr1, const MatExpr& expr2, MatExpr& res) const;
+    virtual void add(const MatExpr& expr1, const Scalar& s, MatExpr& res) const;
+
+    virtual void subtract(const MatExpr& expr1, const MatExpr& expr2, MatExpr& res) const;
+    virtual void subtract(const Scalar& s, const MatExpr& expr, MatExpr& res) const;
+
+    virtual void multiply(const MatExpr& expr1, const MatExpr& expr2, MatExpr& res, double scale=1) const;
+    virtual void multiply(const MatExpr& expr1, double s, MatExpr& res) const;
+
+    virtual void divide(const MatExpr& expr1, const MatExpr& expr2, MatExpr& res, double scale=1) const;
+    virtual void divide(double s, const MatExpr& expr, MatExpr& res) const;
+
+    virtual void abs(const MatExpr& expr, MatExpr& res) const;
+
+    virtual void transpose(const MatExpr& expr, MatExpr& res) const;
+    virtual void matmul(const MatExpr& expr1, const MatExpr& expr2, MatExpr& res) const;
+    virtual void invert(const MatExpr& expr, int method, MatExpr& res) const;
+
+    virtual Size size(const MatExpr& expr) const;
+    virtual int type(const MatExpr& expr) const;
+};
+
+
+class CV_EXPORTS MatExpr
+{
+public:
+    MatExpr();
+    explicit MatExpr(const Mat& m);
+
+    MatExpr(const MatOp* _op, int _flags, const Mat& _a = Mat(), const Mat& _b = Mat(),
+            const Mat& _c = Mat(), double _alpha = 1, double _beta = 1, const Scalar& _s = Scalar());
+
+    operator Mat() const;
+    template<typename _Tp> operator Mat_<_Tp>() const;
+
+    Size size() const;
+    int type() const;
+
+    MatExpr row(int y) const;
+    MatExpr col(int x) const;
+    MatExpr diag(int d = 0) const;
+    MatExpr operator()( const Range& rowRange, const Range& colRange ) const;
+    MatExpr operator()( const Rect& roi ) const;
+
+    MatExpr t() const;
+    MatExpr inv(int method = DECOMP_LU) const;
+    MatExpr mul(const MatExpr& e, double scale=1) const;
+    MatExpr mul(const Mat& m, double scale=1) const;
+
+    Mat cross(const Mat& m) const;
+    double dot(const Mat& m) const;
+
+    const MatOp* op;
+    int flags;
+
+    Mat a, b, c;
+    double alpha, beta;
+    Scalar s;
+};
+
+
+CV_EXPORTS MatExpr operator + (const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr operator + (const Mat& a, const Scalar& s);
+CV_EXPORTS MatExpr operator + (const Scalar& s, const Mat& a);
+CV_EXPORTS MatExpr operator + (const MatExpr& e, const Mat& m);
+CV_EXPORTS MatExpr operator + (const Mat& m, const MatExpr& e);
+CV_EXPORTS MatExpr operator + (const MatExpr& e, const Scalar& s);
+CV_EXPORTS MatExpr operator + (const Scalar& s, const MatExpr& e);
+CV_EXPORTS MatExpr operator + (const MatExpr& e1, const MatExpr& e2);
+
+CV_EXPORTS MatExpr operator - (const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr operator - (const Mat& a, const Scalar& s);
+CV_EXPORTS MatExpr operator - (const Scalar& s, const Mat& a);
+CV_EXPORTS MatExpr operator - (const MatExpr& e, const Mat& m);
+CV_EXPORTS MatExpr operator - (const Mat& m, const MatExpr& e);
+CV_EXPORTS MatExpr operator - (const MatExpr& e, const Scalar& s);
+CV_EXPORTS MatExpr operator - (const Scalar& s, const MatExpr& e);
+CV_EXPORTS MatExpr operator - (const MatExpr& e1, const MatExpr& e2);
+
+CV_EXPORTS MatExpr operator - (const Mat& m);
+CV_EXPORTS MatExpr operator - (const MatExpr& e);
+
+CV_EXPORTS MatExpr operator * (const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr operator * (const Mat& a, double s);
+CV_EXPORTS MatExpr operator * (double s, const Mat& a);
+CV_EXPORTS MatExpr operator * (const MatExpr& e, const Mat& m);
+CV_EXPORTS MatExpr operator * (const Mat& m, const MatExpr& e);
+CV_EXPORTS MatExpr operator * (const MatExpr& e, double s);
+CV_EXPORTS MatExpr operator * (double s, const MatExpr& e);
+CV_EXPORTS MatExpr operator * (const MatExpr& e1, const MatExpr& e2);
+
+CV_EXPORTS MatExpr operator / (const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr operator / (const Mat& a, double s);
+CV_EXPORTS MatExpr operator / (double s, const Mat& a);
+CV_EXPORTS MatExpr operator / (const MatExpr& e, const Mat& m);
+CV_EXPORTS MatExpr operator / (const Mat& m, const MatExpr& e);
+CV_EXPORTS MatExpr operator / (const MatExpr& e, double s);
+CV_EXPORTS MatExpr operator / (double s, const MatExpr& e);
+CV_EXPORTS MatExpr operator / (const MatExpr& e1, const MatExpr& e2);
+
+CV_EXPORTS MatExpr operator < (const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr operator < (const Mat& a, double s);
+CV_EXPORTS MatExpr operator < (double s, const Mat& a);
+
+CV_EXPORTS MatExpr operator <= (const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr operator <= (const Mat& a, double s);
+CV_EXPORTS MatExpr operator <= (double s, const Mat& a);
+
+CV_EXPORTS MatExpr operator == (const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr operator == (const Mat& a, double s);
+CV_EXPORTS MatExpr operator == (double s, const Mat& a);
+
+CV_EXPORTS MatExpr operator != (const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr operator != (const Mat& a, double s);
+CV_EXPORTS MatExpr operator != (double s, const Mat& a);
+
+CV_EXPORTS MatExpr operator >= (const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr operator >= (const Mat& a, double s);
+CV_EXPORTS MatExpr operator >= (double s, const Mat& a);
+
+CV_EXPORTS MatExpr operator > (const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr operator > (const Mat& a, double s);
+CV_EXPORTS MatExpr operator > (double s, const Mat& a);
+
+CV_EXPORTS MatExpr operator & (const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr operator & (const Mat& a, const Scalar& s);
+CV_EXPORTS MatExpr operator & (const Scalar& s, const Mat& a);
+
+CV_EXPORTS MatExpr operator | (const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr operator | (const Mat& a, const Scalar& s);
+CV_EXPORTS MatExpr operator | (const Scalar& s, const Mat& a);
+
+CV_EXPORTS MatExpr operator ^ (const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr operator ^ (const Mat& a, const Scalar& s);
+CV_EXPORTS MatExpr operator ^ (const Scalar& s, const Mat& a);
+
+CV_EXPORTS MatExpr operator ~(const Mat& m);
+
+CV_EXPORTS MatExpr min(const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr min(const Mat& a, double s);
+CV_EXPORTS MatExpr min(double s, const Mat& a);
+
+CV_EXPORTS MatExpr max(const Mat& a, const Mat& b);
+CV_EXPORTS MatExpr max(const Mat& a, double s);
+CV_EXPORTS MatExpr max(double s, const Mat& a);
+
+CV_EXPORTS MatExpr abs(const Mat& m);
+CV_EXPORTS MatExpr abs(const MatExpr& e);
+
 } // cv
+
+#include "opencv2/core/mat.inl.hpp"
 
 #endif // __OPENCV_CORE_MAT_HPP__

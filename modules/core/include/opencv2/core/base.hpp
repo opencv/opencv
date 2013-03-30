@@ -279,11 +279,22 @@ CV_EXPORTS int LU(float* A, size_t astep, int m, float* b, size_t bstep, int n);
 CV_EXPORTS int LU(double* A, size_t astep, int m, double* b, size_t bstep, int n);
 CV_EXPORTS bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, int n);
 CV_EXPORTS bool Cholesky(double* A, size_t astep, int m, double* b, size_t bstep, int n);
-CV_EXPORTS float normL2Sqr_(const float* a, const float* b, int n);
-CV_EXPORTS float normL1_(const float* a, const float* b, int n);
+
 CV_EXPORTS int normL1_(const uchar* a, const uchar* b, int n);
 CV_EXPORTS int normHamming(const uchar* a, const uchar* b, int n);
 CV_EXPORTS int normHamming(const uchar* a, const uchar* b, int n, int cellSize);
+CV_EXPORTS float normL1_(const float* a, const float* b, int n);
+CV_EXPORTS float normL2Sqr_(const float* a, const float* b, int n);
+
+CV_EXPORTS void exp(const float* src, float* dst, int n);
+CV_EXPORTS void log(const float* src, float* dst, int n);
+CV_EXPORTS void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
+CV_EXPORTS void magnitude(const float* x, const float* y, float* dst, int n);
+
+//! computes cube root of the argument
+CV_EXPORTS_W float cubeRoot(float val);
+//! computes the angle in degrees (0..360) of the vector (x,y)
+CV_EXPORTS_W float fastAtan2(float y, float x);
 
 
 
@@ -442,10 +453,10 @@ class CV_EXPORTS KeyPoint;
 class CV_EXPORTS DMatch;
 
 class CV_EXPORTS Mat;
+class CV_EXPORTS MatExpr;
+
 class CV_EXPORTS SparseMat;
 typedef Mat MatND;
-
-class CV_EXPORTS MatExpr;
 
 template<typename _Tp> class CV_EXPORTS Mat_;
 template<typename _Tp> class CV_EXPORTS SparseMat_;
@@ -469,8 +480,6 @@ namespace gpu
 {
     class CV_EXPORTS GpuMat;
 }
-
-
 
 } // cv
 

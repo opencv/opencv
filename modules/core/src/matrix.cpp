@@ -262,9 +262,10 @@ void Mat::deallocate()
 }
 
 
-Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange) : size(&rows)
+Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), size(&rows)
 {
-    initEmpty();
     CV_Assert( m.dims >= 2 );
     if( m.dims > 2 )
     {
@@ -335,9 +336,10 @@ Mat::Mat(const Mat& m, const Rect& roi)
 }
 
 
-Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _steps) : size(&rows)
+Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _steps)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), size(&rows)
 {
-    initEmpty();
     flags |= CV_MAT_TYPE(_type);
     data = datastart = (uchar*)_data;
     setSize(*this, _dims, _sizes, _steps, true);
@@ -345,9 +347,10 @@ Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _st
 }
 
 
-Mat::Mat(const Mat& m, const Range* ranges) : size(&rows)
+Mat::Mat(const Mat& m, const Range* ranges)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), size(&rows)
 {
-    initEmpty();
     int i, d = m.dims;
 
     CV_Assert(ranges);
@@ -833,6 +836,18 @@ Mat Mat::reshape(int new_cn, int new_rows) const
     return hdr;
 }
 
+Mat Mat::diag(const Mat& d)
+{
+    CV_Assert( d.cols == 1 || d.rows == 1 );
+    int len = d.rows + d.cols - 1;
+    Mat m(len, len, d.type(), Scalar(0));
+    Mat md = m.diag();
+    if( d.cols == 1 )
+        d.copyTo(md);
+    else
+        transpose(d, md);
+    return m;
+}
 
 int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) const
 {
@@ -3405,16 +3420,6 @@ void MatConstIterator::seek(const int* _idx, bool relative)
             ofs = ofs*m->size[i] + _idx[i];
     }
     seek(ofs, relative);
-}
-
-ptrdiff_t operator - (const MatConstIterator& b, const MatConstIterator& a)
-{
-    if( a.m != b.m )
-        return INT_MAX;
-    if( a.sliceEnd == b.sliceEnd )
-        return (b.ptr - a.ptr)/b.elemSize;
-
-    return b.lpos() - a.lpos();
 }
 
 //////////////////////////////// SparseMat ////////////////////////////////
