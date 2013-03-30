@@ -379,7 +379,7 @@ Mat::Mat(const MatCommaInitializer_<_Tp>& commaInitializer)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(0), rows(0), cols(0), data(0),
       refcount(0), datastart(0), dataend(0), allocator(0), size(&rows)
 {
-    *this = *commaInitializer;
+    *this = commaInitializer.operator Mat_<_Tp>();
 }
 
 inline
@@ -2689,13 +2689,6 @@ MatCommaInitializer_<_Tp>& MatCommaInitializer_<_Tp>::operator , (T2 v)
     *this->it = _Tp(v);
     ++this->it;
     return *this;
-}
-
-template<typename _Tp> inline
-Mat_<_Tp> MatCommaInitializer_<_Tp>::operator *() const
-{
-    CV_DbgAssert( this->it == ((const Mat_<_Tp>*)this->it.m)->end() );
-    return Mat_<_Tp>(*this->it.m);
 }
 
 template<typename _Tp> inline
