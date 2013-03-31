@@ -44,11 +44,11 @@
 
 #include <utility>
 #include <algorithm>//std::swap
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/emulation.hpp"
-#include "opencv2/gpu/device/transform.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/core/device/common.hpp"
+#include "opencv2/core/device/emulation.hpp"
+#include "opencv2/core/device/transform.hpp"
+#include "opencv2/core/device/functional.hpp"
+#include "opencv2/core/device/utility.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;

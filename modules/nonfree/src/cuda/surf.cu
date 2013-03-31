@@ -44,13 +44,13 @@
 
 #ifdef HAVE_OPENCV_GPU
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/reduce.hpp"
-#include "opencv2/gpu/device/utility.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/filters.hpp"
+#include "opencv2/core/device/common.hpp"
+#include "opencv2/core/device/limits.hpp"
+#include "opencv2/core/device/saturate_cast.hpp"
+#include "opencv2/core/device/reduce.hpp"
+#include "opencv2/core/device/utility.hpp"
+#include "opencv2/core/device/functional.hpp"
+#include "opencv2/core/device/filters.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

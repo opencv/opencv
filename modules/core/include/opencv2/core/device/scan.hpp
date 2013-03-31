@@ -43,10 +43,10 @@
 #ifndef __OPENCV_GPU_SCAN_HPP__
 #define __OPENCV_GPU_SCAN_HPP__
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/utility.hpp"
-#include "opencv2/gpu/device/warp.hpp"
-#include "opencv2/gpu/device/warp_shuffle.hpp"
+#include "opencv2/core/device/common.hpp"
+#include "opencv2/core/device/utility.hpp"
+#include "opencv2/core/device/warp.hpp"
+#include "opencv2/core/device/warp_shuffle.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

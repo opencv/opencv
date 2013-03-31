@@ -42,9 +42,9 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/limits.hpp"
+#include "opencv2/core/device/common.hpp"
+#include "opencv2/core/device/saturate_cast.hpp"
+#include "opencv2/core/device/limits.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

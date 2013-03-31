@@ -45,8 +45,8 @@
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/core/device/common.hpp"
+#include "opencv2/core/device/utility.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

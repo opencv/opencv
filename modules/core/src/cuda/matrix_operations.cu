@@ -40,10 +40,10 @@
 //
 //M*/
 
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/transform.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/type_traits.hpp"
+#include "opencv2/core/device/saturate_cast.hpp"
+#include "opencv2/core/device/transform.hpp"
+#include "opencv2/core/device/functional.hpp"
+#include "opencv2/core/device/type_traits.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

@@ -45,11 +45,11 @@
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/emulation.hpp"
-#include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/dynamic_smem.hpp"
+#include "opencv2/core/device/common.hpp"
+#include "opencv2/core/device/emulation.hpp"
+#include "opencv2/core/device/vec_math.hpp"
+#include "opencv2/core/device/limits.hpp"
+#include "opencv2/core/device/dynamic_smem.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

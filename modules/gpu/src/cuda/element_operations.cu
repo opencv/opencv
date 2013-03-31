@@ -42,13 +42,13 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/transform.hpp"
-#include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/simd_functions.hpp"
+#include "opencv2/core/device/common.hpp"
+#include "opencv2/core/device/functional.hpp"
+#include "opencv2/core/device/vec_math.hpp"
+#include "opencv2/core/device/transform.hpp"
+#include "opencv2/core/device/limits.hpp"
+#include "opencv2/core/device/saturate_cast.hpp"
+#include "opencv2/core/device/simd_functions.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;

@@ -42,8 +42,8 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/vec_traits.hpp"
+#include "opencv2/core/device/common.hpp"
+#include "opencv2/core/device/vec_traits.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

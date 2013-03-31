@@ -65,7 +65,7 @@
 
 #include "NPP_staging/NPP_staging.hpp"
 #include "NCVBroxOpticalFlow.hpp"
-#include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/core/device/utility.hpp"
 
 
 typedef NCVVectorAlloc<Ncv32f> FloatVector;

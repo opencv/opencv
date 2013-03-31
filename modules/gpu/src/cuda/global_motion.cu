@@ -45,7 +45,7 @@
 #include <thrust/device_ptr.h>
 #include <thrust/remove.h>
 #include <thrust/functional.h>
-#include "opencv2/gpu/device/common.hpp"
+#include "opencv2/core/device/common.hpp"
 
 namespace cv { namespace gpu { namespace device { namespace globmotion {
 

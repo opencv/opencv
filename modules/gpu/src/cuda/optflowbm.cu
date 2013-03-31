@@ -42,10 +42,10 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/reduce.hpp"
+#include "opencv2/core/device/common.hpp"
+#include "opencv2/core/device/limits.hpp"
+#include "opencv2/core/device/functional.hpp"
+#include "opencv2/core/device/reduce.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;

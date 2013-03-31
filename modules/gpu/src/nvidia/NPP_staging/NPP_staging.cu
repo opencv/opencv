@@ -45,8 +45,8 @@
 #include <vector>
 #include <cuda_runtime.h>
 #include "NPP_staging.hpp"
-#include "opencv2/gpu/device/warp.hpp"
-#include "opencv2/gpu/device/warp_shuffle.hpp"
+#include "opencv2/core/device/warp.hpp"
+#include "opencv2/core/device/warp_shuffle.hpp"
 
 
 texture<Ncv8u,  1, cudaReadModeElementType> tex8u;
