@@ -455,7 +455,7 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
 
         hullseq = cvMakeSeqHeaderForArray(
                                           CV_SEQ_KIND_CURVE|CV_MAT_TYPE(mat->type)|CV_SEQ_FLAG_CLOSED,
-                                          sizeof(contour_header), CV_ELEM_SIZE(mat->type), mat->data.ptr,
+                                          sizeof(hull_header), CV_ELEM_SIZE(mat->type), mat->data.ptr,
                                           mat->cols + mat->rows - 1, &hull_header, &hullblock );
         cvClearSeq( hullseq );
     }
@@ -474,6 +474,7 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
     cv::Mat h0;
     cv::convexHull(cv::cvarrToMat(ptseq, false, false, 0, &_ptbuf), h0,
                    orientation == CV_CLOCKWISE, CV_MAT_CN(hulltype) == 2);
+
 
     if( hulltype == CV_SEQ_ELTYPE_PPOINT )
     {
