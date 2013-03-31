@@ -1464,28 +1464,28 @@ cvScalarToRawData( const CvScalar* scalar, void* data, int type, int extend_to_1
         while( cn-- )
         {
             int t = cvRound( scalar->val[cn] );
-            ((uchar*)data)[cn] = CV_CAST_8U(t);
+            ((uchar*)data)[cn] = cv::saturate_cast<uchar>(t);
         }
         break;
     case CV_8SC1:
         while( cn-- )
         {
             int t = cvRound( scalar->val[cn] );
-            ((char*)data)[cn] = CV_CAST_8S(t);
+            ((char*)data)[cn] = cv::saturate_cast<schar>(t);
         }
         break;
     case CV_16UC1:
         while( cn-- )
         {
             int t = cvRound( scalar->val[cn] );
-            ((ushort*)data)[cn] = CV_CAST_16U(t);
+            ((ushort*)data)[cn] = cv::saturate_cast<ushort>(t);
         }
         break;
     case CV_16SC1:
         while( cn-- )
         {
             int t = cvRound( scalar->val[cn] );
-            ((short*)data)[cn] = CV_CAST_16S(t);
+            ((short*)data)[cn] = cv::saturate_cast<short>(t);
         }
         break;
     case CV_32SC1:
@@ -1602,19 +1602,19 @@ static void icvSetReal( double value, const void* data, int type )
         switch( type )
         {
         case CV_8U:
-            *(uchar*)data = CV_CAST_8U(ivalue);
+            *(uchar*)data = cv::saturate_cast<uchar>(ivalue);
             break;
         case CV_8S:
-            *(char*)data = CV_CAST_8S(ivalue);
+            *(schar*)data = cv::saturate_cast<schar>(ivalue);
             break;
         case CV_16U:
-            *(ushort*)data = CV_CAST_16U(ivalue);
+            *(ushort*)data = cv::saturate_cast<ushort>(ivalue);
             break;
         case CV_16S:
-            *(short*)data = CV_CAST_16S(ivalue);
+            *(short*)data = cv::saturate_cast<short>(ivalue);
             break;
         case CV_32S:
-            *(int*)data = CV_CAST_32S(ivalue);
+            *(int*)data = cv::saturate_cast<int>(ivalue);
             break;
         }
     }

@@ -184,11 +184,9 @@ enum { DFT_INVERSE        = 1,
 #  if defined(__GNUC__) && (__GNUC__ > 3) && (__GNUC_MINOR__ > 2)
 #    define CV_StaticAssert(condition, reason) ({ extern int __attribute__((error("CV_StaticAssert: " reason " " #condition))) CV_StaticAssert(); ((condition) ? 0 : CV_StaticAssert()); })
 #  else
-     namespace cv {
-       template <bool x> struct CV_StaticAssert_failed;
-       template <> struct CV_StaticAssert_failed<true> { enum { val = 1 }; };
-       template<int x> struct CV_StaticAssert_test{};
-     }
+     template <bool x> struct CV_StaticAssert_failed;
+     template <> struct CV_StaticAssert_failed<true> { enum { val = 1 }; };
+     template<int x> struct CV_StaticAssert_test {};
 #    define CV_StaticAssert(condition, reason)\
        typedef cv::CV_StaticAssert_test< sizeof(cv::CV_StaticAssert_failed< static_cast<bool>(condition) >) > CVAUX_CONCAT(CV_StaticAssert_failed_at_, __LINE__)
 #  endif

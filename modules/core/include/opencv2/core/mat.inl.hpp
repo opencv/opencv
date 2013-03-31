@@ -122,7 +122,7 @@ template<typename _Tp> inline
 _OutputArray::_OutputArray(const std::vector<_Tp>& vec)
     : _InputArray(vec)
 {
-    flags |= FIXED_SIZE
+    flags |= FIXED_SIZE;
 }
 
 template<typename _Tp> inline

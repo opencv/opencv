@@ -2676,7 +2676,7 @@ void cvCreateTreeCascadeClassifier( const char* dirname,
 
                     CvSplit* curSplit;
                     CV_CALL( curSplit = (CvSplit*) cvAlloc( sizeof( *curSplit ) ) );
-                    CV_ZERO_OBJ( curSplit );
+                    memset(curSplit, 0, sizeof(*curSplit));
 
                     if( last_split ) last_split->next = curSplit;
                     else first_split = curSplit;

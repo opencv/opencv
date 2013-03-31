@@ -1843,7 +1843,7 @@ cvPyrSegmentation( IplImage * src,
     int thresh2 = cvRound( threshold2 );
 
     if( src->depth != IPL_DEPTH_8U )
-        CV_Error( CV_BadDepth, cvUnsupportedFormat );
+        CV_Error( CV_BadDepth, "Unsupported format" );
 
     if( src->depth != dst->depth || src->nChannels != dst->nChannels )
         CV_Error( CV_StsBadArg, "src and dst have different formats" );
@@ -1872,7 +1872,7 @@ cvPyrSegmentation( IplImage * src,
                                             comp, storage, level, thresh1, thresh2 ));
         break;
     default:
-        CV_Error( CV_BadNumChannels, cvUnsupportedFormat );
+        CV_Error( CV_BadNumChannels, "Unsupported format" );
     }
 }
 

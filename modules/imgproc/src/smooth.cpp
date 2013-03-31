@@ -1772,7 +1772,7 @@ public:
                         sum += val*w;
                         wsum += w;
                     }
-                    // overflow is not possible here => there is no need to use CV_CAST_8U
+                    // overflow is not possible here => there is no need to use cv::saturate_cast
                     dptr[j] = (uchar)cvRound(sum/wsum);
                 }
             }

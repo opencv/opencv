@@ -416,7 +416,7 @@ cvSnakeImage( const IplImage* src, CvPoint* points,
         CV_Error( CV_BadNumChannels, "input image has more than one channel" );
 
     if( src->depth != IPL_DEPTH_8U )
-        CV_Error( CV_BadDepth, cvUnsupportedFormat );
+        CV_Error( CV_BadDepth, "Unsupported format" );
 
     cvGetRawData( src, &data, &step, &size );
 

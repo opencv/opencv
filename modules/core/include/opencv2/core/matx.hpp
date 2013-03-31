@@ -956,7 +956,7 @@ Vec<double, 4> Vec<double, 4>::conj() const
 template<typename _Tp, int cn> inline
 Vec<_Tp, cn> Vec<_Tp, cn>::cross(const Vec<_Tp, cn>&) const
 {
-    CV_StaticAssert(false, "for arbitrary-size vector there is no cross-product defined");
+    CV_StaticAssert(cn == 3, "for arbitrary-size vector there is no cross-product defined");
     return Vec<_Tp, cn>();
 }
 

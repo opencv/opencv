@@ -3246,19 +3246,19 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
                     switch( elem_type )
                     {
                     case CV_8U:
-                        *(uchar*)data = CV_CAST_8U(ival);
+                        *(uchar*)data = cv::saturate_cast<uchar>(ival);
                         data++;
                         break;
                     case CV_8S:
-                        *(char*)data = CV_CAST_8S(ival);
+                        *(char*)data = cv::saturate_cast<schar>(ival);
                         data++;
                         break;
                     case CV_16U:
-                        *(ushort*)data = CV_CAST_16U(ival);
+                        *(ushort*)data = cv::saturate_cast<ushort>(ival);
                         data += sizeof(ushort);
                         break;
                     case CV_16S:
-                        *(short*)data = CV_CAST_16S(ival);
+                        *(short*)data = cv::saturate_cast<short>(ival);
                         data += sizeof(short);
                         break;
                     case CV_32S:
@@ -3291,22 +3291,22 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
                     {
                     case CV_8U:
                         ival = cvRound(fval);
-                        *(uchar*)data = CV_CAST_8U(ival);
+                        *(uchar*)data = cv::saturate_cast<uchar>(ival);
                         data++;
                         break;
                     case CV_8S:
                         ival = cvRound(fval);
-                        *(char*)data = CV_CAST_8S(ival);
+                        *(char*)data = cv::saturate_cast<schar>(ival);
                         data++;
                         break;
                     case CV_16U:
                         ival = cvRound(fval);
-                        *(ushort*)data = CV_CAST_16U(ival);
+                        *(ushort*)data = cv::saturate_cast<ushort>(ival);
                         data += sizeof(ushort);
                         break;
                     case CV_16S:
                         ival = cvRound(fval);
-                        *(short*)data = CV_CAST_16S(ival);
+                        *(short*)data = cv::saturate_cast<short>(ival);
                         data += sizeof(short);
                         break;
                     case CV_32S:

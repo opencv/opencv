@@ -397,82 +397,80 @@ static CvStatus CV_STDCALL icvGetRectSubPix_8u32f_C1R
 
 #define ICV_32F8U(x)  ((uchar)cvRound(x))
 
-#define ICV_DEF_GET_QUADRANGLE_SUB_PIX_FUNC( flavor, srctype, dsttype,      \
-worktype, cast_macro, cvt )    \
-static CvStatus CV_STDCALL                                                   \
-icvGetQuadrangleSubPix_##flavor##_C1R                                       \
-( const srctype * src, int src_step, CvSize src_size,                       \
-dsttype *dst, int dst_step, CvSize win_size, const float *matrix )        \
-{                                                                           \
-int x, y;                                                               \
-double dx = (win_size.width - 1)*0.5;                                   \
-double dy = (win_size.height - 1)*0.5;                                  \
-double A11 = matrix[0], A12 = matrix[1], A13 = matrix[2]-A11*dx-A12*dy; \
-double A21 = matrix[3], A22 = matrix[4], A23 = matrix[5]-A21*dx-A22*dy; \
-\
-src_step /= sizeof(srctype);                                            \
-dst_step /= sizeof(dsttype);                                            \
-\
-for( y = 0; y < win_size.height; y++, dst += dst_step )                 \
-{                                                                       \
-double xs = A12*y + A13;                                            \
-double ys = A22*y + A23;                                            \
-double xe = A11*(win_size.width-1) + A12*y + A13;                   \
-double ye = A21*(win_size.width-1) + A22*y + A23;                   \
-\
-if( (unsigned)(cvFloor(xs)-1) < (unsigned)(src_size.width - 3) &&   \
-(unsigned)(cvFloor(ys)-1) < (unsigned)(src_size.height - 3) &&  \
-(unsigned)(cvFloor(xe)-1) < (unsigned)(src_size.width - 3) &&   \
-(unsigned)(cvFloor(ye)-1) < (unsigned)(src_size.height - 3))    \
-{                                                                   \
-for( x = 0; x < win_size.width; x++ )                           \
-{                                                               \
-int ixs = cvFloor( xs );                                    \
-int iys = cvFloor( ys );                                    \
-const srctype *ptr = src + src_step*iys + ixs;              \
-double a = xs - ixs, b = ys - iys, a1 = 1.f - a;            \
-worktype p0 = cvt(ptr[0])*a1 + cvt(ptr[1])*a;               \
-worktype p1 = cvt(ptr[src_step])*a1 + cvt(ptr[src_step+1])*a;\
-xs += A11;                                                  \
-ys += A21;                                                  \
-\
-dst[x] = cast_macro(p0 + b * (p1 - p0));                    \
-}                                                               \
-}                                                                   \
-else                                                                \
-{                                                                   \
-for( x = 0; x < win_size.width; x++ )                           \
-{                                                               \
-int ixs = cvFloor( xs ), iys = cvFloor( ys );               \
-double a = xs - ixs, b = ys - iys, a1 = 1.f - a;            \
-const srctype *ptr0, *ptr1;                                 \
-worktype p0, p1;                                            \
-xs += A11; ys += A21;                                       \
-\
-if( (unsigned)iys < (unsigned)(src_size.height-1) )         \
-ptr0 = src + src_step*iys, ptr1 = ptr0 + src_step;      \
-else                                                        \
-ptr0 = ptr1 = src + (iys < 0 ? 0 : src_size.height-1)*src_step; \
-\
-if( (unsigned)ixs < (unsigned)(src_size.width-1) )          \
-{                                                           \
-p0 = cvt(ptr0[ixs])*a1 + cvt(ptr0[ixs+1])*a;            \
-p1 = cvt(ptr1[ixs])*a1 + cvt(ptr1[ixs+1])*a;            \
-}                                                           \
-else                                                        \
-{                                                           \
-ixs = ixs < 0 ? 0 : src_size.width - 1;                 \
-p0 = cvt(ptr0[ixs]); p1 = cvt(ptr1[ixs]);               \
-}                                                           \
-dst[x] = cast_macro(p0 + b * (p1 - p0));                    \
-}                                                               \
-}                                                                   \
-}                                                                       \
-\
-return CV_OK;                                                           \
+#define ICV_DEF_GET_QUADRANGLE_SUB_PIX_FUNC( flavor, srctype, dsttype, worktype, cast_macro, cvt ) \
+static CvStatus CV_STDCALL icvGetQuadrangleSubPix_##flavor##_C1R                    \
+              ( const srctype * src, int src_step, CvSize src_size,                 \
+                dsttype *dst, int dst_step, CvSize win_size, const float *matrix )  \
+{                                                                                   \
+    int x, y;                                                                       \
+    double dx = (win_size.width - 1)*0.5;                                           \
+    double dy = (win_size.height - 1)*0.5;                                          \
+    double A11 = matrix[0], A12 = matrix[1], A13 = matrix[2]-A11*dx-A12*dy;         \
+    double A21 = matrix[3], A22 = matrix[4], A23 = matrix[5]-A21*dx-A22*dy;         \
+                                                                                    \
+    src_step /= sizeof(srctype);                                                    \
+    dst_step /= sizeof(dsttype);                                                    \
+                                                                                    \
+    for( y = 0; y < win_size.height; y++, dst += dst_step )                         \
+    {                                                                               \
+        double xs = A12*y + A13;                                                    \
+        double ys = A22*y + A23;                                                    \
+        double xe = A11*(win_size.width-1) + A12*y + A13;                           \
+        double ye = A21*(win_size.width-1) + A22*y + A23;                           \
+                                                                                    \
+        if( (unsigned)(cvFloor(xs)-1) < (unsigned)(src_size.width - 3) &&           \
+            (unsigned)(cvFloor(ys)-1) < (unsigned)(src_size.height - 3) &&          \
+            (unsigned)(cvFloor(xe)-1) < (unsigned)(src_size.width - 3) &&           \
+            (unsigned)(cvFloor(ye)-1) < (unsigned)(src_size.height - 3))            \
+        {                                                                           \
+            for( x = 0; x < win_size.width; x++ )                                   \
+            {                                                                       \
+                int ixs = cvFloor( xs );                                            \
+                int iys = cvFloor( ys );                                            \
+                const srctype *ptr = src + src_step*iys + ixs;                      \
+                double a = xs - ixs, b = ys - iys, a1 = 1.f - a;                    \
+                worktype p0 = cvt(ptr[0])*a1 + cvt(ptr[1])*a;                       \
+                worktype p1 = cvt(ptr[src_step])*a1 + cvt(ptr[src_step+1])*a;       \
+                xs += A11;                                                          \
+                ys += A21;                                                          \
+                                                                                    \
+                dst[x] = cast_macro(p0 + b * (p1 - p0));                            \
+            }                                                                       \
+        }                                                                           \
+        else                                                                        \
+        {                                                                           \
+            for( x = 0; x < win_size.width; x++ )                                   \
+            {                                                                       \
+                int ixs = cvFloor( xs ), iys = cvFloor( ys );                       \
+                double a = xs - ixs, b = ys - iys, a1 = 1.f - a;                    \
+                const srctype *ptr0, *ptr1;                                         \
+                worktype p0, p1;                                                    \
+                xs += A11; ys += A21;                                               \
+                                                                                    \
+                if( (unsigned)iys < (unsigned)(src_size.height-1) )                 \
+                    ptr0 = src + src_step*iys, ptr1 = ptr0 + src_step;              \
+                else                                                                \
+                    ptr0 = ptr1 = src + (iys < 0 ? 0 : src_size.height-1)*src_step; \
+                                                                                    \
+                if( (unsigned)ixs < (unsigned)(src_size.width-1) )                  \
+                {                                                                   \
+                    p0 = cvt(ptr0[ixs])*a1 + cvt(ptr0[ixs+1])*a;                    \
+                    p1 = cvt(ptr1[ixs])*a1 + cvt(ptr1[ixs+1])*a;                    \
+                }                                                                   \
+                else                                                                \
+                {                                                                   \
+                    ixs = ixs < 0 ? 0 : src_size.width - 1;                         \
+                    p0 = cvt(ptr0[ixs]); p1 = cvt(ptr1[ixs]);                       \
+                }                                                                   \
+                dst[x] = cast_macro(p0 + b * (p1 - p0));                            \
+            }                                                                       \
+        }                                                                           \
+    }                                                                               \
+                                                                                    \
+    return CV_OK;                                                                   \
 }
 
-ICV_DEF_GET_QUADRANGLE_SUB_PIX_FUNC( 8u32f, uchar, float, double, CV_CAST_32F, CV_8TO32F )
+ICV_DEF_GET_QUADRANGLE_SUB_PIX_FUNC( 8u32f, uchar, float, double, cv::saturate_cast<float>, CV_8TO32F )
 
 /* Affine tracking algorithm */
 

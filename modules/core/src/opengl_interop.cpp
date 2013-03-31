@@ -69,9 +69,8 @@ namespace
             void throw_nocuda() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }
         #endif
     #endif
-}
 
-bool cv::ogl::checkError(const char* file, const int line, const char* func)
+bool checkError(const char* file, const int line, const char* func = 0)
 {
 #ifndef HAVE_OPENGL
     (void) file;
@@ -115,6 +114,14 @@ bool cv::ogl::checkError(const char* file, const int line, const char* func)
     return true;
 #endif
 }
+
+#if defined(__GNUC__)
+    #define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__, __func__)) )
+#else
+    #define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__)) )
+#endif
+
+} // namespace
 
 #ifdef HAVE_OPENGL
 namespace

@@ -647,7 +647,7 @@ cvConvertImage( const CvArr* srcarr, CvArr* dstarr, int flags )
         {
             size.width *= size.height;
             size.height = 1;
-            s_step = d_step = CV_STUB_STEP;
+            s_step = d_step = /*CV_STUB_STEP*/ (1 << 30);
         }
 
         switch( code )

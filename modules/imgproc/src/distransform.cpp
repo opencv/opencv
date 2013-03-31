@@ -619,7 +619,7 @@ distanceATS_L1_8u( const Mat& src, Mat& dst )
 
     ////////////////////// forward scan ////////////////////////
     for( x = 0; x < 256; x++ )
-        lut[x] = CV_CAST_8U(x+1);
+        lut[x] = cv::saturate_cast<uchar>(x+1);
 
     //init first pixel to max (we're going to be skipping it)
     dbase[0] = (uchar)(sbase[0] == 0 ? 0 : 255);
