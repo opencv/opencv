@@ -330,249 +330,31 @@ SVD::backSubst( const Matx<_Tp, nm, 1>& w, const Matx<_Tp, m, nm>& u,
     CV_Assert(_dst.data == (uchar*)&dst.val[0]);
 }
 
-//////////////////////////////// Vector ////////////////////////////////
-
-// template vector class. It is similar to STL's vector,
-// with a few important differences:
-//   1) it can be created on top of user-allocated data w/o copying it
-//   2) vector b = a means copying the header,
-//      not the underlying data (use clone() to make a deep copy)
-template <typename _Tp> class CV_EXPORTS Vector
-{
-public:
-    typedef _Tp value_type;
-    typedef _Tp* iterator;
-    typedef const _Tp* const_iterator;
-    typedef _Tp& reference;
-    typedef const _Tp& const_reference;
-
-    struct CV_EXPORTS Hdr
-    {
-        Hdr() : data(0), datastart(0), refcount(0), size(0), capacity(0) {};
-        _Tp* data;
-        _Tp* datastart;
-        int* refcount;
-        size_t size;
-        size_t capacity;
-    };
-
-    Vector() {}
-    Vector(size_t _size)  { resize(_size); }
-    Vector(size_t _size, const _Tp& val)
-    {
-        resize(_size);
-        for(size_t i = 0; i < _size; i++)
-            hdr.data[i] = val;
-    }
-    Vector(_Tp* _data, size_t _size, bool _copyData=false)
-    { set(_data, _size, _copyData); }
-
-    template<int n> Vector(const Vec<_Tp, n>& vec)
-    { set((_Tp*)&vec.val[0], n, true); }
-
-    Vector(const std::vector<_Tp>& vec, bool _copyData=false)
-    { set(!vec.empty() ? (_Tp*)&vec[0] : 0, vec.size(), _copyData); }
-
-    Vector(const Vector& d) { *this = d; }
-
-    Vector(const Vector& d, const Range& r_)
-    {
-        Range r = r_ == Range::all() ? Range(0, d.size()) : r_;
-        /*if( r == Range::all() )
-            r = Range(0, d.size());*/
-        if( r.size() > 0 && r.start >= 0 && r.end <= d.size() )
-        {
-            if( d.hdr.refcount )
-                CV_XADD(d.hdr.refcount, 1);
-            hdr.refcount = d.hdr.refcount;
-            hdr.datastart = d.hdr.datastart;
-            hdr.data = d.hdr.data + r.start;
-            hdr.capacity = hdr.size = r.size();
-        }
-    }
-
-    Vector<_Tp>& operator = (const Vector& d)
-    {
-        if( this != &d )
-        {
-            if( d.hdr.refcount )
-                CV_XADD(d.hdr.refcount, 1);
-            release();
-            hdr = d.hdr;
-        }
-        return *this;
-    }
-
-    ~Vector()  { release(); }
-
-    Vector<_Tp> clone() const
-    { return hdr.data ? Vector<_Tp>(hdr.data, hdr.size, true) : Vector<_Tp>(); }
-
-    void copyTo(Vector<_Tp>& vec) const
-    {
-        size_t i, sz = size();
-        vec.resize(sz);
-        const _Tp* src = hdr.data;
-        _Tp* dst = vec.hdr.data;
-        for( i = 0; i < sz; i++ )
-            dst[i] = src[i];
-    }
-
-    void copyTo(std::vector<_Tp>& vec) const
-    {
-        size_t i, sz = size();
-        vec.resize(sz);
-        const _Tp* src = hdr.data;
-        _Tp* dst = sz ? &vec[0] : 0;
-        for( i = 0; i < sz; i++ )
-            dst[i] = src[i];
-    }
-
-    // operator CvMat() const
-    // { return cvMat((int)size(), 1, type(), (void*)hdr.data); }
-
-    _Tp& operator [] (size_t i) { CV_DbgAssert( i < size() ); return hdr.data[i]; }
-    const _Tp& operator [] (size_t i) const { CV_DbgAssert( i < size() ); return hdr.data[i]; }
-    Vector operator() (const Range& r) const { return Vector(*this, r); }
-    _Tp& back() { CV_DbgAssert(!empty()); return hdr.data[hdr.size-1]; }
-    const _Tp& back() const { CV_DbgAssert(!empty()); return hdr.data[hdr.size-1]; }
-    _Tp& front() { CV_DbgAssert(!empty()); return hdr.data[0]; }
-    const _Tp& front() const { CV_DbgAssert(!empty()); return hdr.data[0]; }
-
-    _Tp* begin() { return hdr.data; }
-    _Tp* end() { return hdr.data + hdr.size; }
-    const _Tp* begin() const { return hdr.data; }
-    const _Tp* end() const { return hdr.data + hdr.size; }
-
-    void addref() { if( hdr.refcount ) CV_XADD(hdr.refcount, 1); }
-    void release()
-    {
-        if( hdr.refcount && CV_XADD(hdr.refcount, -1) == 1 )
-        {
-            delete[] hdr.datastart;
-            delete hdr.refcount;
-        }
-        hdr = Hdr();
-    }
-
-    void set(_Tp* _data, size_t _size, bool _copyData=false)
-    {
-        if( !_copyData )
-        {
-            release();
-            hdr.data = hdr.datastart = _data;
-            hdr.size = hdr.capacity = _size;
-            hdr.refcount = 0;
-        }
-        else
-        {
-            reserve(_size);
-            for( size_t i = 0; i < _size; i++ )
-                hdr.data[i] = _data[i];
-            hdr.size = _size;
-        }
-    }
-
-    void reserve(size_t newCapacity)
-    {
-        _Tp* newData;
-        int* newRefcount;
-        size_t i, oldSize = hdr.size;
-        if( (!hdr.refcount || *hdr.refcount == 1) && hdr.capacity >= newCapacity )
-            return;
-        newCapacity = std::max(newCapacity, oldSize);
-        newData = new _Tp[newCapacity];
-        newRefcount = new int(1);
-        for( i = 0; i < oldSize; i++ )
-            newData[i] = hdr.data[i];
-        release();
-        hdr.data = hdr.datastart = newData;
-        hdr.capacity = newCapacity;
-        hdr.size = oldSize;
-        hdr.refcount = newRefcount;
-    }
-
-    void resize(size_t newSize)
-    {
-        size_t i;
-        newSize = std::max(newSize, (size_t)0);
-        if( (!hdr.refcount || *hdr.refcount == 1) && hdr.size == newSize )
-            return;
-        if( newSize > hdr.capacity )
-            reserve(std::max(newSize, std::max((size_t)4, hdr.capacity*2)));
-        for( i = hdr.size; i < newSize; i++ )
-            hdr.data[i] = _Tp();
-        hdr.size = newSize;
-    }
-
-    Vector<_Tp>& push_back(const _Tp& elem)
-    {
-        if( hdr.size == hdr.capacity )
-            reserve( std::max((size_t)4, hdr.capacity*2) );
-        hdr.data[hdr.size++] = elem;
-        return *this;
-    }
-
-    Vector<_Tp>& pop_back()
-    {
-        if( hdr.size > 0 )
-            --hdr.size;
-        return *this;
-    }
-
-    size_t size() const { return hdr.size; }
-    size_t capacity() const { return hdr.capacity; }
-    bool empty() const { return hdr.size == 0; }
-    void clear() { resize(0); }
-    int type() const { return DataType<_Tp>::type; }
-
-protected:
-    Hdr hdr;
-};
-
-
-template<typename _Tp> inline typename DataType<_Tp>::work_type
-dot(const Vector<_Tp>& v1, const Vector<_Tp>& v2)
-{
-    typedef typename DataType<_Tp>::work_type _Tw;
-    size_t i = 0, n = v1.size();
-    assert(v1.size() == v2.size());
-
-    _Tw s = 0;
-    const _Tp *ptr1 = &v1[0], *ptr2 = &v2[0];
-    for( ; i < n; i++ )
-        s += (_Tw)ptr1[i]*ptr2[i];
-
-    return s;
-}
-
 // Multiply-with-Carry RNG
-inline RNG::RNG() { state = 0xffffffff; }
+inline RNG::RNG()              { state = 0xffffffff; }
 inline RNG::RNG(uint64 _state) { state = _state ? _state : 0xffffffff; }
+
+inline RNG::operator uchar()    { return (uchar)next(); }
+inline RNG::operator schar()    { return (schar)next(); }
+inline RNG::operator ushort()   { return (ushort)next(); }
+inline RNG::operator short()    { return (short)next(); }
+inline RNG::operator int()      { return (int)next(); }
+inline RNG::operator unsigned() { return next(); }
+inline RNG::operator float()    { return next()*2.3283064365386962890625e-10f; }
+inline RNG::operator double()   { unsigned t = next(); return (((uint64)t << 32) | next()) * 5.4210108624275221700372640043497e-20; }
+
+inline unsigned RNG::operator ()(unsigned N) { return (unsigned)uniform(0,N); }
+inline unsigned RNG::operator ()()           { return next(); }
+
+inline int    RNG::uniform(int a, int b)       { return a == b ? a : (int)(next() % (b - a) + a); }
+inline float  RNG::uniform(float a, float b)   { return ((float)*this)*(b - a) + a; }
+inline double RNG::uniform(double a, double b) { return ((double)*this)*(b - a) + a; }
+
 inline unsigned RNG::next()
 {
     state = (uint64)(unsigned)state* /*CV_RNG_COEFF*/ 4164903690U + (unsigned)(state >> 32);
     return (unsigned)state;
 }
-
-inline RNG::operator uchar() { return (uchar)next(); }
-inline RNG::operator schar() { return (schar)next(); }
-inline RNG::operator ushort() { return (ushort)next(); }
-inline RNG::operator short() { return (short)next(); }
-inline RNG::operator unsigned() { return next(); }
-inline unsigned RNG::operator ()(unsigned N) {return (unsigned)uniform(0,N);}
-inline unsigned RNG::operator ()() {return next();}
-inline RNG::operator int() { return (int)next(); }
-// * (2^32-1)^-1
-inline RNG::operator float() { return next()*2.3283064365386962890625e-10f; }
-inline RNG::operator double()
-{
-    unsigned t = next();
-    return (((uint64)t << 32) | next())*5.4210108624275221700372640043497e-20;
-}
-inline int RNG::uniform(int a, int b) { return a == b ? a : (int)(next()%(b - a) + a); }
-inline float RNG::uniform(float a, float b) { return ((float)*this)*(b - a) + a; }
-inline double RNG::uniform(double a, double b) { return ((double)*this)*(b - a) + a; }
 
 inline uchar* LineIterator::operator *() { return ptr; }
 inline LineIterator& LineIterator::operator ++()
