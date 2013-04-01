@@ -52,21 +52,17 @@
   #include <limits.h>
 #endif // SKIP_INCLUDES
 
-
 #include <limits>
-
-#ifdef _MSC_VER
-# pragma warning(push)
-# pragma warning(disable:4127) //conditional expression is constant
-#endif
 
 namespace cv
 {
 
+////////////////////////////// Matx methods depending on core API /////////////////////////////
+
 namespace internal
 {
 
-template<typename _Tp, int m> struct CV_EXPORTS Matx_FastInvOp
+template<typename _Tp, int m> struct Matx_FastInvOp
 {
     bool operator()(const Matx<_Tp, m, m>& a, Matx<_Tp, m, m>& b, int method) const
     {
@@ -83,7 +79,7 @@ template<typename _Tp, int m> struct CV_EXPORTS Matx_FastInvOp
     }
 };
 
-template<typename _Tp> struct CV_EXPORTS Matx_FastInvOp<_Tp, 2>
+template<typename _Tp> struct Matx_FastInvOp<_Tp, 2>
 {
     bool operator()(const Matx<_Tp, 2, 2>& a, Matx<_Tp, 2, 2>& b, int) const
     {
@@ -99,7 +95,7 @@ template<typename _Tp> struct CV_EXPORTS Matx_FastInvOp<_Tp, 2>
     }
 };
 
-template<typename _Tp> struct CV_EXPORTS Matx_FastInvOp<_Tp, 3>
+template<typename _Tp> struct Matx_FastInvOp<_Tp, 3>
 {
     bool operator()(const Matx<_Tp, 3, 3>& a, Matx<_Tp, 3, 3>& b, int) const
     {
@@ -123,7 +119,7 @@ template<typename _Tp> struct CV_EXPORTS Matx_FastInvOp<_Tp, 3>
 };
 
 
-template<typename _Tp, int m, int n> struct CV_EXPORTS Matx_FastSolveOp
+template<typename _Tp, int m, int n> struct Matx_FastSolveOp
 {
     bool operator()(const Matx<_Tp, m, m>& a, const Matx<_Tp, m, n>& b,
                     Matx<_Tp, m, n>& x, int method) const
@@ -137,7 +133,7 @@ template<typename _Tp, int m, int n> struct CV_EXPORTS Matx_FastSolveOp
     }
 };
 
-template<typename _Tp> struct CV_EXPORTS Matx_FastSolveOp<_Tp, 2, 1>
+template<typename _Tp> struct Matx_FastSolveOp<_Tp, 2, 1>
 {
     bool operator()(const Matx<_Tp, 2, 2>& a, const Matx<_Tp, 2, 1>& b,
                     Matx<_Tp, 2, 1>& x, int) const
@@ -152,7 +148,7 @@ template<typename _Tp> struct CV_EXPORTS Matx_FastSolveOp<_Tp, 2, 1>
     }
 };
 
-template<typename _Tp> struct CV_EXPORTS Matx_FastSolveOp<_Tp, 3, 1>
+template<typename _Tp> struct Matx_FastSolveOp<_Tp, 3, 1>
 {
     bool operator()(const Matx<_Tp, 3, 3>& a, const Matx<_Tp, 3, 1>& b,
                     Matx<_Tp, 3, 1>& x, int) const
@@ -227,7 +223,7 @@ Matx<_Tp, n, l> Matx<_Tp, m, n>::solve(const Matx<_Tp, m, l>& rhs, int method) c
 
 
 
-////////////////////////////// Augmenting algebraic & logical operations //////////////////////////////////
+////////////////////////// Augmenting algebraic & logical operations //////////////////////////
 
 #define CV_MAT_AUG_OPERATOR1(op, cvop, A, B) \
     static inline A& operator op (A& a, const B& b) { cvop; return a; }
@@ -288,7 +284,7 @@ CV_MAT_AUG_OPERATOR_T(^=, cv::bitwise_xor(a,b,a), Mat_<_Tp>, Mat_<_Tp>)
 
 
 
-///////////////////////////////////////////// SVD //////////////////////////////////////////////////////
+///////////////////////////////////////////// SVD /////////////////////////////////////////////
 
 inline SVD::SVD() {}
 inline SVD::SVD( InputArray m, int flags ) { operator ()(m, flags); }
@@ -330,7 +326,10 @@ SVD::backSubst( const Matx<_Tp, nm, 1>& w, const Matx<_Tp, m, nm>& u,
     CV_Assert(_dst.data == (uchar*)&dst.val[0]);
 }
 
-// Multiply-with-Carry RNG
+
+
+/////////////////////////////////// Multiply-with-Carry RNG ///////////////////////////////////
+
 inline RNG::RNG()              { state = 0xffffffff; }
 inline RNG::RNG(uint64 _state) { state = _state ? _state : 0xffffffff; }
 
@@ -356,21 +355,34 @@ inline unsigned RNG::next()
     return (unsigned)state;
 }
 
-inline uchar* LineIterator::operator *() { return ptr; }
-inline LineIterator& LineIterator::operator ++()
+
+///////////////////////////////////////// LineIterator ////////////////////////////////////////
+
+inline
+uchar* LineIterator::operator *()
+{
+    return ptr;
+}
+
+inline
+LineIterator& LineIterator::operator ++()
 {
     int mask = err < 0 ? -1 : 0;
     err += minusDelta + (plusDelta & mask);
     ptr += minusStep + (plusStep & mask);
     return *this;
 }
-inline LineIterator LineIterator::operator ++(int)
+
+inline
+LineIterator LineIterator::operator ++(int)
 {
     LineIterator it = *this;
     ++(*this);
     return it;
 }
-inline Point LineIterator::pos() const
+
+inline
+Point LineIterator::pos() const
 {
     Point p;
     p.y = (int)((ptr - ptr0)/step);
@@ -378,435 +390,13 @@ inline Point LineIterator::pos() const
     return p;
 }
 
+
 //! returns the next unifomly-distributed random number of the specified type
 template<typename _Tp> static inline _Tp randu()
 {
   return (_Tp)theRNG();
 }
 
-
-//////////////////////////////////////// XML & YAML I/O ////////////////////////////////////
-
-CV_EXPORTS_W void write( FileStorage& fs, const String& name, int value );
-CV_EXPORTS_W void write( FileStorage& fs, const String& name, float value );
-CV_EXPORTS_W void write( FileStorage& fs, const String& name, double value );
-CV_EXPORTS_W void write( FileStorage& fs, const String& name, const String& value );
-
-template<typename _Tp> inline void write(FileStorage& fs, const _Tp& value)
-{ write(fs, String(), value); }
-
-CV_EXPORTS void writeScalar( FileStorage& fs, int value );
-CV_EXPORTS void writeScalar( FileStorage& fs, float value );
-CV_EXPORTS void writeScalar( FileStorage& fs, double value );
-CV_EXPORTS void writeScalar( FileStorage& fs, const String& value );
-
-template<> inline void write( FileStorage& fs, const int& value )
-{
-    writeScalar(fs, value);
-}
-
-template<> inline void write( FileStorage& fs, const float& value )
-{
-    writeScalar(fs, value);
-}
-
-template<> inline void write( FileStorage& fs, const double& value )
-{
-    writeScalar(fs, value);
-}
-
-template<> inline void write( FileStorage& fs, const String& value )
-{
-    writeScalar(fs, value);
-}
-
-template<typename _Tp> inline void write(FileStorage& fs, const Point_<_Tp>& pt )
-{
-    write(fs, pt.x);
-    write(fs, pt.y);
-}
-
-template<typename _Tp> inline void write(FileStorage& fs, const Point3_<_Tp>& pt )
-{
-    write(fs, pt.x);
-    write(fs, pt.y);
-    write(fs, pt.z);
-}
-
-template<typename _Tp> inline void write(FileStorage& fs, const Size_<_Tp>& sz )
-{
-    write(fs, sz.width);
-    write(fs, sz.height);
-}
-
-template<typename _Tp> inline void write(FileStorage& fs, const Complex<_Tp>& c )
-{
-    write(fs, c.re);
-    write(fs, c.im);
-}
-
-template<typename _Tp> inline void write(FileStorage& fs, const Rect_<_Tp>& r )
-{
-    write(fs, r.x);
-    write(fs, r.y);
-    write(fs, r.width);
-    write(fs, r.height);
-}
-
-template<typename _Tp, int cn> inline void write(FileStorage& fs, const Vec<_Tp, cn>& v )
-{
-    for(int i = 0; i < cn; i++)
-        write(fs, v.val[i]);
-}
-
-template<typename _Tp> inline void write(FileStorage& fs, const Scalar_<_Tp>& s )
-{
-    write(fs, s.val[0]);
-    write(fs, s.val[1]);
-    write(fs, s.val[2]);
-    write(fs, s.val[3]);
-}
-
-inline void write(FileStorage& fs, const Range& r )
-{
-    write(fs, r.start);
-    write(fs, r.end);
-}
-
-class CV_EXPORTS WriteStructContext
-{
-public:
-    WriteStructContext(FileStorage& _fs, const String& name,
-        int flags, const String& typeName=String());
-    ~WriteStructContext();
-    FileStorage* fs;
-};
-
-template<typename _Tp> inline void write(FileStorage& fs, const String& name, const Point_<_Tp>& pt )
-{
-    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
-    write(fs, pt.x);
-    write(fs, pt.y);
-}
-
-template<typename _Tp> inline void write(FileStorage& fs, const String& name, const Point3_<_Tp>& pt )
-{
-    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
-    write(fs, pt.x);
-    write(fs, pt.y);
-    write(fs, pt.z);
-}
-
-template<typename _Tp> inline void write(FileStorage& fs, const String& name, const Size_<_Tp>& sz )
-{
-    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
-    write(fs, sz.width);
-    write(fs, sz.height);
-}
-
-template<typename _Tp> inline void write(FileStorage& fs, const String& name, const Complex<_Tp>& c )
-{
-    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
-    write(fs, c.re);
-    write(fs, c.im);
-}
-
-template<typename _Tp> inline void write(FileStorage& fs, const String& name, const Rect_<_Tp>& r )
-{
-    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
-    write(fs, r.x);
-    write(fs, r.y);
-    write(fs, r.width);
-    write(fs, r.height);
-}
-
-template<typename _Tp, int cn> inline void write(FileStorage& fs, const String& name, const Vec<_Tp, cn>& v )
-{
-    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
-    for(int i = 0; i < cn; i++)
-        write(fs, v.val[i]);
-}
-
-template<typename _Tp> inline void write(FileStorage& fs, const String& name, const Scalar_<_Tp>& s )
-{
-    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
-    write(fs, s.val[0]);
-    write(fs, s.val[1]);
-    write(fs, s.val[2]);
-    write(fs, s.val[3]);
-}
-
-inline void write(FileStorage& fs, const String& name, const Range& r )
-{
-    WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
-    write(fs, r.start);
-    write(fs, r.end);
-}
-
-template<typename _Tp, int numflag> class CV_EXPORTS VecWriterProxy
-{
-public:
-    VecWriterProxy( FileStorage* _fs ) : fs(_fs) {}
-    void operator()(const std::vector<_Tp>& vec) const
-    {
-        size_t i, count = vec.size();
-        for( i = 0; i < count; i++ )
-            write( *fs, vec[i] );
-    }
-    FileStorage* fs;
-};
-
-template<typename _Tp> class CV_EXPORTS VecWriterProxy<_Tp,1>
-{
-public:
-    VecWriterProxy( FileStorage* _fs ) : fs(_fs) {}
-    void operator()(const std::vector<_Tp>& vec) const
-    {
-        int _fmt = DataType<_Tp>::fmt;
-        char fmt[] = { (char)((_fmt>>8)+'1'), (char)_fmt, '\0' };
-        fs->writeRaw( String(fmt), !vec.empty() ? (uchar*)&vec[0] : 0, vec.size()*sizeof(_Tp) );
-    }
-    FileStorage* fs;
-};
-
-template<typename _Tp> static inline void write( FileStorage& fs, const std::vector<_Tp>& vec )
-{
-    VecWriterProxy<_Tp, DataType<_Tp>::fmt != 0> w(&fs);
-    w(vec);
-}
-
-template<typename _Tp> static inline void write( FileStorage& fs, const String& name,
-                                                const std::vector<_Tp>& vec )
-{
-    WriteStructContext ws(fs, name, FileNode::SEQ+(DataType<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
-    write(fs, vec);
-}
-
-CV_EXPORTS_W void write( FileStorage& fs, const String& name, const Mat& value );
-CV_EXPORTS void write( FileStorage& fs, const String& name, const SparseMat& value );
-
-template<typename _Tp> static inline FileStorage& operator << (FileStorage& fs, const _Tp& value)
-{
-    if( !fs.isOpened() )
-        return fs;
-    if( fs.state == FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP )
-        CV_Error( Error::StsError, "No element name has been given" );
-    write( fs, fs.elname, value );
-    if( fs.state & FileStorage::INSIDE_MAP )
-        fs.state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
-    return fs;
-}
-
-CV_EXPORTS FileStorage& operator << (FileStorage& fs, const String& str);
-
-static inline FileStorage& operator << (FileStorage& fs, const char* str)
-{ return (fs << String(str)); }
-
-static inline FileStorage& operator << (FileStorage& fs, char* value)
-{ return (fs << String(value)); }
-
-inline FileNode::FileNode() : fs(0), node(0) {}
-inline FileNode::FileNode(const CvFileStorage* _fs, const CvFileNode* _node)
-    : fs(_fs), node(_node) {}
-
-inline FileNode::FileNode(const FileNode& _node) : fs(_node.fs), node(_node.node) {}
-
-inline bool FileNode::empty() const { return node == 0; }
-inline bool FileNode::isNone() const { return type() == NONE; }
-inline bool FileNode::isSeq() const { return type() == SEQ; }
-inline bool FileNode::isMap() const { return type() == MAP; }
-inline bool FileNode::isInt() const { return type() == INT; }
-inline bool FileNode::isReal() const { return type() == REAL; }
-inline bool FileNode::isString() const { return type() == STR; }
-
-inline CvFileNode* FileNode::operator *() { return (CvFileNode*)node; }
-inline const CvFileNode* FileNode::operator* () const { return node; }
-
-CV_EXPORTS void read(const FileNode& node, int& value, int default_value);
-CV_EXPORTS void read(const FileNode& node, float& value, float default_value);
-CV_EXPORTS void read(const FileNode& node, double& value, double default_value);
-CV_EXPORTS void read(const FileNode& node, String& value, const String& default_value);
-CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat=SparseMat() );
-CV_EXPORTS_W void read(const FileNode& node, Mat& mat, const Mat& default_mat=Mat() );
-
-CV_EXPORTS void read(const FileNode& node, std::vector<KeyPoint>& keypoints);
-CV_EXPORTS void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& keypoints);
-
-static inline void read(const FileNode& node, bool& value, bool default_value)
-{
-    int temp; read(node, temp, (int)default_value);
-    value = temp != 0;
-}
-
-static inline void read(const FileNode& node, uchar& value, uchar default_value)
-{
-    int temp; read(node, temp, (int)default_value);
-    value = saturate_cast<uchar>(temp);
-}
-
-static inline void read(const FileNode& node, schar& value, schar default_value)
-{
-    int temp; read(node, temp, (int)default_value);
-    value = saturate_cast<schar>(temp);
-}
-
-static inline void read(const FileNode& node, ushort& value, ushort default_value)
-{
-    int temp; read(node, temp, (int)default_value);
-    value = saturate_cast<ushort>(temp);
-}
-
-static inline void read(const FileNode& node, short& value, short default_value)
-{
-    int temp; read(node, temp, (int)default_value);
-    value = saturate_cast<short>(temp);
-}
-
-inline FileNode::operator int() const
-{
-    int value;
-    read(*this, value, 0);
-    return value;
-}
-inline FileNode::operator float() const
-{
-    float value;
-    read(*this, value, 0.f);
-    return value;
-}
-inline FileNode::operator double() const
-{
-    double value;
-    read(*this, value, 0.);
-    return value;
-}
-inline FileNode::operator String() const
-{
-    String value;
-    read(*this, value, value);
-    return value;
-}
-
-inline String::String(const FileNode& fn): cstr_(0), len_(0)
-{
-    read(fn, *this, *this);
-}
-
-inline void FileNode::readRaw( const String& fmt, uchar* vec, size_t len ) const
-{
-    begin().readRaw( fmt, vec, len );
-}
-
-template<typename _Tp, int numflag> class CV_EXPORTS VecReaderProxy
-{
-public:
-    VecReaderProxy( FileNodeIterator* _it ) : it(_it) {}
-    void operator()(std::vector<_Tp>& vec, size_t count) const
-    {
-        count = std::min(count, it->remaining);
-        vec.resize(count);
-        for( size_t i = 0; i < count; i++, ++(*it) )
-            read(**it, vec[i], _Tp());
-    }
-    FileNodeIterator* it;
-};
-
-template<typename _Tp> class CV_EXPORTS VecReaderProxy<_Tp,1>
-{
-public:
-    VecReaderProxy( FileNodeIterator* _it ) : it(_it) {}
-    void operator()(std::vector<_Tp>& vec, size_t count) const
-    {
-        size_t remaining = it->remaining, cn = DataType<_Tp>::channels;
-        int _fmt = DataType<_Tp>::fmt;
-        char fmt[] = { (char)((_fmt>>8)+'1'), (char)_fmt, '\0' };
-        size_t remaining1 = remaining/cn;
-        count = count < remaining1 ? count : remaining1;
-        vec.resize(count);
-        it->readRaw( String(fmt), !vec.empty() ? (uchar*)&vec[0] : 0, count*sizeof(_Tp) );
-    }
-    FileNodeIterator* it;
-};
-
-template<typename _Tp> static inline void
-read( FileNodeIterator& it, std::vector<_Tp>& vec, size_t maxCount=(size_t)INT_MAX )
-{
-    VecReaderProxy<_Tp, DataType<_Tp>::fmt != 0> r(&it);
-    r(vec, maxCount);
-}
-
-template<typename _Tp> static inline void
-read( const FileNode& node, std::vector<_Tp>& vec, const std::vector<_Tp>& default_value=std::vector<_Tp>() )
-{
-    if(!node.node)
-        vec = default_value;
-    else
-    {
-        FileNodeIterator it = node.begin();
-        read( it, vec );
-    }
-}
-
-inline FileNodeIterator FileNode::begin() const
-{
-    return FileNodeIterator(fs, node);
-}
-
-inline FileNodeIterator FileNode::end() const
-{
-    return FileNodeIterator(fs, node, size());
-}
-
-inline FileNode FileNodeIterator::operator *() const
-{ return FileNode(fs, (const CvFileNode*)reader.ptr); }
-
-inline FileNode FileNodeIterator::operator ->() const
-{ return FileNode(fs, (const CvFileNode*)reader.ptr); }
-
-template<typename _Tp> static inline FileNodeIterator& operator >> (FileNodeIterator& it, _Tp& value)
-{ read( *it, value, _Tp()); return ++it; }
-
-template<typename _Tp> static inline
-FileNodeIterator& operator >> (FileNodeIterator& it, std::vector<_Tp>& vec)
-{
-    VecReaderProxy<_Tp, DataType<_Tp>::fmt != 0> r(&it);
-    r(vec, (size_t)INT_MAX);
-    return it;
-}
-
-template<typename _Tp> static inline void operator >> (const FileNode& n, _Tp& value)
-{ read( n, value, _Tp()); }
-
-template<typename _Tp> static inline void operator >> (const FileNode& n, std::vector<_Tp>& vec)
-{ FileNodeIterator it = n.begin(); it >> vec; }
-
-static inline bool operator == (const FileNodeIterator& it1, const FileNodeIterator& it2)
-{
-    return it1.fs == it2.fs && it1.container == it2.container &&
-        it1.reader.ptr == it2.reader.ptr && it1.remaining == it2.remaining;
-}
-
-static inline bool operator != (const FileNodeIterator& it1, const FileNodeIterator& it2)
-{
-    return !(it1 == it2);
-}
-
-static inline ptrdiff_t operator - (const FileNodeIterator& it1, const FileNodeIterator& it2)
-{
-    return it2.remaining - it1.remaining;
-}
-
-static inline bool operator < (const FileNodeIterator& it1, const FileNodeIterator& it2)
-{
-    return it1.remaining > it2.remaining;
-}
-
-inline FileNode FileStorage::getFirstTopLevelNode() const
-{
-    FileNode r = root();
-    FileNodeIterator it = r.begin();
-    return it != r.end() ? *it : FileNode();
-}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -959,6 +549,9 @@ template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const 
 }
 
 
+
+////////////////////////////////////////// Algorithm //////////////////////////////////////////
+
 template<typename _Tp> inline Ptr<_Tp> Algorithm::create(const String& name)
 {
     return _create(name).ptr<_Tp>();
@@ -1029,9 +622,5 @@ template<typename _Tp> inline void AlgorithmInfo::addParam(Algorithm& algo, cons
 }
 
 }
-
-#ifdef _MSC_VER
-# pragma warning(pop)
-#endif
 
 #endif

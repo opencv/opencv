@@ -449,6 +449,7 @@ class CV_EXPORTS Range;
 class CV_EXPORTS TermCriteria;
 class CV_EXPORTS KeyPoint;
 class CV_EXPORTS DMatch;
+class CV_EXPORTS RNG;
 
 class CV_EXPORTS Mat;
 class CV_EXPORTS MatExpr;

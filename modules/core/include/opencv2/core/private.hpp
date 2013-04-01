@@ -188,6 +188,10 @@ static inline cv::Size cvGetMatSize( const CvMat* mat )
     return cv::Size(mat->cols, mat->rows);
 }
 
+namespace cv
+{
+CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int unroll_to = 0);
+}
 
 
 /****************************************************************************************\

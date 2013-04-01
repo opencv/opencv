@@ -5317,7 +5317,7 @@ FileNodeIterator::FileNodeIterator(const CvFileStorage* _fs,
         container = _node;
         if( !(_node->tag & FileNode::USER) && (node_type == FileNode::SEQ || node_type == FileNode::MAP) )
         {
-            cvStartReadSeq( _node->data.seq, &reader );
+            cvStartReadSeq( _node->data.seq, (CvSeqReader*)&reader );
             remaining = FileNode(_fs, _node).size();
         }
         else
@@ -5350,7 +5350,12 @@ FileNodeIterator& FileNodeIterator::operator ++()
     if( remaining > 0 )
     {
         if( reader.seq )
-            CV_NEXT_SEQ_ELEM( reader.seq->elem_size, reader );
+        {
+            if( ((reader).ptr += (((CvSeq*)reader.seq)->elem_size)) >= (reader).block_max )
+            {
+                cvChangeSeqBlock( (CvSeqReader*)&(reader), 1 );
+            }
+        }
         remaining--;
     }
     return *this;
@@ -5368,7 +5373,12 @@ FileNodeIterator& FileNodeIterator::operator --()
     if( remaining < FileNode(fs, container).size() )
     {
         if( reader.seq )
-            CV_PREV_SEQ_ELEM( reader.seq->elem_size, reader );
+        {
+            if( ((reader).ptr -= (((CvSeq*)reader.seq)->elem_size)) < (reader).block_min )
+            {
+                cvChangeSeqBlock( (CvSeqReader*)&(reader), -1 );
+            }
+        }
         remaining++;
     }
     return *this;
@@ -5394,7 +5404,7 @@ FileNodeIterator& FileNodeIterator::operator += (int ofs)
     }
     remaining -= ofs;
     if( reader.seq )
-        cvSetSeqReaderPos( &reader, ofs, 1 );
+        cvSetSeqReaderPos( (CvSeqReader*)&reader, ofs, 1 );
     return *this;
 }
 
@@ -5415,7 +5425,7 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, uchar* vec, size
 
         if( reader.seq )
         {
-            cvReadRawDataSlice( fs, &reader, (int)count, vec, fmt.c_str() );
+            cvReadRawDataSlice( fs, (CvSeqReader*)&reader, (int)count, vec, fmt.c_str() );
             remaining -= count*cn;
         }
         else
@@ -5475,14 +5485,17 @@ void write( FileStorage& fs, const String& name, const SparseMat& value )
 }
 
 
-WriteStructContext::WriteStructContext(FileStorage& _fs, const String& name,
-                   int flags, const String& typeName) : fs(&_fs)
+internal::WriteStructContext::WriteStructContext(FileStorage& _fs,
+    const String& name, int flags, const String& typeName) : fs(&_fs)
 {
     cvStartWriteStruct(**fs, !name.empty() ? name.c_str() : 0, flags,
                        !typeName.empty() ? typeName.c_str() : 0);
 }
 
-WriteStructContext::~WriteStructContext() { cvEndWriteStruct(**fs); }
+internal::WriteStructContext::~WriteStructContext()
+{
+    cvEndWriteStruct(**fs);
+}
 
 
 void read( const FileNode& node, Mat& mat, const Mat& default_mat )
@@ -5524,7 +5537,7 @@ void read( const FileNode& node, SparseMat& mat, const SparseMat& default_mat )
 
 void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& keypoints)
 {
-    WriteStructContext ws(fs, objname, CV_NODE_SEQ + CV_NODE_FLOW);
+    internal::WriteStructContext ws(fs, objname, CV_NODE_SEQ + CV_NODE_FLOW);
 
     int i, npoints = (int)keypoints.size();
     for( i = 0; i < npoints; i++ )

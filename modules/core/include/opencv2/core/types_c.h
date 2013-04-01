@@ -1461,15 +1461,11 @@ CvSeqWriter;
     int          delta_index;/* = seq->first->start_index   */      \
     schar*       prev_elem;  /* pointer to previous element */
 
-#ifdef __cplusplus
-typedef cv::FileNodeIterator::SeqReader CvSeqReader;
-#else
 typedef struct CvSeqReader
 {
     CV_SEQ_READER_FIELDS()
 }
 CvSeqReader;
-#endif
 
 /****************************************************************************************/
 /*                                Operations on sequences                               */

@@ -49,19 +49,13 @@
 
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/version.hpp"
-
-// Used by FileStorage
-typedef struct CvFileStorage CvFileStorage;
-struct CvFileNode;
-struct CvSeq;
-struct CvSeqBlock;
-
 #include "opencv2/core/base.hpp"
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/traits.hpp"
 #include "opencv2/core/matx.hpp"
 #include "opencv2/core/types.hpp"
 #include "opencv2/core/mat.hpp"
+#include "opencv2/core/persistence.hpp"
 
 #ifndef SKIP_INCLUDES
 #include <limits.h>
@@ -126,78 +120,6 @@ public:
 //TODO: drop this version
 CV_EXPORTS void error( const Exception& exc );
 
-
-CV_EXPORTS void scalarToRawData(const Scalar& s, void* buf, int type, int unroll_to=0);
-
-
-/*!
-   Random Number Generator
-
-   The class implements RNG using Multiply-with-Carry algorithm
-*/
-class CV_EXPORTS RNG
-{
-public:
-    enum { UNIFORM = 0, NORMAL = 1 };
-
-    RNG();
-    RNG(uint64 state);
-    //! updates the state and returns the next 32-bit unsigned integer random number
-    unsigned next();
-
-    operator uchar();
-    operator schar();
-    operator ushort();
-    operator short();
-    operator unsigned();
-    //! returns a random integer sampled uniformly from [0, N).
-    unsigned operator ()(unsigned N);
-    unsigned operator ()();
-    operator int();
-    operator float();
-    operator double();
-    //! returns uniformly distributed integer random number from [a,b) range
-    int uniform(int a, int b);
-    //! returns uniformly distributed floating-point random number from [a,b) range
-    float uniform(float a, float b);
-    //! returns uniformly distributed double-precision floating-point random number from [a,b) range
-    double uniform(double a, double b);
-    void fill( InputOutputArray mat, int distType, InputArray a, InputArray b, bool saturateRange = false );
-    //! returns Gaussian random variate with mean zero.
-    double gaussian(double sigma);
-
-    uint64 state;
-};
-
-class CV_EXPORTS RNG_MT19937
-{
-public:
-    RNG_MT19937();
-    RNG_MT19937(unsigned s);
-    void seed(unsigned s);
-
-    unsigned next();
-
-    operator int();
-    operator unsigned();
-    operator float();
-    operator double();
-
-    unsigned operator ()(unsigned N);
-    unsigned operator ()();
-
-    // returns uniformly distributed integer random number from [a,b) range
-    int uniform(int a, int b);
-    // returns uniformly distributed floating-point random number from [a,b) range
-    float uniform(float a, float b);
-    // returns uniformly distributed double-precision floating-point random number from [a,b) range
-    double uniform(double a, double b);
-
-private:
-    enum PeriodParameters {N = 624, M = 397};
-    unsigned state[N];
-    int mti;
-};
 
 typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
                            const uchar* src2, size_t step2,
@@ -958,331 +880,78 @@ public:
 
 
 
-
-
-
-//////////////////////////////////////// XML & YAML I/O ////////////////////////////////////
-
-class CV_EXPORTS FileNode;
-
 /*!
- XML/YAML File Storage Class.
+   Random Number Generator
 
- The class describes an object associated with XML or YAML file.
- It can be used to store data to such a file or read and decode the data.
-
- The storage is organized as a tree of nested sequences (or lists) and mappings.
- Sequence is a heterogenious array, which elements are accessed by indices or sequentially using an iterator.
- Mapping is analogue of std::map or C structure, which elements are accessed by names.
- The most top level structure is a mapping.
- Leaves of the file storage tree are integers, floating-point numbers and text strings.
-
- For example, the following code:
-
- \code
- // open file storage for writing. Type of the file is determined from the extension
- FileStorage fs("test.yml", FileStorage::WRITE);
- fs << "test_int" << 5 << "test_real" << 3.1 << "test_string" << "ABCDEFGH";
- fs << "test_mat" << Mat::eye(3,3,CV_32F);
-
- fs << "test_list" << "[" << 0.0000000000001 << 2 << CV_PI << -3435345 << "2-502 2-029 3egegeg" <<
- "{:" << "month" << 12 << "day" << 31 << "year" << 1969 << "}" << "]";
- fs << "test_map" << "{" << "x" << 1 << "y" << 2 << "width" << 100 << "height" << 200 << "lbp" << "[:";
-
- const uchar arr[] = {0, 1, 1, 0, 1, 1, 0, 1};
- fs.writeRaw("u", arr, (int)(sizeof(arr)/sizeof(arr[0])));
-
- fs << "]" << "}";
- \endcode
-
- will produce the following file:
-
- \verbatim
- %YAML:1.0
- test_int: 5
- test_real: 3.1000000000000001e+00
- test_string: ABCDEFGH
- test_mat: !!opencv-matrix
-     rows: 3
-     cols: 3
-     dt: f
-     data: [ 1., 0., 0., 0., 1., 0., 0., 0., 1. ]
- test_list:
-     - 1.0000000000000000e-13
-     - 2
-     - 3.1415926535897931e+00
-     - -3435345
-     - "2-502 2-029 3egegeg"
-     - { month:12, day:31, year:1969 }
- test_map:
-     x: 1
-     y: 2
-     width: 100
-     height: 200
-     lbp: [ 0, 1, 1, 0, 1, 1, 0, 1 ]
- \endverbatim
-
- and to read the file above, the following code can be used:
-
- \code
- // open file storage for reading.
- // Type of the file is determined from the content, not the extension
- FileStorage fs("test.yml", FileStorage::READ);
- int test_int = (int)fs["test_int"];
- double test_real = (double)fs["test_real"];
- String test_string = (String)fs["test_string"];
-
- Mat M;
- fs["test_mat"] >> M;
-
- FileNode tl = fs["test_list"];
- CV_Assert(tl.type() == FileNode::SEQ && tl.size() == 6);
- double tl0 = (double)tl[0];
- int tl1 = (int)tl[1];
- double tl2 = (double)tl[2];
- int tl3 = (int)tl[3];
- String tl4 = (String)tl[4];
- CV_Assert(tl[5].type() == FileNode::MAP && tl[5].size() == 3);
-
- int month = (int)tl[5]["month"];
- int day = (int)tl[5]["day"];
- int year = (int)tl[5]["year"];
-
- FileNode tm = fs["test_map"];
-
- int x = (int)tm["x"];
- int y = (int)tm["y"];
- int width = (int)tm["width"];
- int height = (int)tm["height"];
-
- int lbp_val = 0;
- FileNodeIterator it = tm["lbp"].begin();
-
- for(int k = 0; k < 8; k++, ++it)
-    lbp_val |= ((int)*it) << k;
- \endcode
+   The class implements RNG using Multiply-with-Carry algorithm
 */
-class CV_EXPORTS_W FileStorage
+class CV_EXPORTS RNG
 {
 public:
-    //! file storage mode
-    enum
-    {
-        READ=0, //! read mode
-        WRITE=1, //! write mode
-        APPEND=2, //! append mode
-        MEMORY=4,
-        FORMAT_MASK=(7<<3),
-        FORMAT_AUTO=0,
-        FORMAT_XML=(1<<3),
-        FORMAT_YAML=(2<<3)
-    };
-    enum
-    {
-        UNDEFINED=0,
-        VALUE_EXPECTED=1,
-        NAME_EXPECTED=2,
-        INSIDE_MAP=4
-    };
-    //! the default constructor
-    CV_WRAP FileStorage();
-    //! the full constructor that opens file storage for reading or writing
-    CV_WRAP FileStorage(const String& source, int flags, const String& encoding=String());
-    //! the constructor that takes pointer to the C FileStorage structure
-    FileStorage(CvFileStorage* fs);
-    //! the destructor. calls release()
-    virtual ~FileStorage();
+    enum { UNIFORM = 0, NORMAL = 1 };
 
-    //! opens file storage for reading or writing. The previous storage is closed with release()
-    CV_WRAP virtual bool open(const String& filename, int flags, const String& encoding=String());
-    //! returns true if the object is associated with currently opened file.
-    CV_WRAP virtual bool isOpened() const;
-    //! closes the file and releases all the memory buffers
-    CV_WRAP virtual void release();
-    //! closes the file, releases all the memory buffers and returns the text string
-    CV_WRAP virtual String releaseAndGetString();
+    RNG();
+    RNG(uint64 state);
+    //! updates the state and returns the next 32-bit unsigned integer random number
+    unsigned next();
 
-    //! returns the first element of the top-level mapping
-    CV_WRAP FileNode getFirstTopLevelNode() const;
-    //! returns the top-level mapping. YAML supports multiple streams
-    CV_WRAP FileNode root(int streamidx=0) const;
-    //! returns the specified element of the top-level mapping
-    FileNode operator[](const String& nodename) const;
-    //! returns the specified element of the top-level mapping
-    CV_WRAP FileNode operator[](const char* nodename) const;
+    operator uchar();
+    operator schar();
+    operator ushort();
+    operator short();
+    operator unsigned();
+    //! returns a random integer sampled uniformly from [0, N).
+    unsigned operator ()(unsigned N);
+    unsigned operator ()();
+    operator int();
+    operator float();
+    operator double();
+    //! returns uniformly distributed integer random number from [a,b) range
+    int uniform(int a, int b);
+    //! returns uniformly distributed floating-point random number from [a,b) range
+    float uniform(float a, float b);
+    //! returns uniformly distributed double-precision floating-point random number from [a,b) range
+    double uniform(double a, double b);
+    void fill( InputOutputArray mat, int distType, InputArray a, InputArray b, bool saturateRange = false );
+    //! returns Gaussian random variate with mean zero.
+    double gaussian(double sigma);
 
-    //! returns pointer to the underlying C FileStorage structure
-    CvFileStorage* operator *() { return fs; }
-    //! returns pointer to the underlying C FileStorage structure
-    const CvFileStorage* operator *() const { return fs; }
-    //! writes one or more numbers of the specified format to the currently written structure
-    void writeRaw( const String& fmt, const uchar* vec, size_t len );
-    //! writes the registered C structure (CvMat, CvMatND, CvSeq). See cvWrite()
-    void writeObj( const String& name, const void* obj );
-
-    //! returns the normalized object name for the specified file name
-    static String getDefaultObjectName(const String& filename);
-
-    Ptr<CvFileStorage> fs; //!< the underlying C FileStorage structure
-    String elname; //!< the currently written element
-    std::vector<char> structs; //!< the stack of written structures
-    int state; //!< the writer state
+    uint64 state;
 };
 
-class CV_EXPORTS FileNodeIterator;
-
-/*!
- File Storage Node class
-
- The node is used to store each and every element of the file storage opened for reading -
- from the primitive objects, such as numbers and text strings, to the complex nodes:
- sequences, mappings and the registered objects.
-
- Note that file nodes are only used for navigating file storages opened for reading.
- When a file storage is opened for writing, no data is stored in memory after it is written.
-*/
-class CV_EXPORTS_W_SIMPLE FileNode
+class CV_EXPORTS RNG_MT19937
 {
 public:
-    //! type of the file storage node
-    enum
-    {
-        NONE=0, //!< empty node
-        INT=1, //!< an integer
-        REAL=2, //!< floating-point number
-        FLOAT=REAL, //!< synonym or REAL
-        STR=3, //!< text string in UTF-8 encoding
-        STRING=STR, //!< synonym for STR
-        REF=4, //!< integer of size size_t. Typically used for storing complex dynamic structures where some elements reference the others
-        SEQ=5, //!< sequence
-        MAP=6, //!< mapping
-        TYPE_MASK=7,
-        FLOW=8, //!< compact representation of a sequence or mapping. Used only by YAML writer
-        USER=16, //!< a registered object (e.g. a matrix)
-        EMPTY=32, //!< empty structure (sequence or mapping)
-        NAMED=64 //!< the node has a name (i.e. it is element of a mapping)
-    };
-    //! the default constructor
-    CV_WRAP FileNode();
-    //! the full constructor wrapping CvFileNode structure.
-    FileNode(const CvFileStorage* fs, const CvFileNode* node);
-    //! the copy constructor
-    FileNode(const FileNode& node);
-    //! returns element of a mapping node
-    FileNode operator[](const String& nodename) const;
-    //! returns element of a mapping node
-    CV_WRAP FileNode operator[](const char* nodename) const;
-    //! returns element of a sequence node
-    CV_WRAP FileNode operator[](int i) const;
-    //! returns type of the node
-    CV_WRAP int type() const;
+    RNG_MT19937();
+    RNG_MT19937(unsigned s);
+    void seed(unsigned s);
 
-    //! returns true if the node is empty
-    CV_WRAP bool empty() const;
-    //! returns true if the node is a "none" object
-    CV_WRAP bool isNone() const;
-    //! returns true if the node is a sequence
-    CV_WRAP bool isSeq() const;
-    //! returns true if the node is a mapping
-    CV_WRAP bool isMap() const;
-    //! returns true if the node is an integer
-    CV_WRAP bool isInt() const;
-    //! returns true if the node is a floating-point number
-    CV_WRAP bool isReal() const;
-    //! returns true if the node is a text string
-    CV_WRAP bool isString() const;
-    //! returns true if the node has a name
-    CV_WRAP bool isNamed() const;
-    //! returns the node name or an empty string if the node is nameless
-    CV_WRAP String name() const;
-    //! returns the number of elements in the node, if it is a sequence or mapping, or 1 otherwise.
-    CV_WRAP size_t size() const;
-    //! returns the node content as an integer. If the node stores floating-point number, it is rounded.
-    operator int() const;
-    //! returns the node content as float
-    operator float() const;
-    //! returns the node content as double
-    operator double() const;
-    //! returns the node content as text string
-    operator String() const;
-#ifndef OPENCV_NOSTL
-    operator std::string() const;
-#endif
+    unsigned next();
 
-    //! returns pointer to the underlying file node
-    CvFileNode* operator *();
-    //! returns pointer to the underlying file node
-    const CvFileNode* operator* () const;
+    operator int();
+    operator unsigned();
+    operator float();
+    operator double();
 
-    //! returns iterator pointing to the first node element
-    FileNodeIterator begin() const;
-    //! returns iterator pointing to the element following the last node element
-    FileNodeIterator end() const;
+    unsigned operator ()(unsigned N);
+    unsigned operator ()();
 
-    //! reads node elements to the buffer with the specified format
-    void readRaw( const String& fmt, uchar* vec, size_t len ) const;
-    //! reads the registered object and returns pointer to it
-    void* readObj() const;
+    // returns uniformly distributed integer random number from [a,b) range
+    int uniform(int a, int b);
+    // returns uniformly distributed floating-point random number from [a,b) range
+    float uniform(float a, float b);
+    // returns uniformly distributed double-precision floating-point random number from [a,b) range
+    double uniform(double a, double b);
 
-    // do not use wrapper pointer classes for better efficiency
-    const CvFileStorage* fs;
-    const CvFileNode* node;
+private:
+    enum PeriodParameters {N = 624, M = 397};
+    unsigned state[N];
+    int mti;
 };
 
 
-/*!
- File Node Iterator
 
- The class is used for iterating sequences (usually) and mappings.
- */
-class CV_EXPORTS FileNodeIterator
-{
-public:
-    //! the default constructor
-    FileNodeIterator();
-    //! the full constructor set to the ofs-th element of the node
-    FileNodeIterator(const CvFileStorage* fs, const CvFileNode* node, size_t ofs=0);
-    //! the copy constructor
-    FileNodeIterator(const FileNodeIterator& it);
-    //! returns the currently observed element
-    FileNode operator *() const;
-    //! accesses the currently observed element methods
-    FileNode operator ->() const;
-
-    //! moves iterator to the next node
-    FileNodeIterator& operator ++ ();
-    //! moves iterator to the next node
-    FileNodeIterator operator ++ (int);
-    //! moves iterator to the previous node
-    FileNodeIterator& operator -- ();
-    //! moves iterator to the previous node
-    FileNodeIterator operator -- (int);
-    //! moves iterator forward by the specified offset (possibly negative)
-    FileNodeIterator& operator += (int ofs);
-    //! moves iterator backward by the specified offset (possibly negative)
-    FileNodeIterator& operator -= (int ofs);
-
-    //! reads the next maxCount elements (or less, if the sequence/mapping last element occurs earlier) to the buffer with the specified format
-    FileNodeIterator& readRaw( const String& fmt, uchar* vec,
-                               size_t maxCount=(size_t)INT_MAX );
-
-    struct SeqReader
-    {
-      int          header_size;
-      CvSeq*       seq;        /* sequence, beign read */
-      CvSeqBlock*  block;      /* current block */
-      schar*       ptr;        /* pointer to element be read next */
-      schar*       block_min;  /* pointer to the beginning of block */
-      schar*       block_max;  /* pointer to the end of block */
-      int          delta_index;/* = seq->first->start_index   */
-      schar*       prev_elem;  /* pointer to previous element */
-    };
-
-    const CvFileStorage* fs;
-    const CvFileNode* container;
-    SeqReader reader;
-    size_t remaining;
-};
+//////////////////////////////////////// Algorithm ////////////////////////////////////
 
 class CV_EXPORTS Algorithm;
 class CV_EXPORTS AlgorithmInfo;
