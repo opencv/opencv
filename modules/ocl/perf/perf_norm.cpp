@@ -44,44 +44,41 @@
 //M*/
 #include "precomp.hpp"
 
-///////////// pyrDown //////////////////////
-TEST(pyrDown)
+///////////// norm////////////////////////
+TEST(norm)
 {
-    Mat src, dst;
-    int all_type[] = {CV_8UC1, CV_8UC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+    Mat src, buf;
+    ocl::oclMat d_src, d_buf;
+
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+        SUBTEST << size << 'x' << size << "; CV_8UC1; NORM_INF";
 
-            gen(src, size, size, all_type[j], 0, 256);
+        gen(src, size, size, CV_8UC1, Scalar::all(0), Scalar::all(1));
+        gen(buf, size, size, CV_8UC1, Scalar::all(0), Scalar::all(1));
 
-            pyrDown(src, dst);
+        norm(src, NORM_INF);
 
-            CPU_ON;
-            pyrDown(src, dst);
-            CPU_OFF;
+        CPU_ON;
+        norm(src, NORM_INF);
+        CPU_OFF;
 
-            ocl::oclMat d_src(src);
-            ocl::oclMat d_dst;
+        d_src.upload(src);
+        d_buf.upload(buf);
 
-            WARMUP_ON;
-            ocl::pyrDown(d_src, d_dst);
-            WARMUP_OFF;
+        WARMUP_ON;
+        ocl::norm(d_src, d_buf, NORM_INF);
+        WARMUP_OFF;
 
-            GPU_ON;
-            ocl::pyrDown(d_src, d_dst);
-             ;
-            GPU_OFF;
+        GPU_ON;
+        ocl::norm(d_src, d_buf, NORM_INF);
+         ;
+        GPU_OFF;
 
-            GPU_FULL_ON;
-            d_src.upload(src);
-            ocl::pyrDown(d_src, d_dst);
-            d_dst.download(dst);
-            GPU_FULL_OFF;
-        }
+        GPU_FULL_ON;
+        d_src.upload(src);
+        ocl::norm(d_src, d_buf, NORM_INF);
+        GPU_FULL_OFF;
     }
 }
