@@ -389,7 +389,7 @@ void LDetector::getMostStable2D(const Mat& image, std::vector<KeyPoint>& keypoin
 
     if( (int)keypoints.size() > maxPoints )
     {
-        sort(keypoints, CmpKeypointScores());
+        std::sort(keypoints.begin(), keypoints.end(), CmpKeypointScores());
         keypoints.resize(maxPoints);
     }
 }
@@ -602,7 +602,7 @@ void LDetector::operator()(const std::vector<Mat>& pyr, std::vector<KeyPoint>& k
 
     if( maxCount > 0 && keypoints.size() > (size_t)maxCount )
     {
-        sort(keypoints, CmpKeypointScores());
+        std::sort(keypoints.begin(), keypoints.end(), CmpKeypointScores());
         keypoints.resize(maxCount);
     }
 }

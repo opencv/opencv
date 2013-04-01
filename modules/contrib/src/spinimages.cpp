@@ -809,7 +809,7 @@ void cv::SpinImageModel::selectRandomSubset(float ratio)
             left[pos] = left.back();
             left.resize(left.size() - 1);
         }
-        sort(subset, std::less<int>());
+        std::sort(subset.begin(), subset.end());
     }
 }
 
@@ -928,7 +928,7 @@ void cv::SpinImageModel::matchSpinToModel(const Mat& spin, std::vector<int>& ind
     if(total < 5)
         return;
 
-    sort(cleanCorrs, std::less<float>());
+    std::sort(cleanCorrs.begin(), cleanCorrs.end());
 
     float lower_fourth = cleanCorrs[(1 * total) / 4 - 1];
     float upper_fourth = cleanCorrs[(3 * total) / 4 - 0];
@@ -1016,7 +1016,7 @@ private:
         std::vector<int> nonzero(model.spinImages.rows);
         for(int i = 0; i < model.spinImages.rows; ++i)
             nonzero[i] = countNonZero(model.spinImages.row(i));
-        sort(nonzero, std::less<int>());
+        std::sort(nonzero.begin(), nonzero.end());
         model.lambda = static_cast<float>( nonzero[ nonzero.size()/2 ] ) / 2;
     }
 

@@ -125,6 +125,11 @@ template<> inline void operator >> (const FileNode& n, std::string& value)
     value = val;
 }
 
+template<> inline FileStorage& operator << (FileStorage& fs, const std::string& value)
+{
+    return fs << cv::String(value);
+}
+
 #endif // OPENCV_NOSTL
 } // cv
 

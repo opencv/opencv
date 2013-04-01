@@ -53,15 +53,6 @@
 #define __END__  __CV_END__
 #define EXIT __CV_EXIT__
 
-#define CV_DECLARE_QSORT( func_name, T, less_than )                     \
-void func_name( T* array, size_t length, int aux );
-
-#define less_than( a, b ) ((a) < (b))
-
-CV_DECLARE_QSORT( icvSort_32f, float, less_than )
-
-CV_DECLARE_QSORT( icvSort_32s, int, less_than )
-
 #ifndef PATH_MAX
 #define PATH_MAX 512
 #endif /* PATH_MAX */
