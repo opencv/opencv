@@ -48,6 +48,12 @@
 
 #include "precomp.hpp"
 
+#define  CV_ORIGIN_TL  0
+#define  CV_ORIGIN_BL  1
+
+/* default image row align (in bytes) */
+#define  CV_DEFAULT_IMAGE_ROW_ALIGN  4
+
 
 static struct
 {

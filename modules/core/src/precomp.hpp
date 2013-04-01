@@ -96,10 +96,21 @@ static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int 
 
 #else
 #  define cudaSafeCall(expr)
-#endif
+#endif //HAVE_CUDA
 
 namespace cv
 {
+
+/* default memory block for sparse array elements */
+#define  CV_SPARSE_MAT_BLOCK     (1<<12)
+
+/* initial hash table size */
+#define  CV_SPARSE_HASH_SIZE0    (1<<10)
+
+/* maximal average node_count/hash_size ratio beyond which hash table is resized */
+#define  CV_SPARSE_HASH_RATIO    3
+
+
 
 // -128.f ... 255.f
 extern const float g_8x32fTab[];
@@ -206,11 +217,6 @@ extern volatile bool USE_SSE4_2;
 extern volatile bool USE_AVX;
 
 enum { BLOCK_SIZE = 1024 };
-
-#ifdef HAVE_IPP
-static inline IppiSize ippiSize(int width, int height) { IppiSize sz = { width, height}; return sz; }
-static inline IppiSize ippiSize(Size _sz)              { IppiSize sz = { _sz.width, _sz.height}; return sz; }
-#endif
 
 #if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
 #define ARITHM_USE_IPP 1

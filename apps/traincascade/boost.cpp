@@ -44,7 +44,7 @@ static CvMat* cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, b
 
     CV_FUNCNAME( "cvPreprocessIndexArray" );
 
-    __BEGIN__;
+    __CV_BEGIN__;
 
     int i, idx_total, idx_selected = 0, step, type, prev = INT_MIN, is_sorted = 1;
     uchar* srcb = 0;
@@ -132,7 +132,7 @@ static CvMat* cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, b
         }
     }
 
-    __END__;
+    __CV_END__;
 
     if( cvGetErrStatus() < 0 )
         cvReleaseMat( &idx );

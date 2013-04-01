@@ -54,6 +54,10 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/internal.hpp"
 
+#define __BEGIN__ __CV_BEGIN__
+#define __END__ __CV_END__
+#define EXIT __CV_EXIT__
+
 #include "_matrix.h"
 
 CV_INLINE bool operator == (CvSize size1, CvSize size2 );

@@ -61,6 +61,9 @@
 #include <time.h>
 
 #define ML_IMPL CV_IMPL
+#define __BEGIN__ __CV_BEGIN__
+#define __END__ __CV_END__
+#define EXIT __CV_EXIT__
 
 #define CV_MAT_ELEM_FLAG( mat, type, comp, vect, tflag )    \
     (( tflag == CV_ROW_SAMPLE )                             \

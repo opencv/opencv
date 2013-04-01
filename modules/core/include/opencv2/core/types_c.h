@@ -92,6 +92,10 @@
 #  define CVAPI(rettype) CV_EXTERN_C CV_EXPORTS rettype CV_CDECL
 #endif
 
+#ifndef CV_IMPL
+#  define CV_IMPL CV_EXTERN_C
+#endif
+
 #ifdef __cplusplus
 #  include "opencv2/core.hpp"
 #endif

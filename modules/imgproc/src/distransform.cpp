@@ -46,6 +46,7 @@ namespace cv
 
 static const int DIST_SHIFT = 16;
 static const int INIT_DIST0 = (INT_MAX >> 2);
+#define  CV_FLT_TO_FIX(x,n)  cvRound((x)*(1<<(n)))
 
 static void
 initTopBottom( Mat& temp, int border )

@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,30 +41,22 @@
 //
 //M*/
 
-/* The header is for internal use and it is likely to change.
-   It contains some macro definitions that are used in cxcore, cv, cvaux
-   and, probably, other libraries. If you need some of this functionality,
-   the safe way is to copy it into your code and rename the macros.
-*/
-#ifndef __OPENCV_CORE_INTERNAL_HPP__
-#define __OPENCV_CORE_INTERNAL_HPP__
+#ifndef __OPENCV_CORE_PRIVATE_HPP__
+#define __OPENCV_CORE_PRIVATE_HPP__
 
-#define __BEGIN__ __CV_BEGIN__
-#define __END__ __CV_END__
-#define EXIT __CV_EXIT__
-
-#ifdef HAVE_IPP
-#  include "ipp.h"
-
-CV_INLINE IppiSize ippiSize(int width, int height)
-{
-    IppiSize size = { width, height };
-    return size;
-}
+#ifndef __OPENCV_BUILD
+#  error this is a private header which should not be used from outside of the OpenCV library
 #endif
 
-#ifndef IPPI_CALL
-#  define IPPI_CALL(func) CV_Assert((func) >= 0)
+#include "opencv2/core.hpp"
+#include "cvconfig.h"
+
+#ifdef HAVE_EIGEN
+#  if defined __GNUC__ && defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wshadow"
+#  endif
+#  include <Eigen/Core>
+#  include "opencv2/core/eigen.hpp"
 #endif
 
 #ifdef HAVE_TBB
@@ -77,16 +70,6 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #    undef HAVE_TBB
 #  endif
 #endif
-
-#ifdef HAVE_EIGEN
-#  if defined __GNUC__ && defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wshadow"
-#  endif
-#  include <Eigen/Core>
-#  include "opencv2/core/eigen.hpp"
-#endif
-
-#ifdef __cplusplus
 
 namespace cv
 {
@@ -167,32 +150,13 @@ namespace cv
         return &classname##_info(); \
     }
 
-#endif //__cplusplus
-
-/* default image row align (in bytes) */
-#define  CV_DEFAULT_IMAGE_ROW_ALIGN  4
-
-/* the alignment of all the allocated buffers */
-#define  CV_MALLOC_ALIGN    16
-
-/* default alignment for dynamic data strucutures, resided in storages. */
-#define  CV_STRUCT_ALIGN    ((int)sizeof(double))
-
-/* default storage block size */
-#define  CV_STORAGE_BLOCK_SIZE   ((1<<16) - 128)
-
-/* default memory block for sparse array elements */
-#define  CV_SPARSE_MAT_BLOCK    (1<<12)
-
-/* initial hash table size */
-#define  CV_SPARSE_HASH_SIZE0    (1<<10)
-
-/* maximal average node_count/hash_size ratio beyond which hash table is resized */
-#define  CV_SPARSE_HASH_RATIO    3
 
 /****************************************************************************************\
 *                                  Common declarations                                   *
 \****************************************************************************************/
+
+/* the alignment of all the allocated buffers */
+#define  CV_MALLOC_ALIGN    16
 
 #ifdef __GNUC__
 #  define CV_DECL_ALIGNED(x) __attribute__ ((aligned (x)))
@@ -202,47 +166,44 @@ namespace cv
 #  define CV_DECL_ALIGNED(x)
 #endif
 
-#ifndef CV_IMPL
-#  define CV_IMPL CV_EXTERN_C
-#endif
-
-#define  CV_ORIGIN_TL  0
-#define  CV_ORIGIN_BL  1
-
 /* IEEE754 constants and macros */
 #define  CV_TOGGLE_FLT(x) ((x)^((int)(x) < 0 ? 0x7fffffff : 0))
-#define  CV_TOGGLE_DBL(x) \
-    ((x)^((int64)(x) < 0 ? CV_BIG_INT(0x7fffffffffffffff) : 0))
+#define  CV_TOGGLE_DBL(x) ((x)^((int64)(x) < 0 ? CV_BIG_INT(0x7fffffffffffffff) : 0))
 
-//TODO: remove after dropping sorts
-#define  CV_LT(a, b)    ((a) < (b))
-
-CV_INLINE void* cvAlignPtr( const void* ptr, int align CV_DEFAULT(32) )
+static inline void* cvAlignPtr( const void* ptr, int align CV_DEFAULT(32) )
 {
-    assert( (align & (align-1)) == 0 );
+    CV_DbgAssert ( (align & (align-1)) == 0 );
     return (void*)( ((size_t)ptr + align - 1) & ~(size_t)(align-1) );
 }
 
-CV_INLINE int cvAlign( int size, int align )
+static inline int cvAlign( int size, int align )
 {
-    assert( (align & (align-1)) == 0 && size < INT_MAX );
+    CV_DbgAssert( (align & (align-1)) == 0 && size < INT_MAX );
     return (size + align - 1) & -align;
 }
 
-CV_INLINE  CvSize  cvGetMatSize( const CvMat* mat )
+static inline cv::Size cvGetMatSize( const CvMat* mat )
 {
-    CvSize size;
-    size.width = mat->cols;
-    size.height = mat->rows;
-    return size;
+    return cv::Size(mat->cols, mat->rows);
 }
-
-#define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
-#define  CV_FLT_TO_FIX(x,n)  cvRound((x)*(1<<(n)))
 
 /****************************************************************************************\
 *                     Structures and macros for integration with IPP                     *
 \****************************************************************************************/
+
+#ifdef HAVE_IPP
+#  include "ipp.h"
+
+static inline IppiSize ippiSize(int width, int height)
+{
+    IppiSize size = { width, height };
+    return size;
+}
+#endif
+
+#ifndef IPPI_CALL
+#  define IPPI_CALL(func) CV_Assert((func) >= 0)
+#endif
 
 /* IPP-compatible return codes */
 typedef enum CvStatus
@@ -284,4 +245,4 @@ typedef enum CvStatus
 }
 CvStatus;
 
-#endif // __OPENCV_CORE_INTERNAL_HPP__
+#endif // __OPENCV_CORE_PRIVATE_HPP__
