@@ -43,9 +43,6 @@
 #define __OPENCV_FAST_NLMEANS_MULTI_DENOISING_INVOKER_HPP__
 
 #include "precomp.hpp"
-#include <opencv2/core.hpp>
-#include <opencv2/core/internal.hpp>
-#include <opencv2/imgproc.hpp>
 #include <limits>
 
 #include "fast_nlmeans_denoising_invoker_commons.hpp"

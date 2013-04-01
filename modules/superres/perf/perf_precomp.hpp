@@ -51,10 +51,6 @@
 #ifndef __OPENCV_PERF_PRECOMP_HPP__
 #define __OPENCV_PERF_PRECOMP_HPP__
 
-#ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
-#endif
-
 #include "opencv2/core.hpp"
 #include "opencv2/core/gpumat.hpp"
 #include "opencv2/ts/ts_perf.hpp"

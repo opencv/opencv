@@ -43,15 +43,10 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
-#endif
-
 #include "opencv2/nonfree.hpp"
 #include "opencv2/imgproc.hpp"
 
 #include "opencv2/core/utility.hpp"
-#include "opencv2/core/internal.hpp"
 
 #include "opencv2/opencv_modules.hpp"
 
@@ -72,5 +67,7 @@
 #  include "opencv2/nonfree/ocl.hpp"
 #  include "opencv2/ocl/private/util.hpp"
 #endif
+
+#include "opencv2/core/private.hpp"
 
 #endif
