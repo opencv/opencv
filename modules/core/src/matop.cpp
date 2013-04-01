@@ -319,7 +319,7 @@ void MatOp::augAssignXor(const MatExpr& expr, Mat& m) const
 {
     Mat temp;
     expr.op->assign(expr, temp);
-    m /= temp;
+    m ^= temp;
 }
 
 

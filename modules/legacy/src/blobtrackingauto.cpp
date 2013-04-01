@@ -429,10 +429,11 @@ void CvBlobTrackerAuto1::Process(IplImage* pImg, IplImage* pMask)
             for(i=0; i<NewBlobList.GetBlobNum(); ++i)
             {
                 CvBlob* pBN = NewBlobList.GetBlob(i);
-                pBN->ID = m_NextBlobID;
 
                 if(pBN && pBN->w >= CV_BLOB_MINW && pBN->h >= CV_BLOB_MINH)
                 {
+                    pBN->ID = m_NextBlobID;
+
                     CvBlob* pB = m_pBT->AddBlob(pBN, pImg, pmask );
                     if(pB)
                     {

@@ -3669,7 +3669,7 @@ cv2DRotationMatrix( CvPoint2D32f center, double angle,
                     double scale, CvMat* matrix )
 {
     cv::Mat M0 = cv::cvarrToMat(matrix), M = cv::getRotationMatrix2D(center, angle, scale);
-    CV_Assert( M.size() == M.size() );
+    CV_Assert( M.size() == M0.size() );
     M.convertTo(M0, M0.type());
     return matrix;
 }
@@ -3682,7 +3682,7 @@ cvGetPerspectiveTransform( const CvPoint2D32f* src,
 {
     cv::Mat M0 = cv::cvarrToMat(matrix),
         M = cv::getPerspectiveTransform((const cv::Point2f*)src, (const cv::Point2f*)dst);
-    CV_Assert( M.size() == M.size() );
+    CV_Assert( M.size() == M0.size() );
     M.convertTo(M0, M0.type());
     return matrix;
 }
