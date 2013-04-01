@@ -1105,7 +1105,7 @@ void LevMarqSparse::bundleAdjust( vector<Point3d>& points, //positions of points
     Mat rot_vec = Mat(levmar.P).rowRange(i*num_cam_param, i*num_cam_param+3);
     Rodrigues( rot_vec, R[i] );
     //translation
-    T[i] = Mat(levmar.P).rowRange(i*num_cam_param + 3, i*num_cam_param+6);
+    Mat(levmar.P).rowRange(i*num_cam_param + 3, i*num_cam_param+6).copyTo(T[i]);
 
     //intrinsic camera matrix
     double* intr_data = (double*)cameraMatrix[i].data;
