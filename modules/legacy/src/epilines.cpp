@@ -2115,7 +2115,7 @@ CV_IMPL IplImage* icvCreateIsometricImage( IplImage* src, IplImage* dst,
     if( !dst || dst->depth != desired_depth ||
         dst->nChannels != desired_num_channels ||
         dst_size.width != src_size.width ||
-        dst_size.height != dst_size.height )
+        dst_size.height != src_size.height )
     {
         cvReleaseImage( &dst );
         dst = cvCreateImage( src_size, desired_depth, desired_num_channels );

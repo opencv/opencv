@@ -184,7 +184,7 @@ static void finalizeHdr(Mat& m)
 void Mat::create(int d, const int* _sizes, int _type)
 {
     int i;
-    CV_Assert(0 <= d && _sizes && d <= CV_MAX_DIM && _sizes);
+    CV_Assert(0 <= d && d <= CV_MAX_DIM && _sizes);
     _type = CV_MAT_TYPE(_type);
 
     if( data && (d == dims || (d == 1 && dims <= 2)) && _type == type() )

@@ -459,14 +459,14 @@ void CV_StereoMatchingTest::run(int)
             continue;
         }
         int dispScaleFactor = datasetsParams[datasetName].dispScaleFactor;
-        Mat tmp; trueLeftDisp.convertTo( tmp, CV_32FC1, 1.f/dispScaleFactor ); trueLeftDisp = tmp; tmp.release();
+        trueLeftDisp.convertTo( trueLeftDisp, CV_32FC1, 1.f/dispScaleFactor );
         if( !trueRightDisp.empty() )
-            trueRightDisp.convertTo( tmp, CV_32FC1, 1.f/dispScaleFactor ); trueRightDisp = tmp; tmp.release();
+            trueRightDisp.convertTo( trueRightDisp, CV_32FC1, 1.f/dispScaleFactor );
 
         Mat leftDisp, rightDisp;
         int ignBorder = max(runStereoMatchingAlgorithm(leftImg, rightImg, leftDisp, rightDisp, ci), EVAL_IGNORE_BORDER);
-        leftDisp.convertTo( tmp, CV_32FC1 ); leftDisp = tmp; tmp.release();
-        rightDisp.convertTo( tmp, CV_32FC1 ); rightDisp = tmp; tmp.release();
+        leftDisp.convertTo( leftDisp, CV_32FC1 );
+        rightDisp.convertTo( rightDisp, CV_32FC1 );
 
         int tempCode = processStereoMatchingResults( resFS, ci, isWrite,
                    leftImg, rightImg, trueLeftDisp, trueRightDisp, leftDisp, rightDisp, QualityEvalParams(ignBorder));
