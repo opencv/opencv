@@ -351,9 +351,12 @@ CvBoostTree::find_split_ord_class( CvDTreeNode* node, int vi, float init_quality
     return split;
 }
 
-
-#define CV_CMP_NUM_PTR(a,b) (*(a) < *(b))
-static CV_IMPLEMENT_QSORT_EX( icvSortDblPtr, double*, CV_CMP_NUM_PTR, int )
+template<typename T>
+class LessThanPtr
+{
+public:
+    bool operator()(T* a, T* b) const { return *a < *b; }
+};
 
 CvDTreeSplit*
 CvBoostTree::find_split_cat_class( CvDTreeNode* node, int vi, float init_quality, CvDTreeSplit* _split, uchar* _ext_buf )
@@ -412,7 +415,7 @@ CvBoostTree::find_split_cat_class( CvDTreeNode* node, int vi, float init_quality
 
     // sort rows of c_jk by increasing c_j,1
     // (i.e. by the weight of samples in j-th category that belong to class 1)
-    icvSortDblPtr( dbl_ptr, mi, 0 );
+    std::sort(dbl_ptr, dbl_ptr + mi, LessThanPtr<double>());
 
     for( subset_i = 0; subset_i < mi-1; subset_i++ )
     {
@@ -594,7 +597,7 @@ CvBoostTree::find_split_cat_reg( CvDTreeNode* node, int vi, float init_quality, 
         sum_ptr[i] = sum + i;
     }
 
-    icvSortDblPtr( sum_ptr, mi, 0 );
+    std::sort(sum_ptr, sum_ptr + mi, LessThanPtr<double>());
 
     // revert back to unnormalized sums
     // (there should be a very little loss in accuracy)
@@ -1421,9 +1424,6 @@ CvBoost::update_weights( CvBoostTree* tree )
 }
 
 
-static CV_IMPLEMENT_QSORT_EX( icvSort_64f, double, CV_LT, int )
-
-
 void
 CvBoost::trim_weights()
 {
@@ -1440,7 +1440,7 @@ CvBoost::trim_weights()
     // use weak_eval as temporary buffer for sorted weights
     cvCopy( weights, weak_eval );
 
-    icvSort_64f( weak_eval->data.db, count, 0 );
+    std::sort(weak_eval->data.db, weak_eval->data.db + count);
 
     // as weight trimming occurs immediately after updating the weights,
     // where they are renormalized, we assume that the weight sum = 1.

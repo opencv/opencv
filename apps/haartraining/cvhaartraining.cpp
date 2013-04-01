@@ -1088,7 +1088,7 @@ CvIntHaarClassifier* icvCreateCARTStageClassifier( CvHaarTrainingData* data,
                 numpos++;
             }
         }
-        icvSort_32f( eval.data.fl, numpos, 0 );
+        std::sort(eval.data.fl, eval.data.fl + numpos);
         threshold = eval.data.fl[(int) ((1.0F - minhitrate) * numpos)];
 
         numneg = 0;
@@ -2291,7 +2291,7 @@ static CvMat* icvGetUsedValues( CvHaarTrainingData* training_data,
             feature_idx->data.i[total++] = cart->compidx[j];
         }
     }
-    icvSort_32s( feature_idx->data.i, total, 0 );
+    std::sort(feature_idx->data.i, feature_idx->data.i + total);
 
     last = 0;
     for( i = 1; i < total; i++ )
