@@ -435,7 +435,7 @@ namespace cv
 
     typedef bool (*BundleAdjustCallback)(int iteration, double norm_error, void* user_data);
 
-    class LevMarqSparse {
+    class CV_EXPORTS LevMarqSparse {
     public:
         LevMarqSparse();
         LevMarqSparse(int npoints, // number of points
