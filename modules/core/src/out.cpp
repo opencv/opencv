@@ -55,7 +55,7 @@ namespace
         char buf[32];   // enough for double with precision up to 20
 
         cv::Mat mtx;
-        int mcn;
+        int mcn; // == mtx.channels()
         bool singleLine;
 
         int state;
@@ -68,7 +68,6 @@ namespace
         char braces[5];
 
         void (FormattedImpl::*valueToStr)();
-
         void valueToStr8u()  { sprintf(buf, "%3d", (int)mtx.ptr<uchar>(row, col)[cn]); }
         void valueToStr8s()  { sprintf(buf, "%3d", (int)mtx.ptr<schar>(row, col)[cn]); }
         void valueToStr16u() { sprintf(buf, "%d", (int)mtx.ptr<ushort>(row, col)[cn]); }

@@ -228,7 +228,12 @@ public:
 };
 
 
-template<int depth> class TypeDepth {};
+
+template<int _depth> class TypeDepth
+{
+    enum { depth = CV_USRTYPE1 };
+    typedef void value_type;
+};
 
 template<> class TypeDepth<CV_8U>
 {

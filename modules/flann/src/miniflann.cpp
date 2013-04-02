@@ -312,9 +312,9 @@ buildIndex_(void*& index, const Mat& data, const IndexParams& params, const Dist
 {
     typedef typename Distance::ElementType ElementType;
     if(DataType<ElementType>::type != data.type())
-        CV_Error_(CV_StsUnsupportedFormat, ("type=%d\n", data.type()));
+        CV_Error_(Error::StsUnsupportedFormat, ("type=%d\n", data.type()));
     if(!data.isContinuous())
-        CV_Error(CV_StsBadArg, "Only continuous arrays are supported");
+        CV_Error(Error::StsBadArg, "Only continuous arrays are supported");
 
     ::cvflann::Matrix<ElementType> dataset((ElementType*)data.data, data.rows, data.cols);
     IndexType* _index = new IndexType(dataset, get_params(params), dist);
@@ -400,7 +400,7 @@ void Index::build(InputArray _data, const IndexParams& params, flann_distance_t 
         break;
 #endif
     default:
-        CV_Error(CV_StsBadArg, "Unknown/unsupported distance type");
+        CV_Error(Error::StsBadArg, "Unknown/unsupported distance type");
     }
 }
 
@@ -453,7 +453,7 @@ void Index::release()
             break;
 #endif
         default:
-            CV_Error(CV_StsBadArg, "Unknown/unsupported distance type");
+            CV_Error(Error::StsBadArg, "Unknown/unsupported distance type");
     }
     index = 0;
 }
@@ -585,7 +585,7 @@ void Index::knnSearch(InputArray _query, OutputArray _indices,
         break;
 #endif
     default:
-        CV_Error(CV_StsBadArg, "Unknown/unsupported distance type");
+        CV_Error(Error::StsBadArg, "Unknown/unsupported distance type");
     }
 }
 
@@ -599,7 +599,7 @@ int Index::radiusSearch(InputArray _query, OutputArray _indices,
     createIndicesDists( _indices, _dists, indices, dists, query.rows, maxResults, INT_MAX, dtype );
 
     if( algo == FLANN_INDEX_LSH )
-        CV_Error( CV_StsNotImplemented, "LSH index does not support radiusSearch operation" );
+        CV_Error( Error::StsNotImplemented, "LSH index does not support radiusSearch operation" );
 
     switch( distType )
     {
@@ -623,7 +623,7 @@ int Index::radiusSearch(InputArray _query, OutputArray _indices,
         return runRadiusSearch< ::cvflann::KL_Divergence<float> >(index, query, indices, dists, radius, params);
 #endif
     default:
-        CV_Error(CV_StsBadArg, "Unknown/unsupported distance type");
+        CV_Error(Error::StsBadArg, "Unknown/unsupported distance type");
     }
     return -1;
 }
@@ -658,7 +658,7 @@ void Index::save(const String& filename) const
 {
     FILE* fout = fopen(filename.c_str(), "wb");
     if (fout == NULL)
-        CV_Error_( CV_StsError, ("Can not open file %s for writing FLANN index\n", filename.c_str()) );
+        CV_Error_( Error::StsError, ("Can not open file %s for writing FLANN index\n", filename.c_str()) );
 
     switch( distType )
     {
@@ -691,7 +691,7 @@ void Index::save(const String& filename) const
     default:
         fclose(fout);
         fout = 0;
-        CV_Error(CV_StsBadArg, "Unknown/unsupported distance type");
+        CV_Error(Error::StsBadArg, "Unknown/unsupported distance type");
     }
     if( fout )
         fclose(fout);

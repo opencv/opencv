@@ -57,18 +57,6 @@
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/persistence.hpp"
 
-#ifndef SKIP_INCLUDES
-#include <limits.h>
-#include <algorithm>
-#include <cmath>
-#include <cstddef>
-#include <complex>
-#include <map>
-#include <new>
-#include <vector>
-#include <sstream>
-#endif // SKIP_INCLUDES
-
 /*! \namespace cv
     Namespace where all the C++ OpenCV functionality resides
 */
@@ -947,6 +935,42 @@ private:
     enum PeriodParameters {N = 624, M = 397};
     unsigned state[N];
     int mti;
+};
+
+
+
+/////////////////////////////// Formatted output of cv::Mat ///////////////////////////
+
+class CV_EXPORTS Formatted
+{
+public:
+    virtual const char* next() = 0;
+    virtual void reset() = 0;
+    virtual ~Formatted();
+};
+
+
+class CV_EXPORTS Formatter
+{
+public:
+    enum { FMT_MATLAB  = 0,
+           FMT_CSV     = 1,
+           FMT_PYTHON  = 2,
+           FMT_NUMPY   = 3,
+           FMT_C       = 4,
+           FMT_DEFAULT = FMT_MATLAB
+         };
+
+    virtual ~Formatter();
+
+    virtual Ptr<Formatted> format(const Mat& mtx) const = 0;
+
+    virtual void set32fPrecision(int p = 8) = 0;
+    virtual void set64fPrecision(int p = 16) = 0;
+    virtual void setMultiline(bool ml = true) = 0;
+
+    static Ptr<Formatter> get(int fmt = FMT_DEFAULT);
+
 };
 
 

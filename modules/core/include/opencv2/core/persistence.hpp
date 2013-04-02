@@ -226,6 +226,8 @@ public:
     int state; //!< the writer state
 };
 
+template<> CV_EXPORTS void Ptr<CvFileStorage>::delete_obj();
+
 /*!
  File Storage Node class
 

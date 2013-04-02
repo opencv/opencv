@@ -111,7 +111,7 @@
 #define CV_CPU_NEON   11
 #define CV_HARDWARE_MAX_FEATURE 255
 
-// disable SSE/AVX/NEON headers for NVCC compiler
+// do not include SSE/AVX/NEON headers for NVCC compiler
 #ifndef __CUDACC__
 
 #if defined __SSE2__ || defined _M_X64  || (defined _M_IX86_FP && _M_IX86_FP >= 2)

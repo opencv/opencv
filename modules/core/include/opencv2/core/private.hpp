@@ -171,7 +171,7 @@ namespace cv
 #define  CV_TOGGLE_FLT(x) ((x)^((int)(x) < 0 ? 0x7fffffff : 0))
 #define  CV_TOGGLE_DBL(x) ((x)^((int64)(x) < 0 ? CV_BIG_INT(0x7fffffffffffffff) : 0))
 
-static inline void* cvAlignPtr( const void* ptr, int align CV_DEFAULT(32) )
+static inline void* cvAlignPtr( const void* ptr, int align = 32 )
 {
     CV_DbgAssert ( (align & (align-1)) == 0 );
     return (void*)( ((size_t)ptr + align - 1) & ~(size_t)(align-1) );
@@ -183,10 +183,12 @@ static inline int cvAlign( int size, int align )
     return (size + align - 1) & -align;
 }
 
+#ifdef IPL_DEPTH_8U
 static inline cv::Size cvGetMatSize( const CvMat* mat )
 {
     return cv::Size(mat->cols, mat->rows);
 }
+#endif
 
 namespace cv
 {

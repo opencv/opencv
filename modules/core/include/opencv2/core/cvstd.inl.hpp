@@ -68,7 +68,9 @@ public:
     typedef Vec<channel_type, channels> vec_type;
 };
 
-inline String::String(const std::string& str) : cstr_(0), len_(0)
+inline
+String::String(const std::string& str)
+    : cstr_(0), len_(0)
 {
     if (!str.empty())
     {
@@ -77,7 +79,9 @@ inline String::String(const std::string& str) : cstr_(0), len_(0)
     }
 }
 
-inline String::String(const std::string& str, size_t pos, size_t len) : cstr_(0), len_(0)
+inline
+String::String(const std::string& str, size_t pos, size_t len)
+    : cstr_(0), len_(0)
 {
     size_t strlen = str.size();
     pos = max(pos, strlen);
@@ -86,7 +90,8 @@ inline String::String(const std::string& str, size_t pos, size_t len) : cstr_(0)
     memcpy(allocate(len), str.c_str() + pos, len);
 }
 
-inline String& String::operator=(const std::string& str)
+inline
+String& String::operator = (const std::string& str)
 {
     deallocate();
     if (!str.empty())
@@ -97,12 +102,14 @@ inline String& String::operator=(const std::string& str)
     return *this;
 }
 
-inline String::operator std::string() const
+inline
+String::operator std::string() const
 {
     return std::string(cstr_, len_);
 }
 
-inline String operator+ (const String& lhs, const std::string& rhs)
+inline
+String operator + (const String& lhs, const std::string& rhs)
 {
     String s;
     size_t rhslen = rhs.size();
@@ -112,7 +119,8 @@ inline String operator+ (const String& lhs, const std::string& rhs)
     return s;
 }
 
-inline String operator+ (const std::string& lhs, const String& rhs)
+inline
+String operator + (const std::string& lhs, const String& rhs)
 {
     String s;
     size_t lhslen = lhs.size();
@@ -122,29 +130,118 @@ inline String operator+ (const std::string& lhs, const String& rhs)
     return s;
 }
 
-inline std::ostream& operator << (std::ostream& os, const String& str)
-{
-    return os << str.c_str();
-}
-
-inline FileNode::operator std::string() const
+inline
+FileNode::operator std::string() const
 {
     String value;
     read(*this, value, value);
     return value;
 }
 
-template<> inline void operator >> (const FileNode& n, std::string& value)
+template<> inline
+void operator >> (const FileNode& n, std::string& value)
 {
     String val;
     read(n, val, val);
     value = val;
 }
 
-template<> inline FileStorage& operator << (FileStorage& fs, const std::string& value)
+template<> inline
+FileStorage& operator << (FileStorage& fs, const std::string& value)
 {
     return fs << cv::String(value);
 }
+
+static inline
+std::ostream& operator << (std::ostream& os, const String& str)
+{
+    return os << str.c_str();
+}
+
+static inline
+std::ostream& operator << (std::ostream& out, Ptr<Formatted> fmtd)
+{
+    fmtd->reset();
+    for(const char* str = fmtd->next(); str; str = fmtd->next())
+        out << str;
+    return out;
+}
+
+static inline
+std::ostream& operator << (std::ostream& out, const Mat& mtx)
+{
+    return out << Formatter::get()->format(mtx);
+}
+
+template<typename _Tp> static inline
+std::ostream& operator << (std::ostream& out, const std::vector<Point_<_Tp> >& vec)
+{
+    return out << Formatter::get()->format(Mat(vec));
+}
+
+
+template<typename _Tp> static inline
+std::ostream& operator << (std::ostream& out, const std::vector<Point3_<_Tp> >& vec)
+{
+    return out << Formatter::get()->format(Mat(vec));
+}
+
+
+template<typename _Tp, int m, int n> static inline
+std::ostream& operator << (std::ostream& out, const Matx<_Tp, m, n>& matx)
+{
+    return out << Formatter::get()->format(matx);
+}
+
+template<typename _Tp> static inline
+std::ostream& operator << (std::ostream& out, const Point_<_Tp>& p)
+{
+    out << "[" << p.x << ", " << p.y << "]";
+    return out;
+}
+
+template<typename _Tp> static inline
+std::ostream& operator << (std::ostream& out, const Point3_<_Tp>& p)
+{
+    out << "[" << p.x << ", " << p.y << ", " << p.z << "]";
+    return out;
+}
+
+template<typename _Tp, int n> static inline
+std::ostream& operator << (std::ostream& out, const Vec<_Tp, n>& vec)
+{
+    out << "[";
+
+    if(Vec<_Tp, n>::depth < CV_32F)
+    {
+        for (int i = 0; i < n - 1; ++i) {
+            out << (int)vec[i] << ", ";
+        }
+        out << (int)vec[n-1] << "]";
+    }
+    else
+    {
+        for (int i = 0; i < n - 1; ++i) {
+            out << vec[i] << ", ";
+        }
+        out << vec[n-1] << "]";
+    }
+
+    return out;
+}
+
+template<typename _Tp> static inline
+std::ostream& operator << (std::ostream& out, const Size_<_Tp>& size)
+{
+    return out << "[" << size.width << " x " << size.height << "]";
+}
+
+template<typename _Tp> static inline
+std::ostream& operator << (std::ostream& out, const Rect_<_Tp>& rect)
+{
+    return out << "[" << rect.width << " x " << rect.height << " from (" << rect.x << ", " << rect.y << ")]";
+}
+
 
 #endif // OPENCV_NOSTL
 } // cv

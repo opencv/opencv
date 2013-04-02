@@ -47,11 +47,6 @@
 #  error mat.inl.hpp header must be compiled as C++
 #endif
 
-#ifndef SKIP_INCLUDES
-#include <limits.h>
-#include <string.h>
-#endif // SKIP_INCLUDES
-
 namespace cv
 {
 

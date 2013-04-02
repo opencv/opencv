@@ -1,5 +1,7 @@
 #include "test_precomp.hpp"
 
+#include <map>
+
 using namespace cv;
 using namespace std;
 

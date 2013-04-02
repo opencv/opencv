@@ -71,6 +71,7 @@
 #include "precomp.hpp"
 #include "retinafilter.hpp"
 #include <cstdio>
+#include <sstream>
 
 namespace cv
 {

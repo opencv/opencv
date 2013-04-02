@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -1888,7 +1889,6 @@ template<> CV_EXPORTS void Ptr<IplImage>::delete_obj();
 template<> CV_EXPORTS void Ptr<CvMatND>::delete_obj();
 template<> CV_EXPORTS void Ptr<CvSparseMat>::delete_obj();
 template<> CV_EXPORTS void Ptr<CvMemStorage>::delete_obj();
-template<> CV_EXPORTS void Ptr<CvFileStorage>::delete_obj();
 
 ////////////// convenient wrappers for operating old-style dynamic structures //////////////
 
@@ -2228,7 +2228,7 @@ template<typename _Tp> inline ptrdiff_t operator - (const SeqIterator<_Tp>& a,
                                                     const SeqIterator<_Tp>& b)
 {
     ptrdiff_t delta = a.index - b.index, n = a.seq->total;
-    if( std::abs(static_cast<long>(delta)) > n )
+    if( delta > n || delta < -n )
         delta += delta < 0 ? n : -n;
     return delta;
 }

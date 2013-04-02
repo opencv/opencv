@@ -1,44 +1,45 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
- //
- //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
- //
- //  By downloading, copying, installing or using the software you agree to this license.
- //  If you do not agree to this license, do not download, install,
- //  copy or use the software.
- //
- //
- //                           License Agreement
- //                For Open Source Computer Vision Library
- //
- // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
- // Copyright (C) 2008-2013, Willow Garage Inc., all rights reserved.
- // Third party copyrights are property of their respective owners.
- //
- // Redistribution and use in source and binary forms, with or without modification,
- // are permitted provided that the following conditions are met:
- //
- //   * Redistribution's of source code must retain the above copyright notice,
- //     this list of conditions and the following disclaimer.
- //
- //   * Redistribution's in binary form must reproduce the above copyright notice,
- //     this list of conditions and the following disclaimer in the documentation
- //     and / or other materials provided with the distribution.
- //
- //   * The name of the copyright holders may not be used to endorse or promote products
- //     derived from this software without specific prior written permission.
- //
- // This software is provided by the copyright holders and contributors "as is" and
- // any express or implied warranties, including, but not limited to, the implied
- // warranties of merchantability and fitness for a particular purpose are disclaimed.
- // In no event shall the Intel Corporation or contributors be liable for any direct,
- // indirect, incidental, special, exemplary, or consequential damages
- // (including, but not limited to, procurement of substitute goods or services;
- // loss of use, data, or profits; or business interruption) however caused
- // and on any theory of liability, whether in contract, strict liability,
- // or tort (including negligence or otherwise) arising in any way out of
- // the use of this software, even if advised of the possibility of such damage.
- //
- //M*/
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                          License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
 
 #ifndef __OPENCV_CORE_AFFINE3_HPP__
 #define __OPENCV_CORE_AFFINE3_HPP__
@@ -119,24 +120,36 @@ namespace cv
 #endif
     };
 
-    template<typename T> Affine3<T> operator*(const Affine3<T>& affine1, const Affine3<T>& affine2);
-    template<typename T, typename V> V operator*(const Affine3<T>& affine, const V& vector);
+    template<typename T> static
+    Affine3<T> operator*(const Affine3<T>& affine1, const Affine3<T>& affine2);
+
+    template<typename T, typename V> static
+    V operator*(const Affine3<T>& affine, const V& vector);
 
     typedef Affine3<float> Affine3f;
     typedef Affine3<double> Affine3d;
 
-    cv::Vec3f operator*(const cv::Affine3f& affine, const cv::Vec3f& vector);
-    cv::Vec3d operator*(const cv::Affine3d& affine, const cv::Vec3d& vector);
+    static cv::Vec3f operator*(const cv::Affine3f& affine, const cv::Vec3f& vector);
+    static cv::Vec3d operator*(const cv::Affine3d& affine, const cv::Vec3d& vector);
 }
+
 
 
 ///////////////////////////////////////////////////////////////////////////////////
 /// Implementaiton
 
-template<typename T> inline cv::Affine3<T>::Affine3() : matrix(Mat4::eye()) {}
-template<typename T> inline cv::Affine3<T>::Affine3(const Mat4& affine) : matrix(affine) {}
+template<typename T> inline
+cv::Affine3<T>::Affine3()
+    : matrix(Mat4::eye())
+{}
 
-template<typename T> inline cv::Affine3<T>::Affine3(const Mat3& R, const Vec3& t)
+template<typename T> inline
+cv::Affine3<T>::Affine3(const Mat4& affine)
+    : matrix(affine)
+{}
+
+template<typename T> inline
+cv::Affine3<T>::Affine3(const Mat3& R, const Vec3& t)
 {
     rotation(R);
     translation(t);
@@ -144,7 +157,8 @@ template<typename T> inline cv::Affine3<T>::Affine3(const Mat3& R, const Vec3& t
     matrix.val[15] = 1;
 }
 
-template<typename T> inline cv::Affine3<T>::Affine3(const Vec3& rvec, const Vec3& t)
+template<typename T> inline
+cv::Affine3<T>::Affine3(const Vec3& rvec, const Vec3& t)
 {
     rotation(rvec);
     translation(t);
@@ -152,7 +166,8 @@ template<typename T> inline cv::Affine3<T>::Affine3(const Vec3& rvec, const Vec3
     matrix.val[15] = 1;
 }
 
-template<typename T> inline cv::Affine3<T>::Affine3(const cv::Mat& data, const Vec3& t)
+template<typename T> inline
+cv::Affine3<T>::Affine3(const cv::Mat& data, const Vec3& t)
 {
     CV_Assert(data.type() == cv::DataType<T>::type);
 
@@ -168,7 +183,8 @@ template<typename T> inline cv::Affine3<T>::Affine3(const cv::Mat& data, const V
     matrix.val[15] = 1;
 }
 
-template<typename T> inline cv::Affine3<T>::Affine3(float_type alpha, float_type beta, float_type gamma, const Vec3& t)
+template<typename T> inline
+cv::Affine3<T>::Affine3(float_type alpha, float_type beta, float_type gamma, const Vec3& t)
 {
     rotation(alpha, beta, gamma);
     translation(t);
@@ -176,14 +192,20 @@ template<typename T> inline cv::Affine3<T>::Affine3(float_type alpha, float_type
     matrix.val[15] = 1;
 }
 
-template<typename T> inline cv::Affine3<T> cv::Affine3<T>::Identity()
+template<typename T> inline
+cv::Affine3<T> cv::Affine3<T>::Identity()
 {
     return Affine3<T>(cv::Affine3<T>::Mat4::eye());
 }
 
-template<typename T> inline void cv::Affine3<T>::rotation(const Mat3& R) { linear(R); }
+template<typename T> inline
+void cv::Affine3<T>::rotation(const Mat3& R)
+{
+    linear(R);
+}
 
-template<typename T> inline void cv::Affine3<T>::rotation(const Vec3& rvec)
+template<typename T> inline
+void cv::Affine3<T>::rotation(const Vec3& rvec)
 {
     double rx = rvec[0], ry = rvec[1], rz = rvec[2];
     double theta = std::sqrt(rx*rx + ry*ry + rz*rz);
@@ -215,7 +237,8 @@ template<typename T> inline void cv::Affine3<T>::rotation(const Vec3& rvec)
 }
 
 //Combines rotation methods above. Suports 3x3, 1x3, 3x1 sizes of data matrix;
-template<typename T> inline void cv::Affine3<T>::rotation(const cv::Mat& data)
+template<typename T> inline
+void cv::Affine3<T>::rotation(const cv::Mat& data)
 {
     CV_Assert(data.type() == cv::DataType<T>::type);
 
@@ -235,25 +258,34 @@ template<typename T> inline void cv::Affine3<T>::rotation(const cv::Mat& data)
         CV_Assert(!"Input marix can be 3x3, 1x3 or 3x1");
 }
 
-template<typename T> inline void cv::Affine3<T>::rotation(float_type alpha, float_type beta, float_type gamma)
+template<typename T> inline
+void cv::Affine3<T>::rotation(float_type alpha, float_type beta, float_type gamma)
 {
     rotation(Vec3(alpha, beta, gamma));
 }
 
-template<typename T> inline void cv::Affine3<T>::linear(const Mat3& L)
+template<typename T> inline
+void cv::Affine3<T>::linear(const Mat3& L)
 {
     matrix.val[0] = L.val[0]; matrix.val[1] = L.val[1];  matrix.val[ 2] = L.val[2];
     matrix.val[4] = L.val[3]; matrix.val[5] = L.val[4];  matrix.val[ 6] = L.val[5];
     matrix.val[8] = L.val[6]; matrix.val[9] = L.val[7];  matrix.val[10] = L.val[8];
 }
 
-template<typename T> inline void cv::Affine3<T>::translation(const Vec3& t)
+template<typename T> inline
+void cv::Affine3<T>::translation(const Vec3& t)
 {
     matrix.val[3] = t[0]; matrix.val[7] = t[1]; matrix.val[11] = t[2];
 }
 
-template<typename T> inline typename cv::Affine3<T>::Mat3 cv::Affine3<T>::rotation() const { return linear(); }
-template<typename T> inline typename cv::Affine3<T>::Mat3 cv::Affine3<T>::linear() const
+template<typename T> inline
+typename cv::Affine3<T>::Mat3 cv::Affine3<T>::rotation() const
+{
+    return linear();
+}
+
+template<typename T> inline
+typename cv::Affine3<T>::Mat3 cv::Affine3<T>::linear() const
 {
     typename cv::Affine3<T>::Mat3 R;
     R.val[0] = matrix.val[0];  R.val[1] = matrix.val[1];  R.val[2] = matrix.val[ 2];
@@ -262,17 +294,20 @@ template<typename T> inline typename cv::Affine3<T>::Mat3 cv::Affine3<T>::linear
     return R;
 }
 
-template<typename T> inline typename cv::Affine3<T>::Vec3 cv::Affine3<T>::translation() const
+template<typename T> inline
+typename cv::Affine3<T>::Vec3 cv::Affine3<T>::translation() const
 {
     return Vec3(matrix.val[3], matrix.val[7], matrix.val[11]);
 }
 
-template<typename T> inline cv::Affine3<T> cv::Affine3<T>::inv(int method) const
+template<typename T> inline
+cv::Affine3<T> cv::Affine3<T>::inv(int method) const
 {
     return matrix.inv(method);
 }
 
-template<typename T> inline cv::Affine3<T> cv::Affine3<T>::rotate(const Mat3& R) const
+template<typename T> inline
+cv::Affine3<T> cv::Affine3<T>::rotate(const Mat3& R) const
 {
     Mat3 Lc = linear();
     Vec3 tc = translation();
@@ -295,7 +330,8 @@ template<typename T> inline cv::Affine3<T> cv::Affine3<T>::rotate(const Mat3& R)
     return result;
 }
 
-template<typename T> inline cv::Affine3<T> cv::Affine3<T>::translate(const Vec3& t) const
+template<typename T> inline
+cv::Affine3<T> cv::Affine3<T>::translate(const Vec3& t) const
 {
     Mat4 m = matrix;
     m.val[ 3] += t[0];
@@ -304,22 +340,26 @@ template<typename T> inline cv::Affine3<T> cv::Affine3<T>::translate(const Vec3&
     return m;
 }
 
-template<typename T> inline cv::Affine3<T> cv::Affine3<T>::concatenate(const Affine3<T>& affine) const
+template<typename T> inline
+cv::Affine3<T> cv::Affine3<T>::concatenate(const Affine3<T>& affine) const
 {
     return (*this).rotate(affine.rotation()).translate(affine.translation());
 }
 
-template<typename T> template <typename Y> inline cv::Affine3<T>::operator Affine3<Y>() const
+template<typename T> template <typename Y> inline
+cv::Affine3<T>::operator Affine3<Y>() const
 {
     return Affine3<Y>(matrix);
 }
 
-template<typename T> inline cv::Affine3<T> cv::operator*(const cv::Affine3<T>& affine1, const cv::Affine3<T>& affine2)
+template<typename T> inline
+cv::Affine3<T> cv::operator*(const cv::Affine3<T>& affine1, const cv::Affine3<T>& affine2)
 {
     return affine2.concatenate(affine1);
 }
 
-template<typename T, typename V> inline V cv::operator*(const cv::Affine3<T>& affine, const V& v)
+template<typename T, typename V> inline
+V cv::operator*(const cv::Affine3<T>& affine, const V& v)
 {
     const typename Affine3<T>::Mat4& m = affine.matrix;
 
@@ -330,7 +370,8 @@ template<typename T, typename V> inline V cv::operator*(const cv::Affine3<T>& af
     return r;
 }
 
-inline cv::Vec3f cv::operator*(const cv::Affine3f& affine, const cv::Vec3f& v)
+static inline
+cv::Vec3f cv::operator*(const cv::Affine3f& affine, const cv::Vec3f& v)
 {
     const cv::Matx44f& m = affine.matrix;
     cv::Vec3f r;
@@ -340,7 +381,8 @@ inline cv::Vec3f cv::operator*(const cv::Affine3f& affine, const cv::Vec3f& v)
     return r;
 }
 
-inline cv::Vec3d cv::operator*(const cv::Affine3d& affine, const cv::Vec3d& v)
+static inline
+cv::Vec3d cv::operator*(const cv::Affine3d& affine, const cv::Vec3d& v)
 {
     const cv::Matx44d& m = affine.matrix;
     cv::Vec3d r;
@@ -350,20 +392,25 @@ inline cv::Vec3d cv::operator*(const cv::Affine3d& affine, const cv::Vec3d& v)
     return r;
 }
 
+
+
 #if defined EIGEN_WORLD_VERSION && defined EIGEN_GEOMETRY_MODULE_H
 
-template<typename T> inline cv::Affine3<T>::Affine3(const Eigen::Transform<T, 3, Eigen::Affine, (Eigen::RowMajor)>& affine)
+template<typename T> inline
+cv::Affine3<T>::Affine3(const Eigen::Transform<T, 3, Eigen::Affine, (Eigen::RowMajor)>& affine)
 {
     cv::Mat(4, 4, cv::DataType<T>::type, affine.matrix().data()).copyTo(matrix);
 }
 
-template<typename T> inline cv::Affine3<T>::Affine3(const Eigen::Transform<T, 3, Eigen::Affine>& affine)
+template<typename T> inline
+cv::Affine3<T>::Affine3(const Eigen::Transform<T, 3, Eigen::Affine>& affine)
 {
     Eigen::Transform<T, 3, Eigen::Affine, (Eigen::RowMajor)> a = affine;
     cv::Mat(4, 4, cv::DataType<T>::type, a.matrix().data()).copyTo(matrix);
 }
 
-template<typename T> inline cv::Affine3<T>::operator Eigen::Transform<T, 3, Eigen::Affine, (Eigen::RowMajor)>() const
+template<typename T> inline
+cv::Affine3<T>::operator Eigen::Transform<T, 3, Eigen::Affine, (Eigen::RowMajor)>() const
 {
     Eigen::Transform<T, 3, Eigen::Affine, (Eigen::RowMajor)> r;
     cv::Mat hdr(4, 4, cv::DataType<T>::type, r.matrix().data());
@@ -371,7 +418,8 @@ template<typename T> inline cv::Affine3<T>::operator Eigen::Transform<T, 3, Eige
     return r;
 }
 
-template<typename T> inline cv::Affine3<T>::operator Eigen::Transform<T, 3, Eigen::Affine>() const
+template<typename T> inline
+cv::Affine3<T>::operator Eigen::Transform<T, 3, Eigen::Affine>() const
 {
     return this->operator Eigen::Transform<T, 3, Eigen::Affine, (Eigen::RowMajor)>();
 }

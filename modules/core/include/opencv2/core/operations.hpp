@@ -47,12 +47,7 @@
 #  error operations.hpp header must be compiled as C++
 #endif
 
-#ifndef SKIP_INCLUDES
-  #include <string.h>
-  #include <limits.h>
-#endif // SKIP_INCLUDES
-
-#include <limits>
+#include <cstdio>
 
 namespace cv
 {
@@ -356,6 +351,7 @@ inline unsigned RNG::next()
 }
 
 
+
 ///////////////////////////////////////// LineIterator ////////////////////////////////////////
 
 inline
@@ -398,39 +394,8 @@ template<typename _Tp> static inline _Tp randu()
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 
-class CV_EXPORTS Formatted
-{
-public:
-    virtual const char* next() = 0;
-    virtual void reset() = 0;
-    virtual ~Formatted();
-};
-
-
-class CV_EXPORTS Formatter
-{
-public:
-    enum { FMT_MATLAB  = 0,
-           FMT_CSV     = 1,
-           FMT_PYTHON  = 2,
-           FMT_NUMPY   = 3,
-           FMT_C       = 4,
-           FMT_DEFAULT = FMT_MATLAB
-         };
-
-    virtual ~Formatter();
-
-    virtual Ptr<Formatted> format(const Mat& mtx) const = 0;
-
-    virtual void set32fPrecision(int p = 8) = 0;
-    virtual void set64fPrecision(int p = 16) = 0;
-    virtual void setMultiline(bool ml = true) = 0;
-
-    static Ptr<Formatter> get(int fmt = FMT_DEFAULT);
-
-};
+///////////////////////////////// Formatted output of cv::Mat /////////////////////////////////
 
 static inline
 Ptr<Formatted> format(InputArray mtx, int fmt)
@@ -438,111 +403,53 @@ Ptr<Formatted> format(InputArray mtx, int fmt)
     return Formatter::get(fmt)->format(mtx.getMat());
 }
 
-
 static inline
-std::ostream& operator << (std::ostream& out, Ptr<Formatted> fmtd)
+int print(Ptr<Formatted> fmtd, FILE* stream = stdout)
 {
+    int written = 0;
     fmtd->reset();
     for(const char* str = fmtd->next(); str; str = fmtd->next())
-        out << str;
-    return out;
+        written += fputs(str, stream);
+
+    return written;
 }
 
 static inline
-std::ostream& operator << (std::ostream& out, const Mat& mtx)
+int print(const Mat& mtx, FILE* stream = stdout)
 {
-    return out << Formatter::get()->format(mtx);
+    return print(Formatter::get()->format(mtx), stream);
 }
 
 template<typename _Tp> static inline
-std::ostream& operator << (std::ostream& out, const std::vector<Point_<_Tp> >& vec)
+int print(const std::vector<Point_<_Tp> >& vec, FILE* stream = stdout)
 {
-    return out << Formatter::get()->format(Mat(vec));
+    return print(Formatter::get()->format(Mat(vec)), stream);
 }
-
 
 template<typename _Tp> static inline
-std::ostream& operator << (std::ostream& out, const std::vector<Point3_<_Tp> >& vec)
+int print(const std::vector<Point3_<_Tp> >& vec, FILE* stream = stdout)
 {
-    return out << Formatter::get()->format(Mat(vec));
+    return print(Formatter::get()->format(Mat(vec)), stream);
 }
 
-
-/** Writes a Matx to an output stream.
- */
-template<typename _Tp, int m, int n> inline
-std::ostream& operator << (std::ostream& out, const Matx<_Tp, m, n>& matx)
+template<typename _Tp, int m, int n> static inline
+int print(const Matx<_Tp, m, n>& matx, FILE* stream = stdout)
 {
-    return out << Formatter::get()->format(matx);
-}
-
-/** Writes a point to an output stream in Matlab notation
- */
-template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const Point_<_Tp>& p)
-{
-    out << "[" << p.x << ", " << p.y << "]";
-    return out;
-}
-
-/** Writes a point to an output stream in Matlab notation
- */
-template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const Point3_<_Tp>& p)
-{
-    out << "[" << p.x << ", " << p.y << ", " << p.z << "]";
-    return out;
-}
-
-/** Writes a Vec to an output stream. Format example : [10, 20, 30]
- */
-template<typename _Tp, int n> inline std::ostream& operator<<(std::ostream& out, const Vec<_Tp, n>& vec)
-{
-    out << "[";
-
-    if(Vec<_Tp, n>::depth < CV_32F)
-    {
-        for (int i = 0; i < n - 1; ++i) {
-            out << (int)vec[i] << ", ";
-        }
-        out << (int)vec[n-1] << "]";
-    }
-    else
-    {
-        for (int i = 0; i < n - 1; ++i) {
-            out << vec[i] << ", ";
-        }
-        out << vec[n-1] << "]";
-    }
-
-    return out;
-}
-
-/** Writes a Size_ to an output stream. Format example : [640 x 480]
- */
-template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const Size_<_Tp>& size)
-{
-    out << "[" << size.width << " x " << size.height << "]";
-    return out;
-}
-
-/** Writes a Rect_ to an output stream. Format example : [640 x 480 from (10, 20)]
- */
-template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const Rect_<_Tp>& rect)
-{
-    out << "[" << rect.width << " x " << rect.height << " from (" << rect.x << ", " << rect.y << ")]";
-    return out;
+    return print(Formatter::get()->format(matx), stream);
 }
 
 
 
 ////////////////////////////////////////// Algorithm //////////////////////////////////////////
 
-template<typename _Tp> inline Ptr<_Tp> Algorithm::create(const String& name)
+template<typename _Tp> inline
+Ptr<_Tp> Algorithm::create(const String& name)
 {
     return _create(name).ptr<_Tp>();
 }
 
-template<typename _Tp>
-inline void Algorithm::set(const char* _name, const Ptr<_Tp>& value)
+template<typename _Tp> inline
+void Algorithm::set(const char* _name, const Ptr<_Tp>& value)
 {
     Ptr<Algorithm> algo_ptr = value. template ptr<cv::Algorithm>();
     if (algo_ptr.empty()) {
@@ -551,14 +458,14 @@ inline void Algorithm::set(const char* _name, const Ptr<_Tp>& value)
     info()->set(this, _name, ParamType<Algorithm>::type, &algo_ptr);
 }
 
-template<typename _Tp>
-inline void Algorithm::set(const String& _name, const Ptr<_Tp>& value)
+template<typename _Tp> inline
+void Algorithm::set(const String& _name, const Ptr<_Tp>& value)
 {
     this->set<_Tp>(_name.c_str(), value);
 }
 
-template<typename _Tp>
-inline void Algorithm::setAlgorithm(const char* _name, const Ptr<_Tp>& value)
+template<typename _Tp> inline
+void Algorithm::setAlgorithm(const char* _name, const Ptr<_Tp>& value)
 {
     Ptr<Algorithm> algo_ptr = value. template ptr<cv::Algorithm>();
     if (algo_ptr.empty()) {
@@ -567,44 +474,50 @@ inline void Algorithm::setAlgorithm(const char* _name, const Ptr<_Tp>& value)
     info()->set(this, _name, ParamType<Algorithm>::type, &algo_ptr);
 }
 
-template<typename _Tp>
-inline void Algorithm::setAlgorithm(const String& _name, const Ptr<_Tp>& value)
+template<typename _Tp> inline
+void Algorithm::setAlgorithm(const String& _name, const Ptr<_Tp>& value)
 {
     this->set<_Tp>(_name.c_str(), value);
 }
 
-template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const String& _name) const
+template<typename _Tp> inline
+typename ParamType<_Tp>::member_type Algorithm::get(const String& _name) const
 {
     typename ParamType<_Tp>::member_type value;
     info()->get(this, _name.c_str(), ParamType<_Tp>::type, &value);
     return value;
 }
 
-template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const char* _name) const
+template<typename _Tp> inline
+typename ParamType<_Tp>::member_type Algorithm::get(const char* _name) const
 {
     typename ParamType<_Tp>::member_type value;
     info()->get(this, _name, ParamType<_Tp>::type, &value);
     return value;
 }
 
-template<typename _Tp, typename _Base> inline void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
-                  Ptr<_Tp>& value, bool readOnly, Ptr<_Tp> (Algorithm::*getter)(), void (Algorithm::*setter)(const Ptr<_Tp>&),
-                  const String& help)
+template<typename _Tp, typename _Base> inline
+void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter, Ptr<_Tp>& value, bool readOnly,
+                             Ptr<_Tp> (Algorithm::*getter)(), void (Algorithm::*setter)(const Ptr<_Tp>&),
+                             const String& help)
 {
     //TODO: static assert: _Tp inherits from _Base
     addParam_(algo, parameter, ParamType<_Base>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
 }
 
-template<typename _Tp> inline void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
-                  Ptr<_Tp>& value, bool readOnly, Ptr<_Tp> (Algorithm::*getter)(), void (Algorithm::*setter)(const Ptr<_Tp>&),
-                  const String& help)
+template<typename _Tp> inline
+void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter, Ptr<_Tp>& value, bool readOnly,
+                             Ptr<_Tp> (Algorithm::*getter)(), void (Algorithm::*setter)(const Ptr<_Tp>&),
+                             const String& help)
 {
     //TODO: static assert: _Tp inherits from Algorithm
     addParam_(algo, parameter, ParamType<Algorithm>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
 }
 
-}
+
+
+} // cv
 
 #endif

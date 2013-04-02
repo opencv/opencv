@@ -62,6 +62,7 @@
 #ifndef OPENCV_NOSTL_TRANSITIONAL
 #  include <algorithm>
 #  include <utility>
+#  include <cstdlib> //for abs(int)
 #  include <cmath>
 
 namespace cv
@@ -70,19 +71,31 @@ namespace cv
     using std::max;
     using std::abs;
     using std::swap;
+    using std::sqrt;
+    using std::exp;
+    using std::pow;
+    using std::log;
+}
+
+namespace std
+{
+    static inline uchar abs(uchar a) { return a; }
+    static inline ushort abs(ushort a) { return a; }
+    static inline unsigned abs(unsigned a) { return a; }
+    static inline uint64 abs(uint64 a) { return a; }
 }
 
 #else
 namespace cv
 {
-    template<typename T> inline T min(T a, T b) { return a < b ? a : b; }
-    template<typename T> inline T max(T a, T b) { return a > b ? a : b; }
-    template<typename T> inline T abs(T a) { return a < 0 ? -a : a; }
-    template<typename T> inline void swap(T& a, T& b) { T tmp = a; a = b; b = tmp; }
+    template<typename T> static inline T min(T a, T b) { return a < b ? a : b; }
+    template<typename T> static inline T max(T a, T b) { return a > b ? a : b; }
+    template<typename T> static inline T abs(T a) { return a < 0 ? -a : a; }
+    template<typename T> static inline void swap(T& a, T& b) { T tmp = a; a = b; b = tmp; }
 
     template<> inline uchar abs(uchar a) { return a; }
     template<> inline ushort abs(ushort a) { return a; }
-    template<> inline uint abs(uint a) { return a; }
+    template<> inline unsigned abs(unsigned a) { return a; }
     template<> inline uint64 abs(uint64 a) { return a; }
 }
 #endif
@@ -483,17 +496,22 @@ bool operator != (const Ptr<_Tp>& a, const Ptr<_Tp2>& b)
 
 ////////////////////////// cv::String implementation /////////////////////////
 
-inline String::String() : cstr_(0), len_(0)
-{
-}
+inline
+String::String()
+    : cstr_(0), len_(0)
+{}
 
-inline String::String(const String& str) : cstr_(str.cstr_), len_(str.len_)
+inline
+String::String(const String& str)
+    : cstr_(str.cstr_), len_(str.len_)
 {
     if (cstr_)
         CV_XADD(((int*)cstr_)-1, 1);
 }
 
-inline String::String(const String& str, size_t pos, size_t len) : cstr_(0), len_(0)
+inline
+String::String(const String& str, size_t pos, size_t len)
+    : cstr_(0), len_(0)
 {
     pos = min(pos, str.len_);
     len = min(str.len_ - pos, len);
@@ -508,32 +526,41 @@ inline String::String(const String& str, size_t pos, size_t len) : cstr_(0), len
     memcpy(allocate(len), str.cstr_ + pos, len);
 }
 
-inline String::String(const char* s) : cstr_(0), len_(0)
+inline
+String::String(const char* s)
+    : cstr_(0), len_(0)
 {
     if (!s) return;
     size_t len = strlen(s);
     memcpy(allocate(len), s, len);
 }
 
-inline String::String(const char* s, size_t n) : cstr_(0), len_(0)
+inline
+String::String(const char* s, size_t n)
+    : cstr_(0), len_(0)
 {
     if (!n) return;
     memcpy(allocate(n), s, n);
 }
 
-inline String::String(size_t n, char c) : cstr_(0), len_(0)
+inline
+String::String(size_t n, char c)
+    : cstr_(0), len_(0)
 {
     memset(allocate(n), c, n);
 }
 
-inline String::String(const char* first, const char* last) : cstr_(0), len_(0)
+inline
+String::String(const char* first, const char* last)
+    : cstr_(0), len_(0)
 {
     size_t len = (size_t)(last - first);
     memcpy(allocate(len), first, len);
 }
 
-template<typename Iterator>
-inline String::String(Iterator first, Iterator last) : cstr_(0), len_(0)
+template<typename Iterator> inline
+String::String(Iterator first, Iterator last)
+    : cstr_(0), len_(0)
 {
     size_t len = (size_t)(last - first);
     char* str = allocate(len);
@@ -544,12 +571,14 @@ inline String::String(Iterator first, Iterator last) : cstr_(0), len_(0)
     }
 }
 
-inline String::~String()
+inline
+String::~String()
 {
     deallocate();
 }
 
-inline String& String::operator=(const String& str)
+inline
+String& String::operator=(const String& str)
 {
     deallocate();
     if (str.cstr_) CV_XADD(((int*)str.cstr_)-1, 1);
@@ -558,7 +587,8 @@ inline String& String::operator=(const String& str)
     return *this;
 }
 
-inline String& String::operator=(const char* s)
+inline
+String& String::operator=(const char* s)
 {
     deallocate();
     if (!s) return *this;
@@ -567,82 +597,97 @@ inline String& String::operator=(const char* s)
     return *this;
 }
 
-inline String& String::operator=(char c)
+inline
+String& String::operator=(char c)
 {
     deallocate();
     allocate(1)[0] = c;
     return *this;
 }
 
-inline size_t String::size() const
+inline
+size_t String::size() const
 {
     return len_;
 }
 
-inline size_t String::length() const
+inline
+size_t String::length() const
 {
     return len_;
 }
 
-inline char String::operator[](size_t idx) const
+inline
+char String::operator[](size_t idx) const
 {
     return cstr_[idx];
 }
 
-inline char String::operator[](int idx) const
+inline
+char String::operator[](int idx) const
 {
     return cstr_[idx];
 }
 
-inline const char* String::begin() const
+inline
+const char* String::begin() const
 {
     return cstr_;
 }
 
-inline const char* String::end() const
+inline
+const char* String::end() const
 {
     return len_ ? cstr_ + 1 : 0;
 }
 
-inline bool String::empty() const
+inline
+bool String::empty() const
 {
     return len_ == 0;
 }
 
-inline const char* String::c_str() const
+inline
+const char* String::c_str() const
 {
     return cstr_ ? cstr_ : "";
 }
 
-inline void String::swap(String& str)
+inline
+void String::swap(String& str)
 {
     cv::swap(cstr_, str.cstr_);
     cv::swap(len_, str.len_);
 }
 
-inline void String::clear()
+inline
+void String::clear()
 {
     deallocate();
 }
 
-inline int String::compare(const char* s) const
+inline
+int String::compare(const char* s) const
 {
     if (cstr_ == s) return 0;
     return strcmp(c_str(), s);
 }
 
-inline int String::compare(const String& str) const
+inline
+int String::compare(const String& str) const
 {
     if (cstr_ == str.cstr_) return 0;
     return strcmp(c_str(), str.c_str());
 }
 
-inline String String::substr(size_t pos, size_t len) const
+inline
+String String::substr(size_t pos, size_t len) const
 {
     return String(*this, pos, len);
 }
 
-inline size_t String::find(const char* s, size_t pos, size_t n) const
+inline
+size_t String::find(const char* s, size_t pos, size_t n) const
 {
     if (n == 0 || pos + n > len_) return npos;
     const char* lmax = cstr_ + len_ - n;
@@ -655,17 +700,20 @@ inline size_t String::find(const char* s, size_t pos, size_t n) const
     return npos;
 }
 
-inline size_t String::find(char c, size_t pos) const
+inline
+size_t String::find(char c, size_t pos) const
 {
     return find(&c, pos, 1);
 }
 
-inline size_t String::find(const String& str, size_t pos) const
+inline
+size_t String::find(const String& str, size_t pos) const
 {
     return find(str.c_str(), pos, str.len_);
 }
 
-inline size_t String::find(const char* s, size_t pos) const
+inline
+size_t String::find(const char* s, size_t pos) const
 {
     if (pos >= len_ || !s[0]) return npos;
     const char* lmax = cstr_ + len_;
@@ -681,7 +729,8 @@ inline size_t String::find(const char* s, size_t pos) const
     return npos;
 }
 
-inline size_t String::rfind(const char* s, size_t pos, size_t n) const
+inline
+size_t String::rfind(const char* s, size_t pos, size_t n) const
 {
     if (n > len_) return npos;
     if (pos > len_ - n) pos = len_ - n;
@@ -694,22 +743,26 @@ inline size_t String::rfind(const char* s, size_t pos, size_t n) const
     return npos;
 }
 
-inline size_t String::rfind(char c, size_t pos) const
+inline
+size_t String::rfind(char c, size_t pos) const
 {
     return rfind(&c, pos, 1);
 }
 
-inline size_t String::rfind(const String& str, size_t pos) const
+inline
+size_t String::rfind(const String& str, size_t pos) const
 {
     return rfind(str.c_str(), pos, str.len_);
 }
 
-inline size_t String::rfind(const char* s, size_t pos) const
+inline
+size_t String::rfind(const char* s, size_t pos) const
 {
     return rfind(s, pos, strlen(s));
 }
 
-inline size_t String::find_first_of(const char* s, size_t pos, size_t n) const
+inline
+size_t String::find_first_of(const char* s, size_t pos, size_t n) const
 {
     if (n == 0 || pos + n > len_) return npos;
     const char* lmax = cstr_ + len_;
@@ -722,17 +775,20 @@ inline size_t String::find_first_of(const char* s, size_t pos, size_t n) const
     return npos;
 }
 
-inline size_t String::find_first_of(char c, size_t pos) const
+inline
+size_t String::find_first_of(char c, size_t pos) const
 {
     return find_first_of(&c, pos, 1);
 }
 
-inline size_t String::find_first_of(const String& str, size_t pos) const
+inline
+size_t String::find_first_of(const String& str, size_t pos) const
 {
     return find_first_of(str.c_str(), pos, str.len_);
 }
 
-inline size_t String::find_first_of(const char* s, size_t pos) const
+inline
+size_t String::find_first_of(const char* s, size_t pos) const
 {
     if (pos >= len_ || !s[0]) return npos;
     const char* lmax = cstr_ + len_;
@@ -745,7 +801,8 @@ inline size_t String::find_first_of(const char* s, size_t pos) const
     return npos;
 }
 
-inline size_t String::find_last_of(const char* s, size_t pos, size_t n) const
+inline
+size_t String::find_last_of(const char* s, size_t pos, size_t n) const
 {
     if (pos >= len_) pos = len_ - 1;
     for (const char* i = cstr_ + pos; i >= cstr_; --i)
@@ -757,17 +814,20 @@ inline size_t String::find_last_of(const char* s, size_t pos, size_t n) const
     return npos;
 }
 
-inline size_t String::find_last_of(char c, size_t pos) const
+inline
+size_t String::find_last_of(char c, size_t pos) const
 {
     return find_last_of(&c, pos, 1);
 }
 
-inline size_t String::find_last_of(const String& str, size_t pos) const
+inline
+size_t String::find_last_of(const String& str, size_t pos) const
 {
     return find_last_of(str.c_str(), pos, str.len_);
 }
 
-inline size_t String::find_last_of(const char* s, size_t pos) const
+inline
+size_t String::find_last_of(const char* s, size_t pos) const
 {
     if (pos >= len_) pos = len_ - 1;
     for (const char* i = cstr_ + pos; i >= cstr_; --i)
@@ -779,7 +839,8 @@ inline size_t String::find_last_of(const char* s, size_t pos) const
     return npos;
 }
 
-inline String String::toLowerCase() const
+inline
+String String::toLowerCase() const
 {
     String res(cstr_, len_);
 
@@ -791,7 +852,8 @@ inline String String::toLowerCase() const
 
 // ************************* cv::String non-member functions *************************
 
-inline String operator+ (const String& lhs, const String& rhs)
+inline
+String operator + (const String& lhs, const String& rhs)
 {
     String s;
     s.allocate(lhs.len_ + rhs.len_);
@@ -800,7 +862,8 @@ inline String operator+ (const String& lhs, const String& rhs)
     return s;
 }
 
-inline String operator+ (const String& lhs, const char* rhs)
+inline
+String operator + (const String& lhs, const char* rhs)
 {
     String s;
     size_t rhslen = strlen(rhs);
@@ -810,7 +873,8 @@ inline String operator+ (const String& lhs, const char* rhs)
     return s;
 }
 
-inline String operator+ (const char* lhs, const String& rhs)
+inline
+String operator + (const char* lhs, const String& rhs)
 {
     String s;
     size_t lhslen = strlen(lhs);
@@ -820,7 +884,8 @@ inline String operator+ (const char* lhs, const String& rhs)
     return s;
 }
 
-inline String operator+ (const String& lhs, char rhs)
+inline
+String operator + (const String& lhs, char rhs)
 {
     String s;
     s.allocate(lhs.len_ + 1);
@@ -829,7 +894,8 @@ inline String operator+ (const String& lhs, char rhs)
     return s;
 }
 
-inline String operator+ (char lhs, const String& rhs)
+inline
+String operator + (char lhs, const String& rhs)
 {
     String s;
     s.allocate(rhs.len_ + 1);
@@ -838,24 +904,24 @@ inline String operator+ (char lhs, const String& rhs)
     return s;
 }
 
-inline bool operator== (const String& lhs, const String& rhs) { return 0 == lhs.compare(rhs); }
-inline bool operator== (const char*   lhs, const String& rhs) { return 0 == rhs.compare(lhs); }
-inline bool operator== (const String& lhs, const char*   rhs) { return 0 == lhs.compare(rhs); }
-inline bool operator!= (const String& lhs, const String& rhs) { return 0 != lhs.compare(rhs); }
-inline bool operator!= (const char*   lhs, const String& rhs) { return 0 != rhs.compare(lhs); }
-inline bool operator!= (const String& lhs, const char*   rhs) { return 0 != lhs.compare(rhs); }
-inline bool operator<  (const String& lhs, const String& rhs) { return lhs.compare(rhs) <  0; }
-inline bool operator<  (const char*   lhs, const String& rhs) { return rhs.compare(lhs) >  0; }
-inline bool operator<  (const String& lhs, const char*   rhs) { return lhs.compare(rhs) <  0; }
-inline bool operator<= (const String& lhs, const String& rhs) { return lhs.compare(rhs) <= 0; }
-inline bool operator<= (const char*   lhs, const String& rhs) { return rhs.compare(lhs) >= 0; }
-inline bool operator<= (const String& lhs, const char*   rhs) { return lhs.compare(rhs) <= 0; }
-inline bool operator>  (const String& lhs, const String& rhs) { return lhs.compare(rhs) >  0; }
-inline bool operator>  (const char*   lhs, const String& rhs) { return rhs.compare(lhs) <  0; }
-inline bool operator>  (const String& lhs, const char*   rhs) { return lhs.compare(rhs) >  0; }
-inline bool operator>= (const String& lhs, const String& rhs) { return lhs.compare(rhs) >= 0; }
-inline bool operator>= (const char*   lhs, const String& rhs) { return rhs.compare(lhs) <= 0; }
-inline bool operator>= (const String& lhs, const char*   rhs) { return lhs.compare(rhs) >= 0; }
+static inline bool operator== (const String& lhs, const String& rhs) { return 0 == lhs.compare(rhs); }
+static inline bool operator== (const char*   lhs, const String& rhs) { return 0 == rhs.compare(lhs); }
+static inline bool operator== (const String& lhs, const char*   rhs) { return 0 == lhs.compare(rhs); }
+static inline bool operator!= (const String& lhs, const String& rhs) { return 0 != lhs.compare(rhs); }
+static inline bool operator!= (const char*   lhs, const String& rhs) { return 0 != rhs.compare(lhs); }
+static inline bool operator!= (const String& lhs, const char*   rhs) { return 0 != lhs.compare(rhs); }
+static inline bool operator<  (const String& lhs, const String& rhs) { return lhs.compare(rhs) <  0; }
+static inline bool operator<  (const char*   lhs, const String& rhs) { return rhs.compare(lhs) >  0; }
+static inline bool operator<  (const String& lhs, const char*   rhs) { return lhs.compare(rhs) <  0; }
+static inline bool operator<= (const String& lhs, const String& rhs) { return lhs.compare(rhs) <= 0; }
+static inline bool operator<= (const char*   lhs, const String& rhs) { return rhs.compare(lhs) >= 0; }
+static inline bool operator<= (const String& lhs, const char*   rhs) { return lhs.compare(rhs) <= 0; }
+static inline bool operator>  (const String& lhs, const String& rhs) { return lhs.compare(rhs) >  0; }
+static inline bool operator>  (const char*   lhs, const String& rhs) { return rhs.compare(lhs) <  0; }
+static inline bool operator>  (const String& lhs, const char*   rhs) { return lhs.compare(rhs) >  0; }
+static inline bool operator>= (const String& lhs, const String& rhs) { return lhs.compare(rhs) >= 0; }
+static inline bool operator>= (const char*   lhs, const String& rhs) { return rhs.compare(lhs) <= 0; }
+static inline bool operator>= (const String& lhs, const char*   rhs) { return lhs.compare(rhs) >= 0; }
 
 } // cv
 
@@ -865,7 +931,11 @@ namespace std
 namespace cv
 #endif
 {
-    template<> inline void swap<cv::String>(cv::String& a, cv::String& b) { a.swap(b); }
+    template<> inline
+    void swap<cv::String>(cv::String& a, cv::String& b)
+    {
+        a.swap(b);
+    }
 }
 
 #endif //__OPENCV_CORE_CVSTD_HPP__
