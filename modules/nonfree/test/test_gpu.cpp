@@ -58,9 +58,8 @@ namespace
     IMPLEMENT_PARAM_CLASS(SURF_Upright, bool)
 }
 
-PARAM_TEST_CASE(SURF, cv::gpu::DeviceInfo, SURF_HessianThreshold, SURF_Octaves, SURF_OctaveLayers, SURF_Extended, SURF_Upright)
+PARAM_TEST_CASE(SURF, SURF_HessianThreshold, SURF_Octaves, SURF_OctaveLayers, SURF_Extended, SURF_Upright)
 {
-    cv::gpu::DeviceInfo devInfo;
     double hessianThreshold;
     int nOctaves;
     int nOctaveLayers;
@@ -69,14 +68,11 @@ PARAM_TEST_CASE(SURF, cv::gpu::DeviceInfo, SURF_HessianThreshold, SURF_Octaves, 
 
     virtual void SetUp()
     {
-        devInfo = GET_PARAM(0);
-        hessianThreshold = GET_PARAM(1);
-        nOctaves = GET_PARAM(2);
-        nOctaveLayers = GET_PARAM(3);
-        extended = GET_PARAM(4);
-        upright = GET_PARAM(5);
-
-        cv::gpu::setDevice(devInfo.deviceID());
+        hessianThreshold = GET_PARAM(0);
+        nOctaves = GET_PARAM(1);
+        nOctaveLayers = GET_PARAM(2);
+        extended = GET_PARAM(3);
+        upright = GET_PARAM(4);
     }
 };
 
@@ -93,39 +89,24 @@ GPU_TEST_P(SURF, Detector)
     surf.upright = upright;
     surf.keypointsRatio = 0.05f;
 
-    if (!supportFeature(devInfo, cv::gpu::GLOBAL_ATOMICS))
-    {
-        try
-        {
-            std::vector<cv::KeyPoint> keypoints;
-            surf(loadMat(image), cv::gpu::GpuMat(), keypoints);
-        }
-        catch (const cv::Exception& e)
-        {
-            ASSERT_EQ(CV_StsNotImplemented, e.code);
-        }
-    }
-    else
-    {
-        std::vector<cv::KeyPoint> keypoints;
-        surf(loadMat(image), cv::gpu::GpuMat(), keypoints);
+    std::vector<cv::KeyPoint> keypoints;
+    surf(loadMat(image), cv::gpu::GpuMat(), keypoints);
 
-        cv::SURF surf_gold;
-        surf_gold.hessianThreshold = hessianThreshold;
-        surf_gold.nOctaves = nOctaves;
-        surf_gold.nOctaveLayers = nOctaveLayers;
-        surf_gold.extended = extended;
-        surf_gold.upright = upright;
+    cv::SURF surf_gold;
+    surf_gold.hessianThreshold = hessianThreshold;
+    surf_gold.nOctaves = nOctaves;
+    surf_gold.nOctaveLayers = nOctaveLayers;
+    surf_gold.extended = extended;
+    surf_gold.upright = upright;
 
-        std::vector<cv::KeyPoint> keypoints_gold;
-        surf_gold(image, cv::noArray(), keypoints_gold);
+    std::vector<cv::KeyPoint> keypoints_gold;
+    surf_gold(image, cv::noArray(), keypoints_gold);
 
-        ASSERT_EQ(keypoints_gold.size(), keypoints.size());
-        int matchedCount = getMatchedPointsCount(keypoints_gold, keypoints);
-        double matchedRatio = static_cast<double>(matchedCount) / keypoints_gold.size();
+    ASSERT_EQ(keypoints_gold.size(), keypoints.size());
+    int matchedCount = getMatchedPointsCount(keypoints_gold, keypoints);
+    double matchedRatio = static_cast<double>(matchedCount) / keypoints_gold.size();
 
-        EXPECT_GT(matchedRatio, 0.95);
-    }
+    EXPECT_GT(matchedRatio, 0.95);
 }
 
 GPU_TEST_P(SURF, Detector_Masked)
@@ -144,39 +125,24 @@ GPU_TEST_P(SURF, Detector_Masked)
     surf.upright = upright;
     surf.keypointsRatio = 0.05f;
 
-    if (!supportFeature(devInfo, cv::gpu::GLOBAL_ATOMICS))
-    {
-        try
-        {
-            std::vector<cv::KeyPoint> keypoints;
-            surf(loadMat(image), loadMat(mask), keypoints);
-        }
-        catch (const cv::Exception& e)
-        {
-            ASSERT_EQ(CV_StsNotImplemented, e.code);
-        }
-    }
-    else
-    {
-        std::vector<cv::KeyPoint> keypoints;
-        surf(loadMat(image), loadMat(mask), keypoints);
+    std::vector<cv::KeyPoint> keypoints;
+    surf(loadMat(image), loadMat(mask), keypoints);
 
-        cv::SURF surf_gold;
-        surf_gold.hessianThreshold = hessianThreshold;
-        surf_gold.nOctaves = nOctaves;
-        surf_gold.nOctaveLayers = nOctaveLayers;
-        surf_gold.extended = extended;
-        surf_gold.upright = upright;
+    cv::SURF surf_gold;
+    surf_gold.hessianThreshold = hessianThreshold;
+    surf_gold.nOctaves = nOctaves;
+    surf_gold.nOctaveLayers = nOctaveLayers;
+    surf_gold.extended = extended;
+    surf_gold.upright = upright;
 
-        std::vector<cv::KeyPoint> keypoints_gold;
-        surf_gold(image, mask, keypoints_gold);
+    std::vector<cv::KeyPoint> keypoints_gold;
+    surf_gold(image, mask, keypoints_gold);
 
-        ASSERT_EQ(keypoints_gold.size(), keypoints.size());
-        int matchedCount = getMatchedPointsCount(keypoints_gold, keypoints);
-        double matchedRatio = static_cast<double>(matchedCount) / keypoints_gold.size();
+    ASSERT_EQ(keypoints_gold.size(), keypoints.size());
+    int matchedCount = getMatchedPointsCount(keypoints_gold, keypoints);
+    double matchedRatio = static_cast<double>(matchedCount) / keypoints_gold.size();
 
-        EXPECT_GT(matchedRatio, 0.95);
-    }
+    EXPECT_GT(matchedRatio, 0.95);
 }
 
 GPU_TEST_P(SURF, Descriptor)
@@ -199,43 +165,26 @@ GPU_TEST_P(SURF, Descriptor)
     surf_gold.extended = extended;
     surf_gold.upright = upright;
 
-    if (!supportFeature(devInfo, cv::gpu::GLOBAL_ATOMICS))
-    {
-        try
-        {
-            std::vector<cv::KeyPoint> keypoints;
-            cv::gpu::GpuMat descriptors;
-            surf(loadMat(image), cv::gpu::GpuMat(), keypoints, descriptors);
-        }
-        catch (const cv::Exception& e)
-        {
-            ASSERT_EQ(CV_StsNotImplemented, e.code);
-        }
-    }
-    else
-    {
-        std::vector<cv::KeyPoint> keypoints;
-        surf_gold(image, cv::noArray(), keypoints);
+    std::vector<cv::KeyPoint> keypoints;
+    surf_gold(image, cv::noArray(), keypoints);
 
-        cv::gpu::GpuMat descriptors;
-        surf(loadMat(image), cv::gpu::GpuMat(), keypoints, descriptors, true);
+    cv::gpu::GpuMat descriptors;
+    surf(loadMat(image), cv::gpu::GpuMat(), keypoints, descriptors, true);
 
-        cv::Mat descriptors_gold;
-        surf_gold(image, cv::noArray(), keypoints, descriptors_gold, true);
+    cv::Mat descriptors_gold;
+    surf_gold(image, cv::noArray(), keypoints, descriptors_gold, true);
 
-        cv::BFMatcher matcher(cv::NORM_L2);
-        std::vector<cv::DMatch> matches;
-        matcher.match(descriptors_gold, cv::Mat(descriptors), matches);
+    cv::BFMatcher matcher(cv::NORM_L2);
+    std::vector<cv::DMatch> matches;
+    matcher.match(descriptors_gold, cv::Mat(descriptors), matches);
 
-        int matchedCount = getMatchedPointsCount(keypoints, keypoints, matches);
-        double matchedRatio = static_cast<double>(matchedCount) / keypoints.size();
+    int matchedCount = getMatchedPointsCount(keypoints, keypoints, matches);
+    double matchedRatio = static_cast<double>(matchedCount) / keypoints.size();
 
-        EXPECT_GT(matchedRatio, 0.6);
-    }
+    EXPECT_GT(matchedRatio, 0.6);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Features2D, SURF, testing::Combine(
-    ALL_DEVICES,
     testing::Values(SURF_HessianThreshold(100.0), SURF_HessianThreshold(500.0), SURF_HessianThreshold(1000.0)),
     testing::Values(SURF_Octaves(3), SURF_Octaves(4)),
     testing::Values(SURF_OctaveLayers(2), SURF_OctaveLayers(3)),
@@ -245,17 +194,15 @@ INSTANTIATE_TEST_CASE_P(GPU_Features2D, SURF, testing::Combine(
 //////////////////////////////////////////////////////
 // VIBE
 
-PARAM_TEST_CASE(VIBE, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
+PARAM_TEST_CASE(VIBE, cv::Size, MatType, UseRoi)
 {
 };
 
 GPU_TEST_P(VIBE, Accuracy)
 {
-    const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-    const cv::Size size = GET_PARAM(1);
-    const int type = GET_PARAM(2);
-    const bool useRoi = GET_PARAM(3);
+    const cv::Size size = GET_PARAM(0);
+    const int type = GET_PARAM(1);
+    const bool useRoi = GET_PARAM(2);
 
     const cv::Mat fullfg(size, CV_8UC1, cv::Scalar::all(255));
 
@@ -278,7 +225,6 @@ GPU_TEST_P(VIBE, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Video, VIBE, testing::Combine(
-    ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4)),
     WHOLE_SUBMAT));
