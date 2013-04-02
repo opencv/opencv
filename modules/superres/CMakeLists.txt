@@ -9,7 +9,7 @@ ocv_module_include_directories()
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef /wd4127)
 
 if(HAVE_CUDA)
-  string(REPLACE "-Wsign-promo" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wsign-promo)
 
   ocv_source_group("Src\\Cuda" GLOB "src/cuda/*.cu")
   ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include" ${CUDA_INCLUDE_DIRS})

@@ -7,6 +7,7 @@ ocv_add_module(nonfree opencv_imgproc opencv_features2d opencv_calib3d OPTIONAL 
 ocv_module_include_directories()
 
 if(HAVE_CUDA AND HAVE_opencv_gpu)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wsign-promo)
   ocv_source_group("Src\\Cuda" GLOB "src/cuda/*.cu")
   ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include" ${CUDA_INCLUDE_DIRS})
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
