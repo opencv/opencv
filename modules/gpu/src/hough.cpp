@@ -586,8 +586,17 @@ namespace
         edgePointList.cols = func(edges, dx, dy, edgePointList.ptr<unsigned int>(0), edgePointList.ptr<float>(1));
     }
 
-    #define votes_cmp_gt(l1, l2) (aux[l1].x > aux[l2].x)
-    static CV_IMPLEMENT_QSORT_EX( sortIndexies, int, votes_cmp_gt, const int3* )
+    struct IndexCmp
+    {
+        const int3* aux;
+
+        explicit IndexCmp(const int3* _aux) : aux(_aux) {}
+
+        bool operator ()(int l1, int l2) const
+        {
+            return aux[l1].x > aux[l2].x;
+        }
+    };
 
     void GHT_Pos::filterMinDist()
     {
@@ -600,7 +609,7 @@ namespace
         indexies.resize(posCount);
         for (int i = 0; i < posCount; ++i)
             indexies[i] = i;
-        sortIndexies(&indexies[0], posCount, &oldVoteBuf[0]);
+        std::sort(indexies.begin(), indexies.end(), IndexCmp(&oldVoteBuf[0]));
 
         newPosBuf.clear();
         newVoteBuf.clear();
