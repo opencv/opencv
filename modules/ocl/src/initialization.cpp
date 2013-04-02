@@ -354,6 +354,11 @@ namespace cv
             return &(Context::getContext()->impl->clCmdQueue);
         }
 
+        void finish()
+        {
+            clFinish(Context::getContext()->impl->clCmdQueue);
+        }
+
         void queryDeviceInfo(DEVICE_INFO info_type, void* info)
         {
             static Info::Impl* impl = Context::getContext()->impl;
@@ -712,7 +717,7 @@ namespace cv
             clReleaseEvent(event);
 #endif
 
-            clFinish(clCxt->impl->clCmdQueue);
+            clFlush(clCxt->impl->clCmdQueue);
             openCLSafeCall(clReleaseKernel(kernel));
         }
 

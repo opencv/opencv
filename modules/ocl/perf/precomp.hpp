@@ -375,6 +375,7 @@ struct name##_test: Runnable { \
 	while (!TestSystem::instance().stop()) { \
 	TestSystem::instance().gpuOn()
 #define GPU_OFF \
+    ocl::finish(); \
 	TestSystem::instance().gpuOff(); \
 	} TestSystem::instance().gpuComplete()
 
@@ -388,4 +389,5 @@ struct name##_test: Runnable { \
 #define WARMUP_ON \
 	while (!TestSystem::instance().warmupStop()) {
 #define WARMUP_OFF \
+        ocl::finish(); \
 	} TestSystem::instance().warmupComplete()
