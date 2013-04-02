@@ -31,9 +31,9 @@ int WebPConfigInitInternal(WebPConfig* config,
   config->target_PSNR = 0.;
   config->method = 4;
   config->sns_strength = 50;
-  config->filter_strength = 20;   // default: light filtering
+  config->filter_strength = 60;   // rather high filtering, helps w/ gradients.
   config->filter_sharpness = 0;
-  config->filter_type = 0;        // default: simple
+  config->filter_type = 1;        // default: strong (so U/V is filtered too)
   config->partitions = 0;
   config->segments = 4;
   config->pass = 1;
@@ -46,6 +46,9 @@ int WebPConfigInitInternal(WebPConfig* config,
   config->alpha_quality = 100;
   config->lossless = 0;
   config->image_hint = WEBP_HINT_DEFAULT;
+  config->emulate_jpeg_size = 0;
+  config->thread_level = 0;
+  config->low_memory = 0;
 
   // TODO(skal): tune.
   switch (preset) {
@@ -121,6 +124,12 @@ int WebPValidateConfig(const WebPConfig* config) {
   if (config->lossless < 0 || config->lossless > 1)
     return 0;
   if (config->image_hint >= WEBP_HINT_LAST)
+    return 0;
+  if (config->emulate_jpeg_size < 0 || config->emulate_jpeg_size > 1)
+    return 0;
+  if (config->thread_level < 0 || config->thread_level > 1)
+    return 0;
+  if (config->low_memory < 0 || config->low_memory > 1)
     return 0;
   return 1;
 }

@@ -16,6 +16,7 @@
 #include "../webp/encode.h"
 #include "../dsp/dsp.h"
 #include "../utils/bit_writer.h"
+#include "../utils/thread.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
@@ -26,11 +27,8 @@ extern "C" {
 
 // version numbers
 #define ENC_MAJ_VERSION 0
-#define ENC_MIN_VERSION 2
-#define ENC_REV_VERSION 1
-
-// size of histogram used by CollectHistogram.
-#define MAX_COEFF_THRESH   64
+#define ENC_MIN_VERSION 3
+#define ENC_REV_VERSION 0
 
 // intra prediction modes
 enum { B_DC_PRED = 0,   // 4x4 modes
@@ -47,7 +45,8 @@ enum { B_DC_PRED = 0,   // 4x4 modes
 
        // Luma16 or UV modes
        DC_PRED = B_DC_PRED, V_PRED = B_VE_PRED,
-       H_PRED = B_HE_PRED, TM_PRED = B_TM_PRED
+       H_PRED = B_HE_PRED, TM_PRED = B_TM_PRED,
+       NUM_PRED_MODES = 4
      };
 
 enum { NUM_MB_SEGMENTS = 4,
@@ -56,9 +55,17 @@ enum { NUM_MB_SEGMENTS = 4,
        NUM_BANDS = 8,
        NUM_CTX = 3,
        NUM_PROBAS = 11,
-       MAX_LF_LEVELS = 64,      // Maximum loop filter level
-       MAX_VARIABLE_LEVEL = 67  // last (inclusive) level with variable cost
+       MAX_LF_LEVELS = 64,       // Maximum loop filter level
+       MAX_VARIABLE_LEVEL = 67,  // last (inclusive) level with variable cost
+       MAX_LEVEL = 2047          // max level (note: max codable is 2047 + 67)
      };
+
+typedef enum {   // Rate-distortion optimization levels
+  RD_OPT_NONE        = 0,  // no rd-opt
+  RD_OPT_BASIC       = 1,  // basic scoring (no trellis)
+  RD_OPT_TRELLIS     = 2,  // perform trellis-quant on the final decision only
+  RD_OPT_TRELLIS_ALL = 3   // trellis-quant for every scoring (much slower)
+} VP8RDLevel;
 
 // YUV-cache parameters. Cache is 16-pixels wide.
 // The original or reconstructed samples can be accessed using VP8Scan[]
@@ -160,7 +167,17 @@ typedef int64_t score_t;     // type used for scores, rate, distortion
 static WEBP_INLINE int QUANTDIV(int n, int iQ, int B) {
   return (n * iQ + B) >> QFIX;
 }
-extern const uint8_t VP8Zigzag[16];
+
+// size of histogram used by CollectHistogram.
+#define MAX_COEFF_THRESH   31
+typedef struct VP8Histogram VP8Histogram;
+struct VP8Histogram {
+  // TODO(skal): we only need to store the max_value and last_non_zero actually.
+  int distribution[MAX_COEFF_THRESH + 1];
+};
+
+// Uncomment the following to remove token-buffer code:
+// #define DISABLE_TOKEN_BUFFER
 
 //------------------------------------------------------------------------------
 // Headers
@@ -314,44 +331,37 @@ void VP8SetSegment(const VP8EncIterator* const it, int segment);
 //------------------------------------------------------------------------------
 // Paginated token buffer
 
-// WIP: #define USE_TOKEN_BUFFER
-
-#ifdef USE_TOKEN_BUFFER
-
-#define MAX_NUM_TOKEN 2048
-
-typedef struct VP8Tokens VP8Tokens;
-struct VP8Tokens {
-  uint16_t tokens_[MAX_NUM_TOKEN];  // bit#15: bit, bits 0..14: slot
-  int left_;
-  VP8Tokens* next_;
-};
+typedef struct VP8Tokens VP8Tokens;  // struct details in token.c
 
 typedef struct {
-  VP8Tokens* rows_;
-  uint16_t* tokens_;    // set to (*last_)->tokens_
-  VP8Tokens** last_;
-  int left_;
-  int error_;  // true in case of malloc error
+#if !defined(DISABLE_TOKEN_BUFFER)
+  VP8Tokens* pages_;        // first page
+  VP8Tokens** last_page_;   // last page
+  uint16_t* tokens_;        // set to (*last_page_)->tokens_
+  int left_;          // how many free tokens left before the page is full.
+#endif
+  int error_;         // true in case of malloc error
 } VP8TBuffer;
 
 void VP8TBufferInit(VP8TBuffer* const b);    // initialize an empty buffer
-int VP8TBufferNewPage(VP8TBuffer* const b);  // allocate a new page
-void VP8TBufferClear(VP8TBuffer* const b);   // de-allocate memory
+void VP8TBufferClear(VP8TBuffer* const b);   // de-allocate pages memory
 
-int VP8EmitTokens(const VP8TBuffer* const b, VP8BitWriter* const bw,
-                  const uint8_t* const probas);
+#if !defined(DISABLE_TOKEN_BUFFER)
 
-static WEBP_INLINE int VP8AddToken(VP8TBuffer* const b,
-                                   int bit, int proba_idx) {
-  if (b->left_ > 0 || VP8TBufferNewPage(b)) {
-    const int slot = --b->left_;
-    b->tokens_[slot] = (bit << 15) | proba_idx;
-  }
-  return bit;
-}
+// Finalizes bitstream when probabilities are known.
+// Deletes the allocated token memory if final_pass is true.
+int VP8EmitTokens(VP8TBuffer* const b, VP8BitWriter* const bw,
+                  const uint8_t* const probas, int final_pass);
 
-#endif  // USE_TOKEN_BUFFER
+// record the coding of coefficients without knowing the probabilities yet
+int VP8RecordCoeffTokens(int ctx, int coeff_type, int first, int last,
+                         const int16_t* const coeffs,
+                         VP8TBuffer* const tokens);
+
+// unused for now
+void VP8TokenToStats(const VP8TBuffer* const b, proba_t* const stats);
+
+#endif  // !DISABLE_TOKEN_BUFFER
 
 //------------------------------------------------------------------------------
 // VP8Encoder
@@ -376,6 +386,7 @@ struct VP8Encoder {
   // per-partition boolean decoders.
   VP8BitWriter bw_;                         // part0
   VP8BitWriter parts_[MAX_NUM_PARTITIONS];  // token partitions
+  VP8TBuffer tokens_;                       // token buffer
 
   int percent_;                             // for progress
 
@@ -383,6 +394,7 @@ struct VP8Encoder {
   int has_alpha_;
   uint8_t* alpha_data_;       // non-NULL if transparency is present
   uint32_t alpha_data_size_;
+  WebPWorker alpha_worker_;
 
   // enhancement layer
   int use_layer_;
@@ -394,6 +406,7 @@ struct VP8Encoder {
   VP8SegmentInfo dqm_[NUM_MB_SEGMENTS];
   int base_quant_;                 // nominal quantizer value. Only used
                                    // for relative coding of segments' quant.
+  int alpha_;                      // global susceptibility (<=> complexity)
   int uv_alpha_;                   // U/V quantization susceptibility
   // global offset of quantizers, shared by all segments
   int dq_y1_dc_;
@@ -409,9 +422,12 @@ struct VP8Encoder {
   int      block_count_[3];
 
   // quality/speed settings
-  int method_;              // 0=fastest, 6=best/slowest.
-  int rd_opt_level_;        // Deduced from method_.
-  int max_i4_header_bits_;  // partition #0 safeness factor
+  int method_;               // 0=fastest, 6=best/slowest.
+  VP8RDLevel rd_opt_level_;  // Deduced from method_.
+  int max_i4_header_bits_;   // partition #0 safeness factor
+  int thread_level_;         // derived from config->thread_level
+  int do_search_;            // derived from config->target_XXX
+  int use_tokens_;           // if true, use token buffer
 
   // Memory
   VP8MBInfo* mb_info_;   // contextual macroblock infos (mb_w_ + 1)
@@ -455,6 +471,11 @@ void VP8EncFreeBitWriters(VP8Encoder* const enc);
 
   // in frame.c
 extern const uint8_t VP8EncBands[16 + 1];
+extern const uint8_t VP8Cat3[];
+extern const uint8_t VP8Cat4[];
+extern const uint8_t VP8Cat5[];
+extern const uint8_t VP8Cat6[];
+
 // Form all the four Intra16x16 predictions in the yuv_p_ cache
 void VP8MakeLuma16Preds(const VP8EncIterator* const it);
 // Form all the four Chroma8x8 predictions in the yuv_p_ cache
@@ -466,9 +487,9 @@ void VP8MakeIntra4Preds(const VP8EncIterator* const it);
 int VP8GetCostLuma16(VP8EncIterator* const it, const VP8ModeScore* const rd);
 int VP8GetCostLuma4(VP8EncIterator* const it, const int16_t levels[16]);
 int VP8GetCostUV(VP8EncIterator* const it, const VP8ModeScore* const rd);
-// Main stat / coding passes
+// Main coding calls
 int VP8EncLoop(VP8Encoder* const enc);
-int VP8StatLoop(VP8Encoder* const enc);
+int VP8EncTokenLoop(VP8Encoder* const enc);
 
   // in webpenc.c
 // Assign an error code to a picture. Return false for convenience.
@@ -485,12 +506,14 @@ int VP8EncAnalyze(VP8Encoder* const enc);
 // Sets up segment's quantization values, base_quant_ and filter strengths.
 void VP8SetSegmentParams(VP8Encoder* const enc, float quality);
 // Pick best modes and fills the levels. Returns true if skipped.
-int VP8Decimate(VP8EncIterator* const it, VP8ModeScore* const rd, int rd_opt);
+int VP8Decimate(VP8EncIterator* const it, VP8ModeScore* const rd,
+                VP8RDLevel rd_opt);
 
   // in alpha.c
 void VP8EncInitAlpha(VP8Encoder* const enc);    // initialize alpha compression
+int VP8EncStartAlpha(VP8Encoder* const enc);    // start alpha coding process
 int VP8EncFinishAlpha(VP8Encoder* const enc);   // finalize compressed data
-void VP8EncDeleteAlpha(VP8Encoder* const enc);  // delete compressed data
+int VP8EncDeleteAlpha(VP8Encoder* const enc);   // delete compressed data
 
   // in layer.c
 void VP8EncInitLayer(VP8Encoder* const enc);     // init everything

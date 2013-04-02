@@ -425,9 +425,8 @@ static VP8StatusCode DecodeRemaining(WebPIDecoder* const idec) {
         }
         return VP8_STATUS_SUSPENDED;
       }
+      // Reconstruct and emit samples.
       VP8ReconstructBlock(dec);
-      // Store data and save block's filtering params
-      VP8StoreBlock(dec);
 
       // Release buffer only if there is only one partition
       if (dec->num_parts_ == 1) {
@@ -596,12 +595,22 @@ void WebPIDelete(WebPIDecoder* idec) {
 
 WebPIDecoder* WebPINewRGB(WEBP_CSP_MODE mode, uint8_t* output_buffer,
                           size_t output_buffer_size, int output_stride) {
+  const int is_external_memory = (output_buffer != NULL);
   WebPIDecoder* idec;
+
   if (mode >= MODE_YUV) return NULL;
+  if (!is_external_memory) {    // Overwrite parameters to sane values.
+    output_buffer_size = 0;
+    output_stride = 0;
+  } else {  // A buffer was passed. Validate the other params.
+    if (output_stride == 0 || output_buffer_size == 0) {
+      return NULL;   // invalid parameter.
+    }
+  }
   idec = WebPINewDecoder(NULL);
   if (idec == NULL) return NULL;
   idec->output_.colorspace = mode;
-  idec->output_.is_external_memory = 1;
+  idec->output_.is_external_memory = is_external_memory;
   idec->output_.u.RGBA.rgba = output_buffer;
   idec->output_.u.RGBA.stride = output_stride;
   idec->output_.u.RGBA.size = output_buffer_size;
@@ -612,10 +621,30 @@ WebPIDecoder* WebPINewYUVA(uint8_t* luma, size_t luma_size, int luma_stride,
                            uint8_t* u, size_t u_size, int u_stride,
                            uint8_t* v, size_t v_size, int v_stride,
                            uint8_t* a, size_t a_size, int a_stride) {
-  WebPIDecoder* const idec = WebPINewDecoder(NULL);
+  const int is_external_memory = (luma != NULL);
+  WebPIDecoder* idec;
+  WEBP_CSP_MODE colorspace;
+
+  if (!is_external_memory) {    // Overwrite parameters to sane values.
+    luma_size = u_size = v_size = a_size = 0;
+    luma_stride = u_stride = v_stride = a_stride = 0;
+    u = v = a = NULL;
+    colorspace = MODE_YUVA;
+  } else {  // A luma buffer was passed. Validate the other parameters.
+    if (u == NULL || v == NULL) return NULL;
+    if (luma_size == 0 || u_size == 0 || v_size == 0) return NULL;
+    if (luma_stride == 0 || u_stride == 0 || v_stride == 0) return NULL;
+    if (a != NULL) {
+      if (a_size == 0 || a_stride == 0) return NULL;
+    }
+    colorspace = (a == NULL) ? MODE_YUV : MODE_YUVA;
+  }
+
+  idec = WebPINewDecoder(NULL);
   if (idec == NULL) return NULL;
-  idec->output_.colorspace = (a == NULL) ? MODE_YUV : MODE_YUVA;
-  idec->output_.is_external_memory = 1;
+
+  idec->output_.colorspace = colorspace;
+  idec->output_.is_external_memory = is_external_memory;
   idec->output_.u.YUVA.y = luma;
   idec->output_.u.YUVA.y_stride = luma_stride;
   idec->output_.u.YUVA.y_size = luma_size;

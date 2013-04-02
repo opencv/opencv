@@ -140,15 +140,6 @@ int QuantizeLevels(uint8_t* const data, int width, int height,
   return 1;
 }
 
-int DequantizeLevels(uint8_t* const data, int width, int height) {
-  if (data == NULL || width <= 0 || height <= 0) return 0;
-  // TODO(skal): implement gradient smoothing.
-  (void)data;
-  (void)width;
-  (void)height;
-  return 1;
-}
-
 #if defined(__cplusplus) || defined(c_plusplus)
 }    // extern "C"
 #endif

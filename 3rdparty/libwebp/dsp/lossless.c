@@ -11,25 +11,31 @@
 //          Jyrki Alakuijala (jyrki@google.com)
 //          Urvang Joshi (urvang@google.com)
 
+#include "./dsp.h"
+
+// Define the following if target arch is sure to have SSE2
+// #define WEBP_TARGET_HAS_SSE2
+
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
+#endif
+
+#if defined(WEBP_TARGET_HAS_SSE2)
+#include <emmintrin.h>
 #endif
 
 #include <math.h>
 #include <stdlib.h>
 #include "./lossless.h"
 #include "../dec/vp8li.h"
-#include "../dsp/yuv.h"
-#include "../dsp/dsp.h"
-#include "../enc/histogram.h"
+#include "./yuv.h"
 
 #define MAX_DIFF_COST (1e30f)
 
 // lookup table for small values of log2(int)
 #define APPROX_LOG_MAX  4096
 #define LOG_2_RECIPROCAL 1.44269504088896338700465094007086
-#define LOG_LOOKUP_IDX_MAX 256
-static const float kLog2Table[LOG_LOOKUP_IDX_MAX] = {
+const float kLog2Table[LOG_LOOKUP_IDX_MAX] = {
   0.0000000000000000f, 0.0000000000000000f,
   1.0000000000000000f, 1.5849625007211560f,
   2.0000000000000000f, 2.3219280948873621f,
@@ -160,16 +166,97 @@ static const float kLog2Table[LOG_LOOKUP_IDX_MAX] = {
   7.9886846867721654f, 7.9943534368588577f
 };
 
-float VP8LFastLog2(int v) {
-  if (v < LOG_LOOKUP_IDX_MAX) {
-    return kLog2Table[v];
-  } else if (v < APPROX_LOG_MAX) {
+const float kSLog2Table[LOG_LOOKUP_IDX_MAX] = {
+  0.00000000f,    0.00000000f,  2.00000000f,   4.75488750f,
+  8.00000000f,   11.60964047f,  15.50977500f,  19.65148445f,
+  24.00000000f,  28.52932501f,  33.21928095f,  38.05374781f,
+  43.01955001f,  48.10571634f,  53.30296891f,  58.60335893f,
+  64.00000000f,  69.48686830f,  75.05865003f,  80.71062276f,
+  86.43856190f,  92.23866588f,  98.10749561f,  104.04192499f,
+  110.03910002f, 116.09640474f, 122.21143267f, 128.38196256f,
+  134.60593782f, 140.88144886f, 147.20671787f, 153.58008562f,
+  160.00000000f, 166.46500594f, 172.97373660f, 179.52490559f,
+  186.11730005f, 192.74977453f, 199.42124551f, 206.13068654f,
+  212.87712380f, 219.65963219f, 226.47733176f, 233.32938445f,
+  240.21499122f, 247.13338933f, 254.08384998f, 261.06567603f,
+  268.07820003f, 275.12078236f, 282.19280949f, 289.29369244f,
+  296.42286534f, 303.57978409f, 310.76392512f, 317.97478424f,
+  325.21187564f, 332.47473081f, 339.76289772f, 347.07593991f,
+  354.41343574f, 361.77497759f, 369.16017124f, 376.56863518f,
+  384.00000000f, 391.45390785f, 398.93001188f, 406.42797576f,
+  413.94747321f, 421.48818752f, 429.04981119f, 436.63204548f,
+  444.23460010f, 451.85719280f, 459.49954906f, 467.16140179f,
+  474.84249102f, 482.54256363f, 490.26137307f, 497.99867911f,
+  505.75424759f, 513.52785023f, 521.31926438f, 529.12827280f,
+  536.95466351f, 544.79822957f, 552.65876890f, 560.53608414f,
+  568.42998244f, 576.34027536f, 584.26677867f, 592.20931226f,
+  600.16769996f, 608.14176943f, 616.13135206f, 624.13628279f,
+  632.15640007f, 640.19154569f, 648.24156472f, 656.30630539f,
+  664.38561898f, 672.47935976f, 680.58738488f, 688.70955430f,
+  696.84573069f, 704.99577935f, 713.15956818f, 721.33696754f,
+  729.52785023f, 737.73209140f, 745.94956849f, 754.18016116f,
+  762.42375127f, 770.68022275f, 778.94946161f, 787.23135586f,
+  795.52579543f, 803.83267219f, 812.15187982f, 820.48331383f,
+  828.82687147f, 837.18245171f, 845.54995518f, 853.92928416f,
+  862.32034249f, 870.72303558f, 879.13727036f, 887.56295522f,
+  896.00000000f, 904.44831595f, 912.90781569f, 921.37841320f,
+  929.86002376f, 938.35256392f, 946.85595152f, 955.37010560f,
+  963.89494641f, 972.43039537f, 980.97637504f, 989.53280911f,
+  998.09962237f, 1006.67674069f, 1015.26409097f, 1023.86160116f,
+  1032.46920021f, 1041.08681805f, 1049.71438560f, 1058.35183469f,
+  1066.99909811f, 1075.65610955f, 1084.32280357f, 1092.99911564f,
+  1101.68498204f, 1110.38033993f, 1119.08512727f, 1127.79928282f,
+  1136.52274614f, 1145.25545758f, 1153.99735821f, 1162.74838989f,
+  1171.50849518f, 1180.27761738f, 1189.05570047f, 1197.84268914f,
+  1206.63852876f, 1215.44316535f, 1224.25654560f, 1233.07861684f,
+  1241.90932703f, 1250.74862473f, 1259.59645914f, 1268.45278005f,
+  1277.31753781f, 1286.19068338f, 1295.07216828f, 1303.96194457f,
+  1312.85996488f, 1321.76618236f, 1330.68055071f, 1339.60302413f,
+  1348.53355734f, 1357.47210556f, 1366.41862452f, 1375.37307041f,
+  1384.33539991f, 1393.30557020f, 1402.28353887f, 1411.26926400f,
+  1420.26270412f, 1429.26381818f, 1438.27256558f, 1447.28890615f,
+  1456.31280014f, 1465.34420819f, 1474.38309138f, 1483.42941118f,
+  1492.48312945f, 1501.54420843f, 1510.61261078f, 1519.68829949f,
+  1528.77123795f, 1537.86138993f, 1546.95871952f, 1556.06319119f,
+  1565.17476976f, 1574.29342040f, 1583.41910860f, 1592.55180020f,
+  1601.69146137f, 1610.83805860f, 1619.99155871f, 1629.15192882f,
+  1638.31913637f, 1647.49314911f, 1656.67393509f, 1665.86146266f,
+  1675.05570047f, 1684.25661744f, 1693.46418280f, 1702.67836605f,
+  1711.89913698f, 1721.12646563f, 1730.36032233f, 1739.60067768f,
+  1748.84750254f, 1758.10076802f, 1767.36044551f, 1776.62650662f,
+  1785.89892323f, 1795.17766747f, 1804.46271172f, 1813.75402857f,
+  1823.05159087f, 1832.35537170f, 1841.66534438f, 1850.98148244f,
+  1860.30375965f, 1869.63214999f, 1878.96662767f, 1888.30716711f,
+  1897.65374295f, 1907.00633003f, 1916.36490342f, 1925.72943838f,
+  1935.09991037f, 1944.47629506f, 1953.85856831f, 1963.24670620f,
+  1972.64068498f, 1982.04048108f, 1991.44607117f, 2000.85743204f,
+  2010.27454072f, 2019.69737440f, 2029.12591044f, 2038.56012640f
+};
+
+float VP8LFastSLog2Slow(int v) {
+  assert(v >= LOG_LOOKUP_IDX_MAX);
+  if (v < APPROX_LOG_MAX) {
+    int log_cnt = 0;
+    const float v_f = (float)v;
+    while (v >= LOG_LOOKUP_IDX_MAX) {
+      ++log_cnt;
+      v = v >> 1;
+    }
+    return v_f * (kLog2Table[v] + log_cnt);
+  } else {
+    return (float)(LOG_2_RECIPROCAL * v * log((double)v));
+  }
+}
+
+float VP8LFastLog2Slow(int v) {
+  assert(v >= LOG_LOOKUP_IDX_MAX);
+  if (v < APPROX_LOG_MAX) {
     int log_cnt = 0;
     while (v >= LOG_LOOKUP_IDX_MAX) {
       ++log_cnt;
       v = v >> 1;
     }
-    return kLog2Table[v] + (float)log_cnt;
+    return kLog2Table[v] + log_cnt;
   } else {
     return (float)(LOG_2_RECIPROCAL * log((double)v));
   }
@@ -197,6 +284,61 @@ static WEBP_INLINE uint32_t Average4(uint32_t a0, uint32_t a1,
                                      uint32_t a2, uint32_t a3) {
   return Average2(Average2(a0, a1), Average2(a2, a3));
 }
+
+#if defined(WEBP_TARGET_HAS_SSE2)
+static WEBP_INLINE uint32_t ClampedAddSubtractFull(uint32_t c0, uint32_t c1,
+                                                   uint32_t c2) {
+  const __m128i zero = _mm_setzero_si128();
+  const __m128i C0 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(c0), zero);
+  const __m128i C1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(c1), zero);
+  const __m128i C2 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(c2), zero);
+  const __m128i V1 = _mm_add_epi16(C0, C1);
+  const __m128i V2 = _mm_sub_epi16(V1, C2);
+  const __m128i b = _mm_packus_epi16(V2, V2);
+  const uint32_t output = _mm_cvtsi128_si32(b);
+  return output;
+}
+
+static WEBP_INLINE uint32_t ClampedAddSubtractHalf(uint32_t c0, uint32_t c1,
+                                                   uint32_t c2) {
+  const uint32_t ave = Average2(c0, c1);
+  const __m128i zero = _mm_setzero_si128();
+  const __m128i A0 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(ave), zero);
+  const __m128i B0 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(c2), zero);
+  const __m128i A1 = _mm_sub_epi16(A0, B0);
+  const __m128i BgtA = _mm_cmpgt_epi16(B0, A0);
+  const __m128i A2 = _mm_sub_epi16(A1, BgtA);
+  const __m128i A3 = _mm_srai_epi16(A2, 1);
+  const __m128i A4 = _mm_add_epi16(A0, A3);
+  const __m128i A5 = _mm_packus_epi16(A4, A4);
+  const uint32_t output = _mm_cvtsi128_si32(A5);
+  return output;
+}
+
+static WEBP_INLINE uint32_t Select(uint32_t a, uint32_t b, uint32_t c) {
+  int pa_minus_pb;
+  const __m128i zero = _mm_setzero_si128();
+  const __m128i A0 = _mm_cvtsi32_si128(a);
+  const __m128i B0 = _mm_cvtsi32_si128(b);
+  const __m128i C0 = _mm_cvtsi32_si128(c);
+  const __m128i AC0 = _mm_subs_epu8(A0, C0);
+  const __m128i CA0 = _mm_subs_epu8(C0, A0);
+  const __m128i BC0 = _mm_subs_epu8(B0, C0);
+  const __m128i CB0 = _mm_subs_epu8(C0, B0);
+  const __m128i AC = _mm_or_si128(AC0, CA0);
+  const __m128i BC = _mm_or_si128(BC0, CB0);
+  const __m128i pa = _mm_unpacklo_epi8(AC, zero);  // |a - c|
+  const __m128i pb = _mm_unpacklo_epi8(BC, zero);  // |b - c|
+  const __m128i diff = _mm_sub_epi16(pb, pa);
+  {
+    int16_t out[8];
+    _mm_storeu_si128((__m128i*)out, diff);
+    pa_minus_pb = out[0] + out[1] + out[2] + out[3];
+  }
+  return (pa_minus_pb <= 0) ? a : b;
+}
+
+#else
 
 static WEBP_INLINE uint32_t Clip255(uint32_t a) {
   if (a < 256) {
@@ -239,9 +381,9 @@ static WEBP_INLINE uint32_t ClampedAddSubtractHalf(uint32_t c0, uint32_t c1,
 }
 
 static WEBP_INLINE int Sub3(int a, int b, int c) {
-  const int pa = b - c;
-  const int pb = a - c;
-  return abs(pa) - abs(pb);
+  const int pb = b - c;
+  const int pa = a - c;
+  return abs(pb) - abs(pa);
 }
 
 static WEBP_INLINE uint32_t Select(uint32_t a, uint32_t b, uint32_t c) {
@@ -250,9 +392,9 @@ static WEBP_INLINE uint32_t Select(uint32_t a, uint32_t b, uint32_t c) {
       Sub3((a >> 16) & 0xff, (b >> 16) & 0xff, (c >> 16) & 0xff) +
       Sub3((a >>  8) & 0xff, (b >>  8) & 0xff, (c >>  8) & 0xff) +
       Sub3((a      ) & 0xff, (b      ) & 0xff, (c      ) & 0xff);
-
   return (pa_minus_pb <= 0) ? a : b;
 }
+#endif
 
 //------------------------------------------------------------------------------
 // Predictors
@@ -340,35 +482,36 @@ static float PredictionCostSpatial(const int* counts,
   return (float)(-0.1 * bits);
 }
 
-// Compute the Shanon's entropy: Sum(p*log2(p))
-static float ShannonEntropy(const int* const array, int n) {
+// Compute the combined Shanon's entropy for distribution {X} and {X+Y}
+static float CombinedShannonEntropy(const int* const X,
+                                    const int* const Y, int n) {
   int i;
-  float retval = 0.f;
-  int sum = 0;
+  double retval = 0.;
+  int sumX = 0, sumXY = 0;
   for (i = 0; i < n; ++i) {
-    if (array[i] != 0) {
-      sum += array[i];
-      retval -= VP8LFastSLog2(array[i]);
+    const int x = X[i];
+    const int xy = X[i] + Y[i];
+    if (x != 0) {
+      sumX += x;
+      retval -= VP8LFastSLog2(x);
+    }
+    if (xy != 0) {
+      sumXY += xy;
+      retval -= VP8LFastSLog2(xy);
     }
   }
-  retval += VP8LFastSLog2(sum);
-  return retval;
+  retval += VP8LFastSLog2(sumX) + VP8LFastSLog2(sumXY);
+  return (float)retval;
 }
 
 static float PredictionCostSpatialHistogram(int accumulated[4][256],
                                             int tile[4][256]) {
   int i;
-  int k;
-  int combo[256];
   double retval = 0;
   for (i = 0; i < 4; ++i) {
-    const double exp_val = 0.94;
-    retval += PredictionCostSpatial(&tile[i][0], 1, exp_val);
-    retval += ShannonEntropy(&tile[i][0], 256);
-    for (k = 0; k < 256; ++k) {
-      combo[k] = accumulated[i][k] + tile[i][k];
-    }
-    retval += ShannonEntropy(&combo[0], 256);
+    const double kExpValue = 0.94;
+    retval += PredictionCostSpatial(tile[i], 1, kExpValue);
+    retval += CombinedShannonEntropy(tile[i], accumulated[i], 256);
   }
   return (float)retval;
 }
@@ -572,8 +715,21 @@ static void PredictorInverseTransform(const VP8LTransform* const transform,
 }
 
 void VP8LSubtractGreenFromBlueAndRed(uint32_t* argb_data, int num_pixs) {
-  int i;
-  for (i = 0; i < num_pixs; ++i) {
+  int i = 0;
+#if defined(WEBP_TARGET_HAS_SSE2)
+  const __m128i mask = _mm_set1_epi32(0x0000ff00);
+  for (; i + 4 < num_pixs; i += 4) {
+    const __m128i in = _mm_loadu_si128((__m128i*)&argb_data[i]);
+    const __m128i in_00g0 = _mm_and_si128(in, mask);     // 00g0|00g0|...
+    const __m128i in_0g00 = _mm_slli_epi32(in_00g0, 8);  // 0g00|0g00|...
+    const __m128i in_000g = _mm_srli_epi32(in_00g0, 8);  // 000g|000g|...
+    const __m128i in_0g0g = _mm_or_si128(in_0g00, in_000g);
+    const __m128i out = _mm_sub_epi8(in, in_0g0g);
+    _mm_storeu_si128((__m128i*)&argb_data[i], out);
+  }
+  // fallthrough and finish off with plain-C
+#endif
+  for (; i < num_pixs; ++i) {
     const uint32_t argb = argb_data[i];
     const uint32_t green = (argb >> 8) & 0xff;
     const uint32_t new_r = (((argb >> 16) & 0xff) - green) & 0xff;
@@ -588,9 +744,21 @@ static void AddGreenToBlueAndRed(const VP8LTransform* const transform,
                                  int y_start, int y_end, uint32_t* data) {
   const int width = transform->xsize_;
   const uint32_t* const data_end = data + (y_end - y_start) * width;
+#if defined(WEBP_TARGET_HAS_SSE2)
+  const __m128i mask = _mm_set1_epi32(0x0000ff00);
+  for (; data + 4 < data_end; data += 4) {
+    const __m128i in = _mm_loadu_si128((__m128i*)data);
+    const __m128i in_00g0 = _mm_and_si128(in, mask);     // 00g0|00g0|...
+    const __m128i in_0g00 = _mm_slli_epi32(in_00g0, 8);  // 0g00|0g00|...
+    const __m128i in_000g = _mm_srli_epi32(in_00g0, 8);  // 000g|000g|...
+    const __m128i in_0g0g = _mm_or_si128(in_0g00, in_000g);
+    const __m128i out = _mm_add_epi8(in, in_0g0g);
+    _mm_storeu_si128((__m128i*)data, out);
+  }
+  // fallthrough and finish off with plain-C
+#endif
   while (data < data_end) {
     const uint32_t argb = *data;
-    // "* 0001001u" is equivalent to "(green << 16) + green)"
     const uint32_t green = ((argb >> 8) & 0xff);
     uint32_t red_blue = (argb & 0x00ff00ffu);
     red_blue += (green << 16) | green;
@@ -655,6 +823,25 @@ static WEBP_INLINE uint32_t TransformColor(const Multipliers* const m,
   return (argb & 0xff00ff00u) | (new_red << 16) | (new_blue);
 }
 
+static WEBP_INLINE uint8_t TransformColorRed(uint8_t green_to_red,
+                                             uint32_t argb) {
+  const uint32_t green = argb >> 8;
+  uint32_t new_red = argb >> 16;
+  new_red -= ColorTransformDelta(green_to_red, green);
+  return (new_red & 0xff);
+}
+
+static WEBP_INLINE uint8_t TransformColorBlue(uint8_t green_to_blue,
+                                              uint8_t red_to_blue,
+                                              uint32_t argb) {
+  const uint32_t green = argb >> 8;
+  const uint32_t red = argb >> 16;
+  uint8_t new_blue = argb;
+  new_blue -= ColorTransformDelta(green_to_blue, green);
+  new_blue -= ColorTransformDelta(red_to_blue, red);
+  return (new_blue & 0xff);
+}
+
 static WEBP_INLINE int SkipRepeatedPixels(const uint32_t* const argb,
                                           int ix, int xsize) {
   const uint32_t v = argb[ix];
@@ -675,14 +862,10 @@ static WEBP_INLINE int SkipRepeatedPixels(const uint32_t* const argb,
 static float PredictionCostCrossColor(const int accumulated[256],
                                       const int counts[256]) {
   // Favor low entropy, locally and globally.
-  int i;
-  int combo[256];
-  for (i = 0; i < 256; ++i) {
-    combo[i] = accumulated[i] + counts[i];
-  }
-  return ShannonEntropy(combo, 256) +
-         ShannonEntropy(counts, 256) +
-         PredictionCostSpatial(counts, 3, 2.4);  // Favor small absolute values.
+  // Favor small absolute values for PredictionCostSpatial
+  static const double kExpValue = 2.4;
+  return CombinedShannonEntropy(counts, accumulated, 256) +
+         PredictionCostSpatial(counts, 3, kExpValue);
 }
 
 static Multipliers GetBestColorTransformForTile(
@@ -712,85 +895,75 @@ static Multipliers GetBestColorTransformForTile(
   if (all_y_max > ysize) {
     all_y_max = ysize;
   }
+
   for (green_to_red = -64; green_to_red <= 64; green_to_red += halfstep) {
     int histo[256] = { 0 };
     int all_y;
-    Multipliers tx;
-    MultipliersClear(&tx);
-    tx.green_to_red_ = green_to_red & 0xff;
 
     for (all_y = tile_y_offset; all_y < all_y_max; ++all_y) {
-      uint32_t predict;
       int ix = all_y * xsize + tile_x_offset;
       int all_x;
       for (all_x = tile_x_offset; all_x < all_x_max; ++all_x, ++ix) {
         if (SkipRepeatedPixels(argb, ix, xsize)) {
           continue;
         }
-        predict = TransformColor(&tx, argb[ix], 0);
-        ++histo[(predict >> 16) & 0xff];  // red.
+        ++histo[TransformColorRed(green_to_red, argb[ix])];  // red.
       }
     }
     cur_diff = PredictionCostCrossColor(&accumulated_red_histo[0], &histo[0]);
-    if (tx.green_to_red_ == prevX.green_to_red_) {
+    if ((uint8_t)green_to_red == prevX.green_to_red_) {
       cur_diff -= 3;  // favor keeping the areas locally similar
     }
-    if (tx.green_to_red_ == prevY.green_to_red_) {
+    if ((uint8_t)green_to_red == prevY.green_to_red_) {
       cur_diff -= 3;  // favor keeping the areas locally similar
     }
-    if (tx.green_to_red_ == 0) {
+    if (green_to_red == 0) {
       cur_diff -= 3;
     }
     if (cur_diff < best_diff) {
       best_diff = cur_diff;
-      best_tx = tx;
+      best_tx.green_to_red_ = green_to_red;
     }
   }
   best_diff = MAX_DIFF_COST;
-  green_to_red = best_tx.green_to_red_;
   for (green_to_blue = -32; green_to_blue <= 32; green_to_blue += step) {
     for (red_to_blue = -32; red_to_blue <= 32; red_to_blue += step) {
       int all_y;
       int histo[256] = { 0 };
-      Multipliers tx;
-      tx.green_to_red_ = green_to_red;
-      tx.green_to_blue_ = green_to_blue;
-      tx.red_to_blue_ = red_to_blue;
       for (all_y = tile_y_offset; all_y < all_y_max; ++all_y) {
-        uint32_t predict;
         int all_x;
         int ix = all_y * xsize + tile_x_offset;
         for (all_x = tile_x_offset; all_x < all_x_max; ++all_x, ++ix) {
           if (SkipRepeatedPixels(argb, ix, xsize)) {
             continue;
           }
-          predict = TransformColor(&tx, argb[ix], 0);
-          ++histo[predict & 0xff];  // blue.
+          ++histo[TransformColorBlue(green_to_blue, red_to_blue, argb[ix])];
         }
       }
       cur_diff =
-        PredictionCostCrossColor(&accumulated_blue_histo[0], &histo[0]);
-      if (tx.green_to_blue_ == prevX.green_to_blue_) {
+          PredictionCostCrossColor(&accumulated_blue_histo[0], &histo[0]);
+      if ((uint8_t)green_to_blue == prevX.green_to_blue_) {
         cur_diff -= 3;  // favor keeping the areas locally similar
       }
-      if (tx.green_to_blue_ == prevY.green_to_blue_) {
+      if ((uint8_t)green_to_blue == prevY.green_to_blue_) {
         cur_diff -= 3;  // favor keeping the areas locally similar
       }
-      if (tx.red_to_blue_ == prevX.red_to_blue_) {
+      if ((uint8_t)red_to_blue == prevX.red_to_blue_) {
         cur_diff -= 3;  // favor keeping the areas locally similar
       }
-      if (tx.red_to_blue_ == prevY.red_to_blue_) {
+      if ((uint8_t)red_to_blue == prevY.red_to_blue_) {
         cur_diff -= 3;  // favor keeping the areas locally similar
       }
-      if (tx.green_to_blue_ == 0) {
+      if (green_to_blue == 0) {
         cur_diff -= 3;
       }
-      if (tx.red_to_blue_ == 0) {
+      if (red_to_blue == 0) {
         cur_diff -= 3;
       }
       if (cur_diff < best_diff) {
         best_diff = cur_diff;
-        best_tx = tx;
+        best_tx.green_to_blue_ = green_to_blue;
+        best_tx.red_to_blue_ = red_to_blue;
       }
     }
   }
@@ -1034,8 +1207,15 @@ static void ConvertBGRAToRGBA4444(const uint32_t* src,
   const uint32_t* const src_end = src + num_pixels;
   while (src < src_end) {
     const uint32_t argb = *src++;
-    *dst++ = ((argb >> 16) & 0xf0) | ((argb >> 12) & 0xf);
-    *dst++ = ((argb >>  0) & 0xf0) | ((argb >> 28) & 0xf);
+    const uint8_t rg = ((argb >> 16) & 0xf0) | ((argb >> 12) & 0xf);
+    const uint8_t ba = ((argb >>  0) & 0xf0) | ((argb >> 28) & 0xf);
+#ifdef WEBP_SWAP_16BIT_CSP
+    *dst++ = ba;
+    *dst++ = rg;
+#else
+    *dst++ = rg;
+    *dst++ = ba;
+#endif
   }
 }
 
@@ -1044,8 +1224,15 @@ static void ConvertBGRAToRGB565(const uint32_t* src,
   const uint32_t* const src_end = src + num_pixels;
   while (src < src_end) {
     const uint32_t argb = *src++;
-    *dst++ = ((argb >> 16) & 0xf8) | ((argb >> 13) & 0x7);
-    *dst++ = ((argb >>  5) & 0xe0) | ((argb >>  3) & 0x1f);
+    const uint8_t rg = ((argb >> 16) & 0xf8) | ((argb >> 13) & 0x7);
+    const uint8_t gb = ((argb >>  5) & 0xe0) | ((argb >>  3) & 0x1f);
+#ifdef WEBP_SWAP_16BIT_CSP
+    *dst++ = gb;
+    *dst++ = rg;
+#else
+    *dst++ = rg;
+    *dst++ = gb;
+#endif
   }
 }
 
@@ -1066,20 +1253,27 @@ static void CopyOrSwap(const uint32_t* src, int num_pixels, uint8_t* dst,
     const uint32_t* const src_end = src + num_pixels;
     while (src < src_end) {
       uint32_t argb = *src++;
+
+#if !defined(WEBP_REFERENCE_IMPLEMENTATION)
 #if !defined(__BIG_ENDIAN__) && (defined(__i386__) || defined(__x86_64__))
       __asm__ volatile("bswap %0" : "=r"(argb) : "0"(argb));
       *(uint32_t*)dst = argb;
-      dst += sizeof(argb);
 #elif !defined(__BIG_ENDIAN__) && defined(_MSC_VER)
       argb = _byteswap_ulong(argb);
       *(uint32_t*)dst = argb;
-      dst += sizeof(argb);
 #else
-      *dst++ = (argb >> 24) & 0xff;
-      *dst++ = (argb >> 16) & 0xff;
-      *dst++ = (argb >>  8) & 0xff;
-      *dst++ = (argb >>  0) & 0xff;
+      dst[0] = (argb >> 24) & 0xff;
+      dst[1] = (argb >> 16) & 0xff;
+      dst[2] = (argb >>  8) & 0xff;
+      dst[3] = (argb >>  0) & 0xff;
 #endif
+#else   // WEBP_REFERENCE_IMPLEMENTATION
+      dst[0] = (argb >> 24) & 0xff;
+      dst[1] = (argb >> 16) & 0xff;
+      dst[2] = (argb >>  8) & 0xff;
+      dst[3] = (argb >>  0) & 0xff;
+#endif
+      dst += sizeof(argb);
     }
   } else {
     memcpy(dst, src, num_pixels * sizeof(*src));
