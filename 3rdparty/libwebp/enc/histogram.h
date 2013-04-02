@@ -80,22 +80,6 @@ double VP8LHistogramEstimateBits(const VP8LHistogram* const p);
 // represent the entropy code itself.
 double VP8LHistogramEstimateBitsBulk(const VP8LHistogram* const p);
 
-static WEBP_INLINE void VP8LHistogramAdd(VP8LHistogram* const p,
-                                         const VP8LHistogram* const a) {
-  int i;
-  for (i = 0; i < PIX_OR_COPY_CODES_MAX; ++i) {
-    p->literal_[i] += a->literal_[i];
-  }
-  for (i = 0; i < NUM_DISTANCE_CODES; ++i) {
-    p->distance_[i] += a->distance_[i];
-  }
-  for (i = 0; i < 256; ++i) {
-    p->red_[i] += a->red_[i];
-    p->blue_[i] += a->blue_[i];
-    p->alpha_[i] += a->alpha_[i];
-  }
-}
-
 static WEBP_INLINE int VP8LHistogramNumCodes(const VP8LHistogram* const p) {
   return 256 + NUM_LENGTH_CODES +
       ((p->palette_code_bits_ > 0) ? (1 << p->palette_code_bits_) : 0);

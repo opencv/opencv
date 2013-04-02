@@ -75,7 +75,7 @@ const uint16_t VP8LevelCodes[MAX_VARIABLE_LEVEL][2] = {
 
 // fixed costs for coding levels, deduce from the coding tree.
 // This is only the part that doesn't depend on the probability state.
-const uint16_t VP8LevelFixedCosts[2048] = {
+const uint16_t VP8LevelFixedCosts[MAX_LEVEL + 1] = {
      0,  256,  256,  256,  256,  432,  618,  630,
    731,  640,  640,  828,  901,  948, 1021, 1101,
   1174, 1221, 1294, 1042, 1085, 1115, 1158, 1202,
@@ -359,7 +359,7 @@ void VP8CalculateLevelCosts(VP8Proba* const proba) {
 
   for (ctype = 0; ctype < NUM_TYPES; ++ctype) {
     for (band = 0; band < NUM_BANDS; ++band) {
-      for(ctx = 0; ctx < NUM_CTX; ++ctx) {
+      for (ctx = 0; ctx < NUM_CTX; ++ctx) {
         const uint8_t* const p = proba->coeffs_[ctype][band][ctx];
         uint16_t* const table = proba->level_cost_[ctype][band][ctx];
         const int cost_base = VP8BitCost(1, p[1]);

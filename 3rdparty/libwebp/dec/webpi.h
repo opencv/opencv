@@ -61,10 +61,10 @@ typedef struct {
 } WebPHeaderStructure;
 
 // Skips over all valid chunks prior to the first VP8/VP8L frame header.
-// Returns VP8_STATUS_OK on success,
-//         VP8_STATUS_BITSTREAM_ERROR if an invalid header/chunk is found, and
-//         VP8_STATUS_NOT_ENOUGH_DATA if case of insufficient data.
-// In 'headers', compressed_size, offset, alpha_data, alpha_size and lossless
+// Returns: VP8_STATUS_OK, VP8_STATUS_BITSTREAM_ERROR (invalid header/chunk),
+// VP8_STATUS_NOT_ENOUGH_DATA (partial input) or VP8_STATUS_UNSUPPORTED_FEATURE
+// in the case of non-decodable features (animation for instance).
+// In 'headers', compressed_size, offset, alpha_data, alpha_size, and lossless
 // fields are updated appropriately upon success.
 VP8StatusCode WebPParseHeaders(WebPHeaderStructure* const headers);
 

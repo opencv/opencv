@@ -27,11 +27,6 @@ extern "C" {
 int QuantizeLevels(uint8_t* const data, int width, int height, int num_levels,
                    uint64_t* const sse);
 
-// Apply post-processing to input 'data' of size 'width'x'height' assuming
-// that the source was quantized to a reduced number of levels.
-// Returns false in case of error (data is NULL, invalid parameters, ...).
-int DequantizeLevels(uint8_t* const data, int width, int height);
-
 #if defined(__cplusplus) || defined(c_plusplus)
 }    // extern "C"
 #endif

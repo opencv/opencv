@@ -30,18 +30,19 @@ typedef enum {
 } WEBP_FILTER_TYPE;
 
 typedef void (*WebPFilterFunc)(const uint8_t* in, int width, int height,
-                               int bpp, int stride, uint8_t* out);
+                               int stride, uint8_t* out);
+typedef void (*WebPUnfilterFunc)(int width, int height, int stride,
+                                 uint8_t* data);
 
 // Filter the given data using the given predictor.
 // 'in' corresponds to a 2-dimensional pixel array of size (stride * height)
 // in raster order.
-// 'bpp' is number of bytes per pixel, and
 // 'stride' is number of bytes per scan line (with possible padding).
 // 'out' should be pre-allocated.
 extern const WebPFilterFunc WebPFilters[WEBP_FILTER_LAST];
 
-// Reconstruct the original data from the given filtered data.
-extern const WebPFilterFunc WebPUnfilters[WEBP_FILTER_LAST];
+// In-place reconstruct the original data from the given filtered data.
+extern const WebPUnfilterFunc WebPUnfilters[WEBP_FILTER_LAST];
 
 // Fast estimate of a potentially good filter.
 extern WEBP_FILTER_TYPE EstimateBestFilter(const uint8_t* data,
