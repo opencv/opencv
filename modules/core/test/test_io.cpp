@@ -378,6 +378,7 @@ protected:
 
 TEST(Core_InputOutput, write_read_consistency) { Core_IOTest test; test.safe_run(); }
 
+extern void testFormatter();
 
 class CV_MiscIOTest : public cvtest::BaseTest
 {

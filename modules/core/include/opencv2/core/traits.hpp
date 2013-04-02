@@ -227,6 +227,51 @@ public:
     };
 };
 
+
+template<int depth> class TypeDepth {};
+
+template<> class TypeDepth<CV_8U>
+{
+    enum { depth = CV_8U };
+    typedef uchar value_type;
+};
+
+template<> class TypeDepth<CV_8S>
+{
+    enum { depth = CV_8S };
+    typedef schar value_type;
+};
+
+template<> class TypeDepth<CV_16U>
+{
+    enum { depth = CV_16U };
+    typedef ushort value_type;
+};
+
+template<> class TypeDepth<CV_16S>
+{
+    enum { depth = CV_16S };
+    typedef short value_type;
+};
+
+template<> class TypeDepth<CV_32S>
+{
+    enum { depth = CV_32S };
+    typedef int value_type;
+};
+
+template<> class TypeDepth<CV_32F>
+{
+    enum { depth = CV_32F };
+    typedef float value_type;
+};
+
+template<> class TypeDepth<CV_64F>
+{
+    enum { depth = CV_64F };
+    typedef double value_type;
+};
+
 } // cv
 
 #endif // __OPENCV_CORE_TRAITS_HPP__
