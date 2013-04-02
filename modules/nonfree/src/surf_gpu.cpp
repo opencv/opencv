@@ -223,6 +223,9 @@ namespace
         }
 
     private:
+        SURF_GPU_Invoker(const SURF_GPU_Invoker&);
+        SURF_GPU_Invoker& operator =(const SURF_GPU_Invoker&);
+
         SURF_GPU& surf_;
 
         int img_cols, img_rows;

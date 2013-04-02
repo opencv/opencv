@@ -530,7 +530,8 @@ int CV_StereoMatchingTest::processStereoMatchingResults( FileStorage& fs, int ca
     // rightDisp is not used in current test virsion
     int code = cvtest::TS::OK;
     assert( fs.isOpened() );
-    assert( trueLeftDisp.type() == CV_32FC1 && trueRightDisp.type() == CV_32FC1 );
+    assert( trueLeftDisp.type() == CV_32FC1 );
+    assert( trueRightDisp.empty() || trueRightDisp.type() == CV_32FC1 );
     assert( leftDisp.type() == CV_32FC1 && rightDisp.type() == CV_32FC1 );
 
     // get masks for unknown ground truth disparity values

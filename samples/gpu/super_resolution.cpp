@@ -48,8 +48,6 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name, bool useGpu)
         cerr << "Incorrect Optical Flow algorithm - " << name << endl;
         exit(-1);
     }
-
-    return Ptr<DenseOpticalFlowExt>();
 }
 
 int main(int argc, const char* argv[])
