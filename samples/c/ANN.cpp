@@ -1,7 +1,11 @@
-#include <cv.h>
-#include <ml.h>
+#include "opencv2/core/core_c.h"
+#include "opencv2/ml/ml.hpp"
+#include <cstdio>
 #include <cstdlib>
 #include <ctime>
+
+void trainMachine();
+void Predict(float data1, float data2);
 
 // The neural network
 CvANN_MLP machineBrain;
@@ -110,7 +114,6 @@ void Predict(float data1, float data2)
 
 int main()
 {
-	int wait;
 	srand(time(NULL));
 	
 	// Train the neural network  with the samples
