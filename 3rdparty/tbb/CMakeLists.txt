@@ -122,15 +122,32 @@ file(GLOB lib_srcs "${tbb_src_dir}/src/tbb/*.cpp")
 file(GLOB lib_hdrs "${tbb_src_dir}/src/tbb/*.h")
 list(APPEND lib_srcs "${tbb_src_dir}/src/rml/client/rml_tbb.cpp")
 
-add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
-                -D__TBB_BUILD=1                        #required
-                -D__TBB_SURVIVE_THREAD_SWITCH=0        #no cilk support
-                -DUSE_PTHREAD                          #required for Unix
-                -DTBB_USE_GCC_BUILTINS=1               #required for ARM GCC
-                -DTBB_USE_DEBUG=0                      #just to be sure
-                -DTBB_NO_LEGACY=1                      #don't need backward compatibility
-                -DDO_ITT_NOTIFY=0                      #it seems that we don't need these notifications
-               )
+if (WIN32)
+  add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0
+                -D__TBB_BUILD=1
+                -D_UNICODE
+                -DUNICODE
+                -DWINAPI_FAMILY=WINAPI_FAMILY_APP
+                -DDO_ITT_NOTIFY=0
+               ) # defines were copied from windows.cl.inc
+set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /APPCONTAINER")
+else()
+  add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
+                  -D__TBB_BUILD=1                        #required
+                  -D__TBB_SURVIVE_THREAD_SWITCH=0        #no cilk support
+                  -DTBB_USE_DEBUG=0                      #just to be sure
+                  -DTBB_NO_LEGACY=1                      #don't need backward compatibility
+                  -DDO_ITT_NOTIFY=0                      #it seems that we don't need these notifications
+                 )
+endif()
+
+if (HAVE_LIBPTHREAD)
+  add_definitions(-DUSE_PTHREAD) #required for Unix
+endif()
+
+if (CMAKE_COMPILER_IS_GNUCXX)
+  add_definitions(-DTBB_USE_GCC_BUILTINS=1) #required for ARM GCC
+endif()
 
 if(ANDROID_COMPILER_IS_CLANG)
   add_definitions(-D__TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
@@ -145,7 +162,7 @@ endif()
 
 set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs})
 
-if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+if (ARM AND NOT WIN32)
   if (NOT ANDROID)
     set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/arm_linux_stub.cpp")
   endif()

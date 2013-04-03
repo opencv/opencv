@@ -297,6 +297,7 @@ enum
     CV_CAP_UNICAP   =600,   // Unicap drivers
 
     CV_CAP_DSHOW    =700,   // DirectShow (via videoInput)
+    CV_CAP_MSMF     =1400,  // Microsoft Media Foundation (via videoInput)
 
     CV_CAP_PVAPI    =800,   // PvAPI, Prosilica GigE SDK
 

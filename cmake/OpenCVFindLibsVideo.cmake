@@ -2,6 +2,15 @@
 #  Detect 3rd-party video IO libraries
 # ----------------------------------------------------------------------------
 
+ocv_clear_vars(HAVE_VFW)
+if (WITH_VFW)
+  TRY_COMPILE(HAVE_VFW
+    "${OPENCV_BINARY_DIR}/CMakeFiles/CMakeTmp"
+    "${OpenCV_SOURCE_DIR}/cmake/checks/vfwtest.cpp"
+    CMAKE_FLAGS "-DLINK_LIBRARIES:STRING=vfw32"
+    OUTPUT_VARIABLE OUTPUT)
+ endif(WITH_VFW)
+
 # --- GStreamer ---
 ocv_clear_vars(HAVE_GSTREAMER)
 if(WITH_GSTREAMER)
@@ -37,7 +46,7 @@ if(WITH_PVAPI)
       set(PVAPI_SDK_SUBDIR x86)
     elseif(X86_64)
       set(PVAPI_SDK_SUBDIR x64)
-    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES arm)
+    elseif(ARM)
       set(PVAPI_SDK_SUBDIR arm)
     endif()
 
@@ -111,7 +120,7 @@ endif(WITH_XIMEA)
 # --- FFMPEG ---
 ocv_clear_vars(HAVE_FFMPEG HAVE_FFMPEG_CODEC HAVE_FFMPEG_FORMAT HAVE_FFMPEG_UTIL HAVE_FFMPEG_SWSCALE HAVE_GENTOO_FFMPEG HAVE_FFMPEG_FFMPEG)
 if(WITH_FFMPEG)
-  if(WIN32)
+  if(WIN32 AND NOT ARM)
     include("${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/ffmpeg_version.cmake")
   elseif(UNIX)
     CHECK_MODULE(libavcodec HAVE_FFMPEG_CODEC)
@@ -175,11 +184,16 @@ if(WITH_FFMPEG)
   endif(APPLE)
 endif(WITH_FFMPEG)
 
-# --- VideoInput ---
-if(WITH_VIDEOINPUT)
+# --- VideoInput/DirectShow ---
+if(WITH_DSHOW)
   # always have VideoInput on Windows
-  set(HAVE_VIDEOINPUT 1)
-endif(WITH_VIDEOINPUT)
+  set(HAVE_DSHOW 1)
+endif(WITH_DSHOW)
+
+# --- VideoInput/Microsoft Media Foundation ---
+if(WITH_MSMF)
+  check_include_file(Mfapi.h HAVE_MSMF)
+endif(WITH_MSMF)
 
 # --- Extra HighGUI libs on Windows ---
 if(WIN32)

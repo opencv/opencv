@@ -114,7 +114,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 {
     int  domains[] =
     {
-#ifdef HAVE_VIDEOINPUT
+#ifdef HAVE_DSHOW
         CV_CAP_DSHOW,
 #endif
 #if 1
@@ -168,7 +168,8 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
     // try every possibly installed camera API
     for (int i = 0; domains[i] >= 0; i++)
     {
-#if defined(HAVE_VIDEOINPUT)   || \
+#if defined(HAVE_DSHOW)        || \
+    defined(HAVE_MSMF)         || \
     defined(HAVE_TYZX)         || \
     defined(HAVE_VFW)          || \
     defined(HAVE_LIBV4L)       || \
@@ -195,11 +196,18 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 
         switch (domains[i])
         {
-#ifdef HAVE_VIDEOINPUT
+#ifdef HAVE_MSMF
+        case CV_CAP_MSMF:
+             capture = cvCreateCameraCapture_MSMF (index);
+             if (capture)
+                 return capture;
+            break;
+#endif
+#ifdef HAVE_DSHOW
         case CV_CAP_DSHOW:
-            capture = cvCreateCameraCapture_DShow (index);
-            if (capture)
-                return capture;
+             capture = cvCreateCameraCapture_DShow (index);
+             if (capture)
+                 return capture;
             break;
 #endif
 
