@@ -15,7 +15,7 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-
+//     Peng Xiao, pengxiao@outlook.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -63,12 +63,12 @@ PARAM_TEST_CASE(StereoMatchBM, int, int)
     }
 };
 
-TEST_P(StereoMatchBM, Accuracy)
+TEST_P(StereoMatchBM, Regression)
 {
 
-    Mat left_image  = readImage(workdir + "../ocl/aloe-L.png", IMREAD_GRAYSCALE);
-    Mat right_image = readImage(workdir + "../ocl/aloe-R.png", IMREAD_GRAYSCALE);
-    Mat disp_gold   = readImage(workdir + "../ocl/aloe-disp.png", IMREAD_GRAYSCALE);
+    Mat left_image  = readImage("stereobm/aloe-L.png", IMREAD_GRAYSCALE);
+    Mat right_image = readImage("stereobm/aloe-R.png", IMREAD_GRAYSCALE);
+    Mat disp_gold   = readImage("stereobm/aloe-disp.png", IMREAD_GRAYSCALE);
 	ocl::oclMat d_left, d_right;
 	ocl::oclMat d_disp(left_image.size(), CV_8U);
 	Mat  disp;
@@ -88,7 +88,50 @@ TEST_P(StereoMatchBM, Accuracy)
     EXPECT_MAT_SIMILAR(disp_gold, disp, 1e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Calib3D, StereoMatchBM, testing::Combine(testing::Values(128),
+INSTANTIATE_TEST_CASE_P(OCL_Calib3D, StereoMatchBM, testing::Combine(testing::Values(128),
 	                                   testing::Values(19)));
 
+PARAM_TEST_CASE(StereoMatchBP, int, int, int, float, float, float, float)
+{
+    int ndisp_;
+    int iters_;
+    int levels_;
+    float max_data_term_;
+    float data_weight_;
+    float max_disc_term_;
+    float disc_single_jump_;
+    virtual void SetUp()
+    {
+        ndisp_          = GET_PARAM(0);
+        iters_          = GET_PARAM(1);
+        levels_         = GET_PARAM(2);
+        max_data_term_  = GET_PARAM(3);
+        data_weight_    = GET_PARAM(4);
+        max_disc_term_     = GET_PARAM(5);
+        disc_single_jump_  = GET_PARAM(6);
+    }
+};
+TEST_P(StereoMatchBP, Regression)
+{
+    Mat left_image  = readImage("stereobp/aloe-L.png");
+    Mat right_image = readImage("stereobp/aloe-R.png");
+    Mat disp_gold   = readImage("stereobp/aloe-disp.png", IMREAD_GRAYSCALE);
+    ocl::oclMat d_left, d_right;
+    ocl::oclMat d_disp;
+    Mat  disp;
+    ASSERT_FALSE(left_image.empty());
+    ASSERT_FALSE(right_image.empty());
+    ASSERT_FALSE(disp_gold.empty());
+    d_left.upload(left_image);
+    d_right.upload(right_image);
+    ocl::StereoBeliefPropagation bp(ndisp_, iters_, levels_, max_data_term_, data_weight_,
+        max_disc_term_, disc_single_jump_, CV_16S);
+    bp(d_left, d_right, d_disp);
+    d_disp.download(disp);
+    disp.convertTo(disp, disp_gold.depth());
+    EXPECT_MAT_NEAR(disp_gold, disp, 0.0, "");
+}
+INSTANTIATE_TEST_CASE_P(OCL_Calib3D, StereoMatchBP, testing::Combine(testing::Values(64),
+    testing::Values(8),testing::Values(2),testing::Values(25.0f),
+    testing::Values(0.1f),testing::Values(15.0f),testing::Values(1.0f)));
 #endif // HAVE_OPENCL
