@@ -165,7 +165,7 @@ namespace cv
                 args.push_back( make_pair( sizeof(cl_int) , (void *)&disp));
 
                 size_t gt[3] = {dst_cols, dst_rows, 1}, lt[3] = {16, 16, 1};
-                char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
+                const char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
                 openCLExecuteKernel(clCxt, &stereobp, kernelName, gt, lt, args, -1, -1, t_opt);
             }
             /////////////////////////////////////////////////////////////////////////////////
@@ -190,7 +190,7 @@ namespace cv
                 args.push_back( make_pair( sizeof(cl_int) , (void *)&ndisp));
 
                 size_t gt[3] = {dst_cols, dst_rows, 1}, lt[3] = {16, 16, 1};
-                char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
+                const char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
                 openCLExecuteKernel(clCxt, &stereobp, kernelName, gt, lt, args, -1, -1, t_opt);
             }
             static void level_up_messages_calls(int dst_idx, int dst_cols, int dst_rows, int src_rows,
@@ -241,7 +241,7 @@ namespace cv
                 args.push_back( make_pair( sizeof(cl_float) , (void *)&cdisc_single_jump));
 
                 size_t gt[3] = {cols, rows, 1}, lt[3] = {16, 16, 1};
-                char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
+                const char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
                 openCLExecuteKernel(clCxt, &stereobp, kernelName, gt, lt, args, -1, -1, t_opt);
             }
 
@@ -280,7 +280,7 @@ namespace cv
                 args.push_back( make_pair( sizeof(cl_int) , (void *)&ndisp));
 
                 size_t gt[3] = {disp.cols, disp.rows, 1}, lt[3] = {16, 16, 1};
-                char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
+                const char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
                 openCLExecuteKernel(clCxt, &stereobp, kernelName, gt, lt, args, -1, -1, t_opt);
             }
         }
