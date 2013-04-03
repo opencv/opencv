@@ -42,12 +42,12 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/border_interpolate.hpp"
-#include "opencv2/core/device/limits.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/border_interpolate.hpp"
+#include "opencv2/core/cuda/limits.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::device;
+using namespace cv::gpu::cuda;
 
 ////////////////////////////////////////////////////////////
 // centeredGradient

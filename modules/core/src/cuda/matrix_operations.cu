@@ -40,12 +40,12 @@
 //
 //M*/
 
-#include "opencv2/core/device/saturate_cast.hpp"
-#include "opencv2/core/device/transform.hpp"
-#include "opencv2/core/device/functional.hpp"
-#include "opencv2/core/device/type_traits.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
+#include "opencv2/core/cuda/transform.hpp"
+#include "opencv2/core/cuda/functional.hpp"
+#include "opencv2/core/cuda/type_traits.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     void writeScalar(const uchar*);
     void writeScalar(const schar*);
@@ -58,7 +58,7 @@ namespace cv { namespace gpu { namespace device
     void convert_gpu(PtrStepSzb, int, PtrStepSzb, int, double, double, cudaStream_t);
 }}}
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T> struct shift_and_sizeof;
     template <> struct shift_and_sizeof<signed char> { enum { shift = 0 }; };
@@ -76,9 +76,9 @@ namespace cv { namespace gpu { namespace device
     template <typename T> void copyToWithMask(PtrStepSzb src, PtrStepSzb dst, int cn, PtrStepSzb mask, bool colorMask, cudaStream_t stream)
     {
         if (colorMask)
-            cv::gpu::device::transform((PtrStepSz<T>)src, (PtrStepSz<T>)dst, identity<T>(), SingleMask(mask), stream);
+            cv::gpu::cuda::transform((PtrStepSz<T>)src, (PtrStepSz<T>)dst, identity<T>(), SingleMask(mask), stream);
         else
-            cv::gpu::device::transform((PtrStepSz<T>)src, (PtrStepSz<T>)dst, identity<T>(), SingleMaskChannels(mask, cn), stream);
+            cv::gpu::cuda::transform((PtrStepSz<T>)src, (PtrStepSz<T>)dst, identity<T>(), SingleMaskChannels(mask, cn), stream);
     }
 
     void copyToWithMask_gpu(PtrStepSzb src, PtrStepSzb dst, size_t elemSize1, int cn, PtrStepSzb mask, bool colorMask, cudaStream_t stream)
@@ -293,7 +293,7 @@ namespace cv { namespace gpu { namespace device
         cudaSafeCall( cudaSetDoubleForDevice(&alpha) );
         cudaSafeCall( cudaSetDoubleForDevice(&beta) );
         Convertor<T, D, S> op(static_cast<S>(alpha), static_cast<S>(beta));
-        cv::gpu::device::transform((PtrStepSz<T>)src, (PtrStepSz<D>)dst, op, WithOutMask(), stream);
+        cv::gpu::cuda::transform((PtrStepSz<T>)src, (PtrStepSz<D>)dst, op, WithOutMask(), stream);
     }
 
 #if defined  __clang__
@@ -379,4 +379,4 @@ namespace cv { namespace gpu { namespace device
 #if defined __clang__
 # pragma clang diagnostic pop
 #endif
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cuda

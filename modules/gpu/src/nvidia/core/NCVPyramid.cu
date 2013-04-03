@@ -48,7 +48,7 @@
 #include "NCVAlg.hpp"
 #include "NCVPyramid.hpp"
 #include "NCVPixelOperations.hpp"
-#include "opencv2/core/device/common.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
 template<typename T, Ncv32u CN> struct __average4_CN {static __host__ __device__ T _average4_CN(const T &p00, const T &p01, const T &p10, const T &p11);};
 
@@ -204,7 +204,7 @@ __global__ void kernelDownsampleX2(T *d_src,
     }
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace pyramid
     {
@@ -279,7 +279,7 @@ __global__ void kernelInterpolateFrom1(T *d_srcTop,
         d_dst_line[j] = outPix;
     }
 }
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace pyramid
     {

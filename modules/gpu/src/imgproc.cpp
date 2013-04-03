@@ -98,7 +98,7 @@ cv::Ptr<cv::gpu::CLAHE> cv::gpu::createCLAHE(double, cv::Size) { throw_nogpu(); 
 ////////////////////////////////////////////////////////////////////////
 // meanShiftFiltering_GPU
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -108,7 +108,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria, Stream& stream)
 {
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cuda::imgproc;
 
     if( src.empty() )
         CV_Error( CV_StsBadArg, "The input image is empty" );
@@ -134,7 +134,7 @@ void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
 ////////////////////////////////////////////////////////////////////////
 // meanShiftProc_GPU
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -144,7 +144,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria, Stream& stream)
 {
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cuda::imgproc;
 
     if( src.empty() )
         CV_Error( CV_StsBadArg, "The input image is empty" );
@@ -171,7 +171,7 @@ void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int 
 ////////////////////////////////////////////////////////////////////////
 // drawColorDisp
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -185,7 +185,7 @@ namespace
     template <typename T>
     void drawColorDisp_caller(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream)
     {
-        using namespace ::cv::gpu::device::imgproc;
+        using namespace ::cv::gpu::cuda::imgproc;
 
         dst.create(src.size(), CV_8UC4);
 
@@ -207,7 +207,7 @@ void cv::gpu::drawColorDisp(const GpuMat& src, GpuMat& dst, int ndisp, Stream& s
 ////////////////////////////////////////////////////////////////////////
 // reprojectImageTo3D
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -218,7 +218,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyz, const Mat& Q, int dst_cn, Stream& stream)
 {
-    using namespace cv::gpu::device::imgproc;
+    using namespace cv::gpu::cuda::imgproc;
 
     typedef void (*func_t)(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
     static const func_t funcs[2][4] =
@@ -239,7 +239,7 @@ void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyz, const Mat& Q, 
 ////////////////////////////////////////////////////////////////////////
 // copyMakeBorder
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -251,7 +251,7 @@ namespace
 {
     template <typename T, int cn> void copyMakeBorder_caller(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream)
     {
-        using namespace ::cv::gpu::device::imgproc;
+        using namespace ::cv::gpu::cuda::imgproc;
 
         Scalar_<T> val(saturate_cast<T>(value[0]), saturate_cast<T>(value[1]), saturate_cast<T>(value[2]), saturate_cast<T>(value[3]));
 
@@ -348,7 +348,7 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpPlaneMaps
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -362,7 +362,7 @@ void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, cons
                                  float scale, GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
     (void)src_size;
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cuda::imgproc;
 
     CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
     CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
@@ -375,14 +375,14 @@ void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, cons
 
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
-    device::imgproc::buildWarpPlaneMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(),
+    cuda::imgproc::buildWarpPlaneMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(),
                        T.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpCylyndricalMaps
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -396,7 +396,7 @@ void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K
                                        GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
     (void)src_size;
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cuda::imgproc;
 
     CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
     CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
@@ -408,14 +408,14 @@ void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K
 
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
-    device::imgproc::buildWarpCylindricalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
+    cuda::imgproc::buildWarpCylindricalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
 
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpSphericalMaps
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -429,7 +429,7 @@ void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, 
                                      GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
     (void)src_size;
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cuda::imgproc;
 
     CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
     CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
@@ -441,7 +441,7 @@ void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, 
 
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
-    device::imgproc::buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
+    cuda::imgproc::buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -532,7 +532,7 @@ void cv::gpu::integral(const GpuMat& src, GpuMat& sum, Stream& s)
     integralBuffered(src, sum, buffer, s);
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -556,7 +556,7 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
     {
         ensureSizeIsEnough(((src.rows + 7) / 8) * 8, ((src.cols + 63) / 64) * 64, CV_32SC1, buffer);
 
-        cv::gpu::device::imgproc::shfl_integral_gpu(src, buffer, stream);
+        cv::gpu::cuda::imgproc::shfl_integral_gpu(src, buffer, stream);
 
         sum.create(src.rows + 1, src.cols + 1, CV_32SC1);
         if (s)
@@ -631,7 +631,7 @@ void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
 //////////////////////////////////////////////////////////////////////////////
 // columnSum
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -641,13 +641,13 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::columnSum(const GpuMat& src, GpuMat& dst)
 {
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cuda::imgproc;
 
     CV_Assert(src.type() == CV_32F);
 
     dst.create(src.size(), CV_32F);
 
-    device::imgproc::columnSum_32F(src, dst);
+    cuda::imgproc::columnSum_32F(src, dst);
 }
 
 void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& s)
@@ -1021,7 +1021,7 @@ void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat&
 ////////////////////////////////////////////////////////////////////////
 // cornerHarris & minEgenVal
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -1074,7 +1074,7 @@ void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& D
 
 void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, double k, int borderType, Stream& stream)
 {
-    using namespace cv::gpu::device::imgproc;
+    using namespace cv::gpu::cuda::imgproc;
 
     CV_Assert(borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
 
@@ -1102,7 +1102,7 @@ void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuM
 
 void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, int borderType, Stream& stream)
 {
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cuda::imgproc;
 
     CV_Assert(borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
 
@@ -1119,7 +1119,7 @@ void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuM
 //////////////////////////////////////////////////////////////////////////////
 // mulSpectrums
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -1132,11 +1132,11 @@ namespace cv { namespace gpu { namespace device
 void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB, Stream& stream)
 {
     (void)flags;
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cuda::imgproc;
 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, PtrStepSz<cufftComplex>, cudaStream_t stream);
 
-    static Caller callers[] = { device::imgproc::mulSpectrums, device::imgproc::mulSpectrums_CONJ };
+    static Caller callers[] = { cuda::imgproc::mulSpectrums, cuda::imgproc::mulSpectrums_CONJ };
 
     CV_Assert(a.type() == b.type() && a.type() == CV_32FC2);
     CV_Assert(a.size() == b.size());
@@ -1150,7 +1150,7 @@ void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flag
 //////////////////////////////////////////////////////////////////////////////
 // mulAndScaleSpectrums
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -1163,10 +1163,10 @@ namespace cv { namespace gpu { namespace device
 void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB, Stream& stream)
 {
     (void)flags;
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cuda::imgproc;
 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, float scale, PtrStepSz<cufftComplex>, cudaStream_t stream);
-    static Caller callers[] = { device::imgproc::mulAndScaleSpectrums, device::imgproc::mulAndScaleSpectrums_CONJ };
+    static Caller callers[] = { cuda::imgproc::mulAndScaleSpectrums, cuda::imgproc::mulAndScaleSpectrums_CONJ };
 
     CV_Assert(a.type() == b.type() && a.type() == CV_32FC2);
     CV_Assert(a.size() == b.size());
@@ -1335,7 +1335,7 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
 
 void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream)
 {
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cuda::imgproc;
 
 #ifndef HAVE_CUFFT
     throw_nogpu();

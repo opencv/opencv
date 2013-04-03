@@ -44,9 +44,9 @@
 
 #ifdef HAVE_OPENCV_GPU
 
-#include "opencv2/core/device/common.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace vibe
     {
@@ -58,7 +58,7 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace vibe
     {

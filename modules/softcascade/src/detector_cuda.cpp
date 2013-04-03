@@ -77,7 +77,7 @@ namespace
     }
 }
 
-cv::softcascade::device::Level::Level(int idx, const Octave& oct, const float scale, const int w, const int h)
+cv::softcascade::cuda::Level::Level(int idx, const Octave& oct, const float scale, const int w, const int h)
 :  octave(idx), step(oct.stages), relScale(scale / oct.scale)
 {
     workRect.x = (unsigned char)cvRound(w / (float)oct.shrinkage);
@@ -96,7 +96,7 @@ cv::softcascade::device::Level::Level(int idx, const Octave& oct, const float sc
     }
 }
 
-namespace cv { namespace softcascade { namespace device {
+namespace cv { namespace softcascade { namespace cuda {
 
     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
         const int fw, const int fh, const int bins, cudaStream_t stream);
@@ -153,9 +153,9 @@ struct cv::softcascade::SCascade::Fields
         FileNode fn = root[SC_OCTAVES];
         if (fn.empty()) return 0;
 
-        std::vector<device::Octave>  voctaves;
+        std::vector<cuda::Octave>  voctaves;
         std::vector<float>   vstages;
-        std::vector<device::Node>    vnodes;
+        std::vector<cuda::Node>    vnodes;
         std::vector<float>   vleaves;
 
         FileNodeIterator it = fn.begin(), it_end = fn.end();
@@ -171,7 +171,7 @@ struct cv::softcascade::SCascade::Fields
             size.x = (unsigned short)cvRound(origWidth * scale);
             size.y = (unsigned short)cvRound(origHeight * scale);
 
-            device::Octave octave(octIndex, nweaks, shrinkage, size, scale);
+            cuda::Octave octave(octIndex, nweaks, shrinkage, size, scale);
             CV_Assert(octave.stages > 0);
             voctaves.push_back(octave);
 
@@ -240,7 +240,7 @@ struct cv::softcascade::SCascade::Fields
                     rect.w = saturate_cast<uchar>(r.height);
 
                     unsigned int channel = saturate_cast<unsigned int>(feature_channels[featureIdx]);
-                    vnodes.push_back(device::Node(rect, channel, th));
+                    vnodes.push_back(cuda::Node(rect, channel, th));
                 }
 
                 intfns = octfn[SC_LEAF];
@@ -252,13 +252,13 @@ struct cv::softcascade::SCascade::Fields
             }
         }
 
-        cv::Mat hoctaves(1, (int) (voctaves.size() * sizeof(device::Octave)), CV_8UC1, (uchar*)&(voctaves[0]));
+        cv::Mat hoctaves(1, (int) (voctaves.size() * sizeof(cuda::Octave)), CV_8UC1, (uchar*)&(voctaves[0]));
         CV_Assert(!hoctaves.empty());
 
         cv::Mat hstages(cv::Mat(vstages).reshape(1,1));
         CV_Assert(!hstages.empty());
 
-        cv::Mat hnodes(1, (int) (vnodes.size() * sizeof(device::Node)), CV_8UC1, (uchar*)&(vnodes[0]) );
+        cv::Mat hnodes(1, (int) (vnodes.size() * sizeof(cuda::Node)), CV_8UC1, (uchar*)&(vnodes[0]) );
         CV_Assert(!hnodes.empty());
 
         cv::Mat hleaves(cv::Mat(vleaves).reshape(1,1));
@@ -285,7 +285,7 @@ struct cv::softcascade::SCascade::Fields
 
     int createLevels(const int fh, const int fw)
     {
-        std::vector<device::Level> vlevels;
+        std::vector<cuda::Level> vlevels;
         float logFactor = (::log(maxScale) - ::log(minScale)) / (totals -1);
 
         float scale = minScale;
@@ -298,7 +298,7 @@ struct cv::softcascade::SCascade::Fields
             float logScale = ::log(scale);
             int fit = fitOctave(voctaves, logScale);
 
-            device::Level level(fit, voctaves[fit], scale, width, height);
+            cuda::Level level(fit, voctaves[fit], scale, width, height);
 
             if (!width || !height)
                 break;
@@ -312,7 +312,7 @@ struct cv::softcascade::SCascade::Fields
             scale = ::std::min(maxScale, ::expf(::log(scale) + logFactor));
         }
 
-        cv::Mat hlevels = cv::Mat(1, (int) (vlevels.size() * sizeof(device::Level)), CV_8UC1, (uchar*)&(vlevels[0]) );
+        cv::Mat hlevels = cv::Mat(1, (int) (vlevels.size() * sizeof(cuda::Level)), CV_8UC1, (uchar*)&(vlevels[0]) );
         CV_Assert(!hlevels.empty());
         levels.upload(hlevels);
         downscales = dcs;
@@ -355,8 +355,8 @@ struct cv::softcascade::SCascade::Fields
 
         cudaSafeCall( cudaGetLastError());
 
-        device::CascadeInvoker<device::GK107PolicyX4> invoker
-        = device::CascadeInvoker<device::GK107PolicyX4>(levels, stages, nodes, leaves);
+        cuda::CascadeInvoker<cuda::GK107PolicyX4> invoker
+        = cuda::CascadeInvoker<cuda::GK107PolicyX4>(levels, stages, nodes, leaves);
 
         cudaStream_t stream = cv::gpu::StreamAccessor::getStream(s);
         invoker(mask, hogluv, objects, downscales, stream);
@@ -379,19 +379,19 @@ struct cv::softcascade::SCascade::Fields
         }
 
         cudaStream_t stream = cv::gpu::StreamAccessor::getStream(s);
-        device::suppress(objects, overlaps, ndetections, suppressed, stream);
+        cuda::suppress(objects, overlaps, ndetections, suppressed, stream);
     }
 
 private:
 
-    typedef std::vector<device::Octave>::const_iterator  octIt_t;
-    static int fitOctave(const std::vector<device::Octave>& octs, const float& logFactor)
+    typedef std::vector<cuda::Octave>::const_iterator  octIt_t;
+    static int fitOctave(const std::vector<cuda::Octave>& octs, const float& logFactor)
     {
         float minAbsLog = FLT_MAX;
         int res =  0;
         for (int oct = 0; oct < (int)octs.size(); ++oct)
         {
-            const device::Octave& octave =octs[oct];
+            const cuda::Octave& octave =octs[oct];
             float logOctave = ::log(octave.scale);
             float logAbsScale = ::fabs(logFactor - logOctave);
 
@@ -452,7 +452,7 @@ public:
 //     cv::gpu::GpuMat collected;
 
 
-    std::vector<device::Octave> voctaves;
+    std::vector<cuda::Octave> voctaves;
 
 //     DeviceInfo info;
 
@@ -498,7 +498,7 @@ void integral(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& sum, cv::gpu::GpuMat&
     {
         ensureSizeIsEnough(((src.rows + 7) / 8) * 8, ((src.cols + 63) / 64) * 64, CV_32SC1, buffer);
 
-        cv::softcascade::device::shfl_integral(src, buffer, stream);
+        cv::softcascade::cuda::shfl_integral(src, buffer, stream);
 
         sum.create(src.rows + 1, src.cols + 1, CV_32SC1);
         if (s)
@@ -539,7 +539,7 @@ void cv::softcascade::SCascade::detect(InputArray _image, InputArray _rois, Outp
 
     flds.mask.create( rois.cols / shr, rois.rows / shr, rois.type());
 
-    device::shrink(rois, flds.mask);
+    cuda::shrink(rois, flds.mask);
     //cv::gpu::transpose(flds.genRoiTmp, flds.mask, s);
 
     if (type == CV_8UC3)
@@ -607,12 +607,12 @@ struct SeparablePreprocessor : public cv::softcascade::ChannelsProcessor
         setZero(channels, s);
 
         gray.create(bgr.size(), CV_8UC1);
-        cv::softcascade::device::transform(bgr, gray); //cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
-        cv::softcascade::device::gray2hog(gray, channels(cv::Rect(0, 0, bgr.cols, bgr.rows * (bins + 1))), bins);
+        cv::softcascade::cuda::transform(bgr, gray); //cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
+        cv::softcascade::cuda::gray2hog(gray, channels(cv::Rect(0, 0, bgr.cols, bgr.rows * (bins + 1))), bins);
 
         cv::gpu::GpuMat luv(channels, cv::Rect(0, bgr.rows * (bins + 1), bgr.cols, bgr.rows * 3));
-        cv::softcascade::device::bgr2Luv(bgr, luv);
-        cv::softcascade::device::shrink(channels, shrunk);
+        cv::softcascade::cuda::bgr2Luv(bgr, luv);
+        cv::softcascade::cuda::shrink(channels, shrunk);
     }
 
 private:

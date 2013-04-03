@@ -6,10 +6,10 @@ if(HAVE_CUDA)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
 endif()
 
-file(GLOB lib_device_hdrs        "include/opencv2/${name}/device/*.hpp"        "include/opencv2/${name}/device/*.h")
-file(GLOB lib_device_hdrs_detail "include/opencv2/${name}/device/detail/*.hpp" "include/opencv2/${name}/device/detail/*.h")
+file(GLOB lib_cuda_hdrs        "include/opencv2/${name}/cuda/*.hpp"        "include/opencv2/${name}/cuda/*.h")
+file(GLOB lib_cuda_hdrs_detail "include/opencv2/${name}/cuda/detail/*.hpp" "include/opencv2/${name}/cuda/detail/*.h")
 ocv_glob_module_sources(SOURCES "${opencv_core_BINARY_DIR}/version_string.inc"
-                        HEADERS ${lib_device_hdrs} ${lib_device_hdrs_detail})
+                        HEADERS ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
 
 ocv_create_module()
 ocv_add_precompiled_headers(${the_module})

@@ -42,10 +42,10 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/vec_traits.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/vec_traits.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace video_encoding
     {

@@ -44,15 +44,15 @@
 
 #ifdef HAVE_OPENCV_GPU
 
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/limits.hpp"
-#include "opencv2/core/device/saturate_cast.hpp"
-#include "opencv2/core/device/reduce.hpp"
-#include "opencv2/core/device/utility.hpp"
-#include "opencv2/core/device/functional.hpp"
-#include "opencv2/core/device/filters.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
+#include "opencv2/core/cuda/utility.hpp"
+#include "opencv2/core/cuda/functional.hpp"
+#include "opencv2/core/cuda/filters.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace surf
     {
@@ -79,7 +79,7 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace surf
     {
@@ -626,7 +626,7 @@ namespace cv { namespace gpu { namespace device
                 }
 
                 plus<float> op;
-                device::reduce<32>(smem_tuple(s_sumx + threadIdx.y * 32, s_sumy + threadIdx.y * 32),
+                cuda::reduce<32>(smem_tuple(s_sumx + threadIdx.y * 32, s_sumy + threadIdx.y * 32),
                                    thrust::tie(sumx, sumy), threadIdx.x, thrust::make_tuple(op, op));
 
                 const float temp_mod = sumx * sumx + sumy * sumy;
@@ -955,7 +955,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
     } // namespace surf
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cuda
 
 
 #endif /* CUDA_DISABLER */

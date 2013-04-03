@@ -59,7 +59,7 @@ void cv::gpu::FastNonLocalMeansDenoising::labMethod( const GpuMat&, GpuMat&, flo
 //////////////////////////////////////////////////////////////////////////////////
 //// Non Local Means Denosing (brute force)
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -73,7 +73,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode, Stream& s)
 {
-    using cv::gpu::device::imgproc::bilateral_filter_gpu;
+    using cv::gpu::cuda::imgproc::bilateral_filter_gpu;
 
     typedef void (*func_t)(const PtrStepSzb& src, PtrStepSzb dst, int kernel_size, float sigma_spatial, float sigma_color, int borderMode, cudaStream_t s);
 
@@ -109,7 +109,7 @@ void cv::gpu::bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, f
 
 void cv::gpu::nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_window, int block_window, int borderMode, Stream& s)
 {
-    using cv::gpu::device::imgproc::nlm_bruteforce_gpu;
+    using cv::gpu::cuda::imgproc::nlm_bruteforce_gpu;
     typedef void (*func_t)(const PtrStepSzb& src, PtrStepSzb dst, int search_radius, int block_radius, float h, int borderMode, cudaStream_t stream);
 
     static const func_t funcs[4] = { nlm_bruteforce_gpu<uchar>, nlm_bruteforce_gpu<uchar2>, nlm_bruteforce_gpu<uchar3>, 0/*nlm_bruteforce_gpu<uchar4>,*/ };
@@ -134,7 +134,7 @@ void cv::gpu::nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_
 //// Non Local Means Denosing (fast approxinate)
 
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -163,10 +163,10 @@ void cv::gpu::FastNonLocalMeansDenoising::simpleMethod(const GpuMat& src, GpuMat
     GpuMat src_hdr = extended_src(Rect(Point2i(border_size, border_size), src.size()));
 
     int bcols, brows;
-    device::imgproc::nln_fast_get_buffer_size(src_hdr, search_window, block_window, bcols, brows);
+    cuda::imgproc::nln_fast_get_buffer_size(src_hdr, search_window, block_window, bcols, brows);
     buffer.create(brows, bcols, CV_32S);
 
-    using namespace cv::gpu::device::imgproc;
+    using namespace cv::gpu::cuda::imgproc;
     typedef void (*nlm_fast_t)(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
     static const nlm_fast_t funcs[] = { nlm_fast_gpu<uchar>, nlm_fast_gpu<uchar2>, nlm_fast_gpu<uchar3>, 0};
 
@@ -183,12 +183,12 @@ void cv::gpu::FastNonLocalMeansDenoising::labMethod( const GpuMat& src, GpuMat& 
 
     l.create(src.size(), CV_8U);
     ab.create(src.size(), CV_8UC2);
-    device::imgproc::fnlm_split_channels(lab, l, ab, StreamAccessor::getStream(s));
+    cuda::imgproc::fnlm_split_channels(lab, l, ab, StreamAccessor::getStream(s));
 
     simpleMethod(l, l, h_luminance, search_window, block_window, s);
     simpleMethod(ab, ab, h_color, search_window, block_window, s);
 
-    device::imgproc::fnlm_merge_channels(l, ab, lab, StreamAccessor::getStream(s));
+    cuda::imgproc::fnlm_merge_channels(l, ab, lab, StreamAccessor::getStream(s));
     cv::gpu::cvtColor(lab, dst, CV_Lab2BGR, 0, s);
 }
 

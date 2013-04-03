@@ -42,13 +42,13 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/functional.hpp"
-#include "opencv2/core/device/emulation.hpp"
-#include "opencv2/core/device/transform.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/functional.hpp"
+#include "opencv2/core/cuda/emulation.hpp"
+#include "opencv2/core/cuda/transform.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::device;
+using namespace cv::gpu::cuda;
 
 namespace hist
 {
@@ -127,7 +127,7 @@ namespace hist
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <> struct TransformFunctorTraits<hist::EqualizeHist> : DefaultTransformFunctorTraits<hist::EqualizeHist>
     {

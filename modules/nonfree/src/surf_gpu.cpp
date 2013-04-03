@@ -64,7 +64,7 @@ void cv::gpu::SURF_GPU::releaseMemory() { throw_nogpu(); }
 
 #else // !defined (HAVE_CUDA)
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace surf
     {
@@ -91,7 +91,7 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-using namespace ::cv::gpu::device::surf;
+using namespace ::cv::gpu::cuda::surf;
 
 namespace
 {

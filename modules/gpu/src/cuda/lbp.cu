@@ -43,10 +43,10 @@
 #if !defined CUDA_DISABLER
 
 #include "lbp.hpp"
-#include "opencv2/core/device/vec_traits.hpp"
-#include "opencv2/core/device/saturate_cast.hpp"
+#include "opencv2/core/cuda/vec_traits.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace lbp
     {

@@ -188,7 +188,7 @@ void cv::gpu::interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, cons
         cudaSafeCall( cudaDeviceSynchronize() );
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace optical_flow
     {
@@ -199,7 +199,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors)
 {
-    using namespace cv::gpu::device::optical_flow;
+    using namespace cv::gpu::cuda::optical_flow;
 
     CV_Assert(u.type() == CV_32FC1);
     CV_Assert(v.type() == u.type() && v.size() == u.size());

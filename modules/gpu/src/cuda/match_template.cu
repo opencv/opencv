@@ -42,10 +42,10 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/vec_math.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/vec_math.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace match_template
     {
@@ -910,7 +910,7 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
     } //namespace match_template
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cuda
 
 
 #endif /* CUDA_DISABLER */

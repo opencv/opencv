@@ -42,12 +42,12 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/transform.hpp"
-#include "opencv2/core/device/color.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/transform.hpp"
+#include "opencv2/core/cuda/color.hpp"
 #include "cvt_color_internal.h"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgra_to_rgba_traits<uchar>::functor_type)
     {
@@ -229,7 +229,7 @@ namespace cv { namespace gpu { namespace device
         traits::functor_type functor = traits::create_functor(); \
         typedef typename traits::functor_type::argument_type src_t; \
         typedef typename traits::functor_type::result_type   dst_t; \
-        cv::gpu::device::transform((PtrStepSz<src_t>)src, (PtrStepSz<dst_t>)dst, functor, WithOutMask(), stream); \
+        cv::gpu::cuda::transform((PtrStepSz<src_t>)src, (PtrStepSz<dst_t>)dst, functor, WithOutMask(), stream); \
     }
 
 #define OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(name) \
@@ -456,6 +456,6 @@ namespace cv { namespace gpu { namespace device
     #undef OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL
     #undef OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F
     #undef OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F_FULL
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cuda
 
 #endif /* CUDA_DISABLER */

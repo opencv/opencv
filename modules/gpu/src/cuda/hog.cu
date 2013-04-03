@@ -42,12 +42,12 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/reduce.hpp"
-#include "opencv2/core/device/functional.hpp"
-#include "opencv2/core/device/warp_shuffle.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
+#include "opencv2/core/cuda/functional.hpp"
+#include "opencv2/core/cuda/warp_shuffle.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     // Other values are not supported
     #define CELL_WIDTH 8
@@ -808,7 +808,7 @@ namespace cv { namespace gpu { namespace device
         void resize_8UC1(const PtrStepSzb& src, PtrStepSzb dst) { resize_for_hog<uchar> (src, dst, resize8UC1_tex); }
         void resize_8UC4(const PtrStepSzb& src, PtrStepSzb dst) { resize_for_hog<uchar4>(src, dst, resize8UC4_tex); }
     } // namespace hog
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cuda
 
 
 #endif /* CUDA_DISABLER */

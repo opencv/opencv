@@ -42,16 +42,16 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/functional.hpp"
-#include "opencv2/core/device/vec_math.hpp"
-#include "opencv2/core/device/transform.hpp"
-#include "opencv2/core/device/limits.hpp"
-#include "opencv2/core/device/saturate_cast.hpp"
-#include "opencv2/core/device/simd_functions.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/functional.hpp"
+#include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/transform.hpp"
+#include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
+#include "opencv2/core/cuda/simd_functions.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::device;
+using namespace cv::gpu::cuda;
 
 namespace arithm
 {
@@ -193,7 +193,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <> struct TransformFunctorTraits< arithm::VAdd4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -308,7 +308,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T, typename S, typename D> struct TransformFunctorTraits< arithm::AddScalar<T, S, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
@@ -428,7 +428,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <> struct TransformFunctorTraits< arithm::VSub4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -657,7 +657,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <> struct TransformFunctorTraits<arithm::Mul_8uc4_32f> : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -774,7 +774,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T, typename S, typename D> struct TransformFunctorTraits< arithm::MulScalar<T, S, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
@@ -925,7 +925,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <> struct TransformFunctorTraits<arithm::Div_8uc4_32f> : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -1111,7 +1111,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T, typename S, typename D> struct TransformFunctorTraits< arithm::DivInv<T, S, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
@@ -1240,7 +1240,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <> struct TransformFunctorTraits< arithm::VAbsDiff4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -1305,7 +1305,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T, typename S> struct TransformFunctorTraits< arithm::AbsDiffScalar<T, S> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1334,7 +1334,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // absMat
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T> struct TransformFunctorTraits< abs_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1375,7 +1375,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T> struct TransformFunctorTraits< arithm::Sqr<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1402,7 +1402,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // sqrtMat
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T> struct TransformFunctorTraits< sqrt_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1429,7 +1429,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // logMat
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T> struct TransformFunctorTraits< log_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1471,7 +1471,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T> struct TransformFunctorTraits< arithm::Exp<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1554,7 +1554,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <> struct TransformFunctorTraits< arithm::VCmpEq4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -1716,7 +1716,7 @@ namespace arithm
 #undef TYPE_VEC
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <class Op, typename T> struct TransformFunctorTraits< arithm::CmpScalar<Op, T, 1> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(uchar)>
     {
@@ -1875,7 +1875,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////////////////
 // bitMat
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T> struct TransformFunctorTraits< bit_not<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1948,7 +1948,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////////////////
 // bitScalar
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T> struct TransformFunctorTraits< binder2nd< bit_and<T> > > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1967,17 +1967,17 @@ namespace arithm
 {
     template <typename T> void bitScalarAnd(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::device::bind2nd(bit_and<T>(), src2), WithOutMask(), stream);
+        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cuda::bind2nd(bit_and<T>(), src2), WithOutMask(), stream);
     }
 
     template <typename T> void bitScalarOr(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::device::bind2nd(bit_or<T>(), src2), WithOutMask(), stream);
+        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cuda::bind2nd(bit_or<T>(), src2), WithOutMask(), stream);
     }
 
     template <typename T> void bitScalarXor(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::device::bind2nd(bit_xor<T>(), src2), WithOutMask(), stream);
+        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cuda::bind2nd(bit_xor<T>(), src2), WithOutMask(), stream);
     }
 
     template void bitScalarAnd<uchar>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
@@ -2026,7 +2026,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <> struct TransformFunctorTraits< arithm::VMin4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -2076,7 +2076,7 @@ namespace arithm
 
     template <typename T> void minScalar(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::device::bind2nd(minimum<T>(), src2), WithOutMask(), stream);
+        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cuda::bind2nd(minimum<T>(), src2), WithOutMask(), stream);
     }
 
     template void minScalar<uchar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
@@ -2118,7 +2118,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <> struct TransformFunctorTraits< arithm::VMax4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -2168,7 +2168,7 @@ namespace arithm
 
     template <typename T> void maxScalar(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::device::bind2nd(maximum<T>(), src2), WithOutMask(), stream);
+        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cuda::bind2nd(maximum<T>(), src2), WithOutMask(), stream);
     }
 
     template void maxScalar<uchar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
@@ -2183,7 +2183,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // threshold
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T> struct TransformFunctorTraits< thresh_binary_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -2297,7 +2297,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T> struct TransformFunctorTraits< arithm::PowOp<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -2372,7 +2372,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <typename T1, typename T2, typename D, size_t src1_size, size_t src2_size, size_t dst_size> struct AddWeightedTraits : DefaultTransformFunctorTraits< arithm::AddWeighted<T1, T2, D> >
     {

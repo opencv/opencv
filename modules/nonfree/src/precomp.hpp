@@ -56,7 +56,7 @@
 
     #if defined(HAVE_CUDA)
         #include "opencv2/core/stream_accessor.hpp"
-        #include "opencv2/core/device/common.hpp"
+        #include "opencv2/core/cuda/common.hpp"
 
         static inline void throw_nogpu() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }
     #else

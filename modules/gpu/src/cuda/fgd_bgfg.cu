@@ -42,16 +42,16 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/vec_math.hpp"
-#include "opencv2/core/device/limits.hpp"
-#include "opencv2/core/device/utility.hpp"
-#include "opencv2/core/device/reduce.hpp"
-#include "opencv2/core/device/functional.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda/utility.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
+#include "opencv2/core/cuda/functional.hpp"
 #include "fgd_bgfg_common.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::device;
+using namespace cv::gpu::cuda;
 
 namespace bgfg
 {

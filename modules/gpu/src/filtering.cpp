@@ -661,7 +661,7 @@ void cv::gpu::morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& ke
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Linear Filter
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -723,7 +723,7 @@ namespace
 
         virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
         {
-            using namespace cv::gpu::device::imgproc;
+            using namespace cv::gpu::cuda::imgproc;
 
             Point ofs;
             Size wholeSize;
@@ -742,7 +742,7 @@ namespace
 
 Ptr<BaseFilter_GPU> cv::gpu::getLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, Point anchor, int brd_type)
 {
-    using namespace cv::gpu::device::imgproc;
+    using namespace cv::gpu::cuda::imgproc;
 
     int sdepth = CV_MAT_DEPTH(srcType);
     int scn = CV_MAT_CN(srcType);

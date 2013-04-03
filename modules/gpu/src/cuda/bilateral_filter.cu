@@ -42,10 +42,10 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/vec_traits.hpp"
-#include "opencv2/core/device/vec_math.hpp"
-#include "opencv2/core/device/border_interpolate.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/vec_traits.hpp"
+#include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/border_interpolate.hpp"
 
 using namespace cv::gpu;
 
@@ -55,7 +55,7 @@ typedef unsigned short ushort;
 //////////////////////////////////////////////////////////////////////////////////
 /// Bilateral filtering
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -163,7 +163,7 @@ namespace cv { namespace gpu { namespace device
 
 
 #define OCV_INSTANTIATE_BILATERAL_FILTER(T) \
-    template void cv::gpu::device::imgproc::bilateral_filter_gpu<T>(const PtrStepSzb&, PtrStepSzb, int, float, float, int, cudaStream_t);
+    template void cv::gpu::cuda::imgproc::bilateral_filter_gpu<T>(const PtrStepSzb&, PtrStepSzb, int, float, float, int, cudaStream_t);
 
 OCV_INSTANTIATE_BILATERAL_FILTER(uchar)
 //OCV_INSTANTIATE_BILATERAL_FILTER(uchar2)

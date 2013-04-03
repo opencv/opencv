@@ -54,7 +54,7 @@
 #endif
 
 
-namespace cv { namespace softcascade { namespace device {
+namespace cv { namespace softcascade { namespace cuda {
 
 typedef unsigned char uchar;
 typedef unsigned int uint;

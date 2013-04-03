@@ -61,7 +61,7 @@ __host__ __device__ __forceinline__ int divUp(int total, int grain)
     return (total + grain - 1) / grain;
 }
 
-namespace cv { namespace softcascade { namespace device
+namespace cv { namespace softcascade { namespace cuda
 {
     typedef unsigned int uint;
     typedef unsigned short ushort;

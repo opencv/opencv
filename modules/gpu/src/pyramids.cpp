@@ -54,7 +54,7 @@ void cv::gpu::ImagePyramid::getLayer(GpuMat&, Size, Stream&) const { throw_nogpu
 //////////////////////////////////////////////////////////////////////////////
 // pyrDown
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -64,7 +64,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream)
 {
-    using namespace cv::gpu::device::imgproc;
+    using namespace cv::gpu::cuda::imgproc;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
@@ -92,7 +92,7 @@ void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream)
 //////////////////////////////////////////////////////////////////////////////
 // pyrUp
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -102,7 +102,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream)
 {
-    using namespace cv::gpu::device::imgproc;
+    using namespace cv::gpu::cuda::imgproc;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
@@ -130,7 +130,7 @@ void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream)
 //////////////////////////////////////////////////////////////////////////////
 // ImagePyramid
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace pyramid
     {
@@ -141,7 +141,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::ImagePyramid::build(const GpuMat& img, int numLayers, Stream& stream)
 {
-    using namespace cv::gpu::device::pyramid;
+    using namespace cv::gpu::cuda::pyramid;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
@@ -189,7 +189,7 @@ void cv::gpu::ImagePyramid::build(const GpuMat& img, int numLayers, Stream& stre
 
 void cv::gpu::ImagePyramid::getLayer(GpuMat& outImg, Size outRoi, Stream& stream) const
 {
-    using namespace cv::gpu::device::pyramid;
+    using namespace cv::gpu::cuda::pyramid;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 

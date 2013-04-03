@@ -128,7 +128,7 @@ cv::gpu::VideoReader_GPU::Impl::~Impl()
     videoSource_->stop();
 }
 
-namespace cv { namespace gpu { namespace device {
+namespace cv { namespace gpu { namespace cuda {
     namespace video_decoding
     {
         void loadHueCSC(float hueCSC[9]);
@@ -189,7 +189,7 @@ namespace
 
     void cudaPostProcessFrame(const cv::gpu::GpuMat& decodedFrame, cv::gpu::GpuMat& interopFrame, int width, int height)
     {
-        using namespace cv::gpu::device::video_decoding;
+        using namespace cv::gpu::cuda::video_decoding;
 
         static bool updateCSC = true;
         static float hueColorSpaceMat[9];

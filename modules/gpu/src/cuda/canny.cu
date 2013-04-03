@@ -44,14 +44,14 @@
 
 #include <utility>
 #include <algorithm>//std::swap
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/emulation.hpp"
-#include "opencv2/core/device/transform.hpp"
-#include "opencv2/core/device/functional.hpp"
-#include "opencv2/core/device/utility.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/emulation.hpp"
+#include "opencv2/core/cuda/transform.hpp"
+#include "opencv2/core/cuda/functional.hpp"
+#include "opencv2/core/cuda/utility.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::device;
+using namespace cv::gpu::cuda;
 
 namespace canny
 {
@@ -77,7 +77,7 @@ namespace canny
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <> struct TransformFunctorTraits<canny::L1> : DefaultTransformFunctorTraits<canny::L1>
     {
@@ -475,7 +475,7 @@ namespace canny
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     template <> struct TransformFunctorTraits<canny::GetEdges> : DefaultTransformFunctorTraits<canny::GetEdges>
     {

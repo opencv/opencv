@@ -45,8 +45,8 @@
 #include <vector>
 #include <cuda_runtime.h>
 #include "NPP_staging.hpp"
-#include "opencv2/core/device/warp.hpp"
-#include "opencv2/core/device/warp_shuffle.hpp"
+#include "opencv2/core/cuda/warp.hpp"
+#include "opencv2/core/cuda/warp_shuffle.hpp"
 
 
 texture<Ncv8u,  1, cudaReadModeElementType> tex8u;
@@ -95,13 +95,13 @@ template <class T>
 inline __device__ T warpScanInclusive(T idata, volatile T *s_Data)
 {
 #if __CUDA_ARCH__ >= 300
-    const unsigned int laneId = cv::gpu::device::Warp::laneId();
+    const unsigned int laneId = cv::gpu::cuda::Warp::laneId();
 
     // scan on shuffl functions
     #pragma unroll
     for (int i = 1; i <= (K_WARP_SIZE / 2); i *= 2)
     {
-        const T n = cv::gpu::device::shfl_up(idata, i);
+        const T n = cv::gpu::cuda::shfl_up(idata, i);
         if (laneId >= i)
               idata += n;
     }

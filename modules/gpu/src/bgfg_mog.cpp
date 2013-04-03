@@ -58,7 +58,7 @@ void cv::gpu::MOG2_GPU::release() {}
 
 #else
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace mog
     {
@@ -123,7 +123,7 @@ void cv::gpu::MOG_GPU::initialize(cv::Size frameSize, int frameType)
 
 void cv::gpu::MOG_GPU::operator()(const cv::gpu::GpuMat& frame, cv::gpu::GpuMat& fgmask, float learningRate, Stream& stream)
 {
-    using namespace cv::gpu::device::mog;
+    using namespace cv::gpu::cuda::mog;
 
     CV_Assert(frame.depth() == CV_8U);
 
@@ -146,7 +146,7 @@ void cv::gpu::MOG_GPU::operator()(const cv::gpu::GpuMat& frame, cv::gpu::GpuMat&
 
 void cv::gpu::MOG_GPU::getBackgroundImage(GpuMat& backgroundImage, Stream& stream) const
 {
-    using namespace cv::gpu::device::mog;
+    using namespace cv::gpu::cuda::mog;
 
     backgroundImage.create(frameSize_, frameType_);
 
@@ -208,7 +208,7 @@ cv::gpu::MOG2_GPU::MOG2_GPU(int nmixtures) :
 
 void cv::gpu::MOG2_GPU::initialize(cv::Size frameSize, int frameType)
 {
-    using namespace cv::gpu::device::mog;
+    using namespace cv::gpu::cuda::mog;
 
     CV_Assert(frameType == CV_8UC1 || frameType == CV_8UC3 || frameType == CV_8UC4);
 
@@ -236,7 +236,7 @@ void cv::gpu::MOG2_GPU::initialize(cv::Size frameSize, int frameType)
 
 void cv::gpu::MOG2_GPU::operator()(const GpuMat& frame, GpuMat& fgmask, float learningRate, Stream& stream)
 {
-    using namespace cv::gpu::device::mog;
+    using namespace cv::gpu::cuda::mog;
 
     int ch = frame.channels();
     int work_ch = ch;
@@ -256,7 +256,7 @@ void cv::gpu::MOG2_GPU::operator()(const GpuMat& frame, GpuMat& fgmask, float le
 
 void cv::gpu::MOG2_GPU::getBackgroundImage(GpuMat& backgroundImage, Stream& stream) const
 {
-    using namespace cv::gpu::device::mog;
+    using namespace cv::gpu::cuda::mog;
 
     backgroundImage.create(frameSize_, frameType_);
 

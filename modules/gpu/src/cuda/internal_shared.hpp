@@ -48,7 +48,7 @@
 #include "NPP_staging.hpp"
 #include "opencv2/gpu/devmem2d.hpp"
 #include "safe_call.hpp"
-#include "opencv2/core/device/common.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
 namespace cv { namespace gpu
 {

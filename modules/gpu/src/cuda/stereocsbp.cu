@@ -42,13 +42,13 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/saturate_cast.hpp"
-#include "opencv2/core/device/limits.hpp"
-#include "opencv2/core/device/reduce.hpp"
-#include "opencv2/core/device/functional.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
+#include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
+#include "opencv2/core/cuda/functional.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace stereocsbp
     {
@@ -146,7 +146,7 @@ namespace cv { namespace gpu { namespace device
 
                 for(int i = 0; i < nr_plane; i++)
                 {
-                    T minimum = device::numeric_limits<T>::max();
+                    T minimum = cuda::numeric_limits<T>::max();
                     int id = 0;
                     for(int d = 0; d < cndisp; d++)
                     {
@@ -859,6 +859,6 @@ namespace cv { namespace gpu { namespace device
         template void compute_disp(const float* u, const float* d, const float* l, const float* r, const float* data_cost_selected, const float* disp_selected, size_t msg_step,
             const PtrStepSz<short>& disp, int nr_plane, cudaStream_t stream);
     } // namespace stereocsbp
-}}} // namespace cv { namespace gpu { namespace device {
+}}} // namespace cv { namespace gpu { namespace cuda {
 
 #endif /* CUDA_DISABLER */

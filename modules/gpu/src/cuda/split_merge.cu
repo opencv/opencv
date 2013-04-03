@@ -42,9 +42,9 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/core/device/common.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace split_merge
     {
@@ -505,7 +505,7 @@ namespace cv { namespace gpu { namespace device
             split_func(src, dst, stream);
         }
     } // namespace split_merge
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cuda
 
 
 #endif /* CUDA_DISABLER */

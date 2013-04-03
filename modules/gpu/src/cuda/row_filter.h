@@ -40,13 +40,13 @@
 //
 //M*/
 
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/saturate_cast.hpp"
-#include "opencv2/core/device/vec_math.hpp"
-#include "opencv2/core/device/border_interpolate.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
+#include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/border_interpolate.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::device;
+using namespace cv::gpu::cuda;
 
 namespace row_filter
 {

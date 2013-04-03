@@ -42,14 +42,14 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/border_interpolate.hpp"
-#include "opencv2/core/device/vec_traits.hpp"
-#include "opencv2/core/device/vec_math.hpp"
-#include "opencv2/core/device/saturate_cast.hpp"
-#include "opencv2/core/device/filters.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/border_interpolate.hpp"
+#include "opencv2/core/cuda/vec_traits.hpp"
+#include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
+#include "opencv2/core/cuda/filters.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace imgproc
     {
@@ -383,7 +383,7 @@ namespace cv { namespace gpu { namespace device
         template void warpPerspective_gpu<float3>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[3 * 3], PtrStepSzb dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
         template void warpPerspective_gpu<float4>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[3 * 3], PtrStepSzb dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
     } // namespace imgproc
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cuda
 
 
 #endif /* CUDA_DISABLER */

@@ -59,7 +59,7 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(const GpuMat&, const GpuMat&, Gp
 
 #else
 
-namespace cv { namespace gpu { namespace device { namespace optflow_farneback
+namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
 {
     void setPolynomialExpansionConsts(
             int polyN, const float *g, const float *xg, const float *xxg,
@@ -93,7 +93,7 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
     void gaussianBlur5Gpu_CC11(
             const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, int borderType, cudaStream_t stream);
 
-}}}} // namespace cv { namespace gpu { namespace device { namespace optflow_farneback
+}}}} // namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
 
 
 void cv::gpu::FarnebackOpticalFlow::prepareGaussian(
@@ -163,7 +163,7 @@ void cv::gpu::FarnebackOpticalFlow::setPolynomialExpansionConsts(int n, double s
     double ig11, ig03, ig33, ig55;
     prepareGaussian(n, sigma, g, xg, xxg, ig11, ig03, ig33, ig55);
 
-    device::optflow_farneback::setPolynomialExpansionConsts(n, g, xg, xxg, static_cast<float>(ig11), static_cast<float>(ig03), static_cast<float>(ig33), static_cast<float>(ig55));
+    cuda::optflow_farneback::setPolynomialExpansionConsts(n, g, xg, xxg, static_cast<float>(ig11), static_cast<float>(ig03), static_cast<float>(ig33), static_cast<float>(ig55));
 }
 
 
@@ -172,17 +172,17 @@ void cv::gpu::FarnebackOpticalFlow::updateFlow_boxFilter(
         GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[])
 {
     if (deviceSupports(FEATURE_SET_COMPUTE_12))
-        device::optflow_farneback::boxFilter5Gpu(M, blockSize/2, bufM, S(streams[0]));
+        cuda::optflow_farneback::boxFilter5Gpu(M, blockSize/2, bufM, S(streams[0]));
     else
-        device::optflow_farneback::boxFilter5Gpu_CC11(M, blockSize/2, bufM, S(streams[0]));
+        cuda::optflow_farneback::boxFilter5Gpu_CC11(M, blockSize/2, bufM, S(streams[0]));
     swap(M, bufM);
 
     for (int i = 1; i < 5; ++i)
         streams[i].waitForCompletion();
-    device::optflow_farneback::updateFlowGpu(M, flowx, flowy, S(streams[0]));
+    cuda::optflow_farneback::updateFlowGpu(M, flowx, flowy, S(streams[0]));
 
     if (updateMatrices)
-        device::optflow_farneback::updateMatricesGpu(flowx, flowy, R0, R1, M, S(streams[0]));
+        cuda::optflow_farneback::updateMatricesGpu(flowx, flowy, R0, R1, M, S(streams[0]));
 }
 
 
@@ -191,17 +191,17 @@ void cv::gpu::FarnebackOpticalFlow::updateFlow_gaussianBlur(
         GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[])
 {
     if (deviceSupports(FEATURE_SET_COMPUTE_12))
-        device::optflow_farneback::gaussianBlur5Gpu(
+        cuda::optflow_farneback::gaussianBlur5Gpu(
                     M, blockSize/2, bufM, BORDER_REPLICATE_GPU, S(streams[0]));
     else
-        device::optflow_farneback::gaussianBlur5Gpu_CC11(
+        cuda::optflow_farneback::gaussianBlur5Gpu_CC11(
                     M, blockSize/2, bufM, BORDER_REPLICATE_GPU, S(streams[0]));
     swap(M, bufM);
 
-    device::optflow_farneback::updateFlowGpu(M, flowx, flowy, S(streams[0]));
+    cuda::optflow_farneback::updateFlowGpu(M, flowx, flowy, S(streams[0]));
 
     if (updateMatrices)
-        device::optflow_farneback::updateMatricesGpu(flowx, flowy, R0, R1, M, S(streams[0]));
+        cuda::optflow_farneback::updateMatricesGpu(flowx, flowy, R0, R1, M, S(streams[0]));
 }
 
 
@@ -253,7 +253,7 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
     }
 
     setPolynomialExpansionConsts(polyN, polySigma);
-    device::optflow_farneback::setUpdateMatricesConsts();
+    cuda::optflow_farneback::setUpdateMatricesConsts();
 
     for (int k = numLevelsCropped; k >= 0; k--)
     {
@@ -344,8 +344,8 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
 
         if (fastPyramids)
         {
-            device::optflow_farneback::polynomialExpansionGpu(pyramid0_[k], polyN, R[0], S(streams[0]));
-            device::optflow_farneback::polynomialExpansionGpu(pyramid1_[k], polyN, R[1], S(streams[1]));
+            cuda::optflow_farneback::polynomialExpansionGpu(pyramid0_[k], polyN, R[0], S(streams[0]));
+            cuda::optflow_farneback::polynomialExpansionGpu(pyramid1_[k], polyN, R[1], S(streams[1]));
         }
         else
         {
@@ -361,11 +361,11 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
             };
 
             Mat g = getGaussianKernel(smoothSize, sigma, CV_32F);
-            device::optflow_farneback::setGaussianBlurKernel(g.ptr<float>(smoothSize/2), smoothSize/2);
+            cuda::optflow_farneback::setGaussianBlurKernel(g.ptr<float>(smoothSize/2), smoothSize/2);
 
             for (int i = 0; i < 2; i++)
             {
-                device::optflow_farneback::gaussianBlurGpu(
+                cuda::optflow_farneback::gaussianBlurGpu(
                         frames_[i], smoothSize/2, blurredFrame[i], BORDER_REFLECT101_GPU, S(streams[i]));
 #if ENABLE_GPU_RESIZE
                 resize(blurredFrame[i], pyrLevel[i], Size(width, height), INTER_LINEAR, streams[i]);
@@ -375,17 +375,17 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
                 resize(tmp1, tmp2, Size(width, height), INTER_LINEAR);
                 I[i].upload(tmp2);
 #endif
-                device::optflow_farneback::polynomialExpansionGpu(pyrLevel[i], polyN, R[i], S(streams[i]));
+                cuda::optflow_farneback::polynomialExpansionGpu(pyrLevel[i], polyN, R[i], S(streams[i]));
             }
         }
 
         streams[1].waitForCompletion();
-        device::optflow_farneback::updateMatricesGpu(curFlowX, curFlowY, R[0], R[1], M, S(streams[0]));
+        cuda::optflow_farneback::updateMatricesGpu(curFlowX, curFlowY, R[0], R[1], M, S(streams[0]));
 
         if (flags & OPTFLOW_FARNEBACK_GAUSSIAN)
         {
             Mat g = getGaussianKernel(winSize, winSize/2*0.3f, CV_32F);
-            device::optflow_farneback::setGaussianBlurKernel(g.ptr<float>(winSize/2), winSize/2);
+            cuda::optflow_farneback::setGaussianBlurKernel(g.ptr<float>(winSize/2), winSize/2);
         }
         for (int i = 0; i < numIters; i++)
         {

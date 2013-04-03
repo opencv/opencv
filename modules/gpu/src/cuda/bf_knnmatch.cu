@@ -42,15 +42,15 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/core/device/common.hpp"
-#include "opencv2/core/device/utility.hpp"
-#include "opencv2/core/device/reduce.hpp"
-#include "opencv2/core/device/limits.hpp"
-#include "opencv2/core/device/vec_distance.hpp"
-#include "opencv2/core/device/datamov_utils.hpp"
-#include "opencv2/core/device/warp_shuffle.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/utility.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
+#include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda/vec_distance.hpp"
+#include "opencv2/core/cuda/datamov_utils.hpp"
+#include "opencv2/core/cuda/warp_shuffle.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cuda
 {
     namespace bf_knnmatch
     {
@@ -1249,7 +1249,7 @@ namespace cv { namespace gpu { namespace device
         //template void match2Hamming_gpu<short >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzb& trainIdx, const PtrStepSzb& imgIdx, const PtrStepSzb& distance, cudaStream_t stream);
         template void match2Hamming_gpu<int   >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzb& trainIdx, const PtrStepSzb& imgIdx, const PtrStepSzb& distance, cudaStream_t stream);
     } // namespace bf_knnmatch
-}}} // namespace cv { namespace gpu { namespace device {
+}}} // namespace cv { namespace gpu { namespace cuda {
 
 
 #endif /* CUDA_DISABLER */
