@@ -83,11 +83,15 @@ def get_cv2_object(name):
     elif name == "DescriptorExtractor":
         return cv2.DescriptorExtractor_create("ORB"), name
     elif name == "BackgroundSubtractor":
-        return cv2.BackgroundSubtractorMOG(), name
+        return cv2.createBackgroundSubtractorMOG(), name
     elif name == "StatModel":
         return cv2.KNearest(), name
     else:
-        return getattr(cv2, name)(), name
+        try:
+            obj = getattr(cv2, name)()
+        except AttributeError:
+            obj = getattr(cv2, "create" + name)()
+        return obj, name
 
 def compareSignatures(f, s):
     # function names

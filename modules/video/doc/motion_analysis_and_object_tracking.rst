@@ -530,7 +530,7 @@ Creates mixture-of-gaussian background subtractor
 
 .. ocv:function:: Ptr<BackgroundSubtractorMOG> createBackgroundSubtractorMOG(int history=200, int nmixtures=5, double backgroundRatio=0.7, double noiseSigma=0)
 
-.. ocv:pyfunction:: cv2.createBackgroundSubtractorMOG([history, nmixtures, backgroundRatio, noiseSigma]) -> <BackgroundSubtractorMOG object>
+.. ocv:pyfunction:: cv2.createBackgroundSubtractorMOG([history[, nmixtures[, backgroundRatio[, noiseSigma]]]]) -> retval
 
     :param history: Length of the history.
 

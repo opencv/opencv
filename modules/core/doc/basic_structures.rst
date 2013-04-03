@@ -175,7 +175,6 @@ The class represents rotated (i.e. not up-right) rectangles on a plane. Each rec
 
     .. ocv:function:: RotatedRect::RotatedRect()
     .. ocv:function:: RotatedRect::RotatedRect(const Point2f& center, const Size2f& size, float angle)
-    .. ocv:function:: RotatedRect::RotatedRect(const CvBox2D& box)
 
         :param center: The rectangle mass center.
         :param size: Width and height of the rectangle.
@@ -184,7 +183,6 @@ The class represents rotated (i.e. not up-right) rectangles on a plane. Each rec
 
     .. ocv:function:: void RotatedRect::points( Point2f pts[] ) const
     .. ocv:function:: Rect RotatedRect::boundingRect() const
-    .. ocv:function:: RotatedRect::operator CvBox2D() const
 
         :param pts: The points array for storing rectangle vertices.
 
@@ -229,8 +227,6 @@ The constructors.
 
 .. ocv:function:: TermCriteria::TermCriteria(int type, int maxCount, double epsilon)
 
-.. ocv:function:: TermCriteria::TermCriteria(const CvTermCriteria& criteria)
-
     :param type: The type of termination criteria: ``TermCriteria::COUNT``, ``TermCriteria::EPS`` or ``TermCriteria::COUNT`` + ``TermCriteria::EPS``.
 
     :param maxCount: The maximum number of iterations or elements to compute.
@@ -239,11 +235,6 @@ The constructors.
 
     :param criteria: Termination criteria in the deprecated ``CvTermCriteria`` format.
 
-TermCriteria::operator CvTermCriteria
--------------------------------------
-Converts to the deprecated ``CvTermCriteria`` format.
-
-.. ocv:function:: TermCriteria::operator CvTermCriteria() const
 
 Matx
 ----
@@ -429,13 +420,14 @@ The keypoint constructors
 
 DMatch
 ------
-.. ocv:struct:: DMatch
+.. ocv:class:: DMatch
 
 Class for matching keypoint descriptors: query descriptor index,
 train descriptor index, train image index, and distance between descriptors. ::
 
-    struct DMatch
+    class DMatch
     {
+    public:
         DMatch() : queryIdx(-1), trainIdx(-1), imgIdx(-1),
                    distance(std::numeric_limits<float>::max()) {}
         DMatch( int _queryIdx, int _trainIdx, float _distance ) :
@@ -999,10 +991,6 @@ Various Mat constructors
 .. ocv:function:: Mat::Mat( const Mat& m, const Range& rowRange, const Range& colRange=Range::all() )
 
 .. ocv:function:: Mat::Mat(const Mat& m, const Rect& roi)
-
-.. ocv:function:: Mat::Mat(const CvMat* m, bool copyData=false)
-
-.. ocv:function:: Mat::Mat(const IplImage* img, bool copyData=false)
 
 .. ocv:function:: template<typename T, int n> explicit Mat::Mat(const Vec<T, n>& vec, bool copyData=true)
 
@@ -1641,33 +1629,6 @@ The operators make a new header for the specified sub-array of ``*this`` . They 
 :ocv:func:`Mat::colRange` . For example, ``A(Range(0, 10), Range::all())`` is equivalent to ``A.rowRange(0, 10)`` . Similarly to all of the above, the operators are O(1) operations, that is, no matrix data is copied.
 
 
-Mat::operator CvMat
--------------------
-Creates the ``CvMat`` header for the matrix.
-
-.. ocv:function:: Mat::operator CvMat() const
-
-
-The operator creates the ``CvMat`` header for the matrix without copying the underlying data. The reference counter is not taken into account by this operation. Thus, you should make sure than the original matrix is not deallocated while the ``CvMat`` header is used. The operator is useful for intermixing the new and the old OpenCV API's, for example: ::
-
-    Mat img(Size(320, 240), CV_8UC3);
-    ...
-
-    CvMat cvimg = img;
-    mycvOldFunc( &cvimg, ...);
-
-
-where ``mycvOldFunc`` is a function written to work with OpenCV 1.x data structures.
-
-
-Mat::operator IplImage
-----------------------
-Creates the ``IplImage`` header for the matrix.
-
-.. ocv:function:: Mat::operator IplImage() const
-
-The operator creates the ``IplImage`` header for the matrix without copying the underlying data. You should make sure than the original matrix is not deallocated while the ``IplImage`` header is used. Similarly to ``Mat::operator CvMat`` , the operator is useful for intermixing the new and the old OpenCV API's.
-
 Mat::total
 ----------
 Returns the total number of array elements.
@@ -2242,7 +2203,6 @@ Various SparseMat constructors.
 .. ocv:function:: SparseMat::SparseMat( int dims, const int* _sizes, int _type )
 .. ocv:function:: SparseMat::SparseMat( const SparseMat& m )
 .. ocv:function:: SparseMat::SparseMat( const Mat& m )
-.. ocv:function:: SparseMat::SparseMat( const CvSparseMat* m )
 
 
     :param m: Source matrix for copy constructor. If m is dense matrix (ocv:class:`Mat`) then it will be converted to sparse representation.
