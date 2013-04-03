@@ -1701,6 +1701,36 @@ namespace cv
         private:
             oclMat minSSD, leBuf, riBuf;
         };
+        class CV_EXPORTS StereoBeliefPropagation
+        {
+        public:
+            enum { DEFAULT_NDISP  = 64 };
+            enum { DEFAULT_ITERS  = 5  };
+            enum { DEFAULT_LEVELS = 5  };
+            static void estimateRecommendedParams(int width, int height, int &ndisp, int &iters, int &levels);
+            explicit StereoBeliefPropagation(int ndisp  = DEFAULT_NDISP,
+                                             int iters  = DEFAULT_ITERS,
+                                             int levels = DEFAULT_LEVELS,
+                                             int msg_type = CV_16S);
+            StereoBeliefPropagation(int ndisp, int iters, int levels,
+                                    float max_data_term, float data_weight,
+                                    float max_disc_term, float disc_single_jump,
+                                    int msg_type = CV_32F);
+            void operator()(const oclMat &left, const oclMat &right, oclMat &disparity);
+            void operator()(const oclMat &data, oclMat &disparity);
+            int ndisp;
+            int iters;
+            int levels;
+            float max_data_term;
+            float data_weight;
+            float max_disc_term;
+            float disc_single_jump;
+            int msg_type;
+        private:
+            oclMat u, d, l, r, u2, d2, l2, r2;
+            std::vector<oclMat> datas;
+            oclMat out;
+        };
     }
 }
 #if defined _MSC_VER && _MSC_VER >= 1200
