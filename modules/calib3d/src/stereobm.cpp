@@ -183,7 +183,7 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         if( useSIMD )
         {
             __m128i z = _mm_setzero_si128(), ftz = _mm_set1_epi16((short)ftzero),
-            ftz2 = _mm_set1_epi8(CV_CAST_8U(ftzero*2));
+            ftz2 = _mm_set1_epi8(cv::saturate_cast<uchar>(ftzero*2));
             for( ; x <= size.width-9; x += 8 )
             {
                 __m128i c0 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow0 + x - 1)), z);

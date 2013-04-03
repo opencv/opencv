@@ -2343,7 +2343,7 @@ cvColorToScalar( double packed_color, int type )
         }
         else
         {
-            scalar.val[0] = CV_CAST_8U( icolor );
+            scalar.val[0] = cv::saturate_cast<uchar>( icolor );
             scalar.val[1] = scalar.val[2] = scalar.val[3] = 0;
         }
     }
@@ -2359,7 +2359,7 @@ cvColorToScalar( double packed_color, int type )
         }
         else
         {
-            scalar.val[0] = CV_CAST_8S( icolor );
+            scalar.val[0] = cv::saturate_cast<schar>( icolor );
             scalar.val[1] = scalar.val[2] = scalar.val[3] = 0;
         }
     }

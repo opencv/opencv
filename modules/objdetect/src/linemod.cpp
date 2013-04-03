@@ -175,7 +175,7 @@ void QuantizedPyramid::selectScatteredFeatures(const std::vector<Candidate>& can
                                                size_t num_features, float distance)
 {
   features.clear();
-  float distance_sq = CV_SQR(distance);
+  float distance_sq = distance * distance;
   int i = 0;
   while (features.size() < num_features)
   {
@@ -186,7 +186,7 @@ void QuantizedPyramid::selectScatteredFeatures(const std::vector<Candidate>& can
     for (int j = 0; (j < (int)features.size()) && keep; ++j)
     {
       Feature f = features[j];
-      keep = CV_SQR(c.f.x - f.x) + CV_SQR(c.f.y - f.y) >= distance_sq;
+      keep = (c.f.x - f.x)*(c.f.x - f.x) + (c.f.y - f.y)*(c.f.y - f.y) >= distance_sq;
     }
     if (keep)
       features.push_back(c.f);
@@ -196,7 +196,7 @@ void QuantizedPyramid::selectScatteredFeatures(const std::vector<Candidate>& can
       // Start back at beginning, and relax required distance
       i = 0;
       distance -= 1.0f;
-      distance_sq = CV_SQR(distance);
+      distance_sq = distance * distance;
     }
   }
 }
@@ -306,9 +306,9 @@ static void quantizedOrientations(const Mat& src, Mat& magnitude,
     for (int i = 0; i < length0; i += 3)
     {
       // Use the gradient orientation of the channel whose magnitude is largest
-      int mag1 = CV_SQR(ptrx[i]) + CV_SQR(ptry[i]);
-      int mag2 = CV_SQR(ptrx[i + 1]) + CV_SQR(ptry[i + 1]);
-      int mag3 = CV_SQR(ptrx[i + 2]) + CV_SQR(ptry[i + 2]);
+      int mag1 = ptrx[i+0] * ptrx[i + 0] + ptry[i + 0] * ptry[i + 0];
+      int mag2 = ptrx[i+1] * ptrx[i + 1] + ptry[i + 1] * ptry[i + 1];
+      int mag3 = ptrx[i+2] * ptrx[i + 2] + ptry[i + 2] * ptry[i + 2];
 
       if (mag1 >= mag2 && mag1 >= mag3)
       {
@@ -339,7 +339,7 @@ static void quantizedOrientations(const Mat& src, Mat& magnitude,
 
   // Calculate the final gradient orientations
   phase(sobel_dx, sobel_dy, sobel_ag, true);
-  hysteresisGradient(magnitude, angle, sobel_ag, CV_SQR(threshold));
+  hysteresisGradient(magnitude, angle, sobel_ag, threshold * threshold);
 }
 
 void hysteresisGradient(Mat& magnitude, Mat& quantized_angle,
@@ -509,7 +509,7 @@ bool ColorGradientPyramid::extractTemplate(Template& templ) const
   // Create sorted list of all pixels with magnitude greater than a threshold
   std::vector<Candidate> candidates;
   bool no_mask = local_mask.empty();
-  float threshold_sq = CV_SQR(strong_threshold);
+  float threshold_sq = strong_threshold*strong_threshold;
   for (int r = 0; r < magnitude.rows; ++r)
   {
     const uchar* angle_r = angle.ptr<uchar>(r);

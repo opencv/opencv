@@ -24,6 +24,9 @@ ocv_module_include_directories(
 
 set(opencv_hdrs
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core.hpp"
+    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp"
+    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/types.hpp"
+    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/persistence.hpp"
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/utility.hpp"
     "${OPENCV_MODULE_opencv_flann_LOCATION}/include/opencv2/flann/miniflann.hpp"
     "${OPENCV_MODULE_opencv_imgproc_LOCATION}/include/opencv2/imgproc.hpp"

@@ -41,12 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-
 #include <string>
-
-#ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
-#endif
 
 #ifdef HAVE_TBB
 #include "tbb/task_scheduler_init.h"

@@ -193,7 +193,7 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     wholeSize = Size(-1,-1);
 }
 
-static const int VEC_ALIGN = CV_MALLOC_ALIGN;
+#define VEC_ALIGN CV_MALLOC_ALIGN
 
 int FilterEngine::start(Size _wholeSize, Rect _roi, int _maxBufRows)
 {

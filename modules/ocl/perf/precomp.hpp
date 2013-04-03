@@ -61,19 +61,16 @@
 #include <iterator>
 #include <string>
 #include <cstdarg>
-#include "cvconfig.h"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/video.hpp"
 #include "opencv2/ts.hpp"
 #include "opencv2/ocl.hpp"
-//#include "opencv2/calib3d.hpp"
-//#include "opencv2/nonfree.hpp"
 
 #include "utility.hpp"
 #include "interpolation.hpp"
-//#include "add_test_info.h"
-//#define  PERF_TEST_OCL 1
+
+#include "opencv2/core/private.hpp"
 
 #endif
 

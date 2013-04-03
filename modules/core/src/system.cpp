@@ -465,6 +465,11 @@ void error( const Exception& exc )
     throw exc;
 }
 
+void error(int _code, const String& _err, const char* _func, const char* _file, int _line)
+{
+    error(cv::Exception(_code, _err, _func, _file, _line));
+}
+
 CvErrorCallback
 redirectError( CvErrorCallback errCallback, void* userdata, void** prevUserdata)
 {
@@ -671,125 +676,6 @@ cvErrorFromIppStatus( int status )
     }
 }
 
-static CvModuleInfo cxcore_info = { 0, "cxcore", CV_VERSION, 0 };
-
-CvModuleInfo* CvModule::first = 0, *CvModule::last = 0;
-
-CvModule::CvModule( CvModuleInfo* _info )
-{
-    cvRegisterModule( _info );
-    info = last;
-}
-
-CvModule::~CvModule(void)
-{
-    if( info )
-    {
-        CvModuleInfo* p = first;
-        for( ; p != 0 && p->next != info; p = p->next )
-            ;
-
-        if( p )
-            p->next = info->next;
-
-        if( first == info )
-            first = info->next;
-
-        if( last == info )
-            last = p;
-
-        free( info );
-        info = 0;
-    }
-}
-
-CV_IMPL int
-cvRegisterModule( const CvModuleInfo* module )
-{
-    CV_Assert( module != 0 && module->name != 0 && module->version != 0 );
-
-    size_t name_len = strlen(module->name);
-    size_t version_len = strlen(module->version);
-
-    CvModuleInfo* module_copy = (CvModuleInfo*)malloc( sizeof(*module_copy) +
-                                name_len + 1 + version_len + 1 );
-
-    *module_copy = *module;
-    module_copy->name = (char*)(module_copy + 1);
-    module_copy->version = (char*)(module_copy + 1) + name_len + 1;
-
-    memcpy( (void*)module_copy->name, module->name, name_len + 1 );
-    memcpy( (void*)module_copy->version, module->version, version_len + 1 );
-    module_copy->next = 0;
-
-    if( CvModule::first == 0 )
-        CvModule::first = module_copy;
-    else
-        CvModule::last->next = module_copy;
-
-    CvModule::last = module_copy;
-
-    return 0;
-}
-
-CvModule cxcore_module( &cxcore_info );
-
-CV_IMPL void
-cvGetModuleInfo( const char* name, const char **version, const char **plugin_list )
-{
-    static char joint_verinfo[1024]   = "";
-    static char plugin_list_buf[1024] = "";
-
-    if( version )
-        *version = 0;
-
-    if( plugin_list )
-        *plugin_list = 0;
-
-    CvModuleInfo* module;
-
-    if( version )
-    {
-        if( name )
-        {
-            size_t i, name_len = strlen(name);
-
-            for( module = CvModule::first; module != 0; module = module->next )
-            {
-                if( strlen(module->name) == name_len )
-                {
-                    for( i = 0; i < name_len; i++ )
-                    {
-                        int c0 = toupper(module->name[i]), c1 = toupper(name[i]);
-                        if( c0 != c1 )
-                            break;
-                    }
-                    if( i == name_len )
-                        break;
-                }
-            }
-            if( !module )
-                CV_Error( CV_StsObjectNotFound, "The module is not found" );
-
-            *version = module->version;
-        }
-        else
-        {
-            char* ptr = joint_verinfo;
-
-            for( module = CvModule::first; module != 0; module = module->next )
-            {
-                sprintf( ptr, "%s: %s%s", module->name, module->version, module->next ? ", " : "" );
-                ptr += strlen(ptr);
-            }
-
-            *version = joint_verinfo;
-        }
-    }
-
-    if( plugin_list )
-        *plugin_list = plugin_list_buf;
-}
 
 #if defined BUILD_SHARED_LIBS && defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
 BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID );

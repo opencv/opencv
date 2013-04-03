@@ -47,7 +47,6 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name, bool useGpu)
     else
     {
         cerr << "Incorrect Optical Flow algorithm - " << name << endl;
-        exit(-1);
     }
 
     return Ptr<DenseOpticalFlowExt>();
@@ -90,7 +89,11 @@ int main(int argc, const char* argv[])
     superRes->set("scale", scale);
     superRes->set("iterations", iterations);
     superRes->set("temporalAreaRadius", temporalAreaRadius);
-    superRes->set("opticalFlow", createOptFlow(optFlow, useGpu));
+
+    Ptr<DenseOpticalFlowExt> of = createOptFlow(optFlow, useGpu);
+    if (of.empty())
+        exit(-1);
+    superRes->set("opticalFlow", of);
 
     Ptr<FrameSource> frameSource;
     if (useGpu)

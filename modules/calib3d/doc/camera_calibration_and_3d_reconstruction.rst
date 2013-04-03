@@ -1178,7 +1178,7 @@ Computes disparity map for the specified stereo pair
 
 .. ocv:function:: void StereoMatcher::compute( InputArray left, InputArray right, OutputArray disparity )
 
-.. ocv:pyfunction:: cv2.StereoBM.compute(left, right[, disparity[, disptype]]) -> disparity
+.. ocv:pyfunction:: cv2.StereoBM.compute(left, right[, disparity]) -> disparity
 
     :param left: Left 8-bit single-channel image.
 
@@ -1200,7 +1200,7 @@ Creates StereoBM object
 
 .. ocv:function:: Ptr<StereoBM> createStereoBM(int numDisparities=0, int blockSize=21)
 
-.. ocv:pyfunction:: cv2.createStereoBM([numDisparities[, blockSize]]) -> <StereoBM object>
+.. ocv:pyfunction:: cv2.createStereoBM([numDisparities[, blockSize]]) -> retval
 
     :param numDisparities: the disparity search range. For each pixel algorithm will find the best disparity from 0 (default minimum disparity) to ``numDisparities``. The search range can then be shifted by changing the minimum disparity.
 
@@ -1231,7 +1231,7 @@ Creates StereoSGBM object
 
 .. ocv:function:: Ptr<StereoSGBM> createStereoSGBM( int minDisparity, int numDisparities, int blockSize, int P1=0, int P2=0, int disp12MaxDiff=0, int preFilterCap=0, int uniquenessRatio=0, int speckleWindowSize=0, int speckleRange=0, int mode=StereoSGBM::MODE_SGBM)
 
-.. ocv:pyfunction:: cv2.StereoSGBM([minDisparity, numDisparities, blockSize[, P1[, P2[, disp12MaxDiff[, preFilterCap[, uniquenessRatio[, speckleWindowSize[, speckleRange[, mode]]]]]]]]]) -> <StereoSGBM object>
+.. ocv:pyfunction:: cv2.createStereoSGBM(minDisparity, numDisparities, blockSize[, P1[, P2[, disp12MaxDiff[, preFilterCap[, uniquenessRatio[, speckleWindowSize[, speckleRange[, mode]]]]]]]]) -> retval
 
     :param minDisparity: Minimum possible disparity value. Normally, it is zero but sometimes rectification algorithms can shift images, so this parameter needs to be adjusted accordingly.
 

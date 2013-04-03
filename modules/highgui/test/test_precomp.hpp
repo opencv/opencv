@@ -9,14 +9,12 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-#ifdef HAVE_CVCONFIG_H
-# include "cvconfig.h"
-#endif
-
 #include <iostream>
 #include "opencv2/ts.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
+
+#include "opencv2/core/private.hpp"
 
 #if defined(HAVE_VIDEOINPUT)   || \
     defined(HAVE_TYZX)         || \

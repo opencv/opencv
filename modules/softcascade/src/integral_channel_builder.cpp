@@ -165,8 +165,7 @@ void cv::softcascade::write(cv::FileStorage& fs, const cv::String&, const Channe
 
 std::ostream& cv::softcascade::operator<<(std::ostream& out, const ChannelFeature& m)
 {
-    out << m.channel << " " << m.bb;
-    return out;
+    return out << m.channel << " " << "[" << m.bb.width << " x " << m.bb.height << " from (" << m.bb.x << ", " << m.bb.y << ")]";
 }
 
 ChannelFeature::~ChannelFeature(){}

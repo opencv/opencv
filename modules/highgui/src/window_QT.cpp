@@ -948,7 +948,7 @@ void GuiReceiver::showImage(QString name, void* arr)
 
         mat = cvGetMat(arr, &stub);
 
-        cv::Mat im(mat);
+        cv::Mat im = cv::cvarrToMat(mat);
         cv::imshow(name.toUtf8().data(), im);
     }
     else

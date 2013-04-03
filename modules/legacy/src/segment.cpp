@@ -328,8 +328,8 @@ static void color_derv( const CvArr* srcArr, CvArr* dstArr, int thresh )
 }
 #endif
 
-const CvPoint icvCodeDeltas[8] =
-    { {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1} };
+static const CvPoint icvCodeDeltas[8] =
+    { CvPoint(1, 0), CvPoint(1, -1), CvPoint(0, -1), CvPoint(-1, -1), CvPoint(-1, 0), CvPoint(-1, 1), CvPoint(0, 1), CvPoint(1, 1) };
 
 static CvSeq*
 icvGetComponent( uchar* img, int step, CvRect rect,
@@ -366,7 +366,7 @@ icvGetComponent( uchar* img, int step, CvRect rect,
                 CvSeqWriter  writer;
                 char  *i0, *i1, *i3, *i4 = 0;
                 int  prev_s = -1, s, s_end;
-                CvPoint pt = { x, y };
+                CvPoint pt(x, y);
 
                 if( !(prev == 0 && p == 2) )    /* if not external contour */
                 {

@@ -265,7 +265,7 @@ static void ocl_cvMoments( const void* array, CvMoments* mom, int binary )
     if( size.width <= 0 || size.height <= 0 )
         return;
 
-    cv::Mat src0(mat);
+    cv::Mat src0 = cv::cvarrToMat(mat);
     cv::ocl::oclMat src(src0);
     cv::Size tileSize;
     int blockx,blocky;

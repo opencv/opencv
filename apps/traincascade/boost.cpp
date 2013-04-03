@@ -1,10 +1,51 @@
 #include "opencv2/core.hpp"
-#include "opencv2/core/internal.hpp"
 
 #include "boost.h"
 #include "cascadeclassifier.h"
 #include <queue>
 #include "cxmisc.h"
+
+#include "cvconfig.h"
+#ifdef HAVE_TBB
+#  include "tbb/tbb_stddef.h"
+#  if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
+#    include "tbb/tbb.h"
+#    include "tbb/task.h"
+#    undef min
+#    undef max
+#  else
+#    undef HAVE_TBB
+#  endif
+#endif
+
+#ifdef HAVE_TBB
+    typedef tbb::blocked_range<int> BlockedRange;
+
+    template<typename Body> static inline
+    void parallel_for( const BlockedRange& range, const Body& body )
+    {
+        tbb::parallel_for(range, body);
+    }
+#else
+    class BlockedRange
+    {
+    public:
+        BlockedRange() : _begin(0), _end(0), _grainsize(0) {}
+        BlockedRange(int b, int e, int g=1) : _begin(b), _end(e), _grainsize(g) {}
+        int begin() const { return _begin; }
+        int end() const { return _end; }
+        int grainsize() const { return _grainsize; }
+
+    protected:
+        int _begin, _end, _grainsize;
+    };
+
+    template<typename Body> static inline
+    void parallel_for( const BlockedRange& range, const Body& body )
+    {
+        body(range);
+    }
+#endif
 
 using namespace std;
 
@@ -27,6 +68,12 @@ public:
     const T* arr;
 };
 
+static inline int cvAlign( int size, int align )
+{
+    CV_DbgAssert( (align & (align-1)) == 0 && size < INT_MAX );
+    return (size + align - 1) & -align;
+}
+
 #define CV_THRESHOLD_EPS (0.00001F)
 
 static const int MinBlockSize = 1 << 16;
@@ -45,7 +92,7 @@ static CvMat* cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, b
 
     CV_FUNCNAME( "cvPreprocessIndexArray" );
 
-    __BEGIN__;
+    __CV_BEGIN__;
 
     int i, idx_total, idx_selected = 0, step, type, prev = INT_MIN, is_sorted = 1;
     uchar* srcb = 0;
@@ -133,7 +180,7 @@ static CvMat* cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, b
         }
     }
 
-    __END__;
+    __CV_END__;
 
     if( cvGetErrStatus() < 0 )
         cvReleaseMat( &idx );

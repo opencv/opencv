@@ -41,18 +41,18 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
-#endif
-
 #include "opencv2/legacy.hpp"
 
 #include "opencv2/video.hpp"
 #include "opencv2/legacy/blobtrack.hpp"
 #include "opencv2/legacy/compat.hpp"
-
 #include "opencv2/core/utility.hpp"
-#include "opencv2/core/internal.hpp"
+
+#include "opencv2/core/private.hpp"
+
+#define __BEGIN__ __CV_BEGIN__
+#define __END__ __CV_END__
+#define EXIT __CV_EXIT__
 
 #include "_matrix.h"
 

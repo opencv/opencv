@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,652 +41,687 @@
 //
 //M*/
 
+
 #ifndef __OPENCV_GPUMAT_HPP__
 #define __OPENCV_GPUMAT_HPP__
-
-#ifdef __cplusplus
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/cuda_devptrs.hpp"
 
 namespace cv { namespace gpu
 {
-    //////////////////////////////// CudaMem ////////////////////////////////
-    // CudaMem is limited cv::Mat with page locked memory allocation.
-    // Page locked memory is only needed for async and faster coping to GPU.
-    // It is convertable to cv::Mat header without reference counting
-    // so you can use it with other opencv functions.
+//////////////////////////////// CudaMem ////////////////////////////////
+// CudaMem is limited cv::Mat with page locked memory allocation.
+// Page locked memory is only needed for async and faster coping to GPU.
+// It is convertable to cv::Mat header without reference counting
+// so you can use it with other opencv functions.
 
-    // Page-locks the matrix m memory and maps it for the device(s)
-    CV_EXPORTS void registerPageLocked(Mat& m);
-    // Unmaps the memory of matrix m, and makes it pageable again.
-    CV_EXPORTS void unregisterPageLocked(Mat& m);
+// Page-locks the matrix m memory and maps it for the device(s)
+CV_EXPORTS void registerPageLocked(Mat& m);
 
-    class CV_EXPORTS CudaMem
+// Unmaps the memory of matrix m, and makes it pageable again.
+CV_EXPORTS void unregisterPageLocked(Mat& m);
+
+class CV_EXPORTS CudaMem
+{
+public:
+    enum  { ALLOC_PAGE_LOCKED = 1, ALLOC_ZEROCOPY = 2, ALLOC_WRITE_COMBINED = 4 };
+
+    CudaMem();
+    CudaMem(const CudaMem& m);
+
+    CudaMem(int rows, int cols, int type, int _alloc_type = ALLOC_PAGE_LOCKED);
+    CudaMem(Size size, int type, int alloc_type = ALLOC_PAGE_LOCKED);
+
+
+    //! creates from cv::Mat with coping data
+    explicit CudaMem(const Mat& m, int alloc_type = ALLOC_PAGE_LOCKED);
+
+    ~CudaMem();
+
+    CudaMem& operator = (const CudaMem& m);
+
+    //! returns deep copy of the matrix, i.e. the data is copied
+    CudaMem clone() const;
+
+    //! allocates new matrix data unless the matrix already has specified size and type.
+    void create(int rows, int cols, int type, int alloc_type = ALLOC_PAGE_LOCKED);
+    void create(Size size, int type, int alloc_type = ALLOC_PAGE_LOCKED);
+
+    //! decrements reference counter and released memory if needed.
+    void release();
+
+    //! returns matrix header with disabled reference counting for CudaMem data.
+    Mat createMatHeader() const;
+    operator Mat() const;
+
+    //! maps host memory into device address space and returns GpuMat header for it. Throws exception if not supported by hardware.
+    GpuMat createGpuMatHeader() const;
+    operator GpuMat() const;
+
+    //returns if host memory can be mapperd to gpu address space;
+    static bool canMapHostMemory();
+
+    // Please see cv::Mat for descriptions
+    bool isContinuous() const;
+    size_t elemSize() const;
+    size_t elemSize1() const;
+    int type() const;
+    int depth() const;
+    int channels() const;
+    size_t step1() const;
+    Size size() const;
+    bool empty() const;
+
+
+    // Please see cv::Mat for descriptions
+    int flags;
+    int rows, cols;
+    size_t step;
+
+    uchar* data;
+    int* refcount;
+
+    uchar* datastart;
+    uchar* dataend;
+
+    int alloc_type;
+};
+
+
+//////////////////////////////// CudaStream ////////////////////////////////
+// Encapculates Cuda Stream. Provides interface for async coping.
+// Passed to each function that supports async kernel execution.
+// Reference counting is enabled
+
+class CV_EXPORTS Stream
+{
+public:
+    Stream();
+    ~Stream();
+
+    Stream(const Stream&);
+    Stream& operator =(const Stream&);
+
+    bool queryIfComplete();
+    void waitForCompletion();
+
+    //! downloads asynchronously
+    // Warning! cv::Mat must point to page locked memory (i.e. to CudaMem data or to its subMat)
+    void enqueueDownload(const GpuMat& src, CudaMem& dst);
+    void enqueueDownload(const GpuMat& src, Mat& dst);
+
+    //! uploads asynchronously
+    // Warning! cv::Mat must point to page locked memory (i.e. to CudaMem data or to its ROI)
+    void enqueueUpload(const CudaMem& src, GpuMat& dst);
+    void enqueueUpload(const Mat& src, GpuMat& dst);
+
+    //! copy asynchronously
+    void enqueueCopy(const GpuMat& src, GpuMat& dst);
+
+    //! memory set asynchronously
+    void enqueueMemSet(GpuMat& src, Scalar val);
+    void enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask);
+
+    //! converts matrix type, ex from float to uchar depending on type
+    void enqueueConvert(const GpuMat& src, GpuMat& dst, int dtype, double a = 1, double b = 0);
+
+    //! adds a callback to be called on the host after all currently enqueued items in the stream have completed
+    typedef void (*StreamCallback)(Stream& stream, int status, void* userData);
+    void enqueueHostCallback(StreamCallback callback, void* userData);
+
+    static Stream& Null();
+
+    operator bool() const;
+
+private:
+    struct Impl;
+
+    explicit Stream(Impl* impl);
+    void create();
+    void release();
+
+    Impl *impl;
+
+    friend struct StreamAccessor;
+};
+
+//////////////////////////////// Initialization & Info ////////////////////////
+
+//! This is the only function that do not throw exceptions if the library is compiled without Cuda.
+CV_EXPORTS int getCudaEnabledDeviceCount();
+
+//! Functions below throw cv::Expception if the library is compiled without Cuda.
+
+CV_EXPORTS void setDevice(int device);
+
+CV_EXPORTS int getDevice();
+
+//! Explicitly destroys and cleans up all resources associated with the current device in the current process.
+//! Any subsequent API call to this device will reinitialize the device.
+CV_EXPORTS void resetDevice();
+
+enum FeatureSet
+{
+    FEATURE_SET_COMPUTE_10 = 10,
+    FEATURE_SET_COMPUTE_11 = 11,
+    FEATURE_SET_COMPUTE_12 = 12,
+    FEATURE_SET_COMPUTE_13 = 13,
+    FEATURE_SET_COMPUTE_20 = 20,
+    FEATURE_SET_COMPUTE_21 = 21,
+    FEATURE_SET_COMPUTE_30 = 30,
+    FEATURE_SET_COMPUTE_35 = 35,
+
+    GLOBAL_ATOMICS = FEATURE_SET_COMPUTE_11,
+    SHARED_ATOMICS = FEATURE_SET_COMPUTE_12,
+    NATIVE_DOUBLE = FEATURE_SET_COMPUTE_13,
+    WARP_SHUFFLE_FUNCTIONS = FEATURE_SET_COMPUTE_30,
+    DYNAMIC_PARALLELISM = FEATURE_SET_COMPUTE_35
+};
+
+// Checks whether current device supports the given feature
+CV_EXPORTS bool deviceSupports(FeatureSet feature_set);
+
+// Gives information about what GPU archs this OpenCV GPU module was
+// compiled for
+class CV_EXPORTS TargetArchs
+{
+public:
+    static bool builtWith(FeatureSet feature_set);
+    static bool has(int major, int minor);
+    static bool hasPtx(int major, int minor);
+    static bool hasBin(int major, int minor);
+    static bool hasEqualOrLessPtx(int major, int minor);
+    static bool hasEqualOrGreater(int major, int minor);
+    static bool hasEqualOrGreaterPtx(int major, int minor);
+    static bool hasEqualOrGreaterBin(int major, int minor);
+private:
+    TargetArchs();
+};
+
+// Gives information about the given GPU
+class CV_EXPORTS DeviceInfo
+{
+public:
+    // Creates DeviceInfo object for the current GPU
+    DeviceInfo() : device_id_(getDevice()) { query(); }
+
+    // Creates DeviceInfo object for the given GPU
+    DeviceInfo(int device_id) : device_id_(device_id) { query(); }
+
+    String name() const { return name_; }
+
+    // Return compute capability versions
+    int majorVersion() const { return majorVersion_; }
+    int minorVersion() const { return minorVersion_; }
+
+    int multiProcessorCount() const { return multi_processor_count_; }
+
+    size_t sharedMemPerBlock() const;
+
+    void queryMemory(size_t& totalMemory, size_t& freeMemory) const;
+    size_t freeMemory() const;
+    size_t totalMemory() const;
+
+    // Checks whether device supports the given feature
+    bool supports(FeatureSet feature_set) const;
+
+    // Checks whether the GPU module can be run on the given device
+    bool isCompatible() const;
+
+    int deviceID() const { return device_id_; }
+
+private:
+    void query();
+
+    int device_id_;
+
+    String name_;
+    int multi_processor_count_;
+    int majorVersion_;
+    int minorVersion_;
+};
+
+CV_EXPORTS void printCudaDeviceInfo(int device);
+
+CV_EXPORTS void printShortCudaDeviceInfo(int device);
+
+//////////////////////////////// GpuMat ///////////////////////////////
+
+//! Smart pointer for GPU memory with reference counting. Its interface is mostly similar with cv::Mat.
+class CV_EXPORTS GpuMat
+{
+public:
+    //! default constructor
+    GpuMat();
+
+    //! constructs GpuMatrix of the specified size and type (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
+    GpuMat(int rows, int cols, int type);
+    GpuMat(Size size, int type);
+
+    //! constucts GpuMatrix and fills it with the specified value _s.
+    GpuMat(int rows, int cols, int type, Scalar s);
+    GpuMat(Size size, int type, Scalar s);
+
+    //! copy constructor
+    GpuMat(const GpuMat& m);
+
+    //! constructor for GpuMatrix headers pointing to user-allocated data
+    GpuMat(int rows, int cols, int type, void* data, size_t step = Mat::AUTO_STEP);
+    GpuMat(Size size, int type, void* data, size_t step = Mat::AUTO_STEP);
+
+    //! creates a matrix header for a part of the bigger matrix
+    GpuMat(const GpuMat& m, Range rowRange, Range colRange);
+    GpuMat(const GpuMat& m, Rect roi);
+
+    //! builds GpuMat from Mat. Perfom blocking upload to device.
+    explicit GpuMat(const Mat& m);
+
+    //! destructor - calls release()
+    ~GpuMat();
+
+    //! assignment operators
+    GpuMat& operator = (const GpuMat& m);
+
+    //! pefroms blocking upload data to GpuMat.
+    void upload(const Mat& m);
+
+    //! downloads data from device to host memory. Blocking calls.
+    void download(Mat& m) const;
+
+    //! returns a new GpuMatrix header for the specified row
+    GpuMat row(int y) const;
+    //! returns a new GpuMatrix header for the specified column
+    GpuMat col(int x) const;
+    //! ... for the specified row span
+    GpuMat rowRange(int startrow, int endrow) const;
+    GpuMat rowRange(Range r) const;
+    //! ... for the specified column span
+    GpuMat colRange(int startcol, int endcol) const;
+    GpuMat colRange(Range r) const;
+
+    //! returns deep copy of the GpuMatrix, i.e. the data is copied
+    GpuMat clone() const;
+    //! copies the GpuMatrix content to "m".
+    // It calls m.create(this->size(), this->type()).
+    void copyTo(GpuMat& m) const;
+    //! copies those GpuMatrix elements to "m" that are marked with non-zero mask elements.
+    void copyTo(GpuMat& m, const GpuMat& mask) const;
+    //! converts GpuMatrix to another datatype with optional scalng. See cvConvertScale.
+    void convertTo(GpuMat& m, int rtype, double alpha = 1, double beta = 0) const;
+
+    void assignTo(GpuMat& m, int type=-1) const;
+
+    //! sets every GpuMatrix element to s
+    GpuMat& operator = (Scalar s);
+    //! sets some of the GpuMatrix elements to s, according to the mask
+    GpuMat& setTo(Scalar s, const GpuMat& mask = GpuMat());
+    //! creates alternative GpuMatrix header for the same data, with different
+    // number of channels and/or different number of rows. see cvReshape.
+    GpuMat reshape(int cn, int rows = 0) const;
+
+    //! allocates new GpuMatrix data unless the GpuMatrix already has specified size and type.
+    // previous data is unreferenced if needed.
+    void create(int rows, int cols, int type);
+    void create(Size size, int type);
+    //! decreases reference counter;
+    // deallocate the data when reference counter reaches 0.
+    void release();
+
+    //! swaps with other smart pointer
+    void swap(GpuMat& mat);
+
+    //! locates GpuMatrix header within a parent GpuMatrix. See below
+    void locateROI(Size& wholeSize, Point& ofs) const;
+    //! moves/resizes the current GpuMatrix ROI inside the parent GpuMatrix.
+    GpuMat& adjustROI(int dtop, int dbottom, int dleft, int dright);
+    //! extracts a rectangular sub-GpuMatrix
+    // (this is a generalized form of row, rowRange etc.)
+    GpuMat operator()(Range rowRange, Range colRange) const;
+    GpuMat operator()(Rect roi) const;
+
+    //! returns true iff the GpuMatrix data is continuous
+    // (i.e. when there are no gaps between successive rows).
+    // similar to CV_IS_GpuMat_CONT(cvGpuMat->type)
+    bool isContinuous() const;
+    //! returns element size in bytes,
+    // similar to CV_ELEM_SIZE(cvMat->type)
+    size_t elemSize() const;
+    //! returns the size of element channel in bytes.
+    size_t elemSize1() const;
+    //! returns element type, similar to CV_MAT_TYPE(cvMat->type)
+    int type() const;
+    //! returns element type, similar to CV_MAT_DEPTH(cvMat->type)
+    int depth() const;
+    //! returns element type, similar to CV_MAT_CN(cvMat->type)
+    int channels() const;
+    //! returns step/elemSize1()
+    size_t step1() const;
+    //! returns GpuMatrix size:
+    // width == number of columns, height == number of rows
+    Size size() const;
+    //! returns true if GpuMatrix data is NULL
+    bool empty() const;
+
+    //! returns pointer to y-th row
+    uchar* ptr(int y = 0);
+    const uchar* ptr(int y = 0) const;
+
+    //! template version of the above method
+    template<typename _Tp> _Tp* ptr(int y = 0);
+    template<typename _Tp> const _Tp* ptr(int y = 0) const;
+
+    template <typename _Tp> operator PtrStepSz<_Tp>() const;
+    template <typename _Tp> operator PtrStep<_Tp>() const;
+
+    // Deprecated function
+    __CV_GPU_DEPR_BEFORE__ template <typename _Tp> operator DevMem2D_<_Tp>() const __CV_GPU_DEPR_AFTER__;
+    #undef __CV_GPU_DEPR_BEFORE__
+    #undef __CV_GPU_DEPR_AFTER__
+
+    /*! includes several bit-fields:
+    - the magic signature
+    - continuity flag
+    - depth
+    - number of channels
+    */
+    int flags;
+
+    //! the number of rows and columns
+    int rows, cols;
+
+    //! a distance between successive rows in bytes; includes the gap if any
+    size_t step;
+
+    //! pointer to the data
+    uchar* data;
+
+    //! pointer to the reference counter;
+    // when GpuMatrix points to user-allocated data, the pointer is NULL
+    int* refcount;
+
+    //! helper fields used in locateROI and adjustROI
+    uchar* datastart;
+    uchar* dataend;
+};
+
+//! Creates continuous GPU matrix
+CV_EXPORTS void createContinuous(int rows, int cols, int type, GpuMat& m);
+
+//! Ensures that size of the given matrix is not less than (rows, cols) size
+//! and matrix type is match specified one too
+CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m);
+
+CV_EXPORTS GpuMat allocMatFromBuf(int rows, int cols, int type, GpuMat &mat);
+
+////////////////////////////////////////////////////////////////////////
+// Error handling
+
+CV_EXPORTS void error(const char* error_string, const char* file, const int line, const char* func = "");
+
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+inline
+GpuMat::GpuMat()
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+{}
+
+inline
+GpuMat::GpuMat(int rows_, int cols_, int type_)
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+{
+    if (rows_ > 0 && cols_ > 0)
+        create(rows_, cols_, type_);
+}
+
+inline
+GpuMat::GpuMat(Size size_, int type_)
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+{
+    if (size_.height > 0 && size_.width > 0)
+        create(size_.height, size_.width, type_);
+}
+
+inline
+GpuMat::GpuMat(int rows_, int cols_, int type_, Scalar s_)
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+{
+    if (rows_ > 0 && cols_ > 0)
     {
-    public:
-        enum  { ALLOC_PAGE_LOCKED = 1, ALLOC_ZEROCOPY = 2, ALLOC_WRITE_COMBINED = 4 };
-
-        CudaMem();
-        CudaMem(const CudaMem& m);
-
-        CudaMem(int rows, int cols, int type, int _alloc_type = ALLOC_PAGE_LOCKED);
-        CudaMem(Size size, int type, int alloc_type = ALLOC_PAGE_LOCKED);
-
-
-        //! creates from cv::Mat with coping data
-        explicit CudaMem(const Mat& m, int alloc_type = ALLOC_PAGE_LOCKED);
-
-        ~CudaMem();
-
-        CudaMem& operator = (const CudaMem& m);
-
-        //! returns deep copy of the matrix, i.e. the data is copied
-        CudaMem clone() const;
-
-        //! allocates new matrix data unless the matrix already has specified size and type.
-        void create(int rows, int cols, int type, int alloc_type = ALLOC_PAGE_LOCKED);
-        void create(Size size, int type, int alloc_type = ALLOC_PAGE_LOCKED);
-
-        //! decrements reference counter and released memory if needed.
-        void release();
-
-        //! returns matrix header with disabled reference counting for CudaMem data.
-        Mat createMatHeader() const;
-        operator Mat() const;
-
-        //! maps host memory into device address space and returns GpuMat header for it. Throws exception if not supported by hardware.
-        GpuMat createGpuMatHeader() const;
-        operator GpuMat() const;
-
-        //returns if host memory can be mapperd to gpu address space;
-        static bool canMapHostMemory();
-
-        // Please see cv::Mat for descriptions
-        bool isContinuous() const;
-        size_t elemSize() const;
-        size_t elemSize1() const;
-        int type() const;
-        int depth() const;
-        int channels() const;
-        size_t step1() const;
-        Size size() const;
-        bool empty() const;
-
-
-        // Please see cv::Mat for descriptions
-        int flags;
-        int rows, cols;
-        size_t step;
-
-        uchar* data;
-        int* refcount;
-
-        uchar* datastart;
-        uchar* dataend;
-
-        int alloc_type;
-    };
-
-
-    //////////////////////////////// CudaStream ////////////////////////////////
-    // Encapculates Cuda Stream. Provides interface for async coping.
-    // Passed to each function that supports async kernel execution.
-    // Reference counting is enabled
-
-    class CV_EXPORTS Stream
-    {
-    public:
-        Stream();
-        ~Stream();
-
-        Stream(const Stream&);
-        Stream& operator =(const Stream&);
-
-        bool queryIfComplete();
-        void waitForCompletion();
-
-        //! downloads asynchronously
-        // Warning! cv::Mat must point to page locked memory (i.e. to CudaMem data or to its subMat)
-        void enqueueDownload(const GpuMat& src, CudaMem& dst);
-        void enqueueDownload(const GpuMat& src, Mat& dst);
-
-        //! uploads asynchronously
-        // Warning! cv::Mat must point to page locked memory (i.e. to CudaMem data or to its ROI)
-        void enqueueUpload(const CudaMem& src, GpuMat& dst);
-        void enqueueUpload(const Mat& src, GpuMat& dst);
-
-        //! copy asynchronously
-        void enqueueCopy(const GpuMat& src, GpuMat& dst);
-
-        //! memory set asynchronously
-        void enqueueMemSet(GpuMat& src, Scalar val);
-        void enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask);
-
-        //! converts matrix type, ex from float to uchar depending on type
-        void enqueueConvert(const GpuMat& src, GpuMat& dst, int dtype, double a = 1, double b = 0);
-
-        //! adds a callback to be called on the host after all currently enqueued items in the stream have completed
-        typedef void (*StreamCallback)(Stream& stream, int status, void* userData);
-        void enqueueHostCallback(StreamCallback callback, void* userData);
-
-        static Stream& Null();
-
-        operator bool() const;
-
-    private:
-        struct Impl;
-
-        explicit Stream(Impl* impl);
-        void create();
-        void release();
-
-        Impl *impl;
-
-        friend struct StreamAccessor;
-    };
-
-    //////////////////////////////// Initialization & Info ////////////////////////
-
-    //! This is the only function that do not throw exceptions if the library is compiled without Cuda.
-    CV_EXPORTS int getCudaEnabledDeviceCount();
-
-    //! Functions below throw cv::Expception if the library is compiled without Cuda.
-
-    CV_EXPORTS void setDevice(int device);
-    CV_EXPORTS int getDevice();
-
-    //! Explicitly destroys and cleans up all resources associated with the current device in the current process.
-    //! Any subsequent API call to this device will reinitialize the device.
-    CV_EXPORTS void resetDevice();
-
-    enum FeatureSet
-    {
-        FEATURE_SET_COMPUTE_10 = 10,
-        FEATURE_SET_COMPUTE_11 = 11,
-        FEATURE_SET_COMPUTE_12 = 12,
-        FEATURE_SET_COMPUTE_13 = 13,
-        FEATURE_SET_COMPUTE_20 = 20,
-        FEATURE_SET_COMPUTE_21 = 21,
-        FEATURE_SET_COMPUTE_30 = 30,
-        FEATURE_SET_COMPUTE_35 = 35,
-
-        GLOBAL_ATOMICS = FEATURE_SET_COMPUTE_11,
-        SHARED_ATOMICS = FEATURE_SET_COMPUTE_12,
-        NATIVE_DOUBLE = FEATURE_SET_COMPUTE_13,
-        WARP_SHUFFLE_FUNCTIONS = FEATURE_SET_COMPUTE_30,
-        DYNAMIC_PARALLELISM = FEATURE_SET_COMPUTE_35
-    };
-
-    // Checks whether current device supports the given feature
-    CV_EXPORTS bool deviceSupports(FeatureSet feature_set);
-
-    // Gives information about what GPU archs this OpenCV GPU module was
-    // compiled for
-    class CV_EXPORTS TargetArchs
-    {
-    public:
-        static bool builtWith(FeatureSet feature_set);
-        static bool has(int major, int minor);
-        static bool hasPtx(int major, int minor);
-        static bool hasBin(int major, int minor);
-        static bool hasEqualOrLessPtx(int major, int minor);
-        static bool hasEqualOrGreater(int major, int minor);
-        static bool hasEqualOrGreaterPtx(int major, int minor);
-        static bool hasEqualOrGreaterBin(int major, int minor);
-    private:
-        TargetArchs();
-    };
-
-    // Gives information about the given GPU
-    class CV_EXPORTS DeviceInfo
-    {
-    public:
-        // Creates DeviceInfo object for the current GPU
-        DeviceInfo() : device_id_(getDevice()) { query(); }
-
-        // Creates DeviceInfo object for the given GPU
-        DeviceInfo(int device_id) : device_id_(device_id) { query(); }
-
-        String name() const { return name_; }
-
-        // Return compute capability versions
-        int majorVersion() const { return majorVersion_; }
-        int minorVersion() const { return minorVersion_; }
-
-        int multiProcessorCount() const { return multi_processor_count_; }
-
-        size_t sharedMemPerBlock() const;
-
-        void queryMemory(size_t& totalMemory, size_t& freeMemory) const;
-        size_t freeMemory() const;
-        size_t totalMemory() const;
-
-        // Checks whether device supports the given feature
-        bool supports(FeatureSet feature_set) const;
-
-        // Checks whether the GPU module can be run on the given device
-        bool isCompatible() const;
-
-        int deviceID() const { return device_id_; }
-
-    private:
-        void query();
-
-        int device_id_;
-
-        String name_;
-        int multi_processor_count_;
-        int majorVersion_;
-        int minorVersion_;
-    };
-
-    CV_EXPORTS void printCudaDeviceInfo(int device);
-    CV_EXPORTS void printShortCudaDeviceInfo(int device);
-
-    //////////////////////////////// GpuMat ///////////////////////////////
-
-    //! Smart pointer for GPU memory with reference counting. Its interface is mostly similar with cv::Mat.
-    class CV_EXPORTS GpuMat
-    {
-    public:
-        //! default constructor
-        GpuMat();
-
-        //! constructs GpuMatrix of the specified size and type (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
-        GpuMat(int rows, int cols, int type);
-        GpuMat(Size size, int type);
-
-        //! constucts GpuMatrix and fills it with the specified value _s.
-        GpuMat(int rows, int cols, int type, Scalar s);
-        GpuMat(Size size, int type, Scalar s);
-
-        //! copy constructor
-        GpuMat(const GpuMat& m);
-
-        //! constructor for GpuMatrix headers pointing to user-allocated data
-        GpuMat(int rows, int cols, int type, void* data, size_t step = Mat::AUTO_STEP);
-        GpuMat(Size size, int type, void* data, size_t step = Mat::AUTO_STEP);
-
-        //! creates a matrix header for a part of the bigger matrix
-        GpuMat(const GpuMat& m, Range rowRange, Range colRange);
-        GpuMat(const GpuMat& m, Rect roi);
-
-        //! builds GpuMat from Mat. Perfom blocking upload to device.
-        explicit GpuMat(const Mat& m);
-
-        //! destructor - calls release()
-        ~GpuMat();
-
-        //! assignment operators
-        GpuMat& operator = (const GpuMat& m);
-
-        //! pefroms blocking upload data to GpuMat.
-        void upload(const Mat& m);
-
-        //! downloads data from device to host memory. Blocking calls.
-        void download(Mat& m) const;
-
-        //! returns a new GpuMatrix header for the specified row
-        GpuMat row(int y) const;
-        //! returns a new GpuMatrix header for the specified column
-        GpuMat col(int x) const;
-        //! ... for the specified row span
-        GpuMat rowRange(int startrow, int endrow) const;
-        GpuMat rowRange(Range r) const;
-        //! ... for the specified column span
-        GpuMat colRange(int startcol, int endcol) const;
-        GpuMat colRange(Range r) const;
-
-        //! returns deep copy of the GpuMatrix, i.e. the data is copied
-        GpuMat clone() const;
-        //! copies the GpuMatrix content to "m".
-        // It calls m.create(this->size(), this->type()).
-        void copyTo(GpuMat& m) const;
-        //! copies those GpuMatrix elements to "m" that are marked with non-zero mask elements.
-        void copyTo(GpuMat& m, const GpuMat& mask) const;
-        //! converts GpuMatrix to another datatype with optional scalng. See cvConvertScale.
-        void convertTo(GpuMat& m, int rtype, double alpha = 1, double beta = 0) const;
-
-        void assignTo(GpuMat& m, int type=-1) const;
-
-        //! sets every GpuMatrix element to s
-        GpuMat& operator = (Scalar s);
-        //! sets some of the GpuMatrix elements to s, according to the mask
-        GpuMat& setTo(Scalar s, const GpuMat& mask = GpuMat());
-        //! creates alternative GpuMatrix header for the same data, with different
-        // number of channels and/or different number of rows. see cvReshape.
-        GpuMat reshape(int cn, int rows = 0) const;
-
-        //! allocates new GpuMatrix data unless the GpuMatrix already has specified size and type.
-        // previous data is unreferenced if needed.
-        void create(int rows, int cols, int type);
-        void create(Size size, int type);
-        //! decreases reference counter;
-        // deallocate the data when reference counter reaches 0.
-        void release();
-
-        //! swaps with other smart pointer
-        void swap(GpuMat& mat);
-
-        //! locates GpuMatrix header within a parent GpuMatrix. See below
-        void locateROI(Size& wholeSize, Point& ofs) const;
-        //! moves/resizes the current GpuMatrix ROI inside the parent GpuMatrix.
-        GpuMat& adjustROI(int dtop, int dbottom, int dleft, int dright);
-        //! extracts a rectangular sub-GpuMatrix
-        // (this is a generalized form of row, rowRange etc.)
-        GpuMat operator()(Range rowRange, Range colRange) const;
-        GpuMat operator()(Rect roi) const;
-
-        //! returns true iff the GpuMatrix data is continuous
-        // (i.e. when there are no gaps between successive rows).
-        // similar to CV_IS_GpuMat_CONT(cvGpuMat->type)
-        bool isContinuous() const;
-        //! returns element size in bytes,
-        // similar to CV_ELEM_SIZE(cvMat->type)
-        size_t elemSize() const;
-        //! returns the size of element channel in bytes.
-        size_t elemSize1() const;
-        //! returns element type, similar to CV_MAT_TYPE(cvMat->type)
-        int type() const;
-        //! returns element type, similar to CV_MAT_DEPTH(cvMat->type)
-        int depth() const;
-        //! returns element type, similar to CV_MAT_CN(cvMat->type)
-        int channels() const;
-        //! returns step/elemSize1()
-        size_t step1() const;
-        //! returns GpuMatrix size:
-        // width == number of columns, height == number of rows
-        Size size() const;
-        //! returns true if GpuMatrix data is NULL
-        bool empty() const;
-
-        //! returns pointer to y-th row
-        uchar* ptr(int y = 0);
-        const uchar* ptr(int y = 0) const;
-
-        //! template version of the above method
-        template<typename _Tp> _Tp* ptr(int y = 0);
-        template<typename _Tp> const _Tp* ptr(int y = 0) const;
-
-        template <typename _Tp> operator PtrStepSz<_Tp>() const;
-        template <typename _Tp> operator PtrStep<_Tp>() const;
-
-        // Deprecated function
-        __CV_GPU_DEPR_BEFORE__ template <typename _Tp> operator DevMem2D_<_Tp>() const __CV_GPU_DEPR_AFTER__;
-        #undef __CV_GPU_DEPR_BEFORE__
-        #undef __CV_GPU_DEPR_AFTER__
-
-        /*! includes several bit-fields:
-        - the magic signature
-        - continuity flag
-        - depth
-        - number of channels
-        */
-        int flags;
-
-        //! the number of rows and columns
-        int rows, cols;
-
-        //! a distance between successive rows in bytes; includes the gap if any
-        size_t step;
-
-        //! pointer to the data
-        uchar* data;
-
-        //! pointer to the reference counter;
-        // when GpuMatrix points to user-allocated data, the pointer is NULL
-        int* refcount;
-
-        //! helper fields used in locateROI and adjustROI
-        uchar* datastart;
-        uchar* dataend;
-    };
-
-    //! Creates continuous GPU matrix
-    CV_EXPORTS void createContinuous(int rows, int cols, int type, GpuMat& m);
-    CV_EXPORTS GpuMat createContinuous(int rows, int cols, int type);
-    CV_EXPORTS void createContinuous(Size size, int type, GpuMat& m);
-    CV_EXPORTS GpuMat createContinuous(Size size, int type);
-
-    //! Ensures that size of the given matrix is not less than (rows, cols) size
-    //! and matrix type is match specified one too
-    CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m);
-    CV_EXPORTS void ensureSizeIsEnough(Size size, int type, GpuMat& m);
-
-    CV_EXPORTS GpuMat allocMatFromBuf(int rows, int cols, int type, GpuMat &mat);
-
-    ////////////////////////////////////////////////////////////////////////
-    // Error handling
-
-    CV_EXPORTS void error(const char* error_string, const char* file, const int line, const char* func = "");
-
-    ////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////
-
-    inline GpuMat::GpuMat()
-        : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
-    {
+        create(rows_, cols_, type_);
+        setTo(s_);
     }
+}
 
-    inline GpuMat::GpuMat(int rows_, int cols_, int type_)
-        : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
-    {
-        if (rows_ > 0 && cols_ > 0)
-            create(rows_, cols_, type_);
-    }
-
-    inline GpuMat::GpuMat(Size size_, int type_)
-        : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
-    {
-        if (size_.height > 0 && size_.width > 0)
-            create(size_.height, size_.width, type_);
-    }
-
-    inline GpuMat::GpuMat(int rows_, int cols_, int type_, Scalar s_)
-        : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
-    {
-        if (rows_ > 0 && cols_ > 0)
-        {
-            create(rows_, cols_, type_);
-            setTo(s_);
-        }
-    }
-
-    inline GpuMat::GpuMat(Size size_, int type_, Scalar s_)
-        : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
-    {
-        if (size_.height > 0 && size_.width > 0)
-        {
-            create(size_.height, size_.width, type_);
-            setTo(s_);
-        }
-    }
-
-    inline GpuMat::~GpuMat()
-    {
-        release();
-    }
-
-    inline GpuMat GpuMat::clone() const
-    {
-        GpuMat m;
-        copyTo(m);
-        return m;
-    }
-
-    inline void GpuMat::assignTo(GpuMat& m, int _type) const
-    {
-        if (_type < 0)
-            m = *this;
-        else
-            convertTo(m, _type);
-    }
-
-    inline size_t GpuMat::step1() const
-    {
-        return step / elemSize1();
-    }
-
-    inline bool GpuMat::empty() const
-    {
-        return data == 0;
-    }
-
-    template<typename _Tp> inline _Tp* GpuMat::ptr(int y)
-    {
-        return (_Tp*)ptr(y);
-    }
-
-    template<typename _Tp> inline const _Tp* GpuMat::ptr(int y) const
-    {
-        return (const _Tp*)ptr(y);
-    }
-
-    inline void swap(GpuMat& a, GpuMat& b)
-    {
-        a.swap(b);
-    }
-
-    inline GpuMat GpuMat::row(int y) const
-    {
-        return GpuMat(*this, Range(y, y+1), Range::all());
-    }
-
-    inline GpuMat GpuMat::col(int x) const
-    {
-        return GpuMat(*this, Range::all(), Range(x, x+1));
-    }
-
-    inline GpuMat GpuMat::rowRange(int startrow, int endrow) const
-    {
-        return GpuMat(*this, Range(startrow, endrow), Range::all());
-    }
-
-    inline GpuMat GpuMat::rowRange(Range r) const
-    {
-        return GpuMat(*this, r, Range::all());
-    }
-
-    inline GpuMat GpuMat::colRange(int startcol, int endcol) const
-    {
-        return GpuMat(*this, Range::all(), Range(startcol, endcol));
-    }
-
-    inline GpuMat GpuMat::colRange(Range r) const
-    {
-        return GpuMat(*this, Range::all(), r);
-    }
-
-    inline void GpuMat::create(Size size_, int type_)
+inline
+GpuMat::GpuMat(Size size_, int type_, Scalar s_)
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+{
+    if (size_.height > 0 && size_.width > 0)
     {
         create(size_.height, size_.width, type_);
+        setTo(s_);
     }
+}
 
-    inline GpuMat GpuMat::operator()(Range _rowRange, Range _colRange) const
-    {
-        return GpuMat(*this, _rowRange, _colRange);
-    }
+inline
+GpuMat::~GpuMat()
+{
+    release();
+}
 
-    inline GpuMat GpuMat::operator()(Rect roi) const
-    {
-        return GpuMat(*this, roi);
-    }
+inline
+GpuMat GpuMat::clone() const
+{
+    GpuMat m;
+    copyTo(m);
+    return m;
+}
 
-    inline bool GpuMat::isContinuous() const
-    {
-        return (flags & Mat::CONTINUOUS_FLAG) != 0;
-    }
+inline
+void GpuMat::assignTo(GpuMat& m, int _type) const
+{
+    if (_type < 0)
+        m = *this;
+    else
+        convertTo(m, _type);
+}
 
-    inline size_t GpuMat::elemSize() const
-    {
-        return CV_ELEM_SIZE(flags);
-    }
+inline
+size_t GpuMat::step1() const
+{
+    return step / elemSize1();
+}
 
-    inline size_t GpuMat::elemSize1() const
-    {
-        return CV_ELEM_SIZE1(flags);
-    }
+inline
+bool GpuMat::empty() const
+{
+    return data == 0;
+}
 
-    inline int GpuMat::type() const
-    {
-        return CV_MAT_TYPE(flags);
-    }
+template<typename _Tp> inline
+_Tp* GpuMat::ptr(int y)
+{
+    return (_Tp*)ptr(y);
+}
 
-    inline int GpuMat::depth() const
-    {
-        return CV_MAT_DEPTH(flags);
-    }
+template<typename _Tp> inline
+const _Tp* GpuMat::ptr(int y) const
+{
+    return (const _Tp*)ptr(y);
+}
 
-    inline int GpuMat::channels() const
-    {
-        return CV_MAT_CN(flags);
-    }
+inline
+GpuMat GpuMat::row(int y) const
+{
+    return GpuMat(*this, Range(y, y+1), Range::all());
+}
 
-    inline Size GpuMat::size() const
-    {
-        return Size(cols, rows);
-    }
+inline
+GpuMat GpuMat::col(int x) const
+{
+    return GpuMat(*this, Range::all(), Range(x, x+1));
+}
 
-    inline uchar* GpuMat::ptr(int y)
-    {
-        CV_DbgAssert((unsigned)y < (unsigned)rows);
-        return data + step * y;
-    }
+inline
+GpuMat GpuMat::rowRange(int startrow, int endrow) const
+{
+    return GpuMat(*this, Range(startrow, endrow), Range::all());
+}
 
-    inline const uchar* GpuMat::ptr(int y) const
-    {
-        CV_DbgAssert((unsigned)y < (unsigned)rows);
-        return data + step * y;
-    }
+inline
+GpuMat GpuMat::rowRange(Range r) const
+{
+    return GpuMat(*this, r, Range::all());
+}
 
-    inline GpuMat& GpuMat::operator = (Scalar s)
-    {
-        setTo(s);
-        return *this;
-    }
+inline
+GpuMat GpuMat::colRange(int startcol, int endcol) const
+{
+    return GpuMat(*this, Range::all(), Range(startcol, endcol));
+}
 
-    template <class T> inline GpuMat::operator PtrStepSz<T>() const
-    {
-        return PtrStepSz<T>(rows, cols, (T*)data, step);
-    }
+inline
+GpuMat GpuMat::colRange(Range r) const
+{
+    return GpuMat(*this, Range::all(), r);
+}
 
-    template <class T> inline GpuMat::operator PtrStep<T>() const
-    {
-        return PtrStep<T>((T*)data, step);
-    }
+inline
+void GpuMat::create(Size size_, int type_)
+{
+    create(size_.height, size_.width, type_);
+}
 
-    template <class T> inline GpuMat::operator DevMem2D_<T>() const
-    {
-        return DevMem2D_<T>(rows, cols, (T*)data, step);
-    }
+inline
+GpuMat GpuMat::operator()(Range _rowRange, Range _colRange) const
+{
+    return GpuMat(*this, _rowRange, _colRange);
+}
 
-    inline GpuMat createContinuous(int rows, int cols, int type)
-    {
-        GpuMat m;
-        createContinuous(rows, cols, type, m);
-        return m;
-    }
+inline
+GpuMat GpuMat::operator()(Rect roi) const
+{
+    return GpuMat(*this, roi);
+}
 
-    inline void createContinuous(Size size, int type, GpuMat& m)
-    {
-        createContinuous(size.height, size.width, type, m);
-    }
+inline
+bool GpuMat::isContinuous() const
+{
+    return (flags & Mat::CONTINUOUS_FLAG) != 0;
+}
 
-    inline GpuMat createContinuous(Size size, int type)
-    {
-        GpuMat m;
-        createContinuous(size, type, m);
-        return m;
-    }
+inline
+size_t GpuMat::elemSize() const
+{
+    return CV_ELEM_SIZE(flags);
+}
 
-    inline void ensureSizeIsEnough(Size size, int type, GpuMat& m)
-    {
-        ensureSizeIsEnough(size.height, size.width, type, m);
-    }
-}}
+inline
+size_t GpuMat::elemSize1() const
+{
+    return CV_ELEM_SIZE1(flags);
+}
 
-#endif // __cplusplus
+inline
+int GpuMat::type() const
+{
+    return CV_MAT_TYPE(flags);
+}
+
+inline
+int GpuMat::depth() const
+{
+    return CV_MAT_DEPTH(flags);
+}
+
+inline
+int GpuMat::channels() const
+{
+    return CV_MAT_CN(flags);
+}
+
+inline
+Size GpuMat::size() const
+{
+    return Size(cols, rows);
+}
+
+inline
+uchar* GpuMat::ptr(int y)
+{
+    CV_DbgAssert((unsigned)y < (unsigned)rows);
+    return data + step * y;
+}
+
+inline
+const uchar* GpuMat::ptr(int y) const
+{
+    CV_DbgAssert((unsigned)y < (unsigned)rows);
+    return data + step * y;
+}
+
+inline
+GpuMat& GpuMat::operator = (Scalar s)
+{
+    setTo(s);
+    return *this;
+}
+
+template <class T> inline
+GpuMat::operator PtrStepSz<T>() const
+{
+    return PtrStepSz<T>(rows, cols, (T*)data, step);
+}
+
+template <class T> inline
+GpuMat::operator PtrStep<T>() const
+{
+    return PtrStep<T>((T*)data, step);
+}
+
+template <class T> inline
+GpuMat::operator DevMem2D_<T>() const
+{
+    return DevMem2D_<T>(rows, cols, (T*)data, step);
+}
+
+static inline
+void swap(GpuMat& a, GpuMat& b)
+{
+    a.swap(b);
+}
+
+static inline
+GpuMat createContinuous(int rows, int cols, int type)
+{
+    GpuMat m;
+    createContinuous(rows, cols, type, m);
+    return m;
+}
+
+static inline
+void createContinuous(Size size, int type, GpuMat& m)
+{
+    createContinuous(size.height, size.width, type, m);
+}
+
+static inline
+GpuMat createContinuous(Size size, int type)
+{
+    GpuMat m;
+    createContinuous(size, type, m);
+    return m;
+}
+
+static inline
+void ensureSizeIsEnough(Size size, int type, GpuMat& m)
+{
+    ensureSizeIsEnough(size.height, size.width, type, m);
+}
+
+}} // cv::gpu
 
 #endif // __OPENCV_GPUMAT_HPP__

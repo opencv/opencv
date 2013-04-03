@@ -43,7 +43,9 @@
 #ifndef __OPENCV_TRACKING_HPP__
 #define __OPENCV_TRACKING_HPP__
 
-#include "opencv2/core.hpp"
+#ifdef __cplusplus
+#  include "opencv2/core.hpp"
+#endif
 #include "opencv2/imgproc.hpp"
 
 #ifdef __cplusplus

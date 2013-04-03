@@ -48,6 +48,7 @@
 #include "test_precomp.hpp"
 #include <limits>
 #include <cstdio>
+#include <map>
 
 using namespace std;
 using namespace cv;

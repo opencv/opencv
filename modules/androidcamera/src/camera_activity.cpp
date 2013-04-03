@@ -29,6 +29,11 @@
 #include <sys/types.h>
 #include <dirent.h>
 
+struct str_greater
+{
+    bool operator() (const cv::String& a, const cv::String& b) { return a > b; }
+};
+
 class CameraWrapperConnector
 {
 public:
@@ -177,7 +182,7 @@ CameraActivity::ErrorCode CameraWrapperConnector::connectToLib()
 
     std::vector<cv::String> listLibs;
     fillListWrapperLibs(folderPath, listLibs);
-    std::sort(listLibs.begin(), listLibs.end(), std::greater<cv::String>());
+    std::sort(listLibs.begin(), listLibs.end(), str_greater());
 
     void * libHandle=0;
     cv::String cur_path;

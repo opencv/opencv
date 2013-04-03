@@ -2688,7 +2688,7 @@ void cv::reprojectImageTo3D( InputArray _disparity,
             for( x = 0; x < cols*3; x++ )
             {
                 int ival = cvRound(dptr[x]);
-                dptr0[x] = CV_CAST_16S(ival);
+                dptr0[x] = cv::saturate_cast<short>(ival);
             }
         }
         else if( dtype == CV_32SC3 )

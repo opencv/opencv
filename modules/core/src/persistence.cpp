@@ -3246,19 +3246,19 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
                     switch( elem_type )
                     {
                     case CV_8U:
-                        *(uchar*)data = CV_CAST_8U(ival);
+                        *(uchar*)data = cv::saturate_cast<uchar>(ival);
                         data++;
                         break;
                     case CV_8S:
-                        *(char*)data = CV_CAST_8S(ival);
+                        *(char*)data = cv::saturate_cast<schar>(ival);
                         data++;
                         break;
                     case CV_16U:
-                        *(ushort*)data = CV_CAST_16U(ival);
+                        *(ushort*)data = cv::saturate_cast<ushort>(ival);
                         data += sizeof(ushort);
                         break;
                     case CV_16S:
-                        *(short*)data = CV_CAST_16S(ival);
+                        *(short*)data = cv::saturate_cast<short>(ival);
                         data += sizeof(short);
                         break;
                     case CV_32S:
@@ -3291,22 +3291,22 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
                     {
                     case CV_8U:
                         ival = cvRound(fval);
-                        *(uchar*)data = CV_CAST_8U(ival);
+                        *(uchar*)data = cv::saturate_cast<uchar>(ival);
                         data++;
                         break;
                     case CV_8S:
                         ival = cvRound(fval);
-                        *(char*)data = CV_CAST_8S(ival);
+                        *(char*)data = cv::saturate_cast<schar>(ival);
                         data++;
                         break;
                     case CV_16U:
                         ival = cvRound(fval);
-                        *(ushort*)data = CV_CAST_16U(ival);
+                        *(ushort*)data = cv::saturate_cast<ushort>(ival);
                         data += sizeof(ushort);
                         break;
                     case CV_16S:
                         ival = cvRound(fval);
-                        *(short*)data = CV_CAST_16S(ival);
+                        *(short*)data = cv::saturate_cast<short>(ival);
                         data += sizeof(short);
                         break;
                     case CV_32S:
@@ -5317,7 +5317,7 @@ FileNodeIterator::FileNodeIterator(const CvFileStorage* _fs,
         container = _node;
         if( !(_node->tag & FileNode::USER) && (node_type == FileNode::SEQ || node_type == FileNode::MAP) )
         {
-            cvStartReadSeq( _node->data.seq, &reader );
+            cvStartReadSeq( _node->data.seq, (CvSeqReader*)&reader );
             remaining = FileNode(_fs, _node).size();
         }
         else
@@ -5350,7 +5350,12 @@ FileNodeIterator& FileNodeIterator::operator ++()
     if( remaining > 0 )
     {
         if( reader.seq )
-            CV_NEXT_SEQ_ELEM( reader.seq->elem_size, reader );
+        {
+            if( ((reader).ptr += (((CvSeq*)reader.seq)->elem_size)) >= (reader).block_max )
+            {
+                cvChangeSeqBlock( (CvSeqReader*)&(reader), 1 );
+            }
+        }
         remaining--;
     }
     return *this;
@@ -5368,7 +5373,12 @@ FileNodeIterator& FileNodeIterator::operator --()
     if( remaining < FileNode(fs, container).size() )
     {
         if( reader.seq )
-            CV_PREV_SEQ_ELEM( reader.seq->elem_size, reader );
+        {
+            if( ((reader).ptr -= (((CvSeq*)reader.seq)->elem_size)) < (reader).block_min )
+            {
+                cvChangeSeqBlock( (CvSeqReader*)&(reader), -1 );
+            }
+        }
         remaining++;
     }
     return *this;
@@ -5394,7 +5404,7 @@ FileNodeIterator& FileNodeIterator::operator += (int ofs)
     }
     remaining -= ofs;
     if( reader.seq )
-        cvSetSeqReaderPos( &reader, ofs, 1 );
+        cvSetSeqReaderPos( (CvSeqReader*)&reader, ofs, 1 );
     return *this;
 }
 
@@ -5415,7 +5425,7 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, uchar* vec, size
 
         if( reader.seq )
         {
-            cvReadRawDataSlice( fs, &reader, (int)count, vec, fmt.c_str() );
+            cvReadRawDataSlice( fs, (CvSeqReader*)&reader, (int)count, vec, fmt.c_str() );
             remaining -= count*cn;
         }
         else
@@ -5470,19 +5480,22 @@ void write( FileStorage& fs, const String& name, const Mat& value )
 // TODO: the 4 functions below need to be implemented more efficiently
 void write( FileStorage& fs, const String& name, const SparseMat& value )
 {
-    Ptr<CvSparseMat> mat = (CvSparseMat*)value;
+    Ptr<CvSparseMat> mat = cvCreateSparseMat(value);
     cvWrite( *fs, name.size() ? name.c_str() : 0, mat );
 }
 
 
-WriteStructContext::WriteStructContext(FileStorage& _fs, const String& name,
-                   int flags, const String& typeName) : fs(&_fs)
+internal::WriteStructContext::WriteStructContext(FileStorage& _fs,
+    const String& name, int flags, const String& typeName) : fs(&_fs)
 {
     cvStartWriteStruct(**fs, !name.empty() ? name.c_str() : 0, flags,
                        !typeName.empty() ? typeName.c_str() : 0);
 }
 
-WriteStructContext::~WriteStructContext() { cvEndWriteStruct(**fs); }
+internal::WriteStructContext::~WriteStructContext()
+{
+    cvEndWriteStruct(**fs);
+}
 
 
 void read( const FileNode& node, Mat& mat, const Mat& default_mat )
@@ -5495,12 +5508,12 @@ void read( const FileNode& node, Mat& mat, const Mat& default_mat )
     void* obj = cvRead((CvFileStorage*)node.fs, (CvFileNode*)*node);
     if(CV_IS_MAT_HDR_Z(obj))
     {
-        Mat((const CvMat*)obj).copyTo(mat);
+        cvarrToMat(obj).copyTo(mat);
         cvReleaseMat((CvMat**)&obj);
     }
     else if(CV_IS_MATND_HDR(obj))
     {
-        Mat((const CvMatND*)obj).copyTo(mat);
+        cvarrToMat(obj).copyTo(mat);
         cvReleaseMatND((CvMatND**)&obj);
     }
     else
@@ -5519,12 +5532,12 @@ void read( const FileNode& node, SparseMat& mat, const SparseMat& default_mat )
     }
     Ptr<CvSparseMat> m = (CvSparseMat*)cvRead((CvFileStorage*)node.fs, (CvFileNode*)*node);
     CV_Assert(CV_IS_SPARSE_MAT(m.obj));
-    SparseMat(m).copyTo(mat);
+    m->copyToSparseMat(mat);
 }
 
 void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& keypoints)
 {
-    WriteStructContext ws(fs, objname, CV_NODE_SEQ + CV_NODE_FLOW);
+    internal::WriteStructContext ws(fs, objname, CV_NODE_SEQ + CV_NODE_FLOW);
 
     int i, npoints = (int)keypoints.size();
     for( i = 0; i < npoints; i++ )
@@ -5551,6 +5564,42 @@ void read(const FileNode& node, std::vector<KeyPoint>& keypoints)
         it >> kpt.pt.x >> kpt.pt.y >> kpt.size >> kpt.angle >> kpt.response >> kpt.octave >> kpt.class_id;
         keypoints.push_back(kpt);
     }
+}
+
+int FileNode::type() const { return !node ? NONE : (node->tag & TYPE_MASK); }
+bool FileNode::isNamed() const { return !node ? false : (node->tag & NAMED) != 0; }
+
+size_t FileNode::size() const
+{
+    int t = type();
+    return t == MAP ? (size_t)((CvSet*)node->data.map)->active_count :
+        t == SEQ ? (size_t)node->data.seq->total : (size_t)!isNone();
+}
+
+void read(const FileNode& node, int& value, int default_value)
+{
+    value = !node.node ? default_value :
+    CV_NODE_IS_INT(node.node->tag) ? node.node->data.i :
+    CV_NODE_IS_REAL(node.node->tag) ? cvRound(node.node->data.f) : 0x7fffffff;
+}
+
+void read(const FileNode& node, float& value, float default_value)
+{
+    value = !node.node ? default_value :
+        CV_NODE_IS_INT(node.node->tag) ? (float)node.node->data.i :
+        CV_NODE_IS_REAL(node.node->tag) ? (float)node.node->data.f : 1e30f;
+}
+
+void read(const FileNode& node, double& value, double default_value)
+{
+    value = !node.node ? default_value :
+        CV_NODE_IS_INT(node.node->tag) ? (double)node.node->data.i :
+        CV_NODE_IS_REAL(node.node->tag) ? node.node->data.f : 1e300;
+}
+
+void read(const FileNode& node, String& value, const String& default_value)
+{
+    value = !node.node ? default_value : CV_NODE_IS_STRING(node.node->tag) ? String(node.node->data.str.ptr) : String();
 }
 
 }

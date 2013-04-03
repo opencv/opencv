@@ -103,8 +103,8 @@ private:
     gst_initializer()
     {
         gst_init(NULL, NULL);
-//        gst_debug_set_active(TRUE);
-//        gst_debug_set_colored(TRUE);
+//        gst_debug_set_active(1);
+//        gst_debug_set_colored(1);
 //        gst_debug_set_default_threshold(GST_LEVEL_INFO);
     }
 };
@@ -701,7 +701,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     gst_app_sink_set_max_buffers (GST_APP_SINK(sink), 1);
     gst_app_sink_set_drop (GST_APP_SINK(sink), stream);
     //do not emit signals: all calls will be synchronous and blocking
-    gst_app_sink_set_emit_signals (GST_APP_SINK(sink), FALSE);
+    gst_app_sink_set_emit_signals (GST_APP_SINK(sink), 0);
 
 #if GST_VERSION_MAJOR == 0
     caps = gst_caps_new_simple("video/x-raw-rgb",
@@ -1261,9 +1261,9 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
     gst_app_src_set_size (GST_APP_SRC(source), -1);
 
     g_object_set(G_OBJECT(source), "format", GST_FORMAT_TIME, NULL);
-    g_object_set(G_OBJECT(source), "block", TRUE, NULL);
-    g_object_set(G_OBJECT(source), "is-live", FALSE, NULL);
-    g_object_set(G_OBJECT(source), "emit-signals", TRUE, NULL);
+    g_object_set(G_OBJECT(source), "block", 1, NULL);
+    g_object_set(G_OBJECT(source), "is-live", 0, NULL);
+    g_object_set(G_OBJECT(source), "emit-signals", 1, NULL);
 
     if(!manualpipeline)
     {

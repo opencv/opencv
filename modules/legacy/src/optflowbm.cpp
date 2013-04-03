@@ -75,11 +75,10 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
     if( !CV_ARE_TYPES_EQ( velx, vely ))
         CV_Error( CV_StsUnmatchedFormats, "Destination images have different formats" );
 
-    CvSize velSize =
-    {
+    CvSize velSize(
         (srcA->width - blockSize.width + shiftSize.width)/shiftSize.width,
         (srcA->height - blockSize.height + shiftSize.height)/shiftSize.height
-    };
+    );
 
     if( !CV_ARE_SIZES_EQ( srcA, srcB ) ||
         !CV_ARE_SIZES_EQ( velx, vely ) ||

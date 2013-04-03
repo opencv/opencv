@@ -211,7 +211,7 @@ protected:
             vector<int> pt;
 
             if( !m || !CV_IS_MAT(m) || m->rows != test_mat.rows || m->cols != test_mat.cols ||
-               cvtest::cmpEps( Mat(&stub1), Mat(&_test_stub1), &max_diff, 0, &pt, true) < 0 )
+               cvtest::cmpEps( cv::cvarrToMat(&stub1), cv::cvarrToMat(&_test_stub1), &max_diff, 0, &pt, true) < 0 )
             {
                 ts->printf( cvtest::TS::LOG, "the read matrix is not correct: (%.20g vs %.20g) at (%d,%d)\n",
                             cvGetReal2D(&stub1, pt[0], pt[1]), cvGetReal2D(&_test_stub1, pt[0], pt[1]),
@@ -241,7 +241,7 @@ protected:
             if( !CV_ARE_TYPES_EQ(&stub, &_test_stub) ||
                !CV_ARE_SIZES_EQ(&stub, &_test_stub) ||
                //cvNorm(&stub, &_test_stub, CV_L2) != 0 )
-               cvtest::cmpEps( Mat(&stub1), Mat(&_test_stub1), &max_diff, 0, &pt, true) < 0 )
+               cvtest::cmpEps( cv::cvarrToMat(&stub1), cv::cvarrToMat(&_test_stub1), &max_diff, 0, &pt, true) < 0 )
             {
                 ts->printf( cvtest::TS::LOG, "readObj method: the read nd matrix is not correct: (%.20g vs %.20g) vs at (%d,%d)\n",
                            cvGetReal2D(&stub1, pt[0], pt[1]), cvGetReal2D(&_test_stub1, pt[0], pt[1]),
@@ -259,7 +259,7 @@ protected:
             if( !CV_ARE_TYPES_EQ(&stub, &_test_stub) ||
                !CV_ARE_SIZES_EQ(&stub, &_test_stub) ||
                //cvNorm(&stub, &_test_stub, CV_L2) != 0 )
-               cvtest::cmpEps( Mat(&stub1), Mat(&_test_stub1), &max_diff, 0, &pt, true) < 0 )
+               cvtest::cmpEps( cv::cvarrToMat(&stub1), cv::cvarrToMat(&_test_stub1), &max_diff, 0, &pt, true) < 0 )
             {
                 ts->printf( cvtest::TS::LOG, "C++ method: the read nd matrix is not correct: (%.20g vs %.20g) vs at (%d,%d)\n",
                            cvGetReal2D(&stub1, pt[0], pt[1]), cvGetReal2D(&_test_stub1, pt[1], pt[0]),
@@ -271,11 +271,11 @@ protected:
             cvRelease((void**)&m_nd);
 
             Ptr<CvSparseMat> m_s = (CvSparseMat*)fs["test_sparse_mat"].readObj();
-            Ptr<CvSparseMat> _test_sparse_ = (CvSparseMat*)test_sparse_mat;
+            Ptr<CvSparseMat> _test_sparse_ = cvCreateSparseMat(test_sparse_mat);
             Ptr<CvSparseMat> _test_sparse = (CvSparseMat*)cvClone(_test_sparse_);
             SparseMat m_s2;
             fs["test_sparse_mat"] >> m_s2;
-            Ptr<CvSparseMat> _m_s2 = (CvSparseMat*)m_s2;
+            Ptr<CvSparseMat> _m_s2 = cvCreateSparseMat(m_s2);
 
             if( !m_s || !CV_IS_SPARSE_MAT(m_s) ||
                !cvTsCheckSparse(m_s, _test_sparse,0) ||
@@ -378,6 +378,7 @@ protected:
 
 TEST(Core_InputOutput, write_read_consistency) { Core_IOTest test; test.safe_run(); }
 
+extern void testFormatter();
 
 class CV_MiscIOTest : public cvtest::BaseTest
 {

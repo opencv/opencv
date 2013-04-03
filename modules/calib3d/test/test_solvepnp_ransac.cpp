@@ -41,7 +41,10 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/core/internal.hpp"
+
+#ifdef HAVE_TBB
+#include "tbb/task_scheduler_init.h"
+#endif
 
 using namespace cv;
 using namespace std;
