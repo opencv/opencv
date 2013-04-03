@@ -184,11 +184,16 @@ if(WITH_FFMPEG)
   endif(APPLE)
 endif(WITH_FFMPEG)
 
-# --- VideoInput ---
-if(WITH_VIDEOINPUT)
+# --- VideoInput/DirectShow ---
+if(WITH_DSHOW)
   # always have VideoInput on Windows
-  set(HAVE_VIDEOINPUT 1)
-endif(WITH_VIDEOINPUT)
+  set(HAVE_DSHOW 1)
+endif(WITH_DSHOW)
+
+# --- VideoInput/Microsoft Media Foundation ---
+if(WITH_MSMF)
+  check_include_file(Mfapi.h HAVE_MSMF)
+endif(WITH_MSMF)
 
 # --- Extra HighGUI libs on Windows ---
 if(WIN32)

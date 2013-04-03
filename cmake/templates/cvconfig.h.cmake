@@ -214,8 +214,11 @@
 /* AMD's Basic Linear Algebra Subprograms Library*/
 #cmakedefine HAVE_CLAMDBLAS
 
-/* VideoInput library */
-#cmakedefine HAVE_VIDEOINPUT
+/* DirectShow Video Capture library */
+#cmakedefine HAVE_DSHOW
+
+/* Microsoft Media Foundation Capture library */
+#cmakedefine HAVE_MSMF
 
 /* XIMEA camera support */
 #cmakedefine HAVE_XIMEA

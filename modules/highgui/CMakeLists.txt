@@ -106,7 +106,19 @@ elseif(APPLE)
 endif()
 
 if(WIN32 AND NOT ARM)
-  list(APPEND highgui_srcs src/cap_dshow.cpp src/cap_vfw.cpp src/cap_cmu.cpp)
+  list(APPEND highgui_srcs src/cap_cmu.cpp)
+endif()
+
+if (WIN32 AND HAVE_DSHOW)
+  list(APPEND highgui_srcs src/cap_dshow.cpp)
+endif()
+
+if (WIN32 AND HAVE_MSMF)
+  list(APPEND highgui_srcs src/cap_msmf.cpp)
+endif()
+
+if (WIN32 AND HAVE_VFW)
+  list(APPEND highgui_srcs src/cap_vfw.cpp)
 endif()
 
 if(HAVE_XINE)

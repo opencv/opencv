@@ -18,7 +18,7 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include <iostream>
 
-#if defined(HAVE_VIDEOINPUT)   || \
+#if defined(HAVE_DSHOW)        || \
     defined(HAVE_TYZX)         || \
     defined(HAVE_VFW)          || \
     defined(HAVE_LIBV4L)       || \
@@ -34,7 +34,7 @@
     defined(HAVE_OPENNI)       || \
     defined(HAVE_XIMEA)        || \
     defined(HAVE_AVFOUNDATION) || \
-    defined(HAVE_GIGE_API) || \
+    defined(HAVE_GIGE_API)     || \
     (0)
     //defined(HAVE_ANDROID_NATIVE_CAMERA) ||   - enable after #1193
 #  define BUILD_WITH_CAMERA_SUPPORT 1
