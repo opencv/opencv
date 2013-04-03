@@ -138,13 +138,8 @@ static int CompareHuffmanTrees(const void* ptr1, const void* ptr2) {
   } else if (t1->total_count_ < t2->total_count_) {
     return 1;
   } else {
-    if (t1->value_ < t2->value_) {
-      return -1;
-    }
-    if (t1->value_ > t2->value_) {
-      return 1;
-    }
-    return 0;
+    assert(t1->value_ != t2->value_);
+    return (t1->value_ < t2->value_) ? -1 : 1;
   }
 }
 
@@ -193,6 +188,10 @@ static int GenerateOptimalTree(const int* const histogram, int histogram_size,
     }
   }
 
+  if (tree_size_orig == 0) {   // pretty optimal already!
+    return 1;
+  }
+
   // 3 * tree_size is enough to cover all the nodes representing a
   // population and all the inserted nodes combining two existing nodes.
   // The tree pool needs 2 * (tree_size_orig - 1) entities, and the
@@ -234,7 +233,7 @@ static int GenerateOptimalTree(const int* const histogram, int histogram_size,
         tree_pool[tree_pool_size++] = tree[tree_size - 1];
         tree_pool[tree_pool_size++] = tree[tree_size - 2];
         count = tree_pool[tree_pool_size - 1].total_count_ +
-            tree_pool[tree_pool_size - 2].total_count_;
+                tree_pool[tree_pool_size - 2].total_count_;
         tree_size -= 2;
         {
           // Search for the insertion point.

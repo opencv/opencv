@@ -51,12 +51,12 @@ extern "C" {
 
 // pack and store two alterning pixel rows
 #define PACK_AND_STORE(a, b, da, db, out) do {                                 \
-  const __m128i ta = _mm_avg_epu8(a, da);  /* (9a + 3b + 3c +  d + 8) / 16 */  \
-  const __m128i tb = _mm_avg_epu8(b, db);  /* (3a + 9b +  c + 3d + 8) / 16 */  \
-  const __m128i t1 = _mm_unpacklo_epi8(ta, tb);                                \
-  const __m128i t2 = _mm_unpackhi_epi8(ta, tb);                                \
-  _mm_store_si128(((__m128i*)(out)) + 0, t1);                                  \
-  _mm_store_si128(((__m128i*)(out)) + 1, t2);                                  \
+  const __m128i t_a = _mm_avg_epu8(a, da);  /* (9a + 3b + 3c +  d + 8) / 16 */ \
+  const __m128i t_b = _mm_avg_epu8(b, db);  /* (3a + 9b +  c + 3d + 8) / 16 */ \
+  const __m128i t_1 = _mm_unpacklo_epi8(t_a, t_b);                             \
+  const __m128i t_2 = _mm_unpackhi_epi8(t_a, t_b);                             \
+  _mm_store_si128(((__m128i*)(out)) + 0, t_1);                                 \
+  _mm_store_si128(((__m128i*)(out)) + 1, t_2);                                 \
 } while (0)
 
 // Loads 17 pixels each from rows r1 and r2 and generates 32 pixels.
@@ -128,7 +128,7 @@ static void FUNC_NAME(const uint8_t* top_y, const uint8_t* bottom_y,           \
                       const uint8_t* top_u, const uint8_t* top_v,              \
                       const uint8_t* cur_u, const uint8_t* cur_v,              \
                       uint8_t* top_dst, uint8_t* bottom_dst, int len) {        \
-  int b;                                                                       \
+  int block;                                                                   \
   /* 16 byte aligned array to cache reconstructed u and v */                   \
   uint8_t uv_buf[4 * 32 + 15];                                                 \
   uint8_t* const r_uv = (uint8_t*)((uintptr_t)(uv_buf + 15) & ~15);            \
@@ -154,11 +154,11 @@ static void FUNC_NAME(const uint8_t* top_y, const uint8_t* bottom_y,           \
     FUNC(bottom_y[0], u0, v0, bottom_dst);                                     \
   }                                                                            \
                                                                                \
-  for (b = 0; b < num_blocks; ++b) {                                           \
+  for (block = 0; block < num_blocks; ++block) {                               \
     UPSAMPLE_32PIXELS(top_u, cur_u, r_uv + 0 * 32);                            \
     UPSAMPLE_32PIXELS(top_v, cur_v, r_uv + 1 * 32);                            \
     CONVERT2RGB(FUNC, XSTEP, top_y, bottom_y, r_uv, top_dst, bottom_dst,       \
-                32 * b + 1, 32)                                                \
+                32 * block + 1, 32)                                            \
     top_u += 16;                                                               \
     cur_u += 16;                                                               \
     top_v += 16;                                                               \
@@ -211,3 +211,5 @@ void WebPInitPremultiplySSE2(void) {
 #if defined(__cplusplus) || defined(c_plusplus)
 }    // extern "C"
 #endif
+
+

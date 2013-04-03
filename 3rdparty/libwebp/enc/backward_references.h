@@ -35,7 +35,8 @@ extern "C" {
 #if defined(__GNUC__) && \
     ((__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || __GNUC__ >= 4)
 static WEBP_INLINE int BitsLog2Floor(uint32_t n) {
-  return n == 0 ? -1 : 31 ^ __builtin_clz(n);
+  assert(n != 0);
+  return 31 ^ __builtin_clz(n);
 }
 #elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))
 #include <intrin.h>
@@ -43,15 +44,18 @@ static WEBP_INLINE int BitsLog2Floor(uint32_t n) {
 
 static WEBP_INLINE int BitsLog2Floor(uint32_t n) {
   unsigned long first_set_bit;
-  return _BitScanReverse(&first_set_bit, n) ? first_set_bit : -1;
+  assert(n != 0);
+  _BitScanReverse(&first_set_bit, n);
+  return first_set_bit;
 }
 #else
+// Returns (int)floor(log2(n)). n must be > 0.
 static WEBP_INLINE int BitsLog2Floor(uint32_t n) {
   int log = 0;
   uint32_t value = n;
   int i;
 
-  if (value == 0) return -1;
+  assert(n != 0);
   for (i = 4; i >= 0; --i) {
     const int shift = (1 << i);
     const uint32_t x = value >> shift;
@@ -65,11 +69,11 @@ static WEBP_INLINE int BitsLog2Floor(uint32_t n) {
 #endif
 
 static WEBP_INLINE int VP8LBitsLog2Ceiling(uint32_t n) {
-  const int floor = BitsLog2Floor(n);
+  const int log_floor = BitsLog2Floor(n);
   if (n == (n & ~(n - 1)))  // zero or a power of two.
-    return floor;
+    return log_floor;
   else
-    return floor + 1;
+    return log_floor + 1;
 }
 
 // Splitting of distance and length codes into prefixes and
@@ -78,16 +82,17 @@ static WEBP_INLINE int VP8LBitsLog2Ceiling(uint32_t n) {
 static WEBP_INLINE void PrefixEncode(int distance, int* const code,
                                      int* const extra_bits_count,
                                      int* const extra_bits_value) {
-  // Collect the two most significant bits where the highest bit is 1.
-  const int highest_bit = BitsLog2Floor(--distance);
-  // & 0x3f is to make behavior well defined when highest_bit
-  // does not exist or is the least significant bit.
-  const int second_highest_bit =
-      (distance >> ((highest_bit - 1) & 0x3f)) & 1;
-  *extra_bits_count = (highest_bit > 0) ? (highest_bit - 1) : 0;
-  *extra_bits_value = distance & ((1 << *extra_bits_count) - 1);
-  *code = (highest_bit > 0) ? (2 * highest_bit + second_highest_bit)
-                            : (highest_bit == 0) ? 1 : 0;
+  if (distance > 2) {  // Collect the two most significant bits.
+    const int highest_bit = BitsLog2Floor(--distance);
+    const int second_highest_bit = (distance >> (highest_bit - 1)) & 1;
+    *extra_bits_count = highest_bit - 1;
+    *extra_bits_value = distance & ((1 << *extra_bits_count) - 1);
+    *code = 2 * highest_bit + second_highest_bit;
+  } else {
+    *extra_bits_count = 0;
+    *extra_bits_value = 0;
+    *code = (distance == 2) ? 1 : 0;
+  }
 }
 
 // -----------------------------------------------------------------------------

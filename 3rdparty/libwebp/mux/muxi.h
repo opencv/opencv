@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include "../dec/vp8i.h"
 #include "../dec/vp8li.h"
-#include "../webp/format_constants.h"
 #include "../webp/mux.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)
@@ -25,22 +24,26 @@ extern "C" {
 //------------------------------------------------------------------------------
 // Defines and constants.
 
+#define MUX_MAJ_VERSION 0
+#define MUX_MIN_VERSION 1
+#define MUX_REV_VERSION 0
+
 // Chunk object.
 typedef struct WebPChunk WebPChunk;
 struct WebPChunk {
   uint32_t        tag_;
   int             owner_;  // True if *data_ memory is owned internally.
-                           // VP8X, Loop, and other internally created chunks
-                           // like frame/tile are always owned.
+                           // VP8X, ANIM, and other internally created chunks
+                           // like ANMF/FRGM are always owned.
   WebPData        data_;
   WebPChunk*      next_;
 };
 
-// MuxImage object. Store a full webp image (including frame/tile chunk, alpha
+// MuxImage object. Store a full WebP image (including ANMF/FRGM chunk, ALPH
 // chunk and VP8/VP8L chunk),
 typedef struct WebPMuxImage WebPMuxImage;
 struct WebPMuxImage {
-  WebPChunk*  header_;      // Corresponds to WEBP_CHUNK_FRAME/WEBP_CHUNK_TILE.
+  WebPChunk*  header_;      // Corresponds to WEBP_CHUNK_ANMF/WEBP_CHUNK_FRGM.
   WebPChunk*  alpha_;       // Corresponds to WEBP_CHUNK_ALPHA.
   WebPChunk*  img_;         // Corresponds to WEBP_CHUNK_IMAGE.
   int         is_partial_;  // True if only some of the chunks are filled.
@@ -51,8 +54,9 @@ struct WebPMuxImage {
 struct WebPMux {
   WebPMuxImage*   images_;
   WebPChunk*      iccp_;
-  WebPChunk*      meta_;
-  WebPChunk*      loop_;
+  WebPChunk*      exif_;
+  WebPChunk*      xmp_;
+  WebPChunk*      anim_;
   WebPChunk*      vp8x_;
 
   WebPChunk*  unknown_;
@@ -65,13 +69,14 @@ struct WebPMux {
 typedef enum {
   IDX_VP8X = 0,
   IDX_ICCP,
-  IDX_LOOP,
-  IDX_FRAME,
-  IDX_TILE,
+  IDX_ANIM,
+  IDX_ANMF,
+  IDX_FRGM,
   IDX_ALPHA,
   IDX_VP8,
   IDX_VP8L,
-  IDX_META,
+  IDX_EXIF,
+  IDX_XMP,
   IDX_UNKNOWN,
 
   IDX_NIL,
@@ -80,8 +85,6 @@ typedef enum {
 
 #define NIL_TAG 0x00000000u  // To signal void chunk.
 
-#define MKFOURCC(a, b, c, d) ((uint32_t)(a) | (b) << 8 | (c) << 16 | (d) << 24)
-
 typedef struct {
   uint32_t      tag;
   WebPChunkId   id;
@@ -89,44 +92,6 @@ typedef struct {
 } ChunkInfo;
 
 extern const ChunkInfo kChunks[IDX_LAST_CHUNK];
-
-//------------------------------------------------------------------------------
-// Helper functions.
-
-// Read 16, 24 or 32 bits stored in little-endian order.
-static WEBP_INLINE int GetLE16(const uint8_t* const data) {
-  return (int)(data[0] << 0) | (data[1] << 8);
-}
-
-static WEBP_INLINE int GetLE24(const uint8_t* const data) {
-  return GetLE16(data) | (data[2] << 16);
-}
-
-static WEBP_INLINE uint32_t GetLE32(const uint8_t* const data) {
-  return (uint32_t)GetLE16(data) | (GetLE16(data + 2) << 16);
-}
-
-// Store 16, 24 or 32 bits in little-endian order.
-static WEBP_INLINE void PutLE16(uint8_t* const data, int val) {
-  assert(val < (1 << 16));
-  data[0] = (val >> 0);
-  data[1] = (val >> 8);
-}
-
-static WEBP_INLINE void PutLE24(uint8_t* const data, int val) {
-  assert(val < (1 << 24));
-  PutLE16(data, val & 0xffff);
-  data[2] = (val >> 16);
-}
-
-static WEBP_INLINE void PutLE32(uint8_t* const data, uint32_t val) {
-  PutLE16(data, (int)(val & 0xffff));
-  PutLE16(data + 2, (int)(val >> 16));
-}
-
-static WEBP_INLINE size_t SizeWithPadding(size_t chunk_size) {
-  return CHUNK_HEADER_SIZE + ((chunk_size + 1) & ~1U);
-}
 
 //------------------------------------------------------------------------------
 // Chunk object management.
@@ -140,6 +105,12 @@ CHUNK_INDEX ChunkGetIndexFromTag(uint32_t tag);
 // Get chunk id from chunk tag. Returns WEBP_CHUNK_NIL if not found.
 WebPChunkId ChunkGetIdFromTag(uint32_t tag);
 
+// Convert a fourcc string to a tag.
+uint32_t ChunkGetTagFromFourCC(const char fourcc[4]);
+
+// Get chunk index from fourcc. Returns IDX_UNKNOWN if given fourcc is unknown.
+CHUNK_INDEX ChunkGetIndexFromFourCC(const char fourcc[4]);
+
 // Search for nth chunk with given 'tag' in the chunk list.
 // nth = 0 means "last of the list".
 WebPChunk* ChunkSearchList(WebPChunk* first, uint32_t nth, uint32_t tag);
@@ -150,7 +121,8 @@ WebPMuxError ChunkAssignData(WebPChunk* chunk, const WebPData* const data,
 
 // Sets 'chunk' at nth position in the 'chunk_list'.
 // nth = 0 has the special meaning "last of the list".
-WebPMuxError ChunkSetNth(const WebPChunk* chunk, WebPChunk** chunk_list,
+// On success ownership is transferred from 'chunk' to the 'chunk_list'.
+WebPMuxError ChunkSetNth(WebPChunk* chunk, WebPChunk** chunk_list,
                          uint32_t nth);
 
 // Releases chunk and returns chunk->next_.
@@ -159,9 +131,14 @@ WebPChunk* ChunkRelease(WebPChunk* const chunk);
 // Deletes given chunk & returns chunk->next_.
 WebPChunk* ChunkDelete(WebPChunk* const chunk);
 
+// Returns size of the chunk including chunk header and padding byte (if any).
+static WEBP_INLINE size_t SizeWithPadding(size_t chunk_size) {
+  return CHUNK_HEADER_SIZE + ((chunk_size + 1) & ~1U);
+}
+
 // Size of a chunk including header and padding.
 static WEBP_INLINE size_t ChunkDiskSize(const WebPChunk* chunk) {
-  const size_t data_size = chunk->data_.size_;
+  const size_t data_size = chunk->data_.size;
   assert(data_size < MAX_CHUNK_PAYLOAD);
   return SizeWithPadding(data_size);
 }
@@ -193,13 +170,14 @@ WebPMuxImage* MuxImageDelete(WebPMuxImage* const wpi);
 void MuxImageDeleteAll(WebPMuxImage** const wpi_list);
 
 // Count number of images matching the given tag id in the 'wpi_list'.
+// If id == WEBP_CHUNK_NIL, all images will be matched.
 int MuxImageCount(const WebPMuxImage* wpi_list, WebPChunkId id);
 
 // Check if given ID corresponds to an image related chunk.
 static WEBP_INLINE int IsWPI(WebPChunkId id) {
   switch (id) {
-    case WEBP_CHUNK_FRAME:
-    case WEBP_CHUNK_TILE:
+    case WEBP_CHUNK_ANMF:
+    case WEBP_CHUNK_FRGM:
     case WEBP_CHUNK_ALPHA:
     case WEBP_CHUNK_IMAGE:  return 1;
     default:        return 0;
@@ -211,8 +189,8 @@ static WEBP_INLINE WebPChunk** MuxImageGetListFromId(
     const WebPMuxImage* const wpi, WebPChunkId id) {
   assert(wpi != NULL);
   switch (id) {
-    case WEBP_CHUNK_FRAME:
-    case WEBP_CHUNK_TILE:  return (WebPChunk**)&wpi->header_;
+    case WEBP_CHUNK_ANMF:
+    case WEBP_CHUNK_FRGM:  return (WebPChunk**)&wpi->header_;
     case WEBP_CHUNK_ALPHA: return (WebPChunk**)&wpi->alpha_;
     case WEBP_CHUNK_IMAGE: return (WebPChunk**)&wpi->img_;
     default: return NULL;
@@ -222,13 +200,12 @@ static WEBP_INLINE WebPChunk** MuxImageGetListFromId(
 // Pushes 'wpi' at the end of 'wpi_list'.
 WebPMuxError MuxImagePush(const WebPMuxImage* wpi, WebPMuxImage** wpi_list);
 
-// Delete nth image in the image list with given tag id.
-WebPMuxError MuxImageDeleteNth(WebPMuxImage** wpi_list, uint32_t nth,
-                               WebPChunkId id);
+// Delete nth image in the image list.
+WebPMuxError MuxImageDeleteNth(WebPMuxImage** wpi_list, uint32_t nth);
 
-// Get nth image in the image list with given tag id.
+// Get nth image in the image list.
 WebPMuxError MuxImageGetNth(const WebPMuxImage** wpi_list, uint32_t nth,
-                            WebPChunkId id, WebPMuxImage** wpi);
+                            WebPMuxImage** wpi);
 
 // Total size of the given image.
 size_t MuxImageDiskSize(const WebPMuxImage* const wpi);

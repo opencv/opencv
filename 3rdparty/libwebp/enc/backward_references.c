@@ -141,21 +141,35 @@ static void HashChainInsert(HashChain* const p,
   p->hash_to_first_index_[hash_code] = pos;
 }
 
+static void GetParamsForHashChainFindCopy(int quality, int xsize,
+                                          int* window_size, int* iter_pos,
+                                          int* iter_limit) {
+  const int iter_mult = (quality < 27) ? 1 : 1 + ((quality - 27) >> 4);
+  // Limit the backward-ref window size for lower qualities.
+  const int max_window_size = (quality > 50) ? WINDOW_SIZE
+                            : (quality > 25) ? (xsize << 8)
+                            : (xsize << 4);
+  assert(xsize > 0);
+  *window_size = (max_window_size > WINDOW_SIZE) ? WINDOW_SIZE
+               : max_window_size;
+  *iter_pos = 5 + (quality >> 3);
+  *iter_limit = -quality * iter_mult;
+}
+
 static int HashChainFindCopy(const HashChain* const p,
-                             int quality, int index, int xsize,
+                             int base_position, int xsize,
                              const uint32_t* const argb, int maxlen,
+                             int window_size, int iter_pos, int iter_limit,
                              int* const distance_ptr,
                              int* const length_ptr) {
-  const uint64_t hash_code = GetPixPairHash64(&argb[index]);
+  const uint64_t hash_code = GetPixPairHash64(&argb[base_position]);
   int prev_length = 0;
   int64_t best_val = 0;
   int best_length = 0;
   int best_distance = 0;
-  const uint32_t* const argb_start = argb + index;
-  const int iter_min_mult = (quality < 50) ? 2 : (quality < 75) ? 4 : 8;
-  const int iter_min = -quality * iter_min_mult;
-  int iter_cnt = 10 + (quality >> 1);
-  const int min_pos = (index > WINDOW_SIZE) ? index - WINDOW_SIZE : 0;
+  const uint32_t* const argb_start = argb + base_position;
+  const int min_pos =
+      (base_position > window_size) ? base_position - window_size : 0;
   int pos;
 
   assert(xsize > 0);
@@ -164,12 +178,12 @@ static int HashChainFindCopy(const HashChain* const p,
        pos = p->chain_[pos]) {
     int64_t val;
     int curr_length;
-    if (iter_cnt < 0) {
-      if (iter_cnt < iter_min || best_val >= 0xff0000) {
+    if (iter_pos < 0) {
+      if (iter_pos < iter_limit || best_val >= 0xff0000) {
         break;
       }
     }
-    --iter_cnt;
+    --iter_pos;
     if (best_length != 0 &&
         argb[pos + best_length - 1] != argb_start[best_length - 1]) {
       continue;
@@ -180,9 +194,9 @@ static int HashChainFindCopy(const HashChain* const p,
     }
     val = 65536 * curr_length;
     // Favoring 2d locality here gives savings for certain images.
-    if (index - pos < 9 * xsize) {
-      const int y = (index - pos) / xsize;
-      int x = (index - pos) % xsize;
+    if (base_position - pos < 9 * xsize) {
+      const int y = (base_position - pos) / xsize;
+      int x = (base_position - pos) % xsize;
       if (x > xsize / 2) {
         x = xsize - x;
       }
@@ -198,7 +212,7 @@ static int HashChainFindCopy(const HashChain* const p,
       prev_length = curr_length;
       best_val = val;
       best_length = curr_length;
-      best_distance = index - pos;
+      best_distance = base_position - pos;
       if (curr_length >= MAX_LENGTH) {
         break;
       }
@@ -257,6 +271,9 @@ static int BackwardReferencesHashChain(int xsize, int ysize,
   const int pix_count = xsize * ysize;
   HashChain* const hash_chain = (HashChain*)malloc(sizeof(*hash_chain));
   VP8LColorCache hashers;
+  int window_size = WINDOW_SIZE;
+  int iter_pos = 1;
+  int iter_limit = -1;
 
   if (hash_chain == NULL) return 0;
   if (use_color_cache) {
@@ -267,6 +284,8 @@ static int BackwardReferencesHashChain(int xsize, int ysize,
   if (!HashChainInit(hash_chain, pix_count)) goto Error;
 
   refs->size = 0;
+  GetParamsForHashChainFindCopy(quality, xsize, &window_size, &iter_pos,
+                                &iter_limit);
   for (i = 0; i < pix_count; ) {
     // Alternative#1: Code the pixels starting at 'i' using backward reference.
     int offset = 0;
@@ -276,7 +295,8 @@ static int BackwardReferencesHashChain(int xsize, int ysize,
       if (maxlen > MAX_LENGTH) {
         maxlen = MAX_LENGTH;
       }
-      HashChainFindCopy(hash_chain, quality, i, xsize, argb, maxlen,
+      HashChainFindCopy(hash_chain, i, xsize, argb, maxlen,
+                        window_size, iter_pos, iter_limit,
                         &offset, &len);
     }
     if (len >= MIN_LENGTH) {
@@ -291,8 +311,9 @@ static int BackwardReferencesHashChain(int xsize, int ysize,
         if (maxlen > MAX_LENGTH) {
           maxlen = MAX_LENGTH;
         }
-        HashChainFindCopy(hash_chain, quality,
-                          i + 1, xsize, argb, maxlen, &offset2, &len2);
+        HashChainFindCopy(hash_chain, i + 1, xsize, argb, maxlen,
+                          window_size, iter_pos, iter_limit,
+                          &offset2, &len2);
         if (len2 > len + 1) {
           const uint32_t pixel = argb[i];
           // Alternative#2 is a better match. So push pixel at 'i' as literal.
@@ -362,7 +383,8 @@ typedef struct {
 
 static int BackwardReferencesTraceBackwards(
     int xsize, int ysize, int recursive_cost_model,
-    const uint32_t* const argb, int cache_bits, VP8LBackwardRefs* const refs);
+    const uint32_t* const argb, int quality, int cache_bits,
+    VP8LBackwardRefs* const refs);
 
 static void ConvertPopulationCountTableToBitEstimates(
     int num_symbols, const int population_counts[], double output[]) {
@@ -387,17 +409,16 @@ static void ConvertPopulationCountTableToBitEstimates(
 
 static int CostModelBuild(CostModel* const m, int xsize, int ysize,
                           int recursion_level, const uint32_t* const argb,
-                          int cache_bits) {
+                          int quality, int cache_bits) {
   int ok = 0;
   VP8LHistogram histo;
   VP8LBackwardRefs refs;
-  const int quality = 100;
 
   if (!VP8LBackwardRefsAlloc(&refs, xsize * ysize)) goto Error;
 
   if (recursion_level > 0) {
     if (!BackwardReferencesTraceBackwards(xsize, ysize, recursion_level - 1,
-                                          argb, cache_bits, &refs)) {
+                                          argb, quality, cache_bits, &refs)) {
       goto Error;
     }
   } else {
@@ -452,11 +473,10 @@ static WEBP_INLINE double GetDistanceCost(const CostModel* const m,
 
 static int BackwardReferencesHashChainDistanceOnly(
     int xsize, int ysize, int recursive_cost_model, const uint32_t* const argb,
-    int cache_bits, uint32_t* const dist_array) {
+    int quality, int cache_bits, uint32_t* const dist_array) {
   int i;
   int ok = 0;
   int cc_init = 0;
-  const int quality = 100;
   const int pix_count = xsize * ysize;
   const int use_color_cache = (cache_bits > 0);
   float* const cost =
@@ -466,6 +486,10 @@ static int BackwardReferencesHashChainDistanceOnly(
   VP8LColorCache hashers;
   const double mul0 = (recursive_cost_model != 0) ? 1.0 : 0.68;
   const double mul1 = (recursive_cost_model != 0) ? 1.0 : 0.82;
+  const int min_distance_code = 2;  // TODO(vikasa): tune as function of quality
+  int window_size = WINDOW_SIZE;
+  int iter_pos = 1;
+  int iter_limit = -1;
 
   if (cost == NULL || cost_model == NULL || hash_chain == NULL) goto Error;
 
@@ -477,7 +501,7 @@ static int BackwardReferencesHashChainDistanceOnly(
   }
 
   if (!CostModelBuild(cost_model, xsize, ysize, recursive_cost_model, argb,
-                      cache_bits)) {
+                      quality, cache_bits)) {
     goto Error;
   }
 
@@ -486,6 +510,8 @@ static int BackwardReferencesHashChainDistanceOnly(
   // We loop one pixel at a time, but store all currently best points to
   // non-processed locations from this point.
   dist_array[0] = 0;
+  GetParamsForHashChainFindCopy(quality, xsize, &window_size, &iter_pos,
+                                &iter_limit);
   for (i = 0; i < pix_count; ++i) {
     double prev_cost = 0.0;
     int shortmax;
@@ -500,7 +526,8 @@ static int BackwardReferencesHashChainDistanceOnly(
         if (maxlen > pix_count - i) {
           maxlen = pix_count - i;
         }
-        HashChainFindCopy(hash_chain, quality, i, xsize, argb, maxlen,
+        HashChainFindCopy(hash_chain, i, xsize, argb, maxlen,
+                          window_size, iter_pos, iter_limit,
                           &offset, &len);
       }
       if (len >= MIN_LENGTH) {
@@ -517,7 +544,7 @@ static int BackwardReferencesHashChainDistanceOnly(
         }
         // This if is for speedup only. It roughly doubles the speed, and
         // makes compression worse by .1 %.
-        if (len >= 128 && code < 2) {
+        if (len >= 128 && code <= min_distance_code) {
           // Long copy for short distances, let's skip the middle
           // lookups for better copies.
           // 1) insert the hashes.
@@ -528,10 +555,10 @@ static int BackwardReferencesHashChainDistanceOnly(
           }
           // 2) Add to the hash_chain (but cannot add the last pixel)
           {
-            const int last = (len < pix_count - 1 - i) ? len
-                                                       : pix_count - 1 - i;
-            for (k = 0; k < last; ++k) {
-              HashChainInsert(hash_chain, &argb[i + k], i + k);
+            const int last = (len + i < pix_count - 1) ? len + i
+                                                       : pix_count - 1;
+            for (k = i; k < last; ++k) {
+              HashChainInsert(hash_chain, &argb[k], k);
             }
           }
           // 3) jump.
@@ -571,40 +598,30 @@ Error:
   return ok;
 }
 
-static int TraceBackwards(const uint32_t* const dist_array,
-                          int dist_array_size,
-                          uint32_t** const chosen_path,
-                          int* const chosen_path_size) {
-  int i;
-  // Count how many.
-  int count = 0;
-  for (i = dist_array_size - 1; i >= 0; ) {
-    int k = dist_array[i];
-    assert(k >= 1);
-    ++count;
-    i -= k;
+// We pack the path at the end of *dist_array and return
+// a pointer to this part of the array. Example:
+// dist_array = [1x2xx3x2] => packed [1x2x1232], chosen_path = [1232]
+static void TraceBackwards(uint32_t* const dist_array,
+                           int dist_array_size,
+                           uint32_t** const chosen_path,
+                           int* const chosen_path_size) {
+  uint32_t* path = dist_array + dist_array_size;
+  uint32_t* cur = dist_array + dist_array_size - 1;
+  while (cur >= dist_array) {
+    const int k = *cur;
+    --path;
+    *path = k;
+    cur -= k;
   }
-  // Allocate.
-  *chosen_path_size = count;
-  *chosen_path =
-      (uint32_t*)WebPSafeMalloc((uint64_t)count, sizeof(**chosen_path));
-  if (*chosen_path == NULL) return 0;
-
-  // Write in reverse order.
-  for (i = dist_array_size - 1; i >= 0; ) {
-    int k = dist_array[i];
-    assert(k >= 1);
-    (*chosen_path)[--count] = k;
-    i -= k;
-  }
-  return 1;
+  *chosen_path = path;
+  *chosen_path_size = (int)(dist_array + dist_array_size - path);
 }
 
 static int BackwardReferencesHashChainFollowChosenPath(
-    int xsize, int ysize, const uint32_t* const argb, int cache_bits,
+    int xsize, int ysize, const uint32_t* const argb,
+    int quality, int cache_bits,
     const uint32_t* const chosen_path, int chosen_path_size,
     VP8LBackwardRefs* const refs) {
-  const int quality = 100;
   const int pix_count = xsize * ysize;
   const int use_color_cache = (cache_bits > 0);
   int size = 0;
@@ -613,6 +630,9 @@ static int BackwardReferencesHashChainFollowChosenPath(
   int ix;
   int ok = 0;
   int cc_init = 0;
+  int window_size = WINDOW_SIZE;
+  int iter_pos = 1;
+  int iter_limit = -1;
   HashChain* hash_chain = (HashChain*)malloc(sizeof(*hash_chain));
   VP8LColorCache hashers;
 
@@ -625,13 +645,16 @@ static int BackwardReferencesHashChainFollowChosenPath(
   }
 
   refs->size = 0;
+  GetParamsForHashChainFindCopy(quality, xsize, &window_size, &iter_pos,
+                                &iter_limit);
   for (ix = 0; ix < chosen_path_size; ++ix, ++size) {
     int offset = 0;
     int len = 0;
     int maxlen = chosen_path[ix];
     if (maxlen != 1) {
-      HashChainFindCopy(hash_chain, quality,
-                        i, xsize, argb, maxlen, &offset, &len);
+      HashChainFindCopy(hash_chain, i, xsize, argb, maxlen,
+                        window_size, iter_pos, iter_limit,
+                        &offset, &len);
       assert(len == maxlen);
       refs->refs[size] = PixOrCopyCreateCopy(offset, len);
       if (use_color_cache) {
@@ -674,7 +697,7 @@ Error:
 static int BackwardReferencesTraceBackwards(int xsize, int ysize,
                                             int recursive_cost_model,
                                             const uint32_t* const argb,
-                                            int cache_bits,
+                                            int quality, int cache_bits,
                                             VP8LBackwardRefs* const refs) {
   int ok = 0;
   const int dist_array_size = xsize * ysize;
@@ -686,22 +709,18 @@ static int BackwardReferencesTraceBackwards(int xsize, int ysize,
   if (dist_array == NULL) goto Error;
 
   if (!BackwardReferencesHashChainDistanceOnly(
-      xsize, ysize, recursive_cost_model, argb, cache_bits, dist_array)) {
+      xsize, ysize, recursive_cost_model, argb, quality, cache_bits,
+      dist_array)) {
     goto Error;
   }
-  if (!TraceBackwards(dist_array, dist_array_size,
-                      &chosen_path, &chosen_path_size)) {
-    goto Error;
-  }
-  free(dist_array);   // no need to retain this memory any longer
-  dist_array = NULL;
+  TraceBackwards(dist_array, dist_array_size, &chosen_path, &chosen_path_size);
   if (!BackwardReferencesHashChainFollowChosenPath(
-      xsize, ysize, argb, cache_bits, chosen_path, chosen_path_size, refs)) {
+      xsize, ysize, argb, quality, cache_bits, chosen_path, chosen_path_size,
+      refs)) {
     goto Error;
   }
   ok = 1;
  Error:
-  free(chosen_path);
   free(dist_array);
   return ok;
 }
@@ -761,8 +780,8 @@ int VP8LGetBackwardReferences(int width, int height,
 
   // Choose appropriate backward reference.
   if (lz77_is_useful) {
-    // TraceBackwards is costly. Run it for higher qualities.
-    const int try_lz77_trace_backwards = (quality >= 75);
+    // TraceBackwards is costly. Don't execute it at lower quality (q <= 10).
+    const int try_lz77_trace_backwards = (quality > 10);
     *best = refs_lz77;   // default guess: lz77 is better
     VP8LClearBackwardRefs(&refs_rle);
     if (try_lz77_trace_backwards) {
@@ -771,8 +790,8 @@ int VP8LGetBackwardReferences(int width, int height,
       if (!VP8LBackwardRefsAlloc(&refs_trace, num_pix)) {
         goto End;
       }
-      if (BackwardReferencesTraceBackwards(
-          width, height, recursion_level, argb, cache_bits, &refs_trace)) {
+      if (BackwardReferencesTraceBackwards(width, height, recursion_level, argb,
+                                           quality, cache_bits, &refs_trace)) {
         VP8LClearBackwardRefs(&refs_lz77);
         *best = refs_trace;
       }

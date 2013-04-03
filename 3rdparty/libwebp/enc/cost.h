@@ -18,7 +18,8 @@
 extern "C" {
 #endif
 
-extern const uint16_t VP8LevelFixedCosts[2048];   // approximate cost per level
+// approximate cost per level:
+extern const uint16_t VP8LevelFixedCosts[MAX_LEVEL + 1];
 extern const uint16_t VP8EntropyCost[256];        // 8bit fixed-point log(p)
 
 // Cost of coding one event with probability 'proba'.

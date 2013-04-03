@@ -97,53 +97,50 @@ static void FilterRow(const VP8Decoder* const dec) {
 }
 
 //------------------------------------------------------------------------------
+// Precompute the filtering strength for each segment and each i4x4/i16x16 mode.
 
-void VP8StoreBlock(VP8Decoder* const dec) {
+static void PrecomputeFilterStrengths(VP8Decoder* const dec) {
   if (dec->filter_type_ > 0) {
-    VP8FInfo* const info = dec->f_info_ + dec->mb_x_;
-    const int skip = dec->mb_info_[dec->mb_x_].skip_;
-    int level = dec->filter_levels_[dec->segment_];
-    if (dec->filter_hdr_.use_lf_delta_) {
-      // TODO(skal): only CURRENT is handled for now.
-      level += dec->filter_hdr_.ref_lf_delta_[0];
-      if (dec->is_i4x4_) {
-        level += dec->filter_hdr_.mode_lf_delta_[0];
-      }
-    }
-    level = (level < 0) ? 0 : (level > 63) ? 63 : level;
-    info->f_level_ = level;
-
-    if (dec->filter_hdr_.sharpness_ > 0) {
-      if (dec->filter_hdr_.sharpness_ > 4) {
-        level >>= 2;
+    int s;
+    const VP8FilterHeader* const hdr = &dec->filter_hdr_;
+    for (s = 0; s < NUM_MB_SEGMENTS; ++s) {
+      int i4x4;
+      // First, compute the initial level
+      int base_level;
+      if (dec->segment_hdr_.use_segment_) {
+        base_level = dec->segment_hdr_.filter_strength_[s];
+        if (!dec->segment_hdr_.absolute_delta_) {
+          base_level += hdr->level_;
+        }
       } else {
-        level >>= 1;
+        base_level = hdr->level_;
       }
-      if (level > 9 - dec->filter_hdr_.sharpness_) {
-        level = 9 - dec->filter_hdr_.sharpness_;
-      }
-    }
+      for (i4x4 = 0; i4x4 <= 1; ++i4x4) {
+        VP8FInfo* const info = &dec->fstrengths_[s][i4x4];
+        int level = base_level;
+        if (hdr->use_lf_delta_) {
+          // TODO(skal): only CURRENT is handled for now.
+          level += hdr->ref_lf_delta_[0];
+          if (i4x4) {
+            level += hdr->mode_lf_delta_[0];
+          }
+        }
+        level = (level < 0) ? 0 : (level > 63) ? 63 : level;
+        info->f_level_ = level;
 
-    info->f_ilevel_ = (level < 1) ? 1 : level;
-    info->f_inner_ = (!skip || dec->is_i4x4_);
-  }
-  {
-    // Transfer samples to row cache
-    int y;
-    const int y_offset = dec->cache_id_ * 16 * dec->cache_y_stride_;
-    const int uv_offset = dec->cache_id_ * 8 * dec->cache_uv_stride_;
-    uint8_t* const ydst = dec->cache_y_ + dec->mb_x_ * 16 + y_offset;
-    uint8_t* const udst = dec->cache_u_ + dec->mb_x_ * 8 + uv_offset;
-    uint8_t* const vdst = dec->cache_v_ + dec->mb_x_ * 8 + uv_offset;
-    for (y = 0; y < 16; ++y) {
-      memcpy(ydst + y * dec->cache_y_stride_,
-             dec->yuv_b_ + Y_OFF + y * BPS, 16);
-    }
-    for (y = 0; y < 8; ++y) {
-      memcpy(udst + y * dec->cache_uv_stride_,
-           dec->yuv_b_ + U_OFF + y * BPS, 8);
-      memcpy(vdst + y * dec->cache_uv_stride_,
-           dec->yuv_b_ + V_OFF + y * BPS, 8);
+        if (hdr->sharpness_ > 0) {
+          if (hdr->sharpness_ > 4) {
+            level >>= 2;
+          } else {
+            level >>= 1;
+          }
+          if (level > 9 - hdr->sharpness_) {
+            level = 9 - hdr->sharpness_;
+          }
+        }
+        info->f_ilevel_ = (level < 1) ? 1 : level;
+        info->f_inner_ = 0;
+      }
     }
   }
 }
@@ -339,6 +336,7 @@ VP8StatusCode VP8EnterCritical(VP8Decoder* const dec, VP8Io* const io) {
       dec->br_mb_y_ = dec->mb_h_;
     }
   }
+  PrecomputeFilterStrengths(dec);
   return VP8_STATUS_OK;
 }
 
@@ -496,6 +494,7 @@ static int AllocateMemory(VP8Decoder* const dec) {
   // alpha plane
   dec->alpha_plane_ = alpha_size ? (uint8_t*)mem : NULL;
   mem += alpha_size;
+  assert(mem <= (uint8_t*)dec->mem_ + dec->mem_size_);
 
   // note: left-info is initialized once for all.
   memset(dec->mb_info_ - 1, 0, mb_info_size);
@@ -551,6 +550,7 @@ static WEBP_INLINE void Copy32b(uint8_t* dst, uint8_t* src) {
 }
 
 void VP8ReconstructBlock(VP8Decoder* const dec) {
+  int j;
   uint8_t* const y_dst = dec->yuv_b_ + Y_OFF;
   uint8_t* const u_dst = dec->yuv_b_ + U_OFF;
   uint8_t* const v_dst = dec->yuv_b_ + V_OFF;
@@ -558,7 +558,6 @@ void VP8ReconstructBlock(VP8Decoder* const dec) {
   // Rotate in the left samples from previously decoded block. We move four
   // pixels at a time for alignment reason, and because of in-loop filter.
   if (dec->mb_x_ > 0) {
-    int j;
     for (j = -1; j < 16; ++j) {
       Copy32b(&y_dst[j * BPS - 4], &y_dst[j * BPS + 12]);
     }
@@ -567,7 +566,6 @@ void VP8ReconstructBlock(VP8Decoder* const dec) {
       Copy32b(&v_dst[j * BPS - 4], &v_dst[j * BPS + 4]);
     }
   } else {
-    int j;
     for (j = 0; j < 16; ++j) {
       y_dst[j * BPS - 1] = 129;
     }
@@ -668,6 +666,21 @@ void VP8ReconstructBlock(VP8Decoder* const dec) {
         memcpy(top_u, u_dst +  7 * BPS,  8);
         memcpy(top_v, v_dst +  7 * BPS,  8);
       }
+    }
+  }
+  // Transfer reconstructed samples from yuv_b_ cache to final destination.
+  {
+    const int y_offset = dec->cache_id_ * 16 * dec->cache_y_stride_;
+    const int uv_offset = dec->cache_id_ * 8 * dec->cache_uv_stride_;
+    uint8_t* const y_out = dec->cache_y_ + dec->mb_x_ * 16 + y_offset;
+    uint8_t* const u_out = dec->cache_u_ + dec->mb_x_ * 8 + uv_offset;
+    uint8_t* const v_out = dec->cache_v_ + dec->mb_x_ * 8 + uv_offset;
+    for (j = 0; j < 16; ++j) {
+      memcpy(y_out + j * dec->cache_y_stride_, y_dst + j * BPS, 16);
+    }
+    for (j = 0; j < 8; ++j) {
+      memcpy(u_out + j * dec->cache_uv_stride_, u_dst + j * BPS, 8);
+      memcpy(v_out + j * dec->cache_uv_stride_, v_dst + j * BPS, 8);
     }
   }
 }
