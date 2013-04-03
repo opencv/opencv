@@ -44,7 +44,6 @@
 //M*/
 
 #include "precomp.hpp"
-
 using namespace cv;
 using namespace cv::ocl;
 using namespace std;
@@ -229,7 +228,6 @@ void cv::ocl::HOGDescriptor::computeGradient(const oclMat &img, oclMat &grad, oc
         break;
     }
 }
-
 
 void cv::ocl::HOGDescriptor::computeBlockHistograms(const oclMat &img)
 {
@@ -1571,6 +1569,27 @@ void cv::ocl::device::hog::set_up_constants(int nbins, int block_stride_x, int b
     cdescr_size = descr_size;
 }
 
+static inline int divUp(int total, int grain)
+{
+    return (total + grain - 1) / grain;
+}
+
+static void openCLExecuteKernel_hog(Context *clCxt , const char **source, string kernelName, 
+                                    size_t globalThreads[3], size_t localThreads[3], 
+                                    vector< pair<size_t, const void *> > &args)
+{
+    size_t wave_size = 0;
+    queryDeviceInfo(WAVEFRONT_SIZE, &wave_size);
+    if (wave_size <= 16)
+    {
+        char build_options[64];
+        sprintf(build_options, (wave_size == 16) ? "-D WAVE_SIZE_16" : "-D WAVE_SIZE_1");
+        openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
+    }
+    else
+        openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, -1, -1);
+}
+
 void cv::ocl::device::hog::compute_hists(int nbins, int block_stride_x, int block_stride_y,
         int height, int width, const cv::ocl::oclMat &grad,
         const cv::ocl::oclMat &qangle, float sigma, cv::ocl::oclMat &block_hists)
@@ -1582,8 +1601,10 @@ void cv::ocl::device::hog::compute_hists(int nbins, int block_stride_x, int bloc
     int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / block_stride_x;
     int img_block_height = (height - CELLS_PER_BLOCK_Y * CELL_HEIGHT + block_stride_y) / block_stride_y;
 
-    size_t globalThreads[3] = { img_block_width * 32, img_block_height * 2, 1 };
-    size_t localThreads[3] = { 32, 2, 1 };
+    int blocks_total = img_block_width * img_block_height;
+    int blocks_in_group = 4;
+    size_t localThreads[3] = { blocks_in_group * 24, 2, 1 };
+    size_t globalThreads[3] = { divUp(blocks_total, blocks_in_group) * localThreads[0], 2, 1 };
 
     int grad_quadstep = grad.step >> 2;
     int qangle_step = qangle.step;
@@ -1593,14 +1614,15 @@ void cv::ocl::device::hog::compute_hists(int nbins, int block_stride_x, int bloc
 
     int hists_size = (nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y * 12) * sizeof(float);
     int final_hists_size = (nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y) * sizeof(float);
-    int smem = hists_size + final_hists_size;
+    int smem = (hists_size + final_hists_size) * blocks_in_group;
 
-    args.push_back( make_pair( sizeof(cl_int), (void *)&width));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cblock_stride_x));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cblock_stride_y));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cnbins));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cblock_hist_size));
     args.push_back( make_pair( sizeof(cl_int), (void *)&img_block_width));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&blocks_in_group));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&blocks_total));
     args.push_back( make_pair( sizeof(cl_int), (void *)&grad_quadstep));
     args.push_back( make_pair( sizeof(cl_int), (void *)&qangle_step));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&grad.data));
@@ -1609,7 +1631,7 @@ void cv::ocl::device::hog::compute_hists(int nbins, int block_stride_x, int bloc
     args.push_back( make_pair( sizeof(cl_mem), (void *)&block_hists.data));
     args.push_back( make_pair( smem, (void *)NULL));
 
-    openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel_hog(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args);
 }
 
 void cv::ocl::device::hog::normalize_hists(int nbins, int block_stride_x, int block_stride_y,
@@ -1637,7 +1659,7 @@ void cv::ocl::device::hog::normalize_hists(int nbins, int block_stride_x, int bl
     args.push_back( make_pair( sizeof(cl_float), (void *)&threshold));
     args.push_back( make_pair( nthreads * sizeof(float), (void *)NULL));
 
-    openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel_hog(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args);
 }
 
 void cv::ocl::device::hog::classify_hists(int win_height, int win_width, int block_stride_y,
@@ -1671,7 +1693,7 @@ void cv::ocl::device::hog::classify_hists(int win_height, int win_width, int blo
     args.push_back( make_pair( sizeof(cl_float), (void *)&threshold));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&labels.data));
 
-    openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel_hog(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args);
 }
 
 void cv::ocl::device::hog::extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, int block_stride_x,
@@ -1702,7 +1724,7 @@ void cv::ocl::device::hog::extract_descrs_by_rows(int win_height, int win_width,
     args.push_back( make_pair( sizeof(cl_mem), (void *)&block_hists.data));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&descriptors.data));
 
-    openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void cv::ocl::device::hog::extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, int block_stride_x,
@@ -1734,12 +1756,7 @@ void cv::ocl::device::hog::extract_descrs_by_cols(int win_height, int win_width,
     args.push_back( make_pair( sizeof(cl_mem), (void *)&block_hists.data));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&descriptors.data));
 
-    openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args, -1, -1);
-}
-
-static inline int divUp(int total, int grain)
-{
-    return (total + grain - 1) / grain;
+    openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void cv::ocl::device::hog::compute_gradients_8UC1(int height, int width, const cv::ocl::oclMat &img,
@@ -1768,7 +1785,7 @@ void cv::ocl::device::hog::compute_gradients_8UC1(int height, int width, const c
     args.push_back( make_pair( sizeof(cl_char), (void *)&correctGamma));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cnbins));
 
-    openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void cv::ocl::device::hog::compute_gradients_8UC4(int height, int width, const cv::ocl::oclMat &img,
@@ -1798,7 +1815,7 @@ void cv::ocl::device::hog::compute_gradients_8UC4(int height, int width, const c
     args.push_back( make_pair( sizeof(cl_char), (void *)&correctGamma));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cnbins));
 
-    openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void cv::ocl::device::hog::resize( const oclMat &src, oclMat &dst, const Size sz)
@@ -1815,14 +1832,16 @@ void cv::ocl::device::hog::resize( const oclMat &src, oclMat &dst, const Size sz
 
     float ifx = (float)src.cols / sz.width;
     float ify = (float)src.rows / sz.height;
+    int src_step = static_cast<int>(src.step);
+    int dst_step = static_cast<int>(dst.step);
 
     vector< pair<size_t, const void *> > args;
     args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
     args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
     args.push_back( make_pair(sizeof(cl_int), (void *)&dst.offset));
     args.push_back( make_pair(sizeof(cl_int), (void *)&src.offset));
-    args.push_back( make_pair(sizeof(cl_int), (void *)&dst.step));
-    args.push_back( make_pair(sizeof(cl_int), (void *)&src.step));
+    args.push_back( make_pair(sizeof(cl_int), (void *)&dst_step));
+    args.push_back( make_pair(sizeof(cl_int), (void *)&src_step));
     args.push_back( make_pair(sizeof(cl_int), (void *)&src.cols));
     args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
     args.push_back( make_pair(sizeof(cl_int), (void *)&sz.width));
@@ -1830,5 +1849,5 @@ void cv::ocl::device::hog::resize( const oclMat &src, oclMat &dst, const Size sz
     args.push_back( make_pair(sizeof(cl_float), (void *)&ifx));
     args.push_back( make_pair(sizeof(cl_float), (void *)&ify));
 
-    openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads, localThreads, args, -1, -1);
 }
