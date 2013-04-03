@@ -71,7 +71,7 @@ int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels)
 {
     int channels = rng.uniform(minChannels, maxChannels+1);
     int depth = 0;
-    CV_Assert((typeMask & DEPTH_MASK_ALL) != 0);
+    CV_Assert((typeMask & _OutputArray::DEPTH_MASK_ALL) != 0);
     for(;;)
     {
         depth = rng.uniform(CV_8U, CV_64F+1);
@@ -272,10 +272,13 @@ convertTo(const _Tp* src, void* dst, int dtype, size_t total, double alpha, doub
     }
 }
 
-void convert(const Mat& src, Mat& dst, int dtype, double alpha, double beta)
+void convert(const Mat& src, cv::OutputArray _dst, int dtype, double alpha, double beta)
 {
+    if (dtype < 0) dtype = _dst.depth();
+
     dtype = CV_MAKETYPE(CV_MAT_DEPTH(dtype), src.channels());
-    dst.create(src.dims, &src.size[0], dtype);
+    _dst.create(src.dims, &src.size[0], dtype);
+    Mat dst = _dst.getMat();
     if( alpha == 0 )
     {
         set( dst, Scalar::all(beta) );
@@ -2934,16 +2937,4 @@ MatComparator::operator()(const char* expr1, const char* expr2,
     << "'" << expr2 << "': " << MatPart(m2part, border > 0 ? &loc : 0) << ".\n";
 }
 
-}
-
-void cvTsConvert( const CvMat* src, CvMat* dst )
-{
-    Mat _src = cvarrToMat(src), _dst = cvarrToMat(dst);
-    cvtest::convert(_src, _dst, _dst.depth());
-}
-
-void cvTsZero( CvMat* dst, const CvMat* mask )
-{
-    Mat _dst = cvarrToMat(dst), _mask = mask ? cvarrToMat(mask) : Mat();
-    cvtest::set(_dst, Scalar::all(0), _mask);
 }

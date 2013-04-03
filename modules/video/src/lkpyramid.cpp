@@ -44,6 +44,8 @@
 #include <stdio.h>
 #include "lkpyramid.hpp"
 
+#define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
+
 namespace
 {
 static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)

@@ -46,16 +46,11 @@
 #include <vector>
 #include <limits>
 
-#ifdef HAVE_CVCONFIG_H
-  #include "cvconfig.h"
-#endif
-
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/core.hpp"
 #include "opencv2/core/gpumat.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/utility.hpp"
-#include "opencv2/core/internal.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/video/tracking.hpp"
 
@@ -75,5 +70,7 @@
 #include "input_array_utility.hpp"
 
 #include "ring_buffer.hpp"
+
+#include "opencv2/core/private.hpp"
 
 #endif /* __OPENCV_PRECOMP_H__ */

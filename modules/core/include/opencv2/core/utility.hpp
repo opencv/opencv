@@ -44,6 +44,10 @@
 #ifndef __OPENCV_CORE_UTILITY_H__
 #define __OPENCV_CORE_UTILITY_H__
 
+#ifndef __cplusplus
+#  error utility.hpp header must be compiled as C++
+#endif
+
 #include "opencv2/core.hpp"
 
 namespace cv
@@ -126,7 +130,7 @@ protected:
  */
 CV_EXPORTS bool setBreakOnError(bool flag);
 
-typedef int (CV_CDECL *ErrorCallback)( int status, const char* func_name,
+extern "C" typedef int (*ErrorCallback)( int status, const char* func_name,
                                        const char* err_msg, const char* file_name,
                                        int line, void* userdata );
 
@@ -144,7 +148,7 @@ typedef int (CV_CDECL *ErrorCallback)( int status, const char* func_name,
 CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback, void* userdata=0, void** prevUserdata=0);
 
 CV_EXPORTS String format( const char* fmt, ... );
-CV_EXPORTS String tempfile( const char* suffix CV_DEFAULT(0));
+CV_EXPORTS String tempfile( const char* suffix = 0);
 CV_EXPORTS void glob(String pattern, std::vector<String>& result, bool recursive = false);
 CV_EXPORTS void setNumThreads(int nthreads);
 CV_EXPORTS int getNumThreads();
@@ -442,17 +446,6 @@ AutoBuffer<_Tp, fixed_size>::operator _Tp* ()
 template<typename _Tp, size_t fixed_size> inline
 AutoBuffer<_Tp, fixed_size>::operator const _Tp* () const
 { return ptr; }
-
-// TODO: move them to core_c.h
-//! converts array (CvMat or IplImage) to cv::Mat
-CV_EXPORTS Mat cvarrToMat(const CvArr* arr, bool copyData=false,
-                          bool allowND=true, int coiMode=0,
-                          AutoBuffer<double>* buf=0);
-
-static inline Mat cvarrToMatND(const CvArr* arr, bool copyData=false, int coiMode=0)
-{
-    return cvarrToMat(arr, copyData, true, coiMode);
-}
 
 #ifndef OPENCV_NOSTL
 template<> inline std::string CommandLineParser::get<std::string>(int index, bool space_delete) const

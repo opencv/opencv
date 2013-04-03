@@ -137,7 +137,7 @@ public:
             name = name + "BRISK";
             break;
         default:
-            CV_Error( CV_StsBadArg, "Specified feature detector type is not supported." );
+            CV_Error( Error::StsBadArg, "Specified feature detector type is not supported." );
             break;
         }
 
@@ -231,7 +231,7 @@ public:
             name = "BruteForce-SL2";
             break;
         default:
-            CV_Error( CV_StsBadArg, "Specified descriptor matcher type is not supported." );
+            CV_Error( Error::StsBadArg, "Specified descriptor matcher type is not supported." );
             break;
         }
 
@@ -323,7 +323,7 @@ public:
             name = name + "FREAK";
             break;
         default:
-            CV_Error( CV_StsBadArg, "Specified descriptor extractor type is not supported." );
+            CV_Error( Error::StsBadArg, "Specified descriptor extractor type is not supported." );
             break;
         }
 
@@ -412,7 +412,7 @@ public:
             name = "FERN";
             break;
         default:
-            CV_Error( CV_StsBadArg, "Specified generic descriptor matcher type is not supported." );
+            CV_Error( Error::StsBadArg, "Specified generic descriptor matcher type is not supported." );
             break;
         }
 

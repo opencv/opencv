@@ -64,8 +64,6 @@
 #include <iterator>
 #include <stdexcept>
 
-#include "cvconfig.h"
-
 #ifdef HAVE_CUDA
     #include <cuda.h>
     #include <cuda_runtime.h>
@@ -83,6 +81,8 @@
 
     #include "interpolation.hpp"
     #include "main_test_nvidia.h"
+
+    #include "opencv2/core/private.hpp"
 #endif
 
 #endif

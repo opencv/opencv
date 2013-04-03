@@ -47,6 +47,7 @@
 //#warning "This is a deprecated opencv header provided for compatibility. Please include a header from a corresponding opencv module"
 //#endif
 
-#include <cv.h>
+#include "cv.h"
+#include "opencv2/core.hpp"
 
 #endif

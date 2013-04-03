@@ -1,4 +1,5 @@
 #include "precomp.hpp"
+#include <sstream>
 
 namespace cv
 {

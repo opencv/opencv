@@ -630,7 +630,8 @@ void CV_MinMaxHistTest::run_func(void)
 {
     if( hist_type != CV_HIST_ARRAY && test_cpp )
     {
-        cv::SparseMat h((CvSparseMat*)hist[0]->bins);
+        cv::SparseMat h;
+        ((CvSparseMat*)hist[0]->bins)->copyToSparseMat(h);
         double _min_val = 0, _max_val = 0;
         cv::minMaxLoc(h, &_min_val, &_max_val, min_idx, max_idx );
         min_val = (float)_min_val;
@@ -727,10 +728,11 @@ void CV_NormHistTest::run_func(void)
 {
     if( hist_type != CV_HIST_ARRAY && test_cpp )
     {
-        cv::SparseMat h((CvSparseMat*)hist[0]->bins);
+        cv::SparseMat h;
+        ((CvSparseMat*)hist[0]->bins)->copyToSparseMat(h);
         cv::normalize(h, h, factor, CV_L1);
         cvReleaseSparseMat((CvSparseMat**)&hist[0]->bins);
-        hist[0]->bins = (CvSparseMat*)h;
+        hist[0]->bins = cvCreateSparseMat(h);
     }
     else
         cvNormalizeHist( hist[0], factor );
@@ -978,8 +980,9 @@ void CV_CompareHistTest::run_func(void)
     int k;
     if( hist_type != CV_HIST_ARRAY && test_cpp )
     {
-        cv::SparseMat h0((CvSparseMat*)hist[0]->bins);
-        cv::SparseMat h1((CvSparseMat*)hist[1]->bins);
+        cv::SparseMat h0, h1;
+        ((CvSparseMat*)hist[0]->bins)->copyToSparseMat(h0);
+        ((CvSparseMat*)hist[1]->bins)->copyToSparseMat(h1);
         for( k = 0; k < MAX_METHOD; k++ )
             result[k] = cv::compareHist(h0, h1, k);
     }

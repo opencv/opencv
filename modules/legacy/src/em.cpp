@@ -139,15 +139,15 @@ void init_params(const CvEMParams& src,
                  Mat& prbs, Mat& weights,
                  Mat& means, std::vector<Mat>& covsHdrs)
 {
-    prbs = src.probs;
-    weights = src.weights;
-    means = src.means;
+    prbs = cv::cvarrToMat(src.probs);
+    weights = cv::cvarrToMat(src.weights);
+    means = cv::cvarrToMat(src.means);
 
     if(src.covs)
     {
         covsHdrs.resize(src.nclusters);
         for(size_t i = 0; i < covsHdrs.size(); i++)
-            covsHdrs[i] = src.covs[i];
+            covsHdrs[i] = cv::cvarrToMat(src.covs[i]);
     }
 }
 

@@ -189,13 +189,13 @@ void CV_POSITTest::run( int start_from )
                  rotation->data.fl, translation->data.fl );
         cvReleasePOSITObject( &object );
 
-        //Mat _rotation = cvarrToMat(rotation), _true_rotation = cvarrToMat(true_rotation);
-        //Mat _translation = cvarrToMat(translation), _true_translation = cvarrToMat(true_translation);
-        code = cvtest::cmpEps2( ts, rotation, true_rotation, flEpsilon, false, "rotation matrix" );
+        Mat _rotation = cvarrToMat(rotation), _true_rotation = cvarrToMat(true_rotation);
+        Mat _translation = cvarrToMat(translation), _true_translation = cvarrToMat(true_translation);
+        code = cvtest::cmpEps2( ts, _rotation, _true_rotation, flEpsilon, false, "rotation matrix" );
         if( code < 0 )
             break;
 
-        code = cvtest::cmpEps2( ts, translation, true_translation, flEpsilon, false, "translation vector" );
+        code = cvtest::cmpEps2( ts, _translation, _true_translation, flEpsilon, false, "translation vector" );
         if( code < 0 )
             break;
     }

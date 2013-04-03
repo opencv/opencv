@@ -43,10 +43,6 @@
 #ifndef __OPENCV_PRECOMP_HPP__
 #define __OPENCV_PRECOMP_HPP__
 
-#ifdef HAVE_CVCONFIG_H
-  #include "cvconfig.h"
-#endif
-
 #include <stdexcept>
 #include <iostream>
 #include <ctime>
@@ -56,6 +52,8 @@
 #include "opencv2/video.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/calib3d.hpp"
+
+#include "opencv2/core/private.hpp"
 
 // some aux. functions
 

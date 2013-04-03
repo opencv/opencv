@@ -927,7 +927,7 @@ void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type, DevMemRW rw_type
 {
     clCxt = Context::getContext();
     /* core logic */
-    _type &= TYPE_MASK;
+    _type &= Mat::TYPE_MASK;
     //download_channels = CV_MAT_CN(_type);
     //if(download_channels==3)
     //{

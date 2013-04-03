@@ -180,19 +180,19 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
     case C2C:
         inLayout        = CLFFT_COMPLEX_INTERLEAVED;
         outLayout       = CLFFT_COMPLEX_INTERLEAVED;
-        clStridesIn[1]  = src_step / sizeof(std::complex<float>);
+        clStridesIn[1]  = src_step / (2*sizeof(float));
         clStridesOut[1] = clStridesIn[1];
         break;
     case R2C:
         inLayout        = CLFFT_REAL;
         outLayout       = CLFFT_HERMITIAN_INTERLEAVED;
         clStridesIn[1]  = src_step / sizeof(float);
-        clStridesOut[1] = dst_step / sizeof(std::complex<float>);
+        clStridesOut[1] = dst_step / (2*sizeof(float));
         break;
     case C2R:
         inLayout        = CLFFT_HERMITIAN_INTERLEAVED;
         outLayout       = CLFFT_REAL;
-        clStridesIn[1]  = src_step / sizeof(std::complex<float>);
+        clStridesIn[1]  = src_step / (2*sizeof(float));
         clStridesOut[1] = dst_step / sizeof(float);
         break;
     default:

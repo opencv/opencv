@@ -544,7 +544,7 @@ cv::gpu::GpuMat::GpuMat(const GpuMat& m)
 }
 
 cv::gpu::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t step_) :
-    flags(Mat::MAGIC_VAL + (type_ & TYPE_MASK)), rows(rows_), cols(cols_),
+    flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(rows_), cols(cols_),
     step(step_), data((uchar*)data_), refcount(0),
     datastart((uchar*)data_), dataend((uchar*)data_)
 {
@@ -568,7 +568,7 @@ cv::gpu::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t ste
 }
 
 cv::gpu::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
-    flags(Mat::MAGIC_VAL + (type_ & TYPE_MASK)), rows(size_.height), cols(size_.width),
+    flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(size_.height), cols(size_.width),
     step(step_), data((uchar*)data_), refcount(0),
     datastart((uchar*)data_), dataend((uchar*)data_)
 {
@@ -1495,7 +1495,7 @@ GpuMat& cv::gpu::GpuMat::setTo(Scalar s, const GpuMat& mask)
 
 void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
 {
-    _type &= TYPE_MASK;
+    _type &= Mat::TYPE_MASK;
 
     if (rows == _rows && cols == _cols && type() == _type && data)
         return;

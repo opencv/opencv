@@ -43,8 +43,6 @@
 #ifndef __OPENCV_OPENGL_INTEROP_HPP__
 #define __OPENCV_OPENGL_INTEROP_HPP__
 
-#ifdef __cplusplus
-
 #include "opencv2/core.hpp"
 
 namespace cv { namespace ogl {
@@ -269,7 +267,7 @@ namespace cv { namespace gpu {
 //! set a CUDA device to use OpenGL interoperability
 CV_EXPORTS void setGlDevice(int device = 0);
 
-}}
+}} // cv::gpu
 
 namespace cv {
 
@@ -277,7 +275,5 @@ template <> CV_EXPORTS void Ptr<cv::ogl::Buffer::Impl>::delete_obj();
 template <> CV_EXPORTS void Ptr<cv::ogl::Texture2D::Impl>::delete_obj();
 
 }
-
-#endif // __cplusplus
 
 #endif // __OPENCV_OPENGL_INTEROP_HPP__

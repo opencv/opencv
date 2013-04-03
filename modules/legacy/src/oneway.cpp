@@ -529,7 +529,7 @@ namespace cv{
             }
             return;
         }
-        CvRect roi={0,0,0,0};
+        CvRect roi;
         if (!CV_IS_MAT(patch))
         {
             roi = cvGetImageROI((IplImage*)patch);
@@ -1740,7 +1740,7 @@ namespace cv{
             CV_Error(CV_StsNotImplemented, "OpenCV was built without SURF support");
         surf_extractor->set("hessianThreshold", 1.0);
         //printf("Extracting SURF features...");
-        surf_extractor->detect(Mat(img), features);
+        surf_extractor->detect(cv::cvarrToMat(img), features);
         //printf("done\n");
 
         for (int j = 0; j < (int)features.size(); j++)

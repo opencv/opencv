@@ -45,6 +45,7 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/gpumat.hpp"
+#include <ostream>
 
 namespace cv { namespace softcascade {
 

@@ -423,7 +423,7 @@ void AlgorithmInfo::write(const Algorithm* algo, FileStorage& fs) const
             cv::write(fs, pname, algo->get<std::vector<Mat> >(pname));
         else if( p.type == Param::ALGORITHM )
         {
-            WriteStructContext ws(fs, pname, CV_NODE_MAP);
+            internal::WriteStructContext ws(fs, pname, CV_NODE_MAP);
             Ptr<Algorithm> nestedAlgo = algo->get<Algorithm>(pname);
             nestedAlgo->write(fs);
         }

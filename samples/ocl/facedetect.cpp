@@ -114,7 +114,7 @@ int main( int argc, const char** argv )
         for(;;)
         {
             IplImage* iplImg = cvQueryFrame( capture );
-            frame = iplImg;
+            frame = cv::cvarrToMat(iplImg);
             if( frame.empty() )
                 break;
             if( iplImg->origin == IPL_ORIGIN_TL )

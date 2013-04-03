@@ -92,6 +92,8 @@
 #include "precomp.hpp"
 #include <limits>
 
+#define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
+
 namespace cv
 {
 

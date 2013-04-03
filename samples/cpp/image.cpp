@@ -3,6 +3,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/flann/miniflann.hpp"
+#include "opencv2/core/utility.hpp"
 
 using namespace cv; // all the new API is put into "cv" namespace. Export its content
 using namespace std;
@@ -32,7 +33,7 @@ int main( int argc, char** argv )
         fprintf(stderr, "Can not load image %s\n", imagename);
         return -1;
     }
-    Mat img(iplimg); // cv::Mat replaces the CvMat and IplImage, but it's easy to convert
+    Mat img = cv::cvarrToMat(iplimg); // cv::Mat replaces the CvMat and IplImage, but it's easy to convert
     // between the old and the new data structures (by default, only the header
     // is converted, while the data is shared)
 #else

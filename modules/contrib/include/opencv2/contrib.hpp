@@ -48,6 +48,8 @@
 #include "opencv2/features2d.hpp"
 #include "opencv2/objdetect.hpp"
 
+#include <ostream>
+
 #ifdef __cplusplus
 
 /****************************************************************************************\

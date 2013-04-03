@@ -1838,7 +1838,7 @@ minMaxIdx
 ---------
 Finds the global minimum and maximum in an array
 
-.. ocv:function:: void minMaxIdx(InputArray src, double* minVal, double* maxVal, int* minIdx=0, int* maxIdx=0, InputArray mask=noArray())
+.. ocv:function:: void minMaxIdx(InputArray src, double* minVal, double* maxVal = 0, int* minIdx=0, int* maxIdx=0, InputArray mask=noArray())
 
     :param src: input single-channel array.
 

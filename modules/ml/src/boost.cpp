@@ -1655,10 +1655,10 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
     const int* cmap = data->cat_map->data.i;
     const int* cofs = data->cat_ofs->data.i;
 
-    cv::Mat sample = _sample;
+    cv::Mat sample = cv::cvarrToMat(_sample);
     cv::Mat missing;
     if(!_missing)
-        missing = _missing;
+        missing = cv::cvarrToMat(_missing);
 
     // if need, preprocess the input vector
     if( !raw_mode )

@@ -43,10 +43,11 @@
 #ifndef __OPENCV_IMGPROC_HPP__
 #define __OPENCV_IMGPROC_HPP__
 
-#include "opencv2/core.hpp"
 #include "opencv2/imgproc/types_c.h"
 
 #ifdef __cplusplus
+
+#include "opencv2/core.hpp"
 
 /*! \namespace cv
  Namespace where all the C++ OpenCV functionality resides

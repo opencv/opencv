@@ -745,6 +745,7 @@ void icvReconstructPoints4DStatus(CvMat** projPoints, CvMat **projMatrs, CvMat**
     double* matrW_dat = 0;
 
     CV_FUNCNAME( "icvReconstructPoints4DStatus" );
+
     __BEGIN__;
 
     /* ----- Test input params for errors ----- */
@@ -770,6 +771,7 @@ void icvReconstructPoints4DStatus(CvMat** projPoints, CvMat **projMatrs, CvMat**
         CV_ERROR( CV_StsOutOfRange, "Points must have 4 cordinates" );
     }
 
+
     /* !!! Not tested all input parameters */
     /* ----- End test ----- */
 
@@ -778,75 +780,75 @@ void icvReconstructPoints4DStatus(CvMat** projPoints, CvMat **projMatrs, CvMat**
 
     /* Allocate maximum data */
 
-
-    CvMat matrV;
-    double matrV_dat[4*4];
-    matrV = cvMat(4,4,CV_64F,matrV_dat);
-
-    CV_CALL(matrA_dat = (double*)cvAlloc(3*numImages * 4 * sizeof(double)));
-    CV_CALL(matrW_dat = (double*)cvAlloc(3*numImages * 4 * sizeof(double)));
-
-    /* reconstruct each point */
-    for( currPoint = 0; currPoint < numPoints; currPoint++ )
     {
-        /* Reconstruct current point */
-        /* Define number of visible projections */
-        int numVisProj = 0;
-        for( currImage = 0; currImage < numImages; currImage++ )
+        double matrV_dat[4*4];
+        CvMat matrV = cvMat(4,4,CV_64F,matrV_dat);
+
+        CV_CALL(matrA_dat = (double*)cvAlloc(3*numImages * 4 * sizeof(double)));
+        CV_CALL(matrW_dat = (double*)cvAlloc(3*numImages * 4 * sizeof(double)));
+
+        /* reconstruct each point */
+        for( currPoint = 0; currPoint < numPoints; currPoint++ )
         {
-            if( cvmGet(presPoints[currImage],0,currPoint) > 0 )
+            /* Reconstruct current point */
+            /* Define number of visible projections */
+            int numVisProj = 0;
+            for( currImage = 0; currImage < numImages; currImage++ )
             {
-                numVisProj++;
-            }
-        }
-
-        if( numVisProj < 2 )
-        {
-            /* This point can't be reconstructed */
-            continue;
-        }
-
-        /* Allocate memory and create matrices */
-        CvMat matrA;
-        matrA = cvMat(3*numVisProj,4,CV_64F,matrA_dat);
-
-        CvMat matrW;
-        matrW = cvMat(3*numVisProj,4,CV_64F,matrW_dat);
-
-        int currVisProj = 0;
-        for( currImage = 0; currImage < numImages; currImage++ )/* For each view */
-        {
-            if( cvmGet(presPoints[currImage],0,currPoint) > 0 )
-            {
-                double x,y;
-                x = cvmGet(projPoints[currImage],0,currPoint);
-                y = cvmGet(projPoints[currImage],1,currPoint);
-                for( int k = 0; k < 4; k++ )
+                if( cvmGet(presPoints[currImage],0,currPoint) > 0 )
                 {
-                    matrA_dat[currVisProj*12   + k] =
-                           x * cvmGet(projMatrs[currImage],2,k) -     cvmGet(projMatrs[currImage],0,k);
-
-                    matrA_dat[currVisProj*12+4 + k] =
-                           y * cvmGet(projMatrs[currImage],2,k) -     cvmGet(projMatrs[currImage],1,k);
-
-                    matrA_dat[currVisProj*12+8 + k] =
-                           x * cvmGet(projMatrs[currImage],1,k) - y * cvmGet(projMatrs[currImage],0,k);
+                    numVisProj++;
                 }
-                currVisProj++;
             }
+
+            if( numVisProj < 2 )
+            {
+                /* This point can't be reconstructed */
+                continue;
+            }
+
+            /* Allocate memory and create matrices */
+            CvMat matrA;
+            matrA = cvMat(3*numVisProj,4,CV_64F,matrA_dat);
+
+            CvMat matrW;
+            matrW = cvMat(3*numVisProj,4,CV_64F,matrW_dat);
+
+            int currVisProj = 0;
+            for( currImage = 0; currImage < numImages; currImage++ )/* For each view */
+            {
+                if( cvmGet(presPoints[currImage],0,currPoint) > 0 )
+                {
+                    double x,y;
+                    x = cvmGet(projPoints[currImage],0,currPoint);
+                    y = cvmGet(projPoints[currImage],1,currPoint);
+                    for( int k = 0; k < 4; k++ )
+                    {
+                        matrA_dat[currVisProj*12   + k] =
+                               x * cvmGet(projMatrs[currImage],2,k) -     cvmGet(projMatrs[currImage],0,k);
+
+                        matrA_dat[currVisProj*12+4 + k] =
+                               y * cvmGet(projMatrs[currImage],2,k) -     cvmGet(projMatrs[currImage],1,k);
+
+                        matrA_dat[currVisProj*12+8 + k] =
+                               x * cvmGet(projMatrs[currImage],1,k) - y * cvmGet(projMatrs[currImage],0,k);
+                    }
+                    currVisProj++;
+                }
+            }
+
+            /* Solve system for current point */
+            {
+                cvSVD(&matrA,&matrW,0,&matrV,CV_SVD_V_T);
+
+                /* Copy computed point */
+                cvmSet(points4D,0,currPoint,cvmGet(&matrV,3,0));//X
+                cvmSet(points4D,1,currPoint,cvmGet(&matrV,3,1));//Y
+                cvmSet(points4D,2,currPoint,cvmGet(&matrV,3,2));//Z
+                cvmSet(points4D,3,currPoint,cvmGet(&matrV,3,3));//W
+            }
+
         }
-
-        /* Solve system for current point */
-        {
-            cvSVD(&matrA,&matrW,0,&matrV,CV_SVD_V_T);
-
-            /* Copy computed point */
-            cvmSet(points4D,0,currPoint,cvmGet(&matrV,3,0));//X
-            cvmSet(points4D,1,currPoint,cvmGet(&matrV,3,1));//Y
-            cvmSet(points4D,2,currPoint,cvmGet(&matrV,3,2));//Z
-            cvmSet(points4D,3,currPoint,cvmGet(&matrV,3,3));//W
-        }
-
     }
 
     {/* Compute projection error */
@@ -913,7 +915,7 @@ static void icvProjPointsStatusFunc( int numImages, CvMat *points4D, CvMat **pro
     {
         CV_ERROR( CV_StsNullPtr, "Some of parameters is a NULL pointer" );
     }
-
+    {
     int numPoints;
     numPoints = points4D->cols;
     if( numPoints < 1 )
@@ -994,7 +996,7 @@ static void icvProjPointsStatusFunc( int numImages, CvMat *points4D, CvMat **pro
             }
         }
     }
-
+    }
     __END__;
 }
 

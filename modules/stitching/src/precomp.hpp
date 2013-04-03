@@ -43,9 +43,6 @@
 #ifndef __OPENCV_STITCHING_PRECOMP_H__
 #define __OPENCV_STITCHING_PRECOMP_H__
 
-#ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
-#endif
 #include "opencv2/opencv_modules.hpp"
 
 #include <vector>
@@ -56,7 +53,6 @@
 #include <sstream>
 #include <cmath>
 #include "opencv2/core.hpp"
-#include "opencv2/core/internal.hpp"
 #include "opencv2/stitching.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
@@ -78,6 +74,8 @@
 #endif
 
 #include "../../imgproc/src/gcgraph.hpp"
+
+#include "opencv2/core/private.hpp"
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
 # include "opencv2/stitching/stitching_tegra.hpp"

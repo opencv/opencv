@@ -684,6 +684,11 @@ static inline PyObject* pyopencv_from(const Vec3d& v)
     return Py_BuildValue("(ddd)", v[0], v[1], v[2]);
 }
 
+static inline PyObject* pyopencv_from(const Vec2d& v)
+{
+    return Py_BuildValue("(dd)", v[0], v[1]);
+}
+
 static inline PyObject* pyopencv_from(const Point2d& p)
 {
     return Py_BuildValue("(dd)", p.x, p.y);

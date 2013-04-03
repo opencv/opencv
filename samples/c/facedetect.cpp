@@ -1,6 +1,7 @@
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core/utility.hpp"
 
 #include <cctype>
 #include <iostream>
@@ -124,7 +125,7 @@ int main( int argc, const char** argv )
         for(;;)
         {
             IplImage* iplImg = cvQueryFrame( capture );
-            frame = iplImg;
+            frame = cv::cvarrToMat(iplImg);
             if( frame.empty() )
                 break;
             if( iplImg->origin == IPL_ORIGIN_TL )
