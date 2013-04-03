@@ -1714,6 +1714,7 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
 #endif
 
      free(capture->deviceName);
+     capture->deviceName = NULL;
      //v4l2_free_ranges(capture);
      //cvFree((void **)capture);
    }
