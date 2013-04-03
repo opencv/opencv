@@ -1551,3 +1551,16 @@ TEST(Core_Add, AddToColumnWhen4Rows)
 
     ASSERT_EQ(0, countNonZero(m1 - m2));
 }
+
+TEST(Core_round, CvRound)
+{
+    ASSERT_EQ(2, cvRound(2.0));
+    ASSERT_EQ(2, cvRound(2.1));
+    ASSERT_EQ(-2, cvRound(-2.1));
+    ASSERT_EQ(3, cvRound(2.8));
+    ASSERT_EQ(-3, cvRound(-2.8));
+    ASSERT_EQ(2, cvRound(2.5));
+    ASSERT_EQ(4, cvRound(3.5));
+    ASSERT_EQ(-2, cvRound(-2.5));
+    ASSERT_EQ(-4, cvRound(-3.5));
+}

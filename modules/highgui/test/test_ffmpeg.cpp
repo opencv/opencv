@@ -176,7 +176,7 @@ TEST(Highgui_Video, ffmpeg_image) { CV_FFmpegReadImageTest test; test.safe_run()
 
 #endif
 
-#if defined(HAVE_FFMPEG) || defined(WIN32) || defined(_WIN32)
+#if defined(HAVE_FFMPEG)
 
 //////////////////////////////// Parallel VideoWriters and VideoCaptures ////////////////////////////////////
 

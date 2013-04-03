@@ -999,25 +999,22 @@ static int normHamming(const uchar* a, int n)
 {
     int i = 0, result = 0;
 #if CV_NEON
-    if (CPU_HAS_NEON_FEATURE)
-    {
-        uint32x4_t bits = vmovq_n_u32(0);
-        for (; i <= n - 16; i += 16) {
-            uint8x16_t A_vec = vld1q_u8 (a + i);
-            uint8x16_t bitsSet = vcntq_u8 (A_vec);
-            uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
-            uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
-            bits = vaddq_u32(bits, bitSet4);
-        }
-        uint64x2_t bitSet2 = vpaddlq_u32 (bits);
-        result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
-        result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
+    uint32x4_t bits = vmovq_n_u32(0);
+    for (; i <= n - 16; i += 16) {
+        uint8x16_t A_vec = vld1q_u8 (a + i);
+        uint8x16_t bitsSet = vcntq_u8 (A_vec);
+        uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
+        uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
+        bits = vaddq_u32(bits, bitSet4);
     }
-    else
-#endif
-        for( ; i <= n - 4; i += 4 )
+    uint64x2_t bitSet2 = vpaddlq_u32 (bits);
+    result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
+    result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
+#else
+    for( ; i <= n - 4; i += 4 )
             result += popCountTable[a[i]] + popCountTable[a[i+1]] +
             popCountTable[a[i+2]] + popCountTable[a[i+3]];
+#endif
     for( ; i < n; i++ )
         result += popCountTable[a[i]];
     return result;
@@ -1027,27 +1024,24 @@ int normHamming(const uchar* a, const uchar* b, int n)
 {
     int i = 0, result = 0;
 #if CV_NEON
-    if (CPU_HAS_NEON_FEATURE)
-    {
-        uint32x4_t bits = vmovq_n_u32(0);
-        for (; i <= n - 16; i += 16) {
-            uint8x16_t A_vec = vld1q_u8 (a + i);
-            uint8x16_t B_vec = vld1q_u8 (b + i);
-            uint8x16_t AxorB = veorq_u8 (A_vec, B_vec);
-            uint8x16_t bitsSet = vcntq_u8 (AxorB);
-            uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
-            uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
-            bits = vaddq_u32(bits, bitSet4);
-        }
-        uint64x2_t bitSet2 = vpaddlq_u32 (bits);
-        result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
-        result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
+    uint32x4_t bits = vmovq_n_u32(0);
+    for (; i <= n - 16; i += 16) {
+        uint8x16_t A_vec = vld1q_u8 (a + i);
+        uint8x16_t B_vec = vld1q_u8 (b + i);
+        uint8x16_t AxorB = veorq_u8 (A_vec, B_vec);
+        uint8x16_t bitsSet = vcntq_u8 (AxorB);
+        uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
+        uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
+        bits = vaddq_u32(bits, bitSet4);
     }
-    else
+    uint64x2_t bitSet2 = vpaddlq_u32 (bits);
+    result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
+    result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
+#else
+    for( ; i <= n - 4; i += 4 )
+        result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
+                popCountTable[a[i+2] ^ b[i+2]] + popCountTable[a[i+3] ^ b[i+3]];
 #endif
-        for( ; i <= n - 4; i += 4 )
-            result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
-                    popCountTable[a[i+2] ^ b[i+2]] + popCountTable[a[i+3] ^ b[i+3]];
     for( ; i < n; i++ )
         result += popCountTable[a[i] ^ b[i]];
     return result;
