@@ -47,18 +47,18 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::ORB_GPU::ORB_GPU(int, float, int, int, int, int, int, int) : fastDetector_(20) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::downloadKeyPoints(const GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::convertKeyPoints(const Mat&, std::vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::release() { throw_nogpu(); }
-void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat&, const GpuMat&) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::computeKeyPointsPyramid() { throw_nogpu(); }
-void cv::gpu::ORB_GPU::computeDescriptors(GpuMat&) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::mergeKeyPoints(GpuMat&) { throw_nogpu(); }
+cv::gpu::ORB_GPU::ORB_GPU(int, float, int, int, int, int, int, int) : fastDetector_(20) { throw_no_cuda(); }
+void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::ORB_GPU::downloadKeyPoints(const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::gpu::ORB_GPU::convertKeyPoints(const Mat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::gpu::ORB_GPU::release() { throw_no_cuda(); }
+void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat&, const GpuMat&) { throw_no_cuda(); }
+void cv::gpu::ORB_GPU::computeKeyPointsPyramid() { throw_no_cuda(); }
+void cv::gpu::ORB_GPU::computeDescriptors(GpuMat&) { throw_no_cuda(); }
+void cv::gpu::ORB_GPU::mergeKeyPoints(GpuMat&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 

@@ -47,28 +47,28 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&) { throw_nogpu(); }
-void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&, GpuMat&) { throw_nogpu(); }
-double cv::gpu::norm(const GpuMat&, int) { throw_nogpu(); return 0.0; }
-double cv::gpu::norm(const GpuMat&, int, GpuMat&) { throw_nogpu(); return 0.0; }
-double cv::gpu::norm(const GpuMat&, int, const GpuMat&, GpuMat&) { throw_nogpu(); return 0.0; }
-double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_nogpu(); return 0.0; }
-Scalar cv::gpu::sum(const GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::sum(const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::sum(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::absSum(const GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::absSum(const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::absSum(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::sqrSum(const GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::sqrSum(const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::sqrSum(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
-void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&) { throw_nogpu(); }
-void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&) { throw_nogpu(); }
-void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
-int cv::gpu::countNonZero(const GpuMat&) { throw_nogpu(); return 0; }
-int cv::gpu::countNonZero(const GpuMat&, GpuMat&) { throw_nogpu(); return 0; }
-void cv::gpu::reduce(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_nogpu(); }
+void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&) { throw_no_cuda(); }
+void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&, GpuMat&) { throw_no_cuda(); }
+double cv::gpu::norm(const GpuMat&, int) { throw_no_cuda(); return 0.0; }
+double cv::gpu::norm(const GpuMat&, int, GpuMat&) { throw_no_cuda(); return 0.0; }
+double cv::gpu::norm(const GpuMat&, int, const GpuMat&, GpuMat&) { throw_no_cuda(); return 0.0; }
+double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_no_cuda(); return 0.0; }
+Scalar cv::gpu::sum(const GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::sum(const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::sum(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::absSum(const GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::absSum(const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::absSum(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::sqrSum(const GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::sqrSum(const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::sqrSum(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&) { throw_no_cuda(); }
+void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&) { throw_no_cuda(); }
+void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+int cv::gpu::countNonZero(const GpuMat&) { throw_no_cuda(); return 0; }
+int cv::gpu::countNonZero(const GpuMat&, GpuMat&) { throw_no_cuda(); return 0; }
+void cv::gpu::reduce(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
 
 #else
 #include "opencv2/core/utility.hpp"
@@ -80,11 +80,11 @@ namespace
     public:
         explicit DeviceBuffer(int count_ = 1) : count(count_)
         {
-            cudaSafeCall( cudaMalloc(&pdev, count * sizeof(double)) );
+            cvCudaSafeCall( cudaMalloc(&pdev, count * sizeof(double)) );
         }
         ~DeviceBuffer()
         {
-            cudaSafeCall( cudaFree(pdev) );
+            cvCudaSafeCall( cudaFree(pdev) );
         }
 
         operator double*() {return pdev;}
@@ -92,13 +92,13 @@ namespace
         void download(double* hptr)
         {
             double hbuf;
-            cudaSafeCall( cudaMemcpy(&hbuf, pdev, sizeof(double), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy(&hbuf, pdev, sizeof(double), cudaMemcpyDeviceToHost) );
             *hptr = hbuf;
         }
         void download(double** hptrs)
         {
             AutoBuffer<double, 2 * sizeof(double)> hbuf(count);
-            cudaSafeCall( cudaMemcpy((void*)hbuf, pdev, count * sizeof(double), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy((void*)hbuf, pdev, count * sizeof(double), cudaMemcpyDeviceToHost) );
             for (int i = 0; i < count; ++i)
                 *hptrs[i] = hbuf[i];
         }
@@ -143,7 +143,7 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev, GpuMat
 
     nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), sz, buf.ptr<Npp8u>(), dbuf, (double*)dbuf + 1) );
 
-    cudaSafeCall( cudaDeviceSynchronize() );
+    cvCudaSafeCall( cudaDeviceSynchronize() );
 
     double* ptrs[2] = {mean.val, stddev.val};
     dbuf.download(ptrs);
@@ -205,7 +205,7 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
 
     nppSafeCall( npp_norm_diff_func[funcIdx](src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), sz, dbuf) );
 
-    cudaSafeCall( cudaDeviceSynchronize() );
+    cvCudaSafeCall( cudaDeviceSynchronize() );
 
     dbuf.download(&retVal);
 

@@ -60,7 +60,7 @@ namespace cv { namespace gpu { namespace cuda {
 
         void loadHueCSC(float hueCSC[9])
         {
-            cudaSafeCall( cudaMemcpyToSymbol(constHueColorSpaceMat, hueCSC, 9 * sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(constHueColorSpaceMat, hueCSC, 9 * sizeof(float)) );
         }
 
         __device__ void YUV2RGB(const uint* yuvi, float* red, float* green, float* blue)
@@ -190,10 +190,10 @@ namespace cv { namespace gpu { namespace cuda {
             NV12ToARGB<<<grid, block, 0, stream>>>(decodedFrame.data, decodedFrame.step, interopFrame.data, interopFrame.step,
                 interopFrame.cols, interopFrame.rows);
 
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     }
 }}}

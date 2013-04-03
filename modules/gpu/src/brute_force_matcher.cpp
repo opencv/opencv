@@ -47,37 +47,37 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::BFMatcher_GPU::BFMatcher_GPU(int) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::add(const std::vector<GpuMat>&) { throw_nogpu(); }
-const std::vector<GpuMat>& cv::gpu::BFMatcher_GPU::getTrainDescriptors() const { throw_nogpu(); return trainDescCollection; }
-void cv::gpu::BFMatcher_GPU::clear() { throw_nogpu(); }
-bool cv::gpu::BFMatcher_GPU::empty() const { throw_nogpu(); return true; }
-bool cv::gpu::BFMatcher_GPU::isMaskSupported() const { throw_nogpu(); return true; }
-void cv::gpu::BFMatcher_GPU::matchSingle(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::matchDownload(const GpuMat&, const GpuMat&, std::vector<DMatch>&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::matchConvert(const Mat&, const Mat&, std::vector<DMatch>&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::match(const GpuMat&, const GpuMat&, std::vector<DMatch>&, const GpuMat&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::makeGpuCollection(GpuMat&, GpuMat&, const std::vector<GpuMat>&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::matchCollection(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::matchDownload(const GpuMat&, const GpuMat&, const GpuMat&, std::vector<DMatch>&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::matchConvert(const Mat&, const Mat&, const Mat&, std::vector<DMatch>&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::match(const GpuMat&, std::vector<DMatch>&, const std::vector<GpuMat>&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatchSingle(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatchDownload(const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatchConvert(const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatch(const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, int, const GpuMat&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatch2Collection(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatch2Download(const GpuMat&, const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatch2Convert(const Mat&, const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatch(const GpuMat&, std::vector< std::vector<DMatch> >&, int, const std::vector<GpuMat>&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatchSingle(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, float, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatchDownload(const GpuMat&, const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatchConvert(const Mat&, const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatch(const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, float, const GpuMat&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatchCollection(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, float, const std::vector<GpuMat>&, Stream&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatchDownload(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatchConvert(const Mat&, const Mat&, const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatch(const GpuMat&, std::vector< std::vector<DMatch> >&, float, const std::vector<GpuMat>&, bool) { throw_nogpu(); }
+cv::gpu::BFMatcher_GPU::BFMatcher_GPU(int) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::add(const std::vector<GpuMat>&) { throw_no_cuda(); }
+const std::vector<GpuMat>& cv::gpu::BFMatcher_GPU::getTrainDescriptors() const { throw_no_cuda(); return trainDescCollection; }
+void cv::gpu::BFMatcher_GPU::clear() { throw_no_cuda(); }
+bool cv::gpu::BFMatcher_GPU::empty() const { throw_no_cuda(); return true; }
+bool cv::gpu::BFMatcher_GPU::isMaskSupported() const { throw_no_cuda(); return true; }
+void cv::gpu::BFMatcher_GPU::matchSingle(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::matchDownload(const GpuMat&, const GpuMat&, std::vector<DMatch>&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::matchConvert(const Mat&, const Mat&, std::vector<DMatch>&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::match(const GpuMat&, const GpuMat&, std::vector<DMatch>&, const GpuMat&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::makeGpuCollection(GpuMat&, GpuMat&, const std::vector<GpuMat>&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::matchCollection(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::matchDownload(const GpuMat&, const GpuMat&, const GpuMat&, std::vector<DMatch>&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::matchConvert(const Mat&, const Mat&, const Mat&, std::vector<DMatch>&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::match(const GpuMat&, std::vector<DMatch>&, const std::vector<GpuMat>&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatchSingle(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatchDownload(const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatchConvert(const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatch(const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, int, const GpuMat&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatch2Collection(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatch2Download(const GpuMat&, const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatch2Convert(const Mat&, const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatch(const GpuMat&, std::vector< std::vector<DMatch> >&, int, const std::vector<GpuMat>&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatchSingle(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, float, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatchDownload(const GpuMat&, const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatchConvert(const Mat&, const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatch(const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, float, const GpuMat&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatchCollection(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, float, const std::vector<GpuMat>&, Stream&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatchDownload(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatchConvert(const Mat&, const Mat&, const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatch(const GpuMat&, std::vector< std::vector<DMatch> >&, float, const std::vector<GpuMat>&, bool) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 

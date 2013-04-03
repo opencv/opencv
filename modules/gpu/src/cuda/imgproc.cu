@@ -154,13 +154,13 @@ namespace cv { namespace gpu { namespace cuda
             grid.y = divUp(src.rows, threads.y);
 
             cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar4>();
-            cudaSafeCall( cudaBindTexture2D( 0, tex_meanshift, src.data, desc, src.cols, src.rows, src.step ) );
+            cvCudaSafeCall( cudaBindTexture2D( 0, tex_meanshift, src.data, desc, src.cols, src.rows, src.step ) );
 
             meanshift_kernel<<< grid, threads, 0, stream >>>( dst.data, dst.step, dst.cols, dst.rows, sp, sr, maxIter, eps );
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
 
             //cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );
         }
@@ -173,13 +173,13 @@ namespace cv { namespace gpu { namespace cuda
             grid.y = divUp(src.rows, threads.y);
 
             cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar4>();
-            cudaSafeCall( cudaBindTexture2D( 0, tex_meanshift, src.data, desc, src.cols, src.rows, src.step ) );
+            cvCudaSafeCall( cudaBindTexture2D( 0, tex_meanshift, src.data, desc, src.cols, src.rows, src.step ) );
 
             meanshiftproc_kernel<<< grid, threads, 0, stream >>>( dstr.data, dstr.step, dstsp.data, dstsp.step, dstr.cols, dstr.rows, sp, sr, maxIter, eps );
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
 
             //cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );
         }
@@ -295,10 +295,10 @@ namespace cv { namespace gpu { namespace cuda
             grid.y = divUp(src.rows, threads.y);
 
             drawColorDisp<<<grid, threads, 0, stream>>>(src.data, src.step, dst.data, dst.step, src.cols, src.rows, ndisp);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         void drawColorDisp_gpu(const PtrStepSz<short>& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream)
@@ -309,10 +309,10 @@ namespace cv { namespace gpu { namespace cuda
             grid.y = divUp(src.rows, threads.y);
 
             drawColorDisp<<<grid, threads, 0, stream>>>(src.data, src.step / sizeof(short), dst.data, dst.step, src.cols, src.rows, ndisp);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         /////////////////////////////////// reprojectImageTo3D ///////////////////////////////////////////////
@@ -351,13 +351,13 @@ namespace cv { namespace gpu { namespace cuda
             dim3 block(32, 8);
             dim3 grid(divUp(disp.cols, block.x), divUp(disp.rows, block.y));
 
-            cudaSafeCall( cudaMemcpyToSymbol(cq, q, 16 * sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cq, q, 16 * sizeof(float)) );
 
             reprojectImageTo3D<T, D><<<grid, block, 0, stream>>>((PtrStepSz<T>)disp, (PtrStepSz<D>)xyz);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template void reprojectImageTo3D_gpu<uchar, float3>(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
@@ -464,10 +464,10 @@ namespace cv { namespace gpu { namespace cuda
                 break;
             }
 
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         /////////////////////////////////////////// Corner Min Eigen Val /////////////////////////////////////////////////
@@ -576,10 +576,10 @@ namespace cv { namespace gpu { namespace cuda
                 break;
             }
 
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall(cudaDeviceSynchronize());
+                cvCudaSafeCall(cudaDeviceSynchronize());
         }
 
         ////////////////////////////// Column Sum //////////////////////////////////////
@@ -611,9 +611,9 @@ namespace cv { namespace gpu { namespace cuda
             dim3 grid(divUp(src.cols, threads.x));
 
             column_sumKernel_32F<<<grid, threads>>>(src.cols, src.rows, src, dst);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -638,10 +638,10 @@ namespace cv { namespace gpu { namespace cuda
             dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
 
             mulSpectrumsKernel<<<grid, threads, 0, stream>>>(a, b, c);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -666,10 +666,10 @@ namespace cv { namespace gpu { namespace cuda
             dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
 
             mulSpectrumsKernel_CONJ<<<grid, threads, 0, stream>>>(a, b, c);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -695,10 +695,10 @@ namespace cv { namespace gpu { namespace cuda
             dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
 
             mulAndScaleSpectrumsKernel<<<grid, threads, 0, stream>>>(a, b, scale, c);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -724,10 +724,10 @@ namespace cv { namespace gpu { namespace cuda
             dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
 
             mulAndScaleSpectrumsKernel_CONJ<<<grid, threads, 0, stream>>>(a, b, scale, c);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         //////////////////////////////////////////////////////////////////////////
@@ -837,10 +837,10 @@ namespace cv { namespace gpu { namespace cuda
                                 const float k_rinv[9], const float r_kinv[9], const float t[3],
                                 float scale, cudaStream_t stream)
         {
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ck_rinv, k_rinv, 9*sizeof(float)));
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr_kinv, r_kinv, 9*sizeof(float)));
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ct, t, 3*sizeof(float)));
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cscale, &scale, sizeof(float)));
+            cvCudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ck_rinv, k_rinv, 9*sizeof(float)));
+            cvCudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr_kinv, r_kinv, 9*sizeof(float)));
+            cvCudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ct, t, 3*sizeof(float)));
+            cvCudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cscale, &scale, sizeof(float)));
 
             int cols = map_x.cols;
             int rows = map_x.rows;
@@ -849,9 +849,9 @@ namespace cv { namespace gpu { namespace cuda
             dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
             buildWarpMapsKernel<PlaneMapper><<<grid,threads>>>(tl_u, tl_v, cols, rows, map_x, map_y);
-            cudaSafeCall(cudaGetLastError());
+            cvCudaSafeCall(cudaGetLastError());
             if (stream == 0)
-                cudaSafeCall(cudaDeviceSynchronize());
+                cvCudaSafeCall(cudaDeviceSynchronize());
         }
 
 
@@ -859,9 +859,9 @@ namespace cv { namespace gpu { namespace cuda
                                       const float k_rinv[9], const float r_kinv[9], float scale,
                                       cudaStream_t stream)
         {
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ck_rinv, k_rinv, 9*sizeof(float)));
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr_kinv, r_kinv, 9*sizeof(float)));
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cscale, &scale, sizeof(float)));
+            cvCudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ck_rinv, k_rinv, 9*sizeof(float)));
+            cvCudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr_kinv, r_kinv, 9*sizeof(float)));
+            cvCudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cscale, &scale, sizeof(float)));
 
             int cols = map_x.cols;
             int rows = map_x.rows;
@@ -870,9 +870,9 @@ namespace cv { namespace gpu { namespace cuda
             dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
             buildWarpMapsKernel<CylindricalMapper><<<grid,threads>>>(tl_u, tl_v, cols, rows, map_x, map_y);
-            cudaSafeCall(cudaGetLastError());
+            cvCudaSafeCall(cudaGetLastError());
             if (stream == 0)
-                cudaSafeCall(cudaDeviceSynchronize());
+                cvCudaSafeCall(cudaDeviceSynchronize());
         }
 
 
@@ -880,9 +880,9 @@ namespace cv { namespace gpu { namespace cuda
                                     const float k_rinv[9], const float r_kinv[9], float scale,
                                     cudaStream_t stream)
         {
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ck_rinv, k_rinv, 9*sizeof(float)));
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr_kinv, r_kinv, 9*sizeof(float)));
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cscale, &scale, sizeof(float)));
+            cvCudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ck_rinv, k_rinv, 9*sizeof(float)));
+            cvCudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr_kinv, r_kinv, 9*sizeof(float)));
+            cvCudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cscale, &scale, sizeof(float)));
 
             int cols = map_x.cols;
             int rows = map_x.rows;
@@ -891,9 +891,9 @@ namespace cv { namespace gpu { namespace cuda
             dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
             buildWarpMapsKernel<SphericalMapper><<<grid,threads>>>(tl_u, tl_v, cols, rows, map_x, map_y);
-            cudaSafeCall(cudaGetLastError());
+            cvCudaSafeCall(cudaGetLastError());
             if (stream == 0)
-                cudaSafeCall(cudaDeviceSynchronize());
+                cvCudaSafeCall(cudaDeviceSynchronize());
         }
 
         //////////////////////////////////////////////////////////////////////////
@@ -955,9 +955,9 @@ namespace cv { namespace gpu { namespace cuda
                     Brd<work_type> brd(dst.rows, dst.cols, VecTraits<work_type>::make(borderValue)); \
                     BorderReader< tex_filter2D_ ## type ##_reader, Brd<work_type> > brdSrc(texSrc, brd); \
                     filter2D<<<grid, block, 0, stream>>>(brdSrc, dst, kWidth, kHeight, anchorX, anchorY); \
-                    cudaSafeCall( cudaGetLastError() ); \
+                    cvCudaSafeCall( cudaGetLastError() ); \
                     if (stream == 0) \
-                        cudaSafeCall( cudaDeviceSynchronize() ); \
+                        cvCudaSafeCall( cudaDeviceSynchronize() ); \
                 } \
             };
 
@@ -988,9 +988,9 @@ namespace cv { namespace gpu { namespace cuda
             };
 
             if (stream == 0)
-                cudaSafeCall( cudaMemcpyToSymbol(c_filter2DKernel, kernel, kWidth * kHeight * sizeof(float), 0, cudaMemcpyDeviceToDevice) );
+                cvCudaSafeCall( cudaMemcpyToSymbol(c_filter2DKernel, kernel, kWidth * kHeight * sizeof(float), 0, cudaMemcpyDeviceToDevice) );
             else
-                cudaSafeCall( cudaMemcpyToSymbolAsync(c_filter2DKernel, kernel, kWidth * kHeight * sizeof(float), 0, cudaMemcpyDeviceToDevice, stream) );
+                cvCudaSafeCall( cudaMemcpyToSymbolAsync(c_filter2DKernel, kernel, kWidth * kHeight * sizeof(float), 0, cudaMemcpyDeviceToDevice, stream) );
 
             funcs[borderMode](static_cast< PtrStepSz<T> >(srcWhole), ofsX, ofsY, static_cast< PtrStepSz<D> >(dst), kWidth, kHeight, anchorX, anchorY, borderValue, stream);
         }

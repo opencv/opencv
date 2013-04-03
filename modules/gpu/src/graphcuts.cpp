@@ -44,11 +44,11 @@
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::connectivityMask(const GpuMat&, GpuMat&, const cv::Scalar&, const cv::Scalar&, Stream&) { throw_nogpu(); }
-void cv::gpu::labelComponents(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
+void cv::gpu::connectivityMask(const GpuMat&, GpuMat&, const cv::Scalar&, const cv::Scalar&, Stream&) { throw_no_cuda(); }
+void cv::gpu::labelComponents(const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -198,7 +198,7 @@ void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTrans
 #endif
 
     if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
 }
 
 void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& topLeft, GpuMat& topRight,
@@ -276,7 +276,7 @@ void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTrans
 #endif
 
     if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
 }
 
 #endif /* !defined (HAVE_CUDA) */

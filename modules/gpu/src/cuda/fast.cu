@@ -282,7 +282,7 @@ namespace cv { namespace gpu { namespace cuda
         int calcKeypoints_gpu(PtrStepSzb img, PtrStepSzb mask, short2* kpLoc, int maxKeypoints, PtrStepSzi score, int threshold)
         {
             void* counter_ptr;
-            cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
+            cvCudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
 
             dim3 block(32, 8);
 
@@ -290,7 +290,7 @@ namespace cv { namespace gpu { namespace cuda
             grid.x = divUp(img.cols - 6, block.x);
             grid.y = divUp(img.rows - 6, block.y);
 
-            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(unsigned int)) );
+            cvCudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(unsigned int)) );
 
             if (score.data)
             {
@@ -307,12 +307,12 @@ namespace cv { namespace gpu { namespace cuda
                     calcKeypoints<false><<<grid, block>>>(img, WithOutMask(), kpLoc, maxKeypoints, score, threshold);
             }
 
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
 
             unsigned int count;
-            cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
 
             return count;
         }
@@ -359,22 +359,22 @@ namespace cv { namespace gpu { namespace cuda
         int nonmaxSupression_gpu(const short2* kpLoc, int count, PtrStepSzi score, short2* loc, float* response)
         {
             void* counter_ptr;
-            cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
+            cvCudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
 
             dim3 block(256);
 
             dim3 grid;
             grid.x = divUp(count, block.x);
 
-            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(unsigned int)) );
+            cvCudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(unsigned int)) );
 
             nonmaxSupression<<<grid, block>>>(kpLoc, count, score, loc, response);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
 
             unsigned int new_count;
-            cudaSafeCall( cudaMemcpy(&new_count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy(&new_count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
 
             return new_count;
         }

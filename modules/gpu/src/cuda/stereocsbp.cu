@@ -78,20 +78,20 @@ namespace cv { namespace gpu { namespace cuda
         void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th,
                             const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& temp)
         {
-            cudaSafeCall( cudaMemcpyToSymbol(cndisp, &ndisp, sizeof(int)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cndisp, &ndisp, sizeof(int)) );
 
-            cudaSafeCall( cudaMemcpyToSymbol(cmax_data_term,    &max_data_term,    sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cdata_weight,      &data_weight,      sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmax_disc_term,    &max_disc_term,    sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cdisc_single_jump, &disc_single_jump, sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cmax_data_term,    &max_data_term,    sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cdata_weight,      &data_weight,      sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cmax_disc_term,    &max_disc_term,    sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cdisc_single_jump, &disc_single_jump, sizeof(float)) );
 
-            cudaSafeCall( cudaMemcpyToSymbol(cth, &min_disp_th, sizeof(int)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cth, &min_disp_th, sizeof(int)) );
 
-            cudaSafeCall( cudaMemcpyToSymbol(cimg_step, &left.step, sizeof(size_t)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cimg_step, &left.step, sizeof(size_t)) );
 
-            cudaSafeCall( cudaMemcpyToSymbol(cleft,  &left.data,  sizeof(left.data)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cright, &right.data, sizeof(right.data)) );
-            cudaSafeCall( cudaMemcpyToSymbol(ctemp, &temp.data, sizeof(temp.data)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cleft,  &left.data,  sizeof(left.data)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cright, &right.data, sizeof(right.data)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(ctemp, &temp.data, sizeof(temp.data)) );
         }
 
         ///////////////////////////////////////////////////////////////
@@ -324,7 +324,7 @@ namespace cv { namespace gpu { namespace cuda
             case 1: init_data_cost<T, 1><<<grid, threads, 0, stream>>>(h, w, level); break;
             case 3: init_data_cost<T, 3><<<grid, threads, 0, stream>>>(h, w, level); break;
             case 4: init_data_cost<T, 4><<<grid, threads, 0, stream>>>(h, w, level); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "init_data_cost_caller_");
+            default: CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
         }
 
@@ -343,7 +343,7 @@ namespace cv { namespace gpu { namespace cuda
             case 1: init_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
             case 3: init_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
             case 4: init_data_cost_reduce<T, winsz, 4><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "init_data_cost_reduce_caller_");
+            default: CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
         }
 
@@ -362,14 +362,14 @@ namespace cv { namespace gpu { namespace cuda
             };
 
             size_t disp_step = msg_step * h;
-            cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step,  &msg_step,  sizeof(size_t)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step, sizeof(size_t)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cmsg_step,  &msg_step,  sizeof(size_t)) );
 
             init_data_cost_callers[level](rows, cols, h, w, level, ndisp, channels, stream);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
 
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -382,10 +382,10 @@ namespace cv { namespace gpu { namespace cuda
             else
                 get_first_k_initial_global<<<grid, threads, 0, stream>>>(data_cost_selected, disp_selected_pyr, h, w, nr_plane);
 
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template void init_data_cost(int rows, int cols, short* disp_selected_pyr, short* data_cost_selected, size_t msg_step,
@@ -506,7 +506,7 @@ namespace cv { namespace gpu { namespace cuda
             case 1: compute_data_cost<T, 1><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
             case 3: compute_data_cost<T, 3><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
             case 4: compute_data_cost<T, 4><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "compute_data_cost_caller_");
+            default: CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
         }
 
@@ -526,7 +526,7 @@ namespace cv { namespace gpu { namespace cuda
             case 1: compute_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
             case 3: compute_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
             case 4: compute_data_cost_reduce<T, winsz, 4><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "compute_data_cost_reduce_caller_");
+            default: CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
         }
 
@@ -546,15 +546,15 @@ namespace cv { namespace gpu { namespace cuda
 
             size_t disp_step1 = msg_step * h;
             size_t disp_step2 = msg_step * h2;
-            cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step1, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cdisp_step2, &disp_step2, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step,  &msg_step,  sizeof(size_t)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step1, sizeof(size_t)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cdisp_step2, &disp_step2, sizeof(size_t)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cmsg_step,  &msg_step,  sizeof(size_t)) );
 
             callers[level](disp_selected_pyr, data_cost, rows, cols, h, w, level, nr_plane, channels, stream);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template void compute_data_cost(const short* disp_selected_pyr, short* data_cost, size_t msg_step,
@@ -662,9 +662,9 @@ namespace cv { namespace gpu { namespace cuda
 
             size_t disp_step1 = msg_step * h;
             size_t disp_step2 = msg_step * h2;
-            cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step1, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cdisp_step2, &disp_step2, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step,   &msg_step, sizeof(size_t)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step1, sizeof(size_t)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cdisp_step2, &disp_step2, sizeof(size_t)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cmsg_step,   &msg_step, sizeof(size_t)) );
 
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -677,10 +677,10 @@ namespace cv { namespace gpu { namespace cuda
                                                        selected_disp_pyr_new, selected_disp_pyr_cur,
                                                        data_cost_selected, data_cost,
                                                        h, w, nr_plane, h2, w2, nr_plane2);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -767,8 +767,8 @@ namespace cv { namespace gpu { namespace cuda
             const T* selected_disp_pyr_cur, size_t msg_step, int h, int w, int nr_plane, int iters, cudaStream_t stream)
         {
             size_t disp_step = msg_step * h;
-            cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step,  &msg_step,  sizeof(size_t)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step, sizeof(size_t)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cmsg_step,  &msg_step,  sizeof(size_t)) );
 
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -779,10 +779,10 @@ namespace cv { namespace gpu { namespace cuda
             for(int t = 0; t < iters; ++t)
             {
                 compute_message<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, selected_disp_pyr_cur, h, w, nr_plane, t & 1);
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
             }
             if (stream == 0)
-                    cudaSafeCall( cudaDeviceSynchronize() );
+                    cvCudaSafeCall( cudaDeviceSynchronize() );
         };
 
         template void calc_all_iterations(short* u, short* d, short* l, short* r, const short* data_cost_selected, const short* selected_disp_pyr_cur, size_t msg_step,
@@ -837,8 +837,8 @@ namespace cv { namespace gpu { namespace cuda
             const PtrStepSz<short>& disp, int nr_plane, cudaStream_t stream)
         {
             size_t disp_step = disp.rows * msg_step;
-            cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step,  &msg_step,  sizeof(size_t)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step, sizeof(size_t)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cmsg_step,  &msg_step,  sizeof(size_t)) );
 
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -847,10 +847,10 @@ namespace cv { namespace gpu { namespace cuda
             grid.y = divUp(disp.rows, threads.y);
 
             compute_disp<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, disp_selected, disp, nr_plane);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template void compute_disp(const short* u, const short* d, const short* l, const short* r, const short* data_cost_selected, const short* disp_selected, size_t msg_step,

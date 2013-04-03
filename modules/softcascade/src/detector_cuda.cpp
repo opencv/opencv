@@ -43,39 +43,26 @@
 #include "precomp.hpp"
 
 #if !defined (HAVE_CUDA)
-#define throw_nogpu() CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
-cv::softcascade::SCascade::SCascade(const double, const double, const int, const int) { throw_nogpu(); }
 
-cv::softcascade::SCascade::~SCascade() { throw_nogpu(); }
+cv::softcascade::SCascade::SCascade(const double, const double, const int, const int) { throw_no_cuda(); }
 
-bool cv::softcascade::SCascade::load(const FileNode&) { throw_nogpu(); return false;}
+cv::softcascade::SCascade::~SCascade() { throw_no_cuda(); }
 
-void cv::softcascade::SCascade::detect(InputArray, InputArray, OutputArray, cv::gpu::Stream&) const { throw_nogpu(); }
+bool cv::softcascade::SCascade::load(const FileNode&) { throw_no_cuda(); return false;}
+
+void cv::softcascade::SCascade::detect(InputArray, InputArray, OutputArray, cv::gpu::Stream&) const { throw_no_cuda(); }
 
 void cv::softcascade::SCascade::read(const FileNode& fn) { Algorithm::read(fn); }
 
-cv::softcascade::ChannelsProcessor::ChannelsProcessor() { throw_nogpu(); }
- cv::softcascade::ChannelsProcessor::~ChannelsProcessor() { throw_nogpu(); }
+cv::softcascade::ChannelsProcessor::ChannelsProcessor() { throw_no_cuda(); }
+ cv::softcascade::ChannelsProcessor::~ChannelsProcessor() { throw_no_cuda(); }
 
 cv::Ptr<cv::softcascade::ChannelsProcessor> cv::softcascade::ChannelsProcessor::create(const int, const int, const int)
-{ throw_nogpu(); return cv::Ptr<cv::softcascade::ChannelsProcessor>(0); }
+{ throw_no_cuda(); return cv::Ptr<cv::softcascade::ChannelsProcessor>(0); }
 
 #else
-# include "cuda_invoker.hpp"
-# include "opencv2/core/stream_accessor.hpp"
-namespace
-{
-#if defined(__GNUC__)
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
-#endif
 
-    inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
-    {
-        if (cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), file, line, func);
-    }
-}
+# include "cuda_invoker.hpp"
 
 cv::softcascade::cuda::Level::Level(int idx, const Octave& oct, const float scale, const int w, const int h)
 :  octave(idx), step(oct.stages), relScale(scale / oct.scale)
@@ -353,7 +340,7 @@ struct cv::softcascade::SCascade::Fields
         else
             cudaMemset(objects.data, 0, sizeof(Detection));
 
-        cudaSafeCall( cudaGetLastError());
+        cvCudaSafeCall( cudaGetLastError());
 
         cuda::CascadeInvoker<cuda::GK107PolicyX4> invoker
         = cuda::CascadeInvoker<cuda::GK107PolicyX4>(levels, stages, nodes, leaves);

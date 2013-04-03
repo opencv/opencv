@@ -159,10 +159,10 @@ namespace optflowbm
 
         calcOptFlowBM<<<grid, block, 0, stream>>>(velx, vely, blockSize, shiftSize, usePrevious,
                                                   maxX, maxY, acceptLevel,  escapeLevel, ss, ssCount);
-        cudaSafeCall( cudaGetLastError() );
+        cvCudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -402,10 +402,10 @@ namespace optflowbm_fast
         size_t smem = search_window * search_window * sizeof(int);
 
         optflowbm_fast_kernel<<<grid, block, smem, stream>>>(fbm, velx, vely);
-        cudaSafeCall ( cudaGetLastError () );
+        cvCudaSafeCall ( cudaGetLastError () );
 
         if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void calc<uchar>(PtrStepSzb I0, PtrStepSzb I1, PtrStepSzf velx, PtrStepSzf vely, PtrStepi buffer, int search_window, int block_window, cudaStream_t stream);

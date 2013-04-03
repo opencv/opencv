@@ -61,16 +61,16 @@ namespace cv { namespace gpu { namespace cuda
 
         void disp_load_constants(float* table_color, PtrStepSzf table_space, int ndisp, int radius, short edge_disc, short max_disc)
         {
-            cudaSafeCall( cudaMemcpyToSymbol(ctable_color, &table_color, sizeof(table_color)) );
-            cudaSafeCall( cudaMemcpyToSymbol(ctable_space, &table_space.data, sizeof(table_space.data)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(ctable_color, &table_color, sizeof(table_color)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(ctable_space, &table_space.data, sizeof(table_space.data)) );
             size_t table_space_step = table_space.step / sizeof(float);
-            cudaSafeCall( cudaMemcpyToSymbol(ctable_space_step, &table_space_step, sizeof(size_t)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(ctable_space_step, &table_space_step, sizeof(size_t)) );
 
-            cudaSafeCall( cudaMemcpyToSymbol(cndisp, &ndisp, sizeof(int)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cradius, &radius, sizeof(int)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cndisp, &ndisp, sizeof(int)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cradius, &radius, sizeof(int)) );
 
-            cudaSafeCall( cudaMemcpyToSymbol(cedge_disc, &edge_disc, sizeof(short)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmax_disc, &max_disc, sizeof(short)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cedge_disc, &edge_disc, sizeof(short)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cmax_disc, &max_disc, sizeof(short)) );
         }
 
         template <int channels>
@@ -191,28 +191,28 @@ namespace cv { namespace gpu { namespace cuda
                 for (int i = 0; i < iters; ++i)
                 {
                     disp_bilateral_filter<1><<<grid, threads, 0, stream>>>(0, disp.data, disp.step/sizeof(T), img.data, img.step, disp.rows, disp.cols);
-                    cudaSafeCall( cudaGetLastError() );
+                    cvCudaSafeCall( cudaGetLastError() );
 
                     disp_bilateral_filter<1><<<grid, threads, 0, stream>>>(1, disp.data, disp.step/sizeof(T), img.data, img.step, disp.rows, disp.cols);
-                    cudaSafeCall( cudaGetLastError() );
+                    cvCudaSafeCall( cudaGetLastError() );
                 }
                 break;
             case 3:
                 for (int i = 0; i < iters; ++i)
                 {
                     disp_bilateral_filter<3><<<grid, threads, 0, stream>>>(0, disp.data, disp.step/sizeof(T), img.data, img.step, disp.rows, disp.cols);
-                    cudaSafeCall( cudaGetLastError() );
+                    cvCudaSafeCall( cudaGetLastError() );
 
                     disp_bilateral_filter<3><<<grid, threads, 0, stream>>>(1, disp.data, disp.step/sizeof(T), img.data, img.step, disp.rows, disp.cols);
-                    cudaSafeCall( cudaGetLastError() );
+                    cvCudaSafeCall( cudaGetLastError() );
                 }
                 break;
             default:
-                cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "disp_bilateral_filter");
+                CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template void disp_bilateral_filter<uchar>(PtrStepSz<uchar> disp, PtrStepSzb img, int channels, int iters, cudaStream_t stream);

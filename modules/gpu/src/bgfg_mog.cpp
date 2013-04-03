@@ -44,16 +44,16 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-cv::gpu::MOG_GPU::MOG_GPU(int) { throw_nogpu(); }
-void cv::gpu::MOG_GPU::initialize(cv::Size, int) { throw_nogpu(); }
-void cv::gpu::MOG_GPU::operator()(const cv::gpu::GpuMat&, cv::gpu::GpuMat&, float, Stream&) { throw_nogpu(); }
-void cv::gpu::MOG_GPU::getBackgroundImage(GpuMat&, Stream&) const { throw_nogpu(); }
+cv::gpu::MOG_GPU::MOG_GPU(int) { throw_no_cuda(); }
+void cv::gpu::MOG_GPU::initialize(cv::Size, int) { throw_no_cuda(); }
+void cv::gpu::MOG_GPU::operator()(const cv::gpu::GpuMat&, cv::gpu::GpuMat&, float, Stream&) { throw_no_cuda(); }
+void cv::gpu::MOG_GPU::getBackgroundImage(GpuMat&, Stream&) const { throw_no_cuda(); }
 void cv::gpu::MOG_GPU::release() {}
 
-cv::gpu::MOG2_GPU::MOG2_GPU(int) { throw_nogpu(); }
-void cv::gpu::MOG2_GPU::initialize(cv::Size, int) { throw_nogpu(); }
-void cv::gpu::MOG2_GPU::operator()(const GpuMat&, GpuMat&, float, Stream&) { throw_nogpu(); }
-void cv::gpu::MOG2_GPU::getBackgroundImage(GpuMat&, Stream&) const { throw_nogpu(); }
+cv::gpu::MOG2_GPU::MOG2_GPU(int) { throw_no_cuda(); }
+void cv::gpu::MOG2_GPU::initialize(cv::Size, int) { throw_no_cuda(); }
+void cv::gpu::MOG2_GPU::operator()(const GpuMat&, GpuMat&, float, Stream&) { throw_no_cuda(); }
+void cv::gpu::MOG2_GPU::getBackgroundImage(GpuMat&, Stream&) const { throw_no_cuda(); }
 void cv::gpu::MOG2_GPU::release() {}
 
 #else

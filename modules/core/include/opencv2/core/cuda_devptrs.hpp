@@ -58,9 +58,6 @@ namespace cv
         // Simple lightweight structures that encapsulates information about an image on device.
         // It is intended to pass to nvcc-compiled code. GpuMat depends on headers that nvcc can't compile
 
-        template <bool expr> struct StaticAssert;
-        template <> struct StaticAssert<true> {static __CV_GPU_HOST_DEVICE__ void check(){}};
-
         template<typename T> struct DevPtr
         {
             typedef T elem_type;

@@ -236,10 +236,10 @@ namespace cv { namespace gpu { namespace cuda
                     src[0].data, src[0].step,
                     src[1].data, src[1].step,
                     dst.rows, dst.cols, dst.data, dst.step);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall(cudaDeviceSynchronize());
+                cvCudaSafeCall(cudaDeviceSynchronize());
         }
 
 
@@ -253,10 +253,10 @@ namespace cv { namespace gpu { namespace cuda
                     src[1].data, src[1].step,
                     src[2].data, src[2].step,
                     dst.rows, dst.cols, dst.data, dst.step);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall(cudaDeviceSynchronize());
+                cvCudaSafeCall(cudaDeviceSynchronize());
         }
 
 
@@ -271,10 +271,10 @@ namespace cv { namespace gpu { namespace cuda
                     src[2].data, src[2].step,
                     src[3].data, src[3].step,
                     dst.rows, dst.cols, dst.data, dst.step);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall(cudaDeviceSynchronize());
+                cvCudaSafeCall(cudaDeviceSynchronize());
         }
 
 
@@ -293,7 +293,7 @@ namespace cv { namespace gpu { namespace cuda
             MergeFunction merge_func = merge_func_tbl[merge_func_id];
 
             if (merge_func == 0)
-                cv::gpu::error("Unsupported channel count or data type", __FILE__, __LINE__, "merge_caller");
+                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported channel count or data type");
 
             merge_func(src, dst, stream);
         }
@@ -445,10 +445,10 @@ namespace cv { namespace gpu { namespace cuda
                     src.data, src.step, src.rows, src.cols,
                     dst[0].data, dst[0].step,
                     dst[1].data, dst[1].step);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall(cudaDeviceSynchronize());
+                cvCudaSafeCall(cudaDeviceSynchronize());
         }
 
 
@@ -462,10 +462,10 @@ namespace cv { namespace gpu { namespace cuda
                     dst[0].data, dst[0].step,
                     dst[1].data, dst[1].step,
                     dst[2].data, dst[2].step);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall(cudaDeviceSynchronize());
+                cvCudaSafeCall(cudaDeviceSynchronize());
         }
 
 
@@ -480,10 +480,10 @@ namespace cv { namespace gpu { namespace cuda
                      dst[1].data, dst[1].step,
                      dst[2].data, dst[2].step,
                      dst[3].data, dst[3].step);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall(cudaDeviceSynchronize());
+                cvCudaSafeCall(cudaDeviceSynchronize());
         }
 
 
@@ -500,7 +500,7 @@ namespace cv { namespace gpu { namespace cuda
             SplitFunction split_func = split_func_tbl[split_func_id];
 
             if (split_func == 0)
-                cv::gpu::error("Unsupported channel count or data type", __FILE__, __LINE__, "split_caller");
+                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported channel count or data type");
 
             split_func(src, dst, stream);
         }

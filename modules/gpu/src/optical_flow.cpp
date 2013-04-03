@@ -47,9 +47,9 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::interpolateFrames(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::createOpticalFlowNeedleMap(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::interpolateFrames(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, float, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::createOpticalFlowNeedleMap(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
 #else
 
@@ -82,7 +82,7 @@ void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat& frame0, const GpuMat& f
     v.create(frame0.size(), CV_32FC1);
 
     cudaDeviceProp devProp;
-    cudaSafeCall( cudaGetDeviceProperties(&devProp, getDevice()) );
+    cvCudaSafeCall( cudaGetDeviceProperties(&devProp, getDevice()) );
 
     NCVBroxOpticalFlowDescriptor desc;
 
@@ -185,7 +185,7 @@ void cv::gpu::interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, cons
     ncvSafeCall( nppiStInterpolateFrames(&state) );
 
     if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
 }
 
 namespace cv { namespace gpu { namespace cuda

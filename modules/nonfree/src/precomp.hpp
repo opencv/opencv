@@ -51,17 +51,9 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#if defined(HAVE_OPENCV_GPU)
-    #include "opencv2/nonfree/gpu.hpp"
-
-    #if defined(HAVE_CUDA)
-        #include "opencv2/core/stream_accessor.hpp"
-        #include "opencv2/core/cuda/common.hpp"
-
-        static inline void throw_nogpu() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }
-    #else
-        static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support"); }
-    #endif
+#ifdef HAVE_OPENCV_GPU
+#  include "opencv2/nonfree/gpu.hpp"
+#  include "opencv2/core/gpu_private.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_OCL

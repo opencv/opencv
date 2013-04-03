@@ -215,9 +215,9 @@ namespace cv { namespace gpu { namespace cuda
             Int_t inInt(lo, hi);
             computeConnectivity<T, Int_t><<<grid, block, 0, stream>>>(static_cast<const PtrStepSz<T> >(image), edges, inInt);
 
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template void computeEdges<uchar>  (const PtrStepSzb& image, PtrStepSzb edges, const float4& lo, const float4& hi, cudaStream_t stream);
@@ -503,7 +503,7 @@ namespace cv { namespace gpu { namespace cuda
             dim3 grid(divUp(edges.cols, TILE_COLS), divUp(edges.rows, TILE_ROWS));
 
             lableTiles<<<grid, block, 0, stream>>>(edges, comps);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             int tileSizeX = TILE_COLS, tileSizeY = TILE_ROWS;
             while (grid.x > 1 || grid.y > 1)
@@ -517,16 +517,16 @@ namespace cv { namespace gpu { namespace cuda
                 tileSizeY <<= 1;
                 grid = mergeGrid;
 
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
             }
 
             grid.x = divUp(edges.cols, block.x);
             grid.y = divUp(edges.rows, block.y);
             flatten<<<grid, block, 0, stream>>>(edges, comps);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     }
 } } }

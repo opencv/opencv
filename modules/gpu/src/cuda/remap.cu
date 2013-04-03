@@ -81,7 +81,7 @@ namespace cv { namespace gpu { namespace cuda
                 Filter< BorderReader< PtrStep<T>, B<work_type> > > filter_src(brdSrc);
 
                 remap<<<grid, block, 0, stream>>>(filter_src, mapx, mapy, dst);
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
             }
         };
 
@@ -102,9 +102,9 @@ namespace cv { namespace gpu { namespace cuda
                 Filter< BorderReader< PtrStep<T>, B<work_type> > > filter_src(brdSrc);
 
                 remap<<<grid, block>>>(filter_src, mapx, mapy, dst);
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
 
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
             }
         };
 
@@ -135,8 +135,8 @@ namespace cv { namespace gpu { namespace cuda
                     BorderReader< tex_remap_ ## type ##_reader, B<work_type> > brdSrc(texSrc, brd); \
                     Filter< BorderReader< tex_remap_ ## type ##_reader, B<work_type> > > filter_src(brdSrc); \
                     remap<<<grid, block>>>(filter_src, mapx, mapy, dst); \
-                    cudaSafeCall( cudaGetLastError() ); \
-                    cudaSafeCall( cudaDeviceSynchronize() ); \
+                    cvCudaSafeCall( cudaGetLastError() ); \
+                    cvCudaSafeCall( cudaDeviceSynchronize() ); \
                 } \
             }; \
             template <template <typename> class Filter> struct RemapDispatcherNonStream<Filter, BrdReplicate, type> \
@@ -160,8 +160,8 @@ namespace cv { namespace gpu { namespace cuda
                         Filter< BorderReader< tex_remap_ ## type ##_reader, BrdReplicate<type> > > filter_src(brdSrc); \
                         remap<<<grid, block>>>(filter_src, mapx, mapy, dst); \
                     } \
-                    cudaSafeCall( cudaGetLastError() ); \
-                    cudaSafeCall( cudaDeviceSynchronize() ); \
+                    cvCudaSafeCall( cudaGetLastError() ); \
+                    cvCudaSafeCall( cudaDeviceSynchronize() ); \
                 } \
             };
 

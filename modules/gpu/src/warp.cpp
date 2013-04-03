@@ -45,11 +45,11 @@
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
 
-void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int, int, Scalar, Stream&) { throw_nogpu(); }
-void cv::gpu::buildWarpAffineMaps(const Mat&, bool, Size, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int, int, Scalar, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpAffineMaps(const Mat&, bool, Size, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::warpPerspective(const GpuMat&, GpuMat&, const Mat&, Size, int, int, Scalar, Stream&) { throw_nogpu(); }
-void cv::gpu::buildWarpPerspectiveMaps(const Mat&, bool, Size, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::warpPerspective(const GpuMat&, GpuMat&, const Mat&, Size, int, int, Scalar, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpPerspectiveMaps(const Mat&, bool, Size, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
 #else // HAVE_CUDA
 
@@ -170,7 +170,7 @@ namespace
                               coeffs, npp_inter[interpolation]) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }

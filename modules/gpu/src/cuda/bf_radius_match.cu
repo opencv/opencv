@@ -122,10 +122,10 @@ namespace cv { namespace gpu { namespace cuda
 
             matchUnrolled<BLOCK_SIZE, MAX_DESC_LEN, false, Dist><<<grid, block, smemSize, stream>>>(query, 0, train, maxDistance, mask,
                 trainIdx, PtrStepi(), distance, nMatches.data, trainIdx.cols);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T>
@@ -153,11 +153,11 @@ namespace cv { namespace gpu { namespace cuda
                     matchUnrolled<BLOCK_SIZE, MAX_DESC_LEN, true, Dist><<<grid, block, smemSize, stream>>>(query, i, train, maxDistance, WithOutMask(),
                         trainIdx, imgIdx, distance, nMatches.data, trainIdx.cols);
                 }
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
             }
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ///////////////////////////////////////////////////////////////////////////////
@@ -230,10 +230,10 @@ namespace cv { namespace gpu { namespace cuda
 
             match<BLOCK_SIZE, false, Dist><<<grid, block, smemSize, stream>>>(query, 0, train, maxDistance, mask,
                 trainIdx, PtrStepi(), distance, nMatches.data, trainIdx.cols);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template <int BLOCK_SIZE, typename Dist, typename T>
@@ -261,11 +261,11 @@ namespace cv { namespace gpu { namespace cuda
                     match<BLOCK_SIZE, true, Dist><<<grid, block, smemSize, stream>>>(query, i, train, maxDistance, WithOutMask(),
                         trainIdx, imgIdx, distance, nMatches.data, trainIdx.cols);
                 }
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
             }
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ///////////////////////////////////////////////////////////////////////////////

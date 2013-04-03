@@ -44,9 +44,9 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-cv::gpu::GMG_GPU::GMG_GPU() { throw_nogpu(); }
-void cv::gpu::GMG_GPU::initialize(cv::Size, float, float) { throw_nogpu(); }
-void cv::gpu::GMG_GPU::operator ()(const cv::gpu::GpuMat&, cv::gpu::GpuMat&, float, cv::gpu::Stream&) { throw_nogpu(); }
+cv::gpu::GMG_GPU::GMG_GPU() { throw_no_cuda(); }
+void cv::gpu::GMG_GPU::initialize(cv::Size, float, float) { throw_no_cuda(); }
+void cv::gpu::GMG_GPU::operator ()(const cv::gpu::GpuMat&, cv::gpu::GpuMat&, float, cv::gpu::Stream&) { throw_no_cuda(); }
 void cv::gpu::GMG_GPU::release() {}
 
 #else

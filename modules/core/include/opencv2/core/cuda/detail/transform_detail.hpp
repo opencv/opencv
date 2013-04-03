@@ -317,10 +317,10 @@ namespace cv { namespace gpu { namespace cuda
                 const dim3 grid(divUp(src.cols, threads.x), divUp(src.rows, threads.y), 1);
 
                 transformSimple<T, D><<<grid, threads, 0, stream>>>(src, dst, mask, op);
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cudaSafeCall( cudaDeviceSynchronize() );
+                    cvCudaSafeCall( cudaDeviceSynchronize() );
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
@@ -332,10 +332,10 @@ namespace cv { namespace gpu { namespace cuda
                 const dim3 grid(divUp(src1.cols, threads.x), divUp(src1.rows, threads.y), 1);
 
                 transformSimple<T1, T2, D><<<grid, threads, 0, stream>>>(src1, src2, dst, mask, op);
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cudaSafeCall( cudaDeviceSynchronize() );
+                    cvCudaSafeCall( cudaDeviceSynchronize() );
             }
         };
         template<> struct TransformDispatcher<true>
@@ -345,7 +345,7 @@ namespace cv { namespace gpu { namespace cuda
             {
                 typedef TransformFunctorTraits<UnOp> ft;
 
-                StaticAssert<ft::smart_shift != 1>::check();
+                CV_StaticAssert(ft::smart_shift != 1, "");
 
                 if (!isAligned(src.data, ft::smart_shift * sizeof(T)) || !isAligned(src.step, ft::smart_shift * sizeof(T)) ||
                     !isAligned(dst.data, ft::smart_shift * sizeof(D)) || !isAligned(dst.step, ft::smart_shift * sizeof(D)))
@@ -358,10 +358,10 @@ namespace cv { namespace gpu { namespace cuda
                 const dim3 grid(divUp(src.cols, threads.x * ft::smart_shift), divUp(src.rows, threads.y), 1);
 
                 transformSmart<T, D><<<grid, threads, 0, stream>>>(src, dst, mask, op);
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cudaSafeCall( cudaDeviceSynchronize() );
+                    cvCudaSafeCall( cudaDeviceSynchronize() );
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
@@ -369,7 +369,7 @@ namespace cv { namespace gpu { namespace cuda
             {
                 typedef TransformFunctorTraits<BinOp> ft;
 
-                StaticAssert<ft::smart_shift != 1>::check();
+                CV_StaticAssert(ft::smart_shift != 1, "");
 
                 if (!isAligned(src1.data, ft::smart_shift * sizeof(T1)) || !isAligned(src1.step, ft::smart_shift * sizeof(T1)) ||
                     !isAligned(src2.data, ft::smart_shift * sizeof(T2)) || !isAligned(src2.step, ft::smart_shift * sizeof(T2)) ||
@@ -383,10 +383,10 @@ namespace cv { namespace gpu { namespace cuda
                 const dim3 grid(divUp(src1.cols, threads.x * ft::smart_shift), divUp(src1.rows, threads.y), 1);
 
                 transformSmart<T1, T2, D><<<grid, threads, 0, stream>>>(src1, src2, dst, mask, op);
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cudaSafeCall( cudaDeviceSynchronize() );
+                    cvCudaSafeCall( cudaDeviceSynchronize() );
             }
         };
     } // namespace transform_detail

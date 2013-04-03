@@ -49,15 +49,15 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU()               { throw_nogpu(); }
-cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const String&)  { throw_nogpu(); }
-cv::gpu::CascadeClassifier_GPU::~CascadeClassifier_GPU()              { throw_nogpu(); }
-bool cv::gpu::CascadeClassifier_GPU::empty() const                    { throw_nogpu(); return true; }
-bool cv::gpu::CascadeClassifier_GPU::load(const String&)              { throw_nogpu(); return true; }
-Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const        { throw_nogpu(); return Size();}
-void cv::gpu::CascadeClassifier_GPU::release()                        { throw_nogpu(); }
-int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, double, int, Size)       {throw_nogpu(); return -1;}
-int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, Size, Size, double, int) {throw_nogpu(); return -1;}
+cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU()               { throw_no_cuda(); }
+cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const String&)  { throw_no_cuda(); }
+cv::gpu::CascadeClassifier_GPU::~CascadeClassifier_GPU()              { throw_no_cuda(); }
+bool cv::gpu::CascadeClassifier_GPU::empty() const                    { throw_no_cuda(); return true; }
+bool cv::gpu::CascadeClassifier_GPU::load(const String&)              { throw_no_cuda(); return true; }
+Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const        { throw_no_cuda(); return Size();}
+void cv::gpu::CascadeClassifier_GPU::release()                        { throw_no_cuda(); }
+int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, double, int, Size)       {throw_no_cuda(); return -1;}
+int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, Size, Size, double, int) {throw_no_cuda(); return -1;}
 
 #else
 
@@ -403,7 +403,7 @@ public:
 
         unsigned int classified = 0;
         GpuMat dclassified(1, 1, CV_32S);
-        cudaSafeCall( cudaMemcpy(dclassified.ptr(), &classified, sizeof(int), cudaMemcpyHostToDevice) );
+        cvCudaSafeCall( cudaMemcpy(dclassified.ptr(), &classified, sizeof(int), cudaMemcpyHostToDevice) );
 
         PyrLavel level(0, 1.0f, image.size(), NxM, minObjectSize);
 
@@ -448,11 +448,11 @@ public:
         if (groupThreshold <= 0  || objects.empty())
             return 0;
 
-        cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
+        cvCudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
         cuda::lbp::connectedConmonents(candidates, classified, objects, groupThreshold, grouping_eps, dclassified.ptr<unsigned int>());
 
-        cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
         return classified;
     }
 
@@ -481,7 +481,7 @@ private:
             roiSize.height = frame.height;
 
             cudaDeviceProp prop;
-            cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
+            cvCudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
 
             Ncv32u bufSize;
             ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );

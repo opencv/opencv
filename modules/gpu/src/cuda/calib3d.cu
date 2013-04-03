@@ -75,10 +75,10 @@ namespace cv { namespace gpu { namespace cuda
                   const float* transl, PtrStepSz<float3> dst,
                   cudaStream_t stream)
         {
-            cudaSafeCall(cudaMemcpyToSymbol(crot0, rot, sizeof(float) * 3));
-            cudaSafeCall(cudaMemcpyToSymbol(crot1, rot + 3, sizeof(float) * 3));
-            cudaSafeCall(cudaMemcpyToSymbol(crot2, rot + 6, sizeof(float) * 3));
-            cudaSafeCall(cudaMemcpyToSymbol(ctransl, transl, sizeof(float) * 3));
+            cvCudaSafeCall(cudaMemcpyToSymbol(crot0, rot, sizeof(float) * 3));
+            cvCudaSafeCall(cudaMemcpyToSymbol(crot1, rot + 3, sizeof(float) * 3));
+            cvCudaSafeCall(cudaMemcpyToSymbol(crot2, rot + 6, sizeof(float) * 3));
+            cvCudaSafeCall(cudaMemcpyToSymbol(ctransl, transl, sizeof(float) * 3));
             cv::gpu::cuda::transform(src, dst, TransformOp(), WithOutMask(), stream);
         }
     } // namespace transform_points
@@ -114,12 +114,12 @@ namespace cv { namespace gpu { namespace cuda
                   const float* transl, const float* proj, PtrStepSz<float2> dst,
                   cudaStream_t stream)
         {
-            cudaSafeCall(cudaMemcpyToSymbol(crot0, rot, sizeof(float) * 3));
-            cudaSafeCall(cudaMemcpyToSymbol(crot1, rot + 3, sizeof(float) * 3));
-            cudaSafeCall(cudaMemcpyToSymbol(crot2, rot + 6, sizeof(float) * 3));
-            cudaSafeCall(cudaMemcpyToSymbol(ctransl, transl, sizeof(float) * 3));
-            cudaSafeCall(cudaMemcpyToSymbol(cproj0, proj, sizeof(float) * 3));
-            cudaSafeCall(cudaMemcpyToSymbol(cproj1, proj + 3, sizeof(float) * 3));
+            cvCudaSafeCall(cudaMemcpyToSymbol(crot0, rot, sizeof(float) * 3));
+            cvCudaSafeCall(cudaMemcpyToSymbol(crot1, rot + 3, sizeof(float) * 3));
+            cvCudaSafeCall(cudaMemcpyToSymbol(crot2, rot + 6, sizeof(float) * 3));
+            cvCudaSafeCall(cudaMemcpyToSymbol(ctransl, transl, sizeof(float) * 3));
+            cvCudaSafeCall(cudaMemcpyToSymbol(cproj0, proj, sizeof(float) * 3));
+            cvCudaSafeCall(cudaMemcpyToSymbol(cproj1, proj + 3, sizeof(float) * 3));
             cv::gpu::cuda::transform(src, dst, ProjectOp(), WithOutMask(), stream);
         }
     } // namespace project_points
@@ -174,17 +174,17 @@ namespace cv { namespace gpu { namespace cuda
                 const float3* transl_vectors, const float3* object, const float2* image,
                 const float dist_threshold, int* hypothesis_scores)
         {
-            cudaSafeCall(cudaMemcpyToSymbol(crot_matrices, rot_matrices, num_hypotheses * 3 * sizeof(float3)));
-            cudaSafeCall(cudaMemcpyToSymbol(ctransl_vectors, transl_vectors, num_hypotheses * sizeof(float3)));
+            cvCudaSafeCall(cudaMemcpyToSymbol(crot_matrices, rot_matrices, num_hypotheses * 3 * sizeof(float3)));
+            cvCudaSafeCall(cudaMemcpyToSymbol(ctransl_vectors, transl_vectors, num_hypotheses * sizeof(float3)));
 
             dim3 threads(256);
             dim3 grid(num_hypotheses);
 
             computeHypothesisScoresKernel<256><<<grid, threads>>>(
                     num_points, object, image, dist_threshold, hypothesis_scores);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     } // namespace solvepnp_ransac
 }}} // namespace cv { namespace gpu { namespace cuda

@@ -150,10 +150,10 @@ namespace cv { namespace gpu { namespace cuda
             const dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
 
             pyrUp<<<grid, block, 0, stream>>>(src, dst);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template <typename T> void pyrUp_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)

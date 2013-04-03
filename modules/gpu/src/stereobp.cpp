@@ -47,14 +47,14 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::StereoBeliefPropagation::estimateRecommendedParams(int, int, int&, int&, int&) { throw_nogpu(); }
+void cv::gpu::StereoBeliefPropagation::estimateRecommendedParams(int, int, int&, int&, int&) { throw_no_cuda(); }
 
-cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int, int, int, int) { throw_nogpu(); }
-cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int, int, int, float, float, float, float, int) { throw_nogpu(); }
+cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int, int, int, int) { throw_no_cuda(); }
+cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int, int, int, float, float, float, float, int) { throw_no_cuda(); }
 
-void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 

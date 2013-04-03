@@ -47,9 +47,9 @@ using namespace cv::gpu;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::calcOpticalFlowBM(const GpuMat&, const GpuMat&, Size, Size, Size, bool, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::calcOpticalFlowBM(const GpuMat&, const GpuMat&, Size, Size, Size, bool, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::FastOpticalFlowBM::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, int, int, Stream&) { throw_nogpu(); }
+void cv::gpu::FastOpticalFlowBM::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, int, int, Stream&) { throw_no_cuda(); }
 
 #else // HAVE_CUDA
 
@@ -184,9 +184,9 @@ void cv::gpu::calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr, Size blo
 
     ensureSizeIsEnough(1, ssCount, CV_16SC2, buf);
     if (stream == 0)
-        cudaSafeCall( cudaMemcpy(buf.data, &ss[0], ssCount * sizeof(short2), cudaMemcpyHostToDevice) );
+        cvCudaSafeCall( cudaMemcpy(buf.data, &ss[0], ssCount * sizeof(short2), cudaMemcpyHostToDevice) );
     else
-        cudaSafeCall( cudaMemcpyAsync(buf.data, &ss[0], ssCount * sizeof(short2), cudaMemcpyHostToDevice, stream) );
+        cvCudaSafeCall( cudaMemcpyAsync(buf.data, &ss[0], ssCount * sizeof(short2), cudaMemcpyHostToDevice, stream) );
 
     const int maxX = prev.cols - blockSize.width;
     const int maxY = prev.rows - blockSize.height;

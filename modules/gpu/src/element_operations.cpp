@@ -47,41 +47,41 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::add(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::add(const GpuMat&, const Scalar&, GpuMat&, const GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::subtract(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::subtract(const GpuMat&, const Scalar&, GpuMat&, const GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::multiply(const GpuMat&, const GpuMat&, GpuMat&, double, int, Stream&) { throw_nogpu(); }
-void cv::gpu::multiply(const GpuMat&, const Scalar&, GpuMat&, double, int, Stream&) { throw_nogpu(); }
-void cv::gpu::divide(const GpuMat&, const GpuMat&, GpuMat&, double, int, Stream&) { throw_nogpu(); }
-void cv::gpu::divide(const GpuMat&, const Scalar&, GpuMat&, double, int, Stream&) { throw_nogpu(); }
-void cv::gpu::divide(double, const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::absdiff(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::absdiff(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::abs(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::sqr(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::sqrt(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::exp(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::log(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::compare(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::compare(const GpuMat&, Scalar, GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::bitwise_not(const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::bitwise_or(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::bitwise_or(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::bitwise_and(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::bitwise_and(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::bitwise_xor(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::bitwise_xor(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::rshift(const GpuMat&, Scalar_<int>, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::lshift(const GpuMat&, Scalar_<int>, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::min(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::min(const GpuMat&, double, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::max(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::max(const GpuMat&, double, GpuMat&, Stream&) { throw_nogpu(); }
-double cv::gpu::threshold(const GpuMat&, GpuMat&, double, double, int, Stream&) {throw_nogpu(); return 0.0;}
-void cv::gpu::pow(const GpuMat&, double, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::alphaComp(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::addWeighted(const GpuMat&, double, const GpuMat&, double, double, GpuMat&, int, Stream&) { throw_nogpu(); }
+void cv::gpu::add(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::add(const GpuMat&, const Scalar&, GpuMat&, const GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::subtract(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::subtract(const GpuMat&, const Scalar&, GpuMat&, const GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::multiply(const GpuMat&, const GpuMat&, GpuMat&, double, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::multiply(const GpuMat&, const Scalar&, GpuMat&, double, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::divide(const GpuMat&, const GpuMat&, GpuMat&, double, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::divide(const GpuMat&, const Scalar&, GpuMat&, double, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::divide(double, const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::absdiff(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::absdiff(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::abs(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::sqr(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::sqrt(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::exp(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::log(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::compare(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::compare(const GpuMat&, Scalar, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::bitwise_not(const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::bitwise_or(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::bitwise_or(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::bitwise_and(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::bitwise_and(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::bitwise_xor(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::bitwise_xor(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::rshift(const GpuMat&, Scalar_<int>, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::lshift(const GpuMat&, Scalar_<int>, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::min(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::min(const GpuMat&, double, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::max(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::max(const GpuMat&, double, GpuMat&, Stream&) { throw_no_cuda(); }
+double cv::gpu::threshold(const GpuMat&, GpuMat&, double, double, int, Stream&) {throw_no_cuda(); return 0.0;}
+void cv::gpu::pow(const GpuMat&, double, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::alphaComp(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::addWeighted(const GpuMat&, double, const GpuMat&, double, double, GpuMat&, int, Stream&) { throw_no_cuda(); }
 
 #else
 
@@ -150,7 +150,7 @@ namespace
             nppSafeCall( func((const npp_t*)src.data, static_cast<int>(src.step), pConstants, (npp_t*)dst.data, static_cast<int>(dst.step), sz, 0) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<int DEPTH, typename NppArithmScalarFunc<DEPTH, 1>::func_ptr func> struct NppArithmScalar<DEPTH, 1, func>
@@ -168,7 +168,7 @@ namespace
             nppSafeCall( func((const npp_t*)src.data, static_cast<int>(src.step), saturate_cast<npp_t>(sc.val[0]), (npp_t*)dst.data, static_cast<int>(dst.step), sz, 0) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<int DEPTH, typename NppArithmScalarFunc<DEPTH, 2>::func_ptr func> struct NppArithmScalar<DEPTH, 2, func>
@@ -192,7 +192,7 @@ namespace
                               (npp_complex_type*)dst.data, static_cast<int>(dst.step), sz, 0) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<int cn, typename NppArithmScalarFunc<CV_32F, cn>::func_ptr func> struct NppArithmScalar<CV_32F, cn, func>
@@ -212,7 +212,7 @@ namespace
             nppSafeCall( func((const npp_t*)src.data, static_cast<int>(src.step), pConstants, (npp_t*)dst.data, static_cast<int>(dst.step), sz) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<typename NppArithmScalarFunc<CV_32F, 1>::func_ptr func> struct NppArithmScalar<CV_32F, 1, func>
@@ -230,7 +230,7 @@ namespace
             nppSafeCall( func((const npp_t*)src.data, static_cast<int>(src.step), saturate_cast<Npp32f>(sc.val[0]), (npp_t*)dst.data, static_cast<int>(dst.step), sz) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<typename NppArithmScalarFunc<CV_32F, 2>::func_ptr func> struct NppArithmScalar<CV_32F, 2, func>
@@ -253,7 +253,7 @@ namespace
             nppSafeCall( func((const npp_complex_type*)src.data, static_cast<int>(src.step), nConstant, (npp_complex_type*)dst.data, static_cast<int>(dst.step), sz) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }
@@ -2218,7 +2218,7 @@ namespace
             nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step), pConstants, dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template <int DEPTH, typename NppBitwiseCFunc<DEPTH, 1>::func_t func> struct NppBitwiseC<DEPTH, 1, func>
@@ -2236,7 +2236,7 @@ namespace
             nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step), saturate_cast<npp_t>(sc.val[0]), dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }
@@ -2349,7 +2349,7 @@ namespace
             nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step), sc.val, dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template <int DEPTH, typename NppShiftFunc<DEPTH, 1>::func_t func> struct NppShift<DEPTH, 1, func>
@@ -2367,7 +2367,7 @@ namespace
             nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step), sc.val[0], dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }
@@ -2708,7 +2708,7 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double 
             dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, static_cast<Npp32f>(thresh), NPP_CMP_GREATER) );
 
         if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
     }
     else
     {
@@ -2805,7 +2805,7 @@ namespace
                               dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI, eAlphaOp) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }

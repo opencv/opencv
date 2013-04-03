@@ -73,10 +73,10 @@ namespace cv { namespace gpu { namespace cuda
             dim3 grid(divUp(cols * cn, threads.x), divUp(rows, threads.y));
 
             blendLinearKernel<<<grid, threads, 0, stream>>>(rows, cols * cn, cn, img1, img2, weights1, weights2, result);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall(cudaDeviceSynchronize());
+                cvCudaSafeCall(cudaDeviceSynchronize());
         }
 
         template void blendLinearCaller<uchar>(int, int, int, PtrStep<uchar>, PtrStep<uchar>, PtrStepf, PtrStepf, PtrStep<uchar>, cudaStream_t stream);
@@ -109,10 +109,10 @@ namespace cv { namespace gpu { namespace cuda
             dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
             blendLinearKernel8UC4<<<grid, threads, 0, stream>>>(rows, cols, img1, img2, weights1, weights2, result);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall(cudaDeviceSynchronize());
+                cvCudaSafeCall(cudaDeviceSynchronize());
         }
     } // namespace blend
 }}} // namespace cv { namespace gpu { namespace cuda

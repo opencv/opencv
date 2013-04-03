@@ -320,10 +320,10 @@ namespace pyrlk
         else
             sparseKernel<cn, PATCH_X, PATCH_Y, false><<<grid, block>>>(prevPts, nextPts, status, err, level, rows, cols);
 
-        cudaSafeCall( cudaGetLastError() );
+        cvCudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template <bool calcErr>
@@ -474,14 +474,14 @@ namespace pyrlk
 
     void loadConstants(int2 winSize, int iters)
     {
-        cudaSafeCall( cudaMemcpyToSymbol(c_winSize_x, &winSize.x, sizeof(int)) );
-        cudaSafeCall( cudaMemcpyToSymbol(c_winSize_y, &winSize.y, sizeof(int)) );
+        cvCudaSafeCall( cudaMemcpyToSymbol(c_winSize_x, &winSize.x, sizeof(int)) );
+        cvCudaSafeCall( cudaMemcpyToSymbol(c_winSize_y, &winSize.y, sizeof(int)) );
 
         int2 halfWin = make_int2((winSize.x - 1) / 2, (winSize.y - 1) / 2);
-        cudaSafeCall( cudaMemcpyToSymbol(c_halfWin_x, &halfWin.x, sizeof(int)) );
-        cudaSafeCall( cudaMemcpyToSymbol(c_halfWin_y, &halfWin.y, sizeof(int)) );
+        cvCudaSafeCall( cudaMemcpyToSymbol(c_halfWin_x, &halfWin.x, sizeof(int)) );
+        cvCudaSafeCall( cudaMemcpyToSymbol(c_halfWin_y, &halfWin.y, sizeof(int)) );
 
-        cudaSafeCall( cudaMemcpyToSymbol(c_iters, &iters, sizeof(int)) );
+        cvCudaSafeCall( cudaMemcpyToSymbol(c_iters, &iters, sizeof(int)) );
     }
 
     void sparse1(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
@@ -544,16 +544,16 @@ namespace pyrlk
         if (err.data)
         {
             denseKernel<true><<<grid, block, smem_size, stream>>>(u, v, prevU, prevV, err, I.rows, I.cols);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
         }
         else
         {
             denseKernel<false><<<grid, block, smem_size, stream>>>(u, v, prevU, prevV, PtrStepf(), I.rows, I.cols);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
         }
 
         if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 

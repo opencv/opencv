@@ -47,14 +47,14 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::FAST_GPU::FAST_GPU(int, bool, double) { throw_nogpu(); }
-void cv::gpu::FAST_GPU::operator ()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::FAST_GPU::operator ()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::FAST_GPU::downloadKeypoints(const GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::FAST_GPU::convertKeypoints(const Mat&, std::vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::FAST_GPU::release() { throw_nogpu(); }
-int cv::gpu::FAST_GPU::calcKeyPointsLocation(const GpuMat&, const GpuMat&) { throw_nogpu(); return 0; }
-int cv::gpu::FAST_GPU::getKeyPoints(GpuMat&) { throw_nogpu(); return 0; }
+cv::gpu::FAST_GPU::FAST_GPU(int, bool, double) { throw_no_cuda(); }
+void cv::gpu::FAST_GPU::operator ()(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::FAST_GPU::operator ()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::gpu::FAST_GPU::downloadKeypoints(const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::gpu::FAST_GPU::convertKeypoints(const Mat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::gpu::FAST_GPU::release() { throw_no_cuda(); }
+int cv::gpu::FAST_GPU::calcKeyPointsLocation(const GpuMat&, const GpuMat&) { throw_no_cuda(); return 0; }
+int cv::gpu::FAST_GPU::getKeyPoints(GpuMat&) { throw_no_cuda(); return 0; }
 
 #else /* !defined (HAVE_CUDA) */
 

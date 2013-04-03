@@ -47,10 +47,10 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::merge(const GpuMat* /*src*/, size_t /*count*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
-void cv::gpu::merge(const std::vector<GpuMat>& /*src*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
-void cv::gpu::split(const GpuMat& /*src*/, GpuMat* /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
-void cv::gpu::split(const GpuMat& /*src*/, std::vector<GpuMat>& /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
+void cv::gpu::merge(const GpuMat* /*src*/, size_t /*count*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_no_cuda(); }
+void cv::gpu::merge(const std::vector<GpuMat>& /*src*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_no_cuda(); }
+void cv::gpu::split(const GpuMat& /*src*/, GpuMat* /*dst*/, Stream& /*stream*/) { throw_no_cuda(); }
+void cv::gpu::split(const GpuMat& /*src*/, std::vector<GpuMat>& /*dst*/, Stream& /*stream*/) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 

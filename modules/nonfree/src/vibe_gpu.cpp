@@ -46,9 +46,9 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-cv::gpu::VIBE_GPU::VIBE_GPU(unsigned long) { throw_nogpu(); }
-void cv::gpu::VIBE_GPU::initialize(const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::VIBE_GPU::operator()(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+cv::gpu::VIBE_GPU::VIBE_GPU(unsigned long) { throw_no_cuda(); }
+void cv::gpu::VIBE_GPU::initialize(const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::VIBE_GPU::operator()(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 void cv::gpu::VIBE_GPU::release() {}
 
 #else

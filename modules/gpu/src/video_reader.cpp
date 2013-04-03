@@ -48,18 +48,18 @@ class cv::gpu::VideoReader_GPU::Impl
 {
 };
 
-cv::gpu::VideoReader_GPU::VideoReader_GPU() { throw_nogpu(); }
-cv::gpu::VideoReader_GPU::VideoReader_GPU(const String&) { throw_nogpu(); }
-cv::gpu::VideoReader_GPU::VideoReader_GPU(const cv::Ptr<VideoSource>&) { throw_nogpu(); }
+cv::gpu::VideoReader_GPU::VideoReader_GPU() { throw_no_cuda(); }
+cv::gpu::VideoReader_GPU::VideoReader_GPU(const String&) { throw_no_cuda(); }
+cv::gpu::VideoReader_GPU::VideoReader_GPU(const cv::Ptr<VideoSource>&) { throw_no_cuda(); }
 cv::gpu::VideoReader_GPU::~VideoReader_GPU() { }
-void cv::gpu::VideoReader_GPU::open(const String&) { throw_nogpu(); }
-void cv::gpu::VideoReader_GPU::open(const cv::Ptr<VideoSource>&) { throw_nogpu(); }
+void cv::gpu::VideoReader_GPU::open(const String&) { throw_no_cuda(); }
+void cv::gpu::VideoReader_GPU::open(const cv::Ptr<VideoSource>&) { throw_no_cuda(); }
 bool cv::gpu::VideoReader_GPU::isOpened() const { return false; }
 void cv::gpu::VideoReader_GPU::close() { }
-bool cv::gpu::VideoReader_GPU::read(GpuMat&) { throw_nogpu(); return false; }
-cv::gpu::VideoReader_GPU::FormatInfo cv::gpu::VideoReader_GPU::format() const { throw_nogpu(); FormatInfo format_ = {MPEG1,Monochrome,0,0}; return format_; }
-bool cv::gpu::VideoReader_GPU::VideoSource::parseVideoData(const unsigned char*, size_t, bool) { throw_nogpu(); return false; }
-void cv::gpu::VideoReader_GPU::dumpFormat(std::ostream&) { throw_nogpu(); }
+bool cv::gpu::VideoReader_GPU::read(GpuMat&) { throw_no_cuda(); return false; }
+cv::gpu::VideoReader_GPU::FormatInfo cv::gpu::VideoReader_GPU::format() const { throw_no_cuda(); FormatInfo format_ = {MPEG1,Monochrome,0,0}; return format_; }
+bool cv::gpu::VideoReader_GPU::VideoSource::parseVideoData(const unsigned char*, size_t, bool) { throw_no_cuda(); return false; }
+void cv::gpu::VideoReader_GPU::dumpFormat(std::ostream&) { throw_no_cuda(); }
 
 #else // HAVE_CUDA
 

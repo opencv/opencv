@@ -47,51 +47,51 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::meanShiftFiltering(const GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_nogpu(); }
-void cv::gpu::meanShiftProc(const GpuMat&, GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_nogpu(); }
-void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::reprojectImageTo3D(const GpuMat&, GpuMat&, const Mat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::copyMakeBorder(const GpuMat&, GpuMat&, int, int, int, int, int, const Scalar&, Stream&) { throw_nogpu(); }
-void cv::gpu::buildWarpPlaneMaps(Size, Rect, const Mat&, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::buildWarpCylindricalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::buildWarpSphericalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int, Stream&) { throw_nogpu(); }
-void cv::gpu::integral(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::integralBuffered(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::sqrIntegral(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::columnSum(const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::rectStdDev(const GpuMat&, const GpuMat&, GpuMat&, const Rect&, Stream&) { throw_nogpu(); }
-void cv::gpu::evenLevels(GpuMat&, int, int, int) { throw_nogpu(); }
-void cv::gpu::histEven(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::histEven(const GpuMat&, GpuMat&, GpuMat&, int, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::histEven(const GpuMat&, GpuMat*, int*, int*, int*, Stream&) { throw_nogpu(); }
-void cv::gpu::histEven(const GpuMat&, GpuMat*, GpuMat&, int*, int*, int*, Stream&) { throw_nogpu(); }
-void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*, Stream&) { throw_nogpu(); }
-void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::calcHist(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double, int) { throw_nogpu(); }
-void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, double, int) { throw_nogpu(); }
-void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, double, int, Stream&) { throw_nogpu(); }
-void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, int, int, int) { throw_nogpu(); }
-void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, int) { throw_nogpu(); }
-void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::mulSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, bool, Stream&) { throw_nogpu(); }
-void cv::gpu::mulAndScaleSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, float, bool, Stream&) { throw_nogpu(); }
-void cv::gpu::dft(const GpuMat&, GpuMat&, Size, int, Stream&) { throw_nogpu(); }
-void cv::gpu::ConvolveBuf::create(Size, Size) { throw_nogpu(); }
-void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool) { throw_nogpu(); }
-void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&, Stream&) { throw_nogpu(); }
-void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int, bool) { throw_nogpu(); }
-void cv::gpu::Canny(const GpuMat&, CannyBuf&, GpuMat&, double, double, int, bool) { throw_nogpu(); }
-void cv::gpu::Canny(const GpuMat&, const GpuMat&, GpuMat&, double, double, bool) { throw_nogpu(); }
-void cv::gpu::Canny(const GpuMat&, const GpuMat&, CannyBuf&, GpuMat&, double, double, bool) { throw_nogpu(); }
-void cv::gpu::CannyBuf::create(const Size&, int) { throw_nogpu(); }
-void cv::gpu::CannyBuf::release() { throw_nogpu(); }
-cv::Ptr<cv::gpu::CLAHE> cv::gpu::createCLAHE(double, cv::Size) { throw_nogpu(); return cv::Ptr<cv::gpu::CLAHE>(); }
+void cv::gpu::meanShiftFiltering(const GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
+void cv::gpu::meanShiftProc(const GpuMat&, GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
+void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::reprojectImageTo3D(const GpuMat&, GpuMat&, const Mat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::copyMakeBorder(const GpuMat&, GpuMat&, int, int, int, int, int, const Scalar&, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpPlaneMaps(Size, Rect, const Mat&, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpCylindricalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpSphericalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::integral(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::integralBuffered(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::sqrIntegral(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::columnSum(const GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::rectStdDev(const GpuMat&, const GpuMat&, GpuMat&, const Rect&, Stream&) { throw_no_cuda(); }
+void cv::gpu::evenLevels(GpuMat&, int, int, int) { throw_no_cuda(); }
+void cv::gpu::histEven(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::histEven(const GpuMat&, GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::histEven(const GpuMat&, GpuMat*, int*, int*, int*, Stream&) { throw_no_cuda(); }
+void cv::gpu::histEven(const GpuMat&, GpuMat*, GpuMat&, int*, int*, int*, Stream&) { throw_no_cuda(); }
+void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*, Stream&) { throw_no_cuda(); }
+void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::calcHist(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double, int) { throw_no_cuda(); }
+void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, double, int) { throw_no_cuda(); }
+void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, double, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, int, int, int) { throw_no_cuda(); }
+void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, int) { throw_no_cuda(); }
+void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::mulSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::mulAndScaleSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, float, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::dft(const GpuMat&, GpuMat&, Size, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::ConvolveBuf::create(Size, Size) { throw_no_cuda(); }
+void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool) { throw_no_cuda(); }
+void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&, Stream&) { throw_no_cuda(); }
+void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int, bool) { throw_no_cuda(); }
+void cv::gpu::Canny(const GpuMat&, CannyBuf&, GpuMat&, double, double, int, bool) { throw_no_cuda(); }
+void cv::gpu::Canny(const GpuMat&, const GpuMat&, GpuMat&, double, double, bool) { throw_no_cuda(); }
+void cv::gpu::Canny(const GpuMat&, const GpuMat&, CannyBuf&, GpuMat&, double, double, bool) { throw_no_cuda(); }
+void cv::gpu::CannyBuf::create(const Size&, int) { throw_no_cuda(); }
+void cv::gpu::CannyBuf::release() { throw_no_cuda(); }
+cv::Ptr<cv::gpu::CLAHE> cv::gpu::createCLAHE(double, cv::Size) { throw_no_cuda(); return cv::Ptr<cv::gpu::CLAHE>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -320,7 +320,7 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
         }
 
         if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
     }
     else
     {
@@ -494,7 +494,7 @@ namespace
                 dst.ptr<npp_t>(), static_cast<int>(dst.step), dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }
@@ -581,7 +581,7 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
         roiSize.height = src.rows;
 
         cudaDeviceProp prop;
-        cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
+        cvCudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
 
         Ncv32u bufSize;
         ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
@@ -594,7 +594,7 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
             sum.ptr<Ncv32u>(), static_cast<int>(sum.step), roiSize, buffer.ptr<Ncv8u>(), bufSize, prop) );
 
         if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -610,7 +610,7 @@ void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
     roiSize.height = src.rows;
 
     cudaDeviceProp prop;
-    cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
+    cvCudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
 
     Ncv32u bufSize;
     ncvSafeCall(nppiStSqrIntegralGetSize_8u64u(roiSize, &bufSize, prop));
@@ -625,7 +625,7 @@ void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
             sqsum.ptr<Ncv64u>(0), static_cast<int>(sqsum.step), roiSize, buf.ptr<Ncv8u>(0), bufSize, prop));
 
     if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -674,7 +674,7 @@ void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, cons
                 dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, nppRect) );
 
     if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -726,7 +726,7 @@ namespace
                 lowerLevel, upperLevel, buffer.ptr<Npp8u>()) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<int SDEPTH, typename NppHistogramEvenFuncC4<SDEPTH>::func_ptr func, get_buf_size_c4_t get_buf_size>
@@ -758,7 +758,7 @@ namespace
             nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), sz, pHist, levels, lowerLevel, upperLevel, buffer.ptr<Npp8u>()) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 
@@ -826,7 +826,7 @@ namespace
             nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), sz, hist.ptr<Npp32s>(), levels.ptr<level_t>(), levels.cols, buffer.ptr<Npp8u>()) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<int SDEPTH, typename NppHistogramRangeFuncC4<SDEPTH>::func_ptr func, get_buf_size_c4_t get_buf_size>
@@ -866,7 +866,7 @@ namespace
             nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), sz, pHist, pLevels, nLevels, buffer.ptr<Npp8u>()) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }
@@ -1190,7 +1190,7 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags, Stre
     OPENCV_GPU_UNUSED(flags);
     OPENCV_GPU_UNUSED(stream);
 
-    throw_nogpu();
+    throw_no_cuda();
 
 #else
 
@@ -1338,11 +1338,8 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     using namespace ::cv::gpu::cuda::imgproc;
 
 #ifndef HAVE_CUFFT
-    throw_nogpu();
+    throw_no_cuda();
 #else
-    StaticAssert<sizeof(float) == sizeof(cufftReal)>::check();
-    StaticAssert<sizeof(float) * 2 == sizeof(cufftComplex)>::check();
-
     CV_Assert(image.type() == CV_32F);
     CV_Assert(templ.type() == CV_32F);
 

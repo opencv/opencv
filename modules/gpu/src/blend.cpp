@@ -47,7 +47,7 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::blendLinear(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::blendLinear(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
 #else
 

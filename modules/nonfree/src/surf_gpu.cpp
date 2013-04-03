@@ -49,18 +49,18 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-cv::gpu::SURF_GPU::SURF_GPU() { throw_nogpu(); }
-cv::gpu::SURF_GPU::SURF_GPU(double, int, int, bool, float, bool) { throw_nogpu(); }
-int cv::gpu::SURF_GPU::descriptorSize() const { throw_nogpu(); return 0;}
-void cv::gpu::SURF_GPU::uploadKeypoints(const std::vector<KeyPoint>&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::downloadDescriptors(const GpuMat&, std::vector<float>&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&, bool) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, std::vector<float>&, bool) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::releaseMemory() { throw_nogpu(); }
+cv::gpu::SURF_GPU::SURF_GPU() { throw_no_cuda(); }
+cv::gpu::SURF_GPU::SURF_GPU(double, int, int, bool, float, bool) { throw_no_cuda(); }
+int cv::gpu::SURF_GPU::descriptorSize() const { throw_no_cuda(); return 0;}
+void cv::gpu::SURF_GPU::uploadKeypoints(const std::vector<KeyPoint>&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::downloadDescriptors(const GpuMat&, std::vector<float>&) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&, bool) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, std::vector<float>&, bool) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::releaseMemory() { throw_no_cuda(); }
 
 #else // !defined (HAVE_CUDA)
 
@@ -177,7 +177,7 @@ namespace
                     img_rows, img_cols, octave, use_mask, surf_.nOctaveLayers);
 
                 unsigned int maxCounter;
-                cudaSafeCall( cudaMemcpy(&maxCounter, counters.ptr<unsigned int>() + 1 + octave, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+                cvCudaSafeCall( cudaMemcpy(&maxCounter, counters.ptr<unsigned int>() + 1 + octave, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
                 maxCounter = std::min(maxCounter, static_cast<unsigned int>(maxCandidates));
 
                 if (maxCounter > 0)
@@ -190,7 +190,7 @@ namespace
                 }
             }
             unsigned int featureCounter;
-            cudaSafeCall( cudaMemcpy(&featureCounter, counters.ptr<unsigned int>(), sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy(&featureCounter, counters.ptr<unsigned int>(), sizeof(unsigned int), cudaMemcpyDeviceToHost) );
             featureCounter = std::min(featureCounter, static_cast<unsigned int>(maxFeatures));
 
             keypoints.cols = featureCounter;

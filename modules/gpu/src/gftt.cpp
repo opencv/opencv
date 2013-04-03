@@ -47,7 +47,7 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat&, GpuMat&, const GpuMat&) { throw_nogpu(); }
+void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat&, GpuMat&, const GpuMat&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 

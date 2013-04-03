@@ -45,10 +45,8 @@
 
 #include <cuda_runtime.h>
 #include "opencv2/core/cuda_devptrs.hpp"
-
-#ifndef CV_PI
-    #define CV_PI   3.1415926535897932384626433832795
-#endif
+#include "opencv2/core/cvdef.h"
+#include "opencv2/core/base.hpp"
 
 #ifndef CV_PI_F
     #ifndef CV_PI
@@ -58,16 +56,22 @@
     #endif
 #endif
 
+namespace cv { namespace gpu { namespace cuda {
+    static inline void checkError(cudaError_t err, const char* file, const int line, const char* func)
+    {
+        if (cudaSuccess != err)
+            cv::error(cv::Error::GpuApiCallError, cudaGetErrorString(err), func, file, line);
+    }
+}}}
+
 #if defined(__GNUC__)
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
+    #define cvCudaSafeCall(expr)  cv::gpu::cuda::checkError((expr), __FILE__, __LINE__, __func__)
 #else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
+    #define cvCudaSafeCall(expr)  cv::gpu::cuda::checkError((expr), __FILE__, __LINE__, "")
 #endif
 
 namespace cv { namespace gpu
 {
-    void error(const char *error_string, const char *file, const int line, const char *func);
-
     template <typename T> static inline bool isAligned(const T* ptr, size_t size)
     {
         return reinterpret_cast<size_t>(ptr) % size == 0;
@@ -79,38 +83,32 @@ namespace cv { namespace gpu
     }
 }}
 
-static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
-{
-    if (cudaSuccess != err)
-        cv::gpu::error(cudaGetErrorString(err), file, line, func);
-}
-
 namespace cv { namespace gpu
 {
-    __host__ __device__ __forceinline__ int divUp(int total, int grain)
+    enum
     {
-        return (total + grain - 1) / grain;
-    }
-
-    namespace cuda
-    {
-        using cv::gpu::divUp;
+        BORDER_REFLECT101_GPU = 0,
+        BORDER_REPLICATE_GPU,
+        BORDER_CONSTANT_GPU,
+        BORDER_REFLECT_GPU,
+        BORDER_WRAP_GPU
+    };
 
 #ifdef __CUDACC__
-        typedef unsigned char uchar;
-        typedef unsigned short ushort;
-        typedef signed char schar;
-        #if defined (_WIN32) || defined (__APPLE__)
-            typedef unsigned int uint;
-        #endif
+    namespace cuda
+    {
+        __host__ __device__ __forceinline__ int divUp(int total, int grain)
+        {
+            return (total + grain - 1) / grain;
+        }
 
         template<class T> inline void bindTexture(const textureReference* tex, const PtrStepSz<T>& img)
         {
             cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
-            cudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
+            cvCudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
         }
-#endif // __CUDACC__
     }
+#endif // __CUDACC__
 }}
 
 

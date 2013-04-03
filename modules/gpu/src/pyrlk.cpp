@@ -47,9 +47,9 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::PyrLKOpticalFlow::PyrLKOpticalFlow() { throw_nogpu(); }
-void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_nogpu(); }
-void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_nogpu(); }
+cv::gpu::PyrLKOpticalFlow::PyrLKOpticalFlow() { throw_no_cuda(); }
+void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_no_cuda(); }
+void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_no_cuda(); }
 void cv::gpu::PyrLKOpticalFlow::releaseMemory() {}
 
 #else /* !defined (HAVE_CUDA) */

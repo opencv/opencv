@@ -122,22 +122,22 @@ namespace cv { namespace gpu { namespace cuda
             const int PIXELS_PER_THREAD = 16;
 
             void* counterPtr;
-            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+            cvCudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
+            cvCudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
 
             const dim3 block(32, 4);
             const dim3 grid(divUp(src.cols, block.x * PIXELS_PER_THREAD), divUp(src.rows, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(buildPointList<PIXELS_PER_THREAD>, cudaFuncCachePreferShared) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(buildPointList<PIXELS_PER_THREAD>, cudaFuncCachePreferShared) );
 
             buildPointList<PIXELS_PER_THREAD><<<grid, block>>>(src, list);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
 
             int totalCount;
-            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
 
             return totalCount;
         }
@@ -225,9 +225,9 @@ namespace cv { namespace gpu { namespace cuda
             else
                 linesAccumGlobal<<<grid, block>>>(list, count, accum, 1.0f / rho, theta, accum.cols - 2);
 
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ////////////////////////////////////////////////////////////////////////
@@ -264,22 +264,22 @@ namespace cv { namespace gpu { namespace cuda
         int linesGetResult_gpu(PtrStepSzi accum, float2* out, int* votes, int maxSize, float rho, float theta, int threshold, bool doSort)
         {
             void* counterPtr;
-            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+            cvCudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
+            cvCudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
 
             const dim3 block(32, 8);
             const dim3 grid(divUp(accum.cols - 2, block.x), divUp(accum.rows - 2, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(linesGetResult, cudaFuncCachePreferL1) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(linesGetResult, cudaFuncCachePreferL1) );
 
             linesGetResult<<<grid, block>>>(accum, out, votes, maxSize, rho, theta, threshold, accum.cols - 2);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
 
             int totalCount;
-            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
 
             totalCount = ::min(totalCount, maxSize);
 
@@ -462,9 +462,9 @@ namespace cv { namespace gpu { namespace cuda
         int houghLinesProbabilistic_gpu(PtrStepSzb mask, PtrStepSzi accum, int4* out, int maxSize, float rho, float theta, int lineGap, int lineLength)
         {
             void* counterPtr;
-            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+            cvCudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
+            cvCudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
 
             const dim3 block(32, 8);
             const dim3 grid(divUp(accum.cols - 2, block.x), divUp(accum.rows - 2, block.y));
@@ -476,12 +476,12 @@ namespace cv { namespace gpu { namespace cuda
                                                      rho, theta,
                                                      lineGap, lineLength,
                                                      mask.rows, mask.cols);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
 
             int totalCount;
-            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
 
             totalCount = ::min(totalCount, maxSize);
 
@@ -548,12 +548,12 @@ namespace cv { namespace gpu { namespace cuda
             const dim3 block(256);
             const dim3 grid(divUp(count, block.x));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(circlesAccumCenters, cudaFuncCachePreferL1) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(circlesAccumCenters, cudaFuncCachePreferL1) );
 
             circlesAccumCenters<<<grid, block>>>(list, count, dx, dy, accum, accum.cols - 2, accum.rows - 2, minRadius, maxRadius, idp);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ////////////////////////////////////////////////////////////////////////
@@ -586,22 +586,22 @@ namespace cv { namespace gpu { namespace cuda
         int buildCentersList_gpu(PtrStepSzi accum, unsigned int* centers, int threshold)
         {
             void* counterPtr;
-            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+            cvCudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
+            cvCudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
 
             const dim3 block(32, 8);
             const dim3 grid(divUp(accum.cols - 2, block.x), divUp(accum.rows - 2, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(buildCentersList, cudaFuncCachePreferL1) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(buildCentersList, cudaFuncCachePreferL1) );
 
             buildCentersList<<<grid, block>>>(accum, centers, threshold);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
 
             int totalCount;
-            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
 
             return totalCount;
         }
@@ -662,9 +662,9 @@ namespace cv { namespace gpu { namespace cuda
                                    float3* circles, int maxCircles, float dp, int minRadius, int maxRadius, int threshold, bool has20)
         {
             void* counterPtr;
-            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+            cvCudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
+            cvCudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
 
             const dim3 block(has20 ? 1024 : 512);
             const dim3 grid(centersCount);
@@ -673,12 +673,12 @@ namespace cv { namespace gpu { namespace cuda
             size_t smemSize = (histSize + 2) * sizeof(int);
 
             circlesAccumRadius<<<grid, block, smemSize>>>(centers, list, count, circles, maxCircles, dp, minRadius, maxRadius, histSize, threshold);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
 
             int totalCount;
-            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
 
             totalCount = ::min(totalCount, maxCircles);
 
@@ -768,22 +768,22 @@ namespace cv { namespace gpu { namespace cuda
             const int PIXELS_PER_THREAD = 8;
 
             void* counterPtr;
-            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+            cvCudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
+            cvCudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
 
             const dim3 block(32, 4);
             const dim3 grid(divUp(edges.cols, block.x * PIXELS_PER_THREAD), divUp(edges.rows, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(buildEdgePointList<T, PIXELS_PER_THREAD>, cudaFuncCachePreferShared) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(buildEdgePointList<T, PIXELS_PER_THREAD>, cudaFuncCachePreferShared) );
 
             buildEdgePointList<T, PIXELS_PER_THREAD><<<grid, block>>>(edges, (PtrStepSz<T>) dx, (PtrStepSz<T>) dy, coordList, thetaList);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
 
             int totalCount;
-            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
 
             return totalCount;
         }
@@ -824,9 +824,9 @@ namespace cv { namespace gpu { namespace cuda
             const float thetaScale = levels / (2.0f * CV_PI_F);
 
             buildRTable<<<grid, block>>>(coordList, thetaList, pointsCount, r_table, r_sizes, r_table.cols, templCenter, thetaScale);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ////////////////////////////////////////////////////////////////////////
@@ -877,9 +877,9 @@ namespace cv { namespace gpu { namespace cuda
             const float thetaScale = levels / (2.0f * CV_PI_F);
 
             GHT_Ballard_Pos_calcHist<<<grid, block>>>(coordList, thetaList, pointsCount, r_table, r_sizes, hist, idp, thetaScale);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         __global__ void GHT_Ballard_Pos_findPosInHist(const PtrStepSzi hist, float4* out, int3* votes, const int maxSize, const float dp, const int threshold)
@@ -911,22 +911,22 @@ namespace cv { namespace gpu { namespace cuda
         int GHT_Ballard_Pos_findPosInHist_gpu(PtrStepSzi hist, float4* out, int3* votes, int maxSize, float dp, int threshold)
         {
             void* counterPtr;
-            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+            cvCudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
+            cvCudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
 
             const dim3 block(32, 8);
             const dim3 grid(divUp(hist.cols - 2, block.x), divUp(hist.rows - 2, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(GHT_Ballard_Pos_findPosInHist, cudaFuncCachePreferL1) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(GHT_Ballard_Pos_findPosInHist, cudaFuncCachePreferL1) );
 
             GHT_Ballard_Pos_findPosInHist<<<grid, block>>>(hist, out, votes, maxSize, dp, threshold);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
 
             int totalCount;
-            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
 
             totalCount = ::min(totalCount, maxSize);
 
@@ -989,9 +989,9 @@ namespace cv { namespace gpu { namespace cuda
                                                            hist, rows, cols,
                                                            minScale, scaleStep, scaleRange,
                                                            idp, thetaScale);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         __global__ void GHT_Ballard_PosScale_findPosInHist(const PtrStepi hist, const int rows, const int cols, const int scaleRange,
@@ -1037,22 +1037,22 @@ namespace cv { namespace gpu { namespace cuda
                                                    float minScale, float scaleStep, float dp, int threshold)
         {
             void* counterPtr;
-            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+            cvCudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
+            cvCudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
 
             const dim3 block(32, 8);
             const dim3 grid(divUp(cols, block.x), divUp(rows, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(GHT_Ballard_PosScale_findPosInHist, cudaFuncCachePreferL1) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(GHT_Ballard_PosScale_findPosInHist, cudaFuncCachePreferL1) );
 
             GHT_Ballard_PosScale_findPosInHist<<<grid, block>>>(hist, rows, cols, scaleRange, out, votes, maxSize, minScale, scaleStep, dp, threshold);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
 
             int totalCount;
-            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
 
             totalCount = ::min(totalCount, maxSize);
 
@@ -1123,9 +1123,9 @@ namespace cv { namespace gpu { namespace cuda
                                                               hist, rows, cols,
                                                               minAngle, angleStep, angleRange,
                                                               idp, thetaScale);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         __global__ void GHT_Ballard_PosRotation_findPosInHist(const PtrStepi hist, const int rows, const int cols, const int angleRange,
@@ -1171,22 +1171,22 @@ namespace cv { namespace gpu { namespace cuda
                                                       float minAngle, float angleStep, float dp, int threshold)
         {
             void* counterPtr;
-            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+            cvCudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
+            cvCudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
 
             const dim3 block(32, 8);
             const dim3 grid(divUp(cols, block.x), divUp(rows, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(GHT_Ballard_PosRotation_findPosInHist, cudaFuncCachePreferL1) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(GHT_Ballard_PosRotation_findPosInHist, cudaFuncCachePreferL1) );
 
             GHT_Ballard_PosRotation_findPosInHist<<<grid, block>>>(hist, rows, cols, angleRange, out, votes, maxSize, minAngle, angleStep, dp, threshold);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
 
             int totalCount;
-            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
 
             totalCount = ::min(totalCount, maxSize);
 
@@ -1242,7 +1242,7 @@ namespace cv { namespace gpu { namespace cuda
             tbl.r2_data = r2.data;
             tbl.r2_step = r2.step;
 
-            cudaSafeCall( cudaMemcpyToSymbol(c_templFeatures, &tbl, sizeof(FeatureTable)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_templFeatures, &tbl, sizeof(FeatureTable)) );
         }
         void GHT_Guil_Full_setImageFeatures(PtrStepb p1_pos, PtrStepb p1_theta, PtrStepb p2_pos, PtrStepb d12, PtrStepb r1, PtrStepb r2)
         {
@@ -1266,7 +1266,7 @@ namespace cv { namespace gpu { namespace cuda
             tbl.r2_data = r2.data;
             tbl.r2_step = r2.step;
 
-            cudaSafeCall( cudaMemcpyToSymbol(c_imageFeatures, &tbl, sizeof(FeatureTable)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_imageFeatures, &tbl, sizeof(FeatureTable)) );
         }
 
         struct TemplFeatureTable
@@ -1419,9 +1419,9 @@ namespace cv { namespace gpu { namespace cuda
                                                                          sizes, maxSize,
                                                                          xi * (CV_PI_F / 180.0f), angleEpsilon * (CV_PI_F / 180.0f), alphaScale,
                                                                          center, maxDist);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
 
             thrust::device_ptr<int> sizesPtr(sizes);
             thrust::transform(sizesPtr, sizesPtr + levels + 1, sizesPtr, cuda::bind2nd(cuda::minimum<int>(), maxSize));
@@ -1501,9 +1501,9 @@ namespace cv { namespace gpu { namespace cuda
 
             GHT_Guil_Full_calcOHist<<<grid, block, smemSize>>>(templSizes, imageSizes, OHist,
                                                                minAngle, maxAngle, 1.0f / angleStep, angleRange);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         __global__ void GHT_Guil_Full_calcSHist(const int* templSizes, const int* imageSizes, int* SHist,
@@ -1566,9 +1566,9 @@ namespace cv { namespace gpu { namespace cuda
             GHT_Guil_Full_calcSHist<<<grid, block, smemSize>>>(templSizes, imageSizes, SHist,
                                                                angle, angleEpsilon,
                                                                minScale, maxScale, iScaleStep, scaleRange);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         __global__ void GHT_Guil_Full_calcPHist(const int* templSizes, const int* imageSizes, PtrStepSzi PHist,
@@ -1636,14 +1636,14 @@ namespace cv { namespace gpu { namespace cuda
             const float sinVal = ::sinf(angle);
             const float cosVal = ::cosf(angle);
 
-            cudaSafeCall( cudaFuncSetCacheConfig(GHT_Guil_Full_calcPHist, cudaFuncCachePreferL1) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(GHT_Guil_Full_calcPHist, cudaFuncCachePreferL1) );
 
             GHT_Guil_Full_calcPHist<<<grid, block>>>(templSizes, imageSizes, PHist,
                                                      angle, sinVal, cosVal, angleEpsilon, scale,
                                                      1.0f / dp);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         __global__ void GHT_Guil_Full_findPosInHist(const PtrStepSzi hist, float4* out, int3* votes, const int maxSize,
@@ -1679,24 +1679,24 @@ namespace cv { namespace gpu { namespace cuda
                                              float dp, int threshold)
         {
             void* counterPtr;
-            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+            cvCudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
 
-            cudaSafeCall( cudaMemcpy(counterPtr, &curSize, sizeof(int), cudaMemcpyHostToDevice) );
+            cvCudaSafeCall( cudaMemcpy(counterPtr, &curSize, sizeof(int), cudaMemcpyHostToDevice) );
 
             const dim3 block(32, 8);
             const dim3 grid(divUp(hist.cols - 2, block.x), divUp(hist.rows - 2, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(GHT_Guil_Full_findPosInHist, cudaFuncCachePreferL1) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(GHT_Guil_Full_findPosInHist, cudaFuncCachePreferL1) );
 
             GHT_Guil_Full_findPosInHist<<<grid, block>>>(hist, out, votes, maxSize,
                                                          angle, angleVotes, scale, scaleVotes,
                                                          dp, threshold);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
 
             int totalCount;
-            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+            cvCudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
 
             totalCount = ::min(totalCount, maxSize);
 

@@ -47,11 +47,11 @@ using namespace cv::gpu;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::transformPoints(const GpuMat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::transformPoints(const GpuMat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::solvePnPRansac(const Mat&, const Mat&, const Mat&, const Mat&, Mat&, Mat&, bool, int, float, int, std::vector<int>*) { throw_nogpu(); }
+void cv::gpu::solvePnPRansac(const Mat&, const Mat&, const Mat&, const Mat&, Mat&, Mat&, bool, int, float, int, std::vector<int>*) { throw_no_cuda(); }
 
 #else
 

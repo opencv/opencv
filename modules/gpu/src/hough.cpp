@@ -47,23 +47,23 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::HoughLines(const GpuMat&, GpuMat&, float, float, int, bool, int) { throw_nogpu(); }
-void cv::gpu::HoughLines(const GpuMat&, GpuMat&, HoughLinesBuf&, float, float, int, bool, int) { throw_nogpu(); }
-void cv::gpu::HoughLinesDownload(const GpuMat&, OutputArray, OutputArray) { throw_nogpu(); }
+void cv::gpu::HoughLines(const GpuMat&, GpuMat&, float, float, int, bool, int) { throw_no_cuda(); }
+void cv::gpu::HoughLines(const GpuMat&, GpuMat&, HoughLinesBuf&, float, float, int, bool, int) { throw_no_cuda(); }
+void cv::gpu::HoughLinesDownload(const GpuMat&, OutputArray, OutputArray) { throw_no_cuda(); }
 
-void cv::gpu::HoughLinesP(const GpuMat&, GpuMat&, HoughLinesBuf&, float, float, int, int, int) { throw_nogpu(); }
+void cv::gpu::HoughLinesP(const GpuMat&, GpuMat&, HoughLinesBuf&, float, float, int, int, int) { throw_no_cuda(); }
 
-void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, int, float, float, int, int, int, int, int) { throw_nogpu(); }
-void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, HoughCirclesBuf&, int, float, float, int, int, int, int, int) { throw_nogpu(); }
-void cv::gpu::HoughCirclesDownload(const GpuMat&, OutputArray) { throw_nogpu(); }
+void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, int, float, float, int, int, int, int, int) { throw_no_cuda(); }
+void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, HoughCirclesBuf&, int, float, float, int, int, int, int, int) { throw_no_cuda(); }
+void cv::gpu::HoughCirclesDownload(const GpuMat&, OutputArray) { throw_no_cuda(); }
 
-Ptr<GeneralizedHough_GPU> cv::gpu::GeneralizedHough_GPU::create(int) { throw_nogpu(); return Ptr<GeneralizedHough_GPU>(); }
+Ptr<GeneralizedHough_GPU> cv::gpu::GeneralizedHough_GPU::create(int) { throw_no_cuda(); return Ptr<GeneralizedHough_GPU>(); }
 cv::gpu::GeneralizedHough_GPU::~GeneralizedHough_GPU() {}
-void cv::gpu::GeneralizedHough_GPU::setTemplate(const GpuMat&, int, Point) { throw_nogpu(); }
-void cv::gpu::GeneralizedHough_GPU::setTemplate(const GpuMat&, const GpuMat&, const GpuMat&, Point) { throw_nogpu(); }
-void cv::gpu::GeneralizedHough_GPU::detect(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
-void cv::gpu::GeneralizedHough_GPU::detect(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::GeneralizedHough_GPU::download(const GpuMat&, OutputArray, OutputArray) { throw_nogpu(); }
+void cv::gpu::GeneralizedHough_GPU::setTemplate(const GpuMat&, int, Point) { throw_no_cuda(); }
+void cv::gpu::GeneralizedHough_GPU::setTemplate(const GpuMat&, const GpuMat&, const GpuMat&, Point) { throw_no_cuda(); }
+void cv::gpu::GeneralizedHough_GPU::detect(const GpuMat&, GpuMat&, int) { throw_no_cuda(); }
+void cv::gpu::GeneralizedHough_GPU::detect(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::GeneralizedHough_GPU::download(const GpuMat&, OutputArray, OutputArray) { throw_no_cuda(); }
 void cv::gpu::GeneralizedHough_GPU::release() {}
 
 #else /* !defined (HAVE_CUDA) */
@@ -278,7 +278,7 @@ void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& 
         ushort2* oldBuf = oldBuf_;
         ushort2* newBuf = newBuf_;
 
-        cudaSafeCall( cudaMemcpy(oldBuf, centers, centersCount * sizeof(ushort2), cudaMemcpyDeviceToHost) );
+        cvCudaSafeCall( cudaMemcpy(oldBuf, centers, centersCount * sizeof(ushort2), cudaMemcpyDeviceToHost) );
 
         const int cellSize = cvRound(minDist);
         const int gridWidth = (src.cols + cellSize - 1) / cellSize;
@@ -338,7 +338,7 @@ void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& 
             }
         }
 
-        cudaSafeCall( cudaMemcpy(centers, newBuf, newCount * sizeof(unsigned int), cudaMemcpyHostToDevice) );
+        cvCudaSafeCall( cudaMemcpy(centers, newBuf, newCount * sizeof(unsigned int), cudaMemcpyHostToDevice) );
         centersCount = newCount;
     }
 
@@ -603,8 +603,8 @@ namespace
         oldPosBuf.resize(posCount);
         oldVoteBuf.resize(posCount);
 
-        cudaSafeCall( cudaMemcpy(&oldPosBuf[0], outBuf.ptr(0), posCount * sizeof(float4), cudaMemcpyDeviceToHost) );
-        cudaSafeCall( cudaMemcpy(&oldVoteBuf[0], outBuf.ptr(1), posCount * sizeof(int3), cudaMemcpyDeviceToHost) );
+        cvCudaSafeCall( cudaMemcpy(&oldPosBuf[0], outBuf.ptr(0), posCount * sizeof(float4), cudaMemcpyDeviceToHost) );
+        cvCudaSafeCall( cudaMemcpy(&oldVoteBuf[0], outBuf.ptr(1), posCount * sizeof(int3), cudaMemcpyDeviceToHost) );
 
         indexies.resize(posCount);
         for (int i = 0; i < posCount; ++i)
@@ -677,8 +677,8 @@ namespace
         }
 
         posCount = static_cast<int>(newPosBuf.size());
-        cudaSafeCall( cudaMemcpy(outBuf.ptr(0), &newPosBuf[0], posCount * sizeof(float4), cudaMemcpyHostToDevice) );
-        cudaSafeCall( cudaMemcpy(outBuf.ptr(1), &newVoteBuf[0], posCount * sizeof(int3), cudaMemcpyHostToDevice) );
+        cvCudaSafeCall( cudaMemcpy(outBuf.ptr(0), &newPosBuf[0], posCount * sizeof(float4), cudaMemcpyHostToDevice) );
+        cvCudaSafeCall( cudaMemcpy(outBuf.ptr(1), &newVoteBuf[0], posCount * sizeof(int3), cudaMemcpyHostToDevice) );
     }
 
     void GHT_Pos::convertTo(GpuMat& positions)
@@ -1153,7 +1153,7 @@ namespace
             true, templCenter);
 
         h_buf.resize(templFeatures.sizes.cols);
-        cudaSafeCall( cudaMemcpy(&h_buf[0], templFeatures.sizes.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
+        cvCudaSafeCall( cudaMemcpy(&h_buf[0], templFeatures.sizes.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
         templFeatures.maxSize = *max_element(h_buf.begin(), h_buf.end());
     }
 
@@ -1279,7 +1279,7 @@ namespace
         hist.setTo(Scalar::all(0));
         GHT_Guil_Full_calcOHist_gpu(templFeatures.sizes.ptr<int>(), imageFeatures.sizes.ptr<int>(0),
             hist.ptr<int>(), (float)minAngle, (float)maxAngle, (float)angleStep, angleRange, levels, templFeatures.maxSize);
-        cudaSafeCall( cudaMemcpy(&h_buf[0], hist.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
+        cvCudaSafeCall( cudaMemcpy(&h_buf[0], hist.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
 
         angles.clear();
 
@@ -1303,7 +1303,7 @@ namespace
         hist.setTo(Scalar::all(0));
         GHT_Guil_Full_calcSHist_gpu(templFeatures.sizes.ptr<int>(), imageFeatures.sizes.ptr<int>(0),
             hist.ptr<int>(), (float)angle, (float)angleEpsilon, (float)minScale, (float)maxScale, (float)iScaleStep, scaleRange, levels, templFeatures.maxSize);
-        cudaSafeCall( cudaMemcpy(&h_buf[0], hist.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
+        cvCudaSafeCall( cudaMemcpy(&h_buf[0], hist.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
 
         scales.clear();
 

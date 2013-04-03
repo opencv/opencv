@@ -72,9 +72,9 @@ namespace tvl1flow
         const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
 
         centeredGradientKernel<<<grid, block>>>(src, dx, dy);
-        cudaSafeCall( cudaGetLastError() );
+        cvCudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -174,9 +174,9 @@ namespace tvl1flow
         bindTexture(&tex_I1y, I1y);
 
         warpBackwardKernel<<<grid, block>>>(I0, u1, u2, I1w, I1wx, I1wy, grad, rho);
-        cudaSafeCall( cudaGetLastError() );
+        cvCudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -280,9 +280,9 @@ namespace tvl1flow
         const dim3 grid(divUp(I1wx.cols, block.x), divUp(I1wx.rows, block.y));
 
         estimateUKernel<<<grid, block>>>(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, u1, u2, error, l_t, theta);
-        cudaSafeCall( cudaGetLastError() );
+        cvCudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -323,9 +323,9 @@ namespace tvl1flow
         const dim3 grid(divUp(u1.cols, block.x), divUp(u1.rows, block.y));
 
         estimateDualVariablesKernel<<<grid, block>>>(u1, u2, p11, p12, p21, p22, taut);
-        cudaSafeCall( cudaGetLastError() );
+        cvCudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 

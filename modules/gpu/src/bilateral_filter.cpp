@@ -47,10 +47,10 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::DisparityBilateralFilter::DisparityBilateralFilter(int, int, int) { throw_nogpu(); }
-cv::gpu::DisparityBilateralFilter::DisparityBilateralFilter(int, int, int, float, float, float) { throw_nogpu(); }
+cv::gpu::DisparityBilateralFilter::DisparityBilateralFilter(int, int, int) { throw_no_cuda(); }
+cv::gpu::DisparityBilateralFilter::DisparityBilateralFilter(int, int, int, float, float, float) { throw_no_cuda(); }
 
-void cv::gpu::DisparityBilateralFilter::operator()(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::DisparityBilateralFilter::operator()(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 

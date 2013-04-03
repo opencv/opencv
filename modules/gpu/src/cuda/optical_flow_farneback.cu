@@ -123,13 +123,13 @@ namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
             int polyN, const float *g, const float *xg, const float *xxg,
             float ig11, float ig03, float ig33, float ig55)
     {
-        cudaSafeCall(cudaMemcpyToSymbol(c_g, g, (polyN + 1) * sizeof(*g)));
-        cudaSafeCall(cudaMemcpyToSymbol(c_xg, xg, (polyN + 1) * sizeof(*xg)));
-        cudaSafeCall(cudaMemcpyToSymbol(c_xxg, xxg, (polyN + 1) * sizeof(*xxg)));
-        cudaSafeCall(cudaMemcpyToSymbol(c_ig11, &ig11, sizeof(ig11)));
-        cudaSafeCall(cudaMemcpyToSymbol(c_ig03, &ig03, sizeof(ig03)));
-        cudaSafeCall(cudaMemcpyToSymbol(c_ig33, &ig33, sizeof(ig33)));
-        cudaSafeCall(cudaMemcpyToSymbol(c_ig55, &ig55, sizeof(ig55)));
+        cvCudaSafeCall(cudaMemcpyToSymbol(c_g, g, (polyN + 1) * sizeof(*g)));
+        cvCudaSafeCall(cudaMemcpyToSymbol(c_xg, xg, (polyN + 1) * sizeof(*xg)));
+        cvCudaSafeCall(cudaMemcpyToSymbol(c_xxg, xxg, (polyN + 1) * sizeof(*xxg)));
+        cvCudaSafeCall(cudaMemcpyToSymbol(c_ig11, &ig11, sizeof(ig11)));
+        cvCudaSafeCall(cudaMemcpyToSymbol(c_ig03, &ig03, sizeof(ig03)));
+        cvCudaSafeCall(cudaMemcpyToSymbol(c_ig33, &ig33, sizeof(ig33)));
+        cvCudaSafeCall(cudaMemcpyToSymbol(c_ig55, &ig55, sizeof(ig55)));
     }
 
 
@@ -144,10 +144,10 @@ namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
         else if (polyN == 7)
             polynomialExpansion<7><<<grid, block, smem, stream>>>(src.rows, src.cols, src, dst);
 
-        cudaSafeCall(cudaGetLastError());
+        cvCudaSafeCall(cudaGetLastError());
 
         if (stream == 0)
-            cudaSafeCall(cudaDeviceSynchronize());
+            cvCudaSafeCall(cudaDeviceSynchronize());
     }
 
 
@@ -244,7 +244,7 @@ namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
     void setUpdateMatricesConsts()
     {
         static const float border[BORDER_SIZE + 1] = {0.14f, 0.14f, 0.4472f, 0.4472f, 0.4472f, 1.f};
-        cudaSafeCall(cudaMemcpyToSymbol(c_border, border, (BORDER_SIZE + 1) * sizeof(*border)));
+        cvCudaSafeCall(cudaMemcpyToSymbol(c_border, border, (BORDER_SIZE + 1) * sizeof(*border)));
     }
 
 
@@ -257,10 +257,10 @@ namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
 
         updateMatrices<<<grid, block, 0, stream>>>(flowx.rows, flowx.cols, flowx, flowy, R0, R1, M);
 
-        cudaSafeCall(cudaGetLastError());
+        cvCudaSafeCall(cudaGetLastError());
 
         if (stream == 0)
-            cudaSafeCall(cudaDeviceSynchronize());
+            cvCudaSafeCall(cudaDeviceSynchronize());
     }
 
 
@@ -293,10 +293,10 @@ namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
 
         updateFlow<<<grid, block, 0, stream>>>(flowx.rows, flowx.cols, M, flowx, flowy);
 
-        cudaSafeCall(cudaGetLastError());
+        cvCudaSafeCall(cudaGetLastError());
 
         if (stream == 0)
-            cudaSafeCall(cudaDeviceSynchronize());
+            cvCudaSafeCall(cudaDeviceSynchronize());
     }
 
 
@@ -424,10 +424,10 @@ namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
         float boxAreaInv = 1.f / ((1 + 2*ksizeHalf) * (1 + 2*ksizeHalf));
         boxFilter5<<<grid, block, smem, stream>>>(height, width, src, ksizeHalf, boxAreaInv, dst);
 
-        cudaSafeCall(cudaGetLastError());
+        cvCudaSafeCall(cudaGetLastError());
 
         if (stream == 0)
-            cudaSafeCall(cudaDeviceSynchronize());
+            cvCudaSafeCall(cudaDeviceSynchronize());
     }
 
 
@@ -443,10 +443,10 @@ namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
         float boxAreaInv = 1.f / ((1 + 2*ksizeHalf) * (1 + 2*ksizeHalf));
         boxFilter5<<<grid, block, smem, stream>>>(height, width, src, ksizeHalf, boxAreaInv, dst);
 
-        cudaSafeCall(cudaGetLastError());
+        cvCudaSafeCall(cudaGetLastError());
 
         if (stream == 0)
-            cudaSafeCall(cudaDeviceSynchronize());
+            cvCudaSafeCall(cudaDeviceSynchronize());
     }
 
 
@@ -494,7 +494,7 @@ namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
 
     void setGaussianBlurKernel(const float *gKer, int ksizeHalf)
     {
-        cudaSafeCall(cudaMemcpyToSymbol(c_gKer, gKer, (ksizeHalf + 1) * sizeof(*gKer)));
+        cvCudaSafeCall(cudaMemcpyToSymbol(c_gKer, gKer, (ksizeHalf + 1) * sizeof(*gKer)));
     }
 
 
@@ -511,10 +511,10 @@ namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
 
         gaussianBlur<<<grid, block, smem, stream>>>(height, width, src, ksizeHalf, b, dst);
 
-        cudaSafeCall(cudaGetLastError());
+        cvCudaSafeCall(cudaGetLastError());
 
         if (stream == 0)
-            cudaSafeCall(cudaDeviceSynchronize());
+            cvCudaSafeCall(cudaDeviceSynchronize());
     }
 
 
@@ -606,10 +606,10 @@ namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
 
         gaussianBlur5<<<grid, block, smem, stream>>>(height, width, src, ksizeHalf, b, dst);
 
-        cudaSafeCall(cudaGetLastError());
+        cvCudaSafeCall(cudaGetLastError());
 
         if (stream == 0)
-            cudaSafeCall(cudaDeviceSynchronize());
+            cvCudaSafeCall(cudaDeviceSynchronize());
     }
 
 

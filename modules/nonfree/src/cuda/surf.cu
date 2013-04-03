@@ -106,19 +106,19 @@ namespace cv { namespace gpu { namespace cuda
 
         void loadGlobalConstants(int maxCandidates, int maxFeatures, int img_rows, int img_cols, int nOctaveLayers, float hessianThreshold)
         {
-            cudaSafeCall( cudaMemcpyToSymbol(c_max_candidates, &maxCandidates, sizeof(maxCandidates)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_max_features, &maxFeatures, sizeof(maxFeatures)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_img_rows, &img_rows, sizeof(img_rows)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_img_cols, &img_cols, sizeof(img_cols)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_nOctaveLayers, &nOctaveLayers, sizeof(nOctaveLayers)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_hessianThreshold, &hessianThreshold, sizeof(hessianThreshold)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_max_candidates, &maxCandidates, sizeof(maxCandidates)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_max_features, &maxFeatures, sizeof(maxFeatures)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_img_rows, &img_rows, sizeof(img_rows)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_img_cols, &img_cols, sizeof(img_cols)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_nOctaveLayers, &nOctaveLayers, sizeof(nOctaveLayers)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_hessianThreshold, &hessianThreshold, sizeof(hessianThreshold)) );
         }
 
         void loadOctaveConstants(int octave, int layer_rows, int layer_cols)
         {
-            cudaSafeCall( cudaMemcpyToSymbol(c_octave, &octave, sizeof(octave)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_layer_rows, &layer_rows, sizeof(layer_rows)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_layer_cols, &layer_cols, sizeof(layer_cols)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_octave, &octave, sizeof(octave)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_layer_rows, &layer_rows, sizeof(layer_rows)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_layer_cols, &layer_cols, sizeof(layer_cols)) );
         }
 
         ////////////////////////////////////////////////////////////////////////
@@ -137,14 +137,14 @@ namespace cv { namespace gpu { namespace cuda
         {
             size_t offset;
             cudaChannelFormatDesc desc_sum = cudaCreateChannelDesc<uint>();
-            cudaSafeCall( cudaBindTexture2D(&offset, sumTex, sum.data, desc_sum, sum.cols, sum.rows, sum.step));
+            cvCudaSafeCall( cudaBindTexture2D(&offset, sumTex, sum.data, desc_sum, sum.cols, sum.rows, sum.step));
             return offset / sizeof(uint);
         }
         size_t bindMaskSumTex(PtrStepSz<uint> maskSum)
         {
             size_t offset;
             cudaChannelFormatDesc desc_sum = cudaCreateChannelDesc<uint>();
-            cudaSafeCall( cudaBindTexture2D(&offset, maskSumTex, maskSum.data, desc_sum, maskSum.cols, maskSum.rows, maskSum.step));
+            cvCudaSafeCall( cudaBindTexture2D(&offset, maskSumTex, maskSum.data, desc_sum, maskSum.cols, maskSum.rows, maskSum.step));
             return offset / sizeof(uint);
         }
 
@@ -245,9 +245,9 @@ namespace cv { namespace gpu { namespace cuda
             grid.y = divUp(max_samples_i, threads.y) * (nOctaveLayers + 2);
 
             icvCalcLayerDetAndTrace<<<grid, threads>>>(det, trace);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ////////////////////////////////////////////////////////////////////////
@@ -395,9 +395,9 @@ namespace cv { namespace gpu { namespace cuda
             else
                 icvFindMaximaInLayer<WithOutMask><<<grid, threads, smem_size>>>(det, trace, maxPosBuffer, maxCounter);
 
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ////////////////////////////////////////////////////////////////////////
@@ -520,9 +520,9 @@ namespace cv { namespace gpu { namespace cuda
             grid.x = maxCounter;
 
             icvInterpolateKeypoint<<<grid, threads>>>(det, maxPosBuffer, featureX, featureY, featureLaplacian, featureOctave, featureSize, featureHessian, featureCounter);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ////////////////////////////////////////////////////////////////////////
@@ -686,9 +686,9 @@ namespace cv { namespace gpu { namespace cuda
             grid.x = nFeatures;
 
             icvCalcOrientation<<<grid, threads>>>(featureX, featureY, featureSize, featureDir);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ////////////////////////////////////////////////////////////////////////
@@ -932,26 +932,26 @@ namespace cv { namespace gpu { namespace cuda
             if (descriptors.cols == 64)
             {
                 compute_descriptors_64<<<nFeatures, dim3(32, 16)>>>(descriptors, featureX, featureY, featureSize, featureDir);
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
 
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
 
                 normalize_descriptors<64><<<nFeatures, 64>>>((PtrStepSzf) descriptors);
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
 
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
             }
             else
             {
                 compute_descriptors_128<<<nFeatures, dim3(32, 16)>>>(descriptors, featureX, featureY, featureSize, featureDir);
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
 
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
 
                 normalize_descriptors<128><<<nFeatures, 128>>>((PtrStepSzf) descriptors);
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
 
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
             }
         }
     } // namespace surf

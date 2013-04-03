@@ -47,10 +47,10 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::cvtColor(const GpuMat&, GpuMat&, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::demosaicing(const GpuMat&, GpuMat&, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::swapChannels(GpuMat&, const int[], Stream&) { throw_nogpu(); }
-void cv::gpu::gammaCorrection(const GpuMat&, GpuMat&, bool, Stream&) { throw_nogpu(); }
+void cv::gpu::cvtColor(const GpuMat&, GpuMat&, int, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::demosaicing(const GpuMat&, GpuMat&, int, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::swapChannels(GpuMat&, const int[], Stream&) { throw_no_cuda(); }
+void cv::gpu::gammaCorrection(const GpuMat&, GpuMat&, bool, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -1600,7 +1600,7 @@ namespace
             nppSafeCall( nppiAlphaPremul_16u_AC4R(src.ptr<Npp16u>(), static_cast<int>(src.step), dst.ptr<Npp16u>(), static_cast<int>(dst.step), oSizeROI) );
 
         if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
     #endif
     }
 
@@ -1942,7 +1942,7 @@ void cv::gpu::swapChannels(GpuMat& image, const int dstOrder[4], Stream& s)
     nppSafeCall( nppiSwapChannels_8u_C4IR(image.ptr<Npp8u>(), static_cast<int>(image.step), sz, dstOrder) );
 
     if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
 }
 
 void cv::gpu::gammaCorrection(const GpuMat& src, GpuMat& dst, bool forward, Stream& stream)

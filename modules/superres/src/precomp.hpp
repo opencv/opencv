@@ -56,10 +56,8 @@
 #include "opencv2/core/private.hpp"
 
 #ifdef HAVE_OPENCV_GPU
-    #include "opencv2/gpu.hpp"
-    #ifdef HAVE_CUDA
-        #include "opencv2/core/stream_accessor.hpp"
-    #endif
+#  include "opencv2/gpu.hpp"
+#  include "opencv2/core/gpu_private.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_HIGHGUI

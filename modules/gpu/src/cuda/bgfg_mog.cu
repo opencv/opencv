@@ -180,16 +180,16 @@ namespace cv { namespace gpu { namespace cuda
             dim3 block(32, 8);
             dim3 grid(divUp(frame.cols, block.x), divUp(frame.rows, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(mog_withoutLearning<SrcT, WorkT>, cudaFuncCachePreferL1) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(mog_withoutLearning<SrcT, WorkT>, cudaFuncCachePreferL1) );
 
             mog_withoutLearning<SrcT, WorkT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, fgmask,
                                                                          weight, (PtrStepSz<WorkT>) mean, (PtrStepSz<WorkT>) var,
                                                                          nmixtures, varThreshold, backgroundRatio);
 
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ///////////////////////////////////////////////////////////////
@@ -333,16 +333,16 @@ namespace cv { namespace gpu { namespace cuda
             dim3 block(32, 8);
             dim3 grid(divUp(frame.cols, block.x), divUp(frame.rows, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(mog_withLearning<SrcT, WorkT>, cudaFuncCachePreferL1) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(mog_withLearning<SrcT, WorkT>, cudaFuncCachePreferL1) );
 
             mog_withLearning<SrcT, WorkT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, fgmask,
                                                                       weight, sortKey, (PtrStepSz<WorkT>) mean, (PtrStepSz<WorkT>) var,
                                                                       nmixtures, varThreshold, backgroundRatio, learningRate, minVar);
 
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ///////////////////////////////////////////////////////////////
@@ -406,13 +406,13 @@ namespace cv { namespace gpu { namespace cuda
             dim3 block(32, 8);
             dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(getBackgroundImage<WorkT, OutT>, cudaFuncCachePreferL1) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(getBackgroundImage<WorkT, OutT>, cudaFuncCachePreferL1) );
 
             getBackgroundImage<WorkT, OutT><<<grid, block, 0, stream>>>(weight, (PtrStepSz<WorkT>) mean, (PtrStepSz<OutT>) dst, nmixtures, backgroundRatio);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         void getBackgroundImage_gpu(int cn, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, int nmixtures, float backgroundRatio, cudaStream_t stream)
@@ -445,15 +445,15 @@ namespace cv { namespace gpu { namespace cuda
             varMin = ::fminf(varMin, varMax);
             varMax = ::fmaxf(varMin, varMax);
 
-            cudaSafeCall( cudaMemcpyToSymbol(c_nmixtures, &nmixtures, sizeof(int)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_Tb, &Tb, sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_TB, &TB, sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_Tg, &Tg, sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_varInit, &varInit, sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_varMin, &varMin, sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_varMax, &varMax, sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_tau, &tau, sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_shadowVal, &shadowVal, sizeof(unsigned char)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_nmixtures, &nmixtures, sizeof(int)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_Tb, &Tb, sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_TB, &TB, sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_Tg, &Tg, sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_varInit, &varInit, sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_varMin, &varMin, sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_varMax, &varMax, sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_tau, &tau, sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_shadowVal, &shadowVal, sizeof(unsigned char)) );
         }
 
         template <bool detectShadows, typename SrcT, typename WorkT>
@@ -665,7 +665,7 @@ namespace cv { namespace gpu { namespace cuda
 
             if (detectShadows)
             {
-                cudaSafeCall( cudaFuncSetCacheConfig(mog2<true, SrcT, WorkT>, cudaFuncCachePreferL1) );
+                cvCudaSafeCall( cudaFuncSetCacheConfig(mog2<true, SrcT, WorkT>, cudaFuncCachePreferL1) );
 
                 mog2<true, SrcT, WorkT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, fgmask, modesUsed,
                                                                     weight, variance, (PtrStepSz<WorkT>) mean,
@@ -673,17 +673,17 @@ namespace cv { namespace gpu { namespace cuda
             }
             else
             {
-                cudaSafeCall( cudaFuncSetCacheConfig(mog2<false, SrcT, WorkT>, cudaFuncCachePreferL1) );
+                cvCudaSafeCall( cudaFuncSetCacheConfig(mog2<false, SrcT, WorkT>, cudaFuncCachePreferL1) );
 
                 mog2<false, SrcT, WorkT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, fgmask, modesUsed,
                                                                     weight, variance, (PtrStepSz<WorkT>) mean,
                                                                     alphaT, alpha1, prune);
             }
 
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         void mog2_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean,
@@ -737,13 +737,13 @@ namespace cv { namespace gpu { namespace cuda
             dim3 block(32, 8);
             dim3 grid(divUp(modesUsed.cols, block.x), divUp(modesUsed.rows, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(getBackgroundImage2<WorkT, OutT>, cudaFuncCachePreferL1) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(getBackgroundImage2<WorkT, OutT>, cudaFuncCachePreferL1) );
 
             getBackgroundImage2<WorkT, OutT><<<grid, block, 0, stream>>>(modesUsed, weight, (PtrStepSz<WorkT>) mean, (PtrStepSz<OutT>) dst);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         void getBackgroundImage2_gpu(int cn, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, cudaStream_t stream)

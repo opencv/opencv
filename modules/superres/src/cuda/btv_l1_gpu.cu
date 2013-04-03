@@ -102,9 +102,9 @@ namespace btv_l1_cuda
                                                backwardMotionX, bacwardMotionY,
                                                forwardMapX, forwardMapY,
                                                backwardMapX, backwardMapY);
-        cudaSafeCall( cudaGetLastError() );
+        cvCudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template <typename T>
@@ -128,10 +128,10 @@ namespace btv_l1_cuda
         const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
 
         upscaleKernel<src_t><<<grid, block, 0, stream>>>((PtrStepSz<src_t>) src, (PtrStepSz<src_t>) dst, scale);
-        cudaSafeCall( cudaGetLastError() );
+        cvCudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void upscale<1>(const PtrStepSzb src, PtrStepSzb dst, int scale, cudaStream_t stream);
@@ -211,7 +211,7 @@ namespace btv_l1_cuda
 
     void loadBtvWeights(const float* weights, size_t count)
     {
-        cudaSafeCall( cudaMemcpyToSymbol(c_btvRegWeights, weights, count * sizeof(float)) );
+        cvCudaSafeCall( cudaMemcpyToSymbol(c_btvRegWeights, weights, count * sizeof(float)) );
     }
 
     template <int cn>
@@ -223,9 +223,9 @@ namespace btv_l1_cuda
         const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
 
         calcBtvRegularizationKernel<src_t><<<grid, block>>>((PtrStepSz<src_t>) src, (PtrStepSz<src_t>) dst, ksize);
-        cudaSafeCall( cudaGetLastError() );
+        cvCudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void calcBtvRegularization<1>(PtrStepSzb src, PtrStepSzb dst, int ksize);

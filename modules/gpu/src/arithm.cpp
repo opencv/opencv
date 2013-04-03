@@ -47,19 +47,19 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::gemm(const GpuMat&, const GpuMat&, double, const GpuMat&, double, GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::transpose(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::flip(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::LUT(const GpuMat&, const Mat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::magnitude(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::magnitudeSqr(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::magnitude(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::magnitudeSqr(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::phase(const GpuMat&, const GpuMat&, GpuMat&, bool, Stream&) { throw_nogpu(); }
-void cv::gpu::cartToPolar(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, Stream&) { throw_nogpu(); }
-void cv::gpu::polarToCart(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, Stream&) { throw_nogpu(); }
-void cv::gpu::normalize(const GpuMat&, GpuMat&, double, double, int, int, const GpuMat&) { throw_nogpu(); }
-void cv::gpu::normalize(const GpuMat&, GpuMat&, double, double, int, int, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::gemm(const GpuMat&, const GpuMat&, double, const GpuMat&, double, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::transpose(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::flip(const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::LUT(const GpuMat&, const Mat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::magnitude(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::magnitudeSqr(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::magnitude(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::magnitudeSqr(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::phase(const GpuMat&, const GpuMat&, GpuMat&, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::cartToPolar(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::polarToCart(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::normalize(const GpuMat&, GpuMat&, double, double, int, int, const GpuMat&) { throw_no_cuda(); }
+void cv::gpu::normalize(const GpuMat&, GpuMat&, double, double, int, int, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -246,7 +246,7 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
     }
 
     if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -287,7 +287,7 @@ namespace
                 (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS))) );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }
@@ -402,7 +402,7 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
     }
 
     if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
+        cvCudaSafeCall( cudaDeviceSynchronize() );
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -427,7 +427,7 @@ namespace
         nppSafeCall( func(src.ptr<Npp32fc>(), static_cast<int>(src.step), dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
 
         if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 

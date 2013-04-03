@@ -47,11 +47,11 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::StereoBM_GPU::StereoBM_GPU() { throw_nogpu(); }
-cv::gpu::StereoBM_GPU::StereoBM_GPU(int, int, int) { throw_nogpu(); }
+cv::gpu::StereoBM_GPU::StereoBM_GPU() { throw_no_cuda(); }
+cv::gpu::StereoBM_GPU::StereoBM_GPU(int, int, int) { throw_no_cuda(); }
 
-bool cv::gpu::StereoBM_GPU::checkIfGpuCallReasonable() { throw_nogpu(); return false; }
-void cv::gpu::StereoBM_GPU::operator() ( const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+bool cv::gpu::StereoBM_GPU::checkIfGpuCallReasonable() { throw_no_cuda(); return false; }
+void cv::gpu::StereoBM_GPU::operator() ( const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 

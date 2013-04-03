@@ -44,21 +44,21 @@
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::HOGDescriptor::HOGDescriptor(Size, Size, Size, Size, int, double, double, bool, int) { throw_nogpu(); }
-size_t cv::gpu::HOGDescriptor::getDescriptorSize() const { throw_nogpu(); return 0; }
-size_t cv::gpu::HOGDescriptor::getBlockHistogramSize() const { throw_nogpu(); return 0; }
-double cv::gpu::HOGDescriptor::getWinSigma() const { throw_nogpu(); return 0; }
-bool cv::gpu::HOGDescriptor::checkDetectorSize() const { throw_nogpu(); return false; }
-void cv::gpu::HOGDescriptor::setSVMDetector(const std::vector<float>&) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::detect(const GpuMat&, std::vector<Point>&, double, Size, Size) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat&, std::vector<Rect>&, double, Size, Size, double, int) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::computeBlockHistograms(const GpuMat&) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat&, Size, GpuMat&, int) { throw_nogpu(); }
-std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector() { throw_nogpu(); return std::vector<float>(); }
-std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector48x96() { throw_nogpu(); return std::vector<float>(); }
-std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector64x128() { throw_nogpu(); return std::vector<float>(); }
-void cv::gpu::HOGDescriptor::computeConfidence(const GpuMat&, std::vector<Point>&, double, Size, Size, std::vector<Point>&, std::vector<double>&) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat&, std::vector<Rect>&, double, Size, Size, std::vector<HOGConfidence>&, int) { throw_nogpu(); }
+cv::gpu::HOGDescriptor::HOGDescriptor(Size, Size, Size, Size, int, double, double, bool, int) { throw_no_cuda(); }
+size_t cv::gpu::HOGDescriptor::getDescriptorSize() const { throw_no_cuda(); return 0; }
+size_t cv::gpu::HOGDescriptor::getBlockHistogramSize() const { throw_no_cuda(); return 0; }
+double cv::gpu::HOGDescriptor::getWinSigma() const { throw_no_cuda(); return 0; }
+bool cv::gpu::HOGDescriptor::checkDetectorSize() const { throw_no_cuda(); return false; }
+void cv::gpu::HOGDescriptor::setSVMDetector(const std::vector<float>&) { throw_no_cuda(); }
+void cv::gpu::HOGDescriptor::detect(const GpuMat&, std::vector<Point>&, double, Size, Size) { throw_no_cuda(); }
+void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat&, std::vector<Rect>&, double, Size, Size, double, int) { throw_no_cuda(); }
+void cv::gpu::HOGDescriptor::computeBlockHistograms(const GpuMat&) { throw_no_cuda(); }
+void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat&, Size, GpuMat&, int) { throw_no_cuda(); }
+std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector() { throw_no_cuda(); return std::vector<float>(); }
+std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector48x96() { throw_no_cuda(); return std::vector<float>(); }
+std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector64x128() { throw_no_cuda(); return std::vector<float>(); }
+void cv::gpu::HOGDescriptor::computeConfidence(const GpuMat&, std::vector<Point>&, double, Size, Size, std::vector<Point>&, std::vector<double>&) { throw_no_cuda(); }
+void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat&, std::vector<Rect>&, double, Size, Size, std::vector<HOGConfidence>&, int) { throw_no_cuda(); }
 
 #else
 

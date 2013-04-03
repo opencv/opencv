@@ -54,7 +54,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
     (void)interpolation;
     (void)s;
 
-    throw_nogpu();
+    throw_no_cuda();
 }
 
 #else // HAVE_CUDA
@@ -133,7 +133,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
                 dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, fx, fy, npp_inter[interpolation]) );
 
         if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cvCudaSafeCall( cudaDeviceSynchronize() );
     }
     else
     {

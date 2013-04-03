@@ -189,7 +189,7 @@ namespace cv { namespace gpu { namespace cuda
             int block = ncandidates;
             int smem  = block * ( sizeof(int) + sizeof(int4) );
             disjoin<InSameComponint><<<1, block, smem>>>(candidates, objects, ncandidates, groupThreshold, grouping_eps, nclasses);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
         }
 
         struct Cascade

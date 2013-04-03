@@ -69,10 +69,10 @@ namespace cv { namespace gpu { namespace cuda
 
         void loadConstants(int nbSamples, int reqMatches, int radius, int subsamplingFactor)
         {
-            cudaSafeCall( cudaMemcpyToSymbol(c_nbSamples, &nbSamples, sizeof(int)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_reqMatches, &reqMatches, sizeof(int)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_radius, &radius, sizeof(int)) );
-            cudaSafeCall( cudaMemcpyToSymbol(c_subsamplingFactor, &subsamplingFactor, sizeof(int)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_nbSamples, &nbSamples, sizeof(int)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_reqMatches, &reqMatches, sizeof(int)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_radius, &radius, sizeof(int)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(c_subsamplingFactor, &subsamplingFactor, sizeof(int)) );
         }
 
         __device__ __forceinline__ uint nextRand(uint& state)
@@ -137,13 +137,13 @@ namespace cv { namespace gpu { namespace cuda
             dim3 block(32, 8);
             dim3 grid(divUp(frame.cols, block.x), divUp(frame.rows, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(init<SrcT, SampleT>, cudaFuncCachePreferL1) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(init<SrcT, SampleT>, cudaFuncCachePreferL1) );
 
             init<SrcT, SampleT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, (PtrStepSz<SampleT>) samples, randStates);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         void init_gpu(PtrStepSzb frame, int cn, PtrStepSzb samples, PtrStepSz<uint> randStates, cudaStream_t stream)
@@ -246,13 +246,13 @@ namespace cv { namespace gpu { namespace cuda
             dim3 block(32, 8);
             dim3 grid(divUp(frame.cols, block.x), divUp(frame.rows, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(update<SrcT, SampleT>, cudaFuncCachePreferL1) );
+            cvCudaSafeCall( cudaFuncSetCacheConfig(update<SrcT, SampleT>, cudaFuncCachePreferL1) );
 
             update<SrcT, SampleT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, fgmask, (PtrStepSz<SampleT>) samples, randStates);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         void update_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzb samples, PtrStepSz<uint> randStates, cudaStream_t stream)

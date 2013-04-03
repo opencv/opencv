@@ -44,7 +44,7 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::remap(const GpuMat&, GpuMat&, const GpuMat&, const GpuMat&, int, int, Scalar, Stream&){ throw_nogpu(); }
+void cv::gpu::remap(const GpuMat&, GpuMat&, const GpuMat&, const GpuMat&, int, int, Scalar, Stream&){ throw_no_cuda(); }
 
 #else // HAVE_CUDA
 

@@ -62,11 +62,11 @@ namespace cv { namespace gpu { namespace cuda
 
         void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump)
         {
-            cudaSafeCall( cudaMemcpyToSymbol(cndisp,            &ndisp,            sizeof(int  )) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmax_data_term,    &max_data_term,    sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cdata_weight,      &data_weight,      sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmax_disc_term,    &max_disc_term,    sizeof(float)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cdisc_single_jump, &disc_single_jump, sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cndisp,            &ndisp,            sizeof(int  )) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cmax_data_term,    &max_data_term,    sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cdata_weight,      &data_weight,      sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cmax_disc_term,    &max_disc_term,    sizeof(float)) );
+            cvCudaSafeCall( cudaMemcpyToSymbol(cdisc_single_jump, &disc_single_jump, sizeof(float)) );
         }
 
         ///////////////////////////////////////////////////////////////
@@ -172,10 +172,10 @@ namespace cv { namespace gpu { namespace cuda
             grid.y = divUp(left.rows, threads.y);
 
             comp_data<1, short><<<grid, threads, 0, stream>>>(left, right, (PtrStepSz<short>)data);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
         template <> void comp_data_gpu<uchar, float>(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream)
         {
@@ -186,10 +186,10 @@ namespace cv { namespace gpu { namespace cuda
             grid.y = divUp(left.rows, threads.y);
 
             comp_data<1, float><<<grid, threads, 0, stream>>>(left, right, (PtrStepSz<float>)data);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template <> void comp_data_gpu<uchar3, short>(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream)
@@ -201,10 +201,10 @@ namespace cv { namespace gpu { namespace cuda
             grid.y = divUp(left.rows, threads.y);
 
             comp_data<3, short><<<grid, threads, 0, stream>>>(left, right, (PtrStepSz<short>)data);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
         template <> void comp_data_gpu<uchar3, float>(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream)
         {
@@ -215,10 +215,10 @@ namespace cv { namespace gpu { namespace cuda
             grid.y = divUp(left.rows, threads.y);
 
             comp_data<3, float><<<grid, threads, 0, stream>>>(left, right, (PtrStepSz<float>)data);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template <> void comp_data_gpu<uchar4, short>(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream)
@@ -230,10 +230,10 @@ namespace cv { namespace gpu { namespace cuda
             grid.y = divUp(left.rows, threads.y);
 
             comp_data<4, short><<<grid, threads, 0, stream>>>(left, right, (PtrStepSz<short>)data);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
         template <> void comp_data_gpu<uchar4, float>(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream)
         {
@@ -244,10 +244,10 @@ namespace cv { namespace gpu { namespace cuda
             grid.y = divUp(left.rows, threads.y);
 
             comp_data<4, float><<<grid, threads, 0, stream>>>(left, right, (PtrStepSz<float>)data);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ///////////////////////////////////////////////////////////////
@@ -284,10 +284,10 @@ namespace cv { namespace gpu { namespace cuda
             grid.y = divUp(dst_rows, threads.y);
 
             data_step_down<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (PtrStepSz<T>)src, (PtrStepSz<T>)dst);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template void data_step_down_gpu<short>(int dst_cols, int dst_rows, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
@@ -328,19 +328,19 @@ namespace cv { namespace gpu { namespace cuda
             int src_idx = (dst_idx + 1) & 1;
 
             level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (PtrStepSz<T>)mus[src_idx], (PtrStepSz<T>)mus[dst_idx]);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (PtrStepSz<T>)mds[src_idx], (PtrStepSz<T>)mds[dst_idx]);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (PtrStepSz<T>)mls[src_idx], (PtrStepSz<T>)mls[dst_idx]);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (PtrStepSz<T>)mrs[src_idx], (PtrStepSz<T>)mrs[dst_idx]);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template void level_up_messages_gpu<short>(int dst_idx, int dst_cols, int dst_rows, int src_rows, PtrStepSzb* mus, PtrStepSzb* mds, PtrStepSzb* mls, PtrStepSzb* mrs, cudaStream_t stream);
@@ -459,10 +459,10 @@ namespace cv { namespace gpu { namespace cuda
             for(int t = 0; t < iters; ++t)
             {
                 one_iteration<T><<<grid, threads, 0, stream>>>(t, elem_step, (T*)u.data, (T*)d.data, (T*)l.data, (T*)r.data, (PtrStepSz<T>)data, cols, rows);
-                cudaSafeCall( cudaGetLastError() );
+                cvCudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cudaSafeCall( cudaDeviceSynchronize() );
+                    cvCudaSafeCall( cudaDeviceSynchronize() );
             }
         }
 
@@ -524,10 +524,10 @@ namespace cv { namespace gpu { namespace cuda
             int elem_step = static_cast<int>(u.step/sizeof(T));
 
             output<T><<<grid, threads, 0, stream>>>(elem_step, (const T*)u.data, (const T*)d.data, (const T*)l.data, (const T*)r.data, (const T*)data.data, disp);
-            cudaSafeCall( cudaGetLastError() );
+            cvCudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
+                cvCudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template void output_gpu<short>(const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, const PtrStepSz<short>& disp, cudaStream_t stream);
