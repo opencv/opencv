@@ -30,7 +30,6 @@
 */
 
 #include "precomp.hpp"
-#include <complex>
 
 namespace cv
 {
@@ -101,7 +100,7 @@ public:
         c[1] = (b[29]*b[7]*b[24]-b[29]*b[20]*b[11]+b[2]*b[20]*b[38]-b[2]*b[25]*b[33]-b[28]*b[20]*b[12]+b[28]*b[7]*b[25]-b[29]*b[19]*b[12]-b[3]*b[24]*b[33]+b[15]*b[33]*b[12]+b[3]*b[19]*b[38]-b[16]*b[6]*b[38]+b[3]*b[20]*b[37]+b[16]*b[32]*b[12]+b[29]*b[6]*b[25]-b[16]*b[7]*b[37]-b[3]*b[25]*b[32]-b[15]*b[7]*b[38]+b[16]*b[33]*b[11]);
         c[0] = -b[29]*b[20]*b[12]+b[29]*b[7]*b[25]+b[16]*b[33]*b[12]-b[16]*b[7]*b[38]+b[3]*b[20]*b[38]-b[3]*b[25]*b[33];
 
-        std::vector<std::complex<double> > roots;
+        std::vector<Complex<double> > roots;
         solvePoly(coeffs, roots);
 
         std::vector<double> xs, ys, zs;
@@ -111,8 +110,8 @@ public:
         double* e = ematrix.ptr<double>();
         for (size_t i = 0; i < roots.size(); i++)
         {
-            if (fabs(roots[i].imag()) > 1e-10) continue;
-            double z1 = roots[i].real();
+            if (fabs(roots[i].im) > 1e-10) continue;
+            double z1 = roots[i].re;
             double z2 = z1 * z1;
             double z3 = z2 * z1;
             double z4 = z3 * z1;

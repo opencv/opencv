@@ -52,10 +52,6 @@
 #include <cfloat>
 #include <vector>
 
-#ifndef OPENCV_NOSTL
-#  include <complex>
-#endif
-
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/matx.hpp"

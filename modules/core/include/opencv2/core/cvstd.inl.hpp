@@ -45,6 +45,7 @@
 #define __OPENCV_CORE_CVSTDINL_HPP__
 
 #ifndef OPENCV_NOSTL
+#  include <complex>
 #  include <ostream>
 #endif
 
