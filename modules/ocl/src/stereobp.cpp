@@ -85,7 +85,7 @@ namespace cv
             } con_struct_t;
 
             cl_mem cl_con_struct =  NULL;
-            static void load_constants(Context *clCxt, int ndisp, float max_data_term, float data_weight,
+            static void load_constants(int ndisp, float max_data_term, float data_weight,
                                 float max_disc_term, float disc_single_jump)
             {
                 con_struct_t *con_struct = new con_struct_t;
@@ -95,7 +95,7 @@ namespace cv
                 con_struct -> cmax_disc_term    = max_disc_term;
                 con_struct -> cdisc_single_jump = disc_single_jump;
 
-                cl_con_struct = load_constant(clCxt->impl->clContext, clCxt->impl->clCmdQueue, (void *)con_struct,
+                cl_con_struct = load_constant(*((cl_context*)getoclContext()), *((cl_command_queue*)getoclCommandQueue()), (void *)con_struct,
                                               sizeof(con_struct_t));
 
                 delete con_struct;
@@ -418,7 +418,7 @@ namespace
                 }
             }
 
-            cv::ocl::stereoBP::load_constants(u.clCxt, rthis.ndisp, rthis.max_data_term, scale * rthis.data_weight,
+            cv::ocl::stereoBP::load_constants(rthis.ndisp, rthis.max_data_term, scale * rthis.data_weight,
                                               scale * rthis.max_disc_term, scale * rthis.disc_single_jump);
 
             datas.resize(rthis.levels);
