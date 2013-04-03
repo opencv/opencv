@@ -155,7 +155,7 @@ namespace cv
             static Context* getContext();
             static void setContext(Info &oclinfo);
 
-            enum {CL_DOUBLE, CL_UNIFIED_MEM};
+            enum {CL_DOUBLE, CL_UNIFIED_MEM, CL_CPU};
             bool supportsFeature(int ftype);
             size_t computeUnits();
             void* oclContext();

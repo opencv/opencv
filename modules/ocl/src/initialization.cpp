@@ -979,6 +979,12 @@ namespace cv
                 return impl->double_support == 1;
             case CL_UNIFIED_MEM:
                 return impl->unified_memory == 1;
+            case CL_CPU:
+                cl_device_type devicetype;
+                clGetDeviceInfo(impl->devices[impl->devnum], 
+                                CL_DEVICE_TYPE, sizeof(cl_device_type), 
+                                &devicetype, NULL);
+                return devicetype == CVCL_DEVICE_TYPE_CPU;
             default:
                 return false;
             }
