@@ -73,12 +73,7 @@
 
 namespace cv { namespace gpu {
     CV_EXPORTS cv::String getNppErrorMessage(int code);
-
-    static inline void checkNppError(int code, const char* file, const int line, const char* func)
-    {
-        if (code < 0)
-            cv::error(cv::Error::GpuApiCallError, getNppErrorMessage(code), func, file, line);
-    }
+    CV_EXPORTS cv::String getCudaDriverApiErrorMessage(int code);
 
     // Converts CPU border extrapolation mode into GPU internal analogue.
     // Returns true if the GPU analogue exists, false otherwise.
@@ -93,14 +88,20 @@ static inline void throw_no_cuda() { CV_Error(cv::Error::GpuNotSupported, "The l
 
 static inline void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform"); }
 
-#if defined(__GNUC__)
-    #define nppSafeCall(expr)  cv::gpu::checkNppError(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define nppSafeCall(expr)  cv::gpu::checkNppError(expr, __FILE__, __LINE__, "")
-#endif
-
 namespace cv { namespace gpu
 {
+    static inline void checkNppError(int code, const char* file, const int line, const char* func)
+    {
+        if (code < 0)
+            cv::error(cv::Error::GpuApiCallError, getNppErrorMessage(code), func, file, line);
+    }
+
+    static inline void checkCudaDriverApiError(int code, const char* file, const int line, const char* func)
+    {
+        if (code != CUDA_SUCCESS)
+            cv::error(cv::Error::GpuApiCallError, getCudaDriverApiErrorMessage(code), func, file, line);
+    }
+
     template<int n> struct NPPTypeTraits;
     template<> struct NPPTypeTraits<CV_8U>  { typedef Npp8u npp_type; };
     template<> struct NPPTypeTraits<CV_8S>  { typedef Npp8s npp_type; };
@@ -128,6 +129,14 @@ namespace cv { namespace gpu
         cudaStream_t oldStream;
     };
 }}
+
+#if defined(__GNUC__)
+    #define nppSafeCall(expr)  cv::gpu::checkNppError(expr, __FILE__, __LINE__, __func__)
+    #define cuSafeCall(expr)  cv::gpu::checkCudaDriverApiError(expr, __FILE__, __LINE__, __func__)
+#else /* defined(__CUDACC__) || defined(__MSVC__) */
+    #define nppSafeCall(expr)  cv::gpu::checkNppError(expr, __FILE__, __LINE__, "")
+    #define cuSafeCall(expr)  cv::gpu::checkCudaDriverApiError(expr, __FILE__, __LINE__, "")
+#endif
 
 #endif // HAVE_CUDA
 

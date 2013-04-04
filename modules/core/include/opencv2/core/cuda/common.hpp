@@ -65,9 +65,9 @@ namespace cv { namespace gpu { namespace cuda {
 }}}
 
 #if defined(__GNUC__)
-    #define cvCudaSafeCall(expr)  cv::gpu::cuda::checkError((expr), __FILE__, __LINE__, __func__)
+    #define cvCudaSafeCall(expr)  cv::gpu::cuda::checkError(expr, __FILE__, __LINE__, __func__)
 #else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cvCudaSafeCall(expr)  cv::gpu::cuda::checkError((expr), __FILE__, __LINE__, "")
+    #define cvCudaSafeCall(expr)  cv::gpu::cuda::checkError(expr, __FILE__, __LINE__, "")
 #endif
 
 namespace cv { namespace gpu

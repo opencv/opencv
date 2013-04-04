@@ -41,7 +41,6 @@
 //M*/
 
 #include "video_parser.h"
-#include "cu_safe_call.h"
 
 #if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
 

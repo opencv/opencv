@@ -1591,6 +1591,69 @@ namespace
     };
 
     const size_t npp_error_num = sizeof(npp_errors) / sizeof(npp_errors[0]);
+
+    const ErrorEntry cu_errors [] =
+    {
+        error_entry( CUDA_SUCCESS                              ),
+        error_entry( CUDA_ERROR_INVALID_VALUE                  ),
+        error_entry( CUDA_ERROR_OUT_OF_MEMORY                  ),
+        error_entry( CUDA_ERROR_NOT_INITIALIZED                ),
+        error_entry( CUDA_ERROR_DEINITIALIZED                  ),
+        error_entry( CUDA_ERROR_PROFILER_DISABLED              ),
+        error_entry( CUDA_ERROR_PROFILER_NOT_INITIALIZED       ),
+        error_entry( CUDA_ERROR_PROFILER_ALREADY_STARTED       ),
+        error_entry( CUDA_ERROR_PROFILER_ALREADY_STOPPED       ),
+        error_entry( CUDA_ERROR_NO_DEVICE                      ),
+        error_entry( CUDA_ERROR_INVALID_DEVICE                 ),
+        error_entry( CUDA_ERROR_INVALID_IMAGE                  ),
+        error_entry( CUDA_ERROR_INVALID_CONTEXT                ),
+        error_entry( CUDA_ERROR_CONTEXT_ALREADY_CURRENT        ),
+        error_entry( CUDA_ERROR_MAP_FAILED                     ),
+        error_entry( CUDA_ERROR_UNMAP_FAILED                   ),
+        error_entry( CUDA_ERROR_ARRAY_IS_MAPPED                ),
+        error_entry( CUDA_ERROR_ALREADY_MAPPED                 ),
+        error_entry( CUDA_ERROR_NO_BINARY_FOR_GPU              ),
+        error_entry( CUDA_ERROR_ALREADY_ACQUIRED               ),
+        error_entry( CUDA_ERROR_NOT_MAPPED                     ),
+        error_entry( CUDA_ERROR_NOT_MAPPED_AS_ARRAY            ),
+        error_entry( CUDA_ERROR_NOT_MAPPED_AS_POINTER          ),
+        error_entry( CUDA_ERROR_ECC_UNCORRECTABLE              ),
+        error_entry( CUDA_ERROR_UNSUPPORTED_LIMIT              ),
+        error_entry( CUDA_ERROR_CONTEXT_ALREADY_IN_USE         ),
+        error_entry( CUDA_ERROR_INVALID_SOURCE                 ),
+        error_entry( CUDA_ERROR_FILE_NOT_FOUND                 ),
+        error_entry( CUDA_ERROR_SHARED_OBJECT_SYMBOL_NOT_FOUND ),
+        error_entry( CUDA_ERROR_SHARED_OBJECT_INIT_FAILED      ),
+        error_entry( CUDA_ERROR_OPERATING_SYSTEM               ),
+        error_entry( CUDA_ERROR_INVALID_HANDLE                 ),
+        error_entry( CUDA_ERROR_NOT_FOUND                      ),
+        error_entry( CUDA_ERROR_NOT_READY                      ),
+        error_entry( CUDA_ERROR_LAUNCH_FAILED                  ),
+        error_entry( CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES        ),
+        error_entry( CUDA_ERROR_LAUNCH_TIMEOUT                 ),
+        error_entry( CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING  ),
+        error_entry( CUDA_ERROR_PEER_ACCESS_ALREADY_ENABLED    ),
+        error_entry( CUDA_ERROR_PEER_ACCESS_NOT_ENABLED        ),
+        error_entry( CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE         ),
+        error_entry( CUDA_ERROR_CONTEXT_IS_DESTROYED           ),
+        error_entry( CUDA_ERROR_ASSERT                         ),
+        error_entry( CUDA_ERROR_TOO_MANY_PEERS                 ),
+        error_entry( CUDA_ERROR_HOST_MEMORY_ALREADY_REGISTERED ),
+        error_entry( CUDA_ERROR_HOST_MEMORY_NOT_REGISTERED     ),
+        error_entry( CUDA_ERROR_UNKNOWN                        )
+    };
+
+    const size_t cu_errors_num = sizeof(cu_errors) / sizeof(cu_errors[0]);
+
+    cv::String getErrorString(int code, const ErrorEntry* errors, size_t n)
+    {
+        size_t idx = std::find_if(errors, errors + n, ErrorEntryComparer(code)) - errors;
+
+        const char* msg = (idx != n) ? errors[idx].str : "Unknown error code";
+        cv::String str = cv::format("%s [Code = %d]", msg, code);
+
+        return str;
+    }
 }
 
 #endif
@@ -1601,12 +1664,17 @@ String cv::gpu::getNppErrorMessage(int code)
     (void) code;
     return String();
 #else
-    size_t idx = std::find_if(npp_errors, npp_errors + npp_error_num, ErrorEntryComparer(code)) - npp_errors;
+    return getErrorString(code, npp_errors, npp_error_num);
+#endif
+}
 
-    const char* msg = (idx != npp_error_num) ? npp_errors[idx].str : "Unknown error code";
-    String str = cv::format("%s [Code = %d]", msg, code);
-
-    return str;
+String cv::gpu::getCudaDriverApiErrorMessage(int code)
+{
+#ifndef HAVE_CUDA
+    (void) code;
+    return String();
+#else
+    return getErrorString(code, cu_errors, cu_errors_num);
 #endif
 }
 
