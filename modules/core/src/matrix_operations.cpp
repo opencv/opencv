@@ -224,7 +224,7 @@ void cv::gpu::CudaMem::create(int _rows, int _cols, int _type, int _alloc_type)
     if (_alloc_type == ALLOC_ZEROCOPY && !canMapHostMemory())
             cv::gpu::error("ZeroCopy is not supported by current device", __FILE__, __LINE__);
 
-    _type &= TYPE_MASK;
+    _type &= Mat::TYPE_MASK;
     if( rows == _rows && cols == _cols && type() == _type && data )
         return;
     if( data )

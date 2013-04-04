@@ -125,8 +125,8 @@ GPU_TEST_P(FGDStatModel, Update)
 
         ASSERT_EQ(gold_count, count);
 
-        cv::Mat gold_background(model->background);
-        cv::Mat gold_foreground(model->foreground);
+        cv::Mat gold_background = cv::cvarrToMat(model->background);
+        cv::Mat gold_foreground = cv::cvarrToMat(model->foreground);
 
         if (out_cn == 3)
             d_model.background.download(h_background3);

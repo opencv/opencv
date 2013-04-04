@@ -1096,10 +1096,7 @@ cvShowImage( const char* name, const CvArr* arr )
     #ifdef HAVE_OPENGL
         if (window->useGl)
         {
-            CvMat stub;
-            CvMat* mat = cvGetMat(arr, &stub);
-            cv::Mat im(mat);
-            cv::imshow(name, im);
+            cv::imshow(name, cv::cvarrToMat(arr));
             return;
         }
     #endif
