@@ -312,6 +312,7 @@ extlinks = {
             'imgproc_geometric' : ('http://opencv.itseez.com/trunk/modules/imgproc/doc/geometric_transformations.html#%s', None ),
 
             'opencv_group' : ('http://tech.groups.yahoo.com/group/OpenCV/%s', None),
+            'opencv_qa' : ('http://answers.opencv.org/%s', None),
 
             'cvt_color': ('http://opencv.itseez.com/modules/imgproc/doc/miscellaneous_transformations.html?highlight=cvtcolor#cvtcolor%s', None),
             'imread':    ('http://opencv.itseez.com/modules/highgui/doc/reading_and_writing_images_and_video.html?highlight=imread#imread%s', None),
