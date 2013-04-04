@@ -501,7 +501,7 @@ void cv::gpu::VideoWriter_GPU::Impl::createHWEncoder()
     CV_Assert( err == 0 );
 }
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace video_encoding
     {
