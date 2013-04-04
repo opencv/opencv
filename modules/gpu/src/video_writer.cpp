@@ -674,7 +674,7 @@ void cv::gpu::VideoWriter_GPU::Impl::write(const cv::gpu::GpuMat& frame, bool la
     CV_Assert( res == CUDA_SUCCESS );
 
     if (inputFormat_ == SF_BGR)
-        cv::gpu::cuda::video_encoding::YV12_gpu(frame, frame.channels(), videoFrame_);
+        cv::gpu::cudev::video_encoding::YV12_gpu(frame, frame.channels(), videoFrame_);
     else
     {
         switch (surfaceFormat_)

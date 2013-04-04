@@ -43,7 +43,7 @@
 #ifndef __OPENCV_GPU_DEVICE_BLOCK_HPP__
 #define __OPENCV_GPU_DEVICE_BLOCK_HPP__
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     struct Block
     {

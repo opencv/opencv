@@ -43,7 +43,7 @@
 #ifndef OPENCV_GPU_WARP_REDUCE_HPP__
 #define OPENCV_GPU_WARP_REDUCE_HPP__
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     template <class T>
     __device__ __forceinline__ T warp_reduce(volatile T *ptr , const unsigned int tid = threadIdx.x)
@@ -63,6 +63,6 @@ namespace cv { namespace gpu { namespace cuda
 
         return ptr[tid - lane];
     }
-}}} // namespace cv { namespace gpu { namespace cuda {
+}}} // namespace cv { namespace gpu { namespace cudev {
 
 #endif /* OPENCV_GPU_WARP_REDUCE_HPP__ */

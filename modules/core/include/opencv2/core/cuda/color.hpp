@@ -45,7 +45,7 @@
 
 #include "detail/color_detail.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     // All OPENCV_GPU_IMPLEMENT_*_TRAITS(ColorSpace1_to_ColorSpace2, ...) macros implements
     // template <typename T> class ColorSpace1_to_ColorSpace2_traits
@@ -296,6 +296,6 @@ namespace cv { namespace gpu { namespace cuda
     OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv4_to_lbgra, 4, 4, false, 0)
 
     #undef OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS
-}}} // namespace cv { namespace gpu { namespace cuda
+}}} // namespace cv { namespace gpu { namespace cudev
 
 #endif // __OPENCV_GPU_BORDER_INTERPOLATE_HPP__

@@ -51,7 +51,7 @@ void cv::gpu::GMG_GPU::release() {}
 
 #else
 
-namespace cv { namespace gpu { namespace cuda {
+namespace cv { namespace gpu { namespace cudev {
     namespace bgfg_gmg
     {
         void loadConstants(int width, int height, float minVal, float maxVal, int quantizationLevels, float backgroundPrior,
@@ -77,7 +77,7 @@ cv::gpu::GMG_GPU::GMG_GPU()
 
 void cv::gpu::GMG_GPU::initialize(cv::Size frameSize, float min, float max)
 {
-    using namespace cv::gpu::cuda::bgfg_gmg;
+    using namespace cv::gpu::cudev::bgfg_gmg;
 
     CV_Assert(min < max);
     CV_Assert(maxFeatures > 0);
@@ -107,7 +107,7 @@ void cv::gpu::GMG_GPU::initialize(cv::Size frameSize, float min, float max)
 
 void cv::gpu::GMG_GPU::operator ()(const cv::gpu::GpuMat& frame, cv::gpu::GpuMat& fgmask, float newLearningRate, cv::gpu::Stream& stream)
 {
-    using namespace cv::gpu::cuda::bgfg_gmg;
+    using namespace cv::gpu::cudev::bgfg_gmg;
 
     typedef void (*func_t)(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures,
                            int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);

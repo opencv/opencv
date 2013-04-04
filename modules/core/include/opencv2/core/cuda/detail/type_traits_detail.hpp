@@ -46,7 +46,7 @@
 #include "../common.hpp"
 #include "../vec_traits.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace type_traits_detail
     {
@@ -182,6 +182,6 @@ namespace cv { namespace gpu { namespace cuda
             enum { value = 1 };
         };
     } // namespace type_traits_detail
-}}} // namespace cv { namespace gpu { namespace cuda
+}}} // namespace cv { namespace gpu { namespace cudev
 
 #endif // __OPENCV_GPU_TYPE_TRAITS_DETAIL_HPP__

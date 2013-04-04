@@ -47,7 +47,7 @@
 #include "opencv2/core/cuda/functional.hpp"
 #include "opencv2/core/cuda/reduce.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     #define SOLVE_PNP_RANSAC_MAX_NUM_ITERS 200
 
@@ -79,7 +79,7 @@ namespace cv { namespace gpu { namespace cuda
             cvCudaSafeCall(cudaMemcpyToSymbol(crot1, rot + 3, sizeof(float) * 3));
             cvCudaSafeCall(cudaMemcpyToSymbol(crot2, rot + 6, sizeof(float) * 3));
             cvCudaSafeCall(cudaMemcpyToSymbol(ctransl, transl, sizeof(float) * 3));
-            cv::gpu::cuda::transform(src, dst, TransformOp(), WithOutMask(), stream);
+            cv::gpu::cudev::transform(src, dst, TransformOp(), WithOutMask(), stream);
         }
     } // namespace transform_points
 
@@ -120,7 +120,7 @@ namespace cv { namespace gpu { namespace cuda
             cvCudaSafeCall(cudaMemcpyToSymbol(ctransl, transl, sizeof(float) * 3));
             cvCudaSafeCall(cudaMemcpyToSymbol(cproj0, proj, sizeof(float) * 3));
             cvCudaSafeCall(cudaMemcpyToSymbol(cproj1, proj + 3, sizeof(float) * 3));
-            cv::gpu::cuda::transform(src, dst, ProjectOp(), WithOutMask(), stream);
+            cv::gpu::cudev::transform(src, dst, ProjectOp(), WithOutMask(), stream);
         }
     } // namespace project_points
 
@@ -187,7 +187,7 @@ namespace cv { namespace gpu { namespace cuda
             cvCudaSafeCall( cudaDeviceSynchronize() );
         }
     } // namespace solvepnp_ransac
-}}} // namespace cv { namespace gpu { namespace cuda
+}}} // namespace cv { namespace gpu { namespace cudev
 
 
 #endif /* CUDA_DISABLER */

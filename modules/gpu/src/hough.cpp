@@ -70,7 +70,7 @@ void cv::gpu::GeneralizedHough_GPU::release() {}
 
 #include "opencv2/core/utility.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace hough
     {
@@ -81,7 +81,7 @@ namespace cv { namespace gpu { namespace cuda
 //////////////////////////////////////////////////////////
 // HoughLines
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace hough
     {
@@ -98,7 +98,7 @@ void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, float rho, float thet
 
 void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int threshold, bool doSort, int maxLines)
 {
-    using namespace cv::gpu::cuda::hough;
+    using namespace cv::gpu::cudev::hough;
 
     CV_Assert(src.type() == CV_8UC1);
     CV_Assert(src.cols < std::numeric_limits<unsigned short>::max());
@@ -161,7 +161,7 @@ void cv::gpu::HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines_, Ou
 //////////////////////////////////////////////////////////
 // HoughLinesP
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace hough
     {
@@ -171,7 +171,7 @@ namespace cv { namespace gpu { namespace cuda
 
 void cv::gpu::HoughLinesP(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int minLineLength, int maxLineGap, int maxLines)
 {
-    using namespace cv::gpu::cuda::hough;
+    using namespace cv::gpu::cudev::hough;
 
     CV_Assert( src.type() == CV_8UC1 );
     CV_Assert( src.cols < std::numeric_limits<unsigned short>::max() );
@@ -210,7 +210,7 @@ void cv::gpu::HoughLinesP(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, 
 //////////////////////////////////////////////////////////
 // HoughCircles
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace hough
     {
@@ -230,7 +230,7 @@ void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, int method, float
 void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& buf, int method,
                            float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles)
 {
-    using namespace cv::gpu::cuda::hough;
+    using namespace cv::gpu::cudev::hough;
 
     CV_Assert(src.type() == CV_8UC1);
     CV_Assert(src.cols < std::numeric_limits<unsigned short>::max());
@@ -371,7 +371,7 @@ void cv::gpu::HoughCirclesDownload(const GpuMat& d_circles, cv::OutputArray h_ci
 //////////////////////////////////////////////////////////
 // GeneralizedHough
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace hough
     {
@@ -559,7 +559,7 @@ namespace
 
     void GHT_Pos::buildEdgePointList(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy)
     {
-        using namespace cv::gpu::cuda::hough;
+        using namespace cv::gpu::cudev::hough;
 
         typedef int (*func_t)(PtrStepSzb edges, PtrStepSzb dx, PtrStepSzb dy, unsigned int* coordList, float* thetaList);
         static const func_t funcs[] =
@@ -747,7 +747,7 @@ namespace
 
     void GHT_Ballard_Pos::processTempl()
     {
-        using namespace cv::gpu::cuda::hough;
+        using namespace cv::gpu::cudev::hough;
 
         CV_Assert(levels > 0);
 
@@ -773,7 +773,7 @@ namespace
 
     void GHT_Ballard_Pos::calcHist()
     {
-        using namespace cv::gpu::cuda::hough;
+        using namespace cv::gpu::cudev::hough;
 
         CV_Assert(levels > 0 && r_table.rows == (levels + 1) && r_sizes.cols == (levels + 1));
         CV_Assert(dp > 0.0);
@@ -796,7 +796,7 @@ namespace
 
     void GHT_Ballard_Pos::findPosInHist()
     {
-        using namespace cv::gpu::cuda::hough;
+        using namespace cv::gpu::cudev::hough;
 
         CV_Assert(votesThreshold > 0);
 
@@ -851,7 +851,7 @@ namespace
 
     void GHT_Ballard_PosScale::calcHist()
     {
-        using namespace cv::gpu::cuda::hough;
+        using namespace cv::gpu::cudev::hough;
 
         CV_Assert(levels > 0 && r_table.rows == (levels + 1) && r_sizes.cols == (levels + 1));
         CV_Assert(dp > 0.0);
@@ -879,7 +879,7 @@ namespace
 
     void GHT_Ballard_PosScale::findPosInHist()
     {
-        using namespace cv::gpu::cuda::hough;
+        using namespace cv::gpu::cudev::hough;
 
         CV_Assert(votesThreshold > 0);
 
@@ -939,7 +939,7 @@ namespace
 
     void GHT_Ballard_PosRotation::calcHist()
     {
-        using namespace cv::gpu::cuda::hough;
+        using namespace cv::gpu::cudev::hough;
 
         CV_Assert(levels > 0 && r_table.rows == (levels + 1) && r_sizes.cols == (levels + 1));
         CV_Assert(dp > 0.0);
@@ -967,7 +967,7 @@ namespace
 
     void GHT_Ballard_PosRotation::findPosInHist()
     {
-        using namespace cv::gpu::cuda::hough;
+        using namespace cv::gpu::cudev::hough;
 
         CV_Assert(votesThreshold > 0);
 
@@ -1146,7 +1146,7 @@ namespace
 
     void GHT_Guil_Full::processTempl()
     {
-        using namespace cv::gpu::cuda::hough;
+        using namespace cv::gpu::cudev::hough;
 
         buildFeatureList(templEdges, templDx, templDy, templFeatures,
             GHT_Guil_Full_setTemplFeatures, GHT_Guil_Full_buildTemplFeatureList_gpu,
@@ -1159,7 +1159,7 @@ namespace
 
     void GHT_Guil_Full::processImage()
     {
-        using namespace cv::gpu::cuda::hough;
+        using namespace cv::gpu::cudev::hough;
 
         CV_Assert(levels > 0);
         CV_Assert(templFeatures.sizes.cols == levels + 1);
@@ -1271,7 +1271,7 @@ namespace
 
     void GHT_Guil_Full::calcOrientation()
     {
-        using namespace cv::gpu::cuda::hough;
+        using namespace cv::gpu::cudev::hough;
 
         const double iAngleStep = 1.0 / angleStep;
         const int angleRange = cvCeil((maxAngle - minAngle) * iAngleStep);
@@ -1295,7 +1295,7 @@ namespace
 
     void GHT_Guil_Full::calcScale(double angle)
     {
-        using namespace cv::gpu::cuda::hough;
+        using namespace cv::gpu::cudev::hough;
 
         const double iScaleStep = 1.0 / scaleStep;
         const int scaleRange = cvCeil((maxScale - minScale) * iScaleStep);
@@ -1319,7 +1319,7 @@ namespace
 
     void GHT_Guil_Full::calcPosition(double angle, int angleVotes, double scale, int scaleVotes)
     {
-        using namespace cv::gpu::cuda::hough;
+        using namespace cv::gpu::cudev::hough;
 
         hist.setTo(Scalar::all(0));
         GHT_Guil_Full_calcPHist_gpu(templFeatures.sizes.ptr<int>(), imageFeatures.sizes.ptr<int>(0),

@@ -844,7 +844,7 @@ namespace
 
 #else // HAVE_CUDA
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     void copyToWithMask_gpu(PtrStepSzb src, PtrStepSzb dst, size_t elemSize1, int cn, PtrStepSzb mask, bool colorMask, cudaStream_t stream);
 
@@ -862,13 +862,13 @@ namespace
     template <typename T> void kernelSetCaller(GpuMat& src, Scalar s, cudaStream_t stream)
     {
         Scalar_<T> sf = s;
-        cv::gpu::cuda::set_to_gpu(src, sf.val, src.channels(), stream);
+        cv::gpu::cudev::set_to_gpu(src, sf.val, src.channels(), stream);
     }
 
     template <typename T> void kernelSetCaller(GpuMat& src, Scalar s, const GpuMat& mask, cudaStream_t stream)
     {
         Scalar_<T> sf = s;
-        cv::gpu::cuda::set_to_gpu(src, sf.val, mask, src.channels(), stream);
+        cv::gpu::cudev::set_to_gpu(src, sf.val, mask, src.channels(), stream);
     }
 }
 
@@ -892,17 +892,17 @@ namespace cv { namespace gpu
         CV_Assert(src.size() == dst.size() && src.type() == dst.type());
         CV_Assert(src.size() == mask.size() && mask.depth() == CV_8U && (mask.channels() == 1 || mask.channels() == src.channels()));
 
-        cv::gpu::cuda::copyToWithMask_gpu(src.reshape(1), dst.reshape(1), src.elemSize1(), src.channels(), mask.reshape(1), mask.channels() != 1, stream);
+        cv::gpu::cudev::copyToWithMask_gpu(src.reshape(1), dst.reshape(1), src.elemSize1(), src.channels(), mask.reshape(1), mask.channels() != 1, stream);
     }
 
     void convertTo(const GpuMat& src, GpuMat& dst)
     {
-        cv::gpu::cuda::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), 1.0, 0.0, 0);
+        cv::gpu::cudev::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), 1.0, 0.0, 0);
     }
 
     void convertTo(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream = 0)
     {
-        cv::gpu::cuda::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), alpha, beta, stream);
+        cv::gpu::cudev::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), alpha, beta, stream);
     }
 
     void setTo(GpuMat& src, Scalar s, cudaStream_t stream)

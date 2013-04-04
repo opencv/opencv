@@ -44,7 +44,7 @@
 
 #include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace optical_flow
     {

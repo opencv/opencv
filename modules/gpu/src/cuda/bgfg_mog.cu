@@ -47,7 +47,7 @@
 #include "opencv2/core/cuda/vec_math.hpp"
 #include "opencv2/core/cuda/limits.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace mog
     {

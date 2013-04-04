@@ -50,7 +50,7 @@
 #include "opencv2/core/cuda/datamov_utils.hpp"
 #include "opencv2/core/cuda/warp_shuffle.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace bf_knnmatch
     {
@@ -1249,7 +1249,7 @@ namespace cv { namespace gpu { namespace cuda
         //template void match2Hamming_gpu<short >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzb& trainIdx, const PtrStepSzb& imgIdx, const PtrStepSzb& distance, cudaStream_t stream);
         template void match2Hamming_gpu<int   >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzb& trainIdx, const PtrStepSzb& imgIdx, const PtrStepSzb& distance, cudaStream_t stream);
     } // namespace bf_knnmatch
-}}} // namespace cv { namespace gpu { namespace cuda {
+}}} // namespace cv { namespace gpu { namespace cudev {
 
 
 #endif /* CUDA_DISABLER */

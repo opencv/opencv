@@ -51,7 +51,7 @@
 
 #include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace cuda {
+namespace cv { namespace gpu { namespace cudev {
     namespace video_decoding
     {
         __constant__ uint constAlpha = ((uint)0xff << 24);

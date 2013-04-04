@@ -47,7 +47,7 @@
 #include "opencv2/core/cuda/functional.hpp"
 #include "opencv2/core/cuda/warp_shuffle.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     // Other values are not supported
     #define CELL_WIDTH 8
@@ -808,7 +808,7 @@ namespace cv { namespace gpu { namespace cuda
         void resize_8UC1(const PtrStepSzb& src, PtrStepSzb dst) { resize_for_hog<uchar> (src, dst, resize8UC1_tex); }
         void resize_8UC4(const PtrStepSzb& src, PtrStepSzb dst) { resize_for_hog<uchar4>(src, dst, resize8UC4_tex); }
     } // namespace hog
-}}} // namespace cv { namespace gpu { namespace cuda
+}}} // namespace cv { namespace gpu { namespace cudev
 
 
 #endif /* CUDA_DISABLER */

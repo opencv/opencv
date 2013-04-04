@@ -46,7 +46,7 @@
 #include <limits>
 #include "common.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     template<class T> struct numeric_limits
     {
@@ -230,6 +230,6 @@ namespace cv { namespace gpu { namespace cuda
         __device__ __forceinline__ static type signaling_NaN();
         static const bool is_signed = true;
     };
-}}} // namespace cv { namespace gpu { namespace cuda {
+}}} // namespace cv { namespace gpu { namespace cudev {
 
 #endif // __OPENCV_GPU_LIMITS_GPU_HPP__

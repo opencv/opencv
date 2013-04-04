@@ -44,7 +44,7 @@
 
 #include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace blend
     {
@@ -115,7 +115,7 @@ namespace cv { namespace gpu { namespace cuda
                 cvCudaSafeCall(cudaDeviceSynchronize());
         }
     } // namespace blend
-}}} // namespace cv { namespace gpu { namespace cuda
+}}} // namespace cv { namespace gpu { namespace cudev
 
 
 #endif /* CUDA_DISABLER */

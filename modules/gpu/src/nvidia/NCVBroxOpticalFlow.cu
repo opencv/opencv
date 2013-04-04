@@ -1141,8 +1141,8 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
                 ScaleVector(ptrVNew->ptr(), ptrVNew->ptr(), 1.0f/scale_factor, ns * nh, stream);
                 ncvAssertCUDALastErrorReturn((int)NCV_CUDA_ERROR);
 
-                cv::gpu::cuda::swap<FloatVector*>(ptrU, ptrUNew);
-                cv::gpu::cuda::swap<FloatVector*>(ptrV, ptrVNew);
+                cv::gpu::cudev::swap<FloatVector*>(ptrU, ptrUNew);
+                cv::gpu::cudev::swap<FloatVector*>(ptrV, ptrVNew);
             }
             scale /= scale_factor;
         }

@@ -55,7 +55,7 @@ void cv::gpu::StereoBM_GPU::operator() ( const GpuMat&, const GpuMat&, GpuMat&, 
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace stereobm
     {
@@ -101,7 +101,7 @@ namespace
 {
     void stereo_bm_gpu_operator( GpuMat& minSSD,  GpuMat& leBuf, GpuMat&  riBuf,  int preset, int ndisp, int winSize, float avergeTexThreshold, const GpuMat& left, const GpuMat& right, GpuMat& disparity, cudaStream_t stream)
     {
-        using namespace ::cv::gpu::cuda::stereobm;
+        using namespace ::cv::gpu::cudev::stereobm;
 
         CV_Assert(left.rows == right.rows && left.cols == right.cols);
         CV_Assert(left.type() == CV_8UC1);

@@ -48,7 +48,7 @@
 #include "opencv2/core/cuda/reduce.hpp"
 #include "opencv2/core/cuda/functional.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace stereocsbp
     {
@@ -146,7 +146,7 @@ namespace cv { namespace gpu { namespace cuda
 
                 for(int i = 0; i < nr_plane; i++)
                 {
-                    T minimum = cuda::numeric_limits<T>::max();
+                    T minimum = cudev::numeric_limits<T>::max();
                     int id = 0;
                     for(int d = 0; d < cndisp; d++)
                     {
@@ -859,6 +859,6 @@ namespace cv { namespace gpu { namespace cuda
         template void compute_disp(const float* u, const float* d, const float* l, const float* r, const float* data_cost_selected, const float* disp_selected, size_t msg_step,
             const PtrStepSz<short>& disp, int nr_plane, cudaStream_t stream);
     } // namespace stereocsbp
-}}} // namespace cv { namespace gpu { namespace cuda {
+}}} // namespace cv { namespace gpu { namespace cudev {
 
 #endif /* CUDA_DISABLER */

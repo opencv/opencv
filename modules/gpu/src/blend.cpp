@@ -51,7 +51,7 @@ void cv::gpu::blendLinear(const GpuMat&, const GpuMat&, const GpuMat&, const Gpu
 
 #else
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace blend
     {
@@ -62,7 +62,7 @@ namespace cv { namespace gpu { namespace cuda
     }
 }}}
 
-using namespace ::cv::gpu::cuda::blend;
+using namespace ::cv::gpu::cudev::blend;
 
 void cv::gpu::blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2,
                           GpuMat& result, Stream& stream)

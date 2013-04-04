@@ -55,7 +55,7 @@
 #define BORDER_SIZE 5
 #define MAX_KSIZE_HALF 100
 
-namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
+namespace cv { namespace gpu { namespace cudev { namespace optflow_farneback
 {
     __constant__ float c_g[8];
     __constant__ float c_xg[8];
@@ -641,7 +641,7 @@ namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
         callers[borderMode](src, ksizeHalf, dst, stream);
     }
 
-}}}} // namespace cv { namespace gpu { namespace cuda { namespace optflow_farneback
+}}}} // namespace cv { namespace gpu { namespace cudev { namespace optflow_farneback
 
 
 #endif /* CUDA_DISABLER */

@@ -44,7 +44,7 @@
 
 #include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace split_merge
     {
@@ -505,7 +505,7 @@ namespace cv { namespace gpu { namespace cuda
             split_func(src, dst, stream);
         }
     } // namespace split_merge
-}}} // namespace cv { namespace gpu { namespace cuda
+}}} // namespace cv { namespace gpu { namespace cudev
 
 
 #endif /* CUDA_DISABLER */

@@ -47,7 +47,7 @@
 #include "detail/reduce.hpp"
 #include "detail/reduce_key_val.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     template <int N, typename T, class Op>
     __device__ __forceinline__ void reduce(volatile T* smem, T& val, unsigned int tid, const Op& op)

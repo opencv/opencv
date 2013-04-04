@@ -49,7 +49,7 @@
 #include "opencv2/core/cuda/border_interpolate.hpp"
 #include "internal_shared.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -1002,7 +1002,7 @@ namespace cv { namespace gpu { namespace cuda
         template void filter2D_gpu<float, float>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
         template void filter2D_gpu<float4, float4>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
     } // namespace imgproc
-}}} // namespace cv { namespace gpu { namespace cuda {
+}}} // namespace cv { namespace gpu { namespace cudev {
 
 
 #endif /* CUDA_DISABLER */

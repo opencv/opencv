@@ -47,7 +47,7 @@
 #include "utility.hpp"
 #include "detail/transform_detail.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T, typename D, typename UnOp, typename Mask>
     static inline void transform(PtrStepSz<T> src, PtrStepSz<D> dst, UnOp op, const Mask& mask, cudaStream_t stream)

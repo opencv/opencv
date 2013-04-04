@@ -49,7 +49,7 @@
 #include "opencv2/core/cuda/vec_distance.hpp"
 #include "opencv2/core/cuda/datamov_utils.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace bf_match
     {
@@ -768,7 +768,7 @@ namespace cv { namespace gpu { namespace cuda
         //template void matchHamming_gpu<short >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, cudaStream_t stream);
         template void matchHamming_gpu<int   >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, cudaStream_t stream);
     } // namespace bf_match
-}}} // namespace cv { namespace gpu { namespace cuda {
+}}} // namespace cv { namespace gpu { namespace cudev {
 
 
 #endif /* CUDA_DISABLER */

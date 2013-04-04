@@ -57,7 +57,7 @@ typedef unsigned short ushort;
 //////////////////////////////////////////////////////////////////////////////////
 //// Non Local Means Denosing
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -179,7 +179,7 @@ namespace cv { namespace gpu { namespace cuda
 //////////////////////////////////////////////////////////////////////////////////
 //// Non Local Means Denosing (fast approximate version)
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -190,7 +190,7 @@ namespace cv { namespace gpu { namespace cuda
             template <int BLOCK_SIZE>
             static __device__ __forceinline__ thrust::tuple<volatile float*, volatile float*> smem_tuple(float* smem)
             {
-                return cv::gpu::cuda::smem_tuple(smem, smem + BLOCK_SIZE);
+                return cv::gpu::cudev::smem_tuple(smem, smem + BLOCK_SIZE);
             }
 
             static __device__ __forceinline__ thrust::tuple<float&, float&> tie(float& val1, float& val2)
@@ -209,7 +209,7 @@ namespace cv { namespace gpu { namespace cuda
             template <int BLOCK_SIZE>
             static __device__ __forceinline__ thrust::tuple<volatile float*, volatile float*, volatile float*> smem_tuple(float* smem)
             {
-                return cv::gpu::cuda::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE);
+                return cv::gpu::cudev::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE);
             }
 
             static __device__ __forceinline__ thrust::tuple<float&, float&, float&> tie(float& val1, float2& val2)
@@ -228,7 +228,7 @@ namespace cv { namespace gpu { namespace cuda
             template <int BLOCK_SIZE>
             static __device__ __forceinline__ thrust::tuple<volatile float*, volatile float*, volatile float*, volatile float*> smem_tuple(float* smem)
             {
-                return cv::gpu::cuda::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE, smem + 3 * BLOCK_SIZE);
+                return cv::gpu::cudev::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE, smem + 3 * BLOCK_SIZE);
             }
 
             static __device__ __forceinline__ thrust::tuple<float&, float&, float&, float&> tie(float& val1, float3& val2)
@@ -247,7 +247,7 @@ namespace cv { namespace gpu { namespace cuda
             template <int BLOCK_SIZE>
             static __device__ __forceinline__ thrust::tuple<volatile float*, volatile float*, volatile float*, volatile float*, volatile float*> smem_tuple(float* smem)
             {
-                return cv::gpu::cuda::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE, smem + 3 * BLOCK_SIZE, smem + 4 * BLOCK_SIZE);
+                return cv::gpu::cudev::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE, smem + 3 * BLOCK_SIZE, smem + 4 * BLOCK_SIZE);
             }
 
             static __device__ __forceinline__ thrust::tuple<float&, float&, float&, float&, float&> tie(float& val1, float4& val2)

@@ -45,7 +45,7 @@
 
 #include "common.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     template<typename T, int N> struct TypeVec;
 
@@ -275,6 +275,6 @@ namespace cv { namespace gpu { namespace cuda
         static __device__ __host__ __forceinline__ char8 make(schar a0, schar a1, schar a2, schar a3, schar a4, schar a5, schar a6, schar a7) {return make_char8(a0, a1, a2, a3, a4, a5, a6, a7);}
         static __device__ __host__ __forceinline__ char8 make(const schar* v) {return make_char8(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);}
     };
-}}} // namespace cv { namespace gpu { namespace cuda
+}}} // namespace cv { namespace gpu { namespace cudev
 
 #endif // __OPENCV_GPU_VEC_TRAITS_HPP__

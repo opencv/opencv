@@ -45,7 +45,7 @@
 
 #include "detail/type_traits_detail.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T> struct IsSimpleParameter
     {

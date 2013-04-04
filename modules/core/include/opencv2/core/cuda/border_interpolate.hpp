@@ -47,7 +47,7 @@
 #include "vec_traits.hpp"
 #include "vec_math.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     //////////////////////////////////////////////////////////////
     // BrdConstant
@@ -709,6 +709,6 @@ namespace cv { namespace gpu { namespace cuda
         const int width;
         const D val;
     };
-}}} // namespace cv { namespace gpu { namespace cuda
+}}} // namespace cv { namespace gpu { namespace cudev
 
 #endif // __OPENCV_GPU_BORDER_INTERPOLATE_HPP__

@@ -45,7 +45,7 @@
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/vec_traits.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace video_encoding
     {

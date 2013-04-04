@@ -60,7 +60,7 @@ Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1_GPU()
 
 #else // HAVE_CUDA
 
-namespace btv_l1_cuda
+namespace btv_l1_cudev
 {
     void buildMotionMaps(PtrStepSzf forwardMotionX, PtrStepSzf forwardMotionY,
                          PtrStepSzf backwardMotionX, PtrStepSzf bacwardMotionY,
@@ -138,7 +138,7 @@ namespace
         backwardMap.first.create(forwardMotion.first.size(), CV_32FC1);
         backwardMap.second.create(forwardMotion.first.size(), CV_32FC1);
 
-        btv_l1_cuda::buildMotionMaps(forwardMotion.first, forwardMotion.second,
+        btv_l1_cudev::buildMotionMaps(forwardMotion.first, forwardMotion.second,
                                        backwardMotion.first, backwardMotion.second,
                                        forwardMap.first, forwardMap.second,
                                        backwardMap.first, backwardMap.second);
@@ -149,7 +149,7 @@ namespace
         typedef void (*func_t)(const PtrStepSzb src, PtrStepSzb dst, int scale, cudaStream_t stream);
         static const func_t funcs[] =
         {
-            0, btv_l1_cuda::upscale<1>, 0, btv_l1_cuda::upscale<3>, btv_l1_cuda::upscale<4>
+            0, btv_l1_cudev::upscale<1>, 0, btv_l1_cudev::upscale<3>, btv_l1_cudev::upscale<4>
         };
 
         CV_Assert( src.channels() == 1 || src.channels() == 3 || src.channels() == 4 );
@@ -166,7 +166,7 @@ namespace
     {
         dst.create(src1.size(), src1.type());
 
-        btv_l1_cuda::diffSign(src1.reshape(1), src2.reshape(1), dst.reshape(1), StreamAccessor::getStream(stream));
+        btv_l1_cudev::diffSign(src1.reshape(1), src2.reshape(1), dst.reshape(1), StreamAccessor::getStream(stream));
     }
 
     void calcBtvWeights(int btvKernelSize, double alpha, std::vector<float>& btvWeights)
@@ -184,7 +184,7 @@ namespace
                 btvWeights[ind] = pow(alpha_f, std::abs(m) + std::abs(l));
         }
 
-        btv_l1_cuda::loadBtvWeights(&btvWeights[0], size);
+        btv_l1_cudev::loadBtvWeights(&btvWeights[0], size);
     }
 
     void calcBtvRegularization(const GpuMat& src, GpuMat& dst, int btvKernelSize)
@@ -193,10 +193,10 @@ namespace
         static const func_t funcs[] =
         {
             0,
-            btv_l1_cuda::calcBtvRegularization<1>,
+            btv_l1_cudev::calcBtvRegularization<1>,
             0,
-            btv_l1_cuda::calcBtvRegularization<3>,
-            btv_l1_cuda::calcBtvRegularization<4>
+            btv_l1_cudev::calcBtvRegularization<3>,
+            btv_l1_cudev::calcBtvRegularization<4>
         };
 
         dst.create(src.size(), src.type());

@@ -45,7 +45,7 @@
 
 #include "../datamov_utils.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace vec_distance_detail
     {
@@ -112,6 +112,6 @@ namespace cv { namespace gpu { namespace cuda
             }
         };
     } // namespace vec_distance_detail
-}}} // namespace cv { namespace gpu { namespace cuda
+}}} // namespace cv { namespace gpu { namespace cudev
 
 #endif // __OPENCV_GPU_VEC_DISTANCE_DETAIL_HPP__

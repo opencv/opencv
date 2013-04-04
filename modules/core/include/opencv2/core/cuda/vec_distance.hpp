@@ -47,7 +47,7 @@
 #include "functional.hpp"
 #include "detail/vec_distance_detail.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T> struct L1Dist
     {
@@ -219,6 +219,6 @@ namespace cv { namespace gpu { namespace cuda
 
         U vec1Vals[MAX_LEN / THREAD_DIM];
     };
-}}} // namespace cv { namespace gpu { namespace cuda
+}}} // namespace cv { namespace gpu { namespace cudev
 
 #endif // __OPENCV_GPU_VEC_DISTANCE_HPP__

@@ -47,7 +47,7 @@
 #include "../warp.hpp"
 #include "../warp_shuffle.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace reduce_key_val_detail
     {

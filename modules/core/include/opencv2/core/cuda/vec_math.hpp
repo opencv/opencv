@@ -47,7 +47,7 @@
 #include "vec_traits.hpp"
 #include "functional.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace vec_math_detail
     {
@@ -325,6 +325,6 @@ namespace cv { namespace gpu { namespace cuda
     #undef OPENCV_GPU_IMPLEMENT_VEC_BINOP
     #undef OPENCV_GPU_IMPLEMENT_VEC_OP
     #undef OPENCV_GPU_IMPLEMENT_VEC_INT_OP
-}}} // namespace cv { namespace gpu { namespace cuda
+}}} // namespace cv { namespace gpu { namespace cudev
 
 #endif // __OPENCV_GPU_VECMATH_HPP__

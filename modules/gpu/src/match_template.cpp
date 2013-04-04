@@ -51,7 +51,7 @@ void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&)
 
 #else
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace match_template
     {
@@ -137,7 +137,7 @@ namespace cv { namespace gpu { namespace cuda
     }
 }}}
 
-using namespace ::cv::gpu::cuda::match_template;
+using namespace ::cv::gpu::cudev::match_template;
 
 namespace
 {

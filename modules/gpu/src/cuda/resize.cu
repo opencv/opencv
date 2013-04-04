@@ -51,7 +51,7 @@
 #include "opencv2/core/cuda/filters.hpp"
 #include "opencv2/core/cuda/scan.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -296,7 +296,7 @@ namespace cv { namespace gpu { namespace cuda
         };
 
     } // namespace imgproc
-}}} // namespace cv { namespace gpu { namespace cuda
+}}} // namespace cv { namespace gpu { namespace cudev
 
 
 #endif /* CUDA_DISABLER */

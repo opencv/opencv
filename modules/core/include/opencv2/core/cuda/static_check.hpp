@@ -51,7 +51,7 @@
 
 namespace cv { namespace gpu
 {
-    namespace cuda
+    namespace cudev
     {
         template<bool expr> struct Static {};
 

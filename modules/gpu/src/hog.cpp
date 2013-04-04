@@ -62,7 +62,7 @@ void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat&, std::vec
 
 #else
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace hog
     {
@@ -102,7 +102,7 @@ namespace cv { namespace gpu { namespace cuda
     }
 }}}
 
-using namespace ::cv::gpu::cuda;
+using namespace ::cv::gpu::cudev;
 
 cv::gpu::HOGDescriptor::HOGDescriptor(Size win_size_, Size block_size_, Size block_stride_, Size cell_size_,
                                       int nbins_, double win_sigma_, double threshold_L2hys_, bool gamma_correction_, int nlevels_)

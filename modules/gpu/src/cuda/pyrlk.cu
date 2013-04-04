@@ -50,7 +50,7 @@
 #include "opencv2/core/cuda/reduce.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::cuda;
+using namespace cv::gpu::cudev;
 
 namespace pyrlk
 {

@@ -47,7 +47,7 @@
 #include <thrust/functional.h>
 #include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace cuda { namespace globmotion {
+namespace cv { namespace gpu { namespace cudev { namespace globmotion {
 
 __constant__ float cml[9];
 __constant__ float cmr[9];

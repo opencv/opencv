@@ -56,18 +56,18 @@
     #endif
 #endif
 
-namespace cv { namespace gpu { namespace cuda {
-    static inline void checkError(cudaError_t err, const char* file, const int line, const char* func)
+namespace cv { namespace gpu {
+    static inline void checkCudaError(cudaError_t err, const char* file, const int line, const char* func)
     {
         if (cudaSuccess != err)
             cv::error(cv::Error::GpuApiCallError, cudaGetErrorString(err), func, file, line);
     }
-}}}
+}}
 
 #if defined(__GNUC__)
-    #define cvCudaSafeCall(expr)  cv::gpu::cuda::checkError(expr, __FILE__, __LINE__, __func__)
+    #define cvCudaSafeCall(expr)  cv::gpu::checkCudaError(expr, __FILE__, __LINE__, __func__)
 #else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cvCudaSafeCall(expr)  cv::gpu::cuda::checkError(expr, __FILE__, __LINE__, "")
+    #define cvCudaSafeCall(expr)  cv::gpu::checkCudaError(expr, __FILE__, __LINE__, "")
 #endif
 
 namespace cv { namespace gpu
@@ -94,8 +94,7 @@ namespace cv { namespace gpu
         BORDER_WRAP_GPU
     };
 
-#ifdef __CUDACC__
-    namespace cuda
+    namespace cudev
     {
         __host__ __device__ __forceinline__ int divUp(int total, int grain)
         {
@@ -108,7 +107,6 @@ namespace cv { namespace gpu
             cvCudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
         }
     }
-#endif // __CUDACC__
 }}
 
 

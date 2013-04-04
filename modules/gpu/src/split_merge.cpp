@@ -54,7 +54,7 @@ void cv::gpu::split(const GpuMat& /*src*/, std::vector<GpuMat>& /*dst*/, Stream&
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace split_merge
     {
@@ -67,7 +67,7 @@ namespace
 {
     void merge(const GpuMat* src, size_t n, GpuMat& dst, const cudaStream_t& stream)
     {
-        using namespace ::cv::gpu::cuda::split_merge;
+        using namespace ::cv::gpu::cudev::split_merge;
 
         CV_Assert(src);
         CV_Assert(n > 0);
@@ -112,7 +112,7 @@ namespace
 
     void split(const GpuMat& src, GpuMat* dst, const cudaStream_t& stream)
     {
-        using namespace ::cv::gpu::cuda::split_merge;
+        using namespace ::cv::gpu::cudev::split_merge;
 
         CV_Assert(dst);
 

@@ -58,7 +58,7 @@ void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, GpuMat&, Stream
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace stereobp
     {
@@ -78,7 +78,7 @@ namespace cv { namespace gpu { namespace cuda
     }
 }}}
 
-using namespace ::cv::gpu::cuda::stereobp;
+using namespace ::cv::gpu::cudev::stereobp;
 
 namespace
 {

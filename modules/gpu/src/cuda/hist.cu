@@ -48,7 +48,7 @@
 #include "opencv2/core/cuda/transform.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::cuda;
+using namespace cv::gpu::cudev;
 
 namespace hist
 {
@@ -127,7 +127,7 @@ namespace hist
     };
 }
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     template <> struct TransformFunctorTraits<hist::EqualizeHist> : DefaultTransformFunctorTraits<hist::EqualizeHist>
     {
@@ -146,7 +146,7 @@ namespace hist
 
         const float scale = 255.0f / (src.cols * src.rows);
 
-        cuda::transform(src, dst, EqualizeHist(scale), WithOutMask(), stream);
+        cudev::transform(src, dst, EqualizeHist(scale), WithOutMask(), stream);
     }
 }
 

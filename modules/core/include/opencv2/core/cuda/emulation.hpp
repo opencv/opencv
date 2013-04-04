@@ -45,7 +45,7 @@
 
 #include "warp_reduce.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     struct Emulation
     {
@@ -133,6 +133,6 @@ namespace cv { namespace gpu { namespace cuda
             }
         };
     };
-}}} // namespace cv { namespace gpu { namespace cuda
+}}} // namespace cv { namespace gpu { namespace cudev
 
 #endif /* OPENCV_GPU_EMULATION_HPP_ */

@@ -46,7 +46,7 @@
 #include "opencv2/core/cuda/border_interpolate.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::cuda;
+using namespace cv::gpu::cudev;
 
 namespace column_filter
 {

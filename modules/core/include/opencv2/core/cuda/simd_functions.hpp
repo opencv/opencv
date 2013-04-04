@@ -123,7 +123,7 @@
   vmin4(a,b)      per-byte unsigned minimum: min(a, b)
 */
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     // 2
 

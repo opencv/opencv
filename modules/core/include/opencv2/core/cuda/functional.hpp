@@ -49,7 +49,7 @@
 #include "type_traits.hpp"
 #include "device_functions.h"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     // Function Objects
     template<typename Argument, typename Result> struct unary_function : public std::unary_function<Argument, Result> {};
@@ -786,6 +786,6 @@ namespace cv { namespace gpu { namespace cuda
 
 #define OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(type) \
     template <> struct TransformFunctorTraits< type > : DefaultTransformFunctorTraits< type >
-}}} // namespace cv { namespace gpu { namespace cuda
+}}} // namespace cv { namespace gpu { namespace cudev
 
 #endif // __OPENCV_GPU_FUNCTIONAL_HPP__

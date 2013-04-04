@@ -45,7 +45,7 @@
 
 #include "common.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     template<typename _Tp> __device__ __forceinline__ _Tp saturate_cast(uchar v) { return _Tp(v); }
     template<typename _Tp> __device__ __forceinline__ _Tp saturate_cast(schar v) { return _Tp(v); }

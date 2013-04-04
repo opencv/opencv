@@ -204,7 +204,7 @@ __global__ void kernelDownsampleX2(T *d_src,
     }
 }
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace pyramid
     {
@@ -279,7 +279,7 @@ __global__ void kernelInterpolateFrom1(T *d_srcTop,
         d_dst_line[j] = outPix;
     }
 }
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace pyramid
     {

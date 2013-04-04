@@ -51,7 +51,7 @@
 #include "opencv2/core/cuda/limits.hpp"
 #include "opencv2/core/cuda/dynamic_smem.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace hough
     {
@@ -1424,7 +1424,7 @@ namespace cv { namespace gpu { namespace cuda
             cvCudaSafeCall( cudaDeviceSynchronize() );
 
             thrust::device_ptr<int> sizesPtr(sizes);
-            thrust::transform(sizesPtr, sizesPtr + levels + 1, sizesPtr, cuda::bind2nd(cuda::minimum<int>(), maxSize));
+            thrust::transform(sizesPtr, sizesPtr + levels + 1, sizesPtr, cudev::bind2nd(cudev::minimum<int>(), maxSize));
         }
 
         void GHT_Guil_Full_buildTemplFeatureList_gpu(const unsigned int* coordList, const float* thetaList, int pointsCount,

@@ -49,7 +49,7 @@
 #include "opencv2/core/cuda/color.hpp"
 #include "opencv2/core/cuda/saturate_cast.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T> struct Bayer2BGR;
 

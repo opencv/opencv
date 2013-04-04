@@ -54,7 +54,7 @@ void cv::gpu::DisparityBilateralFilter::operator()(const GpuMat&, const GpuMat&,
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace disp_bilateral_filter
     {
@@ -65,7 +65,7 @@ namespace cv { namespace gpu { namespace cuda
     }
 }}}
 
-using namespace ::cv::gpu::cuda::disp_bilateral_filter;
+using namespace ::cv::gpu::cudev::disp_bilateral_filter;
 
 namespace
 {

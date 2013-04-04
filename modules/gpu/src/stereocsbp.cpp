@@ -57,7 +57,7 @@ void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat&, const GpuMat&, Gp
 #else /* !defined (HAVE_CUDA) */
 #include "opencv2/core/utility.hpp"
 
-namespace cv { namespace gpu { namespace cuda
+namespace cv { namespace gpu { namespace cudev
 {
     namespace stereocsbp
     {
@@ -89,7 +89,7 @@ namespace cv { namespace gpu { namespace cuda
     }
 }}}
 
-using namespace ::cv::gpu::cuda::stereocsbp;
+using namespace ::cv::gpu::cudev::stereocsbp;
 
 namespace
 {
