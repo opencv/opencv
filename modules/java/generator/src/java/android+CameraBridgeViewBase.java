@@ -54,6 +54,9 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
     public CameraBridgeViewBase(Context context, int cameraId) {
         super(context);
         mCameraIndex = cameraId;
+        getHolder().addCallback(this);
+        mMaxWidth = MAX_UNSPECIFIED;
+        mMaxHeight = MAX_UNSPECIFIED;
     }
 
     public CameraBridgeViewBase(Context context, AttributeSet attrs) {
