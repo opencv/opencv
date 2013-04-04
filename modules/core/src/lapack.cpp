@@ -600,8 +600,8 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
 
                     for( ; k < m; k++ )
                     {
-                        _Tp t0 = c*Ai[k] + s*Aj[k];
-                        _Tp t1 = -s*Ai[k] + c*Aj[k];
+                        _Tp t0 = c*Ai[k] + double(s)*Aj[k];
+                        _Tp t1 = double(-s)*Ai[k] + c*Aj[k];
                         Ai[k] = t0; Aj[k] = t1;
                     }
                 }
@@ -610,8 +610,8 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
                     a = b = 0;
                     for( k = 0; k < m; k++ )
                     {
-                        _Tp t0 = c*Ai[k] + s*Aj[k];
-                        _Tp t1 = -s*Ai[k] + c*Aj[k];
+                        _Tp t0 = c*Ai[k] + double(s)*Aj[k];
+                        _Tp t1 = double(-s)*Ai[k] + c*Aj[k];
                         Ai[k] = t0; Aj[k] = t1;
 
                         a += (double)t0*t0; b += (double)t1*t1;
