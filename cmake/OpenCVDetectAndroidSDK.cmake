@@ -278,6 +278,7 @@ macro(add_android_project target path)
         if (NATIVE_APP_GLUE)
           include_directories(${ANDROID_NDK}/sources/android/native_app_glue)
           list(APPEND android_proj_jni_files ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
+          ocv_warnings_disable(CMAKE_C_FLAGS -Wstrict-prototypes -Wunused-parameter -Wmissing-prototypes)
           set(android_proj_NATIVE_DEPS ${android_proj_NATIVE_DEPS} android)
         endif()
 
