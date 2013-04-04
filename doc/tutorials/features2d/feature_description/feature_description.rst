@@ -69,7 +69,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      extractor.compute( img_2, keypoints_2, descriptors_2 );
 
      //-- Step 3: Matching descriptor vectors with a brute force matcher
-     BruteForceMatcher< L2<float> > matcher;
+     BFMatcher matcher(NORM_L2);
      std::vector< DMatch > matches;
      matcher.match( descriptors_1, descriptors_2, matches );
 
