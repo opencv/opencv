@@ -1740,7 +1740,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::resize(src, dst, inv_scale_x, inv_scale_y, interpolation))
+    if (tegra::resize(src, dst, (float)inv_scale_x, (float)inv_scale_y, interpolation))
         return;
 #endif
 
