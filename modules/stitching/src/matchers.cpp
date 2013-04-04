@@ -357,7 +357,6 @@ void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     {
         gray_image = image;
     }
-    cvtColor(image, gray_image, CV_BGR2GRAY);
     if (surf == 0)
     {
         detector_->detect(gray_image, features.keypoints);
