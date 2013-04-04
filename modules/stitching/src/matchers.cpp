@@ -347,7 +347,15 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
 void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
 {
     Mat gray_image;
-    CV_Assert(image.type() == CV_8UC3);
+    CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC1));
+    if(image.type() == CV_8UC3)
+    {
+        cvtColor(image, gray_image, CV_BGR2GRAY);
+    }
+    else
+    {
+        gray_image = image;
+    }
     cvtColor(image, gray_image, CV_BGR2GRAY);
     if (surf.empty())
     {
