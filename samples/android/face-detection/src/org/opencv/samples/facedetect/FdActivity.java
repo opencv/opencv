@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
@@ -15,8 +16,7 @@ import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
-import org.opencv.imgproc.Imgproc;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 import org.opencv.objdetect.CascadeClassifier;
 
 import android.app.Activity;
@@ -25,10 +25,9 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.Window;
 import android.view.WindowManager;
 
-public class FdActivity extends Activity implements CvCameraViewListener {
+public class FdActivity extends Activity implements CvCameraViewListener2 {
 
     private static final String    TAG                 = "OCVSample::Activity";
     private static final Scalar    FACE_RECT_COLOR     = new Scalar(0, 255, 0, 255);
@@ -120,7 +119,6 @@ public class FdActivity extends Activity implements CvCameraViewListener {
     public void onCreate(Bundle savedInstanceState) {
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.face_detect_surface_view);
@@ -132,9 +130,9 @@ public class FdActivity extends Activity implements CvCameraViewListener {
     @Override
     public void onPause()
     {
+        super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
-        super.onPause();
     }
 
     @Override
@@ -159,10 +157,10 @@ public class FdActivity extends Activity implements CvCameraViewListener {
         mRgba.release();
     }
 
-    public Mat onCameraFrame(Mat inputFrame) {
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
 
-        inputFrame.copyTo(mRgba);
-        Imgproc.cvtColor(inputFrame, mGray, Imgproc.COLOR_RGBA2GRAY);
+        mRgba = inputFrame.rgba();
+        mGray = inputFrame.gray();
 
         if (mAbsoluteFaceSize == 0) {
             int height = mGray.rows();

@@ -110,7 +110,7 @@ void  RBaseStream::readBlock()
 }
 
 
-bool  RBaseStream::open( const string& filename )
+bool  RBaseStream::open( const String& filename )
 {
     close();
     allocate();
@@ -388,7 +388,7 @@ void  WBaseStream::writeBlock()
 }
 
 
-bool  WBaseStream::open( const string& filename )
+bool  WBaseStream::open( const String& filename )
 {
     close();
     allocate();
@@ -403,7 +403,7 @@ bool  WBaseStream::open( const string& filename )
     return m_file != 0;
 }
 
-bool  WBaseStream::open( vector<uchar>& buf )
+bool  WBaseStream::open( std::vector<uchar>& buf )
 {
     close();
     allocate();

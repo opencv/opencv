@@ -22,13 +22,13 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
@@ -419,7 +418,7 @@ cv::gpu::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int edg
 
     // pre-compute the end of a row in a circular patch
     int half_patch_size = patchSize_ / 2;
-    vector<int> u_max(half_patch_size + 2);
+    std::vector<int> u_max(half_patch_size + 2);
     for (int v = 0; v <= half_patch_size * std::sqrt(2.f) / 2 + 1; ++v)
         u_max[v] = cvRound(std::sqrt(static_cast<float>(half_patch_size * half_patch_size - v * v)));
 

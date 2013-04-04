@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
 Morphology operations.
 
@@ -21,9 +23,17 @@ if __name__ == '__main__':
     from itertools import cycle
     from common import draw_str
 
-    try: fn = sys.argv[1]
-    except: fn = '../cpp/baboon.jpg'
+    try:
+        fn = sys.argv[1]
+    except:
+        fn = '../cpp/baboon.jpg'
+    
     img = cv2.imread(fn)
+    
+    if img is None:
+        print 'Failed to load image file:', fn
+        sys.exit(1)
+    
     cv2.imshow('original', img)
 
     modes = cycle(['erode/dilate', 'open/close', 'blackhat/tophat', 'gradient'])

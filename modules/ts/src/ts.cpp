@@ -47,7 +47,12 @@
 #include <time.h>
 #if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
 #include <io.h>
+
 #include <windows.h>
+#undef small
+#undef min
+#undef max
+#undef abs
 
 #ifdef _MSC_VER
 #include <eh.h>
@@ -316,9 +321,7 @@ int BaseTest::update_progress( int progress, int test_case_idx, int count, doubl
 
 BadArgTest::BadArgTest()
 {
-    progress        = -1;
     test_case_idx   = -1;
-    freq            = cv::getTickFrequency();
     // oldErrorCbk     = 0;
     // oldErrorCbkData = 0;
 }
@@ -329,20 +332,6 @@ BadArgTest::~BadArgTest(void)
 
 int BadArgTest::run_test_case( int expected_code, const string& _descr )
 {
-    double new_t = (double)cv::getTickCount(), dt;
-    if( test_case_idx < 0 )
-    {
-        test_case_idx = 0;
-        progress      = 0;
-        dt            = 0;
-    }
-    else
-    {
-        dt = (new_t - t)/(freq*1000);
-        t  = new_t;
-    }
-    progress = update_progress(progress, test_case_idx, 0, dt);
-
     int errcount = 0;
     bool thrown = false;
     const char* descr = _descr.c_str() ? _descr.c_str() : "";
@@ -582,6 +571,79 @@ void TS::printf( int streams, const char* fmt, ... )
 TS ts;
 TS* TS::ptr() { return &ts; }
 
+void fillGradient(Mat& img, int delta)
+{
+    const int ch = img.channels();
+    CV_Assert(!img.empty() && img.depth() == CV_8U && ch <= 4);
+
+    int n = 255 / delta;
+    int r, c, i;
+    for(r=0; r<img.rows; r++)
+    {
+        int kR = r % (2*n);
+        int valR = (kR<=n) ? delta*kR : delta*(2*n-kR);
+        for(c=0; c<img.cols; c++)
+        {
+            int kC = c % (2*n);
+            int valC = (kC<=n) ? delta*kC : delta*(2*n-kC);
+            uchar vals[] = {uchar(valR), uchar(valC), uchar(200*r/img.rows), uchar(255)};
+            uchar *p = img.ptr(r, c);
+            for(i=0; i<ch; i++) p[i] = vals[i];
+        }
+    }
 }
+
+void smoothBorder(Mat& img, const Scalar& color, int delta)
+{
+    const int ch = img.channels();
+    CV_Assert(!img.empty() && img.depth() == CV_8U && ch <= 4);
+
+    Scalar s;
+    uchar *p = NULL;
+    int n = 100/delta;
+    int nR = std::min(n, (img.rows+1)/2), nC = std::min(n, (img.cols+1)/2);
+
+    int r, c, i;
+    for(r=0; r<nR; r++)
+    {
+        double k1 = r*delta/100., k2 = 1-k1;
+        for(c=0; c<img.cols; c++)
+        {
+            p = img.ptr(r, c);
+            for(i=0; i<ch; i++) s[i] = p[i];
+            s = s * k1 + color * k2;
+            for(i=0; i<ch; i++) p[i] = uchar(s[i]);
+        }
+        for(c=0; c<img.cols; c++)
+        {
+            p = img.ptr(img.rows-r-1, c);
+            for(i=0; i<ch; i++) s[i] = p[i];
+            s = s * k1 + color * k2;
+            for(i=0; i<ch; i++) p[i] = uchar(s[i]);
+        }
+    }
+
+    for(r=0; r<img.rows; r++)
+    {
+        for(c=0; c<nC; c++)
+        {
+            double k1 = c*delta/100., k2 = 1-k1;
+            p = img.ptr(r, c);
+            for(i=0; i<ch; i++) s[i] = p[i];
+            s = s * k1 + color * k2;
+            for(i=0; i<ch; i++) p[i] = uchar(s[i]);
+        }
+        for(c=0; c<n; c++)
+        {
+            double k1 = c*delta/100., k2 = 1-k1;
+            p = img.ptr(r, img.cols-c-1);
+            for(i=0; i<ch; i++) s[i] = p[i];
+            s = s * k1 + color * k2;
+            for(i=0; i<ch; i++) p[i] = uchar(s[i]);
+        }
+    }
+}
+
+} //namespace cvtest
 
 /* End of file. */

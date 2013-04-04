@@ -41,138 +41,39 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/gpumat.hpp"
-#include <iostream>
 
-#ifdef HAVE_CUDA
-    #include <cuda.h>
-    #include <cuda_runtime_api.h>
-    #include <npp.h>
-
-    #define CUDART_MINIMUM_REQUIRED_VERSION 4010
-    #define NPP_MINIMUM_REQUIRED_VERSION 4100
-
-    #if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
-        #error "Insufficient Cuda Runtime library version, please update it."
-    #endif
-
-    #if (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
-        #error "Insufficient NPP version, please update it."
-    #endif
-#endif
-
-using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-//////////////////////////////// Initialization & Info ////////////////////////
+#ifndef HAVE_CUDA
+
+#define throw_nogpu CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
+
+#else // HAVE_CUDA
 
 namespace
 {
-    // Compares value to set using the given comparator. Returns true if
-    // there is at least one element x in the set satisfying to: x cmp value
-    // predicate.
-    template <typename Comparer>
-    bool compareToSet(const std::string& set_as_str, int value, Comparer cmp)
+#if defined(__GNUC__)
+    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__, __func__)
+#else /* defined(__CUDACC__) || defined(__MSVC__) */
+    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__)
+#endif
+
+    inline void ___nppSafeCall(int err, const char *file, const int line, const char *func = "")
     {
-        if (set_as_str.find_first_not_of(" ") == string::npos)
-            return false;
-
-        std::stringstream stream(set_as_str);
-        int cur_value;
-
-        while (!stream.eof())
+        if (err < 0)
         {
-            stream >> cur_value;
-            if (cmp(cur_value, value))
-                return true;
+            String msg = cv::format("NPP API Call Error: %d", err);
+            cv::gpu::error(msg.c_str(), file, line, func);
         }
-
-        return false;
     }
 }
 
-bool cv::gpu::TargetArchs::builtWith(cv::gpu::FeatureSet feature_set)
-{
-#if defined (HAVE_CUDA)
-    return ::compareToSet(CUDA_ARCH_FEATURES, feature_set, std::greater_equal<int>());
-#else
-    (void)feature_set;
-    return false;
-#endif
-}
+#endif // HAVE_CUDA
 
-bool cv::gpu::TargetArchs::has(int major, int minor)
-{
-    return hasPtx(major, minor) || hasBin(major, minor);
-}
+//////////////////////////////// Initialization & Info ////////////////////////
 
-bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
-{
-#if defined (HAVE_CUDA)
-    return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor, std::equal_to<int>());
-#else
-    (void)major;
-    (void)minor;
-    return false;
-#endif
-}
-
-bool cv::gpu::TargetArchs::hasBin(int major, int minor)
-{
-#if defined (HAVE_CUDA)
-    return ::compareToSet(CUDA_ARCH_BIN, major * 10 + minor, std::equal_to<int>());
-#else
-    (void)major;
-    (void)minor;
-    return false;
-#endif
-}
-
-bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
-{
-#if defined (HAVE_CUDA)
-    return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor,
-                     std::less_equal<int>());
-#else
-    (void)major;
-    (void)minor;
-    return false;
-#endif
-}
-
-bool cv::gpu::TargetArchs::hasEqualOrGreater(int major, int minor)
-{
-    return hasEqualOrGreaterPtx(major, minor) ||
-           hasEqualOrGreaterBin(major, minor);
-}
-
-bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
-{
-#if defined (HAVE_CUDA)
-    return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor, std::greater_equal<int>());
-#else
-    (void)major;
-    (void)minor;
-    return false;
-#endif
-}
-
-bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
-{
-#if defined (HAVE_CUDA)
-    return ::compareToSet(CUDA_ARCH_BIN, major * 10 + minor,
-                     std::greater_equal<int>());
-#else
-    (void)major;
-    (void)minor;
-    return false;
-#endif
-}
-
-#if !defined (HAVE_CUDA)
-
-#define throw_nogpu CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
+#ifndef HAVE_CUDA
 
 int cv::gpu::getCudaEnabledDeviceCount() { return 0; }
 
@@ -181,49 +82,29 @@ int cv::gpu::getDevice() { throw_nogpu; return 0; }
 
 void cv::gpu::resetDevice() { throw_nogpu; }
 
+bool cv::gpu::deviceSupports(FeatureSet) { throw_nogpu; return false; }
+
+bool cv::gpu::TargetArchs::builtWith(FeatureSet) { throw_nogpu; return false; }
+bool cv::gpu::TargetArchs::has(int, int) { throw_nogpu; return false; }
+bool cv::gpu::TargetArchs::hasPtx(int, int) { throw_nogpu; return false; }
+bool cv::gpu::TargetArchs::hasBin(int, int) { throw_nogpu; return false; }
+bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int, int) { throw_nogpu; return false; }
+bool cv::gpu::TargetArchs::hasEqualOrGreater(int, int) { throw_nogpu; return false; }
+bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int, int) { throw_nogpu; return false; }
+bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int, int) { throw_nogpu; return false; }
+
+size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const { throw_nogpu; return 0; }
+void cv::gpu::DeviceInfo::queryMemory(size_t&, size_t&) const { throw_nogpu; }
 size_t cv::gpu::DeviceInfo::freeMemory() const { throw_nogpu; return 0; }
 size_t cv::gpu::DeviceInfo::totalMemory() const { throw_nogpu; return 0; }
-
-bool cv::gpu::DeviceInfo::supports(cv::gpu::FeatureSet) const { throw_nogpu; return false; }
-
+bool cv::gpu::DeviceInfo::supports(FeatureSet) const { throw_nogpu; return false; }
 bool cv::gpu::DeviceInfo::isCompatible() const { throw_nogpu; return false; }
-
 void cv::gpu::DeviceInfo::query() { throw_nogpu; }
-void cv::gpu::DeviceInfo::queryMemory(size_t&, size_t&) const { throw_nogpu; }
 
 void cv::gpu::printCudaDeviceInfo(int) { throw_nogpu; }
 void cv::gpu::printShortCudaDeviceInfo(int) { throw_nogpu; }
 
-#undef throw_nogpu
-
 #else // HAVE_CUDA
-
-namespace
-{
-#if defined(__GNUC__)
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
-    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
-    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__)
-#endif
-
-    inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
-    {
-        if (cudaSuccess != err)
-            cv::gpu::error(cudaGetErrorString(err), file, line, func);
-    }
-
-    inline void ___nppSafeCall(int err, const char *file, const int line, const char *func = "")
-    {
-        if (err < 0)
-        {
-            std::ostringstream msg;
-            msg << "NPP API Call Error: " << err;
-            cv::gpu::error(msg.str().c_str(), file, line, func);
-        }
-    }
-}
 
 int cv::gpu::getCudaEnabledDeviceCount()
 {
@@ -236,7 +117,7 @@ int cv::gpu::getCudaEnabledDeviceCount()
     if (error == cudaErrorNoDevice)
         return 0;
 
-    cudaSafeCall(error);
+    cudaSafeCall( error );
     return count;
 }
 
@@ -257,21 +138,237 @@ void cv::gpu::resetDevice()
     cudaSafeCall( cudaDeviceReset() );
 }
 
+namespace
+{
+    class CudaArch
+    {
+    public:
+        CudaArch();
+
+        bool builtWith(FeatureSet feature_set) const;
+        bool hasPtx(int major, int minor) const;
+        bool hasBin(int major, int minor) const;
+        bool hasEqualOrLessPtx(int major, int minor) const;
+        bool hasEqualOrGreaterPtx(int major, int minor) const;
+        bool hasEqualOrGreaterBin(int major, int minor) const;
+
+    private:
+        static void fromStr(const String& set_as_str, std::vector<int>& arr);
+
+        std::vector<int> bin;
+        std::vector<int> ptx;
+        std::vector<int> features;
+    };
+
+    const CudaArch cudaArch;
+
+    CudaArch::CudaArch()
+    {
+        fromStr(CUDA_ARCH_BIN, bin);
+        fromStr(CUDA_ARCH_PTX, ptx);
+        fromStr(CUDA_ARCH_FEATURES, features);
+    }
+
+    bool CudaArch::builtWith(FeatureSet feature_set) const
+    {
+        return !features.empty() && (features.back() >= feature_set);
+    }
+
+    bool CudaArch::hasPtx(int major, int minor) const
+    {
+        return std::find(ptx.begin(), ptx.end(), major * 10 + minor) != ptx.end();
+    }
+
+    bool CudaArch::hasBin(int major, int minor) const
+    {
+        return std::find(bin.begin(), bin.end(), major * 10 + minor) != bin.end();
+    }
+
+    bool CudaArch::hasEqualOrLessPtx(int major, int minor) const
+    {
+        return !ptx.empty() && (ptx.front() <= major * 10 + minor);
+    }
+
+    bool CudaArch::hasEqualOrGreaterPtx(int major, int minor) const
+    {
+        return !ptx.empty() && (ptx.back() >= major * 10 + minor);
+    }
+
+    bool CudaArch::hasEqualOrGreaterBin(int major, int minor) const
+    {
+        return !bin.empty() && (bin.back() >= major * 10 + minor);
+    }
+
+    void CudaArch::fromStr(const String& set_as_str, std::vector<int>& arr)
+    {
+        arr.clear();
+
+        size_t pos = 0;
+        while (pos < set_as_str.size())
+        {
+            if (isspace(set_as_str[pos]))
+            {
+                ++pos;
+            }
+            else
+            {
+                int cur_value;
+                int chars_read;
+                int args_read = sscanf(set_as_str.c_str() + pos, "%d%n", &cur_value, &chars_read);
+                CV_Assert(args_read == 1);
+
+                arr.push_back(cur_value);
+                pos += chars_read;
+            }
+        }
+
+        std::sort(arr.begin(), arr.end());
+    }
+}
+
+bool cv::gpu::TargetArchs::builtWith(cv::gpu::FeatureSet feature_set)
+{
+    return cudaArch.builtWith(feature_set);
+}
+
+bool cv::gpu::TargetArchs::has(int major, int minor)
+{
+    return hasPtx(major, minor) || hasBin(major, minor);
+}
+
+bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
+{
+    return cudaArch.hasPtx(major, minor);
+}
+
+bool cv::gpu::TargetArchs::hasBin(int major, int minor)
+{
+    return cudaArch.hasBin(major, minor);
+}
+
+bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
+{
+    return cudaArch.hasEqualOrLessPtx(major, minor);
+}
+
+bool cv::gpu::TargetArchs::hasEqualOrGreater(int major, int minor)
+{
+    return hasEqualOrGreaterPtx(major, minor) || hasEqualOrGreaterBin(major, minor);
+}
+
+bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
+{
+    return cudaArch.hasEqualOrGreaterPtx(major, minor);
+}
+
+bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
+{
+    return cudaArch.hasEqualOrGreaterBin(major, minor);
+}
+
+bool cv::gpu::deviceSupports(FeatureSet feature_set)
+{
+    static int versions[] =
+    {
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+    };
+    static const int cache_size = static_cast<int>(sizeof(versions) / sizeof(versions[0]));
+
+    const int devId = getDevice();
+
+    int version;
+
+    if (devId < cache_size && versions[devId] >= 0)
+        version = versions[devId];
+    else
+    {
+        DeviceInfo dev(devId);
+        version = dev.majorVersion() * 10 + dev.minorVersion();
+        if (devId < cache_size)
+            versions[devId] = version;
+    }
+
+    return TargetArchs::builtWith(feature_set) && (version >= feature_set);
+}
+
+namespace
+{
+    class DeviceProps
+    {
+    public:
+        DeviceProps();
+        ~DeviceProps();
+
+        cudaDeviceProp* get(int devID);
+
+    private:
+        std::vector<cudaDeviceProp*> props_;
+    };
+
+    DeviceProps::DeviceProps()
+    {
+        props_.resize(10, 0);
+    }
+
+    DeviceProps::~DeviceProps()
+    {
+        for (size_t i = 0; i < props_.size(); ++i)
+        {
+            if (props_[i])
+                delete props_[i];
+        }
+        props_.clear();
+    }
+
+    cudaDeviceProp* DeviceProps::get(int devID)
+    {
+        if (devID >= (int) props_.size())
+            props_.resize(devID + 5, 0);
+
+        if (!props_[devID])
+        {
+            props_[devID] = new cudaDeviceProp;
+            cudaSafeCall( cudaGetDeviceProperties(props_[devID], devID) );
+        }
+
+        return props_[devID];
+    }
+
+    DeviceProps deviceProps;
+}
+
+size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const
+{
+    return deviceProps.get(device_id_)->sharedMemPerBlock;
+}
+
+void cv::gpu::DeviceInfo::queryMemory(size_t& _totalMemory, size_t& _freeMemory) const
+{
+    int prevDeviceID = getDevice();
+    if (prevDeviceID != device_id_)
+        setDevice(device_id_);
+
+    cudaSafeCall( cudaMemGetInfo(&_freeMemory, &_totalMemory) );
+
+    if (prevDeviceID != device_id_)
+        setDevice(prevDeviceID);
+}
+
 size_t cv::gpu::DeviceInfo::freeMemory() const
 {
-    size_t free_memory, total_memory;
-    queryMemory(free_memory, total_memory);
-    return free_memory;
+    size_t _totalMemory, _freeMemory;
+    queryMemory(_totalMemory, _freeMemory);
+    return _freeMemory;
 }
 
 size_t cv::gpu::DeviceInfo::totalMemory() const
 {
-    size_t free_memory, total_memory;
-    queryMemory(free_memory, total_memory);
-    return total_memory;
+    size_t _totalMemory, _freeMemory;
+    queryMemory(_totalMemory, _freeMemory);
+    return _totalMemory;
 }
 
-bool cv::gpu::DeviceInfo::supports(cv::gpu::FeatureSet feature_set) const
+bool cv::gpu::DeviceInfo::supports(FeatureSet feature_set) const
 {
     int version = majorVersion() * 10 + minorVersion();
     return version >= feature_set;
@@ -293,41 +390,16 @@ bool cv::gpu::DeviceInfo::isCompatible() const
 
 void cv::gpu::DeviceInfo::query()
 {
-    cudaDeviceProp prop;
-    cudaSafeCall(cudaGetDeviceProperties(&prop, device_id_));
-    name_ = prop.name;
-    multi_processor_count_ = prop.multiProcessorCount;
-    majorVersion_ = prop.major;
-    minorVersion_ = prop.minor;
-    sharedMemPerBlock_ = prop.sharedMemPerBlock;
-}
+    const cudaDeviceProp* prop = deviceProps.get(device_id_);
 
-void cv::gpu::DeviceInfo::queryMemory(size_t& free_memory, size_t& total_memory) const
-{
-    int prev_device_id = getDevice();
-    if (prev_device_id != device_id_)
-        setDevice(device_id_);
-
-    cudaSafeCall(cudaMemGetInfo(&free_memory, &total_memory));
-
-    if (prev_device_id != device_id_)
-        setDevice(prev_device_id);
+    name_ = prop->name;
+    multi_processor_count_ = prop->multiProcessorCount;
+    majorVersion_ = prop->major;
+    minorVersion_ = prop->minor;
 }
 
 namespace
 {
-    template <class T> void getCudaAttribute(T *attribute, CUdevice_attribute device_attribute, int device)
-    {
-        *attribute = T();
-        //CUresult error = CUDA_SUCCESS;// = cuDeviceGetAttribute( attribute, device_attribute, device ); why link erros under ubuntu??
-        CUresult error = cuDeviceGetAttribute( attribute, device_attribute, device );
-        if( CUDA_SUCCESS == error )
-            return;
-
-        printf("Driver API error = %04d\n", error);
-        cv::gpu::error("driver API error", __FILE__, __LINE__);
-    }
-
     int convertSMVer2Cores(int major, int minor)
     {
         // Defines for GPU Architecture types (using the SM version to determine the # of cores per SM
@@ -336,7 +408,7 @@ namespace
             int Cores;
         } SMtoCores;
 
-        SMtoCores gpuArchCoresPerSM[] =  { { 0x10,  8 }, { 0x11,  8 }, { 0x12,  8 }, { 0x13,  8 }, { 0x20, 32 }, { 0x21, 48 }, {0x30, 192}, { -1, -1 }  };
+        SMtoCores gpuArchCoresPerSM[] =  { { 0x10,  8 }, { 0x11,  8 }, { 0x12,  8 }, { 0x13,  8 }, { 0x20, 32 }, { 0x21, 48 }, {0x30, 192}, {0x35, 192}, { -1, -1 }  };
 
         int index = 0;
         while (gpuArchCoresPerSM[index].SM != -1)
@@ -345,7 +417,7 @@ namespace
                 return gpuArchCoresPerSM[index].Cores;
             index++;
         }
-        printf("MapSMtoCores undefined SMversion %d.%d!\n", major, minor);
+
         return -1;
     }
 }
@@ -383,21 +455,12 @@ void cv::gpu::printCudaDeviceInfo(int device)
         printf("  CUDA Driver Version / Runtime Version          %d.%d / %d.%d\n", driverVersion/1000, driverVersion%100, runtimeVersion/1000, runtimeVersion%100);
         printf("  CUDA Capability Major/Minor version number:    %d.%d\n", prop.major, prop.minor);
         printf("  Total amount of global memory:                 %.0f MBytes (%llu bytes)\n", (float)prop.totalGlobalMem/1048576.0f, (unsigned long long) prop.totalGlobalMem);
-        printf("  (%2d) Multiprocessors x (%2d) CUDA Cores/MP:     %d CUDA Cores\n",
-            prop.multiProcessorCount, convertSMVer2Cores(prop.major, prop.minor),
-            convertSMVer2Cores(prop.major, prop.minor) * prop.multiProcessorCount);
+
+        int cores = convertSMVer2Cores(prop.major, prop.minor);
+        if (cores > 0)
+            printf("  (%2d) Multiprocessors x (%2d) CUDA Cores/MP:     %d CUDA Cores\n", prop.multiProcessorCount, cores, cores * prop.multiProcessorCount);
+
         printf("  GPU Clock Speed:                               %.2f GHz\n", prop.clockRate * 1e-6f);
-
-        // This is not available in the CUDA Runtime API, so we make the necessary calls the driver API to support this for output
-        int memoryClock, memBusWidth, L2CacheSize;
-        getCudaAttribute<int>( &memoryClock, CU_DEVICE_ATTRIBUTE_MEMORY_CLOCK_RATE, dev );
-        getCudaAttribute<int>( &memBusWidth, CU_DEVICE_ATTRIBUTE_GLOBAL_MEMORY_BUS_WIDTH, dev );
-        getCudaAttribute<int>( &L2CacheSize, CU_DEVICE_ATTRIBUTE_L2_CACHE_SIZE, dev );
-
-        printf("  Memory Clock rate:                             %.2f Mhz\n", memoryClock * 1e-3f);
-        printf("  Memory Bus Width:                              %d-bit\n", memBusWidth);
-        if (L2CacheSize)
-            printf("  L2 Cache Size:                                 %d bytes\n", L2CacheSize);
 
         printf("  Max Texture Dimension Size (x,y,z)             1D=(%d), 2D=(%d,%d), 3D=(%d,%d,%d)\n",
             prop.maxTexture1D, prop.maxTexture2D[0], prop.maxTexture2D[1],
@@ -458,7 +521,12 @@ void cv::gpu::printShortCudaDeviceInfo(int device)
 
         const char *arch_str = prop.major < 2 ? " (not Fermi)" : "";
         printf("Device %d:  \"%s\"  %.0fMb", dev, prop.name, (float)prop.totalGlobalMem/1048576.0f);
-        printf(", sm_%d%d%s, %d cores", prop.major, prop.minor, arch_str, convertSMVer2Cores(prop.major, prop.minor) * prop.multiProcessorCount);
+        printf(", sm_%d%d%s", prop.major, prop.minor, arch_str);
+
+        int cores = convertSMVer2Cores(prop.major, prop.minor);
+        if (cores > 0)
+            printf(", %d cores", cores * prop.multiProcessorCount);
+
         printf(", Driver/Runtime ver.%d.%d/%d.%d\n", driverVersion/1000, driverVersion%100, runtimeVersion/1000, runtimeVersion%100);
     }
     fflush(stdout);
@@ -476,7 +544,7 @@ cv::gpu::GpuMat::GpuMat(const GpuMat& m)
 }
 
 cv::gpu::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t step_) :
-    flags(Mat::MAGIC_VAL + (type_ & TYPE_MASK)), rows(rows_), cols(cols_),
+    flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(rows_), cols(cols_),
     step(step_), data((uchar*)data_), refcount(0),
     datastart((uchar*)data_), dataend((uchar*)data_)
 {
@@ -500,7 +568,7 @@ cv::gpu::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t ste
 }
 
 cv::gpu::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
-    flags(Mat::MAGIC_VAL + (type_ & TYPE_MASK)), rows(size_.height), cols(size_.width),
+    flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(size_.height), cols(size_.width),
     step(step_), data((uchar*)data_), refcount(0),
     datastart((uchar*)data_), dataend((uchar*)data_)
 {
@@ -704,6 +772,50 @@ cv::Mat::Mat(const GpuMat& m) : flags(0), dims(0), rows(0), cols(0), data(0), re
     m.download(*this);
 }
 
+void cv::gpu::createContinuous(int rows, int cols, int type, GpuMat& m)
+{
+    int area = rows * cols;
+    if (m.empty() || m.type() != type || !m.isContinuous() || m.size().area() < area)
+        m.create(1, area, type);
+
+    m.cols = cols;
+    m.rows = rows;
+    m.step = m.elemSize() * cols;
+    m.flags |= Mat::CONTINUOUS_FLAG;
+}
+
+void cv::gpu::ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
+{
+    if (m.empty() || m.type() != type || m.data != m.datastart)
+        m.create(rows, cols, type);
+    else
+    {
+        const size_t esz = m.elemSize();
+        const ptrdiff_t delta2 = m.dataend - m.datastart;
+
+        const size_t minstep = m.cols * esz;
+
+        Size wholeSize;
+        wholeSize.height = std::max(static_cast<int>((delta2 - minstep) / m.step + 1), m.rows);
+        wholeSize.width = std::max(static_cast<int>((delta2 - m.step * (wholeSize.height - 1)) / esz), m.cols);
+
+        if (wholeSize.height < rows || wholeSize.width < cols)
+            m.create(rows, cols, type);
+        else
+        {
+            m.cols = cols;
+            m.rows = rows;
+        }
+    }
+}
+
+GpuMat cv::gpu::allocMatFromBuf(int rows, int cols, int type, GpuMat &mat)
+{
+    if (!mat.empty() && mat.type() == type && mat.rows >= rows && mat.cols >= cols)
+        return mat(Rect(0, 0, cols, rows));
+    return mat = GpuMat(rows, cols, type);
+}
+
 namespace
 {
     class GpuFuncTable
@@ -727,25 +839,25 @@ namespace
     };
 }
 
-#if !defined HAVE_CUDA || defined(CUDA_DISABLER_)
+#ifndef HAVE_CUDA
 
 namespace
 {
     class EmptyFuncTable : public GpuFuncTable
     {
     public:
-        void copy(const Mat&, GpuMat&) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
-        void copy(const GpuMat&, Mat&) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
-        void copy(const GpuMat&, GpuMat&) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
+        void copy(const Mat&, GpuMat&) const { throw_nogpu; }
+        void copy(const GpuMat&, Mat&) const { throw_nogpu; }
+        void copy(const GpuMat&, GpuMat&) const { throw_nogpu; }
 
-        void copyWithMask(const GpuMat&, GpuMat&, const GpuMat&) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
+        void copyWithMask(const GpuMat&, GpuMat&, const GpuMat&) const { throw_nogpu; }
 
-        void convert(const GpuMat&, GpuMat&) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
-        void convert(const GpuMat&, GpuMat&, double, double) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
+        void convert(const GpuMat&, GpuMat&) const { throw_nogpu; }
+        void convert(const GpuMat&, GpuMat&, double, double) const { throw_nogpu; }
 
-        void setTo(GpuMat&, Scalar, const GpuMat&) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
+        void setTo(GpuMat&, Scalar, const GpuMat&) const { throw_nogpu; }
 
-        void mallocPitch(void**, size_t*, size_t, size_t) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
+        void mallocPitch(void**, size_t*, size_t, size_t) const { throw_nogpu; }
         void free(void*) const {}
     };
 
@@ -1340,7 +1452,7 @@ void cv::gpu::GpuMat::copyTo(GpuMat& mat, const GpuMat& mask) const
 
 void cv::gpu::GpuMat::convertTo(GpuMat& dst, int rtype, double alpha, double beta) const
 {
-    bool noScale = fabs(alpha - 1) < numeric_limits<double>::epsilon() && fabs(beta) < numeric_limits<double>::epsilon();
+    bool noScale = fabs(alpha - 1) < std::numeric_limits<double>::epsilon() && fabs(beta) < std::numeric_limits<double>::epsilon();
 
     if (rtype < 0)
         rtype = type();
@@ -1383,7 +1495,7 @@ GpuMat& cv::gpu::GpuMat::setTo(Scalar s, const GpuMat& mask)
 
 void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
 {
-    _type &= TYPE_MASK;
+    _type &= Mat::TYPE_MASK;
 
     if (rows == _rows && cols == _cols && type() == _type && data)
         return;
@@ -1443,13 +1555,13 @@ void cv::gpu::error(const char *error_string, const char *file, const int line, 
 {
     int code = CV_GpuApiCallError;
 
-    if (uncaught_exception())
+    if (std::uncaught_exception())
     {
         const char* errorStr = cvErrorStr(code);
         const char* function = func ? func : "unknown function";
 
-        cerr << "OpenCV Error: " << errorStr << "(" << error_string << ") in " << function << ", file " << file << ", line " << line;
-        cerr.flush();
+        fprintf(stderr, "OpenCV Error: %s(%s) in %s, file %s, line %d", errorStr, error_string, function, file, line);
+        fflush(stderr);
     }
     else
         cv::error( cv::Exception(code, error_string, func, file, line) );

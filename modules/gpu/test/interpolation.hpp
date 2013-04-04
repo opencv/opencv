@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -41,6 +42,9 @@
 
 #ifndef __OPENCV_TEST_INTERPOLATION_HPP__
 #define __OPENCV_TEST_INTERPOLATION_HPP__
+
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
 
 template <typename T> T readVal(const cv::Mat& src, int y, int x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
 {
@@ -113,7 +117,7 @@ template <typename T> struct CubicInterpolator
             for (float cx = xmin; cx <= xmax; cx += 1.0f)
             {
                 const float w = bicubicCoeff(x - cx) * bicubicCoeff(y - cy);
-                sum += w * readVal<T>(src, cvFloor(cy), cvFloor(cx), c, border_type, borderVal);
+                sum += w * readVal<T>(src, (int) floorf(cy), (int) floorf(cx), c, border_type, borderVal);
                 wsum += w;
             }
         }

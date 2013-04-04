@@ -85,8 +85,6 @@ static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int 
         cv::gpu::error(cudaGetErrorString(err), file, line, func);
 }
 
-#ifdef __CUDACC__
-
 namespace cv { namespace gpu
 {
     __host__ __device__ __forceinline__ int divUp(int total, int grain)
@@ -96,19 +94,25 @@ namespace cv { namespace gpu
 
     namespace device
     {
+        using cv::gpu::divUp;
+
+#ifdef __CUDACC__
         typedef unsigned char uchar;
         typedef unsigned short ushort;
         typedef signed char schar;
-        typedef unsigned int uint;
+        #if defined (_WIN32) || defined (__APPLE__)
+            typedef unsigned int uint;
+        #endif
 
         template<class T> inline void bindTexture(const textureReference* tex, const PtrStepSz<T>& img)
         {
             cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
             cudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
         }
+#endif // __CUDACC__
     }
 }}
 
-#endif // __CUDACC__
+
 
 #endif // __OPENCV_GPU_COMMON_HPP__

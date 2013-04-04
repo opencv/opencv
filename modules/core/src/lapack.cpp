@@ -42,6 +42,10 @@
 
 #include "precomp.hpp"
 
+#if defined _M_IX86 && defined _MSC_VER && _MSC_VER < 1700
+#pragma float_control(precise, on)
+#endif
+
 namespace cv
 {
 
@@ -527,12 +531,12 @@ template<> inline int VBLAS<double>::givensx(double* a, double* b, int n, double
 #endif
 
 template<typename _Tp> void
-JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int n, int n1, double minval)
+JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
+               int m, int n, int n1, double minval, _Tp eps)
 {
     VBLAS<_Tp> vblas;
     AutoBuffer<double> Wbuf(n);
     double* W = Wbuf;
-    _Tp eps = DBL_EPSILON*10;
     int i, j, k, iter, max_iter = std::max(m, 30);
     _Tp c, s;
     double sd;
@@ -725,12 +729,12 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
 
 static void JacobiSVD(float* At, size_t astep, float* W, float* Vt, size_t vstep, int m, int n, int n1=-1)
 {
-    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, FLT_MIN);
+    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, FLT_MIN, FLT_EPSILON*2);
 }
 
 static void JacobiSVD(double* At, size_t astep, double* W, double* Vt, size_t vstep, int m, int n, int n1=-1)
 {
-    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, DBL_MIN);
+    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, DBL_MIN, DBL_EPSILON*10);
 }
 
 /* y[0:m,0:n] += diag(a[0:1,0:m]) * x[0:m,0:n] */
@@ -874,6 +878,7 @@ double cv::determinant( InputArray _mat )
     size_t step = mat.step;
     const uchar* m = mat.data;
 
+    CV_Assert( !mat.empty() );
     CV_Assert( mat.rows == mat.cols && (type == CV_32F || type == CV_64F));
 
     #define Mf(y, x) ((float*)(m + y*step))[x]
@@ -1095,27 +1100,28 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
             if( type == CV_32FC1 )
             {
                 double d = det3(Sf);
+
                 if( d != 0. )
                 {
-                    float CV_DECL_ALIGNED(16) t[12];
+                    double t[12];
 
                     result = true;
                     d = 1./d;
-                    t[0] = (float)(((double)Sf(1,1) * Sf(2,2) - (double)Sf(1,2) * Sf(2,1)) * d);
-                    t[1] = (float)(((double)Sf(0,2) * Sf(2,1) - (double)Sf(0,1) * Sf(2,2)) * d);
-                    t[2] = (float)(((double)Sf(0,1) * Sf(1,2) - (double)Sf(0,2) * Sf(1,1)) * d);
+                    t[0] = (((double)Sf(1,1) * Sf(2,2) - (double)Sf(1,2) * Sf(2,1)) * d);
+                    t[1] = (((double)Sf(0,2) * Sf(2,1) - (double)Sf(0,1) * Sf(2,2)) * d);
+                    t[2] = (((double)Sf(0,1) * Sf(1,2) - (double)Sf(0,2) * Sf(1,1)) * d);
 
-                    t[3] = (float)(((double)Sf(1,2) * Sf(2,0) - (double)Sf(1,0) * Sf(2,2)) * d);
-                    t[4] = (float)(((double)Sf(0,0) * Sf(2,2) - (double)Sf(0,2) * Sf(2,0)) * d);
-                    t[5] = (float)(((double)Sf(0,2) * Sf(1,0) - (double)Sf(0,0) * Sf(1,2)) * d);
+                    t[3] = (((double)Sf(1,2) * Sf(2,0) - (double)Sf(1,0) * Sf(2,2)) * d);
+                    t[4] = (((double)Sf(0,0) * Sf(2,2) - (double)Sf(0,2) * Sf(2,0)) * d);
+                    t[5] = (((double)Sf(0,2) * Sf(1,0) - (double)Sf(0,0) * Sf(1,2)) * d);
 
-                    t[6] = (float)(((double)Sf(1,0) * Sf(2,1) - (double)Sf(1,1) * Sf(2,0)) * d);
-                    t[7] = (float)(((double)Sf(0,1) * Sf(2,0) - (double)Sf(0,0) * Sf(2,1)) * d);
-                    t[8] = (float)(((double)Sf(0,0) * Sf(1,1) - (double)Sf(0,1) * Sf(1,0)) * d);
+                    t[6] = (((double)Sf(1,0) * Sf(2,1) - (double)Sf(1,1) * Sf(2,0)) * d);
+                    t[7] = (((double)Sf(0,1) * Sf(2,0) - (double)Sf(0,0) * Sf(2,1)) * d);
+                    t[8] = (((double)Sf(0,0) * Sf(1,1) - (double)Sf(0,1) * Sf(1,0)) * d);
 
-                    Df(0,0) = t[0]; Df(0,1) = t[1]; Df(0,2) = t[2];
-                    Df(1,0) = t[3]; Df(1,1) = t[4]; Df(1,2) = t[5];
-                    Df(2,0) = t[6]; Df(2,1) = t[7]; Df(2,2) = t[8];
+                    Df(0,0) = (float)t[0]; Df(0,1) = (float)t[1]; Df(0,2) = (float)t[2];
+                    Df(1,0) = (float)t[3]; Df(1,1) = (float)t[4]; Df(1,2) = (float)t[5];
+                    Df(2,0) = (float)t[6]; Df(2,1) = (float)t[7]; Df(2,2) = (float)t[8];
                 }
             }
             else
@@ -1683,7 +1689,6 @@ cvDet( const CvArr* arr )
             if( rows == 3 )
                 return det3(Md);
         }
-        return cv::determinant(cv::Mat(mat));
     }
     return cv::determinant(cv::cvarrToMat(arr));
 }

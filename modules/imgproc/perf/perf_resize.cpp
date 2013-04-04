@@ -21,14 +21,17 @@ PERF_TEST_P(MatInfo_Size_Size, resizeUpLinear,
     Size from = get<1>(GetParam());
     Size to = get<2>(GetParam());
 
-    cv::Mat src(from, matType);
-    cv::Mat dst(to, matType);
-
-    declare.in(src, WARMUP_RNG).out(dst);
+    cv::Mat src(from, matType), dst(to, matType);
+    cvtest::fillGradient(src);
+    declare.in(src).out(dst);
 
     TEST_CYCLE() resize(src, dst, to);
 
+#ifdef ANDROID
+    SANITY_CHECK(dst, 5);
+#else
     SANITY_CHECK(dst, 1 + 1e-6);
+#endif
 }
 
 PERF_TEST_P(MatInfo_Size_Size, resizeDownLinear,
@@ -45,14 +48,17 @@ PERF_TEST_P(MatInfo_Size_Size, resizeDownLinear,
     Size from = get<1>(GetParam());
     Size to = get<2>(GetParam());
 
-    cv::Mat src(from, matType);
-    cv::Mat dst(to, matType);
-
-    declare.in(src, WARMUP_RNG).out(dst);
+    cv::Mat src(from, matType), dst(to, matType);
+    cvtest::fillGradient(src);
+    declare.in(src).out(dst);
 
     TEST_CYCLE() resize(src, dst, to);
 
+#ifdef ANDROID
+    SANITY_CHECK(dst, 5);
+#else
     SANITY_CHECK(dst, 1 + 1e-6);
+#endif
 }
 
 
@@ -61,7 +67,7 @@ typedef TestBaseWithParam<MatInfo_Size_Scale_t> MatInfo_Size_Scale;
 
 PERF_TEST_P(MatInfo_Size_Scale, ResizeAreaFast,
             testing::Combine(
-                testing::Values(CV_8UC1, CV_8UC4),
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4),
                 testing::Values(szVGA, szqHD, sz720p, sz1080p),
                 testing::Values(2)
                 )
@@ -91,7 +97,7 @@ typedef TestBaseWithParam<tr1::tuple<MatType, Size, double> > MatInfo_Size_Scale
 PERF_TEST_P(MatInfo_Size_Scale_Area, ResizeArea,
             testing::Combine(
                 testing::Values(CV_8UC1, CV_8UC4),
-                testing::Values(szVGA, szqHD, sz720p, sz1080p),
+                testing::Values(szVGA, szqHD, sz720p),
                 testing::Values(2.4, 3.4, 1.3)
                 )
             )
@@ -106,6 +112,7 @@ PERF_TEST_P(MatInfo_Size_Scale_Area, ResizeArea,
     cv::Mat dst(to, matType);
 
     declare.in(src, WARMUP_RNG).out(dst);
+    declare.time(100);
 
     TEST_CYCLE() resize(src, dst, dst.size(), 0, 0, INTER_AREA);
 

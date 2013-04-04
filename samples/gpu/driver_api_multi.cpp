@@ -11,6 +11,18 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/gpu/gpu.hpp"
 
+#ifdef HAVE_TBB
+#  include "tbb/tbb_stddef.h"
+#  if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
+#    include "tbb/tbb.h"
+#    include "tbb/task.h"
+#    undef min
+#    undef max
+#  else
+#    undef HAVE_TBB
+#  endif
+#endif
+
 #if !defined(HAVE_CUDA) || !defined(HAVE_TBB)
 
 int main()
@@ -30,7 +42,6 @@ int main()
 
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include "opencv2/core/internal.hpp" // For TBB wrappers
 
 using namespace std;
 using namespace cv;
@@ -54,14 +65,8 @@ inline void safeCall_(int code, const char* expr, const char* file, int line)
 // Each GPU is associated with its own context
 CUcontext contexts[2];
 
-int main(int argc, char **argv)
+int main()
 {
-    if (argc > 1)
-    {
-        cout << "CUDA driver API sample\n";
-        return -1;
-    }
-
     int num_devices = getCudaEnabledDeviceCount();
     if (num_devices < 2)
     {
@@ -102,7 +107,7 @@ int main(int argc, char **argv)
 
     // Execute calculation in two threads using two GPUs
     int devices[] = {0, 1};
-    parallel_do(devices, devices + 2, Worker());
+    tbb::parallel_do(devices, devices + 2, Worker());
 
     destroyContexts();
     return 0;

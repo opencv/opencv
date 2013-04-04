@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -46,57 +47,44 @@
 
 #include "precomp.hpp"
 #include <stdio.h>
-
-//#undef CV_SSE2
-//#define CV_SSE2 0
-//#include "emmintrin.h"
-
-
 #include <limits>
-
-CV_IMPL CvStereoBMState* cvCreateStereoBMState( int /*preset*/, int numberOfDisparities )
-{
-    CvStereoBMState* state = (CvStereoBMState*)cvAlloc( sizeof(*state) );
-    if( !state )
-        return 0;
-
-    state->preFilterType = CV_STEREO_BM_XSOBEL; //CV_STEREO_BM_NORMALIZED_RESPONSE;
-    state->preFilterSize = 9;
-    state->preFilterCap = 31;
-    state->SADWindowSize = 15;
-    state->minDisparity = 0;
-    state->numberOfDisparities = numberOfDisparities > 0 ? numberOfDisparities : 64;
-    state->textureThreshold = 10;
-    state->uniquenessRatio = 15;
-    state->speckleRange = state->speckleWindowSize = 0;
-    state->trySmallerWindows = 0;
-    state->roi1 = state->roi2 = cvRect(0,0,0,0);
-    state->disp12MaxDiff = -1;
-
-    state->preFilteredImg0 = state->preFilteredImg1 = state->slidingSumBuf =
-    state->disp = state->cost = 0;
-
-    return state;
-}
-
-CV_IMPL void cvReleaseStereoBMState( CvStereoBMState** state )
-{
-    if( !state )
-        CV_Error( CV_StsNullPtr, "" );
-
-    if( !*state )
-        return;
-
-    cvReleaseMat( &(*state)->preFilteredImg0 );
-    cvReleaseMat( &(*state)->preFilteredImg1 );
-    cvReleaseMat( &(*state)->slidingSumBuf );
-    cvReleaseMat( &(*state)->disp );
-    cvReleaseMat( &(*state)->cost );
-    cvFree( state );
-}
 
 namespace cv
 {
+
+struct StereoBMParams
+{
+    StereoBMParams(int _numDisparities=64, int _SADWindowSize=21)
+    {
+        preFilterType = StereoBM::PREFILTER_XSOBEL;
+        preFilterSize = 9;
+        preFilterCap = 31;
+        SADWindowSize = _SADWindowSize;
+        minDisparity = 0;
+        numDisparities = _numDisparities > 0 ? _numDisparities : 64;
+        textureThreshold = 10;
+        uniquenessRatio = 15;
+        speckleRange = speckleWindowSize = 0;
+        roi1 = roi2 = Rect(0,0,0,0);
+        disp12MaxDiff = -1;
+        dispType = CV_16S;
+    }
+
+    int preFilterType;
+    int preFilterSize;
+    int preFilterCap;
+    int SADWindowSize;
+    int minDisparity;
+    int numDisparities;
+    int textureThreshold;
+    int uniquenessRatio;
+    int speckleRange;
+    int speckleWindowSize;
+    Rect roi1, roi2;
+    int disp12MaxDiff;
+    int dispType;
+};
+    
 
 static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uchar* buf )
 {
@@ -191,11 +179,11 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         dptr0[0] = dptr0[size.width-1] = dptr1[0] = dptr1[size.width-1] = val0;
         x = 1;
 
-    #if CV_SSE2
+#if CV_SSE2
         if( useSIMD )
         {
             __m128i z = _mm_setzero_si128(), ftz = _mm_set1_epi16((short)ftzero),
-                ftz2 = _mm_set1_epi8(CV_CAST_8U(ftzero*2));
+            ftz2 = _mm_set1_epi8(cv::saturate_cast<uchar>(ftzero*2));
             for( ; x <= size.width-9; x += 8 )
             {
                 __m128i c0 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow0 + x - 1)), z);
@@ -207,9 +195,9 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
                 d1 = _mm_sub_epi16(d1, c1);
 
                 __m128i c2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow2 + x - 1)), z);
-                __m128i c3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow2 + x - 1)), z);
+                __m128i c3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow3 + x - 1)), z);
                 __m128i d2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow2 + x + 1)), z);
-                __m128i d3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow2 + x + 1)), z);
+                __m128i d3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow3 + x + 1)), z);
 
                 d2 = _mm_sub_epi16(d2, c2);
                 d3 = _mm_sub_epi16(d3, c3);
@@ -223,12 +211,12 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
                 _mm_storel_epi64((__m128i*)(dptr1 + x), _mm_unpackhi_epi64(v0, v0));
             }
         }
-    #endif
+#endif
 
         for( ; x < size.width-1; x++ )
         {
             int d0 = srow0[x+1] - srow0[x-1], d1 = srow1[x+1] - srow1[x-1],
-                d2 = srow2[x+1] - srow2[x-1], d3 = srow3[x+1] - srow3[x-1];
+            d2 = srow2[x+1] - srow2[x-1], d3 = srow3[x+1] - srow3[x-1];
             int v0 = tab[d0 + d1*2 + d2 + OFS];
             int v1 = tab[d1 + d2*2 + d3 + OFS];
             dptr0[x] = (uchar)v0;
@@ -249,14 +237,14 @@ static const int DISPARITY_SHIFT = 4;
 
 #if CV_SSE2
 static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
-                                             Mat& disp, Mat& cost, CvStereoBMState& state,
-                                             uchar* buf, int _dy0, int _dy1 )
+                                            Mat& disp, Mat& cost, StereoBMParams& state,
+                                            uchar* buf, int _dy0, int _dy1 )
 {
     const int ALIGN = 16;
     int x, y, d;
     int wsz = state.SADWindowSize, wsz2 = wsz/2;
     int dy0 = MIN(_dy0, wsz2+1), dy1 = MIN(_dy1, wsz2+1);
-    int ndisp = state.numberOfDisparities;
+    int ndisp = state.numDisparities;
     int mindisp = state.minDisparity;
     int lofs = MAX(ndisp - 1 + mindisp, 0);
     int rofs = -MIN(ndisp - 1 + mindisp, 0);
@@ -343,7 +331,7 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
         rptr = rptr0 + MIN(MAX(x1, -rofs), width-1-rofs) - dy0*sstep;
 
         for( y = -dy0; y < height + dy1; y++, cbuf += ndisp, cbuf_sub += ndisp,
-             hsad += ndisp, lptr += sstep, lptr_sub += sstep, rptr += sstep )
+            hsad += ndisp, lptr += sstep, lptr_sub += sstep, rptr += sstep )
         {
             int lval = lptr[0];
             __m128i lv = _mm_set1_epi8((char)lval), z = _mm_setzero_si128();
@@ -464,7 +452,7 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
                 __m128i thresh8 = _mm_set1_epi16((short)(thresh + 1));
                 __m128i d1 = _mm_set1_epi16((short)(mind-1)), d2 = _mm_set1_epi16((short)(mind+1));
                 __m128i dd_16 = _mm_add_epi16(dd_8, dd_8);
-                 d8 = _mm_sub_epi16(d0_8, dd_16);
+                d8 = _mm_sub_epi16(d0_8, dd_16);
 
                 for( d = 0; d < ndisp; d += 16 )
                 {
@@ -507,14 +495,14 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
 
 static void
 findStereoCorrespondenceBM( const Mat& left, const Mat& right,
-                            Mat& disp, Mat& cost, const CvStereoBMState& state,
-                            uchar* buf, int _dy0, int _dy1 )
+                           Mat& disp, Mat& cost, const StereoBMParams& state,
+                           uchar* buf, int _dy0, int _dy1 )
 {
     const int ALIGN = 16;
     int x, y, d;
     int wsz = state.SADWindowSize, wsz2 = wsz/2;
     int dy0 = MIN(_dy0, wsz2+1), dy1 = MIN(_dy1, wsz2+1);
-    int ndisp = state.numberOfDisparities;
+    int ndisp = state.numDisparities;
     int mindisp = state.minDisparity;
     int lofs = MAX(ndisp - 1 + mindisp, 0);
     int rofs = -MIN(ndisp - 1 + mindisp, 0);
@@ -592,7 +580,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
         rptr = rptr0 + MIN(MAX(x1, -rofs), width-1-rofs) - dy0*sstep;
 
         for( y = -dy0; y < height + dy1; y++, cbuf += ndisp, cbuf_sub += ndisp,
-             hsad += ndisp, lptr += sstep, lptr_sub += sstep, rptr += sstep )
+            hsad += ndisp, lptr += sstep, lptr_sub += sstep, rptr += sstep )
         {
             int lval = lptr[0];
             for( d = 0; d < ndisp; d++ )
@@ -662,21 +650,21 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
             }
 
             {
-            sad[-1] = sad[1];
-            sad[ndisp] = sad[ndisp-2];
-            int p = sad[mind+1], n = sad[mind-1];
-            d = p + n - 2*sad[mind] + std::abs(p - n);
-            dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
-            costptr[y*coststep] = sad[mind];
+                sad[-1] = sad[1];
+                sad[ndisp] = sad[ndisp-2];
+                int p = sad[mind+1], n = sad[mind-1];
+                d = p + n - 2*sad[mind] + std::abs(p - n);
+                dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
+                costptr[y*coststep] = sad[mind];
             }
         }
     }
 }
 
-struct PrefilterInvoker
+struct PrefilterInvoker : public ParallelLoopBody
 {
     PrefilterInvoker(const Mat& left0, const Mat& right0, Mat& left, Mat& right,
-                     uchar* buf0, uchar* buf1, CvStereoBMState* _state )
+                     uchar* buf0, uchar* buf1, StereoBMParams* _state)
     {
         imgs0[0] = &left0; imgs0[1] = &right0;
         imgs[0] = &left; imgs[1] = &right;
@@ -684,41 +672,47 @@ struct PrefilterInvoker
         state = _state;
     }
 
-    void operator()( int ind ) const
+    void operator()( const Range& range ) const
     {
-        if( state->preFilterType == CV_STEREO_BM_NORMALIZED_RESPONSE )
-            prefilterNorm( *imgs0[ind], *imgs[ind], state->preFilterSize, state->preFilterCap, buf[ind] );
-        else
-            prefilterXSobel( *imgs0[ind], *imgs[ind], state->preFilterCap );
+        for( int i = range.start; i < range.end; i++ )
+        {
+            if( state->preFilterType == StereoBM::PREFILTER_NORMALIZED_RESPONSE )
+                prefilterNorm( *imgs0[i], *imgs[i], state->preFilterSize, state->preFilterCap, buf[i] );
+            else
+                prefilterXSobel( *imgs0[i], *imgs[i], state->preFilterCap );
+        }
     }
 
     const Mat* imgs0[2];
     Mat* imgs[2];
     uchar* buf[2];
-    CvStereoBMState *state;
+    StereoBMParams* state;
 };
 
 
-struct FindStereoCorrespInvoker
+struct FindStereoCorrespInvoker : public ParallelLoopBody
 {
     FindStereoCorrespInvoker( const Mat& _left, const Mat& _right,
-                              Mat& _disp, CvStereoBMState* _state,
-                              int _nstripes, int _stripeBufSize,
-                              bool _useShorts, Rect _validDisparityRect )
+                             Mat& _disp, StereoBMParams* _state,
+                             int _nstripes, size_t _stripeBufSize,
+                             bool _useShorts, Rect _validDisparityRect,
+                             Mat& _slidingSumBuf, Mat& _cost )
     {
         left = &_left; right = &_right;
         disp = &_disp; state = _state;
         nstripes = _nstripes; stripeBufSize = _stripeBufSize;
         useShorts = _useShorts;
         validDisparityRect = _validDisparityRect;
+        slidingSumBuf = &_slidingSumBuf;
+        cost = &_cost;
     }
 
-    void operator()( const BlockedRange& range ) const
+    void operator()( const Range& range ) const
     {
         int cols = left->cols, rows = left->rows;
-        int _row0 = min(cvRound(range.begin() * rows / nstripes), rows);
-        int _row1 = min(cvRound(range.end() * rows / nstripes), rows);
-        uchar *ptr = state->slidingSumBuf->data.ptr + range.begin() * stripeBufSize;
+        int _row0 = std::min(cvRound(range.start * rows / nstripes), rows);
+        int _row1 = std::min(cvRound(range.end * rows / nstripes), rows);
+        uchar *ptr = slidingSumBuf->data + range.start * stripeBufSize;
         int FILTERED = (state->minDisparity - 1)*16;
 
         Rect roi = validDisparityRect & Rect(0, _row0, cols, _row1 - _row0);
@@ -742,7 +736,7 @@ struct FindStereoCorrespInvoker
         Mat left_i = left->rowRange(row0, row1);
         Mat right_i = right->rowRange(row0, row1);
         Mat disp_i = disp->rowRange(row0, row1);
-        Mat cost_i = state->disp12MaxDiff >= 0 ? Mat(state->cost).rowRange(row0, row1) : Mat();
+        Mat cost_i = state->disp12MaxDiff >= 0 ? cost->rowRange(row0, row1) : Mat();
 
 #if CV_SSE2
         if( useShorts )
@@ -752,7 +746,7 @@ struct FindStereoCorrespInvoker
             findStereoCorrespondenceBM( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
 
         if( state->disp12MaxDiff >= 0 )
-            validateDisparity( disp_i, cost_i, state->minDisparity, state->numberOfDisparities, state->disp12MaxDiff );
+            validateDisparity( disp_i, cost_i, state->minDisparity, state->numDisparities, state->disp12MaxDiff );
 
         if( roi.x > 0 )
         {
@@ -768,185 +762,236 @@ struct FindStereoCorrespInvoker
 
 protected:
     const Mat *left, *right;
-    Mat* disp;
-    CvStereoBMState *state;
+    Mat* disp, *slidingSumBuf, *cost;
+    StereoBMParams *state;
 
     int nstripes;
-    int stripeBufSize;
+    size_t stripeBufSize;
     bool useShorts;
     Rect validDisparityRect;
 };
 
-static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat& disp0, CvStereoBMState* state)
+class StereoBMImpl : public StereoBM
 {
-    if (left0.size() != right0.size() || disp0.size() != left0.size())
-        CV_Error( CV_StsUnmatchedSizes, "All the images must have the same size" );
-
-    if (left0.type() != CV_8UC1 || right0.type() != CV_8UC1)
-        CV_Error( CV_StsUnsupportedFormat, "Both input images must have CV_8UC1" );
-
-    if (disp0.type() != CV_16SC1 && disp0.type() != CV_32FC1)
-        CV_Error( CV_StsUnsupportedFormat, "Disparity image must have CV_16SC1 or CV_32FC1 format" );
-
-    if( !state )
-        CV_Error( CV_StsNullPtr, "Stereo BM state is NULL." );
-
-    if( state->preFilterType != CV_STEREO_BM_NORMALIZED_RESPONSE && state->preFilterType != CV_STEREO_BM_XSOBEL )
-        CV_Error( CV_StsOutOfRange, "preFilterType must be = CV_STEREO_BM_NORMALIZED_RESPONSE" );
-
-    if( state->preFilterSize < 5 || state->preFilterSize > 255 || state->preFilterSize % 2 == 0 )
-        CV_Error( CV_StsOutOfRange, "preFilterSize must be odd and be within 5..255" );
-
-    if( state->preFilterCap < 1 || state->preFilterCap > 63 )
-        CV_Error( CV_StsOutOfRange, "preFilterCap must be within 1..63" );
-
-    if( state->SADWindowSize < 5 || state->SADWindowSize > 255 || state->SADWindowSize % 2 == 0 ||
-        state->SADWindowSize >= min(left0.cols, left0.rows) )
-        CV_Error( CV_StsOutOfRange, "SADWindowSize must be odd, be within 5..255 and be not larger than image width or height" );
-
-    if( state->numberOfDisparities <= 0 || state->numberOfDisparities % 16 != 0 )
-        CV_Error( CV_StsOutOfRange, "numberOfDisparities must be positive and divisble by 16" );
-
-    if( state->textureThreshold < 0 )
-        CV_Error( CV_StsOutOfRange, "texture threshold must be non-negative" );
-
-    if( state->uniquenessRatio < 0 )
-        CV_Error( CV_StsOutOfRange, "uniqueness ratio must be non-negative" );
-
-    if( !state->preFilteredImg0 || state->preFilteredImg0->cols * state->preFilteredImg0->rows < left0.cols * left0.rows )
+public:
+    StereoBMImpl()
     {
-        cvReleaseMat( &state->preFilteredImg0 );
-        cvReleaseMat( &state->preFilteredImg1 );
-        cvReleaseMat( &state->cost );
-
-        state->preFilteredImg0 = cvCreateMat( left0.rows, left0.cols, CV_8U );
-        state->preFilteredImg1 = cvCreateMat( left0.rows, left0.cols, CV_8U );
-        state->cost = cvCreateMat( left0.rows, left0.cols, CV_16S );
-    }
-    Mat left(left0.size(), CV_8U, state->preFilteredImg0->data.ptr);
-    Mat right(right0.size(), CV_8U, state->preFilteredImg1->data.ptr);
-
-    int mindisp = state->minDisparity;
-    int ndisp = state->numberOfDisparities;
-
-    int width = left0.cols;
-    int height = left0.rows;
-    int lofs = max(ndisp - 1 + mindisp, 0);
-    int rofs = -min(ndisp - 1 + mindisp, 0);
-    int width1 = width - rofs - ndisp + 1;
-    int FILTERED = (state->minDisparity - 1) << DISPARITY_SHIFT;
-
-    if( lofs >= width || rofs >= width || width1 < 1 )
-    {
-        disp0 = Scalar::all( FILTERED * ( disp0.type() < CV_32F ? 1 : 1./(1 << DISPARITY_SHIFT) ) );
-        return;
+        params = StereoBMParams();
     }
 
-    Mat disp = disp0;
-
-    if( disp0.type() == CV_32F)
+    StereoBMImpl( int _numDisparities, int _SADWindowSize )
     {
-        if( !state->disp || state->disp->rows != disp0.rows || state->disp->cols != disp0.cols )
+        params = StereoBMParams(_numDisparities, _SADWindowSize);
+    }
+    
+    void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr )
+    {
+        Mat left0 = leftarr.getMat(), right0 = rightarr.getMat();
+        int dtype = disparr.fixedType() ? disparr.type() : params.dispType;
+
+        if (left0.size() != right0.size())
+            CV_Error( CV_StsUnmatchedSizes, "All the images must have the same size" );
+
+        if (left0.type() != CV_8UC1 || right0.type() != CV_8UC1)
+            CV_Error( CV_StsUnsupportedFormat, "Both input images must have CV_8UC1" );
+
+        if (dtype != CV_16SC1 && dtype != CV_32FC1)
+            CV_Error( CV_StsUnsupportedFormat, "Disparity image must have CV_16SC1 or CV_32FC1 format" );
+
+        disparr.create(left0.size(), dtype);
+        Mat disp0 = disparr.getMat();
+
+        if( params.preFilterType != PREFILTER_NORMALIZED_RESPONSE &&
+            params.preFilterType != PREFILTER_XSOBEL )
+            CV_Error( CV_StsOutOfRange, "preFilterType must be = CV_STEREO_BM_NORMALIZED_RESPONSE" );
+
+        if( params.preFilterSize < 5 || params.preFilterSize > 255 || params.preFilterSize % 2 == 0 )
+            CV_Error( CV_StsOutOfRange, "preFilterSize must be odd and be within 5..255" );
+
+        if( params.preFilterCap < 1 || params.preFilterCap > 63 )
+            CV_Error( CV_StsOutOfRange, "preFilterCap must be within 1..63" );
+
+        if( params.SADWindowSize < 5 || params.SADWindowSize > 255 || params.SADWindowSize % 2 == 0 ||
+            params.SADWindowSize >= std::min(left0.cols, left0.rows) )
+            CV_Error( CV_StsOutOfRange, "SADWindowSize must be odd, be within 5..255 and be not larger than image width or height" );
+
+        if( params.numDisparities <= 0 || params.numDisparities % 16 != 0 )
+            CV_Error( CV_StsOutOfRange, "numDisparities must be positive and divisble by 16" );
+
+        if( params.textureThreshold < 0 )
+            CV_Error( CV_StsOutOfRange, "texture threshold must be non-negative" );
+
+        if( params.uniquenessRatio < 0 )
+            CV_Error( CV_StsOutOfRange, "uniqueness ratio must be non-negative" );
+
+        preFilteredImg0.create( left0.size(), CV_8U );
+        preFilteredImg1.create( left0.size(), CV_8U );
+        cost.create( left0.size(), CV_16S );
+
+        Mat left = preFilteredImg0, right = preFilteredImg1;
+
+        int mindisp = params.minDisparity;
+        int ndisp = params.numDisparities;
+
+        int width = left0.cols;
+        int height = left0.rows;
+        int lofs = std::max(ndisp - 1 + mindisp, 0);
+        int rofs = -std::min(ndisp - 1 + mindisp, 0);
+        int width1 = width - rofs - ndisp + 1;
+        int FILTERED = (params.minDisparity - 1) << DISPARITY_SHIFT;
+
+        if( lofs >= width || rofs >= width || width1 < 1 )
         {
-            cvReleaseMat( &state->disp );
-            state->disp = cvCreateMat(disp0.rows, disp0.cols, CV_16S);
+            disp0 = Scalar::all( FILTERED * ( disp0.type() < CV_32F ? 1 : 1./(1 << DISPARITY_SHIFT) ) );
+            return;
         }
-        disp = cv::cvarrToMat(state->disp);
-    }
 
-    int wsz = state->SADWindowSize;
-    int bufSize0 = (int)((ndisp + 2)*sizeof(int));
-    bufSize0 += (int)((height+wsz+2)*ndisp*sizeof(int));
-    bufSize0 += (int)((height + wsz + 2)*sizeof(int));
-    bufSize0 += (int)((height+wsz+2)*ndisp*(wsz+2)*sizeof(uchar) + 256);
+        Mat disp = disp0;
+        if( dtype == CV_32F )
+        {
+            dispbuf.create(disp0.size(), CV_16S);
+            disp = dispbuf;
+        }
 
-    int bufSize1 = (int)((width + state->preFilterSize + 2) * sizeof(int) + 256);
-    int bufSize2 = 0;
-    if( state->speckleRange >= 0 && state->speckleWindowSize > 0 )
-        bufSize2 = width*height*(sizeof(cv::Point_<short>) + sizeof(int) + sizeof(uchar));
+        int wsz = params.SADWindowSize;
+        int bufSize0 = (int)((ndisp + 2)*sizeof(int));
+        bufSize0 += (int)((height+wsz+2)*ndisp*sizeof(int));
+        bufSize0 += (int)((height + wsz + 2)*sizeof(int));
+        bufSize0 += (int)((height+wsz+2)*ndisp*(wsz+2)*sizeof(uchar) + 256);
+
+        int bufSize1 = (int)((width + params.preFilterSize + 2) * sizeof(int) + 256);
+        int bufSize2 = 0;
+        if( params.speckleRange >= 0 && params.speckleWindowSize > 0 )
+            bufSize2 = width*height*(sizeof(Point_<short>) + sizeof(int) + sizeof(uchar));
 
 #if CV_SSE2
-    bool useShorts = state->preFilterCap <= 31 && state->SADWindowSize <= 21 && checkHardwareSupport(CV_CPU_SSE2);
+        bool useShorts = params.preFilterCap <= 31 && params.SADWindowSize <= 21 && checkHardwareSupport(CV_CPU_SSE2);
 #else
-    const bool useShorts = false;
+        const bool useShorts = false;
 #endif
 
-#ifdef HAVE_TBB
-    const double SAD_overhead_coeff = 10.0;
-    double N0 = 8000000 / (useShorts ? 1 : 4);  // approx tbb's min number instructions reasonable for one thread
-    double maxStripeSize = min(max(N0 / (width * ndisp), (wsz-1) * SAD_overhead_coeff), (double)height);
-    int nstripes = cvCeil(height / maxStripeSize);
-#else
-    const int nstripes = 1;
-#endif
+        const double SAD_overhead_coeff = 10.0;
+        double N0 = 8000000 / (useShorts ? 1 : 4);  // approx tbb's min number instructions reasonable for one thread
+        double maxStripeSize = std::min(std::max(N0 / (width * ndisp), (wsz-1) * SAD_overhead_coeff), (double)height);
+        int nstripes = cvCeil(height / maxStripeSize);
+        int bufSize = std::max(bufSize0 * nstripes, std::max(bufSize1 * 2, bufSize2));
 
-    int bufSize = max(bufSize0 * nstripes, max(bufSize1 * 2, bufSize2));
+        if( slidingSumBuf.cols < bufSize )
+            slidingSumBuf.create( 1, bufSize, CV_8U );
 
-    if( !state->slidingSumBuf || state->slidingSumBuf->cols < bufSize )
-    {
-        cvReleaseMat( &state->slidingSumBuf );
-        state->slidingSumBuf = cvCreateMat( 1, bufSize, CV_8U );
+        uchar *_buf = slidingSumBuf.data;
+        parallel_for_(Range(0, 2), PrefilterInvoker(left0, right0, left, right, _buf, _buf + bufSize1, &params), 1);
+
+        Rect validDisparityRect(0, 0, width, height), R1 = params.roi1, R2 = params.roi2;
+        validDisparityRect = getValidDisparityROI(R1.area() > 0 ? Rect(0, 0, width, height) : validDisparityRect,
+                                                  R2.area() > 0 ? Rect(0, 0, width, height) : validDisparityRect,
+                                                  params.minDisparity, params.numDisparities,
+                                                  params.SADWindowSize);
+        
+        parallel_for_(Range(0, nstripes),
+                      FindStereoCorrespInvoker(left, right, disp, &params, nstripes,
+                                               bufSize0, useShorts, validDisparityRect,
+                                               slidingSumBuf, cost));
+        
+        if( params.speckleRange >= 0 && params.speckleWindowSize > 0 )
+            filterSpeckles(disp, FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
+        
+        if (disp0.data != disp.data)
+            disp.convertTo(disp0, disp0.type(), 1./(1 << DISPARITY_SHIFT), 0);
     }
 
-    uchar *_buf = state->slidingSumBuf->data.ptr;
-    int idx[] = {0,1};
-    parallel_do(idx, idx+2, PrefilterInvoker(left0, right0, left, right, _buf, _buf + bufSize1, state));
+    AlgorithmInfo* info() const { return 0; }
 
-    Rect validDisparityRect(0, 0, width, height), R1 = state->roi1, R2 = state->roi2;
-    validDisparityRect = getValidDisparityROI(R1.area() > 0 ? Rect(0, 0, width, height) : validDisparityRect,
-                                              R2.area() > 0 ? Rect(0, 0, width, height) : validDisparityRect,
-                                              state->minDisparity, state->numberOfDisparities,
-                                              state->SADWindowSize);
+    int getMinDisparity() const { return params.minDisparity; }
+    void setMinDisparity(int minDisparity) { params.minDisparity = minDisparity; }
 
-    parallel_for(BlockedRange(0, nstripes),
-                 FindStereoCorrespInvoker(left, right, disp, state, nstripes,
-                                          bufSize0, useShorts, validDisparityRect));
+    int getNumDisparities() const { return params.numDisparities; }
+    void setNumDisparities(int numDisparities) { params.numDisparities = numDisparities; }
 
-    if( state->speckleRange >= 0 && state->speckleWindowSize > 0 )
+    int getBlockSize() const { return params.SADWindowSize; }
+    void setBlockSize(int blockSize) { params.SADWindowSize = blockSize; }
+
+    int getSpeckleWindowSize() const { return params.speckleWindowSize; }
+    void setSpeckleWindowSize(int speckleWindowSize) { params.speckleWindowSize = speckleWindowSize; }
+
+    int getSpeckleRange() const { return params.speckleRange; }
+    void setSpeckleRange(int speckleRange) { params.speckleRange = speckleRange; }
+
+    int getDisp12MaxDiff() const { return params.disp12MaxDiff; }
+    void setDisp12MaxDiff(int disp12MaxDiff) { params.disp12MaxDiff = disp12MaxDiff; }
+
+    int getPreFilterType() const { return params.preFilterType; }
+    void setPreFilterType(int preFilterType) { params.preFilterType = preFilterType; }
+
+    int getPreFilterSize() const { return params.preFilterSize; }
+    void setPreFilterSize(int preFilterSize) { params.preFilterSize = preFilterSize; }
+
+    int getPreFilterCap() const { return params.preFilterCap; }
+    void setPreFilterCap(int preFilterCap) { params.preFilterCap = preFilterCap; }
+
+    int getTextureThreshold() const { return params.textureThreshold; }
+    void setTextureThreshold(int textureThreshold) { params.textureThreshold = textureThreshold; }
+
+    int getUniquenessRatio() const { return params.uniquenessRatio; }
+    void setUniquenessRatio(int uniquenessRatio) { params.uniquenessRatio = uniquenessRatio; }
+
+    int getSmallerBlockSize() const { return 0; }
+    void setSmallerBlockSize(int) {}
+
+    Rect getROI1() const { return params.roi1; }
+    void setROI1(Rect roi1) { params.roi1 = roi1; }
+
+    Rect getROI2() const { return params.roi2; }
+    void setROI2(Rect roi2) { params.roi2 = roi2; }
+
+    void write(FileStorage& fs) const
     {
-        Mat buf(state->slidingSumBuf);
-        filterSpeckles(disp, FILTERED, state->speckleWindowSize, state->speckleRange, buf);
+        fs << "name" << name_
+        << "minDisparity" << params.minDisparity
+        << "numDisparities" << params.numDisparities
+        << "blockSize" << params.SADWindowSize
+        << "speckleWindowSize" << params.speckleWindowSize
+        << "speckleRange" << params.speckleRange
+        << "disp12MaxDiff" << params.disp12MaxDiff
+        << "preFilterType" << params.preFilterType
+        << "preFilterSize" << params.preFilterSize
+        << "preFilterCap" << params.preFilterCap
+        << "textureThreshold" << params.textureThreshold
+        << "uniquenessRatio" << params.uniquenessRatio;
     }
 
-    if (disp0.data != disp.data)
-        disp.convertTo(disp0, disp0.type(), 1./(1 << DISPARITY_SHIFT), 0);
+    void read(const FileNode& fn)
+    {
+        FileNode n = fn["name"];
+        CV_Assert( n.isString() && strcmp(n.node->data.str.ptr, name_) == 0 );
+        params.minDisparity = (int)fn["minDisparity"];
+        params.numDisparities = (int)fn["numDisparities"];
+        params.SADWindowSize = (int)fn["blockSize"];
+        params.speckleWindowSize = (int)fn["speckleWindowSize"];
+        params.speckleRange = (int)fn["speckleRange"];
+        params.disp12MaxDiff = (int)fn["disp12MaxDiff"];
+        params.preFilterType = (int)fn["preFilterType"];
+        params.preFilterSize = (int)fn["preFilterSize"];
+        params.preFilterCap = (int)fn["preFilterCap"];
+        params.textureThreshold = (int)fn["textureThreshold"];
+        params.uniquenessRatio = (int)fn["uniquenessRatio"];
+        params.roi1 = params.roi2 = Rect();
+    }
+
+    StereoBMParams params;
+    Mat preFilteredImg0, preFilteredImg1, cost, dispbuf;
+    Mat slidingSumBuf;
+
+    static const char* name_;
+};
+
+const char* StereoBMImpl::name_ = "StereoMatcher.BM";
+
 }
 
-StereoBM::StereoBM()
-{ state = cvCreateStereoBMState(); }
-
-StereoBM::StereoBM(int _preset, int _ndisparities, int _SADWindowSize)
-{ init(_preset, _ndisparities, _SADWindowSize); }
-
-void StereoBM::init(int _preset, int _ndisparities, int _SADWindowSize)
+cv::Ptr<cv::StereoBM> cv::createStereoBM(int _numDisparities, int _SADWindowSize)
 {
-    state = cvCreateStereoBMState(_preset, _ndisparities);
-    state->SADWindowSize = _SADWindowSize;
-}
-
-void StereoBM::operator()( InputArray _left, InputArray _right,
-                           OutputArray _disparity, int disptype )
-{
-    Mat left = _left.getMat(), right = _right.getMat();
-    CV_Assert( disptype == CV_16S || disptype == CV_32F );
-    _disparity.create(left.size(), disptype);
-    Mat disparity = _disparity.getMat();
-
-    findStereoCorrespondenceBM(left, right, disparity, state);
-}
-
-template<> void Ptr<CvStereoBMState>::delete_obj()
-{ cvReleaseStereoBMState(&obj); }
-
-}
-
-CV_IMPL void cvFindStereoCorrespondenceBM( const CvArr* leftarr, const CvArr* rightarr,
-                                           CvArr* disparr, CvStereoBMState* state )
-{
-    cv::Mat left = cv::cvarrToMat(leftarr),
-        right = cv::cvarrToMat(rightarr),
-        disp = cv::cvarrToMat(disparr);
-    cv::findStereoCorrespondenceBM(left, right, disp, state);
+    return new StereoBMImpl(_numDisparities, _SADWindowSize);
 }
 
 /* End of file. */

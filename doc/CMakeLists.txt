@@ -2,14 +2,20 @@
 #  CMake file for OpenCV docs
 #
 
-file(GLOB FILES_DOC *.htm *.txt *.jpg *.png *.pdf)
-file(GLOB FILES_DOC_VS vidsurv/*.doc)
 file(GLOB FILES_TEX *.tex *.sty *.bib)
 file(GLOB FILES_TEX_PICS pics/*.png pics/*.jpg)
 
 if(BUILD_DOCS AND HAVE_SPHINX)
 
   project(opencv_docs)
+
+  set(DOC_LIST "${OpenCV_SOURCE_DIR}/doc/opencv-logo.png" "${OpenCV_SOURCE_DIR}/doc/opencv-logo2.png"
+               "${OpenCV_SOURCE_DIR}/doc/opencv-logo-white.png" "${OpenCV_SOURCE_DIR}/doc/opencv.ico"
+               "${OpenCV_SOURCE_DIR}/doc/haartraining.htm" "${OpenCV_SOURCE_DIR}/doc/license.txt"
+               "${OpenCV_SOURCE_DIR}/doc/pattern.png" "${OpenCV_SOURCE_DIR}/doc/acircles_pattern.png")
+
+  set(OPTIONAL_DOC_LIST "")
+
 
   set(OPENCV2_BASE_MODULES core imgproc highgui video calib3d features2d objdetect ml flann gpu photo stitching nonfree contrib legacy)
 
@@ -54,7 +60,7 @@ if(BUILD_DOCS AND HAVE_SPHINX)
 
   configure_file("${OpenCV_SOURCE_DIR}/modules/refman.rst.in" "${OpenCV_SOURCE_DIR}/modules/refman.rst" IMMEDIATE @ONLY)
 
-  file(GLOB_RECURSE OPENCV_FILES_UG user_guide/*.rst)
+  file(GLOB_RECURSE OPENCV_FILES_UG  user_guide/*.rst)
   file(GLOB_RECURSE OPENCV_FILES_TUT tutorials/*.rst)
   file(GLOB_RECURSE OPENCV_FILES_TUT_PICT tutorials/*.png tutorials/*.jpg)
 
@@ -68,18 +74,28 @@ if(BUILD_DOCS AND HAVE_SPHINX)
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
       COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2refman.tex
       COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2manager.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv2refman.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv2refman.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv2manager.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv2manager.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv_user.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv_user.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv_tutorials.tex
-      COMMAND ${PDFLATEX_COMPILER} opencv_tutorials.tex
+      COMMAND ${CMAKE_COMMAND} -E echo "Generating opencv2refman.pdf"
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv2refman.tex
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv2refman.tex
+      COMMAND ${CMAKE_COMMAND} -E echo "Generating opencv2manager.pdf"
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv2manager.tex
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv2manager.tex
+      COMMAND ${CMAKE_COMMAND} -E echo "Generating opencv_user.pdf"
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv_user.tex
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv_user.tex
+      COMMAND ${CMAKE_COMMAND} -E echo "Generating opencv_tutorials.pdf"
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv_tutorials.tex
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode opencv_tutorials.tex
+      COMMAND ${CMAKE_COMMAND} -E echo "Generating opencv_cheatsheet.pdf"
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode "${CMAKE_CURRENT_SOURCE_DIR}/opencv_cheatsheet.tex"
+      COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode "${CMAKE_CURRENT_SOURCE_DIR}/opencv_cheatsheet.tex"
       DEPENDS ${OPENCV_DOC_DEPS}
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       COMMENT "Generating the PDF Manuals"
       )
+
+    LIST(APPEND OPTIONAL_DOC_LIST "${CMAKE_BINARY_DIR}/doc/opencv2refman.pdf" "${CMAKE_BINARY_DIR}/doc/opencv2manager.pdf"
+          "${CMAKE_BINARY_DIR}/doc/opencv_user.pdf" "${CMAKE_BINARY_DIR}/doc/opencv_tutorials.pdf" "${CMAKE_BINARY_DIR}/doc/opencv_cheatsheet.pdf")
 
     if(ENABLE_SOLUTION_FOLDERS)
       set_target_properties(docs PROPERTIES FOLDER "documentation")
@@ -97,7 +113,13 @@ if(BUILD_DOCS AND HAVE_SPHINX)
   if(ENABLE_SOLUTION_FOLDERS)
     set_target_properties(html_docs PROPERTIES FOLDER "documentation")
   endif()
-endif()
 
-install(FILES ${FILES_DOC} DESTINATION "${OPENCV_DOC_INSTALL_PATH}" COMPONENT main)
-install(FILES ${FILES_DOC_VS} DESTINATION "${OPENCV_DOC_INSTALL_PATH}/vidsurv" COMPONENT main)
+  foreach(f ${DOC_LIST})
+    install(FILES "${f}" DESTINATION "${OPENCV_DOC_INSTALL_PATH}" COMPONENT main)
+  endforeach()
+
+  foreach(f ${OPTIONAL_DOC_LIST})
+    install(FILES "${f}" DESTINATION "${OPENCV_DOC_INSTALL_PATH}" OPTIONAL)
+  endforeach()
+
+endif()

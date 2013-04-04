@@ -1,7 +1,3 @@
-/*! \file tracking.hpp
- \brief The Object and Feature Tracking
- */
-
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
@@ -47,8 +43,10 @@
 #ifndef __OPENCV_TRACKING_HPP__
 #define __OPENCV_TRACKING_HPP__
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#ifdef __cplusplus
+#  include "opencv2/core.hpp"
+#endif
+#include "opencv2/imgproc.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -222,6 +220,7 @@ CVAPI(const CvMat*)  cvKalmanCorrect( CvKalman* kalman, const CvMat* measurement
 #define cvKalmanUpdateByTime  cvKalmanPredict
 #define cvKalmanUpdateByMeasurement cvKalmanCorrect
 
+
 #ifdef __cplusplus
 }
 
@@ -244,7 +243,7 @@ CV_EXPORTS_W double calcGlobalOrientation( InputArray orientation, InputArray ma
                                            double duration );
 
 CV_EXPORTS_W void segmentMotion(InputArray mhi, OutputArray segmask,
-                                CV_OUT vector<Rect>& boundingRects,
+                                CV_OUT std::vector<Rect>& boundingRects,
                                 double timestamp, double segThresh);
 
 //! updates the object tracking window using CAMSHIFT algorithm
@@ -311,7 +310,7 @@ CV_EXPORTS_W int buildOpticalFlowPyramid(InputArray img, OutputArrayOfArrays pyr
 
 //! computes sparse optical flow using multi-scale Lucas-Kanade algorithm
 CV_EXPORTS_W void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg,
-                           InputArray prevPts, CV_OUT InputOutputArray nextPts,
+                           InputArray prevPts, InputOutputArray nextPts,
                            OutputArray status, OutputArray err,
                            Size winSize=Size(21,21), int maxLevel=3,
                            TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),
@@ -319,13 +318,36 @@ CV_EXPORTS_W void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg,
 
 //! computes dense optical flow using Farneback algorithm
 CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next,
-                           CV_OUT InputOutputArray flow, double pyr_scale, int levels, int winsize,
+                           InputOutputArray flow, double pyr_scale, int levels, int winsize,
                            int iterations, int poly_n, double poly_sigma, int flags );
 
 //! estimates the best-fit Euqcidean, similarity, affine or perspective transformation
 // that maps one 2D point set to another or one image to another.
 CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst,
                                          bool fullAffine);
+
+enum
+{
+    MOTION_TRANSLATION=0,
+    MOTION_EUCLIDEAN=1,
+    MOTION_AFFINE=2,
+    MOTION_HOMOGRAPHY=3
+};
+
+//! estimates the best-fit Translation, Euclidean, Affine or Perspective Transformation
+// with respect to Enhanced Correlation Coefficient criterion that maps one image to
+// another (area-based alignment)
+//
+// see reference:
+// Evangelidis, G. E., Psarakis, E.Z., Parametric Image Alignment using
+// Enhanced Correlation Coefficient Maximization, PAMI, 30(8), 2008
+
+CV_EXPORTS_W double findTransformECC(InputArray templateImage,
+                                     InputArray inputImage,
+                                     InputOutputArray warpMatrix,
+                                     int motionType=MOTION_AFFINE,
+                                     TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001));
+
 
 //! computes dense optical flow using Simple Flow algorithm
 CV_EXPORTS_W void calcOpticalFlowSF(InputArray from,
@@ -352,104 +374,19 @@ CV_EXPORTS_W void calcOpticalFlowSF(InputArray from,
                                     double upscale_sigma_color,
                                     double speed_up_thr);
 
+class CV_EXPORTS DenseOpticalFlow : public Algorithm
+{
+public:
+    virtual void calc(InputArray I0, InputArray I1, InputOutputArray flow) = 0;
+    virtual void collectGarbage() = 0;
+};
+
 // Implementation of the Zach, Pock and Bischof Dual TV-L1 Optical Flow method
 //
 // see reference:
 //   [1] C. Zach, T. Pock and H. Bischof, "A Duality Based Approach for Realtime TV-L1 Optical Flow".
 //   [2] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
-class CV_EXPORTS OpticalFlowDual_TVL1
-{
-public:
-    OpticalFlowDual_TVL1();
-
-    void operator ()(InputArray I0, InputArray I1, InputOutputArray flow);
-
-    void collectGarbage();
-
-    /**
-     * Time step of the numerical scheme.
-     */
-    double tau;
-
-    /**
-     * Weight parameter for the data term, attachment parameter.
-     * This is the most relevant parameter, which determines the smoothness of the output.
-     * The smaller this parameter is, the smoother the solutions we obtain.
-     * It depends on the range of motions of the images, so its value should be adapted to each image sequence.
-     */
-    double lambda;
-
-    /**
-     * Weight parameter for (u - v)^2, tightness parameter.
-     * It serves as a link between the attachment and the regularization terms.
-     * In theory, it should have a small value in order to maintain both parts in correspondence.
-     * The method is stable for a large range of values of this parameter.
-     */
-    double theta;
-
-    /**
-     * Number of scales used to create the pyramid of images.
-     */
-    int nscales;
-
-    /**
-     * Number of warpings per scale.
-     * Represents the number of times that I1(x+u0) and grad( I1(x+u0) ) are computed per scale.
-     * This is a parameter that assures the stability of the method.
-     * It also affects the running time, so it is a compromise between speed and accuracy.
-     */
-    int warps;
-
-    /**
-     * Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time.
-     * A small value will yield more accurate solutions at the expense of a slower convergence.
-     */
-    double epsilon;
-
-    /**
-     * Stopping criterion iterations number used in the numerical scheme.
-     */
-    int iterations;
-
-    bool useInitialFlow;
-
-private:
-    void procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2);
-
-    std::vector<Mat_<float> > I0s;
-    std::vector<Mat_<float> > I1s;
-    std::vector<Mat_<float> > u1s;
-    std::vector<Mat_<float> > u2s;
-
-    Mat_<float> I1x_buf;
-    Mat_<float> I1y_buf;
-
-    Mat_<float> flowMap1_buf;
-    Mat_<float> flowMap2_buf;
-
-    Mat_<float> I1w_buf;
-    Mat_<float> I1wx_buf;
-    Mat_<float> I1wy_buf;
-
-    Mat_<float> grad_buf;
-    Mat_<float> rho_c_buf;
-
-    Mat_<float> v1_buf;
-    Mat_<float> v2_buf;
-
-    Mat_<float> p11_buf;
-    Mat_<float> p12_buf;
-    Mat_<float> p21_buf;
-    Mat_<float> p22_buf;
-
-    Mat_<float> div_p1_buf;
-    Mat_<float> div_p2_buf;
-
-    Mat_<float> u1x_buf;
-    Mat_<float> u1y_buf;
-    Mat_<float> u2x_buf;
-    Mat_<float> u2y_buf;
-};
+CV_EXPORTS Ptr<DenseOpticalFlow> createOptFlow_DualTVL1();
 
 }
 

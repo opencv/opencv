@@ -28,7 +28,7 @@
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -216,6 +216,86 @@ namespace cv { namespace gpu { namespace device
     OPENCV_GPU_IMPLEMENT_HLS2RGB_TRAITS(hls4_to_bgra, 4, 4, 0)
 
     #undef OPENCV_GPU_IMPLEMENT_HLS2RGB_TRAITS
+
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(rgb_to_lab, 3, 3, true, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(rgba_to_lab, 4, 3, true, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(rgb_to_lab4, 3, 4, true, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(rgba_to_lab4, 4, 4, true, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(bgr_to_lab, 3, 3, true, 0)
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(bgra_to_lab, 4, 3, true, 0)
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(bgr_to_lab4, 3, 4, true, 0)
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(bgra_to_lab4, 4, 4, true, 0)
+
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(lrgb_to_lab, 3, 3, false, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(lrgba_to_lab, 4, 3, false, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(lrgb_to_lab4, 3, 4, false, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(lrgba_to_lab4, 4, 4, false, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(lbgr_to_lab, 3, 3, false, 0)
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(lbgra_to_lab, 4, 3, false, 0)
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(lbgr_to_lab4, 3, 4, false, 0)
+    OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS(lbgra_to_lab4, 4, 4, false, 0)
+
+    #undef OPENCV_GPU_IMPLEMENT_RGB2Lab_TRAITS
+
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab_to_rgb, 3, 3, true, 2)
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab4_to_rgb, 4, 3, true, 2)
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab_to_rgba, 3, 4, true, 2)
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab4_to_rgba, 4, 4, true, 2)
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab_to_bgr, 3, 3, true, 0)
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab4_to_bgr, 4, 3, true, 0)
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab_to_bgra, 3, 4, true, 0)
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab4_to_bgra, 4, 4, true, 0)
+
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab_to_lrgb, 3, 3, false, 2)
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab4_to_lrgb, 4, 3, false, 2)
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab_to_lrgba, 3, 4, false, 2)
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab4_to_lrgba, 4, 4, false, 2)
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab_to_lbgr, 3, 3, false, 0)
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab4_to_lbgr, 4, 3, false, 0)
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab_to_lbgra, 3, 4, false, 0)
+    OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS(lab4_to_lbgra, 4, 4, false, 0)
+
+    #undef OPENCV_GPU_IMPLEMENT_Lab2RGB_TRAITS
+
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(rgb_to_luv, 3, 3, true, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(rgba_to_luv, 4, 3, true, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(rgb_to_luv4, 3, 4, true, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(rgba_to_luv4, 4, 4, true, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(bgr_to_luv, 3, 3, true, 0)
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(bgra_to_luv, 4, 3, true, 0)
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(bgr_to_luv4, 3, 4, true, 0)
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(bgra_to_luv4, 4, 4, true, 0)
+
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(lrgb_to_luv, 3, 3, false, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(lrgba_to_luv, 4, 3, false, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(lrgb_to_luv4, 3, 4, false, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(lrgba_to_luv4, 4, 4, false, 2)
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(lbgr_to_luv, 3, 3, false, 0)
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(lbgra_to_luv, 4, 3, false, 0)
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(lbgr_to_luv4, 3, 4, false, 0)
+    OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS(lbgra_to_luv4, 4, 4, false, 0)
+
+    #undef OPENCV_GPU_IMPLEMENT_RGB2Luv_TRAITS
+
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv_to_rgb, 3, 3, true, 2)
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv4_to_rgb, 4, 3, true, 2)
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv_to_rgba, 3, 4, true, 2)
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv4_to_rgba, 4, 4, true, 2)
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv_to_bgr, 3, 3, true, 0)
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv4_to_bgr, 4, 3, true, 0)
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv_to_bgra, 3, 4, true, 0)
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv4_to_bgra, 4, 4, true, 0)
+
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv_to_lrgb, 3, 3, false, 2)
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv4_to_lrgb, 4, 3, false, 2)
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv_to_lrgba, 3, 4, false, 2)
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv4_to_lrgba, 4, 4, false, 2)
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv_to_lbgr, 3, 3, false, 0)
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv4_to_lbgr, 4, 3, false, 0)
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv_to_lbgra, 3, 4, false, 0)
+    OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS(luv4_to_lbgra, 4, 4, false, 0)
+
+    #undef OPENCV_GPU_IMPLEMENT_Luv2RGB_TRAITS
 }}} // namespace cv { namespace gpu { namespace device
 
 #endif // __OPENCV_GPU_BORDER_INTERPOLATE_HPP__

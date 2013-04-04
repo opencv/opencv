@@ -7,9 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                          License Agreement
+//                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -22,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -58,15 +60,6 @@
 namespace cv
 {
 
-BackgroundSubtractor::~BackgroundSubtractor() {}
-void BackgroundSubtractor::operator()(InputArray, OutputArray, double)
-{
-}
-
-void BackgroundSubtractor::getBackgroundImage(OutputArray) const
-{
-}
-
 static const int defaultNMixtures = 5;
 static const int defaultHistory = 200;
 static const double defaultBackgroundRatio = 0.7;
@@ -74,55 +67,108 @@ static const double defaultVarThreshold = 2.5*2.5;
 static const double defaultNoiseSigma = 30*0.5;
 static const double defaultInitialWeight = 0.05;
 
-BackgroundSubtractorMOG::BackgroundSubtractorMOG()
+class BackgroundSubtractorMOGImpl : public BackgroundSubtractorMOG
 {
-    frameSize = Size(0,0);
-    frameType = 0;
+public:
+    //! the default constructor
+    BackgroundSubtractorMOGImpl()
+    {
+        frameSize = Size(0,0);
+        frameType = 0;
 
-    nframes = 0;
-    nmixtures = defaultNMixtures;
-    history = defaultHistory;
-    varThreshold = defaultVarThreshold;
-    backgroundRatio = defaultBackgroundRatio;
-    noiseSigma = defaultNoiseSigma;
-}
+        nframes = 0;
+        nmixtures = defaultNMixtures;
+        history = defaultHistory;
+        varThreshold = defaultVarThreshold;
+        backgroundRatio = defaultBackgroundRatio;
+        noiseSigma = defaultNoiseSigma;
+        name_ = "BackgroundSubtractor.MOG";
+    }
+    // the full constructor that takes the length of the history,
+    // the number of gaussian mixtures, the background ratio parameter and the noise strength
+    BackgroundSubtractorMOGImpl(int _history, int _nmixtures, double _backgroundRatio, double _noiseSigma=0)
+    {
+        frameSize = Size(0,0);
+        frameType = 0;
 
-BackgroundSubtractorMOG::BackgroundSubtractorMOG(int _history, int _nmixtures,
-                                                 double _backgroundRatio,
-                                                 double _noiseSigma)
-{
-    frameSize = Size(0,0);
-    frameType = 0;
+        nframes = 0;
+        nmixtures = std::min(_nmixtures > 0 ? _nmixtures : defaultNMixtures, 8);
+        history = _history > 0 ? _history : defaultHistory;
+        varThreshold = defaultVarThreshold;
+        backgroundRatio = std::min(_backgroundRatio > 0 ? _backgroundRatio : 0.95, 1.);
+        noiseSigma = _noiseSigma <= 0 ? defaultNoiseSigma : _noiseSigma;
+    }
 
-    nframes = 0;
-    nmixtures = min(_nmixtures > 0 ? _nmixtures : defaultNMixtures, 8);
-    history = _history > 0 ? _history : defaultHistory;
-    varThreshold = defaultVarThreshold;
-    backgroundRatio = min(_backgroundRatio > 0 ? _backgroundRatio : 0.95, 1.);
-    noiseSigma = _noiseSigma <= 0 ? defaultNoiseSigma : _noiseSigma;
-}
+    //! the update operator
+    virtual void apply(InputArray image, OutputArray fgmask, double learningRate=0);
 
-BackgroundSubtractorMOG::~BackgroundSubtractorMOG()
-{
-}
+    //! re-initiaization method
+    virtual void initialize(Size _frameSize, int _frameType)
+    {
+        frameSize = _frameSize;
+        frameType = _frameType;
+        nframes = 0;
 
+        int nchannels = CV_MAT_CN(frameType);
+        CV_Assert( CV_MAT_DEPTH(frameType) == CV_8U );
 
-void BackgroundSubtractorMOG::initialize(Size _frameSize, int _frameType)
-{
-    frameSize = _frameSize;
-    frameType = _frameType;
-    nframes = 0;
+        // for each gaussian mixture of each pixel bg model we store ...
+        // the mixture sort key (w/sum_of_variances), the mixture weight (w),
+        // the mean (nchannels values) and
+        // the diagonal covariance matrix (another nchannels values)
+        bgmodel.create( 1, frameSize.height*frameSize.width*nmixtures*(2 + 2*nchannels), CV_32F );
+        bgmodel = Scalar::all(0);
+    }
 
-    int nchannels = CV_MAT_CN(frameType);
-    CV_Assert( CV_MAT_DEPTH(frameType) == CV_8U );
+    virtual AlgorithmInfo* info() const { return 0; }
 
-    // for each gaussian mixture of each pixel bg model we store ...
-    // the mixture sort key (w/sum_of_variances), the mixture weight (w),
-    // the mean (nchannels values) and
-    // the diagonal covariance matrix (another nchannels values)
-    bgmodel.create( 1, frameSize.height*frameSize.width*nmixtures*(2 + 2*nchannels), CV_32F );
-    bgmodel = Scalar::all(0);
-}
+    virtual void getBackgroundImage(OutputArray) const
+    {
+        CV_Error( CV_StsNotImplemented, "" );
+    }
+
+    virtual int getHistory() const { return history; }
+    virtual void setHistory(int _nframes) { history = _nframes; }
+
+    virtual int getNMixtures() const { return nmixtures; }
+    virtual void setNMixtures(int nmix) { nmixtures = nmix; }
+
+    virtual double getBackgroundRatio() const { return backgroundRatio; }
+    virtual void setBackgroundRatio(double _backgroundRatio) { backgroundRatio = _backgroundRatio; }
+
+    virtual double getNoiseSigma() const { return noiseSigma; }
+    virtual void setNoiseSigma(double _noiseSigma) { noiseSigma = _noiseSigma; }
+
+    virtual void write(FileStorage& fs) const
+    {
+        fs << "name" << name_
+           << "history" << history
+           << "nmixtures" << nmixtures
+           << "backgroundRatio" << backgroundRatio
+           << "noiseSigma" << noiseSigma;
+    }
+
+    virtual void read(const FileNode& fn)
+    {
+        CV_Assert( (String)fn["name"] == name_ );
+        history = (int)fn["history"];
+        nmixtures = (int)fn["nmixtures"];
+        backgroundRatio = (double)fn["backgroundRatio"];
+        noiseSigma = (double)fn["noiseSigma"];
+    }
+
+protected:
+    Size frameSize;
+    int frameType;
+    Mat bgmodel;
+    int nframes;
+    int history;
+    int nmixtures;
+    double varThreshold;
+    double backgroundRatio;
+    double noiseSigma;
+    String name_;
+};
 
 
 template<typename VT> struct MixData
@@ -177,9 +223,9 @@ static void process8uC1( const Mat& image, Mat& fgmask, double learningRate,
                         float dw = alpha*(1.f - w);
                         mptr[k].weight = w + dw;
                         mptr[k].mean = mu + alpha*diff;
-                        var = max(var + alpha*(d2 - var), minVar);
+                        var = std::max(var + alpha*(d2 - var), minVar);
                         mptr[k].var = var;
-                        mptr[k].sortKey = w/sqrt(var);
+                        mptr[k].sortKey = w/std::sqrt(var);
 
                         for( k1 = k-1; k1 >= 0; k1-- )
                         {
@@ -195,7 +241,7 @@ static void process8uC1( const Mat& image, Mat& fgmask, double learningRate,
 
                 if( kHit < 0 ) // no appropriate gaussian mixture found at all, remove the weakest mixture and create a new one
                 {
-                    kHit = k = min(k, K-1);
+                    kHit = k = std::min(k, K-1);
                     wsum += w0 - mptr[k].weight;
                     mptr[k].weight = w0;
                     mptr[k].mean = pix;
@@ -271,7 +317,7 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
     int K = nmixtures;
 
     const float w0 = (float)defaultInitialWeight;
-    const float sk0 = (float)(w0/(defaultNoiseSigma*2*sqrt(3.)));
+    const float sk0 = (float)(w0/(defaultNoiseSigma*2*std::sqrt(3.)));
     const float var0 = (float)(defaultNoiseSigma*defaultNoiseSigma*4);
     const float minVar = (float)(noiseSigma*noiseSigma);
     MixData<Vec3f>* mptr = (MixData<Vec3f>*)bgmodel.data;
@@ -305,11 +351,11 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
                         float dw = alpha*(1.f - w);
                         mptr[k].weight = w + dw;
                         mptr[k].mean = mu + alpha*diff;
-                        var = Vec3f(max(var[0] + alpha*(diff[0]*diff[0] - var[0]), minVar),
-                                    max(var[1] + alpha*(diff[1]*diff[1] - var[1]), minVar),
-                                    max(var[2] + alpha*(diff[2]*diff[2] - var[2]), minVar));
+                        var = Vec3f(std::max(var[0] + alpha*(diff[0]*diff[0] - var[0]), minVar),
+                                    std::max(var[1] + alpha*(diff[1]*diff[1] - var[1]), minVar),
+                                    std::max(var[2] + alpha*(diff[2]*diff[2] - var[2]), minVar));
                         mptr[k].var = var;
-                        mptr[k].sortKey = w/sqrt(var[0] + var[1] + var[2]);
+                        mptr[k].sortKey = w/std::sqrt(var[0] + var[1] + var[2]);
 
                         for( k1 = k-1; k1 >= 0; k1-- )
                         {
@@ -325,7 +371,7 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
 
                 if( kHit < 0 ) // no appropriate gaussian mixture found at all, remove the weakest mixture and create a new one
                 {
-                    kHit = k = min(k, K-1);
+                    kHit = k = std::min(k, K-1);
                     wsum += w0 - mptr[k].weight;
                     mptr[k].weight = w0;
                     mptr[k].mean = pix;
@@ -391,7 +437,7 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
     }
 }
 
-void BackgroundSubtractorMOG::operator()(InputArray _image, OutputArray _fgmask, double learningRate)
+void BackgroundSubtractorMOGImpl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
     Mat image = _image.getMat();
     bool needToInitialize = nframes == 0 || learningRate >= 1 || image.size() != frameSize || image.type() != frameType;
@@ -404,7 +450,7 @@ void BackgroundSubtractorMOG::operator()(InputArray _image, OutputArray _fgmask,
     Mat fgmask = _fgmask.getMat();
 
     ++nframes;
-    learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./min( nframes, history );
+    learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( nframes, history );
     CV_Assert(learningRate >= 0);
 
     if( image.type() == CV_8UC1 )
@@ -413,6 +459,12 @@ void BackgroundSubtractorMOG::operator()(InputArray _image, OutputArray _fgmask,
         process8uC3( image, fgmask, learningRate, bgmodel, nmixtures, backgroundRatio, varThreshold, noiseSigma );
     else
         CV_Error( CV_StsUnsupportedFormat, "Only 1- and 3-channel 8-bit images are supported in BackgroundSubtractorMOG" );
+}
+
+Ptr<BackgroundSubtractorMOG> createBackgroundSubtractorMOG(int history, int nmixtures,
+                                  double backgroundRatio, double noiseSigma)
+{
+    return new BackgroundSubtractorMOGImpl(history, nmixtures, backgroundRatio, noiseSigma);
 }
 
 }

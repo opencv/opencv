@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
 Video capture sample.
 
@@ -28,9 +30,14 @@ Keys:
 '''
 
 import numpy as np
-import cv2
-from time import clock
 from numpy import pi, sin, cos
+
+import cv2
+
+# built-in modules
+from time import clock
+
+# local modules
 import common
 
 class VideoSynthBase(object):

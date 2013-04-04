@@ -45,7 +45,6 @@
 
 #include "saturate_cast.hpp"
 #include "datamov_utils.hpp"
-#include "detail/reduction_detail.hpp"
 
 namespace cv { namespace gpu { namespace device
 {
@@ -150,34 +149,11 @@ namespace cv { namespace gpu { namespace device
             return true;
         }
 
-        static __device__ __forceinline__ bool check(int, int, int, uint offset = 0)
+        static __device__ __forceinline__ bool check(int, int, int)
         {
             return true;
         }
     };
-
-    ///////////////////////////////////////////////////////////////////////////////
-    // Reduction
-
-    template <int n, typename T, typename Op> __device__ __forceinline__ void reduce(volatile T* data, T& partial_reduction, int tid, const Op& op)
-    {
-        StaticAssert<n >= 8 && n <= 512>::check();
-        utility_detail::ReductionDispatcher<n <= 64>::reduce<n>(data, partial_reduction, tid, op);
-    }
-
-    template <int n, typename T, typename V, typename Pred>
-    __device__ __forceinline__ void reducePredVal(volatile T* sdata, T& myData, V* sval, V& myVal, int tid, const Pred& pred)
-    {
-        StaticAssert<n >= 8 && n <= 512>::check();
-        utility_detail::PredValReductionDispatcher<n <= 64>::reduce<n>(myData, myVal, sdata, sval, tid, pred);
-    }
-
-    template <int n, typename T, typename V1, typename V2, typename Pred>
-    __device__ __forceinline__ void reducePredVal2(volatile T* sdata, T& myData, V1* sval1, V1& myVal1, V2* sval2, V2& myVal2, int tid, const Pred& pred)
-    {
-        StaticAssert<n >= 8 && n <= 512>::check();
-        utility_detail::PredVal2ReductionDispatcher<n <= 64>::reduce<n>(myData, myVal1, myVal2, sdata, sval1, sval2, tid, pred);
-    }
 
     ///////////////////////////////////////////////////////////////////////////////
     // Solve linear system

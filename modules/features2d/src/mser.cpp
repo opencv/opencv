@@ -1054,10 +1054,11 @@ static int preprocessMSER_8UC3( MSCRNode* node,
     return Ne;
 }
 
-#define cmp_mscr_edge(edge1, edge2) \
-    ((edge1).chi < (edge2).chi)
-
-static CV_IMPLEMENT_QSORT( QuickSortMSCREdge, MSCREdge, cmp_mscr_edge )
+class LessThanEdge
+{
+public:
+    bool operator()(const MSCREdge& a, const MSCREdge& b) const { return a.chi < b.chi; }
+};
 
 // to find the root of one region
 static MSCRNode* findMSCR( MSCRNode* x )
@@ -1112,7 +1113,7 @@ extractMSER_8UC3( CvMat* src,
     CvMat* dy = cvCreateMat( src->rows-1, src->cols, CV_64FC1 );
     Ne = preprocessMSER_8UC3( map, edge, &emean, src, mask, dx, dy, Ne, params.edgeBlurSize );
     emean = emean / (double)Ne;
-    QuickSortMSCREdge( edge, Ne, 0 );
+    std::sort(edge, edge + Ne, LessThanEdge());
     MSCREdge* edge_ub = edge+Ne;
     MSCREdge* edgeptr = edge;
     TempMSCR* mscrptr = mscr;
@@ -1263,7 +1264,7 @@ MSER::MSER( int _delta, int _min_area, int _max_area,
 {
 }
 
-void MSER::operator()( const Mat& image, vector<vector<Point> >& dstcontours, const Mat& mask ) const
+void MSER::operator()( const Mat& image, std::vector<std::vector<Point> >& dstcontours, const Mat& mask ) const
 {
     CvMat _image = image, _mask, *pmask = 0;
     if( mask.data )
@@ -1281,19 +1282,19 @@ void MSER::operator()( const Mat& image, vector<vector<Point> >& dstcontours, co
 }
 
 
-void MserFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+void MserFeatureDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
-    vector<vector<Point> > msers;
+    std::vector<std::vector<Point> > msers;
 
     (*this)(image, msers, mask);
 
-    vector<vector<Point> >::const_iterator contour_it = msers.begin();
+    std::vector<std::vector<Point> >::const_iterator contour_it = msers.begin();
     Rect r(0, 0, image.cols, image.rows);
     for( ; contour_it != msers.end(); ++contour_it )
     {
         // TODO check transformation from MSER region to KeyPoint
         RotatedRect rect = fitEllipse(Mat(*contour_it));
-        float diam = sqrt(rect.size.height*rect.size.width);
+        float diam = std::sqrt(rect.size.height*rect.size.width);
 
         if( diam > std::numeric_limits<float>::epsilon() && r.contains(rect.center) )
             keypoints.push_back( KeyPoint(rect.center, diam) );

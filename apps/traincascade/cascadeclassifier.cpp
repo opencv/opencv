@@ -1,5 +1,4 @@
-#include "opencv2/core/core.hpp"
-#include "opencv2/core/internal.hpp"
+#include "opencv2/core.hpp"
 
 #include "cascadeclassifier.h"
 #include <queue>
@@ -24,10 +23,10 @@ CvCascadeParams::CvCascadeParams( int _stageType, int _featureType ) : stageType
 
 void CvCascadeParams::write( FileStorage &fs ) const
 {
-    String stageTypeStr = stageType == BOOST ? CC_BOOST : String();
+    string stageTypeStr = stageType == BOOST ? CC_BOOST : string();
     CV_Assert( !stageTypeStr.empty() );
     fs << CC_STAGE_TYPE << stageTypeStr;
-    String featureTypeStr = featureType == CvFeatureParams::HAAR ? CC_HAAR :
+    string featureTypeStr = featureType == CvFeatureParams::HAAR ? CC_HAAR :
                             featureType == CvFeatureParams::LBP ? CC_LBP :
                             featureType == CvFeatureParams::HOG ? CC_HOG :
                             0;
@@ -41,7 +40,7 @@ bool CvCascadeParams::read( const FileNode &node )
 {
     if ( node.empty() )
         return false;
-    String stageTypeStr, featureTypeStr;
+    string stageTypeStr, featureTypeStr;
     FileNode rnode = node[CC_STAGE_TYPE];
     if ( !rnode.isString() )
         return false;
@@ -96,7 +95,7 @@ void CvCascadeParams::printAttrs() const
     cout << "sampleHeight: " << winSize.height << endl;
 }
 
-bool CvCascadeParams::scanAttr( const String prmName, const String val )
+bool CvCascadeParams::scanAttr( const string prmName, const string val )
 {
     bool res = true;
     if( !prmName.compare( "-stageType" ) )
@@ -126,9 +125,9 @@ bool CvCascadeParams::scanAttr( const String prmName, const String val )
 
 //---------------------------- CascadeClassifier --------------------------------------
 
-bool CvCascadeClassifier::train( const String _cascadeDirName,
-                                const String _posFilename,
-                                const String _negFilename,
+bool CvCascadeClassifier::train( const string _cascadeDirName,
+                                const string _posFilename,
+                                const string _negFilename,
                                 int _numPos, int _numNeg,
                                 int _precalcValBufSize, int _precalcIdxBufSize,
                                 int _numStages,
@@ -399,7 +398,7 @@ bool CvCascadeClassifier::readStages( const FileNode &node)
 #define ICV_HAAR_PARENT_NAME            "parent"
 #define ICV_HAAR_NEXT_NAME              "next"
 
-void CvCascadeClassifier::save( const String filename, bool baseFormat )
+void CvCascadeClassifier::save( const string filename, bool baseFormat )
 {
     FileStorage fs( filename, FileStorage::WRITE );
 
@@ -491,7 +490,7 @@ void CvCascadeClassifier::save( const String filename, bool baseFormat )
     fs << "}";
 }
 
-bool CvCascadeClassifier::load( const String cascadeDirName )
+bool CvCascadeClassifier::load( const string cascadeDirName )
 {
     FileStorage fs( cascadeDirName + CC_PARAMS_FILENAME, FileStorage::READ );
     if ( !fs.isOpened() )

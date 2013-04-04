@@ -1,8 +1,10 @@
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <stdio.h>
 
+using namespace std;
 using namespace cv;
 
 int maskSize0 = CV_DIST_MASK_5;
@@ -111,7 +113,7 @@ int main( int argc, const char** argv )
 {
     help();
     CommandLineParser parser(argc, argv, keys);
-    string filename = parser.get<string>(1);
+    string filename = parser.get<string>(0);
     gray = imread(filename.c_str(), 0);
     if(gray.empty())
     {

@@ -163,22 +163,13 @@ int DetectKnownPlatforms()
 {
     int tegra_status = DetectTegra();
 
-    if (3 == tegra_status)
+    // All Tegra platforms since Tegra3
+    if (2 < tegra_status)
     {
-        return PLATFORM_TEGRA3;
+        return PLATFORM_TEGRA + tegra_status - 1;
     }
     else
     {
         return PLATFORM_UNKNOWN;
     }
-
-    // NOTE: Uncomment when all Tegras will be supported
-    /*if (tegra_status > 0)
-     *   {
-     *   return PLATFORM_TEGRA + tegra_status - 1;
-     }
-     else
-     {
-         return PLATFORM_UNKNOWN;
-     }*/
 }

@@ -11,7 +11,8 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2010, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -41,267 +42,304 @@
 //M*/
 
 #include "precomp.hpp"
-#include <iterator>
+
+namespace
+{
+    class FormattedImpl : public cv::Formatted
+    {
+        enum { STATE_PROLOGUE, STATE_EPILOGUE, STATE_ROW_OPEN, STATE_ROW_CLOSE, STATE_CN_OPEN, STATE_CN_CLOSE, STATE_VALUE, STATE_FINISHED,
+               STATE_LINE_SEPARATOR, STATE_CN_SEPARATOR, STATE_VALUE_SEPARATOR };
+        enum {BRACE_ROW_OPEN = 0, BRACE_ROW_CLOSE = 1, BRACE_ROW_SEP=2, BRACE_CN_OPEN=3, BRACE_CN_CLOSE=4 };
+
+        char floatFormat[8];
+        char buf[32];   // enough for double with precision up to 20
+
+        cv::Mat mtx;
+        int mcn; // == mtx.channels()
+        bool singleLine;
+
+        int state;
+        int row;
+        int col;
+        int cn;
+
+        cv::String prologue;
+        cv::String epilogue;
+        char braces[5];
+
+        void (FormattedImpl::*valueToStr)();
+        void valueToStr8u()  { sprintf(buf, "%3d", (int)mtx.ptr<uchar>(row, col)[cn]); }
+        void valueToStr8s()  { sprintf(buf, "%3d", (int)mtx.ptr<schar>(row, col)[cn]); }
+        void valueToStr16u() { sprintf(buf, "%d", (int)mtx.ptr<ushort>(row, col)[cn]); }
+        void valueToStr16s() { sprintf(buf, "%d", (int)mtx.ptr<short>(row, col)[cn]); }
+        void valueToStr32s() { sprintf(buf, "%d", mtx.ptr<int>(row, col)[cn]); }
+        void valueToStr32f() { sprintf(buf, floatFormat, mtx.ptr<float>(row, col)[cn]); }
+        void valueToStr64f() { sprintf(buf, floatFormat, mtx.ptr<double>(row, col)[cn]); }
+        void valueToStrOther() { buf[0] = 0; }
+
+    public:
+
+        FormattedImpl(cv::String pl, cv::String el, cv::Mat m, char br[5], bool sLine, int precision)
+        {
+            prologue = pl;
+            epilogue = el;
+            mtx = m;
+            mcn = m.channels();
+            memcpy(braces, br, 5);
+            state = STATE_PROLOGUE;
+            singleLine = sLine;
+
+            if (precision < 0)
+            {
+                floatFormat[0] = '%';
+                floatFormat[1] = 'a';
+                floatFormat[2] = 0;
+            }
+            else
+            {
+                sprintf(floatFormat, "%%.%dg", std::min(precision, 20));
+            }
+
+            switch(mtx.depth())
+            {
+                case CV_8U:  valueToStr = &FormattedImpl::valueToStr8u; break;
+                case CV_8S:  valueToStr = &FormattedImpl::valueToStr8s; break;
+                case CV_16U: valueToStr = &FormattedImpl::valueToStr16u; break;
+                case CV_16S: valueToStr = &FormattedImpl::valueToStr16s; break;
+                case CV_32S: valueToStr = &FormattedImpl::valueToStr32s; break;
+                case CV_32F: valueToStr = &FormattedImpl::valueToStr32f; break;
+                case CV_64F: valueToStr = &FormattedImpl::valueToStr64f; break;
+                default:     valueToStr = &FormattedImpl::valueToStrOther; break;
+            }
+        }
+
+        void reset()
+        {
+            state = STATE_PROLOGUE;
+        }
+
+        const char* next()
+        {
+            switch(state)
+            {
+                case STATE_PROLOGUE:
+                    row = 0;
+                    if (mtx.empty())
+                        state = STATE_EPILOGUE;
+                    else
+                        state = STATE_ROW_OPEN;
+                    return prologue.c_str();
+                case STATE_EPILOGUE:
+                    state = STATE_FINISHED;
+                    return epilogue.c_str();
+                case STATE_ROW_OPEN:
+                    col = 0;
+                    state = STATE_CN_OPEN;
+                    {
+                        size_t pos = 0;
+                        if (row > 0)
+                            while(pos < prologue.size() && pos < sizeof(buf) - 2)
+                                buf[pos++] = ' ';
+                        if (braces[BRACE_ROW_OPEN])
+                            buf[pos++] = braces[BRACE_ROW_OPEN];
+                        if(!pos)
+                            return next();
+                        buf[pos] = 0;
+                    }
+                    return buf;
+                case STATE_ROW_CLOSE:
+                    state = STATE_LINE_SEPARATOR;
+                    ++row;
+                    if (braces[BRACE_ROW_CLOSE])
+                    {
+                        buf[0] = braces[BRACE_ROW_CLOSE];
+                        buf[1] = row < mtx.rows ? ',' : '\0';
+                        buf[2] = 0;
+                        return buf;
+                    }
+                    else if(braces[BRACE_ROW_SEP] && row < mtx.rows)
+                    {
+                        buf[0] = braces[BRACE_ROW_SEP];
+                        buf[1] = 0;
+                        return buf;
+                    }
+                    return next();
+                case STATE_CN_OPEN:
+                    cn = 0;
+                    state = STATE_VALUE;
+                    if (mcn > 1 && braces[BRACE_CN_OPEN])
+                    {
+                        buf[0] = braces[BRACE_CN_OPEN];
+                        buf[1] = 0;
+                        return buf;
+                    }
+                    return next();
+                case STATE_CN_CLOSE:
+                    ++col;
+                    if (col >= mtx.cols)
+                        state = STATE_ROW_CLOSE;
+                    else
+                        state = STATE_CN_SEPARATOR;
+                    if (mcn > 1 && braces[BRACE_CN_CLOSE])
+                    {
+                        buf[0] = braces[BRACE_CN_CLOSE];
+                        buf[1] = 0;
+                        return buf;
+                    }
+                    return next();
+                case STATE_VALUE:
+                    (this->*valueToStr)();
+                    if (++cn >= mcn)
+                        state = STATE_CN_CLOSE;
+                    else
+                        state = STATE_VALUE_SEPARATOR;
+                    return buf;
+                case STATE_FINISHED:
+                    return 0;
+                case STATE_LINE_SEPARATOR:
+                    if (row >= mtx.rows)
+                    {
+                        state = STATE_EPILOGUE;
+                        return next();
+                    }
+                    state = STATE_ROW_OPEN;
+                    buf[0] = singleLine ? ' ' : '\n';
+                    buf[1] = 0;
+                    return buf;
+                case STATE_CN_SEPARATOR:
+                    state = STATE_CN_OPEN;
+                    buf[0] = ',';
+                    buf[1] = ' ';
+                    buf[2] = 0;
+                    return buf;
+                case STATE_VALUE_SEPARATOR:
+                    state = STATE_VALUE;
+                    buf[0] = ',';
+                    buf[1] = ' ';
+                    buf[2] = 0;
+                    return buf;
+            }
+            return 0;
+        }
+    };
+
+    class FormatterBase : public cv::Formatter
+    {
+    public:
+        FormatterBase() : prec32f(8), prec64f(16), multiline(true) {}
+
+        void set32fPrecision(int p)
+        {
+            prec32f = p;
+        }
+
+        void set64fPrecision(int p)
+        {
+            prec64f = p;
+        }
+
+        void setMultiline(bool ml)
+        {
+            multiline = ml;
+        }
+
+    protected:
+        int prec32f;
+        int prec64f;
+        int multiline;
+    };
+
+    class MatlabFormatter : public FormatterBase
+    {
+    public:
+
+        cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
+        {
+            char braces[5] = {'\0', '\0', ';', '\0', '\0'};
+            return new FormattedImpl("[", "]", mtx, braces,
+                mtx.cols == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+        }
+    };
+
+    class PythonFormatter : public FormatterBase
+    {
+    public:
+
+        cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
+        {
+            char braces[5] = {'[', ']', '\0', '[', ']'};
+            if (mtx.cols == 1)
+                braces[0] = braces[1] = '\0';
+            return new FormattedImpl("[", "]", mtx, braces,
+                mtx.cols*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+        }
+    };
+
+    class NumpyFormatter : public FormatterBase
+    {
+    public:
+
+        cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
+        {
+            static const char* numpyTypes[] =
+            {
+                "uint8", "int8", "uint16", "int16", "int32", "float32", "float64", "uint64"
+            };
+            char braces[5] = {'[', ']', '\0', '[', ']'};
+            if (mtx.cols == 1)
+                braces[0] = braces[1] = '\0';
+            return new FormattedImpl("array([", cv::format("], type='%s')", numpyTypes[mtx.depth()]), mtx, braces,
+                mtx.cols*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+        }
+    };
+
+    class CSVFormatter : public FormatterBase
+    {
+    public:
+
+        cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
+        {
+            char braces[5] = {'\0', '\0', '\0', '\0', '\0'};
+            return new FormattedImpl(cv::String(), mtx.rows > 1 ? cv::String("\n") : cv::String(), mtx, braces,
+                mtx.cols*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+        }
+    };
+
+    class CFormatter : public FormatterBase
+    {
+    public:
+
+        cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
+        {
+            char braces[5] = {'\0', '\0', ',', '\0', '\0'};
+            return new FormattedImpl("{", "}", mtx, braces,
+                mtx.cols == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
+        }
+    };
+
+} // namespace
+
 
 namespace cv
 {
+    Formatted::~Formatted() {}
+    Formatter::~Formatter() {}
 
-static inline char getCloseBrace(char c)
-{
-    return c == '[' ? ']' : c == '(' ? ')' : c == '{' ? '}' : '\0';
-}
-
-
-template<typename _Tp> static void writeElems(std::ostream& out, const _Tp* data,
-                                              int nelems, int cn, char obrace, char cbrace)
-{
-    typedef typename DataType<_Tp>::work_type _WTp;
-    nelems *= cn;
-    for(int i = 0; i < nelems; i += cn)
+    Ptr<Formatter> Formatter::get(int fmt)
     {
-        if(cn == 1)
+        switch(fmt)
         {
-            out << (_WTp)data[i] << (i+1 < nelems ? ", " : "");
-            continue;
+            case FMT_MATLAB:
+                return new MatlabFormatter();
+            case FMT_CSV:
+                return new CSVFormatter();
+            case FMT_PYTHON:
+                return new PythonFormatter();
+            case FMT_NUMPY:
+                return new NumpyFormatter();
+            case FMT_C:
+                return new CFormatter();
         }
-        out << obrace;
-        for(int j = 0; j < cn; j++)
-            out << (_WTp)data[i + j] << (j+1 < cn ? ", " : "");
-        out << cbrace << (i+cn < nelems ? ", " : "");
+        return new MatlabFormatter();
     }
-}
-
-
-static void writeElems(std::ostream& out, const void* data, int nelems, int type, char brace)
-{
-    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    char cbrace = ' ';
-    if(!brace || isspace(brace))
-    {
-        nelems *= cn;
-        cn = 1;
-    }
-    else
-        cbrace = getCloseBrace(brace);
-    if(depth == CV_8U)
-        writeElems(out, (const uchar*)data, nelems, cn, brace, cbrace);
-    else if(depth == CV_8S)
-        writeElems(out, (const schar*)data, nelems, cn, brace, cbrace);
-    else if(depth == CV_16U)
-        writeElems(out, (const ushort*)data, nelems, cn, brace, cbrace);
-    else if(depth == CV_16S)
-        writeElems(out, (const short*)data, nelems, cn, brace, cbrace);
-    else if(depth == CV_32S)
-        writeElems(out, (const int*)data, nelems, cn, brace, cbrace);
-    else if(depth == CV_32F)
-    {
-        std::streamsize pp = out.precision();
-        out.precision(8);
-        writeElems(out, (const float*)data, nelems, cn, brace, cbrace);
-        out.precision(pp);
-    }
-    else if(depth == CV_64F)
-    {
-        std::streamsize pp = out.precision();
-        out.precision(16);
-        writeElems(out, (const double*)data, nelems, cn, brace, cbrace);
-        out.precision(pp);
-    }
-    else
-        CV_Error(CV_StsUnsupportedFormat, "");
-}
-
-
-static void writeMat(std::ostream& out, const Mat& m, char rowsep, char elembrace, bool singleLine)
-{
-    CV_Assert(m.dims <= 2);
-    int type = m.type();
-
-    char crowbrace = getCloseBrace(rowsep);
-    char orowbrace = crowbrace ? rowsep : '\0';
-
-    if( orowbrace || isspace(rowsep) )
-        rowsep = '\0';
-
-    for( int i = 0; i < m.rows; i++ )
-    {
-        if(orowbrace)
-            out << orowbrace;
-        if( m.data )
-            writeElems(out, m.ptr(i), m.cols, type, elembrace);
-        if(orowbrace)
-            out << crowbrace << (i+1 < m.rows ? ", " : "");
-        if(i+1 < m.rows)
-        {
-            if(rowsep)
-                out << rowsep << (singleLine ? " " : "");
-            if(!singleLine)
-                out << "\n  ";
-        }
-    }
-}
-
-class MatlabFormatter : public Formatter
-{
-public:
-    virtual ~MatlabFormatter() {}
-    void write(std::ostream& out, const Mat& m, const int*, int) const
-    {
-        out << "[";
-        writeMat(out, m, ';', ' ', m.cols == 1);
-        out << "]";
-    }
-
-    void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
-    {
-        writeElems(out, data, nelems, type, ' ');
-    }
-};
-
-class PythonFormatter : public Formatter
-{
-public:
-    virtual ~PythonFormatter() {}
-    void write(std::ostream& out, const Mat& m, const int*, int) const
-    {
-        out << "[";
-        writeMat(out, m, m.cols > 1 ? '[' : ' ', '[', m.cols*m.channels() == 1);
-        out << "]";
-    }
-
-    void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
-    {
-        writeElems(out, data, nelems, type, '[');
-    }
-};
-
-
-class NumpyFormatter : public Formatter
-{
-public:
-    virtual ~NumpyFormatter() {}
-    void write(std::ostream& out, const Mat& m, const int*, int) const
-    {
-        static const char* numpyTypes[] =
-        {
-            "uint8", "int8", "uint16", "int16", "int32", "float32", "float64", "uint64"
-        };
-        out << "array([";
-        writeMat(out, m, m.cols > 1 ? '[' : ' ', '[', m.cols*m.channels() == 1);
-        out << "], type='" << numpyTypes[m.depth()] << "')";
-    }
-
-    void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
-    {
-        writeElems(out, data, nelems, type, '[');
-    }
-};
-
-
-class CSVFormatter : public Formatter
-{
-public:
-    virtual ~CSVFormatter() {}
-    void write(std::ostream& out, const Mat& m, const int*, int) const
-    {
-        writeMat(out, m, ' ', ' ', m.cols*m.channels() == 1);
-        if(m.rows > 1)
-            out << "\n";
-    }
-
-    void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
-    {
-        writeElems(out, data, nelems, type, ' ');
-    }
-};
-
-
-class CFormatter : public Formatter
-{
-public:
-    virtual ~CFormatter() {}
-    void write(std::ostream& out, const Mat& m, const int*, int) const
-    {
-        out << "{";
-        writeMat(out, m, ',', ' ', m.cols==1);
-        out << "}";
-    }
-
-    void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
-    {
-        writeElems(out, data, nelems, type, ' ');
-    }
-};
-
-
-static MatlabFormatter matlabFormatter;
-static PythonFormatter pythonFormatter;
-static NumpyFormatter numpyFormatter;
-static CSVFormatter csvFormatter;
-static CFormatter cFormatter;
-
-static const Formatter* g_defaultFormatter0 = &matlabFormatter;
-static const Formatter* g_defaultFormatter = &matlabFormatter;
-
-static bool my_streq(const char* a, const char* b)
-{
-    size_t i, alen = strlen(a), blen = strlen(b);
-    if( alen != blen )
-        return false;
-    for( i = 0; i < alen; i++ )
-        if( a[i] != b[i] && a[i] - 32 != b[i] )
-            return false;
-    return true;
-}
-
-const Formatter* Formatter::get(const char* fmt)
-{
-    if(!fmt || my_streq(fmt, ""))
-        return g_defaultFormatter;
-    if( my_streq(fmt, "MATLAB"))
-        return &matlabFormatter;
-    if( my_streq(fmt, "CSV"))
-        return &csvFormatter;
-    if( my_streq(fmt, "PYTHON"))
-        return &pythonFormatter;
-    if( my_streq(fmt, "NUMPY"))
-        return &numpyFormatter;
-    if( my_streq(fmt, "C"))
-        return &cFormatter;
-    CV_Error(CV_StsBadArg, "Unknown formatter");
-    return g_defaultFormatter;
-}
-
-const Formatter* Formatter::setDefault(const Formatter* fmt)
-{
-    const Formatter* prevFmt = g_defaultFormatter;
-    if(!fmt)
-        fmt = g_defaultFormatter0;
-    g_defaultFormatter = fmt;
-    return prevFmt;
-}
-
-Formatted::Formatted(const Mat& _m, const Formatter* _fmt,
-                     const vector<int>& _params)
-{
-    mtx = _m;
-    fmt = _fmt ? _fmt : Formatter::get();
-    std::copy(_params.begin(), _params.end(), back_inserter(params));
-}
-
-Formatted::Formatted(const Mat& _m, const Formatter* _fmt, const int* _params)
-{
-    mtx = _m;
-    fmt = _fmt ? _fmt : Formatter::get();
-
-    if( _params )
-    {
-        int i, maxParams = 100;
-        for(i = 0; i < maxParams && _params[i] != 0; i+=2)
-            ;
-        std::copy(_params, _params + i, back_inserter(params));
-    }
-}
-
-}
-
+} // cv

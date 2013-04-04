@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -45,7 +45,7 @@
 
 #include "precomp.hpp"
 
-#if defined(HAVE_CUDA) && !defined(__APPLE__)
+#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
 
 namespace cv { namespace gpu
 {
@@ -54,7 +54,7 @@ namespace cv { namespace gpu
         class CuvidVideoSource : public VideoReader_GPU::VideoSource
         {
         public:
-            explicit CuvidVideoSource(const std::string& fname);
+            explicit CuvidVideoSource(const String& fname);
             ~CuvidVideoSource() { cuvidDestroyVideoSource(videoSource_); }
 
             VideoReader_GPU::FormatInfo format() const;

@@ -1,24 +1,18 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <cctype>
 
-#include "cvconfig.h"
-#include "opencv2/core/core.hpp"
-#include "opencv2/core/opengl_interop.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/gpu.hpp"
 
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
 void getFlowField(const Mat& u, const Mat& v, Mat& flowField);
-
-#ifdef HAVE_OPENGL
-
-void needleMapDraw(void* userdata);
-
-#endif
 
 int main(int argc, const char* argv[])
 {
@@ -79,11 +73,7 @@ int main(int argc, const char* argv[])
         namedWindow("Forward flow");
         namedWindow("Backward flow");
 
-        namedWindow("Needle Map", WINDOW_OPENGL);
-
         namedWindow("Interpolated frame");
-
-        setGlDevice();
 
         cout << "Press:" << endl;
         cout << "\tESC to quit" << endl;
@@ -122,14 +112,6 @@ int main(int argc, const char* argv[])
 
         Mat flowFieldBackward;
         getFlowField(Mat(d_bu), Mat(d_bv), flowFieldBackward);
-
-#ifdef HAVE_OPENGL
-        cout << "Create Optical Flow Needle Map..." << endl;
-
-        GpuMat d_vertex, d_colors;
-
-        createOpticalFlowNeedleMap(d_fu, d_fv, d_vertex, d_colors);
-#endif
 
         cout << "Interpolating..." << endl;
 
@@ -194,14 +176,6 @@ int main(int argc, const char* argv[])
 
         imshow("Forward flow", flowFieldForward);
         imshow("Backward flow", flowFieldBackward);
-
-#ifdef HAVE_OPENGL
-        GlArrays arr;
-        arr.setVertexArray(d_vertex);
-        arr.setColorArray(d_colors, false);
-
-        setOpenGlDrawCallback("Needle Map", needleMapDraw, &arr);
-#endif
 
         int currentFrame = 0;
 
@@ -292,21 +266,3 @@ void getFlowField(const Mat& u, const Mat& v, Mat& flowField)
         }
     }
 }
-
-#ifdef HAVE_OPENGL
-
-void needleMapDraw(void* userdata)
-{
-    const GlArrays* arr = static_cast<const GlArrays*>(userdata);
-
-    GlCamera camera;
-    camera.setOrthoProjection(0.0, 1.0, 1.0, 0.0, 0.0, 1.0);
-    camera.lookAt(Point3d(0.0, 0.0, 1.0), Point3d(0.0, 0.0, 0.0), Point3d(0.0, 1.0, 0.0));
-
-    camera.setupProjectionMatrix();
-    camera.setupModelViewMatrix();
-
-    render(*arr, RenderMode::TRIANGLES);
-}
-
-#endif

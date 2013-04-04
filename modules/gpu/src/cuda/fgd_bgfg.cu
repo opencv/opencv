@@ -28,7 +28,7 @@
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -46,6 +46,8 @@
 #include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/gpu/device/reduce.hpp"
+#include "opencv2/gpu/device/functional.hpp"
 #include "fgd_bgfg_common.hpp"
 
 using namespace cv::gpu;
@@ -181,57 +183,8 @@ namespace bgfg
         __shared__ unsigned int data1[MERGE_THREADBLOCK_SIZE];
         __shared__ unsigned int data2[MERGE_THREADBLOCK_SIZE];
 
-        data0[threadIdx.x] = sum0;
-        data1[threadIdx.x] = sum1;
-        data2[threadIdx.x] = sum2;
-        __syncthreads();
-
-        if (threadIdx.x < 128)
-        {
-            data0[threadIdx.x] = sum0 += data0[threadIdx.x + 128];
-            data1[threadIdx.x] = sum1 += data1[threadIdx.x + 128];
-            data2[threadIdx.x] = sum2 += data2[threadIdx.x + 128];
-        }
-        __syncthreads();
-
-        if (threadIdx.x < 64)
-        {
-            data0[threadIdx.x] = sum0 += data0[threadIdx.x + 64];
-            data1[threadIdx.x] = sum1 += data1[threadIdx.x + 64];
-            data2[threadIdx.x] = sum2 += data2[threadIdx.x + 64];
-        }
-        __syncthreads();
-
-        if (threadIdx.x < 32)
-        {
-            volatile unsigned int* vdata0 = data0;
-            volatile unsigned int* vdata1 = data1;
-            volatile unsigned int* vdata2 = data2;
-
-            vdata0[threadIdx.x] = sum0 += vdata0[threadIdx.x + 32];
-            vdata1[threadIdx.x] = sum1 += vdata1[threadIdx.x + 32];
-            vdata2[threadIdx.x] = sum2 += vdata2[threadIdx.x + 32];
-
-            vdata0[threadIdx.x] = sum0 += vdata0[threadIdx.x + 16];
-            vdata1[threadIdx.x] = sum1 += vdata1[threadIdx.x + 16];
-            vdata2[threadIdx.x] = sum2 += vdata2[threadIdx.x + 16];
-
-            vdata0[threadIdx.x] = sum0 += vdata0[threadIdx.x + 8];
-            vdata1[threadIdx.x] = sum1 += vdata1[threadIdx.x + 8];
-            vdata2[threadIdx.x] = sum2 += vdata2[threadIdx.x + 8];
-
-            vdata0[threadIdx.x] = sum0 += vdata0[threadIdx.x + 4];
-            vdata1[threadIdx.x] = sum1 += vdata1[threadIdx.x + 4];
-            vdata2[threadIdx.x] = sum2 += vdata2[threadIdx.x + 4];
-
-            vdata0[threadIdx.x] = sum0 += vdata0[threadIdx.x + 2];
-            vdata1[threadIdx.x] = sum1 += vdata1[threadIdx.x + 2];
-            vdata2[threadIdx.x] = sum2 += vdata2[threadIdx.x + 2];
-
-            vdata0[threadIdx.x] = sum0 += vdata0[threadIdx.x + 1];
-            vdata1[threadIdx.x] = sum1 += vdata1[threadIdx.x + 1];
-            vdata2[threadIdx.x] = sum2 += vdata2[threadIdx.x + 1];
-        }
+        plus<unsigned int> op;
+        reduce<MERGE_THREADBLOCK_SIZE>(smem_tuple(data0, data1, data2), thrust::tie(sum0, sum1, sum2), threadIdx.x, thrust::make_tuple(op, op, op));
 
         if(threadIdx.x == 0)
         {
@@ -245,9 +198,9 @@ namespace bgfg
     void calcDiffHistogram_gpu(PtrStepSzb prevFrame, PtrStepSzb curFrame,
                                unsigned int* hist0, unsigned int* hist1, unsigned int* hist2,
                                unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2,
-                               int cc, cudaStream_t stream)
+                               bool cc20, cudaStream_t stream)
     {
-        const int HISTOGRAM_WARP_COUNT = cc < 20 ? 4 : 6;
+        const int HISTOGRAM_WARP_COUNT = cc20 ? 6 : 4;
         const int HISTOGRAM_THREADBLOCK_SIZE = HISTOGRAM_WARP_COUNT * WARP_SIZE;
 
         calcPartialHistogram<PT, CT><<<PARTIAL_HISTOGRAM_COUNT, HISTOGRAM_THREADBLOCK_SIZE, 0, stream>>>(
@@ -261,10 +214,10 @@ namespace bgfg
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    template void calcDiffHistogram_gpu<uchar3, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
-    template void calcDiffHistogram_gpu<uchar3, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
-    template void calcDiffHistogram_gpu<uchar4, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
-    template void calcDiffHistogram_gpu<uchar4, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
+    template void calcDiffHistogram_gpu<uchar3, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, bool cc20, cudaStream_t stream);
+    template void calcDiffHistogram_gpu<uchar3, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, bool cc20, cudaStream_t stream);
+    template void calcDiffHistogram_gpu<uchar4, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, bool cc20, cudaStream_t stream);
+    template void calcDiffHistogram_gpu<uchar4, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, bool cc20, cudaStream_t stream);
 
     /////////////////////////////////////////////////////////////////////////
     // calcDiffThreshMask

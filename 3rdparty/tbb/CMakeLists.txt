@@ -1,44 +1,53 @@
-#build TBB for Android from source
-if(NOT ANDROID)
-  message(FATAL_ERROR "The script is designed for Android only!")
-endif()
-
+#Cross compile TBB from source
 project(tbb)
 
-# 4.1 - works fine
-set(tbb_ver "tbb41_20120718oss")
-set(tbb_url "http://threadingbuildingblocks.org/uploads/77/188/4.1/tbb41_20120718oss_src.tgz")
-set(tbb_md5 "31b9ec300f3d09da2504d5d882788dd4")
+# 4.1 update 2 - works fine
+set(tbb_ver "tbb41_20130116oss")
+set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130116oss_src.tgz")
+set(tbb_md5 "3809790e1001a1b32d59c9fee590ee85")
 set(tbb_version_file "version_string.ver")
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
+
+# 4.1 update 1 - works fine
+#set(tbb_ver "tbb41_20121003oss")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20121003oss_src.tgz")
+#set(tbb_md5 "2a684fefb855d2d0318d1ef09afa75ff")
+#set(tbb_version_file "version_string.ver")
+
+# 4.1 - works fine
+#set(tbb_ver "tbb41_20120718oss")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20120718oss_src.tgz")
+#set(tbb_md5 "31b9ec300f3d09da2504d5d882788dd4")
+#set(tbb_version_file "version_string.ver")
 
 # 4.0 update 5 - works fine
 #set(tbb_ver "tbb40_20120613oss")
-#set(tbb_url "http://threadingbuildingblocks.org/uploads/77/187/4.0%20update%205/tbb40_20120613oss_src.tgz")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb40_20120613oss_src.tgz")
 #set(tbb_md5 "da01ed74944ec5950cfae3476901a172")
 #set(tbb_version_file "version_string.ver")
 
 # 4.0 update 4 - works fine
 #set(tbb_ver "tbb40_20120408oss")
-#set(tbb_url "http://threadingbuildingblocks.org/uploads/77/185/4.0%20update%204/tbb40_20120408oss_src.tgz")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb40_20120408oss_src.tgz")
 #set(tbb_md5 "734b356da7fe0ed308741f3e6018251e")
 #set(tbb_version_file "version_string.ver")
 
 # 4.0 update 3 - build broken
 #set(tbb_ver "tbb40_20120201oss")
-#set(tbb_url "http://threadingbuildingblocks.org/uploads/77/182/4.0%20update%203/tbb40_20120201oss_src.tgz")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb40_20120201oss_src.tgz")
 #set(tbb_md5 "4669e7d4adee018de7a7b8b972987218")
 #set(tbb_version_file "version_string.tmp")
 
 # 4.0 update 2 - works fine
 #set(tbb_ver "tbb40_20111130oss")
-#set(tbb_url "http://threadingbuildingblocks.org/uploads/77/180/4.0%20update%202/tbb40_20111130oss_src.tgz")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb40_20111130oss_src.tgz")
 #set(tbb_md5 "1e6926b21e865e79772119cd44fc3ad8")
 #set(tbb_version_file "version_string.tmp")
 #set(tbb_need_GENERIC_DWORD_LOAD_STORE TRUE)
 
 # 4.0 update 1 - works fine
 #set(tbb_ver "tbb40_20111003oss")
-#set(tbb_url "http://threadingbuildingblocks.org/uploads/77/177/4.0%20update%201/tbb40_20111003oss_src.tgz")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb40_20111003oss_src.tgz")
 #set(tbb_md5 "7b5d94eb35a563b29ef402e0fd8f15c9")
 #set(tbb_version_file "version_string.tmp")
 #set(tbb_need_GENERIC_DWORD_LOAD_STORE TRUE)
@@ -115,13 +124,18 @@ list(APPEND lib_srcs "${tbb_src_dir}/src/rml/client/rml_tbb.cpp")
 
 add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
                 -D__TBB_BUILD=1                        #required
-                -D__TBB_SURVIVE_THREAD_SWITCH=0        #no cilk on Android ?
-                -DUSE_PTHREAD                          #required
-                -DTBB_USE_GCC_BUILTINS=1               #required
+                -D__TBB_SURVIVE_THREAD_SWITCH=0        #no cilk support
+                -DUSE_PTHREAD                          #required for Unix
+                -DTBB_USE_GCC_BUILTINS=1               #required for ARM GCC
                 -DTBB_USE_DEBUG=0                      #just to be sure
                 -DTBB_NO_LEGACY=1                      #don't need backward compatibility
                 -DDO_ITT_NOTIFY=0                      #it seems that we don't need these notifications
                )
+
+if(ANDROID_COMPILER_IS_CLANG)
+  add_definitions(-D__TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-prototypes)
+endif()
 
 if(tbb_need_GENERIC_DWORD_LOAD_STORE)
   #needed by TBB 4.0 update 1,2; fixed in TBB 4.0 update 3 but it has 2 new problems
@@ -129,13 +143,23 @@ if(tbb_need_GENERIC_DWORD_LOAD_STORE)
   set(tbb_need_GENERIC_DWORD_LOAD_STORE ON PARENT_SCOPE)
 endif()
 
-add_library(tbb STATIC ${lib_srcs} ${lib_hdrs} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h" "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
+set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs})
+
+if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+  if (NOT ANDROID)
+    set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/arm_linux_stub.cpp")
+  endif()
+  set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
+endif()
+
+set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
+
+add_library(tbb ${TBB_SOURCE_FILES})
 target_link_libraries(tbb c m dl)
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
 string(REPLACE "-Werror=non-virtual-dtor" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
 
 set_target_properties(tbb
   PROPERTIES OUTPUT_NAME tbb
@@ -153,4 +177,3 @@ endif()
 
 # get TBB version
 ocv_parse_header("${tbb_src_dir}/include/tbb/tbb_stddef.h" TBB_VERSION_LINES TBB_VERSION_MAJOR TBB_VERSION_MINOR TBB_INTERFACE_VERSION CACHE)
-

@@ -7,7 +7,9 @@ import java.util.StringTokenizer;
 import org.opencv.engine.HardwareDetector;
 import org.opencv.engine.MarketConnector;
 import org.opencv.engine.OpenCVEngineInterface;
+import org.opencv.engine.OpenCVLibraryInfo;
 import org.opencv.engine.R;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
@@ -77,13 +79,17 @@ public class ManagerActivity extends Activity
             {
                 HardwarePlatformView.setText("Tegra");
             }
-            else if (HardwareDetector.PLATFORM_TEGRA == Platfrom)
+            else if (HardwareDetector.PLATFORM_TEGRA2 == Platfrom)
             {
                 HardwarePlatformView.setText("Tegra 2");
             }
-            else
+            else if (HardwareDetector.PLATFORM_TEGRA3 == Platfrom)
             {
                 HardwarePlatformView.setText("Tegra 3");
+            }
+            else
+            {
+                HardwarePlatformView.setText("Tegra 4");
             }
         }
         else
@@ -170,9 +176,13 @@ public class ManagerActivity extends Activity
 
         mInstalledPackageView.setOnItemClickListener(new OnItemClickListener() {
 
-            public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long id) {
-                mInstalledPackageView.setTag(Integer.valueOf((int)id));
-                mActionDialog.show();
+            public void onItemClick(AdapterView<?> adapter, View view, int position, long id) {
+                //if (!mListViewItems.get((int) id).get("Name").equals("Built-in OpenCV library"));
+                if (!mInstalledPackageInfo[(int) id].packageName.equals("org.opencv.engine"))
+                {
+                    mInstalledPackageView.setTag(Integer.valueOf((int)id));
+                    mActionDialog.show();
+                }
             }
         });
 
@@ -232,8 +242,6 @@ public class ManagerActivity extends Activity
     protected class OpenCVEngineServiceConnection implements ServiceConnection
     {
         public void onServiceDisconnected(ComponentName name) {
-            // TODO Auto-generated method stub
-
         }
 
         public void onServiceConnected(ComponentName name, IBinder service) {
@@ -266,23 +274,57 @@ public class ManagerActivity extends Activity
         }
     };
 
+    @TargetApi(Build.VERSION_CODES.GINGERBREAD)
     synchronized protected void FillPackageList()
     {
         synchronized (mListViewItems) {
-            mMarket.mIncludeManager = false;
             mInstalledPackageInfo = mMarket.GetInstalledOpenCVPackages();
             mListViewItems.clear();
 
-            for (int i = 0; i < mInstalledPackageInfo.length; i++)
+            int RealPackageCount = mInstalledPackageInfo.length;
+            for (int i = 0; i < RealPackageCount; i++)
             {
+                if (mInstalledPackageInfo[i] == null)
+                    break;
+
                 // Convert to Items for package list view
                 HashMap<String,String> temp = new HashMap<String,String>();
+
+                String HardwareName = "";
+                String NativeLibDir = "";
+                String OpenCVersion = "";
+
                 String PublicName = mMarket.GetApplicationName(mInstalledPackageInfo[i].applicationInfo);
+                String PackageName = mInstalledPackageInfo[i].packageName;
+                String VersionName = mInstalledPackageInfo[i].versionName;
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
+                    NativeLibDir = mInstalledPackageInfo[i].applicationInfo.nativeLibraryDir;
+                else
+                    NativeLibDir = "/data/data/" + mInstalledPackageInfo[i].packageName + "/lib";
+
+                if (PackageName.equals("org.opencv.engine"))
+                {
+                    OpenCVLibraryInfo NativeInfo = new OpenCVLibraryInfo(NativeLibDir);
+                    if (NativeInfo.status())
+                    {
+                        PublicName = "Built-in OpenCV library";
+                        PackageName = NativeInfo.packageName();
+                        VersionName = NativeInfo.versionName();
+                    }
+                    else
+                    {
+                        mInstalledPackageInfo[i] = mInstalledPackageInfo[RealPackageCount-1];
+                        mInstalledPackageInfo[RealPackageCount-1] = null;
+                        RealPackageCount--;
+                        i--;
+                        continue;
+                    }
+                }
 
                 int idx = 0;
-                String OpenCVersion = "unknown";
-                String HardwareName = "";
-                StringTokenizer tokenizer = new StringTokenizer(mInstalledPackageInfo[i].packageName, "_");
+                Log.d(TAG, PackageName);
+                StringTokenizer tokenizer = new StringTokenizer(PackageName, "_");
                 while (tokenizer.hasMoreTokens())
                 {
                     if (idx == 1)
@@ -303,21 +345,22 @@ public class ManagerActivity extends Activity
                 }
 
                 String ActivePackagePath;
+                String Tags = null;
                 ActivePackagePath = mActivePackageMap.get(OpenCVersion);
                 Log.d(TAG, OpenCVersion + " -> " + ActivePackagePath);
 
                 if (null != ActivePackagePath)
                 {
-                    int start = ActivePackagePath.indexOf(mInstalledPackageInfo[i].packageName);
-                    int stop = start + mInstalledPackageInfo[i].packageName.length();
-                    if (start >= 0 && ActivePackagePath.charAt(stop) == '/')
+                    if (ActivePackagePath.equals(NativeLibDir))
                     {
                         temp.put("Activity", "y");
-                        PublicName += " (in use)";
+                        Tags = "active";
                     }
                     else
                     {
                         temp.put("Activity", "n");
+                        if (!PublicName.equals("Built-in OpenCV library"))
+                            Tags = "safe to remove";
                     }
                 }
                 else
@@ -325,9 +368,32 @@ public class ManagerActivity extends Activity
                     temp.put("Activity", "n");
                 }
 
+                temp.put("Version", NormalizeVersion(OpenCVersion, VersionName));
+                // HACK: OpenCV Manager for Armv7-a Neon already has Tegra3 optimizations
+                // that is enabled on proper hardware
+                if (HardwareDetector.DetectKnownPlatforms() >= HardwareDetector.PLATFORM_TEGRA3 &&
+                  HardwareName.equals("armv7a neon ") &&  Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
+                {
+                    temp.put("Hardware", "Tegra");
+                    if (Tags == null)
+                    {
+                        Tags = "optimized";
+                    }
+                    else
+                    {
+                        Tags = Tags + ", optimized";
+                    }
+                }
+                else
+                {
+                    temp.put("Hardware", HardwareName);
+                }
+
+                if (Tags != null)
+                    PublicName = PublicName + " (" + Tags + ")";
+
                 temp.put("Name", PublicName);
-                temp.put("Version", NormalizeVersion(OpenCVersion, mInstalledPackageInfo[i].versionName));
-                temp.put("Hardware", HardwareName);
+
                 mListViewItems.add(temp);
             }
 
@@ -337,10 +403,25 @@ public class ManagerActivity extends Activity
 
     protected String NormalizeVersion(String OpenCVersion, String PackageVersion)
     {
-        int dot = PackageVersion.indexOf(".");
-        return OpenCVersion.substring(0,  OpenCVersion.length()-1) + "." +
-            OpenCVersion.toCharArray()[OpenCVersion.length()-1] + "." +
-            PackageVersion.substring(0, dot) + " rev " + PackageVersion.substring(dot+1);
+        if (OpenCVersion == null || PackageVersion == null)
+            return "unknown";
+
+        String[] revisions = PackageVersion.split("\\.");
+
+        if (revisions.length <= 1 || OpenCVersion.length() == 0)
+            return "unknown";
+        else
+            if (revisions.length == 2)
+                // the 2nd digit is revision
+                return OpenCVersion.substring(0,  OpenCVersion.length()-1) + "." +
+                    OpenCVersion.toCharArray()[OpenCVersion.length()-1] + "." +
+                    revisions[0] + " rev " + revisions[1];
+            else
+                // the 2nd digit is part of library version
+                // the 3rd digit is revision
+                return OpenCVersion.substring(0,  OpenCVersion.length()-1) + "." +
+                    OpenCVersion.toCharArray()[OpenCVersion.length()-1] + "." +
+                    revisions[0] + "." + revisions[1] + " rev " + revisions[2];
     }
 
     protected String ConvertPackageName(String Name, String Version)

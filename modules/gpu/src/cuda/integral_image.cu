@@ -28,7 +28,7 @@
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -357,18 +357,19 @@ namespace cv { namespace gpu { namespace device
         #endif
         }
 
-        void shfl_integral_gpu(PtrStepSzb img, PtrStepSz<unsigned int> integral, cudaStream_t stream)
+        void shfl_integral_gpu(const PtrStepSzb& img, PtrStepSz<unsigned int> integral, cudaStream_t stream)
         {
             {
                 // each thread handles 16 values, use 1 block/row
-                const int block = img.cols / 16;
+                // save, becouse step is actually can't be less 512 bytes
+                int block = integral.cols / 16;
 
                 // launch 1 block / row
                 const int grid = img.rows;
 
                 cudaSafeCall( cudaFuncSetCacheConfig(shfl_integral_horizontal, cudaFuncCachePreferL1) );
 
-                shfl_integral_horizontal<<<grid, block, 0, stream>>>((PtrStepSz<uint4>) img, (PtrStepSz<uint4>) integral);
+                shfl_integral_horizontal<<<grid, block, 0, stream>>>((const PtrStepSz<uint4>) img, (PtrStepSz<uint4>) integral);
                 cudaSafeCall( cudaGetLastError() );
             }
 
@@ -382,6 +383,88 @@ namespace cv { namespace gpu { namespace device
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
+        }
+
+        __global__ void shfl_integral_vertical(PtrStepSz<unsigned int> buffer, PtrStepSz<unsigned int> integral)
+        {
+        #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 300)
+            __shared__ unsigned int sums[32][9];
+
+            const int tidx = blockIdx.x * blockDim.x + threadIdx.x;
+            const int lane_id = tidx % 8;
+
+            if (tidx >= integral.cols)
+                return;
+
+            sums[threadIdx.x][threadIdx.y] = 0;
+            __syncthreads();
+
+            unsigned int stepSum = 0;
+
+            for (int y = threadIdx.y; y < integral.rows; y += blockDim.y)
+            {
+                unsigned int* p = buffer.ptr(y) + tidx;
+                unsigned int* dst = integral.ptr(y + 1) + tidx + 1;
+
+                unsigned int sum = *p;
+
+                sums[threadIdx.x][threadIdx.y] = sum;
+                __syncthreads();
+
+                // place into SMEM
+                // shfl scan reduce the SMEM, reformating so the column
+                // sums are computed in a warp
+                // then read out properly
+                const int j = threadIdx.x % 8;
+                const int k = threadIdx.x / 8 + threadIdx.y * 4;
+
+                int partial_sum = sums[k][j];
+
+                for (int i = 1; i <= 8; i *= 2)
+                {
+                    int n = __shfl_up(partial_sum, i, 32);
+
+                    if (lane_id >= i)
+                        partial_sum += n;
+                }
+
+                sums[k][j] = partial_sum;
+                __syncthreads();
+
+                if (threadIdx.y > 0)
+                    sum += sums[threadIdx.x][threadIdx.y - 1];
+
+                sum += stepSum;
+                stepSum += sums[threadIdx.x][blockDim.y - 1];
+
+                __syncthreads();
+
+                *dst = sum;
+            }
+        #endif
+        }
+
+        // used for frame preprocessing before Soft Cascade evaluation: no synchronization needed
+        void shfl_integral_gpu_buffered(PtrStepSzb img, PtrStepSz<uint4> buffer, PtrStepSz<unsigned int> integral,
+            int blockStep, cudaStream_t stream)
+        {
+            {
+                const int block = blockStep;
+                const int grid = img.rows;
+
+                cudaSafeCall( cudaFuncSetCacheConfig(shfl_integral_horizontal, cudaFuncCachePreferL1) );
+
+                shfl_integral_horizontal<<<grid, block, 0, stream>>>((PtrStepSz<uint4>) img, buffer);
+                cudaSafeCall( cudaGetLastError() );
+            }
+
+            {
+                const dim3 block(32, 8);
+                const dim3 grid(divUp(integral.cols, block.x), 1);
+
+                shfl_integral_vertical<<<grid, block, 0, stream>>>((PtrStepSz<uint>)buffer, integral);
+                cudaSafeCall( cudaGetLastError() );
+            }
         }
     }
 }}}

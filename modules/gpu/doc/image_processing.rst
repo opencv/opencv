@@ -703,13 +703,9 @@ Calculates histogram for one channel 8-bit image.
 
 .. ocv:function:: void gpu::calcHist(const GpuMat& src, GpuMat& hist, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::calcHist(const GpuMat& src, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null())
-
     :param src: Source image.
 
     :param hist: Destination histogram with one row, 256 columns, and the  ``CV_32SC1`` type.
-
-    :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
 
     :param stream: Stream for the asynchronous version.
 
@@ -720,8 +716,6 @@ gpu::equalizeHist
 Equalizes the histogram of a grayscale image.
 
 .. ocv:function:: void gpu::equalizeHist(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
-
-.. ocv:function:: void gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, Stream& stream = Stream::Null())
 
 .. ocv:function:: void gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null())
 
@@ -873,15 +867,16 @@ gpu::FastNonLocalMeansDenoising
 -------------------------------
 .. ocv:class:: gpu::FastNonLocalMeansDenoising
 
-    class FastNonLocalMeansDenoising
-    {
-    public:
-        //! Simple method, recommended for grayscale images (though it supports multichannel images)
-        void simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
+    ::
 
-        //! Processes luminance and color components separatelly
-        void labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
-    };
+        class FastNonLocalMeansDenoising
+        {
+        public:
+            //! Simple method, recommended for grayscale images (though it supports multichannel images)
+            void simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
+            //! Processes luminance and color components separatelly
+            void labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
+        };
 
 The class implements fast approximate Non Local Means Denoising algorithm.
 

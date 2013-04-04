@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 """
 Find Squares in image by finding countours and filtering
 """

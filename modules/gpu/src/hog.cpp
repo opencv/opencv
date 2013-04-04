@@ -22,13 +22,13 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -49,16 +49,16 @@ size_t cv::gpu::HOGDescriptor::getDescriptorSize() const { throw_nogpu(); return
 size_t cv::gpu::HOGDescriptor::getBlockHistogramSize() const { throw_nogpu(); return 0; }
 double cv::gpu::HOGDescriptor::getWinSigma() const { throw_nogpu(); return 0; }
 bool cv::gpu::HOGDescriptor::checkDetectorSize() const { throw_nogpu(); return false; }
-void cv::gpu::HOGDescriptor::setSVMDetector(const vector<float>&) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::detect(const GpuMat&, vector<Point>&, double, Size, Size) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat&, vector<Rect>&, double, Size, Size, double, int) { throw_nogpu(); }
+void cv::gpu::HOGDescriptor::setSVMDetector(const std::vector<float>&) { throw_nogpu(); }
+void cv::gpu::HOGDescriptor::detect(const GpuMat&, std::vector<Point>&, double, Size, Size) { throw_nogpu(); }
+void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat&, std::vector<Rect>&, double, Size, Size, double, int) { throw_nogpu(); }
 void cv::gpu::HOGDescriptor::computeBlockHistograms(const GpuMat&) { throw_nogpu(); }
 void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat&, Size, GpuMat&, int) { throw_nogpu(); }
 std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector() { throw_nogpu(); return std::vector<float>(); }
 std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector48x96() { throw_nogpu(); return std::vector<float>(); }
 std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector64x128() { throw_nogpu(); return std::vector<float>(); }
-void cv::gpu::HOGDescriptor::computeConfidence(const GpuMat&, vector<Point>&, double, Size, Size, vector<Point>&, vector<double>&) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat&, vector<Rect>&, double, Size, Size, vector<HOGConfidence>&, int) { throw_nogpu(); }
+void cv::gpu::HOGDescriptor::computeConfidence(const GpuMat&, std::vector<Point>&, double, Size, Size, std::vector<Point>&, std::vector<double>&) { throw_nogpu(); }
+void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat&, std::vector<Rect>&, double, Size, Size, std::vector<HOGConfidence>&, int) { throw_nogpu(); }
 
 #else
 
@@ -155,7 +155,7 @@ bool cv::gpu::HOGDescriptor::checkDetectorSize() const
     return detector_size == 0 || detector_size == descriptor_size || detector_size == descriptor_size + 1;
 }
 
-void cv::gpu::HOGDescriptor::setSVMDetector(const vector<float>& _detector)
+void cv::gpu::HOGDescriptor::setSVMDetector(const std::vector<float>& _detector)
 {
     std::vector<float> detector_reordered(_detector.size());
 
@@ -264,8 +264,8 @@ void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, 
     }
 }
 
-void cv::gpu::HOGDescriptor::computeConfidence(const GpuMat& img, vector<Point>& hits, double hit_threshold,
-                          Size win_stride, Size padding, vector<Point>& locations, vector<double>& confidences)
+void cv::gpu::HOGDescriptor::computeConfidence(const GpuMat& img, std::vector<Point>& hits, double hit_threshold,
+                          Size win_stride, Size padding, std::vector<Point>& locations, std::vector<double>& confidences)
 {
   CV_Assert(padding == Size(0, 0));
 
@@ -307,11 +307,11 @@ void cv::gpu::HOGDescriptor::computeConfidence(const GpuMat& img, vector<Point>&
     }
 }
 
-void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat& img, vector<Rect>& found_locations,
+void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat& img, std::vector<Rect>& found_locations,
                             double hit_threshold, Size win_stride, Size padding,
-                            vector<HOGConfidence> &conf_out, int group_threshold)
+                            std::vector<HOGConfidence> &conf_out, int group_threshold)
 {
-    vector<double> level_scale;
+    std::vector<double> level_scale;
     double scale = 1.;
     int levels = 0;
 
@@ -327,7 +327,7 @@ void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat& img, vect
     level_scale.resize(levels);
 
     std::vector<Rect> all_candidates;
-    vector<Point> locations;
+    std::vector<Point> locations;
 
     for (size_t i = 0; i < level_scale.size(); i++)
     {
@@ -359,7 +359,7 @@ void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat& img, vect
 }
 
 
-void cv::gpu::HOGDescriptor::detect(const GpuMat& img, vector<Point>& hits, double hit_threshold, Size win_stride, Size padding)
+void cv::gpu::HOGDescriptor::detect(const GpuMat& img, std::vector<Point>& hits, double hit_threshold, Size win_stride, Size padding)
 {
     CV_Assert(img.type() == CV_8UC1 || img.type() == CV_8UC4);
     CV_Assert(padding == Size(0, 0));
@@ -396,13 +396,13 @@ void cv::gpu::HOGDescriptor::detect(const GpuMat& img, vector<Point>& hits, doub
 
 
 
-void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat& img, vector<Rect>& found_locations, double hit_threshold,
+void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat& img, std::vector<Rect>& found_locations, double hit_threshold,
                                               Size win_stride, Size padding, double scale0, int group_threshold)
 {
 
     CV_Assert(img.type() == CV_8UC1 || img.type() == CV_8UC4);
 
-    vector<double> level_scale;
+    std::vector<double> level_scale;
     double scale = 1.;
     int levels = 0;
 
@@ -419,7 +419,7 @@ void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat& img, vector<Rect>& f
     image_scales.resize(levels);
 
     std::vector<Rect> all_candidates;
-    vector<Point> locations;
+    std::vector<Point> locations;
 
     for (size_t i = 0; i < level_scale.size(); i++)
     {
@@ -799,7 +799,7 @@ std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector48x96()
         -0.119002f, 0.026722f, 0.034853f, -0.060934f, -0.025054f, -0.093026f,
         -0.035372f, -0.233209f, -0.049869f, -0.039151f, -0.022279f, -0.065380f,
         -9.063785f };
-    return vector<float>(detector, detector + sizeof(detector)/sizeof(detector[0]));
+    return std::vector<float>(detector, detector + sizeof(detector)/sizeof(detector[0]));
 }
 
 
@@ -1613,7 +1613,7 @@ std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector64x128()
        -0.01612278f, -1.46097376e-003f, 0.14013411f, -8.96181818e-003f,
        -0.03250246f, 3.38630192e-003f, 2.64779478e-003f, 0.03359732f,
        -0.02411991f, -0.04229729f, 0.10666174f, -6.66579151f };
-    return vector<float>(detector, detector + sizeof(detector)/sizeof(detector[0]));
+    return std::vector<float>(detector, detector + sizeof(detector)/sizeof(detector[0]));
 }
 
 #endif

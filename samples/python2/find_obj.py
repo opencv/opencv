@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
 Feature-based image matching sample.
 
@@ -7,7 +9,7 @@ USAGE
   --feature  - Feature to use. Can be sift, surf of orb. Append '-flann' to feature name
                 to use Flann-based matcher instead bruteforce.
 
-  Press left mouse button on a feature point to see its mathcing point.
+  Press left mouse button on a feature point to see its matching point.
 '''
 
 import numpy as np
@@ -128,7 +130,8 @@ if __name__ == '__main__':
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
     feature_name = opts.get('--feature', 'sift')
-    try: fn1, fn2 = args
+    try:
+        fn1, fn2 = args
     except:
         fn1 = '../c/box.png'
         fn2 = '../c/box_in_scene.png'
@@ -136,12 +139,20 @@ if __name__ == '__main__':
     img1 = cv2.imread(fn1, 0)
     img2 = cv2.imread(fn2, 0)
     detector, matcher = init_feature(feature_name)
-    if detector != None:
-        print 'using', feature_name
-    else:
+
+    if img1 is None:
+        print 'Failed to load fn1:', fn1
+        sys.exit(1)
+        
+    if img2 is None:
+        print 'Failed to load fn2:', fn2
+        sys.exit(1)
+    
+    if detector is None:
         print 'unknown feature:', feature_name
         sys.exit(1)
-
+    
+    print 'using', feature_name
 
     kp1, desc1 = detector.detectAndCompute(img1, None)
     kp2, desc2 = detector.detectAndCompute(img2, None)

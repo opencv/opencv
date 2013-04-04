@@ -65,12 +65,6 @@ namespace cv
 {
     namespace ocl
     {
-        enum openCLMemcpyKind
-        {
-            clMemcpyHostToDevice = 0,
-            clMemcpyDeviceToHost,
-            clMemcpyDeviceToDevice
-        };
         void error( const char *error_string, const char *file, const int line, const char *func = "");
         const char *getOpenCLErrorString( int err );
 

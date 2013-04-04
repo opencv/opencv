@@ -4,11 +4,12 @@
  *  Created on: Oct 17, 2010
  *      Author: ethan
  */
-#include "opencv2/core/core.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/calib3d.hpp"
+#include "opencv2/features2d.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 #include <vector>
 #include <iostream>
 
@@ -62,8 +63,8 @@ int main(int argc, const char ** argv)
 
   help();
   CommandLineParser parser(argc, argv, keys);
-  string im1_name = parser.get<string>(1);
-  string im2_name = parser.get<string>(2);
+  string im1_name = parser.get<string>(0);
+  string im2_name = parser.get<string>(1);
 
   Mat im1 = imread(im1_name, CV_LOAD_IMAGE_GRAYSCALE);
   Mat im2 = imread(im2_name, CV_LOAD_IMAGE_GRAYSCALE);

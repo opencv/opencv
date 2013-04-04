@@ -22,13 +22,13 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-namespace {
+using namespace cvtest;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SetTo
@@ -67,7 +67,7 @@ PARAM_TEST_CASE(SetTo, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
     }
 };
 
-TEST_P(SetTo, Zero)
+GPU_TEST_P(SetTo, Zero)
 {
     cv::Scalar zero = cv::Scalar::all(0);
 
@@ -77,7 +77,7 @@ TEST_P(SetTo, Zero)
     EXPECT_MAT_NEAR(cv::Mat::zeros(size, type), mat, 0.0);
 }
 
-TEST_P(SetTo, SameVal)
+GPU_TEST_P(SetTo, SameVal)
 {
     cv::Scalar val = cv::Scalar::all(randomDouble(0.0, 255.0));
 
@@ -102,7 +102,7 @@ TEST_P(SetTo, SameVal)
     }
 }
 
-TEST_P(SetTo, DifferentVal)
+GPU_TEST_P(SetTo, DifferentVal)
 {
     cv::Scalar val = randomScalar(0.0, 255.0);
 
@@ -127,7 +127,7 @@ TEST_P(SetTo, DifferentVal)
     }
 }
 
-TEST_P(SetTo, Masked)
+GPU_TEST_P(SetTo, Masked)
 {
     cv::Scalar val = randomScalar(0.0, 255.0);
     cv::Mat mat_gold = randomMat(size, type);
@@ -184,7 +184,7 @@ PARAM_TEST_CASE(CopyTo, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
     }
 };
 
-TEST_P(CopyTo, WithOutMask)
+GPU_TEST_P(CopyTo, WithOutMask)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -195,7 +195,7 @@ TEST_P(CopyTo, WithOutMask)
     EXPECT_MAT_NEAR(src, dst, 0.0);
 }
 
-TEST_P(CopyTo, Masked)
+GPU_TEST_P(CopyTo, Masked)
 {
     cv::Mat src = randomMat(size, type);
     cv::Mat mask = randomMat(size, CV_8UC1, 0.0, 2.0);
@@ -255,7 +255,7 @@ PARAM_TEST_CASE(ConvertTo, cv::gpu::DeviceInfo, cv::Size, MatDepth, MatDepth, Us
     }
 };
 
-TEST_P(ConvertTo, WithOutScaling)
+GPU_TEST_P(ConvertTo, WithOutScaling)
 {
     cv::Mat src = randomMat(size, depth1);
 
@@ -285,7 +285,7 @@ TEST_P(ConvertTo, WithOutScaling)
     }
 }
 
-TEST_P(ConvertTo, WithScaling)
+GPU_TEST_P(ConvertTo, WithScaling)
 {
     cv::Mat src = randomMat(size, depth1);
     double a = randomDouble(0.0, 1.0);
@@ -324,6 +324,38 @@ INSTANTIATE_TEST_CASE_P(GPU_GpuMat, ConvertTo, testing::Combine(
     ALL_DEPTH,
     WHOLE_SUBMAT));
 
-} // namespace
+////////////////////////////////////////////////////////////////////////////////
+// ensureSizeIsEnough
+
+struct EnsureSizeIsEnough : testing::TestWithParam<cv::gpu::DeviceInfo>
+{
+    virtual void SetUp()
+    {
+        cv::gpu::DeviceInfo devInfo = GetParam();
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+GPU_TEST_P(EnsureSizeIsEnough, BufferReuse)
+{
+    cv::gpu::GpuMat buffer(100, 100, CV_8U);
+    cv::gpu::GpuMat old = buffer;
+
+    // don't reallocate memory
+    cv::gpu::ensureSizeIsEnough(10, 20, CV_8U, buffer);
+    EXPECT_EQ(10, buffer.rows);
+    EXPECT_EQ(20, buffer.cols);
+    EXPECT_EQ(CV_8UC1, buffer.type());
+    EXPECT_EQ(reinterpret_cast<intptr_t>(old.data), reinterpret_cast<intptr_t>(buffer.data));
+
+    // don't reallocate memory
+    cv::gpu::ensureSizeIsEnough(20, 30, CV_8U, buffer);
+    EXPECT_EQ(20, buffer.rows);
+    EXPECT_EQ(30, buffer.cols);
+    EXPECT_EQ(CV_8UC1, buffer.type());
+    EXPECT_EQ(reinterpret_cast<intptr_t>(old.data), reinterpret_cast<intptr_t>(buffer.data));
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_GpuMat, EnsureSizeIsEnough, ALL_DEVICES);
 
 #endif // HAVE_CUDA

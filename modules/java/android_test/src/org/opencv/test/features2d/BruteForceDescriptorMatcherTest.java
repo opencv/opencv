@@ -11,11 +11,11 @@ import org.opencv.core.MatOfDMatch;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
-import org.opencv.features2d.DMatch;
+import org.opencv.core.DMatch;
 import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.FeatureDetector;
-import org.opencv.features2d.KeyPoint;
+import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
@@ -80,18 +80,17 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
     }
 
     protected void setUp() throws Exception {
+        super.setUp();
         matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE);
         matSize = 100;
 
         truth = new DMatch[] {
-                new DMatch(0, 0, 0, 1.0496940f),
-                new DMatch(1, 0, 0, 1.0984558f),
-                new DMatch(2, 1, 0, 0.4945875f),
-                new DMatch(3, 1, 0, 0.48435235f),
-                new DMatch(4, 0, 0, 1.0836693f)
+                new DMatch(0, 0, 0, 0.6211397f),
+                new DMatch(1, 1, 0, 0.9177120f),
+                new DMatch(2, 1, 0, 0.3112163f),
+                new DMatch(3, 1, 0, 0.2925074f),
+                new DMatch(4, 1, 0, 0.9309178f)
                 };
-
-        super.setUp();
     }
 
     public void testAdd() {

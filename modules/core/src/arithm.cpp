@@ -1243,10 +1243,14 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     bool haveMask = !_mask.empty();
     bool reallocate = false;
 
+    bool src1Scalar = checkScalar(src1, src2.type(), kind1, kind2);
+    bool src2Scalar = checkScalar(src2, src1.type(), kind2, kind1);
+
     if( (kind1 == kind2 || src1.channels() == 1) && src1.dims <= 2 && src2.dims <= 2 &&
         src1.size() == src2.size() && src1.type() == src2.type() &&
         !haveMask && ((!_dst.fixedType() && (dtype < 0 || CV_MAT_DEPTH(dtype) == src1.depth())) ||
-                       (_dst.fixedType() && _dst.type() == _src1.type())) )
+                       (_dst.fixedType() && _dst.type() == _src1.type())) &&
+        ((src1Scalar && src2Scalar) || (!src1Scalar && !src2Scalar)) )
     {
         _dst.create(src1.size(), src1.type());
         Mat dst = _dst.getMat();

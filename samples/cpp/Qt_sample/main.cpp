@@ -118,7 +118,7 @@ static void foundCorners(vector<CvPoint2D32f> *srcImagePoints,IplImage* source, 
     cvNormalize(grayImage, grayImage, 0, 255, CV_MINMAX);
     cvThreshold( grayImage, grayImage, 26, 255, CV_THRESH_BINARY_INV);//25
 
-    Mat MgrayImage = grayImage;
+    Mat MgrayImage = cv::cvarrToMat(grayImage);
     //For debug
     //MgrayImage = MgrayImage.clone();//deep copy
     vector<vector<Point> > contours;
@@ -184,7 +184,7 @@ static void foundCorners(vector<CvPoint2D32f> *srcImagePoints,IplImage* source, 
         }
         srcImagePoints->at(3) = srcImagePoints_temp.at(index);
 
-        Mat Msource = source;
+        Mat Msource = cv::cvarrToMat(source);
         stringstream ss;
         for(size_t i = 0 ; i<srcImagePoints_temp.size(); i++ )
         {

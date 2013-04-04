@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -42,17 +42,17 @@
 
 #include "precomp.hpp"
 
-#if !defined HAVE_CUDA || defined(CUDA_DISABLER) || defined(__APPLE__)
+#if !defined(HAVE_CUDA) || defined(CUDA_DISABLER) || !defined(HAVE_NVCUVID)
 
 class cv::gpu::VideoReader_GPU::Impl
 {
 };
 
 cv::gpu::VideoReader_GPU::VideoReader_GPU() { throw_nogpu(); }
-cv::gpu::VideoReader_GPU::VideoReader_GPU(const std::string&) { throw_nogpu(); }
+cv::gpu::VideoReader_GPU::VideoReader_GPU(const String&) { throw_nogpu(); }
 cv::gpu::VideoReader_GPU::VideoReader_GPU(const cv::Ptr<VideoSource>&) { throw_nogpu(); }
 cv::gpu::VideoReader_GPU::~VideoReader_GPU() { }
-void cv::gpu::VideoReader_GPU::open(const std::string&) { throw_nogpu(); }
+void cv::gpu::VideoReader_GPU::open(const String&) { throw_nogpu(); }
 void cv::gpu::VideoReader_GPU::open(const cv::Ptr<VideoSource>&) { throw_nogpu(); }
 bool cv::gpu::VideoReader_GPU::isOpened() const { return false; }
 void cv::gpu::VideoReader_GPU::close() { }
@@ -294,7 +294,7 @@ cv::gpu::VideoReader_GPU::VideoReader_GPU()
 {
 }
 
-cv::gpu::VideoReader_GPU::VideoReader_GPU(const std::string& filename)
+cv::gpu::VideoReader_GPU::VideoReader_GPU(const String& filename)
 {
     open(filename);
 }
@@ -309,7 +309,7 @@ cv::gpu::VideoReader_GPU::~VideoReader_GPU()
     close();
 }
 
-void cv::gpu::VideoReader_GPU::open(const std::string& filename)
+void cv::gpu::VideoReader_GPU::open(const String& filename)
 {
     CV_Assert( !filename.empty() );
 

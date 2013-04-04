@@ -13,7 +13,7 @@ typedef perf::TestBaseWithParam<InpaintArea_InpaintingMethod_t> InpaintArea_Inpa
 
 PERF_TEST_P(InpaintArea_InpaintingMethod, inpaint,
             testing::Combine(
-                SZ_ALL_SMALL,
+                testing::Values(::perf::szSmall24, ::perf::szSmall32, ::perf::szSmall64),
                 testing::ValuesIn(InpaintingMethod::all())
                 )
             )
@@ -29,7 +29,7 @@ PERF_TEST_P(InpaintArea_InpaintingMethod, inpaint,
     Rect inpaintArea(src.cols/3, src.rows/3, sz.width, sz.height);
     mask(inpaintArea).setTo(255);
 
-    declare.in(src, mask).out(result).time(30);
+    declare.in(src, mask).out(result).time(120);
 
     TEST_CYCLE() inpaint(src, mask, result, 10.0, inpaintingMethod);
 

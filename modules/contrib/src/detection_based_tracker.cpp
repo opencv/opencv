@@ -1,5 +1,8 @@
 #if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(ANDROID)
 #include "opencv2/contrib/detection_based_tracker.hpp"
+#include "opencv2/core/utility.hpp"
+
+#include <pthread.h>
 
 #if defined(DEBUG) || defined(_DEBUG)
 #undef DEBUGLOGS
@@ -12,7 +15,6 @@
 
 #ifdef ANDROID
 #include <android/log.h>
-#include <pthread.h>
 #define LOG_TAG "OBJECT_DETECTOR"
 #define LOGD0(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
 #define LOGI0(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))
@@ -42,7 +44,6 @@
 
 
 using namespace cv;
-using namespace std;
 
 static inline cv::Point2f centerRect(const cv::Rect& r)
 {
@@ -70,7 +71,7 @@ class cv::DetectionBasedTracker::SeparateDetectionWork
     public:
         SeparateDetectionWork(cv::DetectionBasedTracker& _detectionBasedTracker, cv::Ptr<DetectionBasedTracker::IDetector> _detector);
         virtual ~SeparateDetectionWork();
-        bool communicateWithDetectingThread(const Mat& imageGray, vector<Rect>& rectsWhereRegions);
+        bool communicateWithDetectingThread(const Mat& imageGray, std::vector<Rect>& rectsWhereRegions);
         bool run();
         void stop();
         void resetTracking();
@@ -226,7 +227,7 @@ void cv::DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector()
 {
     static double freq = getTickFrequency();
     LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- start");
-    vector<Rect> objects;
+    std::vector<Rect> objects;
 
     CV_Assert(stateThread==STATE_THREAD_WORKING_SLEEPING);
     pthread_mutex_lock(&mutex);
@@ -384,7 +385,7 @@ void cv::DetectionBasedTracker::SeparateDetectionWork::resetTracking()
 
 }
 
-bool cv::DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThread(const Mat& imageGray, vector<Rect>& rectsWhereRegions)
+bool cv::DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThread(const Mat& imageGray, std::vector<Rect>& rectsWhereRegions)
 {
     static double freq = getTickFrequency();
 
@@ -498,7 +499,7 @@ void DetectionBasedTracker::process(const Mat& imageGray)
 
     Mat imageDetect=imageGray;
 
-    vector<Rect> rectsWhereRegions;
+    std::vector<Rect> rectsWhereRegions;
     bool shouldHandleResult=false;
     if (!separateDetectionWork.empty()) {
         shouldHandleResult = separateDetectionWork->communicateWithDetectingThread(imageGray, rectsWhereRegions);
@@ -534,7 +535,7 @@ void DetectionBasedTracker::process(const Mat& imageGray)
     }
     LOGI("DetectionBasedTracker::process: tracked objects num==%d", (int)trackedObjects.size());
 
-    vector<Rect> detectedObjectsInRegions;
+    std::vector<Rect> detectedObjectsInRegions;
 
     LOGD("DetectionBasedTracker::process: rectsWhereRegions.size()=%d", (int)rectsWhereRegions.size());
     for(size_t i=0; i < rectsWhereRegions.size(); i++) {
@@ -609,7 +610,7 @@ void cv::DetectionBasedTracker::resetTracking()
     trackedObjects.clear();
 }
 
-void cv::DetectionBasedTracker::updateTrackedObjects(const vector<Rect>& detectedObjects)
+void cv::DetectionBasedTracker::updateTrackedObjects(const std::vector<Rect>& detectedObjects)
 {
     enum {
         NEW_RECTANGLE=-1,
@@ -624,7 +625,7 @@ void cv::DetectionBasedTracker::updateTrackedObjects(const vector<Rect>& detecte
         trackedObjects[i].numDetectedFrames++;
     }
 
-    vector<int> correspondence(detectedObjects.size(), NEW_RECTANGLE);
+    std::vector<int> correspondence(detectedObjects.size(), NEW_RECTANGLE);
     correspondence.clear();
     correspondence.resize(detectedObjects.size(), NEW_RECTANGLE);
 
@@ -830,7 +831,7 @@ Rect cv::DetectionBasedTracker::calcTrackedObjectPositionToShow(int i, ObjectSta
     return res;
 }
 
-void cv::DetectionBasedTracker::detectInRegion(const Mat& img, const Rect& r, vector<Rect>& detectedObjectsInRegions)
+void cv::DetectionBasedTracker::detectInRegion(const Mat& img, const Rect& r, std::vector<Rect>& detectedObjectsInRegions)
 {
     Rect r0(Point(), img.size());
     Rect r1 = scale_rect(r, innerParameters.coeffTrackingWindowSize);
@@ -843,7 +844,7 @@ void cv::DetectionBasedTracker::detectInRegion(const Mat& img, const Rect& r, ve
 
     int d = cvRound(std::min(r.width, r.height) * innerParameters.coeffObjectSizeToTrack);
 
-    vector<Rect> tmpobjects;
+    std::vector<Rect> tmpobjects;
 
     Mat img1(img, r1);//subimage for rectangle -- without data copying
     LOGD("DetectionBasedTracker::detectInRegion: img1.size()=%d x %d, d=%d",

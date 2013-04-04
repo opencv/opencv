@@ -25,8 +25,8 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
 .. code-block:: cpp
 
-   #include "opencv2/highgui/highgui.hpp"
-   #include "opencv2/imgproc/imgproc.hpp"
+   #include "opencv2/highgui.hpp"
+   #include "opencv2/imgproc.hpp"
    #include <iostream>
    #include <stdio.h>
    #include <stdlib.h>
@@ -85,7 +85,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      for( int i = 0; i < contours.size(); i++ )
         { approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
           boundRect[i] = boundingRect( Mat(contours_poly[i]) );
-          minEnclosingCircle( contours_poly[i], center[i], radius[i] );
+          minEnclosingCircle( (Mat)contours_poly[i], center[i], radius[i] );
         }
 
 

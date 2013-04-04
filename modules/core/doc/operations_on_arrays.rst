@@ -103,7 +103,7 @@ Calculates the per-element sum of two arrays or an array and a scalar.
 
     :param dst: output array that has the same size and number of channels as the input array(s); the depth is defined by ``dtype`` or ``src1``/``src2``.
 
-    :param mask: optional operation mask – 8-bit single channel array, that specifies elements of the output array to be changed.
+    :param mask: optional operation mask - 8-bit single channel array, that specifies elements of the output array to be changed.
 
     :param dtype: optional depth of the output array (see the discussion below).
 
@@ -592,7 +592,7 @@ Copies the lower or the upper half of a square matrix to another half.
 
 .. ocv:function:: void completeSymm(InputOutputArray mtx, bool lowerToUpper=false)
 
-.. ocv:pyfunction:: cv2.completeSymm(mtx[, lowerToUpper]) -> None
+.. ocv:pyfunction:: cv2.completeSymm(mtx[, lowerToUpper]) -> mtx
 
     :param mtx: input-output floating-point square matrix.
 
@@ -692,7 +692,7 @@ cvarrToMat
 ----------
 Converts ``CvMat``, ``IplImage`` , or ``CvMatND`` to ``Mat``.
 
-.. ocv:function:: Mat cvarrToMat( const CvArr* arr, bool copyData=false, bool allowND=true, int coiMode=0 )
+.. ocv:function:: Mat cvarrToMat( const CvArr* arr, bool copyData=false, bool allowND=true, int coiMode=0, AutoBuffer<double>* buf=0 )
 
     :param arr: input ``CvMat``, ``IplImage`` , or  ``CvMatND``.
 
@@ -868,7 +868,7 @@ Performs a forward or inverse Discrete Fourier transform of a 1D or 2D floating-
             * **DFT_SCALE** scales the result: divide it by the number of array elements. Normally, it is combined with  ``DFT_INVERSE``.
             * **DFT_ROWS** performs a forward or inverse transform of every individual row of the input matrix; this flag enables you to transform multiple vectors simultaneously and can be used to decrease the overhead (which is sometimes several times larger than the processing itself) to perform 3D and higher-dimensional transformations and so forth.
 
-            * **DFT_COMPLEX_OUTPUT** performs a forward transformation of 1D or 2D real array; the result, though being a complex array, has complex-conjugate symmetry (*CCS*, see the function description below for details), and such an array can be packed into a real array of the same size as input, which is the fastest option and which is what the function does by default; however, you may wish to get a full complex array (for simpler spectrum analysis, and so on) – pass the flag to enable the function to produce a full-size complex output array.
+            * **DFT_COMPLEX_OUTPUT** performs a forward transformation of 1D or 2D real array; the result, though being a complex array, has complex-conjugate symmetry (*CCS*, see the function description below for details), and such an array can be packed into a real array of the same size as input, which is the fastest option and which is what the function does by default; however, you may wish to get a full complex array (for simpler spectrum analysis, and so on) - pass the flag to enable the function to produce a full-size complex output array.
 
             * **DFT_REAL_OUTPUT** performs an inverse transformation of a 1D or 2D complex array; the result is normally a complex array of the same size, however, if the input array has conjugate-complex symmetry (for example, it is a result of forward transformation with  ``DFT_COMPLEX_OUTPUT``  flag), the output is a real array; while the function itself does not check whether the input is symmetrical or not, you can pass the flag and then the function will assume the symmetry and produce the real output array (note that when the input is packed into a real array and inverse transformation is executed, the function treats the input as a packed complex-conjugate symmetrical array, and the output will also be a real array).
 
@@ -1838,7 +1838,7 @@ minMaxIdx
 ---------
 Finds the global minimum and maximum in an array
 
-.. ocv:function:: void minMaxIdx(InputArray src, double* minVal, double* maxVal, int* minIdx=0, int* maxIdx=0, InputArray mask=noArray())
+.. ocv:function:: void minMaxIdx(InputArray src, double* minVal, double* maxVal = 0, int* minIdx=0, int* maxIdx=0, InputArray mask=noArray())
 
     :param src: input single-channel array.
 
@@ -2299,7 +2299,9 @@ Performs Principal Component Analysis of the supplied dataset.
 
 .. ocv:function:: PCA& PCA::operator()(InputArray data, InputArray mean, int flags, double retainedVariance)
 
-.. ocv:pyfunction:: cv2.PCACompute(data[, mean[, eigenvectors[, maxComponents]]]) -> mean, eigenvectors
+.. ocv:pyfunction:: cv2.PCACompute(data, mean[, eigenvectors[, maxComponents]]) -> mean, eigenvectors
+
+.. ocv:pyfunction:: cv2.PCACompute(data, mean, retainedVariance[, eigenvectors]) -> mean, eigenvectors
 
     :param data: input samples stored as the matrix rows or as the matrix columns.
 
@@ -2670,7 +2672,7 @@ Generates a single uniformly-distributed random number or an array of random num
 
 .. ocv:function:: void randu( InputOutputArray dst, InputArray low, InputArray high )
 
-.. ocv:pyfunction:: cv2.randu(dst, low, high) -> None
+.. ocv:pyfunction:: cv2.randu(dst, low, high) -> dst
 
     :param dst: output array of random numbers; the array must be pre-allocated.
 
@@ -2701,7 +2703,7 @@ Fills the array with normally distributed random numbers.
 
 .. ocv:function:: void randn( InputOutputArray dst, InputArray mean, InputArray stddev )
 
-.. ocv:pyfunction:: cv2.randn(dst, mean, stddev) -> None
+.. ocv:pyfunction:: cv2.randn(dst, mean, stddev) -> dst
 
     :param dst: output array of random numbers; the array must be pre-allocated and have 1 to 4 channels.
 
@@ -2724,7 +2726,7 @@ Shuffles the array elements randomly.
 
 .. ocv:function:: void randShuffle( InputOutputArray dst, double iterFactor=1., RNG* rng=0 )
 
-.. ocv:pyfunction:: cv2.randShuffle(dst[, iterFactor]) -> None
+.. ocv:pyfunction:: cv2.randShuffle(dst[, iterFactor]) -> dst
 
     :param dst: input/output numerical 1D array.
 
@@ -2864,7 +2866,7 @@ Initializes a scaled identity matrix.
 
 .. ocv:function:: void setIdentity( InputOutputArray mtx, const Scalar& s=Scalar(1) )
 
-.. ocv:pyfunction:: cv2.setIdentity(mtx[, s]) -> None
+.. ocv:pyfunction:: cv2.setIdentity(mtx[, s]) -> mtx
 
 .. ocv:cfunction:: void cvSetIdentity(CvArr* mat, CvScalar value=cvRealScalar(1))
 
@@ -3241,7 +3243,7 @@ The constructors.
 
         * **SVD::NO_UV** indicates that only a vector of singular values ``w`` is to be processed, while ``u`` and ``vt`` will be set to empty matrices.
 
-        * **SVD::FULL_UV** when the matrix is not square, by default the algorithm produces ``u`` and ``vt`` matrices of sufficiently large size for the further ``A`` reconstruction; if, however, ``FULL_UV`` flag is specified, ``u`` and ``vt``will be full-size square orthogonal matrices.
+        * **SVD::FULL_UV** when the matrix is not square, by default the algorithm produces ``u`` and ``vt`` matrices of sufficiently large size for the further ``A`` reconstruction; if, however,   ``FULL_UV`` flag is specified, ``u`` and ``vt`` will be full-size square orthogonal matrices.
 
 The first constructor initializes an empty ``SVD`` structure. The second constructor initializes an empty ``SVD`` structure and then calls
 :ocv:funcx:`SVD::operator()` .

@@ -1,8 +1,9 @@
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
 #include <opencv2/imgproc/imgproc_c.h> // cvFindContours
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/objdetect/objdetect.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/objdetect.hpp>
+#include <opencv2/highgui.hpp>
 #include <iterator>
 #include <set>
 #include <cstdio>
@@ -129,7 +130,7 @@ static void writeLinemod(const cv::Ptr<cv::linemod::Detector>& detector, const s
   cv::FileStorage fs(filename, cv::FileStorage::WRITE);
   detector->write(fs);
 
-  std::vector<std::string> ids = detector->classIds();
+  std::vector<cv::String> ids = detector->classIds();
   fs << "classes" << "[";
   for (int i = 0; i < (int)ids.size(); ++i)
   {
@@ -176,7 +177,7 @@ int main(int argc, char * argv[])
   {
     detector = readLinemod(argv[1]);
 
-    std::vector<std::string> ids = detector->classIds();
+    std::vector<cv::String> ids = detector->classIds();
     num_classes = detector->numClasses();
     printf("Loaded %s with %d classes and %d templates\n",
            argv[1], num_classes, detector->numTemplates());
@@ -259,7 +260,7 @@ int main(int argc, char * argv[])
 
     // Perform matching
     std::vector<cv::linemod::Match> matches;
-    std::vector<std::string> class_ids;
+    std::vector<cv::String> class_ids;
     std::vector<cv::Mat> quantized_images;
     match_timer.start();
     detector->match(sources, (float)matching_threshold, matches, class_ids, quantized_images);

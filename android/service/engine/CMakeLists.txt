@@ -2,23 +2,27 @@ set(engine OpenCVEngine)
 set(JNI_LIB_NAME ${engine} ${engine}_jni)
 
 unset(__android_project_chain CACHE)
-add_android_project(opencv_engine "${CMAKE_CURRENT_SOURCE_DIR}" SDK_TARGET 8 ${ANDROID_SDK_TARGET} IGNORE_JAVA ON)
+add_android_project(opencv_engine "${CMAKE_CURRENT_SOURCE_DIR}" SDK_TARGET 9 ${ANDROID_SDK_TARGET} IGNORE_JAVA ON IGNORE_MANIFEST ON )
 
 set(ANDROID_PLATFORM_VERSION_CODE "0")
 
 if(ARMEABI_V7A)
+  if (ANDROID_NATIVE_API_LEVEL LESS 9)
     set(ANDROID_PLATFORM_VERSION_CODE "2")
-  elseif(ARMEABI_V6)
-    set(ANDROID_PLATFORM_VERSION_CODE "1")
-  elseif(ARMEABI)
-    set(ANDROID_PLATFORM_VERSION_CODE "1")
-  elseif(X86)
-    set(ANDROID_PLATFORM_VERSION_CODE "3")
-  elseif(MIPS)
-    set(ANDROID_PLATFORM_VERSION_CODE "4")
   else()
-    message(WARNING "Can not automatically determine the value for ANDROID_PLATFORM_VERSION_CODE")
+    set(ANDROID_PLATFORM_VERSION_CODE "3")
   endif()
+elseif(ARMEABI_V6)
+  set(ANDROID_PLATFORM_VERSION_CODE "1")
+elseif(ARMEABI)
+  set(ANDROID_PLATFORM_VERSION_CODE "1")
+elseif(X86)
+  set(ANDROID_PLATFORM_VERSION_CODE "4")
+elseif(MIPS)
+  set(ANDROID_PLATFORM_VERSION_CODE "5")
+else()
+  message(WARNING "Can not automatically determine the value for ANDROID_PLATFORM_VERSION_CODE")
+endif()
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${ANDROID_MANIFEST_FILE}" "${OpenCV_BINARY_DIR}/android/service/engine/.build/${ANDROID_MANIFEST_FILE}"  @ONLY)
 
@@ -58,3 +62,14 @@ set_target_properties(${engine}_jni PROPERTIES
 
 get_target_property(engine_lib_location ${engine}_jni LOCATION)
 add_custom_command(TARGET ${engine}_jni POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${engine_lib_location}")
+
+# native tests
+add_definitions(-DGTEST_HAS_CLONE=0 -DANDROID -DGTEST_HAS_TR1_TUPLE=0)
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-allow-shlib-undefined")
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/jni/Tests)
+file(GLOB engine_test_files "jni/Tests/*.cpp")
+
+add_executable(opencv_test_engine ${engine_test_files} jni/Tests/gtest/gtest-all.cpp)
+target_link_libraries(opencv_test_engine z binder log utils android_runtime ${engine} ${engine}_jni)
+

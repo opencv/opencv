@@ -144,11 +144,11 @@ void StereoVar::VariationalSolver(Mat &I1, Mat &I2, Mat &I2x, Mat &u, int level)
 
 
     if (flags & USE_SMART_ID) {
-        double scale = pow(pyrScale, (double) level) * (1 + pyrScale);
+        double scale = std::pow(pyrScale, (double) level) * (1 + pyrScale);
         N = (int) (N / scale);
     }
 
-    double scale = pow(pyrScale, (double) level);
+    double scale = std::pow(pyrScale, (double) level);
     Fi /= (float) scale;
     l *= (float) scale;
 
@@ -284,7 +284,7 @@ void StereoVar::VCycle_MyFAS(Mat &I1, Mat &I2, Mat &I2x, Mat &_u, int level)
 
 void StereoVar::FMG(Mat &I1, Mat &I2, Mat &I2x, Mat &u, int level)
 {
-    double  scale = pow(pyrScale, (double) level);
+    double  scale = std::pow(pyrScale, (double) level);
     CvSize  frmSize = cvSize((int) (u.cols * scale + 0.5), (int) (u.rows * scale + 0.5));
     Mat I1_h, I2_h, I2x_h, u_h;
 
@@ -336,7 +336,7 @@ void StereoVar::autoParams()
 
     if (maxD) {
         levels = 0;
-        while ( pow(pyrScale, levels) * maxD > 1.5) levels ++;
+        while ( std::pow(pyrScale, levels) * maxD > 1.5) levels ++;
         levels++;
     }
 

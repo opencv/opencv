@@ -71,7 +71,9 @@ There are functions in OpenCV, especially from calib3d module, such as ``project
     //... fill the array
     Mat pointsMat = Mat(points);
 
-One can access a point in this matrix using the same method \texttt{Mat::at}: ::
+One can access a point in this matrix using the same method ``Mat::at`` :
+
+::
 
     Point2f point = pointsMat.at<Point2f>(i, 0);
 
@@ -109,7 +111,7 @@ Selecting a region of interest: ::
     Rect r(10, 10, 100, 100);
     Mat smallImg = img(r);
 
-A convertion from \texttt{Mat} to C API data structures: ::
+A convertion from ``Mat`` to C API data structures: ::
 
     Mat img = imread("image.jpg");
     IplImage img1 = img;
@@ -142,7 +144,7 @@ A call to ``waitKey()`` starts a message passing cycle that waits for a key stro
 
     Mat img = imread("image.jpg");
     Mat grey;
-    cvtColor(img, grey, CV_BGR2GREY);
+    cvtColor(img, grey, CV_BGR2GRAY);
 
     Mat sobelx;
     Sobel(grey, sobelx, CV_32F, 1, 0);
@@ -150,7 +152,7 @@ A call to ``waitKey()`` starts a message passing cycle that waits for a key stro
     double minVal, maxVal;
     minMaxLoc(sobelx, &minVal, &maxVal); //find minimum and maximum intensities
     Mat draw;
-    sobelx.convertTo(draw, CV_8U, 255.0/(maxVal - minVal), -minVal);
+    sobelx.convertTo(draw, CV_8U, 255.0/(maxVal - minVal), -minVal * 255.0/(maxVal - minVal));
 
     namedWindow("image", CV_WINDOW_AUTOSIZE);
     imshow("image", draw);

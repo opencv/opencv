@@ -14,8 +14,8 @@ import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
 import org.opencv.core.Point3;
 import org.opencv.core.Rect;
-import org.opencv.features2d.DMatch;
-import org.opencv.features2d.KeyPoint;
+import org.opencv.core.DMatch;
+import org.opencv.core.KeyPoint;
 
 public class Converters {
 
@@ -262,7 +262,7 @@ public class Converters {
         int[] buff = new int[count * 2];
         m.get(0, 0, buff);
         for (int i = 0; i < count; i++) {
-            long addr = (((long) buff[i * 2]) << 32) | ((long) buff[i * 2 + 1]);
+            long addr = (((long) buff[i * 2]) << 32) | (((long) buff[i * 2 + 1]) & 0xffffffffL);
             mats.add(new Mat(addr));
         }
     }

@@ -29,8 +29,22 @@ ifeq ($(OPENCV_LIB_TYPE),SHARED)
     OPENCV_3RDPARTY_COMPONENTS:=
     OPENCV_EXTRA_COMPONENTS:=
 else
-    OPENCV_3RDPARTY_COMPONENTS:=@OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE@
-    OPENCV_EXTRA_COMPONENTS:=@OPENCV_EXTRA_COMPONENTS_CONFIGMAKE@
+    ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
+        OPENCV_3RDPARTY_COMPONENTS:=@OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE@
+        OPENCV_EXTRA_COMPONENTS:=@OPENCV_EXTRA_COMPONENTS_CONFIGMAKE@
+    endif
+    ifeq ($(TARGET_ARCH_ABI),x86)
+        OPENCV_3RDPARTY_COMPONENTS:=@OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE@
+        OPENCV_EXTRA_COMPONENTS:=@OPENCV_EXTRA_COMPONENTS_CONFIGMAKE@
+    endif
+    ifeq ($(TARGET_ARCH_ABI),armeabi)
+        OPENCV_3RDPARTY_COMPONENTS:=@OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE_NO_TBB@
+        OPENCV_EXTRA_COMPONENTS:=@OPENCV_EXTRA_COMPONENTS_CONFIGMAKE@
+    endif
+    ifeq ($(TARGET_ARCH_ABI),mips)
+        OPENCV_3RDPARTY_COMPONENTS:=@OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE@
+        OPENCV_EXTRA_COMPONENTS:=@OPENCV_EXTRA_COMPONENTS_CONFIGMAKE@
+    endif
 endif
 
 ifeq (${OPENCV_CAMERA_MODULES},on)
@@ -42,6 +56,9 @@ ifeq (${OPENCV_CAMERA_MODULES},on)
     endif
     ifeq ($(TARGET_ARCH_ABI),x86)
         OPENCV_CAMERA_MODULES:=@OPENCV_CAMERA_LIBS_X86_CONFIGCMAKE@
+    endif
+    ifeq ($(TARGET_ARCH_ABI),mips)
+        OPENCV_CAMERA_MODULES:=@OPENCV_CAMERA_LIBS_MIPS_CONFIGCMAKE@
     endif
 else
     OPENCV_CAMERA_MODULES:=
@@ -75,14 +92,20 @@ define add_opencv_camera_module
     include $(PREBUILT_SHARED_LIBRARY)
 endef
 
-ifeq ($(OPENCV_INSTALL_MODULES),on)
-$(foreach module,$(OPENCV_LIBS),$(eval $(call add_opencv_module,$(module))))
-endif
-$(foreach module,$(OPENCV_3RDPARTY_COMPONENTS),$(eval $(call add_opencv_3rdparty_component,$(module))))
-$(foreach module,$(OPENCV_CAMERA_MODULES),$(eval $(call add_opencv_camera_module,$(module))))
+ifeq ($(OPENCV_MK_$(OPENCV_TARGET_ARCH_ABI)_ALREADY_INCLUDED),)
+    ifeq ($(OPENCV_INSTALL_MODULES),on)
+        $(foreach module,$(OPENCV_LIBS),$(eval $(call add_opencv_module,$(module))))
+    endif
 
-ifneq ($(OPENCV_BASEDIR),)
-    OPENCV_LOCAL_C_INCLUDES += $(foreach mod, $(OPENCV_MODULES), $(OPENCV_BASEDIR)/modules/$(mod)/include)
+    $(foreach module,$(OPENCV_3RDPARTY_COMPONENTS),$(eval $(call add_opencv_3rdparty_component,$(module))))
+    $(foreach module,$(OPENCV_CAMERA_MODULES),$(eval $(call add_opencv_camera_module,$(module))))
+
+    ifneq ($(OPENCV_BASEDIR),)
+        OPENCV_LOCAL_C_INCLUDES += $(foreach mod, $(OPENCV_MODULES), $(OPENCV_BASEDIR)/modules/$(mod)/include)
+    endif
+
+    #turn off module installation to prevent their redefinition
+    OPENCV_MK_$(OPENCV_TARGET_ARCH_ABI)_ALREADY_INCLUDED:=on
 endif
 
 ifeq ($(OPENCV_LOCAL_CFLAGS),)

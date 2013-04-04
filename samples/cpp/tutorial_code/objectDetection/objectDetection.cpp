@@ -6,6 +6,7 @@
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core/utility.hpp"
 
 #include <iostream>
 #include <stdio.h>
@@ -18,8 +19,8 @@ void detectAndDisplay( Mat frame );
 
 /** Global variables */
 //-- Note, either copy these two files from opencv/data/haarscascades to your current folder, or change these locations
-String face_cascade_name = "haarcascade_frontalface_alt.xml";
-String eyes_cascade_name = "haarcascade_eye_tree_eyeglasses.xml";
+string face_cascade_name = "haarcascade_frontalface_alt.xml";
+string eyes_cascade_name = "haarcascade_eye_tree_eyeglasses.xml";
 CascadeClassifier face_cascade;
 CascadeClassifier eyes_cascade;
 string window_name = "Capture - Face detection";
@@ -43,7 +44,7 @@ int main( void )
   {
     for(;;)
     {
-      frame = cvQueryFrame( capture );
+      frame = cv::cvarrToMat(cvQueryFrame( capture ));
 
       //-- 3. Apply the classifier to the frame
       if( !frame.empty() )

@@ -1,5 +1,9 @@
 #include "precomp.hpp"
 
+#ifdef HAVE_CUDA
+#include "opencv2/core/gpumat.hpp"
+#endif
+
 #ifdef ANDROID
 # include <sys/time.h>
 #endif
@@ -16,7 +20,8 @@ const std::string command_line_keys =
     "{   perf_force_samples  |100      |force set maximum number of samples for all tests}"
     "{   perf_seed           |809564   |seed for random numbers generator}"
     "{   perf_threads        |-1       |the number of worker threads, if parallel execution is enabled}"
-    "{   perf_write_sanity   |         |allow to create new records for sanity checks}"
+    "{   perf_write_sanity   |         |create new records for sanity checks}"
+    "{   perf_verify_sanity  |         |fail tests having no regression data for sanity checks}"
 #ifdef ANDROID
     "{   perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
     "{   perf_affinity_mask  |0        |set affinity mask for the main thread}"
@@ -41,6 +46,7 @@ static uint64       param_seed;
 static double       param_time_limit;
 static int          param_threads;
 static bool         param_write_sanity;
+static bool         param_verify_sanity;
 #ifdef HAVE_CUDA
 static bool         param_run_cpu;
 static int          param_cuda_device;
@@ -133,12 +139,12 @@ Regression& Regression::add(TestBase* test, const std::string& name, cv::InputAr
 Regression& Regression::addKeypoints(TestBase* test, const std::string& name, const std::vector<cv::KeyPoint>& array, double eps, ERROR_TYPE err)
 {
     int len = (int)array.size();
-    cv::Mat pt      (len, 1, CV_32FC2, (void*)&array[0].pt,       sizeof(cv::KeyPoint));
-    cv::Mat size    (len, 1, CV_32FC1, (void*)&array[0].size,     sizeof(cv::KeyPoint));
-    cv::Mat angle   (len, 1, CV_32FC1, (void*)&array[0].angle,    sizeof(cv::KeyPoint));
-    cv::Mat response(len, 1, CV_32FC1, (void*)&array[0].response, sizeof(cv::KeyPoint));
-    cv::Mat octave  (len, 1, CV_32SC1, (void*)&array[0].octave,   sizeof(cv::KeyPoint));
-    cv::Mat class_id(len, 1, CV_32SC1, (void*)&array[0].class_id, sizeof(cv::KeyPoint));
+    cv::Mat pt      (len, 1, CV_32FC2, len ? (void*)&array[0].pt : 0,       sizeof(cv::KeyPoint));
+    cv::Mat size    (len, 1, CV_32FC1, len ? (void*)&array[0].size : 0,     sizeof(cv::KeyPoint));
+    cv::Mat angle   (len, 1, CV_32FC1, len ? (void*)&array[0].angle : 0,    sizeof(cv::KeyPoint));
+    cv::Mat response(len, 1, CV_32FC1, len ? (void*)&array[0].response : 0, sizeof(cv::KeyPoint));
+    cv::Mat octave  (len, 1, CV_32SC1, len ? (void*)&array[0].octave : 0,   sizeof(cv::KeyPoint));
+    cv::Mat class_id(len, 1, CV_32SC1, len ? (void*)&array[0].class_id : 0, sizeof(cv::KeyPoint));
 
     return Regression::add(test, name + "-pt",       pt,       eps, ERROR_ABSOLUTE)
                                 (name + "-size",     size,     eps, ERROR_ABSOLUTE)
@@ -151,10 +157,10 @@ Regression& Regression::addKeypoints(TestBase* test, const std::string& name, co
 Regression& Regression::addMatches(TestBase* test, const std::string& name, const std::vector<cv::DMatch>& array, double eps, ERROR_TYPE err)
 {
     int len = (int)array.size();
-    cv::Mat queryIdx(len, 1, CV_32SC1, (void*)&array[0].queryIdx, sizeof(cv::DMatch));
-    cv::Mat trainIdx(len, 1, CV_32SC1, (void*)&array[0].trainIdx, sizeof(cv::DMatch));
-    cv::Mat imgIdx  (len, 1, CV_32SC1, (void*)&array[0].imgIdx,   sizeof(cv::DMatch));
-    cv::Mat distance(len, 1, CV_32FC1, (void*)&array[0].distance, sizeof(cv::DMatch));
+    cv::Mat queryIdx(len, 1, CV_32SC1, len ? (void*)&array[0].queryIdx : 0, sizeof(cv::DMatch));
+    cv::Mat trainIdx(len, 1, CV_32SC1, len ? (void*)&array[0].trainIdx : 0, sizeof(cv::DMatch));
+    cv::Mat imgIdx  (len, 1, CV_32SC1, len ? (void*)&array[0].imgIdx : 0,   sizeof(cv::DMatch));
+    cv::Mat distance(len, 1, CV_32FC1, len ? (void*)&array[0].distance : 0, sizeof(cv::DMatch));
 
     return Regression::add(test, name + "-queryIdx", queryIdx, DBL_EPSILON, ERROR_ABSOLUTE)
                                 (name + "-trainIdx", trainIdx, DBL_EPSILON, ERROR_ABSOLUTE)
@@ -303,64 +309,59 @@ double Regression::getElem(cv::Mat& m, int y, int x, int cn)
 
 void Regression::write(cv::Mat m)
 {
+    if (!m.empty() && m.dims < 2) return;
+
     double min, max;
-    cv::minMaxLoc(m, &min, &max);
+    cv::minMaxIdx(m, &min, &max);
     write() << "min" << min << "max" << max;
 
-    write() << "last" << "{" << "x" << m.cols-1 << "y" << m.rows-1
-        << "val" << getElem(m, m.rows-1, m.cols-1, m.channels()-1) << "}";
+    write() << "last" << "{" << "x" << m.size.p[1] - 1 << "y" << m.size.p[0] - 1
+        << "val" << getElem(m, m.size.p[0] - 1, m.size.p[1] - 1, m.channels() - 1) << "}";
 
     int x, y, cn;
-    x = regRNG.uniform(0, m.cols);
-    y = regRNG.uniform(0, m.rows);
+    x = regRNG.uniform(0, m.size.p[1]);
+    y = regRNG.uniform(0, m.size.p[0]);
     cn = regRNG.uniform(0, m.channels());
     write() << "rng1" << "{" << "x" << x << "y" << y;
     if(cn > 0) write() << "cn" << cn;
     write() << "val" << getElem(m, y, x, cn) << "}";
 
-    x = regRNG.uniform(0, m.cols);
-    y = regRNG.uniform(0, m.rows);
+    x = regRNG.uniform(0, m.size.p[1]);
+    y = regRNG.uniform(0, m.size.p[0]);
     cn = regRNG.uniform(0, m.channels());
     write() << "rng2" << "{" << "x" << x << "y" << y;
     if (cn > 0) write() << "cn" << cn;
     write() << "val" << getElem(m, y, x, cn) << "}";
 }
 
-static double evalEps(double expected, double actual, double _eps, ERROR_TYPE err)
+void Regression::verify(cv::FileNode node, cv::Mat actual, double eps, std::string argname, ERROR_TYPE err)
 {
-    if (err == ERROR_ABSOLUTE)
-        return _eps;
-    else if (err == ERROR_RELATIVE)
-        return std::max(std::abs(expected), std::abs(actual)) * err;
-    return 0;
-}
-
-void Regression::verify(cv::FileNode node, cv::Mat actual, double _eps, std::string argname, ERROR_TYPE err)
-{
-    double actual_min, actual_max;
-    cv::minMaxLoc(actual, &actual_min, &actual_max);
+    if (!actual.empty() && actual.dims < 2) return;
 
     double expect_min = (double)node["min"];
-    double eps = evalEps(expect_min, actual_min, _eps, err);
+    double expect_max = (double)node["max"];
+
+    if (err == ERROR_RELATIVE)
+        eps *= std::max(std::abs(expect_min), std::abs(expect_max));
+
+    double actual_min, actual_max;
+    cv::minMaxIdx(actual, &actual_min, &actual_max);
+
     ASSERT_NEAR(expect_min, actual_min, eps)
             << argname << " has unexpected minimal value" << std::endl;
-
-    double expect_max = (double)node["max"];
-    eps = evalEps(expect_max, actual_max, _eps, err);
     ASSERT_NEAR(expect_max, actual_max, eps)
             << argname << " has unexpected maximal value" << std::endl;
 
     cv::FileNode last = node["last"];
-    double actual_last = getElem(actual, actual.rows - 1, actual.cols - 1, actual.channels() - 1);
+    double actual_last = getElem(actual, actual.size.p[0] - 1, actual.size.p[1] - 1, actual.channels() - 1);
     int expect_cols = (int)last["x"] + 1;
     int expect_rows = (int)last["y"] + 1;
-    ASSERT_EQ(expect_cols, actual.cols)
+    ASSERT_EQ(expect_cols, actual.size.p[1])
             << argname << " has unexpected number of columns" << std::endl;
-    ASSERT_EQ(expect_rows, actual.rows)
+    ASSERT_EQ(expect_rows, actual.size.p[0])
             << argname << " has unexpected number of rows" << std::endl;
 
     double expect_last = (double)last["val"];
-    eps = evalEps(expect_last, actual_last, _eps, err);
     ASSERT_NEAR(expect_last, actual_last, eps)
             << argname << " has unexpected value of the last element" << std::endl;
 
@@ -370,9 +371,10 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double _eps, std::str
     int cn1 = rng1["cn"];
 
     double expect_rng1 = (double)rng1["val"];
+    // it is safe to use x1 and y1 without checks here because we have already
+    // verified that mat size is the same as recorded
     double actual_rng1 = getElem(actual, y1, x1, cn1);
 
-    eps = evalEps(expect_rng1, actual_rng1, _eps, err);
     ASSERT_NEAR(expect_rng1, actual_rng1, eps)
             << argname << " has unexpected value of the ["<< x1 << ":" << y1 << ":" << cn1 <<"] element" << std::endl;
 
@@ -384,7 +386,6 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double _eps, std::str
     double expect_rng2 = (double)rng2["val"];
     double actual_rng2 = getElem(actual, y2, x2, cn2);
 
-    eps = evalEps(expect_rng2, actual_rng2, _eps, err);
     ASSERT_NEAR(expect_rng2, actual_rng2, eps)
             << argname << " has unexpected value of the ["<< x2 << ":" << y2 << ":" << cn2 <<"] element" << std::endl;
 }
@@ -488,10 +489,10 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                             std::cout << " Expected: " << std::endl << expected << std::endl << " Actual:" << std::endl << actual << std::endl;
 
                         double max;
-                        cv::minMaxLoc(diff.reshape(1), 0, &max);
+                        cv::minMaxIdx(diff.reshape(1), 0, &max);
 
                         FAIL() << "  Absolute difference (=" << max << ") between argument \""
-                               << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps;
+                               << node.name() << "[" <<  idx << "]\" and expected value is greater than " << eps;
                     }
                 }
                 else if (err == ERROR_RELATIVE)
@@ -501,7 +502,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                     if (violations > 0)
                     {
                         FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \""
-                               << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps << " in " << violations << " points";
+                               << node.name() << "[" <<  idx << "]\" and expected value is greater than " << eps << " in " << violations << " points";
                     }
                 }
             }
@@ -542,10 +543,10 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                             std::cout << " Expected: " << std::endl << expected << std::endl << " Actual:" << std::endl << actual << std::endl;
 
                         double max;
-                        cv::minMaxLoc(diff.reshape(1), 0, &max);
+                        cv::minMaxIdx(diff.reshape(1), 0, &max);
 
                         FAIL() << "  Difference (=" << max << ") between argument1 \"" << node.name()
-                               << "\" and expected value is bugger than " << eps;
+                               << "\" and expected value is greater than " << eps;
                     }
                 }
                 else if (err == ERROR_RELATIVE)
@@ -555,7 +556,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                     if (violations > 0)
                     {
                         FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \"" << node.name()
-                               << "\" and expected value is bugger than " << eps << " in " << violations << " points";
+                               << "\" and expected value is greater than " << eps << " in " << violations << " points";
                     }
                 }
             }
@@ -595,9 +596,14 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
 
                 write() << nodename << "{";
             }
+            // TODO: verify that name is alphanumeric, current error message is useless
             write() << name << "{";
             write(array);
             write() << "}";
+        }
+        else if(param_verify_sanity)
+        {
+            ADD_FAILURE() << "  No regression data for " << name << " argument";
         }
     }
     else
@@ -656,6 +662,7 @@ void TestBase::Init(int argc, const char* const argv[])
     param_time_limit    = std::max(0., args.get<double>("perf_time_limit"));
     param_force_samples = args.get<unsigned int>("perf_force_samples");
     param_write_sanity  = args.has("perf_write_sanity");
+    param_verify_sanity = args.has("perf_verify_sanity");
     param_threads  = args.get<int>("perf_threads");
 #ifdef ANDROID
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
@@ -970,7 +977,7 @@ void TestBase::validateMetrics()
     if (m.gstddev > DBL_EPSILON)
     {
         EXPECT_GT(/*m.gmean * */1., /*m.gmean * */ 2 * sinh(m.gstddev * param_max_deviation))
-          << "  Test results are not reliable ((mean-sigma,mean+sigma) deviation interval is bigger than measured time interval).";
+          << "  Test results are not reliable ((mean-sigma,mean+sigma) deviation interval is greater than measured time interval).";
     }
 
     EXPECT_LE(m.outliers, std::max((unsigned int)cvCeil(m.samples * param_max_outliers / 100.), 1u))
@@ -1145,12 +1152,21 @@ void TestBase::RunPerfTestBody()
     catch(cv::Exception e)
     {
         metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
-        FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws:\n  " << e.what();
+        #ifdef HAVE_CUDA
+            if (e.code == CV_GpuApiCallError)
+                cv::gpu::resetDevice();
+        #endif
+        FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws cv::Exception:\n  " << e.what();
+    }
+    catch(std::exception e)
+    {
+        metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
+        FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws std::exception:\n  " << e.what();
     }
     catch(...)
     {
         metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
-        FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws.";
+        FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws...";
     }
 }
 
@@ -1308,12 +1324,14 @@ void perf::sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors
 /*****************************************************************************************\
 *                                  ::perf::GpuPerf
 \*****************************************************************************************/
-#ifdef HAVE_CUDA
 bool perf::GpuPerf::targetDevice()
 {
+#ifdef HAVE_CUDA
     return !param_run_cpu;
-}
+#else
+    return false;
 #endif
+}
 
 /*****************************************************************************************\
 *                                  ::perf::PrintTo

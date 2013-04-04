@@ -1,31 +1,31 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
-// By downloading, copying, installing or using the software you agree to this license.
-// If you do not agree to this license, do not download, install,
-// copy or use the software.
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
 //
 //
-//                          License Agreement
-//               For Open Source Computer Vision Library
+//                           License Agreement
+//                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
-//  * Redistributions of source code must retain the above copyright notice,
-//    this list of conditions and the following disclaimer.
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
 //
-//  * Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
 //
-//  * The name of the copyright holders may not be used to endorse or promote products
-//    derived from this software without specific prior written permission.
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
 // any express or implied warranties, including, but not limited to, the implied
@@ -37,14 +37,15 @@
 // and on any theory of liability, whether in contract, strict liability,
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
+//
 //M*/
 
 #include "test_precomp.hpp"
 
 #ifdef HAVE_CUDA
 
-namespace {
-
+namespace
+{
     struct GreedyLabeling
     {
         struct dot
@@ -82,7 +83,7 @@ namespace {
             int cc = -1;
 
             int* dist_labels = (int*)labels.data;
-            int pitch = labels.step1();
+            int pitch = (int) labels.step1();
 
             unsigned char* source = (unsigned char*)image.data;
             int width = image.cols;
@@ -166,7 +167,7 @@ struct Labeling : testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(Labeling, ConnectedComponents)
+GPU_TEST_P(Labeling, DISABLED_ConnectedComponents)
 {
     cv::Mat image;
     cvtColor(loat_image(), image, CV_BGR2GRAY);
@@ -186,11 +187,11 @@ TEST_P(Labeling, ConnectedComponents)
 
     cv::gpu::connectivityMask(cv::gpu::GpuMat(image), mask, cv::Scalar::all(0), cv::Scalar::all(2));
 
-    ASSERT_NO_THROW(cv::gpu::labelComponents(mask, components));
+    cv::gpu::labelComponents(mask, components);
 
     host.checkCorrectness(cv::Mat(components));
 }
 
-INSTANTIATE_TEST_CASE_P(ConnectedComponents, Labeling, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_ConnectedComponents, Labeling, ALL_DEVICES);
 
 #endif // HAVE_CUDA

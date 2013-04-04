@@ -10,7 +10,7 @@ import org.opencv.core.MatOfDMatch;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
-import org.opencv.features2d.DMatch;
+import org.opencv.core.DMatch;
 import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.FeatureDetector;
@@ -65,6 +65,7 @@ public class BruteForceHammingLUTDescriptorMatcherTest extends OpenCVTestCase {
     }
 
     protected void setUp() throws Exception {
+        super.setUp();
         matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_HAMMINGLUT);
         matSize = 100;
 
@@ -73,7 +74,6 @@ public class BruteForceHammingLUTDescriptorMatcherTest extends OpenCVTestCase {
                 new DMatch(1, 2, 0, 42),
                 new DMatch(2, 1, 0, 40),
                 new DMatch(3, 3, 0, 53) };
-        super.setUp();
     }
 
     public void testAdd() {

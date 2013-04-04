@@ -1,18 +1,20 @@
+#/usr/bin/env python
+
 import sys, glob
 
 sys.path.append("../modules/python/src2/")
 import hdr_parser as hp
 
 opencv_hdr_list = [
-"../modules/core/include/opencv2/core/core.hpp",
-"../modules/ml/include/opencv2/ml/ml.hpp",
-"../modules/imgproc/include/opencv2/imgproc/imgproc.hpp",
-"../modules/calib3d/include/opencv2/calib3d/calib3d.hpp",
-"../modules/features2d/include/opencv2/features2d/features2d.hpp",
+"../modules/core/include/opencv2/core.hpp",
+"../modules/ml/include/opencv2/ml.hpp",
+"../modules/imgproc/include/opencv2/imgproc.hpp",
+"../modules/calib3d/include/opencv2/calib3d.hpp",
+"../modules/features2d/include/opencv2/features2d.hpp",
 "../modules/video/include/opencv2/video/tracking.hpp",
 "../modules/video/include/opencv2/video/background_segm.hpp",
-"../modules/objdetect/include/opencv2/objdetect/objdetect.hpp",
-"../modules/highgui/include/opencv2/highgui/highgui.hpp",
+"../modules/objdetect/include/opencv2/objdetect.hpp",
+"../modules/highgui/include/opencv2/highgui.hpp",
 ]
 
 opencv_module_list = [

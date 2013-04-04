@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -43,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-namespace {
+using namespace cvtest;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // HoughLines
@@ -79,7 +80,7 @@ PARAM_TEST_CASE(HoughLines, cv::gpu::DeviceInfo, cv::Size, UseRoi)
     }
 };
 
-TEST_P(HoughLines, Accuracy)
+GPU_TEST_P(HoughLines, Accuracy)
 {
     const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     cv::gpu::setDevice(devInfo.deviceID());
@@ -87,7 +88,7 @@ TEST_P(HoughLines, Accuracy)
     const bool useRoi = GET_PARAM(2);
 
     const float rho = 1.0f;
-    const float theta = 1.5f * CV_PI / 180.0f;
+    const float theta = (float) (1.5 * CV_PI / 180.0);
     const int threshold = 100;
 
     cv::Mat src(size, CV_8UC1);
@@ -124,7 +125,7 @@ PARAM_TEST_CASE(HoughCircles, cv::gpu::DeviceInfo, cv::Size, UseRoi)
     }
 };
 
-TEST_P(HoughCircles, Accuracy)
+GPU_TEST_P(HoughCircles, Accuracy)
 {
     const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     cv::gpu::setDevice(devInfo.deviceID());
@@ -132,7 +133,7 @@ TEST_P(HoughCircles, Accuracy)
     const bool useRoi = GET_PARAM(2);
 
     const float dp = 2.0f;
-    const float minDist = 10.0f;
+    const float minDist = 0.0f;
     const int minRadius = 10;
     const int maxRadius = 20;
     const int cannyThreshold = 100;
@@ -165,7 +166,7 @@ TEST_P(HoughCircles, Accuracy)
         {
             cv::Vec3f gold = circles_gold[j];
 
-            if (std::fabs(cur[0] - gold[0]) < minDist && std::fabs(cur[1] - gold[1]) < minDist && std::fabs(cur[2] - gold[2]) < minDist)
+            if (std::fabs(cur[0] - gold[0]) < 5 && std::fabs(cur[1] - gold[1]) < 5 && std::fabs(cur[2] - gold[2]) < 5)
             {
                 found = true;
                 break;
@@ -188,7 +189,7 @@ PARAM_TEST_CASE(GeneralizedHough, cv::gpu::DeviceInfo, UseRoi)
 {
 };
 
-TEST_P(GeneralizedHough, POSITION)
+GPU_TEST_P(GeneralizedHough, POSITION)
 {
     const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     cv::gpu::setDevice(devInfo.deviceID());
@@ -250,7 +251,5 @@ TEST_P(GeneralizedHough, POSITION)
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, GeneralizedHough, testing::Combine(
     ALL_DEVICES,
     WHOLE_SUBMAT));
-
-} // namespace
 
 #endif // HAVE_CUDA

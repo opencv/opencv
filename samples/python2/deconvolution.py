@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
 Wiener deconvolution.
 
@@ -30,6 +32,8 @@ Examples:
 
 import numpy as np
 import cv2
+
+# local module
 from common import nothing
 
 
@@ -63,12 +67,18 @@ if __name__ == '__main__':
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['circle', 'angle=', 'd=', 'snr='])
     opts = dict(opts)
-    try: fn = args[0]
-    except: fn = 'data/licenseplate_motion.jpg'
+    try:
+        fn = args[0]
+    except: 
+        fn = 'data/licenseplate_motion.jpg'
 
     win = 'deconvolution'
 
     img = cv2.imread(fn, 0)
+    if img is None:
+        print 'Failed to load fn1:', fn1
+        sys.exit(1)
+    
     img = np.float32(img)/255.0
     cv2.imshow('input', img)
 

@@ -1,5 +1,6 @@
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <iostream>
 
@@ -70,7 +71,7 @@ int main( int argc, const char** argv )
     help();
 
     CommandLineParser parser(argc, argv, keys);
-    string inputImage = parser.get<string>(1);
+    string inputImage = parser.get<string>(0);
 
     // Load the source image. HighGUI use.
     image = imread( inputImage, 0 );

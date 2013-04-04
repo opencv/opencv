@@ -1,8 +1,13 @@
+#!/usr/bin/env python
+
 import numpy as np
 import cv2
-from time import clock
-import sys
 
+# built-in modules
+import sys
+from time import clock
+
+# local modules
 import video
 
 if __name__ == '__main__':
@@ -22,8 +27,10 @@ if __name__ == '__main__':
         hist_scale = val
     cv2.createTrackbar('scale', 'hist', hist_scale, 32, set_scale)
 
-    try: fn = sys.argv[1]
-    except: fn = 0
+    try:
+        fn = sys.argv[1]
+    except:
+        fn = 0
     cam = video.create_capture(fn, fallback='synth:bg=../cpp/baboon.jpg:class=chess:noise=0.05')
 
     while True:

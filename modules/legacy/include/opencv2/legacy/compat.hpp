@@ -56,6 +56,8 @@
 #include <math.h>
 #include <string.h>
 
+#define CV_NOOP(...)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -190,7 +192,8 @@ CV_EXPORTS double cvPseudoInverse( const CvArr* src, CvArr* dst );
 #define cvMinMaxLocMask(img, mask, min_val, max_val, min_loc, max_loc) \
         cvMinMaxLoc(img, min_val, max_val, min_loc, max_loc, mask)
 
-#define cvRemoveMemoryManager  cvSetMemoryManager
+#define cvRemoveMemoryManager  CV_NOOP
+#define cvSetMemoryManager     CV_NOOP
 
 #define cvmSetZero( mat )               cvSetZero( mat )
 #define cvmSetIdentity( mat )           cvSetIdentity( mat )

@@ -1,18 +1,20 @@
 *********************************************
-Base Loader Callback Interface implementation
+Base Loader Callback Interface Implementation
 *********************************************
 
 .. highlight:: java
 .. class:: BaseLoaderCallback
 
-    Basic implementation of LoaderCallbackInterface. Logic of this implementation is well-described by the following scheme:
+    Basic implementation of ``LoaderCallbackInterface``. Logic of this implementation is
+    well-described by the following scheme:
 
 .. image:: img/AndroidAppUsageModel.png
 
 Using in Java Activity
 ----------------------
 
-There is a very base code snippet implementing the async initialization with BaseLoaderCallback. See the "15-puzzle" OpenCV sample for details.
+There is a very base code snippet implementing the async initialization with ``BaseLoaderCallback``.
+See the "15-puzzle" OpenCV sample for details.
 
 .. code-block:: java
     :linenos:
@@ -42,11 +44,11 @@ There is a very base code snippet implementing the async initialization with Bas
     @Override
     protected void onResume()
     {
-        Log.i(TAG, "called onResume");
+        Log.i(TAG, "Called onResume");
         super.onResume();
 
         Log.i(TAG, "Trying to load OpenCV library");
-        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, this, mOpenCVCallBack))
+        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_4, this, mOpenCVCallBack))
         {
             Log.e(TAG, "Cannot connect to OpenCV Manager");
         }
@@ -55,6 +57,7 @@ There is a very base code snippet implementing the async initialization with Bas
 Using in Service
 ----------------
 
-Default BaseLoaderCallback implementation treat application context as Activity and calls Activity.finish() method to exit in case of initialization failure.
-To override this behavior you need to override finish() method of BaseLoaderCallback class and implement your own finalization method.
-
+Default ``BaseLoaderCallback`` implementation treats application context as ``Activity`` and calls
+``Activity.finish()`` method to exit in case of initialization failure.
+To override this behavior you need to override ``finish()`` method of ``BaseLoaderCallback`` class
+and implement your own finalization method.

@@ -75,7 +75,7 @@
 #include <algorithm>
 #include <vector>
 #include <functional>
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 #include <GL\gl.h>
 #endif
 
@@ -192,11 +192,6 @@ typedef struct CvWindow
 
     CvOpenGlDrawCallback glDrawCallback;
     void* glDrawData;
-
-    CvOpenGlCleanCallback glCleanCallback;
-    void* glCleanData;
-
-    CvOpenGlFuncTab* glFuncTab;
 #endif
 }
 CvWindow;
@@ -580,272 +575,8 @@ double cvGetOpenGlProp_W32(const char* name)
 
 #ifdef HAVE_OPENGL
 
-#ifndef APIENTRY
-    #define APIENTRY
-#endif
-
-#ifndef APIENTRYP
-    #define APIENTRYP APIENTRY *
-#endif
-
-#ifndef GL_VERSION_1_5
-    /* GL types for handling large vertex buffer objects */
-    typedef ptrdiff_t GLintptr;
-    typedef ptrdiff_t GLsizeiptr;
-#endif
-
 namespace
 {
-    typedef void (APIENTRYP PFNGLGENBUFFERSPROC   ) (GLsizei n, GLuint *buffers);
-    typedef void (APIENTRYP PFNGLDELETEBUFFERSPROC) (GLsizei n, const GLuint *buffers);
-
-    typedef void (APIENTRYP PFNGLBUFFERDATAPROC   ) (GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage);
-    typedef void (APIENTRYP PFNGLBUFFERSUBDATAPROC) (GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data);
-
-    typedef void (APIENTRYP PFNGLBINDBUFFERPROC   ) (GLenum target, GLuint buffer);
-
-    typedef GLvoid* (APIENTRYP PFNGLMAPBUFFERPROC) (GLenum target, GLenum access);
-    typedef GLboolean (APIENTRYP PFNGLUNMAPBUFFERPROC) (GLenum target);
-
-    class GlFuncTab_W32 : public CvOpenGlFuncTab
-    {
-    public:
-        GlFuncTab_W32(HDC hDC);
-
-        void genBuffers(int n, unsigned int* buffers) const;
-        void deleteBuffers(int n, const unsigned int* buffers) const;
-
-        void bufferData(unsigned int target, ptrdiff_t size, const void* data, unsigned int usage) const;
-        void bufferSubData(unsigned int target, ptrdiff_t offset, ptrdiff_t size, const void* data) const;
-
-        void bindBuffer(unsigned int target, unsigned int buffer) const;
-
-        void* mapBuffer(unsigned int target, unsigned int access) const;
-        void unmapBuffer(unsigned int target) const;
-
-        void generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool underline, int start, int count, int base) const;
-
-        bool isGlContextInitialized() const;
-
-        PFNGLGENBUFFERSPROC    glGenBuffersExt;
-        PFNGLDELETEBUFFERSPROC glDeleteBuffersExt;
-
-        PFNGLBUFFERDATAPROC    glBufferDataExt;
-        PFNGLBUFFERSUBDATAPROC glBufferSubDataExt;
-
-        PFNGLBINDBUFFERPROC    glBindBufferExt;
-
-        PFNGLMAPBUFFERPROC     glMapBufferExt;
-        PFNGLUNMAPBUFFERPROC   glUnmapBufferExt;
-
-        bool initialized;
-
-        HDC hDC;
-    };
-
-    GlFuncTab_W32::GlFuncTab_W32(HDC hDC_)
-    {
-        glGenBuffersExt    = 0;
-        glDeleteBuffersExt = 0;
-
-        glBufferDataExt    = 0;
-        glBufferSubDataExt = 0;
-
-        glBindBufferExt    = 0;
-
-        glMapBufferExt     = 0;
-        glUnmapBufferExt   = 0;
-
-        initialized = false;
-
-        hDC = hDC_;
-    }
-
-    void GlFuncTab_W32::genBuffers(int n, unsigned int* buffers) const
-    {
-        CV_FUNCNAME( "GlFuncTab_W32::genBuffers" );
-
-        __BEGIN__;
-
-        if (!glGenBuffersExt)
-            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-        glGenBuffersExt(n, buffers);
-        CV_CheckGlError();
-
-        __END__;
-    }
-
-    void GlFuncTab_W32::deleteBuffers(int n, const unsigned int* buffers) const
-    {
-        CV_FUNCNAME( "GlFuncTab_W32::deleteBuffers" );
-
-        __BEGIN__;
-
-        if (!glDeleteBuffersExt)
-            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-        glDeleteBuffersExt(n, buffers);
-        CV_CheckGlError();
-
-        __END__;
-    }
-
-    void GlFuncTab_W32::bufferData(unsigned int target, ptrdiff_t size, const void* data, unsigned int usage) const
-    {
-        CV_FUNCNAME( "GlFuncTab_W32::bufferData" );
-
-        __BEGIN__;
-
-        if (!glBufferDataExt)
-            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-        glBufferDataExt(target, size, data, usage);
-        CV_CheckGlError();
-
-        __END__;
-    }
-
-    void GlFuncTab_W32::bufferSubData(unsigned int target, ptrdiff_t offset, ptrdiff_t size, const void* data) const
-    {
-        CV_FUNCNAME( "GlFuncTab_W32::bufferSubData" );
-
-        __BEGIN__;
-
-        if (!glBufferSubDataExt)
-            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-        glBufferSubDataExt(target, offset, size, data);
-        CV_CheckGlError();
-
-        __END__;
-    }
-
-    void GlFuncTab_W32::bindBuffer(unsigned int target, unsigned int buffer) const
-    {
-        CV_FUNCNAME( "GlFuncTab_W32::bindBuffer" );
-
-        __BEGIN__;
-
-        if (!glBindBufferExt)
-            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-        glBindBufferExt(target, buffer);
-        CV_CheckGlError();
-
-        __END__;
-    }
-
-    void* GlFuncTab_W32::mapBuffer(unsigned int target, unsigned int access) const
-    {
-        CV_FUNCNAME( "GlFuncTab_W32::mapBuffer" );
-
-        void* res = 0;
-
-        __BEGIN__;
-
-        if (!glMapBufferExt)
-            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-        res = glMapBufferExt(target, access);
-        CV_CheckGlError();
-
-        __END__;
-
-        return res;
-    }
-
-    void GlFuncTab_W32::unmapBuffer(unsigned int target) const
-    {
-        CV_FUNCNAME( "GlFuncTab_W32::unmapBuffer" );
-
-        __BEGIN__;
-
-        if (!glUnmapBufferExt)
-            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-        glUnmapBufferExt(target);
-        CV_CheckGlError();
-
-        __END__;
-    }
-
-    void GlFuncTab_W32::generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool underline, int start, int count, int base) const
-    {
-        HFONT font;
-
-        CV_FUNCNAME( "GlFuncTab_W32::generateBitmapFont" );
-
-        __BEGIN__;
-
-        font = CreateFont
-        (
-            -height,                     // height
-            0,                           // cell width
-            0,                           // Angle of Escapement
-            0,                           // Orientation Angle
-            weight,                      // font weight
-            italic ? TRUE : FALSE,       // Italic
-            underline ? TRUE : FALSE,    // Underline
-            FALSE,                       // StrikeOut
-            ANSI_CHARSET,                // CharSet
-            OUT_TT_PRECIS,               // OutPrecision
-            CLIP_DEFAULT_PRECIS,         // ClipPrecision
-            ANTIALIASED_QUALITY,         // Quality
-            FF_DONTCARE | DEFAULT_PITCH, // PitchAndFamily
-            family.c_str()               // FaceName
-        );
-
-        SelectObject(hDC, font);
-
-        if (!wglUseFontBitmaps(hDC, start, count, base))
-            CV_ERROR(CV_OpenGlApiCallError, "Can't create font");
-
-        __END__;
-    }
-
-    bool GlFuncTab_W32::isGlContextInitialized() const
-    {
-        return initialized;
-    }
-
-    void initGl(CvWindow* window)
-    {
-        glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-
-        std::auto_ptr<GlFuncTab_W32> glFuncTab(new GlFuncTab_W32(window->dc));
-
-        // Load extensions
-        PROC func;
-
-        func = wglGetProcAddress("glGenBuffers");
-        glFuncTab->glGenBuffersExt = (PFNGLGENBUFFERSPROC)func;
-
-        func = wglGetProcAddress("glDeleteBuffers");
-        glFuncTab->glDeleteBuffersExt = (PFNGLDELETEBUFFERSPROC)func;
-
-        func = wglGetProcAddress("glBufferData");
-        glFuncTab->glBufferDataExt = (PFNGLBUFFERDATAPROC)func;
-
-        func = wglGetProcAddress("glBufferSubData");
-        glFuncTab->glBufferSubDataExt = (PFNGLBUFFERSUBDATAPROC)func;
-
-        func = wglGetProcAddress("glBindBuffer");
-        glFuncTab->glBindBufferExt = (PFNGLBINDBUFFERPROC)func;
-
-        func = wglGetProcAddress("glMapBuffer");
-        glFuncTab->glMapBufferExt = (PFNGLMAPBUFFERPROC)func;
-
-        func = wglGetProcAddress("glUnmapBuffer");
-        glFuncTab->glUnmapBufferExt = (PFNGLUNMAPBUFFERPROC)func;
-
-        glFuncTab->initialized = true;
-
-        window->glFuncTab = glFuncTab.release();
-
-        icvSetOpenGlFuncTab(window->glFuncTab);
-    }
-
     void createGlContext(HWND hWnd, HDC& hGLDC, HGLRC& hGLRC, bool& useGl)
     {
         CV_FUNCNAME( "createGlContext" );
@@ -907,8 +638,6 @@ namespace
 
         __BEGIN__;
 
-        delete window->glFuncTab;
-
         if (window->hGLRC)
         {
             wglDeleteContext(window->hGLRC);
@@ -939,8 +668,6 @@ namespace
 
         if (window->glDrawCallback)
             window->glDrawCallback(window->glDrawData);
-
-        CV_CheckGlError();
 
         if (!SwapBuffers(window->dc))
             CV_ERROR( CV_OpenGlApiCallError, "Can't swap OpenGL buffers" );
@@ -1042,7 +769,6 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 #ifndef HAVE_OPENGL
     window->dc = CreateCompatibleDC(0);
 #else
-    window->glFuncTab = 0;
     if (!useGl)
     {
         window->dc = CreateCompatibleDC(0);
@@ -1054,14 +780,10 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
         window->dc = hGLDC;
         window->hGLRC = hGLRC;
         window->useGl = true;
-        initGl(window);
     }
 
     window->glDrawCallback = 0;
     window->glDrawData = 0;
-
-    window->glCleanCallback = 0;
-    window->glCleanData = 0;
 #endif
 
     window->last_key = 0;
@@ -1112,8 +834,6 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
     if (!wglMakeCurrent(window->dc, window->hGLRC))
         CV_ERROR( CV_OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
 
-    icvSetOpenGlFuncTab(window->glFuncTab);
-
     __END__;
 }
 
@@ -1161,30 +881,6 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback call
     __END__;
 }
 
-void icvSetOpenGlCleanCallback(const char* name, CvOpenGlCleanCallback callback, void* userdata)
-{
-    CV_FUNCNAME( "icvSetOpenGlCleanCallback" );
-
-    __BEGIN__;
-
-    CvWindow* window;
-
-    if (!name)
-        CV_ERROR(CV_StsNullPtr, "NULL name string");
-
-    window = icvFindWindowByName(name);
-    if (!window)
-        EXIT;
-
-    if (window->glCleanCallback)
-        window->glCleanCallback(window->glCleanData);
-
-    window->glCleanCallback = callback;
-    window->glCleanData = userdata;
-
-    __END__;
-}
-
 #endif // HAVE_OPENGL
 
 static void icvRemoveWindow( CvWindow* window )
@@ -1194,18 +890,7 @@ static void icvRemoveWindow( CvWindow* window )
 
 #ifdef HAVE_OPENGL
     if (window->useGl)
-    {
-        wglMakeCurrent(window->dc, window->hGLRC);
-
-        if (window->glCleanCallback)
-        {
-            window->glCleanCallback(window->glCleanData);
-            window->glCleanCallback = 0;
-            window->glCleanData = 0;
-        }
-
         releaseGlContext(window);
-    }
 #endif
 
     if( window->frame )
@@ -1422,8 +1107,7 @@ cvShowImage( const char* name, const CvArr* arr )
 #ifdef HAVE_OPENGL
     if (window->useGl)
     {
-        cv::Mat im(image);
-        cv::imshow(name, im);
+        cv::imshow(name, cv::cvarrToMat(image));
         return;
     }
 #endif

@@ -42,7 +42,7 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
+#include "opencv2/gpu/device/common.hpp"
 
 namespace cv { namespace gpu { namespace device
 {
@@ -76,7 +76,7 @@ namespace cv { namespace gpu { namespace device
             static __device__ __forceinline__ void calc(int x, int y, float x_data, float y_data, float* dst, size_t dst_step, float scale)
             {
                 float angle = ::atan2f(y_data, x_data);
-                angle += (angle < 0) * 2.0 * CV_PI;
+                angle += (angle < 0) * 2.0f * CV_PI_F;
                 dst[y * dst_step + x] = scale * angle;
             }
         };
@@ -140,7 +140,7 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(x.cols, threads.x);
             grid.y = divUp(x.rows, threads.y);
 
-            const float scale = angleInDegrees ? (float)(180.0f / CV_PI) : 1.f;
+            const float scale = angleInDegrees ? (180.0f / CV_PI_F) : 1.f;
 
             cartToPolar<Mag, Angle><<<grid, threads, 0, stream>>>(
                 x.data, x.step/x.elemSize(), y.data, y.step/y.elemSize(),
@@ -190,7 +190,7 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(mag.cols, threads.x);
             grid.y = divUp(mag.rows, threads.y);
 
-            const float scale = angleInDegrees ? (float)(CV_PI / 180.0f) : 1.0f;
+            const float scale = angleInDegrees ? (CV_PI_F / 180.0f) : 1.0f;
 
             polarToCart<Mag><<<grid, threads, 0, stream>>>(mag.data, mag.step/mag.elemSize(),
                 angle.data, angle.step/angle.elemSize(), scale, x.data, x.step/x.elemSize(), y.data, y.step/y.elemSize(), mag.cols, mag.rows);

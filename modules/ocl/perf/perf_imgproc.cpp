@@ -379,7 +379,7 @@ TEST_P(bilateralFilter, Mat)
     }
     else
     {
-        for(int i = 0; i < sizeof(bordertype) / sizeof(int); i++)
+        for(size_t i = 0; i < sizeof(bordertype) / sizeof(int); i++)
         {
             cout << borderstr[i] << endl;
 #ifndef PRINT_KERNEL_RUN_TIME
@@ -397,7 +397,7 @@ TEST_P(bilateralFilter, Mat)
                 for(int j = 0; j < LOOP_TIMES + 1; j ++)
                 {
                     Has_roi(k);
-                    if(((bordertype[i] != cv::BORDER_CONSTANT) && (bordertype[i] != cv::BORDER_REPLICATE)) && (mat1_roi.cols <= radius) || (mat1_roi.cols <= radius) || (mat1_roi.rows <= radius) || (mat1_roi.rows <= radius))
+                    if(((bordertype[i] != cv::BORDER_CONSTANT) && (bordertype[i] != cv::BORDER_REPLICATE) && (mat1_roi.cols <= radius)) || (mat1_roi.cols <= radius) || (mat1_roi.rows <= radius) || (mat1_roi.rows <= radius))
                     {
                         continue;
                     }
@@ -482,7 +482,7 @@ TEST_P(CopyMakeBorder, Mat)
     }
     else
     {
-        for(int i = 0; i < sizeof(bordertype) / sizeof(int); i++)
+        for(size_t i = 0; i < sizeof(bordertype) / sizeof(int); i++)
         {
 #ifndef PRINT_KERNEL_RUN_TIME
             double totalcputick = 0;
@@ -1133,7 +1133,6 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
 
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size srcSize = cv::Size(MWIDTH, MHEIGHT);
-        cv::Size dstSize = cv::Size(MWIDTH, MHEIGHT);
         cv::Size map1Size = cv::Size(MWIDTH, MHEIGHT);
         double min = 5, max = 16;
 

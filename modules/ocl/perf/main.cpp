@@ -97,12 +97,12 @@ int main(int argc, char **argv)
     unsigned int pid = cmd.get<unsigned int>("p");
     int device = cmd.get<int>("d");
     print_info();
-    int flag = CVCL_DEVICE_TYPE_GPU;
+    // int flag = CVCL_DEVICE_TYPE_GPU;
 
-    if(type == "cpu")
-    {
-        flag = CVCL_DEVICE_TYPE_CPU;
-    }
+    // if(type == "cpu")
+    // {
+    //     flag = CVCL_DEVICE_TYPE_CPU;
+    // }
     std::vector<cv::ocl::Info> oclinfo;
     int devnums = getDevice(oclinfo);
     if(devnums <= device || device < 0)

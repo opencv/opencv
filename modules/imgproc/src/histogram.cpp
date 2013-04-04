@@ -54,7 +54,7 @@ static const size_t OUT_OF_RANGE = (size_t)1 << (sizeof(size_t)*8 - 2);
 static void
 calcHistLookupTables_8u( const Mat& hist, const SparseMat& shist,
                          int dims, const float** ranges, const double* uniranges,
-                         bool uniform, bool issparse, vector<size_t>& _tab )
+                         bool uniform, bool issparse, std::vector<size_t>& _tab )
 {
     const int low = 0, high = 256;
     int i, j;
@@ -117,8 +117,8 @@ calcHistLookupTables_8u( const Mat& hist, const SparseMat& shist,
 static void histPrepareImages( const Mat* images, int nimages, const int* channels,
                                const Mat& mask, int dims, const int* histSize,
                                const float** ranges, bool uniform,
-                               vector<uchar*>& ptrs, vector<int>& deltas,
-                               Size& imsize, vector<double>& uniranges )
+                               std::vector<uchar*>& ptrs, std::vector<int>& deltas,
+                               Size& imsize, std::vector<double>& uniranges )
 {
     int i, j, c;
     CV_Assert( channels != 0 || nimages == dims );
@@ -165,11 +165,13 @@ static void histPrepareImages( const Mat* images, int nimages, const int* channe
         deltas[dims*2 + 1] = (int)(mask.step/mask.elemSize1());
     }
 
+#ifndef HAVE_TBB
     if( isContinuous )
     {
         imsize.width *= imsize.height;
         imsize.height = 1;
     }
+#endif
 
     if( !ranges )
     {
@@ -207,9 +209,541 @@ static void histPrepareImages( const Mat* images, int nimages, const int* channe
 
 
 ////////////////////////////////// C A L C U L A T E    H I S T O G R A M ////////////////////////////////////
+#ifdef HAVE_TBB
+enum {one = 1, two, three}; // array elements number
+
+template<typename T>
+class calcHist1D_Invoker
+{
+public:
+    calcHist1D_Invoker( const std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
+                        Mat& hist, const double* _uniranges, int sz, int dims,
+                        Size& imageSize )
+        : mask_(_ptrs[dims]),
+          mstep_(_deltas[dims*2 + 1]),
+          imageWidth_(imageSize.width),
+          histogramSize_(hist.size()), histogramType_(hist.type()),
+          globalHistogram_((tbb::atomic<int>*)hist.data)
+    {
+        p_[0] = ((T**)&_ptrs[0])[0];
+        step_[0] = (&_deltas[0])[1];
+        d_[0] = (&_deltas[0])[0];
+        a_[0] = (&_uniranges[0])[0];
+        b_[0] = (&_uniranges[0])[1];
+        size_[0] = sz;
+    }
+
+    void operator()( const BlockedRange& range ) const
+    {
+        T* p0 = p_[0] + range.begin() * (step_[0] + imageWidth_*d_[0]);
+        uchar* mask = mask_ + range.begin()*mstep_;
+
+        for( int row = range.begin(); row < range.end(); row++, p0 += step_[0] )
+        {
+            if( !mask_ )
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0] )
+                {
+                    int idx = cvFloor(*p0*a_[0] + b_[0]);
+                    if( (unsigned)idx < (unsigned)size_[0] )
+                    {
+                        globalHistogram_[idx].fetch_and_add(1);
+                    }
+                }
+            }
+            else
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0] )
+                {
+                    if( mask[x] )
+                    {
+                        int idx = cvFloor(*p0*a_[0] + b_[0]);
+                        if( (unsigned)idx < (unsigned)size_[0] )
+                        {
+                            globalHistogram_[idx].fetch_and_add(1);
+                        }
+                    }
+                }
+                mask += mstep_;
+            }
+        }
+    }
+
+private:
+    T* p_[one];
+    uchar* mask_;
+    int step_[one];
+    int d_[one];
+    int mstep_;
+    double a_[one];
+    double b_[one];
+    int size_[one];
+    int imageWidth_;
+    Size histogramSize_;
+    int histogramType_;
+    tbb::atomic<int>* globalHistogram_;
+};
+
+template<typename T>
+class calcHist2D_Invoker
+{
+public:
+    calcHist2D_Invoker( const std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
+                        Mat& hist, const double* _uniranges, const int* size,
+                        int dims, Size& imageSize, size_t* hstep )
+        : mask_(_ptrs[dims]),
+          mstep_(_deltas[dims*2 + 1]),
+          imageWidth_(imageSize.width),
+          histogramSize_(hist.size()), histogramType_(hist.type()),
+          globalHistogram_(hist.data)
+    {
+        p_[0] = ((T**)&_ptrs[0])[0]; p_[1] = ((T**)&_ptrs[0])[1];
+        step_[0] = (&_deltas[0])[1]; step_[1] = (&_deltas[0])[3];
+        d_[0] = (&_deltas[0])[0];    d_[1] = (&_deltas[0])[2];
+        a_[0] = (&_uniranges[0])[0]; a_[1] = (&_uniranges[0])[2];
+        b_[0] = (&_uniranges[0])[1]; b_[1] = (&_uniranges[0])[3];
+        size_[0] = size[0];          size_[1] = size[1];
+        hstep_[0] = hstep[0];
+    }
+
+    void operator()(const BlockedRange& range) const
+    {
+        T* p0 = p_[0] + range.begin()*(step_[0] + imageWidth_*d_[0]);
+        T* p1 = p_[1] + range.begin()*(step_[1] + imageWidth_*d_[1]);
+        uchar* mask = mask_ + range.begin()*mstep_;
+
+        for( int row = range.begin(); row < range.end(); row++, p0 += step_[0], p1 += step_[1] )
+        {
+            if( !mask_ )
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1] )
+                {
+                    int idx0 = cvFloor(*p0*a_[0] + b_[0]);
+                    int idx1 = cvFloor(*p1*a_[1] + b_[1]);
+                    if( (unsigned)idx0 < (unsigned)size_[0] && (unsigned)idx1 < (unsigned)size_[1] )
+                        ( (tbb::atomic<int>*)(globalHistogram_ + hstep_[0]*idx0) )[idx1].fetch_and_add(1);
+                }
+            }
+            else
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1] )
+                {
+                    if( mask[x] )
+                    {
+                        int idx0 = cvFloor(*p0*a_[0] + b_[0]);
+                        int idx1 = cvFloor(*p1*a_[1] + b_[1]);
+                        if( (unsigned)idx0 < (unsigned)size_[0] && (unsigned)idx1 < (unsigned)size_[1] )
+                            ((tbb::atomic<int>*)(globalHistogram_ + hstep_[0]*idx0))[idx1].fetch_and_add(1);
+                    }
+                }
+                mask += mstep_;
+            }
+        }
+    }
+
+private:
+    T* p_[two];
+    uchar* mask_;
+    int step_[two];
+    int d_[two];
+    int mstep_;
+    double a_[two];
+    double b_[two];
+    int size_[two];
+    const int imageWidth_;
+    size_t hstep_[one];
+    Size histogramSize_;
+    int histogramType_;
+    uchar* globalHistogram_;
+};
+
+
+template<typename T>
+class calcHist3D_Invoker
+{
+public:
+    calcHist3D_Invoker( const std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
+                        Size imsize, Mat& hist, const double* uniranges, int _dims,
+                        size_t* hstep, int* size )
+        : mask_(_ptrs[_dims]),
+          mstep_(_deltas[_dims*2 + 1]),
+          imageWidth_(imsize.width),
+          globalHistogram_(hist.data)
+    {
+        p_[0] = ((T**)&_ptrs[0])[0]; p_[1] = ((T**)&_ptrs[0])[1]; p_[2] = ((T**)&_ptrs[0])[2];
+        step_[0] = (&_deltas[0])[1]; step_[1] = (&_deltas[0])[3]; step_[2] = (&_deltas[0])[5];
+        d_[0] = (&_deltas[0])[0];    d_[1] = (&_deltas[0])[2];    d_[2] = (&_deltas[0])[4];
+        a_[0] = uniranges[0];        a_[1] = uniranges[2];        a_[2] = uniranges[4];
+        b_[0] = uniranges[1];        b_[1] = uniranges[3];        b_[2] = uniranges[5];
+        size_[0] = size[0];          size_[1] = size[1];          size_[2] = size[2];
+        hstep_[0] = hstep[0];        hstep_[1] = hstep[1];
+    }
+
+    void operator()( const BlockedRange& range ) const
+    {
+        T* p0 = p_[0] + range.begin()*(imageWidth_*d_[0] + step_[0]);
+        T* p1 = p_[1] + range.begin()*(imageWidth_*d_[1] + step_[1]);
+        T* p2 = p_[2] + range.begin()*(imageWidth_*d_[2] + step_[2]);
+        uchar* mask = mask_ + range.begin()*mstep_;
+
+        for( int i = range.begin(); i < range.end(); i++, p0 += step_[0], p1 += step_[1], p2 += step_[2] )
+        {
+            if( !mask_ )
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1], p2 += d_[2] )
+                {
+                    int idx0 = cvFloor(*p0*a_[0] + b_[0]);
+                    int idx1 = cvFloor(*p1*a_[1] + b_[1]);
+                    int idx2 = cvFloor(*p2*a_[2] + b_[2]);
+                    if( (unsigned)idx0 < (unsigned)size_[0] &&
+                            (unsigned)idx1 < (unsigned)size_[1] &&
+                            (unsigned)idx2 < (unsigned)size_[2] )
+                    {
+                        ( (tbb::atomic<int>*)(globalHistogram_ + hstep_[0]*idx0 + hstep_[1]*idx1) )[idx2].fetch_and_add(1);
+                    }
+                }
+            }
+            else
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1], p2 += d_[2] )
+                {
+                    if( mask[x] )
+                    {
+                        int idx0 = cvFloor(*p0*a_[0] + b_[0]);
+                        int idx1 = cvFloor(*p1*a_[1] + b_[1]);
+                        int idx2 = cvFloor(*p2*a_[2] + b_[2]);
+                        if( (unsigned)idx0 < (unsigned)size_[0] &&
+                                (unsigned)idx1 < (unsigned)size_[1] &&
+                                (unsigned)idx2 < (unsigned)size_[2] )
+                        {
+                            ( (tbb::atomic<int>*)(globalHistogram_ + hstep_[0]*idx0 + hstep_[1]*idx1) )[idx2].fetch_and_add(1);
+                        }
+                    }
+                }
+                mask += mstep_;
+            }
+        }
+    }
+
+    static bool isFit( const Mat& histogram, const Size imageSize )
+    {
+        return ( imageSize.width * imageSize.height >= 320*240
+                 && histogram.total() >= 8*8*8 );
+    }
+
+private:
+    T* p_[three];
+    uchar* mask_;
+    int step_[three];
+    int d_[three];
+    const int mstep_;
+    double a_[three];
+    double b_[three];
+    int size_[three];
+    int imageWidth_;
+    size_t hstep_[two];
+    uchar* globalHistogram_;
+};
+
+class CalcHist1D_8uInvoker
+{
+public:
+    CalcHist1D_8uInvoker( const std::vector<uchar*>& ptrs, const std::vector<int>& deltas,
+                          Size imsize, Mat& hist, int dims, const std::vector<size_t>& tab,
+                          tbb::mutex* lock )
+        : mask_(ptrs[dims]),
+          mstep_(deltas[dims*2 + 1]),
+          imageWidth_(imsize.width),
+          imageSize_(imsize),
+          histSize_(hist.size()), histType_(hist.type()),
+          tab_((size_t*)&tab[0]),
+          histogramWriteLock_(lock),
+          globalHistogram_(hist.data)
+    {
+        p_[0] = (&ptrs[0])[0];
+        step_[0] = (&deltas[0])[1];
+        d_[0] = (&deltas[0])[0];
+    }
+
+    void operator()( const BlockedRange& range ) const
+    {
+        int localHistogram[256] = { 0, };
+        uchar* mask = mask_;
+        uchar* p0 = p_[0];
+        int x;
+        tbb::mutex::scoped_lock lock;
+
+        if( !mask_ )
+        {
+            int n = (imageWidth_ - 4) / 4 + 1;
+            int tail = imageWidth_ - n*4;
+
+            int xN = 4*n;
+            p0 += (xN*d_[0] + tail*d_[0] + step_[0]) * range.begin();
+        }
+        else
+        {
+            p0 += (imageWidth_*d_[0] + step_[0]) * range.begin();
+            mask += mstep_*range.begin();
+        }
+
+        for( int i = range.begin(); i < range.end(); i++, p0 += step_[0] )
+        {
+            if( !mask_ )
+            {
+                if( d_[0] == 1 )
+                {
+                    for( x = 0; x <= imageWidth_ - 4; x += 4 )
+                    {
+                        int t0 = p0[x], t1 = p0[x+1];
+                        localHistogram[t0]++; localHistogram[t1]++;
+                        t0 = p0[x+2]; t1 = p0[x+3];
+                        localHistogram[t0]++; localHistogram[t1]++;
+                    }
+                    p0 += x;
+                }
+                else
+                {
+                    for( x = 0; x <= imageWidth_ - 4; x += 4 )
+                    {
+                        int t0 = p0[0], t1 = p0[d_[0]];
+                        localHistogram[t0]++; localHistogram[t1]++;
+                        p0 += d_[0]*2;
+                        t0 = p0[0]; t1 = p0[d_[0]];
+                        localHistogram[t0]++; localHistogram[t1]++;
+                        p0 += d_[0]*2;
+                    }
+                }
+
+                for( ; x < imageWidth_; x++, p0 += d_[0] )
+                {
+                    localHistogram[*p0]++;
+                }
+            }
+            else
+            {
+                for( x = 0; x < imageWidth_; x++, p0 += d_[0] )
+                {
+                    if( mask[x] )
+                    {
+                        localHistogram[*p0]++;
+                    }
+                }
+                mask += mstep_;
+            }
+        }
+
+        lock.acquire(*histogramWriteLock_);
+        for(int i = 0; i < 256; i++ )
+        {
+            size_t hidx = tab_[i];
+            if( hidx < OUT_OF_RANGE )
+            {
+                *(int*)((globalHistogram_ + hidx)) += localHistogram[i];
+            }
+        }
+        lock.release();
+    }
+
+    static bool isFit( const Mat& histogram, const Size imageSize )
+    {
+        return ( histogram.total() >= 8
+                && imageSize.width * imageSize.height >= 160*120 );
+    }
+
+private:
+    uchar* p_[one];
+    uchar* mask_;
+    int mstep_;
+    int step_[one];
+    int d_[one];
+    int imageWidth_;
+    Size imageSize_;
+    Size histSize_;
+    int histType_;
+    size_t* tab_;
+    tbb::mutex* histogramWriteLock_;
+    uchar* globalHistogram_;
+};
+
+class CalcHist2D_8uInvoker
+{
+public:
+    CalcHist2D_8uInvoker( const std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
+                          Size imsize, Mat& hist, int dims, const std::vector<size_t>& _tab,
+                          tbb::mutex* lock )
+        : mask_(_ptrs[dims]),
+          mstep_(_deltas[dims*2 + 1]),
+          imageWidth_(imsize.width),
+          histSize_(hist.size()), histType_(hist.type()),
+          tab_((size_t*)&_tab[0]),
+          histogramWriteLock_(lock),
+          globalHistogram_(hist.data)
+    {
+        p_[0] = (uchar*)(&_ptrs[0])[0]; p_[1] = (uchar*)(&_ptrs[0])[1];
+        step_[0] = (&_deltas[0])[1];    step_[1] = (&_deltas[0])[3];
+        d_[0] = (&_deltas[0])[0];       d_[1] = (&_deltas[0])[2];
+    }
+
+    void operator()( const BlockedRange& range ) const
+    {
+        uchar* p0 = p_[0] + range.begin()*(step_[0] + imageWidth_*d_[0]);
+        uchar* p1 = p_[1] + range.begin()*(step_[1] + imageWidth_*d_[1]);
+        uchar* mask = mask_ + range.begin()*mstep_;
+
+        Mat localHist = Mat::zeros(histSize_, histType_);
+        uchar* localHistData = localHist.data;
+        tbb::mutex::scoped_lock lock;
+
+        for(int i = range.begin(); i < range.end(); i++, p0 += step_[0], p1 += step_[1])
+        {
+            if( !mask_ )
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1] )
+                {
+                    size_t idx = tab_[*p0] + tab_[*p1 + 256];
+                    if( idx < OUT_OF_RANGE )
+                    {
+                        ++*(int*)(localHistData + idx);
+                    }
+                }
+            }
+            else
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1] )
+                {
+                    size_t idx;
+                    if( mask[x] && (idx = tab_[*p0] + tab_[*p1 + 256]) < OUT_OF_RANGE )
+                    {
+                        ++*(int*)(localHistData + idx);
+                    }
+                }
+                mask += mstep_;
+            }
+        }
+
+        lock.acquire(*histogramWriteLock_);
+        for(int i = 0; i < histSize_.width*histSize_.height; i++)
+        {
+            ((int*)globalHistogram_)[i] += ((int*)localHistData)[i];
+        }
+        lock.release();
+    }
+
+    static bool isFit( const Mat& histogram, const Size imageSize )
+    {
+        return ( (histogram.total() > 4*4 &&  histogram.total() <= 116*116
+                  && imageSize.width * imageSize.height >= 320*240)
+                 || (histogram.total() > 116*116 && imageSize.width * imageSize.height >= 1280*720) );
+    }
+
+private:
+    uchar* p_[two];
+    uchar* mask_;
+    int step_[two];
+    int d_[two];
+    int mstep_;
+    int imageWidth_;
+    Size histSize_;
+    int histType_;
+    size_t* tab_;
+    tbb::mutex* histogramWriteLock_;
+    uchar* globalHistogram_;
+};
+
+class CalcHist3D_8uInvoker
+{
+public:
+    CalcHist3D_8uInvoker( const std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
+                          Size imsize, Mat& hist, int dims, const std::vector<size_t>& tab )
+        : mask_(_ptrs[dims]),
+          mstep_(_deltas[dims*2 + 1]),
+          histogramSize_(hist.size.p), histogramType_(hist.type()),
+          imageWidth_(imsize.width),
+          tab_((size_t*)&tab[0]),
+          globalHistogram_(hist.data)
+    {
+        p_[0] = (uchar*)(&_ptrs[0])[0]; p_[1] = (uchar*)(&_ptrs[0])[1]; p_[2] = (uchar*)(&_ptrs[0])[2];
+        step_[0] = (&_deltas[0])[1];    step_[1] = (&_deltas[0])[3];    step_[2] = (&_deltas[0])[5];
+        d_[0] = (&_deltas[0])[0];       d_[1] = (&_deltas[0])[2];       d_[2] = (&_deltas[0])[4];
+    }
+
+    void operator()( const BlockedRange& range ) const
+    {
+        uchar* p0 = p_[0] + range.begin()*(step_[0] + imageWidth_*d_[0]);
+        uchar* p1 = p_[1] + range.begin()*(step_[1] + imageWidth_*d_[1]);
+        uchar* p2 = p_[2] + range.begin()*(step_[2] + imageWidth_*d_[2]);
+        uchar* mask = mask_ + range.begin()*mstep_;
+
+        for(int i = range.begin(); i < range.end(); i++, p0 += step_[0], p1 += step_[1], p2 += step_[2] )
+        {
+            if( !mask_ )
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1], p2 += d_[2] )
+                {
+                    size_t idx = tab_[*p0] + tab_[*p1 + 256] + tab_[*p2 + 512];
+                    if( idx < OUT_OF_RANGE )
+                    {
+                        ( *(tbb::atomic<int>*)(globalHistogram_ + idx) ).fetch_and_add(1);
+                    }
+                }
+            }
+            else
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1], p2 += d_[2] )
+                {
+                    size_t idx;
+                    if( mask[x] && (idx = tab_[*p0] + tab_[*p1 + 256] + tab_[*p2 + 512]) < OUT_OF_RANGE )
+                    {
+                        (*(tbb::atomic<int>*)(globalHistogram_ + idx)).fetch_and_add(1);
+                    }
+                }
+                mask += mstep_;
+            }
+        }
+    }
+
+    static bool isFit( const Mat& histogram, const Size imageSize )
+    {
+        return ( histogram.total() >= 128*128*128
+                 && imageSize.width * imageSize.width >= 320*240 );
+    }
+
+private:
+    uchar* p_[three];
+    uchar* mask_;
+    int mstep_;
+    int step_[three];
+    int d_[three];
+    int* histogramSize_;
+    int histogramType_;
+    int imageWidth_;
+    size_t* tab_;
+    uchar* globalHistogram_;
+};
+
+static void
+callCalcHist2D_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
+                   Size imsize, Mat& hist, int dims,  std::vector<size_t>& _tab )
+{
+    int grainSize = imsize.height / tbb::task_scheduler_init::default_num_threads();
+    tbb::mutex histogramWriteLock;
+
+    CalcHist2D_8uInvoker body(_ptrs, _deltas, imsize, hist, dims, _tab, &histogramWriteLock);
+    parallel_for(BlockedRange(0, imsize.height, grainSize), body);
+}
+
+static void
+callCalcHist3D_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
+                   Size imsize, Mat& hist, int dims,  std::vector<size_t>& _tab )
+{
+    CalcHist3D_8uInvoker body(_ptrs, _deltas, imsize, hist, dims, _tab);
+    parallel_for(BlockedRange(0, imsize.height), body);
+}
+#endif
 
 template<typename T> static void
-calcHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
            Size imsize, Mat& hist, int dims, const float** _ranges,
            const double* _uniranges, bool uniform )
 {
@@ -234,6 +768,11 @@ calcHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 
         if( dims == 1 )
         {
+#ifdef HAVE_TBB
+            calcHist1D_Invoker<T> body(_ptrs, _deltas, hist, _uniranges, size[0], dims, imsize);
+            parallel_for(BlockedRange(0, imsize.height), body);
+            return;
+#endif
             double a = uniranges[0], b = uniranges[1];
             int sz = size[0], d0 = deltas[0], step0 = deltas[1];
             const T* p0 = (const T*)ptrs[0];
@@ -259,6 +798,11 @@ calcHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
         }
         else if( dims == 2 )
         {
+#ifdef HAVE_TBB
+            calcHist2D_Invoker<T> body(_ptrs, _deltas, hist, _uniranges, size, dims, imsize, hstep);
+            parallel_for(BlockedRange(0, imsize.height), body);
+            return;
+#endif
             double a0 = uniranges[0], b0 = uniranges[1], a1 = uniranges[2], b1 = uniranges[3];
             int sz0 = size[0], sz1 = size[1];
             int d0 = deltas[0], step0 = deltas[1],
@@ -290,6 +834,14 @@ calcHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
         }
         else if( dims == 3 )
         {
+#ifdef HAVE_TBB
+            if( calcHist3D_Invoker<T>::isFit(hist, imsize) )
+            {
+                calcHist3D_Invoker<T> body(_ptrs, _deltas, imsize, hist, uniranges, dims, hstep, size);
+                parallel_for(BlockedRange(0, imsize.height), body);
+                return;
+            }
+#endif
             double a0 = uniranges[0], b0 = uniranges[1],
                    a1 = uniranges[2], b1 = uniranges[3],
                    a2 = uniranges[4], b2 = uniranges[5];
@@ -424,7 +976,7 @@ calcHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 
 
 static void
-calcHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
              Size imsize, Mat& hist, int dims, const float** _ranges,
              const double* _uniranges, bool uniform )
 {
@@ -434,15 +986,27 @@ calcHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
     int x;
     const uchar* mask = _ptrs[dims];
     int mstep = _deltas[dims*2 + 1];
-    vector<size_t> _tab;
+    std::vector<size_t> _tab;
 
     calcHistLookupTables_8u( hist, SparseMat(), dims, _ranges, _uniranges, uniform, false, _tab );
     const size_t* tab = &_tab[0];
 
     if( dims == 1 )
     {
+#ifdef HAVE_TBB
+        if( CalcHist1D_8uInvoker::isFit(hist, imsize) )
+        {
+            int treadsNumber = tbb::task_scheduler_init::default_num_threads();
+            int grainSize = imsize.height/treadsNumber;
+            tbb::mutex histogramWriteLock;
+
+            CalcHist1D_8uInvoker body(_ptrs, _deltas, imsize, hist, dims, _tab, &histogramWriteLock);
+            parallel_for(BlockedRange(0, imsize.height, grainSize), body);
+            return;
+        }
+#endif
         int d0 = deltas[0], step0 = deltas[1];
-        int matH[256] = {0};
+        int matH[256] = { 0, };
         const uchar* p0 = (const uchar*)ptrs[0];
 
         for( ; imsize.height--; p0 += step0, mask += mstep )
@@ -489,6 +1053,13 @@ calcHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
     }
     else if( dims == 2 )
     {
+#ifdef HAVE_TBB
+        if( CalcHist2D_8uInvoker::isFit(hist, imsize) )
+        {
+            callCalcHist2D_8u(_ptrs, _deltas, imsize, hist, dims, _tab);
+            return;
+        }
+#endif
         int d0 = deltas[0], step0 = deltas[1],
             d1 = deltas[2], step1 = deltas[3];
         const uchar* p0 = (const uchar*)ptrs[0];
@@ -514,6 +1085,13 @@ calcHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
     }
     else if( dims == 3 )
     {
+#ifdef HAVE_TBB
+        if( CalcHist3D_8uInvoker::isFit(hist, imsize) )
+        {
+            callCalcHist3D_8u(_ptrs, _deltas, imsize, hist, dims, _tab);
+            return;
+        }
+#endif
         int d0 = deltas[0], step0 = deltas[1],
             d1 = deltas[2], step1 = deltas[3],
             d2 = deltas[4], step2 = deltas[5];
@@ -611,9 +1189,9 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     else
         hist.convertTo(ihist, CV_32S);
 
-    vector<uchar*> ptrs;
-    vector<int> deltas;
-    vector<double> uniranges;
+    std::vector<uchar*> ptrs;
+    std::vector<int> deltas;
+    std::vector<double> uniranges;
     Size imsize;
 
     CV_Assert( !mask.data || mask.type() == CV_8UC1 );
@@ -640,7 +1218,7 @@ namespace cv
 {
 
 template<typename T> static void
-calcSparseHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcSparseHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                  Size imsize, SparseMat& hist, int dims, const float** _ranges,
                  const double* _uniranges, bool uniform )
 {
@@ -724,7 +1302,7 @@ calcSparseHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 
 
 static void
-calcSparseHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcSparseHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                    Size imsize, SparseMat& hist, int dims, const float** _ranges,
                    const double* _uniranges, bool uniform )
 {
@@ -734,7 +1312,7 @@ calcSparseHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
     const uchar* mask = _ptrs[dims];
     int mstep = _deltas[dims*2 + 1];
     int idx[CV_MAX_DIM];
-    vector<size_t> _tab;
+    std::vector<size_t> _tab;
 
     calcHistLookupTables_8u( Mat(), hist, dims, _ranges, _uniranges, uniform, true, _tab );
     const size_t* tab = &_tab[0];
@@ -784,9 +1362,9 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
         }
     }
 
-    vector<uchar*> ptrs;
-    vector<int> deltas;
-    vector<double> uniranges;
+    std::vector<uchar*> ptrs;
+    std::vector<int> deltas;
+    std::vector<double> uniranges;
     Size imsize;
 
     CV_Assert( !mask.data || mask.type() == CV_8UC1 );
@@ -827,10 +1405,10 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
 }
 
 
-void cv::calcHist( InputArrayOfArrays images, const vector<int>& channels,
+void cv::calcHist( InputArrayOfArrays images, const std::vector<int>& channels,
                    InputArray mask, OutputArray hist,
-                   const vector<int>& histSize,
-                   const vector<float>& ranges,
+                   const std::vector<int>& histSize,
+                   const std::vector<float>& ranges,
                    bool accumulate )
 {
     int i, dims = (int)histSize.size(), rsz = (int)ranges.size(), csz = (int)channels.size();
@@ -862,7 +1440,7 @@ namespace cv
 {
 
 template<typename T, typename BT> static void
-calcBackProj_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcBackProj_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                Size imsize, const Mat& hist, int dims, const float** _ranges,
                const double* _uniranges, float scale, bool uniform )
 {
@@ -1027,7 +1605,7 @@ calcBackProj_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 
 
 static void
-calcBackProj_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcBackProj_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                  Size imsize, const Mat& hist, int dims, const float** _ranges,
                  const double* _uniranges, float scale, bool uniform )
 {
@@ -1037,7 +1615,7 @@ calcBackProj_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
     int i, x;
     uchar* bproj = _ptrs[dims];
     int bpstep = _deltas[dims*2 + 1];
-    vector<size_t> _tab;
+    std::vector<size_t> _tab;
 
     calcHistLookupTables_8u( hist, SparseMat(), dims, _ranges, _uniranges, uniform, false, _tab );
     const size_t* tab = &_tab[0];
@@ -1155,9 +1733,9 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
                           const float** ranges, double scale, bool uniform )
 {
     Mat hist = _hist.getMat();
-    vector<uchar*> ptrs;
-    vector<int> deltas;
-    vector<double> uniranges;
+    std::vector<uchar*> ptrs;
+    std::vector<int> deltas;
+    std::vector<double> uniranges;
     Size imsize;
     int dims = hist.dims == 2 && hist.size[1] == 1 ? 1 : hist.dims;
 
@@ -1184,7 +1762,7 @@ namespace cv
 {
 
 template<typename T, typename BT> static void
-calcSparseBackProj_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcSparseBackProj_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                      Size imsize, const SparseMat& hist, int dims, const float** _ranges,
                      const double* _uniranges, float scale, bool uniform )
 {
@@ -1269,7 +1847,7 @@ calcSparseBackProj_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 
 
 static void
-calcSparseBackProj_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+calcSparseBackProj_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                        Size imsize, const SparseMat& hist, int dims, const float** _ranges,
                        const double* _uniranges, float scale, bool uniform )
 {
@@ -1278,7 +1856,7 @@ calcSparseBackProj_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
     int i, x;
     uchar* bproj = _ptrs[dims];
     int bpstep = _deltas[dims*2 + 1];
-    vector<size_t> _tab;
+    std::vector<size_t> _tab;
     int idx[CV_MAX_DIM];
 
     calcHistLookupTables_8u( Mat(), hist, dims, _ranges, _uniranges, uniform, true, _tab );
@@ -1317,9 +1895,9 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
                           const SparseMat& hist, OutputArray _backProject,
                           const float** ranges, double scale, bool uniform )
 {
-    vector<uchar*> ptrs;
-    vector<int> deltas;
-    vector<double> uniranges;
+    std::vector<uchar*> ptrs;
+    std::vector<int> deltas;
+    std::vector<double> uniranges;
     Size imsize;
     int dims = hist.dims();
 
@@ -1346,9 +1924,9 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
 }
 
 
-void cv::calcBackProject( InputArrayOfArrays images, const vector<int>& channels,
+void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& channels,
                           InputArray hist, OutputArray dst,
-                          const vector<float>& ranges,
+                          const std::vector<float>& ranges,
                           double scale )
 {
     Mat H0 = hist.getMat(), H;
@@ -1878,7 +2456,8 @@ cvCompareHist( const CvHistogram* hist1,
 
     if( !CV_IS_SPARSE_MAT(hist1->bins) )
     {
-        cv::Mat H1((const CvMatND*)hist1->bins), H2((const CvMatND*)hist2->bins);
+        cv::Mat H1 = cv::cvarrToMat(hist1->bins);
+        cv::Mat H2 = cv::cvarrToMat(hist2->bins);
         return cv::compareHist(H1, H2, method);
     }
 
@@ -2014,39 +2593,36 @@ cvCompareHist( const CvHistogram* hist1,
 CV_IMPL void
 cvCopyHist( const CvHistogram* src, CvHistogram** _dst )
 {
-    int eq = 0;
-    int is_sparse;
-    int i, dims1, dims2;
-    int size1[CV_MAX_DIM], size2[CV_MAX_DIM], total = 1;
-    float* ranges[CV_MAX_DIM];
-    float** thresh = 0;
-    CvHistogram* dst;
-
     if( !_dst )
         CV_Error( CV_StsNullPtr, "Destination double pointer is NULL" );
 
-    dst = *_dst;
+    CvHistogram* dst = *_dst;
 
     if( !CV_IS_HIST(src) || (dst && !CV_IS_HIST(dst)) )
         CV_Error( CV_StsBadArg, "Invalid histogram header[s]" );
 
-    is_sparse = CV_IS_SPARSE_MAT(src->bins);
-    dims1 = cvGetDims( src->bins, size1 );
-    for( i = 0; i < dims1; i++ )
-        total *= size1[i];
+    bool eq = false;
+    int size1[CV_MAX_DIM];
+    bool is_sparse = CV_IS_SPARSE_MAT(src->bins);
+    int dims1 = cvGetDims( src->bins, size1 );
 
-    if( dst && is_sparse == CV_IS_SPARSE_MAT(dst->bins))
+    if( dst && (is_sparse == CV_IS_SPARSE_MAT(dst->bins)))
     {
-        dims2 = cvGetDims( dst->bins, size2 );
+        int size2[CV_MAX_DIM];
+        int dims2 = cvGetDims( dst->bins, size2 );
 
         if( dims1 == dims2 )
         {
+            int i;
+
             for( i = 0; i < dims1; i++ )
+            {
                 if( size1[i] != size2[i] )
                     break;
-        }
+            }
 
-        eq = i == dims1;
+            eq = (i == dims1);
+        }
     }
 
     if( !eq )
@@ -2058,14 +2634,21 @@ cvCopyHist( const CvHistogram* src, CvHistogram** _dst )
 
     if( CV_HIST_HAS_RANGES( src ))
     {
+        float* ranges[CV_MAX_DIM];
+        float** thresh = 0;
+
         if( CV_IS_UNIFORM_HIST( src ))
         {
-            for( i = 0; i < dims1; i++ )
+            for( int i = 0; i < dims1; i++ )
                 ranges[i] = (float*)src->thresh[i];
+
             thresh = ranges;
         }
         else
+        {
             thresh = src->thresh2;
+        }
+
         cvSetHistBinRanges( dst, thresh, CV_IS_UNIFORM_HIST(src));
     }
 
@@ -2152,7 +2735,7 @@ cvCalcArrHist( CvArr** img, CvHistogram* hist, int accumulate, const CvArr* mask
     int i, dims = cvGetDims( hist->bins, size);
     bool uniform = CV_IS_UNIFORM_HIST(hist);
 
-    cv::vector<cv::Mat> images(dims);
+    std::vector<cv::Mat> images(dims);
     for( i = 0; i < dims; i++ )
         images[i] = cv::cvarrToMat(img[i]);
 
@@ -2176,7 +2759,7 @@ cvCalcArrHist( CvArr** img, CvHistogram* hist, int accumulate, const CvArr* mask
 
     if( !CV_IS_SPARSE_HIST(hist) )
     {
-        cv::Mat H((const CvMatND*)hist->bins);
+        cv::Mat H = cv::cvarrToMat(hist->bins);
         cv::calcHist( &images[0], (int)images.size(), 0, _mask,
                       H, cvGetDims(hist->bins), H.size, ranges, uniform, accumulate != 0 );
     }
@@ -2186,7 +2769,8 @@ cvCalcArrHist( CvArr** img, CvHistogram* hist, int accumulate, const CvArr* mask
 
         if( !accumulate )
             cvZero( hist->bins );
-        cv::SparseMat sH(sparsemat);
+        cv::SparseMat sH;
+        sparsemat->copyToSparseMat(sH);
         cv::calcHist( &images[0], (int)images.size(), 0, _mask, sH, sH.dims(),
                       sH.dims() > 0 ? sH.hdr->size : 0, ranges, uniform, accumulate != 0, true );
 
@@ -2228,7 +2812,7 @@ cvCalcArrBackProject( CvArr** img, CvArr* dst, const CvHistogram* hist )
         }
     }
 
-    cv::vector<cv::Mat> images(dims);
+    std::vector<cv::Mat> images(dims);
     for( i = 0; i < dims; i++ )
         images[i] = cv::cvarrToMat(img[i]);
 
@@ -2238,13 +2822,14 @@ cvCalcArrBackProject( CvArr** img, CvArr* dst, const CvHistogram* hist )
 
     if( !CV_IS_SPARSE_HIST(hist) )
     {
-        cv::Mat H((const CvMatND*)hist->bins);
+        cv::Mat H = cv::cvarrToMat(hist->bins);
         cv::calcBackProject( &images[0], (int)images.size(),
                             0, H, _dst, ranges, 1, uniform );
     }
     else
     {
-        cv::SparseMat sH((const CvSparseMat*)hist->bins);
+        cv::SparseMat sH;
+        ((const CvSparseMat*)hist->bins)->copyToSparseMat(sH);
         cv::calcBackProject( &images[0], (int)images.size(),
                              0, sH, _dst, ranges, 1, uniform );
     }
@@ -2404,62 +2989,501 @@ cvCalcProbDensity( const CvHistogram* hist, const CvHistogram* hist_mask,
     }
 }
 
+class EqualizeHistCalcHist_Invoker
+{
+public:
+    enum {HIST_SZ = 256};
+
+#ifdef HAVE_TBB
+    typedef tbb::mutex* MutextPtr;
+#else
+    typedef void* MutextPtr;
+#endif
+
+    EqualizeHistCalcHist_Invoker(cv::Mat& src, int* histogram, MutextPtr histogramLock)
+        : src_(src), globalHistogram_(histogram), histogramLock_(histogramLock)
+    { }
+
+    void operator()( const cv::BlockedRange& rowRange ) const
+    {
+        int localHistogram[HIST_SZ] = {0, };
+
+        const size_t sstep = src_.step;
+
+        int width = src_.cols;
+        int height = rowRange.end() - rowRange.begin();
+
+        if (src_.isContinuous())
+        {
+            width *= height;
+            height = 1;
+        }
+
+        for (const uchar* ptr = src_.ptr<uchar>(rowRange.begin()); height--; ptr += sstep)
+        {
+            int x = 0;
+            for (; x <= width - 4; x += 4)
+            {
+                int t0 = ptr[x], t1 = ptr[x+1];
+                localHistogram[t0]++; localHistogram[t1]++;
+                t0 = ptr[x+2]; t1 = ptr[x+3];
+                localHistogram[t0]++; localHistogram[t1]++;
+            }
+
+            for (; x < width; ++x)
+                localHistogram[ptr[x]]++;
+        }
+
+#ifdef HAVE_TBB
+        tbb::mutex::scoped_lock lock(*histogramLock_);
+#endif
+
+        for( int i = 0; i < HIST_SZ; i++ )
+            globalHistogram_[i] += localHistogram[i];
+    }
+
+    static bool isWorthParallel( const cv::Mat& src )
+    {
+#ifdef HAVE_TBB
+        return ( src.total() >= 640*480 );
+#else
+        (void)src;
+        return false;
+#endif
+    }
+
+private:
+    EqualizeHistCalcHist_Invoker& operator=(const EqualizeHistCalcHist_Invoker&);
+
+    cv::Mat& src_;
+    int* globalHistogram_;
+    MutextPtr histogramLock_;
+};
+
+class EqualizeHistLut_Invoker
+{
+public:
+    EqualizeHistLut_Invoker( cv::Mat& src, cv::Mat& dst, int* lut )
+        : src_(src),
+          dst_(dst),
+          lut_(lut)
+    { }
+
+    void operator()( const cv::BlockedRange& rowRange ) const
+    {
+        const size_t sstep = src_.step;
+        const size_t dstep = dst_.step;
+
+        int width = src_.cols;
+        int height = rowRange.end() - rowRange.begin();
+        int* lut = lut_;
+
+        if (src_.isContinuous() && dst_.isContinuous())
+        {
+            width *= height;
+            height = 1;
+        }
+
+        const uchar* sptr = src_.ptr<uchar>(rowRange.begin());
+        uchar* dptr = dst_.ptr<uchar>(rowRange.begin());
+
+        for (; height--; sptr += sstep, dptr += dstep)
+        {
+            int x = 0;
+            for (; x <= width - 4; x += 4)
+            {
+                int v0 = sptr[x];
+                int v1 = sptr[x+1];
+                int x0 = lut[v0];
+                int x1 = lut[v1];
+                dptr[x] = (uchar)x0;
+                dptr[x+1] = (uchar)x1;
+
+                v0 = sptr[x+2];
+                v1 = sptr[x+3];
+                x0 = lut[v0];
+                x1 = lut[v1];
+                dptr[x+2] = (uchar)x0;
+                dptr[x+3] = (uchar)x1;
+            }
+
+            for (; x < width; ++x)
+                dptr[x] = (uchar)lut[sptr[x]];
+        }
+    }
+
+    static bool isWorthParallel( const cv::Mat& src )
+    {
+#ifdef HAVE_TBB
+        return ( src.total() >= 640*480 );
+#else
+        (void)src;
+        return false;
+#endif
+    }
+
+private:
+    EqualizeHistLut_Invoker& operator=(const EqualizeHistLut_Invoker&);
+
+    cv::Mat& src_;
+    cv::Mat& dst_;
+    int* lut_;
+};
 
 CV_IMPL void cvEqualizeHist( const CvArr* srcarr, CvArr* dstarr )
 {
-    CvMat sstub, *src = cvGetMat(srcarr, &sstub);
-    CvMat dstub, *dst = cvGetMat(dstarr, &dstub);
-
-    CV_Assert( CV_ARE_SIZES_EQ(src, dst) && CV_ARE_TYPES_EQ(src, dst) &&
-               CV_MAT_TYPE(src->type) == CV_8UC1 );
-    CvSize size = cvGetMatSize(src);
-    if( CV_IS_MAT_CONT(src->type & dst->type) )
-    {
-        size.width *= size.height;
-        size.height = 1;
-    }
-    int x, y;
-    const int hist_sz = 256;
-    int hist[hist_sz];
-    memset(hist, 0, sizeof(hist));
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const uchar* sptr = src->data.ptr + src->step*y;
-        for( x = 0; x < size.width; x++ )
-            hist[sptr[x]]++;
-    }
-
-    float scale = 255.f/(size.width*size.height);
-    int sum = 0;
-    uchar lut[hist_sz+1];
-
-    for( int i = 0; i < hist_sz; i++ )
-    {
-        sum += hist[i];
-        int val = cvRound(sum*scale);
-        lut[i] = CV_CAST_8U(val);
-    }
-
-    lut[0] = 0;
-    for( y = 0; y < size.height; y++ )
-    {
-        const uchar* sptr = src->data.ptr + src->step*y;
-        uchar* dptr = dst->data.ptr + dst->step*y;
-        for( x = 0; x < size.width; x++ )
-            dptr[x] = lut[sptr[x]];
-    }
+    cv::equalizeHist(cv::cvarrToMat(srcarr), cv::cvarrToMat(dstarr));
 }
-
 
 void cv::equalizeHist( InputArray _src, OutputArray _dst )
 {
     Mat src = _src.getMat();
+    CV_Assert( src.type() == CV_8UC1 );
+
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
-    CvMat _csrc = src, _cdst = dst;
-    cvEqualizeHist( &_csrc, &_cdst );
+
+    if(src.empty())
+        return;
+
+#ifdef HAVE_TBB
+    tbb::mutex histogramLockInstance;
+    EqualizeHistCalcHist_Invoker::MutextPtr histogramLock = &histogramLockInstance;
+#else
+    EqualizeHistCalcHist_Invoker::MutextPtr histogramLock = 0;
+#endif
+
+    const int hist_sz = EqualizeHistCalcHist_Invoker::HIST_SZ;
+    int hist[hist_sz] = {0,};
+    int lut[hist_sz];
+
+    EqualizeHistCalcHist_Invoker calcBody(src, hist, histogramLock);
+    EqualizeHistLut_Invoker      lutBody(src, dst, lut);
+    cv::BlockedRange heightRange(0, src.rows);
+
+    if(EqualizeHistCalcHist_Invoker::isWorthParallel(src))
+        parallel_for(heightRange, calcBody);
+    else
+        calcBody(heightRange);
+
+    int i = 0;
+    while (!hist[i]) ++i;
+
+    int total = (int)src.total();
+    if (hist[i] == total)
+    {
+        dst.setTo(i);
+        return;
+    }
+
+    float scale = (hist_sz - 1.f)/(total - hist[i]);
+    int sum = 0;
+
+    for (lut[i++] = 0; i < hist_sz; ++i)
+    {
+        sum += hist[i];
+        lut[i] = saturate_cast<uchar>(sum * scale);
+    }
+
+    if(EqualizeHistLut_Invoker::isWorthParallel(src))
+        parallel_for(heightRange, lutBody);
+    else
+        lutBody(heightRange);
 }
+
+// ----------------------------------------------------------------------
+// CLAHE
+
+namespace
+{
+    class CLAHE_CalcLut_Body : public cv::ParallelLoopBody
+    {
+    public:
+        CLAHE_CalcLut_Body(const cv::Mat& src, cv::Mat& lut, cv::Size tileSize, int tilesX, int tilesY, int clipLimit, float lutScale) :
+            src_(src), lut_(lut), tileSize_(tileSize), tilesX_(tilesX), tilesY_(tilesY), clipLimit_(clipLimit), lutScale_(lutScale)
+        {
+        }
+
+        void operator ()(const cv::Range& range) const;
+
+    private:
+        cv::Mat src_;
+        mutable cv::Mat lut_;
+
+        cv::Size tileSize_;
+        int tilesX_;
+        int tilesY_;
+        int clipLimit_;
+        float lutScale_;
+    };
+
+    void CLAHE_CalcLut_Body::operator ()(const cv::Range& range) const
+    {
+        const int histSize = 256;
+
+        uchar* tileLut = lut_.ptr(range.start);
+        const size_t lut_step = lut_.step;
+
+        for (int k = range.start; k < range.end; ++k, tileLut += lut_step)
+        {
+            const int ty = k / tilesX_;
+            const int tx = k % tilesX_;
+
+            // retrieve tile submatrix
+
+            cv::Rect tileROI;
+            tileROI.x = tx * tileSize_.width;
+            tileROI.y = ty * tileSize_.height;
+            tileROI.width = tileSize_.width;
+            tileROI.height = tileSize_.height;
+
+            const cv::Mat tile = src_(tileROI);
+
+            // calc histogram
+
+            int tileHist[histSize] = {0, };
+
+            int height = tileROI.height;
+            const size_t sstep = tile.step;
+            for (const uchar* ptr = tile.ptr<uchar>(0); height--; ptr += sstep)
+            {
+                int x = 0;
+                for (; x <= tileROI.width - 4; x += 4)
+                {
+                    int t0 = ptr[x], t1 = ptr[x+1];
+                    tileHist[t0]++; tileHist[t1]++;
+                    t0 = ptr[x+2]; t1 = ptr[x+3];
+                    tileHist[t0]++; tileHist[t1]++;
+                }
+
+                for (; x < tileROI.width; ++x)
+                    tileHist[ptr[x]]++;
+            }
+
+            // clip histogram
+
+            if (clipLimit_ > 0)
+            {
+                // how many pixels were clipped
+                int clipped = 0;
+                for (int i = 0; i < histSize; ++i)
+                {
+                    if (tileHist[i] > clipLimit_)
+                    {
+                        clipped += tileHist[i] - clipLimit_;
+                        tileHist[i] = clipLimit_;
+                    }
+                }
+
+                // redistribute clipped pixels
+                int redistBatch = clipped / histSize;
+                int residual = clipped - redistBatch * histSize;
+
+                for (int i = 0; i < histSize; ++i)
+                    tileHist[i] += redistBatch;
+
+                for (int i = 0; i < residual; ++i)
+                    tileHist[i]++;
+            }
+
+            // calc Lut
+
+            int sum = 0;
+            for (int i = 0; i < histSize; ++i)
+            {
+                sum += tileHist[i];
+                tileLut[i] = cv::saturate_cast<uchar>(sum * lutScale_);
+            }
+        }
+    }
+
+    class CLAHE_Interpolation_Body : public cv::ParallelLoopBody
+    {
+    public:
+        CLAHE_Interpolation_Body(const cv::Mat& src, cv::Mat& dst, const cv::Mat& lut, cv::Size tileSize, int tilesX, int tilesY) :
+            src_(src), dst_(dst), lut_(lut), tileSize_(tileSize), tilesX_(tilesX), tilesY_(tilesY)
+        {
+        }
+
+        void operator ()(const cv::Range& range) const;
+
+    private:
+        cv::Mat src_;
+        mutable cv::Mat dst_;
+        cv::Mat lut_;
+
+        cv::Size tileSize_;
+        int tilesX_;
+        int tilesY_;
+    };
+
+    void CLAHE_Interpolation_Body::operator ()(const cv::Range& range) const
+    {
+        const size_t lut_step = lut_.step;
+
+        for (int y = range.start; y < range.end; ++y)
+        {
+            const uchar* srcRow = src_.ptr<uchar>(y);
+            uchar* dstRow = dst_.ptr<uchar>(y);
+
+            const float tyf = (static_cast<float>(y) / tileSize_.height) - 0.5f;
+
+            int ty1 = cvFloor(tyf);
+            int ty2 = ty1 + 1;
+
+            const float ya = tyf - ty1;
+
+            ty1 = std::max(ty1, 0);
+            ty2 = std::min(ty2, tilesY_ - 1);
+
+            const uchar* lutPlane1 = lut_.ptr(ty1 * tilesX_);
+            const uchar* lutPlane2 = lut_.ptr(ty2 * tilesX_);
+
+            for (int x = 0; x < src_.cols; ++x)
+            {
+                const float txf = (static_cast<float>(x) / tileSize_.width) - 0.5f;
+
+                int tx1 = cvFloor(txf);
+                int tx2 = tx1 + 1;
+
+                const float xa = txf - tx1;
+
+                tx1 = std::max(tx1, 0);
+                tx2 = std::min(tx2, tilesX_ - 1);
+
+                const int srcVal = srcRow[x];
+
+                const size_t ind1 = tx1 * lut_step + srcVal;
+                const size_t ind2 = tx2 * lut_step + srcVal;
+
+                float res = 0;
+
+                res += lutPlane1[ind1] * ((1.0f - xa) * (1.0f - ya));
+                res += lutPlane1[ind2] * ((xa) * (1.0f - ya));
+                res += lutPlane2[ind1] * ((1.0f - xa) * (ya));
+                res += lutPlane2[ind2] * ((xa) * (ya));
+
+                dstRow[x] = cv::saturate_cast<uchar>(res);
+            }
+        }
+    }
+
+    class CLAHE_Impl : public cv::CLAHE
+    {
+    public:
+        CLAHE_Impl(double clipLimit = 40.0, int tilesX = 8, int tilesY = 8);
+
+        cv::AlgorithmInfo* info() const;
+
+        void apply(cv::InputArray src, cv::OutputArray dst);
+
+        void setClipLimit(double clipLimit);
+        double getClipLimit() const;
+
+        void setTilesGridSize(cv::Size tileGridSize);
+        cv::Size getTilesGridSize() const;
+
+        void collectGarbage();
+
+    private:
+        double clipLimit_;
+        int tilesX_;
+        int tilesY_;
+
+        cv::Mat srcExt_;
+        cv::Mat lut_;
+    };
+
+    CLAHE_Impl::CLAHE_Impl(double clipLimit, int tilesX, int tilesY) :
+        clipLimit_(clipLimit), tilesX_(tilesX), tilesY_(tilesY)
+    {
+    }
+
+    CV_INIT_ALGORITHM(CLAHE_Impl, "CLAHE",
+        obj.info()->addParam(obj, "clipLimit", obj.clipLimit_);
+        obj.info()->addParam(obj, "tilesX", obj.tilesX_);
+        obj.info()->addParam(obj, "tilesY", obj.tilesY_))
+
+    void CLAHE_Impl::apply(cv::InputArray _src, cv::OutputArray _dst)
+    {
+        cv::Mat src = _src.getMat();
+
+        CV_Assert( src.type() == CV_8UC1 );
+
+        _dst.create( src.size(), src.type() );
+        cv::Mat dst = _dst.getMat();
+
+        const int histSize = 256;
+
+        lut_.create(tilesX_ * tilesY_, histSize, CV_8UC1);
+
+        cv::Size tileSize;
+        cv::Mat srcForLut;
+
+        if (src.cols % tilesX_ == 0 && src.rows % tilesY_ == 0)
+        {
+            tileSize = cv::Size(src.cols / tilesX_, src.rows / tilesY_);
+            srcForLut = src;
+        }
+        else
+        {
+            cv::copyMakeBorder(src, srcExt_, 0, tilesY_ - (src.rows % tilesY_), 0, tilesX_ - (src.cols % tilesX_), cv::BORDER_REFLECT_101);
+
+            tileSize = cv::Size(srcExt_.cols / tilesX_, srcExt_.rows / tilesY_);
+            srcForLut = srcExt_;
+        }
+
+        const int tileSizeTotal = tileSize.area();
+        const float lutScale = static_cast<float>(histSize - 1) / tileSizeTotal;
+
+        int clipLimit = 0;
+        if (clipLimit_ > 0.0)
+        {
+            clipLimit = static_cast<int>(clipLimit_ * tileSizeTotal / histSize);
+            clipLimit = std::max(clipLimit, 1);
+        }
+
+        CLAHE_CalcLut_Body calcLutBody(srcForLut, lut_, tileSize, tilesX_, tilesY_, clipLimit, lutScale);
+        cv::parallel_for_(cv::Range(0, tilesX_ * tilesY_), calcLutBody);
+
+        CLAHE_Interpolation_Body interpolationBody(src, dst, lut_, tileSize, tilesX_, tilesY_);
+        cv::parallel_for_(cv::Range(0, src.rows), interpolationBody);
+    }
+
+    void CLAHE_Impl::setClipLimit(double clipLimit)
+    {
+        clipLimit_ = clipLimit;
+    }
+
+    double CLAHE_Impl::getClipLimit() const
+    {
+        return clipLimit_;
+    }
+
+    void CLAHE_Impl::setTilesGridSize(cv::Size tileGridSize)
+    {
+        tilesX_ = tileGridSize.width;
+        tilesY_ = tileGridSize.height;
+    }
+
+    cv::Size CLAHE_Impl::getTilesGridSize() const
+    {
+        return cv::Size(tilesX_, tilesY_);
+    }
+
+    void CLAHE_Impl::collectGarbage()
+    {
+        srcExt_.release();
+        lut_.release();
+    }
+}
+
+cv::Ptr<cv::CLAHE> cv::createCLAHE(double clipLimit, cv::Size tileGridSize)
+{
+    return new CLAHE_Impl(clipLimit, tileGridSize.width, tileGridSize.height);
+}
+
+// ----------------------------------------------------------------------
 
 /* Implementation of RTTI and Generic Functions for CvHistogram */
 #define CV_TYPE_NAME_HIST "opencv-hist"
@@ -2612,4 +3636,3 @@ CvType hist_type( CV_TYPE_NAME_HIST, icvIsHist, (CvReleaseFunc)cvReleaseHist,
                   icvReadHist, icvWriteHist, (CvCloneFunc)icvCloneHist );
 
 /* End of file. */
-

@@ -182,7 +182,7 @@ Enables the :ocv:class:`gpu::StereoBeliefPropagation` constructors.
 
 .. math::
 
-    DataCost = data \_ weight  \cdot \min ( \lvert I_2-I_1  \rvert , max \_ data \_ term)
+    DataCost = data \_ weight  \cdot \min ( \lvert Img_Left(x,y)-Img_Right(x-d,y)  \rvert , max \_ data \_ term)
 
 .. math::
 

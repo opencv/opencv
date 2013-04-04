@@ -4,8 +4,9 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
-#include "opencv2/ocl/ocl.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/ocl.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;

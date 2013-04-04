@@ -183,12 +183,11 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
         if( count == 0 )
             break;
 
-        double icount = 1.0 / count;
-        int x1 = cvFloor(sx * icount);
-        int y1 = cvFloor(sy * icount);
-        s0 = cvFloor(s0 * icount);
-        s1 = cvFloor(s1 * icount);
-        s2 = cvFloor(s2 * icount);
+        int x1 = sx / count;
+        int y1 = sy / count;
+        s0 = s0 / count;
+        s1 = s1 / count;
+        s2 = s2 / count;
 
         bool stopFlag = (x0 == x1 && y0 == y1) || (abs(x1 - x0) + abs(y1 - y0) +
                         tab[s0 - c0 + 255] + tab[s1 - c1 + 255] + tab[s2 - c2 + 255] <= eps);
@@ -498,11 +497,11 @@ TEST_P(bilateralFilter, Mat)
     }
     else
     {
-        for(int i = 0; i < sizeof(bordertype) / sizeof(int); i++)
+        for(size_t i = 0; i < sizeof(bordertype) / sizeof(int); i++)
             for(int j = 0; j < LOOP_TIMES; j++)
             {
                 random_roi();
-                if(((bordertype[i] != cv::BORDER_CONSTANT) && (bordertype[i] != cv::BORDER_REPLICATE)) && (mat1_roi.cols <= radius) || (mat1_roi.cols <= radius) || (mat1_roi.rows <= radius) || (mat1_roi.rows <= radius))
+                if(((bordertype[i] != cv::BORDER_CONSTANT) && (bordertype[i] != cv::BORDER_REPLICATE) && (mat1_roi.cols <= radius)) || (mat1_roi.cols <= radius) || (mat1_roi.rows <= radius) || (mat1_roi.rows <= radius))
                 {
                     continue;
                 }
@@ -563,7 +562,7 @@ TEST_P(CopyMakeBorder, Mat)
     }
     else
     {
-        for(int i = 0; i < sizeof(bordertype) / sizeof(int); i++)
+        for(size_t i = 0; i < sizeof(bordertype) / sizeof(int); i++)
             for(int j = 0; j < LOOP_TIMES; j++)
             {
                 random_roi();
@@ -792,8 +791,8 @@ TEST_P(WarpAffine, Mat)
 {
     static const double coeffs[2][3] =
     {
-        {cos(3.14 / 6), -sin(3.14 / 6), 100.0},
-        {sin(3.14 / 6), cos(3.14 / 6), -100.0}
+        {cos(CV_PI / 6), -sin(CV_PI / 6), 100.0},
+        {sin(CV_PI / 6), cos(CV_PI / 6), -100.0}
     };
     Mat M(2, 3, CV_64F, (void *)coeffs);
 
@@ -911,7 +910,6 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
 
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size srcSize = cv::Size(MWIDTH, MHEIGHT);
-        cv::Size dstSize = cv::Size(MWIDTH, MHEIGHT);
         cv::Size map1Size = cv::Size(MWIDTH, MHEIGHT);
         double min = 5, max = 16;
 
@@ -1371,9 +1369,7 @@ TEST_P(meanShiftFiltering, Mat)
         gdst.download(cpu_gdst);
 
         char sss[1024];
-        char warning[300] = "Warning: If the selected device doesn't support double, a deviation will exist.\nIf the accuracy is acceptable, please ignore it.\n";
         sprintf(sss, "roicols=%d,roirows=%d,srcx=%d,srcy=%d,dstx=%d,dsty=%d\n", roicols, roirows, srcx, srcy, dstx, dsty);
-        strcat(sss, warning);
         EXPECT_MAT_NEAR(dst, cpu_gdst, 0.0, sss);
 
     }
@@ -1399,9 +1395,7 @@ TEST_P(meanShiftProc, Mat)
         gdstCoor.download(cpu_gdstCoor);
 
         char sss[1024];
-        char warning[300] = "Warning: If the selected device doesn't support double, a deviation will exist.\nIf the accuracy is acceptable, please ignore it.\n";
         sprintf(sss, "roicols=%d,roirows=%d,srcx=%d,srcy=%d,dstx=%d,dsty=%d\n", roicols, roirows, srcx, srcy, dstx, dsty);
-        strcat(sss, warning);
         EXPECT_MAT_NEAR(dst, cpu_gdst, 0.0, sss);
         EXPECT_MAT_NEAR(dstCoor, cpu_gdstCoor, 0.0, sss);
     }

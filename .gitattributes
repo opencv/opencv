@@ -1,27 +1,36 @@
 .git*       export-ignore
 
-*           text=auto
-*           whitespace=!indent,trail,space
+*           text=auto whitespace=trailing-space,space-before-tab,-indent-with-non-tab,tab-in-indent,tabwidth=4
 
-*.py        text whitespace=tab-in-indent,trail,space,fix
-*.cpp       text whitespace=tab-in-indent,trail,space,fix
-*.hpp       text whitespace=tab-in-indent,trail,space,fix
-*.cxx       text whitespace=tab-in-indent,trail,space,fix
-*.hxx       text whitespace=tab-in-indent,trail,space,fix
-*.mm        text whitespace=tab-in-indent,trail,space,fix
-*.c         text whitespace=tab-in-indent,trail,space,fix
-*.h         text whitespace=tab-in-indent,trail,space,fix
-*.i         text whitespace=tab-in-indent,trail,space,fix
-*.java      text whitespace=tab-in-indent,trail,space,fix
-*.cu        text whitespace=tab-in-indent,trail,space,fix
-*.cl        text whitespace=tab-in-indent,trail,space,fix
+*.py        text
+*.cpp       text
+*.hpp       text
+*.cxx       text
+*.hxx       text
+*.mm        text
+*.c         text
+*.h         text
+*.i         text
+*.js        text
+*.java      text
+*.scala     text
+*.cu        text
+*.cl        text
+*.css_t     text
+*.qrc       text
+*.qss       text
+*.S         text
+*.rst       text
+*.tex       text
+*.sty       text
 
-*.cmake     text whitespace=tab-in-indent,trail,space,fix
-*.cmakein   text whitespace=tab-in-indent,trail,space,fix
-*.in        text whitespace=tab-in-indent,trail,space,fix
-CMakeLists.txt  text whitespace=tab-in-indent,trail,space,fix
+*.aidl      text
+*.mk        text
 
-*.rst       text whitespace=tab-in-indent,trail,space,fix
+*.cmake         text whitespace=tabwidth=2
+*.cmakein       text whitespace=tabwidth=2
+*.in            text whitespace=tabwidth=2
+CMakeLists.txt  text whitespace=tabwidth=2
 
 *.png       binary
 *.jepg      binary
@@ -32,22 +41,21 @@ CMakeLists.txt  text whitespace=tab-in-indent,trail,space,fix
 *.a         binary
 *.so        binary
 *.dll       binary
+*.jar       binary
 
 *.pdf       binary
 *.pbxproj   binary
 *.vec       binary
 *.doc       binary
 
-*.css_t     text
-*.qrc       text
-*.qss       text
-*.S         text
-
-*.xml       -text
-*.yml       -text
+*.xml                      -text whitespace=cr-at-eol
+*.yml                      -text whitespace=cr-at-eol
+.project                   -text whitespace=cr-at-eol merge=union
+.classpath                 -text whitespace=cr-at-eol merge=union
+.cproject                  -text whitespace=cr-at-eol merge=union
+org.eclipse.jdt.core.prefs -text whitespace=cr-at-eol merge=union
 
 *.vcproj    text eol=crlf merge=union
-*.cproject  text eol=crlf merge=union
 *.bat       text eol=crlf
 *.cmd       text eol=crlf
 *.cmd.tmpl  text eol=crlf

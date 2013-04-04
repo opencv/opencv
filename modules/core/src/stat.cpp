@@ -999,7 +999,6 @@ static int normHamming(const uchar* a, int n)
 {
     int i = 0, result = 0;
 #if CV_NEON
-    if (CPU_HAS_NEON_FEATURE)
     {
         uint32x4_t bits = vmovq_n_u32(0);
         for (; i <= n - 16; i += 16) {
@@ -1013,7 +1012,6 @@ static int normHamming(const uchar* a, int n)
         result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
         result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
     }
-    else
 #endif
         for( ; i <= n - 4; i += 4 )
             result += popCountTable[a[i]] + popCountTable[a[i+1]] +
@@ -1027,7 +1025,6 @@ int normHamming(const uchar* a, const uchar* b, int n)
 {
     int i = 0, result = 0;
 #if CV_NEON
-    if (CPU_HAS_NEON_FEATURE)
     {
         uint32x4_t bits = vmovq_n_u32(0);
         for (; i <= n - 16; i += 16) {
@@ -1043,7 +1040,6 @@ int normHamming(const uchar* a, const uchar* b, int n)
         result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
         result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
     }
-    else
 #endif
         for( ; i <= n - 4; i += 4 )
             result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
@@ -1111,7 +1107,7 @@ normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result = std::max(result, ST(fast_abs(src[k])));
+                    result = std::max(result, ST(std::abs(src[k])));
             }
     }
     *_result = result;
@@ -1132,7 +1128,7 @@ normL1_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result += fast_abs(src[k]);
+                    result += std::abs(src[k]);
             }
     }
     *_result = result;
@@ -1726,7 +1722,7 @@ typedef void (*BatchDistFunc)(const uchar* src1, const uchar* src2, size_t step2
                               int nvecs, int len, uchar* dist, const uchar* mask);
 
 
-struct BatchDistInvoker
+struct BatchDistInvoker : public ParallelLoopBody
 {
     BatchDistInvoker( const Mat& _src1, const Mat& _src2,
                       Mat& _dist, Mat& _nidx, int _K,
@@ -1743,12 +1739,12 @@ struct BatchDistInvoker
         func = _func;
     }
 
-    void operator()(const BlockedRange& range) const
+    void operator()(const Range& range) const
     {
         AutoBuffer<int> buf(src2->rows);
         int* bufptr = buf;
 
-        for( int i = range.begin(); i < range.end(); i++ )
+        for( int i = range.start; i < range.end; i++ )
         {
             func(src1->ptr(i), src2->ptr(), src2->step, src2->rows, src2->cols,
                  K > 0 ? (uchar*)bufptr : dist->ptr(i), mask->data ? mask->ptr(i) : 0);
@@ -1899,8 +1895,8 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
                   ("The combination of type=%d, dtype=%d and normType=%d is not supported",
                    type, dtype, normType));
 
-    parallel_for(BlockedRange(0, src1.rows),
-                 BatchDistInvoker(src1, src2, dist, nidx, K, mask, update, func));
+    parallel_for_(Range(0, src1.rows),
+                  BatchDistInvoker(src1, src2, dist, nidx, K, mask, update, func));
 }
 
 

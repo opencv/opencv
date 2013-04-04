@@ -107,10 +107,41 @@ namespace
             }
         }
     }
+
+    bool isFlowCorrect(Point2f u)
+    {
+        return !cvIsNaN(u.x) && !cvIsNaN(u.y) && (fabs(u.x) < 1e9) && (fabs(u.y) < 1e9);
+    }
+
+    double calcRMSE(const Mat_<Point2f>& flow1, const Mat_<Point2f>& flow2)
+    {
+        double sum = 0.0;
+        int counter = 0;
+
+        for (int i = 0; i < flow1.rows; ++i)
+        {
+            for (int j = 0; j < flow1.cols; ++j)
+            {
+                const Point2f u1 = flow1(i, j);
+                const Point2f u2 = flow2(i, j);
+
+                if (isFlowCorrect(u1) && isFlowCorrect(u2))
+                {
+                    const Point2f diff = u1 - u2;
+                    sum += diff.ddot(diff);
+                    ++counter;
+                }
+            }
+        }
+
+        return sqrt(sum / (1e-9 + counter));
+    }
 }
 
 TEST(Video_calcOpticalFlowDual_TVL1, Regression)
 {
+    const double MAX_RMSE = 0.02;
+
     const string frame1_path = TS::ptr()->get_data_path() + "optflow/RubberWhale1.png";
     const string frame2_path = TS::ptr()->get_data_path() + "optflow/RubberWhale2.png";
     const string gold_flow_path = TS::ptr()->get_data_path() + "optflow/tvl1_flow.flo";
@@ -121,16 +152,20 @@ TEST(Video_calcOpticalFlowDual_TVL1, Regression)
     ASSERT_FALSE(frame2.empty());
 
     Mat_<Point2f> flow;
-    OpticalFlowDual_TVL1 tvl1;
+    Ptr<DenseOpticalFlow> tvl1 = createOptFlow_DualTVL1();
 
-    tvl1(frame1, frame2, flow);
+    tvl1->calc(frame1, frame2, flow);
 
 #ifdef DUMP
     writeOpticalFlowToFile(flow, gold_flow_path);
 #else
     Mat_<Point2f> gold;
     readOpticalFlowFromFile(gold, gold_flow_path);
-    double err = norm(gold, flow, NORM_INF);
-    EXPECT_EQ(0.0f, err);
+
+    ASSERT_EQ(gold.rows, flow.rows);
+    ASSERT_EQ(gold.cols, flow.cols);
+
+    const double err = calcRMSE(gold, flow);
+    EXPECT_LE(err, MAX_RMSE);
 #endif
 }

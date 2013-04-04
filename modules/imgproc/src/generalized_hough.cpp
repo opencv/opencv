@@ -42,7 +42,6 @@
 #include "precomp.hpp"
 #include <functional>
 
-using namespace std;
 using namespace cv;
 
 namespace
@@ -50,9 +49,9 @@ namespace
     /////////////////////////////////////
     // Common
 
-    template <typename T, class A> void releaseVector(vector<T, A>& v)
+    template <typename T, class A> void releaseVector(std::vector<T, A>& v)
     {
-        vector<T, A> empty;
+        std::vector<T, A> empty;
         empty.swap(v);
     }
 
@@ -63,7 +62,7 @@ namespace
 
     bool notNull(float v)
     {
-        return fabs(v) > numeric_limits<float>::epsilon();
+        return fabs(v) > std::numeric_limits<float>::epsilon();
     }
 
     class GHT_Pos : public GeneralizedHough
@@ -95,8 +94,8 @@ namespace
         Mat imageDx;
         Mat imageDy;
 
-        vector<Vec4f> posOutBuf;
-        vector<Vec3i> voteOutBuf;
+        std::vector<Vec4f> posOutBuf;
+        std::vector<Vec3i> voteOutBuf;
     };
 
     GHT_Pos::GHT_Pos()
@@ -158,8 +157,13 @@ namespace
         releaseVector(voteOutBuf);
     }
 
-    #define votes_cmp_gt(l1, l2) (aux[l1][0] > aux[l2][0])
-    static CV_IMPLEMENT_QSORT_EX( sortIndexies, size_t, votes_cmp_gt, const Vec3i* )
+    class Vec3iGreaterThanIdx
+    {
+    public:
+        Vec3iGreaterThanIdx( const Vec3i* _arr ) : arr(_arr) {}
+        bool operator()(size_t a, size_t b) const { return arr[a][0] > arr[b][0]; }
+        const Vec3i* arr;
+    };
 
     void GHT_Pos::filterMinDist()
     {
@@ -168,13 +172,13 @@ namespace
 
         CV_Assert(!hasVotes || voteOutBuf.size() == oldSize);
 
-        vector<Vec4f> oldPosBuf(posOutBuf);
-        vector<Vec3i> oldVoteBuf(voteOutBuf);
+        std::vector<Vec4f> oldPosBuf(posOutBuf);
+        std::vector<Vec3i> oldVoteBuf(voteOutBuf);
 
-        vector<size_t> indexies(oldSize);
+        std::vector<size_t> indexies(oldSize);
         for (size_t i = 0; i < oldSize; ++i)
             indexies[i] = i;
-        sortIndexies(&indexies[0], oldSize, &oldVoteBuf[0]);
+        std::sort(indexies.begin(), indexies.end(), Vec3iGreaterThanIdx(&oldVoteBuf[0]));
 
         posOutBuf.clear();
         voteOutBuf.clear();
@@ -183,7 +187,7 @@ namespace
         const int gridWidth = (imageSize.width + cellSize - 1) / cellSize;
         const int gridHeight = (imageSize.height + cellSize - 1) / cellSize;
 
-        vector< vector<Point2f> > grid(gridWidth * gridHeight);
+        std::vector< std::vector<Point2f> > grid(gridWidth * gridHeight);
 
         const double minDist2 = minDist * minDist;
 
@@ -213,7 +217,7 @@ namespace
             {
                 for (int xx = x1; xx <= x2; ++xx)
                 {
-                    const vector<Point2f>& m = grid[yy * gridWidth + xx];
+                    const std::vector<Point2f>& m = grid[yy * gridWidth + xx];
 
                     for(size_t j = 0; j < m.size(); ++j)
                     {
@@ -288,7 +292,7 @@ namespace
         int votesThreshold;
         double dp;
 
-        vector< vector<Point> > r_table;
+        std::vector< std::vector<Point> > r_table;
         Mat hist;
     };
 
@@ -327,7 +331,7 @@ namespace
         const double thetaScale = levels / 360.0;
 
         r_table.resize(levels + 1);
-        for_each(r_table.begin(), r_table.end(), mem_fun_ref(&vector<Point>::clear));
+        for_each(r_table.begin(), r_table.end(), mem_fun_ref(&std::vector<Point>::clear));
 
         for (int y = 0; y < templSize.height; ++y)
         {
@@ -387,7 +391,7 @@ namespace
                     const float theta = fastAtan2(dyRow[x], dxRow[x]);
                     const int n = cvRound(theta * thetaScale);
 
-                    const vector<Point>& r_row = r_table[n];
+                    const std::vector<Point>& r_row = r_table[n];
 
                     for (size_t j = 0; j < r_row.size(); ++j)
                     {
@@ -512,7 +516,7 @@ namespace
                         const float theta = fastAtan2(dyRow[x], dxRow[x]);
                         const int n = cvRound(theta * thetaScale);
 
-                        const vector<Point>& r_row = base->r_table[n];
+                        const std::vector<Point>& r_row = base->r_table[n];
 
                         for (size_t j = 0; j < r_row.size(); ++j)
                         {
@@ -682,7 +686,7 @@ namespace
                             theta += 360.0;
                         const int n = cvRound(theta * thetaScale);
 
-                        const vector<Point>& r_row = base->r_table[n];
+                        const std::vector<Point>& r_row = base->r_table[n];
 
                         for (size_t j = 0; j < r_row.size(); ++j)
                         {
@@ -816,8 +820,8 @@ namespace
             Point2d r2;
         };
 
-        void buildFeatureList(const Mat& edges, const Mat& dx, const Mat& dy, vector< vector<Feature> >& features, Point2d center = Point2d());
-        void getContourPoints(const Mat& edges, const Mat& dx, const Mat& dy, vector<ContourPoint>& points);
+        void buildFeatureList(const Mat& edges, const Mat& dx, const Mat& dy, std::vector< std::vector<Feature> >& features, Point2d center = Point2d());
+        void getContourPoints(const Mat& edges, const Mat& dx, const Mat& dy, std::vector<ContourPoint>& points);
 
         void calcOrientation();
         void calcScale(double angle);
@@ -841,11 +845,11 @@ namespace
         double dp;
         int posThresh;
 
-        vector< vector<Feature> > templFeatures;
-        vector< vector<Feature> > imageFeatures;
+        std::vector< std::vector<Feature> > templFeatures;
+        std::vector< std::vector<Feature> > imageFeatures;
 
-        vector< pair<double, int> > angles;
-        vector< pair<double, int> > scales;
+        std::vector< std::pair<double, int> > angles;
+        std::vector< std::pair<double, int> > scales;
     };
 
     CV_INIT_ALGORITHM(GHT_Guil_Full, "GeneralizedHough.POSITION_SCALE_ROTATION",
@@ -940,7 +944,7 @@ namespace
         }
     }
 
-    void GHT_Guil_Full::buildFeatureList(const Mat& edges, const Mat& dx, const Mat& dy, vector< vector<Feature> >& features, Point2d center)
+    void GHT_Guil_Full::buildFeatureList(const Mat& edges, const Mat& dx, const Mat& dy, std::vector< std::vector<Feature> >& features, Point2d center)
     {
         CV_Assert(levels > 0);
 
@@ -948,12 +952,12 @@ namespace
 
         const double alphaScale = levels / 360.0;
 
-        vector<ContourPoint> points;
+        std::vector<ContourPoint> points;
         getContourPoints(edges, dx, dy, points);
 
         features.resize(levels + 1);
-        for_each(features.begin(), features.end(), mem_fun_ref(&vector<Feature>::clear));
-        for_each(features.begin(), features.end(), bind2nd(mem_fun_ref(&vector<Feature>::reserve), maxSize));
+        for_each(features.begin(), features.end(), mem_fun_ref(&std::vector<Feature>::clear));
+        for_each(features.begin(), features.end(), bind2nd(mem_fun_ref(&std::vector<Feature>::reserve), maxSize));
 
         for (size_t i = 0; i < points.size(); ++i)
         {
@@ -990,7 +994,7 @@ namespace
         }
     }
 
-    void GHT_Guil_Full::getContourPoints(const Mat& edges, const Mat& dx, const Mat& dy, vector<ContourPoint>& points)
+    void GHT_Guil_Full::getContourPoints(const Mat& edges, const Mat& dx, const Mat& dy, std::vector<ContourPoint>& points)
     {
         CV_Assert(edges.type() == CV_8UC1);
         CV_Assert(dx.type() == CV_32FC1 && dx.size == edges.size);
@@ -1032,11 +1036,11 @@ namespace
         const double iAngleStep = 1.0 / angleStep;
         const int angleRange = cvCeil((maxAngle - minAngle) * iAngleStep);
 
-        vector<int> OHist(angleRange + 1, 0);
+        std::vector<int> OHist(angleRange + 1, 0);
         for (int i = 0; i <= levels; ++i)
         {
-            const vector<Feature>& templRow = templFeatures[i];
-            const vector<Feature>& imageRow = imageFeatures[i];
+            const std::vector<Feature>& templRow = templFeatures[i];
+            const std::vector<Feature>& imageRow = imageFeatures[i];
 
             for (size_t j = 0; j < templRow.size(); ++j)
             {
@@ -1063,7 +1067,7 @@ namespace
             if (OHist[n] >= angleThresh)
             {
                 const double angle = minAngle + n * angleStep;
-                angles.push_back(make_pair(angle, OHist[n]));
+                angles.push_back(std::make_pair(angle, OHist[n]));
             }
         }
     }
@@ -1080,12 +1084,12 @@ namespace
         const double iScaleStep = 1.0 / scaleStep;
         const int scaleRange = cvCeil((maxScale - minScale) * iScaleStep);
 
-        vector<int> SHist(scaleRange + 1, 0);
+        std::vector<int> SHist(scaleRange + 1, 0);
 
         for (int i = 0; i <= levels; ++i)
         {
-            const vector<Feature>& templRow = templFeatures[i];
-            const vector<Feature>& imageRow = imageFeatures[i];
+            const std::vector<Feature>& templRow = templFeatures[i];
+            const std::vector<Feature>& imageRow = imageFeatures[i];
 
             for (size_t j = 0; j < templRow.size(); ++j)
             {
@@ -1117,7 +1121,7 @@ namespace
             if (SHist[s] >= scaleThresh)
             {
                 const double scale = minScale + s * scaleStep;
-                scales.push_back(make_pair(scale, SHist[s]));
+                scales.push_back(std::make_pair(scale, SHist[s]));
             }
         }
     }
@@ -1141,8 +1145,8 @@ namespace
 
         for (int i = 0; i <= levels; ++i)
         {
-            const vector<Feature>& templRow = templFeatures[i];
-            const vector<Feature>& imageRow = imageFeatures[i];
+            const std::vector<Feature>& templRow = templFeatures[i];
+            const std::vector<Feature>& imageRow = imageFeatures[i];
 
             for (size_t j = 0; j < templRow.size(); ++j)
             {

@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 using namespace std;
@@ -99,11 +99,14 @@ public:
                 {
                     if(ext_from_int(ext).empty())
                         continue;
-                    for (int num_channels = 1; num_channels <= 3; num_channels+=2)
+                    for (int num_channels = 1; num_channels <= 4; num_channels++)
                     {
+                        if (num_channels == 2) continue;
+                        if (num_channels == 4 && ext!=3 /*TIFF*/) continue;
+
                         ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ext_from_int(ext).c_str());
                         Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
-                        circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+                        circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), std::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
 
                         string img_path = cv::tempfile(ext_from_int(ext).c_str());
                         ts->printf(ts->LOG, "writing      image : %s\n", img_path.c_str());
@@ -116,6 +119,7 @@ public:
 
                         CV_Assert(img.size() == img_test.size());
                         CV_Assert(img.type() == img_test.type());
+                        CV_Assert(num_channels == img_test.channels());
 
                         double n = norm(img, img_test);
                         if ( n > 1.0)
@@ -132,7 +136,7 @@ public:
                     // jpeg
                     ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ".jpg");
                     Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
-                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), std::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
 
                     string filename = cv::tempfile(".jpg");
                     imwrite(filename, img);
@@ -162,7 +166,7 @@ public:
                     // tiff
                     ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_16U, num_channels, ".tiff");
                     Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_16U, num_channels), Scalar::all(0));
-                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), std::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
 
                     string filename = cv::tempfile(".tiff");
                     imwrite(filename, img);
@@ -282,3 +286,123 @@ TEST(Highgui_ImreadVSCvtColor, regression)
 }
 #endif
 
+#ifdef HAVE_JPEG
+TEST(Highgui_Jpeg, encode_empty)
+{
+    cv::Mat img;
+    std::vector<uchar> jpegImg;
+
+    ASSERT_THROW(cv::imencode(".jpg", img, jpegImg), cv::Exception);
+}
+#endif
+
+
+#ifdef HAVE_TIFF
+
+// these defines are used to resolve conflict between tiff.h and opencv2/core/types_c.h
+#define uint64 uint64_hack_
+#define int64 int64_hack_
+#include "tiff.h"
+
+TEST(Highgui_Tiff, decode_tile16384x16384)
+{
+    // see issue #2161
+    cv::Mat big(16384, 16384, CV_8UC1, cv::Scalar::all(0));
+    string file3 = cv::tempfile(".tiff");
+    string file4 = cv::tempfile(".tiff");
+
+    std::vector<int> params;
+    params.push_back(TIFFTAG_ROWSPERSTRIP);
+    params.push_back(big.rows);
+    cv::imwrite(file4, big, params);
+    cv::imwrite(file3, big.colRange(0, big.cols - 1), params);
+    big.release();
+
+    try
+    {
+        cv::imread(file3);
+        EXPECT_NO_THROW(cv::imread(file4));
+    }
+    catch(const std::bad_alloc&)
+    {
+        // have no enough memory
+    }
+
+    remove(file3.c_str());
+    remove(file4.c_str());
+}
+#endif
+
+#ifdef HAVE_WEBP
+
+TEST(Highgui_WebP, encode_decode_lossless_webp)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    std::string input = std::string(ts.get_data_path()) + "../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+    ASSERT_FALSE(img.empty());
+
+    std::string output = cv::tempfile(".webp");
+    EXPECT_NO_THROW(cv::imwrite(output, img)); // lossless
+
+    cv::Mat img_webp = cv::imread(output);
+
+    std::vector<unsigned char> buf;
+
+    FILE * wfile = NULL;
+
+    wfile = fopen(output.c_str(), "rb");
+    if (wfile != NULL)
+    {
+        fseek(wfile, 0, SEEK_END);
+        size_t wfile_size = ftell(wfile);
+        fseek(wfile, 0, SEEK_SET);
+
+        buf.resize(wfile_size);
+
+        size_t data_size = fread(&buf[0], 1, wfile_size, wfile);
+
+        if(wfile)
+        {
+            fclose(wfile);
+        }
+
+        if (data_size != wfile_size)
+        {
+            EXPECT_TRUE(false);
+        }
+    }
+
+    remove(output.c_str());
+
+    cv::Mat decode = cv::imdecode(buf, CV_LOAD_IMAGE_COLOR);
+    ASSERT_FALSE(decode.empty());
+    EXPECT_TRUE(cv::norm(decode, img_webp, NORM_INF) == 0);
+
+    ASSERT_FALSE(img_webp.empty());
+
+    EXPECT_TRUE(cv::norm(img, img_webp, NORM_INF) == 0);
+}
+
+TEST(Highgui_WebP, encode_decode_lossy_webp)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    std::string input = std::string(ts.get_data_path()) + "/../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+    ASSERT_FALSE(img.empty());
+
+    for(int q = 100; q>=0; q-=10)
+    {
+        std::vector<int> params;
+        params.push_back(CV_IMWRITE_WEBP_QUALITY);
+        params.push_back(q);
+        string output = cv::tempfile(".webp");
+
+        EXPECT_NO_THROW(cv::imwrite(output, img, params));
+        cv::Mat img_webp = cv::imread(output);
+        remove(output.c_str());
+        EXPECT_FALSE(img_webp.empty());
+    }
+}
+
+#endif

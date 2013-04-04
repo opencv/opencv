@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
 Texture flow direction estimation.
 
@@ -13,10 +15,16 @@ import cv2
 
 if __name__ == '__main__':
     import sys
-    try: fn = sys.argv[1]
-    except: fn = 'data/starry_night.jpg'
+    try:
+        fn = sys.argv[1]
+    except:
+        fn = 'data/starry_night.jpg'
 
     img = cv2.imread(fn)
+    if img is None:
+        print 'Failed to load image file:', fn
+        sys.exit(1)
+        
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     h, w = img.shape[:2]
 

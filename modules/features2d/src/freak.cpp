@@ -114,7 +114,7 @@ void FREAK::buildPattern()
     patternScale0 = patternScale;
 
     patternLookup.resize(FREAK_NB_SCALES*FREAK_NB_ORIENTATION*FREAK_NB_POINTS);
-    double scaleStep = pow(2.0, (double)(nOctaves)/FREAK_NB_SCALES ); // 2 ^ ( (nOctaves-1) /nbScales)
+    double scaleStep = std::pow(2.0, (double)(nOctaves)/FREAK_NB_SCALES ); // 2 ^ ( (nOctaves-1) /nbScales)
     double scalingFactor, alpha, beta, theta = 0;
 
     // pattern definition, radius normalized to 1.0 (outer point position+sigma=1.0)
@@ -132,7 +132,7 @@ void FREAK::buildPattern()
     // fill the lookup table
     for( int scaleIdx=0; scaleIdx < FREAK_NB_SCALES; ++scaleIdx ) {
         patternSizes[scaleIdx] = 0; // proper initialization
-        scalingFactor = pow(scaleStep,scaleIdx); //scale of the pattern, scaleStep ^ scaleIdx
+        scalingFactor = std::pow(scaleStep,scaleIdx); //scale of the pattern, scaleStep ^ scaleIdx
 
         for( int orientationIdx = 0; orientationIdx < FREAK_NB_ORIENTATION; ++orientationIdx ) {
             theta = double(orientationIdx)* 2*CV_PI/double(FREAK_NB_ORIENTATION); // orientation of the pattern
@@ -239,7 +239,7 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
     if( scaleNormalized ) {
         for( size_t k = keypoints.size(); k--; ) {
             //Is k non-zero? If so, decrement it and continue"
-            kpScaleIdx[k] = max( (int)(log(keypoints[k].size/FREAK_SMALLEST_KP_SIZE)*sizeCst+0.5) ,0);
+            kpScaleIdx[k] = std::max( (int)(std::log(keypoints[k].size/FREAK_SMALLEST_KP_SIZE)*sizeCst+0.5) ,0);
             if( kpScaleIdx[k] >= FREAK_NB_SCALES )
                 kpScaleIdx[k] = FREAK_NB_SCALES-1;
 
@@ -254,7 +254,7 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
         }
     }
     else {
-        const int scIdx = max( (int)(1.0986122886681*sizeCst+0.5) ,0);
+        const int scIdx = std::max( (int)(1.0986122886681*sizeCst+0.5) ,0);
         for( size_t k = keypoints.size(); k--; ) {
             kpScaleIdx[k] = scIdx; // equivalent to the formule when the scale is normalized with a constant size of keypoints[k].size=3*SMALLEST_KP_SIZE
             if( kpScaleIdx[k] >= FREAK_NB_SCALES ) {
@@ -495,7 +495,7 @@ uchar FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
 }
 
 // pair selection algorithm from a set of training images and corresponding keypoints
-vector<int> FREAK::selectPairs(const std::vector<Mat>& images
+std::vector<int> FREAK::selectPairs(const std::vector<Mat>& images
                                         , std::vector<std::vector<KeyPoint> >& keypoints
                                         , const double corrTresh
                                         , bool verbose )

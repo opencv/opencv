@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 import sys, re, os.path
 from xml.dom.minidom import parse
 
@@ -28,6 +30,7 @@ class TestInfo(object):
         self.parseLongMetric(xmlnode, "mean");
         self.parseLongMetric(xmlnode, "stddev");
         self.parseFloatMetric(xmlnode, "gstddev");
+        self.parseFloatMetric(xmlnode, "time");
 
     def parseLongMetric(self, xmlnode, name, default = 0):
         if xmlnode.hasAttribute(name):
@@ -76,6 +79,8 @@ class TestInfo(object):
         val = self.metrix.get(name, None)
         if not val:
             return val
+        if name == "time":
+            return self.metrix.get("time")
         if name in ["gmean", "min", "mean", "median", "stddev"]:
             scale = 1.0
             frequency = self.metrix.get("frequency", 1.0) or 1.0

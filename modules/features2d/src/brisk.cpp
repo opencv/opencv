@@ -42,9 +42,9 @@
  the IEEE International Conference on Computer Vision (ICCV2011).
  */
 
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/features2d.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #include <fstream>
 #include <stdlib.h>
 
@@ -247,7 +247,7 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
   BriskPatternPoint* patternIterator = patternPoints_;
 
   // define the scale discretization:
-  static const float lb_scale = (float)(log(scalerange_) / log(2.0));
+  static const float lb_scale = (float)(std::log(scalerange_) / std::log(2.0));
   static const float lb_scale_step = lb_scale / (scales_);
 
   scaleList_ = new float[scales_];
@@ -257,7 +257,7 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
 
   for (unsigned int scale = 0; scale < scales_; ++scale)
   {
-    scaleList_[scale] = (float)pow((double) 2.0, (double) (scale * lb_scale_step));
+    scaleList_[scale] = (float)std::pow((double) 2.0, (double) (scale * lb_scale_step));
     sizeList_[scale] = 0;
 
     // generate the pattern points look-up
@@ -309,10 +309,9 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
   {
     indexChange.resize(points_ * (points_ - 1) / 2);
     indSize = (unsigned int)indexChange.size();
-  }
-  for (unsigned int i = 0; i < indSize; i++)
-  {
-    indexChange[i] = i;
+
+    for (unsigned int i = 0; i < indSize; i++)
+      indexChange[i] = i;
   }
   const float dMin_sq = dMin_ * dMin_;
   const float dMax_sq = dMax_ * dMax_;
@@ -520,7 +519,7 @@ RoiPredicate(const float minX, const float minY, const float maxX, const float m
 
 // computes the descriptor
 void
-BRISK::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& keypoints,
+BRISK::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
                    OutputArray _descriptors, bool useProvidedKeypoints) const
 {
   bool doOrientation=true;
@@ -531,7 +530,7 @@ BRISK::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& keypoi
 }
 
 void
-BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, vector<KeyPoint>& keypoints,
+BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
                                      OutputArray _descriptors, bool doDescriptors, bool doOrientation,
                                      bool useProvidedKeypoints) const
 {
@@ -550,14 +549,14 @@ BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, v
   std::vector<int> kscales; // remember the scale per keypoint
   kscales.resize(ksize);
   static const float log2 = 0.693147180559945f;
-  static const float lb_scalerange = (float)(log(scalerange_) / (log2));
+  static const float lb_scalerange = (float)(std::log(scalerange_) / (log2));
   std::vector<cv::KeyPoint>::iterator beginning = keypoints.begin();
   std::vector<int>::iterator beginningkscales = kscales.begin();
   static const float basicSize06 = basicSize_ * 0.6f;
   for (size_t k = 0; k < ksize; k++)
   {
     unsigned int scale;
-      scale = std::max((int) (scales_ / lb_scalerange * (log(keypoints[k].size / (basicSize06)) / log2) + 0.5), 0);
+      scale = std::max((int) (scales_ / lb_scalerange * (std::log(keypoints[k].size / (basicSize06)) / log2) + 0.5), 0);
       // saturate
       if (scale >= scales_)
         scale = scales_ - 1;
@@ -719,14 +718,14 @@ BRISK::~BRISK()
 }
 
 void
-BRISK::operator()(InputArray image, InputArray mask, vector<KeyPoint>& keypoints) const
+BRISK::operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const
 {
   computeKeypointsNoOrientation(image, mask, keypoints);
   computeDescriptorsAndOrOrientation(image, mask, keypoints, cv::noArray(), false, true, true);
 }
 
 void
-BRISK::computeKeypointsNoOrientation(InputArray _image, InputArray _mask, vector<KeyPoint>& keypoints) const
+BRISK::computeKeypointsNoOrientation(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints) const
 {
   Mat image = _image.getMat(), mask = _mask.getMat();
   if( image.type() != CV_8UC1 )
@@ -742,13 +741,13 @@ BRISK::computeKeypointsNoOrientation(InputArray _image, InputArray _mask, vector
 
 
 void
-BRISK::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
+BRISK::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
 {
     (*this)(image, mask, keypoints);
 }
 
 void
-BRISK::computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const
+BRISK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
 }

@@ -41,34 +41,23 @@
 
 #include "precomp.hpp"
 
-
-/* motion templates */
-CV_IMPL void
-cvUpdateMotionHistory( const void* silhouette, void* mhimg,
-                       double timestamp, double mhi_duration )
+void cv::updateMotionHistory( InputArray _silhouette, InputOutputArray _mhi,
+                              double timestamp, double duration )
 {
-    CvMat  silhstub, *silh = cvGetMat(silhouette, &silhstub);
-    CvMat  mhistub, *mhi = cvGetMat(mhimg, &mhistub);
+    Mat silh = _silhouette.getMat(), mhi = _mhi.getMat();
 
-    if( !CV_IS_MASK_ARR( silh ))
-        CV_Error( CV_StsBadMask, "" );
+    CV_Assert( silh.type() == CV_8U && mhi.type() == CV_32F );
+    CV_Assert( silh.size() == mhi.size() );
 
-    if( CV_MAT_TYPE( mhi->type ) != CV_32FC1 )
-        CV_Error( CV_StsUnsupportedFormat, "" );
-
-    if( !CV_ARE_SIZES_EQ( mhi, silh ))
-        CV_Error( CV_StsUnmatchedSizes, "" );
-
-    CvSize size = cvGetMatSize( mhi );
-
-    if( CV_IS_MAT_CONT( mhi->type & silh->type ))
+    Size size = silh.size();
+    if( silh.isContinuous() && mhi.isContinuous() )
     {
         size.width *= size.height;
         size.height = 1;
     }
 
     float ts = (float)timestamp;
-    float delbound = (float)(timestamp - mhi_duration);
+    float delbound = (float)(timestamp - duration);
     int x, y;
 #if CV_SSE2
     volatile bool useSIMD = cv::checkHardwareSupport(CV_CPU_SSE2);
@@ -76,8 +65,8 @@ cvUpdateMotionHistory( const void* silhouette, void* mhimg,
 
     for( y = 0; y < size.height; y++ )
     {
-        const uchar* silhData = silh->data.ptr + silh->step*y;
-        float* mhiData = (float*)(mhi->data.ptr + mhi->step*y);
+        const uchar* silhData = silh.ptr<uchar>(y);
+        float* mhiData = mhi.ptr<float>(y);
         x = 0;
 
 #if CV_SSE2
@@ -117,26 +106,21 @@ cvUpdateMotionHistory( const void* silhouette, void* mhimg,
 }
 
 
-CV_IMPL void
-cvCalcMotionGradient( const CvArr* mhiimg, CvArr* maskimg,
-                      CvArr* orientation,
-                      double delta1, double delta2,
-                      int aperture_size )
+void cv::calcMotionGradient( InputArray _mhi, OutputArray _mask,
+                             OutputArray _orientation,
+                             double delta1, double delta2,
+                             int aperture_size )
 {
-    cv::Ptr<CvMat> dX_min, dY_max;
+    static int runcase = 0; runcase++;
 
-    CvMat  mhistub, *mhi = cvGetMat(mhiimg, &mhistub);
-    CvMat  maskstub, *mask = cvGetMat(maskimg, &maskstub);
-    CvMat  orientstub, *orient = cvGetMat(orientation, &orientstub);
-    CvMat  dX_min_row, dY_max_row, orient_row, mask_row;
-    CvSize size;
-    int x, y;
+    Mat mhi = _mhi.getMat();
+    Size size = mhi.size();
 
-    float  gradient_epsilon = 1e-4f * aperture_size * aperture_size;
-    float  min_delta, max_delta;
+    _mask.create(size, CV_8U);
+    _orientation.create(size, CV_32F);
 
-    if( !CV_IS_MASK_ARR( mask ))
-        CV_Error( CV_StsBadMask, "" );
+    Mat mask = _mask.getMat();
+    Mat orient = _orientation.getMat();
 
     if( aperture_size < 3 || aperture_size > 7 || (aperture_size & 1) == 0 )
         CV_Error( CV_StsOutOfRange, "aperture_size must be 3, 5 or 7" );
@@ -144,343 +128,247 @@ cvCalcMotionGradient( const CvArr* mhiimg, CvArr* maskimg,
     if( delta1 <= 0 || delta2 <= 0 )
         CV_Error( CV_StsOutOfRange, "both delta's must be positive" );
 
-    if( CV_MAT_TYPE( mhi->type ) != CV_32FC1 || CV_MAT_TYPE( orient->type ) != CV_32FC1 )
+    if( mhi.type() != CV_32FC1 )
         CV_Error( CV_StsUnsupportedFormat,
-        "MHI and orientation must be single-channel floating-point images" );
+                 "MHI must be single-channel floating-point images" );
 
-    if( !CV_ARE_SIZES_EQ( mhi, mask ) || !CV_ARE_SIZES_EQ( orient, mhi ))
-        CV_Error( CV_StsUnmatchedSizes, "" );
-
-    if( orient->data.ptr == mhi->data.ptr )
-        CV_Error( CV_StsInplaceNotSupported, "orientation image must be different from MHI" );
-
-    if( delta1 > delta2 )
+    if( orient.data == mhi.data )
     {
-        double t;
-        CV_SWAP( delta1, delta2, t );
+        _orientation.release();
+        _orientation.create(size, CV_32F);
+        orient = _orientation.getMat();
     }
 
-    size = cvGetMatSize( mhi );
-    min_delta = (float)delta1;
-    max_delta = (float)delta2;
-    dX_min = cvCreateMat( mhi->rows, mhi->cols, CV_32F );
-    dY_max = cvCreateMat( mhi->rows, mhi->cols, CV_32F );
+    if( delta1 > delta2 )
+        std::swap(delta1, delta2);
+
+    float gradient_epsilon = 1e-4f * aperture_size * aperture_size;
+    float min_delta = (float)delta1;
+    float max_delta = (float)delta2;
+
+    Mat dX_min, dY_max;
 
     // calc Dx and Dy
-    cvSobel( mhi, dX_min, 1, 0, aperture_size );
-    cvSobel( mhi, dY_max, 0, 1, aperture_size );
-    cvGetRow( dX_min, &dX_min_row, 0 );
-    cvGetRow( dY_max, &dY_max_row, 0 );
-    cvGetRow( orient, &orient_row, 0 );
-    cvGetRow( mask, &mask_row, 0 );
+    Sobel( mhi, dX_min, CV_32F, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE );
+    Sobel( mhi, dY_max, CV_32F, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE );
+
+    int x, y;
+
+    if( mhi.isContinuous() && orient.isContinuous() && mask.isContinuous() )
+    {
+        size.width *= size.height;
+        size.height = 1;
+    }
 
     // calc gradient
     for( y = 0; y < size.height; y++ )
     {
-        dX_min_row.data.ptr = dX_min->data.ptr + y*dX_min->step;
-        dY_max_row.data.ptr = dY_max->data.ptr + y*dY_max->step;
-        orient_row.data.ptr = orient->data.ptr + y*orient->step;
-        mask_row.data.ptr = mask->data.ptr + y*mask->step;
-        cvCartToPolar( &dX_min_row, &dY_max_row, 0, &orient_row, 1 );
+        const float* dX_min_row = dX_min.ptr<float>(y);
+        const float* dY_max_row = dY_max.ptr<float>(y);
+        float* orient_row = orient.ptr<float>(y);
+        uchar* mask_row = mask.ptr<uchar>(y);
+
+        fastAtan2(dY_max_row, dX_min_row, orient_row, size.width, true);
 
         // make orientation zero where the gradient is very small
         for( x = 0; x < size.width; x++ )
         {
-            float dY = dY_max_row.data.fl[x];
-            float dX = dX_min_row.data.fl[x];
+            float dY = dY_max_row[x];
+            float dX = dX_min_row[x];
 
-            if( fabs(dX) < gradient_epsilon && fabs(dY) < gradient_epsilon )
+            if( std::abs(dX) < gradient_epsilon && std::abs(dY) < gradient_epsilon )
             {
-                mask_row.data.ptr[x] = 0;
-                orient_row.data.i[x] = 0;
+                mask_row[x] = (uchar)0;
+                orient_row[x] = 0.f;
             }
             else
-                mask_row.data.ptr[x] = 1;
+                mask_row[x] = (uchar)1;
         }
     }
 
-    cvErode( mhi, dX_min, 0, (aperture_size-1)/2);
-    cvDilate( mhi, dY_max, 0, (aperture_size-1)/2);
+    erode( mhi, dX_min, noArray(), Point(-1,-1), (aperture_size-1)/2, BORDER_REPLICATE );
+    dilate( mhi, dY_max, noArray(), Point(-1,-1), (aperture_size-1)/2, BORDER_REPLICATE );
 
     // mask off pixels which have little motion difference in their neighborhood
     for( y = 0; y < size.height; y++ )
     {
-        dX_min_row.data.ptr = dX_min->data.ptr + y*dX_min->step;
-        dY_max_row.data.ptr = dY_max->data.ptr + y*dY_max->step;
-        mask_row.data.ptr = mask->data.ptr + y*mask->step;
-        orient_row.data.ptr = orient->data.ptr + y*orient->step;
+        const float* dX_min_row = dX_min.ptr<float>(y);
+        const float* dY_max_row = dY_max.ptr<float>(y);
+        float* orient_row = orient.ptr<float>(y);
+        uchar* mask_row = mask.ptr<uchar>(y);
 
         for( x = 0; x < size.width; x++ )
         {
-            float d0 = dY_max_row.data.fl[x] - dX_min_row.data.fl[x];
+            float d0 = dY_max_row[x] - dX_min_row[x];
 
-            if( mask_row.data.ptr[x] == 0 || d0 < min_delta || max_delta < d0 )
+            if( mask_row[x] == 0 || d0 < min_delta || max_delta < d0 )
             {
-                mask_row.data.ptr[x] = 0;
-                orient_row.data.i[x] = 0;
+                mask_row[x] = (uchar)0;
+                orient_row[x] = 0.f;
             }
         }
     }
-}
-
-
-CV_IMPL double
-cvCalcGlobalOrientation( const void* orientation, const void* maskimg, const void* mhiimg,
-                         double curr_mhi_timestamp, double mhi_duration )
-{
-    int hist_size = 12;
-    cv::Ptr<CvHistogram> hist;
-
-    CvMat  mhistub, *mhi = cvGetMat(mhiimg, &mhistub);
-    CvMat  maskstub, *mask = cvGetMat(maskimg, &maskstub);
-    CvMat  orientstub, *orient = cvGetMat(orientation, &orientstub);
-    void*  _orient;
-    float _ranges[] = { 0, 360 };
-    float* ranges = _ranges;
-    int base_orient;
-    float shift_orient = 0, shift_weight = 0;
-    float a, b, fbase_orient;
-    float delbound;
-    CvMat mhi_row, mask_row, orient_row;
-    int x, y, mhi_rows, mhi_cols;
-
-    if( !CV_IS_MASK_ARR( mask ))
-        CV_Error( CV_StsBadMask, "" );
-
-    if( CV_MAT_TYPE( mhi->type ) != CV_32FC1 || CV_MAT_TYPE( orient->type ) != CV_32FC1 )
-        CV_Error( CV_StsUnsupportedFormat,
-        "MHI and orientation must be single-channel floating-point images" );
-
-    if( !CV_ARE_SIZES_EQ( mhi, mask ) || !CV_ARE_SIZES_EQ( orient, mhi ))
-        CV_Error( CV_StsUnmatchedSizes, "" );
-
-    if( mhi_duration <= 0 )
-        CV_Error( CV_StsOutOfRange, "MHI duration must be positive" );
-
-    if( orient->data.ptr == mhi->data.ptr )
-        CV_Error( CV_StsInplaceNotSupported, "orientation image must be different from MHI" );
-
-    // calculate histogram of different orientation values
-    hist = cvCreateHist( 1, &hist_size, CV_HIST_ARRAY, &ranges );
-    _orient = orient;
-    cvCalcArrHist( &_orient, hist, 0, mask );
-
-    // find the maximum index (the dominant orientation)
-    cvGetMinMaxHistValue( hist, 0, 0, 0, &base_orient );
-    fbase_orient = base_orient*360.f/hist_size;
-
-    // override timestamp with the maximum value in MHI
-    cvMinMaxLoc( mhi, 0, &curr_mhi_timestamp, 0, 0, mask );
-
-    // find the shift relative to the dominant orientation as weighted sum of relative angles
-    a = (float)(254. / 255. / mhi_duration);
-    b = (float)(1. - curr_mhi_timestamp * a);
-    delbound = (float)(curr_mhi_timestamp - mhi_duration);
-    mhi_rows = mhi->rows;
-    mhi_cols = mhi->cols;
-
-    if( CV_IS_MAT_CONT( mhi->type & mask->type & orient->type ))
-    {
-        mhi_cols *= mhi_rows;
-        mhi_rows = 1;
-    }
-
-    cvGetRow( mhi, &mhi_row, 0 );
-    cvGetRow( mask, &mask_row, 0 );
-    cvGetRow( orient, &orient_row, 0 );
-
-    /*
-       a = 254/(255*dt)
-       b = 1 - t*a = 1 - 254*t/(255*dur) =
-       (255*dt - 254*t)/(255*dt) =
-       (dt - (t - dt)*254)/(255*dt);
-       --------------------------------------------------------
-       ax + b = 254*x/(255*dt) + (dt - (t - dt)*254)/(255*dt) =
-       (254*x + dt - (t - dt)*254)/(255*dt) =
-       ((x - (t - dt))*254 + dt)/(255*dt) =
-       (((x - (t - dt))/dt)*254 + 1)/255 = (((x - low_time)/dt)*254 + 1)/255
-     */
-    for( y = 0; y < mhi_rows; y++ )
-    {
-        mhi_row.data.ptr = mhi->data.ptr + mhi->step*y;
-        mask_row.data.ptr = mask->data.ptr + mask->step*y;
-        orient_row.data.ptr = orient->data.ptr + orient->step*y;
-
-        for( x = 0; x < mhi_cols; x++ )
-            if( mask_row.data.ptr[x] != 0 && mhi_row.data.fl[x] > delbound )
-            {
-                /*
-                   orient in 0..360, base_orient in 0..360
-                   -> (rel_angle = orient - base_orient) in -360..360.
-                   rel_angle is translated to -180..180
-                 */
-                float weight = mhi_row.data.fl[x] * a + b;
-                float rel_angle = orient_row.data.fl[x] - fbase_orient;
-
-                rel_angle += (rel_angle < -180 ? 360 : 0);
-                rel_angle += (rel_angle > 180 ? -360 : 0);
-
-                if( fabs(rel_angle) < 45 )
-                {
-                    shift_orient += weight * rel_angle;
-                    shift_weight += weight;
-                }
-            }
-    }
-
-    // add the dominant orientation and the relative shift
-    if( shift_weight == 0 )
-        shift_weight = 0.01f;
-
-    fbase_orient += shift_orient / shift_weight;
-    fbase_orient -= (fbase_orient < 360 ? 0 : 360);
-    fbase_orient += (fbase_orient >= 0 ? 0 : 360);
-
-    return fbase_orient;
-}
-
-
-CV_IMPL CvSeq*
-cvSegmentMotion( const CvArr* mhiimg, CvArr* segmask, CvMemStorage* storage,
-                 double timestamp, double seg_thresh )
-{
-    CvSeq* components = 0;
-    cv::Ptr<CvMat> mask8u;
-
-    CvMat  mhistub, *mhi = cvGetMat(mhiimg, &mhistub);
-    CvMat  maskstub, *mask = cvGetMat(segmask, &maskstub);
-    Cv32suf v, comp_idx;
-    int stub_val, ts;
-    int x, y;
-
-    if( !storage )
-        CV_Error( CV_StsNullPtr, "NULL memory storage" );
-
-    mhi = cvGetMat( mhi, &mhistub );
-    mask = cvGetMat( mask, &maskstub );
-
-    if( CV_MAT_TYPE( mhi->type ) != CV_32FC1 || CV_MAT_TYPE( mask->type ) != CV_32FC1 )
-        CV_Error( CV_BadDepth, "Both MHI and the destination mask" );
-
-    if( !CV_ARE_SIZES_EQ( mhi, mask ))
-        CV_Error( CV_StsUnmatchedSizes, "" );
-
-    mask8u = cvCreateMat( mhi->rows + 2, mhi->cols + 2, CV_8UC1 );
-    cvZero( mask8u );
-    cvZero( mask );
-    components = cvCreateSeq( CV_SEQ_KIND_GENERIC, sizeof(CvSeq),
-                              sizeof(CvConnectedComp), storage );
-
-    v.f = (float)timestamp; ts = v.i;
-    v.f = FLT_MAX*0.1f; stub_val = v.i;
-    comp_idx.f = 1;
-
-    for( y = 0; y < mhi->rows; y++ )
-    {
-        int* mhi_row = (int*)(mhi->data.ptr + y*mhi->step);
-        for( x = 0; x < mhi->cols; x++ )
-        {
-            if( mhi_row[x] == 0 )
-                mhi_row[x] = stub_val;
-        }
-    }
-
-    for( y = 0; y < mhi->rows; y++ )
-    {
-        int* mhi_row = (int*)(mhi->data.ptr + y*mhi->step);
-        uchar* mask8u_row = mask8u->data.ptr + (y+1)*mask8u->step + 1;
-
-        for( x = 0; x < mhi->cols; x++ )
-        {
-            if( mhi_row[x] == ts && mask8u_row[x] == 0 )
-            {
-                CvConnectedComp comp;
-                int x1, y1;
-                CvScalar _seg_thresh = cvRealScalar(seg_thresh);
-                CvPoint seed = cvPoint(x,y);
-
-                cvFloodFill( mhi, seed, cvRealScalar(0), _seg_thresh, _seg_thresh,
-                            &comp, CV_FLOODFILL_MASK_ONLY + 2*256 + 4, mask8u );
-
-                for( y1 = 0; y1 < comp.rect.height; y1++ )
-                {
-                    int* mask_row1 = (int*)(mask->data.ptr +
-                                    (comp.rect.y + y1)*mask->step) + comp.rect.x;
-                    uchar* mask8u_row1 = mask8u->data.ptr +
-                                    (comp.rect.y + y1+1)*mask8u->step + comp.rect.x+1;
-
-                    for( x1 = 0; x1 < comp.rect.width; x1++ )
-                    {
-                        if( mask8u_row1[x1] > 1 )
-                        {
-                            mask8u_row1[x1] = 1;
-                            mask_row1[x1] = comp_idx.i;
-                        }
-                    }
-                }
-                comp_idx.f++;
-                cvSeqPush( components, &comp );
-            }
-        }
-    }
-
-    for( y = 0; y < mhi->rows; y++ )
-    {
-        int* mhi_row = (int*)(mhi->data.ptr + y*mhi->step);
-        for( x = 0; x < mhi->cols; x++ )
-        {
-            if( mhi_row[x] == stub_val )
-                mhi_row[x] = 0;
-        }
-    }
-
-    return components;
-}
-
-
-void cv::updateMotionHistory( InputArray _silhouette, InputOutputArray _mhi,
-                              double timestamp, double duration )
-{
-    Mat silhouette = _silhouette.getMat();
-    CvMat c_silhouette = silhouette, c_mhi = _mhi.getMat();
-    cvUpdateMotionHistory( &c_silhouette, &c_mhi, timestamp, duration );
-}
-
-void cv::calcMotionGradient( InputArray _mhi, OutputArray _mask,
-                             OutputArray _orientation,
-                             double delta1, double delta2,
-                             int aperture_size )
-{
-    Mat mhi = _mhi.getMat();
-    _mask.create(mhi.size(), CV_8U);
-    _orientation.create(mhi.size(), CV_32F);
-    CvMat c_mhi = mhi, c_mask = _mask.getMat(), c_orientation = _orientation.getMat();
-    cvCalcMotionGradient(&c_mhi, &c_mask, &c_orientation, delta1, delta2, aperture_size);
 }
 
 double cv::calcGlobalOrientation( InputArray _orientation, InputArray _mask,
-                                  InputArray _mhi, double timestamp,
+                                  InputArray _mhi, double /*timestamp*/,
                                   double duration )
 {
-    Mat orientation = _orientation.getMat(), mask = _mask.getMat(), mhi = _mhi.getMat();
-    CvMat c_orientation = orientation, c_mask = mask, c_mhi = mhi;
-    return cvCalcGlobalOrientation(&c_orientation, &c_mask, &c_mhi, timestamp, duration);
+    Mat orient = _orientation.getMat(), mask = _mask.getMat(), mhi = _mhi.getMat();
+    Size size = mhi.size();
+
+    CV_Assert( mask.type() == CV_8U && orient.type() == CV_32F && mhi.type() == CV_32F );
+    CV_Assert( mask.size() == size && orient.size() == size );
+    CV_Assert( duration > 0 );
+
+    int histSize = 12;
+    float _ranges[] = { 0.f, 360.f };
+    const float* ranges = _ranges;
+    Mat hist;
+
+    calcHist(&orient, 1, 0, mask, hist, 1, &histSize, &ranges);
+
+    // find the maximum index (the dominant orientation)
+    Point baseOrientPt;
+    minMaxLoc(hist, 0, 0, 0, &baseOrientPt);
+    float fbaseOrient = (baseOrientPt.x + baseOrientPt.y)*360.f/histSize;
+
+    // override timestamp with the maximum value in MHI
+    double timestamp = 0;
+    minMaxLoc( mhi, 0, &timestamp, 0, 0, mask );
+
+    // find the shift relative to the dominant orientation as weighted sum of relative angles
+    float a = (float)(254. / 255. / duration);
+    float b = (float)(1. - timestamp * a);
+    float delbound = (float)(timestamp - duration);
+
+    if( mhi.isContinuous() && mask.isContinuous() && orient.isContinuous() )
+    {
+        size.width *= size.height;
+        size.height = 1;
+    }
+
+    /*
+     a = 254/(255*dt)
+     b = 1 - t*a = 1 - 254*t/(255*dur) =
+     (255*dt - 254*t)/(255*dt) =
+     (dt - (t - dt)*254)/(255*dt);
+     --------------------------------------------------------
+     ax + b = 254*x/(255*dt) + (dt - (t - dt)*254)/(255*dt) =
+     (254*x + dt - (t - dt)*254)/(255*dt) =
+     ((x - (t - dt))*254 + dt)/(255*dt) =
+     (((x - (t - dt))/dt)*254 + 1)/255 = (((x - low_time)/dt)*254 + 1)/255
+     */
+    float shiftOrient = 0, shiftWeight = 0;
+    for( int y = 0; y < size.height; y++ )
+    {
+        const float* mhiptr = mhi.ptr<float>(y);
+        const float* oriptr = orient.ptr<float>(y);
+        const uchar* maskptr = mask.ptr<uchar>(y);
+
+        for( int x = 0; x < size.width; x++ )
+        {
+            if( maskptr[x] != 0 && mhiptr[x] > delbound )
+            {
+                /*
+                 orient in 0..360, base_orient in 0..360
+                 -> (rel_angle = orient - base_orient) in -360..360.
+                 rel_angle is translated to -180..180
+                 */
+                float weight = mhiptr[x] * a + b;
+                float relAngle = oriptr[x] - fbaseOrient;
+
+                relAngle += (relAngle < -180 ? 360 : 0);
+                relAngle += (relAngle > 180 ? -360 : 0);
+
+                if( fabs(relAngle) < 45 )
+                {
+                    shiftOrient += weight * relAngle;
+                    shiftWeight += weight;
+                }
+            }
+        }
+    }
+
+    // add the dominant orientation and the relative shift
+    if( shiftWeight == 0 )
+        shiftWeight = 0.01f;
+
+    fbaseOrient += shiftOrient / shiftWeight;
+    fbaseOrient -= (fbaseOrient < 360 ? 0 : 360);
+    fbaseOrient += (fbaseOrient >= 0 ? 0 : 360);
+
+    return fbaseOrient;
 }
 
+
 void cv::segmentMotion(InputArray _mhi, OutputArray _segmask,
-                       vector<Rect>& boundingRects,
+                       std::vector<Rect>& boundingRects,
                        double timestamp, double segThresh)
 {
     Mat mhi = _mhi.getMat();
+
     _segmask.create(mhi.size(), CV_32F);
-    CvMat c_mhi = mhi, c_segmask = _segmask.getMat();
-    Ptr<CvMemStorage> storage = cvCreateMemStorage();
-    Seq<CvConnectedComp> comps = cvSegmentMotion(&c_mhi, &c_segmask, storage, timestamp, segThresh);
-    Seq<CvConnectedComp>::const_iterator it(comps);
-    size_t i, ncomps = comps.size();
-    boundingRects.resize(ncomps);
-    for( i = 0; i < ncomps; i++, ++it)
-        boundingRects[i] = (*it).rect;
+    Mat segmask = _segmask.getMat();
+    segmask = Scalar::all(0);
+
+    CV_Assert( mhi.type() == CV_32F );
+    CV_Assert( segThresh >= 0 );
+
+    Mat mask = Mat::zeros( mhi.rows + 2, mhi.cols + 2, CV_8UC1 );
+
+    int x, y;
+
+    // protect zero mhi pixels from floodfill.
+    for( y = 0; y < mhi.rows; y++ )
+    {
+        const float* mhiptr = mhi.ptr<float>(y);
+        uchar* maskptr = mask.ptr<uchar>(y+1) + 1;
+
+        for( x = 0; x < mhi.cols; x++ )
+        {
+            if( mhiptr[x] == 0 )
+                maskptr[x] = 1;
+        }
+    }
+
+    float ts = (float)timestamp;
+    float comp_idx = 1.f;
+
+    for( y = 0; y < mhi.rows; y++ )
+    {
+        float* mhiptr = mhi.ptr<float>(y);
+        uchar* maskptr = mask.ptr<uchar>(y+1) + 1;
+
+        for( x = 0; x < mhi.cols; x++ )
+        {
+            if( mhiptr[x] == ts && maskptr[x] == 0 )
+            {
+                Rect cc;
+                floodFill( mhi, mask, Point(x,y), Scalar::all(0),
+                           &cc, Scalar::all(segThresh), Scalar::all(segThresh),
+                           FLOODFILL_MASK_ONLY + 2*256 + 4 );
+
+                for( int y1 = 0; y1 < cc.height; y1++ )
+                {
+                    float* segmaskptr = segmask.ptr<float>(cc.y + y1) + cc.x;
+                    uchar* maskptr1 = mask.ptr<uchar>(cc.y + y1 + 1) + cc.x + 1;
+
+                    for( int x1 = 0; x1 < cc.width; x1++ )
+                    {
+                        if( maskptr1[x1] > 1 )
+                        {
+                            maskptr1[x1] = 1;
+                            segmaskptr[x1] = comp_idx;
+                        }
+                    }
+                }
+                comp_idx += 1.f;
+                boundingRects.push_back(cc);
+            }
+        }
+    }
 }
+
 
 /* End of file. */

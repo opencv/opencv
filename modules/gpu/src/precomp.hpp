@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -47,10 +47,6 @@
     #pragma warning( disable: 4251 4710 4711 4514 4996 )
 #endif
 
-#ifdef HAVE_CVCONFIG_H
-    #include "cvconfig.h"
-#endif
-
 #include <cstring>
 #include <iostream>
 #include <limits>
@@ -64,14 +60,16 @@
 #include <deque>
 #include <stdexcept>
 #include <memory>
-#include <string>
 
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/gpu.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/core/internal.hpp"
-#include "opencv2/video/video.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/video.hpp"
+
+#include "opencv2/core/private.hpp"
 
 #if defined WIN32 || defined WINCE
     #include <windows.h>
@@ -97,16 +95,16 @@
         #include <cublas.h>
     #endif
 
-    #ifndef __APPLE__
+    #ifdef HAVE_NVCUVID
         #include <nvcuvid.h>
-    #endif
 
-    #ifdef WIN32
-        #include <NVEncoderAPI.h>
+        #ifdef WIN32
+            #include <NVEncoderAPI.h>
+        #endif
     #endif
 
     #include "internal_shared.hpp"
-    #include "opencv2/gpu/stream_accessor.hpp"
+    #include "opencv2/core/stream_accessor.hpp"
 
     #include "nvidia/core/NCV.hpp"
     #include "nvidia/NPP_staging/NPP_staging.hpp"

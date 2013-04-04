@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 import hdr_parser, sys, re, os, cStringIO
 from string import Template
 
@@ -241,9 +243,9 @@ class ClassInfo(object):
         if decl:
             self.bases = decl[1].split()[1:]
             if len(self.bases) > 1:
-                print "Warning: class %s has more than 1 base class (not supported by Python C extensions)" % (self.name,)
-                print "Bases: ", " ".join(self.bases)
-                print "Only the first base class will be used"
+                print "Note: Class %s has more than 1 base class (not supported by Python C extensions)" % (self.name,)
+                print "      Bases: ", " ".join(self.bases)
+                print "      Only the first base class will be used"
                 self.bases = [self.bases[0].strip(",")]
                 #return sys.exit(-1)
             if self.bases and self.bases[0].startswith("cv::"):
@@ -351,6 +353,7 @@ class ArgInfo(object):
             elif m == "/IO":
                 self.inputarg = True
                 self.outputarg = True
+                self.returnarg = True
             elif m.startswith("/A"):
                 self.isarray = True
                 self.arraylen = m[2:].strip()
@@ -424,7 +427,7 @@ class FuncVariant(object):
                 continue
             if a.returnarg:
                 outlist.append((a.name, argno))
-            if (not a.inputarg or a.returnarg) and a.isbig():
+            if (not a.inputarg) and a.isbig():
                 outarr_list.append((a.name, argno))
                 continue
             if not a.inputarg:

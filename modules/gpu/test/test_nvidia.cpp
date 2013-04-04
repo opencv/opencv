@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -41,11 +42,9 @@
 
 #include "test_precomp.hpp"
 
-#if defined HAVE_CUDA
-  OutputLevel nvidiaTestOutputLevel = OutputLevelNone;
-#endif
+#ifdef HAVE_CUDA
 
-#if defined HAVE_CUDA && !defined(CUDA_DISABLER)
+OutputLevel nvidiaTestOutputLevel = OutputLevelNone;
 
 using namespace cvtest;
 using namespace testing;
@@ -69,77 +68,77 @@ struct NVidiaTest : TestWithParam<cv::gpu::DeviceInfo>
 struct NPPST : NVidiaTest {};
 struct NCV : NVidiaTest {};
 
-//TEST_P(NPPST, Integral)
-//{
-//    bool res = nvidia_NPPST_Integral_Image(path, nvidiaTestOutputLevel);
+GPU_TEST_P(NPPST, Integral)
+{
+    bool res = nvidia_NPPST_Integral_Image(_path, nvidiaTestOutputLevel);
 
-//    ASSERT_TRUE(res);
-//}
+    ASSERT_TRUE(res);
+}
 
-TEST_P(NPPST, SquaredIntegral)
+GPU_TEST_P(NPPST, SquaredIntegral)
 {
     bool res = nvidia_NPPST_Squared_Integral_Image(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-TEST_P(NPPST, RectStdDev)
+GPU_TEST_P(NPPST, RectStdDev)
 {
     bool res = nvidia_NPPST_RectStdDev(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-TEST_P(NPPST, Resize)
+GPU_TEST_P(NPPST, Resize)
 {
     bool res = nvidia_NPPST_Resize(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-TEST_P(NPPST, VectorOperations)
+GPU_TEST_P(NPPST, VectorOperations)
 {
     bool res = nvidia_NPPST_Vector_Operations(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-TEST_P(NPPST, Transpose)
+GPU_TEST_P(NPPST, Transpose)
 {
     bool res = nvidia_NPPST_Transpose(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-TEST_P(NCV, VectorOperations)
+GPU_TEST_P(NCV, VectorOperations)
 {
     bool res = nvidia_NCV_Vector_Operations(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-TEST_P(NCV, HaarCascadeLoader)
+GPU_TEST_P(NCV, HaarCascadeLoader)
 {
     bool res = nvidia_NCV_Haar_Cascade_Loader(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-TEST_P(NCV, HaarCascadeApplication)
+GPU_TEST_P(NCV, HaarCascadeApplication)
 {
     bool res = nvidia_NCV_Haar_Cascade_Application(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-TEST_P(NCV, HypothesesFiltration)
+GPU_TEST_P(NCV, HypothesesFiltration)
 {
     bool res = nvidia_NCV_Hypotheses_Filtration(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-TEST_P(NCV, Visualization)
+GPU_TEST_P(NCV, Visualization)
 {
     // this functionality doesn't used in gpu module
     bool res = nvidia_NCV_Visualization(_path, nvidiaTestOutputLevel);

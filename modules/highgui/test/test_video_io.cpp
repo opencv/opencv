@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 using namespace std;
@@ -247,7 +247,7 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
         if (!img)
             break;
 
-        frames.push_back(Mat(img).clone());
+        frames.push_back(cv::cvarrToMat(img, true));
 
         if (writer == 0)
         {
@@ -285,7 +285,7 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
             break;
 
         Mat img = frames[i];
-        Mat img1(ipl1);
+        Mat img1 = cv::cvarrToMat(ipl1);
 
         double psnr = PSNR(img1, img);
         if (psnr < thresDbell)

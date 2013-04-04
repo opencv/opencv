@@ -42,7 +42,10 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
+#include "opencv2/gpu/device/common.hpp"
+#include "opencv2/gpu/device/reduce.hpp"
+#include "opencv2/gpu/device/functional.hpp"
+#include "opencv2/gpu/device/warp_shuffle.hpp"
 
 namespace cv { namespace gpu { namespace device
 {
@@ -226,29 +229,32 @@ namespace cv { namespace gpu { namespace device
 
 
         template<int size>
-        __device__ float reduce_smem(volatile float* smem)
+        __device__ float reduce_smem(float* smem, float val)
         {
             unsigned int tid = threadIdx.x;
-            float sum = smem[tid];
+            float sum = val;
 
-            if (size >= 512) { if (tid < 256) smem[tid] = sum = sum + smem[tid + 256]; __syncthreads(); }
-            if (size >= 256) { if (tid < 128) smem[tid] = sum = sum + smem[tid + 128]; __syncthreads(); }
-            if (size >= 128) { if (tid < 64) smem[tid] = sum = sum + smem[tid + 64]; __syncthreads(); }
+            reduce<size>(smem, sum, tid, plus<float>());
 
-            if (tid < 32)
+            if (size == 32)
             {
-                if (size >= 64) smem[tid] = sum = sum + smem[tid + 32];
-                if (size >= 32) smem[tid] = sum = sum + smem[tid + 16];
-                if (size >= 16) smem[tid] = sum = sum + smem[tid + 8];
-                if (size >= 8) smem[tid] = sum = sum + smem[tid + 4];
-                if (size >= 4) smem[tid] = sum = sum + smem[tid + 2];
-                if (size >= 2) smem[tid] = sum = sum + smem[tid + 1];
+            #if __CUDA_ARCH__ >= 300
+                return shfl(sum, 0);
+            #else
+                return smem[0];
+            #endif
             }
+            else
+            {
+            #if __CUDA_ARCH__ >= 300
+                if (threadIdx.x == 0)
+                    smem[0] = sum;
+            #endif
 
-            __syncthreads();
-            sum = smem[0];
+                __syncthreads();
 
-            return sum;
+                return smem[0];
+            }
         }
 
 
@@ -272,19 +278,13 @@ namespace cv { namespace gpu { namespace device
             if (threadIdx.x < block_hist_size)
                 elem = hist[0];
 
-            squares[threadIdx.x] = elem * elem;
-
-            __syncthreads();
-            float sum = reduce_smem<nthreads>(squares);
+            float sum = reduce_smem<nthreads>(squares, elem * elem);
 
             float scale = 1.0f / (::sqrtf(sum) + 0.1f * block_hist_size);
             elem = ::min(elem * scale, threshold);
 
-            __syncthreads();
-            squares[threadIdx.x] = elem * elem;
+            sum = reduce_smem<nthreads>(squares, elem * elem);
 
-            __syncthreads();
-            sum = reduce_smem<nthreads>(squares);
             scale = 1.0f / (::sqrtf(sum) + 1e-3f);
 
             if (threadIdx.x < block_hist_size)
@@ -330,65 +330,36 @@ namespace cv { namespace gpu { namespace device
 
        // return confidence values not just positive location
        template <int nthreads, // Number of threads per one histogram block
-                           int nblocks> // Number of histogram block processed by single GPU thread block
+                 int nblocks>  // Number of histogram block processed by single GPU thread block
        __global__ void compute_confidence_hists_kernel_many_blocks(const int img_win_width, const int img_block_width,
                                                                                                            const int win_block_stride_x, const int win_block_stride_y,
                                                                                                            const float* block_hists, const float* coefs,
                                                                                                            float free_coef, float threshold, float* confidences)
        {
-               const int win_x = threadIdx.z;
-               if (blockIdx.x * blockDim.z + win_x >= img_win_width)
-                       return;
+           const int win_x = threadIdx.z;
+           if (blockIdx.x * blockDim.z + win_x >= img_win_width)
+                   return;
 
-               const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width +
-                                                                                    blockIdx.x * win_block_stride_x * blockDim.z + win_x) *
-                                                                                   cblock_hist_size;
+           const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width +
+                                                                                blockIdx.x * win_block_stride_x * blockDim.z + win_x) *
+                                                                               cblock_hist_size;
 
-               float product = 0.f;
-               for (int i = threadIdx.x; i < cdescr_size; i += nthreads)
-               {
-                       int offset_y = i / cdescr_width;
-                       int offset_x = i - offset_y * cdescr_width;
-                       product += coefs[i] * hist[offset_y * img_block_width * cblock_hist_size + offset_x];
-               }
+           float product = 0.f;
+           for (int i = threadIdx.x; i < cdescr_size; i += nthreads)
+           {
+                   int offset_y = i / cdescr_width;
+                   int offset_x = i - offset_y * cdescr_width;
+                   product += coefs[i] * hist[offset_y * img_block_width * cblock_hist_size + offset_x];
+           }
 
-               __shared__ float products[nthreads * nblocks];
+           __shared__ float products[nthreads * nblocks];
 
-               const int tid = threadIdx.z * nthreads + threadIdx.x;
-               products[tid] = product;
+           const int tid = threadIdx.z * nthreads + threadIdx.x;
 
-               __syncthreads();
+           reduce<nthreads>(products, product, tid, plus<float>());
 
-               if (nthreads >= 512)
-               {
-                       if (threadIdx.x < 256) products[tid] = product = product + products[tid + 256];
-                       __syncthreads();
-               }
-               if (nthreads >= 256)
-               {
-                       if (threadIdx.x < 128) products[tid] = product = product + products[tid + 128];
-                       __syncthreads();
-               }
-               if (nthreads >= 128)
-               {
-                       if (threadIdx.x < 64) products[tid] = product = product + products[tid + 64];
-                       __syncthreads();
-               }
-
-               if (threadIdx.x < 32)
-               {
-                       volatile float* smem = products;
-                       if (nthreads >= 64) smem[tid] = product = product + smem[tid + 32];
-                       if (nthreads >= 32) smem[tid] = product = product + smem[tid + 16];
-                       if (nthreads >= 16) smem[tid] = product = product + smem[tid + 8];
-                       if (nthreads >= 8) smem[tid] = product = product + smem[tid + 4];
-                       if (nthreads >= 4) smem[tid] = product = product + smem[tid + 2];
-                       if (nthreads >= 2) smem[tid] = product = product + smem[tid + 1];
-               }
-
-               if (threadIdx.x == 0)
-                       confidences[blockIdx.y * img_win_width + blockIdx.x * blockDim.z + win_x]
-                               = (float)(product + free_coef);
+           if (threadIdx.x == 0)
+               confidences[blockIdx.y * img_win_width + blockIdx.x * blockDim.z + win_x] = product + free_coef;
 
        }
 
@@ -396,32 +367,32 @@ namespace cv { namespace gpu { namespace device
                                                int win_stride_y, int win_stride_x, int height, int width, float* block_hists,
                                                float* coefs, float free_coef, float threshold, float *confidences)
        {
-               const int nthreads = 256;
-               const int nblocks = 1;
+           const int nthreads = 256;
+           const int nblocks = 1;
 
-               int win_block_stride_x = win_stride_x / block_stride_x;
-               int win_block_stride_y = win_stride_y / block_stride_y;
-               int img_win_width = (width - win_width + win_stride_x) / win_stride_x;
-               int img_win_height = (height - win_height + win_stride_y) / win_stride_y;
+           int win_block_stride_x = win_stride_x / block_stride_x;
+           int win_block_stride_y = win_stride_y / block_stride_y;
+           int img_win_width = (width - win_width + win_stride_x) / win_stride_x;
+           int img_win_height = (height - win_height + win_stride_y) / win_stride_y;
 
-               dim3 threads(nthreads, 1, nblocks);
-               dim3 grid(divUp(img_win_width, nblocks), img_win_height);
+           dim3 threads(nthreads, 1, nblocks);
+           dim3 grid(divUp(img_win_width, nblocks), img_win_height);
 
-               cudaSafeCall(cudaFuncSetCacheConfig(compute_confidence_hists_kernel_many_blocks<nthreads, nblocks>,
-                                                                                       cudaFuncCachePreferL1));
+           cudaSafeCall(cudaFuncSetCacheConfig(compute_confidence_hists_kernel_many_blocks<nthreads, nblocks>,
+                                                                                   cudaFuncCachePreferL1));
 
-               int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) /
-                                                           block_stride_x;
-               compute_confidence_hists_kernel_many_blocks<nthreads, nblocks><<<grid, threads>>>(
-                       img_win_width, img_block_width, win_block_stride_x, win_block_stride_y,
-                       block_hists, coefs, free_coef, threshold, confidences);
-               cudaSafeCall(cudaThreadSynchronize());
+           int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) /
+                                                       block_stride_x;
+           compute_confidence_hists_kernel_many_blocks<nthreads, nblocks><<<grid, threads>>>(
+                   img_win_width, img_block_width, win_block_stride_x, win_block_stride_y,
+                   block_hists, coefs, free_coef, threshold, confidences);
+           cudaSafeCall(cudaThreadSynchronize());
        }
 
 
 
         template <int nthreads, // Number of threads per one histogram block
-                  int nblocks> // Number of histogram block processed by single GPU thread block
+                  int nblocks>  // Number of histogram block processed by single GPU thread block
         __global__ void classify_hists_kernel_many_blocks(const int img_win_width, const int img_block_width,
                                                           const int win_block_stride_x, const int win_block_stride_y,
                                                           const float* block_hists, const float* coefs,
@@ -446,36 +417,8 @@ namespace cv { namespace gpu { namespace device
             __shared__ float products[nthreads * nblocks];
 
             const int tid = threadIdx.z * nthreads + threadIdx.x;
-            products[tid] = product;
 
-            __syncthreads();
-
-            if (nthreads >= 512)
-            {
-                if (threadIdx.x < 256) products[tid] = product = product + products[tid + 256];
-                __syncthreads();
-            }
-            if (nthreads >= 256)
-            {
-                if (threadIdx.x < 128) products[tid] = product = product + products[tid + 128];
-                __syncthreads();
-            }
-            if (nthreads >= 128)
-            {
-                if (threadIdx.x < 64) products[tid] = product = product + products[tid + 64];
-                __syncthreads();
-            }
-
-            if (threadIdx.x < 32)
-            {
-                volatile float* smem = products;
-                if (nthreads >= 64) smem[tid] = product = product + smem[tid + 32];
-                if (nthreads >= 32) smem[tid] = product = product + smem[tid + 16];
-                if (nthreads >= 16) smem[tid] = product = product + smem[tid + 8];
-                if (nthreads >= 8) smem[tid] = product = product + smem[tid + 4];
-                if (nthreads >= 4) smem[tid] = product = product + smem[tid + 2];
-                if (nthreads >= 2) smem[tid] = product = product + smem[tid + 1];
-            }
+            reduce<nthreads>(products, product, tid, plus<float>());
 
             if (threadIdx.x == 0)
                 labels[blockIdx.y * img_win_width + blockIdx.x * blockDim.z + win_x] = (product + free_coef >= threshold);

@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -43,7 +43,7 @@
 #include "video_parser.h"
 #include "cu_safe_call.h"
 
-#if defined(HAVE_CUDA) && !defined(__APPLE__)
+#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
 
 cv::gpu::detail::VideoParser::VideoParser(VideoDecoder* videoDecoder, FrameQueue* frameQueue) :
     videoDecoder_(videoDecoder), frameQueue_(frameQueue), unparsedPackets_(0), hasError_(false)

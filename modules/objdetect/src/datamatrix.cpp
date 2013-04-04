@@ -1,16 +1,7 @@
 #include "precomp.hpp"
 
-#if CV_SSE2
-#include <xmmintrin.h>
-#endif
-
 #include <deque>
 #include <algorithm>
-
-using namespace std;
-
-#undef NDEBUG
-#include <assert.h>
 
 class Sampler {
 public:
@@ -52,7 +43,7 @@ unsigned char ccblk[256] = { 34,17,2,17,19,19,2,17,36,36,2,36,19,19,2,17,51,51,2
     36,19,19,2,32,66,66,2,66,19,19,2,66,36,36,2,36,19,19,2,66,51,51,2,51,19,19,2,51,36,36,2,36,19,19,2,32,49,49,2,49,
     19,19,2,49,36,36,2,36,19,19,2,49,51,51,2,51,19,19,2,51,36,36,2,36,19,19,2,49,66,66,2,66,19,19,2,66,36,36,2,36,19,
     19,2,66,51,51,2,51,19,19,2,51,36,36,2,36,19,19,2,34 };
-static const CvPoint pickup[64] = { {7,6},{8,6},{7,5},{8,5},{1,5},{7,4},{8,4},{1,4},{1,8},{2,8},{1,7},{2,7},{3,7},
+static const int pickup[64][2] = { {7,6},{8,6},{7,5},{8,5},{1,5},{7,4},{8,4},{1,4},{1,8},{2,8},{1,7},{2,7},{3,7},
     {1,6},{2,6},{3,6},{3,2},{4,2},{3,1},{4,1},{5,1},{3,8},{4,8},{5,8},{6,1},{7,1},{6,8},{7,8},{8,8},{6,7},{7,7},{8,7},
     {4,7},{5,7},{4,6},{5,6},{6,6},{4,5},{5,5},{6,5},{2,5},{3,5},{2,4},{3,4},{4,4},{2,3},{3,3},{4,3},{8,3},{1,3},{8,2},
     {1,2},{2,2},{8,1},{1,1},{2,1},{5,4},{6,4},{5,3},{6,3},{7,3},{5,2},{6,2},{7,2} };
@@ -264,7 +255,7 @@ static int decode(Sampler &sa, code &cc)
     sum += sa.getpixel(1 + (i & 7), 1 + (i >> 3));
   uchar mean = (uchar)(sum / 64);
   for (int i = 0; i < 64; i++) {
-    b = (b << 1) + (sa.getpixel(pickup[i].x, pickup[i].y) <= mean);
+    b = (b << 1) + (sa.getpixel(pickup[i][0], pickup[i][1]) <= mean);
     if ((i & 7) == 7) {
       binary[i >> 3] = b;
       b = 0;
@@ -310,7 +301,7 @@ static int decode(Sampler &sa, code &cc)
   }
 }
 
-static deque<CvPoint> trailto(CvMat *v, int x, int y, CvMat *terminal)
+static std::deque<CvPoint> trailto(CvMat *v, int x, int y, CvMat *terminal)
 {
   CvPoint np;
   /* Return the last 10th of the trail of points following v from (x,y)
@@ -319,7 +310,7 @@ static deque<CvPoint> trailto(CvMat *v, int x, int y, CvMat *terminal)
 
   int ex = x + ((short*)cvPtr2D(terminal, y, x))[0];
   int ey = y + ((short*)cvPtr2D(terminal, y, x))[1];
-  deque<CvPoint> r;
+  std::deque<CvPoint> r;
   while ((x != ex) || (y != ey)) {
     np.x = x;
     np.y = y;
@@ -338,7 +329,7 @@ static deque<CvPoint> trailto(CvMat *v, int x, int y, CvMat *terminal)
 }
 #endif
 
-deque <CvDataMatrixCode> cvFindDataMatrix(CvMat *im)
+std::deque <CvDataMatrixCode> cvFindDataMatrix(CvMat *im)
 {
 #if CV_SSE2
   int r = im->rows;
@@ -386,7 +377,7 @@ deque <CvDataMatrixCode> cvFindDataMatrix(CvMat *im)
   cfollow(vc, cxy);
   cfollow(vcc, ccxy);
 
-  deque <CvPoint> candidates;
+  std::deque <CvPoint> candidates;
   {
     int x, y;
     int rows = cxy->rows;
@@ -437,13 +428,13 @@ deque <CvDataMatrixCode> cvFindDataMatrix(CvMat *im)
     }
   }
 
-  deque <code> codes;
+  std::deque <code> codes;
   size_t i, j, k;
   while (!candidates.empty()) {
     CvPoint o = candidates.front();
     candidates.pop_front();
-    deque<CvPoint> ptc = trailto(vc, o.x, o.y, cxy);
-    deque<CvPoint> ptcc = trailto(vcc, o.x, o.y, ccxy);
+    std::deque<CvPoint> ptc = trailto(vc, o.x, o.y, cxy);
+    std::deque<CvPoint> ptcc = trailto(vcc, o.x, o.y, ccxy);
     for (j = 0; j < ptc.size(); j++) {
       for (k = 0; k < ptcc.size(); k++) {
         code cc;
@@ -476,7 +467,7 @@ endo: ; // end search for this o
   cvReleaseMat(&cxy);
   cvReleaseMat(&ccxy);
 
-  deque <CvDataMatrixCode> rc;
+  std::deque <CvDataMatrixCode> rc;
   for (i = 0; i < codes.size(); i++) {
     CvDataMatrixCode cc;
     strcpy(cc.msg, codes[i].msg);
@@ -487,24 +478,24 @@ endo: ; // end search for this o
   return rc;
 #else
   (void)im;
-  deque <CvDataMatrixCode> rc;
+  std::deque <CvDataMatrixCode> rc;
   return rc;
 #endif
 }
 
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/imgproc.hpp>
 
 namespace cv
 {
 
 void findDataMatrix(InputArray _image,
-                    vector<string>& codes,
+                    std::vector<String>& codes,
                     OutputArray _corners,
                     OutputArrayOfArrays _dmtx)
 {
     Mat image = _image.getMat();
     CvMat m(image);
-    deque <CvDataMatrixCode> rc = cvFindDataMatrix(&m);
+    std::deque <CvDataMatrixCode> rc = cvFindDataMatrix(&m);
     int i, n = (int)rc.size();
     Mat corners;
 
@@ -522,7 +513,7 @@ void findDataMatrix(InputArray _image,
     for( i = 0; i < n; i++ )
     {
         CvDataMatrixCode& rc_i = rc[i];
-        codes[i] = string(rc_i.msg);
+        codes[i] = String(rc_i.msg);
 
         if( corners.data )
         {
@@ -537,14 +528,14 @@ void findDataMatrix(InputArray _image,
         {
             _dmtx.create(rc_i.original->rows, rc_i.original->cols, rc_i.original->type, i);
             Mat dst = _dmtx.getMat(i);
-            Mat(rc_i.original).copyTo(dst);
+            cv::cvarrToMat(rc_i.original).copyTo(dst);
         }
         cvReleaseMat(&rc_i.original);
     }
 }
 
 void drawDataMatrixCodes(InputOutputArray _image,
-                         const vector<string>& codes,
+                         const std::vector<String>& codes,
                          InputArray _corners)
 {
     Mat image = _image.getMat();

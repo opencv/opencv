@@ -1,5 +1,4 @@
-#include "opencv2/core/core.hpp"
-#include "opencv2/core/internal.hpp"
+#include "opencv2/core.hpp"
 
 #include "traincascade_features.h"
 #include "cascadeclassifier.h"
@@ -24,7 +23,7 @@ CvParams::CvParams() : name( "params" ) {}
 void CvParams::printDefaults() const
 { cout << "--" << name << "--" << endl; }
 void CvParams::printAttrs() const {}
-bool CvParams::scanAttr( const String, const String ) { return false; }
+bool CvParams::scanAttr( const string, const string ) { return false; }
 
 
 //---------------------------- FeatureParams --------------------------------------

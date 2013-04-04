@@ -1,8 +1,9 @@
 #include <iostream>
 #include <fstream>
 
-#include "opencv2/video/tracking.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/video.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 using namespace std;
@@ -173,10 +174,10 @@ int main(int argc, const char* argv[])
     }
 
     Mat_<Point2f> flow;
-    OpticalFlowDual_TVL1 tvl1;
+    Ptr<DenseOpticalFlow> tvl1 = createOptFlow_DualTVL1();
 
     const double start = (double)getTickCount();
-    tvl1(frame0, frame1, flow);
+    tvl1->calc(frame0, frame1, flow);
     const double timeSec = (getTickCount() - start) / getTickFrequency();
     cout << "calcOpticalFlowDual_TVL1 : " << timeSec << " sec" << endl;
 

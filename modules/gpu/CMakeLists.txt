@@ -3,11 +3,11 @@ if(ANDROID OR IOS)
 endif()
 
 set(the_description "GPU-accelerated Computer Vision")
-ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_nonfree opencv_photo opencv_legacy)
+ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_photo opencv_legacy)
 
-ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda" "${CMAKE_CURRENT_SOURCE_DIR}/../highgui/src")
+ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")
 
-file(GLOB lib_hdrs               "include/opencv2/${name}/*.hpp"               "include/opencv2/${name}/*.h")
+file(GLOB lib_hdrs               "include/opencv2/*.hpp"                       "include/opencv2/${name}/*.hpp"               "include/opencv2/${name}/*.h")
 file(GLOB lib_device_hdrs        "include/opencv2/${name}/device/*.hpp"        "include/opencv2/${name}/device/*.h")
 file(GLOB lib_device_hdrs_detail "include/opencv2/${name}/device/detail/*.hpp" "include/opencv2/${name}/device/detail/*.h")
 file(GLOB lib_int_hdrs           "src/*.hpp"      "src/*.h")
@@ -21,18 +21,15 @@ source_group("Src\\Cuda"      FILES ${lib_cuda} ${lib_cuda_hdrs})
 source_group("Device"         FILES ${lib_device_hdrs})
 source_group("Device\\Detail" FILES ${lib_device_hdrs_detail})
 
-if (HAVE_CUDA)
-  file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp")
+if(HAVE_CUDA)
+  file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp" "src/nvidia/*.h*")
   file(GLOB_RECURSE ncv_cuda "src/nvidia/*.cu")
-  file(GLOB_RECURSE ncv_hdrs "src/nvidia/*.hpp" "src/nvidia/*.h")
-  set(ncv_files ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda})
+  set(ncv_files ${ncv_srcs} ${ncv_cuda})
 
   source_group("Src\\NVidia" FILES ${ncv_files})
   ocv_include_directories("src/nvidia" "src/nvidia/core" "src/nvidia/NPP_staging" ${CUDA_INCLUDE_DIRS})
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations /wd4211 /wd4201 /wd4100 /wd4505 /wd4408)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations -Wshadow -Wunused-parameter /wd4211 /wd4201 /wd4100 /wd4505 /wd4408)
   string(REPLACE "-Wsign-promo" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-
-  #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
   #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/EHsc-;")
 
   if(MSVC)
@@ -47,23 +44,18 @@ if (HAVE_CUDA)
 
   ocv_cuda_compile(cuda_objs ${lib_cuda} ${ncv_cuda})
 
-  #CUDA_BUILD_CLEAN_TARGET()
-
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
 
-  if(NOT APPLE)
-    unset(CUDA_nvcuvid_LIBRARY CACHE)
-    find_cuda_helper_libs(nvcuvid)
+  if(WITH_NVCUVID)
     set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvid_LIBRARY})
   endif()
 
   if(WIN32)
-    unset(CUDA_nvcuvenc_LIBRARY CACHE)
     find_cuda_helper_libs(nvcuvenc)
     set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvenc_LIBRARY})
   endif()
 
-  if(NOT APPLE AND WITH_FFMPEG)
+  if(WITH_FFMPEG)
     set(cuda_link_libs ${cuda_link_libs} ${HIGHGUI_LIBRARIES})
   endif()
 else()
@@ -112,3 +104,7 @@ ocv_add_accuracy_tests(FILES "Include" ${test_hdrs}
                        FILES "Src" ${test_srcs}
                        ${nvidia})
 ocv_add_perf_tests()
+
+if(HAVE_CUDA)
+  add_subdirectory(perf4au)
+endif()

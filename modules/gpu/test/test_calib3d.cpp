@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -43,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-namespace {
+using namespace cvtest;
 
 //////////////////////////////////////////////////////////////////////////
 // StereoBM
@@ -60,7 +61,7 @@ struct StereoBM : testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(StereoBM, Regression)
+GPU_TEST_P(StereoBM, Regression)
 {
     cv::Mat left_image  = readImage("stereobm/aloe-L.png", cv::IMREAD_GRAYSCALE);
     cv::Mat right_image = readImage("stereobm/aloe-R.png", cv::IMREAD_GRAYSCALE);
@@ -95,7 +96,7 @@ struct StereoBeliefPropagation : testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(StereoBeliefPropagation, Regression)
+GPU_TEST_P(StereoBeliefPropagation, Regression)
 {
     cv::Mat left_image  = readImage("stereobp/aloe-L.png");
     cv::Mat right_image = readImage("stereobp/aloe-R.png");
@@ -133,7 +134,7 @@ struct StereoConstantSpaceBP : testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(StereoConstantSpaceBP, Regression)
+GPU_TEST_P(StereoConstantSpaceBP, Regression)
 {
     cv::Mat left_image  = readImage("csstereobp/aloe-L.png");
     cv::Mat right_image = readImage("csstereobp/aloe-R.png");
@@ -177,7 +178,7 @@ struct TransformPoints : testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(TransformPoints, Accuracy)
+GPU_TEST_P(TransformPoints, Accuracy)
 {
     cv::Mat src = randomMat(cv::Size(1000, 1), CV_32FC3, 0, 10);
     cv::Mat rvec = randomMat(cv::Size(3, 1), CV_32F, 0, 1);
@@ -225,7 +226,7 @@ struct ProjectPoints : testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(ProjectPoints, Accuracy)
+GPU_TEST_P(ProjectPoints, Accuracy)
 {
     cv::Mat src = randomMat(cv::Size(1000, 1), CV_32FC3, 0, 10);
     cv::Mat rvec = randomMat(cv::Size(3, 1), CV_32F, 0, 1);
@@ -275,7 +276,7 @@ struct SolvePnPRansac : testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(SolvePnPRansac, Accuracy)
+GPU_TEST_P(SolvePnPRansac, Accuracy)
 {
     cv::Mat object = randomMat(cv::Size(5000, 1), CV_32FC3, 0, 100);
     cv::Mat camera_mat = randomMat(cv::Size(3, 3), CV_32F, 0.5, 1);
@@ -324,7 +325,7 @@ PARAM_TEST_CASE(ReprojectImageTo3D, cv::gpu::DeviceInfo, cv::Size, MatDepth, Use
     }
 };
 
-TEST_P(ReprojectImageTo3D, Accuracy)
+GPU_TEST_P(ReprojectImageTo3D, Accuracy)
 {
     cv::Mat disp = randomMat(size, depth, 5.0, 30.0);
     cv::Mat Q = randomMat(cv::Size(4, 4), CV_32FC1, 0.1, 1.0);
@@ -343,7 +344,5 @@ INSTANTIATE_TEST_CASE_P(GPU_Calib3D, ReprojectImageTo3D, testing::Combine(
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16S)),
     WHOLE_SUBMAT));
-
-} // namespace
 
 #endif // HAVE_CUDA

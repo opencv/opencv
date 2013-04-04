@@ -1,16 +1,18 @@
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/legacy/legacy.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/features2d.hpp"
+#include "opencv2/objdetect.hpp"
+#include "opencv2/legacy.hpp"
 
 #include <algorithm>
 #include <iostream>
 #include <vector>
 #include <stdio.h>
 
+using namespace std;
 using namespace cv;
+
 static void help()
 {
     printf( "This program shows the use of the \"fern\" plannar PlanarObjectDetector point\n"

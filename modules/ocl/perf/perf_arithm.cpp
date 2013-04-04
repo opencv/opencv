@@ -2597,13 +2597,13 @@ TEST_P(Sum, MAT)
             Has_roi(k);
 
             t0 = (double)cvGetTickCount();//cpu start
-            Scalar cpures = cv::sum(mat1_roi);
+            cv::sum(mat1_roi);
             t0 = (double)cvGetTickCount() - t0;//cpu end
 
             t1 = (double)cvGetTickCount();//gpu start1
             gmat1 = mat1_roi;
             t2 = (double)cvGetTickCount(); //kernel
-            Scalar gpures = cv::ocl::sum(gmat1);
+            cv::ocl::sum(gmat1);
             t2 = (double)cvGetTickCount() - t2;//kernel
             t1 = (double)cvGetTickCount() - t1;//gpu end1
             if(j == 0)
@@ -4317,11 +4317,11 @@ INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(
-                            Values(CV_32FC1, CV_64FC1),
+                            Values(CV_32FC1, CV_32FC1),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(
-                            Values(CV_32FC1, CV_64FC1),
+                            Values(CV_32FC1, CV_32FC1),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(

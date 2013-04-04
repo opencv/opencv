@@ -1,14 +1,14 @@
 #include "perf_precomp.hpp"
 
+#if BUILD_WITH_VIDEO_OUTPUT_SUPPORT
+
 using namespace std;
 using namespace cv;
 using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-#ifndef ANDROID
-
-typedef std::tr1::tuple<String, bool> VideoWriter_Writing_t;
+typedef std::tr1::tuple<std::string, bool> VideoWriter_Writing_t;
 typedef perf::TestBaseWithParam<VideoWriter_Writing_t> VideoWriter_Writing;
 
 PERF_TEST_P(VideoWriter_Writing, WriteFrame,
@@ -23,7 +23,7 @@ PERF_TEST_P(VideoWriter_Writing, WriteFrame,
   string filename = getDataPath(get<0>(GetParam()));
   bool isColor = get<1>(GetParam());
 
-  VideoWriter writer("perf_writer.avi", CV_FOURCC('X', 'V', 'I', 'D'), 25, cv::Size(640, 480), isColor);
+  VideoWriter writer(cv::tempfile(".avi"), CV_FOURCC('X', 'V', 'I', 'D'), 25, cv::Size(640, 480), isColor);
 
   TEST_CYCLE() { Mat image = imread(filename, 1); writer << image; }
 
@@ -31,4 +31,4 @@ PERF_TEST_P(VideoWriter_Writing, WriteFrame,
   SANITY_CHECK(dummy);
 }
 
-#endif //ANDROID
+#endif // BUILD_WITH_VIDEO_OUTPUT_SUPPORT

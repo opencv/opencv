@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -42,6 +43,8 @@
 #include "test_precomp.hpp"
 
 #ifdef HAVE_CUDA
+
+using namespace cvtest;
 
 ////////////////////////////////////////////////////////
 // BilateralFilter
@@ -69,7 +72,7 @@ PARAM_TEST_CASE(BilateralFilter, cv::gpu::DeviceInfo, cv::Size, MatType)
     }
 };
 
-TEST_P(BilateralFilter, Accuracy)
+GPU_TEST_P(BilateralFilter, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -105,7 +108,7 @@ struct BruteForceNonLocalMeans: testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(BruteForceNonLocalMeans, Regression)
+GPU_TEST_P(BruteForceNonLocalMeans, Regression)
 {
     using cv::gpu::GpuMat;
 
@@ -134,8 +137,6 @@ TEST_P(BruteForceNonLocalMeans, Regression)
 
 INSTANTIATE_TEST_CASE_P(GPU_Denoising, BruteForceNonLocalMeans, ALL_DEVICES);
 
-
-
 ////////////////////////////////////////////////////////
 // Fast Force Non local means
 
@@ -150,7 +151,7 @@ struct FastNonLocalMeans: testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(FastNonLocalMeans, Regression)
+GPU_TEST_P(FastNonLocalMeans, Regression)
 {
     using cv::gpu::GpuMat;
 
@@ -167,8 +168,8 @@ TEST_P(FastNonLocalMeans, Regression)
     fnlmd.labMethod(GpuMat(bgr),  dbgr, 20, 10);
 
 #if 0
-    //dumpImage("denoising/fnlm_denoised_lena_bgr.png", cv::Mat(dbgr));
-    //dumpImage("denoising/fnlm_denoised_lena_gray.png", cv::Mat(dgray));
+    dumpImage("denoising/fnlm_denoised_lena_bgr.png", cv::Mat(dbgr));
+    dumpImage("denoising/fnlm_denoised_lena_gray.png", cv::Mat(dgray));
 #endif
 
     cv::Mat bgr_gold  = readImage("denoising/fnlm_denoised_lena_bgr.png", cv::IMREAD_COLOR);
@@ -180,6 +181,5 @@ TEST_P(FastNonLocalMeans, Regression)
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Denoising, FastNonLocalMeans, ALL_DEVICES);
-
 
 #endif // HAVE_CUDA

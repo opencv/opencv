@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -50,7 +50,7 @@
 namespace cv { namespace gpu {
     namespace detail
     {
-        std::string cuGetErrString(CUresult res);
+        String cuGetErrString(CUresult res);
 
         inline void cuSafeCall_impl(CUresult res, const char* file, int line)
         {

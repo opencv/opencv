@@ -217,7 +217,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         ts->update_context( this, idx, true );
 
         /* read the image */
-        string img_file = board_list[idx * 2];
+        String img_file = board_list[idx * 2];
         Mat gray = imread( folder + img_file, 0);
 
         if( gray.empty() )
@@ -227,7 +227,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
             return;
         }
 
-        string _filename = folder + (string)board_list[idx * 2 + 1];
+        String _filename = folder + (String)board_list[idx * 2 + 1];
         bool doesContatinChessboard;
         Mat expected;
         {

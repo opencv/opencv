@@ -1,4 +1,4 @@
-#include "opencv2/legacy/legacy.hpp"
+#include "opencv2/legacy.hpp"
 #include "opencv2/legacy/compat.hpp"
 
 #define OLD_MODULESTR "cv2.cv"
@@ -253,7 +253,7 @@ static PyObject *iplimage_tostring(PyObject *self, PyObject *args)
     return NULL;
   if (i == NULL)
     return NULL;
-  cv::Mat img(i);
+  cv::Mat img = cvarrToMat(i);
   size_t esz = img.elemSize();
   int nrows = img.rows, ncols = img.cols;
 
@@ -1158,7 +1158,7 @@ static PyObject* cvseq_map_getitem(PyObject *o, PyObject *item)
     if (i < 0)
       i += (int)cvseq_seq_length(o);
     return cvseq_seq_getitem(o, i);
-  } else if (PySlice_Check(item)) {
+  } else if (!!PySlice_Check(item)) {
     Py_ssize_t start, stop, step, slicelength, cur, i;
     PyObject* result;
 
@@ -1975,7 +1975,7 @@ struct dims
 
 static int convert_to_dim(PyObject *item, int i, dims *dst, CvArr *cva, const char *name = "no_name")
 {
-  if (PySlice_Check(item)) {
+  if (!!PySlice_Check(item)) {
     Py_ssize_t start, stop, step, slicelength;
     PySlice_GetIndicesEx((PySliceObject*)item, cvGetDimSize(cva, i), &start, &stop, &step, &slicelength);
     dst->i[i] = (int)start;
@@ -3882,23 +3882,23 @@ static PyMethodDef old_methods[] = {
 #include "opencv2/opencv_modules.hpp"
 
 #ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/nonfree.hpp"
+#  include "opencv2/nonfree.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_FEATURES2D
-#  include "opencv2/features2d/features2d.hpp"
+#  include "opencv2/features2d.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_VIDEO
-#  include "opencv2/video/video.hpp"
+#  include "opencv2/video.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_ML
-#  include "opencv2/ml/ml.hpp"
+#  include "opencv2/ml.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_CONTRIB
-#  include "opencv2/contrib/contrib.hpp"
+#  include "opencv2/contrib.hpp"
 #endif
 
 static PyObject* init_cv()

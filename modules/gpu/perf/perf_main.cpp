@@ -1,74 +1,47 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+
 #include "perf_precomp.hpp"
 
-namespace{
-
-static void printOsInfo()
-{
-#if defined _WIN32
-#   if defined _WIN64
-        printf("[----------]\n[ GPU INFO ] \tRun on OS Windows x64.\n[----------]\n"), fflush(stdout);
-#   else
-        printf("[----------]\n[ GPU INFO ] \tRun on OS Windows x32.\n[----------]\n"), fflush(stdout);
-#   endif
-#elif defined linux
-#   if defined _LP64
-        printf("[----------]\n[ GPU INFO ] \tRun on OS Linux x64.\n[----------]\n"), fflush(stdout);
-#   else
-        printf("[----------]\n[ GPU INFO ] \tRun on OS Linux x32.\n[----------]\n"), fflush(stdout);
-#   endif
-#elif defined __APPLE__
-#   if defined _LP64
-        printf("[----------]\n[ GPU INFO ] \tRun on OS Apple x64.\n[----------]\n"), fflush(stdout);
-#   else
-        printf("[----------]\n[ GPU INFO ] \tRun on OS Apple x32.\n[----------]\n"), fflush(stdout);
-#   endif
-#endif
-
-}
-
-static void printCudaInfo()
-{
-    printOsInfo();
-#ifndef HAVE_CUDA
-    printf("[----------]\n[ GPU INFO ] \tOpenCV was built without CUDA support.\n[----------]\n"), fflush(stdout);
-#else
-    int driver;
-    cudaDriverGetVersion(&driver);
-
-    printf("[----------]\n"), fflush(stdout);
-    printf("[ GPU INFO ] \tCUDA Driver  version: %d.\n", driver), fflush(stdout);
-    printf("[ GPU INFO ] \tCUDA Runtime version: %d.\n", CUDART_VERSION), fflush(stdout);
-    printf("[----------]\n"), fflush(stdout);
-
-    printf("[----------]\n"), fflush(stdout);
-    printf("[ GPU INFO ] \tGPU module was compiled for the following GPU archs.\n"), fflush(stdout);
-    printf("[      BIN ] \t%s.\n", CUDA_ARCH_BIN), fflush(stdout);
-    printf("[      PTX ] \t%s.\n", CUDA_ARCH_PTX), fflush(stdout);
-    printf("[----------]\n"), fflush(stdout);
-
-    printf("[----------]\n"), fflush(stdout);
-    int deviceCount = cv::gpu::getCudaEnabledDeviceCount();
-    printf("[ GPU INFO ] \tCUDA device count:: %d.\n", deviceCount), fflush(stdout);
-    printf("[----------]\n"), fflush(stdout);
-
-    for (int i = 0; i < deviceCount; ++i)
-    {
-        cv::gpu::DeviceInfo info(i);
-
-        printf("[----------]\n"), fflush(stdout);
-        printf("[ DEVICE   ] \t# %d %s.\n", i, info.name().c_str()), fflush(stdout);
-        printf("[          ] \tCompute capability: %d.%d\n", (int)info.majorVersion(), (int)info.minorVersion()), fflush(stdout);
-        printf("[          ] \tMulti Processor Count:  %d\n", info.multiProcessorCount()), fflush(stdout);
-        printf("[          ] \tTotal memory: %d Mb\n", static_cast<int>(static_cast<int>(info.totalMemory() / 1024.0) / 1024.0)), fflush(stdout);
-        printf("[          ] \tFree  memory: %d Mb\n", static_cast<int>(static_cast<int>(info.freeMemory()  / 1024.0) / 1024.0)), fflush(stdout);
-        if (!info.isCompatible())
-            printf("[ GPU INFO ] \tThis device is NOT compatible with current GPU module build\n");
-        printf("[----------]\n"), fflush(stdout);
-    }
-
-#endif
-}
-
-}
+using namespace perf;
 
 CV_PERF_TEST_MAIN(gpu, printCudaInfo())

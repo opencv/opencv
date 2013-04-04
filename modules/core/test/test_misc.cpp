@@ -40,3 +40,11 @@ TEST(Core_OutputArraySreate, _1997)
 
     ASSERT_NO_THROW(local::create( mat(Rect(Point(), submatSize)), submatSize, mat.type() ));
 }
+
+TEST(Core_SaturateCast, NegativeNotClipped)
+{
+    double d = -1.0;
+    unsigned int val = cv::saturate_cast<unsigned int>(d);
+
+    ASSERT_EQ(0xffffffff, val);
+}

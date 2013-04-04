@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -42,7 +42,7 @@
 
 #include "thread_wrappers.h"
 
-#if defined(HAVE_CUDA) && !defined(__APPLE__)
+#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
 
 #ifdef WIN32
     #define NOMINMAX

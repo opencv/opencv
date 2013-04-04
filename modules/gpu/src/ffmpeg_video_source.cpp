@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -42,12 +42,12 @@
 
 #include "ffmpeg_video_source.h"
 
-#if defined(HAVE_CUDA) && !defined(__APPLE__)
+#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
 
-#ifdef HAVE_FFMPEG
-    #include "cap_ffmpeg_impl.hpp"
+#if defined(HAVE_FFMPEG) && defined(BUILD_SHARED_LIBS)
+    #include "../src/cap_ffmpeg_impl.hpp"
 #else
-    #include "cap_ffmpeg_api.hpp"
+    #include "../src/cap_ffmpeg_api.hpp"
 #endif
 
 namespace
@@ -64,7 +64,7 @@ namespace
         {
             #if defined WIN32 || defined _WIN32
                 const char* module_name = "opencv_ffmpeg"
-                    CVAUX_STR(CV_MAJOR_VERSION) CVAUX_STR(CV_MINOR_VERSION) CVAUX_STR(CV_SUBMINOR_VERSION)
+                    CVAUX_STR(CV_VERSION_EPOCH) CVAUX_STR(CV_VERSION_MAJOR) CVAUX_STR(CV_VERSION_MINOR)
                 #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)
                     "_64"
                 #endif
@@ -96,7 +96,7 @@ namespace
     }
 }
 
-cv::gpu::detail::FFmpegVideoSource::FFmpegVideoSource(const std::string& fname) :
+cv::gpu::detail::FFmpegVideoSource::FFmpegVideoSource(const String& fname) :
     stream_(0)
 {
     CV_Assert( init_MediaStream_FFMPEG() );

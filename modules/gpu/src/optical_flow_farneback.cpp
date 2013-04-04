@@ -22,13 +22,13 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -50,7 +50,6 @@
 // leads to an inefficient code. It's for debug purposes only.
 #define ENABLE_GPU_RESIZE 1
 
-using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
@@ -153,7 +152,7 @@ void cv::gpu::FarnebackOpticalFlow::prepareGaussian(
 
 void cv::gpu::FarnebackOpticalFlow::setPolynomialExpansionConsts(int n, double sigma)
 {
-    vector<float> buf(n*6 + 3);
+    std::vector<float> buf(n*6 + 3);
     float* g = &buf[0] + n;
     float* xg = g + n*2 + 1;
     float* xxg = xg + n*2 + 1;
@@ -172,7 +171,7 @@ void cv::gpu::FarnebackOpticalFlow::updateFlow_boxFilter(
         const GpuMat& R0, const GpuMat& R1, GpuMat& flowx, GpuMat &flowy,
         GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[])
 {
-    if (!isDeviceArch11_)
+    if (deviceSupports(FEATURE_SET_COMPUTE_12))
         device::optflow_farneback::boxFilter5Gpu(M, blockSize/2, bufM, S(streams[0]));
     else
         device::optflow_farneback::boxFilter5Gpu_CC11(M, blockSize/2, bufM, S(streams[0]));
@@ -191,7 +190,7 @@ void cv::gpu::FarnebackOpticalFlow::updateFlow_gaussianBlur(
         const GpuMat& R0, const GpuMat& R1, GpuMat& flowx, GpuMat& flowy,
         GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[])
 {
-    if (!isDeviceArch11_)
+    if (deviceSupports(FEATURE_SET_COMPUTE_12))
         device::optflow_farneback::gaussianBlur5Gpu(
                     M, blockSize/2, bufM, BORDER_REPLICATE_GPU, S(streams[0]));
     else
@@ -209,7 +208,7 @@ void cv::gpu::FarnebackOpticalFlow::updateFlow_gaussianBlur(
 void cv::gpu::FarnebackOpticalFlow::operator ()(
         const GpuMat &frame0, const GpuMat &frame1, GpuMat &flowx, GpuMat &flowy, Stream &s)
 {
-    CV_Assert(frame0.type() == CV_8U && frame1.type() == CV_8U);
+    CV_Assert(frame0.channels() == 1 && frame1.channels() == 1);
     CV_Assert(frame0.size() == frame1.size());
     CV_Assert(polyN == 5 || polyN == 7);
     CV_Assert(!fastPyramids || std::abs(pyrScale - 0.5) < 1e-6);

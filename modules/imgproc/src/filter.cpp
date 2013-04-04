@@ -193,7 +193,7 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     wholeSize = Size(-1,-1);
 }
 
-static const int VEC_ALIGN = CV_MALLOC_ALIGN;
+#define VEC_ALIGN CV_MALLOC_ALIGN
 
 int FilterEngine::start(Size _wholeSize, Rect _roi, int _maxBufRows)
 {
@@ -1954,7 +1954,7 @@ struct FilterVec_8u
         Mat kernel;
         _kernel.convertTo(kernel, CV_32F, 1./(1 << _bits), 0);
         delta = (float)(_delta/(1 << _bits));
-        vector<Point> coords;
+        std::vector<Point> coords;
         preprocess2DKernel(kernel, coords, coeffs);
         _nz = (int)coords.size();
     }
@@ -2024,7 +2024,7 @@ struct FilterVec_8u
     }
 
     int _nz;
-    vector<uchar> coeffs;
+    std::vector<uchar> coeffs;
     float delta;
 };
 
@@ -2037,7 +2037,7 @@ struct FilterVec_8u16s
         Mat kernel;
         _kernel.convertTo(kernel, CV_32F, 1./(1 << _bits), 0);
         delta = (float)(_delta/(1 << _bits));
-        vector<Point> coords;
+        std::vector<Point> coords;
         preprocess2DKernel(kernel, coords, coeffs);
         _nz = (int)coords.size();
     }
@@ -2107,7 +2107,7 @@ struct FilterVec_8u16s
     }
 
     int _nz;
-    vector<uchar> coeffs;
+    std::vector<uchar> coeffs;
     float delta;
 };
 
@@ -2118,7 +2118,7 @@ struct FilterVec_32f
     FilterVec_32f(const Mat& _kernel, int, double _delta)
     {
         delta = (float)_delta;
-        vector<Point> coords;
+        std::vector<Point> coords;
         preprocess2DKernel(_kernel, coords, coeffs);
         _nz = (int)coords.size();
     }
@@ -2179,7 +2179,7 @@ struct FilterVec_32f
     }
 
     int _nz;
-    vector<uchar> coeffs;
+    std::vector<uchar> coeffs;
     float delta;
 };
 
@@ -2989,7 +2989,7 @@ cv::Ptr<cv::FilterEngine> cv::createSeparableLinearFilter(
 namespace cv
 {
 
-void preprocess2DKernel( const Mat& kernel, vector<Point>& coords, vector<uchar>& coeffs )
+void preprocess2DKernel( const Mat& kernel, std::vector<Point>& coords, std::vector<uchar>& coeffs )
 {
     int i, j, k, nz = countNonZero(kernel), ktype = kernel.type();
     if(nz == 0)
@@ -3107,9 +3107,9 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
         }
     }
 
-    vector<Point> coords;
-    vector<uchar> coeffs;
-    vector<uchar*> ptrs;
+    std::vector<Point> coords;
+    std::vector<uchar> coeffs;
+    std::vector<uchar*> ptrs;
     KT delta;
     CastOp castOp0;
     VecOp vecOp;

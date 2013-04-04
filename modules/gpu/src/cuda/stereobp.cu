@@ -28,7 +28,7 @@
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -42,7 +42,7 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
+#include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 
@@ -454,7 +454,7 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(cols, threads.x << 1);
             grid.y = divUp(rows, threads.y);
 
-            int elem_step = u.step/sizeof(T);
+            int elem_step = (int)(u.step / sizeof(T));
 
             for(int t = 0; t < iters; ++t)
             {

@@ -46,21 +46,19 @@
 #include "opencv2/videostab/ring_buffer.hpp"
 #include "clp.hpp"
 
-using namespace std;
-
 namespace cv
 {
 namespace videostab
 {
 
 void MotionStabilizationPipeline::stabilize(
-        int size, const vector<Mat> &motions, pair<int,int> range, Mat *stabilizationMotions)
+        int size, const std::vector<Mat> &motions, std::pair<int,int> range, Mat *stabilizationMotions)
 {
-    vector<Mat> updatedMotions(motions.size());
+    std::vector<Mat> updatedMotions(motions.size());
     for (size_t i = 0; i < motions.size(); ++i)
         updatedMotions[i] = motions[i].clone();
 
-    vector<Mat> stabilizationMotions_(size);
+    std::vector<Mat> stabilizationMotions_(size);
 
     for (int i = 0; i < size; ++i)
         stabilizationMotions[i] = Mat::eye(3, 3, CV_32F);
@@ -83,7 +81,7 @@ void MotionStabilizationPipeline::stabilize(
 
 
 void MotionFilterBase::stabilize(
-        int size, const vector<Mat> &motions, pair<int,int> range, Mat *stabilizationMotions)
+        int size, const std::vector<Mat> &motions, std::pair<int,int> range, Mat *stabilizationMotions)
 {
     for (int i = 0; i < size; ++i)
         stabilizationMotions[i] = stabilize(i, motions, range);
@@ -93,7 +91,7 @@ void MotionFilterBase::stabilize(
 void GaussianMotionFilter::setParams(int _radius, float _stdev)
 {
     radius_ = _radius;
-    stdev_ = _stdev > 0.f ? _stdev : sqrt(static_cast<float>(_radius));
+    stdev_ = _stdev > 0.f ? _stdev : std::sqrt(static_cast<float>(_radius));
 
     float sum = 0;
     weight_.resize(2*radius_ + 1);
@@ -104,13 +102,13 @@ void GaussianMotionFilter::setParams(int _radius, float _stdev)
 }
 
 
-Mat GaussianMotionFilter::stabilize(int idx, const vector<Mat> &motions, pair<int,int> range)
+Mat GaussianMotionFilter::stabilize(int idx, const std::vector<Mat> &motions, std::pair<int,int> range)
 {
     const Mat &cur = at(idx, motions);
     Mat res = Mat::zeros(cur.size(), cur.type());
     float sum = 0.f;
-    int iMin = max(idx - radius_, range.first);
-    int iMax = min(idx + radius_, range.second);
+    int iMin = std::max(idx - radius_, range.first);
+    int iMax = std::min(idx + radius_, range.second);
     for (int i = iMin; i <= iMax; ++i)
     {
         res += weight_[radius_ + i - idx] * getMotion(idx, i, motions);
@@ -134,7 +132,7 @@ LpMotionStabilizer::LpMotionStabilizer(MotionModel model)
 
 #ifndef HAVE_CLP
 
-void LpMotionStabilizer::stabilize(int, const vector<Mat>&, pair<int,int>, Mat*)
+void LpMotionStabilizer::stabilize(int, const std::vector<Mat>&, std::pair<int,int>, Mat*)
 {
     CV_Error(CV_StsError, "The library is built without Clp support");
 }
@@ -142,12 +140,12 @@ void LpMotionStabilizer::stabilize(int, const vector<Mat>&, pair<int,int>, Mat*)
 #else
 
 void LpMotionStabilizer::stabilize(
-        int size, const vector<Mat> &motions, pair<int,int> /*range*/, Mat *stabilizationMotions)
+        int size, const std::vector<Mat> &motions, std::pair<int,int> /*range*/, Mat *stabilizationMotions)
 {
     CV_Assert(model_ <= MM_AFFINE);
 
     int N = size;
-    const vector<Mat> &M = motions;
+    const std::vector<Mat> &M = motions;
     Mat *S = stabilizationMotions;
 
     double w = frameSize_.width, h = frameSize_.height;

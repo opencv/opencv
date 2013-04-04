@@ -8,64 +8,6 @@ between different algorithms solving the same problem. All objects that implemen
 inherit the
 :ocv:class:`FeatureDetector` interface.
 
-KeyPoint
---------
-.. ocv:class:: KeyPoint
-
-  Data structure for salient point detectors.
-
-  .. ocv:member:: Point2f pt
-
-     coordinates of the keypoint
-
-  .. ocv:member:: float size
-
-     diameter of the meaningful keypoint neighborhood
-
-  .. ocv:member:: float angle
-
-     computed orientation of the keypoint (-1 if not applicable). Its possible values are in a range [0,360) degrees. It is measured relative to image coordinate system (y-axis is directed downward), ie in clockwise.
-
-  .. ocv:member:: float response
-
-     the response by which the most strong keypoints have been selected. Can be used for further sorting or subsampling
-
-  .. ocv:member:: int octave
-
-     octave (pyramid layer) from which the keypoint has been extracted
-
-  .. ocv:member:: int class_id
-
-     object id that can be used to clustered keypoints by an object they belong to
-
-KeyPoint::KeyPoint
-------------------
-The keypoint constructors
-
-.. ocv:function:: KeyPoint::KeyPoint()
-
-.. ocv:function:: KeyPoint::KeyPoint(Point2f _pt, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
-
-.. ocv:function:: KeyPoint::KeyPoint(float x, float y, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
-
-.. ocv:pyfunction:: cv2.KeyPoint([x, y, _size[, _angle[, _response[, _octave[, _class_id]]]]]) -> <KeyPoint object>
-
-    :param x: x-coordinate of the keypoint
-
-    :param y: y-coordinate of the keypoint
-
-    :param _pt: x & y coordinates of the keypoint
-
-    :param _size: keypoint diameter
-
-    :param _angle: keypoint orientation
-
-    :param _response: keypoint detector response on the keypoint (that is, strength of the keypoint)
-
-    :param _octave: pyramid octave in which the keypoint has been detected
-
-    :param _class_id: object id
-
 
 FeatureDetector
 ---------------
@@ -88,7 +30,7 @@ Abstract base class for 2D image feature detectors. ::
         virtual void read(const FileNode&);
         virtual void write(FileStorage&) const;
 
-        static Ptr<FeatureDetector> create( const string& detectorType );
+        static Ptr<FeatureDetector> create( const String& detectorType );
 
     protected:
     ...
@@ -113,10 +55,10 @@ Detects keypoints in an image (first variant) or image set (second variant).
     :param masks: Masks for each input image specifying where to look for keypoints (optional). ``masks[i]`` is a mask for ``images[i]``.
 
 FeatureDetector::create
----------------------------
+-----------------------
 Creates a feature detector by its name.
 
-.. ocv:function:: Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
+.. ocv:function:: Ptr<FeatureDetector> FeatureDetector::create( const String& detectorType )
 
     :param detectorType: Feature detector type.
 
@@ -127,6 +69,7 @@ The following detector types are supported:
 * ``"SIFT"`` -- :ocv:class:`SIFT` (nonfree module)
 * ``"SURF"`` -- :ocv:class:`SURF` (nonfree module)
 * ``"ORB"`` -- :ocv:class:`ORB`
+* ``"BRISK"`` -- :ocv:class:`BRISK`
 * ``"MSER"`` -- :ocv:class:`MSER`
 * ``"GFTT"`` -- :ocv:class:`GoodFeaturesToTrackDetector`
 * ``"HARRIS"`` -- :ocv:class:`GoodFeaturesToTrackDetector` with Harris detector enabled
@@ -219,8 +162,7 @@ StarFeatureDetector
 -------------------
 .. ocv:class:: StarFeatureDetector : public FeatureDetector
 
-Wrapping class for feature detection using the
-:ocv:class:`StarDetector` class. ::
+The class implements the keypoint detector introduced by K. Konolige, synonym of ``StarDetector``.  ::
 
     class StarFeatureDetector : public FeatureDetector
     {
@@ -412,7 +354,7 @@ Example of creating ``DynamicAdaptedFeatureDetector`` : ::
 
 
 DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
-----------------------------------------------------------------
+------------------------------------------------------------
 The constructor
 
 .. ocv:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector( const Ptr<AdjusterAdapter>& adjuster, int min_features=400, int max_features=500, int max_iters=5 )
@@ -439,7 +381,7 @@ Class providing an interface for adjusting parameters of a feature detector. Thi
         virtual void tooMany(int max, int n_detected) = 0;
         virtual bool good() const = 0;
         virtual Ptr<AdjusterAdapter> clone() const = 0;
-        static Ptr<AdjusterAdapter> create( const string& detectorType );
+        static Ptr<AdjusterAdapter> create( const String& detectorType );
      };
 
 
@@ -484,7 +426,7 @@ Example: ::
 
 
 AdjusterAdapter::good
--------------------------
+---------------------
 Returns false if the detector parameters cannot be adjusted any more.
 
 .. ocv:function:: bool AdjusterAdapter::good() const
@@ -497,10 +439,10 @@ Example: ::
         }
 
 AdjusterAdapter::create
--------------------------
+-----------------------
 Creates an adjuster adapter by name
 
-.. ocv:function:: Ptr<AdjusterAdapter> AdjusterAdapter::create( const string& detectorType )
+.. ocv:function:: Ptr<AdjusterAdapter> AdjusterAdapter::create( const String& detectorType )
 
     Creates an adjuster adapter by name ``detectorType``. The detector name is the same as in :ocv:func:`FeatureDetector::create`, but now supports ``"FAST"``, ``"STAR"``, and ``"SURF"`` only.
 
@@ -528,3 +470,23 @@ StarAdjuster
                 StarAdjuster(double initial_thresh = 30.0);
                 ...
         };
+
+SurfAdjuster
+------------
+.. ocv:class:: SurfAdjuster : public AdjusterAdapter
+
+:ocv:class:`AdjusterAdapter` for ``SurfFeatureDetector``.  ::
+
+    class CV_EXPORTS SurfAdjuster: public AdjusterAdapter
+    {
+    public:
+        SurfAdjuster( double initial_thresh=400.f, double min_thresh=2, double max_thresh=1000 );
+
+        virtual void tooFew(int minv, int n_detected);
+        virtual void tooMany(int maxv, int n_detected);
+        virtual bool good() const;
+
+        virtual Ptr<AdjusterAdapter> clone() const;
+
+        ...
+    };

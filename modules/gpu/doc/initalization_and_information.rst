@@ -6,7 +6,7 @@ Initalization and Information
 
 
 gpu::getCudaEnabledDeviceCount
-----------------------------------
+------------------------------
 Returns the number of installed CUDA-enabled devices.
 
 .. ocv:function:: int gpu::getCudaEnabledDeviceCount()
@@ -16,7 +16,7 @@ Use this function before any other GPU functions calls. If OpenCV is compiled wi
 
 
 gpu::setDevice
-------------------
+--------------
 Sets a device and initializes it for the current thread.
 
 .. ocv:function:: void gpu::setDevice(int device)
@@ -28,7 +28,7 @@ If the call of this function is omitted, a default device is initialized at the 
 
 
 gpu::getDevice
-------------------
+--------------
 Returns the current device index set by :ocv:func:`gpu::setDevice` or initialized by default.
 
 .. ocv:function:: int gpu::getDevice()
@@ -36,7 +36,7 @@ Returns the current device index set by :ocv:func:`gpu::setDevice` or initialize
 
 
 gpu::resetDevice
-------------------
+----------------
 Explicitly destroys and cleans up all resources associated with the current device in the current process.
 
 .. ocv:function:: void gpu::resetDevice()
@@ -47,22 +47,19 @@ Any subsequent API call to this device will reinitialize the device.
 
 gpu::FeatureSet
 ---------------
+Enumeration providing GPU computing features.
 
-Class providing GPU computing features. ::
+.. ocv:enum:: gpu::FeatureSet
 
-    enum FeatureSet
-    {
-        FEATURE_SET_COMPUTE_10,
-        FEATURE_SET_COMPUTE_11,
-        FEATURE_SET_COMPUTE_12,
-        FEATURE_SET_COMPUTE_13,
-        FEATURE_SET_COMPUTE_20,
-        FEATURE_SET_COMPUTE_21,
-        GLOBAL_ATOMICS,
-        SHARED_ATOMICS,
-        NATIVE_DOUBLE
-    };
-
+  .. ocv:emember:: FEATURE_SET_COMPUTE_10
+  .. ocv:emember:: FEATURE_SET_COMPUTE_11
+  .. ocv:emember:: FEATURE_SET_COMPUTE_12
+  .. ocv:emember:: FEATURE_SET_COMPUTE_13
+  .. ocv:emember:: FEATURE_SET_COMPUTE_20
+  .. ocv:emember:: FEATURE_SET_COMPUTE_21
+  .. ocv:emember:: GLOBAL_ATOMICS
+  .. ocv:emember:: SHARED_ATOMICS
+  .. ocv:emember:: NATIVE_DOUBLE
 
 
 gpu::TargetArchs
@@ -75,7 +72,7 @@ The following method checks whether the module was built with the support of the
 
     .. ocv:function:: static bool gpu::TargetArchs::builtWith( FeatureSet feature_set )
 
-        :param feature_set: Features to be checked. See :ocv:class:`gpu::FeatureSet`.
+        :param feature_set: Features to be checked. See :ocv:enum:`gpu::FeatureSet`.
 
 There is a set of methods to check whether the module contains intermediate (PTX) or binary GPU code for the given architecture(s):
 
@@ -113,7 +110,7 @@ Class providing functionality for querying the specified GPU properties. ::
         DeviceInfo();
         DeviceInfo(int device_id);
 
-        string name() const;
+        String name() const;
 
         int majorVersion() const;
         int minorVersion() const;
@@ -132,7 +129,7 @@ Class providing functionality for querying the specified GPU properties. ::
 
 
 gpu::DeviceInfo::DeviceInfo
--------------------------------
+---------------------------
 The constructors.
 
 .. ocv:function:: gpu::DeviceInfo::DeviceInfo()
@@ -146,15 +143,15 @@ Constructs the ``DeviceInfo`` object for the specified device. If ``device_id`` 
 
 
 gpu::DeviceInfo::name
--------------------------
+---------------------
 Returns the device name.
 
-.. ocv:function:: string gpu::DeviceInfo::name() const
+.. ocv:function:: String gpu::DeviceInfo::name() const
 
 
 
 gpu::DeviceInfo::majorVersion
----------------------------------
+-----------------------------
 Returns the major compute capability version.
 
 .. ocv:function:: int gpu::DeviceInfo::majorVersion()
@@ -162,7 +159,7 @@ Returns the major compute capability version.
 
 
 gpu::DeviceInfo::minorVersion
----------------------------------
+-----------------------------
 Returns the minor compute capability version.
 
 .. ocv:function:: int gpu::DeviceInfo::minorVersion()
@@ -170,7 +167,7 @@ Returns the minor compute capability version.
 
 
 gpu::DeviceInfo::multiProcessorCount
-----------------------------------------
+------------------------------------
 Returns the number of streaming multiprocessors.
 
 .. ocv:function:: int gpu::DeviceInfo::multiProcessorCount()
@@ -178,7 +175,7 @@ Returns the number of streaming multiprocessors.
 
 
 gpu::DeviceInfo::freeMemory
--------------------------------
+---------------------------
 Returns the amount of free memory in bytes.
 
 .. ocv:function:: size_t gpu::DeviceInfo::freeMemory()
@@ -186,7 +183,7 @@ Returns the amount of free memory in bytes.
 
 
 gpu::DeviceInfo::totalMemory
---------------------------------
+----------------------------
 Returns the amount of total memory in bytes.
 
 .. ocv:function:: size_t gpu::DeviceInfo::totalMemory()
@@ -194,19 +191,19 @@ Returns the amount of total memory in bytes.
 
 
 gpu::DeviceInfo::supports
------------------------------
+-------------------------
 Provides information on GPU feature support.
 
 .. ocv:function:: bool gpu::DeviceInfo::supports( FeatureSet feature_set ) const
 
-    :param feature_set: Features to be checked. See :ocv:class:`gpu::FeatureSet`.
+    :param feature_set: Features to be checked. See :ocv:enum:`gpu::FeatureSet`.
 
 This function returns ``true`` if the device has the specified GPU feature. Otherwise, it returns ``false`` .
 
 
 
 gpu::DeviceInfo::isCompatible
----------------------------------
+-----------------------------
 Checks the GPU module and device compatibility.
 
 .. ocv:function:: bool gpu::DeviceInfo::isCompatible()
@@ -216,7 +213,7 @@ This function returns ``true`` if the GPU module can be run on the specified dev
 
 
 gpu::DeviceInfo::deviceID
----------------------------------
+-------------------------
 Returns system index of the GPU device starting with 0.
 
 .. ocv:function:: int gpu::DeviceInfo::deviceID()

@@ -54,7 +54,7 @@ namespace cv { namespace gpu { namespace device
     {
         template <typename T>
         void remap_gpu(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst,
-                       int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+                       int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
     }
 }}}
 
@@ -63,7 +63,7 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
     using namespace cv::gpu::device::imgproc;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation,
-        int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
 
     static const func_t funcs[6][4] =
     {
@@ -91,15 +91,12 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
     Scalar_<float> borderValueFloat;
     borderValueFloat = borderValue;
 
-    DeviceInfo info;
-    int cc = info.majorVersion() * 10 + info.minorVersion();
-
     Size wholeSize;
     Point ofs;
     src.locateROI(wholeSize, ofs);
 
     func(src, PtrStepSzb(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y, xmap, ymap,
-        dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(stream), cc);
+        dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(stream), deviceSupports(FEATURE_SET_COMPUTE_20));
 }
 
 #endif // HAVE_CUDA

@@ -22,13 +22,13 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -104,12 +104,12 @@ void cv::gpu::connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scal
 
 void cv::gpu::labelComponents(const GpuMat& mask, GpuMat& components, int flags, Stream& s)
 {
-    if (!TargetArchs::builtWith(SHARED_ATOMICS) || !DeviceInfo().supports(SHARED_ATOMICS))
-        CV_Error(CV_StsNotImplemented, "The device doesn't support shared atomics and communicative synchronization!");
     CV_Assert(!mask.empty() && mask.type() == CV_8U);
 
-    if (mask.size() != components.size() || components.type() != CV_32SC1)
-        components.create(mask.size(), CV_32SC1);
+    if (!deviceSupports(SHARED_ATOMICS))
+        CV_Error(CV_StsNotImplemented, "The device doesn't support shared atomics and communicative synchronization!");
+
+    components.create(mask.size(), CV_32SC1);
 
     cudaStream_t stream = StreamAccessor::getStream(s);
     device::ccl::labelComponents(mask, components, flags, stream);

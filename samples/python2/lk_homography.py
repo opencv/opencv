@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
 Lucas-Kanade homography tracker
 ===============================
@@ -101,8 +103,10 @@ class App:
 
 def main():
     import sys
-    try: video_src = sys.argv[1]
-    except: video_src = 0
+    try:
+        video_src = sys.argv[1]
+    except:
+        video_src = 0
 
     print __doc__
     App(video_src).run()

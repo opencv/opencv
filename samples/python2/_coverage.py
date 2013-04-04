@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
 Utility for measuring python opencv API coverage by samples.
 '''

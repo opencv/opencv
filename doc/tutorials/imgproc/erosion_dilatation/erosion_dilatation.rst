@@ -39,7 +39,7 @@ Morphological Operations
      :align: center
 
 Dilation
-^^^^^^^^^
+~~~~~~~~
 
 * This operations consists of convoluting an image :math:`A` with some kernel (:math:`B`), which can have any shape or size, usually a square or circle.
 
@@ -54,7 +54,7 @@ Dilation
 The background (bright) dilates around the black regions of the letter.
 
 Erosion
-^^^^^^^^
+~~~~~~~
 
 * This operation is the sister of dilation. What this does is to compute a local minimum over the area of the kernel.
 
@@ -74,8 +74,8 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
 .. code-block:: cpp
 
-   #include "opencv2/imgproc/imgproc.hpp"
-   #include "opencv2/highgui/highgui.hpp"
+   #include "opencv2/imgproc.hpp"
+   #include "opencv2/highgui.hpp"
    #include "highgui.h"
    #include <stdlib.h>
    #include <stdio.h>
@@ -216,17 +216,17 @@ Explanation
 
         .. code-block:: cpp
 
-       Mat element = getStructuringElement( erosion_type,
-                                    Size( 2*erosion_size + 1, 2*erosion_size+1 ),
-                                Point( erosion_size, erosion_size ) );
+            Mat element = getStructuringElement( erosion_type,
+                                          Size( 2*erosion_size + 1, 2*erosion_size+1 ),
+                                          Point( erosion_size, erosion_size ) );
 
        We can choose any of three shapes for our kernel:
 
        .. container:: enumeratevisibleitemswithsquare
 
-      + Rectangular box: MORPH_RECT
-      + Cross:  MORPH_CROSS
-      + Ellipse: MORPH_ELLIPSE
+           + Rectangular box: MORPH_RECT
+           + Cross:  MORPH_CROSS
+           + Ellipse: MORPH_ELLIPSE
 
        Then, we just have to specify the size of our kernel and the *anchor point*. If not specified, it is assumed to be in the center.
 

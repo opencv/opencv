@@ -2,8 +2,8 @@
 
 #if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(ANDROID)
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/objdetect/objdetect.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/objdetect.hpp>
 
 #include <vector>
 

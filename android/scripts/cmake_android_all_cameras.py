@@ -7,6 +7,16 @@ import shutil
 ScriptHome = os.path.split(sys.argv[0])[0]
 ConfFile = open(os.path.join(ScriptHome, "camera_build.conf"), "rt")
 HomeDir = os.getcwd()
+
+stub = ""
+try:
+    stub = os.environ["ANDROID_STUB_ROOT"]
+except:
+    None
+
+if (stub == ""):
+    print("Warning: ANDROID_STUB_ROOT environment variable is not set")
+
 for s in ConfFile.readlines():
     s = s[0:s.find("#")]
     if (not s):
@@ -20,6 +30,7 @@ for s in ConfFile.readlines():
     NativeApiLevel = str.strip(keys[2])
     AndroidTreeRoot = str.strip(keys[3])
     AndroidTreeRoot = str.strip(AndroidTreeRoot, "\n")
+    AndroidTreeRoot = os.path.expandvars(AndroidTreeRoot)
     print("Building %s for %s" % (MakeTarget, Arch))
     BuildDir = os.path.join(HomeDir, MakeTarget + "_" + Arch)
 
@@ -33,20 +44,27 @@ for s in ConfFile.readlines():
         continue
 
     shutil.rmtree(os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"), ignore_errors=True)
+
+    LinkerLibs = os.path.join(AndroidTreeRoot, "bin_arm", "system")
     if (Arch == "x86"):
-        shutil.copytree(os.path.join(AndroidTreeRoot, "bin_x86", "system"), os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"))
+        LinkerLibs = os.path.join(AndroidTreeRoot, "bin_x86", "system")
     elif (Arch == "mips"):
-        shutil.copytree(os.path.join(AndroidTreeRoot, "bin_mips", "system"), os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"))
-    else:
-        shutil.copytree(os.path.join(AndroidTreeRoot, "bin_arm", "system"), os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"))
+        LinkerLibs = os.path.join(AndroidTreeRoot, "bin_mips", "system")
+
+    if (not os.path.exists(LinkerLibs)):
+        print("Error: Paltform libs for linker in path \"%s\" not found" % LinkerLibs)
+        print("Building %s for %s\t[\033[91mFAILED\033[0m]" % (MakeTarget, Arch))
+        continue
+
+    shutil.copytree(LinkerLibs, os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"))
 
     os.chdir(BuildDir)
     BuildLog = os.path.join(BuildDir, "build.log")
     CmakeCmdLine = "cmake -DCMAKE_TOOLCHAIN_FILE=../android.toolchain.cmake -DANDROID_SOURCE_TREE=\"%s\" -DANDROID_NATIVE_API_LEVEL=\"%s\" -DANDROID_ABI=\"%s\" -DANDROID_STL=stlport_static ../../ > \"%s\" 2>&1" % (AndroidTreeRoot, NativeApiLevel, Arch, BuildLog)
     MakeCmdLine = "make %s >> \"%s\" 2>&1" % (MakeTarget, BuildLog);
-    print(CmakeCmdLine)
+    #print(CmakeCmdLine)
     os.system(CmakeCmdLine)
-    print(MakeCmdLine)
+    #print(MakeCmdLine)
     os.system(MakeCmdLine)
     os.chdir(HomeDir)
     CameraLib = os.path.join(BuildDir, "lib", Arch, "lib" + MakeTarget + ".so")

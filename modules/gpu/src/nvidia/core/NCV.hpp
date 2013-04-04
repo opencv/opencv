@@ -1,6 +1,6 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
@@ -10,7 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2009-2010, NVIDIA Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -53,8 +54,8 @@
 #endif
 
 #include <cuda_runtime.h>
-#include <sstream>
-#include <iostream>
+#include "opencv2/core/cvstd.hpp"
+#include "opencv2/core/utility.hpp"
 
 
 //==============================================================================
@@ -243,10 +244,10 @@ const Ncv32u K_LOG2_WARP_SIZE = 5;
 //==============================================================================
 
 
-NCV_EXPORTS void ncvDebugOutput(const std::string &msg);
+NCV_EXPORTS void ncvDebugOutput(const cv::String &msg);
 
 
-typedef void NCVDebugOutputHandler(const std::string &msg);
+typedef void NCVDebugOutputHandler(const cv::String &msg);
 
 
 NCV_EXPORTS void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);
@@ -257,9 +258,8 @@ NCV_EXPORTS void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);
     { \
         if (!(pred)) \
         { \
-            std::ostringstream oss; \
-            oss << "NCV Assertion Failed: " << msg << ", file=" << __FILE__ << ", line=" << __LINE__ << std::endl; \
-            ncvDebugOutput(oss.str()); \
+            cv::String str = cv::format("NCV Assertion Failed: %s, file=%s, line=%d", msg, __FILE__, __LINE__); \
+            ncvDebugOutput(str); \
         } \
     } while (0)
 
@@ -273,14 +273,19 @@ NCV_EXPORTS void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);
 
 
 #define ncvAssertReturn(pred, err) \
-    ncvAssertPrintReturn(pred, "retcode=" << (int)err, err)
+    do \
+    { \
+        cv::String msg = cv::format("retcode=%d", (int)err); \
+        ncvAssertPrintReturn(pred, msg.c_str(), err); \
+    } while (0)
 
 
 #define ncvAssertReturnNcvStat(ncvOp) \
     do \
     { \
         NCVStatus _ncvStat = ncvOp; \
-        ncvAssertPrintReturn(NCV_SUCCESS==_ncvStat, "NcvStat=" << (int)_ncvStat, _ncvStat); \
+        cv::String msg = cv::format("NcvStat=%d", (int)_ncvStat); \
+        ncvAssertPrintReturn(NCV_SUCCESS==_ncvStat, msg.c_str(), _ncvStat); \
     } while (0)
 
 
@@ -288,7 +293,8 @@ NCV_EXPORTS void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);
     do \
     { \
         cudaError_t res = cudacall; \
-        ncvAssertPrintReturn(cudaSuccess==res, "cudaError_t=" << res, errCode); \
+        cv::String msg = cv::format("cudaError_t=%d", (int)res); \
+        ncvAssertPrintReturn(cudaSuccess==res, msg.c_str(), errCode); \
     } while (0)
 
 
@@ -296,7 +302,8 @@ NCV_EXPORTS void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);
     do \
     { \
         cudaError_t res = cudaGetLastError(); \
-        ncvAssertPrintReturn(cudaSuccess==res, "cudaError_t=" << res, errCode); \
+        cv::String msg = cv::format("cudaError_t=%d", (int)res); \
+        ncvAssertPrintReturn(cudaSuccess==res, msg.c_str(), errCode); \
     } while (0)
 
 
@@ -805,7 +812,7 @@ public:
     T& at(Ncv32u x, Ncv32u y) const
     {
         NcvBool bOutRange = (x >= this->_width || y >= this->_height);
-        ncvAssertPrintCheck(!bOutRange, "Error addressing matrix at [" << x << ", " << y << "]");
+        ncvAssertPrintCheck(!bOutRange, "Error addressing matrix");
         if (bOutRange)
         {
             return *this->_ptr;

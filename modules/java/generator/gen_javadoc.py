@@ -1,5 +1,20 @@
+#/usr/bin/env python
+
 import os, sys, re, string, glob
 from optparse import OptionParser
+
+# Black list for classes and methods that does not implemented in Java API
+# Created to exclude referencies to them in @see tag
+JAVADOC_ENTITY_BLACK_LIST = set(["org.opencv.core.Core#abs", \
+                                 "org.opencv.core.Core#theRNG", \
+                                 "org.opencv.core.Core#extractImageCOI", \
+                                 "org.opencv.core.PCA", \
+                                 "org.opencv.core.SVD", \
+                                 "org.opencv.core.RNG", \
+                                 "org.opencv.imgproc.Imgproc#createMorphologyFilter", \
+                                 "org.opencv.imgproc.Imgproc#createLinearFilter", \
+                                 "org.opencv.imgproc.Imgproc#createSeparableLinearFilter", \
+                                 "org.opencv.imgproc.FilterEngine"])
 
 class JavadocGenerator(object):
     def __init__(self, definitions = {}, modules= [], javadoc_marker = "//javadoc:"):
@@ -212,9 +227,9 @@ class JavadocGenerator(object):
             for see in decl["seealso"]:
                 seedecl = self.definitions.get(see,None)
                 if seedecl:
-                    doc += prefix + " * @see " + self.getJavaName(seedecl, "#") + "\n"
-                else:
-                    doc += prefix + " * @see " + see.replace("::",".") + "\n"
+                    javadoc_name = self.getJavaName(seedecl, "#")
+                    if (javadoc_name not in JAVADOC_ENTITY_BLACK_LIST):
+                        doc += prefix + " * @see " + javadoc_name + "\n"
         prefix = " *\n"
 
         #doc += prefix + " * File: " + decl["file"] + " (line " + str(decl["line"]) + ")\n"
