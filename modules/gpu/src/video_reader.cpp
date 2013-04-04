@@ -70,8 +70,6 @@ void cv::gpu::VideoReader_GPU::dumpFormat(std::ostream&) { throw_no_cuda(); }
 #include "cuvid_video_source.h"
 #include "ffmpeg_video_source.h"
 
-#include "cu_safe_call.h"
-
 class cv::gpu::VideoReader_GPU::Impl
 {
 public:
