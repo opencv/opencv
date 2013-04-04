@@ -14,20 +14,20 @@ manually using adb tool:
 
 .. code-block:: sh
 
-    adb install OpenCV-2.4.4-android-sdk/apk/OpenCV_2.4.4_Manager_2.6_<platform>.apk
+    adb install OpenCV-2.4.5-android-sdk/apk/OpenCV_2.4.5_Manager_2.7_<platform>.apk
 
 Use the table below to determine proper OpenCV Manager package for your device:
 
 +------------------------------+--------------+---------------------------------------------------+
 | Hardware Platform            | Android ver. | Package name                                      |
 +==============================+==============+===================================================+
-| armeabi-v7a (ARMv7-A + NEON) |    >= 2.3    | OpenCV_2.4.4_Manager_2.6_armv7a-neon.apk          |
+| armeabi-v7a (ARMv7-A + NEON) |    >= 2.3    | OpenCV_2.4.5_Manager_2.7_armv7a-neon.apk          |
 +------------------------------+--------------+---------------------------------------------------+
-| armeabi-v7a (ARMv7-A + NEON) |     = 2.2    | OpenCV_2.4.4_Manager_2.6_armv7a-neon-android8.apk |
+| armeabi-v7a (ARMv7-A + NEON) |     = 2.2    | OpenCV_2.4.5_Manager_2.7_armv7a-neon-android8.apk |
 +------------------------------+--------------+---------------------------------------------------+
-| armeabi (ARMv5, ARMv6)       |    >= 2.3    | OpenCV_2.4.4_Manager_2.6_armeabi.apk              |
+| armeabi (ARMv5, ARMv6)       |    >= 2.3    | OpenCV_2.4.5_Manager_2.7_armeabi.apk              |
 +------------------------------+--------------+---------------------------------------------------+
-| Intel x86                    |    >= 2.3    | OpenCV_2.4.4_Manager_2.6_x86.apk                  |
+| Intel x86                    |    >= 2.3    | OpenCV_2.4.5_Manager_2.7_x86.apk                  |
 +------------------------------+--------------+---------------------------------------------------+
-| MIPS                         |    >= 2.3    | OpenCV_2.4.4_Manager_2.6_mips.apk                 |
+| MIPS                         |    >= 2.3    | OpenCV_2.4.5_Manager_2.7_mips.apk                 |
 +------------------------------+--------------+---------------------------------------------------+
