@@ -387,8 +387,8 @@ public:
 
     CV_WRAP virtual void detectMultiScale( const Mat& image,
                                    CV_OUT std::vector<Rect>& objects,
-                                   std::vector<int>& rejectLevels,
-                                   std::vector<double>& levelWeights,
+                                   CV_OUT std::vector<int>& rejectLevels,
+                                   CV_OUT std::vector<double>& levelWeights,
                                    double scaleFactor=1.1,
                                    int minNeighbors=3, int flags=0,
                                    Size minSize=Size(),
