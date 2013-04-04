@@ -577,10 +577,10 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
                     continue;
 
                 p *= 2;
-                double beta = a - b, gamma = hypot((double)p, beta), delta;
+                double beta = a - b, gamma = hypot((double)p, beta);
                 if( beta < 0 )
                 {
-                    delta = (gamma - beta)*0.5;
+                    double delta = (gamma - beta)*0.5;
                     s = (_Tp)std::sqrt(delta/gamma);
                     c = (_Tp)(p/(gamma*s*2));
                 }
@@ -588,36 +588,18 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
                 {
                     c = (_Tp)std::sqrt((gamma + beta)/(gamma*2));
                     s = (_Tp)(p/(gamma*c*2));
-                    delta = p*p*0.5/(gamma + beta);
                 }
 
-                W[i] += delta;
-                W[j] -= delta;
-
-                if( iter % 2 != 0 && W[i] > 0 && W[j] > 0 )
+                a = b = 0;
+                for( k = 0; k < m; k++ )
                 {
-                    k = vblas.givens(Ai, Aj, m, c, s);
+                    _Tp t0 = c*Ai[k] + s*Aj[k];
+                    _Tp t1 = -s*Ai[k] + c*Aj[k];
+                    Ai[k] = t0; Aj[k] = t1;
 
-                    for( ; k < m; k++ )
-                    {
-                        _Tp t0 = c*Ai[k] + s*Aj[k];
-                        _Tp t1 = -s*Ai[k] + c*Aj[k];
-                        Ai[k] = t0; Aj[k] = t1;
-                    }
+                    a += (double)t0*t0; b += (double)t1*t1;
                 }
-                else
-                {
-                    a = b = 0;
-                    for( k = 0; k < m; k++ )
-                    {
-                        _Tp t0 = c*Ai[k] + s*Aj[k];
-                        _Tp t1 = -s*Ai[k] + c*Aj[k];
-                        Ai[k] = t0; Aj[k] = t1;
-
-                        a += (double)t0*t0; b += (double)t1*t1;
-                    }
-                    W[i] = a; W[j] = b;
-                }
+                W[i] = a; W[j] = b;
 
                 changed = true;
 
