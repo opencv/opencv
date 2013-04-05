@@ -913,6 +913,7 @@ namespace cv
         auto_ptr<Context> Context::clCxt;
         int Context::val = 0;
         static Mutex cs;
+        static volatile int context_tear_down = 0;
         Context* Context::getContext()
         {
             if(*((volatile int*)&val) != 1)
@@ -920,9 +921,10 @@ namespace cv
                 AutoLock al(cs);
                 if(*((volatile int*)&val) != 1)
                 {
+                    if (context_tear_down)
+                        return clCxt.get();
                     if( 0 == clCxt.get())
                         clCxt.reset(new Context);
-
                     std::vector<Info> oclinfo;
                     CV_Assert(getDevice(oclinfo, CVCL_DEVICE_TYPE_ALL) > 0);
                     oclinfo[0].impl->setDevice(0, 0, 0);
@@ -1045,9 +1047,14 @@ BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )
     {
         // application hangs if call clReleaseCommandQueue here, so release context only
         // without context release application hangs as well
-        cl_context ctx = (cl_context)getoclContext();
-        if(ctx)
-            openCLSafeCall(clReleaseContext(ctx));
+        context_tear_down = 1;
+        Context* cv_ctx = Context::getContext();
+        if(cv_ctx)
+        {
+            cl_context ctx = (cl_context)&(cv_ctx->impl->oclcontext);
+            if(ctx)
+                openCLSafeCall(clReleaseContext(ctx));
+        }
     }
     return TRUE;
 }
