@@ -22,7 +22,7 @@
    * An active user group is at:
      http://tech.groups.yahoo.com/group/OpenCV/
    * The minutes of weekly OpenCV development meetings are at:
-     http://pr.willowgarage.com/wiki/OpenCV
+     http://code.opencv.org/projects/opencv/wiki/Meeting_notes
    ************************************************** */
 
 #include "opencv2/calib3d/calib3d.hpp"

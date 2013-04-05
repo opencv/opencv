@@ -205,7 +205,7 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
     clStridesIn[2]  = is_row_dft ? clStridesIn[1]  : dft_size.width * clStridesIn[1];
     clStridesOut[2] = is_row_dft ? clStridesOut[1] : dft_size.width * clStridesOut[1];
 
-    openCLSafeCall( clAmdFftCreateDefaultPlan( &plHandle, (cl_context)getoclContext(), dim, clLengthsIn ) );
+    openCLSafeCall( clAmdFftCreateDefaultPlan( &plHandle, *(cl_context*)getoclContext(), dim, clLengthsIn ) );
 
     openCLSafeCall( clAmdFftSetResultLocation( plHandle, CLFFT_OUTOFPLACE ) );
     openCLSafeCall( clAmdFftSetLayout( plHandle, inLayout, outLayout ) );
@@ -219,8 +219,7 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
     openCLSafeCall( clAmdFftSetPlanScale  ( plHandle, is_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD, scale_ ) );
 
     //ready to bake
-    cl_command_queue clq = (cl_command_queue)getoclCommandQueue();
-    openCLSafeCall( clAmdFftBakePlan( plHandle, 1, &clq, NULL, NULL ) );
+    openCLSafeCall( clAmdFftBakePlan( plHandle, 1, (cl_command_queue*)getoclCommandQueue(), NULL, NULL ) );
 }
 cv::ocl::FftPlan::~FftPlan()
 {

@@ -975,7 +975,7 @@ static inline PyObject* pyopencv_from(const Moments& m)
                          "mu20", m.mu20, "mu11", m.mu11, "mu02", m.mu02,
                          "mu30", m.mu30, "mu21", m.mu21, "mu12", m.mu12, "mu03", m.mu03,
                          "nu20", m.nu20, "nu11", m.nu11, "nu02", m.nu02,
-                         "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "mu03", m.nu03);
+                         "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "nu03", m.nu03);
 }
 
 static inline PyObject* pyopencv_from(const CvDTreeNode* node)

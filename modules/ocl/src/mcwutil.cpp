@@ -142,7 +142,7 @@ namespace cv
                 format.image_channel_data_type = CL_FLOAT;
                 break;
             default:
-                throw std::exception();
+                CV_Error(-1, "Image forma is not supported");
                 break;
             }
             switch(channels)
@@ -157,7 +157,7 @@ namespace cv
                 format.image_channel_order     = CL_RGBA;
                 break;
             default:
-                throw std::exception();
+                CV_Error(-1, "Image forma is not supported");
                 break;
             }
 #if CL_VERSION_1_2
@@ -195,7 +195,8 @@ namespace cv
                 const size_t regin[3] = {mat.cols * mat.elemSize(), mat.rows, 1};
                 clEnqueueCopyBufferRect((cl_command_queue)mat.clCxt->oclCommandQueue(), (cl_mem)mat.data, devData, origin, origin,
                     regin, mat.step, 0, mat.cols * mat.elemSize(), 0, 0, NULL, NULL);
-            }
+                clFlush((cl_command_queue)mat.clCxt->oclCommandQueue());
+           }
             else
             {
                 devData = (cl_mem)mat.data;
@@ -204,7 +205,7 @@ namespace cv
             clEnqueueCopyBufferToImage((cl_command_queue)mat.clCxt->oclCommandQueue(), devData, texture, 0, origin, region, 0, NULL, 0);
             if ((mat.cols * mat.elemSize() != mat.step))
             {
-                clFinish((cl_command_queue)mat.clCxt->oclCommandQueue());
+                clFlush((cl_command_queue)mat.clCxt->oclCommandQueue());
                 clReleaseMemObject(devData);
             }
 
@@ -229,7 +230,8 @@ namespace cv
             try
             {
                 cv::ocl::openCLGetKernelFromSource(clCxt, &_kernel_string, "test_func");
-                //_support = true;
+                finish();
+                _support = true;
             }
             catch (const cv::Exception& e)
             {

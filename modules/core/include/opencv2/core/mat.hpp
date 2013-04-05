@@ -1704,6 +1704,7 @@ public:
     SparseMatConstIterator_();
     //! the full constructor setting the iterator to the first sparse matrix element
     SparseMatConstIterator_(const SparseMat_<_Tp>* _m);
+    SparseMatConstIterator_(const SparseMat* _m);
     //! the copy constructor
     SparseMatConstIterator_(const SparseMatConstIterator_& it);
 
@@ -1740,6 +1741,7 @@ public:
     SparseMatIterator_();
     //! the full constructor setting the iterator to the first sparse matrix element
     SparseMatIterator_(SparseMat_<_Tp>* _m);
+    SparseMatIterator_(SparseMat* _m);
     //! the copy constructor
     SparseMatIterator_(const SparseMatIterator_& it);
 

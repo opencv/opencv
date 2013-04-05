@@ -44,7 +44,11 @@
 //M*/
 
 #if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -61,7 +65,10 @@ __kernel void arithm_flip_rows_D0 (__global uchar *src, int src_step, int src_of
     {
         x = x << 2;
 
-        #define dst_align (dst_offset & 3)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (dst_offset & 3)
         int src_index_0 = mad24(y,            src_step, x + src_offset - dst_align);
         int src_index_1 = mad24(rows - y - 1, src_step, x + src_offset - dst_align);
 
@@ -116,7 +123,10 @@ __kernel void arithm_flip_rows_D1 (__global char *src, int src_step, int src_off
     {
         x = x << 2;
 
-        #define dst_align (dst_offset & 3)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (dst_offset & 3)
         int src_index_0 = mad24(y,            src_step, x + src_offset - dst_align);
         int src_index_1 = mad24(rows - y - 1, src_step, x + src_offset - dst_align);
 
@@ -158,7 +168,10 @@ __kernel void arithm_flip_rows_D2 (__global ushort *src, int src_step, int src_o
     {
         x = x << 2;
 
-        #define dst_align (((dst_offset >> 1) & 3) << 1)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (((dst_offset >> 1) & 3) << 1)
         int src_index_0 = mad24(y,            src_step, (x << 1) + src_offset - dst_align);
         int src_index_1 = mad24(rows - y - 1, src_step, (x << 1) + src_offset - dst_align);
 
@@ -200,7 +213,10 @@ __kernel void arithm_flip_rows_D3 (__global short *src, int src_step, int src_of
     {
         x = x << 2;
 
-        #define dst_align (((dst_offset >> 1) & 3) << 1)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (((dst_offset >> 1) & 3) << 1)
         int src_index_0 = mad24(y,            src_step, (x << 1) + src_offset - dst_align);
         int src_index_1 = mad24(rows - y - 1, src_step, (x << 1) + src_offset - dst_align);
 

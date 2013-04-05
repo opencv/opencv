@@ -69,7 +69,7 @@ struct KeypointResponseGreater
 void KeyPointsFilter::retainBest(std::vector<KeyPoint>& keypoints, int n_points)
 {
     //this is only necessary if the keypoints size is greater than the number of desired points.
-    if( n_points > 0 && keypoints.size() > (size_t)n_points )
+    if( n_points >= 0 && keypoints.size() > (size_t)n_points )
     {
         if (n_points==0)
         {

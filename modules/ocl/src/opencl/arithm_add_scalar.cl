@@ -44,9 +44,13 @@
 //M*/
 
 #if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
 #endif
 
+#endif
 /**************************************add with scalar without mask**************************************/
 __kernel void arithm_s_add_C1_D0 (__global   uchar *src1, int src1_step, int src1_offset,
                                   __global   uchar *dst,  int dst_step,  int dst_offset,
@@ -59,7 +63,10 @@ __kernel void arithm_s_add_C1_D0 (__global   uchar *src1, int src1_step, int src
     {
         x = x << 2;
 
-        #define dst_align (dst_offset & 3)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (dst_offset & 3)
         int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -99,7 +106,10 @@ __kernel void arithm_s_add_C1_D2 (__global   ushort *src1, int src1_step, int sr
     {
         x = x << 1;
 
-        #define dst_align ((dst_offset >> 1) & 1)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 1)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -131,7 +141,10 @@ __kernel void arithm_s_add_C1_D3 (__global   short *src1, int src1_step, int src
     {
         x = x << 1;
 
-        #define dst_align ((dst_offset >> 1) & 1)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 1)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -233,7 +246,10 @@ __kernel void arithm_s_add_C2_D0 (__global   uchar *src1, int src1_step, int src
     {
         x = x << 1;
 
-        #define dst_align ((dst_offset >> 1) & 1)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 1)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -378,7 +394,10 @@ __kernel void arithm_s_add_C3_D0 (__global   uchar *src1, int src1_step, int src
     {
         x = x << 2;
 
-        #define dst_align (((dst_offset % dst_step) / 3 ) & 3)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (((dst_offset % dst_step) / 3 ) & 3)
         int src1_index = mad24(y, src1_step, (x * 3) + src1_offset - (dst_align * 3));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -432,7 +451,10 @@ __kernel void arithm_s_add_C3_D2 (__global   ushort *src1, int src1_step, int sr
     {
         x = x << 1;
 
-        #define dst_align (((dst_offset % dst_step) / 6 ) & 1)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (((dst_offset % dst_step) / 6 ) & 1)
         int src1_index = mad24(y, src1_step, (x * 6) + src1_offset - (dst_align * 6));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -458,16 +480,16 @@ __kernel void arithm_s_add_C3_D2 (__global   ushort *src1, int src1_step, int sr
         data_0.xy = ((dst_index + 0 >= dst_start)) ? tmp_data_0.xy : data_0.xy;
 
         data_1.x  = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end))
-                     ? tmp_data_1.x : data_1.x;
+                    ? tmp_data_1.x : data_1.x;
         data_1.y  = ((dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
-                     ? tmp_data_1.y : data_1.y;
+                    ? tmp_data_1.y : data_1.y;
 
         data_2.xy = ((dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
-                     ? tmp_data_2.xy : data_2.xy;
+                    ? tmp_data_2.xy : data_2.xy;
 
-       *((__global ushort2 *)((__global char *)dst + dst_index + 0))= data_0;
-       *((__global ushort2 *)((__global char *)dst + dst_index + 4))= data_1;
-       *((__global ushort2 *)((__global char *)dst + dst_index + 8))= data_2;
+        *((__global ushort2 *)((__global char *)dst + dst_index + 0))= data_0;
+        *((__global ushort2 *)((__global char *)dst + dst_index + 4))= data_1;
+        *((__global ushort2 *)((__global char *)dst + dst_index + 8))= data_2;
     }
 }
 __kernel void arithm_s_add_C3_D3 (__global   short *src1, int src1_step, int src1_offset,
@@ -482,7 +504,10 @@ __kernel void arithm_s_add_C3_D3 (__global   short *src1, int src1_step, int src
     {
         x = x << 1;
 
-        #define dst_align (((dst_offset % dst_step) / 6 ) & 1)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (((dst_offset % dst_step) / 6 ) & 1)
         int src1_index = mad24(y, src1_step, (x * 6) + src1_offset - (dst_align * 6));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -508,16 +533,16 @@ __kernel void arithm_s_add_C3_D3 (__global   short *src1, int src1_step, int src
         data_0.xy = ((dst_index + 0 >= dst_start)) ? tmp_data_0.xy : data_0.xy;
 
         data_1.x  = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end))
-                     ? tmp_data_1.x : data_1.x;
+                    ? tmp_data_1.x : data_1.x;
         data_1.y  = ((dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
-                     ? tmp_data_1.y : data_1.y;
+                    ? tmp_data_1.y : data_1.y;
 
         data_2.xy = ((dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
-                     ? tmp_data_2.xy : data_2.xy;
+                    ? tmp_data_2.xy : data_2.xy;
 
-       *((__global short2 *)((__global char *)dst + dst_index + 0))= data_0;
-       *((__global short2 *)((__global char *)dst + dst_index + 4))= data_1;
-       *((__global short2 *)((__global char *)dst + dst_index + 8))= data_2;
+        *((__global short2 *)((__global char *)dst + dst_index + 0))= data_0;
+        *((__global short2 *)((__global char *)dst + dst_index + 4))= data_1;
+        *((__global short2 *)((__global char *)dst + dst_index + 8))= data_2;
     }
 }
 __kernel void arithm_s_add_C3_D4 (__global   int *src1, int src1_step, int src1_offset,
@@ -549,9 +574,9 @@ __kernel void arithm_s_add_C3_D4 (__global   int *src1, int src1_step, int src1_
         int tmp_data_1 = convert_int_sat((long)src1_data_1 + (long)src2_data_1);
         int tmp_data_2 = convert_int_sat((long)src1_data_2 + (long)src2_data_2);
 
-       *((__global int *)((__global char *)dst + dst_index + 0))= tmp_data_0;
-       *((__global int *)((__global char *)dst + dst_index + 4))= tmp_data_1;
-       *((__global int *)((__global char *)dst + dst_index + 8))= tmp_data_2;
+        *((__global int *)((__global char *)dst + dst_index + 0))= tmp_data_0;
+        *((__global int *)((__global char *)dst + dst_index + 4))= tmp_data_1;
+        *((__global int *)((__global char *)dst + dst_index + 8))= tmp_data_2;
     }
 }
 __kernel void arithm_s_add_C3_D5 (__global   float *src1, int src1_step, int src1_offset,
@@ -583,9 +608,9 @@ __kernel void arithm_s_add_C3_D5 (__global   float *src1, int src1_step, int src
         float tmp_data_1 = src1_data_1 + src2_data_1;
         float tmp_data_2 = src1_data_2 + src2_data_2;
 
-       *((__global float *)((__global char *)dst + dst_index + 0))= tmp_data_0;
-       *((__global float *)((__global char *)dst + dst_index + 4))= tmp_data_1;
-       *((__global float *)((__global char *)dst + dst_index + 8))= tmp_data_2;
+        *((__global float *)((__global char *)dst + dst_index + 0))= tmp_data_0;
+        *((__global float *)((__global char *)dst + dst_index + 4))= tmp_data_1;
+        *((__global float *)((__global char *)dst + dst_index + 8))= tmp_data_2;
     }
 }
 
@@ -619,9 +644,9 @@ __kernel void arithm_s_add_C3_D6 (__global   double *src1, int src1_step, int sr
         double tmp_data_1 = src1_data_1 + src2_data_1;
         double tmp_data_2 = src1_data_2 + src2_data_2;
 
-       *((__global double *)((__global char *)dst + dst_index + 0 ))= tmp_data_0;
-       *((__global double *)((__global char *)dst + dst_index + 8 ))= tmp_data_1;
-       *((__global double *)((__global char *)dst + dst_index + 16))= tmp_data_2;
+        *((__global double *)((__global char *)dst + dst_index + 0 ))= tmp_data_0;
+        *((__global double *)((__global char *)dst + dst_index + 8 ))= tmp_data_1;
+        *((__global double *)((__global char *)dst + dst_index + 16))= tmp_data_2;
     }
 }
 #endif

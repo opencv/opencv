@@ -1007,7 +1007,7 @@ PERF_TEST_P(Video_Cn_MaxFeatures, Video_GMG,
 
 #if defined(HAVE_NVCUVID) && BUILD_WITH_VIDEO_INPUT_SUPPORT
 
-PERF_TEST_P(Video, Video_VideoReader, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
+PERF_TEST_P(Video, DISABLED_Video_VideoReader, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
 {
     declare.time(20);
 
@@ -1044,7 +1044,7 @@ PERF_TEST_P(Video, Video_VideoReader, Values("gpu/video/768x576.avi", "gpu/video
 
 #if defined(HAVE_NVCUVID) && defined(WIN32)
 
-PERF_TEST_P(Video, Video_VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
+PERF_TEST_P(Video, DISABLED_Video_VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
 {
     declare.time(30);
 

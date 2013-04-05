@@ -168,13 +168,12 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
     I0.convertTo(I0s[0], I0s[0].depth(), I0.depth() == CV_8U ? 1.0 : 255.0);
     I1.convertTo(I1s[0], I1s[0].depth(), I1.depth() == CV_8U ? 1.0 : 255.0);
 
+    u1s[0].create(I0.size());
+    u2s[0].create(I0.size());
+
     if (useInitialFlow)
     {
-        u1s[0].create(I0.size());
-        u2s[0].create(I0.size());
-
         Mat_<float> mv[] = {u1s[0], u2s[0]};
-
         split(_flow.getMat(), mv);
     }
 
@@ -227,6 +226,17 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
             multiply(u1s[s], Scalar::all(0.5), u1s[s]);
             multiply(u2s[s], Scalar::all(0.5), u2s[s]);
         }
+        else
+        {
+            u1s[s].create(I0s[s].size());
+            u2s[s].create(I0s[s].size());
+        }
+    }
+
+    if (!useInitialFlow)
+    {
+        u1s[nscales-1].setTo(Scalar::all(0));
+        u2s[nscales-1].setTo(Scalar::all(0));
     }
 
     // pyramidal structure for computing the optical flow
@@ -792,17 +802,8 @@ void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>
 
     CV_DbgAssert( I1.size() == I0.size() );
     CV_DbgAssert( I1.type() == I0.type() );
-    CV_DbgAssert( u1.empty() || u1.size() == I0.size() );
+    CV_DbgAssert( u1.size() == I0.size() );
     CV_DbgAssert( u2.size() == u1.size() );
-
-    if (u1.empty())
-    {
-        u1.create(I0.size());
-        u1.setTo(Scalar::all(0));
-
-        u2.create(I0.size());
-        u2.setTo(Scalar::all(0));
-    }
 
     Mat_<float> I1x = I1x_buf(Rect(0, 0, I0.cols, I0.rows));
     Mat_<float> I1y = I1y_buf(Rect(0, 0, I0.cols, I0.rows));

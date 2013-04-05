@@ -13,7 +13,7 @@ In this tutorial you will learn how to:
    * Use the :descriptor_extractor:`DescriptorExtractor<>` interface in order to find the feature vector correspondent to the keypoints. Specifically:
 
      * Use :surf_descriptor_extractor:`SurfDescriptorExtractor<>` and its function :descriptor_extractor:`compute<>` to perform the required calculations.
-     * Use a :brute_force_matcher:`BruteForceMatcher<>`	to match the features vector
+     * Use a :brute_force_matcher:`BFMatcher<>`	to match the features vector
      * Use the function :draw_matches:`drawMatches<>` to draw the detected matches.
 
 
@@ -69,7 +69,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      extractor.compute( img_2, keypoints_2, descriptors_2 );
 
      //-- Step 3: Matching descriptor vectors with a brute force matcher
-     BruteForceMatcher< L2<float> > matcher;
+     BFMatcher matcher(NORM_L2);
      std::vector< DMatch > matches;
      matcher.match( descriptors_1, descriptors_2, matches );
 

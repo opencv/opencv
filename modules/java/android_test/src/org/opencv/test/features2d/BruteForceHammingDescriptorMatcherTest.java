@@ -1,5 +1,6 @@
 package org.opencv.test.features2d;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -204,7 +205,17 @@ public class BruteForceHammingDescriptorMatcherTest extends OpenCVTestCase {
     }
 
     public void testRadiusMatchMatListOfListOfDMatchFloat() {
-        fail("Not yet implemented");
+        Mat train = getTrainDescriptors();
+        Mat query = getQueryDescriptors();
+        ArrayList<MatOfDMatch> matches = new ArrayList<MatOfDMatch>();
+
+        matcher.radiusMatch(query, train, matches, 50.f);
+
+        assertEquals(matches.size(), 4);
+        assertTrue(matches.get(0).empty());
+        assertMatEqual(matches.get(1), new MatOfDMatch(truth[1]), EPS);
+        assertMatEqual(matches.get(2), new MatOfDMatch(truth[2]), EPS);
+        assertTrue(matches.get(3).empty());
     }
 
     public void testRadiusMatchMatListOfListOfDMatchFloatListOfMat() {

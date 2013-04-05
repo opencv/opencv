@@ -60,7 +60,6 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
     public JavaCameraView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        Log.d(TAG, "Java camera view ctor");
     }
 
     protected boolean initializeCamera(int width, int height) {
@@ -237,10 +236,8 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
     }
 
     public void onPreviewFrame(byte[] frame, Camera arg1) {
-        Log.i(TAG, "Preview Frame received. Need to create MAT and deliver it to clients");
-        Log.i(TAG, "Frame size  is " + frame.length);
-        synchronized (this)
-        {
+        Log.d(TAG, "Preview Frame received. Frame size: " + frame.length);
+        synchronized (this) {
             mFrameChain[1 - mChainIdx].put(0, 0, frame);
             this.notify();
         }
@@ -248,8 +245,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
             mCamera.addCallbackBuffer(mBuffer);
     }
 
-    private class JavaCameraFrame implements CvCameraViewFrame
-    {
+    private class JavaCameraFrame implements CvCameraViewFrame {
         public Mat gray() {
             return mYuvFrameData.submat(0, mHeight, 0, mWidth);
         }

@@ -16,7 +16,6 @@
 //
 // @Authors
 //    Jia Haipeng, jiahaipeng95@gmail.com
-//    Dachuan Zhao, dachuan@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -44,11 +43,16 @@
 //
 //M*/
 
-#if defined DOUBLE_SUPPORT
+#if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 #endif
 
-int4 round_int4(float4 v){
+int4 round_int4(float4 v)
+{
     v.s0 = v.s0 + (v.s0 > 0 ? 0.5 : -0.5);
     v.s1 = v.s1 + (v.s1 > 0 ? 0.5 : -0.5);
     v.s2 = v.s2 + (v.s2 > 0 ? 0.5 : -0.5);
@@ -56,7 +60,8 @@ int4 round_int4(float4 v){
 
     return convert_int4_sat(v);
 }
-uint4 round_uint4(float4 v){
+uint4 round_uint4(float4 v)
+{
     v.s0 = v.s0 + (v.s0 > 0 ? 0.5 : -0.5);
     v.s1 = v.s1 + (v.s1 > 0 ? 0.5 : -0.5);
     v.s2 = v.s2 + (v.s2 > 0 ? 0.5 : -0.5);
@@ -64,7 +69,8 @@ uint4 round_uint4(float4 v){
 
     return convert_uint4_sat(v);
 }
-long round_int(float v){
+long round_int(float v)
+{
     v = v + (v > 0 ? 0.5 : -0.5);
 
     return convert_int_sat(v);
@@ -85,7 +91,10 @@ __kernel void arithm_mul_D0 (__global uchar *src1, int src1_step, int src1_offse
     {
         x = x << 2;
 
-        #define dst_align (dst_offset & 3)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (dst_offset & 3)
         int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
         int src2_index = mad24(y, src2_step, x + src2_offset - dst_align);
 
@@ -130,7 +139,10 @@ __kernel void arithm_mul_D2 (__global ushort *src1, int src1_step, int src1_offs
     {
         x = x << 2;
 
-        #define dst_align ((dst_offset >> 1) & 3)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 3)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
         int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
@@ -166,7 +178,10 @@ __kernel void arithm_mul_D3 (__global short *src1, int src1_step, int src1_offse
     {
         x = x << 2;
 
-        #define dst_align ((dst_offset >> 1) & 3)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 3)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
         int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
@@ -263,8 +278,8 @@ __kernel void arithm_mul_D6 (__global double *src1, int src1_step, int src1_offs
 #endif
 
 __kernel void arithm_muls_D5 (__global float *src1, int src1_step, int src1_offset,
-                             __global float *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1, float scalar)
+                              __global float *dst,  int dst_step,  int dst_offset,
+                              int rows, int cols, int dst_step1, float scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);

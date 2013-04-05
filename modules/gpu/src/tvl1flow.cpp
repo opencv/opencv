@@ -129,6 +129,17 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat& I0, const GpuM
             gpu::multiply(u1s[s], Scalar::all(0.5), u1s[s]);
             gpu::multiply(u2s[s], Scalar::all(0.5), u2s[s]);
         }
+        else
+        {
+            u1s[s].create(I0s[s].size(), CV_32FC1);
+            u2s[s].create(I0s[s].size(), CV_32FC1);
+        }
+    }
+
+    if (!useInitialFlow)
+    {
+        u1s[nscales-1].setTo(Scalar::all(0));
+        u2s[nscales-1].setTo(Scalar::all(0));
     }
 
     // pyramidal structure for computing the optical flow
@@ -173,17 +184,8 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat& I0, const Gpu
 
     CV_DbgAssert( I1.size() == I0.size() );
     CV_DbgAssert( I1.type() == I0.type() );
-    CV_DbgAssert( u1.empty() || u1.size() == I0.size() );
+    CV_DbgAssert( u1.size() == I0.size() );
     CV_DbgAssert( u2.size() == u1.size() );
-
-    if (u1.empty())
-    {
-        u1.create(I0.size(), CV_32FC1);
-        u1.setTo(Scalar::all(0));
-
-        u2.create(I0.size(), CV_32FC1);
-        u2.setTo(Scalar::all(0));
-    }
 
     GpuMat I1x = I1x_buf(Rect(0, 0, I0.cols, I0.rows));
     GpuMat I1y = I1y_buf(Rect(0, 0, I0.cols, I0.rows));

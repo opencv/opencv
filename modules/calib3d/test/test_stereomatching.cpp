@@ -460,14 +460,29 @@ void CV_StereoMatchingTest::run(int)
             continue;
         }
         int dispScaleFactor = datasetsParams[datasetName].dispScaleFactor;
-        Mat tmp; trueLeftDisp.convertTo( tmp, CV_32FC1, 1.f/dispScaleFactor ); trueLeftDisp = tmp; tmp.release();
+        Mat tmp;
+
+        trueLeftDisp.convertTo( tmp, CV_32FC1, 1.f/dispScaleFactor );
+        trueLeftDisp = tmp;
+        tmp.release();
+
         if( !trueRightDisp.empty() )
-            trueRightDisp.convertTo( tmp, CV_32FC1, 1.f/dispScaleFactor ); trueRightDisp = tmp; tmp.release();
+        {
+            trueRightDisp.convertTo( tmp, CV_32FC1, 1.f/dispScaleFactor );
+            trueRightDisp = tmp;
+            tmp.release();
+        }
 
         Mat leftDisp, rightDisp;
         int ignBorder = max(runStereoMatchingAlgorithm(leftImg, rightImg, leftDisp, rightDisp, ci), EVAL_IGNORE_BORDER);
-        leftDisp.convertTo( tmp, CV_32FC1 ); leftDisp = tmp; tmp.release();
-        rightDisp.convertTo( tmp, CV_32FC1 ); rightDisp = tmp; tmp.release();
+
+        leftDisp.convertTo( tmp, CV_32FC1 );
+        leftDisp = tmp;
+        tmp.release();
+
+        rightDisp.convertTo( tmp, CV_32FC1 );
+        rightDisp = tmp;
+        tmp.release();
 
         int tempCode = processStereoMatchingResults( resFS, ci, isWrite,
                    leftImg, rightImg, trueLeftDisp, trueRightDisp, leftDisp, rightDisp, QualityEvalParams(ignBorder));
@@ -531,7 +546,8 @@ int CV_StereoMatchingTest::processStereoMatchingResults( FileStorage& fs, int ca
     // rightDisp is not used in current test virsion
     int code = cvtest::TS::OK;
     assert( fs.isOpened() );
-    assert( trueLeftDisp.type() == CV_32FC1 && trueRightDisp.type() == CV_32FC1 );
+    assert( trueLeftDisp.type() == CV_32FC1 );
+    assert( trueRightDisp.empty() || trueRightDisp.type() == CV_32FC1 );
     assert( leftDisp.type() == CV_32FC1 && rightDisp.type() == CV_32FC1 );
 
     // get masks for unknown ground truth disparity values
