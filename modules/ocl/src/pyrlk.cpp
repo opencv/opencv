@@ -187,7 +187,9 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     args.push_back( make_pair( sizeof(cl_int), (void *)&iters ));
     args.push_back( make_pair( sizeof(cl_char), (void *)&calcErr ));
 
-    if (clCxt->supportsFeature(Context::CL_CPU))
+    bool is_cpu;
+    queryDeviceInfo(IS_CPU_DEVICE, &is_cpu);
+    if (is_cpu)
     {
         openCLExecuteKernel(clCxt, &pyrlk, kernelName, globalThreads, localThreads, args, I.oclchannels(), I.depth(), (char*)" -D CPU");
         releaseTexture(ITex);
