@@ -44,7 +44,11 @@
 //M*/
 
 #if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 #endif
 
 /**************************************add with scalar with mask**************************************/
@@ -60,8 +64,11 @@ __kernel void arithm_s_add_with_mask_C1_D0 (__global   uchar *src1, int src1_ste
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align (dst_offset & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (dst_offset & 3)
         int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
@@ -110,8 +117,11 @@ __kernel void arithm_s_add_with_mask_C1_D2 (__global   ushort *src1, int src1_st
     if (x < cols && y < rows)
     {
         x = x << 1;
-
-        #define dst_align ((dst_offset >> 1) & 1)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 1)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
@@ -145,8 +155,11 @@ __kernel void arithm_s_add_with_mask_C1_D3 (__global   short *src1, int src1_ste
     if (x < cols && y < rows)
     {
         x = x << 1;
-
-        #define dst_align ((dst_offset >> 1) & 1)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 1)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
@@ -266,8 +279,11 @@ __kernel void arithm_s_add_with_mask_C2_D0 (__global   uchar *src1, int src1_ste
     if (x < cols && y < rows)
     {
         x = x << 1;
-
-        #define dst_align ((dst_offset >> 1) & 1)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 1)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
@@ -442,8 +458,11 @@ __kernel void arithm_s_add_with_mask_C3_D0 (__global   uchar *src1, int src1_ste
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align (((dst_offset % dst_step) / 3 ) & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (((dst_offset % dst_step) / 3 ) & 3)
         int src1_index = mad24(y, src1_step, (x * 3) + src1_offset - (dst_align * 3));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
@@ -500,8 +519,11 @@ __kernel void arithm_s_add_with_mask_C3_D2 (__global   ushort *src1, int src1_st
     if (x < cols && y < rows)
     {
         x = x << 1;
-
-        #define dst_align (((dst_offset % dst_step) / 6 ) & 1)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (((dst_offset % dst_step) / 6 ) & 1)
         int src1_index = mad24(y, src1_step, (x * 6) + src1_offset - (dst_align * 6));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
@@ -530,16 +552,16 @@ __kernel void arithm_s_add_with_mask_C3_D2 (__global   ushort *src1, int src1_st
         data_0.xy = ((mask_data.x) && (dst_index + 0 >= dst_start)) ? tmp_data_0.xy : data_0.xy;
 
         data_1.x  = ((mask_data.x) && (dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end))
-                     ? tmp_data_1.x : data_1.x;
+                    ? tmp_data_1.x : data_1.x;
         data_1.y  = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
-                     ? tmp_data_1.y : data_1.y;
+                    ? tmp_data_1.y : data_1.y;
 
         data_2.xy = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
-                     ? tmp_data_2.xy : data_2.xy;
+                    ? tmp_data_2.xy : data_2.xy;
 
-       *((__global ushort2 *)((__global char *)dst + dst_index + 0))= data_0;
-       *((__global ushort2 *)((__global char *)dst + dst_index + 4))= data_1;
-       *((__global ushort2 *)((__global char *)dst + dst_index + 8))= data_2;
+        *((__global ushort2 *)((__global char *)dst + dst_index + 0))= data_0;
+        *((__global ushort2 *)((__global char *)dst + dst_index + 4))= data_1;
+        *((__global ushort2 *)((__global char *)dst + dst_index + 8))= data_2;
     }
 }
 __kernel void arithm_s_add_with_mask_C3_D3 (__global   short *src1, int src1_step, int src1_offset,
@@ -554,8 +576,11 @@ __kernel void arithm_s_add_with_mask_C3_D3 (__global   short *src1, int src1_ste
     if (x < cols && y < rows)
     {
         x = x << 1;
-
-        #define dst_align (((dst_offset % dst_step) / 6 ) & 1)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (((dst_offset % dst_step) / 6 ) & 1)
         int src1_index = mad24(y, src1_step, (x * 6) + src1_offset - (dst_align * 6));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
@@ -584,16 +609,16 @@ __kernel void arithm_s_add_with_mask_C3_D3 (__global   short *src1, int src1_ste
         data_0.xy = ((mask_data.x) && (dst_index + 0 >= dst_start)) ? tmp_data_0.xy : data_0.xy;
 
         data_1.x  = ((mask_data.x) && (dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end))
-                     ? tmp_data_1.x : data_1.x;
+                    ? tmp_data_1.x : data_1.x;
         data_1.y  = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
-                     ? tmp_data_1.y : data_1.y;
+                    ? tmp_data_1.y : data_1.y;
 
         data_2.xy = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
-                     ? tmp_data_2.xy : data_2.xy;
+                    ? tmp_data_2.xy : data_2.xy;
 
-       *((__global short2 *)((__global char *)dst + dst_index + 0))= data_0;
-       *((__global short2 *)((__global char *)dst + dst_index + 4))= data_1;
-       *((__global short2 *)((__global char *)dst + dst_index + 8))= data_2;
+        *((__global short2 *)((__global char *)dst + dst_index + 0))= data_0;
+        *((__global short2 *)((__global char *)dst + dst_index + 4))= data_1;
+        *((__global short2 *)((__global char *)dst + dst_index + 8))= data_2;
     }
 }
 __kernel void arithm_s_add_with_mask_C3_D4 (__global   int *src1, int src1_step, int src1_offset,
@@ -633,9 +658,9 @@ __kernel void arithm_s_add_with_mask_C3_D4 (__global   int *src1, int src1_step,
         data_1 = mask_data ? tmp_data_1 : data_1;
         data_2 = mask_data ? tmp_data_2 : data_2;
 
-       *((__global int *)((__global char *)dst + dst_index + 0))= data_0;
-       *((__global int *)((__global char *)dst + dst_index + 4))= data_1;
-       *((__global int *)((__global char *)dst + dst_index + 8))= data_2;
+        *((__global int *)((__global char *)dst + dst_index + 0))= data_0;
+        *((__global int *)((__global char *)dst + dst_index + 4))= data_1;
+        *((__global int *)((__global char *)dst + dst_index + 8))= data_2;
     }
 }
 __kernel void arithm_s_add_with_mask_C3_D5 (__global   float *src1, int src1_step, int src1_offset,
@@ -675,9 +700,9 @@ __kernel void arithm_s_add_with_mask_C3_D5 (__global   float *src1, int src1_ste
         data_1 = mask_data ? tmp_data_1 : data_1;
         data_2 = mask_data ? tmp_data_2 : data_2;
 
-       *((__global float *)((__global char *)dst + dst_index + 0))= data_0;
-       *((__global float *)((__global char *)dst + dst_index + 4))= data_1;
-       *((__global float *)((__global char *)dst + dst_index + 8))= data_2;
+        *((__global float *)((__global char *)dst + dst_index + 0))= data_0;
+        *((__global float *)((__global char *)dst + dst_index + 4))= data_1;
+        *((__global float *)((__global char *)dst + dst_index + 8))= data_2;
     }
 }
 
@@ -719,9 +744,9 @@ __kernel void arithm_s_add_with_mask_C3_D6 (__global   double *src1, int src1_st
         data_1 = mask_data ? tmp_data_1 : data_1;
         data_2 = mask_data ? tmp_data_2 : data_2;
 
-       *((__global double *)((__global char *)dst + dst_index + 0 ))= data_0;
-       *((__global double *)((__global char *)dst + dst_index + 8 ))= data_1;
-       *((__global double *)((__global char *)dst + dst_index + 16))= data_2;
+        *((__global double *)((__global char *)dst + dst_index + 0 ))= data_0;
+        *((__global double *)((__global char *)dst + dst_index + 8 ))= data_1;
+        *((__global double *)((__global char *)dst + dst_index + 16))= data_2;
     }
 }
 #endif
