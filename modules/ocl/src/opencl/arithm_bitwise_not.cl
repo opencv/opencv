@@ -43,9 +43,12 @@
 //
 //M*/
 #if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
 #endif
-
+#endif
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////BITWISE_NOT////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -60,26 +63,29 @@ __kernel void arithm_bitwise_not_D0 (__global uchar *src1, int src1_step, int sr
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align (dst_offset & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (dst_offset & 3)
         int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + x & (int)0xfffffffc);
-    int src1_index_fix = src1_index < 0 ? 0 : src1_index;
+        int src1_index_fix = src1_index < 0 ? 0 : src1_index;
         uchar4 src1_data = vload4(0, src1 + src1_index_fix);
 
         uchar4 dst_data = *((__global uchar4 *)(dst + dst_index));
         uchar4 tmp_data = ~ src1_data;
 
-  /*  if(src1_index < 0)
-    {
-      uchar4 tmp;
-      tmp.xyzw = (src1_index == -2) ? src1_data.zwxy:src1_data.yzwx;
-      src1_data.xyzw = (src1_index == -1) ? src1_data.wxyz:tmp.xyzw;
-    }
-  */
+        /*  if(src1_index < 0)
+          {
+            uchar4 tmp;
+            tmp.xyzw = (src1_index == -2) ? src1_data.zwxy:src1_data.yzwx;
+            src1_data.xyzw = (src1_index == -1) ? src1_data.wxyz:tmp.xyzw;
+          }
+        */
         dst_data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : dst_data.x;
         dst_data.y = ((dst_index + 1 >= dst_start) && (dst_index + 1 < dst_end)) ? tmp_data.y : dst_data.y;
         dst_data.z = ((dst_index + 2 >= dst_start) && (dst_index + 2 < dst_end)) ? tmp_data.z : dst_data.z;
@@ -91,8 +97,8 @@ __kernel void arithm_bitwise_not_D0 (__global uchar *src1, int src1_step, int sr
 
 
 __kernel void arithm_bitwise_not_D1 (__global char *src1, int src1_step, int src1_offset,
-                             __global char *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1)
+                                     __global char *dst,  int dst_step,  int dst_offset,
+                                     int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -100,8 +106,11 @@ __kernel void arithm_bitwise_not_D1 (__global char *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align (dst_offset & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (dst_offset & 3)
         int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -124,8 +133,8 @@ __kernel void arithm_bitwise_not_D1 (__global char *src1, int src1_step, int src
 
 
 __kernel void arithm_bitwise_not_D2 (__global ushort *src1, int src1_step, int src1_offset,
-                             __global ushort *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1)
+                                     __global ushort *dst,  int dst_step,  int dst_offset,
+                                     int rows, int cols, int dst_step1)
 
 {
     int x = get_global_id(0);
@@ -134,8 +143,11 @@ __kernel void arithm_bitwise_not_D2 (__global ushort *src1, int src1_step, int s
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align ((dst_offset >> 1) & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 3)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -159,8 +171,8 @@ __kernel void arithm_bitwise_not_D2 (__global ushort *src1, int src1_step, int s
 
 
 __kernel void arithm_bitwise_not_D3 (__global short *src1, int src1_step, int src1_offset,
-                             __global short *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1)
+                                     __global short *dst,  int dst_step,  int dst_offset,
+                                     int rows, int cols, int dst_step1)
 
 {
     int x = get_global_id(0);
@@ -169,8 +181,11 @@ __kernel void arithm_bitwise_not_D3 (__global short *src1, int src1_step, int sr
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align ((dst_offset >> 1) & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 3)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -194,8 +209,8 @@ __kernel void arithm_bitwise_not_D3 (__global short *src1, int src1_step, int sr
 
 
 __kernel void arithm_bitwise_not_D4 (__global int *src1, int src1_step, int src1_offset,
-                             __global int *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1)
+                                     __global int *dst,  int dst_step,  int dst_offset,
+                                     int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);

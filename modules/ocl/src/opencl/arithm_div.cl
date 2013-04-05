@@ -44,7 +44,11 @@
 //M*/
 
 #if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 typedef double F ;
 typedef double4 F4;
 #define convert_F4 convert_double4
@@ -56,34 +60,24 @@ typedef float4 F4;
 #define convert_F  float
 #endif
 
-uchar round2_uchar(F v){
-
-    uchar v1 = convert_uchar_sat(round(v));
-    //uchar v2 = convert_uchar_sat(v+(v>=0 ? 0.5 : -0.5));
-
-    return v1;//(((v-v1)==0.5) && (v1%2==0)) ? v1 : v2;
+inline uchar round2_uchar(F v)
+{
+    return convert_uchar_sat(round(v));
 }
 
-ushort round2_ushort(F v){
-
-    ushort v1 = convert_ushort_sat(round(v));
-    //ushort v2 = convert_ushort_sat(v+(v>=0 ? 0.5 : -0.5));
-
-    return v1;//(((v-v1)==0.5) && (v1%2==0)) ? v1 : v2;
+inline ushort round2_ushort(F v)
+{
+    return convert_ushort_sat(round(v));
 }
-short round2_short(F v){
 
-    short v1 = convert_short_sat(round(v));
-    //short v2 = convert_short_sat(v+(v>=0 ? 0.5 : -0.5));
-
-    return v1;//(((v-v1)==0.5) && (v1%2==0)) ? v1 : v2;
+inline short round2_short(F v)
+{
+    return convert_short_sat(round(v));
 }
-int round2_int(F v){
 
-    int v1 = convert_int_sat(round(v));
-    //int v2 = convert_int_sat(v+(v>=0 ? 0.5 : -0.5));
-
-    return v1;//(((v-v1)==0.5) && (v1%2==0)) ? v1 : v2;
+inline int round2_int(F v)
+{
+    return convert_int_sat(round(v));
 }
 ///////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////divide///////////////////////////////////////////////////
@@ -94,39 +88,41 @@ __kernel void arithm_div_D0 (__global uchar *src1, int src1_step, int src1_offse
                              __global uchar *dst,  int dst_step,  int dst_offset,
                              int rows, int cols, int dst_step1, F scalar)
 {
-    int x = get_global_id(0);
-    int y = get_global_id(1);
+    int2 coor = (int2)(get_global_id(0), get_global_id(1));
 
-    if (x < cols && y < rows)
+    if (coor.x < cols && coor.y < rows)
     {
-        x = x << 2;
+        coor.x = coor.x << 2;
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (dst_offset & 3)
+        int2 src_index = (int2)(mad24(coor.y, src1_step, coor.x + src1_offset - dst_align),
+                                mad24(coor.y, src2_step, coor.x + src2_offset - dst_align));
 
-        #define dst_align (dst_offset & 3)
-        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
-        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align);
+        int4 dst_args  = (int4)(mad24(coor.y, dst_step, dst_offset),
+                                mad24(coor.y, dst_step, dst_offset + dst_step1),
+                                mad24(coor.y, dst_step, dst_offset + coor.x & (int)0xfffffffc),
+                                0);
 
-        int dst_start  = mad24(y, dst_step, dst_offset);
-        int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
-        int dst_index  = mad24(y, dst_step, dst_offset + x & (int)0xfffffffc);
-
-        uchar4 src1_data = vload4(0, src1 + src1_index);
-        uchar4 src2_data = vload4(0, src2 + src2_index);
-        uchar4 dst_data  = *((__global uchar4 *)(dst + dst_index));
+        uchar4 src1_data = vload4(0, src1 + src_index.x);
+        uchar4 src2_data = vload4(0, src2 + src_index.y);
+        uchar4 dst_data  = *((__global uchar4 *)(dst + dst_args.z));
 
         F4 tmp      = convert_F4(src1_data) * scalar;
-
         uchar4 tmp_data;
-        tmp_data.x = ((tmp.x == 0) || (src2_data.x == 0)) ? 0 : round2_uchar(tmp.x / (F)src2_data.x);
-        tmp_data.y = ((tmp.y == 0) || (src2_data.y == 0)) ? 0 : round2_uchar(tmp.y / (F)src2_data.y);
-        tmp_data.z = ((tmp.z == 0) || (src2_data.z == 0)) ? 0 : round2_uchar(tmp.z / (F)src2_data.z);
-        tmp_data.w = ((tmp.w == 0) || (src2_data.w == 0)) ? 0 : round2_uchar(tmp.w / (F)src2_data.w);
+        tmp_data.x = ((tmp.x == 0) || (src2_data.x == 0)) ? 0 : round2_uchar(tmp.x / src2_data.x);
+        tmp_data.y = ((tmp.y == 0) || (src2_data.y == 0)) ? 0 : round2_uchar(tmp.y / src2_data.y);
+        tmp_data.z = ((tmp.z == 0) || (src2_data.z == 0)) ? 0 : round2_uchar(tmp.z / src2_data.z);
+        tmp_data.w = ((tmp.w == 0) || (src2_data.w == 0)) ? 0 : round2_uchar(tmp.w / src2_data.w);
 
-        dst_data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : dst_data.x;
-        dst_data.y = ((dst_index + 1 >= dst_start) && (dst_index + 1 < dst_end)) ? tmp_data.y : dst_data.y;
-        dst_data.z = ((dst_index + 2 >= dst_start) && (dst_index + 2 < dst_end)) ? tmp_data.z : dst_data.z;
-        dst_data.w = ((dst_index + 3 >= dst_start) && (dst_index + 3 < dst_end)) ? tmp_data.w : dst_data.w;
+        dst_data.x = ((dst_args.z + 0 >= dst_args.x) && (dst_args.z + 0 < dst_args.y)) ? tmp_data.x : dst_data.x;
+        dst_data.y = ((dst_args.z + 1 >= dst_args.x) && (dst_args.z + 1 < dst_args.y)) ? tmp_data.y : dst_data.y;
+        dst_data.z = ((dst_args.z + 2 >= dst_args.x) && (dst_args.z + 2 < dst_args.y)) ? tmp_data.z : dst_data.z;
+        dst_data.w = ((dst_args.z + 3 >= dst_args.x) && (dst_args.z + 3 < dst_args.y)) ? tmp_data.w : dst_data.w;
 
-        *((__global uchar4 *)(dst + dst_index)) = dst_data;
+        *((__global uchar4 *)(dst + dst_args.z)) = dst_data;
     }
 }
 
@@ -141,8 +137,11 @@ __kernel void arithm_div_D2 (__global ushort *src1, int src1_step, int src1_offs
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align ((dst_offset >> 1) & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 3)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
         int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
@@ -181,8 +180,11 @@ __kernel void arithm_div_D3 (__global short *src1, int src1_step, int src1_offse
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align ((dst_offset >> 1) & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 3)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
         int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
@@ -296,8 +298,11 @@ __kernel void arithm_s_div_D0 (__global uchar *src, int src_step, int src_offset
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align (dst_offset & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (dst_offset & 3)
         int src_index = mad24(y, src_step, x + src_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -332,8 +337,11 @@ __kernel void arithm_s_div_D2 (__global ushort *src, int src_step, int src_offse
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align ((dst_offset >> 1) & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 3)
         int src_index = mad24(y, src_step, (x << 1) + src_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -367,8 +375,11 @@ __kernel void arithm_s_div_D3 (__global short *src, int src_step, int src_offset
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align ((dst_offset >> 1) & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 3)
         int src_index = mad24(y, src_step, (x << 1) + src_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -455,3 +466,5 @@ __kernel void arithm_s_div_D6 (__global double *src, int src_step, int src_offse
     }
 }
 #endif
+
+

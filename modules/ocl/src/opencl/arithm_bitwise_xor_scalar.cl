@@ -42,19 +42,21 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //
-#if defined (__ATI__)
-#pragma OPENCL EXTENSION cl_amd_fp64:enable
-#elif defined (__NVIDIA__)
+#if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
 #endif
-
+#endif
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////BITWISE_XOR////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 /**************************************xor with scalar without mask**************************************/
-__kernel void arithm_s_bitwise_xor_C1_D0 (__global   uchar *src1, int src1_step, int src1_offset,
-                                  __global   uchar *dst,  int dst_step,  int dst_offset,
-                                  uchar4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C1_D0 (
+        __global   uchar *src1, int src1_step, int src1_offset,
+        __global   uchar *dst,  int dst_step,  int dst_offset,
+        uchar4 src2, int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -62,8 +64,11 @@ __kernel void arithm_s_bitwise_xor_C1_D0 (__global   uchar *src1, int src1_step,
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align (dst_offset & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (dst_offset & 3)
         int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -86,9 +91,10 @@ __kernel void arithm_s_bitwise_xor_C1_D0 (__global   uchar *src1, int src1_step,
 }
 
 
-__kernel void arithm_s_bitwise_xor_C1_D1 (__global   char *src1, int src1_step, int src1_offset,
-                                  __global   char *dst,  int dst_step,  int dst_offset,
-                                  char4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C1_D1 (
+        __global   char *src1, int src1_step, int src1_offset,
+        __global   char *dst,  int dst_step,  int dst_offset,
+        char4 src2, int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -96,8 +102,11 @@ __kernel void arithm_s_bitwise_xor_C1_D1 (__global   char *src1, int src1_step, 
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align (dst_offset & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (dst_offset & 3)
         int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -119,9 +128,10 @@ __kernel void arithm_s_bitwise_xor_C1_D1 (__global   char *src1, int src1_step, 
     }
 }
 
-__kernel void arithm_s_bitwise_xor_C1_D2 (__global   ushort *src1, int src1_step, int src1_offset,
-                                  __global   ushort *dst,  int dst_step,  int dst_offset,
-                                  ushort4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C1_D2 (
+        __global   ushort *src1, int src1_step, int src1_offset,
+        __global   ushort *dst,  int dst_step,  int dst_offset,
+        ushort4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -130,8 +140,11 @@ __kernel void arithm_s_bitwise_xor_C1_D2 (__global   ushort *src1, int src1_step
     if (x < cols && y < rows)
     {
         x = x << 1;
-
-        #define dst_align ((dst_offset >> 1) & 1)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 1)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -150,9 +163,10 @@ __kernel void arithm_s_bitwise_xor_C1_D2 (__global   ushort *src1, int src1_step
         *((__global ushort2 *)((__global uchar *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C1_D3 (__global   short *src1, int src1_step, int src1_offset,
-                                  __global   short *dst,  int dst_step,  int dst_offset,
-                                  short4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C1_D3 (
+        __global   short *src1, int src1_step, int src1_offset,
+        __global   short *dst,  int dst_step,  int dst_offset,
+        short4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -161,8 +175,11 @@ __kernel void arithm_s_bitwise_xor_C1_D3 (__global   short *src1, int src1_step,
     if (x < cols && y < rows)
     {
         x = x << 1;
-
-        #define dst_align ((dst_offset >> 1) & 1)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 1)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -181,9 +198,10 @@ __kernel void arithm_s_bitwise_xor_C1_D3 (__global   short *src1, int src1_step,
         *((__global short2 *)((__global uchar *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C1_D4 (__global   int *src1, int src1_step, int src1_offset,
-                                  __global   int *dst,  int dst_step,  int dst_offset,
-                                  int4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C1_D4 (
+        __global   int *src1, int src1_step, int src1_offset,
+        __global   int *dst,  int dst_step,  int dst_offset,
+        int4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -202,9 +220,10 @@ __kernel void arithm_s_bitwise_xor_C1_D4 (__global   int *src1, int src1_step, i
         *((__global int *)((__global char *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C1_D5 (__global   char *src1, int src1_step, int src1_offset,
-                                  __global   char *dst,  int dst_step,  int dst_offset,
-                                  char16 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C1_D5 (
+        __global   char *src1, int src1_step, int src1_offset,
+        __global   char *dst,  int dst_step,  int dst_offset,
+        char16 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -234,9 +253,10 @@ __kernel void arithm_s_bitwise_xor_C1_D5 (__global   char *src1, int src1_step, 
 }
 
 #if defined (DOUBLE_SUPPORT)
-__kernel void arithm_s_bitwise_xor_C1_D6 (__global short *src1, int src1_step, int src1_offset,
-                                  __global short *dst,  int dst_step,  int dst_offset,
-                                  short16 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C1_D6 (
+        __global short *src1, int src1_step, int src1_offset,
+        __global short *dst,  int dst_step,  int dst_offset,
+        short16 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -256,9 +276,10 @@ __kernel void arithm_s_bitwise_xor_C1_D6 (__global short *src1, int src1_step, i
     }
 }
 #endif
-__kernel void arithm_s_bitwise_xor_C2_D0 (__global   uchar *src1, int src1_step, int src1_offset,
-                                  __global   uchar *dst,  int dst_step,  int dst_offset,
-                                  uchar4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C2_D0 (
+        __global   uchar *src1, int src1_step, int src1_offset,
+        __global   uchar *dst,  int dst_step,  int dst_offset,
+        uchar4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -267,8 +288,11 @@ __kernel void arithm_s_bitwise_xor_C2_D0 (__global   uchar *src1, int src1_step,
     if (x < cols && y < rows)
     {
         x = x << 1;
-
-        #define dst_align ((dst_offset >> 1) & 1)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 1)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -290,9 +314,10 @@ __kernel void arithm_s_bitwise_xor_C2_D0 (__global   uchar *src1, int src1_step,
 }
 
 
-__kernel void arithm_s_bitwise_xor_C2_D1 (__global   char *src1, int src1_step, int src1_offset,
-                                  __global   char *dst,  int dst_step,  int dst_offset,
-                                  char4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C2_D1 (
+        __global   char *src1, int src1_step, int src1_offset,
+        __global   char *dst,  int dst_step,  int dst_offset,
+        char4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -301,8 +326,11 @@ __kernel void arithm_s_bitwise_xor_C2_D1 (__global   char *src1, int src1_step, 
     if (x < cols && y < rows)
     {
         x = x << 1;
-
-        #define dst_align ((dst_offset >> 1) & 1)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 1)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -322,9 +350,10 @@ __kernel void arithm_s_bitwise_xor_C2_D1 (__global   char *src1, int src1_step, 
     }
 }
 
-__kernel void arithm_s_bitwise_xor_C2_D2 (__global   ushort *src1, int src1_step, int src1_offset,
-                                  __global   ushort *dst,  int dst_step,  int dst_offset,
-                                  ushort4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C2_D2 (
+        __global   ushort *src1, int src1_step, int src1_offset,
+        __global   ushort *dst,  int dst_step,  int dst_offset,
+        ushort4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -343,9 +372,10 @@ __kernel void arithm_s_bitwise_xor_C2_D2 (__global   ushort *src1, int src1_step
         *((__global ushort2 *)((__global char *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C2_D3 (__global   short *src1, int src1_step, int src1_offset,
-                                  __global   short *dst,  int dst_step,  int dst_offset,
-                                  short4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C2_D3 (
+        __global   short *src1, int src1_step, int src1_offset,
+        __global   short *dst,  int dst_step,  int dst_offset,
+        short4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -364,9 +394,10 @@ __kernel void arithm_s_bitwise_xor_C2_D3 (__global   short *src1, int src1_step,
         *((__global short2 *)((__global char *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C2_D4 (__global   int *src1, int src1_step, int src1_offset,
-                                  __global   int *dst,  int dst_step,  int dst_offset,
-                                  int4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C2_D4 (
+        __global   int *src1, int src1_step, int src1_offset,
+        __global   int *dst,  int dst_step,  int dst_offset,
+        int4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -384,9 +415,10 @@ __kernel void arithm_s_bitwise_xor_C2_D4 (__global   int *src1, int src1_step, i
         *((__global int2 *)((__global char *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C2_D5 (__global   char *src1, int src1_step, int src1_offset,
-                                  __global   char *dst,  int dst_step,  int dst_offset,
-                                  char16 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C2_D5 (
+        __global   char *src1, int src1_step, int src1_offset,
+        __global   char *dst,  int dst_step,  int dst_offset,
+        char16 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -403,12 +435,13 @@ __kernel void arithm_s_bitwise_xor_C2_D5 (__global   char *src1, int src1_step, 
         char8 tmp_data = src1_data ^ src2_data;
 
         *((__global char8 *)((__global char *)dst + dst_index)) = tmp_data;
-      }
+    }
 }
 #if defined (DOUBLE_SUPPORT)
-__kernel void arithm_s_bitwise_xor_C2_D6 (__global short *src1, int src1_step, int src1_offset,
-                                  __global short *dst,  int dst_step,  int dst_offset,
-                                  short16 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C2_D6 (
+        __global short *src1, int src1_step, int src1_offset,
+        __global short *dst,  int dst_step,  int dst_offset,
+        short16 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -428,9 +461,10 @@ __kernel void arithm_s_bitwise_xor_C2_D6 (__global short *src1, int src1_step, i
     }
 }
 #endif
-__kernel void arithm_s_bitwise_xor_C3_D0 (__global   uchar *src1, int src1_step, int src1_offset,
-                                  __global   uchar *dst,  int dst_step,  int dst_offset,
-                                  uchar4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C3_D0 (
+        __global   uchar *src1, int src1_step, int src1_offset,
+        __global   uchar *dst,  int dst_step,  int dst_offset,
+        uchar4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -439,8 +473,11 @@ __kernel void arithm_s_bitwise_xor_C3_D0 (__global   uchar *src1, int src1_step,
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align (((dst_offset % dst_step) / 3 ) & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (((dst_offset % dst_step) / 3 ) & 3)
         int src1_index = mad24(y, src1_step, (x * 3) + src1_offset - (dst_align * 3));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -484,9 +521,10 @@ __kernel void arithm_s_bitwise_xor_C3_D0 (__global   uchar *src1, int src1_step,
 }
 
 
-__kernel void arithm_s_bitwise_xor_C3_D1 (__global   char *src1, int src1_step, int src1_offset,
-                                  __global   char *dst,  int dst_step,  int dst_offset,
-                                  char4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C3_D1 (
+        __global   char *src1, int src1_step, int src1_offset,
+        __global   char *dst,  int dst_step,  int dst_offset,
+        char4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -495,8 +533,11 @@ __kernel void arithm_s_bitwise_xor_C3_D1 (__global   char *src1, int src1_step, 
     if (x < cols && y < rows)
     {
         x = x << 2;
-
-        #define dst_align (((dst_offset % dst_step) / 3 ) & 3)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (((dst_offset % dst_step) / 3 ) & 3)
         int src1_index = mad24(y, src1_step, (x * 3) + src1_offset - (dst_align * 3));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -539,9 +580,10 @@ __kernel void arithm_s_bitwise_xor_C3_D1 (__global   char *src1, int src1_step, 
     }
 }
 
-__kernel void arithm_s_bitwise_xor_C3_D2 (__global   ushort *src1, int src1_step, int src1_offset,
-                                  __global   ushort *dst,  int dst_step,  int dst_offset,
-                                  ushort4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C3_D2 (
+        __global   ushort *src1, int src1_step, int src1_offset,
+        __global   ushort *dst,  int dst_step,  int dst_offset,
+        ushort4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -550,8 +592,11 @@ __kernel void arithm_s_bitwise_xor_C3_D2 (__global   ushort *src1, int src1_step
     if (x < cols && y < rows)
     {
         x = x << 1;
-
-        #define dst_align (((dst_offset % dst_step) / 6 ) & 1)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (((dst_offset % dst_step) / 6 ) & 1)
         int src1_index = mad24(y, src1_step, (x * 6) + src1_offset - (dst_align * 6));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -577,21 +622,22 @@ __kernel void arithm_s_bitwise_xor_C3_D2 (__global   ushort *src1, int src1_step
         data_0.xy = ((dst_index + 0 >= dst_start)) ? tmp_data_0.xy : data_0.xy;
 
         data_1.x  = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end))
-                     ? tmp_data_1.x : data_1.x;
+                    ? tmp_data_1.x : data_1.x;
         data_1.y  = ((dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
-                     ? tmp_data_1.y : data_1.y;
+                    ? tmp_data_1.y : data_1.y;
 
         data_2.xy = ((dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
-                     ? tmp_data_2.xy : data_2.xy;
+                    ? tmp_data_2.xy : data_2.xy;
 
-       *((__global ushort2 *)((__global char *)dst + dst_index + 0))= data_0;
-       *((__global ushort2 *)((__global char *)dst + dst_index + 4))= data_1;
-       *((__global ushort2 *)((__global char *)dst + dst_index + 8))= data_2;
+        *((__global ushort2 *)((__global char *)dst + dst_index + 0))= data_0;
+        *((__global ushort2 *)((__global char *)dst + dst_index + 4))= data_1;
+        *((__global ushort2 *)((__global char *)dst + dst_index + 8))= data_2;
     }
 }
-__kernel void arithm_s_bitwise_xor_C3_D3 (__global   short *src1, int src1_step, int src1_offset,
-                                  __global   short *dst,  int dst_step,  int dst_offset,
-                                  short4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C3_D3 (
+        __global   short *src1, int src1_step, int src1_offset,
+        __global   short *dst,  int dst_step,  int dst_offset,
+        short4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -600,8 +646,11 @@ __kernel void arithm_s_bitwise_xor_C3_D3 (__global   short *src1, int src1_step,
     if (x < cols && y < rows)
     {
         x = x << 1;
-
-        #define dst_align (((dst_offset % dst_step) / 6 ) & 1)
+        
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (((dst_offset % dst_step) / 6 ) & 1)
         int src1_index = mad24(y, src1_step, (x * 6) + src1_offset - (dst_align * 6));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -627,21 +676,22 @@ __kernel void arithm_s_bitwise_xor_C3_D3 (__global   short *src1, int src1_step,
         data_0.xy = ((dst_index + 0 >= dst_start)) ? tmp_data_0.xy : data_0.xy;
 
         data_1.x  = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end))
-                     ? tmp_data_1.x : data_1.x;
+                    ? tmp_data_1.x : data_1.x;
         data_1.y  = ((dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
-                     ? tmp_data_1.y : data_1.y;
+                    ? tmp_data_1.y : data_1.y;
 
         data_2.xy = ((dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
-                     ? tmp_data_2.xy : data_2.xy;
+                    ? tmp_data_2.xy : data_2.xy;
 
-       *((__global short2 *)((__global char *)dst + dst_index + 0))= data_0;
-       *((__global short2 *)((__global char *)dst + dst_index + 4))= data_1;
-       *((__global short2 *)((__global char *)dst + dst_index + 8))= data_2;
+        *((__global short2 *)((__global char *)dst + dst_index + 0))= data_0;
+        *((__global short2 *)((__global char *)dst + dst_index + 4))= data_1;
+        *((__global short2 *)((__global char *)dst + dst_index + 8))= data_2;
     }
 }
-__kernel void arithm_s_bitwise_xor_C3_D4 (__global   int *src1, int src1_step, int src1_offset,
-                                  __global   int *dst,  int dst_step,  int dst_offset,
-                                  int4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C3_D4 (
+        __global   int *src1, int src1_step, int src1_offset,
+        __global   int *dst,  int dst_step,  int dst_offset,
+        int4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -668,14 +718,15 @@ __kernel void arithm_s_bitwise_xor_C3_D4 (__global   int *src1, int src1_step, i
         int tmp_data_1 = src1_data_1 ^ src2_data_1;
         int tmp_data_2 = src1_data_2 ^ src2_data_2;
 
-       *((__global int *)((__global char *)dst + dst_index + 0))= tmp_data_0;
-       *((__global int *)((__global char *)dst + dst_index + 4))= tmp_data_1;
-       *((__global int *)((__global char *)dst + dst_index + 8))= tmp_data_2;
+        *((__global int *)((__global char *)dst + dst_index + 0))= tmp_data_0;
+        *((__global int *)((__global char *)dst + dst_index + 4))= tmp_data_1;
+        *((__global int *)((__global char *)dst + dst_index + 8))= tmp_data_2;
     }
 }
-__kernel void arithm_s_bitwise_xor_C3_D5 (__global   char *src1, int src1_step, int src1_offset,
-                                  __global   char *dst,  int dst_step,  int dst_offset,
-                                  char16 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C3_D5 (
+        __global   char *src1, int src1_step, int src1_offset,
+        __global   char *dst,  int dst_step,  int dst_offset,
+        char16 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -702,15 +753,16 @@ __kernel void arithm_s_bitwise_xor_C3_D5 (__global   char *src1, int src1_step, 
         char4 tmp_data_1 = src1_data_1 ^ src2_data_1;
         char4 tmp_data_2 = src1_data_2 ^ src2_data_2;
 
-       *((__global char4 *)((__global char *)dst + dst_index + 0))= tmp_data_0;
-       *((__global char4 *)((__global char *)dst + dst_index + 4))= tmp_data_1;
-       *((__global char4 *)((__global char *)dst + dst_index + 8))= tmp_data_2;
+        *((__global char4 *)((__global char *)dst + dst_index + 0))= tmp_data_0;
+        *((__global char4 *)((__global char *)dst + dst_index + 4))= tmp_data_1;
+        *((__global char4 *)((__global char *)dst + dst_index + 8))= tmp_data_2;
     }
 }
 #if defined (DOUBLE_SUPPORT)
-__kernel void arithm_s_bitwise_xor_C3_D6 (__global short *src1, int src1_step, int src1_offset,
-                                          __global short *dst,  int dst_step,  int dst_offset,
-                                          short16 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C3_D6 (
+        __global short *src1, int src1_step, int src1_offset,
+        __global short *dst,  int dst_step,  int dst_offset,
+        short16 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -737,15 +789,16 @@ __kernel void arithm_s_bitwise_xor_C3_D6 (__global short *src1, int src1_step, i
         short4 tmp_data_1 = src1_data_1 ^ src2_data_1;
         short4 tmp_data_2 = src1_data_2 ^ src2_data_2;
 
-       *((__global short4 *)((__global char *)dst + dst_index + 0 ))= tmp_data_0;
-       *((__global short4 *)((__global char *)dst + dst_index + 8 ))= tmp_data_1;
-       *((__global short4 *)((__global char *)dst + dst_index + 16))= tmp_data_2;
+        *((__global short4 *)((__global char *)dst + dst_index + 0 ))= tmp_data_0;
+        *((__global short4 *)((__global char *)dst + dst_index + 8 ))= tmp_data_1;
+        *((__global short4 *)((__global char *)dst + dst_index + 16))= tmp_data_2;
     }
 }
 #endif
-__kernel void arithm_s_bitwise_xor_C4_D0 (__global   uchar *src1, int src1_step, int src1_offset,
-                                  __global   uchar *dst,  int dst_step,  int dst_offset,
-                                  uchar4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C4_D0 (
+        __global   uchar *src1, int src1_step, int src1_offset,
+        __global   uchar *dst,  int dst_step,  int dst_offset,
+        uchar4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -765,9 +818,10 @@ __kernel void arithm_s_bitwise_xor_C4_D0 (__global   uchar *src1, int src1_step,
 }
 
 
-__kernel void arithm_s_bitwise_xor_C4_D1 (__global   char *src1, int src1_step, int src1_offset,
-                                  __global   char *dst,  int dst_step,  int dst_offset,
-                                  char4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C4_D1 (
+        __global   char *src1, int src1_step, int src1_offset,
+        __global   char *dst,  int dst_step,  int dst_offset,
+        char4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -786,9 +840,10 @@ __kernel void arithm_s_bitwise_xor_C4_D1 (__global   char *src1, int src1_step, 
     }
 }
 
-__kernel void arithm_s_bitwise_xor_C4_D2 (__global   ushort *src1, int src1_step, int src1_offset,
-                                  __global   ushort *dst,  int dst_step,  int dst_offset,
-                                  ushort4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C4_D2 (
+        __global   ushort *src1, int src1_step, int src1_offset,
+        __global   ushort *dst,  int dst_step,  int dst_offset,
+        ushort4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -806,9 +861,10 @@ __kernel void arithm_s_bitwise_xor_C4_D2 (__global   ushort *src1, int src1_step
         *((__global ushort4 *)((__global char *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C4_D3 (__global   short *src1, int src1_step, int src1_offset,
-                                  __global   short *dst,  int dst_step,  int dst_offset,
-                                  short4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C4_D3 (
+        __global   short *src1, int src1_step, int src1_offset,
+        __global   short *dst,  int dst_step,  int dst_offset,
+        short4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -826,9 +882,10 @@ __kernel void arithm_s_bitwise_xor_C4_D3 (__global   short *src1, int src1_step,
         *((__global short4 *)((__global char *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C4_D4 (__global   int *src1, int src1_step, int src1_offset,
-                                  __global   int *dst,  int dst_step,  int dst_offset,
-                                  int4 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C4_D4 (
+        __global   int *src1, int src1_step, int src1_offset,
+        __global   int *dst,  int dst_step,  int dst_offset,
+        int4 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -846,9 +903,10 @@ __kernel void arithm_s_bitwise_xor_C4_D4 (__global   int *src1, int src1_step, i
         *((__global int4 *)((__global char *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C4_D5 (__global   char *src1, int src1_step, int src1_offset,
-                                  __global   char *dst,  int dst_step,  int dst_offset,
-                                  char16 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C4_D5 (
+        __global   char *src1, int src1_step, int src1_offset,
+        __global   char *dst,  int dst_step,  int dst_offset,
+        char16 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -869,9 +927,10 @@ __kernel void arithm_s_bitwise_xor_C4_D5 (__global   char *src1, int src1_step, 
     }
 }
 #if defined (DOUBLE_SUPPORT)
-__kernel void arithm_s_bitwise_xor_C4_D6 (__global short *src1, int src1_step, int src1_offset,
-                                          __global short *dst,  int dst_step,  int dst_offset,
-                                          short16 src2, int rows, int cols, int dst_step1)
+__kernel void arithm_s_bitwise_xor_C4_D6 (
+        __global short *src1, int src1_step, int src1_offset,
+        __global short *dst,  int dst_step,  int dst_offset,
+        short16 src2, int rows, int cols, int dst_step1)
 {
 
     int x = get_global_id(0);
@@ -897,10 +956,10 @@ __kernel void arithm_s_bitwise_xor_C4_D6 (__global short *src1, int src1_step, i
         short4 tmp_data_2 = src1_data_2 ^ src2_data_2;
         short4 tmp_data_3 = src1_data_3 ^ src2_data_3;
 
-       *((__global short4 *)((__global char *)dst + dst_index + 0 ))= tmp_data_0;
-       *((__global short4 *)((__global char *)dst + dst_index + 8 ))= tmp_data_1;
-       *((__global short4 *)((__global char *)dst + dst_index + 16))= tmp_data_2;
-       *((__global short4 *)((__global char *)dst + dst_index + 24))= tmp_data_3;
+        *((__global short4 *)((__global char *)dst + dst_index + 0 ))= tmp_data_0;
+        *((__global short4 *)((__global char *)dst + dst_index + 8 ))= tmp_data_1;
+        *((__global short4 *)((__global char *)dst + dst_index + 16))= tmp_data_2;
+        *((__global short4 *)((__global char *)dst + dst_index + 24))= tmp_data_3;
 
     }
 }
