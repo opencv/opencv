@@ -72,7 +72,7 @@ int main( int argc, char** argv ) {
     }
 
     Mat imgB = imread(argv[2], CV_LOAD_IMAGE_GRAYSCALE );
-    if( !imgA.data ) {
+    if( !imgB.data ) {
         std::cout << " --(!) Error reading image " << argv[2] << std::endl;
         return -1;
     }
