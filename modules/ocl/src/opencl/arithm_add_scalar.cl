@@ -49,7 +49,12 @@
 #elif defined (cl_amd_fp64)
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
 #endif
+#endif
 
+#ifdef ARITHM_ADD
+  #define ARITHM_OP(A,B) ((A)+(B))
+#elif defined ARITHM_SUB
+  #define ARITHM_OP(A,B) ((A)-(B))
 #endif
 /**************************************add with scalar without mask**************************************/
 __kernel void arithm_s_add_C1_D0 (__global   uchar *src1, int src1_step, int src1_offset,
@@ -83,7 +88,7 @@ __kernel void arithm_s_add_C1_D0 (__global   uchar *src1, int src1_step, int src
         }
 
         uchar4 data = *((__global uchar4 *)(dst + dst_index));
-        int4 tmp = convert_int4_sat(src1_data) + src2_data;
+        int4 tmp = ARITHM_OP(convert_int4_sat(src1_data), src2_data);
         uchar4 tmp_data = convert_uchar4_sat(tmp);
 
         data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : data.x;
@@ -120,7 +125,7 @@ __kernel void arithm_s_add_C1_D2 (__global   ushort *src1, int src1_step, int sr
         int2 src2_data = (int2)(src2.x, src2.x);
 
         ushort2 data = *((__global ushort2 *)((__global uchar *)dst + dst_index));
-        int2    tmp = convert_int2_sat(src1_data) + src2_data;
+        int2    tmp = ARITHM_OP(convert_int2_sat(src1_data), src2_data);
         ushort2 tmp_data = convert_ushort2_sat(tmp);
 
         data.x = (dst_index + 0 >= dst_start) ? tmp_data.x : data.x;
@@ -155,7 +160,7 @@ __kernel void arithm_s_add_C1_D3 (__global   short *src1, int src1_step, int src
         int2 src2_data = (int2)(src2.x, src2.x);
         short2 data = *((__global short2 *)((__global uchar *)dst + dst_index));
 
-        int2    tmp = convert_int2_sat(src1_data) + src2_data;
+        int2    tmp = ARITHM_OP(convert_int2_sat(src1_data), src2_data);
         short2 tmp_data = convert_short2_sat(tmp);
 
         data.x = (dst_index + 0 >= dst_start) ? tmp_data.x : data.x;
@@ -181,7 +186,7 @@ __kernel void arithm_s_add_C1_D4 (__global   int *src1, int src1_step, int src1_
         int src_data2 = src2.x;
         int dst_data  = *((__global int *)((__global char *)dst  + dst_index));
 
-        int data = convert_int_sat((long)src_data1 + (long)src_data2);
+        int data = convert_int_sat(ARITHM_OP((long)src_data1, (long)src_data2));
 
         *((__global int *)((__global char *)dst + dst_index)) = data;
     }
@@ -203,7 +208,7 @@ __kernel void arithm_s_add_C1_D5 (__global   float *src1, int src1_step, int src
         float src_data2 = src2.x;
         float dst_data  = *((__global float *)((__global char *)dst  + dst_index));
 
-        float data = src_data1 + src_data2;
+        float data = ARITHM_OP(src_data1, src_data2);
 
         *((__global float *)((__global char *)dst + dst_index)) = data;
     }
@@ -227,7 +232,7 @@ __kernel void arithm_s_add_C1_D6 (__global   double *src1, int src1_step, int sr
         double src2_data = src2.x;
         double dst_data  = *((__global double *)((__global char *)dst  + dst_index));
 
-        double data = src_data1 + src2_data;
+        double data = ARITHM_OP(src_data1, src2_data);
 
         *((__global double *)((__global char *)dst + dst_index)) = data;
     }
@@ -260,7 +265,7 @@ __kernel void arithm_s_add_C2_D0 (__global   uchar *src1, int src1_step, int src
         int4 src2_data = (int4)(src2.x, src2.y, src2.x, src2.y);
 
         uchar4 data = *((__global uchar4 *)(dst + dst_index));
-        int4 tmp = convert_int4_sat(src1_data) + src2_data;
+        int4 tmp = ARITHM_OP(convert_int4_sat(src1_data), src2_data);
         uchar4 tmp_data = convert_uchar4_sat(tmp);
 
         data.xy = (dst_index + 0 >= dst_start) ? tmp_data.xy : data.xy;
@@ -286,7 +291,7 @@ __kernel void arithm_s_add_C2_D2 (__global   ushort *src1, int src1_step, int sr
         int2 src_data2 = (int2)(src2.x, src2.y);
         ushort2 dst_data  = *((__global ushort2 *)((__global char *)dst  + dst_index));
 
-        int2    tmp = convert_int2_sat(src_data1) + src_data2;
+        int2    tmp = ARITHM_OP(convert_int2_sat(src_data1), src_data2);
         ushort2 data = convert_ushort2_sat(tmp);
 
         *((__global ushort2 *)((__global char *)dst + dst_index)) = data;
@@ -309,7 +314,7 @@ __kernel void arithm_s_add_C2_D3 (__global   short *src1, int src1_step, int src
         int2 src_data2 = (int2)(src2.x, src2.y);
         short2 dst_data  = *((__global short2 *)((__global char *)dst  + dst_index));
 
-        int2    tmp = convert_int2_sat(src_data1) + src_data2;
+        int2    tmp = ARITHM_OP(convert_int2_sat(src_data1), src_data2);
         short2 data = convert_short2_sat(tmp);
 
         *((__global short2 *)((__global char *)dst + dst_index)) = data;
@@ -332,7 +337,7 @@ __kernel void arithm_s_add_C2_D4 (__global   int *src1, int src1_step, int src1_
         int2 src_data2 = (int2)(src2.x, src2.y);
         int2 dst_data  = *((__global int2 *)((__global char *)dst  + dst_index));
 
-        int2 data = convert_int2_sat(convert_long2_sat(src_data1) + convert_long2_sat(src_data2));
+        int2 data = convert_int2_sat(ARITHM_OP(convert_long2_sat(src_data1), convert_long2_sat(src_data2)));
         *((__global int2 *)((__global char *)dst + dst_index)) = data;
     }
 }
@@ -353,7 +358,7 @@ __kernel void arithm_s_add_C2_D5 (__global   float *src1, int src1_step, int src
         float2 src_data2 = (float2)(src2.x, src2.y);
         float2 dst_data  = *((__global float2 *)((__global char *)dst  + dst_index));
 
-        float2 data = src_data1 + src_data2;
+        float2 data = ARITHM_OP(src_data1, src_data2);
         *((__global float2 *)((__global char *)dst + dst_index)) = data;
     }
 }
@@ -376,7 +381,7 @@ __kernel void arithm_s_add_C2_D6 (__global   double *src1, int src1_step, int sr
         double2 src_data2 = (double2)(src2.x, src2.y);
         double2 dst_data  = *((__global double2 *)((__global char *)dst  + dst_index));
 
-        double2 data = src_data1 + src_data2;
+        double2 data = ARITHM_OP(src_data1, src_data2);
 
         *((__global double2 *)((__global char *)dst + dst_index)) = data;
     }
@@ -398,7 +403,7 @@ __kernel void arithm_s_add_C4_D0 (__global   uchar *src1, int src1_step, int src
 
         uchar4 src_data1 = *((__global uchar4 *)(src1 + src1_index));
 
-        uchar4 data = convert_uchar4_sat(convert_int4_sat(src_data1) + src2);
+        uchar4 data = convert_uchar4_sat(ARITHM_OP(convert_int4_sat(src_data1), src2));
 
         *((__global uchar4 *)(dst + dst_index)) = data;
     }
@@ -418,7 +423,7 @@ __kernel void arithm_s_add_C4_D2 (__global   ushort *src1, int src1_step, int sr
 
         ushort4 src_data1 = *((__global ushort4 *)((__global char *)src1 + src1_index));
 
-        ushort4 data = convert_ushort4_sat(convert_int4_sat(src_data1) + src2);
+        ushort4 data = convert_ushort4_sat(ARITHM_OP(convert_int4_sat(src_data1), src2));
 
         *((__global ushort4 *)((__global char *)dst + dst_index)) = data;
     }
@@ -438,7 +443,7 @@ __kernel void arithm_s_add_C4_D3 (__global   short *src1, int src1_step, int src
 
         short4 src_data1 = *((__global short4 *)((__global char *)src1 + src1_index));
 
-        short4 data = convert_short4_sat(convert_int4_sat(src_data1) + src2);
+        short4 data = convert_short4_sat(ARITHM_OP(convert_int4_sat(src_data1), src2));
 
         *((__global short4 *)((__global char *)dst + dst_index)) = data;
     }
@@ -458,7 +463,7 @@ __kernel void arithm_s_add_C4_D4 (__global   int *src1, int src1_step, int src1_
 
         int4 src_data1 = *((__global int4 *)((__global char *)src1 + src1_index));
 
-        int4 data = convert_int4_sat(convert_long4_sat(src_data1) + convert_long4_sat(src2));
+        int4 data = convert_int4_sat(ARITHM_OP(convert_long4_sat(src_data1), convert_long4_sat(src2)));
 
         *((__global int4 *)((__global char *)dst + dst_index)) = data;
     }
@@ -478,7 +483,7 @@ __kernel void arithm_s_add_C4_D5 (__global   float *src1, int src1_step, int src
 
         float4 src_data1 = *((__global float4 *)((__global char *)src1 + src1_index));
 
-        float4 data = src_data1 + src2;
+        float4 data = ARITHM_OP(src_data1, src2);
 
         *((__global float4 *)((__global char *)dst + dst_index)) = data;
     }
@@ -500,7 +505,7 @@ __kernel void arithm_s_add_C4_D6 (__global   double *src1, int src1_step, int sr
 
         double4 src_data1 = *((__global double4 *)((__global char *)src1 + src1_index));
 
-        double4 data = src_data1 + src2;
+        double4 data = ARITHM_OP(src_data1, src2);
 
         *((__global double4 *)((__global char *)dst + dst_index)) = data;
     }
