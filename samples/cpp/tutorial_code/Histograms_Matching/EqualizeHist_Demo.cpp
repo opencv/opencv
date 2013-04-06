@@ -31,7 +31,7 @@ int main( int, char** argv )
     }
 
   /// Convert to grayscale
-  cvtColor( src, src, CV_BGR2GRAY );
+  cvtColor( src, src, COLOR_BGR2GRAY );
 
   /// Apply Histogram Equalization
   equalizeHist( src, dst );

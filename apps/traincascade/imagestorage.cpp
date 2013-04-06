@@ -1,6 +1,7 @@
 #include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 
-#include "cv.h"
 #include "imagestorage.h"
 #include <stdio.h>
 #include <iostream>

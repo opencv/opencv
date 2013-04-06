@@ -37,9 +37,9 @@ static void OpenClose(int, void*)
     int an = n > 0 ? n : -n;
     Mat element = getStructuringElement(element_shape, Size(an*2+1, an*2+1), Point(an, an) );
     if( n < 0 )
-        morphologyEx(src, dst, CV_MOP_OPEN, element);
+        morphologyEx(src, dst, MORPH_OPEN, element);
     else
-        morphologyEx(src, dst, CV_MOP_CLOSE, element);
+        morphologyEx(src, dst, MORPH_CLOSE, element);
     imshow("Open/Close",dst);
 }
 

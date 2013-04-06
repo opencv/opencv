@@ -716,6 +716,12 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
       }\
    }
 
+namespace cv {
+template<> void cv::Ptr<IplConvKernel>::delete_obj()
+{
+  cvReleaseStructuringElement(&obj);
+}
+}
 
 void
 cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_img,

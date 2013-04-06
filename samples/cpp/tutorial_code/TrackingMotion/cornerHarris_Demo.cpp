@@ -31,7 +31,7 @@ int main( int, char** argv )
 {
   /// Load source image and convert it to gray
   src = imread( argv[1], 1 );
-  cvtColor( src, src_gray, CV_BGR2GRAY );
+  cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
   /// Create a window and a trackbar
   namedWindow( source_window, CV_WINDOW_AUTOSIZE );

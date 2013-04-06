@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 
     Mat dst, cdst;
     Canny(src, dst, 50, 200, 3);
-    cvtColor(dst, cdst, CV_GRAY2BGR);
+    cvtColor(dst, cdst, COLOR_GRAY2BGR);
 
 #if 0
     vector<Vec2f> lines;

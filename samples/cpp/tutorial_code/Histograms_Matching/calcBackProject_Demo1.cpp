@@ -28,7 +28,7 @@ int main( int, char** argv )
   /// Read the image
   src = imread( argv[1], 1 );
   /// Transform it to HSV
-  cvtColor( src, hsv, CV_BGR2HSV );
+  cvtColor( src, hsv, COLOR_BGR2HSV );
 
   /// Use only the Hue value
   hue.create( hsv.size(), hsv.depth() );

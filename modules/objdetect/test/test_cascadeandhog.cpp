@@ -434,7 +434,7 @@ int CV_CascadeDetectorTest::detectMultiScale_C( const string& filename,
         return cvtest::TS::FAIL_INVALID_TEST_DATA;
     }
     Mat grayImg;
-    cvtColor( img, grayImg, CV_BGR2GRAY );
+    cvtColor( img, grayImg, COLOR_BGR2GRAY );
     equalizeHist( grayImg, grayImg );
 
     CvMat c_gray = grayImg;
@@ -469,7 +469,7 @@ int CV_CascadeDetectorTest::detectMultiScale( int di, const Mat& img,
         return cvtest::TS::FAIL_INVALID_TEST_DATA;
     }
     Mat grayImg;
-    cvtColor( img, grayImg, CV_BGR2GRAY );
+    cvtColor( img, grayImg, COLOR_BGR2GRAY );
     equalizeHist( grayImg, grayImg );
     cascade.detectMultiScale( grayImg, objects, 1.1, 3, flags[di] );
     return cvtest::TS::OK;

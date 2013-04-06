@@ -30,7 +30,7 @@ int main( int, char** argv )
   src = imread( argv[1], 1 );
 
   /// Convert image to gray and blur it
-  cvtColor( src, src_gray, CV_BGR2GRAY );
+  cvtColor( src, src_gray, COLOR_BGR2GRAY );
   blur( src_gray, src_gray, Size(3,3) );
 
   /// Create Window
@@ -57,7 +57,7 @@ void thresh_callback(int, void* )
   /// Detect edges using Threshold
   threshold( src_gray, threshold_output, thresh, 255, THRESH_BINARY );
   /// Find contours
-  findContours( threshold_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+  findContours( threshold_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
   /// Find the rotated rectangles and ellipses for each contour
   vector<RotatedRect> minRect( contours.size() );

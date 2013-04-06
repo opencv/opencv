@@ -58,7 +58,7 @@ int main( int, char** argv )
   dst.create( src.size(), src.type() );
 
   /// Convert the image to grayscale
-  cvtColor( src, src_gray, CV_BGR2GRAY );
+  cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
   /// Create a window
   namedWindow( window_name, CV_WINDOW_AUTOSIZE );

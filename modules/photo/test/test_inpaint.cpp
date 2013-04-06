@@ -78,7 +78,7 @@ void CV_InpaintTest::run( int )
     mask.convertTo(inv_mask, CV_8UC3, -1.0, 255.0);
 
     Mat mask1ch;
-    cv::cvtColor(mask, mask1ch, CV_BGR2GRAY);
+    cv::cvtColor(mask, mask1ch, COLOR_BGR2GRAY);
 
     Mat test = orig.clone();
     test.setTo(Scalar::all(255), mask1ch);

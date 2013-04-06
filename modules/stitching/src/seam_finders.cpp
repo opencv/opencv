@@ -139,8 +139,8 @@ void VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
     Mat unique2 = submask2.clone(); unique2.setTo(0, collision);
 
     Mat dist1, dist2;
-    distanceTransform(unique1 == 0, dist1, CV_DIST_L1, 3);
-    distanceTransform(unique2 == 0, dist2, CV_DIST_L1, 3);
+    distanceTransform(unique1 == 0, dist1, DIST_L1, 3);
+    distanceTransform(unique2 == 0, dist2, DIST_L1, 3);
 
     Mat seam = dist1 < dist2;
 
@@ -522,17 +522,17 @@ void DpSeamFinder::computeGradients(const Mat &image1, const Mat &image2)
     Mat gray;
 
     if (image1.channels() == 3)
-        cvtColor(image1, gray, CV_BGR2GRAY);
+        cvtColor(image1, gray, COLOR_BGR2GRAY);
     else if (image1.channels() == 4)
-        cvtColor(image1, gray, CV_BGRA2GRAY);
+        cvtColor(image1, gray, COLOR_BGRA2GRAY);
 
     Sobel(gray, gradx1_, CV_32F, 1, 0);
     Sobel(gray, grady1_, CV_32F, 0, 1);
 
     if (image2.channels() == 3)
-        cvtColor(image2, gray, CV_BGR2GRAY);
+        cvtColor(image2, gray, COLOR_BGR2GRAY);
     else if (image2.channels() == 4)
-        cvtColor(image2, gray, CV_BGRA2GRAY);
+        cvtColor(image2, gray, COLOR_BGRA2GRAY);
 
     Sobel(gray, gradx2_, CV_32F, 1, 0);
     Sobel(gray, grady2_, CV_32F, 0, 1);

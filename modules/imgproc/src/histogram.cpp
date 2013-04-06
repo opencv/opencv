@@ -43,10 +43,6 @@
 namespace cv
 {
 
-template<> void Ptr<CvHistogram>::delete_obj()
-{ cvReleaseHist(&obj); }
-
-
 ////////////////// Helper functions //////////////////////
 
 static const size_t OUT_OF_RANGE = (size_t)1 << (sizeof(size_t)*8 - 2);

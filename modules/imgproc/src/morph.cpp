@@ -1191,9 +1191,6 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
     //    f->apply( dst, dst );
 }
 
-template<> void Ptr<IplConvKernel>::delete_obj()
-{ cvReleaseStructuringElement(&obj); }
-
 }
 
 void cv::erode( InputArray src, OutputArray dst, InputArray kernel,

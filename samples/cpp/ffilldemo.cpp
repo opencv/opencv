@@ -41,7 +41,7 @@ static void onMouse( int event, int x, int y, int, void* )
     int lo = ffillMode == 0 ? 0 : loDiff;
     int up = ffillMode == 0 ? 0 : upDiff;
     int flags = connectivity + (newMaskVal << 8) +
-                (ffillMode == 1 ? CV_FLOODFILL_FIXED_RANGE : 0);
+                (ffillMode == 1 ? FLOODFILL_FIXED_RANGE : 0);
     int b = (unsigned)theRNG() & 255;
     int g = (unsigned)theRNG() & 255;
     int r = (unsigned)theRNG() & 255;
@@ -53,7 +53,7 @@ static void onMouse( int event, int x, int y, int, void* )
 
     if( useMask )
     {
-        threshold(mask, mask, 1, 128, CV_THRESH_BINARY);
+        threshold(mask, mask, 1, 128, THRESH_BINARY);
         area = floodFill(dst, mask, seed, newVal, &ccomp, Scalar(lo, lo, lo),
                   Scalar(up, up, up), flags);
         imshow( "mask", mask );
@@ -81,7 +81,7 @@ int main( int argc, char** argv )
     }
     help();
     image0.copyTo(image);
-    cvtColor(image0, gray, CV_BGR2GRAY);
+    cvtColor(image0, gray, COLOR_BGR2GRAY);
     mask.create(image0.rows+2, image0.cols+2, CV_8UC1);
 
     namedWindow( "image", 0 );
@@ -106,7 +106,7 @@ int main( int argc, char** argv )
             if( isColor )
             {
                 cout << "Grayscale mode is set\n";
-                cvtColor(image0, gray, CV_BGR2GRAY);
+                cvtColor(image0, gray, COLOR_BGR2GRAY);
                 mask = Scalar::all(0);
                 isColor = false;
             }
@@ -135,7 +135,7 @@ int main( int argc, char** argv )
         case 'r':
             cout << "Original image is restored\n";
             image0.copyTo(image);
-            cvtColor(image, gray, CV_BGR2GRAY);
+            cvtColor(image, gray, COLOR_BGR2GRAY);
             mask = Scalar::all(0);
             break;
         case 's':

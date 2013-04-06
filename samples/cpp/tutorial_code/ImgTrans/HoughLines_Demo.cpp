@@ -46,7 +46,7 @@ int main( int, char** argv )
      }
 
    /// Pass the image to gray
-   cvtColor( src, src_gray, CV_RGB2GRAY );
+   cvtColor( src, src_gray, COLOR_RGB2GRAY );
 
    /// Apply Canny edge detector
    Canny( src_gray, edges, 50, 200, 3 );
@@ -85,7 +85,7 @@ void help()
 void Standard_Hough( int, void* )
 {
   vector<Vec2f> s_lines;
-  cvtColor( edges, standard_hough, CV_GRAY2BGR );
+  cvtColor( edges, standard_hough, COLOR_GRAY2BGR );
 
   /// 1. Use Standard Hough Transform
   HoughLines( edges, s_lines, 1, CV_PI/180, min_threshold + s_trackbar, 0, 0 );
@@ -112,7 +112,7 @@ void Standard_Hough( int, void* )
 void Probabilistic_Hough( int, void* )
 {
   vector<Vec4i> p_lines;
-  cvtColor( edges, probabilistic_hough, CV_GRAY2BGR );
+  cvtColor( edges, probabilistic_hough, COLOR_GRAY2BGR );
 
   /// 2. Use Probabilistic Hough Transform
   HoughLinesP( edges, p_lines, 1, CV_PI/180, min_threshold + p_trackbar, 30, 10 );

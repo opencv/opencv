@@ -45,8 +45,10 @@
 
 #ifdef __cplusplus
 #  include "opencv2/core.hpp"
+#  include "opencv2/imgproc.hpp"
 #endif
-#include "opencv2/imgproc.hpp"
+
+#include "opencv2/imgproc/imgproc_c.h"
 
 #ifdef __cplusplus
 extern "C" {

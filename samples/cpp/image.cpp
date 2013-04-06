@@ -49,7 +49,7 @@ int main( int argc, char** argv )
         return -1;
 
     Mat img_yuv;
-    cvtColor(img, img_yuv, CV_BGR2YCrCb); // convert image to YUV color space. The output image will be created automatically
+    cvtColor(img, img_yuv, COLOR_BGR2YCrCb); // convert image to YUV color space. The output image will be created automatically
 
     vector<Mat> planes; // Vector is template vector class, similar to STL's vector. It can store matrices too.
     split(img_yuv, planes); // split the image into separate color planes
@@ -107,7 +107,7 @@ int main( int argc, char** argv )
     // now merge the results back
     merge(planes, img_yuv);
     // and produce the output RGB image
-    cvtColor(img_yuv, img, CV_YCrCb2BGR);
+    cvtColor(img_yuv, img, COLOR_YCrCb2BGR);
 
     // this is counterpart for cvNamedWindow
     namedWindow("image with grain", CV_WINDOW_AUTOSIZE);

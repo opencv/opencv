@@ -31,7 +31,7 @@ int main( int, char** argv )
   /// Read the image
   src = imread( argv[1], 1 );
   /// Transform it to HSV
-  cvtColor( src, hsv, CV_BGR2HSV );
+  cvtColor( src, hsv, COLOR_BGR2HSV );
 
   /// Show the image
   namedWindow( window_image, CV_WINDOW_AUTOSIZE );

@@ -47,7 +47,7 @@ int main( int, char** argv )
 
     /// Update map_x & map_y. Then apply remap
     update_map();
-    remap( src, dst, map_x, map_y, CV_INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0) );
+    remap( src, dst, map_x, map_y, INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0) );
 
     // Display results
     imshow( remap_window, dst );

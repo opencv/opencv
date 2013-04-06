@@ -89,12 +89,12 @@ int main(int argc, char* argv[])
     if(argc != 5)
     {
         cpu_img1 = imread("o.png");
-        cvtColor(cpu_img1, cpu_img1_grey, CV_BGR2GRAY);
+        cvtColor(cpu_img1, cpu_img1_grey, COLOR_BGR2GRAY);
         img1     = cpu_img1_grey;
         CV_Assert(!img1.empty());
 
         cpu_img2 = imread("r2.png");
-        cvtColor(cpu_img2, cpu_img2_grey, CV_BGR2GRAY);
+        cvtColor(cpu_img2, cpu_img2_grey, COLOR_BGR2GRAY);
         img2     = cpu_img2_grey;
     }
     else
@@ -104,14 +104,14 @@ int main(int argc, char* argv[])
             if (string(argv[i]) == "--left")
             {
                 cpu_img1 = imread(argv[++i]);
-                cvtColor(cpu_img1, cpu_img1_grey, CV_BGR2GRAY);
+                cvtColor(cpu_img1, cpu_img1_grey, COLOR_BGR2GRAY);
                 img1     = cpu_img1_grey;
                 CV_Assert(!img1.empty());
             }
             else if (string(argv[i]) == "--right")
             {
                 cpu_img2 = imread(argv[++i]);
-                cvtColor(cpu_img2, cpu_img2_grey, CV_BGR2GRAY);
+                cvtColor(cpu_img2, cpu_img2_grey, COLOR_BGR2GRAY);
                 img2     = cpu_img2_grey;
             }
             else if (string(argv[i]) == "--help")

@@ -93,7 +93,7 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
     }
 
     Mat src_lab;
-    cvtColor(src, src_lab, CV_LBGR2Lab);
+    cvtColor(src, src_lab, COLOR_LBGR2Lab);
 
     Mat l(src.size(), CV_8U);
     Mat ab(src.size(), CV_8UC2);
@@ -108,7 +108,7 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
     Mat dst_lab(src.size(), src.type());
     mixChannels(l_ab_denoised, 2, &dst_lab, 1, from_to, 3);
 
-    cvtColor(dst_lab, dst, CV_Lab2LBGR);
+    cvtColor(dst_lab, dst, COLOR_Lab2LBGR);
 }
 
 static void fastNlMeansDenoisingMultiCheckPreconditions(
@@ -215,7 +215,7 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
         src_lab[i] = Mat::zeros(srcImgs[0].size(), CV_8UC3);
         l[i] = Mat::zeros(srcImgs[0].size(), CV_8UC1);
         ab[i] = Mat::zeros(srcImgs[0].size(), CV_8UC2);
-        cvtColor(srcImgs[i], src_lab[i], CV_LBGR2Lab);
+        cvtColor(srcImgs[i], src_lab[i], COLOR_LBGR2Lab);
 
         Mat l_ab[] = { l[i], ab[i] };
         mixChannels(&src_lab[i], 1, l_ab, 2, from_to, 3);
@@ -236,7 +236,7 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
     Mat dst_lab(srcImgs[0].size(), srcImgs[0].type());
     mixChannels(l_ab_denoised, 2, &dst_lab, 1, from_to, 3);
 
-    cvtColor(dst_lab, dst, CV_Lab2LBGR);
+    cvtColor(dst_lab, dst, COLOR_Lab2LBGR);
 }
 
 

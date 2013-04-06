@@ -46,7 +46,7 @@ int main( int argc, char** argv )
 
     // convert image to YUV color space. The output image will be created automatically.
     Mat I_YUV;
-    cvtColor(I, I_YUV, CV_BGR2YCrCb);
+    cvtColor(I, I_YUV, COLOR_BGR2YCrCb);
 
     vector<Mat> planes;    // Use the STL's vector structure to store multiple Mat objects
     split(I_YUV, planes);  // split the image into separate color planes (Y U V)
@@ -115,7 +115,7 @@ int main( int argc, char** argv )
 
 
     merge(planes, I_YUV);                // now merge the results back
-    cvtColor(I_YUV, I, CV_YCrCb2BGR);  // and produce the output RGB image
+    cvtColor(I_YUV, I, COLOR_YCrCb2BGR);  // and produce the output RGB image
 
 
     namedWindow("image with grain", CV_WINDOW_AUTOSIZE);   // use this to create images

@@ -167,7 +167,7 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
         CV_RGB(255,0,255)} ;
     Mat gray, smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
 
-    cvtColor( img, gray, CV_BGR2GRAY );
+    cvtColor( img, gray, COLOR_BGR2GRAY );
     resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
     equalizeHist( smallImg, smallImg );
 
