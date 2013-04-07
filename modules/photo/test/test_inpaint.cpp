@@ -84,8 +84,8 @@ void CV_InpaintTest::run( int )
     test.setTo(Scalar::all(255), mask1ch);
 
     Mat res1, res2;
-    inpaint( test, mask1ch, res1, 5, CV_INPAINT_NS );
-    inpaint( test, mask1ch, res2, 5, CV_INPAINT_TELEA );
+    inpaint( test, mask1ch, res1, 5, INPAINT_NS );
+    inpaint( test, mask1ch, res2, 5, INPAINT_TELEA );
 
     Mat diff1, diff2;
     absdiff( orig, res1, diff1 );

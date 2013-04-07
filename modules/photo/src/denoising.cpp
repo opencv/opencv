@@ -74,7 +74,7 @@ void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
         default:
-            CV_Error(CV_StsBadArg,
+            CV_Error(Error::StsBadArg,
                 "Unsupported image format! Only CV_8UC1, CV_8UC2 and CV_8UC3 are supported");
     }
 }
@@ -88,7 +88,7 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
     Mat dst = _dst.getMat();
 
     if (src.type() != CV_8UC3) {
-        CV_Error(CV_StsBadArg, "Type of input image should be CV_8UC3!");
+        CV_Error(Error::StsBadArg, "Type of input image should be CV_8UC3!");
         return;
     }
 
@@ -118,27 +118,27 @@ static void fastNlMeansDenoisingMultiCheckPreconditions(
 {
     int src_imgs_size = (int)srcImgs.size();
     if (src_imgs_size == 0) {
-        CV_Error(CV_StsBadArg, "Input images vector should not be empty!");
+        CV_Error(Error::StsBadArg, "Input images vector should not be empty!");
     }
 
     if (temporalWindowSize % 2 == 0 ||
         searchWindowSize % 2 == 0 ||
         templateWindowSize % 2 == 0) {
-        CV_Error(CV_StsBadArg, "All windows sizes should be odd!");
+        CV_Error(Error::StsBadArg, "All windows sizes should be odd!");
     }
 
     int temporalWindowHalfSize = temporalWindowSize / 2;
     if (imgToDenoiseIndex - temporalWindowHalfSize < 0 ||
         imgToDenoiseIndex + temporalWindowHalfSize >= src_imgs_size)
     {
-        CV_Error(CV_StsBadArg,
+        CV_Error(Error::StsBadArg,
             "imgToDenoiseIndex and temporalWindowSize "
             "should be choosen corresponding srcImgs size!");
     }
 
     for (int i = 1; i < src_imgs_size; i++) {
         if (srcImgs[0].size() != srcImgs[i].size() || srcImgs[0].type() != srcImgs[i].type()) {
-            CV_Error(CV_StsBadArg, "Input images should have the same size and type!");
+            CV_Error(Error::StsBadArg, "Input images should have the same size and type!");
         }
     }
 }
@@ -177,7 +177,7 @@ void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _ds
                     dst, templateWindowSize, searchWindowSize, h));
             break;
         default:
-            CV_Error(CV_StsBadArg,
+            CV_Error(Error::StsBadArg,
                 "Unsupported matrix format! Only uchar, Vec2b, Vec3b are supported");
     }
 }
@@ -201,7 +201,7 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
     int src_imgs_size = (int)srcImgs.size();
 
     if (srcImgs[0].type() != CV_8UC3) {
-        CV_Error(CV_StsBadArg, "Type of input images should be CV_8UC3!");
+        CV_Error(Error::StsBadArg, "Type of input images should be CV_8UC3!");
         return;
     }
 

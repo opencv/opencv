@@ -81,7 +81,7 @@ int main( int argc, char** argv )
         if( c == 'i' || c == ' ' )
         {
             Mat inpainted;
-            inpaint(img, inpaintMask, inpainted, 3, CV_INPAINT_TELEA);
+            inpaint(img, inpaintMask, inpainted, 3, INPAINT_TELEA);
             imshow("inpainted image", inpainted);
         }
     }
