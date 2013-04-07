@@ -23,6 +23,8 @@
 #include "opencv2/photo.hpp"
 #include "opencv2/highgui.hpp"
 
+#include "opencv2/highgui/highgui_c.h"
+
 #include "opencv2/opencv_modules.hpp"
 
 #ifdef HAVE_OPENCV_NONFREE

@@ -61,7 +61,9 @@ extern "C" {
 #endif
 
 #ifdef WIN32
-  #include <libavformat/avformat.h>
+#  define AVUTIL_COMMON_H
+#  define MKBETAG(a,b,c,d) ((d) | ((c) << 8) | ((b) << 16) | ((unsigned)(a) << 24))
+#  include <libavformat/avformat.h>
 #else
 
 // if the header path is not specified explicitly, let's deduce it

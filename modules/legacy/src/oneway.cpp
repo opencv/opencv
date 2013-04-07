@@ -669,7 +669,7 @@ namespace cv{
             cvConvertScale(m_samples[i], patch, 255/maxval);
 
 #ifdef HAVE_OPENCV_HIGHGUI
-            cvSaveImage(buf, patch);
+            cv::imwrite(buf, cv::cvarrToMat(patch));
 #else
             CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without image I/O support");
 #endif
@@ -1801,17 +1801,16 @@ namespace cv{
             sprintf(filename, "%s/%s", path, imagename);
 
             //printf("Reading image %s...", filename);
-            IplImage* img = 0;
+            IplImage img;
 #ifdef HAVE_OPENCV_HIGHGUI
-            img = cvLoadImage(filename, CV_LOAD_IMAGE_GRAYSCALE);
+            Mat img2 = cv::imread(filename, IMREAD_GRAYSCALE);
+            img = img2;
 #else
             CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without image I/O support");
 #endif
             //printf("done\n");
 
-            extractPatches (img, patches, patch_size);
-
-            cvReleaseImage(&img);
+            extractPatches (&img, patches, patch_size);
         }
         fclose(pFile);
     }

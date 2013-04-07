@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <iostream>
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/flann/miniflann.hpp"
-#include "opencv2/core/utility.hpp"
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/flann/miniflann.hpp>
+#include <opencv2/core/utility.hpp>
 
 using namespace cv; // all the new API is put into "cv" namespace. Export its content
 using namespace std;
@@ -21,6 +21,10 @@ static void help()
 
 // enable/disable use of mixed API in the code below.
 #define DEMO_MIXED_API_USE 1
+
+#ifdef DEMO_MIXED_API_USE
+#  include <opencv2/highgui/highgui_c.h>
+#endif
 
 int main( int argc, char** argv )
 {
@@ -110,7 +114,7 @@ int main( int argc, char** argv )
     cvtColor(img_yuv, img, COLOR_YCrCb2BGR);
 
     // this is counterpart for cvNamedWindow
-    namedWindow("image with grain", CV_WINDOW_AUTOSIZE);
+    namedWindow("image with grain", WINDOW_AUTOSIZE);
 #if DEMO_MIXED_API_USE
     // this is to demonstrate that img and iplimg really share the data - the result of the above
     // processing is stored in img and thus in iplimg too.

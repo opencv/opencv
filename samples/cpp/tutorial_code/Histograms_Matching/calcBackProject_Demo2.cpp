@@ -34,7 +34,7 @@ int main( int, char** argv )
   cvtColor( src, hsv, COLOR_BGR2HSV );
 
   /// Show the image
-  namedWindow( window_image, CV_WINDOW_AUTOSIZE );
+  namedWindow( window_image, WINDOW_AUTOSIZE );
   imshow( window_image, src );
 
   /// Set Trackbars for floodfill thresholds
@@ -52,7 +52,7 @@ int main( int, char** argv )
  */
 void pickPoint (int event, int x, int y, int, void* )
 {
-  if( event != CV_EVENT_LBUTTONDOWN )
+  if( event != EVENT_LBUTTONDOWN )
     { return; }
 
   // Fill and get the mask

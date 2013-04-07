@@ -37,7 +37,7 @@ int main( int, char** argv )
   cvtColor( src, src_gray, COLOR_RGB2GRAY );
 
   /// Create window
-  namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+  namedWindow( window_name, WINDOW_AUTOSIZE );
 
   /// Apply Laplace function
   Mat abs_dst;

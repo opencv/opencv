@@ -304,7 +304,7 @@ int Displaying_Random_Text( Mat image, char* window_name, RNG rng )
  */
 int Displaying_Big_End( Mat image, char* window_name, RNG )
 {
-  Size textsize = getTextSize("OpenCV forever!", CV_FONT_HERSHEY_COMPLEX, 3, 5, 0);
+  Size textsize = getTextSize("OpenCV forever!", FONT_HERSHEY_COMPLEX, 3, 5, 0);
   Point org((window_width - textsize.width)/2, (window_height - textsize.height)/2);
   int lineType = 8;
 
@@ -313,7 +313,7 @@ int Displaying_Big_End( Mat image, char* window_name, RNG )
   for( int i = 0; i < 255; i += 2 )
   {
     image2 = image - Scalar::all(i);
-    putText( image2, "OpenCV forever!", org, CV_FONT_HERSHEY_COMPLEX, 3,
+    putText( image2, "OpenCV forever!", org, FONT_HERSHEY_COMPLEX, 3,
              Scalar(i, i, 255), 5, lineType );
 
     imshow( window_name, image2 );

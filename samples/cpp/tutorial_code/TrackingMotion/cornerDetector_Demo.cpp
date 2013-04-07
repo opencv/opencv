@@ -64,7 +64,7 @@ int main( int, char** argv )
   minMaxLoc( Mc, &myHarris_minVal, &myHarris_maxVal, 0, 0, Mat() );
 
   /* Create Window and Trackbar */
-  namedWindow( myHarris_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( myHarris_window, WINDOW_AUTOSIZE );
   createTrackbar( " Quality Level:", myHarris_window, &myHarris_qualityLevel, max_qualityLevel, myHarris_function );
   myHarris_function( 0, 0 );
 
@@ -75,7 +75,7 @@ int main( int, char** argv )
   minMaxLoc( myShiTomasi_dst, &myShiTomasi_minVal, &myShiTomasi_maxVal, 0, 0, Mat() );
 
   /* Create Window and Trackbar */
-  namedWindow( myShiTomasi_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( myShiTomasi_window, WINDOW_AUTOSIZE );
   createTrackbar( " Quality Level:", myShiTomasi_window, &myShiTomasi_qualityLevel, max_qualityLevel, myShiTomasi_function );
   myShiTomasi_function( 0, 0 );
 

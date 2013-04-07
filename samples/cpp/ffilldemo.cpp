@@ -34,7 +34,7 @@ int newMaskVal = 255;
 
 static void onMouse( int event, int x, int y, int, void* )
 {
-    if( event != CV_EVENT_LBUTTONDOWN )
+    if( event != EVENT_LBUTTONDOWN )
         return;
 
     Point seed = Point(x,y);

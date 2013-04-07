@@ -34,7 +34,7 @@ int main( int, char** argv )
   map_y.create( src.size(), CV_32FC1 );
 
   /// Create window
-  namedWindow( remap_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( remap_window, WINDOW_AUTOSIZE );
 
   /// Loop
   for(;;)

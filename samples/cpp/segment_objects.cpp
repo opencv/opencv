@@ -53,7 +53,7 @@ static void refineSegments(const Mat& img, Mat& mask, Mat& dst)
         }
     }
     Scalar color( 0, 0, 255 );
-    drawContours( dst, contours, largestComp, color, CV_FILLED, 8, hierarchy );
+    drawContours( dst, contours, largestComp, color, FILLED, LINE_8, hierarchy );
 }
 
 

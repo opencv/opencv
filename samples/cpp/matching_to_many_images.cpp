@@ -95,7 +95,7 @@ static bool readImages( const string& queryImageName, const string& trainFilenam
                  Mat& queryImage, vector <Mat>& trainImages, vector<string>& trainImageNames )
 {
     cout << "< Reading the images..." << endl;
-    queryImage = imread( queryImageName, CV_LOAD_IMAGE_GRAYSCALE);
+    queryImage = imread( queryImageName, IMREAD_GRAYSCALE);
     if( queryImage.empty() )
     {
         cout << "Query image can not be read." << endl << ">" << endl;
@@ -112,7 +112,7 @@ static bool readImages( const string& queryImageName, const string& trainFilenam
     for( size_t i = 0; i < trainImageNames.size(); i++ )
     {
         string filename = trainDirName + trainImageNames[i];
-        Mat img = imread( filename, CV_LOAD_IMAGE_GRAYSCALE );
+        Mat img = imread( filename, IMREAD_GRAYSCALE );
         if( img.empty() )
             cout << "Train image " << filename << " can not be read." << endl;
         else

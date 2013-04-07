@@ -345,7 +345,7 @@ void App::run()
             {
                 if (!video_writer.isOpened())
                 {
-                    video_writer.open(args.dst_video, CV_FOURCC('x','v','i','d'), args.dst_video_fps,
+                    video_writer.open(args.dst_video, VideoWriter::fourcc('x','v','i','d'), args.dst_video_fps,
                                       img_to_show.size(), true);
                     if (!video_writer.isOpened())
                         throw std::runtime_error("can't create video writer");

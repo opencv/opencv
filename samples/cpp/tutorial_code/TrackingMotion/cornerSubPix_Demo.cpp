@@ -35,7 +35,7 @@ int main( int, char** argv )
   cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
   /// Create Window
-  namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( source_window, WINDOW_AUTOSIZE );
 
   /// Create Trackbar to set the number of corners
   createTrackbar( "Max  corners:", source_window, &maxCorners, maxTrackbar, goodFeaturesToTrack_Demo );
@@ -87,13 +87,13 @@ void goodFeaturesToTrack_Demo( int, void* )
      { circle( copy, corners[i], r, Scalar(rng.uniform(0,255), rng.uniform(0,255), rng.uniform(0,255)), -1, 8, 0 ); }
 
   /// Show what you got
-  namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( source_window, WINDOW_AUTOSIZE );
   imshow( source_window, copy );
 
   /// Set the neeed parameters to find the refined corners
   Size winSize = Size( 5, 5 );
   Size zeroZone = Size( -1, -1 );
-  TermCriteria criteria = TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 );
+  TermCriteria criteria = TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 40, 0.001 );
 
   /// Calculate the refined corner locations
   cornerSubPix( src_gray, corners, winSize, zeroZone, criteria );

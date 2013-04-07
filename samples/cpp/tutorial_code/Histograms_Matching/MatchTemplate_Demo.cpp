@@ -33,8 +33,8 @@ int main( int, char** argv )
   templ = imread( argv[2], 1 );
 
   /// Create windows
-  namedWindow( image_window, CV_WINDOW_AUTOSIZE );
-  namedWindow( result_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( image_window, WINDOW_AUTOSIZE );
+  namedWindow( result_window, WINDOW_AUTOSIZE );
 
   /// Create Trackbar
   const char* trackbar_label = "Method: \n 0: SQDIFF \n 1: SQDIFF NORMED \n 2: TM CCORR \n 3: TM CCORR NORMED \n 4: TM COEFF \n 5: TM COEFF NORMED";

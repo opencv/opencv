@@ -44,7 +44,7 @@ namespace
         char filename[200];
         string window_name = "video | q or esc to quit";
         cout << "press space to save a picture. q or esc to quit" << endl;
-        namedWindow(window_name, CV_WINDOW_KEEPRATIO); //resizable window;
+        namedWindow(window_name, WINDOW_KEEPRATIO); //resizable window;
         Mat frame;
         for (;;)
         {

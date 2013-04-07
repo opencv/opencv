@@ -36,7 +36,7 @@ static void on_mouse( int event, int x, int y, int /*flags*/, void* )
 
     int updateFlag = 0;
 
-    if( event == CV_EVENT_LBUTTONUP )
+    if( event == EVENT_LBUTTONUP )
     {
         if( classColors.empty() )
             return;
@@ -45,7 +45,7 @@ static void on_mouse( int event, int x, int y, int /*flags*/, void* )
         trainedPointsMarkers.push_back( (int)(classColors.size()-1) );
         updateFlag = true;
     }
-    else if( event == CV_EVENT_RBUTTONUP )
+    else if( event == EVENT_RBUTTONUP )
     {
 #if _BT_
         if( classColors.size() < 2 )
@@ -503,7 +503,7 @@ int main()
     imgDst.create( 480, 640, CV_8UC3 );
 
     imshow( "points", img );
-    cvSetMouseCallback( "points", on_mouse );
+    setMouseCallback( "points", on_mouse );
 
     for(;;)
     {

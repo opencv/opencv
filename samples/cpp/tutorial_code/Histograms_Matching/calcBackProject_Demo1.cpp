@@ -37,7 +37,7 @@ int main( int, char** argv )
 
   /// Create Trackbar to enter the number of bins
   const char* window_image = "Source image";
-  namedWindow( window_image, CV_WINDOW_AUTOSIZE );
+  namedWindow( window_image, WINDOW_AUTOSIZE );
   createTrackbar("* Hue  bins: ", window_image, &bins, 180, Hist_and_Backproj );
   Hist_and_Backproj(0, 0);
 

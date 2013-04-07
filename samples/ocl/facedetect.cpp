@@ -4,6 +4,9 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/ocl/ocl.hpp"
+
+#include "opencv2/highgui/highgui_c.h"
+
 #include <iostream>
 #include <stdio.h>
 

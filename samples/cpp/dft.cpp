@@ -27,7 +27,7 @@ int main(int argc, const char ** argv)
     CommandLineParser parser(argc, argv, keys);
     string filename = parser.get<string>(0);
 
-    Mat img = imread(filename.c_str(), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img = imread(filename.c_str(), IMREAD_GRAYSCALE);
     if( img.empty() )
     {
         help();
@@ -74,7 +74,7 @@ int main(int argc, const char ** argv)
     q2.copyTo(q1);
     tmp.copyTo(q2);
 
-    normalize(mag, mag, 0, 1, CV_MINMAX);
+    normalize(mag, mag, 0, 1, NORM_MINMAX);
 
     imshow("spectrum magnitude", mag);
     waitKey();

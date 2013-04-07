@@ -48,7 +48,7 @@ int main(int, char** argv)
     }
 
    /// Show your results
-    namedWindow( "Hough Circle Transform Demo", CV_WINDOW_AUTOSIZE );
+    namedWindow( "Hough Circle Transform Demo", WINDOW_AUTOSIZE );
     imshow( "Hough Circle Transform Demo", src );
 
     waitKey(0);

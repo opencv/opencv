@@ -35,7 +35,7 @@ int main( int, char** argv )
 
   /// Create Window
   const char* source_window = "Source";
-  namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( source_window, WINDOW_AUTOSIZE );
   imshow( source_window, src );
 
   createTrackbar( " Threshold:", "Source", &thresh, max_thresh, thresh_callback );
@@ -83,6 +83,6 @@ void thresh_callback(int, void* )
      }
 
   /// Show in a window
-  namedWindow( "Contours", CV_WINDOW_AUTOSIZE );
+  namedWindow( "Contours", WINDOW_AUTOSIZE );
   imshow( "Contours", drawing );
 }

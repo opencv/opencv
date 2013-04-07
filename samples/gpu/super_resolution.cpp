@@ -146,7 +146,7 @@ int main(int argc, const char* argv[])
         if (!outputVideoName.empty())
         {
             if (!writer.isOpened())
-                writer.open(outputVideoName, CV_FOURCC('X', 'V', 'I', 'D'), 25.0, result.size());
+                writer.open(outputVideoName, VideoWriter::fourcc('X', 'V', 'I', 'D'), 25.0, result.size());
             writer << result;
         }
     }

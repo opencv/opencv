@@ -37,8 +37,8 @@ int main(int argc, char** argv)
     for( size_t i = 0; i < circles.size(); i++ )
     {
         Vec3i c = circles[i];
-        circle( cimg, Point(c[0], c[1]), c[2], Scalar(0,0,255), 3, CV_AA);
-        circle( cimg, Point(c[0], c[1]), 2, Scalar(0,255,0), 3, CV_AA);
+        circle( cimg, Point(c[0], c[1]), c[2], Scalar(0,0,255), 3, LINE_AA);
+        circle( cimg, Point(c[0], c[1]), 2, Scalar(0,255,0), 3, LINE_AA);
     }
 
     imshow("detected circles", cimg);

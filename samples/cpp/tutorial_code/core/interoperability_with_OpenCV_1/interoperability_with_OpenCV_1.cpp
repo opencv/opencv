@@ -22,6 +22,10 @@ static void help( char* progName)
 // comment out the define to use only the latest C++ API
 #define DEMO_MIXED_API_USE
 
+#ifdef DEMO_MIXED_API_USE
+#  include <opencv2/highgui/highgui_c.h>
+#endif
+
 int main( int argc, char** argv )
 {
     help(argv[0]);
@@ -118,7 +122,7 @@ int main( int argc, char** argv )
     cvtColor(I_YUV, I, COLOR_YCrCb2BGR);  // and produce the output RGB image
 
 
-    namedWindow("image with grain", CV_WINDOW_AUTOSIZE);   // use this to create images
+    namedWindow("image with grain", WINDOW_AUTOSIZE);   // use this to create images
 
 #ifdef DEMO_MIXED_API_USE
     // this is to demonstrate that I and IplI really share the data - the result of the above
