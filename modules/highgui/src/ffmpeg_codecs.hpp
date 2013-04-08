@@ -61,8 +61,10 @@ extern "C" {
 #endif
 
 #ifdef WIN32
-#  define AVUTIL_COMMON_H
-#  define MKBETAG(a,b,c,d) ((d) | ((c) << 8) | ((b) << 16) | ((unsigned)(a) << 24))
+#  ifdef __OPENCV_BUILD
+#    define AVUTIL_COMMON_H
+#    define MKBETAG(a,b,c,d) ((d) | ((c) << 8) | ((b) << 16) | ((unsigned)(a) << 24))
+#  endif
 #  include <libavformat/avformat.h>
 #else
 
