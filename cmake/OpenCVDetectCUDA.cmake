@@ -28,6 +28,9 @@ if(CUDA_FOUND)
 
   if(WITH_NVCUVID)
     find_cuda_helper_libs(nvcuvid)
+    if(WIN32)
+      find_cuda_helper_libs(nvcuvenc)
+    endif()
     set(HAVE_NVCUVID 1)
   endif()
 

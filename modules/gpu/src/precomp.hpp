@@ -80,20 +80,6 @@
         #include <cublas.h>
     #endif
 
-    #ifdef HAVE_NVCUVID
-        #include <nvcuvid.h>
-
-        #ifdef WIN32
-            #include <windows.h>
-            #undef small
-            #undef min
-            #undef max
-            #undef abs
-
-            #include <NVEncoderAPI.h>
-        #endif
-    #endif
-
     #include "internal_shared.hpp"
     #include "opencv2/core/stream_accessor.hpp"
 

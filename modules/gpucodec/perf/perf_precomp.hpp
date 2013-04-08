@@ -40,73 +40,25 @@
 //
 //M*/
 
-#ifndef __THREAD_WRAPPERS_H__
-#define __THREAD_WRAPPERS_H__
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
+#endif
 
-#include "precomp.hpp"
+#ifndef __OPENCV_PERF_PRECOMP_HPP__
+#define __OPENCV_PERF_PRECOMP_HPP__
 
-#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/gpu_perf.hpp"
 
-namespace cv { namespace gpu
-{
-    namespace detail
-    {
-        class CriticalSection
-        {
-        public:
-            CriticalSection();
-            ~CriticalSection();
+#include "opencv2/highgui.hpp"
+#include "opencv2/gpucodec.hpp"
 
-            void enter();
-            void leave();
+#ifdef GTEST_CREATE_SHARED_LIBRARY
+#error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
+#endif
 
-            class AutoLock
-            {
-            public:
-                explicit AutoLock(CriticalSection& criticalSection) :
-                    criticalSection_(criticalSection)
-                {
-                    criticalSection_.enter();
-                }
-
-                ~AutoLock()
-                {
-                    criticalSection_.leave();
-                }
-
-            private:
-                CriticalSection& criticalSection_;
-            };
-
-        private:
-            CriticalSection(const CriticalSection&);
-            CriticalSection& operator=(const CriticalSection&);
-
-            class Impl;
-            std::auto_ptr<Impl> impl_;
-        };
-
-        class Thread
-        {
-        public:
-            explicit Thread(void (*func)(void* userData), void* userData = 0);
-            ~Thread();
-
-            void wait();
-
-            static void sleep(int ms);
-
-        private:
-            Thread(const Thread&);
-            Thread& operator=(const Thread&);
-
-            class Impl;
-            std::auto_ptr<Impl> impl_;
-        };
-
-    }
-}}
-
-#endif // HAVE_CUDA
-
-#endif // __THREAD_WRAPPERS_H__
+#endif

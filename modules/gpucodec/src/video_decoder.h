@@ -43,74 +43,69 @@
 #ifndef __VIDEO_DECODER_H__
 #define __VIDEO_DECODER_H__
 
-#include "precomp.hpp"
+#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/gpucodec.hpp"
 
-#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
+#include <nvcuvid.h>
 
-namespace cv { namespace gpu
+namespace cv { namespace gpu { namespace detail
 {
-    namespace detail
+
+class VideoDecoder
+{
+public:
+    VideoDecoder(const VideoReader_GPU::FormatInfo& videoFormat, CUvideoctxlock lock) : lock_(lock), decoder_(0)
     {
-        class VideoDecoder
-        {
-        public:
-            VideoDecoder(const VideoReader_GPU::FormatInfo& videoFormat, CUvideoctxlock lock) : lock_(lock), decoder_(0)
-            {
-                create(videoFormat);
-            }
-
-            ~VideoDecoder()
-            {
-                release();
-            }
-
-            void create(const VideoReader_GPU::FormatInfo& videoFormat);
-            void release();
-
-            // Get the code-type currently used.
-            cudaVideoCodec codec() const { return createInfo_.CodecType; }
-            unsigned long maxDecodeSurfaces() const { return createInfo_.ulNumDecodeSurfaces; }
-
-            unsigned long frameWidth() const { return createInfo_.ulWidth; }
-            unsigned long frameHeight() const { return createInfo_.ulHeight; }
-
-            unsigned long targetWidth() const { return createInfo_.ulTargetWidth; }
-            unsigned long targetHeight() const { return createInfo_.ulTargetHeight; }
-
-            cudaVideoChromaFormat chromaFormat() const { return createInfo_.ChromaFormat; }
-
-            bool decodePicture(CUVIDPICPARAMS* picParams)
-            {
-                return cuvidDecodePicture(decoder_, picParams) == CUDA_SUCCESS;
-            }
-
-            cv::gpu::GpuMat mapFrame(int picIdx, CUVIDPROCPARAMS& videoProcParams)
-            {
-                CUdeviceptr ptr;
-                unsigned int pitch;
-
-                cuSafeCall( cuvidMapVideoFrame(decoder_, picIdx, &ptr, &pitch, &videoProcParams) );
-
-                return GpuMat(targetHeight() * 3 / 2, targetWidth(), CV_8UC1, (void*) ptr, pitch);
-            }
-
-            void unmapFrame(cv::gpu::GpuMat& frame)
-            {
-                cuSafeCall( cuvidUnmapVideoFrame(decoder_, (CUdeviceptr) frame.data) );
-                frame.release();
-            }
-
-        private:
-            VideoDecoder(const VideoDecoder&);
-            VideoDecoder& operator =(const VideoDecoder&);
-
-            CUvideoctxlock lock_;
-            CUVIDDECODECREATEINFO createInfo_;
-            CUvideodecoder        decoder_;
-        };
+        create(videoFormat);
     }
-}}
 
-#endif // HAVE_CUDA
+    ~VideoDecoder()
+    {
+        release();
+    }
+
+    void create(const VideoReader_GPU::FormatInfo& videoFormat);
+    void release();
+
+    // Get the code-type currently used.
+    cudaVideoCodec codec() const { return createInfo_.CodecType; }
+    unsigned long maxDecodeSurfaces() const { return createInfo_.ulNumDecodeSurfaces; }
+
+    unsigned long frameWidth() const { return createInfo_.ulWidth; }
+    unsigned long frameHeight() const { return createInfo_.ulHeight; }
+
+    unsigned long targetWidth() const { return createInfo_.ulTargetWidth; }
+    unsigned long targetHeight() const { return createInfo_.ulTargetHeight; }
+
+    cudaVideoChromaFormat chromaFormat() const { return createInfo_.ChromaFormat; }
+
+    bool decodePicture(CUVIDPICPARAMS* picParams)
+    {
+        return cuvidDecodePicture(decoder_, picParams) == CUDA_SUCCESS;
+    }
+
+    cv::gpu::GpuMat mapFrame(int picIdx, CUVIDPROCPARAMS& videoProcParams)
+    {
+        CUdeviceptr ptr;
+        unsigned int pitch;
+
+        cuSafeCall( cuvidMapVideoFrame(decoder_, picIdx, &ptr, &pitch, &videoProcParams) );
+
+        return GpuMat(targetHeight() * 3 / 2, targetWidth(), CV_8UC1, (void*) ptr, pitch);
+    }
+
+    void unmapFrame(cv::gpu::GpuMat& frame)
+    {
+        cuSafeCall( cuvidUnmapVideoFrame(decoder_, (CUdeviceptr) frame.data) );
+        frame.release();
+    }
+
+private:
+    CUvideoctxlock lock_;
+    CUVIDDECODECREATEINFO createInfo_;
+    CUvideodecoder        decoder_;
+};
+
+}}}
 
 #endif // __VIDEO_DECODER_H__

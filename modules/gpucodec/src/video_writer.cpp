@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#if !defined(HAVE_CUDA) || defined(CUDA_DISABLER) || !defined(HAVE_NVCUVID) || !defined(WIN32)
+#if !defined(HAVE_NVCUVID) || !defined(WIN32)
 
 class cv::gpu::VideoWriter_GPU::Impl
 {
@@ -70,13 +70,6 @@ void cv::gpu::VideoWriter_GPU::EncoderParams::save(const String&) const { throw_
 
 #else // !defined HAVE_CUDA || !defined WIN32
 
-#ifdef HAVE_FFMPEG
-    #include "../src/cap_ffmpeg_impl.hpp"
-#else
-    #include "../src/cap_ffmpeg_api.hpp"
-#endif
-
-
 ///////////////////////////////////////////////////////////////////////////
 // VideoWriter_GPU::Impl
 
@@ -91,7 +84,7 @@ namespace
 
             err = NVGetHWEncodeCaps();
             if (err)
-                CV_Error(CV_GpuNotSupported, "No CUDA capability present");
+                CV_Error(cv::Error::GpuNotSupported, "No CUDA capability present");
 
             // Create the Encoder API Interface
             err = NVCreateEncoder(&encoder_);
@@ -212,7 +205,7 @@ void cv::gpu::VideoWriter_GPU::Impl::initEncoder(double fps)
     };
     err = NVSetCodec(encoder_, codecs_id[codec_]);
     if (err)
-        CV_Error(CV_StsNotImplemented, "Codec format is not supported");
+        CV_Error(cv::Error::StsNotImplemented, "Codec format is not supported");
 
     // Set default params
 
@@ -503,10 +496,7 @@ void cv::gpu::VideoWriter_GPU::Impl::createHWEncoder()
 
 namespace cv { namespace gpu { namespace cudev
 {
-    namespace video_encoding
-    {
-        void YV12_gpu(const PtrStepSzb src, int cn, PtrStepSzb dst);
-    }
+    void bgr_to_YV12(const PtrStepSzb src, int cn, PtrStepSzb dst);
 }}}
 
 namespace
@@ -674,7 +664,7 @@ void cv::gpu::VideoWriter_GPU::Impl::write(const cv::gpu::GpuMat& frame, bool la
     CV_Assert( res == CUDA_SUCCESS );
 
     if (inputFormat_ == SF_BGR)
-        cv::gpu::cudev::video_encoding::YV12_gpu(frame, frame.channels(), videoFrame_);
+        cv::gpu::cudev::bgr_to_YV12(frame, frame.channels(), videoFrame_);
     else
     {
         switch (surfaceFormat_)
@@ -829,11 +819,14 @@ void EncoderCallBackFFMPEG::releaseBitStream(unsigned char* data, int size)
 
 void EncoderCallBackFFMPEG::onBeginFrame(int frameNumber, PicType picType)
 {
+    (void) frameNumber;
     isKeyFrame_ = picType == IFRAME;
 }
 
 void EncoderCallBackFFMPEG::onEndFrame(int frameNumber, PicType picType)
 {
+    (void) frameNumber;
+    (void) picType;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -885,23 +878,23 @@ void cv::gpu::VideoWriter_GPU::open(const String& fileName, cv::Size frameSize, 
 void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format)
 {
     close();
-    impl_.reset(new Impl(encoderCallback, frameSize, fps, format));
+    impl_ = new Impl(encoderCallback, frameSize, fps, format);
 }
 
 void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format)
 {
     close();
-    impl_.reset(new Impl(encoderCallback, frameSize, fps, params, format));
+    impl_ = new Impl(encoderCallback, frameSize, fps, params, format);
 }
 
 bool cv::gpu::VideoWriter_GPU::isOpened() const
 {
-    return impl_.get() != 0;
+    return !impl_.empty();
 }
 
 void cv::gpu::VideoWriter_GPU::close()
 {
-    impl_.reset();
+    impl_.release();
 }
 
 void cv::gpu::VideoWriter_GPU::write(const cv::gpu::GpuMat& image, bool lastFrame)
@@ -1002,3 +995,8 @@ void cv::gpu::VideoWriter_GPU::EncoderParams::save(const String& configFile) con
 }
 
 #endif // !defined HAVE_CUDA || !defined WIN32
+
+template <> void cv::Ptr<cv::gpu::VideoWriter_GPU::Impl>::delete_obj()
+{
+    if (obj) delete obj;
+}

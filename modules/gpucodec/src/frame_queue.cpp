@@ -40,49 +40,78 @@
 //
 //M*/
 
-#ifndef __FFMPEG_VIDEO_SOURCE_H__
-#define __FFMPEG_VIDEO_SOURCE_H__
-
 #include "precomp.hpp"
-#include "thread_wrappers.h"
 
-#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
+#ifdef HAVE_NVCUVID
 
-struct InputMediaStream_FFMPEG;
-
-namespace cv { namespace gpu
+cv::gpu::detail::FrameQueue::FrameQueue() :
+    endOfDecode_(0),
+    framesInQueue_(0),
+    readPosition_(0)
 {
-    namespace detail
+    std::memset(displayQueue_, 0, sizeof(displayQueue_));
+    std::memset((void*)isFrameInUse_, 0, sizeof(isFrameInUse_));
+}
+
+bool cv::gpu::detail::FrameQueue::waitUntilFrameAvailable(int pictureIndex)
+{
+    while (isInUse(pictureIndex))
     {
-        class FFmpegVideoSource : public VideoReader_GPU::VideoSource
-        {
-        public:
-            FFmpegVideoSource(const String& fname);
-            ~FFmpegVideoSource();
+        // Decoder is getting too far ahead from display
+        Thread::sleep(1);
 
-            VideoReader_GPU::FormatInfo format() const;
-            void start();
-            void stop();
-            bool isStarted() const;
-            bool hasError() const;
-
-        private:
-            FFmpegVideoSource(const FFmpegVideoSource&);
-            FFmpegVideoSource& operator =(const FFmpegVideoSource&);
-
-            VideoReader_GPU::FormatInfo format_;
-
-            InputMediaStream_FFMPEG* stream_;
-
-            std::auto_ptr<Thread> thread_;
-            volatile bool stop_;
-            volatile bool hasError_;
-
-            static void readLoop(void* userData);
-        };
+        if (isEndOfDecode())
+            return false;
     }
-}}
 
-#endif // HAVE_CUDA
+    return true;
+}
 
-#endif // __CUVUD_VIDEO_SOURCE_H__
+void cv::gpu::detail::FrameQueue::enqueue(const CUVIDPARSERDISPINFO* picParams)
+{
+    // Mark the frame as 'in-use' so we don't re-use it for decoding until it is no longer needed
+    // for display
+    isFrameInUse_[picParams->picture_index] = true;
+
+    // Wait until we have a free entry in the display queue (should never block if we have enough entries)
+    do
+    {
+        bool isFramePlaced = false;
+
+        {
+            AutoLock autoLock(mtx_);
+
+            if (framesInQueue_ < MaximumSize)
+            {
+                int writePosition = (readPosition_ + framesInQueue_) % MaximumSize;
+                displayQueue_[writePosition] = *picParams;
+                framesInQueue_++;
+                isFramePlaced = true;
+            }
+        }
+
+        if (isFramePlaced) // Done
+            break;
+
+        // Wait a bit
+        Thread::sleep(1);
+    } while (!isEndOfDecode());
+}
+
+bool cv::gpu::detail::FrameQueue::dequeue(CUVIDPARSERDISPINFO& displayInfo)
+{
+    AutoLock autoLock(mtx_);
+
+    if (framesInQueue_ > 0)
+    {
+        int entry = readPosition_;
+        displayInfo = displayQueue_[entry];
+        readPosition_ = (entry + 1) % MaximumSize;
+        framesInQueue_--;
+        return true;
+    }
+
+    return false;
+}
+
+#endif // HAVE_NVCUVID

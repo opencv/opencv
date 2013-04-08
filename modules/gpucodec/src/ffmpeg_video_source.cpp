@@ -40,14 +40,12 @@
 //
 //M*/
 
-#include "ffmpeg_video_source.h"
+#include "precomp.hpp"
 
-#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
+#ifdef HAVE_NVCUVID
 
 #if defined(HAVE_FFMPEG) && defined(BUILD_SHARED_LIBS)
     #include "../src/cap_ffmpeg_impl.hpp"
-#else
-    #include "../src/cap_ffmpeg_api.hpp"
 #endif
 
 namespace
@@ -108,17 +106,12 @@ cv::gpu::detail::FFmpegVideoSource::FFmpegVideoSource(const String& fname) :
 
     stream_ = create_InputMediaStream_FFMPEG_p(fname.c_str(), &codec, &chroma_format, &width, &height);
     if (!stream_)
-        CV_Error(CV_StsUnsupportedFormat, "Unsupported video source");
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported video source");
 
     format_.codec = static_cast<VideoReader_GPU::Codec>(codec);
     format_.chromaFormat = static_cast<VideoReader_GPU::ChromaFormat>(chroma_format);
     format_.width = width;
     format_.height = height;
-}
-
-cv::gpu::detail::FFmpegVideoSource::~FFmpegVideoSource()
-{
-    release_InputMediaStream_FFMPEG_p(stream_);
 }
 
 cv::gpu::VideoReader_GPU::FormatInfo cv::gpu::detail::FFmpegVideoSource::format() const
@@ -130,14 +123,14 @@ void cv::gpu::detail::FFmpegVideoSource::start()
 {
     stop_ = false;
     hasError_ = false;
-    thread_.reset(new Thread(readLoop, this));
+    thread_ = new Thread(readLoop, this);
 }
 
 void cv::gpu::detail::FFmpegVideoSource::stop()
 {
     stop_ = true;
     thread_->wait();
-    thread_.reset();
+    thread_.release();
 }
 
 bool cv::gpu::detail::FFmpegVideoSource::isStarted() const
@@ -177,6 +170,11 @@ void cv::gpu::detail::FFmpegVideoSource::readLoop(void* userData)
     }
 
     thiz->parseVideoData(0, 0, true);
+}
+
+template <> void cv::Ptr<InputMediaStream_FFMPEG>::delete_obj()
+{
+    if (obj) release_InputMediaStream_FFMPEG_p(obj);
 }
 
 #endif // HAVE_CUDA

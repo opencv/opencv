@@ -40,51 +40,34 @@
 //
 //M*/
 
-#ifndef __CUVUD_VIDEO_SOURCE_H__
-#define __CUVUD_VIDEO_SOURCE_H__
+#ifndef __THREAD_WRAPPERS_H__
+#define __THREAD_WRAPPERS_H__
 
-#include "precomp.hpp"
+#include "opencv2/core.hpp"
 
-#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
+namespace cv { namespace gpu { namespace detail {
 
-namespace cv { namespace gpu
+class Thread
 {
-    namespace detail
-    {
-        class CuvidVideoSource : public VideoReader_GPU::VideoSource
-        {
-        public:
-            explicit CuvidVideoSource(const String& fname);
-            ~CuvidVideoSource() { cuvidDestroyVideoSource(videoSource_); }
+public:
+    typedef void (*Func)(void* userData);
 
-            VideoReader_GPU::FormatInfo format() const;
-            void start();
-            void stop();
-            bool isStarted() const;
-            bool hasError() const;
+    explicit Thread(Func func, void* userData = 0);
 
-        private:
-            CuvidVideoSource(const CuvidVideoSource&);
-            CuvidVideoSource& operator =(const CuvidVideoSource&);
+    void wait();
 
-            // Callback for handling packages of demuxed video data.
-            //
-            // Parameters:
-            //      pUserData - Pointer to user data. We must pass a pointer to a
-            //          VideoSourceData struct here, that contains a valid CUvideoparser
-            //          and FrameQueue.
-            //      pPacket - video-source data packet.
-            //
-            // NOTE: called from a different thread that doesn't not have a cuda context
-            //
-            static int CUDAAPI HandleVideoData(void* pUserData, CUVIDSOURCEDATAPACKET* pPacket);
+    static void sleep(int ms);
 
-            CUvideosource videoSource_;
-            VideoReader_GPU::FormatInfo format_;
-        };
-    }
-}}
+    class Impl;
 
-#endif // defined(HAVE_CUDA) && !defined(__APPLE__)
+private:
+    cv::Ptr<Impl> impl_;
+};
 
-#endif // __CUVUD_VIDEO_SOURCE_H__
+}}}
+
+namespace cv {
+    template <> void Ptr<cv::gpu::detail::Thread::Impl>::delete_obj();
+}
+
+#endif // __THREAD_WRAPPERS_H__

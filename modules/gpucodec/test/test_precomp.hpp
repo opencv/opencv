@@ -40,40 +40,21 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
-
-#include <vector>
-#include <limits>
-
-#include "opencv2/opencv_modules.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/core/gpumat.hpp"
-#include "opencv2/core/opengl.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/video/tracking.hpp"
-#include "opencv2/core/private.hpp"
-
-#ifdef HAVE_OPENCV_GPU
-#  include "opencv2/gpu.hpp"
-#  include "opencv2/core/gpu_private.hpp"
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
 #endif
 
-#ifdef HAVE_OPENCV_GPUCODEC
-#  include "opencv2/gpucodec.hpp"
+#ifndef __OPENCV_TEST_PRECOMP_HPP__
+#define __OPENCV_TEST_PRECOMP_HPP__
+
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/gpu_test.hpp"
+
+#include "opencv2/highgui.hpp"
+#include "opencv2/gpucodec.hpp"
+
 #endif
-
-#ifdef HAVE_OPENCV_HIGHGUI
-    #include "opencv2/highgui.hpp"
-#endif
-
-#include "opencv2/superres.hpp"
-#include "opencv2/superres/optical_flow.hpp"
-#include "input_array_utility.hpp"
-
-#include "ring_buffer.hpp"
-
-#include "opencv2/core/private.hpp"
-
-#endif /* __OPENCV_PRECOMP_H__ */

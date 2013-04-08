@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#if !defined(HAVE_CUDA) || defined(CUDA_DISABLER) || !defined(HAVE_NVCUVID)
+#ifndef HAVE_NVCUVID
 
 class cv::gpu::VideoReader_GPU::Impl
 {
@@ -61,14 +61,7 @@ cv::gpu::VideoReader_GPU::FormatInfo cv::gpu::VideoReader_GPU::format() const { 
 bool cv::gpu::VideoReader_GPU::VideoSource::parseVideoData(const unsigned char*, size_t, bool) { throw_no_cuda(); return false; }
 void cv::gpu::VideoReader_GPU::dumpFormat(std::ostream&) { throw_no_cuda(); }
 
-#else // HAVE_CUDA
-
-#include "frame_queue.h"
-#include "video_decoder.h"
-#include "video_parser.h"
-
-#include "cuvid_video_source.h"
-#include "ffmpeg_video_source.h"
+#else // HAVE_NVCUVID
 
 class cv::gpu::VideoReader_GPU::Impl
 {
@@ -81,14 +74,11 @@ public:
     cv::gpu::VideoReader_GPU::FormatInfo format() const { return videoSource_->format(); }
 
 private:
-    Impl(const Impl&);
-    Impl& operator =(const Impl&);
-
     cv::Ptr<cv::gpu::VideoReader_GPU::VideoSource> videoSource_;
 
-    std::auto_ptr<cv::gpu::detail::FrameQueue> frameQueue_;
-    std::auto_ptr<cv::gpu::detail::VideoDecoder> videoDecoder_;
-    std::auto_ptr<cv::gpu::detail::VideoParser> videoParser_;
+    cv::Ptr<cv::gpu::detail::FrameQueue> frameQueue_;
+    cv::Ptr<cv::gpu::detail::VideoDecoder> videoDecoder_;
+    cv::Ptr<cv::gpu::detail::VideoParser> videoParser_;
 
     CUvideoctxlock lock_;
 
@@ -110,12 +100,12 @@ cv::gpu::VideoReader_GPU::Impl::Impl(const cv::Ptr<VideoSource>& source) :
     cuSafeCall( cuCtxGetCurrent(&ctx) );
     cuSafeCall( cuvidCtxLockCreate(&lock_, ctx) );
 
-    frameQueue_.reset(new detail::FrameQueue);
-    videoDecoder_.reset(new detail::VideoDecoder(videoSource_->format(), lock_));
-    videoParser_.reset(new detail::VideoParser(videoDecoder_.get(), frameQueue_.get()));
+    frameQueue_ = new detail::FrameQueue;
+    videoDecoder_ = new detail::VideoDecoder(videoSource_->format(), lock_);
+    videoParser_ = new detail::VideoParser(videoDecoder_, frameQueue_);
 
-    videoSource_->setFrameQueue(frameQueue_.get());
-    videoSource_->setVideoParser(videoParser_.get());
+    videoSource_->setFrameQueue(frameQueue_);
+    videoSource_->setVideoParser(videoParser_);
 
     videoSource_->start();
 }
@@ -126,12 +116,10 @@ cv::gpu::VideoReader_GPU::Impl::~Impl()
     videoSource_->stop();
 }
 
-namespace cv { namespace gpu { namespace cudev {
-    namespace video_decoding
-    {
-        void loadHueCSC(float hueCSC[9]);
-        void NV12ToARGB_gpu(const PtrStepb decodedFrame, PtrStepSz<unsigned int> interopFrame, cudaStream_t stream = 0);
-    }
+namespace cv { namespace gpu { namespace cudev
+{
+    void loadHueCSC(float hueCSC[9]);
+    void NV12ToARGB(const PtrStepb decodedFrame, PtrStepSz<uint> interopFrame, cudaStream_t stream = 0);
 }}}
 
 namespace
@@ -187,7 +175,7 @@ namespace
 
     void cudaPostProcessFrame(const cv::gpu::GpuMat& decodedFrame, cv::gpu::GpuMat& interopFrame, int width, int height)
     {
-        using namespace cv::gpu::cudev::video_decoding;
+        using namespace cv::gpu::cudev;
 
         static bool updateCSC = true;
         static float hueColorSpaceMat[9];
@@ -210,14 +198,14 @@ namespace
 
         loadHueCSC(hueColorSpaceMat);
 
-        NV12ToARGB_gpu(decodedFrame, interopFrame);
+        NV12ToARGB(decodedFrame, interopFrame);
     }
 }
 
 bool cv::gpu::VideoReader_GPU::Impl::grab(GpuMat& frame)
 {
     if (videoSource_->hasError() || videoParser_->hasError())
-        CV_Error(CV_StsUnsupportedFormat, "Unsupported video source");
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported video source");
 
     if (!videoSource_->isStarted() || frameQueue_->isEndOfDecode())
         return false;
@@ -232,7 +220,7 @@ bool cv::gpu::VideoReader_GPU::Impl::grab(GpuMat& frame)
                 break;
 
             if (videoSource_->hasError() || videoParser_->hasError())
-                CV_Error(CV_StsUnsupportedFormat, "Unsupported video source");
+                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported video source");
 
             if (frameQueue_->isEndOfDecode())
                 return false;
@@ -329,17 +317,17 @@ void cv::gpu::VideoReader_GPU::open(const cv::Ptr<VideoSource>& source)
 {
     CV_Assert( !source.empty() );
     close();
-    impl_.reset(new Impl(source));
+    impl_ = new Impl(source);
 }
 
 bool cv::gpu::VideoReader_GPU::isOpened() const
 {
-    return impl_.get() != 0;
+    return !impl_.empty();
 }
 
 void cv::gpu::VideoReader_GPU::close()
 {
-    impl_.reset();
+    impl_.release();
 }
 
 bool cv::gpu::VideoReader_GPU::read(GpuMat& image)
@@ -396,4 +384,9 @@ void cv::gpu::VideoReader_GPU::dumpFormat(std::ostream& st)
     st << "Chroma Format : " << chromas[_format.chromaFormat] << std::endl;
 }
 
-#endif // HAVE_CUDA
+#endif // HAVE_NVCUVID
+
+template <> void cv::Ptr<cv::gpu::VideoReader_GPU::Impl>::delete_obj()
+{
+    if (obj) delete obj;
+}

@@ -40,78 +40,8 @@
 //
 //M*/
 
-#include "frame_queue.h"
+#include "perf_precomp.hpp"
 
-#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
+using namespace perf;
 
-cv::gpu::detail::FrameQueue::FrameQueue() :
-    endOfDecode_(0),
-    framesInQueue_(0),
-    readPosition_(0)
-{
-    std::memset(displayQueue_, 0, sizeof(displayQueue_));
-    std::memset((void*)isFrameInUse_, 0, sizeof(isFrameInUse_));
-}
-
-bool cv::gpu::detail::FrameQueue::waitUntilFrameAvailable(int pictureIndex)
-{
-    while (isInUse(pictureIndex))
-    {
-        // Decoder is getting too far ahead from display
-        Thread::sleep(1);
-
-        if (isEndOfDecode())
-            return false;
-    }
-
-    return true;
-}
-
-void cv::gpu::detail::FrameQueue::enqueue(const CUVIDPARSERDISPINFO* picParams)
-{
-    // Mark the frame as 'in-use' so we don't re-use it for decoding until it is no longer needed
-    // for display
-    isFrameInUse_[picParams->picture_index] = true;
-
-    // Wait until we have a free entry in the display queue (should never block if we have enough entries)
-    do
-    {
-        bool isFramePlaced = false;
-
-        {
-            CriticalSection::AutoLock autoLock(criticalSection_);
-
-            if (framesInQueue_ < MaximumSize)
-            {
-                int writePosition = (readPosition_ + framesInQueue_) % MaximumSize;
-                displayQueue_[writePosition] = *picParams;
-                framesInQueue_++;
-                isFramePlaced = true;
-            }
-        }
-
-        if (isFramePlaced) // Done
-            break;
-
-        // Wait a bit
-        Thread::sleep(1);
-    } while (!isEndOfDecode());
-}
-
-bool cv::gpu::detail::FrameQueue::dequeue(CUVIDPARSERDISPINFO& displayInfo)
-{
-    CriticalSection::AutoLock autoLock(criticalSection_);
-
-    if (framesInQueue_ > 0)
-    {
-        int entry = readPosition_;
-        displayInfo = displayQueue_[entry];
-        readPosition_ = (entry + 1) % MaximumSize;
-        framesInQueue_--;
-        return true;
-    }
-
-    return false;
-}
-
-#endif // HAVE_CUDA
+CV_PERF_TEST_MAIN(gpucodec, printCudaInfo())

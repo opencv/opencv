@@ -40,40 +40,55 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef __VIDEO_PARSER_H__
+#define __VIDEO_PARSER_H__
 
-#include <vector>
-#include <limits>
+#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/gpucodec.hpp"
+#include "frame_queue.h"
+#include "video_decoder.h"
 
-#include "opencv2/opencv_modules.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/core/gpumat.hpp"
-#include "opencv2/core/opengl.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/video/tracking.hpp"
-#include "opencv2/core/private.hpp"
+#include <nvcuvid.h>
 
-#ifdef HAVE_OPENCV_GPU
-#  include "opencv2/gpu.hpp"
-#  include "opencv2/core/gpu_private.hpp"
-#endif
+namespace cv { namespace gpu { namespace detail
+{
 
-#ifdef HAVE_OPENCV_GPUCODEC
-#  include "opencv2/gpucodec.hpp"
-#endif
+class VideoParser
+{
+public:
+    VideoParser(VideoDecoder* videoDecoder, FrameQueue* frameQueue);
 
-#ifdef HAVE_OPENCV_HIGHGUI
-    #include "opencv2/highgui.hpp"
-#endif
+    ~VideoParser()
+    {
+        cuvidDestroyVideoParser(parser_);
+    }
 
-#include "opencv2/superres.hpp"
-#include "opencv2/superres/optical_flow.hpp"
-#include "input_array_utility.hpp"
+    bool parseVideoData(const unsigned char* data, size_t size, bool endOfStream);
 
-#include "ring_buffer.hpp"
+    bool hasError() const { return hasError_; }
 
-#include "opencv2/core/private.hpp"
+private:
+    VideoDecoder* videoDecoder_;
+    FrameQueue* frameQueue_;
+    CUvideoparser parser_;
+    int unparsedPackets_;
+    volatile bool hasError_;
 
-#endif /* __OPENCV_PRECOMP_H__ */
+    // Called when the decoder encounters a video format change (or initial sequence header)
+    // This particular implementation of the callback returns 0 in case the video format changes
+    // to something different than the original format. Returning 0 causes a stop of the app.
+    static int CUDAAPI HandleVideoSequence(void* pUserData, CUVIDEOFORMAT* pFormat);
+
+    // Called by the video parser to decode a single picture
+    // Since the parser will deliver data as fast as it can, we need to make sure that the picture
+    // index we're attempting to use for decode is no longer used for display
+    static int CUDAAPI HandlePictureDecode(void* pUserData, CUVIDPICPARAMS* pPicParams);
+
+    // Called by the video parser to display a video frame (in the case of field pictures, there may be
+    // 2 decode calls per 1 display call, since two fields make up one frame)
+    static int CUDAAPI HandlePictureDisplay(void* pUserData, CUVIDPARSERDISPINFO* pPicParams);
+};
+
+}}}
+
+#endif // __VIDEO_PARSER_H__
