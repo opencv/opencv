@@ -226,7 +226,7 @@ TEST_P(Convolve_DFT, Accuracy)
 
     cv::ocl::oclMat dst;
     cv::ocl::convolve(cv::ocl::oclMat(src), cv::ocl::oclMat(kernel), dst, ccorr);
-    
+
     cv::Mat dst_gold;
     convolveDFT(src, kernel, dst_gold, ccorr);
 

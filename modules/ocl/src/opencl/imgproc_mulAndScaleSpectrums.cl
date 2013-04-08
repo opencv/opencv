@@ -54,16 +54,16 @@ inline cfloat conjf(cfloat a)
     return (cfloat)( a.x, - a.y );
 }
 
-__kernel void 
-    mulAndScaleSpectrumsKernel(
-    __global const cfloat* a, 
-    __global const cfloat* b, 
-    float scale, 
-    __global cfloat* dst, 
-    uint cols, 
-    uint rows, 
+__kernel void
+mulAndScaleSpectrumsKernel(
+    __global const cfloat* a,
+    __global const cfloat* b,
+    float scale,
+    __global cfloat* dst,
+    uint cols,
+    uint rows,
     uint mstep
-    )
+)
 {
     const uint x = get_global_id(0);
     const uint y = get_global_id(1);
@@ -74,16 +74,16 @@ __kernel void
         dst[idx] = (cfloat)( v.x * scale, v.y * scale );
     }
 }
-__kernel void 
-    mulAndScaleSpectrumsKernel_CONJ(
-    __global const cfloat* a, 
-    __global const cfloat* b, 
-    float scale, 
-    __global cfloat* dst, 
-    uint cols, 
-    uint rows, 
+__kernel void
+mulAndScaleSpectrumsKernel_CONJ(
+    __global const cfloat* a,
+    __global const cfloat* b,
+    float scale,
+    __global cfloat* dst,
+    uint cols,
+    uint rows,
     uint mstep
-    )
+)
 {
     const uint x = get_global_id(0);
     const uint y = get_global_id(1);

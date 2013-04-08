@@ -1661,7 +1661,7 @@ Size cv::ocl::ConvolveBuf::estimateBlockSize(Size result_size, Size /*templ_size
     int width = (result_size.width + 2) / 3;
     int height = (result_size.height + 2) / 3;
     width = std::min(width, result_size.width);
-    height = std::min(height, result_size.height);    
+    height = std::min(height, result_size.height);
     return Size(width, height);
 }
 
@@ -1714,7 +1714,7 @@ static void convolve_run_fft(const oclMat &image, const oclMat &templ, oclMat &r
 
             Size result_roi_size(std::min(x + block_size.width, result.cols) - x,
                                  std::min(y + block_size.height, result.rows) - y);
-            
+
             Rect roi1(x, y, result_roi_size.width, result_roi_size.height);
             Rect roi2(0, 0, result_roi_size.width, result_roi_size.height);
 
@@ -1727,6 +1727,9 @@ static void convolve_run_fft(const oclMat &image, const oclMat &templ, oclMat &r
 
 #else
     CV_Error(CV_StsNotImplemented, "OpenCL DFT is not implemented");
+#define UNUSED(x) (void)(x);
+    UNUSED(image) UNUSED(templ) UNUSED(result) UNUSED(ccorr) UNUSED(buf)
+#undef UNUSED
 #endif
 }
 static void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, String kernelName, const char **kernelString)

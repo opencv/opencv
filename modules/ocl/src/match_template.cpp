@@ -112,6 +112,9 @@ namespace cv
             else
                 return false;
 #else
+#define UNUSED(x) (void)(x);
+            UNUSED(method) UNUSED(depth) UNUSED(size)
+#undef  UNUSED
             return true;
 #endif
         }
