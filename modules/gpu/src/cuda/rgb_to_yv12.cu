@@ -140,9 +140,9 @@ namespace cv { namespace gpu { namespace cudev
             dim3 grid(divUp(src.cols, block.x * 2), divUp(src.rows, block.y * 2));
 
             Gray_to_YV12<<<grid, block>>>(src, dst);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
         template <int cn>
         void BGR_to_YV12_caller(const PtrStepSzb src, PtrStepb dst)
@@ -153,9 +153,9 @@ namespace cv { namespace gpu { namespace cudev
             dim3 grid(divUp(src.cols, block.x * 2), divUp(src.rows, block.y * 2));
 
             BGR_to_YV12<<<grid, block>>>(static_cast< PtrStepSz<src_t> >(src), dst);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         void YV12_gpu(const PtrStepSzb src, int cn, PtrStepSzb dst)

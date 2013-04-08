@@ -184,9 +184,9 @@ void cv::gpu::calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr, Size blo
 
     ensureSizeIsEnough(1, ssCount, CV_16SC2, buf);
     if (stream == 0)
-        cvCudaSafeCall( cudaMemcpy(buf.data, &ss[0], ssCount * sizeof(short2), cudaMemcpyHostToDevice) );
+        cudaSafeCall( cudaMemcpy(buf.data, &ss[0], ssCount * sizeof(short2), cudaMemcpyHostToDevice) );
     else
-        cvCudaSafeCall( cudaMemcpyAsync(buf.data, &ss[0], ssCount * sizeof(short2), cudaMemcpyHostToDevice, stream) );
+        cudaSafeCall( cudaMemcpyAsync(buf.data, &ss[0], ssCount * sizeof(short2), cudaMemcpyHostToDevice, stream) );
 
     const int maxX = prev.cols - blockSize.width;
     const int maxY = prev.rows - blockSize.height;

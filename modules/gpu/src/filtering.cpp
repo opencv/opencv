@@ -288,7 +288,7 @@ namespace
                 dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, ksize, anchor) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }
@@ -322,7 +322,7 @@ namespace
                 dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, ksize, anchor) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }
@@ -368,7 +368,7 @@ namespace
                 dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, oKernelSize, oAnchor) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         nppFilterBox_t func;
@@ -436,7 +436,7 @@ namespace
                 dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, kernel.ptr<Npp8u>(), oKernelSize, oAnchor) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         GpuMat kernel;
@@ -702,7 +702,7 @@ namespace
                 kernel.ptr<Npp32s>(), oKernelSize, oAnchor, nDivisor) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         GpuMat kernel;
@@ -865,7 +865,7 @@ namespace
                 kernel.ptr<Npp32s>(), ksize, anchor, nDivisor) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         GpuMat kernel;
@@ -967,7 +967,7 @@ namespace
                 kernel.ptr<Npp32s>(), ksize, anchor, nDivisor) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         GpuMat kernel;
@@ -1307,7 +1307,7 @@ namespace
             nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, oKernelSize, oAnchor) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         nppFilterRank_t func;

@@ -131,14 +131,14 @@ bool cv::gpu::Stream::queryIfComplete()
     if (err == cudaErrorNotReady || err == cudaSuccess)
         return err == cudaSuccess;
 
-    cvCudaSafeCall(err);
+    cudaSafeCall(err);
     return false;
 }
 
 void cv::gpu::Stream::waitForCompletion()
 {
     cudaStream_t stream = Impl::getStream(impl);
-    cvCudaSafeCall( cudaStreamSynchronize(stream) );
+    cudaSafeCall( cudaStreamSynchronize(stream) );
 }
 
 void cv::gpu::Stream::enqueueDownload(const GpuMat& src, Mat& dst)
@@ -148,7 +148,7 @@ void cv::gpu::Stream::enqueueDownload(const GpuMat& src, Mat& dst)
 
     cudaStream_t stream = Impl::getStream(impl);
     size_t bwidth = src.cols * src.elemSize();
-    cvCudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyDeviceToHost, stream) );
+    cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyDeviceToHost, stream) );
 }
 
 void cv::gpu::Stream::enqueueDownload(const GpuMat& src, CudaMem& dst)
@@ -157,7 +157,7 @@ void cv::gpu::Stream::enqueueDownload(const GpuMat& src, CudaMem& dst)
 
     cudaStream_t stream = Impl::getStream(impl);
     size_t bwidth = src.cols * src.elemSize();
-    cvCudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyDeviceToHost, stream) );
+    cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyDeviceToHost, stream) );
 }
 
 void cv::gpu::Stream::enqueueUpload(const CudaMem& src, GpuMat& dst)
@@ -166,7 +166,7 @@ void cv::gpu::Stream::enqueueUpload(const CudaMem& src, GpuMat& dst)
 
     cudaStream_t stream = Impl::getStream(impl);
     size_t bwidth = src.cols * src.elemSize();
-    cvCudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyHostToDevice, stream) );
+    cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyHostToDevice, stream) );
 }
 
 void cv::gpu::Stream::enqueueUpload(const Mat& src, GpuMat& dst)
@@ -175,7 +175,7 @@ void cv::gpu::Stream::enqueueUpload(const Mat& src, GpuMat& dst)
 
     cudaStream_t stream = Impl::getStream(impl);
     size_t bwidth = src.cols * src.elemSize();
-    cvCudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyHostToDevice, stream) );
+    cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyHostToDevice, stream) );
 }
 
 void cv::gpu::Stream::enqueueCopy(const GpuMat& src, GpuMat& dst)
@@ -184,7 +184,7 @@ void cv::gpu::Stream::enqueueCopy(const GpuMat& src, GpuMat& dst)
 
     cudaStream_t stream = Impl::getStream(impl);
     size_t bwidth = src.cols * src.elemSize();
-    cvCudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyDeviceToDevice, stream) );
+    cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyDeviceToDevice, stream) );
 }
 
 void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val)
@@ -201,7 +201,7 @@ void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val)
 
     if (val[0] == 0.0 && val[1] == 0.0 && val[2] == 0.0 && val[3] == 0.0)
     {
-        cvCudaSafeCall( cudaMemset2DAsync(src.data, src.step, 0, src.cols * src.elemSize(), src.rows, stream) );
+        cudaSafeCall( cudaMemset2DAsync(src.data, src.step, 0, src.cols * src.elemSize(), src.rows, stream) );
         return;
     }
 
@@ -212,7 +212,7 @@ void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val)
         if (cn == 1 || (cn == 2 && val[0] == val[1]) || (cn == 3 && val[0] == val[1] && val[0] == val[2]) || (cn == 4 && val[0] == val[1] && val[0] == val[2] && val[0] == val[3]))
         {
             int ival = saturate_cast<uchar>(val[0]);
-            cvCudaSafeCall( cudaMemset2DAsync(src.data, src.step, ival, src.cols * src.elemSize(), src.rows, stream) );
+            cudaSafeCall( cudaMemset2DAsync(src.data, src.step, ival, src.cols * src.elemSize(), src.rows, stream) );
             return;
         }
     }
@@ -299,7 +299,7 @@ void cv::gpu::Stream::enqueueHostCallback(StreamCallback callback, void* userDat
 
     cudaStream_t stream = Impl::getStream(impl);
 
-    cvCudaSafeCall( cudaStreamAddCallback(stream, cudaStreamCallback, data, 0) );
+    cudaSafeCall( cudaStreamAddCallback(stream, cudaStreamCallback, data, 0) );
 #else
     (void) callback;
     (void) userData;
@@ -328,7 +328,7 @@ void cv::gpu::Stream::create()
         release();
 
     cudaStream_t stream;
-    cvCudaSafeCall( cudaStreamCreate( &stream ) );
+    cudaSafeCall( cudaStreamCreate( &stream ) );
 
     impl = (Stream::Impl*) fastMalloc(sizeof(Stream::Impl));
 
@@ -340,7 +340,7 @@ void cv::gpu::Stream::release()
 {
     if (impl && CV_XADD(&impl->ref_counter, -1) == 1)
     {
-        cvCudaSafeCall( cudaStreamDestroy(impl->stream) );
+        cudaSafeCall( cudaStreamDestroy(impl->stream) );
         cv::fastFree(impl);
     }
 }

@@ -92,7 +92,7 @@ namespace cv { namespace gpu { namespace cudev
                 Filter< BorderReader< PtrStep<T>, BrdReplicate<T> > > filteredSrc(brdSrc, fx, fy);
 
                 resize<<<grid, block, 0, stream>>>(filteredSrc, fx, fy, dst);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
             }
         };
 
@@ -107,9 +107,9 @@ namespace cv { namespace gpu { namespace cudev
                 BorderReader< PtrStep<T>, BrdConstant<T> > brdSrc(src, brd);
                 AreaFilter< BorderReader< PtrStep<T>, BrdConstant<T> > > filteredSrc(brdSrc, fx, fy);
                 resize_area<<<grid, block, 0, stream>>>(filteredSrc, fx, fy, dst);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
                 if (stream == 0)
-                    cvCudaSafeCall( cudaDeviceSynchronize() );
+                    cudaSafeCall( cudaDeviceSynchronize() );
             }
         };
 
@@ -123,9 +123,9 @@ namespace cv { namespace gpu { namespace cudev
                 BorderReader< PtrStep<T>, BrdConstant<T> > brdSrc(src, brd);
                 IntegerAreaFilter< BorderReader< PtrStep<T>, BrdConstant<T> > > filteredSrc(brdSrc, fx, fy);
                 resize_area<<<grid, block, 0, stream>>>(filteredSrc, fx, fy, dst);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
                 if (stream == 0)
-                    cvCudaSafeCall( cudaDeviceSynchronize() );
+                    cudaSafeCall( cudaDeviceSynchronize() );
             }
         };
 
@@ -145,9 +145,9 @@ namespace cv { namespace gpu { namespace cudev
                 Filter< BorderReader< PtrStep<T>, BrdReplicate<T> > > filteredSrc(brdSrc);
 
                 resize<<<grid, block>>>(filteredSrc, fx, fy, dst);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
 
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
             }
         };
 
@@ -185,8 +185,8 @@ namespace cv { namespace gpu { namespace cudev
                         Filter< BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > > filteredSrc(brdSrc); \
                         resize<<<grid, block>>>(filteredSrc, fx, fy, dst); \
                     } \
-                    cvCudaSafeCall( cudaGetLastError() ); \
-                    cvCudaSafeCall( cudaDeviceSynchronize() ); \
+                    cudaSafeCall( cudaGetLastError() ); \
+                    cudaSafeCall( cudaDeviceSynchronize() ); \
                 } \
             };
 

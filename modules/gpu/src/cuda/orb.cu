@@ -132,10 +132,10 @@ namespace cv { namespace gpu { namespace cudev
 
             HarrisResponses<<<grid, block, 0, stream>>>(img, loc, response, npoints, blockSize, harris_k);
 
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -145,7 +145,7 @@ namespace cv { namespace gpu { namespace cudev
 
         void loadUMax(const int* u_max, int count)
         {
-            cvCudaSafeCall( cudaMemcpyToSymbol(c_u_max, u_max, count * sizeof(int)) );
+            cudaSafeCall( cudaMemcpyToSymbol(c_u_max, u_max, count * sizeof(int)) );
         }
 
         __global__ void IC_Angle(const PtrStepb image, const short2* loc_, float* angle, const int npoints, const int half_k)
@@ -214,10 +214,10 @@ namespace cv { namespace gpu { namespace cudev
 
             IC_Angle<<<grid, block, 0, stream>>>(image, loc, angle, npoints, half_k);
 
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -382,10 +382,10 @@ namespace cv { namespace gpu { namespace cudev
                 break;
             }
 
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -413,10 +413,10 @@ namespace cv { namespace gpu { namespace cudev
 
             mergeLocation<<<grid, block, 0, stream>>>(loc, x, y, npoints, scale);
 
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     }
 }}}

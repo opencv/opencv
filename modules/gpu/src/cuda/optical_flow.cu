@@ -119,9 +119,9 @@ namespace cv { namespace gpu { namespace cudev
             const dim3 grid(u_avg.cols, u_avg.rows);
 
             NeedleMapAverageKernel<<<grid, block>>>(u, v, u_avg, v_avg);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         __global__ void NeedleMapVertexKernel(const PtrStepSzf u_avg, const PtrStepf v_avg, float* vertex_data, float* color_data, float max_flow, float xscale, float yscale)
@@ -210,9 +210,9 @@ namespace cv { namespace gpu { namespace cudev
             const dim3 grid(divUp(u_avg.cols, block.x), divUp(u_avg.rows, block.y));
 
             NeedleMapVertexKernel<<<grid, block>>>(u_avg, v_avg, vertex_buffer, color_data, max_flow, xscale, yscale);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
     }
 }}}

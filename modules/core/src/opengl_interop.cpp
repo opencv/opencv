@@ -133,7 +133,7 @@ void cv::gpu::setGlDevice(int device)
         (void) device;
         throw_no_cuda();
     #else
-        cvCudaSafeCall( cudaGLSetGLDevice(device) );
+        cudaSafeCall( cudaGLSetGLDevice(device) );
     #endif
 #endif
 }
@@ -184,7 +184,7 @@ namespace
             return;
 
         cudaGraphicsResource_t resource;
-        cvCudaSafeCall( cudaGraphicsGLRegisterBuffer(&resource, buffer, cudaGraphicsMapFlagsNone) );
+        cudaSafeCall( cudaGraphicsGLRegisterBuffer(&resource, buffer, cudaGraphicsMapFlagsNone) );
 
         release();
 
@@ -217,7 +217,7 @@ namespace
     CudaResource::GraphicsMapHolder::GraphicsMapHolder(cudaGraphicsResource_t* resource, cudaStream_t stream) : resource_(resource), stream_(stream)
     {
         if (resource_)
-            cvCudaSafeCall( cudaGraphicsMapResources(1, resource_, stream_) );
+            cudaSafeCall( cudaGraphicsMapResources(1, resource_, stream_) );
     }
 
     CudaResource::GraphicsMapHolder::~GraphicsMapHolder()
@@ -240,14 +240,14 @@ namespace
 
         void* dst;
         size_t size;
-        cvCudaSafeCall( cudaGraphicsResourceGetMappedPointer(&dst, &size, resource_) );
+        cudaSafeCall( cudaGraphicsResourceGetMappedPointer(&dst, &size, resource_) );
 
         CV_DbgAssert( width * height == size );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaMemcpy2D(dst, width, src, spitch, width, height, cudaMemcpyDeviceToDevice) );
+            cudaSafeCall( cudaMemcpy2D(dst, width, src, spitch, width, height, cudaMemcpyDeviceToDevice) );
         else
-            cvCudaSafeCall( cudaMemcpy2DAsync(dst, width, src, spitch, width, height, cudaMemcpyDeviceToDevice, stream) );
+            cudaSafeCall( cudaMemcpy2DAsync(dst, width, src, spitch, width, height, cudaMemcpyDeviceToDevice, stream) );
     }
 
     void CudaResource::copyTo(void* dst, size_t dpitch, size_t width, size_t height, cudaStream_t stream)
@@ -259,14 +259,14 @@ namespace
 
         void* src;
         size_t size;
-        cvCudaSafeCall( cudaGraphicsResourceGetMappedPointer(&src, &size, resource_) );
+        cudaSafeCall( cudaGraphicsResourceGetMappedPointer(&src, &size, resource_) );
 
         CV_DbgAssert( width * height == size );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaMemcpy2D(dst, dpitch, src, width, width, height, cudaMemcpyDeviceToDevice) );
+            cudaSafeCall( cudaMemcpy2D(dst, dpitch, src, width, width, height, cudaMemcpyDeviceToDevice) );
         else
-            cvCudaSafeCall( cudaMemcpy2DAsync(dst, dpitch, src, width, width, height, cudaMemcpyDeviceToDevice, stream) );
+            cudaSafeCall( cudaMemcpy2DAsync(dst, dpitch, src, width, width, height, cudaMemcpyDeviceToDevice, stream) );
     }
 
     void* CudaResource::map(cudaStream_t stream)
@@ -277,7 +277,7 @@ namespace
 
         void* ptr;
         size_t size;
-        cvCudaSafeCall( cudaGraphicsResourceGetMappedPointer(&ptr, &size, resource_) );
+        cudaSafeCall( cudaGraphicsResourceGetMappedPointer(&ptr, &size, resource_) );
 
         h.reset();
 

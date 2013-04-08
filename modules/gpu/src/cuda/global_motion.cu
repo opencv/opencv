@@ -98,8 +98,8 @@ void calcWobbleSuppressionMaps(
         int left, int idx, int right, int width, int height,
         const float *ml, const float *mr, PtrStepSzf mapx, PtrStepSzf mapy)
 {
-    cvCudaSafeCall(cudaMemcpyToSymbol(cml, ml, 9*sizeof(float)));
-    cvCudaSafeCall(cudaMemcpyToSymbol(cmr, mr, 9*sizeof(float)));
+    cudaSafeCall(cudaMemcpyToSymbol(cml, ml, 9*sizeof(float)));
+    cudaSafeCall(cudaMemcpyToSymbol(cmr, mr, 9*sizeof(float)));
 
     dim3 threads(32, 8);
     dim3 grid(divUp(width, threads.x), divUp(height, threads.y));
@@ -107,8 +107,8 @@ void calcWobbleSuppressionMaps(
     calcWobbleSuppressionMapsKernel<<<grid, threads>>>(
             left, idx, right, width, height, mapx, mapy);
 
-    cvCudaSafeCall(cudaGetLastError());
-    cvCudaSafeCall(cudaDeviceSynchronize());
+    cudaSafeCall(cudaGetLastError());
+    cudaSafeCall(cudaDeviceSynchronize());
 }
 
 }}}}

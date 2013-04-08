@@ -403,7 +403,7 @@ public:
 
         unsigned int classified = 0;
         GpuMat dclassified(1, 1, CV_32S);
-        cvCudaSafeCall( cudaMemcpy(dclassified.ptr(), &classified, sizeof(int), cudaMemcpyHostToDevice) );
+        cudaSafeCall( cudaMemcpy(dclassified.ptr(), &classified, sizeof(int), cudaMemcpyHostToDevice) );
 
         PyrLavel level(0, 1.0f, image.size(), NxM, minObjectSize);
 
@@ -448,11 +448,11 @@ public:
         if (groupThreshold <= 0  || objects.empty())
             return 0;
 
-        cvCudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
         cudev::lbp::connectedConmonents(candidates, classified, objects, groupThreshold, grouping_eps, dclassified.ptr<unsigned int>());
 
-        cvCudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaDeviceSynchronize() );
         return classified;
     }
 
@@ -481,7 +481,7 @@ private:
             roiSize.height = frame.height;
 
             cudaDeviceProp prop;
-            cvCudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
+            cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
 
             Ncv32u bufSize;
             ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );

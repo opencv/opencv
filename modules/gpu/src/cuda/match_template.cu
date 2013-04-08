@@ -114,10 +114,10 @@ namespace cv { namespace gpu { namespace cudev
             const dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
 
             matchTemplateNaiveKernel_CCORR<T, cn><<<grid, threads, 0, stream>>>(templ.cols, templ.rows, image, templ, result);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         void matchTemplateNaive_CCORR_32F(const PtrStepSzb image, const PtrStepSzb templ, PtrStepSzf result, int cn, cudaStream_t stream)
@@ -184,10 +184,10 @@ namespace cv { namespace gpu { namespace cudev
             const dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
 
             matchTemplateNaiveKernel_SQDIFF<T, cn><<<grid, threads, 0, stream>>>(templ.cols, templ.rows, image, templ, result);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         void matchTemplateNaive_SQDIFF_32F(const PtrStepSzb image, const PtrStepSzb templ, PtrStepSzf result, int cn, cudaStream_t stream)
@@ -240,10 +240,10 @@ namespace cv { namespace gpu { namespace cudev
             const dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
 
             matchTemplatePreparedKernel_SQDIFF_8U<cn><<<grid, threads, 0, stream>>>(w, h, image_sqsum, templ_sqsum, result);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         void matchTemplatePrepared_SQDIFF_8U(int w, int h, const PtrStepSz<unsigned long long> image_sqsum, unsigned long long templ_sqsum, PtrStepSzf result, int cn,
@@ -312,10 +312,10 @@ namespace cv { namespace gpu { namespace cudev
             const dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
 
             matchTemplatePreparedKernel_SQDIFF_NORMED_8U<cn><<<grid, threads, 0, stream>>>(w, h, image_sqsum, templ_sqsum, result);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -355,10 +355,10 @@ namespace cv { namespace gpu { namespace cudev
             dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
 
             matchTemplatePreparedKernel_CCOFF_8U<<<grid, threads, 0, stream>>>(w, h, (float)templ_sum / (w * h), image_sum, result);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -399,10 +399,10 @@ namespace cv { namespace gpu { namespace cudev
             matchTemplatePreparedKernel_CCOFF_8UC2<<<grid, threads, 0, stream>>>(
                     w, h, (float)templ_sum_r / (w * h), (float)templ_sum_g / (w * h),
                     image_sum_r, image_sum_g, result);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -457,10 +457,10 @@ namespace cv { namespace gpu { namespace cudev
                     (float)templ_sum_g / (w * h),
                     (float)templ_sum_b / (w * h),
                     image_sum_r, image_sum_g, image_sum_b, result);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -525,10 +525,10 @@ namespace cv { namespace gpu { namespace cudev
                     (float)templ_sum_a / (w * h),
                     image_sum_r, image_sum_g, image_sum_b, image_sum_a,
                     result);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         //////////////////////////////////////////////////////////////////////
@@ -574,10 +574,10 @@ namespace cv { namespace gpu { namespace cudev
             matchTemplatePreparedKernel_CCOFF_NORMED_8U<<<grid, threads, 0, stream>>>(
                     w, h, weight, templ_sum_scale, templ_sqsum_scale,
                     image_sum, image_sqsum, result);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -640,10 +640,10 @@ namespace cv { namespace gpu { namespace cudev
                     image_sum_r, image_sqsum_r,
                     image_sum_g, image_sqsum_g,
                     result);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -720,10 +720,10 @@ namespace cv { namespace gpu { namespace cudev
                     image_sum_g, image_sqsum_g,
                     image_sum_b, image_sqsum_b,
                     result);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -812,10 +812,10 @@ namespace cv { namespace gpu { namespace cudev
                     image_sum_b, image_sqsum_b,
                     image_sum_a, image_sqsum_a,
                     result);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         //////////////////////////////////////////////////////////////////////
@@ -860,10 +860,10 @@ namespace cv { namespace gpu { namespace cudev
                 break;
             }
 
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         //////////////////////////////////////////////////////////////////////
@@ -904,10 +904,10 @@ namespace cv { namespace gpu { namespace cudev
                 extractFirstChannel_32F<4><<<grid, threads, 0, stream>>>(image, result);
                 break;
             }
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     } //namespace match_template
 }}} // namespace cv { namespace gpu { namespace cudev

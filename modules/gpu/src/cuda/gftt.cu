@@ -94,9 +94,9 @@ namespace cv { namespace gpu { namespace cudev
         int findCorners_gpu(PtrStepSzf eig, float threshold, PtrStepSzb mask, float2* corners, int max_count)
         {
             void* counter_ptr;
-            cvCudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
+            cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
 
-            cvCudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(int)) );
+            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(int)) );
 
             bindTexture(&eigTex, eig);
 
@@ -108,12 +108,12 @@ namespace cv { namespace gpu { namespace cudev
             else
                 findCorners<<<grid, block>>>(threshold, WithOutMask(), corners, max_count, eig.rows, eig.cols);
 
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
 
             int count;
-            cvCudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
+            cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
 
             return std::min(count, max_count);
         }

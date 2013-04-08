@@ -198,7 +198,7 @@ void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTrans
 #endif
 
     if (stream == 0)
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& topLeft, GpuMat& topRight,
@@ -276,7 +276,7 @@ void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTrans
 #endif
 
     if (stream == 0)
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 #endif /* !defined (HAVE_CUDA) */

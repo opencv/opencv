@@ -177,7 +177,7 @@ namespace
                     img_rows, img_cols, octave, use_mask, surf_.nOctaveLayers);
 
                 unsigned int maxCounter;
-                cvCudaSafeCall( cudaMemcpy(&maxCounter, counters.ptr<unsigned int>() + 1 + octave, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+                cudaSafeCall( cudaMemcpy(&maxCounter, counters.ptr<unsigned int>() + 1 + octave, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
                 maxCounter = std::min(maxCounter, static_cast<unsigned int>(maxCandidates));
 
                 if (maxCounter > 0)
@@ -190,7 +190,7 @@ namespace
                 }
             }
             unsigned int featureCounter;
-            cvCudaSafeCall( cudaMemcpy(&featureCounter, counters.ptr<unsigned int>(), sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+            cudaSafeCall( cudaMemcpy(&featureCounter, counters.ptr<unsigned int>(), sizeof(unsigned int), cudaMemcpyDeviceToHost) );
             featureCounter = std::min(featureCounter, static_cast<unsigned int>(maxFeatures));
 
             keypoints.cols = featureCounter;

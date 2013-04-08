@@ -70,10 +70,10 @@ namespace cv { namespace gpu { namespace cudev
                 BorderReader< PtrStep<T>, B<T> > brdSrc(src, brd);
 
                 copyMakeBorder<<<grid, block, 0, stream>>>(brdSrc, dst, top, left);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cvCudaSafeCall( cudaDeviceSynchronize() );
+                    cudaSafeCall( cudaDeviceSynchronize() );
             }
         };
 

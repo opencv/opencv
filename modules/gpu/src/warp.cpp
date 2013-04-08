@@ -170,7 +170,7 @@ namespace
                               coeffs, npp_inter[interpolation]) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }

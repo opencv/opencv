@@ -320,7 +320,7 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
         }
 
         if (stream == 0)
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
     else
     {
@@ -494,7 +494,7 @@ namespace
                 dst.ptr<npp_t>(), static_cast<int>(dst.step), dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }
@@ -581,7 +581,7 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
         roiSize.height = src.rows;
 
         cudaDeviceProp prop;
-        cvCudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
+        cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
 
         Ncv32u bufSize;
         ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
@@ -594,7 +594,7 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
             sum.ptr<Ncv32u>(), static_cast<int>(sum.step), roiSize, buffer.ptr<Ncv8u>(), bufSize, prop) );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -610,7 +610,7 @@ void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
     roiSize.height = src.rows;
 
     cudaDeviceProp prop;
-    cvCudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
+    cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
 
     Ncv32u bufSize;
     ncvSafeCall(nppiStSqrIntegralGetSize_8u64u(roiSize, &bufSize, prop));
@@ -625,7 +625,7 @@ void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
             sqsum.ptr<Ncv64u>(0), static_cast<int>(sqsum.step), roiSize, buf.ptr<Ncv8u>(0), bufSize, prop));
 
     if (stream == 0)
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -674,7 +674,7 @@ void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, cons
                 dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, nppRect) );
 
     if (stream == 0)
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -726,7 +726,7 @@ namespace
                 lowerLevel, upperLevel, buffer.ptr<Npp8u>()) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<int SDEPTH, typename NppHistogramEvenFuncC4<SDEPTH>::func_ptr func, get_buf_size_c4_t get_buf_size>
@@ -758,7 +758,7 @@ namespace
             nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), sz, pHist, levels, lowerLevel, upperLevel, buffer.ptr<Npp8u>()) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 
@@ -826,7 +826,7 @@ namespace
             nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), sz, hist.ptr<Npp32s>(), levels.ptr<level_t>(), levels.cols, buffer.ptr<Npp8u>()) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<int SDEPTH, typename NppHistogramRangeFuncC4<SDEPTH>::func_ptr func, get_buf_size_c4_t get_buf_size>
@@ -866,7 +866,7 @@ namespace
             nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), sz, pHist, pLevels, nLevels, buffer.ptr<Npp8u>()) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }

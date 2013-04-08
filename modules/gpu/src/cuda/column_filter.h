@@ -169,10 +169,10 @@ namespace column_filter
 
         linearColumnFilter<KSIZE, T, D><<<grid, block, 0, stream>>>(src, dst, anchor, brd);
 
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -363,9 +363,9 @@ namespace filter
         };
 
         if (stream == 0)
-            cvCudaSafeCall( cudaMemcpyToSymbol(column_filter::c_kernel, kernel, ksize * sizeof(float), 0, cudaMemcpyDeviceToDevice) );
+            cudaSafeCall( cudaMemcpyToSymbol(column_filter::c_kernel, kernel, ksize * sizeof(float), 0, cudaMemcpyDeviceToDevice) );
         else
-            cvCudaSafeCall( cudaMemcpyToSymbolAsync(column_filter::c_kernel, kernel, ksize * sizeof(float), 0, cudaMemcpyDeviceToDevice, stream) );
+            cudaSafeCall( cudaMemcpyToSymbolAsync(column_filter::c_kernel, kernel, ksize * sizeof(float), 0, cudaMemcpyDeviceToDevice, stream) );
 
         callers[brd_type][ksize]((PtrStepSz<T>)src, (PtrStepSz<D>)dst, anchor, cc, stream);
     }

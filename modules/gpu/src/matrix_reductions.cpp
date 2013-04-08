@@ -80,11 +80,11 @@ namespace
     public:
         explicit DeviceBuffer(int count_ = 1) : count(count_)
         {
-            cvCudaSafeCall( cudaMalloc(&pdev, count * sizeof(double)) );
+            cudaSafeCall( cudaMalloc(&pdev, count * sizeof(double)) );
         }
         ~DeviceBuffer()
         {
-            cvCudaSafeCall( cudaFree(pdev) );
+            cudaSafeCall( cudaFree(pdev) );
         }
 
         operator double*() {return pdev;}
@@ -92,13 +92,13 @@ namespace
         void download(double* hptr)
         {
             double hbuf;
-            cvCudaSafeCall( cudaMemcpy(&hbuf, pdev, sizeof(double), cudaMemcpyDeviceToHost) );
+            cudaSafeCall( cudaMemcpy(&hbuf, pdev, sizeof(double), cudaMemcpyDeviceToHost) );
             *hptr = hbuf;
         }
         void download(double** hptrs)
         {
             AutoBuffer<double, 2 * sizeof(double)> hbuf(count);
-            cvCudaSafeCall( cudaMemcpy((void*)hbuf, pdev, count * sizeof(double), cudaMemcpyDeviceToHost) );
+            cudaSafeCall( cudaMemcpy((void*)hbuf, pdev, count * sizeof(double), cudaMemcpyDeviceToHost) );
             for (int i = 0; i < count; ++i)
                 *hptrs[i] = hbuf[i];
         }
@@ -143,7 +143,7 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev, GpuMat
 
     nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), sz, buf.ptr<Npp8u>(), dbuf, (double*)dbuf + 1) );
 
-    cvCudaSafeCall( cudaDeviceSynchronize() );
+    cudaSafeCall( cudaDeviceSynchronize() );
 
     double* ptrs[2] = {mean.val, stddev.val};
     dbuf.download(ptrs);
@@ -205,7 +205,7 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
 
     nppSafeCall( npp_norm_diff_func[funcIdx](src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), sz, dbuf) );
 
-    cvCudaSafeCall( cudaDeviceSynchronize() );
+    cudaSafeCall( cudaDeviceSynchronize() );
 
     dbuf.download(&retVal);
 

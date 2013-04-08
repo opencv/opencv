@@ -246,7 +246,7 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
     }
 
     if (stream == 0)
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -287,7 +287,7 @@ namespace
                 (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS))) );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }
@@ -402,7 +402,7 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
     }
 
     if (stream == 0)
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -427,7 +427,7 @@ namespace
         nppSafeCall( func(src.ptr<Npp32fc>(), static_cast<int>(src.step), dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 

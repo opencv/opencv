@@ -102,22 +102,22 @@ namespace cv { namespace gpu { namespace cudev
             dim3 grid(divUp(xmap.cols, block.x), divUp(xmap.rows, block.y));
 
             buildWarpMaps<Transform><<<grid, block, 0, stream>>>(xmap, ymap);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         void buildWarpAffineMaps_gpu(float coeffs[2 * 3], PtrStepSzf xmap, PtrStepSzf ymap, cudaStream_t stream)
         {
-            cvCudaSafeCall( cudaMemcpyToSymbol(c_warpMat, coeffs, 2 * 3 * sizeof(float)) );
+            cudaSafeCall( cudaMemcpyToSymbol(c_warpMat, coeffs, 2 * 3 * sizeof(float)) );
 
             buildWarpMaps_caller<AffineTransform>(xmap, ymap, stream);
         }
 
         void buildWarpPerspectiveMaps_gpu(float coeffs[3 * 3], PtrStepSzf xmap, PtrStepSzf ymap, cudaStream_t stream)
         {
-            cvCudaSafeCall( cudaMemcpyToSymbol(c_warpMat, coeffs, 3 * 3 * sizeof(float)) );
+            cudaSafeCall( cudaMemcpyToSymbol(c_warpMat, coeffs, 3 * 3 * sizeof(float)) );
 
             buildWarpMaps_caller<PerspectiveTransform>(xmap, ymap, stream);
         }
@@ -152,7 +152,7 @@ namespace cv { namespace gpu { namespace cudev
                 Filter< BorderReader< PtrStep<T>, B<work_type> > > filter_src(brdSrc);
 
                 warp<Transform><<<grid, block, 0, stream>>>(filter_src, dst);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
             }
         };
 
@@ -174,9 +174,9 @@ namespace cv { namespace gpu { namespace cudev
                 Filter< BorderReader< PtrStep<T>, B<work_type> > > filter_src(brdSrc);
 
                 warp<Transform><<<grid, block>>>(filter_src, dst);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
 
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
             }
         };
 
@@ -206,8 +206,8 @@ namespace cv { namespace gpu { namespace cudev
                     BorderReader< tex_warp_ ## type ##_reader, B<work_type> > brdSrc(texSrc, brd); \
                     Filter< BorderReader< tex_warp_ ## type ##_reader, B<work_type> > > filter_src(brdSrc); \
                     warp<Transform><<<grid, block>>>(filter_src, dst); \
-                    cvCudaSafeCall( cudaGetLastError() ); \
-                    cvCudaSafeCall( cudaDeviceSynchronize() ); \
+                    cudaSafeCall( cudaGetLastError() ); \
+                    cudaSafeCall( cudaDeviceSynchronize() ); \
                 } \
             }; \
             template <class Transform, template <typename> class Filter> struct WarpDispatcherNonStream<Transform, Filter, BrdReplicate, type> \
@@ -230,8 +230,8 @@ namespace cv { namespace gpu { namespace cudev
                         Filter< BorderReader< tex_warp_ ## type ##_reader, BrdReplicate<type> > > filter_src(brdSrc); \
                         warp<Transform><<<grid, block>>>(filter_src, dst); \
                     } \
-                    cvCudaSafeCall( cudaGetLastError() ); \
-                    cvCudaSafeCall( cudaDeviceSynchronize() ); \
+                    cudaSafeCall( cudaGetLastError() ); \
+                    cudaSafeCall( cudaDeviceSynchronize() ); \
                 } \
             };
 
@@ -310,7 +310,7 @@ namespace cv { namespace gpu { namespace cudev
         template <typename T> void warpAffine_gpu(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[2 * 3], PtrStepSzb dst, int interpolation,
                                                   int borderMode, const float* borderValue, cudaStream_t stream, bool cc20)
         {
-            cvCudaSafeCall( cudaMemcpyToSymbol(c_warpMat, coeffs, 2 * 3 * sizeof(float)) );
+            cudaSafeCall( cudaMemcpyToSymbol(c_warpMat, coeffs, 2 * 3 * sizeof(float)) );
 
             warp_caller<AffineTransform, T>(src, srcWhole, xoff, yoff, dst, interpolation, borderMode, borderValue, stream, cc20);
         }
@@ -348,7 +348,7 @@ namespace cv { namespace gpu { namespace cudev
         template <typename T> void warpPerspective_gpu(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[3 * 3], PtrStepSzb dst, int interpolation,
                                                   int borderMode, const float* borderValue, cudaStream_t stream, bool cc20)
         {
-            cvCudaSafeCall( cudaMemcpyToSymbol(c_warpMat, coeffs, 3 * 3 * sizeof(float)) );
+            cudaSafeCall( cudaMemcpyToSymbol(c_warpMat, coeffs, 3 * 3 * sizeof(float)) );
 
             warp_caller<PerspectiveTransform, T>(src, srcWhole, xoff, yoff, dst, interpolation, borderMode, borderValue, stream, cc20);
         }

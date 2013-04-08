@@ -124,31 +124,31 @@ namespace cv { namespace gpu { namespace cudev
 
     void writeScalar(const uchar* vals)
     {
-        cvCudaSafeCall( cudaMemcpyToSymbol(scalar_8u, vals, sizeof(uchar) * 4) );
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_8u, vals, sizeof(uchar) * 4) );
     }
     void writeScalar(const schar* vals)
     {
-        cvCudaSafeCall( cudaMemcpyToSymbol(scalar_8s, vals, sizeof(schar) * 4) );
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_8s, vals, sizeof(schar) * 4) );
     }
     void writeScalar(const ushort* vals)
     {
-        cvCudaSafeCall( cudaMemcpyToSymbol(scalar_16u, vals, sizeof(ushort) * 4) );
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_16u, vals, sizeof(ushort) * 4) );
     }
     void writeScalar(const short* vals)
     {
-        cvCudaSafeCall( cudaMemcpyToSymbol(scalar_16s, vals, sizeof(short) * 4) );
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_16s, vals, sizeof(short) * 4) );
     }
     void writeScalar(const int* vals)
     {
-        cvCudaSafeCall( cudaMemcpyToSymbol(scalar_32s, vals, sizeof(int) * 4) );
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_32s, vals, sizeof(int) * 4) );
     }
     void writeScalar(const float* vals)
     {
-        cvCudaSafeCall( cudaMemcpyToSymbol(scalar_32f, vals, sizeof(float) * 4) );
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_32f, vals, sizeof(float) * 4) );
     }
     void writeScalar(const double* vals)
     {
-        cvCudaSafeCall( cudaMemcpyToSymbol(scalar_64f, vals, sizeof(double) * 4) );
+        cudaSafeCall( cudaMemcpyToSymbol(scalar_64f, vals, sizeof(double) * 4) );
     }
 
     template<typename T>
@@ -186,10 +186,10 @@ namespace cv { namespace gpu { namespace cudev
         dim3 numBlocks (mat.cols * channels / threadsPerBlock.x + 1, mat.rows / threadsPerBlock.y + 1, 1);
 
         set_to_with_mask<T><<<numBlocks, threadsPerBlock, 0, stream>>>((T*)mat.data, (uchar*)mask.data, mat.cols, mat.rows, mat.step, channels, mask.step);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cvCudaSafeCall ( cudaDeviceSynchronize() );
+            cudaSafeCall ( cudaDeviceSynchronize() );
     }
 
     template void set_to_gpu<uchar >(PtrStepSzb mat, const uchar*  scalar, PtrStepSzb mask, int channels, cudaStream_t stream);
@@ -209,10 +209,10 @@ namespace cv { namespace gpu { namespace cudev
         dim3 numBlocks (mat.cols * channels / threadsPerBlock.x + 1, mat.rows / threadsPerBlock.y + 1, 1);
 
         set_to_without_mask<T><<<numBlocks, threadsPerBlock, 0, stream>>>((T*)mat.data, mat.cols, mat.rows, mat.step, channels);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cvCudaSafeCall ( cudaDeviceSynchronize() );
+            cudaSafeCall ( cudaDeviceSynchronize() );
     }
 
     template void set_to_gpu<uchar >(PtrStepSzb mat, const uchar*  scalar, int channels, cudaStream_t stream);
@@ -290,8 +290,8 @@ namespace cv { namespace gpu { namespace cudev
     template<typename T, typename D, typename S>
     void cvt_(PtrStepSzb src, PtrStepSzb dst, double alpha, double beta, cudaStream_t stream)
     {
-        cvCudaSafeCall( cudaSetDoubleForDevice(&alpha) );
-        cvCudaSafeCall( cudaSetDoubleForDevice(&beta) );
+        cudaSafeCall( cudaSetDoubleForDevice(&alpha) );
+        cudaSafeCall( cudaSetDoubleForDevice(&beta) );
         Convertor<T, D, S> op(static_cast<S>(alpha), static_cast<S>(beta));
         cv::gpu::cudev::transform((PtrStepSz<T>)src, (PtrStepSz<D>)dst, op, WithOutMask(), stream);
     }

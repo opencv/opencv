@@ -216,10 +216,10 @@ namespace cv { namespace gpu { namespace cudev
             kernelDownsampleX2<<<gDim, bDim, 0, stream>>>((T*)src.data, static_cast<Ncv32u>(src.step),
                 (T*)dst.data, static_cast<Ncv32u>(dst.step), NcvSize32u(dst.cols, dst.rows));
 
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template void kernelDownsampleX2_gpu<uchar1>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -291,10 +291,10 @@ namespace cv { namespace gpu { namespace cudev
             kernelInterpolateFrom1<<<gDim, bDim, 0, stream>>>((T*) src.data, static_cast<Ncv32u>(src.step), NcvSize32u(src.cols, src.rows),
                 (T*) dst.data, static_cast<Ncv32u>(dst.step), NcvSize32u(dst.cols, dst.rows));
 
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template void kernelInterpolateFrom1_gpu<uchar1>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);

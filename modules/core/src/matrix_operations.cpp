@@ -191,18 +191,18 @@ GpuMat cv::gpu::CudaMem::createGpuMatHeader () const { throw_no_cuda(); return G
 
 void cv::gpu::registerPageLocked(Mat& m)
 {
-    cvCudaSafeCall( cudaHostRegister(m.ptr(), m.step * m.rows, cudaHostRegisterPortable) );
+    cudaSafeCall( cudaHostRegister(m.ptr(), m.step * m.rows, cudaHostRegisterPortable) );
 }
 
 void cv::gpu::unregisterPageLocked(Mat& m)
 {
-    cvCudaSafeCall( cudaHostUnregister(m.ptr()) );
+    cudaSafeCall( cudaHostUnregister(m.ptr()) );
 }
 
 bool cv::gpu::CudaMem::canMapHostMemory()
 {
     cudaDeviceProp prop;
-    cvCudaSafeCall( cudaGetDeviceProperties(&prop, getDevice()) );
+    cudaSafeCall( cudaGetDeviceProperties(&prop, getDevice()) );
     return (prop.canMapHostMemory != 0) ? true : false;
 }
 
@@ -237,7 +237,7 @@ void cv::gpu::CudaMem::create(int _rows, int _cols, int _type, int _alloc_type)
         if (_alloc_type == ALLOC_ZEROCOPY)
         {
             cudaDeviceProp prop;
-            cvCudaSafeCall( cudaGetDeviceProperties(&prop, getDevice()) );
+            cudaSafeCall( cudaGetDeviceProperties(&prop, getDevice()) );
             step = alignUpStep(step, prop.textureAlignment);
         }
         int64 _nettosize = (int64)step*rows;
@@ -252,9 +252,9 @@ void cv::gpu::CudaMem::create(int _rows, int _cols, int _type, int _alloc_type)
 
         switch (alloc_type)
         {
-        case ALLOC_PAGE_LOCKED:    cvCudaSafeCall( cudaHostAlloc( &ptr, datasize, cudaHostAllocDefault) ); break;
-        case ALLOC_ZEROCOPY:       cvCudaSafeCall( cudaHostAlloc( &ptr, datasize, cudaHostAllocMapped) );  break;
-        case ALLOC_WRITE_COMBINED: cvCudaSafeCall( cudaHostAlloc( &ptr, datasize, cudaHostAllocWriteCombined) ); break;
+        case ALLOC_PAGE_LOCKED:    cudaSafeCall( cudaHostAlloc( &ptr, datasize, cudaHostAllocDefault) ); break;
+        case ALLOC_ZEROCOPY:       cudaSafeCall( cudaHostAlloc( &ptr, datasize, cudaHostAllocMapped) );  break;
+        case ALLOC_WRITE_COMBINED: cudaSafeCall( cudaHostAlloc( &ptr, datasize, cudaHostAllocWriteCombined) ); break;
         default:                   CV_Error(cv::Error::StsBadFlag, "Invalid alloc type");
         }
 
@@ -273,7 +273,7 @@ GpuMat cv::gpu::CudaMem::createGpuMatHeader () const
     GpuMat res;
 
     void *pdev;
-    cvCudaSafeCall( cudaHostGetDevicePointer( &pdev, data, 0 ) );
+    cudaSafeCall( cudaHostGetDevicePointer( &pdev, data, 0 ) );
     res = GpuMat(rows, cols, type(), pdev, step);
 
     return res;
@@ -283,7 +283,7 @@ void cv::gpu::CudaMem::release()
 {
     if( refcount && CV_XADD(refcount, -1) == 1 )
     {
-        cvCudaSafeCall( cudaFreeHost(datastart ) );
+        cudaSafeCall( cudaFreeHost(datastart ) );
         fastFree(refcount);
     }
     data = datastart = dataend = 0;

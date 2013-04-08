@@ -1600,7 +1600,7 @@ namespace
             nppSafeCall( nppiAlphaPremul_16u_AC4R(src.ptr<Npp16u>(), static_cast<int>(src.step), dst.ptr<Npp16u>(), static_cast<int>(dst.step), oSizeROI) );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     #endif
     }
 
@@ -1942,7 +1942,7 @@ void cv::gpu::swapChannels(GpuMat& image, const int dstOrder[4], Stream& s)
     nppSafeCall( nppiSwapChannels_8u_C4IR(image.ptr<Npp8u>(), static_cast<int>(image.step), sz, dstOrder) );
 
     if (stream == 0)
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 void cv::gpu::gammaCorrection(const GpuMat& src, GpuMat& dst, bool forward, Stream& stream)

@@ -367,10 +367,10 @@ namespace cv { namespace gpu { namespace cudev
                 // launch 1 block / row
                 const int grid = img.rows;
 
-                cvCudaSafeCall( cudaFuncSetCacheConfig(shfl_integral_horizontal, cudaFuncCachePreferL1) );
+                cudaSafeCall( cudaFuncSetCacheConfig(shfl_integral_horizontal, cudaFuncCachePreferL1) );
 
                 shfl_integral_horizontal<<<grid, block, 0, stream>>>((const PtrStepSz<uint4>) img, (PtrStepSz<uint4>) integral);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
             }
 
             {
@@ -378,11 +378,11 @@ namespace cv { namespace gpu { namespace cudev
                 const dim3 grid(divUp(integral.cols, block.x), 1);
 
                 shfl_integral_vertical<<<grid, block, 0, stream>>>(integral);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
             }
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         __global__ void shfl_integral_vertical(PtrStepSz<unsigned int> buffer, PtrStepSz<unsigned int> integral)
@@ -452,10 +452,10 @@ namespace cv { namespace gpu { namespace cudev
                 const int block = blockStep;
                 const int grid = img.rows;
 
-                cvCudaSafeCall( cudaFuncSetCacheConfig(shfl_integral_horizontal, cudaFuncCachePreferL1) );
+                cudaSafeCall( cudaFuncSetCacheConfig(shfl_integral_horizontal, cudaFuncCachePreferL1) );
 
                 shfl_integral_horizontal<<<grid, block, 0, stream>>>((PtrStepSz<uint4>) img, buffer);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
             }
 
             {
@@ -463,7 +463,7 @@ namespace cv { namespace gpu { namespace cudev
                 const dim3 grid(divUp(integral.cols, block.x), 1);
 
                 shfl_integral_vertical<<<grid, block, 0, stream>>>((PtrStepSz<uint>)buffer, integral);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
             }
         }
     }

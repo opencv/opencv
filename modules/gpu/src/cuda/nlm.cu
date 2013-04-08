@@ -146,12 +146,12 @@ namespace cv { namespace gpu { namespace cudev
             float minus_h2_inv = -1.f/(h * h * VecTraits<T>::cn);
             float noise_mult = minus_h2_inv/(block_window * block_window);
 
-            cvCudaSafeCall( cudaFuncSetCacheConfig (nlm_kernel<T, B<T> >, cudaFuncCachePreferL1) );
+            cudaSafeCall( cudaFuncSetCacheConfig (nlm_kernel<T, B<T> >, cudaFuncCachePreferL1) );
             nlm_kernel<<<grid, block>>>((PtrStepSz<T>)src, (PtrStepSz<T>)dst, b, search_radius, block_radius, noise_mult);
-            cvCudaSafeCall ( cudaGetLastError () );
+            cudaSafeCall ( cudaGetLastError () );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template<typename T>
@@ -505,9 +505,9 @@ namespace cv { namespace gpu { namespace cudev
 
 
             fast_nlm_kernel<<<grid, block, smem>>>(fnlm, (PtrStepSz<T>)dst);
-            cvCudaSafeCall ( cudaGetLastError () );
+            cudaSafeCall ( cudaGetLastError () );
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template void nlm_fast_gpu<uchar>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float,  cudaStream_t);
@@ -535,9 +535,9 @@ namespace cv { namespace gpu { namespace cudev
             dim3 g(divUp(lab.cols, b.x), divUp(lab.rows, b.y));
 
             fnlm_split_kernel<<<g, b>>>(lab, l, ab);
-            cvCudaSafeCall ( cudaGetLastError () );
+            cudaSafeCall ( cudaGetLastError () );
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         __global__ void fnlm_merge_kernel(const PtrStepb l, const PtrStep<uchar2> ab, PtrStepSz<uchar3> lab)
@@ -558,9 +558,9 @@ namespace cv { namespace gpu { namespace cudev
             dim3 g(divUp(lab.cols, b.x), divUp(lab.rows, b.y));
 
             fnlm_merge_kernel<<<g, b>>>(l, ab, lab);
-            cvCudaSafeCall ( cudaGetLastError () );
+            cudaSafeCall ( cudaGetLastError () );
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     }
 }}}

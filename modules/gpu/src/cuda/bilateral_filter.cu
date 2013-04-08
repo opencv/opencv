@@ -135,12 +135,12 @@ namespace cv { namespace gpu { namespace cudev
             float sigma_spatial2_inv_half = -0.5f/(sigma_spatial * sigma_spatial);
              float sigma_color2_inv_half = -0.5f/(sigma_color * sigma_color);
 
-            cvCudaSafeCall( cudaFuncSetCacheConfig (bilateral_kernel<T, B<T> >, cudaFuncCachePreferL1) );
+            cudaSafeCall( cudaFuncSetCacheConfig (bilateral_kernel<T, B<T> >, cudaFuncCachePreferL1) );
             bilateral_kernel<<<grid, block>>>((PtrStepSz<T>)src, (PtrStepSz<T>)dst, b, kernel_size, sigma_spatial2_inv_half, sigma_color2_inv_half);
-            cvCudaSafeCall ( cudaGetLastError () );
+            cudaSafeCall ( cudaGetLastError () );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template<typename T>

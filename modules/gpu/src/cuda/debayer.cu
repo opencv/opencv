@@ -347,13 +347,13 @@ namespace cv { namespace gpu { namespace cudev
         const dim3 block(32, 8);
         const dim3 grid(divUp(src.cols, 4 * block.x), divUp(src.rows, block.y));
 
-        cvCudaSafeCall( cudaFuncSetCacheConfig(Bayer2BGR_8u<dst_t>, cudaFuncCachePreferL1) );
+        cudaSafeCall( cudaFuncSetCacheConfig(Bayer2BGR_8u<dst_t>, cudaFuncCachePreferL1) );
 
         Bayer2BGR_8u<dst_t><<<grid, block, 0, stream>>>(src, (PtrStepSz<dst_t>)dst, blue_last, start_with_green);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template <int cn>
@@ -364,13 +364,13 @@ namespace cv { namespace gpu { namespace cudev
         const dim3 block(32, 8);
         const dim3 grid(divUp(src.cols, 2 * block.x), divUp(src.rows, block.y));
 
-        cvCudaSafeCall( cudaFuncSetCacheConfig(Bayer2BGR_16u<dst_t>, cudaFuncCachePreferL1) );
+        cudaSafeCall( cudaFuncSetCacheConfig(Bayer2BGR_16u<dst_t>, cudaFuncCachePreferL1) );
 
         Bayer2BGR_16u<dst_t><<<grid, block, 0, stream>>>(src, (PtrStepSz<dst_t>)dst, blue_last, start_with_green);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void Bayer2BGR_8u_gpu<1>(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
@@ -530,10 +530,10 @@ namespace cv { namespace gpu { namespace cudev
         bindTexture(&sourceTex, src);
 
         MHCdemosaic<dst_t><<<grid, block, 0, stream>>>((PtrStepSz<dst_t>)dst, sourceOffset, firstRed);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void MHCdemosaic<1>(PtrStepSzb src, int2 sourceOffset, PtrStepSzb dst, int2 firstRed, cudaStream_t stream);

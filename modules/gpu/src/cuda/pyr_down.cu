@@ -181,10 +181,10 @@ namespace cv { namespace gpu { namespace cudev
             B<T> b(src.rows, src.cols);
 
             pyrDown<T><<<grid, block, 0, stream>>>(src, dst, b, dst.cols);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template <typename T> void pyrDown_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)

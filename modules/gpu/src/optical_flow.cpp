@@ -82,7 +82,7 @@ void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat& frame0, const GpuMat& f
     v.create(frame0.size(), CV_32FC1);
 
     cudaDeviceProp devProp;
-    cvCudaSafeCall( cudaGetDeviceProperties(&devProp, getDevice()) );
+    cudaSafeCall( cudaGetDeviceProperties(&devProp, getDevice()) );
 
     NCVBroxOpticalFlowDescriptor desc;
 
@@ -185,7 +185,7 @@ void cv::gpu::interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, cons
     ncvSafeCall( nppiStInterpolateFrames(&state) );
 
     if (stream == 0)
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 namespace cv { namespace gpu { namespace cudev

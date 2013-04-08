@@ -317,10 +317,10 @@ namespace cv { namespace gpu { namespace cudev
                 const dim3 grid(divUp(src.cols, threads.x), divUp(src.rows, threads.y), 1);
 
                 transformSimple<T, D><<<grid, threads, 0, stream>>>(src, dst, mask, op);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cvCudaSafeCall( cudaDeviceSynchronize() );
+                    cudaSafeCall( cudaDeviceSynchronize() );
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
@@ -332,10 +332,10 @@ namespace cv { namespace gpu { namespace cudev
                 const dim3 grid(divUp(src1.cols, threads.x), divUp(src1.rows, threads.y), 1);
 
                 transformSimple<T1, T2, D><<<grid, threads, 0, stream>>>(src1, src2, dst, mask, op);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cvCudaSafeCall( cudaDeviceSynchronize() );
+                    cudaSafeCall( cudaDeviceSynchronize() );
             }
         };
         template<> struct TransformDispatcher<true>
@@ -358,10 +358,10 @@ namespace cv { namespace gpu { namespace cudev
                 const dim3 grid(divUp(src.cols, threads.x * ft::smart_shift), divUp(src.rows, threads.y), 1);
 
                 transformSmart<T, D><<<grid, threads, 0, stream>>>(src, dst, mask, op);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cvCudaSafeCall( cudaDeviceSynchronize() );
+                    cudaSafeCall( cudaDeviceSynchronize() );
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
@@ -383,10 +383,10 @@ namespace cv { namespace gpu { namespace cudev
                 const dim3 grid(divUp(src1.cols, threads.x * ft::smart_shift), divUp(src1.rows, threads.y), 1);
 
                 transformSmart<T1, T2, D><<<grid, threads, 0, stream>>>(src1, src2, dst, mask, op);
-                cvCudaSafeCall( cudaGetLastError() );
+                cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cvCudaSafeCall( cudaDeviceSynchronize() );
+                    cudaSafeCall( cudaDeviceSynchronize() );
             }
         };
     } // namespace transform_detail

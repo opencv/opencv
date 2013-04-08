@@ -90,23 +90,23 @@ namespace cv { namespace gpu { namespace cudev
         void set_up_constants(int nbins, int block_stride_x, int block_stride_y,
                               int nblocks_win_x, int nblocks_win_y)
         {
-            cvCudaSafeCall( cudaMemcpyToSymbol(cnbins, &nbins, sizeof(nbins)) );
-            cvCudaSafeCall( cudaMemcpyToSymbol(cblock_stride_x, &block_stride_x, sizeof(block_stride_x)) );
-            cvCudaSafeCall( cudaMemcpyToSymbol(cblock_stride_y, &block_stride_y, sizeof(block_stride_y)) );
-            cvCudaSafeCall( cudaMemcpyToSymbol(cnblocks_win_x, &nblocks_win_x, sizeof(nblocks_win_x)) );
-            cvCudaSafeCall( cudaMemcpyToSymbol(cnblocks_win_y, &nblocks_win_y, sizeof(nblocks_win_y)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cnbins, &nbins, sizeof(nbins)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cblock_stride_x, &block_stride_x, sizeof(block_stride_x)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cblock_stride_y, &block_stride_y, sizeof(block_stride_y)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cnblocks_win_x, &nblocks_win_x, sizeof(nblocks_win_x)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cnblocks_win_y, &nblocks_win_y, sizeof(nblocks_win_y)) );
 
             int block_hist_size = nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y;
-            cvCudaSafeCall( cudaMemcpyToSymbol(cblock_hist_size, &block_hist_size, sizeof(block_hist_size)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cblock_hist_size, &block_hist_size, sizeof(block_hist_size)) );
 
             int block_hist_size_2up = power_2up(block_hist_size);
-            cvCudaSafeCall( cudaMemcpyToSymbol(cblock_hist_size_2up, &block_hist_size_2up, sizeof(block_hist_size_2up)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cblock_hist_size_2up, &block_hist_size_2up, sizeof(block_hist_size_2up)) );
 
             int descr_width = nblocks_win_x * block_hist_size;
-            cvCudaSafeCall( cudaMemcpyToSymbol(cdescr_width, &descr_width, sizeof(descr_width)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cdescr_width, &descr_width, sizeof(descr_width)) );
 
             int descr_size = descr_width * nblocks_win_y;
-            cvCudaSafeCall( cudaMemcpyToSymbol(cdescr_size, &descr_size, sizeof(descr_size)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cdescr_size, &descr_size, sizeof(descr_size)) );
         }
 
 
@@ -206,7 +206,7 @@ namespace cv { namespace gpu { namespace cudev
             dim3 grid(divUp(img_block_width, nblocks), img_block_height);
             dim3 threads(32, 2, nblocks);
 
-            cvCudaSafeCall(cudaFuncSetCacheConfig(compute_hists_kernel_many_blocks<nblocks>,
+            cudaSafeCall(cudaFuncSetCacheConfig(compute_hists_kernel_many_blocks<nblocks>,
                                                 cudaFuncCachePreferL1));
 
             // Precompute gaussian spatial window parameter
@@ -217,9 +217,9 @@ namespace cv { namespace gpu { namespace cudev
             int smem = hists_size + final_hists_size;
             compute_hists_kernel_many_blocks<nblocks><<<grid, threads, smem>>>(
                 img_block_width, grad, qangle, scale, block_hists);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -318,9 +318,9 @@ namespace cv { namespace gpu { namespace cudev
             else
                 CV_Error(cv::Error::StsBadArg, "normalize_hists: histogram's size is too big, try to decrease number of bins");
 
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -378,7 +378,7 @@ namespace cv { namespace gpu { namespace cudev
            dim3 threads(nthreads, 1, nblocks);
            dim3 grid(divUp(img_win_width, nblocks), img_win_height);
 
-           cvCudaSafeCall(cudaFuncSetCacheConfig(compute_confidence_hists_kernel_many_blocks<nthreads, nblocks>,
+           cudaSafeCall(cudaFuncSetCacheConfig(compute_confidence_hists_kernel_many_blocks<nthreads, nblocks>,
                                                                                    cudaFuncCachePreferL1));
 
            int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) /
@@ -386,7 +386,7 @@ namespace cv { namespace gpu { namespace cudev
            compute_confidence_hists_kernel_many_blocks<nthreads, nblocks><<<grid, threads>>>(
                    img_win_width, img_block_width, win_block_stride_x, win_block_stride_y,
                    block_hists, coefs, free_coef, threshold, confidences);
-           cvCudaSafeCall(cudaThreadSynchronize());
+           cudaSafeCall(cudaThreadSynchronize());
        }
 
 
@@ -440,15 +440,15 @@ namespace cv { namespace gpu { namespace cudev
             dim3 threads(nthreads, 1, nblocks);
             dim3 grid(divUp(img_win_width, nblocks), img_win_height);
 
-            cvCudaSafeCall(cudaFuncSetCacheConfig(classify_hists_kernel_many_blocks<nthreads, nblocks>, cudaFuncCachePreferL1));
+            cudaSafeCall(cudaFuncSetCacheConfig(classify_hists_kernel_many_blocks<nthreads, nblocks>, cudaFuncCachePreferL1));
 
             int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / block_stride_x;
             classify_hists_kernel_many_blocks<nthreads, nblocks><<<grid, threads>>>(
                 img_win_width, img_block_width, win_block_stride_x, win_block_stride_y,
                 block_hists, coefs, free_coef, threshold, labels);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         //----------------------------------------------------------------------------
@@ -491,9 +491,9 @@ namespace cv { namespace gpu { namespace cudev
             int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / block_stride_x;
             extract_descrs_by_rows_kernel<nthreads><<<grid, threads>>>(
                 img_block_width, win_block_stride_x, win_block_stride_y, block_hists, descriptors);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -540,9 +540,9 @@ namespace cv { namespace gpu { namespace cudev
             int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / block_stride_x;
             extract_descrs_by_cols_kernel<nthreads><<<grid, threads>>>(
                 img_block_width, win_block_stride_x, win_block_stride_y, block_hists, descriptors);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         //----------------------------------------------------------------------------
@@ -666,9 +666,9 @@ namespace cv { namespace gpu { namespace cudev
             else
                 compute_gradients_8UC4_kernel<nthreads, 0><<<gdim, bdim>>>(height, width, img, angle_scale, grad, qangle);
 
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template <int nthreads, int correct_gamma>
@@ -739,9 +739,9 @@ namespace cv { namespace gpu { namespace cudev
             else
                 compute_gradients_8UC1_kernel<nthreads, 0><<<gdim, bdim>>>(height, width, img, angle_scale, grad, qangle);
 
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
@@ -782,13 +782,13 @@ namespace cv { namespace gpu { namespace cudev
             int colOfs = 0;
 
             cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
-            cvCudaSafeCall( cudaBindTexture2D(&texOfs, tex, src.data, desc, src.cols, src.rows, src.step) );
+            cudaSafeCall( cudaBindTexture2D(&texOfs, tex, src.data, desc, src.cols, src.rows, src.step) );
 
             if (texOfs != 0)
             {
                 colOfs = static_cast<int>( texOfs/sizeof(T) );
-                cvCudaSafeCall( cudaUnbindTexture(tex) );
-                cvCudaSafeCall( cudaBindTexture2D(&texOfs, tex, src.data, desc, src.cols, src.rows, src.step) );
+                cudaSafeCall( cudaUnbindTexture(tex) );
+                cudaSafeCall( cudaBindTexture2D(&texOfs, tex, src.data, desc, src.cols, src.rows, src.step) );
             }
 
             dim3 threads(32, 8);
@@ -798,11 +798,11 @@ namespace cv { namespace gpu { namespace cudev
             float sy = static_cast<float>(src.rows) / dst.rows;
 
             resize_for_hog_kernel<<<grid, threads>>>(sx, sy, (PtrStepSz<T>)dst, colOfs);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
 
-            cvCudaSafeCall( cudaUnbindTexture(tex) );
+            cudaSafeCall( cudaUnbindTexture(tex) );
         }
 
         void resize_8UC1(const PtrStepSzb& src, PtrStepSzb dst) { resize_for_hog<uchar> (src, dst, resize8UC1_tex); }

@@ -100,10 +100,10 @@ namespace hist
         const dim3 grid(divUp(src.rows, block.y));
 
         histogram256Kernel<<<grid, block, 0, stream>>>(src.data, src.cols, src.rows, src.step, hist);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -140,9 +140,9 @@ namespace hist
     void equalizeHist(PtrStepSzb src, PtrStepSzb dst, const int* lut, cudaStream_t stream)
     {
         if (stream == 0)
-            cvCudaSafeCall( cudaMemcpyToSymbol(c_lut, lut, 256 * sizeof(int), 0, cudaMemcpyDeviceToDevice) );
+            cudaSafeCall( cudaMemcpyToSymbol(c_lut, lut, 256 * sizeof(int), 0, cudaMemcpyDeviceToDevice) );
         else
-            cvCudaSafeCall( cudaMemcpyToSymbolAsync(c_lut, lut, 256 * sizeof(int), 0, cudaMemcpyDeviceToDevice, stream) );
+            cudaSafeCall( cudaMemcpyToSymbolAsync(c_lut, lut, 256 * sizeof(int), 0, cudaMemcpyDeviceToDevice, stream) );
 
         const float scale = 255.0f / (src.cols * src.rows);
 

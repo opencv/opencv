@@ -205,13 +205,13 @@ namespace bgfg
 
         calcPartialHistogram<PT, CT><<<PARTIAL_HISTOGRAM_COUNT, HISTOGRAM_THREADBLOCK_SIZE, 0, stream>>>(
                 (PtrStepSz<PT>)prevFrame, (PtrStepSz<CT>)curFrame, partialBuf0, partialBuf1, partialBuf2);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
         mergeHistogram<<<HISTOGRAM_BIN_COUNT, MERGE_THREADBLOCK_SIZE, 0, stream>>>(partialBuf0, partialBuf1, partialBuf2, hist0, hist1, hist2);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void calcDiffHistogram_gpu<uchar3, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, bool cc20, cudaStream_t stream);
@@ -251,10 +251,10 @@ namespace bgfg
         dim3 grid(divUp(prevFrame.cols, block.x), divUp(prevFrame.rows, block.y));
 
         calcDiffThreshMask<PT, CT><<<grid, block, 0, stream>>>((PtrStepSz<PT>)prevFrame, (PtrStepSz<CT>)curFrame, bestThres, changeMask);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void calcDiffThreshMask_gpu<uchar3, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, uchar3 bestThres, PtrStepSzb changeMask, cudaStream_t stream);
@@ -269,7 +269,7 @@ namespace bgfg
 
     void setBGPixelStat(const BGPixelStat& stat)
     {
-        cvCudaSafeCall( cudaMemcpyToSymbol(c_stat, &stat, sizeof(BGPixelStat)) );
+        cudaSafeCall( cudaMemcpyToSymbol(c_stat, &stat, sizeof(BGPixelStat)) );
     }
 
     template <typename T> struct Output;
@@ -374,15 +374,15 @@ namespace bgfg
         dim3 block(32, 8);
         dim3 grid(divUp(prevFrame.cols, block.x), divUp(prevFrame.rows, block.y));
 
-        cvCudaSafeCall( cudaFuncSetCacheConfig(bgfgClassification<PT, CT, OT>, cudaFuncCachePreferL1) );
+        cudaSafeCall( cudaFuncSetCacheConfig(bgfgClassification<PT, CT, OT>, cudaFuncCachePreferL1) );
 
         bgfgClassification<PT, CT, OT><<<grid, block, 0, stream>>>((PtrStepSz<PT>)prevFrame, (PtrStepSz<CT>)curFrame,
                                                                    Ftd, Fbd, foreground,
                                                                    deltaC, deltaCC, alpha2, N1c, N1cc);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void bgfgClassification_gpu<uchar3, uchar3, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
@@ -765,17 +765,17 @@ namespace bgfg
             dim3 block(32, 8);
             dim3 grid(divUp(prevFrame.cols, block.x), divUp(prevFrame.rows, block.y));
 
-            cvCudaSafeCall( cudaFuncSetCacheConfig(updateBackgroundModel<PT, CT, OT, PtrStep<PT>, PtrStep<CT>, PtrStepb, PtrStepb>, cudaFuncCachePreferL1) );
+            cudaSafeCall( cudaFuncSetCacheConfig(updateBackgroundModel<PT, CT, OT, PtrStep<PT>, PtrStep<CT>, PtrStepb, PtrStepb>, cudaFuncCachePreferL1) );
 
             updateBackgroundModel<PT, CT, OT, PtrStep<PT>, PtrStep<CT>, PtrStepb, PtrStepb><<<grid, block, 0, stream>>>(
                 prevFrame.cols, prevFrame.rows,
                 prevFrame, curFrame,
                 Ftd, Fbd, foreground, background,
                 deltaC, deltaCC, alpha1, alpha2, alpha3, N1c, N1cc, N2c, N2cc, T);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 

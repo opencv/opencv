@@ -278,7 +278,7 @@ void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& 
         ushort2* oldBuf = oldBuf_;
         ushort2* newBuf = newBuf_;
 
-        cvCudaSafeCall( cudaMemcpy(oldBuf, centers, centersCount * sizeof(ushort2), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(oldBuf, centers, centersCount * sizeof(ushort2), cudaMemcpyDeviceToHost) );
 
         const int cellSize = cvRound(minDist);
         const int gridWidth = (src.cols + cellSize - 1) / cellSize;
@@ -338,7 +338,7 @@ void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& 
             }
         }
 
-        cvCudaSafeCall( cudaMemcpy(centers, newBuf, newCount * sizeof(unsigned int), cudaMemcpyHostToDevice) );
+        cudaSafeCall( cudaMemcpy(centers, newBuf, newCount * sizeof(unsigned int), cudaMemcpyHostToDevice) );
         centersCount = newCount;
     }
 
@@ -603,8 +603,8 @@ namespace
         oldPosBuf.resize(posCount);
         oldVoteBuf.resize(posCount);
 
-        cvCudaSafeCall( cudaMemcpy(&oldPosBuf[0], outBuf.ptr(0), posCount * sizeof(float4), cudaMemcpyDeviceToHost) );
-        cvCudaSafeCall( cudaMemcpy(&oldVoteBuf[0], outBuf.ptr(1), posCount * sizeof(int3), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&oldPosBuf[0], outBuf.ptr(0), posCount * sizeof(float4), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&oldVoteBuf[0], outBuf.ptr(1), posCount * sizeof(int3), cudaMemcpyDeviceToHost) );
 
         indexies.resize(posCount);
         for (int i = 0; i < posCount; ++i)
@@ -677,8 +677,8 @@ namespace
         }
 
         posCount = static_cast<int>(newPosBuf.size());
-        cvCudaSafeCall( cudaMemcpy(outBuf.ptr(0), &newPosBuf[0], posCount * sizeof(float4), cudaMemcpyHostToDevice) );
-        cvCudaSafeCall( cudaMemcpy(outBuf.ptr(1), &newVoteBuf[0], posCount * sizeof(int3), cudaMemcpyHostToDevice) );
+        cudaSafeCall( cudaMemcpy(outBuf.ptr(0), &newPosBuf[0], posCount * sizeof(float4), cudaMemcpyHostToDevice) );
+        cudaSafeCall( cudaMemcpy(outBuf.ptr(1), &newVoteBuf[0], posCount * sizeof(int3), cudaMemcpyHostToDevice) );
     }
 
     void GHT_Pos::convertTo(GpuMat& positions)
@@ -1153,7 +1153,7 @@ namespace
             true, templCenter);
 
         h_buf.resize(templFeatures.sizes.cols);
-        cvCudaSafeCall( cudaMemcpy(&h_buf[0], templFeatures.sizes.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&h_buf[0], templFeatures.sizes.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
         templFeatures.maxSize = *max_element(h_buf.begin(), h_buf.end());
     }
 
@@ -1279,7 +1279,7 @@ namespace
         hist.setTo(Scalar::all(0));
         GHT_Guil_Full_calcOHist_gpu(templFeatures.sizes.ptr<int>(), imageFeatures.sizes.ptr<int>(0),
             hist.ptr<int>(), (float)minAngle, (float)maxAngle, (float)angleStep, angleRange, levels, templFeatures.maxSize);
-        cvCudaSafeCall( cudaMemcpy(&h_buf[0], hist.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&h_buf[0], hist.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
 
         angles.clear();
 
@@ -1303,7 +1303,7 @@ namespace
         hist.setTo(Scalar::all(0));
         GHT_Guil_Full_calcSHist_gpu(templFeatures.sizes.ptr<int>(), imageFeatures.sizes.ptr<int>(0),
             hist.ptr<int>(), (float)angle, (float)angleEpsilon, (float)minScale, (float)maxScale, (float)iScaleStep, scaleRange, levels, templFeatures.maxSize);
-        cvCudaSafeCall( cudaMemcpy(&h_buf[0], hist.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&h_buf[0], hist.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
 
         scales.clear();
 

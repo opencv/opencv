@@ -91,25 +91,25 @@ int cv::gpu::getCudaEnabledDeviceCount()
     if (error == cudaErrorNoDevice)
         return 0;
 
-    cvCudaSafeCall( error );
+    cudaSafeCall( error );
     return count;
 }
 
 void cv::gpu::setDevice(int device)
 {
-    cvCudaSafeCall( cudaSetDevice( device ) );
+    cudaSafeCall( cudaSetDevice( device ) );
 }
 
 int cv::gpu::getDevice()
 {
     int device;
-    cvCudaSafeCall( cudaGetDevice( &device ) );
+    cudaSafeCall( cudaGetDevice( &device ) );
     return device;
 }
 
 void cv::gpu::resetDevice()
 {
-    cvCudaSafeCall( cudaDeviceReset() );
+    cudaSafeCall( cudaDeviceReset() );
 }
 
 namespace
@@ -302,7 +302,7 @@ namespace
         if (!props_[devID])
         {
             props_[devID] = new cudaDeviceProp;
-            cvCudaSafeCall( cudaGetDeviceProperties(props_[devID], devID) );
+            cudaSafeCall( cudaGetDeviceProperties(props_[devID], devID) );
         }
 
         return props_[devID];
@@ -322,7 +322,7 @@ void cv::gpu::DeviceInfo::queryMemory(size_t& _totalMemory, size_t& _freeMemory)
     if (prevDeviceID != device_id_)
         setDevice(device_id_);
 
-    cvCudaSafeCall( cudaMemGetInfo(&_freeMemory, &_totalMemory) );
+    cudaSafeCall( cudaMemGetInfo(&_freeMemory, &_totalMemory) );
 
     if (prevDeviceID != device_id_)
         setDevice(prevDeviceID);
@@ -408,8 +408,8 @@ void cv::gpu::printCudaDeviceInfo(int device)
     printf("Device count: %d\n", count);
 
     int driverVersion = 0, runtimeVersion = 0;
-    cvCudaSafeCall( cudaDriverGetVersion(&driverVersion) );
-    cvCudaSafeCall( cudaRuntimeGetVersion(&runtimeVersion) );
+    cudaSafeCall( cudaDriverGetVersion(&driverVersion) );
+    cudaSafeCall( cudaRuntimeGetVersion(&runtimeVersion) );
 
     const char *computeMode[] = {
         "Default (multiple host threads can use ::cudaSetDevice() with device simultaneously)",
@@ -423,7 +423,7 @@ void cv::gpu::printCudaDeviceInfo(int device)
     for(int dev = beg; dev < end; ++dev)
     {
         cudaDeviceProp prop;
-        cvCudaSafeCall( cudaGetDeviceProperties(&prop, dev) );
+        cudaSafeCall( cudaGetDeviceProperties(&prop, dev) );
 
         printf("\nDevice %d: \"%s\"\n", dev, prop.name);
         printf("  CUDA Driver Version / Runtime Version          %d.%d / %d.%d\n", driverVersion/1000, driverVersion%100, runtimeVersion/1000, runtimeVersion%100);
@@ -485,13 +485,13 @@ void cv::gpu::printShortCudaDeviceInfo(int device)
     int end = valid ? device+1 : count;
 
     int driverVersion = 0, runtimeVersion = 0;
-    cvCudaSafeCall( cudaDriverGetVersion(&driverVersion) );
-    cvCudaSafeCall( cudaRuntimeGetVersion(&runtimeVersion) );
+    cudaSafeCall( cudaDriverGetVersion(&driverVersion) );
+    cudaSafeCall( cudaRuntimeGetVersion(&runtimeVersion) );
 
     for(int dev = beg; dev < end; ++dev)
     {
         cudaDeviceProp prop;
-        cvCudaSafeCall( cudaGetDeviceProperties(&prop, dev) );
+        cudaSafeCall( cudaGetDeviceProperties(&prop, dev) );
 
         const char *arch_str = prop.major < 2 ? " (not Fermi)" : "";
         printf("Device %d:  \"%s\"  %.0fMb", dev, prop.name, (float)prop.totalGlobalMem/1048576.0f);
@@ -983,7 +983,7 @@ namespace
 
             nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), dst.ptr<dst_t>(), static_cast<int>(dst.step), sz) );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<int DDEPTH, typename NppConvertFunc<CV_32F, DDEPTH>::func_ptr func> struct NppCvt<CV_32F, DDEPTH, func>
@@ -998,7 +998,7 @@ namespace
 
             nppSafeCall( func(src.ptr<Npp32f>(), static_cast<int>(src.step), dst.ptr<dst_t>(), static_cast<int>(dst.step), sz, NPP_RND_NEAR) );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 
@@ -1040,7 +1040,7 @@ namespace
 
             nppSafeCall( func(nppS.val, src.ptr<src_t>(), static_cast<int>(src.step), sz) );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<int SDEPTH, typename NppSetFunc<SDEPTH, 1>::func_ptr func> struct NppSet<SDEPTH, 1, func>
@@ -1057,7 +1057,7 @@ namespace
 
             nppSafeCall( func(nppS[0], src.ptr<src_t>(), static_cast<int>(src.step), sz) );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 
@@ -1088,7 +1088,7 @@ namespace
 
             nppSafeCall( func(nppS.val, src.ptr<src_t>(), static_cast<int>(src.step), sz, mask.ptr<Npp8u>(), static_cast<int>(mask.step)) );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<int SDEPTH, typename NppSetMaskFunc<SDEPTH, 1>::func_ptr func> struct NppSetMask<SDEPTH, 1, func>
@@ -1105,7 +1105,7 @@ namespace
 
             nppSafeCall( func(nppS[0], src.ptr<src_t>(), static_cast<int>(src.step), sz, mask.ptr<Npp8u>(), static_cast<int>(mask.step)) );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 
@@ -1131,7 +1131,7 @@ namespace
 
             nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), dst.ptr<src_t>(), static_cast<int>(dst.step), sz, mask.ptr<Npp8u>(), static_cast<int>(mask.step)) );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 
@@ -1148,15 +1148,15 @@ namespace
     public:
         void copy(const Mat& src, GpuMat& dst) const
         {
-            cvCudaSafeCall( cudaMemcpy2D(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyHostToDevice) );
+            cudaSafeCall( cudaMemcpy2D(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyHostToDevice) );
         }
         void copy(const GpuMat& src, Mat& dst) const
         {
-            cvCudaSafeCall( cudaMemcpy2D(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyDeviceToHost) );
+            cudaSafeCall( cudaMemcpy2D(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyDeviceToHost) );
         }
         void copy(const GpuMat& src, GpuMat& dst) const
         {
-            cvCudaSafeCall( cudaMemcpy2D(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyDeviceToDevice) );
+            cudaSafeCall( cudaMemcpy2D(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyDeviceToDevice) );
         }
 
         void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask) const
@@ -1301,7 +1301,7 @@ namespace
             {
                 if (s[0] == 0.0 && s[1] == 0.0 && s[2] == 0.0 && s[3] == 0.0)
                 {
-                    cvCudaSafeCall( cudaMemset2D(m.data, m.step, 0, m.cols * m.elemSize(), m.rows) );
+                    cudaSafeCall( cudaMemset2D(m.data, m.step, 0, m.cols * m.elemSize(), m.rows) );
                     return;
                 }
 
@@ -1312,7 +1312,7 @@ namespace
                     if (cn == 1 || (cn == 2 && s[0] == s[1]) || (cn == 3 && s[0] == s[1] && s[0] == s[2]) || (cn == 4 && s[0] == s[1] && s[0] == s[2] && s[0] == s[3]))
                     {
                         int val = saturate_cast<uchar>(s[0]);
-                        cvCudaSafeCall( cudaMemset2D(m.data, m.step, val, m.cols * m.elemSize(), m.rows) );
+                        cudaSafeCall( cudaMemset2D(m.data, m.step, val, m.cols * m.elemSize(), m.rows) );
                         return;
                     }
                 }
@@ -1367,7 +1367,7 @@ namespace
 
         void mallocPitch(void** devPtr, size_t* step, size_t width, size_t height) const
         {
-            cvCudaSafeCall( cudaMallocPitch(devPtr, step, width, height) );
+            cudaSafeCall( cudaMallocPitch(devPtr, step, width, height) );
         }
 
         void free(void* devPtr) const

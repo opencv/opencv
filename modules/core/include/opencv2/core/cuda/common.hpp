@@ -64,10 +64,12 @@ namespace cv { namespace gpu {
     }
 }}
 
-#if defined(__GNUC__)
-    #define cvCudaSafeCall(expr)  cv::gpu::checkCudaError(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cvCudaSafeCall(expr)  cv::gpu::checkCudaError(expr, __FILE__, __LINE__, "")
+#ifndef cudaSafeCall
+    #if defined(__GNUC__)
+        #define cudaSafeCall(expr)  cv::gpu::checkCudaError(expr, __FILE__, __LINE__, __func__)
+    #else /* defined(__CUDACC__) || defined(__MSVC__) */
+        #define cudaSafeCall(expr)  cv::gpu::checkCudaError(expr, __FILE__, __LINE__, "")
+    #endif
 #endif
 
 namespace cv { namespace gpu
@@ -104,7 +106,7 @@ namespace cv { namespace gpu
         template<class T> inline void bindTexture(const textureReference* tex, const PtrStepSz<T>& img)
         {
             cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
-            cvCudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
+            cudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
         }
     }
 }}

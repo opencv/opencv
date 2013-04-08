@@ -141,9 +141,9 @@ namespace canny
             calcMagnitudeKernel<<<grid, block>>>(src, dx, dy, mag, norm);
         }
 
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
-        cvCudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall(cudaThreadSynchronize());
     }
 
     void calcMagnitude(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad)
@@ -227,9 +227,9 @@ namespace canny
         bindTexture(&tex_mag, mag);
 
         calcMapKernel<<<grid, block>>>(dx, dy, map, low_thresh, high_thresh);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -324,17 +324,17 @@ namespace canny
     void edgesHysteresisLocal(PtrStepSzi map, ushort2* st1)
     {
         void* counter_ptr;
-        cvCudaSafeCall( cudaGetSymbolAddress(&counter_ptr, counter) );
+        cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, counter) );
 
-        cvCudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(int)) );
+        cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(int)) );
 
         const dim3 block(16, 16);
         const dim3 grid(divUp(map.cols, block.x), divUp(map.rows, block.y));
 
         edgesHysteresisLocalKernel<<<grid, block>>>(map, st1);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
@@ -435,24 +435,24 @@ namespace canny
     void edgesHysteresisGlobal(PtrStepSzi map, ushort2* st1, ushort2* st2)
     {
         void* counter_ptr;
-        cvCudaSafeCall( cudaGetSymbolAddress(&counter_ptr, canny::counter) );
+        cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, canny::counter) );
 
         int count;
-        cvCudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
 
         while (count > 0)
         {
-            cvCudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(int)) );
+            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(int)) );
 
             const dim3 block(128);
             const dim3 grid(::min(count, 65535u), divUp(count, 65535), 1);
 
             edgesHysteresisGlobalKernel<<<grid, block>>>(map, st1, st2, count);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
 
-            cvCudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
+            cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
 
             std::swap(st1, st2);
         }

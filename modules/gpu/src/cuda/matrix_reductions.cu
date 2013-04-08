@@ -432,12 +432,12 @@ namespace sum
             kernel<threads_x * threads_y><<<grid, block>>>(src, buf, SingleMask(mask), op, twidth, theight);
         else
             kernel<threads_x * threads_y><<<grid, block>>>(src, buf, WithOutMask(), op, twidth, theight);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         R result[4] = {0, 0, 0, 0};
-        cvCudaSafeCall( cudaMemcpy(&result, buf, sizeof(result_type), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&result, buf, sizeof(result_type), cudaMemcpyDeviceToHost) );
 
         out[0] = result[0];
         out[1] = result[1];
@@ -761,13 +761,13 @@ namespace minMax
         else
             kernel<threads_x * threads_y><<<grid, block>>>((PtrStepSz<T>) src, WithOutMask(), minval_buf, maxval_buf, twidth, theight);
 
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         R minval_, maxval_;
-        cvCudaSafeCall( cudaMemcpy(&minval_, minval_buf, sizeof(R), cudaMemcpyDeviceToHost) );
-        cvCudaSafeCall( cudaMemcpy(&maxval_, maxval_buf, sizeof(R), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&minval_, minval_buf, sizeof(R), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&maxval_, maxval_buf, sizeof(R), cudaMemcpyDeviceToHost) );
         *minval = minval_;
         *maxval = maxval_;
     }
@@ -934,22 +934,22 @@ namespace minMaxLoc
         else
             kernel_pass_1<threads_x * threads_y><<<grid, block>>>((PtrStepSz<T>) src, WithOutMask(), minval_buf, maxval_buf, minloc_buf, maxloc_buf, twidth, theight);
 
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
         kernel_pass_2<threads_x * threads_y><<<1, threads_x * threads_y>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         T minval_, maxval_;
-        cvCudaSafeCall( cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost) );
-        cvCudaSafeCall( cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost) );
         *minval = minval_;
         *maxval = maxval_;
 
         unsigned int minloc_, maxloc_;
-        cvCudaSafeCall( cudaMemcpy(&minloc_, minloc_buf, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
-        cvCudaSafeCall( cudaMemcpy(&maxloc_, maxloc_buf, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&minloc_, minloc_buf, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&maxloc_, maxloc_buf, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
         minloc[1] = minloc_ / src.cols; minloc[0] = minloc_ - minloc[1] * src.cols;
         maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
     }
@@ -1065,15 +1065,15 @@ namespace countNonZero
 
         unsigned int* count_buf = buf.ptr(0);
 
-        cvCudaSafeCall( cudaMemset(count_buf, 0, sizeof(unsigned int)) );
+        cudaSafeCall( cudaMemset(count_buf, 0, sizeof(unsigned int)) );
 
         kernel<threads_x * threads_y><<<grid, block>>>((PtrStepSz<T>) src, count_buf, twidth, theight);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
-        cvCudaSafeCall( cudaDeviceSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         unsigned int count;
-        cvCudaSafeCall(cudaMemcpy(&count, count_buf, sizeof(unsigned int), cudaMemcpyDeviceToHost));
+        cudaSafeCall(cudaMemcpy(&count, count_buf, sizeof(unsigned int), cudaMemcpyDeviceToHost));
 
         return count;
     }
@@ -1236,10 +1236,10 @@ namespace reduce
 
         Op op;
         rowsKernel<T, S, D, Op><<<grid, block, 0, stream>>>(src, dst, op);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template <typename T, typename S, typename D>
@@ -1316,10 +1316,10 @@ namespace reduce
 
         Op op;
         colsKernel<BLOCK_SIZE, T, S, D, cn, Op><<<grid, block, 0, stream>>>((PtrStepSz<typename TypeVec<T, cn>::vec_type>) src, (typename TypeVec<D, cn>::vec_type*) dst, op);
-        cvCudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cvCudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
 
     }
 

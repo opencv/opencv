@@ -340,7 +340,7 @@ struct cv::softcascade::SCascade::Fields
         else
             cudaMemset(objects.data, 0, sizeof(Detection));
 
-        cvCudaSafeCall( cudaGetLastError());
+        cudaSafeCall( cudaGetLastError());
 
         cudev::CascadeInvoker<cudev::GK107PolicyX4> invoker
         = cudev::CascadeInvoker<cudev::GK107PolicyX4>(levels, stages, nodes, leaves);

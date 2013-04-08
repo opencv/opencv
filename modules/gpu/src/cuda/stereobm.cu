@@ -322,10 +322,10 @@ namespace cv { namespace gpu { namespace cudev
             size_t smem_size = (BLOCK_W + N_DISPARITIES * (BLOCK_W + 2 * RADIUS)) * sizeof(unsigned int);
 
             stereoKernel<RADIUS><<<grid, threads, smem_size, stream>>>(left.data, right.data, left.step, disp, maxdisp);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         };
 
         typedef void (*kernel_caller_t)(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& disp, int maxdisp, cudaStream_t & stream);
@@ -353,15 +353,15 @@ namespace cv { namespace gpu { namespace cudev
             //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferL1) );
             //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferShared) );
 
-            cvCudaSafeCall( cudaMemset2D(disp.data, disp.step, 0, disp.cols, disp.rows) );
-            cvCudaSafeCall( cudaMemset2D(minSSD_buf.data, minSSD_buf.step, 0xFF, minSSD_buf.cols * minSSD_buf.elemSize(), disp.rows) );
+            cudaSafeCall( cudaMemset2D(disp.data, disp.step, 0, disp.cols, disp.rows) );
+            cudaSafeCall( cudaMemset2D(minSSD_buf.data, minSSD_buf.step, 0xFF, minSSD_buf.cols * minSSD_buf.elemSize(), disp.rows) );
 
-            cvCudaSafeCall( cudaMemcpyToSymbol( cwidth, &left.cols, sizeof(left.cols) ) );
-            cvCudaSafeCall( cudaMemcpyToSymbol( cheight, &left.rows, sizeof(left.rows) ) );
-            cvCudaSafeCall( cudaMemcpyToSymbol( cminSSDImage, &minSSD_buf.data, sizeof(minSSD_buf.data) ) );
+            cudaSafeCall( cudaMemcpyToSymbol( cwidth, &left.cols, sizeof(left.cols) ) );
+            cudaSafeCall( cudaMemcpyToSymbol( cheight, &left.rows, sizeof(left.rows) ) );
+            cudaSafeCall( cudaMemcpyToSymbol( cminSSDImage, &minSSD_buf.data, sizeof(minSSD_buf.data) ) );
 
             size_t minssd_step = minSSD_buf.step/minSSD_buf.elemSize();
-            cvCudaSafeCall( cudaMemcpyToSymbol( cminSSD_step,  &minssd_step, sizeof(minssd_step) ) );
+            cudaSafeCall( cudaMemcpyToSymbol( cminSSD_step,  &minssd_step, sizeof(minssd_step) ) );
 
             callers[winsz2](left, right, disp, maxdisp, stream);
         }
@@ -392,7 +392,7 @@ namespace cv { namespace gpu { namespace cudev
         void prefilter_xsobel(const PtrStepSzb& input, const PtrStepSzb& output, int prefilterCap, cudaStream_t & stream)
         {
             cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-            cvCudaSafeCall( cudaBindTexture2D( 0, texForSobel, input.data, desc, input.cols, input.rows, input.step ) );
+            cudaSafeCall( cudaBindTexture2D( 0, texForSobel, input.data, desc, input.cols, input.rows, input.step ) );
 
             dim3 threads(16, 16, 1);
             dim3 grid(1, 1, 1);
@@ -401,12 +401,12 @@ namespace cv { namespace gpu { namespace cudev
             grid.y = divUp(input.rows, threads.y);
 
             prefilter_kernel<<<grid, threads, 0, stream>>>(output, prefilterCap);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
 
-            cvCudaSafeCall( cudaUnbindTexture (texForSobel ) );
+            cudaSafeCall( cudaUnbindTexture (texForSobel ) );
         }
 
 
@@ -516,7 +516,7 @@ namespace cv { namespace gpu { namespace cudev
             texForTF.addressMode[1] = cudaAddressModeWrap;
 
             cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-            cvCudaSafeCall( cudaBindTexture2D( 0, texForTF, input.data, desc, input.cols, input.rows, input.step ) );
+            cudaSafeCall( cudaBindTexture2D( 0, texForTF, input.data, desc, input.cols, input.rows, input.step ) );
 
             dim3 threads(128, 1, 1);
             dim3 grid(1, 1, 1);
@@ -526,12 +526,12 @@ namespace cv { namespace gpu { namespace cudev
 
             size_t smem_size = (threads.x + threads.x + (winsz/2) * 2 ) * sizeof(float);
             textureness_kernel<<<grid, threads, smem_size, stream>>>(disp, winsz, avgTexturenessThreshold);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
 
-            cvCudaSafeCall( cudaUnbindTexture (texForTF) );
+            cudaSafeCall( cudaUnbindTexture (texForTF) );
         }
     } // namespace stereobm
 }}} // namespace cv { namespace gpu { namespace cudev

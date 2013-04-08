@@ -236,10 +236,10 @@ namespace cv { namespace gpu { namespace cudev
                     src[0].data, src[0].step,
                     src[1].data, src[1].step,
                     dst.rows, dst.cols, dst.data, dst.step);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall(cudaDeviceSynchronize());
+                cudaSafeCall(cudaDeviceSynchronize());
         }
 
 
@@ -253,10 +253,10 @@ namespace cv { namespace gpu { namespace cudev
                     src[1].data, src[1].step,
                     src[2].data, src[2].step,
                     dst.rows, dst.cols, dst.data, dst.step);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall(cudaDeviceSynchronize());
+                cudaSafeCall(cudaDeviceSynchronize());
         }
 
 
@@ -271,10 +271,10 @@ namespace cv { namespace gpu { namespace cudev
                     src[2].data, src[2].step,
                     src[3].data, src[3].step,
                     dst.rows, dst.cols, dst.data, dst.step);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall(cudaDeviceSynchronize());
+                cudaSafeCall(cudaDeviceSynchronize());
         }
 
 
@@ -445,10 +445,10 @@ namespace cv { namespace gpu { namespace cudev
                     src.data, src.step, src.rows, src.cols,
                     dst[0].data, dst[0].step,
                     dst[1].data, dst[1].step);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall(cudaDeviceSynchronize());
+                cudaSafeCall(cudaDeviceSynchronize());
         }
 
 
@@ -462,10 +462,10 @@ namespace cv { namespace gpu { namespace cudev
                     dst[0].data, dst[0].step,
                     dst[1].data, dst[1].step,
                     dst[2].data, dst[2].step);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall(cudaDeviceSynchronize());
+                cudaSafeCall(cudaDeviceSynchronize());
         }
 
 
@@ -480,10 +480,10 @@ namespace cv { namespace gpu { namespace cudev
                      dst[1].data, dst[1].step,
                      dst[2].data, dst[2].step,
                      dst[3].data, dst[3].step);
-            cvCudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cvCudaSafeCall(cudaDeviceSynchronize());
+                cudaSafeCall(cudaDeviceSynchronize());
         }
 
 
