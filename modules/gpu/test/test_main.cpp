@@ -40,46 +40,6 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "test_precomp.hpp"
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-    #pragma warning( disable: 4251 4710 4711 4514 4996 )
-#endif
-
-#include <cstring>
-#include <iostream>
-#include <limits>
-#include <vector>
-#include <algorithm>
-#include <sstream>
-#include <exception>
-#include <iterator>
-#include <functional>
-#include <utility>
-#include <deque>
-#include <stdexcept>
-#include <memory>
-
-#include "opencv2/core.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/gpu.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/calib3d.hpp"
-#include "opencv2/video.hpp"
-
-#include "opencv2/core/private.hpp"
-#include "opencv2/core/gpu_private.hpp"
-
-#ifdef HAVE_CUDA
-    #ifdef HAVE_CUFFT
-        #include <cufft.h>
-    #endif
-
-    #include "internal_shared.hpp"
-    #include "opencv2/core/stream_accessor.hpp"
-
-    #include "opencv2/gpunvidia.hpp"
-#endif /* defined(HAVE_CUDA) */
-
-#endif /* __OPENCV_PRECOMP_H__ */
+CV_GPU_TEST_MAIN("gpu")

@@ -45,7 +45,7 @@
 
 #include <cuda_runtime_api.h>
 #include <cufft.h>
-#include "NCV.hpp"
+#include "opencv2/gpunvidia.hpp"
 
 #if defined(__GNUC__)
     #define ncvSafeCall(expr)  ___ncvSafeCall(expr, __FILE__, __LINE__, __func__)

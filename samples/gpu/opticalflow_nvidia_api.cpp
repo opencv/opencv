@@ -16,8 +16,7 @@
 #include "opencv2/highgui/highgui_c.h"
 
 #ifdef HAVE_CUDA
-#include "NPP_staging/NPP_staging.hpp"
-#include "NCVBroxOpticalFlow.hpp"
+#include "opencv2/gpunvidia.hpp"
 #endif
 
 #if !defined(HAVE_CUDA)

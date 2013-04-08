@@ -11,7 +11,7 @@
 #include "opencv2/objdetect/objdetect_c.h"
 
 #ifdef HAVE_CUDA
-#include "NCVHaarObjectDetection.hpp"
+#include "opencv2/gpunvidia.hpp"
 #endif
 
 using namespace std;
