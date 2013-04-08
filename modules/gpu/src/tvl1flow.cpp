@@ -63,6 +63,7 @@ cv::gpu::OpticalFlowDual_TVL1_GPU::OpticalFlowDual_TVL1_GPU()
     warps          = 5;
     epsilon        = 0.01;
     iterations     = 300;
+    scaleStep      = 0.8;
     useInitialFlow = false;
 }
 
@@ -112,8 +113,8 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat& I0, const GpuM
     // create the scales
     for (int s = 1; s < nscales; ++s)
     {
-        gpu::pyrDown(I0s[s - 1], I0s[s]);
-        gpu::pyrDown(I1s[s - 1], I1s[s]);
+        gpu::resize(I0s[s-1], I0s[s], Size(), scaleStep, scaleStep);
+        gpu::resize(I1s[s-1], I1s[s], Size(), scaleStep, scaleStep);
 
         if (I0s[s].cols < 16 || I0s[s].rows < 16)
         {
@@ -123,11 +124,11 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat& I0, const GpuM
 
         if (useInitialFlow)
         {
-            gpu::pyrDown(u1s[s - 1], u1s[s]);
-            gpu::pyrDown(u2s[s - 1], u2s[s]);
+            gpu::resize(u1s[s-1], u1s[s], Size(), scaleStep, scaleStep);
+            gpu::resize(u2s[s-1], u2s[s], Size(), scaleStep, scaleStep);
 
-            gpu::multiply(u1s[s], Scalar::all(0.5), u1s[s]);
-            gpu::multiply(u2s[s], Scalar::all(0.5), u2s[s]);
+            gpu::multiply(u1s[s], Scalar::all(scaleStep), u1s[s]);
+            gpu::multiply(u2s[s], Scalar::all(scaleStep), u2s[s]);
         }
         else
         {
@@ -159,8 +160,8 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat& I0, const GpuM
         gpu::resize(u2s[s], u2s[s - 1], I0s[s - 1].size());
 
         // scale the optical flow with the appropriate zoom factor
-        gpu::multiply(u1s[s - 1], Scalar::all(2), u1s[s - 1]);
-        gpu::multiply(u2s[s - 1], Scalar::all(2), u2s[s - 1]);
+        gpu::multiply(u1s[s - 1], Scalar::all(1/scaleStep), u1s[s - 1]);
+        gpu::multiply(u2s[s - 1], Scalar::all(1/scaleStep), u2s[s - 1]);
     }
 }
 

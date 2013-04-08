@@ -434,6 +434,9 @@ PERF_TEST_P(ImagePair, Video_OpticalFlowDual_TVL1,
         cv::Mat flow;
 
         cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
+        alg->set("medianFiltering", 1);
+        alg->set("innerIterations", 1);
+        alg->set("outerIterations", 300);
 
         TEST_CYCLE() alg->calc(frame0, frame1, flow);
 
