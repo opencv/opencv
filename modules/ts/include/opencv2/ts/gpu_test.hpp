@@ -43,6 +43,7 @@
 #ifndef __OPENCV_GPU_TEST_UTILITY_HPP__
 #define __OPENCV_GPU_TEST_UTILITY_HPP__
 
+#include <stdexcept>
 #include "opencv2/core.hpp"
 #include "opencv2/core/gpumat.hpp"
 #include "opencv2/highgui.hpp"
@@ -344,5 +345,68 @@ namespace cv { namespace gpu
 {
     CV_EXPORTS void PrintTo(const DeviceInfo& info, std::ostream* os);
 }}
+
+#ifdef HAVE_CUDA
+
+#define CV_GPU_TEST_MAIN(resourcesubdir) \
+    int main(int argc, char* argv[]) \
+    { \
+        try \
+        { \
+            cv::CommandLineParser cmd(argc, argv, \
+                "{ h help ?            |      | Print help}" \
+                "{ i info              |      | Print information about system and exit }" \
+                "{ device              | -1   | Device on which tests will be executed (-1 means all devices) }" \
+            ); \
+            if (cmd.has("help")) \
+            { \
+                cmd.printMessage(); \
+                return 0; \
+            } \
+            cvtest::printCudaInfo(); \
+            if (cmd.has("info")) \
+            { \
+                return 0; \
+            } \
+            int device = cmd.get<int>("device"); \
+            if (device < 0) \
+            { \
+                cvtest::DeviceManager::instance().loadAll(); \
+                std::cout << "Run tests on all supported devices \n" << std::endl; \
+            } \
+            else \
+            { \
+                cvtest::DeviceManager::instance().load(device); \
+                cv::gpu::DeviceInfo info(device); \
+                std::cout << "Run tests on device " << device << " [" << info.name() << "] \n" << std::endl; \
+            } \
+            cvtest::TS::ptr()->init( resourcesubdir ); \
+            testing::InitGoogleTest(&argc, argv); \
+            return RUN_ALL_TESTS(); \
+        } \
+        catch (const std::exception& e) \
+        { \
+            std::cerr << e.what() << std::endl; \
+            return -1; \
+        } \
+        catch (...) \
+        { \
+            std::cerr << "Unknown error" << std::endl; \
+            return -1; \
+        } \
+        return 0; \
+    }
+
+#else // HAVE_CUDA
+
+#define CV_GPU_TEST_MAIN(resourcesubdir) \
+    int main() \
+    { \
+        printf("OpenCV was built without CUDA support\n"); \
+        return 0; \
+    }
+
+#endif // HAVE_CUDA
+
 
 #endif // __OPENCV_GPU_TEST_UTILITY_HPP__

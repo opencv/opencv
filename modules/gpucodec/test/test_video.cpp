@@ -44,7 +44,7 @@
 
 #ifdef HAVE_NVCUVID
 
-struct Video : testing::TestWithParam<std::string>
+PARAM_TEST_CASE(Video, cv::gpu::DeviceInfo, std::string)
 {
 };
 
@@ -53,7 +53,9 @@ struct Video : testing::TestWithParam<std::string>
 
 GPU_TEST_P(Video, Reader)
 {
-    const std::string inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GetParam();
+    cv::gpu::setDevice(GET_PARAM(0).deviceID());
+
+    const std::string inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
 
     cv::gpu::VideoReader_GPU reader(inputFile);
     ASSERT_TRUE(reader.isOpened());
@@ -77,7 +79,9 @@ GPU_TEST_P(Video, Reader)
 
 GPU_TEST_P(Video, Writer)
 {
-    const std::string inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GetParam();
+    cv::gpu::setDevice(GET_PARAM(0).deviceID());
+
+    const std::string inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
 
     std::string outputFile = cv::tempfile(".avi");
     const double FPS = 25.0;
@@ -118,7 +122,8 @@ GPU_TEST_P(Video, Writer)
 
 #endif // WIN32
 
-INSTANTIATE_TEST_CASE_P(GPU, Video,
-    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi")));
+INSTANTIATE_TEST_CASE_P(GPU, Video, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
 
 #endif // HAVE_NVCUVID
