@@ -64,6 +64,8 @@
 #include <iterator>
 #include <stdexcept>
 
+#include "opencv2/core/private.hpp"
+
 #ifdef HAVE_CUDA
     #include <cuda.h>
     #include <cuda_runtime.h>
