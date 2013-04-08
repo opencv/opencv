@@ -45,10 +45,12 @@
 
 #include <cuda_runtime.h>
 #include <npp.h>
-#include "NPP_staging.hpp"
-#include "opencv2/gpu/devmem2d.hpp"
-#include "safe_call.hpp"
+
+#include "opencv2/core/cuda_devptrs.hpp"
 #include "opencv2/core/cuda/common.hpp"
+#include "opencv2/gpunvidia.hpp"
+
+#include "safe_call.hpp"
 
 namespace cv { namespace gpu
 {

@@ -40,46 +40,60 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef _ncvpyramid_hpp_
+#define _ncvpyramid_hpp_
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-    #pragma warning( disable: 4251 4710 4711 4514 4996 )
-#endif
-
-#include <cstring>
-#include <iostream>
-#include <limits>
-#include <vector>
-#include <algorithm>
-#include <sstream>
-#include <exception>
-#include <iterator>
-#include <functional>
-#include <utility>
-#include <deque>
-#include <stdexcept>
 #include <memory>
+#include <vector>
+#include "opencv2/gpunvidia/NCV.hpp"
 
-#include "opencv2/core.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/gpu.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/calib3d.hpp"
-#include "opencv2/video.hpp"
+#if 0 //def _WIN32
 
-#include "opencv2/core/private.hpp"
-#include "opencv2/core/gpu_private.hpp"
+template <class T>
+class NCV_EXPORTS NCVMatrixStack
+{
+public:
+    NCVMatrixStack() {this->_arr.clear();}
+    ~NCVMatrixStack()
+    {
+        const Ncv32u nElem = this->_arr.size();
+        for (Ncv32u i=0; i<nElem; i++)
+        {
+            pop_back();
+        }
+    }
+    void push_back(NCVMatrix<T> *elem) {this->_arr.push_back(std::tr1::shared_ptr< NCVMatrix<T> >(elem));}
+    void pop_back() {this->_arr.pop_back();}
+    NCVMatrix<T> * operator [] (int i) const {return this->_arr[i].get();}
+private:
+    std::vector< std::tr1::shared_ptr< NCVMatrix<T> > > _arr;
+};
 
-#ifdef HAVE_CUDA
-    #ifdef HAVE_CUFFT
-        #include <cufft.h>
-    #endif
 
-    #include "internal_shared.hpp"
-    #include "opencv2/core/stream_accessor.hpp"
+template <class T>
+class NCV_EXPORTS NCVImagePyramid
+{
+public:
 
-    #include "opencv2/gpunvidia.hpp"
-#endif /* defined(HAVE_CUDA) */
+    NCVImagePyramid(const NCVMatrix<T> &img,
+                    Ncv8u nLayers,
+                    INCVMemAllocator &alloc,
+                    cudaStream_t cuStream);
+    ~NCVImagePyramid();
+    NcvBool isInitialized() const;
+    NCVStatus getLayer(NCVMatrix<T> &outImg,
+                       NcvSize32u outRoi,
+                       NcvBool bTrilinear,
+                       cudaStream_t cuStream) const;
 
-#endif /* __OPENCV_PRECOMP_H__ */
+private:
+
+    NcvBool _isInitialized;
+    const NCVMatrix<T> *layer0;
+    NCVMatrixStack<T> pyramid;
+    Ncv32u nLayers;
+};
+
+#endif //_WIN32
+
+#endif //_ncvpyramid_hpp_

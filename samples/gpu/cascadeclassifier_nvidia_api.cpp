@@ -10,7 +10,7 @@
 #include "opencv2/highgui/highgui.hpp"
 
 #ifdef HAVE_CUDA
-#include "NCVHaarObjectDetection.hpp"
+#include "opencv2/gpunvidia.hpp"
 #endif
 
 using namespace std;

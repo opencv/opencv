@@ -40,46 +40,56 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
-
-#if defined _MSC_VER && _MSC_VER >= 1200
-    #pragma warning( disable: 4251 4710 4711 4514 4996 )
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
 #endif
 
-#include <cstring>
-#include <iostream>
-#include <limits>
+#ifndef __OPENCV_TEST_PRECOMP_HPP__
+#define __OPENCV_TEST_PRECOMP_HPP__
+
+#if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__)
+    #include <fpu_control.h>
+#endif
+
+#include <cfloat>
+#include <cstdio>
+#include <cmath>
 #include <vector>
-#include <algorithm>
-#include <sstream>
-#include <exception>
-#include <iterator>
-#include <functional>
-#include <utility>
-#include <deque>
-#include <stdexcept>
+#include <string>
+#include <map>
 #include <memory>
+#include <algorithm>
+#include <fstream>
 
-#include "opencv2/core.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/gpu.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/calib3d.hpp"
-#include "opencv2/video.hpp"
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/gpu_test.hpp"
 
-#include "opencv2/core/private.hpp"
+#include "opencv2/core/gpumat.hpp"
+#include "opencv2/gpunvidia.hpp"
+#include "opencv2/highgui.hpp"
+
 #include "opencv2/core/gpu_private.hpp"
 
-#ifdef HAVE_CUDA
-    #ifdef HAVE_CUFFT
-        #include <cufft.h>
-    #endif
+#include "NCVTest.hpp"
+#include "NCVAutoTestLister.hpp"
+#include "NCVTestSourceProvider.hpp"
 
-    #include "internal_shared.hpp"
-    #include "opencv2/core/stream_accessor.hpp"
+#include "TestIntegralImage.h"
+#include "TestIntegralImageSquared.h"
+#include "TestRectStdDev.h"
+#include "TestResize.h"
+#include "TestCompact.h"
+#include "TestTranspose.h"
+#include "TestDrawRects.h"
+#include "TestHypothesesGrow.h"
+#include "TestHypothesesFilter.h"
+#include "TestHaarCascadeLoader.h"
+#include "TestHaarCascadeApplication.h"
 
-    #include "opencv2/gpunvidia.hpp"
-#endif /* defined(HAVE_CUDA) */
+#include "main_test_nvidia.h"
 
-#endif /* __OPENCV_PRECOMP_H__ */
+#endif

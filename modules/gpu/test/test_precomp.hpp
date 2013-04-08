@@ -76,7 +76,6 @@
 #include "opencv2/legacy.hpp"
 
 #include "interpolation.hpp"
-#include "main_test_nvidia.h"
 
 #include "opencv2/core/gpu_private.hpp"
 
