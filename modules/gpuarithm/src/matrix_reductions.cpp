@@ -124,7 +124,7 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev, GpuMat
     CV_Assert(src.type() == CV_8UC1);
 
     if (!deviceSupports(FEATURE_SET_COMPUTE_13))
-        CV_Error(CV_StsNotImplemented, "Not sufficient compute capebility");
+        CV_Error(cv::Error::StsNotImplemented, "Not sufficient compute capebility");
 
     NppiSize sz;
     sz.width  = src.cols;
@@ -259,7 +259,7 @@ Scalar cv::gpu::sum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
     if (src.depth() == CV_64F)
     {
         if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
     Size buf_size;
@@ -305,7 +305,7 @@ Scalar cv::gpu::absSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
     if (src.depth() == CV_64F)
     {
         if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
     Size buf_size;
@@ -351,7 +351,7 @@ Scalar cv::gpu::sqrSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
     if (src.depth() == CV_64F)
     {
         if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
     Size buf_size;
@@ -404,7 +404,7 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
     if (src.depth() == CV_64F)
     {
         if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
     Size buf_size;
@@ -455,7 +455,7 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
     if (src.depth() == CV_64F)
     {
         if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
     Size valbuf_size, locbuf_size;
@@ -506,7 +506,7 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
     if (src.depth() == CV_64F)
     {
         if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
     Size buf_size;
@@ -614,7 +614,7 @@ void cv::gpu::reduce(const GpuMat& src, GpuMat& dst, int dim, int reduceOp, int 
         const func_t func = funcs[src.depth()][dst.depth()];
 
         if (!func)
-            CV_Error(CV_StsUnsupportedFormat, "Unsupported combination of input and output array formats");
+            CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of input and output array formats");
 
         func(src.reshape(1), dst.data, reduceOp, StreamAccessor::getStream(stream));
     }
@@ -691,7 +691,7 @@ void cv::gpu::reduce(const GpuMat& src, GpuMat& dst, int dim, int reduceOp, int 
         const func_t func = funcs[src.depth()][dst.depth()];
 
         if (!func)
-            CV_Error(CV_StsUnsupportedFormat, "Unsupported combination of input and output array formats");
+            CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of input and output array formats");
 
         func(src, dst.data, src.channels(), reduceOp, StreamAccessor::getStream(stream));
     }

@@ -40,37 +40,21 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_SAFE_CALL_HPP__
-#define __OPENCV_CUDA_SAFE_CALL_HPP__
-
-#include <cuda_runtime_api.h>
-#include <cufft.h>
-#include "NCV.hpp"
-
-#if defined(__GNUC__)
-    #define ncvSafeCall(expr)  ___ncvSafeCall(expr, __FILE__, __LINE__, __func__)
-    #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define ncvSafeCall(expr)  ___ncvSafeCall(expr, __FILE__, __LINE__)
-    #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__)
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
 #endif
 
-namespace cv { namespace gpu
-{
-    void ncvError(int err, const char *file, const int line, const char *func = "");
-    void cufftError(int err, const char *file, const int line, const char *func = "");
-}}
+#ifndef __OPENCV_TEST_PRECOMP_HPP__
+#define __OPENCV_TEST_PRECOMP_HPP__
 
-static inline void ___ncvSafeCall(int err, const char *file, const int line, const char *func = "")
-{
-    if (NCV_SUCCESS != err)
-        cv::gpu::ncvError(err, file, line, func);
-}
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/gpu_test.hpp"
 
-static inline void ___cufftSafeCall(cufftResult_t err, const char *file, const int line, const char *func = "")
-{
-    if (CUFFT_SUCCESS != err)
-        cv::gpu::cufftError(err, file, line, func);
-}
+#include "opencv2/core.hpp"
+#include "opencv2/gpuarithm.hpp"
 
-#endif /* __OPENCV_CUDA_SAFE_CALL_HPP__ */
+#endif

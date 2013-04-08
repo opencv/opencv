@@ -414,28 +414,6 @@ The methods support arbitrary permutations of the original channels, including r
 
 
 
-gpu::threshold
-------------------
-Applies a fixed-level threshold to each array element.
-
-.. ocv:function:: double gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type, Stream& stream = Stream::Null())
-
-    :param src: Source array (single-channel).
-
-    :param dst: Destination array with the same size and type as  ``src`` .
-
-    :param thresh: Threshold value.
-
-    :param maxval: Maximum value to use with  ``THRESH_BINARY`` and  ``THRESH_BINARY_INV`` threshold types.
-
-    :param type: Threshold type. For details, see  :ocv:func:`threshold` . The ``THRESH_OTSU`` threshold type is not supported.
-
-    :param stream: Stream for the asynchronous version.
-
-.. seealso:: :ocv:func:`threshold`
-
-
-
 gpu::resize
 ---------------
 Resizes an image.

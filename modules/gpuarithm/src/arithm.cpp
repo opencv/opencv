@@ -66,6 +66,61 @@ void cv::gpu::normalize(const GpuMat&, GpuMat&, double, double, int, int, const 
 ////////////////////////////////////////////////////////////////////////
 // gemm
 
+#ifdef HAVE_CUBLAS
+
+namespace
+{
+    #define error_entry(entry)  { entry, #entry }
+
+    struct ErrorEntry
+    {
+        int code;
+        const char* str;
+    };
+
+    struct ErrorEntryComparer
+    {
+        int code;
+        ErrorEntryComparer(int code_) : code(code_) {}
+        bool operator()(const ErrorEntry& e) const { return e.code == code; }
+    };
+
+    const ErrorEntry cublas_errors[] =
+    {
+        error_entry( CUBLAS_STATUS_SUCCESS ),
+        error_entry( CUBLAS_STATUS_NOT_INITIALIZED ),
+        error_entry( CUBLAS_STATUS_ALLOC_FAILED ),
+        error_entry( CUBLAS_STATUS_INVALID_VALUE ),
+        error_entry( CUBLAS_STATUS_ARCH_MISMATCH ),
+        error_entry( CUBLAS_STATUS_MAPPING_ERROR ),
+        error_entry( CUBLAS_STATUS_EXECUTION_FAILED ),
+        error_entry( CUBLAS_STATUS_INTERNAL_ERROR )
+    };
+
+    const size_t cublas_error_num = sizeof(cublas_errors) / sizeof(cublas_errors[0]);
+
+    static inline void ___cublasSafeCall(cublasStatus_t err, const char* file, const int line, const char* func)
+    {
+        if (CUBLAS_STATUS_SUCCESS != err)
+        {
+            size_t idx = std::find_if(cublas_errors, cublas_errors + cublas_error_num, ErrorEntryComparer(err)) - cublas_errors;
+
+            const char* msg = (idx != cublas_error_num) ? cublas_errors[idx].str : "Unknown error code";
+            String str = cv::format("%s [Code = %d]", msg, err);
+
+            cv::error(cv::Error::GpuApiCallError, str, func, file, line);
+        }
+    }
+}
+
+#if defined(__GNUC__)
+    #define cublasSafeCall(expr)  ___cublasSafeCall(expr, __FILE__, __LINE__, __func__)
+#else /* defined(__CUDACC__) || defined(__MSVC__) */
+    #define cublasSafeCall(expr)  ___cublasSafeCall(expr, __FILE__, __LINE__, "")
+#endif
+
+#endif
+
 void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const GpuMat& src3, double beta, GpuMat& dst, int flags, Stream& stream)
 {
 #ifndef HAVE_CUBLAS
@@ -77,7 +132,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     (void)dst;
     (void)flags;
     (void)stream;
-    CV_Error(CV_StsNotImplemented, "The library was build without CUBLAS");
+    CV_Error(cv::Error::StsNotImplemented, "The library was build without CUBLAS");
 #else
     // CUBLAS works with column-major matrices
 
@@ -87,7 +142,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     if (src1.depth() == CV_64F)
     {
         if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
     bool tr1 = (flags & GEMM_1_T) != 0;
@@ -97,7 +152,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     if (src1.type() == CV_64FC2)
     {
         if (tr1 || tr2 || tr3)
-            CV_Error(CV_StsNotImplemented, "transpose operation doesn't implemented for CV_64FC2 type");
+            CV_Error(cv::Error::StsNotImplemented, "transpose operation doesn't implemented for CV_64FC2 type");
     }
 
     Size src1Size = tr1 ? Size(src1.rows, src1.cols) : src1.size();
@@ -200,9 +255,14 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
 ////////////////////////////////////////////////////////////////////////
 // transpose
 
+namespace arithm
+{
+    template <typename T> void transpose(PtrStepSz<T> src, PtrStepSz<T> dst, cudaStream_t stream);
+}
+
 void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
 {
-    CV_Assert(src.elemSize() == 1 || src.elemSize() == 4 || src.elemSize() == 8);
+    CV_Assert( src.elemSize() == 1 || src.elemSize() == 4 || src.elemSize() == 8 );
 
     dst.create( src.cols, src.rows, src.type() );
 
@@ -218,35 +278,21 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
 
         nppSafeCall( nppiTranspose_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
             dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz) );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
     else if (src.elemSize() == 4)
     {
-        NppStStreamHandler h(stream);
-
-        NcvSize32u sz;
-        sz.width  = src.cols;
-        sz.height = src.rows;
-
-        ncvSafeCall( nppiStTranspose_32u_C1R(const_cast<Ncv32u*>(src.ptr<Ncv32u>()), static_cast<int>(src.step),
-            dst.ptr<Ncv32u>(), static_cast<int>(dst.step), sz) );
+        arithm::transpose<int>(src, dst, stream);
     }
     else // if (src.elemSize() == 8)
     {
         if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
 
-        NppStStreamHandler h(stream);
-
-        NcvSize32u sz;
-        sz.width  = src.cols;
-        sz.height = src.rows;
-
-        ncvSafeCall( nppiStTranspose_64u_C1R(const_cast<Ncv64u*>(src.ptr<Ncv64u>()), static_cast<int>(src.step),
-            dst.ptr<Ncv64u>(), static_cast<int>(dst.step), sz) );
+        arithm::transpose<double>(src, dst, stream);
     }
-
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -548,7 +594,7 @@ void cv::gpu::normalize(const GpuMat& src, GpuMat& dst, double a, double b, int 
     }
     else
     {
-        CV_Error(CV_StsBadArg, "Unknown/unsupported norm type");
+        CV_Error(cv::Error::StsBadArg, "Unknown/unsupported norm type");
     }
 
     if (mask.empty())

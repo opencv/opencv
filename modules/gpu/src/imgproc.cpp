@@ -92,6 +92,7 @@ void cv::gpu::Canny(const GpuMat&, const GpuMat&, CannyBuf&, GpuMat&, double, do
 void cv::gpu::CannyBuf::create(const Size&, int) { throw_no_cuda(); }
 void cv::gpu::CannyBuf::release() { throw_no_cuda(); }
 cv::Ptr<cv::gpu::CLAHE> cv::gpu::createCLAHE(double, cv::Size) { throw_no_cuda(); return cv::Ptr<cv::gpu::CLAHE>(); }
+void cv::gpu::alphaComp(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -1670,6 +1671,79 @@ namespace
 cv::Ptr<cv::gpu::CLAHE> cv::gpu::createCLAHE(double clipLimit, cv::Size tileGridSize)
 {
     return new CLAHE_Impl(clipLimit, tileGridSize.width, tileGridSize.height);
+}
+
+////////////////////////////////////////////////////////////////////////
+// alphaComp
+
+namespace
+{
+    template <int DEPTH> struct NppAlphaCompFunc
+    {
+        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
+
+        typedef NppStatus (*func_t)(const npp_t* pSrc1, int nSrc1Step, const npp_t* pSrc2, int nSrc2Step, npp_t* pDst, int nDstStep, NppiSize oSizeROI, NppiAlphaOp eAlphaOp);
+    };
+
+    template <int DEPTH, typename NppAlphaCompFunc<DEPTH>::func_t func> struct NppAlphaComp
+    {
+        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
+
+        static void call(const GpuMat& img1, const GpuMat& img2, GpuMat& dst, NppiAlphaOp eAlphaOp, cudaStream_t stream)
+        {
+            NppStreamHandler h(stream);
+
+            NppiSize oSizeROI;
+            oSizeROI.width = img1.cols;
+            oSizeROI.height = img2.rows;
+
+            nppSafeCall( func(img1.ptr<npp_t>(), static_cast<int>(img1.step), img2.ptr<npp_t>(), static_cast<int>(img2.step),
+                              dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI, eAlphaOp) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+    };
+}
+
+void cv::gpu::alphaComp(const GpuMat& img1, const GpuMat& img2, GpuMat& dst, int alpha_op, Stream& stream)
+{
+    static const NppiAlphaOp npp_alpha_ops[] = {
+        NPPI_OP_ALPHA_OVER,
+        NPPI_OP_ALPHA_IN,
+        NPPI_OP_ALPHA_OUT,
+        NPPI_OP_ALPHA_ATOP,
+        NPPI_OP_ALPHA_XOR,
+        NPPI_OP_ALPHA_PLUS,
+        NPPI_OP_ALPHA_OVER_PREMUL,
+        NPPI_OP_ALPHA_IN_PREMUL,
+        NPPI_OP_ALPHA_OUT_PREMUL,
+        NPPI_OP_ALPHA_ATOP_PREMUL,
+        NPPI_OP_ALPHA_XOR_PREMUL,
+        NPPI_OP_ALPHA_PLUS_PREMUL,
+        NPPI_OP_ALPHA_PREMUL
+    };
+
+    typedef void (*func_t)(const GpuMat& img1, const GpuMat& img2, GpuMat& dst, NppiAlphaOp eAlphaOp, cudaStream_t stream);
+
+    static const func_t funcs[] =
+    {
+        NppAlphaComp<CV_8U, nppiAlphaComp_8u_AC4R>::call,
+        0,
+        NppAlphaComp<CV_16U, nppiAlphaComp_16u_AC4R>::call,
+        0,
+        NppAlphaComp<CV_32S, nppiAlphaComp_32s_AC4R>::call,
+        NppAlphaComp<CV_32F, nppiAlphaComp_32f_AC4R>::call
+    };
+
+    CV_Assert( img1.type() == CV_8UC4 || img1.type() == CV_16UC4 || img1.type() == CV_32SC4 || img1.type() == CV_32FC4 );
+    CV_Assert( img1.size() == img2.size() && img1.type() == img2.type() );
+
+    dst.create(img1.size(), img1.type());
+
+    const func_t func = funcs[img1.depth()];
+
+    func(img1, img2, dst, npp_alpha_ops[alpha_op], StreamAccessor::getStream(stream));
 }
 
 #endif /* !defined (HAVE_CUDA) */
