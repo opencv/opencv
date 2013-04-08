@@ -98,11 +98,22 @@ namespace cv
         // Evaluates optimal template's area threshold. If
         // template's area is less  than the threshold, we use naive match
         // template version, otherwise FFT-based (if available)
-        static bool useNaive(int , int , Size )
+        static bool useNaive(int method, int depth, Size size)
         {
-            // FIXME!
-            //   always use naive until convolve is imported
+#ifdef HAVE_CLAMDFFT
+            if (method == CV_TM_SQDIFF && (depth == CV_32F || !Context::getContext()->supportsFeature(Context::CL_DOUBLE)))
+            {
+                return true;
+            }
+            else if(method == CV_TM_CCORR || (method == CV_TM_SQDIFF && depth == CV_8U))
+            {
+                return size.height < 18 && size.width < 18;
+            }
+            else
+                return false;
+#else
             return true;
+#endif
         }
 
         //////////////////////////////////////////////////////////////////////
@@ -223,9 +234,18 @@ namespace cv
         //////////////////////////////////////////////////////////////////////
         // CCORR
         void convolve_32F(
-            const oclMat &, const oclMat &, oclMat &, MatchTemplateBuf &)
+            const oclMat &image, const oclMat &templ, oclMat &result, MatchTemplateBuf &buf)
         {
-            CV_Error(-1, "convolve is not fully implemented yet");
+            ConvolveBuf convolve_buf;
+            convolve_buf.user_block_size = buf.user_block_size;
+            if (image.oclchannels() == 1)
+                convolve(image, templ, result, true, convolve_buf);
+            else
+            {
+                oclMat result_;
+                convolve(image.reshape(1), templ.reshape(1), result_, true, convolve_buf);
+                extractFirstChannel_32F(result_, result);
+            }
         }
 
         void matchTemplate_CCORR(
