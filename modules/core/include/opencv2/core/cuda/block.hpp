@@ -201,5 +201,3 @@ namespace cv { namespace gpu { namespace cudev
 }}}
 
 #endif /* __OPENCV_GPU_DEVICE_BLOCK_HPP__ */
-
-
