@@ -40,7 +40,9 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_GPU
 
 #include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/limits.hpp"
