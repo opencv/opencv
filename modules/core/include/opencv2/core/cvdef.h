@@ -443,9 +443,9 @@ CV_INLINE int cvIsInf( double value )
 #  else
 #    if defined __ATOMIC_ACQ_REL && !defined __clang__
        // version for gcc >= 4.7
-#      define CV_XADD(addr, delta) __atomic_fetch_add(addr, delta, __ATOMIC_ACQ_REL)
+#      define CV_XADD(addr, delta) (int)__atomic_fetch_add((unsigned*)(addr), (unsigned)(delta), __ATOMIC_ACQ_REL)
 #    else
-#      define CV_XADD(addr, delta) __sync_fetch_and_add(addr, delta)
+#      define CV_XADD(addr, delta) (int)__sync_fetch_and_add((unsigned*)(addr), (unsigned)(delta))
 #    endif
 #  endif
 #elif (defined WIN32 || defined _WIN32 || defined WINCE) && (!defined RC_INVOKED)
