@@ -435,13 +435,16 @@ GPU_TEST_P(OpticalFlowDual_TVL1, Accuracy)
     d_alg(loadMat(frame0, useRoi), loadMat(frame1, useRoi), d_flowx, d_flowy);
 
     cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
+    alg->set("medianFiltering", 1);
+    alg->set("innerIterations", 1);
+    alg->set("outerIterations", d_alg.iterations);
     cv::Mat flow;
     alg->calc(frame0, frame1, flow);
     cv::Mat gold[2];
     cv::split(flow, gold);
 
-    EXPECT_MAT_SIMILAR(gold[0], d_flowx, 3e-3);
-    EXPECT_MAT_SIMILAR(gold[1], d_flowy, 3e-3);
+    EXPECT_MAT_SIMILAR(gold[0], d_flowx, 4e-3);
+    EXPECT_MAT_SIMILAR(gold[1], d_flowy, 4e-3);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Video, OpticalFlowDual_TVL1, testing::Combine(
