@@ -43,10 +43,10 @@
 #ifndef __OPENCV_GPU_DEVICE_LBP_HPP_
 #define __OPENCV_GPU_DEVICE_LBP_HPP_
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/emulation.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/emulation.hpp"
 
-namespace cv { namespace gpu { namespace device {
+namespace cv { namespace gpu { namespace cudev {
 
 namespace lbp {
 

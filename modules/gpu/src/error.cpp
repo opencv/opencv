@@ -59,7 +59,7 @@ namespace
     struct ErrorEntryComparer
     {
         int code;
-        ErrorEntryComparer(int code_) : code(code_) {};
+        ErrorEntryComparer(int code_) : code(code_) {}
         bool operator()(const ErrorEntry& e) const { return e.code == code; }
     };
 
@@ -72,57 +72,6 @@ namespace
 
         return str;
     }
-
-    //////////////////////////////////////////////////////////////////////////
-    // NPP errors
-
-    const ErrorEntry npp_errors [] =
-    {
-        error_entry( NPP_NOT_SUPPORTED_MODE_ERROR ),
-        error_entry( NPP_ROUND_MODE_NOT_SUPPORTED_ERROR ),
-        error_entry( NPP_RESIZE_NO_OPERATION_ERROR ),
-
-#if defined (_MSC_VER)
-        error_entry( NPP_NOT_SUFFICIENT_COMPUTE_CAPABILITY ),
-#endif
-
-        error_entry( NPP_BAD_ARG_ERROR ),
-        error_entry( NPP_LUT_NUMBER_OF_LEVELS_ERROR ),
-        error_entry( NPP_TEXTURE_BIND_ERROR ),
-        error_entry( NPP_COEFF_ERROR ),
-        error_entry( NPP_RECT_ERROR ),
-        error_entry( NPP_QUAD_ERROR ),
-        error_entry( NPP_WRONG_INTERSECTION_ROI_ERROR ),
-        error_entry( NPP_NOT_EVEN_STEP_ERROR ),
-        error_entry( NPP_INTERPOLATION_ERROR ),
-        error_entry( NPP_RESIZE_FACTOR_ERROR ),
-        error_entry( NPP_HAAR_CLASSIFIER_PIXEL_MATCH_ERROR ),
-        error_entry( NPP_MEMFREE_ERR ),
-        error_entry( NPP_MEMSET_ERR ),
-        error_entry( NPP_MEMCPY_ERROR ),
-        error_entry( NPP_MEM_ALLOC_ERR ),
-        error_entry( NPP_HISTO_NUMBER_OF_LEVELS_ERROR ),
-        error_entry( NPP_MIRROR_FLIP_ERR ),
-        error_entry( NPP_INVALID_INPUT ),
-        error_entry( NPP_ALIGNMENT_ERROR ),
-        error_entry( NPP_STEP_ERROR ),
-        error_entry( NPP_SIZE_ERROR ),
-        error_entry( NPP_POINTER_ERROR ),
-        error_entry( NPP_NULL_POINTER_ERROR ),
-        error_entry( NPP_CUDA_KERNEL_EXECUTION_ERROR ),
-        error_entry( NPP_NOT_IMPLEMENTED_ERROR ),
-        error_entry( NPP_ERROR ),
-        error_entry( NPP_NO_ERROR ),
-        error_entry( NPP_SUCCESS ),
-        error_entry( NPP_WARNING ),
-        error_entry( NPP_WRONG_INTERSECTION_QUAD_WARNING ),
-        error_entry( NPP_MISALIGNED_DST_ROI_WARNING ),
-        error_entry( NPP_AFFINE_QUAD_INCORRECT_WARNING ),
-        error_entry( NPP_DOUBLE_SIZE_WARNING ),
-        error_entry( NPP_ODD_ROI_WARNING )
-    };
-
-    const size_t npp_error_num = sizeof(npp_errors) / sizeof(npp_errors[0]);
 
     //////////////////////////////////////////////////////////////////////////
     // NCV errors
@@ -216,28 +165,22 @@ namespace cv
 {
     namespace gpu
     {
-        void nppError(int code, const char *file, const int line, const char *func)
-        {
-            String msg = getErrorString(code, npp_errors, npp_error_num);
-            cv::gpu::error(msg.c_str(), file, line, func);
-        }
-
-        void ncvError(int code, const char *file, const int line, const char *func)
+        void ncvError(int code, const char* file, const int line, const char* func)
         {
             String msg = getErrorString(code, ncv_errors, ncv_error_num);
-            cv::gpu::error(msg.c_str(), file, line, func);
+            cv::error(cv::Error::GpuApiCallError, msg, func, file, line);
         }
 
-        void cufftError(int code, const char *file, const int line, const char *func)
+        void cufftError(int code, const char* file, const int line, const char* func)
         {
             String msg = getErrorString(code, cufft_errors, cufft_error_num);
-            cv::gpu::error(msg.c_str(), file, line, func);
+            cv::error(cv::Error::GpuApiCallError, msg, func, file, line);
         }
 
-        void cublasError(int code, const char *file, const int line, const char *func)
+        void cublasError(int code, const char* file, const int line, const char* func)
         {
             String msg = getErrorString(code, cublas_errors, cublas_error_num);
-            cv::gpu::error(msg.c_str(), file, line, func);
+            cv::error(cv::Error::GpuApiCallError, msg, func, file, line);
         }
     }
 }

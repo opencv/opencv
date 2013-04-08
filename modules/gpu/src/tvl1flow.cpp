@@ -44,10 +44,10 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-cv::gpu::OpticalFlowDual_TVL1_GPU::OpticalFlowDual_TVL1_GPU() { throw_nogpu(); }
-void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
+cv::gpu::OpticalFlowDual_TVL1_GPU::OpticalFlowDual_TVL1_GPU() { throw_no_cuda(); }
+void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 void cv::gpu::OpticalFlowDual_TVL1_GPU::collectGarbage() {}
-void cv::gpu::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
 #else
 

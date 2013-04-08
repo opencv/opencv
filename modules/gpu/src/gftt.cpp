@@ -47,11 +47,11 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat&, GpuMat&, const GpuMat&) { throw_nogpu(); }
+void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat&, GpuMat&, const GpuMat&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace gfft
     {
@@ -62,7 +62,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, GpuMat& corners, const GpuMat& mask)
 {
-    using namespace cv::gpu::device::gfft;
+    using namespace cv::gpu::cudev::gfft;
 
     CV_Assert(qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0);
     CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size()));

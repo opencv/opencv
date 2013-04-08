@@ -42,16 +42,16 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/transform.hpp"
-#include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/simd_functions.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/functional.hpp"
+#include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/transform.hpp"
+#include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
+#include "opencv2/core/cuda/simd_functions.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::device;
+using namespace cv::gpu::cudev;
 
 namespace arithm
 {
@@ -193,7 +193,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <> struct TransformFunctorTraits< arithm::VAdd4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -216,21 +216,21 @@ namespace arithm
 {
     void addMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, VAdd4(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, VAdd4(), WithOutMask(), stream);
     }
 
     void addMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, VAdd2(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, VAdd2(), WithOutMask(), stream);
     }
 
     template <typename T, typename D>
     void addMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
     {
         if (mask.data)
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, AddMat<T, D>(), mask, stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, AddMat<T, D>(), mask, stream);
         else
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, AddMat<T, D>(), WithOutMask(), stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, AddMat<T, D>(), WithOutMask(), stream);
     }
 
     template void addMat<uchar, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
@@ -308,7 +308,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T, typename S, typename D> struct TransformFunctorTraits< arithm::AddScalar<T, S, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
@@ -323,9 +323,9 @@ namespace arithm
         AddScalar<T, S, D> op(static_cast<S>(val));
 
         if (mask.data)
-            transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, mask, stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, mask, stream);
         else
-            transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
     }
 
     template void addScalar<uchar, float, uchar>(PtrStepSzb src1, double val, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
@@ -428,7 +428,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <> struct TransformFunctorTraits< arithm::VSub4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -451,21 +451,21 @@ namespace arithm
 {
     void subMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, VSub4(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, VSub4(), WithOutMask(), stream);
     }
 
     void subMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, VSub2(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, VSub2(), WithOutMask(), stream);
     }
 
     template <typename T, typename D>
     void subMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
     {
         if (mask.data)
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, SubMat<T, D>(), mask, stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, SubMat<T, D>(), mask, stream);
         else
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, SubMat<T, D>(), WithOutMask(), stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, SubMat<T, D>(), WithOutMask(), stream);
     }
 
     template void subMat<uchar, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
@@ -536,9 +536,9 @@ namespace arithm
         AddScalar<T, S, D> op(-static_cast<S>(val));
 
         if (mask.data)
-            transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, mask, stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, mask, stream);
         else
-            transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
     }
 
     template void subScalar<uchar, float, uchar>(PtrStepSzb src1, double val, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
@@ -657,7 +657,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <> struct TransformFunctorTraits<arithm::Mul_8uc4_32f> : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -676,12 +676,12 @@ namespace arithm
 {
     void mulMat_8uc4_32f(PtrStepSz<uint> src1, PtrStepSzf src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, Mul_8uc4_32f(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, Mul_8uc4_32f(), WithOutMask(), stream);
     }
 
     void mulMat_16sc4_32f(PtrStepSz<short4> src1, PtrStepSzf src2, PtrStepSz<short4> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, Mul_16sc4_32f(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, Mul_16sc4_32f(), WithOutMask(), stream);
     }
 
     template <typename T, typename S, typename D>
@@ -690,12 +690,12 @@ namespace arithm
         if (scale == 1)
         {
             Mul<T, D> op;
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
         }
         else
         {
             MulScale<T, S, D> op(static_cast<S>(scale));
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
         }
     }
 
@@ -774,7 +774,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T, typename S, typename D> struct TransformFunctorTraits< arithm::MulScalar<T, S, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
@@ -787,7 +787,7 @@ namespace arithm
     void mulScalar(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream)
     {
         MulScalar<T, S, D> op(static_cast<S>(val));
-        transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
     }
 
     template void mulScalar<uchar, float, uchar>(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream);
@@ -925,7 +925,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <> struct TransformFunctorTraits<arithm::Div_8uc4_32f> : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -944,12 +944,12 @@ namespace arithm
 {
     void divMat_8uc4_32f(PtrStepSz<uint> src1, PtrStepSzf src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, Div_8uc4_32f(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, Div_8uc4_32f(), WithOutMask(), stream);
     }
 
     void divMat_16sc4_32f(PtrStepSz<short4> src1, PtrStepSzf src2, PtrStepSz<short4> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, Div_16sc4_32f(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, Div_16sc4_32f(), WithOutMask(), stream);
     }
 
     template <typename T, typename S, typename D>
@@ -958,12 +958,12 @@ namespace arithm
         if (scale == 1)
         {
             Div<T, D> op;
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
         }
         else
         {
             DivScale<T, S, D> op(static_cast<S>(scale));
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
         }
     }
 
@@ -1033,7 +1033,7 @@ namespace arithm
     void divScalar(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream)
     {
         MulScalar<T, S, D> op(static_cast<S>(1.0 / val));
-        transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
     }
 
     template void divScalar<uchar, float, uchar>(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream);
@@ -1111,7 +1111,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T, typename S, typename D> struct TransformFunctorTraits< arithm::DivInv<T, S, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
@@ -1124,7 +1124,7 @@ namespace arithm
     void divInv(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream)
     {
         DivInv<T, S, D> op(static_cast<S>(val));
-        transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
     }
 
     template void divInv<uchar, float, uchar>(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream);
@@ -1240,7 +1240,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <> struct TransformFunctorTraits< arithm::VAbsDiff4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -1263,18 +1263,18 @@ namespace arithm
 {
     void absDiffMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, VAbsDiff4(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, VAbsDiff4(), WithOutMask(), stream);
     }
 
     void absDiffMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, VAbsDiff2(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, VAbsDiff2(), WithOutMask(), stream);
     }
 
     template <typename T>
     void absDiffMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, AbsDiffMat<T>(), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, AbsDiffMat<T>(), WithOutMask(), stream);
     }
 
     template void absDiffMat<uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
@@ -1305,7 +1305,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T, typename S> struct TransformFunctorTraits< arithm::AbsDiffScalar<T, S> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1319,7 +1319,7 @@ namespace arithm
     {
         AbsDiffScalar<T, S> op(static_cast<S>(val));
 
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, op, WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, op, WithOutMask(), stream);
     }
 
     template void absDiffScalar<uchar, float>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
@@ -1334,7 +1334,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // absMat
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T> struct TransformFunctorTraits< abs_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1346,7 +1346,7 @@ namespace arithm
     template <typename T>
     void absMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, abs_func<T>(), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, abs_func<T>(), WithOutMask(), stream);
     }
 
     template void absMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -1375,7 +1375,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T> struct TransformFunctorTraits< arithm::Sqr<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1387,7 +1387,7 @@ namespace arithm
     template <typename T>
     void sqrMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, Sqr<T>(), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, Sqr<T>(), WithOutMask(), stream);
     }
 
     template void sqrMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -1402,7 +1402,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // sqrtMat
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T> struct TransformFunctorTraits< sqrt_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1414,7 +1414,7 @@ namespace arithm
     template <typename T>
     void sqrtMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, sqrt_func<T>(), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, sqrt_func<T>(), WithOutMask(), stream);
     }
 
     template void sqrtMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -1429,7 +1429,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // logMat
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T> struct TransformFunctorTraits< log_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1441,7 +1441,7 @@ namespace arithm
     template <typename T>
     void logMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, log_func<T>(), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, log_func<T>(), WithOutMask(), stream);
     }
 
     template void logMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -1471,7 +1471,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T> struct TransformFunctorTraits< arithm::Exp<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1483,7 +1483,7 @@ namespace arithm
     template <typename T>
     void expMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, Exp<T>(), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, Exp<T>(), WithOutMask(), stream);
     }
 
     template void expMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -1554,7 +1554,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <> struct TransformFunctorTraits< arithm::VCmpEq4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -1580,26 +1580,26 @@ namespace arithm
 {
     void cmpMatEq_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, VCmpEq4(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, VCmpEq4(), WithOutMask(), stream);
     }
     void cmpMatNe_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, VCmpNe4(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, VCmpNe4(), WithOutMask(), stream);
     }
     void cmpMatLt_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, VCmpLt4(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, VCmpLt4(), WithOutMask(), stream);
     }
     void cmpMatLe_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, VCmpLe4(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, VCmpLe4(), WithOutMask(), stream);
     }
 
     template <template <typename> class Op, typename T>
     void cmpMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
     {
         Cmp<Op<T>, T> op;
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, dst, op, WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, dst, op, WithOutMask(), stream);
     }
 
     template <typename T> void cmpMatEq(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
@@ -1716,7 +1716,7 @@ namespace arithm
 #undef TYPE_VEC
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <class Op, typename T> struct TransformFunctorTraits< arithm::CmpScalar<Op, T, 1> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(uchar)>
     {
@@ -1735,7 +1735,7 @@ namespace arithm
         src_t val1 = VecTraits<src_t>::make(sval);
 
         CmpScalar<Op<T>, T, cn> op(val1);
-        transform((PtrStepSz<src_t>) src, (PtrStepSz<dst_t>) dst, op, WithOutMask(), stream);
+        cudev::transform((PtrStepSz<src_t>) src, (PtrStepSz<dst_t>) dst, op, WithOutMask(), stream);
     }
 
     template <typename T> void cmpScalarEq(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream)
@@ -1875,7 +1875,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////////////////
 // bitMat
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T> struct TransformFunctorTraits< bit_not<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1899,33 +1899,33 @@ namespace arithm
     template <typename T> void bitMatNot(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
     {
         if (mask.data)
-            transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, bit_not<T>(), mask, stream);
+            cudev::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, bit_not<T>(), mask, stream);
         else
-            transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, bit_not<T>(), WithOutMask(), stream);
+            cudev::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, bit_not<T>(), WithOutMask(), stream);
     }
 
     template <typename T> void bitMatAnd(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
     {
         if (mask.data)
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_and<T>(), mask, stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_and<T>(), mask, stream);
         else
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_and<T>(), WithOutMask(), stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_and<T>(), WithOutMask(), stream);
     }
 
     template <typename T> void bitMatOr(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
     {
         if (mask.data)
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_or<T>(), mask, stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_or<T>(), mask, stream);
         else
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_or<T>(), WithOutMask(), stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_or<T>(), WithOutMask(), stream);
     }
 
     template <typename T> void bitMatXor(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
     {
         if (mask.data)
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_xor<T>(), mask, stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_xor<T>(), mask, stream);
         else
-            transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_xor<T>(), WithOutMask(), stream);
+            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_xor<T>(), WithOutMask(), stream);
     }
 
     template void bitMatNot<uchar>(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
@@ -1948,7 +1948,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////////////////
 // bitScalar
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T> struct TransformFunctorTraits< binder2nd< bit_and<T> > > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -1967,17 +1967,17 @@ namespace arithm
 {
     template <typename T> void bitScalarAnd(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::device::bind2nd(bit_and<T>(), src2), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cudev::bind2nd(bit_and<T>(), src2), WithOutMask(), stream);
     }
 
     template <typename T> void bitScalarOr(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::device::bind2nd(bit_or<T>(), src2), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cudev::bind2nd(bit_or<T>(), src2), WithOutMask(), stream);
     }
 
     template <typename T> void bitScalarXor(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::device::bind2nd(bit_xor<T>(), src2), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cudev::bind2nd(bit_xor<T>(), src2), WithOutMask(), stream);
     }
 
     template void bitScalarAnd<uchar>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);
@@ -2026,7 +2026,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <> struct TransformFunctorTraits< arithm::VMin4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -2053,17 +2053,17 @@ namespace arithm
 {
     void minMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, VMin4(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, VMin4(), WithOutMask(), stream);
     }
 
     void minMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, VMin2(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, VMin2(), WithOutMask(), stream);
     }
 
     template <typename T> void minMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, minimum<T>(), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, minimum<T>(), WithOutMask(), stream);
     }
 
     template void minMat<uchar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
@@ -2076,7 +2076,7 @@ namespace arithm
 
     template <typename T> void minScalar(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::device::bind2nd(minimum<T>(), src2), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cudev::bind2nd(minimum<T>(), src2), WithOutMask(), stream);
     }
 
     template void minScalar<uchar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
@@ -2118,7 +2118,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <> struct TransformFunctorTraits< arithm::VMax4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -2145,17 +2145,17 @@ namespace arithm
 {
     void maxMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, VMax4(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, VMax4(), WithOutMask(), stream);
     }
 
     void maxMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        transform(src1, src2, dst, VMax2(), WithOutMask(), stream);
+        cudev::transform(src1, src2, dst, VMax2(), WithOutMask(), stream);
     }
 
     template <typename T> void maxMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, maximum<T>(), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, maximum<T>(), WithOutMask(), stream);
     }
 
     template void maxMat<uchar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
@@ -2168,7 +2168,7 @@ namespace arithm
 
     template <typename T> void maxScalar(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::device::bind2nd(maximum<T>(), src2), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cudev::bind2nd(maximum<T>(), src2), WithOutMask(), stream);
     }
 
     template void maxScalar<uchar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
@@ -2183,7 +2183,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // threshold
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T> struct TransformFunctorTraits< thresh_binary_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -2212,7 +2212,7 @@ namespace arithm
     void threshold_caller(PtrStepSz<T> src, PtrStepSz<T> dst, T thresh, T maxVal, cudaStream_t stream)
     {
         Op<T> op(thresh, maxVal);
-        transform(src, dst, op, WithOutMask(), stream);
+        cudev::transform(src, dst, op, WithOutMask(), stream);
     }
 
     template <typename T>
@@ -2297,7 +2297,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T> struct TransformFunctorTraits< arithm::PowOp<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -2309,7 +2309,7 @@ namespace arithm
     template<typename T>
     void pow(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream)
     {
-        transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, PowOp<T>(power), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, PowOp<T>(power), WithOutMask(), stream);
     }
 
     template void pow<uchar>(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);
@@ -2372,7 +2372,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T1, typename T2, typename D, size_t src1_size, size_t src2_size, size_t dst_size> struct AddWeightedTraits : DefaultTransformFunctorTraits< arithm::AddWeighted<T1, T2, D> >
     {
@@ -2393,7 +2393,7 @@ namespace arithm
     {
         AddWeighted<T1, T2, D> op(alpha, beta, gamma);
 
-        transform((PtrStepSz<T1>) src1, (PtrStepSz<T2>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T1>) src1, (PtrStepSz<T2>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
     }
 
     template void addWeighted<uchar, uchar, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);

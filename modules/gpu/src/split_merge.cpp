@@ -47,14 +47,14 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::merge(const GpuMat* /*src*/, size_t /*count*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
-void cv::gpu::merge(const std::vector<GpuMat>& /*src*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
-void cv::gpu::split(const GpuMat& /*src*/, GpuMat* /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
-void cv::gpu::split(const GpuMat& /*src*/, std::vector<GpuMat>& /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
+void cv::gpu::merge(const GpuMat* /*src*/, size_t /*count*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_no_cuda(); }
+void cv::gpu::merge(const std::vector<GpuMat>& /*src*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_no_cuda(); }
+void cv::gpu::split(const GpuMat& /*src*/, GpuMat* /*dst*/, Stream& /*stream*/) { throw_no_cuda(); }
+void cv::gpu::split(const GpuMat& /*src*/, std::vector<GpuMat>& /*dst*/, Stream& /*stream*/) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace split_merge
     {
@@ -67,7 +67,7 @@ namespace
 {
     void merge(const GpuMat* src, size_t n, GpuMat& dst, const cudaStream_t& stream)
     {
-        using namespace ::cv::gpu::device::split_merge;
+        using namespace ::cv::gpu::cudev::split_merge;
 
         CV_Assert(src);
         CV_Assert(n > 0);
@@ -112,7 +112,7 @@ namespace
 
     void split(const GpuMat& src, GpuMat* dst, const cudaStream_t& stream)
     {
-        using namespace ::cv::gpu::device::split_merge;
+        using namespace ::cv::gpu::cudev::split_merge;
 
         CV_Assert(dst);
 

@@ -54,10 +54,6 @@
 #include <cstdio>
 #include <iostream>
 
-#ifdef HAVE_CUDA
-#include <cuda_runtime.h>
-#endif
-
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_perf.hpp"
 
@@ -70,7 +66,7 @@
 #include "opencv2/legacy.hpp"
 #include "opencv2/photo.hpp"
 
-#include "opencv2/core/private.hpp"
+#include "opencv2/core/gpu_private.hpp"
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY
 #error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined

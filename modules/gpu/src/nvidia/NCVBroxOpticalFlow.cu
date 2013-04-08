@@ -65,7 +65,7 @@
 
 #include "NPP_staging/NPP_staging.hpp"
 #include "NCVBroxOpticalFlow.hpp"
-#include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/core/cuda/utility.hpp"
 
 
 typedef NCVVectorAlloc<Ncv32f> FloatVector;
@@ -1141,8 +1141,8 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
                 ScaleVector(ptrVNew->ptr(), ptrVNew->ptr(), 1.0f/scale_factor, ns * nh, stream);
                 ncvAssertCUDALastErrorReturn((int)NCV_CUDA_ERROR);
 
-                cv::gpu::device::swap<FloatVector*>(ptrU, ptrUNew);
-                cv::gpu::device::swap<FloatVector*>(ptrV, ptrVNew);
+                cv::gpu::cudev::swap<FloatVector*>(ptrU, ptrUNew);
+                cv::gpu::cudev::swap<FloatVector*>(ptrV, ptrVNew);
             }
             scale /= scale_factor;
         }
