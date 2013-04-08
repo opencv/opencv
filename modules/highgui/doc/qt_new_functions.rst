@@ -123,7 +123,7 @@ fontQt
 ----------
 Creates the font to draw a text on an image.
 
-.. ocv:function:: CvFont fontQt(const String& nameFont, int pointSize  = -1, Scalar color = Scalar::all(0), int weight = CV_FONT_NORMAL,  int style = CV_STYLE_NORMAL, int spacing = 0)
+.. ocv:function:: QtFont fontQt( const String& nameFont, int pointSize=-1, Scalar color=Scalar::all(0), int weight=QT_FONT_NORMAL, int style=QT_STYLE_NORMAL, int spacing=0 )
 
 .. ocv:cfunction:: CvFont cvFontQt(const char* nameFont, int pointSize=-1, CvScalar color=cvScalarAll(0), int weight=CV_FONT_NORMAL, int style=CV_STYLE_NORMAL, int spacing=0)
 
@@ -169,7 +169,7 @@ addText
 -----------
 Creates the font to draw a text on an image.
 
-.. ocv:function:: void addText( const Mat& img, const String& text, Point org, CvFont font )
+.. ocv:function:: void addText( const Mat& img, const String& text, Point org, const QtFont& font )
 
 .. ocv:cfunction:: void cvAddText( const CvArr* img, const char* text, CvPoint org, CvFont * arg2 )
 
@@ -302,7 +302,7 @@ createButton
 ----------------
 Attaches a button to the control panel.
 
-.. ocv:function:: int createButton( const String& bar_name, ButtonCallback on_change, void* userdata=NULL, int type=CV_PUSH_BUTTON, bool initial_button_state=0 )
+.. ocv:function:: int createButton( const String& bar_name, ButtonCallback on_change, void* userdata=0, int type=QT_PUSH_BUTTON, bool initial_button_state=false )
 
 .. ocv:cfunction:: int cvCreateButton( const char* button_name=NULL, CvButtonCallback on_change=NULL, void* userdata=NULL, int button_type=CV_PUSH_BUTTON, int initial_button_state=0 )
 
