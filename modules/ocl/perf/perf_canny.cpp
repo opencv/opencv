@@ -47,7 +47,7 @@
 ///////////// Canny ////////////////////////
 TEST(Canny)
 {
-    Mat img = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
 
     if (img.empty())
     {

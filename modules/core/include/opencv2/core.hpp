@@ -496,67 +496,73 @@ CV_EXPORTS void randShuffle(InputOutputArray dst, double iterFactor = 1., RNG* r
 
 CV_EXPORTS_AS(randShuffle) void randShuffle_(InputOutputArray dst, double iterFactor = 1.);
 
+enum { FILLED  = -1,
+       LINE_4  = 4,
+       LINE_8  = 8,
+       LINE_AA = 16
+     };
+
 //! draws the line segment (pt1, pt2) in the image
 CV_EXPORTS_W void line(CV_IN_OUT Mat& img, Point pt1, Point pt2, const Scalar& color,
-                     int thickness = 1, int lineType = 8, int shift = 0);
+                     int thickness = 1, int lineType = LINE_8, int shift = 0);
 
 //! draws the rectangle outline or a solid rectangle with the opposite corners pt1 and pt2 in the image
 CV_EXPORTS_W void rectangle(CV_IN_OUT Mat& img, Point pt1, Point pt2,
                           const Scalar& color, int thickness = 1,
-                          int lineType = 8, int shift = 0);
+                          int lineType = LINE_8, int shift = 0);
 
 //! draws the rectangle outline or a solid rectangle covering rec in the image
 CV_EXPORTS void rectangle(CV_IN_OUT Mat& img, Rect rec,
                           const Scalar& color, int thickness = 1,
-                          int lineType = 8, int shift = 0);
+                          int lineType = LINE_8, int shift = 0);
 
 //! draws the circle outline or a solid circle in the image
 CV_EXPORTS_W void circle(CV_IN_OUT Mat& img, Point center, int radius,
                        const Scalar& color, int thickness = 1,
-                       int lineType = 8, int shift = 0);
+                       int lineType = LINE_8, int shift = 0);
 
 //! draws an elliptic arc, ellipse sector or a rotated ellipse in the image
 CV_EXPORTS_W void ellipse(CV_IN_OUT Mat& img, Point center, Size axes,
                         double angle, double startAngle, double endAngle,
                         const Scalar& color, int thickness = 1,
-                        int lineType = 8, int shift = 0);
+                        int lineType = LINE_8, int shift = 0);
 
 //! draws a rotated ellipse in the image
 CV_EXPORTS_W void ellipse(CV_IN_OUT Mat& img, const RotatedRect& box, const Scalar& color,
-                        int thickness = 1, int lineType = 8);
+                        int thickness = 1, int lineType = LINE_8);
 
 //! draws a filled convex polygon in the image
 CV_EXPORTS void fillConvexPoly(Mat& img, const Point* pts, int npts,
-                               const Scalar& color, int lineType = 8,
+                               const Scalar& color, int lineType = LINE_8,
                                int shift = 0);
 
 CV_EXPORTS_W void fillConvexPoly(InputOutputArray img, InputArray points,
-                                 const Scalar& color, int lineType = 8,
+                                 const Scalar& color, int lineType = LINE_8,
                                  int shift = 0);
 
 //! fills an area bounded by one or more polygons
 CV_EXPORTS void fillPoly(Mat& img, const Point** pts,
                          const int* npts, int ncontours,
-                         const Scalar& color, int lineType = 8, int shift = 0,
+                         const Scalar& color, int lineType = LINE_8, int shift = 0,
                          Point offset = Point() );
 
 CV_EXPORTS_W void fillPoly(InputOutputArray img, InputArrayOfArrays pts,
-                           const Scalar& color, int lineType = 8, int shift = 0,
+                           const Scalar& color, int lineType = LINE_8, int shift = 0,
                            Point offset = Point() );
 
 //! draws one or more polygonal curves
 CV_EXPORTS void polylines(Mat& img, const Point* const* pts, const int* npts,
                           int ncontours, bool isClosed, const Scalar& color,
-                          int thickness = 1, int lineType = 8, int shift = 0 );
+                          int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
 CV_EXPORTS_W void polylines(InputOutputArray img, InputArrayOfArrays pts,
                             bool isClosed, const Scalar& color,
-                            int thickness = 1, int lineType = 8, int shift = 0 );
+                            int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
 //! draws contours in the image
 CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays contours,
                               int contourIdx, const Scalar& color,
-                              int thickness = 1, int lineType = 8,
+                              int thickness = 1, int lineType = LINE_8,
                               InputArray hierarchy = noArray(),
                               int maxLevel = INT_MAX, Point offset = Point() );
 
@@ -587,7 +593,7 @@ enum
 //! renders text string in the image
 CV_EXPORTS_W void putText( Mat& img, const String& text, Point org,
                          int fontFace, double fontScale, Scalar color,
-                         int thickness = 1, int lineType = 8,
+                         int thickness = 1, int lineType = LINE_8,
                          bool bottomLeftOrigin = false );
 
 //! returns bounding box of the text string
@@ -631,9 +637,9 @@ CV_EXPORTS ConvertScaleData getConvertScaleElem(int fromType, int toType);
         PCA pca(pcaset, // pass the data
                 Mat(), // we do not have a pre-computed mean vector,
                        // so let the PCA engine to compute it
-                CV_PCA_DATA_AS_ROW, // indicate that the vectors
+                PCA::DATA_AS_ROW, // indicate that the vectors
                                     // are stored as matrix rows
-                                    // (use CV_PCA_DATA_AS_COL if the vectors are
+                                    // (use PCA::DATA_AS_COL if the vectors are
                                     // the matrix columns)
                 maxComponents // specify, how many principal components to retain
                 );
@@ -663,6 +669,11 @@ CV_EXPORTS ConvertScaleData getConvertScaleElem(int fromType, int toType);
 class CV_EXPORTS PCA
 {
 public:
+    enum { DATA_AS_ROW = 0,
+           DATA_AS_COL = 1,
+           USE_AVG     = 2
+         };
+
     //! default constructor
     PCA();
 

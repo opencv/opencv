@@ -347,10 +347,10 @@ int main (const int argc, const char * argv[])
 
         cout << "The warped image has been saved in the file: " << warpedImFile << endl << flush;
 
-        namedWindow ("image",    CV_WINDOW_AUTOSIZE);
-        namedWindow ("template", CV_WINDOW_AUTOSIZE);
-        namedWindow ("warped image",   CV_WINDOW_AUTOSIZE);
-        namedWindow ("error (black: no error)", CV_WINDOW_AUTOSIZE);
+        namedWindow ("image",    WINDOW_AUTOSIZE);
+        namedWindow ("template", WINDOW_AUTOSIZE);
+        namedWindow ("warped image",   WINDOW_AUTOSIZE);
+        namedWindow ("error (black: no error)", WINDOW_AUTOSIZE);
 
         moveWindow  ("template", 350, 350);
         moveWindow  ("warped image",   600, 300);

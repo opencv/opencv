@@ -33,9 +33,9 @@ int main( int argc, char** argv )
    src_test2 = imread( argv[3], 1 );
 
    /// Convert to HSV
-   cvtColor( src_base, hsv_base, CV_BGR2HSV );
-   cvtColor( src_test1, hsv_test1, CV_BGR2HSV );
-   cvtColor( src_test2, hsv_test2, CV_BGR2HSV );
+   cvtColor( src_base, hsv_base, COLOR_BGR2HSV );
+   cvtColor( src_test1, hsv_test1, COLOR_BGR2HSV );
+   cvtColor( src_test2, hsv_test2, COLOR_BGR2HSV );
 
    hsv_half_down = hsv_base( Range( hsv_base.rows/2, hsv_base.rows - 1 ), Range( 0, hsv_base.cols - 1 ) );
 

@@ -125,8 +125,8 @@ int main(int argc, char** argv)
     }
 
     Mat grayImage0, grayImage1, depthFlt0, depthFlt1/*in meters*/;
-    cvtColor( colorImage0, grayImage0, CV_BGR2GRAY );
-    cvtColor( colorImage1, grayImage1, CV_BGR2GRAY );
+    cvtColor( colorImage0, grayImage0, COLOR_BGR2GRAY );
+    cvtColor( colorImage1, grayImage1, COLOR_BGR2GRAY );
     depth0.convertTo( depthFlt0, CV_32FC1, 1./1000 );
     depth1.convertTo( depthFlt1, CV_32FC1, 1./1000 );
 

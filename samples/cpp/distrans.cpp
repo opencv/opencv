@@ -7,10 +7,10 @@
 using namespace std;
 using namespace cv;
 
-int maskSize0 = CV_DIST_MASK_5;
+int maskSize0 = DIST_MASK_5;
 int voronoiType = -1;
 int edgeThresh = 100;
-int distType0 = CV_DIST_L1;
+int distType0 = DIST_L1;
 
 // The output and temporary images
 Mat gray;
@@ -31,8 +31,8 @@ static void onTrackbar( int, void* )
         Scalar(255,0,255)
     };
 
-    int maskSize = voronoiType >= 0 ? CV_DIST_MASK_5 : maskSize0;
-    int distType = voronoiType >= 0 ? CV_DIST_L2 : distType0;
+    int maskSize = voronoiType >= 0 ? DIST_MASK_5 : maskSize0;
+    int distType = voronoiType >= 0 ? DIST_L2 : distType0;
 
     Mat edge = gray >= edgeThresh, dist, labels, dist8u;
 
@@ -130,7 +130,7 @@ int main( int argc, const char** argv )
         // Call to update the view
         onTrackbar(0, 0);
 
-        int c = cvWaitKey(0) & 255;
+        int c = waitKey() & 255;
 
         if( c == 27 )
             break;
@@ -140,17 +140,17 @@ int main( int argc, const char** argv )
             voronoiType = -1;
 
         if( c == 'c' || c == 'C' )
-            distType0 = CV_DIST_C;
+            distType0 = DIST_C;
         else if( c == '1' )
-            distType0 = CV_DIST_L1;
+            distType0 = DIST_L1;
         else if( c == '2' )
-            distType0 = CV_DIST_L2;
+            distType0 = DIST_L2;
         else if( c == '3' )
-            maskSize0 = CV_DIST_MASK_3;
+            maskSize0 = DIST_MASK_3;
         else if( c == '5' )
-            maskSize0 = CV_DIST_MASK_5;
+            maskSize0 = DIST_MASK_5;
         else if( c == '0' )
-            maskSize0 = CV_DIST_MASK_PRECISE;
+            maskSize0 = DIST_MASK_PRECISE;
         else if( c == 'v' )
             voronoiType = 0;
         else if( c == 'p' )
@@ -162,18 +162,18 @@ int main( int argc, const char** argv )
             else if( voronoiType == 1 )
             {
                 voronoiType = -1;
-                maskSize0 = CV_DIST_MASK_3;
-                distType0 = CV_DIST_C;
+                maskSize0 = DIST_MASK_3;
+                distType0 = DIST_C;
             }
-            else if( distType0 == CV_DIST_C )
-                distType0 = CV_DIST_L1;
-            else if( distType0 == CV_DIST_L1 )
-                distType0 = CV_DIST_L2;
-            else if( maskSize0 == CV_DIST_MASK_3 )
-                maskSize0 = CV_DIST_MASK_5;
-            else if( maskSize0 == CV_DIST_MASK_5 )
-                maskSize0 = CV_DIST_MASK_PRECISE;
-            else if( maskSize0 == CV_DIST_MASK_PRECISE )
+            else if( distType0 == DIST_C )
+                distType0 = DIST_L1;
+            else if( distType0 == DIST_L1 )
+                distType0 = DIST_L2;
+            else if( maskSize0 == DIST_MASK_3 )
+                maskSize0 = DIST_MASK_5;
+            else if( maskSize0 == DIST_MASK_5 )
+                maskSize0 = DIST_MASK_PRECISE;
+            else if( maskSize0 == DIST_MASK_PRECISE )
                 voronoiType = 0;
         }
     }

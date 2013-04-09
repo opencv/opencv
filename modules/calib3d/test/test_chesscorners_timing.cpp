@@ -66,7 +66,7 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
     CvMat*  _v = 0;
     CvPoint2D32f* v;
 
-    IplImage* img = 0;
+    IplImage img;
     IplImage* gray = 0;
     IplImage* thresh = 0;
 
@@ -105,9 +105,10 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
         /* read the image */
         sprintf( filename, "%s%s", filepath, imgname );
 
-        img = cvLoadImage( filename );
+        cv::Mat img2 = cv::imread( filename );
+        img = img2;
 
-        if( !img )
+        if( img2.empty() )
         {
             ts->printf( cvtest::TS::LOG, "one of chessboard images can't be read: %s\n", filename );
             if( max_idx == 1 )
@@ -120,9 +121,9 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
 
         ts->printf(cvtest::TS::LOG, "%s: chessboard %d:\n", imgname, is_chessboard);
 
-        gray = cvCreateImage( cvSize( img->width, img->height ), IPL_DEPTH_8U, 1 );
-        thresh = cvCreateImage( cvSize( img->width, img->height ), IPL_DEPTH_8U, 1 );
-        cvCvtColor( img, gray, CV_BGR2GRAY );
+        gray = cvCreateImage( cvSize( img.width, img.height ), IPL_DEPTH_8U, 1 );
+        thresh = cvCreateImage( cvSize( img.width, img.height ), IPL_DEPTH_8U, 1 );
+        cvCvtColor( &img, gray, CV_BGR2GRAY );
 
 
         count0 = pattern_size.width*pattern_size.height;
@@ -164,7 +165,6 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
                    find_chessboard_time*1e-6, find_chessboard_time/num_pixels);
 
         cvReleaseMat( &_v );
-        cvReleaseImage( &img );
         cvReleaseImage( &gray );
         cvReleaseImage( &thresh );
         progress = update_progress( progress, idx-1, max_idx, 0 );
@@ -175,7 +175,6 @@ _exit_:
     /* release occupied memory */
     cvReleaseMat( &_v );
     cvReleaseFileStorage( &fs );
-    cvReleaseImage( &img );
     cvReleaseImage( &gray );
     cvReleaseImage( &thresh );
 

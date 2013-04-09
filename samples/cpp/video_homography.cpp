@@ -161,7 +161,7 @@ int main(int ac, char ** av)
         if (frame.empty())
             break;
 
-        cvtColor(frame, gray, CV_RGB2GRAY);
+        cvtColor(frame, gray, COLOR_RGB2GRAY);
 
         detector.detect(gray, query_kpts); //Find interest points
 

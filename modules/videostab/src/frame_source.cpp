@@ -84,10 +84,10 @@ public:
     }
 
 #ifdef HAVE_OPENCV_HIGHGUI
-    int width() {return static_cast<int>(vc.get(CV_CAP_PROP_FRAME_WIDTH));}
-    int height() {return static_cast<int>(vc.get(CV_CAP_PROP_FRAME_HEIGHT));}
-    int count() {return static_cast<int>(vc.get(CV_CAP_PROP_FRAME_COUNT));}
-    double fps() {return vc.get(CV_CAP_PROP_FPS);}
+    int width() {return static_cast<int>(vc.get(CAP_PROP_FRAME_WIDTH));}
+    int height() {return static_cast<int>(vc.get(CAP_PROP_FRAME_HEIGHT));}
+    int count() {return static_cast<int>(vc.get(CAP_PROP_FRAME_COUNT));}
+    double fps() {return vc.get(CAP_PROP_FPS);}
 #else
     int width() {return 0;}
     int height() {return 0;}

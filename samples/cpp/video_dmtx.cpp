@@ -44,7 +44,7 @@ namespace
         char filename[200];
         string window_name = "video | q or esc to quit";
         cout << "press space to save a picture. q or esc to quit" << endl;
-        namedWindow(window_name, CV_WINDOW_KEEPRATIO); //resizable window;
+        namedWindow(window_name, WINDOW_KEEPRATIO); //resizable window;
         Mat frame;
         for (;;)
         {
@@ -52,7 +52,7 @@ namespace
             if (frame.empty())
                 break;
             cv::Mat gray;
-            cv::cvtColor(frame,gray,CV_RGB2GRAY);
+            cv::cvtColor(frame,gray, COLOR_RGB2GRAY);
             vector<String> codes;
             Mat corners;
             findDataMatrix(gray, codes, corners);

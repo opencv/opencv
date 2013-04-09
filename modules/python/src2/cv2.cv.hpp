@@ -1,5 +1,6 @@
 #include "opencv2/legacy.hpp"
 #include "opencv2/legacy/compat.hpp"
+#include "opencv2/highgui/highgui_c.h"
 
 #define OLD_MODULESTR "cv2.cv"
 

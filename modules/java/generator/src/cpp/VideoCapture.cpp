@@ -4,7 +4,6 @@
 #include "opencv2/opencv_modules.hpp"
 #ifdef HAVE_OPENCV_HIGHGUI
 
-#include "opencv2/highgui/highgui_c.h"
 #include "opencv2/highgui.hpp"
 using namespace cv;
 
@@ -394,7 +393,7 @@ JNIEXPORT jstring JNICALL Java_org_opencv_highgui_VideoCapture_n_1getSupportedPr
 
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
         union {double prop; const char* name;} u;
-        u.prop = me->get(CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING);
+        u.prop = me->get(CAP_PROP_ANDROID_PREVIEW_SIZES_STRING);
         return env->NewStringUTF(u.name);
     } catch(cv::Exception e) {
 

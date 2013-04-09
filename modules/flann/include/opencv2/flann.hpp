@@ -43,9 +43,6 @@
 #ifndef _OPENCV_FLANN_HPP_
 #define _OPENCV_FLANN_HPP_
 
-#ifdef __cplusplus
-
-#include "opencv2/core/types_c.h"
 #include "opencv2/core.hpp"
 #include "opencv2/flann/miniflann.hpp"
 #include "opencv2/flann/flann_base.hpp"
@@ -421,7 +418,5 @@ FLANN_DEPRECATED int hierarchicalClustering(const Mat& features, Mat& centers, c
 }
 
 } } // namespace cv::flann
-
-#endif // __cplusplus
 
 #endif

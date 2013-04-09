@@ -46,10 +46,6 @@
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
 
-#include "opencv2/photo/photo_c.h"
-
-#ifdef __cplusplus
-
 /*! \namespace cv
  Namespace where all the C++ OpenCV functionality resides
  */
@@ -59,8 +55,8 @@ namespace cv
 //! the inpainting algorithm
 enum
 {
-    INPAINT_NS=CV_INPAINT_NS, // Navier-Stokes algorithm
-    INPAINT_TELEA=CV_INPAINT_TELEA // A. Telea algorithm
+    INPAINT_NS    = 0, // Navier-Stokes algorithm
+    INPAINT_TELEA = 1 // A. Telea algorithm
 };
 
 //! restores the damaged image areas using one of the available intpainting algorithms
@@ -84,8 +80,6 @@ CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, 
                                                     float h = 3, float hColor = 3,
                                                     int templateWindowSize = 7, int searchWindowSize = 21);
 
-}
-
-#endif //__cplusplus
+} // cv
 
 #endif

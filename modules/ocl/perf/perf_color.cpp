@@ -60,26 +60,26 @@ TEST(cvtColor)
             gen(src, size, size, all_type[j], 0, 256);
             SUBTEST << size << "x" << size << "; " << type_name[j] << " ; CV_RGBA2GRAY";
 
-            cvtColor(src, dst, CV_RGBA2GRAY, 4);
+            cvtColor(src, dst, COLOR_RGBA2GRAY, 4);
 
             CPU_ON;
-            cvtColor(src, dst, CV_RGBA2GRAY, 4);
+            cvtColor(src, dst, COLOR_RGBA2GRAY, 4);
             CPU_OFF;
 
             d_src.upload(src);
 
             WARMUP_ON;
-            ocl::cvtColor(d_src, d_dst, CV_RGBA2GRAY, 4);
+            ocl::cvtColor(d_src, d_dst, COLOR_RGBA2GRAY, 4);
             WARMUP_OFF;
 
             GPU_ON;
-            ocl::cvtColor(d_src, d_dst, CV_RGBA2GRAY, 4);
+            ocl::cvtColor(d_src, d_dst, COLOR_RGBA2GRAY, 4);
              ;
             GPU_OFF;
 
             GPU_FULL_ON;
             d_src.upload(src);
-            ocl::cvtColor(d_src, d_dst, CV_RGBA2GRAY, 4);
+            ocl::cvtColor(d_src, d_dst, COLOR_RGBA2GRAY, 4);
             d_dst.download(dst);
             GPU_FULL_OFF;
         }

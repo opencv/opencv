@@ -44,7 +44,7 @@ static void updateBrightnessContrast( int /*arg*/, void* )
     calcHist(&dst, 1, 0, Mat(), hist, 1, &histSize, 0);
     Mat histImage = Mat::ones(200, 320, CV_8U)*255;
 
-    normalize(hist, hist, 0, histImage.rows, CV_MINMAX, CV_32F);
+    normalize(hist, hist, 0, histImage.rows, NORM_MINMAX, CV_32F);
 
     histImage = Scalar::all(255);
     int binW = cvRound((double)histImage.cols/histSize);

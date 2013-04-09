@@ -46,13 +46,13 @@
 #ifndef __OPENCV_OCL_PRIVATE_UTIL__
 #define __OPENCV_OCL_PRIVATE_UTIL__
 
-#include "opencv2/ocl.hpp"
-
 #if defined __APPLE__
 #include <OpenCL/OpenCL.h>
 #else
 #include <CL/opencl.h>
 #endif
+
+#include "opencv2/ocl.hpp"
 
 namespace cv
 {

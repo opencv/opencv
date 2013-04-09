@@ -79,8 +79,8 @@ static void colorizeDisparity( const Mat& gray, Mat& rgb, double maxDisp=-1.f, f
 static float getMaxDisparity( VideoCapture& capture )
 {
     const int minDistance = 400; // mm
-    float b = (float)capture.get( CV_CAP_OPENNI_DEPTH_GENERATOR_BASELINE ); // mm
-    float F = (float)capture.get( CV_CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH ); // pixels
+    float b = (float)capture.get( CAP_OPENNI_DEPTH_GENERATOR_BASELINE ); // mm
+    float F = (float)capture.get( CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH ); // pixels
     return b * F / minDistance;
 }
 
@@ -142,7 +142,7 @@ static void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool
             {
                 string mask( argv[++i] );
                 if( mask.size() != 5)
-                    CV_Error( CV_StsBadArg, "Incorrect length of -m argument string" );
+                    CV_Error( Error::StsBadArg, "Incorrect length of -m argument string" );
                 int val = atoi(mask.c_str());
 
                 int l = 100000, r = 10000, sum = 0;
@@ -191,7 +191,7 @@ int main( int argc, char* argv[] )
     if( isVideoReading )
         capture.open( filename );
     else
-        capture.open( CV_CAP_OPENNI );
+        capture.open( CAP_OPENNI );
 
     cout << "done." << endl;
 
@@ -207,23 +207,23 @@ int main( int argc, char* argv[] )
         switch ( imageMode )
         {
             case 0:
-                modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_VGA_30HZ );
+                modeRes = capture.set( CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CAP_OPENNI_VGA_30HZ );
                 break;
             case 1:
-                modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_SXGA_15HZ );
+                modeRes = capture.set( CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CAP_OPENNI_SXGA_15HZ );
                 break;
             case 2:
-                modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_SXGA_30HZ );
+                modeRes = capture.set( CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CAP_OPENNI_SXGA_30HZ );
                 break;
                 //The following modes are only supported by the Xtion Pro Live
             case 3:
-                modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_QVGA_30HZ );
+                modeRes = capture.set( CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CAP_OPENNI_QVGA_30HZ );
                 break;
             case 4:
-                modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_QVGA_60HZ );
+                modeRes = capture.set( CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CAP_OPENNI_QVGA_60HZ );
                 break;
             default:
-                CV_Error( CV_StsBadArg, "Unsupported image mode property.\n");
+                CV_Error( Error::StsBadArg, "Unsupported image mode property.\n");
         }
         if (!modeRes)
             cout << "\nThis image mode is not supported by the device, the default value (CV_CAP_OPENNI_SXGA_15HZ) will be used.\n" << endl;
@@ -231,18 +231,18 @@ int main( int argc, char* argv[] )
 
     // Print some avalible device settings.
     cout << "\nDepth generator output mode:" << endl <<
-            "FRAME_WIDTH      " << capture.get( CV_CAP_PROP_FRAME_WIDTH ) << endl <<
-            "FRAME_HEIGHT     " << capture.get( CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
-            "FRAME_MAX_DEPTH  " << capture.get( CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH ) << " mm" << endl <<
-            "FPS              " << capture.get( CV_CAP_PROP_FPS ) << endl <<
-            "REGISTRATION     " << capture.get( CV_CAP_PROP_OPENNI_REGISTRATION ) << endl;
-    if( capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR_PRESENT ) )
+            "FRAME_WIDTH      " << capture.get( CAP_PROP_FRAME_WIDTH ) << endl <<
+            "FRAME_HEIGHT     " << capture.get( CAP_PROP_FRAME_HEIGHT ) << endl <<
+            "FRAME_MAX_DEPTH  " << capture.get( CAP_PROP_OPENNI_FRAME_MAX_DEPTH ) << " mm" << endl <<
+            "FPS              " << capture.get( CAP_PROP_FPS ) << endl <<
+            "REGISTRATION     " << capture.get( CAP_PROP_OPENNI_REGISTRATION ) << endl;
+    if( capture.get( CAP_OPENNI_IMAGE_GENERATOR_PRESENT ) )
     {
         cout <<
             "\nImage generator output mode:" << endl <<
-            "FRAME_WIDTH   " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FRAME_WIDTH ) << endl <<
-            "FRAME_HEIGHT  " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
-            "FPS           " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FPS ) << endl;
+            "FRAME_WIDTH   " << capture.get( CAP_OPENNI_IMAGE_GENERATOR+CAP_PROP_FRAME_WIDTH ) << endl <<
+            "FRAME_HEIGHT  " << capture.get( CAP_OPENNI_IMAGE_GENERATOR+CAP_PROP_FRAME_HEIGHT ) << endl <<
+            "FPS           " << capture.get( CAP_OPENNI_IMAGE_GENERATOR+CAP_PROP_FPS ) << endl;
     }
     else
     {
@@ -266,14 +266,14 @@ int main( int argc, char* argv[] )
         }
         else
         {
-            if( retrievedImageFlags[0] && capture.retrieve( depthMap, CV_CAP_OPENNI_DEPTH_MAP ) )
+            if( retrievedImageFlags[0] && capture.retrieve( depthMap, CAP_OPENNI_DEPTH_MAP ) )
             {
                 const float scaleFactor = 0.05f;
                 Mat show; depthMap.convertTo( show, CV_8UC1, scaleFactor );
                 imshow( "depth map", show );
             }
 
-            if( retrievedImageFlags[1] && capture.retrieve( disparityMap, CV_CAP_OPENNI_DISPARITY_MAP ) )
+            if( retrievedImageFlags[1] && capture.retrieve( disparityMap, CAP_OPENNI_DISPARITY_MAP ) )
             {
                 if( isColorizeDisp )
                 {
@@ -289,13 +289,13 @@ int main( int argc, char* argv[] )
                 }
             }
 
-            if( retrievedImageFlags[2] && capture.retrieve( validDepthMap, CV_CAP_OPENNI_VALID_DEPTH_MASK ) )
+            if( retrievedImageFlags[2] && capture.retrieve( validDepthMap, CAP_OPENNI_VALID_DEPTH_MASK ) )
                 imshow( "valid depth mask", validDepthMap );
 
-            if( retrievedImageFlags[3] && capture.retrieve( bgrImage, CV_CAP_OPENNI_BGR_IMAGE ) )
+            if( retrievedImageFlags[3] && capture.retrieve( bgrImage, CAP_OPENNI_BGR_IMAGE ) )
                 imshow( "rgb image", bgrImage );
 
-            if( retrievedImageFlags[4] && capture.retrieve( grayImage, CV_CAP_OPENNI_GRAY_IMAGE ) )
+            if( retrievedImageFlags[4] && capture.retrieve( grayImage, CAP_OPENNI_GRAY_IMAGE ) )
                 imshow( "gray image", grayImage );
         }
 

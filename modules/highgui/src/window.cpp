@@ -342,15 +342,16 @@ CV_IMPL void cvUpdateWindow(const char*)
 
 #if defined (HAVE_QT)
 
-CvFont cv::fontQt(const String& nameFont, int pointSize, Scalar color, int weight,  int style, int /*spacing*/)
+cv::QtFont cv::fontQt(const String& nameFont, int pointSize, Scalar color, int weight,  int style, int /*spacing*/)
 {
-return cvFontQt(nameFont.c_str(), pointSize,color,weight, style);
+    CvFont f = cvFontQt(nameFont.c_str(), pointSize,color,weight, style);
+    return *(cv::QtFont*)(&f);
 }
 
-void cv::addText( const Mat& img, const String& text, Point org, CvFont font)
+void cv::addText( const Mat& img, const String& text, Point org, const QtFont& font)
 {
     CvMat _img = img;
-    cvAddText( &_img, text.c_str(), org,&font);
+    cvAddText( &_img, text.c_str(), org, (CvFont*)&font);
 }
 
 void cv::displayStatusBar(const String& name,  const String& text, int delayms)
@@ -390,13 +391,13 @@ int cv::createButton(const String& button_name, ButtonCallback on_change, void* 
 
 #else
 
-CvFont cv::fontQt(const String&, int, Scalar, int,  int, int)
+cv::QtFont cv::fontQt(const String&, int, Scalar, int,  int, int)
 {
     CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
-    return CvFont();
+    return QtFont();
 }
 
-void cv::addText( const Mat&, const String&, Point, CvFont)
+void cv::addText( const Mat&, const String&, Point, const QtFont&)
 {
     CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
 }

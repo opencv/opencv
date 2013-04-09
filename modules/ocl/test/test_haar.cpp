@@ -121,7 +121,7 @@ TEST_F(Haar, FaceDetect)
 
     Mat gray, smallImg(cvRound (img.rows / scale), cvRound(img.cols / scale), CV_8UC1 );
     MemStorage storage(cvCreateMemStorage(0));
-    cvtColor( img, gray, CV_BGR2GRAY );
+    cvtColor( img, gray, COLOR_BGR2GRAY );
     resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
     equalizeHist( smallImg, smallImg );
 

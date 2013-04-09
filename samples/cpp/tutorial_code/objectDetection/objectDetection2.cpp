@@ -8,6 +8,8 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/core/utility.hpp"
 
+#include "opencv2/highgui/highgui_c.h"
+
 #include <iostream>
 #include <stdio.h>
 
@@ -68,7 +70,7 @@ void detectAndDisplay( Mat frame )
    std::vector<Rect> faces;
    Mat frame_gray;
 
-   cvtColor( frame, frame_gray, CV_BGR2GRAY );
+   cvtColor( frame, frame_gray, COLOR_BGR2GRAY );
    equalizeHist( frame_gray, frame_gray );
 
    //-- Detect faces

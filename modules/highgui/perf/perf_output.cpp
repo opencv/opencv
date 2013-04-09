@@ -23,7 +23,7 @@ PERF_TEST_P(VideoWriter_Writing, WriteFrame,
   string filename = getDataPath(get<0>(GetParam()));
   bool isColor = get<1>(GetParam());
 
-  VideoWriter writer(cv::tempfile(".avi"), CV_FOURCC('X', 'V', 'I', 'D'), 25, cv::Size(640, 480), isColor);
+  VideoWriter writer(cv::tempfile(".avi"), VideoWriter::fourcc('X', 'V', 'I', 'D'), 25, cv::Size(640, 480), isColor);
 
   TEST_CYCLE() { Mat image = imread(filename, 1); writer << image; }
 

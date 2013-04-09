@@ -350,7 +350,7 @@ void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC1));
     if(image.type() == CV_8UC3)
     {
-        cvtColor(image, gray_image, CV_BGR2GRAY);
+        cvtColor(image, gray_image, COLOR_BGR2GRAY);
     }
     else
     {
@@ -382,9 +382,9 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC4) || (image.type() == CV_8UC1));
 
     if (image.type() == CV_8UC3) {
-        cvtColor(image, gray_image, CV_BGR2GRAY);
+        cvtColor(image, gray_image, COLOR_BGR2GRAY);
     } else if (image.type() == CV_8UC4) {
-        cvtColor(image, gray_image, CV_BGRA2GRAY);
+        cvtColor(image, gray_image, COLOR_BGRA2GRAY);
     } else if (image.type() == CV_8UC1) {
         gray_image=image;
     } else {
@@ -457,7 +457,7 @@ void SurfFeaturesFinderGpu::find(const Mat &image, ImageFeatures &features)
     image_.upload(image);
 
     ensureSizeIsEnough(image.size(), CV_8UC1, gray_image_);
-    cvtColor(image_, gray_image_, CV_BGR2GRAY);
+    cvtColor(image_, gray_image_, COLOR_BGR2GRAY);
 
     surf_.nOctaves = num_octaves_;
     surf_.nOctaveLayers = num_layers_;

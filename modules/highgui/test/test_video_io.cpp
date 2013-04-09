@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/highgui/highgui_c.h"
 
 using namespace cv;
 using namespace std;
@@ -56,15 +56,15 @@ string fourccToString(int fourcc)
 
 const VideoFormat g_specific_fmt_list[] =
 {
-    VideoFormat("avi", CV_FOURCC('X', 'V', 'I', 'D')),
-    VideoFormat("avi", CV_FOURCC('M', 'P', 'E', 'G')),
-    VideoFormat("avi", CV_FOURCC('M', 'J', 'P', 'G')),
-    //VideoFormat("avi", CV_FOURCC('I', 'Y', 'U', 'V')),
-    VideoFormat("mkv", CV_FOURCC('X', 'V', 'I', 'D')),
-    VideoFormat("mkv", CV_FOURCC('M', 'P', 'E', 'G')),
-    VideoFormat("mkv", CV_FOURCC('M', 'J', 'P', 'G')),
+    VideoFormat("avi", VideoWriter::fourcc('X', 'V', 'I', 'D')),
+    VideoFormat("avi", VideoWriter::fourcc('M', 'P', 'E', 'G')),
+    VideoFormat("avi", VideoWriter::fourcc('M', 'J', 'P', 'G')),
+    //VideoFormat("avi", VideoWriter::fourcc('I', 'Y', 'U', 'V')),
+    VideoFormat("mkv", VideoWriter::fourcc('X', 'V', 'I', 'D')),
+    VideoFormat("mkv", VideoWriter::fourcc('M', 'P', 'E', 'G')),
+    VideoFormat("mkv", VideoWriter::fourcc('M', 'J', 'P', 'G')),
 
-    VideoFormat("mov", CV_FOURCC('m', 'p', '4', 'v')),
+    VideoFormat("mov", VideoWriter::fourcc('m', 'p', '4', 'v')),
     VideoFormat()
 };
 
@@ -416,7 +416,7 @@ void CV_HighGuiTest::SpecificVideoTest(const string& dir, const cvtest::VideoFor
     for( size_t i = 0; i < IMAGE_COUNT; ++i )
     {
         string file_path = format("%s../python/images/QCIF_%02d.bmp", dir.c_str(), i);
-        Mat img = imread(file_path, CV_LOAD_IMAGE_COLOR);
+        Mat img = imread(file_path, IMREAD_COLOR);
 
         if (img.empty())
         {
@@ -442,7 +442,7 @@ void CV_HighGuiTest::SpecificVideoTest(const string& dir, const cvtest::VideoFor
     writer.release();
     VideoCapture cap(video_file);
 
-    size_t FRAME_COUNT = (size_t)cap.get(CV_CAP_PROP_FRAME_COUNT);
+    size_t FRAME_COUNT = (size_t)cap.get(CAP_PROP_FRAME_COUNT);
 
     if (FRAME_COUNT != IMAGE_COUNT )
     {

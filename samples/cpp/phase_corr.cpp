@@ -13,7 +13,7 @@ int main(int, char* [])
     do
     {
         video >> frame;
-        cvtColor(frame, curr, CV_RGB2GRAY);
+        cvtColor(frame, curr, COLOR_RGB2GRAY);
 
         if(prev.empty())
         {
@@ -31,8 +31,8 @@ int main(int, char* [])
         {
             // draw a circle and line indicating the shift direction...
             Point center(curr.cols >> 1, curr.rows >> 1);
-            circle(frame, center, (int)radius, Scalar(0, 255, 0), 3, CV_AA);
-            line(frame, center, Point(center.x + (int)shift.x, center.y + (int)shift.y), Scalar(0, 255, 0), 3, CV_AA);
+            circle(frame, center, (int)radius, Scalar(0, 255, 0), 3, LINE_AA);
+            line(frame, center, Point(center.x + (int)shift.x, center.y + (int)shift.y), Scalar(0, 255, 0), 3, LINE_AA);
         }
 
         imshow("phase shift", frame);

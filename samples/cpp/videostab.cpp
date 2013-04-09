@@ -48,7 +48,7 @@ void run()
         if (!outputPath.empty())
         {
             if (!writer.isOpened())
-                writer.open(outputPath, CV_FOURCC('X','V','I','D'),
+                writer.open(outputPath, VideoWriter::fourcc('X','V','I','D'),
                             outputFps, stabilizedFrame.size());
             writer << stabilizedFrame;
         }

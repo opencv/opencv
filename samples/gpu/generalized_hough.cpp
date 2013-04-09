@@ -86,11 +86,11 @@ int main(int argc, const char* argv[])
     Mat templ = loadImage(templName);
     Mat image = loadImage(imageName);
 
-    int method = GHT_POSITION;
+    int method = cv::GeneralizedHough::GHT_POSITION;
     if (estimateScale)
-        method += GHT_SCALE;
+        method += cv::GeneralizedHough::GHT_SCALE;
     if (estimateRotation)
-        method += GHT_ROTATION;
+        method += cv::GeneralizedHough::GHT_ROTATION;
 
     vector<Vec4f> position;
     cv::TickMeter tm;
