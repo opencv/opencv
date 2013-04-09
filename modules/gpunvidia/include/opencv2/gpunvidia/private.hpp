@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,26 +41,56 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_SAFE_CALL_HPP__
-#define __OPENCV_CUDA_SAFE_CALL_HPP__
+#ifndef __OPENCV_CORE_GPUNVIDIA_PRIVATE_HPP__
+#define __OPENCV_CORE_GPUNVIDIA_PRIVATE_HPP__
 
-#include <cufft.h>
-
-#if defined(__GNUC__)
-    #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__)
+#ifndef __OPENCV_BUILD
+#  error this is a private header which should not be used from outside of the OpenCV library
 #endif
+
+#include "opencv2/core/gpu_private.hpp"
+
+#ifndef HAVE_CUDA
+#  error gpunvidia module requires CUDA
+#endif
+
+#include "opencv2/gpunvidia.hpp"
 
 namespace cv { namespace gpu
 {
-    void cufftError(int err, const char *file, const int line, const char *func = "");
+    class NppStStreamHandler
+    {
+    public:
+        inline explicit NppStStreamHandler(cudaStream_t newStream = 0)
+        {
+            oldStream = nppStSetActiveCUDAstream(newStream);
+        }
+
+        inline ~NppStStreamHandler()
+        {
+            nppStSetActiveCUDAstream(oldStream);
+        }
+
+    private:
+        cudaStream_t oldStream;
+    };
+
+    NCV_EXPORTS cv::String getNcvErrorMessage(int code);
+
+    static inline void checkNcvError(int err, const char* file, const int line, const char* func)
+    {
+        if (NCV_SUCCESS != err)
+        {
+            cv::String msg = getNcvErrorMessage(err);
+            cv::error(cv::Error::GpuApiCallError, msg, func, file, line);
+        }
+    }
 }}
 
-static inline void ___cufftSafeCall(cufftResult_t err, const char *file, const int line, const char *func = "")
-{
-    if (CUFFT_SUCCESS != err)
-        cv::gpu::cufftError(err, file, line, func);
-}
+#if defined(__GNUC__)
+    #define ncvSafeCall(expr)  cv::gpu::checkNcvError(expr, __FILE__, __LINE__, __func__)
+#else /* defined(__CUDACC__) || defined(__MSVC__) */
+    #define ncvSafeCall(expr)  cv::gpu::checkNcvError(expr, __FILE__, __LINE__, "")
+#endif
 
-#endif /* __OPENCV_CUDA_SAFE_CALL_HPP__ */
+#endif // __OPENCV_CORE_GPUNVIDIA_PRIVATE_HPP__

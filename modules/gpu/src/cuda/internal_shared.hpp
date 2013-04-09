@@ -48,28 +48,11 @@
 
 #include "opencv2/core/cuda_devptrs.hpp"
 #include "opencv2/core/cuda/common.hpp"
-#include "opencv2/gpunvidia.hpp"
+#include "opencv2/gpunvidia/private.hpp"
+
 
 #include "safe_call.hpp"
 
-namespace cv { namespace gpu
-{
-    class NppStStreamHandler
-    {
-    public:
-        inline explicit NppStStreamHandler(cudaStream_t newStream = 0)
-        {
-            oldStream = nppStSetActiveCUDAstream(newStream);
-        }
 
-        inline ~NppStStreamHandler()
-        {
-            nppStSetActiveCUDAstream(oldStream);
-        }
-
-    private:
-        cudaStream_t oldStream;
-    };
-}}
 
 #endif /* __OPENCV_internal_shared_HPP__ */
