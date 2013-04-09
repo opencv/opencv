@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include <climits>
+#include <limits>
 
 namespace cv
 {
