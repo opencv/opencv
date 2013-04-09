@@ -45,21 +45,6 @@
 
 #include <cufft.h>
 
-#if defined(__GNUC__)
-    #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__)
-#endif
 
-namespace cv { namespace gpu
-{
-    void cufftError(int err, const char *file, const int line, const char *func = "");
-}}
-
-static inline void ___cufftSafeCall(cufftResult_t err, const char *file, const int line, const char *func = "")
-{
-    if (CUFFT_SUCCESS != err)
-        cv::gpu::cufftError(err, file, line, func);
-}
 
 #endif /* __OPENCV_CUDA_SAFE_CALL_HPP__ */

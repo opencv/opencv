@@ -295,6 +295,49 @@ CV_EXPORTS void integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer,
 //! supports source images of 8UC1 type only
 CV_EXPORTS void sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& stream = Stream::Null());
 
+//! performs per-element multiplication of two full (not packed) Fourier spectrums
+//! supports 32FC2 matrixes only (interleaved format)
+CV_EXPORTS void mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false, Stream& stream = Stream::Null());
+
+//! performs per-element multiplication of two full (not packed) Fourier spectrums
+//! supports 32FC2 matrixes only (interleaved format)
+CV_EXPORTS void mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB=false, Stream& stream = Stream::Null());
+
+//! Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
+//! Param dft_size is the size of DFT transform.
+//!
+//! If the source matrix is not continous, then additional copy will be done,
+//! so to avoid copying ensure the source matrix is continous one. If you want to use
+//! preallocated output ensure it is continuous too, otherwise it will be reallocated.
+//!
+//! Being implemented via CUFFT real-to-complex transform result contains only non-redundant values
+//! in CUFFT's format. Result as full complex matrix for such kind of transform cannot be retrieved.
+//!
+//! For complex-to-real transform it is assumed that the source matrix is packed in CUFFT's format.
+CV_EXPORTS void dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags=0, Stream& stream = Stream::Null());
+
+struct CV_EXPORTS ConvolveBuf
+{
+    Size result_size;
+    Size block_size;
+    Size user_block_size;
+    Size dft_size;
+    int spect_len;
+
+    GpuMat image_spect, templ_spect, result_spect;
+    GpuMat image_block, templ_block, result_data;
+
+    void create(Size image_size, Size templ_size);
+    static Size estimateBlockSize(Size result_size, Size templ_size);
+};
+
+
+//! computes convolution (or cross-correlation) of two images using discrete Fourier transform
+//! supports source images of 32FC1 type only
+//! result matrix will have 32FC1 type
+CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr = false);
+CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream = Stream::Null());
+
 }} // namespace cv { namespace gpu {
 
 #endif /* __OPENCV_GPUARITHM_HPP__ */

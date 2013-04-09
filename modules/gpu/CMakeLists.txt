@@ -48,12 +48,6 @@ ocv_set_module_sources(
 
 ocv_create_module(${cuda_link_libs})
 
-if(HAVE_CUDA)
-  if(HAVE_CUFFT)
-    CUDA_ADD_CUFFT_TO_TARGET(${the_module})
-  endif()
-endif()
-
 ocv_add_precompiled_headers(${the_module})
 
 ################################################################################################################
