@@ -63,7 +63,7 @@
  * NOT THREAD SAFE
  * \return Current CUDA stream
  */
-NCV_EXPORTS
+CV_EXPORTS
 cudaStream_t nppStGetActiveCUDAstream();
 
 
@@ -73,7 +73,7 @@ cudaStream_t nppStGetActiveCUDAstream();
  * \param cudaStream        [IN] cudaStream CUDA stream to become current
  * \return CUDA stream used before
  */
-NCV_EXPORTS
+CV_EXPORTS
 cudaStream_t nppStSetActiveCUDAstream(cudaStream_t cudaStream);
 
 
@@ -142,7 +142,7 @@ enum NppStInterpMode
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStGetInterpolationBufferSize(NcvSize32u srcSize,
                                            Ncv32u nStep,
                                            Ncv32u *hpSize);
@@ -155,7 +155,7 @@ NCVStatus nppiStGetInterpolationBufferSize(NcvSize32u srcSize,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStInterpolateFrames(const NppStInterpolationState *pState);
 
 
@@ -177,7 +177,7 @@ NCVStatus nppiStInterpolateFrames(const NppStInterpolationState *pState);
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStFilterRowBorder_32f_C1R(const Ncv32f *pSrc,
                                         NcvSize32u srcSize,
                                         Ncv32u nSrcStep,
@@ -210,7 +210,7 @@ NCVStatus nppiStFilterRowBorder_32f_C1R(const Ncv32f *pSrc,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStFilterColumnBorder_32f_C1R(const Ncv32f *pSrc,
                                            NcvSize32u srcSize,
                                            Ncv32u nSrcStep,
@@ -233,7 +233,7 @@ NCVStatus nppiStFilterColumnBorder_32f_C1R(const Ncv32f *pSrc,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStVectorWarpGetBufferSize(NcvSize32u srcSize,
                                         Ncv32u nSrcStep,
                                         Ncv32u *hpSize);
@@ -259,7 +259,7 @@ NCVStatus nppiStVectorWarpGetBufferSize(NcvSize32u srcSize,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStVectorWarp_PSF1x1_32f_C1(const Ncv32f *pSrc,
                                          NcvSize32u srcSize,
                                          Ncv32u nSrcStep,
@@ -290,7 +290,7 @@ NCVStatus nppiStVectorWarp_PSF1x1_32f_C1(const Ncv32f *pSrc,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStVectorWarp_PSF2x2_32f_C1(const Ncv32f *pSrc,
                                          NcvSize32u srcSize,
                                          Ncv32u nSrcStep,
@@ -320,7 +320,7 @@ NCVStatus nppiStVectorWarp_PSF2x2_32f_C1(const Ncv32f *pSrc,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStResize_32f_C1R(const Ncv32f *pSrc,
                                NcvSize32u srcSize,
                                Ncv32u nSrcStep,
@@ -347,7 +347,7 @@ NCVStatus nppiStResize_32f_C1R(const Ncv32f *pSrc,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStDecimate_32u_C1R(Ncv32u *d_src, Ncv32u srcStep,
                                  Ncv32u *d_dst, Ncv32u dstStep,
                                  NcvSize32u srcRoi, Ncv32u scale,
@@ -358,7 +358,7 @@ NCVStatus nppiStDecimate_32u_C1R(Ncv32u *d_src, Ncv32u srcStep,
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 32-bit signed pixels, single channel.
  * \see nppiStDecimate_32u_C1R
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStDecimate_32s_C1R(Ncv32s *d_src, Ncv32u srcStep,
                                  Ncv32s *d_dst, Ncv32u dstStep,
                                  NcvSize32u srcRoi, Ncv32u scale,
@@ -369,7 +369,7 @@ NCVStatus nppiStDecimate_32s_C1R(Ncv32s *d_src, Ncv32u srcStep,
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 32-bit float pixels, single channel.
  * \see nppiStDecimate_32u_C1R
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStDecimate_32f_C1R(Ncv32f *d_src, Ncv32u srcStep,
                                  Ncv32f *d_dst, Ncv32u dstStep,
                                  NcvSize32u srcRoi, Ncv32u scale,
@@ -380,7 +380,7 @@ NCVStatus nppiStDecimate_32f_C1R(Ncv32f *d_src, Ncv32u srcStep,
 * Downsamples (decimates) an image using the nearest neighbor algorithm. 64-bit unsigned pixels, single channel.
 * \see nppiStDecimate_32u_C1R
 */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStDecimate_64u_C1R(Ncv64u *d_src, Ncv32u srcStep,
                                  Ncv64u *d_dst, Ncv32u dstStep,
                                  NcvSize32u srcRoi, Ncv32u scale,
@@ -391,7 +391,7 @@ NCVStatus nppiStDecimate_64u_C1R(Ncv64u *d_src, Ncv32u srcStep,
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 64-bit signed pixels, single channel.
  * \see nppiStDecimate_32u_C1R
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStDecimate_64s_C1R(Ncv64s *d_src, Ncv32u srcStep,
                                  Ncv64s *d_dst, Ncv32u dstStep,
                                  NcvSize32u srcRoi, Ncv32u scale,
@@ -402,7 +402,7 @@ NCVStatus nppiStDecimate_64s_C1R(Ncv64s *d_src, Ncv32u srcStep,
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 64-bit float pixels, single channel.
  * \see nppiStDecimate_32u_C1R
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStDecimate_64f_C1R(Ncv64f *d_src, Ncv32u srcStep,
                                  Ncv64f *d_dst, Ncv32u dstStep,
                                  NcvSize32u srcRoi, Ncv32u scale,
@@ -421,7 +421,7 @@ NCVStatus nppiStDecimate_64f_C1R(Ncv64f *d_src, Ncv32u srcStep,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStDecimate_32u_C1R_host(Ncv32u *h_src, Ncv32u srcStep,
                                       Ncv32u *h_dst, Ncv32u dstStep,
                                       NcvSize32u srcRoi, Ncv32u scale);
@@ -431,7 +431,7 @@ NCVStatus nppiStDecimate_32u_C1R_host(Ncv32u *h_src, Ncv32u srcStep,
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 32-bit signed pixels, single channel. Host implementation.
  * \see nppiStDecimate_32u_C1R_host
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStDecimate_32s_C1R_host(Ncv32s *h_src, Ncv32u srcStep,
                                       Ncv32s *h_dst, Ncv32u dstStep,
                                       NcvSize32u srcRoi, Ncv32u scale);
@@ -441,7 +441,7 @@ NCVStatus nppiStDecimate_32s_C1R_host(Ncv32s *h_src, Ncv32u srcStep,
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 32-bit float pixels, single channel. Host implementation.
  * \see nppiStDecimate_32u_C1R_host
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStDecimate_32f_C1R_host(Ncv32f *h_src, Ncv32u srcStep,
                                       Ncv32f *h_dst, Ncv32u dstStep,
                                       NcvSize32u srcRoi, Ncv32u scale);
@@ -451,7 +451,7 @@ NCVStatus nppiStDecimate_32f_C1R_host(Ncv32f *h_src, Ncv32u srcStep,
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 64-bit unsigned pixels, single channel. Host implementation.
  * \see nppiStDecimate_32u_C1R_host
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStDecimate_64u_C1R_host(Ncv64u *h_src, Ncv32u srcStep,
                                       Ncv64u *h_dst, Ncv32u dstStep,
                                       NcvSize32u srcRoi, Ncv32u scale);
@@ -461,7 +461,7 @@ NCVStatus nppiStDecimate_64u_C1R_host(Ncv64u *h_src, Ncv32u srcStep,
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 64-bit signed pixels, single channel. Host implementation.
  * \see nppiStDecimate_32u_C1R_host
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStDecimate_64s_C1R_host(Ncv64s *h_src, Ncv32u srcStep,
                                       Ncv64s *h_dst, Ncv32u dstStep,
                                       NcvSize32u srcRoi, Ncv32u scale);
@@ -471,7 +471,7 @@ NCVStatus nppiStDecimate_64s_C1R_host(Ncv64s *h_src, Ncv32u srcStep,
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 64-bit float pixels, single channel. Host implementation.
  * \see nppiStDecimate_32u_C1R_host
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStDecimate_64f_C1R_host(Ncv64f *h_src, Ncv32u srcStep,
                                       Ncv64f *h_dst, Ncv32u dstStep,
                                       NcvSize32u srcRoi, Ncv32u scale);
@@ -493,7 +493,7 @@ NCVStatus nppiStDecimate_64f_C1R_host(Ncv64f *h_src, Ncv32u srcStep,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStRectStdDev_32f_C1R(Ncv32u *d_sum, Ncv32u sumStep,
                                    Ncv64u *d_sqsum, Ncv32u sqsumStep,
                                    Ncv32f *d_norm, Ncv32u normStep,
@@ -516,7 +516,7 @@ NCVStatus nppiStRectStdDev_32f_C1R(Ncv32u *d_sum, Ncv32u sumStep,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStRectStdDev_32f_C1R_host(Ncv32u *h_sum, Ncv32u sumStep,
                                         Ncv64u *h_sqsum, Ncv32u sqsumStep,
                                         Ncv32f *h_norm, Ncv32u normStep,
@@ -535,7 +535,7 @@ NCVStatus nppiStRectStdDev_32f_C1R_host(Ncv32u *h_sum, Ncv32u sumStep,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStTranspose_32u_C1R(Ncv32u *d_src, Ncv32u srcStride,
                                   Ncv32u *d_dst, Ncv32u dstStride, NcvSize32u srcRoi);
 
@@ -544,7 +544,7 @@ NCVStatus nppiStTranspose_32u_C1R(Ncv32u *d_src, Ncv32u srcStride,
  * Transposes an image. 32-bit signed pixels, single channel
  * \see nppiStTranspose_32u_C1R
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStTranspose_32s_C1R(Ncv32s *d_src, Ncv32u srcStride,
                                   Ncv32s *d_dst, Ncv32u dstStride, NcvSize32u srcRoi);
 
@@ -553,7 +553,7 @@ NCVStatus nppiStTranspose_32s_C1R(Ncv32s *d_src, Ncv32u srcStride,
  * Transposes an image. 32-bit float pixels, single channel
  * \see nppiStTranspose_32u_C1R
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStTranspose_32f_C1R(Ncv32f *d_src, Ncv32u srcStride,
                                   Ncv32f *d_dst, Ncv32u dstStride, NcvSize32u srcRoi);
 
@@ -562,7 +562,7 @@ NCVStatus nppiStTranspose_32f_C1R(Ncv32f *d_src, Ncv32u srcStride,
  * Transposes an image. 64-bit unsigned pixels, single channel
  * \see nppiStTranspose_32u_C1R
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStTranspose_64u_C1R(Ncv64u *d_src, Ncv32u srcStride,
                                   Ncv64u *d_dst, Ncv32u dstStride, NcvSize32u srcRoi);
 
@@ -571,7 +571,7 @@ NCVStatus nppiStTranspose_64u_C1R(Ncv64u *d_src, Ncv32u srcStride,
  * Transposes an image. 64-bit signed pixels, single channel
  * \see nppiStTranspose_32u_C1R
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStTranspose_64s_C1R(Ncv64s *d_src, Ncv32u srcStride,
                                   Ncv64s *d_dst, Ncv32u dstStride, NcvSize32u srcRoi);
 
@@ -580,7 +580,7 @@ NCVStatus nppiStTranspose_64s_C1R(Ncv64s *d_src, Ncv32u srcStride,
  * Transposes an image. 64-bit float pixels, single channel
  * \see nppiStTranspose_32u_C1R
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStTranspose_64f_C1R(Ncv64f *d_src, Ncv32u srcStride,
                                   Ncv64f *d_dst, Ncv32u dstStride, NcvSize32u srcRoi);
 
@@ -589,7 +589,7 @@ NCVStatus nppiStTranspose_64f_C1R(Ncv64f *d_src, Ncv32u srcStride,
  * Transposes an image. 128-bit pixels of any type, single channel
  * \see nppiStTranspose_32u_C1R
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStTranspose_128_C1R(void *d_src, Ncv32u srcStep,
                                   void *d_dst, Ncv32u dstStep, NcvSize32u srcRoi);
 
@@ -605,7 +605,7 @@ NCVStatus nppiStTranspose_128_C1R(void *d_src, Ncv32u srcStep,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStTranspose_32u_C1R_host(Ncv32u *h_src, Ncv32u srcStride,
                                        Ncv32u *h_dst, Ncv32u dstStride, NcvSize32u srcRoi);
 
@@ -614,7 +614,7 @@ NCVStatus nppiStTranspose_32u_C1R_host(Ncv32u *h_src, Ncv32u srcStride,
  * Transposes an image. 32-bit signed pixels, single channel. Host implementation
  * \see nppiStTranspose_32u_C1R_host
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStTranspose_32s_C1R_host(Ncv32s *h_src, Ncv32u srcStride,
                                        Ncv32s *h_dst, Ncv32u dstStride, NcvSize32u srcRoi);
 
@@ -623,7 +623,7 @@ NCVStatus nppiStTranspose_32s_C1R_host(Ncv32s *h_src, Ncv32u srcStride,
  * Transposes an image. 32-bit float pixels, single channel. Host implementation
  * \see nppiStTranspose_32u_C1R_host
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStTranspose_32f_C1R_host(Ncv32f *h_src, Ncv32u srcStride,
                                        Ncv32f *h_dst, Ncv32u dstStride, NcvSize32u srcRoi);
 
@@ -632,7 +632,7 @@ NCVStatus nppiStTranspose_32f_C1R_host(Ncv32f *h_src, Ncv32u srcStride,
  * Transposes an image. 64-bit unsigned pixels, single channel. Host implementation
  * \see nppiStTranspose_32u_C1R_host
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStTranspose_64u_C1R_host(Ncv64u *h_src, Ncv32u srcStride,
                                        Ncv64u *h_dst, Ncv32u dstStride, NcvSize32u srcRoi);
 
@@ -641,7 +641,7 @@ NCVStatus nppiStTranspose_64u_C1R_host(Ncv64u *h_src, Ncv32u srcStride,
  * Transposes an image. 64-bit signed pixels, single channel. Host implementation
  * \see nppiStTranspose_32u_C1R_host
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStTranspose_64s_C1R_host(Ncv64s *h_src, Ncv32u srcStride,
                                        Ncv64s *h_dst, Ncv32u dstStride, NcvSize32u srcRoi);
 
@@ -650,7 +650,7 @@ NCVStatus nppiStTranspose_64s_C1R_host(Ncv64s *h_src, Ncv32u srcStride,
  * Transposes an image. 64-bit float pixels, single channel. Host implementation
  * \see nppiStTranspose_32u_C1R_host
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStTranspose_64f_C1R_host(Ncv64f *h_src, Ncv32u srcStride,
                                        Ncv64f *h_dst, Ncv32u dstStride, NcvSize32u srcRoi);
 
@@ -659,7 +659,7 @@ NCVStatus nppiStTranspose_64f_C1R_host(Ncv64f *h_src, Ncv32u srcStride,
  * Transposes an image. 128-bit pixels of any type, single channel. Host implementation
  * \see nppiStTranspose_32u_C1R_host
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStTranspose_128_C1R_host(void *d_src, Ncv32u srcStep,
                                        void *d_dst, Ncv32u dstStep, NcvSize32u srcRoi);
 
@@ -673,7 +673,7 @@ NCVStatus nppiStTranspose_128_C1R_host(void *d_src, Ncv32u srcStep,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStIntegralGetSize_8u32u(NcvSize32u roiSize, Ncv32u *pBufsize, cudaDeviceProp &devProp);
 
 
@@ -681,7 +681,7 @@ NCVStatus nppiStIntegralGetSize_8u32u(NcvSize32u roiSize, Ncv32u *pBufsize, cuda
  * Calculates the size of the temporary buffer for integral image creation
  * \see nppiStIntegralGetSize_8u32u
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStIntegralGetSize_32f32f(NcvSize32u roiSize, Ncv32u *pBufsize, cudaDeviceProp &devProp);
 
 
@@ -699,7 +699,7 @@ NCVStatus nppiStIntegralGetSize_32f32f(NcvSize32u roiSize, Ncv32u *pBufsize, cud
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStIntegral_8u32u_C1R(Ncv8u *d_src, Ncv32u srcStep,
                                    Ncv32u *d_dst, Ncv32u dstStep, NcvSize32u roiSize,
                                    Ncv8u *pBuffer, Ncv32u bufSize, cudaDeviceProp &devProp);
@@ -709,7 +709,7 @@ NCVStatus nppiStIntegral_8u32u_C1R(Ncv8u *d_src, Ncv32u srcStep,
  * Creates an integral image representation for the input image
  * \see nppiStIntegral_8u32u_C1R
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStIntegral_32f32f_C1R(Ncv32f *d_src, Ncv32u srcStep,
                                     Ncv32f *d_dst, Ncv32u dstStep, NcvSize32u roiSize,
                                     Ncv8u *pBuffer, Ncv32u bufSize, cudaDeviceProp &devProp);
@@ -726,7 +726,7 @@ NCVStatus nppiStIntegral_32f32f_C1R(Ncv32f *d_src, Ncv32u srcStep,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStIntegral_8u32u_C1R_host(Ncv8u *h_src, Ncv32u srcStep,
                                         Ncv32u *h_dst, Ncv32u dstStep, NcvSize32u roiSize);
 
@@ -735,7 +735,7 @@ NCVStatus nppiStIntegral_8u32u_C1R_host(Ncv8u *h_src, Ncv32u srcStep,
  * Creates an integral image representation for the input image. Host implementation
  * \see nppiStIntegral_8u32u_C1R_host
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStIntegral_32f32f_C1R_host(Ncv32f *h_src, Ncv32u srcStep,
                                          Ncv32f *h_dst, Ncv32u dstStep, NcvSize32u roiSize);
 
@@ -749,7 +749,7 @@ NCVStatus nppiStIntegral_32f32f_C1R_host(Ncv32f *h_src, Ncv32u srcStep,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStSqrIntegralGetSize_8u64u(NcvSize32u roiSize, Ncv32u *pBufsize, cudaDeviceProp &devProp);
 
 
@@ -767,7 +767,7 @@ NCVStatus nppiStSqrIntegralGetSize_8u64u(NcvSize32u roiSize, Ncv32u *pBufsize, c
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStSqrIntegral_8u64u_C1R(Ncv8u *d_src, Ncv32u srcStep,
                                       Ncv64u *d_dst, Ncv32u dstStep, NcvSize32u roiSize,
                                       Ncv8u *pBuffer, Ncv32u bufSize, cudaDeviceProp &devProp);
@@ -784,7 +784,7 @@ NCVStatus nppiStSqrIntegral_8u64u_C1R(Ncv8u *d_src, Ncv32u srcStep,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppiStSqrIntegral_8u64u_C1R_host(Ncv8u *h_src, Ncv32u srcStep,
                                            Ncv64u *h_dst, Ncv32u dstStep, NcvSize32u roiSize);
 
@@ -806,7 +806,7 @@ NCVStatus nppiStSqrIntegral_8u64u_C1R_host(Ncv8u *h_src, Ncv32u srcStep,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppsStCompactGetSize_32u(Ncv32u srcLen, Ncv32u *pBufsize, cudaDeviceProp &devProp);
 
 
@@ -838,7 +838,7 @@ NCVStatus nppsStCompactGetSize_32f(Ncv32u srcLen, Ncv32u *pBufsize, cudaDevicePr
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppsStCompact_32u(Ncv32u *d_src, Ncv32u srcLen,
                             Ncv32u *d_dst, Ncv32u *p_dstLen,
                             Ncv32u elemRemove, Ncv8u *pBuffer,
@@ -849,7 +849,7 @@ NCVStatus nppsStCompact_32u(Ncv32u *d_src, Ncv32u srcLen,
  * Compacts the input vector by removing elements of specified value. 32-bit signed values
  * \see nppsStCompact_32u
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppsStCompact_32s(Ncv32s *d_src, Ncv32u srcLen,
                             Ncv32s *d_dst, Ncv32u *p_dstLen,
                             Ncv32s elemRemove, Ncv8u *pBuffer,
@@ -860,7 +860,7 @@ NCVStatus nppsStCompact_32s(Ncv32s *d_src, Ncv32u srcLen,
  * Compacts the input vector by removing elements of specified value. 32-bit float values
  * \see nppsStCompact_32u
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppsStCompact_32f(Ncv32f *d_src, Ncv32u srcLen,
                             Ncv32f *d_dst, Ncv32u *p_dstLen,
                             Ncv32f elemRemove, Ncv8u *pBuffer,
@@ -878,7 +878,7 @@ NCVStatus nppsStCompact_32f(Ncv32f *d_src, Ncv32u srcLen,
  *
  * \return NCV status code
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppsStCompact_32u_host(Ncv32u *h_src, Ncv32u srcLen,
                                  Ncv32u *h_dst, Ncv32u *dstLen, Ncv32u elemRemove);
 
@@ -887,7 +887,7 @@ NCVStatus nppsStCompact_32u_host(Ncv32u *h_src, Ncv32u srcLen,
  * Compacts the input vector by removing elements of specified value. 32-bit signed values. Host implementation
  * \see nppsStCompact_32u_host
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppsStCompact_32s_host(Ncv32s *h_src, Ncv32u srcLen,
                                  Ncv32s *h_dst, Ncv32u *dstLen, Ncv32s elemRemove);
 
@@ -896,7 +896,7 @@ NCVStatus nppsStCompact_32s_host(Ncv32s *h_src, Ncv32u srcLen,
  * Compacts the input vector by removing elements of specified value. 32-bit float values. Host implementation
  * \see nppsStCompact_32u_host
  */
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus nppsStCompact_32f_host(Ncv32f *h_src, Ncv32u srcLen,
                                  Ncv32f *h_dst, Ncv32u *dstLen, Ncv32f elemRemove);
 

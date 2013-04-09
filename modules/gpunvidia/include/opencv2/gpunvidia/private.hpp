@@ -75,7 +75,7 @@ namespace cv { namespace gpu
         cudaStream_t oldStream;
     };
 
-    NCV_EXPORTS cv::String getNcvErrorMessage(int code);
+    CV_EXPORTS cv::String getNcvErrorMessage(int code);
 
     static inline void checkNcvError(int err, const char* file, const int line, const char* func)
     {
