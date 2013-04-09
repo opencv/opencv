@@ -92,7 +92,7 @@ struct NCVBroxOpticalFlowDescriptor
 /// \return                        computation status
 /////////////////////////////////////////////////////////////////////////////////////////
 
-NCV_EXPORTS
+CV_EXPORTS
 NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
                              INCVMemAllocator &gpu_mem_allocator,
                              const NCVMatrix<Ncv32f> &frame0,

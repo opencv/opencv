@@ -43,11 +43,7 @@
 #ifndef _ncv_hpp_
 #define _ncv_hpp_
 
-#if (defined WIN32 || defined _WIN32 || defined WINCE) && defined CVAPI_EXPORTS
-    #define NCV_EXPORTS __declspec(dllexport)
-#else
-    #define NCV_EXPORTS
-#endif
+#include "opencv2/core/cvdef.h"
 
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
@@ -244,13 +240,13 @@ const Ncv32u K_LOG2_WARP_SIZE = 5;
 //==============================================================================
 
 
-NCV_EXPORTS void ncvDebugOutput(const cv::String &msg);
+CV_EXPORTS void ncvDebugOutput(const cv::String &msg);
 
 
 typedef void NCVDebugOutputHandler(const cv::String &msg);
 
 
-NCV_EXPORTS void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);
+CV_EXPORTS void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);
 
 
 #define ncvAssertPrintCheck(pred, msg) \
@@ -401,11 +397,11 @@ typedef Ncv32u NCVStatus;
 
 typedef struct _NcvTimer *NcvTimer;
 
-NCV_EXPORTS NcvTimer ncvStartTimer(void);
+CV_EXPORTS NcvTimer ncvStartTimer(void);
 
-NCV_EXPORTS double ncvEndQueryTimerUs(NcvTimer t);
+CV_EXPORTS double ncvEndQueryTimerUs(NcvTimer t);
 
-NCV_EXPORTS double ncvEndQueryTimerMs(NcvTimer t);
+CV_EXPORTS double ncvEndQueryTimerMs(NcvTimer t);
 
 
 //==============================================================================
@@ -418,7 +414,7 @@ NCV_EXPORTS double ncvEndQueryTimerMs(NcvTimer t);
 /**
 * Calculates the aligned top bound value
 */
-NCV_EXPORTS Ncv32u alignUp(Ncv32u what, Ncv32u alignment);
+CV_EXPORTS Ncv32u alignUp(Ncv32u what, Ncv32u alignment);
 
 
 /**
@@ -436,7 +432,7 @@ enum NCVMemoryType
 /**
 * NCVMemPtr
 */
-struct NCV_EXPORTS NCVMemPtr
+struct CV_EXPORTS NCVMemPtr
 {
     void *ptr;
     NCVMemoryType memtype;
@@ -447,7 +443,7 @@ struct NCV_EXPORTS NCVMemPtr
 /**
 * NCVMemSegment
 */
-struct NCV_EXPORTS NCVMemSegment
+struct CV_EXPORTS NCVMemSegment
 {
     NCVMemPtr begin;
     size_t size;
@@ -458,7 +454,7 @@ struct NCV_EXPORTS NCVMemSegment
 /**
 * INCVMemAllocator (Interface)
 */
-class NCV_EXPORTS INCVMemAllocator
+class CV_EXPORTS INCVMemAllocator
 {
 public:
     virtual ~INCVMemAllocator() = 0;
@@ -480,7 +476,7 @@ inline INCVMemAllocator::~INCVMemAllocator() {}
 /**
 * NCVMemStackAllocator
 */
-class NCV_EXPORTS NCVMemStackAllocator : public INCVMemAllocator
+class CV_EXPORTS NCVMemStackAllocator : public INCVMemAllocator
 {
     NCVMemStackAllocator();
     NCVMemStackAllocator(const NCVMemStackAllocator &);
@@ -517,7 +513,7 @@ private:
 /**
 * NCVMemNativeAllocator
 */
-class NCV_EXPORTS NCVMemNativeAllocator : public INCVMemAllocator
+class CV_EXPORTS NCVMemNativeAllocator : public INCVMemAllocator
 {
 public:
 
@@ -549,12 +545,12 @@ private:
 /**
 * Copy dispatchers
 */
-NCV_EXPORTS NCVStatus memSegCopyHelper(void *dst, NCVMemoryType dstType,
+CV_EXPORTS NCVStatus memSegCopyHelper(void *dst, NCVMemoryType dstType,
                                        const void *src, NCVMemoryType srcType,
                                        size_t sz, cudaStream_t cuStream);
 
 
-NCV_EXPORTS NCVStatus memSegCopyHelper2D(void *dst, Ncv32u dstPitch, NCVMemoryType dstType,
+CV_EXPORTS NCVStatus memSegCopyHelper2D(void *dst, Ncv32u dstPitch, NCVMemoryType dstType,
                                          const void *src, Ncv32u srcPitch, NCVMemoryType srcType,
                                          Ncv32u widthbytes, Ncv32u height, cudaStream_t cuStream);
 
@@ -990,23 +986,23 @@ private:
 /**
 * Operations with rectangles
 */
-NCV_EXPORTS NCVStatus ncvGroupRectangles_host(NCVVector<NcvRect32u> &hypotheses, Ncv32u &numHypotheses,
+CV_EXPORTS NCVStatus ncvGroupRectangles_host(NCVVector<NcvRect32u> &hypotheses, Ncv32u &numHypotheses,
                                               Ncv32u minNeighbors, Ncv32f intersectEps, NCVVector<Ncv32u> *hypothesesWeights);
 
 
-NCV_EXPORTS NCVStatus ncvDrawRects_8u_host(Ncv8u *h_dst, Ncv32u dstStride, Ncv32u dstWidth, Ncv32u dstHeight,
+CV_EXPORTS NCVStatus ncvDrawRects_8u_host(Ncv8u *h_dst, Ncv32u dstStride, Ncv32u dstWidth, Ncv32u dstHeight,
                                            NcvRect32u *h_rects, Ncv32u numRects, Ncv8u color);
 
 
-NCV_EXPORTS NCVStatus ncvDrawRects_32u_host(Ncv32u *h_dst, Ncv32u dstStride, Ncv32u dstWidth, Ncv32u dstHeight,
+CV_EXPORTS NCVStatus ncvDrawRects_32u_host(Ncv32u *h_dst, Ncv32u dstStride, Ncv32u dstWidth, Ncv32u dstHeight,
                                             NcvRect32u *h_rects, Ncv32u numRects, Ncv32u color);
 
 
-NCV_EXPORTS NCVStatus ncvDrawRects_8u_device(Ncv8u *d_dst, Ncv32u dstStride, Ncv32u dstWidth, Ncv32u dstHeight,
+CV_EXPORTS NCVStatus ncvDrawRects_8u_device(Ncv8u *d_dst, Ncv32u dstStride, Ncv32u dstWidth, Ncv32u dstHeight,
                                              NcvRect32u *d_rects, Ncv32u numRects, Ncv8u color, cudaStream_t cuStream);
 
 
-NCV_EXPORTS NCVStatus ncvDrawRects_32u_device(Ncv32u *d_dst, Ncv32u dstStride, Ncv32u dstWidth, Ncv32u dstHeight,
+CV_EXPORTS NCVStatus ncvDrawRects_32u_device(Ncv32u *d_dst, Ncv32u dstStride, Ncv32u dstWidth, Ncv32u dstHeight,
                                               NcvRect32u *d_rects, Ncv32u numRects, Ncv32u color, cudaStream_t cuStream);
 
 

@@ -755,13 +755,6 @@ static void groupRectangles(std::vector<NcvRect32u> &hypotheses, int groupThresh
 }
 
 
-//===================================================================
-//
-// Operations with rectangles
-//
-//===================================================================
-
-
 
 NCVStatus ncvGroupRectangles_host(NCVVector<NcvRect32u> &hypotheses,
                                   Ncv32u &numHypotheses,

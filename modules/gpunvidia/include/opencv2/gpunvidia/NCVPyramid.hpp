@@ -50,7 +50,7 @@
 #if 0 //def _WIN32
 
 template <class T>
-class NCV_EXPORTS NCVMatrixStack
+class CV_EXPORTS NCVMatrixStack
 {
 public:
     NCVMatrixStack() {this->_arr.clear();}
@@ -71,7 +71,7 @@ private:
 
 
 template <class T>
-class NCV_EXPORTS NCVImagePyramid
+class CV_EXPORTS NCVImagePyramid
 {
 public:
 
