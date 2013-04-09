@@ -74,58 +74,6 @@ namespace
     }
 
     //////////////////////////////////////////////////////////////////////////
-    // NCV errors
-
-    const ErrorEntry ncv_errors [] =
-    {
-        error_entry( NCV_SUCCESS ),
-        error_entry( NCV_UNKNOWN_ERROR ),
-        error_entry( NCV_CUDA_ERROR ),
-        error_entry( NCV_NPP_ERROR ),
-        error_entry( NCV_FILE_ERROR ),
-        error_entry( NCV_NULL_PTR ),
-        error_entry( NCV_INCONSISTENT_INPUT ),
-        error_entry( NCV_TEXTURE_BIND_ERROR ),
-        error_entry( NCV_DIMENSIONS_INVALID ),
-        error_entry( NCV_INVALID_ROI ),
-        error_entry( NCV_INVALID_STEP ),
-        error_entry( NCV_INVALID_SCALE ),
-        error_entry( NCV_INVALID_SCALE ),
-        error_entry( NCV_ALLOCATOR_NOT_INITIALIZED ),
-        error_entry( NCV_ALLOCATOR_BAD_ALLOC ),
-        error_entry( NCV_ALLOCATOR_BAD_DEALLOC ),
-        error_entry( NCV_ALLOCATOR_INSUFFICIENT_CAPACITY ),
-        error_entry( NCV_ALLOCATOR_DEALLOC_ORDER ),
-        error_entry( NCV_ALLOCATOR_BAD_REUSE ),
-        error_entry( NCV_MEM_COPY_ERROR ),
-        error_entry( NCV_MEM_RESIDENCE_ERROR ),
-        error_entry( NCV_MEM_INSUFFICIENT_CAPACITY ),
-        error_entry( NCV_HAAR_INVALID_PIXEL_STEP ),
-        error_entry( NCV_HAAR_TOO_MANY_FEATURES_IN_CLASSIFIER ),
-        error_entry( NCV_HAAR_TOO_MANY_FEATURES_IN_CASCADE ),
-        error_entry( NCV_HAAR_TOO_LARGE_FEATURES ),
-        error_entry( NCV_HAAR_XML_LOADING_EXCEPTION ),
-        error_entry( NCV_NOIMPL_HAAR_TILTED_FEATURES ),
-        error_entry( NCV_WARNING_HAAR_DETECTIONS_VECTOR_OVERFLOW ),
-        error_entry( NPPST_SUCCESS ),
-        error_entry( NPPST_ERROR ),
-        error_entry( NPPST_CUDA_KERNEL_EXECUTION_ERROR ),
-        error_entry( NPPST_NULL_POINTER_ERROR ),
-        error_entry( NPPST_TEXTURE_BIND_ERROR ),
-        error_entry( NPPST_MEMCPY_ERROR ),
-        error_entry( NPPST_MEM_ALLOC_ERR ),
-        error_entry( NPPST_MEMFREE_ERR ),
-        error_entry( NPPST_INVALID_ROI ),
-        error_entry( NPPST_INVALID_STEP ),
-        error_entry( NPPST_INVALID_SCALE ),
-        error_entry( NPPST_MEM_INSUFFICIENT_BUFFER ),
-        error_entry( NPPST_MEM_RESIDENCE_ERROR ),
-        error_entry( NPPST_MEM_INTERNAL_ERROR )
-    };
-
-    const size_t ncv_error_num = sizeof(ncv_errors) / sizeof(ncv_errors[0]);
-
-    //////////////////////////////////////////////////////////////////////////
     // CUFFT errors
 
     const ErrorEntry cufft_errors[] =
@@ -148,12 +96,6 @@ namespace cv
 {
     namespace gpu
     {
-        void ncvError(int code, const char* file, const int line, const char* func)
-        {
-            String msg = getErrorString(code, ncv_errors, ncv_error_num);
-            cv::error(cv::Error::GpuApiCallError, msg, func, file, line);
-        }
-
         void cufftError(int code, const char* file, const int line, const char* func)
         {
             String msg = getErrorString(code, cufft_errors, cufft_error_num);
