@@ -1334,19 +1334,19 @@ Ptr<GeneralizedHough_GPU> cv::gpu::GeneralizedHough_GPU::create(int method)
 {
     switch (method)
     {
-    case GHT_POSITION:
+    case cv::GeneralizedHough::GHT_POSITION:
         CV_Assert( !GHT_Ballard_Pos_info_auto.name().empty() );
         return new GHT_Ballard_Pos();
 
-    case (GHT_POSITION | GHT_SCALE):
+    case (cv::GeneralizedHough::GHT_POSITION | cv::GeneralizedHough::GHT_SCALE):
         CV_Assert( !GHT_Ballard_PosScale_info_auto.name().empty() );
         return new GHT_Ballard_PosScale();
 
-    case (GHT_POSITION | GHT_ROTATION):
+    case (cv::GeneralizedHough::GHT_POSITION | cv::GeneralizedHough::GHT_ROTATION):
         CV_Assert( !GHT_Ballard_PosRotation_info_auto.name().empty() );
         return new GHT_Ballard_PosRotation();
 
-    case (GHT_POSITION | GHT_SCALE | GHT_ROTATION):
+    case (cv::GeneralizedHough::GHT_POSITION | cv::GeneralizedHough::GHT_SCALE | cv::GeneralizedHough::GHT_ROTATION):
         CV_Assert( !GHT_Guil_Full_info_auto.name().empty() );
         return new GHT_Guil_Full();
     }

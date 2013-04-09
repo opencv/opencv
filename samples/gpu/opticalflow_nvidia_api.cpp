@@ -13,6 +13,7 @@
 #include <iomanip>
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui/highgui_c.h"
 
 #ifdef HAVE_CUDA
 #include "NPP_staging/NPP_staging.hpp"

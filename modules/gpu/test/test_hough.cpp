@@ -214,7 +214,7 @@ GPU_TEST_P(GeneralizedHough, POSITION)
         templ.copyTo(imageROI);
     }
 
-    cv::Ptr<cv::gpu::GeneralizedHough_GPU> hough = cv::gpu::GeneralizedHough_GPU::create(cv::GHT_POSITION);
+    cv::Ptr<cv::gpu::GeneralizedHough_GPU> hough = cv::gpu::GeneralizedHough_GPU::create(cv::GeneralizedHough::GHT_POSITION);
     hough->set("votesThreshold", 200);
 
     hough->setTemplate(loadMat(templ, useRoi));
