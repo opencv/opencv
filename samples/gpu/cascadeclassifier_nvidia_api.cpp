@@ -27,7 +27,7 @@ int main( int, const char** )
 
 
 const Size2i preferredVideoFrameSize(640, 480);
-const string wndTitle = "NVIDIA Computer Vision :: Haar Classifiers Cascade";
+const cv::String wndTitle = "NVIDIA Computer Vision :: Haar Classifiers Cascade";
 
 
 static void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const string &ss)
@@ -286,7 +286,7 @@ int main(int argc, const char** argv)
     do
     {
         Mat gray;
-        cvtColor((image.empty() ? frame : image), gray, CV_BGR2GRAY);
+        cvtColor((image.empty() ? frame : image), gray, cv::COLOR_BGR2GRAY);
 
         //
         // process
@@ -334,12 +334,12 @@ int main(int argc, const char** argv)
 
         avgTime = (Ncv32f)ncvEndQueryTimerMs(timer);
 
-        cvtColor(gray, frameDisp, CV_GRAY2BGR);
+        cvtColor(gray, frameDisp, cv::COLOR_GRAY2BGR);
         displayState(frameDisp, bHelpScreen, bUseGPU, bLargestObject, bFilterRects, 1000.0f / avgTime);
         imshow(wndTitle, frameDisp);
 
         //handle input
-        switch (cvWaitKey(3))
+        switch (cv::waitKey(3))
         {
         case ' ':
             bUseGPU = !bUseGPU;
@@ -372,7 +372,7 @@ int main(int argc, const char** argv)
         }
     } while (!bQuit);
 
-    cvDestroyWindow(wndTitle.c_str());
+    cv::destroyWindow(wndTitle);
 
     return 0;
 }
