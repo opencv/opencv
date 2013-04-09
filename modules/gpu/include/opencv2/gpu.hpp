@@ -168,10 +168,6 @@ CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K
 CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0,
                        int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
 
-//! copies 2D array to a larger destination array and pads borders with user-specifiable constant
-CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType,
-                               const Scalar& value = Scalar(), Stream& stream = Stream::Null());
-
 //! computes the integral image
 //! sum will have CV_32S type, but will contain unsigned int values
 //! supports only CV_8UC1 source type

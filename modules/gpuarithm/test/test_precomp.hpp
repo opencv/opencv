@@ -57,4 +57,10 @@
 #include "opencv2/core.hpp"
 #include "opencv2/gpuarithm.hpp"
 
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_IMGPROC
+#  include "opencv2/imgproc.hpp"
+#endif
+
 #endif
