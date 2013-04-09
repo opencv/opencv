@@ -283,6 +283,18 @@ CV_EXPORTS void rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, co
 CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType,
                                const Scalar& value = Scalar(), Stream& stream = Stream::Null());
 
+//! computes the integral image
+//! sum will have CV_32S type, but will contain unsigned int values
+//! supports only CV_8UC1 source type
+CV_EXPORTS void integral(const GpuMat& src, GpuMat& sum, Stream& stream = Stream::Null());
+//! buffered version
+CV_EXPORTS void integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, Stream& stream = Stream::Null());
+
+//! computes squared integral image
+//! result matrix will have 64F type, but will contain 64U values
+//! supports source images of 8UC1 type only
+CV_EXPORTS void sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& stream = Stream::Null());
+
 }} // namespace cv { namespace gpu {
 
 #endif /* __OPENCV_GPUARITHM_HPP__ */
