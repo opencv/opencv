@@ -109,17 +109,52 @@ Returns void
 
 The function calculates the Laplacian of the source image by adding up the second x and y derivatives calculated using the Sobel operator.
 
+ocl::ConvolveBuf
+----------------
+.. ocv:struct:: ocl::ConvolveBuf
+
+Class providing a memory buffer for :ocv:func:`ocl::convolve` function, plus it allows to adjust some specific parameters. ::
+
+    struct CV_EXPORTS ConvolveBuf
+    {
+        Size result_size;
+        Size block_size;
+        Size user_block_size;
+        Size dft_size;
+        int spect_len;
+
+        oclMat image_spect, templ_spect, result_spect;
+        oclMat image_block, templ_block, result_data;
+
+        void create(Size image_size, Size templ_size);
+        static Size estimateBlockSize(Size result_size, Size templ_size);
+    };
+
+You can use field `user_block_size` to set specific block size for :ocv:func:`ocl::convolve` function. If you leave its default value `Size(0,0)` then automatic estimation of block size will be used (which is optimized for speed). By varying `user_block_size` you can reduce memory requirements at the cost of speed.
+
+ocl::ConvolveBuf::create
+------------------------
+.. ocv:function:: ocl::ConvolveBuf::create(Size image_size, Size templ_size)
+
+Constructs a buffer for :ocv:func:`ocl::convolve` function with respective arguments.
+
 ocl::convolve
 ------------------
 Returns void
 
-.. ocv:function:: void ocl::convolve(const oclMat &image, const oclMat &temp1, oclMat &result)
+.. ocv:function:: void ocl::convolve(const oclMat &image, const oclMat &temp1, oclMat &result, bool ccorr=false)
 
-    :param image: The source image
+.. ocv:function:: void ocl::convolve(const oclMat &image, const oclMat &temp1, oclMat &result, bool ccorr, ConvolveBuf& buf)
 
-    :param temp1: Convolution kernel, a single-channel floating point matrix.
+    :param image: The source image. Only  ``CV_32FC1`` images are supported for now.
+
+    :param temp1: Convolution kernel, a single-channel floating point matrix. The size is not greater than the  ``image`` size. The type is the same as  ``image``.
 
     :param result: The destination image
+    
+    :param ccorr: Flags to evaluate cross-correlation instead of convolution.
+    
+    :param buf: Optional buffer to avoid extra memory allocations and to adjust some specific parameters. See :ocv:struct:`ocl::ConvolveBuf`.
 
 Convolves an image with the kernel. Supports only CV_32FC1 data types and do not support ROI.
 
