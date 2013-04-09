@@ -67,7 +67,7 @@ GPU_TEST_P(HistEven, Accuracy)
     ASSERT_FALSE(img.empty());
 
     cv::Mat hsv;
-    cv::cvtColor(img, hsv, CV_BGR2HSV);
+    cv::cvtColor(img, hsv, cv::COLOR_BGR2HSV);
 
     int hbins = 30;
     float hranges[] = {0.0f, 180.0f};
@@ -268,7 +268,7 @@ GPU_TEST_P(Canny, Accuracy)
         }
         catch (const cv::Exception& e)
         {
-            ASSERT_EQ(CV_StsNotImplemented, e.code);
+            ASSERT_EQ(cv::Error::StsNotImplemented, e.code);
         }
     }
     else
@@ -332,7 +332,7 @@ GPU_TEST_P(MeanShift, Filtering)
     cv::Mat dst(d_dst);
 
     cv::Mat result;
-    cv::cvtColor(dst, result, CV_BGRA2BGR);
+    cv::cvtColor(dst, result, cv::COLOR_BGRA2BGR);
 
     EXPECT_MAT_NEAR(img_template, result, 0.0);
 }
@@ -405,7 +405,7 @@ GPU_TEST_P(MeanShiftSegmentation, Regression)
     cv::gpu::meanShiftSegmentation(loadMat(img), dst, 10, 10, minsize);
 
     cv::Mat dst_rgb;
-    cv::cvtColor(dst, dst_rgb, CV_BGRA2BGR);
+    cv::cvtColor(dst, dst_rgb, cv::COLOR_BGRA2BGR);
 
     EXPECT_MAT_SIMILAR(dst_gold, dst_rgb, 1e-3);
 }
@@ -658,7 +658,7 @@ GPU_TEST_P(MatchTemplate_CCOEF_NORMED, Accuracy)
     ASSERT_FALSE(pattern.empty());
 
     cv::gpu::GpuMat d_dst;
-    cv::gpu::matchTemplate(loadMat(image), loadMat(pattern), d_dst, CV_TM_CCOEFF_NORMED);
+    cv::gpu::matchTemplate(loadMat(image), loadMat(pattern), d_dst, cv::TM_CCOEFF_NORMED);
 
     cv::Mat dst(d_dst);
 
@@ -667,7 +667,7 @@ GPU_TEST_P(MatchTemplate_CCOEF_NORMED, Accuracy)
     cv::minMaxLoc(dst, &minVal, &maxVal, &minLoc, &maxLoc);
 
     cv::Mat dstGold;
-    cv::matchTemplate(image, pattern, dstGold, CV_TM_CCOEFF_NORMED);
+    cv::matchTemplate(image, pattern, dstGold, cv::TM_CCOEFF_NORMED);
 
     double minValGold, maxValGold;
     cv::Point minLocGold, maxLocGold;
@@ -707,7 +707,7 @@ GPU_TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF_NORMED)
     ASSERT_FALSE(templ.empty());
 
     cv::gpu::GpuMat d_result;
-    cv::gpu::matchTemplate(loadMat(scene), loadMat(templ), d_result, CV_TM_SQDIFF_NORMED);
+    cv::gpu::matchTemplate(loadMat(scene), loadMat(templ), d_result, cv::TM_SQDIFF_NORMED);
 
     cv::Mat result(d_result);
 
@@ -730,7 +730,7 @@ GPU_TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF)
     ASSERT_FALSE(templ.empty());
 
     cv::gpu::GpuMat d_result;
-    cv::gpu::matchTemplate(loadMat(scene), loadMat(templ), d_result, CV_TM_SQDIFF);
+    cv::gpu::matchTemplate(loadMat(scene), loadMat(templ), d_result, cv::TM_SQDIFF);
 
     cv::Mat result(d_result);
 

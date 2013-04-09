@@ -48,33 +48,19 @@
 #  endif
 #endif
 
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
+#ifndef __OPENCV_PERF_PRECOMP_HPP__
+#define __OPENCV_PERF_PRECOMP_HPP__
 
-#include <cmath>
-#include <ctime>
-#include <cstdio>
-#include <iostream>
-#include <fstream>
-#include <functional>
-#include <sstream>
-#include <string>
-#include <limits>
-#include <algorithm>
-#include <iterator>
-#include <stdexcept>
-
-#include "opencv2/core.hpp"
-#include "opencv2/core/opengl.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/calib3d.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/video.hpp"
 #include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_test.hpp"
-#include "opencv2/gpu.hpp"
-#include "opencv2/legacy.hpp"
+#include "opencv2/ts/gpu_perf.hpp"
 
-#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/gpuimgproc.hpp"
+#include "opencv2/gpuarithm.hpp"
+
+#include "opencv2/photo.hpp"
+
+#ifdef GTEST_CREATE_SHARED_LIBRARY
+#error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
+#endif
 
 #endif

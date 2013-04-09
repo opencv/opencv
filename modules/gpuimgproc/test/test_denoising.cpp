@@ -116,7 +116,7 @@ GPU_TEST_P(BruteForceNonLocalMeans, Regression)
     ASSERT_FALSE(bgr.empty());
 
     cv::Mat gray;
-    cv::cvtColor(bgr, gray, CV_BGR2GRAY);
+    cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
 
     GpuMat dbgr, dgray;
     cv::gpu::nonLocalMeans(GpuMat(bgr),  dbgr, 20);
@@ -159,7 +159,7 @@ GPU_TEST_P(FastNonLocalMeans, Regression)
     ASSERT_FALSE(bgr.empty());
 
     cv::Mat gray;
-    cv::cvtColor(bgr, gray, CV_BGR2GRAY);
+    cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
 
     GpuMat dbgr, dgray;
     cv::gpu::FastNonLocalMeansDenoising fnlmd;

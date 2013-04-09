@@ -170,9 +170,9 @@ struct Labeling : testing::TestWithParam<cv::gpu::DeviceInfo>
 GPU_TEST_P(Labeling, DISABLED_ConnectedComponents)
 {
     cv::Mat image;
-    cvtColor(loat_image(), image, CV_BGR2GRAY);
+    cvtColor(loat_image(), image, cv::COLOR_BGR2GRAY);
 
-    cv::threshold(image, image, 150, 255, CV_THRESH_BINARY);
+    cv::threshold(image, image, 150, 255, cv::THRESH_BINARY);
 
     ASSERT_TRUE(image.type() == CV_8UC1);
 

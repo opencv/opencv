@@ -100,10 +100,10 @@ void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
     using namespace ::cv::gpu::cudev::imgproc;
 
     if( src.empty() )
-        CV_Error( CV_StsBadArg, "The input image is empty" );
+        CV_Error( cv::Error::StsBadArg, "The input image is empty" );
 
     if( src.depth() != CV_8U || src.channels() != 4 )
-        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
     dst.create( src.size(), CV_8UC4 );
 
@@ -136,10 +136,10 @@ void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int 
     using namespace ::cv::gpu::cudev::imgproc;
 
     if( src.empty() )
-        CV_Error( CV_StsBadArg, "The input image is empty" );
+        CV_Error( cv::Error::StsBadArg, "The input image is empty" );
 
     if( src.depth() != CV_8U || src.channels() != 4 )
-        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
     dstr.create( src.size(), CV_8UC4 );
     dstsp.create( src.size(), CV_16SC2 );
@@ -921,7 +921,7 @@ void cv::gpu::Canny(const GpuMat& src, CannyBuf& buf, GpuMat& dst, double low_th
     CV_Assert(src.type() == CV_8UC1);
 
     if (!deviceSupports(SHARED_ATOMICS))
-        CV_Error(CV_StsNotImplemented, "The device doesn't support shared atomics");
+        CV_Error(cv::Error::StsNotImplemented, "The device doesn't support shared atomics");
 
     if( low_thresh > high_thresh )
         std::swap( low_thresh, high_thresh);

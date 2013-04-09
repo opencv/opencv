@@ -1521,7 +1521,7 @@ PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles,
         cv::gpu::GpuMat d_circles;
         cv::gpu::HoughCirclesBuf d_buf;
 
-        TEST_CYCLE() cv::gpu::HoughCircles(d_src, d_circles, d_buf, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+        TEST_CYCLE() cv::gpu::HoughCircles(d_src, d_circles, d_buf, cv::HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
 
         cv::Mat gpu_circles(d_circles);
         cv::Vec3f* begin = gpu_circles.ptr<cv::Vec3f>(0);
@@ -1533,7 +1533,7 @@ PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles,
     {
         std::vector<cv::Vec3f> cpu_circles;
 
-        TEST_CYCLE() cv::HoughCircles(src, cpu_circles, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+        TEST_CYCLE() cv::HoughCircles(src, cpu_circles, cv::HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
 
         SANITY_CHECK(cpu_circles);
     }

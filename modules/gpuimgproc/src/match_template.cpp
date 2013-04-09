@@ -149,15 +149,15 @@ namespace
     {
         switch (method)
         {
-        case CV_TM_CCORR:
+        case cv::TM_CCORR:
             if (depth == CV_32F) return 250;
             if (depth == CV_8U) return 300;
             break;
-        case CV_TM_SQDIFF:
+        case cv::TM_SQDIFF:
             if (depth == CV_8U) return 300;
             break;
         }
-        CV_Error(CV_StsBadArg, "getTemplateThreshold: unsupported match template mode");
+        CV_Error(cv::Error::StsBadArg, "getTemplateThreshold: unsupported match template mode");
         return 0;
     }
 
@@ -166,7 +166,7 @@ namespace
             const GpuMat& image, const GpuMat& templ, GpuMat& result, MatchTemplateBuf &buf, Stream& stream)
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-        if (templ.size().area() < getTemplateThreshold(CV_TM_CCORR, CV_32F))
+        if (templ.size().area() < getTemplateThreshold(cv::TM_CCORR, CV_32F))
         {
             matchTemplateNaive_CCORR_32F(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
             return;
@@ -189,7 +189,7 @@ namespace
     void matchTemplate_CCORR_8U(
             const GpuMat& image, const GpuMat& templ, GpuMat& result, MatchTemplateBuf &buf, Stream& stream)
     {
-        if (templ.size().area() < getTemplateThreshold(CV_TM_CCORR, CV_8U))
+        if (templ.size().area() < getTemplateThreshold(cv::TM_CCORR, CV_8U))
         {
             result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
             matchTemplateNaive_CCORR_8U(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
@@ -235,7 +235,7 @@ namespace
     void matchTemplate_SQDIFF_8U(
             const GpuMat& image, const GpuMat& templ, GpuMat& result, MatchTemplateBuf &buf, Stream& stream)
     {
-        if (templ.size().area() < getTemplateThreshold(CV_TM_SQDIFF, CV_8U))
+        if (templ.size().area() < getTemplateThreshold(cv::TM_SQDIFF, CV_8U))
         {
             result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
             matchTemplateNaive_SQDIFF_8U(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
@@ -308,7 +308,7 @@ namespace
                         (unsigned int)templ_sum[3], result, StreamAccessor::getStream(stream));
                 break;
             default:
-                CV_Error(CV_StsBadArg, "matchTemplate: unsupported number of channels");
+                CV_Error(cv::Error::StsBadArg, "matchTemplate: unsupported number of channels");
             }
         }
     }
@@ -394,7 +394,7 @@ namespace
                         result, StreamAccessor::getStream(stream));
                 break;
             default:
-                CV_Error(CV_StsBadArg, "matchTemplate: unsupported number of channels");
+                CV_Error(cv::Error::StsBadArg, "matchTemplate: unsupported number of channels");
             }
         }
     }
@@ -428,7 +428,7 @@ void cv::gpu::matchTemplate(
     {
         case CV_8U: callers = callers8U; break;
         case CV_32F: callers = callers32F; break;
-        default: CV_Error(CV_StsBadArg, "matchTemplate: unsupported data type");
+    default: CV_Error(cv::Error::StsBadArg, "matchTemplate: unsupported data type");
     }
 
     Caller caller = callers[method];

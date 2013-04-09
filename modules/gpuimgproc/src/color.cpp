@@ -1854,7 +1854,7 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
     func_t func = funcs[code];
 
     if (func == 0)
-        CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+        CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" );
 
     func(src, dst, dcn, stream);
 }
@@ -1867,12 +1867,12 @@ void cv::gpu::demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn, Str
 
     switch (code)
     {
-    case CV_BayerBG2GRAY: case CV_BayerGB2GRAY: case CV_BayerRG2GRAY: case CV_BayerGR2GRAY:
-        bayer_to_gray(src, dst, code == CV_BayerBG2GRAY || code == CV_BayerGB2GRAY, code == CV_BayerGB2GRAY || code == CV_BayerGR2GRAY, stream);
+    case COLOR_BayerBG2GRAY: case COLOR_BayerGB2GRAY: case COLOR_BayerRG2GRAY: case COLOR_BayerGR2GRAY:
+        bayer_to_gray(src, dst, code == COLOR_BayerBG2GRAY || code == COLOR_BayerGB2GRAY, code == COLOR_BayerGB2GRAY || code == COLOR_BayerGR2GRAY, stream);
         break;
 
-    case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
-        bayer_to_bgr(src, dst, dcn, code == CV_BayerBG2BGR || code == CV_BayerGB2BGR, code == CV_BayerGB2BGR || code == CV_BayerGR2BGR, stream);
+    case COLOR_BayerBG2BGR: case COLOR_BayerGB2BGR: case COLOR_BayerRG2BGR: case COLOR_BayerGR2BGR:
+        bayer_to_bgr(src, dst, dcn, code == COLOR_BayerBG2BGR || code == COLOR_BayerGB2BGR, code == COLOR_BayerGB2BGR || code == COLOR_BayerGR2BGR, stream);
         break;
 
     case COLOR_BayerBG2BGR_MHT: case COLOR_BayerGB2BGR_MHT: case COLOR_BayerRG2BGR_MHT: case COLOR_BayerGR2BGR_MHT:
@@ -1923,7 +1923,7 @@ void cv::gpu::demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn, Str
     }
 
     default:
-        CV_Error( CV_StsBadFlag, "Unknown / unsupported color conversion code" );
+        CV_Error( cv::Error::StsBadFlag, "Unknown / unsupported color conversion code" );
     }
 }
 

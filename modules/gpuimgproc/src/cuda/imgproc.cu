@@ -47,7 +47,6 @@
 #include "opencv2/core/cuda/vec_math.hpp"
 #include "opencv2/core/cuda/saturate_cast.hpp"
 #include "opencv2/core/cuda/border_interpolate.hpp"
-#include "internal_shared.hpp"
 
 namespace cv { namespace gpu { namespace cudev
 {

@@ -40,41 +40,60 @@
 //
 //M*/
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
+#include "precomp.hpp"
 
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
+using namespace cv;
+using namespace cv::gpu;
 
-#include <cmath>
-#include <ctime>
-#include <cstdio>
-#include <iostream>
-#include <fstream>
-#include <functional>
-#include <sstream>
-#include <string>
-#include <limits>
-#include <algorithm>
-#include <iterator>
-#include <stdexcept>
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-#include "opencv2/core.hpp"
-#include "opencv2/core/opengl.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/calib3d.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/video.hpp"
-#include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_test.hpp"
-#include "opencv2/gpu.hpp"
-#include "opencv2/legacy.hpp"
+void cv::gpu::blendLinear(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
-#include "opencv2/core/gpu_private.hpp"
+#else
+
+namespace cv { namespace gpu { namespace cudev
+{
+    namespace blend
+    {
+        template <typename T>
+        void blendLinearCaller(int rows, int cols, int cn, PtrStep<T> img1, PtrStep<T> img2, PtrStepf weights1, PtrStepf weights2, PtrStep<T> result, cudaStream_t stream);
+
+        void blendLinearCaller8UC4(int rows, int cols, PtrStepb img1, PtrStepb img2, PtrStepf weights1, PtrStepf weights2, PtrStepb result, cudaStream_t stream);
+    }
+}}}
+
+using namespace ::cv::gpu::cudev::blend;
+
+void cv::gpu::blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2,
+                          GpuMat& result, Stream& stream)
+{
+    CV_Assert(img1.size() == img2.size());
+    CV_Assert(img1.type() == img2.type());
+    CV_Assert(weights1.size() == img1.size());
+    CV_Assert(weights2.size() == img2.size());
+    CV_Assert(weights1.type() == CV_32F);
+    CV_Assert(weights2.type() == CV_32F);
+
+    const Size size = img1.size();
+    const int depth = img1.depth();
+    const int cn = img1.channels();
+
+    result.create(size, CV_MAKE_TYPE(depth, cn));
+
+    switch (depth)
+    {
+    case CV_8U:
+        if (cn != 4)
+            blendLinearCaller<uchar>(size.height, size.width, cn, img1, img2, weights1, weights2, result, StreamAccessor::getStream(stream));
+        else
+            blendLinearCaller8UC4(size.height, size.width, img1, img2, weights1, weights2, result, StreamAccessor::getStream(stream));
+        break;
+    case CV_32F:
+        blendLinearCaller<float>(size.height, size.width, cn, img1, img2, weights1, weights2, result, StreamAccessor::getStream(stream));
+        break;
+    default:
+        CV_Error(cv::Error::StsUnsupportedFormat, "bad image depth in linear blending function");
+    }
+}
 
 #endif

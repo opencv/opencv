@@ -179,7 +179,7 @@ void cv::gpu::FastNonLocalMeansDenoising::labMethod( const GpuMat& src, GpuMat& 
     CV_Assert(src.type() == CV_8UC3);
 
     lab.create(src.size(), src.type());
-    cv::gpu::cvtColor(src, lab, CV_BGR2Lab, 0, s);
+    cv::gpu::cvtColor(src, lab, COLOR_BGR2Lab, 0, s);
 
     l.create(src.size(), CV_8U);
     ab.create(src.size(), CV_8UC2);
@@ -189,7 +189,7 @@ void cv::gpu::FastNonLocalMeansDenoising::labMethod( const GpuMat& src, GpuMat& 
     simpleMethod(ab, ab, h_color, search_window, block_window, s);
 
     cudev::imgproc::fnlm_merge_channels(l, ab, lab, StreamAccessor::getStream(s));
-    cv::gpu::cvtColor(lab, dst, CV_Lab2BGR, 0, s);
+    cv::gpu::cvtColor(lab, dst, COLOR_Lab2BGR, 0, s);
 }
 
 
