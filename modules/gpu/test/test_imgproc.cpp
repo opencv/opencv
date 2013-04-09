@@ -261,54 +261,6 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CLAHE, testing::Combine(
     DIFFERENT_SIZES,
     testing::Values(0.0, 40.0)));
 
-////////////////////////////////////////////////////////////////////////
-// ColumnSum
-
-PARAM_TEST_CASE(ColumnSum, cv::gpu::DeviceInfo, cv::Size)
-{
-    cv::gpu::DeviceInfo devInfo;
-    cv::Size size;
-
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        size = GET_PARAM(1);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-    }
-};
-
-GPU_TEST_P(ColumnSum, Accuracy)
-{
-    cv::Mat src = randomMat(size, CV_32FC1);
-
-    cv::gpu::GpuMat d_dst;
-    cv::gpu::columnSum(loadMat(src), d_dst);
-
-    cv::Mat dst(d_dst);
-
-    for (int j = 0; j < src.cols; ++j)
-    {
-        float gold = src.at<float>(0, j);
-        float res = dst.at<float>(0, j);
-        ASSERT_NEAR(res, gold, 1e-5);
-    }
-
-    for (int i = 1; i < src.rows; ++i)
-    {
-        for (int j = 0; j < src.cols; ++j)
-        {
-            float gold = src.at<float>(i, j) += src.at<float>(i - 1, j);
-            float res = dst.at<float>(i, j);
-            ASSERT_NEAR(res, gold, 1e-5);
-        }
-    }
-}
-
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ColumnSum, testing::Combine(
-    ALL_DEVICES,
-    DIFFERENT_SIZES));
-
 ////////////////////////////////////////////////////////
 // Canny
 

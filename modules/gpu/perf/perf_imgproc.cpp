@@ -634,32 +634,6 @@ PERF_TEST_P(Sz_ClipLimit, ImgProc_CLAHE,
 }
 
 //////////////////////////////////////////////////////////////////////
-// ColumnSum
-
-PERF_TEST_P(Sz, ImgProc_ColumnSum,
-            GPU_TYPICAL_MAT_SIZES)
-{
-    const cv::Size size = GetParam();
-
-    cv::Mat src(size, CV_32FC1);
-    declare.in(src, WARMUP_RNG);
-
-    if (PERF_RUN_GPU())
-    {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
-
-        TEST_CYCLE() cv::gpu::columnSum(d_src, dst);
-
-        GPU_SANITY_CHECK(dst);
-    }
-    else
-    {
-        FAIL_NO_CPU();
-    }
-}
-
-//////////////////////////////////////////////////////////////////////
 // Canny
 
 DEF_PARAM_TEST(Image_AppertureSz_L2gradient, string, int, bool);

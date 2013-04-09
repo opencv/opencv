@@ -184,9 +184,6 @@ CV_EXPORTS void integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer,
 //! supports source images of 8UC1 type only
 CV_EXPORTS void sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& stream = Stream::Null());
 
-//! computes vertical sum, supports only CV_32FC1 images
-CV_EXPORTS void columnSum(const GpuMat& src, GpuMat& sum);
-
 //! computes the standard deviation of integral images
 //! supports only CV_32SC1 source type and CV_32FC1 sqr type
 //! output will have CV_32FC1 type
