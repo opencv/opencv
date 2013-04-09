@@ -582,41 +582,6 @@ namespace cv { namespace gpu { namespace cudev
                 cudaSafeCall(cudaDeviceSynchronize());
         }
 
-        ////////////////////////////// Column Sum //////////////////////////////////////
-
-        __global__ void column_sumKernel_32F(int cols, int rows, const PtrStepb src, const PtrStepb dst)
-        {
-            int x = blockIdx.x * blockDim.x + threadIdx.x;
-
-            if (x < cols)
-            {
-                const unsigned char* src_data = src.data + x * sizeof(float);
-                unsigned char* dst_data = dst.data + x * sizeof(float);
-
-                float sum = 0.f;
-                for (int y = 0; y < rows; ++y)
-                {
-                    sum += *(const float*)src_data;
-                    *(float*)dst_data = sum;
-                    src_data += src.step;
-                    dst_data += dst.step;
-                }
-            }
-        }
-
-
-        void columnSum_32F(const PtrStepSzb src, const PtrStepSzb dst)
-        {
-            dim3 threads(256);
-            dim3 grid(divUp(src.cols, threads.x));
-
-            column_sumKernel_32F<<<grid, threads>>>(src.cols, src.rows, src, dst);
-            cudaSafeCall( cudaGetLastError() );
-
-            cudaSafeCall( cudaDeviceSynchronize() );
-        }
-
-
         //////////////////////////////////////////////////////////////////////////
         // mulSpectrums
 

@@ -59,7 +59,6 @@ void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int, 
 void cv::gpu::integral(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 void cv::gpu::integralBuffered(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 void cv::gpu::sqrIntegral(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::columnSum(const GpuMat&, GpuMat&) { throw_no_cuda(); }
 void cv::gpu::rectStdDev(const GpuMat&, const GpuMat&, GpuMat&, const Rect&, Stream&) { throw_no_cuda(); }
 void cv::gpu::evenLevels(GpuMat&, int, int, int) { throw_no_cuda(); }
 void cv::gpu::histEven(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
@@ -630,26 +629,7 @@ void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// columnSum
-
-namespace cv { namespace gpu { namespace cudev
-{
-    namespace imgproc
-    {
-        void columnSum_32F(const PtrStepSzb src, const PtrStepSzb dst);
-    }
-}}}
-
-void cv::gpu::columnSum(const GpuMat& src, GpuMat& dst)
-{
-    using namespace ::cv::gpu::cudev::imgproc;
-
-    CV_Assert(src.type() == CV_32F);
-
-    dst.create(src.size(), CV_32F);
-
-    cudev::imgproc::columnSum_32F(src, dst);
-}
+// rectStdDev
 
 void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& s)
 {
