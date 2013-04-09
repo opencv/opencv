@@ -1305,7 +1305,8 @@ PERF_TEST_P(Sz_3Depth, Core_AddWeighted,
 // GEMM
 
 CV_FLAGS(GemmFlags, 0, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T)
-#define ALL_GEMM_FLAGS Values(0, CV_GEMM_A_T, CV_GEMM_B_T, CV_GEMM_C_T, CV_GEMM_A_T | CV_GEMM_B_T, CV_GEMM_A_T | CV_GEMM_C_T, CV_GEMM_A_T | CV_GEMM_B_T | CV_GEMM_C_T)
+#define ALL_GEMM_FLAGS Values(GemmFlags(0), GemmFlags(cv::GEMM_1_T), GemmFlags(cv::GEMM_2_T), GemmFlags(cv::GEMM_3_T), \
+                              GemmFlags(cv::GEMM_1_T | cv::GEMM_2_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_3_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_2_T | cv::GEMM_3_T))
 
 DEF_PARAM_TEST(Sz_Type_Flags, cv::Size, MatType, GemmFlags);
 
@@ -2071,7 +2072,7 @@ PERF_TEST_P(Sz_Depth, Core_CountNonZero,
 //////////////////////////////////////////////////////////////////////
 // Reduce
 
-CV_ENUM(ReduceCode, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN)
+CV_ENUM(ReduceCode, cv::REDUCE_SUM, cv::REDUCE_AVG, cv::REDUCE_MAX, cv::REDUCE_MIN)
 #define ALL_REDUCE_CODES ValuesIn(ReduceCode::all())
 
 enum {Rows = 0, Cols = 1};

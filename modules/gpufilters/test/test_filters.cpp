@@ -286,7 +286,7 @@ GPU_TEST_P(GaussianBlur, Accuracy)
         }
         catch (const cv::Exception& e)
         {
-            ASSERT_EQ(CV_StsNotImplemented, e.code);
+            ASSERT_EQ(cv::Error::StsNotImplemented, e.code);
         }
     }
     else
