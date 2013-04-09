@@ -1464,7 +1464,7 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
 
 /////////////////// finding eigenvalues and eigenvectors of a symmetric matrix ///////////////
 
-bool cv::eigen( InputArray _src, bool computeEvects, OutputArray _evals, OutputArray _evects )
+bool cv::eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
 {
     Mat src = _src.getMat();
     int type = src.type();
@@ -1474,7 +1474,7 @@ bool cv::eigen( InputArray _src, bool computeEvects, OutputArray _evals, OutputA
     CV_Assert (type == CV_32F || type == CV_64F);
 
     Mat v;
-    if( computeEvects )
+    if( _evects.needed() )
     {
         _evects.create(n, n, type);
         v = _evects.getMat();
@@ -1492,16 +1492,6 @@ bool cv::eigen( InputArray _src, bool computeEvects, OutputArray _evals, OutputA
 
     w.copyTo(_evals);
     return ok;
-}
-
-bool cv::eigen( InputArray src, OutputArray evals, int, int )
-{
-    return eigen(src, false, evals, noArray());
-}
-
-bool cv::eigen( InputArray src, OutputArray evals, OutputArray evects, int, int)
-{
-    return eigen(src, true, evals, evects);
 }
 
 namespace cv
@@ -1705,13 +1695,13 @@ cvSolve( const CvArr* Aarr, const CvArr* barr, CvArr* xarr, int method )
 
 CV_IMPL void
 cvEigenVV( CvArr* srcarr, CvArr* evectsarr, CvArr* evalsarr, double,
-           int lowindex, int highindex)
+           int, int )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), evals0 = cv::cvarrToMat(evalsarr), evals = evals0;
     if( evectsarr )
     {
         cv::Mat evects0 = cv::cvarrToMat(evectsarr), evects = evects0;
-        eigen(src, evals, evects, lowindex, highindex);
+        eigen(src, evals, evects);
         if( evects0.data != evects.data )
         {
             uchar* p = evects0.data;
@@ -1720,7 +1710,7 @@ cvEigenVV( CvArr* srcarr, CvArr* evectsarr, CvArr* evalsarr, double,
         }
     }
     else
-        eigen(src, evals, lowindex, highindex);
+        eigen(src, evals);
     if( evals0.data != evals.data )
     {
         uchar* p = evals0.data;

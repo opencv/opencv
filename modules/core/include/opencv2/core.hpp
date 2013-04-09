@@ -109,15 +109,6 @@ public:
 CV_EXPORTS void error( const Exception& exc );
 
 
-typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
-                           const uchar* src2, size_t step2,
-                           uchar* dst, size_t step, Size sz,
-                           void*);
-
-CV_EXPORTS BinaryFunc getConvertFunc(int sdepth, int ddepth);
-CV_EXPORTS BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
-CV_EXPORTS BinaryFunc getCopyMaskFunc(size_t esz);
-
 //! swaps two matrices
 CV_EXPORTS void swap(Mat& a, Mat& b);
 
@@ -153,8 +144,7 @@ CV_EXPORTS_W void convertScaleAbs(InputArray src, OutputArray dst,
                                   double alpha = 1, double beta = 0);
 
 //! transforms array of numbers using a lookup table: dst(i)=lut(src(i))
-CV_EXPORTS_W void LUT(InputArray src, InputArray lut, OutputArray dst,
-                      int interpolation = 0);
+CV_EXPORTS_W void LUT(InputArray src, InputArray lut, OutputArray dst);
 
 //! computes sum of array elements
 CV_EXPORTS_AS(sumElems) Scalar sum(InputArray src);
@@ -227,11 +217,11 @@ CV_EXPORTS_W void split(InputArray m, OutputArrayOfArrays mv);
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
                             const int* fromTo, size_t npairs);
 
-CV_EXPORTS void mixChannels(const std::vector<Mat>& src, std::vector<Mat>& dst,
-                            const int* fromTo, size_t npairs); //TODO: use arrays
+CV_EXPORTS void mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
+                            const int* fromTo, size_t npairs);
 
-CV_EXPORTS_W void mixChannels(InputArrayOfArrays src, InputArrayOfArrays dst,
-                              const std::vector<int>& fromTo); //TODO: InputOutputArrayOfArrays
+CV_EXPORTS_W void mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
+                              const std::vector<int>& fromTo);
 
 //! extracts a single channel from src (coi is 0-based index)
 CV_EXPORTS_W void extractChannel(InputArray src, OutputArray dst, int coi);
@@ -291,15 +281,12 @@ CV_EXPORTS_W void min(InputArray src1, InputArray src2, OutputArray dst);
 //! computes per-element maximum of two arrays (dst = max(src1, src2))
 CV_EXPORTS_W void max(InputArray src1, InputArray src2, OutputArray dst);
 
-//TODO: can we drop these versions?
+// the following overloads are needed to avoid conflicts with
+//     const _Tp& std::min(const _Tp&, const _Tp&, _Compare)
 //! computes per-element minimum of two arrays (dst = min(src1, src2))
 CV_EXPORTS void min(const Mat& src1, const Mat& src2, Mat& dst);
-//! computes per-element minimum of array and scalar (dst = min(src1, src2))
-CV_EXPORTS void min(const Mat& src1, double src2, Mat& dst);
 //! computes per-element maximum of two arrays (dst = max(src1, src2))
 CV_EXPORTS void max(const Mat& src1, const Mat& src2, Mat& dst);
-//! computes per-element maximum of array and scalar (dst = max(src1, src2))
-CV_EXPORTS void max(const Mat& src1, double src2, Mat& dst);
 
 //! computes square root of each matrix element (dst = src**0.5)
 CV_EXPORTS_W void sqrt(InputArray src, OutputArray dst);
@@ -393,17 +380,9 @@ CV_EXPORTS_W int solveCubic(InputArray coeffs, OutputArray roots);
 //! finds real and complex roots of a polynomial
 CV_EXPORTS_W double solvePoly(InputArray coeffs, OutputArray roots, int maxIters = 300);
 
-//! finds eigenvalues of a symmetric matrix
-CV_EXPORTS bool eigen(InputArray src, OutputArray eigenvalues, int lowindex = -1,
-                      int highindex = -1);
-
 //! finds eigenvalues and eigenvectors of a symmetric matrix
-CV_EXPORTS bool eigen(InputArray src, OutputArray eigenvalues,
-                      OutputArray eigenvectors,
-                      int lowindex = -1, int highindex = -1);
-
-CV_EXPORTS_W bool eigen(InputArray src, bool computeEigenvectors,
-                        OutputArray eigenvalues, OutputArray eigenvectors);
+CV_EXPORTS_W bool eigen(InputArray src, OutputArray eigenvalues,
+                        OutputArray eigenvectors = noArray());
 
 enum
 {
@@ -417,10 +396,10 @@ enum
 
 //! computes covariation matrix of a set of samples
 CV_EXPORTS void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, Mat& mean,
-                                 int flags, int ctype = CV_64F); //TODO: output arrays or drop
+                                 int flags, int ctype = CV_64F); //TODO: InputArrayOfArrays
 
 //! computes covariation matrix of a set of samples
-CV_EXPORTS_W void calcCovarMatrix( InputArray samples, OutputArray covar, //TODO: InputArrayOfArrays
+CV_EXPORTS_W void calcCovarMatrix( InputArray samples, OutputArray covar,
                                    OutputArray mean, int flags, int ctype = CV_64F);
 
 CV_EXPORTS_W void PCACompute(InputArray data, InputOutputArray mean,
@@ -444,9 +423,6 @@ CV_EXPORTS_W void SVBackSubst( InputArray w, InputArray u, InputArray vt,
 
 //! computes Mahalanobis distance between two vectors: sqrt((v1-v2)'*icovar*(v1-v2)), where icovar is the inverse covariation matrix
 CV_EXPORTS_W double Mahalanobis(InputArray v1, InputArray v2, InputArray icovar);
-
-//! a synonym for Mahalanobis
-CV_EXPORTS double Mahalonobis(InputArray v1, InputArray v2, InputArray icovar); //TODO: check if we can drop it or move to legacy
 
 //! performs forward or inverse 1D or 2D Discrete Fourier Transformation
 CV_EXPORTS_W void dft(InputArray src, OutputArray dst, int flags = 0, int nonzeroRows = 0);
@@ -492,9 +468,7 @@ CV_EXPORTS_W void randu(InputOutputArray dst, InputArray low, InputArray high);
 CV_EXPORTS_W void randn(InputOutputArray dst, InputArray mean, InputArray stddev);
 
 //! shuffles the input array elements
-CV_EXPORTS void randShuffle(InputOutputArray dst, double iterFactor = 1., RNG* rng = 0);
-
-CV_EXPORTS_AS(randShuffle) void randShuffle_(InputOutputArray dst, double iterFactor = 1.);
+CV_EXPORTS_W void randShuffle(InputOutputArray dst, double iterFactor = 1., RNG* rng = 0);
 
 enum { FILLED  = -1,
        LINE_4  = 4,
@@ -600,17 +574,6 @@ CV_EXPORTS_W void putText( Mat& img, const String& text, Point org,
 CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
                             double fontScale, int thickness,
                             CV_OUT int* baseLine);
-
-typedef void (*ConvertData)(const void* from, void* to, int cn);
-typedef void (*ConvertScaleData)(const void* from, void* to, int cn, double alpha, double beta);
-
-//! returns the function for converting pixels from one data type to another
-CV_EXPORTS ConvertData getConvertElem(int fromType, int toType);
-
-//! returns the function for converting pixels from one data type to another with the optional scaling
-CV_EXPORTS ConvertScaleData getConvertScaleElem(int fromType, int toType);
-
-
 
 /*!
     Principal Component Analysis

@@ -460,7 +460,7 @@ public class CoreTest extends OpenCVTestCase {
         Mat eigenVals = new Mat();
         Mat eigenVecs = new Mat();
 
-        Core.eigen(src, true, eigenVals, eigenVecs);
+        Core.eigen(src, eigenVals, eigenVecs);
 
         Mat expectedEigenVals = new Mat(3, 1, CvType.CV_32FC1) {
             {
@@ -1111,18 +1111,6 @@ public class CoreTest extends OpenCVTestCase {
         Core.LUT(grayRnd, lut, dst);
 
         assertMatEqual(gray255, dst);
-    }
-
-    public void testLUTMatMatMatInt() {
-        Mat lut = new Mat(1, 256, CvType.CV_8UC1);
-        // TODO: ban this overload
-        try
-        {
-            Core.LUT(grayRnd, lut, dst, 1);
-            fail("Last parameter for LUT was not supported");
-        } catch (CvException e) {
-            // expected
-        }
     }
 
     public void testMagnitude() {

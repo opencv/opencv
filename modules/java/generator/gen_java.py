@@ -996,6 +996,11 @@ extern "C" {
             return
         for a in fi.args:
             if a.ctype not in type_dict:
+                if not a.defval and a.ctype.endswith("*"):
+                    a.defval = 0
+                if a.defval:
+                    a.ctype = ''
+                    continue
                 msg = "// Unknown type '%s' (%s), skipping the function\n\n" % (a.ctype, a.out or "I")
                 self.skipped_func_list.append(c_decl + "\n" + msg)
                 j_code.write( " "*4 + msg )
