@@ -279,6 +279,10 @@ CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh, doubl
 //! output will have CV_32FC1 type
 CV_EXPORTS void rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& stream = Stream::Null());
 
+//! copies 2D array to a larger destination array and pads borders with user-specifiable constant
+CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType,
+                               const Scalar& value = Scalar(), Stream& stream = Stream::Null());
+
 }} // namespace cv { namespace gpu {
 
 #endif /* __OPENCV_GPUARITHM_HPP__ */

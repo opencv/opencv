@@ -2159,3 +2159,47 @@ PERF_TEST_P(Sz_Depth_NormType, Core_Normalize,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+//////////////////////////////////////////////////////////////////////
+// CopyMakeBorder
+
+#ifdef HAVE_OPENCV_IMGPROC
+
+DEF_PARAM_TEST(Sz_Depth_Cn_Border, cv::Size, MatDepth, MatCn, BorderMode);
+
+PERF_TEST_P(Sz_Depth_Cn_Border, ImgProc_CopyMakeBorder,
+            Combine(GPU_TYPICAL_MAT_SIZES,
+                    Values(CV_8U, CV_16U, CV_32F),
+                    GPU_CHANNELS_1_3_4,
+                    ALL_BORDER_MODES))
+{
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const int channels = GET_PARAM(2);
+    const int borderMode = GET_PARAM(3);
+
+    const int type = CV_MAKE_TYPE(depth, channels);
+
+    cv::Mat src(size, type);
+    declare.in(src, WARMUP_RNG);
+
+    if (PERF_RUN_GPU())
+    {
+        const cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat dst;
+
+        TEST_CYCLE() cv::gpu::copyMakeBorder(d_src, dst, 5, 5, 5, 5, borderMode);
+
+        GPU_SANITY_CHECK(dst);
+    }
+    else
+    {
+        cv::Mat dst;
+
+        TEST_CYCLE() cv::copyMakeBorder(src, dst, 5, 5, 5, 5, borderMode);
+
+        CPU_SANITY_CHECK(dst);
+    }
+}
+
+#endif

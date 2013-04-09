@@ -3609,4 +3609,68 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Normalize, testing::Combine(
     testing::Values(NormCode(cv::NORM_L1), NormCode(cv::NORM_L2), NormCode(cv::NORM_INF), NormCode(cv::NORM_MINMAX)),
     WHOLE_SUBMAT));
 
+//////////////////////////////////////////////////////////////////////////////
+// CopyMakeBorder
+
+#ifdef HAVE_OPENCV_IMGPROC
+
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(Border, int)
+}
+
+PARAM_TEST_CASE(CopyMakeBorder, cv::gpu::DeviceInfo, cv::Size, MatType, Border, BorderType, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    int type;
+    int border;
+    int borderType;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        type = GET_PARAM(2);
+        border = GET_PARAM(3);
+        borderType = GET_PARAM(4);
+        useRoi = GET_PARAM(5);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+GPU_TEST_P(CopyMakeBorder, Accuracy)
+{
+    cv::Mat src = randomMat(size, type);
+    cv::Scalar val = randomScalar(0, 255);
+
+    cv::gpu::GpuMat dst = createMat(cv::Size(size.width + 2 * border, size.height + 2 * border), type, useRoi);
+    cv::gpu::copyMakeBorder(loadMat(src, useRoi), dst, border, border, border, border, borderType, val);
+
+    cv::Mat dst_gold;
+    cv::copyMakeBorder(src, dst_gold, border, border, border, border, borderType, val);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CopyMakeBorder, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatType(CV_8UC1),
+                    MatType(CV_8UC3),
+                    MatType(CV_8UC4),
+                    MatType(CV_16UC1),
+                    MatType(CV_16UC3),
+                    MatType(CV_16UC4),
+                    MatType(CV_32FC1),
+                    MatType(CV_32FC3),
+                    MatType(CV_32FC4)),
+    testing::Values(Border(1), Border(10), Border(50)),
+    ALL_BORDER_TYPES,
+    WHOLE_SUBMAT));
+
+#endif
+
 #endif // HAVE_CUDA
