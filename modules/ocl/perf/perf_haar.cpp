@@ -84,7 +84,7 @@ public:
 }
 TEST(Haar)
 {
-    Mat img = imread(abspath("basketball1.png"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img = imread(abspath("basketball1.png"), IMREAD_GRAYSCALE);
 
     if (img.empty())
     {

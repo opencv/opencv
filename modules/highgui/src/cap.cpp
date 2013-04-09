@@ -540,9 +540,9 @@ double VideoCapture::get(int propId)
 VideoWriter::VideoWriter()
 {}
 
-VideoWriter::VideoWriter(const String& filename, int fourcc, double fps, Size frameSize, bool isColor)
+VideoWriter::VideoWriter(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
-    open(filename, fourcc, fps, frameSize, isColor);
+    open(filename, _fourcc, fps, frameSize, isColor);
 }
 
 void VideoWriter::release()
@@ -555,9 +555,9 @@ VideoWriter::~VideoWriter()
     release();
 }
 
-bool VideoWriter::open(const String& filename, int fourcc, double fps, Size frameSize, bool isColor)
+bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
-    writer = cvCreateVideoWriter(filename.c_str(), fourcc, fps, frameSize, isColor);
+    writer = cvCreateVideoWriter(filename.c_str(), _fourcc, fps, frameSize, isColor);
     return isOpened();
 }
 
@@ -576,6 +576,11 @@ VideoWriter& VideoWriter::operator << (const Mat& image)
 {
     write(image);
     return *this;
+}
+
+int VideoWriter::fourcc(char c1, char c2, char c3, char c4)
+{
+    return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
 }
 
 }

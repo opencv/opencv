@@ -1815,12 +1815,17 @@ PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles,
 //////////////////////////////////////////////////////////////////////
 // GeneralizedHough
 
-CV_FLAGS(GHMethod, cv::GHT_POSITION, cv::GHT_SCALE, cv::GHT_ROTATION);
+enum { GHT_POSITION = cv::GeneralizedHough::GHT_POSITION,
+       GHT_SCALE    = cv::GeneralizedHough::GHT_SCALE,
+       GHT_ROTATION = cv::GeneralizedHough::GHT_ROTATION
+     };
+
+CV_FLAGS(GHMethod, GHT_POSITION, GHT_SCALE, GHT_ROTATION);
 
 DEF_PARAM_TEST(Method_Sz, GHMethod, cv::Size);
 
 PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough,
-            Combine(Values(GHMethod(cv::GHT_POSITION), GHMethod(cv::GHT_POSITION | cv::GHT_SCALE), GHMethod(cv::GHT_POSITION | cv::GHT_ROTATION), GHMethod(cv::GHT_POSITION | cv::GHT_SCALE | cv::GHT_ROTATION)),
+            Combine(Values(GHMethod(GHT_POSITION), GHMethod(GHT_POSITION | GHT_SCALE), GHMethod(GHT_POSITION | GHT_ROTATION), GHMethod(GHT_POSITION | GHT_SCALE | GHT_ROTATION)),
                     GPU_TYPICAL_MAT_SIZES))
 {
     declare.time(10);
@@ -1870,7 +1875,7 @@ PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough,
         cv::gpu::GpuMat posAndVotes;
 
         cv::Ptr<cv::gpu::GeneralizedHough_GPU> d_hough = cv::gpu::GeneralizedHough_GPU::create(method);
-        if (method & cv::GHT_ROTATION)
+        if (method & GHT_ROTATION)
         {
             d_hough->set("maxAngle", 90.0);
             d_hough->set("angleStep", 2.0);
@@ -1888,7 +1893,7 @@ PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough,
         cv::Mat positions;
 
         cv::Ptr<cv::GeneralizedHough> hough = cv::GeneralizedHough::create(method);
-        if (method & cv::GHT_ROTATION)
+        if (method & GHT_ROTATION)
         {
             hough->set("maxAngle", 90.0);
             hough->set("angleStep", 2.0);

@@ -199,41 +199,4 @@ void cvSetRatioWindow_QT(const char* name,double prop_value);
 double cvGetOpenGlProp_QT(const char* name);
 #endif
 
-
-
-/*namespace cv
-{
-
-class CV_EXPORTS BaseWindow
-{
-public:
-    BaseWindow(const String& name, int flags=0);
-    virtual ~BaseWindow();
-    virtual void close();
-    virtual void show(const Mat& mat);
-    virtual void resize(Size size);
-    virtual void move(Point topleft);
-    virtual Size size() const;
-    virtual Point topLeft() const;
-    virtual void setGeometry(Point topLeft, Size size);
-    virtual void getGeometry(Point& topLeft, Size& size) const;
-    virtual String getTitle() const;
-    virtual void setTitle(const String& str);
-    virtual String getName() const;
-    virtual void setScaleMode(int mode);
-    virtual int getScaleMode();
-    virtual void setScrollPos(double pos);
-    virtual double getScrollPos() const;
-    virtual void setScale(double scale);
-    virtual double getScale() const;
-    virtual Point getImageCoords(Point pos) const;
-    virtual Scalar getPixelValue(Point pos, const String& colorspace=String()) const;
-
-    virtual void addTrackbar( const String& trackbar, int low, int high, int step );
-};
-
-typedef Ptr<BaseWindow> Window;
-
-}*/
-
 #endif /* __HIGHGUI_H_ */

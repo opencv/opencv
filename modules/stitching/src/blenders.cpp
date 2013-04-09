@@ -425,7 +425,7 @@ void normalizeUsingWeightMap(const Mat& weight, Mat& src)
 void createWeightMap(const Mat &mask, float sharpness, Mat &weight)
 {
     CV_Assert(mask.type() == CV_8U);
-    distanceTransform(mask, weight, CV_DIST_L1, 3);
+    distanceTransform(mask, weight, DIST_L1, 3);
     threshold(weight * sharpness, weight, 1.f, 1.f, THRESH_TRUNC);
 }
 

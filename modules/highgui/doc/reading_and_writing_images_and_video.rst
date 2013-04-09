@@ -59,7 +59,7 @@ imread
 ------
 Loads an image from a file.
 
-.. ocv:function:: Mat imread( const String& filename, int flags=1 )
+.. ocv:function:: Mat imread( const String& filename, int flags=IMREAD_COLOR )
 
 .. ocv:pyfunction:: cv2.imread(filename[, flags]) -> retval
 
@@ -321,9 +321,9 @@ VideoCapture::retrieve
 ----------------------
 Decodes and returns the grabbed video frame.
 
-.. ocv:function:: bool VideoCapture::retrieve(Mat& image, int channel=0)
+.. ocv:function:: bool VideoCapture::retrieve( Mat& image, int flag=0 )
 
-.. ocv:pyfunction:: cv2.VideoCapture.retrieve([image[, channel]]) -> retval, image
+.. ocv:pyfunction:: cv2.VideoCapture.retrieve([image[, flag]]) -> retval, image
 
 .. ocv:cfunction:: IplImage* cvRetrieveFrame( CvCapture* capture, int streamIdx=0 )
 

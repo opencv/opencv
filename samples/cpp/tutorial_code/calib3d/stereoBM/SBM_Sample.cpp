@@ -26,8 +26,8 @@ int main( int argc, char** argv )
   { readme(); return -1; }
 
   //-- 1. Read the images
-  Mat imgLeft = imread( argv[1], CV_LOAD_IMAGE_GRAYSCALE );
-  Mat imgRight = imread( argv[2], CV_LOAD_IMAGE_GRAYSCALE );
+  Mat imgLeft = imread( argv[1], IMREAD_GRAYSCALE );
+  Mat imgRight = imread( argv[2], IMREAD_GRAYSCALE );
   //-- And create the image in which we will save our disparities
   Mat imgDisparity16S = Mat( imgLeft.rows, imgLeft.cols, CV_16S );
   Mat imgDisparity8U = Mat( imgLeft.rows, imgLeft.cols, CV_8UC1 );
@@ -54,7 +54,7 @@ int main( int argc, char** argv )
   //-- 4. Display it as a CV_8UC1 image
   imgDisparity16S.convertTo( imgDisparity8U, CV_8UC1, 255/(maxVal - minVal));
 
-  namedWindow( windowDisparity, CV_WINDOW_NORMAL );
+  namedWindow( windowDisparity, WINDOW_NORMAL );
   imshow( windowDisparity, imgDisparity8U );
 
   //-- 5. Save the image

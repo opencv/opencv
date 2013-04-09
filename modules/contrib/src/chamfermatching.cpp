@@ -912,8 +912,7 @@ void ChamferMatcher::Template::show() const
 #ifdef HAVE_OPENCV_HIGHGUI
     namedWindow("templ",1);
     imshow("templ",templ_color);
-
-    cvWaitKey(0);
+    waitKey();
 #else
     CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without GUI support");
 #endif

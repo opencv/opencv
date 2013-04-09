@@ -66,8 +66,8 @@ int main(int argc, const char ** argv)
   string im1_name = parser.get<string>(0);
   string im2_name = parser.get<string>(1);
 
-  Mat im1 = imread(im1_name, CV_LOAD_IMAGE_GRAYSCALE);
-  Mat im2 = imread(im2_name, CV_LOAD_IMAGE_GRAYSCALE);
+  Mat im1 = imread(im1_name, IMREAD_GRAYSCALE);
+  Mat im2 = imread(im2_name, IMREAD_GRAYSCALE);
 
   if (im1.empty() || im2.empty())
   {

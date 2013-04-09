@@ -1687,8 +1687,8 @@ TEST(Imgproc_ColorBayer, regression)
 {
     cvtest::TS* ts = cvtest::TS::ptr();
 
-    Mat given = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_input.png", CV_LOAD_IMAGE_GRAYSCALE);
-    Mat gold = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_gold.png", CV_LOAD_IMAGE_UNCHANGED);
+    Mat given = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_input.png", IMREAD_GRAYSCALE);
+    Mat gold = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_gold.png", IMREAD_UNCHANGED);
     Mat result;
     
     CV_Assert(given.data != NULL && gold.data != NULL);
@@ -1709,9 +1709,9 @@ TEST(Imgproc_ColorBayerVNG, regression)
 {
     cvtest::TS* ts = cvtest::TS::ptr();
 
-    Mat given = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_input.png", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat given = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_input.png", IMREAD_GRAYSCALE);
     string goldfname = string(ts->get_data_path()) + "/cvtcolor/bayerVNG_gold.png";
-    Mat gold = imread(goldfname, CV_LOAD_IMAGE_UNCHANGED);
+    Mat gold = imread(goldfname, IMREAD_UNCHANGED);
     Mat result;
 
     CV_Assert(given.data != NULL);
@@ -1804,7 +1804,7 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
 
     Mat src, dst, bayer, reference;
     std::string full_path = parent_path + image_name;
-    src = imread(full_path, CV_LOAD_IMAGE_UNCHANGED);
+    src = imread(full_path, IMREAD_UNCHANGED);
 
     if (src.data == NULL)
     {
@@ -1824,7 +1824,7 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
 
         // reading a reference image
         full_path = parent_path + pattern[i] + image_name;
-        reference = imread(full_path, CV_LOAD_IMAGE_UNCHANGED);
+        reference = imread(full_path, IMREAD_UNCHANGED);
         if (reference.data == NULL)
         {
             imwrite(full_path, dst);
@@ -2091,7 +2091,7 @@ TEST(ImgProc_BayerEdgeAwareDemosaicing, accuracy)
 
     Mat src, bayer;
     std::string full_path = parent_path + image_name;
-    src = imread(full_path, CV_LOAD_IMAGE_UNCHANGED);
+    src = imread(full_path, IMREAD_UNCHANGED);
 
     if (src.data == NULL)
     {
@@ -2141,7 +2141,7 @@ TEST(ImgProc_BayerEdgeAwareDemosaicing, accuracy)
 TEST(ImgProc_Bayer2RGBA, accuracy)
 {
     cvtest::TS* ts = cvtest::TS::ptr();
-    Mat raw = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_input.png", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat raw = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_input.png", IMREAD_GRAYSCALE);
     Mat rgb, reference;
 
     CV_Assert(raw.channels() == 1);

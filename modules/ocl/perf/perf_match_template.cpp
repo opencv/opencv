@@ -75,10 +75,10 @@ TEST(matchTemplate)
 
                 gen(templ, templ_size, templ_size, all_type[j], 0, 1);
 
-                matchTemplate(src, templ, dst, CV_TM_CCORR);
+                matchTemplate(src, templ, dst, TM_CCORR);
 
                 CPU_ON;
-                matchTemplate(src, templ, dst, CV_TM_CCORR);
+                matchTemplate(src, templ, dst, TM_CCORR);
                 CPU_OFF;
 
                 ocl::oclMat d_src(src), d_templ, d_dst;
@@ -86,18 +86,18 @@ TEST(matchTemplate)
                 d_templ.upload(templ);
 
                 WARMUP_ON;
-                ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
+                ocl::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
                 WARMUP_OFF;
 
                 GPU_ON;
-                ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
+                ocl::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
                  ;
                 GPU_OFF;
 
                 GPU_FULL_ON;
                 d_src.upload(src);
                 d_templ.upload(templ);
-                ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
+                ocl::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
                 d_dst.download(dst);
                 GPU_FULL_OFF;
             }
@@ -116,28 +116,28 @@ TEST(matchTemplate)
 
                 gen(templ, templ_size, templ_size, all_type_8U[j], 0, 255);
 
-                matchTemplate(src, templ, dst, CV_TM_CCORR_NORMED);
+                matchTemplate(src, templ, dst, TM_CCORR_NORMED);
 
                 CPU_ON;
-                matchTemplate(src, templ, dst, CV_TM_CCORR_NORMED);
+                matchTemplate(src, templ, dst, TM_CCORR_NORMED);
                 CPU_OFF;
 
                 ocl::oclMat d_src(src);
                 ocl::oclMat d_templ(templ), d_dst;
 
                 WARMUP_ON;
-                ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR_NORMED);
+                ocl::matchTemplate(d_src, d_templ, d_dst, TM_CCORR_NORMED);
                 WARMUP_OFF;
 
                 GPU_ON;
-                ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR_NORMED);
+                ocl::matchTemplate(d_src, d_templ, d_dst, TM_CCORR_NORMED);
                  ;
                 GPU_OFF;
 
                 GPU_FULL_ON;
                 d_src.upload(src);
                 d_templ.upload(templ);
-                ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR_NORMED);
+                ocl::matchTemplate(d_src, d_templ, d_dst, TM_CCORR_NORMED);
                 d_dst.download(dst);
                 GPU_FULL_OFF;
             }

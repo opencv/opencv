@@ -29,7 +29,7 @@ void convertAndResize(const T& src, T& gray, T& resized, double scale)
 {
     if (src.channels() == 3)
     {
-        cvtColor( src, gray, CV_BGR2GRAY );
+        cvtColor( src, gray, COLOR_BGR2GRAY );
     }
     else
     {
@@ -272,7 +272,7 @@ int main(int argc, const char *argv[])
         }
         cout << endl;
 
-        cvtColor(resized_cpu, frameDisp, CV_GRAY2BGR);
+        cvtColor(resized_cpu, frameDisp, COLOR_GRAY2BGR);
         displayState(frameDisp, helpScreen, useGPU, findLargestObject, filterRects, fps);
         imshow("result", frameDisp);
 

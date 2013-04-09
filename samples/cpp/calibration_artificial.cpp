@@ -120,7 +120,7 @@ int main()
         imshow("Current chessboard", boards[i]); waitKey(1000);
     }
     cout << "Done" << endl;
-    cvDestroyAllWindows();
+    destroyAllWindows();
 
     Mat camMat_est;
     Mat distCoeffs_est;

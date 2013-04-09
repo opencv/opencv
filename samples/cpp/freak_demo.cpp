@@ -66,13 +66,13 @@ int main( int argc, char** argv ) {
     }
 
     // Load images
-    Mat imgA = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE );
+    Mat imgA = imread(argv[1], IMREAD_GRAYSCALE );
     if( !imgA.data ) {
         std::cout<< " --(!) Error reading image " << argv[1] << std::endl;
         return -1;
     }
 
-    Mat imgB = imread(argv[2], CV_LOAD_IMAGE_GRAYSCALE );
+    Mat imgB = imread(argv[2], IMREAD_GRAYSCALE );
     if( !imgA.data ) {
         std::cout << " --(!) Error reading image " << argv[2] << std::endl;
         return -1;
@@ -123,7 +123,7 @@ int main( int argc, char** argv ) {
     Mat imgMatch;
     drawMatches(imgA, keypointsA, imgB, keypointsB, matches, imgMatch);
 
-    namedWindow("matches", CV_WINDOW_KEEPRATIO);
+    namedWindow("matches", WINDOW_KEEPRATIO);
     imshow("matches", imgMatch);
     waitKey(0);
 }

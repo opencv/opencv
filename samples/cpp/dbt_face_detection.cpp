@@ -84,7 +84,7 @@ int main(int , char** )
 
         imshow(WindowName, ReferenceFrame);
 
-        if (cvWaitKey(30) >= 0) break;
+        if (waitKey(30) >= 0) break;
     }
 
     Detector.stop();

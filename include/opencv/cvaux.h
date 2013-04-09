@@ -48,7 +48,8 @@
 
 #include "opencv2/core/core_c.h"
 #include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/imgproc.hpp"
+#include "opencv2/photo/photo_c.h"
+
 #include "opencv2/video.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/calib3d.hpp"

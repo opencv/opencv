@@ -354,25 +354,6 @@ Moments::Moments( double _m00, double _m10, double _m01, double _m20, double _m1
     nu30 = mu30*s3; nu21 = mu21*s3; nu12 = mu12*s3; nu03 = mu03*s3;
 }
 
-Moments::Moments( const CvMoments& m )
-{
-    *this = Moments(m.m00, m.m10, m.m01, m.m20, m.m11, m.m02, m.m30, m.m21, m.m12, m.m03);
-}
-
-Moments::operator CvMoments() const
-{
-    CvMoments m;
-    m.m00 = m00; m.m10 = m10; m.m01 = m01;
-    m.m20 = m20; m.m11 = m11; m.m02 = m02;
-    m.m30 = m30; m.m21 = m21; m.m12 = m12; m.m03 = m03;
-    m.mu20 = mu20; m.mu11 = mu11; m.mu02 = mu02;
-    m.mu30 = mu30; m.mu21 = mu21; m.mu12 = mu12; m.mu03 = mu03;
-    double am00 = std::abs(m00);
-    m.inv_sqrt_m00 = am00 > DBL_EPSILON ? 1./std::sqrt(am00) : 0;
-
-    return m;
-}
-
 }
 
 
