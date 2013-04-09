@@ -47,43 +47,6 @@
 using namespace cvtest;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
-// Integral
-
-PARAM_TEST_CASE(Integral, cv::gpu::DeviceInfo, cv::Size, UseRoi)
-{
-    cv::gpu::DeviceInfo devInfo;
-    cv::Size size;
-    bool useRoi;
-
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        size = GET_PARAM(1);
-        useRoi = GET_PARAM(2);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-    }
-};
-
-GPU_TEST_P(Integral, Accuracy)
-{
-    cv::Mat src = randomMat(size, CV_8UC1);
-
-    cv::gpu::GpuMat dst = createMat(cv::Size(src.cols + 1, src.rows + 1), CV_32SC1, useRoi);
-    cv::gpu::integral(loadMat(src, useRoi), dst);
-
-    cv::Mat dst_gold;
-    cv::integral(src, dst_gold, CV_32S);
-
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
-}
-
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Integral, testing::Combine(
-    ALL_DEVICES,
-    DIFFERENT_SIZES,
-    WHOLE_SUBMAT));
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////
 // HistEven
 
 struct HistEven : testing::TestWithParam<cv::gpu::DeviceInfo>

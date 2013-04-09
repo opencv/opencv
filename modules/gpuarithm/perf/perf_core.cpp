@@ -2160,10 +2160,10 @@ PERF_TEST_P(Sz_Depth_NormType, Core_Normalize,
     }
 }
 
+#ifdef HAVE_OPENCV_IMGPROC
+
 //////////////////////////////////////////////////////////////////////
 // CopyMakeBorder
-
-#ifdef HAVE_OPENCV_IMGPROC
 
 DEF_PARAM_TEST(Sz_Depth_Cn_Border, cv::Size, MatDepth, MatCn, BorderMode);
 
@@ -2199,6 +2199,63 @@ PERF_TEST_P(Sz_Depth_Cn_Border, ImgProc_CopyMakeBorder,
         TEST_CYCLE() cv::copyMakeBorder(src, dst, 5, 5, 5, 5, borderMode);
 
         CPU_SANITY_CHECK(dst);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// Integral
+
+PERF_TEST_P(Sz, ImgProc_Integral,
+            GPU_TYPICAL_MAT_SIZES)
+{
+    const cv::Size size = GetParam();
+
+    cv::Mat src(size, CV_8UC1);
+    declare.in(src, WARMUP_RNG);
+
+    if (PERF_RUN_GPU())
+    {
+        const cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat dst;
+        cv::gpu::GpuMat d_buf;
+
+        TEST_CYCLE() cv::gpu::integralBuffered(d_src, dst, d_buf);
+
+        GPU_SANITY_CHECK(dst);
+    }
+    else
+    {
+        cv::Mat dst;
+
+        TEST_CYCLE() cv::integral(src, dst);
+
+        CPU_SANITY_CHECK(dst);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// IntegralSqr
+
+PERF_TEST_P(Sz, ImgProc_IntegralSqr,
+            GPU_TYPICAL_MAT_SIZES)
+{
+    const cv::Size size = GetParam();
+
+    cv::Mat src(size, CV_8UC1);
+    declare.in(src, WARMUP_RNG);
+
+    if (PERF_RUN_GPU())
+    {
+        const cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat dst;
+
+        TEST_CYCLE() cv::gpu::sqrIntegral(d_src, dst);
+
+        GPU_SANITY_CHECK(dst);
+    }
+    else
+    {
+        FAIL_NO_CPU();
     }
 }
 

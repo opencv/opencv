@@ -168,18 +168,6 @@ CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K
 CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0,
                        int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
 
-//! computes the integral image
-//! sum will have CV_32S type, but will contain unsigned int values
-//! supports only CV_8UC1 source type
-CV_EXPORTS void integral(const GpuMat& src, GpuMat& sum, Stream& stream = Stream::Null());
-//! buffered version
-CV_EXPORTS void integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, Stream& stream = Stream::Null());
-
-//! computes squared integral image
-//! result matrix will have 64F type, but will contain 64U values
-//! supports source images of 8UC1 type only
-CV_EXPORTS void sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& stream = Stream::Null());
-
 //! computes Harris cornerness criteria at each image pixel
 CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
 CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
