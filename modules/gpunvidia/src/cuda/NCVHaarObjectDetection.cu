@@ -61,7 +61,12 @@
 
 #include "opencv2/core/cuda/warp.hpp"
 #include "opencv2/core/cuda/warp_shuffle.hpp"
-#include "opencv2/objdetect.hpp"
+
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_OBJDETECT
+#  include "opencv2/objdetect.hpp"
+#endif
 
 #include "opencv2/gpunvidia/NCV.hpp"
 #include "opencv2/gpunvidia/NPP_staging.hpp"
@@ -2106,6 +2111,15 @@ static NCVStatus loadFromXML(const cv::String &filename,
                       std::vector<HaarClassifierNode128> &haarClassifierNodes,
                       std::vector<HaarFeature64> &haarFeatures)
 {
+#ifndef HAVE_OPENCV_OBJDETECT
+    (void) filename;
+    (void) haar;
+    (void) haarStages;
+    (void) haarClassifierNodes;
+    (void) haarFeatures;
+    CV_Error(cv::Error::StsNotImplemented, "This functionality requires objdetect module");
+    return NCV_HAAR_XML_LOADING_EXCEPTION;
+#else
     NCVStatus ncvStat;
 
     haar.NumStages = 0;
@@ -2294,6 +2308,7 @@ static NCVStatus loadFromXML(const cv::String &filename,
     }
 
     return NCV_SUCCESS;
+#endif
 }
 
 

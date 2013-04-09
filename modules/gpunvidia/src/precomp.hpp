@@ -49,7 +49,12 @@
 
 #include "opencv2/gpunvidia.hpp"
 #include "opencv2/core/utility.hpp"
-#include "opencv2/objdetect.hpp"
+
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_OBJDETECT
+#  include "opencv2/objdetect.hpp"
+#endif
 
 #include "opencv2/core/gpu_private.hpp"
 #include "opencv2/gpunvidia/private.hpp"
