@@ -59,7 +59,6 @@ void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int, 
 void cv::gpu::integral(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 void cv::gpu::integralBuffered(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 void cv::gpu::sqrIntegral(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::rectStdDev(const GpuMat&, const GpuMat&, GpuMat&, const Rect&, Stream&) { throw_no_cuda(); }
 void cv::gpu::evenLevels(GpuMat&, int, int, int) { throw_no_cuda(); }
 void cv::gpu::histEven(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
 void cv::gpu::histEven(const GpuMat&, GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
@@ -623,36 +622,6 @@ void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
     sqsum.create(src.rows + 1, src.cols + 1, CV_64F);
     ncvSafeCall(nppiStSqrIntegral_8u64u_C1R(const_cast<Ncv8u*>(src.ptr<Ncv8u>(0)), static_cast<int>(src.step),
             sqsum.ptr<Ncv64u>(0), static_cast<int>(sqsum.step), roiSize, buf.ptr<Ncv8u>(0), bufSize, prop));
-
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
-}
-
-//////////////////////////////////////////////////////////////////////////////
-// rectStdDev
-
-void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& s)
-{
-    CV_Assert(src.type() == CV_32SC1 && sqr.type() == CV_64FC1);
-
-    dst.create(src.size(), CV_32FC1);
-
-    NppiSize sz;
-    sz.width = src.cols;
-    sz.height = src.rows;
-
-    NppiRect nppRect;
-    nppRect.height = rect.height;
-    nppRect.width = rect.width;
-    nppRect.x = rect.x;
-    nppRect.y = rect.y;
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    NppStreamHandler h(stream);
-
-    nppSafeCall( nppiRectStdDev_32s32f_C1R(src.ptr<Npp32s>(), static_cast<int>(src.step), sqr.ptr<Npp64f>(), static_cast<int>(sqr.step),
-                dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, nppRect) );
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
