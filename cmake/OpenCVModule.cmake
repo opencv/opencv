@@ -432,16 +432,16 @@ macro(ocv_glob_module_sources)
   file(GLOB lib_hdrs     "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
   file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.hpp" "include/opencv2/${name}/detail/*.h")
 
-  file(GLOB lib_device_srcs "src/cuda/*.cu")
-  set(device_objs "")
-  set(lib_device_hdrs "")
+  file(GLOB lib_cuda_srcs "src/cuda/*.cu")
+  set(cuda_objs "")
+  set(lib_cuda_hdrs "")
 
-  if (HAVE_CUDA AND lib_device_srcs)
+  if(HAVE_CUDA AND lib_cuda_srcs)
     ocv_include_directories(${CUDA_INCLUDE_DIRS})
-    file(GLOB lib_device_hdrs "src/cuda/*.hpp")
+    file(GLOB lib_cuda_hdrs "src/cuda/*.hpp")
 
-    ocv_cuda_compile(device_objs ${lib_device_srcs} ${lib_device_hdrs})
-    source_group("Src\\Cuda"      FILES ${lib_device_srcs} ${lib_device_hdrs})
+    ocv_cuda_compile(cuda_objs ${lib_cuda_srcs} ${lib_cuda_hdrs})
+    source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
   endif()
 
   file(GLOB cl_kernels "src/opencl/*.cl")
@@ -457,7 +457,7 @@ macro(ocv_glob_module_sources)
   endif()
 
   ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
-                                 SOURCES ${lib_srcs} ${lib_int_hdrs} ${device_objs} ${lib_device_srcs} ${lib_device_hdrs})
+                                 SOURCES ${lib_srcs} ${lib_int_hdrs} ${cuda_objs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
 
   source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
   source_group("Include" FILES ${lib_hdrs})

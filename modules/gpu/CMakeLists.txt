@@ -8,8 +8,6 @@ ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video o
 ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")
 
 file(GLOB lib_hdrs               "include/opencv2/*.hpp"                       "include/opencv2/${name}/*.hpp"               "include/opencv2/${name}/*.h")
-file(GLOB lib_device_hdrs        "include/opencv2/${name}/device/*.hpp"        "include/opencv2/${name}/device/*.h")
-file(GLOB lib_device_hdrs_detail "include/opencv2/${name}/device/detail/*.hpp" "include/opencv2/${name}/device/detail/*.h")
 file(GLOB lib_int_hdrs           "src/*.hpp"      "src/*.h")
 file(GLOB lib_cuda_hdrs          "src/cuda/*.hpp" "src/cuda/*.h")
 file(GLOB lib_srcs               "src/*.cpp")
@@ -18,8 +16,6 @@ file(GLOB lib_cuda               "src/cuda/*.cu*")
 source_group("Include"        FILES ${lib_hdrs})
 source_group("Src\\Host"      FILES ${lib_srcs} ${lib_int_hdrs})
 source_group("Src\\Cuda"      FILES ${lib_cuda} ${lib_cuda_hdrs})
-source_group("Device"         FILES ${lib_device_hdrs})
-source_group("Device\\Detail" FILES ${lib_device_hdrs_detail})
 
 if(HAVE_CUDA)
   file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp" "src/nvidia/*.h*")
@@ -64,7 +60,7 @@ else()
 endif()
 
 ocv_set_module_sources(
-  HEADERS ${lib_hdrs} ${lib_device_hdrs} ${lib_device_hdrs_detail}
+  HEADERS ${lib_hdrs}
   SOURCES ${lib_int_hdrs} ${lib_cuda_hdrs} ${lib_srcs} ${lib_cuda} ${ncv_files} ${cuda_objs}
   )
 

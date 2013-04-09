@@ -46,14 +46,14 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-cv::gpu::VIBE_GPU::VIBE_GPU(unsigned long) { throw_nogpu(); }
-void cv::gpu::VIBE_GPU::initialize(const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::VIBE_GPU::operator()(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+cv::gpu::VIBE_GPU::VIBE_GPU(unsigned long) { throw_no_cuda(); }
+void cv::gpu::VIBE_GPU::initialize(const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::VIBE_GPU::operator()(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 void cv::gpu::VIBE_GPU::release() {}
 
 #else
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace vibe
     {
@@ -84,7 +84,7 @@ cv::gpu::VIBE_GPU::VIBE_GPU(unsigned long rngSeed) :
 
 void cv::gpu::VIBE_GPU::initialize(const GpuMat& firstFrame, Stream& s)
 {
-    using namespace cv::gpu::device::vibe;
+    using namespace cv::gpu::cudev::vibe;
 
     CV_Assert(firstFrame.type() == CV_8UC1 || firstFrame.type() == CV_8UC3 || firstFrame.type() == CV_8UC4);
 
@@ -112,7 +112,7 @@ void cv::gpu::VIBE_GPU::initialize(const GpuMat& firstFrame, Stream& s)
 
 void cv::gpu::VIBE_GPU::operator()(const GpuMat& frame, GpuMat& fgmask, Stream& s)
 {
-    using namespace cv::gpu::device::vibe;
+    using namespace cv::gpu::cudev::vibe;
 
     CV_Assert(frame.depth() == CV_8U);
 

@@ -43,17 +43,20 @@
 #ifndef __OPENCV_CUDA_STREAM_ACCESSOR_HPP__
 #define __OPENCV_CUDA_STREAM_ACCESSOR_HPP__
 
-#include "opencv2/core/gpumat.hpp"
-#include "cuda_runtime_api.h"
+#include <cuda_runtime.h>
+#include "opencv2/core/cvdef.h"
+
+// This is only header file that depends on Cuda. All other headers are independent.
+// So if you use OpenCV binaries you do noot need to install Cuda Toolkit.
+// But of you wanna use GPU by yourself, may get cuda stream instance using the class below.
+// In this case you have to install Cuda Toolkit.
 
 namespace cv
 {
     namespace gpu
     {
-        // This is only header file that depends on Cuda. All other headers are independent.
-        // So if you use OpenCV binaries you do noot need to install Cuda Toolkit.
-        // But of you wanna use GPU by yourself, may get cuda stream instance using the class below.
-        // In this case you have to install Cuda Toolkit.
+        class Stream;
+
         struct StreamAccessor
         {
             CV_EXPORTS static cudaStream_t getStream(const Stream& stream);

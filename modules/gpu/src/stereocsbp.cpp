@@ -47,17 +47,17 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::StereoConstantSpaceBP::estimateRecommendedParams(int, int, int&, int&, int&, int&) { throw_nogpu(); }
+void cv::gpu::StereoConstantSpaceBP::estimateRecommendedParams(int, int, int&, int&, int&, int&) { throw_no_cuda(); }
 
-cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int, int, int, int, int) { throw_nogpu(); }
-cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int, int, int, int, float, float, float, float, int, int) { throw_nogpu(); }
+cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int, int, int, int, int) { throw_no_cuda(); }
+cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int, int, int, int, float, float, float, float, int, int) { throw_no_cuda(); }
 
-void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 #include "opencv2/core/utility.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace stereocsbp
     {
@@ -89,7 +89,7 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-using namespace ::cv::gpu::device::stereocsbp;
+using namespace ::cv::gpu::cudev::stereocsbp;
 
 namespace
 {

@@ -48,37 +48,10 @@
 #include "NPP_staging.hpp"
 #include "opencv2/gpu/devmem2d.hpp"
 #include "safe_call.hpp"
-#include "opencv2/gpu/device/common.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
 namespace cv { namespace gpu
 {
-    enum
-    {
-        BORDER_REFLECT101_GPU = 0,
-        BORDER_REPLICATE_GPU,
-        BORDER_CONSTANT_GPU,
-        BORDER_REFLECT_GPU,
-        BORDER_WRAP_GPU
-    };
-
-    class NppStreamHandler
-    {
-    public:
-        inline explicit NppStreamHandler(cudaStream_t newStream = 0)
-        {
-            oldStream = nppGetStream();
-            nppSetStream(newStream);
-        }
-
-        inline ~NppStreamHandler()
-        {
-            nppSetStream(oldStream);
-        }
-
-    private:
-        cudaStream_t oldStream;
-    };
-
     class NppStStreamHandler
     {
     public:

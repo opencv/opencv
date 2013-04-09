@@ -58,9 +58,6 @@ namespace cv
         // Simple lightweight structures that encapsulates information about an image on device.
         // It is intended to pass to nvcc-compiled code. GpuMat depends on headers that nvcc can't compile
 
-        template <bool expr> struct StaticAssert;
-        template <> struct StaticAssert<true> {static __CV_GPU_HOST_DEVICE__ void check(){}};
-
         template<typename T> struct DevPtr
         {
             typedef T elem_type;
@@ -148,24 +145,6 @@ namespace cv
         typedef DevMem2Db DevMem2D;
         typedef DevMem2D_<float> DevMem2Df;
         typedef DevMem2D_<int> DevMem2Di;
-
-//#undef __CV_GPU_DEPR_BEFORE__
-//#undef __CV_GPU_DEPR_AFTER__
-
-        namespace device
-        {
-            using cv::gpu::PtrSz;
-            using cv::gpu::PtrStep;
-            using cv::gpu::PtrStepSz;
-
-            using cv::gpu::PtrStepSzb;
-            using cv::gpu::PtrStepSzf;
-            using cv::gpu::PtrStepSzi;
-
-            using cv::gpu::PtrStepb;
-            using cv::gpu::PtrStepf;
-            using cv::gpu::PtrStepi;
-        }
     }
 }
 

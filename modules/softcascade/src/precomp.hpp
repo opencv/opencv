@@ -50,6 +50,7 @@
 #include "opencv2/ml.hpp"
 
 #include "opencv2/core/private.hpp"
+#include "opencv2/core/gpu_private.hpp"
 
 namespace cv { namespace softcascade { namespace internal
 {

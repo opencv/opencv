@@ -48,25 +48,25 @@ class cv::gpu::VideoWriter_GPU::Impl
 {
 };
 
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU() { throw_nogpu(); }
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const String&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const String&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU() { throw_no_cuda(); }
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const String&, cv::Size, double, SurfaceFormat) { throw_no_cuda(); }
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const String&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_no_cuda(); }
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>&, cv::Size, double, SurfaceFormat) { throw_no_cuda(); }
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_no_cuda(); }
 cv::gpu::VideoWriter_GPU::~VideoWriter_GPU() {}
-void cv::gpu::VideoWriter_GPU::open(const String&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
-void cv::gpu::VideoWriter_GPU::open(const String&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }
-void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
-void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }
+void cv::gpu::VideoWriter_GPU::open(const String&, cv::Size, double, SurfaceFormat) { throw_no_cuda(); }
+void cv::gpu::VideoWriter_GPU::open(const String&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_no_cuda(); }
+void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>&, cv::Size, double, SurfaceFormat) { throw_no_cuda(); }
+void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_no_cuda(); }
 bool cv::gpu::VideoWriter_GPU::isOpened() const { return false; }
 void cv::gpu::VideoWriter_GPU::close() {}
-void cv::gpu::VideoWriter_GPU::write(const cv::gpu::GpuMat&, bool) { throw_nogpu(); }
-cv::gpu::VideoWriter_GPU::EncoderParams cv::gpu::VideoWriter_GPU::getParams() const { EncoderParams params; throw_nogpu(); return params; }
+void cv::gpu::VideoWriter_GPU::write(const cv::gpu::GpuMat&, bool) { throw_no_cuda(); }
+cv::gpu::VideoWriter_GPU::EncoderParams cv::gpu::VideoWriter_GPU::getParams() const { EncoderParams params; throw_no_cuda(); return params; }
 
-cv::gpu::VideoWriter_GPU::EncoderParams::EncoderParams() { throw_nogpu(); }
-cv::gpu::VideoWriter_GPU::EncoderParams::EncoderParams(const String&) { throw_nogpu(); }
-void cv::gpu::VideoWriter_GPU::EncoderParams::load(const String&) { throw_nogpu(); }
-void cv::gpu::VideoWriter_GPU::EncoderParams::save(const String&) const { throw_nogpu(); }
+cv::gpu::VideoWriter_GPU::EncoderParams::EncoderParams() { throw_no_cuda(); }
+cv::gpu::VideoWriter_GPU::EncoderParams::EncoderParams(const String&) { throw_no_cuda(); }
+void cv::gpu::VideoWriter_GPU::EncoderParams::load(const String&) { throw_no_cuda(); }
+void cv::gpu::VideoWriter_GPU::EncoderParams::save(const String&) const { throw_no_cuda(); }
 
 #else // !defined HAVE_CUDA || !defined WIN32
 
@@ -501,7 +501,7 @@ void cv::gpu::VideoWriter_GPU::Impl::createHWEncoder()
     CV_Assert( err == 0 );
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace video_encoding
     {
@@ -674,7 +674,7 @@ void cv::gpu::VideoWriter_GPU::Impl::write(const cv::gpu::GpuMat& frame, bool la
     CV_Assert( res == CUDA_SUCCESS );
 
     if (inputFormat_ == SF_BGR)
-        cv::gpu::device::video_encoding::YV12_gpu(frame, frame.channels(), videoFrame_);
+        cv::gpu::cudev::video_encoding::YV12_gpu(frame, frame.channels(), videoFrame_);
     else
     {
         switch (surfaceFormat_)

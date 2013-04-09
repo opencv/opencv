@@ -45,9 +45,9 @@
 #include <thrust/device_ptr.h>
 #include <thrust/remove.h>
 #include <thrust/functional.h>
-#include "opencv2/gpu/device/common.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace device { namespace globmotion {
+namespace cv { namespace gpu { namespace cudev { namespace globmotion {
 
 __constant__ float cml[9];
 __constant__ float cmr[9];

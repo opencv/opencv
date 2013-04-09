@@ -49,22 +49,22 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-cv::gpu::SURF_GPU::SURF_GPU() { throw_nogpu(); }
-cv::gpu::SURF_GPU::SURF_GPU(double, int, int, bool, float, bool) { throw_nogpu(); }
-int cv::gpu::SURF_GPU::descriptorSize() const { throw_nogpu(); return 0;}
-void cv::gpu::SURF_GPU::uploadKeypoints(const std::vector<KeyPoint>&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::downloadDescriptors(const GpuMat&, std::vector<float>&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&, bool) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, std::vector<float>&, bool) { throw_nogpu(); }
-void cv::gpu::SURF_GPU::releaseMemory() { throw_nogpu(); }
+cv::gpu::SURF_GPU::SURF_GPU() { throw_no_cuda(); }
+cv::gpu::SURF_GPU::SURF_GPU(double, int, int, bool, float, bool) { throw_no_cuda(); }
+int cv::gpu::SURF_GPU::descriptorSize() const { throw_no_cuda(); return 0;}
+void cv::gpu::SURF_GPU::uploadKeypoints(const std::vector<KeyPoint>&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::downloadDescriptors(const GpuMat&, std::vector<float>&) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&, bool) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, std::vector<float>&, bool) { throw_no_cuda(); }
+void cv::gpu::SURF_GPU::releaseMemory() { throw_no_cuda(); }
 
 #else // !defined (HAVE_CUDA)
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace surf
     {
@@ -91,7 +91,7 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-using namespace ::cv::gpu::device::surf;
+using namespace ::cv::gpu::cudev::surf;
 
 namespace
 {

@@ -49,9 +49,9 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace device {
+namespace cv { namespace gpu { namespace cudev {
     namespace video_decoding
     {
         __constant__ uint constAlpha = ((uint)0xff << 24);

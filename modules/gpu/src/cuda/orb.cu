@@ -45,11 +45,11 @@
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/reduce.hpp"
-#include "opencv2/gpu/device/functional.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
+#include "opencv2/core/cuda/functional.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace orb
     {

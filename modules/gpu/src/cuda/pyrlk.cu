@@ -42,15 +42,15 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/utility.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/reduce.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/utility.hpp"
+#include "opencv2/core/cuda/functional.hpp"
+#include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::device;
+using namespace cv::gpu::cudev;
 
 namespace pyrlk
 {

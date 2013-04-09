@@ -64,27 +64,20 @@
 #include <iterator>
 #include <stdexcept>
 
-#include "opencv2/core/private.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/opengl.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/video.hpp"
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/gpu_test.hpp"
+#include "opencv2/gpu.hpp"
+#include "opencv2/legacy.hpp"
 
-#ifdef HAVE_CUDA
-    #include <cuda.h>
-    #include <cuda_runtime.h>
+#include "interpolation.hpp"
+#include "main_test_nvidia.h"
 
-    #include "opencv2/core.hpp"
-    #include "opencv2/core/opengl.hpp"
-    #include "opencv2/highgui.hpp"
-    #include "opencv2/calib3d.hpp"
-    #include "opencv2/imgproc.hpp"
-    #include "opencv2/video.hpp"
-    #include "opencv2/ts.hpp"
-    #include "opencv2/ts/gpu_test.hpp"
-    #include "opencv2/gpu.hpp"
-    #include "opencv2/legacy.hpp"
-
-    #include "interpolation.hpp"
-    #include "main_test_nvidia.h"
-
-    #include "opencv2/core/private.hpp"
-#endif
+#include "opencv2/core/gpu_private.hpp"
 
 #endif

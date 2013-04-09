@@ -42,9 +42,9 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace split_merge
     {
@@ -293,7 +293,7 @@ namespace cv { namespace gpu { namespace device
             MergeFunction merge_func = merge_func_tbl[merge_func_id];
 
             if (merge_func == 0)
-                cv::gpu::error("Unsupported channel count or data type", __FILE__, __LINE__, "merge_caller");
+                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported channel count or data type");
 
             merge_func(src, dst, stream);
         }
@@ -500,12 +500,12 @@ namespace cv { namespace gpu { namespace device
             SplitFunction split_func = split_func_tbl[split_func_id];
 
             if (split_func == 0)
-                cv::gpu::error("Unsupported channel count or data type", __FILE__, __LINE__, "split_caller");
+                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported channel count or data type");
 
             split_func(src, dst, stream);
         }
     } // namespace split_merge
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cudev
 
 
 #endif /* CUDA_DISABLER */

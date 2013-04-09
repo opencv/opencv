@@ -54,12 +54,12 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
     (void)interpolation;
     (void)s;
 
-    throw_nogpu();
+    throw_no_cuda();
 }
 
 #else // HAVE_CUDA
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -137,7 +137,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
     }
     else
     {
-        using namespace ::cv::gpu::device::imgproc;
+        using namespace ::cv::gpu::cudev::imgproc;
 
         typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
 

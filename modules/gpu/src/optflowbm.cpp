@@ -47,9 +47,9 @@ using namespace cv::gpu;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::calcOpticalFlowBM(const GpuMat&, const GpuMat&, Size, Size, Size, bool, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::calcOpticalFlowBM(const GpuMat&, const GpuMat&, Size, Size, Size, bool, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::FastOpticalFlowBM::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, int, int, Stream&) { throw_nogpu(); }
+void cv::gpu::FastOpticalFlowBM::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, int, int, Stream&) { throw_no_cuda(); }
 
 #else // HAVE_CUDA
 

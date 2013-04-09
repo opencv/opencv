@@ -47,28 +47,28 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&) { throw_nogpu(); }
-void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&, GpuMat&) { throw_nogpu(); }
-double cv::gpu::norm(const GpuMat&, int) { throw_nogpu(); return 0.0; }
-double cv::gpu::norm(const GpuMat&, int, GpuMat&) { throw_nogpu(); return 0.0; }
-double cv::gpu::norm(const GpuMat&, int, const GpuMat&, GpuMat&) { throw_nogpu(); return 0.0; }
-double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_nogpu(); return 0.0; }
-Scalar cv::gpu::sum(const GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::sum(const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::sum(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::absSum(const GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::absSum(const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::absSum(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::sqrSum(const GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::sqrSum(const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
-Scalar cv::gpu::sqrSum(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); return Scalar(); }
-void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&) { throw_nogpu(); }
-void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&) { throw_nogpu(); }
-void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
-int cv::gpu::countNonZero(const GpuMat&) { throw_nogpu(); return 0; }
-int cv::gpu::countNonZero(const GpuMat&, GpuMat&) { throw_nogpu(); return 0; }
-void cv::gpu::reduce(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_nogpu(); }
+void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&) { throw_no_cuda(); }
+void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&, GpuMat&) { throw_no_cuda(); }
+double cv::gpu::norm(const GpuMat&, int) { throw_no_cuda(); return 0.0; }
+double cv::gpu::norm(const GpuMat&, int, GpuMat&) { throw_no_cuda(); return 0.0; }
+double cv::gpu::norm(const GpuMat&, int, const GpuMat&, GpuMat&) { throw_no_cuda(); return 0.0; }
+double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_no_cuda(); return 0.0; }
+Scalar cv::gpu::sum(const GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::sum(const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::sum(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::absSum(const GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::absSum(const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::absSum(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::sqrSum(const GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::sqrSum(const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::sqrSum(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&) { throw_no_cuda(); }
+void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&) { throw_no_cuda(); }
+void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+int cv::gpu::countNonZero(const GpuMat&) { throw_no_cuda(); return 0; }
+int cv::gpu::countNonZero(const GpuMat&, GpuMat&) { throw_no_cuda(); return 0; }
+void cv::gpu::reduce(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
 
 #else
 #include "opencv2/core/utility.hpp"

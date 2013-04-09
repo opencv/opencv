@@ -45,21 +45,19 @@
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/utility.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace gfft
     {
         texture<float, cudaTextureType2D, cudaReadModeElementType> eigTex(0, cudaFilterModePoint, cudaAddressModeClamp);
 
-        __device__ uint g_counter = 0;
+        __device__ int g_counter = 0;
 
-        template <class Mask> __global__ void findCorners(float threshold, const Mask mask, float2* corners, uint max_count, int rows, int cols)
+        template <class Mask> __global__ void findCorners(float threshold, const Mask mask, float2* corners, int max_count, int rows, int cols)
         {
-            #if __CUDA_ARCH__ >= 110
-
             const int j = blockIdx.x * blockDim.x + threadIdx.x;
             const int i = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -84,15 +82,13 @@ namespace cv { namespace gpu { namespace device
 
                     if (val == maxVal)
                     {
-                        const uint ind = atomicInc(&g_counter, (uint)(-1));
+                        const int ind = ::atomicAdd(&g_counter, 1);
 
                         if (ind < max_count)
                             corners[ind] = make_float2(j, i);
                     }
                 }
             }
-
-            #endif // __CUDA_ARCH__ >= 110
         }
 
         int findCorners_gpu(PtrStepSzf eig, float threshold, PtrStepSzb mask, float2* corners, int max_count)
@@ -100,7 +96,7 @@ namespace cv { namespace gpu { namespace device
             void* counter_ptr;
             cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(uint)) );
+            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(int)) );
 
             bindTexture(&eigTex, eig);
 
@@ -116,10 +112,10 @@ namespace cv { namespace gpu { namespace device
 
             cudaSafeCall( cudaDeviceSynchronize() );
 
-            uint count;
-            cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(uint), cudaMemcpyDeviceToHost) );
+            int count;
+            cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
 
-            return min(count, max_count);
+            return std::min(count, max_count);
         }
 
         class EigGreater

@@ -47,11 +47,11 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::blendLinear(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::blendLinear(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
 #else
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace blend
     {
@@ -62,7 +62,7 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-using namespace ::cv::gpu::device::blend;
+using namespace ::cv::gpu::cudev::blend;
 
 void cv::gpu::blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2,
                           GpuMat& result, Stream& stream)

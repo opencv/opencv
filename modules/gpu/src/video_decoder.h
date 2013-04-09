@@ -44,7 +44,6 @@
 #define __VIDEO_DECODER_H__
 
 #include "precomp.hpp"
-#include "cu_safe_call.h"
 
 #if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
 

@@ -42,14 +42,14 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/vec_traits.hpp"
-#include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/color.hpp"
-#include "opencv2/gpu/device/saturate_cast.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/vec_traits.hpp"
+#include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda/color.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <typename T> struct Bayer2BGR;
 

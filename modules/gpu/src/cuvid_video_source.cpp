@@ -41,7 +41,6 @@
 //M*/
 
 #include "cuvid_video_source.h"
-#include "cu_safe_call.h"
 
 #if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
 
