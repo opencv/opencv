@@ -1,12 +1,19 @@
 #Cross compile TBB from source
 project(tbb)
 
-# 4.1 update 2 - works fine
-set(tbb_ver "tbb41_20130116oss")
-set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130116oss_src.tgz")
-set(tbb_md5 "3809790e1001a1b32d59c9fee590ee85")
+# 4.1 update 3 dev - works fine
+set(tbb_ver "tbb41_20130401oss")
+set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130401oss_src.tgz")
+set(tbb_md5 "f2f591a0d2ca8f801e221ce7d9ea84bb")
 set(tbb_version_file "version_string.ver")
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
+
+# 4.1 update 2 - works fine
+#set(tbb_ver "tbb41_20130116oss")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130116oss_src.tgz")
+#set(tbb_md5 "3809790e1001a1b32d59c9fee590ee85")
+#set(tbb_version_file "version_string.ver")
+#ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
 
 # 4.1 update 1 - works fine
 #set(tbb_ver "tbb41_20121003oss")
@@ -107,7 +114,8 @@ if(NOT EXISTS "${tbb_src_dir}")
               RESULT_VARIABLE tbb_untar_RESULT)
 
   if(NOT tbb_untar_RESULT EQUAL 0 OR NOT EXISTS "${tbb_src_dir}")
-    message(FATAL_ERROR "Failed to unpack TBB sources")
+    message(FATAL_ERROR "Failed to unpack TBB sources (${tbb_untar_RESULT} ${tbb_src_dir})")
+
   endif()
 endif()
 
@@ -124,11 +132,12 @@ list(APPEND lib_srcs "${tbb_src_dir}/src/rml/client/rml_tbb.cpp")
 
 if (WIN32)
   add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0
-                -D__TBB_BUILD=1
-                -D_UNICODE
-                -DUNICODE
-                -DWINAPI_FAMILY=WINAPI_FAMILY_APP
-                -DDO_ITT_NOTIFY=0
+                /D__TBB_BUILD=1
+                /D_UNICODE
+                /DUNICODE
+                /DWINAPI_FAMILY=WINAPI_FAMILY_APP
+                /DDO_ITT_NOTIFY=0
+                /DUSE_WINTHREAD
                ) # defines were copied from windows.cl.inc
 set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /APPCONTAINER")
 else()
@@ -173,7 +182,23 @@ endif()
 set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
 
 add_library(tbb ${TBB_SOURCE_FILES})
-target_link_libraries(tbb c m dl)
+
+if (WIN32)
+  add_custom_command(TARGET tbb
+                     PRE_BUILD
+                     COMMAND ${CMAKE_C_COMPILER} /nologo /TC /EP ${tbb_src_dir}\\src\\tbb\\win32-tbb-export.def /DTBB_NO_LEGACY /DUSE_WINTHREAD /D_CRT_SECURE_NO_DEPRECATE /D_WIN32_WINNT=0x0400 /D__TBB_BUILD=1 /I${tbb_src_dir}\\src /I${tbb_src_dir}\\include > "${tbb_src_dir}\\src\\tbb\\tbb.def"
+                     WORKING_DIRECTORY ${tbb_src_dir}\\src\\tbb
+                     COMMENT "Generating tbb.def file" VERBATIM
+                    )
+endif()
+
+if (WIN32)
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DEF:${tbb_src_dir}/src/tbb/tbb.def /DLL /MAP /fixed:no /INCREMENTAL:NO")
+endif()
+
+if (NOT WIN32)
+  target_link_libraries(tbb c m dl)
+endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
 string(REPLACE "-Werror=non-virtual-dtor" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
