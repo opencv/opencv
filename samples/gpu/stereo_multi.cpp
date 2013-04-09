@@ -93,12 +93,12 @@ int main(int argc, char** argv)
     {
         if (string(argv[i]) == "--left")
         {
-            left = imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE);
+            left = imread(argv[++i], cv::IMREAD_GRAYSCALE);
             CV_Assert(!left.empty());
         }
         else if (string(argv[i]) == "--right")
         {
-            right = imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE);
+            right = imread(argv[++i], cv::IMREAD_GRAYSCALE);
             CV_Assert(!right.empty());
         }
         else if (string(argv[i]) == "--help")
