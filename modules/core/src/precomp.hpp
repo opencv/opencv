@@ -69,6 +69,14 @@
 namespace cv
 {
 
+typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
+                       const uchar* src2, size_t step2,
+                       uchar* dst, size_t step, Size sz,
+                       void*);
+
+BinaryFunc getConvertFunc(int sdepth, int ddepth);
+BinaryFunc getCopyMaskFunc(size_t esz);
+
 /* default memory block for sparse array elements */
 #define  CV_SPARSE_MAT_BLOCK     (1<<12)
 
