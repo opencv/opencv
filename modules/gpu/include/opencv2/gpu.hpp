@@ -184,11 +184,6 @@ CV_EXPORTS void integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer,
 //! supports source images of 8UC1 type only
 CV_EXPORTS void sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& stream = Stream::Null());
 
-//! computes the standard deviation of integral images
-//! supports only CV_32SC1 source type and CV_32FC1 sqr type
-//! output will have CV_32FC1 type
-CV_EXPORTS void rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& stream = Stream::Null());
-
 //! computes Harris cornerness criteria at each image pixel
 CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
 CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);

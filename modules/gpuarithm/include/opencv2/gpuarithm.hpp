@@ -274,6 +274,11 @@ CV_EXPORTS void reduce(const GpuMat& mtx, GpuMat& vec, int dim, int reduceOp, in
 //! applies fixed threshold to the image
 CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type, Stream& stream = Stream::Null());
 
+//! computes the standard deviation of integral images
+//! supports only CV_32SC1 source type and CV_32FC1 sqr type
+//! output will have CV_32FC1 type
+CV_EXPORTS void rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& stream = Stream::Null());
+
 }} // namespace cv { namespace gpu {
 
 #endif /* __OPENCV_GPUARITHM_HPP__ */
