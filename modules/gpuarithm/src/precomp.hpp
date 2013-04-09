@@ -59,7 +59,11 @@
 #endif
 
 #ifdef HAVE_CUBLAS
-    #include <cublas.h>
+#  include <cublas.h>
+#endif
+
+#ifdef HAVE_CUFFT
+#  include <cufft.h>
 #endif
 
 #endif /* __OPENCV_PRECOMP_H__ */
