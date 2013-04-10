@@ -40,12 +40,4 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPUNVIDIA_HPP__
-#define __OPENCV_GPUNVIDIA_HPP__
-
-#include "opencv2/gpunvidia/NCV.hpp"
-#include "opencv2/gpunvidia/NPP_staging.hpp"
-#include "opencv2/gpunvidia/NCVPyramid.hpp"
-#include "opencv2/gpunvidia/NCVHaarObjectDetection.hpp"
-
-#endif /* __OPENCV_GPUNVIDIA_HPP__ */
+#include "test_precomp.hpp"

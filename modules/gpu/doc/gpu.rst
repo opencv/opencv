@@ -10,4 +10,3 @@ gpu. GPU-accelerated Computer Vision
     data_structures
     object_detection
     camera_calibration_and_3d_reconstruction
-    video

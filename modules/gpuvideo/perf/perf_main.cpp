@@ -40,12 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPUNVIDIA_HPP__
-#define __OPENCV_GPUNVIDIA_HPP__
+#include "perf_precomp.hpp"
 
-#include "opencv2/gpunvidia/NCV.hpp"
-#include "opencv2/gpunvidia/NPP_staging.hpp"
-#include "opencv2/gpunvidia/NCVPyramid.hpp"
-#include "opencv2/gpunvidia/NCVHaarObjectDetection.hpp"
+using namespace perf;
 
-#endif /* __OPENCV_GPUNVIDIA_HPP__ */
+CV_PERF_TEST_MAIN(gpuarithm, printCudaInfo())
