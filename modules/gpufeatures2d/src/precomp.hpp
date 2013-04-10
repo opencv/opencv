@@ -47,6 +47,9 @@
 #include <functional>
 
 #include "opencv2/gpufeatures2d.hpp"
+#include "opencv2/gpuarithm.hpp"
+#include "opencv2/gpuimgproc.hpp"
+
 #include "opencv2/features2d.hpp"
 
 #include "opencv2/core/gpu_private.hpp"

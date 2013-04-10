@@ -75,7 +75,7 @@ void DeviceManager::load(int i)
     if (i < 0 || i >= getCudaEnabledDeviceCount())
     {
         msg << "Incorrect device number - " << i;
-        CV_Error(CV_StsBadArg, msg.str());
+        CV_Error(cv::Error::StsBadArg, msg.str());
     }
 
     DeviceInfo info(i);
@@ -83,7 +83,7 @@ void DeviceManager::load(int i)
     if (!info.isCompatible())
     {
         msg << "Device " << i << " [" << info.name() << "] is NOT compatible with current GPU module build";
-        CV_Error(CV_StsBadArg, msg.str());
+        CV_Error(cv::Error::StsBadArg, msg.str());
     }
 
     devices_.push_back(info);

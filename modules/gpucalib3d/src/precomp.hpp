@@ -46,6 +46,7 @@
 #include <limits>
 
 #include "opencv2/gpucalib3d.hpp"
+#include "opencv2/gpuarithm.hpp"
 
 #include "opencv2/calib3d.hpp"
 #include "opencv2/imgproc.hpp"
