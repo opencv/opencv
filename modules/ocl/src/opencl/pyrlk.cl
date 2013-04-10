@@ -184,6 +184,209 @@ float linearFilter_float(__global const float* src, int srcStep, int cn, float2 
 }
 
 #define	BUFFER	64
+
+#ifdef CPU
+void reduce3(float val1, float val2, float val3,  __local float* smem1,  __local float* smem2,  __local float* smem3, int tid)
+{
+    smem1[tid] = val1;
+    smem2[tid] = val2;
+    smem3[tid] = val3;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+#if	BUFFER > 128
+    if (tid < 128)
+    {
+        smem1[tid] = val1 += smem1[tid + 128];
+        smem2[tid] = val2 += smem2[tid + 128];
+        smem3[tid] = val3 += smem3[tid + 128];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+#endif
+
+#if	BUFFER > 64
+    if (tid < 64)
+    {
+        smem1[tid] = val1 += smem1[tid + 64];
+        smem2[tid] = val2 += smem2[tid + 64];
+        smem3[tid] = val3 += smem3[tid + 64];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+#endif
+
+    if (tid < 32)
+    {
+        smem1[tid] = val1 += smem1[tid + 32];
+        smem2[tid] = val2 += smem2[tid + 32];
+        smem3[tid] = val3 += smem3[tid + 32];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 16)
+    {
+        smem1[tid] = val1 += smem1[tid + 16];
+        smem2[tid] = val2 += smem2[tid + 16];
+        smem3[tid] = val3 += smem3[tid + 16];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 8)
+    {
+        smem1[tid] = val1 += smem1[tid + 8];
+        smem2[tid] = val2 += smem2[tid + 8];
+        smem3[tid] = val3 += smem3[tid + 8];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 4)
+    {
+        smem1[tid] = val1 += smem1[tid + 4];
+        smem2[tid] = val2 += smem2[tid + 4];
+        smem3[tid] = val3 += smem3[tid + 4];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 2)
+    {
+        smem1[tid] = val1 += smem1[tid + 2];
+        smem2[tid] = val2 += smem2[tid + 2];
+        smem3[tid] = val3 += smem3[tid + 2];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 1)
+    {
+        smem1[BUFFER] = val1 += smem1[tid + 1];
+        smem2[BUFFER] = val2 += smem2[tid + 1];
+        smem3[BUFFER] = val3 += smem3[tid + 1];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+}
+
+void reduce2(float val1, float val2, volatile __local float* smem1, volatile __local float* smem2, int tid)
+{
+    smem1[tid] = val1;
+    smem2[tid] = val2;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+#if	BUFFER > 128
+    if (tid < 128)
+    {
+        smem1[tid] = (val1 += smem1[tid + 128]);
+        smem2[tid] = (val2 += smem2[tid + 128]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+#endif
+
+#if	BUFFER > 64
+    if (tid < 64)
+    {
+        smem1[tid] = (val1 += smem1[tid + 64]);
+        smem2[tid] = (val2 += smem2[tid + 64]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+#endif
+
+    if (tid < 32)
+    {
+        smem1[tid] = (val1 += smem1[tid + 32]);
+        smem2[tid] = (val2 += smem2[tid + 32]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 16)
+    {
+        smem1[tid] = (val1 += smem1[tid + 16]);
+        smem2[tid] = (val2 += smem2[tid + 16]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 8)
+    {
+        smem1[tid] = (val1 += smem1[tid + 8]);
+        smem2[tid] = (val2 += smem2[tid + 8]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 4)
+    {
+        smem1[tid] = (val1 += smem1[tid + 4]);
+        smem2[tid] = (val2 += smem2[tid + 4]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 2)
+    {
+        smem1[tid] = (val1 += smem1[tid + 2]);
+        smem2[tid] = (val2 += smem2[tid + 2]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 1)
+    {
+        smem1[BUFFER] = (val1 += smem1[tid + 1]);
+        smem2[BUFFER] = (val2 += smem2[tid + 1]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+}
+
+void reduce1(float val1, volatile __local float* smem1, int tid)
+{
+    smem1[tid] = val1;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+#if	BUFFER > 128
+    if (tid < 128)
+    {
+        smem1[tid] = (val1 += smem1[tid + 128]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+#endif
+
+#if	BUFFER > 64
+    if (tid < 64)
+    {
+        smem1[tid] = (val1 += smem1[tid + 64]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+#endif
+
+    if (tid < 32)
+    {
+        smem1[tid] = (val1 += smem1[tid + 32]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 16)
+    {
+        smem1[tid] = (val1 += smem1[tid + 16]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 8)
+    {
+        smem1[tid] = (val1 += smem1[tid + 8]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 4)
+    {
+        smem1[tid] = (val1 += smem1[tid + 4]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 2)
+    {
+        smem1[tid] = (val1 += smem1[tid + 2]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 1)
+    {
+        smem1[BUFFER] = (val1 += smem1[tid + 1]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+}
+#else
 void reduce3(float val1, float val2, float val3, __local float* smem1, __local float* smem2, __local float* smem3, int tid)
 {
     smem1[tid] = val1;
@@ -325,6 +528,7 @@ void reduce1(float val1, __local float* smem1, int tid)
         vmem1[tid] = val1 += vmem1[tid + 1];
     }
 }
+#endif
 
 #define SCALE (1.0f / (1 << 20))
 #define	THRESHOLD	0.01f
@@ -411,14 +615,20 @@ void GetError4(image2d_t J, const float x, const float y, const float4* Pch, flo
         *errval += fabs(diff.x) + fabs(diff.y) + fabs(diff.z);
 }
 
-
+#define	GRIDSIZE	3
 __kernel void lkSparse_C1_D5(image2d_t I, image2d_t J,
     __global const float2* prevPts, int prevPtsStep, __global float2* nextPts, int nextPtsStep, __global uchar* status, __global float* err,
         const int level, const int rows, const int cols, int PATCH_X, int PATCH_Y, int cn, int c_winSize_x, int c_winSize_y, int c_iters, char calcErr)
 {
+#ifdef CPU
+    __local float smem1[BUFFER+1];
+    __local float smem2[BUFFER+1];
+    __local float smem3[BUFFER+1];
+#else
     __local float smem1[BUFFER];
     __local float smem2[BUFFER];
     __local float smem3[BUFFER];
+#endif
 
         unsigned int xid=get_local_id(0);
         unsigned int yid=get_local_id(1);
@@ -431,7 +641,7 @@ __kernel void lkSparse_C1_D5(image2d_t I, image2d_t J,
 
     const int tid = mad24(yid, xsize, xid);
 
-    float2 prevPt = prevPts[gid] / (1 << level);
+    float2 prevPt = prevPts[gid] / (float2)(1 << level);
 
     if (prevPt.x < 0 || prevPt.x >= cols || prevPt.y < 0 || prevPt.y >= rows)
     {
@@ -450,9 +660,9 @@ __kernel void lkSparse_C1_D5(image2d_t I, image2d_t J,
     float A12 = 0;
     float A22 = 0;
 
-    float I_patch[3][3];
-    float dIdx_patch[3][3];
-    float dIdy_patch[3][3];
+    float I_patch[GRIDSIZE][GRIDSIZE];
+    float dIdx_patch[GRIDSIZE][GRIDSIZE];
+    float dIdy_patch[GRIDSIZE][GRIDSIZE];
 
         yBase=yid;
         {
@@ -512,12 +722,19 @@ __kernel void lkSparse_C1_D5(image2d_t I, image2d_t J,
                                         &I_patch[2][2], &dIdx_patch[2][2], &dIdy_patch[2][2],
                                         &A11, &A12, &A22);
         }
+
     reduce3(A11, A12, A22, smem1, smem2, smem3, tid);
     barrier(CLK_LOCAL_MEM_FENCE);
 
+#ifdef CPU
+    A11 = smem1[BUFFER];
+    A12 = smem2[BUFFER];
+    A22 = smem3[BUFFER];
+#else
     A11 = smem1[0];
     A12 = smem2[0];
     A22 = smem3[0];
+#endif
 
     float D = A11 * A22 - A12 * A12;
 
@@ -609,8 +826,13 @@ __kernel void lkSparse_C1_D5(image2d_t I, image2d_t J,
         reduce2(b1, b2, smem1, smem2, tid);
         barrier(CLK_LOCAL_MEM_FENCE);
 
+#ifdef CPU
+        b1 = smem1[BUFFER];
+        b2 = smem2[BUFFER];
+#else
         b1 = smem1[0];
         b2 = smem2[0];
+#endif
 
         float2 delta;
         delta.x = A12 * b2 - A22 * b1;
@@ -685,18 +907,28 @@ __kernel void lkSparse_C1_D5(image2d_t I, image2d_t J,
         nextPts[gid] = prevPt;
 
         if (calcErr)
-            err[gid] = smem1[0] / (c_winSize_x * c_winSize_y);
+#ifdef CPU
+            err[gid] = smem1[BUFFER] / (float)(c_winSize_x * c_winSize_y);
+#else
+            err[gid] = smem1[0] / (float)(c_winSize_x * c_winSize_y);
+#endif
     }
-
 }
+
 
 __kernel void lkSparse_C4_D5(image2d_t I, image2d_t J,
     __global const float2* prevPts, int prevPtsStep, __global float2* nextPts, int nextPtsStep, __global uchar* status, __global float* err,
         const int level, const int rows, const int cols, int PATCH_X, int PATCH_Y, int cn, int c_winSize_x, int c_winSize_y, int c_iters, char calcErr)
 {
-    __local float smem1[BUFFER];
-    __local float smem2[BUFFER];
-    __local float smem3[BUFFER];
+#ifdef CPU
+     __local float smem1[BUFFER+1];
+     __local float smem2[BUFFER+1];
+     __local float smem3[BUFFER+1];
+#else
+     __local float smem1[BUFFER];
+     __local float smem2[BUFFER];
+     __local float smem3[BUFFER];
+#endif
 
         unsigned int xid=get_local_id(0);
         unsigned int yid=get_local_id(1);
@@ -709,7 +941,7 @@ __kernel void lkSparse_C4_D5(image2d_t I, image2d_t J,
 
     const int tid = mad24(yid, xsize, xid);
 
-    float2 nextPt = prevPts[gid]/(1<<level);
+    float2 nextPt = prevPts[gid]/(float2)(1<<level);
 
     if (nextPt.x < 0 || nextPt.x >= cols || nextPt.y < 0 || nextPt.y >= rows)
     {
@@ -725,9 +957,9 @@ __kernel void lkSparse_C4_D5(image2d_t I, image2d_t J,
 
     // extract the patch from the first image, compute covariation matrix of derivatives
 
-    float A11 = 0;
-    float A12 = 0;
-    float A22 = 0;
+    float A11 = 0.0f;
+    float A12 = 0.0f;
+    float A22 = 0.0f;
 
     float4 I_patch[8];
     float4 dIdx_patch[8];
@@ -797,9 +1029,15 @@ __kernel void lkSparse_C4_D5(image2d_t I, image2d_t J,
     reduce3(A11, A12, A22, smem1, smem2, smem3, tid);
     barrier(CLK_LOCAL_MEM_FENCE);
 
+#ifdef CPU
+    A11 = smem1[BUFFER];
+    A12 = smem2[BUFFER];
+    A22 = smem3[BUFFER];
+#else
     A11 = smem1[0];
     A12 = smem2[0];
     A22 = smem3[0];
+#endif
 
     float D = A11 * A22 - A12 * A12;
 
@@ -888,12 +1126,16 @@ __kernel void lkSparse_C4_D5(image2d_t I, image2d_t J,
                                                 &b1, &b2);
                 }
 
-
         reduce2(b1, b2, smem1, smem2, tid);
         barrier(CLK_LOCAL_MEM_FENCE);
 
+#ifdef CPU
+        b1 = smem1[BUFFER];
+        b2 = smem2[BUFFER];
+#else
         b1 = smem1[0];
         b2 = smem2[0];
+#endif
 
         float2 delta;
         delta.x = A12 * b2 - A22 * b1;
@@ -967,7 +1209,11 @@ __kernel void lkSparse_C4_D5(image2d_t I, image2d_t J,
         nextPts[gid] = nextPt;
 
         if (calcErr)
-            err[gid] = smem1[0] / (3 * c_winSize_x * c_winSize_y);
+#ifdef CPU
+            err[gid] = smem1[BUFFER] / (float)(3 * c_winSize_x * c_winSize_y);
+#else
+            err[gid] = smem1[0] / (float)(3 * c_winSize_x * c_winSize_y);
+#endif
     }
 }
 
