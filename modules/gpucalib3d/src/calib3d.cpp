@@ -48,10 +48,10 @@ using namespace cv::gpu;
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
 void cv::gpu::transformPoints(const GpuMat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::solvePnPRansac(const Mat&, const Mat&, const Mat&, const Mat&, Mat&, Mat&, bool, int, float, int, std::vector<int>*) { throw_no_cuda(); }
+void cv::gpu::reprojectImageTo3D(const GpuMat&, GpuMat&, const Mat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
 
 #else
 
@@ -150,7 +150,7 @@ namespace
     }
 
     // Computes rotation, translation pair for small subsets if the input data
-    class TransformHypothesesGenerator
+    class TransformHypothesesGenerator : public cv::ParallelLoopBody
     {
     public:
         TransformHypothesesGenerator(const Mat& object_, const Mat& image_, const Mat& dist_coef_,
@@ -160,7 +160,7 @@ namespace
                   num_points(num_points_), subset_size(subset_size_), rot_matrices(rot_matrices_),
                   transl_vectors(transl_vectors_) {}
 
-        void operator()(const BlockedRange& range) const
+        void operator()(const Range& range) const
         {
             // Input data for generation of the current hypothesis
             std::vector<int> subset_indices(subset_size);
@@ -172,7 +172,7 @@ namespace
             Mat rot_mat(3, 3, CV_64F);
             Mat transl_vec(1, 3, CV_64F);
 
-            for (int iter = range.begin(); iter < range.end(); ++iter)
+            for (int iter = range.start; iter < range.end; ++iter)
             {
                 selectRandom(subset_size, num_points, subset_indices);
                 for (int i = 0; i < subset_size; ++i)
@@ -238,7 +238,7 @@ void cv::gpu::solvePnPRansac(const Mat& object, const Mat& image, const Mat& cam
     // Generate set of hypotheses using small subsets of the input data
     TransformHypothesesGenerator body(object, image_normalized, empty_dist_coef, eye_camera_mat,
                                       num_points, subset_size, rot_matrices, transl_vectors);
-    parallel_for(BlockedRange(0, num_iters), body);
+    parallel_for_(Range(0, num_iters), body);
 
     // Compute scores (i.e. number of inliers) for each hypothesis
     GpuMat d_object(object);
@@ -289,6 +289,66 @@ void cv::gpu::solvePnPRansac(const Mat& object, const Mat& image, const Mat& cam
     }
 }
 
+////////////////////////////////////////////////////////////////////////
+// reprojectImageTo3D
+
+namespace cv { namespace gpu { namespace cudev
+{
+    template <typename T, typename D>
+    void reprojectImageTo3D_gpu(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
+}}}
+
+void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyz, const Mat& Q, int dst_cn, Stream& stream)
+{
+    using namespace cv::gpu::cudev;
+
+    typedef void (*func_t)(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
+    static const func_t funcs[2][4] =
+    {
+        {reprojectImageTo3D_gpu<uchar, float3>, 0, 0, reprojectImageTo3D_gpu<short, float3>},
+        {reprojectImageTo3D_gpu<uchar, float4>, 0, 0, reprojectImageTo3D_gpu<short, float4>}
+    };
+
+    CV_Assert(disp.type() == CV_8U || disp.type() == CV_16S);
+    CV_Assert(Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4 && Q.isContinuous());
+    CV_Assert(dst_cn == 3 || dst_cn == 4);
+
+    xyz.create(disp.size(), CV_MAKE_TYPE(CV_32F, dst_cn));
+
+    funcs[dst_cn == 4][disp.type()](disp, xyz, Q.ptr<float>(), StreamAccessor::getStream(stream));
+}
+
+////////////////////////////////////////////////////////////////////////
+// drawColorDisp
+
+namespace cv { namespace gpu { namespace cudev
+{
+    void drawColorDisp_gpu(const PtrStepSzb& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream);
+    void drawColorDisp_gpu(const PtrStepSz<short>& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream);
+}}}
+
+namespace
+{
+    template <typename T>
+    void drawColorDisp_caller(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream)
+    {
+        using namespace ::cv::gpu::cudev;
+
+        dst.create(src.size(), CV_8UC4);
+
+        drawColorDisp_gpu((PtrStepSz<T>)src, dst, ndisp, stream);
+    }
+
+    typedef void (*drawColorDisp_caller_t)(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream);
+
+    const drawColorDisp_caller_t drawColorDisp_callers[] = {drawColorDisp_caller<unsigned char>, 0, 0, drawColorDisp_caller<short>, 0, 0, 0, 0};
+}
+
+void cv::gpu::drawColorDisp(const GpuMat& src, GpuMat& dst, int ndisp, Stream& stream)
+{
+    CV_Assert(src.type() == CV_8U || src.type() == CV_16S);
+
+    drawColorDisp_callers[src.type()](src, dst, ndisp, StreamAccessor::getStream(stream));
+}
+
 #endif
-
-

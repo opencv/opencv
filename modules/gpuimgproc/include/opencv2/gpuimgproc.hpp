@@ -76,18 +76,6 @@ CV_EXPORTS void meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, in
 CV_EXPORTS void meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize,
                                       TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
-//! Does coloring of disparity image: [0..ndisp) -> [0..240, 1, 1] in HSV.
-//! Supported types of input disparity: CV_8U, CV_16S.
-//! Output disparity has CV_8UC4 type in BGRA format (alpha = 255).
-CV_EXPORTS void drawColorDisp(const GpuMat& src_disp, GpuMat& dst_disp, int ndisp, Stream& stream = Stream::Null());
-
-//! Reprojects disparity image to 3D space.
-//! Supports CV_8U and CV_16S types of input disparity.
-//! The output is a 3- or 4-channel floating-point matrix.
-//! Each element of this matrix will contain the 3D coordinates of the point (x,y,z,1), computed from the disparity map.
-//! Q is the 4x4 perspective transformation matrix that can be obtained with cvStereoRectify.
-CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, int dst_cn = 4, Stream& stream = Stream::Null());
-
 //! converts image from one color space to another
 CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0, Stream& stream = Stream::Null());
 
