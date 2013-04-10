@@ -891,6 +891,8 @@ void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
 //////////////////////////////////////////////////////////////////////////////
 // mulSpectrums
 
+#ifdef HAVE_CUFFT
+
 namespace cv { namespace gpu { namespace cudev
 {
     void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c, cudaStream_t stream);
@@ -898,9 +900,20 @@ namespace cv { namespace gpu { namespace cudev
     void mulSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c, cudaStream_t stream);
 }}}
 
+#endif
+
 void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB, Stream& stream)
 {
-    (void)flags;
+#ifndef HAVE_CUFFT
+    (void) a;
+    (void) b;
+    (void) c;
+    (void) flags;
+    (void) conjB;
+    (void) stream;
+    throw_no_cuda();
+#else
+    (void) flags;
 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, PtrStepSz<cufftComplex>, cudaStream_t stream);
 
@@ -913,10 +926,13 @@ void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flag
 
     Caller caller = callers[(int)conjB];
     caller(a, b, c, StreamAccessor::getStream(stream));
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // mulAndScaleSpectrums
+
+#ifdef HAVE_CUFFT
 
 namespace cv { namespace gpu { namespace cudev
 {
@@ -925,8 +941,20 @@ namespace cv { namespace gpu { namespace cudev
     void mulAndScaleSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c, cudaStream_t stream);
 }}}
 
+#endif
+
 void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB, Stream& stream)
 {
+#ifndef HAVE_CUFFT
+    (void) a;
+    (void) b;
+    (void) c;
+    (void) flags;
+    (void) scale;
+    (void) conjB;
+    (void) stream;
+    throw_no_cuda();
+#else
     (void)flags;
 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, float scale, PtrStepSz<cufftComplex>, cudaStream_t stream);
@@ -939,6 +967,7 @@ void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, 
 
     Caller caller = callers[(int)conjB];
     caller(a, b, scale, c, StreamAccessor::getStream(stream));
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -947,15 +976,12 @@ void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, 
 void cv::gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags, Stream& stream)
 {
 #ifndef HAVE_CUFFT
-
-    OPENCV_GPU_UNUSED(src);
-    OPENCV_GPU_UNUSED(dst);
-    OPENCV_GPU_UNUSED(dft_size);
-    OPENCV_GPU_UNUSED(flags);
-    OPENCV_GPU_UNUSED(stream);
-
+    (void) src;
+    (void) dst;
+    (void) dft_size;
+    (void) flags;
+    (void) stream;
     throw_no_cuda();
-
 #else
 
     CV_Assert(src.type() == CV_32F || src.type() == CV_32FC2);
@@ -1099,11 +1125,17 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
 
 void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream)
 {
-    using namespace ::cv::gpu::cudev::imgproc;
-
 #ifndef HAVE_CUFFT
+    (void) image;
+    (void) templ;
+    (void) result;
+    (void) ccorr;
+    (void) buf;
+    (void) stream;
     throw_no_cuda();
 #else
+    using namespace cv::gpu::cudev::imgproc;
+
     CV_Assert(image.type() == CV_32F);
     CV_Assert(templ.type() == CV_32F);
 

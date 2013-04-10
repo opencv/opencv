@@ -534,7 +534,7 @@ void cv::gpu::reduce(const GpuMat& src, GpuMat& dst, int dim, int reduceOp, int 
 {
     CV_Assert( src.channels() <= 4 );
     CV_Assert( dim == 0 || dim == 1 );
-    CV_Assert( reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG || reduceOp == CV_REDUCE_MAX || reduceOp == CV_REDUCE_MIN );
+    CV_Assert( reduceOp == cv::REDUCE_SUM || reduceOp == cv::REDUCE_AVG || reduceOp == cv::REDUCE_MAX || reduceOp == cv::REDUCE_MIN );
 
     if (dtype < 0)
         dtype = src.depth();
