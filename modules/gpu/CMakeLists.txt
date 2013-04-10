@@ -4,7 +4,9 @@ endif()
 
 set(the_description "GPU-accelerated Computer Vision")
 
-ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_photo opencv_legacy opencv_gpuarithm opencv_gpufilters opencv_gpuimgproc opencv_gpufeatures2d OPTIONAL opencv_gpunvidia)
+ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_photo opencv_legacy
+                   opencv_gpuarithm opencv_gpufilters opencv_gpuimgproc opencv_gpufeatures2d opencv_gpuvideo
+                   OPTIONAL opencv_gpunvidia)
 
 ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")
 

@@ -17,6 +17,7 @@
 
 #ifdef HAVE_CUDA
 #include "opencv2/gpunvidia.hpp"
+#include "opencv2/gpuvideo/NCVBroxOpticalFlow.hpp"
 #endif
 
 #if !defined(HAVE_CUDA)

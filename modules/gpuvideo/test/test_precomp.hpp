@@ -40,12 +40,26 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPUNVIDIA_HPP__
-#define __OPENCV_GPUNVIDIA_HPP__
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
+#endif
 
-#include "opencv2/gpunvidia/NCV.hpp"
-#include "opencv2/gpunvidia/NPP_staging.hpp"
-#include "opencv2/gpunvidia/NCVPyramid.hpp"
-#include "opencv2/gpunvidia/NCVHaarObjectDetection.hpp"
+#ifndef __OPENCV_TEST_PRECOMP_HPP__
+#define __OPENCV_TEST_PRECOMP_HPP__
 
-#endif /* __OPENCV_GPUNVIDIA_HPP__ */
+#include <fstream>
+
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/gpu_test.hpp"
+
+#include "opencv2/gpuvideo.hpp"
+#include "opencv2/gpuimgproc.hpp"
+
+#include "opencv2/video.hpp"
+#include "opencv2/legacy.hpp"
+
+#endif

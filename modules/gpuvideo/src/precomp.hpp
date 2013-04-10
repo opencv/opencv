@@ -40,12 +40,30 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPUNVIDIA_HPP__
-#define __OPENCV_GPUNVIDIA_HPP__
+#ifndef __OPENCV_PRECOMP_H__
+#define __OPENCV_PRECOMP_H__
 
-#include "opencv2/gpunvidia/NCV.hpp"
-#include "opencv2/gpunvidia/NPP_staging.hpp"
-#include "opencv2/gpunvidia/NCVPyramid.hpp"
-#include "opencv2/gpunvidia/NCVHaarObjectDetection.hpp"
+#include <limits>
 
-#endif /* __OPENCV_GPUNVIDIA_HPP__ */
+#include "opencv2/gpuvideo.hpp"
+
+#include "opencv2/gpuarithm.hpp"
+#include "opencv2/gpufilters.hpp"
+#include "opencv2/gpuimgproc.hpp"
+
+#include "opencv2/video.hpp"
+
+#include "opencv2/core/gpu_private.hpp"
+
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_GPUNVIDIA
+#  include "opencv2/gpunvidia/private.hpp"
+#  include "opencv2/gpuvideo/NCVBroxOpticalFlow.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#  include "cuda/fgd_bgfg_common.hpp"
+#endif
+
+#endif /* __OPENCV_PRECOMP_H__ */
