@@ -6,6 +6,7 @@ import android.content.Context;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
+import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.PreviewCallback;
 import android.os.Build;
 import android.util.AttributeSet;
@@ -68,7 +69,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
         synchronized (this) {
             mCamera = null;
 
-            if (mCameraIndex == -1) {
+            if (mCameraIndex == CAMERA_ID_ANY) {
                 Log.d(TAG, "Trying to open camera with old open()");
                 try {
                     mCamera = Camera.open();
@@ -92,11 +93,39 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                 }
             } else {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
-                    Log.d(TAG, "Trying to open camera with new open(" + Integer.valueOf(mCameraIndex) + ")");
-                    try {
-                        mCamera = Camera.open(mCameraIndex);
-                    } catch (RuntimeException e) {
-                        Log.e(TAG, "Camera #" + mCameraIndex + "failed to open: " + e.getLocalizedMessage());
+                    int localCameraIndex = mCameraIndex;
+                    if (mCameraIndex == CAMERA_ID_BACK) {
+                        Log.i(TAG, "Trying to open back camera");
+                        Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+                        for (int camIdx = 0; camIdx < Camera.getNumberOfCameras(); ++camIdx) {
+                            Camera.getCameraInfo( camIdx, cameraInfo );
+                            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+                                localCameraIndex = camIdx;
+                                break;
+                            }
+                        }
+                    } else if (mCameraIndex == CAMERA_ID_FRONT) {
+                        Log.i(TAG, "Trying to open front camera");
+                        Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+                        for (int camIdx = 0; camIdx < Camera.getNumberOfCameras(); ++camIdx) {
+                            Camera.getCameraInfo( camIdx, cameraInfo );
+                            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                                localCameraIndex = camIdx;
+                                break;
+                            }
+                        }
+                    }
+                    if (localCameraIndex == CAMERA_ID_BACK) {
+                        Log.e(TAG, "Back camera not found!");
+                    } else if (localCameraIndex == CAMERA_ID_FRONT) {
+                        Log.e(TAG, "Front camera not found!");
+                    } else {
+                        Log.d(TAG, "Trying to open camera with new open(" + Integer.valueOf(localCameraIndex) + ")");
+                        try {
+                            mCamera = Camera.open(localCameraIndex);
+                        } catch (RuntimeException e) {
+                            Log.e(TAG, "Camera #" + localCameraIndex + "failed to open: " + e.getLocalizedMessage());
+                        }
                     }
                 }
             }
