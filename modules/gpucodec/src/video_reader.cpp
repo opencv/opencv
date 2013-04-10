@@ -385,8 +385,3 @@ void cv::gpu::VideoReader_GPU::dumpFormat(std::ostream& st)
 }
 
 #endif // HAVE_NVCUVID
-
-template <> void cv::Ptr<cv::gpu::VideoReader_GPU::Impl>::delete_obj()
-{
-    if (obj) delete obj;
-}

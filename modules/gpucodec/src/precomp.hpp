@@ -50,8 +50,8 @@
 #include <stdexcept>
 #include <iostream>
 
-#include "opencv2/core.hpp"
 #include "opencv2/gpucodec.hpp"
+
 #include "opencv2/core/gpu_private.hpp"
 
 #ifdef HAVE_NVCUVID

@@ -995,8 +995,3 @@ void cv::gpu::VideoWriter_GPU::EncoderParams::save(const String& configFile) con
 }
 
 #endif // !defined HAVE_CUDA || !defined WIN32
-
-template <> void cv::Ptr<cv::gpu::VideoWriter_GPU::Impl>::delete_obj()
-{
-    if (obj) delete obj;
-}

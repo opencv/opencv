@@ -157,7 +157,6 @@ private:
     cv::Ptr<Impl> impl_;
 };
 
-
 ////////////////////////////////// Video Decoding //////////////////////////////////////////
 
 namespace detail
@@ -255,10 +254,5 @@ private:
 };
 
 }} // namespace cv { namespace gpu {
-
-namespace cv {
-    template <> CV_EXPORTS void Ptr<cv::gpu::VideoReader_GPU::Impl>::delete_obj();
-    template <> CV_EXPORTS void Ptr<cv::gpu::VideoWriter_GPU::Impl>::delete_obj();
-}
 
 #endif /* __OPENCV_GPUCODEC_HPP__ */
