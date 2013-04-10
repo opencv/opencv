@@ -824,7 +824,7 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
     }
     else
     {
-#ifndef HAVE_OPENCV_GPUNVIDIA
+#ifndef HAVE_OPENCV_GPULEGACY
     throw_no_cuda();
 #else
         sum.create(src.rows + 1, src.cols + 1, CV_32SC1);
@@ -856,7 +856,7 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
 
 void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
 {
-#ifndef HAVE_OPENCV_GPUNVIDIA
+#ifndef HAVE_OPENCV_GPULEGACY
     (void) src;
     (void) sqsum;
     (void) s;

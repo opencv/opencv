@@ -43,7 +43,7 @@
 #include <iostream>
 #include <vector>
 
-#include "opencv2/gpunvidia/NCV.hpp"
+#include "opencv2/gpulegacy/NCV.hpp"
 
 //===================================================================
 //

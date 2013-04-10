@@ -43,7 +43,7 @@
 #ifndef _ncv_alg_hpp_
 #define _ncv_alg_hpp_
 
-#include "opencv2/gpunvidia/NCV.hpp"
+#include "opencv2/gpulegacy/NCV.hpp"
 
 
 template <class T>

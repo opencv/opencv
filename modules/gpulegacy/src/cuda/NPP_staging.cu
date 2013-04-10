@@ -48,7 +48,7 @@
 #include "opencv2/core/cuda/warp.hpp"
 #include "opencv2/core/cuda/warp_shuffle.hpp"
 
-#include "opencv2/gpunvidia/NPP_staging.hpp"
+#include "opencv2/gpulegacy/NPP_staging.hpp"
 
 
 texture<Ncv8u,  1, cudaReadModeElementType> tex8u;

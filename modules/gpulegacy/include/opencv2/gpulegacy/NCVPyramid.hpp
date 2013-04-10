@@ -40,56 +40,60 @@
 //
 //M*/
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
+#ifndef _ncvpyramid_hpp_
+#define _ncvpyramid_hpp_
 
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
-
-#if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__)
-    #include <fpu_control.h>
-#endif
-
-#include <cfloat>
-#include <cstdio>
-#include <cmath>
-#include <vector>
-#include <string>
-#include <map>
 #include <memory>
-#include <algorithm>
-#include <fstream>
+#include <vector>
+#include "opencv2/gpulegacy/NCV.hpp"
 
-#include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_test.hpp"
+#if 0 //def _WIN32
 
-#include "opencv2/core/gpumat.hpp"
-#include "opencv2/gpunvidia.hpp"
-#include "opencv2/highgui.hpp"
+template <class T>
+class CV_EXPORTS NCVMatrixStack
+{
+public:
+    NCVMatrixStack() {this->_arr.clear();}
+    ~NCVMatrixStack()
+    {
+        const Ncv32u nElem = this->_arr.size();
+        for (Ncv32u i=0; i<nElem; i++)
+        {
+            pop_back();
+        }
+    }
+    void push_back(NCVMatrix<T> *elem) {this->_arr.push_back(std::tr1::shared_ptr< NCVMatrix<T> >(elem));}
+    void pop_back() {this->_arr.pop_back();}
+    NCVMatrix<T> * operator [] (int i) const {return this->_arr[i].get();}
+private:
+    std::vector< std::tr1::shared_ptr< NCVMatrix<T> > > _arr;
+};
 
-#include "opencv2/core/gpu_private.hpp"
 
-#include "NCVTest.hpp"
-#include "NCVAutoTestLister.hpp"
-#include "NCVTestSourceProvider.hpp"
+template <class T>
+class CV_EXPORTS NCVImagePyramid
+{
+public:
 
-#include "TestIntegralImage.h"
-#include "TestIntegralImageSquared.h"
-#include "TestRectStdDev.h"
-#include "TestResize.h"
-#include "TestCompact.h"
-#include "TestTranspose.h"
-#include "TestDrawRects.h"
-#include "TestHypothesesGrow.h"
-#include "TestHypothesesFilter.h"
-#include "TestHaarCascadeLoader.h"
-#include "TestHaarCascadeApplication.h"
+    NCVImagePyramid(const NCVMatrix<T> &img,
+                    Ncv8u nLayers,
+                    INCVMemAllocator &alloc,
+                    cudaStream_t cuStream);
+    ~NCVImagePyramid();
+    NcvBool isInitialized() const;
+    NCVStatus getLayer(NCVMatrix<T> &outImg,
+                       NcvSize32u outRoi,
+                       NcvBool bTrilinear,
+                       cudaStream_t cuStream) const;
 
-#include "main_test_nvidia.h"
+private:
 
-#endif
+    NcvBool _isInitialized;
+    const NCVMatrix<T> *layer0;
+    NCVMatrixStack<T> pyramid;
+    Ncv32u nLayers;
+};
+
+#endif //_WIN32
+
+#endif //_ncvpyramid_hpp_

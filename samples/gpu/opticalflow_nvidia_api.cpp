@@ -16,7 +16,7 @@
 #include "opencv2/highgui/highgui_c.h"
 
 #ifdef HAVE_CUDA
-#include "opencv2/gpunvidia.hpp"
+#include "opencv2/gpulegacy.hpp"
 #endif
 
 #if !defined(HAVE_CUDA)

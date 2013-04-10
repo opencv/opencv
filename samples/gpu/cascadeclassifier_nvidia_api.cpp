@@ -11,7 +11,7 @@
 #include "opencv2/objdetect.hpp"
 
 #ifdef HAVE_CUDA
-#include "opencv2/gpunvidia.hpp"
+#include "opencv2/gpulegacy.hpp"
 #endif
 
 using namespace std;

@@ -53,8 +53,8 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_GPUNVIDIA
-#  include "opencv2/gpunvidia/private.hpp"
+#ifdef HAVE_OPENCV_GPULEGACY
+#  include "opencv2/gpulegacy/private.hpp"
 #endif
 
 #endif /* __OPENCV_PRECOMP_H__ */

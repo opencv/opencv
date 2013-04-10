@@ -63,8 +63,8 @@
 
 #include "opencv2/core/cuda/utility.hpp"
 
-#include "opencv2/gpunvidia/NPP_staging.hpp"
-#include "opencv2/gpunvidia/NCVBroxOpticalFlow.hpp"
+#include "opencv2/gpulegacy/NPP_staging.hpp"
+#include "opencv2/gpulegacy/NCVBroxOpticalFlow.hpp"
 
 
 typedef NCVVectorAlloc<Ncv32f> FloatVector;
