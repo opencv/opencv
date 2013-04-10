@@ -225,6 +225,8 @@ CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback,
 #define CV_DbgAssert(expr)
 #endif
 
+CV_EXPORTS void glob(String pattern, std::vector<String>& result, bool recursive = false);
+
 CV_EXPORTS void setNumThreads(int nthreads);
 CV_EXPORTS int getNumThreads();
 CV_EXPORTS int getThreadNum();
