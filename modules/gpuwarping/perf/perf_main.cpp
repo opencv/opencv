@@ -40,28 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_HPP__
-#define __OPENCV_GPU_HPP__
+#include "perf_precomp.hpp"
 
-#include "opencv2/core/gpumat.hpp"
-#include "opencv2/gpuarithm.hpp"
-#include "opencv2/gpufilters.hpp"
-#include "opencv2/gpuwarping.hpp"
-#include "opencv2/gpuimgproc.hpp"
-#include "opencv2/gpufeatures2d.hpp"
-#include "opencv2/gpuvideo.hpp"
-#include "opencv2/gpucalib3d.hpp"
-#include "opencv2/gpuobjdetect.hpp"
+using namespace perf;
 
-namespace cv { namespace gpu {
-
-//! removes points (CV_32FC2, single row matrix) with zero mask value
-CV_EXPORTS void compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask);
-
-CV_EXPORTS void calcWobbleSuppressionMaps(
-        int left, int idx, int right, Size size, const Mat &ml, const Mat &mr,
-        GpuMat &mapx, GpuMat &mapy);
-
-}} // namespace cv { namespace gpu {
-
-#endif /* __OPENCV_GPU_HPP__ */
+CV_PERF_TEST_MAIN(gpufilters, printCudaInfo())

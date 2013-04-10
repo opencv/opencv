@@ -56,12 +56,6 @@ enum { ALPHA_OVER, ALPHA_IN, ALPHA_OUT, ALPHA_ATOP, ALPHA_XOR, ALPHA_PLUS, ALPHA
 //! Supports CV_8UC4, CV_16UC4, CV_32SC4 and CV_32FC4 types
 CV_EXPORTS void alphaComp(const GpuMat& img1, const GpuMat& img2, GpuMat& dst, int alpha_op, Stream& stream = Stream::Null());
 
-//! DST[x,y] = SRC[xmap[x,y],ymap[x,y]]
-//! supports only CV_32FC1 map type
-CV_EXPORTS void remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap,
-                      int interpolation, int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(),
-                      Stream& stream = Stream::Null());
-
 //! Does mean shift filtering on GPU.
 CV_EXPORTS void meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
                                    TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1),
@@ -109,42 +103,6 @@ CV_EXPORTS void swapChannels(GpuMat& image, const int dstOrder[4], Stream& strea
 //! Routines for correcting image color gamma
 CV_EXPORTS void gammaCorrection(const GpuMat& src, GpuMat& dst, bool forward = true, Stream& stream = Stream::Null());
 
-//! resizes the image
-//! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA
-CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
-
-//! warps the image using affine transformation
-//! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
-CV_EXPORTS void warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR,
-    int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null());
-
-CV_EXPORTS void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null());
-
-//! warps the image using perspective transformation
-//! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
-CV_EXPORTS void warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR,
-    int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null());
-
-CV_EXPORTS void buildWarpPerspectiveMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null());
-
-//! builds plane warping maps
-CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, const Mat &T, float scale,
-                                   GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
-
-//! builds cylindrical warping maps
-CV_EXPORTS void buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
-                                         GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
-
-//! builds spherical warping maps
-CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
-                                       GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
-
-//! rotates an image around the origin (0,0) and then shifts it
-//! supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
-//! supports 1, 3 or 4 channels images with CV_8U, CV_16U or CV_32F depth
-CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0,
-                       int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
-
 //! computes Harris cornerness criteria at each image pixel
 CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
 CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
@@ -171,12 +129,6 @@ CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& 
 
 //! computes the proximity map for the raster template and the image where the template is searched for
 CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method, MatchTemplateBuf &buf, Stream& stream = Stream::Null());
-
-//! smoothes the source image and downsamples it
-CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
-
-//! upsamples the source image and then smoothes it
-CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
 
 //! performs linear blending of two images
 //! to avoid accuracy errors sum of weigths shouldn't be very close to zero
@@ -222,32 +174,6 @@ CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, double low_thresh, dou
 CV_EXPORTS void Canny(const GpuMat& image, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
 CV_EXPORTS void Canny(const GpuMat& dx, const GpuMat& dy, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false);
 CV_EXPORTS void Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false);
-
-class CV_EXPORTS ImagePyramid
-{
-public:
-    inline ImagePyramid() : nLayers_(0) {}
-    inline ImagePyramid(const GpuMat& img, int nLayers, Stream& stream = Stream::Null())
-    {
-        build(img, nLayers, stream);
-    }
-
-    void build(const GpuMat& img, int nLayers, Stream& stream = Stream::Null());
-
-    void getLayer(GpuMat& outImg, Size outRoi, Stream& stream = Stream::Null()) const;
-
-    inline void release()
-    {
-        layer0_.release();
-        pyramid_.clear();
-        nLayers_ = 0;
-    }
-
-private:
-    GpuMat layer0_;
-    std::vector<GpuMat> pyramid_;
-    int nLayers_;
-};
 
 //! HoughLines
 

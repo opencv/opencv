@@ -57,6 +57,4 @@
 #include "opencv2/gpuimgproc.hpp"
 #include "opencv2/gpuarithm.hpp"
 
-#include "interpolation.hpp"
-
 #endif

@@ -2262,8 +2262,6 @@ PERF_TEST_P(Sz_Flags, ImgProc_Dft,
     }
 }
 
-#ifdef HAVE_OPENCV_IMGPROC
-
 //////////////////////////////////////////////////////////////////////
 // CopyMakeBorder
 
@@ -2409,4 +2407,41 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, ImgProc_Convolve,
     }
 }
 
-#endif
+//////////////////////////////////////////////////////////////////////
+// Threshold
+
+CV_ENUM(ThreshOp, cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC, cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)
+#define ALL_THRESH_OPS ValuesIn(ThreshOp::all())
+
+DEF_PARAM_TEST(Sz_Depth_Op, cv::Size, MatDepth, ThreshOp);
+
+PERF_TEST_P(Sz_Depth_Op, ImgProc_Threshold,
+            Combine(GPU_TYPICAL_MAT_SIZES,
+            Values(CV_8U, CV_16U, CV_32F, CV_64F),
+            ALL_THRESH_OPS))
+{
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const int threshOp = GET_PARAM(2);
+
+    cv::Mat src(size, depth);
+    declare.in(src, WARMUP_RNG);
+
+    if (PERF_RUN_GPU())
+    {
+        const cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat dst;
+
+        TEST_CYCLE() cv::gpu::threshold(d_src, dst, 100.0, 255.0, threshOp);
+
+        GPU_SANITY_CHECK(dst, 1e-10);
+    }
+    else
+    {
+        cv::Mat dst;
+
+        TEST_CYCLE() cv::threshold(src, dst, 100.0, 255.0, threshOp);
+
+        CPU_SANITY_CHECK(dst);
+    }
+}

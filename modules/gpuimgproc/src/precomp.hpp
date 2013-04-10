@@ -43,9 +43,9 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
+#include "opencv2/gpuimgproc.hpp"
 #include "opencv2/gpufilters.hpp"
 #include "opencv2/gpuarithm.hpp"
-#include "opencv2/gpuimgproc.hpp"
 
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/gpu_private.hpp"
