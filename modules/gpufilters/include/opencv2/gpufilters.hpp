@@ -43,6 +43,10 @@
 #ifndef __OPENCV_GPUFILTERS_HPP__
 #define __OPENCV_GPUFILTERS_HPP__
 
+#ifndef __cplusplus
+#  error gpufilters.hpp header must be compiled as C++
+#endif
+
 #include "opencv2/core/gpumat.hpp"
 #include "opencv2/imgproc.hpp"
 

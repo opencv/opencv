@@ -54,8 +54,8 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_perf.hpp"
 
-#include "opencv2/imgproc.hpp"
 #include "opencv2/gpufilters.hpp"
+#include "opencv2/imgproc.hpp"
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY
 #error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
