@@ -6,8 +6,9 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdio>
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/gpu.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/objdetect.hpp"
 
 #ifdef HAVE_CUDA
 #include "opencv2/gpunvidia.hpp"

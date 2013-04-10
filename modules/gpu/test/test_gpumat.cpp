@@ -90,7 +90,7 @@ GPU_TEST_P(SetTo, SameVal)
         }
         catch (const cv::Exception& e)
         {
-            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+            ASSERT_EQ(cv::Error::StsUnsupportedFormat, e.code);
         }
     }
     else
@@ -115,7 +115,7 @@ GPU_TEST_P(SetTo, DifferentVal)
         }
         catch (const cv::Exception& e)
         {
-            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+            ASSERT_EQ(cv::Error::StsUnsupportedFormat, e.code);
         }
     }
     else
@@ -142,7 +142,7 @@ GPU_TEST_P(SetTo, Masked)
         }
         catch (const cv::Exception& e)
         {
-            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+            ASSERT_EQ(cv::Error::StsUnsupportedFormat, e.code);
         }
     }
     else
@@ -210,7 +210,7 @@ GPU_TEST_P(CopyTo, Masked)
         }
         catch (const cv::Exception& e)
         {
-            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+            ASSERT_EQ(cv::Error::StsUnsupportedFormat, e.code);
         }
     }
     else
@@ -269,7 +269,7 @@ GPU_TEST_P(ConvertTo, WithOutScaling)
         }
         catch (const cv::Exception& e)
         {
-            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+            ASSERT_EQ(cv::Error::StsUnsupportedFormat, e.code);
         }
     }
     else
@@ -301,7 +301,7 @@ GPU_TEST_P(ConvertTo, WithScaling)
         }
         catch (const cv::Exception& e)
         {
-            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+            ASSERT_EQ(cv::Error::StsUnsupportedFormat, e.code);
         }
     }
     else
