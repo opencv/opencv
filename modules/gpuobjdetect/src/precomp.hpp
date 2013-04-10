@@ -43,15 +43,11 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#include <limits>
-
-#include "opencv2/gpuvideo.hpp"
-
-#include "opencv2/gpuarithm.hpp"
-#include "opencv2/gpufilters.hpp"
+#include "opencv2/gpuobjdetect.hpp"
 #include "opencv2/gpuimgproc.hpp"
+#include "opencv2/gpuarithm.hpp"
 
-#include "opencv2/video.hpp"
+#include "opencv2/objdetect.hpp"
 
 #include "opencv2/core/gpu_private.hpp"
 
@@ -59,10 +55,6 @@
 
 #ifdef HAVE_OPENCV_GPUNVIDIA
 #  include "opencv2/gpunvidia/private.hpp"
-#endif
-
-#ifdef HAVE_CUDA
-#  include "cuda/fgd_bgfg_common.hpp"
 #endif
 
 #endif /* __OPENCV_PRECOMP_H__ */
