@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2008-2012, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,25 +40,32 @@
 //
 //M*/
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
+#ifndef __OPENCV_PHOTO_GPU_HPP__
+#define __OPENCV_PHOTO_GPU_HPP__
 
-#ifndef __OPENCV_PERF_PRECOMP_HPP__
-#define __OPENCV_PERF_PRECOMP_HPP__
+#include "opencv2/core/gpumat.hpp"
 
-#include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_perf.hpp"
+namespace cv { namespace gpu {
 
-#include "opencv2/gpuimgproc.hpp"
-#include "opencv2/gpuarithm.hpp"
+//! Brute force non-local means algorith (slow but universal)
+CV_EXPORTS void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null());
 
-#ifdef GTEST_CREATE_SHARED_LIBRARY
-#error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
-#endif
+//! Fast (but approximate)version of non-local means algorith similar to CPU function (running sums technique)
+class CV_EXPORTS FastNonLocalMeansDenoising
+{
+public:
+    //! Simple method, recommended for grayscale images (though it supports multichannel images)
+    void simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, Stream& s = Stream::Null());
 
-#endif
+    //! Processes luminance and color components separatelly
+    void labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window = 21, int block_size = 7, Stream& s = Stream::Null());
+
+private:
+
+    GpuMat buffer, extended_src_buffer;
+    GpuMat lab, l, ab;
+};
+
+}} // namespace cv { namespace gpu {
+
+#endif /* __OPENCV_PHOTO_GPU_HPP__ */
