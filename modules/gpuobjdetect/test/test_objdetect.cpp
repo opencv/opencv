@@ -192,11 +192,11 @@ GPU_TEST_P(HOG, Detect)
 
     // Test on color image
     cv::Mat img;
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
     testDetect(img);
 
     // Test on gray image
-    cv::cvtColor(img_rgb, img, CV_BGR2GRAY);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2GRAY);
     testDetect(img);
 
     f.close();
@@ -210,7 +210,7 @@ GPU_TEST_P(HOG, GetDescriptors)
 
     // Convert to C4
     cv::Mat img;
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
 
     cv::gpu::GpuMat d_img(img);
 
@@ -250,38 +250,38 @@ GPU_TEST_P(HOG, GetDescriptors)
 
     img_rgb = readImage("hog/positive1.png");
     ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
     computeBlockHistograms(cv::gpu::GpuMat(img));
     // Everything is fine with interpolation for left top subimage
     ASSERT_EQ(0.0, cv::norm((cv::Mat)block_hists, (cv::Mat)descriptors.rowRange(0, 1)));
 
     img_rgb = readImage("hog/positive2.png");
     ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
     computeBlockHistograms(cv::gpu::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(1, 2)));
 
     img_rgb = readImage("hog/negative1.png");
     ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
     computeBlockHistograms(cv::gpu::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(2, 3)));
 
     img_rgb = readImage("hog/negative2.png");
     ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
     computeBlockHistograms(cv::gpu::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(3, 4)));
 
     img_rgb = readImage("hog/positive3.png");
     ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
     computeBlockHistograms(cv::gpu::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(4, 5)));
 
     img_rgb = readImage("hog/negative3.png");
     ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
     computeBlockHistograms(cv::gpu::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(5, 6)));
 }
@@ -385,7 +385,7 @@ GPU_TEST_P(LBP_classify, Accuracy)
     cv::Mat image = cv::imread(imagePath);
     image = image.colRange(0, image.cols/2);
     cv::Mat grey;
-    cvtColor(image, grey, CV_BGR2GRAY);
+    cvtColor(image, grey, cv::COLOR_BGR2GRAY);
     ASSERT_FALSE(image.empty());
 
     std::vector<cv::Rect> rects;

@@ -40,29 +40,26 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
-
-#include <limits>
-
-#include "opencv2/gpuvideo.hpp"
-
-#include "opencv2/gpuarithm.hpp"
-#include "opencv2/gpufilters.hpp"
-#include "opencv2/gpuimgproc.hpp"
-
-#include "opencv2/video.hpp"
-
-#include "opencv2/core/gpu_private.hpp"
-
-#include "opencv2/opencv_modules.hpp"
-
-#ifdef HAVE_OPENCV_GPUNVIDIA
-#  include "opencv2/gpunvidia/private.hpp"
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
 #endif
 
-#ifdef HAVE_CUDA
-#  include "cuda/fgd_bgfg_common.hpp"
+#ifndef __OPENCV_PERF_PRECOMP_HPP__
+#define __OPENCV_PERF_PRECOMP_HPP__
+
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/gpu_perf.hpp"
+
+#include "opencv2/gpuobjdetect.hpp"
+
+#include "opencv2/objdetect.hpp"
+
+#ifdef GTEST_CREATE_SHARED_LIBRARY
+#error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
 #endif
 
-#endif /* __OPENCV_PRECOMP_H__ */
+#endif

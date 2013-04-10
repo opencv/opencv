@@ -47,5 +47,6 @@
 #include "opencv2/gpunvidia/NPP_staging.hpp"
 #include "opencv2/gpunvidia/NCVPyramid.hpp"
 #include "opencv2/gpunvidia/NCVHaarObjectDetection.hpp"
+#include "opencv2/gpunvidia/NCVBroxOpticalFlow.hpp"
 
 #endif /* __OPENCV_GPUNVIDIA_HPP__ */

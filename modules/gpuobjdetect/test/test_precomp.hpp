@@ -40,29 +40,24 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
-
-#include <limits>
-
-#include "opencv2/gpuvideo.hpp"
-
-#include "opencv2/gpuarithm.hpp"
-#include "opencv2/gpufilters.hpp"
-#include "opencv2/gpuimgproc.hpp"
-
-#include "opencv2/video.hpp"
-
-#include "opencv2/core/gpu_private.hpp"
-
-#include "opencv2/opencv_modules.hpp"
-
-#ifdef HAVE_OPENCV_GPUNVIDIA
-#  include "opencv2/gpunvidia/private.hpp"
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
 #endif
 
-#ifdef HAVE_CUDA
-#  include "cuda/fgd_bgfg_common.hpp"
-#endif
+#ifndef __OPENCV_TEST_PRECOMP_HPP__
+#define __OPENCV_TEST_PRECOMP_HPP__
 
-#endif /* __OPENCV_PRECOMP_H__ */
+#include <fstream>
+
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/gpu_test.hpp"
+
+#include "opencv2/gpuobjdetect.hpp"
+
+#include "opencv2/objdetect.hpp"
+
+#endif

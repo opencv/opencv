@@ -260,7 +260,7 @@ void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, 
                                     win_stride.height, win_stride.width, img.rows, img.cols, block_hists.ptr<float>(), descriptors);
         break;
     default:
-        CV_Error(CV_StsBadArg, "Unknown descriptor format");
+        CV_Error(cv::Error::StsBadArg, "Unknown descriptor format");
     }
 }
 
@@ -351,7 +351,7 @@ void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat& img, std:
 
         Size scaled_win_size(cvRound(win_size.width * scale), cvRound(win_size.height * scale));
         for (size_t j = 0; j < locations.size(); j++)
-            all_candidates.push_back(Rect(Point2d((CvPoint)locations[j]) * scale, scaled_win_size));
+            all_candidates.push_back(Rect(Point2d(locations[j]) * scale, scaled_win_size));
     }
 
     found_locations.assign(all_candidates.begin(), all_candidates.end());

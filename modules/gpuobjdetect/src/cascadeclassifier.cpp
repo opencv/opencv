@@ -425,7 +425,7 @@ public:
                 GpuMat buff = integralBuffer;
 
                 // generate integral for scale
-                gpu::resize(image, src, level.sFrame, 0, 0, CV_INTER_LINEAR);
+                gpu::resize(image, src, level.sFrame, 0, 0, cv::INTER_LINEAR);
                 gpu::integralBuffered(src, sint, buff);
 
                 // calculate job
