@@ -122,7 +122,7 @@ GPU_TEST_P(Video, Writer)
 
 #endif // WIN32
 
-INSTANTIATE_TEST_CASE_P(GPU, Video, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Codec, Video, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
 

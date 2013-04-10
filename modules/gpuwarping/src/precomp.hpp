@@ -47,4 +47,11 @@
 
 #include "opencv2/core/gpu_private.hpp"
 
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_GPULEGACY
+#  include "opencv2/gpulegacy.hpp"
+#  include "opencv2/gpulegacy/private.hpp"
+#endif
+
 #endif /* __OPENCV_PRECOMP_H__ */

@@ -104,7 +104,7 @@ GPU_TEST_P(Merge, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Merge, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Merge, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -171,7 +171,7 @@ GPU_TEST_P(Split, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Split, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Split, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -237,7 +237,7 @@ GPU_TEST_P(Add_Array, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Add_Array, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Add_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -299,7 +299,7 @@ GPU_TEST_P(Add_Array_Mask, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Add_Array_Mask, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Add_Array_Mask, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -387,7 +387,7 @@ GPU_TEST_P(Add_Scalar, WithMask)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Add_Scalar, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Add_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -452,7 +452,7 @@ GPU_TEST_P(Subtract_Array, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Subtract_Array, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Subtract_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -514,7 +514,7 @@ GPU_TEST_P(Subtract_Array_Mask, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Subtract_Array_Mask, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Subtract_Array_Mask, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -602,7 +602,7 @@ GPU_TEST_P(Subtract_Scalar, WithMask)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Subtract_Scalar, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Subtract_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -696,7 +696,7 @@ GPU_TEST_P(Multiply_Array, WithScale)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Multiply_Array, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Multiply_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -796,7 +796,7 @@ GPU_TEST_P(Multiply_Array_Special, Case_16SC4x_32FC1)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Multiply_Array_Special, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Multiply_Array_Special, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));
@@ -882,7 +882,7 @@ GPU_TEST_P(Multiply_Scalar, WithScale)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Multiply_Scalar, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Multiply_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -976,7 +976,7 @@ GPU_TEST_P(Divide_Array, WithScale)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Divide_Array, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Divide_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -1076,7 +1076,7 @@ GPU_TEST_P(Divide_Array_Special, Case_16SC4x_32FC1)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Divide_Array_Special, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Divide_Array_Special, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));
@@ -1161,7 +1161,7 @@ GPU_TEST_P(Divide_Scalar, WithScale)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Divide_Scalar, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Divide_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -1217,7 +1217,7 @@ GPU_TEST_P(Divide_Scalar_Inv, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Divide_Scalar_Inv, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Divide_Scalar_Inv, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -1302,7 +1302,7 @@ GPU_TEST_P(AbsDiff, Scalar)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, AbsDiff, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, AbsDiff, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -1341,7 +1341,7 @@ GPU_TEST_P(Abs, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Abs, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Abs, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_16S), MatDepth(CV_32F)),
@@ -1381,7 +1381,7 @@ GPU_TEST_P(Sqr, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Sqr, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Sqr, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U),
@@ -1451,7 +1451,7 @@ GPU_TEST_P(Sqrt, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, depth < CV_32F ? 1.0 : 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Sqrt, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Sqrt, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U),
@@ -1521,7 +1521,7 @@ GPU_TEST_P(Log, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, depth < CV_32F ? 1.0 : 1e-6);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Log, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Log, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U),
@@ -1601,7 +1601,7 @@ GPU_TEST_P(Exp, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, depth < CV_32F ? 1.0 : 1e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Exp, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Exp, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U),
@@ -1665,7 +1665,7 @@ GPU_TEST_P(Compare_Array, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Compare_Array, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Compare_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -1776,7 +1776,7 @@ GPU_TEST_P(Compare_Scalar, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Compare_Scalar, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Compare_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     TYPES(CV_8U, CV_64F, 1, 4),
@@ -1848,7 +1848,7 @@ GPU_TEST_P(Bitwise_Array, Xor)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Bitwise_Array, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Bitwise_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     TYPES(CV_8U, CV_32S, 1, 4)));
@@ -1914,7 +1914,7 @@ GPU_TEST_P(Bitwise_Scalar, Xor)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Bitwise_Scalar, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Bitwise_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32S)),
@@ -1989,7 +1989,7 @@ GPU_TEST_P(RShift, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, RShift, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, RShift, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U),
@@ -2069,7 +2069,7 @@ GPU_TEST_P(LShift, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, LShift, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, LShift, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32S)),
@@ -2153,7 +2153,7 @@ GPU_TEST_P(Min, Scalar)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Min, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Min, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -2236,7 +2236,7 @@ GPU_TEST_P(Max, Scalar)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Max, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Max, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -2295,7 +2295,7 @@ GPU_TEST_P(Pow, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Pow, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Pow, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -2358,7 +2358,7 @@ GPU_TEST_P(AddWeighted, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, AddWeighted, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, AddWeighted, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -2438,7 +2438,7 @@ GPU_TEST_P(GEMM, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, GEMM, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, GEMM, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_32FC1), MatType(CV_32FC2), MatType(CV_64FC1), MatType(CV_64FC2)),
@@ -2496,7 +2496,7 @@ GPU_TEST_P(Transpose, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Transpose, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Transpose, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1),
@@ -2548,7 +2548,7 @@ GPU_TEST_P(Flip, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Flip, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Flip, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1),
@@ -2615,7 +2615,7 @@ GPU_TEST_P(LUT, MultiChannel)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, LUT, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, LUT, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3)),
@@ -2700,7 +2700,7 @@ GPU_TEST_P(Magnitude, Sqr_Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-1);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Magnitude, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Magnitude, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));
@@ -2745,7 +2745,7 @@ GPU_TEST_P(Phase, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, angleInDegrees ? 1e-2 : 1e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Phase, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Phase, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(AngleInDegrees(false), AngleInDegrees(true)),
@@ -2789,7 +2789,7 @@ GPU_TEST_P(CartToPolar, Accuracy)
     EXPECT_MAT_NEAR(angle_gold, angle, angleInDegrees ? 1e-2 : 1e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, CartToPolar, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, CartToPolar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(AngleInDegrees(false), AngleInDegrees(true)),
@@ -2833,7 +2833,7 @@ GPU_TEST_P(PolarToCart, Accuracy)
     EXPECT_MAT_NEAR(y_gold, y, 1e-4);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, PolarToCart, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, PolarToCart, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(AngleInDegrees(false), AngleInDegrees(true)),
@@ -2890,7 +2890,7 @@ GPU_TEST_P(MeanStdDev, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, MeanStdDev, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, MeanStdDev, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));
@@ -2931,7 +2931,7 @@ GPU_TEST_P(Norm, Accuracy)
     EXPECT_NEAR(val_gold, val, depth < CV_32F ? 0.0 : 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Norm, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Norm, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U),
@@ -2976,7 +2976,7 @@ GPU_TEST_P(NormDiff, Accuracy)
     EXPECT_NEAR(val_gold, val, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, NormDiff, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, NormDiff, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(NormCode(cv::NORM_L1), NormCode(cv::NORM_L2), NormCode(cv::NORM_INF)),
@@ -3114,7 +3114,7 @@ GPU_TEST_P(Sum, Sqr)
     EXPECT_SCALAR_NEAR(val_gold, val, CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.5);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Sum, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Sum, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     TYPES(CV_8U, CV_64F, 1, 4),
@@ -3231,7 +3231,7 @@ GPU_TEST_P(MinMax, NullPtr)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, MinMax, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, MinMax, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -3397,7 +3397,7 @@ GPU_TEST_P(MinMaxLoc, NullPtr)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, MinMaxLoc, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, MinMaxLoc, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -3452,7 +3452,7 @@ GPU_TEST_P(CountNonZero, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, CountNonZero, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, CountNonZero, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -3531,7 +3531,7 @@ GPU_TEST_P(Reduce, Cols)
     EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 0.0 : 0.02);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Reduce, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Reduce, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U),
@@ -3602,7 +3602,7 @@ GPU_TEST_P(Normalize, WithMask)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-6);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Normalize, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Normalize, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -3660,7 +3660,7 @@ GPU_TEST_P(MulSpectrums, Scaled)
     EXPECT_MAT_NEAR(c_gold, c, 1e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MulSpectrums, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, MulSpectrums, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(DftFlags(0), DftFlags(cv::DFT_ROWS))));
@@ -3793,7 +3793,7 @@ GPU_TEST_P(Dft, R2CThenC2R)
     testR2CThenC2R("single row 1", cols + 1, 1, true);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Dft, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Dft, ALL_DEVICES);
 
 ////////////////////////////////////////////////////////
 // Convolve
@@ -3875,13 +3875,11 @@ GPU_TEST_P(Convolve, Accuracy)
     EXPECT_MAT_NEAR(dst, dst_gold, 1e-1);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Convolve, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Convolve, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(KSize(3), KSize(7), KSize(11), KSize(17), KSize(19), KSize(23), KSize(45)),
     testing::Values(Ccorr(false), Ccorr(true))));
-
-#ifdef HAVE_OPENCV_IMGPROC
 
 //////////////////////////////////////////////////////////////////////////////
 // CopyMakeBorder
@@ -3927,7 +3925,7 @@ GPU_TEST_P(CopyMakeBorder, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CopyMakeBorder, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, CopyMakeBorder, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1),
@@ -3975,11 +3973,57 @@ GPU_TEST_P(Integral, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Integral, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Integral, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));
 
-#endif
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// Threshold
+
+CV_ENUM(ThreshOp, cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC, cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)
+#define ALL_THRESH_OPS testing::Values(ThreshOp(cv::THRESH_BINARY), ThreshOp(cv::THRESH_BINARY_INV), ThreshOp(cv::THRESH_TRUNC), ThreshOp(cv::THRESH_TOZERO), ThreshOp(cv::THRESH_TOZERO_INV))
+
+PARAM_TEST_CASE(Threshold, cv::gpu::DeviceInfo, cv::Size, MatType, ThreshOp, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    int type;
+    int threshOp;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        type = GET_PARAM(2);
+        threshOp = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+GPU_TEST_P(Threshold, Accuracy)
+{
+    cv::Mat src = randomMat(size, type);
+    double maxVal = randomDouble(20.0, 127.0);
+    double thresh = randomDouble(0.0, maxVal);
+
+    cv::gpu::GpuMat dst = createMat(src.size(), src.type(), useRoi);
+    cv::gpu::threshold(loadMat(src, useRoi), dst, thresh, maxVal, threshOp);
+
+    cv::Mat dst_gold;
+    cv::threshold(src, dst_gold, thresh, maxVal, threshOp);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Threshold, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatType(CV_8UC1), MatType(CV_16SC1), MatType(CV_32FC1)),
+    ALL_THRESH_OPS,
+    WHOLE_SUBMAT));
 
 #endif // HAVE_CUDA

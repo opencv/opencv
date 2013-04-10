@@ -45,7 +45,6 @@
 using namespace cv;
 using namespace cv::gpu;
 
-
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 Ptr<FilterEngine_GPU> cv::gpu::createFilter2D_GPU(const Ptr<BaseFilter_GPU>&, int, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }

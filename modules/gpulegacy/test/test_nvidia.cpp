@@ -140,13 +140,12 @@ GPU_TEST_P(NCV, HypothesesFiltration)
 
 GPU_TEST_P(NCV, Visualization)
 {
-    // this functionality doesn't used in gpu module
     bool res = nvidia_NCV_Visualization(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_NVidia, NPPST, ALL_DEVICES);
-INSTANTIATE_TEST_CASE_P(GPU_NVidia, NCV, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_Legacy, NPPST, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_Legacy, NCV, ALL_DEVICES);
 
 #endif // HAVE_CUDA

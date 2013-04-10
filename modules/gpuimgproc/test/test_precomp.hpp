@@ -56,5 +56,6 @@
 
 #include "opencv2/gpuimgproc.hpp"
 #include "opencv2/gpuarithm.hpp"
+#include "opencv2/imgproc.hpp"
 
 #endif

@@ -51,7 +51,7 @@ using namespace perf;
 
 DEF_PARAM_TEST(Sz_Type_KernelSz, cv::Size, MatType, int);
 
-PERF_TEST_P(Sz_Type_KernelSz, Filters_Blur,
+PERF_TEST_P(Sz_Type_KernelSz, Blur,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8UC1, CV_8UC4),
                     Values(3, 5, 7)))
@@ -87,7 +87,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Blur,
 //////////////////////////////////////////////////////////////////////
 // Sobel
 
-PERF_TEST_P(Sz_Type_KernelSz, Filters_Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1), Values(3, 5, 7, 9, 11, 13, 15)))
+PERF_TEST_P(Sz_Type_KernelSz, Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1), Values(3, 5, 7, 9, 11, 13, 15)))
 {
     declare.time(20.0);
 
@@ -121,7 +121,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Valu
 //////////////////////////////////////////////////////////////////////
 // Scharr
 
-PERF_TEST_P(Sz_Type, Filters_Scharr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1)))
+PERF_TEST_P(Sz_Type, Scharr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1)))
 {
     declare.time(20.0);
 
@@ -154,7 +154,7 @@ PERF_TEST_P(Sz_Type, Filters_Scharr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
 //////////////////////////////////////////////////////////////////////
 // GaussianBlur
 
-PERF_TEST_P(Sz_Type_KernelSz, Filters_GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1), Values(3, 5, 7, 9, 11, 13, 15)))
+PERF_TEST_P(Sz_Type_KernelSz, GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1), Values(3, 5, 7, 9, 11, 13, 15)))
 {
     declare.time(20.0);
 
@@ -188,7 +188,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZE
 //////////////////////////////////////////////////////////////////////
 // Laplacian
 
-PERF_TEST_P(Sz_Type_KernelSz, Filters_Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1, 3)))
+PERF_TEST_P(Sz_Type_KernelSz, Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1, 3)))
 {
     declare.time(20.0);
 
@@ -221,7 +221,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, 
 //////////////////////////////////////////////////////////////////////
 // Erode
 
-PERF_TEST_P(Sz_Type, Filters_Erode, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4)))
+PERF_TEST_P(Sz_Type, Erode, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4)))
 {
     declare.time(20.0);
 
@@ -256,7 +256,7 @@ PERF_TEST_P(Sz_Type, Filters_Erode, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC
 //////////////////////////////////////////////////////////////////////
 // Dilate
 
-PERF_TEST_P(Sz_Type, Filters_Dilate, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4)))
+PERF_TEST_P(Sz_Type, Dilate, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4)))
 {
     declare.time(20.0);
 
@@ -296,7 +296,7 @@ CV_ENUM(MorphOp, cv::MORPH_OPEN, cv::MORPH_CLOSE, cv::MORPH_GRADIENT, cv::MORPH_
 
 DEF_PARAM_TEST(Sz_Type_Op, cv::Size, MatType, MorphOp);
 
-PERF_TEST_P(Sz_Type_Op, Filters_MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4), ALL_MORPH_OPS))
+PERF_TEST_P(Sz_Type_Op, MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4), ALL_MORPH_OPS))
 {
     declare.time(20.0);
 
@@ -333,7 +333,7 @@ PERF_TEST_P(Sz_Type_Op, Filters_MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Val
 //////////////////////////////////////////////////////////////////////
 // Filter2D
 
-PERF_TEST_P(Sz_Type_KernelSz, Filters_Filter2D, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(3, 5, 7, 9, 11, 13, 15)))
+PERF_TEST_P(Sz_Type_KernelSz, Filter2D, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(3, 5, 7, 9, 11, 13, 15)))
 {
     declare.time(20.0);
 

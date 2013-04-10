@@ -51,7 +51,7 @@ using namespace perf;
 //////////////////////////////////////////////////////////////////////
 // Merge
 
-PERF_TEST_P(Sz_Depth_Cn, Core_Merge,
+PERF_TEST_P(Sz_Depth_Cn, Merge,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH,
                     Values(2, 3, 4)))
@@ -92,7 +92,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_Merge,
 //////////////////////////////////////////////////////////////////////
 // Split
 
-PERF_TEST_P(Sz_Depth_Cn, Core_Split,
+PERF_TEST_P(Sz_Depth_Cn, Split,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH,
                     Values(2, 3, 4)))
@@ -134,7 +134,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_Split,
 //////////////////////////////////////////////////////////////////////
 // AddMat
 
-PERF_TEST_P(Sz_Depth, Core_AddMat,
+PERF_TEST_P(Sz_Depth, AddMat,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH))
 {
@@ -170,7 +170,7 @@ PERF_TEST_P(Sz_Depth, Core_AddMat,
 //////////////////////////////////////////////////////////////////////
 // AddScalar
 
-PERF_TEST_P(Sz_Depth, Core_AddScalar,
+PERF_TEST_P(Sz_Depth, AddScalar,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH))
 {
@@ -205,7 +205,7 @@ PERF_TEST_P(Sz_Depth, Core_AddScalar,
 //////////////////////////////////////////////////////////////////////
 // SubtractMat
 
-PERF_TEST_P(Sz_Depth, Core_SubtractMat,
+PERF_TEST_P(Sz_Depth, SubtractMat,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH))
 {
@@ -241,7 +241,7 @@ PERF_TEST_P(Sz_Depth, Core_SubtractMat,
 //////////////////////////////////////////////////////////////////////
 // SubtractScalar
 
-PERF_TEST_P(Sz_Depth, Core_SubtractScalar,
+PERF_TEST_P(Sz_Depth, SubtractScalar,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH))
 {
@@ -276,7 +276,7 @@ PERF_TEST_P(Sz_Depth, Core_SubtractScalar,
 //////////////////////////////////////////////////////////////////////
 // MultiplyMat
 
-PERF_TEST_P(Sz_Depth, Core_MultiplyMat,
+PERF_TEST_P(Sz_Depth, MultiplyMat,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH))
 {
@@ -312,7 +312,7 @@ PERF_TEST_P(Sz_Depth, Core_MultiplyMat,
 //////////////////////////////////////////////////////////////////////
 // MultiplyScalar
 
-PERF_TEST_P(Sz_Depth, Core_MultiplyScalar,
+PERF_TEST_P(Sz_Depth, MultiplyScalar,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH))
 {
@@ -347,7 +347,7 @@ PERF_TEST_P(Sz_Depth, Core_MultiplyScalar,
 //////////////////////////////////////////////////////////////////////
 // DivideMat
 
-PERF_TEST_P(Sz_Depth, Core_DivideMat,
+PERF_TEST_P(Sz_Depth, DivideMat,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH))
 {
@@ -383,7 +383,7 @@ PERF_TEST_P(Sz_Depth, Core_DivideMat,
 //////////////////////////////////////////////////////////////////////
 // DivideScalar
 
-PERF_TEST_P(Sz_Depth, Core_DivideScalar,
+PERF_TEST_P(Sz_Depth, DivideScalar,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH))
 {
@@ -418,7 +418,7 @@ PERF_TEST_P(Sz_Depth, Core_DivideScalar,
 //////////////////////////////////////////////////////////////////////
 // DivideScalarInv
 
-PERF_TEST_P(Sz_Depth, Core_DivideScalarInv,
+PERF_TEST_P(Sz_Depth, DivideScalarInv,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH))
 {
@@ -453,7 +453,7 @@ PERF_TEST_P(Sz_Depth, Core_DivideScalarInv,
 //////////////////////////////////////////////////////////////////////
 // AbsDiffMat
 
-PERF_TEST_P(Sz_Depth, Core_AbsDiffMat,
+PERF_TEST_P(Sz_Depth, AbsDiffMat,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH))
 {
@@ -489,7 +489,7 @@ PERF_TEST_P(Sz_Depth, Core_AbsDiffMat,
 //////////////////////////////////////////////////////////////////////
 // AbsDiffScalar
 
-PERF_TEST_P(Sz_Depth, Core_AbsDiffScalar,
+PERF_TEST_P(Sz_Depth, AbsDiffScalar,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH))
 {
@@ -524,7 +524,7 @@ PERF_TEST_P(Sz_Depth, Core_AbsDiffScalar,
 //////////////////////////////////////////////////////////////////////
 // Abs
 
-PERF_TEST_P(Sz_Depth, Core_Abs,
+PERF_TEST_P(Sz_Depth, Abs,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_16S, CV_32F)))
 {
@@ -552,7 +552,7 @@ PERF_TEST_P(Sz_Depth, Core_Abs,
 //////////////////////////////////////////////////////////////////////
 // Sqr
 
-PERF_TEST_P(Sz_Depth, Core_Sqr,
+PERF_TEST_P(Sz_Depth, Sqr,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16S, CV_32F)))
 {
@@ -580,7 +580,7 @@ PERF_TEST_P(Sz_Depth, Core_Sqr,
 //////////////////////////////////////////////////////////////////////
 // Sqrt
 
-PERF_TEST_P(Sz_Depth, Core_Sqrt,
+PERF_TEST_P(Sz_Depth, Sqrt,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16S, CV_32F)))
 {
@@ -612,7 +612,7 @@ PERF_TEST_P(Sz_Depth, Core_Sqrt,
 //////////////////////////////////////////////////////////////////////
 // Log
 
-PERF_TEST_P(Sz_Depth, Core_Log,
+PERF_TEST_P(Sz_Depth, Log,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16S, CV_32F)))
 {
@@ -644,7 +644,7 @@ PERF_TEST_P(Sz_Depth, Core_Log,
 //////////////////////////////////////////////////////////////////////
 // Exp
 
-PERF_TEST_P(Sz_Depth, Core_Exp,
+PERF_TEST_P(Sz_Depth, Exp,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16S, CV_32F)))
 {
@@ -678,7 +678,7 @@ PERF_TEST_P(Sz_Depth, Core_Exp,
 
 DEF_PARAM_TEST(Sz_Depth_Power, cv::Size, MatDepth, double);
 
-PERF_TEST_P(Sz_Depth_Power, Core_Pow,
+PERF_TEST_P(Sz_Depth_Power, Pow,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16S, CV_32F),
                     Values(0.3, 2.0, 2.4)))
@@ -717,7 +717,7 @@ CV_ENUM(CmpCode, cv::CMP_EQ, cv::CMP_GT, cv::CMP_GE, cv::CMP_LT, cv::CMP_LE, cv:
 
 DEF_PARAM_TEST(Sz_Depth_Code, cv::Size, MatDepth, CmpCode);
 
-PERF_TEST_P(Sz_Depth_Code, Core_CompareMat,
+PERF_TEST_P(Sz_Depth_Code, CompareMat,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH,
                     ALL_CMP_CODES))
@@ -755,7 +755,7 @@ PERF_TEST_P(Sz_Depth_Code, Core_CompareMat,
 //////////////////////////////////////////////////////////////////////
 // CompareScalar
 
-PERF_TEST_P(Sz_Depth_Code, Core_CompareScalar,
+PERF_TEST_P(Sz_Depth_Code, CompareScalar,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH,
                     ALL_CMP_CODES))
@@ -792,7 +792,7 @@ PERF_TEST_P(Sz_Depth_Code, Core_CompareScalar,
 //////////////////////////////////////////////////////////////////////
 // BitwiseNot
 
-PERF_TEST_P(Sz_Depth, Core_BitwiseNot,
+PERF_TEST_P(Sz_Depth, BitwiseNot,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32S)))
 {
@@ -824,7 +824,7 @@ PERF_TEST_P(Sz_Depth, Core_BitwiseNot,
 //////////////////////////////////////////////////////////////////////
 // BitwiseAndMat
 
-PERF_TEST_P(Sz_Depth, Core_BitwiseAndMat,
+PERF_TEST_P(Sz_Depth, BitwiseAndMat,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32S)))
 {
@@ -860,7 +860,7 @@ PERF_TEST_P(Sz_Depth, Core_BitwiseAndMat,
 //////////////////////////////////////////////////////////////////////
 // BitwiseAndScalar
 
-PERF_TEST_P(Sz_Depth_Cn, Core_BitwiseAndScalar,
+PERF_TEST_P(Sz_Depth_Cn, BitwiseAndScalar,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32S),
                     GPU_CHANNELS_1_3_4))
@@ -900,7 +900,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_BitwiseAndScalar,
 //////////////////////////////////////////////////////////////////////
 // BitwiseOrMat
 
-PERF_TEST_P(Sz_Depth, Core_BitwiseOrMat,
+PERF_TEST_P(Sz_Depth, BitwiseOrMat,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32S)))
 {
@@ -936,7 +936,7 @@ PERF_TEST_P(Sz_Depth, Core_BitwiseOrMat,
 //////////////////////////////////////////////////////////////////////
 // BitwiseOrScalar
 
-PERF_TEST_P(Sz_Depth_Cn, Core_BitwiseOrScalar,
+PERF_TEST_P(Sz_Depth_Cn, BitwiseOrScalar,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32S),
                     GPU_CHANNELS_1_3_4))
@@ -976,7 +976,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_BitwiseOrScalar,
 //////////////////////////////////////////////////////////////////////
 // BitwiseXorMat
 
-PERF_TEST_P(Sz_Depth, Core_BitwiseXorMat,
+PERF_TEST_P(Sz_Depth, BitwiseXorMat,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32S)))
 {
@@ -1012,7 +1012,7 @@ PERF_TEST_P(Sz_Depth, Core_BitwiseXorMat,
 //////////////////////////////////////////////////////////////////////
 // BitwiseXorScalar
 
-PERF_TEST_P(Sz_Depth_Cn, Core_BitwiseXorScalar,
+PERF_TEST_P(Sz_Depth_Cn, BitwiseXorScalar,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32S),
                     GPU_CHANNELS_1_3_4))
@@ -1052,7 +1052,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_BitwiseXorScalar,
 //////////////////////////////////////////////////////////////////////
 // RShift
 
-PERF_TEST_P(Sz_Depth_Cn, Core_RShift,
+PERF_TEST_P(Sz_Depth_Cn, RShift,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32S),
                     GPU_CHANNELS_1_3_4))
@@ -1086,7 +1086,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_RShift,
 //////////////////////////////////////////////////////////////////////
 // LShift
 
-PERF_TEST_P(Sz_Depth_Cn, Core_LShift,
+PERF_TEST_P(Sz_Depth_Cn, LShift,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32S),
                     GPU_CHANNELS_1_3_4))
@@ -1120,7 +1120,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_LShift,
 //////////////////////////////////////////////////////////////////////
 // MinMat
 
-PERF_TEST_P(Sz_Depth, Core_MinMat,
+PERF_TEST_P(Sz_Depth, MinMat,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F)))
 {
@@ -1156,7 +1156,7 @@ PERF_TEST_P(Sz_Depth, Core_MinMat,
 //////////////////////////////////////////////////////////////////////
 // MinScalar
 
-PERF_TEST_P(Sz_Depth, Core_MinScalar,
+PERF_TEST_P(Sz_Depth, MinScalar,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F)))
 {
@@ -1191,7 +1191,7 @@ PERF_TEST_P(Sz_Depth, Core_MinScalar,
 //////////////////////////////////////////////////////////////////////
 // MaxMat
 
-PERF_TEST_P(Sz_Depth, Core_MaxMat,
+PERF_TEST_P(Sz_Depth, MaxMat,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F)))
 {
@@ -1227,7 +1227,7 @@ PERF_TEST_P(Sz_Depth, Core_MaxMat,
 //////////////////////////////////////////////////////////////////////
 // MaxScalar
 
-PERF_TEST_P(Sz_Depth, Core_MaxScalar,
+PERF_TEST_P(Sz_Depth, MaxScalar,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F)))
 {
@@ -1264,7 +1264,7 @@ PERF_TEST_P(Sz_Depth, Core_MaxScalar,
 
 DEF_PARAM_TEST(Sz_3Depth, cv::Size, MatDepth, MatDepth, MatDepth);
 
-PERF_TEST_P(Sz_3Depth, Core_AddWeighted,
+PERF_TEST_P(Sz_3Depth, AddWeighted,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F, CV_64F),
                     Values(CV_8U, CV_16U, CV_32F, CV_64F),
@@ -1310,7 +1310,7 @@ CV_FLAGS(GemmFlags, 0, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T)
 
 DEF_PARAM_TEST(Sz_Type_Flags, cv::Size, MatType, GemmFlags);
 
-PERF_TEST_P(Sz_Type_Flags, Core_GEMM,
+PERF_TEST_P(Sz_Type_Flags, GEMM,
             Combine(Values(cv::Size(512, 512), cv::Size(1024, 1024)),
                     Values(CV_32FC1, CV_32FC2, CV_64FC1),
                     ALL_GEMM_FLAGS))
@@ -1356,7 +1356,7 @@ PERF_TEST_P(Sz_Type_Flags, Core_GEMM,
 //////////////////////////////////////////////////////////////////////
 // Transpose
 
-PERF_TEST_P(Sz_Type, Core_Transpose,
+PERF_TEST_P(Sz_Type, Transpose,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8UC1, CV_8UC4, CV_16UC2, CV_16SC2, CV_32SC1, CV_32SC2, CV_64FC1)))
 {
@@ -1394,7 +1394,7 @@ CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
 
 DEF_PARAM_TEST(Sz_Depth_Cn_Code, cv::Size, MatDepth, MatCn, FlipCode);
 
-PERF_TEST_P(Sz_Depth_Cn_Code, Core_Flip,
+PERF_TEST_P(Sz_Depth_Cn_Code, Flip,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4,
@@ -1432,7 +1432,7 @@ PERF_TEST_P(Sz_Depth_Cn_Code, Core_Flip,
 //////////////////////////////////////////////////////////////////////
 // LutOneChannel
 
-PERF_TEST_P(Sz_Type, Core_LutOneChannel,
+PERF_TEST_P(Sz_Type, LutOneChannel,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8UC1, CV_8UC3)))
 {
@@ -1467,7 +1467,7 @@ PERF_TEST_P(Sz_Type, Core_LutOneChannel,
 //////////////////////////////////////////////////////////////////////
 // LutMultiChannel
 
-PERF_TEST_P(Sz_Type, Core_LutMultiChannel,
+PERF_TEST_P(Sz_Type, LutMultiChannel,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values<MatType>(CV_8UC3)))
 {
@@ -1502,7 +1502,7 @@ PERF_TEST_P(Sz_Type, Core_LutMultiChannel,
 //////////////////////////////////////////////////////////////////////
 // MagnitudeComplex
 
-PERF_TEST_P(Sz, Core_MagnitudeComplex,
+PERF_TEST_P(Sz, MagnitudeComplex,
             GPU_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
@@ -1535,7 +1535,7 @@ PERF_TEST_P(Sz, Core_MagnitudeComplex,
 //////////////////////////////////////////////////////////////////////
 // MagnitudeSqrComplex
 
-PERF_TEST_P(Sz, Core_MagnitudeSqrComplex,
+PERF_TEST_P(Sz, MagnitudeSqrComplex,
             GPU_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
@@ -1561,7 +1561,7 @@ PERF_TEST_P(Sz, Core_MagnitudeSqrComplex,
 //////////////////////////////////////////////////////////////////////
 // Magnitude
 
-PERF_TEST_P(Sz, Core_Magnitude,
+PERF_TEST_P(Sz, Magnitude,
             GPU_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
@@ -1595,7 +1595,7 @@ PERF_TEST_P(Sz, Core_Magnitude,
 //////////////////////////////////////////////////////////////////////
 // MagnitudeSqr
 
-PERF_TEST_P(Sz, Core_MagnitudeSqr,
+PERF_TEST_P(Sz, MagnitudeSqr,
             GPU_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
@@ -1627,7 +1627,7 @@ PERF_TEST_P(Sz, Core_MagnitudeSqr,
 
 DEF_PARAM_TEST(Sz_AngleInDegrees, cv::Size, bool);
 
-PERF_TEST_P(Sz_AngleInDegrees, Core_Phase,
+PERF_TEST_P(Sz_AngleInDegrees, Phase,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Bool()))
 {
@@ -1663,7 +1663,7 @@ PERF_TEST_P(Sz_AngleInDegrees, Core_Phase,
 //////////////////////////////////////////////////////////////////////
 // CartToPolar
 
-PERF_TEST_P(Sz_AngleInDegrees, Core_CartToPolar,
+PERF_TEST_P(Sz_AngleInDegrees, CartToPolar,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Bool()))
 {
@@ -1703,7 +1703,7 @@ PERF_TEST_P(Sz_AngleInDegrees, Core_CartToPolar,
 //////////////////////////////////////////////////////////////////////
 // PolarToCart
 
-PERF_TEST_P(Sz_AngleInDegrees, Core_PolarToCart,
+PERF_TEST_P(Sz_AngleInDegrees, PolarToCart,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Bool()))
 {
@@ -1743,7 +1743,7 @@ PERF_TEST_P(Sz_AngleInDegrees, Core_PolarToCart,
 //////////////////////////////////////////////////////////////////////
 // MeanStdDev
 
-PERF_TEST_P(Sz, Core_MeanStdDev,
+PERF_TEST_P(Sz, MeanStdDev,
             GPU_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
@@ -1781,7 +1781,7 @@ PERF_TEST_P(Sz, Core_MeanStdDev,
 
 DEF_PARAM_TEST(Sz_Depth_Norm, cv::Size, MatDepth, NormType);
 
-PERF_TEST_P(Sz_Depth_Norm, Core_Norm,
+PERF_TEST_P(Sz_Depth_Norm, Norm,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32S, CV_32F),
                     Values(NormType(cv::NORM_INF), NormType(cv::NORM_L1), NormType(cv::NORM_L2))))
@@ -1821,7 +1821,7 @@ PERF_TEST_P(Sz_Depth_Norm, Core_Norm,
 
 DEF_PARAM_TEST(Sz_Norm, cv::Size, NormType);
 
-PERF_TEST_P(Sz_Norm, Core_NormDiff,
+PERF_TEST_P(Sz_Norm, NormDiff,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(NormType(cv::NORM_INF), NormType(cv::NORM_L1), NormType(cv::NORM_L2))))
 {
@@ -1858,7 +1858,7 @@ PERF_TEST_P(Sz_Norm, Core_NormDiff,
 //////////////////////////////////////////////////////////////////////
 // Sum
 
-PERF_TEST_P(Sz_Depth_Cn, Core_Sum,
+PERF_TEST_P(Sz_Depth_Cn, Sum,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4))
@@ -1895,7 +1895,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_Sum,
 //////////////////////////////////////////////////////////////////////
 // SumAbs
 
-PERF_TEST_P(Sz_Depth_Cn, Core_SumAbs,
+PERF_TEST_P(Sz_Depth_Cn, SumAbs,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4))
@@ -1928,7 +1928,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_SumAbs,
 //////////////////////////////////////////////////////////////////////
 // SumSqr
 
-PERF_TEST_P(Sz_Depth_Cn, Core_SumSqr,
+PERF_TEST_P(Sz_Depth_Cn, SumSqr,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values<MatDepth>(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4))
@@ -1961,7 +1961,7 @@ PERF_TEST_P(Sz_Depth_Cn, Core_SumSqr,
 //////////////////////////////////////////////////////////////////////
 // MinMax
 
-PERF_TEST_P(Sz_Depth, Core_MinMax,
+PERF_TEST_P(Sz_Depth, MinMax,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F, CV_64F)))
 {
@@ -1999,7 +1999,7 @@ PERF_TEST_P(Sz_Depth, Core_MinMax,
 //////////////////////////////////////////////////////////////////////
 // MinMaxLoc
 
-PERF_TEST_P(Sz_Depth, Core_MinMaxLoc,
+PERF_TEST_P(Sz_Depth, MinMaxLoc,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F, CV_64F)))
 {
@@ -2039,7 +2039,7 @@ PERF_TEST_P(Sz_Depth, Core_MinMaxLoc,
 //////////////////////////////////////////////////////////////////////
 // CountNonZero
 
-PERF_TEST_P(Sz_Depth, Core_CountNonZero,
+PERF_TEST_P(Sz_Depth, CountNonZero,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F, CV_64F)))
 {
@@ -2081,7 +2081,7 @@ CV_ENUM(ReduceDim, Rows, Cols)
 
 DEF_PARAM_TEST(Sz_Depth_Cn_Code_Dim, cv::Size, MatDepth, MatCn, ReduceCode, ReduceDim);
 
-PERF_TEST_P(Sz_Depth_Cn_Code_Dim, Core_Reduce,
+PERF_TEST_P(Sz_Depth_Cn_Code_Dim, Reduce,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_16S, CV_32F),
                     Values(1, 2, 3, 4),
@@ -2122,7 +2122,7 @@ PERF_TEST_P(Sz_Depth_Cn_Code_Dim, Core_Reduce,
 
 DEF_PARAM_TEST(Sz_Depth_NormType, cv::Size, MatDepth, NormType);
 
-PERF_TEST_P(Sz_Depth_NormType, Core_Normalize,
+PERF_TEST_P(Sz_Depth_NormType, Normalize,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F, CV_64F),
                     Values(NormType(cv::NORM_INF),
@@ -2167,7 +2167,7 @@ CV_FLAGS(DftFlags, 0, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMP
 
 DEF_PARAM_TEST(Sz_Flags, cv::Size, DftFlags);
 
-PERF_TEST_P(Sz_Flags, ImgProc_MulSpectrums,
+PERF_TEST_P(Sz_Flags, MulSpectrums,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(0, DftFlags(cv::DFT_ROWS))))
 {
@@ -2201,7 +2201,7 @@ PERF_TEST_P(Sz_Flags, ImgProc_MulSpectrums,
 //////////////////////////////////////////////////////////////////////
 // MulAndScaleSpectrums
 
-PERF_TEST_P(Sz, ImgProc_MulAndScaleSpectrums,
+PERF_TEST_P(Sz, MulAndScaleSpectrums,
             GPU_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
@@ -2231,7 +2231,7 @@ PERF_TEST_P(Sz, ImgProc_MulAndScaleSpectrums,
 //////////////////////////////////////////////////////////////////////
 // Dft
 
-PERF_TEST_P(Sz_Flags, ImgProc_Dft,
+PERF_TEST_P(Sz_Flags, Dft,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(0, DftFlags(cv::DFT_ROWS), DftFlags(cv::DFT_INVERSE))))
 {
@@ -2267,7 +2267,7 @@ PERF_TEST_P(Sz_Flags, ImgProc_Dft,
 
 DEF_PARAM_TEST(Sz_Depth_Cn_Border, cv::Size, MatDepth, MatCn, BorderMode);
 
-PERF_TEST_P(Sz_Depth_Cn_Border, ImgProc_CopyMakeBorder,
+PERF_TEST_P(Sz_Depth_Cn_Border, CopyMakeBorder,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4,
@@ -2305,7 +2305,7 @@ PERF_TEST_P(Sz_Depth_Cn_Border, ImgProc_CopyMakeBorder,
 //////////////////////////////////////////////////////////////////////
 // Integral
 
-PERF_TEST_P(Sz, ImgProc_Integral,
+PERF_TEST_P(Sz, Integral,
             GPU_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
@@ -2336,7 +2336,7 @@ PERF_TEST_P(Sz, ImgProc_Integral,
 //////////////////////////////////////////////////////////////////////
 // IntegralSqr
 
-PERF_TEST_P(Sz, ImgProc_IntegralSqr,
+PERF_TEST_P(Sz, IntegralSqr,
             GPU_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
@@ -2364,7 +2364,7 @@ PERF_TEST_P(Sz, ImgProc_IntegralSqr,
 
 DEF_PARAM_TEST(Sz_KernelSz_Ccorr, cv::Size, int, bool);
 
-PERF_TEST_P(Sz_KernelSz_Ccorr, ImgProc_Convolve,
+PERF_TEST_P(Sz_KernelSz_Ccorr, Convolve,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(17, 27, 32, 64),
                     Bool()))
@@ -2415,7 +2415,7 @@ CV_ENUM(ThreshOp, cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC, cv
 
 DEF_PARAM_TEST(Sz_Depth_Op, cv::Size, MatDepth, ThreshOp);
 
-PERF_TEST_P(Sz_Depth_Op, ImgProc_Threshold,
+PERF_TEST_P(Sz_Depth_Op, Threshold,
             Combine(GPU_TYPICAL_MAT_SIZES,
             Values(CV_8U, CV_16U, CV_32F, CV_64F),
             ALL_THRESH_OPS))

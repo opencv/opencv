@@ -45,14 +45,14 @@
 
 namespace cv { namespace gpu { namespace cudev
 {
-    __device__ __forceinline__ void rgbtoy(const uchar b, const uchar g, const uchar r, uchar& y)
+    __device__ __forceinline__ void rgb_to_y(const uchar b, const uchar g, const uchar r, uchar& y)
     {
         y = static_cast<uchar>(((int)(30 * r) + (int)(59 * g) + (int)(11 * b)) / 100);
     }
 
-    __device__ __forceinline__ void rgbtoyuv(const uchar b, const uchar g, const uchar r, uchar& y, uchar& u, uchar& v)
+    __device__ __forceinline__ void rgb_to_yuv(const uchar b, const uchar g, const uchar r, uchar& y, uchar& u, uchar& v)
     {
-        rgbtoy(b, g, r, y);
+        rgb_to_y(b, g, r, y);
         u = static_cast<uchar>(((int)(-17 * r) - (int)(33 * g) + (int)(50 * b) + 12800) / 100);
         v = static_cast<uchar>(((int)(50 * r) - (int)(42 * g) - (int)(8 * b) + 12800) / 100);
     }
@@ -75,26 +75,26 @@ namespace cv { namespace gpu { namespace cudev
         uchar y_val, u_val, v_val;
 
         pix = src(y, x);
-        rgbtoy(pix, pix, pix, y_val);
+        rgb_to_y(pix, pix, pix, y_val);
         y_plane(y, x) = y_val;
 
         pix = src(y, x + 1);
-        rgbtoy(pix, pix, pix, y_val);
+        rgb_to_y(pix, pix, pix, y_val);
         y_plane(y, x + 1) = y_val;
 
         pix = src(y + 1, x);
-        rgbtoy(pix, pix, pix, y_val);
+        rgb_to_y(pix, pix, pix, y_val);
         y_plane(y + 1, x) = y_val;
 
         pix = src(y + 1, x + 1);
-        rgbtoyuv(pix, pix, pix, y_val, u_val, v_val);
+        rgb_to_yuv(pix, pix, pix, y_val, u_val, v_val);
         y_plane(y + 1, x + 1) = y_val;
         u_plane(y / 2, x / 2) = u_val;
         v_plane(y / 2, x / 2) = v_val;
     }
 
     template <typename T>
-    __global__ void BGR_to_YV12(const PtrStepSz<T> src, PtrStepb dst)
+    __global__ void RGB_to_YV12(const PtrStepSz<T> src, PtrStepb dst)
     {
         const int x = (blockIdx.x * blockDim.x + threadIdx.x) * 2;
         const int y = (blockIdx.y * blockDim.y + threadIdx.y) * 2;
@@ -112,57 +112,59 @@ namespace cv { namespace gpu { namespace cudev
         uchar y_val, u_val, v_val;
 
         pix = src(y, x);
-        rgbtoy(pix.z, pix.y, pix.x, y_val);
+        rgb_to_y(pix.z, pix.y, pix.x, y_val);
         y_plane(y, x) = y_val;
 
         pix = src(y, x + 1);
-        rgbtoy(pix.z, pix.y, pix.x, y_val);
+        rgb_to_y(pix.z, pix.y, pix.x, y_val);
         y_plane(y, x + 1) = y_val;
 
         pix = src(y + 1, x);
-        rgbtoy(pix.z, pix.y, pix.x, y_val);
+        rgb_to_y(pix.z, pix.y, pix.x, y_val);
         y_plane(y + 1, x) = y_val;
 
         pix = src(y + 1, x + 1);
-        rgbtoyuv(pix.z, pix.y, pix.x, y_val, u_val, v_val);
+        rgb_to_yuv(pix.z, pix.y, pix.x, y_val, u_val, v_val);
         y_plane(y + 1, x + 1) = y_val;
         u_plane(y / 2, x / 2) = u_val;
         v_plane(y / 2, x / 2) = v_val;
     }
 
-    void Gray_to_YV12_caller(const PtrStepSzb src, PtrStepb dst)
+    void Gray_to_YV12_caller(const PtrStepSzb src, PtrStepb dst, cudaStream_t stream)
     {
         dim3 block(32, 8);
         dim3 grid(divUp(src.cols, block.x * 2), divUp(src.rows, block.y * 2));
 
-        Gray_to_YV12<<<grid, block>>>(src, dst);
+        Gray_to_YV12<<<grid, block, 0, stream>>>(src, dst);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
     template <int cn>
-    void BGR_to_YV12_caller(const PtrStepSzb src, PtrStepb dst)
+    void RGB_to_YV12_caller(const PtrStepSzb src, PtrStepb dst, cudaStream_t stream)
     {
         typedef typename TypeVec<uchar, cn>::vec_type src_t;
 
         dim3 block(32, 8);
         dim3 grid(divUp(src.cols, block.x * 2), divUp(src.rows, block.y * 2));
 
-        BGR_to_YV12<<<grid, block>>>(static_cast< PtrStepSz<src_t> >(src), dst);
+        RGB_to_YV12<<<grid, block, 0, stream>>>(static_cast< PtrStepSz<src_t> >(src), dst);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    void bgr_to_YV12(const PtrStepSzb src, int cn, PtrStepSzb dst)
+    void RGB_to_YV12(const PtrStepSzb src, int cn, PtrStepSzb dst, cudaStream_t stream)
     {
-        typedef void (*func_t)(const PtrStepSzb src, PtrStepb dst);
+        typedef void (*func_t)(const PtrStepSzb src, PtrStepb dst, cudaStream_t stream);
 
         static const func_t funcs[] =
         {
-            0, Gray_to_YV12_caller, 0, BGR_to_YV12_caller<3>, BGR_to_YV12_caller<4>
+            0, Gray_to_YV12_caller, 0, RGB_to_YV12_caller<3>, RGB_to_YV12_caller<4>
         };
 
-        funcs[cn](src, dst);
+        funcs[cn](src, dst, stream);
     }
 }}}

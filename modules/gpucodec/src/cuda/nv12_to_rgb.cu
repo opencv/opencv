@@ -51,8 +51,6 @@
 
 namespace cv { namespace gpu { namespace cudev
 {
-    __constant__ uint constAlpha = ((uint)0xff << 24);
-
     __constant__ float constHueColorSpaceMat[9];
 
     void loadHueCSC(float hueCSC[9])
@@ -83,7 +81,7 @@ namespace cv { namespace gpu { namespace cudev
                 (chromaCr * constHueColorSpaceMat[8]);
     }
 
-    __device__ uint RGBAPACK_10bit(float red, float green, float blue, uint alpha)
+    __device__ uint RGBA_pack_10bit(float red, float green, float blue, uint alpha)
     {
         uint ARGBpixel = 0;
 
@@ -106,9 +104,9 @@ namespace cv { namespace gpu { namespace cudev
     #define COLOR_COMPONENT_BIT_SIZE 10
     #define COLOR_COMPONENT_MASK     0x3FF
 
-    __global__ void NV12ToARGB(uchar* srcImage, size_t nSourcePitch,
-                               uint* dstImage, size_t nDestPitch,
-                               uint width, uint height)
+    __global__ void NV12_to_RGB(uchar* srcImage, size_t nSourcePitch,
+                                uint* dstImage, size_t nDestPitch,
+                                uint width, uint height)
     {
         // Pad borders with duplicate pixels, and we multiply by 2 because we process 2 pixels per thread
         const int x = blockIdx.x * (blockDim.x << 1) + (threadIdx.x << 1);
@@ -175,16 +173,16 @@ namespace cv { namespace gpu { namespace cudev
 
         const size_t dstImagePitch = nDestPitch >> 2;
 
-        dstImage[y * dstImagePitch + x     ] = RGBAPACK_10bit(red[0], green[0], blue[0], constAlpha);
-        dstImage[y * dstImagePitch + x + 1 ] = RGBAPACK_10bit(red[1], green[1], blue[1], constAlpha);
+        dstImage[y * dstImagePitch + x     ] = RGBA_pack_10bit(red[0], green[0], blue[0], ((uint)0xff << 24));
+        dstImage[y * dstImagePitch + x + 1 ] = RGBA_pack_10bit(red[1], green[1], blue[1], ((uint)0xff << 24));
     }
 
-    void NV12ToARGB(const PtrStepb decodedFrame, PtrStepSz<uint> interopFrame, cudaStream_t stream)
+    void NV12_to_RGB(const PtrStepb decodedFrame, PtrStepSz<uint> interopFrame, cudaStream_t stream)
     {
         dim3 block(32, 8);
         dim3 grid(divUp(interopFrame.cols, 2 * block.x), divUp(interopFrame.rows, block.y));
 
-        NV12ToARGB<<<grid, block, 0, stream>>>(decodedFrame.data, decodedFrame.step, interopFrame.data, interopFrame.step,
+        NV12_to_RGB<<<grid, block, 0, stream>>>(decodedFrame.data, decodedFrame.step, interopFrame.data, interopFrame.step,
             interopFrame.cols, interopFrame.rows);
 
         cudaSafeCall( cudaGetLastError() );

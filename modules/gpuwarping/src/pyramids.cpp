@@ -130,17 +130,14 @@ void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream)
 //////////////////////////////////////////////////////////////////////////////
 // ImagePyramid
 
-namespace cv { namespace gpu { namespace cudev
-{
-    namespace pyramid
-    {
-        template <typename T> void kernelDownsampleX2_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        template <typename T> void kernelInterpolateFrom1_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    }
-}}}
-
 void cv::gpu::ImagePyramid::build(const GpuMat& img, int numLayers, Stream& stream)
 {
+#ifndef HAVE_OPENCV_GPULEGACY
+    (void) img;
+    (void) numLayers;
+    (void) stream;
+    throw_no_cuda();
+#else
     using namespace cv::gpu::cudev::pyramid;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -185,10 +182,17 @@ void cv::gpu::ImagePyramid::build(const GpuMat& img, int numLayers, Stream& stre
 
         szLastLayer = szCurLayer;
     }
+#endif
 }
 
 void cv::gpu::ImagePyramid::getLayer(GpuMat& outImg, Size outRoi, Stream& stream) const
 {
+#ifndef HAVE_OPENCV_GPULEGACY
+    (void) outImg;
+    (void) outRoi;
+    (void) stream;
+    throw_no_cuda();
+#else
     using namespace cv::gpu::cudev::pyramid;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -244,6 +248,7 @@ void cv::gpu::ImagePyramid::getLayer(GpuMat& outImg, Size outRoi, Stream& stream
     }
 
     func(lastLayer, outImg, StreamAccessor::getStream(stream));
+#endif
 }
 
 #endif // HAVE_CUDA

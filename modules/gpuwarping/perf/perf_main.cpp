@@ -44,4 +44,4 @@
 
 using namespace perf;
 
-CV_PERF_TEST_MAIN(gpufilters, printCudaInfo())
+CV_PERF_TEST_MAIN(gpuwarping, printCudaInfo())

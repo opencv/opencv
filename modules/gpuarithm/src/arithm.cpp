@@ -234,7 +234,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
         {
             if (tr3)
             {
-                transpose(src3, dst, stream);
+                gpu::transpose(src3, dst, stream);
             }
             else
             {
@@ -638,13 +638,13 @@ void cv::gpu::normalize(const GpuMat& src, GpuMat& dst, double a, double b, int 
     {
         double smin = 0, smax = 0;
         double dmin = std::min(a, b), dmax = std::max(a, b);
-        minMax(src, &smin, &smax, mask, norm_buf);
+        gpu::minMax(src, &smin, &smax, mask, norm_buf);
         scale = (dmax - dmin) * (smax - smin > std::numeric_limits<double>::epsilon() ? 1.0 / (smax - smin) : 0.0);
         shift = dmin - smin * scale;
     }
     else if (norm_type == NORM_L2 || norm_type == NORM_L1 || norm_type == NORM_INF)
     {
-        scale = norm(src, norm_type, mask, norm_buf);
+        scale = gpu::norm(src, norm_type, mask, norm_buf);
         scale = scale > std::numeric_limits<double>::epsilon() ? a / scale : 0.0;
         shift = 0;
     }
@@ -779,7 +779,7 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
 void cv::gpu::integral(const GpuMat& src, GpuMat& sum, Stream& s)
 {
     GpuMat buffer;
-    integralBuffered(src, sum, buffer, s);
+    gpu::integralBuffered(src, sum, buffer, s);
 }
 
 namespace cv { namespace gpu { namespace cudev
@@ -1120,7 +1120,7 @@ Size cv::gpu::ConvolveBuf::estimateBlockSize(Size result_size, Size /*templ_size
 void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr)
 {
     ConvolveBuf buf;
-    convolve(image, templ, result, ccorr, buf);
+    gpu::convolve(image, templ, result, ccorr, buf);
 }
 
 void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream)
@@ -1161,8 +1161,8 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     cufftSafeCall( cufftSetStream(planC2R, StreamAccessor::getStream(stream)) );
 
     GpuMat templ_roi(templ.size(), CV_32F, templ.data, templ.step);
-    copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
-                   templ_block.cols - templ_roi.cols, 0, Scalar(), stream);
+    gpu::copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
+                        templ_block.cols - templ_roi.cols, 0, Scalar(), stream);
 
     cufftSafeCall(cufftExecR2C(planR2C, templ_block.ptr<cufftReal>(),
                                templ_spect.ptr<cufftComplex>()));
@@ -1176,13 +1176,13 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
                                 std::min(y + dft_size.height, image.rows) - y);
             GpuMat image_roi(image_roi_size, CV_32F, (void*)(image.ptr<float>(y) + x),
                              image.step);
-            copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
-                           0, image_block.cols - image_roi.cols, 0, Scalar(), stream);
+            gpu::copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
+                                0, image_block.cols - image_roi.cols, 0, Scalar(), stream);
 
             cufftSafeCall(cufftExecR2C(planR2C, image_block.ptr<cufftReal>(),
                                        image_spect.ptr<cufftComplex>()));
-            mulAndScaleSpectrums(image_spect, templ_spect, result_spect, 0,
-                                 1.f / dft_size.area(), ccorr, stream);
+            gpu::mulAndScaleSpectrums(image_spect, templ_spect, result_spect, 0,
+                                      1.f / dft_size.area(), ccorr, stream);
             cufftSafeCall(cufftExecC2R(planC2R, result_spect.ptr<cufftComplex>(),
                                        result_data.ptr<cufftReal>()));
 

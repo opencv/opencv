@@ -494,11 +494,6 @@ void cv::gpu::VideoWriter_GPU::Impl::createHWEncoder()
     CV_Assert( err == 0 );
 }
 
-namespace cv { namespace gpu { namespace cudev
-{
-    void bgr_to_YV12(const PtrStepSzb src, int cn, PtrStepSzb dst);
-}}}
-
 namespace
 {
     // UYVY/YUY2 are both 4:2:2 formats (16bpc)
@@ -634,6 +629,11 @@ namespace
     }
 }
 
+namespace cv { namespace gpu { namespace cudev
+{
+    void RGB_to_YV12(const PtrStepSzb src, int cn, PtrStepSzb dst);
+}}}
+
 void cv::gpu::VideoWriter_GPU::Impl::write(const cv::gpu::GpuMat& frame, bool lastFrame)
 {
     if (inputFormat_ == SF_BGR)
@@ -664,7 +664,7 @@ void cv::gpu::VideoWriter_GPU::Impl::write(const cv::gpu::GpuMat& frame, bool la
     CV_Assert( res == CUDA_SUCCESS );
 
     if (inputFormat_ == SF_BGR)
-        cv::gpu::cudev::bgr_to_YV12(frame, frame.channels(), videoFrame_);
+        cv::gpu::cudev::RGB_to_YV12(frame, frame.channels(), videoFrame_);
     else
     {
         switch (surfaceFormat_)

@@ -119,7 +119,7 @@ cv::gpu::VideoReader_GPU::Impl::~Impl()
 namespace cv { namespace gpu { namespace cudev
 {
     void loadHueCSC(float hueCSC[9]);
-    void NV12ToARGB(const PtrStepb decodedFrame, PtrStepSz<uint> interopFrame, cudaStream_t stream = 0);
+    void NV12_to_RGB(const PtrStepb decodedFrame, PtrStepSz<uint> interopFrame, cudaStream_t stream = 0);
 }}}
 
 namespace
@@ -198,7 +198,7 @@ namespace
 
         loadHueCSC(hueColorSpaceMat);
 
-        NV12ToARGB(decodedFrame, interopFrame);
+        NV12_to_RGB(decodedFrame, interopFrame);
     }
 }
 

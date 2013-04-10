@@ -49,7 +49,7 @@ using namespace perf;
 //////////////////////////////////////////////////////////////////////
 // HistEvenC1
 
-PERF_TEST_P(Sz_Depth, ImgProc_HistEvenC1,
+PERF_TEST_P(Sz_Depth, HistEvenC1,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_16S)))
 {
@@ -88,7 +88,7 @@ PERF_TEST_P(Sz_Depth, ImgProc_HistEvenC1,
 //////////////////////////////////////////////////////////////////////
 // HistEvenC4
 
-PERF_TEST_P(Sz_Depth, ImgProc_HistEvenC4,
+PERF_TEST_P(Sz_Depth, HistEvenC4,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_16S)))
 {
@@ -129,7 +129,7 @@ PERF_TEST_P(Sz_Depth, ImgProc_HistEvenC4,
 //////////////////////////////////////////////////////////////////////
 // CalcHist
 
-PERF_TEST_P(Sz, ImgProc_CalcHist,
+PERF_TEST_P(Sz, CalcHist,
             GPU_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
@@ -155,7 +155,7 @@ PERF_TEST_P(Sz, ImgProc_CalcHist,
 //////////////////////////////////////////////////////////////////////
 // EqualizeHist
 
-PERF_TEST_P(Sz, ImgProc_EqualizeHist,
+PERF_TEST_P(Sz, EqualizeHist,
             GPU_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
@@ -186,7 +186,7 @@ PERF_TEST_P(Sz, ImgProc_EqualizeHist,
 
 DEF_PARAM_TEST(Sz_ClipLimit, cv::Size, double);
 
-PERF_TEST_P(Sz_ClipLimit, ImgProc_CLAHE,
+PERF_TEST_P(Sz_ClipLimit, CLAHE,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(0.0, 40.0)))
 {
@@ -222,7 +222,7 @@ PERF_TEST_P(Sz_ClipLimit, ImgProc_CLAHE,
 
 DEF_PARAM_TEST(Image_AppertureSz_L2gradient, string, int, bool);
 
-PERF_TEST_P(Image_AppertureSz_L2gradient, ImgProc_Canny,
+PERF_TEST_P(Image_AppertureSz_L2gradient, Canny,
             Combine(Values("perf/800x600.png", "perf/1280x1024.png", "perf/1680x1050.png"),
                     Values(3, 5),
                     Bool()))
@@ -262,7 +262,7 @@ PERF_TEST_P(Image_AppertureSz_L2gradient, ImgProc_Canny,
 
 DEF_PARAM_TEST_1(Image, string);
 
-PERF_TEST_P(Image, ImgProc_MeanShiftFiltering,
+PERF_TEST_P(Image, MeanShiftFiltering,
             Values<string>("gpu/meanshift/cones.png"))
 {
     declare.time(300.0);
@@ -298,7 +298,7 @@ PERF_TEST_P(Image, ImgProc_MeanShiftFiltering,
 //////////////////////////////////////////////////////////////////////
 // MeanShiftProc
 
-PERF_TEST_P(Image, ImgProc_MeanShiftProc,
+PERF_TEST_P(Image, MeanShiftProc,
             Values<string>("gpu/meanshift/cones.png"))
 {
     declare.time(300.0);
@@ -332,7 +332,7 @@ PERF_TEST_P(Image, ImgProc_MeanShiftProc,
 //////////////////////////////////////////////////////////////////////
 // MeanShiftSegmentation
 
-PERF_TEST_P(Image, ImgProc_MeanShiftSegmentation,
+PERF_TEST_P(Image, MeanShiftSegmentation,
             Values<string>("gpu/meanshift/cones.png"))
 {
     declare.time(300.0);
@@ -365,7 +365,7 @@ PERF_TEST_P(Image, ImgProc_MeanShiftSegmentation,
 //////////////////////////////////////////////////////////////////////
 // BlendLinear
 
-PERF_TEST_P(Sz_Depth_Cn, ImgProc_BlendLinear,
+PERF_TEST_P(Sz_Depth_Cn, BlendLinear,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_32F),
                     GPU_CHANNELS_1_3_4))
@@ -409,7 +409,7 @@ CV_ENUM(TemplateMethod, cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED, cv::TM_CCORR, cv::T
 
 DEF_PARAM_TEST(Sz_TemplateSz_Cn_Method, cv::Size, cv::Size, MatCn, TemplateMethod);
 
-PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate8U,
+PERF_TEST_P(Sz_TemplateSz_Cn_Method, MatchTemplate8U,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(cv::Size(5, 5), cv::Size(16, 16), cv::Size(30, 30)),
                     GPU_CHANNELS_1_3_4,
@@ -449,7 +449,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate8U,
 ////////////////////////////////////////////////////////////////////////////////
 // MatchTemplate32F
 
-PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate32F,
+PERF_TEST_P(Sz_TemplateSz_Cn_Method, MatchTemplate32F,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(cv::Size(5, 5), cv::Size(16, 16), cv::Size(30, 30)),
                     GPU_CHANNELS_1_3_4,
@@ -491,7 +491,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate32F,
 
 DEF_PARAM_TEST(Image_Type_Border_BlockSz_ApertureSz, string, MatType, BorderMode, int, int);
 
-PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, ImgProc_CornerHarris,
+PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, CornerHarris,
             Combine(Values<string>("gpu/stereobm/aloe-L.png"),
                     Values(CV_8UC1, CV_32FC1),
                     Values(BorderMode(cv::BORDER_REFLECT101), BorderMode(cv::BORDER_REPLICATE), BorderMode(cv::BORDER_REFLECT)),
@@ -536,7 +536,7 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, ImgProc_CornerHarris,
 //////////////////////////////////////////////////////////////////////
 // CornerMinEigenVal
 
-PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, ImgProc_CornerMinEigenVal,
+PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, CornerMinEigenVal,
             Combine(Values<string>("gpu/stereobm/aloe-L.png"),
                     Values(CV_8UC1, CV_32FC1),
                     Values(BorderMode(cv::BORDER_REFLECT101), BorderMode(cv::BORDER_REPLICATE), BorderMode(cv::BORDER_REFLECT)),
@@ -581,7 +581,7 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, ImgProc_CornerMinEigenVal,
 
 DEF_PARAM_TEST(Sz_Depth_Code, cv::Size, MatDepth, CvtColorInfo);
 
-PERF_TEST_P(Sz_Depth_Code, ImgProc_CvtColor,
+PERF_TEST_P(Sz_Depth_Code, CvtColor,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_32F),
                     Values(CvtColorInfo(4, 4, cv::COLOR_RGBA2BGRA),
@@ -632,7 +632,7 @@ PERF_TEST_P(Sz_Depth_Code, ImgProc_CvtColor,
     }
 }
 
-PERF_TEST_P(Sz_Depth_Code, ImgProc_CvtColorBayer,
+PERF_TEST_P(Sz_Depth_Code, CvtColorBayer,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U),
                     Values(CvtColorInfo(1, 3, cv::COLOR_BayerBG2BGR),
@@ -679,7 +679,7 @@ CV_ENUM(DemosaicingCode,
 
 DEF_PARAM_TEST(Sz_Code, cv::Size, DemosaicingCode);
 
-PERF_TEST_P(Sz_Code, ImgProc_Demosaicing,
+PERF_TEST_P(Sz_Code, Demosaicing,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ValuesIn(DemosaicingCode::all())))
 {
@@ -718,7 +718,7 @@ PERF_TEST_P(Sz_Code, ImgProc_Demosaicing,
 //////////////////////////////////////////////////////////////////////
 // SwapChannels
 
-PERF_TEST_P(Sz, ImgProc_SwapChannels,
+PERF_TEST_P(Sz, SwapChannels,
             GPU_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
@@ -750,7 +750,7 @@ CV_ENUM(AlphaOp, cv::gpu::ALPHA_OVER, cv::gpu::ALPHA_IN, cv::gpu::ALPHA_OUT, cv:
 
 DEF_PARAM_TEST(Sz_Type_Op, cv::Size, MatType, AlphaOp);
 
-PERF_TEST_P(Sz_Type_Op, ImgProc_AlphaComp,
+PERF_TEST_P(Sz_Type_Op, AlphaComp,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8UC4, CV_16UC4, CV_32SC4, CV_32FC4),
                     ALL_ALPHA_OPS))
@@ -813,7 +813,7 @@ namespace
     };
 }
 
-PERF_TEST_P(Sz, ImgProc_HoughLines,
+PERF_TEST_P(Sz, HoughLines,
             GPU_TYPICAL_MAT_SIZES)
 {
     declare.time(30.0);
@@ -861,7 +861,7 @@ PERF_TEST_P(Sz, ImgProc_HoughLines,
 
 DEF_PARAM_TEST_1(Image, std::string);
 
-PERF_TEST_P(Image, ImgProc_HoughLinesP,
+PERF_TEST_P(Image, HoughLinesP,
             testing::Values("cv/shared/pic5.png", "stitching/a1.png"))
 {
     declare.time(30.0);
@@ -909,7 +909,7 @@ PERF_TEST_P(Image, ImgProc_HoughLinesP,
 
 DEF_PARAM_TEST(Sz_Dp_MinDist, cv::Size, float, float);
 
-PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles,
+PERF_TEST_P(Sz_Dp_MinDist, HoughCircles,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(1.0f, 2.0f, 4.0f),
                     Values(1.0f)))
@@ -966,7 +966,7 @@ CV_FLAGS(GHMethod, GHT_POSITION, GHT_SCALE, GHT_ROTATION);
 
 DEF_PARAM_TEST(Method_Sz, GHMethod, cv::Size);
 
-PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough,
+PERF_TEST_P(Method_Sz, GeneralizedHough,
             Combine(Values(GHMethod(GHT_POSITION), GHMethod(GHT_POSITION | GHT_SCALE), GHMethod(GHT_POSITION | GHT_ROTATION), GHMethod(GHT_POSITION | GHT_SCALE | GHT_ROTATION)),
                     GPU_TYPICAL_MAT_SIZES))
 {
@@ -1054,7 +1054,7 @@ PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough,
 
 DEF_PARAM_TEST(Sz_Depth_Cn_KernelSz, cv::Size, MatDepth, MatCn, int);
 
-PERF_TEST_P(Sz_Depth_Cn_KernelSz, Denoising_BilateralFilter,
+PERF_TEST_P(Sz_Depth_Cn_KernelSz, BilateralFilter,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_32F),
                     GPU_CHANNELS_1_3,

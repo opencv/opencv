@@ -50,7 +50,7 @@ using namespace perf;
 // Remap
 
 enum { HALF_SIZE=0, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH };
-CV_ENUM(RemapMode, HALF_SIZE, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH);
+CV_ENUM(RemapMode, HALF_SIZE, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH)
 #define ALL_REMAP_MODES ValuesIn(RemapMode::all())
 
 void generateMap(cv::Mat& map_x, cv::Mat& map_y, int remapMode)
@@ -92,7 +92,7 @@ void generateMap(cv::Mat& map_x, cv::Mat& map_y, int remapMode)
 
 DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Border_Mode, cv::Size, MatDepth, MatCn, Interpolation, BorderMode, RemapMode);
 
-PERF_TEST_P(Sz_Depth_Cn_Inter_Border_Mode, ImgProc_Remap,
+PERF_TEST_P(Sz_Depth_Cn_Inter_Border_Mode, Remap,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4,
@@ -144,7 +144,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border_Mode, ImgProc_Remap,
 
 DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Scale, cv::Size, MatDepth, MatCn, Interpolation, double);
 
-PERF_TEST_P(Sz_Depth_Cn_Inter_Scale, ImgProc_Resize,
+PERF_TEST_P(Sz_Depth_Cn_Inter_Scale, Resize,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4,
@@ -188,7 +188,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Scale, ImgProc_Resize,
 
 DEF_PARAM_TEST(Sz_Depth_Cn_Scale, cv::Size, MatDepth, MatCn, double);
 
-PERF_TEST_P(Sz_Depth_Cn_Scale, ImgProc_ResizeArea,
+PERF_TEST_P(Sz_Depth_Cn_Scale, ResizeArea,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4,
@@ -231,7 +231,7 @@ PERF_TEST_P(Sz_Depth_Cn_Scale, ImgProc_ResizeArea,
 
 DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Border, cv::Size, MatDepth, MatCn, Interpolation, BorderMode);
 
-PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpAffine,
+PERF_TEST_P(Sz_Depth_Cn_Inter_Border, WarpAffine,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4,
@@ -281,7 +281,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpAffine,
 //////////////////////////////////////////////////////////////////////
 // WarpPerspective
 
-PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpPerspective,
+PERF_TEST_P(Sz_Depth_Cn_Inter_Border, WarpPerspective,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4,
@@ -329,7 +329,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpPerspective,
 //////////////////////////////////////////////////////////////////////
 // BuildWarpPlaneMaps
 
-PERF_TEST_P(Sz, ImgProc_BuildWarpPlaneMaps,
+PERF_TEST_P(Sz, BuildWarpPlaneMaps,
             GPU_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
@@ -357,7 +357,7 @@ PERF_TEST_P(Sz, ImgProc_BuildWarpPlaneMaps,
 //////////////////////////////////////////////////////////////////////
 // BuildWarpCylindricalMaps
 
-PERF_TEST_P(Sz, ImgProc_BuildWarpCylindricalMaps,
+PERF_TEST_P(Sz, BuildWarpCylindricalMaps,
             GPU_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
@@ -384,7 +384,7 @@ PERF_TEST_P(Sz, ImgProc_BuildWarpCylindricalMaps,
 //////////////////////////////////////////////////////////////////////
 // BuildWarpSphericalMaps
 
-PERF_TEST_P(Sz, ImgProc_BuildWarpSphericalMaps,
+PERF_TEST_P(Sz, BuildWarpSphericalMaps,
             GPU_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
@@ -413,7 +413,7 @@ PERF_TEST_P(Sz, ImgProc_BuildWarpSphericalMaps,
 
 DEF_PARAM_TEST(Sz_Depth_Cn_Inter, cv::Size, MatDepth, MatCn, Interpolation);
 
-PERF_TEST_P(Sz_Depth_Cn_Inter, ImgProc_Rotate,
+PERF_TEST_P(Sz_Depth_Cn_Inter, Rotate,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4,
@@ -447,7 +447,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter, ImgProc_Rotate,
 //////////////////////////////////////////////////////////////////////
 // PyrDown
 
-PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrDown,
+PERF_TEST_P(Sz_Depth_Cn, PyrDown,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4))
@@ -483,7 +483,7 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrDown,
 //////////////////////////////////////////////////////////////////////
 // PyrUp
 
-PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrUp,
+PERF_TEST_P(Sz_Depth_Cn, PyrUp,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4))
@@ -519,7 +519,7 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrUp,
 //////////////////////////////////////////////////////////////////////
 // ImagePyramidBuild
 
-PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidBuild,
+PERF_TEST_P(Sz_Depth_Cn, ImagePyramidBuild,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4))
@@ -558,7 +558,7 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidBuild,
 //////////////////////////////////////////////////////////////////////
 // ImagePyramidGetLayer
 
-PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidGetLayer,
+PERF_TEST_P(Sz_Depth_Cn, ImagePyramidGetLayer,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4))

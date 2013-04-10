@@ -46,6 +46,16 @@
 #include <memory>
 #include <vector>
 #include "opencv2/gpulegacy/NCV.hpp"
+#include "opencv2/core/cuda/common.hpp"
+
+namespace cv { namespace gpu { namespace cudev
+{
+    namespace pyramid
+    {
+        template <typename T> void kernelDownsampleX2_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template <typename T> void kernelInterpolateFrom1_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+    }
+}}}
 
 #if 0 //def _WIN32
 
