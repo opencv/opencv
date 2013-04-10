@@ -483,7 +483,7 @@ void ColorGradientPyramid::pyrDown()
   if (!mask.empty())
   {
     Mat next_mask;
-    resize(mask, next_mask, size, 0.0, 0.0, CV_INTER_NN);
+    resize(mask, next_mask, size, 0.0, 0.0, INTER_NEAREST);
     mask = next_mask;
   }
 
@@ -635,17 +635,11 @@ static void quantizedNormals(const Mat& src, Mat& dst, int distance_threshold,
 {
   dst = Mat::zeros(src.size(), CV_8U);
 
-  IplImage src_ipl = src;
-  IplImage* ap_depth_data = &src_ipl;
-  IplImage dst_ipl = dst;
-  IplImage* dst_ipl_ptr = &dst_ipl;
-  IplImage** m_dep = &dst_ipl_ptr;
+  const unsigned short * lp_depth   = src.ptr<ushort>();
+  unsigned char  * lp_normals = dst.ptr<uchar>();
 
-  unsigned short * lp_depth   = (unsigned short *)ap_depth_data->imageData;
-  unsigned char  * lp_normals = (unsigned char *)m_dep[0]->imageData;
-
-  const int l_W = ap_depth_data->width;
-  const int l_H = ap_depth_data->height;
+  const int l_W = src.cols;
+  const int l_H = src.rows;
 
   const int l_r = 5; // used to be 7
   const int l_offset0 = -l_r - l_r * l_W;
@@ -662,7 +656,7 @@ static void quantizedNormals(const Mat& src, Mat& dst, int distance_threshold,
 
   for (int l_y = l_r; l_y < l_H - l_r - 1; ++l_y)
   {
-    unsigned short * lp_line = lp_depth + (l_y * l_W + l_r);
+    const unsigned short * lp_line = lp_depth + (l_y * l_W + l_r);
     unsigned char * lp_norm = lp_normals + (l_y * l_W + l_r);
 
     for (int l_x = l_r; l_x < l_W - l_r - 1; ++l_x)
@@ -725,7 +719,7 @@ static void quantizedNormals(const Mat& src, Mat& dst, int distance_threshold,
       ++lp_norm;
     }
   }
-  cvSmooth(m_dep[0], m_dep[0], CV_MEDIAN, 5, 5);
+  medianBlur(dst, dst, 5);
 }
 
 class DepthNormalPyramid : public QuantizedPyramid
@@ -772,12 +766,12 @@ void DepthNormalPyramid::pyrDown()
   // In this case, NN-downsample the quantized image
   Mat next_normal;
   Size size(normal.cols / 2, normal.rows / 2);
-  resize(normal, next_normal, size, 0.0, 0.0, CV_INTER_NN);
+  resize(normal, next_normal, size, 0.0, 0.0, INTER_NEAREST);
   normal = next_normal;
   if (!mask.empty())
   {
     Mat next_mask;
-    resize(mask, next_mask, size, 0.0, 0.0, CV_INTER_NN);
+    resize(mask, next_mask, size, 0.0, 0.0, INTER_NEAREST);
     mask = next_mask;
   }
 }
@@ -805,7 +799,7 @@ bool DepthNormalPyramid::extractTemplate(Template& templ) const
     temp.setTo(1 << i, local_mask);
     bitwise_and(temp, normal, temp);
     // temp is now non-zero at pixels in the mask with quantized orientation i
-    distanceTransform(temp, distances[i], CV_DIST_C, 3);
+    distanceTransform(temp, distances[i], DIST_C, 3);
   }
 
   // Count how many features taken for each label

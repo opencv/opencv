@@ -112,7 +112,7 @@ void DescriptorMatcher::DescriptorCollection::set( const std::vector<Mat>& descr
         dim = descriptors[0].cols;
         type = descriptors[0].type();
     }
-    assert( dim > 0 );
+    CV_Assert( dim > 0 );
 
     int count = startIdxs[imageCount-1] + descriptors[imageCount-1].rows;
 
@@ -484,7 +484,7 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const String& descriptorMatche
         dm = new BFMatcher(NORM_HAMMING2);
     }
     else
-        CV_Error( CV_StsBadArg, "Unknown matcher name" );
+        CV_Error( Error::StsBadArg, "Unknown matcher name" );
 
     return dm;
 }
@@ -727,7 +727,7 @@ Ptr<DescriptorMatcher> FlannBasedMatcher::clone( bool emptyTrainData ) const
     FlannBasedMatcher* matcher = new FlannBasedMatcher(indexParams, searchParams);
     if( !emptyTrainData )
     {
-        CV_Error( CV_StsNotImplemented, "deep clone functionality is not implemented, because "
+        CV_Error( Error::StsNotImplemented, "deep clone functionality is not implemented, because "
                   "Flann::Index has not copy constructor or clone method ");
         //matcher->flannIndex;
         matcher->addedDescCount = addedDescCount;

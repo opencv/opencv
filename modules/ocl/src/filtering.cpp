@@ -544,21 +544,21 @@ void cv::ocl::morphologyEx(const oclMat &src, oclMat &dst, int op, const Mat &ke
         erode(src, temp, kernel, anchor, iterations, borderType, borderValue);
         dilate(temp, dst, kernel, anchor, iterations, borderType, borderValue);
         break;
-    case CV_MOP_CLOSE:
+    case MORPH_CLOSE:
         dilate(src, temp, kernel, anchor, iterations, borderType, borderValue);
         erode(temp, dst, kernel, anchor, iterations, borderType, borderValue);
         break;
-    case CV_MOP_GRADIENT:
+    case MORPH_GRADIENT:
         erode(src, temp, kernel, anchor, iterations, borderType, borderValue);
         dilate(src, dst, kernel, anchor, iterations, borderType, borderValue);
         subtract(dst, temp, dst);
         break;
-    case CV_MOP_TOPHAT:
+    case MORPH_TOPHAT:
         erode(src, dst, kernel, anchor, iterations, borderType, borderValue);
         dilate(dst, temp, kernel, anchor, iterations, borderType, borderValue);
         subtract(src, temp, dst);
         break;
-    case CV_MOP_BLACKHAT:
+    case MORPH_BLACKHAT:
         dilate(src, dst, kernel, anchor, iterations, borderType, borderValue);
         erode(dst, temp, kernel, anchor, iterations, borderType, borderValue);
         subtract(temp, src, dst);

@@ -2268,4 +2268,35 @@ public class CoreTest extends OpenCVTestCase {
 
     }
 
+    public void testCopyMakeBorderMatMatIntIntIntIntInt() {
+        Mat src = new Mat(2, 2, CvType.CV_32F, new Scalar(1));
+        int border = 2;
+
+        Core.copyMakeBorder(src, dst, border, border, border, border, Core.BORDER_REPLICATE);
+
+        truth = new Mat(6, 6, CvType.CV_32F, new Scalar(1));
+        assertMatEqual(truth, dst, EPS);
+    }
+
+    public void testCopyMakeBorderMatMatIntIntIntIntIntScalar() {
+        Mat src = new Mat(2, 2, CvType.CV_32F, new Scalar(1));
+
+        Scalar value = new Scalar(0);
+        int border = 2;
+
+        Core.copyMakeBorder(src, dst, border, border, border, border, Core.BORDER_REPLICATE, value);
+        // TODO_: write better test (use Core.BORDER_CONSTANT)
+
+        truth = new Mat(6, 6, CvType.CV_32F, new Scalar(1));
+        assertMatEqual(truth, dst, EPS);
+    }
+
+    public void testBorderInterpolate() {
+        float val1 = Core.borderInterpolate(100, 150, Core.BORDER_REFLECT_101);
+        assertEquals(100f, val1);
+
+        float val2 = Core.borderInterpolate(-5, 10, Core.BORDER_WRAP);
+        assertEquals(5f, val2);
+    }
+
 }

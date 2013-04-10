@@ -44,7 +44,10 @@
 //
 //M*/
 #include "precomp.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
 #include <iostream>
+
+
 namespace cv
 {
 namespace ocl

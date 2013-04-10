@@ -121,6 +121,14 @@ CV_EXPORTS BinaryFunc getCopyMaskFunc(size_t esz);
 //! swaps two matrices
 CV_EXPORTS void swap(Mat& a, Mat& b);
 
+//! 1D interpolation function: returns coordinate of the "donor" pixel for the specified location p.
+CV_EXPORTS_W int borderInterpolate(int p, int len, int borderType);
+
+//! copies 2D array to a larger destination array with extrapolation of the outer part of src using the specified border mode
+CV_EXPORTS_W void copyMakeBorder(InputArray src, OutputArray dst,
+                                 int top, int bottom, int left, int right,
+                                 int borderType, const Scalar& value = Scalar() );
+
 //! adds one matrix to another (dst = src1 + src2)
 CV_EXPORTS_W void add(InputArray src1, InputArray src2, OutputArray dst,
                       InputArray mask = noArray(), int dtype = -1);
@@ -178,6 +186,9 @@ CV_EXPORTS_W double norm(InputArray src1, int normType = NORM_L2, InputArray mas
 //! computes norm of selected part of the difference between two arrays
 CV_EXPORTS_W double norm(InputArray src1, InputArray src2,
                          int normType = NORM_L2, InputArray mask = noArray());
+
+//! computes PSNR image/video quality metric
+CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2);
 
 //! computes norm of a sparse matrix
 CV_EXPORTS double norm( const SparseMat& src, int normType );

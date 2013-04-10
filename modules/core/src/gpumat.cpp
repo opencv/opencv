@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <limits>
 
 using namespace cv;
 using namespace cv::gpu;

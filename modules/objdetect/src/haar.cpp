@@ -42,7 +42,8 @@
 /* Haar features calculation */
 
 #include "precomp.hpp"
-#include "stdio.h"
+#include "opencv2/imgproc/imgproc_c.h"
+#include <stdio.h>
 
 #if CV_SSE2
 #   if 1 /*!CV_SSE4_1 && !CV_SSE4_2*/

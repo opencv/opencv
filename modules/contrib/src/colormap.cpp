@@ -483,8 +483,8 @@ namespace colormap
         }
         // Turn into a BGR matrix into its grayscale representation.
         if(src.type() == CV_8UC3)
-            cvtColor(src.clone(), src, CV_BGR2GRAY);
-        cvtColor(src.clone(), src, CV_GRAY2BGR);
+            cvtColor(src.clone(), src, COLOR_BGR2GRAY);
+        cvtColor(src.clone(), src, COLOR_GRAY2BGR);
         // Apply the ColorMap.
         LUT(src, _lut, _dst);
     }

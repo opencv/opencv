@@ -51,20 +51,6 @@
 namespace cv
 {
 
-//! Various border types, image boundaries are denoted with '|'
-enum {
-       BORDER_CONSTANT    = 0, // iiiiii|abcdefgh|iiiiiii  with some specified 'i'
-       BORDER_REPLICATE   = 1, // aaaaaa|abcdefgh|hhhhhhh
-       BORDER_REFLECT     = 2, // fedcba|abcdefgh|hgfedcb
-       BORDER_WRAP        = 3, // cdefgh|abcdefgh|abcdefg
-       BORDER_REFLECT_101 = 4, // gfedcb|abcdefgh|gfedcba
-       BORDER_TRANSPARENT = 5, // uvwxyz|absdefgh|ijklmno
-
-       BORDER_REFLECT101  = BORDER_REFLECT_101,
-       BORDER_DEFAULT     = BORDER_REFLECT_101,
-       BORDER_ISOLATED    = 16 // do not look outside of ROI
-     };
-
 //! type of the kernel
 enum { KERNEL_GENERAL      = 0, // the kernel is generic. No any type of symmetry or other properties.
        KERNEL_SYMMETRICAL  = 1, // kernel[i] == kernel[ksize-i-1] , and the anchor is at the center
@@ -753,29 +739,6 @@ public:
 };
 
 
-//! raster image moments
-class CV_EXPORTS_W_MAP Moments
-{
-public:
-    //! the default constructor
-    Moments();
-    //! the full constructor
-    Moments(double m00, double m10, double m01, double m20, double m11,
-            double m02, double m30, double m21, double m12, double m03 );
-    ////! the conversion from CvMoments
-    //Moments( const CvMoments& moments );
-    ////! the conversion to CvMoments
-    //operator CvMoments() const;
-
-    //! spatial moments
-    CV_PROP_RW double  m00, m10, m01, m20, m11, m02, m30, m21, m12, m03;
-    //! central moments
-    CV_PROP_RW double  mu20, mu11, mu02, mu30, mu21, mu12, mu03;
-    //! central normalized moments
-    CV_PROP_RW double  nu20, nu11, nu02, nu30, nu21, nu12, nu03;
-};
-
-
 class CV_EXPORTS_W Subdiv2D
 {
 public:
@@ -958,14 +921,6 @@ CV_EXPORTS Ptr<FilterEngine> createMorphologyFilter(int op, int type, InputArray
 
 //! returns structuring element of the specified shape and size
 CV_EXPORTS_W Mat getStructuringElement(int shape, Size ksize, Point anchor = Point(-1,-1));
-
-//! 1D interpolation function: returns coordinate of the "donor" pixel for the specified location p.
-CV_EXPORTS_W int borderInterpolate( int p, int len, int borderType );
-
-//! copies 2D array to a larger destination array with extrapolation of the outer part of src using the specified border mode
-CV_EXPORTS_W void copyMakeBorder( InputArray src, OutputArray dst,
-                                int top, int bottom, int left, int right,
-                                int borderType, const Scalar& value = Scalar() );
 
 //! smooths the image using median filter.
 CV_EXPORTS_W void medianBlur( InputArray src, OutputArray dst, int ksize );
@@ -1164,9 +1119,6 @@ CV_EXPORTS_W void accumulateProduct( InputArray src1, InputArray src2,
 //! updates the running average (dst = dst*(1-alpha) + src*alpha)
 CV_EXPORTS_W void accumulateWeighted( InputArray src, InputOutputArray dst,
                                       double alpha, InputArray mask = noArray() );
-
-//! computes PSNR image/video quality metric
-CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2);
 
 CV_EXPORTS_W Point2d phaseCorrelate(InputArray src1, InputArray src2,
                                     InputArray window = noArray(), CV_OUT double* response = 0);
