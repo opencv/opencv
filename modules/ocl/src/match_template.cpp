@@ -125,7 +125,7 @@ namespace cv
             const oclMat &image, const oclMat &templ, oclMat &result, MatchTemplateBuf & buf)
         {
             result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-            if (useNaive(CV_TM_SQDIFF, image.depth(), templ.size()))
+            if (useNaive(TM_SQDIFF, image.depth(), templ.size()))
             {
                 matchTemplateNaive_SQDIFF(image, templ, result, image.oclchannels());
                 return;
@@ -255,7 +255,7 @@ namespace cv
             const oclMat &image, const oclMat &templ, oclMat &result, MatchTemplateBuf &buf)
         {
             result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-            if (useNaive(CV_TM_CCORR, image.depth(), templ.size()))
+            if (useNaive(TM_CCORR, image.depth(), templ.size()))
             {
                 matchTemplateNaive_CCORR(image, templ, result, image.oclchannels());
                 return;

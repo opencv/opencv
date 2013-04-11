@@ -3460,3 +3460,101 @@ The function :ocv:func:`transpose` transposes the matrix ``src`` :
     \texttt{dst} (i,j) =  \texttt{src} (j,i)
 
 .. note:: No complex conjugation is done in case of a complex matrix. It it should be done separately if needed.
+
+
+borderInterpolate
+-----------------
+Computes the source location of an extrapolated pixel.
+
+.. ocv:function:: int borderInterpolate( int p, int len, int borderType )
+
+.. ocv:pyfunction:: cv2.borderInterpolate(p, len, borderType) -> retval
+
+    :param p: 0-based coordinate of the extrapolated pixel along one of the axes,
+              likely <0 or >= ``len`` .
+
+    :param len: Length of the array along the corresponding axis.
+
+    :param borderType: Border type, one of the  ``BORDER_*`` , except for  ``BORDER_TRANSPARENT``
+                       and  ``BORDER_ISOLATED`` . When  ``borderType==BORDER_CONSTANT`` , the
+                       function always returns -1, regardless of  ``p``  and  ``len`` .
+
+The function computes and returns the coordinate of a donor pixel corresponding to the specified
+extrapolated pixel when using the specified extrapolation border mode. For example, if you use
+``BORDER_WRAP`` mode in the horizontal direction, ``BORDER_REFLECT_101`` in the vertical direction
+and want to compute value of the "virtual" pixel ``Point(-5, 100)`` in a floating-point image
+``img`` , it looks like: ::
+
+    float val = img.at<float>(borderInterpolate(100, img.rows, BORDER_REFLECT_101),
+                              borderInterpolate(-5, img.cols, BORDER_WRAP));
+
+
+Normally, the function is not called directly. It is used inside :ocv:class:`FilterEngine`
+and :ocv:func:`copyMakeBorder` to compute tables for quick extrapolation.
+
+.. seealso::
+
+    :ocv:class:`FilterEngine`,
+    :ocv:func:`copyMakeBorder`
+
+
+copyMakeBorder
+--------------
+Forms a border around an image.
+
+.. ocv:function:: void copyMakeBorder( InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType, const Scalar& value=Scalar() )
+
+.. ocv:pyfunction:: cv2.copyMakeBorder(src, top, bottom, left, right, borderType[, dst[, value]]) -> dst
+
+    :param src: Source image.
+
+    :param dst: Destination image of the same type as  ``src``  and the
+                size ``Size(src.cols+left+right, src.rows+top+bottom)`` .
+
+    :param top:
+
+    :param bottom:
+
+    :param left:
+
+    :param right: Parameter specifying how many pixels in each direction from the source image
+                  rectangle to extrapolate. For example,  ``top=1, bottom=1, left=1, right=1``
+                  mean that 1 pixel-wide border needs to be built.
+
+    :param borderType: Border type. See  :ocv:func:`borderInterpolate` for details.
+
+    :param value: Border value if  ``borderType==BORDER_CONSTANT`` .
+
+The function copies the source image into the middle of the destination image. The areas to the
+left, to the right, above and below the copied source image will be filled with extrapolated pixels.
+This is not what :ocv:class:`FilterEngine` or filtering functions based on it do (they extrapolate
+pixels on-fly), but what other more complex functions, including your own, may do to simplify image
+boundary handling.
+
+The function supports the mode when ``src`` is already in the middle of ``dst`` . In this case, the
+function does not copy ``src`` itself but simply constructs the border, for example: ::
+
+    // let border be the same in all directions
+    int border=2;
+    // constructs a larger image to fit both the image and the border
+    Mat gray_buf(rgb.rows + border*2, rgb.cols + border*2, rgb.depth());
+    // select the middle part of it w/o copying data
+    Mat gray(gray_canvas, Rect(border, border, rgb.cols, rgb.rows));
+    // convert image from RGB to grayscale
+    cvtColor(rgb, gray, CV_RGB2GRAY);
+    // form a border in-place
+    copyMakeBorder(gray, gray_buf, border, border,
+                   border, border, BORDER_REPLICATE);
+    // now do some custom filtering ...
+    ...
+
+
+.. note::
+
+    When the source image is a part (ROI) of a bigger image, the function will try to use the pixels
+    outside of the ROI to form a border. To disable this feature and always do extrapolation, as if
+    ``src`` was not a ROI, use ``borderType | BORDER_ISOLATED``.
+
+.. seealso::
+
+    :ocv:func:`borderInterpolate`

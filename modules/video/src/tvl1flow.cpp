@@ -73,6 +73,7 @@
 */
 
 #include "precomp.hpp"
+#include <limits>
 
 using namespace cv;
 

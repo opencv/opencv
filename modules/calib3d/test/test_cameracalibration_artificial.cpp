@@ -304,7 +304,7 @@ protected:
             for(size_t i = 0; i < brdsNum; ++i)
             {
                 Mat gray;
-                cvtColor(boards[i], gray, CV_BGR2GRAY);
+                cvtColor(boards[i], gray, COLOR_BGR2GRAY);
                 vector<Point2f> tmp = imagePoints_findCb[i];
                 cornerSubPix(gray, tmp, Size(5, 5), Size(-1,-1), tc);
                 imagePoints.push_back(tmp);
@@ -314,7 +314,7 @@ protected:
             for(size_t i = 0; i < brdsNum; ++i)
             {
                 Mat gray;
-                cvtColor(boards[i], gray, CV_BGR2GRAY);
+                cvtColor(boards[i], gray, COLOR_BGR2GRAY);
                 vector<Point2f> tmp = imagePoints_findCb[i];
                 find4QuadCornerSubpix(gray, tmp, Size(5, 5));
                 imagePoints.push_back(tmp);

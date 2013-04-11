@@ -40,6 +40,7 @@
  //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
 #include <limits>
 #include "test_chessboardgenerator.hpp"
 

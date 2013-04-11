@@ -48,7 +48,7 @@
 #  include "opencv2/imgproc.hpp"
 #endif
 
-#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/imgproc/types_c.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -43,11 +43,12 @@
 #define __HIGHGUI_H_
 
 #include "opencv2/highgui.hpp"
-#include "opencv2/highgui/highgui_c.h"
-#include "opencv2/imgproc/imgproc_c.h"
 
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"
+
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/highgui/highgui_c.h"
 
 #include <stdlib.h>
 #include <stdio.h>

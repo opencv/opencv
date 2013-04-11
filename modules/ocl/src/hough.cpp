@@ -242,7 +242,7 @@ void cv::ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& 
     CV_Assert(src.type() == CV_8UC1);
     CV_Assert(src.cols < std::numeric_limits<unsigned short>::max());
     CV_Assert(src.rows < std::numeric_limits<unsigned short>::max());
-    CV_Assert(method == CV_HOUGH_GRADIENT);
+    CV_Assert(method == HOUGH_GRADIENT);
     CV_Assert(dp > 0);
     CV_Assert(minRadius > 0 && maxRadius > minRadius);
     CV_Assert(cannyThreshold > 0);

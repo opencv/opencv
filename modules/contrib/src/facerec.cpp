@@ -832,7 +832,7 @@ void LBPH::predict(InputArray _src, int &minClass, double &minDist) const {
     minDist = DBL_MAX;
     minClass = -1;
     for(size_t sampleIdx = 0; sampleIdx < _histograms.size(); sampleIdx++) {
-        double dist = compareHist(_histograms[sampleIdx], query, CV_COMP_CHISQR);
+        double dist = compareHist(_histograms[sampleIdx], query, HISTCMP_CHISQR);
         if((dist < minDist) && (dist < _threshold)) {
             minDist = dist;
             minClass = _labels.at<int>((int) sampleIdx);

@@ -49,6 +49,7 @@
  */
 
 #include "precomp.hpp"
+#include <limits>
 
 namespace cv
 {
@@ -72,7 +73,7 @@ public:
         minVal_ = maxVal_ = 0;
         name_ = "BackgroundSubtractor.GMG";
     }
-    
+
     ~BackgroundSubtractorGMGImpl()
     {
     }
