@@ -3448,7 +3448,10 @@ convertScaleData_(const void* _from, void* _to, int cn, double alpha, double bet
             to[i] = saturate_cast<T2>(from[i]*alpha + beta);
 }
 
-ConvertData getConvertElem(int fromType, int toType)
+typedef void (*ConvertData)(const void* from, void* to, int cn);
+typedef void (*ConvertScaleData)(const void* from, void* to, int cn, double alpha, double beta);
+
+static ConvertData getConvertElem(int fromType, int toType)
 {
     static ConvertData tab[][8] =
     {{ convertData_<uchar, uchar>, convertData_<uchar, schar>,
@@ -3493,7 +3496,7 @@ ConvertData getConvertElem(int fromType, int toType)
     return func;
 }
 
-ConvertScaleData getConvertScaleElem(int fromType, int toType)
+static ConvertScaleData getConvertScaleElem(int fromType, int toType)
 {
     static ConvertScaleData tab[][8] =
     {{ convertScaleData_<uchar, uchar>, convertScaleData_<uchar, schar>,

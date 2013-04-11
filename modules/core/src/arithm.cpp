@@ -1197,17 +1197,6 @@ void cv::min(const Mat& src1, const Mat& src2, Mat& dst)
     binary_op(src1, src2, _dst, noArray(), minTab, false );
 }
 
-void cv::max(const Mat& src1, double src2, Mat& dst)
-{
-    OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, noArray(), maxTab, false );
-}
-
-void cv::min(const Mat& src1, double src2, Mat& dst)
-{
-    OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, noArray(), minTab, false );
-}
 
 /****************************************************************************************\
 *                                      add/subtract                                      *

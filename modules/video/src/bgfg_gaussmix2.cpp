@@ -486,8 +486,6 @@ public:
         tau = _tau;
         detectShadows = _detectShadows;
         shadowVal = _shadowVal;
-
-        cvtfunc = src->depth() != CV_32F ? getConvertFunc(src->depth(), CV_32F) : 0;
     }
 
     void operator()(const Range& range) const
@@ -501,8 +499,8 @@ public:
         for( int y = y0; y < y1; y++ )
         {
             const float* data = buf;
-            if( cvtfunc )
-                cvtfunc( src->ptr(y), src->step, 0, 0, (uchar*)data, 0, Size(ncols*nchannels, 1), 0);
+            if( src->depth() != CV_32F )
+                src->row(y).convertTo(Mat(1, ncols, CV_32FC(nchannels), (void*)data), CV_32F);
             else
                 data = src->ptr<float>(y);
 
@@ -685,8 +683,6 @@ public:
 
     bool detectShadows;
     uchar shadowVal;
-
-    BinaryFunc cvtfunc;
 };
 
 void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask, double learningRate)

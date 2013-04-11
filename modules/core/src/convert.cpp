@@ -505,14 +505,30 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
 }
 
 
-void cv::mixChannels(const std::vector<Mat>& src, std::vector<Mat>& dst,
+void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                  const int* fromTo, size_t npairs)
 {
-    mixChannels(!src.empty() ? &src[0] : 0, src.size(),
-                !dst.empty() ? &dst[0] : 0, dst.size(), fromTo, npairs);
+    if(npairs == 0)
+        return;
+    bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
+                      src.kind() != _InputArray::STD_VECTOR_VECTOR;
+    bool dst_is_mat = dst.kind() != _InputArray::STD_VECTOR_MAT &&
+                      dst.kind() != _InputArray::STD_VECTOR_VECTOR;
+    int i;
+    int nsrc = src_is_mat ? 1 : (int)src.total();
+    int ndst = dst_is_mat ? 1 : (int)dst.total();
+
+    CV_Assert(nsrc > 0 && ndst > 0);
+    cv::AutoBuffer<Mat> _buf(nsrc + ndst);
+    Mat* buf = _buf;
+    for( i = 0; i < nsrc; i++ )
+        buf[i] = src.getMat(src_is_mat ? -1 : i);
+    for( i = 0; i < ndst; i++ )
+        buf[nsrc + i] = dst.getMat(dst_is_mat ? -1 : i);
+    mixChannels(&buf[0], nsrc, &buf[nsrc], ndst, fromTo, npairs);
 }
 
-void cv::mixChannels(InputArrayOfArrays src, InputArrayOfArrays dst,
+void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                      const std::vector<int>& fromTo)
 {
     if(fromTo.empty())
@@ -1027,7 +1043,7 @@ BinaryFunc getConvertFunc(int sdepth, int ddepth)
     return cvtTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
 }
 
-BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
+static BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
 {
     return cvtScaleTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
 }
@@ -1173,10 +1189,9 @@ static LUTFunc lutTab[] =
 
 }
 
-void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst, int interpolation )
+void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 {
     Mat src = _src.getMat(), lut = _lut.getMat();
-    CV_Assert( interpolation == 0 );
     int cn = src.channels();
     int lutcn = lut.channels();
 

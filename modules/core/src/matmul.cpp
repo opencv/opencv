@@ -2308,11 +2308,6 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
     return std::sqrt(result);
 }
 
-double cv::Mahalonobis( InputArray _v1, InputArray _v2, InputArray _icovar )
-{
-    return Mahalanobis(_v1, _v2, _icovar);
-}
-
 /****************************************************************************************\
 *                                        MulTransposed                                   *
 \****************************************************************************************/

@@ -1081,11 +1081,9 @@ eigen
 -----
 Calculates eigenvalues and eigenvectors of a symmetric matrix.
 
-.. ocv:function:: bool eigen(InputArray src, OutputArray eigenvalues, int lowindex=-1, int highindex=-1)
+.. ocv:function:: bool eigen( InputArray src, OutputArray eigenvalues, OutputArray eigenvectors=noArray() )
 
-.. ocv:function:: bool eigen(InputArray src, OutputArray eigenvalues, OutputArray eigenvectors, int lowindex=-1,int highindex=-1)
-
-.. ocv:pyfunction:: cv2.eigen(src, computeEigenvectors[, eigenvalues[, eigenvectors]]) -> retval, eigenvalues, eigenvectors
+.. ocv:pyfunction:: cv2.eigen(src[, eigenvalues[, eigenvectors]]) -> retval, eigenvalues, eigenvectors
 
 .. ocv:cfunction:: void cvEigenVV( CvArr* mat, CvArr* evects, CvArr* evals, double eps=0, int lowindex=-1, int highindex=-1 )
 
@@ -1281,40 +1279,6 @@ The function can be replaced with a matrix expression. For example, the above ca
 
 
 .. seealso::  :ocv:func:`mulTransposed` , :ocv:func:`transform` , :ref:`MatrixExpressions`
-
-
-
-getConvertElem
---------------
-Returns a conversion function for a single pixel.
-
-.. ocv:function:: ConvertData getConvertElem(int fromType, int toType)
-
-.. ocv:function:: ConvertScaleData getConvertScaleElem(int fromType, int toType)
-
-    :param fromType: input pixel type.
-
-    :param toType: output pixel type.
-
-    :param from: callback parameter: pointer to the input pixel.
-
-    :param to: callback parameter: pointer to the output pixel
-
-    :param cn: callback parameter: the number of channels; it can be arbitrary, 1, 100, 100000, etc.
-
-    :param alpha: ``ConvertScaleData`` callback optional parameter: the scale factor.
-
-    :param beta: ``ConvertScaleData`` callback optional parameter: the delta or offset.
-
-The functions ``getConvertElem`` and ``getConvertScaleElem`` return pointers to the functions for converting individual pixels from one type to another. While the main function purpose is to convert single pixels (actually, for converting sparse matrices from one type to another), you can use them to convert the whole row of a dense matrix or the whole matrix at once, by setting ``cn = matrix.cols*matrix.rows*matrix.channels()`` if the matrix data is continuous.
-
-``ConvertData`` and ``ConvertScaleData`` are defined as: ::
-
-    typedef void (*ConvertData)(const void* from, void* to, int cn)
-    typedef void (*ConvertScaleData)(const void* from, void* to,
-                                     int cn, double alpha, double beta)
-
-.. seealso:: :ocv:func:`Mat::convertTo` , :ocv:func:`SparseMat::convertTo`
 
 
 
@@ -1523,9 +1487,9 @@ LUT
 ---
 Performs a look-up table transform of an array.
 
-.. ocv:function:: void LUT( InputArray src, InputArray lut, OutputArray dst, int interpolation=0 )
+.. ocv:function:: void LUT( InputArray src, InputArray lut, OutputArray dst )
 
-.. ocv:pyfunction:: cv2.LUT(src, lut[, dst[, interpolation]]) -> dst
+.. ocv:pyfunction:: cv2.LUT(src, lut[, dst]) -> dst
 
 .. ocv:cfunction:: void cvLUT(const CvArr* src, CvArr* dst, const CvArr* lut)
 .. ocv:pyoldfunction:: cv.LUT(src, dst, lut)-> None
@@ -1627,8 +1591,6 @@ Calculates per-element maximum of two arrays or an array and a scalar.
 .. ocv:function:: void max(InputArray src1, InputArray src2, OutputArray dst)
 
 .. ocv:function:: void max(const Mat& src1, const Mat& src2, Mat& dst)
-
-.. ocv:function:: void max( const Mat& src1, double src2, Mat& dst )
 
 .. ocv:pyfunction:: cv2.max(src1, src2[, dst]) -> dst
 
@@ -1791,8 +1753,6 @@ Calculates per-element minimum of two arrays or an array and a scalar.
 
 .. ocv:function:: void min(const Mat& src1, const Mat& src2, Mat& dst)
 
-.. ocv:function:: void min( const Mat& src1, double src2, Mat& dst )
-
 .. ocv:pyfunction:: cv2.min(src1, src2[, dst]) -> dst
 
 .. ocv:cfunction:: void cvMin(const CvArr* src1, const CvArr* src2, CvArr* dst)
@@ -1920,9 +1880,11 @@ Copies specified channels from input arrays to the specified channels of output 
 
 .. ocv:function:: void mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const int* fromTo, size_t npairs )
 
-.. ocv:function:: void mixChannels( const vector<Mat>& src, vector<Mat>& dst, const int* fromTo, size_t npairs )
+.. ocv:function:: void mixChannels( InputArrayOfArrays src, InputOutputArrayOfArrays dst, const int* fromTo, size_t npairs )
 
-.. ocv:pyfunction:: cv2.mixChannels(src, dst, fromTo) -> None
+.. ocv:function:: void mixChannels( InputArrayOfArrays src, InputOutputArrayOfArrays dst, const std::vector<int>& fromTo )
+
+.. ocv:pyfunction:: cv2.mixChannels(src, dst, fromTo) -> dst
 
 .. ocv:cfunction:: void cvMixChannels( const CvArr** src, int src_count, CvArr** dst, int dst_count, const int* from_to, int pair_count )
 
