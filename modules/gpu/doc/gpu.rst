@@ -8,3 +8,4 @@ gpu. GPU-accelerated Computer Vision
     introduction
     initalization_and_information
     data_structures
+    object_detection

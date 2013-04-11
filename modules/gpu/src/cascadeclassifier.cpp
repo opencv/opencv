@@ -41,8 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <vector>
-#include <iostream>
 
 using namespace cv;
 using namespace cv::gpu;
@@ -73,6 +71,37 @@ public:
     virtual cv::Size getClassifierCvSize() const = 0;
     virtual bool read(const String& classifierAsXml) = 0;
 };
+
+#ifndef HAVE_OPENCV_GPULEGACY
+
+struct cv::gpu::CascadeClassifier_GPU::HaarCascade
+{
+public:
+    HaarCascade()
+    {
+        throw_no_cuda();
+    }
+
+    unsigned int process(const GpuMat&, GpuMat&, float, int, bool, bool, cv::Size, cv::Size)
+    {
+        throw_no_cuda();
+        return 0;
+    }
+
+    cv::Size getClassifierCvSize() const
+    {
+        throw_no_cuda();
+        return cv::Size();
+    }
+
+    bool read(const String&)
+    {
+        throw_no_cuda();
+        return false;
+    }
+};
+
+#else
 
 struct cv::gpu::CascadeClassifier_GPU::HaarCascade : cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
 {
@@ -282,6 +311,8 @@ private:
 
     virtual ~HaarCascade(){}
 };
+
+#endif
 
 cv::Size operator -(const cv::Size& a, const cv::Size& b)
 {

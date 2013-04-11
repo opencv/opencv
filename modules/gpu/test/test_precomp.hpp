@@ -51,12 +51,15 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
+#include <fstream>
+
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_test.hpp"
 
+#include "opencv2/gpu.hpp"
 #include "opencv2/core.hpp"
 #include "opencv2/core/opengl.hpp"
-#include "opencv2/gpu.hpp"
 #include "opencv2/calib3d.hpp"
+#include "opencv2/objdetect.hpp"
 
 #endif
