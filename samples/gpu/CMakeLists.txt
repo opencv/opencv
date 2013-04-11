@@ -3,7 +3,7 @@ SET(OPENCV_GPU_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc ope
                                      opencv_calib3d opencv_legacy opencv_contrib opencv_gpu
                                      opencv_nonfree opencv_softcascade opencv_superres
                                      opencv_gpucodec opencv_gpuarithm opencv_gpufilters opencv_gpuwarping opencv_gpuimgproc
-                                     opencv_gpufeatures2d opencv_gpuvideo opencv_gpuobjdetect
+                                     opencv_gpufeatures2d opencv_gpuvideo
                                      opencv_gpustereo opencv_gpulegacy)
 
 ocv_check_dependencies(${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
