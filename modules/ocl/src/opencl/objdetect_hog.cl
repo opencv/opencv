@@ -53,76 +53,96 @@
 
 //----------------------------------------------------------------------------
 // Histogram computation
-
-__kernel void compute_hists_kernel(const int width, const int cblock_stride_x, const int cblock_stride_y,
-                                   const int cnbins, const int cblock_hist_size, const int img_block_width,
-                                   const int grad_quadstep, const int qangle_step,
-                                   __global const float* grad, __global const uchar* qangle,
-                                   const float scale, __global float* block_hists, __local float* smem)
+// 12 threads for a cell, 12x4 threads per block
+__kernel void compute_hists_kernel(
+    const int cblock_stride_x, const int cblock_stride_y,
+    const int cnbins, const int cblock_hist_size, const int img_block_width, 
+    const int blocks_in_group, const int blocks_total,
+    const int grad_quadstep, const int qangle_step,
+    __global const float* grad, __global const uchar* qangle,
+    const float scale, __global float* block_hists, __local float* smem)
 {
-    const int lidX = get_local_id(0);
+    const int lx = get_local_id(0);
+    const int lp = lx / 24; /* local group id */
+    const int gid = get_group_id(0) * blocks_in_group + lp;/* global group id */
+    const int gidY = gid / img_block_width;
+    const int gidX = gid - gidY * img_block_width;
+
+    const int lidX = lx - lp * 24;
     const int lidY = get_local_id(1);
-    const int gidX = get_group_id(0);
-    const int gidY = get_group_id(1);
 
-    const int cell_x = lidX / 16;
+    const int cell_x = lidX / 12;
     const int cell_y = lidY;
-    const int cell_thread_x = lidX & 0xF;
+    const int cell_thread_x = lidX - cell_x * 12;
 
-    __local float* hists = smem;
-    __local float* final_hist = smem + cnbins * 48;
+    __local float* hists = smem + lp * cnbins * (CELLS_PER_BLOCK_X * 
+        CELLS_PER_BLOCK_Y * 12 + CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y);
+    __local float* final_hist = hists + cnbins * 
+        (CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y * 12);
 
     const int offset_x = gidX * cblock_stride_x + (cell_x << 2) + cell_thread_x;
     const int offset_y = gidY * cblock_stride_y + (cell_y << 2);
 
-    __global const float* grad_ptr = grad + offset_y * grad_quadstep + (offset_x << 1);
-    __global const uchar* qangle_ptr = qangle + offset_y * qangle_step + (offset_x << 1);
+    __global const float* grad_ptr = (gid < blocks_total) ? 
+        grad + offset_y * grad_quadstep + (offset_x << 1) : grad;
+    __global const uchar* qangle_ptr = (gid < blocks_total) ?
+        qangle + offset_y * qangle_step + (offset_x << 1) : qangle;
 
-    // 12 means that 12 pixels affect on block's cell (in one row)
-    if (cell_thread_x < 12)
+    __local float* hist = hists + 12 * (cell_y * CELLS_PER_BLOCK_Y + cell_x) + 
+        cell_thread_x;
+    for (int bin_id = 0; bin_id < cnbins; ++bin_id)
+        hist[bin_id * 48] = 0.f;
+
+    const int dist_x = -4 + cell_thread_x - 4 * cell_x;
+    const int dist_center_x = dist_x - 4 * (1 - 2 * cell_x);
+
+    const int dist_y_begin = -4 - 4 * lidY;
+    for (int dist_y = dist_y_begin; dist_y < dist_y_begin + 12; ++dist_y)
     {
-        __local float* hist = hists + 12 * (cell_y * CELLS_PER_BLOCK_Y + cell_x) + cell_thread_x;
-        for (int bin_id = 0; bin_id < cnbins; ++bin_id)
-            hist[bin_id * 48] = 0.f;
+        float2 vote = (float2) (grad_ptr[0], grad_ptr[1]);
+        uchar2 bin = (uchar2) (qangle_ptr[0], qangle_ptr[1]);
 
-        const int dist_x = -4 + cell_thread_x - 4 * cell_x;
+        grad_ptr += grad_quadstep;
+        qangle_ptr += qangle_step;
 
-        const int dist_y_begin = -4 - 4 * lidY;
-        for (int dist_y = dist_y_begin; dist_y < dist_y_begin + 12; ++dist_y)
-        {
-            float2 vote = (float2) (grad_ptr[0], grad_ptr[1]);
-            uchar2 bin = (uchar2) (qangle_ptr[0], qangle_ptr[1]);
+        int dist_center_y = dist_y - 4 * (1 - 2 * cell_y);
 
-            grad_ptr += grad_quadstep;
-            qangle_ptr += qangle_step;
+        float gaussian = exp(-(dist_center_y * dist_center_y + dist_center_x * 
+            dist_center_x) * scale);
+        float interp_weight = (8.f - fabs(dist_y + 0.5f)) * 
+            (8.f - fabs(dist_x + 0.5f)) / 64.f;
 
-            int dist_center_y = dist_y - 4 * (1 - 2 * cell_y);
-            int dist_center_x = dist_x - 4 * (1 - 2 * cell_x);
-
-            float gaussian = exp(-(dist_center_y * dist_center_y + dist_center_x * dist_center_x) * scale);
-            float interp_weight = (8.f - fabs(dist_y + 0.5f)) * (8.f - fabs(dist_x + 0.5f)) / 64.f;
-
-            hist[bin.x * 48] += gaussian * interp_weight * vote.x;
-            hist[bin.y * 48] += gaussian * interp_weight * vote.y;
-        }
-
-        volatile __local float* hist_ = hist;
-        for (int bin_id = 0; bin_id < cnbins; ++bin_id, hist_ += 48)
-        {
-            if (cell_thread_x < 6) hist_[0] += hist_[6];
-            if (cell_thread_x < 3) hist_[0] += hist_[3];
-            if (cell_thread_x == 0)
-                final_hist[(cell_x * 2 + cell_y) * cnbins + bin_id] = hist_[0] + hist_[1] + hist_[2];
-        }
+        hist[bin.x * 48] += gaussian * interp_weight * vote.x;
+        hist[bin.y * 48] += gaussian * interp_weight * vote.y;
     }
-
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    __global float* block_hist = block_hists + (gidY * img_block_width + gidX) * cblock_hist_size;
+    volatile __local float* hist_ = hist;
+    for (int bin_id = 0; bin_id < cnbins; ++bin_id, hist_ += 48)
+    {
+        if (cell_thread_x < 6)
+            hist_[0] += hist_[6];
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if (cell_thread_x < 3)
+            hist_[0] += hist_[3];
+#ifdef WAVE_SIZE_1
+        barrier(CLK_LOCAL_MEM_FENCE);
+#endif
+        if (cell_thread_x == 0)
+            final_hist[(cell_x * 2 + cell_y) * cnbins + bin_id] = 
+                hist_[0] + hist_[1] + hist_[2];
+    }
+#ifdef WAVE_SIZE_1
+    barrier(CLK_LOCAL_MEM_FENCE);
+#endif
 
-    int tid = (cell_y * CELLS_PER_BLOCK_Y + cell_x) * 16 + cell_thread_x;
-    if (tid < cblock_hist_size)
+    int tid = (cell_y * CELLS_PER_BLOCK_Y + cell_x) * 12 + cell_thread_x;
+    if ((tid < cblock_hist_size) && (gid < blocks_total))
+    {
+        __global float* block_hist = block_hists + 
+            (gidY * img_block_width + gidX) * cblock_hist_size;
         block_hist[tid] = final_hist[tid];
+    }
 }
 
 //-------------------------------------------------------------
@@ -133,21 +153,59 @@ float reduce_smem(volatile __local float* smem, int size)
     unsigned int tid = get_local_id(0);
     float sum = smem[tid];
 
-    if (size >= 512) { if (tid < 256) smem[tid] = sum = sum + smem[tid + 256]; barrier(CLK_LOCAL_MEM_FENCE); }
-    if (size >= 256) { if (tid < 128) smem[tid] = sum = sum + smem[tid + 128]; barrier(CLK_LOCAL_MEM_FENCE); }
-    if (size >= 128) { if (tid < 64) smem[tid] = sum = sum + smem[tid + 64]; barrier(CLK_LOCAL_MEM_FENCE); }
+    if (size >= 512)
+    {
+        if (tid < 256) smem[tid] = sum = sum + smem[tid + 256];
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    if (size >= 256)
+    {
+        if (tid < 128) smem[tid] = sum = sum + smem[tid + 128];
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    if (size >= 128)
+    {
+        if (tid < 64) smem[tid] = sum = sum + smem[tid + 64];
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
 
     if (tid < 32)
     {
         if (size >= 64) smem[tid] = sum = sum + smem[tid + 32];
+#if defined(WAVE_SIZE_16) || defined(WAVE_SIZE_1)
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 16)
     {
+#endif
         if (size >= 32) smem[tid] = sum = sum + smem[tid + 16];
+#ifdef WAVE_SIZE_1
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 8)
+    {
+#endif
         if (size >= 16) smem[tid] = sum = sum + smem[tid + 8];
+#ifdef WAVE_SIZE_1
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 4)
+    {
+#endif
         if (size >= 8) smem[tid] = sum = sum + smem[tid + 4];
+#ifdef WAVE_SIZE_1
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 2)
+    {
+#endif
         if (size >= 4) smem[tid] = sum = sum + smem[tid + 2];
+#ifdef WAVE_SIZE_1
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 1)
+    {
+#endif
         if (size >= 2) smem[tid] = sum = sum + smem[tid + 1];
     }
 
@@ -224,19 +282,44 @@ __kernel void classify_hists_kernel(const int cblock_hist_size, const int cdescr
     if (tid < 64) products[tid] = product = product + products[tid + 64];
     barrier(CLK_LOCAL_MEM_FENCE);
 
+    volatile __local float* smem = products;
     if (tid < 32)
     {
-        volatile __local float* smem = products;
         smem[tid] = product = product + smem[tid + 32];
+#if defined(WAVE_SIZE_16) || defined(WAVE_SIZE_1)
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 16)
     {
-        volatile __local float* smem = products;
+#endif
         smem[tid] = product = product + smem[tid + 16];
+#ifdef WAVE_SIZE_1
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 8)
+    {
+#endif
         smem[tid] = product = product + smem[tid + 8];
+#ifdef WAVE_SIZE_1
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 4)
+    {
+#endif
         smem[tid] = product = product + smem[tid + 4];
+#ifdef WAVE_SIZE_1
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 2)
+    {
+#endif
         smem[tid] = product = product + smem[tid + 2];
+#ifdef WAVE_SIZE_1
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 1)
+    {
+#endif
         smem[tid] = product = product + smem[tid + 1];
     }
 
@@ -248,8 +331,8 @@ __kernel void classify_hists_kernel(const int cblock_hist_size, const int cdescr
 // Extract descriptors
 
 __kernel void extract_descrs_by_rows_kernel(const int cblock_hist_size, const int descriptors_quadstep, const int cdescr_size, const int cdescr_width,
-                                            const int img_block_width, const int win_block_stride_x, const int win_block_stride_y,
-                                            __global const float* block_hists, __global float* descriptors)
+        const int img_block_width, const int win_block_stride_x, const int win_block_stride_y,
+        __global const float* block_hists, __global float* descriptors)
 {
     int tid = get_local_id(0);
     int gidX = get_group_id(0);
@@ -271,8 +354,8 @@ __kernel void extract_descrs_by_rows_kernel(const int cblock_hist_size, const in
 }
 
 __kernel void extract_descrs_by_cols_kernel(const int cblock_hist_size, const int descriptors_quadstep, const int cdescr_size,
-                                            const int cnblocks_win_x, const int cnblocks_win_y, const int img_block_width, const int win_block_stride_x,
-                                            const int win_block_stride_y, __global const float* block_hists, __global float* descriptors)
+        const int cnblocks_win_x, const int cnblocks_win_y, const int img_block_width, const int win_block_stride_x,
+        const int win_block_stride_y, __global const float* block_hists, __global float* descriptors)
 {
     int tid = get_local_id(0);
     int gidX = get_group_id(0);
@@ -301,8 +384,8 @@ __kernel void extract_descrs_by_cols_kernel(const int cblock_hist_size, const in
 // Gradients computation
 
 __kernel void compute_gradients_8UC4_kernel(const int height, const int width, const int img_step, const int grad_quadstep, const int qangle_step,
-                                            const __global uchar4 * img, __global float * grad, __global uchar * qangle,
-                                            const float angle_scale, const char correct_gamma, const int cnbins)
+        const __global uchar4 * img, __global float * grad, __global uchar * qangle,
+        const float angle_scale, const char correct_gamma, const int cnbins)
 {
     const int x = get_global_id(0);
     const int tid = get_local_id(0);
@@ -400,8 +483,8 @@ __kernel void compute_gradients_8UC4_kernel(const int height, const int width, c
 }
 
 __kernel void compute_gradients_8UC1_kernel(const int height, const int width, const int img_step, const int grad_quadstep, const int qangle_step,
-                                            __global const uchar * img, __global float * grad, __global uchar * qangle,
-                                            const float angle_scale, const char correct_gamma, const int cnbins)
+        __global const uchar * img, __global float * grad, __global uchar * qangle,
+        const float angle_scale, const char correct_gamma, const int cnbins)
 {
     const int x = get_global_id(0);
     const int tid = get_local_id(0);
