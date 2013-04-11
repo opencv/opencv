@@ -48,7 +48,7 @@
 #endif
 
 #include "opencv2/core/gpumat.hpp"
-#include "opencv2/imgproc.hpp"
+#include "opencv2/core/base.hpp"
 
 namespace cv { namespace gpu {
 
