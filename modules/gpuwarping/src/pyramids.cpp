@@ -45,7 +45,9 @@
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
 void cv::gpu::pyrDown(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+
 void cv::gpu::pyrUp(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+
 void cv::gpu::ImagePyramid::build(const GpuMat&, int, Stream&) { throw_no_cuda(); }
 void cv::gpu::ImagePyramid::getLayer(GpuMat&, Size, Stream&) const { throw_no_cuda(); }
 

@@ -44,18 +44,7 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation, Stream& s)
-{
-    (void)src;
-    (void)dst;
-    (void)dsize;
-    (void)fx;
-    (void)fy;
-    (void)interpolation;
-    (void)s;
-
-    throw_no_cuda();
-}
+void cv::gpu::resize(const GpuMat&, GpuMat&, Size, double, double, int, Stream&) { throw_no_cuda(); }
 
 #else // HAVE_CUDA
 
