@@ -40,6 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
 
 class CV_ChessboardDetectorTimingTest : public cvtest::BaseTest
 {

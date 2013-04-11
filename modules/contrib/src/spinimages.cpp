@@ -770,7 +770,7 @@ Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount,
                 int endx   = (x + 1) * sz + x;
 
                 Mat color;
-                cvtColor(spins[pos++], color, CV_GRAY2BGR);
+                cvtColor(spins[pos++], color, COLOR_GRAY2BGR);
                 Mat roi = result(Range(starty, endy), Range(startx, endx));
                 color.copyTo(roi);
             }

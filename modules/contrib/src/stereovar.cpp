@@ -367,8 +367,8 @@ void StereoVar::operator ()( const Mat& left, const Mat& right, Mat& disp )
     // Preprocessing
     Mat leftgray, rightgray;
     if (left.type() != CV_8UC1) {
-        cvtColor(left, leftgray, CV_BGR2GRAY);
-        cvtColor(right, rightgray, CV_BGR2GRAY);
+        cvtColor(left, leftgray, COLOR_BGR2GRAY);
+        cvtColor(right, rightgray, COLOR_BGR2GRAY);
     } else {
         left.copyTo(leftgray);
         right.copyTo(rightgray);

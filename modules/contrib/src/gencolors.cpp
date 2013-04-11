@@ -118,7 +118,7 @@ void cv::generateColors( std::vector<Scalar>& colors, size_t count, size_t facto
     // Convert the colors set to Lab space.
     // Distances between colors in this space correspond a human perception.
     Mat lab;
-    cvtColor( bgr, lab, CV_BGR2Lab);
+    cvtColor( bgr, lab, COLOR_BGR2Lab);
 
     // Subsample colors from the generated set so that
     // to maximize the minimum distances between each other.
@@ -128,7 +128,7 @@ void cv::generateColors( std::vector<Scalar>& colors, size_t count, size_t facto
 
     // Convert subsampled colors back to RGB
     Mat bgr_subset;
-    cvtColor( lab_subset, bgr_subset, CV_Lab2BGR );
+    cvtColor( lab_subset, bgr_subset, COLOR_Lab2BGR );
 
     CV_Assert( bgr_subset.total() == count );
     for( size_t i = 0; i < count; i++ )

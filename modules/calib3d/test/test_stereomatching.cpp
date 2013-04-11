@@ -80,7 +80,7 @@ void computeTextureBasedMasks( const Mat& _img, Mat* texturelessMask, Mat* textu
     Mat img = _img;
     if( _img.channels() > 1)
     {
-        Mat tmp; cvtColor( _img, tmp, CV_BGR2GRAY ); img = tmp;
+        Mat tmp; cvtColor( _img, tmp, COLOR_BGR2GRAY ); img = tmp;
     }
     Mat dxI; Sobel( img, dxI, CV_32FC1, 1, 0, 3 );
     Mat dxI2; pow( dxI / 8.f/*normalize*/, 2, dxI2 );
@@ -714,8 +714,8 @@ protected:
         RunParams params = caseRunParams[caseIdx];
         assert( params.ndisp%16 == 0 );
         assert( _leftImg.type() == CV_8UC3 && _rightImg.type() == CV_8UC3 );
-        Mat leftImg; cvtColor( _leftImg, leftImg, CV_BGR2GRAY );
-        Mat rightImg; cvtColor( _rightImg, rightImg, CV_BGR2GRAY );
+        Mat leftImg; cvtColor( _leftImg, leftImg, COLOR_BGR2GRAY );
+        Mat rightImg; cvtColor( _rightImg, rightImg, COLOR_BGR2GRAY );
 
         Ptr<StereoBM> bm = createStereoBM( params.ndisp, params.winSize );
         Mat tempDisp;

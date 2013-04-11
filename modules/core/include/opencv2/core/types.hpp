@@ -667,6 +667,51 @@ public:
 
 
 
+///////////////////////// raster image moments //////////////////////////
+
+class CV_EXPORTS_W_MAP Moments
+{
+public:
+    //! the default constructor
+    Moments();
+    //! the full constructor
+    Moments(double m00, double m10, double m01, double m20, double m11,
+            double m02, double m30, double m21, double m12, double m03 );
+    ////! the conversion from CvMoments
+    //Moments( const CvMoments& moments );
+    ////! the conversion to CvMoments
+    //operator CvMoments() const;
+
+    //! spatial moments
+    CV_PROP_RW double  m00, m10, m01, m20, m11, m02, m30, m21, m12, m03;
+    //! central moments
+    CV_PROP_RW double  mu20, mu11, mu02, mu30, mu21, mu12, mu03;
+    //! central normalized moments
+    CV_PROP_RW double  nu20, nu11, nu02, nu30, nu21, nu12, nu03;
+};
+
+/*!
+  traits
+*/
+template<> class DataType<Moments>
+{
+public:
+    typedef Moments     value_type;
+    typedef double      work_type;
+    typedef double      channel_type;
+
+    enum { generic_type = 0,
+           depth        = DataType<channel_type>::depth,
+           channels     = (int)(sizeof(value_type)/sizeof(channel_type)), // 24
+           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
+           type         = CV_MAKETYPE(depth, channels)
+         };
+
+    typedef Vec<channel_type, channels> vec_type;
+};
+
+
+
 /////////////////////////////////////////////////////////////////////////
 ///////////////////////////// Implementation ////////////////////////////
 /////////////////////////////////////////////////////////////////////////

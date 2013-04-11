@@ -1364,7 +1364,7 @@ void CirclesGridFinder::drawHoles(const Mat &srcImage, Mat &drawImage) const
   const Scalar holeColor = Scalar(0, 255, 0);
 
   if (srcImage.channels() == 1)
-    cvtColor(srcImage, drawImage, CV_GRAY2RGB);
+    cvtColor(srcImage, drawImage, COLOR_GRAY2RGB);
   else
     srcImage.copyTo(drawImage);
 

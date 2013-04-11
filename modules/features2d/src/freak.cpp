@@ -206,7 +206,7 @@ void FREAK::buildPattern()
                  descriptionPairs[i] = allPairs[selectedPairs0.at(i)];
         }
         else {
-            CV_Error(CV_StsVecLengthErr, "Input vector does not match the required size");
+            CV_Error(Error::StsVecLengthErr, "Input vector does not match the required size");
         }
     }
     else { // default selected pairs
@@ -548,7 +548,7 @@ std::vector<int> FREAK::selectPairs(const std::vector<Mat>& images
             int idxB = pairStat[m].idx;
             double corr(0);
             // compute correlation between 2 pairs
-            corr = fabs(compareHist(descriptorsFloat.col(idxA), descriptorsFloat.col(idxB), CV_COMP_CORREL));
+            corr = fabs(compareHist(descriptorsFloat.col(idxA), descriptorsFloat.col(idxB), HISTCMP_CORREL));
 
             if( corr > corrMax ) {
                 corrMax = corr;
@@ -575,7 +575,7 @@ std::vector<int> FREAK::selectPairs(const std::vector<Mat>& images
     else {
         if( verbose )
             std::cout << "correlation threshold too small (restrictive)" << std::endl;
-        CV_Error(CV_StsError, "correlation threshold too small (restrictive)");
+        CV_Error(Error::StsError, "correlation threshold too small (restrictive)");
     }
     extAll = false;
     return idxBestPairs;
