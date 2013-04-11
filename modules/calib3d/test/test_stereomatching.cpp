@@ -48,6 +48,7 @@
 #include "test_precomp.hpp"
 #include <limits>
 #include <cstdio>
+#include <map>
 
 using namespace std;
 using namespace cv;
@@ -459,14 +460,29 @@ void CV_StereoMatchingTest::run(int)
             continue;
         }
         int dispScaleFactor = datasetsParams[datasetName].dispScaleFactor;
-        Mat tmp; trueLeftDisp.convertTo( tmp, CV_32FC1, 1.f/dispScaleFactor ); trueLeftDisp = tmp; tmp.release();
+        Mat tmp;
+
+        trueLeftDisp.convertTo( tmp, CV_32FC1, 1.f/dispScaleFactor );
+        trueLeftDisp = tmp;
+        tmp.release();
+
         if( !trueRightDisp.empty() )
-            trueRightDisp.convertTo( tmp, CV_32FC1, 1.f/dispScaleFactor ); trueRightDisp = tmp; tmp.release();
+        {
+            trueRightDisp.convertTo( tmp, CV_32FC1, 1.f/dispScaleFactor );
+            trueRightDisp = tmp;
+            tmp.release();
+        }
 
         Mat leftDisp, rightDisp;
         int ignBorder = max(runStereoMatchingAlgorithm(leftImg, rightImg, leftDisp, rightDisp, ci), EVAL_IGNORE_BORDER);
-        leftDisp.convertTo( tmp, CV_32FC1 ); leftDisp = tmp; tmp.release();
-        rightDisp.convertTo( tmp, CV_32FC1 ); rightDisp = tmp; tmp.release();
+
+        leftDisp.convertTo( tmp, CV_32FC1 );
+        leftDisp = tmp;
+        tmp.release();
+
+        rightDisp.convertTo( tmp, CV_32FC1 );
+        rightDisp = tmp;
+        tmp.release();
 
         int tempCode = processStereoMatchingResults( resFS, ci, isWrite,
                    leftImg, rightImg, trueLeftDisp, trueRightDisp, leftDisp, rightDisp, QualityEvalParams(ignBorder));
@@ -530,7 +546,8 @@ int CV_StereoMatchingTest::processStereoMatchingResults( FileStorage& fs, int ca
     // rightDisp is not used in current test virsion
     int code = cvtest::TS::OK;
     assert( fs.isOpened() );
-    assert( trueLeftDisp.type() == CV_32FC1 && trueRightDisp.type() == CV_32FC1 );
+    assert( trueLeftDisp.type() == CV_32FC1 );
+    assert( trueRightDisp.empty() || trueRightDisp.type() == CV_32FC1 );
     assert( leftDisp.type() == CV_32FC1 && rightDisp.type() == CV_32FC1 );
 
     // get masks for unknown ground truth disparity values
@@ -593,10 +610,10 @@ int CV_StereoMatchingTest::readDatasetsParams( FileStorage& fs )
     assert(fn.isSeq());
     for( int i = 0; i < (int)fn.size(); i+=3 )
     {
-        string _name = fn[i];
+        String _name = fn[i];
         DatasetParams params;
-        string sf = fn[i+1]; params.dispScaleFactor = atoi(sf.c_str());
-        string uv = fn[i+2]; params.dispUnknVal = atoi(uv.c_str());
+        String sf = fn[i+1]; params.dispScaleFactor = atoi(sf.c_str());
+        String uv = fn[i+2]; params.dispUnknVal = atoi(uv.c_str());
         datasetsParams[_name] = params;
     }
     return cvtest::TS::OK;
@@ -680,10 +697,10 @@ protected:
         assert(fn.isSeq());
         for( int i = 0; i < (int)fn.size(); i+=4 )
         {
-            string caseName = fn[i], datasetName = fn[i+1];
+            String caseName = fn[i], datasetName = fn[i+1];
             RunParams params;
-            string ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
-            string winSize = fn[i+3]; params.winSize = atoi(winSize.c_str());
+            String ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
+            String winSize = fn[i+3]; params.winSize = atoi(winSize.c_str());
             caseNames.push_back( caseName );
             caseDatasets.push_back( datasetName );
             caseRunParams.push_back( params );
@@ -700,8 +717,10 @@ protected:
         Mat leftImg; cvtColor( _leftImg, leftImg, CV_BGR2GRAY );
         Mat rightImg; cvtColor( _rightImg, rightImg, CV_BGR2GRAY );
 
-        StereoBM bm( StereoBM::BASIC_PRESET, params.ndisp, params.winSize );
-        bm( leftImg, rightImg, leftDisp, CV_32F );
+        Ptr<StereoBM> bm = createStereoBM( params.ndisp, params.winSize );
+        Mat tempDisp;
+        bm->compute( leftImg, rightImg, tempDisp );
+        tempDisp.convertTo(leftDisp, CV_32F, 1./StereoMatcher::DISP_SCALE);
         return params.winSize/2;
     }
 };
@@ -734,11 +753,11 @@ protected:
         assert(fn.isSeq());
         for( int i = 0; i < (int)fn.size(); i+=5 )
         {
-            string caseName = fn[i], datasetName = fn[i+1];
+            String caseName = fn[i], datasetName = fn[i+1];
             RunParams params;
-            string ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
-            string winSize = fn[i+3]; params.winSize = atoi(winSize.c_str());
-            string fullDP = fn[i+4]; params.fullDP = atoi(fullDP.c_str()) == 0 ? false : true;
+            String ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
+            String winSize = fn[i+3]; params.winSize = atoi(winSize.c_str());
+            String fullDP = fn[i+4]; params.fullDP = atoi(fullDP.c_str()) == 0 ? false : true;
             caseNames.push_back( caseName );
             caseDatasets.push_back( datasetName );
             caseRunParams.push_back( params );
@@ -751,10 +770,13 @@ protected:
     {
         RunParams params = caseRunParams[caseIdx];
         assert( params.ndisp%16 == 0 );
-        StereoSGBM sgbm( 0, params.ndisp, params.winSize, 10*params.winSize*params.winSize, 40*params.winSize*params.winSize,
-                         1, 63, 10, 100, 32, params.fullDP );
-        sgbm( leftImg, rightImg, leftDisp );
-        assert( leftDisp.type() == CV_16SC1 );
+        Ptr<StereoSGBM> sgbm = createStereoSGBM( 0, params.ndisp, params.winSize,
+                                                 10*params.winSize*params.winSize,
+                                                 40*params.winSize*params.winSize,
+                                                 1, 63, 10, 100, 32, params.fullDP ?
+                                                 StereoSGBM::MODE_HH : StereoSGBM::MODE_SGBM );
+        sgbm->compute( leftImg, rightImg, leftDisp );
+        CV_Assert( leftDisp.type() == CV_16SC1 );
         leftDisp/=16;
         return 0;
     }

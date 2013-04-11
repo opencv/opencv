@@ -56,7 +56,10 @@ struct LinePolar
 struct hough_cmp_gt
 {
     hough_cmp_gt(const int* _aux) : aux(_aux) {}
-    bool operator()(int l1, int l2) const { return aux[l1] > aux[l2]; }
+    bool operator()(int l1, int l2) const
+    {
+        return aux[l1] > aux[l2] || (aux[l1] == aux[l2] && l1 < l2);
+    }
     const int* aux;
 };
 
@@ -128,7 +131,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
         }
 
     // stage 3. sort the detected lines by accumulator value
-    cv::sort(_sort_buf, hough_cmp_gt(accum));
+    std::sort(_sort_buf.begin(), _sort_buf.end(), hough_cmp_gt(accum));
 
     // stage 4. store the first min(total,linesMax) lines to the output buffer
     linesMax = std::min(linesMax, (int)_sort_buf.size());

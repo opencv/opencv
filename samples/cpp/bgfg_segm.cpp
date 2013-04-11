@@ -1,7 +1,8 @@
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/imgproc.hpp"
 #include "opencv2/video/background_segm.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 #include <stdio.h>
 
 using namespace std;
@@ -46,12 +47,12 @@ int main(int argc, const char** argv)
         return -1;
     }
 
-    namedWindow("image", CV_WINDOW_NORMAL);
-    namedWindow("foreground mask", CV_WINDOW_NORMAL);
-    namedWindow("foreground image", CV_WINDOW_NORMAL);
-    namedWindow("mean background image", CV_WINDOW_NORMAL);
+    namedWindow("image", WINDOW_NORMAL);
+    namedWindow("foreground mask", WINDOW_NORMAL);
+    namedWindow("foreground image", WINDOW_NORMAL);
+    namedWindow("mean background image", WINDOW_NORMAL);
 
-    BackgroundSubtractorMOG2 bg_model;//(100, 3, 0.3, 5);
+    Ptr<BackgroundSubtractor> bg_model = createBackgroundSubtractorMOG2();
 
     Mat img, fgmask, fgimg;
 
@@ -68,13 +69,13 @@ int main(int argc, const char** argv)
           fgimg.create(img.size(), img.type());
 
         //update the model
-        bg_model(img, fgmask, update_bg_model ? -1 : 0);
+        bg_model->apply(img, fgmask, update_bg_model ? -1 : 0);
 
         fgimg = Scalar::all(0);
         img.copyTo(fgimg, fgmask);
 
         Mat bgimg;
-        bg_model.getBackgroundImage(bgimg);
+        bg_model->getBackgroundImage(bgimg);
 
         imshow("image", img);
         imshow("foreground mask", fgmask);

@@ -48,8 +48,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "mcwutil.hpp"
-#include <iostream>
+
 using namespace cv;
 using namespace cv::ocl;
 
@@ -194,7 +193,7 @@ public:
 
 namespace
 {
-typedef void (*GPUMorfFilter_t)(const oclMat & , oclMat & , oclMat & , Size &, const Point, bool rectKernel, bool usrROI);
+typedef void (*GPUMorfFilter_t)(const oclMat & , oclMat & , oclMat & , Size &, const Point, bool rectKernel);
 
 class MorphFilter_GPU : public BaseFilter_GPU
 {
@@ -204,7 +203,7 @@ public:
 
     virtual void operator()(const oclMat &src, oclMat &dst)
     {
-        func(src, dst, kernel, ksize, anchor, rectKernel, false) ;
+        func(src, dst, kernel, ksize, anchor, rectKernel) ;
     }
 
     oclMat kernel;
@@ -219,7 +218,7 @@ public:
 **Note that the kernel need to be further refined.
 */
 static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
-                         Size &ksize, const Point anchor, bool rectKernel, bool useROI)
+                         Size &ksize, const Point anchor, bool rectKernel)
 {
     //Normalize the result by default
     //float alpha = ksize.height * ksize.width;
@@ -236,7 +235,7 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int srcOffset_x = srcOffset % srcStep;
     int srcOffset_y = srcOffset / srcStep;
     Context *clCxt = src.clCxt;
-    std::string kernelName;
+    String kernelName;
     size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0], (src.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1};
 
@@ -275,10 +274,9 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     }
 
     char compile_option[128];
-    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D ERODE %s %s %s",
+    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D ERODE %s %s",
         anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1],
         rectKernel?"-D RECTKERNEL":"",
-        useROI?"-D USEROI":"",
         s);
     std::vector< std::pair<size_t, const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
@@ -299,7 +297,7 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
 
 //! data type supported: CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4
 static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
-                          Size &ksize, const Point anchor, bool rectKernel, bool useROI)
+                          Size &ksize, const Point anchor, bool rectKernel)
 {
     //Normalize the result by default
     //float alpha = ksize.height * ksize.width;
@@ -316,7 +314,7 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int srcOffset_x = srcOffset % srcStep;
     int srcOffset_y = srcOffset / srcStep;
     Context *clCxt = src.clCxt;
-    std::string kernelName;
+    String kernelName;
     size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0],
                                (src.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1};
@@ -356,10 +354,9 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     }
 
     char compile_option[128];
-    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D DILATE %s %s %s",
+    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D DILATE %s %s",
         anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1],
         rectKernel?"-D RECTKERNEL":"",
-        useROI?"-D USEROI":"",
         s);
     std::vector< std::pair<size_t, const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
@@ -609,7 +606,7 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int cn =  src.oclchannels();
     int depth = src.depth();
 
-    std::string kernelName = "filter2D";
+    String kernelName = "filter2D";
 
     size_t src_offset_x = (src.offset % src.step) / src.elemSize();
     size_t src_offset_y = src.offset / src.step;
@@ -765,7 +762,7 @@ static void GPUFilterBox_8u_C1R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    std::string kernelName = "boxFilter_C1_D0";
+    String kernelName = "boxFilter_C1_D0";
 
     char btype[30];
 
@@ -827,7 +824,7 @@ static void GPUFilterBox_8u_C4R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    std::string kernelName = "boxFilter_C4_D0";
+    String kernelName = "boxFilter_C4_D0";
 
     char btype[30];
 
@@ -889,7 +886,7 @@ static void GPUFilterBox_32F_C1R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    std::string kernelName = "boxFilter_C1_D5";
+    String kernelName = "boxFilter_C1_D5";
 
     char btype[30];
 
@@ -952,7 +949,7 @@ static void GPUFilterBox_32F_C4R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    std::string kernelName = "boxFilter_C4_D5";
+    String kernelName = "boxFilter_C4_D5";
 
     char btype[30];
 
@@ -1098,7 +1095,7 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     int channels = src.oclchannels();
 
     size_t localThreads[3] = {16, 16, 1};
-    std::string kernelName = "row_filter";
+    String kernelName = "row_filter";
 
     char btype[30];
 
@@ -1230,7 +1227,7 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
     int channels = src.oclchannels();
 
     size_t localThreads[3] = {16, 16, 1};
-    std::string kernelName = "col_filter";
+    String kernelName = "col_filter";
 
     char btype[30];
 
@@ -1480,7 +1477,7 @@ void cv::ocl::Scharr(const oclMat &src, oclMat &dst, int ddepth, int dx, int dy,
 
 void cv::ocl::Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize, double scale)
 {
-    if (src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
+    if (!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.type() == CV_64F)
     {
         CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;

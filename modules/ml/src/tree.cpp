@@ -120,16 +120,27 @@ bool CvDTreeTrainData::set_params( const CvDTreeParams& _params )
     return ok;
 }
 
-#define CV_CMP_NUM_PTR(a,b) (*(a) < *(b))
-static CV_IMPLEMENT_QSORT_EX( icvSortIntPtr, int*, CV_CMP_NUM_PTR, int )
-static CV_IMPLEMENT_QSORT_EX( icvSortDblPtr, double*, CV_CMP_NUM_PTR, int )
+template<typename T>
+class LessThanPtr
+{
+public:
+    bool operator()(T* a, T* b) const { return *a < *b; }
+};
 
-#define CV_CMP_NUM_IDX(i,j) (aux[i] < aux[j])
-static CV_IMPLEMENT_QSORT_EX( icvSortIntAux, int, CV_CMP_NUM_IDX, const float* )
-static CV_IMPLEMENT_QSORT_EX( icvSortUShAux, unsigned short, CV_CMP_NUM_IDX, const float* )
+template<typename T, typename Idx>
+class LessThanIdx
+{
+public:
+    LessThanIdx( const T* _arr ) : arr(_arr) {}
+    bool operator()(Idx a, Idx b) const { return arr[a] < arr[b]; }
+    const T* arr;
+};
 
-#define CV_CMP_PAIRS(a,b) (*((a).i) < *((b).i))
-static CV_IMPLEMENT_QSORT_EX( icvSortPairs, CvPair16u32s, CV_CMP_PAIRS, int )
+class LessThanPairs
+{
+public:
+    bool operator()(const CvPair16u32s& a, const CvPair16u32s& b) const { return *a.i < *b.i; }
+};
 
 void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     const CvMat* _responses, const CvMat* _var_idx, const CvMat* _sample_idx,
@@ -461,7 +472,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
             c_count = num_valid > 0;
             if (is_buf_16u)
             {
-                icvSortPairs( pair16u32s_ptr, sample_count, 0 );
+                std::sort(pair16u32s_ptr, pair16u32s_ptr + sample_count, LessThanPairs());
                 // count the categories
                 for( i = 1; i < num_valid; i++ )
                     if (*pair16u32s_ptr[i].i != *pair16u32s_ptr[i-1].i)
@@ -469,7 +480,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
             }
             else
             {
-                icvSortIntPtr( int_ptr, sample_count, 0 );
+                std::sort(int_ptr, int_ptr + sample_count, LessThanPtr<int>());
                 // count the categories
                 for( i = 1; i < num_valid; i++ )
                     c_count += *int_ptr[i] != *int_ptr[i-1];
@@ -561,9 +572,9 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
             }
             if (is_buf_16u)
-                icvSortUShAux( udst, sample_count, _fdst);
+                std::sort(udst, udst + sample_count, LessThanIdx<float, unsigned short>(_fdst));
             else
-                icvSortIntAux( idst, sample_count, _fdst );
+                std::sort(idst, idst + sample_count, LessThanIdx<float, int>(_fdst));
         }
 
         if( vi < var_count )
@@ -2239,7 +2250,7 @@ CvDTreeSplit* CvDTree::find_split_cat_class( CvDTreeNode* node, int vi, float in
         int_ptr = (int**)(c_weights + _mi);
         for( j = 0; j < mi; j++ )
             int_ptr[j] = cjk + j*2 + 1;
-        icvSortIntPtr( int_ptr, mi, 0 );
+        std::sort(int_ptr, int_ptr + mi, LessThanPtr<int>());
         subset_i = 0;
         subset_n = mi;
     }
@@ -2466,7 +2477,7 @@ CvDTreeSplit* CvDTree::find_split_cat_reg( CvDTreeNode* node, int vi, float init
         sum_ptr[i] = sum + i;
     }
 
-    icvSortDblPtr( sum_ptr, mi, 0 );
+    std::sort(sum_ptr, sum_ptr + mi, LessThanPtr<double>());
 
     // revert back to unnormalized sums
     // (there should be a very little loss of accuracy)
@@ -4131,7 +4142,7 @@ void CvDTree::read( CvFileStorage* fs, CvFileNode* node, CvDTreeTrainData* _data
 
 Mat CvDTree::getVarImportance()
 {
-    return Mat(get_var_importance());
+    return cvarrToMat(get_var_importance());
 }
 
 /* End of file. */

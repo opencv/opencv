@@ -204,7 +204,7 @@ Two types of constructors.
 
 .. ocv:function:: LatentSvmDetector::LatentSvmDetector()
 
-.. ocv:function:: LatentSvmDetector::LatentSvmDetector(const vector<string>& filenames, const vector<string>& classNames=vector<string>())
+.. ocv:function:: LatentSvmDetector::LatentSvmDetector(const vector<String>& filenames, const vector<String>& classNames=vector<String>())
 
 
 
@@ -228,7 +228,7 @@ LatentSvmDetector::load
 -----------------------
 Load the trained models from given ``.xml`` files and return ``true`` if at least one model was loaded.
 
-.. ocv:function:: bool LatentSvmDetector::load( const vector<string>& filenames, const vector<string>& classNames=vector<string>() )
+.. ocv:function:: bool LatentSvmDetector::load( const vector<String>& filenames, const vector<String>& classNames=vector<String>() )
 
     :param filenames: A set of filenames storing the trained detectors (models). Each file contains one model. See examples of such files here /opencv_extra/testdata/cv/latentsvmdetector/models_VOC2007/.
 
@@ -250,7 +250,7 @@ LatentSvmDetector::getClassNames
 --------------------------------
 Return the class (model) names that were passed in constructor or method ``load`` or extracted from models filenames in those methods.
 
-.. ocv:function:: const vector<string>& LatentSvmDetector::getClassNames() const
+.. ocv:function:: const vector<String>& LatentSvmDetector::getClassNames() const
 
 LatentSvmDetector::getClassCount
 --------------------------------

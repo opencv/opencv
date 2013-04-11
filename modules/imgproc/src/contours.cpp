@@ -48,7 +48,7 @@
      (deltas)[6] =  (step), (deltas)[7] =  (step) + (nch))
 
 static const CvPoint icvCodeDeltas[8] =
-    { {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1} };
+    { CvPoint(1, 0), CvPoint(1, -1), CvPoint(0, -1), CvPoint(-1, -1), CvPoint(-1, 0), CvPoint(-1, 1), CvPoint(0, 1), CvPoint(1, 1) };
 
 CV_IMPL void
 cvStartReadChainPoints( CvChain * chain, CvChainPtReader * reader )
@@ -78,7 +78,7 @@ cvReadChainPoint( CvChainPtReader * reader )
 {
     schar *ptr;
     int code;
-    CvPoint pt = { 0, 0 };
+    CvPoint pt;
 
     if( !reader )
         CV_Error( CV_StsNullPtr, "" );

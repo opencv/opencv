@@ -92,9 +92,9 @@ namespace cv
             releaseProgram();
         }
 
-        cl_program ProgramCache::progLookup(std::string srcsign)
+        cl_program ProgramCache::progLookup(String srcsign)
         {
-            std::map<std::string, cl_program>::iterator iter;
+            std::map<String, cl_program>::iterator iter;
             iter = codeCache.find(srcsign);
             if(iter != codeCache.end())
                 return iter->second;
@@ -102,23 +102,152 @@ namespace cv
                 return NULL;
         }
 
-        void ProgramCache::addProgram(std::string srcsign , cl_program program)
+        void ProgramCache::addProgram(String srcsign , cl_program program)
         {
             if(!progLookup(srcsign))
             {
-                codeCache.insert(std::map<std::string, cl_program>::value_type(srcsign, program));
+                codeCache.insert(std::map<String, cl_program>::value_type(srcsign, program));
             }
         }
 
         void ProgramCache::releaseProgram()
         {
-            std::map<std::string, cl_program>::iterator iter;
+            std::map<String, cl_program>::iterator iter;
             for(iter = codeCache.begin(); iter != codeCache.end(); iter++)
             {
                 openCLSafeCall(clReleaseProgram(iter->second));
             }
             codeCache.clear();
             cacheSize = 0;
+        }
+
+
+       struct Info::Impl
+        {
+            cl_platform_id oclplatform;
+            std::vector<cl_device_id> devices;
+            std::vector<String> devName;
+
+            cl_context oclcontext;
+            cl_command_queue clCmdQueue;
+            int devnum;
+            size_t maxWorkGroupSize;
+            cl_uint maxDimensions; // == maxWorkItemSizes.size()
+            std::vector<size_t> maxWorkItemSizes;
+            cl_uint maxComputeUnits;
+            char extra_options[512];
+            int  double_support;
+            int unified_memory; //1 means integrated GPU, otherwise this value is 0
+            String binpath;
+            int refcounter;
+
+            Impl()
+            {
+                refcounter = 1;
+                oclplatform = 0;
+                oclcontext = 0;
+                clCmdQueue = 0;
+                devnum = -1;
+                maxComputeUnits = 0;
+                maxWorkGroupSize = 0;
+                memset(extra_options, 0, 512);
+                double_support = 0;
+                unified_memory = 0;
+            }
+
+            void setDevice(void *ctx, void *q, int devnum);
+
+            void release()
+            {
+                if(1 == CV_XADD(&refcounter, -1))
+                {
+                    releaseResources();
+                    delete this;
+            }
+            }
+
+            Impl* copy()
+            {
+                CV_XADD(&refcounter, 1);
+                return this;
+            }
+
+        private:
+            Impl(const Impl&);
+            Impl& operator=(const Impl&);
+            void releaseResources();
+        };
+
+        void Info::Impl::releaseResources()
+        {
+            devnum = -1;
+
+            if(clCmdQueue)
+            {
+                openCLSafeCall(clReleaseCommandQueue(clCmdQueue));
+                clCmdQueue = 0;
+            }
+
+            if(oclcontext)
+            {
+                openCLSafeCall(clReleaseContext(oclcontext));
+                oclcontext = 0;
+            }
+        }
+
+        void Info::Impl::setDevice(void *ctx, void *q, int dnum)
+        {
+            if((ctx && q) || devnum != dnum)
+                releaseResources();
+
+            CV_Assert(dnum >= 0 && dnum < (int)devices.size());
+            devnum = dnum;
+            if(ctx && q)
+            {
+                oclcontext = (cl_context)ctx;
+                clCmdQueue = (cl_command_queue)q;
+                clRetainContext(oclcontext);
+                clRetainCommandQueue(clCmdQueue);
+            }
+            else
+            {
+                cl_int status = 0;
+                cl_context_properties cps[3] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(oclplatform), 0 };
+                oclcontext = clCreateContext(cps, 1, &devices[devnum], 0, 0, &status);
+                openCLVerifyCall(status);
+                clCmdQueue = clCreateCommandQueue(oclcontext, devices[devnum], CL_QUEUE_PROFILING_ENABLE, &status);
+                openCLVerifyCall(status);
+            }
+
+            openCLSafeCall(clGetDeviceInfo(devices[devnum], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), (void *)&maxWorkGroupSize, 0));
+            openCLSafeCall(clGetDeviceInfo(devices[devnum], CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), (void *)&maxDimensions, 0));
+            maxWorkItemSizes.resize(maxDimensions);
+            openCLSafeCall(clGetDeviceInfo(devices[devnum], CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t)*maxDimensions, (void *)&maxWorkItemSizes[0], 0));
+            openCLSafeCall(clGetDeviceInfo(devices[devnum], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), (void *)&maxComputeUnits, 0));
+
+            cl_bool unfymem = false;
+            openCLSafeCall(clGetDeviceInfo(devices[devnum], CL_DEVICE_HOST_UNIFIED_MEMORY, sizeof(cl_bool), (void *)&unfymem, 0));
+            unified_memory = unfymem ? 1 : 0;
+
+            //initialize extra options for compilation. Currently only fp64 is included.
+            //Assume 4KB is enough to store all possible extensions.
+            const int EXT_LEN = 4096 + 1 ;
+            char extends_set[EXT_LEN];
+            size_t extends_size;
+            openCLSafeCall(clGetDeviceInfo(devices[devnum], CL_DEVICE_EXTENSIONS, EXT_LEN, (void *)extends_set, &extends_size));
+            extends_set[EXT_LEN - 1] = 0;
+            size_t fp64_khr = String(extends_set).find("cl_khr_fp64");
+
+            if(fp64_khr != String::npos)
+            {
+                sprintf(extra_options, "-D DOUBLE_SUPPORT");
+                double_support = 1;
+            }
+            else
+            {
+                memset(extra_options, 0, 512);
+                double_support = 0;
+            }
         }
 
         ////////////////////////Common OpenCL specific calls///////////////
@@ -140,27 +269,6 @@ namespace cv
             return 0;
         }
 
-       struct Info::Impl
-        {
-            cl_platform_id oclplatform;
-            std::vector<cl_device_id> devices;
-            std::vector<std::string> devName;
-
-            cl_context oclcontext;
-            cl_command_queue clCmdQueue;
-            int devnum;
-            cl_uint maxDimensions;
-            size_t maxWorkGroupSize;
-            size_t *maxWorkItemSizes;
-            cl_uint maxComputeUnits;
-            char extra_options[512];
-            int  double_support;
-            Impl()
-            {
-                memset(extra_options, 0, 512);
-            }
-        };
-
         inline int divUp(int total, int grain)
         {
             return (total + grain - 1) / grain;
@@ -168,6 +276,9 @@ namespace cv
 
         int getDevice(std::vector<Info> &oclinfo, int devicetype)
         {
+            //TODO: cache oclinfo vector
+            oclinfo.clear();
+
             switch(devicetype)
             {
             case CVCL_DEVICE_TYPE_DEFAULT:
@@ -177,131 +288,118 @@ namespace cv
             case CVCL_DEVICE_TYPE_ALL:
                 break;
             default:
-                CV_Error(CV_GpuApiCallError, "Unkown device type");
+                return 0;
             }
-            int devcienums = 0;
-            // Platform info
-            cl_int status = 0;
-            cl_uint numPlatforms;
-            Info ocltmpinfo;
-            openCLSafeCall(clGetPlatformIDs(0, NULL, &numPlatforms));
-            CV_Assert(numPlatforms > 0);
-            cl_platform_id *platforms = new cl_platform_id[numPlatforms];
 
-            openCLSafeCall(clGetPlatformIDs(numPlatforms, platforms, NULL));
+            // Platform info
+            cl_uint numPlatforms;
+            openCLSafeCall(clGetPlatformIDs(0, 0, &numPlatforms));
+            if(numPlatforms < 1) return 0;
+
+            std::vector<cl_platform_id> platforms(numPlatforms);
+            openCLSafeCall(clGetPlatformIDs(numPlatforms, &platforms[0], 0));
+
             char deviceName[256];
+            int devcienums = 0;
             for (unsigned i = 0; i < numPlatforms; ++i)
             {
                 cl_uint numsdev;
-                status = clGetDeviceIDs(platforms[i], devicetype, 0, NULL, &numsdev);
+                cl_int status = clGetDeviceIDs(platforms[i], devicetype, 0, NULL, &numsdev);
                 if(status != CL_DEVICE_NOT_FOUND)
-                {
                     openCLVerifyCall(status);
-                }
+
                 if(numsdev > 0)
                 {
                     devcienums += numsdev;
-                    cl_device_id *devices = new cl_device_id[numsdev];
-                    openCLSafeCall(clGetDeviceIDs(platforms[i], devicetype, numsdev, devices, NULL));
+                    std::vector<cl_device_id> devices(numsdev);
+                    openCLSafeCall(clGetDeviceIDs(platforms[i], devicetype, numsdev, &devices[0], 0));
+
+                    Info ocltmpinfo;
                     ocltmpinfo.impl->oclplatform = platforms[i];
-                    for(unsigned j = 0; j < numsdev; j++)
+                    for(unsigned j = 0; j < numsdev; ++j)
                     {
                         ocltmpinfo.impl->devices.push_back(devices[j]);
-                        openCLSafeCall(clGetDeviceInfo(devices[j], CL_DEVICE_NAME, 256, deviceName, NULL));
-                        ocltmpinfo.impl->devName.push_back(std::string(deviceName));
-                        ocltmpinfo.DeviceName.push_back(std::string(deviceName));
+                        openCLSafeCall(clGetDeviceInfo(devices[j], CL_DEVICE_NAME, sizeof(deviceName), deviceName, 0));
+                        ocltmpinfo.impl->devName.push_back(deviceName);
+                        ocltmpinfo.DeviceName.push_back(deviceName);
                     }
-                    delete[] devices;
                     oclinfo.push_back(ocltmpinfo);
-                    ocltmpinfo.release();
                 }
-            }
-            delete[] platforms;
-            if(devcienums > 0)
-            {
-                setDevice(oclinfo[0]);
             }
             return devcienums;
         }
 
-        static void fillClcontext(Info &oclinfo)
-        {
-            //get device information
-            size_t devnum = oclinfo.impl->devnum;
-
-            openCLSafeCall(clGetDeviceInfo(oclinfo.impl->devices[devnum], CL_DEVICE_MAX_WORK_GROUP_SIZE,
-                                           sizeof(size_t), (void *)&oclinfo.impl->maxWorkGroupSize, NULL));
-            openCLSafeCall(clGetDeviceInfo(oclinfo.impl->devices[devnum], CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS,
-                                           sizeof(cl_uint), (void *)&oclinfo.impl->maxDimensions, NULL));
-            oclinfo.impl->maxWorkItemSizes = new size_t[oclinfo.impl->maxDimensions];
-            openCLSafeCall(clGetDeviceInfo(oclinfo.impl->devices[devnum], CL_DEVICE_MAX_WORK_ITEM_SIZES,
-                                           sizeof(size_t)*oclinfo.impl->maxDimensions, (void *)oclinfo.impl->maxWorkItemSizes, NULL));
-            openCLSafeCall(clGetDeviceInfo(oclinfo.impl->devices[devnum], CL_DEVICE_MAX_COMPUTE_UNITS,
-                                           sizeof(cl_uint), (void *)&oclinfo.impl->maxComputeUnits, NULL));
-            //initialize extra options for compilation. Currently only fp64 is included.
-            //Assume 4KB is enough to store all possible extensions.
-
-            const int EXT_LEN = 4096 + 1 ;
-            char extends_set[EXT_LEN];
-            size_t extends_size;
-            openCLSafeCall(clGetDeviceInfo(oclinfo.impl->devices[devnum], CL_DEVICE_EXTENSIONS,
-                                           EXT_LEN, (void *)extends_set, &extends_size));
-            CV_Assert(extends_size < (size_t)EXT_LEN);
-            extends_set[EXT_LEN - 1] = 0;
-            memset(oclinfo.impl->extra_options, 0, 512);
-            oclinfo.impl->double_support = 0;
-            int fp64_khr = std::string(extends_set).find("cl_khr_fp64");
-
-            if(fp64_khr >= 0 && fp64_khr < EXT_LEN)
-            {
-                sprintf(oclinfo.impl->extra_options , "-D DOUBLE_SUPPORT");
-                oclinfo.impl -> double_support = 1;
-            }
-            Context::setContext(oclinfo);
-
-        }
-
         void setDevice(Info &oclinfo, int devnum)
         {
-            CV_Assert(devnum >= 0);
-            cl_int status = 0;
-            cl_context_properties cps[3] =
-            {
-                CL_CONTEXT_PLATFORM, (cl_context_properties)(oclinfo.impl->oclplatform), 0
-            };
-            oclinfo.impl->devnum = devnum;
-            oclinfo.impl->oclcontext = clCreateContext(cps, 1, &oclinfo.impl->devices[devnum], NULL, NULL, &status);
-            openCLVerifyCall(status);
-            //create the command queue using the first device of the list
-            oclinfo.impl->clCmdQueue = clCreateCommandQueue(oclinfo.impl->oclcontext, oclinfo.impl->devices[devnum],
-                                       CL_QUEUE_PROFILING_ENABLE, &status);
-            openCLVerifyCall(status);
-            fillClcontext(oclinfo);
+            oclinfo.impl->setDevice(0, 0, devnum);
+            Context::setContext(oclinfo);
         }
 
         void setDeviceEx(Info &oclinfo, void *ctx, void *q, int devnum)
         {
-            CV_Assert(devnum >= 0);
-            oclinfo.impl->devnum = devnum;
-            if(ctx && q)
-            {
-                oclinfo.impl->oclcontext = (cl_context)ctx;
-                oclinfo.impl->clCmdQueue = (cl_command_queue)q;
-                clRetainContext((cl_context)ctx);
-                clRetainCommandQueue((cl_command_queue)q);
-                fillClcontext(oclinfo);
-             }
+            oclinfo.impl->setDevice(ctx, q, devnum);
+            Context::setContext(oclinfo);
          }
 
         void *getoclContext()
         {
-            return &(Context::getContext()->impl->clContext);
+            return &(Context::getContext()->impl->oclcontext);
         }
 
         void *getoclCommandQueue()
         {
             return &(Context::getContext()->impl->clCmdQueue);
         }
+
+        void finish()
+        {
+            clFinish(Context::getContext()->impl->clCmdQueue);
+        }
+
+        void queryDeviceInfo(DEVICE_INFO info_type, void* info)
+        {
+            static Info::Impl* impl = Context::getContext()->impl;
+            switch(info_type)
+            {
+            case WAVEFRONT_SIZE:
+                {
+#ifdef CL_DEVICE_WAVEFRONT_WIDTH_AMD
+                    try
+                    {
+                        openCLSafeCall(clGetDeviceInfo(Context::getContext()->impl->devices[0],
+                            CL_DEVICE_WAVEFRONT_WIDTH_AMD, sizeof(size_t), info, 0));
+                    }
+                    catch(const cv::Exception&)
+#elif defined (CL_DEVICE_WARP_SIZE_NV)
+                    const int EXT_LEN = 4096 + 1 ;
+                    char extends_set[EXT_LEN];
+                    size_t extends_size;
+                    openCLSafeCall(clGetDeviceInfo(impl->devices[impl->devnum], CL_DEVICE_EXTENSIONS, EXT_LEN, (void *)extends_set, &extends_size));
+                    extends_set[EXT_LEN - 1] = 0;
+                    if(std::string(extends_set).find("cl_nv_device_attribute_query") != std::string::npos)
+                    {
+                        openCLSafeCall(clGetDeviceInfo(Context::getContext()->impl->devices[0],
+                            CL_DEVICE_WARP_SIZE_NV, sizeof(size_t), info, 0));
+                    }
+                    else
+#endif
+                    {
+                        // if no way left for us to query the warp size, we can get it from kernel group info
+                        static const char * _kernel_string = "__kernel void test_func() {}";
+                        cl_kernel kernel;
+                        kernel = openCLGetKernelFromSource(Context::getContext(), &_kernel_string, "test_func");
+                        openCLSafeCall(clGetKernelWorkGroupInfo(kernel, impl->devices[impl->devnum],
+                            CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE, sizeof(size_t), info, NULL));
+                    }
+
+                }
+                break;
+            default:
+                CV_Error(-1, "Invalid device info type");
+                break;
+            }
+        }
+
         void openCLReadBuffer(Context *clCxt, cl_mem dst_buffer, void *host_buffer, size_t size)
         {
             cl_int status;
@@ -313,7 +411,7 @@ namespace cv
         cl_mem openCLCreateBuffer(Context *clCxt, size_t flag , size_t size)
         {
             cl_int status;
-            cl_mem buffer = clCreateBuffer(clCxt->impl->clContext, (cl_mem_flags)flag, size, NULL, &status);
+            cl_mem buffer = clCreateBuffer(clCxt->impl->oclcontext, (cl_mem_flags)flag, size, NULL, &status);
             openCLVerifyCall(status);
             return buffer;
         }
@@ -328,8 +426,7 @@ namespace cv
                                size_t widthInBytes, size_t height, DevMemRW rw_type, DevMemType mem_type)
         {
             cl_int status;
-
-            *dev_ptr = clCreateBuffer(clCxt->impl->clContext, gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
+            *dev_ptr = clCreateBuffer(clCxt->impl->oclcontext, gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
                                       widthInBytes * height, 0, &status);
             openCLVerifyCall(status);
             *pitch = widthInBytes;
@@ -337,7 +434,7 @@ namespace cv
 
         void openCLMemcpy2D(Context *clCxt, void *dst, size_t dpitch,
                             const void *src, size_t spitch,
-                            size_t width, size_t height, enum openCLMemcpyKind kind, int channels)
+                            size_t width, size_t height, openCLMemcpyKind kind, int channels)
         {
             size_t buffer_origin[3] = {0, 0, 0};
             size_t host_origin[3] = {0, 0, 0};
@@ -386,7 +483,7 @@ namespace cv
         {
             openCLSafeCall(clReleaseMemObject((cl_mem)devPtr));
         }
-        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, std::string kernelName)
+        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, String kernelName)
         {
             return openCLGetKernelFromSource(clCxt, source, kernelName, NULL);
         }
@@ -395,7 +492,7 @@ namespace cv
         void setBinpath(const char *path)
         {
             Context *clcxt = Context::getContext();
-            clcxt->impl->Binpath = path;
+            clcxt->impl->binpath = path;
         }
 
         int savetofile(const Context*,  cl_program &program, const char *fileName)
@@ -426,26 +523,26 @@ namespace cv
             return 1;
         }
 
-        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, std::string kernelName,
+        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, String kernelName,
                                             const char *build_options)
         {
             cl_kernel kernel;
             cl_program program ;
             cl_int status = 0;
             std::stringstream src_sign;
-            std::string srcsign;
-            std::string filename;
+            String srcsign;
+            String filename;
             CV_Assert(programCache != NULL);
 
             if(NULL != build_options)
             {
-                src_sign << (int64)(*source) << clCxt->impl->clContext << "_" << build_options;
+                src_sign << (int64)(*source) << clCxt->impl->oclcontext << "_" << build_options;
             }
             else
             {
-                src_sign << (int64)(*source) << clCxt->impl->clContext;
+                src_sign << (int64)(*source) << clCxt->impl->oclcontext;
             }
-            srcsign = src_sign.str();
+            srcsign = src_sign.str().c_str();
 
             program = NULL;
             program = programCache->progLookup(srcsign);
@@ -463,24 +560,24 @@ namespace cv
                     strcat(all_build_options, build_options);
                 if(all_build_options != NULL)
                 {
-                    filename = clCxt->impl->Binpath  + kernelName + "_" + clCxt->impl->devName + all_build_options + ".clb";
+                    filename = clCxt->impl->binpath  + kernelName + "_" + clCxt->impl->devName[clCxt->impl->devnum] + all_build_options + ".clb";
                 }
                 else
                 {
-                    filename = clCxt->impl->Binpath  + kernelName + "_" + clCxt->impl->devName + ".clb";
+                    filename = clCxt->impl->binpath  + kernelName + "_" + clCxt->impl->devName[clCxt->impl->devnum] + ".clb";
                 }
 
                 FILE *fp = fopen(filename.c_str(), "rb");
-                if(fp == NULL || clCxt->impl->Binpath.size() == 0)    //we should generate a binary file for the first time.
+                if(fp == NULL || clCxt->impl->binpath.size() == 0)    //we should generate a binary file for the first time.
                 {
                     if(fp != NULL)
                         fclose(fp);
 
                     program = clCreateProgramWithSource(
-                                  clCxt->impl->clContext, 1, source, NULL, &status);
+                                  clCxt->impl->oclcontext, 1, source, NULL, &status);
                     openCLVerifyCall(status);
-                    status = clBuildProgram(program, 1, &(clCxt->impl->devices), all_build_options, NULL, NULL);
-                    if(status == CL_SUCCESS && clCxt->impl->Binpath.size())
+                    status = clBuildProgram(program, 1, &(clCxt->impl->devices[clCxt->impl->devnum]), all_build_options, NULL, NULL);
+                    if(status == CL_SUCCESS && clCxt->impl->binpath.size())
                         savetofile(clCxt, program, filename.c_str());
                 }
                 else
@@ -492,15 +589,15 @@ namespace cv
                     CV_Assert(1 == fread(binary, binarySize, 1, fp));
                     fclose(fp);
                     cl_int status = 0;
-                    program = clCreateProgramWithBinary(clCxt->impl->clContext,
+                    program = clCreateProgramWithBinary(clCxt->impl->oclcontext,
                                                         1,
-                                                        &(clCxt->impl->devices),
+                                                        &(clCxt->impl->devices[clCxt->impl->devnum]),
                                                         (const size_t *)&binarySize,
                                                         (const unsigned char **)&binary,
                                                         NULL,
                                                         &status);
                     openCLVerifyCall(status);
-                    status = clBuildProgram(program, 1, &(clCxt->impl->devices), all_build_options, NULL, NULL);
+                    status = clBuildProgram(program, 1, &(clCxt->impl->devices[clCxt->impl->devnum]), all_build_options, NULL, NULL);
                     delete[] binary;
                 }
 
@@ -512,14 +609,14 @@ namespace cv
                         char *buildLog = NULL;
                         size_t buildLogSize = 0;
                         logStatus = clGetProgramBuildInfo(program,
-                                                          clCxt->impl->devices, CL_PROGRAM_BUILD_LOG, buildLogSize,
+                                                          clCxt->impl->devices[clCxt->impl->devnum], CL_PROGRAM_BUILD_LOG, buildLogSize,
                                                           buildLog, &buildLogSize);
                         if(logStatus != CL_SUCCESS)
                             std::cout << "Failed to build the program and get the build info." << std::endl;
                         buildLog = new char[buildLogSize];
                         CV_DbgAssert(!!buildLog);
                         memset(buildLog, 0, buildLogSize);
-                        openCLSafeCall(clGetProgramBuildInfo(program, clCxt->impl->devices,
+                        openCLSafeCall(clGetProgramBuildInfo(program, clCxt->impl->devices[clCxt->impl->devnum],
                                                              CL_PROGRAM_BUILD_LOG, buildLogSize, buildLog, NULL));
                         std::cout << "\n\t\t\tBUILD LOG\n";
                         std::cout << buildLog << std::endl;
@@ -541,20 +638,20 @@ namespace cv
         void openCLVerifyKernel(const Context *clCxt, cl_kernel kernel, size_t *localThreads)
         {
             size_t kernelWorkGroupSize;
-            openCLSafeCall(clGetKernelWorkGroupInfo(kernel, clCxt->impl->devices,
+            openCLSafeCall(clGetKernelWorkGroupInfo(kernel, clCxt->impl->devices[clCxt->impl->devnum],
                                                     CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &kernelWorkGroupSize, 0));
-            CV_Assert( (localThreads[0] <= clCxt->impl->maxWorkItemSizes[0]) &&
-                          (localThreads[1] <= clCxt->impl->maxWorkItemSizes[1]) &&
-                          (localThreads[2] <= clCxt->impl->maxWorkItemSizes[2]) &&
-                          ((localThreads[0] * localThreads[1] * localThreads[2]) <= kernelWorkGroupSize) &&
-                          (localThreads[0] * localThreads[1] * localThreads[2]) <= clCxt->impl->maxWorkGroupSize);
+            CV_Assert( localThreads[0] <= clCxt->impl->maxWorkItemSizes[0] );
+            CV_Assert( localThreads[1] <= clCxt->impl->maxWorkItemSizes[1] );
+            CV_Assert( localThreads[2] <= clCxt->impl->maxWorkItemSizes[2] );
+            CV_Assert( localThreads[0] * localThreads[1] * localThreads[2] <= kernelWorkGroupSize );
+            CV_Assert( localThreads[0] * localThreads[1] * localThreads[2] <= clCxt->impl->maxWorkGroupSize );
         }
 
 #ifdef PRINT_KERNEL_RUN_TIME
         static double total_execute_time = 0;
         static double total_kernel_time = 0;
 #endif
-        void openCLExecuteKernel_(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
+        void openCLExecuteKernel_(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
                                   size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
                                   int depth, const char *build_options)
         {
@@ -566,7 +663,7 @@ namespace cv
                 idxStr << "_C" << channels;
             if(depth != -1)
                 idxStr << "_D" << depth;
-            kernelName += idxStr.str();
+            kernelName = kernelName + idxStr.str().c_str();
 
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, build_options);
@@ -617,18 +714,18 @@ namespace cv
             clReleaseEvent(event);
 #endif
 
-            clFinish(clCxt->impl->clCmdQueue);
+            clFlush(clCxt->impl->clCmdQueue);
             openCLSafeCall(clReleaseKernel(kernel));
         }
 
-        void openCLExecuteKernel(Context *clCxt , const char **source, std::string kernelName,
+        void openCLExecuteKernel(Context *clCxt , const char **source, String kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
                                  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth)
         {
             openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args,
                                 channels, depth, NULL);
         }
-        void openCLExecuteKernel(Context *clCxt , const char **source, std::string kernelName,
+        void openCLExecuteKernel(Context *clCxt , const char **source, String kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
                                  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
 
@@ -637,7 +734,7 @@ namespace cv
             openCLExecuteKernel_(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth,
                                  build_options);
 #else
-            std::string data_type[] = { "uchar", "char", "ushort", "short", "int", "float", "double"};
+            String data_type[] = { "uchar", "char", "ushort", "short", "int", "float", "double"};
             std::cout << std::endl;
             std::cout << "Function Name: " << kernelName;
             if(depth >= 0)
@@ -662,7 +759,7 @@ namespace cv
 #endif
         }
 
-       double openCLExecuteKernelInterop(Context *clCxt , const char **source, std::string kernelName,
+       double openCLExecuteKernelInterop(Context *clCxt , const char **source, String kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
                                  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
                                  bool finish, bool measureKernelTime, bool cleanUp)
@@ -676,7 +773,7 @@ namespace cv
                 idxStr << "_C" << channels;
             if(depth != -1)
                 idxStr << "_D" << depth;
-            kernelName += idxStr.str();
+            kernelName = kernelName + idxStr.str().c_str();
 
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, build_options);
@@ -738,7 +835,7 @@ namespace cv
         }
 
         // Converts the contents of a file into a string
-        static int convertToString(const char *filename, std::string& s)
+        static int convertToString(const char *filename, String& s)
         {
             size_t size;
             char*  str;
@@ -770,16 +867,16 @@ namespace cv
             return -1;
         }
 
-        double openCLExecuteKernelInterop(Context *clCxt , const char **fileName, const int numFiles, std::string kernelName,
+        double openCLExecuteKernelInterop(Context *clCxt , const char **fileName, const int numFiles, String kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
                                  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
                                  bool finish, bool measureKernelTime, bool cleanUp)
 
         {
-            std::vector<std::string> fsource;
+            std::vector<String> fsource;
             for (int i = 0 ; i < numFiles ; i++)
             {
-                std::string str;
+                String str;
                 if (convertToString(fileName[i], str) >= 0)
                     fsource.push_back(str);
             }
@@ -812,142 +909,155 @@ namespace cv
         /////////////////////////////OpenCL initialization/////////////////
         std::auto_ptr<Context> Context::clCxt;
         int Context::val = 0;
-        Mutex cs;
-        Context *Context::getContext()
+        static Mutex cs;
+        static volatile int context_tear_down = 0;
+        Context* Context::getContext()
         {
-            if(val == 0)
+            if(*((volatile int*)&val) != 1)
             {
                 AutoLock al(cs);
-                if( NULL == clCxt.get())
+                if(*((volatile int*)&val) != 1)
+                {
+                    if (context_tear_down)
+                        return clCxt.get();
+                    if( 0 == clCxt.get())
+                    clCxt.reset(new Context);
+                    std::vector<Info> oclinfo;
+                    CV_Assert(getDevice(oclinfo, CVCL_DEVICE_TYPE_ALL) > 0);
+                    oclinfo[0].impl->setDevice(0, 0, 0);
+                    clCxt.get()->impl = oclinfo[0].impl->copy();
+
+                    *((volatile int*)&val) = 1;
+                }
+            }
+                return clCxt.get();
+            }
+
+        void Context::setContext(Info &oclinfo)
+        {
+            AutoLock guard(cs);
+            if(*((volatile int*)&val) != 1)
+            {
+                if( 0 == clCxt.get())
                     clCxt.reset(new Context);
 
-                val = 1;
-                return clCxt.get();
+                clCxt.get()->impl = oclinfo.impl->copy();
+
+                *((volatile int*)&val) = 1;
             }
             else
             {
-                return clCxt.get();
+                clCxt.get()->impl->release();
+                clCxt.get()->impl = oclinfo.impl->copy();
             }
         }
-        void Context::setContext(Info &oclinfo)
-        {
-            Context *clcxt = getContext();
-            clcxt->impl->clContext = oclinfo.impl->oclcontext;
-            clcxt->impl->clCmdQueue = oclinfo.impl->clCmdQueue;
-            clcxt->impl->devices = oclinfo.impl->devices[oclinfo.impl->devnum];
-            clcxt->impl->devName = oclinfo.impl->devName[oclinfo.impl->devnum];
-            clcxt->impl->maxDimensions = oclinfo.impl->maxDimensions;
-            clcxt->impl->maxWorkGroupSize = oclinfo.impl->maxWorkGroupSize;
-            for(size_t i=0; i<clcxt->impl->maxDimensions && i<4; i++)
-                clcxt->impl->maxWorkItemSizes[i] = oclinfo.impl->maxWorkItemSizes[i];
-            clcxt->impl->maxComputeUnits = oclinfo.impl->maxComputeUnits;
-            clcxt->impl->double_support = oclinfo.impl->double_support;
-            //extra options to recognize compiler options
-            memcpy(clcxt->impl->extra_options, oclinfo.impl->extra_options, 512);
-            cl_bool unfymem = false;
-            openCLSafeCall(clGetDeviceInfo(clcxt->impl->devices, CL_DEVICE_HOST_UNIFIED_MEMORY,
-                                           sizeof(cl_bool), (void *)&unfymem, NULL));
-            if(unfymem)
-                clcxt->impl->unified_memory = 1;
-        }
+
         Context::Context()
         {
-            impl = new Impl;
-            //Information of the OpenCL context
-            impl->clContext = NULL;
-            impl->clCmdQueue = NULL;
-            impl->devices = NULL;
-            impl->maxDimensions = 0;
-            impl->maxWorkGroupSize = 0;
-            for(int i=0; i<4; i++)
-                impl->maxWorkItemSizes[i] = 0;
-            impl->maxComputeUnits = 0;
-            impl->double_support = 0;
-            //extra options to recognize vendor specific fp64 extensions
-            memset(impl->extra_options, 0, 512);
-            impl->unified_memory = 0;
+            impl = 0;
             programCache = ProgramCache::getProgramCache();
         }
 
         Context::~Context()
         {
-            delete impl;
+            release();
+        }
+
+        void Context::release()
+        {
+            if (impl)
+                impl->release();
             programCache->releaseProgram();
         }
+
+        bool Context::supportsFeature(int ftype)
+        {
+            switch(ftype)
+            {
+            case CL_DOUBLE:
+                return impl->double_support == 1;
+            case CL_UNIFIED_MEM:
+                return impl->unified_memory == 1;
+            default:
+                return false;
+            }
+        }
+
+        size_t Context::computeUnits()
+        {
+            return impl->maxComputeUnits;
+        }
+
+        size_t Context::maxWorkGroupSize()
+        {
+            return impl->maxWorkGroupSize;
+        }
+
+        void* Context::oclContext()
+        {
+            return impl->oclcontext;
+        }
+
+        void* Context::oclCommandQueue()
+        {
+            return impl->clCmdQueue;
+        }
+
         Info::Info()
         {
             impl = new Impl;
-            impl->oclplatform = 0;
-            impl->oclcontext = 0;
-            impl->clCmdQueue = 0;
-            impl->devnum = 0;
-            impl->maxDimensions = 0;
-            impl->maxWorkGroupSize = 0;
-            impl->maxWorkItemSizes = 0;
-            impl->maxComputeUnits = 0;
-            impl->double_support = 0;
-            //extra_options = 0;
         }
+
         void Info::release()
         {
             fft_teardown();
-            if(impl->oclplatform)
-            {
-                impl->oclplatform = 0;
-            }
-            if(impl->clCmdQueue)
-            {
-                openCLSafeCall(clReleaseCommandQueue(impl->clCmdQueue));
-            }
-            ProgramCache::getProgramCache()->releaseProgram();
-            if(impl->oclcontext)
-            {
-                openCLSafeCall(clReleaseContext(impl->oclcontext));
-            }
-            if(impl->maxWorkItemSizes)
-            {
-                delete[] impl->maxWorkItemSizes;
-                impl->maxWorkItemSizes = 0;
-            }
-            //if(extra_options)
-            //{
-            //	delete[] extra_options;
-            //	extra_options = 0;
-            //}
-            impl->devices.clear();
-            impl->devName.clear();
+            impl->release();
+            impl = new Impl;
             DeviceName.clear();
         }
+
         Info::~Info()
         {
-            release();
-            delete impl;
+            fft_teardown();
+            impl->release();
         }
+
         Info &Info::operator = (const Info &m)
         {
-            impl->oclplatform = m.impl->oclplatform;
-            impl->oclcontext = m.impl->oclcontext;
-            impl->clCmdQueue = m.impl->clCmdQueue;
-            impl->devnum = m.impl->devnum;
-            impl->maxDimensions = m.impl->maxDimensions;
-            impl->maxWorkGroupSize = m.impl->maxWorkGroupSize;
-            impl->maxWorkItemSizes = m.impl->maxWorkItemSizes;
-            impl->maxComputeUnits = m.impl->maxComputeUnits;
-            impl->double_support = m.impl->double_support;
-            memcpy(impl->extra_options, m.impl->extra_options, 512);
-            for(size_t i = 0; i < m.impl->devices.size(); i++)
-            {
-                impl->devices.push_back(m.impl->devices[i]);
-                impl->devName.push_back(m.impl->devName[i]);
-                DeviceName.push_back(m.DeviceName[i]);
-            }
+            impl->release();
+            impl = m.impl->copy();
+            DeviceName = m.DeviceName;
             return *this;
         }
+
         Info::Info(const Info &m)
         {
-            impl = new Impl;
-            *this = m;
+            impl = m.impl->copy();
+            DeviceName = m.DeviceName;
         }
     }//namespace ocl
 
 }//namespace cv
+
+#if defined BUILD_SHARED_LIBS && defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
+#include <windows.h>
+BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID );
+
+BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )
+{
+    if( fdwReason == DLL_PROCESS_DETACH )
+    {
+        // application hangs if call clReleaseCommandQueue here, so release context only
+        // without context release application hangs as well
+        context_tear_down = 1;
+        Context* cv_ctx = Context::getContext();
+        if(cv_ctx)
+        {
+            cl_context ctx = (cl_context)&(cv_ctx->impl->oclcontext);
+            if(ctx)
+                openCLSafeCall(clReleaseContext(ctx));
+        }
+    }
+    return TRUE;
+}
+#endif

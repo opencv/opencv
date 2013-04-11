@@ -1,10 +1,11 @@
 #include <cmath>
 #include <iostream>
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/core.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/gpu.hpp"
 
 using namespace std;
 using namespace cv;
@@ -33,7 +34,7 @@ int main(int argc, const char* argv[])
     Canny(src, mask, 100, 200, 3);
 
     Mat dst_cpu;
-    cvtColor(mask, dst_cpu, CV_GRAY2BGR);
+    cvtColor(mask, dst_cpu, COLOR_GRAY2BGR);
     Mat dst_gpu = dst_cpu.clone();
 
     vector<Vec4i> lines_cpu;

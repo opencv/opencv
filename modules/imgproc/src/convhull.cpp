@@ -206,9 +206,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
 
         for( i = 0; i < tl_count-1; i++ )
-            hullbuf[nout++] = pointer[tl_stack[i]] - data0;
+            hullbuf[nout++] = int(pointer[tl_stack[i]] - data0);
         for( i = tr_count - 1; i > 0; i-- )
-            hullbuf[nout++] = pointer[tr_stack[i]] - data0;
+            hullbuf[nout++] = int(pointer[tr_stack[i]] - data0);
         int stop_idx = tr_count > 2 ? tr_stack[1] : tl_count > 2 ? tl_stack[tl_count - 2] : -1;
 
         // lower half
@@ -244,9 +244,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
 
         for( i = 0; i < bl_count-1; i++ )
-            hullbuf[nout++] = pointer[bl_stack[i]] - data0;
+            hullbuf[nout++] = int(pointer[bl_stack[i]] - data0);
         for( i = br_count-1; i > 0; i-- )
-            hullbuf[nout++] = pointer[br_stack[i]] - data0;
+            hullbuf[nout++] = int(pointer[br_stack[i]] - data0);
     }
 
     if( !returnPoints )
@@ -400,7 +400,7 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
 
     CvMat* mat = 0;
     CvContour contour_header;
-    union { CvContour c; CvSeq s; } hull_header;
+    CvSeq hull_header;
     CvSeqBlock block, hullblock;
     CvSeq* ptseq = 0;
     CvSeq* hullseq = 0;
@@ -455,8 +455,8 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
 
         hullseq = cvMakeSeqHeaderForArray(
                                           CV_SEQ_KIND_CURVE|CV_MAT_TYPE(mat->type)|CV_SEQ_FLAG_CLOSED,
-                                          sizeof(contour_header), CV_ELEM_SIZE(mat->type), mat->data.ptr,
-                                          mat->cols + mat->rows - 1, &hull_header.s, &hullblock );
+                                          sizeof(hull_header), CV_ELEM_SIZE(mat->type), mat->data.ptr,
+                                          mat->cols + mat->rows - 1, &hull_header, &hullblock );
         cvClearSeq( hullseq );
     }
 
@@ -474,6 +474,7 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
     cv::Mat h0;
     cv::convexHull(cv::cvarrToMat(ptseq, false, false, 0, &_ptbuf), h0,
                    orientation == CV_CLOCKWISE, CV_MAT_CN(hulltype) == 2);
+
 
     if( hulltype == CV_SEQ_ELTYPE_PPOINT )
     {
@@ -522,7 +523,7 @@ CV_IMPL CvSeq* cvConvexityDefects( const CvArr* array,
     int rev_orientation;
 
     CvContour contour_header;
-    union { CvContour c; CvSeq s; } hull_header;
+    CvSeq hull_header;
     CvSeqBlock block, hullblock;
     CvSeq *ptseq = (CvSeq*)array, *hull = (CvSeq*)hullarray;
 
@@ -575,7 +576,7 @@ CV_IMPL CvSeq* cvConvexityDefects( const CvArr* array,
         hull = cvMakeSeqHeaderForArray(
                                        CV_SEQ_KIND_CURVE|CV_MAT_TYPE(mat->type)|CV_SEQ_FLAG_CLOSED,
                                        sizeof(CvContour), CV_ELEM_SIZE(mat->type), mat->data.ptr,
-                                       mat->cols + mat->rows - 1, &hull_header.s, &hullblock );
+                                       mat->cols + mat->rows - 1, &hull_header, &hullblock );
     }
 
     is_index = CV_SEQ_ELTYPE(hull) == CV_SEQ_ELTYPE_INDEX;

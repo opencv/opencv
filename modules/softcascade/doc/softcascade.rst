@@ -9,3 +9,4 @@ softcascade. Soft Cascade object detection and training.
 
     softcascade_detector
     softcascade_training
+    softcascade_cuda

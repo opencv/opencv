@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 #include <map>
-#include "opencv2/core/opengl_interop.hpp"
+#include "opencv2/core/opengl.hpp"
 
 // in later times, use this file as a dispatcher to implementations like cvcap.cpp
 
@@ -57,7 +57,7 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 
         #if defined (HAVE_QT)
             cvSetModeWindow_QT(name,prop_value);
-        #elif defined WIN32 || defined _WIN32
+        #elif defined(HAVE_WIN32UI)
             cvSetModeWindow_W32(name,prop_value);
         #elif defined (HAVE_GTK)
             cvSetModeWindow_GTK(name,prop_value);
@@ -96,7 +96,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 
         #if defined (HAVE_QT)
             return cvGetModeWindow_QT(name);
-        #elif defined WIN32 || defined _WIN32
+        #elif defined(HAVE_WIN32UI)
             return cvGetModeWindow_W32(name);
         #elif defined (HAVE_GTK)
             return cvGetModeWindow_GTK(name);
@@ -113,7 +113,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 
         #if defined (HAVE_QT)
             return cvGetPropWindow_QT(name);
-        #elif defined WIN32 || defined _WIN32
+        #elif defined(HAVE_WIN32UI)
             return cvGetPropWindowAutoSize_W32(name);
         #elif defined (HAVE_GTK)
             return cvGetPropWindowAutoSize_GTK(name);
@@ -126,7 +126,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 
         #if defined (HAVE_QT)
             return cvGetRatioWindow_QT(name);
-        #elif defined WIN32 || defined _WIN32
+        #elif defined(HAVE_WIN32UI)
             return cvGetRatioWindow_W32(name);
         #elif defined (HAVE_GTK)
             return cvGetRatioWindow_GTK(name);
@@ -139,7 +139,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 
         #if defined (HAVE_QT)
             return cvGetOpenGlProp_QT(name);
-        #elif defined WIN32 || defined _WIN32
+        #elif defined(HAVE_WIN32UI)
             return cvGetOpenGlProp_W32(name);
         #elif defined (HAVE_GTK)
             return cvGetOpenGlProp_GTK(name);
@@ -153,12 +153,12 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
     }
 }
 
-void cv::namedWindow( const std::string& winname, int flags )
+void cv::namedWindow( const String& winname, int flags )
 {
     cvNamedWindow( winname.c_str(), flags );
 }
 
-void cv::destroyWindow( const std::string& winname )
+void cv::destroyWindow( const String& winname )
 {
     cvDestroyWindow( winname.c_str() );
 }
@@ -168,22 +168,22 @@ void cv::destroyAllWindows()
     cvDestroyAllWindows();
 }
 
-void cv::resizeWindow( const std::string& winname, int width, int height )
+void cv::resizeWindow( const String& winname, int width, int height )
 {
     cvResizeWindow( winname.c_str(), width, height );
 }
 
-void cv::moveWindow( const std::string& winname, int x, int y )
+void cv::moveWindow( const String& winname, int x, int y )
 {
     cvMoveWindow( winname.c_str(), x, y );
 }
 
-void cv::setWindowProperty(const std::string& winname, int prop_id, double prop_value)
+void cv::setWindowProperty(const String& winname, int prop_id, double prop_value)
 {
     cvSetWindowProperty( winname.c_str(), prop_id, prop_value);
 }
 
-double cv::getWindowProperty(const std::string& winname, int prop_id)
+double cv::getWindowProperty(const String& winname, int prop_id)
 {
     return cvGetWindowProperty(winname.c_str(), prop_id);
 }
@@ -193,7 +193,7 @@ int cv::waitKey(int delay)
     return cvWaitKey(delay);
 }
 
-int cv::createTrackbar(const std::string& trackbarName, const std::string& winName,
+int cv::createTrackbar(const String& trackbarName, const String& winName,
                    int* value, int count, TrackbarCallback callback,
                    void* userdata)
 {
@@ -201,17 +201,17 @@ int cv::createTrackbar(const std::string& trackbarName, const std::string& winNa
                              value, count, callback, userdata);
 }
 
-void cv::setTrackbarPos( const std::string& trackbarName, const std::string& winName, int value )
+void cv::setTrackbarPos( const String& trackbarName, const String& winName, int value )
 {
     cvSetTrackbarPos(trackbarName.c_str(), winName.c_str(), value );
 }
 
-int cv::getTrackbarPos( const std::string& trackbarName, const std::string& winName )
+int cv::getTrackbarPos( const String& trackbarName, const String& winName )
 {
     return cvGetTrackbarPos(trackbarName.c_str(), winName.c_str());
 }
 
-void cv::setMouseCallback( const std::string& windowName, MouseCallback onMouse, void* param)
+void cv::setMouseCallback( const String& windowName, MouseCallback onMouse, void* param)
 {
     cvSetMouseCallback(windowName.c_str(), onMouse, param);
 }
@@ -223,17 +223,17 @@ int cv::startWindowThread()
 
 // OpenGL support
 
-void cv::setOpenGlDrawCallback(const std::string& name, OpenGlDrawCallback callback, void* userdata)
+void cv::setOpenGlDrawCallback(const String& name, OpenGlDrawCallback callback, void* userdata)
 {
     cvSetOpenGlDrawCallback(name.c_str(), callback, userdata);
 }
 
-void cv::setOpenGlContext(const std::string& windowName)
+void cv::setOpenGlContext(const String& windowName)
 {
     cvSetOpenGlContext(windowName.c_str());
 }
 
-void cv::updateWindow(const std::string& windowName)
+void cv::updateWindow(const String& windowName)
 {
     cvUpdateWindow(windowName.c_str());
 }
@@ -241,20 +241,20 @@ void cv::updateWindow(const std::string& windowName)
 #ifdef HAVE_OPENGL
 namespace
 {
-    std::map<std::string, cv::GlTexture2D> wndTexs;
-    std::map<std::string, cv::GlTexture2D> ownWndTexs;
-    std::map<std::string, cv::GlBuffer> ownWndBufs;
+    std::map<cv::String, cv::ogl::Texture2D> wndTexs;
+    std::map<cv::String, cv::ogl::Texture2D> ownWndTexs;
+    std::map<cv::String, cv::ogl::Buffer> ownWndBufs;
 
-    void CV_CDECL glDrawTextureCallback(void* userdata)
+    void glDrawTextureCallback(void* userdata)
     {
-        cv::GlTexture2D* texObj = static_cast<cv::GlTexture2D*>(userdata);
+        cv::ogl::Texture2D* texObj = static_cast<cv::ogl::Texture2D*>(userdata);
 
-        cv::render(*texObj);
+        cv::ogl::render(*texObj);
     }
 }
 #endif // HAVE_OPENGL
 
-void cv::imshow( const std::string& winname, InputArray _img )
+void cv::imshow( const String& winname, InputArray _img )
 {
 #ifndef HAVE_OPENGL
     Mat img = _img.getMat();
@@ -281,11 +281,11 @@ void cv::imshow( const std::string& winname, InputArray _img )
 
         setOpenGlContext(winname);
 
-        if (_img.kind() == _InputArray::OPENGL_TEXTURE2D)
+        if (_img.kind() == _InputArray::OPENGL_TEXTURE)
         {
-            cv::GlTexture2D& tex = wndTexs[winname];
+            cv::ogl::Texture2D& tex = wndTexs[winname];
 
-            tex = _img.getGlTexture2D();
+            tex = _img.getOGlTexture2D();
 
             tex.setAutoRelease(false);
 
@@ -293,11 +293,11 @@ void cv::imshow( const std::string& winname, InputArray _img )
         }
         else
         {
-            cv::GlTexture2D& tex = ownWndTexs[winname];
+            cv::ogl::Texture2D& tex = ownWndTexs[winname];
 
             if (_img.kind() == _InputArray::GPU_MAT)
             {
-                cv::GlBuffer& buf = ownWndBufs[winname];
+                cv::ogl::Buffer& buf = ownWndBufs[winname];
                 buf.copyFrom(_img);
                 buf.setAutoRelease(false);
 
@@ -342,23 +342,24 @@ CV_IMPL void cvUpdateWindow(const char*)
 
 #if defined (HAVE_QT)
 
-CvFont cv::fontQt(const std::string& nameFont, int pointSize, Scalar color, int weight,  int style, int /*spacing*/)
+cv::QtFont cv::fontQt(const String& nameFont, int pointSize, Scalar color, int weight,  int style, int /*spacing*/)
 {
-return cvFontQt(nameFont.c_str(), pointSize,color,weight, style);
+    CvFont f = cvFontQt(nameFont.c_str(), pointSize,color,weight, style);
+    return *(cv::QtFont*)(&f);
 }
 
-void cv::addText( const Mat& img, const std::string& text, Point org, CvFont font)
+void cv::addText( const Mat& img, const String& text, Point org, const QtFont& font)
 {
     CvMat _img = img;
-    cvAddText( &_img, text.c_str(), org,&font);
+    cvAddText( &_img, text.c_str(), org, (CvFont*)&font);
 }
 
-void cv::displayStatusBar(const std::string& name,  const std::string& text, int delayms)
+void cv::displayStatusBar(const String& name,  const String& text, int delayms)
 {
     cvDisplayStatusBar(name.c_str(),text.c_str(), delayms);
 }
 
-void cv::displayOverlay(const std::string& name,  const std::string& text, int delayms)
+void cv::displayOverlay(const String& name,  const String& text, int delayms)
 {
     cvDisplayOverlay(name.c_str(),text.c_str(), delayms);
 }
@@ -373,40 +374,40 @@ void cv::stopLoop()
     cvStopLoop();
 }
 
-void cv::saveWindowParameters(const std::string& windowName)
+void cv::saveWindowParameters(const String& windowName)
 {
     cvSaveWindowParameters(windowName.c_str());
 }
 
-void cv::loadWindowParameters(const std::string& windowName)
+void cv::loadWindowParameters(const String& windowName)
 {
     cvLoadWindowParameters(windowName.c_str());
 }
 
-int cv::createButton(const std::string& button_name, ButtonCallback on_change, void* userdata, int button_type , bool initial_button_state  )
+int cv::createButton(const String& button_name, ButtonCallback on_change, void* userdata, int button_type , bool initial_button_state  )
 {
     return cvCreateButton(button_name.c_str(), on_change, userdata, button_type , initial_button_state );
 }
 
 #else
 
-CvFont cv::fontQt(const std::string&, int, Scalar, int,  int, int)
+cv::QtFont cv::fontQt(const String&, int, Scalar, int,  int, int)
 {
     CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
-    return CvFont();
+    return QtFont();
 }
 
-void cv::addText( const Mat&, const std::string&, Point, CvFont)
-{
-    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
-}
-
-void cv::displayStatusBar(const std::string&,  const std::string&, int)
+void cv::addText( const Mat&, const String&, Point, const QtFont&)
 {
     CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
 }
 
-void cv::displayOverlay(const std::string&,  const std::string&, int )
+void cv::displayStatusBar(const String&,  const String&, int)
+{
+    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+}
+
+void cv::displayOverlay(const String&,  const String&, int )
 {
     CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
 }
@@ -422,17 +423,17 @@ void cv::stopLoop()
     CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
 }
 
-void cv::saveWindowParameters(const std::string&)
+void cv::saveWindowParameters(const String&)
 {
     CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
 }
 
-void cv::loadWindowParameters(const std::string&)
+void cv::loadWindowParameters(const String&)
 {
     CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
 }
 
-int cv::createButton(const std::string&, ButtonCallback, void*, int , bool )
+int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 {
     CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
     return 0;
@@ -440,11 +441,11 @@ int cv::createButton(const std::string&, ButtonCallback, void*, int , bool )
 
 #endif
 
-#if   defined WIN32 || defined _WIN32         // see window_w32.cpp
+#if   defined(HAVE_WIN32UI)   // see window_w32.cpp
 #elif defined (HAVE_GTK)      // see window_gtk.cpp
-#elif defined (HAVE_COCOA)   // see window_carbon.cpp
+#elif defined (HAVE_COCOA)    // see window_carbon.cpp
 #elif defined (HAVE_CARBON)
-#elif defined (HAVE_QT) //YV see window_QT.cpp
+#elif defined (HAVE_QT)       //YV see window_QT.cpp
 
 #else
 

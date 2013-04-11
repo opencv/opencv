@@ -1,13 +1,18 @@
 #ifndef __OPENCV_TS_PERF_HPP__
 #define __OPENCV_TS_PERF_HPP__
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "ts_gtest.h"
-
-#ifdef HAVE_TBB
-#include "tbb/task_scheduler_init.h"
+#ifdef HAVE_CVCONFIG_H
+#  include "cvconfig.h"
 #endif
+
+#ifndef GTEST_CREATE_SHARED_LIBRARY
+#  ifdef BUILD_SHARED_LIBS
+#    define GTEST_LINKED_AS_SHARED_LIBRARY 1
+#  endif
+#endif
+
+#include "opencv2/core.hpp"
+#include "ts_gtest.h"
 
 #if !(defined(LOGD) || defined(LOGI) || defined(LOGW) || defined(LOGE))
 # if defined(ANDROID) && defined(USE_ANDROID_LOGGING)
@@ -208,7 +213,6 @@ private:
 #define SANITY_CHECK_KEYPOINTS(array, ...) ::perf::Regression::addKeypoints(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_MATCHES(array, ...) ::perf::Regression::addMatches(this, #array, array , ## __VA_ARGS__)
 
-#ifdef HAVE_CUDA
 class CV_EXPORTS GpuPerf
 {
 public:
@@ -216,9 +220,6 @@ public:
 };
 
 # define PERF_RUN_GPU()  ::perf::GpuPerf::targetDevice()
-#else
-# define PERF_RUN_GPU()  false
-#endif
 
 
 /*****************************************************************************************\
@@ -471,21 +472,6 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
       virtual void PerfTestBody();\
     };\
     TEST_P(fixture##_##name, name /*perf*/){ RunPerfTestBody(); }\
-    INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
-    void fixture##_##name::PerfTestBody()
-
-#define GPU_PERF_TEST_P(fixture, name, params)  \
-    class fixture##_##name : public fixture {\
-     public:\
-      fixture##_##name() {}\
-     protected:\
-      virtual void PerfTestBody();\
-    };\
-    TEST_P(fixture##_##name, name /*perf*/) \
-    { \
-        try { RunPerfTestBody(); } \
-        catch (...) { cv::gpu::resetDevice(); throw; } \
-    } \
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
     void fixture##_##name::PerfTestBody()
 

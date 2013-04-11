@@ -653,7 +653,7 @@ void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
 
 //////////////////////////////////////////////////////////////////////////////
 
-std::string matchesGraphAsString(std::vector<std::string> &pathes, std::vector<MatchesInfo> &pairwise_matches,
+String matchesGraphAsString(std::vector<String> &pathes, std::vector<MatchesInfo> &pairwise_matches,
                                 float conf_threshold)
 {
     std::stringstream str;
@@ -685,18 +685,18 @@ std::string matchesGraphAsString(std::vector<std::string> &pathes, std::vector<M
         std::pair<int,int> edge = *itr;
         if (span_tree_edges.find(edge) != span_tree_edges.end())
         {
-            std::string name_src = pathes[edge.first];
+            String name_src = pathes[edge.first];
             size_t prefix_len = name_src.find_last_of("/\\");
-            if (prefix_len != std::string::npos) prefix_len++; else prefix_len = 0;
+            if (prefix_len != String::npos) prefix_len++; else prefix_len = 0;
             name_src = name_src.substr(prefix_len, name_src.size() - prefix_len);
 
-            std::string name_dst = pathes[edge.second];
+            String name_dst = pathes[edge.second];
             prefix_len = name_dst.find_last_of("/\\");
-            if (prefix_len != std::string::npos) prefix_len++; else prefix_len = 0;
+            if (prefix_len != String::npos) prefix_len++; else prefix_len = 0;
             name_dst = name_dst.substr(prefix_len, name_dst.size() - prefix_len);
 
             int pos = edge.first*num_images + edge.second;
-            str << "\"" << name_src << "\" -- \"" << name_dst << "\""
+            str << "\"" << name_src.c_str() << "\" -- \"" << name_dst.c_str() << "\""
                 << "[label=\"Nm=" << pairwise_matches[pos].matches.size()
                 << ", Ni=" << pairwise_matches[pos].num_inliers
                 << ", C=" << pairwise_matches[pos].confidence << "\"];\n";
@@ -707,16 +707,16 @@ std::string matchesGraphAsString(std::vector<std::string> &pathes, std::vector<M
     {
         if (comps.size[comps.findSetByElem((int)i)] == 1)
         {
-            std::string name = pathes[i];
+            String name = pathes[i];
             size_t prefix_len = name.find_last_of("/\\");
-            if (prefix_len != std::string::npos) prefix_len++; else prefix_len = 0;
+            if (prefix_len != String::npos) prefix_len++; else prefix_len = 0;
             name = name.substr(prefix_len, name.size() - prefix_len);
-            str << "\"" << name << "\";\n";
+            str << "\"" << name.c_str() << "\";\n";
         }
     }
 
     str << "}";
-    return str.str();
+    return str.str().c_str();
 }
 
 std::vector<int> leaveBiggestComponent(std::vector<ImageFeatures> &features,  std::vector<MatchesInfo> &pairwise_matches,

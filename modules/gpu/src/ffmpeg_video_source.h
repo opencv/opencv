@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -57,7 +57,7 @@ namespace cv { namespace gpu
         class FFmpegVideoSource : public VideoReader_GPU::VideoSource
         {
         public:
-            FFmpegVideoSource(const std::string& fname);
+            FFmpegVideoSource(const String& fname);
             ~FFmpegVideoSource();
 
             VideoReader_GPU::FormatInfo format() const;

@@ -66,7 +66,7 @@ public:
     RBaseStream();
     virtual ~RBaseStream();
 
-    virtual bool  open( const std::string& filename );
+    virtual bool  open( const String& filename );
     virtual bool  open( const Mat& buf );
     virtual void  close();
     bool          isOpened();
@@ -123,7 +123,7 @@ public:
     WBaseStream();
     virtual ~WBaseStream();
 
-    virtual bool  open( const std::string& filename );
+    virtual bool  open( const String& filename );
     virtual bool  open( std::vector<uchar>& buf );
     virtual void  close();
     bool          isOpened();

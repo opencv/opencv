@@ -13,10 +13,10 @@
 * Authors: G. Evangelidis, INRIA, Grenoble, France
 *          M. Asbach, Fraunhofer IAIS, St. Augustin, Germany
 */
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/video/video.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/core/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/video.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/core/utility.hpp>
 
 #include <stdio.h>
 #include <string>
@@ -347,10 +347,10 @@ int main (const int argc, const char * argv[])
 
         cout << "The warped image has been saved in the file: " << warpedImFile << endl << flush;
 
-        namedWindow ("image",    CV_WINDOW_AUTOSIZE);
-        namedWindow ("template", CV_WINDOW_AUTOSIZE);
-        namedWindow ("warped image",   CV_WINDOW_AUTOSIZE);
-        namedWindow ("error (black: no error)", CV_WINDOW_AUTOSIZE);
+        namedWindow ("image",    WINDOW_AUTOSIZE);
+        namedWindow ("template", WINDOW_AUTOSIZE);
+        namedWindow ("warped image",   WINDOW_AUTOSIZE);
+        namedWindow ("error (black: no error)", WINDOW_AUTOSIZE);
 
         moveWindow  ("template", 350, 350);
         moveWindow  ("warped image",   600, 300);

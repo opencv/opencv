@@ -83,9 +83,13 @@ public class ManagerActivity extends Activity
             {
                 HardwarePlatformView.setText("Tegra 2");
             }
-            else
+            else if (HardwareDetector.PLATFORM_TEGRA3 == Platfrom)
             {
                 HardwarePlatformView.setText("Tegra 3");
+            }
+            else
+            {
+                HardwarePlatformView.setText("Tegra 4");
             }
         }
         else
@@ -299,10 +303,9 @@ public class ManagerActivity extends Activity
                 else
                     NativeLibDir = "/data/data/" + mInstalledPackageInfo[i].packageName + "/lib";
 
-                OpenCVLibraryInfo NativeInfo = new OpenCVLibraryInfo(NativeLibDir);
-
                 if (PackageName.equals("org.opencv.engine"))
                 {
+                    OpenCVLibraryInfo NativeInfo = new OpenCVLibraryInfo(NativeLibDir);
                     if (NativeInfo.status())
                     {
                         PublicName = "Built-in OpenCV library";
@@ -348,9 +351,7 @@ public class ManagerActivity extends Activity
 
                 if (null != ActivePackagePath)
                 {
-                    int start = ActivePackagePath.indexOf(mInstalledPackageInfo[i].packageName);
-                    int stop = start + mInstalledPackageInfo[i].packageName.length();
-                    if (start >= 0 && ActivePackagePath.charAt(stop) == '/')
+                    if (ActivePackagePath.equals(NativeLibDir))
                     {
                         temp.put("Activity", "y");
                         Tags = "active";
@@ -370,10 +371,10 @@ public class ManagerActivity extends Activity
                 temp.put("Version", NormalizeVersion(OpenCVersion, VersionName));
                 // HACK: OpenCV Manager for Armv7-a Neon already has Tegra3 optimizations
                 // that is enabled on proper hardware
-                if (HardwareDetector.DetectKnownPlatforms() == HardwareDetector.PLATFORM_TEGRA3 &&
+                if (HardwareDetector.DetectKnownPlatforms() >= HardwareDetector.PLATFORM_TEGRA3 &&
                   HardwareName.equals("armv7a neon ") &&  Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
                 {
-                    temp.put("Hardware", "Tegra 3");
+                    temp.put("Hardware", "Tegra");
                     if (Tags == null)
                     {
                         Tags = "optimized";
@@ -405,13 +406,22 @@ public class ManagerActivity extends Activity
         if (OpenCVersion == null || PackageVersion == null)
             return "unknown";
 
-        int dot = PackageVersion.indexOf(".");
-        if (dot == -1 || OpenCVersion.length() == 0)
+        String[] revisions = PackageVersion.split("\\.");
+
+        if (revisions.length <= 1 || OpenCVersion.length() == 0)
             return "unknown";
         else
-            return OpenCVersion.substring(0,  OpenCVersion.length()-1) + "." +
-                OpenCVersion.toCharArray()[OpenCVersion.length()-1] + "." +
-                PackageVersion.substring(0, dot) + " rev " + PackageVersion.substring(dot+1);
+            if (revisions.length == 2)
+                // the 2nd digit is revision
+                return OpenCVersion.substring(0,  OpenCVersion.length()-1) + "." +
+                    OpenCVersion.toCharArray()[OpenCVersion.length()-1] + "." +
+                    revisions[0] + " rev " + revisions[1];
+            else
+                // the 2nd digit is part of library version
+                // the 3rd digit is revision
+                return OpenCVersion.substring(0,  OpenCVersion.length()-1) + "." +
+                    OpenCVersion.toCharArray()[OpenCVersion.length()-1] + "." +
+                    revisions[0] + "." + revisions[1] + " rev " + revisions[2];
     }
 
     protected String ConvertPackageName(String Name, String Version)

@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 
@@ -95,15 +95,15 @@ public:
             double fps = fps0;
             Size frame_s = Size(img_c, img_r);
 
-            if( tag == CV_FOURCC('H', '2', '6', '1') )
+            if( tag == VideoWriter::fourcc('H', '2', '6', '1') )
                 frame_s = Size(352, 288);
-            else if( tag == CV_FOURCC('H', '2', '6', '3') )
+            else if( tag == VideoWriter::fourcc('H', '2', '6', '3') )
                 frame_s = Size(704, 576);
             /*else if( tag == CV_FOURCC('M', 'J', 'P', 'G') ||
                      tag == CV_FOURCC('j', 'p', 'e', 'g') )
                 frame_s = Size(1920, 1080);*/
 
-            if( tag == CV_FOURCC('M', 'P', 'E', 'G') )
+            if( tag == VideoWriter::fourcc('M', 'P', 'E', 'G') )
                 fps = 25;
 
             VideoWriter writer(filename, tag, fps, frame_s);
@@ -176,7 +176,7 @@ TEST(Highgui_Video, ffmpeg_image) { CV_FFmpegReadImageTest test; test.safe_run()
 
 #endif
 
-#if defined(HAVE_FFMPEG) || defined(WIN32) || defined(_WIN32)
+#if defined(HAVE_FFMPEG)
 
 //////////////////////////////// Parallel VideoWriters and VideoCaptures ////////////////////////////////////
 
@@ -201,7 +201,7 @@ public:
             std::string fileName = tempfile(stream.str().c_str());
 
             files->operator[](i) = fileName;
-            writers->operator[](i) = new VideoWriter(fileName, CV_FOURCC('X','V','I','D'), 25.0f, FrameSize);
+            writers->operator[](i) = new VideoWriter(fileName, VideoWriter::fourcc('X','V','I','D'), 25.0f, FrameSize);
 
             CV_Assert(writers->operator[](i)->isOpened());
         }
@@ -311,7 +311,7 @@ public:
             CV_Assert(capture->isOpened());
 
             const static double eps = 23.0;
-            unsigned int frameCount = static_cast<unsigned int>(capture->get(CV_CAP_PROP_FRAME_COUNT));
+            unsigned int frameCount = static_cast<unsigned int>(capture->get(CAP_PROP_FRAME_COUNT));
             CV_Assert(frameCount == WriteVideo_Invoker::FrameCount);
             Mat reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
 

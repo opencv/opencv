@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/photo/photo.hpp"
+#include "opencv2/photo.hpp"
 #include <string>
 
 using namespace cv;
@@ -62,8 +62,8 @@ TEST(Photo_DenoisingGrayscale, regression)
     string original_path = folder + "lena_noised_gaussian_sigma=10.png";
     string expected_path = folder + "lena_noised_denoised_grayscale_tw=7_sw=21_h=10.png";
 
-    Mat original = imread(original_path, CV_LOAD_IMAGE_GRAYSCALE);
-    Mat expected = imread(expected_path, CV_LOAD_IMAGE_GRAYSCALE);
+    Mat original = imread(original_path, IMREAD_GRAYSCALE);
+    Mat expected = imread(expected_path, IMREAD_GRAYSCALE);
 
     ASSERT_FALSE(original.empty()) << "Could not load input image " << original_path;
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
@@ -82,8 +82,8 @@ TEST(Photo_DenoisingColored, regression)
     string original_path = folder + "lena_noised_gaussian_sigma=10.png";
     string expected_path = folder + "lena_noised_denoised_lab12_tw=7_sw=21_h=10_h2=10.png";
 
-    Mat original = imread(original_path, CV_LOAD_IMAGE_COLOR);
-    Mat expected = imread(expected_path, CV_LOAD_IMAGE_COLOR);
+    Mat original = imread(original_path, IMREAD_COLOR);
+    Mat expected = imread(expected_path, IMREAD_COLOR);
 
     ASSERT_FALSE(original.empty()) << "Could not load input image " << original_path;
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
@@ -102,14 +102,14 @@ TEST(Photo_DenoisingGrayscaleMulti, regression)
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
 
     string expected_path = folder + "lena_noised_denoised_multi_tw=7_sw=21_h=15.png";
-    Mat expected = imread(expected_path, CV_LOAD_IMAGE_GRAYSCALE);
+    Mat expected = imread(expected_path, IMREAD_GRAYSCALE);
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
     vector<Mat> original(imgs_count);
     for (int i = 0; i < imgs_count; i++)
     {
         string original_path = format("%slena_noised_gaussian_sigma=20_multi_%d.png", folder.c_str(), i);
-        original[i] = imread(original_path, CV_LOAD_IMAGE_GRAYSCALE);
+        original[i] = imread(original_path, IMREAD_GRAYSCALE);
         ASSERT_FALSE(original[i].empty()) << "Could not load input image " << original_path;
     }
 
@@ -127,14 +127,14 @@ TEST(Photo_DenoisingColoredMulti, regression)
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
 
     string expected_path = folder + "lena_noised_denoised_multi_lab12_tw=7_sw=21_h=10_h2=15.png";
-    Mat expected = imread(expected_path, CV_LOAD_IMAGE_COLOR);
+    Mat expected = imread(expected_path, IMREAD_COLOR);
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
     vector<Mat> original(imgs_count);
     for (int i = 0; i < imgs_count; i++)
     {
         string original_path = format("%slena_noised_gaussian_sigma=20_multi_%d.png", folder.c_str(), i);
-        original[i] = imread(original_path, CV_LOAD_IMAGE_COLOR);
+        original[i] = imread(original_path, IMREAD_COLOR);
         ASSERT_FALSE(original[i].empty()) << "Could not load input image " << original_path;
     }
 

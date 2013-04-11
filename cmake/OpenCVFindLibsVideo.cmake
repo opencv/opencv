@@ -2,17 +2,55 @@
 #  Detect 3rd-party video IO libraries
 # ----------------------------------------------------------------------------
 
+ocv_clear_vars(HAVE_VFW)
+if (WITH_VFW)
+  TRY_COMPILE(HAVE_VFW
+    "${OPENCV_BINARY_DIR}/CMakeFiles/CMakeTmp"
+    "${OpenCV_SOURCE_DIR}/cmake/checks/vfwtest.cpp"
+    CMAKE_FLAGS "-DLINK_LIBRARIES:STRING=vfw32"
+    OUTPUT_VARIABLE OUTPUT)
+ endif(WITH_VFW)
+
 # --- GStreamer ---
 ocv_clear_vars(HAVE_GSTREAMER)
-if(WITH_GSTREAMER)
-  CHECK_MODULE(gstreamer-base-0.10 HAVE_GSTREAMER)
-  if(HAVE_GSTREAMER)
-    CHECK_MODULE(gstreamer-app-0.10 HAVE_GSTREAMER)
+# try to find gstreamer 0.10 first
+if(WITH_GSTREAMER AND NOT WITH_GSTREAMER_1_X)
+  CHECK_MODULE(gstreamer-base-0.10 HAVE_GSTREAMER_BASE)
+  CHECK_MODULE(gstreamer-video-0.10 HAVE_GSTREAMER_VIDEO)
+  CHECK_MODULE(gstreamer-app-0.10 HAVE_GSTREAMER_APP)
+  CHECK_MODULE(gstreamer-riff-0.10 HAVE_GSTREAMER_RIFF)
+  CHECK_MODULE(gstreamer-pbutils-0.10 HAVE_GSTREAMER_PBUTILS)
+
+  if(HAVE_GSTREAMER_BASE AND HAVE_GSTREAMER_VIDEO AND HAVE_GSTREAMER_APP AND HAVE_GSTREAMER_RIFF AND HAVE_GSTREAMER_PBUTILS)
+      set(HAVE_GSTREAMER TRUE)
+      set(GSTREAMER_BASE_VERSION ${ALIASOF_gstreamer-base-0.10_VERSION})
+      set(GSTREAMER_VIDEO_VERSION ${ALIASOF_gstreamer-video-0.10_VERSION})
+      set(GSTREAMER_APP_VERSION ${ALIASOF_gstreamer-app-0.10_VERSION})
+      set(GSTREAMER_RIFF_VERSION ${ALIASOF_gstreamer-riff-0.10_VERSION})
+      set(GSTREAMER_PBUTILS_VERSION ${ALIASOF_gstreamer-pbutils-0.10_VERSION})
   endif()
-  if(HAVE_GSTREAMER)
-    CHECK_MODULE(gstreamer-video-0.10 HAVE_GSTREAMER)
+
+endif(WITH_GSTREAMER AND NOT WITH_GSTREAMER_1_X)
+
+# if gstreamer 0.10 was not found, or we specified we wanted 1.x, try to find it
+if(WITH_GSTREAMER_1_X OR NOT HAVE_GSTREAMER)
+  #check for 1.x
+  CHECK_MODULE(gstreamer-base-1.0 HAVE_GSTREAMER_BASE)
+  CHECK_MODULE(gstreamer-video-1.0 HAVE_GSTREAMER_VIDEO)
+  CHECK_MODULE(gstreamer-app-1.0 HAVE_GSTREAMER_APP)
+  CHECK_MODULE(gstreamer-riff-1.0 HAVE_GSTREAMER_RIFF)
+  CHECK_MODULE(gstreamer-pbutils-1.0 HAVE_GSTREAMER_PBUTILS)
+
+  if(HAVE_GSTREAMER_BASE AND HAVE_GSTREAMER_VIDEO AND HAVE_GSTREAMER_APP AND HAVE_GSTREAMER_RIFF AND HAVE_GSTREAMER_PBUTILS)
+      set(HAVE_GSTREAMER TRUE)
+      set(GSTREAMER_BASE_VERSION ${ALIASOF_gstreamer-base-1.0_VERSION})
+      set(GSTREAMER_VIDEO_VERSION ${ALIASOF_gstreamer-video-1.0_VERSION})
+      set(GSTREAMER_APP_VERSION ${ALIASOF_gstreamer-app-1.0_VERSION})
+      set(GSTREAMER_RIFF_VERSION ${ALIASOF_gstreamer-riff-1.0_VERSION})
+      set(GSTREAMER_PBUTILS_VERSION ${ALIASOF_gstreamer-pbutils-1.0_VERSION})
   endif()
-endif(WITH_GSTREAMER)
+
+endif(WITH_GSTREAMER_1_X OR NOT HAVE_GSTREAMER)
 
 # --- unicap ---
 ocv_clear_vars(HAVE_UNICAP)
@@ -37,7 +75,7 @@ if(WITH_PVAPI)
       set(PVAPI_SDK_SUBDIR x86)
     elseif(X86_64)
       set(PVAPI_SDK_SUBDIR x64)
-    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES arm)
+    elseif(ARM)
       set(PVAPI_SDK_SUBDIR arm)
     endif()
 
@@ -111,7 +149,7 @@ endif(WITH_XIMEA)
 # --- FFMPEG ---
 ocv_clear_vars(HAVE_FFMPEG HAVE_FFMPEG_CODEC HAVE_FFMPEG_FORMAT HAVE_FFMPEG_UTIL HAVE_FFMPEG_SWSCALE HAVE_GENTOO_FFMPEG HAVE_FFMPEG_FFMPEG)
 if(WITH_FFMPEG)
-  if(WIN32)
+  if(WIN32 AND NOT ARM)
     include("${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/ffmpeg_version.cmake")
   elseif(UNIX)
     CHECK_MODULE(libavcodec HAVE_FFMPEG_CODEC)
@@ -175,11 +213,16 @@ if(WITH_FFMPEG)
   endif(APPLE)
 endif(WITH_FFMPEG)
 
-# --- VideoInput ---
-if(WITH_VIDEOINPUT)
+# --- VideoInput/DirectShow ---
+if(WITH_DSHOW)
   # always have VideoInput on Windows
-  set(HAVE_VIDEOINPUT 1)
-endif(WITH_VIDEOINPUT)
+  set(HAVE_DSHOW 1)
+endif(WITH_DSHOW)
+
+# --- VideoInput/Microsoft Media Foundation ---
+if(WITH_MSMF)
+  check_include_file(Mfapi.h HAVE_MSMF)
+endif(WITH_MSMF)
 
 # --- Extra HighGUI libs on Windows ---
 if(WIN32)

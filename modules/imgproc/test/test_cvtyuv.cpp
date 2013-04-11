@@ -30,6 +30,16 @@ public:
     static YUVreader* getReader(int code);
 };
 
+class RGBreader
+{
+public:
+    virtual ~RGBreader() {}
+    virtual RGB read(const Mat& rgb, int row, int col) = 0;
+    virtual int channels() = 0;
+
+    static RGBreader* getReader(int code);
+};
+
 class RGBwriter
 {
 public:
@@ -54,6 +64,21 @@ public:
     virtual int channels() { return 1; }
 
     static GRAYwriter* getWriter(int code);
+};
+
+class YUVwriter
+{
+public:
+    virtual ~YUVwriter() {}
+
+    virtual void write(Mat& yuv, int row, int col, const YUV& val) = 0;
+    virtual int channels() = 0;
+    virtual Size size(Size imgSize) = 0;
+
+    virtual bool requiresEvenHeight() { return true; }
+    virtual bool requiresEvenWidth() { return true; }
+
+    static YUVwriter* getWriter(int code);
 };
 
 class RGB888Writer : public RGBwriter
@@ -97,6 +122,42 @@ class BGRA8888Writer : public RGBwriter
     }
 
     int channels() { return 4; }
+};
+
+class YUV420pWriter: public YUVwriter
+{
+    int channels() { return 1; }
+    Size size(Size imgSize) { return Size(imgSize.width, imgSize.height + imgSize.height/2); }
+};
+
+class YV12Writer: public YUV420pWriter
+{
+    void write(Mat& yuv, int row, int col, const YUV& val)
+    {
+        int h = yuv.rows * 2 / 3;
+
+        yuv.ptr<uchar>(row)[col] = val[0];
+        if( row % 2 == 0 && col % 2 == 0 )
+        {
+            yuv.ptr<uchar>(h + row/4)[col/2 + ((row/2) % 2) * (yuv.cols/2)] = val[2];
+            yuv.ptr<uchar>(h + (row/2 + h/2)/2)[col/2 + ((row/2 + h/2) % 2) * (yuv.cols/2)] = val[1];
+        }
+    }
+};
+
+class I420Writer: public YUV420pWriter
+{
+    void write(Mat& yuv, int row, int col, const YUV& val)
+    {
+        int h = yuv.rows * 2 / 3;
+
+        yuv.ptr<uchar>(row)[col] = val[0];
+        if( row % 2 == 0 && col % 2 == 0 )
+        {
+            yuv.ptr<uchar>(h + row/4)[col/2 + ((row/2) % 2) * (yuv.cols/2)] = val[1];
+            yuv.ptr<uchar>(h + (row/2 + h/2)/2)[col/2 + ((row/2 + h/2) % 2) * (yuv.cols/2)] = val[2];
+        }
+    }
 };
 
 class YUV420Reader: public YUVreader
@@ -212,6 +273,49 @@ class YUV888Reader : public YUVreader
     bool requiresEvenWidth() { return false; }
 };
 
+class RGB888Reader : public RGBreader
+{
+    RGB read(const Mat& rgb, int row, int col)
+    {
+        return rgb.at<RGB>(row, col);
+    }
+
+    int channels() { return 3; }
+};
+
+class BGR888Reader : public RGBreader
+{
+    RGB read(const Mat& rgb, int row, int col)
+    {
+        RGB tmp = rgb.at<RGB>(row, col);
+        return RGB(tmp[2], tmp[1], tmp[0]);
+    }
+
+    int channels() { return 3; }
+};
+
+class RGBA8888Reader : public RGBreader
+{
+    RGB read(const Mat& rgb, int row, int col)
+    {
+        Vec4b rgba = rgb.at<Vec4b>(row, col);
+        return RGB(rgba[0], rgba[1], rgba[2]);
+    }
+
+    int channels() { return 4; }
+};
+
+class BGRA8888Reader : public RGBreader
+{
+    RGB read(const Mat& rgb, int row, int col)
+    {
+        Vec4b rgba = rgb.at<Vec4b>(row, col);
+        return RGB(rgba[2], rgba[1], rgba[0]);
+    }
+
+    int channels() { return 4; }
+};
+
 class YUV2RGB_Converter
 {
 public:
@@ -234,6 +338,23 @@ public:
     uchar convert(YUV yuv)
     {
         return yuv[0];
+    }
+};
+
+class RGB2YUV_Converter
+{
+public:
+    YUV convert(RGB rgb)
+    {
+        int r = rgb[0];
+        int g = rgb[1];
+        int b = rgb[2];
+
+        uchar y = saturate_cast<uchar>((int)( 0.257f*r + 0.504f*g + 0.098f*b + 0.5f) + 16);
+        uchar u = saturate_cast<uchar>((int)(-0.148f*r - 0.291f*g + 0.439f*b + 0.5f) + 128);
+        uchar v = saturate_cast<uchar>((int)( 0.439f*r - 0.368f*g - 0.071f*b + 0.5f) + 128);
+
+        return YUV(y, u, v);
     }
 };
 
@@ -293,6 +414,27 @@ YUVreader* YUVreader::getReader(int code)
     default:
         return 0;
     }
+}
+
+RGBreader* RGBreader::getReader(int code)
+{
+    switch(code)
+    {
+    case CV_RGB2YUV_YV12:
+    case CV_RGB2YUV_I420:
+        return new RGB888Reader();
+    case CV_BGR2YUV_YV12:
+    case CV_BGR2YUV_I420:
+        return new BGR888Reader();
+    case CV_RGBA2YUV_I420:
+    case CV_RGBA2YUV_YV12:
+        return new RGBA8888Reader();
+    case CV_BGRA2YUV_YV12:
+    case CV_BGRA2YUV_I420:
+        return new BGRA8888Reader();
+    default:
+        return 0;
+    };
 }
 
 RGBwriter* RGBwriter::getWriter(int code)
@@ -355,6 +497,25 @@ GRAYwriter* GRAYwriter::getWriter(int code)
     }
 }
 
+YUVwriter* YUVwriter::getWriter(int code)
+{
+    switch(code)
+    {
+    case CV_RGB2YUV_YV12:
+    case CV_BGR2YUV_YV12:
+    case CV_RGBA2YUV_YV12:
+    case CV_BGRA2YUV_YV12:
+        return new YV12Writer();
+    case CV_RGB2YUV_I420:
+    case CV_BGR2YUV_I420:
+    case CV_RGBA2YUV_I420:
+    case CV_BGRA2YUV_I420:
+        return new I420Writer();
+    default:
+        return 0;
+    };
+}
+
 template<class convertor>
 void referenceYUV2RGB(const Mat& yuv, Mat& rgb, YUVreader* yuvReader, RGBwriter* rgbWriter)
 {
@@ -375,6 +536,64 @@ void referenceYUV2GRAY(const Mat& yuv, Mat& rgb, YUVreader* yuvReader, GRAYwrite
             grayWriter->write(rgb, row, col, cvt.convert(yuvReader->read(yuv, row, col)));
 }
 
+template<class convertor>
+void referenceRGB2YUV(const Mat& rgb, Mat& yuv, RGBreader* rgbReader, YUVwriter* yuvWriter)
+{
+    convertor cvt;
+
+    for(int row = 0; row < rgb.rows; ++row)
+        for(int col = 0; col < rgb.cols; ++col)
+            yuvWriter->write(yuv, row, col, cvt.convert(rgbReader->read(rgb, row, col)));
+}
+
+struct ConversionYUV
+{
+    ConversionYUV( const int code )
+    {
+        yuvReader_  = YUVreader :: getReader(code);
+        yuvWriter_  = YUVwriter :: getWriter(code);
+        rgbReader_  = RGBreader :: getReader(code);
+        rgbWriter_  = RGBwriter :: getWriter(code);
+        grayWriter_ = GRAYwriter:: getWriter(code);
+    }
+
+    int getDcn()
+    {
+        return (rgbWriter_ != 0) ? rgbWriter_->channels() : ((grayWriter_ != 0) ? grayWriter_->channels() : yuvWriter_->channels());
+    }
+
+    int getScn()
+    {
+        return (yuvReader_ != 0) ? yuvReader_->channels() : rgbReader_->channels();
+    }
+
+    Size getSrcSize( const Size& imgSize )
+    {
+        return (yuvReader_ != 0) ? yuvReader_->size(imgSize) : imgSize;
+    }
+
+    Size getDstSize( const Size& imgSize )
+    {
+        return (yuvWriter_ != 0) ? yuvWriter_->size(imgSize) : imgSize;
+    }
+
+    bool requiresEvenHeight()
+    {
+        return (yuvReader_ != 0) ? yuvReader_->requiresEvenHeight() : ((yuvWriter_ != 0) ? yuvWriter_->requiresEvenHeight() : false);
+    }
+
+    bool requiresEvenWidth()
+    {
+        return (yuvReader_ != 0) ? yuvReader_->requiresEvenWidth() : ((yuvWriter_ != 0) ? yuvWriter_->requiresEvenWidth() : false);
+    }
+
+    YUVreader*  yuvReader_;
+    YUVwriter*  yuvWriter_;
+    RGBreader*  rgbReader_;
+    RGBwriter*  rgbWriter_;
+    GRAYwriter* grayWriter_;
+};
+
 CV_ENUM(YUVCVTS, CV_YUV2RGB_NV12, CV_YUV2BGR_NV12, CV_YUV2RGB_NV21, CV_YUV2BGR_NV21,
                  CV_YUV2RGBA_NV12, CV_YUV2BGRA_NV12, CV_YUV2RGBA_NV21, CV_YUV2BGRA_NV21,
                  CV_YUV2RGB_YV12, CV_YUV2BGR_YV12, CV_YUV2RGB_IYUV, CV_YUV2BGR_IYUV,
@@ -383,7 +602,8 @@ CV_ENUM(YUVCVTS, CV_YUV2RGB_NV12, CV_YUV2BGR_NV12, CV_YUV2RGB_NV21, CV_YUV2BGR_N
                  CV_YUV2RGB_YUY2, CV_YUV2BGR_YUY2, CV_YUV2RGB_YVYU, CV_YUV2BGR_YVYU,
                  CV_YUV2RGBA_YUY2, CV_YUV2BGRA_YUY2, CV_YUV2RGBA_YVYU, CV_YUV2BGRA_YVYU,
                  CV_YUV2GRAY_420, CV_YUV2GRAY_UYVY, CV_YUV2GRAY_YUY2,
-                 CV_YUV2BGR, CV_YUV2RGB);
+                 CV_YUV2BGR, CV_YUV2RGB, CV_RGB2YUV_YV12, CV_BGR2YUV_YV12, CV_RGBA2YUV_YV12,
+                 CV_BGRA2YUV_YV12, CV_RGB2YUV_I420, CV_BGR2YUV_I420, CV_RGBA2YUV_I420, CV_BGRA2YUV_I420);
 
 typedef ::testing::TestWithParam<YUVCVTS> Imgproc_ColorYUV;
 
@@ -392,31 +612,32 @@ TEST_P(Imgproc_ColorYUV, accuracy)
     int code = GetParam();
     RNG& random = theRNG();
 
-    YUVreader* yuvReader = YUVreader::getReader(code);
-    RGBwriter* rgbWriter = RGBwriter::getWriter(code);
-    GRAYwriter* grayWriter = GRAYwriter::getWriter(code);
+    ConversionYUV cvt(code);
 
-    int dcn = (rgbWriter == 0) ? grayWriter->channels() : rgbWriter->channels();
-
+    const int scn = cvt.getScn();
+    const int dcn = cvt.getDcn();
     for(int iter = 0; iter < 30; ++iter)
     {
         Size sz(random.uniform(1, 641), random.uniform(1, 481));
 
-        if(yuvReader->requiresEvenWidth()) sz.width += sz.width % 2;
-        if(yuvReader->requiresEvenHeight()) sz.height += sz.height % 2;
+        if(cvt.requiresEvenWidth())  sz.width  += sz.width % 2;
+        if(cvt.requiresEvenHeight()) sz.height += sz.height % 2;
 
-        Size ysz = yuvReader->size(sz);
-        Mat src = Mat(ysz.height, ysz.width * yuvReader->channels(), CV_8UC1).reshape(yuvReader->channels());
+        Size srcSize = cvt.getSrcSize(sz);
+        Mat src = Mat(srcSize.height, srcSize.width * scn, CV_8UC1).reshape(scn);
 
-        Mat dst = Mat(sz.height, sz.width * dcn, CV_8UC1).reshape(dcn);
-        Mat gold(sz, CV_8UC(dcn));
+        Size dstSize = cvt.getDstSize(sz);
+        Mat dst = Mat(dstSize.height, dstSize.width * dcn, CV_8UC1).reshape(dcn);
+        Mat gold(dstSize, CV_8UC(dcn));
 
         random.fill(src, RNG::UNIFORM, 0, 256);
 
-        if(rgbWriter)
-            referenceYUV2RGB<YUV2RGB_Converter>(src, gold, yuvReader, rgbWriter);
-        else
-            referenceYUV2GRAY<YUV2GRAY_Converter>(src, gold, yuvReader, grayWriter);
+        if(cvt.rgbWriter_)
+            referenceYUV2RGB<YUV2RGB_Converter>  (src, gold, cvt.yuvReader_, cvt.rgbWriter_);
+        else if(cvt.grayWriter_)
+            referenceYUV2GRAY<YUV2GRAY_Converter>(src, gold, cvt.yuvReader_, cvt.grayWriter_);
+        else if(cvt.yuvWriter_)
+            referenceRGB2YUV<RGB2YUV_Converter>  (src, gold, cvt.rgbReader_, cvt.yuvWriter_);
 
         cv::cvtColor(src, dst, code, -1);
 
@@ -429,40 +650,41 @@ TEST_P(Imgproc_ColorYUV, roi_accuracy)
     int code = GetParam();
     RNG& random = theRNG();
 
-    YUVreader* yuvReader = YUVreader::getReader(code);
-    RGBwriter* rgbWriter = RGBwriter::getWriter(code);
-    GRAYwriter* grayWriter = GRAYwriter::getWriter(code);
+    ConversionYUV cvt(code);
 
-    int dcn = (rgbWriter == 0) ? grayWriter->channels() : rgbWriter->channels();
-
+    const int scn = cvt.getScn();
+    const int dcn = cvt.getDcn();
     for(int iter = 0; iter < 30; ++iter)
     {
         Size sz(random.uniform(1, 641), random.uniform(1, 481));
 
-        if(yuvReader->requiresEvenWidth()) sz.width += sz.width % 2;
-        if(yuvReader->requiresEvenHeight()) sz.height += sz.height % 2;
+        if(cvt.requiresEvenWidth())  sz.width  += sz.width % 2;
+        if(cvt.requiresEvenHeight()) sz.height += sz.height % 2;
 
         int roi_offset_top = random.uniform(0, 6);
         int roi_offset_bottom = random.uniform(0, 6);
         int roi_offset_left = random.uniform(0, 6);
         int roi_offset_right = random.uniform(0, 6);
 
-        Size ysz = yuvReader->size(sz);
+        Size srcSize = cvt.getSrcSize(sz);
+        Mat src_full(srcSize.height + roi_offset_top + roi_offset_bottom, srcSize.width + roi_offset_left + roi_offset_right, CV_8UC(scn));
 
-        Mat src_full(ysz.height + roi_offset_top + roi_offset_bottom, ysz.width + roi_offset_left + roi_offset_right, CV_8UC(yuvReader->channels()));
-        Mat dst_full(sz.height  + roi_offset_left + roi_offset_right, sz.width + roi_offset_top + roi_offset_bottom, CV_8UC(dcn), Scalar::all(0));
+        Size dstSize = cvt.getDstSize(sz);
+        Mat dst_full(dstSize.height  + roi_offset_left + roi_offset_right, dstSize.width + roi_offset_top + roi_offset_bottom, CV_8UC(dcn), Scalar::all(0));
         Mat gold_full(dst_full.size(), CV_8UC(dcn), Scalar::all(0));
 
         random.fill(src_full, RNG::UNIFORM, 0, 256);
 
-        Mat src = src_full(Range(roi_offset_top, roi_offset_top + ysz.height), Range(roi_offset_left, roi_offset_left + ysz.width));
-        Mat dst = dst_full(Range(roi_offset_left, roi_offset_left + sz.height), Range(roi_offset_top, roi_offset_top + sz.width));
-        Mat gold = gold_full(Range(roi_offset_left, roi_offset_left + sz.height), Range(roi_offset_top, roi_offset_top + sz.width));
+        Mat src = src_full(Range(roi_offset_top, roi_offset_top + srcSize.height), Range(roi_offset_left, roi_offset_left + srcSize.width));
+        Mat dst = dst_full(Range(roi_offset_left, roi_offset_left + dstSize.height), Range(roi_offset_top, roi_offset_top + dstSize.width));
+        Mat gold = gold_full(Range(roi_offset_left, roi_offset_left + dstSize.height), Range(roi_offset_top, roi_offset_top + dstSize.width));
 
-        if(rgbWriter)
-            referenceYUV2RGB<YUV2RGB_Converter>(src, gold, yuvReader, rgbWriter);
-        else
-            referenceYUV2GRAY<YUV2GRAY_Converter>(src, gold, yuvReader, grayWriter);
+        if(cvt.rgbWriter_)
+            referenceYUV2RGB<YUV2RGB_Converter>  (src, gold, cvt.yuvReader_, cvt.rgbWriter_);
+        else if(cvt.grayWriter_)
+            referenceYUV2GRAY<YUV2GRAY_Converter>(src, gold, cvt.yuvReader_, cvt.grayWriter_);
+        else if(cvt.yuvWriter_)
+            referenceRGB2YUV<RGB2YUV_Converter>  (src, gold, cvt.rgbReader_, cvt.yuvWriter_);
 
         cv::cvtColor(src, dst, code, -1);
 
@@ -475,7 +697,9 @@ INSTANTIATE_TEST_CASE_P(cvt420, Imgproc_ColorYUV,
                       (int)CV_YUV2RGBA_NV12, (int)CV_YUV2BGRA_NV12, (int)CV_YUV2RGBA_NV21, (int)CV_YUV2BGRA_NV21,
                       (int)CV_YUV2RGB_YV12, (int)CV_YUV2BGR_YV12, (int)CV_YUV2RGB_IYUV, (int)CV_YUV2BGR_IYUV,
                       (int)CV_YUV2RGBA_YV12, (int)CV_YUV2BGRA_YV12, (int)CV_YUV2RGBA_IYUV, (int)CV_YUV2BGRA_IYUV,
-                      (int)CV_YUV2GRAY_420));
+                      (int)CV_YUV2GRAY_420, (int)CV_RGB2YUV_YV12, (int)CV_BGR2YUV_YV12, (int)CV_RGBA2YUV_YV12,
+                      (int)CV_BGRA2YUV_YV12, (int)CV_RGB2YUV_I420, (int)CV_BGR2YUV_I420, (int)CV_RGBA2YUV_I420,
+                      (int)CV_BGRA2YUV_I420));
 
 INSTANTIATE_TEST_CASE_P(cvt422, Imgproc_ColorYUV,
     ::testing::Values((int)CV_YUV2RGB_UYVY, (int)CV_YUV2BGR_UYVY, (int)CV_YUV2RGBA_UYVY, (int)CV_YUV2BGRA_UYVY,

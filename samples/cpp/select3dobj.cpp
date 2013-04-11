@@ -8,10 +8,11 @@
  *
  */
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/imgproc.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -211,11 +212,11 @@ static int select3DBox(const string& windowname, const string& selWinName, const
     for(;;)
     {
         float Z = 0.f;
-        bool dragging = (mouse.buttonState & CV_EVENT_FLAG_LBUTTON) != 0;
+        bool dragging = (mouse.buttonState & EVENT_FLAG_LBUTTON) != 0;
         int npt = nobjpt;
 
-        if( (mouse.event == CV_EVENT_LBUTTONDOWN ||
-             mouse.event == CV_EVENT_LBUTTONUP ||
+        if( (mouse.event == EVENT_LBUTTONDOWN ||
+             mouse.event == EVENT_LBUTTONUP ||
              dragging) && nobjpt < 4 )
         {
             Point2f m = mouse.pt;
@@ -258,9 +259,9 @@ static int select3DBox(const string& windowname, const string& selWinName, const
             }
             box[npt] = image2plane(imgpt[npt], R, tvec, cameraMatrix, npt<3 ? 0 : Z);
 
-            if( (npt == 0 && mouse.event == CV_EVENT_LBUTTONDOWN) ||
+            if( (npt == 0 && mouse.event == EVENT_LBUTTONDOWN) ||
                (npt > 0 && norm(box[npt] - box[npt-1]) > eps &&
-                mouse.event == CV_EVENT_LBUTTONUP) )
+                mouse.event == EVENT_LBUTTONUP) )
             {
                 nobjpt++;
                 if( nobjpt < 4 )

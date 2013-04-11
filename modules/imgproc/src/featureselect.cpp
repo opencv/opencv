@@ -92,7 +92,7 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         }
     }
 
-    sort( tmpCorners, greaterThanPtr<float>() );
+    std::sort( tmpCorners.begin(), tmpCorners.end(), greaterThanPtr<float>() );
     std::vector<Point2f> corners;
     size_t i, j, total = tmpCorners.size(), ncorners = 0;
 

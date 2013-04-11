@@ -51,11 +51,34 @@ CV_INIT_ALGORITHM(Detector, "SoftCascade.Detector",
                   obj.info()->addParam(obj, "scales",      obj.scales);
                   obj.info()->addParam(obj, "rejCriteria", obj.rejCriteria));
 
+CV_INIT_ALGORITHM(SCascade, "CascadeDetector.SCascade",
+                  obj.info()->addParam(obj, "minScale", obj.minScale);
+                  obj.info()->addParam(obj, "maxScale", obj.maxScale);
+                  obj.info()->addParam(obj, "scales",   obj.scales));
 
 bool initModule_softcascade(void)
 {
-    Ptr<Algorithm> sc1 = createDetector();
-    return (sc1->info() != 0);
+    Ptr<Algorithm> sc = createSCascade_hidden();
+    Ptr<Algorithm> sc1 = createDetector_hidden();
+    return (sc1->info() != 0) && (sc->info() != 0);
+}
+
+namespace internal {
+void error(const char *error_string, const char *file, const int line, const char *func)
+{
+    int code = CV_GpuApiCallError;
+
+    if (std::uncaught_exception())
+    {
+        const char* errorStr = cvErrorStr(code);
+        const char* function = func ? func : "unknown function";
+
+        std::cerr << "OpenCV Error: " << errorStr << "(" << error_string << ") in " << function << ", file " << file << ", line " << line;
+        std::cerr.flush();
+    }
+    else
+        cv::error( cv::Exception(code, error_string, func, file, line) );
+}
 }
 
 } }

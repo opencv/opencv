@@ -380,6 +380,7 @@ void CvFuzzyMeanShiftTracker::SearchWindow::initDepthValues(IplImage *maskImage,
                 {
                     if (*depthData)
                     {
+                        d = *depthData;
                         m1 += d;
                         if (d < mind)
                             mind = d;

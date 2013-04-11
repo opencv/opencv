@@ -1046,7 +1046,7 @@ cvFitEllipse2( const CvArr* array )
 CV_IMPL  CvRect
 cvBoundingRect( CvArr* array, int update )
 {
-    CvRect  rect = { 0, 0, 0, 0 };
+    CvRect  rect;
     CvContour contour_header;
     CvSeq* ptseq = 0;
     CvSeqBlock block;

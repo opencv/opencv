@@ -12,7 +12,6 @@
 #define ARCH_ARMv7_NAME "armv7a"
 #define ARCH_ARMv8_NAME "armv8"
 
-
 #define FEATURES_HAS_VFPv3d16_NAME "vfpv3d16"
 #define FEATURES_HAS_VFPv3_NAME "vfpv3"
 #define FEATURES_HAS_NEON_NAME "neon"
@@ -25,7 +24,7 @@
 #define PLATFORM_TEGRA_NAME "tegra"
 #define PLATFORM_TEGRA2_NAME "tegra2"
 #define PLATFORM_TEGRA3_NAME "tegra3"
-
+#define PLATFORM_TEGRA4_NAME "tegra4"
 
 class PackageInfo
 {

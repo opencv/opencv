@@ -2350,7 +2350,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
                 coeffs.size() == Size(1, n0) ||
                 coeffs.size() == Size(1, n0+1)) );
 
-    _roots.create(n0, 1, ctype, -1, true, DEPTH_MASK_FLT);
+    _roots.create(n0, 1, ctype, -1, true, _OutputArray::DEPTH_MASK_FLT);
     Mat roots = _roots.getMat();
 
     int i = -1, n = 0;
@@ -2482,7 +2482,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
 
     int n = coeffs0.cols + coeffs0.rows - 2;
 
-    _roots0.create(n, 1, CV_MAKETYPE(cdepth, 2), -1, true, DEPTH_MASK_FLT);
+    _roots0.create(n, 1, CV_MAKETYPE(cdepth, 2), -1, true, _OutputArray::DEPTH_MASK_FLT);
     Mat roots0 = _roots0.getMat();
 
     AutoBuffer<C> buf(n*2+2);
@@ -2550,7 +2550,9 @@ cvSolveCubic( const CvMat* coeffs, CvMat* roots )
 
 void cvSolvePoly(const CvMat* a, CvMat *r, int maxiter, int)
 {
-    cv::Mat _a = cv::cvarrToMat(a), _r = cv::cvarrToMat(r), _r0 = r;
+    cv::Mat _a = cv::cvarrToMat(a);
+    cv::Mat _r = cv::cvarrToMat(r);
+    cv::Mat _r0 = _r;
     cv::solvePoly(_a, _r, maxiter);
     CV_Assert( _r.data == _r0.data ); // check that the array of roots was not reallocated
 }

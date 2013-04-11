@@ -8,24 +8,28 @@
 
 #include "numpy/ndarrayobject.h"
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/contrib/contrib.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/contrib.hpp"
 #include "opencv2/flann/miniflann.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/ml/ml.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/softcascade/softcascade.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/ml.hpp"
+#include "opencv2/features2d.hpp"
+#include "opencv2/objdetect.hpp"
+#include "opencv2/softcascade.hpp"
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/video/background_segm.hpp"
-#include "opencv2/photo/photo.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/photo.hpp"
+#include "opencv2/highgui.hpp"
+
+#include "opencv2/highgui/highgui_c.h"
+#include "opencv2/photo/photo_c.h"
 
 #include "opencv2/opencv_modules.hpp"
 
 #ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/nonfree.hpp"
+#  include "opencv2/nonfree.hpp"
 #endif
 
 using cv::flann::IndexParams;
@@ -114,7 +118,7 @@ typedef std::vector<Rect> vector_Rect;
 typedef std::vector<KeyPoint> vector_KeyPoint;
 typedef std::vector<Mat> vector_Mat;
 typedef std::vector<DMatch> vector_DMatch;
-typedef std::vector<std::string> vector_string;
+typedef std::vector<String> vector_String;
 typedef std::vector<std::vector<Point> > vector_vector_Point;
 typedef std::vector<std::vector<Point2f> > vector_vector_Point2f;
 typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
@@ -125,6 +129,14 @@ typedef Ptr<FeatureDetector> Ptr_FeatureDetector;
 typedef Ptr<DescriptorExtractor> Ptr_DescriptorExtractor;
 typedef Ptr<Feature2D> Ptr_Feature2D;
 typedef Ptr<DescriptorMatcher> Ptr_DescriptorMatcher;
+typedef Ptr<BackgroundSubtractor> Ptr_BackgroundSubtractor;
+typedef Ptr<BackgroundSubtractorMOG> Ptr_BackgroundSubtractorMOG;
+typedef Ptr<BackgroundSubtractorMOG2> Ptr_BackgroundSubtractorMOG2;
+typedef Ptr<BackgroundSubtractorGMG> Ptr_BackgroundSubtractorGMG;
+
+typedef Ptr<StereoMatcher> Ptr_StereoMatcher;
+typedef Ptr<StereoBM> Ptr_StereoBM;
+typedef Ptr<StereoSGBM> Ptr_StereoSGBM;
 
 typedef Ptr<cv::softcascade::ChannelFeatureBuilder> Ptr_ChannelFeatureBuilder;
 
@@ -514,7 +526,7 @@ static bool pyopencv_to(PyObject* obj, double& value, const char* name = "<unkno
     (void)name;
     if(!obj || obj == Py_None)
         return true;
-    if(PyInt_CheckExact(obj))
+    if(!!PyInt_CheckExact(obj))
         value = (double)PyInt_AS_LONG(obj);
     else
         value = PyFloat_AsDouble(obj);
@@ -531,7 +543,7 @@ static bool pyopencv_to(PyObject* obj, float& value, const char* name = "<unknow
     (void)name;
     if(!obj || obj == Py_None)
         return true;
-    if(PyInt_CheckExact(obj))
+    if(!!PyInt_CheckExact(obj))
         value = (float)PyInt_AS_LONG(obj);
     else
         value = (float)PyFloat_AsDouble(obj);
@@ -543,12 +555,12 @@ static PyObject* pyopencv_from(int64 value)
     return PyLong_FromLongLong(value);
 }
 
-static PyObject* pyopencv_from(const std::string& value)
+static PyObject* pyopencv_from(const String& value)
 {
     return PyString_FromString(value.empty() ? "" : value.c_str());
 }
 
-static bool pyopencv_to(PyObject* obj, std::string& value, const char* name = "<unknown>")
+static bool pyopencv_to(PyObject* obj, String& value, const char* name = "<unknown>")
 {
     (void)name;
     if(!obj || obj == Py_None)
@@ -556,7 +568,7 @@ static bool pyopencv_to(PyObject* obj, std::string& value, const char* name = "<
     char* str = PyString_AsString(obj);
     if(!str)
         return false;
-    value = std::string(str);
+    value = String(str);
     return true;
 }
 
@@ -627,7 +639,7 @@ static inline bool pyopencv_to(PyObject* obj, Point& p, const char* name = "<unk
     (void)name;
     if(!obj || obj == Py_None)
         return true;
-    if(PyComplex_CheckExact(obj))
+    if(!!PyComplex_CheckExact(obj))
     {
         Py_complex c = PyComplex_AsCComplex(obj);
         p.x = saturate_cast<int>(c.real);
@@ -642,7 +654,7 @@ static inline bool pyopencv_to(PyObject* obj, Point2f& p, const char* name = "<u
     (void)name;
     if(!obj || obj == Py_None)
         return true;
-    if(PyComplex_CheckExact(obj))
+    if(!!PyComplex_CheckExact(obj))
     {
         Py_complex c = PyComplex_AsCComplex(obj);
         p.x = saturate_cast<float>(c.real);
@@ -673,6 +685,11 @@ static inline bool pyopencv_to(PyObject* obj, Vec3d& v, const char* name = "<unk
 static inline PyObject* pyopencv_from(const Vec3d& v)
 {
     return Py_BuildValue("(ddd)", v[0], v[1], v[2]);
+}
+
+static inline PyObject* pyopencv_from(const Vec2d& v)
+{
+    return Py_BuildValue("(dd)", v[0], v[1]);
 }
 
 static inline PyObject* pyopencv_from(const Point2d& p)
@@ -899,14 +916,14 @@ template<> struct pyopencvVecConverter<DMatch>
     }
 };
 
-template<> struct pyopencvVecConverter<std::string>
+template<> struct pyopencvVecConverter<String>
 {
-    static bool to(PyObject* obj, std::vector<std::string>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<String>& value, const ArgInfo info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
 
-    static PyObject* from(const std::vector<std::string>& value)
+    static PyObject* from(const std::vector<String>& value)
     {
         return pyopencv_from_generic_vec(value);
     }
@@ -961,7 +978,7 @@ static inline PyObject* pyopencv_from(const Moments& m)
                          "mu20", m.mu20, "mu11", m.mu11, "mu02", m.mu02,
                          "mu30", m.mu30, "mu21", m.mu21, "mu12", m.mu12, "mu03", m.mu03,
                          "nu20", m.nu20, "nu11", m.nu11, "nu02", m.nu02,
-                         "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "mu03", m.nu03);
+                         "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "nu03", m.nu03);
 }
 
 static inline PyObject* pyopencv_from(const CvDTreeNode* node)
@@ -987,13 +1004,13 @@ static bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name
             PyObject* item = PyList_GET_ITEM(values, i);
             if( !PyString_Check(key) )
                 break;
-            std::string k = PyString_AsString(key);
+            String k = PyString_AsString(key);
             if( PyString_Check(item) )
             {
                 const char* value = PyString_AsString(item);
                 p.setString(k, value);
             }
-            else if( PyBool_Check(item) )
+            else if( !!PyBool_Check(item) )
                 p.setBool(k, item == Py_True);
             else if( PyInt_Check(item) )
             {

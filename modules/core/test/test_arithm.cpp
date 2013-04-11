@@ -35,7 +35,7 @@ struct BaseElemWiseOp
 
     virtual int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, DEPTH_MASK_ALL_BUT_8S, 1,
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1,
                                   ninputs > 1 ? ARITHM_MAX_CHANNELS : 4);
     }
 
@@ -425,7 +425,7 @@ struct CmpOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, DEPTH_MASK_ALL_BUT_8S, 1, 1);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 1);
     }
 
     double getMaxErr(int)
@@ -455,7 +455,7 @@ struct CmpSOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, DEPTH_MASK_ALL_BUT_8S, 1, 1);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 1);
     }
     double getMaxErr(int)
     {
@@ -478,7 +478,7 @@ struct CopyOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
     }
     double getMaxErr(int)
     {
@@ -501,7 +501,7 @@ struct SetOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
     }
     double getMaxErr(int)
     {
@@ -718,8 +718,8 @@ struct ConvertScaleOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        int srctype = cvtest::randomType(rng, DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
-        ddepth = cvtest::randomType(rng, DEPTH_MASK_ALL, 1, 1);
+        int srctype = cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
+        ddepth = cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, 1);
         return srctype;
     }
     double getMaxErr(int)
@@ -957,7 +957,7 @@ struct ExpOp : public BaseElemWiseOp
     ExpOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {};
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, DEPTH_MASK_FLT, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_FLT, 1, ARITHM_MAX_CHANNELS);
     }
     void getValueRange(int depth, double& minval, double& maxval)
     {
@@ -984,7 +984,7 @@ struct LogOp : public BaseElemWiseOp
     LogOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {};
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, DEPTH_MASK_FLT, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_FLT, 1, ARITHM_MAX_CHANNELS);
     }
     void getValueRange(int depth, double& minval, double& maxval)
     {
@@ -1070,7 +1070,7 @@ struct CartToPolarToCartOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, DEPTH_MASK_FLT, 1, 1);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_FLT, 1, 1);
     }
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
@@ -1157,7 +1157,7 @@ struct CountNonZeroOp : public BaseElemWiseOp
     {}
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, DEPTH_MASK_ALL, 1, 1);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, 1);
     }
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
@@ -1237,7 +1237,7 @@ struct NormOp : public BaseElemWiseOp
     };
     int getRandomType(RNG& rng)
     {
-        int type = cvtest::randomType(rng, DEPTH_MASK_ALL_BUT_8S, 1, 4);
+        int type = cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 4);
         for(;;)
         {
             normType = rng.uniform(1, 8);
@@ -1283,7 +1283,7 @@ struct MinMaxLocOp : public BaseElemWiseOp
     };
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, DEPTH_MASK_ALL_BUT_8S, 1, 1);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 1);
     }
     void saveOutput(const vector<int>& minidx, const vector<int>& maxidx,
                     double minval, double maxval, Mat& dst)
@@ -1550,4 +1550,17 @@ TEST(Core_Add, AddToColumnWhen4Rows)
     cv::Mat m2 = (cv::Mat_<double>(4, 2) << 1, 12, 3, 14, 5, 16, 7, 18);
 
     ASSERT_EQ(0, countNonZero(m1 - m2));
+}
+
+TEST(Core_round, CvRound)
+{
+    ASSERT_EQ(2, cvRound(2.0));
+    ASSERT_EQ(2, cvRound(2.1));
+    ASSERT_EQ(-2, cvRound(-2.1));
+    ASSERT_EQ(3, cvRound(2.8));
+    ASSERT_EQ(-3, cvRound(-2.8));
+    ASSERT_EQ(2, cvRound(2.5));
+    ASSERT_EQ(4, cvRound(3.5));
+    ASSERT_EQ(-2, cvRound(-2.5));
+    ASSERT_EQ(-4, cvRound(-3.5));
 }

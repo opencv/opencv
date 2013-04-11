@@ -47,6 +47,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/photo/photo_c.h"
 
 #undef CV_MAT_ELEM_PTR_FAST
 #define CV_MAT_ELEM_PTR_FAST( mat, row, col, pix_size )  \
@@ -716,6 +717,12 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
       }\
    }
 
+namespace cv {
+template<> void cv::Ptr<IplConvKernel>::delete_obj()
+{
+  cvReleaseStructuringElement(&obj);
+}
+}
 
 void
 cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_img,
@@ -776,7 +783,7 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
     cvSet(f,cvScalar(INSIDE,0,0,0),mask);
     cvSet(t,cvScalar(0,0,0,0),band);
 
-    if( flags == CV_INPAINT_TELEA )
+    if( flags == cv::INPAINT_TELEA )
     {
         out = cvCreateMat(erows, ecols, CV_8UC1);
         el_range = cvCreateStructuringElementEx(2*range+1,2*range+1,
@@ -793,10 +800,10 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
         icvCalcFMM(out,t,Out,true);
         icvTeleaInpaintFMM(mask,t,output_img,range,Heap);
     }
-    else if (flags == CV_INPAINT_NS) {
+    else if (flags == cv::INPAINT_NS) {
         icvNSInpaintFMM(mask,t,output_img,range,Heap);
     } else {
-        CV_Error( CV_StsBadArg, "The flags argument must be one of CV_INPAINT_TELEA or CV_INPAINT_NS" );
+        CV_Error( cv::Error::StsBadArg, "The flags argument must be one of CV_INPAINT_TELEA or CV_INPAINT_NS" );
     }
 }
 

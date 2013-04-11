@@ -883,4 +883,129 @@ CV_IMPL void cvRandShuffle( CvArr* arr, CvRNG* _rng, double iter_factor )
     cv::randShuffle( dst, iter_factor, &rng );
 }
 
+// Mersenne Twister random number generator.
+// Inspired by http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/MT2002/CODES/mt19937ar.c
+
+/*
+   A C-program for MT19937, with initialization improved 2002/1/26.
+   Coded by Takuji Nishimura and Makoto Matsumoto.
+
+   Before using, initialize the state by using init_genrand(seed)
+   or init_by_array(init_key, key_length).
+
+   Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,
+   All rights reserved.
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions
+   are met:
+
+     1. Redistributions of source code must retain the above copyright
+        notice, this list of conditions and the following disclaimer.
+
+     2. Redistributions in binary form must reproduce the above copyright
+        notice, this list of conditions and the following disclaimer in the
+        documentation and/or other materials provided with the distribution.
+
+     3. The names of its contributors may not be used to endorse or promote
+        products derived from this software without specific prior written
+        permission.
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+   A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+   Any feedback is very welcome.
+   http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html
+   email: m-mat @ math.sci.hiroshima-u.ac.jp (remove space)
+*/
+
+cv::RNG_MT19937::RNG_MT19937(unsigned s) { seed(s); }
+
+cv::RNG_MT19937::RNG_MT19937() { seed(5489U); }
+
+void cv::RNG_MT19937::seed(unsigned s)
+{
+    state[0]= s;
+    for (mti = 1; mti < N; mti++)
+    {
+        /* See Knuth TAOCP Vol2. 3rd Ed. P.106 for multiplier. */
+        state[mti] = (1812433253U * (state[mti - 1] ^ (state[mti - 1] >> 30)) + mti);
+    }
+}
+
+unsigned cv::RNG_MT19937::next()
+{
+    /* mag01[x] = x * MATRIX_A  for x=0,1 */
+    static unsigned mag01[2] = { 0x0U, /*MATRIX_A*/ 0x9908b0dfU};
+
+    const unsigned UPPER_MASK = 0x80000000U;
+    const unsigned LOWER_MASK = 0x7fffffffU;
+
+    /* generate N words at one time */
+    if (mti >= N)
+    {
+        int kk = 0;
+
+        for (; kk < N - M; ++kk)
+        {
+            unsigned y = (state[kk] & UPPER_MASK) | (state[kk + 1] & LOWER_MASK);
+            state[kk] = state[kk + M] ^ (y >> 1) ^ mag01[y & 0x1U];
+        }
+
+        for (; kk < N - 1; ++kk)
+        {
+            unsigned y = (state[kk] & UPPER_MASK) | (state[kk + 1] & LOWER_MASK);
+            state[kk] = state[kk + (M - N)] ^ (y >> 1) ^ mag01[y & 0x1U];
+        }
+
+        unsigned y = (state[N - 1] & UPPER_MASK) | (state[0] & LOWER_MASK);
+        state[N - 1] = state[M - 1] ^ (y >> 1) ^ mag01[y & 0x1U];
+
+        mti = 0;
+    }
+
+    unsigned y = state[mti++];
+
+    /* Tempering */
+    y ^= (y >> 11);
+    y ^= (y <<  7) & 0x9d2c5680U;
+    y ^= (y << 15) & 0xefc60000U;
+    y ^= (y >> 18);
+
+    return y;
+}
+
+cv::RNG_MT19937::operator unsigned() { return next(); }
+
+cv::RNG_MT19937::operator int() { return (int)next();}
+
+cv::RNG_MT19937::operator float() { return next() * (1.f / 4294967296.f); }
+
+cv::RNG_MT19937::operator double()
+{
+    unsigned a = next() >> 5;
+    unsigned b = next() >> 6;
+    return (a * 67108864.0 + b) * (1.0 / 9007199254740992.0);
+}
+
+int cv::RNG_MT19937::uniform(int a, int b) { return (int)(next() % (b - a) + a); }
+
+float cv::RNG_MT19937::uniform(float a, float b) { return ((float)*this)*(b - a) + a; }
+
+double cv::RNG_MT19937::uniform(double a, double b) { return ((double)*this)*(b - a) + a; }
+
+unsigned cv::RNG_MT19937::operator ()(unsigned b) { return next() % b; }
+
+unsigned cv::RNG_MT19937::operator ()() { return next(); }
+
 /* End of file. */

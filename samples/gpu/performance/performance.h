@@ -6,8 +6,8 @@
 #include <vector>
 #include <numeric>
 #include <string>
-#include "opencv2/core/core.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/gpu.hpp"
 
 #define TAB "    "
 

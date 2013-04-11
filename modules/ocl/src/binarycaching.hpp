@@ -68,13 +68,13 @@ namespace cv
             }
 
             //lookup the binary given the file name
-            cl_program progLookup(std::string srcsign);
+            cl_program progLookup(String srcsign);
 
             //add program to the cache
-            void addProgram(std::string srcsign, cl_program program);
+            void addProgram(String srcsign, cl_program program);
             void releaseProgram();
 
-            std::map <std::string, cl_program> codeCache;
+            std::map <String, cl_program> codeCache;
             unsigned int cacheSize;
             //The presumed watermark for the cache volume (256MB). Is it enough?
             //We may need more delicate algorithms when necessary later.

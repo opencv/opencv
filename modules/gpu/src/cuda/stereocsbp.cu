@@ -42,13 +42,13 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/reduce.hpp"
-#include "opencv2/gpu/device/functional.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
+#include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
+#include "opencv2/core/cuda/functional.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace stereocsbp
     {
@@ -146,7 +146,7 @@ namespace cv { namespace gpu { namespace device
 
                 for(int i = 0; i < nr_plane; i++)
                 {
-                    T minimum = device::numeric_limits<T>::max();
+                    T minimum = cudev::numeric_limits<T>::max();
                     int id = 0;
                     for(int d = 0; d < cndisp; d++)
                     {
@@ -324,7 +324,7 @@ namespace cv { namespace gpu { namespace device
             case 1: init_data_cost<T, 1><<<grid, threads, 0, stream>>>(h, w, level); break;
             case 3: init_data_cost<T, 3><<<grid, threads, 0, stream>>>(h, w, level); break;
             case 4: init_data_cost<T, 4><<<grid, threads, 0, stream>>>(h, w, level); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "init_data_cost_caller_");
+            default: CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
         }
 
@@ -343,7 +343,7 @@ namespace cv { namespace gpu { namespace device
             case 1: init_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
             case 3: init_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
             case 4: init_data_cost_reduce<T, winsz, 4><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "init_data_cost_reduce_caller_");
+            default: CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
         }
 
@@ -506,7 +506,7 @@ namespace cv { namespace gpu { namespace device
             case 1: compute_data_cost<T, 1><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
             case 3: compute_data_cost<T, 3><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
             case 4: compute_data_cost<T, 4><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "compute_data_cost_caller_");
+            default: CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
         }
 
@@ -526,7 +526,7 @@ namespace cv { namespace gpu { namespace device
             case 1: compute_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
             case 3: compute_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
             case 4: compute_data_cost_reduce<T, winsz, 4><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "compute_data_cost_reduce_caller_");
+            default: CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
         }
 
@@ -859,6 +859,6 @@ namespace cv { namespace gpu { namespace device
         template void compute_disp(const float* u, const float* d, const float* l, const float* r, const float* data_cost_selected, const float* disp_selected, size_t msg_step,
             const PtrStepSz<short>& disp, int nr_plane, cudaStream_t stream);
     } // namespace stereocsbp
-}}} // namespace cv { namespace gpu { namespace device {
+}}} // namespace cv { namespace gpu { namespace cudev {
 
 #endif /* CUDA_DISABLER */

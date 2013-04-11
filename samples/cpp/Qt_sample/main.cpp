@@ -4,7 +4,13 @@
 
 #include <iostream>
 #include <vector>
-#include <opencv/highgui.h>
+
+#include <opencv2/core/core_c.h>
+#include <opencv2/imgproc/imgproc_c.h>
+#include <opencv2/legacy/compat.hpp>
+#include <opencv2/calib3d.hpp>
+
+#include <opencv2/highgui.hpp>
 
 #if defined WIN32 || defined _WIN32 || defined WINCE
     #include <windows.h>
@@ -20,9 +26,6 @@
     #include <GL/gl.h>
 #endif
 
-#include <opencv/cxcore.h>
-#include <opencv/cv.h>
-
 using namespace std;
 using namespace cv;
 
@@ -33,7 +36,7 @@ static void help()
             "It works off of the video: cube4.avi\n"
             "Using OpenCV version %s\n" << CV_VERSION << "\n\n"
 " 1). This demo is mainly based on work from Javier Barandiaran Martirena\n"
-"     See this page http://opencv.willowgarage.com/wiki/Posit.\n"
+"     See this page http://code.opencv.org/projects/opencv/wiki/Posit.\n"
 " 2). This is a demo to illustrate how to use **OpenGL Callback**.\n"
 " 3). You need Qt binding to compile this sample with OpenGL support enabled.\n"
 " 4). The features' detection is very basic and could highly be improved \n"
@@ -118,7 +121,7 @@ static void foundCorners(vector<CvPoint2D32f> *srcImagePoints,IplImage* source, 
     cvNormalize(grayImage, grayImage, 0, 255, CV_MINMAX);
     cvThreshold( grayImage, grayImage, 26, 255, CV_THRESH_BINARY_INV);//25
 
-    Mat MgrayImage = grayImage;
+    Mat MgrayImage = cv::cvarrToMat(grayImage);
     //For debug
     //MgrayImage = MgrayImage.clone();//deep copy
     vector<vector<Point> > contours;
@@ -184,7 +187,7 @@ static void foundCorners(vector<CvPoint2D32f> *srcImagePoints,IplImage* source, 
         }
         srcImagePoints->at(3) = srcImagePoints_temp.at(index);
 
-        Mat Msource = source;
+        Mat Msource = cv::cvarrToMat(source);
         stringstream ss;
         for(size_t i = 0 ; i<srcImagePoints_temp.size(); i++ )
         {
@@ -224,19 +227,20 @@ static void createOpenGLMatrixFrom(float *posePOSIT,const CvMatr32f &rotationMat
 int main(void)
 {
     help();
-    CvCapture* video = cvCaptureFromFile("cube4.avi");
-    CV_Assert(video);
+    VideoCapture video("cube4.avi");
+    CV_Assert(video.isOpened());
 
-    IplImage* source = cvCreateImage(cvGetSize(cvQueryFrame(video)),8,3);
-    IplImage* grayImage = cvCreateImage(cvGetSize(cvQueryFrame(video)),8,1);
+    Mat frame; video >> frame;
 
-    cvNamedWindow("original",CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
-    cvNamedWindow("POSIT",CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
+    IplImage* grayImage = cvCreateImage(frame.size(),8,1);
+
+    namedWindow("original", WINDOW_AUTOSIZE | WINDOW_FREERATIO);
+    namedWindow("POSIT", WINDOW_AUTOSIZE | WINDOW_FREERATIO);
     displayOverlay("POSIT", "We lost the 4 corners' detection quite often (the red circles disappear). This demo is only to illustrate how to use OpenGL callback.\n -- Press ESC to exit.", 10000);
     //For debug
     //cvNamedWindow("tempGray",CV_WINDOW_AUTOSIZE);
     float OpenGLMatrix[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    cvSetOpenGlDrawCallback("POSIT",on_opengl,OpenGLMatrix);
+    setOpenGlDrawCallback("POSIT",on_opengl,OpenGLMatrix);
 
     vector<CvPoint3D32f> modelPoints;
     initPOSIT(&modelPoints);
@@ -251,26 +255,27 @@ int main(void)
     vector<CvPoint2D32f> srcImagePoints(4,cvPoint2D32f(0,0));
 
 
-    while(cvWaitKey(33) != 27)
+    while(waitKey(33) != 27)
     {
-        source=cvQueryFrame(video);
-        cvShowImage("original",source);
+        video >> frame;
+        imshow("original", frame);
 
-        foundCorners(&srcImagePoints,source,grayImage);
+        IplImage source = frame;
+        foundCorners(&srcImagePoints, &source, grayImage);
         cvPOSIT( positObject, &srcImagePoints[0], FOCAL_LENGTH, criteria, rotation_matrix, translation_vector );
         createOpenGLMatrixFrom(OpenGLMatrix,rotation_matrix,translation_vector);
 
-        cvShowImage("POSIT",source);
+        imshow("POSIT", frame);
         //For debug
         //cvShowImage("tempGray",grayImage);
 
-        if (cvGetCaptureProperty(video,CV_CAP_PROP_POS_AVI_RATIO)>0.99)
-            cvSetCaptureProperty(video,CV_CAP_PROP_POS_AVI_RATIO,0);
+        if (video.get(CAP_PROP_POS_AVI_RATIO) > 0.99)
+            video.set(CAP_PROP_POS_AVI_RATIO, 0);
     }
 
-    cvDestroyAllWindows();
+    destroyAllWindows();
     cvReleaseImage(&grayImage);
-    cvReleaseCapture(&video);
+    video.release();
     cvReleasePOSITObject(&positObject);
 
     return 0;

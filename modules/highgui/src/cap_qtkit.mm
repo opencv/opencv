@@ -29,7 +29,7 @@
  */
 
 #include "precomp.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include <iostream>
 #import <QTKit/QTKit.h>
 

@@ -40,6 +40,8 @@
 //M*/
 
 #include "test_precomp.hpp"
+
+#if 0
 #include "_modelest.h"
 
 using namespace std;
@@ -225,3 +227,6 @@ void CV_ModelEstimator2_Test::run_func()
 }
 
 TEST(Calib3d_ModelEstimator2, accuracy) { CV_ModelEstimator2_Test test; test.safe_run(); }
+
+#endif
+

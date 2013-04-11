@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 '''
 This sample demonstrates Canny edge detection.
@@ -11,15 +11,21 @@ Usage:
 '''
 
 import cv2
+
+# relative module
 import video
+
+# built-in module
 import sys
 
 
 if __name__ == '__main__':
     print __doc__
 
-    try: fn = sys.argv[1]
-    except: fn = 0
+    try:
+        fn = sys.argv[1]
+    except:
+        fn = 0
 
     def nothing(*arg):
         pass

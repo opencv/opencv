@@ -44,7 +44,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/core.hpp"
+
 using namespace std;
 #ifdef HAVE_OPENCL
 
@@ -71,11 +71,11 @@ TEST_P(HOG, GetDescriptors)
     switch (type)
     {
     case CV_8UC1:
-        cv::cvtColor(img_rgb, img, CV_BGR2GRAY);
+        cv::cvtColor(img_rgb, img, cv::COLOR_BGR2GRAY);
         break;
     case CV_8UC4:
     default:
-        cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+        cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
         break;
     }
     cv::ocl::oclMat d_img(img);
@@ -128,11 +128,11 @@ TEST_P(HOG, Detect)
     switch (type)
     {
     case CV_8UC1:
-        cv::cvtColor(img_rgb, img, CV_BGR2GRAY);
+        cv::cvtColor(img_rgb, img, cv::COLOR_BGR2GRAY);
         break;
     case CV_8UC4:
     default:
-        cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+        cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
         break;
     }
     cv::ocl::oclMat d_img(img);

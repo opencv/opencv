@@ -545,7 +545,7 @@ void Core_CrossProductTest::run_func()
 
 void Core_CrossProductTest::prepare_to_validation( int )
 {
-    CvScalar a = {{0,0,0,0}}, b = {{0,0,0,0}}, c = {{0,0,0,0}};
+    CvScalar a(0), b(0), c(0);
 
     if( test_mat[INPUT][0].rows > 1 )
     {
@@ -2292,9 +2292,9 @@ void Core_SolvePolyTest::run( int )
                 cvFlip(&amat, &amat, 0);
                 int nr2;
                 if( cubic_case == 0 )
-                    nr2 = cv::solveCubic(cv::Mat(&amat),umat2);
+                    nr2 = cv::solveCubic(cv::cvarrToMat(&amat),umat2);
                 else
-                    nr2 = cv::solveCubic(cv::Mat_<float>(cv::Mat(&amat)), umat2);
+                    nr2 = cv::solveCubic(cv::Mat_<float>(cv::cvarrToMat(&amat)), umat2);
                 cvFlip(&amat, &amat, 0);
                 if(nr2 > 0)
                     std::sort(ar2.begin(), ar2.begin()+nr2, pred_double());
@@ -2598,6 +2598,35 @@ TEST(Core_SVBkSb, accuracy) { Core_SVBkSbTest test; test.safe_run(); }
 TEST(Core_Trace, accuracy) { Core_TraceTest test; test.safe_run(); }
 TEST(Core_SolvePoly, accuracy) { Core_SolvePolyTest test; test.safe_run(); }
 TEST(Core_Phase, accuracy) { Core_PhaseTest test; test.safe_run(); }
+
+
+TEST(Core_SVD, flt)
+{
+    float a[] = {
+    1.23377746e+011f, -7.05490125e+010f, -4.18380882e+010f, -11693456.f,
+    -39091328.f, 77492224.f, -7.05490125e+010f, 2.36211143e+011f,
+    -3.51093473e+010f, 70773408.f, -4.83386156e+005f, -129560368.f,
+    -4.18380882e+010f, -3.51093473e+010f, 9.25311222e+010f, -49052424.f,
+    43922752.f, 12176842.f, -11693456.f, 70773408.f, -49052424.f, 8.40836094e+004f,
+    5.17475293e+003f, -1.16122949e+004f, -39091328.f, -4.83386156e+005f,
+    43922752.f, 5.17475293e+003f, 5.16047969e+004f, 5.68887842e+003f, 77492224.f,
+    -129560368.f, 12176842.f, -1.16122949e+004f, 5.68887842e+003f,
+    1.28060578e+005f
+    };
+
+    float b[] = {
+    283751232.f, 2.61604198e+009f, -745033216.f, 2.31125625e+005f,
+    -4.52429188e+005f, -1.37596525e+006f
+    };
+
+    Mat A(6, 6, CV_32F, a);
+    Mat B(6, 1, CV_32F, b);
+    Mat X, B1;
+    solve(A, B, X, DECOMP_SVD);
+    B1 = A*X;
+    EXPECT_LE(norm(B1, B, NORM_L2 + NORM_RELATIVE), FLT_EPSILON*10);
+}
+
 
 // TODO: eigenvv, invsqrt, cbrt, fastarctan, (round, floor, ceil(?)),
 

@@ -1,6 +1,6 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
@@ -10,7 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2009-2010, NVIDIA Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -64,7 +65,7 @@
 
 #include "NPP_staging/NPP_staging.hpp"
 #include "NCVBroxOpticalFlow.hpp"
-#include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/core/cuda/utility.hpp"
 
 
 typedef NCVVectorAlloc<Ncv32f> FloatVector;
@@ -1140,8 +1141,8 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
                 ScaleVector(ptrVNew->ptr(), ptrVNew->ptr(), 1.0f/scale_factor, ns * nh, stream);
                 ncvAssertCUDALastErrorReturn((int)NCV_CUDA_ERROR);
 
-                cv::gpu::device::swap<FloatVector*>(ptrU, ptrUNew);
-                cv::gpu::device::swap<FloatVector*>(ptrV, ptrVNew);
+                cv::gpu::cudev::swap<FloatVector*>(ptrU, ptrUNew);
+                cv::gpu::cudev::swap<FloatVector*>(ptrV, ptrVNew);
             }
             scale /= scale_factor;
         }

@@ -44,6 +44,8 @@
 
 #include <limits>
 
+#define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
+
 namespace cv
 {
 
@@ -316,7 +318,7 @@ public:
             _mm_storel_epi64((__m128i*)(dst+6*6), g1);
         }
 
-        return bayer - (bayer_end - width);
+        return int(bayer - (bayer_end - width));
     }
 
     bool use_simd;
@@ -496,7 +498,7 @@ public:
         srcmat(_srcmat), dstmat(_dstmat), Start_with_green(_start_with_green), Blue(_blue), size(_size)
     {
     }
-    
+
     virtual void operator() (const Range& range) const
     {
         SIMDInterpolator vecOp;
@@ -506,24 +508,24 @@ public:
 
         int bayer_step = (int)(srcmat.step/sizeof(T));
         const T* bayer0 = reinterpret_cast<const T*>(srcmat.data) + bayer_step * range.start;
-        
+
         int dst_step = (int)(dstmat.step/sizeof(T));
         T* dst0 = reinterpret_cast<T*>(dstmat.data) + (range.start + 1) * dst_step + dcn + 1;
-        
+
         int blue = Blue, start_with_green = Start_with_green;
         if (range.start % 2)
         {
             blue = -blue;
             start_with_green = !start_with_green;
         }
-        
+
         for (int i = range.start; i < range.end; bayer0 += bayer_step, dst0 += dst_step, ++i )
         {
             int t0, t1;
             const T* bayer = bayer0;
             T* dst = dst0;
             const T* bayer_end = bayer + size.width;
-            
+
             // in case of when size.width <= 2
             if( size.width <= 0 )
             {
@@ -540,27 +542,27 @@ public:
                 }
                 continue;
             }
-            
+
             if( start_with_green )
             {
                 t0 = (bayer[1] + bayer[bayer_step*2+1] + 1) >> 1;
                 t1 = (bayer[bayer_step] + bayer[bayer_step+2] + 1) >> 1;
-                
+
                 dst[-blue] = (T)t0;
                 dst[0] = bayer[bayer_step+1];
                 dst[blue] = (T)t1;
                 if (dcn == 4)
                     dst[2] = alpha; // alpha channel
-                
+
                 bayer++;
                 dst += dcn;
             }
-            
+
             // simd optimization only for dcn == 3
             int delta = dcn == 4 ? 0 : vecOp.bayer2RGB(bayer, bayer_step, dst, size.width, blue);
             bayer += delta;
             dst += delta*dcn;
-            
+
             if (dcn == 3) // Bayer to BGR
             {
                 if( blue > 0 )
@@ -574,7 +576,7 @@ public:
                         dst[-1] = (T)t0;
                         dst[0] = (T)t1;
                         dst[1] = bayer[bayer_step+1];
-                        
+
                         t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
                         t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
                         dst[2] = (T)t0;
@@ -593,7 +595,7 @@ public:
                         dst[1] = (T)t0;
                         dst[0] = (T)t1;
                         dst[-1] = bayer[bayer_step+1];
-                        
+
                         t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
                         t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
                         dst[4] = (T)t0;
@@ -617,7 +619,7 @@ public:
                         dst[0] = (T)t1;
                         dst[1] = bayer[bayer_step+1];
                         dst[2] = alpha; // alpha channel
-                        
+
                         t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
                         t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
                         dst[3] = (T)t0;
@@ -638,7 +640,7 @@ public:
                         dst[0] = (T)t1;
                         dst[1] = (T)t0;
                         dst[2] = alpha; // alpha channel
-                        
+
                         t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
                         t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
                         dst[3] = (T)t1;
@@ -648,7 +650,7 @@ public:
                     }
                 }
             }
-            
+
             // if skip one pixel at the end of row
             if( bayer < bayer_end )
             {
@@ -664,7 +666,7 @@ public:
                 bayer++;
                 dst += dcn;
             }
-            
+
             // fill the last and the first pixels of row accordingly
             if (dcn == 3)
             {
@@ -686,12 +688,12 @@ public:
                 dst0[size.width*dcn+1] = dst0[size.width*dcn-3];
                 dst0[size.width*dcn+2] = dst0[size.width*dcn-2]; // alpha channel
             }
-            
+
             blue = -blue;
             start_with_green = !start_with_green;
         }
     }
-    
+
 private:
     Mat srcmat;
     Mat dstmat;
@@ -706,7 +708,7 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
     Size size = srcmat.size();
     int blue = code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ? -1 : 1;
     int start_with_green = code == CV_BayerGB2BGR || code == CV_BayerGR2BGR;
- 
+
     int dcn = dstmat.channels();
     size.height -= 2;
     size.width -= 2;
@@ -717,7 +719,7 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
         Bayer2RGB_Invoker<T, SIMDInterpolator> invoker(srcmat, dstmat, start_with_green, blue, size);
         parallel_for_(range, invoker, dstmat.total()/static_cast<double>(1<<16));
     }
-    
+
     // filling the first and the last rows
     size = dstmat.size();
     T* dst0 = (T*)dstmat.data;
@@ -1018,9 +1020,9 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                     R = G + cvRound((Rs - Gs)*scale[ng]);
                     B = G + cvRound((Bs - Gs)*scale[ng]);
                 }
-                dstrow[blueIdx] = CV_CAST_8U(B);
-                dstrow[1] = CV_CAST_8U(G);
-                dstrow[blueIdx^2] = CV_CAST_8U(R);
+                dstrow[blueIdx] = cv::saturate_cast<uchar>(B);
+                dstrow[1] = cv::saturate_cast<uchar>(G);
+                dstrow[blueIdx^2] = cv::saturate_cast<uchar>(R);
                 greenCell = !greenCell;
             }
 

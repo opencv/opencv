@@ -87,7 +87,7 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
     int offb    = src2.offset;
     int offc    = dst.offset;
 
-
+    cl_command_queue clq = (cl_command_queue)src1.clCxt->oclCommandQueue();
     switch(src1.type())
     {
     case CV_32FC1:
@@ -97,11 +97,12 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
         offa /= sizeof(float);
         offb /= sizeof(float);
         offc /= sizeof(float);
+
         openCLSafeCall
         (
             clAmdBlasSgemmEx(order, transA, transB, M, N, K,
                              alpha, (const cl_mem)src1.data, offa, lda, (const cl_mem)src2.data, offb, ldb,
-                             beta, (cl_mem)dst.data, offc, ldc, 1, &src1.clCxt->impl->clCmdQueue, 0, NULL, NULL)
+                             beta, (cl_mem)dst.data, offc, ldc, 1, &clq, 0, NULL, NULL)
         );
         break;
     case CV_64FC1:
@@ -115,42 +116,42 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
         (
             clAmdBlasDgemmEx(order, transA, transB, M, N, K,
                              alpha, (const cl_mem)src1.data, offa, lda, (const cl_mem)src2.data, offb, ldb,
-                             beta, (cl_mem)dst.data, offc, ldc, 1, &src1.clCxt->impl->clCmdQueue, 0, NULL, NULL)
+                             beta, (cl_mem)dst.data, offc, ldc, 1, &clq, 0, NULL, NULL)
         );
         break;
     case CV_32FC2:
     {
-        lda  /= sizeof(std::complex<float>);
-        ldb  /= sizeof(std::complex<float>);
-        ldc  /= sizeof(std::complex<float>);
-        offa /= sizeof(std::complex<float>);
-        offb /= sizeof(std::complex<float>);
-        offc /= sizeof(std::complex<float>);
+        lda  /= (2*sizeof(float));
+        ldb  /= (2*sizeof(float));
+        ldc  /= (2*sizeof(float));
+        offa /= (2*sizeof(float));
+        offb /= (2*sizeof(float));
+        offc /= (2*sizeof(float));
         cl_float2 alpha_2 = {{alpha, 0}};
         cl_float2 beta_2  = {{beta, 0}};
         openCLSafeCall
         (
             clAmdBlasCgemmEx(order, transA, transB, M, N, K,
                              alpha_2, (const cl_mem)src1.data, offa, lda, (const cl_mem)src2.data, offb, ldb,
-                             beta_2, (cl_mem)dst.data, offc, ldc, 1, &src1.clCxt->impl->clCmdQueue, 0, NULL, NULL)
+                             beta_2, (cl_mem)dst.data, offc, ldc, 1, &clq, 0, NULL, NULL)
         );
     }
     break;
     case CV_64FC2:
     {
-        lda  /= sizeof(std::complex<double>);
-        ldb  /= sizeof(std::complex<double>);
-        ldc  /= sizeof(std::complex<double>);
-        offa /= sizeof(std::complex<double>);
-        offb /= sizeof(std::complex<double>);
-        offc /= sizeof(std::complex<double>);
+        lda  /= (2*sizeof(double));
+        ldb  /= (2*sizeof(double));
+        ldc  /= (2*sizeof(double));
+        offa /= (2*sizeof(double));
+        offb /= (2*sizeof(double));
+        offc /= (2*sizeof(double));
         cl_double2 alpha_2 = {{alpha, 0}};
         cl_double2 beta_2  = {{beta, 0}};
         openCLSafeCall
         (
             clAmdBlasZgemmEx(order, transA, transB, M, N, K,
                              alpha_2, (const cl_mem)src1.data, offa, lda, (const cl_mem)src2.data, offb, ldb,
-                             beta_2, (cl_mem)dst.data, offc, ldc, 1, &src1.clCxt->impl->clCmdQueue, 0, NULL, NULL)
+                             beta_2, (cl_mem)dst.data, offc, ldc, 1, &clq, 0, NULL, NULL)
         );
     }
     break;

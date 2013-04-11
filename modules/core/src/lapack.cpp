@@ -531,12 +531,12 @@ template<> inline int VBLAS<double>::givensx(double* a, double* b, int n, double
 #endif
 
 template<typename _Tp> void
-JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int n, int n1, double minval)
+JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
+               int m, int n, int n1, double minval, _Tp eps)
 {
     VBLAS<_Tp> vblas;
     AutoBuffer<double> Wbuf(n);
     double* W = Wbuf;
-    _Tp eps = DBL_EPSILON*10;
     int i, j, k, iter, max_iter = std::max(m, 30);
     _Tp c, s;
     double sd;
@@ -577,10 +577,10 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
                     continue;
 
                 p *= 2;
-                double beta = a - b, gamma = hypot((double)p, beta), delta;
+                double beta = a - b, gamma = hypot((double)p, beta);
                 if( beta < 0 )
                 {
-                    delta = (gamma - beta)*0.5;
+                    double delta = (gamma - beta)*0.5;
                     s = (_Tp)std::sqrt(delta/gamma);
                     c = (_Tp)(p/(gamma*s*2));
                 }
@@ -588,36 +588,18 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
                 {
                     c = (_Tp)std::sqrt((gamma + beta)/(gamma*2));
                     s = (_Tp)(p/(gamma*c*2));
-                    delta = p*p*0.5/(gamma + beta);
                 }
 
-                W[i] += delta;
-                W[j] -= delta;
-
-                if( iter % 2 != 0 && W[i] > 0 && W[j] > 0 )
+                a = b = 0;
+                for( k = 0; k < m; k++ )
                 {
-                    k = vblas.givens(Ai, Aj, m, c, s);
+                    _Tp t0 = c*Ai[k] + s*Aj[k];
+                    _Tp t1 = -s*Ai[k] + c*Aj[k];
+                    Ai[k] = t0; Aj[k] = t1;
 
-                    for( ; k < m; k++ )
-                    {
-                        _Tp t0 = c*Ai[k] + s*Aj[k];
-                        _Tp t1 = -s*Ai[k] + c*Aj[k];
-                        Ai[k] = t0; Aj[k] = t1;
-                    }
+                    a += (double)t0*t0; b += (double)t1*t1;
                 }
-                else
-                {
-                    a = b = 0;
-                    for( k = 0; k < m; k++ )
-                    {
-                        _Tp t0 = c*Ai[k] + s*Aj[k];
-                        _Tp t1 = -s*Ai[k] + c*Aj[k];
-                        Ai[k] = t0; Aj[k] = t1;
-
-                        a += (double)t0*t0; b += (double)t1*t1;
-                    }
-                    W[i] = a; W[j] = b;
-                }
+                W[i] = a; W[j] = b;
 
                 changed = true;
 
@@ -729,12 +711,12 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
 
 static void JacobiSVD(float* At, size_t astep, float* W, float* Vt, size_t vstep, int m, int n, int n1=-1)
 {
-    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, FLT_MIN);
+    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, FLT_MIN, FLT_EPSILON*2);
 }
 
 static void JacobiSVD(double* At, size_t astep, double* W, double* Vt, size_t vstep, int m, int n, int n1=-1)
 {
-    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, DBL_MIN);
+    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, DBL_MIN, DBL_EPSILON*10);
 }
 
 /* y[0:m,0:n] += diag(a[0:1,0:m]) * x[0:m,0:n] */
@@ -878,6 +860,7 @@ double cv::determinant( InputArray _mat )
     size_t step = mat.step;
     const uchar* m = mat.data;
 
+    CV_Assert( !mat.empty() );
     CV_Assert( mat.rows == mat.cols && (type == CV_32F || type == CV_64F));
 
     #define Mf(y, x) ((float*)(m + y*step))[x]
@@ -1688,7 +1671,6 @@ cvDet( const CvArr* arr )
             if( rows == 3 )
                 return det3(Md);
         }
-        return cv::determinant(cv::Mat(mat));
     }
     return cv::determinant(cv::cvarrToMat(arr));
 }

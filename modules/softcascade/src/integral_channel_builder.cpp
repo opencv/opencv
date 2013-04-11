@@ -46,12 +46,16 @@ namespace {
 
 using namespace cv::softcascade;
 
-class ICFBuilder : public ChannelFeatureBuilder
+class HOG6MagLuv : public ChannelFeatureBuilder
 {
-    virtual ~ICFBuilder() {}
+    enum {N_CHANNELS = 10};
+public:
+    virtual ~HOG6MagLuv() {}
     virtual cv::AlgorithmInfo* info() const;
 
-    virtual void operator()(cv::InputArray _frame, CV_OUT cv::OutputArray _integrals, cv::Size channelsSize) const
+    virtual int totalChannels() const {return N_CHANNELS; }
+
+    virtual void operator()(cv::InputArray _frame, cv::OutputArray _integrals, cv::Size channelsSize) const
     {
         CV_Assert(_frame.type() == CV_8UC3);
 
@@ -60,16 +64,16 @@ class ICFBuilder : public ChannelFeatureBuilder
         int w = frame.cols;
 
         if (channelsSize != cv::Size())
-            _integrals.create(channelsSize.height * 10 + 1, channelsSize.width + 1, CV_32SC1);
+            _integrals.create(channelsSize.height * N_CHANNELS + 1, channelsSize.width + 1, CV_32SC1);
 
         if(_integrals.empty())
-            _integrals.create(frame.rows * 10 + 1, frame.cols + 1, CV_32SC1);
+            _integrals.create(frame.rows * N_CHANNELS + 1, frame.cols + 1, CV_32SC1);
 
         cv::Mat& integrals = _integrals.getMatRef();
 
         cv::Mat channels, gray;
 
-        channels.create(h * 10, w, CV_8UC1);
+        channels.create(h * N_CHANNELS, w, CV_8UC1);
         channels.setTo(0);
 
         cvtColor(frame, gray, CV_BGR2GRAY);
@@ -81,7 +85,7 @@ class ICFBuilder : public ChannelFeatureBuilder
         cv::cartToPolar(df_dx, df_dy, mag, angle, true);
         mag *= (1.f / (8 * sqrt(2.f)));
 
-        cv::Mat nmag;
+        cv::Mat nmag = channels(cv::Rect(0, h * (N_CHANNELS - 4), w, h));
         mag.convertTo(nmag, CV_8UC1);
 
         angle *=  6 / 360.f;
@@ -114,14 +118,13 @@ class ICFBuilder : public ChannelFeatureBuilder
 using cv::softcascade::ChannelFeatureBuilder;
 using cv::softcascade::ChannelFeature;
 
-CV_INIT_ALGORITHM(ICFBuilder, "ChannelFeatureBuilder.ICFBuilder", );
+CV_INIT_ALGORITHM(HOG6MagLuv,  "ChannelFeatureBuilder.HOG6MagLuv", );
 
 ChannelFeatureBuilder::~ChannelFeatureBuilder() {}
 
-cv::Ptr<ChannelFeatureBuilder> ChannelFeatureBuilder::create()
+cv::Ptr<ChannelFeatureBuilder> ChannelFeatureBuilder::create(const cv::String& featureType)
 {
-    cv::Ptr<ChannelFeatureBuilder> builder(new ICFBuilder());
-    return builder;
+    return Algorithm::create<ChannelFeatureBuilder>("ChannelFeatureBuilder." + featureType);
 }
 
 ChannelFeature::ChannelFeature(int x, int y, int w, int h, int ch)
@@ -155,15 +158,14 @@ float ChannelFeature::operator() (const cv::Mat& integrals, const cv::Size& mode
     return (float)(a - b + c - d);
 }
 
-void cv::softcascade::write(cv::FileStorage& fs, const std::string&, const ChannelFeature& f)
+void cv::softcascade::write(cv::FileStorage& fs, const cv::String&, const ChannelFeature& f)
 {
     fs << "{" << "channel" << f.channel << "rect" << f.bb << "}";
 }
 
 std::ostream& cv::softcascade::operator<<(std::ostream& out, const ChannelFeature& m)
 {
-    out << m.channel << " " << m.bb;
-    return out;
+    return out << m.channel << " " << "[" << m.bb.width << " x " << m.bb.height << " from (" << m.bb.x << ", " << m.bb.y << ")]";
 }
 
 ChannelFeature::~ChannelFeature(){}
@@ -175,9 +177,9 @@ using namespace cv::softcascade;
 class ChannelFeaturePool : public FeaturePool
 {
 public:
-    ChannelFeaturePool(cv::Size m, int n) : FeaturePool(), model(m)
+    ChannelFeaturePool(cv::Size m, int n, int ch) : FeaturePool(), model(m), N_CHANNELS(ch)
     {
-        CV_Assert(m != cv::Size() && n > 0);
+        CV_Assert(m != cv::Size() && n > 0 && (ch == 10 || ch == 8));
         fill(n);
     }
 
@@ -193,7 +195,7 @@ private:
 
     cv::Size model;
     std::vector<ChannelFeature> pool;
-    enum { N_CHANNELS = 10 };
+    int N_CHANNELS;
 };
 
 float ChannelFeaturePool::apply(int fi, int si, const cv::Mat& integrals) const
@@ -203,7 +205,8 @@ float ChannelFeaturePool::apply(int fi, int si, const cv::Mat& integrals) const
 
 void ChannelFeaturePool::write( cv::FileStorage& fs, int index) const
 {
-    CV_Assert((index > 0) && (index < (int)pool.size()));
+
+    CV_Assert((index >= 0) && (index < (int)pool.size()));
     fs << pool[index];
 }
 
@@ -234,22 +237,8 @@ void ChannelFeaturePool::fill(int desired)
         int x = xRand(eng);
         int y = yRand(eng);
 
-#if __cplusplus >= 201103L
-        // The interface changed slightly going from uniform_int to
-        // uniform_int_distribution. See this page to understand
-        // the old behavior:
-        // http://www.boost.org/doc/libs/1_47_0/boost/random/uniform_int.hpp
-        int w = 1 + wRand(
-	  eng,
-          // This extra "- 1" appears to be necessary, based on the Boost docs.
-	  Random::uniform::param_type(0, (model.width  - x - 1) - 1));
-        int h = 1 + hRand(
-	  eng,
-	  Random::uniform::param_type(0, (model.height  - y - 1) - 1));
-#else
         int w = 1 + wRand(eng, model.width  - x - 1);
         int h = 1 + hRand(eng, model.height - y - 1);
-#endif
 
         CV_Assert(w > 0);
         CV_Assert(h > 0);
@@ -270,8 +259,8 @@ void ChannelFeaturePool::fill(int desired)
 
 }
 
-cv::Ptr<FeaturePool> FeaturePool::create(const cv::Size& model, int nfeatures)
+cv::Ptr<FeaturePool> FeaturePool::create(const cv::Size& model, int nfeatures, int nchannels )
 {
-    cv::Ptr<FeaturePool> pool(new ChannelFeaturePool(model, nfeatures));
+    cv::Ptr<FeaturePool> pool(new ChannelFeaturePool(model, nfeatures, nchannels));
     return pool;
 }

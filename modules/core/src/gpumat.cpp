@@ -41,26 +41,76 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/gpumat.hpp"
-#include <iostream>
 
-#ifdef HAVE_CUDA
-    #include <cuda_runtime.h>
-    #include <npp.h>
-
-    #define CUDART_MINIMUM_REQUIRED_VERSION 4020
-    #define NPP_MINIMUM_REQUIRED_VERSION 4200
-
-    #if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
-        #error "Insufficient Cuda Runtime library version, please update it."
-    #endif
-
-    #if (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
-        #error "Insufficient NPP version, please update it."
-    #endif
-#endif
+using namespace cv;
+using namespace cv::gpu;
 
 //////////////////////////////// Initialization & Info ////////////////////////
+
+#ifndef HAVE_CUDA
+
+int cv::gpu::getCudaEnabledDeviceCount() { return 0; }
+
+void cv::gpu::setDevice(int) { throw_no_cuda(); }
+int cv::gpu::getDevice() { throw_no_cuda(); return 0; }
+
+void cv::gpu::resetDevice() { throw_no_cuda(); }
+
+bool cv::gpu::deviceSupports(FeatureSet) { throw_no_cuda(); return false; }
+
+bool cv::gpu::TargetArchs::builtWith(FeatureSet) { throw_no_cuda(); return false; }
+bool cv::gpu::TargetArchs::has(int, int) { throw_no_cuda(); return false; }
+bool cv::gpu::TargetArchs::hasPtx(int, int) { throw_no_cuda(); return false; }
+bool cv::gpu::TargetArchs::hasBin(int, int) { throw_no_cuda(); return false; }
+bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int, int) { throw_no_cuda(); return false; }
+bool cv::gpu::TargetArchs::hasEqualOrGreater(int, int) { throw_no_cuda(); return false; }
+bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int, int) { throw_no_cuda(); return false; }
+bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int, int) { throw_no_cuda(); return false; }
+
+size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const { throw_no_cuda(); return 0; }
+void cv::gpu::DeviceInfo::queryMemory(size_t&, size_t&) const { throw_no_cuda(); }
+size_t cv::gpu::DeviceInfo::freeMemory() const { throw_no_cuda(); return 0; }
+size_t cv::gpu::DeviceInfo::totalMemory() const { throw_no_cuda(); return 0; }
+bool cv::gpu::DeviceInfo::supports(FeatureSet) const { throw_no_cuda(); return false; }
+bool cv::gpu::DeviceInfo::isCompatible() const { throw_no_cuda(); return false; }
+void cv::gpu::DeviceInfo::query() { throw_no_cuda(); }
+
+void cv::gpu::printCudaDeviceInfo(int) { throw_no_cuda(); }
+void cv::gpu::printShortCudaDeviceInfo(int) { throw_no_cuda(); }
+
+#else // HAVE_CUDA
+
+int cv::gpu::getCudaEnabledDeviceCount()
+{
+    int count;
+    cudaError_t error = cudaGetDeviceCount( &count );
+
+    if (error == cudaErrorInsufficientDriver)
+        return -1;
+
+    if (error == cudaErrorNoDevice)
+        return 0;
+
+    cudaSafeCall( error );
+    return count;
+}
+
+void cv::gpu::setDevice(int device)
+{
+    cudaSafeCall( cudaSetDevice( device ) );
+}
+
+int cv::gpu::getDevice()
+{
+    int device;
+    cudaSafeCall( cudaGetDevice( &device ) );
+    return device;
+}
+
+void cv::gpu::resetDevice()
+{
+    cudaSafeCall( cudaDeviceReset() );
+}
 
 namespace
 {
@@ -69,7 +119,7 @@ namespace
     public:
         CudaArch();
 
-        bool builtWith(cv::gpu::FeatureSet feature_set) const;
+        bool builtWith(FeatureSet feature_set) const;
         bool hasPtx(int major, int minor) const;
         bool hasBin(int major, int minor) const;
         bool hasEqualOrLessPtx(int major, int minor) const;
@@ -77,7 +127,7 @@ namespace
         bool hasEqualOrGreaterBin(int major, int minor) const;
 
     private:
-        static void fromStr(const std::string& set_as_str, std::vector<int>& arr);
+        static void fromStr(const String& set_as_str, std::vector<int>& arr);
 
         std::vector<int> bin;
         std::vector<int> ptx;
@@ -88,14 +138,12 @@ namespace
 
     CudaArch::CudaArch()
     {
-    #ifdef HAVE_CUDA
         fromStr(CUDA_ARCH_BIN, bin);
         fromStr(CUDA_ARCH_PTX, ptx);
         fromStr(CUDA_ARCH_FEATURES, features);
-    #endif
     }
 
-    bool CudaArch::builtWith(cv::gpu::FeatureSet feature_set) const
+    bool CudaArch::builtWith(FeatureSet feature_set) const
     {
         return !features.empty() && (features.back() >= feature_set);
     }
@@ -125,18 +173,27 @@ namespace
         return !bin.empty() && (bin.back() >= major * 10 + minor);
     }
 
-    void CudaArch::fromStr(const std::string& set_as_str, std::vector<int>& arr)
+    void CudaArch::fromStr(const String& set_as_str, std::vector<int>& arr)
     {
-        if (set_as_str.find_first_not_of(" ") == std::string::npos)
-            return;
+        arr.clear();
 
-        std::istringstream stream(set_as_str);
-        int cur_value;
-
-        while (!stream.eof())
+        size_t pos = 0;
+        while (pos < set_as_str.size())
         {
-            stream >> cur_value;
-            arr.push_back(cur_value);
+            if (isspace(set_as_str[pos]))
+            {
+                ++pos;
+            }
+            else
+            {
+                int cur_value;
+                int chars_read;
+                int args_read = sscanf(set_as_str.c_str() + pos, "%d%n", &cur_value, &chars_read);
+                CV_Assert(args_read == 1);
+
+                arr.push_back(cur_value);
+                pos += chars_read;
+            }
         }
 
         std::sort(arr.begin(), arr.end());
@@ -145,12 +202,7 @@ namespace
 
 bool cv::gpu::TargetArchs::builtWith(cv::gpu::FeatureSet feature_set)
 {
-#if defined (HAVE_CUDA)
     return cudaArch.builtWith(feature_set);
-#else
-    (void)feature_set;
-    return false;
-#endif
 }
 
 bool cv::gpu::TargetArchs::has(int major, int minor)
@@ -160,35 +212,17 @@ bool cv::gpu::TargetArchs::has(int major, int minor)
 
 bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
 {
-#if defined (HAVE_CUDA)
     return cudaArch.hasPtx(major, minor);
-#else
-    (void)major;
-    (void)minor;
-    return false;
-#endif
 }
 
 bool cv::gpu::TargetArchs::hasBin(int major, int minor)
 {
-#if defined (HAVE_CUDA)
     return cudaArch.hasBin(major, minor);
-#else
-    (void)major;
-    (void)minor;
-    return false;
-#endif
 }
 
 bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
 {
-#if defined (HAVE_CUDA)
     return cudaArch.hasEqualOrLessPtx(major, minor);
-#else
-    (void)major;
-    (void)minor;
-    return false;
-#endif
 }
 
 bool cv::gpu::TargetArchs::hasEqualOrGreater(int major, int minor)
@@ -198,24 +232,12 @@ bool cv::gpu::TargetArchs::hasEqualOrGreater(int major, int minor)
 
 bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 {
-#if defined (HAVE_CUDA)
     return cudaArch.hasEqualOrGreaterPtx(major, minor);
-#else
-    (void)major;
-    (void)minor;
-    return false;
-#endif
 }
 
 bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
 {
-#if defined (HAVE_CUDA)
     return cudaArch.hasEqualOrGreaterBin(major, minor);
-#else
-    (void)major;
-    (void)minor;
-    return false;
-#endif
 }
 
 bool cv::gpu::deviceSupports(FeatureSet feature_set)
@@ -243,108 +265,84 @@ bool cv::gpu::deviceSupports(FeatureSet feature_set)
     return TargetArchs::builtWith(feature_set) && (version >= feature_set);
 }
 
-#if !defined (HAVE_CUDA)
-
-#define throw_nogpu CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
-
-int cv::gpu::getCudaEnabledDeviceCount() { return 0; }
-
-void cv::gpu::setDevice(int) { throw_nogpu; }
-int cv::gpu::getDevice() { throw_nogpu; return 0; }
-
-void cv::gpu::resetDevice() { throw_nogpu; }
-
-size_t cv::gpu::DeviceInfo::freeMemory() const { throw_nogpu; return 0; }
-size_t cv::gpu::DeviceInfo::totalMemory() const { throw_nogpu; return 0; }
-
-bool cv::gpu::DeviceInfo::supports(cv::gpu::FeatureSet) const { throw_nogpu; return false; }
-
-bool cv::gpu::DeviceInfo::isCompatible() const { throw_nogpu; return false; }
-
-void cv::gpu::DeviceInfo::query() { throw_nogpu; }
-void cv::gpu::DeviceInfo::queryMemory(size_t&, size_t&) const { throw_nogpu; }
-
-void cv::gpu::printCudaDeviceInfo(int) { throw_nogpu; }
-void cv::gpu::printShortCudaDeviceInfo(int) { throw_nogpu; }
-
-#undef throw_nogpu
-
-#else // HAVE_CUDA
-
 namespace
 {
-#if defined(__GNUC__)
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
-    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
-    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__)
-#endif
-
-    inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
+    class DeviceProps
     {
-        if (cudaSuccess != err)
-            cv::gpu::error(cudaGetErrorString(err), file, line, func);
+    public:
+        DeviceProps();
+        ~DeviceProps();
+
+        cudaDeviceProp* get(int devID);
+
+    private:
+        std::vector<cudaDeviceProp*> props_;
+    };
+
+    DeviceProps::DeviceProps()
+    {
+        props_.resize(10, 0);
     }
 
-    inline void ___nppSafeCall(int err, const char *file, const int line, const char *func = "")
+    DeviceProps::~DeviceProps()
     {
-        if (err < 0)
+        for (size_t i = 0; i < props_.size(); ++i)
         {
-            std::ostringstream msg;
-            msg << "NPP API Call Error: " << err;
-            cv::gpu::error(msg.str().c_str(), file, line, func);
+            if (props_[i])
+                delete props_[i];
         }
+        props_.clear();
     }
+
+    cudaDeviceProp* DeviceProps::get(int devID)
+    {
+        if (devID >= (int) props_.size())
+            props_.resize(devID + 5, 0);
+
+        if (!props_[devID])
+        {
+            props_[devID] = new cudaDeviceProp;
+            cudaSafeCall( cudaGetDeviceProperties(props_[devID], devID) );
+        }
+
+        return props_[devID];
+    }
+
+    DeviceProps deviceProps;
 }
 
-int cv::gpu::getCudaEnabledDeviceCount()
+size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const
 {
-    int count;
-    cudaError_t error = cudaGetDeviceCount( &count );
-
-    if (error == cudaErrorInsufficientDriver)
-        return -1;
-
-    if (error == cudaErrorNoDevice)
-        return 0;
-
-    cudaSafeCall(error);
-    return count;
+    return deviceProps.get(device_id_)->sharedMemPerBlock;
 }
 
-void cv::gpu::setDevice(int device)
+void cv::gpu::DeviceInfo::queryMemory(size_t& _totalMemory, size_t& _freeMemory) const
 {
-    cudaSafeCall( cudaSetDevice( device ) );
-}
+    int prevDeviceID = getDevice();
+    if (prevDeviceID != device_id_)
+        setDevice(device_id_);
 
-int cv::gpu::getDevice()
-{
-    int device;
-    cudaSafeCall( cudaGetDevice( &device ) );
-    return device;
-}
+    cudaSafeCall( cudaMemGetInfo(&_freeMemory, &_totalMemory) );
 
-void cv::gpu::resetDevice()
-{
-    cudaSafeCall( cudaDeviceReset() );
+    if (prevDeviceID != device_id_)
+        setDevice(prevDeviceID);
 }
 
 size_t cv::gpu::DeviceInfo::freeMemory() const
 {
-    size_t free_memory, total_memory;
-    queryMemory(free_memory, total_memory);
-    return free_memory;
+    size_t _totalMemory, _freeMemory;
+    queryMemory(_totalMemory, _freeMemory);
+    return _freeMemory;
 }
 
 size_t cv::gpu::DeviceInfo::totalMemory() const
 {
-    size_t free_memory, total_memory;
-    queryMemory(free_memory, total_memory);
-    return total_memory;
+    size_t _totalMemory, _freeMemory;
+    queryMemory(_totalMemory, _freeMemory);
+    return _totalMemory;
 }
 
-bool cv::gpu::DeviceInfo::supports(cv::gpu::FeatureSet feature_set) const
+bool cv::gpu::DeviceInfo::supports(FeatureSet feature_set) const
 {
     int version = majorVersion() * 10 + minorVersion();
     return version >= feature_set;
@@ -366,27 +364,12 @@ bool cv::gpu::DeviceInfo::isCompatible() const
 
 void cv::gpu::DeviceInfo::query()
 {
-    cudaDeviceProp prop;
-    cudaSafeCall(cudaGetDeviceProperties(&prop, device_id_));
-    name_ = prop.name;
-    multi_processor_count_ = prop.multiProcessorCount;
-    majorVersion_ = prop.major;
-    minorVersion_ = prop.minor;
-    sharedMemPerBlock_ = prop.sharedMemPerBlock;
-}
+    const cudaDeviceProp* prop = deviceProps.get(device_id_);
 
-size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const {return sharedMemPerBlock_;}
-
-void cv::gpu::DeviceInfo::queryMemory(size_t& free_memory, size_t& total_memory) const
-{
-    int prev_device_id = getDevice();
-    if (prev_device_id != device_id_)
-        setDevice(device_id_);
-
-    cudaSafeCall(cudaMemGetInfo(&free_memory, &total_memory));
-
-    if (prev_device_id != device_id_)
-        setDevice(prev_device_id);
+    name_ = prop->name;
+    multi_processor_count_ = prop->multiProcessorCount;
+    majorVersion_ = prop->major;
+    minorVersion_ = prop->minor;
 }
 
 namespace
@@ -535,7 +518,7 @@ cv::gpu::GpuMat::GpuMat(const GpuMat& m)
 }
 
 cv::gpu::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t step_) :
-    flags(Mat::MAGIC_VAL + (type_ & TYPE_MASK)), rows(rows_), cols(cols_),
+    flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(rows_), cols(cols_),
     step(step_), data((uchar*)data_), refcount(0),
     datastart((uchar*)data_), dataend((uchar*)data_)
 {
@@ -559,7 +542,7 @@ cv::gpu::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t ste
 }
 
 cv::gpu::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
-    flags(Mat::MAGIC_VAL + (type_ & TYPE_MASK)), rows(size_.height), cols(size_.width),
+    flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(size_.height), cols(size_.width),
     step(step_), data((uchar*)data_), refcount(0),
     datastart((uchar*)data_), dataend((uchar*)data_)
 {
@@ -642,7 +625,7 @@ cv::gpu::GpuMat::GpuMat(const Mat& m) :
     upload(m);
 }
 
-cv::gpu::GpuMat& cv::gpu::GpuMat::operator = (const cv::gpu::GpuMat& m)
+GpuMat& cv::gpu::GpuMat::operator = (const GpuMat& m)
 {
     if (this != &m)
     {
@@ -689,7 +672,7 @@ void cv::gpu::GpuMat::locateROI(Size& wholeSize, Point& ofs) const
     wholeSize.width = std::max(static_cast<int>((delta2 - step * (wholeSize.height - 1)) / esz), ofs.x + cols);
 }
 
-cv::gpu::GpuMat& cv::gpu::GpuMat::adjustROI(int dtop, int dbottom, int dleft, int dright)
+GpuMat& cv::gpu::GpuMat::adjustROI(int dtop, int dbottom, int dleft, int dright)
 {
     Size wholeSize;
     Point ofs;
@@ -715,7 +698,7 @@ cv::gpu::GpuMat& cv::gpu::GpuMat::adjustROI(int dtop, int dbottom, int dleft, in
     return *this;
 }
 
-cv::gpu::GpuMat cv::gpu::GpuMat::reshape(int new_cn, int new_rows) const
+GpuMat cv::gpu::GpuMat::reshape(int new_cn, int new_rows) const
 {
     GpuMat hdr = *this;
 
@@ -758,7 +741,7 @@ cv::gpu::GpuMat cv::gpu::GpuMat::reshape(int new_cn, int new_rows) const
     return hdr;
 }
 
-cv::Mat::Mat(const cv::gpu::GpuMat& m) : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
+cv::Mat::Mat(const GpuMat& m) : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
 {
     m.download(*this);
 }
@@ -800,7 +783,7 @@ void cv::gpu::ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
     }
 }
 
-cv::gpu::GpuMat cv::gpu::allocMatFromBuf(int rows, int cols, int type, GpuMat &mat)
+GpuMat cv::gpu::allocMatFromBuf(int rows, int cols, int type, GpuMat &mat)
 {
     if (!mat.empty() && mat.type() == type && mat.rows >= rows && mat.cols >= cols)
         return mat(Rect(0, 0, cols, rows));
@@ -814,41 +797,41 @@ namespace
     public:
         virtual ~GpuFuncTable() {}
 
-        virtual void copy(const cv::Mat& src, cv::gpu::GpuMat& dst) const = 0;
-        virtual void copy(const cv::gpu::GpuMat& src, cv::Mat& dst) const = 0;
-        virtual void copy(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst) const = 0;
+        virtual void copy(const Mat& src, GpuMat& dst) const = 0;
+        virtual void copy(const GpuMat& src, Mat& dst) const = 0;
+        virtual void copy(const GpuMat& src, GpuMat& dst) const = 0;
 
-        virtual void copyWithMask(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst, const cv::gpu::GpuMat& mask) const = 0;
+        virtual void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask) const = 0;
 
-        virtual void convert(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst) const = 0;
-        virtual void convert(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst, double alpha, double beta) const = 0;
+        virtual void convert(const GpuMat& src, GpuMat& dst) const = 0;
+        virtual void convert(const GpuMat& src, GpuMat& dst, double alpha, double beta) const = 0;
 
-        virtual void setTo(cv::gpu::GpuMat& m, cv::Scalar s, const cv::gpu::GpuMat& mask) const = 0;
+        virtual void setTo(GpuMat& m, Scalar s, const GpuMat& mask) const = 0;
 
         virtual void mallocPitch(void** devPtr, size_t* step, size_t width, size_t height) const = 0;
         virtual void free(void* devPtr) const = 0;
     };
 }
 
-#if !defined HAVE_CUDA || defined(CUDA_DISABLER_)
+#ifndef HAVE_CUDA
 
 namespace
 {
     class EmptyFuncTable : public GpuFuncTable
     {
     public:
-        void copy(const cv::Mat&, cv::gpu::GpuMat&) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
-        void copy(const cv::gpu::GpuMat&, cv::Mat&) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
-        void copy(const cv::gpu::GpuMat&, cv::gpu::GpuMat&) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
+        void copy(const Mat&, GpuMat&) const { throw_no_cuda(); }
+        void copy(const GpuMat&, Mat&) const { throw_no_cuda(); }
+        void copy(const GpuMat&, GpuMat&) const { throw_no_cuda(); }
 
-        void copyWithMask(const cv::gpu::GpuMat&, cv::gpu::GpuMat&, const cv::gpu::GpuMat&) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
+        void copyWithMask(const GpuMat&, GpuMat&, const GpuMat&) const { throw_no_cuda(); }
 
-        void convert(const cv::gpu::GpuMat&, cv::gpu::GpuMat&) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
-        void convert(const cv::gpu::GpuMat&, cv::gpu::GpuMat&, double, double) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
+        void convert(const GpuMat&, GpuMat&) const { throw_no_cuda(); }
+        void convert(const GpuMat&, GpuMat&, double, double) const { throw_no_cuda(); }
 
-        void setTo(cv::gpu::GpuMat&, cv::Scalar, const cv::gpu::GpuMat&) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
+        void setTo(GpuMat&, Scalar, const GpuMat&) const { throw_no_cuda(); }
 
-        void mallocPitch(void**, size_t*, size_t, size_t) const { CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support"); }
+        void mallocPitch(void**, size_t*, size_t, size_t) const { throw_no_cuda(); }
         void free(void*) const {}
     };
 
@@ -861,7 +844,7 @@ namespace
 
 #else // HAVE_CUDA
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     void copyToWithMask_gpu(PtrStepSzb src, PtrStepSzb dst, size_t elemSize1, int cn, PtrStepSzb mask, bool colorMask, cudaStream_t stream);
 
@@ -876,16 +859,16 @@ namespace cv { namespace gpu { namespace device
 
 namespace
 {
-    template <typename T> void kernelSetCaller(cv::gpu::GpuMat& src, cv::Scalar s, cudaStream_t stream)
+    template <typename T> void kernelSetCaller(GpuMat& src, Scalar s, cudaStream_t stream)
     {
-        cv::Scalar_<T> sf = s;
-        cv::gpu::device::set_to_gpu(src, sf.val, src.channels(), stream);
+        Scalar_<T> sf = s;
+        cv::gpu::cudev::set_to_gpu(src, sf.val, src.channels(), stream);
     }
 
-    template <typename T> void kernelSetCaller(cv::gpu::GpuMat& src, cv::Scalar s, const cv::gpu::GpuMat& mask, cudaStream_t stream)
+    template <typename T> void kernelSetCaller(GpuMat& src, Scalar s, const GpuMat& mask, cudaStream_t stream)
     {
-        cv::Scalar_<T> sf = s;
-        cv::gpu::device::set_to_gpu(src, sf.val, mask, src.channels(), stream);
+        Scalar_<T> sf = s;
+        cv::gpu::cudev::set_to_gpu(src, sf.val, mask, src.channels(), stream);
     }
 }
 
@@ -909,17 +892,17 @@ namespace cv { namespace gpu
         CV_Assert(src.size() == dst.size() && src.type() == dst.type());
         CV_Assert(src.size() == mask.size() && mask.depth() == CV_8U && (mask.channels() == 1 || mask.channels() == src.channels()));
 
-        cv::gpu::device::copyToWithMask_gpu(src.reshape(1), dst.reshape(1), src.elemSize1(), src.channels(), mask.reshape(1), mask.channels() != 1, stream);
+        cv::gpu::cudev::copyToWithMask_gpu(src.reshape(1), dst.reshape(1), src.elemSize1(), src.channels(), mask.reshape(1), mask.channels() != 1, stream);
     }
 
     void convertTo(const GpuMat& src, GpuMat& dst)
     {
-        cv::gpu::device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), 1.0, 0.0, 0);
+        cv::gpu::cudev::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), 1.0, 0.0, 0);
     }
 
     void convertTo(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream = 0)
     {
-        cv::gpu::device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), alpha, beta, stream);
+        cv::gpu::cudev::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), alpha, beta, stream);
     }
 
     void setTo(GpuMat& src, Scalar s, cudaStream_t stream)
@@ -992,7 +975,7 @@ namespace
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
         typedef typename NPPTypeTraits<DDEPTH>::npp_type dst_t;
 
-        static void call(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst)
+        static void call(const GpuMat& src, GpuMat& dst)
         {
             NppiSize sz;
             sz.width = src.cols;
@@ -1007,7 +990,7 @@ namespace
     {
         typedef typename NPPTypeTraits<DDEPTH>::npp_type dst_t;
 
-        static void call(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst)
+        static void call(const GpuMat& src, GpuMat& dst)
         {
             NppiSize sz;
             sz.width = src.cols;
@@ -1047,13 +1030,13 @@ namespace
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
 
-        static void call(cv::gpu::GpuMat& src, cv::Scalar s)
+        static void call(GpuMat& src, Scalar s)
         {
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
 
-            cv::Scalar_<src_t> nppS = s;
+            Scalar_<src_t> nppS = s;
 
             nppSafeCall( func(nppS.val, src.ptr<src_t>(), static_cast<int>(src.step), sz) );
 
@@ -1064,13 +1047,13 @@ namespace
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
 
-        static void call(cv::gpu::GpuMat& src, cv::Scalar s)
+        static void call(GpuMat& src, Scalar s)
         {
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
 
-            cv::Scalar_<src_t> nppS = s;
+            Scalar_<src_t> nppS = s;
 
             nppSafeCall( func(nppS[0], src.ptr<src_t>(), static_cast<int>(src.step), sz) );
 
@@ -1095,13 +1078,13 @@ namespace
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
 
-        static void call(cv::gpu::GpuMat& src, cv::Scalar s, const cv::gpu::GpuMat& mask)
+        static void call(GpuMat& src, Scalar s, const GpuMat& mask)
         {
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
 
-            cv::Scalar_<src_t> nppS = s;
+            Scalar_<src_t> nppS = s;
 
             nppSafeCall( func(nppS.val, src.ptr<src_t>(), static_cast<int>(src.step), sz, mask.ptr<Npp8u>(), static_cast<int>(mask.step)) );
 
@@ -1112,13 +1095,13 @@ namespace
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
 
-        static void call(cv::gpu::GpuMat& src, cv::Scalar s, const cv::gpu::GpuMat& mask)
+        static void call(GpuMat& src, Scalar s, const GpuMat& mask)
         {
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
 
-            cv::Scalar_<src_t> nppS = s;
+            Scalar_<src_t> nppS = s;
 
             nppSafeCall( func(nppS[0], src.ptr<src_t>(), static_cast<int>(src.step), sz, mask.ptr<Npp8u>(), static_cast<int>(mask.step)) );
 
@@ -1140,7 +1123,7 @@ namespace
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
 
-        static void call(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst, const cv::gpu::GpuMat& mask, cudaStream_t /*stream*/)
+        static void call(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t /*stream*/)
         {
             NppiSize sz;
             sz.width = src.cols;
@@ -1163,20 +1146,20 @@ namespace
     class CudaFuncTable : public GpuFuncTable
     {
     public:
-        void copy(const cv::Mat& src, cv::gpu::GpuMat& dst) const
+        void copy(const Mat& src, GpuMat& dst) const
         {
             cudaSafeCall( cudaMemcpy2D(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyHostToDevice) );
         }
-        void copy(const cv::gpu::GpuMat& src, cv::Mat& dst) const
+        void copy(const GpuMat& src, Mat& dst) const
         {
             cudaSafeCall( cudaMemcpy2D(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyDeviceToHost) );
         }
-        void copy(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst) const
+        void copy(const GpuMat& src, GpuMat& dst) const
         {
             cudaSafeCall( cudaMemcpy2D(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyDeviceToDevice) );
         }
 
-        void copyWithMask(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst, const cv::gpu::GpuMat& mask) const
+        void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask) const
         {
             CV_Assert(src.depth() <= CV_64F && src.channels() <= 4);
             CV_Assert(src.size() == dst.size() && src.type() == dst.type());
@@ -1184,11 +1167,11 @@ namespace
 
             if (src.depth() == CV_64F)
             {
-                if (!cv::gpu::TargetArchs::builtWith(cv::gpu::NATIVE_DOUBLE) || !cv::gpu::DeviceInfo().supports(cv::gpu::NATIVE_DOUBLE))
+                if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
                     CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
             }
 
-            typedef void (*func_t)(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst, const cv::gpu::GpuMat& mask, cudaStream_t stream);
+            typedef void (*func_t)(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream);
             static const func_t funcs[7][4] =
             {
                 /*  8U */ {NppCopyMasked<CV_8U , nppiCopy_8u_C1MR >::call, cv::gpu::copyWithMask, NppCopyMasked<CV_8U , nppiCopy_8u_C3MR >::call, NppCopyMasked<CV_8U , nppiCopy_8u_C4MR >::call},
@@ -1205,9 +1188,9 @@ namespace
             func(src, dst, mask, 0);
         }
 
-        void convert(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst) const
+        void convert(const GpuMat& src, GpuMat& dst) const
         {
-            typedef void (*func_t)(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst);
+            typedef void (*func_t)(const GpuMat& src, GpuMat& dst);
             static const func_t funcs[7][7][4] =
             {
                 {
@@ -1281,7 +1264,7 @@ namespace
 
             if (src.depth() == CV_64F || dst.depth() == CV_64F)
             {
-                if (!cv::gpu::TargetArchs::builtWith(cv::gpu::NATIVE_DOUBLE) || !cv::gpu::DeviceInfo().supports(cv::gpu::NATIVE_DOUBLE))
+                if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
                     CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
             }
 
@@ -1298,21 +1281,21 @@ namespace
             func(src, dst);
         }
 
-        void convert(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst, double alpha, double beta) const
+        void convert(const GpuMat& src, GpuMat& dst, double alpha, double beta) const
         {
             CV_Assert(src.depth() <= CV_64F && src.channels() <= 4);
             CV_Assert(dst.depth() <= CV_64F);
 
             if (src.depth() == CV_64F || dst.depth() == CV_64F)
             {
-                if (!cv::gpu::TargetArchs::builtWith(cv::gpu::NATIVE_DOUBLE) || !cv::gpu::DeviceInfo().supports(cv::gpu::NATIVE_DOUBLE))
+                if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
                     CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
             }
 
             cv::gpu::convertTo(src, dst, alpha, beta);
         }
 
-        void setTo(cv::gpu::GpuMat& m, cv::Scalar s, const cv::gpu::GpuMat& mask) const
+        void setTo(GpuMat& m, Scalar s, const GpuMat& mask) const
         {
             if (mask.empty())
             {
@@ -1328,13 +1311,13 @@ namespace
 
                     if (cn == 1 || (cn == 2 && s[0] == s[1]) || (cn == 3 && s[0] == s[1] && s[0] == s[2]) || (cn == 4 && s[0] == s[1] && s[0] == s[2] && s[0] == s[3]))
                     {
-                        int val = cv::saturate_cast<uchar>(s[0]);
+                        int val = saturate_cast<uchar>(s[0]);
                         cudaSafeCall( cudaMemset2D(m.data, m.step, val, m.cols * m.elemSize(), m.rows) );
                         return;
                     }
                 }
 
-                typedef void (*func_t)(cv::gpu::GpuMat& src, cv::Scalar s);
+                typedef void (*func_t)(GpuMat& src, Scalar s);
                 static const func_t funcs[7][4] =
                 {
                     {NppSet<CV_8U , 1, nppiSet_8u_C1R >::call, cv::gpu::setTo                          , cv::gpu::setTo                        , NppSet<CV_8U , 4, nppiSet_8u_C4R >::call},
@@ -1350,7 +1333,7 @@ namespace
 
                 if (m.depth() == CV_64F)
                 {
-                    if (!cv::gpu::TargetArchs::builtWith(cv::gpu::NATIVE_DOUBLE) || !cv::gpu::DeviceInfo().supports(cv::gpu::NATIVE_DOUBLE))
+                    if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
                         CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
                 }
 
@@ -1358,7 +1341,7 @@ namespace
             }
             else
             {
-                typedef void (*func_t)(cv::gpu::GpuMat& src, cv::Scalar s, const cv::gpu::GpuMat& mask);
+                typedef void (*func_t)(GpuMat& src, Scalar s, const GpuMat& mask);
                 static const func_t funcs[7][4] =
                 {
                     {NppSetMask<CV_8U , 1, nppiSet_8u_C1MR >::call, cv::gpu::setTo, cv::gpu::setTo, NppSetMask<CV_8U , 4, nppiSet_8u_C4MR >::call},
@@ -1374,7 +1357,7 @@ namespace
 
                 if (m.depth() == CV_64F)
                 {
-                    if (!cv::gpu::TargetArchs::builtWith(cv::gpu::NATIVE_DOUBLE) || !cv::gpu::DeviceInfo().supports(cv::gpu::NATIVE_DOUBLE))
+                    if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
                         CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
                 }
 
@@ -1402,7 +1385,7 @@ namespace
 
 #endif // HAVE_CUDA
 
-void cv::gpu::GpuMat::upload(const cv::Mat& m)
+void cv::gpu::GpuMat::upload(const Mat& m)
 {
     CV_DbgAssert(!m.empty());
 
@@ -1411,7 +1394,7 @@ void cv::gpu::GpuMat::upload(const cv::Mat& m)
     gpuFuncTable()->copy(m, *this);
 }
 
-void cv::gpu::GpuMat::download(cv::Mat& m) const
+void cv::gpu::GpuMat::download(Mat& m) const
 {
     CV_DbgAssert(!empty());
 
@@ -1420,7 +1403,7 @@ void cv::gpu::GpuMat::download(cv::Mat& m) const
     gpuFuncTable()->copy(*this, m);
 }
 
-void cv::gpu::GpuMat::copyTo(cv::gpu::GpuMat& m) const
+void cv::gpu::GpuMat::copyTo(GpuMat& m) const
 {
     CV_DbgAssert(!empty());
 
@@ -1429,7 +1412,7 @@ void cv::gpu::GpuMat::copyTo(cv::gpu::GpuMat& m) const
     gpuFuncTable()->copy(*this, m);
 }
 
-void cv::gpu::GpuMat::copyTo(cv::gpu::GpuMat& mat, const cv::gpu::GpuMat& mask) const
+void cv::gpu::GpuMat::copyTo(GpuMat& mat, const GpuMat& mask) const
 {
     if (mask.empty())
         copyTo(mat);
@@ -1441,7 +1424,7 @@ void cv::gpu::GpuMat::copyTo(cv::gpu::GpuMat& mat, const cv::gpu::GpuMat& mask) 
     }
 }
 
-void cv::gpu::GpuMat::convertTo(cv::gpu::GpuMat& dst, int rtype, double alpha, double beta) const
+void cv::gpu::GpuMat::convertTo(GpuMat& dst, int rtype, double alpha, double beta) const
 {
     bool noScale = fabs(alpha - 1) < std::numeric_limits<double>::epsilon() && fabs(beta) < std::numeric_limits<double>::epsilon();
 
@@ -1458,8 +1441,8 @@ void cv::gpu::GpuMat::convertTo(cv::gpu::GpuMat& dst, int rtype, double alpha, d
         return;
     }
 
-    cv::gpu::GpuMat temp;
-    const cv::gpu::GpuMat* psrc = this;
+    GpuMat temp;
+    const GpuMat* psrc = this;
     if (sdepth != ddepth && psrc == &dst)
     {
         temp = *this;
@@ -1474,7 +1457,7 @@ void cv::gpu::GpuMat::convertTo(cv::gpu::GpuMat& dst, int rtype, double alpha, d
         gpuFuncTable()->convert(*psrc, dst, alpha, beta);
 }
 
-cv::gpu::GpuMat& cv::gpu::GpuMat::setTo(cv::Scalar s, const cv::gpu::GpuMat& mask)
+GpuMat& cv::gpu::GpuMat::setTo(Scalar s, const GpuMat& mask)
 {
     CV_Assert(mask.empty() || mask.type() == CV_8UC1);
     CV_DbgAssert(!empty());
@@ -1486,7 +1469,7 @@ cv::gpu::GpuMat& cv::gpu::GpuMat::setTo(cv::Scalar s, const cv::gpu::GpuMat& mas
 
 void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
 {
-    _type &= TYPE_MASK;
+    _type &= Mat::TYPE_MASK;
 
     if (rows == _rows && cols == _cols && type() == _type && data)
         return;
@@ -1498,7 +1481,7 @@ void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
 
     if (_rows > 0 && _cols > 0)
     {
-        flags = cv::Mat::MAGIC_VAL + _type;
+        flags = Mat::MAGIC_VAL + _type;
         rows = _rows;
         cols = _cols;
 
@@ -1512,7 +1495,7 @@ void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
             step = esz * cols;
 
         if (esz * cols == step)
-            flags |= cv::Mat::CONTINUOUS_FLAG;
+            flags |= Mat::CONTINUOUS_FLAG;
 
         int64 _nettosize = static_cast<int64>(step) * rows;
         size_t nettosize = static_cast<size_t>(_nettosize);
@@ -1542,18 +1525,185 @@ void cv::gpu::GpuMat::release()
 ////////////////////////////////////////////////////////////////////////
 // Error handling
 
-void cv::gpu::error(const char *error_string, const char *file, const int line, const char *func)
+#ifdef HAVE_CUDA
+
+namespace
 {
-    int code = CV_GpuApiCallError;
+    #define error_entry(entry)  { entry, #entry }
 
-    if (std::uncaught_exception())
+    struct ErrorEntry
     {
-        const char* errorStr = cvErrorStr(code);
-        const char* function = func ? func : "unknown function";
+        int code;
+        const char* str;
+    };
 
-        std::cerr << "OpenCV Error: " << errorStr << "(" << error_string << ") in " << function << ", file " << file << ", line " << line;
-        std::cerr.flush();
+    struct ErrorEntryComparer
+    {
+        int code;
+        ErrorEntryComparer(int code_) : code(code_) {}
+        bool operator()(const ErrorEntry& e) const { return e.code == code; }
+    };
+
+    const ErrorEntry npp_errors [] =
+    {
+        error_entry( NPP_NOT_SUPPORTED_MODE_ERROR ),
+        error_entry( NPP_ROUND_MODE_NOT_SUPPORTED_ERROR ),
+        error_entry( NPP_RESIZE_NO_OPERATION_ERROR ),
+
+#if defined (_MSC_VER)
+        error_entry( NPP_NOT_SUFFICIENT_COMPUTE_CAPABILITY ),
+#endif
+
+        error_entry( NPP_BAD_ARG_ERROR ),
+        error_entry( NPP_LUT_NUMBER_OF_LEVELS_ERROR ),
+        error_entry( NPP_TEXTURE_BIND_ERROR ),
+        error_entry( NPP_COEFF_ERROR ),
+        error_entry( NPP_RECT_ERROR ),
+        error_entry( NPP_QUAD_ERROR ),
+        error_entry( NPP_WRONG_INTERSECTION_ROI_ERROR ),
+        error_entry( NPP_NOT_EVEN_STEP_ERROR ),
+        error_entry( NPP_INTERPOLATION_ERROR ),
+        error_entry( NPP_RESIZE_FACTOR_ERROR ),
+        error_entry( NPP_HAAR_CLASSIFIER_PIXEL_MATCH_ERROR ),
+        error_entry( NPP_MEMFREE_ERR ),
+        error_entry( NPP_MEMSET_ERR ),
+        error_entry( NPP_MEMCPY_ERROR ),
+        error_entry( NPP_MEM_ALLOC_ERR ),
+        error_entry( NPP_HISTO_NUMBER_OF_LEVELS_ERROR ),
+        error_entry( NPP_MIRROR_FLIP_ERR ),
+        error_entry( NPP_INVALID_INPUT ),
+        error_entry( NPP_ALIGNMENT_ERROR ),
+        error_entry( NPP_STEP_ERROR ),
+        error_entry( NPP_SIZE_ERROR ),
+        error_entry( NPP_POINTER_ERROR ),
+        error_entry( NPP_NULL_POINTER_ERROR ),
+        error_entry( NPP_CUDA_KERNEL_EXECUTION_ERROR ),
+        error_entry( NPP_NOT_IMPLEMENTED_ERROR ),
+        error_entry( NPP_ERROR ),
+        error_entry( NPP_NO_ERROR ),
+        error_entry( NPP_SUCCESS ),
+        error_entry( NPP_WARNING ),
+        error_entry( NPP_WRONG_INTERSECTION_QUAD_WARNING ),
+        error_entry( NPP_MISALIGNED_DST_ROI_WARNING ),
+        error_entry( NPP_AFFINE_QUAD_INCORRECT_WARNING ),
+        error_entry( NPP_DOUBLE_SIZE_WARNING ),
+        error_entry( NPP_ODD_ROI_WARNING )
+    };
+
+    const size_t npp_error_num = sizeof(npp_errors) / sizeof(npp_errors[0]);
+
+    const ErrorEntry cu_errors [] =
+    {
+        error_entry( CUDA_SUCCESS                              ),
+        error_entry( CUDA_ERROR_INVALID_VALUE                  ),
+        error_entry( CUDA_ERROR_OUT_OF_MEMORY                  ),
+        error_entry( CUDA_ERROR_NOT_INITIALIZED                ),
+        error_entry( CUDA_ERROR_DEINITIALIZED                  ),
+        error_entry( CUDA_ERROR_PROFILER_DISABLED              ),
+        error_entry( CUDA_ERROR_PROFILER_NOT_INITIALIZED       ),
+        error_entry( CUDA_ERROR_PROFILER_ALREADY_STARTED       ),
+        error_entry( CUDA_ERROR_PROFILER_ALREADY_STOPPED       ),
+        error_entry( CUDA_ERROR_NO_DEVICE                      ),
+        error_entry( CUDA_ERROR_INVALID_DEVICE                 ),
+        error_entry( CUDA_ERROR_INVALID_IMAGE                  ),
+        error_entry( CUDA_ERROR_INVALID_CONTEXT                ),
+        error_entry( CUDA_ERROR_CONTEXT_ALREADY_CURRENT        ),
+        error_entry( CUDA_ERROR_MAP_FAILED                     ),
+        error_entry( CUDA_ERROR_UNMAP_FAILED                   ),
+        error_entry( CUDA_ERROR_ARRAY_IS_MAPPED                ),
+        error_entry( CUDA_ERROR_ALREADY_MAPPED                 ),
+        error_entry( CUDA_ERROR_NO_BINARY_FOR_GPU              ),
+        error_entry( CUDA_ERROR_ALREADY_ACQUIRED               ),
+        error_entry( CUDA_ERROR_NOT_MAPPED                     ),
+        error_entry( CUDA_ERROR_NOT_MAPPED_AS_ARRAY            ),
+        error_entry( CUDA_ERROR_NOT_MAPPED_AS_POINTER          ),
+        error_entry( CUDA_ERROR_ECC_UNCORRECTABLE              ),
+        error_entry( CUDA_ERROR_UNSUPPORTED_LIMIT              ),
+        error_entry( CUDA_ERROR_CONTEXT_ALREADY_IN_USE         ),
+        error_entry( CUDA_ERROR_INVALID_SOURCE                 ),
+        error_entry( CUDA_ERROR_FILE_NOT_FOUND                 ),
+        error_entry( CUDA_ERROR_SHARED_OBJECT_SYMBOL_NOT_FOUND ),
+        error_entry( CUDA_ERROR_SHARED_OBJECT_INIT_FAILED      ),
+        error_entry( CUDA_ERROR_OPERATING_SYSTEM               ),
+        error_entry( CUDA_ERROR_INVALID_HANDLE                 ),
+        error_entry( CUDA_ERROR_NOT_FOUND                      ),
+        error_entry( CUDA_ERROR_NOT_READY                      ),
+        error_entry( CUDA_ERROR_LAUNCH_FAILED                  ),
+        error_entry( CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES        ),
+        error_entry( CUDA_ERROR_LAUNCH_TIMEOUT                 ),
+        error_entry( CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING  ),
+        error_entry( CUDA_ERROR_PEER_ACCESS_ALREADY_ENABLED    ),
+        error_entry( CUDA_ERROR_PEER_ACCESS_NOT_ENABLED        ),
+        error_entry( CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE         ),
+        error_entry( CUDA_ERROR_CONTEXT_IS_DESTROYED           ),
+        error_entry( CUDA_ERROR_ASSERT                         ),
+        error_entry( CUDA_ERROR_TOO_MANY_PEERS                 ),
+        error_entry( CUDA_ERROR_HOST_MEMORY_ALREADY_REGISTERED ),
+        error_entry( CUDA_ERROR_HOST_MEMORY_NOT_REGISTERED     ),
+        error_entry( CUDA_ERROR_UNKNOWN                        )
+    };
+
+    const size_t cu_errors_num = sizeof(cu_errors) / sizeof(cu_errors[0]);
+
+    cv::String getErrorString(int code, const ErrorEntry* errors, size_t n)
+    {
+        size_t idx = std::find_if(errors, errors + n, ErrorEntryComparer(code)) - errors;
+
+        const char* msg = (idx != n) ? errors[idx].str : "Unknown error code";
+        cv::String str = cv::format("%s [Code = %d]", msg, code);
+
+        return str;
     }
-    else
-        cv::error( cv::Exception(code, error_string, func, file, line) );
+}
+
+#endif
+
+String cv::gpu::getNppErrorMessage(int code)
+{
+#ifndef HAVE_CUDA
+    (void) code;
+    return String();
+#else
+    return getErrorString(code, npp_errors, npp_error_num);
+#endif
+}
+
+String cv::gpu::getCudaDriverApiErrorMessage(int code)
+{
+#ifndef HAVE_CUDA
+    (void) code;
+    return String();
+#else
+    return getErrorString(code, cu_errors, cu_errors_num);
+#endif
+}
+
+bool cv::gpu::tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType)
+{
+#ifndef HAVE_CUDA
+    (void) cpuBorderType;
+    (void) gpuBorderType;
+    return false;
+#else
+    switch (cpuBorderType)
+    {
+    case IPL_BORDER_REFLECT_101:
+        gpuBorderType = cv::gpu::BORDER_REFLECT101_GPU;
+        return true;
+    case IPL_BORDER_REPLICATE:
+        gpuBorderType = cv::gpu::BORDER_REPLICATE_GPU;
+        return true;
+    case IPL_BORDER_CONSTANT:
+        gpuBorderType = cv::gpu::BORDER_CONSTANT_GPU;
+        return true;
+    case IPL_BORDER_REFLECT:
+        gpuBorderType = cv::gpu::BORDER_REFLECT_GPU;
+        return true;
+    case IPL_BORDER_WRAP:
+        gpuBorderType = cv::gpu::BORDER_WRAP_GPU;
+        return true;
+    default:
+        return false;
+    };
+#endif
 }

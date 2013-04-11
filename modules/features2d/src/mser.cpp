@@ -1054,10 +1054,11 @@ static int preprocessMSER_8UC3( MSCRNode* node,
     return Ne;
 }
 
-#define cmp_mscr_edge(edge1, edge2) \
-    ((edge1).chi < (edge2).chi)
-
-static CV_IMPLEMENT_QSORT( QuickSortMSCREdge, MSCREdge, cmp_mscr_edge )
+class LessThanEdge
+{
+public:
+    bool operator()(const MSCREdge& a, const MSCREdge& b) const { return a.chi < b.chi; }
+};
 
 // to find the root of one region
 static MSCRNode* findMSCR( MSCRNode* x )
@@ -1112,7 +1113,7 @@ extractMSER_8UC3( CvMat* src,
     CvMat* dy = cvCreateMat( src->rows-1, src->cols, CV_64FC1 );
     Ne = preprocessMSER_8UC3( map, edge, &emean, src, mask, dx, dy, Ne, params.edgeBlurSize );
     emean = emean / (double)Ne;
-    QuickSortMSCREdge( edge, Ne, 0 );
+    std::sort(edge, edge + Ne, LessThanEdge());
     MSCREdge* edge_ub = edge+Ne;
     MSCREdge* edgeptr = edge;
     TempMSCR* mscrptr = mscr;

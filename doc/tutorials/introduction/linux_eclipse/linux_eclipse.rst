@@ -201,8 +201,6 @@ Assuming that the image to use as the argument would be located in <DisplayImage
 V2: Using CMake+OpenCV with Eclipse (plugin CDT)
 ==================================================
 
-(See the `getting started <http://opencv.willowgarage.com/wiki/Getting_started>` section of the OpenCV Wiki)
-
 Say you have or create a new file, *helloworld.cpp* in a directory called *foo*:
 
 .. code-block:: cpp

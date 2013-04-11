@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 '''
 Coherence-enhancing filtering example
@@ -40,8 +40,10 @@ def coherence_filter(img, sigma = 11, str_sigma = 11, blend = 0.5, iter_n = 4):
 
 if __name__ == '__main__':
     import sys
-    try: fn = sys.argv[1]
-    except: fn = '../cpp/baboon.jpg'
+    try: 
+        fn = sys.argv[1]
+    except: 
+        fn = '../cpp/baboon.jpg'
 
     src = cv2.imread(fn)
 

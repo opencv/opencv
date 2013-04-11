@@ -491,7 +491,7 @@ void CV_UndistortPointsTest::distortPoints(const CvMat* _src, CvMat* _dst, const
         __P = cvCreateMat(3,4,CV_64F);
     if (matP)
     {
-        cvTsConvert(matP,__P);
+        cvtest::convert(cvarrToMat(matP), cvarrToMat(__P), -1);
     }
     else
     {
@@ -500,7 +500,7 @@ void CV_UndistortPointsTest::distortPoints(const CvMat* _src, CvMat* _dst, const
         __P->data.db[4] = 1;
         __P->data.db[8] = 1;
     }
-    CvMat* __R = cvCreateMat(3,3,CV_64F);;
+    CvMat* __R = cvCreateMat(3,3,CV_64F);
     if (matR)
     {
         cvCopy(matR,__R);
@@ -847,16 +847,16 @@ void CV_InitUndistortRectifyMapTest::prepare_to_validation(int/* test_case_idx*/
     CvMat _input3 = test_mat[INPUT][3];
     CvMat _input4 = test_mat[INPUT][4];
 
-    cvTsConvert(&_input1,&_camera);
-    cvTsConvert(&_input2,&_distort);
-    cvTsConvert(&_input3,&_rot);
-    cvTsConvert(&_input4,&_new_cam);
+    cvtest::convert(cvarrToMat(&_input1), cvarrToMat(&_camera), -1);
+    cvtest::convert(cvarrToMat(&_input2), cvarrToMat(&_distort), -1);
+    cvtest::convert(cvarrToMat(&_input3), cvarrToMat(&_rot), -1);
+    cvtest::convert(cvarrToMat(&_input4), cvarrToMat(&_new_cam), -1);
 
     //Applying precalculated undistort rectify map
     if (!useCPlus)
     {
-        mapx = cv::Mat(_mapx);
-        mapy = cv::Mat(_mapy);
+        mapx = cv::cvarrToMat(_mapx);
+        mapy = cv::cvarrToMat(_mapy);
     }
     cv::Mat map1,map2;
     cv::convertMaps(mapx,mapy,map1,map2,CV_32FC1);
@@ -876,7 +876,7 @@ void CV_InitUndistortRectifyMapTest::prepare_to_validation(int/* test_case_idx*/
                       zero_distortion ? 0 : &_distort, zero_R ? 0 : &_rot, zero_new_cam ? &_camera : &_new_cam);
     //cvTsDistortPoints(&_points,&ref_points,&_camera,&_distort,&_rot,&_new_cam);
     CvMat dst = test_mat[REF_OUTPUT][0];
-    cvTsConvert(&ref_points,&dst);
+    cvtest::convert(cvarrToMat(&ref_points), cvarrToMat(&dst), -1);
 
     cvtest::copy(test_mat[INPUT][0],test_mat[OUTPUT][0]);
 

@@ -39,12 +39,11 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
 #include "precomp.hpp"
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::meanShiftSegmentation(const GpuMat&, Mat&, int, int, int, TermCriteria) { throw_nogpu(); }
+void cv::gpu::meanShiftSegmentation(const GpuMat&, Mat&, int, int, int, TermCriteria) { throw_no_cuda(); }
 
 #else
 
@@ -380,6 +379,7 @@ void cv::gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr,
             dstcol[0] = static_cast<uchar>(sumcol[0] / comps.size[parent]);
             dstcol[1] = static_cast<uchar>(sumcol[1] / comps.size[parent]);
             dstcol[2] = static_cast<uchar>(sumcol[2] / comps.size[parent]);
+            dstcol[3] = 255;
         }
     }
 }

@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 '''
 Planar augmented reality
@@ -100,6 +100,8 @@ if __name__ == '__main__':
     print __doc__
 
     import sys
-    try: video_src = sys.argv[1]
-    except: video_src = 0
+    try:
+        video_src = sys.argv[1]
+    except:
+        video_src = 0
     App(video_src).run()

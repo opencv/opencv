@@ -175,7 +175,6 @@ The class represents rotated (i.e. not up-right) rectangles on a plane. Each rec
 
     .. ocv:function:: RotatedRect::RotatedRect()
     .. ocv:function:: RotatedRect::RotatedRect(const Point2f& center, const Size2f& size, float angle)
-    .. ocv:function:: RotatedRect::RotatedRect(const CvBox2D& box)
 
         :param center: The rectangle mass center.
         :param size: Width and height of the rectangle.
@@ -184,7 +183,6 @@ The class represents rotated (i.e. not up-right) rectangles on a plane. Each rec
 
     .. ocv:function:: void RotatedRect::points( Point2f pts[] ) const
     .. ocv:function:: Rect RotatedRect::boundingRect() const
-    .. ocv:function:: RotatedRect::operator CvBox2D() const
 
         :param pts: The points array for storing rectangle vertices.
 
@@ -229,8 +227,6 @@ The constructors.
 
 .. ocv:function:: TermCriteria::TermCriteria(int type, int maxCount, double epsilon)
 
-.. ocv:function:: TermCriteria::TermCriteria(const CvTermCriteria& criteria)
-
     :param type: The type of termination criteria: ``TermCriteria::COUNT``, ``TermCriteria::EPS`` or ``TermCriteria::COUNT`` + ``TermCriteria::EPS``.
 
     :param maxCount: The maximum number of iterations or elements to compute.
@@ -239,11 +235,6 @@ The constructors.
 
     :param criteria: Termination criteria in the deprecated ``CvTermCriteria`` format.
 
-TermCriteria::operator CvTermCriteria
--------------------------------------
-Converts to the deprecated ``CvTermCriteria`` format.
-
-.. ocv:function:: TermCriteria::operator CvTermCriteria() const
 
 Matx
 ----
@@ -366,6 +357,96 @@ The static method ``Range::all()`` returns a special variable that means "the wh
             // process [r.start, r.end)
         }
     }
+
+
+KeyPoint
+--------
+.. ocv:class:: KeyPoint
+
+  Data structure for salient point detectors.
+
+  .. ocv:member:: Point2f pt
+
+     coordinates of the keypoint
+
+  .. ocv:member:: float size
+
+     diameter of the meaningful keypoint neighborhood
+
+  .. ocv:member:: float angle
+
+     computed orientation of the keypoint (-1 if not applicable). Its possible values are in a range [0,360) degrees. It is measured relative to image coordinate system (y-axis is directed downward), ie in clockwise.
+
+  .. ocv:member:: float response
+
+     the response by which the most strong keypoints have been selected. Can be used for further sorting or subsampling
+
+  .. ocv:member:: int octave
+
+     octave (pyramid layer) from which the keypoint has been extracted
+
+  .. ocv:member:: int class_id
+
+     object id that can be used to clustered keypoints by an object they belong to
+
+KeyPoint::KeyPoint
+------------------
+The keypoint constructors
+
+.. ocv:function:: KeyPoint::KeyPoint()
+
+.. ocv:function:: KeyPoint::KeyPoint(Point2f _pt, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
+
+.. ocv:function:: KeyPoint::KeyPoint(float x, float y, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
+
+.. ocv:pyfunction:: cv2.KeyPoint([x, y, _size[, _angle[, _response[, _octave[, _class_id]]]]]) -> <KeyPoint object>
+
+    :param x: x-coordinate of the keypoint
+
+    :param y: y-coordinate of the keypoint
+
+    :param _pt: x & y coordinates of the keypoint
+
+    :param _size: keypoint diameter
+
+    :param _angle: keypoint orientation
+
+    :param _response: keypoint detector response on the keypoint (that is, strength of the keypoint)
+
+    :param _octave: pyramid octave in which the keypoint has been detected
+
+    :param _class_id: object id
+
+
+DMatch
+------
+.. ocv:class:: DMatch
+
+Class for matching keypoint descriptors: query descriptor index,
+train descriptor index, train image index, and distance between descriptors. ::
+
+    class DMatch
+    {
+    public:
+        DMatch() : queryIdx(-1), trainIdx(-1), imgIdx(-1),
+                   distance(std::numeric_limits<float>::max()) {}
+        DMatch( int _queryIdx, int _trainIdx, float _distance ) :
+                queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(-1),
+                distance(_distance) {}
+        DMatch( int _queryIdx, int _trainIdx, int _imgIdx, float _distance ) :
+                queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(_imgIdx),
+                distance(_distance) {}
+
+        int queryIdx; // query descriptor index
+        int trainIdx; // train descriptor index
+        int imgIdx;   // train image index
+
+        float distance;
+
+        // less is better
+        bool operator<( const DMatch &m ) const;
+    };
+
 
 
 .. _Ptr:
@@ -910,10 +991,6 @@ Various Mat constructors
 .. ocv:function:: Mat::Mat( const Mat& m, const Range& rowRange, const Range& colRange=Range::all() )
 
 .. ocv:function:: Mat::Mat(const Mat& m, const Rect& roi)
-
-.. ocv:function:: Mat::Mat(const CvMat* m, bool copyData=false)
-
-.. ocv:function:: Mat::Mat(const IplImage* img, bool copyData=false)
 
 .. ocv:function:: template<typename T, int n> explicit Mat::Mat(const Vec<T, n>& vec, bool copyData=true)
 
@@ -1552,33 +1629,6 @@ The operators make a new header for the specified sub-array of ``*this`` . They 
 :ocv:func:`Mat::colRange` . For example, ``A(Range(0, 10), Range::all())`` is equivalent to ``A.rowRange(0, 10)`` . Similarly to all of the above, the operators are O(1) operations, that is, no matrix data is copied.
 
 
-Mat::operator CvMat
--------------------
-Creates the ``CvMat`` header for the matrix.
-
-.. ocv:function:: Mat::operator CvMat() const
-
-
-The operator creates the ``CvMat`` header for the matrix without copying the underlying data. The reference counter is not taken into account by this operation. Thus, you should make sure than the original matrix is not deallocated while the ``CvMat`` header is used. The operator is useful for intermixing the new and the old OpenCV API's, for example: ::
-
-    Mat img(Size(320, 240), CV_8UC3);
-    ...
-
-    CvMat cvimg = img;
-    mycvOldFunc( &cvimg, ...);
-
-
-where ``mycvOldFunc`` is a function written to work with OpenCV 1.x data structures.
-
-
-Mat::operator IplImage
-----------------------
-Creates the ``IplImage`` header for the matrix.
-
-.. ocv:function:: Mat::operator IplImage() const
-
-The operator creates the ``IplImage`` header for the matrix without copying the underlying data. You should make sure than the original matrix is not deallocated while the ``IplImage`` header is used. Similarly to ``Mat::operator CvMat`` , the operator is useful for intermixing the new and the old OpenCV API's.
-
 Mat::total
 ----------
 Returns the total number of array elements.
@@ -2153,7 +2203,6 @@ Various SparseMat constructors.
 .. ocv:function:: SparseMat::SparseMat( int dims, const int* _sizes, int _type )
 .. ocv:function:: SparseMat::SparseMat( const SparseMat& m )
 .. ocv:function:: SparseMat::SparseMat( const Mat& m )
-.. ocv:function:: SparseMat::SparseMat( const CvSparseMat* m )
 
 
     :param m: Source matrix for copy constructor. If m is dense matrix (ocv:class:`Mat`) then it will be converted to sparse representation.
@@ -2425,7 +2474,7 @@ The class provides the following features for all derived classes:
 Here is example of SIFT use in your application via Algorithm interface: ::
 
     #include "opencv2/opencv.hpp"
-    #include "opencv2/nonfree/nonfree.hpp"
+    #include "opencv2/nonfree.hpp"
 
     ...
 
@@ -2457,13 +2506,13 @@ Algorithm::name
 ---------------
 Returns the algorithm name
 
-.. ocv:function:: string Algorithm::name() const
+.. ocv:function:: String Algorithm::name() const
 
 Algorithm::get
 --------------
 Returns the algorithm parameter
 
-.. ocv:function:: template<typename _Tp> typename ParamType<_Tp>::member_type Algorithm::get(const string& name) const
+.. ocv:function:: template<typename _Tp> typename ParamType<_Tp>::member_type Algorithm::get(const String& name) const
 
     :param name: The parameter name.
 
@@ -2472,7 +2521,7 @@ The method returns value of the particular parameter. Since the compiler can not
     * myalgo.get<int>("param_name")
     * myalgo.get<double>("param_name")
     * myalgo.get<bool>("param_name")
-    * myalgo.get<string>("param_name")
+    * myalgo.get<String>("param_name")
     * myalgo.get<Mat>("param_name")
     * myalgo.get<vector<Mat> >("param_name")
     * myalgo.get<Algorithm>("param_name") (it returns Ptr<Algorithm>).
@@ -2484,13 +2533,13 @@ Algorithm::set
 --------------
 Sets the algorithm parameter
 
-.. ocv:function:: void Algorithm::set(const string& name, int value)
-.. ocv:function:: void Algorithm::set(const string& name, double value)
-.. ocv:function:: void Algorithm::set(const string& name, bool value)
-.. ocv:function:: void Algorithm::set(const string& name, const string& value)
-.. ocv:function:: void Algorithm::set(const string& name, const Mat& value)
-.. ocv:function:: void Algorithm::set(const string& name, const vector<Mat>& value)
-.. ocv:function:: void Algorithm::set(const string& name, const Ptr<Algorithm>& value)
+.. ocv:function:: void Algorithm::set(const String& name, int value)
+.. ocv:function:: void Algorithm::set(const String& name, double value)
+.. ocv:function:: void Algorithm::set(const String& name, bool value)
+.. ocv:function:: void Algorithm::set(const String& name, const String& value)
+.. ocv:function:: void Algorithm::set(const String& name, const Mat& value)
+.. ocv:function:: void Algorithm::set(const String& name, const vector<Mat>& value)
+.. ocv:function:: void Algorithm::set(const String& name, const Ptr<Algorithm>& value)
 
     :param name: The parameter name.
     :param value: The parameter value.
@@ -2529,13 +2578,13 @@ Algorithm::getList
 ------------------
 Returns the list of registered algorithms
 
-.. ocv:function:: void Algorithm::getList(vector<string>& algorithms)
+.. ocv:function:: void Algorithm::getList(vector<String>& algorithms)
 
     :param algorithms: The output vector of algorithm names.
 
 This static method returns the list of registered algorithms in alphabetical order. Here is how to use it ::
 
-    vector<string> algorithms;
+    vector<String> algorithms;
     Algorithm::getList(algorithms);
     cout << "Algorithms: " << algorithms.size() << endl;
     for (size_t i=0; i < algorithms.size(); i++)
@@ -2546,7 +2595,7 @@ Algorithm::create
 -----------------
 Creates algorithm instance by name
 
-.. ocv:function:: template<typename _Tp> Ptr<_Tp> Algorithm::create(const string& name)
+.. ocv:function:: template<typename _Tp> Ptr<_Tp> Algorithm::create(const String& name)
 
     :param name: The algorithm name, one of the names returned by ``Algorithm::getList()``.
 

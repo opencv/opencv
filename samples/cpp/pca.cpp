@@ -54,7 +54,7 @@ static void read_imgList(const string& filename, vector<Mat>& images) {
     std::ifstream file(filename.c_str(), ifstream::in);
     if (!file) {
         string error_message = "No valid input file was given, please check the given filename.";
-        CV_Error(CV_StsBadArg, error_message);
+        CV_Error(Error::StsBadArg, error_message);
     }
     string line;
     while (getline(file, line)) {
@@ -78,7 +78,7 @@ static Mat toGrayscale(InputArray _src) {
     Mat src = _src.getMat();
     // only allow one channel
     if(src.channels() != 1) {
-        CV_Error(CV_StsBadArg, "Only Matrices with one channel are supported");
+        CV_Error(Error::StsBadArg, "Only Matrices with one channel are supported");
     }
     // create and return normalized image
     Mat dst;
@@ -104,7 +104,7 @@ static void onTrackbar(int pos, void* ptr)
 
     struct params *p = (struct params *)ptr;
 
-    p->pca = PCA(p->data, cv::Mat(), CV_PCA_DATA_AS_ROW, var);
+    p->pca = PCA(p->data, cv::Mat(), PCA::DATA_AS_ROW, var);
 
     Mat point = p->pca.project(p->data.row(0));
     Mat reconstruction = p->pca.backProject(point);
@@ -142,14 +142,14 @@ int main(int argc, char** argv)
     // Quit if there are not enough images for this demo.
     if(images.size() <= 1) {
         string error_message = "This demo needs at least 2 images to work. Please add more images to your data set!";
-        CV_Error(CV_StsError, error_message);
+        CV_Error(Error::StsError, error_message);
     }
 
     // Reshape and stack images into a rowMatrix
     Mat data = formatImagesForPCA(images);
 
     // perform PCA
-    PCA pca(data, cv::Mat(), CV_PCA_DATA_AS_ROW, 0.95); // trackbar is initially set here, also this is a common value for retainedVariance
+    PCA pca(data, cv::Mat(), PCA::DATA_AS_ROW, 0.95); // trackbar is initially set here, also this is a common value for retainedVariance
 
     // Demonstration of the effect of retainedVariance on the first image
     Mat point = pca.project(data.row(0)); // project into the eigenspace, thus the image becomes a "point"
@@ -159,7 +159,7 @@ int main(int argc, char** argv)
 
     // init highgui window
     string winName = "Reconstruction | press 'q' to quit";
-    namedWindow(winName, CV_WINDOW_NORMAL);
+    namedWindow(winName, WINDOW_NORMAL);
 
     // params struct to pass to the trackbar handler
     params p;

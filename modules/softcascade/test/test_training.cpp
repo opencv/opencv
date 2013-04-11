@@ -42,16 +42,10 @@
 
 #if !defined(ANDROID)
 
+#include <test_precomp.hpp>
 #include <string>
 #include <fstream>
 #include <vector>
-
-#include "test_precomp.hpp"
-#if !defined (_WIN32) && ! defined(__MINGW32__)
-# include <glob.h>
-#else
-# include <windows.h>
-#endif
 
 using namespace std;
 
@@ -59,7 +53,7 @@ namespace {
 
 using namespace cv::softcascade;
 
-typedef vector<string> svector;
+typedef vector<cv::String> svector;
 class ScaledDataset : public Dataset
 {
 public:
@@ -74,92 +68,10 @@ private:
     svector neg;
 };
 
-string itoa(long i)
-{
-    char s[65];
-    sprintf(s, "%ld", i);
-    return std::string(s);
-}
-
-
-#if !defined (_WIN32) && ! defined(__MINGW32__)
-
-void glob(const string& path, svector& ret)
-{
-    glob_t glob_result;
-    glob(path.c_str(), GLOB_TILDE, 0, &glob_result);
-
-    ret.clear();
-    ret.reserve(glob_result.gl_pathc);
-
-    for(unsigned int i = 0; i < glob_result.gl_pathc; ++i)
-    {
-        ret.push_back(std::string(glob_result.gl_pathv[i]));
-    }
-
-    globfree(&glob_result);
-}
-
-#else
-
-void glob(const string& refRoot, const string& refExt, svector &refvecFiles)
-{
-    std::string     strFilePath;             // File path
-    std::string     strExtension;            // Extension
-
-    std::string strPattern = refRoot + "\\*.*";
-
-    WIN32_FIND_DATA FileInformation;         // File information
-    HANDLE hFile = ::FindFirstFile(strPattern.c_str(), &FileInformation);
-
-    if(hFile == INVALID_HANDLE_VALUE)
-        CV_Error(CV_StsBadArg, "Your dataset search path is incorrect");
-
-    do
-    {
-        if(FileInformation.cFileName[0] != '.')
-        {
-            strFilePath.erase();
-            strFilePath = refRoot + "\\" + FileInformation.cFileName;
-
-            if( !(FileInformation.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) )
-            {
-                // Check extension
-                strExtension = FileInformation.cFileName;
-                strExtension = strExtension.substr(strExtension.rfind(".") + 1);
-
-                if(strExtension == refExt)
-                    // Save filename
-                    refvecFiles.push_back(strFilePath);
-            }
-        }
-    }
-    while(::FindNextFile(hFile, &FileInformation) == TRUE);
-
-    // Close handle
-    ::FindClose(hFile);
-
-    DWORD dwError = ::GetLastError();
-    if(dwError != ERROR_NO_MORE_FILES)
-        CV_Error(CV_StsBadArg, "Your dataset search path is incorrect");
-}
-
-#endif
-
 ScaledDataset::ScaledDataset(const string& path, const int oct)
 {
-
-#if !defined (_WIN32) && ! defined(__MINGW32__)
-    glob(path + "/pos/octave_" + itoa(oct) + "/*.png", pos);
-#else
-    glob(path + "/pos/octave_" + itoa(oct),     "png", pos);
-#endif
-
-#if !defined (_WIN32) && ! defined(__MINGW32__)
-    glob(path + "/neg/octave_" + itoa(oct) + "/*.png", neg);
-#else
-    glob(path + "/neg/octave_" + itoa(oct),     "png", neg);
-#endif
+    cv::glob(path + cv::format("/octave_%d/*.png", oct), pos);
+    cv::glob(path + "/*.png", neg);
 
     // Check: files not empty
     CV_Assert(pos.size() != size_t(0));
@@ -181,7 +93,7 @@ ScaledDataset::~ScaledDataset(){}
 
 }
 
-TEST(DISABLED_SoftCascade, training)
+TEST(SoftCascade, training)
 {
     // // 2. check and open output file
     string outXmlPath = cv::tempfile(".xml");
@@ -212,17 +124,18 @@ TEST(DISABLED_SoftCascade, training)
         float octave = powf(2.f, (float)(*it));
         cv::Size model = cv::Size( cvRound(64 * octave) / shrinkage, cvRound(128 * octave) / shrinkage );
 
-        cv::Ptr<FeaturePool> pool = FeaturePool::create(model, nfeatures);
+        cv::Ptr<FeaturePool> pool = FeaturePool::create(model, nfeatures, 10);
         nfeatures = pool->size();
-        int npositives = 20;
-        int nnegatives = 40;
+        int npositives = 10;
+        int nnegatives = 20;
 
         cv::Rect boundingBox = cv::Rect( cvRound(20 * octave), cvRound(20  * octave),
                                          cvRound(64 * octave), cvRound(128 * octave));
 
-        cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage, nfeatures);
+        cv::Ptr<ChannelFeatureBuilder> builder = ChannelFeatureBuilder::create("HOG6MagLuv");
+        cv::Ptr<Octave> boost = Octave::create(boundingBox, npositives, nnegatives, *it, shrinkage, builder);
 
-        std::string path = cvtest::TS::ptr()->get_data_path() + "softcascade/sample_training_set";
+        std::string path = cvtest::TS::ptr()->get_data_path() + "cascadeandhog/sample_training_set";
         ScaledDataset dataset(path, *it);
 
         if (boost->train(&dataset, pool, 3, 2))

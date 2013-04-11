@@ -22,7 +22,7 @@
    * An active user group is at:
      http://tech.groups.yahoo.com/group/OpenCV/
    * The minutes of weekly OpenCV development meetings are at:
-     http://pr.willowgarage.com/wiki/OpenCV
+     http://code.opencv.org/projects/opencv/wiki/Meeting_notes
    ************************************************** */
 
 #include "opencv2/calib3d/calib3d.hpp"
@@ -121,7 +121,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
             {
                 cout << filename << endl;
                 Mat cimg, cimg1;
-                cvtColor(img, cimg, CV_GRAY2BGR);
+                cvtColor(img, cimg, COLOR_GRAY2BGR);
                 drawChessboardCorners(cimg, boardSize, corners, found);
                 double sf = 640./MAX(img.rows, img.cols);
                 resize(cimg, cimg1, Size(), sf, sf);
@@ -304,10 +304,10 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
         for( k = 0; k < 2; k++ )
         {
             Mat img = imread(goodImageList[i*2+k], 0), rimg, cimg;
-            remap(img, rimg, rmap[k][0], rmap[k][1], CV_INTER_LINEAR);
-            cvtColor(rimg, cimg, CV_GRAY2BGR);
+            remap(img, rimg, rmap[k][0], rmap[k][1], INTER_LINEAR);
+            cvtColor(rimg, cimg, COLOR_GRAY2BGR);
             Mat canvasPart = !isVerticalStereo ? canvas(Rect(w*k, 0, w, h)) : canvas(Rect(0, h*k, w, h));
-            resize(cimg, canvasPart, canvasPart.size(), 0, 0, CV_INTER_AREA);
+            resize(cimg, canvasPart, canvasPart.size(), 0, 0, INTER_AREA);
             if( useCalibrated )
             {
                 Rect vroi(cvRound(validRoi[k].x*sf), cvRound(validRoi[k].y*sf),
