@@ -50,7 +50,7 @@
 #include "opencv2/gpuarithm.hpp"
 #include "opencv2/gpufilters.hpp"
 #include "opencv2/gpuimgproc.hpp"
-
+#include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/video.hpp"
 
 #include "opencv2/core/gpu_private.hpp"
