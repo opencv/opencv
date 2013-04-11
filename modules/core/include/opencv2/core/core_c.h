@@ -1496,6 +1496,14 @@ CVAPI(int) cvKMeans2( const CvArr* samples, int cluster_count, CvArr* labels,
 /* Loads optimized functions from IPP, MKL etc. or switches back to pure C code */
 CVAPI(int)  cvUseOptimized( int on_off );
 
+typedef void* (CV_CDECL *CvAllocFunc)(size_t size);
+typedef void (CV_CDECL *CvFreeFunc)(void* pptr);
+
+/* Set user-defined memory managment functions (substitutors for malloc and free) that 
+   will be called by cvAlloc, cvFree and higher-level functions (e.g. cvCreateImage) */
+CVAPI(void) cvSetMemoryManager(CvAllocFunc alloc_func CV_DEFAULT(NULL), 
+                               CvFreeFunc free_func CV_DEFAULT(NULL));
+
 typedef IplImage* (CV_STDCALL* Cv_iplCreateImageHeader)
                             (int,int,int,char*,char*,int,int,int,int,int,
                             IplROI*,IplImage*,void*,IplTileInfo*);
