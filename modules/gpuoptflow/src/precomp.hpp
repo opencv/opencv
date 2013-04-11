@@ -40,26 +40,23 @@
 //
 //M*/
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
+#ifndef __OPENCV_PRECOMP_H__
+#define __OPENCV_PRECOMP_H__
 
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
+#include <limits>
 
-#include <fstream>
-
-#include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_test.hpp"
-
-#include "opencv2/gpuvideo.hpp"
-#include "opencv2/gpuimgproc.hpp"
+#include "opencv2/gpuoptflow.hpp"
+#include "opencv2/gpuarithm.hpp"
+#include "opencv2/gpuwarping.hpp"
 
 #include "opencv2/video.hpp"
-#include "opencv2/legacy.hpp"
 
+#include "opencv2/core/gpu_private.hpp"
+
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_GPULEGACY
+#  include "opencv2/gpulegacy/private.hpp"
 #endif
+
+#endif /* __OPENCV_PRECOMP_H__ */

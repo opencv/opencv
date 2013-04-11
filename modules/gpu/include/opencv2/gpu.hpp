@@ -49,7 +49,8 @@
 #include "opencv2/gpuwarping.hpp"
 #include "opencv2/gpuimgproc.hpp"
 #include "opencv2/gpufeatures2d.hpp"
-#include "opencv2/gpuvideo.hpp"
+#include "opencv2/gpuoptflow.hpp"
+#include "opencv2/gpubgsegm.hpp"
 #include "opencv2/gpustereo.hpp"
 
 namespace cv { namespace gpu {

@@ -1094,3 +1094,42 @@ PERF_TEST_P(Sz_Depth_Cn_KernelSz, BilateralFilter,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+//////////////////////////////////////////////////////
+// GoodFeaturesToTrack
+
+DEF_PARAM_TEST(Image_MinDistance, string, double);
+
+PERF_TEST_P(Image_MinDistance, GoodFeaturesToTrack,
+            Combine(Values<string>("gpu/perf/aloe.png"),
+                    Values(0.0, 3.0)))
+{
+    const string fileName = GET_PARAM(0);
+    const double minDistance = GET_PARAM(1);
+
+    const cv::Mat image = readImage(fileName, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
+
+    const int maxCorners = 8000;
+    const double qualityLevel = 0.01;
+
+    if (PERF_RUN_GPU())
+    {
+        cv::gpu::GoodFeaturesToTrackDetector_GPU d_detector(maxCorners, qualityLevel, minDistance);
+
+        const cv::gpu::GpuMat d_image(image);
+        cv::gpu::GpuMat pts;
+
+        TEST_CYCLE() d_detector(d_image, pts);
+
+        GPU_SANITY_CHECK(pts);
+    }
+    else
+    {
+        cv::Mat pts;
+
+        TEST_CYCLE() cv::goodFeaturesToTrack(image, pts, maxCorners, qualityLevel, minDistance);
+
+        CPU_SANITY_CHECK(pts);
+    }
+}

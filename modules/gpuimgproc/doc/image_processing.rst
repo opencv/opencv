@@ -556,3 +556,34 @@ Downloads results from :ocv:func:`gpu::HoughCircles` to host memory.
     :param h_circles: Output host array.
 
 .. seealso:: :ocv:func:`gpu::HoughCircles`
+
+
+
+gpu::GoodFeaturesToTrackDetector_GPU
+------------------------------------
+.. ocv:class:: gpu::GoodFeaturesToTrackDetector_GPU
+
+Class used for strong corners detection on an image. ::
+
+    class GoodFeaturesToTrackDetector_GPU
+    {
+    public:
+        explicit GoodFeaturesToTrackDetector_GPU(int maxCorners_ = 1000, double qualityLevel_ = 0.01, double minDistance_ = 0.0,
+            int blockSize_ = 3, bool useHarrisDetector_ = false, double harrisK_ = 0.04);
+
+        void operator ()(const GpuMat& image, GpuMat& corners, const GpuMat& mask = GpuMat());
+
+        int maxCorners;
+        double qualityLevel;
+        double minDistance;
+
+        int blockSize;
+        bool useHarrisDetector;
+        double harrisK;
+
+        void releaseMemory();
+    };
+
+The class finds the most prominent corners in the image.
+
+.. seealso:: :ocv:func:`goodFeaturesToTrack`
