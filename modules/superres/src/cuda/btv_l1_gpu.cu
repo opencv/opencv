@@ -40,6 +40,10 @@
 //
 //M*/
 
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_GPU
+
 #include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/transform.hpp"
 #include "opencv2/gpu/device/vec_traits.hpp"
@@ -232,3 +236,5 @@ namespace btv_l1_device
     template void calcBtvRegularization<3>(PtrStepSzb src, PtrStepSzb dst, int ksize);
     template void calcBtvRegularization<4>(PtrStepSzb src, PtrStepSzb dst, int ksize);
 }
+
+#endif /* HAVE_OPENCV_GPU */
