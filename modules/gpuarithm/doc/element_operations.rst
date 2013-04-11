@@ -1,5 +1,5 @@
 Per-element Operations
-=======================
+======================
 
 .. highlight:: cpp
 
@@ -110,6 +110,7 @@ Computes a matrix-matrix or matrix-scalar division.
 This function, in contrast to :ocv:func:`divide`, uses a round-down rounding mode.
 
 .. seealso:: :ocv:func:`divide`
+
 
 
 gpu::addWeighted
@@ -465,3 +466,109 @@ Applies a fixed-level threshold to each array element.
     :param stream: Stream for the asynchronous version.
 
 .. seealso:: :ocv:func:`threshold`
+
+
+
+gpu::magnitude
+------------------
+Computes magnitudes of complex matrix elements.
+
+.. ocv:function:: void gpu::magnitude( const GpuMat& xy, GpuMat& magnitude, Stream& stream=Stream::Null() )
+
+.. ocv:function:: void gpu::magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, Stream& stream = Stream::Null())
+
+    :param xy: Source complex matrix in the interleaved format ( ``CV_32FC2`` ).
+
+    :param x: Source matrix containing real components ( ``CV_32FC1`` ).
+
+    :param y: Source matrix containing imaginary components ( ``CV_32FC1`` ).
+
+    :param magnitude: Destination matrix of float magnitudes ( ``CV_32FC1`` ).
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`magnitude`
+
+
+
+gpu::magnitudeSqr
+---------------------
+Computes squared magnitudes of complex matrix elements.
+
+.. ocv:function:: void gpu::magnitudeSqr( const GpuMat& xy, GpuMat& magnitude, Stream& stream=Stream::Null() )
+
+.. ocv:function:: void gpu::magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, Stream& stream = Stream::Null())
+
+    :param xy: Source complex matrix in the interleaved format ( ``CV_32FC2`` ).
+
+    :param x: Source matrix containing real components ( ``CV_32FC1`` ).
+
+    :param y: Source matrix containing imaginary components ( ``CV_32FC1`` ).
+
+    :param magnitude: Destination matrix of float magnitude squares ( ``CV_32FC1`` ).
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::phase
+--------------
+Computes polar angles of complex matrix elements.
+
+.. ocv:function:: void gpu::phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees=false, Stream& stream = Stream::Null())
+
+    :param x: Source matrix containing real components ( ``CV_32FC1`` ).
+
+    :param y: Source matrix containing imaginary components ( ``CV_32FC1`` ).
+
+    :param angle: Destination matrix of angles ( ``CV_32FC1`` ).
+
+    :param angleInDegrees: Flag for angles that must be evaluated in degrees.
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`phase`
+
+
+
+gpu::cartToPolar
+--------------------
+Converts Cartesian coordinates into polar.
+
+.. ocv:function:: void gpu::cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees=false, Stream& stream = Stream::Null())
+
+    :param x: Source matrix containing real components ( ``CV_32FC1`` ).
+
+    :param y: Source matrix containing imaginary components ( ``CV_32FC1`` ).
+
+    :param magnitude: Destination matrix of float magnitudes ( ``CV_32FC1`` ).
+
+    :param angle: Destination matrix of angles ( ``CV_32FC1`` ).
+
+    :param angleInDegrees: Flag for angles that must be evaluated in degrees.
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`cartToPolar`
+
+
+
+gpu::polarToCart
+--------------------
+Converts polar coordinates into Cartesian.
+
+.. ocv:function:: void gpu::polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees=false, Stream& stream = Stream::Null())
+
+    :param magnitude: Source matrix containing magnitudes ( ``CV_32FC1`` ).
+
+    :param angle: Source matrix containing angles ( ``CV_32FC1`` ).
+
+    :param x: Destination matrix of real components ( ``CV_32FC1`` ).
+
+    :param y: Destination matrix of imaginary components ( ``CV_32FC1`` ).
+
+    :param angleInDegrees: Flag that indicates angles in degrees.
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`polarToCart`

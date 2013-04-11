@@ -222,12 +222,6 @@ CV_EXPORTS void normalize(const GpuMat& src, GpuMat& dst, double alpha = 1, doub
 CV_EXPORTS void normalize(const GpuMat& src, GpuMat& dst, double a, double b,
                           int norm_type, int dtype, const GpuMat& mask, GpuMat& norm_buf, GpuMat& cvt_buf);
 
-//! computes mean value and standard deviation of all or selected array elements
-//! supports only CV_8UC1 type
-CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev);
-//! buffered version
-CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev, GpuMat& buf);
-
 //! computes norm of array
 //! supports NORM_INF, NORM_L1, NORM_L2
 //! supports all matrices except 64F
@@ -275,8 +269,11 @@ CV_EXPORTS int countNonZero(const GpuMat& src, GpuMat& buf);
 //! reduces a matrix to a vector
 CV_EXPORTS void reduce(const GpuMat& mtx, GpuMat& vec, int dim, int reduceOp, int dtype = -1, Stream& stream = Stream::Null());
 
-//! applies fixed threshold to the image
-CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type, Stream& stream = Stream::Null());
+//! computes mean value and standard deviation of all or selected array elements
+//! supports only CV_8UC1 type
+CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev);
+//! buffered version
+CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev, GpuMat& buf);
 
 //! computes the standard deviation of integral images
 //! supports only CV_32SC1 source type and CV_32FC1 sqr type
@@ -286,6 +283,9 @@ CV_EXPORTS void rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, co
 //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
 CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType,
                                const Scalar& value = Scalar(), Stream& stream = Stream::Null());
+
+//! applies fixed threshold to the image
+CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type, Stream& stream = Stream::Null());
 
 //! computes the integral image
 //! sum will have CV_32S type, but will contain unsigned int values

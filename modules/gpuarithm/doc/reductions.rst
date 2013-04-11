@@ -5,25 +5,6 @@ Matrix Reductions
 
 
 
-gpu::meanStdDev
--------------------
-Computes a mean value and a standard deviation of matrix elements.
-
-.. ocv:function:: void gpu::meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev)
-.. ocv:function:: void gpu::meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev, GpuMat& buf)
-
-    :param mtx: Source matrix.  ``CV_8UC1``  matrices are supported for now.
-
-    :param mean: Mean value.
-
-    :param stddev: Standard deviation value.
-
-    :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
-
-.. seealso:: :ocv:func:`meanStdDev`
-
-
-
 gpu::norm
 -------------
 Returns the norm of a matrix (or difference of two matrices).
@@ -205,3 +186,52 @@ Reduces a matrix to a vector.
 The function ``reduce`` reduces the matrix to a vector by treating the matrix rows/columns as a set of 1D vectors and performing the specified operation on the vectors until a single row/column is obtained. For example, the function can be used to compute horizontal and vertical projections of a raster image. In case of ``CV_REDUCE_SUM`` and ``CV_REDUCE_AVG`` , the output may have a larger element bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction modes.
 
 .. seealso:: :ocv:func:`reduce`
+
+
+
+gpu::normalize
+--------------
+Normalizes the norm or value range of an array.
+
+.. ocv:function:: void gpu::normalize(const GpuMat& src, GpuMat& dst, double alpha = 1, double beta = 0, int norm_type = NORM_L2, int dtype = -1, const GpuMat& mask = GpuMat())
+
+.. ocv:function:: void gpu::normalize(const GpuMat& src, GpuMat& dst, double a, double b, int norm_type, int dtype, const GpuMat& mask, GpuMat& norm_buf, GpuMat& cvt_buf)
+
+    :param src: input array.
+
+    :param dst: output array of the same size as  ``src`` .
+
+    :param alpha: norm value to normalize to or the lower range boundary in case of the range normalization.
+
+    :param beta: upper range boundary in case of the range normalization; it is not used for the norm normalization.
+
+    :param normType: normalization type (see the details below).
+
+    :param dtype: when negative, the output array has the same type as ``src``; otherwise, it has the same number of channels as  ``src`` and the depth ``=CV_MAT_DEPTH(dtype)``.
+
+    :param mask: optional operation mask.
+
+    :param norm_buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
+
+    :param cvt_buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
+
+.. seealso:: :ocv:func:`normalize`
+
+
+
+gpu::meanStdDev
+-------------------
+Computes a mean value and a standard deviation of matrix elements.
+
+.. ocv:function:: void gpu::meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev)
+.. ocv:function:: void gpu::meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev, GpuMat& buf)
+
+    :param mtx: Source matrix.  ``CV_8UC1``  matrices are supported for now.
+
+    :param mean: Mean value.
+
+    :param stddev: Standard deviation value.
+
+    :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
+
+.. seealso:: :ocv:func:`meanStdDev`
