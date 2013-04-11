@@ -783,9 +783,6 @@ Ptr<BaseFilter_GPU> cv::gpu::getLinearFilter_GPU(int srcType, int dstType, const
 
     CV_Assert(ksize.width * ksize.height <= 16 * 16);
 
-    int gpuBorderType;
-    CV_Assert( tryConvertToGpuBorderType(brd_type, gpuBorderType) );
-
     GpuMat gpu_krnl;
     normalizeKernel(kernel, gpu_krnl, CV_32F);
 
@@ -815,7 +812,7 @@ Ptr<BaseFilter_GPU> cv::gpu::getLinearFilter_GPU(int srcType, int dstType, const
         break;
     }
 
-    return Ptr<BaseFilter_GPU>(new GpuFilter2D(ksize, anchor, func, gpu_krnl, gpuBorderType));
+    return Ptr<BaseFilter_GPU>(new GpuFilter2D(ksize, anchor, func, gpu_krnl, brd_type));
 }
 
 Ptr<FilterEngine_GPU> cv::gpu::createLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, Point anchor, int borderType)
@@ -936,9 +933,6 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
 
     CV_Assert( borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP );
 
-    int gpuBorderType;
-    CV_Assert( tryConvertToGpuBorderType(borderType, gpuBorderType) );
-
     const int sdepth = CV_MAT_DEPTH(srcType);
     const int cn = CV_MAT_CN(srcType);
     CV_Assert( sdepth <= CV_64F && cn <= 4 );
@@ -955,7 +949,7 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
 
     normalizeAnchor(anchor, ksize);
 
-    return Ptr<BaseRowFilter_GPU>(new GpuLinearRowFilter(ksize, anchor, gpu_row_krnl, func, gpuBorderType));
+    return Ptr<BaseRowFilter_GPU>(new GpuLinearRowFilter(ksize, anchor, gpu_row_krnl, func, borderType));
 }
 
 namespace
@@ -1041,9 +1035,6 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
 
     CV_Assert( borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP );
 
-    int gpuBorderType;
-    CV_Assert( tryConvertToGpuBorderType(borderType, gpuBorderType) );
-
     const int ddepth = CV_MAT_DEPTH(dstType);
     const int cn = CV_MAT_CN(dstType);
     CV_Assert( ddepth <= CV_64F && cn <= 4 );
@@ -1060,7 +1051,7 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
 
     normalizeAnchor(anchor, ksize);
 
-    return Ptr<BaseColumnFilter_GPU>(new GpuLinearColumnFilter(ksize, anchor, gpu_col_krnl, func, gpuBorderType));
+    return Ptr<BaseColumnFilter_GPU>(new GpuLinearColumnFilter(ksize, anchor, gpu_col_krnl, func, borderType));
 }
 
 Ptr<FilterEngine_GPU> cv::gpu::createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat& rowKernel, const Mat& columnKernel,

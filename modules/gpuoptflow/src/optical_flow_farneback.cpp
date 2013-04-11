@@ -192,10 +192,10 @@ void cv::gpu::FarnebackOpticalFlow::updateFlow_gaussianBlur(
 {
     if (deviceSupports(FEATURE_SET_COMPUTE_12))
         cudev::optflow_farneback::gaussianBlur5Gpu(
-                    M, blockSize/2, bufM, BORDER_REPLICATE_GPU, S(streams[0]));
+                    M, blockSize/2, bufM, BORDER_REPLICATE, S(streams[0]));
     else
         cudev::optflow_farneback::gaussianBlur5Gpu_CC11(
-                    M, blockSize/2, bufM, BORDER_REPLICATE_GPU, S(streams[0]));
+                    M, blockSize/2, bufM, BORDER_REPLICATE, S(streams[0]));
     swap(M, bufM);
 
     cudev::optflow_farneback::updateFlowGpu(M, flowx, flowy, S(streams[0]));
@@ -366,7 +366,7 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
             for (int i = 0; i < 2; i++)
             {
                 cudev::optflow_farneback::gaussianBlurGpu(
-                        frames_[i], smoothSize/2, blurredFrame[i], BORDER_REFLECT101_GPU, S(streams[i]));
+                        frames_[i], smoothSize/2, blurredFrame[i], BORDER_REFLECT101, S(streams[i]));
 #if ENABLE_GPU_RESIZE
                 resize(blurredFrame[i], pyrLevel[i], Size(width, height), INTER_LINEAR, streams[i]);
 #else

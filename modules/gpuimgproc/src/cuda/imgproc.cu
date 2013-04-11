@@ -269,15 +269,15 @@ namespace cv { namespace gpu { namespace cudev
 
             switch (border_type)
             {
-            case BORDER_REFLECT101_GPU:
+            case BORDER_REFLECT101:
                 cornerHarris_kernel<<<grid, block, 0, stream>>>(block_size, k, dst, BrdRowReflect101<void>(Dx.cols), BrdColReflect101<void>(Dx.rows));
                 break;
 
-            case BORDER_REFLECT_GPU:
+            case BORDER_REFLECT:
                 cornerHarris_kernel<<<grid, block, 0, stream>>>(block_size, k, dst, BrdRowReflect<void>(Dx.cols), BrdColReflect<void>(Dx.rows));
                 break;
 
-            case BORDER_REPLICATE_GPU:
+            case BORDER_REPLICATE:
                 cornerHarris_kernel<<<grid, block, 0, stream>>>(block_size, k, dst);
                 break;
             }
@@ -381,15 +381,15 @@ namespace cv { namespace gpu { namespace cudev
 
             switch (border_type)
             {
-            case BORDER_REFLECT101_GPU:
+            case BORDER_REFLECT101:
                 cornerMinEigenVal_kernel<<<grid, block, 0, stream>>>(block_size, dst, BrdRowReflect101<void>(Dx.cols), BrdColReflect101<void>(Dx.rows));
                 break;
 
-            case BORDER_REFLECT_GPU:
+            case BORDER_REFLECT:
                 cornerMinEigenVal_kernel<<<grid, block, 0, stream>>>(block_size, dst, BrdRowReflect<void>(Dx.cols), BrdColReflect<void>(Dx.rows));
                 break;
 
-            case BORDER_REPLICATE_GPU:
+            case BORDER_REPLICATE:
                 cornerMinEigenVal_kernel<<<grid, block, 0, stream>>>(block_size, dst);
                 break;
             }

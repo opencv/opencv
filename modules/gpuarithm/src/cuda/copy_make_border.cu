@@ -86,11 +86,11 @@ namespace cv { namespace gpu { namespace cudev
 
             static const caller_t callers[5] =
             {
-                CopyMakeBorderDispatcher<BrdReflect101, vec_type>::call,
-                CopyMakeBorderDispatcher<BrdReplicate, vec_type>::call,
                 CopyMakeBorderDispatcher<BrdConstant, vec_type>::call,
+                CopyMakeBorderDispatcher<BrdReplicate, vec_type>::call,
                 CopyMakeBorderDispatcher<BrdReflect, vec_type>::call,
-                CopyMakeBorderDispatcher<BrdWrap, vec_type>::call
+                CopyMakeBorderDispatcher<BrdWrap, vec_type>::call,
+                CopyMakeBorderDispatcher<BrdReflect101, vec_type>::call
             };
 
             callers[borderMode](PtrStepSz<vec_type>(src), PtrStepSz<vec_type>(dst), top, left, borderValue, stream);
