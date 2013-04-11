@@ -47,9 +47,17 @@ public class HardwareDetector
 
     public static native int DetectKnownPlatforms();
 
-    static
-    {
-        System.loadLibrary("OpenCVEngine");
-        System.loadLibrary("OpenCVEngine_jni");
+    public static boolean mIsReady = false;
+
+    static {
+        try {
+            System.loadLibrary("OpenCVEngine");
+            System.loadLibrary("OpenCVEngine_jni");
+            mIsReady = true;
+        }
+        catch(UnsatisfiedLinkError e) {
+            mIsReady = false;
+            e.printStackTrace();
+        }
     }
 }
