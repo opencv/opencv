@@ -1117,9 +1117,9 @@ bool CvBoost::train( CvMLData* _data,
 }
 
 void
-CvBoost::update_weights( CvBoostTree* tree )
+CvBoost::update_weights_impl( CvBoostTree* tree, double initial_weights[2] )
 {
-    CV_FUNCNAME( "CvBoost::update_weights" );
+    CV_FUNCNAME( "CvBoost::update_weights_impl" );
 
     __BEGIN__;
 
@@ -1161,7 +1161,7 @@ CvBoost::update_weights( CvBoostTree* tree )
         // so we need to convert class labels to floating-point values
 
         double w0 = 1./n;
-        double p[2] = { 1, 1 };
+        double p[2] = { initial_weights[0], initial_weights[1] };
 
         cvReleaseMat( &orig_response );
         cvReleaseMat( &sum_response );
@@ -1414,6 +1414,11 @@ CvBoost::update_weights( CvBoostTree* tree )
     __END__;
 }
 
+void
+CvBoost::update_weights( CvBoostTree* tree ) {
+  double initial_weights[2] = { 1, 1 };
+  update_weights_impl( tree, initial_weights );
+}
 
 static CV_IMPLEMENT_QSORT_EX( icvSort_64f, double, CV_LT, int )
 

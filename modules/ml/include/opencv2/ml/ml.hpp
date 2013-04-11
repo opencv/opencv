@@ -1253,6 +1253,8 @@ public:
 
 protected:
 
+    void update_weights_impl( CvBoostTree* tree, double initial_weights[2] );
+
     virtual bool set_params( const CvBoostParams& params );
     virtual void update_weights( CvBoostTree* tree );
     virtual void trim_weights();
