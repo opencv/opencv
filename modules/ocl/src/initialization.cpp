@@ -1053,7 +1053,7 @@ BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )
         Context* cv_ctx = Context::getContext();
         if(cv_ctx)
         {
-            cl_context ctx = (cl_context)&(cv_ctx->impl->oclcontext);
+            cl_context ctx = cv_ctx->impl->oclcontext;
             if(ctx)
                 openCLSafeCall(clReleaseContext(ctx));
         }
