@@ -93,18 +93,18 @@ bool CV_RigidTransform_Test::testNPoints(int from)
         progress = update_progress(progress, k, ntests, 0);
 
         Mat aff(2, 3, CV_64F);
-        rng.fill(aff, CV_RAND_UNI, Scalar(-2), Scalar(2));
+        rng.fill(aff, RNG::UNIFORM, Scalar(-2), Scalar(2));
 
         int n = (unsigned)rng % 100 + 10;
 
         Mat fpts(1, n, CV_32FC2);
         Mat tpts(1, n, CV_32FC2);
 
-        rng.fill(fpts, CV_RAND_UNI, Scalar(0,0), Scalar(10,10));
+        rng.fill(fpts, RNG::UNIFORM, Scalar(0,0), Scalar(10,10));
         transform(fpts.ptr<Point2f>(), fpts.ptr<Point2f>() + n, tpts.ptr<Point2f>(), WrapAff2D(aff));
 
         Mat noise(1, n, CV_32FC2);
-        rng.fill(noise, CV_RAND_NORMAL, Scalar::all(0), Scalar::all(0.001*(n<=7 ? 0 : n <= 30 ? 1 : 10)));
+        rng.fill(noise, RNG::NORMAL, Scalar::all(0), Scalar::all(0.001*(n<=7 ? 0 : n <= 30 ? 1 : 10)));
         tpts += noise;
 
         Mat aff_est = estimateRigidTransform(fpts, tpts, true);

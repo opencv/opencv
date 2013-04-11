@@ -761,7 +761,7 @@ void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImag
     }
 
     default:
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(Error::StsUnsupportedFormat, "");
     }
 }
 

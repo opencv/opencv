@@ -357,7 +357,7 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
         mask1_.setTo(255);
     }
 
-    cvtColor(frame, grayFrame_, CV_BGR2GRAY);
+    cvtColor(frame, grayFrame_, COLOR_BGR2GRAY);
 
     MotionInpaintBody body;
     body.rad = 2;
@@ -383,7 +383,7 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
                     frame1_, transformedFrame1_, motion1to0, frame1_.size(), INTER_LINEAR,
                     borderMode_);
 
-        cvtColor(transformedFrame1_, transformedGrayFrame1_, CV_BGR2GRAY);
+        cvtColor(transformedFrame1_, transformedGrayFrame1_, COLOR_BGR2GRAY);
 
         // warp mask
 

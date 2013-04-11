@@ -25,6 +25,7 @@
 
 #include "opencv2/highgui/highgui_c.h"
 #include "opencv2/photo/photo_c.h"
+#include "opencv2/video/tracking_c.h"
 
 #include "opencv2/opencv_modules.hpp"
 

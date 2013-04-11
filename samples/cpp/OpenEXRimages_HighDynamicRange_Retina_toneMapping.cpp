@@ -69,7 +69,7 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
      {
          cv::Mat rgbIntImg;
          outputMat.convertTo(rgbIntImg, CV_8UC3);
-         cvtColor(rgbIntImg, intGrayImage, CV_BGR2GRAY);
+         cv::cvtColor(rgbIntImg, intGrayImage, cv::COLOR_BGR2GRAY);
      }
 
      // get histogram density probability in order to cut values under above edges limits (here 5-95%)... usefull for HDR pixel errors cancellation
