@@ -43,10 +43,8 @@
 #ifndef __OPENCV_FEATURES_2D_HPP__
 #define __OPENCV_FEATURES_2D_HPP__
 
-#ifdef __cplusplus
 #include "opencv2/core.hpp"
 #include "opencv2/flann/miniflann.hpp"
-#include <limits>
 
 namespace cv
 {
@@ -1521,8 +1519,4 @@ protected:
 
 } /* namespace cv */
 
-#endif /* __cplusplus */
-
 #endif
-
-/* End of file. */

@@ -471,7 +471,7 @@ Mat MotionEstimatorRansacL2::estimate(InputArray points0, InputArray points1, bo
     else
     {
         std::vector<uchar> mask;
-        M = findHomography(points0, points1, mask, CV_LMEDS);
+        M = findHomography(points0, points1, mask, LMEDS);
         for (int i  = 0; i < npoints; ++i)
             if (mask[i]) ninliers++;
     }
@@ -504,7 +504,7 @@ Mat MotionEstimatorL1::estimate(InputArray points0, InputArray points1, bool *ok
 
 #ifndef HAVE_CLP
 
-    CV_Error(CV_StsError, "The library is built without Clp support");
+    CV_Error(Error::StsError, "The library is built without Clp support");
     if (ok) *ok = false;
     return Mat::eye(3, 3, CV_32F);
 

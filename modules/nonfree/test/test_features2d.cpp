@@ -275,12 +275,16 @@ static Mat readMatFromBin( const string& filename )
         size_t elements_read4 = fread( (void*)&dataSize, sizeof(int), 1, f );
         CV_Assert(elements_read1 == 1 && elements_read2 == 1 && elements_read3 == 1 && elements_read4 == 1);
 
-        uchar* data = (uchar*)cvAlloc(dataSize);
-        size_t elements_read = fread( (void*)data, 1, dataSize, f );
+        size_t step = dataSize / rows / CV_ELEM_SIZE(type);
+        CV_Assert(step >= (size_t)cols);
+
+        Mat m = Mat( rows, step, type).colRange(0, cols);
+
+        size_t elements_read = fread( m.ptr(), 1, dataSize, f );
         CV_Assert(elements_read == (size_t)(dataSize));
         fclose(f);
 
-        return Mat( rows, cols, type, data );
+        return m;
     }
     return Mat();
 }
@@ -402,7 +406,7 @@ protected:
             double t = (double)getTickCount();
             dextractor->compute( img, keypoints, calcDescriptors );
             t = getTickCount() - t;
-            ts->printf(cvtest::TS::LOG, "\nAverage time of computing one descriptor = %g ms.\n", t/((double)cvGetTickFrequency()*1000.)/calcDescriptors.rows );
+            ts->printf(cvtest::TS::LOG, "\nAverage time of computing one descriptor = %g ms.\n", t/((double)getTickFrequency()*1000.)/calcDescriptors.rows );
 
             if( calcDescriptors.rows != (int)keypoints.size() )
             {

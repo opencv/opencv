@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/calib3d.hpp"
 #include <stdio.h>
 
 namespace cv

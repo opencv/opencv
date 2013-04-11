@@ -131,7 +131,7 @@ Rect CvFeatureTracker::updateTrackingWindowWithSIFT(Mat image)
             curr_keys.push_back(curr_keypoints[matches[i].trainIdx].pt);
         }
 
-        Mat T = findHomography(prev_keys, curr_keys, CV_LMEDS);
+        Mat T = findHomography(prev_keys, curr_keys, LMEDS);
 
         prev_trackwindow.x += cvRound(T.at<double> (0, 2));
         prev_trackwindow.y += cvRound(T.at<double> (1, 2));

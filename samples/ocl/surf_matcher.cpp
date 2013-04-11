@@ -207,7 +207,7 @@ int main(int argc, char* argv[])
         obj.push_back( keypoints1[ good_matches[i].queryIdx ].pt );
         scene.push_back( keypoints2[ good_matches[i].trainIdx ].pt );
     }
-    Mat H = findHomography( obj, scene, CV_RANSAC );
+    Mat H = findHomography( obj, scene, RANSAC );
 
     //-- Get the corners from the image_1 ( the object to be "detected" )
     std::vector<Point2f> obj_corners(4);

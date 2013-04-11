@@ -75,7 +75,7 @@ void computeTextureBasedMasks( const Mat& _img, Mat* texturelessMask, Mat* textu
     if( !texturelessMask && !texturedMask )
         return;
     if( _img.empty() )
-        CV_Error( CV_StsBadArg, "img is empty" );
+        CV_Error( Error::StsBadArg, "img is empty" );
 
     Mat img = _img;
     if( _img.channels() > 1)
@@ -95,21 +95,21 @@ void computeTextureBasedMasks( const Mat& _img, Mat* texturelessMask, Mat* textu
 void checkTypeAndSizeOfDisp( const Mat& dispMap, const Size* sz )
 {
     if( dispMap.empty() )
-        CV_Error( CV_StsBadArg, "dispMap is empty" );
+        CV_Error( Error::StsBadArg, "dispMap is empty" );
     if( dispMap.type() != CV_32FC1 )
-        CV_Error( CV_StsBadArg, "dispMap must have CV_32FC1 type" );
+        CV_Error( Error::StsBadArg, "dispMap must have CV_32FC1 type" );
     if( sz && (dispMap.rows != sz->height || dispMap.cols != sz->width) )
-        CV_Error( CV_StsBadArg, "dispMap has incorrect size" );
+        CV_Error( Error::StsBadArg, "dispMap has incorrect size" );
 }
 
 void checkTypeAndSizeOfMask( const Mat& mask, Size sz )
 {
     if( mask.empty() )
-        CV_Error( CV_StsBadArg, "mask is empty" );
+        CV_Error( Error::StsBadArg, "mask is empty" );
     if( mask.type() != CV_8UC1 )
-        CV_Error( CV_StsBadArg, "mask must have CV_8UC1 type" );
+        CV_Error( Error::StsBadArg, "mask must have CV_8UC1 type" );
     if( mask.rows != sz.height || mask.cols != sz.width )
-        CV_Error( CV_StsBadArg, "mask has incorrect size" );
+        CV_Error( Error::StsBadArg, "mask has incorrect size" );
 }
 
 void checkDispMapsAndUnknDispMasks( const Mat& leftDispMap, const Mat& rightDispMap,
@@ -143,7 +143,7 @@ void checkDispMapsAndUnknDispMasks( const Mat& leftDispMap, const Mat& rightDisp
             minMaxLoc( rightDispMap, &rightMinVal, 0, 0, 0, ~rightUnknDispMask );
     }
     if( leftMinVal < 0 || rightMinVal < 0)
-        CV_Error( CV_StsBadArg, "known disparity values must be positive" );
+        CV_Error( Error::StsBadArg, "known disparity values must be positive" );
 }
 
 /*
@@ -163,7 +163,7 @@ void computeOcclusionBasedMasks( const Mat& leftDisp, const Mat& _rightDisp,
     if( _rightDisp.empty() )
     {
         if( !rightUnknDispMask.empty() )
-           CV_Error( CV_StsBadArg, "rightUnknDispMask must be empty if _rightDisp is empty" );
+           CV_Error( Error::StsBadArg, "rightUnknDispMask must be empty if _rightDisp is empty" );
         rightDisp.create(leftDisp.size(), CV_32FC1);
         rightDisp.setTo(Scalar::all(0) );
         for( int leftY = 0; leftY < leftDisp.rows; leftY++ )
@@ -230,9 +230,9 @@ void computeDepthDiscontMask( const Mat& disp, Mat& depthDiscontMask, const Mat&
                                  float dispGap = EVAL_DISP_GAP, int discontWidth = EVAL_DISCONT_WIDTH )
 {
     if( disp.empty() )
-        CV_Error( CV_StsBadArg, "disp is empty" );
+        CV_Error( Error::StsBadArg, "disp is empty" );
     if( disp.type() != CV_32FC1 )
-        CV_Error( CV_StsBadArg, "disp must have CV_32FC1 type" );
+        CV_Error( Error::StsBadArg, "disp must have CV_32FC1 type" );
     if( !unknDispMask.empty() )
         checkTypeAndSizeOfMask( unknDispMask, disp.size() );
 
@@ -571,9 +571,9 @@ int CV_StereoMatchingTest::processStereoMatchingResults( FileStorage& fs, int ca
     if( isWrite )
     {
         fs << caseNames[caseIdx] << "{";
-        cvWriteComment( fs.fs, RMS_STR.c_str(), 0 );
+        //cvWriteComment( fs.fs, RMS_STR.c_str(), 0 );
         writeErrors( RMS_STR, rmss, &fs );
-        cvWriteComment( fs.fs, BAD_PXLS_FRACTION_STR.c_str(), 0 );
+        //cvWriteComment( fs.fs, BAD_PXLS_FRACTION_STR.c_str(), 0 );
         writeErrors( BAD_PXLS_FRACTION_STR, badPxlsFractions, &fs );
         fs << "}"; // datasetName
     }
