@@ -40,19 +40,54 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "perf_precomp.hpp"
 
-#include "opencv2/gpuimgproc.hpp"
-#include "opencv2/gpufilters.hpp"
+using namespace std;
+using namespace testing;
+using namespace perf;
 
-#include "opencv2/core/private.hpp"
-#include "opencv2/core/gpu_private.hpp"
+//////////////////////////////////////////////////////////////////////
+// BilateralFilter
 
-#include "opencv2/opencv_modules.hpp"
+DEF_PARAM_TEST(Sz_Depth_Cn_KernelSz, cv::Size, MatDepth, MatCn, int);
 
-#ifdef HAVE_OPENCV_GPUARITHM
-#  include "opencv2/gpuarithm.hpp"
-#endif
+PERF_TEST_P(Sz_Depth_Cn_KernelSz, BilateralFilter,
+            Combine(GPU_TYPICAL_MAT_SIZES,
+                    Values(CV_8U, CV_32F),
+                    GPU_CHANNELS_1_3,
+                    Values(3, 5, 9)))
+{
+    declare.time(60.0);
 
-#endif /* __OPENCV_PRECOMP_H__ */
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const int channels = GET_PARAM(2);
+    const int kernel_size = GET_PARAM(3);
+
+    const float sigma_color = 7;
+    const float sigma_spatial = 5;
+    const int borderMode = cv::BORDER_REFLECT101;
+
+    const int type = CV_MAKE_TYPE(depth, channels);
+
+    cv::Mat src(size, type);
+    declare.in(src, WARMUP_RNG);
+
+    if (PERF_RUN_GPU())
+    {
+        const cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat dst;
+
+        TEST_CYCLE() cv::gpu::bilateralFilter(d_src, dst, kernel_size, sigma_color, sigma_spatial, borderMode);
+
+        GPU_SANITY_CHECK(dst);
+    }
+    else
+    {
+        cv::Mat dst;
+
+        TEST_CYCLE() cv::bilateralFilter(src, dst, kernel_size, sigma_color, sigma_spatial, borderMode);
+
+        CPU_SANITY_CHECK(dst);
+    }
+}

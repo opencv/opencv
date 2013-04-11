@@ -235,3 +235,21 @@ Computes a mean value and a standard deviation of matrix elements.
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 .. seealso:: :ocv:func:`meanStdDev`
+
+
+
+gpu::rectStdDev
+-------------------
+Computes a standard deviation of integral images.
+
+.. ocv:function:: void gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& stream = Stream::Null())
+
+    :param src: Source image. Only the ``CV_32SC1`` type is supported.
+
+    :param sqr: Squared source image. Only  the ``CV_32FC1`` type is supported.
+
+    :param dst: Destination image with the same type and size as  ``src`` .
+
+    :param rect: Rectangular window.
+
+    :param stream: Stream for the asynchronous version.

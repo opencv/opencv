@@ -627,31 +627,44 @@ void cv::gpu::morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& ke
 {
     switch( op )
     {
-    case MORPH_ERODE:   erode(src, dst, kernel, buf1, anchor, iterations, stream); break;
-    case MORPH_DILATE: dilate(src, dst, kernel, buf1, anchor, iterations, stream); break;
+    case MORPH_ERODE:
+        erode(src, dst, kernel, buf1, anchor, iterations, stream);
+        break;
+
+    case MORPH_DILATE:
+        dilate(src, dst, kernel, buf1, anchor, iterations, stream);
+        break;
+
     case MORPH_OPEN:
         erode(src, buf2, kernel, buf1, anchor, iterations, stream);
         dilate(buf2, dst, kernel, buf1, anchor, iterations, stream);
         break;
+
     case MORPH_CLOSE:
         dilate(src, buf2, kernel, buf1, anchor, iterations, stream);
         erode(buf2, dst, kernel, buf1, anchor, iterations, stream);
         break;
+
+#ifdef HAVE_OPENCV_GPUARITHM
     case MORPH_GRADIENT:
         erode(src, buf2, kernel, buf1, anchor, iterations, stream);
         dilate(src, dst, kernel, buf1, anchor, iterations, stream);
-        subtract(dst, buf2, dst, GpuMat(), -1, stream);
+        gpu::subtract(dst, buf2, dst, GpuMat(), -1, stream);
         break;
+
     case MORPH_TOPHAT:
         erode(src, dst, kernel, buf1, anchor, iterations, stream);
         dilate(dst, buf2, kernel, buf1, anchor, iterations, stream);
-        subtract(src, buf2, dst, GpuMat(), -1, stream);
+        gpu::subtract(src, buf2, dst, GpuMat(), -1, stream);
         break;
+
     case MORPH_BLACKHAT:
         dilate(src, dst, kernel, buf1, anchor, iterations, stream);
         erode(dst, buf2, kernel, buf1, anchor, iterations, stream);
-        subtract(buf2, src, dst, GpuMat(), -1, stream);
+        gpu::subtract(buf2, src, dst, GpuMat(), -1, stream);
         break;
+#endif
+
     default:
         CV_Error(cv::Error::StsBadArg, "unknown morphological operation");
     }

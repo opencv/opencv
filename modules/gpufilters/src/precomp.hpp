@@ -46,9 +46,14 @@
 #include <limits>
 
 #include "opencv2/gpufilters.hpp"
-#include "opencv2/gpuarithm.hpp"
 #include "opencv2/imgproc.hpp"
 
 #include "opencv2/core/gpu_private.hpp"
+
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_GPUARITHM
+#  include "opencv2/gpuarithm.hpp"
+#endif
 
 #endif /* __OPENCV_PRECOMP_H__ */

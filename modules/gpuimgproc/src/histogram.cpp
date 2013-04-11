@@ -47,113 +47,29 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::meanShiftFiltering(const GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
-void cv::gpu::meanShiftProc(const GpuMat&, GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
 void cv::gpu::evenLevels(GpuMat&, int, int, int) { throw_no_cuda(); }
+
 void cv::gpu::histEven(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
 void cv::gpu::histEven(const GpuMat&, GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
 void cv::gpu::histEven(const GpuMat&, GpuMat*, int*, int*, int*, Stream&) { throw_no_cuda(); }
 void cv::gpu::histEven(const GpuMat&, GpuMat*, GpuMat&, int*, int*, int*, Stream&) { throw_no_cuda(); }
+
 void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
 void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*, Stream&) { throw_no_cuda(); }
 void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*, GpuMat&, Stream&) { throw_no_cuda(); }
+
 void cv::gpu::calcHist(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+
 void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double, int) { throw_no_cuda(); }
-void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, double, int) { throw_no_cuda(); }
-void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, double, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, int, int, int) { throw_no_cuda(); }
-void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, int) { throw_no_cuda(); }
-void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int, bool) { throw_no_cuda(); }
-void cv::gpu::Canny(const GpuMat&, CannyBuf&, GpuMat&, double, double, int, bool) { throw_no_cuda(); }
-void cv::gpu::Canny(const GpuMat&, const GpuMat&, GpuMat&, double, double, bool) { throw_no_cuda(); }
-void cv::gpu::Canny(const GpuMat&, const GpuMat&, CannyBuf&, GpuMat&, double, double, bool) { throw_no_cuda(); }
-void cv::gpu::CannyBuf::create(const Size&, int) { throw_no_cuda(); }
-void cv::gpu::CannyBuf::release() { throw_no_cuda(); }
+
 cv::Ptr<cv::gpu::CLAHE> cv::gpu::createCLAHE(double, cv::Size) { throw_no_cuda(); return cv::Ptr<cv::gpu::CLAHE>(); }
-void cv::gpu::alphaComp(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
 ////////////////////////////////////////////////////////////////////////
-// meanShiftFiltering_GPU
-
-namespace cv { namespace gpu { namespace cudev
-{
-    namespace imgproc
-    {
-        void meanShiftFiltering_gpu(const PtrStepSzb& src, PtrStepSzb dst, int sp, int sr, int maxIter, float eps, cudaStream_t stream);
-    }
-}}}
-
-void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria, Stream& stream)
-{
-    using namespace ::cv::gpu::cudev::imgproc;
-
-    if( src.empty() )
-        CV_Error( cv::Error::StsBadArg, "The input image is empty" );
-
-    if( src.depth() != CV_8U || src.channels() != 4 )
-        CV_Error( cv::Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
-
-    dst.create( src.size(), CV_8UC4 );
-
-    if( !(criteria.type & TermCriteria::MAX_ITER) )
-        criteria.maxCount = 5;
-
-    int maxIter = std::min(std::max(criteria.maxCount, 1), 100);
-
-    float eps;
-    if( !(criteria.type & TermCriteria::EPS) )
-        eps = 1.f;
-    eps = (float)std::max(criteria.epsilon, 0.0);
-
-    meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps, StreamAccessor::getStream(stream));
-}
-
-////////////////////////////////////////////////////////////////////////
-// meanShiftProc_GPU
-
-namespace cv { namespace gpu { namespace cudev
-{
-    namespace imgproc
-    {
-        void meanShiftProc_gpu(const PtrStepSzb& src, PtrStepSzb dstr, PtrStepSzb dstsp, int sp, int sr, int maxIter, float eps, cudaStream_t stream);
-    }
-}}}
-
-void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria, Stream& stream)
-{
-    using namespace ::cv::gpu::cudev::imgproc;
-
-    if( src.empty() )
-        CV_Error( cv::Error::StsBadArg, "The input image is empty" );
-
-    if( src.depth() != CV_8U || src.channels() != 4 )
-        CV_Error( cv::Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
-
-    dstr.create( src.size(), CV_8UC4 );
-    dstsp.create( src.size(), CV_16SC2 );
-
-    if( !(criteria.type & TermCriteria::MAX_ITER) )
-        criteria.maxCount = 5;
-
-    int maxIter = std::min(std::max(criteria.maxCount, 1), 100);
-
-    float eps;
-    if( !(criteria.type & TermCriteria::EPS) )
-        eps = 1.f;
-    eps = (float)std::max(criteria.epsilon, 0.0);
-
-    meanShiftProc_gpu(src, dstr, dstsp, sp, sr, maxIter, eps, StreamAccessor::getStream(stream));
-}
-
-
-////////////////////////////////////////////////////////////////////////
-// Histogram
+// NPP Histogram
 
 namespace
 {
@@ -444,10 +360,12 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4
     hist_callers[src.depth()](src, hist, levels, buf, StreamAccessor::getStream(stream));
 }
 
+////////////////////////////////////////////////////////////////////////
+// calcHist
+
 namespace hist
 {
     void histogram256(PtrStepSzb src, int* hist, cudaStream_t stream);
-    void equalizeHist(PtrStepSzb src, PtrStepSzb dst, const int* lut, cudaStream_t stream);
 }
 
 void cv::gpu::calcHist(const GpuMat& src, GpuMat& hist, Stream& stream)
@@ -458,6 +376,14 @@ void cv::gpu::calcHist(const GpuMat& src, GpuMat& hist, Stream& stream)
     hist.setTo(Scalar::all(0));
 
     hist::histogram256(src, hist.ptr<int>(), StreamAccessor::getStream(stream));
+}
+
+////////////////////////////////////////////////////////////////////////
+// equalizeHist
+
+namespace hist
+{
+    void equalizeHist(PtrStepSzb src, PtrStepSzb dst, const int* lut, cudaStream_t stream);
 }
 
 void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, Stream& stream)
@@ -490,229 +416,6 @@ void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat&
     nppSafeCall( nppsIntegral_32s(hist.ptr<Npp32s>(), lut.ptr<Npp32s>(), 256, intBuf.ptr<Npp8u>()) );
 
     hist::equalizeHist(src, dst, lut.ptr<int>(), stream);
-}
-
-////////////////////////////////////////////////////////////////////////
-// cornerHarris & minEgenVal
-
-namespace cv { namespace gpu { namespace cudev
-{
-    namespace imgproc
-    {
-        void cornerHarris_gpu(int block_size, float k, PtrStepSzf Dx, PtrStepSzf Dy, PtrStepSzf dst, int border_type, cudaStream_t stream);
-        void cornerMinEigenVal_gpu(int block_size, PtrStepSzf Dx, PtrStepSzf Dy, PtrStepSzf dst, int border_type, cudaStream_t stream);
-    }
-}}}
-
-namespace
-{
-    void extractCovData(const GpuMat& src, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, int borderType, Stream& stream)
-    {
-        double scale = static_cast<double>(1 << ((ksize > 0 ? ksize : 3) - 1)) * blockSize;
-
-        if (ksize < 0)
-            scale *= 2.;
-
-        if (src.depth() == CV_8U)
-            scale *= 255.;
-
-        scale = 1./scale;
-
-        Dx.create(src.size(), CV_32F);
-        Dy.create(src.size(), CV_32F);
-
-        if (ksize > 0)
-        {
-            Sobel(src, Dx, CV_32F, 1, 0, buf, ksize, scale, borderType, -1, stream);
-            Sobel(src, Dy, CV_32F, 0, 1, buf, ksize, scale, borderType, -1, stream);
-        }
-        else
-        {
-            Scharr(src, Dx, CV_32F, 1, 0, buf, scale, borderType, -1, stream);
-            Scharr(src, Dy, CV_32F, 0, 1, buf, scale, borderType, -1, stream);
-        }
-    }
-}
-
-void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType)
-{
-    GpuMat Dx, Dy;
-    cornerHarris(src, dst, Dx, Dy, blockSize, ksize, k, borderType);
-}
-
-void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, double k, int borderType)
-{
-    GpuMat buf;
-    cornerHarris(src, dst, Dx, Dy, buf, blockSize, ksize, k, borderType);
-}
-
-void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, double k, int borderType, Stream& stream)
-{
-    using namespace cv::gpu::cudev::imgproc;
-
-    CV_Assert(borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
-
-    extractCovData(src, Dx, Dy, buf, blockSize, ksize, borderType, stream);
-
-    dst.create(src.size(), CV_32F);
-
-    cornerHarris_gpu(blockSize, static_cast<float>(k), Dx, Dy, dst, borderType, StreamAccessor::getStream(stream));
-}
-
-void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType)
-{
-    GpuMat Dx, Dy;
-    cornerMinEigenVal(src, dst, Dx, Dy, blockSize, ksize, borderType);
-}
-
-void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, int borderType)
-{
-    GpuMat buf;
-    cornerMinEigenVal(src, dst, Dx, Dy, buf, blockSize, ksize, borderType);
-}
-
-void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, int borderType, Stream& stream)
-{
-    using namespace ::cv::gpu::cudev::imgproc;
-
-    CV_Assert(borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
-
-    extractCovData(src, Dx, Dy, buf, blockSize, ksize, borderType, stream);
-
-    dst.create(src.size(), CV_32F);
-
-    cornerMinEigenVal_gpu(blockSize, Dx, Dy, dst, borderType, StreamAccessor::getStream(stream));
-}
-
-
-//////////////////////////////////////////////////////////////////////////////
-// Canny
-
-void cv::gpu::CannyBuf::create(const Size& image_size, int apperture_size)
-{
-    if (apperture_size > 0)
-    {
-        ensureSizeIsEnough(image_size, CV_32SC1, dx);
-        ensureSizeIsEnough(image_size, CV_32SC1, dy);
-
-        if (apperture_size != 3)
-        {
-            filterDX = createDerivFilter_GPU(CV_8UC1, CV_32S, 1, 0, apperture_size, BORDER_REPLICATE);
-            filterDY = createDerivFilter_GPU(CV_8UC1, CV_32S, 0, 1, apperture_size, BORDER_REPLICATE);
-        }
-    }
-
-    ensureSizeIsEnough(image_size, CV_32FC1, mag);
-    ensureSizeIsEnough(image_size, CV_32SC1, map);
-
-    ensureSizeIsEnough(1, image_size.area(), CV_16UC2, st1);
-    ensureSizeIsEnough(1, image_size.area(), CV_16UC2, st2);
-}
-
-void cv::gpu::CannyBuf::release()
-{
-    dx.release();
-    dy.release();
-    mag.release();
-    map.release();
-    st1.release();
-    st2.release();
-}
-
-namespace canny
-{
-    void calcMagnitude(PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad);
-    void calcMagnitude(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad);
-
-    void calcMap(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, PtrStepSzi map, float low_thresh, float high_thresh);
-
-    void edgesHysteresisLocal(PtrStepSzi map, ushort2* st1);
-
-    void edgesHysteresisGlobal(PtrStepSzi map, ushort2* st1, ushort2* st2);
-
-    void getEdges(PtrStepSzi map, PtrStepSzb dst);
-}
-
-namespace
-{
-    void CannyCaller(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& dst, float low_thresh, float high_thresh)
-    {
-        using namespace canny;
-
-        buf.map.setTo(Scalar::all(0));
-        calcMap(dx, dy, buf.mag, buf.map, low_thresh, high_thresh);
-
-        edgesHysteresisLocal(buf.map, buf.st1.ptr<ushort2>());
-
-        edgesHysteresisGlobal(buf.map, buf.st1.ptr<ushort2>(), buf.st2.ptr<ushort2>());
-
-        getEdges(buf.map, dst);
-    }
-}
-
-void cv::gpu::Canny(const GpuMat& src, GpuMat& dst, double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
-{
-    CannyBuf buf;
-    Canny(src, buf, dst, low_thresh, high_thresh, apperture_size, L2gradient);
-}
-
-void cv::gpu::Canny(const GpuMat& src, CannyBuf& buf, GpuMat& dst, double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
-{
-    using namespace canny;
-
-    CV_Assert(src.type() == CV_8UC1);
-
-    if (!deviceSupports(SHARED_ATOMICS))
-        CV_Error(cv::Error::StsNotImplemented, "The device doesn't support shared atomics");
-
-    if( low_thresh > high_thresh )
-        std::swap( low_thresh, high_thresh);
-
-    dst.create(src.size(), CV_8U);
-    buf.create(src.size(), apperture_size);
-
-    if (apperture_size == 3)
-    {
-        Size wholeSize;
-        Point ofs;
-        src.locateROI(wholeSize, ofs);
-        GpuMat srcWhole(wholeSize, src.type(), src.datastart, src.step);
-
-        calcMagnitude(srcWhole, ofs.x, ofs.y, buf.dx, buf.dy, buf.mag, L2gradient);
-    }
-    else
-    {
-        buf.filterDX->apply(src, buf.dx, Rect(0, 0, src.cols, src.rows));
-        buf.filterDY->apply(src, buf.dy, Rect(0, 0, src.cols, src.rows));
-
-        calcMagnitude(buf.dx, buf.dy, buf.mag, L2gradient);
-    }
-
-    CannyCaller(buf.dx, buf.dy, buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
-}
-
-void cv::gpu::Canny(const GpuMat& dx, const GpuMat& dy, GpuMat& dst, double low_thresh, double high_thresh, bool L2gradient)
-{
-    CannyBuf buf;
-    Canny(dx, dy, buf, dst, low_thresh, high_thresh, L2gradient);
-}
-
-void cv::gpu::Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& dst, double low_thresh, double high_thresh, bool L2gradient)
-{
-    using namespace canny;
-
-    CV_Assert(TargetArchs::builtWith(SHARED_ATOMICS) && DeviceInfo().supports(SHARED_ATOMICS));
-    CV_Assert(dx.type() == CV_32SC1 && dy.type() == CV_32SC1 && dx.size() == dy.size());
-
-    if( low_thresh > high_thresh )
-        std::swap( low_thresh, high_thresh);
-
-    dst.create(dx.size(), CV_8U);
-    buf.create(dx.size(), -1);
-
-    calcMagnitude(dx, dy, buf.mag, L2gradient);
-
-    CannyCaller(dx, dy, buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -793,7 +496,11 @@ namespace
         }
         else
         {
+#ifndef HAVE_OPENCV_GPUARITHM
+            throw_no_cuda();
+#else
             cv::gpu::copyMakeBorder(src, srcExt_, 0, tilesY_ - (src.rows % tilesY_), 0, tilesX_ - (src.cols % tilesX_), cv::BORDER_REFLECT_101, cv::Scalar(), s);
+#endif
 
             tileSize = cv::Size(srcExt_.cols / tilesX_, srcExt_.rows / tilesY_);
             srcForLut = srcExt_;
@@ -845,79 +552,6 @@ namespace
 cv::Ptr<cv::gpu::CLAHE> cv::gpu::createCLAHE(double clipLimit, cv::Size tileGridSize)
 {
     return new CLAHE_Impl(clipLimit, tileGridSize.width, tileGridSize.height);
-}
-
-////////////////////////////////////////////////////////////////////////
-// alphaComp
-
-namespace
-{
-    template <int DEPTH> struct NppAlphaCompFunc
-    {
-        typedef typename NPPTypeTraits<DEPTH>::npp_type npp_t;
-
-        typedef NppStatus (*func_t)(const npp_t* pSrc1, int nSrc1Step, const npp_t* pSrc2, int nSrc2Step, npp_t* pDst, int nDstStep, NppiSize oSizeROI, NppiAlphaOp eAlphaOp);
-    };
-
-    template <int DEPTH, typename NppAlphaCompFunc<DEPTH>::func_t func> struct NppAlphaComp
-    {
-        typedef typename NPPTypeTraits<DEPTH>::npp_type npp_t;
-
-        static void call(const GpuMat& img1, const GpuMat& img2, GpuMat& dst, NppiAlphaOp eAlphaOp, cudaStream_t stream)
-        {
-            NppStreamHandler h(stream);
-
-            NppiSize oSizeROI;
-            oSizeROI.width = img1.cols;
-            oSizeROI.height = img2.rows;
-
-            nppSafeCall( func(img1.ptr<npp_t>(), static_cast<int>(img1.step), img2.ptr<npp_t>(), static_cast<int>(img2.step),
-                              dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI, eAlphaOp) );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-    };
-}
-
-void cv::gpu::alphaComp(const GpuMat& img1, const GpuMat& img2, GpuMat& dst, int alpha_op, Stream& stream)
-{
-    static const NppiAlphaOp npp_alpha_ops[] = {
-        NPPI_OP_ALPHA_OVER,
-        NPPI_OP_ALPHA_IN,
-        NPPI_OP_ALPHA_OUT,
-        NPPI_OP_ALPHA_ATOP,
-        NPPI_OP_ALPHA_XOR,
-        NPPI_OP_ALPHA_PLUS,
-        NPPI_OP_ALPHA_OVER_PREMUL,
-        NPPI_OP_ALPHA_IN_PREMUL,
-        NPPI_OP_ALPHA_OUT_PREMUL,
-        NPPI_OP_ALPHA_ATOP_PREMUL,
-        NPPI_OP_ALPHA_XOR_PREMUL,
-        NPPI_OP_ALPHA_PLUS_PREMUL,
-        NPPI_OP_ALPHA_PREMUL
-    };
-
-    typedef void (*func_t)(const GpuMat& img1, const GpuMat& img2, GpuMat& dst, NppiAlphaOp eAlphaOp, cudaStream_t stream);
-
-    static const func_t funcs[] =
-    {
-        NppAlphaComp<CV_8U, nppiAlphaComp_8u_AC4R>::call,
-        0,
-        NppAlphaComp<CV_16U, nppiAlphaComp_16u_AC4R>::call,
-        0,
-        NppAlphaComp<CV_32S, nppiAlphaComp_32s_AC4R>::call,
-        NppAlphaComp<CV_32F, nppiAlphaComp_32f_AC4R>::call
-    };
-
-    CV_Assert( img1.type() == CV_8UC4 || img1.type() == CV_16UC4 || img1.type() == CV_32SC4 || img1.type() == CV_32FC4 );
-    CV_Assert( img1.size() == img2.size() && img1.type() == img2.type() );
-
-    dst.create(img1.size(), img1.type());
-
-    const func_t func = funcs[img1.depth()];
-
-    func(img1, img2, dst, npp_alpha_ops[alpha_op], StreamAccessor::getStream(stream));
 }
 
 #endif /* !defined (HAVE_CUDA) */

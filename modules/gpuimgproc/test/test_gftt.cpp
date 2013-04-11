@@ -40,19 +40,92 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "test_precomp.hpp"
 
-#include "opencv2/gpuimgproc.hpp"
-#include "opencv2/gpufilters.hpp"
+#ifdef HAVE_CUDA
 
-#include "opencv2/core/private.hpp"
-#include "opencv2/core/gpu_private.hpp"
+using namespace cvtest;
 
-#include "opencv2/opencv_modules.hpp"
+//////////////////////////////////////////////////////
+// GoodFeaturesToTrack
 
-#ifdef HAVE_OPENCV_GPUARITHM
-#  include "opencv2/gpuarithm.hpp"
-#endif
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(MinDistance, double)
+}
 
-#endif /* __OPENCV_PRECOMP_H__ */
+PARAM_TEST_CASE(GoodFeaturesToTrack, cv::gpu::DeviceInfo, MinDistance)
+{
+    cv::gpu::DeviceInfo devInfo;
+    double minDistance;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        minDistance = GET_PARAM(1);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+GPU_TEST_P(GoodFeaturesToTrack, Accuracy)
+{
+    cv::Mat image = readImage("opticalflow/frame0.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
+
+    int maxCorners = 1000;
+    double qualityLevel = 0.01;
+
+    cv::gpu::GoodFeaturesToTrackDetector_GPU detector(maxCorners, qualityLevel, minDistance);
+
+    cv::gpu::GpuMat d_pts;
+    detector(loadMat(image), d_pts);
+
+    ASSERT_FALSE(d_pts.empty());
+
+    std::vector<cv::Point2f> pts(d_pts.cols);
+    cv::Mat pts_mat(1, d_pts.cols, CV_32FC2, (void*) &pts[0]);
+    d_pts.download(pts_mat);
+
+    std::vector<cv::Point2f> pts_gold;
+    cv::goodFeaturesToTrack(image, pts_gold, maxCorners, qualityLevel, minDistance);
+
+    ASSERT_EQ(pts_gold.size(), pts.size());
+
+    size_t mistmatch = 0;
+    for (size_t i = 0; i < pts.size(); ++i)
+    {
+        cv::Point2i a = pts_gold[i];
+        cv::Point2i b = pts[i];
+
+        bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
+
+        if (!eq)
+            ++mistmatch;
+    }
+
+    double bad_ratio = static_cast<double>(mistmatch) / pts.size();
+
+    ASSERT_LE(bad_ratio, 0.01);
+}
+
+GPU_TEST_P(GoodFeaturesToTrack, EmptyCorners)
+{
+    int maxCorners = 1000;
+    double qualityLevel = 0.01;
+
+    cv::gpu::GoodFeaturesToTrackDetector_GPU detector(maxCorners, qualityLevel, minDistance);
+
+    cv::gpu::GpuMat src(100, 100, CV_8UC1, cv::Scalar::all(0));
+    cv::gpu::GpuMat corners(1, maxCorners, CV_32FC2);
+
+    detector(src, corners);
+
+    ASSERT_TRUE(corners.empty());
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, GoodFeaturesToTrack, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(MinDistance(0.0), MinDistance(3.0))));
+
+#endif // HAVE_CUDA

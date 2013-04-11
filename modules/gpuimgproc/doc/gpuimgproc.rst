@@ -1,8 +1,12 @@
-*************************************
-gpu. GPU-accelerated Image Processing
-*************************************
+********************************************
+gpuimgproc. GPU-accelerated Image Processing
+********************************************
 
 .. toctree::
     :maxdepth: 1
 
-    image_processing
+    color
+    histogram
+    hough
+    feature_detection
+    imgproc

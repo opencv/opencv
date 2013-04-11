@@ -179,3 +179,33 @@ Computes a convolution (or cross-correlation) of two images.
     :param stream: Stream for the asynchronous version.
 
 .. seealso:: :ocv:func:`gpu::filter2D`
+
+
+
+gpu::integral
+-----------------
+Computes an integral image.
+
+.. ocv:function:: void gpu::integral(const GpuMat& src, GpuMat& sum, Stream& stream = Stream::Null())
+
+    :param src: Source image. Only  ``CV_8UC1`` images are supported for now.
+
+    :param sum: Integral image containing 32-bit unsigned integer values packed into  ``CV_32SC1`` .
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`integral`
+
+
+
+gpu::sqrIntegral
+--------------------
+Computes a squared integral image.
+
+.. ocv:function:: void gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& stream = Stream::Null())
+
+    :param src: Source image. Only  ``CV_8UC1`` images are supported for now.
+
+    :param sqsum: Squared integral image containing 64-bit unsigned integer values packed into  ``CV_64FC1`` .
+
+    :param stream: Stream for the asynchronous version.

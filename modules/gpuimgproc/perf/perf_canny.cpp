@@ -40,19 +40,48 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "perf_precomp.hpp"
 
-#include "opencv2/gpuimgproc.hpp"
-#include "opencv2/gpufilters.hpp"
+using namespace std;
+using namespace testing;
+using namespace perf;
 
-#include "opencv2/core/private.hpp"
-#include "opencv2/core/gpu_private.hpp"
+//////////////////////////////////////////////////////////////////////
+// Canny
 
-#include "opencv2/opencv_modules.hpp"
+DEF_PARAM_TEST(Image_AppertureSz_L2gradient, string, int, bool);
 
-#ifdef HAVE_OPENCV_GPUARITHM
-#  include "opencv2/gpuarithm.hpp"
-#endif
+PERF_TEST_P(Image_AppertureSz_L2gradient, Canny,
+            Combine(Values("perf/800x600.png", "perf/1280x1024.png", "perf/1680x1050.png"),
+                    Values(3, 5),
+                    Bool()))
+{
+    const string fileName = GET_PARAM(0);
+    const int apperture_size = GET_PARAM(1);
+    const bool useL2gradient = GET_PARAM(2);
 
-#endif /* __OPENCV_PRECOMP_H__ */
+    const cv::Mat image = readImage(fileName, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
+
+    const double low_thresh = 50.0;
+    const double high_thresh = 100.0;
+
+    if (PERF_RUN_GPU())
+    {
+        const cv::gpu::GpuMat d_image(image);
+        cv::gpu::GpuMat dst;
+        cv::gpu::CannyBuf d_buf;
+
+        TEST_CYCLE() cv::gpu::Canny(d_image, d_buf, dst, low_thresh, high_thresh, apperture_size, useL2gradient);
+
+        GPU_SANITY_CHECK(dst);
+    }
+    else
+    {
+        cv::Mat dst;
+
+        TEST_CYCLE() cv::Canny(image, dst, low_thresh, high_thresh, apperture_size, useL2gradient);
+
+        CPU_SANITY_CHECK(dst);
+    }
+}

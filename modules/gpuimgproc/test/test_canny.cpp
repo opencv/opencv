@@ -40,19 +40,75 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "test_precomp.hpp"
 
-#include "opencv2/gpuimgproc.hpp"
-#include "opencv2/gpufilters.hpp"
+#ifdef HAVE_CUDA
 
-#include "opencv2/core/private.hpp"
-#include "opencv2/core/gpu_private.hpp"
+using namespace cvtest;
 
-#include "opencv2/opencv_modules.hpp"
+////////////////////////////////////////////////////////
+// Canny
 
-#ifdef HAVE_OPENCV_GPUARITHM
-#  include "opencv2/gpuarithm.hpp"
-#endif
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(AppertureSize, int)
+    IMPLEMENT_PARAM_CLASS(L2gradient, bool)
+}
 
-#endif /* __OPENCV_PRECOMP_H__ */
+PARAM_TEST_CASE(Canny, cv::gpu::DeviceInfo, AppertureSize, L2gradient, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    int apperture_size;
+    bool useL2gradient;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        apperture_size = GET_PARAM(1);
+        useL2gradient = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+GPU_TEST_P(Canny, Accuracy)
+{
+    cv::Mat img = readImage("stereobm/aloe-L.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
+
+    double low_thresh = 50.0;
+    double high_thresh = 100.0;
+
+    if (!supportFeature(devInfo, cv::gpu::SHARED_ATOMICS))
+    {
+        try
+        {
+        cv::gpu::GpuMat edges;
+        cv::gpu::Canny(loadMat(img), edges, low_thresh, high_thresh, apperture_size, useL2gradient);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(cv::Error::StsNotImplemented, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat edges;
+        cv::gpu::Canny(loadMat(img, useRoi), edges, low_thresh, high_thresh, apperture_size, useL2gradient);
+
+        cv::Mat edges_gold;
+        cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, useL2gradient);
+
+        EXPECT_MAT_SIMILAR(edges_gold, edges, 2e-2);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Canny, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(AppertureSize(3), AppertureSize(5)),
+    testing::Values(L2gradient(false), L2gradient(true)),
+    WHOLE_SUBMAT));
+
+#endif // HAVE_CUDA

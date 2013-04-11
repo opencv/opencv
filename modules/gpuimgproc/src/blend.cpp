@@ -51,6 +51,9 @@ void cv::gpu::blendLinear(const GpuMat&, const GpuMat&, const GpuMat&, const Gpu
 
 #else
 
+////////////////////////////////////////////////////////////////////////
+// blendLinear
+
 namespace cv { namespace gpu { namespace cudev
 {
     namespace blend

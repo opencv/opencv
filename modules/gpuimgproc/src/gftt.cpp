@@ -62,6 +62,12 @@ namespace cv { namespace gpu { namespace cudev
 
 void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, GpuMat& corners, const GpuMat& mask)
 {
+#ifndef HAVE_OPENCV_GPUARITHM
+    (void) image;
+    (void) corners;
+    (void) mask;
+    throw_no_cuda();
+#else
     using namespace cv::gpu::cudev::gfft;
 
     CV_Assert(qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0);
@@ -75,7 +81,7 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
         cornerMinEigenVal(image, eig_, Dx_, Dy_, buf_, blockSize, 3);
 
     double maxVal = 0;
-    minMax(eig_, 0, &maxVal, GpuMat(), minMaxbuf_);
+    gpu::minMax(eig_, 0, &maxVal, GpuMat(), minMaxbuf_);
 
     ensureSizeIsEnough(1, std::max(1000, static_cast<int>(image.size().area() * 0.05)), CV_32FC2, tmpCorners_);
 
@@ -164,6 +170,7 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
 
         corners.upload(Mat(1, static_cast<int>(tmp2.size()), CV_32FC2, &tmp2[0]));
     }
+#endif
 }
 
 #endif /* !defined (HAVE_CUDA) */

@@ -40,19 +40,47 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "perf_precomp.hpp"
 
-#include "opencv2/gpuimgproc.hpp"
-#include "opencv2/gpufilters.hpp"
+using namespace std;
+using namespace testing;
+using namespace perf;
 
-#include "opencv2/core/private.hpp"
-#include "opencv2/core/gpu_private.hpp"
+//////////////////////////////////////////////////////////////////////
+// BlendLinear
 
-#include "opencv2/opencv_modules.hpp"
+PERF_TEST_P(Sz_Depth_Cn, BlendLinear,
+            Combine(GPU_TYPICAL_MAT_SIZES,
+                    Values(CV_8U, CV_32F),
+                    GPU_CHANNELS_1_3_4))
+{
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const int channels = GET_PARAM(2);
 
-#ifdef HAVE_OPENCV_GPUARITHM
-#  include "opencv2/gpuarithm.hpp"
-#endif
+    const int type = CV_MAKE_TYPE(depth, channels);
 
-#endif /* __OPENCV_PRECOMP_H__ */
+    cv::Mat img1(size, type);
+    cv::Mat img2(size, type);
+    declare.in(img1, img2, WARMUP_RNG);
+
+    const cv::Mat weights1(size, CV_32FC1, cv::Scalar::all(0.5));
+    const cv::Mat weights2(size, CV_32FC1, cv::Scalar::all(0.5));
+
+    if (PERF_RUN_GPU())
+    {
+        const cv::gpu::GpuMat d_img1(img1);
+        const cv::gpu::GpuMat d_img2(img2);
+        const cv::gpu::GpuMat d_weights1(weights1);
+        const cv::gpu::GpuMat d_weights2(weights2);
+        cv::gpu::GpuMat dst;
+
+        TEST_CYCLE() cv::gpu::blendLinear(d_img1, d_img2, d_weights1, d_weights2, dst);
+
+        GPU_SANITY_CHECK(dst);
+    }
+    else
+    {
+        FAIL_NO_CPU();
+    }
+}
