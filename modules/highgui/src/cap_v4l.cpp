@@ -154,6 +154,11 @@ the symptoms were damaged image and 'Corrupt JPEG data: premature end of data se
 - USE_TEMP_BUFFER fixes the main problem (improper buffer management) and
   prevents bad images in the first place
 
+11th patch: April 2, 2013, Forrest Reiling forrest.reiling@gmail.com
+Added v4l2 support for getting capture property CV_CAP_PROP_POS_MSEC. 
+Returns the millisecond timestamp of the last frame grabbed or 0 if no frames have been grabbed
+Used to successfully synchonize 2 Logitech C310 USB webcams to within 16 ms of one another
+
 
 make & enjoy!
 
@@ -319,6 +324,8 @@ typedef struct CvCaptureCAM_V4L
    enum v4l2_buf_type type;
    struct v4l2_queryctrl queryctrl;
    struct v4l2_querymenu querymenu;
+
+   struct timeval timestamp;
 
    /* V4L2 control variables */
    int v4l2_brightness, v4l2_brightness_min, v4l2_brightness_max;
@@ -836,6 +843,9 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
    capture->v4l2_gain_max = 0;
    capture->v4l2_exposure_max = 0;
 
+   capture->timestamp.tv_sec = 0;
+   capture->timestamp.tv_usec = 0;
+
    /* Scan V4L2 controls */
    v4l2_scan_controls(capture);
 
@@ -1220,6 +1230,9 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
 
    if (-1 == ioctl (capture->deviceHandle, VIDIOC_QBUF, &buf))
        perror ("VIDIOC_QBUF");
+
+   //set timestamp in capture struct to be timestamp of most recent frame 
+   capture->timestamp = buf.timestamp; 
 
    return 1;
 }
@@ -2308,6 +2321,13 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
       /* initialize the control structure */
 
       switch (property_id) {
+      case CV_CAP_PROP_POS_MSEC:
+          if (capture->FirstCapture) {
+            return 0;
+          } else {
+            return 1000 * capture->timestamp.tv_sec + ((double) capture->timestamp.tv_usec) / 1000; 
+          }
+          break;
       case CV_CAP_PROP_BRIGHTNESS:
           capture->control.id = V4L2_CID_BRIGHTNESS;
           break;
