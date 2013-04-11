@@ -196,7 +196,7 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat& mbuf, GpuMat& te
         for(int _r = 0; _r < 5; ++_r)
         {
             *buf_ptrs[_r] = sub2.rowRange(_r * sub2.rows/5, (_r+1) * sub2.rows/5);
-            assert(buf_ptrs[_r]->cols == cols && buf_ptrs[_r]->rows == rows * rthis.nr_plane);
+            CV_DbgAssert(buf_ptrs[_r]->cols == cols && buf_ptrs[_r]->rows == rows * rthis.nr_plane);
         }
     };
 
