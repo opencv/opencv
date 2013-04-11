@@ -454,6 +454,23 @@ protected:
 TEST(Core_InputOutput, huge) { CV_BigMatrixIOTest test; test.safe_run(); }
 */
 
+TEST(Core_globbing, accuracy)
+{
+    std::string patternLena    = cvtest::TS::ptr()->get_data_path() + "lena*.*";
+    std::string patternLenaPng = cvtest::TS::ptr()->get_data_path() + "lena.png";
+
+    std::vector<String> lenas, pngLenas;
+    cv::glob(patternLena, lenas, true);
+    cv::glob(patternLenaPng, pngLenas, true);
+
+    ASSERT_GT(lenas.size(), pngLenas.size());
+
+    for (size_t i = 0; i < pngLenas.size(); ++i)
+    {
+        ASSERT_NE(std::find(lenas.begin(), lenas.end(), pngLenas[i]), lenas.end());
+    }
+}
+
 TEST(Core_InputOutput, FileStorage)
 {
     std::string file = cv::tempfile(".xml");
