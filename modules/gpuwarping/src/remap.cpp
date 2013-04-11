@@ -83,9 +83,6 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
     const func_t func = funcs[src.depth()][src.channels() - 1];
     CV_Assert(func != 0);
 
-    int gpuBorderType;
-    CV_Assert(tryConvertToGpuBorderType(borderMode, gpuBorderType));
-
     dst.create(xmap.size(), src.type());
 
     Scalar_<float> borderValueFloat;
@@ -96,7 +93,7 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
     src.locateROI(wholeSize, ofs);
 
     func(src, PtrStepSzb(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y, xmap, ymap,
-        dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(stream), deviceSupports(FEATURE_SET_COMPUTE_20));
+        dst, interpolation, borderMode, borderValueFloat.val, StreamAccessor::getStream(stream), deviceSupports(FEATURE_SET_COMPUTE_20));
 }
 
 #endif // HAVE_CUDA

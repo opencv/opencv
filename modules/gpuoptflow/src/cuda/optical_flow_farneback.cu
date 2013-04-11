@@ -525,8 +525,11 @@ namespace cv { namespace gpu { namespace cudev { namespace optflow_farneback
 
         static const caller_t callers[] =
         {
-            gaussianBlurCaller<BrdReflect101<float> >,
+            0 /*gaussianBlurCaller<BrdConstant<float> >*/,
             gaussianBlurCaller<BrdReplicate<float> >,
+            0 /*gaussianBlurCaller<BrdReflect<float> >*/,
+            0 /*gaussianBlurCaller<BrdWrap<float> >*/,
+            gaussianBlurCaller<BrdReflect101<float> >
         };
 
         callers[borderMode](src, ksizeHalf, dst, stream);
@@ -620,8 +623,11 @@ namespace cv { namespace gpu { namespace cudev { namespace optflow_farneback
 
         static const caller_t callers[] =
         {
-            gaussianBlur5Caller<BrdReflect101<float>,256>,
+            0 /*gaussianBlur5Caller<BrdConstant<float>,256>*/,
             gaussianBlur5Caller<BrdReplicate<float>,256>,
+            0 /*gaussianBlur5Caller<BrdReflect<float>,256>*/,
+            0 /*gaussianBlur5Caller<BrdWrap<float>,256>*/,
+            gaussianBlur5Caller<BrdReflect101<float>,256>
         };
 
         callers[borderMode](src, ksizeHalf, dst, stream);
@@ -634,8 +640,11 @@ namespace cv { namespace gpu { namespace cudev { namespace optflow_farneback
 
         static const caller_t callers[] =
         {
-            gaussianBlur5Caller<BrdReflect101<float>,128>,
+            0 /*gaussianBlur5Caller<BrdConstant<float>,128>*/,
             gaussianBlur5Caller<BrdReplicate<float>,128>,
+            0 /*gaussianBlur5Caller<BrdReflect<float>,128>*/,
+            0 /*gaussianBlur5Caller<BrdWrap<float>,128>*/,
+            gaussianBlur5Caller<BrdReflect101<float>,128>
         };
 
         callers[borderMode](src, ksizeHalf, dst, stream);

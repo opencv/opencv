@@ -281,25 +281,25 @@ namespace cv { namespace gpu { namespace cudev
             static const func_t funcs[3][5] =
             {
                 {
-                    WarpDispatcher<Transform, PointFilter, BrdReflect101, T>::call,
-                    WarpDispatcher<Transform, PointFilter, BrdReplicate, T>::call,
                     WarpDispatcher<Transform, PointFilter, BrdConstant, T>::call,
+                    WarpDispatcher<Transform, PointFilter, BrdReplicate, T>::call,
                     WarpDispatcher<Transform, PointFilter, BrdReflect, T>::call,
-                    WarpDispatcher<Transform, PointFilter, BrdWrap, T>::call
+                    WarpDispatcher<Transform, PointFilter, BrdWrap, T>::call,
+                    WarpDispatcher<Transform, PointFilter, BrdReflect101, T>::call
                 },
                 {
-                    WarpDispatcher<Transform, LinearFilter, BrdReflect101, T>::call,
-                    WarpDispatcher<Transform, LinearFilter, BrdReplicate, T>::call,
                     WarpDispatcher<Transform, LinearFilter, BrdConstant, T>::call,
+                    WarpDispatcher<Transform, LinearFilter, BrdReplicate, T>::call,
                     WarpDispatcher<Transform, LinearFilter, BrdReflect, T>::call,
-                    WarpDispatcher<Transform, LinearFilter, BrdWrap, T>::call
+                    WarpDispatcher<Transform, LinearFilter, BrdWrap, T>::call,
+                    WarpDispatcher<Transform, LinearFilter, BrdReflect101, T>::call
                 },
                 {
-                    WarpDispatcher<Transform, CubicFilter, BrdReflect101, T>::call,
-                    WarpDispatcher<Transform, CubicFilter, BrdReplicate, T>::call,
                     WarpDispatcher<Transform, CubicFilter, BrdConstant, T>::call,
+                    WarpDispatcher<Transform, CubicFilter, BrdReplicate, T>::call,
                     WarpDispatcher<Transform, CubicFilter, BrdReflect, T>::call,
-                    WarpDispatcher<Transform, CubicFilter, BrdWrap, T>::call
+                    WarpDispatcher<Transform, CubicFilter, BrdWrap, T>::call,
+                    WarpDispatcher<Transform, CubicFilter, BrdReflect101, T>::call
                 }
             };
 

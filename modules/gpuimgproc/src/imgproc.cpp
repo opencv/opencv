@@ -552,14 +552,11 @@ void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& D
 
     CV_Assert(borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
 
-    int gpuBorderType;
-    CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
-
     extractCovData(src, Dx, Dy, buf, blockSize, ksize, borderType, stream);
 
     dst.create(src.size(), CV_32F);
 
-    cornerHarris_gpu(blockSize, static_cast<float>(k), Dx, Dy, dst, gpuBorderType, StreamAccessor::getStream(stream));
+    cornerHarris_gpu(blockSize, static_cast<float>(k), Dx, Dy, dst, borderType, StreamAccessor::getStream(stream));
 }
 
 void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType)
@@ -580,14 +577,11 @@ void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuM
 
     CV_Assert(borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
 
-    int gpuBorderType;
-    CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
-
     extractCovData(src, Dx, Dy, buf, blockSize, ksize, borderType, stream);
 
     dst.create(src.size(), CV_32F);
 
-    cornerMinEigenVal_gpu(blockSize, Dx, Dy, dst, gpuBorderType, StreamAccessor::getStream(stream));
+    cornerMinEigenVal_gpu(blockSize, Dx, Dy, dst, borderType, StreamAccessor::getStream(stream));
 }
 
 

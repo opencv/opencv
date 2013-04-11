@@ -87,15 +87,6 @@ namespace cv { namespace gpu
 
 namespace cv { namespace gpu
 {
-    enum
-    {
-        BORDER_REFLECT101_GPU = 0,
-        BORDER_REPLICATE_GPU,
-        BORDER_CONSTANT_GPU,
-        BORDER_REFLECT_GPU,
-        BORDER_WRAP_GPU
-    };
-
     namespace cudev
     {
         __host__ __device__ __forceinline__ int divUp(int total, int grain)

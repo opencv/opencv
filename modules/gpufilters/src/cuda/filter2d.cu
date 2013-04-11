@@ -131,11 +131,11 @@ namespace cv { namespace gpu { namespace cudev
             typedef void (*func_t)(const PtrStepSz<T> srcWhole, int xoff, int yoff, PtrStepSz<D> dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* borderValue, cudaStream_t stream);
             static const func_t funcs[] =
             {
-                Filter2DCaller<T, D, BrdReflect101>::call,
-                Filter2DCaller<T, D, BrdReplicate>::call,
                 Filter2DCaller<T, D, BrdConstant>::call,
+                Filter2DCaller<T, D, BrdReplicate>::call,
                 Filter2DCaller<T, D, BrdReflect>::call,
-                Filter2DCaller<T, D, BrdWrap>::call
+                Filter2DCaller<T, D, BrdWrap>::call,
+                Filter2DCaller<T, D, BrdReflect101>::call
             };
 
             if (stream == 0)

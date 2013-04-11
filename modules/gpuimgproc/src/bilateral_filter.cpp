@@ -89,11 +89,8 @@ void cv::gpu::bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, f
 
     CV_Assert(borderMode == BORDER_REFLECT101 || borderMode == BORDER_REPLICATE || borderMode == BORDER_CONSTANT || borderMode == BORDER_REFLECT || borderMode == BORDER_WRAP);
 
-    int gpuBorderType;
-    CV_Assert(tryConvertToGpuBorderType(borderMode, gpuBorderType));
-
     dst.create(src.size(), src.type());
-    func(src, dst, kernel_size, sigma_spatial, sigma_color, gpuBorderType, StreamAccessor::getStream(s));
+    func(src, dst, kernel_size, sigma_spatial, sigma_color, borderMode, StreamAccessor::getStream(s));
 }
 
 #endif

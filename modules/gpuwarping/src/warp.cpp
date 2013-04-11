@@ -290,9 +290,6 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
         const func_t func = funcs[src.depth()][src.channels() - 1];
         CV_Assert(func != 0);
 
-        int gpuBorderType;
-        CV_Assert(tryConvertToGpuBorderType(borderMode, gpuBorderType));
-
         float coeffs[2 * 3];
         Mat coeffsMat(2, 3, CV_32F, (void*)coeffs);
 
@@ -309,7 +306,7 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
         borderValueFloat = borderValue;
 
         func(src, PtrStepSzb(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y, coeffs,
-            dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(s), deviceSupports(FEATURE_SET_COMPUTE_20));
+            dst, interpolation, borderMode, borderValueFloat.val, StreamAccessor::getStream(s), deviceSupports(FEATURE_SET_COMPUTE_20));
     }
 }
 
@@ -428,9 +425,6 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
         const func_t func = funcs[src.depth()][src.channels() - 1];
         CV_Assert(func != 0);
 
-        int gpuBorderType;
-        CV_Assert(tryConvertToGpuBorderType(borderMode, gpuBorderType));
-
         float coeffs[3 * 3];
         Mat coeffsMat(3, 3, CV_32F, (void*)coeffs);
 
@@ -447,7 +441,7 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
         borderValueFloat = borderValue;
 
         func(src, PtrStepSzb(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y, coeffs,
-            dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(s), deviceSupports(FEATURE_SET_COMPUTE_20));
+            dst, interpolation, borderMode, borderValueFloat.val, StreamAccessor::getStream(s), deviceSupports(FEATURE_SET_COMPUTE_20));
     }
 }
 

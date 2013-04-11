@@ -212,25 +212,25 @@ namespace cv { namespace gpu { namespace cudev
             static const caller_t callers[3][5] =
             {
                 {
-                    RemapDispatcher<PointFilter, BrdReflect101, T>::call,
-                    RemapDispatcher<PointFilter, BrdReplicate, T>::call,
                     RemapDispatcher<PointFilter, BrdConstant, T>::call,
+                    RemapDispatcher<PointFilter, BrdReplicate, T>::call,
                     RemapDispatcher<PointFilter, BrdReflect, T>::call,
-                    RemapDispatcher<PointFilter, BrdWrap, T>::call
+                    RemapDispatcher<PointFilter, BrdWrap, T>::call,
+                    RemapDispatcher<PointFilter, BrdReflect101, T>::call
                 },
                 {
-                    RemapDispatcher<LinearFilter, BrdReflect101, T>::call,
-                    RemapDispatcher<LinearFilter, BrdReplicate, T>::call,
                     RemapDispatcher<LinearFilter, BrdConstant, T>::call,
+                    RemapDispatcher<LinearFilter, BrdReplicate, T>::call,
                     RemapDispatcher<LinearFilter, BrdReflect, T>::call,
-                    RemapDispatcher<LinearFilter, BrdWrap, T>::call
+                    RemapDispatcher<LinearFilter, BrdWrap, T>::call,
+                    RemapDispatcher<LinearFilter, BrdReflect101, T>::call
                 },
                 {
-                    RemapDispatcher<CubicFilter, BrdReflect101, T>::call,
-                    RemapDispatcher<CubicFilter, BrdReplicate, T>::call,
                     RemapDispatcher<CubicFilter, BrdConstant, T>::call,
+                    RemapDispatcher<CubicFilter, BrdReplicate, T>::call,
                     RemapDispatcher<CubicFilter, BrdReflect, T>::call,
-                    RemapDispatcher<CubicFilter, BrdWrap, T>::call
+                    RemapDispatcher<CubicFilter, BrdWrap, T>::call,
+                    RemapDispatcher<CubicFilter, BrdReflect101, T>::call
                 }
             };
 

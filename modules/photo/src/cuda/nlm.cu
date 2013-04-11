@@ -161,11 +161,11 @@ namespace cv { namespace gpu { namespace cudev
 
             static func_t funcs[] =
             {
-                nlm_caller<T, BrdReflect101>,
-                nlm_caller<T, BrdReplicate>,
                 nlm_caller<T, BrdConstant>,
+                nlm_caller<T, BrdReplicate>,
                 nlm_caller<T, BrdReflect>,
                 nlm_caller<T, BrdWrap>,
+                nlm_caller<T, BrdReflect101>
             };
             funcs[borderMode](src, dst, search_radius, block_radius, h, stream);
         }

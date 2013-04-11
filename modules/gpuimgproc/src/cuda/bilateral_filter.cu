@@ -150,11 +150,11 @@ namespace cv { namespace gpu { namespace cudev
 
             static caller_t funcs[] =
             {
-                bilateral_caller<T, BrdReflect101>,
-                bilateral_caller<T, BrdReplicate>,
                 bilateral_caller<T, BrdConstant>,
+                bilateral_caller<T, BrdReplicate>,
                 bilateral_caller<T, BrdReflect>,
                 bilateral_caller<T, BrdWrap>,
+                bilateral_caller<T, BrdReflect101>
             };
             funcs[borderMode](src, dst, kernel_size, gauss_spatial_coeff, gauss_color_coeff, stream);
         }

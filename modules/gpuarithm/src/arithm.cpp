@@ -696,13 +696,13 @@ typedef Npp32s Npp32s_a;
 void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType, const Scalar& value, Stream& s)
 {
     CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
-    CV_Assert(borderType == IPL_BORDER_REFLECT_101 || borderType == IPL_BORDER_REPLICATE || borderType == IPL_BORDER_CONSTANT || borderType == IPL_BORDER_REFLECT || borderType == IPL_BORDER_WRAP);
+    CV_Assert(borderType == BORDER_REFLECT_101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP);
 
     dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    if (borderType == IPL_BORDER_CONSTANT && (src.type() == CV_8UC1 || src.type() == CV_8UC4 || src.type() == CV_32SC1 || src.type() == CV_32FC1))
+    if (borderType == BORDER_CONSTANT && (src.type() == CV_8UC1 || src.type() == CV_8UC4 || src.type() == CV_32SC1 || src.type() == CV_32FC1))
     {
         NppiSize srcsz;
         srcsz.width  = src.cols;
@@ -766,10 +766,7 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
         caller_t func = callers[src.depth()][src.channels() - 1];
         CV_Assert(func != 0);
 
-        int gpuBorderType;
-        CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
-
-        func(src, dst, top, left, gpuBorderType, value, stream);
+        func(src, dst, top, left, borderType, value, stream);
     }
 }
 

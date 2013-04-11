@@ -85,11 +85,8 @@ void cv::gpu::nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_
     int b = borderMode;
     CV_Assert(b == BORDER_REFLECT101 || b == BORDER_REPLICATE || b == BORDER_CONSTANT || b == BORDER_REFLECT || b == BORDER_WRAP);
 
-    int gpuBorderType;
-    CV_Assert(tryConvertToGpuBorderType(borderMode, gpuBorderType));
-
     dst.create(src.size(), src.type());
-    func(src, dst, search_window/2, block_window/2, h, gpuBorderType, StreamAccessor::getStream(s));
+    func(src, dst, search_window/2, block_window/2, h, borderMode, StreamAccessor::getStream(s));
 }
 
 namespace cv { namespace gpu { namespace cudev
