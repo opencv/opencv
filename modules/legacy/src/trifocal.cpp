@@ -223,7 +223,7 @@ int icvComputeProjectMatrices6Points( CvMat* points1,CvMat* points2,CvMat* point
         CV_ERROR( CV_StsUnmatchedSizes, "Number of coordinates of points4D  must be 4" );
     }
 #endif
-
+    {
     /* Find transform matrix for each camera */
     int i;
     CvMat* points[3];
@@ -400,7 +400,7 @@ int icvComputeProjectMatrices6Points( CvMat* points1,CvMat* points2,CvMat* point
 #endif
 
     }/* for all sollutions */
-
+    }
     __END__;
     return numSol;
 }
@@ -1362,7 +1362,7 @@ void icvFindBaseTransform(CvMat* points,CvMat* resultT)
     /* Function gets four points and compute transformation to e1=(100) e2=(010) e3=(001) e4=(111) */
 
     /* !!! test each three points not collinear. Need to test */
-
+    {
     /* Create matrices */
     CvMat matrA;
     CvMat vectB;
@@ -1410,7 +1410,7 @@ void icvFindBaseTransform(CvMat* points,CvMat* resultT)
     cvInvert(&matrA,&tmpRes);
 
     cvConvert(&tmpRes,resultT);
-
+    }
     __END__;
 
     return;
@@ -1459,7 +1459,7 @@ void GetGeneratorReduceFundSolution(CvMat* points1,CvMat* points2,CvMat* fundRed
     }
 
     /* Using 3 corr. points compute reduce */
-
+    {
     /* Create matrix */
     CvMat matrA;
     double matrA_dat[3*5];
@@ -1507,7 +1507,7 @@ void GetGeneratorReduceFundSolution(CvMat* points1,CvMat* points2,CvMat* fundRed
         cvmSet(fundReduceCoef1,0,i,cvmGet(&matrV,3,i));
         cvmSet(fundReduceCoef2,0,i,cvmGet(&matrV,4,i));
     }
-
+    }
     __END__;
     return;
 
@@ -1551,7 +1551,7 @@ int GetGoodReduceFundamMatrFromTwo(CvMat* fundReduceCoef1,CvMat* fundReduceCoef2
     {
         CV_ERROR( CV_StsUnmatchedSizes, "Size of resFundReduceCoef must be 1x5" );
     }
-
+    {
     double p1,q1,r1,s1,t1;
     double p2,q2,r2,s2,t2;
     p1 = cvmGet(fundReduceCoef1,0,0);
@@ -1599,7 +1599,7 @@ int GetGoodReduceFundamMatrFromTwo(CvMat* fundReduceCoef1,CvMat* fundReduceCoef2
             numRoots++;
         }
     }
-
+    }
     __END__;
     return numRoots;
 }
@@ -1636,7 +1636,7 @@ void GetProjMatrFromReducedFundamental(CvMat* fundReduceCoefs,CvMat* projMatrCoe
     /* Computes project matrix from given reduced matrix */
     /* we have p,q,r,s,t and need get a,b,c,d */
     /* Fill matrix to compute ratio a:b:c as A:B:C */
-
+    {
     CvMat matrA;
     double matrA_dat[3*3];
     matrA = cvMat(3,3,CV_64F,matrA_dat);
@@ -1752,7 +1752,7 @@ void GetProjMatrFromReducedFundamental(CvMat* fundReduceCoefs,CvMat* projMatrCoe
         cvmSet(projMatrCoefs,0,3,d);
 
     }
-
+    }
     __END__;
     return;
 }
@@ -2106,7 +2106,7 @@ void icvReconstructPointsFor3View( CvMat* projMatr1,CvMat* projMatr2,CvMat* proj
     {
         CV_ERROR( CV_StsUnmatchedSizes, "Size of projection matrices must be 3x4" );
     }
-
+    {
     CvMat matrA;
     double matrA_dat[36];
     matrA = cvMat(9,4,CV_64F,matrA_dat);
@@ -2203,7 +2203,7 @@ void icvReconstructPointsFor3View( CvMat* projMatr1,CvMat* projMatr2,CvMat* proj
                 }
         }
     }*/
-
+    }
     __END__;
     return;
 }

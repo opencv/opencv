@@ -4,7 +4,7 @@ Introduction
 
 .. highlight:: cpp
 
-OpenCV (Open Source Computer Vision Library: http://opencv.willowgarage.com/wiki/) is an open-source BSD-licensed library that includes several hundreds of computer vision algorithms. The document describes the so-called OpenCV 2.x API, which is essentially a C++ API, as opposite to the C-based OpenCV 1.x API. The latter is described in opencv1x.pdf.
+OpenCV (Open Source Computer Vision Library: http://opencv.org) is an open-source BSD-licensed library that includes several hundreds of computer vision algorithms. The document describes the so-called OpenCV 2.x API, which is essentially a C++ API, as opposite to the C-based OpenCV 1.x API. The latter is described in opencv1x.pdf.
 
 OpenCV has a modular structure, which means that the package includes several shared or static libraries. The following modules are available:
 
@@ -30,14 +30,14 @@ All the OpenCV classes and functions are placed into the ``cv`` namespace. There
 
 .. code-block:: c
 
-    #include "opencv2/core/core.hpp"
+    #include "opencv2/core.hpp"
     ...
     cv::Mat H = cv::findHomography(points1, points2, CV_RANSAC, 5);
     ...
 
 or ::
 
-    #include "opencv2/core/core.hpp"
+    #include "opencv2/core.hpp"
     using namespace cv;
     ...
     Mat H = findHomography(points1, points2, CV_RANSAC, 5 );

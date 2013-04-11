@@ -20,11 +20,12 @@
      Or: http://oreilly.com/catalog/9780596516130/
      ISBN-10: 0596516134 or: ISBN-13: 978-0596516130
 ************************************************** */
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/legacy/legacy.hpp"
+#include "opencv2/highgui/highgui_c.h"
+#include "opencv2/legacy.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>

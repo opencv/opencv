@@ -72,7 +72,7 @@
  *      Author: Alexandre Benoit
  */
 
-#include "opencv2/core/core.hpp" // for all OpenCV core functionalities access, including cv::Exception support
+#include "opencv2/core.hpp" // for all OpenCV core functionalities access, including cv::Exception support
 #include <valarray>
 
 namespace cv
@@ -182,7 +182,7 @@ public:
      * @param retinaParameterFile : the parameters filename
          * @param applyDefaultSetupOnFailure : set to true if an error must be thrown on error
      */
-    void setup(std::string retinaParameterFile="", const bool applyDefaultSetupOnFailure=true);
+    void setup(String retinaParameterFile="", const bool applyDefaultSetupOnFailure=true);
 
 
     /**
@@ -212,13 +212,13 @@ public:
      * parameters setup display method
      * @return a string which contains formatted parameters information
      */
-    const std::string printSetup();
+    const String printSetup();
 
     /**
      * write xml/yml formated parameters information
      * @rparam fs : the filename of the xml file that will be open and writen with formatted parameters information
      */
-    virtual void write( std::string fs ) const;
+    virtual void write( String fs ) const;
 
 
     /**

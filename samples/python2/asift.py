@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 '''
 Affine invariant feature-based image matching sample.
@@ -21,9 +21,12 @@ USAGE
 
 import numpy as np
 import cv2
+
+# built-in modules
 import itertools as it
 from multiprocessing.pool import ThreadPool
 
+# local modules
 from common import Timer
 from find_obj import init_feature, filter_matches, explore_match
 
@@ -85,15 +88,18 @@ def affine_detect(detector, img, mask=None, pool=None):
         if descrs is None:
             descrs = []
         return keypoints, descrs
+
     keypoints, descrs = [], []
     if pool is None:
         ires = it.imap(f, params)
     else:
         ires = pool.imap(f, params)
+
     for i, (k, d) in enumerate(ires):
         print 'affine sampling: %d / %d\r' % (i+1, len(params)),
         keypoints.extend(k)
         descrs.extend(d)
+
     print
     return keypoints, np.array(descrs)
 
@@ -104,7 +110,8 @@ if __name__ == '__main__':
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
     feature_name = opts.get('--feature', 'sift-flann')
-    try: fn1, fn2 = args
+    try:
+        fn1, fn2 = args
     except:
         fn1 = 'data/aero1.jpg'
         fn2 = 'data/aero3.jpg'
@@ -112,11 +119,20 @@ if __name__ == '__main__':
     img1 = cv2.imread(fn1, 0)
     img2 = cv2.imread(fn2, 0)
     detector, matcher = init_feature(feature_name)
-    if detector != None:
-        print 'using', feature_name
-    else:
+    
+    if img1 is None:
+        print 'Failed to load fn1:', fn1
+        sys.exit(1)
+        
+    if img2 is None:
+        print 'Failed to load fn2:', fn2
+        sys.exit(1)
+    
+    if detector is None:
         print 'unknown feature:', feature_name
         sys.exit(1)
+        
+    print 'using', feature_name
 
     pool=ThreadPool(processes = cv2.getNumberOfCPUs())
     kp1, desc1 = affine_detect(detector, img1, pool=pool)

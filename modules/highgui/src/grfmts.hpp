@@ -51,5 +51,6 @@
 #include "grfmt_png.hpp"
 #include "grfmt_jpeg2000.hpp"
 #include "grfmt_exr.hpp"
+#include "grfmt_webp.hpp"
 
 #endif/*_GRFMTS_H_*/

@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -43,57 +44,6 @@
 #ifndef __OPENCV_CORE_TYPES_H__
 #define __OPENCV_CORE_TYPES_H__
 
-#if !defined _CRT_SECURE_NO_DEPRECATE && defined _MSC_VER
-#  if _MSC_VER > 1300
-#    define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio 2005 warnings */
-#  endif
-#endif
-
-
-#ifndef SKIP_INCLUDES
-
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
-#include <float.h>
-
-#if !defined _MSC_VER && !defined __BORLANDC__
-#  include <stdint.h>
-#endif
-
-#if defined __ICL
-#  define CV_ICC   __ICL
-#elif defined __ICC
-#  define CV_ICC   __ICC
-#elif defined __ECL
-#  define CV_ICC   __ECL
-#elif defined __ECC
-#  define CV_ICC   __ECC
-#elif defined __INTEL_COMPILER
-#  define CV_ICC   __INTEL_COMPILER
-#endif
-
-#if defined CV_ICC && !defined CV_ENABLE_UNROLLED
-#  define CV_ENABLE_UNROLLED 0
-#else
-#  define CV_ENABLE_UNROLLED 1
-#endif
-
-#if (defined _M_X64 && defined _MSC_VER && _MSC_VER >= 1400) || (__GNUC__ >= 4 && defined __x86_64__)
-#  if defined WIN32
-#    include <intrin.h>
-#  endif
-#  if defined __SSE2__ || !defined __GNUC__
-#    include <emmintrin.h>
-#  endif
-#endif
-
-#if defined __BORLANDC__
-#  include <fastmath.h>
-#else
-#  include <math.h>
-#endif
-
 #ifdef HAVE_IPL
 #  ifndef __IPL_H__
 #    if defined WIN32 || defined _WIN32
@@ -106,6 +56,13 @@
 #  define HAVE_IPL
 #endif
 
+#include "opencv2/core/cvdef.h"
+
+#ifndef SKIP_INCLUDES
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+#include <float.h>
 #endif // SKIP_INCLUDES
 
 #if defined WIN32 || defined _WIN32
@@ -116,12 +73,10 @@
 #  define CV_STDCALL
 #endif
 
-#ifndef CV_EXTERN_C
+#ifndef CV_DEFAULT
 #  ifdef __cplusplus
-#    define CV_EXTERN_C extern "C"
 #    define CV_DEFAULT(val) = val
 #  else
-#    define CV_EXTERN_C
 #    define CV_DEFAULT(val)
 #  endif
 #endif
@@ -134,59 +89,17 @@
 #  endif
 #endif
 
-#ifndef CV_INLINE
-#  if defined __cplusplus
-#    define CV_INLINE inline
-#  elif (defined WIN32 || defined _WIN32 || defined WINCE) && !defined __GNUC__
-#    define CV_INLINE __inline
-#  else
-#    define CV_INLINE static
-#  endif
-#endif /* CV_INLINE */
-
-#if (defined WIN32 || defined _WIN32 || defined WINCE) && defined CVAPI_EXPORTS
-#  define CV_EXPORTS __declspec(dllexport)
-#else
-#  define CV_EXPORTS
-#endif
-
 #ifndef CVAPI
 #  define CVAPI(rettype) CV_EXTERN_C CV_EXPORTS rettype CV_CDECL
 #endif
 
-#if defined _MSC_VER || defined __BORLANDC__
-   typedef __int64 int64;
-   typedef unsigned __int64 uint64;
-#  define CV_BIG_INT(n)   n##I64
-#  define CV_BIG_UINT(n)  n##UI64
-#else
-   typedef int64_t int64;
-   typedef uint64_t uint64;
-#  define CV_BIG_INT(n)   n##LL
-#  define CV_BIG_UINT(n)  n##ULL
+#ifndef CV_IMPL
+#  define CV_IMPL CV_EXTERN_C
 #endif
 
-#ifndef HAVE_IPL
-   typedef unsigned char uchar;
-   typedef unsigned short ushort;
+#ifdef __cplusplus
+#  include "opencv2/core.hpp"
 #endif
-
-typedef signed char schar;
-
-/* special informative macros for wrapper generators */
-#define CV_CARRAY(counter)
-#define CV_CUSTOM_CARRAY(args)
-#define CV_EXPORTS_W CV_EXPORTS
-#define CV_EXPORTS_W_SIMPLE CV_EXPORTS
-#define CV_EXPORTS_AS(synonym) CV_EXPORTS
-#define CV_EXPORTS_W_MAP CV_EXPORTS
-#define CV_IN_OUT
-#define CV_OUT
-#define CV_PROP
-#define CV_PROP_RW
-#define CV_WRAP
-#define CV_WRAP_AS(synonym)
-#define CV_WRAP_DEFAULT(value)
 
 /* CvArr* is used to pass arbitrary
  * array-like data structures
@@ -271,22 +184,7 @@ enum {
 *                             Common macros and inline functions                         *
 \****************************************************************************************/
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#  include "tegra_round.hpp"
-#endif
-
-#define CV_PI   3.1415926535897932384626433832795
-#define CV_LOG2 0.69314718055994530941723212145818
-
 #define CV_SWAP(a,b,t) ((t) = (a), (a) = (b), (b) = (t))
-
-#ifndef MIN
-#  define MIN(a,b)  ((a) > (b) ? (b) : (a))
-#endif
-
-#ifndef MAX
-#  define MAX(a,b)  ((a) < (b) ? (b) : (a))
-#endif
 
 /* min & max without jumps */
 #define  CV_IMIN(a, b)  ((a) ^ (((a)^(b)) & (((a) < (b)) - 1)))
@@ -302,87 +200,8 @@ enum {
 #define  CV_CMP(a,b)    (((a) > (b)) - ((a) < (b)))
 #define  CV_SIGN(a)     CV_CMP((a),0)
 
-CV_INLINE  int  cvRound( double value )
-{
-#if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__ && defined __SSE2__ && !defined __APPLE__)
-    __m128d t = _mm_set_sd( value );
-    return _mm_cvtsd_si32(t);
-#elif defined _MSC_VER && defined _M_IX86
-    int t;
-    __asm
-    {
-        fld value;
-        fistp t;
-    }
-    return t;
-#elif defined HAVE_LRINT || defined CV_ICC || defined __GNUC__
-#  ifdef HAVE_TEGRA_OPTIMIZATION
-    TEGRA_ROUND(value);
-#  else
-    return (int)lrint(value);
-#  endif
-#else
-    // while this is not IEEE754-compliant rounding, it's usually a good enough approximation
-    return (int)(value + (value >= 0 ? 0.5 : -0.5));
-#endif
-}
-
-#if defined __SSE2__ || (defined _M_IX86_FP && 2 == _M_IX86_FP)
-#  include "emmintrin.h"
-#endif
-
-CV_INLINE  int  cvFloor( double value )
-{
-#if defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__ && !defined __APPLE__)
-    __m128d t = _mm_set_sd( value );
-    int i = _mm_cvtsd_si32(t);
-    return i - _mm_movemask_pd(_mm_cmplt_sd(t, _mm_cvtsi32_sd(t,i)));
-#elif defined __GNUC__
-    int i = (int)value;
-    return i - (i > value);
-#else
-    int i = cvRound(value);
-    float diff = (float)(value - i);
-    return i - (diff < 0);
-#endif
-}
-
-
-CV_INLINE  int  cvCeil( double value )
-{
-#if defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__&& !defined __APPLE__)
-    __m128d t = _mm_set_sd( value );
-    int i = _mm_cvtsd_si32(t);
-    return i + _mm_movemask_pd(_mm_cmplt_sd(_mm_cvtsi32_sd(t,i), t));
-#elif defined __GNUC__
-    int i = (int)value;
-    return i + (i < value);
-#else
-    int i = cvRound(value);
-    float diff = (float)(i - value);
-    return i + (diff < 0);
-#endif
-}
-
 #define cvInvSqrt(value) ((float)(1./sqrt(value)))
 #define cvSqrt(value)  ((float)sqrt(value))
-
-CV_INLINE int cvIsNaN( double value )
-{
-    Cv64suf ieee754;
-    ieee754.f = value;
-    return ((unsigned)(ieee754.u >> 32) & 0x7fffffff) +
-           ((unsigned)ieee754.u != 0) > 0x7ff00000;
-}
-
-
-CV_INLINE int cvIsInf( double value )
-{
-    Cv64suf ieee754;
-    ieee754.f = value;
-    return ((unsigned)(ieee754.u >> 32) & 0x7fffffff) == 0x7ff00000 &&
-           (unsigned)ieee754.u == 0;
-}
 
 
 /*************** Random number generation *******************/
@@ -453,7 +272,7 @@ CV_INLINE double cvRandReal( CvRNG* rng )
 #define IPL_BORDER_REFLECT    2
 #define IPL_BORDER_WRAP       3
 
-typedef struct _IplImage
+typedef struct CV_EXPORTS _IplImage
 {
     int  nSize;             /* sizeof(IplImage) */
     int  ID;                /* version (=0)*/
@@ -485,6 +304,11 @@ typedef struct _IplImage
     char *imageDataOrigin;  /* Pointer to very origin of image data
                                (not necessarily aligned) -
                                needed for correct deallocation */
+
+#ifdef __cplusplus
+    _IplImage() {}
+    _IplImage(const cv::Mat& m);
+#endif
 }
 IplImage;
 
@@ -553,81 +377,8 @@ IplConvKernelFP;
 *                                  Matrix type (CvMat)                                   *
 \****************************************************************************************/
 
-#define CV_CN_MAX     512
-#define CV_CN_SHIFT   3
-#define CV_DEPTH_MAX  (1 << CV_CN_SHIFT)
-
-#define CV_8U   0
-#define CV_8S   1
-#define CV_16U  2
-#define CV_16S  3
-#define CV_32S  4
-#define CV_32F  5
-#define CV_64F  6
-#define CV_USRTYPE1 7
-
-#define CV_MAT_DEPTH_MASK       (CV_DEPTH_MAX - 1)
-#define CV_MAT_DEPTH(flags)     ((flags) & CV_MAT_DEPTH_MASK)
-
-#define CV_MAKETYPE(depth,cn) (CV_MAT_DEPTH(depth) + (((cn)-1) << CV_CN_SHIFT))
-#define CV_MAKE_TYPE CV_MAKETYPE
-
-#define CV_8UC1 CV_MAKETYPE(CV_8U,1)
-#define CV_8UC2 CV_MAKETYPE(CV_8U,2)
-#define CV_8UC3 CV_MAKETYPE(CV_8U,3)
-#define CV_8UC4 CV_MAKETYPE(CV_8U,4)
-#define CV_8UC(n) CV_MAKETYPE(CV_8U,(n))
-
-#define CV_8SC1 CV_MAKETYPE(CV_8S,1)
-#define CV_8SC2 CV_MAKETYPE(CV_8S,2)
-#define CV_8SC3 CV_MAKETYPE(CV_8S,3)
-#define CV_8SC4 CV_MAKETYPE(CV_8S,4)
-#define CV_8SC(n) CV_MAKETYPE(CV_8S,(n))
-
-#define CV_16UC1 CV_MAKETYPE(CV_16U,1)
-#define CV_16UC2 CV_MAKETYPE(CV_16U,2)
-#define CV_16UC3 CV_MAKETYPE(CV_16U,3)
-#define CV_16UC4 CV_MAKETYPE(CV_16U,4)
-#define CV_16UC(n) CV_MAKETYPE(CV_16U,(n))
-
-#define CV_16SC1 CV_MAKETYPE(CV_16S,1)
-#define CV_16SC2 CV_MAKETYPE(CV_16S,2)
-#define CV_16SC3 CV_MAKETYPE(CV_16S,3)
-#define CV_16SC4 CV_MAKETYPE(CV_16S,4)
-#define CV_16SC(n) CV_MAKETYPE(CV_16S,(n))
-
-#define CV_32SC1 CV_MAKETYPE(CV_32S,1)
-#define CV_32SC2 CV_MAKETYPE(CV_32S,2)
-#define CV_32SC3 CV_MAKETYPE(CV_32S,3)
-#define CV_32SC4 CV_MAKETYPE(CV_32S,4)
-#define CV_32SC(n) CV_MAKETYPE(CV_32S,(n))
-
-#define CV_32FC1 CV_MAKETYPE(CV_32F,1)
-#define CV_32FC2 CV_MAKETYPE(CV_32F,2)
-#define CV_32FC3 CV_MAKETYPE(CV_32F,3)
-#define CV_32FC4 CV_MAKETYPE(CV_32F,4)
-#define CV_32FC(n) CV_MAKETYPE(CV_32F,(n))
-
-#define CV_64FC1 CV_MAKETYPE(CV_64F,1)
-#define CV_64FC2 CV_MAKETYPE(CV_64F,2)
-#define CV_64FC3 CV_MAKETYPE(CV_64F,3)
-#define CV_64FC4 CV_MAKETYPE(CV_64F,4)
-#define CV_64FC(n) CV_MAKETYPE(CV_64F,(n))
-
 #define CV_AUTO_STEP  0x7fffffff
 #define CV_WHOLE_ARR  cvSlice( 0, 0x3fffffff )
-
-#define CV_MAT_CN_MASK          ((CV_CN_MAX - 1) << CV_CN_SHIFT)
-#define CV_MAT_CN(flags)        ((((flags) & CV_MAT_CN_MASK) >> CV_CN_SHIFT) + 1)
-#define CV_MAT_TYPE_MASK        (CV_DEPTH_MAX*CV_CN_MAX - 1)
-#define CV_MAT_TYPE(flags)      ((flags) & CV_MAT_TYPE_MASK)
-#define CV_MAT_CONT_FLAG_SHIFT  14
-#define CV_MAT_CONT_FLAG        (1 << CV_MAT_CONT_FLAG_SHIFT)
-#define CV_IS_MAT_CONT(flags)   ((flags) & CV_MAT_CONT_FLAG)
-#define CV_IS_CONT_MAT          CV_IS_MAT_CONT
-#define CV_SUBMAT_FLAG_SHIFT    15
-#define CV_SUBMAT_FLAG          (1 << CV_SUBMAT_FLAG_SHIFT)
-#define CV_IS_SUBMAT(flags)     ((flags) & CV_MAT_SUBMAT_FLAG)
 
 #define CV_MAGIC_MASK       0xFFFF0000
 #define CV_MAT_MAGIC_VAL    0x42420000
@@ -668,6 +419,13 @@ typedef struct CvMat
     int cols;
 #endif
 
+
+#ifdef __cplusplus
+    CvMat() {}
+    CvMat(const CvMat& m) { memcpy(this, &m, sizeof(CvMat));}
+    CvMat(const cv::Mat& m);
+#endif
+
 }
 CvMat;
 
@@ -703,15 +461,6 @@ CvMat;
 #define CV_IS_MAT_CONST(mat)  \
     (((mat)->rows|(mat)->cols) == 1)
 
-/* Size of each channel item,
-   0x124489 = 1000 0100 0100 0010 0010 0001 0001 ~ array of sizeof(arr_type_elem) */
-#define CV_ELEM_SIZE1(type) \
-    ((((sizeof(size_t)<<28)|0x8442211) >> CV_MAT_DEPTH(type)*4) & 15)
-
-/* 0x3a50 = 11 10 10 01 01 00 00 ~ array of log2(sizeof(arr_type_elem)) */
-#define CV_ELEM_SIZE(type) \
-    (CV_MAT_CN(type) << ((((sizeof(size_t)/4+1)*16384|0x3a50) >> CV_MAT_DEPTH(type)*2) & 3))
-
 #define IPL2CV_DEPTH(depth) \
     ((((CV_8U)+(CV_16U<<4)+(CV_32F<<8)+(CV_64F<<16)+(CV_8S<<20)+ \
     (CV_16S<<24)+(CV_32S<<28)) >> ((((depth) & 0xF0) >> 2) + \
@@ -737,6 +486,16 @@ CV_INLINE CvMat cvMat( int rows, int cols, int type, void* data CV_DEFAULT(NULL)
 
     return m;
 }
+
+#ifdef __cplusplus
+inline CvMat::CvMat(const cv::Mat& m)
+{
+    CV_DbgAssert(m.dims <= 2);
+    *this = cvMat(m.rows, m.dims == 1 ? 1 : m.cols, m.type(), m.data);
+    step = (int)m.step[0];
+    type = (type & ~cv::Mat::CONTINUOUS_FLAG) | (m.flags & cv::Mat::CONTINUOUS_FLAG);
+}
+#endif
 
 
 #define CV_MAT_ELEM_PTR_FAST( mat, row, col, pix_size )  \
@@ -804,7 +563,7 @@ CV_INLINE int cvIplDepth( int type )
 #define CV_MAX_DIM            32
 #define CV_MAX_DIM_HEAP       1024
 
-typedef struct CvMatND
+typedef struct CV_EXPORTS CvMatND
 {
     int type;
     int dims;
@@ -827,6 +586,11 @@ typedef struct CvMatND
         int step;
     }
     dim[CV_MAX_DIM];
+
+#ifdef __cplusplus
+    CvMatND() {}
+    CvMatND(const cv::Mat& m);
+#endif
 }
 CvMatND;
 
@@ -846,7 +610,7 @@ CvMatND;
 
 struct CvSet;
 
-typedef struct CvSparseMat
+typedef struct CV_EXPORTS CvSparseMat
 {
     int type;
     int dims;
@@ -859,8 +623,16 @@ typedef struct CvSparseMat
     int valoffset;
     int idxoffset;
     int size[CV_MAX_DIM];
+
+#ifdef __cplusplus
+    void copyToSparseMat(cv::SparseMat& m) const;
+#endif
 }
 CvSparseMat;
+
+#ifdef __cplusplus
+    CV_EXPORTS CvSparseMat* cvCreateSparseMat(const cv::SparseMat& m);
+#endif
 
 #define CV_IS_SPARSE_MAT_HDR(mat) \
     ((mat) != NULL && \
@@ -945,6 +717,14 @@ typedef struct CvRect
     int y;
     int width;
     int height;
+
+#ifdef __cplusplus
+    CvRect(int _x = 0, int _y = 0, int w = 0, int h = 0): x(_x), y(_y), width(w), height(h) {}
+    template<typename _Tp>
+    CvRect(const cv::Rect_<_Tp>& r): x(cv::saturate_cast<int>(r.x)), y(cv::saturate_cast<int>(r.y)), width(cv::saturate_cast<int>(r.width)), height(cv::saturate_cast<int>(r.height)) {}
+    template<typename _Tp>
+    operator cv::Rect_<_Tp>() const { return cv::Rect_<_Tp>((_Tp)x, (_Tp)y, (_Tp)width, (_Tp)height); }
+#endif
 }
 CvRect;
 
@@ -992,6 +772,13 @@ typedef struct CvTermCriteria
                      CV_TERMCRIT_EPS */
     int    max_iter;
     double epsilon;
+
+#ifdef __cplusplus
+    CvTermCriteria(int _type = 0, int _iter = 0, double _eps = 0) : type(_type), max_iter(_iter), epsilon(_eps)  {}
+    CvTermCriteria(const cv::TermCriteria& t) : type(t.type), max_iter(t.maxCount), epsilon(t.epsilon)  {}
+    operator cv::TermCriteria() const { return cv::TermCriteria(type, max_iter, epsilon); }
+#endif
+
 }
 CvTermCriteria;
 
@@ -1013,6 +800,14 @@ typedef struct CvPoint
 {
     int x;
     int y;
+
+#ifdef __cplusplus
+    CvPoint(int _x = 0, int _y = 0): x(_x), y(_y) {}
+    template<typename _Tp>
+    CvPoint(const cv::Point_<_Tp>& pt): x((int)pt.x), y((int)pt.y) {}
+    template<typename _Tp>
+    operator cv::Point_<_Tp>() const { return cv::Point_<_Tp>(cv::saturate_cast<_Tp>(x), cv::saturate_cast<_Tp>(y)); }
+#endif
 }
 CvPoint;
 
@@ -1032,6 +827,14 @@ typedef struct CvPoint2D32f
 {
     float x;
     float y;
+
+#ifdef __cplusplus
+    CvPoint2D32f(float _x = 0, float _y = 0): x(_x), y(_y) {}
+    template<typename _Tp>
+    CvPoint2D32f(const cv::Point_<_Tp>& pt): x((float)pt.x), y((float)pt.y) {}
+    template<typename _Tp>
+    operator cv::Point_<_Tp>() const { return cv::Point_<_Tp>(cv::saturate_cast<_Tp>(x), cv::saturate_cast<_Tp>(y)); }
+#endif
 }
 CvPoint2D32f;
 
@@ -1068,6 +871,14 @@ typedef struct CvPoint3D32f
     float x;
     float y;
     float z;
+
+#ifdef __cplusplus
+    CvPoint3D32f(float _x = 0, float _y = 0, float _z = 0): x(_x), y(_y), z(_z) {}
+    template<typename _Tp>
+    CvPoint3D32f(const cv::Point3_<_Tp>& pt): x((float)pt.x), y((float)pt.y), z((float)pt.z) {}
+    template<typename _Tp>
+    operator cv::Point3_<_Tp>() const { return cv::Point3_<_Tp>(cv::saturate_cast<_Tp>(x), cv::saturate_cast<_Tp>(y), cv::saturate_cast<_Tp>(z)); }
+#endif
 }
 CvPoint3D32f;
 
@@ -1130,6 +941,14 @@ typedef struct CvSize
 {
     int width;
     int height;
+
+#ifdef __cplusplus
+    CvSize(int w = 0, int h = 0): width(w), height(h) {}
+    template<typename _Tp>
+    CvSize(const cv::Size_<_Tp>& sz): width(cv::saturate_cast<int>(sz.width)), height(cv::saturate_cast<int>(sz.height)) {}
+    template<typename _Tp>
+    operator cv::Size_<_Tp>() const { return cv::Size_<_Tp>(cv::saturate_cast<_Tp>(width), cv::saturate_cast<_Tp>(height)); }
+#endif
 }
 CvSize;
 
@@ -1147,6 +966,14 @@ typedef struct CvSize2D32f
 {
     float width;
     float height;
+
+#ifdef __cplusplus
+    CvSize2D32f(float w = 0, float h = 0): width(w), height(h) {}
+    template<typename _Tp>
+    CvSize2D32f(const cv::Size_<_Tp>& sz): width(cv::saturate_cast<float>(sz.width)), height(cv::saturate_cast<float>(sz.height)) {}
+    template<typename _Tp>
+    operator cv::Size_<_Tp>() const { return cv::Size_<_Tp>(cv::saturate_cast<_Tp>(width), cv::saturate_cast<_Tp>(height)); }
+#endif
 }
 CvSize2D32f;
 
@@ -1167,6 +994,12 @@ typedef struct CvBox2D
     CvSize2D32f  size;    /* Box width and length.                       */
     float angle;          /* Angle between the horizontal axis           */
                           /* and the first side (i.e. length) in degrees */
+
+#ifdef __cplusplus
+    CvBox2D(CvPoint2D32f c = CvPoint2D32f(), CvSize2D32f s = CvSize2D32f(), float a = 0) : center(c), size(s), angle(a) {}
+    CvBox2D(const cv::RotatedRect& rr) : center(rr.center), size(rr.size), angle(rr.angle) {}
+    operator cv::RotatedRect() const { return cv::RotatedRect(center, size, angle); }
+#endif
 }
 CvBox2D;
 
@@ -1189,10 +1022,18 @@ CvLineIterator;
 
 
 /************************************* CvSlice ******************************************/
+#define CV_WHOLE_SEQ_END_INDEX 0x3fffffff
+#define CV_WHOLE_SEQ  cvSlice(0, CV_WHOLE_SEQ_END_INDEX)
 
 typedef struct CvSlice
 {
     int  start_index, end_index;
+
+#ifdef __cplusplus
+    CvSlice(int start = 0, int end = 0) : start_index(start), end_index(end) {}
+    CvSlice(const cv::Range& r) { *this = (r.start != INT_MIN && r.end != INT_MAX) ? CvSlice(r.start, r.end) : CvSlice(0, CV_WHOLE_SEQ_END_INDEX); }
+    operator cv::Range() const { return (start_index == 0 && end_index == CV_WHOLE_SEQ_END_INDEX ) ? cv::Range::all() : cv::Range(start_index, end_index); }
+#endif
 }
 CvSlice;
 
@@ -1205,8 +1046,6 @@ CV_INLINE  CvSlice  cvSlice( int start, int end )
     return slice;
 }
 
-#define CV_WHOLE_SEQ_END_INDEX 0x3fffffff
-#define CV_WHOLE_SEQ  cvSlice(0, CV_WHOLE_SEQ_END_INDEX)
 
 
 /************************************* CvScalar *****************************************/
@@ -1214,6 +1053,22 @@ CV_INLINE  CvSlice  cvSlice( int start, int end )
 typedef struct CvScalar
 {
     double val[4];
+
+#ifdef __cplusplus
+    CvScalar() {}
+    CvScalar(double d0, double d1 = 0, double d2 = 0, double d3 = 0) { val[0] = d0; val[1] = d1; val[2] = d2; val[3] = d3; }
+    template<typename _Tp>
+    CvScalar(const cv::Scalar_<_Tp>& s) { val[0] = s.val[0]; val[1] = s.val[1]; val[2] = s.val[2]; val[3] = s.val[3]; }
+    template<typename _Tp>
+    operator cv::Scalar_<_Tp>() const { return cv::Scalar_<_Tp>(cv::saturate_cast<_Tp>(val[0]), cv::saturate_cast<_Tp>(val[1]), cv::saturate_cast<_Tp>(val[2]), cv::saturate_cast<_Tp>(val[3])); }
+    template<typename _Tp, int cn>
+    CvScalar(const cv::Vec<_Tp, cn>& v)
+    {
+        int i;
+        for( i = 0; i < (cn < 4 ? cn : 4); i++ ) val[i] = v.val[i];
+        for( ; i < 4; i++ ) val[i] = 0;
+    }
+#endif
 }
 CvScalar;
 
@@ -1606,7 +1461,6 @@ CvSeqWriter;
     schar*       block_max;  /* pointer to the end of block */      \
     int          delta_index;/* = seq->first->start_index   */      \
     schar*       prev_elem;  /* pointer to previous element */
-
 
 typedef struct CvSeqReader
 {

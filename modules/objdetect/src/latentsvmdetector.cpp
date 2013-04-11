@@ -124,9 +124,9 @@ CvSeq* cvLatentSvmDetectObjects(IplImage* image,
 
     for (int i = 0; i < numBoxesOut; i++)
     {
-        CvObjectDetection detection = {{0, 0, 0, 0}, 0};
+        CvObjectDetection detection = {CvRect(), 0};
         detection.score = scoreOut[i];
-        CvRect bounding_box = {0, 0, 0, 0};
+        CvRect bounding_box;
         bounding_box.x = pointsOut[i].x;
         bounding_box.y = pointsOut[i].y;
         bounding_box.width = oppPointsOut[i].x - pointsOut[i].x;
@@ -158,7 +158,7 @@ LatentSvmDetector::ObjectDetection::ObjectDetection( const Rect& _rect, float _s
 LatentSvmDetector::LatentSvmDetector()
 {}
 
-LatentSvmDetector::LatentSvmDetector( const std::vector<std::string>& filenames, const std::vector<std::string>& _classNames )
+LatentSvmDetector::LatentSvmDetector( const std::vector<String>& filenames, const std::vector<String>& _classNames )
 {
     load( filenames, _classNames );
 }
@@ -182,7 +182,7 @@ bool LatentSvmDetector::empty() const
     return detectors.empty();
 }
 
-const std::vector<std::string>& LatentSvmDetector::getClassNames() const
+const std::vector<String>& LatentSvmDetector::getClassNames() const
 {
     return classNames;
 }
@@ -192,13 +192,13 @@ size_t LatentSvmDetector::getClassCount() const
     return classNames.size();
 }
 
-static std::string extractModelName( const std::string& filename )
+static String extractModelName( const String& filename )
 {
     size_t startPos = filename.rfind('/');
-    if( startPos == std::string::npos )
+    if( startPos == String::npos )
         startPos = filename.rfind('\\');
 
-    if( startPos == std::string::npos )
+    if( startPos == String::npos )
         startPos = 0;
     else
         startPos++;
@@ -210,7 +210,7 @@ static std::string extractModelName( const std::string& filename )
     return filename.substr(startPos, substrLength);
 }
 
-bool LatentSvmDetector::load( const std::vector<std::string>& filenames, const std::vector<std::string>& _classNames )
+bool LatentSvmDetector::load( const std::vector<String>& filenames, const std::vector<String>& _classNames )
 {
     clear();
 
@@ -218,7 +218,7 @@ bool LatentSvmDetector::load( const std::vector<std::string>& filenames, const s
 
     for( size_t i = 0; i < filenames.size(); i++ )
     {
-        const std::string filename = filenames[i];
+        const String filename = filenames[i];
         if( filename.length() < 5 || filename.substr(filename.length()-4, 4) != ".xml" )
             continue;
 

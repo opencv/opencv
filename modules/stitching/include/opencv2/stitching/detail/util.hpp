@@ -44,7 +44,7 @@
 #define __OPENCV_STITCHING_UTIL_HPP__
 
 #include <list>
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 
 #define ENABLE_LOG 0
 
@@ -56,7 +56,7 @@
   #include <android/log.h>
   #define LOG_STITCHING_MSG(msg) \
     do { \
-        std::stringstream _os; \
+        Stringstream _os; \
         _os << msg; \
        __android_log_print(ANDROID_LOG_DEBUG, "STITCHING", "%s", _os.str().c_str()); \
     } while(0);

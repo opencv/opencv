@@ -10,13 +10,13 @@ CommandLineParser
 The CommandLineParser class is designed for command line arguments parsing
 
 
-    .. ocv:function:: CommandLineParser::CommandLineParser( int argc, const char* const argv[], const string& keys )
+    .. ocv:function:: CommandLineParser::CommandLineParser( int argc, const char* const argv[], const String& keys )
 
         :param argc:
         :param argv:
         :param keys:
 
-    .. ocv:function:: template<typename T> T CommandLineParser::get<T>(const std::string& name, bool space_delete = true)
+    .. ocv:function:: template<typename T> T CommandLineParser::get<T>(const String& name, bool space_delete = true)
 
         :param name:
         :param space_delete:
@@ -26,14 +26,14 @@ The CommandLineParser class is designed for command line arguments parsing
         :param index:
         :param space_delete:
 
-    .. ocv:function:: bool CommandLineParser::has(const std::string& name)
+    .. ocv:function:: bool CommandLineParser::has(const String& name)
 
         :param name:
 
     .. ocv:function:: bool CommandLineParser::check()
 
 
-    .. ocv:function:: void CommandLineParser::about( const string& message )
+    .. ocv:function:: void CommandLineParser::about( const String& message )
 
         :param message:
 
@@ -41,7 +41,7 @@ The CommandLineParser class is designed for command line arguments parsing
 
     .. ocv:function:: void CommandLineParser::printErrors()
 
-    .. ocv:function:: std::string CommandLineParser::getPathToApplication()
+    .. ocv:function:: String CommandLineParser::getPathToApplication()
 
 
 The sample below demonstrates how to use CommandLineParser:
@@ -59,12 +59,12 @@ The sample below demonstrates how to use CommandLineParser:
 
     int N = parser.get<int>("N");
     double fps = parser.get<double>("fps");
-    std::string path = parser.get<std::string>("path");
+    String path = parser.get<String>("path");
 
     use_time_stamp = parser.has("timestamp");
 
-    std::string img1 = parser.get<string>(0);
-    std::string img2 = parser.get<string>(1);
+    String img1 = parser.get<String>(0);
+    String img2 = parser.get<String>(1);
 
     int repeat = parser.get<int>(2);
 
@@ -78,7 +78,7 @@ Syntax:
 
 ::
 
-    const std::string keys =
+    const String keys =
         "{help h usage ? |      | print this message   }"
         "{@image1        |      | image1 for compare   }"
         "{@image2        |      | image2 for compare   }"

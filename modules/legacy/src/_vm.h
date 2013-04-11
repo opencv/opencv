@@ -68,8 +68,6 @@ CvStatus  icvMakeScanlinesLengths( int*        scanlines,
 
 /*=============================== PreWarp section ======================================*/
 
-CV_INLINE int icvGetColor(uchar* valueRGB);
-
 CvStatus  icvFindRunsInOneImage(
                                 int     numLines,       /* number of scanlines		*/
                                 uchar*  prewarp,        /* prewarp image 			*/

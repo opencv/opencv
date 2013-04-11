@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -48,18 +48,18 @@ class cv::gpu::VideoReader_GPU::Impl
 {
 };
 
-cv::gpu::VideoReader_GPU::VideoReader_GPU() { throw_nogpu(); }
-cv::gpu::VideoReader_GPU::VideoReader_GPU(const std::string&) { throw_nogpu(); }
-cv::gpu::VideoReader_GPU::VideoReader_GPU(const cv::Ptr<VideoSource>&) { throw_nogpu(); }
+cv::gpu::VideoReader_GPU::VideoReader_GPU() { throw_no_cuda(); }
+cv::gpu::VideoReader_GPU::VideoReader_GPU(const String&) { throw_no_cuda(); }
+cv::gpu::VideoReader_GPU::VideoReader_GPU(const cv::Ptr<VideoSource>&) { throw_no_cuda(); }
 cv::gpu::VideoReader_GPU::~VideoReader_GPU() { }
-void cv::gpu::VideoReader_GPU::open(const std::string&) { throw_nogpu(); }
-void cv::gpu::VideoReader_GPU::open(const cv::Ptr<VideoSource>&) { throw_nogpu(); }
+void cv::gpu::VideoReader_GPU::open(const String&) { throw_no_cuda(); }
+void cv::gpu::VideoReader_GPU::open(const cv::Ptr<VideoSource>&) { throw_no_cuda(); }
 bool cv::gpu::VideoReader_GPU::isOpened() const { return false; }
 void cv::gpu::VideoReader_GPU::close() { }
-bool cv::gpu::VideoReader_GPU::read(GpuMat&) { throw_nogpu(); return false; }
-cv::gpu::VideoReader_GPU::FormatInfo cv::gpu::VideoReader_GPU::format() const { throw_nogpu(); FormatInfo format_ = {MPEG1,Monochrome,0,0}; return format_; }
-bool cv::gpu::VideoReader_GPU::VideoSource::parseVideoData(const unsigned char*, size_t, bool) { throw_nogpu(); return false; }
-void cv::gpu::VideoReader_GPU::dumpFormat(std::ostream&) { throw_nogpu(); }
+bool cv::gpu::VideoReader_GPU::read(GpuMat&) { throw_no_cuda(); return false; }
+cv::gpu::VideoReader_GPU::FormatInfo cv::gpu::VideoReader_GPU::format() const { throw_no_cuda(); FormatInfo format_ = {MPEG1,Monochrome,0,0}; return format_; }
+bool cv::gpu::VideoReader_GPU::VideoSource::parseVideoData(const unsigned char*, size_t, bool) { throw_no_cuda(); return false; }
+void cv::gpu::VideoReader_GPU::dumpFormat(std::ostream&) { throw_no_cuda(); }
 
 #else // HAVE_CUDA
 
@@ -69,8 +69,6 @@ void cv::gpu::VideoReader_GPU::dumpFormat(std::ostream&) { throw_nogpu(); }
 
 #include "cuvid_video_source.h"
 #include "ffmpeg_video_source.h"
-
-#include "cu_safe_call.h"
 
 class cv::gpu::VideoReader_GPU::Impl
 {
@@ -128,7 +126,7 @@ cv::gpu::VideoReader_GPU::Impl::~Impl()
     videoSource_->stop();
 }
 
-namespace cv { namespace gpu { namespace device {
+namespace cv { namespace gpu { namespace cudev {
     namespace video_decoding
     {
         void loadHueCSC(float hueCSC[9]);
@@ -189,7 +187,7 @@ namespace
 
     void cudaPostProcessFrame(const cv::gpu::GpuMat& decodedFrame, cv::gpu::GpuMat& interopFrame, int width, int height)
     {
-        using namespace cv::gpu::device::video_decoding;
+        using namespace cv::gpu::cudev::video_decoding;
 
         static bool updateCSC = true;
         static float hueColorSpaceMat[9];
@@ -294,7 +292,7 @@ cv::gpu::VideoReader_GPU::VideoReader_GPU()
 {
 }
 
-cv::gpu::VideoReader_GPU::VideoReader_GPU(const std::string& filename)
+cv::gpu::VideoReader_GPU::VideoReader_GPU(const String& filename)
 {
     open(filename);
 }
@@ -309,7 +307,7 @@ cv::gpu::VideoReader_GPU::~VideoReader_GPU()
     close();
 }
 
-void cv::gpu::VideoReader_GPU::open(const std::string& filename)
+void cv::gpu::VideoReader_GPU::open(const String& filename)
 {
     CV_Assert( !filename.empty() );
 

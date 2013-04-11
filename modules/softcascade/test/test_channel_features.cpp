@@ -46,13 +46,13 @@ using namespace cv::softcascade;
 
 TEST(ChannelFeatureBuilderTest, info)
 {
-    cv::Ptr<ChannelFeatureBuilder> builder = ChannelFeatureBuilder::create();
+    cv::Ptr<ChannelFeatureBuilder> builder = ChannelFeatureBuilder::create("HOG6MagLuv");
     ASSERT_TRUE(builder->info() != 0);
 }
 
 TEST(ChannelFeatureBuilderTest, compute)
 {
-    cv::Ptr<ChannelFeatureBuilder> builder = ChannelFeatureBuilder::create();
+    cv::Ptr<ChannelFeatureBuilder> builder = ChannelFeatureBuilder::create("HOG6MagLuv");
 
     cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path()  + "cascadeandhog/images/image_00000000_0.png");
     cv::Mat ints;

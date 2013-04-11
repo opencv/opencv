@@ -4,6 +4,9 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/ocl/ocl.hpp"
+
+#include "opencv2/highgui/highgui_c.h"
+
 #include <iostream>
 #include <stdio.h>
 
@@ -114,7 +117,7 @@ int main( int argc, const char** argv )
         for(;;)
         {
             IplImage* iplImg = cvQueryFrame( capture );
-            frame = iplImg;
+            frame = cv::cvarrToMat(iplImg);
             if( frame.empty() )
                 break;
             if( iplImg->origin == IPL_ORIGIN_TL )
@@ -197,7 +200,7 @@ void detectAndDraw( Mat& img,
     cv::ocl::oclMat image(img);
     cv::ocl::oclMat gray, smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
 
-    cv::ocl::cvtColor( image, gray, CV_BGR2GRAY );
+    cv::ocl::cvtColor( image, gray, COLOR_BGR2GRAY );
     cv::ocl::resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
     cv::ocl::equalizeHist( smallImg, smallImg );
 

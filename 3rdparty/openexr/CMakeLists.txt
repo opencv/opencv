@@ -28,6 +28,8 @@ file(GLOB lib_srcs Half/half.cpp Iex/*.cpp IlmThread/*.cpp Imath/*.cpp IlmImf/*.
 file(GLOB lib_hdrs Half/*.h Iex/Iex*.h IlmThread/IlmThread*.h Imath/Imath*.h IlmImf/*.h)
 list(APPEND lib_hdrs "${CMAKE_CURRENT_BINARY_DIR}/IlmBaseConfig.h" "${CMAKE_CURRENT_BINARY_DIR}/OpenEXRConfig.h")
 
+ocv_list_filterout(lib_srcs IlmImf/b44ExpLogTable.cpp)
+
 if(WIN32)
   ocv_list_filterout(lib_srcs Posix.*cpp)
 else()

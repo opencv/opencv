@@ -46,6 +46,10 @@
 #include "opencv2/core/core_c.h"
 
 #ifdef __cplusplus
+#  include "opencv2/imgproc.hpp"
+#endif
+
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -310,18 +314,32 @@ enum
     CV_RGBA2mRGBA = 125,
     CV_mRGBA2RGBA = 126,
 
+    CV_RGB2YUV_I420 = 127,
+    CV_BGR2YUV_I420 = 128,
+    CV_RGB2YUV_IYUV = CV_RGB2YUV_I420,
+    CV_BGR2YUV_IYUV = CV_BGR2YUV_I420,
+
+    CV_RGBA2YUV_I420 = 129,
+    CV_BGRA2YUV_I420 = 130,
+    CV_RGBA2YUV_IYUV = CV_RGBA2YUV_I420,
+    CV_BGRA2YUV_IYUV = CV_BGRA2YUV_I420,
+    CV_RGB2YUV_YV12  = 131,
+    CV_BGR2YUV_YV12  = 132,
+    CV_RGBA2YUV_YV12 = 133,
+    CV_BGRA2YUV_YV12 = 134,
+
     // Edge-Aware Demosaicing
-    CV_BayerBG2BGR_EA = 127,
-    CV_BayerGB2BGR_EA = 128,
-    CV_BayerRG2BGR_EA = 129,
-    CV_BayerGR2BGR_EA = 130,
+    CV_BayerBG2BGR_EA = 135,
+    CV_BayerGB2BGR_EA = 136,
+    CV_BayerRG2BGR_EA = 137,
+    CV_BayerGR2BGR_EA = 138,
 
     CV_BayerBG2RGB_EA = CV_BayerRG2BGR_EA,
     CV_BayerGB2RGB_EA = CV_BayerGR2BGR_EA,
     CV_BayerRG2RGB_EA = CV_BayerBG2BGR_EA,
     CV_BayerGR2RGB_EA = CV_BayerGB2BGR_EA,
 
-    CV_COLORCVT_MAX  = 131
+    CV_COLORCVT_MAX  = 139
 };
 
 
@@ -369,6 +387,24 @@ typedef struct CvMoments
     double  m00, m10, m01, m20, m11, m02, m30, m21, m12, m03; /* spatial moments */
     double  mu20, mu11, mu02, mu30, mu21, mu12, mu03; /* central moments */
     double  inv_sqrt_m00; /* m00 != 0 ? 1/sqrt(m00) : 0 */
+
+#ifdef __cplusplus
+    CvMoments(){}
+    CvMoments(const cv::Moments& m)
+    {
+        m00 = m.m00; m10 = m.m10; m01 = m.m01;
+        m20 = m.m20; m11 = m.m11; m02 = m.m02;
+        m30 = m.m30; m21 = m.m21; m12 = m.m12; m03 = m.m03;
+        mu20 = m.mu20; mu11 = m.mu11; mu02 = m.mu02;
+        mu30 = m.mu30; mu21 = m.mu21; mu12 = m.mu12; mu03 = m.mu03;
+        double am00 = std::abs(m.m00);
+        inv_sqrt_m00 = am00 > DBL_EPSILON ? 1./std::sqrt(am00) : 0;
+    }
+    operator cv::Moments() const
+    {
+        return cv::Moments(m00, m10, m01, m20, m11, m02, m30, m21, m12, m03);
+    }
+#endif
 }
 CvMoments;
 

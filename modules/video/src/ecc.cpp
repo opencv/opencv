@@ -305,23 +305,8 @@ static void update_warping_matrix_ECC (Mat& map_matrix, const Mat& update, const
         mapPtr[3] = (float) sin(new_theta);
         mapPtr[1] = -mapPtr[3];
     }
-
 }
 
-CV_IMPL double cvFindTransformECC (const CvArr* _image1, const CvArr* _image2,
-                                   CvMat* _map_matrix,
-                                   const int motionType,
-                                   const CvTermCriteria _criteria)
-{
-
-    Mat image1 = cvarrToMat(_image1);
-    Mat image2 = cvarrToMat(_image2);
-    Mat map_matrix = cvarrToMat(_map_matrix);
-    double cc = cv::findTransformECC(image1, image2, map_matrix, motionType,
-        TermCriteria(TermCriteria::EPS+TermCriteria::COUNT, _criteria.max_iter, _criteria.epsilon));
-
-    return cc;
-}
 
 double cv::findTransformECC(InputArray templateImage,
                             InputArray inputImage,

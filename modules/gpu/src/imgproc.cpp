@@ -47,57 +47,58 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::meanShiftFiltering(const GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_nogpu(); }
-void cv::gpu::meanShiftProc(const GpuMat&, GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_nogpu(); }
-void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::reprojectImageTo3D(const GpuMat&, GpuMat&, const Mat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::copyMakeBorder(const GpuMat&, GpuMat&, int, int, int, int, int, const Scalar&, Stream&) { throw_nogpu(); }
-void cv::gpu::buildWarpPlaneMaps(Size, Rect, const Mat&, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::buildWarpCylindricalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::buildWarpSphericalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int, Stream&) { throw_nogpu(); }
-void cv::gpu::integral(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::integralBuffered(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::sqrIntegral(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::columnSum(const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::rectStdDev(const GpuMat&, const GpuMat&, GpuMat&, const Rect&, Stream&) { throw_nogpu(); }
-void cv::gpu::evenLevels(GpuMat&, int, int, int) { throw_nogpu(); }
-void cv::gpu::histEven(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::histEven(const GpuMat&, GpuMat&, GpuMat&, int, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::histEven(const GpuMat&, GpuMat*, int*, int*, int*, Stream&) { throw_nogpu(); }
-void cv::gpu::histEven(const GpuMat&, GpuMat*, GpuMat&, int*, int*, int*, Stream&) { throw_nogpu(); }
-void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*, Stream&) { throw_nogpu(); }
-void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::calcHist(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double, int) { throw_nogpu(); }
-void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, double, int) { throw_nogpu(); }
-void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, double, int, Stream&) { throw_nogpu(); }
-void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, int, int, int) { throw_nogpu(); }
-void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, int) { throw_nogpu(); }
-void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::mulSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, bool, Stream&) { throw_nogpu(); }
-void cv::gpu::mulAndScaleSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, float, bool, Stream&) { throw_nogpu(); }
-void cv::gpu::dft(const GpuMat&, GpuMat&, Size, int, Stream&) { throw_nogpu(); }
-void cv::gpu::ConvolveBuf::create(Size, Size) { throw_nogpu(); }
-void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool) { throw_nogpu(); }
-void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&, Stream&) { throw_nogpu(); }
-void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int, bool) { throw_nogpu(); }
-void cv::gpu::Canny(const GpuMat&, CannyBuf&, GpuMat&, double, double, int, bool) { throw_nogpu(); }
-void cv::gpu::Canny(const GpuMat&, const GpuMat&, GpuMat&, double, double, bool) { throw_nogpu(); }
-void cv::gpu::Canny(const GpuMat&, const GpuMat&, CannyBuf&, GpuMat&, double, double, bool) { throw_nogpu(); }
-void cv::gpu::CannyBuf::create(const Size&, int) { throw_nogpu(); }
-void cv::gpu::CannyBuf::release() { throw_nogpu(); }
+void cv::gpu::meanShiftFiltering(const GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
+void cv::gpu::meanShiftProc(const GpuMat&, GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
+void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::reprojectImageTo3D(const GpuMat&, GpuMat&, const Mat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::copyMakeBorder(const GpuMat&, GpuMat&, int, int, int, int, int, const Scalar&, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpPlaneMaps(Size, Rect, const Mat&, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpCylindricalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpSphericalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::integral(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::integralBuffered(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::sqrIntegral(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::columnSum(const GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::rectStdDev(const GpuMat&, const GpuMat&, GpuMat&, const Rect&, Stream&) { throw_no_cuda(); }
+void cv::gpu::evenLevels(GpuMat&, int, int, int) { throw_no_cuda(); }
+void cv::gpu::histEven(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::histEven(const GpuMat&, GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::histEven(const GpuMat&, GpuMat*, int*, int*, int*, Stream&) { throw_no_cuda(); }
+void cv::gpu::histEven(const GpuMat&, GpuMat*, GpuMat&, int*, int*, int*, Stream&) { throw_no_cuda(); }
+void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*, Stream&) { throw_no_cuda(); }
+void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::calcHist(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double, int) { throw_no_cuda(); }
+void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, double, int) { throw_no_cuda(); }
+void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, double, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, int, int, int) { throw_no_cuda(); }
+void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, int) { throw_no_cuda(); }
+void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::mulSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::mulAndScaleSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, float, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::dft(const GpuMat&, GpuMat&, Size, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::ConvolveBuf::create(Size, Size) { throw_no_cuda(); }
+void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool) { throw_no_cuda(); }
+void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&, Stream&) { throw_no_cuda(); }
+void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int, bool) { throw_no_cuda(); }
+void cv::gpu::Canny(const GpuMat&, CannyBuf&, GpuMat&, double, double, int, bool) { throw_no_cuda(); }
+void cv::gpu::Canny(const GpuMat&, const GpuMat&, GpuMat&, double, double, bool) { throw_no_cuda(); }
+void cv::gpu::Canny(const GpuMat&, const GpuMat&, CannyBuf&, GpuMat&, double, double, bool) { throw_no_cuda(); }
+void cv::gpu::CannyBuf::create(const Size&, int) { throw_no_cuda(); }
+void cv::gpu::CannyBuf::release() { throw_no_cuda(); }
+cv::Ptr<cv::gpu::CLAHE> cv::gpu::createCLAHE(double, cv::Size) { throw_no_cuda(); return cv::Ptr<cv::gpu::CLAHE>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
 ////////////////////////////////////////////////////////////////////////
 // meanShiftFiltering_GPU
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -107,7 +108,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria, Stream& stream)
 {
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cudev::imgproc;
 
     if( src.empty() )
         CV_Error( CV_StsBadArg, "The input image is empty" );
@@ -133,7 +134,7 @@ void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
 ////////////////////////////////////////////////////////////////////////
 // meanShiftProc_GPU
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -143,7 +144,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria, Stream& stream)
 {
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cudev::imgproc;
 
     if( src.empty() )
         CV_Error( CV_StsBadArg, "The input image is empty" );
@@ -170,7 +171,7 @@ void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int 
 ////////////////////////////////////////////////////////////////////////
 // drawColorDisp
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -184,7 +185,7 @@ namespace
     template <typename T>
     void drawColorDisp_caller(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream)
     {
-        using namespace ::cv::gpu::device::imgproc;
+        using namespace ::cv::gpu::cudev::imgproc;
 
         dst.create(src.size(), CV_8UC4);
 
@@ -206,7 +207,7 @@ void cv::gpu::drawColorDisp(const GpuMat& src, GpuMat& dst, int ndisp, Stream& s
 ////////////////////////////////////////////////////////////////////////
 // reprojectImageTo3D
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -217,7 +218,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyz, const Mat& Q, int dst_cn, Stream& stream)
 {
-    using namespace cv::gpu::device::imgproc;
+    using namespace cv::gpu::cudev::imgproc;
 
     typedef void (*func_t)(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
     static const func_t funcs[2][4] =
@@ -238,7 +239,7 @@ void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyz, const Mat& Q, 
 ////////////////////////////////////////////////////////////////////////
 // copyMakeBorder
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -250,7 +251,7 @@ namespace
 {
     template <typename T, int cn> void copyMakeBorder_caller(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream)
     {
-        using namespace ::cv::gpu::device::imgproc;
+        using namespace ::cv::gpu::cudev::imgproc;
 
         Scalar_<T> val(saturate_cast<T>(value[0]), saturate_cast<T>(value[1]), saturate_cast<T>(value[2]), saturate_cast<T>(value[3]));
 
@@ -347,7 +348,7 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpPlaneMaps
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -361,7 +362,7 @@ void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, cons
                                  float scale, GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
     (void)src_size;
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cudev::imgproc;
 
     CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
     CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
@@ -374,14 +375,14 @@ void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, cons
 
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
-    device::imgproc::buildWarpPlaneMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(),
+    cudev::imgproc::buildWarpPlaneMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(),
                        T.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpCylyndricalMaps
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -395,7 +396,7 @@ void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K
                                        GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
     (void)src_size;
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cudev::imgproc;
 
     CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
     CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
@@ -407,14 +408,14 @@ void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K
 
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
-    device::imgproc::buildWarpCylindricalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
+    cudev::imgproc::buildWarpCylindricalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
 
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpSphericalMaps
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -428,7 +429,7 @@ void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, 
                                      GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
     (void)src_size;
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cudev::imgproc;
 
     CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
     CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
@@ -440,7 +441,7 @@ void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, 
 
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
-    device::imgproc::buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
+    cudev::imgproc::buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -517,6 +518,7 @@ void cv::gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, d
     CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
 
     dst.create(dsize, src.type());
+    dst.setTo(Scalar::all(0));
 
     funcs[src.depth()][src.channels() - 1](src, dst, dsize, angle, xShift, yShift, interpolation, StreamAccessor::getStream(stream));
 }
@@ -530,7 +532,7 @@ void cv::gpu::integral(const GpuMat& src, GpuMat& sum, Stream& s)
     integralBuffered(src, sum, buffer, s);
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -554,7 +556,7 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
     {
         ensureSizeIsEnough(((src.rows + 7) / 8) * 8, ((src.cols + 63) / 64) * 64, CV_32SC1, buffer);
 
-        cv::gpu::device::imgproc::shfl_integral_gpu(src, buffer, stream);
+        cv::gpu::cudev::imgproc::shfl_integral_gpu(src, buffer, stream);
 
         sum.create(src.rows + 1, src.cols + 1, CV_32SC1);
         if (s)
@@ -629,7 +631,7 @@ void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
 //////////////////////////////////////////////////////////////////////////////
 // columnSum
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -639,13 +641,13 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::columnSum(const GpuMat& src, GpuMat& dst)
 {
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cudev::imgproc;
 
     CV_Assert(src.type() == CV_32F);
 
     dst.create(src.size(), CV_32F);
 
-    device::imgproc::columnSum_32F(src, dst);
+    cudev::imgproc::columnSum_32F(src, dst);
 }
 
 void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& s)
@@ -1019,7 +1021,7 @@ void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat&
 ////////////////////////////////////////////////////////////////////////
 // cornerHarris & minEgenVal
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -1072,7 +1074,7 @@ void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& D
 
 void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, double k, int borderType, Stream& stream)
 {
-    using namespace cv::gpu::device::imgproc;
+    using namespace cv::gpu::cudev::imgproc;
 
     CV_Assert(borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
 
@@ -1100,7 +1102,7 @@ void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuM
 
 void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, int borderType, Stream& stream)
 {
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cudev::imgproc;
 
     CV_Assert(borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
 
@@ -1117,7 +1119,7 @@ void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuM
 //////////////////////////////////////////////////////////////////////////////
 // mulSpectrums
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -1130,11 +1132,11 @@ namespace cv { namespace gpu { namespace device
 void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB, Stream& stream)
 {
     (void)flags;
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cudev::imgproc;
 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, PtrStepSz<cufftComplex>, cudaStream_t stream);
 
-    static Caller callers[] = { device::imgproc::mulSpectrums, device::imgproc::mulSpectrums_CONJ };
+    static Caller callers[] = { cudev::imgproc::mulSpectrums, cudev::imgproc::mulSpectrums_CONJ };
 
     CV_Assert(a.type() == b.type() && a.type() == CV_32FC2);
     CV_Assert(a.size() == b.size());
@@ -1148,7 +1150,7 @@ void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flag
 //////////////////////////////////////////////////////////////////////////////
 // mulAndScaleSpectrums
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -1161,10 +1163,10 @@ namespace cv { namespace gpu { namespace device
 void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB, Stream& stream)
 {
     (void)flags;
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cudev::imgproc;
 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, float scale, PtrStepSz<cufftComplex>, cudaStream_t stream);
-    static Caller callers[] = { device::imgproc::mulAndScaleSpectrums, device::imgproc::mulAndScaleSpectrums_CONJ };
+    static Caller callers[] = { cudev::imgproc::mulAndScaleSpectrums, cudev::imgproc::mulAndScaleSpectrums_CONJ };
 
     CV_Assert(a.type() == b.type() && a.type() == CV_32FC2);
     CV_Assert(a.size() == b.size());
@@ -1188,7 +1190,7 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags, Stre
     OPENCV_GPU_UNUSED(flags);
     OPENCV_GPU_UNUSED(stream);
 
-    throw_nogpu();
+    throw_no_cuda();
 
 #else
 
@@ -1333,14 +1335,11 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
 
 void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream)
 {
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace ::cv::gpu::cudev::imgproc;
 
 #ifndef HAVE_CUFFT
-    throw_nogpu();
+    throw_no_cuda();
 #else
-    StaticAssert<sizeof(float) == sizeof(cufftReal)>::check();
-    StaticAssert<sizeof(float) * 2 == sizeof(cufftComplex)>::check();
-
     CV_Assert(image.type() == CV_32F);
     CV_Assert(templ.type() == CV_32F);
 
@@ -1539,6 +1538,138 @@ void cv::gpu::Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& d
     calcMagnitude(dx, dy, buf.mag, L2gradient);
 
     CannyCaller(dx, dy, buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
+}
+
+////////////////////////////////////////////////////////////////////////
+// CLAHE
+
+namespace clahe
+{
+    void calcLut(PtrStepSzb src, PtrStepb lut, int tilesX, int tilesY, int2 tileSize, int clipLimit, float lutScale, cudaStream_t stream);
+    void transform(PtrStepSzb src, PtrStepSzb dst, PtrStepb lut, int tilesX, int tilesY, int2 tileSize, cudaStream_t stream);
+}
+
+namespace
+{
+    class CLAHE_Impl : public cv::gpu::CLAHE
+    {
+    public:
+        CLAHE_Impl(double clipLimit = 40.0, int tilesX = 8, int tilesY = 8);
+
+        cv::AlgorithmInfo* info() const;
+
+        void apply(cv::InputArray src, cv::OutputArray dst);
+        void apply(InputArray src, OutputArray dst, Stream& stream);
+
+        void setClipLimit(double clipLimit);
+        double getClipLimit() const;
+
+        void setTilesGridSize(cv::Size tileGridSize);
+        cv::Size getTilesGridSize() const;
+
+        void collectGarbage();
+
+    private:
+        double clipLimit_;
+        int tilesX_;
+        int tilesY_;
+
+        GpuMat srcExt_;
+        GpuMat lut_;
+    };
+
+    CLAHE_Impl::CLAHE_Impl(double clipLimit, int tilesX, int tilesY) :
+        clipLimit_(clipLimit), tilesX_(tilesX), tilesY_(tilesY)
+    {
+    }
+
+    CV_INIT_ALGORITHM(CLAHE_Impl, "CLAHE_GPU",
+        obj.info()->addParam(obj, "clipLimit", obj.clipLimit_);
+        obj.info()->addParam(obj, "tilesX", obj.tilesX_);
+        obj.info()->addParam(obj, "tilesY", obj.tilesY_))
+
+    void CLAHE_Impl::apply(cv::InputArray _src, cv::OutputArray _dst)
+    {
+        apply(_src, _dst, Stream::Null());
+    }
+
+    void CLAHE_Impl::apply(InputArray _src, OutputArray _dst, Stream& s)
+    {
+        GpuMat src = _src.getGpuMat();
+
+        CV_Assert( src.type() == CV_8UC1 );
+
+        _dst.create( src.size(), src.type() );
+        GpuMat dst = _dst.getGpuMat();
+
+        const int histSize = 256;
+
+        ensureSizeIsEnough(tilesX_ * tilesY_, histSize, CV_8UC1, lut_);
+
+        cudaStream_t stream = StreamAccessor::getStream(s);
+
+        cv::Size tileSize;
+        GpuMat srcForLut;
+
+        if (src.cols % tilesX_ == 0 && src.rows % tilesY_ == 0)
+        {
+            tileSize = cv::Size(src.cols / tilesX_, src.rows / tilesY_);
+            srcForLut = src;
+        }
+        else
+        {
+            cv::gpu::copyMakeBorder(src, srcExt_, 0, tilesY_ - (src.rows % tilesY_), 0, tilesX_ - (src.cols % tilesX_), cv::BORDER_REFLECT_101, cv::Scalar(), s);
+
+            tileSize = cv::Size(srcExt_.cols / tilesX_, srcExt_.rows / tilesY_);
+            srcForLut = srcExt_;
+        }
+
+        const int tileSizeTotal = tileSize.area();
+        const float lutScale = static_cast<float>(histSize - 1) / tileSizeTotal;
+
+        int clipLimit = 0;
+        if (clipLimit_ > 0.0)
+        {
+            clipLimit = static_cast<int>(clipLimit_ * tileSizeTotal / histSize);
+            clipLimit = std::max(clipLimit, 1);
+        }
+
+        clahe::calcLut(srcForLut, lut_, tilesX_, tilesY_, make_int2(tileSize.width, tileSize.height), clipLimit, lutScale, stream);
+
+        clahe::transform(src, dst, lut_, tilesX_, tilesY_, make_int2(tileSize.width, tileSize.height), stream);
+    }
+
+    void CLAHE_Impl::setClipLimit(double clipLimit)
+    {
+        clipLimit_ = clipLimit;
+    }
+
+    double CLAHE_Impl::getClipLimit() const
+    {
+        return clipLimit_;
+    }
+
+    void CLAHE_Impl::setTilesGridSize(cv::Size tileGridSize)
+    {
+        tilesX_ = tileGridSize.width;
+        tilesY_ = tileGridSize.height;
+    }
+
+    cv::Size CLAHE_Impl::getTilesGridSize() const
+    {
+        return cv::Size(tilesX_, tilesY_);
+    }
+
+    void CLAHE_Impl::collectGarbage()
+    {
+        srcExt_.release();
+        lut_.release();
+    }
+}
+
+cv::Ptr<cv::gpu::CLAHE> cv::gpu::createCLAHE(double clipLimit, cv::Size tileGridSize)
+{
+    return new CLAHE_Impl(clipLimit, tileGridSize.width, tileGridSize.height);
 }
 
 #endif /* !defined (HAVE_CUDA) */

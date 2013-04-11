@@ -28,7 +28,7 @@ bool addRemovePt = false;
 
 static void onMouse( int event, int x, int y, int /*flags*/, void* /*param*/ )
 {
-    if( event == CV_EVENT_LBUTTONDOWN )
+    if( event == EVENT_LBUTTONDOWN )
     {
         point = Point2f((float)x,(float)y);
         addRemovePt = true;

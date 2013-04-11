@@ -1,6 +1,7 @@
+#include <opencv2/core/utility.hpp>
 #include "opencv2/video/tracking.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <iostream>
 #include <ctype.h>
@@ -32,12 +33,12 @@ static void onMouse( int event, int x, int y, int, void* )
 
     switch( event )
     {
-    case CV_EVENT_LBUTTONDOWN:
+    case EVENT_LBUTTONDOWN:
         origin = Point(x,y);
         selection = Rect(x,y,0,0);
         selectObject = true;
         break;
-    case CV_EVENT_LBUTTONUP:
+    case EVENT_LBUTTONUP:
         selectObject = false;
         if( selection.width > 0 && selection.height > 0 )
             trackObject = -1;

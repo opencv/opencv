@@ -1,6 +1,10 @@
-#include <opencv2/gpu/gpu.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/gpu.hpp>
+#include <opencv2/softcascade.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
+
+typedef cv::softcascade::Detection Detection;
 
 int main(int argc, char** argv)
 {
@@ -46,7 +50,7 @@ int main(int argc, char** argv)
     float maxScale =  parser.get<float>("max_scale");
     int scales     =  parser.get<int>("total_scales");
 
-    using cv::gpu::SCascade;
+    using cv::softcascade::SCascade;
     SCascade cascade(minScale, maxScale, scales);
 
     if (!cascade.load(fs.getFirstTopLevelNode()))
@@ -63,7 +67,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    cv::gpu::GpuMat objects(1, sizeof(SCascade::Detection) * 10000, CV_8UC1);
+    cv::gpu::GpuMat objects(1, sizeof(Detection) * 10000, CV_8UC1);
     cv::gpu::printShortCudaDeviceInfo(parser.get<int>("device"));
     for (;;)
     {
@@ -79,7 +83,6 @@ int main(int argc, char** argv)
         cascade.detect(dframe, roi, objects);
 
         cv::Mat dt(objects);
-        typedef cv::gpu::SCascade::Detection Detection;
 
         Detection* dts = ((Detection*)dt.data) + 1;
         int* count = dt.ptr<int>(0);

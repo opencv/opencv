@@ -264,12 +264,23 @@ macro(add_android_project target path)
     ocv_list_filterout(android_proj_jni_files "\\\\.svn")
 
     if(android_proj_jni_files AND EXISTS ${path}/jni/Android.mk AND NOT DEFINED JNI_LIB_NAME)
+      # find local module name in Android.mk file to build native lib
       file(STRINGS "${path}/jni/Android.mk" JNI_LIB_NAME REGEX "LOCAL_MODULE[ ]*:=[ ]*.*" )
       string(REGEX REPLACE "LOCAL_MODULE[ ]*:=[ ]*([a-zA-Z_][a-zA-Z_0-9]*)[ ]*" "\\1" JNI_LIB_NAME "${JNI_LIB_NAME}")
+
+      # find using of native app glue to determine native activity
+      file(STRINGS "${path}/jni/Android.mk" NATIVE_APP_GLUE REGEX ".*(call import-module,android/native_app_glue)" )
 
       if(JNI_LIB_NAME)
         ocv_include_modules_recurse(${android_proj_NATIVE_DEPS})
         ocv_include_directories("${path}/jni")
+
+        if (NATIVE_APP_GLUE)
+          include_directories(${ANDROID_NDK}/sources/android/native_app_glue)
+          list(APPEND android_proj_jni_files ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
+          ocv_warnings_disable(CMAKE_C_FLAGS -Wstrict-prototypes -Wunused-parameter -Wmissing-prototypes)
+          set(android_proj_NATIVE_DEPS ${android_proj_NATIVE_DEPS} android)
+        endif()
 
         add_library(${JNI_LIB_NAME} MODULE ${android_proj_jni_files})
         target_link_libraries(${JNI_LIB_NAME} ${OPENCV_LINKER_LIBS} ${android_proj_NATIVE_DEPS})

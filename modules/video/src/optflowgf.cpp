@@ -644,18 +644,3 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
         prevFlow = flow;
     }
 }
-
-
-CV_IMPL void cvCalcOpticalFlowFarneback(
-            const CvArr* _prev, const CvArr* _next,
-            CvArr* _flow, double pyr_scale, int levels,
-            int winsize, int iterations, int poly_n,
-            double poly_sigma, int flags )
-{
-    cv::Mat prev = cv::cvarrToMat(_prev), next = cv::cvarrToMat(_next);
-    cv::Mat flow = cv::cvarrToMat(_flow);
-    CV_Assert( flow.size() == prev.size() && flow.type() == CV_32FC2 );
-    cv::calcOpticalFlowFarneback( prev, next, flow, pyr_scale, levels,
-        winsize, iterations, poly_n, poly_sigma, flags );
-}
-

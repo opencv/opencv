@@ -48,7 +48,7 @@
 #ifdef DEBUG_BLOB_DETECTOR
 #  include "opencv2/opencv_modules.hpp"
 #  ifdef HAVE_OPENCV_HIGHGUI
-#    include "opencv2/highgui/highgui.hpp"
+#    include "opencv2/highgui.hpp"
 #  else
 #    undef DEBUG_BLOB_DETECTOR
 #  endif
@@ -239,7 +239,7 @@ void SimpleBlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryIm
             if (ratio < params.minConvexity || ratio >= params.maxConvexity)
                 continue;
         }
-
+        
         center.location = Point2d(moms.m10 / moms.m00, moms.m01 / moms.m00);
 
         if (params.filterByColor)
@@ -260,7 +260,10 @@ void SimpleBlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryIm
             center.radius = (dists[(dists.size() - 1) / 2] + dists[dists.size() / 2]) / 2.;
         }
 
+        if(moms.m00 == 0.0)
+            continue;
         centers.push_back(center);
+
 
 #ifdef DEBUG_BLOB_DETECTOR
         //    circle( keypointsImage, center.location, 1, Scalar(0,0,255), 1 );

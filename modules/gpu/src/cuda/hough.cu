@@ -28,7 +28,7 @@
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -45,13 +45,13 @@
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/emulation.hpp"
-#include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/dynamic_smem.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/emulation.hpp"
+#include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda/dynamic_smem.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace hough
     {
@@ -1424,7 +1424,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaDeviceSynchronize() );
 
             thrust::device_ptr<int> sizesPtr(sizes);
-            thrust::transform(sizesPtr, sizesPtr + levels + 1, sizesPtr, device::bind2nd(device::minimum<int>(), maxSize));
+            thrust::transform(sizesPtr, sizesPtr + levels + 1, sizesPtr, cudev::bind2nd(cudev::minimum<int>(), maxSize));
         }
 
         void GHT_Guil_Full_buildTemplFeatureList_gpu(const unsigned int* coordList, const float* thetaList, int pointsCount,

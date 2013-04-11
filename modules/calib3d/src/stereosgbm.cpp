@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -61,42 +62,52 @@ typedef short DispType;
 
 enum { NR = 16, NR2 = NR/2 };
 
-StereoSGBM::StereoSGBM()
+
+struct StereoSGBMParams
 {
-    minDisparity = numberOfDisparities = 0;
-    SADWindowSize = 0;
-    P1 = P2 = 0;
-    disp12MaxDiff = 0;
-    preFilterCap = 0;
-    uniquenessRatio = 0;
-    speckleWindowSize = 0;
-    speckleRange = 0;
-    fullDP = false;
-}
+    StereoSGBMParams()
+    {
+        minDisparity = numDisparities = 0;
+        SADWindowSize = 0;
+        P1 = P2 = 0;
+        disp12MaxDiff = 0;
+        preFilterCap = 0;
+        uniquenessRatio = 0;
+        speckleWindowSize = 0;
+        speckleRange = 0;
+        mode = StereoSGBM::MODE_SGBM;
+    }
 
+    StereoSGBMParams( int _minDisparity, int _numDisparities, int _SADWindowSize,
+                      int _P1, int _P2, int _disp12MaxDiff, int _preFilterCap,
+                      int _uniquenessRatio, int _speckleWindowSize, int _speckleRange,
+                      int _mode )
+    {
+        minDisparity = _minDisparity;
+        numDisparities = _numDisparities;
+        SADWindowSize = _SADWindowSize;
+        P1 = _P1;
+        P2 = _P2;
+        disp12MaxDiff = _disp12MaxDiff;
+        preFilterCap = _preFilterCap;
+        uniquenessRatio = _uniquenessRatio;
+        speckleWindowSize = _speckleWindowSize;
+        speckleRange = _speckleRange;
+        mode = _mode;
+    }
 
-StereoSGBM::StereoSGBM( int _minDisparity, int _numDisparities, int _SADWindowSize,
-                   int _P1, int _P2, int _disp12MaxDiff, int _preFilterCap,
-                   int _uniquenessRatio, int _speckleWindowSize, int _speckleRange,
-                   bool _fullDP )
-{
-    minDisparity = _minDisparity;
-    numberOfDisparities = _numDisparities;
-    SADWindowSize = _SADWindowSize;
-    P1 = _P1;
-    P2 = _P2;
-    disp12MaxDiff = _disp12MaxDiff;
-    preFilterCap = _preFilterCap;
-    uniquenessRatio = _uniquenessRatio;
-    speckleWindowSize = _speckleWindowSize;
-    speckleRange = _speckleRange;
-    fullDP = _fullDP;
-}
-
-
-StereoSGBM::~StereoSGBM()
-{
-}
+    int minDisparity;
+    int numDisparities;
+    int SADWindowSize;
+    int preFilterCap;
+    int uniquenessRatio;
+    int P1;
+    int P2;
+    int speckleWindowSize;
+    int speckleRange;
+    int disp12MaxDiff;
+    int mode;
+};
 
 /*
  For each pixel row1[x], max(-maxD, 0) <= minX <= x < maxX <= width - max(0, -minD),
@@ -289,7 +300,7 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
  final after all the tiles are processed.
 
  the disparity in disp1buf is written with sub-pixel accuracy
- (4 fractional bits, see CvStereoSGBM::DISP_SCALE),
+ (4 fractional bits, see StereoSGBM::DISP_SCALE),
  using quadratic interpolation, while the disparity in disp2buf
  is written as is, without interpolation.
 
@@ -297,7 +308,7 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
  It contains the minimum current cost, used to find the best disparity, corresponding to the minimal cost.
  */
 static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
-                                 Mat& disp1, const StereoSGBM& params,
+                                 Mat& disp1, const StereoSGBMParams& params,
                                  Mat& buffer )
 {
 #if CV_SSE2
@@ -317,11 +328,11 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 #endif
 
     const int ALIGN = 16;
-    const int DISP_SHIFT = StereoSGBM::DISP_SHIFT;
-    const int DISP_SCALE = StereoSGBM::DISP_SCALE;
+    const int DISP_SHIFT = StereoMatcher::DISP_SHIFT;
+    const int DISP_SCALE = (1 << DISP_SHIFT);
     const CostType MAX_COST = SHRT_MAX;
 
-    int minD = params.minDisparity, maxD = minD + params.numberOfDisparities;
+    int minD = params.minDisparity, maxD = minD + params.numDisparities;
     Size SADWindowSize;
     SADWindowSize.width = SADWindowSize.height = params.SADWindowSize > 0 ? params.SADWindowSize : 5;
     int ftzero = std::max(params.preFilterCap, 15) | 1;
@@ -333,7 +344,8 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     int D = maxD - minD, width1 = maxX1 - minX1;
     int INVALID_DISP = minD - 1, INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;
     int SW2 = SADWindowSize.width/2, SH2 = SADWindowSize.height/2;
-    int npasses = params.fullDP ? 2 : 1;
+    bool fullDP = params.mode == StereoSGBM::MODE_HH;
+    int npasses = fullDP ? 2 : 1;
     const int TAB_OFS = 256*4, TAB_SIZE = 256 + TAB_OFS*2;
     PixType clipTab[TAB_SIZE];
 
@@ -362,7 +374,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     // we keep pixel difference cost (C) and the summary cost over NR directions (S).
     // we also keep all the partial costs for the previous line L_r(x,d) and also min_k L_r(x, k)
     size_t costBufSize = width1*D;
-    size_t CSBufSize = costBufSize*(params.fullDP ? height : 1);
+    size_t CSBufSize = costBufSize*(fullDP ? height : 1);
     size_t minLrSize = (width1 + LrBorder*2)*NR2, LrSize = minLrSize*D2;
     int hsumBufNRows = SH2*2 + 2;
     size_t totalBufSize = (LrSize + minLrSize)*NLR*sizeof(CostType) + // minLr[] and Lr[]
@@ -423,8 +435,8 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
         {
             int x, d;
             DispType* disp1ptr = disp1.ptr<DispType>(y);
-            CostType* C = Cbuf + (!params.fullDP ? 0 : y*costBufSize);
-            CostType* S = Sbuf + (!params.fullDP ? 0 : y*costBufSize);
+            CostType* C = Cbuf + (!fullDP ? 0 : y*costBufSize);
+            CostType* S = Sbuf + (!fullDP ? 0 : y*costBufSize);
 
             if( pass == 1 ) // compute C on the first pass, and reuse it on the second pass, if any.
             {
@@ -449,7 +461,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                         if( y > 0 )
                         {
                             const CostType* hsumSub = hsumBuf + (std::max(y - SH2 - 1, 0) % hsumBufNRows)*costBufSize;
-                            const CostType* Cprev = !params.fullDP || y == 0 ? C : C - costBufSize;
+                            const CostType* Cprev = !fullDP || y == 0 ? C : C - costBufSize;
 
                             for( x = D; x < width1*D; x += D )
                             {
@@ -817,25 +829,130 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     }
 }
 
-typedef cv::Point_<short> Point2s;
-
-void StereoSGBM::operator ()( InputArray _left, InputArray _right,
-                             OutputArray _disp )
+class StereoSGBMImpl : public StereoSGBM
 {
-    Mat left = _left.getMat(), right = _right.getMat();
-    CV_Assert( left.size() == right.size() && left.type() == right.type() &&
-              left.depth() == DataType<PixType>::depth );
+public:
+    StereoSGBMImpl()
+    {
+        params = StereoSGBMParams();
+    }
 
-    _disp.create( left.size(), CV_16S );
-    Mat disp = _disp.getMat();
+    StereoSGBMImpl( int _minDisparity, int _numDisparities, int _SADWindowSize,
+                    int _P1, int _P2, int _disp12MaxDiff, int _preFilterCap,
+                    int _uniquenessRatio, int _speckleWindowSize, int _speckleRange,
+                    int _mode )
+    {
+        params = StereoSGBMParams( _minDisparity, _numDisparities, _SADWindowSize,
+                                   _P1, _P2, _disp12MaxDiff, _preFilterCap,
+                                   _uniquenessRatio, _speckleWindowSize, _speckleRange,
+                                   _mode );
+    }
 
-    computeDisparitySGBM( left, right, disp, *this, buffer );
-    medianBlur(disp, disp, 3);
+    void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr )
+    {
+        Mat left = leftarr.getMat(), right = rightarr.getMat();
+        CV_Assert( left.size() == right.size() && left.type() == right.type() &&
+                   left.depth() == CV_8U );
 
-    if( speckleWindowSize > 0 )
-        filterSpeckles(disp, (minDisparity - 1)*DISP_SCALE, speckleWindowSize, DISP_SCALE*speckleRange, buffer);
+        disparr.create( left.size(), CV_16S );
+        Mat disp = disparr.getMat();
+
+        computeDisparitySGBM( left, right, disp, params, buffer );
+        medianBlur(disp, disp, 3);
+
+        if( params.speckleWindowSize > 0 )
+            filterSpeckles(disp, (params.minDisparity - 1)*StereoMatcher::DISP_SCALE, params.speckleWindowSize,
+                           StereoMatcher::DISP_SCALE*params.speckleRange, buffer);
+    }
+
+    AlgorithmInfo* info() const { return 0; }
+
+    int getMinDisparity() const { return params.minDisparity; }
+    void setMinDisparity(int minDisparity) { params.minDisparity = minDisparity; }
+
+    int getNumDisparities() const { return params.numDisparities; }
+    void setNumDisparities(int numDisparities) { params.numDisparities = numDisparities; }
+
+    int getBlockSize() const { return params.SADWindowSize; }
+    void setBlockSize(int blockSize) { params.SADWindowSize = blockSize; }
+
+    int getSpeckleWindowSize() const { return params.speckleWindowSize; }
+    void setSpeckleWindowSize(int speckleWindowSize) { params.speckleWindowSize = speckleWindowSize; }
+
+    int getSpeckleRange() const { return params.speckleRange; }
+    void setSpeckleRange(int speckleRange) { params.speckleRange = speckleRange; }
+
+    int getDisp12MaxDiff() const { return params.disp12MaxDiff; }
+    void setDisp12MaxDiff(int disp12MaxDiff) { params.disp12MaxDiff = disp12MaxDiff; }
+
+    int getPreFilterCap() const { return params.preFilterCap; }
+    void setPreFilterCap(int preFilterCap) { params.preFilterCap = preFilterCap; }
+
+    int getUniquenessRatio() const { return params.uniquenessRatio; }
+    void setUniquenessRatio(int uniquenessRatio) { params.uniquenessRatio = uniquenessRatio; }
+
+    int getP1() const { return params.P1; }
+    void setP1(int P1) { params.P1 = P1; }
+
+    int getP2() const { return params.P2; }
+    void setP2(int P2) { params.P2 = P2; }
+
+    int getMode() const { return params.mode; }
+    void setMode(int mode) { params.mode = mode; }
+
+    void write(FileStorage& fs) const
+    {
+        fs << "name" << name_
+        << "minDisparity" << params.minDisparity
+        << "numDisparities" << params.numDisparities
+        << "blockSize" << params.SADWindowSize
+        << "speckleWindowSize" << params.speckleWindowSize
+        << "speckleRange" << params.speckleRange
+        << "disp12MaxDiff" << params.disp12MaxDiff
+        << "preFilterCap" << params.preFilterCap
+        << "uniquenessRatio" << params.uniquenessRatio
+        << "P1" << params.P1
+        << "P2" << params.P2
+        << "mode" << params.mode;
+    }
+
+    void read(const FileNode& fn)
+    {
+        FileNode n = fn["name"];
+        CV_Assert( n.isString() && strcmp(n.node->data.str.ptr, name_) == 0 );
+        params.minDisparity = (int)fn["minDisparity"];
+        params.numDisparities = (int)fn["numDisparities"];
+        params.SADWindowSize = (int)fn["blockSize"];
+        params.speckleWindowSize = (int)fn["speckleWindowSize"];
+        params.speckleRange = (int)fn["speckleRange"];
+        params.disp12MaxDiff = (int)fn["disp12MaxDiff"];
+        params.preFilterCap = (int)fn["preFilterCap"];
+        params.uniquenessRatio = (int)fn["uniquenessRatio"];
+        params.P1 = (int)fn["P1"];
+        params.P2 = (int)fn["P2"];
+        params.mode = (int)fn["mode"];
+    }
+
+    StereoSGBMParams params;
+    Mat buffer;
+    static const char* name_;
+};
+
+const char* StereoSGBMImpl::name_ = "StereoMatcher.SGBM";
+
+
+Ptr<StereoSGBM> createStereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
+                                 int P1, int P2, int disp12MaxDiff,
+                                 int preFilterCap, int uniquenessRatio,
+                                 int speckleWindowSize, int speckleRange,
+                                 int mode)
+{
+    return new StereoSGBMImpl(minDisparity, numDisparities, SADWindowSize,
+                              P1, P2, disp12MaxDiff,
+                              preFilterCap, uniquenessRatio,
+                              speckleWindowSize, speckleRange,
+                              mode);
 }
-
 
 Rect getValidDisparityROI( Rect roi1, Rect roi2,
                           int minDisparity,
@@ -855,106 +972,105 @@ Rect getValidDisparityROI( Rect roi1, Rect roi2,
     return r.width > 0 && r.height > 0 ? r : Rect();
 }
 
-}
+typedef cv::Point_<short> Point2s;
 
-namespace
+template <typename T>
+void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDiff, cv::Mat& _buf)
 {
-    template <typename T>
-    void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDiff, cv::Mat& _buf)
+    using namespace cv;
+
+    int width = img.cols, height = img.rows, npixels = width*height;
+    size_t bufSize = npixels*(int)(sizeof(Point2s) + sizeof(int) + sizeof(uchar));
+    if( !_buf.isContinuous() || !_buf.data || _buf.cols*_buf.rows*_buf.elemSize() < bufSize )
+        _buf.create(1, (int)bufSize, CV_8U);
+
+    uchar* buf = _buf.data;
+    int i, j, dstep = (int)(img.step/sizeof(T));
+    int* labels = (int*)buf;
+    buf += npixels*sizeof(labels[0]);
+    Point2s* wbuf = (Point2s*)buf;
+    buf += npixels*sizeof(wbuf[0]);
+    uchar* rtype = (uchar*)buf;
+    int curlabel = 0;
+
+    // clear out label assignments
+    memset(labels, 0, npixels*sizeof(labels[0]));
+
+    for( i = 0; i < height; i++ )
     {
-        using namespace cv;
+        T* ds = img.ptr<T>(i);
+        int* ls = labels + width*i;
 
-        int width = img.cols, height = img.rows, npixels = width*height;
-        size_t bufSize = npixels*(int)(sizeof(Point2s) + sizeof(int) + sizeof(uchar));
-        if( !_buf.isContinuous() || !_buf.data || _buf.cols*_buf.rows*_buf.elemSize() < bufSize )
-            _buf.create(1, (int)bufSize, CV_8U);
-
-        uchar* buf = _buf.data;
-        int i, j, dstep = (int)(img.step/sizeof(T));
-        int* labels = (int*)buf;
-        buf += npixels*sizeof(labels[0]);
-        Point2s* wbuf = (Point2s*)buf;
-        buf += npixels*sizeof(wbuf[0]);
-        uchar* rtype = (uchar*)buf;
-        int curlabel = 0;
-
-        // clear out label assignments
-        memset(labels, 0, npixels*sizeof(labels[0]));
-
-        for( i = 0; i < height; i++ )
+        for( j = 0; j < width; j++ )
         {
-            T* ds = img.ptr<T>(i);
-            int* ls = labels + width*i;
-
-            for( j = 0; j < width; j++ )
+            if( ds[j] != newVal )   // not a bad disparity
             {
-                if( ds[j] != newVal )   // not a bad disparity
+                if( ls[j] )     // has a label, check for bad label
                 {
-                    if( ls[j] )     // has a label, check for bad label
+                    if( rtype[ls[j]] ) // small region, zero out disparity
+                        ds[j] = (T)newVal;
+                }
+                // no label, assign and propagate
+                else
+                {
+                    Point2s* ws = wbuf; // initialize wavefront
+                    Point2s p((short)j, (short)i);  // current pixel
+                    curlabel++; // next label
+                    int count = 0;  // current region size
+                    ls[j] = curlabel;
+
+                    // wavefront propagation
+                    while( ws >= wbuf ) // wavefront not empty
                     {
-                        if( rtype[ls[j]] ) // small region, zero out disparity
-                            ds[j] = (T)newVal;
+                        count++;
+                        // put neighbors onto wavefront
+                        T* dpp = &img.at<T>(p.y, p.x);
+                        T dp = *dpp;
+                        int* lpp = labels + width*p.y + p.x;
+
+                        if( p.x < width-1 && !lpp[+1] && dpp[+1] != newVal && std::abs(dp - dpp[+1]) <= maxDiff )
+                        {
+                            lpp[+1] = curlabel;
+                            *ws++ = Point2s(p.x+1, p.y);
+                        }
+
+                        if( p.x > 0 && !lpp[-1] && dpp[-1] != newVal && std::abs(dp - dpp[-1]) <= maxDiff )
+                        {
+                            lpp[-1] = curlabel;
+                            *ws++ = Point2s(p.x-1, p.y);
+                        }
+
+                        if( p.y < height-1 && !lpp[+width] && dpp[+dstep] != newVal && std::abs(dp - dpp[+dstep]) <= maxDiff )
+                        {
+                            lpp[+width] = curlabel;
+                            *ws++ = Point2s(p.x, p.y+1);
+                        }
+
+                        if( p.y > 0 && !lpp[-width] && dpp[-dstep] != newVal && std::abs(dp - dpp[-dstep]) <= maxDiff )
+                        {
+                            lpp[-width] = curlabel;
+                            *ws++ = Point2s(p.x, p.y-1);
+                        }
+
+                        // pop most recent and propagate
+                        // NB: could try least recent, maybe better convergence
+                        p = *--ws;
                     }
-                    // no label, assign and propagate
+
+                    // assign label type
+                    if( count <= maxSpeckleSize )   // speckle region
+                    {
+                        rtype[ls[j]] = 1;   // small region label
+                        ds[j] = (T)newVal;
+                    }
                     else
-                    {
-                        Point2s* ws = wbuf; // initialize wavefront
-                        Point2s p((short)j, (short)i);  // current pixel
-                        curlabel++; // next label
-                        int count = 0;  // current region size
-                        ls[j] = curlabel;
-
-                        // wavefront propagation
-                        while( ws >= wbuf ) // wavefront not empty
-                        {
-                            count++;
-                            // put neighbors onto wavefront
-                            T* dpp = &img.at<T>(p.y, p.x);
-                            T dp = *dpp;
-                            int* lpp = labels + width*p.y + p.x;
-
-                            if( p.x < width-1 && !lpp[+1] && dpp[+1] != newVal && std::abs(dp - dpp[+1]) <= maxDiff )
-                            {
-                                lpp[+1] = curlabel;
-                                *ws++ = Point2s(p.x+1, p.y);
-                            }
-
-                            if( p.x > 0 && !lpp[-1] && dpp[-1] != newVal && std::abs(dp - dpp[-1]) <= maxDiff )
-                            {
-                                lpp[-1] = curlabel;
-                                *ws++ = Point2s(p.x-1, p.y);
-                            }
-
-                            if( p.y < height-1 && !lpp[+width] && dpp[+dstep] != newVal && std::abs(dp - dpp[+dstep]) <= maxDiff )
-                            {
-                                lpp[+width] = curlabel;
-                                *ws++ = Point2s(p.x, p.y+1);
-                            }
-
-                            if( p.y > 0 && !lpp[-width] && dpp[-dstep] != newVal && std::abs(dp - dpp[-dstep]) <= maxDiff )
-                            {
-                                lpp[-width] = curlabel;
-                                *ws++ = Point2s(p.x, p.y-1);
-                            }
-
-                            // pop most recent and propagate
-                            // NB: could try least recent, maybe better convergence
-                            p = *--ws;
-                        }
-
-                        // assign label type
-                        if( count <= maxSpeckleSize )   // speckle region
-                        {
-                            rtype[ls[j]] = 1;   // small region label
-                            ds[j] = (T)newVal;
-                        }
-                        else
-                            rtype[ls[j]] = 0;   // large region label
-                    }
+                        rtype[ls[j]] = 0;   // large region label
                 }
             }
         }
     }
+}
+
 }
 
 void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSize,
@@ -1054,16 +1170,3 @@ void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDis
     }
 }
 
-CvRect cvGetValidDisparityROI( CvRect roi1, CvRect roi2, int minDisparity,
-                               int numberOfDisparities, int SADWindowSize )
-{
-    return (CvRect)cv::getValidDisparityROI( roi1, roi2, minDisparity,
-                                             numberOfDisparities, SADWindowSize );
-}
-
-void cvValidateDisparity( CvArr* _disp, const CvArr* _cost, int minDisparity,
-                          int numberOfDisparities, int disp12MaxDiff )
-{
-    cv::Mat disp = cv::cvarrToMat(_disp), cost = cv::cvarrToMat(_cost);
-    cv::validateDisparity( disp, cost, minDisparity, numberOfDisparities, disp12MaxDiff );
-}

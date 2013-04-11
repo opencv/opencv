@@ -50,7 +50,7 @@ using namespace cv::gpu;
 #endif
 
 #ifdef HAVE_OPENCV_NONFREE
-#include "opencv2/nonfree/nonfree.hpp"
+#include "opencv2/nonfree.hpp"
 
 static bool makeUseOfNonfree = initModule_nonfree();
 #endif
@@ -347,8 +347,15 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
 void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
 {
     Mat gray_image;
-    CV_Assert(image.type() == CV_8UC3);
-    cvtColor(image, gray_image, CV_BGR2GRAY);
+    CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC1));
+    if(image.type() == CV_8UC3)
+    {
+        cvtColor(image, gray_image, COLOR_BGR2GRAY);
+    }
+    else
+    {
+        gray_image = image;
+    }
     if (surf.empty())
     {
         detector_->detect(gray_image, features.keypoints);
@@ -375,9 +382,9 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC4) || (image.type() == CV_8UC1));
 
     if (image.type() == CV_8UC3) {
-        cvtColor(image, gray_image, CV_BGR2GRAY);
+        cvtColor(image, gray_image, COLOR_BGR2GRAY);
     } else if (image.type() == CV_8UC4) {
-        cvtColor(image, gray_image, CV_BGRA2GRAY);
+        cvtColor(image, gray_image, COLOR_BGRA2GRAY);
     } else if (image.type() == CV_8UC1) {
         gray_image=image;
     } else {
@@ -428,7 +435,7 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     }
 }
 
-#ifdef HAVE_OPENCV_GPU
+#if defined(HAVE_OPENCV_NONFREE) && defined(HAVE_OPENCV_GPU)
 SurfFeaturesFinderGpu::SurfFeaturesFinderGpu(double hess_thresh, int num_octaves, int num_layers,
                                              int num_octaves_descr, int num_layers_descr)
 {
@@ -450,7 +457,7 @@ void SurfFeaturesFinderGpu::find(const Mat &image, ImageFeatures &features)
     image_.upload(image);
 
     ensureSizeIsEnough(image.size(), CV_8UC1, gray_image_);
-    cvtColor(image_, gray_image_, CV_BGR2GRAY);
+    cvtColor(image_, gray_image_, COLOR_BGR2GRAY);
 
     surf_.nOctaves = num_octaves_;
     surf_.nOctaveLayers = num_layers_;
@@ -573,7 +580,7 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
 
     // Find pair-wise motion
     matches_info.H = findHomography(src_points, dst_points, matches_info.inliers_mask, CV_RANSAC);
-    if (std::abs(determinant(matches_info.H)) < std::numeric_limits<double>::epsilon())
+    if (matches_info.H.empty() || std::abs(determinant(matches_info.H)) < std::numeric_limits<double>::epsilon())
         return;
 
     // Find number of inliers

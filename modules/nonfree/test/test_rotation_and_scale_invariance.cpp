@@ -40,7 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
@@ -232,7 +232,7 @@ protected:
         featureDetector->detect(image0, keypoints0);
         removeVerySmallKeypoints(keypoints0);
         if(keypoints0.size() < 15)
-            CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
+            CV_Error(Error::StsAssert, "Detector gives too few points in a test image\n");
 
         const int maxAngle = 360, angleStep = 15;
         for(int angle = 0; angle < maxAngle; angle += angleStep)
@@ -262,7 +262,7 @@ protected:
                 float angle0 = keypoints0[matches[m].queryIdx].angle;
                 float angle1 = keypoints1[matches[m].trainIdx].angle;
                 if(angle0 == -1 || angle1 == -1)
-                    CV_Error(CV_StsBadArg, "Given FeatureDetector is not rotation invariant, it can not be tested here.\n");
+                    CV_Error(Error::StsBadArg, "Given FeatureDetector is not rotation invariant, it can not be tested here.\n");
                 CV_Assert(angle0 >= 0.f && angle0 < 360.f);
                 CV_Assert(angle1 >= 0.f && angle1 < 360.f);
 
@@ -347,7 +347,7 @@ protected:
         featureDetector->detect(image0, keypoints0);
         removeVerySmallKeypoints(keypoints0);
         if(keypoints0.size() < 15)
-            CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
+            CV_Error(Error::StsAssert, "Detector gives too few points in a test image\n");
         descriptorExtractor->compute(image0, keypoints0, descriptors0);
 
         BFMatcher bfmatcher(normType);
@@ -432,7 +432,7 @@ protected:
         featureDetector->detect(image0, keypoints0);
         removeVerySmallKeypoints(keypoints0);
         if(keypoints0.size() < 15)
-            CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
+            CV_Error(Error::StsAssert, "Detector gives too few points in a test image\n");
 
         for(int scaleIdx = 1; scaleIdx <= 3; scaleIdx++)
         {
@@ -444,7 +444,7 @@ protected:
             featureDetector->detect(image1, keypoints1);
             removeVerySmallKeypoints(keypoints1);
             if(keypoints1.size() < 15)
-                CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
+                CV_Error(Error::StsAssert, "Detector gives too few points in a test image\n");
 
             if(keypoints1.size() > keypoints0.size())
             {
@@ -553,7 +553,7 @@ protected:
         featureDetector->detect(image0, keypoints0);
         removeVerySmallKeypoints(keypoints0);
         if(keypoints0.size() < 15)
-            CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
+            CV_Error(Error::StsAssert, "Detector gives too few points in a test image\n");
         Mat descriptors0;
         descriptorExtractor->compute(image0, keypoints0, descriptors0);
 

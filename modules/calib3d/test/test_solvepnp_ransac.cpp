@@ -41,7 +41,10 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/core/internal.hpp"
+
+#ifdef HAVE_TBB
+#include "tbb/task_scheduler_init.h"
+#endif
 
 using namespace cv;
 using namespace std;
@@ -236,7 +239,7 @@ protected:
     }
 };
 
-TEST(Calib3d_SolvePnPRansac, accuracy) { CV_solvePnPRansac_Test test; test.safe_run(); }
+TEST(DISABLED_Calib3d_SolvePnPRansac, accuracy) { CV_solvePnPRansac_Test test; test.safe_run(); }
 TEST(Calib3d_SolvePnP, accuracy) { CV_solvePnP_Test test; test.safe_run(); }
 
 

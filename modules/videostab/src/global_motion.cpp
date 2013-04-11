@@ -621,7 +621,7 @@ Mat MotionEstimatorL1::estimate(InputArray points0, InputArray points1, bool *ok
 }
 
 
-FromFileMotionReader::FromFileMotionReader(const std::string &path)
+FromFileMotionReader::FromFileMotionReader(const String &path)
     : ImageMotionEstimatorBase(MM_UNKNOWN)
 {
     file_.open(path.c_str());
@@ -641,7 +641,7 @@ Mat FromFileMotionReader::estimate(const Mat &/*frame0*/, const Mat &/*frame1*/,
 }
 
 
-ToFileMotionWriter::ToFileMotionWriter(const std::string &path, Ptr<ImageMotionEstimatorBase> estimator)
+ToFileMotionWriter::ToFileMotionWriter(const String &path, Ptr<ImageMotionEstimatorBase> estimator)
     : ImageMotionEstimatorBase(estimator->motionModel()), motionEstimator_(estimator)
 {
     file_.open(path.c_str());

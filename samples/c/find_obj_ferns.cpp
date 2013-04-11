@@ -1,9 +1,9 @@
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/legacy/legacy.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/features2d.hpp"
+#include "opencv2/objdetect.hpp"
+#include "opencv2/legacy.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -32,8 +32,8 @@ int main(int argc, char** argv)
 
     help();
 
-    Mat object = imread( object_filename, CV_LOAD_IMAGE_GRAYSCALE );
-    Mat scene = imread( scene_filename, CV_LOAD_IMAGE_GRAYSCALE );
+    Mat object = imread( object_filename, IMREAD_GRAYSCALE );
+    Mat scene = imread( scene_filename, IMREAD_GRAYSCALE );
 
     if( !object.data || !scene.data )
     {
@@ -47,9 +47,9 @@ int main(int argc, char** argv)
 
     resize(scene, image, Size(), 1./imgscale, 1./imgscale, INTER_CUBIC);
 
-    cvNamedWindow("Object", 1);
-    cvNamedWindow("Image", 1);
-    cvNamedWindow("Object Correspondence", 1);
+    namedWindow("Object", 1);
+    namedWindow("Image", 1);
+    namedWindow("Object Correspondence", 1);
 
     Size patchSize(32, 32);
     LDetector ldetector(7, 20, 2, 2000, patchSize.width, 2);

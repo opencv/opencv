@@ -44,11 +44,11 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::remap(const GpuMat&, GpuMat&, const GpuMat&, const GpuMat&, int, int, Scalar, Stream&){ throw_nogpu(); }
+void cv::gpu::remap(const GpuMat&, GpuMat&, const GpuMat&, const GpuMat&, int, int, Scalar, Stream&){ throw_no_cuda(); }
 
 #else // HAVE_CUDA
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -60,7 +60,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap, int interpolation, int borderMode, Scalar borderValue, Stream& stream)
 {
-    using namespace cv::gpu::device::imgproc;
+    using namespace cv::gpu::cudev::imgproc;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation,
         int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);

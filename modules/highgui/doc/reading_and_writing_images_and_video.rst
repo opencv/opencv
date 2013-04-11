@@ -35,7 +35,7 @@ imencode
 --------
 Encodes an image into a memory buffer.
 
-.. ocv:function:: bool imencode( const string& ext, InputArray img, vector<uchar>& buf, const vector<int>& params=vector<int>())
+.. ocv:function:: bool imencode( const String& ext, InputArray img, vector<uchar>& buf, const vector<int>& params=vector<int>())
 
 .. ocv:cfunction:: CvMat* cvEncodeImage( const char* ext, const CvArr* image, const int* params=0 )
 
@@ -59,7 +59,7 @@ imread
 ------
 Loads an image from a file.
 
-.. ocv:function:: Mat imread( const string& filename, int flags=1 )
+.. ocv:function:: Mat imread( const String& filename, int flags=IMREAD_COLOR )
 
 .. ocv:pyfunction:: cv2.imread(filename[, flags]) -> retval
 
@@ -98,6 +98,8 @@ The function ``imread`` loads an image from the specified file and returns it. I
 
  * Portable Network Graphics - ``*.png`` (see the *Notes* section)
 
+ * WebP - ``*.webp`` (see the *Notes* section)
+
  * Portable image format - ``*.pbm, *.pgm, *.ppm``     (always supported)
 
  * Sun rasters - ``*.sr, *.ras``     (always supported)
@@ -118,7 +120,7 @@ imwrite
 -----------
 Saves an image to a specified file.
 
-.. ocv:function:: bool imwrite( const string& filename, InputArray img, const vector<int>& params=vector<int>() )
+.. ocv:function:: bool imwrite( const String& filename, InputArray img, const vector<int>& params=vector<int>() )
 
 .. ocv:pyfunction:: cv2.imwrite(filename, img[, params]) -> retval
 
@@ -133,6 +135,9 @@ Saves an image to a specified file.
     :param params: Format-specific save parameters encoded as pairs  ``paramId_1, paramValue_1, paramId_2, paramValue_2, ...`` . The following parameters are currently supported:
 
         *  For JPEG, it can be a quality ( ``CV_IMWRITE_JPEG_QUALITY`` ) from 0 to 100 (the higher is the better). Default value is 95.
+
+        *  For WEBP, it can be a quality ( CV_IMWRITE_WEBP_QUALITY ) from 1 to 100 (the higher is the better).
+           By default (without any parameter) and for quality above 100 the lossless compression is used.
 
         *  For PNG, it can be the compression level ( ``CV_IMWRITE_PNG_COMPRESSION`` ) from 0 to 9. A higher value means a smaller size and longer compression time. Default value is 3.
 
@@ -231,7 +236,7 @@ VideoCapture constructors.
 
 .. ocv:function:: VideoCapture::VideoCapture()
 
-.. ocv:function:: VideoCapture::VideoCapture(const string& filename)
+.. ocv:function:: VideoCapture::VideoCapture(const String& filename)
 
 .. ocv:function:: VideoCapture::VideoCapture(int device)
 
@@ -255,7 +260,7 @@ VideoCapture::open
 ---------------------
 Open video file or a capturing device for video capturing
 
-.. ocv:function:: bool VideoCapture::open(const string& filename)
+.. ocv:function:: bool VideoCapture::open(const String& filename)
 .. ocv:function:: bool VideoCapture::open(int device)
 
 .. ocv:pyfunction:: cv2.VideoCapture.open(filename) -> retval
@@ -316,9 +321,9 @@ VideoCapture::retrieve
 ----------------------
 Decodes and returns the grabbed video frame.
 
-.. ocv:function:: bool VideoCapture::retrieve(Mat& image, int channel=0)
+.. ocv:function:: bool VideoCapture::retrieve( Mat& image, int flag=0 )
 
-.. ocv:pyfunction:: cv2.VideoCapture.retrieve([image[, channel]]) -> retval, image
+.. ocv:pyfunction:: cv2.VideoCapture.retrieve([image[, flag]]) -> retval, image
 
 .. ocv:cfunction:: IplImage* cvRetrieveFrame( CvCapture* capture, int streamIdx=0 )
 
@@ -474,7 +479,7 @@ VideoWriter constructors
 
 .. ocv:function:: VideoWriter::VideoWriter()
 
-.. ocv:function:: VideoWriter::VideoWriter(const string& filename, int fourcc, double fps, Size frameSize, bool isColor=true)
+.. ocv:function:: VideoWriter::VideoWriter(const String& filename, int fourcc, double fps, Size frameSize, bool isColor=true)
 
 .. ocv:pyfunction:: cv2.VideoWriter([filename, fourcc, fps, frameSize[, isColor]]) -> <VideoWriter object>
 
@@ -512,7 +517,7 @@ VideoWriter::open
 -----------------
 Initializes or reinitializes video writer.
 
-.. ocv:function:: bool VideoWriter::open(const string& filename, int fourcc, double fps, Size frameSize, bool isColor=true)
+.. ocv:function:: bool VideoWriter::open(const String& filename, int fourcc, double fps, Size frameSize, bool isColor=true)
 
 .. ocv:pyfunction:: cv2.VideoWriter.open(filename, fourcc, fps, frameSize[, isColor]) -> retval
 

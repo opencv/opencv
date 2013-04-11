@@ -48,14 +48,14 @@ class cv::gpu::FGDStatModel::Impl
 {
 };
 
-cv::gpu::FGDStatModel::Params::Params() { throw_nogpu(); }
+cv::gpu::FGDStatModel::Params::Params() { throw_no_cuda(); }
 
-cv::gpu::FGDStatModel::FGDStatModel(int) { throw_nogpu(); }
-cv::gpu::FGDStatModel::FGDStatModel(const cv::gpu::GpuMat&, const Params&, int) { throw_nogpu(); }
+cv::gpu::FGDStatModel::FGDStatModel(int) { throw_no_cuda(); }
+cv::gpu::FGDStatModel::FGDStatModel(const cv::gpu::GpuMat&, const Params&, int) { throw_no_cuda(); }
 cv::gpu::FGDStatModel::~FGDStatModel() {}
-void cv::gpu::FGDStatModel::create(const cv::gpu::GpuMat&, const Params&) { throw_nogpu(); }
+void cv::gpu::FGDStatModel::create(const cv::gpu::GpuMat&, const Params&) { throw_no_cuda(); }
 void cv::gpu::FGDStatModel::release() {}
-int cv::gpu::FGDStatModel::update(const cv::gpu::GpuMat&) { throw_nogpu(); return 0; }
+int cv::gpu::FGDStatModel::update(const cv::gpu::GpuMat&) { throw_no_cuda(); return 0; }
 
 #else
 

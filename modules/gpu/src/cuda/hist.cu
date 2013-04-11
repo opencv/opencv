@@ -12,7 +12,6 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
-// Copyright (C) 1993-2011, NVIDIA Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -29,7 +28,7 @@
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -43,13 +42,13 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/emulation.hpp"
-#include "opencv2/gpu/device/transform.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/functional.hpp"
+#include "opencv2/core/cuda/emulation.hpp"
+#include "opencv2/core/cuda/transform.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::device;
+using namespace cv::gpu::cudev;
 
 namespace hist
 {
@@ -128,7 +127,7 @@ namespace hist
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     template <> struct TransformFunctorTraits<hist::EqualizeHist> : DefaultTransformFunctorTraits<hist::EqualizeHist>
     {
@@ -147,7 +146,7 @@ namespace hist
 
         const float scale = 255.0f / (src.cols * src.rows);
 
-        transform(src, dst, EqualizeHist(scale), WithOutMask(), stream);
+        cudev::transform(src, dst, EqualizeHist(scale), WithOutMask(), stream);
     }
 }
 

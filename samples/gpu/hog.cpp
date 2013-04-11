@@ -4,8 +4,9 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/gpu.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
@@ -295,8 +296,8 @@ void App::run()
             workBegin();
 
             // Change format of the image
-            if (make_gray) cvtColor(frame, img_aux, CV_BGR2GRAY);
-            else if (use_gpu) cvtColor(frame, img_aux, CV_BGR2BGRA);
+            if (make_gray) cvtColor(frame, img_aux, COLOR_BGR2GRAY);
+            else if (use_gpu) cvtColor(frame, img_aux, COLOR_BGR2BGRA);
             else frame.copyTo(img_aux);
 
             // Resize image
@@ -344,14 +345,14 @@ void App::run()
             {
                 if (!video_writer.isOpened())
                 {
-                    video_writer.open(args.dst_video, CV_FOURCC('x','v','i','d'), args.dst_video_fps,
+                    video_writer.open(args.dst_video, VideoWriter::fourcc('x','v','i','d'), args.dst_video_fps,
                                       img_to_show.size(), true);
                     if (!video_writer.isOpened())
                         throw std::runtime_error("can't create video writer");
                 }
 
-                if (make_gray) cvtColor(img_to_show, img, CV_GRAY2BGR);
-                else cvtColor(img_to_show, img, CV_BGRA2BGR);
+                if (make_gray) cvtColor(img_to_show, img, COLOR_GRAY2BGR);
+                else cvtColor(img_to_show, img, COLOR_BGRA2BGR);
 
                 video_writer << img;
             }

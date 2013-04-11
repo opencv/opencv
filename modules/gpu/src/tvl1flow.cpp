@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -44,10 +44,10 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-cv::gpu::OpticalFlowDual_TVL1_GPU::OpticalFlowDual_TVL1_GPU() { throw_nogpu(); }
-void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
+cv::gpu::OpticalFlowDual_TVL1_GPU::OpticalFlowDual_TVL1_GPU() { throw_no_cuda(); }
+void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 void cv::gpu::OpticalFlowDual_TVL1_GPU::collectGarbage() {}
-void cv::gpu::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
 #else
 
@@ -63,6 +63,7 @@ cv::gpu::OpticalFlowDual_TVL1_GPU::OpticalFlowDual_TVL1_GPU()
     warps          = 5;
     epsilon        = 0.01;
     iterations     = 300;
+    scaleStep      = 0.8;
     useInitialFlow = false;
 }
 
@@ -112,8 +113,8 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat& I0, const GpuM
     // create the scales
     for (int s = 1; s < nscales; ++s)
     {
-        gpu::pyrDown(I0s[s - 1], I0s[s]);
-        gpu::pyrDown(I1s[s - 1], I1s[s]);
+        gpu::resize(I0s[s-1], I0s[s], Size(), scaleStep, scaleStep);
+        gpu::resize(I1s[s-1], I1s[s], Size(), scaleStep, scaleStep);
 
         if (I0s[s].cols < 16 || I0s[s].rows < 16)
         {
@@ -123,12 +124,23 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat& I0, const GpuM
 
         if (useInitialFlow)
         {
-            gpu::pyrDown(u1s[s - 1], u1s[s]);
-            gpu::pyrDown(u2s[s - 1], u2s[s]);
+            gpu::resize(u1s[s-1], u1s[s], Size(), scaleStep, scaleStep);
+            gpu::resize(u2s[s-1], u2s[s], Size(), scaleStep, scaleStep);
 
-            gpu::multiply(u1s[s], Scalar::all(0.5), u1s[s]);
-            gpu::multiply(u2s[s], Scalar::all(0.5), u2s[s]);
+            gpu::multiply(u1s[s], Scalar::all(scaleStep), u1s[s]);
+            gpu::multiply(u2s[s], Scalar::all(scaleStep), u2s[s]);
         }
+        else
+        {
+            u1s[s].create(I0s[s].size(), CV_32FC1);
+            u2s[s].create(I0s[s].size(), CV_32FC1);
+        }
+    }
+
+    if (!useInitialFlow)
+    {
+        u1s[nscales-1].setTo(Scalar::all(0));
+        u2s[nscales-1].setTo(Scalar::all(0));
     }
 
     // pyramidal structure for computing the optical flow
@@ -148,8 +160,8 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat& I0, const GpuM
         gpu::resize(u2s[s], u2s[s - 1], I0s[s - 1].size());
 
         // scale the optical flow with the appropriate zoom factor
-        gpu::multiply(u1s[s - 1], Scalar::all(2), u1s[s - 1]);
-        gpu::multiply(u2s[s - 1], Scalar::all(2), u2s[s - 1]);
+        gpu::multiply(u1s[s - 1], Scalar::all(1/scaleStep), u1s[s - 1]);
+        gpu::multiply(u2s[s - 1], Scalar::all(1/scaleStep), u2s[s - 1]);
     }
 }
 
@@ -173,17 +185,8 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat& I0, const Gpu
 
     CV_DbgAssert( I1.size() == I0.size() );
     CV_DbgAssert( I1.type() == I0.type() );
-    CV_DbgAssert( u1.empty() || u1.size() == I0.size() );
+    CV_DbgAssert( u1.size() == I0.size() );
     CV_DbgAssert( u2.size() == u1.size() );
-
-    if (u1.empty())
-    {
-        u1.create(I0.size(), CV_32FC1);
-        u1.setTo(Scalar::all(0));
-
-        u2.create(I0.size(), CV_32FC1);
-        u2.setTo(Scalar::all(0));
-    }
 
     GpuMat I1x = I1x_buf(Rect(0, 0, I0.cols, I0.rows));
     GpuMat I1y = I1y_buf(Rect(0, 0, I0.cols, I0.rows));

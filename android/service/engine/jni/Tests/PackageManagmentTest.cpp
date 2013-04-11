@@ -102,6 +102,22 @@ TEST(PackageManager, GetPackagePathForTegra3)
 #endif
 }
 
+TEST(PackageManager, GetPackagePathForTegra4)
+{
+    PackageManagerStub pm;
+    EXPECT_TRUE(pm.InstallVersion(2040400, PLATFORM_TEGRA4, ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON));
+    string path = pm.GetPackagePathByVersion(2040400, PLATFORM_TEGRA4, ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON);
+    #ifdef __SUPPORT_TEGRA3
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_tegra4/lib", path.c_str());
+    #else
+    #ifdef __SUPPORT_ARMEABI_V7A_FEATURES
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a_neon/lib", path.c_str());
+    #else
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a/lib", path.c_str());
+    #endif
+    #endif
+}
+
 #ifdef __SUPPORT_MIPS
 TEST(PackageManager, GetPackagePathForMips)
 {

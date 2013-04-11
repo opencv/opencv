@@ -39,9 +39,9 @@ static void OpenClose(int, void*)
     int an = n > 0 ? n : -n;
     Mat element = getStructuringElement(element_shape, Size(an*2+1, an*2+1), Point(an, an) );
     if( n < 0 )
-        cv::gpu::morphologyEx(src, dst, CV_MOP_OPEN, element);
+        cv::gpu::morphologyEx(src, dst, MORPH_OPEN, element);
     else
-        cv::gpu::morphologyEx(src, dst, CV_MOP_CLOSE, element);
+        cv::gpu::morphologyEx(src, dst, MORPH_CLOSE, element);
     imshow("Open/Close",(Mat)dst);
 }
 
@@ -84,7 +84,7 @@ int main( int argc, char** argv )
     {
         // gpu support only 4th channel images
         GpuMat src4ch;
-        cv::gpu::cvtColor(src, src4ch, CV_BGR2BGRA);
+        cv::gpu::cvtColor(src, src4ch, COLOR_BGR2BGRA);
         src = src4ch;
     }
 
@@ -102,7 +102,7 @@ int main( int argc, char** argv )
 
         OpenClose(open_close_pos, 0);
         ErodeDilate(erode_dilate_pos, 0);
-        c = cvWaitKey(0);
+        c = waitKey();
 
         if( (char)c == 27 )
             break;

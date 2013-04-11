@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -96,7 +96,7 @@ namespace
     }
 }
 
-cv::gpu::detail::FFmpegVideoSource::FFmpegVideoSource(const std::string& fname) :
+cv::gpu::detail::FFmpegVideoSource::FFmpegVideoSource(const String& fname) :
     stream_(0)
 {
     CV_Assert( init_MediaStream_FFMPEG() );

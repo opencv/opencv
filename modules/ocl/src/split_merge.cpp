@@ -84,7 +84,7 @@ namespace cv
             //     int channels = mat_dst.oclchannels();
             //     int depth = mat_dst.depth();
 
-            //     std::string kernelName = "merge_vector";
+            //     String kernelName = "merge_vector";
 
             //     int indexes[4][7] = {{0, 0, 0, 0, 0, 0, 0},
             //         {4, 4, 2, 2, 1, 1, 1},
@@ -125,7 +125,7 @@ namespace cv
 
             static void merge_vector_run(const oclMat *mat_src, size_t n, oclMat &mat_dst)
             {
-                if(mat_dst.clCxt -> impl -> double_support == 0 && mat_dst.type() == CV_64F)
+                if(!mat_dst.clCxt->supportsFeature(Context::CL_DOUBLE) && mat_dst.type() == CV_64F)
                 {
                     CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
                     return;
@@ -135,7 +135,7 @@ namespace cv
                 int channels = mat_dst.oclchannels();
                 int depth = mat_dst.depth();
 
-                std::string kernelName = "merge_vector";
+                String kernelName = "merge_vector";
 
                 int vector_lengths[4][7] = {{0, 0, 0, 0, 0, 0, 0},
                     {2, 2, 1, 1, 1, 1, 1},
@@ -233,7 +233,7 @@ namespace cv
             //     int channels = mat_src.oclchannels();
             //     int depth = mat_src.depth();
 
-            //     std::string kernelName = "split_vector";
+            //     String kernelName = "split_vector";
 
             //     int indexes[4][7] = {{0, 0, 0, 0, 0, 0, 0},
             //         {8, 8, 8, 8, 4, 4, 2},
@@ -274,7 +274,7 @@ namespace cv
             static void split_vector_run(const oclMat &mat_src, oclMat *mat_dst)
             {
 
-                if(mat_src.clCxt -> impl -> double_support == 0 && mat_src.type() == CV_64F)
+                if(!mat_src.clCxt->supportsFeature(Context::CL_DOUBLE) && mat_src.type() == CV_64F)
                 {
                     CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
                     return;
@@ -284,7 +284,7 @@ namespace cv
                 int channels = mat_src.oclchannels();
                 int depth = mat_src.depth();
 
-                std::string kernelName = "split_vector";
+                String kernelName = "split_vector";
 
                 int vector_lengths[4][7] = {{0, 0, 0, 0, 0, 0, 0},
                     {4, 4, 2, 2, 1, 1, 1},

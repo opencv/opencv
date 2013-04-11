@@ -42,10 +42,10 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
-#include "opencv2/gpu/device/border_interpolate.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/border_interpolate.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -126,6 +126,6 @@ namespace cv { namespace gpu { namespace device
         template void copyMakeBorder_gpu<float, 3>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
         template void copyMakeBorder_gpu<float, 4>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
     } // namespace imgproc
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cudev
 
 #endif /* CUDA_DISABLER */

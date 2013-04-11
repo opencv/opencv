@@ -32,7 +32,6 @@
 #define OPENCV_FLANN_HIERARCHICAL_CLUSTERING_INDEX_H_
 
 #include <algorithm>
-#include <string>
 #include <map>
 #include <cassert>
 #include <limits>

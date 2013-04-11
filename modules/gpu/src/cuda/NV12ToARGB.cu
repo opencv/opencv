@@ -41,28 +41,17 @@
 //M*/
 
 /*
- * Copyright 1993-2010 NVIDIA Corporation.  All rights reserved.
+ * NV12ToARGB color space conversion CUDA kernel
  *
- * Please refer to the NVIDIA end user license agreement (EULA) associated
- * with this source code for terms and conditions that govern your use of
- * this software. Any use, reproduction, disclosure, or distribution of
- * this software and related documentation outside the terms of the EULA
- * is strictly prohibited.
- *
+ * This sample uses CUDA to perform a simple NV12 (YUV 4:2:0 planar)
+ * source and converts to output in ARGB format
  */
-
-/*
-    NV12ToARGB color space conversion CUDA kernel
-
-    This sample uses CUDA to perform a simple NV12 (YUV 4:2:0 planar)
-    source and converts to output in ARGB format
-*/
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace device {
+namespace cv { namespace gpu { namespace cudev {
     namespace video_decoding
     {
         __constant__ uint constAlpha = ((uint)0xff << 24);

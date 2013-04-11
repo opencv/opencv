@@ -1,6 +1,7 @@
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 #include <iostream>
 
 using namespace std;
@@ -26,12 +27,12 @@ int main( int argc, char* argv[])
     Mat I, J, K;
 
     if (argc >= 3 && !strcmp("G", argv[2]))
-        I = imread( filename, CV_LOAD_IMAGE_GRAYSCALE);
+        I = imread( filename, IMREAD_GRAYSCALE);
     else
-        I = imread( filename, CV_LOAD_IMAGE_COLOR);
+        I = imread( filename, IMREAD_COLOR);
 
-    namedWindow("Input", CV_WINDOW_AUTOSIZE);
-    namedWindow("Output", CV_WINDOW_AUTOSIZE);
+    namedWindow("Input", WINDOW_AUTOSIZE);
+    namedWindow("Output", WINDOW_AUTOSIZE);
 
     imshow("Input", I);
     double t = (double)getTickCount();
@@ -42,7 +43,7 @@ int main( int argc, char* argv[])
     cout << "Hand written function times passed in seconds: " << t << endl;
 
     imshow("Output", J);
-    cvWaitKey(0);
+    waitKey();
 
     Mat kern = (Mat_<char>(3,3) <<  0, -1,  0,
                                    -1,  5, -1,
@@ -54,7 +55,7 @@ int main( int argc, char* argv[])
 
     imshow("Output", K);
 
-    cvWaitKey(0);
+    waitKey();
     return 0;
 }
 void Sharpen(const Mat& myImage,Mat& Result)

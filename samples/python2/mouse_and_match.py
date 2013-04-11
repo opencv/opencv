@@ -1,5 +1,3 @@
-#/usr/bin/env python
-
 #!/usr/bin/env python
 '''
 mouse_and_match.py [-i path | --input path: default ./]
@@ -11,12 +9,15 @@ Demonstrate using a mouse to interact with an image:
  ESC to exit
 '''
 import numpy as np
-from math import *
-import sys
+import cv2 as cv
+
+# built-in modules
 import os
+import sys
 import glob
 import argparse
-import cv2 as cv
+from math import *
+
 
 drag_start = None
 sel = (0,0,0,0)

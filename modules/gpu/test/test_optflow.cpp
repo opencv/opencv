@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -42,6 +43,8 @@
 #include "test_precomp.hpp"
 
 #ifdef HAVE_CUDA
+
+using namespace cvtest;
 
 //////////////////////////////////////////////////////
 // BroxOpticalFlow
@@ -432,13 +435,16 @@ GPU_TEST_P(OpticalFlowDual_TVL1, Accuracy)
     d_alg(loadMat(frame0, useRoi), loadMat(frame1, useRoi), d_flowx, d_flowy);
 
     cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
+    alg->set("medianFiltering", 1);
+    alg->set("innerIterations", 1);
+    alg->set("outerIterations", d_alg.iterations);
     cv::Mat flow;
     alg->calc(frame0, frame1, flow);
     cv::Mat gold[2];
     cv::split(flow, gold);
 
-    EXPECT_MAT_SIMILAR(gold[0], d_flowx, 3e-3);
-    EXPECT_MAT_SIMILAR(gold[1], d_flowy, 3e-3);
+    EXPECT_MAT_SIMILAR(gold[0], d_flowx, 4e-3);
+    EXPECT_MAT_SIMILAR(gold[1], d_flowy, 4e-3);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Video, OpticalFlowDual_TVL1, testing::Combine(

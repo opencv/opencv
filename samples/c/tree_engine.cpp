@@ -1,5 +1,6 @@
 #include "opencv2/ml/ml.hpp"
 #include "opencv2/core/core_c.h"
+#include "opencv2/core/utility.hpp"
 #include <stdio.h>
 #include <map>
 
@@ -21,7 +22,7 @@ static void help()
 
 static int count_classes(CvMLData& data)
 {
-    cv::Mat r(data.get_responses());
+    cv::Mat r = cv::cvarrToMat(data.get_responses());
     std::map<int, int> rmap;
     int i, n = (int)r.total();
     for( i = 0; i < n; i++ )
@@ -42,7 +43,7 @@ static void print_result(float train_err, float test_err, const CvMat* _var_imp)
 
     if (_var_imp)
     {
-        cv::Mat var_imp(_var_imp), sorted_idx;
+        cv::Mat var_imp = cv::cvarrToMat(_var_imp), sorted_idx;
         cv::sortIdx(var_imp, sorted_idx, CV_SORT_EVERY_ROW + CV_SORT_DESCENDING);
 
         printf( "variable importance:\n" );

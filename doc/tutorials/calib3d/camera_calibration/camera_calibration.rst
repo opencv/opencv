@@ -12,8 +12,8 @@ For the distortion OpenCV takes into account the radial and tangential factors. 
 
 .. math::
 
-   x_{corrected} = x( 1 + k_1 r^2 + k_2 r^4 + k^3 r^6) \\
-   y_{corrected} = y( 1 + k_1 r^2 + k_2 r^4 + k^3 r^6)
+   x_{corrected} = x( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6) \\
+   y_{corrected} = y( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6)
 
 So for an old pixel point at :math:`(x,y)` coordinate in the input image, for a corrected output image its position will be :math:`(x_{corrected} y_{corrected})` . The presence of the radial distortion manifests in form of the "barrel" or "fish-eye" effect.
 

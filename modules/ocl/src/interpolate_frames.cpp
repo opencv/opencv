@@ -43,9 +43,7 @@
 //
 //M*/
 
-#include <iomanip>
 #include "precomp.hpp"
-#include "mcwutil.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
@@ -133,7 +131,7 @@ void cv::ocl::interpolateFrames(const oclMat &frame0, const oclMat &frame1,
 void interpolate::memsetKernel(float val, oclMat &img, int height, int offset)
 {
     Context *clCxt = Context::getContext();
-    std::string kernelName = "memsetKernel";
+    String kernelName = "memsetKernel";
     std::vector< std::pair<size_t, const void *> > args;
     int step = img.step / sizeof(float);
     offset = step * height * offset;
@@ -152,7 +150,7 @@ void interpolate::memsetKernel(float val, oclMat &img, int height, int offset)
 void interpolate::normalizeKernel(oclMat &buffer, int height, int factor_offset, int dst_offset)
 {
     Context *clCxt = Context::getContext();
-    std::string kernelName = "normalizeKernel";
+    String kernelName = "normalizeKernel";
     std::vector< std::pair<size_t, const void *> > args;
     int step   = buffer.step / sizeof(float);
     factor_offset = step * height * factor_offset;
@@ -174,7 +172,7 @@ void interpolate::forwardWarpKernel(const oclMat &src, oclMat &buffer, const ocl
                                     int b_offset, int d_offset)
 {
     Context *clCxt = Context::getContext();
-    std::string kernelName = "forwardWarpKernel";
+    String kernelName = "forwardWarpKernel";
     std::vector< std::pair<size_t, const void *> > args;
     int f_step  = u.step / sizeof(float); // flow step
     int b_step  = buffer.step / sizeof(float);
@@ -212,7 +210,7 @@ void interpolate::blendFrames(const oclMat &frame0, const oclMat &/*frame1*/, co
     int step = buffer.step / sizeof(float);
 
     Context *clCxt = Context::getContext();
-    std::string kernelName = "blendFramesKernel";
+    String kernelName = "blendFramesKernel";
     std::vector< std::pair<size_t, const void *> > args;
 
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&tex_src0));

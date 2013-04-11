@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "simpleflow.hpp"
 
 //
 // 2D dense optical flow algorithm from the following paper:
@@ -53,6 +52,39 @@
 
 namespace cv
 {
+
+static const uchar MASK_TRUE_VALUE = (uchar)255;
+
+inline static float dist(const Vec3b& p1, const Vec3b& p2) {
+  return (float)((p1[0] - p2[0]) * (p1[0] - p2[0]) +
+         (p1[1] - p2[1]) * (p1[1] - p2[1]) +
+         (p1[2] - p2[2]) * (p1[2] - p2[2]));
+}
+
+inline static float dist(const Vec2f& p1, const Vec2f& p2) {
+  return (p1[0] - p2[0]) * (p1[0] - p2[0]) +
+         (p1[1] - p2[1]) * (p1[1] - p2[1]);
+}
+
+inline static float dist(const Point2f& p1, const Point2f& p2) {
+  return (p1.x - p2.x) * (p1.x - p2.x) +
+         (p1.y - p2.y) * (p1.y - p2.y);
+}
+
+inline static float dist(float x1, float y1, float x2, float y2) {
+  return (x1 - x2) * (x1 - x2) +
+         (y1 - y2) * (y1 - y2);
+}
+
+inline static int dist(int x1, int y1, int x2, int y2) {
+  return (x1 - x2) * (x1 - x2) +
+         (y1 - y2) * (y1 - y2);
+}
+
+template<class T>
+inline static T min(T t1, T t2, T t3) {
+  return (t1 <= t2 && t1 <= t3) ? t1 : min(t2, t3);
+}
 
 static void removeOcclusions(const Mat& flow,
                              const Mat& flow_inv,

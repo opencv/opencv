@@ -28,7 +28,7 @@
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -42,14 +42,14 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/utility.hpp"
-#include "opencv2/gpu/device/reduce.hpp"
-#include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/vec_distance.hpp"
-#include "opencv2/gpu/device/datamov_utils.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/utility.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
+#include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda/vec_distance.hpp"
+#include "opencv2/core/cuda/datamov_utils.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace bf_match
     {
@@ -768,7 +768,7 @@ namespace cv { namespace gpu { namespace device
         //template void matchHamming_gpu<short >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, cudaStream_t stream);
         template void matchHamming_gpu<int   >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, cudaStream_t stream);
     } // namespace bf_match
-}}} // namespace cv { namespace gpu { namespace device {
+}}} // namespace cv { namespace gpu { namespace cudev {
 
 
 #endif /* CUDA_DISABLER */

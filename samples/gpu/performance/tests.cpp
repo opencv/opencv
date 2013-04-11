@@ -4,9 +4,14 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/video/video.hpp"
 #include "opencv2/gpu/gpu.hpp"
-#include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/legacy/legacy.hpp"
 #include "performance.h"
+
+#include "opencv2/opencv_modules.hpp"
+#ifdef HAVE_OPENCV_NONFREE
+#include "opencv2/nonfree/gpu.hpp"
+#include "opencv2/nonfree/nonfree.hpp"
+#endif
 
 using namespace std;
 using namespace cv;
@@ -266,10 +271,11 @@ TEST(meanShift)
     }
 }
 
+#ifdef HAVE_OPENCV_NONFREE
 
 TEST(SURF)
 {
-    Mat src = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat src = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
     if (src.empty()) throw runtime_error("can't open aloeL.jpg");
 
     SURF surf;
@@ -294,10 +300,12 @@ TEST(SURF)
     GPU_OFF;
 }
 
+#endif
+
 
 TEST(FAST)
 {
-    Mat src = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat src = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
     if (src.empty()) throw runtime_error("can't open aloeL.jpg");
 
     vector<KeyPoint> keypoints;
@@ -322,7 +330,7 @@ TEST(FAST)
 
 TEST(ORB)
 {
-    Mat src = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat src = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
     if (src.empty()) throw runtime_error("can't open aloeL.jpg");
 
     ORB orb(4000);
@@ -1047,7 +1055,7 @@ TEST(equalizeHist)
 
 TEST(Canny)
 {
-    Mat img = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
 
     if (img.empty()) throw runtime_error("can't open aloeL.jpg");
 
@@ -1316,10 +1324,10 @@ TEST(MOG)
     cv::Mat frame;
     cap >> frame;
 
-    cv::BackgroundSubtractorMOG mog;
+    cv::Ptr<cv::BackgroundSubtractor> mog = cv::createBackgroundSubtractorMOG();
     cv::Mat foreground;
 
-    mog(frame, foreground, 0.01);
+    mog->apply(frame, foreground, 0.01);
 
     while (!TestSystem::instance().stop())
     {
@@ -1327,7 +1335,7 @@ TEST(MOG)
 
         TestSystem::instance().cpuOn();
 
-        mog(frame, foreground, 0.01);
+        mog->apply(frame, foreground, 0.01);
 
         TestSystem::instance().cpuOff();
     }
@@ -1367,12 +1375,12 @@ TEST(MOG2)
     cv::Mat frame;
     cap >> frame;
 
-    cv::BackgroundSubtractorMOG2 mog2;
+    cv::Ptr<cv::BackgroundSubtractor> mog2 = cv::createBackgroundSubtractorMOG2();
     cv::Mat foreground;
     cv::Mat background;
 
-    mog2(frame, foreground);
-    mog2.getBackgroundImage(background);
+    mog2->apply(frame, foreground);
+    mog2->getBackgroundImage(background);
 
     while (!TestSystem::instance().stop())
     {
@@ -1380,8 +1388,8 @@ TEST(MOG2)
 
         TestSystem::instance().cpuOn();
 
-        mog2(frame, foreground);
-        mog2.getBackgroundImage(background);
+        mog2->apply(frame, foreground);
+        mog2->getBackgroundImage(background);
 
         TestSystem::instance().cpuOff();
     }

@@ -22,13 +22,13 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -47,41 +47,41 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::BFMatcher_GPU::BFMatcher_GPU(int) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::add(const std::vector<GpuMat>&) { throw_nogpu(); }
-const std::vector<GpuMat>& cv::gpu::BFMatcher_GPU::getTrainDescriptors() const { throw_nogpu(); return trainDescCollection; }
-void cv::gpu::BFMatcher_GPU::clear() { throw_nogpu(); }
-bool cv::gpu::BFMatcher_GPU::empty() const { throw_nogpu(); return true; }
-bool cv::gpu::BFMatcher_GPU::isMaskSupported() const { throw_nogpu(); return true; }
-void cv::gpu::BFMatcher_GPU::matchSingle(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::matchDownload(const GpuMat&, const GpuMat&, std::vector<DMatch>&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::matchConvert(const Mat&, const Mat&, std::vector<DMatch>&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::match(const GpuMat&, const GpuMat&, std::vector<DMatch>&, const GpuMat&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::makeGpuCollection(GpuMat&, GpuMat&, const std::vector<GpuMat>&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::matchCollection(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::matchDownload(const GpuMat&, const GpuMat&, const GpuMat&, std::vector<DMatch>&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::matchConvert(const Mat&, const Mat&, const Mat&, std::vector<DMatch>&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::match(const GpuMat&, std::vector<DMatch>&, const std::vector<GpuMat>&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatchSingle(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatchDownload(const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatchConvert(const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatch(const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, int, const GpuMat&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatch2Collection(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatch2Download(const GpuMat&, const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatch2Convert(const Mat&, const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::knnMatch(const GpuMat&, std::vector< std::vector<DMatch> >&, int, const std::vector<GpuMat>&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatchSingle(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, float, const GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatchDownload(const GpuMat&, const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatchConvert(const Mat&, const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatch(const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, float, const GpuMat&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatchCollection(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, float, const std::vector<GpuMat>&, Stream&) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatchDownload(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatchConvert(const Mat&, const Mat&, const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_nogpu(); }
-void cv::gpu::BFMatcher_GPU::radiusMatch(const GpuMat&, std::vector< std::vector<DMatch> >&, float, const std::vector<GpuMat>&, bool) { throw_nogpu(); }
+cv::gpu::BFMatcher_GPU::BFMatcher_GPU(int) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::add(const std::vector<GpuMat>&) { throw_no_cuda(); }
+const std::vector<GpuMat>& cv::gpu::BFMatcher_GPU::getTrainDescriptors() const { throw_no_cuda(); return trainDescCollection; }
+void cv::gpu::BFMatcher_GPU::clear() { throw_no_cuda(); }
+bool cv::gpu::BFMatcher_GPU::empty() const { throw_no_cuda(); return true; }
+bool cv::gpu::BFMatcher_GPU::isMaskSupported() const { throw_no_cuda(); return true; }
+void cv::gpu::BFMatcher_GPU::matchSingle(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::matchDownload(const GpuMat&, const GpuMat&, std::vector<DMatch>&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::matchConvert(const Mat&, const Mat&, std::vector<DMatch>&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::match(const GpuMat&, const GpuMat&, std::vector<DMatch>&, const GpuMat&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::makeGpuCollection(GpuMat&, GpuMat&, const std::vector<GpuMat>&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::matchCollection(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::matchDownload(const GpuMat&, const GpuMat&, const GpuMat&, std::vector<DMatch>&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::matchConvert(const Mat&, const Mat&, const Mat&, std::vector<DMatch>&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::match(const GpuMat&, std::vector<DMatch>&, const std::vector<GpuMat>&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatchSingle(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatchDownload(const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatchConvert(const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatch(const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, int, const GpuMat&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatch2Collection(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatch2Download(const GpuMat&, const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatch2Convert(const Mat&, const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::knnMatch(const GpuMat&, std::vector< std::vector<DMatch> >&, int, const std::vector<GpuMat>&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatchSingle(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat&, float, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatchDownload(const GpuMat&, const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatchConvert(const Mat&, const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatch(const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, float, const GpuMat&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatchCollection(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, float, const std::vector<GpuMat>&, Stream&) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatchDownload(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatchConvert(const Mat&, const Mat&, const Mat&, const Mat&, std::vector< std::vector<DMatch> >&, bool) { throw_no_cuda(); }
+void cv::gpu::BFMatcher_GPU::radiusMatch(const GpuMat&, std::vector< std::vector<DMatch> >&, float, const std::vector<GpuMat>&, bool) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace bf_match
     {
@@ -197,7 +197,7 @@ void cv::gpu::BFMatcher_GPU::matchSingle(const GpuMat& query, const GpuMat& trai
     if (query.empty() || train.empty())
         return;
 
-    using namespace cv::gpu::device::bf_match;
+    using namespace cv::gpu::cudev::bf_match;
 
     typedef void (*caller_t)(const PtrStepSzb& query, const PtrStepSzb& train, const PtrStepSzb& mask,
                              const PtrStepSzi& trainIdx, const PtrStepSzf& distance,
@@ -340,7 +340,7 @@ void cv::gpu::BFMatcher_GPU::matchCollection(const GpuMat& query, const GpuMat& 
     if (query.empty() || trainCollection.empty())
         return;
 
-    using namespace cv::gpu::device::bf_match;
+    using namespace cv::gpu::cudev::bf_match;
 
     typedef void (*caller_t)(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks,
                              const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance,
@@ -451,7 +451,7 @@ void cv::gpu::BFMatcher_GPU::knnMatchSingle(const GpuMat& query, const GpuMat& t
     if (query.empty() || train.empty())
         return;
 
-    using namespace cv::gpu::device::bf_knnmatch;
+    using namespace cv::gpu::cudev::bf_knnmatch;
 
     typedef void (*caller_t)(const PtrStepSzb& query, const PtrStepSzb& train, int k, const PtrStepSzb& mask,
                              const PtrStepSzb& trainIdx, const PtrStepSzb& distance, const PtrStepSzf& allDist,
@@ -580,7 +580,7 @@ void cv::gpu::BFMatcher_GPU::knnMatch2Collection(const GpuMat& query, const GpuM
     if (query.empty() || trainCollection.empty())
         return;
 
-    using namespace cv::gpu::device::bf_knnmatch;
+    using namespace cv::gpu::cudev::bf_knnmatch;
 
     typedef void (*caller_t)(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks,
                              const PtrStepSzb& trainIdx, const PtrStepSzb& imgIdx, const PtrStepSzb& distance,
@@ -761,7 +761,7 @@ void cv::gpu::BFMatcher_GPU::radiusMatchSingle(const GpuMat& query, const GpuMat
     if (query.empty() || train.empty())
         return;
 
-    using namespace cv::gpu::device::bf_radius_match;
+    using namespace cv::gpu::cudev::bf_radius_match;
 
     typedef void (*caller_t)(const PtrStepSzb& query, const PtrStepSzb& train, float maxDistance, const PtrStepSzb& mask,
                              const PtrStepSzi& trainIdx, const PtrStepSzf& distance, const PtrStepSz<unsigned int>& nMatches,
@@ -890,7 +890,7 @@ void cv::gpu::BFMatcher_GPU::radiusMatchCollection(const GpuMat& query, GpuMat& 
     if (query.empty() || empty())
         return;
 
-    using namespace cv::gpu::device::bf_radius_match;
+    using namespace cv::gpu::cudev::bf_radius_match;
 
     typedef void (*caller_t)(const PtrStepSzb& query, const PtrStepSzb* trains, int n, float maxDistance, const PtrStepSzb* masks,
                              const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, const PtrStepSz<unsigned int>& nMatches,

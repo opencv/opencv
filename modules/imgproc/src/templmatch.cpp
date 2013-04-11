@@ -280,8 +280,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         integral(img, sum, sqsum, CV_64F);
         meanStdDev( templ, templMean, templSdv );
 
-        templNorm = CV_SQR(templSdv[0]) + CV_SQR(templSdv[1]) +
-                    CV_SQR(templSdv[2]) + CV_SQR(templSdv[3]);
+        templNorm = templSdv[0]*templSdv[0] + templSdv[1]*templSdv[1] + templSdv[2]*templSdv[2] + templSdv[3]*templSdv[3];
 
         if( templNorm < DBL_EPSILON && method == CV_TM_CCOEFF_NORMED )
         {
@@ -289,9 +288,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
             return;
         }
 
-        templSum2 = templNorm +
-                     CV_SQR(templMean[0]) + CV_SQR(templMean[1]) +
-                     CV_SQR(templMean[2]) + CV_SQR(templMean[3]);
+        templSum2 = templNorm + templMean[0]*templMean[0] + templMean[1]*templMean[1] + templMean[2]*templMean[2] + templMean[3]*templMean[3];
 
         if( numType != 1 )
         {
@@ -335,7 +332,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
                 for( k = 0; k < cn; k++ )
                 {
                     t = p0[idx+k] - p1[idx+k] - p2[idx+k] + p3[idx+k];
-                    wndMean2 += CV_SQR(t);
+                    wndMean2 += t*t;
                     num -= t*templMean[k];
                 }
 

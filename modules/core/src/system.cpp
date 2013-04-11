@@ -113,7 +113,7 @@ namespace cv
 
 Exception::Exception() { code = 0; line = 0; }
 
-Exception::Exception(int _code, const std::string& _err, const std::string& _func, const std::string& _file, int _line)
+Exception::Exception(int _code, const String& _err, const String& _func, const String& _file, int _line)
 : code(_code), err(_err), func(_func), file(_file), line(_line)
 {
     formatMessage();
@@ -340,27 +340,39 @@ int64 getCPUTickCount(void)
 
 #endif
 
-const std::string& getBuildInformation()
+const String& getBuildInformation()
 {
-    static std::string build_info =
+    static String build_info =
 #include "version_string.inc"
     ;
     return build_info;
 }
 
-std::string format( const char* fmt, ... )
+String format( const char* fmt, ... )
 {
-    char buf[1 << 16];
-    va_list args;
-    va_start( args, fmt );
-    vsprintf( buf, fmt, args );
-    return std::string(buf);
+    char buf[1024];
+
+    va_list va;
+    va_start(va, fmt);
+    int len = vsnprintf(buf, sizeof(buf), fmt, va);
+    va_end(va);
+
+    if (len >= (int)sizeof(buf))
+    {
+        String s(len, '\0');
+        va_start(va, fmt);
+        len = vsnprintf((char*)s.c_str(), len + 1, fmt, va);
+        va_end(va);
+        return s;
+    }
+
+    return String(buf, len);
 }
 
-std::string tempfile( const char* suffix )
+String tempfile( const char* suffix )
 {
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
-    std::string fname;
+    String fname;
 
 #if defined WIN32 || defined _WIN32
     char temp_dir2[MAX_PATH + 1] = { 0 };
@@ -372,7 +384,7 @@ std::string tempfile( const char* suffix )
         temp_dir = temp_dir2;
     }
     if(0 == ::GetTempFileNameA(temp_dir, "ocv", 0, temp_file))
-        return std::string();
+        return String();
 
     DeleteFileA(temp_file);
 
@@ -392,12 +404,12 @@ std::string tempfile( const char* suffix )
         fname = temp_dir;
         char ech = fname[fname.size() - 1];
         if(ech != '/' && ech != '\\')
-            fname += "/";
-        fname += "__opencv_temp.XXXXXX";
+            fname = fname + "/";
+        fname = fname + "__opencv_temp.XXXXXX";
     }
 
     const int fd = mkstemp((char*)fname.c_str());
-    if (fd == -1) return std::string();
+    if (fd == -1) return String();
 
     close(fd);
     remove(fname.c_str());
@@ -451,6 +463,11 @@ void error( const Exception& exc )
     }
 
     throw exc;
+}
+
+void error(int _code, const String& _err, const char* _func, const char* _file, int _line)
+{
+    error(cv::Exception(_code, _err, _func, _file, _line));
 }
 
 CvErrorCallback
@@ -659,125 +676,6 @@ cvErrorFromIppStatus( int status )
     }
 }
 
-static CvModuleInfo cxcore_info = { 0, "cxcore", CV_VERSION, 0 };
-
-CvModuleInfo* CvModule::first = 0, *CvModule::last = 0;
-
-CvModule::CvModule( CvModuleInfo* _info )
-{
-    cvRegisterModule( _info );
-    info = last;
-}
-
-CvModule::~CvModule(void)
-{
-    if( info )
-    {
-        CvModuleInfo* p = first;
-        for( ; p != 0 && p->next != info; p = p->next )
-            ;
-
-        if( p )
-            p->next = info->next;
-
-        if( first == info )
-            first = info->next;
-
-        if( last == info )
-            last = p;
-
-        free( info );
-        info = 0;
-    }
-}
-
-CV_IMPL int
-cvRegisterModule( const CvModuleInfo* module )
-{
-    CV_Assert( module != 0 && module->name != 0 && module->version != 0 );
-
-    size_t name_len = strlen(module->name);
-    size_t version_len = strlen(module->version);
-
-    CvModuleInfo* module_copy = (CvModuleInfo*)malloc( sizeof(*module_copy) +
-                                name_len + 1 + version_len + 1 );
-
-    *module_copy = *module;
-    module_copy->name = (char*)(module_copy + 1);
-    module_copy->version = (char*)(module_copy + 1) + name_len + 1;
-
-    memcpy( (void*)module_copy->name, module->name, name_len + 1 );
-    memcpy( (void*)module_copy->version, module->version, version_len + 1 );
-    module_copy->next = 0;
-
-    if( CvModule::first == 0 )
-        CvModule::first = module_copy;
-    else
-        CvModule::last->next = module_copy;
-
-    CvModule::last = module_copy;
-
-    return 0;
-}
-
-CvModule cxcore_module( &cxcore_info );
-
-CV_IMPL void
-cvGetModuleInfo( const char* name, const char **version, const char **plugin_list )
-{
-    static char joint_verinfo[1024]   = "";
-    static char plugin_list_buf[1024] = "";
-
-    if( version )
-        *version = 0;
-
-    if( plugin_list )
-        *plugin_list = 0;
-
-    CvModuleInfo* module;
-
-    if( version )
-    {
-        if( name )
-        {
-            size_t i, name_len = strlen(name);
-
-            for( module = CvModule::first; module != 0; module = module->next )
-            {
-                if( strlen(module->name) == name_len )
-                {
-                    for( i = 0; i < name_len; i++ )
-                    {
-                        int c0 = toupper(module->name[i]), c1 = toupper(name[i]);
-                        if( c0 != c1 )
-                            break;
-                    }
-                    if( i == name_len )
-                        break;
-                }
-            }
-            if( !module )
-                CV_Error( CV_StsObjectNotFound, "The module is not found" );
-
-            *version = module->version;
-        }
-        else
-        {
-            char* ptr = joint_verinfo;
-
-            for( module = CvModule::first; module != 0; module = module->next )
-            {
-                sprintf( ptr, "%s: %s%s", module->name, module->version, module->next ? ", " : "" );
-                ptr += strlen(ptr);
-            }
-
-            *version = joint_verinfo;
-        }
-    }
-
-    if( plugin_list )
-        *plugin_list = plugin_list_buf;
-}
 
 #if defined BUILD_SHARED_LIBS && defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
 BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID );
@@ -810,17 +708,6 @@ struct Mutex::Impl
     CRITICAL_SECTION cs;
     int refcount;
 };
-
-#ifndef __GNUC__
-int _interlockedExchangeAdd(int* addr, int delta)
-{
-#if defined _MSC_VER && _MSC_VER >= 1500
-    return (int)_InterlockedExchangeAdd((long volatile*)addr, delta);
-#else
-    return (int)InterlockedExchangeAdd((long volatile*)addr, delta);
-#endif
-}
-#endif // __GNUC__
 
 #elif defined __APPLE__
 

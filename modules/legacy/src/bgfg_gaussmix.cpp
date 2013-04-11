@@ -50,7 +50,7 @@ icvReleaseGaussianBGModel( CvGaussBGModel** bg_model )
 
     if( *bg_model )
     {
-        delete (cv::BackgroundSubtractorMOG*)((*bg_model)->mog);
+        delete (cv::Ptr<cv::BackgroundSubtractor>*)((*bg_model)->mog);
         cvReleaseImage( &(*bg_model)->background );
         cvReleaseImage( &(*bg_model)->foreground );
         memset( *bg_model, 0, sizeof(**bg_model) );
@@ -65,10 +65,10 @@ icvUpdateGaussianBGModel( IplImage* curr_frame, CvGaussBGModel*  bg_model, doubl
 {
     cv::Mat image = cv::cvarrToMat(curr_frame), mask = cv::cvarrToMat(bg_model->foreground);
 
-    cv::BackgroundSubtractorMOG* mog = (cv::BackgroundSubtractorMOG*)(bg_model->mog);
+    cv::Ptr<cv::BackgroundSubtractor>* mog = (cv::Ptr<cv::BackgroundSubtractor>*)(bg_model->mog);
     CV_Assert(mog != 0);
 
-    (*mog)(image, mask, learningRate);
+    (*mog)->apply(image, mask, learningRate);
     bg_model->countFrames++;
 
     return 0;
@@ -105,13 +105,11 @@ cvCreateGaussianBGModel( IplImage* first_frame, CvGaussBGStatModelParams* parame
 
     bg_model->params = params;
 
-    cv::BackgroundSubtractorMOG* mog =
-        new cv::BackgroundSubtractorMOG(params.win_size,
-                                        params.n_gauss,
-                                        params.bg_threshold,
-                                        params.variance_init);
-
-    bg_model->mog = mog;
+    cv::Ptr<cv::BackgroundSubtractor> mog = cv::createBackgroundSubtractorMOG(params.win_size, params.n_gauss,
+                                                                              params.bg_threshold);
+    cv::Ptr<cv::BackgroundSubtractor>* pmog = new cv::Ptr<cv::BackgroundSubtractor>;
+    *pmog = mog;
+    bg_model->mog = pmog;
 
     CvSize sz = cvGetSize(first_frame);
     bg_model->background = cvCreateImage(sz, IPL_DEPTH_8U, first_frame->nChannels);

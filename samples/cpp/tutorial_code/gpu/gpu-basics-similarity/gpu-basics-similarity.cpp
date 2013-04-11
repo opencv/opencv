@@ -1,10 +1,11 @@
 #include <iostream>                   // Console I/O
 #include <sstream>                    // String to number conversion
 
-#include <opencv2/core/core.hpp>      // Basic OpenCV structures
-#include <opencv2/imgproc/imgproc.hpp>// Image processing methods for the CPU
-#include <opencv2/highgui/highgui.hpp>// Read images
-#include <opencv2/gpu/gpu.hpp>        // GPU structures and methods
+#include <opencv2/core.hpp>      // Basic OpenCV structures
+#include <opencv2/core/utility.hpp>
+#include <opencv2/imgproc.hpp>// Image processing methods for the CPU
+#include <opencv2/highgui.hpp>// Read images
+#include <opencv2/gpu.hpp>        // GPU structures and methods
 
 using namespace std;
 using namespace cv;

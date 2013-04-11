@@ -217,6 +217,12 @@ endif(ANDROID AND ANDROID_EXECUTABLE)
 
 set(step3_depends ${step2_depends} ${step3_input_files} ${copied_files})
 
+if(ANDROID)
+  set(LIB_NAME_SUFIX "")
+else()
+  set(LIB_NAME_SUFIX "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
+endif()
+
 # step 4: build jar
 if(ANDROID)
   set(JAR_FILE "${OpenCV_BINARY_DIR}/bin/classes.jar")
@@ -241,7 +247,7 @@ if(ANDROID)
                       )
   endif()
 else(ANDROID)
-  set(JAR_NAME opencv-${OPENCV_VERSION}.jar)
+  set(JAR_NAME opencv-${LIB_NAME_SUFIX}.jar)
   set(JAR_FILE "${OpenCV_BINARY_DIR}/bin/${JAR_NAME}")
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.xml.in" "${OpenCV_BINARY_DIR}/build.xml" IMMEDIATE @ONLY)
   list(APPEND step3_depends "${OpenCV_BINARY_DIR}/build.xml")
@@ -266,6 +272,8 @@ endif(ANDROID)
 add_library(${the_module} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}
                                 "${JAR_FILE}" "${JAR_FILE}.dephelper")
+set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
+
 if(BUILD_FAT_JAVA_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
   list(REMOVE_ITEM __deps ${the_module} opencv_ts)
@@ -275,7 +283,14 @@ if(BUILD_FAT_JAVA_LIB)
   if(__extradeps)
     list(REMOVE_ITEM __deps ${__extradeps})
   endif()
-  target_link_libraries(${the_module} -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive ${__extradeps} ${OPENCV_LINKER_LIBS})
+  if(APPLE)
+    foreach(_dep ${__deps})
+      target_link_libraries(${the_module} -Wl,-force_load "${_dep}")
+    endforeach()
+  else()
+    target_link_libraries(${the_module} -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive)
+  endif()
+  target_link_libraries(${the_module} ${__extradeps} ${OPENCV_LINKER_LIBS})
 else()
   target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
 endif()
@@ -294,17 +309,15 @@ endif()
 
 # Additional target properties
 set_target_properties(${the_module} PROPERTIES
-    OUTPUT_NAME "${the_module}${OPENCV_DLLVERSION}"
-    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+    OUTPUT_NAME "${the_module}${LIB_NAME_SUFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
+    LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
     INSTALL_NAME_DIR ${OPENCV_LIB_INSTALL_PATH}
     LINK_INTERFACE_LIBRARIES ""
     )
 
-if(ANDROID)
-  set_target_properties(${the_module} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH})
-else()
+if(WIN32)
   set_target_properties(${the_module} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
 endif()
 

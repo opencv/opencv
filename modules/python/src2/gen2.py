@@ -211,11 +211,11 @@ gen_template_rw_prop_init = Template("""
 
 simple_argtype_mapping = {
     "bool": ("bool", "b", "0"),
+    "char": ("char", "b", "0"),
     "int": ("int", "i", "0"),
     "float": ("float", "f", "0.f"),
     "double": ("double", "d", "0"),
-    "c_string": ("char*", "s", '(char*)""'),
-    "string": ("std::string", "s", None)
+    "c_string": ("char*", "s", '(char*)""')
 }
 
 def normalize_class_name(name):
@@ -354,6 +354,7 @@ class ArgInfo(object):
             elif m == "/IO":
                 self.inputarg = True
                 self.outputarg = True
+                self.returnarg = True
             elif m.startswith("/A"):
                 self.isarray = True
                 self.arraylen = m[2:].strip()
@@ -427,7 +428,7 @@ class FuncVariant(object):
                 continue
             if a.returnarg:
                 outlist.append((a.name, argno))
-            if (not a.inputarg or a.returnarg) and a.isbig():
+            if (not a.inputarg) and a.isbig():
                 outarr_list.append((a.name, argno))
                 continue
             if not a.inputarg:
@@ -570,7 +571,7 @@ class FuncInfo(object):
             else:
                 code_fcall = "ERRWRAP2( "
                 if v.rettype:
-                    code_decl += "    " + simple_argtype_mapping.get(v.rettype, (v.rettype, None, None))[0]  + " retval;\n"
+                    code_decl += "    " + v.rettype + " retval;\n"
                     code_fcall += "retval = "
                 if ismethod:
                     code_fcall += "_self_->" + self.cname

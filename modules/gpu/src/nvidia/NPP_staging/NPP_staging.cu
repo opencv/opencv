@@ -1,6 +1,6 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
@@ -10,7 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2009-2010, NVIDIA Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -44,8 +45,8 @@
 #include <vector>
 #include <cuda_runtime.h>
 #include "NPP_staging.hpp"
-#include "opencv2/gpu/device/warp.hpp"
-#include "opencv2/gpu/device/warp_shuffle.hpp"
+#include "opencv2/core/cuda/warp.hpp"
+#include "opencv2/core/cuda/warp_shuffle.hpp"
 
 
 texture<Ncv8u,  1, cudaReadModeElementType> tex8u;
@@ -94,13 +95,13 @@ template <class T>
 inline __device__ T warpScanInclusive(T idata, volatile T *s_Data)
 {
 #if __CUDA_ARCH__ >= 300
-    const unsigned int laneId = cv::gpu::device::Warp::laneId();
+    const unsigned int laneId = cv::gpu::cudev::Warp::laneId();
 
     // scan on shuffl functions
     #pragma unroll
     for (int i = 1; i <= (K_WARP_SIZE / 2); i *= 2)
     {
-        const T n = cv::gpu::device::shfl_up(idata, i);
+        const T n = cv::gpu::cudev::shfl_up(idata, i);
         if (laneId >= i)
               idata += n;
     }

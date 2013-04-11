@@ -31,7 +31,7 @@ Public interface for soft cascade training algorithm. ::
         virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth) = 0;
         virtual void setRejectThresholds(OutputArray thresholds) = 0;
         virtual void write( cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const = 0;
-        virtual void write( CvFileStorage* fs, string name) const = 0;
+        virtual void write( CvFileStorage* fs, String name) const = 0;
 
     };
 
@@ -71,7 +71,7 @@ softcascade::Octave::write
 --------------------------
 
 .. ocv:function:: void softcascade::Octave::train(cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const
-.. ocv:function:: void softcascade::Octave::train( CvFileStorage* fs, string name) const
+.. ocv:function:: void softcascade::Octave::train( CvFileStorage* fs, String name) const
 
     :param fs an output file storage to store trained detector.
 

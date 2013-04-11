@@ -6,6 +6,7 @@
  */
 
 #include <opencv2/opencv.hpp>
+#include <opencv2/core/utility.hpp>
 #include <iostream>
 
 using namespace cv;
@@ -32,15 +33,12 @@ int main(int argc, char** argv)
     setUseOptimized(true);
     setNumThreads(8);
 
-    Ptr<BackgroundSubtractorGMG> fgbg = Algorithm::create<BackgroundSubtractorGMG>("BackgroundSubtractor.GMG");
+    Ptr<BackgroundSubtractor> fgbg = createBackgroundSubtractorGMG(20, 0.7);
     if (fgbg.empty())
     {
         std::cerr << "Failed to create BackgroundSubtractor.GMG Algorithm." << std::endl;
         return -1;
     }
-
-    fgbg->set("initializationFrames", 20);
-    fgbg->set("decisionThreshold", 0.7);
 
     VideoCapture cap;
     if (argc > 1)
@@ -65,9 +63,9 @@ int main(int argc, char** argv)
         if (frame.empty())
             break;
 
-        (*fgbg)(frame, fgmask);
+        fgbg->apply(frame, fgmask);
 
-        frame.copyTo(segm);
+        frame.convertTo(segm, CV_8U, 0.5);
         add(frame, Scalar(100, 100, 0), segm, fgmask);
 
         imshow("FG Segmentation", segm);

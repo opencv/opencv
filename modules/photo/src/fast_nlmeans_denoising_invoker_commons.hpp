@@ -42,10 +42,6 @@
 #ifndef __OPENCV_FAST_NLMEANS_DENOISING_INVOKER_COMMONS_HPP__
 #define __OPENCV_FAST_NLMEANS_DENOISING_INVOKER_COMMONS_HPP__
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/core/internal.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-
 using namespace cv;
 
 template <typename T> static inline int calcDist(const T a, const T b);
