@@ -52,7 +52,7 @@ using namespace perf;
 typedef std::tr1::tuple<string, string> pair_string;
 DEF_PARAM_TEST_1(ImagePair, pair_string);
 
-PERF_TEST_P(ImagePair, Calib3D_StereoBM,
+PERF_TEST_P(ImagePair, StereoBM,
             Values(pair_string("gpu/perf/aloe.png", "gpu/perf/aloeR.png")))
 {
     declare.time(300.0);
@@ -93,7 +93,7 @@ PERF_TEST_P(ImagePair, Calib3D_StereoBM,
 //////////////////////////////////////////////////////////////////////
 // StereoBeliefPropagation
 
-PERF_TEST_P(ImagePair, Calib3D_StereoBeliefPropagation,
+PERF_TEST_P(ImagePair, StereoBeliefPropagation,
             Values(pair_string("gpu/stereobp/aloe-L.png", "gpu/stereobp/aloe-R.png")))
 {
     declare.time(300.0);
@@ -127,7 +127,7 @@ PERF_TEST_P(ImagePair, Calib3D_StereoBeliefPropagation,
 //////////////////////////////////////////////////////////////////////
 // StereoConstantSpaceBP
 
-PERF_TEST_P(ImagePair, Calib3D_StereoConstantSpaceBP,
+PERF_TEST_P(ImagePair, StereoConstantSpaceBP,
             Values(pair_string("gpu/stereobm/aloe-L.png", "gpu/stereobm/aloe-R.png")))
 {
     declare.time(300.0);
@@ -161,7 +161,7 @@ PERF_TEST_P(ImagePair, Calib3D_StereoConstantSpaceBP,
 //////////////////////////////////////////////////////////////////////
 // DisparityBilateralFilter
 
-PERF_TEST_P(ImagePair, Calib3D_DisparityBilateralFilter,
+PERF_TEST_P(ImagePair, DisparityBilateralFilter,
             Values(pair_string("gpu/stereobm/aloe-L.png", "gpu/stereobm/aloe-disp.png")))
 {
     const cv::Mat img = readImage(GET_PARAM(0), cv::IMREAD_GRAYSCALE);
@@ -193,7 +193,7 @@ PERF_TEST_P(ImagePair, Calib3D_DisparityBilateralFilter,
 //////////////////////////////////////////////////////////////////////
 // ReprojectImageTo3D
 
-PERF_TEST_P(Sz_Depth, Calib3D_ReprojectImageTo3D,
+PERF_TEST_P(Sz_Depth, ReprojectImageTo3D,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16S)))
 {
@@ -228,7 +228,7 @@ PERF_TEST_P(Sz_Depth, Calib3D_ReprojectImageTo3D,
 //////////////////////////////////////////////////////////////////////
 // DrawColorDisp
 
-PERF_TEST_P(Sz_Depth, Calib3D_DrawColorDisp,
+PERF_TEST_P(Sz_Depth, DrawColorDisp,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16S)))
 {

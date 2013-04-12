@@ -79,7 +79,7 @@ GPU_TEST_P(StereoBM, Regression)
     EXPECT_MAT_NEAR(disp_gold, disp, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Calib3D, StereoBM, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_Stereo, StereoBM, ALL_DEVICES);
 
 //////////////////////////////////////////////////////////////////////////
 // StereoBeliefPropagation
@@ -117,7 +117,7 @@ GPU_TEST_P(StereoBeliefPropagation, Regression)
     EXPECT_MAT_NEAR(disp_gold, h_disp, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Calib3D, StereoBeliefPropagation, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_Stereo, StereoBeliefPropagation, ALL_DEVICES);
 
 //////////////////////////////////////////////////////////////////////////
 // StereoConstantSpaceBP
@@ -161,7 +161,7 @@ GPU_TEST_P(StereoConstantSpaceBP, Regression)
     EXPECT_MAT_NEAR(disp_gold, h_disp, 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Calib3D, StereoConstantSpaceBP, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_Stereo, StereoConstantSpaceBP, ALL_DEVICES);
 
 ////////////////////////////////////////////////////////////////////////////////
 // reprojectImageTo3D
@@ -198,7 +198,7 @@ GPU_TEST_P(ReprojectImageTo3D, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Calib3D, ReprojectImageTo3D, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Stereo, ReprojectImageTo3D, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16S)),
