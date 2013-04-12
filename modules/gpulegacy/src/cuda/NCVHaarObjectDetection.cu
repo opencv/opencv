@@ -66,6 +66,7 @@
 
 #ifdef HAVE_OPENCV_OBJDETECT
 #  include "opencv2/objdetect.hpp"
+#  include "opencv2/objdetect/objdetect_c.h"
 #endif
 
 #include "opencv2/gpulegacy/NCV.hpp"

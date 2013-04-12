@@ -180,7 +180,7 @@ namespace
             #ifdef HAVE_OPENCV_GPUIMGPROC
                 gpu::cvtColor(src.getGpuMat(), dst.getGpuMatRef(), code, cn);
             #else
-                CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");
+                CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
             #endif
             break;
 

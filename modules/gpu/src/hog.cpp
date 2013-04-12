@@ -443,7 +443,7 @@ void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat& img, std::vector<Rec
         detect(smaller_img, locations, hit_threshold, win_stride, padding);
         Size scaled_win_size(cvRound(win_size.width * scale), cvRound(win_size.height * scale));
         for (size_t j = 0; j < locations.size(); j++)
-            all_candidates.push_back(Rect(Point2d((CvPoint)locations[j]) * scale, scaled_win_size));
+            all_candidates.push_back(Rect(Point2d(locations[j]) * scale, scaled_win_size));
     }
 
     found_locations.assign(all_candidates.begin(), all_candidates.end());

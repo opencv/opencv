@@ -172,12 +172,6 @@ enum {
        BORDER_ISOLATED    = 16 // do not look outside of ROI
      };
 
-enum { REDUCE_SUM = 0,
-       REDUCE_AVG = 1,
-       REDUCE_MAX = 2,
-       REDUCE_MIN = 3
-     };
-
 
 
 //////////////// static assert /////////////////

@@ -198,7 +198,7 @@ public:
     cv::Size getClassifierCvSize() const { return cv::Size(haar.ClassifierSize.width, haar.ClassifierSize.height); }
 
 private:
-    static void NCVDebugOutputHandler(const String &msg) { CV_Error(CV_GpuApiCallError, msg.c_str()); }
+    static void NCVDebugOutputHandler(const String &msg) { CV_Error(cv::Error::GpuApiCallError, msg.c_str()); }
 
     NCVStatus load(const String& classifierFile)
     {

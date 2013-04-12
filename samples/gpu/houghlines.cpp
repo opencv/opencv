@@ -77,7 +77,7 @@ int main(int argc, const char* argv[])
     for (size_t i = 0; i < lines_gpu.size(); ++i)
     {
         Vec4i l = lines_gpu[i];
-        line(dst_gpu, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 0, 255), 3, CV_AA);
+        line(dst_gpu, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 0, 255), 3, cv::LINE_AA);
     }
 
     imshow("source", src);

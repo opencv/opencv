@@ -394,7 +394,7 @@ GPU_TEST_P(LBP_classify, Accuracy)
 
     std::vector<cv::Rect>::iterator it = rects.begin();
     for (; it != rects.end(); ++it)
-        cv::rectangle(markedImage, *it, CV_RGB(0, 0, 255));
+        cv::rectangle(markedImage, *it, cv::Scalar(255, 0, 0));
 
     cv::gpu::CascadeClassifier_GPU gpuClassifier;
     ASSERT_TRUE(gpuClassifier.load(classifierXmlPath));

@@ -9,6 +9,7 @@
 #include "opencv2/gpu.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/objdetect.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
 
 #ifdef HAVE_CUDA
 #include "opencv2/gpulegacy.hpp"
@@ -41,15 +42,15 @@ static void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const string &ss
     Point org;
     org.x = 1;
     org.y = 3 * fontSize.height * (lineOffsY + 1) / 2;
-    putText(img, ss, org, fontFace, fontScale, CV_RGB(0,0,0), 5*fontThickness/2, 16);
+    putText(img, ss, org, fontFace, fontScale, Scalar(0,0,0), 5*fontThickness/2, 16);
     putText(img, ss, org, fontFace, fontScale, fontColor, fontThickness, 16);
 }
 
 
 static void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bFilter, double fps)
 {
-    Scalar fontColorRed = CV_RGB(255,0,0);
-    Scalar fontColorNV  = CV_RGB(118,185,0);
+    Scalar fontColorRed(0,0,255);
+    Scalar fontColorNV(0,185,118);
 
     ostringstream ss;
     ss << "FPS = " << setprecision(1) << fixed << fps;
