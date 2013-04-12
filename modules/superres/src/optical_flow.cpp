@@ -343,7 +343,7 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1()
 ///////////////////////////////////////////////////////////////////
 // GpuOpticalFlow
 
-#ifndef HAVE_OPENCV_GPU
+#ifndef HAVE_OPENCV_GPUOPTFLOW
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Farneback_GPU()
 {

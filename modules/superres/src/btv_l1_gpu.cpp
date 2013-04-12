@@ -50,7 +50,7 @@ using namespace cv::gpu;
 using namespace cv::superres;
 using namespace cv::superres::detail;
 
-#if !defined(HAVE_CUDA) || !defined(HAVE_OPENCV_GPU)
+#if !defined(HAVE_CUDA) || !defined(HAVE_OPENCV_GPUARITHM) || !defined(HAVE_OPENCV_GPUWARPING) || !defined(HAVE_OPENCV_GPUFILTERS)
 
 Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1_GPU()
 {
@@ -266,7 +266,12 @@ namespace
         btvKernelSize_ = 7;
         blurKernelSize_ = 5;
         blurSigma_ = 0.0;
+
+#ifdef HAVE_OPENCV_GPUOPTFLOW
         opticalFlow_ = createOptFlow_Farneback_GPU();
+#else
+        opticalFlow_ = createOptFlow_Farneback();
+#endif
 
         curBlurKernelSize_ = -1;
         curBlurSigma_ = -1.0;
