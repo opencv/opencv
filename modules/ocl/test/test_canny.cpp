@@ -45,7 +45,6 @@
 
 #include "precomp.hpp"
 #ifdef HAVE_OPENCL
-#define SHOW_RESULT 0
 
 ////////////////////////////////////////////////////////
 // Canny
@@ -59,13 +58,10 @@ PARAM_TEST_CASE(Canny, AppertureSize, L2gradient)
     bool useL2gradient;
 
     cv::Mat edges_gold;
-    //std::vector<cv::ocl::Info> oclinfo;
     virtual void SetUp()
     {
         apperture_size = GET_PARAM(0);
         useL2gradient = GET_PARAM(1);
-        //int devnums = getDevice(oclinfo);
-        //CV_Assert(devnums > 0);
     }
 };
 
@@ -89,16 +85,6 @@ TEST_P(Canny, Accuracy)
     cv::Mat edges_gold;
     cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, useL2gradient);
 
-#if SHOW_RESULT
-    cv::Mat edges_x2, ocl_edges(edges);
-    edges_x2.create(edges.rows, edges.cols * 2, edges.type());
-    edges_x2.setTo(0);
-    cv::add(edges_gold, cv::Mat(edges_x2, cv::Rect(0, 0, edges_gold.cols, edges_gold.rows)), cv::Mat(edges_x2, cv::Rect(0, 0, edges_gold.cols, edges_gold.rows)));
-    cv::add(ocl_edges, cv::Mat(edges_x2, cv::Rect(edges_gold.cols, 0, edges_gold.cols, edges_gold.rows)), cv::Mat(edges_x2, cv::Rect(edges_gold.cols, 0, edges_gold.cols, edges_gold.rows)));
-    cv::namedWindow("Canny result (left: cpu, right: ocl)");
-    cv::imshow("Canny result (left: cpu, right: ocl)", edges_x2);
-    cv::waitKey();
-#endif //OUTPUT_RESULT
     EXPECT_MAT_SIMILAR(edges_gold, edges, 1e-2);
 }
 
