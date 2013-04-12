@@ -14,7 +14,6 @@ if(WIN32 AND NOT PYTHON_EXECUTABLE)
 endif()
 find_host_package(PythonInterp 2.0)
 
-unset(PYTHON_USE_NUMPY CACHE)
 unset(HAVE_SPHINX CACHE)
 if(PYTHON_EXECUTABLE)
   if(PYTHON_VERSION_STRING)
@@ -93,7 +92,6 @@ if(PYTHON_EXECUTABLE)
     endif()
 
     if(PYTHON_NUMPY_INCLUDE_DIR)
-      set(PYTHON_USE_NUMPY TRUE)
       execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print numpy.version.version"
                         RESULT_VARIABLE PYTHON_NUMPY_PROCESS
                         OUTPUT_VARIABLE PYTHON_NUMPY_VERSION

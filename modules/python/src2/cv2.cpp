@@ -1,12 +1,7 @@
 #include <Python.h>
 
-#if !PYTHON_USE_NUMPY
-#error "The module can only be built if NumPy is available"
-#endif
-
 #define MODULESTR "cv2"
-
-#include "numpy/ndarrayobject.h"
+#include <numpy/ndarrayobject.h>
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"
@@ -14,7 +9,6 @@
 #include "opencv2/flann/miniflann.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/calib3d.hpp"
-#include "opencv2/ml.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/objdetect.hpp"
 #include "opencv2/softcascade.hpp"
@@ -22,13 +16,9 @@
 #include "opencv2/photo.hpp"
 #include "opencv2/highgui.hpp"
 
-#include "opencv2/highgui/highgui_c.h"
-#include "opencv2/photo/photo_c.h"
-#include "opencv2/video/tracking_c.h"
-#include "opencv2/objdetect/objdetect_c.h"
+#include "opencv2/ml.hpp"
 
 #include "opencv2/opencv_modules.hpp"
-
 #ifdef HAVE_OPENCV_NONFREE
 #  include "opencv2/nonfree.hpp"
 #endif
@@ -196,19 +186,14 @@ public:
                       depth == CV_32S ? NPY_INT : depth == CV_32F ? NPY_FLOAT :
                       depth == CV_64F ? NPY_DOUBLE : f*NPY_ULONGLONG + (f^1)*NPY_UINT;
         int i;
-        npy_intp _sizes[CV_MAX_DIM+1];
+        cv::AutoBuffer<npy_intp> _sizes(dims + 1);
         for( i = 0; i < dims; i++ )
             _sizes[i] = sizes[i];
         if( cn > 1 )
-        {
-            /*if( _sizes[dims-1] == 1 )
-                _sizes[dims-1] = cn;
-            else*/
-                _sizes[dims++] = cn;
-        }
+            _sizes[dims++] = cn;
         PyObject* o = PyArray_SimpleNew(dims, _sizes, typenum);
         if(!o)
-            CV_Error_(CV_StsError, ("The numpy array of typenum=%d, ndims=%d can not be created", typenum, dims));
+            CV_Error_(Error::StsError, ("The numpy array of typenum=%d, ndims=%d can not be created", typenum, dims));
         refcount = refcountFromPyObject(o);
         npy_intp* _strides = PyArray_STRIDES(o);
         for( i = 0; i < dims - (cn > 1); i++ )
@@ -306,6 +291,10 @@ static int pyopencv_to(const PyObject* o, Mat& m, const ArgInfo info, bool allow
         }
     }
 
+#ifndef CV_MAX_DIM
+    const int CV_MAX_DIM = 32;
+#endif
+
     int ndims = PyArray_NDIM(o);
     if(ndims >= CV_MAX_DIM)
     {
@@ -314,7 +303,8 @@ static int pyopencv_to(const PyObject* o, Mat& m, const ArgInfo info, bool allow
     }
 
     int size[CV_MAX_DIM+1];
-    size_t step[CV_MAX_DIM+1], elemsize = CV_ELEM_SIZE1(type);
+    size_t step[CV_MAX_DIM+1];
+    size_t elemsize = CV_ELEM_SIZE1(type);
     const npy_intp* _sizes = PyArray_DIMS(o);
     const npy_intp* _strides = PyArray_STRIDES(o);
     bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX;
@@ -617,24 +607,6 @@ static inline PyObject* pyopencv_from(const Range& r)
     return Py_BuildValue("(ii)", r.start, r.end);
 }
 
-static inline bool pyopencv_to(PyObject* obj, CvSlice& r, const char* name = "<unknown>")
-{
-    (void)name;
-    if(!obj || obj == Py_None)
-        return true;
-    if(PyObject_Size(obj) == 0)
-    {
-        r = CV_WHOLE_SEQ;
-        return true;
-    }
-    return PyArg_ParseTuple(obj, "ii", &r.start_index, &r.end_index) > 0;
-}
-
-static inline PyObject* pyopencv_from(const CvSlice& r)
-{
-    return Py_BuildValue("(ii)", r.start_index, r.end_index);
-}
-
 static inline bool pyopencv_to(PyObject* obj, Point& p, const char* name = "<unknown>")
 {
     (void)name;
@@ -930,20 +902,6 @@ template<> struct pyopencvVecConverter<String>
     }
 };
 
-
-static inline bool pyopencv_to(PyObject *obj, CvTermCriteria& dst, const char *name="<unknown>")
-{
-    (void)name;
-    if(!obj)
-        return true;
-    return PyArg_ParseTuple(obj, "iid", &dst.type, &dst.max_iter, &dst.epsilon) > 0;
-}
-
-static inline PyObject* pyopencv_from(const CvTermCriteria& src)
-{
-    return Py_BuildValue("(iid)", src.type, src.max_iter, src.epsilon);
-}
-
 static inline bool pyopencv_to(PyObject *obj, TermCriteria& dst, const char *name="<unknown>")
 {
     (void)name;
@@ -980,13 +938,6 @@ static inline PyObject* pyopencv_from(const Moments& m)
                          "mu30", m.mu30, "mu21", m.mu21, "mu12", m.mu12, "mu03", m.mu03,
                          "nu20", m.nu20, "nu11", m.nu11, "nu02", m.nu02,
                          "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "nu03", m.nu03);
-}
-
-static inline PyObject* pyopencv_from(const CvDTreeNode* node)
-{
-    double value = node->value;
-    int ivalue = cvRound(value);
-    return value == ivalue ? PyInt_FromLong(ivalue) : PyFloat_FromDouble(value);
 }
 
 static bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name="<unknown>")
@@ -1053,6 +1004,31 @@ static bool pyopencv_to(PyObject *o, cvflann::flann_distance_t& dist, const char
     return ok;
 }
 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// TODO: REMOVE used only by ml wrapper
+
+static bool pyopencv_to(PyObject *obj, CvTermCriteria& dst, const char *name="<unknown>")
+{
+    (void)name;
+    if(!obj)
+        return true;
+    return PyArg_ParseTuple(obj, "iid", &dst.type, &dst.max_iter, &dst.epsilon) > 0;
+}
+
+static bool pyopencv_to(PyObject* obj, CvSlice& r, const char* name = "<unknown>")
+{
+    (void)name;
+    if(!obj || obj == Py_None)
+        return true;
+    if(PyObject_Size(obj) == 0)
+    {
+        r = CV_WHOLE_SEQ;
+        return true;
+    }
+    return PyArg_ParseTuple(obj, "ii", &r.start_index, &r.end_index) > 0;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void OnMouse(int event, int x, int y, int flags, void* param)
@@ -1088,7 +1064,7 @@ static PyObject *pycvSetMouseCallback(PyObject*, PyObject *args, PyObject *kw)
     if (param == NULL) {
         param = Py_None;
     }
-    ERRWRAP2(cvSetMouseCallback(name, OnMouse, Py_BuildValue("OO", on_mouse, param)));
+    ERRWRAP2(setMouseCallback(name, OnMouse, Py_BuildValue("OO", on_mouse, param)));
     Py_RETURN_NONE;
 }
 
@@ -1120,7 +1096,7 @@ static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
         PyErr_SetString(PyExc_TypeError, "on_change must be callable");
         return NULL;
     }
-    ERRWRAP2(cvCreateTrackbar2(trackbar_name, window_name, value, count, OnChange, Py_BuildValue("OO", on_change, Py_None)));
+    ERRWRAP2(createTrackbar(trackbar_name, window_name, value, count, OnChange, Py_BuildValue("OO", on_change, Py_None)));
     Py_RETURN_NONE;
 }
 
@@ -1155,8 +1131,6 @@ static int to_ok(PyTypeObject *to)
   return (PyType_Ready(to) == 0);
 }
 
-#include "cv2.cv.hpp"
-
 extern "C"
 #if defined WIN32 || defined _WIN32
 __declspec(dllexport)
@@ -1165,13 +1139,9 @@ void initcv2();
 
 void initcv2()
 {
-#if PYTHON_USE_NUMPY
-    import_array();
-#endif
+  import_array();
 
-#if PYTHON_USE_NUMPY
 #include "pyopencv_generated_type_reg.h"
-#endif
 
   PyObject* m = Py_InitModule(MODULESTR, methods);
   PyObject* d = PyModule_GetDict(m);
@@ -1181,27 +1151,10 @@ void initcv2()
   opencv_error = PyErr_NewException((char*)MODULESTR".error", NULL, NULL);
   PyDict_SetItemString(d, "error", opencv_error);
 
-  PyObject* cv_m = init_cv();
-
-  PyDict_SetItemString(d, "cv", cv_m);
-
 #define PUBLISH(I) PyDict_SetItemString(d, #I, PyInt_FromLong(I))
-#define PUBLISHU(I) PyDict_SetItemString(d, #I, PyLong_FromUnsignedLong(I))
+//#define PUBLISHU(I) PyDict_SetItemString(d, #I, PyLong_FromUnsignedLong(I))
 #define PUBLISH2(I, value) PyDict_SetItemString(d, #I, PyLong_FromLong(value))
 
-  PUBLISHU(IPL_DEPTH_8U);
-  PUBLISHU(IPL_DEPTH_8S);
-  PUBLISHU(IPL_DEPTH_16U);
-  PUBLISHU(IPL_DEPTH_16S);
-  PUBLISHU(IPL_DEPTH_32S);
-  PUBLISHU(IPL_DEPTH_32F);
-  PUBLISHU(IPL_DEPTH_64F);
-
-  PUBLISH(CV_LOAD_IMAGE_COLOR);
-  PUBLISH(CV_LOAD_IMAGE_GRAYSCALE);
-  PUBLISH(CV_LOAD_IMAGE_UNCHANGED);
-  PUBLISH(CV_HIST_ARRAY);
-  PUBLISH(CV_HIST_SPARSE);
   PUBLISH(CV_8U);
   PUBLISH(CV_8UC1);
   PUBLISH(CV_8UC2);
@@ -1237,37 +1190,7 @@ void initcv2()
   PUBLISH(CV_64FC2);
   PUBLISH(CV_64FC3);
   PUBLISH(CV_64FC4);
-  PUBLISH(CV_NEXT_AROUND_ORG);
-  PUBLISH(CV_NEXT_AROUND_DST);
-  PUBLISH(CV_PREV_AROUND_ORG);
-  PUBLISH(CV_PREV_AROUND_DST);
-  PUBLISH(CV_NEXT_AROUND_LEFT);
-  PUBLISH(CV_NEXT_AROUND_RIGHT);
-  PUBLISH(CV_PREV_AROUND_LEFT);
-  PUBLISH(CV_PREV_AROUND_RIGHT);
-
-  PUBLISH(CV_WINDOW_AUTOSIZE);
-
-  PUBLISH(CV_PTLOC_INSIDE);
-  PUBLISH(CV_PTLOC_ON_EDGE);
-  PUBLISH(CV_PTLOC_VERTEX);
-  PUBLISH(CV_PTLOC_OUTSIDE_RECT);
-
-  PUBLISH(GC_BGD);
-  PUBLISH(GC_FGD);
-  PUBLISH(GC_PR_BGD);
-  PUBLISH(GC_PR_FGD);
-  PUBLISH(GC_INIT_WITH_RECT);
-  PUBLISH(GC_INIT_WITH_MASK);
-  PUBLISH(GC_EVAL);
-
-  PUBLISH(CV_ROW_SAMPLE);
-  PUBLISH(CV_VAR_NUMERICAL);
-  PUBLISH(CV_VAR_ORDERED);
-  PUBLISH(CV_VAR_CATEGORICAL);
-
-  PUBLISH(CV_AA);
 
 #include "pyopencv_generated_const_reg.h"
-}
 
+}
