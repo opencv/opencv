@@ -4,7 +4,7 @@ if(APPLE)
   set(OPENCL_INCLUDE_DIR "" CACHE STRING "OpenCL include directory")
   mark_as_advanced(OPENCL_INCLUDE_DIR OPENCL_LIBRARY)
 else(APPLE)
-  find_package(OpenCL QUIET)
+  #find_package(OpenCL QUIET)
 
   if (NOT OPENCL_FOUND)
     find_path(OPENCL_ROOT_DIR

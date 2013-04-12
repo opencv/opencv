@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 # svgfig.py copyright (C) 2008 Jim Pivarski <jpivarski@gmail.com>
 #

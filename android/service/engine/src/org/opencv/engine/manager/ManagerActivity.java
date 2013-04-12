@@ -42,6 +42,26 @@ public class ManagerActivity extends Activity
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (!HardwareDetector.mIsReady) {
+            Log.e(TAG, "Cannot initialize native part of OpenCV Manager!");
+
+            AlertDialog dialog = new AlertDialog.Builder(this).create();
+
+            dialog.setTitle("OpenCV Manager Error");
+            dialog.setMessage("OpenCV Manager is incompatible with this device. Please replace it with an appropriate package.");
+            dialog.setCancelable(false);
+            dialog.setButton("OK", new DialogInterface.OnClickListener() {
+
+                public void onClick(DialogInterface dialog, int which) {
+                    finish();
+                }
+            });
+
+            dialog.show();
+            return;
+        }
+
         setContentView(R.layout.main);
 
         TextView OsVersionView = (TextView)findViewById(R.id.OsVersionValue);
@@ -186,6 +206,20 @@ public class ManagerActivity extends Activity
             }
         });
 
+        mPackageChangeReciever = new BroadcastReceiver() {
+
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Log.d("OpenCVManager/Reciever", "Bradcast message " + intent.getAction() + " reciever");
+                Log.d("OpenCVManager/Reciever", "Filling package list on broadcast message");
+                if (!bindService(new Intent("org.opencv.engine.BIND"), new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
+                {
+                    TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
+                    EngineVersionView.setText("not avaliable");
+                }
+            }
+        };
+
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_PACKAGE_ADDED);
         filter.addAction(Intent.ACTION_PACKAGE_CHANGED);
@@ -199,17 +233,23 @@ public class ManagerActivity extends Activity
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(mPackageChangeReciever);
+        if (mPackageChangeReciever != null)
+            unregisterReceiver(mPackageChangeReciever);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(TAG, "Filling package list on resume");
-        if (!bindService(new Intent("org.opencv.engine.BIND"), new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
-        {
-            TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
-            EngineVersionView.setText("not avaliable");
+        if (HardwareDetector.mIsReady) {
+            Log.d(TAG, "Filling package list on resume");
+            OpenCVEngineServiceConnection connection = new OpenCVEngineServiceConnection();
+            if (!bindService(new Intent("org.opencv.engine.BIND"), connection, Context.BIND_AUTO_CREATE)) {
+                Log.e(TAG, "Cannot bind to OpenCV Manager service!");
+                TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
+                if (EngineVersionView != null)
+                    EngineVersionView.setText("not avaliable");
+                unbindService(connection);
+            }
         }
     }
 
@@ -225,19 +265,7 @@ public class ManagerActivity extends Activity
     protected int ManagerApiLevel = 0;
     protected String ManagerVersion;
 
-    protected BroadcastReceiver mPackageChangeReciever = new BroadcastReceiver() {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Log.d("OpenCVManager/Reciever", "Bradcast message " + intent.getAction() + " reciever");
-            Log.d("OpenCVManager/Reciever", "Filling package list on broadcast message");
-            if (!bindService(new Intent("org.opencv.engine.BIND"), new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
-            {
-                TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
-                EngineVersionView.setText("not avaliable");
-            }
-        }
-    };
+    protected BroadcastReceiver mPackageChangeReciever = null;
 
     protected class OpenCVEngineServiceConnection implements ServiceConnection
     {
@@ -246,6 +274,12 @@ public class ManagerActivity extends Activity
 
         public void onServiceConnected(ComponentName name, IBinder service) {
             OpenCVEngineInterface EngineService = OpenCVEngineInterface.Stub.asInterface(service);
+            if (EngineService == null) {
+                Log.e(TAG, "Cannot connect to OpenCV Manager Service!");
+                unbindService(this);
+                return;
+            }
+
             try {
                 ManagerApiLevel = EngineService.getEngineVersion();
             } catch (RemoteException e) {

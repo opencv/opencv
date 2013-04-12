@@ -91,9 +91,6 @@ namespace cv
         extern const char *arithm_bitwise_xor_scalar_mask;
         extern const char *arithm_compare_eq;
         extern const char *arithm_compare_ne;
-        extern const char *arithm_sub;
-        extern const char *arithm_sub_scalar;
-        extern const char *arithm_sub_scalar_mask;
         extern const char *arithm_mul;
         extern const char *arithm_div;
         extern const char *arithm_absdiff;
@@ -260,11 +257,11 @@ void cv::ocl::add(const oclMat &src1, const oclMat &src2, oclMat &dst, const ocl
 
 void cv::ocl::subtract(const oclMat &src1, const oclMat &src2, oclMat &dst)
 {
-    arithmetic_run(src1, src2, dst, "arithm_sub", &arithm_sub);
+    arithmetic_run(src1, src2, dst, "arithm_add", &arithm_add);
 }
 void cv::ocl::subtract(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
 {
-    arithmetic_run(src1, src2, dst, mask, "arithm_sub_with_mask", &arithm_sub);
+    arithmetic_run(src1, src2, dst, mask, "arithm_add_with_mask", &arithm_add);
 }
 typedef void (*MulDivFunc)(const oclMat &src1, const oclMat &src2, oclMat &dst, String kernelName,
                            const char **kernelString, void *scalar);
@@ -451,14 +448,16 @@ void cv::ocl::add(const oclMat &src1, const Scalar &src2, oclMat &dst, const ocl
 
 void cv::ocl::subtract(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask)
 {
-    String kernelName = mask.data ? "arithm_s_sub_with_mask" : "arithm_s_sub";
-    const char **kernelString = mask.data ? &arithm_sub_scalar_mask : &arithm_sub_scalar;
+    String kernelName = mask.data ? "arithm_s_add_with_mask" : "arithm_s_add";
+    const char **kernelString = mask.data ? &arithm_add_scalar_mask : &arithm_add_scalar;
+
     arithmetic_scalar( src1, src2, dst, mask, kernelName, kernelString, 1);
 }
 void cv::ocl::subtract(const Scalar &src2, const oclMat &src1, oclMat &dst, const oclMat &mask)
 {
-    String kernelName = mask.data ? "arithm_s_sub_with_mask" : "arithm_s_sub";
-    const char **kernelString = mask.data ? &arithm_sub_scalar_mask : &arithm_sub_scalar;
+    String kernelName = mask.data ? "arithm_s_add_with_mask" : "arithm_s_add";
+    const char **kernelString = mask.data ? &arithm_add_scalar_mask : &arithm_add_scalar;
+
     arithmetic_scalar( src1, src2, dst, mask, kernelName, kernelString, -1);
 }
 void cv::ocl::divide(double scalar, const oclMat &src,  oclMat &dst)

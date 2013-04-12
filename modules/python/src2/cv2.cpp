@@ -396,7 +396,7 @@ static PyObject* pyopencv_from(const Mat& m)
     if(!p->refcount || p->allocator != &g_numpyAllocator)
     {
         temp.allocator = &g_numpyAllocator;
-        m.copyTo(temp);
+        ERRWRAP2(m.copyTo(temp));
         p = &temp;
     }
     p->addref();

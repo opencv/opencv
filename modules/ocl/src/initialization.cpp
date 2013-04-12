@@ -394,6 +394,15 @@ namespace cv
 
                 }
                 break;
+            case IS_CPU_DEVICE:
+                {
+                    cl_device_type devicetype;
+                    openCLSafeCall(clGetDeviceInfo(impl->devices[impl->devnum],
+                                    CL_DEVICE_TYPE, sizeof(cl_device_type),
+                                    &devicetype, NULL));
+                    *(bool*)info = (devicetype == CVCL_DEVICE_TYPE_CPU);
+                }
+                break;
             default:
                 CV_Error(-1, "Invalid device info type");
                 break;

@@ -127,8 +127,9 @@ namespace cv
         // currently only support wavefront size queries
         enum DEVICE_INFO
         {
-             WAVEFRONT_SIZE,            //in AMD speak
-             WARP_SIZE = WAVEFRONT_SIZE //in nvidia speak
+            WAVEFRONT_SIZE,             //in AMD speak
+            WARP_SIZE = WAVEFRONT_SIZE, //in nvidia speak
+            IS_CPU_DEVICE               //check if the device is CPU
         };
         //info should have been pre-allocated
         void CV_EXPORTS queryDeviceInfo(DEVICE_INFO info_type, void* info);

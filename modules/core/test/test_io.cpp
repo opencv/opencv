@@ -455,7 +455,7 @@ protected:
 TEST(Core_InputOutput, huge) { CV_BigMatrixIOTest test; test.safe_run(); }
 */
 
-TEST(Core_globbing, accurasy)
+TEST(Core_globbing, accuracy)
 {
     std::string patternLena    = cvtest::TS::ptr()->get_data_path() + "lena*.*";
     std::string patternLenaPng = cvtest::TS::ptr()->get_data_path() + "lena.png";
