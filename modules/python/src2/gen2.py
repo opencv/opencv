@@ -53,14 +53,14 @@ static void pyopencv_${name}_dealloc(PyObject* self)
     PyObject_Del(self);
 }
 
-static PyObject* pyopencv_from(const ${cname}& r)
+template<> PyObject* pyopencv_from(const ${cname}& r)
 {
     pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
     m->v = r;
     return (PyObject*)m;
 }
 
-static bool pyopencv_to(PyObject* src, ${cname}& dst, const char* name="<unknown>")
+template<> bool pyopencv_to(PyObject* src, ${cname}& dst, const char* name)
 {
     if( src == NULL || src == Py_None )
         return true;
@@ -96,7 +96,7 @@ static void pyopencv_${name}_dealloc(PyObject* self)
     PyObject_Del(self);
 }
 
-static PyObject* pyopencv_from(const Ptr<${cname}>& r)
+template<> PyObject* pyopencv_from(const Ptr<${cname}>& r)
 {
     pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
     new (&(m->v)) Ptr<$cname1>(); // init Ptr with placement new
@@ -104,7 +104,7 @@ static PyObject* pyopencv_from(const Ptr<${cname}>& r)
     return (PyObject*)m;
 }
 
-static bool pyopencv_to(PyObject* src, Ptr<${cname}>& dst, const char* name="<unknown>")
+template<> bool pyopencv_to(PyObject* src, Ptr<${cname}>& dst, const char* name)
 {
     if( src == NULL || src == Py_None )
         return true;
@@ -120,7 +120,7 @@ static bool pyopencv_to(PyObject* src, Ptr<${cname}>& dst, const char* name="<un
 """)
 
 gen_template_map_type_cvt = Template("""
-static bool pyopencv_to(PyObject* src, ${cname}& dst, const char* name="<unknown>");
+template<> bool pyopencv_to(PyObject* src, ${cname}& dst, const char* name);
 """)
 
 gen_template_set_prop_from_map = Template("""
