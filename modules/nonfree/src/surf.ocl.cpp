@@ -77,7 +77,7 @@ namespace cv
 
                 size_t wave_size = 0;
                 queryDeviceInfo(WAVEFRONT_SIZE, &wave_size);
-                std::sprintf(pSURF_OPTIONS, " -D WAVE_SIZE=%d", static_cast<int>(wave_size));
+                std::sprintf(pSURF_OPTIONS, "-D WAVE_SIZE=%d", static_cast<int>(wave_size));
                 OPTION_INIT = true;
             }
             openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth, SURF_OPTIONS);
