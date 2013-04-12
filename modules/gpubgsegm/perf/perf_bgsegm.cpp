@@ -73,7 +73,7 @@ namespace cv
 
 DEF_PARAM_TEST_1(Video, string);
 
-PERF_TEST_P(Video, Video_FGDStatModel,
+PERF_TEST_P(Video, FGDStatModel,
             Values(string("gpu/video/768x576.avi")))
 {
     declare.time(60);
@@ -146,7 +146,7 @@ PERF_TEST_P(Video, Video_FGDStatModel,
 
 DEF_PARAM_TEST(Video_Cn_LearningRate, string, MatCn, double);
 
-PERF_TEST_P(Video_Cn_LearningRate, Video_MOG,
+PERF_TEST_P(Video_Cn_LearningRate, MOG,
             Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
                     GPU_CHANNELS_1_3_4,
                     Values(0.0, 0.01)))
@@ -245,7 +245,7 @@ PERF_TEST_P(Video_Cn_LearningRate, Video_MOG,
 
 DEF_PARAM_TEST(Video_Cn, string, int);
 
-PERF_TEST_P(Video_Cn, Video_MOG2,
+PERF_TEST_P(Video_Cn, MOG2,
             Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
                     GPU_CHANNELS_1_3_4))
 {
@@ -344,7 +344,7 @@ PERF_TEST_P(Video_Cn, Video_MOG2,
 
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
-PERF_TEST_P(Video_Cn, Video_MOG2GetBackgroundImage,
+PERF_TEST_P(Video_Cn, MOG2GetBackgroundImage,
             Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
                     GPU_CHANNELS_1_3_4))
 {
@@ -428,7 +428,7 @@ PERF_TEST_P(Video_Cn, Video_MOG2GetBackgroundImage,
 
 DEF_PARAM_TEST(Video_Cn_MaxFeatures, string, MatCn, int);
 
-PERF_TEST_P(Video_Cn_MaxFeatures, Video_GMG,
+PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
             Combine(Values(string("gpu/video/768x576.avi")),
                     GPU_CHANNELS_1_3_4,
                     Values(20, 40, 60)))

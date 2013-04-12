@@ -46,23 +46,15 @@
 #include <limits>
 
 #include "opencv2/gpubgsegm.hpp"
-
 #include "opencv2/gpuarithm.hpp"
 #include "opencv2/gpufilters.hpp"
 #include "opencv2/gpuimgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/video.hpp"
 
 #include "opencv2/core/gpu_private.hpp"
 
-#include "opencv2/opencv_modules.hpp"
-
-#ifdef HAVE_OPENCV_GPULEGACY
-#  include "opencv2/gpulegacy/private.hpp"
-#endif
-
 #ifdef HAVE_CUDA
-#  include "cuda/fgd_bgfg_common.hpp"
+#  include "cuda/fgd.hpp"
 #endif
 
 #endif /* __OPENCV_PRECOMP_H__ */

@@ -44,4 +44,4 @@
 
 using namespace perf;
 
-CV_PERF_TEST_MAIN(gpuarithm, printCudaInfo())
+CV_PERF_TEST_MAIN(gpubgsegm, printCudaInfo())

@@ -142,7 +142,7 @@ GPU_TEST_P(FGDStatModel, Update)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Video, FGDStatModel, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_BgSegm, FGDStatModel, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi")),
     testing::Values(Channels(3), Channels(4))));
@@ -218,7 +218,7 @@ GPU_TEST_P(MOG, Update)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Video, MOG, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_BgSegm, MOG, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi")),
     testing::Values(UseGray(true), UseGray(false)),
@@ -338,7 +338,7 @@ GPU_TEST_P(MOG2, getBackgroundImage)
     ASSERT_MAT_NEAR(background_gold, background, 0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Video, MOG2, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_BgSegm, MOG2, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi")),
     testing::Values(UseGray(true), UseGray(false)),
@@ -394,7 +394,7 @@ GPU_TEST_P(GMG, Accuracy)
     ASSERT_MAT_NEAR(fullfg, d_fgmask, 0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Video, GMG, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_BgSegm, GMG, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8U), MatType(CV_16U), MatType(CV_32F)),

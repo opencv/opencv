@@ -57,7 +57,6 @@
 #include "opencv2/ts/gpu_test.hpp"
 
 #include "opencv2/gpubgsegm.hpp"
-
 #include "opencv2/video.hpp"
 #include "opencv2/legacy.hpp"
 
