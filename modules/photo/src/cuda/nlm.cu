@@ -40,8 +40,6 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
-
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/vec_traits.hpp"
 #include "opencv2/core/cuda/vec_math.hpp"
@@ -564,6 +562,3 @@ namespace cv { namespace gpu { namespace cudev
         }
     }
 }}}
-
-
-#endif /* CUDA_DISABLER */

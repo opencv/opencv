@@ -45,6 +45,10 @@
 #include "opencv2/photo/gpu.hpp"
 #include "opencv2/ts/gpu_perf.hpp"
 
+#include "opencv2/opencv_modules.hpp"
+
+#if defined (HAVE_CUDA) && defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUIMGPROC)
+
 using namespace std;
 using namespace testing;
 using namespace perf;
@@ -56,7 +60,7 @@ using namespace perf;
 
 DEF_PARAM_TEST(Sz_Depth_Cn_WinSz_BlockSz, cv::Size, MatDepth, MatCn, int, int);
 
-PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_NonLocalMeans,
+PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, GPU_NonLocalMeans,
             Combine(GPU_DENOISING_IMAGE_SIZES,
                     Values<MatDepth>(CV_8U),
                     GPU_CHANNELS_1_3,
@@ -100,7 +104,7 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_NonLocalMeans,
 
 DEF_PARAM_TEST(Sz_Depth_Cn_WinSz_BlockSz, cv::Size, MatDepth, MatCn, int, int);
 
-PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_FastNonLocalMeans,
+PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, GPU_FastNonLocalMeans,
             Combine(GPU_DENOISING_IMAGE_SIZES,
                     Values<MatDepth>(CV_8U),
                     GPU_CHANNELS_1_3,
@@ -146,7 +150,7 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_FastNonLocalMeans,
 
 DEF_PARAM_TEST(Sz_Depth_WinSz_BlockSz, cv::Size, MatDepth, int, int);
 
-PERF_TEST_P(Sz_Depth_WinSz_BlockSz, Denoising_FastNonLocalMeansColored,
+PERF_TEST_P(Sz_Depth_WinSz_BlockSz, GPU_FastNonLocalMeansColored,
             Combine(GPU_DENOISING_IMAGE_SIZES,
                     Values<MatDepth>(CV_8U),
                     Values(21),
@@ -185,3 +189,5 @@ PERF_TEST_P(Sz_Depth_WinSz_BlockSz, Denoising_FastNonLocalMeansColored,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+#endif

@@ -44,13 +44,21 @@
 
 #include "opencv2/photo/gpu.hpp"
 #include "opencv2/core/gpu_private.hpp"
-#include "opencv2/gpuarithm.hpp"
-#include "opencv2/gpuimgproc.hpp"
+
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_GPUARITHM
+#  include "opencv2/gpuarithm.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_GPUIMGPROC
+#  include "opencv2/gpuimgproc.hpp"
+#endif
 
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
+#if !defined (HAVE_CUDA) || !defined(HAVE_OPENCV_GPUARITHM) || !defined(HAVE_OPENCV_GPUIMGPROC)
 
 void cv::gpu::nonLocalMeans(const GpuMat&, GpuMat&, float, int, int, int, Stream&) { throw_no_cuda(); }
 void cv::gpu::FastNonLocalMeansDenoising::simpleMethod(const GpuMat&, GpuMat&, float, int, int, Stream&) { throw_no_cuda(); }
@@ -146,7 +154,6 @@ void cv::gpu::FastNonLocalMeansDenoising::labMethod( const GpuMat& src, GpuMat& 
     cudev::imgproc::fnlm_merge_channels(l, ab, lab, StreamAccessor::getStream(s));
     cv::gpu::cvtColor(lab, dst, COLOR_Lab2BGR, 0, s);
 }
-
 
 #endif
 

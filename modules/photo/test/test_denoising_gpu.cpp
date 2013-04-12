@@ -45,18 +45,20 @@
 #include "opencv2/photo/gpu.hpp"
 #include "opencv2/ts/gpu_test.hpp"
 
-#ifdef HAVE_CUDA
+#include "opencv2/opencv_modules.hpp"
+
+#if defined (HAVE_CUDA) && defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUIMGPROC)
 
 using namespace cvtest;
 
 ////////////////////////////////////////////////////////
 // Brute Force Non local means
 
-TEST(BruteForceNonLocalMeans, Regression)
+TEST(GPU_BruteForceNonLocalMeans, Regression)
 {
     using cv::gpu::GpuMat;
 
-    cv::Mat bgr  = readImage("denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);
+    cv::Mat bgr  = readImage("../gpu/denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);
     ASSERT_FALSE(bgr.empty());
 
     cv::Mat gray;
@@ -67,12 +69,12 @@ TEST(BruteForceNonLocalMeans, Regression)
     cv::gpu::nonLocalMeans(GpuMat(gray), dgray, 20);
 
 #if 0
-    dumpImage("denoising/nlm_denoised_lena_bgr.png", cv::Mat(dbgr));
-    dumpImage("denoising/nlm_denoised_lena_gray.png", cv::Mat(dgray));
+    dumpImage("../gpu/denoising/nlm_denoised_lena_bgr.png", cv::Mat(dbgr));
+    dumpImage("../gpu/denoising/nlm_denoised_lena_gray.png", cv::Mat(dgray));
 #endif
 
-    cv::Mat bgr_gold  = readImage("denoising/nlm_denoised_lena_bgr.png", cv::IMREAD_COLOR);
-    cv::Mat gray_gold  = readImage("denoising/nlm_denoised_lena_gray.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat bgr_gold  = readImage("../gpu/denoising/nlm_denoised_lena_bgr.png", cv::IMREAD_COLOR);
+    cv::Mat gray_gold  = readImage("../gpu/denoising/nlm_denoised_lena_gray.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(bgr_gold.empty() || gray_gold.empty());
 
     EXPECT_MAT_NEAR(bgr_gold, dbgr, 1e-4);
@@ -82,11 +84,11 @@ TEST(BruteForceNonLocalMeans, Regression)
 ////////////////////////////////////////////////////////
 // Fast Force Non local means
 
-TEST(FastNonLocalMeans, Regression)
+TEST(GPU_FastNonLocalMeans, Regression)
 {
     using cv::gpu::GpuMat;
 
-    cv::Mat bgr  = readImage("denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);
+    cv::Mat bgr  = readImage("../gpu/denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);
     ASSERT_FALSE(bgr.empty());
 
     cv::Mat gray;
@@ -99,12 +101,12 @@ TEST(FastNonLocalMeans, Regression)
     fnlmd.labMethod(GpuMat(bgr),  dbgr, 20, 10);
 
 #if 0
-    dumpImage("denoising/fnlm_denoised_lena_bgr.png", cv::Mat(dbgr));
-    dumpImage("denoising/fnlm_denoised_lena_gray.png", cv::Mat(dgray));
+    dumpImage("../gpu/denoising/fnlm_denoised_lena_bgr.png", cv::Mat(dbgr));
+    dumpImage("../gpu/denoising/fnlm_denoised_lena_gray.png", cv::Mat(dgray));
 #endif
 
-    cv::Mat bgr_gold  = readImage("denoising/fnlm_denoised_lena_bgr.png", cv::IMREAD_COLOR);
-    cv::Mat gray_gold  = readImage("denoising/fnlm_denoised_lena_gray.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat bgr_gold  = readImage("../gpu/denoising/fnlm_denoised_lena_bgr.png", cv::IMREAD_COLOR);
+    cv::Mat gray_gold  = readImage("../gpu/denoising/fnlm_denoised_lena_gray.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(bgr_gold.empty() || gray_gold.empty());
 
     EXPECT_MAT_NEAR(bgr_gold, dbgr, 1);
