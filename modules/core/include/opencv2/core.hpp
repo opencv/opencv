@@ -109,6 +109,52 @@ public:
 CV_EXPORTS void error( const Exception& exc );
 
 
+enum { SORT_EVERY_ROW    = 0,
+       SORT_EVERY_COLUMN = 1,
+       SORT_ASCENDING    = 0,
+       SORT_DESCENDING   = 16
+     };
+
+enum { COVAR_SCRAMBLED = 0,
+       COVAR_NORMAL    = 1,
+       COVAR_USE_AVG   = 2,
+       COVAR_SCALE     = 4,
+       COVAR_ROWS      = 8,
+       COVAR_COLS      = 16
+     };
+
+/*!
+ k-Means flags
+*/
+enum { KMEANS_RANDOM_CENTERS     = 0, // Chooses random centers for k-Means initialization
+       KMEANS_PP_CENTERS         = 2, // Uses k-Means++ algorithm for initialization
+       KMEANS_USE_INITIAL_LABELS = 1  // Uses the user-provided labels for K-Means initialization
+     };
+
+enum { FILLED  = -1,
+       LINE_4  = 4,
+       LINE_8  = 8,
+       LINE_AA = 16
+     };
+
+enum { FONT_HERSHEY_SIMPLEX        = 0,
+       FONT_HERSHEY_PLAIN          = 1,
+       FONT_HERSHEY_DUPLEX         = 2,
+       FONT_HERSHEY_COMPLEX        = 3,
+       FONT_HERSHEY_TRIPLEX        = 4,
+       FONT_HERSHEY_COMPLEX_SMALL  = 5,
+       FONT_HERSHEY_SCRIPT_SIMPLEX = 6,
+       FONT_HERSHEY_SCRIPT_COMPLEX = 7,
+       FONT_ITALIC                 = 16
+     };
+
+enum { REDUCE_SUM = 0,
+       REDUCE_AVG = 1,
+       REDUCE_MAX = 2,
+       REDUCE_MIN = 3
+     };
+
+
 //! swaps two matrices
 CV_EXPORTS void swap(Mat& a, Mat& b);
 
@@ -371,14 +417,6 @@ CV_EXPORTS_W double invert(InputArray src, OutputArray dst, int flags = DECOMP_L
 CV_EXPORTS_W bool solve(InputArray src1, InputArray src2,
                         OutputArray dst, int flags = DECOMP_LU);
 
-enum
-{
-    SORT_EVERY_ROW    = 0,
-    SORT_EVERY_COLUMN = 1,
-    SORT_ASCENDING    = 0,
-    SORT_DESCENDING   = 16
-};
-
 //! sorts independently each matrix row or each matrix column
 CV_EXPORTS_W void sort(InputArray src, OutputArray dst, int flags);
 
@@ -394,16 +432,6 @@ CV_EXPORTS_W double solvePoly(InputArray coeffs, OutputArray roots, int maxIters
 //! finds eigenvalues and eigenvectors of a symmetric matrix
 CV_EXPORTS_W bool eigen(InputArray src, OutputArray eigenvalues,
                         OutputArray eigenvectors = noArray());
-
-enum
-{
-    COVAR_SCRAMBLED = 0,
-    COVAR_NORMAL    = 1,
-    COVAR_USE_AVG   = 2,
-    COVAR_SCALE     = 4,
-    COVAR_ROWS      = 8,
-    COVAR_COLS      = 16
-};
 
 //! computes covariation matrix of a set of samples
 CV_EXPORTS void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, Mat& mean,
@@ -454,16 +482,6 @@ CV_EXPORTS_W void mulSpectrums(InputArray a, InputArray b, OutputArray c,
 //! computes the minimal vector size vecsize1 >= vecsize so that the dft() of the vector of length vecsize1 can be computed efficiently
 CV_EXPORTS_W int getOptimalDFTSize(int vecsize);
 
-/*!
- k-Means flags
-*/
-enum
-{
-    KMEANS_RANDOM_CENTERS     = 0, // Chooses random centers for k-Means initialization
-    KMEANS_PP_CENTERS         = 2, // Uses k-Means++ algorithm for initialization
-    KMEANS_USE_INITIAL_LABELS = 1  // Uses the user-provided labels for K-Means initialization
-};
-
 //! clusters the input data using k-Means algorithm
 CV_EXPORTS_W double kmeans( InputArray data, int K, InputOutputArray bestLabels,
                             TermCriteria criteria, int attempts,
@@ -480,12 +498,6 @@ CV_EXPORTS_W void randn(InputOutputArray dst, InputArray mean, InputArray stddev
 
 //! shuffles the input array elements
 CV_EXPORTS_W void randShuffle(InputOutputArray dst, double iterFactor = 1., RNG* rng = 0);
-
-enum { FILLED  = -1,
-       LINE_4  = 4,
-       LINE_8  = 8,
-       LINE_AA = 16
-     };
 
 //! draws the line segment (pt1, pt2) in the image
 CV_EXPORTS_W void line(CV_IN_OUT Mat& img, Point pt1, Point pt2, const Scalar& color,
@@ -561,19 +573,6 @@ CV_EXPORTS_W bool clipLine(Rect imgRect, CV_OUT CV_IN_OUT Point& pt1, CV_OUT CV_
 CV_EXPORTS_W void ellipse2Poly( Point center, Size axes, int angle,
                                 int arcStart, int arcEnd, int delta,
                                 CV_OUT std::vector<Point>& pts );
-
-enum
-{
-    FONT_HERSHEY_SIMPLEX        = 0,
-    FONT_HERSHEY_PLAIN          = 1,
-    FONT_HERSHEY_DUPLEX         = 2,
-    FONT_HERSHEY_COMPLEX        = 3,
-    FONT_HERSHEY_TRIPLEX        = 4,
-    FONT_HERSHEY_COMPLEX_SMALL  = 5,
-    FONT_HERSHEY_SCRIPT_SIMPLEX = 6,
-    FONT_HERSHEY_SCRIPT_COMPLEX = 7,
-    FONT_ITALIC                 = 16
-};
 
 //! renders text string in the image
 CV_EXPORTS_W void putText( Mat& img, const String& text, Point org,
@@ -694,7 +693,10 @@ public:
 class CV_EXPORTS SVD
 {
 public:
-    enum { MODIFY_A = 1, NO_UV = 2, FULL_UV = 4 };
+    enum { MODIFY_A = 1,
+           NO_UV    = 2,
+           FULL_UV  = 4
+         };
 
     //! the default constructor
     SVD();
@@ -861,7 +863,9 @@ public:
 class CV_EXPORTS RNG
 {
 public:
-    enum { UNIFORM = 0, NORMAL = 1 };
+    enum { UNIFORM = 0,
+           NORMAL  = 1
+         };
 
     RNG();
     RNG(uint64 state);
