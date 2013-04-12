@@ -887,7 +887,7 @@ namespace cv
 
             oclMat dx, dy;
             oclMat dx_buf, dy_buf;
-            oclMat edgeBuf;
+            oclMat magBuf, mapBuf;
             oclMat trackBuf1, trackBuf2;
             void *counter;
             Ptr<FilterEngine_GPU> filterDX, filterDY;
