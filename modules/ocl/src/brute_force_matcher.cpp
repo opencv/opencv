@@ -547,8 +547,8 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchSingle(const oclMat &query, const
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
     CV_Assert(train.cols == query.cols && train.type() == query.type());
 
-    trainIdx.create(1, query.rows, CV_32S);
-    distance.create(1, query.rows, CV_32F);
+    ensureSizeIsEnough(1, query.rows, CV_32S, trainIdx);
+    ensureSizeIsEnough(1, query.rows, CV_32F, distance);
 
     matchDispatcher(query, train, mask, trainIdx, distance, distType);
 exit:
@@ -667,10 +667,11 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchCollection(const oclMat &query, c
     }
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
+	const int nQuery = query.rows;
 
-    trainIdx.create(1, query.rows, CV_32S);
-    imgIdx.create(1, query.rows, CV_32S);
-    distance.create(1, query.rows, CV_32F);
+    ensureSizeIsEnough(1, nQuery, CV_32S, trainIdx);
+    ensureSizeIsEnough(1, nQuery, CV_32S, imgIdx);
+    ensureSizeIsEnough(1, nQuery, CV_32F, distance);
 
     matchDispatcher(query, (const oclMat *)trainCollection.ptr(), trainCollection.cols, masks, trainIdx, imgIdx, distance, distType);
 exit:
@@ -759,16 +760,18 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatchSingle(const oclMat &query, co
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
     CV_Assert(train.type() == query.type() && train.cols == query.cols);
 
+    const int nQuery = query.rows;
+    const int nTrain = train.rows;
     if (k == 2)
     {
-        trainIdx.create(1, query.rows, CV_32SC2);
-        distance.create(1, query.rows, CV_32FC2);
+        ensureSizeIsEnough(1, nQuery, CV_32SC2, trainIdx);
+        ensureSizeIsEnough(1, nQuery, CV_32FC2, distance);
     }
     else
     {
-        trainIdx.create(query.rows, k, CV_32S);
-        distance.create(query.rows, k, CV_32F);
-        allDist.create(query.rows, train.rows, CV_32FC1);
+        ensureSizeIsEnough(nQuery, k, CV_32S, trainIdx);
+        ensureSizeIsEnough(nQuery, k, CV_32F, distance);
+        ensureSizeIsEnough(nQuery, nTrain, CV_32FC1, allDist);
     }
 
     trainIdx.setTo(Scalar::all(-1));
@@ -873,9 +876,9 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch2Collection(const oclMat &quer
 
     const int nQuery = query.rows;
 
-    trainIdx.create(1, nQuery, CV_32SC2);
-    imgIdx.create(1, nQuery, CV_32SC2);
-    distance.create(1, nQuery, CV_32SC2);
+    ensureSizeIsEnough(1, nQuery, CV_32SC2, trainIdx);
+    ensureSizeIsEnough(1, nQuery, CV_32SC2, imgIdx);
+    ensureSizeIsEnough(1, nQuery, CV_32FC2, distance);
 
     trainIdx.setTo(Scalar::all(-1));
 
@@ -1031,15 +1034,17 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchSingle(const oclMat &query,
         CV_ERROR(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
     }
 
+    const int nQuery = query.rows;
+    const int nTrain = train.rows;
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
     CV_Assert(train.type() == query.type() && train.cols == query.cols);
     CV_Assert(trainIdx.empty() || (trainIdx.rows == query.rows && trainIdx.size() == distance.size()));
 
-    nMatches.create(1, query.rows, CV_32SC1);
+    ensureSizeIsEnough(1, nQuery, CV_32SC1, nMatches);
     if (trainIdx.empty())
     {
-        trainIdx.create(query.rows, std::max((train.rows/ 100), 10), CV_32SC1);
-        distance.create(query.rows, std::max((train.rows/ 100), 10), CV_32FC1);
+        ensureSizeIsEnough(nQuery, std::max((nTrain / 100), 10), CV_32SC1, trainIdx);
+        ensureSizeIsEnough(nQuery, std::max((nTrain / 100), 10), CV_32FC1, distance);
     }
 
     nMatches.setTo(Scalar::all(0));
