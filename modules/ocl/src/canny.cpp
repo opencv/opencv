@@ -112,7 +112,11 @@ void cv::ocl::CannyBuf::release()
     mapBuf.release();
     trackBuf1.release();
     trackBuf2.release();
-    openCLFree(counter);
+    if(counter)
+    {
+        openCLFree(counter);
+        counter = NULL;
+    }
 }
 
 namespace cv
