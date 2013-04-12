@@ -66,37 +66,30 @@ int bit1Count(float x)
     return (float)c;
 }
 
+#ifndef distType
+#define distType 0
+#endif
+
+#if   (distType == 0)
+#define DIST(x, y) fabs((x) - (y))
+#elif (distType == 1)
+#define DIST(x, y) (((x) - (y)) * ((x) - (y)))
+#elif (distType == 2)
+#define DIST(x, y) bit1Count((uint)(x) ^ (uint)(y))
+#endif 
+
+
 float reduce_block(__local float *s_query,
                    __local float *s_train,
                    int lidx,
-                   int lidy,
-                   int distType
+                   int lidy
                   )
 {
-    /* there are threee types in the reducer. the first is L1Dist, which to sum the abs(v1, v2), the second is L2Dist, which to
-    sum the (v1 - v2) * (v1 - v2), the third is humming, which to popc(v1 ^ v2), popc is to count the bits are set to 1*/
     float result = 0;
-    switch(distType)
+    #pragma unroll
+    for (int j = 0 ; j < block_size ; j++)
     {
-    case 0:
-        for (int j = 0 ; j < block_size ; j++)
-        {
-            result += fabs(s_query[lidy * block_size + j] -  s_train[j * block_size + lidx]);
-        }
-        break;
-    case 1:
-        for (int j = 0 ; j < block_size ; j++)
-        {
-            float qr = s_query[lidy * block_size + j] -  s_train[j * block_size + lidx];
-            result += qr * qr;
-        }
-        break;
-    case 2:
-        for (int j = 0 ; j < block_size ; j++)
-        {
-            result += bit1Count((uint)s_query[lidy * block_size + j] ^ (uint)s_train[(uint)j * block_size + lidx]);
-        }
-        break;
+        result += DIST(s_query[lidy * block_size + j], s_train[j * block_size + lidx]);
     }
     return result;
 }
@@ -105,35 +98,14 @@ float reduce_multi_block(__local float *s_query,
                          __local float *s_train,
                          int block_index,
                          int lidx,
-                         int lidy,
-                         int distType
+                         int lidy
                         )
 {
-    /* there are threee types in the reducer. the first is L1Dist, which to sum the abs(v1, v2), the second is L2Dist, which to
-    sum the (v1 - v2) * (v1 - v2), the third is humming, which to popc(v1 ^ v2), popc is to count the bits are set to 1*/
     float result = 0;
-    switch(distType)
+    #pragma unroll
+    for (int j = 0 ; j < block_size ; j++)
     {
-    case 0:
-        for (int j = 0 ; j < block_size ; j++)
-        {
-            result += fabs(s_query[lidy * max_desc_len + block_index * block_size + j] -  s_train[j * block_size + lidx]);
-        }
-        break;
-    case 1:
-        for (int j = 0 ; j < block_size ; j++)
-        {
-            float qr = s_query[lidy * max_desc_len + block_index * block_size + j] -  s_train[j * block_size + lidx];
-            result += qr * qr;
-        }
-        break;
-    case 2:
-        for (int j = 0 ; j < block_size ; j++)
-        {
-            //result += popcount((uint)s_query[lidy * max_desc_len + block_index * block_size + j] ^ (uint)s_train[j * block_size + lidx]);
-            result += bit1Count((uint)s_query[lidy * max_desc_len + block_index * block_size + j] ^ (uint)s_train[j * block_size + lidx]);
-        }
-        break;
+        result += DIST(s_query[lidy * max_desc_len + block_index * block_size + j], s_train[j * block_size + lidx]);
     }
     return result;
 }
@@ -152,8 +124,7 @@ __kernel void BruteForceMatch_UnrollMatch_D5(
     int query_cols,
     int train_rows,
     int train_cols,
-    int step,
-    int distType
+    int step
 )
 {
 
@@ -191,7 +162,7 @@ __kernel void BruteForceMatch_UnrollMatch_D5(
             //synchronize to make sure each elem for reduceIteration in share memory is written already.
             barrier(CLK_LOCAL_MEM_FENCE);
 
-            result += reduce_multi_block(s_query, s_train, i, lidx, lidy, distType);
+            result += reduce_multi_block(s_query, s_train, i, lidx, lidy);
 
             barrier(CLK_LOCAL_MEM_FENCE);
         }
@@ -247,8 +218,7 @@ __kernel void BruteForceMatch_Match_D5(
     int query_cols,
     int train_rows,
     int train_cols,
-    int step,
-    int distType
+    int step
 )
 {
     const int lidx = get_local_id(0);
@@ -283,7 +253,7 @@ __kernel void BruteForceMatch_Match_D5(
 
             barrier(CLK_LOCAL_MEM_FENCE);
 
-            result += reduce_block(s_query, s_train, lidx, lidy, distType);
+            result += reduce_block(s_query, s_train, lidx, lidy);
 
             barrier(CLK_LOCAL_MEM_FENCE);
         }
@@ -344,8 +314,7 @@ __kernel void BruteForceMatch_RadiusUnrollMatch_D5(
     int train_cols,
     int bestTrainIdx_cols,
     int step,
-    int ostep,
-    int distType
+    int ostep
 )
 {
     const int lidx = get_local_id(0);
@@ -371,7 +340,7 @@ __kernel void BruteForceMatch_RadiusUnrollMatch_D5(
         //synchronize to make sure each elem for reduceIteration in share memory is written already.
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        result += reduce_block(s_query, s_train, lidx, lidy, distType);
+        result += reduce_block(s_query, s_train, lidx, lidy);
 
         barrier(CLK_LOCAL_MEM_FENCE);
     }
@@ -405,8 +374,7 @@ __kernel void BruteForceMatch_RadiusMatch_D5(
     int train_cols,
     int bestTrainIdx_cols,
     int step,
-    int ostep,
-    int distType
+    int ostep
 )
 {
     const int lidx = get_local_id(0);
@@ -432,7 +400,7 @@ __kernel void BruteForceMatch_RadiusMatch_D5(
         //synchronize to make sure each elem for reduceIteration in share memory is written already.
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        result += reduce_block(s_query, s_train, lidx, lidy, distType);
+        result += reduce_block(s_query, s_train, lidx, lidy);
 
         barrier(CLK_LOCAL_MEM_FENCE);
     }
@@ -462,8 +430,7 @@ __kernel void BruteForceMatch_knnUnrollMatch_D5(
     int query_cols,
     int train_rows,
     int train_cols,
-    int step,
-    int distType
+    int step
 )
 {
     const int lidx = get_local_id(0);
@@ -501,7 +468,7 @@ __kernel void BruteForceMatch_knnUnrollMatch_D5(
             //synchronize to make sure each elem for reduceIteration in share memory is written already.
             barrier(CLK_LOCAL_MEM_FENCE);
 
-            result += reduce_multi_block(s_query, s_train, i, lidx, lidy, distType);
+            result += reduce_multi_block(s_query, s_train, i, lidx, lidy);
 
             barrier(CLK_LOCAL_MEM_FENCE);
         }
@@ -609,8 +576,7 @@ __kernel void BruteForceMatch_knnMatch_D5(
     int query_cols,
     int train_rows,
     int train_cols,
-    int step,
-    int distType
+    int step
 )
 {
     const int lidx = get_local_id(0);
@@ -645,7 +611,7 @@ __kernel void BruteForceMatch_knnMatch_D5(
 
             barrier(CLK_LOCAL_MEM_FENCE);
 
-            result += reduce_block(s_query, s_train, lidx, lidy, distType);
+            result += reduce_block(s_query, s_train, lidx, lidy);
 
             barrier(CLK_LOCAL_MEM_FENCE);
         }
@@ -752,8 +718,7 @@ kernel void BruteForceMatch_calcDistanceUnrolled_D5(
     int query_cols,
     int train_rows,
     int train_cols,
-    int step,
-    int distType)
+    int step)
 {
     /* Todo */
 }
@@ -768,8 +733,7 @@ kernel void BruteForceMatch_calcDistance_D5(
     int query_cols,
     int train_rows,
     int train_cols,
-    int step,
-    int distType)
+    int step)
 {
     /* Todo */
 }

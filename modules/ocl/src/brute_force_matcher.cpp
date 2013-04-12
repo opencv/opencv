@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Nathan, liujun@multicorewareinc.com
+//    Peng Xiao, pengxiao@outlook.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -61,6 +62,8 @@ namespace cv
     }
 }
 
+static const int OPT_SIZE = 100;
+
 template < int BLOCK_SIZE, int MAX_DESC_LEN/*, typename Mask*/ >
 void matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
                          const oclMat &trainIdx, const oclMat &distance, int distType)
@@ -74,9 +77,9 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat 
     int m_size = MAX_DESC_LEN;
     vector< pair<size_t, const void *> > args;
 
-    static const int OPT_SIZE = 40;
     char opt [OPT_SIZE] = "";
-    sprintf(opt, "-D block_size=%d -D max_desc_len=%d", block_size, m_size);
+    sprintf(opt, "-D distType=%d -D block_size=%d -D max_desc_len=%d", distType, block_size, m_size);
+
     if(globalSize[0] != 0)
     {
         args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
@@ -90,7 +93,6 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat 
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_UnrollMatch";
 
@@ -116,9 +118,9 @@ void match(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
     int block_size = BLOCK_SIZE;
     vector< pair<size_t, const void *> > args;
 
-    static const int OPT_SIZE = 40;
     char opt [OPT_SIZE] = "";
-    sprintf(opt, "-D block_size=%d", block_size);
+    sprintf(opt, "-D distType=%d -D block_size=%d", distType, block_size);
+
     if(globalSize[0] != 0)
     {
         args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
@@ -132,7 +134,6 @@ void match(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_Match";
 
@@ -160,9 +161,9 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDist
     int m_size = MAX_DESC_LEN;
     vector< pair<size_t, const void *> > args;
 
-    static const int OPT_SIZE = 40;
     char opt [OPT_SIZE] = "";
-    sprintf(opt, "-D block_size=%d -D max_desc_len=%d", block_size, m_size);
+    sprintf(opt, "-D distType=%d -D block_size=%d -D max_desc_len=%d", distType, block_size, m_size);
+
     if(globalSize[0] != 0)
     {
         args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
@@ -180,7 +181,6 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDist
         args.push_back( make_pair( sizeof(cl_int), (void *)&trainIdx.cols ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&trainIdx.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_RadiusUnrollMatch";
 
@@ -201,9 +201,9 @@ void radius_match(const oclMat &query, const oclMat &train, float maxDistance, c
     int block_size = BLOCK_SIZE;
     vector< pair<size_t, const void *> > args;
 
-    static const int OPT_SIZE = 40;
     char opt [OPT_SIZE] = "";
-    sprintf(opt, "-D block_size=%d", block_size);
+    sprintf(opt, "-D distType=%d -D block_size=%d", distType, block_size);
+
     if(globalSize[0] != 0)
     {
         args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
@@ -221,7 +221,6 @@ void radius_match(const oclMat &query, const oclMat &train, float maxDistance, c
         args.push_back( make_pair( sizeof(cl_int), (void *)&trainIdx.cols ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&trainIdx.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_RadiusMatch";
 
@@ -300,9 +299,9 @@ void knn_matchUnrolledCached(const oclMat &query, const oclMat &train, const ocl
     int m_size = MAX_DESC_LEN;
     vector< pair<size_t, const void *> > args;
 
-    static const int OPT_SIZE = 40;
     char opt [OPT_SIZE] = "";
-    sprintf(opt, "-D block_size=%d -D max_desc_len=%d", block_size, m_size);
+    sprintf(opt, "-D distType=%d -D block_size=%d -D max_desc_len=%d", distType, block_size, m_size);
+
     if(globalSize[0] != 0)
     {
         args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
@@ -316,7 +315,6 @@ void knn_matchUnrolledCached(const oclMat &query, const oclMat &train, const ocl
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_knnUnrollMatch";
 
@@ -335,9 +333,9 @@ void knn_match(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
     int block_size = BLOCK_SIZE;
     vector< pair<size_t, const void *> > args;
 
-    static const int OPT_SIZE = 40;
     char opt [OPT_SIZE] = "";
-    sprintf(opt, "-D block_size=%d", block_size);
+    sprintf(opt, "-D distType=%d -D block_size=%d", distType, block_size);
+
     if(globalSize[0] != 0)
     {
         args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
@@ -351,7 +349,6 @@ void knn_match(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_knnMatch";
 
@@ -370,6 +367,8 @@ void calcDistanceUnrolled(const oclMat &query, const oclMat &train, const oclMat
     int m_size = MAX_DESC_LEN;
     vector< pair<size_t, const void *> > args;
 
+    char opt [OPT_SIZE] = "";
+    sprintf(opt, "-D distType=%d", distType);
     if(globalSize[0] != 0)
     {
         args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
@@ -384,11 +383,10 @@ void calcDistanceUnrolled(const oclMat &query, const oclMat &train, const oclMat
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_calcDistanceUnrolled";
 
-        openCLExecuteKernel(ctx, &brute_force_match, kernelName, globalSize, localSize, args, -1, query.depth());
+        openCLExecuteKernel(ctx, &brute_force_match, kernelName, globalSize, localSize, args, -1, query.depth(), opt);
     }
 }
 
@@ -402,6 +400,8 @@ void calcDistance(const oclMat &query, const oclMat &train, const oclMat &/*mask
     int block_size = BLOCK_SIZE;
     vector< pair<size_t, const void *> > args;
 
+    char opt [OPT_SIZE] = "";
+    sprintf(opt, "-D distType=%d", distType);
     if(globalSize[0] != 0)
     {
         args.push_back( make_pair( sizeof(cl_mem), (void *)&query.data ));
@@ -415,11 +415,10 @@ void calcDistance(const oclMat &query, const oclMat &train, const oclMat &/*mask
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
 
         std::string kernelName = "BruteForceMatch_calcDistance";
 
-        openCLExecuteKernel(ctx, &brute_force_match, kernelName, globalSize, localSize, args, -1, query.depth());
+        openCLExecuteKernel(ctx, &brute_force_match, kernelName, globalSize, localSize, args, -1, query.depth(), opt);
     }
 }
 
@@ -676,11 +675,13 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchCollection(const oclMat &query, c
     }
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
+	
 	const int nQuery = query.rows;
 
     ensureSizeIsEnough(1, nQuery, CV_32S, trainIdx);
     ensureSizeIsEnough(1, nQuery, CV_32S, imgIdx);
     ensureSizeIsEnough(1, nQuery, CV_32F, distance);
+
 
     matchDispatcher(query, (const oclMat *)trainCollection.ptr(), trainCollection.cols, masks, trainIdx, imgIdx, distance, distType);
 exit:
@@ -771,6 +772,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatchSingle(const oclMat &query, co
 
     const int nQuery = query.rows;
     const int nTrain = train.rows;
+
     if (k == 2)
     {
         ensureSizeIsEnough(1, nQuery, CV_32SC2, trainIdx);
@@ -1045,6 +1047,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchSingle(const oclMat &query,
 
     const int nQuery = query.rows;
     const int nTrain = train.rows;
+
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
     CV_Assert(train.type() == query.type() && train.cols == query.cols);
     CV_Assert(trainIdx.empty() || (trainIdx.rows == query.rows && trainIdx.size() == distance.size()));
