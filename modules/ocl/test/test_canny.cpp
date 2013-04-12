@@ -79,9 +79,6 @@ TEST_P(Canny, Accuracy)
     cv::ocl::oclMat edges;
     cv::ocl::Canny(ocl_img, edges, low_thresh, high_thresh, apperture_size, useL2gradient);
 
-    char filename [100];
-    sprintf(filename, "G:/Valve_edges_a%d_L2Grad%d.jpg", apperture_size, (int)useL2gradient);
-
     cv::Mat edges_gold;
     cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, useL2gradient);
 
