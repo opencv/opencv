@@ -258,7 +258,7 @@ namespace cv
 
     void Octree::buildTree(const std::vector<Point3f>& points3d, int maxLevels, int _minPoints)
     {
-        assert((size_t)maxLevels * 8 < MAX_STACK_SIZE);
+        CV_Assert((size_t)maxLevels * 8 < MAX_STACK_SIZE);
         points.resize(points3d.size());
         std::copy(points3d.begin(), points3d.end(), points.begin());
         minPoints = _minPoints;
