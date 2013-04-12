@@ -133,6 +133,7 @@ struct FastLock
     CriticalSection* cs;
 };
 
+///////////////////////////////// System Alloc/Free /////////////////////////////////
 
 struct NaiveAllocator
 {
@@ -160,8 +161,7 @@ struct NaiveAllocator
     }
 };
 
-
-//////////////////////////////////// MemoryPool ////////////////////////////////////
+//////////////////////////////////// Memory Pool ////////////////////////////////////
 
 struct Node
 {
@@ -463,7 +463,7 @@ struct ThreadData
             }
         }
 
-        for (int i = 0; i < Block::maxBlockSize; i++)
+        for (int i = 0; i < Block::maxBin; i++)
             delete[] bins[i];
         delete[] bins;
     }
@@ -505,8 +505,8 @@ struct ThreadData
 
     static void deleteData()
     {
-        if (ThreadData::tlsKey != TLS_OUT_OF_INDEXES)
-            delete (ThreadData*)TlsGetValue(ThreadData::tlsKey);
+        if (tlsKey != TLS_OUT_OF_INDEXES)
+            delete (ThreadData*)TlsGetValue(tlsKey);
     }
 
     friend struct StaticConstructor;
@@ -595,11 +595,6 @@ static void checkList(ThreadData* tls, int idx)
 
 struct MemPoolAllocator
 {
-    static void dispose()
-    {
-        blockPool.clear();
-    }
-
     static size_t align(size_t num)
     {
         size_t result = 1;
@@ -615,9 +610,12 @@ struct MemPoolAllocator
     static void init(size_t blockSize = 16256)
     {
         if (blockSize <= Block::HDR_SIZE)
+        {
             CV_Error(-1, "BlockSize is too small.");
+            return;
+        }
 
-        dispose();
+        blockPool.clear();
         size_t actualBlockSize = align(blockSize + Block::HDR_SIZE);
         Block::initBlockSize(actualBlockSize);
         BigBlock::bigBlockSize = actualBlockSize << 2;
@@ -647,7 +645,7 @@ struct MemPoolAllocator
             size = Block::binSizeTable[idx];
             STAT(
                 stat.nettoBytes += size;
-            stat.mallocCalls++;
+                stat.mallocCalls++;
             );
             uchar* data = 0;
 
@@ -764,10 +762,10 @@ struct MemPoolAllocator
             {
                 STAT(
                     stat.nettoBytes -= block->objSize;
-                stat.freeCalls++;
-                float ratio = (float)stat.nettoBytes / stat.bruttoBytes;
-                if (stat.minUsageRatio > ratio)
-                    stat.minUsageRatio = ratio;
+                    stat.freeCalls++;
+                    float ratio = (float)stat.nettoBytes / stat.bruttoBytes;
+                    if (stat.minUsageRatio > ratio)
+                        stat.minUsageRatio = ratio;
                 );
                 SANITY_CHECK(block);
 
@@ -802,7 +800,6 @@ struct MemPoolAllocator
                         checkList(tls, idx);
                         return 0;
                     }
-
                     tls->moveBlockToFreeList(block);
                 }
                 node->next = block->privateFreeList;
@@ -842,64 +839,105 @@ struct MemPoolAllocator
 };
 BlockPool MemPoolAllocator::blockPool;
 
+/////////////////////////// Alloc/Free Strategy Management ///////////////////////////
 
-static CvAllocFunc cvAllocFunc = NaiveAllocator::allocate;
-static CvFreeFunc cvFreeFunc = NaiveAllocator::deallocate;
-static void* cvUserData = NULL;
+static CvAllocFunc cvAllocFuncTable[3] = { NaiveAllocator::allocate, MemPoolAllocator::allocate };
+static CvFreeFunc cvFreeFuncTable[3] = { NaiveAllocator::deallocate, MemPoolAllocator::deallocate };
+static void* cvUserDataTable[3] = { };
+static uchar selectedIdx = 0;
 
 inline void* fastMalloc(size_t size)
 {
-    return cvAllocFunc(size, cvUserData);
+    uchar* mem = (uchar*)cvAllocFuncTable[selectedIdx](size + 1, cvUserDataTable[selectedIdx]);
+    *mem = selectedIdx;
+    return mem + 1;
 }
 
 inline void fastFree(void* ptr)
 {
-    cvFreeFunc(ptr, cvUserData);
+    uchar* mem = (uchar*)ptr - 1;
+    uchar idx = *mem;
+    cvFreeFuncTable[idx](mem, cvUserDataTable[idx]);
 }
 }
 
 CV_IMPL void* cvAlloc(size_t size)
 {
-    return cv::cvAllocFunc(size, cv::cvUserData);
+    return cv::fastMalloc(size);
 }
 
 CV_IMPL void cvFree_(void* ptr)
 {
-    cv::cvFreeFunc(ptr, cv::cvUserData);
+    return cv::fastFree(ptr);
 }
+
+static cv::CriticalSection cs;
+static bool hasSetMemoryPool = false;
+static bool hasSetUserDefinedMemoryManager = false;
 
 CV_IMPL void cvTurnOnMemoryPool(size_t blockSize)
 {
+    cs.lock();
+
+    if (hasSetMemoryPool)
+    {
+        CV_Error(-1, "Turning on memory pool for more than one time is not supported.");
+        cs.unlock();
+        return;
+    }
+
+    hasSetMemoryPool = true;
     cv::MemPoolAllocator::init(blockSize);
-    cv::cvAllocFunc = cv::MemPoolAllocator::allocate;
-    cv::cvFreeFunc = cv::MemPoolAllocator::deallocate;
-    cv::cvUserData = NULL;
+    cv::selectedIdx = 1;
+
+    cs.unlock();
 }
 
 CV_IMPL void cvTurnOffMemoryPool()
 {
-    cv::MemPoolAllocator::dispose();
-    cv::cvAllocFunc = cv::NaiveAllocator::allocate;
-    cv::cvFreeFunc = cv::NaiveAllocator::deallocate;
-    cv::cvUserData = NULL;
+    cs.lock();
+
+    cv::selectedIdx = 0;
+
+    cs.unlock();
 }
 
 CV_IMPL void cvSetMemoryManager(CvAllocFunc allocFunc, CvFreeFunc freeFunc, void* userData)
 {
-    if (allocFunc != NULL)
-        cv::cvAllocFunc = allocFunc;
+    if (allocFunc == NULL && freeFunc == NULL)
+        return;
 
-    if (freeFunc != NULL)
-        cv::cvFreeFunc = freeFunc;
+    if ((allocFunc == NULL && freeFunc != NULL) ||
+        (allocFunc != NULL && freeFunc == NULL))
+    {
+        CV_Error(-1, "You need to provide both the allocator and the dellocator.");
+        return;
+    }
 
-    cv::cvUserData = userData;
+    cs.lock();
+
+    if (hasSetUserDefinedMemoryManager)
+    {
+        CV_Error(-1, "Setting user defined memory manager for more than one time is not supported.");
+        cs.unlock();
+        return;
+    }
+
+    hasSetUserDefinedMemoryManager = true;
+    cv::cvAllocFuncTable[2] = allocFunc;
+    cv::cvFreeFuncTable[2] = freeFunc;
+    cv::cvUserDataTable[2] = userData;
+
+    cs.unlock();
 }
 
 CV_IMPL void cvRemoveMemoryManager()
 {
-    cv::cvAllocFunc = cv::NaiveAllocator::allocate;
-    cv::cvFreeFunc = cv::NaiveAllocator::deallocate;
-    cv::cvUserData = NULL;
+    cs.lock();
+
+    cv::selectedIdx = 0;
+
+    cs.unlock();
 }
 
 /* End of file. */
