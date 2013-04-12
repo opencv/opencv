@@ -133,7 +133,7 @@ void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, String 
 {
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -196,7 +196,7 @@ static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, 
 {
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -290,7 +290,7 @@ void arithmetic_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, 
 {
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -362,7 +362,7 @@ static void arithmetic_scalar_run(const oclMat &src, oclMat &dst, String kernelN
 {
     if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -433,7 +433,7 @@ static void arithmetic_scalar(const oclMat &src1, const Scalar &src2, oclMat &ds
     };
     ArithmeticFuncS func = tab[src1.depth()];
     if(func == 0)
-        cv::ocl::error("Unsupported arithmetic operation", __FILE__, __LINE__);
+        cv::error(Error::StsBadArg, "Unsupported arithmetic operation", "", __FILE__, __LINE__);
     func(src1, src2, dst, mask, kernelName, kernelString, isMatSubScalar);
 }
 static void arithmetic_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, String kernelName, const char **kernelString)
@@ -465,7 +465,7 @@ void cv::ocl::divide(double scalar, const oclMat &src,  oclMat &dst)
 {
     if(!src.clCxt->supportsFeature(Context::CL_DOUBLE))
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -557,7 +557,7 @@ void cv::ocl::compare(const oclMat &src1, const oclMat &src2, oclMat &dst , int 
         kernelString = &arithm_compare_ne;
         break;
     default:
-        CV_Error(CV_StsBadArg, "Unknown comparison method");
+        CV_Error(Error::StsBadArg, "Unknown comparison method");
     }
     compare_run(src1, src2, dst, kernelName, kernelString);
 }
@@ -628,7 +628,7 @@ Scalar cv::ocl::sum(const oclMat &src)
 {
     if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "select device don't support double");
+        CV_Error(Error::GpuNotSupported, "select device don't support double");
     }
     static sumFunc functab[2] =
     {
@@ -645,7 +645,7 @@ Scalar cv::ocl::absSum(const oclMat &src)
 {
     if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "select device don't support double");
+        CV_Error(Error::GpuNotSupported, "select device don't support double");
     }
     static sumFunc functab[2] =
     {
@@ -662,7 +662,7 @@ Scalar cv::ocl::sqrSum(const oclMat &src)
 {
     if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "select device don't support double");
+        CV_Error(Error::GpuNotSupported, "select device don't support double");
     }
     static sumFunc functab[2] =
     {
@@ -811,7 +811,7 @@ void cv::ocl::minMax(const oclMat &src, double *minVal, double *maxVal, const oc
     CV_Assert(src.oclchannels() == 1);
     if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "select device don't support double");
+        CV_Error(Error::GpuNotSupported, "select device don't support double");
     }
     static minMaxFunc functab[8] =
     {
@@ -895,7 +895,7 @@ static void arithmetic_flip_rows_run(const oclMat &src, oclMat &dst, String kern
 {
     if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -944,7 +944,7 @@ static void arithmetic_flip_cols_run(const oclMat &src, oclMat &dst, String kern
 {
     if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -1124,7 +1124,7 @@ static void arithmetic_exp_log_run(const oclMat &src, oclMat &dst, String kernel
     Context  *clCxt = src.clCxt;
     if(!clCxt->supportsFeature(Context::CL_DOUBLE) && src.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
     //int channels = dst.oclchannels();
@@ -1165,7 +1165,7 @@ static void arithmetic_magnitude_phase_run(const oclMat &src1, const oclMat &src
 {
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -1213,7 +1213,7 @@ static void arithmetic_phase_run(const oclMat &src1, const oclMat &src2, oclMat 
 {
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -1277,7 +1277,7 @@ static void arithmetic_cartToPolar_run(const oclMat &src1, const oclMat &src2, o
 {
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -1332,7 +1332,7 @@ static void arithmetic_ptc_run(const oclMat &src1, const oclMat &src2, oclMat &d
 {
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -1514,7 +1514,7 @@ void cv::ocl::minMaxLoc(const oclMat &src, double *minVal, double *maxVal,
 {
     if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "select device don't support double");
+        CV_Error(Error::GpuNotSupported, "select device don't support double");
     }
     static minMaxLocFunc functab[2] =
     {
@@ -1561,7 +1561,7 @@ int cv::ocl::countNonZero(const oclMat &src)
     size_t groupnum = src.clCxt->computeUnits();
     if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "select device don't support double");
+        CV_Error(Error::GpuNotSupported, "select device don't support double");
     }
     CV_Assert(groupnum != 0);
     groupnum = groupnum * 2;
@@ -1834,7 +1834,7 @@ static void bitwise_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, 
     };
     BitwiseFuncS func = tab[src1.depth()];
     if(func == 0)
-        cv::ocl::error("Unsupported arithmetic operation", __FILE__, __LINE__);
+        cv::error(Error::StsBadArg, "Unsupported arithmetic operation", "", __FILE__, __LINE__);
     func(src1, src2, dst, mask, kernelName, kernelString, isMatSubScalar);
 }
 static void bitwise_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, String kernelName, const char **kernelString)
@@ -2037,7 +2037,7 @@ static void transpose_run(const oclMat &src, oclMat &dst, String kernelName)
 {
     if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 

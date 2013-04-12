@@ -326,7 +326,7 @@ void App::run()
             for (size_t i = 0; i < found.size(); i++)
             {
                 Rect r = found[i];
-                rectangle(img_to_show, r.tl(), r.br(), CV_RGB(0, 255, 0), 3);
+                rectangle(img_to_show, r.tl(), r.br(), Scalar(0, 255, 0), 3);
             }
 
             if (use_gpu)

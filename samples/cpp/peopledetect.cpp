@@ -141,7 +141,7 @@ int main(int argc, char** argv)
                     conf << d.confidence;
 
                     cv::rectangle(frame, cv::Rect((int)d.x, (int)d.y, (int)d.w, (int)d.h), cv::Scalar(b, 0, 255 - b, 255), 2);
-                    cv::putText(frame, conf.str() , cv::Point((int)d.x + 10, (int)d.y - 5),1, 1.1, cv::Scalar(25, 133, 255, 0), 1, CV_AA);
+                    cv::putText(frame, conf.str() , cv::Point((int)d.x + 10, (int)d.y - 5),1, 1.1, cv::Scalar(25, 133, 255, 0), 1, cv::LINE_AA);
 
                     if (wf)
                         myfile << d.x << "," <<  d.y << "," << d.w << "," <<  d.h << "," << d.confidence << "\n";

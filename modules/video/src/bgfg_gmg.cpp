@@ -134,7 +134,7 @@ public:
 
     virtual void getBackgroundImage(OutputArray) const
     {
-        CV_Error( CV_StsNotImplemented, "" );
+        CV_Error( Error::StsNotImplemented, "" );
     }
 
     virtual void write(FileStorage& fs) const

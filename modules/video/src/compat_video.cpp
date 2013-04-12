@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/video/tracking_c.h"
 
 
 /////////////////////////// Meanshift & CAMShift ///////////////////////////

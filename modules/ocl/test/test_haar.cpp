@@ -46,7 +46,7 @@
 #include "opencv2/objdetect.hpp"
 #include "precomp.hpp"
 
-#ifdef HAVE_OPENCL
+#if 0 //def HAVE_OPENCL
 
 using namespace cvtest;
 using namespace testing;

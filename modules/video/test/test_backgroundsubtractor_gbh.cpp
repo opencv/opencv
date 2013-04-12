@@ -41,7 +41,7 @@ void CV_BackgroundSubtractorTest::run(int)
     Mat fgmask;
 
     if (fgbg.empty())
-        CV_Error(CV_StsError,"Failed to create Algorithm\n");
+        CV_Error(Error::StsError,"Failed to create Algorithm\n");
 
     /**
      * Set a few parameters

@@ -41,6 +41,8 @@
 
 #ifndef __OPENCV_TEST_UTILITY_HPP__
 #define __OPENCV_TEST_UTILITY_HPP__
+#include "opencv2/core.hpp"
+
 #define LOOP_TIMES 1
 #define MWIDTH 256
 #define MHEIGHT 256
@@ -137,7 +139,7 @@ CV_ENUM(NormCode, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2, cv::NORM_TYPE_MASK, cv
 enum {FLIP_BOTH = 0, FLIP_X = 1, FLIP_Y = -1};
 CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
 
-CV_ENUM(ReduceOp, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN)
+CV_ENUM(ReduceOp, cv::REDUCE_SUM, cv::REDUCE_AVG, cv::REDUCE_MAX, cv::REDUCE_MIN)
 
 CV_FLAGS(GemmFlags, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T);
 

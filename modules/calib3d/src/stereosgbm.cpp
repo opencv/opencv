@@ -919,7 +919,7 @@ public:
     void read(const FileNode& fn)
     {
         FileNode n = fn["name"];
-        CV_Assert( n.isString() && strcmp(n.node->data.str.ptr, name_) == 0 );
+        CV_Assert( n.isString() && String(n) == name_ );
         params.minDisparity = (int)fn["minDisparity"];
         params.numDisparities = (int)fn["numDisparities"];
         params.SADWindowSize = (int)fn["blockSize"];

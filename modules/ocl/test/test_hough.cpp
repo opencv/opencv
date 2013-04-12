@@ -80,7 +80,7 @@ TEST_P(HoughCircles, Accuracy)
     cv::ocl::oclMat d_src(src);
 
     cv::ocl::oclMat d_circles;
-    cv::ocl::HoughCircles(d_src, d_circles, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+    cv::ocl::HoughCircles(d_src, d_circles, cv::HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
     ASSERT_TRUE(d_circles.rows > 0);
 
     cv::Mat circles;

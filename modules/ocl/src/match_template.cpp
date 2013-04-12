@@ -407,7 +407,7 @@ namespace cv
                     args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sum[3]) );
                     break;
                 default:
-                    CV_Error(CV_StsBadArg, "matchTemplate: unsupported number of channels");
+                    CV_Error(Error::StsBadArg, "matchTemplate: unsupported number of channels");
                     break;
                 }
             }
@@ -513,7 +513,7 @@ namespace cv
                     args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sqsum_sum) );
                     break;
                 default:
-                    CV_Error(CV_StsBadArg, "matchTemplate: unsupported number of channels");
+                    CV_Error(Error::StsBadArg, "matchTemplate: unsupported number of channels");
                     break;
                 }
             }

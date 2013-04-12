@@ -112,7 +112,9 @@ CV_INLINE float cvLogRatio( float val )
 /* each trainData matrix row is a sample */
 #define CV_ROW_SAMPLE 1
 
-#define CV_IS_ROW_SAMPLE( flags ) ( ( flags ) & CV_ROW_SAMPLE )
+#ifndef CV_IS_ROW_SAMPLE
+#  define CV_IS_ROW_SAMPLE( flags ) ( ( flags ) & CV_ROW_SAMPLE )
+#endif
 
 /* Classifier supports tune function */
 #define CV_TUNABLE    (1 << 1)

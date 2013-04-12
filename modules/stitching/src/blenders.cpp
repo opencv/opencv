@@ -55,7 +55,7 @@ Ptr<Blender> Blender::createDefault(int type, bool try_gpu)
         return new FeatherBlender();
     if (type == MULTI_BAND)
         return new MultiBandBlender(try_gpu);
-    CV_Error(CV_StsBadArg, "unsupported blending method");
+    CV_Error(Error::StsBadArg, "unsupported blending method");
     return NULL;
 }
 

@@ -428,7 +428,7 @@ namespace cv
             {
                 if(dsize.width != (int)(src.cols * fx) || dsize.height != (int)(src.rows * fy))
                 {
-                    CV_Error(CV_StsUnmatchedSizes, "invalid dsize and fx, fy!");
+                    CV_Error(Error::StsUnmatchedSizes, "invalid dsize and fx, fy!");
                 }
             }
             if( dsize == Size() )
@@ -448,7 +448,7 @@ namespace cv
                 resize_gpu( src, dst, fx, fy, interpolation);
                 return;
             }
-            CV_Error(CV_StsUnsupportedFormat, "Non-supported interpolation method");
+            CV_Error(Error::StsUnsupportedFormat, "Non-supported interpolation method");
         }
 
 
@@ -501,7 +501,7 @@ namespace cv
             }
             else
             {
-                CV_Error(CV_StsUnsupportedFormat, "Non-supported filter length");
+                CV_Error(Error::StsUnsupportedFormat, "Non-supported filter length");
                 //String kernelName = "medianFilter";
                 //args.push_back( std::make_pair( sizeof(cl_int),(void*)&m));
 
@@ -522,7 +522,7 @@ namespace cv
                         (bordertype != cv::BORDER_CONSTANT) &&
                         (bordertype != cv::BORDER_REPLICATE))
                 {
-                    CV_Error(CV_StsBadArg, "unsupported border type");
+                    CV_Error(Error::StsBadArg, "unsupported border type");
                 }
             }
             bordertype &= ~cv::BORDER_ISOLATED;
@@ -549,7 +549,7 @@ namespace cv
             }
             if(bordertype_index == sizeof(__bordertype) / sizeof(int))
             {
-                CV_Error(CV_StsBadArg, "unsupported border type");
+                CV_Error(Error::StsBadArg, "unsupported border type");
             }
             String kernelName = "copymakeborder";
             size_t localThreads[3] = {16, 16, 1};
@@ -604,7 +604,7 @@ namespace cv
                     args.push_back( std::make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
                     break;
                 default:
-                    CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+                    CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
                 }
                 break;
             case CV_8S:
@@ -623,7 +623,7 @@ namespace cv
                     args.push_back( std::make_pair( sizeof(cl_char4) , (void *)&val.cval ));
                     break;
                 default:
-                    CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+                    CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
                 }
                 break;
             case CV_16U:
@@ -642,7 +642,7 @@ namespace cv
                     args.push_back( std::make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
                     break;
                 default:
-                    CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+                    CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
                 }
                 break;
             case CV_16S:
@@ -661,7 +661,7 @@ namespace cv
                     args.push_back( std::make_pair( sizeof(cl_short4) , (void *)&val.shval ));
                     break;
                 default:
-                    CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+                    CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
                 }
                 break;
             case CV_32S:
@@ -687,7 +687,7 @@ namespace cv
                     args.push_back( std::make_pair( sizeof(cl_int4) , (void *)&val.ival ));
                     break;
                 default:
-                    CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+                    CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
                 }
                 break;
             case CV_32F:
@@ -706,7 +706,7 @@ namespace cv
                     args.push_back( std::make_pair( sizeof(cl_float4) , (void *)&val.fval ));
                     break;
                 default:
-                    CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+                    CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
                 }
                 break;
             case CV_64F:
@@ -725,11 +725,11 @@ namespace cv
                     args.push_back( std::make_pair( sizeof(cl_double4) , (void *)&val.dval ));
                     break;
                 default:
-                    CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+                    CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
                 }
                 break;
             default:
-                CV_Error(CV_StsUnsupportedFormat, "unknown depth");
+                CV_Error(Error::StsUnsupportedFormat, "unknown depth");
             }
 
             openCLExecuteKernel(src.clCxt, &imgproc_copymakeboder, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
@@ -1021,7 +1021,7 @@ namespace cv
             CV_Assert(src.type() == CV_8UC1);
             if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
             {
-                CV_Error(CV_GpuNotSupported, "select device don't support double");
+                CV_Error(Error::GpuNotSupported, "select device don't support double");
             }
             int vlen = 4;
             int offset = src.offset / vlen;
@@ -1195,7 +1195,7 @@ namespace cv
         {
             if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
             {
-                CV_Error(CV_GpuNotSupported, "select device don't support double");
+                CV_Error(Error::GpuNotSupported, "select device don't support double");
             }
             CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
             oclMat Dx, Dy;
@@ -1209,7 +1209,7 @@ namespace cv
         {
             if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
             {
-                CV_Error(CV_GpuNotSupported, "select device don't support double");
+                CV_Error(Error::GpuNotSupported, "select device don't support double");
             }
             CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
             oclMat Dx, Dy;
@@ -1256,15 +1256,10 @@ namespace cv
         void meanShiftFiltering(const oclMat &src, oclMat &dst, int sp, int sr, TermCriteria criteria)
         {
             if( src.empty() )
-                CV_Error( CV_StsBadArg, "The input image is empty" );
+                CV_Error(Error::StsBadArg, "The input image is empty" );
 
             if( src.depth() != CV_8U || src.oclchannels() != 4 )
-                CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
-
-            //            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE))
-            //            {
-            //                CV_Error( CV_GpuNotSupported, "Selected device doesn't support double, so a deviation exists.\nIf the accuracy is acceptable, the error can be ignored.\n");
-            //            }
+                CV_Error(Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
             dst.create( src.size(), CV_8UC4 );
 
@@ -1324,15 +1319,10 @@ namespace cv
         void meanShiftProc(const oclMat &src, oclMat &dstr, oclMat &dstsp, int sp, int sr, TermCriteria criteria)
         {
             if( src.empty() )
-                CV_Error( CV_StsBadArg, "The input image is empty" );
+                CV_Error(Error::StsBadArg, "The input image is empty" );
 
             if( src.depth() != CV_8U || src.oclchannels() != 4 )
-                CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
-
-            //            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE))
-            //            {
-            //                CV_Error( CV_GpuNotSupported, "Selected device doesn't support double, so a deviation exists.\nIf the accuracy is acceptable, the error can be ignored.\n");
-            //            }
+                CV_Error(Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
             dstr.create( src.size(), CV_8UC4 );
             dstsp.create( src.size(), CV_16SC2 );
@@ -1581,8 +1571,7 @@ namespace cv
             if( src.depth() == CV_8U )
                 oclbilateralFilter_8u( src, dst, radius, sigmaclr, sigmaspc, borderType );
             else
-                CV_Error( CV_StsUnsupportedFormat,
-                          "Bilateral filtering is only implemented for 8uimages" );
+                CV_Error(Error::StsUnsupportedFormat, "Bilateral filtering is only implemented for 8uimages" );
         }
 
     }
@@ -1726,7 +1715,7 @@ static void convolve_run_fft(const oclMat &image, const oclMat &templ, oclMat &r
     }
 
 #else
-    CV_Error(CV_StsNotImplemented, "OpenCL DFT is not implemented");
+    CV_Error(Error::StsNotImplemented, "OpenCL DFT is not implemented");
 #define UNUSED(x) (void)(x);
     UNUSED(image) UNUSED(templ) UNUSED(result) UNUSED(ccorr) UNUSED(buf)
 #undef UNUSED

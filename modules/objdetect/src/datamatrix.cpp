@@ -1,7 +1,7 @@
 #include "precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/objdetect/objdetect_c.h"
 
-#include <deque>
 #include <algorithm>
 
 class Sampler {

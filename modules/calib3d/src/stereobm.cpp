@@ -84,7 +84,7 @@ struct StereoBMParams
     int disp12MaxDiff;
     int dispType;
 };
-    
+
 
 static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uchar* buf )
 {
@@ -783,46 +783,46 @@ public:
     {
         params = StereoBMParams(_numDisparities, _SADWindowSize);
     }
-    
+
     void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr )
     {
         Mat left0 = leftarr.getMat(), right0 = rightarr.getMat();
         int dtype = disparr.fixedType() ? disparr.type() : params.dispType;
 
         if (left0.size() != right0.size())
-            CV_Error( CV_StsUnmatchedSizes, "All the images must have the same size" );
+            CV_Error( Error::StsUnmatchedSizes, "All the images must have the same size" );
 
         if (left0.type() != CV_8UC1 || right0.type() != CV_8UC1)
-            CV_Error( CV_StsUnsupportedFormat, "Both input images must have CV_8UC1" );
+            CV_Error( Error::StsUnsupportedFormat, "Both input images must have CV_8UC1" );
 
         if (dtype != CV_16SC1 && dtype != CV_32FC1)
-            CV_Error( CV_StsUnsupportedFormat, "Disparity image must have CV_16SC1 or CV_32FC1 format" );
+            CV_Error( Error::StsUnsupportedFormat, "Disparity image must have CV_16SC1 or CV_32FC1 format" );
 
         disparr.create(left0.size(), dtype);
         Mat disp0 = disparr.getMat();
 
         if( params.preFilterType != PREFILTER_NORMALIZED_RESPONSE &&
             params.preFilterType != PREFILTER_XSOBEL )
-            CV_Error( CV_StsOutOfRange, "preFilterType must be = CV_STEREO_BM_NORMALIZED_RESPONSE" );
+            CV_Error( Error::StsOutOfRange, "preFilterType must be = CV_STEREO_BM_NORMALIZED_RESPONSE" );
 
         if( params.preFilterSize < 5 || params.preFilterSize > 255 || params.preFilterSize % 2 == 0 )
-            CV_Error( CV_StsOutOfRange, "preFilterSize must be odd and be within 5..255" );
+            CV_Error( Error::StsOutOfRange, "preFilterSize must be odd and be within 5..255" );
 
         if( params.preFilterCap < 1 || params.preFilterCap > 63 )
-            CV_Error( CV_StsOutOfRange, "preFilterCap must be within 1..63" );
+            CV_Error( Error::StsOutOfRange, "preFilterCap must be within 1..63" );
 
         if( params.SADWindowSize < 5 || params.SADWindowSize > 255 || params.SADWindowSize % 2 == 0 ||
             params.SADWindowSize >= std::min(left0.cols, left0.rows) )
-            CV_Error( CV_StsOutOfRange, "SADWindowSize must be odd, be within 5..255 and be not larger than image width or height" );
+            CV_Error( Error::StsOutOfRange, "SADWindowSize must be odd, be within 5..255 and be not larger than image width or height" );
 
         if( params.numDisparities <= 0 || params.numDisparities % 16 != 0 )
-            CV_Error( CV_StsOutOfRange, "numDisparities must be positive and divisble by 16" );
+            CV_Error( Error::StsOutOfRange, "numDisparities must be positive and divisble by 16" );
 
         if( params.textureThreshold < 0 )
-            CV_Error( CV_StsOutOfRange, "texture threshold must be non-negative" );
+            CV_Error( Error::StsOutOfRange, "texture threshold must be non-negative" );
 
         if( params.uniquenessRatio < 0 )
-            CV_Error( CV_StsOutOfRange, "uniqueness ratio must be non-negative" );
+            CV_Error( Error::StsOutOfRange, "uniqueness ratio must be non-negative" );
 
         preFilteredImg0.create( left0.size(), CV_8U );
         preFilteredImg1.create( left0.size(), CV_8U );
@@ -887,15 +887,15 @@ public:
                                                   R2.area() > 0 ? Rect(0, 0, width, height) : validDisparityRect,
                                                   params.minDisparity, params.numDisparities,
                                                   params.SADWindowSize);
-        
+
         parallel_for_(Range(0, nstripes),
                       FindStereoCorrespInvoker(left, right, disp, &params, nstripes,
                                                bufSize0, useShorts, validDisparityRect,
                                                slidingSumBuf, cost));
-        
+
         if( params.speckleRange >= 0 && params.speckleWindowSize > 0 )
             filterSpeckles(disp, FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
-        
+
         if (disp0.data != disp.data)
             disp.convertTo(disp0, disp0.type(), 1./(1 << DISPARITY_SHIFT), 0);
     }
@@ -963,7 +963,7 @@ public:
     void read(const FileNode& fn)
     {
         FileNode n = fn["name"];
-        CV_Assert( n.isString() && strcmp(n.node->data.str.ptr, name_) == 0 );
+        CV_Assert( n.isString() && String(n) == name_ );
         params.minDisparity = (int)fn["minDisparity"];
         params.numDisparities = (int)fn["numDisparities"];
         params.SADWindowSize = (int)fn["blockSize"];

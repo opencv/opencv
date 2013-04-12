@@ -716,7 +716,7 @@ void DpSeamFinder::computeCosts(
     else if (image1.type() == CV_8UC4 && image2.type() == CV_8UC4)
         diff = diffL2Square4<uchar>;
     else
-        CV_Error(CV_StsBadArg, "both images must have CV_32FC3(4) or CV_8UC3(4) type");
+        CV_Error(Error::StsBadArg, "both images must have CV_32FC3(4) or CV_8UC3(4) type");
 
     int l = comp+1;
     Rect roi(tls_[comp], brs_[comp]);
@@ -1279,7 +1279,7 @@ void GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect roi)
                                  submask1, submask2, graph);
         break;
     default:
-        CV_Error(CV_StsBadArg, "unsupported pixel similarity measure");
+        CV_Error(Error::StsBadArg, "unsupported pixel similarity measure");
     }
 
     graph.maxFlow();
@@ -1420,7 +1420,7 @@ void GraphCutSeamFinderGpu::findInPair(size_t first, size_t second, Rect roi)
                                  submask1, submask2, terminals, leftT, rightT, top, bottom);
         break;
     default:
-        CV_Error(CV_StsBadArg, "unsupported pixel similarity measure");
+        CV_Error(Error::StsBadArg, "unsupported pixel similarity measure");
     }
 
     gpu::GpuMat terminals_d(terminals);

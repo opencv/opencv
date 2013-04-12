@@ -1,4 +1,4 @@
-SET(OPENCV_HAARTRAINING_DEPS opencv_core opencv_imgproc opencv_photo opencv_highgui opencv_objdetect opencv_calib3d opencv_video opencv_features2d opencv_flann opencv_legacy)
+SET(OPENCV_HAARTRAINING_DEPS opencv_core opencv_imgproc opencv_photo opencv_ml opencv_highgui opencv_objdetect opencv_calib3d opencv_video opencv_features2d opencv_flann opencv_legacy)
 ocv_check_dependencies(${OPENCV_HAARTRAINING_DEPS})
 
 if(NOT OCV_DEPENDENCIES_FOUND)

@@ -385,7 +385,7 @@ void cv::ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& 
 void cv::ocl::HoughCirclesDownload(const oclMat& d_circles, cv::OutputArray h_circles_)
 {
     // FIX ME: garbage values are copied!
-    CV_Error(CV_StsNotImplemented, "HoughCirclesDownload is not implemented");
+    CV_Error(Error::StsNotImplemented, "HoughCirclesDownload is not implemented");
 
     if (d_circles.empty())
     {

@@ -360,7 +360,7 @@ static void triangulatePoint_test(void)
         pts[0] = imgpt1[i]; pts[1] = imgpt2[i];
         objptt[i] = triangulatePoint(pts, Rv, tv, cameraMatrix);
     }
-    double err = norm(Mat(objpt), Mat(objptt), CV_C);
+    double err = norm(Mat(objpt), Mat(objptt), NORM_INF);
     CV_Assert(err < 1e-1);
 }
 
@@ -694,7 +694,7 @@ static void build3dmodel( const Ptr<FeatureDetector>& detector,
         projectPoints(Mat(model.points), Rs[i], ts[i], cameraMatrix, Mat(), imagePoints);
 
         for( int k = 0; k < (int)imagePoints.size(); k++ )
-            circle(img, imagePoints[k], 2, Scalar(0,255,0), -1, CV_AA, 0);
+            circle(img, imagePoints[k], 2, Scalar(0,255,0), -1, LINE_AA, 0);
 
         imshow("Test", img);
         int c = waitKey();
