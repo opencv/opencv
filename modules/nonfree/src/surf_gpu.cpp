@@ -42,12 +42,10 @@
 
 #include "precomp.hpp"
 
-#if defined(HAVE_OPENCV_GPU)
-
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined (HAVE_CUDA)
+#if !defined (HAVE_CUDA) || !defined (HAVE_OPENCV_GPUARITHM)
 
 cv::gpu::SURF_GPU::SURF_GPU() { throw_no_cuda(); }
 cv::gpu::SURF_GPU::SURF_GPU(double, int, int, bool, float, bool) { throw_no_cuda(); }
@@ -144,13 +142,13 @@ namespace
 
             bindImgTex(img);
 
-            integralBuffered(img, surf_.sum, surf_.intBuffer);
+            gpu::integralBuffered(img, surf_.sum, surf_.intBuffer);
             sumOffset = bindSumTex(surf_.sum);
 
             if (use_mask)
             {
                 min(mask, 1.0, surf_.mask1);
-                integralBuffered(surf_.mask1, surf_.maskSum, surf_.intBuffer);
+                gpu::integralBuffered(surf_.mask1, surf_.maskSum, surf_.intBuffer);
                 maskOffset = bindMaskSumTex(surf_.maskSum);
             }
         }
@@ -421,5 +419,3 @@ void cv::gpu::SURF_GPU::releaseMemory()
 }
 
 #endif // !defined (HAVE_CUDA)
-
-#endif // defined(HAVE_OPENCV_GPU)

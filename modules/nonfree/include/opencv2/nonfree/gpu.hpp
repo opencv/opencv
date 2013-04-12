@@ -43,11 +43,7 @@
 #ifndef __OPENCV_NONFREE_GPU_HPP__
 #define __OPENCV_NONFREE_GPU_HPP__
 
-#include "opencv2/opencv_modules.hpp"
-
-#if defined(HAVE_OPENCV_GPU)
-
-#include "opencv2/gpu.hpp"
+#include "opencv2/core/gpumat.hpp"
 
 namespace cv { namespace gpu {
 
@@ -160,10 +156,6 @@ private:
     GpuMat samples_;
 };
 
-} // namespace gpu
-
-} // namespace cv
-
-#endif // defined(HAVE_OPENCV_GPU)
+}} // namespace cv { namespace gpu {
 
 #endif // __OPENCV_NONFREE_GPU_HPP__
