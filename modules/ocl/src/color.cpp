@@ -268,7 +268,7 @@ void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
     case COLOR_HLS2BGR: case COLOR_HLS2RGB: case COLOR_HLS2BGR_FULL: case COLOR_HLS2RGB_FULL:
     */
     default:
-        CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+        CV_Error(Error::StsBadFlag, "Unknown/unsupported color conversion code" );
     }
 }
 }

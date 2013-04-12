@@ -55,6 +55,8 @@
 #include "opencv2/features2d.hpp"
 #include "opencv2/ocl.hpp"
 
+#include "opencv2/core/utility.hpp"
+
 #define Min_Size 1000
 #define Max_Size 4000
 #define Multiple 2
@@ -65,7 +67,7 @@ using namespace cv;
 
 void gen(Mat &mat, int rows, int cols, int type, Scalar low, Scalar high);
 string abspath(const string &relpath);
-int CV_CDECL cvErrorCallback(int, const char *, const char *, const char *, int, void *);
+
 typedef struct
 {
     short x;

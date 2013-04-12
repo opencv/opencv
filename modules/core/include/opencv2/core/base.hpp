@@ -109,7 +109,8 @@ enum {
     GpuNotSupported=           -216,
     GpuApiCallError=           -217,
     OpenGlNotSupported=        -218,
-    OpenGlApiCallError=        -219
+    OpenGlApiCallError=        -219,
+    OpenCLApiCallError=        -220
 };
 } //Error
 

@@ -44,6 +44,8 @@
 //M*/
 #include "precomp.hpp"
 
+#if 0
+
 ///////////// Haar ////////////////////////
 namespace cv
 {
@@ -136,3 +138,5 @@ TEST(Haar)
                                  1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
     GPU_FULL_OFF;
 }
+
+#endif

@@ -113,9 +113,6 @@ static void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
 {
     int winsz2 = winSize >> 1;
 
-    //if(winsz2 == 0 || winsz2 >= calles_num)
-    //cv::ocl:error("Unsupported window size", __FILE__, __LINE__, __FUNCTION__);
-
     Context *clCxt = left.clCxt;
 
     String kernelName = "stereoKernel";

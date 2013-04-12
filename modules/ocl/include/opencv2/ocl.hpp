@@ -131,9 +131,6 @@ namespace cv
         //getDevice also need to be called before this function
         CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0);
 
-        //////////////////////////////// Error handling ////////////////////////
-        CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
-
         //////////////////////////////// OpenCL context ////////////////////////
         //This is a global singleton class used to represent a OpenCL context.
         class CV_EXPORTS Context
@@ -811,7 +808,8 @@ namespace cv
         ///////////////////////////////////////////CascadeClassifier//////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        class CV_EXPORTS_W OclCascadeClassifier : public  cv::CascadeClassifier
+#if 0
+        class CV_EXPORTS OclCascadeClassifier : public  cv::CascadeClassifier
         {
         public:
             OclCascadeClassifier() {};
@@ -820,6 +818,7 @@ namespace cv
             CvSeq* oclHaarDetectObjects(oclMat &gimg, CvMemStorage *storage, double scaleFactor,
                                         int minNeighbors, int flags, CvSize minSize = cvSize(0, 0), CvSize maxSize = cvSize(0, 0));
         };
+#endif
 
 
 

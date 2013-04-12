@@ -50,7 +50,7 @@
 void cv::ocl::gemm(const oclMat&, const oclMat&, double,
                    const oclMat&, double, oclMat&, int)
 {
-    CV_Error(CV_StsNotImplemented, "OpenCL BLAS is not implemented");
+    CV_Error(Error::StsNotImplemented, "OpenCL BLAS is not implemented");
 }
 #else
 #include "clAmdBlas.h"
