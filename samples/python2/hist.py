@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 ''' This is a sample for histogram plotting for RGB images and grayscale images for better understanding of colour distribution
 

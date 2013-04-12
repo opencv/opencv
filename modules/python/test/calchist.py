@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 # Calculating and displaying 2D Hue-Saturation histogram of a color image
 import sys
