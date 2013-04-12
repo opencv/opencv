@@ -447,10 +447,10 @@ void matchTemplate_Naive_CCORR_C1_D0
             __global const uchar * tpl_ptr = tpl + mad24(i, tpl_step, tpl_offset);
             for(j = 0; j < tpl_cols; j ++)
             {
-                sum = mad24(img_ptr[j], tpl_ptr[j], sum);
+                sum = mad24(convert_int(img_ptr[j]), convert_int(tpl_ptr[j]), sum);
             }
         }
-        res[res_idx] = sum;
+        res[res_idx] = (float)sum;
     }
 }
 
@@ -548,7 +548,7 @@ void matchTemplate_Naive_CCORR_C4_D0
                 sum   = mad24(convert_int4(img_ptr[j]), convert_int4(tpl_ptr[j]), sum);
             }
         }
-        res[res_idx] = sum.x + sum.y + sum.z + sum.w;
+        res[res_idx] = (float)(sum.x + sum.y + sum.z + sum.w);
     }
 }
 
@@ -633,9 +633,8 @@ void matchTemplate_Prepared_CCOFF_C1_D0
 
     if(gidx < res_cols && gidy < res_rows)
     {
-        float sum = (float)(
-                        (img_sums[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums[SUMS_PTR(tpl_cols, 0)])
-                        - (img_sums[SUMS_PTR(0, tpl_rows)] - img_sums[SUMS_PTR(0, 0)]));
+        float sum = (float)((img_sums[SUMS_PTR(tpl_cols, tpl_rows)] - img_sums[SUMS_PTR(tpl_cols, 0)])
+                            -(img_sums[SUMS_PTR(0, tpl_rows)] - img_sums[SUMS_PTR(0, 0)]));
         res[res_idx] -= sum * tpl_sum;
     }
 }

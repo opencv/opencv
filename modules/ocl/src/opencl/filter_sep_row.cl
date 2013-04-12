@@ -96,18 +96,18 @@ The info above maybe obsolete.
 ***********************************************************************************/
 
 __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_C1_D0
-                        (__global const uchar * restrict src,
-                         __global float * dst,
-                         const int dst_cols,
-                         const int dst_rows,
-                         const int src_whole_cols,
-                         const int src_whole_rows,
-                         const int src_step_in_pixel,
-                         const int src_offset_x,
-                         const int src_offset_y,
-                         const int dst_step_in_pixel,
-                         const int radiusy,
-                         __constant float * mat_kernel __attribute__((max_constant_size(4*(2*RADIUSX+1)))))
+(__global const uchar * restrict src,
+ __global float * dst,
+ const int dst_cols,
+ const int dst_rows,
+ const int src_whole_cols,
+ const int src_whole_rows,
+ const int src_step_in_pixel,
+ const int src_offset_x,
+ const int src_offset_y,
+ const int dst_step_in_pixel,
+ const int radiusy,
+ __constant float * mat_kernel __attribute__((max_constant_size(4*(2*RADIUSX+1)))))
 {
     int x = get_global_id(0)<<2;
     int y = get_global_id(1);
@@ -122,17 +122,17 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
     uchar4 temp[READ_TIMES_ROW];
 
     __local uchar4 LDS_DAT[LSIZE1][READ_TIMES_ROW*LSIZE0+1];
-    #ifdef BORDER_CONSTANT
+#ifdef BORDER_CONSTANT
     int end_addr = mad24(src_whole_rows - 1,src_step_in_pixel,src_whole_cols);
     //read pixels from src
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         int current_addr = start_addr+i*LSIZE0*4;
         current_addr = ((current_addr < end_addr) && (current_addr > 0)) ? current_addr : 0;
         temp[i] = *(__global uchar4*)&src[current_addr];
     }
     //judge if read out of boundary
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         temp[i].x= ELEM(start_x+i*LSIZE0*4,0,src_whole_cols,0,temp[i].x);
         temp[i].y= ELEM(start_x+i*LSIZE0*4+1,0,src_whole_cols,0,temp[i].y);
@@ -140,7 +140,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
         temp[i].w= ELEM(start_x+i*LSIZE0*4+3,0,src_whole_cols,0,temp[i].w);
         temp[i]= ELEM(start_y,0,src_whole_rows,(uchar4)0,temp[i]);
     }
-    #else
+#else
     int not_all_in_range = (start_x<0) | (start_x + READ_TIMES_ROW*LSIZE0*4+4>src_whole_cols)| (start_y<0) | (start_y >= src_whole_rows);
     int4 index[READ_TIMES_ROW];
     int4 addr;
@@ -148,7 +148,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
     if(not_all_in_range)
     {
         //judge if read out of boundary
-        for(i = 0;i<READ_TIMES_ROW;i++)
+        for(i = 0; i<READ_TIMES_ROW; i++)
         {
             index[i].x= ADDR_L(start_x+i*LSIZE0*4,0,src_whole_cols,start_x+i*LSIZE0*4);
             index[i].x= ADDR_R(start_x+i*LSIZE0*4,src_whole_cols,index[i].x);
@@ -162,7 +162,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
         s_y= ADDR_L(start_y,0,src_whole_rows,start_y);
         s_y= ADDR_R(start_y,src_whole_rows,s_y);
         //read pixels from src
-        for(i = 0;i<READ_TIMES_ROW;i++)
+        for(i = 0; i<READ_TIMES_ROW; i++)
         {
             addr = mad24((int4)s_y,(int4)src_step_in_pixel,index[i]);
             temp[i].x = src[addr.x];
@@ -174,15 +174,15 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
     else
     {
         //read pixels from src
-        for(i = 0;i<READ_TIMES_ROW;i++)
+        for(i = 0; i<READ_TIMES_ROW; i++)
         {
             temp[i] = *(__global uchar4*)&src[start_addr+i*LSIZE0*4];
         }
     }
-    #endif
+#endif
 
     //save pixels to lds
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         LDS_DAT[l_y][l_x+i*LSIZE0]=temp[i];
     }
@@ -190,7 +190,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
 
     //read pixels from lds and calculate the result
     sum =convert_float4(vload4(0,(__local uchar*)&LDS_DAT[l_y][l_x]+RADIUSX+offset))*mat_kernel[RADIUSX];
-    for(i=1;i<=RADIUSX;i++)
+    for(i=1; i<=RADIUSX; i++)
     {
         temp[0]=vload4(0,(__local uchar*)&LDS_DAT[l_y][l_x]+RADIUSX+offset-i);
         temp[1]=vload4(0,(__local uchar*)&LDS_DAT[l_y][l_x]+RADIUSX+offset+i);
@@ -219,18 +219,18 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
     }
 }
 __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_C4_D0
-                        (__global const uchar4 * restrict src,
-                         __global float4 * dst,
-                         const int dst_cols,
-                         const int dst_rows,
-                         const int src_whole_cols,
-                         const int src_whole_rows,
-                         const int src_step_in_pixel,
-                         const int src_offset_x,
-                         const int src_offset_y,
-                         const int dst_step_in_pixel,
-                         const int radiusy,
-                         __constant float * mat_kernel __attribute__((max_constant_size(4*(2*RADIUSX+1)))))
+(__global const uchar4 * restrict src,
+ __global float4 * dst,
+ const int dst_cols,
+ const int dst_rows,
+ const int src_whole_cols,
+ const int src_whole_rows,
+ const int src_step_in_pixel,
+ const int src_offset_x,
+ const int src_offset_y,
+ const int dst_step_in_pixel,
+ const int radiusy,
+ __constant float * mat_kernel __attribute__((max_constant_size(4*(2*RADIUSX+1)))))
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -244,26 +244,26 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
     uchar4 temp[READ_TIMES_ROW];
 
     __local uchar4 LDS_DAT[LSIZE1][READ_TIMES_ROW*LSIZE0+1];
-    #ifdef BORDER_CONSTANT
+#ifdef BORDER_CONSTANT
     int end_addr = mad24(src_whole_rows - 1,src_step_in_pixel,src_whole_cols);
     //read pixels from src
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         int current_addr = start_addr+i*LSIZE0;
         current_addr = ((current_addr < end_addr) && (current_addr > 0)) ? current_addr : 0;
         temp[i] = src[current_addr];
     }
     //judge if read out of boundary
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         temp[i]= ELEM(start_x+i*LSIZE0,0,src_whole_cols,(uchar4)0,temp[i]);
         temp[i]= ELEM(start_y,0,src_whole_rows,(uchar4)0,temp[i]);
     }
-    #else
+#else
     int index[READ_TIMES_ROW];
     int s_x,s_y;
     //judge if read out of boundary
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         s_x= ADDR_L(start_x+i*LSIZE0,0,src_whole_cols,start_x+i*LSIZE0);
         s_x= ADDR_R(start_x+i*LSIZE0,src_whole_cols,s_x);
@@ -272,14 +272,14 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
         index[i]=mad24(s_y,src_step_in_pixel,s_x);
     }
     //read pixels from src
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         temp[i] = src[index[i]];
     }
-    #endif
+#endif
 
     //save pixels to lds
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         LDS_DAT[l_y][l_x+i*LSIZE0]=temp[i];
     }
@@ -287,7 +287,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
 
     //read pixels from lds and calculate the result
     sum =convert_float4(LDS_DAT[l_y][l_x+RADIUSX])*mat_kernel[RADIUSX];
-    for(i=1;i<=RADIUSX;i++)
+    for(i=1; i<=RADIUSX; i++)
     {
         temp[0]=LDS_DAT[l_y][l_x+RADIUSX-i];
         temp[1]=LDS_DAT[l_y][l_x+RADIUSX+i];
@@ -302,18 +302,18 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
 }
 
 __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_C1_D5
-                        (__global const float * restrict src,
-                         __global float * dst,
-                         const int dst_cols,
-                         const int dst_rows,
-                         const int src_whole_cols,
-                         const int src_whole_rows,
-                         const int src_step_in_pixel,
-                         const int src_offset_x,
-                         const int src_offset_y,
-                         const int dst_step_in_pixel,
-                         const int radiusy,
-                         __constant float * mat_kernel __attribute__((max_constant_size(4*(2*RADIUSX+1)))))
+(__global const float * restrict src,
+ __global float * dst,
+ const int dst_cols,
+ const int dst_rows,
+ const int src_whole_cols,
+ const int src_whole_rows,
+ const int src_step_in_pixel,
+ const int src_offset_x,
+ const int src_offset_y,
+ const int dst_step_in_pixel,
+ const int radiusy,
+ __constant float * mat_kernel __attribute__((max_constant_size(4*(2*RADIUSX+1)))))
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -327,26 +327,26 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
     float temp[READ_TIMES_ROW];
 
     __local float LDS_DAT[LSIZE1][READ_TIMES_ROW*LSIZE0+1];
-    #ifdef BORDER_CONSTANT
+#ifdef BORDER_CONSTANT
     int end_addr = mad24(src_whole_rows - 1,src_step_in_pixel,src_whole_cols);
     //read pixels from src
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         int current_addr = start_addr+i*LSIZE0;
         current_addr = ((current_addr < end_addr) && (current_addr > 0)) ? current_addr : 0;
         temp[i] = src[current_addr];
     }
     //judge if read out of boundary
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
-        temp[i]= ELEM(start_x+i*LSIZE0,0,src_whole_cols,0,temp[i]);
-        temp[i]= ELEM(start_y,0,src_whole_rows,0,temp[i]);
+        temp[i]= ELEM(start_x+i*LSIZE0,0,src_whole_cols,(float)0,temp[i]);
+        temp[i]= ELEM(start_y,0,src_whole_rows,(float)0,temp[i]);
     }
-    #else
+#else
     int index[READ_TIMES_ROW];
     int s_x,s_y;
     //judge if read out of boundary
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         s_x= ADDR_L(start_x+i*LSIZE0,0,src_whole_cols,start_x+i*LSIZE0);
         s_x= ADDR_R(start_x+i*LSIZE0,src_whole_cols,s_x);
@@ -355,14 +355,14 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
         index[i]=mad24(s_y,src_step_in_pixel,s_x);
     }
     //read pixels from src
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         temp[i] = src[index[i]];
     }
-    #endif
+#endif
 
     //save pixels to lds
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         LDS_DAT[l_y][l_x+i*LSIZE0]=temp[i];
     }
@@ -370,7 +370,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
 
     //read pixels from lds and calculate the result
     sum =LDS_DAT[l_y][l_x+RADIUSX]*mat_kernel[RADIUSX];
-    for(i=1;i<=RADIUSX;i++)
+    for(i=1; i<=RADIUSX; i++)
     {
         temp[0]=LDS_DAT[l_y][l_x+RADIUSX-i];
         temp[1]=LDS_DAT[l_y][l_x+RADIUSX+i];
@@ -385,18 +385,18 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
 }
 
 __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_C4_D5
-                        (__global const float4 * restrict src,
-                         __global float4 * dst,
-                         const int dst_cols,
-                         const int dst_rows,
-                         const int src_whole_cols,
-                         const int src_whole_rows,
-                         const int src_step_in_pixel,
-                         const int src_offset_x,
-                         const int src_offset_y,
-                         const int dst_step_in_pixel,
-                         const int radiusy,
-                         __constant float * mat_kernel __attribute__((max_constant_size(4*(2*RADIUSX+1)))))
+(__global const float4 * restrict src,
+ __global float4 * dst,
+ const int dst_cols,
+ const int dst_rows,
+ const int src_whole_cols,
+ const int src_whole_rows,
+ const int src_step_in_pixel,
+ const int src_offset_x,
+ const int src_offset_y,
+ const int dst_step_in_pixel,
+ const int radiusy,
+ __constant float * mat_kernel __attribute__((max_constant_size(4*(2*RADIUSX+1)))))
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -410,26 +410,26 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
     float4 temp[READ_TIMES_ROW];
 
     __local float4 LDS_DAT[LSIZE1][READ_TIMES_ROW*LSIZE0+1];
-    #ifdef BORDER_CONSTANT
+#ifdef BORDER_CONSTANT
     int end_addr = mad24(src_whole_rows - 1,src_step_in_pixel,src_whole_cols);
     //read pixels from src
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         int current_addr = start_addr+i*LSIZE0;
         current_addr = ((current_addr < end_addr) && (current_addr > 0)) ? current_addr : 0;
         temp[i] = src[current_addr];
     }
     //judge if read out of boundary
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
-        temp[i]= ELEM(start_x+i*LSIZE0,0,src_whole_cols,0,temp[i]);
-        temp[i]= ELEM(start_y,0,src_whole_rows,0,temp[i]);
+        temp[i]= ELEM(start_x+i*LSIZE0,0,src_whole_cols,(float4)0,temp[i]);
+        temp[i]= ELEM(start_y,0,src_whole_rows,(float4)0,temp[i]);
     }
-    #else
+#else
     int index[READ_TIMES_ROW];
     int s_x,s_y;
     //judge if read out of boundary
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         s_x= ADDR_L(start_x+i*LSIZE0,0,src_whole_cols,start_x+i*LSIZE0);
         s_x= ADDR_R(start_x+i*LSIZE0,src_whole_cols,s_x);
@@ -438,14 +438,14 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
         index[i]=mad24(s_y,src_step_in_pixel,s_x);
     }
     //read pixels from src
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         temp[i] = src[index[i]];
     }
-    #endif
+#endif
 
     //save pixels to lds
-    for(i = 0;i<READ_TIMES_ROW;i++)
+    for(i = 0; i<READ_TIMES_ROW; i++)
     {
         LDS_DAT[l_y][l_x+i*LSIZE0]=temp[i];
     }
@@ -453,7 +453,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
 
     //read pixels from lds and calculate the result
     sum =LDS_DAT[l_y][l_x+RADIUSX]*mat_kernel[RADIUSX];
-    for(i=1;i<=RADIUSX;i++)
+    for(i=1; i<=RADIUSX; i++)
     {
         temp[0]=LDS_DAT[l_y][l_x+RADIUSX-i];
         temp[1]=LDS_DAT[l_y][l_x+RADIUSX+i];
@@ -465,4 +465,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
         start_addr = mad24(y,dst_step_in_pixel,x);
         dst[start_addr] = sum;
     }
+  
 }
+
+
