@@ -79,7 +79,7 @@ int main(int , char** )
 
         for (size_t i = 0; i < Faces.size(); i++)
         {
-            rectangle(ReferenceFrame, Faces[i], CV_RGB(0,255,0));
+            rectangle(ReferenceFrame, Faces[i], Scalar(0,255,0));
         }
 
         imshow(WindowName, ReferenceFrame);

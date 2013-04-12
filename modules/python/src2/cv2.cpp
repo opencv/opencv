@@ -18,14 +18,14 @@
 #include "opencv2/features2d.hpp"
 #include "opencv2/objdetect.hpp"
 #include "opencv2/softcascade.hpp"
-#include "opencv2/video/tracking.hpp"
-#include "opencv2/video/background_segm.hpp"
+#include "opencv2/video.hpp"
 #include "opencv2/photo.hpp"
 #include "opencv2/highgui.hpp"
 
 #include "opencv2/highgui/highgui_c.h"
 #include "opencv2/photo/photo_c.h"
 #include "opencv2/video/tracking_c.h"
+#include "opencv2/objdetect/objdetect_c.h"
 
 #include "opencv2/opencv_modules.hpp"
 

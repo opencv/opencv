@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/core_c.h"
 
 #include <cstdio>
 #include <iterator>
@@ -2862,7 +2863,7 @@ void HOGDescriptor::readALTModel(String modelfile)
         String eerr("file not exist");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
-        throw Exception(CV_StsError, eerr, efile, efunc, __LINE__);
+        throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
     }
     char version_buffer[10];
     if (!fread (&version_buffer,sizeof(char),10,modelfl))
@@ -2870,13 +2871,13 @@ void HOGDescriptor::readALTModel(String modelfile)
         String eerr("version?");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
-        throw Exception(CV_StsError, eerr, efile, efunc, __LINE__);
+        throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
     }
     if(strcmp(version_buffer,"V6.01")) {
         String eerr("version doesnot match");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
-        throw Exception(CV_StsError, eerr, efile, efunc, __LINE__);
+        throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
     }
     /* read version number */
     int version = 0;

@@ -175,9 +175,9 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
 
     cascade.detectMultiScale( smallImg, faces,
         1.1, 2, 0
-        //|CV_HAAR_FIND_BIGGEST_OBJECT
-        //|CV_HAAR_DO_ROUGH_SEARCH
-        |CV_HAAR_SCALE_IMAGE
+        //|CASCADE_FIND_BIGGEST_OBJECT
+        //|CASCADE_DO_ROUGH_SEARCH
+        |CASCADE_SCALE_IMAGE
         ,
         Size(30, 30) );
     if( tryflip )
@@ -185,9 +185,9 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
         flip(smallImg, smallImg, 1);
         cascade.detectMultiScale( smallImg, faces2,
                                  1.1, 2, 0
-                                 //|CV_HAAR_FIND_BIGGEST_OBJECT
-                                 //|CV_HAAR_DO_ROUGH_SEARCH
-                                 |CV_HAAR_SCALE_IMAGE
+                                 //|CASCADE_FIND_BIGGEST_OBJECT
+                                 //|CASCADE_DO_ROUGH_SEARCH
+                                 |CASCADE_SCALE_IMAGE
                                  ,
                                  Size(30, 30) );
         for( vector<Rect>::const_iterator r = faces2.begin(); r != faces2.end(); r++ )
@@ -223,10 +223,10 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
         smallImgROI = smallImg(*r);
         nestedCascade.detectMultiScale( smallImgROI, nestedObjects,
             1.1, 0, 0
-            //|CV_HAAR_FIND_BIGGEST_OBJECT
-            //|CV_HAAR_DO_ROUGH_SEARCH
-            //|CV_HAAR_DO_CANNY_PRUNING
-            |CV_HAAR_SCALE_IMAGE
+            //|CASCADE_FIND_BIGGEST_OBJECT
+            //|CASCADE_DO_ROUGH_SEARCH
+            //|CASCADE_DO_CANNY_PRUNING
+            |CASCADE_SCALE_IMAGE
             ,
             Size(30, 30) );
 

@@ -228,8 +228,8 @@ int main(int argc, const char *argv[])
             Size minSize = cascade_gpu.getClassifierSize();
             cascade_cpu.detectMultiScale(resized_cpu, facesBuf_cpu, 1.2,
                                          (filterRects || findLargestObject) ? 4 : 0,
-                                         (findLargestObject ? CV_HAAR_FIND_BIGGEST_OBJECT : 0)
-                                            | CV_HAAR_SCALE_IMAGE,
+                                         (findLargestObject ? CASCADE_FIND_BIGGEST_OBJECT : 0)
+                                            | CASCADE_SCALE_IMAGE,
                                          minSize);
             detections_num = (int)facesBuf_cpu.size();
         }
