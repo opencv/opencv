@@ -43,6 +43,10 @@
 #ifndef __OPENCV_GPUFEATURES2D_HPP__
 #define __OPENCV_GPUFEATURES2D_HPP__
 
+#ifndef __cplusplus
+#  error gpufeatures2d.hpp header must be compiled as C++
+#endif
+
 #include "opencv2/core/gpumat.hpp"
 #include "opencv2/gpufilters.hpp"
 

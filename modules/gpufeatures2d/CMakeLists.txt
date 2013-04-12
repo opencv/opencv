@@ -6,4 +6,4 @@ set(the_description "GPU-accelerated Feature Detection and Description")
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations -Wshadow -Wunused-parameter)
 
-ocv_define_module(gpufeatures2d opencv_features2d opencv_gpufilters opencv_gpuwarping opencv_gpuimgproc)
+ocv_define_module(gpufeatures2d opencv_features2d opencv_gpufilters opencv_gpuwarping)
