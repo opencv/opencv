@@ -369,7 +369,7 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_PyrLK_GPU()
     return Ptr<DenseOpticalFlowExt>();
 }
 
-#else // HAVE_OPENCV_GPU
+#else // HAVE_OPENCV_GPUOPTFLOW
 
 namespace
 {
@@ -717,4 +717,4 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1_GPU()
     return new DualTVL1_GPU;
 }
 
-#endif // HAVE_OPENCV_GPU
+#endif // HAVE_OPENCV_GPUOPTFLOW
