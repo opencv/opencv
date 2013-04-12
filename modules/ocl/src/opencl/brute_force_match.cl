@@ -1,5 +1,58 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// @Authors
+//    Nathan, liujun@multicorewareinc.com
+//    Peng Xiao, pengxiao@outlook.com
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other oclMaterials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics:enable
-#define MAX_FLOAT 1e7f
+#define MAX_FLOAT 3.40282e+038f
+
+#ifndef block_size
+#define block_size 16
+#endif
+#ifndef max_desc_len
+#define max_desc_len 64
+#endif
 
 int bit1Count(float x)
 {
@@ -15,7 +68,6 @@ int bit1Count(float x)
 
 float reduce_block(__local float *s_query,
                    __local float *s_train,
-                   int block_size,
                    int lidx,
                    int lidy,
                    int distType
@@ -51,8 +103,6 @@ float reduce_block(__local float *s_query,
 
 float reduce_multi_block(__local float *s_query,
                          __local float *s_train,
-                         int max_desc_len,
-                         int block_size,
                          int block_index,
                          int lidx,
                          int lidy,
@@ -98,8 +148,6 @@ __kernel void BruteForceMatch_UnrollMatch_D5(
     __global int *bestTrainIdx,
     __global float *bestDistance,
     __local float *sharebuffer,
-    int block_size,
-    int max_desc_len,
     int query_rows,
     int query_cols,
     int train_rows,
@@ -108,6 +156,7 @@ __kernel void BruteForceMatch_UnrollMatch_D5(
     int distType
 )
 {
+
     const int lidx = get_local_id(0);
     const int lidy = get_local_id(1);
     const int groupidx = get_group_id(0);
@@ -117,6 +166,7 @@ __kernel void BruteForceMatch_UnrollMatch_D5(
 
     int queryIdx = groupidx * block_size + lidy;
     // load the query into local memory.
+    #pragma unroll
     for (int i = 0 ;  i <  max_desc_len / block_size; i ++)
     {
         int loadx = lidx + i * block_size;
@@ -128,9 +178,10 @@ __kernel void BruteForceMatch_UnrollMatch_D5(
 
     // loopUnrolledCached to find the best trainIdx and best distance.
     volatile int imgIdx = 0;
-    for (int t = 0 ; t < (train_rows + block_size - 1) / block_size ; t++)
+    for (int t = 0, endt = (train_rows + block_size - 1) / block_size; t < endt; t++)
     {
         float result = 0;
+        #pragma unroll
         for (int i = 0 ; i < max_desc_len / block_size ; i++)
         {
             //load a block_size * block_size block into local train.
@@ -140,7 +191,7 @@ __kernel void BruteForceMatch_UnrollMatch_D5(
             //synchronize to make sure each elem for reduceIteration in share memory is written already.
             barrier(CLK_LOCAL_MEM_FENCE);
 
-            result += reduce_multi_block(s_query, s_train, max_desc_len, block_size, i, lidx, lidy, distType);
+            result += reduce_multi_block(s_query, s_train, i, lidx, lidy, distType);
 
             barrier(CLK_LOCAL_MEM_FENCE);
         }
@@ -168,6 +219,7 @@ __kernel void BruteForceMatch_UnrollMatch_D5(
     barrier(CLK_LOCAL_MEM_FENCE);
 
     //reduce -- now all reduce implement in each threads.
+    #pragma unroll
     for (int k = 0 ; k < block_size; k++)
     {
         if (myBestDistance > s_distance[k])
@@ -191,7 +243,6 @@ __kernel void BruteForceMatch_Match_D5(
     __global int *bestTrainIdx,
     __global float *bestDistance,
     __local float *sharebuffer,
-    int block_size,
     int query_rows,
     int query_cols,
     int train_rows,
@@ -232,7 +283,7 @@ __kernel void BruteForceMatch_Match_D5(
 
             barrier(CLK_LOCAL_MEM_FENCE);
 
-            result += reduce_block(s_query, s_train, block_size, lidx, lidy, distType);
+            result += reduce_block(s_query, s_train, lidx, lidy, distType);
 
             barrier(CLK_LOCAL_MEM_FENCE);
         }
@@ -287,8 +338,6 @@ __kernel void BruteForceMatch_RadiusUnrollMatch_D5(
     __global float *bestDistance,
     __global int *nMatches,
     __local float *sharebuffer,
-    int block_size,
-    int max_desc_len,
     int query_rows,
     int query_cols,
     int train_rows,
@@ -322,7 +371,7 @@ __kernel void BruteForceMatch_RadiusUnrollMatch_D5(
         //synchronize to make sure each elem for reduceIteration in share memory is written already.
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        result += reduce_block(s_query, s_train, block_size, lidx, lidy, distType);
+        result += reduce_block(s_query, s_train, lidx, lidy, distType);
 
         barrier(CLK_LOCAL_MEM_FENCE);
     }
@@ -350,7 +399,6 @@ __kernel void BruteForceMatch_RadiusMatch_D5(
     __global float *bestDistance,
     __global int *nMatches,
     __local float *sharebuffer,
-    int block_size,
     int query_rows,
     int query_cols,
     int train_rows,
@@ -384,7 +432,7 @@ __kernel void BruteForceMatch_RadiusMatch_D5(
         //synchronize to make sure each elem for reduceIteration in share memory is written already.
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        result += reduce_block(s_query, s_train, block_size, lidx, lidy, distType);
+        result += reduce_block(s_query, s_train, lidx, lidy, distType);
 
         barrier(CLK_LOCAL_MEM_FENCE);
     }
@@ -410,8 +458,6 @@ __kernel void BruteForceMatch_knnUnrollMatch_D5(
     __global int2 *bestTrainIdx,
     __global float2 *bestDistance,
     __local float *sharebuffer,
-    int block_size,
-    int max_desc_len,
     int query_rows,
     int query_cols,
     int train_rows,
@@ -455,7 +501,7 @@ __kernel void BruteForceMatch_knnUnrollMatch_D5(
             //synchronize to make sure each elem for reduceIteration in share memory is written already.
             barrier(CLK_LOCAL_MEM_FENCE);
 
-            result += reduce_multi_block(s_query, s_train, max_desc_len, block_size, i, lidx, lidy, distType);
+            result += reduce_multi_block(s_query, s_train, i, lidx, lidy, distType);
 
             barrier(CLK_LOCAL_MEM_FENCE);
         }
@@ -559,7 +605,6 @@ __kernel void BruteForceMatch_knnMatch_D5(
     __global int2 *bestTrainIdx,
     __global float2 *bestDistance,
     __local float *sharebuffer,
-    int block_size,
     int query_rows,
     int query_cols,
     int train_rows,
@@ -600,7 +645,7 @@ __kernel void BruteForceMatch_knnMatch_D5(
 
             barrier(CLK_LOCAL_MEM_FENCE);
 
-            result += reduce_block(s_query, s_train, block_size, lidx, lidy, distType);
+            result += reduce_block(s_query, s_train, lidx, lidy, distType);
 
             barrier(CLK_LOCAL_MEM_FENCE);
         }
@@ -703,8 +748,6 @@ kernel void BruteForceMatch_calcDistanceUnrolled_D5(
     //__global float *mask,
     __global float *allDist,
     __local float *sharebuffer,
-    int block_size,
-    int max_desc_len,
     int query_rows,
     int query_cols,
     int train_rows,
@@ -721,7 +764,6 @@ kernel void BruteForceMatch_calcDistance_D5(
     //__global float *mask,
     __global float *allDist,
     __local float *sharebuffer,
-    int block_size,
     int query_rows,
     int query_cols,
     int train_rows,
@@ -736,8 +778,7 @@ kernel void BruteForceMatch_findBestMatch_D5(
     __global float *allDist,
     __global int *bestTrainIdx,
     __global float *bestDistance,
-    int k,
-    int block_size
+    int k
 )
 {
     /* Todo */
