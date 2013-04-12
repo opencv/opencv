@@ -5,7 +5,10 @@
 #include <opencv2/core/utility.hpp>
 #include <opencv2/imgproc.hpp>// Image processing methods for the CPU
 #include <opencv2/highgui.hpp>// Read images
-#include <opencv2/gpu.hpp>        // GPU structures and methods
+
+// GPU structures and methods
+#include <opencv2/gpuarithm.hpp>
+#include <opencv2/gpufilters.hpp>
 
 using namespace std;
 using namespace cv;
