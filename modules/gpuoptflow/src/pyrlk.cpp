@@ -124,7 +124,7 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
 
     GpuMat temp1 = (useInitialFlow ? nextPts : prevPts).reshape(1);
     GpuMat temp2 = nextPts.reshape(1);
-    multiply(temp1, Scalar::all(1.0 / (1 << maxLevel) / 2.0), temp2);
+    gpu::multiply(temp1, Scalar::all(1.0 / (1 << maxLevel) / 2.0), temp2);
 
     ensureSizeIsEnough(1, prevPts.cols, CV_8UC1, status);
     status.setTo(Scalar::all(1));
@@ -146,17 +146,17 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
     }
     else
     {
-        cvtColor(prevImg, buf_, COLOR_BGR2BGRA);
+        gpu::cvtColor(prevImg, buf_, COLOR_BGR2BGRA);
         buf_.convertTo(prevPyr_[0], CV_32F);
 
-        cvtColor(nextImg, buf_, COLOR_BGR2BGRA);
+        gpu::cvtColor(nextImg, buf_, COLOR_BGR2BGRA);
         buf_.convertTo(nextPyr_[0], CV_32F);
     }
 
     for (int level = 1; level <= maxLevel; ++level)
     {
-        pyrDown(prevPyr_[level - 1], prevPyr_[level]);
-        pyrDown(nextPyr_[level - 1], nextPyr_[level]);
+        gpu::pyrDown(prevPyr_[level - 1], prevPyr_[level]);
+        gpu::pyrDown(nextPyr_[level - 1], nextPyr_[level]);
     }
 
     pyrlk::loadConstants(make_int2(winSize.width, winSize.height), iters);
@@ -198,8 +198,8 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
 
     for (int level = 1; level <= maxLevel; ++level)
     {
-        pyrDown(prevPyr_[level - 1], prevPyr_[level]);
-        pyrDown(nextPyr_[level - 1], nextPyr_[level]);
+        gpu::pyrDown(prevPyr_[level - 1], prevPyr_[level]);
+        gpu::pyrDown(nextPyr_[level - 1], nextPyr_[level]);
     }
 
     ensureSizeIsEnough(prevImg.size(), CV_32FC1, uPyr_[0]);

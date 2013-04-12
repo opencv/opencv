@@ -148,7 +148,7 @@ GPU_TEST_P(BroxOpticalFlow, OpticalFlowNan)
     EXPECT_TRUE(cv::checkRange(h_v));
 };
 
-INSTANTIATE_TEST_CASE_P(GPU_Video, BroxOpticalFlow, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_OptFlow, BroxOpticalFlow, ALL_DEVICES);
 
 //////////////////////////////////////////////////////
 // PyrLKOpticalFlow
@@ -240,7 +240,7 @@ GPU_TEST_P(PyrLKOpticalFlow, Sparse)
     ASSERT_LE(bad_ratio, 0.01);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Video, PyrLKOpticalFlow, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_OptFlow, PyrLKOpticalFlow, testing::Combine(
     ALL_DEVICES,
     testing::Values(UseGray(true), UseGray(false))));
 
@@ -315,7 +315,7 @@ GPU_TEST_P(FarnebackOpticalFlow, Accuracy)
     EXPECT_MAT_SIMILAR(flowxy[1], d_flowy, 0.1);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Video, FarnebackOpticalFlow, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_OptFlow, FarnebackOpticalFlow, testing::Combine(
     ALL_DEVICES,
     testing::Values(PyrScale(0.3), PyrScale(0.5), PyrScale(0.8)),
     testing::Values(PolyN(5), PolyN(7)),
@@ -365,7 +365,7 @@ GPU_TEST_P(OpticalFlowDual_TVL1, Accuracy)
     EXPECT_MAT_SIMILAR(gold[1], d_flowy, 4e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Video, OpticalFlowDual_TVL1, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_OptFlow, OpticalFlowDual_TVL1, testing::Combine(
     ALL_DEVICES,
     WHOLE_SUBMAT));
 
@@ -424,7 +424,7 @@ GPU_TEST_P(OpticalFlowBM, Accuracy)
     EXPECT_MAT_NEAR(vely, d_vely, 0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Video, OpticalFlowBM, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_OptFlow, OpticalFlowBM, ALL_DEVICES);
 
 //////////////////////////////////////////////////////
 // FastOpticalFlowBM
@@ -542,6 +542,6 @@ GPU_TEST_P(FastOpticalFlowBM, Accuracy)
     EXPECT_LE(err, MAX_RMSE);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Video, FastOpticalFlowBM, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_OptFlow, FastOpticalFlowBM, ALL_DEVICES);
 
 #endif // HAVE_CUDA

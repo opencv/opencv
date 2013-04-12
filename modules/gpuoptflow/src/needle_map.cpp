@@ -40,26 +40,61 @@
 //
 //M*/
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
+#include "precomp.hpp"
 
-#ifndef __OPENCV_PERF_PRECOMP_HPP__
-#define __OPENCV_PERF_PRECOMP_HPP__
+using namespace cv;
+using namespace cv::gpu;
 
-#include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_perf.hpp"
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-#include "opencv2/gpuoptflow.hpp"
-#include "opencv2/video.hpp"
-#include "opencv2/legacy.hpp"
+void cv::gpu::createOpticalFlowNeedleMap(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
-#ifdef GTEST_CREATE_SHARED_LIBRARY
-#error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
-#endif
+#else
 
-#endif
+namespace cv { namespace gpu { namespace cudev
+{
+    namespace optical_flow
+    {
+        void NeedleMapAverage_gpu(PtrStepSzf u, PtrStepSzf v, PtrStepSzf u_avg, PtrStepSzf v_avg);
+        void CreateOpticalFlowNeedleMap_gpu(PtrStepSzf u_avg, PtrStepSzf v_avg, float* vertex_buffer, float* color_data, float max_flow, float xscale, float yscale);
+    }
+}}}
+
+void cv::gpu::createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors)
+{
+    using namespace cv::gpu::cudev::optical_flow;
+
+    CV_Assert(u.type() == CV_32FC1);
+    CV_Assert(v.type() == u.type() && v.size() == u.size());
+
+    const int NEEDLE_MAP_SCALE = 16;
+
+    const int x_needles = u.cols / NEEDLE_MAP_SCALE;
+    const int y_needles = u.rows / NEEDLE_MAP_SCALE;
+
+    GpuMat u_avg(y_needles, x_needles, CV_32FC1);
+    GpuMat v_avg(y_needles, x_needles, CV_32FC1);
+
+    NeedleMapAverage_gpu(u, v, u_avg, v_avg);
+
+    const int NUM_VERTS_PER_ARROW = 6;
+
+    const int num_arrows = x_needles * y_needles * NUM_VERTS_PER_ARROW;
+
+    vertex.create(1, num_arrows, CV_32FC3);
+    colors.create(1, num_arrows, CV_32FC3);
+
+    colors.setTo(Scalar::all(1.0));
+
+    double uMax, vMax;
+    gpu::minMax(u_avg, 0, &uMax);
+    gpu::minMax(v_avg, 0, &vMax);
+
+    float max_flow = static_cast<float>(std::sqrt(uMax * uMax + vMax * vMax));
+
+    CreateOpticalFlowNeedleMap_gpu(u_avg, v_avg, vertex.ptr<float>(), colors.ptr<float>(), max_flow, 1.0f / u.cols, 1.0f / u.rows);
+
+    cvtColor(colors, colors, COLOR_HSV2RGB);
+}
+
+#endif /* HAVE_CUDA */

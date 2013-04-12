@@ -1,5 +1,5 @@
-Video Analysis
-==============
+Optical Flow
+============
 
 .. highlight:: cpp
 
@@ -44,25 +44,6 @@ Class computing the optical flow for two images using Brox et al Optical Flow al
         GpuMat buf;
     };
 
-
-
-gpu::GoodFeaturesToTrackDetector_GPU::GoodFeaturesToTrackDetector_GPU
----------------------------------------------------------------------
-Constructor.
-
-.. ocv:function:: gpu::GoodFeaturesToTrackDetector_GPU::GoodFeaturesToTrackDetector_GPU(int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0, int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04)
-
-    :param maxCorners: Maximum number of corners to return. If there are more corners than are found, the strongest of them is returned.
-
-    :param qualityLevel: Parameter characterizing the minimal accepted quality of image corners. The parameter value is multiplied by the best corner quality measure, which is the minimal eigenvalue (see  :ocv:func:`gpu::cornerMinEigenVal` ) or the Harris function response (see  :ocv:func:`gpu::cornerHarris` ). The corners with the quality measure less than the product are rejected. For example, if the best corner has the quality measure = 1500, and the  ``qualityLevel=0.01`` , then all the corners with the quality measure less than 15 are rejected.
-
-    :param minDistance: Minimum possible Euclidean distance between the returned corners.
-
-    :param blockSize: Size of an average block for computing a derivative covariation matrix over each pixel neighborhood. See  :ocv:func:`cornerEigenValsAndVecs` .
-
-    :param useHarrisDetector: Parameter indicating whether to use a Harris detector (see :ocv:func:`gpu::cornerHarris`) or :ocv:func:`gpu::cornerMinEigenVal`.
-
-    :param harrisK: Free parameter of the Harris detector.
 
 
 gpu::FarnebackOpticalFlow

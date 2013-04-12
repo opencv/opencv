@@ -43,11 +43,13 @@
 #ifndef __OPENCV_GPUOPTFLOW_HPP__
 #define __OPENCV_GPUOPTFLOW_HPP__
 
+#ifndef __cplusplus
+#  error gpuoptflow.hpp header must be compiled as C++
+#endif
+
 #include "opencv2/core/gpumat.hpp"
 
 namespace cv { namespace gpu {
-
-////////////////////////////////// Optical Flow //////////////////////////////////////////
 
 class CV_EXPORTS BroxOpticalFlow
 {
@@ -281,7 +283,6 @@ private:
     GpuMat extended_I0;
     GpuMat extended_I1;
 };
-
 
 //! Interpolate frames (images) using provided optical flow (displacement field).
 //! frame0   - frame 0 (32-bit floating point images, single channel)

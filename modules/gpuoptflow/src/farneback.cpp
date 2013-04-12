@@ -247,8 +247,8 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
         pyramid1_[0] = frames_[1];
         for (int i = 1; i <= numLevelsCropped; ++i)
         {
-            pyrDown(pyramid0_[i - 1], pyramid0_[i], streams[0]);
-            pyrDown(pyramid1_[i - 1], pyramid1_[i], streams[1]);
+            gpu::pyrDown(pyramid0_[i - 1], pyramid0_[i], streams[0]);
+            gpu::pyrDown(pyramid1_[i - 1], pyramid1_[i], streams[1]);
         }
     }
 
@@ -291,22 +291,10 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
         {
             if (flags & OPTFLOW_USE_INITIAL_FLOW)
             {
-#if ENABLE_GPU_RESIZE
-                resize(flowx0, curFlowX, Size(width, height), 0, 0, INTER_LINEAR, streams[0]);
-                resize(flowy0, curFlowY, Size(width, height), 0, 0, INTER_LINEAR, streams[1]);
+                gpu::resize(flowx0, curFlowX, Size(width, height), 0, 0, INTER_LINEAR, streams[0]);
+                gpu::resize(flowy0, curFlowY, Size(width, height), 0, 0, INTER_LINEAR, streams[1]);
                 streams[0].enqueueConvert(curFlowX, curFlowX, curFlowX.depth(), scale);
                 streams[1].enqueueConvert(curFlowY, curFlowY, curFlowY.depth(), scale);
-#else
-                Mat tmp1, tmp2;
-                flowx0.download(tmp1);
-                resize(tmp1, tmp2, Size(width, height), 0, 0, INTER_AREA);
-                tmp2 *= scale;
-                curFlowX.upload(tmp2);
-                flowy0.download(tmp1);
-                resize(tmp1, tmp2, Size(width, height), 0, 0, INTER_AREA);
-                tmp2 *= scale;
-                curFlowY.upload(tmp2);
-#endif
             }
             else
             {
@@ -316,22 +304,10 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
         }
         else
         {
-#if ENABLE_GPU_RESIZE
-            resize(prevFlowX, curFlowX, Size(width, height), 0, 0, INTER_LINEAR, streams[0]);
-            resize(prevFlowY, curFlowY, Size(width, height), 0, 0, INTER_LINEAR, streams[1]);
+            gpu::resize(prevFlowX, curFlowX, Size(width, height), 0, 0, INTER_LINEAR, streams[0]);
+            gpu::resize(prevFlowY, curFlowY, Size(width, height), 0, 0, INTER_LINEAR, streams[1]);
             streams[0].enqueueConvert(curFlowX, curFlowX, curFlowX.depth(), 1./pyrScale);
             streams[1].enqueueConvert(curFlowY, curFlowY, curFlowY.depth(), 1./pyrScale);
-#else
-            Mat tmp1, tmp2;
-            prevFlowX.download(tmp1);
-            resize(tmp1, tmp2, Size(width, height), 0, 0, INTER_LINEAR);
-            tmp2 *= 1./pyrScale;
-            curFlowX.upload(tmp2);
-            prevFlowY.download(tmp1);
-            resize(tmp1, tmp2, Size(width, height), 0, 0, INTER_LINEAR);
-            tmp2 *= 1./pyrScale;
-            curFlowY.upload(tmp2);
-#endif
         }
 
         GpuMat M = allocMatFromBuf(5*height, width, CV_32F, M_);
@@ -367,14 +343,7 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
             {
                 cudev::optflow_farneback::gaussianBlurGpu(
                         frames_[i], smoothSize/2, blurredFrame[i], BORDER_REFLECT101, S(streams[i]));
-#if ENABLE_GPU_RESIZE
-                resize(blurredFrame[i], pyrLevel[i], Size(width, height), INTER_LINEAR, streams[i]);
-#else
-                Mat tmp1, tmp2;
-                tmp[i].download(tmp1);
-                resize(tmp1, tmp2, Size(width, height), INTER_LINEAR);
-                I[i].upload(tmp2);
-#endif
+                gpu::resize(blurredFrame[i], pyrLevel[i], Size(width, height), INTER_LINEAR, streams[i]);
                 cudev::optflow_farneback::polynomialExpansionGpu(pyrLevel[i], polyN, R[i], S(streams[i]));
             }
         }
