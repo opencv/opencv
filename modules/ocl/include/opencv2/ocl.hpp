@@ -861,68 +861,36 @@ namespace cv
 
 
         ///////////////////////////////////////////// Canny /////////////////////////////////////////////
-
         struct CV_EXPORTS CannyBuf;
 
-
-
         //! compute edges of the input image using Canny operator
-
         // Support CV_8UC1 only
-
         CV_EXPORTS void Canny(const oclMat &image, oclMat &edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
-
         CV_EXPORTS void Canny(const oclMat &image, CannyBuf &buf, oclMat &edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
-
         CV_EXPORTS void Canny(const oclMat &dx, const oclMat &dy, oclMat &edges, double low_thresh, double high_thresh, bool L2gradient = false);
-
         CV_EXPORTS void Canny(const oclMat &dx, const oclMat &dy, CannyBuf &buf, oclMat &edges, double low_thresh, double high_thresh, bool L2gradient = false);
 
-
-
         struct CV_EXPORTS CannyBuf
-
         {
-
             CannyBuf() : counter(NULL) {}
-
             ~CannyBuf()
             {
                 release();
             }
-
             explicit CannyBuf(const Size &image_size, int apperture_size = 3) : counter(NULL)
-
             {
-
                 create(image_size, apperture_size);
-
             }
-
             CannyBuf(const oclMat &dx_, const oclMat &dy_);
-
-
-
             void create(const Size &image_size, int apperture_size = 3);
-
-
-
             void release();
 
-
-
             oclMat dx, dy;
-
             oclMat dx_buf, dy_buf;
-
-            oclMat edgeBuf;
-
+            oclMat magBuf, mapBuf;
             oclMat trackBuf1, trackBuf2;
-
             void *counter;
-
             Ptr<FilterEngine_GPU> filterDX, filterDY;
-
         };
 
         ///////////////////////////////////////// Hough Transform /////////////////////////////////////////

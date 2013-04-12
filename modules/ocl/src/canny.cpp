@@ -86,7 +86,8 @@ void cv::ocl::CannyBuf::create(const Size &image_size, int apperture_size)
             filterDY = createDerivFilter_GPU(CV_8U, CV_32S, 0, 1, apperture_size, BORDER_REPLICATE);
         }
     }
-    ensureSizeIsEnough(image_size.height + 2, image_size.width + 2, CV_32FC1, edgeBuf);
+    ensureSizeIsEnough(image_size.height + 2, image_size.width + 2, CV_32FC1, magBuf);
+    ensureSizeIsEnough(image_size.height + 2, image_size.width + 2, CV_32FC1, mapBuf);
 
     ensureSizeIsEnough(1, image_size.width * image_size.height, CV_16UC2, trackBuf1);
     ensureSizeIsEnough(1, image_size.width * image_size.height, CV_16UC2, trackBuf2);
@@ -107,10 +108,15 @@ void cv::ocl::CannyBuf::release()
     dy.release();
     dx_buf.release();
     dy_buf.release();
-    edgeBuf.release();
+    magBuf.release();
+    mapBuf.release();
     trackBuf1.release();
     trackBuf2.release();
-    openCLFree(counter);
+    if(counter)
+    {
+        openCLFree(counter);
+        counter = NULL;
+    }
 }
 
 namespace cv
@@ -140,13 +146,13 @@ namespace
     void CannyCaller(CannyBuf &buf, oclMat &dst, float low_thresh, float high_thresh)
     {
         using namespace ::cv::ocl::canny;
-        calcMap_gpu(buf.dx, buf.dy, buf.edgeBuf, buf.edgeBuf, dst.rows, dst.cols, low_thresh, high_thresh);
+        calcMap_gpu(buf.dx, buf.dy, buf.magBuf, buf.mapBuf, dst.rows, dst.cols, low_thresh, high_thresh);
 
-        edgesHysteresisLocal_gpu(buf.edgeBuf, buf.trackBuf1, buf.counter, dst.rows, dst.cols);
+        edgesHysteresisLocal_gpu(buf.mapBuf, buf.trackBuf1, buf.counter, dst.rows, dst.cols);
 
-        edgesHysteresisGlobal_gpu(buf.edgeBuf, buf.trackBuf1, buf.trackBuf2, buf.counter, dst.rows, dst.cols);
+        edgesHysteresisGlobal_gpu(buf.mapBuf, buf.trackBuf1, buf.trackBuf2, buf.counter, dst.rows, dst.cols);
 
-        getEdges_gpu(buf.edgeBuf, dst, dst.rows, dst.cols);
+        getEdges_gpu(buf.mapBuf, dst, dst.rows, dst.cols);
     }
 }
 
@@ -169,20 +175,20 @@ void cv::ocl::Canny(const oclMat &src, CannyBuf &buf, oclMat &dst, double low_th
     dst.setTo(Scalar::all(0));
 
     buf.create(src.size(), apperture_size);
-    buf.edgeBuf.setTo(Scalar::all(0));
+    buf.magBuf.setTo(Scalar::all(0));
 
     if (apperture_size == 3)
     {
         calcSobelRowPass_gpu(src, buf.dx_buf, buf.dy_buf, src.rows, src.cols);
 
-        calcMagnitude_gpu(buf.dx_buf, buf.dy_buf, buf.dx, buf.dy, buf.edgeBuf, src.rows, src.cols, L2gradient);
+        calcMagnitude_gpu(buf.dx_buf, buf.dy_buf, buf.dx, buf.dy, buf.magBuf, src.rows, src.cols, L2gradient);
     }
     else
     {
         buf.filterDX->apply(src, buf.dx);
         buf.filterDY->apply(src, buf.dy);
 
-        calcMagnitude_gpu(buf.dx, buf.dy, buf.edgeBuf, src.rows, src.cols, L2gradient);
+        calcMagnitude_gpu(buf.dx, buf.dy, buf.magBuf, src.rows, src.cols, L2gradient);
     }
     CannyCaller(buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
 }
@@ -207,8 +213,8 @@ void cv::ocl::Canny(const oclMat &dx, const oclMat &dy, CannyBuf &buf, oclMat &d
     buf.dx = dx;
     buf.dy = dy;
     buf.create(dx.size(), -1);
-    buf.edgeBuf.setTo(Scalar::all(0));
-    calcMagnitude_gpu(buf.dx, buf.dy, buf.edgeBuf, dx.rows, dx.cols, L2gradient);
+    buf.magBuf.setTo(Scalar::all(0));
+    calcMagnitude_gpu(buf.dx, buf.dy, buf.magBuf, dx.rows, dx.cols, L2gradient);
 
     CannyCaller(buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
 }
