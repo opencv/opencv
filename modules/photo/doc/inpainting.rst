@@ -12,7 +12,6 @@ Restores the selected region in an image using the region neighborhood.
 .. ocv:pyfunction:: cv2.inpaint(src, inpaintMask, inpaintRadius, flags[, dst]) -> dst
 
 .. ocv:cfunction:: void cvInpaint( const CvArr* src, const CvArr* inpaint_mask, CvArr* dst, double inpaintRange, int flags )
-.. ocv:pyoldfunction:: cv.Inpaint(src, mask, dst, inpaintRadius, flags) -> None
 
     :param src: Input 8-bit 1-channel or 3-channel image.
 

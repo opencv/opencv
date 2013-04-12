@@ -67,10 +67,6 @@ Loads an image from a file.
 
 .. ocv:cfunction:: CvMat* cvLoadImageM( const char* filename, int iscolor=CV_LOAD_IMAGE_COLOR )
 
-.. ocv:pyoldfunction:: cv.LoadImage(filename, iscolor=CV_LOAD_IMAGE_COLOR) -> None
-
-.. ocv:pyoldfunction:: cv.LoadImageM(filename, iscolor=CV_LOAD_IMAGE_COLOR) -> None
-
     :param filename: Name of file to be loaded.
 
     :param flags: Flags specifying the color type of a loaded image:
@@ -125,8 +121,6 @@ Saves an image to a specified file.
 .. ocv:pyfunction:: cv2.imwrite(filename, img[, params]) -> retval
 
 .. ocv:cfunction:: int cvSaveImage( const char* filename, const CvArr* image, const int* params=0 )
-
-.. ocv:pyoldfunction:: cv.SaveImage(filename, image)-> None
 
     :param filename: Name of the file.
 
@@ -245,9 +239,7 @@ VideoCapture constructors.
 .. ocv:pyfunction:: cv2.VideoCapture(device) -> <VideoCapture object>
 
 .. ocv:cfunction:: CvCapture* cvCaptureFromCAM( int device )
-.. ocv:pyoldfunction:: cv.CaptureFromCAM(index) -> CvCapture
 .. ocv:cfunction:: CvCapture* cvCaptureFromFile( const char* filename )
-.. ocv:pyoldfunction:: cv.CaptureFromFile(filename) -> CvCapture
 
     :param filename: name of the opened video file
 
@@ -308,8 +300,6 @@ Grabs the next frame from video file or capturing device.
 
 .. ocv:cfunction:: int cvGrabFrame(CvCapture* capture)
 
-.. ocv:pyoldfunction:: cv.GrabFrame(capture) -> int
-
 The methods/functions grab the next frame from video file or camera and return true (non-zero) in the case of success.
 
 The primary use of the function is in multi-camera environments, especially when the cameras do not have hardware synchronization. That is, you call ``VideoCapture::grab()`` for each camera and after that call the slower method ``VideoCapture::retrieve()`` to decode and get frame from each camera. This way the overhead on demosaicing or motion jpeg decompression etc. is eliminated and the retrieved frames from different cameras will be closer in time.
@@ -326,8 +316,6 @@ Decodes and returns the grabbed video frame.
 .. ocv:pyfunction:: cv2.VideoCapture.retrieve([image[, flag]]) -> retval, image
 
 .. ocv:cfunction:: IplImage* cvRetrieveFrame( CvCapture* capture, int streamIdx=0 )
-
-.. ocv:pyoldfunction:: cv.RetrieveFrame(capture) -> image
 
 The methods/functions decode and return the just grabbed frame. If no frames has been grabbed (camera has been disconnected, or there are no more frames in video file), the methods return false and the functions return NULL pointer.
 
@@ -346,8 +334,6 @@ Grabs, decodes and returns the next video frame.
 
 .. ocv:cfunction:: IplImage* cvQueryFrame(CvCapture* capture)
 
-.. ocv:pyoldfunction:: cv.QueryFrame(capture) -> image
-
 The methods/functions combine :ocv:func:`VideoCapture::grab` and :ocv:func:`VideoCapture::retrieve` in one call. This is the most convenient method for reading video files or capturing data from decode and return the just grabbed frame. If no frames has been grabbed (camera has been disconnected, or there are no more frames in video file), the methods return false and the functions return NULL pointer.
 
 .. note:: OpenCV 1.x functions ``cvRetrieveFrame`` and ``cv.RetrieveFrame`` return image stored inside the video capturing structure. It is not allowed to modify or release the image! You can copy the frame using :ocv:cfunc:`cvCloneImage` and then do whatever you want with the copy.
@@ -362,9 +348,6 @@ Returns the specified ``VideoCapture`` property
 .. ocv:pyfunction:: cv2.VideoCapture.get(propId) -> retval
 
 .. ocv:cfunction:: double cvGetCaptureProperty( CvCapture* capture, int property_id )
-
-.. ocv:pyoldfunction:: cv.GetCaptureProperty(capture, property_id) -> float
-
 
     :param propId: Property identifier. It can be one of the following:
 
@@ -418,8 +401,6 @@ Sets a property in the ``VideoCapture``.
 .. ocv:pyfunction:: cv2.VideoCapture.set(propId, value) -> retval
 
 .. ocv:cfunction:: int cvSetCaptureProperty( CvCapture* capture, int property_id, double value )
-
-.. ocv:pyoldfunction:: cv.SetCaptureProperty(capture, property_id, value) -> retval
 
     :param propId: Property identifier. It can be one of the following:
 
@@ -484,7 +465,6 @@ VideoWriter constructors
 .. ocv:pyfunction:: cv2.VideoWriter([filename, fourcc, fps, frameSize[, isColor]]) -> <VideoWriter object>
 
 .. ocv:cfunction:: CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc, double fps, CvSize frame_size, int is_color=1 )
-.. ocv:pyoldfunction:: cv.CreateVideoWriter(filename, fourcc, fps, frame_size, is_color=true) -> CvVideoWriter
 
 .. ocv:pyfunction:: cv2.VideoWriter.isOpened() -> retval
 .. ocv:pyfunction:: cv2.VideoWriter.open(filename, fourcc, fps, frameSize[, isColor]) -> retval
@@ -544,7 +524,6 @@ Writes the next video frame
 .. ocv:pyfunction:: cv2.VideoWriter.write(image) -> None
 
 .. ocv:cfunction:: int cvWriteFrame( CvVideoWriter* writer, const IplImage* image )
-.. ocv:pyoldfunction:: cv.WriteFrame(writer, image)->int
 
     :param writer: Video writer structure (OpenCV 1.x API)
 
