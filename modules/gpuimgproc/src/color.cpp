@@ -1587,7 +1587,7 @@ namespace
         (void)src;
         (void)dst;
         (void)st;
-        CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+        CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" );
     #else
         CV_Assert(src.type() == CV_8UC4 || src.type() == CV_16UC4);
 
@@ -1970,7 +1970,7 @@ void cv::gpu::gammaCorrection(const GpuMat& src, GpuMat& dst, bool forward, Stre
     (void)dst;
     (void)forward;
     (void)stream;
-    CV_Error( CV_StsNotImplemented, "This function works only with CUDA 5.0 or higher" );
+    CV_Error( cv::Error::StsNotImplemented, "This function works only with CUDA 5.0 or higher" );
 #else
     typedef NppStatus (*func_t)(const Npp8u* pSrc, int nSrcStep, Npp8u* pDst, int nDstStep, NppiSize oSizeROI);
     typedef NppStatus (*func_inplace_t)(Npp8u* pSrcDst, int nSrcDstStep, NppiSize oSizeROI);

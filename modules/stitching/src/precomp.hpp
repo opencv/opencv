@@ -79,6 +79,10 @@
 #  include "opencv2/gpufeatures2d.hpp"
 #endif
 
+#ifdef HAVE_OPENCV_GPU
+#  include "opencv2/gpu.hpp"
+#endif
+
 #ifdef HAVE_OPENCV_NONFREE
 #  include "opencv2/nonfree/gpu.hpp"
 #endif
