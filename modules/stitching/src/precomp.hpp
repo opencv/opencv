@@ -66,11 +66,21 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/calib3d.hpp"
-#ifdef HAVE_OPENCV_GPU
-#  include "opencv2/gpu.hpp"
-#  ifdef HAVE_OPENCV_NONFREE
-#    include "opencv2/nonfree/gpu.hpp"
-#  endif
+
+#ifdef HAVE_OPENCV_GPUARITHM
+#  include "opencv2/gpuarithm.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_GPUWARPING
+#  include "opencv2/gpuwarping.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_GPUFEATURES2D
+#  include "opencv2/gpufeatures2d.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_NONFREE
+#  include "opencv2/nonfree/gpu.hpp"
 #endif
 
 #include "../../imgproc/src/gcgraph.hpp"
