@@ -43,19 +43,28 @@
 #ifndef __OPENCV_GPU_HPP__
 #define __OPENCV_GPU_HPP__
 
+#ifndef __cplusplus
+#  error gpu.hpp header must be compiled as C++
+#endif
+
 #include "opencv2/core/gpumat.hpp"
-#include "opencv2/gpuarithm.hpp"
-#include "opencv2/gpufilters.hpp"
-#include "opencv2/gpuwarping.hpp"
-#include "opencv2/gpuimgproc.hpp"
-#include "opencv2/gpufeatures2d.hpp"
-#include "opencv2/gpuoptflow.hpp"
-#include "opencv2/gpubgsegm.hpp"
-#include "opencv2/gpustereo.hpp"
+
+#if !defined(__OPENCV_BUILD) && !defined(OPENCV_GPU_SKIP_INCLUDE)
+#  include "opencv2/gpuarithm.hpp"
+#  include "opencv2/gpufilters.hpp"
+#  include "opencv2/gpuwarping.hpp"
+#  include "opencv2/gpuimgproc.hpp"
+#  include "opencv2/gpufeatures2d.hpp"
+#  include "opencv2/gpuoptflow.hpp"
+#  include "opencv2/gpubgsegm.hpp"
+#  include "opencv2/gpustereo.hpp"
+#  include "opencv2/gpucodec.hpp"
+#endif
 
 namespace cv { namespace gpu {
 
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
+
 struct CV_EXPORTS HOGConfidence
 {
    double scale;
@@ -146,6 +155,8 @@ protected:
     std::vector<GpuMat> image_scales;
 };
 
+//////////////////////////// CascadeClassifier ////////////////////////////
+
 // The cascade classifier class for object detection: supports old haar and new lbp xlm formats and nvbin for haar cascades olny.
 class CV_EXPORTS CascadeClassifier_GPU
 {
@@ -175,6 +186,8 @@ private:
     friend class CascadeClassifier_GPU_LBP;
 };
 
+//////////////////////////// Labeling ////////////////////////////
+
 //!performs labeling via graph cuts of a 2D regular 4-connected graph.
 CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels,
                          GpuMat& buf, Stream& stream = Stream::Null());
@@ -191,6 +204,8 @@ CV_EXPORTS void connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Sc
 //! performs connected componnents labeling.
 CV_EXPORTS void labelComponents(const GpuMat& mask, GpuMat& components, int flags = 0, Stream& stream = Stream::Null());
 
+//////////////////////////// Calib3d ////////////////////////////
+
 CV_EXPORTS void transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
                                 GpuMat& dst, Stream& stream = Stream::Null());
 
@@ -202,6 +217,8 @@ CV_EXPORTS void solvePnPRansac(const Mat& object, const Mat& image, const Mat& c
                                const Mat& dist_coef, Mat& rvec, Mat& tvec, bool use_extrinsic_guess=false,
                                int num_iters=100, float max_dist=8.0, int min_inlier_count=100,
                                std::vector<int>* inliers=NULL);
+
+//////////////////////////// VStab ////////////////////////////
 
 //! removes points (CV_32FC2, single row matrix) with zero mask value
 CV_EXPORTS void compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask);
