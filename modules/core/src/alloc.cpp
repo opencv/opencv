@@ -208,7 +208,8 @@ struct Block
         return allocated > almostEmptyThreshold; 
     }
 
-    unsigned int signature;
+    // Do not change the order of the following members! 
+    // Otherwise sizeof(Block) may change.
     Block* prev;
     Block* next;
     Node* privateFreeList;
@@ -218,6 +219,7 @@ struct Block
     uchar* data;
     ThreadData* threadData;
     size_t objSize;
+    unsigned int signature;
     int binIdx;
     int allocated;
     int almostEmptyThreshold;
@@ -267,13 +269,14 @@ struct Block
     }
 
     static const unsigned int MEM_BLOCK_SIGNATURE = 0x01234567;
-    static const size_t HDR_SIZE = 128;
+    static const size_t HDR_SIZE;
     static size_t memBlockSize;
     static size_t maxBlockSize;
     static int maxBin;
     static int* binSizeTable;
     static int* binIdxTable;
 };
+const size_t Block::HDR_SIZE = sizeof(Block);
 size_t Block::memBlockSize = 0;
 size_t Block::maxBlockSize = 0;
 int Block::maxBin = 0;
@@ -597,13 +600,27 @@ struct MemPoolAllocator
         blockPool.clear();
     }
 
-    static void init(int blockSize = 1 << 14)
+    static size_t align(size_t num)
     {
-        assert(bigBlockSize > blockSize);
+        size_t result = 1;
+
+        while (result < num)
+        {
+            result <<= 1;
+        }
+
+        return result;
+    }
+
+    static void init(size_t blockSize = 16256)
+    {
+        if (blockSize <= Block::HDR_SIZE)
+            CV_Error(-1, "BlockSize is too small.");
 
         dispose();
-        Block::initBlockSize(blockSize);
-        BigBlock::bigBlockSize = blockSize << 2;
+        size_t actualBlockSize = align(blockSize + Block::HDR_SIZE);
+        Block::initBlockSize(actualBlockSize);
+        BigBlock::bigBlockSize = actualBlockSize << 2;
     };
 
     static BlockPool blockPool;
@@ -851,7 +868,7 @@ CV_IMPL void cvFree_(void* ptr)
     cv::cvFreeFunc(ptr, cv::cvUserData);
 }
 
-CV_IMPL void cvTurnOnMemoryPool(int blockSize)
+CV_IMPL void cvTurnOnMemoryPool(size_t blockSize)
 {
     cv::MemPoolAllocator::init(blockSize);
     cv::cvAllocFunc = cv::MemPoolAllocator::allocate;
@@ -876,6 +893,13 @@ CV_IMPL void cvSetMemoryManager(CvAllocFunc allocFunc, CvFreeFunc freeFunc, void
         cv::cvFreeFunc = freeFunc;
 
     cv::cvUserData = userData;
+}
+
+CV_IMPL void cvRemoveMemoryManager()
+{
+    cv::cvAllocFunc = cv::NaiveAllocator::allocate;
+    cv::cvFreeFunc = cv::NaiveAllocator::deallocate;
+    cv::cvUserData = NULL;
 }
 
 /* End of file. */
