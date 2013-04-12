@@ -60,7 +60,7 @@ void CvMeanShiftTracker::newTrackingWindow(Mat image, Rect selection)
     float srange[] = { 0, 1 };
     const float* ranges[] = {hrange, srange};
 
-    cvtColor(image, hsv, CV_BGR2HSV);
+    cvtColor(image, hsv, COLOR_BGR2HSV);
     inRange(hsv, Scalar(0, 30, MIN(10, 256)), Scalar(180, 256, MAX(10, 256)), mask);
 
     hue.create(hsv.size(), CV_8UC2);
@@ -83,7 +83,7 @@ RotatedRect CvMeanShiftTracker::updateTrackingWindow(Mat image)
     float srange[] = { 0, 1 };
     const float* ranges[] = {hrange, srange};
 
-    cvtColor(image, hsv, CV_BGR2HSV);
+    cvtColor(image, hsv, COLOR_BGR2HSV);
     inRange(hsv, Scalar(0, 30, MIN(10, 256)), Scalar(180, 256, MAX(10, 256)), mask);
     hue.create(hsv.size(), CV_8UC2);
     mixChannels(&hsv, 1, &hue, 1, channels, 2);

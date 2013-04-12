@@ -138,7 +138,7 @@ bool CV_ECC_Test_Translation::testTranslation(int from)
         Mat warpedImage;
 
         warpAffine(testImg, warpedImage, translationGround,
-            Size(200,200), CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+            Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
 
         Mat mapTranslation = (Mat_<float>(2,3) << 1, 0, 0, 0, 1, 0);
 
@@ -213,7 +213,7 @@ bool CV_ECC_Test_Euclidean::testEuclidean(int from)
         Mat warpedImage;
 
         warpAffine(testImg, warpedImage, euclideanGround,
-            Size(200,200), CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+            Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
 
         Mat mapEuclidean = (Mat_<float>(2,3) << 1, 0, 0, 0, 1, 0);
 
@@ -288,7 +288,7 @@ bool CV_ECC_Test_Affine::testAffine(int from)
         Mat warpedImage;
 
         warpAffine(testImg, warpedImage, affineGround,
-            Size(200,200), CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+            Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
 
         Mat mapAffine = (Mat_<float>(2,3) << 1, 0, 0, 0, 1, 0);
 
@@ -363,7 +363,7 @@ bool CV_ECC_Test_Homography::testHomography(int from)
         Mat warpedImage;
 
         warpPerspective(testImg, warpedImage, homoGround,
-            Size(200,200), CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+            Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
 
         Mat mapHomography = Mat::eye(3, 3, CV_32F);
 

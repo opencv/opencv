@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/calib3d/calib3d_c.h"
 
 CvStereoBMState* cvCreateStereoBMState( int /*preset*/, int numberOfDisparities )
 {
@@ -82,10 +83,6 @@ void cvReleaseStereoBMState( CvStereoBMState** state )
     cvReleaseMat( &(*state)->cost );
     cvFree( state );
 }
-
-template<> void cv::Ptr<CvStereoBMState>::delete_obj()
-{ cvReleaseStereoBMState(&obj); }
-
 
 void cvFindStereoCorrespondenceBM( const CvArr* leftarr, const CvArr* rightarr,
                                    CvArr* disparr, CvStereoBMState* state )

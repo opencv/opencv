@@ -66,7 +66,7 @@ static inline int getLabel(int quantized)
     case 64:  return 6;
     case 128: return 7;
     default:
-      CV_Error(CV_StsBadArg, "Invalid value of quantized parameter");
+      CV_Error(Error::StsBadArg, "Invalid value of quantized parameter");
       return -1; //avoid warning
   }
 }
@@ -1398,17 +1398,17 @@ void Detector::match(const std::vector<Mat>& sources, float threshold, std::vect
   if (quantized_images.needed())
     quantized_images.create(1, static_cast<int>(pyramid_levels * modalities.size()), CV_8U);
 
-  assert(sources.size() == modalities.size());
+  CV_Assert(sources.size() == modalities.size());
   // Initialize each modality with our sources
   std::vector< Ptr<QuantizedPyramid> > quantizers;
   for (int i = 0; i < (int)modalities.size(); ++i){
     Mat mask, source;
     source = sources[i];
     if(!masks.empty()){
-      assert(masks.size() == modalities.size());
+      CV_Assert(masks.size() == modalities.size());
       mask = masks[i];
     }
-    assert(mask.empty() || mask.size() == source.size());
+    CV_Assert(mask.empty() || mask.size() == source.size());
     quantizers.push_back(modalities[i]->process(source, mask));
   }
   // pyramid level -> modality -> quantization

@@ -505,7 +505,7 @@ namespace cv
             char* binary = (char*)malloc(binarySize);
             if(binary == NULL)
             {
-                CV_Error(CV_StsNoMem, "Failed to allocate host memory.");
+                CV_Error(Error::StsNoMem, "Failed to allocate host memory.");
             }
             openCLSafeCall(clGetProgramInfo(program,
                                     CL_PROGRAM_BINARIES,

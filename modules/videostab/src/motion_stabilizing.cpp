@@ -134,7 +134,7 @@ LpMotionStabilizer::LpMotionStabilizer(MotionModel model)
 
 void LpMotionStabilizer::stabilize(int, const std::vector<Mat>&, std::pair<int,int>, Mat*)
 {
-    CV_Error(CV_StsError, "The library is built without Clp support");
+    CV_Error(Error::StsError, "The library is built without Clp support");
 }
 
 #else

@@ -41,6 +41,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
 
 using namespace cv;
 using namespace std;
@@ -117,7 +118,7 @@ int CV_DetectorTest::prepareData( FileStorage& _fs )
 //        fn[TOTAL_NO_PAIR_E] >> eps.totalNoPair;
 
         // read detectors
-        if( fn[DETECTOR_NAMES].node->data.seq != 0 )
+        if( fn[DETECTOR_NAMES].size() != 0 )
         {
             FileNodeIterator it = fn[DETECTOR_NAMES].begin();
             for( ; it != fn[DETECTOR_NAMES].end(); )
@@ -132,7 +133,7 @@ int CV_DetectorTest::prepareData( FileStorage& _fs )
 
         // read images filenames and images
         string dataPath = ts->get_data_path();
-        if( fn[IMAGE_FILENAMES].node->data.seq != 0 )
+        if( fn[IMAGE_FILENAMES].size() != 0 )
         {
             for( FileNodeIterator it = fn[IMAGE_FILENAMES].begin(); it != fn[IMAGE_FILENAMES].end(); )
             {
@@ -210,7 +211,7 @@ void CV_DetectorTest::run( int )
         {
             char buf[10];
             sprintf( buf, "%s%d", "img_", ii );
-            cvWriteComment( validationFS.fs, buf, 0 );
+            //cvWriteComment( validationFS.fs, buf, 0 );
             validationFS << *it;
         }
         validationFS << "]"; // IMAGE_FILENAMES
@@ -316,7 +317,7 @@ int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
         string imageIdxStr = buf;
         FileNode node = validationFS.getFirstTopLevelNode()[VALIDATION][detectorNames[detectorIdx]][imageIdxStr];
         vector<Rect> valRects;
-        if( node.node->data.seq != 0 )
+        if( node.size() != 0 )
         {
             for( FileNodeIterator it2 = node.begin(); it2 != node.end(); )
             {
@@ -410,12 +411,12 @@ void CV_CascadeDetectorTest::readDetector( const FileNode& fn )
     if( flag )
         flags.push_back( 0 );
     else
-        flags.push_back( CV_HAAR_SCALE_IMAGE );
+        flags.push_back( CASCADE_SCALE_IMAGE );
 }
 
 void CV_CascadeDetectorTest::writeDetector( FileStorage& fs, int di )
 {
-    int sc = flags[di] & CV_HAAR_SCALE_IMAGE ? 0 : 1;
+    int sc = flags[di] & CASCADE_SCALE_IMAGE ? 0 : 1;
     fs << FILENAME << detectorFilenames[di];
     fs << C_SCALE_CASCADE << sc;
 }
@@ -439,7 +440,7 @@ int CV_CascadeDetectorTest::detectMultiScale_C( const string& filename,
 
     CvMat c_gray = grayImg;
     CvSeq* rs = cvHaarDetectObjects(&c_gray, c_cascade, storage, 1.1, 3, flags[di] );
-    
+
     objects.clear();
     for( int i = 0; i < rs->total; i++ )
     {
@@ -494,7 +495,7 @@ CV_HOGDetectorTest::CV_HOGDetectorTest()
 void CV_HOGDetectorTest::readDetector( const FileNode& fn )
 {
     String filename;
-    if( fn[FILENAME].node->data.seq != 0 )
+    if( fn[FILENAME].size() != 0 )
         fn[FILENAME] >> filename;
     detectorFilenames.push_back( filename);
 }
@@ -1085,7 +1086,7 @@ void HOGDescriptorTester::detect(const Mat& img,
     }
 
     const double eps = 0.0;
-    double diff_norm = norm(Mat(actual_weights) - Mat(weights), CV_L2);
+    double diff_norm = norm(Mat(actual_weights) - Mat(weights), NORM_L2);
     if (diff_norm > eps)
     {
         ts->printf(cvtest::TS::SUMMARY, "Weights for found locations aren't equal.\n"
@@ -1164,7 +1165,7 @@ void HOGDescriptorTester::compute(const Mat& img, vector<float>& descriptors,
     std::vector<float> actual_descriptors;
     actual_hog->compute(img, actual_descriptors, winStride, padding, locations);
 
-    double diff_norm = cv::norm(Mat(actual_descriptors) - Mat(descriptors), CV_L2);
+    double diff_norm = cv::norm(Mat(actual_descriptors) - Mat(descriptors), NORM_L2);
     const double eps = 0.0;
     if (diff_norm > eps)
     {
@@ -1314,7 +1315,7 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
     const double eps = 0.0;
     for (i = 0; i < 2; ++i)
     {
-       double diff_norm = norm(reference_mats[i] - actual_mats[i], CV_L2);
+       double diff_norm = norm(reference_mats[i] - actual_mats[i], NORM_L2);
        if (diff_norm > eps)
        {
            ts->printf(cvtest::TS::LOG, "%s matrices are not equal\n"

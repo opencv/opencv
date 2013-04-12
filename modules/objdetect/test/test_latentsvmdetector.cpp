@@ -41,6 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
 #include <string>
 
 #ifdef HAVE_TBB

@@ -53,7 +53,7 @@ namespace cv
 int RANSACUpdateNumIters( double p, double ep, int modelPoints, int maxIters )
 {
     if( modelPoints <= 0 )
-        CV_Error( CV_StsOutOfRange, "the number of model points should be positive" );
+        CV_Error( Error::StsOutOfRange, "the number of model points should be positive" );
 
     p = MAX(p, 0.);
     p = MIN(p, 1.);

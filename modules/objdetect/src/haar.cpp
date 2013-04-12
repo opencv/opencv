@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/objdetect/objdetect_c.h"
 #include <stdio.h>
 
 #if CV_SSE2

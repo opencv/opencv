@@ -267,7 +267,7 @@ void cv::ocl::HOGDescriptor::getDescriptors(const oclMat &img, Size win_stride, 
                                     win_stride.height, win_stride.width, effect_size.height, effect_size.width, block_hists, descriptors);
         break;
     default:
-        CV_Error(CV_StsBadArg, "Unknown descriptor format");
+        CV_Error(Error::StsBadArg, "Unknown descriptor format");
     }
 }
 
@@ -353,7 +353,7 @@ void cv::ocl::HOGDescriptor::detectMultiScale(const oclMat &img, std::vector<Rec
         }
         Size scaled_win_size(cvRound(win_size.width * scale), cvRound(win_size.height * scale));
         for (size_t j = 0; j < locations.size(); j++)
-            all_candidates.push_back(Rect(Point2d((CvPoint)locations[j]) * scale, scaled_win_size));
+            all_candidates.push_back(Rect(Point2d(locations[j]) * scale, scaled_win_size));
     }
 
     found_locations.assign(all_candidates.begin(), all_candidates.end());
@@ -1627,7 +1627,7 @@ void cv::ocl::device::hog::normalize_hists(int nbins, int block_stride_x, int bl
     size_t localThreads[3] = { nthreads, 1, 1  };
 
     if ((nthreads < 32) || (nthreads > 512) )
-        cv::ocl::error("normalize_hists: histogram's size is too small or too big", __FILE__, __LINE__, "normalize_hists");
+        cv::error(Error::StsBadArg, "normalize_hists: histogram's size is too small or too big", "cv::ocl::device::hog::normalize_hists", __FILE__, __LINE__);
 
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&nthreads));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&block_hist_size));

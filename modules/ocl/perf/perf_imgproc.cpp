@@ -746,12 +746,12 @@ void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi, int sp, 
 
     if (src_roi.empty())
     {
-        CV_Error(CV_StsBadArg, "The input image is empty");
+        CV_Error(Error::StsBadArg, "The input image is empty");
     }
 
     if (src_roi.depth() != CV_8U || src_roi.channels() != 4)
     {
-        CV_Error(CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported");
+        CV_Error(Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported");
     }
 
     CV_Assert((src_roi.cols == dst_roi.cols) && (src_roi.rows == dst_roi.rows) &&

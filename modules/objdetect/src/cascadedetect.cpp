@@ -43,6 +43,7 @@
 #include <cstdio>
 
 #include "cascadedetect.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
 
 #if defined (LOG_CASCADE_STATISTIC)
 struct Logger

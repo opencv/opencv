@@ -10,6 +10,10 @@
 #include <iostream>
 #include <stdio.h>
 
+int main( int, const char** ) { return 0; }
+
+#if 0
+
 using namespace std;
 using namespace cv;
 
@@ -26,6 +30,8 @@ static void help()
         "Hit any key to quit.\n"
         "Using OpenCV version " << CV_VERSION << "\n" << endl;
 }
+
+
 struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } };
 void detectAndDraw( Mat& img,
     cv::ocl::OclCascadeClassifier& cascade, CascadeClassifier& nestedCascade,
@@ -230,3 +236,4 @@ void detectAndDraw( Mat& img,
     }
     cv::imshow( "result", img );
 }
+#endif

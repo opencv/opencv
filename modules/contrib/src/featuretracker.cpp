@@ -80,7 +80,7 @@ CvFeatureTracker::~CvFeatureTracker()
 void CvFeatureTracker::newTrackingWindow(Mat image, Rect selection)
 {
     image.copyTo(prev_image);
-    cvtColor(prev_image, prev_image_bw, CV_BGR2GRAY);
+    cvtColor(prev_image, prev_image_bw, COLOR_BGR2GRAY);
     prev_trackwindow = selection;
     prev_center.x = selection.x;
     prev_center.y = selection.y;
@@ -131,7 +131,7 @@ Rect CvFeatureTracker::updateTrackingWindowWithSIFT(Mat image)
             curr_keys.push_back(curr_keypoints[matches[i].trainIdx].pt);
         }
 
-        Mat T = findHomography(prev_keys, curr_keys, CV_LMEDS);
+        Mat T = findHomography(prev_keys, curr_keys, LMEDS);
 
         prev_trackwindow.x += cvRound(T.at<double> (0, 2));
         prev_trackwindow.y += cvRound(T.at<double> (1, 2));
@@ -148,12 +148,12 @@ Rect CvFeatureTracker::updateTrackingWindowWithFlow(Mat image)
     ittr++;
     Size subPixWinSize(10,10), winSize(31,31);
     Mat image_bw;
-    TermCriteria termcrit(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.03);
+    TermCriteria termcrit(TermCriteria::COUNT | TermCriteria::EPS, 20, 0.03);
     std::vector<uchar> status;
     std::vector<float> err;
 
-    cvtColor(image, image_bw, CV_BGR2GRAY);
-    cvtColor(prev_image, prev_image_bw, CV_BGR2GRAY);
+    cvtColor(image, image_bw, COLOR_BGR2GRAY);
+    cvtColor(prev_image, prev_image_bw, COLOR_BGR2GRAY);
 
     if (ittr == 1)
     {

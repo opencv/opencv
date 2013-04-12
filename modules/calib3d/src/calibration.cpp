@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/calib3d/calib3d_c.h"
 #include <stdio.h>
 #include <iterator>
 
@@ -825,7 +826,7 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
                             dpdk_p[dpdk_step+7] = fy*y*cdist*(-icdist2)*icdist2*r6;
                             if( _dpdk->cols > 8 )
                             {
-                                dpdk_p[8] = fx*r2; //s1 
+                                dpdk_p[8] = fx*r2; //s1
                                 dpdk_p[9] = fx*r4; //s2
                                 dpdk_p[10] = 0;//s3
                                 dpdk_p[11] = 0;//s4
@@ -1255,7 +1256,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
     //when the thin prism model is used the distortion coefficients matrix must have 12 parameters
     if((flags & CV_CALIB_THIN_PRISM_MODEL) && (distCoeffs->cols*distCoeffs->rows != 12))
         CV_Error( CV_StsBadArg, "Thin prism model must have 12 parameters in the distortion matrix" );
-    
+
     nimages = npoints->rows*npoints->cols;
     npstep = npoints->rows == 1 ? 1 : npoints->step/CV_ELEM_SIZE(npoints->type);
 

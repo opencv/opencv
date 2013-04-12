@@ -226,7 +226,7 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
             args.push_back( std::make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case 1:
@@ -245,7 +245,7 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
             args.push_back( std::make_pair( sizeof(cl_char4) , (void *)&val.cval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case 2:
@@ -264,7 +264,7 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
             args.push_back( std::make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case 3:
@@ -283,7 +283,7 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
             args.push_back( std::make_pair( sizeof(cl_short4) , (void *)&val.shval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case 4:
@@ -309,7 +309,7 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
             args.push_back( std::make_pair( sizeof(cl_int4) , (void *)&val.ival ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case 5:
@@ -328,7 +328,7 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
             args.push_back( std::make_pair( sizeof(cl_float4) , (void *)&val.fval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case 6:
@@ -347,11 +347,11 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
             args.push_back( std::make_pair( sizeof(cl_double4) , (void *)&val.dval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     default:
-        CV_Error(CV_StsUnsupportedFormat, "unknown depth");
+        CV_Error(Error::StsUnsupportedFormat, "unknown depth");
     }
 #ifdef CL_VERSION_1_2
     if(dst.offset == 0 && dst.cols == dst.wholecols)
@@ -465,7 +465,7 @@ static void arithmetic_run(const oclMat &src1, oclMat &dst, String kernelName, c
 {
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 

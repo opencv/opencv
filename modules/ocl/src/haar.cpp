@@ -53,6 +53,8 @@
 using namespace cv;
 using namespace cv::ocl;
 
+#if 0
+
 namespace cv
 {
 namespace ocl
@@ -1493,3 +1495,4 @@ struct gpuHaarDetectObjects_ScaleCascade_Invoker
 
 }
 }
+#endif

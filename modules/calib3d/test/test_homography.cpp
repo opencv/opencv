@@ -65,7 +65,7 @@
 #define METHODS_COUNT 3
 
 int NORM_TYPE[COUNT_NORM_TYPES] = {cv::NORM_L1, cv::NORM_L2, cv::NORM_INF};
-int METHOD[METHODS_COUNT] = {0, CV_RANSAC, CV_LMEDS};
+int METHOD[METHODS_COUNT] = {0, cv::RANSAC, cv::LMEDS};
 
 using namespace cv;
 using namespace std;
@@ -309,7 +309,7 @@ void CV_HomographyTest::run(int)
             switch (method)
             {
             case 0:
-            case CV_LMEDS:
+            case LMEDS:
                 {
                     Mat H_res_64 [4] = { cv::findHomography(src_mat_2f, dst_mat_2f, method),
                                          cv::findHomography(src_mat_2f, dst_vec, method),
@@ -339,14 +339,14 @@ void CV_HomographyTest::run(int)
 
                     continue;
                 }
-            case CV_RANSAC:
+            case RANSAC:
                 {
                     cv::Mat mask [4]; double diff;
 
-                    Mat H_res_64 [4] = { cv::findHomography(src_mat_2f, dst_mat_2f, CV_RANSAC, reproj_threshold, mask[0]),
-                                         cv::findHomography(src_mat_2f, dst_vec, CV_RANSAC, reproj_threshold, mask[1]),
-                                         cv::findHomography(src_vec, dst_mat_2f, CV_RANSAC, reproj_threshold, mask[2]),
-                                         cv::findHomography(src_vec, dst_vec, CV_RANSAC, reproj_threshold, mask[3]) };
+                    Mat H_res_64 [4] = { cv::findHomography(src_mat_2f, dst_mat_2f, RANSAC, reproj_threshold, mask[0]),
+                                         cv::findHomography(src_mat_2f, dst_vec, RANSAC, reproj_threshold, mask[1]),
+                                         cv::findHomography(src_vec, dst_mat_2f, RANSAC, reproj_threshold, mask[2]),
+                                         cv::findHomography(src_vec, dst_vec, RANSAC, reproj_threshold, mask[3]) };
 
                     for (int j = 0; j < 4; ++j)
                     {
@@ -411,7 +411,7 @@ void CV_HomographyTest::run(int)
             switch (method)
             {
             case 0:
-            case CV_LMEDS:
+            case LMEDS:
                 {
                     Mat H_res_64 [4] = { cv::findHomography(src_mat_2f, dst_mat_2f),
                                          cv::findHomography(src_mat_2f, dst_vec),
@@ -466,14 +466,14 @@ void CV_HomographyTest::run(int)
 
                     continue;
                 }
-            case CV_RANSAC:
+            case RANSAC:
                 {
                     cv::Mat mask_res [4];
 
-                    Mat H_res_64 [4] = { cv::findHomography(src_mat_2f, dst_mat_2f, CV_RANSAC, reproj_threshold, mask_res[0]),
-                                         cv::findHomography(src_mat_2f, dst_vec, CV_RANSAC, reproj_threshold, mask_res[1]),
-                                         cv::findHomography(src_vec, dst_mat_2f, CV_RANSAC, reproj_threshold, mask_res[2]),
-                                         cv::findHomography(src_vec, dst_vec, CV_RANSAC, reproj_threshold, mask_res[3]) };
+                    Mat H_res_64 [4] = { cv::findHomography(src_mat_2f, dst_mat_2f, RANSAC, reproj_threshold, mask_res[0]),
+                                         cv::findHomography(src_mat_2f, dst_vec, RANSAC, reproj_threshold, mask_res[1]),
+                                         cv::findHomography(src_vec, dst_mat_2f, RANSAC, reproj_threshold, mask_res[2]),
+                                         cv::findHomography(src_vec, dst_vec, RANSAC, reproj_threshold, mask_res[3]) };
 
                     for (int j = 0; j < 4; ++j)
                     {

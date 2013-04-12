@@ -1,6 +1,5 @@
 #include "precomp.hpp"
 #include <iomanip>
-#include "opencv2/imgproc/imgproc_c.h"
 
 #ifdef HAVE_OPENCL
 
@@ -47,11 +46,11 @@ TEST_P(ocl_Moments, Mat)
         {
             Mat src = imread( workdir + "../cpp/pic3.png", 1 );
             Mat src_gray, canny_output;
-            cvtColor( src, src_gray, CV_BGR2GRAY );
+            cvtColor( src, src_gray, COLOR_BGR2GRAY );
             vector<vector<Point> > contours;
             vector<Vec4i> hierarchy;
             Canny( src_gray, canny_output, 100, 200, 3 );
-            findContours( canny_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+            findContours( canny_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
             for( size_t i = 0; i < contours.size(); i++ )
             {
                 Moments m = moments( contours[i], false );

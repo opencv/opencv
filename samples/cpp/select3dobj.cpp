@@ -148,25 +148,25 @@ static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFram
     if( shownFrame.data )
     {
         if( nobjpt == 1 )
-            circle(shownFrame, imgpt[0], 3, Scalar(0,255,0), -1, CV_AA);
+            circle(shownFrame, imgpt[0], 3, Scalar(0,255,0), -1, LINE_AA);
         else if( nobjpt == 2 )
         {
-            circle(shownFrame, imgpt[0], 3, Scalar(0,255,0), -1, CV_AA);
-            circle(shownFrame, imgpt[1], 3, Scalar(0,255,0), -1, CV_AA);
-            line(shownFrame, imgpt[0], imgpt[1], Scalar(0,255,0), 3, CV_AA);
+            circle(shownFrame, imgpt[0], 3, Scalar(0,255,0), -1, LINE_AA);
+            circle(shownFrame, imgpt[1], 3, Scalar(0,255,0), -1, LINE_AA);
+            line(shownFrame, imgpt[0], imgpt[1], Scalar(0,255,0), 3, LINE_AA);
         }
         else if( nobjpt == 3 )
             for( int i = 0; i < 4; i++ )
             {
-                circle(shownFrame, imgpt[i], 3, Scalar(0,255,0), -1, CV_AA);
-                line(shownFrame, imgpt[i], imgpt[(i+1)%4], Scalar(0,255,0), 3, CV_AA);
+                circle(shownFrame, imgpt[i], 3, Scalar(0,255,0), -1, LINE_AA);
+                line(shownFrame, imgpt[i], imgpt[(i+1)%4], Scalar(0,255,0), 3, LINE_AA);
             }
         else
             for( int i = 0; i < 8; i++ )
             {
-                circle(shownFrame, imgpt[i], 3, Scalar(0,255,0), -1, CV_AA);
-                line(shownFrame, imgpt[i], imgpt[(i+1)%4 + (i/4)*4], Scalar(0,255,0), 3, CV_AA);
-                line(shownFrame, imgpt[i], imgpt[i%4], Scalar(0,255,0), 3, CV_AA);
+                circle(shownFrame, imgpt[i], 3, Scalar(0,255,0), -1, LINE_AA);
+                line(shownFrame, imgpt[i], imgpt[(i+1)%4 + (i/4)*4], Scalar(0,255,0), 3, LINE_AA);
+                line(shownFrame, imgpt[i], imgpt[i%4], Scalar(0,255,0), 3, LINE_AA);
             }
     }
 

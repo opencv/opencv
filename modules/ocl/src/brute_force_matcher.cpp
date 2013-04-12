@@ -64,7 +64,7 @@ template < int BLOCK_SIZE, int MAX_DESC_LEN/*, typename Mask*/ >
 void matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
                          const oclMat &trainIdx, const oclMat &distance, int distType)
 {
-    assert(query.type() == CV_32F);
+    CV_Assert(query.type() == CV_32F);
     cv::ocl::Context *ctx = query.clCxt;
     size_t globalSize[] = {(query.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
@@ -106,7 +106,7 @@ template < int BLOCK_SIZE/*, typename Mask*/ >
 void match(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
            const oclMat &trainIdx, const oclMat &distance, int distType)
 {
-    assert(query.type() == CV_32F);
+    CV_Assert(query.type() == CV_32F);
     cv::ocl::Context *ctx = query.clCxt;
     size_t globalSize[] = {(query.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
@@ -147,7 +147,7 @@ template < int BLOCK_SIZE, int MAX_DESC_LEN/*, typename Mask*/ >
 void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDistance, const oclMat &/*mask*/,
                          const oclMat &trainIdx, const oclMat &distance, const oclMat &nMatches, int distType)
 {
-    assert(query.type() == CV_32F);
+    CV_Assert(query.type() == CV_32F);
     cv::ocl::Context *ctx = query.clCxt;
     size_t globalSize[] = {(train.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, (query.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
@@ -188,7 +188,7 @@ template < int BLOCK_SIZE/*, typename Mask*/ >
 void radius_match(const oclMat &query, const oclMat &train, float maxDistance, const oclMat &/*mask*/,
                   const oclMat &trainIdx, const oclMat &distance, const oclMat &nMatches, int distType)
 {
-    assert(query.type() == CV_32F);
+    CV_Assert(query.type() == CV_32F);
     cv::ocl::Context *ctx = query.clCxt;
     size_t globalSize[] = {(train.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, (query.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
@@ -533,14 +533,13 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchSingle(const oclMat &query, const
 
     // match1 doesn't support signed char type, match2 only support float, hamming support uchar, ushort and int
     int callType = query.depth();
-    char cvFuncName[] = "singleMatch";
     if (callType != 5)
-        CV_ERROR(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(Error::StsUnsupportedFormat, "BruteForceMatch OpenCL only support float type query!\n");
 
     if ((distType == 0 && callType == 1 ) || (distType == 1 && callType != 5) || (distType == 2 && (callType != 0
         || callType != 2 || callType != 4)))
     {
-        CV_ERROR(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(Error::BadDepth, "BruteForceMatch OpenCL only support float type query!\n");
     }
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
@@ -550,8 +549,6 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchSingle(const oclMat &query, const
     distance.create(1, query.rows, CV_32F);
 
     matchDispatcher(query, train, mask, trainIdx, distance, distType);
-exit:
-    return;
 }
 
 void cv::ocl::BruteForceMatcher_OCL_base::matchDownload(const oclMat &trainIdx, const oclMat &distance, std::vector<DMatch> &matches)
@@ -597,7 +594,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchConvert(const Mat &trainIdx, cons
 
 void cv::ocl::BruteForceMatcher_OCL_base::match(const oclMat &query, const oclMat &train, std::vector<DMatch> &matches, const oclMat &mask)
 {
-    assert(mask.empty()); // mask is not supported at the moment
+    CV_Assert(mask.empty()); // mask is not supported at the moment
     oclMat trainIdx, distance;
     matchSingle(query, train, trainIdx, distance, mask);
     matchDownload(trainIdx, distance, matches);
@@ -655,14 +652,13 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchCollection(const oclMat &query, c
 
     // match1 doesn't support signed char type, match2 only support float, hamming support uchar, ushort and int
     int callType = query.depth();
-    char cvFuncName[] = "matchCollection";
     if (callType != 5)
-        CV_ERROR(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(Error::StsUnsupportedFormat, "BruteForceMatch OpenCL only support float type query!\n");
 
     if ((distType == 0 && callType == 1 ) || (distType == 1 && callType != 5) || (distType == 2 && (callType != 0
         || callType != 2 || callType != 4)))
     {
-        CV_ERROR(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(Error::BadDepth, "BruteForceMatch OpenCL only support float type query!\n");
     }
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
@@ -672,8 +668,6 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchCollection(const oclMat &query, c
     distance.create(1, query.rows, CV_32F);
 
     matchDispatcher(query, (const oclMat *)trainCollection.ptr(), trainCollection.cols, masks, trainIdx, imgIdx, distance, distType);
-exit:
-    return;
 }
 
 void cv::ocl::BruteForceMatcher_OCL_base::matchDownload(const oclMat &trainIdx, const oclMat &imgIdx, const oclMat &distance, std::vector<DMatch> &matches)
@@ -745,14 +739,13 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatchSingle(const oclMat &query, co
     // match1 doesn't support signed char type, match2 only support float, hamming support uchar, ushort and int
     int callType = query.depth();
 
-    char cvFuncName[] = "knnMatchSingle";
     if (callType != 5)
-        CV_ERROR(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(Error::StsUnsupportedFormat, "BruteForceMatch OpenCL only support float type query!\n");
 
     if ((distType == 0 && callType == 1 ) || (distType == 1 && callType != 5) || (distType == 2 && (callType != 0
         || callType != 2 || callType != 4)))
     {
-        CV_ERROR(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(Error::BadDepth, "BruteForceMatch OpenCL only support float type query!\n");
     }
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
@@ -773,8 +766,6 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatchSingle(const oclMat &query, co
     trainIdx.setTo(Scalar::all(-1));
 
     kmatchDispatcher(query, train, k, mask, trainIdx, distance, allDist, distType);
-exit:
-    return;
 }
 
 void cv::ocl::BruteForceMatcher_OCL_base::knnMatchDownload(const oclMat &trainIdx, const oclMat &distance, std::vector< std::vector<DMatch> > &matches, bool compactResult)
@@ -1020,14 +1011,13 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchSingle(const oclMat &query,
 
     // match1 doesn't support signed char type, match2 only support float, hamming support uchar, ushort and int
     int callType = query.depth();
-    char cvFuncName[] = "radiusMatchSingle";
     if (callType != 5)
-        CV_ERROR(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(Error::StsUnsupportedFormat, "BruteForceMatch OpenCL only support float type query!\n");
 
     if ((distType == 0 && callType == 1 ) || (distType == 1 && callType != 5) || (distType == 2 && (callType != 0
         || callType != 2 || callType != 4)))
     {
-        CV_ERROR(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(Error::BadDepth, "BruteForceMatch OpenCL only support float type query!\n");
     }
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
@@ -1044,8 +1034,6 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchSingle(const oclMat &query,
     nMatches.setTo(Scalar::all(0));
 
     matchDispatcher(query, train, maxDistance, mask, trainIdx, distance, nMatches, distType);
-exit:
-    return;
 }
 
 void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchDownload(const oclMat &trainIdx, const oclMat &distance, const oclMat &nMatches,

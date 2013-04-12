@@ -62,7 +62,7 @@ void cv::ocl::blendLinear(const oclMat &img1, const oclMat &img2, const oclMat &
                           oclMat &result)
 {
     cv::ocl::Context *ctx = img1.clCxt;
-    assert(ctx == img2.clCxt && ctx == weights1.clCxt && ctx == weights2.clCxt);
+    CV_Assert(ctx == img2.clCxt && ctx == weights1.clCxt && ctx == weights2.clCxt);
     int channels = img1.oclchannels();
     int depth = img1.depth();
     int rows = img1.rows;

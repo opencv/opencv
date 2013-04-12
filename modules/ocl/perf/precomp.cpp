@@ -349,14 +349,3 @@ string abspath(const string &relpath)
 {
     return TestSystem::instance().workingDir() + relpath;
 }
-
-
-int CV_CDECL cvErrorCallback(int /*status*/, const char * /*func_name*/,
-                             const char *err_msg, const char * /*file_name*/,
-                             int /*line*/, void * /*userdata*/)
-{
-    TestSystem::instance().printError(err_msg);
-    return 0;
-}
-
-

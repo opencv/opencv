@@ -108,7 +108,7 @@ static void findCorner(const std::vector<Point2f>& contour, Point2f point, Point
             min_idx = (int)i;
         }
     }
-    assert(min_idx >= 0);
+    CV_Assert(min_idx >= 0);
 
     // temporary solution, have to make something more precise
     corner = contour[min_idx];

@@ -40,6 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/video/tracking_c.h"
 
 using namespace cv;
 using namespace std;

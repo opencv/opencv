@@ -220,10 +220,10 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
 void meanShiftFiltering_(const Mat &src_roi, Mat &dst_roi, int sp, int sr, cv::TermCriteria crit)
 {
     if( src_roi.empty() )
-        CV_Error( CV_StsBadArg, "The input image is empty" );
+        CV_Error(cv::Error::StsBadArg, "The input image is empty" );
 
     if( src_roi.depth() != CV_8U || src_roi.channels() != 4 )
-        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
+        CV_Error(cv::Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
     CV_Assert( (src_roi.cols == dst_roi.cols) && (src_roi.rows == dst_roi.rows) );
     CV_Assert( !(dst_roi.step & 0x3) );
@@ -259,9 +259,9 @@ void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi, int sp, 
 {
 
     if( src_roi.empty() )
-        CV_Error( CV_StsBadArg, "The input image is empty" );
+        CV_Error(cv::Error::StsBadArg, "The input image is empty" );
     if( src_roi.depth() != CV_8U || src_roi.channels() != 4 )
-        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
+        CV_Error(cv::Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
     CV_Assert( (src_roi.cols == dst_roi.cols) && (src_roi.rows == dst_roi.rows) &&
                (src_roi.cols == dstCoor_roi.cols) && (src_roi.rows == dstCoor_roi.rows));
     CV_Assert( !(dstCoor_roi.step & 0x3) );

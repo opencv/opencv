@@ -63,8 +63,6 @@ int main(int argc, const char *argv[])
         }
     }
 
-    redirectError(cvErrorCallback);
-
     const char *keys =
         "{ h help    | false | print help message }"
         "{ f filter  |       | filter for test }"

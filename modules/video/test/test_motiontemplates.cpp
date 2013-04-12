@@ -169,9 +169,7 @@ double CV_UpdateMHITest::get_success_error_level( int /*test_case_idx*/, int /*i
 
 void CV_UpdateMHITest::run_func()
 {
-    CvMat m = test_mat[INPUT_OUTPUT][0];
     cv::updateMotionHistory( test_mat[INPUT][0], test_mat[INPUT_OUTPUT][0], timestamp, duration);
-    m = test_mat[INPUT_OUTPUT][0];
 }
 
 
@@ -203,8 +201,7 @@ static void test_MHIGradient( const Mat& mhi, Mat& mask, Mat& orientation,
 
     if( delta1 > delta2 )
     {
-        double t;
-        CV_SWAP( delta1, delta2, t );
+        std::swap( delta1, delta2 );
     }
 
     for( int i = 0; i < mhi.rows; i++ )
@@ -417,7 +414,7 @@ void CV_MHIGlobalOrientTest::get_test_array_types_and_sizes( int test_case_idx, 
 {
     RNG& rng = ts->get_rng();
     CV_MHIBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    CvSize size = sizes[INPUT][0];
+    Size size = sizes[INPUT][0];
 
     size.width = MAX( size.width, 16 );
     size.height = MAX( size.height, 16 );
@@ -430,8 +427,7 @@ void CV_MHIGlobalOrientTest::get_test_array_types_and_sizes( int test_case_idx, 
     max_angle = cvtest::randReal(rng)*359.9;
     if( min_angle >= max_angle )
     {
-        double t;
-        CV_SWAP( min_angle, max_angle, t );
+        std::swap( min_angle, max_angle);
     }
     max_angle += 0.1;
     duration = exp(cvtest::randReal(rng)*max_log_duration);
@@ -474,7 +470,7 @@ int CV_MHIGlobalOrientTest::validate_test_results( int test_case_idx )
                                                    test_mat[INPUT][0], timestamp, duration );
     double err_level = get_success_error_level( test_case_idx, 0, 0 );
     int code = cvtest::TS::OK;
-    int nz = cvCountNonZero( test_array[INPUT][1] );
+    int nz = countNonZero( test_mat[INPUT][1] );
 
     if( nz > 32 && !(min_angle - err_level <= angle &&
           max_angle + err_level >= angle) &&
