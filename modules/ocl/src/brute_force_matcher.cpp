@@ -542,14 +542,13 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchSingle(const oclMat &query, const
     
     // match1 doesn't support signed char type, match2 only support float, hamming support uchar, ushort and int
     int callType = query.depth();
-    char cvFuncName[] = "singleMatch";
     if (callType != 5)
-        CV_ERROR(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
 
     if ((distType == 0 && callType == 1 ) || (distType == 1 && callType != 5) || (distType == 2 && (callType != 0
         || callType != 2 || callType != 4)))
     {
-        CV_ERROR(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
     }
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
@@ -559,7 +558,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchSingle(const oclMat &query, const
     ensureSizeIsEnough(1, query.rows, CV_32F, distance);
 
     matchDispatcher(query, train, mask, trainIdx, distance, distType);
-exit:
+
     return;
 }
 
@@ -664,14 +663,13 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchCollection(const oclMat &query, c
 
     // match1 doesn't support signed char type, match2 only support float, hamming support uchar, ushort and int
     int callType = query.depth();
-    char cvFuncName[] = "matchCollection";
     if (callType != 5)
-        CV_ERROR(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
 
     if ((distType == 0 && callType == 1 ) || (distType == 1 && callType != 5) || (distType == 2 && (callType != 0
         || callType != 2 || callType != 4)))
     {
-        CV_ERROR(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
     }
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
@@ -684,7 +682,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchCollection(const oclMat &query, c
 
 
     matchDispatcher(query, (const oclMat *)trainCollection.ptr(), trainCollection.cols, masks, trainIdx, imgIdx, distance, distType);
-exit:
+
     return;
 }
 
@@ -757,14 +755,13 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatchSingle(const oclMat &query, co
     // match1 doesn't support signed char type, match2 only support float, hamming support uchar, ushort and int
     int callType = query.depth();
 
-    char cvFuncName[] = "knnMatchSingle";
     if (callType != 5)
-        CV_ERROR(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
 
     if ((distType == 0 && callType == 1 ) || (distType == 1 && callType != 5) || (distType == 2 && (callType != 0
         || callType != 2 || callType != 4)))
     {
-        CV_ERROR(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
     }
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
@@ -788,7 +785,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatchSingle(const oclMat &query, co
     trainIdx.setTo(Scalar::all(-1));
 
     kmatchDispatcher(query, train, k, mask, trainIdx, distance, allDist, distType);
-exit:
+
     return;
 }
 
@@ -1035,14 +1032,14 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchSingle(const oclMat &query,
 
     // match1 doesn't support signed char type, match2 only support float, hamming support uchar, ushort and int
     int callType = query.depth();
-    char cvFuncName[] = "radiusMatchSingle";
+
     if (callType != 5)
-        CV_ERROR(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
 
     if ((distType == 0 && callType == 1 ) || (distType == 1 && callType != 5) || (distType == 2 && (callType != 0
         || callType != 2 || callType != 4)))
     {
-        CV_ERROR(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
+        CV_Error(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
     }
 
     const int nQuery = query.rows;
@@ -1062,7 +1059,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchSingle(const oclMat &query,
     nMatches.setTo(Scalar::all(0));
 
     matchDispatcher(query, train, maxDistance, mask, trainIdx, distance, nMatches, distType);
-exit:
+
     return;
 }
 
