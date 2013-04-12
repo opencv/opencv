@@ -213,7 +213,6 @@ gen_template_rw_prop_init = Template("""
 
 simple_argtype_mapping = {
     "bool": ("bool", "b", "0"),
-    "char": ("char", "b", "0"),
     "int": ("int", "i", "0"),
     "float": ("float", "f", "0.f"),
     "double": ("double", "d", "0"),
@@ -619,7 +618,10 @@ class FuncInfo(object):
                     if amapping[1] == "O":
                         code_decl += "    PyObject* pyobj_%s = NULL;\n" % (a.name,)
                         parse_name = "pyobj_" + a.name
-                        code_cvt_list.append("pyopencv_to(pyobj_%s, %s, %s)" % (a.name, a.name, a.crepr()))
+                        if a.tp == 'char':
+                            code_cvt_list.append("convert_to_char(pyobj_%s, &%s, %s)"% (a.name, a.name, a.crepr()))
+                        else:
+                            code_cvt_list.append("pyopencv_to(pyobj_%s, %s, %s)" % (a.name, a.name, a.crepr()))
 
                 all_cargs.append([amapping, parse_name])
 

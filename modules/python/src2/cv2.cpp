@@ -1102,6 +1102,17 @@ static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
+static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
+{
+  if (PyString_Check(o) && PyString_Size(o) == 1) {
+    *dst = PyString_AsString(o)[0];
+    return 1;
+  } else {
+    (*dst) = 0;
+    return failmsg("Expected single character string for argument '%s'", name);
+  }
+}
+
 #define MKTYPE2(NAME) pyopencv_##NAME##_specials(); if (!to_ok(&pyopencv_##NAME##_Type)) return
 
 #ifdef __GNUC__
