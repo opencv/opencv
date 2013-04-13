@@ -77,7 +77,6 @@ template < int BLOCK_SIZE, int MAX_DESC_LEN/*, typename Mask*/ >
 void matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
                          const oclMat &trainIdx, const oclMat &distance, int distType)
 {
-    assert(query.type() == CV_32F);
     cv::ocl::Context *ctx = query.clCxt;
     size_t globalSize[] = {(query.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
@@ -121,7 +120,6 @@ template < int BLOCK_SIZE/*, typename Mask*/ >
 void match(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
            const oclMat &trainIdx, const oclMat &distance, int distType)
 {
-    assert(query.type() == CV_32F);
     cv::ocl::Context *ctx = query.clCxt;
     size_t globalSize[] = {(query.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, BLOCK_SIZE, 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
@@ -164,7 +162,6 @@ template < int BLOCK_SIZE, int MAX_DESC_LEN/*, typename Mask*/ >
 void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDistance, const oclMat &/*mask*/,
                          const oclMat &trainIdx, const oclMat &distance, const oclMat &nMatches, int distType)
 {
-    assert(query.type() == CV_32F);
     cv::ocl::Context *ctx = query.clCxt;
     size_t globalSize[] = {(train.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, (query.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
@@ -207,7 +204,6 @@ template < int BLOCK_SIZE/*, typename Mask*/ >
 void radius_match(const oclMat &query, const oclMat &train, float maxDistance, const oclMat &/*mask*/,
                   const oclMat &trainIdx, const oclMat &distance, const oclMat &nMatches, int distType)
 {
-    assert(query.type() == CV_32F);
     cv::ocl::Context *ctx = query.clCxt;
     size_t globalSize[] = {(train.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, (query.rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, 1};
     size_t localSize[] = {BLOCK_SIZE, BLOCK_SIZE, 1};
@@ -566,17 +562,6 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchSingle(const oclMat &query, const
     if (query.empty() || train.empty())
         return;
     
-    // match1 doesn't support signed char type, match2 only support float, hamming support uchar, ushort and int
-    int callType = query.depth();
-    if (callType != 5)
-        CV_Error(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
-
-    if ((distType == 0 && callType == 1 ) || (distType == 1 && callType != 5) || (distType == 2 && (callType != 0
-        || callType != 2 || callType != 4)))
-    {
-        CV_Error(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
-    }
-
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
     CV_Assert(train.cols == query.cols && train.type() == query.type());
 
@@ -687,17 +672,6 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchCollection(const oclMat &query, c
     if (query.empty() || trainCollection.empty())
         return;
 
-    // match1 doesn't support signed char type, match2 only support float, hamming support uchar, ushort and int
-    int callType = query.depth();
-    if (callType != 5)
-        CV_Error(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
-
-    if ((distType == 0 && callType == 1 ) || (distType == 1 && callType != 5) || (distType == 2 && (callType != 0
-        || callType != 2 || callType != 4)))
-    {
-        CV_Error(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
-    }
-
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
     
     const int nQuery = query.rows;
@@ -705,7 +679,6 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchCollection(const oclMat &query, c
     ensureSizeIsEnough(1, nQuery, CV_32S, trainIdx);
     ensureSizeIsEnough(1, nQuery, CV_32S, imgIdx);
     ensureSizeIsEnough(1, nQuery, CV_32F, distance);
-
 
     matchDispatcher(query, (const oclMat *)trainCollection.ptr(), trainCollection.cols, masks, trainIdx, imgIdx, distance, distType);
 
@@ -777,18 +750,6 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatchSingle(const oclMat &query, co
 {
     if (query.empty() || train.empty())
         return;
-
-    // match1 doesn't support signed char type, match2 only support float, hamming support uchar, ushort and int
-    int callType = query.depth();
-
-    if (callType != 5)
-        CV_Error(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
-
-    if ((distType == 0 && callType == 1 ) || (distType == 1 && callType != 5) || (distType == 2 && (callType != 0
-        || callType != 2 || callType != 4)))
-    {
-        CV_Error(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
-    }
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
     CV_Assert(train.type() == query.type() && train.cols == query.cols);
@@ -886,26 +847,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch2Collection(const oclMat &quer
 
     typedef void (*caller_t)(const oclMat & query, const oclMat & trains, const oclMat & masks,
                              const oclMat & trainIdx, const oclMat & imgIdx, const oclMat & distance);
-#if 0
-    static const caller_t callers[3][6] =
-    {
-        {
-            ocl_match2L1_gpu<unsigned char>, 0/*match2L1_gpu<signed char>*/,
-            ocl_match2L1_gpu<unsigned short>, ocl_match2L1_gpu<short>,
-            ocl_match2L1_gpu<int>, ocl_match2L1_gpu<float>
-        },
-        {
-            0/*match2L2_gpu<unsigned char>*/, 0/*match2L2_gpu<signed char>*/,
-            0/*match2L2_gpu<unsigned short>*/, 0/*match2L2_gpu<short>*/,
-            0/*match2L2_gpu<int>*/, ocl_match2L2_gpu<float>
-        },
-        {
-            ocl_match2Hamming_gpu<unsigned char>, 0/*match2Hamming_gpu<signed char>*/,
-            ocl_match2Hamming_gpu<unsigned short>, 0/*match2Hamming_gpu<short>*/,
-            ocl_match2Hamming_gpu<int>, 0/*match2Hamming_gpu<float>*/
-        }
-    };
-#endif
+
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
 
     const int nQuery = query.rows;
@@ -1051,22 +993,10 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, vector< 
 
 // radiusMatchSingle
 void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchSingle(const oclMat &query, const oclMat &train,
-        oclMat &trainIdx,	oclMat &distance, oclMat &nMatches, float maxDistance, const oclMat &mask)
+        oclMat &trainIdx, oclMat &distance, oclMat &nMatches, float maxDistance, const oclMat &mask)
 {
     if (query.empty() || train.empty())
         return;
-
-    // match1 doesn't support signed char type, match2 only support float, hamming support uchar, ushort and int
-    int callType = query.depth();
-
-    if (callType != 5)
-        CV_Error(CV_UNSUPPORTED_FORMAT_ERR, "BruteForceMatch OpenCL only support float type query!\n");
-
-    if ((distType == 0 && callType == 1 ) || (distType == 1 && callType != 5) || (distType == 2 && (callType != 0
-        || callType != 2 || callType != 4)))
-    {
-        CV_Error(CV_UNSUPPORTED_DEPTH_ERR, "BruteForceMatch OpenCL only support float type query!\n");
-    }
 
     const int nQuery = query.rows;
     const int nTrain = train.rows;
