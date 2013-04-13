@@ -58,7 +58,6 @@
 #  include "opencv2/gpuoptflow.hpp"
 #  include "opencv2/gpubgsegm.hpp"
 #  include "opencv2/gpustereo.hpp"
-#  include "opencv2/gpucodec.hpp"
 #endif
 
 namespace cv { namespace gpu {

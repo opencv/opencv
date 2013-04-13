@@ -1,4 +1,4 @@
-if(ANDROID OR IOS)
+if(ANDROID OR IOS OR APPLE)
   ocv_module_disable(gpucodec)
 endif()
 

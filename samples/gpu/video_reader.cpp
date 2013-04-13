@@ -1,4 +1,9 @@
 #include <iostream>
+
+#include "opencv2/opencv_modules.hpp"
+
+#if defined(HAVE_OPENCV_GPUCODEC)
+
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -69,3 +74,13 @@ int main(int argc, const char* argv[])
 
     return 0;
 }
+
+#else
+
+int main()
+{
+    std::cout << "OpenCV was built without GPU Video decoding support\n" << std::endl;
+    return 0;
+}
+
+#endif
