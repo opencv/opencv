@@ -156,5 +156,3 @@ void cv::gpu::FastNonLocalMeansDenoising::labMethod( const GpuMat& src, GpuMat& 
 }
 
 #endif
-
-

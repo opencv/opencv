@@ -5,6 +5,14 @@ Video Decoding
 
 
 
+gpu::VideoReader_GPU
+--------------------
+Video reader class.
+
+.. ocv:class:: gpu::VideoReader_GPU
+
+
+
 gpu::VideoReader_GPU::Codec
 ---------------------------
 
