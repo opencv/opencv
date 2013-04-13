@@ -101,11 +101,11 @@ namespace cv
         static bool useNaive(int method, int depth, Size size)
         {
 #ifdef HAVE_CLAMDFFT
-            if (method == CV_TM_SQDIFF && (depth == CV_32F || !Context::getContext()->supportsFeature(Context::CL_DOUBLE)))
+            if (method == TM_SQDIFF && (depth == CV_32F || !Context::getContext()->supportsFeature(Context::CL_DOUBLE)))
             {
                 return true;
             }
-            else if(method == CV_TM_CCORR || (method == CV_TM_SQDIFF && depth == CV_8U))
+            else if(method == TM_CCORR || (method == TM_SQDIFF && depth == CV_8U))
             {
                 return size.height < 18 && size.width < 18;
             }
