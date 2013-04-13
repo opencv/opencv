@@ -92,29 +92,29 @@ void cv::gpu::calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr, Size blo
         // upper side
         for (int j = -i; j <= i + 1; ++j, ++ssCount)
         {
-            ss[ssCount].x = ++x;
-            ss[ssCount].y = y;
+            ss[ssCount].x = (short) ++x;
+            ss[ssCount].y = (short) y;
         }
 
         // right side
         for (int j = -i; j <= i + 1; ++j, ++ssCount)
         {
-            ss[ssCount].x = x;
-            ss[ssCount].y = ++y;
+            ss[ssCount].x = (short) x;
+            ss[ssCount].y = (short) ++y;
         }
 
         // bottom side
         for (int j = -i; j <= i + 1; ++j, ++ssCount)
         {
-            ss[ssCount].x = --x;
-            ss[ssCount].y = y;
+            ss[ssCount].x = (short) --x;
+            ss[ssCount].y = (short) y;
         }
 
         // left side
         for (int j = -i; j <= i + 1; ++j, ++ssCount)
         {
-            ss[ssCount].x = x;
-            ss[ssCount].y = --y;
+            ss[ssCount].x = (short) x;
+            ss[ssCount].y = (short) --y;
         }
     }
 
@@ -133,8 +133,8 @@ void cv::gpu::calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr, Size blo
             // upper side
             for (int j = -maxRange.width; j <= maxRange.width; ++j, ++ssCount, ++x)
             {
-                ss[ssCount].x = x;
-                ss[ssCount].y = y;
+                ss[ssCount].x = (short) x;
+                ss[ssCount].y = (short) y;
             }
 
             x = xleft;
@@ -143,8 +143,8 @@ void cv::gpu::calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr, Size blo
             // bottom side
             for (int j = -maxRange.width; j <= maxRange.width; ++j, ++ssCount, ++x)
             {
-                ss[ssCount].x = x;
-                ss[ssCount].y = y;
+                ss[ssCount].x = (short) x;
+                ss[ssCount].y = (short) y;
             }
         }
     }
@@ -162,8 +162,8 @@ void cv::gpu::calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr, Size blo
             // left side
             for (int j = -maxRange.height; j <= maxRange.height; ++j, ++ssCount, ++y)
             {
-                ss[ssCount].x = x;
-                ss[ssCount].y = y;
+                ss[ssCount].x = (short) x;
+                ss[ssCount].y = (short) y;
             }
 
             y = yupper;
@@ -172,8 +172,8 @@ void cv::gpu::calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr, Size blo
             // right side
             for (int j = -maxRange.height; j <= maxRange.height; ++j, ++ssCount, ++y)
             {
-                ss[ssCount].x = x;
-                ss[ssCount].y = y;
+                ss[ssCount].x = (short) x;
+                ss[ssCount].y = (short) y;
             }
         }
     }

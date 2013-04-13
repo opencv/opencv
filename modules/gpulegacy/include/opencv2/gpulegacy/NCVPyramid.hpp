@@ -52,8 +52,8 @@ namespace cv { namespace gpu { namespace cudev
 {
     namespace pyramid
     {
-        template <typename T> void kernelDownsampleX2_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        template <typename T> void kernelInterpolateFrom1_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        CV_EXPORTS void downsampleX2(PtrStepSzb src, PtrStepSzb dst, int depth, int cn, cudaStream_t stream);
+        CV_EXPORTS void interpolateFrom1(PtrStepSzb src, PtrStepSzb dst, int depth, int cn, cudaStream_t stream);
     }
 }}}
 

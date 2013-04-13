@@ -349,7 +349,7 @@ bool nvidia_NPPST_Resize(const std::string& test_data_path, OutputLevel outputLe
     NCVAutoTestLister testListerResize("NPPST Resize", outputLevel);
 
     NCVTestSourceProvider<Ncv32u> testSrcRandom_32u(2010, 0, 0xFFFFFFFF, 2048, 2048);
-    NCVTestSourceProvider<Ncv64u> testSrcRandom_64u(2010, 0, -1, 2048, 2048);
+    NCVTestSourceProvider<Ncv64u> testSrcRandom_64u(2010, 0, (Ncv64u) -1, 2048, 2048);
 
     generateResizeTests(testListerResize, testSrcRandom_32u);
     generateResizeTests(testListerResize, testSrcRandom_64u);
@@ -379,7 +379,7 @@ bool nvidia_NPPST_Transpose(const std::string& test_data_path, OutputLevel outpu
     NCVAutoTestLister testListerTranspose("NPPST Transpose", outputLevel);
 
     NCVTestSourceProvider<Ncv32u> testSrcRandom_32u(2010, 0, 0xFFFFFFFF, 2048, 2048);
-    NCVTestSourceProvider<Ncv64u> testSrcRandom_64u(2010, 0, -1, 2048, 2048);
+    NCVTestSourceProvider<Ncv64u> testSrcRandom_64u(2010, 0, (Ncv64u) -1, 2048, 2048);
 
     generateTransposeTests(testListerTranspose, testSrcRandom_32u);
     generateTransposeTests(testListerTranspose, testSrcRandom_64u);

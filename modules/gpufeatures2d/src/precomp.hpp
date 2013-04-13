@@ -45,6 +45,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <iterator>
 
 #include "opencv2/gpufeatures2d.hpp"
 #include "opencv2/gpuarithm.hpp"

@@ -140,24 +140,7 @@ void cv::gpu::ImagePyramid::build(const GpuMat& img, int numLayers, Stream& stre
     (void) stream;
     throw_no_cuda();
 #else
-    using namespace cv::gpu::cudev::pyramid;
-
-    typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-
-    static const func_t funcs[6][4] =
-    {
-        {kernelDownsampleX2_gpu<uchar1>       , 0 /*kernelDownsampleX2_gpu<uchar2>*/ , kernelDownsampleX2_gpu<uchar3>      , kernelDownsampleX2_gpu<uchar4>      },
-        {0 /*kernelDownsampleX2_gpu<char1>*/  , 0 /*kernelDownsampleX2_gpu<char2>*/  , 0 /*kernelDownsampleX2_gpu<char3>*/ , 0 /*kernelDownsampleX2_gpu<char4>*/ },
-        {kernelDownsampleX2_gpu<ushort1>      , 0 /*kernelDownsampleX2_gpu<ushort2>*/, kernelDownsampleX2_gpu<ushort3>     , kernelDownsampleX2_gpu<ushort4>     },
-        {0 /*kernelDownsampleX2_gpu<short1>*/ , 0 /*kernelDownsampleX2_gpu<short2>*/ , 0 /*kernelDownsampleX2_gpu<short3>*/, 0 /*kernelDownsampleX2_gpu<short4>*/},
-        {0 /*kernelDownsampleX2_gpu<int1>*/   , 0 /*kernelDownsampleX2_gpu<int2>*/   , 0 /*kernelDownsampleX2_gpu<int3>*/  , 0 /*kernelDownsampleX2_gpu<int4>*/  },
-        {kernelDownsampleX2_gpu<float1>       , 0 /*kernelDownsampleX2_gpu<float2>*/ , kernelDownsampleX2_gpu<float3>      , kernelDownsampleX2_gpu<float4>      }
-    };
-
     CV_Assert(img.depth() <= CV_32F && img.channels() <= 4);
-
-    const func_t func = funcs[img.depth()][img.channels() - 1];
-    CV_Assert(func != 0);
 
     layer0_ = img;
     Size szLastLayer = img.size();
@@ -180,7 +163,7 @@ void cv::gpu::ImagePyramid::build(const GpuMat& img, int numLayers, Stream& stre
 
         const GpuMat& prevLayer = i == 0 ? layer0_ : pyramid_[i - 1];
 
-        func(prevLayer, pyramid_[i], StreamAccessor::getStream(stream));
+        cudev::pyramid::downsampleX2(prevLayer, pyramid_[i], img.depth(), img.channels(), StreamAccessor::getStream(stream));
 
         szLastLayer = szCurLayer;
     }
@@ -195,26 +178,9 @@ void cv::gpu::ImagePyramid::getLayer(GpuMat& outImg, Size outRoi, Stream& stream
     (void) stream;
     throw_no_cuda();
 #else
-    using namespace cv::gpu::cudev::pyramid;
-
-    typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-
-    static const func_t funcs[6][4] =
-    {
-        {kernelInterpolateFrom1_gpu<uchar1>      , 0 /*kernelInterpolateFrom1_gpu<uchar2>*/ , kernelInterpolateFrom1_gpu<uchar3>      , kernelInterpolateFrom1_gpu<uchar4>      },
-        {0 /*kernelInterpolateFrom1_gpu<char1>*/ , 0 /*kernelInterpolateFrom1_gpu<char2>*/  , 0 /*kernelInterpolateFrom1_gpu<char3>*/ , 0 /*kernelInterpolateFrom1_gpu<char4>*/ },
-        {kernelInterpolateFrom1_gpu<ushort1>     , 0 /*kernelInterpolateFrom1_gpu<ushort2>*/, kernelInterpolateFrom1_gpu<ushort3>     , kernelInterpolateFrom1_gpu<ushort4>     },
-        {0 /*kernelInterpolateFrom1_gpu<short1>*/, 0 /*kernelInterpolateFrom1_gpu<short2>*/ , 0 /*kernelInterpolateFrom1_gpu<short3>*/, 0 /*kernelInterpolateFrom1_gpu<short4>*/},
-        {0 /*kernelInterpolateFrom1_gpu<int1>*/  , 0 /*kernelInterpolateFrom1_gpu<int2>*/   , 0 /*kernelInterpolateFrom1_gpu<int3>*/  , 0 /*kernelInterpolateFrom1_gpu<int4>*/  },
-        {kernelInterpolateFrom1_gpu<float1>      , 0 /*kernelInterpolateFrom1_gpu<float2>*/ , kernelInterpolateFrom1_gpu<float3>      , kernelInterpolateFrom1_gpu<float4>      }
-    };
-
     CV_Assert(outRoi.width <= layer0_.cols && outRoi.height <= layer0_.rows && outRoi.width > 0 && outRoi.height > 0);
 
     ensureSizeIsEnough(outRoi, layer0_.type(), outImg);
-
-    const func_t func = funcs[outImg.depth()][outImg.channels() - 1];
-    CV_Assert(func != 0);
 
     if (outRoi.width == layer0_.cols && outRoi.height == layer0_.rows)
     {
@@ -249,7 +215,7 @@ void cv::gpu::ImagePyramid::getLayer(GpuMat& outImg, Size outRoi, Stream& stream
         lastLayer = curLayer;
     }
 
-    func(lastLayer, outImg, StreamAccessor::getStream(stream));
+    cudev::pyramid::interpolateFrom1(lastLayer, outImg, outImg.depth(), outImg.channels(), StreamAccessor::getStream(stream));
 #endif
 }
 

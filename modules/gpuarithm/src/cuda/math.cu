@@ -253,7 +253,7 @@ namespace arithm
     };
     template<> struct PowOp<float> : unary_function<float, float>
     {
-        const float power;
+        float power;
 
         PowOp(double power_) : power(static_cast<float>(power_)) {}
 

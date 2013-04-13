@@ -2131,7 +2131,7 @@ static NCVStatus loadFromXML(const cv::String &filename,
     haar.ClassifierSize.height = 0;
     haar.bHasStumpsOnly = true;
     haar.bNeedsTiltedII = false;
-    Ncv32u curMaxTreeDepth;
+    Ncv32u curMaxTreeDepth = 0;
 
     std::vector<HaarClassifierNode128> h_TmpClassifierNotRootNodes;
     haarStages.resize(0);

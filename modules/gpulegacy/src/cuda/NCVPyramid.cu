@@ -223,17 +223,25 @@ namespace cv { namespace gpu { namespace cudev
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void kernelDownsampleX2_gpu<uchar1>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        template void kernelDownsampleX2_gpu<uchar3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        template void kernelDownsampleX2_gpu<uchar4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        void downsampleX2(PtrStepSzb src, PtrStepSzb dst, int depth, int cn, cudaStream_t stream)
+        {
+            typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
-        template void kernelDownsampleX2_gpu<ushort1>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        template void kernelDownsampleX2_gpu<ushort3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        template void kernelDownsampleX2_gpu<ushort4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+            static const func_t funcs[6][4] =
+            {
+                {kernelDownsampleX2_gpu<uchar1>       , 0 /*kernelDownsampleX2_gpu<uchar2>*/ , kernelDownsampleX2_gpu<uchar3>      , kernelDownsampleX2_gpu<uchar4>      },
+                {0 /*kernelDownsampleX2_gpu<char1>*/  , 0 /*kernelDownsampleX2_gpu<char2>*/  , 0 /*kernelDownsampleX2_gpu<char3>*/ , 0 /*kernelDownsampleX2_gpu<char4>*/ },
+                {kernelDownsampleX2_gpu<ushort1>      , 0 /*kernelDownsampleX2_gpu<ushort2>*/, kernelDownsampleX2_gpu<ushort3>     , kernelDownsampleX2_gpu<ushort4>     },
+                {0 /*kernelDownsampleX2_gpu<short1>*/ , 0 /*kernelDownsampleX2_gpu<short2>*/ , 0 /*kernelDownsampleX2_gpu<short3>*/, 0 /*kernelDownsampleX2_gpu<short4>*/},
+                {0 /*kernelDownsampleX2_gpu<int1>*/   , 0 /*kernelDownsampleX2_gpu<int2>*/   , 0 /*kernelDownsampleX2_gpu<int3>*/  , 0 /*kernelDownsampleX2_gpu<int4>*/  },
+                {kernelDownsampleX2_gpu<float1>       , 0 /*kernelDownsampleX2_gpu<float2>*/ , kernelDownsampleX2_gpu<float3>      , kernelDownsampleX2_gpu<float4>      }
+            };
 
-        template void kernelDownsampleX2_gpu<float1>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        template void kernelDownsampleX2_gpu<float3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        template void kernelDownsampleX2_gpu<float4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+            const func_t func = funcs[depth][cn - 1];
+            CV_Assert(func != 0);
+
+            func(src, dst, stream);
+        }
     }
 }}}
 
@@ -298,17 +306,25 @@ namespace cv { namespace gpu { namespace cudev
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void kernelInterpolateFrom1_gpu<uchar1>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        template void kernelInterpolateFrom1_gpu<uchar3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        template void kernelInterpolateFrom1_gpu<uchar4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        void interpolateFrom1(PtrStepSzb src, PtrStepSzb dst, int depth, int cn, cudaStream_t stream)
+        {
+            typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
-        template void kernelInterpolateFrom1_gpu<ushort1>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        template void kernelInterpolateFrom1_gpu<ushort3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        template void kernelInterpolateFrom1_gpu<ushort4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+            static const func_t funcs[6][4] =
+            {
+                {kernelInterpolateFrom1_gpu<uchar1>      , 0 /*kernelInterpolateFrom1_gpu<uchar2>*/ , kernelInterpolateFrom1_gpu<uchar3>      , kernelInterpolateFrom1_gpu<uchar4>      },
+                {0 /*kernelInterpolateFrom1_gpu<char1>*/ , 0 /*kernelInterpolateFrom1_gpu<char2>*/  , 0 /*kernelInterpolateFrom1_gpu<char3>*/ , 0 /*kernelInterpolateFrom1_gpu<char4>*/ },
+                {kernelInterpolateFrom1_gpu<ushort1>     , 0 /*kernelInterpolateFrom1_gpu<ushort2>*/, kernelInterpolateFrom1_gpu<ushort3>     , kernelInterpolateFrom1_gpu<ushort4>     },
+                {0 /*kernelInterpolateFrom1_gpu<short1>*/, 0 /*kernelInterpolateFrom1_gpu<short2>*/ , 0 /*kernelInterpolateFrom1_gpu<short3>*/, 0 /*kernelInterpolateFrom1_gpu<short4>*/},
+                {0 /*kernelInterpolateFrom1_gpu<int1>*/  , 0 /*kernelInterpolateFrom1_gpu<int2>*/   , 0 /*kernelInterpolateFrom1_gpu<int3>*/  , 0 /*kernelInterpolateFrom1_gpu<int4>*/  },
+                {kernelInterpolateFrom1_gpu<float1>      , 0 /*kernelInterpolateFrom1_gpu<float2>*/ , kernelInterpolateFrom1_gpu<float3>      , kernelInterpolateFrom1_gpu<float4>      }
+            };
 
-        template void kernelInterpolateFrom1_gpu<float1>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        template void kernelInterpolateFrom1_gpu<float3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-        template void kernelInterpolateFrom1_gpu<float4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+            const func_t func = funcs[depth][cn - 1];
+            CV_Assert(func != 0);
+
+            func(src, dst, stream);
+        }
     }
 }}}
 
