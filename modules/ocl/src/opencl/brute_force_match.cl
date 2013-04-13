@@ -47,6 +47,10 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics:enable
 #define MAX_FLOAT 3.40282e+038f
 
+#ifndef T
+#define T float
+#endif
+
 #ifndef BLOCK_SIZE
 #define BLOCK_SIZE 16
 #endif
@@ -54,7 +58,11 @@
 #define MAX_DESC_LEN 64
 #endif
 
-int bit1Count(float x)
+#ifndef DIST_TYPE
+#define DIST_TYPE 0
+#endif
+
+int bit1Count(int x)
 {
     int c = 0;
     int ix = (int)x;
@@ -63,12 +71,8 @@ int bit1Count(float x)
         c += ix & 0x1;
         ix >>= 1;
     }
-    return (float)c;
+    return c;
 }
-
-#ifndef DIST_TYPE
-#define DIST_TYPE 0
-#endif
 
 #if   (DIST_TYPE == 0)
 #define DIST(x, y) fabs((x) - (y))
