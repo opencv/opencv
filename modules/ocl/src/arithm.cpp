@@ -126,7 +126,8 @@ inline int divUp(int total, int grain)
 /////////////////////// add subtract multiply divide /////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 template<typename T>
-void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, String kernelName, const char **kernelString, void *_scalar)
+void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, 
+                    String kernelName, const char **kernelString, void *_scalar, int op_type = 0)
 {
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
     {
@@ -182,14 +183,25 @@ void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, String 
         scalar = (T)scalar1;
         args.push_back( std::make_pair( sizeof(T), (void *)&scalar ));
     }
-
-    openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
+    switch(op_type)
+    {
+        case MAT_ADD:
+            openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth, "-D ARITHM_ADD");
+            break;
+        case MAT_SUB:
+            openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth, "-D ARITHM_SUB");
+            break;
+        default:
+            openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
+    }
 }
-static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, String kernelName, const char **kernelString)
+static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, 
+                           String kernelName, const char **kernelString, int op_type = 0)
 {
-    arithmetic_run<char>(src1, src2, dst, kernelName, kernelString, (void *)NULL);
+    arithmetic_run<char>(src1, src2, dst, kernelName, kernelString, (void *)NULL, op_type);
 }
-static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask, String kernelName, const char **kernelString)
+static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask, 
+                           String kernelName, const char **kernelString, int op_type = 0)
 {
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
     {
@@ -244,24 +256,34 @@ static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, 
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step1 ));
 
-    openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, channels, depth);
+    switch (op_type)
+    {
+        case MAT_ADD:
+            openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, channels, depth, "-D ARITHM_ADD");
+            break;
+        case MAT_SUB:
+            openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, channels, depth, "-D ARITHM_SUB");
+            break;
+        default:
+            openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, channels, depth);
+    }
 }
 void cv::ocl::add(const oclMat &src1, const oclMat &src2, oclMat &dst)
 {
-    arithmetic_run(src1, src2, dst, "arithm_add", &arithm_add);
+    arithmetic_run(src1, src2, dst, "arithm_add", &arithm_add, MAT_ADD);
 }
 void cv::ocl::add(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
 {
-    arithmetic_run(src1, src2, dst, mask, "arithm_add_with_mask", &arithm_add);
+    arithmetic_run(src1, src2, dst, mask, "arithm_add_with_mask", &arithm_add, MAT_ADD);
 }
 
 void cv::ocl::subtract(const oclMat &src1, const oclMat &src2, oclMat &dst)
 {
-    arithmetic_run(src1, src2, dst, "arithm_add", &arithm_add);
+    arithmetic_run(src1, src2, dst, "arithm_add", &arithm_add, MAT_SUB);
 }
 void cv::ocl::subtract(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
 {
-    arithmetic_run(src1, src2, dst, mask, "arithm_add_with_mask", &arithm_add);
+    arithmetic_run(src1, src2, dst, mask, "arithm_add_with_mask", &arithm_add, MAT_SUB);
 }
 typedef void (*MulDivFunc)(const oclMat &src1, const oclMat &src2, oclMat &dst, String kernelName,
                            const char **kernelString, void *scalar);
@@ -347,12 +369,9 @@ void arithmetic_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, 
     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&cols ));
     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_step1 ));
     if(isMatSubScalar != 0)
-    {
-        isMatSubScalar = isMatSubScalar > 0 ? 1 : 0;
-        args.push_back( std::make_pair( sizeof(cl_int) , (void *)&isMatSubScalar));
-    }
-
-    openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, channels, depth);
+        openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, channels, depth, "-D ARITHM_SUB");
+    else
+        openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, channels, depth, "-D ARITHM_ADD");
 }
 
 static void arithmetic_scalar_run(const oclMat &src, oclMat &dst, String kernelName, const char **kernelString, double scalar)
