@@ -605,7 +605,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchConvert(const Mat &trainIdx, cons
 
 void cv::ocl::BruteForceMatcher_OCL_base::match(const oclMat &query, const oclMat &train, vector<DMatch> &matches, const oclMat &mask)
 {
-	assert(mask.empty()); // mask is not supported at the moment
+    assert(mask.empty()); // mask is not supported at the moment
     oclMat trainIdx, distance;
     matchSingle(query, train, trainIdx, distance, mask);
     matchDownload(trainIdx, distance, matches);
@@ -673,8 +673,8 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchCollection(const oclMat &query, c
     }
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
-	
-	const int nQuery = query.rows;
+    
+    const int nQuery = query.rows;
 
     ensureSizeIsEnough(1, nQuery, CV_32S, trainIdx);
     ensureSizeIsEnough(1, nQuery, CV_32S, imgIdx);
