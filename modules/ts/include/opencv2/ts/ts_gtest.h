@@ -7155,10 +7155,20 @@ GTEST_API_ std::string AppendUserMessage(
 // errors presumably detectable only at run time.  Since
 // std::runtime_error inherits from std::exception, many testing
 // frameworks know how to extract and print the message inside it.
+
+#ifdef _MSC_VER
+# pragma warning(push)          // Saves the current warning state.
+# pragma warning(disable:4275)  // Temporarily disables warning 4275.
+#endif  // _MSC_VER
+
 class GTEST_API_ GoogleTestFailureException : public ::std::runtime_error {
  public:
   explicit GoogleTestFailureException(const TestPartResult& failure);
 };
+
+#ifdef _MSC_VER
+# pragma warning(pop)           // Restores the warning state.
+#endif  // _MSC_VER
 
 #endif  // GTEST_HAS_EXCEPTIONS
 

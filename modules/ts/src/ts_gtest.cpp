@@ -3284,7 +3284,7 @@ static std::string FormatWordList(const std::vector<std::string>& words) {
   return word_list.GetString();
 }
 
-bool ValidateTestPropertyName(const std::string& property_name,
+static bool ValidateTestPropertyName(const std::string& property_name,
                               const std::vector<std::string>& reserved_names) {
   if (std::find(reserved_names.begin(), reserved_names.end(), property_name) !=
           reserved_names.end()) {
