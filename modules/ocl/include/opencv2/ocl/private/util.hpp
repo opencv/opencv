@@ -68,7 +68,8 @@ namespace cv
         void CV_EXPORTS openCLMallocPitch(Context *clCxt, void **dev_ptr, size_t *pitch,
                                           size_t widthInBytes, size_t height);
         void CV_EXPORTS openCLMallocPitchEx(Context *clCxt, void **dev_ptr, size_t *pitch,
-                                            size_t widthInBytes, size_t height, DevMemRW rw_type, DevMemType mem_type);
+                                            size_t widthInBytes, size_t height, 
+                                            DevMemRW rw_type, DevMemType mem_type, void* hptr = 0);
         void CV_EXPORTS openCLMemcpy2D(Context *clCxt, void *dst, size_t dpitch,
                                        const void *src, size_t spitch,
                                        size_t width, size_t height, openCLMemcpyKind kind, int channels = -1);

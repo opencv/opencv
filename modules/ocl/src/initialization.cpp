@@ -163,7 +163,7 @@ namespace cv
                 {
                     releaseResources();
                     delete this;
-            }
+                }
             }
 
             Impl* copy()
@@ -260,9 +260,8 @@ namespace cv
 
         int setDevMemType(DevMemRW rw_type, DevMemType mem_type)
         {
-            if( (mem_type == DEVICE_MEM_PM && Context::getContext()->impl->unified_memory == 0) ||
-                 mem_type == DEVICE_MEM_UHP ||
-                 mem_type == DEVICE_MEM_CHP )
+            if( (mem_type == DEVICE_MEM_PM && 
+                 Context::getContext()->impl->unified_memory == 0) )
                 return -1;
             gDeviceMemRW = rw_type;
             gDeviceMemType = mem_type;
@@ -432,11 +431,17 @@ namespace cv
         }
 
         void openCLMallocPitchEx(Context *clCxt, void **dev_ptr, size_t *pitch,
-                               size_t widthInBytes, size_t height, DevMemRW rw_type, DevMemType mem_type)
+                                 size_t widthInBytes, size_t height, 
+                                 DevMemRW rw_type, DevMemType mem_type, void* hptr)
         {
             cl_int status;
-            *dev_ptr = clCreateBuffer(clCxt->impl->oclcontext, gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
-                                      widthInBytes * height, 0, &status);
+            if(hptr && (mem_type==DEVICE_MEM_UHP || mem_type==DEVICE_MEM_CHP))
+                *dev_ptr = clCreateBuffer(clCxt->impl->oclcontext, 
+                                          gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type], 
+                                          widthInBytes * height, hptr, &status);
+            else
+                *dev_ptr = clCreateBuffer(clCxt->impl->oclcontext, gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
+                                          widthInBytes * height, 0, &status);
             openCLVerifyCall(status);
             *pitch = widthInBytes;
         }
