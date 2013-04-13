@@ -65,11 +65,10 @@
 int bit1Count(int x)
 {
     int c = 0;
-    int ix = x;
     for (int i = 0 ; i < 32 ; i++)
     {
-        c += ix & 0x1;
-        ix >>= 1;
+        c += x & 1;
+        x >>= 1;
     }
     return c;
 }
@@ -85,14 +84,17 @@ int bit1Count(int x)
         typedef int value_type;
         typedef int result_type;
 #   endif
+#define DIST_RES(x) (x)
 #elif (DIST_TYPE == 1) // L2Dist
 #define DIST(x, y) (((x) - (y)) * ((x) - (y)))
 typedef float value_type;
 typedef float result_type;
+#define DIST_RES(x) sqrt(x)
 #elif (DIST_TYPE == 2) // Hamming
-#define DIST(x, y) bit1Count(((x) ^ (y))
+#define DIST(x, y) bit1Count( (x) ^ (y) )
 typedef int value_type;
 typedef int result_type;
+#define DIST_RES(x) (x)
 #endif
 
 result_type reduce_block(
@@ -107,10 +109,10 @@ result_type reduce_block(
     for (int j = 0 ; j < BLOCK_SIZE ; j++)
     {
         result += DIST(
-            s_query[lidy * BLOCK_SIZE + j], 
+            s_query[lidy * BLOCK_SIZE + j],
             s_train[j * BLOCK_SIZE + lidx]);
     }
-    return result;
+    return DIST_RES(result);
 }
 
 result_type reduce_multi_block(
@@ -126,10 +128,10 @@ result_type reduce_multi_block(
     for (int j = 0 ; j < BLOCK_SIZE ; j++)
     {
         result += DIST(
-            s_query[lidy * MAX_DESC_LEN + block_index * BLOCK_SIZE + j], 
+            s_query[lidy * MAX_DESC_LEN + block_index * BLOCK_SIZE + j],
             s_train[j * BLOCK_SIZE + lidx]);
     }
-    return result;
+    return DIST_RES(result);
 }
 
 /* 2dim launch, global size: dim0 is (query rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, dim1 is BLOCK_SIZE
@@ -153,8 +155,8 @@ __kernel void BruteForceMatch_UnrollMatch(
     const int lidy = get_local_id(1);
     const int groupidx = get_group_id(0);
 
-    __local value_type *s_query = sharebuffer;
-    __local value_type *s_train = sharebuffer + BLOCK_SIZE * MAX_DESC_LEN;
+    __local value_type *s_query = (__local value_type *)sharebuffer;
+    __local value_type *s_train = (__local value_type *)sharebuffer + BLOCK_SIZE * MAX_DESC_LEN;
 
     int queryIdx = groupidx * BLOCK_SIZE + lidy;
     // load the query into local memory.
@@ -251,8 +253,8 @@ __kernel void BruteForceMatch_Match(
     float myBestDistance = MAX_FLOAT;
     int myBestTrainIdx = -1;
 
-    __local value_type *s_query = sharebuffer;
-    __local value_type *s_train = sharebuffer + BLOCK_SIZE * BLOCK_SIZE;
+    __local value_type *s_query = (__local value_type *)sharebuffer;
+    __local value_type *s_train = (__local value_type *)sharebuffer + BLOCK_SIZE * BLOCK_SIZE;
 
     // loop
     for (int t = 0 ;  t < (train_rows + BLOCK_SIZE - 1) / BLOCK_SIZE ; t++)
@@ -345,8 +347,8 @@ __kernel void BruteForceMatch_RadiusUnrollMatch(
     const int queryIdx = groupidy * BLOCK_SIZE + lidy;
     const int trainIdx = groupidx * BLOCK_SIZE + lidx;
 
-    __local value_type *s_query = sharebuffer;
-    __local value_type *s_train = sharebuffer + BLOCK_SIZE * BLOCK_SIZE;
+    __local value_type *s_query = (__local value_type *)sharebuffer;
+    __local value_type *s_train = (__local value_type *)sharebuffer + BLOCK_SIZE * BLOCK_SIZE;
 
     result_type result = 0;
     for (int i = 0 ; i < MAX_DESC_LEN / BLOCK_SIZE ; ++i)
@@ -365,7 +367,8 @@ __kernel void BruteForceMatch_RadiusUnrollMatch(
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 
-    if (queryIdx < query_rows && trainIdx < train_rows && result < maxDistance/* && mask(queryIdx, trainIdx)*/)
+    if (queryIdx < query_rows && trainIdx < train_rows &&
+        convert_float(result) < maxDistance/* && mask(queryIdx, trainIdx)*/)
     {
         unsigned int ind = atom_inc(nMatches + queryIdx/*, (unsigned int) -1*/);
 
@@ -405,8 +408,8 @@ __kernel void BruteForceMatch_RadiusMatch(
     const int queryIdx = groupidy * BLOCK_SIZE + lidy;
     const int trainIdx = groupidx * BLOCK_SIZE + lidx;
 
-    __local value_type *s_query = sharebuffer;
-    __local value_type *s_train = sharebuffer + BLOCK_SIZE * BLOCK_SIZE;
+    __local value_type *s_query = (__local value_type *)sharebuffer;
+    __local value_type *s_train = (__local value_type *)sharebuffer + BLOCK_SIZE * BLOCK_SIZE;
 
     result_type result = 0;
     for (int i = 0 ; i < (query_cols + BLOCK_SIZE - 1) / BLOCK_SIZE ; ++i)
@@ -425,7 +428,8 @@ __kernel void BruteForceMatch_RadiusMatch(
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 
-    if (queryIdx < query_rows && trainIdx < train_rows && result < maxDistance/* && mask(queryIdx, trainIdx)*/)
+    if (queryIdx < query_rows && trainIdx < train_rows && 
+        convert_float(result) < maxDistance/* && mask(queryIdx, trainIdx)*/)
     {
         unsigned int ind = atom_inc(nMatches + queryIdx);
 
@@ -458,8 +462,8 @@ __kernel void BruteForceMatch_knnUnrollMatch(
     const int groupidx = get_group_id(0);
 
     const int queryIdx = groupidx * BLOCK_SIZE + lidy;
-    local value_type *s_query = sharebuffer;
-    local value_type *s_train = sharebuffer + BLOCK_SIZE * MAX_DESC_LEN;
+    __local value_type *s_query = (__local value_type *)sharebuffer;
+    __local value_type *s_train = (__local value_type *)sharebuffer + BLOCK_SIZE * MAX_DESC_LEN;
 
     // load the query into local memory.
     for (int i = 0 ;  i <  MAX_DESC_LEN / BLOCK_SIZE; i ++)
@@ -480,7 +484,6 @@ __kernel void BruteForceMatch_knnUnrollMatch(
         result_type result = 0;
         for (int i = 0 ; i < MAX_DESC_LEN / BLOCK_SIZE ; i++)
         {
-            const int loadX = lidx + i * BLOCK_SIZE;
             //load a BLOCK_SIZE * BLOCK_SIZE block into local train.
             const int loadx = lidx + i * BLOCK_SIZE;
             s_train[lidx * BLOCK_SIZE + lidy] = loadx < train_cols ? train[min(t * BLOCK_SIZE + lidy, train_rows - 1) * (step / sizeof(float)) + loadx] : 0;
@@ -514,8 +517,8 @@ __kernel void BruteForceMatch_knnUnrollMatch(
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    local float *s_distance = (local float *)sharebuffer;
-    local int *s_trainIdx = (local int *)(sharebuffer + BLOCK_SIZE * BLOCK_SIZE);
+    __local float *s_distance = (local float *)sharebuffer;
+    __local int *s_trainIdx = (local int *)(sharebuffer + BLOCK_SIZE * BLOCK_SIZE);
 
     // find BestMatch
     s_distance += lidy * BLOCK_SIZE;
@@ -604,8 +607,8 @@ __kernel void BruteForceMatch_knnMatch(
     const int groupidx = get_group_id(0);
 
     const int queryIdx = groupidx * BLOCK_SIZE + lidy;
-    local value_type *s_query = sharebuffer;
-    local value_type *s_train = sharebuffer + BLOCK_SIZE * BLOCK_SIZE;
+    __local value_type *s_query = (__local value_type *)sharebuffer;
+    __local value_type *s_train = (__local value_type *)sharebuffer + BLOCK_SIZE * BLOCK_SIZE;
 
     float myBestDistance1 = MAX_FLOAT;
     float myBestDistance2 = MAX_FLOAT;
