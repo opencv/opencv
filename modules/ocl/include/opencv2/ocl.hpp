@@ -263,8 +263,10 @@ namespace cv
             void create(Size size, int type);
 
             //! allocates new oclMatrix with specified device memory type.
-            void createEx(int rows, int cols, int type, DevMemRW rw_type, DevMemType mem_type);
-            void createEx(Size size, int type, DevMemRW rw_type, DevMemType mem_type);
+            void createEx(int rows, int cols, int type, 
+                          DevMemRW rw_type, DevMemType mem_type, void* hptr = 0);
+            void createEx(Size size, int type, DevMemRW rw_type, 
+                          DevMemType mem_type, void* hptr = 0);
 
             //! decreases reference counter;
             // deallocate the data when reference counter reaches 0.

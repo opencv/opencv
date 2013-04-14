@@ -177,15 +177,9 @@ void cv::ocl::oclMat::upload(const Mat &m)
     Size wholeSize;
     Point ofs;
     m.locateROI(wholeSize, ofs);
-    //   int type = m.type();
-    //   if(m.oclchannels() == 3)
-    //{
-    //	type = CV_MAKETYPE(m.depth(), 4);
-    //}
-    create(wholeSize, m.type());
-
     if(m.channels() == 3)
     {
+        create(wholeSize, m.type());
         int pitch = wholeSize.width * 3 * m.elemSize1();
         int tail_padding = m.elemSize1() * 3072;
         int err;
@@ -195,35 +189,20 @@ void cv::ocl::oclMat::upload(const Mat &m)
 
         openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step, wholeSize.width * m.elemSize(), wholeSize.height, clMemcpyHostToDevice, 3);
         convert_C3C4(temp, *this);
-        //int* cputemp=new int[wholeSize.height*wholeSize.width * 3];
-        //int* cpudata=new int[this->step*this->wholerows/sizeof(int)];
-        //openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, temp, CL_TRUE,
-        //						0, wholeSize.height*wholeSize.width * 3* sizeof(int), cputemp, 0, NULL, NULL));
-        //openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, (cl_mem)data, CL_TRUE,
-        //						0, this->step*this->wholerows, cpudata, 0, NULL, NULL));
-        //for(int i=0;i<wholeSize.height;i++)
-        //{
-        //	int *a = cputemp+i*wholeSize.width * 3,*b = cpudata + i*this->step/sizeof(int);
-        //	for(int j=0;j<wholeSize.width;j++)
-        //	{
-        //		if((a[3*j] != b[4*j])||(a[3*j+1] != b[4*j+1])||(a[3*j+2] != b[4*j+2]))
-        //			printf("rows=%d,cols=%d,cputtemp=%d,%d,%d;cpudata=%d,%d,%d\n",
-        //			i,j,a[3*j],a[3*j+1],a[3*j+2],b[4*j],b[4*j+1],b[4*j+2]);
-        //	}
-        //}
-        //delete []cputemp;
-        //delete []cpudata;
         openCLSafeCall(clReleaseMemObject(temp));
     }
     else
     {
-        openCLMemcpy2D(clCxt, data, step, m.datastart, m.step, wholeSize.width * elemSize(), wholeSize.height, clMemcpyHostToDevice);
+        // try to use host ptr
+        createEx(wholeSize, m.type(), gDeviceMemRW, gDeviceMemType, m.datastart);
+        if(gDeviceMemType!=DEVICE_MEM_UHP && gDeviceMemType!=DEVICE_MEM_CHP)
+            openCLMemcpy2D(clCxt, data, step, m.datastart, m.step, 
+                           wholeSize.width * elemSize(), wholeSize.height, clMemcpyHostToDevice);
     }
 
     rows = m.rows;
     cols = m.cols;
     offset = ofs.y * step + ofs.x * elemSize();
-    //download_channels = m.channels();
 }
 
 void cv::ocl::oclMat::download(cv::Mat &m) const
@@ -908,9 +887,10 @@ oclMat cv::ocl::oclMat::reshape(int new_cn, int new_rows) const
 
 }
 
-void cv::ocl::oclMat::createEx(Size size, int type, DevMemRW rw_type, DevMemType mem_type)
+void cv::ocl::oclMat::createEx(Size size, int type, 
+                               DevMemRW rw_type, DevMemType mem_type, void* hptr)
 {
-    createEx(size.height, size.width, type, rw_type, mem_type);
+    createEx(size.height, size.width, type, rw_type, mem_type, hptr);
 }
 
 void cv::ocl::oclMat::create(int _rows, int _cols, int _type)
@@ -918,16 +898,12 @@ void cv::ocl::oclMat::create(int _rows, int _cols, int _type)
     createEx(_rows, _cols, _type, gDeviceMemRW, gDeviceMemType);
 }
 
-void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type, DevMemRW rw_type, DevMemType mem_type)
+void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type, 
+                               DevMemRW rw_type, DevMemType mem_type, void* hptr)
 {
     clCxt = Context::getContext();
     /* core logic */
     _type &= Mat::TYPE_MASK;
-    //download_channels = CV_MAT_CN(_type);
-    //if(download_channels==3)
-    //{
-    //	_type = CV_MAKE_TYPE((CV_MAT_DEPTH(_type)),4);
-    //}
     if( rows == _rows && cols == _cols && type() == _type && data )
         return;
     if( data )
@@ -943,8 +919,8 @@ void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type, DevMemRW rw_type
         size_t esz = elemSize();
 
         void *dev_ptr;
-        openCLMallocPitchEx(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols), rows, rw_type, mem_type);
-        //openCLMallocPitch(clCxt,&dev_ptr, &step, esz * cols, rows);
+        openCLMallocPitchEx(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols), 
+                            rows, rw_type, mem_type, hptr);
 
         if (esz * cols == step)
             flags |= Mat::CONTINUOUS_FLAG;
