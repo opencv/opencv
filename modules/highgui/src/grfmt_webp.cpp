@@ -58,7 +58,15 @@ namespace cv
 
 WebPDecoder::WebPDecoder()
 {
-    m_signature = "RIFF....WEBPVP8 ";
+    /*
+     * True signature is RIFF<size>WEBPVP8x x depends on the image content.
+     * To verify the signature instead of doing string comparison use API
+     * exposed by libwebp.
+     * 
+     * 123456789 is appeneded to get first 32 bytes of data from the file as
+     * it is required by WebPGetFeatures API.
+     */
+    m_signature = "RIFF....WEBPVP8 0123456789abcdef";
     m_buf_supported = true;
 }
 
@@ -78,8 +86,15 @@ bool WebPDecoder::checkSignature( const String& signature ) const
 
     if(signature.size() >= len)
     {
-        ret = ( (memcmp(signature.c_str(), m_signature.c_str(), 4) == 0) &&
-            (memcmp(signature.c_str() + 8, m_signature.c_str() + 8, 4) == 0) );
+        WebPBitstreamFeatures features;
+        memset(&features, 0, sizeof(features));
+
+        if(VP8_STATUS_OK == WebPGetFeatures((uint8_t *)signature.c_str(),
+            m_signature.size(), &features))
+        {
+            // File has a valid WebP header with correct signature.
+            ret = true;
+        }
     }
 
     return ret;
@@ -98,26 +113,16 @@ bool WebPDecoder::readHeader()
             return false;
         }
 
-        fseek(wfile, 0, SEEK_END);
-        size_t wfile_size = ftell(wfile);
-        fseek(wfile, 0, SEEK_SET);
+        data.create(1, WEBP_HEADER_SIZE, CV_8U);
 
-        if(wfile_size > (size_t)INT_MAX)
-        {
-            fclose(wfile);
-            return false;
-        }
-
-        data.create(1, (int)wfile_size, CV_8U);
-
-        size_t data_size = fread(data.data, 1, wfile_size, wfile);
+        size_t data_size = fread(data.data, 1, WEBP_HEADER_SIZE, wfile);
 
         if(wfile)
         {
             fclose(wfile);
         }
 
-        if( data_size < wfile_size )
+        if( data_size < WEBP_HEADER_SIZE )
         {
             return false;
         }
@@ -127,9 +132,16 @@ bool WebPDecoder::readHeader()
         data = m_buf;
     }
 
-    if(WebPGetInfo(data.data, data.total(), &m_width, &m_height) == 1)
+    WebPBitstreamFeatures features;
+    memset(&features, 0, sizeof(features));
+
+    if(VP8_STATUS_OK == WebPGetFeatures(data.data, WEBP_HEADER_SIZE, &features))
     {
+        // Got the width and height information also so use it.
+        m_width = features.width;
+        m_height = features.height;
         m_type = CV_8UC3;
+
         return true;
     }
 

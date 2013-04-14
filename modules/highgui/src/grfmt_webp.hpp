@@ -47,6 +47,8 @@
 
 #ifdef HAVE_WEBP
 
+#define WEBP_HEADER_SIZE 32
+
 namespace cv
 {
 
