@@ -67,7 +67,7 @@ if(NOT TIFF_VERSION_STRING AND TIFF_INCLUDE_DIR)
 endif()
 
 # --- libjpeg (optional) ---
-if(WITH_JPEG)
+if(WITH_JPEG AND NOT IOS)
   if(BUILD_JPEG)
     ocv_clear_vars(JPEG_FOUND)
   else()
@@ -145,12 +145,13 @@ if(NOT JASPER_VERSION_STRING)
 endif()
 
 # --- libpng (optional, should be searched after zlib) ---
-if(WITH_PNG)
+if(WITH_PNG AND NOT IOS)
   if(BUILD_PNG)
     ocv_clear_vars(PNG_FOUND)
   else()
     include(FindPNG)
     if(PNG_FOUND)
+      include(CheckIncludeFile)
       check_include_file("${PNG_PNG_INCLUDE_DIR}/png.h"        HAVE_PNG_H)
       check_include_file("${PNG_PNG_INCLUDE_DIR}/libpng/png.h" HAVE_LIBPNG_PNG_H)
       if(HAVE_PNG_H)

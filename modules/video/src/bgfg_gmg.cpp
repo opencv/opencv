@@ -49,6 +49,7 @@
  */
 
 #include "precomp.hpp"
+#include <limits>
 
 namespace cv
 {
@@ -72,7 +73,7 @@ public:
         minVal_ = maxVal_ = 0;
         name_ = "BackgroundSubtractor.GMG";
     }
-    
+
     ~BackgroundSubtractorGMGImpl()
     {
     }
@@ -133,7 +134,7 @@ public:
 
     virtual void getBackgroundImage(OutputArray) const
     {
-        CV_Error( CV_StsNotImplemented, "" );
+        CV_Error( Error::StsNotImplemented, "" );
     }
 
     virtual void write(FileStorage& fs) const
@@ -152,7 +153,7 @@ public:
 
     virtual void read(const FileNode& fn)
     {
-        CV_Assert( (std::string)fn["name"] == name_ );
+        CV_Assert( (String)fn["name"] == name_ );
         maxFeatures = (int)fn["maxFeatures"];
         learningRate = (double)fn["defaultLearningRate"];
         numInitializationFrames = (int)fn["numFrames"];
@@ -189,7 +190,7 @@ private:
     Size frameSize_;
     int frameNum_;
 
-    std::string name_;
+    String name_;
 
     Mat_<int> nfeatures_;
     Mat_<unsigned int> colors_;

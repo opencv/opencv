@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 #define RFIX 30
-#define MULT_FIX(x,y) (((int64_t)(x) * (y) + (1 << (RFIX - 1))) >> RFIX)
+#define MULT_FIX(x, y) (((int64_t)(x) * (y) + (1 << (RFIX - 1))) >> RFIX)
 
 void WebPRescalerInit(WebPRescaler* const wrk, int src_width, int src_height,
                       uint8_t* const dst, int dst_width, int dst_height,

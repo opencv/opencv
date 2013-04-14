@@ -24,6 +24,9 @@ ocv_module_include_directories(
 
 set(opencv_hdrs
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core.hpp"
+    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp"
+    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/types.hpp"
+    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/persistence.hpp"
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/utility.hpp"
     "${OPENCV_MODULE_opencv_flann_LOCATION}/include/opencv2/flann/miniflann.hpp"
     "${OPENCV_MODULE_opencv_imgproc_LOCATION}/include/opencv2/imgproc.hpp"
@@ -65,6 +68,8 @@ add_custom_command(
    DEPENDS ${opencv_hdrs})
 
 add_library(${the_module} SHARED src2/cv2.cpp ${CMAKE_CURRENT_BINARY_DIR}/generated0.i ${cv2_generated_hdrs} src2/cv2.cv.hpp)
+set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
+
 if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
   target_link_libraries(${the_module} debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
 else()

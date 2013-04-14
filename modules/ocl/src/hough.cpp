@@ -242,7 +242,7 @@ void cv::ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& 
     CV_Assert(src.type() == CV_8UC1);
     CV_Assert(src.cols < std::numeric_limits<unsigned short>::max());
     CV_Assert(src.rows < std::numeric_limits<unsigned short>::max());
-    CV_Assert(method == CV_HOUGH_GRADIENT);
+    CV_Assert(method == HOUGH_GRADIENT);
     CV_Assert(dp > 0);
     CV_Assert(minRadius > 0 && maxRadius > minRadius);
     CV_Assert(cannyThreshold > 0);
@@ -385,7 +385,7 @@ void cv::ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& 
 void cv::ocl::HoughCirclesDownload(const oclMat& d_circles, cv::OutputArray h_circles_)
 {
     // FIX ME: garbage values are copied!
-    CV_Error(CV_StsNotImplemented, "HoughCirclesDownload is not implemented");
+    CV_Error(Error::StsNotImplemented, "HoughCirclesDownload is not implemented");
 
     if (d_circles.empty())
     {

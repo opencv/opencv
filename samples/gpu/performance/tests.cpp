@@ -275,7 +275,7 @@ TEST(meanShift)
 
 TEST(SURF)
 {
-    Mat src = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat src = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
     if (src.empty()) throw runtime_error("can't open aloeL.jpg");
 
     SURF surf;
@@ -305,7 +305,7 @@ TEST(SURF)
 
 TEST(FAST)
 {
-    Mat src = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat src = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
     if (src.empty()) throw runtime_error("can't open aloeL.jpg");
 
     vector<KeyPoint> keypoints;
@@ -330,7 +330,7 @@ TEST(FAST)
 
 TEST(ORB)
 {
-    Mat src = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat src = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
     if (src.empty()) throw runtime_error("can't open aloeL.jpg");
 
     ORB orb(4000);
@@ -1055,7 +1055,7 @@ TEST(equalizeHist)
 
 TEST(Canny)
 {
-    Mat img = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
 
     if (img.empty()) throw runtime_error("can't open aloeL.jpg");
 

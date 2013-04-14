@@ -348,8 +348,7 @@ bool  ExrDecoder::readData( Mat& img )
                     float *fi = (float *)buffer;
                     for( x = 0; x < m_width * 3; x++)
                     {
-                        int t = cvRound(fi[x]*5);
-                        out[x] = CV_CAST_8U(t);
+                        out[x] = cv::saturate_cast<uchar>(fi[x]*5);
                     }
                 }
                 else
@@ -357,8 +356,7 @@ bool  ExrDecoder::readData( Mat& img )
                     unsigned *ui = (unsigned *)buffer;
                     for( x = 0; x < m_width * 3; x++)
                     {
-                        unsigned t = ui[x];
-                        out[x] = CV_CAST_8U(t);
+                        out[x] = cv::saturate_cast<uchar>(ui[x]);
                     }
                 }
             }
@@ -487,12 +485,9 @@ void  ExrDecoder::ChromaToBGR( float *data, int numlines, int step )
 
             if( !m_native_depth )
             {
-                int t = cvRound(b);
-                ((uchar *)data)[y * step + x * 3] = CV_CAST_8U(t);
-                t = cvRound(Y);
-                ((uchar *)data)[y * step + x * 3 + 1] = CV_CAST_8U(t);
-                t = cvRound(r);
-                ((uchar *)data)[y * step + x * 3 + 2] = CV_CAST_8U(t);
+                ((uchar *)data)[y * step + x * 3 + 0] = cv::saturate_cast<uchar>(b);
+                ((uchar *)data)[y * step + x * 3 + 1] = cv::saturate_cast<uchar>(Y);
+                ((uchar *)data)[y * step + x * 3 + 2] = cv::saturate_cast<uchar>(r);
             }
             else if( m_type == FLOAT )
             {
@@ -503,11 +498,11 @@ void  ExrDecoder::ChromaToBGR( float *data, int numlines, int step )
             else
             {
                 int t = cvRound(b);
-                ((unsigned *)data)[y * step + x * 3] = (unsigned)MAX(t,0);
+                ((unsigned *)data)[y * step + x * 3 + 0] = (unsigned)MAX(t, 0);
                 t = cvRound(Y);
-                ((unsigned *)data)[y * step + x * 3 + 1] = (unsigned)MAX(t,0);
+                ((unsigned *)data)[y * step + x * 3 + 1] = (unsigned)MAX(t, 0);
                 t = cvRound(r);
-                ((unsigned *)data)[y * step + x * 3 + 2] = (unsigned)MAX(t,0);
+                ((unsigned *)data)[y * step + x * 3 + 2] = (unsigned)MAX(t, 0);
             }
         }
     }

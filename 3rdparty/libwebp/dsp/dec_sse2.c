@@ -194,7 +194,7 @@ static void TransformSSE2(const int16_t* in, uint8_t* dst, int do_two) {
 
   // Add inverse transform to 'dst' and store.
   {
-    const __m128i zero = _mm_set1_epi16(0);
+    const __m128i zero = _mm_setzero_si128();
     // Load the reference(s).
     __m128i dst0, dst1, dst2, dst3;
     if (do_two) {
@@ -278,14 +278,14 @@ static void TransformSSE2(const int16_t* in, uint8_t* dst, int do_two) {
 
 #define GET_NOTHEV(p1, p0, q0, q1, hev_thresh, not_hev) {                      \
   const __m128i zero = _mm_setzero_si128();                                    \
-  const __m128i t1 = MM_ABS(p1, p0);                                           \
-  const __m128i t2 = MM_ABS(q1, q0);                                           \
+  const __m128i t_1 = MM_ABS(p1, p0);                                          \
+  const __m128i t_2 = MM_ABS(q1, q0);                                          \
                                                                                \
   const __m128i h = _mm_set1_epi8(hev_thresh);                                 \
-  const __m128i t3 = _mm_subs_epu8(t1, h);  /* abs(p1 - p0) - hev_tresh */     \
-  const __m128i t4 = _mm_subs_epu8(t2, h);  /* abs(q1 - q0) - hev_tresh */     \
+  const __m128i t_3 = _mm_subs_epu8(t_1, h);  /* abs(p1 - p0) - hev_tresh */   \
+  const __m128i t_4 = _mm_subs_epu8(t_2, h);  /* abs(q1 - q0) - hev_tresh */   \
                                                                                \
-  not_hev = _mm_or_si128(t3, t4);                                              \
+  not_hev = _mm_or_si128(t_3, t_4);                                            \
   not_hev = _mm_cmpeq_epi8(not_hev, zero); /* not_hev <= t1 && not_hev <= t2 */\
 }
 
@@ -314,13 +314,13 @@ static void TransformSSE2(const int16_t* in, uint8_t* dst, int do_two) {
 
 // Updates values of 2 pixels at MB edge during complex filtering.
 // Update operations:
-// q = q - a and p = p + a; where a = [(a_hi >> 7), (a_lo >> 7)]
+// q = q - delta and p = p + delta; where delta = [(a_hi >> 7), (a_lo >> 7)]
 #define UPDATE_2PIXELS(pi, qi, a_lo, a_hi) {                                   \
   const __m128i a_lo7 = _mm_srai_epi16(a_lo, 7);                               \
   const __m128i a_hi7 = _mm_srai_epi16(a_hi, 7);                               \
-  const __m128i a = _mm_packs_epi16(a_lo7, a_hi7);                             \
-  pi = _mm_adds_epi8(pi, a);                                                   \
-  qi = _mm_subs_epi8(qi, a);                                                   \
+  const __m128i delta = _mm_packs_epi16(a_lo7, a_hi7);                         \
+  pi = _mm_adds_epi8(pi, delta);                                               \
+  qi = _mm_subs_epi8(qi, delta);                                               \
 }
 
 static void NeedsFilter(const __m128i* p1, const __m128i* p0, const __m128i* q0,

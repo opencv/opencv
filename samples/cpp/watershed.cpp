@@ -29,11 +29,11 @@ static void onMouse( int event, int x, int y, int flags, void* )
 {
     if( x < 0 || x >= img.cols || y < 0 || y >= img.rows )
         return;
-    if( event == CV_EVENT_LBUTTONUP || !(flags & CV_EVENT_FLAG_LBUTTON) )
+    if( event == EVENT_LBUTTONUP || !(flags & EVENT_FLAG_LBUTTON) )
         prevPt = Point(-1,-1);
-    else if( event == CV_EVENT_LBUTTONDOWN )
+    else if( event == EVENT_LBUTTONDOWN )
         prevPt = Point(x,y);
-    else if( event == CV_EVENT_MOUSEMOVE && (flags & CV_EVENT_FLAG_LBUTTON) )
+    else if( event == EVENT_MOUSEMOVE && (flags & EVENT_FLAG_LBUTTON) )
     {
         Point pt(x, y);
         if( prevPt.x < 0 )
@@ -59,8 +59,8 @@ int main( int argc, char** argv )
     namedWindow( "image", 1 );
 
     img0.copyTo(img);
-    cvtColor(img, markerMask, CV_BGR2GRAY);
-    cvtColor(markerMask, imgGray, CV_GRAY2BGR);
+    cvtColor(img, markerMask, COLOR_BGR2GRAY);
+    cvtColor(markerMask, imgGray, COLOR_GRAY2BGR);
     markerMask = Scalar::all(0);
     imshow( "image", img );
     setMouseCallback( "image", onMouse, 0 );
@@ -85,7 +85,7 @@ int main( int argc, char** argv )
             vector<vector<Point> > contours;
             vector<Vec4i> hierarchy;
 
-            findContours(markerMask, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
+            findContours(markerMask, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
 
             if( contours.empty() )
                 continue;

@@ -6,6 +6,9 @@
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core/utility.hpp"
+
+#include "opencv2/highgui/highgui_c.h"
 
 #include <iostream>
 #include <stdio.h>
@@ -43,7 +46,7 @@ int main( void )
   {
     for(;;)
     {
-      frame = cvQueryFrame( capture );
+      frame = cv::cvarrToMat(cvQueryFrame( capture ));
 
       //-- 3. Apply the classifier to the frame
       if( !frame.empty() )
@@ -67,7 +70,7 @@ void detectAndDisplay( Mat frame )
    std::vector<Rect> faces;
    Mat frame_gray;
 
-   cvtColor( frame, frame_gray, CV_BGR2GRAY );
+   cvtColor( frame, frame_gray, COLOR_BGR2GRAY );
    equalizeHist( frame_gray, frame_gray );
 
    //-- Detect faces
@@ -79,7 +82,7 @@ void detectAndDisplay( Mat frame )
       std::vector<Rect> eyes;
 
       //-- In each face, detect eyes
-      eyes_cascade.detectMultiScale( faceROI, eyes, 1.1, 2, 0 |CV_HAAR_SCALE_IMAGE, Size(30, 30) );
+      eyes_cascade.detectMultiScale( faceROI, eyes, 1.1, 2, 0 |CASCADE_SCALE_IMAGE, Size(30, 30) );
       if( eyes.size() == 2)
       {
          //-- Draw the face

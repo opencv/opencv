@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 import unittest
 import random
@@ -31,6 +31,19 @@ class NewOpenCVTests(unittest.TestCase):
     def hashimg(self, im):
         """ Compute a hash for an image, useful for image comparisons """
         return hashlib.md5(im.tostring()).digest()
+
+    if sys.version_info[:2] == (2, 6):
+        def assertLess(self, a, b, msg=None):
+            if not a < b:
+                self.fail('%s not less than %s' % (repr(a), repr(b)))
+
+        def assertLessEqual(self, a, b, msg=None):
+            if not a <= b:
+                self.fail('%s not less than or equal to %s' % (repr(a), repr(b)))
+
+        def assertGreater(self, a, b, msg=None):
+            if not a > b:
+                self.fail('%s not greater than %s' % (repr(a), repr(b)))
 
 # Tests to run first; check the handful of basic operations that the later tests rely on
 

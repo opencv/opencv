@@ -1,10 +1,51 @@
 #include "opencv2/core.hpp"
-#include "opencv2/core/internal.hpp"
 
 #include "boost.h"
 #include "cascadeclassifier.h"
 #include <queue>
 #include "cxmisc.h"
+
+#include "cvconfig.h"
+#ifdef HAVE_TBB
+#  include "tbb/tbb_stddef.h"
+#  if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
+#    include "tbb/tbb.h"
+#    include "tbb/task.h"
+#    undef min
+#    undef max
+#  else
+#    undef HAVE_TBB
+#  endif
+#endif
+
+#ifdef HAVE_TBB
+    typedef tbb::blocked_range<int> BlockedRange;
+
+    template<typename Body> static inline
+    void parallel_for( const BlockedRange& range, const Body& body )
+    {
+        tbb::parallel_for(range, body);
+    }
+#else
+    class BlockedRange
+    {
+    public:
+        BlockedRange() : _begin(0), _end(0), _grainsize(0) {}
+        BlockedRange(int b, int e, int g=1) : _begin(b), _end(e), _grainsize(g) {}
+        int begin() const { return _begin; }
+        int end() const { return _end; }
+        int grainsize() const { return _grainsize; }
+
+    protected:
+        int _begin, _end, _grainsize;
+    };
+
+    template<typename Body> static inline
+    void parallel_for( const BlockedRange& range, const Body& body )
+    {
+        body(range);
+    }
+#endif
 
 using namespace std;
 
@@ -18,12 +59,20 @@ logRatio( double val )
     return log( val/(1. - val) );
 }
 
-#define CV_CMP_FLT(i,j) (i < j)
-static CV_IMPLEMENT_QSORT_EX( icvSortFlt, float, CV_CMP_FLT, const float* )
+template<typename T, typename Idx>
+class LessThanIdx
+{
+public:
+    LessThanIdx( const T* _arr ) : arr(_arr) {}
+    bool operator()(Idx a, Idx b) const { return arr[a] < arr[b]; }
+    const T* arr;
+};
 
-#define CV_CMP_NUM_IDX(i,j) (aux[i] < aux[j])
-static CV_IMPLEMENT_QSORT_EX( icvSortIntAux, int, CV_CMP_NUM_IDX, const float* )
-static CV_IMPLEMENT_QSORT_EX( icvSortUShAux, unsigned short, CV_CMP_NUM_IDX, const float* )
+static inline int cvAlign( int size, int align )
+{
+    CV_DbgAssert( (align & (align-1)) == 0 && size < INT_MAX );
+    return (size + align - 1) & -align;
+}
 
 #define CV_THRESHOLD_EPS (0.00001F)
 
@@ -43,7 +92,7 @@ static CvMat* cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, b
 
     CV_FUNCNAME( "cvPreprocessIndexArray" );
 
-    __BEGIN__;
+    __CV_BEGIN__;
 
     int i, idx_total, idx_selected = 0, step, type, prev = INT_MIN, is_sorted = 1;
     uchar* srcb = 0;
@@ -131,7 +180,7 @@ static CvMat* cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, b
         }
     }
 
-    __END__;
+    __CV_END__;
 
     if( cvGetErrStatus() < 0 )
         cvReleaseMat( &idx );
@@ -722,7 +771,7 @@ void CvCascadeBoostTrainData::get_ord_var_data( CvDTreeNode* n, int vi, float* o
                 sampleValues[i] = (*featureEvaluator)( vi, sampleIndices[i]);
             }
         }
-        icvSortIntAux( sortedIndicesBuf, nodeSampleCount, &sampleValues[0] );
+        std::sort(sortedIndicesBuf, sortedIndicesBuf + nodeSampleCount, LessThanIdx<float, int>(&sampleValues[0]) );
         for( int i = 0; i < nodeSampleCount; i++ )
             ordValuesBuf[i] = (&sampleValues[0])[sortedIndicesBuf[i]];
         *sortedIndices = sortedIndicesBuf;
@@ -791,9 +840,9 @@ struct FeatureIdxOnlyPrecalc
                     *(idst + fi*sample_count + si) = si;
             }
             if ( is_buf_16u )
-                icvSortUShAux( udst + fi*sample_count, sample_count, valCachePtr );
+                std::sort(udst + fi*sample_count, udst + (fi + 1)*sample_count, LessThanIdx<float, unsigned short>(valCachePtr) );
             else
-                icvSortIntAux( idst + fi*sample_count, sample_count, valCachePtr );
+                std::sort(idst + fi*sample_count, idst + (fi + 1)*sample_count, LessThanIdx<float, int>(valCachePtr) );
         }
     }
     const CvFeatureEvaluator* featureEvaluator;
@@ -827,9 +876,9 @@ struct FeatureValAndIdxPrecalc
                     *(idst + fi*sample_count + si) = si;
             }
             if ( is_buf_16u )
-                icvSortUShAux( udst + fi*sample_count, sample_count, valCache->ptr<float>(fi) );
+                std::sort(idst + fi*sample_count, idst + (fi + 1)*sample_count, LessThanIdx<float, unsigned short>(valCache->ptr<float>(fi)) );
             else
-                icvSortIntAux( idst + fi*sample_count, sample_count, valCache->ptr<float>(fi) );
+                std::sort(idst + fi*sample_count, idst + (fi + 1)*sample_count, LessThanIdx<float, int>(valCache->ptr<float>(fi)) );
         }
     }
     const CvFeatureEvaluator* featureEvaluator;
@@ -1602,7 +1651,7 @@ bool CvCascadeBoost::isErrDesired()
         if( ((CvCascadeBoostTrainData*)data)->featureEvaluator->getCls( i ) == 1.0F )
             eval[numPos++] = predict( i, true );
 
-    icvSortFlt( &eval[0], numPos, 0 );
+    std::sort(&eval[0], &eval[0] + numPos);
 
     int thresholdIdx = (int)((1.0F - minHitRate) * numPos);
 

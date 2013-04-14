@@ -169,7 +169,7 @@ void SimpleBlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryIm
 
     std::vector < std::vector<Point> > contours;
     Mat tmpBinaryImage = binaryImage.clone();
-    findContours(tmpBinaryImage, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
+    findContours(tmpBinaryImage, contours, RETR_LIST, CHAIN_APPROX_NONE);
 
 #ifdef DEBUG_BLOB_DETECTOR
     //  Mat keypointsImage;
@@ -260,7 +260,10 @@ void SimpleBlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryIm
             center.radius = (dists[(dists.size() - 1) / 2] + dists[dists.size() / 2]) / 2.;
         }
 
+        if(moms.m00 == 0.0)
+            continue;
         centers.push_back(center);
+
 
 #ifdef DEBUG_BLOB_DETECTOR
         //    circle( keypointsImage, center.location, 1, Scalar(0,0,255), 1 );
@@ -278,7 +281,7 @@ void SimpleBlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::KeyPoi
     keypoints.clear();
     Mat grayscaleImage;
     if (image.channels() == 3)
-        cvtColor(image, grayscaleImage, CV_BGR2GRAY);
+        cvtColor(image, grayscaleImage, COLOR_BGR2GRAY);
     else
         grayscaleImage = image;
 

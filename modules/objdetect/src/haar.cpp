@@ -42,8 +42,9 @@
 /* Haar features calculation */
 
 #include "precomp.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/objdetect/objdetect_c.h"
 #include <stdio.h>
-#include "opencv2/core/internal.hpp"
 
 #if CV_SSE2
 #   if 1 /*!CV_SSE4_1 && !CV_SSE4_2*/
@@ -1569,14 +1570,14 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
 
         for( factor = 1; ; factor *= scaleFactor )
         {
-            CvSize winSize = { cvRound(winSize0.width*factor),
-                                cvRound(winSize0.height*factor) };
-            CvSize sz = { cvRound( img->cols/factor ), cvRound( img->rows/factor ) };
-            CvSize sz1 = { sz.width - winSize0.width + 1, sz.height - winSize0.height + 1 };
+            CvSize winSize(cvRound(winSize0.width*factor),
+                                cvRound(winSize0.height*factor));
+            CvSize sz(cvRound( img->cols/factor ), cvRound( img->rows/factor ));
+            CvSize sz1(sz.width - winSize0.width + 1, sz.height - winSize0.height + 1);
 
-            CvRect equRect = { icv_object_win_border, icv_object_win_border,
+            CvRect equRect(icv_object_win_border, icv_object_win_border,
                 winSize0.width - icv_object_win_border*2,
-                winSize0.height - icv_object_win_border*2 };
+                winSize0.height - icv_object_win_border*2);
 
             CvMat img1, sum1, sqsum1, norm1, tilted1, mask1;
             CvMat* _tilted = 0;
@@ -1611,17 +1612,17 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
             if( use_ipp )
             {
                 cv::Mat fsum(sum1.rows, sum1.cols, CV_32F, sum1.data.ptr, sum1.step);
-                cv::Mat(&sum1).convertTo(fsum, CV_32F, 1, -(1<<24));
+                cv::cvarrToMat(&sum1).convertTo(fsum, CV_32F, 1, -(1<<24));
             }
             else
 #endif
                 cvSetImagesForHaarClassifierCascade( cascade, &sum1, &sqsum1, _tilted, 1. );
 
-            cv::Mat _norm1(&norm1), _mask1(&mask1);
+            cv::Mat _norm1 = cv::cvarrToMat(&norm1), _mask1 = cv::cvarrToMat(&mask1);
             cv::parallel_for_(cv::Range(0, stripCount),
                          cv::HaarDetectObjects_ScaleImage_Invoker(cascade,
                                 (((sz1.height + stripCount - 1)/stripCount + ystep-1)/ystep)*ystep,
-                                factor, cv::Mat(&sum1), cv::Mat(&sqsum1), &_norm1, &_mask1,
+                                factor, cv::cvarrToMat(&sum1), cv::cvarrToMat(&sqsum1), &_norm1, &_mask1,
                                 cv::Rect(equRect), allCandidates, rejectLevels, levelWeights, outputRejectLevels, &mtx));
         }
     }
@@ -1656,9 +1657,9 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
         for( ; n_factors-- > 0; factor *= scaleFactor )
         {
             const double ystep = std::max( 2., factor );
-            CvSize winSize = { cvRound( cascade->orig_window_size.width * factor ),
-                                cvRound( cascade->orig_window_size.height * factor )};
-            CvRect equRect = { 0, 0, 0, 0 };
+            CvSize winSize(cvRound( cascade->orig_window_size.width * factor ),
+                                cvRound( cascade->orig_window_size.height * factor ));
+            CvRect equRect;
             int *p[4] = {0,0,0,0};
             int *pq[4] = {0,0,0,0};
             int startX = 0, startY = 0;
@@ -1775,7 +1776,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
 
     if( findBiggestObject && rectList.size() )
     {
-        CvAvgComp result_comp = {{0,0,0,0},0};
+        CvAvgComp result_comp = {CvRect(),0};
 
         for( size_t i = 0; i < rectList.size(); i++ )
         {

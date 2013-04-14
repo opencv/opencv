@@ -51,7 +51,7 @@ using namespace cv::ocl;
 #if !defined HAVE_CLAMDFFT
 void cv::ocl::dft(const oclMat&, oclMat&, Size, int)
 {
-    CV_Error(CV_StsNotImplemented, "OpenCL DFT is not implemented");
+    CV_Error(Error::StsNotImplemented, "OpenCL DFT is not implemented");
 }
 namespace cv { namespace ocl {
     void fft_teardown();
@@ -180,19 +180,19 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
     case C2C:
         inLayout        = CLFFT_COMPLEX_INTERLEAVED;
         outLayout       = CLFFT_COMPLEX_INTERLEAVED;
-        clStridesIn[1]  = src_step / sizeof(std::complex<float>);
+        clStridesIn[1]  = src_step / (2*sizeof(float));
         clStridesOut[1] = clStridesIn[1];
         break;
     case R2C:
         inLayout        = CLFFT_REAL;
         outLayout       = CLFFT_HERMITIAN_INTERLEAVED;
         clStridesIn[1]  = src_step / sizeof(float);
-        clStridesOut[1] = dst_step / sizeof(std::complex<float>);
+        clStridesOut[1] = dst_step / (2*sizeof(float));
         break;
     case C2R:
         inLayout        = CLFFT_HERMITIAN_INTERLEAVED;
         outLayout       = CLFFT_REAL;
-        clStridesIn[1]  = src_step / sizeof(std::complex<float>);
+        clStridesIn[1]  = src_step / (2*sizeof(float));
         clStridesOut[1] = dst_step / sizeof(float);
         break;
     default:
@@ -205,7 +205,7 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
     clStridesIn[2]  = is_row_dft ? clStridesIn[1]  : dft_size.width * clStridesIn[1];
     clStridesOut[2] = is_row_dft ? clStridesOut[1] : dft_size.width * clStridesOut[1];
 
-    openCLSafeCall( clAmdFftCreateDefaultPlan( &plHandle, (cl_context)getoclContext(), dim, clLengthsIn ) );
+    openCLSafeCall( clAmdFftCreateDefaultPlan( &plHandle, *(cl_context*)getoclContext(), dim, clLengthsIn ) );
 
     openCLSafeCall( clAmdFftSetResultLocation( plHandle, CLFFT_OUTOFPLACE ) );
     openCLSafeCall( clAmdFftSetLayout( plHandle, inLayout, outLayout ) );
@@ -219,8 +219,7 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
     openCLSafeCall( clAmdFftSetPlanScale  ( plHandle, is_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD, scale_ ) );
 
     //ready to bake
-    cl_command_queue clq = (cl_command_queue)getoclCommandQueue();
-    openCLSafeCall( clAmdFftBakePlan( plHandle, 1, &clq, NULL, NULL ) );
+    openCLSafeCall( clAmdFftBakePlan( plHandle, 1, (cl_command_queue*)getoclCommandQueue(), NULL, NULL ) );
 }
 cv::ocl::FftPlan::~FftPlan()
 {

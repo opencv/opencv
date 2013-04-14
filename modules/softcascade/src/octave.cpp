@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 #include <queue>
-#include <string>
 
 using cv::InputArray;
 using cv::OutputArray;
@@ -69,7 +68,7 @@ public:
     virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth);
     virtual void setRejectThresholds(OutputArray thresholds);
     virtual void write( cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const;
-    virtual void write( CvFileStorage* fs, std::string name) const;
+    virtual void write( CvFileStorage* fs, cv::String name) const;
 protected:
     virtual float predict( InputArray _sample, InputArray _votes, bool raw_mode, bool return_sum ) const;
     virtual bool train( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& varIdx=cv::Mat(),
@@ -321,6 +320,8 @@ void BoostedSoftCascadeOctave::traverse(const CvBoostTree* tree, cv::FileStorage
 
 
     fs << "}";
+    
+    delete [] leafs;
 }
 
 void BoostedSoftCascadeOctave::write( cv::FileStorage &fso, const FeaturePool* pool, InputArray _thresholds) const
@@ -436,7 +437,7 @@ float BoostedSoftCascadeOctave::predict( const Mat& _sample, const cv::Range ran
     return CvBoost::predict(&sample, 0, 0, range, false, true);
 }
 
-void BoostedSoftCascadeOctave::write( CvFileStorage* fs, std::string _name) const
+void BoostedSoftCascadeOctave::write( CvFileStorage* fs, cv::String _name) const
 {
     CvBoost::write(fs, _name.c_str());
 }

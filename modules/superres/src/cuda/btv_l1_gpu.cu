@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,15 +40,15 @@
 //
 //M*/
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/transform.hpp"
-#include "opencv2/gpu/device/vec_traits.hpp"
-#include "opencv2/gpu/device/vec_math.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/transform.hpp"
+#include "opencv2/core/cuda/vec_traits.hpp"
+#include "opencv2/core/cuda/vec_math.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::device;
+using namespace cv::gpu::cudev;
 
-namespace btv_l1_device
+namespace btv_l1_cudev
 {
     void buildMotionMaps(PtrStepSzf forwardMotionX, PtrStepSzf forwardMotionY,
                          PtrStepSzf backwardMotionX, PtrStepSzf bacwardMotionY,
@@ -64,7 +64,7 @@ namespace btv_l1_device
     template <int cn> void calcBtvRegularization(PtrStepSzb src, PtrStepSzb dst, int ksize);
 }
 
-namespace btv_l1_device
+namespace btv_l1_cudev
 {
     __global__ void buildMotionMapsKernel(const PtrStepSzf forwardMotionX, const PtrStepf forwardMotionY,
                                           PtrStepf backwardMotionX, PtrStepf backwardMotionY,
@@ -169,16 +169,16 @@ namespace btv_l1_device
     };
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
-    template <> struct TransformFunctorTraits<btv_l1_device::DiffSign> : DefaultTransformFunctorTraits<btv_l1_device::DiffSign>
+    template <> struct TransformFunctorTraits<btv_l1_cudev::DiffSign> : DefaultTransformFunctorTraits<btv_l1_cudev::DiffSign>
     {
         enum { smart_block_dim_y = 8 };
         enum { smart_shift = 4 };
     };
 }}}
 
-namespace btv_l1_device
+namespace btv_l1_cudev
 {
     void diffSign(PtrStepSzf src1, PtrStepSzf src2, PtrStepSzf dst, cudaStream_t stream)
     {

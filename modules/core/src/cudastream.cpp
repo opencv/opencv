@@ -41,38 +41,34 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/gpumat.hpp"
 
 using namespace cv;
 using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
-#define throw_nogpu() CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
 
-cv::gpu::Stream::Stream() { throw_nogpu(); }
+cv::gpu::Stream::Stream() { throw_no_cuda(); }
 cv::gpu::Stream::~Stream() {}
-cv::gpu::Stream::Stream(const Stream&) { throw_nogpu(); }
-Stream& cv::gpu::Stream::operator=(const Stream&) { throw_nogpu(); return *this; }
-bool cv::gpu::Stream::queryIfComplete() { throw_nogpu(); return false; }
-void cv::gpu::Stream::waitForCompletion() { throw_nogpu(); }
-void cv::gpu::Stream::enqueueDownload(const GpuMat&, Mat&) { throw_nogpu(); }
-void cv::gpu::Stream::enqueueDownload(const GpuMat&, CudaMem&) { throw_nogpu(); }
-void cv::gpu::Stream::enqueueUpload(const CudaMem&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::Stream::enqueueUpload(const Mat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::Stream::enqueueCopy(const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::Stream::enqueueMemSet(GpuMat&, Scalar) { throw_nogpu(); }
-void cv::gpu::Stream::enqueueMemSet(GpuMat&, Scalar, const GpuMat&) { throw_nogpu(); }
-void cv::gpu::Stream::enqueueConvert(const GpuMat&, GpuMat&, int, double, double) { throw_nogpu(); }
-void cv::gpu::Stream::enqueueHostCallback(StreamCallback, void*) { throw_nogpu(); }
-Stream& cv::gpu::Stream::Null() { throw_nogpu(); static Stream s; return s; }
-cv::gpu::Stream::operator bool() const { throw_nogpu(); return false; }
-cv::gpu::Stream::Stream(Impl*) { throw_nogpu(); }
-void cv::gpu::Stream::create() { throw_nogpu(); }
-void cv::gpu::Stream::release() { throw_nogpu(); }
+cv::gpu::Stream::Stream(const Stream&) { throw_no_cuda(); }
+Stream& cv::gpu::Stream::operator=(const Stream&) { throw_no_cuda(); return *this; }
+bool cv::gpu::Stream::queryIfComplete() { throw_no_cuda(); return false; }
+void cv::gpu::Stream::waitForCompletion() { throw_no_cuda(); }
+void cv::gpu::Stream::enqueueDownload(const GpuMat&, Mat&) { throw_no_cuda(); }
+void cv::gpu::Stream::enqueueDownload(const GpuMat&, CudaMem&) { throw_no_cuda(); }
+void cv::gpu::Stream::enqueueUpload(const CudaMem&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::Stream::enqueueUpload(const Mat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::Stream::enqueueCopy(const GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::Stream::enqueueMemSet(GpuMat&, Scalar) { throw_no_cuda(); }
+void cv::gpu::Stream::enqueueMemSet(GpuMat&, Scalar, const GpuMat&) { throw_no_cuda(); }
+void cv::gpu::Stream::enqueueConvert(const GpuMat&, GpuMat&, int, double, double) { throw_no_cuda(); }
+void cv::gpu::Stream::enqueueHostCallback(StreamCallback, void*) { throw_no_cuda(); }
+Stream& cv::gpu::Stream::Null() { throw_no_cuda(); static Stream s; return s; }
+cv::gpu::Stream::operator bool() const { throw_no_cuda(); return false; }
+cv::gpu::Stream::Stream(Impl*) { throw_no_cuda(); }
+void cv::gpu::Stream::create() { throw_no_cuda(); }
+void cv::gpu::Stream::release() { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
-
-#include "opencv2/core/stream_accessor.hpp"
 
 namespace cv { namespace gpu
 {
@@ -272,7 +268,7 @@ void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int dtype, 
     convertTo(src, dst, alpha, beta, stream);
 }
 
-#if CUDA_VERSION >= 5000
+#if CUDART_VERSION >= 5000
 
 namespace
 {
@@ -295,7 +291,7 @@ namespace
 
 void cv::gpu::Stream::enqueueHostCallback(StreamCallback callback, void* userData)
 {
-#if CUDA_VERSION >= 5000
+#if CUDART_VERSION >= 5000
     CallbackData* data = new CallbackData;
     data->callback = callback;
     data->userData = userData;

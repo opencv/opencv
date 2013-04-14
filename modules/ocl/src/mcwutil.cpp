@@ -60,7 +60,7 @@ namespace cv
         }
 
         // provide additional methods for the user to interact with the command queue after a task is fired
-        static void openCLExecuteKernel_2(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
+        static void openCLExecuteKernel_2(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
                                    size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
                                    int depth, char *build_options, FLUSH_MODE finish_mode)
         {
@@ -72,7 +72,7 @@ namespace cv
                 idxStr << "_C" << channels;
             if(depth != -1)
                 idxStr << "_D" << depth;
-            kernelName += idxStr.str();
+            kernelName = kernelName + idxStr.str().c_str();
 
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, build_options);
@@ -106,14 +106,14 @@ namespace cv
             openCLSafeCall(clReleaseKernel(kernel));
         }
 
-        void openCLExecuteKernel2(Context *clCxt , const char **source, std::string kernelName,
+        void openCLExecuteKernel2(Context *clCxt , const char **source, String kernelName,
                                   size_t globalThreads[3], size_t localThreads[3],
                                   std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, FLUSH_MODE finish_mode)
         {
             openCLExecuteKernel2(clCxt, source, kernelName, globalThreads, localThreads, args,
                                  channels, depth, NULL, finish_mode);
         }
-        void openCLExecuteKernel2(Context *clCxt , const char **source, std::string kernelName,
+        void openCLExecuteKernel2(Context *clCxt , const char **source, String kernelName,
                                   size_t globalThreads[3], size_t localThreads[3],
                                   std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, char *build_options, FLUSH_MODE finish_mode)
 
@@ -142,7 +142,7 @@ namespace cv
                 format.image_channel_data_type = CL_FLOAT;
                 break;
             default:
-                throw std::exception();
+                CV_Error(-1, "Image forma is not supported");
                 break;
             }
             switch(channels)
@@ -157,7 +157,7 @@ namespace cv
                 format.image_channel_order     = CL_RGBA;
                 break;
             default:
-                throw std::exception();
+                CV_Error(-1, "Image forma is not supported");
                 break;
             }
 #if CL_VERSION_1_2
@@ -195,7 +195,8 @@ namespace cv
                 const size_t regin[3] = {mat.cols * mat.elemSize(), mat.rows, 1};
                 clEnqueueCopyBufferRect((cl_command_queue)mat.clCxt->oclCommandQueue(), (cl_mem)mat.data, devData, origin, origin,
                     regin, mat.step, 0, mat.cols * mat.elemSize(), 0, 0, NULL, NULL);
-            }
+                clFlush((cl_command_queue)mat.clCxt->oclCommandQueue());
+           }
             else
             {
                 devData = (cl_mem)mat.data;
@@ -204,7 +205,7 @@ namespace cv
             clEnqueueCopyBufferToImage((cl_command_queue)mat.clCxt->oclCommandQueue(), devData, texture, 0, origin, region, 0, NULL, 0);
             if ((mat.cols * mat.elemSize() != mat.step))
             {
-                clFinish((cl_command_queue)mat.clCxt->oclCommandQueue());
+                clFlush((cl_command_queue)mat.clCxt->oclCommandQueue());
                 clReleaseMemObject(devData);
             }
 
@@ -229,7 +230,8 @@ namespace cv
             try
             {
                 cv::ocl::openCLGetKernelFromSource(clCxt, &_kernel_string, "test_func");
-                //_support = true;
+                finish();
+                _support = true;
             }
             catch (const cv::Exception& e)
             {

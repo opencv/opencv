@@ -732,10 +732,10 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
     Mat image = _image.getMat(), mask = _mask.getMat();
 
     if( image.empty() || image.depth() != CV_8U )
-        CV_Error( CV_StsBadArg, "image is empty or has incorrect depth (!=CV_8U)" );
+        CV_Error( Error::StsBadArg, "image is empty or has incorrect depth (!=CV_8U)" );
 
     if( !mask.empty() && mask.type() != CV_8UC1 )
-        CV_Error( CV_StsBadArg, "mask has incorrect type (!=CV_8UC1)" );
+        CV_Error( Error::StsBadArg, "mask has incorrect type (!=CV_8UC1)" );
 
     if( useProvidedKeypoints )
     {

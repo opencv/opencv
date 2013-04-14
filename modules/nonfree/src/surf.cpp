@@ -427,7 +427,7 @@ void SURFFindInvoker::findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
                     float center_j = sum_j + (size-1)*0.5f;
 
                     KeyPoint kpt( center_j, center_i, (float)sizes[layer],
-                                  -1, val0, octave, CV_SIGN(trace_ptr[j]) );
+                                  -1, val0, octave, (trace_ptr[j] > 0) - (trace_ptr[j] < 0) );
 
                     /* Interpolate maxima location within the 3x3x3 neighbourhood  */
                     int ds = size - sizes[layer-1];
@@ -550,7 +550,7 @@ struct SURFInvoker
             {
                 if( i*i + j*j <= ORI_RADIUS*ORI_RADIUS )
                 {
-                    apt[nOriSamples] = cvPoint(i,j);
+                    apt[nOriSamples] = Point(i,j);
                     aptw[nOriSamples++] = G_ori.at<float>(i+ORI_RADIUS,0) * G_ori.at<float>(j+ORI_RADIUS,0);
                 }
             }
@@ -580,9 +580,6 @@ struct SURFInvoker
         float X[nOriSampleBound], Y[nOriSampleBound], angle[nOriSampleBound];
         uchar PATCH[PATCH_SZ+1][PATCH_SZ+1];
         float DX[PATCH_SZ][PATCH_SZ], DY[PATCH_SZ][PATCH_SZ];
-        CvMat matX = cvMat(1, nOriSampleBound, CV_32F, X);
-        CvMat matY = cvMat(1, nOriSampleBound, CV_32F, Y);
-        CvMat _angle = cvMat(1, nOriSampleBound, CV_32F, angle);
         Mat _patch(PATCH_SZ+1, PATCH_SZ+1, CV_8U, PATCH);
 
         int dsize = extended ? 128 : 64;
@@ -594,7 +591,8 @@ struct SURFInvoker
             maxSize = std::max(maxSize, (*keypoints)[k].size);
         }
         int imaxSize = std::max(cvCeil((PATCH_SZ+1)*maxSize*1.2f/9.0f), 1);
-        Ptr<CvMat> winbuf = cvCreateMat( 1, imaxSize*imaxSize, CV_8U );
+        cv::AutoBuffer<uchar> winbuf(imaxSize*imaxSize);
+
         for( k = k1; k < k2; k++ )
         {
             int i, j, kk, nangle;
@@ -648,8 +646,8 @@ struct SURFInvoker
                     kp.size = -1;
                     continue;
                 }
-                matX.cols = matY.cols = _angle.cols = nangle;
-                cvCartToPolar( &matX, &matY, 0, &_angle, 1 );
+
+                phase( Mat(1, nangle, CV_32F, X), Mat(1, nangle, CV_32F, Y), Mat(1, nangle, CV_32F, angle), true );
 
                 float bestx = 0, besty = 0, descriptor_mod = 0;
                 for( i = 0; i < 360; i += SURF_ORI_SEARCH_INC )
@@ -680,8 +678,8 @@ struct SURFInvoker
 
             /* Extract a window of pixels around the keypoint of size 20s */
             int win_size = (int)((PATCH_SZ+1)*s);
-            CV_Assert( winbuf->cols >= win_size*win_size );
-            Mat win(win_size, win_size, CV_8U, winbuf->data.ptr);
+            CV_Assert( imaxSize >= win_size );
+            Mat win(win_size, win_size, CV_8U, winbuf);
 
             if( !upright )
             {

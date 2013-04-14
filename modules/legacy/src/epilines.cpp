@@ -1826,7 +1826,7 @@ void icvGetCutPiece(   CvVect64d areaLineCoef1,CvVect64d areaLineCoef2,
     /* Collect all candidate point */
 
     CvPoint2D64d candPoints[8];
-    CvPoint2D64d midPoint = {0, 0};
+    CvPoint2D64d midPoint;
     int numPoints = 0;
     int res;
     int i;
@@ -2115,7 +2115,7 @@ CV_IMPL IplImage* icvCreateIsometricImage( IplImage* src, IplImage* dst,
     if( !dst || dst->depth != desired_depth ||
         dst->nChannels != desired_num_channels ||
         dst_size.width != src_size.width ||
-        dst_size.height != dst_size.height )
+        dst_size.height != src_size.height )
     {
         cvReleaseImage( &dst );
         dst = cvCreateImage( src_size, desired_depth, desired_num_channels );

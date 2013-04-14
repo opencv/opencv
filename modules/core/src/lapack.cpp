@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <limits>
 
 #if defined _M_IX86 && defined _MSC_VER && _MSC_VER < 1700
 #pragma float_control(precise, on)
@@ -577,10 +578,10 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
                     continue;
 
                 p *= 2;
-                double beta = a - b, gamma = hypot((double)p, beta), delta;
+                double beta = a - b, gamma = hypot((double)p, beta);
                 if( beta < 0 )
                 {
-                    delta = (gamma - beta)*0.5;
+                    double delta = (gamma - beta)*0.5;
                     s = (_Tp)std::sqrt(delta/gamma);
                     c = (_Tp)(p/(gamma*s*2));
                 }
@@ -588,36 +589,18 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
                 {
                     c = (_Tp)std::sqrt((gamma + beta)/(gamma*2));
                     s = (_Tp)(p/(gamma*c*2));
-                    delta = p*p*0.5/(gamma + beta);
                 }
 
-                W[i] += delta;
-                W[j] -= delta;
-
-                if( iter % 2 != 0 && W[i] > 0 && W[j] > 0 )
+                a = b = 0;
+                for( k = 0; k < m; k++ )
                 {
-                    k = vblas.givens(Ai, Aj, m, c, s);
+                    _Tp t0 = c*Ai[k] + s*Aj[k];
+                    _Tp t1 = -s*Ai[k] + c*Aj[k];
+                    Ai[k] = t0; Aj[k] = t1;
 
-                    for( ; k < m; k++ )
-                    {
-                        _Tp t0 = c*Ai[k] + s*Aj[k];
-                        _Tp t1 = -s*Ai[k] + c*Aj[k];
-                        Ai[k] = t0; Aj[k] = t1;
-                    }
+                    a += (double)t0*t0; b += (double)t1*t1;
                 }
-                else
-                {
-                    a = b = 0;
-                    for( k = 0; k < m; k++ )
-                    {
-                        _Tp t0 = c*Ai[k] + s*Aj[k];
-                        _Tp t1 = -s*Ai[k] + c*Aj[k];
-                        Ai[k] = t0; Aj[k] = t1;
-
-                        a += (double)t0*t0; b += (double)t1*t1;
-                    }
-                    W[i] = a; W[j] = b;
-                }
+                W[i] = a; W[j] = b;
 
                 changed = true;
 
@@ -1482,7 +1465,7 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
 
 /////////////////// finding eigenvalues and eigenvectors of a symmetric matrix ///////////////
 
-bool cv::eigen( InputArray _src, bool computeEvects, OutputArray _evals, OutputArray _evects )
+bool cv::eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
 {
     Mat src = _src.getMat();
     int type = src.type();
@@ -1492,7 +1475,7 @@ bool cv::eigen( InputArray _src, bool computeEvects, OutputArray _evals, OutputA
     CV_Assert (type == CV_32F || type == CV_64F);
 
     Mat v;
-    if( computeEvects )
+    if( _evects.needed() )
     {
         _evects.create(n, n, type);
         v = _evects.getMat();
@@ -1510,16 +1493,6 @@ bool cv::eigen( InputArray _src, bool computeEvects, OutputArray _evals, OutputA
 
     w.copyTo(_evals);
     return ok;
-}
-
-bool cv::eigen( InputArray src, OutputArray evals, int, int )
-{
-    return eigen(src, false, evals, noArray());
-}
-
-bool cv::eigen( InputArray src, OutputArray evals, OutputArray evects, int, int)
-{
-    return eigen(src, true, evals, evects);
 }
 
 namespace cv
@@ -1689,7 +1662,6 @@ cvDet( const CvArr* arr )
             if( rows == 3 )
                 return det3(Md);
         }
-        return cv::determinant(cv::Mat(mat));
     }
     return cv::determinant(cv::cvarrToMat(arr));
 }
@@ -1724,13 +1696,13 @@ cvSolve( const CvArr* Aarr, const CvArr* barr, CvArr* xarr, int method )
 
 CV_IMPL void
 cvEigenVV( CvArr* srcarr, CvArr* evectsarr, CvArr* evalsarr, double,
-           int lowindex, int highindex)
+           int, int )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), evals0 = cv::cvarrToMat(evalsarr), evals = evals0;
     if( evectsarr )
     {
         cv::Mat evects0 = cv::cvarrToMat(evectsarr), evects = evects0;
-        eigen(src, evals, evects, lowindex, highindex);
+        eigen(src, evals, evects);
         if( evects0.data != evects.data )
         {
             uchar* p = evects0.data;
@@ -1739,7 +1711,7 @@ cvEigenVV( CvArr* srcarr, CvArr* evectsarr, CvArr* evalsarr, double,
         }
     }
     else
-        eigen(src, evals, lowindex, highindex);
+        eigen(src, evals);
     if( evals0.data != evals.data )
     {
         uchar* p = evals0.data;

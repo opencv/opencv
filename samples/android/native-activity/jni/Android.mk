@@ -6,7 +6,7 @@ include ../../sdk/native/jni/OpenCV.mk
 
 LOCAL_MODULE    := native_activity
 LOCAL_SRC_FILES := native.cpp
-LOCAL_LDLIBS    := -lm -llog -landroid
+LOCAL_LDLIBS    += -lm -llog -landroid
 LOCAL_STATIC_LIBRARIES := android_native_app_glue
 
 include $(BUILD_SHARED_LIBRARY)

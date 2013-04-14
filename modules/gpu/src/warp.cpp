@@ -45,15 +45,15 @@
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
 
-void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int, int, Scalar, Stream&) { throw_nogpu(); }
-void cv::gpu::buildWarpAffineMaps(const Mat&, bool, Size, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int, int, Scalar, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpAffineMaps(const Mat&, bool, Size, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::warpPerspective(const GpuMat&, GpuMat&, const Mat&, Size, int, int, Scalar, Stream&) { throw_nogpu(); }
-void cv::gpu::buildWarpPerspectiveMaps(const Mat&, bool, Size, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::warpPerspective(const GpuMat&, GpuMat&, const Mat&, Size, int, int, Scalar, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpPerspectiveMaps(const Mat&, bool, Size, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
 #else // HAVE_CUDA
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -73,7 +73,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream)
 {
-    using namespace cv::gpu::device::imgproc;
+    using namespace cv::gpu::cudev::imgproc;
 
     CV_Assert(M.rows == 2 && M.cols == 3);
 
@@ -97,7 +97,7 @@ void cv::gpu::buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat
 
 void cv::gpu::buildWarpPerspectiveMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream)
 {
-    using namespace cv::gpu::device::imgproc;
+    using namespace cv::gpu::cudev::imgproc;
 
     CV_Assert(M.rows == 3 && M.cols == 3);
 
@@ -272,7 +272,7 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
     }
     else
     {
-        using namespace cv::gpu::device::imgproc;
+        using namespace cv::gpu::cudev::imgproc;
 
         typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[2 * 3], PtrStepSzb dst, int interpolation,
             int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
@@ -410,7 +410,7 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
     }
     else
     {
-        using namespace cv::gpu::device::imgproc;
+        using namespace cv::gpu::cudev::imgproc;
 
         typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[2 * 3], PtrStepSzb dst, int interpolation,
             int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);

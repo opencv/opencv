@@ -74,7 +74,7 @@ static void prefilter_xsobel(const oclMat &input, oclMat &output, int prefilterC
 {
     Context *clCxt = input.clCxt;
 
-    std::string kernelName = "prefilter_xsobel";
+    String kernelName = "prefilter_xsobel";
     cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereobm, kernelName);
 
     size_t blockSize = 1;
@@ -113,12 +113,9 @@ static void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
 {
     int winsz2 = winSize >> 1;
 
-    //if(winsz2 == 0 || winsz2 >= calles_num)
-    //cv::ocl:error("Unsupported window size", __FILE__, __LINE__, __FUNCTION__);
-
     Context *clCxt = left.clCxt;
 
-    std::string kernelName = "stereoKernel";
+    String kernelName = "stereoKernel";
     cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereobm, kernelName);
 
     disp.setTo(Scalar_<unsigned char>::all(0));
@@ -163,7 +160,7 @@ static void postfilter_textureness(oclMat &left, int winSize,
 {
     Context *clCxt = left.clCxt;
 
-    std::string kernelName = "textureness_kernel";
+    String kernelName = "textureness_kernel";
     cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereobm, kernelName);
 
     size_t blockSize = 1;

@@ -43,7 +43,11 @@
 //
 //M*/
 #if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -51,9 +55,9 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 /**************************************bitwise_or without mask**************************************/
 __kernel void arithm_bitwise_or_D0 (__global uchar *src1, int src1_step, int src1_offset,
-                             __global uchar *src2, int src2_step, int src2_offset,
-                             __global uchar *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1)
+                                    __global uchar *src2, int src2_step, int src2_offset,
+                                    __global uchar *dst,  int dst_step,  int dst_offset,
+                                    int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -62,29 +66,32 @@ __kernel void arithm_bitwise_or_D0 (__global uchar *src1, int src1_step, int src
     {
         x = x << 2;
 
-        #define dst_align (dst_offset & 3)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (dst_offset & 3)
         int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
         int src2_index = mad24(y, src2_step, x + src2_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + x & (int)0xfffffffc);
-      int src1_index_fix = src1_index < 0 ? 0 : src1_index;
-      int src2_index_fix = src2_index < 0 ? 0 : src2_index;
+        int src1_index_fix = src1_index < 0 ? 0 : src1_index;
+        int src2_index_fix = src2_index < 0 ? 0 : src2_index;
         uchar4 src1_data = vload4(0, src1 + src1_index_fix);
         uchar4 src2_data = vload4(0, src2 + src2_index_fix);
-      if(src1_index < 0)
-      {
-        uchar4 tmp;
-        tmp.xyzw = (src1_index == -2) ? src1_data.zwxy:src1_data.yzwx;
-        src1_data.xyzw = (src1_index == -1) ? src1_data.wxyz:tmp.xyzw;
-      }
-      if(src2_index < 0)
-      {
-        uchar4 tmp;
-        tmp.xyzw = (src2_index == -2) ? src2_data.zwxy:src2_data.yzwx;
-        src2_data.xyzw = (src2_index == -1) ? src2_data.wxyz:tmp.xyzw;
-      }
+        if(src1_index < 0)
+        {
+            uchar4 tmp;
+            tmp.xyzw = (src1_index == -2) ? src1_data.zwxy:src1_data.yzwx;
+            src1_data.xyzw = (src1_index == -1) ? src1_data.wxyz:tmp.xyzw;
+        }
+        if(src2_index < 0)
+        {
+            uchar4 tmp;
+            tmp.xyzw = (src2_index == -2) ? src2_data.zwxy:src2_data.yzwx;
+            src2_data.xyzw = (src2_index == -1) ? src2_data.wxyz:tmp.xyzw;
+        }
         uchar4 dst_data = *((__global uchar4 *)(dst + dst_index));
         uchar4 tmp_data = src1_data | src2_data;
 
@@ -99,9 +106,9 @@ __kernel void arithm_bitwise_or_D0 (__global uchar *src1, int src1_step, int src
 
 
 __kernel void arithm_bitwise_or_D1 (__global char *src1, int src1_step, int src1_offset,
-                             __global char *src2, int src2_step, int src2_offset,
-                             __global char *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1)
+                                    __global char *src2, int src2_step, int src2_offset,
+                                    __global char *dst,  int dst_step,  int dst_offset,
+                                    int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -110,7 +117,10 @@ __kernel void arithm_bitwise_or_D1 (__global char *src1, int src1_step, int src1
     {
         x = x << 2;
 
-        #define dst_align (dst_offset & 3)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align (dst_offset & 3)
         int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
         int src2_index = mad24(y, src2_step, x + src2_offset - dst_align);
 
@@ -135,9 +145,9 @@ __kernel void arithm_bitwise_or_D1 (__global char *src1, int src1_step, int src1
 
 
 __kernel void arithm_bitwise_or_D2 (__global ushort *src1, int src1_step, int src1_offset,
-                             __global ushort *src2, int src2_step, int src2_offset,
-                             __global ushort *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1)
+                                    __global ushort *src2, int src2_step, int src2_offset,
+                                    __global ushort *dst,  int dst_step,  int dst_offset,
+                                    int rows, int cols, int dst_step1)
 
 {
     int x = get_global_id(0);
@@ -147,7 +157,10 @@ __kernel void arithm_bitwise_or_D2 (__global ushort *src1, int src1_step, int sr
     {
         x = x << 2;
 
-        #define dst_align ((dst_offset >> 1) & 3)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 3)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
         int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
@@ -173,9 +186,9 @@ __kernel void arithm_bitwise_or_D2 (__global ushort *src1, int src1_step, int sr
 
 
 __kernel void arithm_bitwise_or_D3 (__global short *src1, int src1_step, int src1_offset,
-                             __global short *src2, int src2_step, int src2_offset,
-                             __global short *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1)
+                                    __global short *src2, int src2_step, int src2_offset,
+                                    __global short *dst,  int dst_step,  int dst_offset,
+                                    int rows, int cols, int dst_step1)
 
 {
     int x = get_global_id(0);
@@ -185,7 +198,10 @@ __kernel void arithm_bitwise_or_D3 (__global short *src1, int src1_step, int src
     {
         x = x << 2;
 
-        #define dst_align ((dst_offset >> 1) & 3)
+#ifdef dst_align
+#undef dst_align
+#endif
+#define dst_align ((dst_offset >> 1) & 3)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
         int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
@@ -211,9 +227,9 @@ __kernel void arithm_bitwise_or_D3 (__global short *src1, int src1_step, int src
 
 
 __kernel void arithm_bitwise_or_D4 (__global int *src1, int src1_step, int src1_offset,
-                             __global int *src2, int src2_step, int src2_offset,
-                             __global int *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1)
+                                    __global int *src2, int src2_step, int src2_offset,
+                                    __global int *dst,  int dst_step,  int dst_offset,
+                                    int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -233,9 +249,9 @@ __kernel void arithm_bitwise_or_D4 (__global int *src1, int src1_step, int src1_
 }
 
 __kernel void arithm_bitwise_or_D5 (__global char *src1, int src1_step, int src1_offset,
-                             __global char *src2, int src2_step, int src2_offset,
-                             __global char *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1)
+                                    __global char *src2, int src2_step, int src2_offset,
+                                    __global char *dst,  int dst_step,  int dst_offset,
+                                    int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -256,9 +272,9 @@ __kernel void arithm_bitwise_or_D5 (__global char *src1, int src1_step, int src1
 
 #if defined (DOUBLE_SUPPORT)
 __kernel void arithm_bitwise_or_D6 (__global char *src1, int src1_step, int src1_offset,
-                             __global char *src2, int src2_step, int src2_offset,
-                             __global char *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1)
+                                    __global char *src2, int src2_step, int src2_offset,
+                                    __global char *dst,  int dst_step,  int dst_offset,
+                                    int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);

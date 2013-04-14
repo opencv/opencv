@@ -42,18 +42,18 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/vec_traits.hpp"
-#include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/reduce.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/utility.hpp"
-#include "opencv2/gpu/device/type_traits.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
+#include "opencv2/core/cuda/vec_traits.hpp"
+#include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
+#include "opencv2/core/cuda/functional.hpp"
+#include "opencv2/core/cuda/utility.hpp"
+#include "opencv2/core/cuda/type_traits.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::device;
+using namespace cv::gpu::cudev;
 
 namespace detail
 {
@@ -205,7 +205,7 @@ namespace detail
         template <int BLOCK_SIZE, typename R>
         static __device__ __forceinline__ thrust::tuple<volatile R*, volatile R*> smem_tuple(R* smem)
         {
-            return cv::gpu::device::smem_tuple(smem, smem + BLOCK_SIZE);
+            return cv::gpu::cudev::smem_tuple(smem, smem + BLOCK_SIZE);
         }
 
         template <typename R>
@@ -225,7 +225,7 @@ namespace detail
         template <int BLOCK_SIZE, typename R>
         static __device__ __forceinline__ thrust::tuple<volatile R*, volatile R*, volatile R*> smem_tuple(R* smem)
         {
-            return cv::gpu::device::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE);
+            return cv::gpu::cudev::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE);
         }
 
         template <typename R>
@@ -245,7 +245,7 @@ namespace detail
         template <int BLOCK_SIZE, typename R>
         static __device__ __forceinline__ thrust::tuple<volatile R*, volatile R*, volatile R*, volatile R*> smem_tuple(R* smem)
         {
-            return cv::gpu::device::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE, smem + 3 * BLOCK_SIZE);
+            return cv::gpu::cudev::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE, smem + 3 * BLOCK_SIZE);
         }
 
         template <typename R>
@@ -340,7 +340,7 @@ namespace sum
             {
                 sum = tid < gridDim.x * gridDim.y ? result[tid] : VecTraits<result_type>::all(0);
 
-                device::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(sum), tid, detail::Unroll<cn>::op(plus<R>()));
+                cudev::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(sum), tid, detail::Unroll<cn>::op(plus<R>()));
 
                 if (tid == 0)
                 {
@@ -383,7 +383,7 @@ namespace sum
             }
         }
 
-        device::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(sum), tid, detail::Unroll<cn>::op(plus<R>()));
+        cudev::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(sum), tid, detail::Unroll<cn>::op(plus<R>()));
 
         GlobalReduce<BLOCK_SIZE, R, cn>::run(sum, result, tid, bid, smem);
     }
@@ -642,7 +642,7 @@ namespace minMax
 
                 const minimum<R> minOp;
                 const maximum<R> maxOp;
-                device::reduce<BLOCK_SIZE>(smem_tuple(sminval, smaxval), thrust::tie(mymin, mymax), tid, thrust::make_tuple(minOp, maxOp));
+                cudev::reduce<BLOCK_SIZE>(smem_tuple(sminval, smaxval), thrust::tie(mymin, mymax), tid, thrust::make_tuple(minOp, maxOp));
 
                 if (tid == 0)
                 {
@@ -690,7 +690,7 @@ namespace minMax
             }
         }
 
-        device::reduce<BLOCK_SIZE>(smem_tuple(sminval, smaxval), thrust::tie(mymin, mymax), tid, thrust::make_tuple(minOp, maxOp));
+        cudev::reduce<BLOCK_SIZE>(smem_tuple(sminval, smaxval), thrust::tie(mymin, mymax), tid, thrust::make_tuple(minOp, maxOp));
 
         GlobalReduce<BLOCK_SIZE, R>::run(mymin, mymax, minval, maxval, tid, bid, sminval, smaxval);
     }
@@ -994,7 +994,7 @@ namespace countNonZero
             }
         }
 
-        device::reduce<BLOCK_SIZE>(scount, mycount, tid, plus<unsigned int>());
+        cudev::reduce<BLOCK_SIZE>(scount, mycount, tid, plus<unsigned int>());
 
     #if __CUDA_ARCH__ >= 200
         if (tid == 0)
@@ -1019,7 +1019,7 @@ namespace countNonZero
         {
             mycount = tid < gridDim.x * gridDim.y ? count[tid] : 0;
 
-            device::reduce<BLOCK_SIZE>(scount, mycount, tid, plus<unsigned int>());
+            cudev::reduce<BLOCK_SIZE>(scount, mycount, tid, plus<unsigned int>());
 
             if (tid == 0)
             {
@@ -1217,7 +1217,7 @@ namespace reduce
         volatile S* srow = smem + threadIdx.y * 16;
 
         myVal = srow[threadIdx.x];
-        device::reduce<16>(srow, myVal, threadIdx.x, op);
+        cudev::reduce<16>(srow, myVal, threadIdx.x, op);
 
         if (threadIdx.x == 0)
             srow[0] = myVal;
@@ -1301,7 +1301,7 @@ namespace reduce
         for (int x = threadIdx.x; x < src.cols; x += BLOCK_SIZE)
             myVal = op(myVal, saturate_cast<work_type>(srcRow[x]));
 
-        device::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(myVal), threadIdx.x, detail::Unroll<cn>::op(op));
+        cudev::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(myVal), threadIdx.x, detail::Unroll<cn>::op(op));
 
         if (threadIdx.x == 0)
             dst[y] = saturate_cast<dst_type>(op.result(myVal, src.cols));

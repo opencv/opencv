@@ -360,7 +360,7 @@ static void triangulatePoint_test(void)
         pts[0] = imgpt1[i]; pts[1] = imgpt2[i];
         objptt[i] = triangulatePoint(pts, Rv, tv, cameraMatrix);
     }
-    double err = norm(Mat(objpt), Mat(objptt), CV_C);
+    double err = norm(Mat(objpt), Mat(objptt), NORM_INF);
     CV_Assert(err < 1e-1);
 }
 
@@ -381,6 +381,96 @@ struct EqKeypoints
     const vector<int>* dstart;
     const Set2i* pairs;
 };
+
+template<typename _Tp, class _EqPredicate> static
+int partition( const std::vector<_Tp>& _vec, std::vector<int>& labels,
+           _EqPredicate predicate=_EqPredicate())
+{
+    int i, j, N = (int)_vec.size();
+    const _Tp* vec = &_vec[0];
+
+    const int PARENT=0;
+    const int RANK=1;
+
+    std::vector<int> _nodes(N*2);
+    int (*nodes)[2] = (int(*)[2])&_nodes[0];
+
+    // The first O(N) pass: create N single-vertex trees
+    for(i = 0; i < N; i++)
+    {
+        nodes[i][PARENT]=-1;
+        nodes[i][RANK] = 0;
+    }
+
+    // The main O(N^2) pass: merge connected components
+    for( i = 0; i < N; i++ )
+    {
+        int root = i;
+
+        // find root
+        while( nodes[root][PARENT] >= 0 )
+            root = nodes[root][PARENT];
+
+        for( j = 0; j < N; j++ )
+        {
+            if( i == j || !predicate(vec[i], vec[j]))
+                continue;
+            int root2 = j;
+
+            while( nodes[root2][PARENT] >= 0 )
+                root2 = nodes[root2][PARENT];
+
+            if( root2 != root )
+            {
+                // unite both trees
+                int rank = nodes[root][RANK], rank2 = nodes[root2][RANK];
+                if( rank > rank2 )
+                    nodes[root2][PARENT] = root;
+                else
+                {
+                    nodes[root][PARENT] = root2;
+                    nodes[root2][RANK] += rank == rank2;
+                    root = root2;
+                }
+                CV_Assert( nodes[root][PARENT] < 0 );
+
+                int k = j, parent;
+
+                // compress the path from node2 to root
+                while( (parent = nodes[k][PARENT]) >= 0 )
+                {
+                    nodes[k][PARENT] = root;
+                    k = parent;
+                }
+
+                // compress the path from node to root
+                k = i;
+                while( (parent = nodes[k][PARENT]) >= 0 )
+                {
+                    nodes[k][PARENT] = root;
+                    k = parent;
+                }
+            }
+        }
+    }
+
+    // Final O(N) pass: enumerate classes
+    labels.resize(N);
+    int nclasses = 0;
+
+    for( i = 0; i < N; i++ )
+    {
+        int root = i;
+        while( nodes[root][PARENT] >= 0 )
+            root = nodes[root][PARENT];
+        // re-use the rank as the class label
+        if( nodes[root][RANK] >= 0 )
+            nodes[root][RANK] = ~nclasses++;
+        labels[i] = ~nodes[root][RANK];
+    }
+
+    return nclasses;
+}
 
 static void build3dmodel( const Ptr<FeatureDetector>& detector,
                           const Ptr<DescriptorExtractor>& descriptorExtractor,
@@ -419,7 +509,7 @@ static void build3dmodel( const Ptr<FeatureDetector>& detector,
     for( size_t i = 0; i < nimages; i++ )
     {
         Mat img = imread(imageList[i], 1), gray;
-        cvtColor(img, gray, CV_BGR2GRAY);
+        cvtColor(img, gray, COLOR_BGR2GRAY);
 
         vector<KeyPoint> keypoints;
         detector->detect(gray, keypoints);
@@ -604,7 +694,7 @@ static void build3dmodel( const Ptr<FeatureDetector>& detector,
         projectPoints(Mat(model.points), Rs[i], ts[i], cameraMatrix, Mat(), imagePoints);
 
         for( int k = 0; k < (int)imagePoints.size(); k++ )
-            circle(img, imagePoints[k], 2, Scalar(0,255,0), -1, CV_AA, 0);
+            circle(img, imagePoints[k], 2, Scalar(0,255,0), -1, LINE_AA, 0);
 
         imshow("Test", img);
         int c = waitKey();

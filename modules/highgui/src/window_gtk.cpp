@@ -1096,10 +1096,7 @@ cvShowImage( const char* name, const CvArr* arr )
     #ifdef HAVE_OPENGL
         if (window->useGl)
         {
-            CvMat stub;
-            CvMat* mat = cvGetMat(arr, &stub);
-            cv::Mat im(mat);
-            cv::imshow(name, im);
+            cv::imshow(name, cv::cvarrToMat(arr));
             return;
         }
     #endif
@@ -1501,8 +1498,8 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
 {
     // TODO move this logic to CvImageWidget
     CvWindow* window = (CvWindow*)user_data;
-    CvPoint2D32f pt32f = {-1., -1.};
-    CvPoint pt = {-1,-1};
+    CvPoint2D32f pt32f(-1., -1.);
+    CvPoint pt(-1,-1);
     int cv_event = -1, state = 0;
     CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
 

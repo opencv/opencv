@@ -45,8 +45,6 @@
 
 #include "opencv2/features2d.hpp"
 
-#ifdef __cplusplus
-
 namespace cv
 {
 
@@ -58,9 +56,9 @@ namespace cv
 class CV_EXPORTS_W SIFT : public Feature2D
 {
 public:
-    CV_WRAP explicit SIFT( int nfeatures=0, int nOctaveLayers=3,
-          double contrastThreshold=0.04, double edgeThreshold=10,
-          double sigma=1.6);
+    CV_WRAP explicit SIFT( int nfeatures = 0, int nOctaveLayers = 3,
+          double contrastThreshold = 0.04, double edgeThreshold = 10,
+          double sigma = 1.6);
 
     //! returns the descriptor size in floats (128)
     CV_WRAP int descriptorSize() const;
@@ -76,7 +74,7 @@ public:
     void operator()(InputArray img, InputArray mask,
                     std::vector<KeyPoint>& keypoints,
                     OutputArray descriptors,
-                    bool useProvidedKeypoints=false) const;
+                    bool useProvidedKeypoints = false) const;
 
     AlgorithmInfo* info() const;
 
@@ -86,7 +84,7 @@ public:
                                 std::vector<KeyPoint>& keypoints ) const;
 
 protected:
-    void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask = Mat() ) const;
     void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
 
     CV_PROP_RW int nfeatures;
@@ -111,8 +109,8 @@ public:
     CV_WRAP SURF();
     //! the full constructor taking all the necessary parameters
     explicit CV_WRAP SURF(double hessianThreshold,
-                  int nOctaves=4, int nOctaveLayers=2,
-                  bool extended=true, bool upright=false);
+                  int nOctaves = 4, int nOctaveLayers = 2,
+                  bool extended = true, bool upright = false);
 
     //! returns the descriptor size in float's (64 or 128)
     CV_WRAP int descriptorSize() const;
@@ -127,7 +125,7 @@ public:
     void operator()(InputArray img, InputArray mask,
                     CV_OUT std::vector<KeyPoint>& keypoints,
                     OutputArray descriptors,
-                    bool useProvidedKeypoints=false) const;
+                    bool useProvidedKeypoints = false) const;
 
     AlgorithmInfo* info() const;
 
@@ -139,7 +137,7 @@ public:
 
 protected:
 
-    void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask = Mat() ) const;
     void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
 };
 
@@ -148,8 +146,4 @@ typedef SURF SurfDescriptorExtractor;
 
 } /* namespace cv */
 
-#endif /* __cplusplus */
-
 #endif
-
-/* End of file. */

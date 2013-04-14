@@ -120,7 +120,7 @@ int main()
         imshow("Current chessboard", boards[i]); waitKey(1000);
     }
     cout << "Done" << endl;
-    cvDestroyAllWindows();
+    destroyAllWindows();
 
     Mat camMat_est;
     Mat distCoeffs_est;
@@ -259,15 +259,15 @@ Mat cv::ChessBoardGenerator::generageChessBoard(const Mat& bg, const Mat& camMat
     if (rendererResolutionMultiplier == 1)
     {
         result = bg.clone();
-        drawContours(result, whole_contour, -1, Scalar::all(255), CV_FILLED, CV_AA);
-        drawContours(result, squares_black, -1, Scalar::all(0), CV_FILLED, CV_AA);
+        drawContours(result, whole_contour, -1, Scalar::all(255), FILLED, LINE_AA);
+        drawContours(result, squares_black, -1, Scalar::all(0), FILLED, LINE_AA);
     }
     else
     {
         Mat tmp;
         resize(bg, tmp, bg.size() * rendererResolutionMultiplier);
-        drawContours(tmp, whole_contour, -1, Scalar::all(255), CV_FILLED, CV_AA);
-        drawContours(tmp, squares_black, -1, Scalar::all(0), CV_FILLED, CV_AA);
+        drawContours(tmp, whole_contour, -1, Scalar::all(255), FILLED, LINE_AA);
+        drawContours(tmp, squares_black, -1, Scalar::all(0), FILLED, LINE_AA);
         resize(tmp, result, bg.size(), 0, 0, INTER_AREA);
     }
     return result;

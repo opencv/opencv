@@ -95,7 +95,7 @@ if(HAVE_QT)
   if(${_have_flag})
     set_source_files_properties(${_RCC_OUTFILES} PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
   endif()
-elseif(WIN32)
+elseif(HAVE_WIN32UI)
   list(APPEND highgui_srcs src/window_w32.cpp)
 elseif(HAVE_GTK)
   list(APPEND highgui_srcs src/window_gtk.cpp)
@@ -111,9 +111,21 @@ elseif(APPLE)
   endif()
 endif()
 
-if(WIN32)
-  list(APPEND highgui_srcs src/cap_vfw.cpp src/cap_cmu.cpp src/cap_dshow.cpp)
-endif(WIN32)
+if(WIN32 AND NOT ARM)
+  list(APPEND highgui_srcs src/cap_cmu.cpp)
+endif()
+
+if (WIN32 AND HAVE_DSHOW)
+  list(APPEND highgui_srcs src/cap_dshow.cpp)
+endif()
+
+if (WIN32 AND HAVE_MSMF)
+  list(APPEND highgui_srcs src/cap_msmf.cpp)
+endif()
+
+if (WIN32 AND HAVE_VFW)
+  list(APPEND highgui_srcs src/cap_vfw.cpp)
+endif()
 
 if(HAVE_XINE)
   list(APPEND highgui_srcs src/cap_xine.cpp)
@@ -209,6 +221,7 @@ endif()
 if(WIN32)
   link_directories("${OpenCV_SOURCE_DIR}/3rdparty/lib") # for ffmpeg wrapper only
   include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include") # for directshow in VS2005 and multi-monitor support on MinGW
+  include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include/ffmpeg_") # for tests
 endif()
 
 if(UNIX)

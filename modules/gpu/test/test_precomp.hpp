@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -63,25 +64,20 @@
 #include <iterator>
 #include <stdexcept>
 
-#include "cvconfig.h"
+#include "opencv2/core.hpp"
+#include "opencv2/core/opengl.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/video.hpp"
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/gpu_test.hpp"
+#include "opencv2/gpu.hpp"
+#include "opencv2/legacy.hpp"
 
-#ifdef HAVE_CUDA
-    #include <cuda.h>
-    #include <cuda_runtime.h>
+#include "interpolation.hpp"
+#include "main_test_nvidia.h"
 
-    #include "opencv2/core.hpp"
-    #include "opencv2/core/opengl.hpp"
-    #include "opencv2/highgui.hpp"
-    #include "opencv2/calib3d.hpp"
-    #include "opencv2/imgproc.hpp"
-    #include "opencv2/video.hpp"
-    #include "opencv2/ts.hpp"
-    #include "opencv2/ts/gpu_test.hpp"
-    #include "opencv2/gpu.hpp"
-    #include "opencv2/legacy.hpp"
-
-    #include "interpolation.hpp"
-    #include "main_test_nvidia.h"
-#endif
+#include "opencv2/core/gpu_private.hpp"
 
 #endif

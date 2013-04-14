@@ -162,7 +162,7 @@ calcHarris( const Mat& _cov, Mat& _dst, double k )
 }
 
 
-void eigen2x2( const float* cov, float* dst, int n )
+static void eigen2x2( const float* cov, float* dst, int n )
 {
     for( int j = 0; j < n; j++ )
     {

@@ -28,7 +28,7 @@ struct Engine
     cv::Ptr<cv::VideoCapture> capture;
 };
 
-cv::Size calc_optimal_camera_resolution(const char* supported, int width, int height)
+static cv::Size calc_optimal_camera_resolution(const char* supported, int width, int height)
 {
     int frame_width = 0;
     int frame_height = 0;

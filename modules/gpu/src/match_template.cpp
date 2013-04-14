@@ -47,11 +47,11 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
+void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
 
 #else
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace match_template
     {
@@ -137,7 +137,7 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-using namespace ::cv::gpu::device::match_template;
+using namespace ::cv::gpu::cudev::match_template;
 
 namespace
 {

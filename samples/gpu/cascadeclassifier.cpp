@@ -29,7 +29,7 @@ void convertAndResize(const T& src, T& gray, T& resized, double scale)
 {
     if (src.channels() == 3)
     {
-        cvtColor( src, gray, CV_BGR2GRAY );
+        cvtColor( src, gray, COLOR_BGR2GRAY );
     }
     else
     {
@@ -228,8 +228,8 @@ int main(int argc, const char *argv[])
             Size minSize = cascade_gpu.getClassifierSize();
             cascade_cpu.detectMultiScale(resized_cpu, facesBuf_cpu, 1.2,
                                          (filterRects || findLargestObject) ? 4 : 0,
-                                         (findLargestObject ? CV_HAAR_FIND_BIGGEST_OBJECT : 0)
-                                            | CV_HAAR_SCALE_IMAGE,
+                                         (findLargestObject ? CASCADE_FIND_BIGGEST_OBJECT : 0)
+                                            | CASCADE_SCALE_IMAGE,
                                          minSize);
             detections_num = (int)facesBuf_cpu.size();
         }
@@ -272,7 +272,7 @@ int main(int argc, const char *argv[])
         }
         cout << endl;
 
-        cvtColor(resized_cpu, frameDisp, CV_GRAY2BGR);
+        cvtColor(resized_cpu, frameDisp, COLOR_GRAY2BGR);
         displayState(frameDisp, helpScreen, useGPU, findLargestObject, filterRects, fps);
         imshow("result", frameDisp);
 

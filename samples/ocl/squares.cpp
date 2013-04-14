@@ -88,7 +88,7 @@ static void findSquares( const Mat& image, vector<vector<Point> >& squares )
             }
 
             // find contours and store them all as a list
-            findContours(gray, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+            findContours(gray, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
 
             vector<Point> approx;
 
@@ -137,7 +137,7 @@ static void drawSquares( Mat& image, const vector<vector<Point> >& squares )
     {
         const Point* p = &squares[i][0];
         int n = (int)squares[i].size();
-        polylines(image, &p, &n, 1, true, Scalar(0,255,0), 3, CV_AA);
+        polylines(image, &p, &n, 1, true, Scalar(0,255,0), 3, LINE_AA);
     }
 
     imshow(wndname, image);

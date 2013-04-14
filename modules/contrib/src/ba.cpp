@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/calib3d.hpp"
+#include "opencv2/calib3d/calib3d_c.h"
 #include <iostream>
 
 using namespace cv;
@@ -359,7 +360,7 @@ void LevMarqSparse::ask_for_proj(CvMat &/*_vis*/,bool once) {
                 cvGetSubRect( P, &cam_mat, cvRect( 0, j * num_cam_param, 1, num_cam_param ));
                 CvMat measur_mat;
                 cvGetSubRect( hX, &measur_mat, cvRect( 0, ind * num_err_param, 1, num_err_param ));
-                Mat _point_mat(&point_mat), _cam_mat(&cam_mat), _measur_mat(&measur_mat);
+                Mat _point_mat = cv::cvarrToMat(&point_mat), _cam_mat = cv::cvarrToMat(&cam_mat), _measur_mat = cv::cvarrToMat(&measur_mat);
                 func( i, j, _point_mat, _cam_mat, _measur_mat, data);
                 assert( ind*num_err_param == ((int*)(Vis_index->data.ptr + i * Vis_index->step))[j]);
                 ind+=1;
@@ -398,7 +399,7 @@ void LevMarqSparse::ask_for_projac(CvMat &/*_vis*/)   //should be evaluated at p
 
                 //CvMat* Bij = B_line[j];
                 //CvMat* Bij = ((CvMat**)(B->data.ptr + B->step * i))[j];
-                Mat _point_mat(&point_mat), _cam_mat(&cam_mat), _Aij(Aij), _Bij(Bij);
+                Mat _point_mat = cv::cvarrToMat(&point_mat), _cam_mat = cv::cvarrToMat(&cam_mat), _Aij = cv::cvarrToMat(Aij), _Bij = cv::cvarrToMat(Bij);
                 (*fjac)(i, j, _point_mat, _cam_mat, _Aij, _Bij, data);
             }
         }
@@ -1100,16 +1101,17 @@ void LevMarqSparse::bundleAdjust( std::vector<Point3d>& points, //positions of p
   }
   //fill camera params
   //R.clear();T.clear();cameraMatrix.clear();
+  Mat levmarP = cv::cvarrToMat(levmar.P);
   for( int i = 0; i < num_cameras; i++ ) {
     //rotation
-    Mat rot_vec = Mat(levmar.P).rowRange(i*num_cam_param, i*num_cam_param+3);
+    Mat rot_vec = levmarP.rowRange(i*num_cam_param, i*num_cam_param+3);
     Rodrigues( rot_vec, R[i] );
     //translation
-    T[i] = Mat(levmar.P).rowRange(i*num_cam_param + 3, i*num_cam_param+6);
+    levmarP.rowRange(i*num_cam_param + 3, i*num_cam_param+6).copyTo(T[i]);
 
     //intrinsic camera matrix
     double* intr_data = (double*)cameraMatrix[i].data;
-    double* intr = (double*)(Mat(levmar.P).data + Mat(levmar.P).step * (i*num_cam_param+6));
+    double* intr = (double*)(levmarP.data +levmarP.step * (i*num_cam_param+6));
     //focals
     intr_data[0] = intr[0];  //fx
     intr_data[4] = intr[1];  //fy
@@ -1119,7 +1121,7 @@ void LevMarqSparse::bundleAdjust( std::vector<Point3d>& points, //positions of p
 
     //add distortion if exists
     if( distCoeffs.size() ) {
-      Mat(levmar.P).rowRange(i*num_cam_param + 10, i*num_cam_param+10+numdist).copyTo(distCoeffs[i]);
+      levmarP.rowRange(i*num_cam_param + 10, i*num_cam_param+10+numdist).copyTo(distCoeffs[i]);
     }
   }
 }

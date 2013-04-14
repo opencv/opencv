@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -46,24 +46,18 @@
 #include <vector>
 #include <limits>
 
-#ifdef HAVE_CVCONFIG_H
-  #include "cvconfig.h"
-#endif
-
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/core.hpp"
 #include "opencv2/core/gpumat.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/utility.hpp"
-#include "opencv2/core/internal.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/video/tracking.hpp"
+#include "opencv2/core/private.hpp"
 
 #ifdef HAVE_OPENCV_GPU
-    #include "opencv2/gpu.hpp"
-    #ifdef HAVE_CUDA
-        #include "opencv2/gpu/stream_accessor.hpp"
-    #endif
+#  include "opencv2/gpu.hpp"
+#  include "opencv2/core/gpu_private.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_HIGHGUI
@@ -75,5 +69,7 @@
 #include "input_array_utility.hpp"
 
 #include "ring_buffer.hpp"
+
+#include "opencv2/core/private.hpp"
 
 #endif /* __OPENCV_PRECOMP_H__ */

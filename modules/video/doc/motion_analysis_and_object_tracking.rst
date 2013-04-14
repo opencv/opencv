@@ -530,7 +530,7 @@ Creates mixture-of-gaussian background subtractor
 
 .. ocv:function:: Ptr<BackgroundSubtractorMOG> createBackgroundSubtractorMOG(int history=200, int nmixtures=5, double backgroundRatio=0.7, double noiseSigma=0)
 
-.. ocv:pyfunction:: cv2.createBackgroundSubtractorMOG([history, nmixtures, backgroundRatio, noiseSigma]) -> <BackgroundSubtractorMOG object>
+.. ocv:pyfunction:: cv2.createBackgroundSubtractorMOG([history[, nmixtures[, backgroundRatio[, noiseSigma]]]]) -> retval
 
     :param history: Length of the history.
 
@@ -826,4 +826,4 @@ Releases all inner buffers.
 
 .. [Zivkovic2004] Z. Zivkovic. Improved adaptive Gausian mixture model for background subtraction*, International Conference Pattern Recognition, UK, August, 2004, http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf. The code is very fast and performs also shadow detection. Number of Gausssian components is adapted per pixel.
 
-.. [Zivkovic2006] Z.Zivkovic, F. van der Heijden. "Efficient Adaptive Density Estimapion per Image Pixel for the Task of Background Subtraction", Pattern Recognition Letters, vol. 27, no. 7, pages 773-780, 2006.
+.. [Zivkovic2006] Z.Zivkovic, F. van der Heijden. "Efficient Adaptive Density Estimation per Image Pixel for the Task of Background Subtraction", Pattern Recognition Letters, vol. 27, no. 7, pages 773-780, 2006.

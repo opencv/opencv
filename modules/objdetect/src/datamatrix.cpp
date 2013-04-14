@@ -1,6 +1,7 @@
 #include "precomp.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/objdetect/objdetect_c.h"
 
-#include <deque>
 #include <algorithm>
 
 class Sampler {
@@ -43,7 +44,7 @@ unsigned char ccblk[256] = { 34,17,2,17,19,19,2,17,36,36,2,36,19,19,2,17,51,51,2
     36,19,19,2,32,66,66,2,66,19,19,2,66,36,36,2,36,19,19,2,66,51,51,2,51,19,19,2,51,36,36,2,36,19,19,2,32,49,49,2,49,
     19,19,2,49,36,36,2,36,19,19,2,49,51,51,2,51,19,19,2,51,36,36,2,36,19,19,2,49,66,66,2,66,19,19,2,66,36,36,2,36,19,
     19,2,66,51,51,2,51,19,19,2,51,36,36,2,36,19,19,2,34 };
-static const CvPoint pickup[64] = { {7,6},{8,6},{7,5},{8,5},{1,5},{7,4},{8,4},{1,4},{1,8},{2,8},{1,7},{2,7},{3,7},
+static const int pickup[64][2] = { {7,6},{8,6},{7,5},{8,5},{1,5},{7,4},{8,4},{1,4},{1,8},{2,8},{1,7},{2,7},{3,7},
     {1,6},{2,6},{3,6},{3,2},{4,2},{3,1},{4,1},{5,1},{3,8},{4,8},{5,8},{6,1},{7,1},{6,8},{7,8},{8,8},{6,7},{7,7},{8,7},
     {4,7},{5,7},{4,6},{5,6},{6,6},{4,5},{5,5},{6,5},{2,5},{3,5},{2,4},{3,4},{4,4},{2,3},{3,3},{4,3},{8,3},{1,3},{8,2},
     {1,2},{2,2},{8,1},{1,1},{2,1},{5,4},{6,4},{5,3},{6,3},{7,3},{5,2},{6,2},{7,2} };
@@ -255,7 +256,7 @@ static int decode(Sampler &sa, code &cc)
     sum += sa.getpixel(1 + (i & 7), 1 + (i >> 3));
   uchar mean = (uchar)(sum / 64);
   for (int i = 0; i < 64; i++) {
-    b = (b << 1) + (sa.getpixel(pickup[i].x, pickup[i].y) <= mean);
+    b = (b << 1) + (sa.getpixel(pickup[i][0], pickup[i][1]) <= mean);
     if ((i & 7) == 7) {
       binary[i >> 3] = b;
       b = 0;
@@ -489,7 +490,7 @@ namespace cv
 {
 
 void findDataMatrix(InputArray _image,
-                    std::vector<std::string>& codes,
+                    std::vector<String>& codes,
                     OutputArray _corners,
                     OutputArrayOfArrays _dmtx)
 {
@@ -513,7 +514,7 @@ void findDataMatrix(InputArray _image,
     for( i = 0; i < n; i++ )
     {
         CvDataMatrixCode& rc_i = rc[i];
-        codes[i] = std::string(rc_i.msg);
+        codes[i] = String(rc_i.msg);
 
         if( corners.data )
         {
@@ -528,14 +529,14 @@ void findDataMatrix(InputArray _image,
         {
             _dmtx.create(rc_i.original->rows, rc_i.original->cols, rc_i.original->type, i);
             Mat dst = _dmtx.getMat(i);
-            Mat(rc_i.original).copyTo(dst);
+            cv::cvarrToMat(rc_i.original).copyTo(dst);
         }
         cvReleaseMat(&rc_i.original);
     }
 }
 
 void drawDataMatrixCodes(InputOutputArray _image,
-                         const std::vector<std::string>& codes,
+                         const std::vector<String>& codes,
                          InputArray _corners)
 {
     Mat image = _image.getMat();

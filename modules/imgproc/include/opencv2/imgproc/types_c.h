@@ -383,6 +383,24 @@ typedef struct CvMoments
     double  m00, m10, m01, m20, m11, m02, m30, m21, m12, m03; /* spatial moments */
     double  mu20, mu11, mu02, mu30, mu21, mu12, mu03; /* central moments */
     double  inv_sqrt_m00; /* m00 != 0 ? 1/sqrt(m00) : 0 */
+
+#ifdef __cplusplus
+    CvMoments(){}
+    CvMoments(const cv::Moments& m)
+    {
+        m00 = m.m00; m10 = m.m10; m01 = m.m01;
+        m20 = m.m20; m11 = m.m11; m02 = m.m02;
+        m30 = m.m30; m21 = m.m21; m12 = m.m12; m03 = m.m03;
+        mu20 = m.mu20; mu11 = m.mu11; mu02 = m.mu02;
+        mu30 = m.mu30; mu21 = m.mu21; mu12 = m.mu12; mu03 = m.mu03;
+        double am00 = std::abs(m.m00);
+        inv_sqrt_m00 = am00 > DBL_EPSILON ? 1./std::sqrt(am00) : 0;
+    }
+    operator cv::Moments() const
+    {
+        return cv::Moments(m00, m10, m01, m20, m11, m02, m30, m21, m12, m03);
+    }
+#endif
 }
 CvMoments;
 

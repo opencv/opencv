@@ -18,10 +18,14 @@
 #include "opencv2/features2d.hpp"
 #include "opencv2/objdetect.hpp"
 #include "opencv2/softcascade.hpp"
-#include "opencv2/video/tracking.hpp"
-#include "opencv2/video/background_segm.hpp"
+#include "opencv2/video.hpp"
 #include "opencv2/photo.hpp"
 #include "opencv2/highgui.hpp"
+
+#include "opencv2/highgui/highgui_c.h"
+#include "opencv2/photo/photo_c.h"
+#include "opencv2/video/tracking_c.h"
+#include "opencv2/objdetect/objdetect_c.h"
 
 #include "opencv2/opencv_modules.hpp"
 
@@ -100,8 +104,6 @@ catch (const cv::Exception &e) \
 using namespace cv;
 typedef cv::softcascade::ChannelFeatureBuilder softcascade_ChannelFeatureBuilder;
 
-typedef std::string string;
-
 typedef std::vector<uchar> vector_uchar;
 typedef std::vector<int> vector_int;
 typedef std::vector<float> vector_float;
@@ -117,7 +119,7 @@ typedef std::vector<Rect> vector_Rect;
 typedef std::vector<KeyPoint> vector_KeyPoint;
 typedef std::vector<Mat> vector_Mat;
 typedef std::vector<DMatch> vector_DMatch;
-typedef std::vector<std::string> vector_string;
+typedef std::vector<String> vector_String;
 typedef std::vector<std::vector<Point> > vector_vector_Point;
 typedef std::vector<std::vector<Point2f> > vector_vector_Point2f;
 typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
@@ -132,6 +134,10 @@ typedef Ptr<BackgroundSubtractor> Ptr_BackgroundSubtractor;
 typedef Ptr<BackgroundSubtractorMOG> Ptr_BackgroundSubtractorMOG;
 typedef Ptr<BackgroundSubtractorMOG2> Ptr_BackgroundSubtractorMOG2;
 typedef Ptr<BackgroundSubtractorGMG> Ptr_BackgroundSubtractorGMG;
+
+typedef Ptr<StereoMatcher> Ptr_StereoMatcher;
+typedef Ptr<StereoBM> Ptr_StereoBM;
+typedef Ptr<StereoSGBM> Ptr_StereoSGBM;
 
 typedef Ptr<cv::softcascade::ChannelFeatureBuilder> Ptr_ChannelFeatureBuilder;
 
@@ -390,7 +396,7 @@ static PyObject* pyopencv_from(const Mat& m)
     if(!p->refcount || p->allocator != &g_numpyAllocator)
     {
         temp.allocator = &g_numpyAllocator;
-        m.copyTo(temp);
+        ERRWRAP2(m.copyTo(temp));
         p = &temp;
     }
     p->addref();
@@ -550,12 +556,12 @@ static PyObject* pyopencv_from(int64 value)
     return PyLong_FromLongLong(value);
 }
 
-static PyObject* pyopencv_from(const std::string& value)
+static PyObject* pyopencv_from(const String& value)
 {
     return PyString_FromString(value.empty() ? "" : value.c_str());
 }
 
-static bool pyopencv_to(PyObject* obj, std::string& value, const char* name = "<unknown>")
+static bool pyopencv_to(PyObject* obj, String& value, const char* name = "<unknown>")
 {
     (void)name;
     if(!obj || obj == Py_None)
@@ -563,7 +569,7 @@ static bool pyopencv_to(PyObject* obj, std::string& value, const char* name = "<
     char* str = PyString_AsString(obj);
     if(!str)
         return false;
-    value = std::string(str);
+    value = String(str);
     return true;
 }
 
@@ -680,6 +686,11 @@ static inline bool pyopencv_to(PyObject* obj, Vec3d& v, const char* name = "<unk
 static inline PyObject* pyopencv_from(const Vec3d& v)
 {
     return Py_BuildValue("(ddd)", v[0], v[1], v[2]);
+}
+
+static inline PyObject* pyopencv_from(const Vec2d& v)
+{
+    return Py_BuildValue("(dd)", v[0], v[1]);
 }
 
 static inline PyObject* pyopencv_from(const Point2d& p)
@@ -906,14 +917,14 @@ template<> struct pyopencvVecConverter<DMatch>
     }
 };
 
-template<> struct pyopencvVecConverter<std::string>
+template<> struct pyopencvVecConverter<String>
 {
-    static bool to(PyObject* obj, std::vector<std::string>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<String>& value, const ArgInfo info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
 
-    static PyObject* from(const std::vector<std::string>& value)
+    static PyObject* from(const std::vector<String>& value)
     {
         return pyopencv_from_generic_vec(value);
     }
@@ -968,7 +979,7 @@ static inline PyObject* pyopencv_from(const Moments& m)
                          "mu20", m.mu20, "mu11", m.mu11, "mu02", m.mu02,
                          "mu30", m.mu30, "mu21", m.mu21, "mu12", m.mu12, "mu03", m.mu03,
                          "nu20", m.nu20, "nu11", m.nu11, "nu02", m.nu02,
-                         "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "mu03", m.nu03);
+                         "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "nu03", m.nu03);
 }
 
 static inline PyObject* pyopencv_from(const CvDTreeNode* node)
@@ -994,7 +1005,7 @@ static bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name
             PyObject* item = PyList_GET_ITEM(values, i);
             if( !PyString_Check(key) )
                 break;
-            std::string k = PyString_AsString(key);
+            String k = PyString_AsString(key);
             if( PyString_Check(item) )
             {
                 const char* value = PyString_AsString(item);

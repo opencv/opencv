@@ -322,7 +322,7 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
     {
         surf = Algorithm::create<Feature2D>("Feature2D.SURF");
         if( surf.empty() )
-            CV_Error( CV_StsNotImplemented, "OpenCV was built without SURF support" );
+            CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );
         surf->set("hessianThreshold", hess_thresh);
         surf->set("nOctaves", num_octaves);
         surf->set("nOctaveLayers", num_layers);
@@ -333,7 +333,7 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
         extractor_ = Algorithm::create<DescriptorExtractor>("Feature2D.SURF");
 
         if( detector_.empty() || extractor_.empty() )
-            CV_Error( CV_StsNotImplemented, "OpenCV was built without SURF support" );
+            CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );
 
         detector_->set("hessianThreshold", hess_thresh);
         detector_->set("nOctaves", num_octaves);
@@ -347,8 +347,15 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
 void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
 {
     Mat gray_image;
-    CV_Assert(image.type() == CV_8UC3);
-    cvtColor(image, gray_image, CV_BGR2GRAY);
+    CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC1));
+    if(image.type() == CV_8UC3)
+    {
+        cvtColor(image, gray_image, COLOR_BGR2GRAY);
+    }
+    else
+    {
+        gray_image = image;
+    }
     if (surf.empty())
     {
         detector_->detect(gray_image, features.keypoints);
@@ -375,13 +382,13 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC4) || (image.type() == CV_8UC1));
 
     if (image.type() == CV_8UC3) {
-        cvtColor(image, gray_image, CV_BGR2GRAY);
+        cvtColor(image, gray_image, COLOR_BGR2GRAY);
     } else if (image.type() == CV_8UC4) {
-        cvtColor(image, gray_image, CV_BGRA2GRAY);
+        cvtColor(image, gray_image, COLOR_BGRA2GRAY);
     } else if (image.type() == CV_8UC1) {
         gray_image=image;
     } else {
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(Error::StsUnsupportedFormat, "");
     }
 
     if (grid_size.area() == 1)
@@ -450,7 +457,7 @@ void SurfFeaturesFinderGpu::find(const Mat &image, ImageFeatures &features)
     image_.upload(image);
 
     ensureSizeIsEnough(image.size(), CV_8UC1, gray_image_);
-    cvtColor(image_, gray_image_, CV_BGR2GRAY);
+    cvtColor(image_, gray_image_, COLOR_BGR2GRAY);
 
     surf_.nOctaves = num_octaves_;
     surf_.nOctaveLayers = num_layers_;
@@ -572,7 +579,7 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
     }
 
     // Find pair-wise motion
-    matches_info.H = findHomography(src_points, dst_points, matches_info.inliers_mask, CV_RANSAC);
+    matches_info.H = findHomography(src_points, dst_points, matches_info.inliers_mask, RANSAC);
     if (matches_info.H.empty() || std::abs(determinant(matches_info.H)) < std::numeric_limits<double>::epsilon())
         return;
 
@@ -619,7 +626,7 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
     }
 
     // Rerun motion estimation on inliers only
-    matches_info.H = findHomography(src_points, dst_points, CV_RANSAC);
+    matches_info.H = findHomography(src_points, dst_points, RANSAC);
 }
 
 void BestOf2NearestMatcher::collectGarbage()

@@ -52,10 +52,6 @@
 #pragma warning( disable: 4267 4324 4244 4251 4710 4711 4514 4996 )
 #endif
 
-#ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
-#endif
-
 #include <map>
 #include <iostream>
 #include <limits>
@@ -66,13 +62,12 @@
 #include <stdio.h>
 
 #include "opencv2/imgproc.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/core/core_c.h"
 #include "opencv2/objdetect.hpp"
 #include "opencv2/ocl.hpp"
 
 #include "opencv2/core/utility.hpp"
-#include "opencv2/core/internal.hpp"
+#include "opencv2/core/private.hpp"
+
 //#include "opencv2/highgui.hpp"
 
 #define __ATI__

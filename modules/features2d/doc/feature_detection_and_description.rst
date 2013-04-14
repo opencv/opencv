@@ -48,7 +48,7 @@ Maximally stable extremal region extractor. ::
     };
 
 The class encapsulates all the parameters of the MSER extraction algorithm (see
-http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions). Also see http://opencv.willowgarage.com/wiki/documentation/cpp/features2d/MSER for useful comments and parameters description.
+http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions). Also see http://code.opencv.org/projects/opencv/wiki/MSER for useful comments and parameters description.
 
 
 ORB

@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/core_c.h"
 
 #include <cstdio>
 #include <iterator>
@@ -121,7 +122,7 @@ bool HOGDescriptor::read(FileNode& obj)
     return true;
 }
 
-void HOGDescriptor::write(FileStorage& fs, const std::string& objName) const
+void HOGDescriptor::write(FileStorage& fs, const String& objName) const
 {
     if( !objName.empty() )
         fs << objName;
@@ -143,14 +144,14 @@ void HOGDescriptor::write(FileStorage& fs, const std::string& objName) const
     fs << "}";
 }
 
-bool HOGDescriptor::load(const std::string& filename, const std::string& objname)
+bool HOGDescriptor::load(const String& filename, const String& objname)
 {
     FileStorage fs(filename, FileStorage::READ);
     FileNode obj = !objname.empty() ? fs[objname] : fs.getFirstTopLevelNode();
     return read(obj);
 }
 
-void HOGDescriptor::save(const std::string& filename, const std::string& objName) const
+void HOGDescriptor::save(const String& filename, const String& objName) const
 {
     FileStorage fs(filename, FileStorage::WRITE);
     write(fs, !objName.empty() ? objName : FileStorage::getDefaultObjectName(filename));
@@ -362,27 +363,27 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
         __m128 fhalf = _mm_set1_ps(0.5f), fzero = _mm_setzero_ps();
         __m128 _angleScale = _mm_set1_ps(angleScale), fone = _mm_set1_ps(1.0f);
         __m128i ione = _mm_set1_epi32(1), _nbins = _mm_set1_epi32(nbins), izero = _mm_setzero_si128();
-        
+
         for ( ; x <= width - 4; x += 4)
         {
             int x2 = x << 1;
             __m128 _mag = _mm_loadu_ps(dbuf + x + (width << 1));
             __m128 _angle = _mm_loadu_ps(dbuf + x + width * 3);
             _angle = _mm_sub_ps(_mm_mul_ps(_angleScale, _angle), fhalf);
-            
+
             __m128 sign = _mm_and_ps(fone, _mm_cmplt_ps(_angle, fzero));
             __m128i _hidx = _mm_cvttps_epi32(_angle);
             _hidx = _mm_sub_epi32(_hidx, _mm_cvtps_epi32(sign));
             _angle = _mm_sub_ps(_angle, _mm_cvtepi32_ps(_hidx));
-            
+
             __m128 ft0 = _mm_mul_ps(_mag, _mm_sub_ps(fone, _angle));
             __m128 ft1 = _mm_mul_ps(_mag, _angle);
             __m128 ft2 = _mm_unpacklo_ps(ft0, ft1);
             __m128 ft3 = _mm_unpackhi_ps(ft0, ft1);
-            
+
             _mm_storeu_ps(gradPtr + x2, ft2);
             _mm_storeu_ps(gradPtr + x2 + 4, ft3);
-            
+
             __m128i mask0 = _mm_sub_epi32(izero, _mm_srli_epi32(_hidx, 31));
             __m128i it0 = _mm_and_si128(mask0, _nbins);
             mask0 = _mm_cmplt_epi32(_hidx, _nbins);
@@ -428,7 +429,7 @@ struct HOGCache
         BlockData() :
             histOfs(0), imgOffset()
         { }
-        
+
         int histOfs;
         Point imgOffset;
     };
@@ -455,7 +456,7 @@ struct HOGCache
 
     const float* getBlock(Point pt, float* buf);
     virtual void normalizeBlockHistogram(float* histogram) const;
-    
+
     std::vector<PixData> pixData;
     std::vector<BlockData> blockData;
 
@@ -540,7 +541,7 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
         __m128i idx = _mm_loadu_si128((__m128i*)a);
         __m128 _bw = _mm_set1_ps(bw), _bh = _mm_set1_ps(bh);
         __m128i ifour = _mm_set1_epi32(4);
-        
+
         for (; i <= blockSize.height - 4; i += 4)
         {
             __m128 t = _mm_sub_ps(_mm_cvtepi32_ps(idx), _bh);
@@ -617,7 +618,7 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
             int icellX1 = icellX0 + 1, icellY1 = icellY0 + 1;
             cellX -= icellX0;
             cellY -= icellY0;
-            
+
             if( (unsigned)icellX0 < (unsigned)ncells.width &&
                (unsigned)icellX1 < (unsigned)ncells.width )
             {
@@ -657,7 +658,7 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
                     icellX1 = icellX0;
                     cellX = 1.f - cellX;
                 }
-                
+
                 if( (unsigned)icellY0 < (unsigned)ncells.height &&
                    (unsigned)icellY1 < (unsigned)ncells.height )
                 {
@@ -687,7 +688,7 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
             data->qangleOfs = (qangle.cols*i + j)*2;
             data->gradWeight = weights(i,j);
         }
-    
+
     assert( count1 + count2 + count4 == rawBlockSize );
     // defragment pixData
     for( j = 0; j < count2; j++ )
@@ -696,7 +697,7 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
         pixData[j + count1 + count2] = pixData[j + rawBlockSize*2];
     count2 += count1;
     count4 += count2;
-    
+
     // initialize blockData
     for( j = 0; j < nblocks.width; j++ )
         for( i = 0; i < nblocks.height; i++ )
@@ -744,9 +745,9 @@ const float* HOGCache::getBlock(Point pt, float* buf)
 
 //    CV_Assert( blockHist != 0 );
     memset(blockHist, 0, sizeof(float) * blockHistogramSize);
-    
+
     const PixData* _pixData = &pixData[0];
-    
+
     for( k = 0; k < C1; k++ )
     {
         const PixData& pk = _pixData[k];
@@ -754,7 +755,7 @@ const float* HOGCache::getBlock(Point pt, float* buf)
         float w = pk.gradWeight*pk.histWeights[0];
         const uchar* h = qanglePtr + pk.qangleOfs;
         int h0 = h[0], h1 = h[1];
-        
+
         float* hist = blockHist + pk.histOfs[0];
         float t0 = hist[h0] + a[0]*w;
         float t1 = hist[h1] + a[1]*w;
@@ -769,19 +770,19 @@ const float* HOGCache::getBlock(Point pt, float* buf)
         const float* const a = gradPtr + pk.gradOfs;
         const uchar* const h = qanglePtr + pk.qangleOfs;
         int h0 = h[0], h1 = h[1];
-        
+
         __m128 _a0 = _mm_set1_ps(a[0]), _a1 = _mm_set1_ps(a[1]);
         __m128 _w = _mm_mul_ps(_mm_set1_ps(pk.gradWeight), _mm_loadu_ps(pk.histWeights));
         __m128 _t0 = _mm_mul_ps(_a0, _w), _t1 = _mm_mul_ps(_a1, _w);
-        
+
         _mm_storeu_ps(hist0, _t0);
         _mm_storeu_ps(hist1, _t1);
-        
+
         float* hist = blockHist + pk.histOfs[0];
         float t0 = hist[h0] + hist0[0];
         float t1 = hist[h1] + hist1[0];
         hist[h0] = t0; hist[h1] = t1;
-        
+
         hist = blockHist + pk.histOfs[1];
         t0 = hist[h0] + hist0[1];
         t1 = hist[h1] + hist1[1];
@@ -795,13 +796,13 @@ const float* HOGCache::getBlock(Point pt, float* buf)
         float w, t0, t1, a0 = a[0], a1 = a[1];
         const uchar* const h = qanglePtr + pk.qangleOfs;
         int h0 = h[0], h1 = h[1];
-        
+
         float* hist = blockHist + pk.histOfs[0];
         w = pk.gradWeight*pk.histWeights[0];
         t0 = hist[h0] + a0*w;
         t1 = hist[h1] + a1*w;
         hist[h0] = t0; hist[h1] = t1;
-        
+
         hist = blockHist + pk.histOfs[1];
         w = pk.gradWeight*pk.histWeights[1];
         t0 = hist[h0] + a0*w;
@@ -809,7 +810,7 @@ const float* HOGCache::getBlock(Point pt, float* buf)
         hist[h0] = t0; hist[h1] = t1;
     }
 #endif
-    
+
 #if CV_SSE2
     for( ; k < C4; k++ )
     {
@@ -817,34 +818,34 @@ const float* HOGCache::getBlock(Point pt, float* buf)
         const float* const a = gradPtr + pk.gradOfs;
         const uchar* const h = qanglePtr + pk.qangleOfs;
         int h0 = h[0], h1 = h[1];
-        
+
         __m128 _a0 = _mm_set1_ps(a[0]), _a1 = _mm_set1_ps(a[1]);
 		__m128 _w = _mm_mul_ps(_mm_set1_ps(pk.gradWeight), _mm_loadu_ps(pk.histWeights));
         __m128 _t0 = _mm_mul_ps(_a0, _w), _t1 = _mm_mul_ps(_a1, _w);
-        
+
         _mm_storeu_ps(hist0, _t0);
         _mm_storeu_ps(hist1, _t1);
-        
+
         float* hist = blockHist + pk.histOfs[0];
         float t0 = hist[h0] + hist0[0];
         float t1 = hist[h1] + hist1[0];
         hist[h0] = t0; hist[h1] = t1;
-        
+
         hist = blockHist + pk.histOfs[1];
         t0 = hist[h0] + hist0[1];
         t1 = hist[h1] + hist1[1];
         hist[h0] = t0; hist[h1] = t1;
-        
+
         hist = blockHist + pk.histOfs[2];
         t0 = hist[h0] + hist0[2];
         t1 = hist[h1] + hist1[2];
         hist[h0] = t0; hist[h1] = t1;
-        
+
         hist = blockHist + pk.histOfs[3];
         t0 = hist[h0] + hist0[3];
         t1 = hist[h1] + hist1[3];
         hist[h0] = t0; hist[h1] = t1;
-        
+
 //        __m128 _hist0 = _mm_set_ps((blockHist + pk.histOfs[3])[h0], (blockHist + pk.histOfs[2])[h0],
 //            (blockHist + pk.histOfs[1])[h0], (blockHist + pk.histOfs[0])[h0]);
 //        __m128 _hist1 = _mm_set_ps((blockHist + pk.histOfs[3])[h1], (blockHist + pk.histOfs[2])[h1],
@@ -860,7 +861,7 @@ const float* HOGCache::getBlock(Point pt, float* buf)
 //        (pk.histOfs[1] + blockHist)[h0] = hist0[1];
 //        (pk.histOfs[2] + blockHist)[h0] = hist0[2];
 //        (pk.histOfs[3] + blockHist)[h0] = hist0[3];
-//        
+//
 //        (pk.histOfs[0] + blockHist)[h1] = hist1[0];
 //        (pk.histOfs[1] + blockHist)[h1] = hist1[1];
 //        (pk.histOfs[2] + blockHist)[h1] = hist1[2];
@@ -874,25 +875,25 @@ const float* HOGCache::getBlock(Point pt, float* buf)
         float w, t0, t1, a0 = a[0], a1 = a[1];
         const uchar* h = qanglePtr + pk.qangleOfs;
         int h0 = h[0], h1 = h[1];
-        
+
         float* hist = blockHist + pk.histOfs[0];
         w = pk.gradWeight*pk.histWeights[0];
         t0 = hist[h0] + a0*w;
         t1 = hist[h1] + a1*w;
         hist[h0] = t0; hist[h1] = t1;
-        
+
         hist = blockHist + pk.histOfs[1];
         w = pk.gradWeight*pk.histWeights[1];
         t0 = hist[h0] + a0*w;
         t1 = hist[h1] + a1*w;
         hist[h0] = t0; hist[h1] = t1;
-        
+
         hist = blockHist + pk.histOfs[2];
         w = pk.gradWeight*pk.histWeights[2];
         t0 = hist[h0] + a0*w;
         t1 = hist[h1] + a1*w;
         hist[h0] = t0; hist[h1] = t1;
-        
+
         hist = blockHist + pk.histOfs[3];
         w = pk.gradWeight*pk.histWeights[3];
         t0 = hist[h0] + a0*w;
@@ -1013,6 +1014,19 @@ Rect HOGCache::getWindow(const Size& imageSize, const Size& winStride, int idx) 
     int y = idx / nwindowsX;
     int x = idx - nwindowsX*y;
     return Rect( x*winStride.width, y*winStride.height, winSize.width, winSize.height );
+}
+
+static inline int gcd(int a, int b)
+{
+    if( a < b )
+        std::swap(a, b);
+    while( b > 0 )
+    {
+        int r = a % b;
+        a = b;
+        b = r;
+    }
+    return a;
 }
 
 void HOGDescriptor::compute(const Mat& img, std::vector<float>& descriptors,
@@ -1300,6 +1314,58 @@ void HOGDescriptor::detectMultiScale(const Mat& img, std::vector<Rect>& foundLoc
     detectMultiScale(img, foundLocations, foundWeights, hitThreshold, winStride,
                 padding, scale0, finalThreshold, useMeanshiftGrouping);
 }
+
+template<typename _ClsName> struct RTTIImpl
+{
+public:
+    static int isInstance(const void* ptr)
+    {
+        static _ClsName dummy;
+        static void* dummyp = &dummy;
+        union
+        {
+            const void* p;
+            const void** pp;
+        } a, b;
+        a.p = dummyp;
+        b.p = ptr;
+        return *a.pp == *b.pp;
+    }
+    static void release(void** dbptr)
+    {
+        if(dbptr && *dbptr)
+        {
+            delete (_ClsName*)*dbptr;
+            *dbptr = 0;
+        }
+    }
+    static void* read(CvFileStorage* fs, CvFileNode* n)
+    {
+        FileNode fn(fs, n);
+        _ClsName* obj = new _ClsName;
+        if(obj->read(fn))
+            return obj;
+        delete obj;
+        return 0;
+    }
+
+    static void write(CvFileStorage* _fs, const char* name, const void* ptr, CvAttrList)
+    {
+        if(ptr && _fs)
+        {
+            FileStorage fs(_fs);
+            fs.fs.addref();
+            ((const _ClsName*)ptr)->write(fs, String(name));
+        }
+    }
+
+    static void* clone(const void* ptr)
+    {
+        if(!ptr)
+            return 0;
+        return new _ClsName(*(const _ClsName*)ptr);
+    }
+};
 
 typedef RTTIImpl<HOGDescriptor> HOGRTTI;
 
@@ -2788,30 +2854,30 @@ void HOGDescriptor::detectMultiScaleROI(const cv::Mat& img,
     cv::groupRectangles(foundLocations, groupThreshold, 0.2);
 }
 
-void HOGDescriptor::readALTModel(std::string modelfile)
+void HOGDescriptor::readALTModel(String modelfile)
 {
     // read model from SVMlight format..
     FILE *modelfl;
     if ((modelfl = fopen(modelfile.c_str(), "rb")) == NULL)
     {
-        std::string eerr("file not exist");
-        std::string efile(__FILE__);
-        std::string efunc(__FUNCTION__);
-        throw Exception(CV_StsError, eerr, efile, efunc, __LINE__);
+        String eerr("file not exist");
+        String efile(__FILE__);
+        String efunc(__FUNCTION__);
+        throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
     }
     char version_buffer[10];
     if (!fread (&version_buffer,sizeof(char),10,modelfl))
     {
-        std::string eerr("version?");
-        std::string efile(__FILE__);
-        std::string efunc(__FUNCTION__);
-        throw Exception(CV_StsError, eerr, efile, efunc, __LINE__);
+        String eerr("version?");
+        String efile(__FILE__);
+        String efunc(__FUNCTION__);
+        throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
     }
     if(strcmp(version_buffer,"V6.01")) {
-        std::string eerr("version doesnot match");
-        std::string efile(__FILE__);
-        std::string efunc(__FUNCTION__);
-        throw Exception(CV_StsError, eerr, efile, efunc, __LINE__);
+        String eerr("version doesnot match");
+        String efile(__FILE__);
+        String efunc(__FUNCTION__);
+        throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
     }
     /* read version number */
     int version = 0;
@@ -2819,9 +2885,9 @@ void HOGDescriptor::readALTModel(std::string modelfile)
     { throw Exception(); }
     if (version < 200)
     {
-        std::string eerr("version doesnot match");
-        std::string efile(__FILE__);
-        std::string efunc(__FUNCTION__);
+        String eerr("version doesnot match");
+        String efile(__FILE__);
+        String efunc(__FUNCTION__);
         throw Exception();
     }
     int kernel_type;
@@ -2871,7 +2937,7 @@ void HOGDescriptor::readALTModel(std::string modelfile)
 
         detector.push_back((float)-linearbias);
         setSVMDetector(detector);
-        delete linearwt;
+        delete [] linearwt;
     } else {
         throw Exception();
     }

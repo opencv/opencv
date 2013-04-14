@@ -43,6 +43,7 @@
 //
 //M*/
 #include "precomp.hpp"
+#include <cstdio>
 
 #ifdef HAVE_OPENCV_OCL
 
@@ -56,19 +57,29 @@ namespace cv
         ///////////////////////////OpenCL kernel strings///////////////////////////
         extern const char *surf;
 
-        const char* noImage2dOption = "-D DISABLE_IMAGE2D";
+        const char noImage2dOption [] = "-D DISABLE_IMAGE2D";
 
-        static void openCLExecuteKernelSURF(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
-            size_t localThreads[3], std::vector< std::pair<size_t, const void *> > &args, int channels, int depth)
+        static char SURF_OPTIONS [1024] = "";
+        static bool USE_IMAGE2d = false;
+        static void openCLExecuteKernelSURF(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
+            size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth)
         {
-            if(support_image2d())
+            char * pSURF_OPTIONS = SURF_OPTIONS;
+            static bool OPTION_INIT = false;
+            if(!OPTION_INIT)
             {
-                openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth);
+                if( !USE_IMAGE2d )
+                {
+                    strcat(pSURF_OPTIONS, noImage2dOption);
+                    pSURF_OPTIONS += strlen(noImage2dOption);
+                }
+
+                size_t wave_size = 0;
+                queryDeviceInfo(WAVEFRONT_SIZE, &wave_size);
+                std::sprintf(pSURF_OPTIONS, "-D WAVE_SIZE=%d", static_cast<int>(wave_size));
+                OPTION_INIT = true;
             }
-            else
-            {
-                openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth, noImage2dOption);
-            }
+            openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth, SURF_OPTIONS);
         }
     }
 }
@@ -151,15 +162,27 @@ public:
         integral(img, surf_.sum);
         if(support_image2d())
         {
-            bindImgTex(img, imgTex);
-            bindImgTex(surf_.sum, sumTex);
+            try
+            {
+                bindImgTex(img, imgTex);
+                bindImgTex(surf_.sum, sumTex);
+                USE_IMAGE2d = true;
+            }
+            catch (const cv::Exception& e)
+            {
+                USE_IMAGE2d = false;
+                if(e.code != CL_IMAGE_FORMAT_NOT_SUPPORTED && e.code != -217)
+                {
+                    throw e;
+                }
+            }
         }
 
         maskSumTex = 0;
 
         if (use_mask)
         {
-            CV_Error(CV_StsBadFunc, "Masked SURF detector is not implemented yet");
+            CV_Error(Error::StsBadFunc, "Masked SURF detector is not implemented yet");
             //!FIXME
             // temp fix for missing min overload
             //oclMat temp(mask.size(), mask.type());
@@ -480,7 +503,7 @@ void SURF_OCL_Invoker::icvCalcLayerDetAndTrace_gpu(oclMat &det, oclMat &trace, i
     const int max_samples_j = 1 + ((img_cols - min_size) >> octave);
 
     Context *clCxt = det.clCxt;
-    std::string kernelName = "icvCalcLayerDetAndTrace";
+    String kernelName = "icvCalcLayerDetAndTrace";
     std::vector< std::pair<size_t, const void *> > args;
 
     if(sumTex)
@@ -518,7 +541,7 @@ void SURF_OCL_Invoker::icvFindMaximaInLayer_gpu(const oclMat &det, const oclMat 
     const int min_margin = ((calcSize(octave, 2) >> 1) >> octave) + 1;
 
     Context *clCxt = det.clCxt;
-    std::string kernelName = use_mask ? "icvFindMaximaInLayer_withmask" : "icvFindMaximaInLayer";
+    String kernelName = use_mask ? "icvFindMaximaInLayer_withmask" : "icvFindMaximaInLayer";
     std::vector< std::pair<size_t, const void *> > args;
 
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&det.data));
@@ -562,7 +585,7 @@ void SURF_OCL_Invoker::icvInterpolateKeypoint_gpu(const oclMat &det, const oclMa
         oclMat &keypoints, oclMat &counters_, int octave, int layer_rows, int max_features)
 {
     Context *clCxt = det.clCxt;
-    std::string kernelName = "icvInterpolateKeypoint";
+    String kernelName = "icvInterpolateKeypoint";
     std::vector< std::pair<size_t, const void *> > args;
 
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&det.data));
@@ -586,7 +609,7 @@ void SURF_OCL_Invoker::icvInterpolateKeypoint_gpu(const oclMat &det, const oclMa
 void SURF_OCL_Invoker::icvCalcOrientation_gpu(const oclMat &keypoints, int nFeatures)
 {
     Context *clCxt = counters.clCxt;
-    std::string kernelName = "icvCalcOrientation";
+    String kernelName = "icvCalcOrientation";
 
     std::vector< std::pair<size_t, const void *> > args;
 
@@ -613,7 +636,7 @@ void SURF_OCL_Invoker::icvCalcOrientation_gpu(const oclMat &keypoints, int nFeat
 void SURF_OCL_Invoker::icvSetUpright_gpu(const oclMat &keypoints, int nFeatures)
 {
     Context *clCxt = counters.clCxt;
-    std::string kernelName = "icvSetUpright";
+    String kernelName = "icvSetUpright";
 
     std::vector< std::pair<size_t, const void *> > args;
 
@@ -632,7 +655,7 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
 {
     // compute unnormalized descriptors, then normalize them - odd indexing since grid must be 2D
     Context *clCxt = descriptors.clCxt;
-    std::string kernelName;
+    String kernelName;
     std::vector< std::pair<size_t, const void *> > args;
     size_t localThreads[3]  = {1, 1, 1};
     size_t globalThreads[3] = {1, 1, 1};

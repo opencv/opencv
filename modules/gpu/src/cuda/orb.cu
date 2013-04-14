@@ -38,11 +38,6 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
-// Copyright (c) 2010, Paul Furgale, Chi Hay Tong
-//
-// The original code was written by Paul Furgale and Chi Hay Tong
-// and later optimized and prepared for integration into OpenCV by Itseez.
-//
 //M*/
 
 #if !defined CUDA_DISABLER
@@ -50,11 +45,11 @@
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/reduce.hpp"
-#include "opencv2/gpu/device/functional.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
+#include "opencv2/core/cuda/functional.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace orb
     {

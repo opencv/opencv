@@ -16,7 +16,7 @@ endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
 
-ocv_add_module(ts opencv_core opencv_features2d)
+ocv_add_module(ts opencv_core opencv_imgproc opencv_highgui)
 
 ocv_glob_module_sources()
 ocv_module_include_directories()

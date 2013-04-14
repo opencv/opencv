@@ -191,7 +191,7 @@ protected:
 
             int real_int = (int)fs["test_int"];
             double real_real = (double)fs["test_real"];
-            string real_string = (string)fs["test_string"];
+            String real_string = (String)fs["test_string"];
 
             if( real_int != test_int ||
                fabs(real_real - test_real) > DBL_EPSILON*(fabs(test_real)+1) ||
@@ -211,7 +211,7 @@ protected:
             vector<int> pt;
 
             if( !m || !CV_IS_MAT(m) || m->rows != test_mat.rows || m->cols != test_mat.cols ||
-               cvtest::cmpEps( Mat(&stub1), Mat(&_test_stub1), &max_diff, 0, &pt, true) < 0 )
+               cvtest::cmpEps( cv::cvarrToMat(&stub1), cv::cvarrToMat(&_test_stub1), &max_diff, 0, &pt, true) < 0 )
             {
                 ts->printf( cvtest::TS::LOG, "the read matrix is not correct: (%.20g vs %.20g) at (%d,%d)\n",
                             cvGetReal2D(&stub1, pt[0], pt[1]), cvGetReal2D(&_test_stub1, pt[0], pt[1]),
@@ -241,7 +241,7 @@ protected:
             if( !CV_ARE_TYPES_EQ(&stub, &_test_stub) ||
                !CV_ARE_SIZES_EQ(&stub, &_test_stub) ||
                //cvNorm(&stub, &_test_stub, CV_L2) != 0 )
-               cvtest::cmpEps( Mat(&stub1), Mat(&_test_stub1), &max_diff, 0, &pt, true) < 0 )
+               cvtest::cmpEps( cv::cvarrToMat(&stub1), cv::cvarrToMat(&_test_stub1), &max_diff, 0, &pt, true) < 0 )
             {
                 ts->printf( cvtest::TS::LOG, "readObj method: the read nd matrix is not correct: (%.20g vs %.20g) vs at (%d,%d)\n",
                            cvGetReal2D(&stub1, pt[0], pt[1]), cvGetReal2D(&_test_stub1, pt[0], pt[1]),
@@ -259,7 +259,7 @@ protected:
             if( !CV_ARE_TYPES_EQ(&stub, &_test_stub) ||
                !CV_ARE_SIZES_EQ(&stub, &_test_stub) ||
                //cvNorm(&stub, &_test_stub, CV_L2) != 0 )
-               cvtest::cmpEps( Mat(&stub1), Mat(&_test_stub1), &max_diff, 0, &pt, true) < 0 )
+               cvtest::cmpEps( cv::cvarrToMat(&stub1), cv::cvarrToMat(&_test_stub1), &max_diff, 0, &pt, true) < 0 )
             {
                 ts->printf( cvtest::TS::LOG, "C++ method: the read nd matrix is not correct: (%.20g vs %.20g) vs at (%d,%d)\n",
                            cvGetReal2D(&stub1, pt[0], pt[1]), cvGetReal2D(&_test_stub1, pt[1], pt[0]),
@@ -271,11 +271,11 @@ protected:
             cvRelease((void**)&m_nd);
 
             Ptr<CvSparseMat> m_s = (CvSparseMat*)fs["test_sparse_mat"].readObj();
-            Ptr<CvSparseMat> _test_sparse_ = (CvSparseMat*)test_sparse_mat;
+            Ptr<CvSparseMat> _test_sparse_ = cvCreateSparseMat(test_sparse_mat);
             Ptr<CvSparseMat> _test_sparse = (CvSparseMat*)cvClone(_test_sparse_);
             SparseMat m_s2;
             fs["test_sparse_mat"] >> m_s2;
-            Ptr<CvSparseMat> _m_s2 = (CvSparseMat*)m_s2;
+            Ptr<CvSparseMat> _m_s2 = cvCreateSparseMat(m_s2);
 
             if( !m_s || !CV_IS_SPARSE_MAT(m_s) ||
                !cvTsCheckSparse(m_s, _test_sparse,0) ||
@@ -292,7 +292,7 @@ protected:
                (int)tl[1] != 2 ||
                fabs((double)tl[2] - CV_PI) >= DBL_EPSILON ||
                (int)tl[3] != -3435345 ||
-               (string)tl[4] != "2-502 2-029 3egegeg" ||
+               (String)tl[4] != "2-502 2-029 3egegeg" ||
                tl[5].type() != FileNode::MAP || tl[5].size() != 3 ||
                (int)tl[5]["month"] != 12 ||
                (int)tl[5]["day"] != 31 ||
@@ -378,6 +378,7 @@ protected:
 
 TEST(Core_InputOutput, write_read_consistency) { Core_IOTest test; test.safe_run(); }
 
+extern void testFormatter();
 
 class CV_MiscIOTest : public cvtest::BaseTest
 {
@@ -454,12 +455,12 @@ protected:
 TEST(Core_InputOutput, huge) { CV_BigMatrixIOTest test; test.safe_run(); }
 */
 
-TEST(Core_globbing, accurasy)
+TEST(Core_globbing, accuracy)
 {
     std::string patternLena    = cvtest::TS::ptr()->get_data_path() + "lena*.*";
     std::string patternLenaPng = cvtest::TS::ptr()->get_data_path() + "lena.png";
 
-    std::vector<std::string> lenas, pngLenas;
+    std::vector<String> lenas, pngLenas;
     cv::glob(patternLena, lenas, true);
     cv::glob(patternLenaPng, pngLenas, true);
 
@@ -469,4 +470,14 @@ TEST(Core_globbing, accurasy)
     {
         ASSERT_NE(std::find(lenas.begin(), lenas.end(), pngLenas[i]), lenas.end());
     }
+}
+
+TEST(Core_InputOutput, FileStorage)
+{
+    std::string file = cv::tempfile(".xml");
+    cv::FileStorage f(file, cv::FileStorage::WRITE);
+
+    char arr[66];
+    sprintf(arr, "sprintf is hell %d", 666);
+    EXPECT_NO_THROW(f << arr);
 }

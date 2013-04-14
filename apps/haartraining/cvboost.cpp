@@ -76,15 +76,18 @@ typedef struct CvValArray
     size_t step;
 } CvValArray;
 
-#define CMP_VALUES( idx1, idx2 )                                 \
-    ( *( (float*) (aux->data + ((int) (idx1)) * aux->step ) ) <  \
-      *( (float*) (aux->data + ((int) (idx2)) * aux->step ) ) )
-
-static CV_IMPLEMENT_QSORT_EX( icvSortIndexedValArray_16s, short, CMP_VALUES, CvValArray* )
-
-static CV_IMPLEMENT_QSORT_EX( icvSortIndexedValArray_32s, int,   CMP_VALUES, CvValArray* )
-
-static CV_IMPLEMENT_QSORT_EX( icvSortIndexedValArray_32f, float, CMP_VALUES, CvValArray* )
+template<typename T, typename Idx>
+class LessThanValArray
+{
+public:
+    LessThanValArray( const T* _aux ) : aux(_aux) {}
+    bool operator()(Idx a, Idx b) const
+    {
+        return *( (float*) (aux->data + ((int) (a)) * aux->step ) ) <
+               *( (float*) (aux->data + ((int) (b)) * aux->step ) );
+    }
+    const T* aux;
+};
 
 CV_BOOST_IMPL
 void cvGetSortedIndices( CvMat* val, CvMat* idx, int sortcols )
@@ -130,8 +133,9 @@ void cvGetSortedIndices( CvMat* val, CvMat* idx, int sortcols )
                 {
                     CV_MAT_ELEM( *idx, short, i, j ) = (short) j;
                 }
-                icvSortIndexedValArray_16s( (short*) (idx->data.ptr + (size_t)i * idx->step),
-                                            idx->cols, &va );
+                std::sort((short*) (idx->data.ptr + (size_t)i * idx->step),
+                          (short*) (idx->data.ptr + (size_t)i * idx->step) + idx->cols,
+                          LessThanValArray<CvValArray, short>(&va));
                 va.data += istep;
             }
             break;
@@ -143,8 +147,9 @@ void cvGetSortedIndices( CvMat* val, CvMat* idx, int sortcols )
                 {
                     CV_MAT_ELEM( *idx, int, i, j ) = j;
                 }
-                icvSortIndexedValArray_32s( (int*) (idx->data.ptr + (size_t)i * idx->step),
-                                            idx->cols, &va );
+                std::sort((int*) (idx->data.ptr + (size_t)i * idx->step),
+                          (int*) (idx->data.ptr + (size_t)i * idx->step) + idx->cols,
+                          LessThanValArray<CvValArray, int>(&va));
                 va.data += istep;
             }
             break;
@@ -156,8 +161,9 @@ void cvGetSortedIndices( CvMat* val, CvMat* idx, int sortcols )
                 {
                     CV_MAT_ELEM( *idx, float, i, j ) = (float) j;
                 }
-                icvSortIndexedValArray_32f( (float*) (idx->data.ptr + (size_t)i * idx->step),
-                                            idx->cols, &va );
+                std::sort((float*) (idx->data.ptr + (size_t)i * idx->step),
+                          (float*) (idx->data.ptr + (size_t)i * idx->step) + idx->cols,
+                          LessThanValArray<CvValArray, float>(&va));
                 va.data += istep;
             }
             break;
@@ -545,7 +551,7 @@ CvClassifier* cvCreateStumpClassifier( CvMat* trainData,
 
         va.data = data + i * ((size_t) cstep);
         va.step = sstep;
-        icvSortIndexedValArray_32s( idx, l, &va );
+        std::sort(idx, idx + l, LessThanValArray<CvValArray, int>(&va));
         if( findStumpThreshold_32s[(int) ((CvStumpTrainParams*) trainParams)->error]
               ( data + i * ((size_t) cstep), sstep,
                 wdata, wstep, ydata, ystep, (uchar*) idx, sizeof( int ), l,
@@ -1028,7 +1034,7 @@ CvClassifier* cvCreateMTStumpClassifier( CvMat* trainData,
             {
                 va.data = t_data + ti * t_cstep;
                 va.step = t_sstep;
-                icvSortIndexedValArray_32s( t_idx, l, &va );
+                std::sort(t_idx, t_idx + l, LessThanValArray<CvValArray, int>(&va));
                 if( findStumpThreshold_32s[stumperror](
                         t_data + ti * t_cstep, t_sstep,
                         wdata, wstep, ydata, ystep,
@@ -2096,7 +2102,7 @@ static void icvZeroApproxMed( float* approx, CvBtTrainer* trainer )
         trainer->f[i] = *((float*) (trainer->ydata + idx * trainer->ystep));
     }
 
-    icvSort_32f( trainer->f, trainer->numsamples, 0 );
+    std::sort(trainer->f, trainer->f + trainer->numsamples);
     approx[0] = trainer->f[trainer->numsamples / 2];
 }
 
@@ -2341,7 +2347,7 @@ static void icvBtNext_LADREG( CvCARTClassifier** trees, CvBtTrainer* trainer )
         }
         if( respnum > 0 )
         {
-            icvSort_32f( resp, respnum, 0 );
+            std::sort(resp, resp + respnum);
             val = resp[respnum / 2];
         }
         else
@@ -2394,7 +2400,7 @@ static void icvBtNext_MREG( CvCARTClassifier** trees, CvBtTrainer* trainer )
     }
 
     /* delta = quantile_alpha{abs(resid_i)} */
-    icvSort_32f( resp, trainer->numsamples, 0 );
+    std::sort(resp, resp + trainer->numsamples);
     delta = resp[(int)(trainer->param[1] * (trainer->numsamples - 1))];
 
     /* yhat_i */
@@ -2434,7 +2440,7 @@ static void icvBtNext_MREG( CvCARTClassifier** trees, CvBtTrainer* trainer )
         if( respnum > 0 )
         {
             /* rhat = median(y_i - F_(m-1)(x_i)) */
-            icvSort_32f( resp, respnum, 0 );
+            std::sort(resp, resp + respnum);
             rhat = resp[respnum / 2];
 
             /* val = sum{sign(r_i - rhat_i) * min(delta, abs(r_i - rhat_i)}
@@ -2531,7 +2537,7 @@ static void icvBtNext_L2CLASS( CvCARTClassifier** trees, CvBtTrainer* trainer )
         float threshold;
         int count;
 
-        icvSort_32f( sorted_weights, trainer->numsamples, 0 );
+        std::sort(sorted_weights, sorted_weights + trainer->numsamples);
 
         sum_weights *= (1.0F - trainer->param[1]);
 
@@ -2693,7 +2699,7 @@ static void icvBtNext_LKCLASS( CvCARTClassifier** trees, CvBtTrainer* trainer )
             float threshold;
             int count;
 
-            icvSort_32f( sorted_weights, trainer->numsamples, 0 );
+            std::sort(sorted_weights, sorted_weights + trainer->numsamples);
 
             sum_weights *= (1.0F - trainer->param[1]);
 
@@ -3504,7 +3510,7 @@ CvMat* cvTrimWeights( CvMat* weights, CvMat* idx, float factor )
             sum_weights += sorted_weights[i];
         }
 
-        icvSort_32f( sorted_weights, num, 0 );
+        std::sort(sorted_weights, sorted_weights + num);
 
         sum_weights *= (1.0F - factor);
 

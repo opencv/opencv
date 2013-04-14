@@ -13,7 +13,7 @@
 #include "./vp8i.h"
 #include "./vp8li.h"
 #include "../utils/filters.h"
-#include "../utils/quant_levels.h"
+#include "../utils/quant_levels_dec.h"
 #include "../webp/format_constants.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)
@@ -44,7 +44,6 @@ static int DecodeAlpha(const uint8_t* data, size_t data_size,
                        int width, int height, int stride, uint8_t* output) {
   uint8_t* decoded_data = NULL;
   const size_t decoded_size = height * width;
-  uint8_t* unfiltered_data = NULL;
   WEBP_FILTER_TYPE filter;
   int pre_processing;
   int rsrv;
@@ -83,29 +82,19 @@ static int DecodeAlpha(const uint8_t* data, size_t data_size,
   }
 
   if (ok) {
-    WebPFilterFunc unfilter_func = WebPUnfilters[filter];
+    WebPUnfilterFunc unfilter_func = WebPUnfilters[filter];
     if (unfilter_func != NULL) {
-      unfiltered_data = (uint8_t*)malloc(decoded_size);
-      if (unfiltered_data == NULL) {
-        ok = 0;
-        goto Error;
-      }
       // TODO(vikas): Implement on-the-fly decoding & filter mechanism to decode
       // and apply filter per image-row.
-      unfilter_func(decoded_data, width, height, 1, width, unfiltered_data);
-      // Construct raw_data (height x stride) from alpha data (height x width).
-      CopyPlane(unfiltered_data, width, output, stride, width, height);
-      free(unfiltered_data);
-    } else {
-      // Construct raw_data (height x stride) from alpha data (height x width).
-      CopyPlane(decoded_data, width, output, stride, width, height);
+      unfilter_func(width, height, width, decoded_data);
     }
+    // Construct raw_data (height x stride) from alpha data (height x width).
+    CopyPlane(decoded_data, width, output, stride, width, height);
     if (pre_processing == ALPHA_PREPROCESSED_LEVELS) {
       ok = DequantizeLevels(decoded_data, width, height);
     }
   }
 
- Error:
   if (method != ALPHA_NO_COMPRESSION) {
     free(decoded_data);
   }

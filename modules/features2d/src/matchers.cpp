@@ -41,7 +41,6 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/core/internal.hpp"
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 2
 #include <Eigen/Array>
 #endif
@@ -113,7 +112,7 @@ void DescriptorMatcher::DescriptorCollection::set( const std::vector<Mat>& descr
         dim = descriptors[0].cols;
         type = descriptors[0].type();
     }
-    assert( dim > 0 );
+    CV_Assert( dim > 0 );
 
     int count = startIdxs[imageCount-1] + descriptors[imageCount-1].rows;
 
@@ -456,7 +455,7 @@ void BFMatcher::radiusMatchImpl( const Mat& queryDescriptors, std::vector<std::v
 /*
  * Factory function for DescriptorMatcher creating
  */
-Ptr<DescriptorMatcher> DescriptorMatcher::create( const std::string& descriptorMatcherType )
+Ptr<DescriptorMatcher> DescriptorMatcher::create( const String& descriptorMatcherType )
 {
     DescriptorMatcher* dm = 0;
     if( !descriptorMatcherType.compare( "FlannBased" ) )
@@ -485,7 +484,7 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const std::string& descriptorM
         dm = new BFMatcher(NORM_HAMMING2);
     }
     else
-        CV_Error( CV_StsBadArg, "Unknown matcher name" );
+        CV_Error( Error::StsBadArg, "Unknown matcher name" );
 
     return dm;
 }
@@ -540,7 +539,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
      for(int i = 0; i < (int)ip.size(); ++i)
      {
         CV_Assert(ip[i].type() == FileNode::MAP);
-        std::string _name =  (std::string)ip[i]["name"];
+        String _name =  (String)ip[i]["name"];
         int type =  (int)ip[i]["type"];
 
         switch(type)
@@ -559,7 +558,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
             indexParams->setDouble(_name, (double) ip[i]["value"]);
             break;
         case CV_USRTYPE1:
-            indexParams->setString(_name, (std::string) ip[i]["value"]);
+            indexParams->setString(_name, (String) ip[i]["value"]);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,2):
             indexParams->setBool(_name, (int) ip[i]["value"] != 0);
@@ -579,7 +578,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
      for(int i = 0; i < (int)sp.size(); ++i)
      {
         CV_Assert(sp[i].type() == FileNode::MAP);
-        std::string _name =  (std::string)sp[i]["name"];
+        String _name =  (String)sp[i]["name"];
         int type =  (int)sp[i]["type"];
 
         switch(type)
@@ -598,7 +597,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
             searchParams->setDouble(_name, (double) ip[i]["value"]);
             break;
         case CV_USRTYPE1:
-            searchParams->setString(_name, (std::string) ip[i]["value"]);
+            searchParams->setString(_name, (String) ip[i]["value"]);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,2):
             searchParams->setBool(_name, (int) ip[i]["value"] != 0);
@@ -618,9 +617,9 @@ void FlannBasedMatcher::write( FileStorage& fs) const
 
      if (indexParams)
      {
-         std::vector<std::string> names;
+         std::vector<String> names;
          std::vector<int> types;
-         std::vector<std::string> strValues;
+         std::vector<String> strValues;
          std::vector<double> numValues;
 
          indexParams->getAll(names, types, strValues, numValues);
@@ -669,9 +668,9 @@ void FlannBasedMatcher::write( FileStorage& fs) const
 
      if (searchParams)
      {
-         std::vector<std::string> names;
+         std::vector<String> names;
          std::vector<int> types;
-         std::vector<std::string> strValues;
+         std::vector<String> strValues;
          std::vector<double> numValues;
 
          searchParams->getAll(names, types, strValues, numValues);
@@ -728,7 +727,7 @@ Ptr<DescriptorMatcher> FlannBasedMatcher::clone( bool emptyTrainData ) const
     FlannBasedMatcher* matcher = new FlannBasedMatcher(indexParams, searchParams);
     if( !emptyTrainData )
     {
-        CV_Error( CV_StsNotImplemented, "deep clone functionality is not implemented, because "
+        CV_Error( Error::StsNotImplemented, "deep clone functionality is not implemented, because "
                   "Flann::Index has not copy constructor or clone method ");
         //matcher->flannIndex;
         matcher->addedDescCount = addedDescCount;
@@ -1060,8 +1059,8 @@ bool GenericDescriptorMatcher::empty() const
 /*
  * Factory function for GenericDescriptorMatch creating
  */
-Ptr<GenericDescriptorMatcher> GenericDescriptorMatcher::create( const std::string& genericDescritptorMatcherType,
-                                                                const std::string &paramsFilename )
+Ptr<GenericDescriptorMatcher> GenericDescriptorMatcher::create( const String& genericDescritptorMatcherType,
+                                                                const String &paramsFilename )
 {
     Ptr<GenericDescriptorMatcher> descriptorMatcher =
         Algorithm::create<GenericDescriptorMatcher>("DescriptorMatcher." + genericDescritptorMatcherType);

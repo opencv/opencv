@@ -55,7 +55,7 @@ Ptr<Blender> Blender::createDefault(int type, bool try_gpu)
         return new FeatherBlender();
     if (type == MULTI_BAND)
         return new MultiBandBlender(try_gpu);
-    CV_Error(CV_StsBadArg, "unsupported blending method");
+    CV_Error(Error::StsBadArg, "unsupported blending method");
     return NULL;
 }
 
@@ -425,7 +425,7 @@ void normalizeUsingWeightMap(const Mat& weight, Mat& src)
 void createWeightMap(const Mat &mask, float sharpness, Mat &weight)
 {
     CV_Assert(mask.type() == CV_8U);
-    distanceTransform(mask, weight, CV_DIST_L1, 3);
+    distanceTransform(mask, weight, DIST_L1, 3);
     threshold(weight * sharpness, weight, 1.f, 1.f, THRESH_TRUNC);
 }
 

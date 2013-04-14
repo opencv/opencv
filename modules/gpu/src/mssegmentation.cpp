@@ -39,12 +39,11 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
 #include "precomp.hpp"
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::meanShiftSegmentation(const GpuMat&, Mat&, int, int, int, TermCriteria) { throw_nogpu(); }
+void cv::gpu::meanShiftSegmentation(const GpuMat&, Mat&, int, int, int, TermCriteria) { throw_no_cuda(); }
 
 #else
 

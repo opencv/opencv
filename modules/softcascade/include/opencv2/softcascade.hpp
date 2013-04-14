@@ -45,6 +45,7 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/gpumat.hpp"
+#include <ostream>
 
 namespace cv { namespace softcascade {
 
@@ -109,7 +110,7 @@ public:
 
     float operator() (const cv::Mat& integrals, const cv::Size& model) const;
 
-    friend void write(cv::FileStorage& fs, const std::string&, const ChannelFeature& f);
+    friend void write(cv::FileStorage& fs, const String&, const ChannelFeature& f);
     friend std::ostream& operator<<(std::ostream& out, const ChannelFeature& f);
 
 private:
@@ -117,7 +118,7 @@ private:
     int channel;
 };
 
-void write(cv::FileStorage& fs, const std::string&, const ChannelFeature& f);
+void write(cv::FileStorage& fs, const String&, const ChannelFeature& f);
 std::ostream& operator<<(std::ostream& out, const ChannelFeature& m);
 
 // ========================================================================== //
@@ -135,7 +136,7 @@ public:
     CV_WRAP virtual int totalChannels() const = 0;
     virtual cv::AlgorithmInfo* info() const = 0;
 
-    CV_WRAP static cv::Ptr<ChannelFeatureBuilder> create(const std::string& featureType);
+    CV_WRAP static cv::Ptr<ChannelFeatureBuilder> create(const String& featureType);
 };
 
 // ========================================================================== //
@@ -211,7 +212,7 @@ public:
     virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth) = 0;
     virtual void setRejectThresholds(OutputArray thresholds) = 0;
     virtual void write( cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const = 0;
-    virtual void write( CvFileStorage* fs, std::string name) const = 0;
+    virtual void write( CvFileStorage* fs, String name) const = 0;
 };
 
 CV_EXPORTS bool initModule_softcascade(void);

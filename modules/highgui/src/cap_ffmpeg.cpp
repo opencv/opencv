@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 
-#ifdef HAVE_FFMPEG
+#if defined HAVE_FFMPEG && !defined WIN32
 #include "cap_ffmpeg_impl.hpp"
 #else
 #include "cap_ffmpeg_api.hpp"
@@ -209,7 +209,7 @@ CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char * filename)
     if( result->open( filename ))
         return result;
     delete result;
-#if defined WIN32 || defined _WIN32
+#ifdef HAVE_VFW
     return cvCreateFileCapture_VFW(filename);
 #else
     return 0;
@@ -263,9 +263,9 @@ CvVideoWriter* cvCreateVideoWriter_FFMPEG_proxy( const char* filename, int fourc
     if( result->open( filename, fourcc, fps, frameSize, isColor != 0 ))
         return result;
     delete result;
-#if defined WIN32 || defined _WIN32
-    return cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, isColor);
-#else
+#ifdef HAVE_VFW
+     return cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, isColor);
+ #else
     return 0;
 #endif
 }

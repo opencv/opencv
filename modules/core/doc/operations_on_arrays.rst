@@ -103,7 +103,7 @@ Calculates the per-element sum of two arrays or an array and a scalar.
 
     :param dst: output array that has the same size and number of channels as the input array(s); the depth is defined by ``dtype`` or ``src1``/``src2``.
 
-    :param mask: optional operation mask – 8-bit single channel array, that specifies elements of the output array to be changed.
+    :param mask: optional operation mask - 8-bit single channel array, that specifies elements of the output array to be changed.
 
     :param dtype: optional depth of the output array (see the discussion below).
 
@@ -868,7 +868,7 @@ Performs a forward or inverse Discrete Fourier transform of a 1D or 2D floating-
             * **DFT_SCALE** scales the result: divide it by the number of array elements. Normally, it is combined with  ``DFT_INVERSE``.
             * **DFT_ROWS** performs a forward or inverse transform of every individual row of the input matrix; this flag enables you to transform multiple vectors simultaneously and can be used to decrease the overhead (which is sometimes several times larger than the processing itself) to perform 3D and higher-dimensional transformations and so forth.
 
-            * **DFT_COMPLEX_OUTPUT** performs a forward transformation of 1D or 2D real array; the result, though being a complex array, has complex-conjugate symmetry (*CCS*, see the function description below for details), and such an array can be packed into a real array of the same size as input, which is the fastest option and which is what the function does by default; however, you may wish to get a full complex array (for simpler spectrum analysis, and so on) – pass the flag to enable the function to produce a full-size complex output array.
+            * **DFT_COMPLEX_OUTPUT** performs a forward transformation of 1D or 2D real array; the result, though being a complex array, has complex-conjugate symmetry (*CCS*, see the function description below for details), and such an array can be packed into a real array of the same size as input, which is the fastest option and which is what the function does by default; however, you may wish to get a full complex array (for simpler spectrum analysis, and so on) - pass the flag to enable the function to produce a full-size complex output array.
 
             * **DFT_REAL_OUTPUT** performs an inverse transformation of a 1D or 2D complex array; the result is normally a complex array of the same size, however, if the input array has conjugate-complex symmetry (for example, it is a result of forward transformation with  ``DFT_COMPLEX_OUTPUT``  flag), the output is a real array; while the function itself does not check whether the input is symmetrical or not, you can pass the flag and then the function will assume the symmetry and produce the real output array (note that when the input is packed into a real array and inverse transformation is executed, the function treats the input as a packed complex-conjugate symmetrical array, and the output will also be a real array).
 
@@ -1081,11 +1081,9 @@ eigen
 -----
 Calculates eigenvalues and eigenvectors of a symmetric matrix.
 
-.. ocv:function:: bool eigen(InputArray src, OutputArray eigenvalues, int lowindex=-1, int highindex=-1)
+.. ocv:function:: bool eigen( InputArray src, OutputArray eigenvalues, OutputArray eigenvectors=noArray() )
 
-.. ocv:function:: bool eigen(InputArray src, OutputArray eigenvalues, OutputArray eigenvectors, int lowindex=-1,int highindex=-1)
-
-.. ocv:pyfunction:: cv2.eigen(src, computeEigenvectors[, eigenvalues[, eigenvectors]]) -> retval, eigenvalues, eigenvectors
+.. ocv:pyfunction:: cv2.eigen(src[, eigenvalues[, eigenvectors]]) -> retval, eigenvalues, eigenvectors
 
 .. ocv:cfunction:: void cvEigenVV( CvArr* mat, CvArr* evects, CvArr* evals, double eps=0, int lowindex=-1, int highindex=-1 )
 
@@ -1281,40 +1279,6 @@ The function can be replaced with a matrix expression. For example, the above ca
 
 
 .. seealso::  :ocv:func:`mulTransposed` , :ocv:func:`transform` , :ref:`MatrixExpressions`
-
-
-
-getConvertElem
---------------
-Returns a conversion function for a single pixel.
-
-.. ocv:function:: ConvertData getConvertElem(int fromType, int toType)
-
-.. ocv:function:: ConvertScaleData getConvertScaleElem(int fromType, int toType)
-
-    :param fromType: input pixel type.
-
-    :param toType: output pixel type.
-
-    :param from: callback parameter: pointer to the input pixel.
-
-    :param to: callback parameter: pointer to the output pixel
-
-    :param cn: callback parameter: the number of channels; it can be arbitrary, 1, 100, 100000, etc.
-
-    :param alpha: ``ConvertScaleData`` callback optional parameter: the scale factor.
-
-    :param beta: ``ConvertScaleData`` callback optional parameter: the delta or offset.
-
-The functions ``getConvertElem`` and ``getConvertScaleElem`` return pointers to the functions for converting individual pixels from one type to another. While the main function purpose is to convert single pixels (actually, for converting sparse matrices from one type to another), you can use them to convert the whole row of a dense matrix or the whole matrix at once, by setting ``cn = matrix.cols*matrix.rows*matrix.channels()`` if the matrix data is continuous.
-
-``ConvertData`` and ``ConvertScaleData`` are defined as: ::
-
-    typedef void (*ConvertData)(const void* from, void* to, int cn)
-    typedef void (*ConvertScaleData)(const void* from, void* to,
-                                     int cn, double alpha, double beta)
-
-.. seealso:: :ocv:func:`Mat::convertTo` , :ocv:func:`SparseMat::convertTo`
 
 
 
@@ -1523,9 +1487,9 @@ LUT
 ---
 Performs a look-up table transform of an array.
 
-.. ocv:function:: void LUT( InputArray src, InputArray lut, OutputArray dst, int interpolation=0 )
+.. ocv:function:: void LUT( InputArray src, InputArray lut, OutputArray dst )
 
-.. ocv:pyfunction:: cv2.LUT(src, lut[, dst[, interpolation]]) -> dst
+.. ocv:pyfunction:: cv2.LUT(src, lut[, dst]) -> dst
 
 .. ocv:cfunction:: void cvLUT(const CvArr* src, CvArr* dst, const CvArr* lut)
 .. ocv:pyoldfunction:: cv.LUT(src, dst, lut)-> None
@@ -1627,8 +1591,6 @@ Calculates per-element maximum of two arrays or an array and a scalar.
 .. ocv:function:: void max(InputArray src1, InputArray src2, OutputArray dst)
 
 .. ocv:function:: void max(const Mat& src1, const Mat& src2, Mat& dst)
-
-.. ocv:function:: void max( const Mat& src1, double src2, Mat& dst )
 
 .. ocv:pyfunction:: cv2.max(src1, src2[, dst]) -> dst
 
@@ -1791,8 +1753,6 @@ Calculates per-element minimum of two arrays or an array and a scalar.
 
 .. ocv:function:: void min(const Mat& src1, const Mat& src2, Mat& dst)
 
-.. ocv:function:: void min( const Mat& src1, double src2, Mat& dst )
-
 .. ocv:pyfunction:: cv2.min(src1, src2[, dst]) -> dst
 
 .. ocv:cfunction:: void cvMin(const CvArr* src1, const CvArr* src2, CvArr* dst)
@@ -1838,7 +1798,7 @@ minMaxIdx
 ---------
 Finds the global minimum and maximum in an array
 
-.. ocv:function:: void minMaxIdx(InputArray src, double* minVal, double* maxVal, int* minIdx=0, int* maxIdx=0, InputArray mask=noArray())
+.. ocv:function:: void minMaxIdx(InputArray src, double* minVal, double* maxVal = 0, int* minIdx=0, int* maxIdx=0, InputArray mask=noArray())
 
     :param src: input single-channel array.
 
@@ -1920,9 +1880,11 @@ Copies specified channels from input arrays to the specified channels of output 
 
 .. ocv:function:: void mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const int* fromTo, size_t npairs )
 
-.. ocv:function:: void mixChannels( const vector<Mat>& src, vector<Mat>& dst, const int* fromTo, size_t npairs )
+.. ocv:function:: void mixChannels( InputArrayOfArrays src, InputOutputArrayOfArrays dst, const int* fromTo, size_t npairs )
 
-.. ocv:pyfunction:: cv2.mixChannels(src, dst, fromTo) -> None
+.. ocv:function:: void mixChannels( InputArrayOfArrays src, InputOutputArrayOfArrays dst, const std::vector<int>& fromTo )
+
+.. ocv:pyfunction:: cv2.mixChannels(src, dst, fromTo) -> dst
 
 .. ocv:cfunction:: void cvMixChannels( const CvArr** src, int src_count, CvArr** dst, int dst_count, const int* from_to, int pair_count )
 
@@ -3498,3 +3460,101 @@ The function :ocv:func:`transpose` transposes the matrix ``src`` :
     \texttt{dst} (i,j) =  \texttt{src} (j,i)
 
 .. note:: No complex conjugation is done in case of a complex matrix. It it should be done separately if needed.
+
+
+borderInterpolate
+-----------------
+Computes the source location of an extrapolated pixel.
+
+.. ocv:function:: int borderInterpolate( int p, int len, int borderType )
+
+.. ocv:pyfunction:: cv2.borderInterpolate(p, len, borderType) -> retval
+
+    :param p: 0-based coordinate of the extrapolated pixel along one of the axes,
+              likely <0 or >= ``len`` .
+
+    :param len: Length of the array along the corresponding axis.
+
+    :param borderType: Border type, one of the  ``BORDER_*`` , except for  ``BORDER_TRANSPARENT``
+                       and  ``BORDER_ISOLATED`` . When  ``borderType==BORDER_CONSTANT`` , the
+                       function always returns -1, regardless of  ``p``  and  ``len`` .
+
+The function computes and returns the coordinate of a donor pixel corresponding to the specified
+extrapolated pixel when using the specified extrapolation border mode. For example, if you use
+``BORDER_WRAP`` mode in the horizontal direction, ``BORDER_REFLECT_101`` in the vertical direction
+and want to compute value of the "virtual" pixel ``Point(-5, 100)`` in a floating-point image
+``img`` , it looks like: ::
+
+    float val = img.at<float>(borderInterpolate(100, img.rows, BORDER_REFLECT_101),
+                              borderInterpolate(-5, img.cols, BORDER_WRAP));
+
+
+Normally, the function is not called directly. It is used inside :ocv:class:`FilterEngine`
+and :ocv:func:`copyMakeBorder` to compute tables for quick extrapolation.
+
+.. seealso::
+
+    :ocv:class:`FilterEngine`,
+    :ocv:func:`copyMakeBorder`
+
+
+copyMakeBorder
+--------------
+Forms a border around an image.
+
+.. ocv:function:: void copyMakeBorder( InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType, const Scalar& value=Scalar() )
+
+.. ocv:pyfunction:: cv2.copyMakeBorder(src, top, bottom, left, right, borderType[, dst[, value]]) -> dst
+
+    :param src: Source image.
+
+    :param dst: Destination image of the same type as  ``src``  and the
+                size ``Size(src.cols+left+right, src.rows+top+bottom)`` .
+
+    :param top:
+
+    :param bottom:
+
+    :param left:
+
+    :param right: Parameter specifying how many pixels in each direction from the source image
+                  rectangle to extrapolate. For example,  ``top=1, bottom=1, left=1, right=1``
+                  mean that 1 pixel-wide border needs to be built.
+
+    :param borderType: Border type. See  :ocv:func:`borderInterpolate` for details.
+
+    :param value: Border value if  ``borderType==BORDER_CONSTANT`` .
+
+The function copies the source image into the middle of the destination image. The areas to the
+left, to the right, above and below the copied source image will be filled with extrapolated pixels.
+This is not what :ocv:class:`FilterEngine` or filtering functions based on it do (they extrapolate
+pixels on-fly), but what other more complex functions, including your own, may do to simplify image
+boundary handling.
+
+The function supports the mode when ``src`` is already in the middle of ``dst`` . In this case, the
+function does not copy ``src`` itself but simply constructs the border, for example: ::
+
+    // let border be the same in all directions
+    int border=2;
+    // constructs a larger image to fit both the image and the border
+    Mat gray_buf(rgb.rows + border*2, rgb.cols + border*2, rgb.depth());
+    // select the middle part of it w/o copying data
+    Mat gray(gray_canvas, Rect(border, border, rgb.cols, rgb.rows));
+    // convert image from RGB to grayscale
+    cvtColor(rgb, gray, CV_RGB2GRAY);
+    // form a border in-place
+    copyMakeBorder(gray, gray_buf, border, border,
+                   border, border, BORDER_REPLICATE);
+    // now do some custom filtering ...
+    ...
+
+
+.. note::
+
+    When the source image is a part (ROI) of a bigger image, the function will try to use the pixels
+    outside of the ROI to form a border. To disable this feature and always do extrapolation, as if
+    ``src`` was not a ROI, use ``borderType | BORDER_ISOLATED``.
+
+.. seealso::
+
+    :ocv:func:`borderInterpolate`

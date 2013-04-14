@@ -4,13 +4,20 @@ if(APPLE)
   set(OPENCL_INCLUDE_DIR "" CACHE STRING "OpenCL include directory")
   mark_as_advanced(OPENCL_INCLUDE_DIR OPENCL_LIBRARY)
 else(APPLE)
-  find_package(OpenCL QUIET)
+  #find_package(OpenCL QUIET)
 
   if (NOT OPENCL_FOUND)
     find_path(OPENCL_ROOT_DIR
               NAMES OpenCL/cl.h CL/cl.h include/CL/cl.h include/nvidia-current/CL/cl.h
               PATHS ENV OCLROOT ENV AMDAPPSDKROOT ENV CUDA_PATH ENV INTELOCLSDKROOT
               DOC "OpenCL root directory"
+              NO_DEFAULT_PATH)
+
+    find_path(OPENCL_INCLUDE_DIR
+              NAMES OpenCL/cl.h CL/cl.h
+              HINTS ${OPENCL_ROOT_DIR}
+              PATH_SUFFIXES include include/nvidia-current
+              DOC "OpenCL include directory"
               NO_DEFAULT_PATH)
 
     find_path(OPENCL_INCLUDE_DIR
@@ -24,6 +31,13 @@ else(APPLE)
     elseif (X86)
       set(OPENCL_POSSIBLE_LIB_SUFFIXES lib/Win32 lib/x86)
     endif()
+
+    find_library(OPENCL_LIBRARY
+              NAMES OpenCL
+              HINTS ${OPENCL_ROOT_DIR}
+              PATH_SUFFIXES ${OPENCL_POSSIBLE_LIB_SUFFIXES}
+              DOC "OpenCL library"
+              NO_DEFAULT_PATH)
 
     find_library(OPENCL_LIBRARY
               NAMES OpenCL
@@ -43,7 +57,7 @@ if(OPENCL_FOUND)
   set(OPENCL_LIBRARIES    ${OPENCL_LIBRARY})
 
   if (X86_64)
-    set(CLAMD_POSSIBLE_LIB_SUFFIXES lib32/import)
+    set(CLAMD_POSSIBLE_LIB_SUFFIXES lib64/import)
   elseif (X86)
     set(CLAMD_POSSIBLE_LIB_SUFFIXES lib32/import)
   endif()

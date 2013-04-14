@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include <climits>
+#include <limits>
 
 namespace cv
 {
@@ -999,7 +1000,6 @@ static int normHamming(const uchar* a, int n)
 {
     int i = 0, result = 0;
 #if CV_NEON
-    if (CPU_HAS_NEON_FEATURE)
     {
         uint32x4_t bits = vmovq_n_u32(0);
         for (; i <= n - 16; i += 16) {
@@ -1013,7 +1013,6 @@ static int normHamming(const uchar* a, int n)
         result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
         result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
     }
-    else
 #endif
         for( ; i <= n - 4; i += 4 )
             result += popCountTable[a[i]] + popCountTable[a[i+1]] +
@@ -1027,7 +1026,6 @@ int normHamming(const uchar* a, const uchar* b, int n)
 {
     int i = 0, result = 0;
 #if CV_NEON
-    if (CPU_HAS_NEON_FEATURE)
     {
         uint32x4_t bits = vmovq_n_u32(0);
         for (; i <= n - 16; i += 16) {
@@ -1043,7 +1041,6 @@ int normHamming(const uchar* a, const uchar* b, int n)
         result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
         result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
     }
-    else
 #endif
         for( ; i <= n - 4; i += 4 )
             result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
@@ -1111,7 +1108,7 @@ normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result = std::max(result, ST(fast_abs(src[k])));
+                    result = std::max(result, ST(std::abs(src[k])));
             }
     }
     *_result = result;
@@ -1132,7 +1129,7 @@ normL1_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result += fast_abs(src[k]);
+                    result += std::abs(src[k]);
             }
     }
     *_result = result;
@@ -1923,6 +1920,14 @@ void cv::findNonZero( InputArray _src, OutputArray _idx )
             if( bin_ptr[j] )
                 *idx_ptr++ = Point(j, i);
     }
+}
+
+double cv::PSNR(InputArray _src1, InputArray _src2)
+{
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
+    CV_Assert( src1.depth() == CV_8U );
+    double diff = std::sqrt(norm(src1, src2, NORM_L2SQR)/(src1.total()*src1.channels()));
+    return 20*log10(255./(diff+DBL_EPSILON));
 }
 
 

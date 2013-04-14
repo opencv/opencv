@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/calib3d/calib3d_c.h"
 
 /************************************************************************************\
        Some backward compatibility stuff, to be moved to legacy or compat module

@@ -43,41 +43,28 @@
 #include "precomp.hpp"
 
 #if !defined (HAVE_CUDA)
-#define throw_nogpu() CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
-cv::softcascade::SCascade::SCascade(const double, const double, const int, const int) { throw_nogpu(); }
 
-cv::softcascade::SCascade::~SCascade() { throw_nogpu(); }
+cv::softcascade::SCascade::SCascade(const double, const double, const int, const int) { throw_no_cuda(); }
 
-bool cv::softcascade::SCascade::load(const FileNode&) { throw_nogpu(); return false;}
+cv::softcascade::SCascade::~SCascade() { throw_no_cuda(); }
 
-void cv::softcascade::SCascade::detect(InputArray, InputArray, OutputArray, cv::gpu::Stream&) const { throw_nogpu(); }
+bool cv::softcascade::SCascade::load(const FileNode&) { throw_no_cuda(); return false;}
+
+void cv::softcascade::SCascade::detect(InputArray, InputArray, OutputArray, cv::gpu::Stream&) const { throw_no_cuda(); }
 
 void cv::softcascade::SCascade::read(const FileNode& fn) { Algorithm::read(fn); }
 
-cv::softcascade::ChannelsProcessor::ChannelsProcessor() { throw_nogpu(); }
- cv::softcascade::ChannelsProcessor::~ChannelsProcessor() { throw_nogpu(); }
+cv::softcascade::ChannelsProcessor::ChannelsProcessor() { throw_no_cuda(); }
+ cv::softcascade::ChannelsProcessor::~ChannelsProcessor() { throw_no_cuda(); }
 
 cv::Ptr<cv::softcascade::ChannelsProcessor> cv::softcascade::ChannelsProcessor::create(const int, const int, const int)
-{ throw_nogpu(); return cv::Ptr<cv::softcascade::ChannelsProcessor>(0); }
+{ throw_no_cuda(); return cv::Ptr<cv::softcascade::ChannelsProcessor>(0); }
 
 #else
+
 # include "cuda_invoker.hpp"
-# include "opencv2/core/stream_accessor.hpp"
-namespace
-{
-#if defined(__GNUC__)
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
-#endif
 
-    inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
-    {
-        if (cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), file, line, func);
-    }
-}
-
-cv::softcascade::device::Level::Level(int idx, const Octave& oct, const float scale, const int w, const int h)
+cv::softcascade::cudev::Level::Level(int idx, const Octave& oct, const float scale, const int w, const int h)
 :  octave(idx), step(oct.stages), relScale(scale / oct.scale)
 {
     workRect.x = (unsigned char)cvRound(w / (float)oct.shrinkage);
@@ -96,7 +83,7 @@ cv::softcascade::device::Level::Level(int idx, const Octave& oct, const float sc
     }
 }
 
-namespace cv { namespace softcascade { namespace device {
+namespace cv { namespace softcascade { namespace cudev {
 
     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
         const int fw, const int fh, const int bins, cudaStream_t stream);
@@ -136,26 +123,26 @@ struct cv::softcascade::SCascade::Fields
         static const char *const SC_F_RECT              = "rect";
 
         // only Ada Boost supported
-        std::string stageTypeStr = (std::string)root[SC_STAGE_TYPE];
+        String stageTypeStr = (String)root[SC_STAGE_TYPE];
         CV_Assert(stageTypeStr == SC_BOOST);
 
         // only HOG-like integral channel features supported
-        std::string featureTypeStr = (std::string)root[SC_FEATURE_TYPE];
+        String featureTypeStr = (String)root[SC_FEATURE_TYPE];
         CV_Assert(featureTypeStr == SC_ICF);
 
         int origWidth  = (int)root[SC_ORIG_W];
         int origHeight = (int)root[SC_ORIG_H];
 
-        std::string fformat = (std::string)root[SC_FEATURE_FORMAT];
+        String fformat = (String)root[SC_FEATURE_FORMAT];
         bool useBoxes = (fformat == "BOX");
         ushort shrinkage = cv::saturate_cast<ushort>((int)root[SC_SHRINKAGE]);
 
         FileNode fn = root[SC_OCTAVES];
         if (fn.empty()) return 0;
 
-        std::vector<device::Octave>  voctaves;
+        std::vector<cudev::Octave>  voctaves;
         std::vector<float>   vstages;
-        std::vector<device::Node>    vnodes;
+        std::vector<cudev::Node>    vnodes;
         std::vector<float>   vleaves;
 
         FileNodeIterator it = fn.begin(), it_end = fn.end();
@@ -171,7 +158,7 @@ struct cv::softcascade::SCascade::Fields
             size.x = (unsigned short)cvRound(origWidth * scale);
             size.y = (unsigned short)cvRound(origHeight * scale);
 
-            device::Octave octave(octIndex, nweaks, shrinkage, size, scale);
+            cudev::Octave octave(octIndex, nweaks, shrinkage, size, scale);
             CV_Assert(octave.stages > 0);
             voctaves.push_back(octave);
 
@@ -240,7 +227,7 @@ struct cv::softcascade::SCascade::Fields
                     rect.w = saturate_cast<uchar>(r.height);
 
                     unsigned int channel = saturate_cast<unsigned int>(feature_channels[featureIdx]);
-                    vnodes.push_back(device::Node(rect, channel, th));
+                    vnodes.push_back(cudev::Node(rect, channel, th));
                 }
 
                 intfns = octfn[SC_LEAF];
@@ -252,13 +239,13 @@ struct cv::softcascade::SCascade::Fields
             }
         }
 
-        cv::Mat hoctaves(1, (int) (voctaves.size() * sizeof(device::Octave)), CV_8UC1, (uchar*)&(voctaves[0]));
+        cv::Mat hoctaves(1, (int) (voctaves.size() * sizeof(cudev::Octave)), CV_8UC1, (uchar*)&(voctaves[0]));
         CV_Assert(!hoctaves.empty());
 
         cv::Mat hstages(cv::Mat(vstages).reshape(1,1));
         CV_Assert(!hstages.empty());
 
-        cv::Mat hnodes(1, (int) (vnodes.size() * sizeof(device::Node)), CV_8UC1, (uchar*)&(vnodes[0]) );
+        cv::Mat hnodes(1, (int) (vnodes.size() * sizeof(cudev::Node)), CV_8UC1, (uchar*)&(vnodes[0]) );
         CV_Assert(!hnodes.empty());
 
         cv::Mat hleaves(cv::Mat(vleaves).reshape(1,1));
@@ -274,7 +261,7 @@ struct cv::softcascade::SCascade::Fields
 
     bool check(float mins,float  maxs, int scales)
     {
-        bool updated = ((minScale == mins) || (maxScale == maxs) || (totals = scales));
+        bool updated = ((minScale == mins) || (maxScale == maxs) || (totals == scales));
 
         minScale = mins;
         maxScale = maxScale;
@@ -285,7 +272,7 @@ struct cv::softcascade::SCascade::Fields
 
     int createLevels(const int fh, const int fw)
     {
-        std::vector<device::Level> vlevels;
+        std::vector<cudev::Level> vlevels;
         float logFactor = (::log(maxScale) - ::log(minScale)) / (totals -1);
 
         float scale = minScale;
@@ -298,7 +285,7 @@ struct cv::softcascade::SCascade::Fields
             float logScale = ::log(scale);
             int fit = fitOctave(voctaves, logScale);
 
-            device::Level level(fit, voctaves[fit], scale, width, height);
+            cudev::Level level(fit, voctaves[fit], scale, width, height);
 
             if (!width || !height)
                 break;
@@ -312,7 +299,7 @@ struct cv::softcascade::SCascade::Fields
             scale = ::std::min(maxScale, ::expf(::log(scale) + logFactor));
         }
 
-        cv::Mat hlevels = cv::Mat(1, (int) (vlevels.size() * sizeof(device::Level)), CV_8UC1, (uchar*)&(vlevels[0]) );
+        cv::Mat hlevels = cv::Mat(1, (int) (vlevels.size() * sizeof(cudev::Level)), CV_8UC1, (uchar*)&(vlevels[0]) );
         CV_Assert(!hlevels.empty());
         levels.upload(hlevels);
         downscales = dcs;
@@ -355,8 +342,8 @@ struct cv::softcascade::SCascade::Fields
 
         cudaSafeCall( cudaGetLastError());
 
-        device::CascadeInvoker<device::GK107PolicyX4> invoker
-        = device::CascadeInvoker<device::GK107PolicyX4>(levels, stages, nodes, leaves);
+        cudev::CascadeInvoker<cudev::GK107PolicyX4> invoker
+        = cudev::CascadeInvoker<cudev::GK107PolicyX4>(levels, stages, nodes, leaves);
 
         cudaStream_t stream = cv::gpu::StreamAccessor::getStream(s);
         invoker(mask, hogluv, objects, downscales, stream);
@@ -379,19 +366,19 @@ struct cv::softcascade::SCascade::Fields
         }
 
         cudaStream_t stream = cv::gpu::StreamAccessor::getStream(s);
-        device::suppress(objects, overlaps, ndetections, suppressed, stream);
+        cudev::suppress(objects, overlaps, ndetections, suppressed, stream);
     }
 
 private:
 
-    typedef std::vector<device::Octave>::const_iterator  octIt_t;
-    static int fitOctave(const std::vector<device::Octave>& octs, const float& logFactor)
+    typedef std::vector<cudev::Octave>::const_iterator  octIt_t;
+    static int fitOctave(const std::vector<cudev::Octave>& octs, const float& logFactor)
     {
         float minAbsLog = FLT_MAX;
         int res =  0;
         for (int oct = 0; oct < (int)octs.size(); ++oct)
         {
-            const device::Octave& octave =octs[oct];
+            const cudev::Octave& octave =octs[oct];
             float logOctave = ::log(octave.scale);
             float logAbsScale = ::fabs(logFactor - logOctave);
 
@@ -452,7 +439,7 @@ public:
 //     cv::gpu::GpuMat collected;
 
 
-    std::vector<device::Octave> voctaves;
+    std::vector<cudev::Octave> voctaves;
 
 //     DeviceInfo info;
 
@@ -498,7 +485,7 @@ void integral(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& sum, cv::gpu::GpuMat&
     {
         ensureSizeIsEnough(((src.rows + 7) / 8) * 8, ((src.cols + 63) / 64) * 64, CV_32SC1, buffer);
 
-        cv::softcascade::device::shfl_integral(src, buffer, stream);
+        cv::softcascade::cudev::shfl_integral(src, buffer, stream);
 
         sum.create(src.rows + 1, src.cols + 1, CV_32SC1);
         if (s)
@@ -539,7 +526,7 @@ void cv::softcascade::SCascade::detect(InputArray _image, InputArray _rois, Outp
 
     flds.mask.create( rois.cols / shr, rois.rows / shr, rois.type());
 
-    device::shrink(rois, flds.mask);
+    cudev::shrink(rois, flds.mask);
     //cv::gpu::transpose(flds.genRoiTmp, flds.mask, s);
 
     if (type == CV_8UC3)
@@ -607,12 +594,12 @@ struct SeparablePreprocessor : public cv::softcascade::ChannelsProcessor
         setZero(channels, s);
 
         gray.create(bgr.size(), CV_8UC1);
-        cv::softcascade::device::transform(bgr, gray); //cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
-        cv::softcascade::device::gray2hog(gray, channels(cv::Rect(0, 0, bgr.cols, bgr.rows * (bins + 1))), bins);
+        cv::softcascade::cudev::transform(bgr, gray); //cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
+        cv::softcascade::cudev::gray2hog(gray, channels(cv::Rect(0, 0, bgr.cols, bgr.rows * (bins + 1))), bins);
 
         cv::gpu::GpuMat luv(channels, cv::Rect(0, bgr.rows * (bins + 1), bgr.cols, bgr.rows * 3));
-        cv::softcascade::device::bgr2Luv(bgr, luv);
-        cv::softcascade::device::shrink(channels, shrunk);
+        cv::softcascade::cudev::bgr2Luv(bgr, luv);
+        cv::softcascade::cudev::shrink(channels, shrunk);
     }
 
 private:

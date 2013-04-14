@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/calib3d/calib3d_c.h"
 
 CvStereoBMState* cvCreateStereoBMState( int /*preset*/, int numberOfDisparities )
 {
@@ -83,10 +84,6 @@ void cvReleaseStereoBMState( CvStereoBMState** state )
     cvFree( state );
 }
 
-template<> void cv::Ptr<CvStereoBMState>::delete_obj()
-{ cvReleaseStereoBMState(&obj); }
-
-
 void cvFindStereoCorrespondenceBM( const CvArr* leftarr, const CvArr* rightarr,
                                    CvArr* disparr, CvStereoBMState* state )
 {
@@ -124,93 +121,3 @@ void cvValidateDisparity( CvArr* _disp, const CvArr* _cost, int minDisparity,
     cv::Mat disp = cv::cvarrToMat(_disp), cost = cv::cvarrToMat(_cost);
     cv::validateDisparity( disp, cost, minDisparity, numberOfDisparities, disp12MaxDiff );
 }
-
-namespace cv
-{
-
-StereoBM::StereoBM()
-{ init(BASIC_PRESET); }
-
-StereoBM::StereoBM(int _preset, int _ndisparities, int _SADWindowSize)
-{ init(_preset, _ndisparities, _SADWindowSize); }
-
-void StereoBM::init(int _preset, int _ndisparities, int _SADWindowSize)
-{
-    state = cvCreateStereoBMState(_preset, _ndisparities);
-    state->SADWindowSize = _SADWindowSize;
-}
-
-void StereoBM::operator()( InputArray _left, InputArray _right,
-                          OutputArray _disparity, int disptype )
-{
-    Mat left = _left.getMat(), right = _right.getMat();
-    CV_Assert( disptype == CV_16S || disptype == CV_32F );
-    _disparity.create(left.size(), disptype);
-    Mat disp = _disparity.getMat();
-
-    CvMat left_c = left, right_c = right, disp_c = disp;
-    cvFindStereoCorrespondenceBM(&left_c, &right_c, &disp_c, state);
-}
-
-
-StereoSGBM::StereoSGBM()
-{
-    minDisparity = numberOfDisparities = 0;
-    SADWindowSize = 0;
-    P1 = P2 = 0;
-    disp12MaxDiff = 0;
-    preFilterCap = 0;
-    uniquenessRatio = 0;
-    speckleWindowSize = 0;
-    speckleRange = 0;
-    fullDP = false;
-
-    sm = createStereoSGBM(0, 0, 0);
-}
-
-StereoSGBM::StereoSGBM( int _minDisparity, int _numDisparities, int _SADWindowSize,
-                       int _P1, int _P2, int _disp12MaxDiff, int _preFilterCap,
-                       int _uniquenessRatio, int _speckleWindowSize, int _speckleRange,
-                       bool _fullDP )
-{
-    minDisparity = _minDisparity;
-    numberOfDisparities = _numDisparities;
-    SADWindowSize = _SADWindowSize;
-    P1 = _P1;
-    P2 = _P2;
-    disp12MaxDiff = _disp12MaxDiff;
-    preFilterCap = _preFilterCap;
-    uniquenessRatio = _uniquenessRatio;
-    speckleWindowSize = _speckleWindowSize;
-    speckleRange = _speckleRange;
-    fullDP = _fullDP;
-
-    sm = createStereoSGBM(0, 0, 0);
-}
-
-StereoSGBM::~StereoSGBM()
-{
-}
-
-void StereoSGBM::operator ()( InputArray _left, InputArray _right,
-                             OutputArray _disp )
-{
-    sm->set("minDisparity", minDisparity);
-    sm->set("numDisparities", numberOfDisparities);
-    sm->set("SADWindowSize", SADWindowSize);
-    sm->set("P1", P1);
-    sm->set("P2", P2);
-    sm->set("disp12MaxDiff", disp12MaxDiff);
-    sm->set("preFilterCap", preFilterCap);
-    sm->set("uniquenessRatio", uniquenessRatio);
-    sm->set("speckleWindowSize", speckleWindowSize);
-    sm->set("speckleRange", speckleRange);
-    sm->set("fullDP", fullDP);
-
-    sm->compute(_left, _right, _disp);
-}
-
-}
-
-
-

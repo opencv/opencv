@@ -17,30 +17,17 @@
 extern "C" {
 #endif
 
+static WEBP_INLINE uint8_t clip_8b(int v) {
+  return (!(v & ~0xff)) ? v : (v < 0) ? 0 : 255;
+}
+
+static WEBP_INLINE int clip_max(int v, int max) {
+  return (v > max) ? max : v;
+}
+
 //------------------------------------------------------------------------------
 // Compute susceptibility based on DCT-coeff histograms:
 // the higher, the "easier" the macroblock is to compress.
-
-static int ClipAlpha(int alpha) {
-  return alpha < 0 ? 0 : alpha > 255 ? 255 : alpha;
-}
-
-int VP8GetAlpha(const int histo[MAX_COEFF_THRESH + 1]) {
-  int num = 0, den = 0, val = 0;
-  int k;
-  int alpha;
-  // note: changing this loop to avoid the numerous "k + 1" slows things down.
-  for (k = 0; k < MAX_COEFF_THRESH; ++k) {
-    if (histo[k + 1]) {
-      val += histo[k + 1];
-      num += val * (k + 1);
-      den += (k + 1) * (k + 1);
-    }
-  }
-  // we scale the value to a usable [0..255] range
-  alpha = den ? 10 * num / den - 5 : 0;
-  return ClipAlpha(alpha);
-}
 
 const int VP8DspScan[16 + 4 + 4] = {
   // Luma
@@ -53,27 +40,23 @@ const int VP8DspScan[16 + 4 + 4] = {
   8 + 0 * BPS,  12 + 0 * BPS, 8 + 4 * BPS, 12 + 4 * BPS     // V
 };
 
-static int CollectHistogram(const uint8_t* ref, const uint8_t* pred,
-                            int start_block, int end_block) {
-  int histo[MAX_COEFF_THRESH + 1] = { 0 };
-  int16_t out[16];
-  int j, k;
+static void CollectHistogram(const uint8_t* ref, const uint8_t* pred,
+                             int start_block, int end_block,
+                             VP8Histogram* const histo) {
+  int j;
   for (j = start_block; j < end_block; ++j) {
+    int k;
+    int16_t out[16];
+
     VP8FTransform(ref + VP8DspScan[j], pred + VP8DspScan[j], out);
 
-    // Convert coefficients to bin (within out[]).
+    // Convert coefficients to bin.
     for (k = 0; k < 16; ++k) {
-      const int v = abs(out[k]) >> 2;
-      out[k] = (v > MAX_COEFF_THRESH) ? MAX_COEFF_THRESH : v;
-    }
-
-    // Use bin to update histogram.
-    for (k = 0; k < 16; ++k) {
-      histo[out[k]]++;
+      const int v = abs(out[k]) >> 3;  // TODO(skal): add rounding?
+      const int clipped_value = clip_max(v, MAX_COEFF_THRESH);
+      histo->distribution[clipped_value]++;
     }
   }
-
-  return VP8GetAlpha(histo);
 }
 
 //------------------------------------------------------------------------------
@@ -89,15 +72,12 @@ static void InitTables(void) {
   if (!tables_ok) {
     int i;
     for (i = -255; i <= 255 + 255; ++i) {
-      clip1[255 + i] = (i < 0) ? 0 : (i > 255) ? 255 : i;
+      clip1[255 + i] = clip_8b(i);
     }
     tables_ok = 1;
   }
 }
 
-static WEBP_INLINE uint8_t clip_8b(int v) {
-  return (!(v & ~0xff)) ? v : v < 0 ? 0 : 255;
-}
 
 //------------------------------------------------------------------------------
 // Transforms (Paragraph 14.4)
@@ -154,25 +134,25 @@ static void FTransform(const uint8_t* src, const uint8_t* ref, int16_t* out) {
   int i;
   int tmp[16];
   for (i = 0; i < 4; ++i, src += BPS, ref += BPS) {
-    const int d0 = src[0] - ref[0];
+    const int d0 = src[0] - ref[0];   // 9bit dynamic range ([-255,255])
     const int d1 = src[1] - ref[1];
     const int d2 = src[2] - ref[2];
     const int d3 = src[3] - ref[3];
-    const int a0 = (d0 + d3) << 3;
-    const int a1 = (d1 + d2) << 3;
-    const int a2 = (d1 - d2) << 3;
-    const int a3 = (d0 - d3) << 3;
-    tmp[0 + i * 4] = (a0 + a1);
-    tmp[1 + i * 4] = (a2 * 2217 + a3 * 5352 + 14500) >> 12;
-    tmp[2 + i * 4] = (a0 - a1);
-    tmp[3 + i * 4] = (a3 * 2217 - a2 * 5352 +  7500) >> 12;
+    const int a0 = (d0 + d3);         // 10b                      [-510,510]
+    const int a1 = (d1 + d2);
+    const int a2 = (d1 - d2);
+    const int a3 = (d0 - d3);
+    tmp[0 + i * 4] = (a0 + a1) << 3;  // 14b                      [-8160,8160]
+    tmp[1 + i * 4] = (a2 * 2217 + a3 * 5352 + 1812) >> 9;      // [-7536,7542]
+    tmp[2 + i * 4] = (a0 - a1) << 3;
+    tmp[3 + i * 4] = (a3 * 2217 - a2 * 5352 +  937) >> 9;
   }
   for (i = 0; i < 4; ++i) {
-    const int a0 = (tmp[0 + i] + tmp[12 + i]);
+    const int a0 = (tmp[0 + i] + tmp[12 + i]);  // 15b
     const int a1 = (tmp[4 + i] + tmp[ 8 + i]);
     const int a2 = (tmp[4 + i] - tmp[ 8 + i]);
     const int a3 = (tmp[0 + i] - tmp[12 + i]);
-    out[0 + i] = (a0 + a1 + 7) >> 4;
+    out[0 + i] = (a0 + a1 + 7) >> 4;            // 12b
     out[4 + i] = ((a2 * 2217 + a3 * 5352 + 12000) >> 16) + (a3 != 0);
     out[8 + i] = (a0 - a1 + 7) >> 4;
     out[12+ i] = ((a3 * 2217 - a2 * 5352 + 51000) >> 16);
@@ -589,30 +569,30 @@ static int TTransform(const uint8_t* in, const uint16_t* w) {
   int i;
   // horizontal pass
   for (i = 0; i < 4; ++i, in += BPS) {
-    const int a0 = (in[0] + in[2]) << 2;
-    const int a1 = (in[1] + in[3]) << 2;
-    const int a2 = (in[1] - in[3]) << 2;
-    const int a3 = (in[0] - in[2]) << 2;
-    tmp[0 + i * 4] = a0 + a1 + (a0 != 0);
+    const int a0 = in[0] + in[2];
+    const int a1 = in[1] + in[3];
+    const int a2 = in[1] - in[3];
+    const int a3 = in[0] - in[2];
+    tmp[0 + i * 4] = a0 + a1;
     tmp[1 + i * 4] = a3 + a2;
     tmp[2 + i * 4] = a3 - a2;
     tmp[3 + i * 4] = a0 - a1;
   }
   // vertical pass
   for (i = 0; i < 4; ++i, ++w) {
-    const int a0 = (tmp[0 + i] + tmp[8 + i]);
-    const int a1 = (tmp[4 + i] + tmp[12+ i]);
-    const int a2 = (tmp[4 + i] - tmp[12+ i]);
-    const int a3 = (tmp[0 + i] - tmp[8 + i]);
+    const int a0 = tmp[0 + i] + tmp[8 + i];
+    const int a1 = tmp[4 + i] + tmp[12+ i];
+    const int a2 = tmp[4 + i] - tmp[12+ i];
+    const int a3 = tmp[0 + i] - tmp[8 + i];
     const int b0 = a0 + a1;
     const int b1 = a3 + a2;
     const int b2 = a3 - a2;
     const int b3 = a0 - a1;
-    // abs((b + (b<0) + 3) >> 3) = (abs(b) + 3) >> 3
-    sum += w[ 0] * ((abs(b0) + 3) >> 3);
-    sum += w[ 4] * ((abs(b1) + 3) >> 3);
-    sum += w[ 8] * ((abs(b2) + 3) >> 3);
-    sum += w[12] * ((abs(b3) + 3) >> 3);
+
+    sum += w[ 0] * abs(b0);
+    sum += w[ 4] * abs(b1);
+    sum += w[ 8] * abs(b2);
+    sum += w[12] * abs(b3);
   }
   return sum;
 }
@@ -621,7 +601,7 @@ static int Disto4x4(const uint8_t* const a, const uint8_t* const b,
                     const uint16_t* const w) {
   const int sum1 = TTransform(a, w);
   const int sum2 = TTransform(b, w);
-  return (abs(sum2 - sum1) + 8) >> 4;
+  return abs(sum2 - sum1) >> 5;
 }
 
 static int Disto16x16(const uint8_t* const a, const uint8_t* const b,
@@ -651,13 +631,13 @@ static int QuantizeBlock(int16_t in[16], int16_t out[16],
   for (; n < 16; ++n) {
     const int j = kZigzag[n];
     const int sign = (in[j] < 0);
-    int coeff = (sign ? -in[j] : in[j]) + mtx->sharpen_[j];
-    if (coeff > 2047) coeff = 2047;
+    const int coeff = (sign ? -in[j] : in[j]) + mtx->sharpen_[j];
     if (coeff > mtx->zthresh_[j]) {
       const int Q = mtx->q_[j];
       const int iQ = mtx->iq_[j];
       const int B = mtx->bias_[j];
       out[n] = QUANTDIV(coeff, iQ, B);
+      if (out[n] > MAX_LEVEL) out[n] = MAX_LEVEL;
       if (sign) out[n] = -out[n];
       in[j] = out[n] * Q;
       if (out[n]) last = n;
@@ -706,6 +686,7 @@ VP8QuantizeBlock VP8EncQuantizeBlock;
 VP8BlockCopy VP8Copy4x4;
 
 extern void VP8EncDspInitSSE2(void);
+extern void VP8EncDspInitNEON(void);
 
 void VP8EncDspInit(void) {
   InitTables();
@@ -733,6 +714,10 @@ void VP8EncDspInit(void) {
 #if defined(WEBP_USE_SSE2)
     if (VP8GetCPUInfo(kSSE2)) {
       VP8EncDspInitSSE2();
+    }
+#elif defined(WEBP_USE_NEON)
+    if (VP8GetCPUInfo(kNEON)) {
+      VP8EncDspInitNEON();
     }
 #endif
   }

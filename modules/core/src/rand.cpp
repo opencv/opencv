@@ -54,6 +54,8 @@
     #undef min
     #undef max
     #undef abs
+#else
+    #include <pthread.h>
 #endif
 
 #if defined __SSE2__ || (defined _M_IX86_FP && 2 == _M_IX86_FP)
@@ -859,11 +861,6 @@ void cv::randShuffle( InputOutputArray _dst, double iterFactor, RNG* _rng )
     RandShuffleFunc func = tab[dst.elemSize()];
     CV_Assert( func != 0 );
     func( dst, rng, iterFactor );
-}
-
-void cv::randShuffle_( InputOutputArray _dst, double iterFactor )
-{
-    randShuffle(_dst, iterFactor);
 }
 
 CV_IMPL void

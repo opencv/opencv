@@ -46,6 +46,13 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
             LIST(APPEND ${_out_compile_flags} "-fPIC")
         ENDIF()
 
+        GET_TARGET_PROPERTY(_target_definitions ${_PCH_current_target} COMPILE_DEFINITIONS)
+        if(_target_definitions)
+          foreach(_def ${_target_definitions})
+            LIST(APPEND ${_out_compile_flags} "-D${_def}")
+          endforeach()
+        endif()
+
     ELSE()
         ## TODO ... ? or does it work out of the box
     ENDIF()

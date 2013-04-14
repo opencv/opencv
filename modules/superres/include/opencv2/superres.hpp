@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -62,8 +62,8 @@ namespace cv
 
         CV_EXPORTS Ptr<FrameSource> createFrameSource_Empty();
 
-        CV_EXPORTS Ptr<FrameSource> createFrameSource_Video(const std::string& fileName);
-        CV_EXPORTS Ptr<FrameSource> createFrameSource_Video_GPU(const std::string& fileName);
+        CV_EXPORTS Ptr<FrameSource> createFrameSource_Video(const String& fileName);
+        CV_EXPORTS Ptr<FrameSource> createFrameSource_Video_GPU(const String& fileName);
 
         CV_EXPORTS Ptr<FrameSource> createFrameSource_Camera(int deviceId = 0);
 

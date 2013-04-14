@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 
-#if (defined WIN32 || defined _WIN32) && defined HAVE_VIDEOINPUT
+#if (defined WIN32 || defined _WIN32) && defined HAVE_DSHOW
 
 /*
    DirectShow-based Video Capturing module is based on
@@ -86,8 +86,6 @@ Thanks to:
 
 */
 /////////////////////////////////////////////////////////
-
-#include "precomp.hpp"
 
 #if defined _MSC_VER && _MSC_VER >= 100
 //'sprintf': name was marked as #pragma deprecated
@@ -3099,6 +3097,7 @@ HRESULT videoInput::routeCrossbar(ICaptureGraphBuilder2 **ppBuild, IBaseFilter *
 
     return hr;
 }
+
 
 /********************* Capturing video from camera via DirectShow *********************/
 

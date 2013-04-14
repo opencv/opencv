@@ -226,9 +226,9 @@ __kernel void stereoKernel(__global unsigned char *left, __global unsigned char 
     volatile __local unsigned int *col_ssd_extra = get_local_id(0) < (2 * radius) ? col_ssd + BLOCK_W : 0;
 
     int X = get_group_id(0) * BLOCK_W + get_local_id(0) + maxdisp + radius;
-   // int Y = get_group_id(1) * ROWSperTHREAD + radius;
+    // int Y = get_group_id(1) * ROWSperTHREAD + radius;
 
-    #define Y (get_group_id(1) * ROWSperTHREAD + radius)
+#define Y (get_group_id(1) * ROWSperTHREAD + radius)
 
     volatile __global unsigned int* minSSDImage = cminSSDImage + X + Y * cminSSD_step;
     __global unsigned char* disparImage = disp + X + Y * disp_step;
@@ -251,9 +251,9 @@ __kernel void stereoKernel(__global unsigned char *left, __global unsigned char 
 
         barrier(CLK_LOCAL_MEM_FENCE); //before MinSSD function
 
+        uint2 minSSD = MinSSD(col_ssd_cache + get_local_id(0), col_ssd, radius);
         if (X < cwidth - radius && Y < cheight - radius)
         {
-            uint2 minSSD = MinSSD(col_ssd_cache + get_local_id(0), col_ssd, radius);
             if (minSSD.x < minSSDImage[0])
             {
                 disparImage[0] = (unsigned char)(d + minSSD.y);
@@ -264,7 +264,7 @@ __kernel void stereoKernel(__global unsigned char *left, __global unsigned char 
         for(int row = 1; row < end_row; row++)
         {
             int idx1 = y_tex * img_step + x_tex;
-            int idx2 = (y_tex + (2 * radius + 1)) * img_step + x_tex;
+            int idx2 = min(y_tex + (2 * radius + 1), cheight - 1) * img_step + x_tex;
 
             barrier(CLK_GLOBAL_MEM_FENCE);
             barrier(CLK_LOCAL_MEM_FENCE);
@@ -278,10 +278,10 @@ __kernel void stereoKernel(__global unsigned char *left, __global unsigned char 
 
             barrier(CLK_LOCAL_MEM_FENCE);
 
+            uint2 minSSD = MinSSD(col_ssd_cache + get_local_id(0), col_ssd, radius);
             if (X < cwidth - radius && row < cheight - radius - Y)
             {
                 int idx = row * cminSSD_step;
-                uint2 minSSD = MinSSD(col_ssd_cache + get_local_id(0), col_ssd, radius);
                 if (minSSD.x < minSSDImage[idx])
                 {
                     disparImage[disp_step * row] = (unsigned char)(d + minSSD.y);
@@ -323,7 +323,7 @@ float sobel(__global unsigned char *input, int x, int y, int rows, int cols)
     float conv = 0;
     int y1 = y==0? 0 : y-1;
     int x1 = x==0? 0 : x-1;
-    if(x < cols && y < rows)
+    if(x < cols && y < rows && x > 0 && y > 0)
     {
         conv = (float)input[(y1)  * cols + (x1)] * (-1) + (float)input[(y1)  * cols + (x+1)] * (1) +
                (float)input[(y)   * cols + (x1)] * (-2) + (float)input[(y)   * cols + (x+1)] * (2) +
@@ -378,50 +378,50 @@ __kernel void textureness_kernel(__global unsigned char *disp, int disp_rows, in
     int beg_row = group_id_y * RpT;
     int end_row = min(beg_row + RpT, disp_rows);
 
- //   if (x < disp_cols)
- //   {
-        int y = beg_row;
+//   if (x < disp_cols)
+//   {
+    int y = beg_row;
 
-        float sum = 0;
-        float sum_extra = 0;
+    float sum = 0;
+    float sum_extra = 0;
 
-        for(int i = y - winsz2; i <= y + winsz2; ++i)
-        {
-            sum += sobel(input, x - winsz2, i, input_rows, input_cols);
-            if (cols_extra)
-                sum_extra += sobel(input, x + group_size_x - winsz2, i, input_rows, input_cols);
-        }
-        *cols = sum;
+    for(int i = y - winsz2; i <= y + winsz2; ++i)
+    {
+        sum += sobel(input, x - winsz2, i, input_rows, input_cols);
         if (cols_extra)
+            sum_extra += sobel(input, x + group_size_x - winsz2, i, input_rows, input_cols);
+    }
+    *cols = sum;
+    if (cols_extra)
+        *cols_extra = sum_extra;
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    float sum_win = CalcSums(cols, cols_cache + local_id_x, winsz) * 255;
+    if (sum_win < threshold)
+        disp[y * disp_step + x] = 0;
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    for(int y = beg_row + 1; y < end_row; ++y)
+    {
+        sum = sum - sobel(input, x - winsz2, y - winsz2 - 1, input_rows, input_cols) +
+              sobel(input, x - winsz2, y + winsz2, input_rows, input_cols);
+        *cols = sum;
+
+        if (cols_extra)
+        {
+            sum_extra = sum_extra - sobel(input, x + group_size_x - winsz2, y - winsz2 - 1,input_rows, input_cols)
+                        + sobel(input, x + group_size_x - winsz2, y + winsz2, input_rows, input_cols);
             *cols_extra = sum_extra;
+        }
 
         barrier(CLK_LOCAL_MEM_FENCE);
-
         float sum_win = CalcSums(cols, cols_cache + local_id_x, winsz) * 255;
         if (sum_win < threshold)
             disp[y * disp_step + x] = 0;
 
         barrier(CLK_LOCAL_MEM_FENCE);
-
-        for(int y = beg_row + 1; y < end_row; ++y)
-        {
-            sum = sum - sobel(input, x - winsz2, y - winsz2 - 1, input_rows, input_cols) +
-                  sobel(input, x - winsz2, y + winsz2, input_rows, input_cols);
-            *cols = sum;
-
-            if (cols_extra)
-            {
-                sum_extra = sum_extra - sobel(input, x + group_size_x - winsz2, y - winsz2 - 1,input_rows, input_cols)
-                            + sobel(input, x + group_size_x - winsz2, y + winsz2, input_rows, input_cols);
-                *cols_extra = sum_extra;
-            }
-
-            barrier(CLK_LOCAL_MEM_FENCE);
-            float sum_win = CalcSums(cols, cols_cache + local_id_x, winsz) * 255;
-            if (sum_win < threshold)
-                disp[y * disp_step + x] = 0;
-
-            barrier(CLK_LOCAL_MEM_FENCE);
-        }
-  //  }
+    }
+    //  }
 }

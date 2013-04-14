@@ -50,7 +50,7 @@
 void cv::ocl::gemm(const oclMat&, const oclMat&, double,
                    const oclMat&, double, oclMat&, int)
 {
-    CV_Error(CV_StsNotImplemented, "OpenCL BLAS is not implemented");
+    CV_Error(Error::StsNotImplemented, "OpenCL BLAS is not implemented");
 }
 #else
 #include "clAmdBlas.h"
@@ -121,12 +121,12 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
         break;
     case CV_32FC2:
     {
-        lda  /= sizeof(std::complex<float>);
-        ldb  /= sizeof(std::complex<float>);
-        ldc  /= sizeof(std::complex<float>);
-        offa /= sizeof(std::complex<float>);
-        offb /= sizeof(std::complex<float>);
-        offc /= sizeof(std::complex<float>);
+        lda  /= (2*sizeof(float));
+        ldb  /= (2*sizeof(float));
+        ldc  /= (2*sizeof(float));
+        offa /= (2*sizeof(float));
+        offb /= (2*sizeof(float));
+        offc /= (2*sizeof(float));
         cl_float2 alpha_2 = {{alpha, 0}};
         cl_float2 beta_2  = {{beta, 0}};
         openCLSafeCall
@@ -139,12 +139,12 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
     break;
     case CV_64FC2:
     {
-        lda  /= sizeof(std::complex<double>);
-        ldb  /= sizeof(std::complex<double>);
-        ldc  /= sizeof(std::complex<double>);
-        offa /= sizeof(std::complex<double>);
-        offb /= sizeof(std::complex<double>);
-        offc /= sizeof(std::complex<double>);
+        lda  /= (2*sizeof(double));
+        ldb  /= (2*sizeof(double));
+        ldc  /= (2*sizeof(double));
+        offa /= (2*sizeof(double));
+        offb /= (2*sizeof(double));
+        offc /= (2*sizeof(double));
         cl_double2 alpha_2 = {{alpha, 0}};
         cl_double2 beta_2  = {{beta, 0}};
         openCLSafeCall

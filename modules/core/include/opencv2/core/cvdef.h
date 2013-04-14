@@ -111,16 +111,19 @@
 #define CV_CPU_NEON   11
 #define CV_HARDWARE_MAX_FEATURE 255
 
+// do not include SSE/AVX/NEON headers for NVCC compiler
+#ifndef __CUDACC__
+
 #if defined __SSE2__ || defined _M_X64  || (defined _M_IX86_FP && _M_IX86_FP >= 2)
-#  include "emmintrin.h"
+#  include <emmintrin.h>
 #  define CV_SSE 1
 #  define CV_SSE2 1
 #  if defined __SSE3__ || (defined _MSC_VER && _MSC_VER >= 1500)
-#    include "pmmintrin.h"
+#    include <pmmintrin.h>
 #    define CV_SSE3 1
 #  endif
 #  if defined __SSSE3__  || (defined _MSC_VER && _MSC_VER >= 1500)
-#    include "tmmintrin.h"
+#    include <tmmintrin.h>
 #    define CV_SSSE3 1
 #  endif
 #  if defined __SSE4_1__ || (defined _MSC_VER && _MSC_VER >= 1500)
@@ -148,6 +151,8 @@
 #  include <arm_neon.h>
 #  define CV_NEON 1
 #endif
+
+#endif // __CUDACC__
 
 #ifndef CV_SSE
 #  define CV_SSE 0
@@ -187,7 +192,13 @@
 */
 
 #if !defined _MSC_VER && !defined __BORLANDC__
-#  include <stdint.h>
+#  if defined __cplusplus && __cplusplus >= 201103L
+#    include <cstdint>
+#  else
+#    include <stdint.h>
+#  endif
+#else
+   typedef unsigned uint;
 #endif
 
 typedef signed char schar;
@@ -318,8 +329,18 @@ typedef signed char schar;
 
 #if defined __BORLANDC__
 #  include <fastmath.h>
+#elif defined __cplusplus
+#  include <cmath>
 #else
 #  include <math.h>
+#endif
+
+#ifndef MIN
+#  define MIN(a,b)  ((a) > (b) ? (b) : (a))
+#endif
+
+#ifndef MAX
+#  define MAX(a,b)  ((a) < (b) ? (b) : (a))
 #endif
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
@@ -328,7 +349,7 @@ typedef signed char schar;
 
 CV_INLINE int cvRound( double value )
 {
-#if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__ && defined __SSE2__ && !defined __APPLE__)
+#if ((defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__ && defined __SSE2__ && !defined __APPLE__)) && !defined(__CUDACC__)
     __m128d t = _mm_set_sd( value );
     return _mm_cvtsd_si32(t);
 #elif defined _MSC_VER && defined _M_IX86
@@ -339,6 +360,8 @@ CV_INLINE int cvRound( double value )
         fistp t;
     }
     return t;
+#elif defined _MSC_VER && defined _M_ARM && defined HAVE_TEGRA_OPTIMIZATION
+    TEGRA_ROUND(value);
 #elif defined HAVE_LRINT || defined CV_ICC || defined __GNUC__
 #  ifdef HAVE_TEGRA_OPTIMIZATION
     TEGRA_ROUND(value);
@@ -346,14 +369,18 @@ CV_INLINE int cvRound( double value )
     return (int)lrint(value);
 #  endif
 #else
-    // while this is not IEEE754-compliant rounding, it's usually a good enough approximation
-    return (int)(value + (value >= 0 ? 0.5 : -0.5));
+    double intpart, fractpart;
+    fractpart = modf(value, &intpart);
+    if ((fabs(fractpart) != 0.5) || ((((int)intpart) % 2) != 0))
+        return (int)(value + (value >= 0 ? 0.5 : -0.5));
+    else
+        return (int)intpart;
 #endif
 }
 
 CV_INLINE int cvFloor( double value )
 {
-#if defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__ && !defined __APPLE__)
+#if (defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__ && !defined __APPLE__)) && !defined(__CUDACC__)
     __m128d t = _mm_set_sd( value );
     int i = _mm_cvtsd_si32(t);
     return i - _mm_movemask_pd(_mm_cmplt_sd(t, _mm_cvtsi32_sd(t,i)));
@@ -369,7 +396,7 @@ CV_INLINE int cvFloor( double value )
 
 CV_INLINE int cvCeil( double value )
 {
-#if defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__&& !defined __APPLE__)
+#if (defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__&& !defined __APPLE__)) && !defined(__CUDACC__)
     __m128d t = _mm_set_sd( value );
     int i = _mm_cvtsd_si32(t);
     return i + _mm_movemask_pd(_mm_cmplt_sd(_mm_cvtsi32_sd(t,i), t));
@@ -414,11 +441,11 @@ CV_INLINE int cvIsInf( double value )
 #      define CV_XADD(addr, delta) __atomic_fetch_add((_Atomic(int)*)(addr), delta, 4)
 #    endif
 #  else
-#    ifdef __ATOMIC_ACQ_REL
+#    if defined __ATOMIC_ACQ_REL && !defined __clang__
        // version for gcc >= 4.7
-#      define CV_XADD(addr, delta) __atomic_fetch_add(addr, delta, __ATOMIC_ACQ_REL)
+#      define CV_XADD(addr, delta) (int)__atomic_fetch_add((unsigned*)(addr), (unsigned)(delta), __ATOMIC_ACQ_REL)
 #    else
-#      define CV_XADD(addr, delta) __sync_fetch_and_add(addr, delta)
+#      define CV_XADD(addr, delta) (int)__sync_fetch_and_add((unsigned*)(addr), (unsigned)(delta))
 #    endif
 #  endif
 #elif (defined WIN32 || defined _WIN32 || defined WINCE) && (!defined RC_INVOKED)

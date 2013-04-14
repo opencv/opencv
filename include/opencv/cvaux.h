@@ -47,16 +47,14 @@
 //#endif
 
 #include "opencv2/core/core_c.h"
-#include "opencv2/core.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/video.hpp"
-#include "opencv2/features2d.hpp"
-#include "opencv2/calib3d.hpp"
-#include "opencv2/objdetect.hpp"
+#include "opencv2/photo/photo_c.h"
+#include "opencv2/video/tracking_c.h"
+#include "opencv2/objdetect/objdetect_c.h"
 #include "opencv2/legacy.hpp"
 #include "opencv2/legacy/compat.hpp"
 #include "opencv2/legacy/blobtrack.hpp"
+
 #include "opencv2/contrib.hpp"
 
 #endif

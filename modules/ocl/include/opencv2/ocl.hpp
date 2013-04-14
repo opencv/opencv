@@ -50,7 +50,6 @@
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/objdetect.hpp"
-#include "opencv2/features2d.hpp"
 
 namespace cv
 {
@@ -103,7 +102,7 @@ namespace cv
             ~Info();
             void release();
             Info &operator = (const Info &m);
-            std::vector<std::string> DeviceName;
+            std::vector<String> DeviceName;
         };
         //////////////////////////////// Initialization & Info ////////////////////////
         //this function may be obsoleted
@@ -125,12 +124,12 @@ namespace cv
 
         CV_EXPORTS void* getoclCommandQueue();
 
+        //explicit call clFinish. The global command queue will be used.
+        CV_EXPORTS void finish();
+
         //this function enable ocl module to use customized cl_context and cl_command_queue
         //getDevice also need to be called before this function
         CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0);
-
-        //////////////////////////////// Error handling ////////////////////////
-        CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
 
         //////////////////////////////// OpenCL context ////////////////////////
         //This is a global singleton class used to represent a OpenCL context.
@@ -161,7 +160,7 @@ namespace cv
 
         //! Calls a kernel, by string. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
         CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
-                                                        const char **source, std::string kernelName,
+                                                        const char **source, String kernelName,
                                                         size_t globalThreads[3], size_t localThreads[3],
                                                         std::vector< std::pair<size_t, const void *> > &args,
                                                         int channels, int depth, const char *build_options,
@@ -170,7 +169,7 @@ namespace cv
 
         //! Calls a kernel, by file. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
         CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
-                                                        const char **fileName, const int numFiles, std::string kernelName,
+                                                        const char **fileName, const int numFiles, String kernelName,
                                                         size_t globalThreads[3], size_t localThreads[3],
                                                         std::vector< std::pair<size_t, const void *> > &args,
                                                         int channels, int depth, const char *build_options,
@@ -538,9 +537,29 @@ namespace cv
         CV_EXPORTS oclMatExpr operator * (const oclMat &src1, const oclMat &src2);
         CV_EXPORTS oclMatExpr operator / (const oclMat &src1, const oclMat &src2);
 
-        //! computes convolution of two images
+        struct CV_EXPORTS ConvolveBuf
+        {
+            Size result_size;
+            Size block_size;
+            Size user_block_size;
+            Size dft_size;
+
+            oclMat image_spect, templ_spect, result_spect;
+            oclMat image_block, templ_block, result_data;
+
+            void create(Size image_size, Size templ_size);
+            static Size estimateBlockSize(Size result_size, Size templ_size);
+        };
+
+        //! computes convolution of two images, may use discrete Fourier transform
         //! support only CV_32FC1 type
-        CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result);
+        CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result, bool ccorr = false);
+        CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result, bool ccorr, ConvolveBuf& buf);
+
+        //! Performs a per-element multiplication of two Fourier spectrums.
+        //! Only full (not packed) CV_32FC2 complex spectrums in the interleaved format are supported for now.
+        //! support only CV_32FC2 type
+        CV_EXPORTS void mulSpectrums(const oclMat &a, const oclMat &b, oclMat &c, int flags, float scale, bool conjB = false);
 
         CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0);
 
@@ -789,7 +808,8 @@ namespace cv
         ///////////////////////////////////////////CascadeClassifier//////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        class CV_EXPORTS_W OclCascadeClassifier : public  cv::CascadeClassifier
+#if 0
+        class CV_EXPORTS OclCascadeClassifier : public  cv::CascadeClassifier
         {
         public:
             OclCascadeClassifier() {};
@@ -798,6 +818,7 @@ namespace cv
             CvSeq* oclHaarDetectObjects(oclMat &gimg, CvMemStorage *storage, double scaleFactor,
                                         int minNeighbors, int flags, CvSize minSize = cvSize(0, 0), CvSize maxSize = cvSize(0, 0));
         };
+#endif
 
 
 
@@ -839,68 +860,36 @@ namespace cv
 
 
         ///////////////////////////////////////////// Canny /////////////////////////////////////////////
-
         struct CV_EXPORTS CannyBuf;
 
-
-
         //! compute edges of the input image using Canny operator
-
         // Support CV_8UC1 only
-
         CV_EXPORTS void Canny(const oclMat &image, oclMat &edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
-
         CV_EXPORTS void Canny(const oclMat &image, CannyBuf &buf, oclMat &edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
-
         CV_EXPORTS void Canny(const oclMat &dx, const oclMat &dy, oclMat &edges, double low_thresh, double high_thresh, bool L2gradient = false);
-
         CV_EXPORTS void Canny(const oclMat &dx, const oclMat &dy, CannyBuf &buf, oclMat &edges, double low_thresh, double high_thresh, bool L2gradient = false);
 
-
-
         struct CV_EXPORTS CannyBuf
-
         {
-
             CannyBuf() : counter(NULL) {}
-
             ~CannyBuf()
             {
                 release();
             }
-
             explicit CannyBuf(const Size &image_size, int apperture_size = 3) : counter(NULL)
-
             {
-
                 create(image_size, apperture_size);
-
             }
-
             CannyBuf(const oclMat &dx_, const oclMat &dy_);
-
-
-
             void create(const Size &image_size, int apperture_size = 3);
-
-
-
             void release();
 
-
-
             oclMat dx, dy;
-
             oclMat dx_buf, dy_buf;
-
-            oclMat edgeBuf;
-
+            oclMat magBuf, mapBuf;
             oclMat trackBuf1, trackBuf2;
-
             void *counter;
-
             Ptr<FilterEngine_GPU> filterDX, filterDY;
-
         };
 
         ///////////////////////////////////////// Hough Transform /////////////////////////////////////////
@@ -1713,6 +1702,36 @@ namespace cv
             float avergeTexThreshold;
         private:
             oclMat minSSD, leBuf, riBuf;
+        };
+        class CV_EXPORTS StereoBeliefPropagation
+        {
+        public:
+            enum { DEFAULT_NDISP  = 64 };
+            enum { DEFAULT_ITERS  = 5  };
+            enum { DEFAULT_LEVELS = 5  };
+            static void estimateRecommendedParams(int width, int height, int &ndisp, int &iters, int &levels);
+            explicit StereoBeliefPropagation(int ndisp  = DEFAULT_NDISP,
+                                             int iters  = DEFAULT_ITERS,
+                                             int levels = DEFAULT_LEVELS,
+                                             int msg_type = CV_16S);
+            StereoBeliefPropagation(int ndisp, int iters, int levels,
+                                    float max_data_term, float data_weight,
+                                    float max_disc_term, float disc_single_jump,
+                                    int msg_type = CV_32F);
+            void operator()(const oclMat &left, const oclMat &right, oclMat &disparity);
+            void operator()(const oclMat &data, oclMat &disparity);
+            int ndisp;
+            int iters;
+            int levels;
+            float max_data_term;
+            float data_weight;
+            float max_disc_term;
+            float disc_single_jump;
+            int msg_type;
+        private:
+            oclMat u, d, l, r, u2, d2, l2, r2;
+            std::vector<oclMat> datas;
+            oclMat out;
         };
     }
 }

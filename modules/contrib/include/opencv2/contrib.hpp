@@ -48,6 +48,10 @@
 #include "opencv2/features2d.hpp"
 #include "opencv2/objdetect.hpp"
 
+#include "opencv2/core/core_c.h"
+
+#include <ostream>
+
 #ifdef __cplusplus
 
 /****************************************************************************************\
@@ -301,7 +305,7 @@ namespace cv
         void computeNormals(float normalRadius, int minNeighbors = 20);
         void computeNormals(const std::vector<int>& subset, float normalRadius, int minNeighbors = 20);
 
-        void writeAsVrml(const std::string& file, const std::vector<Scalar>& colors = std::vector<Scalar>()) const;
+        void writeAsVrml(const String& file, const std::vector<Scalar>& colors = std::vector<Scalar>()) const;
 
         std::vector<Point3f> vtx;
         std::vector<Point3f> normals;
@@ -610,9 +614,9 @@ namespace cv
     class CV_EXPORTS Directory
     {
         public:
-            static std::vector<std::string> GetListFiles  ( const std::string& path, const std::string & exten = "*", bool addPath = true );
-            static std::vector<std::string> GetListFilesR ( const std::string& path, const std::string & exten = "*", bool addPath = true );
-            static std::vector<std::string> GetListFolders( const std::string& path, const std::string & exten = "*", bool addPath = true );
+            static std::vector<String> GetListFiles  ( const String& path, const String & exten = "*", bool addPath = true );
+            static std::vector<String> GetListFilesR ( const String& path, const String & exten = "*", bool addPath = true );
+            static std::vector<String> GetListFolders( const String& path, const String & exten = "*", bool addPath = true );
     };
 
     /*
@@ -869,10 +873,10 @@ namespace cv
         }
 
         // Serializes this object to a given filename.
-        void save(const std::string& filename) const;
+        void save(const String& filename) const;
 
         // Deserializes this object from a given filename.
-        void load(const std::string& filename);
+        void load(const String& filename);
 
         // Serializes this object to a given cv::FileStorage.
         void save(FileStorage& fs) const;
@@ -926,10 +930,10 @@ namespace cv
         CV_WRAP virtual void predict(InputArray src, CV_OUT int &label, CV_OUT double &confidence) const = 0;
 
         // Serializes this object to a given filename.
-        CV_WRAP virtual void save(const std::string& filename) const;
+        CV_WRAP virtual void save(const String& filename) const;
 
         // Deserializes this object from a given filename.
-        CV_WRAP virtual void load(const std::string& filename);
+        CV_WRAP virtual void load(const String& filename);
 
         // Serializes this object to a given cv::FileStorage.
         virtual void save(FileStorage& fs) const = 0;

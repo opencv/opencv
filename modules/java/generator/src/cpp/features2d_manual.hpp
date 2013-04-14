@@ -84,7 +84,7 @@ public:
     //not supported: SimpleBlob, Dense
     CV_WRAP static javaFeatureDetector* create( int detectorType )
     {
-        std::string name;
+        String name;
         if (detectorType > DYNAMICDETECTOR)
         {
             name = "Dynamic";
@@ -104,40 +104,40 @@ public:
         switch(detectorType)
         {
         case FAST:
-            name += "FAST";
+            name = name + "FAST";
             break;
         case STAR:
-            name += "STAR";
+            name = name + "STAR";
             break;
         case SIFT:
-            name += "SIFT";
+            name = name + "SIFT";
             break;
         case SURF:
-            name += "SURF";
+            name = name + "SURF";
             break;
         case ORB:
-            name += "ORB";
+            name = name + "ORB";
             break;
         case MSER:
-            name += "MSER";
+            name = name + "MSER";
             break;
         case GFTT:
-            name += "GFTT";
+            name = name + "GFTT";
             break;
         case HARRIS:
-            name += "HARRIS";
+            name = name + "HARRIS";
             break;
         case SIMPLEBLOB:
-            name += "SimpleBlob";
+            name = name + "SimpleBlob";
             break;
         case DENSE:
-            name += "Dense";
+            name = name + "Dense";
             break;
         case BRISK:
-            name += "BRISK";
+            name = name + "BRISK";
             break;
         default:
-            CV_Error( CV_StsBadArg, "Specified feature detector type is not supported." );
+            CV_Error( Error::StsBadArg, "Specified feature detector type is not supported." );
             break;
         }
 
@@ -146,14 +146,14 @@ public:
         return (javaFeatureDetector*)((FeatureDetector*) detector);
     }
 
-    CV_WRAP void write( const std::string& fileName ) const
+    CV_WRAP void write( const String& fileName ) const
     {
         FileStorage fs(fileName, FileStorage::WRITE);
         ((FeatureDetector*)this)->write(fs);
         fs.release();
     }
 
-    CV_WRAP void read( const std::string& fileName )
+    CV_WRAP void read( const String& fileName )
     {
         FileStorage fs(fileName, FileStorage::READ);
         ((FeatureDetector*)this)->read(fs.root());
@@ -208,7 +208,7 @@ public:
     //supported: FlannBased, BruteForce, BruteForce-L1, BruteForce-Hamming, BruteForce-HammingLUT
     CV_WRAP static javaDescriptorMatcher* create( int matcherType )
     {
-        std::string name;
+        String name;
 
         switch(matcherType)
         {
@@ -231,7 +231,7 @@ public:
             name = "BruteForce-SL2";
             break;
         default:
-            CV_Error( CV_StsBadArg, "Specified descriptor matcher type is not supported." );
+            CV_Error( Error::StsBadArg, "Specified descriptor matcher type is not supported." );
             break;
         }
 
@@ -240,14 +240,14 @@ public:
         return (javaDescriptorMatcher*)((DescriptorMatcher*) matcher);
     }
 
-    CV_WRAP void write( const std::string& fileName ) const
+    CV_WRAP void write( const String& fileName ) const
     {
         FileStorage fs(fileName, FileStorage::WRITE);
         ((DescriptorMatcher*)this)->write(fs);
         fs.release();
     }
 
-    CV_WRAP void read( const std::string& fileName )
+    CV_WRAP void read( const String& fileName )
     {
         FileStorage fs(fileName, FileStorage::READ);
         ((DescriptorMatcher*)this)->read(fs.root());
@@ -260,8 +260,8 @@ class CV_EXPORTS_AS(DescriptorExtractor) javaDescriptorExtractor : public Descri
 public:
 #if 0
     //DO NOT REMOVE! The block is required for sources parser
-    CV_WRAP void compute( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
-    CV_WRAP void compute( const std::vector<Mat>& images, std::vector<std::vector<KeyPoint> >& keypoints, CV_OUT std::vector<Mat>& descriptors ) const;
+    CV_WRAP void compute( const Mat& image, CV_IN_OUT std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    CV_WRAP void compute( const std::vector<Mat>& images, CV_IN_OUT std::vector<std::vector<KeyPoint> >& keypoints, CV_OUT std::vector<Mat>& descriptors ) const;
     CV_WRAP virtual int descriptorSize() const;
     CV_WRAP virtual int descriptorType() const;
 
@@ -294,7 +294,7 @@ public:
     //not supported: Calonder
     CV_WRAP static javaDescriptorExtractor* create( int extractorType )
     {
-        std::string name;
+        String name;
 
         if (extractorType > OPPONENTEXTRACTOR)
         {
@@ -305,25 +305,25 @@ public:
         switch(extractorType)
         {
         case SIFT:
-            name += "SIFT";
+            name = name + "SIFT";
             break;
         case SURF:
-            name += "SURF";
+            name = name + "SURF";
             break;
         case ORB:
-            name += "ORB";
+            name = name + "ORB";
             break;
         case BRIEF:
-            name += "BRIEF";
+            name = name + "BRIEF";
             break;
         case BRISK:
-            name += "BRISK";
+            name = name + "BRISK";
             break;
         case FREAK:
-            name += "FREAK";
+            name = name + "FREAK";
             break;
         default:
-            CV_Error( CV_StsBadArg, "Specified descriptor extractor type is not supported." );
+            CV_Error( Error::StsBadArg, "Specified descriptor extractor type is not supported." );
             break;
         }
 
@@ -332,14 +332,14 @@ public:
         return (javaDescriptorExtractor*)((DescriptorExtractor*) extractor);
     }
 
-    CV_WRAP void write( const std::string& fileName ) const
+    CV_WRAP void write( const String& fileName ) const
     {
         FileStorage fs(fileName, FileStorage::WRITE);
         ((DescriptorExtractor*)this)->write(fs);
         fs.release();
     }
 
-    CV_WRAP void read( const std::string& fileName )
+    CV_WRAP void read( const String& fileName )
     {
         FileStorage fs(fileName, FileStorage::READ);
         ((DescriptorExtractor*)this)->read(fs.root());
@@ -401,7 +401,7 @@ public:
     //unsupported: Vector
     CV_WRAP static javaGenericDescriptorMatcher* create( int matcherType )
     {
-        std::string name;
+        String name;
 
         switch(matcherType)
         {
@@ -412,7 +412,7 @@ public:
             name = "FERN";
             break;
         default:
-            CV_Error( CV_StsBadArg, "Specified generic descriptor matcher type is not supported." );
+            CV_Error( Error::StsBadArg, "Specified generic descriptor matcher type is not supported." );
             break;
         }
 
@@ -421,14 +421,14 @@ public:
         return (javaGenericDescriptorMatcher*)((GenericDescriptorMatcher*) matcher);
     }
 
-    CV_WRAP void write( const std::string& fileName ) const
+    CV_WRAP void write( const String& fileName ) const
     {
         FileStorage fs(fileName, FileStorage::WRITE);
         ((GenericDescriptorMatcher*)this)->write(fs);
         fs.release();
     }
 
-    CV_WRAP void read( const std::string& fileName )
+    CV_WRAP void read( const String& fileName )
     {
         FileStorage fs(fileName, FileStorage::READ);
         ((GenericDescriptorMatcher*)this)->read(fs.root());

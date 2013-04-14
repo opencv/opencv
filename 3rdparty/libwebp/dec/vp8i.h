@@ -27,8 +27,8 @@ extern "C" {
 
 // version numbers
 #define DEC_MAJ_VERSION 0
-#define DEC_MIN_VERSION 2
-#define DEC_REV_VERSION 1
+#define DEC_MIN_VERSION 3
+#define DEC_REV_VERSION 0
 
 #define ONLY_KEYFRAME_CODE      // to remove any code related to P-Frames
 
@@ -157,7 +157,7 @@ typedef struct {  // filter specs
 } VP8FInfo;
 
 typedef struct {  // used for syntax-parsing
-  unsigned int nz_;          // non-zero AC/DC coeffs
+  unsigned int nz_:24;       // non-zero AC/DC coeffs (24bit)
   unsigned int dc_nz_:1;     // non-zero DC coeffs
   unsigned int skip_:1;      // block type
 } VP8MB;
@@ -269,9 +269,9 @@ struct VP8Decoder {
   uint32_t non_zero_ac_;
 
   // Filtering side-info
-  int filter_type_;                         // 0=off, 1=simple, 2=complex
-  int filter_row_;                          // per-row flag
-  uint8_t filter_levels_[NUM_MB_SEGMENTS];  // precalculated per-segment
+  int filter_type_;                          // 0=off, 1=simple, 2=complex
+  int filter_row_;                           // per-row flag
+  VP8FInfo fstrengths_[NUM_MB_SEGMENTS][2];  // precalculated per-segment/type
 
   // extensions
   const uint8_t* alpha_data_;   // compressed alpha data (if present)
@@ -312,8 +312,6 @@ VP8StatusCode VP8EnterCritical(VP8Decoder* const dec, VP8Io* const io);
 int VP8ExitCritical(VP8Decoder* const dec, VP8Io* const io);
 // Process the last decoded row (filtering + output)
 int VP8ProcessRow(VP8Decoder* const dec, VP8Io* const io);
-// Store a block, along with filtering params
-void VP8StoreBlock(VP8Decoder* const dec);
 // To be called at the start of a new scanline, to initialize predictors.
 void VP8InitScanline(VP8Decoder* const dec);
 // Decode one macroblock. Returns false if there is not enough data.

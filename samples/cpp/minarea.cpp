@@ -45,16 +45,16 @@ int main( int /*argc*/, char** /*argv*/ )
 
         img = Scalar::all(0);
         for( i = 0; i < count; i++ )
-            circle( img, points[i], 3, Scalar(0, 0, 255), CV_FILLED, CV_AA );
+            circle( img, points[i], 3, Scalar(0, 0, 255), FILLED, LINE_AA );
 
         for( i = 0; i < 4; i++ )
-            line(img, vtx[i], vtx[(i+1)%4], Scalar(0, 255, 0), 1, CV_AA);
+            line(img, vtx[i], vtx[(i+1)%4], Scalar(0, 255, 0), 1, LINE_AA);
 
-        circle(img, center, cvRound(radius), Scalar(0, 255, 255), 1, CV_AA);
+        circle(img, center, cvRound(radius), Scalar(0, 255, 255), 1, LINE_AA);
 
         imshow( "rect & circle", img );
 
-        char key = (char)cvWaitKey();
+        char key = (char)waitKey();
         if( key == 27 || key == 'q' || key == 'Q' ) // 'ESC'
             break;
     }

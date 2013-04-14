@@ -22,7 +22,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -921,6 +921,14 @@ CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, Stream& stream = St
 CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, Stream& stream = Stream::Null());
 CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null());
 
+class CV_EXPORTS CLAHE : public cv::CLAHE
+{
+public:
+    using cv::CLAHE::apply;
+    virtual void apply(InputArray src, OutputArray dst, Stream& stream) = 0;
+};
+CV_EXPORTS Ptr<cv::gpu::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+
 //////////////////////////////// StereoBM_GPU ////////////////////////////////
 
 class CV_EXPORTS StereoBM_GPU
@@ -1384,11 +1392,11 @@ class CV_EXPORTS CascadeClassifier_GPU
 {
 public:
     CascadeClassifier_GPU();
-    CascadeClassifier_GPU(const std::string& filename);
+    CascadeClassifier_GPU(const String& filename);
     ~CascadeClassifier_GPU();
 
     bool empty() const;
-    bool load(const std::string& filename);
+    bool load(const String& filename);
     void release();
 
     /* returns number of detected objects */
@@ -1802,6 +1810,8 @@ public:
      */
     int iterations;
 
+    double scaleStep;
+
     bool useInitialFlow;
 
 private:
@@ -2170,15 +2180,15 @@ public:
     };
 
     VideoWriter_GPU();
-    VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
-    VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
+    VideoWriter_GPU(const String& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
+    VideoWriter_GPU(const String& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
     VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
     VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
     ~VideoWriter_GPU();
 
     // all methods throws cv::Exception if error occurs
-    void open(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
-    void open(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
+    void open(const String& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
+    void open(const String& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
     void open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
     void open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
 
@@ -2210,10 +2220,10 @@ public:
         int       DisableSPSPPS;   //    NVVE_DISABLE_SPS_PPS
 
         EncoderParams();
-        explicit EncoderParams(const std::string& configFile);
+        explicit EncoderParams(const String& configFile);
 
-        void load(const std::string& configFile);
-        void save(const std::string& configFile) const;
+        void load(const String& configFile);
+        void save(const String& configFile) const;
     };
 
     EncoderParams getParams() const;
@@ -2301,12 +2311,12 @@ public:
     class VideoSource;
 
     VideoReader_GPU();
-    explicit VideoReader_GPU(const std::string& filename);
+    explicit VideoReader_GPU(const String& filename);
     explicit VideoReader_GPU(const cv::Ptr<VideoSource>& source);
 
     ~VideoReader_GPU();
 
-    void open(const std::string& filename);
+    void open(const String& filename);
     void open(const cv::Ptr<VideoSource>& source);
     bool isOpened() const;
 

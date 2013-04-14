@@ -14,12 +14,14 @@
 #include "opencv2/highgui.hpp"
 
 #include "opencv2/opencv_modules.hpp"
+
 #ifdef HAVE_OPENCV_OCL
 #  include "opencv2/nonfree/ocl.hpp"
 #endif
 
-#if defined(HAVE_OPENCV_GPU) && defined(HAVE_CUDA)
+#ifdef HAVE_OPENCV_GPU
     #include "opencv2/nonfree/gpu.hpp"
+    #include "opencv2/ts/gpu_perf.hpp"
 #endif
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY

@@ -42,9 +42,9 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace mathfunc
     {
@@ -212,6 +212,6 @@ namespace cv { namespace gpu { namespace device
             callers[mag.data == 0](mag, angle, x, y, angleInDegrees, stream);
         }
     } // namespace mathfunc
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cudev
 
 #endif /* CUDA_DISABLER */

@@ -59,10 +59,20 @@ static WEBP_INLINE uint32_t VP8LSubSampleSize(uint32_t size,
   return (size + (1 << sampling_bits) - 1) >> sampling_bits;
 }
 
-// Faster logarithm for integers, with the property of log2(0) == 0.
-float VP8LFastLog2(int v);
+// Faster logarithm for integers. Small values use a look-up table.
+#define LOG_LOOKUP_IDX_MAX 256
+extern const float kLog2Table[LOG_LOOKUP_IDX_MAX];
+extern const float kSLog2Table[LOG_LOOKUP_IDX_MAX];
+extern float VP8LFastLog2Slow(int v);
+extern float VP8LFastSLog2Slow(int v);
+static WEBP_INLINE float VP8LFastLog2(int v) {
+  return (v < LOG_LOOKUP_IDX_MAX) ? kLog2Table[v] : VP8LFastLog2Slow(v);
+}
 // Fast calculation of v * log2(v) for integer input.
-static WEBP_INLINE float VP8LFastSLog2(int v) { return VP8LFastLog2(v) * v; }
+static WEBP_INLINE float VP8LFastSLog2(int v) {
+  return (v < LOG_LOOKUP_IDX_MAX) ? kSLog2Table[v] : VP8LFastSLog2Slow(v);
+}
+
 
 // In-place difference of each component with mod 256.
 static WEBP_INLINE uint32_t VP8LSubPixels(uint32_t a, uint32_t b) {

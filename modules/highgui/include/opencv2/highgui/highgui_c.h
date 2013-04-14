@@ -298,6 +298,7 @@ enum
     CV_CAP_UNICAP   =600,   // Unicap drivers
 
     CV_CAP_DSHOW    =700,   // DirectShow (via videoInput)
+    CV_CAP_MSMF     =1400,  // Microsoft Media Foundation (via videoInput)
 
     CV_CAP_PVAPI    =800,   // PvAPI, Prosilica GigE SDK
 
@@ -568,9 +569,6 @@ CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
 CVAPI(CvVideoWriter*) cvCreateVideoWriter( const char* filename, int fourcc,
                                            double fps, CvSize frame_size,
                                            int is_color CV_DEFAULT(1));
-
-//CVAPI(CvVideoWriter*) cvCreateImageSequenceWriter( const char* filename,
-//                                                   int is_color CV_DEFAULT(1));
 
 /* write frame to video file */
 CVAPI(int) cvWriteFrame( CvVideoWriter* writer, const IplImage* image );

@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
@@ -41,73 +42,47 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
-
 #include "precomp.hpp"
-using namespace std;
-#ifdef HAVE_CLAMDBLAS
-////////////////////////////////////////////////////////////////////////////
-// GEMM
-PARAM_TEST_CASE(Gemm, int, cv::Size, int)
+
+///////////// gemm ////////////////////////
+TEST(gemm)
 {
-    int      type;
-    cv::Size mat_size;
-    int		 flags;
-    vector<cv::ocl::Info> info;
-    virtual void SetUp()
+    Mat src1, src2, src3, dst;
+    ocl::oclMat d_src1, d_src2, d_src3, d_dst;
+
+    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {
-        type     = GET_PARAM(0);
-        mat_size = GET_PARAM(1);
-        flags    = GET_PARAM(2);
+        SUBTEST << size << 'x' << size;
 
-        cv::ocl::getDevice(info);
+        gen(src1, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
+        gen(src2, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
+        gen(src3, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
+
+        gemm(src1, src2, 1.0, src3, 1.0, dst);
+
+        CPU_ON;
+        gemm(src1, src2, 1.0, src3, 1.0, dst);
+        CPU_OFF;
+
+        d_src1.upload(src1);
+        d_src2.upload(src2);
+        d_src3.upload(src3);
+
+        WARMUP_ON;
+        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
+        WARMUP_OFF;
+
+        GPU_ON;
+        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
+         ;
+        GPU_OFF;
+
+        GPU_FULL_ON;
+        d_src1.upload(src1);
+        d_src2.upload(src2);
+        d_src3.upload(src3);
+        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
+        d_dst.download(dst);
+        GPU_FULL_OFF;
     }
-};
-
-TEST_P(Gemm, Performance)
-{
-    cv::Mat a = randomMat(mat_size, type, 0.0, 10.0);
-    cv::Mat b = randomMat(mat_size, type, 0.0, 10.0);
-    cv::Mat c = randomMat(mat_size, type, 0.0, 10.0);
-    cv::ocl::oclMat ocl_dst;
-
-    double totalgputick = 0;
-    double totalgputick_kernel = 0;
-    double t1 = 0;
-    double t2 = 0;
-
-    for(int j = 0; j < LOOP_TIMES + 1; j ++)
-    {
-
-        t1 = (double)cvGetTickCount();//gpu start1
-
-        cv::ocl::oclMat ga = cv::ocl::oclMat(a);//upload
-        cv::ocl::oclMat gb = cv::ocl::oclMat(b);//upload
-        cv::ocl::oclMat gc = cv::ocl::oclMat(c);//upload
-
-        t2 = (double)cvGetTickCount(); //kernel
-        cv::ocl::gemm(ga, gb, 1.0, gc, 1.0, ocl_dst, flags);
-        t2 = (double)cvGetTickCount() - t2;//kernel
-
-        cv::Mat cpu_dst;
-        ocl_dst.download (cpu_dst);//download
-
-        t1 = (double)cvGetTickCount() - t1;//gpu end
-
-        if(j == 0)
-            continue;
-
-        totalgputick = t1 + totalgputick;
-        totalgputick_kernel = t2 + totalgputick_kernel;
-
-    }
-    cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-    cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
 }
-
-
-INSTANTIATE_TEST_CASE_P(ocl_gemm, Gemm, testing::Combine(
-                            testing::Values(CV_32FC1, CV_32FC2/* , CV_64FC1, CV_64FC2*/),
-                            testing::Values(cv::Size(512, 512), cv::Size(1024, 1024)),
-                            testing::Values(0, (int)cv::GEMM_1_T, (int)cv::GEMM_2_T, (int)(cv::GEMM_1_T + cv::GEMM_2_T))));
-#endif

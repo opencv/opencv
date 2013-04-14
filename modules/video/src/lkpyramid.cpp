@@ -44,6 +44,8 @@
 #include <stdio.h>
 #include "lkpyramid.hpp"
 
+#define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
+
 namespace
 {
 static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
@@ -326,7 +328,7 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
         float minEig = (A22 + A11 - std::sqrt((A11-A22)*(A11-A22) +
                         4.f*A12*A12))/(2*winSize.width*winSize.height);
 
-        if( err && (flags & CV_LKFLOW_GET_MIN_EIGENVALS) != 0 )
+        if( err && (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) != 0 )
             err[ptidx] = (float)minEig;
 
         if( minEig < minEigThreshold || D < FLT_EPSILON )
@@ -450,7 +452,7 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
             prevDelta = delta;
         }
 
-        if( status[ptidx] && err && level == 0 && (flags & CV_LKFLOW_GET_MIN_EIGENVALS) == 0 )
+        if( status[ptidx] && err && level == 0 && (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) == 0 )
         {
             Point2f nextPoint = nextPts[ptidx] - halfWin;
             Point inextPoint;
@@ -862,10 +864,10 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
     int good_count = 0;
 
     if( A.size() != B.size() )
-        CV_Error( CV_StsUnmatchedSizes, "Both input images must have the same size" );
+        CV_Error( Error::StsUnmatchedSizes, "Both input images must have the same size" );
 
     if( A.type() != B.type() )
-        CV_Error( CV_StsUnmatchedFormats, "Both input images must have the same data type" );
+        CV_Error( Error::StsUnmatchedFormats, "Both input images must have the same data type" );
 
     int count = A.checkVector(2);
 
@@ -945,7 +947,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
         pB.resize(count);
     }
     else
-        CV_Error( CV_StsUnsupportedFormat, "Both input images must have either 8uC1 or 8uC3 type" );
+        CV_Error( Error::StsUnsupportedFormat, "Both input images must have either 8uC1 or 8uC3 type" );
 
     good_idx.resize(count);
 

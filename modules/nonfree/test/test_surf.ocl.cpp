@@ -109,17 +109,6 @@ static int getMatchedPointsCount(const std::vector<cv::KeyPoint>& keypoints1, co
     return validCount;
 }
 
-#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
-#define IMPLEMENT_PARAM_CLASS(name, type) \
-    namespace { class name { \
-    public: \
-        name ( type arg = type ()) : val_(arg) {} \
-        operator type () const {return val_;} \
-    private: \
-        type val_; \
-    }; \
-    inline void PrintTo( name param, std::ostream* os) {*os << #name <<  "=" << testing::PrintToString(static_cast< type >(param));}}
-
 IMPLEMENT_PARAM_CLASS(HessianThreshold, double)
 IMPLEMENT_PARAM_CLASS(Octaves, int)
 IMPLEMENT_PARAM_CLASS(OctaveLayers, int)

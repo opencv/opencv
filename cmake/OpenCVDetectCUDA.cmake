@@ -57,7 +57,7 @@ if(CUDA_FOUND)
   elseif(CUDA_GENERATION STREQUAL "Kepler")
     set(__cuda_arch_bin "3.0")
   elseif(CUDA_GENERATION STREQUAL "Auto")
-    execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" "${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCudaArch.cu" "--run"
+    execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run"
                      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
                      RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
                      ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -142,11 +142,14 @@ if(CUDA_FOUND)
     foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
       set(${var}_backup_in_cuda_compile_ "${${var}}")
 
-      # we reomove /EHa as it leasd warnings under windows
+      # we remove /EHa as it generates warnings under windows
       string(REPLACE "/EHa" "" ${var} "${${var}}")
 
       # we remove -ggdb3 flag as it leads to preprocessor errors when compiling CUDA files (CUDA 4.1)
       string(REPLACE "-ggdb3" "" ${var} "${${var}}")
+
+      # we remove -Wsign-promo as it generates warnings under linux
+      string(REPLACE "-Wsign-promo" "" ${var} "${${var}}")
     endforeach()
 
     if(BUILD_SHARED_LIBS)

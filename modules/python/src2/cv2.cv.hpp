@@ -1,5 +1,6 @@
 #include "opencv2/legacy.hpp"
 #include "opencv2/legacy/compat.hpp"
+#include "opencv2/highgui/highgui_c.h"
 
 #define OLD_MODULESTR "cv2.cv"
 
@@ -253,7 +254,7 @@ static PyObject *iplimage_tostring(PyObject *self, PyObject *args)
     return NULL;
   if (i == NULL)
     return NULL;
-  cv::Mat img(i);
+  cv::Mat img = cvarrToMat(i);
   size_t esz = img.elemSize();
   int nrows = img.rows, ncols = img.cols;
 

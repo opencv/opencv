@@ -47,10 +47,8 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name, bool useGpu)
     else
     {
         cerr << "Incorrect Optical Flow algorithm - " << name << endl;
-        exit(-1);
     }
-
-    return Ptr<DenseOpticalFlowExt>();
+    return 0;
 }
 
 int main(int argc, const char* argv[])
@@ -90,7 +88,11 @@ int main(int argc, const char* argv[])
     superRes->set("scale", scale);
     superRes->set("iterations", iterations);
     superRes->set("temporalAreaRadius", temporalAreaRadius);
-    superRes->set("opticalFlow", createOptFlow(optFlow, useGpu));
+
+    Ptr<DenseOpticalFlowExt> of = createOptFlow(optFlow, useGpu);
+    if (of.empty())
+        exit(-1);
+    superRes->set("opticalFlow", of);
 
     Ptr<FrameSource> frameSource;
     if (useGpu)
@@ -144,7 +146,7 @@ int main(int argc, const char* argv[])
         if (!outputVideoName.empty())
         {
             if (!writer.isOpened())
-                writer.open(outputVideoName, CV_FOURCC('X', 'V', 'I', 'D'), 25.0, result.size());
+                writer.open(outputVideoName, VideoWriter::fourcc('X', 'V', 'I', 'D'), 25.0, result.size());
             writer << result;
         }
     }

@@ -235,7 +235,7 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int srcOffset_x = srcOffset % srcStep;
     int srcOffset_y = srcOffset / srcStep;
     Context *clCxt = src.clCxt;
-    std::string kernelName;
+    String kernelName;
     size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0], (src.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1};
 
@@ -270,7 +270,7 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
         sprintf(s, "-D VAL=FLT_MAX -D GENTYPE=float4");
         break;
     default:
-        CV_Error(CV_StsUnsupportedFormat, "unsupported type");
+        CV_Error(Error::StsUnsupportedFormat, "unsupported type");
     }
 
     char compile_option[128];
@@ -314,7 +314,7 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int srcOffset_x = srcOffset % srcStep;
     int srcOffset_y = srcOffset / srcStep;
     Context *clCxt = src.clCxt;
-    std::string kernelName;
+    String kernelName;
     size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0],
                                (src.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1};
@@ -350,7 +350,7 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
         sprintf(s, "-D VAL=-FLT_MAX -D GENTYPE=float4");
         break;
     default:
-        CV_Error(CV_StsUnsupportedFormat, "unsupported type");
+        CV_Error(Error::StsUnsupportedFormat, "unsupported type");
     }
 
     char compile_option[128];
@@ -462,7 +462,7 @@ void morphOp(int op, const oclMat &src, oclMat &dst, const Mat &_kernel, Point a
 {
     if ((borderType != cv::BORDER_CONSTANT) || (borderValue != morphologyDefaultBorderValue()))
     {
-        CV_Error(CV_StsBadArg, "unsupported border type");
+        CV_Error(Error::StsBadArg, "unsupported border type");
     }
 
     Mat kernel;
@@ -544,27 +544,27 @@ void cv::ocl::morphologyEx(const oclMat &src, oclMat &dst, int op, const Mat &ke
         erode(src, temp, kernel, anchor, iterations, borderType, borderValue);
         dilate(temp, dst, kernel, anchor, iterations, borderType, borderValue);
         break;
-    case CV_MOP_CLOSE:
+    case MORPH_CLOSE:
         dilate(src, temp, kernel, anchor, iterations, borderType, borderValue);
         erode(temp, dst, kernel, anchor, iterations, borderType, borderValue);
         break;
-    case CV_MOP_GRADIENT:
+    case MORPH_GRADIENT:
         erode(src, temp, kernel, anchor, iterations, borderType, borderValue);
         dilate(src, dst, kernel, anchor, iterations, borderType, borderValue);
         subtract(dst, temp, dst);
         break;
-    case CV_MOP_TOPHAT:
+    case MORPH_TOPHAT:
         erode(src, dst, kernel, anchor, iterations, borderType, borderValue);
         dilate(dst, temp, kernel, anchor, iterations, borderType, borderValue);
         subtract(src, temp, dst);
         break;
-    case CV_MOP_BLACKHAT:
+    case MORPH_BLACKHAT:
         dilate(src, dst, kernel, anchor, iterations, borderType, borderValue);
         erode(dst, temp, kernel, anchor, iterations, borderType, borderValue);
         subtract(temp, src, dst);
         break;
     default:
-        CV_Error(CV_StsBadArg, "unknown morphological operation");
+        CV_Error(Error::StsBadArg, "unknown morphological operation");
     }
 }
 
@@ -606,7 +606,7 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int cn =  src.oclchannels();
     int depth = src.depth();
 
-    std::string kernelName = "filter2D";
+    String kernelName = "filter2D";
 
     size_t src_offset_x = (src.offset % src.step) / src.elemSize();
     size_t src_offset_y = src.offset / src.step;
@@ -762,7 +762,7 @@ static void GPUFilterBox_8u_C1R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    std::string kernelName = "boxFilter_C1_D0";
+    String kernelName = "boxFilter_C1_D0";
 
     char btype[30];
 
@@ -778,7 +778,7 @@ static void GPUFilterBox_8u_C1R(const oclMat &src, oclMat &dst,
         sprintf(btype, "BORDER_REFLECT");
         break;
     case 3:
-        CV_Error(CV_StsUnsupportedFormat, "BORDER_WRAP is not supported!");
+        CV_Error(Error::StsUnsupportedFormat, "BORDER_WRAP is not supported!");
         return;
     case 4:
         sprintf(btype, "BORDER_REFLECT_101");
@@ -824,7 +824,7 @@ static void GPUFilterBox_8u_C4R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    std::string kernelName = "boxFilter_C4_D0";
+    String kernelName = "boxFilter_C4_D0";
 
     char btype[30];
 
@@ -840,7 +840,7 @@ static void GPUFilterBox_8u_C4R(const oclMat &src, oclMat &dst,
         sprintf(btype, "BORDER_REFLECT");
         break;
     case 3:
-        CV_Error(CV_StsUnsupportedFormat, "BORDER_WRAP is not supported!");
+        CV_Error(Error::StsUnsupportedFormat, "BORDER_WRAP is not supported!");
         return;
     case 4:
         sprintf(btype, "BORDER_REFLECT_101");
@@ -886,7 +886,7 @@ static void GPUFilterBox_32F_C1R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    std::string kernelName = "boxFilter_C1_D5";
+    String kernelName = "boxFilter_C1_D5";
 
     char btype[30];
 
@@ -902,7 +902,7 @@ static void GPUFilterBox_32F_C1R(const oclMat &src, oclMat &dst,
         sprintf(btype, "BORDER_REFLECT");
         break;
     case 3:
-        CV_Error(CV_StsUnsupportedFormat, "BORDER_WRAP is not supported!");
+        CV_Error(Error::StsUnsupportedFormat, "BORDER_WRAP is not supported!");
         return;
     case 4:
         sprintf(btype, "BORDER_REFLECT_101");
@@ -949,7 +949,7 @@ static void GPUFilterBox_32F_C4R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    std::string kernelName = "boxFilter_C4_D5";
+    String kernelName = "boxFilter_C4_D5";
 
     char btype[30];
 
@@ -965,7 +965,7 @@ static void GPUFilterBox_32F_C4R(const oclMat &src, oclMat &dst,
         sprintf(btype, "BORDER_REFLECT");
         break;
     case 3:
-        CV_Error(CV_StsUnsupportedFormat, "BORDER_WRAP is not supported!");
+        CV_Error(Error::StsUnsupportedFormat, "BORDER_WRAP is not supported!");
         return;
     case 4:
         sprintf(btype, "BORDER_REFLECT_101");
@@ -1095,7 +1095,7 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     int channels = src.oclchannels();
 
     size_t localThreads[3] = {16, 16, 1};
-    std::string kernelName = "row_filter";
+    String kernelName = "row_filter";
 
     char btype[30];
 
@@ -1227,7 +1227,7 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
     int channels = src.oclchannels();
 
     size_t localThreads[3] = {16, 16, 1};
-    std::string kernelName = "col_filter";
+    String kernelName = "col_filter";
 
     char btype[30];
 
@@ -1396,7 +1396,7 @@ void cv::ocl::sepFilter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat 
             if ((bordertype != cv::BORDER_CONSTANT) &&
                     (bordertype != cv::BORDER_REPLICATE))
             {
-                CV_Error(CV_StsBadArg, "unsupported border type");
+                CV_Error(Error::StsBadArg, "unsupported border type");
             }
         }
     }
@@ -1479,7 +1479,7 @@ void cv::ocl::Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize, d
 {
     if (!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -1563,7 +1563,7 @@ void cv::ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double si
             if ((bordertype != cv::BORDER_CONSTANT) &&
                     (bordertype != cv::BORDER_REPLICATE))
             {
-                CV_Error(CV_StsBadArg, "unsupported border type");
+                CV_Error(Error::StsBadArg, "unsupported border type");
             }
         }
     }

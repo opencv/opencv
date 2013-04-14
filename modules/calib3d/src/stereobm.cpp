@@ -56,7 +56,7 @@ struct StereoBMParams
 {
     StereoBMParams(int _numDisparities=64, int _SADWindowSize=21)
     {
-        preFilterType = STEREO_PREFILTER_XSOBEL;
+        preFilterType = StereoBM::PREFILTER_XSOBEL;
         preFilterSize = 9;
         preFilterCap = 31;
         SADWindowSize = _SADWindowSize;
@@ -84,7 +84,7 @@ struct StereoBMParams
     int disp12MaxDiff;
     int dispType;
 };
-    
+
 
 static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uchar* buf )
 {
@@ -183,7 +183,7 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         if( useSIMD )
         {
             __m128i z = _mm_setzero_si128(), ftz = _mm_set1_epi16((short)ftzero),
-            ftz2 = _mm_set1_epi8(CV_CAST_8U(ftzero*2));
+            ftz2 = _mm_set1_epi8(cv::saturate_cast<uchar>(ftzero*2));
             for( ; x <= size.width-9; x += 8 )
             {
                 __m128i c0 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow0 + x - 1)), z);
@@ -676,7 +676,7 @@ struct PrefilterInvoker : public ParallelLoopBody
     {
         for( int i = range.start; i < range.end; i++ )
         {
-            if( state->preFilterType == STEREO_PREFILTER_NORMALIZED_RESPONSE )
+            if( state->preFilterType == StereoBM::PREFILTER_NORMALIZED_RESPONSE )
                 prefilterNorm( *imgs0[i], *imgs[i], state->preFilterSize, state->preFilterCap, buf[i] );
             else
                 prefilterXSobel( *imgs0[i], *imgs[i], state->preFilterCap );
@@ -771,8 +771,7 @@ protected:
     Rect validDisparityRect;
 };
 
-    
-class StereoBMImpl : public StereoMatcher
+class StereoBMImpl : public StereoBM
 {
 public:
     StereoBMImpl()
@@ -784,46 +783,46 @@ public:
     {
         params = StereoBMParams(_numDisparities, _SADWindowSize);
     }
-    
+
     void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr )
     {
         Mat left0 = leftarr.getMat(), right0 = rightarr.getMat();
         int dtype = disparr.fixedType() ? disparr.type() : params.dispType;
 
         if (left0.size() != right0.size())
-            CV_Error( CV_StsUnmatchedSizes, "All the images must have the same size" );
+            CV_Error( Error::StsUnmatchedSizes, "All the images must have the same size" );
 
         if (left0.type() != CV_8UC1 || right0.type() != CV_8UC1)
-            CV_Error( CV_StsUnsupportedFormat, "Both input images must have CV_8UC1" );
+            CV_Error( Error::StsUnsupportedFormat, "Both input images must have CV_8UC1" );
 
         if (dtype != CV_16SC1 && dtype != CV_32FC1)
-            CV_Error( CV_StsUnsupportedFormat, "Disparity image must have CV_16SC1 or CV_32FC1 format" );
+            CV_Error( Error::StsUnsupportedFormat, "Disparity image must have CV_16SC1 or CV_32FC1 format" );
 
         disparr.create(left0.size(), dtype);
         Mat disp0 = disparr.getMat();
 
-        if( params.preFilterType != STEREO_PREFILTER_NORMALIZED_RESPONSE &&
-            params.preFilterType != STEREO_PREFILTER_XSOBEL )
-            CV_Error( CV_StsOutOfRange, "preFilterType must be = CV_STEREO_BM_NORMALIZED_RESPONSE" );
+        if( params.preFilterType != PREFILTER_NORMALIZED_RESPONSE &&
+            params.preFilterType != PREFILTER_XSOBEL )
+            CV_Error( Error::StsOutOfRange, "preFilterType must be = CV_STEREO_BM_NORMALIZED_RESPONSE" );
 
         if( params.preFilterSize < 5 || params.preFilterSize > 255 || params.preFilterSize % 2 == 0 )
-            CV_Error( CV_StsOutOfRange, "preFilterSize must be odd and be within 5..255" );
+            CV_Error( Error::StsOutOfRange, "preFilterSize must be odd and be within 5..255" );
 
         if( params.preFilterCap < 1 || params.preFilterCap > 63 )
-            CV_Error( CV_StsOutOfRange, "preFilterCap must be within 1..63" );
+            CV_Error( Error::StsOutOfRange, "preFilterCap must be within 1..63" );
 
         if( params.SADWindowSize < 5 || params.SADWindowSize > 255 || params.SADWindowSize % 2 == 0 ||
             params.SADWindowSize >= std::min(left0.cols, left0.rows) )
-            CV_Error( CV_StsOutOfRange, "SADWindowSize must be odd, be within 5..255 and be not larger than image width or height" );
+            CV_Error( Error::StsOutOfRange, "SADWindowSize must be odd, be within 5..255 and be not larger than image width or height" );
 
         if( params.numDisparities <= 0 || params.numDisparities % 16 != 0 )
-            CV_Error( CV_StsOutOfRange, "numDisparities must be positive and divisble by 16" );
+            CV_Error( Error::StsOutOfRange, "numDisparities must be positive and divisble by 16" );
 
         if( params.textureThreshold < 0 )
-            CV_Error( CV_StsOutOfRange, "texture threshold must be non-negative" );
+            CV_Error( Error::StsOutOfRange, "texture threshold must be non-negative" );
 
         if( params.uniquenessRatio < 0 )
-            CV_Error( CV_StsOutOfRange, "uniqueness ratio must be non-negative" );
+            CV_Error( Error::StsOutOfRange, "uniqueness ratio must be non-negative" );
 
         preFilteredImg0.create( left0.size(), CV_8U );
         preFilteredImg1.create( left0.size(), CV_8U );
@@ -888,46 +887,109 @@ public:
                                                   R2.area() > 0 ? Rect(0, 0, width, height) : validDisparityRect,
                                                   params.minDisparity, params.numDisparities,
                                                   params.SADWindowSize);
-        
+
         parallel_for_(Range(0, nstripes),
                       FindStereoCorrespInvoker(left, right, disp, &params, nstripes,
                                                bufSize0, useShorts, validDisparityRect,
                                                slidingSumBuf, cost));
-        
+
         if( params.speckleRange >= 0 && params.speckleWindowSize > 0 )
             filterSpeckles(disp, FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
-        
+
         if (disp0.data != disp.data)
             disp.convertTo(disp0, disp0.type(), 1./(1 << DISPARITY_SHIFT), 0);
     }
 
-    AlgorithmInfo* info() const;
+    AlgorithmInfo* info() const { return 0; }
+
+    int getMinDisparity() const { return params.minDisparity; }
+    void setMinDisparity(int minDisparity) { params.minDisparity = minDisparity; }
+
+    int getNumDisparities() const { return params.numDisparities; }
+    void setNumDisparities(int numDisparities) { params.numDisparities = numDisparities; }
+
+    int getBlockSize() const { return params.SADWindowSize; }
+    void setBlockSize(int blockSize) { params.SADWindowSize = blockSize; }
+
+    int getSpeckleWindowSize() const { return params.speckleWindowSize; }
+    void setSpeckleWindowSize(int speckleWindowSize) { params.speckleWindowSize = speckleWindowSize; }
+
+    int getSpeckleRange() const { return params.speckleRange; }
+    void setSpeckleRange(int speckleRange) { params.speckleRange = speckleRange; }
+
+    int getDisp12MaxDiff() const { return params.disp12MaxDiff; }
+    void setDisp12MaxDiff(int disp12MaxDiff) { params.disp12MaxDiff = disp12MaxDiff; }
+
+    int getPreFilterType() const { return params.preFilterType; }
+    void setPreFilterType(int preFilterType) { params.preFilterType = preFilterType; }
+
+    int getPreFilterSize() const { return params.preFilterSize; }
+    void setPreFilterSize(int preFilterSize) { params.preFilterSize = preFilterSize; }
+
+    int getPreFilterCap() const { return params.preFilterCap; }
+    void setPreFilterCap(int preFilterCap) { params.preFilterCap = preFilterCap; }
+
+    int getTextureThreshold() const { return params.textureThreshold; }
+    void setTextureThreshold(int textureThreshold) { params.textureThreshold = textureThreshold; }
+
+    int getUniquenessRatio() const { return params.uniquenessRatio; }
+    void setUniquenessRatio(int uniquenessRatio) { params.uniquenessRatio = uniquenessRatio; }
+
+    int getSmallerBlockSize() const { return 0; }
+    void setSmallerBlockSize(int) {}
+
+    Rect getROI1() const { return params.roi1; }
+    void setROI1(Rect roi1) { params.roi1 = roi1; }
+
+    Rect getROI2() const { return params.roi2; }
+    void setROI2(Rect roi2) { params.roi2 = roi2; }
+
+    void write(FileStorage& fs) const
+    {
+        fs << "name" << name_
+        << "minDisparity" << params.minDisparity
+        << "numDisparities" << params.numDisparities
+        << "blockSize" << params.SADWindowSize
+        << "speckleWindowSize" << params.speckleWindowSize
+        << "speckleRange" << params.speckleRange
+        << "disp12MaxDiff" << params.disp12MaxDiff
+        << "preFilterType" << params.preFilterType
+        << "preFilterSize" << params.preFilterSize
+        << "preFilterCap" << params.preFilterCap
+        << "textureThreshold" << params.textureThreshold
+        << "uniquenessRatio" << params.uniquenessRatio;
+    }
+
+    void read(const FileNode& fn)
+    {
+        FileNode n = fn["name"];
+        CV_Assert( n.isString() && String(n) == name_ );
+        params.minDisparity = (int)fn["minDisparity"];
+        params.numDisparities = (int)fn["numDisparities"];
+        params.SADWindowSize = (int)fn["blockSize"];
+        params.speckleWindowSize = (int)fn["speckleWindowSize"];
+        params.speckleRange = (int)fn["speckleRange"];
+        params.disp12MaxDiff = (int)fn["disp12MaxDiff"];
+        params.preFilterType = (int)fn["preFilterType"];
+        params.preFilterSize = (int)fn["preFilterSize"];
+        params.preFilterCap = (int)fn["preFilterCap"];
+        params.textureThreshold = (int)fn["textureThreshold"];
+        params.uniquenessRatio = (int)fn["uniquenessRatio"];
+        params.roi1 = params.roi2 = Rect();
+    }
 
     StereoBMParams params;
     Mat preFilteredImg0, preFilteredImg1, cost, dispbuf;
     Mat slidingSumBuf;
+
+    static const char* name_;
 };
 
-#define add_param(n) \
-    obj.info()->addParam(obj, #n, obj.params.n)
-
-CV_INIT_ALGORITHM(StereoBMImpl, "StereoMatcher.BM",
-                  add_param(preFilterType);
-                  add_param(preFilterSize);
-                  add_param(preFilterCap);
-                  add_param(SADWindowSize);
-                  add_param(minDisparity);
-                  add_param(numDisparities);
-                  add_param(textureThreshold);
-                  add_param(uniquenessRatio);
-                  add_param(speckleRange);
-                  add_param(speckleWindowSize);
-                  add_param(disp12MaxDiff);
-                  add_param(dispType));
+const char* StereoBMImpl::name_ = "StereoMatcher.BM";
 
 }
 
-cv::Ptr<cv::StereoMatcher> cv::createStereoBM(int _numDisparities, int _SADWindowSize)
+cv::Ptr<cv::StereoBM> cv::createStereoBM(int _numDisparities, int _SADWindowSize)
 {
     return new StereoBMImpl(_numDisparities, _SADWindowSize);
 }

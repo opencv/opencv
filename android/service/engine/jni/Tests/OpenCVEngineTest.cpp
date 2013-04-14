@@ -294,7 +294,7 @@ TEST(OpenCVEngineTest, GetPathFor2_4_5)
     Starter.PackageManager->InstallVersion(2040500, PLATFORM_UNKNOWN, ARCH_ARMv7);
     EXPECT_FALSE(NULL == Engine.get());
     String16 result = Engine->GetLibPathByVersion(String16("2.4.5"));
-    EXPECT_EQ(0, result.size()); // 2.4.5 is not published yet
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a/lib", String8(result).string());
 }
 #endif
 

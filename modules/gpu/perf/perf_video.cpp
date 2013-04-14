@@ -1,3 +1,45 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+
 #include "perf_precomp.hpp"
 
 using namespace std;
@@ -392,6 +434,9 @@ PERF_TEST_P(ImagePair, Video_OpticalFlowDual_TVL1,
         cv::Mat flow;
 
         cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
+        alg->set("medianFiltering", 1);
+        alg->set("innerIterations", 1);
+        alg->set("outerIterations", 300);
 
         TEST_CYCLE() alg->calc(frame0, frame1, flow);
 
@@ -554,8 +599,8 @@ PERF_TEST_P(Video, Video_FGDStatModel,
             stopTimer();
         }
 
-        const cv::Mat background = model->background;
-        const cv::Mat foreground = model->foreground;
+        const cv::Mat background = cv::cvarrToMat(model->background);
+        const cv::Mat foreground = cv::cvarrToMat(model->foreground);
 
         CPU_SANITY_CHECK(background);
         CPU_SANITY_CHECK(foreground);
@@ -965,7 +1010,7 @@ PERF_TEST_P(Video_Cn_MaxFeatures, Video_GMG,
 
 #if defined(HAVE_NVCUVID) && BUILD_WITH_VIDEO_INPUT_SUPPORT
 
-PERF_TEST_P(Video, Video_VideoReader, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
+PERF_TEST_P(Video, DISABLED_Video_VideoReader, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
 {
     declare.time(20);
 
@@ -1002,7 +1047,7 @@ PERF_TEST_P(Video, Video_VideoReader, Values("gpu/video/768x576.avi", "gpu/video
 
 #if defined(HAVE_NVCUVID) && defined(WIN32)
 
-PERF_TEST_P(Video, Video_VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
+PERF_TEST_P(Video, DISABLED_Video_VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
 {
     declare.time(30);
 

@@ -211,10 +211,14 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
                 int4 data = *(__global int4*)&sum[glb_off];
                 int lcl_off = mad24(lcl_y, readwidth, lcl_x<<2);
 
+#if OFF
                 lcldata[lcl_off] = data.x;
                 lcldata[lcl_off+1] = data.y;
                 lcldata[lcl_off+2] = data.z;
                 lcldata[lcl_off+3] = data.w;
+#else
+                vstore4(data, 0, &lcldata[lcl_off]);
+#endif
             }
 
             lcloutindex[lcl_id] = 0;

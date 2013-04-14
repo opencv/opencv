@@ -1916,7 +1916,7 @@ static const int* getFontData(int fontFace)
 }
 
 
-void putText( Mat& img, const std::string& text, Point org,
+void putText( Mat& img, const String& text, Point org,
               int fontFace, double fontScale, Scalar color,
               int thickness, int line_type, bool bottomLeftOrigin )
 
@@ -1978,7 +1978,7 @@ void putText( Mat& img, const std::string& text, Point org,
     }
 }
 
-Size getTextSize( const std::string& text, int fontFace, double fontScale, int thickness, int* _base_line)
+Size getTextSize( const String& text, int fontFace, double fontScale, int thickness, int* _base_line)
 {
     Size size;
     double view_x = 0;
@@ -2343,7 +2343,7 @@ cvColorToScalar( double packed_color, int type )
         }
         else
         {
-            scalar.val[0] = CV_CAST_8U( icolor );
+            scalar.val[0] = cv::saturate_cast<uchar>( icolor );
             scalar.val[1] = scalar.val[2] = scalar.val[3] = 0;
         }
     }
@@ -2359,7 +2359,7 @@ cvColorToScalar( double packed_color, int type )
         }
         else
         {
-            scalar.val[0] = CV_CAST_8S( icolor );
+            scalar.val[0] = cv::saturate_cast<schar>( icolor );
             scalar.val[1] = scalar.val[2] = scalar.val[3] = 0;
         }
     }

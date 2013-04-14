@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -124,8 +125,8 @@ GPU_TEST_P(FGDStatModel, Update)
 
         ASSERT_EQ(gold_count, count);
 
-        cv::Mat gold_background(model->background);
-        cv::Mat gold_foreground(model->foreground);
+        cv::Mat gold_background = cv::cvarrToMat(model->background);
+        cv::Mat gold_foreground = cv::cvarrToMat(model->foreground);
 
         if (out_cn == 3)
             d_model.background.download(h_background3);
@@ -194,7 +195,7 @@ GPU_TEST_P(MOG, Update)
     cv::gpu::MOG_GPU mog;
     cv::gpu::GpuMat foreground = createMat(frame.size(), CV_8UC1, useRoi);
 
-    cv::BackgroundSubtractorMOG mog_gold;
+    cv::Ptr<cv::BackgroundSubtractorMOG> mog_gold = cv::createBackgroundSubtractorMOG();
     cv::Mat foreground_gold;
 
     for (int i = 0; i < 10; ++i)
@@ -211,7 +212,7 @@ GPU_TEST_P(MOG, Update)
 
         mog(loadMat(frame, useRoi), foreground, (float)learningRate);
 
-        mog_gold(frame, foreground_gold, learningRate);
+        mog_gold->apply(frame, foreground_gold, learningRate);
 
         ASSERT_MAT_NEAR(foreground_gold, foreground, 0.0);
     }
@@ -270,7 +271,7 @@ GPU_TEST_P(MOG2, Update)
     cv::gpu::GpuMat foreground = createMat(frame.size(), CV_8UC1, useRoi);
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> mog2_gold = cv::createBackgroundSubtractorMOG2();
-    mog2_gold.setDetectShadows(detectShadow);
+    mog2_gold->setDetectShadows(detectShadow);
     cv::Mat foreground_gold;
 
     for (int i = 0; i < 10; ++i)
@@ -315,7 +316,7 @@ GPU_TEST_P(MOG2, getBackgroundImage)
     cv::gpu::GpuMat foreground;
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> mog2_gold = cv::createBackgroundSubtractorMOG2();
-    mog2_gold.setDetectShadows(detectShadow);
+    mog2_gold->setDetectShadows(detectShadow);
     cv::Mat foreground_gold;
 
     for (int i = 0; i < 10; ++i)

@@ -114,10 +114,10 @@ inline int divUp(int total, int grain)
 ///////////////////////////////////////////////////////////////////////////
 static void convert_run_cus(const oclMat &src, oclMat &dst, double alpha, double beta)
 {
-    std::string kernelName = "convert_to_S";
+    String kernelName = "convert_to_S";
     std::stringstream idxStr;
     idxStr << src.depth();
-    kernelName += idxStr.str();
+    kernelName = kernelName + idxStr.str().c_str();
     float alpha_f = (float)alpha, beta_f = (float)beta;
     CV_DbgAssert(src.rows == dst.rows && src.cols == dst.cols);
     std::vector<std::pair<size_t , const void *> > args;
@@ -183,7 +183,7 @@ void convertTo( const oclMat &src, oclMat &dst, int rtype, double alpha, double 
 //    setTo(s);
 //    return *this;
 //}
-static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, std::string kernelName)
+static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, String kernelName)
 {
     std::vector<std::pair<size_t , const void *> > args;
 
@@ -226,7 +226,7 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
             args.push_back( std::make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case 1:
@@ -245,7 +245,7 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
             args.push_back( std::make_pair( sizeof(cl_char4) , (void *)&val.cval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case 2:
@@ -264,7 +264,7 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
             args.push_back( std::make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case 3:
@@ -283,7 +283,7 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
             args.push_back( std::make_pair( sizeof(cl_short4) , (void *)&val.shval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case 4:
@@ -309,7 +309,7 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
             args.push_back( std::make_pair( sizeof(cl_int4) , (void *)&val.ival ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case 5:
@@ -328,7 +328,7 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
             args.push_back( std::make_pair( sizeof(cl_float4) , (void *)&val.fval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case 6:
@@ -347,11 +347,11 @@ static void set_to_withoutmask_run_cus(const oclMat &dst, const Scalar &scalar, 
             args.push_back( std::make_pair( sizeof(cl_double4) , (void *)&val.dval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     default:
-        CV_Error(CV_StsUnsupportedFormat, "unknown depth");
+        CV_Error(Error::StsUnsupportedFormat, "unknown depth");
     }
 #ifdef CL_VERSION_1_2
     if(dst.offset == 0 && dst.cols == dst.wholecols)
@@ -399,7 +399,7 @@ static oclMat &setTo(oclMat &src, const Scalar &scalar)
 ///////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// CopyTo /////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
-// static void copy_to_with_mask_cus(const oclMat &src, oclMat &dst, const oclMat &mask, std::string kernelName)
+// static void copy_to_with_mask_cus(const oclMat &src, oclMat &dst, const oclMat &mask, String kernelName)
 // {
 //     CV_DbgAssert( dst.rows == mask.rows && dst.cols == mask.cols &&
 //                   src.rows == dst.rows && src.cols == dst.cols
@@ -407,7 +407,7 @@ static oclMat &setTo(oclMat &src, const Scalar &scalar)
 
 //     std::vector<std::pair<size_t , const void *> > args;
 
-//     std::string string_types[4][7] = {{"uchar", "char", "ushort", "short", "int", "float", "double"},
+//     String string_types[4][7] = {{"uchar", "char", "ushort", "short", "int", "float", "double"},
 //         {"uchar2", "char2", "ushort2", "short2", "int2", "float2", "double2"},
 //         {"uchar3", "char3", "ushort3", "short3", "int3", "float3", "double3"},
 //         {"uchar4", "char4", "ushort4", "short4", "int4", "float4", "double4"}
@@ -461,11 +461,11 @@ static void copyTo(const oclMat &src, oclMat &m )
 //     }
 // }
 
-static void arithmetic_run(const oclMat &src1, oclMat &dst, std::string kernelName, const char **kernelString, void *_scalar)
+static void arithmetic_run(const oclMat &src1, oclMat &dst, String kernelName, const char **kernelString, void *_scalar)
 {
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -539,7 +539,7 @@ static void pyrdown_run_cus(const oclMat &src, const oclMat &dst)
 
     Context  *clCxt = src.clCxt;
 
-    std::string kernelName = "pyrDown";
+    String kernelName = "pyrDown";
 
     size_t localThreads[3]  = { 256, 1, 1 };
     size_t globalThreads[3] = { src.cols, dst.rows, 1};
@@ -571,7 +571,7 @@ static void lkSparse_run(oclMat &I, oclMat &J,
 {
     Context  *clCxt = I.clCxt;
     int elemCntPerRow = I.step / I.elemSize();
-    std::string kernelName = "lkSparse";
+    String kernelName = "lkSparse";
     bool isImageSupported = support_image2d();
     size_t localThreads[3]  = { 8, isImageSupported ? 8 : 32, 1 };
     size_t globalThreads[3] = { 8 * ptcount, isImageSupported ? 8 : 32, 1};
@@ -724,7 +724,7 @@ static void lkDense_run(oclMat &I, oclMat &J, oclMat &u, oclMat &v,
     bool isImageSupported = support_image2d();
     int elemCntPerRow = I.step / I.elemSize();
 
-    std::string kernelName = "lkDense";
+    String kernelName = "lkDense";
 
     size_t localThreads[3]  = { 16, 16, 1 };
     size_t globalThreads[3] = { I.cols, I.rows, 1};

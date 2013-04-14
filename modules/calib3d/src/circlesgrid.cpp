@@ -202,12 +202,12 @@ void CirclesGridClusterFinder::findCorners(const std::vector<cv::Point2f> &hull2
   //corners are the most sharp angles (6)
   Mat anglesMat = Mat(angles);
   Mat sortedIndices;
-  sortIdx(anglesMat, sortedIndices, CV_SORT_EVERY_COLUMN + CV_SORT_DESCENDING);
+  sortIdx(anglesMat, sortedIndices, SORT_EVERY_COLUMN + SORT_DESCENDING);
   CV_Assert(sortedIndices.type() == CV_32SC1);
   CV_Assert(sortedIndices.cols == 1);
   const int cornersCount = isAsymmetricGrid ? 6 : 4;
   Mat cornersIndices;
-  cv::sort(sortedIndices.rowRange(0, cornersCount), cornersIndices, CV_SORT_EVERY_COLUMN + CV_SORT_ASCENDING);
+  cv::sort(sortedIndices.rowRange(0, cornersCount), cornersIndices, SORT_EVERY_COLUMN + SORT_ASCENDING);
   corners.clear();
   for(int i=0; i<cornersCount; i++)
   {
@@ -438,15 +438,15 @@ bool Graph::doesVertexExist(size_t id) const
 
 void Graph::addVertex(size_t id)
 {
-  assert( !doesVertexExist( id ) );
+  CV_Assert( !doesVertexExist( id ) );
 
   vertices.insert(std::pair<size_t, Vertex> (id, Vertex()));
 }
 
 void Graph::addEdge(size_t id1, size_t id2)
 {
-  assert( doesVertexExist( id1 ) );
-  assert( doesVertexExist( id2 ) );
+  CV_Assert( doesVertexExist( id1 ) );
+  CV_Assert( doesVertexExist( id2 ) );
 
   vertices[id1].neighbors.insert(id2);
   vertices[id2].neighbors.insert(id1);
@@ -454,8 +454,8 @@ void Graph::addEdge(size_t id1, size_t id2)
 
 void Graph::removeEdge(size_t id1, size_t id2)
 {
-  assert( doesVertexExist( id1 ) );
-  assert( doesVertexExist( id2 ) );
+  CV_Assert( doesVertexExist( id1 ) );
+  CV_Assert( doesVertexExist( id2 ) );
 
   vertices[id1].neighbors.erase(id2);
   vertices[id2].neighbors.erase(id1);
@@ -463,8 +463,8 @@ void Graph::removeEdge(size_t id1, size_t id2)
 
 bool Graph::areVerticesAdjacent(size_t id1, size_t id2) const
 {
-  assert( doesVertexExist( id1 ) );
-  assert( doesVertexExist( id2 ) );
+  CV_Assert( doesVertexExist( id1 ) );
+  CV_Assert( doesVertexExist( id2 ) );
 
   Vertices::const_iterator it = vertices.find(id1);
   return it->second.neighbors.find(id2) != it->second.neighbors.end();
@@ -477,7 +477,7 @@ size_t Graph::getVerticesCount() const
 
 size_t Graph::getDegree(size_t id) const
 {
-  assert( doesVertexExist(id) );
+  CV_Assert( doesVertexExist(id) );
 
   Vertices::const_iterator it = vertices.find(id);
   return it->second.neighbors.size();
@@ -495,7 +495,7 @@ void Graph::floydWarshall(cv::Mat &distanceMatrix, int infinity) const
     distanceMatrix.at<int> ((int)it1->first, (int)it1->first) = 0;
     for (Neighbors::const_iterator it2 = it1->second.neighbors.begin(); it2 != it1->second.neighbors.end(); it2++)
     {
-      assert( it1->first != *it2 );
+      CV_Assert( it1->first != *it2 );
       distanceMatrix.at<int> ((int)it1->first, (int)*it2) = edgeWeight;
     }
   }
@@ -524,7 +524,7 @@ void Graph::floydWarshall(cv::Mat &distanceMatrix, int infinity) const
 
 const Graph::Neighbors& Graph::getNeighbors(size_t id) const
 {
-  assert( doesVertexExist(id) );
+  CV_Assert( doesVertexExist(id) );
 
   Vertices::const_iterator it = vertices.find(id);
   return it->second.neighbors;
@@ -604,7 +604,7 @@ bool CirclesGridFinder::findHoles()
     }
 
     default:
-      CV_Error(CV_StsBadArg, "Unkown pattern type");
+      CV_Error(Error::StsBadArg, "Unkown pattern type");
   }
   return (isDetectionCorrect());
   //CV_Error( 0, "Detection is not correct" );
@@ -813,7 +813,7 @@ void CirclesGridFinder::findMCS(const std::vector<Point2f> &basis, std::vector<G
 Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const std::vector<Point2f>& centers,
                                    const std::vector<Point2f> &keypoints, std::vector<Point2f> &warpedKeypoints)
 {
-  assert( !centers.empty() );
+  CV_Assert( !centers.empty() );
   const float edgeLength = 30;
   const Point2f offset(150, 150);
 
@@ -832,7 +832,7 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const std::vector<Poin
     }
   }
 
-  Mat H = findHomography(Mat(centers), Mat(dstPoints), CV_RANSAC);
+  Mat H = findHomography(Mat(centers), Mat(dstPoints), RANSAC);
   //Mat H = findHomography( Mat( corners ), Mat( dstPoints ) );
 
   std::vector<Point2f> srcKeypoints;
@@ -912,7 +912,7 @@ void CirclesGridFinder::findCandidateLine(std::vector<size_t> &line, size_t seed
     }
   }
 
-  assert( line.size() == seeds.size() );
+  CV_Assert( line.size() == seeds.size() );
 }
 
 void CirclesGridFinder::findCandidateHoles(std::vector<size_t> &above, std::vector<size_t> &below, bool addRow, Point2f basisVec,
@@ -927,9 +927,9 @@ void CirclesGridFinder::findCandidateHoles(std::vector<size_t> &above, std::vect
   size_t lastIdx = addRow ? holes.size() - 1 : holes[0].size() - 1;
   findCandidateLine(below, lastIdx, addRow, basisVec, belowSeeds);
 
-  assert( below.size() == above.size() );
-  assert( belowSeeds.size() == aboveSeeds.size() );
-  assert( below.size() == belowSeeds.size() );
+  CV_Assert( below.size() == above.size() );
+  CV_Assert( belowSeeds.size() == aboveSeeds.size() );
+  CV_Assert( below.size() == belowSeeds.size() );
 }
 
 bool CirclesGridFinder::areCentersNew(const std::vector<size_t> &newCenters, const std::vector<std::vector<size_t> > &holes)
@@ -1000,10 +1000,10 @@ void CirclesGridFinder::insertWinner(float aboveConfidence, float belowConfidenc
 float CirclesGridFinder::computeGraphConfidence(const std::vector<Graph> &basisGraphs, bool addRow,
                                                 const std::vector<size_t> &points, const std::vector<size_t> &seeds)
 {
-  assert( points.size() == seeds.size() );
+  CV_Assert( points.size() == seeds.size() );
   float confidence = 0;
   const size_t vCount = basisGraphs[0].getVerticesCount();
-  assert( basisGraphs[0].getVerticesCount() == basisGraphs[1].getVerticesCount() );
+  CV_Assert( basisGraphs[0].getVerticesCount() == basisGraphs[1].getVerticesCount() );
 
   for (size_t i = 0; i < seeds.size(); i++)
   {
@@ -1087,7 +1087,7 @@ void CirclesGridFinder::findBasis(const std::vector<Point2f> &samples, std::vect
   const int clustersCount = 4;
   kmeans(Mat(samples).reshape(1, 0), clustersCount, bestLabels, termCriteria, parameters.kmeansAttempts,
          KMEANS_RANDOM_CENTERS, centers);
-  assert( centers.type() == CV_32FC1 );
+  CV_Assert( centers.type() == CV_32FC1 );
 
   std::vector<int> basisIndices;
   //TODO: only remove duplicate
@@ -1204,7 +1204,7 @@ void CirclesGridFinder::computeRNG(Graph &rng, std::vector<cv::Point2f> &vectors
 
 void computePredecessorMatrix(const Mat &dm, int verticesCount, Mat &predecessorMatrix)
 {
-  assert( dm.type() == CV_32SC1 );
+  CV_Assert( dm.type() == CV_32SC1 );
   predecessorMatrix.create(verticesCount, verticesCount, CV_32SC1);
   predecessorMatrix = -1;
   for (int i = 0; i < predecessorMatrix.rows; i++)
@@ -1253,7 +1253,6 @@ size_t CirclesGridFinder::findLongestPath(std::vector<Graph> &basisGraphs, Path 
 
     double maxVal;
     Point maxLoc;
-    assert (infinity < 0);
     minMaxLoc(distanceMatrix, 0, &maxVal, 0, &maxLoc);
 
     if (maxVal > longestPaths[0].length)
@@ -1364,7 +1363,7 @@ void CirclesGridFinder::drawHoles(const Mat &srcImage, Mat &drawImage) const
   const Scalar holeColor = Scalar(0, 255, 0);
 
   if (srcImage.channels() == 1)
-    cvtColor(srcImage, drawImage, CV_GRAY2RGB);
+    cvtColor(srcImage, drawImage, COLOR_GRAY2RGB);
   else
     srcImage.copyTo(drawImage);
 
@@ -1593,10 +1592,4 @@ size_t CirclesGridFinder::getFirstCorner(std::vector<Point> &largeCornerIndices,
   }
 
   return cornerIdx;
-}
-
-bool cv::findCirclesGridDefault( InputArray image, Size patternSize,
-                                 OutputArray centers, int flags )
-{
-  return findCirclesGrid(image, patternSize, centers, flags);
 }

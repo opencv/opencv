@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -39,7 +39,6 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
 #include "precomp.hpp"
 
 using namespace cv;
@@ -83,7 +82,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Empty()
 
 #ifndef HAVE_OPENCV_HIGHGUI
 
-Ptr<FrameSource> cv::superres::createFrameSource_Video(const string& fileName)
+Ptr<FrameSource> cv::superres::createFrameSource_Video(const String& fileName)
 {
     (void) fileName;
     CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");
@@ -129,15 +128,15 @@ namespace
     class VideoFrameSource : public CaptureFrameSource
     {
     public:
-        VideoFrameSource(const std::string& fileName);
+        VideoFrameSource(const String& fileName);
 
         void reset();
 
     private:
-        std::string fileName_;
+        String fileName_;
     };
 
-    VideoFrameSource::VideoFrameSource(const std::string& fileName) : fileName_(fileName)
+    VideoFrameSource::VideoFrameSource(const String& fileName) : fileName_(fileName)
     {
         reset();
     }
@@ -173,7 +172,7 @@ namespace
     }
 }
 
-Ptr<FrameSource> cv::superres::createFrameSource_Video(const std::string& fileName)
+Ptr<FrameSource> cv::superres::createFrameSource_Video(const String& fileName)
 {
     return new VideoFrameSource(fileName);
 }
@@ -190,7 +189,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
 
 #ifndef HAVE_OPENCV_GPU
 
-Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const string& fileName)
+Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const String& fileName)
 {
     (void) fileName;
     CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");
@@ -204,18 +203,18 @@ namespace
     class VideoFrameSource_GPU : public FrameSource
     {
     public:
-        VideoFrameSource_GPU(const std::string& fileName);
+        VideoFrameSource_GPU(const String& fileName);
 
         void nextFrame(OutputArray frame);
         void reset();
 
     private:
-        std::string fileName_;
+        String fileName_;
         VideoReader_GPU reader_;
         GpuMat frame_;
     };
 
-    VideoFrameSource_GPU::VideoFrameSource_GPU(const std::string& fileName) : fileName_(fileName)
+    VideoFrameSource_GPU::VideoFrameSource_GPU(const String& fileName) : fileName_(fileName)
     {
         reset();
     }
@@ -246,7 +245,7 @@ namespace
     }
 }
 
-Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const std::string& fileName)
+Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const String& fileName)
 {
     return new VideoFrameSource(fileName);
 }

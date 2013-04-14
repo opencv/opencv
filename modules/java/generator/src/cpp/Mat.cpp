@@ -2543,12 +2543,35 @@ JNIEXPORT jstring JNICALL Java_org_opencv_core_Mat_nDump
   (JNIEnv *env, jclass, jlong self)
 {
     cv::Mat* me = (cv::Mat*) self; //TODO: check for NULL
-    std::stringstream s;
     try {
             LOGD("Mat::nDump()");
 
-            s << *me;
-            return env->NewStringUTF(s.str().c_str());
+            const int BUFSZ = 4096 - 32;
+            char buf[BUFSZ + 32];
+            String s;
+
+            Ptr<Formatted> fmtd = Formatter::get()->format(*me);
+            char* pos = buf;
+
+            for(const char* str = fmtd->next(); str; str = fmtd->next())
+            {
+                pos = strcpy(pos, str);
+                if(pos > buf + BUFSZ)
+                {
+                    s = s + String(buf, pos - buf);
+                    pos = buf;
+                }
+            }
+
+            if (pos > buf)
+            {
+                if (s.empty())
+                    return env->NewStringUTF(buf);
+
+                s = s + String(buf, pos - buf);
+            }
+
+            return env->NewStringUTF(s.c_str());
         } catch(cv::Exception e) {
             LOGE("Mat::nDump() catched cv::Exception: %s", e.what());
             jclass je = env->FindClass("org/opencv/core/CvException");

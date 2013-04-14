@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include <functional>
+#include <limits>
 
 using namespace cv;
 
@@ -157,8 +158,13 @@ namespace
         releaseVector(voteOutBuf);
     }
 
-    #define votes_cmp_gt(l1, l2) (aux[l1][0] > aux[l2][0])
-    static CV_IMPLEMENT_QSORT_EX( sortIndexies, size_t, votes_cmp_gt, const Vec3i* )
+    class Vec3iGreaterThanIdx
+    {
+    public:
+        Vec3iGreaterThanIdx( const Vec3i* _arr ) : arr(_arr) {}
+        bool operator()(size_t a, size_t b) const { return arr[a][0] > arr[b][0]; }
+        const Vec3i* arr;
+    };
 
     void GHT_Pos::filterMinDist()
     {
@@ -173,7 +179,7 @@ namespace
         std::vector<size_t> indexies(oldSize);
         for (size_t i = 0; i < oldSize; ++i)
             indexies[i] = i;
-        sortIndexies(&indexies[0], oldSize, &oldVoteBuf[0]);
+        std::sort(indexies.begin(), indexies.end(), Vec3iGreaterThanIdx(&oldVoteBuf[0]));
 
         posOutBuf.clear();
         voteOutBuf.clear();

@@ -1,7 +1,9 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 import hdr_parser, sys, re, os, cStringIO
 from string import Template
+
+ignored_arg_types = ["RNG*"]
 
 gen_template_check_self = Template("""    if(!PyObject_TypeCheck(self, &pyopencv_${name}_Type))
         return failmsgp("Incorrect type of self (must be '${name}' or its derivative)");
@@ -211,6 +213,7 @@ gen_template_rw_prop_init = Template("""
 
 simple_argtype_mapping = {
     "bool": ("bool", "b", "0"),
+    "char": ("char", "b", "0"),
     "int": ("int", "i", "0"),
     "float": ("float", "f", "0.f"),
     "double": ("double", "d", "0"),
@@ -425,6 +428,8 @@ class FuncVariant(object):
             argno += 1
             if a.name in self.array_counters:
                 continue
+            if a.tp in ignored_arg_types:
+                continue
             if a.returnarg:
                 outlist.append((a.name, argno))
             if (not a.inputarg) and a.isbig():
@@ -585,6 +590,16 @@ class FuncInfo(object):
             # form the function/method call,
             # for the list of type mappings
             for a in v.args:
+                if a.tp in ignored_arg_types:
+                    defval = a.defval
+                    if not defval and a.tp.endswith("*"):
+                        defval = 0
+                    assert defval
+                    if not code_fcall.endswith("("):
+                        code_fcall += ", "
+                    code_fcall += defval
+                    all_cargs.append([[None, ""], ""])
+                    continue
                 tp1 = tp = a.tp
                 amp = ""
                 defval0 = ""

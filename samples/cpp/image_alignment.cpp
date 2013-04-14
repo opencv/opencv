@@ -238,7 +238,7 @@ int main (const int argc, const char * argv[])
             warpGround = (Mat_<float>(2,3) << 1, 0, (rng.uniform(10.f, 20.f)),
                 0, 1, (rng.uniform(10.f, 20.f)));
             warpAffine(target_image, template_image, warpGround,
-                Size(200,200), CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+                Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_EUCLIDEAN:
             angle = CV_PI/30 + CV_PI*rng.uniform((double)-2.f, (double)2.f)/180;
@@ -246,7 +246,7 @@ int main (const int argc, const char * argv[])
             warpGround = (Mat_<float>(2,3) << cos(angle), -sin(angle), (rng.uniform(10.f, 20.f)),
                 sin(angle), cos(angle), (rng.uniform(10.f, 20.f)));
             warpAffine(target_image, template_image, warpGround,
-                Size(200,200), CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+                Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_AFFINE:
 
@@ -255,7 +255,7 @@ int main (const int argc, const char * argv[])
                 (rng.uniform(-0.03f, 0.03f)), (1-rng.uniform(-0.05f, 0.05f)),
                 (rng.uniform(10.f, 20.f)));
             warpAffine(target_image, template_image, warpGround,
-                Size(200,200), CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+                Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_HOMOGRAPHY:
             warpGround = (Mat_<float>(3,3) << (1-rng.uniform(-0.05f, 0.05f)),
@@ -263,7 +263,7 @@ int main (const int argc, const char * argv[])
                 (rng.uniform(-0.03f, 0.03f)), (1-rng.uniform(-0.05f, 0.05f)),(rng.uniform(10.f, 20.f)),
                 (rng.uniform(0.0001f, 0.0003f)), (rng.uniform(0.0001f, 0.0003f)), 1.f);
             warpPerspective(target_image, template_image, warpGround,
-                Size(200,200), CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+                Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         }
     }
@@ -333,10 +333,10 @@ int main (const int argc, const char * argv[])
     Mat warped_image = Mat(template_image.rows, template_image.cols, CV_32FC1);
     if (warp_mode != MOTION_HOMOGRAPHY)
         warpAffine      (target_image, warped_image, warp_matrix, warped_image.size(),
-        CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+        INTER_LINEAR + WARP_INVERSE_MAP);
     else
         warpPerspective (target_image, warped_image, warp_matrix, warped_image.size(),
-        CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP);
+        INTER_LINEAR + WARP_INVERSE_MAP);
 
     //save the warped image
     imwrite(warpedImFile, warped_image);
@@ -347,10 +347,10 @@ int main (const int argc, const char * argv[])
 
         cout << "The warped image has been saved in the file: " << warpedImFile << endl << flush;
 
-        namedWindow ("image",    CV_WINDOW_AUTOSIZE);
-        namedWindow ("template", CV_WINDOW_AUTOSIZE);
-        namedWindow ("warped image",   CV_WINDOW_AUTOSIZE);
-        namedWindow ("error (black: no error)", CV_WINDOW_AUTOSIZE);
+        namedWindow ("image",    WINDOW_AUTOSIZE);
+        namedWindow ("template", WINDOW_AUTOSIZE);
+        namedWindow ("warped image",   WINDOW_AUTOSIZE);
+        namedWindow ("error (black: no error)", WINDOW_AUTOSIZE);
 
         moveWindow  ("template", 350, 350);
         moveWindow  ("warped image",   600, 300);

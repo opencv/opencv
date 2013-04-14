@@ -31,7 +31,7 @@ class Mouse
 public:
   static void start(const std::string& a_img_name)
   {
-    cvSetMouseCallback(a_img_name.c_str(), Mouse::cv_on_mouse, 0);
+      cv::setMouseCallback(a_img_name.c_str(), Mouse::cv_on_mouse, 0);
   }
   static int event(void)
   {
@@ -130,7 +130,7 @@ static void writeLinemod(const cv::Ptr<cv::linemod::Detector>& detector, const s
   cv::FileStorage fs(filename, cv::FileStorage::WRITE);
   detector->write(fs);
 
-  std::vector<std::string> ids = detector->classIds();
+  std::vector<cv::String> ids = detector->classIds();
   fs << "classes" << "[";
   for (int i = 0; i < (int)ids.size(); ++i)
   {
@@ -177,7 +177,7 @@ int main(int argc, char * argv[])
   {
     detector = readLinemod(argv[1]);
 
-    std::vector<std::string> ids = detector->classIds();
+    std::vector<cv::String> ids = detector->classIds();
     num_classes = detector->numClasses();
     printf("Loaded %s with %d classes and %d templates\n",
            argv[1], num_classes, detector->numTemplates());
@@ -190,14 +190,14 @@ int main(int argc, char * argv[])
   int num_modalities = (int)detector->getModalities().size();
 
   // Open Kinect sensor
-  cv::VideoCapture capture( CV_CAP_OPENNI );
+  cv::VideoCapture capture( cv::CAP_OPENNI );
   if (!capture.isOpened())
   {
     printf("Could not open OpenNI-capable sensor\n");
     return -1;
   }
-  capture.set(CV_CAP_PROP_OPENNI_REGISTRATION, 1);
-  double focal_length = capture.get(CV_CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH);
+  capture.set(cv::CAP_PROP_OPENNI_REGISTRATION, 1);
+  double focal_length = capture.get(cv::CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH);
   //printf("Focal length = %f\n", focal_length);
 
   // Main loop
@@ -206,8 +206,8 @@ int main(int argc, char * argv[])
   {
     // Capture next color/depth pair
     capture.grab();
-    capture.retrieve(depth, CV_CAP_OPENNI_DEPTH_MAP);
-    capture.retrieve(color, CV_CAP_OPENNI_BGR_IMAGE);
+    capture.retrieve(depth, cv::CAP_OPENNI_DEPTH_MAP);
+    capture.retrieve(color, cv::CAP_OPENNI_BGR_IMAGE);
 
     std::vector<cv::Mat> sources;
     sources.push_back(color);
@@ -224,7 +224,7 @@ int main(int argc, char * argv[])
       cv::Point pt1 = mouse - roi_offset; // top left
       cv::Point pt2 = mouse + roi_offset; // bottom right
 
-      if (event == CV_EVENT_RBUTTONDOWN)
+      if (event == cv::EVENT_RBUTTONDOWN)
       {
         // Compute object mask by subtracting the plane within the ROI
         std::vector<CvPoint> chain(4);
@@ -260,7 +260,7 @@ int main(int argc, char * argv[])
 
     // Perform matching
     std::vector<cv::linemod::Match> matches;
-    std::vector<std::string> class_ids;
+    std::vector<cv::String> class_ids;
     std::vector<cv::Mat> quantized_images;
     match_timer.start();
     detector->match(sources, (float)matching_threshold, matches, class_ids, quantized_images);
@@ -331,7 +331,7 @@ int main(int argc, char * argv[])
     cv::imshow("normals", quantized_images[1]);
 
     cv::FileStorage fs;
-    char key = (char)cvWaitKey(10);
+    char key = (char)cv::waitKey(10);
     if( key == 'q' )
         break;
 

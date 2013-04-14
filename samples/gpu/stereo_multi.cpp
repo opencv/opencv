@@ -13,6 +13,18 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/gpu/gpu.hpp"
 
+#ifdef HAVE_TBB
+#  include "tbb/tbb_stddef.h"
+#  if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
+#    include "tbb/tbb.h"
+#    include "tbb/task.h"
+#    undef min
+#    undef max
+#  else
+#    undef HAVE_TBB
+#  endif
+#endif
+
 #if !defined(HAVE_CUDA) || !defined(HAVE_TBB)
 
 int main()
@@ -29,8 +41,6 @@ int main()
 }
 
 #else
-
-#include "opencv2/core/internal.hpp" // For TBB wrappers
 
 using namespace std;
 using namespace cv;
@@ -83,12 +93,12 @@ int main(int argc, char** argv)
     {
         if (string(argv[i]) == "--left")
         {
-            left = imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE);
+            left = imread(argv[++i], cv::IMREAD_GRAYSCALE);
             CV_Assert(!left.empty());
         }
         else if (string(argv[i]) == "--right")
         {
-            right = imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE);
+            right = imread(argv[++i], cv::IMREAD_GRAYSCALE);
             CV_Assert(!right.empty());
         }
         else if (string(argv[i]) == "--help")
@@ -112,7 +122,7 @@ int main(int argc, char** argv)
 
     // Execute calculation in two threads using two GPUs
     int devices[] = {0, 1};
-    parallel_do(devices, devices + 2, Worker());
+    tbb::parallel_do(devices, devices + 2, Worker());
 
     // Release the first GPU resources
     setDevice(0);

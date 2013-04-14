@@ -43,12 +43,9 @@
 #ifndef _OPENCV_FLANN_HPP_
 #define _OPENCV_FLANN_HPP_
 
-#ifdef __cplusplus
-
-#include "opencv2/core/types_c.h"
 #include "opencv2/core.hpp"
-#include "opencv2/flann/flann_base.hpp"
 #include "opencv2/flann/miniflann.hpp"
+#include "opencv2/flann/flann_base.hpp"
 
 namespace cvflann
 {
@@ -112,7 +109,7 @@ public:
         int radiusSearch(const Mat& query, Mat& indices, Mat& dists,
                          DistanceType radius, const ::cvflann::SearchParams& params);
 
-        void save(std::string filename) { nnIndex->save(filename); }
+        void save(String filename) { nnIndex->save(filename); }
 
         int veclen() const { return nnIndex->veclen(); }
 
@@ -244,7 +241,7 @@ public:
     int radiusSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& params);
     int radiusSearch(const Mat& query, Mat& indices, Mat& dists, DistanceType radius, const ::cvflann::SearchParams& params);
 
-    void save(std::string filename)
+    void save(String filename)
         {
             if (nnIndex_L1) nnIndex_L1->save(filename);
             if (nnIndex_L2) nnIndex_L2->save(filename);
@@ -421,7 +418,5 @@ FLANN_DEPRECATED int hierarchicalClustering(const Mat& features, Mat& centers, c
 }
 
 } } // namespace cv::flann
-
-#endif // __cplusplus
 
 #endif

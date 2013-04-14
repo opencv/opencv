@@ -2,7 +2,6 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/utility.hpp>
-#include <opencv2/core/internal.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/objdetect.hpp>
@@ -145,7 +144,7 @@ static int test_FaceDetector(int argc, char *argv[])
         LOGD("\n\nSTEP n=%d        from prev step %f ms\n", n, t_ms);
         m=images[n-1];
         CV_Assert(! m.empty());
-        cvtColor(m, gray, CV_BGR2GRAY);
+        cvtColor(m, gray, COLOR_BGR2GRAY);
 
         fd.process(gray);
 

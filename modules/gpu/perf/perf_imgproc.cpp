@@ -1,3 +1,45 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+
 #include "perf_precomp.hpp"
 
 using namespace std;
@@ -553,6 +595,39 @@ PERF_TEST_P(Sz, ImgProc_EqualizeHist,
         cv::Mat dst;
 
         TEST_CYCLE() cv::equalizeHist(src, dst);
+
+        CPU_SANITY_CHECK(dst);
+    }
+}
+
+DEF_PARAM_TEST(Sz_ClipLimit, cv::Size, double);
+
+PERF_TEST_P(Sz_ClipLimit, ImgProc_CLAHE,
+            Combine(GPU_TYPICAL_MAT_SIZES,
+                    Values(0.0, 40.0)))
+{
+    const cv::Size size = GET_PARAM(0);
+    const double clipLimit = GET_PARAM(1);
+
+    cv::Mat src(size, CV_8UC1);
+    declare.in(src, WARMUP_RNG);
+
+    if (PERF_RUN_GPU())
+    {
+        cv::Ptr<cv::gpu::CLAHE> clahe = cv::gpu::createCLAHE(clipLimit);
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat dst;
+
+        TEST_CYCLE() clahe->apply(d_src, dst);
+
+        GPU_SANITY_CHECK(dst);
+    }
+    else
+    {
+        cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(clipLimit);
+        cv::Mat dst;
+
+        TEST_CYCLE() clahe->apply(src, dst);
 
         CPU_SANITY_CHECK(dst);
     }
@@ -1740,12 +1815,17 @@ PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles,
 //////////////////////////////////////////////////////////////////////
 // GeneralizedHough
 
-CV_FLAGS(GHMethod, cv::GHT_POSITION, cv::GHT_SCALE, cv::GHT_ROTATION);
+enum { GHT_POSITION = cv::GeneralizedHough::GHT_POSITION,
+       GHT_SCALE    = cv::GeneralizedHough::GHT_SCALE,
+       GHT_ROTATION = cv::GeneralizedHough::GHT_ROTATION
+     };
+
+CV_FLAGS(GHMethod, GHT_POSITION, GHT_SCALE, GHT_ROTATION);
 
 DEF_PARAM_TEST(Method_Sz, GHMethod, cv::Size);
 
 PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough,
-            Combine(Values(GHMethod(cv::GHT_POSITION), GHMethod(cv::GHT_POSITION | cv::GHT_SCALE), GHMethod(cv::GHT_POSITION | cv::GHT_ROTATION), GHMethod(cv::GHT_POSITION | cv::GHT_SCALE | cv::GHT_ROTATION)),
+            Combine(Values(GHMethod(GHT_POSITION), GHMethod(GHT_POSITION | GHT_SCALE), GHMethod(GHT_POSITION | GHT_ROTATION), GHMethod(GHT_POSITION | GHT_SCALE | GHT_ROTATION)),
                     GPU_TYPICAL_MAT_SIZES))
 {
     declare.time(10);
@@ -1795,7 +1875,7 @@ PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough,
         cv::gpu::GpuMat posAndVotes;
 
         cv::Ptr<cv::gpu::GeneralizedHough_GPU> d_hough = cv::gpu::GeneralizedHough_GPU::create(method);
-        if (method & cv::GHT_ROTATION)
+        if (method & GHT_ROTATION)
         {
             d_hough->set("maxAngle", 90.0);
             d_hough->set("angleStep", 2.0);
@@ -1813,7 +1893,7 @@ PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough,
         cv::Mat positions;
 
         cv::Ptr<cv::GeneralizedHough> hough = cv::GeneralizedHough::create(method);
-        if (method & cv::GHT_ROTATION)
+        if (method & GHT_ROTATION)
         {
             hough->set("maxAngle", 90.0);
             hough->set("angleStep", 2.0);

@@ -40,8 +40,8 @@ int main(int argc, char** argv)
     }
 
     //printf("Reading the images...\n");
-    Mat img1 = imread(img1_name, CV_LOAD_IMAGE_GRAYSCALE);
-    Mat img2 = imread(img2_name, CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img1 = imread(img1_name, IMREAD_GRAYSCALE);
+    Mat img2 = imread(img2_name, IMREAD_GRAYSCALE);
 
     // extract keypoints from the first image
     SURF surf_extractor(5.0e3);
@@ -80,7 +80,7 @@ Mat DrawCorrespondences(const Mat& img1, const vector<KeyPoint>& features1, cons
 
     for (size_t i = 0; i < features1.size(); i++)
     {
-        circle(img_corr, features1[i].pt, 3, CV_RGB(255, 0, 0));
+        circle(img_corr, features1[i].pt, 3, Scalar(255, 0, 0));
     }
 
     for (size_t i = 0; i < features2.size(); i++)

@@ -1,5 +1,5 @@
 #include "opencv2/core.hpp"
-#include "opencv2/core/internal.hpp"
+#include "opencv2/imgproc.hpp"
 
 #include "lbpfeatures.h"
 #include "cascadeclassifier.h"

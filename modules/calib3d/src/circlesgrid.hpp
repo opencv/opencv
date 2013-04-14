@@ -47,6 +47,7 @@
 #include <set>
 #include <list>
 #include <numeric>
+#include <map>
 
 #include "precomp.hpp"
 

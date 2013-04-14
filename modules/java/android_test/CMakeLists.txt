@@ -14,7 +14,7 @@ ocv_list_filterout(opencv_test_java_files ".svn")
 
 # copy sources out from the build tree
 set(opencv_test_java_file_deps "")
-foreach(f ${opencv_test_java_files} ${ANDROID_MANIFEST_FILE})
+foreach(f ${opencv_test_java_files} ${ANDROID_MANIFEST_FILE} ".classpath" ".project")
   add_custom_command(
       OUTPUT "${opencv_test_java_bin_dir}/${f}"
       COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${f}" "${opencv_test_java_bin_dir}/${f}"

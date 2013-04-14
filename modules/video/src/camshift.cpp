@@ -49,7 +49,7 @@ int cv::meanShift( InputArray _probImage, Rect& window, TermCriteria criteria )
     CV_Assert( mat.channels() == 1 );
 
     if( window.height <= 0 || window.width <= 0 )
-        CV_Error( CV_StsBadArg, "Input window has non-positive sizes" );
+        CV_Error( Error::StsBadArg, "Input window has non-positive sizes" );
 
     window = window & Rect(0, 0, mat.cols, mat.rows);
 

@@ -93,8 +93,8 @@ public:
     double confThresh() const { return conf_thresh_; }
     void setConfThresh(double conf_thresh) { conf_thresh_ = conf_thresh; }
 
-    CvTermCriteria termCriteria() { return term_criteria_; }
-    void setTermCriteria(const CvTermCriteria& term_criteria) { term_criteria_ = term_criteria; }
+    TermCriteria termCriteria() { return term_criteria_; }
+    void setTermCriteria(const TermCriteria& term_criteria) { term_criteria_ = term_criteria; }
 
 protected:
     BundleAdjusterBase(int num_params_per_cam, int num_errs_per_measurement)
@@ -103,7 +103,7 @@ protected:
     {
         setRefinementMask(Mat::ones(3, 3, CV_8U));
         setConfThresh(1.);
-        setTermCriteria(cvTermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 1000, DBL_EPSILON));
+        setTermCriteria(TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 1000, DBL_EPSILON));
     }
 
     // Runs bundle adjustment
@@ -132,7 +132,7 @@ protected:
     double conf_thresh_;
 
     //Levenberg–Marquardt algorithm termination criteria
-    CvTermCriteria term_criteria_;
+    TermCriteria term_criteria_;
 
     // Camera parameters matrix (CV_64F)
     Mat cam_params_;
@@ -190,7 +190,7 @@ void CV_EXPORTS waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind);
 // Auxiliary functions
 
 // Returns matches graph representation in DOT language
-std::string CV_EXPORTS matchesGraphAsString(std::vector<std::string> &pathes, std::vector<MatchesInfo> &pairwise_matches,
+String CV_EXPORTS matchesGraphAsString(std::vector<String> &pathes, std::vector<MatchesInfo> &pairwise_matches,
                                             float conf_threshold);
 
 std::vector<int> CV_EXPORTS leaveBiggestComponent(std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,

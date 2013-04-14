@@ -44,7 +44,7 @@ int main( int, char** argv )
   printf( " ** Press 'ESC' to exit the program \n");
 
   /// Create window
-  namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+  namedWindow( window_name, WINDOW_AUTOSIZE );
 
   /// Initialize arguments for the filter
   top = (int) (0.05*src.rows); bottom = (int) (0.05*src.rows);

@@ -53,7 +53,7 @@ namespace cv
 int RANSACUpdateNumIters( double p, double ep, int modelPoints, int maxIters )
 {
     if( modelPoints <= 0 )
-        CV_Error( CV_StsOutOfRange, "the number of model points should be positive" );
+        CV_Error( Error::StsOutOfRange, "the number of model points should be positive" );
 
     p = MAX(p, 0.);
     p = MIN(p, 1.);
@@ -154,7 +154,7 @@ public:
                 continue;
             break;
         }
-        
+
         return i == modelPoints && iters < maxAttempts;
     }
 
@@ -235,7 +235,7 @@ public:
                 }
             }
         }
-        
+
         if( maxGoodCount > 0 )
         {
             if( bestMask.data != bestMask0.data )
@@ -250,7 +250,7 @@ public:
         }
         else
             _model.release();
-        
+
         return result;
     }
 
@@ -266,9 +266,6 @@ public:
     double confidence;
     int maxIters;
 };
-
-
-static CV_IMPLEMENT_QSORT( sortDistances, int, CV_LT )
 
 class LMeDSPointSetRegistrator : public RANSACPointSetRegistrator
 {
@@ -347,7 +344,7 @@ public:
                 else
                     errf = err;
                 CV_Assert( errf.isContinuous() && errf.type() == CV_32F && (int)errf.total() == count );
-                sortDistances( (int*)errf.data, count, 0 );
+                std::sort((int*)errf.data, (int*)errf.data + count);
 
                 double median = count % 2 != 0 ?
                 errf.at<float>(count/2) : (errf.at<float>(count/2-1) + errf.at<float>(count/2))*0.5;
@@ -359,7 +356,7 @@ public:
                 }
             }
         }
-        
+
         if( minMedian < DBL_MAX )
         {
             sigma = 2.5*1.4826*(1 + 5./(count - modelPoints))*std::sqrt(minMedian);
@@ -378,7 +375,7 @@ public:
         }
         else
             _model.release();
-        
+
         return result;
     }
 
@@ -534,7 +531,7 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
     const double epsilon = DBL_EPSILON;
     param1 = param1 <= 0 ? 3 : param1;
     param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
-    
+
     return createRANSACPointSetRegistrator(new Affine3DEstimatorCallback, 4, param1, param2)->run(dFrom, dTo, _out, _inliers);
 }
 

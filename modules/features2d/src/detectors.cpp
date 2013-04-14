@@ -86,7 +86,7 @@ void FeatureDetector::removeInvalidPoints( const Mat& mask, std::vector<KeyPoint
     KeyPointsFilter::runByPixelsMask( keypoints, mask );
 }
 
-Ptr<FeatureDetector> FeatureDetector::create( const std::string& detectorType )
+Ptr<FeatureDetector> FeatureDetector::create( const String& detectorType )
 {
     if( detectorType.find("Grid") == 0 )
     {
@@ -128,7 +128,7 @@ GFTTDetector::GFTTDetector( int _nfeatures, double _qualityLevel,
 void GFTTDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
 {
     Mat grayImage = image;
-    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
     std::vector<Point2f> corners;
     goodFeaturesToTrack( grayImage, corners, nfeatures, qualityLevel, minDistance, mask,
@@ -346,7 +346,7 @@ void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, std::vector<Ke
             src = dst;
 
             if( !mask.empty() )
-                resize( dilated_mask, src_mask, src.size(), 0, 0, CV_INTER_AREA );
+                resize( dilated_mask, src_mask, src.size(), 0, 0, INTER_AREA );
         }
     }
 
