@@ -112,7 +112,7 @@ typedef struct __attribute__((aligned (64))) GpuHidHaarClassifierCascade
 } GpuHidHaarClassifierCascade;
 
 
-__kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCascade(//constant GpuHidHaarClassifierCascade * cascade,
+__kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCascade(
     global GpuHidHaarStageClassifier * stagecascadeptr,
     global int4 * info,
     global GpuHidHaarTreeNode * nodeptr,
@@ -128,12 +128,7 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
     const int splitnode,
     const int4 p,
     const int4 pq,
-    const float correction
-    //const int width,
-    //const int height,
-    //const int grpnumperline,
-    //const int totalgrp
-)
+    const float correction)
 {
     int grpszx = get_local_size(0);
     int grpszy = get_local_size(1);
@@ -145,13 +140,8 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
     int lcl_sz = mul24(grpszx,grpszy);
     int lcl_id = mad24(lclidy,grpszx,lclidx);
 
-    //assume lcl_sz == 256 or 128 or 64
-    //int lcl_sz_shift = (lcl_sz == 256) ? 8 : 7;
-    //lcl_sz_shift = (lcl_sz == 64) ? 6 : lcl_sz_shift;
     __local int lclshare[1024];
-
-#define OFF 0
-    __local int* lcldata = lclshare + OFF;//for save win data
+    __local int* lcldata = lclshare;//for save win data
     __local int* glboutindex = lcldata + 28*28;//for save global out index
     __local int* lclcount = glboutindex + 1;//for save the numuber of temp pass pixel
     __local int* lcloutindex = lclcount + 1;//for save info of temp pass pixel
@@ -181,7 +171,6 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
         int totalgrp = scaleinfo1.y & 0xffff;
         int imgoff = scaleinfo1.z;
         float factor = as_float(scaleinfo1.w);
-        //int ystep =1;// factor > 2.0 ? 1 : 2;
 
         __global const int * sum = sum1 + imgoff;
         __global const float * sqsum = sqsum1 + imgoff;
@@ -191,8 +180,6 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
             int grpidx = grploop - mul24(grpidy, grpnumperline);
             int x = mad24(grpidx,grpszx,lclidx);
             int y = mad24(grpidy,grpszy,lclidy);
-            //candidate_result.x = convert_int_rtn(x*factor);
-            //candidate_result.y = convert_int_rtn(y*factor);
             int grpoffx = x-lclidx;
             int grpoffy = y-lclidy;
 
@@ -211,14 +198,7 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
                 int4 data = *(__global int4*)&sum[glb_off];
                 int lcl_off = mad24(lcl_y, readwidth, lcl_x<<2);
 
-#if OFF
-                lcldata[lcl_off] = data.x;
-                lcldata[lcl_off+1] = data.y;
-                lcldata[lcl_off+2] = data.z;
-                lcldata[lcl_off+3] = data.w;
-#else
                 vstore4(data, 0, &lcldata[lcl_off]);
-#endif
             }
 
             lcloutindex[lcl_id] = 0;
@@ -231,184 +211,170 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
             int lcl_off = mad24(lclidy,readwidth,lclidx);
             int4 cascadeinfo1, cascadeinfo2;
             cascadeinfo1 = p;
-            cascadeinfo2 = pq;// + mad24(y, pixelstep, x);
+            cascadeinfo2 = pq;
 
+            cascadeinfo1.x +=lcl_off;
+            cascadeinfo1.z +=lcl_off;
+            mean = (lcldata[mad24(cascadeinfo1.y,readwidth,cascadeinfo1.x)] - lcldata[mad24(cascadeinfo1.y,readwidth,cascadeinfo1.z)] -
+                    lcldata[mad24(cascadeinfo1.w,readwidth,cascadeinfo1.x)] + lcldata[mad24(cascadeinfo1.w,readwidth,cascadeinfo1.z)])
+                    *correction;
 
-            //if((x < width) && (y < height))
+            int p_offset = mad24(y, pixelstep, x);
+
+            cascadeinfo2.x +=p_offset;
+            cascadeinfo2.z +=p_offset;
+            variance_norm_factor =sqsum[mad24(cascadeinfo2.y, pixelstep, cascadeinfo2.x)] - sqsum[mad24(cascadeinfo2.y, pixelstep, cascadeinfo2.z)] -
+                                    sqsum[mad24(cascadeinfo2.w, pixelstep, cascadeinfo2.x)] + sqsum[mad24(cascadeinfo2.w, pixelstep, cascadeinfo2.z)];
+
+            variance_norm_factor = variance_norm_factor * correction - mean * mean;
+            variance_norm_factor = variance_norm_factor >=0.f ? sqrt(variance_norm_factor) : 1.f;
+
+            for(int stageloop = start_stage; (stageloop < split_stage)  && result; stageloop++ )
             {
-                cascadeinfo1.x +=lcl_off;
-                cascadeinfo1.z +=lcl_off;
-                mean = (lcldata[mad24(cascadeinfo1.y,readwidth,cascadeinfo1.x)] - lcldata[mad24(cascadeinfo1.y,readwidth,cascadeinfo1.z)] -
-                        lcldata[mad24(cascadeinfo1.w,readwidth,cascadeinfo1.x)] + lcldata[mad24(cascadeinfo1.w,readwidth,cascadeinfo1.z)])
-                       *correction;
+                float stage_sum = 0.f;
+                int2 stageinfo = *(global int2*)(stagecascadeptr+stageloop);
+                float stagethreshold = as_float(stageinfo.y);
+                for(int nodeloop = 0; nodeloop < stageinfo.x; nodeloop++ )
+                {
+                    __global GpuHidHaarTreeNode* currentnodeptr = (nodeptr + nodecounter);
 
-                int p_offset = mad24(y, pixelstep, x);
+                    int4 info1 = *(__global int4*)(&(currentnodeptr->p[0][0]));
+                    int4 info2 = *(__global int4*)(&(currentnodeptr->p[1][0]));
+                    int4 info3 = *(__global int4*)(&(currentnodeptr->p[2][0]));
+                    float4 w = *(__global float4*)(&(currentnodeptr->weight[0]));
+                    float2 alpha2 = *(__global float2*)(&(currentnodeptr->alpha[0]));
+                    float nodethreshold  = w.w * variance_norm_factor;
 
-                cascadeinfo2.x +=p_offset;
-                cascadeinfo2.z +=p_offset;
-                variance_norm_factor =sqsum[mad24(cascadeinfo2.y, pixelstep, cascadeinfo2.x)] - sqsum[mad24(cascadeinfo2.y, pixelstep, cascadeinfo2.z)] -
-                                      sqsum[mad24(cascadeinfo2.w, pixelstep, cascadeinfo2.x)] + sqsum[mad24(cascadeinfo2.w, pixelstep, cascadeinfo2.z)];
+                    info1.x +=lcl_off;
+                    info1.z +=lcl_off;
+                    info2.x +=lcl_off;
+                    info2.z +=lcl_off;
 
-                variance_norm_factor = variance_norm_factor * correction - mean * mean;
-                variance_norm_factor = variance_norm_factor >=0.f ? sqrt(variance_norm_factor) : 1.f;
-                //if( cascade->is_stump_based )
-                //{
-                for(int stageloop = start_stage; (stageloop < split_stage)  && result; stageloop++ )
+                    float classsum = (lcldata[mad24(info1.y,readwidth,info1.x)] - lcldata[mad24(info1.y,readwidth,info1.z)] -
+                                        lcldata[mad24(info1.w,readwidth,info1.x)] + lcldata[mad24(info1.w,readwidth,info1.z)]) * w.x;
+
+                    classsum += (lcldata[mad24(info2.y,readwidth,info2.x)] - lcldata[mad24(info2.y,readwidth,info2.z)] -
+                                    lcldata[mad24(info2.w,readwidth,info2.x)] + lcldata[mad24(info2.w,readwidth,info2.z)]) * w.y;
+
+                    info3.x +=lcl_off;
+                    info3.z +=lcl_off;
+                    classsum += (lcldata[mad24(info3.y,readwidth,info3.x)] - lcldata[mad24(info3.y,readwidth,info3.z)] -
+                                    lcldata[mad24(info3.w,readwidth,info3.x)] + lcldata[mad24(info3.w,readwidth,info3.z)]) * w.z;
+
+                    stage_sum += classsum >= nodethreshold ? alpha2.y : alpha2.x;
+                    nodecounter++;
+                }
+
+                result = (stage_sum >= stagethreshold);
+            }
+
+            if(result && (x < width) && (y < height))
+            {
+                int queueindex = atomic_inc(lclcount);
+                lcloutindex[queueindex<<1] = (lclidy << 16) | lclidx;
+                lcloutindex[(queueindex<<1)+1] = as_int(variance_norm_factor);
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
+            int queuecount  = lclcount[0];
+            barrier(CLK_LOCAL_MEM_FENCE);
+            nodecounter = splitnode;
+            for(int stageloop = split_stage; stageloop< end_stage && queuecount>0; stageloop++)
+            {
+                lclcount[0]=0;
+                barrier(CLK_LOCAL_MEM_FENCE);
+
+                int2 stageinfo = *(global int2*)(stagecascadeptr+stageloop);
+                float stagethreshold = as_float(stageinfo.y);
+
+                int perfscale = queuecount > 4 ? 3 : 2;
+                int queuecount_loop = (queuecount + (1<<perfscale)-1) >> perfscale;
+                int lcl_compute_win = lcl_sz >> perfscale;
+                int lcl_compute_win_id = (lcl_id >>(6-perfscale));
+                int lcl_loops = (stageinfo.x + lcl_compute_win -1) >> (6-perfscale);
+                int lcl_compute_id = lcl_id - (lcl_compute_win_id << (6-perfscale));
+                for(int queueloop=0; queueloop<queuecount_loop; queueloop++)
                 {
                     float stage_sum = 0.f;
-                    int2 stageinfo = *(global int2*)(stagecascadeptr+stageloop);
-                    float stagethreshold = as_float(stageinfo.y);
-                    for(int nodeloop = 0; nodeloop < stageinfo.x; nodeloop++ )
+                    int temp_coord = lcloutindex[lcl_compute_win_id<<1];
+                    float variance_norm_factor = as_float(lcloutindex[(lcl_compute_win_id<<1)+1]);
+                    int queue_pixel = mad24(((temp_coord  & (int)0xffff0000)>>16),readwidth,temp_coord & 0xffff);
+
+                    if(lcl_compute_win_id < queuecount)
                     {
-                        __global GpuHidHaarTreeNode* currentnodeptr = (nodeptr + nodecounter);
 
-                        int4 info1 = *(__global int4*)(&(currentnodeptr->p[0][0]));
-                        int4 info2 = *(__global int4*)(&(currentnodeptr->p[1][0]));
-                        int4 info3 = *(__global int4*)(&(currentnodeptr->p[2][0]));
-                        float4 w = *(__global float4*)(&(currentnodeptr->weight[0]));
-                        float2 alpha2 = *(__global float2*)(&(currentnodeptr->alpha[0]));
-                        float nodethreshold  = w.w * variance_norm_factor;
+                        int tempnodecounter = lcl_compute_id;
+                        float part_sum = 0.f;
+                        for(int lcl_loop=0; lcl_loop<lcl_loops && tempnodecounter<stageinfo.x; lcl_loop++)
+                        {
+                            __global GpuHidHaarTreeNode* currentnodeptr = (nodeptr + nodecounter + tempnodecounter);
 
-                        info1.x +=lcl_off;
-                        info1.z +=lcl_off;
-                        info2.x +=lcl_off;
-                        info2.z +=lcl_off;
+                            int4 info1 = *(__global int4*)(&(currentnodeptr->p[0][0]));
+                            int4 info2 = *(__global int4*)(&(currentnodeptr->p[1][0]));
+                            int4 info3 = *(__global int4*)(&(currentnodeptr->p[2][0]));
+                            float4 w = *(__global float4*)(&(currentnodeptr->weight[0]));
+                            float2 alpha2 = *(__global float2*)(&(currentnodeptr->alpha[0]));
+                            float nodethreshold  = w.w * variance_norm_factor;
 
-                        float classsum = (lcldata[mad24(info1.y,readwidth,info1.x)] - lcldata[mad24(info1.y,readwidth,info1.z)] -
-                                          lcldata[mad24(info1.w,readwidth,info1.x)] + lcldata[mad24(info1.w,readwidth,info1.z)]) * w.x;
+                            info1.x +=queue_pixel;
+                            info1.z +=queue_pixel;
+                            info2.x +=queue_pixel;
+                            info2.z +=queue_pixel;
+
+                            float classsum = (lcldata[mad24(info1.y,readwidth,info1.x)] - lcldata[mad24(info1.y,readwidth,info1.z)] -
+                                                lcldata[mad24(info1.w,readwidth,info1.x)] + lcldata[mad24(info1.w,readwidth,info1.z)]) * w.x;
 
 
-                        classsum += (lcldata[mad24(info2.y,readwidth,info2.x)] - lcldata[mad24(info2.y,readwidth,info2.z)] -
-                                     lcldata[mad24(info2.w,readwidth,info2.x)] + lcldata[mad24(info2.w,readwidth,info2.z)]) * w.y;
+                            classsum += (lcldata[mad24(info2.y,readwidth,info2.x)] - lcldata[mad24(info2.y,readwidth,info2.z)] -
+                                            lcldata[mad24(info2.w,readwidth,info2.x)] + lcldata[mad24(info2.w,readwidth,info2.z)]) * w.y;
 
+                            info3.x +=queue_pixel;
+                            info3.z +=queue_pixel;
+                            classsum += (lcldata[mad24(info3.y,readwidth,info3.x)] - lcldata[mad24(info3.y,readwidth,info3.z)] -
+                                            lcldata[mad24(info3.w,readwidth,info3.x)] + lcldata[mad24(info3.w,readwidth,info3.z)]) * w.z;
 
-                        //if((info3.z - info3.x) && (!stageinfo.z))
-                        //{
-                        info3.x +=lcl_off;
-                        info3.z +=lcl_off;
-                        classsum += (lcldata[mad24(info3.y,readwidth,info3.x)] - lcldata[mad24(info3.y,readwidth,info3.z)] -
-                                     lcldata[mad24(info3.w,readwidth,info3.x)] + lcldata[mad24(info3.w,readwidth,info3.z)]) * w.z;
-                        //}
-                        stage_sum += classsum >= nodethreshold ? alpha2.y : alpha2.x;
-                        nodecounter++;
+                            part_sum += classsum >= nodethreshold ? alpha2.y : alpha2.x;
+                            tempnodecounter +=lcl_compute_win;
+                        }//end for(int lcl_loop=0;lcl_loop<lcl_loops;lcl_loop++)
+                        partialsum[lcl_id]=part_sum;
                     }
-
-                    result = (stage_sum >= stagethreshold);
-                }
-
-                if(result && (x < width) && (y < height))
-                {
-                    int queueindex = atomic_inc(lclcount);
-                    lcloutindex[queueindex<<1] = (lclidy << 16) | lclidx;
-                    lcloutindex[(queueindex<<1)+1] = as_int(variance_norm_factor);
-                }
-                barrier(CLK_LOCAL_MEM_FENCE);
-                int queuecount  = lclcount[0];
-                barrier(CLK_LOCAL_MEM_FENCE);
-                nodecounter = splitnode;
-                for(int stageloop = split_stage; stageloop< end_stage && queuecount>0; stageloop++)
-                {
-                    //barrier(CLK_LOCAL_MEM_FENCE);
-                    //if(lcl_id == 0)
-                    lclcount[0]=0;
                     barrier(CLK_LOCAL_MEM_FENCE);
-
-                    int2 stageinfo = *(global int2*)(stagecascadeptr+stageloop);
-                    float stagethreshold = as_float(stageinfo.y);
-
-                    int perfscale = queuecount > 4 ? 3 : 2;
-                    int queuecount_loop = (queuecount + (1<<perfscale)-1) >> perfscale;
-                    int lcl_compute_win = lcl_sz >> perfscale;
-                    int lcl_compute_win_id = (lcl_id >>(6-perfscale));
-                    int lcl_loops = (stageinfo.x + lcl_compute_win -1) >> (6-perfscale);
-                    int lcl_compute_id = lcl_id - (lcl_compute_win_id << (6-perfscale));
-                    for(int queueloop=0; queueloop<queuecount_loop/* && lcl_compute_win_id < queuecount*/; queueloop++)
+                    if(lcl_compute_win_id < queuecount)
                     {
-                        float stage_sum = 0.f;
-                        int temp_coord = lcloutindex[lcl_compute_win_id<<1];
-                        float variance_norm_factor = as_float(lcloutindex[(lcl_compute_win_id<<1)+1]);
-                        int queue_pixel = mad24(((temp_coord  & (int)0xffff0000)>>16),readwidth,temp_coord & 0xffff);
-
-                        //barrier(CLK_LOCAL_MEM_FENCE);
-                        if(lcl_compute_win_id < queuecount)
+                        for(int i=0; i<lcl_compute_win && (lcl_compute_id==0); i++)
                         {
-
-                            int tempnodecounter = lcl_compute_id;
-                            float part_sum = 0.f;
-                            for(int lcl_loop=0; lcl_loop<lcl_loops && tempnodecounter<stageinfo.x; lcl_loop++)
-                            {
-                                __global GpuHidHaarTreeNode* currentnodeptr = (nodeptr + nodecounter + tempnodecounter);
-
-                                int4 info1 = *(__global int4*)(&(currentnodeptr->p[0][0]));
-                                int4 info2 = *(__global int4*)(&(currentnodeptr->p[1][0]));
-                                int4 info3 = *(__global int4*)(&(currentnodeptr->p[2][0]));
-                                float4 w = *(__global float4*)(&(currentnodeptr->weight[0]));
-                                float2 alpha2 = *(__global float2*)(&(currentnodeptr->alpha[0]));
-                                float nodethreshold  = w.w * variance_norm_factor;
-
-                                info1.x +=queue_pixel;
-                                info1.z +=queue_pixel;
-                                info2.x +=queue_pixel;
-                                info2.z +=queue_pixel;
-
-                                float classsum = (lcldata[mad24(info1.y,readwidth,info1.x)] - lcldata[mad24(info1.y,readwidth,info1.z)] -
-                                                  lcldata[mad24(info1.w,readwidth,info1.x)] + lcldata[mad24(info1.w,readwidth,info1.z)]) * w.x;
-
-
-                                classsum += (lcldata[mad24(info2.y,readwidth,info2.x)] - lcldata[mad24(info2.y,readwidth,info2.z)] -
-                                             lcldata[mad24(info2.w,readwidth,info2.x)] + lcldata[mad24(info2.w,readwidth,info2.z)]) * w.y;
-                                //if((info3.z - info3.x) && (!stageinfo.z))
-                                //{
-                                info3.x +=queue_pixel;
-                                info3.z +=queue_pixel;
-                                classsum += (lcldata[mad24(info3.y,readwidth,info3.x)] - lcldata[mad24(info3.y,readwidth,info3.z)] -
-                                             lcldata[mad24(info3.w,readwidth,info3.x)] + lcldata[mad24(info3.w,readwidth,info3.z)]) * w.z;
-                                //}
-                                part_sum += classsum >= nodethreshold ? alpha2.y : alpha2.x;
-                                tempnodecounter +=lcl_compute_win;
-                            }//end for(int lcl_loop=0;lcl_loop<lcl_loops;lcl_loop++)
-                            partialsum[lcl_id]=part_sum;
+                            stage_sum += partialsum[lcl_id+i];
                         }
-                        barrier(CLK_LOCAL_MEM_FENCE);
-                        if(lcl_compute_win_id < queuecount)
+                        if(stage_sum >= stagethreshold && (lcl_compute_id==0))
                         {
-                            for(int i=0; i<lcl_compute_win && (lcl_compute_id==0); i++)
-                            {
-                                stage_sum += partialsum[lcl_id+i];
-                            }
-                            if(stage_sum >= stagethreshold && (lcl_compute_id==0))
-                            {
-                                int queueindex = atomic_inc(lclcount);
-                                lcloutindex[queueindex<<1] = temp_coord;
-                                lcloutindex[(queueindex<<1)+1] = as_int(variance_norm_factor);
-                            }
-                            lcl_compute_win_id +=(1<<perfscale);
+                            int queueindex = atomic_inc(lclcount);
+                            lcloutindex[queueindex<<1] = temp_coord;
+                            lcloutindex[(queueindex<<1)+1] = as_int(variance_norm_factor);
                         }
-                        barrier(CLK_LOCAL_MEM_FENCE);
-                    }//end for(int queueloop=0;queueloop<queuecount_loop;queueloop++)
-                    //barrier(CLK_LOCAL_MEM_FENCE);
-                    queuecount = lclcount[0];
+                        lcl_compute_win_id +=(1<<perfscale);
+                    }
                     barrier(CLK_LOCAL_MEM_FENCE);
-                    nodecounter += stageinfo.x;
-                }//end for(int stageloop = splitstage; stageloop< endstage && queuecount>0;stageloop++)
-                //barrier(CLK_LOCAL_MEM_FENCE);
-                if(lcl_id<queuecount)
-                {
-                    int temp = lcloutindex[lcl_id<<1];
-                    int x = mad24(grpidx,grpszx,temp & 0xffff);
-                    int y = mad24(grpidy,grpszy,((temp & (int)0xffff0000) >> 16));
-                    temp = glboutindex[0];
-                    int4 candidate_result;
-                    candidate_result.zw = (int2)convert_int_rtn(factor*20.f);
-                    candidate_result.x = convert_int_rtn(x*factor);
-                    candidate_result.y = convert_int_rtn(y*factor);
-                    atomic_inc(glboutindex);
-                    candidate[outputoff+temp+lcl_id] = candidate_result;
-                }
+                }//end for(int queueloop=0;queueloop<queuecount_loop;queueloop++)
+
+                queuecount = lclcount[0];
                 barrier(CLK_LOCAL_MEM_FENCE);
-            }//end if((x < width) && (y < height))
+                nodecounter += stageinfo.x;
+            }//end for(int stageloop = splitstage; stageloop< endstage && queuecount>0;stageloop++)
+
+            if(lcl_id<queuecount)
+            {
+                int temp = lcloutindex[lcl_id<<1];
+                int x = mad24(grpidx,grpszx,temp & 0xffff);
+                int y = mad24(grpidy,grpszy,((temp & (int)0xffff0000) >> 16));
+                temp = glboutindex[0];
+                int4 candidate_result;
+                candidate_result.zw = (int2)convert_int_rtn(factor*20.f);
+                candidate_result.x = convert_int_rtn(x*factor);
+                candidate_result.y = convert_int_rtn(y*factor);
+                atomic_inc(glboutindex);
+                candidate[outputoff+temp+lcl_id] = candidate_result;
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
         }//end for(int grploop=grpidx;grploop<totalgrp;grploop+=grpnumx)
-        //outputoff +=mul24(width,height);
     }//end for(int scalei = 0; scalei <loopcount; scalei++)
 }
 

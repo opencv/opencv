@@ -802,6 +802,44 @@ namespace cv
                                         int minNeighbors, int flags, CvSize minSize = cvSize(0, 0), CvSize maxSize = cvSize(0, 0));
         };
 
+        class CV_EXPORTS OclCascadeClassifierBuf : public  cv::CascadeClassifier
+        {
+        public:
+            OclCascadeClassifierBuf() :
+                m_flags(0), initialized(false), m_scaleFactor(0), buffers(NULL) {}
+
+            ~OclCascadeClassifierBuf() {}
+
+            void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
+                                  double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
+                                  Size minSize = Size(), Size maxSize = Size());
+            void release();
+
+        private:
+            void Init(const int rows, const int cols, double scaleFactor, int flags,
+                      const int outputsz, const size_t localThreads[],
+                      CvSize minSize, CvSize maxSize);
+            void CreateBaseBufs(const int datasize, const int totalclassifier, const int flags, const int outputsz);
+            void CreateFactorRelatedBufs(const int rows, const int cols, const int flags,
+                                         const double scaleFactor, const size_t localThreads[],
+                                         CvSize minSize, CvSize maxSize);
+            void GenResult(CV_OUT std::vector<cv::Rect>& faces, const std::vector<cv::Rect> &rectList, const std::vector<int> &rweights);
+
+            int m_rows;
+            int m_cols;
+            int m_flags;
+            int m_loopcount;
+            int m_nodenum;
+            bool findBiggestObject;
+            bool initialized;
+            double m_scaleFactor;
+            Size m_minSize;
+            Size m_maxSize;
+            vector<CvSize> sizev;
+            vector<float> scalev;
+            oclMat gimg1, gsum, gsqsum;
+            void * buffers;
+        };
 
 
         /////////////////////////////// Pyramid /////////////////////////////////////
