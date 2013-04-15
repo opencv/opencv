@@ -16,7 +16,7 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerEigenValsAndVecs,
                 testing::Values( "stitching/a1.png", "cv/shared/pic5.png"),
                 testing::Values( 3, 5 ),
                 testing::Values( 3, 5 ),
-                testing::ValuesIn(BorderType::all())
+                BorderType::all()
             )
           )
 {

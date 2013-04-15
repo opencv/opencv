@@ -17,7 +17,7 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_k_BorderType, cornerHarris,
                 testing::Values( 3, 5 ),
                 testing::Values( 3, 5 ),
                 testing::Values( 0.04, 0.1 ),
-                testing::ValuesIn(BorderType::all())
+                BorderType::all()
                 )
           )
 {

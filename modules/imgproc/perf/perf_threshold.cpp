@@ -15,7 +15,7 @@ PERF_TEST_P(Size_MatType_ThreshType, threshold,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
                 testing::Values(CV_8UC1, CV_16SC1),
-                testing::ValuesIn(ThreshType::all())
+                ThreshType::all()
                 )
             )
 {
@@ -65,8 +65,8 @@ typedef perf::TestBaseWithParam<Size_AdaptThreshType_AdaptThreshMethod_BlockSize
 PERF_TEST_P(Size_AdaptThreshType_AdaptThreshMethod_BlockSize, adaptiveThreshold,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::ValuesIn(AdaptThreshType::all()),
-                testing::ValuesIn(AdaptThreshMethod::all()),
+                AdaptThreshType::all(),
+                AdaptThreshMethod::all(),
                 testing::Values(3, 5)
                 )
             )

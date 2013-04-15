@@ -123,7 +123,7 @@ namespace
     IMPLEMENT_PARAM_CLASS(ORB_BlurForDescriptor, bool)
 }
 
-CV_ENUM(ORB_ScoreType, cv::ORB::HARRIS_SCORE, cv::ORB::FAST_SCORE)
+CV_ENUM(ORB_ScoreType, ORB::HARRIS_SCORE, ORB::FAST_SCORE)
 
 PARAM_TEST_CASE(ORB, cv::gpu::DeviceInfo, ORB_FeaturesCount, ORB_ScaleFactor, ORB_LevelsCount, ORB_EdgeThreshold, ORB_firstLevel, ORB_WTA_K, ORB_ScoreType, ORB_PatchSize, ORB_BlurForDescriptor)
 {

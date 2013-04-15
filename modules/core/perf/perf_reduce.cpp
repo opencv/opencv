@@ -16,7 +16,7 @@ PERF_TEST_P(Size_MatType_ROp, reduceR,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
                 testing::Values(TYPICAL_MAT_TYPES),
-                testing::ValuesIn(ROp::all())
+                ROp::all()
                 )
             )
 {
@@ -43,7 +43,7 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
                 testing::Values(TYPICAL_MAT_TYPES),
-                testing::ValuesIn(ROp::all())
+                ROp::all()
                 )
             )
 {

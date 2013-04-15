@@ -2,6 +2,7 @@
 #define __OPENCV_TS_PERF_HPP__
 
 #include "opencv2/core/core.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "ts_gtest.h"
 
@@ -25,6 +26,9 @@
 #  define LOGE(_str, ...) do{printf(_str , ## __VA_ARGS__); printf("\n");fflush(stdout);} while(0)
 # endif
 #endif
+
+// declare major namespaces to avoid errors on unknown namespace
+namespace cv { namespace gpu {} namespace ocl {} }
 
 namespace perf
 {
@@ -92,66 +96,64 @@ private:
 *     CV_ENUM and CV_FLAGS - macro to create printable wrappers for defines and enums     *
 \*****************************************************************************************/
 
-#define CV_ENUM(class_name, ...) \
-namespace { class CV_EXPORTS class_name {\
-public:\
-  class_name(int val = 0) : _val(val) {}\
-  operator int() const {return _val;}\
-  void PrintTo(std::ostream* os) const {\
-    const int vals[] = {__VA_ARGS__};\
-    const char* svals = #__VA_ARGS__;\
-    for(int i = 0, pos = 0; i < (int)(sizeof(vals)/sizeof(int)); ++i){\
-      while(isspace(svals[pos]) || svals[pos] == ',') ++pos;\
-      int start = pos;\
-      while(!(isspace(svals[pos]) || svals[pos] == ',' || svals[pos] == 0)) ++pos;\
-      if (_val == vals[i]) {\
-        *os << std::string(svals + start, svals + pos);\
-        return;\
-      }\
-    }\
-    *os << "UNKNOWN";\
-  }\
-  struct Container{\
-    typedef class_name value_type;\
-      Container(class_name* first, size_t len): _begin(first), _end(first+len){}\
-      const class_name* begin() const {return _begin;}\
-      const class_name* end() const {return _end;}\
-    private: class_name *_begin, *_end;\
-  };\
-  static Container all(){\
-    static int vals[] = {__VA_ARGS__};\
-    return Container((class_name*)vals, sizeof(vals)/sizeof(vals[0]));\
-  }\
-private: int _val;\
-};\
-inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
+#define CV_ENUM(class_name, ...)                                                        \
+    namespace {                                                                         \
+    struct class_name {                                                                 \
+        class_name(int val = 0) : val_(val) {}                                          \
+        operator int() const { return val_; }                                           \
+        void PrintTo(std::ostream* os) const {                                          \
+            using namespace cv;using namespace cv::gpu; using namespace cv::ocl;        \
+            const int vals[] = { __VA_ARGS__ };                                         \
+            const char* svals = #__VA_ARGS__;                                           \
+            for(int i = 0, pos = 0; i < (int)(sizeof(vals)/sizeof(int)); ++i) {         \
+                while(isspace(svals[pos]) || svals[pos] == ',') ++pos;                  \
+                int start = pos;                                                        \
+                while(!(isspace(svals[pos]) || svals[pos] == ',' || svals[pos] == 0))   \
+                    ++pos;                                                              \
+                if (val_ == vals[i]) {                                                  \
+                    *os << std::string(svals + start, svals + pos);                     \
+                    return;                                                             \
+                }                                                                       \
+            }                                                                           \
+            *os << "UNKNOWN";                                                           \
+        }                                                                               \
+        static ::testing::internal::ParamGenerator<class_name> all() {                  \
+            using namespace cv;using namespace cv::gpu; using namespace cv::ocl;        \
+            static class_name vals[] = { __VA_ARGS__ };                                 \
+            return ::testing::ValuesIn(vals);                                           \
+        }                                                                               \
+    private: int val_;                                                                  \
+    };                                                                                  \
+    inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
 
-#define CV_FLAGS(class_name, ...) \
-class CV_EXPORTS class_name {\
-public:\
-  class_name(int val = 0) : _val(val) {}\
-  operator int() const {return _val;}\
-  void PrintTo(std::ostream* os) const {\
-    const int vals[] = {__VA_ARGS__};\
-    const char* svals = #__VA_ARGS__;\
-    int value = _val;\
-    bool first = true;\
-    for(int i = 0, pos = 0; i < (int)(sizeof(vals)/sizeof(int)); ++i){\
-      while(isspace(svals[pos]) || svals[pos] == ',') ++pos;\
-      int start = pos;\
-      while(!(isspace(svals[pos]) || svals[pos] == ',' || svals[pos] == 0)) ++pos;\
-      if ((value & vals[i]) == vals[i]) {\
-        value &= ~vals[i]; \
-        if (first) first = false; else *os << "|"; \
-        *os << std::string(svals + start, svals + pos);\
-        if (!value) return;\
-      }\
-    }\
-    if (first) *os << "UNKNOWN";\
-  }\
-private: int _val;\
-};\
-inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); }
+#define CV_FLAGS(class_name, ...)                                                       \
+    namespace {                                                                         \
+    struct class_name {                                                                 \
+        class_name(int val = 0) : val_(val) {}                                          \
+        operator int() const { return val_; }                                           \
+        void PrintTo(std::ostream* os) const {                                          \
+            using namespace cv;using namespace cv::gpu; using namespace cv::ocl;        \
+            const int vals[] = { __VA_ARGS__ };                                         \
+            const char* svals = #__VA_ARGS__;                                           \
+            int value = val_;                                                           \
+            bool first = true;                                                          \
+            for(int i = 0, pos = 0; i < (int)(sizeof(vals)/sizeof(int)); ++i) {         \
+                while(isspace(svals[pos]) || svals[pos] == ',') ++pos;                  \
+                int start = pos;                                                        \
+                while(!(isspace(svals[pos]) || svals[pos] == ',' || svals[pos] == 0))   \
+                    ++pos;                                                              \
+                if ((value & vals[i]) == vals[i]) {                                     \
+                    value &= ~vals[i];                                                  \
+                    if (first) first = false; else *os << "|";                          \
+                    *os << std::string(svals + start, svals + pos);                     \
+                    if (!value) return;                                                 \
+                }                                                                       \
+            }                                                                           \
+            if (first) *os << "UNKNOWN";                                                \
+        }                                                                               \
+    private: int val_;                                                                  \
+    };                                                                                  \
+    inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
 
 CV_ENUM(MatDepth, CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_USRTYPE1)
 

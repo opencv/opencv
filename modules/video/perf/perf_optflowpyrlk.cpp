@@ -185,7 +185,7 @@ PERF_TEST_P(Path_Win_Deriv_Border_Reuse, OpticalFlowPyrLK_pyr, testing::Combine(
                 testing::Values<std::string>("cv/optflow/frames/720p_01.png"),
                 testing::Values(7, 11),
                 testing::Bool(),
-                testing::ValuesIn(PyrBorderMode::all()),
+                PyrBorderMode::all(),
                 testing::Bool()
                 )
             )

@@ -51,7 +51,6 @@ using namespace perf;
 
 enum { HALF_SIZE=0, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH };
 CV_ENUM(RemapMode, HALF_SIZE, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH);
-#define ALL_REMAP_MODES ValuesIn(RemapMode::all())
 
 void generateMap(cv::Mat& map_x, cv::Mat& map_y, int remapMode)
 {
@@ -98,7 +97,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border_Mode, ImgProc_Remap,
                     GPU_CHANNELS_1_3_4,
                     Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
                     ALL_BORDER_MODES,
-                    ALL_REMAP_MODES))
+                    RemapMode::all()))
 {
     declare.time(20.0);
 
@@ -369,15 +368,14 @@ PERF_TEST_P(Sz_Depth_Cn_Border, ImgProc_CopyMakeBorder,
 //////////////////////////////////////////////////////////////////////
 // Threshold
 
-CV_ENUM(ThreshOp, cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC, cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)
-#define ALL_THRESH_OPS ValuesIn(ThreshOp::all())
+CV_ENUM(ThreshOp, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
 
 DEF_PARAM_TEST(Sz_Depth_Op, cv::Size, MatDepth, ThreshOp);
 
 PERF_TEST_P(Sz_Depth_Op, ImgProc_Threshold,
             Combine(GPU_TYPICAL_MAT_SIZES,
             Values(CV_8U, CV_16U, CV_32F, CV_64F),
-            ALL_THRESH_OPS))
+            ThreshOp::all()))
 {
     const cv::Size size = GET_PARAM(0);
     const int depth = GET_PARAM(1);
@@ -894,8 +892,7 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, ImgProc_Convolve,
 ////////////////////////////////////////////////////////////////////////////////
 // MatchTemplate8U
 
-CV_ENUM(TemplateMethod, cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED, cv::TM_CCORR, cv::TM_CCORR_NORMED, cv::TM_CCOEFF, cv::TM_CCOEFF_NORMED)
-#define ALL_TEMPLATE_METHODS ValuesIn(TemplateMethod::all())
+CV_ENUM(TemplateMethod, TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED)
 
 DEF_PARAM_TEST(Sz_TemplateSz_Cn_Method, cv::Size, cv::Size, MatCn, TemplateMethod);
 
@@ -903,7 +900,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate8U,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(cv::Size(5, 5), cv::Size(16, 16), cv::Size(30, 30)),
                     GPU_CHANNELS_1_3_4,
-                    ALL_TEMPLATE_METHODS))
+                    TemplateMethod::all()))
 {
     declare.time(300.0);
 
@@ -979,7 +976,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate32F,
 //////////////////////////////////////////////////////////////////////
 // MulSpectrums
 
-CV_FLAGS(DftFlags, 0, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMPLEX_OUTPUT, cv::DFT_REAL_OUTPUT)
+CV_FLAGS(DftFlags, 0, DFT_INVERSE, DFT_SCALE, DFT_ROWS, DFT_COMPLEX_OUTPUT, DFT_REAL_OUTPUT)
 
 DEF_PARAM_TEST(Sz_Flags, cv::Size, DftFlags);
 
@@ -1454,16 +1451,16 @@ PERF_TEST_P(Sz_Depth_Code, ImgProc_CvtColorBayer,
 }
 
 CV_ENUM(DemosaicingCode,
-        cv::COLOR_BayerBG2BGR, cv::COLOR_BayerGB2BGR, cv::COLOR_BayerRG2BGR, cv::COLOR_BayerGR2BGR,
-        cv::COLOR_BayerBG2GRAY, cv::COLOR_BayerGB2GRAY, cv::COLOR_BayerRG2GRAY, cv::COLOR_BayerGR2GRAY,
-        cv::gpu::COLOR_BayerBG2BGR_MHT, cv::gpu::COLOR_BayerGB2BGR_MHT, cv::gpu::COLOR_BayerRG2BGR_MHT, cv::gpu::COLOR_BayerGR2BGR_MHT,
-        cv::gpu::COLOR_BayerBG2GRAY_MHT, cv::gpu::COLOR_BayerGB2GRAY_MHT, cv::gpu::COLOR_BayerRG2GRAY_MHT, cv::gpu::COLOR_BayerGR2GRAY_MHT)
+        COLOR_BayerBG2BGR, COLOR_BayerGB2BGR, COLOR_BayerRG2BGR, COLOR_BayerGR2BGR,
+        COLOR_BayerBG2GRAY, COLOR_BayerGB2GRAY, COLOR_BayerRG2GRAY, COLOR_BayerGR2GRAY,
+        COLOR_BayerBG2BGR_MHT, COLOR_BayerGB2BGR_MHT, COLOR_BayerRG2BGR_MHT, COLOR_BayerGR2BGR_MHT,
+        COLOR_BayerBG2GRAY_MHT, COLOR_BayerGB2GRAY_MHT, COLOR_BayerRG2GRAY_MHT, COLOR_BayerGR2GRAY_MHT)
 
 DEF_PARAM_TEST(Sz_Code, cv::Size, DemosaicingCode);
 
 PERF_TEST_P(Sz_Code, ImgProc_Demosaicing,
             Combine(GPU_TYPICAL_MAT_SIZES,
-                    ValuesIn(DemosaicingCode::all())))
+                    DemosaicingCode::all()))
 {
     const cv::Size size = GET_PARAM(0);
     const int code = GET_PARAM(1);
@@ -1527,15 +1524,14 @@ PERF_TEST_P(Sz, ImgProc_SwapChannels,
 //////////////////////////////////////////////////////////////////////
 // AlphaComp
 
-CV_ENUM(AlphaOp, cv::gpu::ALPHA_OVER, cv::gpu::ALPHA_IN, cv::gpu::ALPHA_OUT, cv::gpu::ALPHA_ATOP, cv::gpu::ALPHA_XOR, cv::gpu::ALPHA_PLUS, cv::gpu::ALPHA_OVER_PREMUL, cv::gpu::ALPHA_IN_PREMUL, cv::gpu::ALPHA_OUT_PREMUL, cv::gpu::ALPHA_ATOP_PREMUL, cv::gpu::ALPHA_XOR_PREMUL, cv::gpu::ALPHA_PLUS_PREMUL, cv::gpu::ALPHA_PREMUL)
-#define ALL_ALPHA_OPS ValuesIn(AlphaOp::all())
+CV_ENUM(AlphaOp, ALPHA_OVER, ALPHA_IN, ALPHA_OUT, ALPHA_ATOP, ALPHA_XOR, ALPHA_PLUS, ALPHA_OVER_PREMUL, ALPHA_IN_PREMUL, ALPHA_OUT_PREMUL, ALPHA_ATOP_PREMUL, ALPHA_XOR_PREMUL, ALPHA_PLUS_PREMUL, ALPHA_PREMUL)
 
 DEF_PARAM_TEST(Sz_Type_Op, cv::Size, MatType, AlphaOp);
 
 PERF_TEST_P(Sz_Type_Op, ImgProc_AlphaComp,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8UC4, CV_16UC4, CV_32SC4, CV_32FC4),
-                    ALL_ALPHA_OPS))
+                    AlphaOp::all()))
 {
     const cv::Size size = GET_PARAM(0);
     const int type = GET_PARAM(1);
@@ -1815,7 +1811,7 @@ PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles,
 //////////////////////////////////////////////////////////////////////
 // GeneralizedHough
 
-CV_FLAGS(GHMethod, cv::GHT_POSITION, cv::GHT_SCALE, cv::GHT_ROTATION);
+CV_FLAGS(GHMethod, GHT_POSITION, GHT_SCALE, GHT_ROTATION);
 
 DEF_PARAM_TEST(Method_Sz, GHMethod, cv::Size);
 
