@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Jiang Liyuan, jlyuan001.good@163.com
+//    Peng Xiao,    pengxiao@outlook.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -49,11 +50,16 @@
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
 #endif
 #endif
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////BITWISE_XOR////////////////////////////////////////////////////
+
+#ifndef OP_BINARY
+#define OP_BINARY &
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
-/**************************************xor with scalar without mask**************************************/
-__kernel void arithm_s_bitwise_xor_C1_D0 (
+////////////////////////////////////////////bitwise_binary/////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+/******************************bitwise binary with scalar without mask********************************/
+__kernel void arithm_s_bitwise_binary_C1_D0 (
         __global   uchar *src1, int src1_step, int src1_offset,
         __global   uchar *dst,  int dst_step,  int dst_offset,
         uchar4 src2, int rows, int cols, int dst_step1)
@@ -79,7 +85,7 @@ __kernel void arithm_s_bitwise_xor_C1_D0 (
         uchar4 src2_data = (uchar4)(src2.x, src2.x, src2.x, src2.x);
 
         uchar4 data = *((__global uchar4 *)(dst + dst_index));
-        uchar4 tmp_data = src1_data ^ src2_data;
+        uchar4 tmp_data = src1_data OP_BINARY src2_data;
 
         data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : data.x;
         data.y = ((dst_index + 1 >= dst_start) && (dst_index + 1 < dst_end)) ? tmp_data.y : data.y;
@@ -91,7 +97,7 @@ __kernel void arithm_s_bitwise_xor_C1_D0 (
 }
 
 
-__kernel void arithm_s_bitwise_xor_C1_D1 (
+__kernel void arithm_s_bitwise_binary_C1_D1 (
         __global   char *src1, int src1_step, int src1_offset,
         __global   char *dst,  int dst_step,  int dst_offset,
         char4 src2, int rows, int cols, int dst_step1)
@@ -117,7 +123,7 @@ __kernel void arithm_s_bitwise_xor_C1_D1 (
         char4 src2_data = (char4)(src2.x, src2.x, src2.x, src2.x);
 
         char4 data = *((__global char4 *)(dst + dst_index));
-        char4 tmp_data = src1_data ^ src2_data;
+        char4 tmp_data = src1_data OP_BINARY src2_data;
 
         data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : data.x;
         data.y = ((dst_index + 1 >= dst_start) && (dst_index + 1 < dst_end)) ? tmp_data.y : data.y;
@@ -128,7 +134,7 @@ __kernel void arithm_s_bitwise_xor_C1_D1 (
     }
 }
 
-__kernel void arithm_s_bitwise_xor_C1_D2 (
+__kernel void arithm_s_bitwise_binary_C1_D2 (
         __global   ushort *src1, int src1_step, int src1_offset,
         __global   ushort *dst,  int dst_step,  int dst_offset,
         ushort4 src2, int rows, int cols, int dst_step1)
@@ -155,7 +161,7 @@ __kernel void arithm_s_bitwise_xor_C1_D2 (
         ushort2 src2_data = (ushort2)(src2.x, src2.x);
 
         ushort2 data = *((__global ushort2 *)((__global uchar *)dst + dst_index));
-        ushort2 tmp_data = src1_data ^ src2_data;
+        ushort2 tmp_data = src1_data OP_BINARY src2_data;
 
         data.x = (dst_index + 0 >= dst_start) ? tmp_data.x : data.x;
         data.y = (dst_index + 2 <  dst_end  ) ? tmp_data.y : data.y;
@@ -163,7 +169,7 @@ __kernel void arithm_s_bitwise_xor_C1_D2 (
         *((__global ushort2 *)((__global uchar *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C1_D3 (
+__kernel void arithm_s_bitwise_binary_C1_D3 (
         __global   short *src1, int src1_step, int src1_offset,
         __global   short *dst,  int dst_step,  int dst_offset,
         short4 src2, int rows, int cols, int dst_step1)
@@ -190,7 +196,7 @@ __kernel void arithm_s_bitwise_xor_C1_D3 (
         short2 src2_data = (short2)(src2.x, src2.x);
         short2 data = *((__global short2 *)((__global uchar *)dst + dst_index));
 
-        short2 tmp_data = src1_data ^ src2_data;
+        short2 tmp_data = src1_data OP_BINARY src2_data;
 
         data.x = (dst_index + 0 >= dst_start) ? tmp_data.x : data.x;
         data.y = (dst_index + 2 <  dst_end  ) ? tmp_data.y : data.y;
@@ -198,7 +204,7 @@ __kernel void arithm_s_bitwise_xor_C1_D3 (
         *((__global short2 *)((__global uchar *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C1_D4 (
+__kernel void arithm_s_bitwise_binary_C1_D4 (
         __global   int *src1, int src1_step, int src1_offset,
         __global   int *dst,  int dst_step,  int dst_offset,
         int4 src2, int rows, int cols, int dst_step1)
@@ -215,12 +221,12 @@ __kernel void arithm_s_bitwise_xor_C1_D4 (
         int src_data1 = *((__global int *)((__global char *)src1 + src1_index));
         int src_data2 = src2.x;
 
-        int data = src_data1 ^ src_data2;
+        int data = src_data1 OP_BINARY src_data2;
 
         *((__global int *)((__global char *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C1_D5 (
+__kernel void arithm_s_bitwise_binary_C1_D5 (
         __global   char *src1, int src1_step, int src1_offset,
         __global   char *dst,  int dst_step,  int dst_offset,
         char16 src2, int rows, int cols, int dst_step1)
@@ -241,7 +247,7 @@ __kernel void arithm_s_bitwise_xor_C1_D5 (
         char4 src2_data = (char4)(src2.s0, src2.s1, src2.s2, src2.s3);
 
         char4 data  = *((__global char4 *)((__global char *)dst  + dst_index));
-        char4 tmp_data = src1_data ^ src2_data;
+        char4 tmp_data = src1_data OP_BINARY src2_data;
 
         data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : data.x;
         data.y = ((dst_index + 1 >= dst_start) && (dst_index + 1 < dst_end)) ? tmp_data.y : data.y;
@@ -251,9 +257,8 @@ __kernel void arithm_s_bitwise_xor_C1_D5 (
         *((__global char4 *)((__global char *)dst + dst_index)) = data;
     }
 }
-
 #if defined (DOUBLE_SUPPORT)
-__kernel void arithm_s_bitwise_xor_C1_D6 (
+__kernel void arithm_s_bitwise_binary_C1_D6 (
         __global short *src1, int src1_step, int src1_offset,
         __global short *dst,  int dst_step,  int dst_offset,
         short16 src2, int rows, int cols, int dst_step1)
@@ -270,13 +275,13 @@ __kernel void arithm_s_bitwise_xor_C1_D6 (
         short4 src1_data = *((__global short4 *)((__global char *)src1 + src1_index));
         short4 src2_data = (short4)(src2.s0, src2.s1, src2.s2, src2.s3);
 
-        short4 tmp_data = src1_data ^ src2_data;
+        short4 tmp_data = src1_data OP_BINARY src2_data;
 
         *((__global short4 *)((__global char *)dst + dst_index)) = tmp_data;
     }
 }
 #endif
-__kernel void arithm_s_bitwise_xor_C2_D0 (
+__kernel void arithm_s_bitwise_binary_C2_D0 (
         __global   uchar *src1, int src1_step, int src1_offset,
         __global   uchar *dst,  int dst_step,  int dst_offset,
         uchar4 src2, int rows, int cols, int dst_step1)
@@ -303,7 +308,7 @@ __kernel void arithm_s_bitwise_xor_C2_D0 (
         uchar4 src2_data = (uchar4)(src2.x, src2.y, src2.x, src2.y);
 
         uchar4 data = *((__global uchar4 *)(dst + dst_index));
-        uchar4 tmp_data = src1_data ^ src2_data;
+        uchar4 tmp_data = src1_data OP_BINARY src2_data;
 
 
         data.xy = (dst_index + 0 >= dst_start) ? tmp_data.xy : data.xy;
@@ -314,7 +319,7 @@ __kernel void arithm_s_bitwise_xor_C2_D0 (
 }
 
 
-__kernel void arithm_s_bitwise_xor_C2_D1 (
+__kernel void arithm_s_bitwise_binary_C2_D1 (
         __global   char *src1, int src1_step, int src1_offset,
         __global   char *dst,  int dst_step,  int dst_offset,
         char4 src2, int rows, int cols, int dst_step1)
@@ -341,7 +346,7 @@ __kernel void arithm_s_bitwise_xor_C2_D1 (
         char4 src2_data = (char4)(src2.x, src2.y, src2.x, src2.y);
 
         char4 data = *((__global char4 *)(dst + dst_index));
-        char4 tmp_data = src1_data ^ src2_data;
+        char4 tmp_data = src1_data OP_BINARY src2_data;
 
         data.xy = (dst_index + 0 >= dst_start) ? tmp_data.xy : data.xy;
         data.zw = (dst_index + 2 <  dst_end  ) ? tmp_data.zw : data.zw;
@@ -350,7 +355,7 @@ __kernel void arithm_s_bitwise_xor_C2_D1 (
     }
 }
 
-__kernel void arithm_s_bitwise_xor_C2_D2 (
+__kernel void arithm_s_bitwise_binary_C2_D2 (
         __global   ushort *src1, int src1_step, int src1_offset,
         __global   ushort *dst,  int dst_step,  int dst_offset,
         ushort4 src2, int rows, int cols, int dst_step1)
@@ -367,12 +372,12 @@ __kernel void arithm_s_bitwise_xor_C2_D2 (
         ushort2 src_data1 = *((__global ushort2 *)((__global char *)src1 + src1_index));
         ushort2 src_data2 = (ushort2)(src2.x, src2.y);
 
-        ushort2 data = src_data1 ^ src_data2;
+        ushort2 data = src_data1 OP_BINARY src_data2;
 
         *((__global ushort2 *)((__global char *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C2_D3 (
+__kernel void arithm_s_bitwise_binary_C2_D3 (
         __global   short *src1, int src1_step, int src1_offset,
         __global   short *dst,  int dst_step,  int dst_offset,
         short4 src2, int rows, int cols, int dst_step1)
@@ -389,12 +394,12 @@ __kernel void arithm_s_bitwise_xor_C2_D3 (
         short2 src_data1 = *((__global short2 *)((__global char *)src1 + src1_index));
         short2 src_data2 = (short2)(src2.x, src2.y);
 
-        short2 data = src_data1 ^ src_data2;
+        short2 data = src_data1 OP_BINARY src_data2;
 
         *((__global short2 *)((__global char *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C2_D4 (
+__kernel void arithm_s_bitwise_binary_C2_D4 (
         __global   int *src1, int src1_step, int src1_offset,
         __global   int *dst,  int dst_step,  int dst_offset,
         int4 src2, int rows, int cols, int dst_step1)
@@ -411,11 +416,11 @@ __kernel void arithm_s_bitwise_xor_C2_D4 (
         int2 src_data1 = *((__global int2 *)((__global char *)src1 + src1_index));
         int2 src_data2 = (int2)(src2.x, src2.y);
 
-        int2 data = src_data1 ^ src_data2;
+        int2 data = src_data1 OP_BINARY src_data2;
         *((__global int2 *)((__global char *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C2_D5 (
+__kernel void arithm_s_bitwise_binary_C2_D5 (
         __global   char *src1, int src1_step, int src1_offset,
         __global   char *dst,  int dst_step,  int dst_offset,
         char16 src2, int rows, int cols, int dst_step1)
@@ -432,13 +437,13 @@ __kernel void arithm_s_bitwise_xor_C2_D5 (
         char8 src1_data = *((__global char8 *)((__global char *)src1 + src1_index));
         char8 src2_data = (char8)(src2.s0, src2.s1, src2.s2, src2.s3, src2.s4, src2.s5, src2.s6, src2.s7);
 
-        char8 tmp_data = src1_data ^ src2_data;
+        char8 tmp_data = src1_data OP_BINARY src2_data;
 
         *((__global char8 *)((__global char *)dst + dst_index)) = tmp_data;
     }
 }
 #if defined (DOUBLE_SUPPORT)
-__kernel void arithm_s_bitwise_xor_C2_D6 (
+__kernel void arithm_s_bitwise_binary_C2_D6 (
         __global short *src1, int src1_step, int src1_offset,
         __global short *dst,  int dst_step,  int dst_offset,
         short16 src2, int rows, int cols, int dst_step1)
@@ -455,14 +460,14 @@ __kernel void arithm_s_bitwise_xor_C2_D6 (
         short8 src1_data = *((__global short8 *)((__global char *)src1 + src1_index));
         short8 src2_data = (short8)(src2.s0, src2.s1, src2.s2, src2.s3, src2.s4, src2.s5, src2.s6, src2.s7);
 
-        short8 tmp_data = src1_data ^ src2_data;
+        short8 tmp_data = src1_data OP_BINARY src2_data;
 
         *((__global short8 *)((__global char *)dst + dst_index)) = tmp_data;
     }
 }
 #endif
 
-__kernel void arithm_s_bitwise_xor_C4_D0 (
+__kernel void arithm_s_bitwise_binary_C4_D0 (
         __global   uchar *src1, int src1_step, int src1_offset,
         __global   uchar *dst,  int dst_step,  int dst_offset,
         uchar4 src2, int rows, int cols, int dst_step1)
@@ -478,14 +483,14 @@ __kernel void arithm_s_bitwise_xor_C4_D0 (
 
         uchar4 src_data1 = *((__global uchar4 *)(src1 + src1_index));
 
-        uchar4 data = src_data1 ^ src2;
+        uchar4 data = src_data1 OP_BINARY src2;
 
         *((__global uchar4 *)(dst + dst_index)) = data;
     }
 }
 
 
-__kernel void arithm_s_bitwise_xor_C4_D1 (
+__kernel void arithm_s_bitwise_binary_C4_D1 (
         __global   char *src1, int src1_step, int src1_offset,
         __global   char *dst,  int dst_step,  int dst_offset,
         char4 src2, int rows, int cols, int dst_step1)
@@ -501,13 +506,13 @@ __kernel void arithm_s_bitwise_xor_C4_D1 (
 
         char4 src_data1 = *((__global char4 *)(src1 + src1_index));
 
-        char4 data = src_data1 ^ src2;
+        char4 data = src_data1 OP_BINARY src2;
 
         *((__global char4 *)(dst + dst_index)) = data;
     }
 }
 
-__kernel void arithm_s_bitwise_xor_C4_D2 (
+__kernel void arithm_s_bitwise_binary_C4_D2 (
         __global   ushort *src1, int src1_step, int src1_offset,
         __global   ushort *dst,  int dst_step,  int dst_offset,
         ushort4 src2, int rows, int cols, int dst_step1)
@@ -523,12 +528,12 @@ __kernel void arithm_s_bitwise_xor_C4_D2 (
 
         ushort4 src_data1 = *((__global ushort4 *)((__global char *)src1 + src1_index));
 
-        ushort4 data = src_data1 ^ src2;
+        ushort4 data = src_data1 OP_BINARY src2;
 
         *((__global ushort4 *)((__global char *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C4_D3 (
+__kernel void arithm_s_bitwise_binary_C4_D3 (
         __global   short *src1, int src1_step, int src1_offset,
         __global   short *dst,  int dst_step,  int dst_offset,
         short4 src2, int rows, int cols, int dst_step1)
@@ -544,12 +549,12 @@ __kernel void arithm_s_bitwise_xor_C4_D3 (
 
         short4 src_data1 = *((__global short4 *)((__global char *)src1 + src1_index));
 
-        short4 data = src_data1 ^ src2;
+        short4 data = src_data1 OP_BINARY src2;
 
         *((__global short4 *)((__global char *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C4_D4 (
+__kernel void arithm_s_bitwise_binary_C4_D4 (
         __global   int *src1, int src1_step, int src1_offset,
         __global   int *dst,  int dst_step,  int dst_offset,
         int4 src2, int rows, int cols, int dst_step1)
@@ -565,12 +570,12 @@ __kernel void arithm_s_bitwise_xor_C4_D4 (
 
         int4 src_data1 = *((__global int4 *)((__global char *)src1 + src1_index));
 
-        int4 data = src_data1 ^ src2;
+        int4 data = src_data1 OP_BINARY src2;
 
         *((__global int4 *)((__global char *)dst + dst_index)) = data;
     }
 }
-__kernel void arithm_s_bitwise_xor_C4_D5 (
+__kernel void arithm_s_bitwise_binary_C4_D5 (
         __global   char *src1, int src1_step, int src1_offset,
         __global   char *dst,  int dst_step,  int dst_offset,
         char16 src2, int rows, int cols, int dst_step1)
@@ -588,13 +593,13 @@ __kernel void arithm_s_bitwise_xor_C4_D5 (
         char16 src2_data = (char16)(src2.s0, src2.s1, src2.s2, src2.s3, src2.s4, src2.s5, src2.s6, src2.s7,
                                     src2.s8, src2.s9, src2.sa, src2.sb, src2.sc, src2.sd, src2.se, src2.sf);
 
-        char16 tmp_data = src1_data ^ src2_data;
+        char16 tmp_data = src1_data OP_BINARY src2_data;
 
         *((__global char16 *)((__global char *)dst + dst_index)) = tmp_data;
     }
 }
 #if defined (DOUBLE_SUPPORT)
-__kernel void arithm_s_bitwise_xor_C4_D6 (
+__kernel void arithm_s_bitwise_binary_C4_D6 (
         __global short *src1, int src1_step, int src1_offset,
         __global short *dst,  int dst_step,  int dst_offset,
         short16 src2, int rows, int cols, int dst_step1)
@@ -618,10 +623,10 @@ __kernel void arithm_s_bitwise_xor_C4_D6 (
         short4 src2_data_2 = (short4)(src2.s8, src2.s9, src2.sa, src2.sb);
         short4 src2_data_3 = (short4)(src2.sc, src2.sd, src2.se, src2.sf);
 
-        short4 tmp_data_0 = src1_data_0 ^ src2_data_0;
-        short4 tmp_data_1 = src1_data_1 ^ src2_data_1;
-        short4 tmp_data_2 = src1_data_2 ^ src2_data_2;
-        short4 tmp_data_3 = src1_data_3 ^ src2_data_3;
+        short4 tmp_data_0 = src1_data_0 OP_BINARY src2_data_0;
+        short4 tmp_data_1 = src1_data_1 OP_BINARY src2_data_1;
+        short4 tmp_data_2 = src1_data_2 OP_BINARY src2_data_2;
+        short4 tmp_data_3 = src1_data_3 OP_BINARY src2_data_3;
 
         *((__global short4 *)((__global char *)dst + dst_index + 0 ))= tmp_data_0;
         *((__global short4 *)((__global char *)dst + dst_index + 8 ))= tmp_data_1;
