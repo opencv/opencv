@@ -158,11 +158,7 @@ namespace
 
     TEST_P(BruteForceMatcher, RadiusMatch_Single)
     {
-        float radius;
-        if(distType == cv::ocl::BruteForceMatcher_OCL_base::L2Dist)
-            radius = 1.f / countFactor / countFactor;
-        else
-            radius = 1.f / countFactor;
+        float radius = 1.f / countFactor;
 
         cv::ocl::BruteForceMatcher_OCL_base matcher(distType);
 
@@ -191,8 +187,20 @@ namespace
 
     INSTANTIATE_TEST_CASE_P(OCL_Features2D, BruteForceMatcher, 
         testing::Combine(
-        testing::Values(DistType(cv::ocl::BruteForceMatcher_OCL_base::L1Dist), DistType(cv::ocl::BruteForceMatcher_OCL_base::L2Dist)),
-        testing::Values(DescriptorSize(57), DescriptorSize(64), DescriptorSize(83), DescriptorSize(128), DescriptorSize(179), DescriptorSize(256), DescriptorSize(304))));
-
+        testing::Values(
+            DistType(cv::ocl::BruteForceMatcher_OCL_base::L1Dist),
+            DistType(cv::ocl::BruteForceMatcher_OCL_base::L2Dist)/*, 
+            DistType(cv::ocl::BruteForceMatcher_OCL_base::HammingDist)*/
+        ),
+        testing::Values(
+            DescriptorSize(57), 
+            DescriptorSize(64), 
+            DescriptorSize(83), 
+            DescriptorSize(128), 
+            DescriptorSize(179), 
+            DescriptorSize(256), 
+            DescriptorSize(304))
+        )
+    );
 } // namespace
 #endif
