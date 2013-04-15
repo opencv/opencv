@@ -49,9 +49,11 @@
 //
 //M*/
 
+#include <iostream>
 
-#include "opencv2/opencv.hpp"
-#include "opencv2/nonfree/nonfree.hpp"
+#include "opencv2/contrib.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/nonfree.hpp"
 
 using namespace cv;
 using namespace std;

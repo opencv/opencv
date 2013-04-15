@@ -14,7 +14,8 @@
 #include <stdio.h>
 #include <cstring>
 
-#include "opencv2/opencv.hpp"
+#include "opencv2/contrib.hpp"
+#include "opencv2/highgui.hpp"
 
 static void help(std::string errorMessage)
 {
@@ -38,7 +39,7 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
     cv::Mat displayedCurveImage = cv::Mat::ones(200, curve.size().height, CV_8U);
 
     cv::Mat windowNormalizedCurve;
-    normalize(curve, windowNormalizedCurve, 0, 200, CV_MINMAX, CV_32F);
+    normalize(curve, windowNormalizedCurve, 0, 200, cv::NORM_MINMAX, CV_32F);
 
     displayedCurveImage = cv::Scalar::all(255); // set a white background
     int binW = cvRound((double)displayedCurveImage.cols/curve.size().height);

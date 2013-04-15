@@ -4,7 +4,6 @@
 #include <opencv2/gpu.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/video.hpp>
-#include <opencv2/legacy.hpp>
 #include <opencv2/ts.hpp>
 
 static void printOsInfo()

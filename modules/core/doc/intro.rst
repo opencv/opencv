@@ -104,8 +104,8 @@ OpenCV deallocates the memory automatically, as well as automatically allocates 
 
 Example: ::
 
-    #include "cv.h"
-    #include "highgui.h"
+    #include "opencv2/imgproc.hpp"
+    #include "opencv2/highgui.hpp"
 
     using namespace cv;
 
@@ -119,7 +119,7 @@ Example: ::
         for(;;)
         {
             cap >> frame;
-            cvtColor(frame, edges, CV_BGR2GRAY);
+            cvtColor(frame, edges, COLOR_BGR2GRAY);
             GaussianBlur(edges, edges, Size(7,7), 1.5, 1.5);
             Canny(edges, edges, 0, 30, 3);
             imshow("edges", edges);
