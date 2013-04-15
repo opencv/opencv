@@ -178,7 +178,7 @@ int main(int argc, char** argv)
     if( intrinsic_filename )
     {
         // reading intrinsic parameters
-        FileStorage fs(intrinsic_filename, CV_STORAGE_READ);
+        FileStorage fs(intrinsic_filename, FileStorage::READ);
         if(!fs.isOpened())
         {
             printf("Failed to open file %s\n", intrinsic_filename);
@@ -194,7 +194,7 @@ int main(int argc, char** argv)
         M1 *= scale;
         M2 *= scale;
 
-        fs.open(extrinsic_filename, CV_STORAGE_READ);
+        fs.open(extrinsic_filename, FileStorage::READ);
         if(!fs.isOpened())
         {
             printf("Failed to open file %s\n", extrinsic_filename);

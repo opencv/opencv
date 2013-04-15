@@ -239,8 +239,8 @@ void StereoVar::VariationalSolver(Mat &I1, Mat &I2, Mat &I2x, Mat &u, int level)
 
 void StereoVar::VCycle_MyFAS(Mat &I1, Mat &I2, Mat &I2x, Mat &_u, int level)
 {
-    CvSize imgSize = _u.size();
-    CvSize frmSize = cvSize((int) (imgSize.width * pyrScale + 0.5), (int) (imgSize.height * pyrScale + 0.5));
+    Size imgSize = _u.size();
+    Size frmSize = Size((int) (imgSize.width * pyrScale + 0.5), (int) (imgSize.height * pyrScale + 0.5));
     Mat I1_h, I2_h, I2x_h, u_h, U, U_h;
 
     //PRE relaxation
@@ -285,7 +285,7 @@ void StereoVar::VCycle_MyFAS(Mat &I1, Mat &I2, Mat &I2x, Mat &_u, int level)
 void StereoVar::FMG(Mat &I1, Mat &I2, Mat &I2x, Mat &u, int level)
 {
     double  scale = std::pow(pyrScale, (double) level);
-    CvSize  frmSize = cvSize((int) (u.cols * scale + 0.5), (int) (u.rows * scale + 0.5));
+    Size  frmSize = Size((int) (u.cols * scale + 0.5), (int) (u.rows * scale + 0.5));
     Mat I1_h, I2_h, I2x_h, u_h;
 
     //scaling DOWN
@@ -350,7 +350,7 @@ void StereoVar::autoParams()
 void StereoVar::operator ()( const Mat& left, const Mat& right, Mat& disp )
 {
     CV_Assert(left.size() == right.size() && left.type() == right.type());
-    CvSize imgSize = left.size();
+    Size imgSize = left.size();
     int MaxD = MAX(labs(minDisp), labs(maxDisp));
     int SignD = 1; if (MIN(minDisp, maxDisp) < 0) SignD = -1;
     if (minDisp >= maxDisp) {MaxD = 256; SignD = 1;}
@@ -378,8 +378,8 @@ void StereoVar::operator ()( const Mat& left, const Mat& right, Mat& disp )
         equalizeHist(rightgray, rightgray);
     }
     if (poly_sigma > 0.0001) {
-        GaussianBlur(leftgray, leftgray, cvSize(poly_n, poly_n), poly_sigma);
-        GaussianBlur(rightgray, rightgray, cvSize(poly_n, poly_n), poly_sigma);
+        GaussianBlur(leftgray, leftgray, Size(poly_n, poly_n), poly_sigma);
+        GaussianBlur(rightgray, rightgray, Size(poly_n, poly_n), poly_sigma);
     }
 
     if (flags & USE_AUTO_PARAMS) {

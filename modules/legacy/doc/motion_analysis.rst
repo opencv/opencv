@@ -10,8 +10,6 @@ Calculates the optical flow for two images by using the block matching method.
 
 .. ocv:cfunction:: void cvCalcOpticalFlowBM( const CvArr* prev, const CvArr* curr, CvSize block_size, CvSize shift_size, CvSize max_range, int use_previous, CvArr* velx, CvArr* vely )
 
-.. ocv:pyoldfunction:: cv.CalcOpticalFlowBM(prev, curr, blockSize, shiftSize, max_range, usePrevious, velx, vely)-> None
-
         :param prev: First image, 8-bit, single-channel
 
         :param curr: Second image, 8-bit, single-channel
@@ -45,8 +43,6 @@ Calculates the optical flow for two images using Horn-Schunck algorithm.
 
 .. ocv:cfunction:: void cvCalcOpticalFlowHS(const CvArr* prev, const CvArr* curr, int use_previous, CvArr* velx, CvArr* vely, double lambda, CvTermCriteria criteria)
 
-.. ocv:pyoldfunction:: cv.CalcOpticalFlowHS(prev, curr, usePrevious, velx, vely, lambda, criteria)-> None
-
     :param prev: First image, 8-bit, single-channel
 
     :param curr: Second image, 8-bit, single-channel
@@ -70,8 +66,6 @@ CalcOpticalFlowLK
 Calculates the optical flow for two images using Lucas-Kanade algorithm.
 
 .. ocv:cfunction:: void cvCalcOpticalFlowLK( const CvArr* prev, const CvArr* curr, CvSize win_size, CvArr* velx, CvArr* vely )
-
-.. ocv:pyoldfunction:: cv.CalcOpticalFlowLK(prev, curr, winSize, velx, vely)-> None
 
     :param prev: First image, 8-bit, single-channel
 

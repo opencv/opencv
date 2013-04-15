@@ -2,7 +2,6 @@
 
 import numpy as np
 import cv2
-import cv2.cv as cv
 
 # local modules
 from video import create_capture
@@ -13,7 +12,7 @@ USAGE: facedetect.py [--cascade <cascade_fn>] [--nested-cascade <cascade_fn>] [<
 '''
 
 def detect(img, cascade):
-    rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=4, minSize=(30, 30), flags = cv.CV_HAAR_SCALE_IMAGE)
+    rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=4, minSize=(30, 30), flags = cv2.CASCADE_SCALE_IMAGE)
     if len(rects) == 0:
         return []
     rects[:,2:] += rects[:,:2]

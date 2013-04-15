@@ -76,7 +76,6 @@ Calculates the angle of a 2D vector in degrees.
 .. ocv:pyfunction:: cv2.fastAtan2(y, x) -> retval
 
 .. ocv:cfunction:: float cvFastArctan(float y, float x)
-.. ocv:pyoldfunction:: cv.FastArctan(y, x)-> float
 
     :param x: x-coordinate of the vector.
 
@@ -95,8 +94,6 @@ Computes the cube root of an argument.
 
 .. ocv:cfunction:: float cvCbrt( float value )
 
-.. ocv:pyoldfunction:: cv.Cbrt(value)-> float
-
     :param val: A function argument.
 
 The function ``cubeRoot`` computes :math:`\sqrt[3]{\texttt{val}}`. Negative arguments are handled correctly. NaN and Inf are not handled. The accuracy approaches the maximum possible accuracy for single-precision data.
@@ -107,7 +104,6 @@ Ceil
 Rounds floating-point number to the nearest integer not smaller than the original.
 
 .. ocv:cfunction:: int cvCeil(double value)
-.. ocv:pyoldfunction:: cv.Ceil(value) -> int
 
     :param value: floating-point number. If the value is outside of ``INT_MIN`` ... ``INT_MAX`` range, the result is not defined.
 
@@ -123,7 +119,6 @@ Floor
 Rounds floating-point number to the nearest integer not larger than the original.
 
 .. ocv:cfunction:: int cvFloor(double value)
-.. ocv:pyoldfunction:: cv.Floor(value) -> int
 
     :param value: floating-point number. If the value is outside of ``INT_MIN`` ... ``INT_MAX`` range, the result is not defined.
 
@@ -139,7 +134,6 @@ Round
 Rounds floating-point number to the nearest integer
 
 .. ocv:cfunction:: int cvRound(double value)
-.. ocv:pyoldfunction:: cv.Round(value) -> int
 
     :param value: floating-point number. If the value is outside of ``INT_MIN`` ... ``INT_MAX`` range, the result is not defined.
 
@@ -149,7 +143,6 @@ IsInf
 Determines if the argument is Infinity.
 
 .. ocv:cfunction:: int cvIsInf(double value)
-.. ocv:pyoldfunction:: cv.IsInf(value)-> int
 
         :param value: The input floating-point value
 
@@ -160,7 +153,6 @@ IsNaN
 Determines if the argument is Not A Number.
 
 .. ocv:cfunction:: int cvIsNaN(double value)
-.. ocv:pyoldfunction:: cv.IsNaN(value)-> int
 
         :param value: The input floating-point value
 

@@ -53,7 +53,7 @@ if __name__ == '__main__':
         vis = np.zeros((h, w, 3), np.uint8)
         levels = levels - 3
         cv2.drawContours( vis, contours, (-1, 3)[levels <= 0], (128,255,255),
-            3, cv2.CV_AA, hierarchy, abs(levels) )
+            3, cv2.LINE_AA, hierarchy, abs(levels) )
         cv2.imshow('contours', vis)
     update(3)
     cv2.createTrackbar( "levels+3", "contours", 3, 7, update )

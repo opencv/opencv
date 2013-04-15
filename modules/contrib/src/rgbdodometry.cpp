@@ -422,7 +422,7 @@ bool computeKsi( int transformType,
         computeCFuncPtr = computeC_Translation;
     }
     else
-        CV_Error( CV_StsBadFlag, "Unsupported value of transformation type flag.");
+        CV_Error(Error::StsBadFlag, "Unsupported value of transformation type flag.");
 
     Mat C( correspsCount, Cwidth, CV_64FC1 );
     Mat dI_dt( correspsCount, 1, CV_64FC1 );
