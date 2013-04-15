@@ -105,7 +105,7 @@ if(PYTHON_EXECUTABLE)
     find_host_program(SPHINX_BUILD sphinx-build)
     if(SPHINX_BUILD)
         if(UNIX)
-            execute_process(COMMAND sh -c "${SPHINX_BUILD} -_ 2>&1 | sed -ne 1p"
+            execute_process(COMMAND sh -c "${SPHINX_BUILD} -_ 2>&1 | sed -ne '1{s/^Sphinx v//;p}'"
                              RESULT_VARIABLE SPHINX_PROCESS
                              OUTPUT_VARIABLE SPHINX_VERSION
                              OUTPUT_STRIP_TRAILING_WHITESPACE)
