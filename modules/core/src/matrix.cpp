@@ -41,8 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/gpu.hpp"
-#include "opencv2/core/opengl.hpp"
 
 /****************************************************************************************\
 *                           [scaled] Identity matrix initialization                      *

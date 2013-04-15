@@ -198,7 +198,8 @@ GPU_TEST_P(Buffer, CopyToBuffer)
     cv::ogl::Buffer buf(gold, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
     cv::ogl::Buffer dst;
-    buf.copyTo(dst, cv::ogl::Buffer::ARRAY_BUFFER, true);
+    buf.copyTo(dst);
+    dst.setAutoRelease(true);
 
     EXPECT_NE(buf.bufId(), dst.bufId());
 
