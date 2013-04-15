@@ -418,11 +418,6 @@ public:
     template <typename _Tp> operator PtrStepSz<_Tp>() const;
     template <typename _Tp> operator PtrStep<_Tp>() const;
 
-    // Deprecated function
-    __CV_GPU_DEPR_BEFORE__ template <typename _Tp> operator DevMem2D_<_Tp>() const __CV_GPU_DEPR_AFTER__;
-    #undef __CV_GPU_DEPR_BEFORE__
-    #undef __CV_GPU_DEPR_AFTER__
-
     /*! includes several bit-fields:
     - the magic signature
     - continuity flag
@@ -679,12 +674,6 @@ template <class T> inline
 GpuMat::operator PtrStep<T>() const
 {
     return PtrStep<T>((T*)data, step);
-}
-
-template <class T> inline
-GpuMat::operator DevMem2D_<T>() const
-{
-    return DevMem2D_<T>(rows, cols, (T*)data, step);
 }
 
 static inline
