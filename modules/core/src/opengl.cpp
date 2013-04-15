@@ -533,12 +533,6 @@ cv::ogl::Buffer::Buffer(InputArray arr, Target target, bool autoRelease) : rows_
             break;
         }
 
-    case _InputArray::OPENGL_TEXTURE:
-        {
-            copyFrom(arr, target, autoRelease);
-            break;
-        }
-
     case _InputArray::GPU_MAT:
         {
             copyFrom(arr, target, autoRelease);
@@ -613,14 +607,6 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, Target target, bool autoRelease)
 #else
     const int kind = arr.kind();
 
-    if (kind == _InputArray::OPENGL_TEXTURE)
-    {
-        ogl::Texture2D tex = arr.getOGlTexture2D();
-        tex.copyTo(*this);
-        setAutoRelease(autoRelease);
-        return;
-    }
-
     const Size asize = arr.size();
     const int atype = arr.type();
     create(asize, atype, target, autoRelease);
@@ -671,12 +657,6 @@ void cv::ogl::Buffer::copyTo(OutputArray arr, Target target, bool autoRelease) c
     case _InputArray::OPENGL_BUFFER:
         {
             arr.getOGlBufferRef().copyFrom(*this, target, autoRelease);
-            break;
-        }
-
-    case _InputArray::OPENGL_TEXTURE:
-        {
-            arr.getOGlTexture2DRef().copyFrom(*this, autoRelease);
             break;
         }
 

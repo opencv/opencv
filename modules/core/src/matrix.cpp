@@ -948,7 +948,6 @@ _InputArray::_InputArray(const double& val) : flags(FIXED_TYPE + FIXED_SIZE + MA
 _InputArray::_InputArray(const MatExpr& expr) : flags(FIXED_TYPE + FIXED_SIZE + EXPR), obj((void*)&expr) {}
 _InputArray::_InputArray(const gpu::GpuMat& d_mat) : flags(GPU_MAT), obj((void*)&d_mat) {}
 _InputArray::_InputArray(const ogl::Buffer& buf) : flags(OPENGL_BUFFER), obj((void*)&buf) {}
-_InputArray::_InputArray(const ogl::Texture2D& tex) : flags(OPENGL_TEXTURE), obj((void*)&tex) {}
 
 Mat _InputArray::getMat(int i) const
 {
@@ -1108,16 +1107,6 @@ ogl::Buffer _InputArray::getOGlBuffer() const
     return *gl_buf;
 }
 
-ogl::Texture2D _InputArray::getOGlTexture2D() const
-{
-    int k = kind();
-
-    CV_Assert(k == OPENGL_TEXTURE);
-
-    const ogl::Texture2D* gl_tex = (const ogl::Texture2D*)obj;
-    return *gl_tex;
-}
-
 int _InputArray::kind() const
 {
     return flags & KIND_MASK;
@@ -1184,13 +1173,6 @@ Size _InputArray::size(int i) const
         CV_Assert( i < 0 );
         const ogl::Buffer* buf = (const ogl::Buffer*)obj;
         return buf->size();
-    }
-
-    if( k == OPENGL_TEXTURE )
-    {
-        CV_Assert( i < 0 );
-        const ogl::Texture2D* tex = (const ogl::Texture2D*)obj;
-        return tex->size();
     }
 
     CV_Assert( k == GPU_MAT );
@@ -1304,9 +1286,6 @@ bool _InputArray::empty() const
     if( k == OPENGL_BUFFER )
         return ((const ogl::Buffer*)obj)->empty();
 
-    if( k == OPENGL_TEXTURE )
-        return ((const ogl::Texture2D*)obj)->empty();
-
     CV_Assert( k == GPU_MAT );
     //if( k == GPU_MAT )
         return ((const gpu::GpuMat*)obj)->empty();
@@ -1319,13 +1298,11 @@ _OutputArray::_OutputArray(Mat& m) : _InputArray(m) {}
 _OutputArray::_OutputArray(std::vector<Mat>& vec) : _InputArray(vec) {}
 _OutputArray::_OutputArray(gpu::GpuMat& d_mat) : _InputArray(d_mat) {}
 _OutputArray::_OutputArray(ogl::Buffer& buf) : _InputArray(buf) {}
-_OutputArray::_OutputArray(ogl::Texture2D& tex) : _InputArray(tex) {}
 
 _OutputArray::_OutputArray(const Mat& m) : _InputArray(m) {flags |= FIXED_SIZE|FIXED_TYPE;}
 _OutputArray::_OutputArray(const std::vector<Mat>& vec) : _InputArray(vec) {flags |= FIXED_SIZE;}
 _OutputArray::_OutputArray(const gpu::GpuMat& d_mat) : _InputArray(d_mat) {flags |= FIXED_SIZE|FIXED_TYPE;}
 _OutputArray::_OutputArray(const ogl::Buffer& buf) : _InputArray(buf) {flags |= FIXED_SIZE|FIXED_TYPE;}
-_OutputArray::_OutputArray(const ogl::Texture2D& tex) : _InputArray(tex) {flags |= FIXED_SIZE|FIXED_TYPE;}
 
 
 bool _OutputArray::fixedSize() const
@@ -1615,12 +1592,6 @@ void _OutputArray::release() const
         return;
     }
 
-    if( k == OPENGL_TEXTURE )
-    {
-        ((ogl::Texture2D*)obj)->release();
-        return;
-    }
-
     if( k == NONE )
         return;
 
@@ -1691,13 +1662,6 @@ ogl::Buffer& _OutputArray::getOGlBufferRef() const
     int k = kind();
     CV_Assert( k == OPENGL_BUFFER );
     return *(ogl::Buffer*)obj;
-}
-
-ogl::Texture2D& _OutputArray::getOGlTexture2DRef() const
-{
-    int k = kind();
-    CV_Assert( k == OPENGL_TEXTURE );
-    return *(ogl::Texture2D*)obj;
 }
 
 static _OutputArray _none;

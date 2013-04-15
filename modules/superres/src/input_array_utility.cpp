@@ -57,10 +57,6 @@ Mat cv::superres::arrGetMat(InputArray arr, Mat& buf)
         arr.getOGlBuffer().copyTo(buf);
         return buf;
 
-    case _InputArray::OPENGL_TEXTURE:
-        arr.getOGlTexture2D().copyTo(buf);
-        return buf;
-
     default:
         return arr.getMat();
     }
@@ -75,10 +71,6 @@ GpuMat cv::superres::arrGetGpuMat(InputArray arr, GpuMat& buf)
 
     case _InputArray::OPENGL_BUFFER:
         arr.getOGlBuffer().copyTo(buf);
-        return buf;
-
-    case _InputArray::OPENGL_TEXTURE:
-        arr.getOGlTexture2D().copyTo(buf);
         return buf;
 
     default:
@@ -97,10 +89,6 @@ namespace
     {
         dst.getOGlBufferRef().copyFrom(src);
     }
-    void arr2tex(InputArray src, OutputArray dst)
-    {
-        dst.getOGlTexture2D().copyFrom(src);
-    }
     void mat2gpu(InputArray src, OutputArray dst)
     {
         dst.getGpuMatRef().upload(src.getMat());
@@ -108,10 +96,6 @@ namespace
     void buf2arr(InputArray src, OutputArray dst)
     {
         src.getOGlBuffer().copyTo(dst);
-    }
-    void tex2arr(InputArray src, OutputArray dst)
-    {
-        src.getOGlTexture2D().copyTo(dst);
     }
     void gpu2mat(InputArray src, OutputArray dst)
     {
@@ -132,15 +116,15 @@ void cv::superres::arrCopy(InputArray src, OutputArray dst)
     static const func_t funcs[10][10] =
     {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, arr2tex, mat2gpu},
-        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, arr2tex, mat2gpu},
-        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, arr2tex, mat2gpu},
-        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, arr2tex, mat2gpu},
-        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, arr2tex, mat2gpu},
-        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, arr2tex, mat2gpu},
-        {0, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr},
-        {0, tex2arr, tex2arr, tex2arr, tex2arr, tex2arr, tex2arr, tex2arr, tex2arr, tex2arr},
-        {0, gpu2mat, gpu2mat, gpu2mat, gpu2mat, gpu2mat, gpu2mat, arr2buf, arr2tex, gpu2gpu}
+        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, 0 /*arr2tex*/, mat2gpu},
+        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, 0 /*arr2tex*/, mat2gpu},
+        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, 0 /*arr2tex*/, mat2gpu},
+        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, 0 /*arr2tex*/, mat2gpu},
+        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, 0 /*arr2tex*/, mat2gpu},
+        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, 0 /*arr2tex*/, mat2gpu},
+        {0, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, 0 /*buf2arr*/, buf2arr},
+        {0, 0 /*tex2arr*/, 0 /*tex2arr*/, 0 /*tex2arr*/, 0 /*tex2arr*/, 0 /*tex2arr*/, 0 /*tex2arr*/, 0 /*tex2arr*/, 0 /*tex2arr*/, 0 /*tex2arr*/},
+        {0, gpu2mat, gpu2mat, gpu2mat, gpu2mat, gpu2mat, gpu2mat, arr2buf, 0 /*arr2tex*/, gpu2gpu}
     };
 
     const int src_kind = src.kind() >> _InputArray::KIND_SHIFT;
