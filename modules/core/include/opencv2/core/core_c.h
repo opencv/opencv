@@ -1501,24 +1501,24 @@ typedef int (CV_CDECL *CvFreeFunc)(void* pptr, void* userdata);
 
 /*
   Use a memory pool to allocate and deallocate objects.
-  If an object is larger than blockSize bytes, it will be allocated by a system call. 
-  Otherwise, it will be allocated from the memory pool.
-  blockSize must be larger than 128 bytes.
-  If this function is used, cvTurnOffMemoryPool() must be called before the program exits.
+  If an object is larger than blockSize bytes, it will be allocated/deallocated by system malloc/free. 
+  Otherwise, the memory pool will handle the allocation/deallocation request.
+  Currently this function can only be called once and blockSize must be larger than 128 bytes.
 */
 CVAPI(void) cvTurnOnMemoryPool(size_t blockSize CV_DEFAULT(16256));
 
-/* Use system call to allocate and deallocate objects. */
+/* Use system malloc/free to allocate and deallocate objects. */
 CVAPI(void) cvTurnOffMemoryPool();
 
-/* Set user-defined memory management functions (substitutors for malloc and free) that 
-   will be called by cvAlloc, cvFree and higher-level functions (e.g. cvCreateImage).
-   If this function is used, cvRemoveMemoryManager() must be called before the program exits. */
+/* 
+  Set user-defined memory management functions (substitutors for malloc and free) that 
+  will be called by cvAlloc, cvFree and higher-level functions (e.g. cvCreateImage).
+*/
 CVAPI(void) cvSetMemoryManager(CvAllocFunc alloc_func CV_DEFAULT(NULL), 
                                CvFreeFunc free_func CV_DEFAULT(NULL),
                                void* userdata CV_DEFAULT(NULL));
 
-/* Remove user-defined memory management functions. */
+/* Use system malloc/free to allocate and deallocate objects. */
 CVAPI(void) cvRemoveMemoryManager();
 
 typedef IplImage* (CV_STDCALL* Cv_iplCreateImageHeader)
