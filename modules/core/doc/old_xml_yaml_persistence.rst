@@ -327,8 +327,6 @@ Loads an object from a file.
 
 .. ocv:cfunction:: void* cvLoad( const char* filename, CvMemStorage* memstorage=NULL, const char* name=NULL, const char** real_name=NULL )
 
-.. ocv:pyoldfunction:: cv.Load(filename, storage=None, name=None)-> generic
-
     :param filename: File name
 
     :param memstorage: Memory storage for dynamic structures, such as  :ocv:struct:`CvSeq`  or  :ocv:struct:`CvGraph`  . It is not used for matrices or images.
@@ -595,8 +593,6 @@ Save
 Saves an object to a file.
 
 .. ocv:cfunction:: void cvSave( const char* filename, const void* struct_ptr, const char* name=NULL, const char* comment=NULL, CvAttrList attributes=cvAttrList() )
-
-.. ocv:pyoldfunction:: cv.Save(filename, structPtr, name=None, comment=None)-> None
 
     :param filename: File name
 

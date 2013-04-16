@@ -24,7 +24,7 @@ if __name__ == '__main__':
     if img is None:
         print 'Failed to load image file:', fn
         sys.exit(1)
-        
+
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     h, w = img.shape[:2]
 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     points =  np.dstack( np.mgrid[d/2:w:d, d/2:h:d] ).reshape(-1, 2)
     for x, y in points:
        vx, vy = np.int32(flow[y, x]*d)
-       cv2.line(vis, (x-vx, y-vy), (x+vx, y+vy), (0, 0, 0), 1, cv2.CV_AA)
+       cv2.line(vis, (x-vx, y-vy), (x+vx, y+vy), (0, 0, 0), 1, cv2.LINE_AA)
     cv2.imshow('input', img)
     cv2.imshow('flow', vis)
     cv2.waitKey()

@@ -15,8 +15,6 @@ Finds edges in an image using the [Canny86]_ algorithm.
 
 .. ocv:cfunction:: void cvCanny( const CvArr* image, CvArr* edges, double threshold1, double threshold2, int aperture_size=3 )
 
-.. ocv:pyoldfunction:: cv.Canny(image, edges, threshold1, threshold2, aperture_size=3) -> None
-
     :param image: single-channel 8-bit input image.
 
     :param edges: output edge map; it has the same size and type as  ``image`` .
@@ -43,8 +41,6 @@ Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 .. ocv:pyfunction:: cv2.cornerEigenValsAndVecs(src, blockSize, ksize[, dst[, borderType]]) -> dst
 
 .. ocv:cfunction:: void cvCornerEigenValsAndVecs( const CvArr* image, CvArr* eigenvv, int block_size, int aperture_size=3 )
-
-.. ocv:pyoldfunction:: cv.CornerEigenValsAndVecs(image, eigenvv, blockSize, aperture_size=3) -> None
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -97,8 +93,6 @@ Harris edge detector.
 
 .. ocv:cfunction:: void cvCornerHarris( const CvArr* image, CvArr* harris_responce, int block_size, int aperture_size=3, double k=0.04 )
 
-.. ocv:pyoldfunction:: cv.CornerHarris(image, harris_dst, blockSize, aperture_size=3, k=0.04) -> None
-
     :param src: Input single-channel 8-bit or floating-point image.
 
     :param dst: Image to store the Harris detector responses. It has the type  ``CV_32FC1``  and the same size as  ``src`` .
@@ -137,8 +131,6 @@ Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
 .. ocv:cfunction:: void cvCornerMinEigenVal( const CvArr* image, CvArr* eigenval, int block_size, int aperture_size=3 )
 
-.. ocv:pyoldfunction:: cv.CornerMinEigenVal(image, eigenval, blockSize, aperture_size=3) -> None
-
     :param src: Input single-channel 8-bit or floating-point image.
 
     :param dst: Image to store the minimal eigenvalues. It has the type  ``CV_32FC1``  and the same size as  ``src`` .
@@ -165,8 +157,6 @@ Refines the corner locations.
 .. ocv:pyfunction:: cv2.cornerSubPix(image, corners, winSize, zeroZone, criteria) -> corners
 
 .. ocv:cfunction:: void cvFindCornerSubPix( const CvArr* image, CvPoint2D32f* corners, int count, CvSize win, CvSize zero_zone, CvTermCriteria criteria )
-
-.. ocv:pyoldfunction:: cv.FindCornerSubPix(image, corners, win, zero_zone, criteria) -> corners
 
     :param image: Input image.
 
@@ -227,8 +217,6 @@ Determines strong corners on an image.
 .. ocv:pyfunction:: cv2.goodFeaturesToTrack(image, maxCorners, qualityLevel, minDistance[, corners[, mask[, blockSize[, useHarrisDetector[, k]]]]]) -> corners
 
 .. ocv:cfunction:: void cvGoodFeaturesToTrack( const CvArr* image, CvArr* eig_image, CvArr* temp_image, CvPoint2D32f* corners, int* corner_count, double quality_level, double min_distance, const CvArr* mask=NULL, int block_size=3, int use_harris=0, double k=0.04 )
-
-.. ocv:pyoldfunction:: cv.GoodFeaturesToTrack(image, eigImage, tempImage, cornerCount, qualityLevel, minDistance, mask=None, blockSize=3, useHarris=0, k=0.04) -> cornerCount
 
     :param image: Input 8-bit or floating-point 32-bit, single-channel image.
 
@@ -366,8 +354,6 @@ Finds lines in a binary image using the standard Hough transform.
 .. ocv:pyfunction:: cv2.HoughLines(image, rho, theta, threshold[, lines[, srn[, stn]]]) -> lines
 
 .. ocv:cfunction:: CvSeq* cvHoughLines2( CvArr* image, void* line_storage, int method, double rho, double theta, int threshold, double param1=0, double param2=0 )
-
-.. ocv:pyoldfunction:: cv.HoughLines2(image, storage, method, rho, theta, threshold, param1=0, param2=0)-> lines
 
     :param image: 8-bit, single-channel binary source image. The image may be modified by the function.
 
@@ -509,8 +495,6 @@ Calculates a feature map for corner detection.
 .. ocv:pyfunction:: cv2.preCornerDetect(src, ksize[, dst[, borderType]]) -> dst
 
 .. ocv:cfunction:: void cvPreCornerDetect( const CvArr* image, CvArr* corners, int aperture_size=3 )
-
-.. ocv:pyoldfunction:: cv.PreCornerDetect(image, corners, apertureSize=3)-> None
 
     :param src: Source single-channel 8-bit of floating-point image.
 
