@@ -43,6 +43,8 @@
 #include "precomp.hpp"
 #include "epnp.h"
 #include "p3p.h"
+#include "opencv2/calib3d/calib3d_c.h"
+
 #include <iostream>
 using namespace cv;
 
@@ -57,7 +59,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     _tvec.create(3, 1, CV_64F);
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
 
-    if (flags == CV_EPNP)
+    if (flags == EPNP)
     {
         cv::Mat undistortedPoints;
         cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
@@ -68,7 +70,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
         cv::Rodrigues(R, rvec);
         return true;
     }
-    else if (flags == CV_P3P)
+    else if (flags == P3P)
     {
         CV_Assert( npoints == 4);
         cv::Mat undistortedPoints;
@@ -81,7 +83,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
             cv::Rodrigues(R, rvec);
         return result;
     }
-    else if (flags == CV_ITERATIVE)
+    else if (flags == ITERATIVE)
     {
         CvMat c_objectPoints = opoints, c_imagePoints = ipoints;
         CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
@@ -342,7 +344,7 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     if (localInliers.size() >= (size_t)pnpransac::MIN_POINTS_COUNT)
     {
-        if (flags != CV_P3P)
+        if (flags != P3P)
         {
             int i, pointsCount = (int)localInliers.size();
             Mat inlierObjectPoints(1, pointsCount, CV_32FC3), inlierImagePoints(1, pointsCount, CV_32FC2);

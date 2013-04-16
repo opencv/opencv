@@ -109,17 +109,62 @@ public:
 CV_EXPORTS void error( const Exception& exc );
 
 
-typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
-                           const uchar* src2, size_t step2,
-                           uchar* dst, size_t step, Size sz,
-                           void*);
+enum { SORT_EVERY_ROW    = 0,
+       SORT_EVERY_COLUMN = 1,
+       SORT_ASCENDING    = 0,
+       SORT_DESCENDING   = 16
+     };
 
-CV_EXPORTS BinaryFunc getConvertFunc(int sdepth, int ddepth);
-CV_EXPORTS BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
-CV_EXPORTS BinaryFunc getCopyMaskFunc(size_t esz);
+enum { COVAR_SCRAMBLED = 0,
+       COVAR_NORMAL    = 1,
+       COVAR_USE_AVG   = 2,
+       COVAR_SCALE     = 4,
+       COVAR_ROWS      = 8,
+       COVAR_COLS      = 16
+     };
+
+/*!
+ k-Means flags
+*/
+enum { KMEANS_RANDOM_CENTERS     = 0, // Chooses random centers for k-Means initialization
+       KMEANS_PP_CENTERS         = 2, // Uses k-Means++ algorithm for initialization
+       KMEANS_USE_INITIAL_LABELS = 1  // Uses the user-provided labels for K-Means initialization
+     };
+
+enum { FILLED  = -1,
+       LINE_4  = 4,
+       LINE_8  = 8,
+       LINE_AA = 16
+     };
+
+enum { FONT_HERSHEY_SIMPLEX        = 0,
+       FONT_HERSHEY_PLAIN          = 1,
+       FONT_HERSHEY_DUPLEX         = 2,
+       FONT_HERSHEY_COMPLEX        = 3,
+       FONT_HERSHEY_TRIPLEX        = 4,
+       FONT_HERSHEY_COMPLEX_SMALL  = 5,
+       FONT_HERSHEY_SCRIPT_SIMPLEX = 6,
+       FONT_HERSHEY_SCRIPT_COMPLEX = 7,
+       FONT_ITALIC                 = 16
+     };
+
+enum { REDUCE_SUM = 0,
+       REDUCE_AVG = 1,
+       REDUCE_MAX = 2,
+       REDUCE_MIN = 3
+     };
+
 
 //! swaps two matrices
 CV_EXPORTS void swap(Mat& a, Mat& b);
+
+//! 1D interpolation function: returns coordinate of the "donor" pixel for the specified location p.
+CV_EXPORTS_W int borderInterpolate(int p, int len, int borderType);
+
+//! copies 2D array to a larger destination array with extrapolation of the outer part of src using the specified border mode
+CV_EXPORTS_W void copyMakeBorder(InputArray src, OutputArray dst,
+                                 int top, int bottom, int left, int right,
+                                 int borderType, const Scalar& value = Scalar() );
 
 //! adds one matrix to another (dst = src1 + src2)
 CV_EXPORTS_W void add(InputArray src1, InputArray src2, OutputArray dst,
@@ -153,8 +198,7 @@ CV_EXPORTS_W void convertScaleAbs(InputArray src, OutputArray dst,
                                   double alpha = 1, double beta = 0);
 
 //! transforms array of numbers using a lookup table: dst(i)=lut(src(i))
-CV_EXPORTS_W void LUT(InputArray src, InputArray lut, OutputArray dst,
-                      int interpolation = 0);
+CV_EXPORTS_W void LUT(InputArray src, InputArray lut, OutputArray dst);
 
 //! computes sum of array elements
 CV_EXPORTS_AS(sumElems) Scalar sum(InputArray src);
@@ -178,6 +222,9 @@ CV_EXPORTS_W double norm(InputArray src1, int normType = NORM_L2, InputArray mas
 //! computes norm of selected part of the difference between two arrays
 CV_EXPORTS_W double norm(InputArray src1, InputArray src2,
                          int normType = NORM_L2, InputArray mask = noArray());
+
+//! computes PSNR image/video quality metric
+CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2);
 
 //! computes norm of a sparse matrix
 CV_EXPORTS double norm( const SparseMat& src, int normType );
@@ -227,11 +274,11 @@ CV_EXPORTS_W void split(InputArray m, OutputArrayOfArrays mv);
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
                             const int* fromTo, size_t npairs);
 
-CV_EXPORTS void mixChannels(const std::vector<Mat>& src, std::vector<Mat>& dst,
-                            const int* fromTo, size_t npairs); //TODO: use arrays
+CV_EXPORTS void mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
+                            const int* fromTo, size_t npairs);
 
-CV_EXPORTS_W void mixChannels(InputArrayOfArrays src, InputArrayOfArrays dst,
-                              const std::vector<int>& fromTo); //TODO: InputOutputArrayOfArrays
+CV_EXPORTS_W void mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
+                              const std::vector<int>& fromTo);
 
 //! extracts a single channel from src (coi is 0-based index)
 CV_EXPORTS_W void extractChannel(InputArray src, OutputArray dst, int coi);
@@ -291,15 +338,12 @@ CV_EXPORTS_W void min(InputArray src1, InputArray src2, OutputArray dst);
 //! computes per-element maximum of two arrays (dst = max(src1, src2))
 CV_EXPORTS_W void max(InputArray src1, InputArray src2, OutputArray dst);
 
-//TODO: can we drop these versions?
+// the following overloads are needed to avoid conflicts with
+//     const _Tp& std::min(const _Tp&, const _Tp&, _Compare)
 //! computes per-element minimum of two arrays (dst = min(src1, src2))
 CV_EXPORTS void min(const Mat& src1, const Mat& src2, Mat& dst);
-//! computes per-element minimum of array and scalar (dst = min(src1, src2))
-CV_EXPORTS void min(const Mat& src1, double src2, Mat& dst);
 //! computes per-element maximum of two arrays (dst = max(src1, src2))
 CV_EXPORTS void max(const Mat& src1, const Mat& src2, Mat& dst);
-//! computes per-element maximum of array and scalar (dst = max(src1, src2))
-CV_EXPORTS void max(const Mat& src1, double src2, Mat& dst);
 
 //! computes square root of each matrix element (dst = src**0.5)
 CV_EXPORTS_W void sqrt(InputArray src, OutputArray dst);
@@ -373,14 +417,6 @@ CV_EXPORTS_W double invert(InputArray src, OutputArray dst, int flags = DECOMP_L
 CV_EXPORTS_W bool solve(InputArray src1, InputArray src2,
                         OutputArray dst, int flags = DECOMP_LU);
 
-enum
-{
-    SORT_EVERY_ROW    = 0,
-    SORT_EVERY_COLUMN = 1,
-    SORT_ASCENDING    = 0,
-    SORT_DESCENDING   = 16
-};
-
 //! sorts independently each matrix row or each matrix column
 CV_EXPORTS_W void sort(InputArray src, OutputArray dst, int flags);
 
@@ -393,34 +429,16 @@ CV_EXPORTS_W int solveCubic(InputArray coeffs, OutputArray roots);
 //! finds real and complex roots of a polynomial
 CV_EXPORTS_W double solvePoly(InputArray coeffs, OutputArray roots, int maxIters = 300);
 
-//! finds eigenvalues of a symmetric matrix
-CV_EXPORTS bool eigen(InputArray src, OutputArray eigenvalues, int lowindex = -1,
-                      int highindex = -1);
-
 //! finds eigenvalues and eigenvectors of a symmetric matrix
-CV_EXPORTS bool eigen(InputArray src, OutputArray eigenvalues,
-                      OutputArray eigenvectors,
-                      int lowindex = -1, int highindex = -1);
-
-CV_EXPORTS_W bool eigen(InputArray src, bool computeEigenvectors,
-                        OutputArray eigenvalues, OutputArray eigenvectors);
-
-enum
-{
-    COVAR_SCRAMBLED = 0,
-    COVAR_NORMAL    = 1,
-    COVAR_USE_AVG   = 2,
-    COVAR_SCALE     = 4,
-    COVAR_ROWS      = 8,
-    COVAR_COLS      = 16
-};
+CV_EXPORTS_W bool eigen(InputArray src, OutputArray eigenvalues,
+                        OutputArray eigenvectors = noArray());
 
 //! computes covariation matrix of a set of samples
 CV_EXPORTS void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, Mat& mean,
-                                 int flags, int ctype = CV_64F); //TODO: output arrays or drop
+                                 int flags, int ctype = CV_64F); //TODO: InputArrayOfArrays
 
 //! computes covariation matrix of a set of samples
-CV_EXPORTS_W void calcCovarMatrix( InputArray samples, OutputArray covar, //TODO: InputArrayOfArrays
+CV_EXPORTS_W void calcCovarMatrix( InputArray samples, OutputArray covar,
                                    OutputArray mean, int flags, int ctype = CV_64F);
 
 CV_EXPORTS_W void PCACompute(InputArray data, InputOutputArray mean,
@@ -445,9 +463,6 @@ CV_EXPORTS_W void SVBackSubst( InputArray w, InputArray u, InputArray vt,
 //! computes Mahalanobis distance between two vectors: sqrt((v1-v2)'*icovar*(v1-v2)), where icovar is the inverse covariation matrix
 CV_EXPORTS_W double Mahalanobis(InputArray v1, InputArray v2, InputArray icovar);
 
-//! a synonym for Mahalanobis
-CV_EXPORTS double Mahalonobis(InputArray v1, InputArray v2, InputArray icovar); //TODO: check if we can drop it or move to legacy
-
 //! performs forward or inverse 1D or 2D Discrete Fourier Transformation
 CV_EXPORTS_W void dft(InputArray src, OutputArray dst, int flags = 0, int nonzeroRows = 0);
 
@@ -467,16 +482,6 @@ CV_EXPORTS_W void mulSpectrums(InputArray a, InputArray b, OutputArray c,
 //! computes the minimal vector size vecsize1 >= vecsize so that the dft() of the vector of length vecsize1 can be computed efficiently
 CV_EXPORTS_W int getOptimalDFTSize(int vecsize);
 
-/*!
- k-Means flags
-*/
-enum
-{
-    KMEANS_RANDOM_CENTERS     = 0, // Chooses random centers for k-Means initialization
-    KMEANS_PP_CENTERS         = 2, // Uses k-Means++ algorithm for initialization
-    KMEANS_USE_INITIAL_LABELS = 1  // Uses the user-provided labels for K-Means initialization
-};
-
 //! clusters the input data using k-Means algorithm
 CV_EXPORTS_W double kmeans( InputArray data, int K, InputOutputArray bestLabels,
                             TermCriteria criteria, int attempts,
@@ -492,15 +497,7 @@ CV_EXPORTS_W void randu(InputOutputArray dst, InputArray low, InputArray high);
 CV_EXPORTS_W void randn(InputOutputArray dst, InputArray mean, InputArray stddev);
 
 //! shuffles the input array elements
-CV_EXPORTS void randShuffle(InputOutputArray dst, double iterFactor = 1., RNG* rng = 0);
-
-CV_EXPORTS_AS(randShuffle) void randShuffle_(InputOutputArray dst, double iterFactor = 1.);
-
-enum { FILLED  = -1,
-       LINE_4  = 4,
-       LINE_8  = 8,
-       LINE_AA = 16
-     };
+CV_EXPORTS_W void randShuffle(InputOutputArray dst, double iterFactor = 1., RNG* rng = 0);
 
 //! draws the line segment (pt1, pt2) in the image
 CV_EXPORTS_W void line(CV_IN_OUT Mat& img, Point pt1, Point pt2, const Scalar& color,
@@ -577,19 +574,6 @@ CV_EXPORTS_W void ellipse2Poly( Point center, Size axes, int angle,
                                 int arcStart, int arcEnd, int delta,
                                 CV_OUT std::vector<Point>& pts );
 
-enum
-{
-    FONT_HERSHEY_SIMPLEX        = 0,
-    FONT_HERSHEY_PLAIN          = 1,
-    FONT_HERSHEY_DUPLEX         = 2,
-    FONT_HERSHEY_COMPLEX        = 3,
-    FONT_HERSHEY_TRIPLEX        = 4,
-    FONT_HERSHEY_COMPLEX_SMALL  = 5,
-    FONT_HERSHEY_SCRIPT_SIMPLEX = 6,
-    FONT_HERSHEY_SCRIPT_COMPLEX = 7,
-    FONT_ITALIC                 = 16
-};
-
 //! renders text string in the image
 CV_EXPORTS_W void putText( Mat& img, const String& text, Point org,
                          int fontFace, double fontScale, Scalar color,
@@ -600,17 +584,6 @@ CV_EXPORTS_W void putText( Mat& img, const String& text, Point org,
 CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
                             double fontScale, int thickness,
                             CV_OUT int* baseLine);
-
-typedef void (*ConvertData)(const void* from, void* to, int cn);
-typedef void (*ConvertScaleData)(const void* from, void* to, int cn, double alpha, double beta);
-
-//! returns the function for converting pixels from one data type to another
-CV_EXPORTS ConvertData getConvertElem(int fromType, int toType);
-
-//! returns the function for converting pixels from one data type to another with the optional scaling
-CV_EXPORTS ConvertScaleData getConvertScaleElem(int fromType, int toType);
-
-
 
 /*!
     Principal Component Analysis
@@ -720,7 +693,10 @@ public:
 class CV_EXPORTS SVD
 {
 public:
-    enum { MODIFY_A = 1, NO_UV = 2, FULL_UV = 4 };
+    enum { MODIFY_A = 1,
+           NO_UV    = 2,
+           FULL_UV  = 4
+         };
 
     //! the default constructor
     SVD();
@@ -887,7 +863,9 @@ public:
 class CV_EXPORTS RNG
 {
 public:
-    enum { UNIFORM = 0, NORMAL = 1 };
+    enum { UNIFORM = 0,
+           NORMAL  = 1
+         };
 
     RNG();
     RNG(uint64 state);

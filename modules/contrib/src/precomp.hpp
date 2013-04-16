@@ -47,7 +47,6 @@
 #include "opencv2/features2d.hpp"
 #include "opencv2/objdetect.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/core/utility.hpp"
 
 #include "opencv2/core/private.hpp"

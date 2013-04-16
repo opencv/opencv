@@ -326,7 +326,7 @@ MotionInpainter::MotionInpainter()
 #ifdef HAVE_OPENCV_GPU
     setOptFlowEstimator(new DensePyrLkOptFlowEstimatorGpu());
 #else
-    CV_Error(CV_StsNotImplemented, "Current implementation of MotionInpainter requires GPU");
+    CV_Error(Error::StsNotImplemented, "Current implementation of MotionInpainter requires GPU");
 #endif
     setFlowErrorThreshold(1e-4f);
     setDistThreshold(5.f);
@@ -357,7 +357,7 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
         mask1_.setTo(255);
     }
 
-    cvtColor(frame, grayFrame_, CV_BGR2GRAY);
+    cvtColor(frame, grayFrame_, COLOR_BGR2GRAY);
 
     MotionInpaintBody body;
     body.rad = 2;
@@ -383,7 +383,7 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
                     frame1_, transformedFrame1_, motion1to0, frame1_.size(), INTER_LINEAR,
                     borderMode_);
 
-        cvtColor(transformedFrame1_, transformedGrayFrame1_, CV_BGR2GRAY);
+        cvtColor(transformedFrame1_, transformedGrayFrame1_, COLOR_BGR2GRAY);
 
         // warp mask
 

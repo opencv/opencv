@@ -45,12 +45,15 @@
 //M*/
 #include "precomp.hpp"
 #include <iostream>
+
+
 namespace cv
 {
 namespace ocl
 {
 extern const char *moments;
 
+#if 0
 // The function calculates center of gravity and the central second order moments
 static void icvCompleteMomentState( CvMoments* moments )
 {
@@ -331,13 +334,21 @@ static void ocl_cvMoments( const void* array, CvMoments* mom, int binary )
     icvCompleteMomentState( mom );
 }
 
+#endif
+
 Moments ocl_moments( InputArray _array, bool binaryImage )
 {
+#if 0
     CvMoments om;
     Mat arr = _array.getMat();
     CvMat c_array = arr;
     ocl_cvMoments(&c_array, &om, binaryImage);
     return om;
+#endif
+    CV_Error(Error::StsNotImplemented, "ocl_moments is not implemented");
+    (void)_array;
+    (void)binaryImage;
+    return Moments();
 }
 
 }

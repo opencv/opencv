@@ -1,4 +1,4 @@
-#include "opencv2/objdetect.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
 #include "opencv2/highgui/highgui_c.h"
 #include <stdio.h>
 

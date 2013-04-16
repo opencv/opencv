@@ -204,7 +204,7 @@ int main(int argc, char * argv[]) {
     }
 
     Mat result_large(100, 100, CV_8UC1);
-    resize(result_small, result_large, Size(500, 500), 0, 0, CV_INTER_NN);
+    resize(result_small, result_large, Size(500, 500), 0, 0, INTER_NEAREST);
 
     cout << endl << "Press any key to exit" << endl;
     imshow("Confusion Matrix", result_large);

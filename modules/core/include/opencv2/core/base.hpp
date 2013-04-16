@@ -109,7 +109,8 @@ enum {
     GpuNotSupported=           -216,
     GpuApiCallError=           -217,
     OpenGlNotSupported=        -218,
-    OpenGlApiCallError=        -219
+    OpenGlApiCallError=        -219,
+    OpenCLApiCallError=        -220
 };
 } //Error
 
@@ -155,6 +156,20 @@ enum { DFT_INVERSE        = 1,
        DFT_REAL_OUTPUT    = 32,
        DCT_INVERSE        = DFT_INVERSE,
        DCT_ROWS           = DFT_ROWS
+     };
+
+//! Various border types, image boundaries are denoted with '|'
+enum {
+       BORDER_CONSTANT    = 0, // iiiiii|abcdefgh|iiiiiii  with some specified 'i'
+       BORDER_REPLICATE   = 1, // aaaaaa|abcdefgh|hhhhhhh
+       BORDER_REFLECT     = 2, // fedcba|abcdefgh|hgfedcb
+       BORDER_WRAP        = 3, // cdefgh|abcdefgh|abcdefg
+       BORDER_REFLECT_101 = 4, // gfedcb|abcdefgh|gfedcba
+       BORDER_TRANSPARENT = 5, // uvwxyz|absdefgh|ijklmno
+
+       BORDER_REFLECT101  = BORDER_REFLECT_101,
+       BORDER_DEFAULT     = BORDER_REFLECT_101,
+       BORDER_ISOLATED    = 16 // do not look outside of ROI
      };
 
 

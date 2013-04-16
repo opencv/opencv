@@ -185,7 +185,7 @@ void EllipticKeyPoint::convert( const std::vector<KeyPoint>& src, std::vector<El
         for( size_t i = 0; i < src.size(); i++ )
         {
             float rad = src[i].size/2;
-            assert( rad );
+            CV_Assert( rad );
             float fac = 1.f/(rad*rad);
             dst[i] = EllipticKeyPoint( src[i].pt, Scalar(fac, 0, fac) );
         }
@@ -210,7 +210,7 @@ void EllipticKeyPoint::calcProjection( const std::vector<EllipticKeyPoint>& src,
 {
     if( !src.empty() )
     {
-        assert( !H.empty() && H.cols == 3 && H.rows == 3);
+        CV_Assert( !H.empty() && H.cols == 3 && H.rows == 3);
         dst.resize(src.size());
         std::vector<EllipticKeyPoint>::const_iterator srcIt = src.begin();
         std::vector<EllipticKeyPoint>::iterator       dstIt = dst.begin();
@@ -462,7 +462,7 @@ void cv::evaluateFeatureDetector( const Mat& img1, const Mat& img2, const Mat& H
     keypoints2 = _keypoints2 != 0 ? _keypoints2 : &buf2;
 
     if( (keypoints1->empty() || keypoints2->empty()) && fdetector.empty() )
-        CV_Error( CV_StsBadArg, "fdetector must not be empty when keypoints1 or keypoints2 is empty" );
+        CV_Error( Error::StsBadArg, "fdetector must not be empty when keypoints1 or keypoints2 is empty" );
 
     if( keypoints1->empty() )
         fdetector->detect( img1, *keypoints1 );
@@ -573,15 +573,15 @@ void cv::evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, con
     correctMatches1to2Mask = _correctMatches1to2Mask != 0 ? _correctMatches1to2Mask : &buf2;
 
     if( keypoints1.empty() )
-        CV_Error( CV_StsBadArg, "keypoints1 must not be empty" );
+        CV_Error( Error::StsBadArg, "keypoints1 must not be empty" );
 
     if( matches1to2->empty() && dmatcher.empty() )
-        CV_Error( CV_StsBadArg, "dmatch must not be empty when matches1to2 is empty" );
+        CV_Error( Error::StsBadArg, "dmatch must not be empty when matches1to2 is empty" );
 
     bool computeKeypoints2ByPrj = keypoints2.empty();
     if( computeKeypoints2ByPrj )
     {
-        assert(0);
+        CV_Error(Error::StsNotImplemented, "");
         // TODO: add computing keypoints2 from keypoints1 using H1to2
     }
 

@@ -44,12 +44,10 @@
 #define __OPENCV_PRECOMP_H__
 
 #include "opencv2/video.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/video/tracking_c.h"
+
 #include "opencv2/core/utility.hpp"
-
 #include "opencv2/core/private.hpp"
-
-#include <list>
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
 #include "opencv2/video/video_tegra.hpp"

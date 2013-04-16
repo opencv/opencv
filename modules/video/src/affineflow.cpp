@@ -41,6 +41,8 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/video/tracking_c.h"
 
 // to be moved to legacy
 
@@ -540,7 +542,7 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
     if( !matrices )
         CV_Error( CV_StsNullPtr, "" );
 
-    imgSize = cvGetMatSize( imgA );
+    imgSize = cv::Size(imgA->cols, imgA->rows);
 
     if( pyrA )
     {

@@ -8,9 +8,10 @@
 #include <opencv2/core/core_c.h>
 #include <opencv2/imgproc/imgproc_c.h>
 #include <opencv2/legacy/compat.hpp>
-#include <opencv2/calib3d.hpp>
 
+#include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/calib3d.hpp>
 
 #if defined WIN32 || defined _WIN32 || defined WINCE
     #include <windows.h>
@@ -126,7 +127,7 @@ static void foundCorners(vector<CvPoint2D32f> *srcImagePoints,IplImage* source, 
     //MgrayImage = MgrayImage.clone();//deep copy
     vector<vector<Point> > contours;
     vector<Vec4i> hierarchy;
-    findContours(MgrayImage, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+    findContours(MgrayImage, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE);
 
     Point p;
     vector<CvPoint2D32f> srcImagePoints_temp(4,cvPoint2D32f(0,0));

@@ -118,7 +118,7 @@ OpponentColorDescriptorExtractor::OpponentColorDescriptorExtractor( const Ptr<De
 static void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, std::vector<Mat>& opponentChannels )
 {
     if( bgrImage.type() != CV_8UC3 )
-        CV_Error( CV_StsBadArg, "input image must be an BGR image of type CV_8UC3" );
+        CV_Error( Error::StsBadArg, "input image must be an BGR image of type CV_8UC3" );
 
     // Prepare opponent color space storage matrices.
     opponentChannels.resize( 3 );

@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -45,7 +45,7 @@
 #define __OPENCV_BACKGROUND_SEGM_HPP__
 
 #include "opencv2/core.hpp"
-#include <list>
+
 namespace cv
 {
 
@@ -64,6 +64,7 @@ public:
     //! computes a background image
     CV_WRAP virtual void getBackgroundImage(OutputArray backgroundImage) const = 0;
 };
+
 
 
 /*!
@@ -95,6 +96,7 @@ public:
 CV_EXPORTS_W Ptr<BackgroundSubtractorMOG>
     createBackgroundSubtractorMOG(int history=200, int nmixtures=5,
                                   double backgroundRatio=0.7, double noiseSigma=0);
+
 
 
 /*!
@@ -193,6 +195,6 @@ public:
 CV_EXPORTS_W Ptr<BackgroundSubtractorGMG> createBackgroundSubtractorGMG(int initializationFrames=120,
                                                                         double decisionThreshold=0.8);
 
-}
+} // cv
 
 #endif

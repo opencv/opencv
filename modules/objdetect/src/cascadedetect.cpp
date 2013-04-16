@@ -43,6 +43,7 @@
 #include <cstdio>
 
 #include "cascadedetect.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
 
 #if defined (LOG_CASCADE_STATISTIC)
 struct Logger
@@ -1126,7 +1127,7 @@ void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& o
     if( grayImage.channels() > 1 )
     {
         Mat temp;
-        cvtColor(grayImage, temp, CV_BGR2GRAY);
+        cvtColor(grayImage, temp, COLOR_BGR2GRAY);
         grayImage = temp;
     }
 
@@ -1149,7 +1150,7 @@ void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& o
             continue;
 
         Mat scaledImage( scaledImageSize, CV_8U, imageBuffer.data );
-        resize( grayImage, scaledImage, scaledImageSize, 0, 0, CV_INTER_LINEAR );
+        resize( grayImage, scaledImage, scaledImageSize, 0, 0, INTER_LINEAR );
 
         int yStep;
         if( getFeatureType() == cv::FeatureEvaluator::HOG )

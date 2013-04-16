@@ -54,9 +54,9 @@ class CV_solvePnPRansac_Test : public cvtest::BaseTest
 public:
     CV_solvePnPRansac_Test()
     {
-        eps[CV_ITERATIVE] = 1.0e-2;
-        eps[CV_EPNP] = 1.0e-2;
-        eps[CV_P3P] = 1.0e-2;
+        eps[ITERATIVE] = 1.0e-2;
+        eps[EPNP] = 1.0e-2;
+        eps[P3P] = 1.0e-2;
         totalTestsCount = 10;
     }
     ~CV_solvePnPRansac_Test() {}
@@ -193,9 +193,9 @@ class CV_solvePnP_Test : public CV_solvePnPRansac_Test
 public:
     CV_solvePnP_Test()
     {
-        eps[CV_ITERATIVE] = 1.0e-6;
-        eps[CV_EPNP] = 1.0e-6;
-        eps[CV_P3P] = 1.0e-4;
+        eps[ITERATIVE] = 1.0e-6;
+        eps[EPNP] = 1.0e-6;
+        eps[P3P] = 1.0e-4;
         totalTestsCount = 1000;
     }
 

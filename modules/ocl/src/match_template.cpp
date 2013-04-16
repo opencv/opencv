@@ -101,11 +101,11 @@ namespace cv
         static bool useNaive(int method, int depth, Size size)
         {
 #ifdef HAVE_CLAMDFFT
-            if (method == CV_TM_SQDIFF && (depth == CV_32F || !Context::getContext()->supportsFeature(Context::CL_DOUBLE)))
+            if (method == TM_SQDIFF && (depth == CV_32F || !Context::getContext()->supportsFeature(Context::CL_DOUBLE)))
             {
                 return true;
             }
-            else if(method == CV_TM_CCORR || (method == CV_TM_SQDIFF && depth == CV_8U))
+            else if(method == TM_CCORR || (method == TM_SQDIFF && depth == CV_8U))
             {
                 return size.height < 18 && size.width < 18;
             }
@@ -125,7 +125,7 @@ namespace cv
             const oclMat &image, const oclMat &templ, oclMat &result, MatchTemplateBuf & buf)
         {
             result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-            if (useNaive(CV_TM_SQDIFF, image.depth(), templ.size()))
+            if (useNaive(TM_SQDIFF, image.depth(), templ.size()))
             {
                 matchTemplateNaive_SQDIFF(image, templ, result, image.oclchannels());
                 return;
@@ -255,7 +255,7 @@ namespace cv
             const oclMat &image, const oclMat &templ, oclMat &result, MatchTemplateBuf &buf)
         {
             result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-            if (useNaive(CV_TM_CCORR, image.depth(), templ.size()))
+            if (useNaive(TM_CCORR, image.depth(), templ.size()))
             {
                 matchTemplateNaive_CCORR(image, templ, result, image.oclchannels());
                 return;
@@ -407,7 +407,7 @@ namespace cv
                     args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sum[3]) );
                     break;
                 default:
-                    CV_Error(CV_StsBadArg, "matchTemplate: unsupported number of channels");
+                    CV_Error(Error::StsBadArg, "matchTemplate: unsupported number of channels");
                     break;
                 }
             }
@@ -513,7 +513,7 @@ namespace cv
                     args.push_back( std::make_pair( sizeof(cl_float), (void *)&templ_sqsum_sum) );
                     break;
                 default:
-                    CV_Error(CV_StsBadArg, "matchTemplate: unsupported number of channels");
+                    CV_Error(Error::StsBadArg, "matchTemplate: unsupported number of channels");
                     break;
                 }
             }

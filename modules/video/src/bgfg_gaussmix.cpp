@@ -124,7 +124,7 @@ public:
 
     virtual void getBackgroundImage(OutputArray) const
     {
-        CV_Error( CV_StsNotImplemented, "" );
+        CV_Error( Error::StsNotImplemented, "" );
     }
 
     virtual int getHistory() const { return history; }
@@ -458,7 +458,7 @@ void BackgroundSubtractorMOGImpl::apply(InputArray _image, OutputArray _fgmask, 
     else if( image.type() == CV_8UC3 )
         process8uC3( image, fgmask, learningRate, bgmodel, nmixtures, backgroundRatio, varThreshold, noiseSigma );
     else
-        CV_Error( CV_StsUnsupportedFormat, "Only 1- and 3-channel 8-bit images are supported in BackgroundSubtractorMOG" );
+        CV_Error( Error::StsUnsupportedFormat, "Only 1- and 3-channel 8-bit images are supported in BackgroundSubtractorMOG" );
 }
 
 Ptr<BackgroundSubtractorMOG> createBackgroundSubtractorMOG(int history, int nmixtures,

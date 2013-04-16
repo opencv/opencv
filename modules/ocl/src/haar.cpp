@@ -53,6 +53,8 @@
 using namespace cv;
 using namespace cv::ocl;
 
+#if 0
+
 namespace cv
 {
 namespace ocl
@@ -906,7 +908,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
 
     if( CV_MAT_CN(gimg.type()) > 1 )
     {
-        cvtColor( gimg, gtemp, CV_BGR2GRAY );
+        cvtColor( gimg, gtemp, COLOR_BGR2GRAY );
         gimg = gtemp;
     }
 
@@ -1493,3 +1495,4 @@ struct gpuHaarDetectObjects_ScaleCascade_Invoker
 
 }
 }
+#endif

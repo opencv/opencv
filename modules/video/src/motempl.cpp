@@ -123,13 +123,13 @@ void cv::calcMotionGradient( InputArray _mhi, OutputArray _mask,
     Mat orient = _orientation.getMat();
 
     if( aperture_size < 3 || aperture_size > 7 || (aperture_size & 1) == 0 )
-        CV_Error( CV_StsOutOfRange, "aperture_size must be 3, 5 or 7" );
+        CV_Error( Error::StsOutOfRange, "aperture_size must be 3, 5 or 7" );
 
     if( delta1 <= 0 || delta2 <= 0 )
-        CV_Error( CV_StsOutOfRange, "both delta's must be positive" );
+        CV_Error( Error::StsOutOfRange, "both delta's must be positive" );
 
     if( mhi.type() != CV_32FC1 )
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( Error::StsUnsupportedFormat,
                  "MHI must be single-channel floating-point images" );
 
     if( orient.data == mhi.data )

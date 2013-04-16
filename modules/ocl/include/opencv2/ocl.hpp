@@ -131,9 +131,6 @@ namespace cv
         //getDevice also need to be called before this function
         CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0);
 
-        //////////////////////////////// Error handling ////////////////////////
-        CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
-
         //////////////////////////////// OpenCL context ////////////////////////
         //This is a global singleton class used to represent a OpenCL context.
         class CV_EXPORTS Context
@@ -266,8 +263,10 @@ namespace cv
             void create(Size size, int type);
 
             //! allocates new oclMatrix with specified device memory type.
-            void createEx(int rows, int cols, int type, DevMemRW rw_type, DevMemType mem_type);
-            void createEx(Size size, int type, DevMemRW rw_type, DevMemType mem_type);
+            void createEx(int rows, int cols, int type, 
+                          DevMemRW rw_type, DevMemType mem_type, void* hptr = 0);
+            void createEx(Size size, int type, DevMemRW rw_type, 
+                          DevMemType mem_type, void* hptr = 0);
 
             //! decreases reference counter;
             // deallocate the data when reference counter reaches 0.
@@ -811,7 +810,8 @@ namespace cv
         ///////////////////////////////////////////CascadeClassifier//////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        class CV_EXPORTS_W OclCascadeClassifier : public  cv::CascadeClassifier
+#if 0
+        class CV_EXPORTS OclCascadeClassifier : public  cv::CascadeClassifier
         {
         public:
             OclCascadeClassifier() {};
@@ -820,6 +820,7 @@ namespace cv
             CvSeq* oclHaarDetectObjects(oclMat &gimg, CvMemStorage *storage, double scaleFactor,
                                         int minNeighbors, int flags, CvSize minSize = cvSize(0, 0), CvSize maxSize = cvSize(0, 0));
         };
+#endif
 
 
 
@@ -861,68 +862,36 @@ namespace cv
 
 
         ///////////////////////////////////////////// Canny /////////////////////////////////////////////
-
         struct CV_EXPORTS CannyBuf;
 
-
-
         //! compute edges of the input image using Canny operator
-
         // Support CV_8UC1 only
-
         CV_EXPORTS void Canny(const oclMat &image, oclMat &edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
-
         CV_EXPORTS void Canny(const oclMat &image, CannyBuf &buf, oclMat &edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
-
         CV_EXPORTS void Canny(const oclMat &dx, const oclMat &dy, oclMat &edges, double low_thresh, double high_thresh, bool L2gradient = false);
-
         CV_EXPORTS void Canny(const oclMat &dx, const oclMat &dy, CannyBuf &buf, oclMat &edges, double low_thresh, double high_thresh, bool L2gradient = false);
 
-
-
         struct CV_EXPORTS CannyBuf
-
         {
-
             CannyBuf() : counter(NULL) {}
-
             ~CannyBuf()
             {
                 release();
             }
-
             explicit CannyBuf(const Size &image_size, int apperture_size = 3) : counter(NULL)
-
             {
-
                 create(image_size, apperture_size);
-
             }
-
             CannyBuf(const oclMat &dx_, const oclMat &dy_);
-
-
-
             void create(const Size &image_size, int apperture_size = 3);
-
-
-
             void release();
 
-
-
             oclMat dx, dy;
-
             oclMat dx_buf, dy_buf;
-
-            oclMat edgeBuf;
-
+            oclMat magBuf, mapBuf;
             oclMat trackBuf1, trackBuf2;
-
             void *counter;
-
             Ptr<FilterEngine_GPU> filterDX, filterDY;
-
         };
 
         ///////////////////////////////////////// Hough Transform /////////////////////////////////////////

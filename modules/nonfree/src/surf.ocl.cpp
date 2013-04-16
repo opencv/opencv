@@ -76,7 +76,7 @@ namespace cv
 
                 size_t wave_size = 0;
                 queryDeviceInfo(WAVEFRONT_SIZE, &wave_size);
-                std::sprintf(pSURF_OPTIONS, " -D WAVE_SIZE=%d", static_cast<int>(wave_size));
+                std::sprintf(pSURF_OPTIONS, "-D WAVE_SIZE=%d", static_cast<int>(wave_size));
                 OPTION_INIT = true;
             }
             openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth, SURF_OPTIONS);
@@ -182,7 +182,7 @@ public:
 
         if (use_mask)
         {
-            CV_Error(CV_StsBadFunc, "Masked SURF detector is not implemented yet");
+            CV_Error(Error::StsBadFunc, "Masked SURF detector is not implemented yet");
             //!FIXME
             // temp fix for missing min overload
             //oclMat temp(mask.size(), mask.type());

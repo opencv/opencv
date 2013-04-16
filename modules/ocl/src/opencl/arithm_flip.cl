@@ -330,16 +330,14 @@ __kernel void arithm_flip_cols_C1_D0 (__global uchar *src, int src_step, int src
     if (x < thread_cols && y < rows)
     {
         int src_index_0 = mad24(y, src_step, (x)           + src_offset);
-        int src_index_1 = mad24(y, src_step, (cols - x -1) + src_offset);
-
-        int dst_index_0 = mad24(y, dst_step, (x)           + dst_offset);
         int dst_index_1 = mad24(y, dst_step, (cols - x -1) + dst_offset);
-
         uchar data0 = *(src + src_index_0);
-        uchar data1 = *(src + src_index_1);
-
-        *(dst + dst_index_0) = data1;
         *(dst + dst_index_1) = data0;
+
+        int src_index_1 = mad24(y, src_step, (cols - x -1) + src_offset);
+        int dst_index_0 = mad24(y, dst_step, (x)           + dst_offset);
+        uchar data1 = *(src + src_index_1);
+        *(dst + dst_index_0) = data1;
     }
 }
 __kernel void arithm_flip_cols_C1_D1 (__global char *src, int src_step, int src_offset,

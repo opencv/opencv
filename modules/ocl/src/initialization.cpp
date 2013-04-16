@@ -163,7 +163,7 @@ namespace cv
                 {
                     releaseResources();
                     delete this;
-            }
+                }
             }
 
             Impl* copy()
@@ -260,9 +260,8 @@ namespace cv
 
         int setDevMemType(DevMemRW rw_type, DevMemType mem_type)
         {
-            if( (mem_type == DEVICE_MEM_PM && Context::getContext()->impl->unified_memory == 0) ||
-                 mem_type == DEVICE_MEM_UHP ||
-                 mem_type == DEVICE_MEM_CHP )
+            if( (mem_type == DEVICE_MEM_PM && 
+                 Context::getContext()->impl->unified_memory == 0) )
                 return -1;
             gDeviceMemRW = rw_type;
             gDeviceMemType = mem_type;
@@ -394,6 +393,15 @@ namespace cv
 
                 }
                 break;
+            case IS_CPU_DEVICE:
+                {
+                    cl_device_type devicetype;
+                    openCLSafeCall(clGetDeviceInfo(impl->devices[impl->devnum],
+                                    CL_DEVICE_TYPE, sizeof(cl_device_type),
+                                    &devicetype, NULL));
+                    *(bool*)info = (devicetype == CVCL_DEVICE_TYPE_CPU);
+                }
+                break;
             default:
                 CV_Error(-1, "Invalid device info type");
                 break;
@@ -423,11 +431,17 @@ namespace cv
         }
 
         void openCLMallocPitchEx(Context *clCxt, void **dev_ptr, size_t *pitch,
-                               size_t widthInBytes, size_t height, DevMemRW rw_type, DevMemType mem_type)
+                                 size_t widthInBytes, size_t height, 
+                                 DevMemRW rw_type, DevMemType mem_type, void* hptr)
         {
             cl_int status;
-            *dev_ptr = clCreateBuffer(clCxt->impl->oclcontext, gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
-                                      widthInBytes * height, 0, &status);
+            if(hptr && (mem_type==DEVICE_MEM_UHP || mem_type==DEVICE_MEM_CHP))
+                *dev_ptr = clCreateBuffer(clCxt->impl->oclcontext, 
+                                          gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type], 
+                                          widthInBytes * height, hptr, &status);
+            else
+                *dev_ptr = clCreateBuffer(clCxt->impl->oclcontext, gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
+                                          widthInBytes * height, 0, &status);
             openCLVerifyCall(status);
             *pitch = widthInBytes;
         }
@@ -505,7 +519,7 @@ namespace cv
             char* binary = (char*)malloc(binarySize);
             if(binary == NULL)
             {
-                CV_Error(CV_StsNoMem, "Failed to allocate host memory.");
+                CV_Error(Error::StsNoMem, "Failed to allocate host memory.");
             }
             openCLSafeCall(clGetProgramInfo(program,
                                     CL_PROGRAM_BINARIES,
@@ -1053,7 +1067,7 @@ BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )
         Context* cv_ctx = Context::getContext();
         if(cv_ctx)
         {
-            cl_context ctx = (cl_context)&(cv_ctx->impl->oclcontext);
+            cl_context ctx = cv_ctx->impl->oclcontext;
             if(ctx)
                 openCLSafeCall(clReleaseContext(ctx));
         }

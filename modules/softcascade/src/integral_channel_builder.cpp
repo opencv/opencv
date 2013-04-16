@@ -76,7 +76,7 @@ public:
         channels.create(h * N_CHANNELS, w, CV_8UC1);
         channels.setTo(0);
 
-        cvtColor(frame, gray, CV_BGR2GRAY);
+        cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
 
         cv::Mat df_dx, df_dy, mag, angle;
         cv::Sobel(gray, df_dx, CV_32F, 1, 0);
@@ -102,13 +102,13 @@ public:
         }
 
         cv::Mat luv, shrunk;
-        cv::cvtColor(frame, luv, CV_BGR2Luv);
+        cv::cvtColor(frame, luv, cv::COLOR_BGR2Luv);
 
         std::vector<cv::Mat> splited;
         for (int i = 0; i < 3; ++i)
             splited.push_back(channels(cv::Rect(0, h * (7 + i), w, h)));
         split(luv, splited);
-        cv::resize(channels, shrunk, cv::Size(integrals.cols - 1, integrals.rows - 1), -1 , -1, CV_INTER_AREA);
+        cv::resize(channels, shrunk, cv::Size(integrals.cols - 1, integrals.rows - 1), -1 , -1, cv::INTER_AREA);
         cv::integral(shrunk, integrals, cv::noArray(), CV_32S);
     }
 };
