@@ -234,6 +234,7 @@ struct Block
 
         memBlockSize = blockSize;
         maxBlockSize = memBlockSize - HDR_SIZE;
+        const int shift = 5;
 
         maxBin = 0;
         while (blockSize)
@@ -241,22 +242,22 @@ struct Block
             maxBin++;
             blockSize >>= 1;
         }
-        maxBin -= 3;
+        maxBin -= shift;
 
         delete[] binSizeTable;
         binSizeTable = new int[maxBin];
         for (int i = maxBin - 2; i >= 0; i--)
         {
-            binSizeTable[i] = 1 << (i + 3);
+            binSizeTable[i] = 1 << (i + shift);
         }
         binSizeTable[maxBin - 1] = maxBlockSize;
 
         delete[] binIdxTable;
-        binIdxTable = new int[(maxBlockSize >> 3) + 1];
+        binIdxTable = new int[(maxBlockSize >> shift) + 1];
         int j = 0;
         for (int i = 0; i < maxBin; i++)
         {
-            int n = binSizeTable[i] >> 3;
+            int n = binSizeTable[i] >> shift;
             for (; j <= n; j++)
                 binIdxTable[j] = i;
         }
@@ -265,7 +266,7 @@ struct Block
     static int getBinIdx(size_t size)
     {
         assert(size <= maxBlockSize);
-        return binIdxTable[(size + 7) >> 3];
+        return binIdxTable[(size + 31) >> 5];
     }
 
     static const unsigned int MEM_BLOCK_SIGNATURE = 0x01234567;
