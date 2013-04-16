@@ -131,17 +131,17 @@ public class NativeCameraView extends CameraBridgeViewBase {
         }
     }
 
-    private class NativeCameraFrame implements CvCameraViewFrame {
+    private static class NativeCameraFrame implements CvCameraViewFrame {
 
         @Override
         public Mat rgba() {
-            mCamera.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+            mCapture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
             return mRgba;
         }
 
         @Override
         public Mat gray() {
-            mCamera.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
+            mCapture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
             return mGray;
         }
 
@@ -157,9 +157,6 @@ public class NativeCameraView extends CameraBridgeViewBase {
     };
 
     private class CameraWorker implements Runnable {
-
-        private Mat mRgba = new Mat();
-        private Mat mGray = new Mat();
 
         public void run() {
             do {

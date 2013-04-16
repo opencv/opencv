@@ -267,9 +267,6 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
             mRgba.release();
         }
 
-        private JavaCameraFrame(CvCameraViewFrame obj) {
-        }
-
         private Mat mYuvFrameData;
         private Mat mRgba;
         private int mWidth;
