@@ -252,66 +252,59 @@ public:
     uchar* dataend;
 };
 
-//! Creates continuous GPU matrix
+//! creates continuous GPU matrix
 CV_EXPORTS void createContinuous(int rows, int cols, int type, GpuMat& m);
 
-//! Ensures that size of the given matrix is not less than (rows, cols) size
+//! ensures that size of the given matrix is not less than (rows, cols) size
 //! and matrix type is match specified one too
 CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m);
 
 CV_EXPORTS GpuMat allocMatFromBuf(int rows, int cols, int type, GpuMat& mat);
 
 //////////////////////////////// CudaMem ////////////////////////////////
+
 // CudaMem is limited cv::Mat with page locked memory allocation.
 // Page locked memory is only needed for async and faster coping to GPU.
 // It is convertable to cv::Mat header without reference counting
 // so you can use it with other opencv functions.
 
-// Page-locks the matrix m memory and maps it for the device(s)
-CV_EXPORTS void registerPageLocked(Mat& m);
-
-// Unmaps the memory of matrix m, and makes it pageable again.
-CV_EXPORTS void unregisterPageLocked(Mat& m);
-
 class CV_EXPORTS CudaMem
 {
 public:
-    enum  { ALLOC_PAGE_LOCKED = 1, ALLOC_ZEROCOPY = 2, ALLOC_WRITE_COMBINED = 4 };
+    enum AllocType { PAGE_LOCKED = 1, SHARED = 2, WRITE_COMBINED = 4 };
 
-    CudaMem();
+    explicit CudaMem(AllocType alloc_type = PAGE_LOCKED);
+
     CudaMem(const CudaMem& m);
 
-    CudaMem(int rows, int cols, int type, int _alloc_type = ALLOC_PAGE_LOCKED);
-    CudaMem(Size size, int type, int alloc_type = ALLOC_PAGE_LOCKED);
+    CudaMem(int rows, int cols, int type, AllocType alloc_type = PAGE_LOCKED);
+    CudaMem(Size size, int type, AllocType alloc_type = PAGE_LOCKED);
 
-
-    //! creates from cv::Mat with coping data
-    explicit CudaMem(const Mat& m, int alloc_type = ALLOC_PAGE_LOCKED);
+    //! creates from host memory with coping data
+    explicit CudaMem(InputArray arr, AllocType alloc_type = PAGE_LOCKED);
 
     ~CudaMem();
 
-    CudaMem& operator = (const CudaMem& m);
+    CudaMem& operator =(const CudaMem& m);
+
+    //! swaps with other smart pointer
+    void swap(CudaMem& b);
 
     //! returns deep copy of the matrix, i.e. the data is copied
     CudaMem clone() const;
 
     //! allocates new matrix data unless the matrix already has specified size and type.
-    void create(int rows, int cols, int type, int alloc_type = ALLOC_PAGE_LOCKED);
-    void create(Size size, int type, int alloc_type = ALLOC_PAGE_LOCKED);
+    void create(int rows, int cols, int type);
+    void create(Size size, int type);
 
     //! decrements reference counter and released memory if needed.
     void release();
 
     //! returns matrix header with disabled reference counting for CudaMem data.
     Mat createMatHeader() const;
-    operator Mat() const;
 
     //! maps host memory into device address space and returns GpuMat header for it. Throws exception if not supported by hardware.
     GpuMat createGpuMatHeader() const;
-    operator GpuMat() const;
-
-    //returns if host memory can be mapperd to gpu address space;
-    static bool canMapHostMemory();
 
     // Please see cv::Mat for descriptions
     bool isContinuous() const;
@@ -324,7 +317,6 @@ public:
     Size size() const;
     bool empty() const;
 
-
     // Please see cv::Mat for descriptions
     int flags;
     int rows, cols;
@@ -336,9 +328,14 @@ public:
     uchar* datastart;
     uchar* dataend;
 
-    int alloc_type;
+    AllocType alloc_type;
 };
 
+//! page-locks the matrix m memory and maps it for the device(s)
+CV_EXPORTS void registerPageLocked(Mat& m);
+
+//! unmaps the memory of matrix m, and makes it pageable again
+CV_EXPORTS void unregisterPageLocked(Mat& m);
 
 //////////////////////////////// CudaStream ////////////////////////////////
 // Encapculates Cuda Stream. Provides interface for async coping.
@@ -479,6 +476,10 @@ public:
 
     // Checks whether the GPU module can be run on the given device
     bool isCompatible() const;
+
+    bool canMapHostMemory() const;
+
+    size_t textureAlignment() const;
 
     int deviceID() const { return device_id_; }
 

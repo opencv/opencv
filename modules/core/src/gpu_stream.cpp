@@ -145,7 +145,7 @@ void cv::gpu::Stream::enqueueDownload(const GpuMat& src, Mat& dst)
 
 void cv::gpu::Stream::enqueueDownload(const GpuMat& src, CudaMem& dst)
 {
-    dst.create(src.size(), src.type(), CudaMem::ALLOC_PAGE_LOCKED);
+    dst.create(src.size(), src.type());
 
     cudaStream_t stream = Impl::getStream(impl);
     size_t bwidth = src.cols * src.elemSize();

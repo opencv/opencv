@@ -317,6 +317,16 @@ size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const
     return deviceProps.get(device_id_)->sharedMemPerBlock;
 }
 
+bool cv::gpu::DeviceInfo::canMapHostMemory() const
+{
+    return deviceProps.get(device_id_)->canMapHostMemory != 0;
+}
+
+size_t cv::gpu::DeviceInfo::textureAlignment() const
+{
+    return deviceProps.get(device_id_)->textureAlignment;
+}
+
 void cv::gpu::DeviceInfo::queryMemory(size_t& _totalMemory, size_t& _freeMemory) const
 {
     int prevDeviceID = getDevice();

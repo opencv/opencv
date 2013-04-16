@@ -373,7 +373,160 @@ void swap(GpuMat& a, GpuMat& b)
     a.swap(b);
 }
 
+//////////////////////////////// CudaMem ////////////////////////////////
+
+inline
+CudaMem::CudaMem(AllocType alloc_type_)
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(alloc_type_)
+{
+}
+
+inline
+CudaMem::CudaMem(const CudaMem& m)
+    : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(m.datastart), dataend(m.dataend), alloc_type(m.alloc_type)
+{
+    if( refcount )
+        CV_XADD(refcount, 1);
+}
+
+inline
+CudaMem::CudaMem(int rows_, int cols_, int type_, AllocType alloc_type_)
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(alloc_type_)
+{
+    if (rows_ > 0 && cols_ > 0)
+        create(rows_, cols_, type_);
+}
+
+inline
+CudaMem::CudaMem(Size size_, int type_, AllocType alloc_type_)
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(alloc_type_)
+{
+    if (size_.height > 0 && size_.width > 0)
+        create(size_.height, size_.width, type_);
+}
+
+inline
+CudaMem::CudaMem(InputArray arr, AllocType alloc_type_)
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(alloc_type_)
+{
+    arr.getMat().copyTo(*this);
+}
+
+inline
+CudaMem::~CudaMem()
+{
+    release();
+}
+
+inline
+CudaMem& CudaMem::operator =(const CudaMem& m)
+{
+    if (this != &m)
+    {
+        CudaMem temp(m);
+        swap(temp);
+    }
+
+    return *this;
+}
+
+inline
+void CudaMem::swap(CudaMem& b)
+{
+    std::swap(flags, b.flags);
+    std::swap(rows, b.rows);
+    std::swap(cols, b.cols);
+    std::swap(step, b.step);
+    std::swap(data, b.data);
+    std::swap(datastart, b.datastart);
+    std::swap(dataend, b.dataend);
+    std::swap(refcount, b.refcount);
+    std::swap(alloc_type, b.alloc_type);
+}
+
+inline
+CudaMem CudaMem::clone() const
+{
+    CudaMem m(size(), type(), alloc_type);
+    createMatHeader().copyTo(m);
+    return m;
+}
+
+inline
+void CudaMem::create(Size size_, int type_)
+{
+    create(size_.height, size_.width, type_);
+}
+
+inline
+Mat CudaMem::createMatHeader() const
+{
+    return Mat(size(), type(), data, step);
+}
+
+inline
+bool CudaMem::isContinuous() const
+{
+    return (flags & Mat::CONTINUOUS_FLAG) != 0;
+}
+
+inline
+size_t CudaMem::elemSize() const
+{
+    return CV_ELEM_SIZE(flags);
+}
+
+inline
+size_t CudaMem::elemSize1() const
+{
+    return CV_ELEM_SIZE1(flags);
+}
+
+inline
+int CudaMem::type() const
+{
+    return CV_MAT_TYPE(flags);
+}
+
+inline
+int CudaMem::depth() const
+{
+    return CV_MAT_DEPTH(flags);
+}
+
+inline
+int CudaMem::channels() const
+{
+    return CV_MAT_CN(flags);
+}
+
+inline
+size_t CudaMem::step1() const
+{
+    return step / elemSize1();
+}
+
+inline
+Size CudaMem::size() const
+{
+    return Size(cols, rows);
+}
+
+inline
+bool CudaMem::empty() const
+{
+    return data == 0;
+}
+
+static inline
+void swap(CudaMem& a, CudaMem& b)
+{
+    a.swap(b);
+}
+
 }} // namespace cv { namespace gpu
+
+//////////////////////////////// Mat ////////////////////////////////
 
 namespace cv {
 
