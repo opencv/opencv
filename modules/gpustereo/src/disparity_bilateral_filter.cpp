@@ -113,10 +113,7 @@ namespace
 
         if (&dst != &disp)
         {
-            if (stream)
-                stream.enqueueCopy(disp, dst);
-            else
-                disp.copyTo(dst);
+            disp.copyTo(dst, stream);
         }
 
         disp_bilateral_filter<T>(dst, img, img.channels(), iters, StreamAccessor::getStream(stream));

@@ -157,10 +157,7 @@ namespace
 
             if (roi.size() != src_size)
             {
-                if (stream)
-                    stream.enqueueMemSet(dst, Scalar::all(0));
-                else
-                    dst.setTo(Scalar::all(0));
+                dst.setTo(Scalar::all(0), stream);
             }
 
             normalizeROI(roi, filter2D->ksize, filter2D->anchor, src_size);
@@ -221,10 +218,7 @@ namespace
 
             if (roi.size() != src_size)
             {
-                if (stream)
-                    stream.enqueueMemSet(dst, Scalar::all(0));
-                else
-                    dst.setTo(Scalar::all(0));
+                dst.setTo(Scalar::all(0), stream);
             }
 
             ensureSizeIsEnough(src_size, bufType, *pbuf);
@@ -487,10 +481,7 @@ namespace
 
             if (roi.size() != src_size)
             {
-                if (stream)
-                    stream.enqueueMemSet(dst, Scalar::all(0));
-                else
-                    dst.setTo(Scalar::all(0));
+                dst.setTo(Scalar::all(0), stream);
             }
 
             normalizeROI(roi, filter2D->ksize, filter2D->anchor, src_size);
@@ -557,10 +548,7 @@ namespace
 
         if (iterations == 0 || _kernel.rows * _kernel.cols == 1)
         {
-            if (stream)
-                stream.enqueueCopy(src, dst);
-            else
-                src.copyTo(dst);
+            src.copyTo(dst, stream);
             return;
         }
 

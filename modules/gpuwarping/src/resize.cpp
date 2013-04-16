@@ -77,10 +77,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 
     if (dsize == src.size())
     {
-        if (s)
-            s.enqueueCopy(src, dst);
-        else
-            src.copyTo(dst);
+        src.copyTo(dst, s);
         return;
     }
 

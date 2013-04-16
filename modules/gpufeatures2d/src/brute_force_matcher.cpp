@@ -497,10 +497,7 @@ void cv::gpu::BFMatcher_GPU::knnMatchSingle(const GpuMat& query, const GpuMat& t
         ensureSizeIsEnough(nQuery, nTrain, CV_32FC1, allDist);
     }
 
-    if (stream)
-        stream.enqueueMemSet(trainIdx, Scalar::all(-1));
-    else
-        trainIdx.setTo(Scalar::all(-1));
+    trainIdx.setTo(Scalar::all(-1), stream);
 
     caller_t func = callers[query.depth()];
     CV_Assert(func != 0);
@@ -616,10 +613,7 @@ void cv::gpu::BFMatcher_GPU::knnMatch2Collection(const GpuMat& query, const GpuM
     ensureSizeIsEnough(1, nQuery, CV_32SC2, imgIdx);
     ensureSizeIsEnough(1, nQuery, CV_32FC2, distance);
 
-    if (stream)
-        stream.enqueueMemSet(trainIdx, Scalar::all(-1));
-    else
-        trainIdx.setTo(Scalar::all(-1));
+    trainIdx.setTo(Scalar::all(-1), stream);
 
     caller_t func = callers[query.depth()];
     CV_Assert(func != 0);
@@ -803,10 +797,7 @@ void cv::gpu::BFMatcher_GPU::radiusMatchSingle(const GpuMat& query, const GpuMat
         ensureSizeIsEnough(nQuery, std::max((nTrain / 100), 10), CV_32FC1, distance);
     }
 
-    if (stream)
-        stream.enqueueMemSet(nMatches, Scalar::all(0));
-    else
-        nMatches.setTo(Scalar::all(0));
+    nMatches.setTo(Scalar::all(0), stream);
 
     caller_t func = callers[query.depth()];
     CV_Assert(func != 0);
@@ -931,10 +922,7 @@ void cv::gpu::BFMatcher_GPU::radiusMatchCollection(const GpuMat& query, GpuMat& 
         ensureSizeIsEnough(nQuery, std::max((nQuery / 100), 10), CV_32FC1, distance);
     }
 
-    if (stream)
-        stream.enqueueMemSet(nMatches, Scalar::all(0));
-    else
-        nMatches.setTo(Scalar::all(0));
+    nMatches.setTo(Scalar::all(0), stream);
 
     caller_t func = callers[query.depth()];
     CV_Assert(func != 0);

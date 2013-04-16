@@ -45,170 +45,103 @@
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined (HAVE_CUDA)
+#ifndef HAVE_CUDA
 
-cv::gpu::Stream::Stream() { throw_no_cuda(); }
-cv::gpu::Stream::~Stream() {}
-cv::gpu::Stream::Stream(const Stream&) { throw_no_cuda(); }
-Stream& cv::gpu::Stream::operator=(const Stream&) { throw_no_cuda(); return *this; }
-bool cv::gpu::Stream::queryIfComplete() { throw_no_cuda(); return false; }
-void cv::gpu::Stream::waitForCompletion() { throw_no_cuda(); }
-void cv::gpu::Stream::enqueueDownload(const GpuMat&, Mat&) { throw_no_cuda(); }
-void cv::gpu::Stream::enqueueDownload(const GpuMat&, CudaMem&) { throw_no_cuda(); }
-void cv::gpu::Stream::enqueueUpload(const CudaMem&, GpuMat&) { throw_no_cuda(); }
-void cv::gpu::Stream::enqueueUpload(const Mat&, GpuMat&) { throw_no_cuda(); }
-void cv::gpu::Stream::enqueueCopy(const GpuMat&, GpuMat&) { throw_no_cuda(); }
-void cv::gpu::Stream::enqueueMemSet(GpuMat&, Scalar) { throw_no_cuda(); }
-void cv::gpu::Stream::enqueueMemSet(GpuMat&, Scalar, const GpuMat&) { throw_no_cuda(); }
-void cv::gpu::Stream::enqueueConvert(const GpuMat&, GpuMat&, int, double, double) { throw_no_cuda(); }
-void cv::gpu::Stream::enqueueHostCallback(StreamCallback, void*) { throw_no_cuda(); }
-Stream& cv::gpu::Stream::Null() { throw_no_cuda(); static Stream s; return s; }
-cv::gpu::Stream::operator bool() const { throw_no_cuda(); return false; }
-cv::gpu::Stream::Stream(Impl*) { throw_no_cuda(); }
-void cv::gpu::Stream::create() { throw_no_cuda(); }
-void cv::gpu::Stream::release() { throw_no_cuda(); }
-
-#else /* !defined (HAVE_CUDA) */
-
-struct Stream::Impl
+class cv::gpu::Stream::Impl
 {
-    static cudaStream_t getStream(const Impl* impl)
+public:
+    Impl(void* ptr = 0)
     {
-        return impl ? impl->stream : 0;
+        (void) ptr;
+        throw_no_cuda();
     }
-
-    cudaStream_t stream;
-    int ref_counter;
 };
+
+#else
+
+class cv::gpu::Stream::Impl
+{
+public:
+    cudaStream_t stream;
+
+    Impl();
+    Impl(cudaStream_t stream);
+
+    ~Impl();
+};
+
+cv::gpu::Stream::Impl::Impl() : stream(0)
+{
+    cudaSafeCall( cudaStreamCreate(&stream) );
+}
+
+cv::gpu::Stream::Impl::Impl(cudaStream_t stream_) : stream(stream_)
+{
+}
+
+cv::gpu::Stream::Impl::~Impl()
+{
+    if (stream)
+        cudaStreamDestroy(stream);
+}
 
 cudaStream_t cv::gpu::StreamAccessor::getStream(const Stream& stream)
 {
-    return Stream::Impl::getStream(stream.impl);
+    return stream.impl_->stream;
 }
 
-cv::gpu::Stream::Stream() : impl(0)
+#endif
+
+cv::gpu::Stream::Stream()
 {
-    create();
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+#else
+    impl_ = new Impl;
+#endif
 }
 
-cv::gpu::Stream::~Stream()
+bool cv::gpu::Stream::queryIfComplete() const
 {
-    release();
-}
-
-cv::gpu::Stream::Stream(const Stream& stream) : impl(stream.impl)
-{
-    if (impl)
-        CV_XADD(&impl->ref_counter, 1);
-}
-
-Stream& cv::gpu::Stream::operator =(const Stream& stream)
-{
-    if (this != &stream)
-    {
-        release();
-        impl = stream.impl;
-        if (impl)
-            CV_XADD(&impl->ref_counter, 1);
-    }
-
-    return *this;
-}
-
-bool cv::gpu::Stream::queryIfComplete()
-{
-    cudaStream_t stream = Impl::getStream(impl);
-    cudaError_t err = cudaStreamQuery(stream);
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return false;
+#else
+    cudaError_t err = cudaStreamQuery(impl_->stream);
 
     if (err == cudaErrorNotReady || err == cudaSuccess)
         return err == cudaSuccess;
 
     cudaSafeCall(err);
     return false;
+#endif
 }
 
 void cv::gpu::Stream::waitForCompletion()
 {
-    cudaStream_t stream = Impl::getStream(impl);
-    cudaSafeCall( cudaStreamSynchronize(stream) );
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+#else
+    cudaSafeCall( cudaStreamSynchronize(impl_->stream) );
+#endif
 }
 
-void cv::gpu::Stream::enqueueDownload(const GpuMat& src, Mat& dst)
-{
-    // if not -> allocation will be done, but after that dst will not point to page locked memory
-    CV_Assert( src.size() == dst.size() && src.type() == dst.type() );
-
-    cudaStream_t stream = Impl::getStream(impl);
-    size_t bwidth = src.cols * src.elemSize();
-    cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyDeviceToHost, stream) );
-}
-
-void cv::gpu::Stream::enqueueDownload(const GpuMat& src, CudaMem& dst)
-{
-    dst.create(src.size(), src.type());
-
-    cudaStream_t stream = Impl::getStream(impl);
-    size_t bwidth = src.cols * src.elemSize();
-    cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyDeviceToHost, stream) );
-}
-
-void cv::gpu::Stream::enqueueUpload(const CudaMem& src, GpuMat& dst)
-{
-    dst.create(src.size(), src.type());
-
-    cudaStream_t stream = Impl::getStream(impl);
-    size_t bwidth = src.cols * src.elemSize();
-    cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyHostToDevice, stream) );
-}
-
-void cv::gpu::Stream::enqueueUpload(const Mat& src, GpuMat& dst)
-{
-    dst.create(src.size(), src.type());
-
-    cudaStream_t stream = Impl::getStream(impl);
-    size_t bwidth = src.cols * src.elemSize();
-    cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyHostToDevice, stream) );
-}
-
-void cv::gpu::Stream::enqueueCopy(const GpuMat& src, GpuMat& dst)
-{
-    dst.create(src.size(), src.type());
-
-    cudaStream_t stream = Impl::getStream(impl);
-    size_t bwidth = src.cols * src.elemSize();
-    cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, cudaMemcpyDeviceToDevice, stream) );
-}
-
-void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val)
-{
-    src.setTo(val, *this);
-}
-
-void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask)
-{
-    src.setTo(val, mask, *this);
-}
-
-void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int dtype, double alpha, double beta)
-{
-    src.convertTo(dst, dtype, alpha, beta, *this);
-}
-
-#if CUDART_VERSION >= 5000
+#if defined(HAVE_CUDA) && (CUDART_VERSION >= 5000)
 
 namespace
 {
     struct CallbackData
     {
-        cv::gpu::Stream::StreamCallback callback;
+        Stream::StreamCallback callback;
         void* userData;
-        Stream stream;
+
+        CallbackData(Stream::StreamCallback callback_, void* userData_) : callback(callback_), userData(userData_) {}
     };
 
     void CUDART_CB cudaStreamCallback(cudaStream_t, cudaError_t status, void* userData)
     {
         CallbackData* data = reinterpret_cast<CallbackData*>(userData);
-        data->callback(data->stream, static_cast<int>(status), data->userData);
+        data->callback(static_cast<int>(status), data->userData);
         delete data;
     }
 }
@@ -217,58 +150,39 @@ namespace
 
 void cv::gpu::Stream::enqueueHostCallback(StreamCallback callback, void* userData)
 {
-#if CUDART_VERSION >= 5000
-    CallbackData* data = new CallbackData;
-    data->callback = callback;
-    data->userData = userData;
-    data->stream = *this;
-
-    cudaStream_t stream = Impl::getStream(impl);
-
-    cudaSafeCall( cudaStreamAddCallback(stream, cudaStreamCallback, data, 0) );
-#else
+#ifndef HAVE_CUDA
     (void) callback;
     (void) userData;
-    CV_Error(CV_StsNotImplemented, "This function requires CUDA 5.0");
+    throw_no_cuda();
+#else
+    #if CUDART_VERSION < 5000
+        (void) callback;
+        (void) userData;
+        CV_Error(cv::Error::StsNotImplemented, "This function requires CUDA 5.0");
+    #else
+        CallbackData* data = new CallbackData(callback, userData);
+
+        cudaSafeCall( cudaStreamAddCallback(impl_->stream, cudaStreamCallback, data, 0) );
+    #endif
 #endif
 }
 
-cv::gpu::Stream& cv::gpu::Stream::Null()
+Stream& cv::gpu::Stream::Null()
 {
-    static Stream s((Impl*) 0);
+    static Stream s(new Impl(0));
     return s;
 }
 
-cv::gpu::Stream::operator bool() const
+cv::gpu::Stream::operator bool_type() const
 {
-    return impl && impl->stream;
+#ifndef HAVE_CUDA
+    return 0;
+#else
+    return (impl_->stream != 0) ? &Stream::this_type_does_not_support_comparisons : 0;
+#endif
 }
 
-cv::gpu::Stream::Stream(Impl* impl_) : impl(impl_)
+template <> void cv::Ptr<Stream::Impl>::delete_obj()
 {
+    if (obj) delete obj;
 }
-
-void cv::gpu::Stream::create()
-{
-    if (impl)
-        release();
-
-    cudaStream_t stream;
-    cudaSafeCall( cudaStreamCreate( &stream ) );
-
-    impl = (Stream::Impl*) fastMalloc(sizeof(Stream::Impl));
-
-    impl->stream = stream;
-    impl->ref_counter = 1;
-}
-
-void cv::gpu::Stream::release()
-{
-    if (impl && CV_XADD(&impl->ref_counter, -1) == 1)
-    {
-        cudaSafeCall( cudaStreamDestroy(impl->stream) );
-        cv::fastFree(impl);
-    }
-}
-
-#endif /* !defined (HAVE_CUDA) */

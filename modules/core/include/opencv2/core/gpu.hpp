@@ -51,8 +51,7 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/gpu_types.hpp"
 
-namespace cv { namespace gpu
-{
+namespace cv { namespace gpu {
 
 //////////////////////////////// GpuMat ///////////////////////////////
 
@@ -337,59 +336,56 @@ CV_EXPORTS void registerPageLocked(Mat& m);
 //! unmaps the memory of matrix m, and makes it pageable again
 CV_EXPORTS void unregisterPageLocked(Mat& m);
 
-//////////////////////////////// CudaStream ////////////////////////////////
+///////////////////////////////// Stream //////////////////////////////////
+
 // Encapculates Cuda Stream. Provides interface for async coping.
 // Passed to each function that supports async kernel execution.
-// Reference counting is enabled
+// Reference counting is enabled.
 
 class CV_EXPORTS Stream
 {
+    typedef void (Stream::*bool_type)() const;
+    void this_type_does_not_support_comparisons() const {}
+
 public:
+    typedef void (*StreamCallback)(int status, void* userData);
+
+    //! creates a new asynchronous stream
     Stream();
-    ~Stream();
 
-    Stream(const Stream&);
-    Stream& operator =(const Stream&);
+    //! queries an asynchronous stream for completion status
+    bool queryIfComplete() const;
 
-    bool queryIfComplete();
+    //! waits for stream tasks to complete
     void waitForCompletion();
 
-    //! downloads asynchronously
-    // Warning! cv::Mat must point to page locked memory (i.e. to CudaMem data or to its subMat)
-    void enqueueDownload(const GpuMat& src, CudaMem& dst);
-    void enqueueDownload(const GpuMat& src, Mat& dst);
-
-    //! uploads asynchronously
-    // Warning! cv::Mat must point to page locked memory (i.e. to CudaMem data or to its ROI)
-    void enqueueUpload(const CudaMem& src, GpuMat& dst);
-    void enqueueUpload(const Mat& src, GpuMat& dst);
-
-    //! copy asynchronously
-    void enqueueCopy(const GpuMat& src, GpuMat& dst);
-
-    //! memory set asynchronously
-    void enqueueMemSet(GpuMat& src, Scalar val);
-    void enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask);
-
-    //! converts matrix type, ex from float to uchar depending on type
-    void enqueueConvert(const GpuMat& src, GpuMat& dst, int dtype, double a = 1, double b = 0);
-
     //! adds a callback to be called on the host after all currently enqueued items in the stream have completed
-    typedef void (*StreamCallback)(Stream& stream, int status, void* userData);
     void enqueueHostCallback(StreamCallback callback, void* userData);
 
+    //! return Stream object for default CUDA stream
     static Stream& Null();
 
-    operator bool() const;
+    //! returns true if stream object is not default (!= 0)
+    operator bool_type() const;
+
+    // obsolete methods
+
+    void enqueueDownload(const GpuMat& src, OutputArray dst);
+
+    void enqueueUpload(InputArray src, GpuMat& dst);
+
+    void enqueueCopy(const GpuMat& src, OutputArray dst);
+
+    void enqueueMemSet(GpuMat& src, Scalar val);
+    void enqueueMemSet(GpuMat& src, Scalar val, InputArray mask);
+
+    void enqueueConvert(const GpuMat& src, OutputArray dst, int dtype, double alpha = 1.0, double beta = 0.0);
+
+    class Impl;
 
 private:
-    struct Impl;
-
-    explicit Stream(Impl* impl);
-    void create();
-    void release();
-
-    Impl *impl;
+    Ptr<Impl> impl_;
+    Stream(const Ptr<Impl>& impl);
 
     friend struct StreamAccessor;
 };
@@ -498,7 +494,13 @@ CV_EXPORTS void printCudaDeviceInfo(int device);
 
 CV_EXPORTS void printShortCudaDeviceInfo(int device);
 
-}} // cv::gpu
+}} // namespace cv { namespace gpu {
+
+namespace cv {
+
+template <> CV_EXPORTS void Ptr<cv::gpu::Stream::Impl>::delete_obj();
+
+}
 
 #include "opencv2/core/gpu.inl.hpp"
 
