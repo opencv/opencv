@@ -84,8 +84,8 @@ public:
     GpuMat(const GpuMat& m, Range rowRange, Range colRange);
     GpuMat(const GpuMat& m, Rect roi);
 
-    //! builds GpuMat from Mat. Perfom blocking upload to device
-    explicit GpuMat(const Mat& m);
+    //! builds GpuMat from host memory (Blocking call)
+    explicit GpuMat(InputArray arr);
 
     //! destructor - calls release()
     ~GpuMat();
@@ -103,26 +103,59 @@ public:
     //! swaps with other smart pointer
     void swap(GpuMat& mat);
 
-    //! pefroms blocking upload data to GpuMat
-    void upload(const Mat& m);
+    //! pefroms upload data to GpuMat (Blocking call)
+    void upload(InputArray arr);
 
-    //! downloads data from device to host memory (Blocking calls)
-    void download(Mat& m) const;
+    //! pefroms upload data to GpuMat (Non-Blocking call)
+    void upload(InputArray arr, Stream& stream);
+
+    //! pefroms download data from device to host memory (Blocking call)
+    void download(OutputArray dst) const;
+
+    //! pefroms download data from device to host memory (Non-Blocking call)
+    void download(OutputArray dst, Stream& stream) const;
 
     //! returns deep copy of the GpuMat, i.e. the data is copied
     GpuMat clone() const;
 
-    //! copies the GpuMat content to "m"
-    void copyTo(GpuMat& m) const;
+    //! copies the GpuMat content to device memory (Blocking call)
+    void copyTo(OutputArray dst) const;
 
-    //! copies those GpuMat elements to "m" that are marked with non-zero mask elements
-    void copyTo(GpuMat& m, const GpuMat& mask) const;
+    //! copies the GpuMat content to device memory (Non-Blocking call)
+    void copyTo(OutputArray dst, Stream& stream) const;
 
-    //! sets some of the GpuMat elements to s, according to the mask
-    GpuMat& setTo(Scalar s, const GpuMat& mask = GpuMat());
+    //! copies those GpuMat elements to "m" that are marked with non-zero mask elements (Blocking call)
+    void copyTo(OutputArray dst, InputArray mask) const;
 
-    //! converts GpuMat to another datatype with optional scaling
-    void convertTo(GpuMat& m, int rtype, double alpha = 1, double beta = 0) const;
+    //! copies those GpuMat elements to "m" that are marked with non-zero mask elements (Non-Blocking call)
+    void copyTo(OutputArray dst, InputArray mask, Stream& stream) const;
+
+    //! sets some of the GpuMat elements to s (Blocking call)
+    GpuMat& setTo(Scalar s);
+
+    //! sets some of the GpuMat elements to s (Non-Blocking call)
+    GpuMat& setTo(Scalar s, Stream& stream);
+
+    //! sets some of the GpuMat elements to s, according to the mask (Blocking call)
+    GpuMat& setTo(Scalar s, InputArray mask);
+
+    //! sets some of the GpuMat elements to s, according to the mask (Non-Blocking call)
+    GpuMat& setTo(Scalar s, InputArray mask, Stream& stream);
+
+    //! converts GpuMat to another datatype (Blocking call)
+    void convertTo(OutputArray dst, int rtype) const;
+
+    //! converts GpuMat to another datatype (Non-Blocking call)
+    void convertTo(OutputArray dst, int rtype, Stream& stream) const;
+
+    //! converts GpuMat to another datatype with scaling (Blocking call)
+    void convertTo(OutputArray dst, int rtype, double alpha, double beta = 0.0) const;
+
+    //! converts GpuMat to another datatype with scaling (Non-Blocking call)
+    void convertTo(OutputArray dst, int rtype, double alpha, Stream& stream) const;
+
+    //! converts GpuMat to another datatype with scaling (Non-Blocking call)
+    void convertTo(OutputArray dst, int rtype, double alpha, double beta, Stream& stream) const;
 
     void assignTo(GpuMat& m, int type=-1) const;
 

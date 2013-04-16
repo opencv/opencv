@@ -70,14 +70,6 @@ void cv::gpu::Stream::release() { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu
-{
-    void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream = 0);
-    void convert(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream = 0);
-    void set(GpuMat& m, Scalar s, cudaStream_t stream = 0);
-    void set(GpuMat& m, Scalar s, const GpuMat& mask, cudaStream_t stream = 0);
-}}
-
 struct Stream::Impl
 {
     static cudaStream_t getStream(const Impl* impl)
@@ -189,83 +181,17 @@ void cv::gpu::Stream::enqueueCopy(const GpuMat& src, GpuMat& dst)
 
 void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val)
 {
-    const int sdepth = src.depth();
-
-    if (sdepth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    cudaStream_t stream = Impl::getStream(impl);
-
-    if (val[0] == 0.0 && val[1] == 0.0 && val[2] == 0.0 && val[3] == 0.0)
-    {
-        cudaSafeCall( cudaMemset2DAsync(src.data, src.step, 0, src.cols * src.elemSize(), src.rows, stream) );
-        return;
-    }
-
-    if (sdepth == CV_8U)
-    {
-        int cn = src.channels();
-
-        if (cn == 1 || (cn == 2 && val[0] == val[1]) || (cn == 3 && val[0] == val[1] && val[0] == val[2]) || (cn == 4 && val[0] == val[1] && val[0] == val[2] && val[0] == val[3]))
-        {
-            int ival = saturate_cast<uchar>(val[0]);
-            cudaSafeCall( cudaMemset2DAsync(src.data, src.step, ival, src.cols * src.elemSize(), src.rows, stream) );
-            return;
-        }
-    }
-
-    set(src, val, stream);
+    src.setTo(val, *this);
 }
 
 void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask)
 {
-    const int sdepth = src.depth();
-
-    if (sdepth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    CV_Assert(mask.type() == CV_8UC1);
-
-    cudaStream_t stream = Impl::getStream(impl);
-
-    set(src, val, mask, stream);
+    src.setTo(val, mask, *this);
 }
 
 void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int dtype, double alpha, double beta)
 {
-    if (dtype < 0)
-        dtype = src.type();
-    else
-        dtype = CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels());
-
-    const int sdepth = src.depth();
-    const int ddepth = CV_MAT_DEPTH(dtype);
-
-    if (sdepth == CV_64F || ddepth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    bool noScale = fabs(alpha - 1) < std::numeric_limits<double>::epsilon()
-                && fabs(beta) < std::numeric_limits<double>::epsilon();
-
-    if (sdepth == ddepth && noScale)
-    {
-        enqueueCopy(src, dst);
-        return;
-    }
-
-    dst.create(src.size(), dtype);
-
-    cudaStream_t stream = Impl::getStream(impl);
-    convert(src, dst, alpha, beta, stream);
+    src.convertTo(dst, dtype, alpha, beta, *this);
 }
 
 #if CUDART_VERSION >= 5000

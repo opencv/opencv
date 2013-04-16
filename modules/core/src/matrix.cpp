@@ -1132,6 +1132,9 @@ gpu::GpuMat _InputArray::getGpuMat() const
         return gpu::GpuMat();
     }
 
+    if (k == NONE)
+        return gpu::GpuMat();
+
     CV_Error(cv::Error::StsNotImplemented, "getGpuMat is available only for gpu::GpuMat and gpu::CudaMem");
     return gpu::GpuMat();
 }

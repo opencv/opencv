@@ -103,10 +103,10 @@ GpuMat::GpuMat(const GpuMat& m)
 }
 
 inline
-GpuMat::GpuMat(const Mat& m) :
+GpuMat::GpuMat(InputArray arr) :
     flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
 {
-    upload(m);
+    upload(arr);
 }
 
 inline
@@ -152,6 +152,42 @@ GpuMat GpuMat::clone() const
     GpuMat m;
     copyTo(m);
     return m;
+}
+
+inline
+void GpuMat::copyTo(OutputArray dst, InputArray mask) const
+{
+    copyTo(dst, mask, Stream::Null());
+}
+
+inline
+GpuMat& GpuMat::setTo(Scalar s)
+{
+    return setTo(s, Stream::Null());
+}
+
+inline
+GpuMat& GpuMat::setTo(Scalar s, InputArray mask)
+{
+    return setTo(s, mask, Stream::Null());
+}
+
+inline
+void GpuMat::convertTo(OutputArray dst, int rtype) const
+{
+    convertTo(dst, rtype, Stream::Null());
+}
+
+inline
+void GpuMat::convertTo(OutputArray dst, int rtype, double alpha, double beta) const
+{
+    convertTo(dst, rtype, alpha, beta, Stream::Null());
+}
+
+inline
+void GpuMat::convertTo(OutputArray dst, int rtype, double alpha, Stream& stream) const
+{
+    convertTo(dst, rtype, alpha, 0.0, stream);
 }
 
 inline

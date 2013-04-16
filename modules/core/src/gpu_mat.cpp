@@ -328,18 +328,9 @@ namespace
 
 // Dispatcher
 
-namespace cv { namespace gpu
+namespace
 {
-    void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream = 0);
-    void convert(const GpuMat& src, GpuMat& dst, cudaStream_t stream = 0);
-    void convert(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream = 0);
-    void set(GpuMat& m, Scalar s, cudaStream_t stream = 0);
-    void set(GpuMat& m, Scalar s, const GpuMat& mask, cudaStream_t stream = 0);
-}}
-
-namespace cv { namespace gpu
-{
-    void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream)
+    void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream = 0)
     {
         CV_DbgAssert( src.size() == dst.size() && src.type() == dst.type() );
 
@@ -368,7 +359,7 @@ namespace cv { namespace gpu
         func(src, dst, mask, stream);
     }
 
-    void convert(const GpuMat& src, GpuMat& dst, cudaStream_t stream)
+    void convert(const GpuMat& src, GpuMat& dst, cudaStream_t stream = 0)
     {
         CV_DbgAssert( src.size() == dst.size() && src.channels() == dst.channels() );
 
@@ -461,7 +452,7 @@ namespace cv { namespace gpu
         func(src, dst, stream);
     }
 
-    void convert(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream)
+    void convert(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream = 0)
     {
         CV_DbgAssert( src.size() == dst.size() && src.channels() == dst.channels() );
 
@@ -476,7 +467,7 @@ namespace cv { namespace gpu
         cudaConvert(src, dst, alpha, beta, stream);
     }
 
-    void set(GpuMat& m, Scalar s, cudaStream_t stream)
+    void set(GpuMat& m, Scalar s, cudaStream_t stream = 0)
     {
         if (s[0] == 0.0 && s[1] == 0.0 && s[2] == 0.0 && s[3] == 0.0)
         {
@@ -524,7 +515,7 @@ namespace cv { namespace gpu
         funcs[m.depth()][m.channels() - 1](m, s, stream);
     }
 
-    void set(GpuMat& m, Scalar s, const GpuMat& mask, cudaStream_t stream)
+    void set(GpuMat& m, Scalar s, const GpuMat& mask, cudaStream_t stream = 0)
     {
         CV_DbgAssert( !mask.empty() );
 
@@ -549,7 +540,7 @@ namespace cv { namespace gpu
 
         funcs[m.depth()][m.channels() - 1](m, s, mask, stream);
     }
-}}
+}
 
 #endif // HAVE_CUDA
 
@@ -723,127 +714,216 @@ void cv::gpu::GpuMat::release()
 #endif
 }
 
-void cv::gpu::GpuMat::upload(const Mat& m)
+void cv::gpu::GpuMat::upload(InputArray arr)
 {
 #ifndef HAVE_CUDA
-    (void) m;
+    (void) arr;
     throw_no_cuda();
 #else
-    CV_DbgAssert( !m.empty() );
+    Mat mat = arr.getMat();
 
-    create(m.size(), m.type());
+    CV_DbgAssert( !mat.empty() );
 
-    cudaSafeCall( cudaMemcpy2D(data, step, m.data, m.step, cols * elemSize(), rows, cudaMemcpyHostToDevice) );
+    create(mat.size(), mat.type());
+
+    cudaSafeCall( cudaMemcpy2D(data, step, mat.data, mat.step, cols * elemSize(), rows, cudaMemcpyHostToDevice) );
 #endif
 }
 
-void cv::gpu::GpuMat::download(Mat& m) const
+void cv::gpu::GpuMat::upload(InputArray arr, Stream& _stream)
 {
 #ifndef HAVE_CUDA
-    (void) m;
+    (void) arr;
+    (void) _stream;
     throw_no_cuda();
 #else
-    CV_DbgAssert( !empty() );
+    Mat mat = arr.getMat();
 
-    m.create(size(), type());
+    CV_DbgAssert( !mat.empty() );
 
-    cudaSafeCall( cudaMemcpy2D(m.data, m.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToHost) );
+    create(mat.size(), mat.type());
+
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
+    cudaSafeCall( cudaMemcpy2DAsync(data, step, mat.data, mat.step, cols * elemSize(), rows, cudaMemcpyHostToDevice, stream) );
 #endif
 }
 
-void cv::gpu::GpuMat::copyTo(GpuMat& m) const
+void cv::gpu::GpuMat::download(OutputArray _dst) const
 {
 #ifndef HAVE_CUDA
-    (void) m;
-    throw_no_cuda();
-#else
-    CV_DbgAssert( !empty() );
-
-    m.create(size(), type());
-
-    cudaSafeCall( cudaMemcpy2D(m.data, m.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToDevice) );
-#endif
-}
-
-void cv::gpu::GpuMat::copyTo(GpuMat& mat, const GpuMat& mask) const
-{
-#ifndef HAVE_CUDA
-    (void) mat;
-    (void) mask;
+    (void) _dst;
     throw_no_cuda();
 #else
     CV_DbgAssert( !empty() );
 
-    if (mask.empty())
-    {
-        copyTo(mat);
-    }
-    else
-    {
-        mat.create(size(), type());
+    _dst.create(size(), type());
+    Mat dst = _dst.getMat();
 
-        copyWithMask(*this, mat, mask);
-    }
+    cudaSafeCall( cudaMemcpy2D(dst.data, dst.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToHost) );
 #endif
 }
 
-GpuMat& cv::gpu::GpuMat::setTo(Scalar s, const GpuMat& mask)
+void cv::gpu::GpuMat::download(OutputArray _dst, Stream& _stream) const
+{
+#ifndef HAVE_CUDA
+    (void) _dst;
+    (void) _stream;
+    throw_no_cuda();
+#else
+    CV_DbgAssert( !empty() );
+
+    _dst.create(size(), type());
+    Mat dst = _dst.getMat();
+
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
+    cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToHost, stream) );
+#endif
+}
+
+void cv::gpu::GpuMat::copyTo(OutputArray _dst) const
+{
+#ifndef HAVE_CUDA
+    (void) _dst;
+    throw_no_cuda();
+#else
+    CV_DbgAssert( !empty() );
+
+    _dst.create(size(), type());
+    GpuMat dst = _dst.getGpuMat();
+
+    cudaSafeCall( cudaMemcpy2D(dst.data, dst.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToDevice) );
+#endif
+}
+
+void cv::gpu::GpuMat::copyTo(OutputArray _dst, Stream& _stream) const
+{
+#ifndef HAVE_CUDA
+    (void) _dst;
+    (void) _stream;
+    throw_no_cuda();
+#else
+    CV_DbgAssert( !empty() );
+
+    _dst.create(size(), type());
+    GpuMat dst = _dst.getGpuMat();
+
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
+    cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToDevice, stream) );
+#endif
+}
+
+void cv::gpu::GpuMat::copyTo(OutputArray _dst, InputArray _mask, Stream& _stream) const
+{
+#ifndef HAVE_CUDA
+    (void) _dst;
+    (void) _mask;
+    (void) _stream;
+    throw_no_cuda();
+#else
+    CV_DbgAssert( !empty() );
+
+    _dst.create(size(), type());
+    GpuMat dst = _dst.getGpuMat();
+
+    GpuMat mask = _mask.getGpuMat();
+
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
+    ::copyWithMask(*this, dst, mask, stream);
+#endif
+}
+
+GpuMat& cv::gpu::GpuMat::setTo(Scalar s, Stream& _stream)
 {
 #ifndef HAVE_CUDA
     (void) s;
-    (void) mask;
+    (void) _stream;
     throw_no_cuda();
-    return *this;
 #else
     CV_DbgAssert( !empty() );
 
-    if (mask.empty())
-        set(*this, s);
-    else
-        set(*this, s, mask);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
+    ::set(*this, s, stream);
+#endif
 
     return *this;
-#endif
 }
 
-void cv::gpu::GpuMat::convertTo(GpuMat& dst, int rtype, double alpha, double beta) const
+GpuMat& cv::gpu::GpuMat::setTo(Scalar s, InputArray _mask, Stream& _stream)
 {
 #ifndef HAVE_CUDA
-    (void) dst;
-    (void) rtype;
-    (void) alpha;
-    (void) beta;
+    (void) s;
+    (void) _mask;
+    (void) _stream;
     throw_no_cuda();
 #else
-    bool noScale = fabs(alpha - 1) < std::numeric_limits<double>::epsilon() && fabs(beta) < std::numeric_limits<double>::epsilon();
+    CV_DbgAssert( !empty() );
 
+    GpuMat mask = _mask.getGpuMat();
+
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
+    ::set(*this, s, mask, stream);
+#endif
+
+    return *this;
+}
+
+void cv::gpu::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& _stream) const
+{
+#ifndef HAVE_CUDA
+    (void) _dst;
+    (void) rtype;
+    (void) _stream;
+    throw_no_cuda();
+#else
     if (rtype < 0)
         rtype = type();
     else
         rtype = CV_MAKETYPE(CV_MAT_DEPTH(rtype), channels());
 
-    int sdepth = depth();
-    int ddepth = CV_MAT_DEPTH(rtype);
-    if (sdepth == ddepth && noScale)
+    const int sdepth = depth();
+    const int ddepth = CV_MAT_DEPTH(rtype);
+    if (sdepth == ddepth)
     {
-        copyTo(dst);
+        if (_stream)
+            copyTo(_dst, _stream);
+        else
+            copyTo(_dst);
+
         return;
     }
 
-    GpuMat temp;
-    const GpuMat* psrc = this;
-    if (sdepth != ddepth && psrc == &dst)
-    {
-        temp = *this;
-        psrc = &temp;
-    }
+    GpuMat src = *this;
 
-    dst.create(size(), rtype);
+    _dst.create(size(), rtype);
+    GpuMat dst = _dst.getGpuMat();
 
-    if (noScale)
-        convert(*psrc, dst);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
+    ::convert(src, dst, stream);
+#endif
+}
+
+void cv::gpu::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, double beta, Stream& _stream) const
+{
+#ifndef HAVE_CUDA
+    (void) _dst;
+    (void) rtype;
+    (void) alpha;
+    (void) beta;
+    (void) _stream;
+    throw_no_cuda();
+#else
+    if (rtype < 0)
+        rtype = type();
     else
-        convert(*psrc, dst, alpha, beta);
+        rtype = CV_MAKETYPE(CV_MAT_DEPTH(rtype), channels());
+
+    GpuMat src = *this;
+
+    _dst.create(size(), rtype);
+    GpuMat dst = _dst.getGpuMat();
+
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
+    ::convert(src, dst, alpha, beta, stream);
 #endif
 }
 
