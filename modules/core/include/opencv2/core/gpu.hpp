@@ -392,17 +392,17 @@ private:
 
 //////////////////////////////// Initialization & Info ////////////////////////
 
-//! This is the only function that do not throw exceptions if the library is compiled without Cuda.
+//! this is the only function that do not throw exceptions if the library is compiled without CUDA
 CV_EXPORTS int getCudaEnabledDeviceCount();
 
-//! Functions below throw cv::Expception if the library is compiled without Cuda.
-
+//! set device to be used for GPU executions for the calling host thread
 CV_EXPORTS void setDevice(int device);
 
+//! returns which device is currently being used for the calling host thread
 CV_EXPORTS int getDevice();
 
-//! Explicitly destroys and cleans up all resources associated with the current device in the current process.
-//! Any subsequent API call to this device will reinitialize the device.
+//! explicitly destroys and cleans up all resources associated with the current device in the current process
+//! any subsequent API call to this device will reinitialize the device
 CV_EXPORTS void resetDevice();
 
 enum FeatureSet
@@ -423,75 +423,218 @@ enum FeatureSet
     DYNAMIC_PARALLELISM = FEATURE_SET_COMPUTE_35
 };
 
-// Checks whether current device supports the given feature
+//! checks whether current device supports the given feature
 CV_EXPORTS bool deviceSupports(FeatureSet feature_set);
 
-// Gives information about what GPU archs this OpenCV GPU module was
-// compiled for
+//! information about what GPU archs this OpenCV GPU module was compiled for
 class CV_EXPORTS TargetArchs
 {
 public:
     static bool builtWith(FeatureSet feature_set);
+
     static bool has(int major, int minor);
     static bool hasPtx(int major, int minor);
     static bool hasBin(int major, int minor);
+
     static bool hasEqualOrLessPtx(int major, int minor);
     static bool hasEqualOrGreater(int major, int minor);
     static bool hasEqualOrGreaterPtx(int major, int minor);
     static bool hasEqualOrGreaterBin(int major, int minor);
-private:
-    TargetArchs();
 };
 
-// Gives information about the given GPU
+//! information about the given GPU.
 class CV_EXPORTS DeviceInfo
 {
 public:
-    // Creates DeviceInfo object for the current GPU
-    DeviceInfo() : device_id_(getDevice()) { query(); }
+    //! creates DeviceInfo object for the current GPU
+    DeviceInfo();
 
-    // Creates DeviceInfo object for the given GPU
-    DeviceInfo(int device_id) : device_id_(device_id) { query(); }
+    //! creates DeviceInfo object for the given GPU
+    DeviceInfo(int device_id);
 
-    String name() const { return name_; }
+    //! device number.
+    int deviceID() const;
 
-    // Return compute capability versions
-    int majorVersion() const { return majorVersion_; }
-    int minorVersion() const { return minorVersion_; }
+    //! ASCII string identifying device
+    const char* name() const;
 
-    int multiProcessorCount() const { return multi_processor_count_; }
+    //! global memory available on device in bytes
+    size_t totalGlobalMem() const;
 
+    //! shared memory available per block in bytes
     size_t sharedMemPerBlock() const;
 
+    //! 32-bit registers available per block
+    int regsPerBlock() const;
+
+    //! warp size in threads
+    int warpSize() const;
+
+    //! maximum pitch in bytes allowed by memory copies
+    size_t memPitch() const;
+
+    //! maximum number of threads per block
+    int maxThreadsPerBlock() const;
+
+    //! maximum size of each dimension of a block
+    Vec3i maxThreadsDim() const;
+
+    //! maximum size of each dimension of a grid
+    Vec3i maxGridSize() const;
+
+    //! clock frequency in kilohertz
+    int clockRate() const;
+
+    //! constant memory available on device in bytes
+    size_t totalConstMem() const;
+
+    //! major compute capability
+    int major() const;
+
+    //! minor compute capability
+    int minor() const;
+
+    //! alignment requirement for textures
+    size_t textureAlignment() const;
+
+    //! pitch alignment requirement for texture references bound to pitched memory
+    size_t texturePitchAlignment() const;
+
+    //! number of multiprocessors on device
+    int multiProcessorCount() const;
+
+    //! specified whether there is a run time limit on kernels
+    bool kernelExecTimeoutEnabled() const;
+
+    //! device is integrated as opposed to discrete
+    bool integrated() const;
+
+    //! device can map host memory with cudaHostAlloc/cudaHostGetDevicePointer
+    bool canMapHostMemory() const;
+
+    enum ComputeMode
+    {
+        ComputeModeDefault,         /**< default compute mode (Multiple threads can use ::cudaSetDevice() with this device) */
+        ComputeModeExclusive,       /**< compute-exclusive-thread mode (Only one thread in one process will be able to use ::cudaSetDevice() with this device) */
+        ComputeModeProhibited,      /**< compute-prohibited mode (No threads can use ::cudaSetDevice() with this device) */
+        ComputeModeExclusiveProcess /**< compute-exclusive-process mode (Many threads in one process will be able to use ::cudaSetDevice() with this device) */
+    };
+
+    //! compute mode
+    ComputeMode computeMode() const;
+
+    //! maximum 1D texture size
+    int maxTexture1D() const;
+
+    //! maximum 1D mipmapped texture size
+    int maxTexture1DMipmap() const;
+
+    //! maximum size for 1D textures bound to linear memory
+    int maxTexture1DLinear() const;
+
+    //! maximum 2D texture dimensions
+    Vec2i maxTexture2D() const;
+
+    //! maximum 2D mipmapped texture dimensions
+    Vec2i maxTexture2DMipmap() const;
+
+    //! maximum dimensions (width, height, pitch) for 2D textures bound to pitched memory
+    Vec3i maxTexture2DLinear() const;
+
+    //! maximum 2D texture dimensions if texture gather operations have to be performed
+    Vec2i maxTexture2DGather() const;
+
+    //! maximum 3D texture dimensions
+    Vec3i maxTexture3D() const;
+
+    //! maximum Cubemap texture dimensions
+    int maxTextureCubemap() const;
+
+    //! maximum 1D layered texture dimensions
+    Vec2i maxTexture1DLayered() const;
+
+    //! maximum 2D layered texture dimensions
+    Vec3i maxTexture2DLayered() const;
+
+    //! maximum Cubemap layered texture dimensions
+    Vec2i maxTextureCubemapLayered() const;
+
+    //! maximum 1D surface size
+    int maxSurface1D() const;
+
+    //! maximum 2D surface dimensions
+    Vec2i maxSurface2D() const;
+
+    //! maximum 3D surface dimensions
+    Vec3i maxSurface3D() const;
+
+    //! maximum 1D layered surface dimensions
+    Vec2i maxSurface1DLayered() const;
+
+    //! maximum 2D layered surface dimensions
+    Vec3i maxSurface2DLayered() const;
+
+    //! maximum Cubemap surface dimensions
+    int maxSurfaceCubemap() const;
+
+    //! maximum Cubemap layered surface dimensions
+    Vec2i maxSurfaceCubemapLayered() const;
+
+    //! alignment requirements for surfaces
+    size_t surfaceAlignment() const;
+
+    //! device can possibly execute multiple kernels concurrently
+    bool concurrentKernels() const;
+
+    //! device has ECC support enabled
+    bool ECCEnabled() const;
+
+    //! PCI bus ID of the device
+    int pciBusID() const;
+
+    //! PCI device ID of the device
+    int pciDeviceID() const;
+
+    //! PCI domain ID of the device
+    int pciDomainID() const;
+
+    //! true if device is a Tesla device using TCC driver, false otherwise
+    bool tccDriver() const;
+
+    //! number of asynchronous engines
+    int asyncEngineCount() const;
+
+    //! device shares a unified address space with the host
+    bool unifiedAddressing() const;
+
+    //! peak memory clock frequency in kilohertz
+    int memoryClockRate() const;
+
+    //! global memory bus width in bits
+    int memoryBusWidth() const;
+
+    //! size of L2 cache in bytes
+    int l2CacheSize() const;
+
+    //! maximum resident threads per multiprocessor
+    int maxThreadsPerMultiProcessor() const;
+
+    //! gets free and total device memory
     void queryMemory(size_t& totalMemory, size_t& freeMemory) const;
     size_t freeMemory() const;
     size_t totalMemory() const;
 
-    // Checks whether device supports the given feature
+    //! checks whether device supports the given feature
     bool supports(FeatureSet feature_set) const;
 
-    // Checks whether the GPU module can be run on the given device
+    //! checks whether the GPU module can be run on the given device
     bool isCompatible() const;
 
-    bool canMapHostMemory() const;
-
-    size_t textureAlignment() const;
-
-    int deviceID() const { return device_id_; }
-
 private:
-    void query();
-
     int device_id_;
-
-    String name_;
-    int multi_processor_count_;
-    int majorVersion_;
-    int minorVersion_;
 };
 
 CV_EXPORTS void printCudaDeviceInfo(int device);
-
 CV_EXPORTS void printShortCudaDeviceInfo(int device);
 
 }} // namespace cv { namespace gpu {

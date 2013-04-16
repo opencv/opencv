@@ -41,50 +41,17 @@
 //M*/
 
 #include "precomp.hpp"
-#include <limits>
 
 using namespace cv;
 using namespace cv::gpu;
 
-//////////////////////////////// Initialization & Info ////////////////////////
-
-#ifndef HAVE_CUDA
-
-int cv::gpu::getCudaEnabledDeviceCount() { return 0; }
-
-void cv::gpu::setDevice(int) { throw_no_cuda(); }
-int cv::gpu::getDevice() { throw_no_cuda(); return 0; }
-
-void cv::gpu::resetDevice() { throw_no_cuda(); }
-
-bool cv::gpu::deviceSupports(FeatureSet) { throw_no_cuda(); return false; }
-
-bool cv::gpu::TargetArchs::builtWith(FeatureSet) { throw_no_cuda(); return false; }
-bool cv::gpu::TargetArchs::has(int, int) { throw_no_cuda(); return false; }
-bool cv::gpu::TargetArchs::hasPtx(int, int) { throw_no_cuda(); return false; }
-bool cv::gpu::TargetArchs::hasBin(int, int) { throw_no_cuda(); return false; }
-bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int, int) { throw_no_cuda(); return false; }
-bool cv::gpu::TargetArchs::hasEqualOrGreater(int, int) { throw_no_cuda(); return false; }
-bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int, int) { throw_no_cuda(); return false; }
-bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int, int) { throw_no_cuda(); return false; }
-
-size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const { throw_no_cuda(); return 0; }
-void cv::gpu::DeviceInfo::queryMemory(size_t&, size_t&) const { throw_no_cuda(); }
-size_t cv::gpu::DeviceInfo::freeMemory() const { throw_no_cuda(); return 0; }
-size_t cv::gpu::DeviceInfo::totalMemory() const { throw_no_cuda(); return 0; }
-bool cv::gpu::DeviceInfo::supports(FeatureSet) const { throw_no_cuda(); return false; }
-bool cv::gpu::DeviceInfo::isCompatible() const { throw_no_cuda(); return false; }
-void cv::gpu::DeviceInfo::query() { throw_no_cuda(); }
-
-void cv::gpu::printCudaDeviceInfo(int) { throw_no_cuda(); }
-void cv::gpu::printShortCudaDeviceInfo(int) { throw_no_cuda(); }
-
-#else // HAVE_CUDA
-
 int cv::gpu::getCudaEnabledDeviceCount()
 {
+#ifndef HAVE_CUDA
+    return 0;
+#else
     int count;
-    cudaError_t error = cudaGetDeviceCount( &count );
+    cudaError_t error = cudaGetDeviceCount(&count);
 
     if (error == cudaErrorInsufficientDriver)
         return -1;
@@ -94,24 +61,77 @@ int cv::gpu::getCudaEnabledDeviceCount()
 
     cudaSafeCall( error );
     return count;
+#endif
 }
 
 void cv::gpu::setDevice(int device)
 {
-    cudaSafeCall( cudaSetDevice( device ) );
+#ifndef HAVE_CUDA
+    (void) device;
+    throw_no_cuda();
+#else
+    cudaSafeCall( cudaSetDevice(device) );
+#endif
 }
 
 int cv::gpu::getDevice()
 {
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
     int device;
-    cudaSafeCall( cudaGetDevice( &device ) );
+    cudaSafeCall( cudaGetDevice(&device) );
     return device;
+#endif
 }
 
 void cv::gpu::resetDevice()
 {
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+#else
     cudaSafeCall( cudaDeviceReset() );
+#endif
 }
+
+bool cv::gpu::deviceSupports(FeatureSet feature_set)
+{
+#ifndef HAVE_CUDA
+    (void) feature_set;
+    throw_no_cuda();
+    return false;
+#else
+    static int versions[] =
+    {
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+    };
+    static const int cache_size = static_cast<int>(sizeof(versions) / sizeof(versions[0]));
+
+    const int devId = getDevice();
+
+    int version;
+
+    if (devId < cache_size && versions[devId] >= 0)
+    {
+        version = versions[devId];
+    }
+    else
+    {
+        DeviceInfo dev(devId);
+        version = dev.major() * 10 + dev.minor();
+        if (devId < cache_size)
+            versions[devId] = version;
+    }
+
+    return TargetArchs::builtWith(feature_set) && (version >= feature_set);
+#endif
+}
+
+////////////////////////////////////////////////////////////////////////
+// TargetArchs
+
+#ifdef HAVE_CUDA
 
 namespace
 {
@@ -128,7 +148,7 @@ namespace
         bool hasEqualOrGreaterBin(int major, int minor) const;
 
     private:
-        static void fromStr(const String& set_as_str, std::vector<int>& arr);
+        static void fromStr(const char* set_as_str, std::vector<int>& arr);
 
         std::vector<int> bin;
         std::vector<int> ptx;
@@ -174,12 +194,14 @@ namespace
         return !bin.empty() && (bin.back() >= major * 10 + minor);
     }
 
-    void CudaArch::fromStr(const String& set_as_str, std::vector<int>& arr)
+    void CudaArch::fromStr(const char* set_as_str, std::vector<int>& arr)
     {
         arr.clear();
 
+        const size_t len = strlen(set_as_str);
+
         size_t pos = 0;
-        while (pos < set_as_str.size())
+        while (pos < len)
         {
             if (isspace(set_as_str[pos]))
             {
@@ -189,8 +211,8 @@ namespace
             {
                 int cur_value;
                 int chars_read;
-                int args_read = sscanf(set_as_str.c_str() + pos, "%d%n", &cur_value, &chars_read);
-                CV_Assert(args_read == 1);
+                int args_read = sscanf(set_as_str + pos, "%d%n", &cur_value, &chars_read);
+                CV_Assert( args_read == 1 );
 
                 arr.push_back(cur_value);
                 pos += chars_read;
@@ -201,70 +223,83 @@ namespace
     }
 }
 
+#endif
+
 bool cv::gpu::TargetArchs::builtWith(cv::gpu::FeatureSet feature_set)
 {
+#ifndef HAVE_CUDA
+    (void) feature_set;
+    throw_no_cuda();
+    return false;
+#else
     return cudaArch.builtWith(feature_set);
-}
-
-bool cv::gpu::TargetArchs::has(int major, int minor)
-{
-    return hasPtx(major, minor) || hasBin(major, minor);
+#endif
 }
 
 bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
 {
+#ifndef HAVE_CUDA
+    (void) major;
+    (void) minor;
+    throw_no_cuda();
+    return false;
+#else
     return cudaArch.hasPtx(major, minor);
+#endif
 }
 
 bool cv::gpu::TargetArchs::hasBin(int major, int minor)
 {
+#ifndef HAVE_CUDA
+    (void) major;
+    (void) minor;
+    throw_no_cuda();
+    return false;
+#else
     return cudaArch.hasBin(major, minor);
+#endif
 }
 
 bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
 {
+#ifndef HAVE_CUDA
+    (void) major;
+    (void) minor;
+    throw_no_cuda();
+    return false;
+#else
     return cudaArch.hasEqualOrLessPtx(major, minor);
-}
-
-bool cv::gpu::TargetArchs::hasEqualOrGreater(int major, int minor)
-{
-    return hasEqualOrGreaterPtx(major, minor) || hasEqualOrGreaterBin(major, minor);
+#endif
 }
 
 bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 {
+#ifndef HAVE_CUDA
+    (void) major;
+    (void) minor;
+    throw_no_cuda();
+    return false;
+#else
     return cudaArch.hasEqualOrGreaterPtx(major, minor);
+#endif
 }
 
 bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
 {
+#ifndef HAVE_CUDA
+    (void) major;
+    (void) minor;
+    throw_no_cuda();
+    return false;
+#else
     return cudaArch.hasEqualOrGreaterBin(major, minor);
+#endif
 }
 
-bool cv::gpu::deviceSupports(FeatureSet feature_set)
-{
-    static int versions[] =
-    {
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
-    };
-    static const int cache_size = static_cast<int>(sizeof(versions) / sizeof(versions[0]));
+////////////////////////////////////////////////////////////////////////
+// DeviceInfo
 
-    const int devId = getDevice();
-
-    int version;
-
-    if (devId < cache_size && versions[devId] >= 0)
-        version = versions[devId];
-    else
-    {
-        DeviceInfo dev(devId);
-        version = dev.majorVersion() * 10 + dev.minorVersion();
-        if (devId < cache_size)
-            versions[devId] = version;
-    }
-
-    return TargetArchs::builtWith(feature_set) && (version >= feature_set);
-}
+#ifdef HAVE_CUDA
 
 namespace
 {
@@ -272,63 +307,579 @@ namespace
     {
     public:
         DeviceProps();
-        ~DeviceProps();
 
-        cudaDeviceProp* get(int devID);
+        const cudaDeviceProp* get(int devID) const;
 
     private:
-        std::vector<cudaDeviceProp*> props_;
+        std::vector<cudaDeviceProp> props_;
     };
 
     DeviceProps::DeviceProps()
     {
-        props_.resize(10, 0);
-    }
+        int count = getCudaEnabledDeviceCount();
 
-    DeviceProps::~DeviceProps()
-    {
-        for (size_t i = 0; i < props_.size(); ++i)
+        if (count > 0)
         {
-            if (props_[i])
-                delete props_[i];
+            props_.resize(count);
+
+            for (int devID = 0; devID < count; ++devID)
+            {
+                cudaSafeCall( cudaGetDeviceProperties(&props_[devID], devID) );
+            }
         }
-        props_.clear();
     }
 
-    cudaDeviceProp* DeviceProps::get(int devID)
+    const cudaDeviceProp* DeviceProps::get(int devID) const
     {
-        if (devID >= (int) props_.size())
-            props_.resize(devID + 5, 0);
+        CV_Assert( static_cast<size_t>(devID) < props_.size() );
 
-        if (!props_[devID])
-        {
-            props_[devID] = new cudaDeviceProp;
-            cudaSafeCall( cudaGetDeviceProperties(props_[devID], devID) );
-        }
-
-        return props_[devID];
+        return &props_[devID];
     }
 
-    DeviceProps deviceProps;
+    DeviceProps& deviceProps()
+    {
+        static DeviceProps props;
+        return props;
+    }
+}
+
+#endif
+
+const char* cv::gpu::DeviceInfo::name() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return "";
+#else
+    return deviceProps().get(device_id_)->name;
+#endif
+}
+
+size_t cv::gpu::DeviceInfo::totalGlobalMem() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->totalGlobalMem;
+#endif
 }
 
 size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const
 {
-    return deviceProps.get(device_id_)->sharedMemPerBlock;
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->sharedMemPerBlock;
+#endif
 }
 
-bool cv::gpu::DeviceInfo::canMapHostMemory() const
+int cv::gpu::DeviceInfo::regsPerBlock() const
 {
-    return deviceProps.get(device_id_)->canMapHostMemory != 0;
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->regsPerBlock;
+#endif
+}
+
+int cv::gpu::DeviceInfo::warpSize() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->warpSize;
+#endif
+}
+
+size_t cv::gpu::DeviceInfo::memPitch() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->memPitch;
+#endif
+}
+
+int cv::gpu::DeviceInfo::maxThreadsPerBlock() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->maxThreadsPerBlock;
+#endif
+}
+
+Vec3i cv::gpu::DeviceInfo::maxThreadsDim() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec3i();
+#else
+    return Vec3i(deviceProps().get(device_id_)->maxThreadsDim);
+#endif
+}
+
+Vec3i cv::gpu::DeviceInfo::maxGridSize() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec3i();
+#else
+    return Vec3i(deviceProps().get(device_id_)->maxGridSize);
+#endif
+}
+
+int cv::gpu::DeviceInfo::clockRate() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->clockRate;
+#endif
+}
+
+size_t cv::gpu::DeviceInfo::totalConstMem() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->totalConstMem;
+#endif
+}
+
+int cv::gpu::DeviceInfo::major() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->major;
+#endif
+}
+
+int cv::gpu::DeviceInfo::minor() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->minor;
+#endif
 }
 
 size_t cv::gpu::DeviceInfo::textureAlignment() const
 {
-    return deviceProps.get(device_id_)->textureAlignment;
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->textureAlignment;
+#endif
+}
+
+size_t cv::gpu::DeviceInfo::texturePitchAlignment() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->texturePitchAlignment;
+#endif
+}
+
+int cv::gpu::DeviceInfo::multiProcessorCount() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->multiProcessorCount;
+#endif
+}
+
+bool cv::gpu::DeviceInfo::kernelExecTimeoutEnabled() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return false;
+#else
+    return deviceProps().get(device_id_)->kernelExecTimeoutEnabled != 0;
+#endif
+}
+
+bool cv::gpu::DeviceInfo::integrated() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return false;
+#else
+    return deviceProps().get(device_id_)->integrated != 0;
+#endif
+}
+
+bool cv::gpu::DeviceInfo::canMapHostMemory() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return false;
+#else
+    return deviceProps().get(device_id_)->canMapHostMemory != 0;
+#endif
+}
+
+DeviceInfo::ComputeMode cv::gpu::DeviceInfo::computeMode() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return ComputeModeDefault;
+#else
+    static const ComputeMode tbl[] =
+    {
+        ComputeModeDefault,
+        ComputeModeExclusive,
+        ComputeModeProhibited,
+        ComputeModeExclusiveProcess
+    };
+
+    return tbl[deviceProps().get(device_id_)->computeMode];
+#endif
+}
+
+int cv::gpu::DeviceInfo::maxTexture1D() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->maxTexture1D;
+#endif
+}
+
+int cv::gpu::DeviceInfo::maxTexture1DMipmap() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->maxTexture1DMipmap;
+#endif
+}
+
+int cv::gpu::DeviceInfo::maxTexture1DLinear() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->maxTexture1DLinear;
+#endif
+}
+
+Vec2i cv::gpu::DeviceInfo::maxTexture2D() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec2i();
+#else
+    return Vec2i(deviceProps().get(device_id_)->maxTexture2D);
+#endif
+}
+
+Vec2i cv::gpu::DeviceInfo::maxTexture2DMipmap() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec2i();
+#else
+    return Vec2i(deviceProps().get(device_id_)->maxTexture2DMipmap);
+#endif
+}
+
+Vec3i cv::gpu::DeviceInfo::maxTexture2DLinear() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec3i();
+#else
+    return Vec3i(deviceProps().get(device_id_)->maxTexture2DLinear);
+#endif
+}
+
+Vec2i cv::gpu::DeviceInfo::maxTexture2DGather() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec2i();
+#else
+    return Vec2i(deviceProps().get(device_id_)->maxTexture2DGather);
+#endif
+}
+
+Vec3i cv::gpu::DeviceInfo::maxTexture3D() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec3i();
+#else
+    return Vec3i(deviceProps().get(device_id_)->maxTexture3D);
+#endif
+}
+
+int cv::gpu::DeviceInfo::maxTextureCubemap() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->maxTextureCubemap;
+#endif
+}
+
+Vec2i cv::gpu::DeviceInfo::maxTexture1DLayered() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec2i();
+#else
+    return Vec2i(deviceProps().get(device_id_)->maxTexture1DLayered);
+#endif
+}
+
+Vec3i cv::gpu::DeviceInfo::maxTexture2DLayered() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec3i();
+#else
+    return Vec3i(deviceProps().get(device_id_)->maxTexture2DLayered);
+#endif
+}
+
+Vec2i cv::gpu::DeviceInfo::maxTextureCubemapLayered() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec2i();
+#else
+    return Vec2i(deviceProps().get(device_id_)->maxTextureCubemapLayered);
+#endif
+}
+
+int cv::gpu::DeviceInfo::maxSurface1D() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->maxSurface1D;
+#endif
+}
+
+Vec2i cv::gpu::DeviceInfo::maxSurface2D() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec2i();
+#else
+    return Vec2i(deviceProps().get(device_id_)->maxSurface2D);
+#endif
+}
+
+Vec3i cv::gpu::DeviceInfo::maxSurface3D() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec3i();
+#else
+    return Vec3i(deviceProps().get(device_id_)->maxSurface3D);
+#endif
+}
+
+Vec2i cv::gpu::DeviceInfo::maxSurface1DLayered() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec2i();
+#else
+    return Vec2i(deviceProps().get(device_id_)->maxSurface1DLayered);
+#endif
+}
+
+Vec3i cv::gpu::DeviceInfo::maxSurface2DLayered() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec3i();
+#else
+    return Vec3i(deviceProps().get(device_id_)->maxSurface2DLayered);
+#endif
+}
+
+int cv::gpu::DeviceInfo::maxSurfaceCubemap() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->maxSurfaceCubemap;
+#endif
+}
+
+Vec2i cv::gpu::DeviceInfo::maxSurfaceCubemapLayered() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return Vec2i();
+#else
+    return Vec2i(deviceProps().get(device_id_)->maxSurfaceCubemapLayered);
+#endif
+}
+
+size_t cv::gpu::DeviceInfo::surfaceAlignment() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->surfaceAlignment;
+#endif
+}
+
+bool cv::gpu::DeviceInfo::concurrentKernels() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return false;
+#else
+    return deviceProps().get(device_id_)->concurrentKernels != 0;
+#endif
+}
+
+bool cv::gpu::DeviceInfo::ECCEnabled() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return false;
+#else
+    return deviceProps().get(device_id_)->ECCEnabled != 0;
+#endif
+}
+
+int cv::gpu::DeviceInfo::pciBusID() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->pciBusID;
+#endif
+}
+
+int cv::gpu::DeviceInfo::pciDeviceID() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->pciDeviceID;
+#endif
+}
+
+int cv::gpu::DeviceInfo::pciDomainID() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->pciDomainID;
+#endif
+}
+
+bool cv::gpu::DeviceInfo::tccDriver() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return false;
+#else
+    return deviceProps().get(device_id_)->tccDriver != 0;
+#endif
+}
+
+int cv::gpu::DeviceInfo::asyncEngineCount() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->asyncEngineCount;
+#endif
+}
+
+bool cv::gpu::DeviceInfo::unifiedAddressing() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return false;
+#else
+    return deviceProps().get(device_id_)->unifiedAddressing != 0;
+#endif
+}
+
+int cv::gpu::DeviceInfo::memoryClockRate() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->memoryClockRate;
+#endif
+}
+
+int cv::gpu::DeviceInfo::memoryBusWidth() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->memoryBusWidth;
+#endif
+}
+
+int cv::gpu::DeviceInfo::l2CacheSize() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->l2CacheSize;
+#endif
+}
+
+int cv::gpu::DeviceInfo::maxThreadsPerMultiProcessor() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return 0;
+#else
+    return deviceProps().get(device_id_)->maxThreadsPerMultiProcessor;
+#endif
 }
 
 void cv::gpu::DeviceInfo::queryMemory(size_t& _totalMemory, size_t& _freeMemory) const
 {
+#ifndef HAVE_CUDA
+    (void) _totalMemory;
+    (void) _freeMemory;
+    throw_no_cuda();
+#else
     int prevDeviceID = getDevice();
     if (prevDeviceID != device_id_)
         setDevice(device_id_);
@@ -337,51 +888,32 @@ void cv::gpu::DeviceInfo::queryMemory(size_t& _totalMemory, size_t& _freeMemory)
 
     if (prevDeviceID != device_id_)
         setDevice(prevDeviceID);
-}
-
-size_t cv::gpu::DeviceInfo::freeMemory() const
-{
-    size_t _totalMemory, _freeMemory;
-    queryMemory(_totalMemory, _freeMemory);
-    return _freeMemory;
-}
-
-size_t cv::gpu::DeviceInfo::totalMemory() const
-{
-    size_t _totalMemory, _freeMemory;
-    queryMemory(_totalMemory, _freeMemory);
-    return _totalMemory;
-}
-
-bool cv::gpu::DeviceInfo::supports(FeatureSet feature_set) const
-{
-    int version = majorVersion() * 10 + minorVersion();
-    return version >= feature_set;
+#endif
 }
 
 bool cv::gpu::DeviceInfo::isCompatible() const
 {
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return false;
+#else
     // Check PTX compatibility
-    if (TargetArchs::hasEqualOrLessPtx(majorVersion(), minorVersion()))
+    if (TargetArchs::hasEqualOrLessPtx(major(), minor()))
         return true;
 
     // Check BIN compatibility
-    for (int i = minorVersion(); i >= 0; --i)
-        if (TargetArchs::hasBin(majorVersion(), i))
+    for (int i = minor(); i >= 0; --i)
+        if (TargetArchs::hasBin(major(), i))
             return true;
 
     return false;
+#endif
 }
 
-void cv::gpu::DeviceInfo::query()
-{
-    const cudaDeviceProp* prop = deviceProps.get(device_id_);
+////////////////////////////////////////////////////////////////////////
+// print info
 
-    name_ = prop->name;
-    multi_processor_count_ = prop->multiProcessorCount;
-    majorVersion_ = prop->major;
-    minorVersion_ = prop->minor;
-}
+#ifdef HAVE_CUDA
 
 namespace
 {
@@ -407,8 +939,14 @@ namespace
     }
 }
 
+#endif
+
 void cv::gpu::printCudaDeviceInfo(int device)
 {
+#ifndef HAVE_CUDA
+    (void) device;
+    throw_no_cuda();
+#else
     int count = getCudaEnabledDeviceCount();
     bool valid = (device >= 0) && (device < count);
 
@@ -484,11 +1022,17 @@ void cv::gpu::printCudaDeviceInfo(int device)
     printf(", CUDA Driver Version  = %d.%d", driverVersion / 1000, driverVersion % 100);
     printf(", CUDA Runtime Version = %d.%d", runtimeVersion/1000, runtimeVersion%100);
     printf(", NumDevs = %d\n\n", count);
+
     fflush(stdout);
+#endif
 }
 
 void cv::gpu::printShortCudaDeviceInfo(int device)
 {
+#ifndef HAVE_CUDA
+    (void) device;
+    throw_no_cuda();
+#else
     int count = getCudaEnabledDeviceCount();
     bool valid = (device >= 0) && (device < count);
 
@@ -514,10 +1058,10 @@ void cv::gpu::printShortCudaDeviceInfo(int device)
 
         printf(", Driver/Runtime ver.%d.%d/%d.%d\n", driverVersion/1000, driverVersion%100, runtimeVersion/1000, runtimeVersion%100);
     }
-    fflush(stdout);
-}
 
-#endif // HAVE_CUDA
+    fflush(stdout);
+#endif
+}
 
 ////////////////////////////////////////////////////////////////////////
 // Error handling

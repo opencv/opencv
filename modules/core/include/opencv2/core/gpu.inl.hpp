@@ -567,6 +567,62 @@ Stream::Stream(const Ptr<Impl>& impl)
 {
 }
 
+//////////////////////////////// Initialization & Info ////////////////////////
+
+inline
+bool TargetArchs::has(int major, int minor)
+{
+    return hasPtx(major, minor) || hasBin(major, minor);
+}
+
+inline
+bool TargetArchs::hasEqualOrGreater(int major, int minor)
+{
+    return hasEqualOrGreaterPtx(major, minor) || hasEqualOrGreaterBin(major, minor);
+}
+
+inline
+DeviceInfo::DeviceInfo()
+{
+    device_id_ = getDevice();
+}
+
+inline
+DeviceInfo::DeviceInfo(int device_id)
+{
+    CV_Assert( device_id >= 0 && device_id < getCudaEnabledDeviceCount() );
+    device_id_ = device_id;
+}
+
+inline
+int DeviceInfo::deviceID() const
+{
+    return device_id_;
+}
+
+inline
+size_t DeviceInfo::freeMemory() const
+{
+    size_t _totalMemory, _freeMemory;
+    queryMemory(_totalMemory, _freeMemory);
+    return _freeMemory;
+}
+
+inline
+size_t DeviceInfo::totalMemory() const
+{
+    size_t _totalMemory, _freeMemory;
+    queryMemory(_totalMemory, _freeMemory);
+    return _totalMemory;
+}
+
+inline
+bool DeviceInfo::supports(FeatureSet feature_set) const
+{
+    int version = major() * 10 + minor();
+    return version >= feature_set;
+}
+
 }} // namespace cv { namespace gpu {
 
 //////////////////////////////// Mat ////////////////////////////////

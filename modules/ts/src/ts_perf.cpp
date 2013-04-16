@@ -682,13 +682,13 @@ void TestBase::Init(int argc, const char* const argv[])
         cv::gpu::DeviceInfo info(param_cuda_device);
         if (!info.isCompatible())
         {
-            printf("[----------]\n[ FAILURE  ] \tDevice %s is NOT compatible with current GPU module build.\n[----------]\n", info.name().c_str()), fflush(stdout);
+            printf("[----------]\n[ FAILURE  ] \tDevice %s is NOT compatible with current GPU module build.\n[----------]\n", info.name()), fflush(stdout);
             exit(-1);
         }
 
         cv::gpu::setDevice(param_cuda_device);
 
-        printf("[----------]\n[ GPU INFO ] \tRun test suite on %s GPU.\n[----------]\n", info.name().c_str()), fflush(stdout);
+        printf("[----------]\n[ GPU INFO ] \tRun test suite on %s GPU.\n[----------]\n", info.name()), fflush(stdout);
     }
 #endif
 
