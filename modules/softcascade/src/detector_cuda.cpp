@@ -537,7 +537,7 @@ void cv::softcascade::SCascade::detect(InputArray _image, InputArray _rois, Outp
             flds.createLevels(image.rows, image.cols);
 
         flds.preprocessor->apply(image, flds.shrunk);
-        integral(flds.shrunk, flds.hogluv, flds.integralBuffer, s);
+        ::integral(flds.shrunk, flds.hogluv, flds.integralBuffer, s);
     }
     else
     {

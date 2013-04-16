@@ -132,7 +132,7 @@ private:
     float match_conf_;
 };
 
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPUFEATURES2D
 class GpuMatcher : public FeaturesMatcher
 {
 public:
@@ -207,7 +207,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     LOG("1->2 & 2->1 matches: " << matches_info.matches.size() << endl);
 }
 
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPUFEATURES2D
 void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
     matches_info.matches.clear();

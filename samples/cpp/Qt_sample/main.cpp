@@ -13,6 +13,8 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/calib3d.hpp>
 
+#include <opencv2/calib3d/calib3d_c.h>
+
 #if defined WIN32 || defined _WIN32 || defined WINCE
     #include <windows.h>
     #undef small
