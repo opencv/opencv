@@ -45,9 +45,9 @@ namespace
 {
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // BruteForceMatcher
-    CV_ENUM(DistType, cv::ocl::BruteForceMatcher_OCL_base::L1Dist,\
-        cv::ocl::BruteForceMatcher_OCL_base::L2Dist,\
-        cv::ocl::BruteForceMatcher_OCL_base::HammingDist)
+    CV_ENUM(DistType, BruteForceMatcher_OCL_base::L1Dist,
+                      BruteForceMatcher_OCL_base::L2Dist,
+                      BruteForceMatcher_OCL_base::HammingDist)
     IMPLEMENT_PARAM_CLASS(DescriptorSize, int)
     PARAM_TEST_CASE(BruteForceMatcher, DistType, DescriptorSize)
     {

@@ -16,7 +16,7 @@ PERF_TEST_P( TestRemap, Remap,
                 Values( szVGA, sz1080p ),
                 Values( CV_16UC1, CV_16SC1, CV_32FC1 ),
                 Values( CV_16SC2, CV_32FC1, CV_32FC2 ),
-                ValuesIn( InterType::all() )
+                InterType::all()
              )
 )
 {

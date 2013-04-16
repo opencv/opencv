@@ -18,7 +18,7 @@ PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateSmall,
                                 cv::Size(1024, 768), cv::Size(1280, 1024)),
                 testing::Values(cv::Size(12, 12), cv::Size(28, 9),
                                 cv::Size(8, 30), cv::Size(16, 16)),
-                testing::ValuesIn(MethodType::all())
+                MethodType::all()
                 )
             )
 {
@@ -52,7 +52,7 @@ PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateBig,
             testing::Combine(
                 testing::Values(cv::Size(1280, 1024)),
                 testing::Values(cv::Size(1260, 1000), cv::Size(1261, 1013)),
-                testing::ValuesIn(MethodType::all())
+                MethodType::all()
                 )
     )
 {

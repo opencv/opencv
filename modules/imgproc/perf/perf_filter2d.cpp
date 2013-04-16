@@ -17,7 +17,7 @@ PERF_TEST_P( TestFilter2d, Filter2d,
              Combine(
                 Values( Size(320, 240), sz1080p ),
                 Values( 3, 5 ),
-                ValuesIn( BorderMode::all() )
+                BorderMode::all()
              )
 )
 {
