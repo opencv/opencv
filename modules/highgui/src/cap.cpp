@@ -117,6 +117,9 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #ifdef HAVE_DSHOW
         CV_CAP_DSHOW,
 #endif
+#ifdef HAVE_MSMF
+        CV_CAP_MSMF,
+#endif
 #if 1
         CV_CAP_IEEE1394,   // identical to CV_CAP_DC1394
 #endif
@@ -198,7 +201,9 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         {
 #ifdef HAVE_MSMF
         case CV_CAP_MSMF:
+             printf("Creating Media foundation capture\n");
              capture = cvCreateCameraCapture_MSMF (index);
+             printf("Capture address %p\n", capture);
              if (capture)
                  return capture;
             break;

@@ -61,18 +61,22 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+
 #pragma warning(disable:4503)
 #pragma comment(lib, "mfplat")
 #pragma comment(lib, "mf")
 #pragma comment(lib, "mfuuid")
 #pragma comment(lib, "Strmiids")
 #pragma comment(lib, "MinCore_Downlevel")
+
 struct IMFMediaType;
 struct IMFActivate;
 struct IMFMediaSource;
 struct IMFAttributes;
+
 namespace
 {
+
 template <class T> void SafeRelease(T **ppT)
 {
     if (*ppT)
@@ -81,7 +85,8 @@ template <class T> void SafeRelease(T **ppT)
         *ppT = NULL;
     }
 }
- /// Class for printing info into consol
+
+/// Class for printing info into consol
 class DebugPrintOut
 {
 public:
@@ -93,6 +98,7 @@ public:
 private:
     DebugPrintOut(void);
 };
+
 // Structure for collecting info about types of video, which are supported by current video device
 struct MediaType
 {
@@ -127,6 +133,7 @@ struct MediaType
     ~MediaType();
     void Clear();
 };
+
 /// Class for parsing info from IMFMediaType into the local MediaType
 class FormatReader
 {
@@ -136,9 +143,11 @@ public:
 private:
     FormatReader(void);
 };
+
 DWORD WINAPI MainThreadFunction( LPVOID lpParam );
 typedef void(*emergensyStopEventCallback)(int, void *);
 typedef unsigned char BYTE;
+
 class RawImage
 {
 public:
@@ -156,6 +165,7 @@ private:
     unsigned char *ri_pixels;
     RawImage(unsigned int size);
 };
+
 // Class for grabbing image from video stream
 class ImageGrabber : public IMFSampleGrabberSinkCallback
 {
@@ -836,10 +846,13 @@ MediaType FormatReader::Read(IMFMediaType *pType)
 FormatReader::~FormatReader(void)
 {
 }
-#define CHECK_HR(x) if (FAILED(x)) { goto done; }
+
+#define CHECK_HR(x) if (FAILED(x)) { printf("Checking failed !!!\n"); goto done; }
+
 ImageGrabber::ImageGrabber(unsigned int deviceID): m_cRef(1), ig_DeviceID(deviceID), ig_pSource(NULL), ig_pSession(NULL), ig_pTopology(NULL), ig_RIE(true), ig_Close(false)
 {
 }
+
 ImageGrabber::~ImageGrabber(void)
 {
     if (ig_pSession)
@@ -851,6 +864,7 @@ ImageGrabber::~ImageGrabber(void)
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Destroing instance of the ImageGrabber class \n", ig_DeviceID);
 }
+
 HRESULT ImageGrabber::initImageGrabber(IMFMediaSource *pSource, GUID VideoFormat)
 {
     IMFActivate *pSinkActivate = NULL;
@@ -871,23 +885,34 @@ HRESULT ImageGrabber::initImageGrabber(IMFMediaSource *pSource, GUID VideoFormat
     ig_pSource = pSource;
     hr = pSource->CreatePresentationDescriptor(&pPD);
     if (FAILED(hr))
+    {
+        printf("Error creating CreatePresentationDescriptor()\n");
         goto err;
+    }
     BOOL fSelected;
     hr = pPD->GetStreamDescriptorByIndex(0, &fSelected, &pSD);
-    if (FAILED(hr))
+    if (FAILED(hr)) {
+        printf("Error GetStreamDescriptorByIndex()\n");
         goto err;
+    }
     hr = pSD->GetMediaTypeHandler(&pHandler);
-    if (FAILED(hr))
+    if (FAILED(hr)) {
+        printf("Error GetMediaTypeHandler()\n");
         goto err;
+    }
     DWORD cTypes = 0;
     hr = pHandler->GetMediaTypeCount(&cTypes);
-    if (FAILED(hr))
+    if (FAILED(hr)) {
+        printf("Error GetMediaTypeCount()\n");
         goto err;
+    }
     if(cTypes > 0)
     {
         hr = pHandler->GetCurrentMediaType(&pCurrentType);
-        if (FAILED(hr))
+        if (FAILED(hr)) {
+            printf("Error GetCurrentMediaType()\n");
             goto err;
+        }
         MT = FormatReader::Read(pCurrentType);
     }
 err:
@@ -903,6 +928,10 @@ err:
     else if(VideoFormat == MFVideoFormat_RGB32)
     {
         sizeRawImage = MT.MF_MT_FRAME_SIZE * 4;
+    }
+    else
+    {
+        printf("Video format is not RBG 24/32!\n");
     }
     CHECK_HR(hr = RawImage::CreateInstance(&ig_RIFirst, sizeRawImage));
     CHECK_HR(hr = RawImage::CreateInstance(&ig_RISecond, sizeRawImage));
@@ -936,6 +965,7 @@ done:
     SafeRelease(&pType);
     return hr;
 }
+
 void ImageGrabber::stopGrabbing()
 {
     if(ig_pSession)
@@ -943,6 +973,7 @@ void ImageGrabber::stopGrabbing()
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Stopping of of grabbing of images\n", ig_DeviceID);
 }
+
 HRESULT ImageGrabber::startGrabbing(void)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -995,12 +1026,15 @@ HRESULT ImageGrabber::startGrabbing(void)
         SafeRelease(&pEvent);
     }
     DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Finish startGrabbing \n", ig_DeviceID);
+
 done:
     SafeRelease(&pEvent);
     SafeRelease(&ig_pSession);
     SafeRelease(&ig_pTopology);
+    
     return hr;
 }
+
 HRESULT ImageGrabber::CreateTopology(IMFMediaSource *pSource, IMFActivate *pSinkActivate, IMFTopology **ppTopo)
 {
     IMFTopology *pTopology = NULL;
@@ -1038,6 +1072,7 @@ HRESULT ImageGrabber::CreateTopology(IMFMediaSource *pSource, IMFActivate *pSink
     }
     *ppTopo = pTopology;
     (*ppTopo)->AddRef();
+
 done:
     SafeRelease(&pTopology);
     SafeRelease(&pNode1);
@@ -1045,8 +1080,10 @@ done:
     SafeRelease(&pPD);
     SafeRelease(&pSD);
     SafeRelease(&pHandler);
+    
     return hr;
 }
+
 HRESULT ImageGrabber::AddSourceNode(
     IMFTopology *pTopology,           // Topology.
     IMFMediaSource *pSource,          // Media source.
@@ -1064,10 +1101,13 @@ HRESULT ImageGrabber::AddSourceNode(
     // Return the pointer to the caller.
     *ppNode = pNode;
     (*ppNode)->AddRef();
+
 done:
     SafeRelease(&pNode);
+
     return hr;
 }
+
 HRESULT ImageGrabber::AddOutputNode(
     IMFTopology *pTopology,     // Topology.
     IMFActivate *pActivate,     // Media sink activation object.
@@ -1084,10 +1124,13 @@ HRESULT ImageGrabber::AddOutputNode(
     // Return the pointer to the caller.
     *ppNode = pNode;
     (*ppNode)->AddRef();
+
 done:
     SafeRelease(&pNode);
+
     return hr;
 }
+
 HRESULT ImageGrabber::CreateInstance(ImageGrabber **ppIG, unsigned int deviceID)
 {
     *ppIG = new (std::nothrow) ImageGrabber(deviceID);
@@ -1099,6 +1142,7 @@ HRESULT ImageGrabber::CreateInstance(ImageGrabber **ppIG, unsigned int deviceID)
     DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Creating instance of ImageGrabber\n", deviceID);
     return S_OK;
 }
+
 STDMETHODIMP ImageGrabber::QueryInterface(REFIID riid, void** ppv)
 {
     HRESULT hr = E_NOINTERFACE;
@@ -1119,10 +1163,12 @@ STDMETHODIMP ImageGrabber::QueryInterface(REFIID riid, void** ppv)
     }
     return hr;
 }
+
 STDMETHODIMP_(ULONG) ImageGrabber::AddRef()
 {
     return InterlockedIncrement(&m_cRef);
 }
+
 STDMETHODIMP_(ULONG) ImageGrabber::Release()
 {
     ULONG cRef = InterlockedDecrement(&m_cRef);
@@ -1132,38 +1178,45 @@ STDMETHODIMP_(ULONG) ImageGrabber::Release()
     }
     return cRef;
 }
+
 STDMETHODIMP ImageGrabber::OnClockStart(MFTIME hnsSystemTime, LONGLONG llClockStartOffset)
 {
     (void)hnsSystemTime;
     (void)llClockStartOffset;
     return S_OK;
 }
+
 STDMETHODIMP ImageGrabber::OnClockStop(MFTIME hnsSystemTime)
 {
     (void)hnsSystemTime;
     return S_OK;
 }
+
 STDMETHODIMP ImageGrabber::OnClockPause(MFTIME hnsSystemTime)
 {
     (void)hnsSystemTime;
     return S_OK;
 }
+
 STDMETHODIMP ImageGrabber::OnClockRestart(MFTIME hnsSystemTime)
 {
     (void)hnsSystemTime;
     return S_OK;
 }
+
 STDMETHODIMP ImageGrabber::OnClockSetRate(MFTIME hnsSystemTime, float flRate)
 {
     (void)flRate;
     (void)hnsSystemTime;
     return S_OK;
 }
+
 STDMETHODIMP ImageGrabber::OnSetPresentationClock(IMFPresentationClock* pClock)
 {
     (void)pClock;
     return S_OK;
 }
+
 STDMETHODIMP ImageGrabber::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwSampleFlags,
     LONGLONG llSampleTime, LONGLONG llSampleDuration, const BYTE * pSampleBuffer,
     DWORD dwSampleSize)
@@ -1173,6 +1226,9 @@ STDMETHODIMP ImageGrabber::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwS
     (void)dwSampleFlags;
     (void)llSampleDuration;
     (void)dwSampleSize;
+
+    printf("ImageGrabber::OnProcessSample() -- begin\n");
+
     if(ig_RIE)
     {
         ig_RIFirst->fastCopy(pSampleBuffer);
@@ -1184,22 +1240,29 @@ STDMETHODIMP ImageGrabber::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwS
         ig_RIOut = ig_RISecond;
     }
     ig_RIE = !ig_RIE;
+
+    printf("ImageGrabber::OnProcessSample() -- end\n");
+
     return S_OK;
 }
+
 STDMETHODIMP ImageGrabber::OnShutdown()
 {
     return S_OK;
 }
+
 RawImage *ImageGrabber::getRawImage()
 {
     return ig_RIOut;
 }
+
 DWORD WINAPI MainThreadFunction( LPVOID lpParam )
 {
     ImageGrabberThread *pIGT = (ImageGrabberThread *)lpParam;
     pIGT->run();
     return 0;
 }
+
 HRESULT ImageGrabberThread::CreateInstance(ImageGrabberThread **ppIGT, IMFMediaSource *pSource, unsigned int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -1213,6 +1276,7 @@ HRESULT ImageGrabberThread::CreateInstance(ImageGrabberThread **ppIGT, IMFMediaS
         DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Creating of the instance of ImageGrabberThread\n", deviceID);
     return S_OK;
 }
+
 ImageGrabberThread::ImageGrabberThread(IMFMediaSource *pSource, unsigned int deviceID): igt_Handle(NULL), igt_stop(false)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -1235,6 +1299,7 @@ ImageGrabberThread::ImageGrabberThread(IMFMediaSource *pSource, unsigned int dev
         DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i There is a problem with creation of the instance of the ImageGrabber class\n", deviceID);
     }
 }
+
 void ImageGrabberThread::setEmergencyStopEvent(void *userData, void(*func)(int, void *))
 {
     if(func)
@@ -1243,12 +1308,14 @@ void ImageGrabberThread::setEmergencyStopEvent(void *userData, void(*func)(int, 
         igt_userData = userData;
     }
 }
+
 ImageGrabberThread::~ImageGrabberThread(void)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Destroing ImageGrabberThread\n", igt_DeviceID);
     delete igt_pImageGrabber;
 }
+
 void ImageGrabberThread::stop()
 {
     igt_stop = true;
@@ -1257,6 +1324,7 @@ void ImageGrabberThread::stop()
         igt_pImageGrabber->stopGrabbing();
     }
 }
+
 void ImageGrabberThread::start()
 {
     igt_Handle = CreateThread(
@@ -1267,6 +1335,7 @@ void ImageGrabberThread::start()
             0,                      // use default creation flags
             &igt_ThreadIdArray);   // returns the thread identifier
 }
+
 void ImageGrabberThread::run()
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -1294,10 +1363,12 @@ void ImageGrabberThread::run()
     else
         DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Finish thread\n", igt_DeviceID);
 }
+
 ImageGrabber *ImageGrabberThread::getImageGrabber()
 {
     return igt_pImageGrabber;
 }
+
 Media_Foundation::Media_Foundation(void)
 {
     HRESULT hr = MFStartup(MF_VERSION);
@@ -1307,6 +1378,7 @@ Media_Foundation::Media_Foundation(void)
         DPO->printOut(L"MEDIA FOUNDATION: It cannot be created!!!\n");
     }
 }
+
 Media_Foundation::~Media_Foundation(void)
 {
     HRESULT hr = MFShutdown();
@@ -1316,6 +1388,7 @@ Media_Foundation::~Media_Foundation(void)
         DPO->printOut(L"MEDIA FOUNDATION: Resources cannot be released\n");
     }
 }
+
 bool Media_Foundation::buildListOfDevices()
 {
     HRESULT hr = S_OK;
@@ -1342,30 +1415,36 @@ bool Media_Foundation::buildListOfDevices()
     SafeRelease(&pAttributes);
     return (SUCCEEDED(hr));
 }
+
 Media_Foundation& Media_Foundation::getInstance()
 {
     static Media_Foundation instance;
     return instance;
 }
+
 RawImage::RawImage(unsigned int size): ri_new(false), ri_pixels(NULL)
 {
     ri_size = size;
     ri_pixels = new unsigned char[size];
     memset((void *)ri_pixels,0,ri_size);
 }
+
 bool RawImage::isNew()
 {
     return ri_new;
 }
+
 unsigned int RawImage::getSize()
 {
     return ri_size;
 }
+
 RawImage::~RawImage(void)
 {
     delete []ri_pixels;
     ri_pixels = NULL;
 }
+
 long RawImage::CreateInstance(RawImage **ppRImage,unsigned int size)
 {
     *ppRImage = new (std::nothrow) RawImage(size);
@@ -1375,25 +1454,30 @@ long RawImage::CreateInstance(RawImage **ppRImage,unsigned int size)
     }
     return S_OK;
 }
+
 void RawImage::setCopy(const BYTE * pSampleBuffer)
 {
     memcpy(ri_pixels, pSampleBuffer, ri_size);
     ri_new = true;
 }
+
 void RawImage::fastCopy(const BYTE * pSampleBuffer)
 {
     memcpy(ri_pixels, pSampleBuffer, ri_size);
     ri_new = true;
 }
+
 unsigned char * RawImage::getpPixels()
 {
     ri_new = false;
     return ri_pixels;
 }
+
 videoDevice::videoDevice(void): vd_IsSetuped(false), vd_LockOut(OpenLock), vd_pFriendlyName(NULL),
     vd_Width(0), vd_Height(0), vd_pSource(NULL), vd_func(NULL), vd_userData(NULL)
 {
 }
+
 void videoDevice::setParametrs(CamParametrs parametrs)
 {
     if(vd_IsSetuped)
@@ -1428,6 +1512,7 @@ void videoDevice::setParametrs(CamParametrs parametrs)
         }
     }
 }
+
 CamParametrs videoDevice::getParametrs()
 {
     CamParametrs out;
@@ -1472,6 +1557,7 @@ CamParametrs videoDevice::getParametrs()
     }
     return out;
 }
+
 long videoDevice::resetDevice(IMFActivate *pActivate)
 {
     HRESULT hr = -1;
@@ -1503,6 +1589,7 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
     }
     return hr;
 }
+
 long videoDevice::readInfoOfDevice(IMFActivate *pActivate, unsigned int Num)
 {
     HRESULT hr = -1;
@@ -1510,6 +1597,7 @@ long videoDevice::readInfoOfDevice(IMFActivate *pActivate, unsigned int Num)
     hr = resetDevice(pActivate);
     return hr;
 }
+
 long videoDevice::checkDevice(IMFAttributes *pAttributes, IMFActivate **pDevice)
 {
     HRESULT hr = S_OK;
@@ -1911,8 +1999,10 @@ done:
     SafeRelease(&pType);
     return hr;
 }
+
 videoDevices::videoDevices(void): count(0)
 {}
+
 void videoDevices::clearDevices()
 {
     std::vector<videoDevice *>::iterator i = vds_Devices.begin();
@@ -1920,10 +2010,12 @@ void videoDevices::clearDevices()
         delete (*i);
     vds_Devices.clear();
 }
+
 videoDevices::~videoDevices(void)
 {
     clearDevices();
 }
+
 videoDevice * videoDevices::getDevice(unsigned int i)
 {
     if(i >= vds_Devices.size())
@@ -1936,6 +2028,7 @@ videoDevice * videoDevices::getDevice(unsigned int i)
     }
     return vds_Devices[i];
 }
+
 long videoDevices::initDevices(IMFAttributes *pAttributes)
 {
     HRESULT hr = S_OK;
@@ -1965,15 +2058,18 @@ long videoDevices::initDevices(IMFAttributes *pAttributes)
     }
     return hr;
 }
+
 size_t videoDevices::getCount()
 {
     return vds_Devices.size();
 }
+
 videoDevices& videoDevices::getInstance()
 {
     static videoDevices instance;
     return instance;
 }
+
 Parametr::Parametr()
 {
     CurrentValue = 0;
@@ -1983,6 +2079,7 @@ Parametr::Parametr()
     Default = 0;
     Flag = 0;
 }
+
 MediaType::MediaType()
 {
     pMF_MT_AM_FORMAT_TYPEName = NULL;
@@ -1990,10 +2087,12 @@ MediaType::MediaType()
     pMF_MT_SUBTYPEName = NULL;
     Clear();
 }
+
 MediaType::~MediaType()
 {
     Clear();
 }
+
 void MediaType::Clear()
 {
     MF_MT_FRAME_SIZE = 0;
@@ -2021,6 +2120,7 @@ void MediaType::Clear()
     memset(&MF_MT_AM_FORMAT_TYPE, 0, sizeof(GUID));
     memset(&MF_MT_SUBTYPE, 0, sizeof(GUID));
 }
+
 videoInput::videoInput(void): accessToDevices(false)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2029,6 +2129,7 @@ videoInput::videoInput(void): accessToDevices(false)
     if(!accessToDevices)
         DPO->printOut(L"INITIALIZATION: Ther is not any suitable video device\n");
 }
+
 void videoInput::updateListOfDevices()
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2037,11 +2138,13 @@ void videoInput::updateListOfDevices()
     if(!accessToDevices)
         DPO->printOut(L"UPDATING: Ther is not any suitable video device\n");
 }
+
 videoInput::~videoInput(void)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     DPO->printOut(L"\n***** CLOSE VIDEOINPUT LIBRARY - 2013 *****\n\n");
 }
+
 IMFMediaSource *videoInput::getMediaSource(int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2063,6 +2166,7 @@ IMFMediaSource *videoInput::getMediaSource(int deviceID)
     }
     return NULL;
 }
+
 bool videoInput::setupDevice(int deviceID, unsigned int id)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2089,6 +2193,7 @@ bool videoInput::setupDevice(int deviceID, unsigned int id)
     }
     return false;
 }
+
 bool videoInput::setupDevice(int deviceID, unsigned int w, unsigned int h, unsigned int idealFramerate)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2115,6 +2220,7 @@ bool videoInput::setupDevice(int deviceID, unsigned int w, unsigned int h, unsig
     }
     return false;
 }
+
 MediaType videoInput::getFormat(int deviceID, unsigned int id)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2136,6 +2242,7 @@ MediaType videoInput::getFormat(int deviceID, unsigned int id)
     }
     return MediaType();
 }
+
 bool videoInput::isDeviceSetup(int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2157,6 +2264,7 @@ bool videoInput::isDeviceSetup(int deviceID)
     }
     return false;
 }
+
 bool videoInput::isDeviceMediaSource(int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2178,6 +2286,7 @@ bool videoInput::isDeviceMediaSource(int deviceID)
     }
     return false;
 }
+
 bool videoInput::isDeviceRawDataSource(int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2202,6 +2311,7 @@ bool videoInput::isDeviceRawDataSource(int deviceID)
     }
     return false;
 }
+
 bool videoInput::isFrameNew(int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2230,6 +2340,7 @@ bool videoInput::isFrameNew(int deviceID)
     }
     return false;
 }
+
 unsigned int videoInput::getCountFormats(int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2251,12 +2362,14 @@ unsigned int videoInput::getCountFormats(int deviceID)
     }
     return 0;
 }
+
 void videoInput::closeAllDevices()
 {
     videoDevices *VDS = &videoDevices::getInstance();
     for(unsigned int i = 0; i < VDS->getCount(); i++)
         closeDevice(i);
 }
+
 void videoInput::setParametrs(int deviceID, CamParametrs parametrs)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2277,6 +2390,7 @@ void videoInput::setParametrs(int deviceID, CamParametrs parametrs)
         DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
 }
+
 CamParametrs videoInput::getParametrs(int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2299,6 +2413,7 @@ CamParametrs videoInput::getParametrs(int deviceID)
     }
     return out;
 }
+
 void videoInput::closeDevice(int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2319,6 +2434,7 @@ void videoInput::closeDevice(int deviceID)
         DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
 }
+
 unsigned int videoInput::getWidth(int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2340,6 +2456,7 @@ unsigned int videoInput::getWidth(int deviceID)
     }
     return 0;
 }
+
 unsigned int videoInput::getHeight(int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2361,6 +2478,7 @@ unsigned int videoInput::getHeight(int deviceID)
     }
     return 0;
 }
+
 wchar_t *videoInput::getNameVideoDevice(int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2382,6 +2500,7 @@ wchar_t *videoInput::getNameVideoDevice(int deviceID)
     }
     return L"Empty";
 }
+
 unsigned int videoInput::listDevices(bool silent)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2405,20 +2524,24 @@ unsigned int videoInput::listDevices(bool silent)
     }
     return out;
 }
+
 videoInput& videoInput::getInstance()
 {
     static videoInput instance;
     return instance;
 }
+
 bool videoInput::isDevicesAcceable()
 {
     return accessToDevices;
 }
+
 void videoInput::setVerbose(bool state)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     DPO->setVerbose(state);
 }
+
 void videoInput::setEmergencyStopEvent(int deviceID, void *userData, void(*func)(int, void *))
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2442,6 +2565,7 @@ void videoInput::setEmergencyStopEvent(int deviceID, void *userData, void(*func)
         DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
     }
 }
+
 bool videoInput::getPixels(int deviceID, unsigned char * dstBuffer, bool flipRedAndBlue, bool flipImage)
 {
     bool success = false;
@@ -2491,6 +2615,7 @@ bool videoInput::getPixels(int deviceID, unsigned char * dstBuffer, bool flipRed
     }
     return success;
 }
+
 void videoInput::processPixels(unsigned char * src, unsigned char * dst, unsigned int width,
                                 unsigned int height, unsigned int bpp, bool bRGB, bool bFlip)
 {
@@ -2553,6 +2678,7 @@ void videoInput::processPixels(unsigned char * src, unsigned char * dst, unsigne
     }
 }
 }
+
 /******* Capturing video from camera via Microsoft Media Foundation **********/
 class CvCaptureCAM_MSMF : public CvCapture
 {
@@ -2605,6 +2731,7 @@ void CvCaptureCAM_MSMF::close()
     }
     widthSet = heightSet = width = height = -1;
 }
+
 // Initialize camera input
 bool CvCaptureCAM_MSMF::open( int _index )
 {
@@ -2621,10 +2748,14 @@ bool CvCaptureCAM_MSMF::open( int _index )
     index = try_index;
     return true;
 }
+
 bool CvCaptureCAM_MSMF::grabFrame()
 {
-    return true;
+    while (VI.isDeviceSetup(index) && !VI.isFrameNew(index))
+        Sleep(1);
+    return VI.isDeviceSetup(index);
 }
+
 IplImage* CvCaptureCAM_MSMF::retrieveFrame(int)
 {
     if( !frame || (int)VI.getWidth(index) != frame->width || (int)VI.getHeight(index) != frame->height )
@@ -2637,6 +2768,7 @@ IplImage* CvCaptureCAM_MSMF::retrieveFrame(int)
     VI.getPixels( index, (uchar*)frame->imageData, false, true );
     return frame;
 }
+
 double CvCaptureCAM_MSMF::getProperty( int property_id )
 {
     // image format proprrties
