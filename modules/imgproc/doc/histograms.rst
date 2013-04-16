@@ -42,8 +42,8 @@ arrays. The elements of a tuple used to increment
 a histogram bin are taken from the corresponding
 input arrays at the same location. The sample below shows how to compute a 2D Hue-Saturation histogram for a color image. ::
 
-    #include <cv.h>
-    #include <highgui.h>
+    #include <opencv2/imgproc.hpp>
+    #include <opencv2/highgui.hpp>
 
     using namespace cv;
 
@@ -53,7 +53,7 @@ input arrays at the same location. The sample below shows how to compute a 2D Hu
         if( argc != 2 || !(src=imread(argv[1], 1)).data )
             return -1;
 
-        cvtColor(src, hsv, CV_BGR2HSV);
+        cvtColor(src, hsv, COLOR_BGR2HSV);
 
         // Quantize the hue to 30 levels
         // and the saturation to 32 levels

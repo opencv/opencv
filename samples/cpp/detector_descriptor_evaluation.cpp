@@ -39,10 +39,10 @@
 //
 //M*/
 
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/legacy/legacy.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/features2d.hpp"
+#include "opencv2/legacy.hpp"
 
 #include <limits>
 #include <cstdio>
@@ -93,7 +93,7 @@ static void calcKeyPointProjections( const vector<KeyPoint>& src, const Mat_<dou
 {
     if(  !src.empty() )
     {
-        assert( !H.empty() && H.cols == 3 && H.rows == 3);
+        CV_Assert( !H.empty() && H.cols == 3 && H.rows == 3);
         dst.resize(src.size());
         vector<KeyPoint>::const_iterator srcIt = src.begin();
         vector<KeyPoint>::iterator       dstIt = dst.begin();
@@ -109,7 +109,7 @@ static void calcKeyPointProjections( const vector<KeyPoint>& src, const Mat_<dou
             Mat_<double> Aff; linearizeHomographyAt(H, srcIt->pt, Aff);
             Mat_<double> dstM; invert(Aff*invM*Aff.t(), dstM);
             Mat_<double> eval; eigen( dstM, eval );
-            assert( eval(0,0) && eval(1,0) );
+            CV_Assert( eval(0,0) && eval(1,0) );
             float dstSize = (float)pow(1./(eval(0,0)*eval(1,0)), 0.25);
 
             // TODO: check angle projection
@@ -526,7 +526,7 @@ inline void writeKeypoints( FileStorage& fs, const vector<KeyPoint>& keypoints, 
 
 inline void readKeypoints( FileStorage& fs, vector<KeyPoint>& keypoints, int imgIdx )
 {
-    assert( fs.isOpened() );
+    CV_Assert( fs.isOpened() );
     stringstream imgName; imgName << "img" << imgIdx;
     read( fs[imgName.str()], keypoints);
 }

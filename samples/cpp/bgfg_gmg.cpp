@@ -5,7 +5,8 @@
  *      Author: Andrew B. Godbehere
  */
 
-#include <opencv2/opencv.hpp>
+#include "opencv2/video.hpp"
+#include "opencv2/highgui.hpp"
 #include <opencv2/core/utility.hpp>
 #include <iostream>
 

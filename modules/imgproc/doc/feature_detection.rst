@@ -306,8 +306,8 @@ The function finds circles in a grayscale image using a modification of the Houg
 
 Example: ::
 
-    #include <cv.h>
-    #include <highgui.h>
+    #include <opencv2/imgproc.hpp>
+    #include <opencv2/highgui.hpp>
     #include <math.h>
 
     using namespace cv;
@@ -317,11 +317,11 @@ Example: ::
         Mat img, gray;
         if( argc != 2 && !(img=imread(argv[1], 1)).data)
             return -1;
-        cvtColor(img, gray, CV_BGR2GRAY);
+        cvtColor(img, gray, COLOR_BGR2GRAY);
         // smooth it, otherwise a lot of false circles may be detected
         GaussianBlur( gray, gray, Size(9, 9), 2, 2 );
         vector<Vec3f> circles;
-        HoughCircles(gray, circles, CV_HOUGH_GRADIENT,
+        HoughCircles(gray, circles, HOUGH_GRADIENT,
                      2, gray->rows/4, 200, 100 );
         for( size_t i = 0; i < circles.size(); i++ )
         {
@@ -426,9 +426,8 @@ The function implements the probabilistic Hough transform algorithm for line det
     /* This is a standalone program. Pass an image name as the first parameter
     of the program.  Switch between standard and probabilistic Hough transform
     by changing "#if 1" to "#if 0" and back */
-    #include <cv.h>
-    #include <highgui.h>
-    #include <math.h>
+    #include <opencv2/imgproc.hpp>
+    #include <opencv2/highgui.hpp>
 
     using namespace cv;
 
@@ -439,7 +438,7 @@ The function implements the probabilistic Hough transform algorithm for line det
             return -1;
 
         Canny( src, dst, 50, 200, 3 );
-        cvtColor( dst, color_dst, CV_GRAY2BGR );
+        cvtColor( dst, color_dst, COLOR_GRAY2BGR );
 
     #if 0
         vector<Vec2f> lines;

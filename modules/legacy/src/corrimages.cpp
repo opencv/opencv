@@ -40,11 +40,6 @@
 //M*/
 
 #include "precomp.hpp"
-//#include "cvtypes.h"
-//#include <float.h>
-//#include <limits.h>
-//#include "cv.h"
-//#include "highgui.h"
 #if 0
 #include <stdio.h>
 
