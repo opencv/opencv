@@ -95,9 +95,55 @@ GpuMat::GpuMat(Size size_, int type_, Scalar s_)
 }
 
 inline
+GpuMat::GpuMat(const GpuMat& m)
+    : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(m.datastart), dataend(m.dataend)
+{
+    if (refcount)
+        CV_XADD(refcount, 1);
+}
+
+inline
+GpuMat::GpuMat(const Mat& m) :
+    flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+{
+    upload(m);
+}
+
+inline
 GpuMat::~GpuMat()
 {
     release();
+}
+
+inline
+GpuMat& GpuMat::operator =(const GpuMat& m)
+{
+    if (this != &m)
+    {
+        GpuMat temp(m);
+        swap(temp);
+    }
+
+    return *this;
+}
+
+inline
+void GpuMat::create(Size size_, int type_)
+{
+    create(size_.height, size_.width, type_);
+}
+
+inline
+void GpuMat::swap(GpuMat& b)
+{
+    std::swap(flags, b.flags);
+    std::swap(rows, b.rows);
+    std::swap(cols, b.cols);
+    std::swap(step, b.step);
+    std::swap(data, b.data);
+    std::swap(datastart, b.datastart);
+    std::swap(dataend, b.dataend);
+    std::swap(refcount, b.refcount);
 }
 
 inline
@@ -118,15 +164,17 @@ void GpuMat::assignTo(GpuMat& m, int _type) const
 }
 
 inline
-size_t GpuMat::step1() const
+uchar* GpuMat::ptr(int y)
 {
-    return step / elemSize1();
+    CV_DbgAssert( (unsigned)y < (unsigned)rows );
+    return data + step * y;
 }
 
 inline
-bool GpuMat::empty() const
+const uchar* GpuMat::ptr(int y) const
 {
-    return data == 0;
+    CV_DbgAssert( (unsigned)y < (unsigned)rows );
+    return data + step * y;
 }
 
 template<typename _Tp> inline
@@ -139,6 +187,18 @@ template<typename _Tp> inline
 const _Tp* GpuMat::ptr(int y) const
 {
     return (const _Tp*)ptr(y);
+}
+
+template <class T> inline
+GpuMat::operator PtrStepSz<T>() const
+{
+    return PtrStepSz<T>(rows, cols, (T*)data, step);
+}
+
+template <class T> inline
+GpuMat::operator PtrStep<T>() const
+{
+    return PtrStep<T>((T*)data, step);
 }
 
 inline
@@ -178,19 +238,13 @@ GpuMat GpuMat::colRange(Range r) const
 }
 
 inline
-void GpuMat::create(Size size_, int type_)
+GpuMat GpuMat::operator ()(Range rowRange_, Range colRange_) const
 {
-    create(size_.height, size_.width, type_);
+    return GpuMat(*this, rowRange_, colRange_);
 }
 
 inline
-GpuMat GpuMat::operator()(Range _rowRange, Range _colRange) const
-{
-    return GpuMat(*this, _rowRange, _colRange);
-}
-
-inline
-GpuMat GpuMat::operator()(Rect roi) const
+GpuMat GpuMat::operator ()(Rect roi) const
 {
     return GpuMat(*this, roi);
 }
@@ -232,48 +286,21 @@ int GpuMat::channels() const
 }
 
 inline
+size_t GpuMat::step1() const
+{
+    return step / elemSize1();
+}
+
+inline
 Size GpuMat::size() const
 {
     return Size(cols, rows);
 }
 
 inline
-uchar* GpuMat::ptr(int y)
+bool GpuMat::empty() const
 {
-    CV_DbgAssert((unsigned)y < (unsigned)rows);
-    return data + step * y;
-}
-
-inline
-const uchar* GpuMat::ptr(int y) const
-{
-    CV_DbgAssert((unsigned)y < (unsigned)rows);
-    return data + step * y;
-}
-
-inline
-GpuMat& GpuMat::operator = (Scalar s)
-{
-    setTo(s);
-    return *this;
-}
-
-template <class T> inline
-GpuMat::operator PtrStepSz<T>() const
-{
-    return PtrStepSz<T>(rows, cols, (T*)data, step);
-}
-
-template <class T> inline
-GpuMat::operator PtrStep<T>() const
-{
-    return PtrStep<T>((T*)data, step);
-}
-
-static inline
-void swap(GpuMat& a, GpuMat& b)
-{
-    a.swap(b);
+    return data == 0;
 }
 
 static inline
@@ -304,6 +331,23 @@ void ensureSizeIsEnough(Size size, int type, GpuMat& m)
     ensureSizeIsEnough(size.height, size.width, type, m);
 }
 
+static inline
+void swap(GpuMat& a, GpuMat& b)
+{
+    a.swap(b);
+}
+
 }} // namespace cv { namespace gpu
+
+namespace cv {
+
+inline
+Mat::Mat(const gpu::GpuMat& m)
+    : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
+{
+    m.download(*this);
+}
+
+}
 
 #endif // __OPENCV_CORE_GPUINL_HPP__

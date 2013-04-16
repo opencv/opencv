@@ -72,10 +72,10 @@ void cv::gpu::Stream::release() { throw_no_cuda(); }
 
 namespace cv { namespace gpu
 {
-    void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream);
-    void convertTo(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream);
-    void setTo(GpuMat& src, Scalar s, cudaStream_t stream);
-    void setTo(GpuMat& src, Scalar s, const GpuMat& mask, cudaStream_t stream);
+    void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream = 0);
+    void convert(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream = 0);
+    void set(GpuMat& m, Scalar s, cudaStream_t stream = 0);
+    void set(GpuMat& m, Scalar s, const GpuMat& mask, cudaStream_t stream = 0);
 }}
 
 struct Stream::Impl
@@ -217,7 +217,7 @@ void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val)
         }
     }
 
-    setTo(src, val, stream);
+    set(src, val, stream);
 }
 
 void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask)
@@ -234,7 +234,7 @@ void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask)
 
     cudaStream_t stream = Impl::getStream(impl);
 
-    setTo(src, val, mask, stream);
+    set(src, val, mask, stream);
 }
 
 void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int dtype, double alpha, double beta)
@@ -265,7 +265,7 @@ void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int dtype, 
     dst.create(src.size(), dtype);
 
     cudaStream_t stream = Impl::getStream(impl);
-    convertTo(src, dst, alpha, beta, stream);
+    convert(src, dst, alpha, beta, stream);
 }
 
 #if CUDART_VERSION >= 5000
