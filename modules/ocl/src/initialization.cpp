@@ -366,6 +366,13 @@ namespace cv
             {
             case WAVEFRONT_SIZE:
                 {
+                    bool is_cpu = false;
+                    queryDeviceInfo(IS_CPU_DEVICE, &is_cpu);
+                    if(is_cpu)
+                    {
+                        *(int*)info = 1;
+                        return;
+                    }
 #ifdef CL_DEVICE_WAVEFRONT_WIDTH_AMD
                     try
                     {
