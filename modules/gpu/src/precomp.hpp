@@ -76,10 +76,6 @@
         #include <cufft.h>
     #endif
 
-    #ifdef HAVE_CUBLAS
-        #include <cublas.h>
-    #endif
-
     #include "internal_shared.hpp"
     #include "opencv2/core/stream_accessor.hpp"
 

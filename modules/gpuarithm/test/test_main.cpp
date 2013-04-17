@@ -40,37 +40,81 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_SAFE_CALL_HPP__
-#define __OPENCV_CUDA_SAFE_CALL_HPP__
+#include "test_precomp.hpp"
 
-#include <cuda_runtime_api.h>
-#include <cufft.h>
-#include "NCV.hpp"
+#ifdef HAVE_CUDA
 
-#if defined(__GNUC__)
-    #define ncvSafeCall(expr)  ___ncvSafeCall(expr, __FILE__, __LINE__, __func__)
-    #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define ncvSafeCall(expr)  ___ncvSafeCall(expr, __FILE__, __LINE__)
-    #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__)
-#endif
+using namespace std;
+using namespace cv;
+using namespace cv::gpu;
+using namespace cvtest;
+using namespace testing;
 
-namespace cv { namespace gpu
+int main(int argc, char** argv)
 {
-    void ncvError(int err, const char *file, const int line, const char *func = "");
-    void cufftError(int err, const char *file, const int line, const char *func = "");
-}}
+    try
+    {
+        const std::string keys =
+                "{ h help ?            |      | Print help}"
+                "{ i info              |      | Print information about system and exit }"
+                "{ device              | -1   | Device on which tests will be executed (-1 means all devices) }"
+                ;
 
-static inline void ___ncvSafeCall(int err, const char *file, const int line, const char *func = "")
-{
-    if (NCV_SUCCESS != err)
-        cv::gpu::ncvError(err, file, line, func);
+        CommandLineParser cmd(argc, (const char**)argv, keys);
+
+        if (cmd.has("help"))
+        {
+            cmd.printMessage();
+            return 0;
+        }
+
+        printCudaInfo();
+
+        if (cmd.has("info"))
+        {
+            return 0;
+        }
+
+        int device = cmd.get<int>("device");
+        if (device < 0)
+        {
+            DeviceManager::instance().loadAll();
+
+            cout << "Run tests on all supported devices \n" << endl;
+        }
+        else
+        {
+            DeviceManager::instance().load(device);
+
+            DeviceInfo info(device);
+            cout << "Run tests on device " << device << " [" << info.name() << "] \n" << endl;
+        }
+
+        TS::ptr()->init("gpu");
+        InitGoogleTest(&argc, argv);
+
+        return RUN_ALL_TESTS();
+    }
+    catch (const exception& e)
+    {
+        cerr << e.what() << endl;
+        return -1;
+    }
+    catch (...)
+    {
+        cerr << "Unknown error" << endl;
+        return -1;
+    }
+
+    return 0;
 }
 
-static inline void ___cufftSafeCall(cufftResult_t err, const char *file, const int line, const char *func = "")
+#else // HAVE_CUDA
+
+int main()
 {
-    if (CUFFT_SUCCESS != err)
-        cv::gpu::cufftError(err, file, line, func);
+    printf("OpenCV was built without CUDA support\n");
+    return 0;
 }
 
-#endif /* __OPENCV_CUDA_SAFE_CALL_HPP__ */
+#endif // HAVE_CUDA

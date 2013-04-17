@@ -3,7 +3,7 @@ if(ANDROID OR IOS)
 endif()
 
 set(the_description "GPU-accelerated Computer Vision")
-ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_photo opencv_legacy)
+ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_photo opencv_legacy opencv_gpuarithm)
 
 ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")
 
@@ -56,10 +56,6 @@ ocv_create_module(${cuda_link_libs})
 if(HAVE_CUDA)
   if(HAVE_CUFFT)
     CUDA_ADD_CUFFT_TO_TARGET(${the_module})
-  endif()
-
-  if(HAVE_CUBLAS)
-    CUDA_ADD_CUBLAS_TO_TARGET(${the_module})
   endif()
 
   install(FILES src/nvidia/NPP_staging/NPP_staging.hpp  src/nvidia/core/NCV.hpp

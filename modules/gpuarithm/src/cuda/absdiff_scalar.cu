@@ -40,37 +40,59 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_SAFE_CALL_HPP__
-#define __OPENCV_CUDA_SAFE_CALL_HPP__
+#if !defined CUDA_DISABLER
 
-#include <cuda_runtime_api.h>
-#include <cufft.h>
-#include "NCV.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/functional.hpp"
+#include "opencv2/core/cuda/transform.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
+#include "opencv2/core/cuda/simd_functions.hpp"
 
-#if defined(__GNUC__)
-    #define ncvSafeCall(expr)  ___ncvSafeCall(expr, __FILE__, __LINE__, __func__)
-    #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define ncvSafeCall(expr)  ___ncvSafeCall(expr, __FILE__, __LINE__)
-    #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__)
-#endif
+#include "arithm_func_traits.hpp"
 
-namespace cv { namespace gpu
+using namespace cv::gpu;
+using namespace cv::gpu::cudev;
+
+namespace arithm
 {
-    void ncvError(int err, const char *file, const int line, const char *func = "");
-    void cufftError(int err, const char *file, const int line, const char *func = "");
-}}
+    template <typename T, typename S> struct AbsDiffScalar : unary_function<T, T>
+    {
+        S val;
 
-static inline void ___ncvSafeCall(int err, const char *file, const int line, const char *func = "")
-{
-    if (NCV_SUCCESS != err)
-        cv::gpu::ncvError(err, file, line, func);
+        explicit AbsDiffScalar(S val_) : val(val_) {}
+
+        __device__ __forceinline__ T operator ()(T a) const
+        {
+            abs_func<S> f;
+            return saturate_cast<T>(f(a - val));
+        }
+    };
 }
 
-static inline void ___cufftSafeCall(cufftResult_t err, const char *file, const int line, const char *func = "")
+namespace cv { namespace gpu { namespace cudev
 {
-    if (CUFFT_SUCCESS != err)
-        cv::gpu::cufftError(err, file, line, func);
+    template <typename T, typename S> struct TransformFunctorTraits< arithm::AbsDiffScalar<T, S> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    {
+    };
+}}}
+
+namespace arithm
+{
+    template <typename T, typename S>
+    void absDiffScalar(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream)
+    {
+        AbsDiffScalar<T, S> op(static_cast<S>(val));
+
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, op, WithOutMask(), stream);
+    }
+
+    template void absDiffScalar<uchar, float>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
+    template void absDiffScalar<schar, float>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
+    template void absDiffScalar<ushort, float>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
+    template void absDiffScalar<short, float>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
+    template void absDiffScalar<int, float>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
+    template void absDiffScalar<float, float>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
+    template void absDiffScalar<double, double>(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
 }
 
-#endif /* __OPENCV_CUDA_SAFE_CALL_HPP__ */
+#endif // CUDA_DISABLER
