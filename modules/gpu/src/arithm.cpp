@@ -77,7 +77,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     (void)dst;
     (void)flags;
     (void)stream;
-    CV_Error(CV_StsNotImplemented, "The library was build without CUBLAS");
+    CV_Error(cv::Error::StsNotImplemented, "The library was build without CUBLAS");
 #else
     // CUBLAS works with column-major matrices
 
@@ -87,7 +87,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     if (src1.depth() == CV_64F)
     {
         if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
     bool tr1 = (flags & GEMM_1_T) != 0;
@@ -97,7 +97,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     if (src1.type() == CV_64FC2)
     {
         if (tr1 || tr2 || tr3)
-            CV_Error(CV_StsNotImplemented, "transpose operation doesn't implemented for CV_64FC2 type");
+            CV_Error(cv::Error::StsNotImplemented, "transpose operation doesn't implemented for CV_64FC2 type");
     }
 
     Size src1Size = tr1 ? Size(src1.rows, src1.cols) : src1.size();
@@ -233,7 +233,7 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
     else // if (src.elemSize() == 8)
     {
         if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
 
         NppStStreamHandler h(stream);
 
@@ -548,7 +548,7 @@ void cv::gpu::normalize(const GpuMat& src, GpuMat& dst, double a, double b, int 
     }
     else
     {
-        CV_Error(CV_StsBadArg, "Unknown/unsupported norm type");
+        CV_Error(cv::Error::StsBadArg, "Unknown/unsupported norm type");
     }
 
     if (mask.empty())

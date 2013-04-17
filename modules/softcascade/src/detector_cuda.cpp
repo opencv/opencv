@@ -501,7 +501,7 @@ void integral(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& sum, cv::gpu::GpuMat&
         else
             res.copyTo(inner);
     }
-    else {CV_Error(CV_GpuNotSupported, ": CC 3.x required.");}
+    else {CV_Error(cv::Error::GpuNotSupported, ": CC 3.x required.");}
 }
 
 }

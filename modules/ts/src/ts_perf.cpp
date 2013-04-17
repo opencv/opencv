@@ -1153,7 +1153,7 @@ void TestBase::RunPerfTestBody()
     {
         metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
         #ifdef HAVE_CUDA
-            if (e.code == CV_GpuApiCallError)
+            if (e.code == cv::Error::GpuApiCallError)
                 cv::gpu::resetDevice();
         #endif
         FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws cv::Exception:\n  " << e.what();

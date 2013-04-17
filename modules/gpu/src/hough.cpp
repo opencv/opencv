@@ -235,7 +235,7 @@ void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& 
     CV_Assert(src.type() == CV_8UC1);
     CV_Assert(src.cols < std::numeric_limits<unsigned short>::max());
     CV_Assert(src.rows < std::numeric_limits<unsigned short>::max());
-    CV_Assert(method == CV_HOUGH_GRADIENT);
+    CV_Assert(method == cv::HOUGH_GRADIENT);
     CV_Assert(dp > 0);
     CV_Assert(minRadius > 0 && maxRadius > minRadius);
     CV_Assert(cannyThreshold > 0);
@@ -1351,7 +1351,7 @@ Ptr<GeneralizedHough_GPU> cv::gpu::GeneralizedHough_GPU::create(int method)
         return new GHT_Guil_Full();
     }
 
-    CV_Error(CV_StsBadArg, "Unsupported method");
+    CV_Error(cv::Error::StsBadArg, "Unsupported method");
     return Ptr<GeneralizedHough_GPU>();
 }
 
