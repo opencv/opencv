@@ -56,7 +56,7 @@ static void* OutOfMemoryError(size_t size)
 #if defined WIN32 || defined _WIN32
 static void (*disposeThreadData)() = NULL;
 
-void deleteThreadAllocData() 
+void deleteThreadAllocData()
 {
     if (disposeThreadData != NULL)
         disposeThreadData();
@@ -203,12 +203,12 @@ struct Block
         almostEmptyThreshold = (nObjects + 1) / 2;
     }
 
-    bool isFilled() const 
-    { 
-        return allocated > almostEmptyThreshold; 
+    bool isFilled() const
+    {
+        return allocated > almostEmptyThreshold;
     }
 
-    // Do not change the order of the following members! 
+    // Do not change the order of the following members!
     // Otherwise sizeof(Block) may change.
     Block* prev;
     Block* next;
@@ -226,7 +226,7 @@ struct Block
     CriticalSection cs;
 
     ////////////////////////// Static Members and Methods //////////////////////////
-    
+
     static void initBlockSize(size_t blockSize)
     {
         // make sure blockSize can be represented as 2^n and larger than HDR_SIZE * 2
@@ -386,14 +386,14 @@ enum { START = 0, FREE = 1, GC = 2 };
 
 struct ThreadData
 {
-    ThreadData(BlockPool* _blockPool) 
-    { 
+    ThreadData(BlockPool* _blockPool)
+    {
         bins = new Block**[Block::maxBin];
         for (int i = Block::maxBin - 1; i >= 0; i--)
             bins[i] = new Block*[3];
 
         for (int i = 0; i < Block::maxBin; i++)
-            bins[i][START] = bins[i][FREE] = bins[i][GC] = 0; 
+            bins[i][START] = bins[i][FREE] = bins[i][GC] = 0;
 
         blockPool = _blockPool;
     }
@@ -511,7 +511,7 @@ struct ThreadData
     }
 
     friend struct StaticConstructor;
-    struct StaticConstructor 
+    struct StaticConstructor
     {
         StaticConstructor()
         {
@@ -927,7 +927,7 @@ void* fastMalloc(size_t size)
     // Don't use currentIdx directly since it may be changed by other threads.
     volatile int idx = currentIdx;
 
-    void* mem = allocFuncTable[idx](size + 2 * sizeof(size_t) + CV_MALLOC_ALIGN, 
+    void* mem = allocFuncTable[idx](size + 2 * sizeof(size_t) + CV_MALLOC_ALIGN,
         userDataTable[idx]);
 
     void** data = alignPtr((void**)mem + 2, CV_MALLOC_ALIGN);
