@@ -42,26 +42,17 @@
 
 #include "test_precomp.hpp"
 
+#include "opencv2/photo/gpu.hpp"
+#include "opencv2/ts/gpu_test.hpp"
+
 #ifdef HAVE_CUDA
 
 using namespace cvtest;
 
-
 ////////////////////////////////////////////////////////
 // Brute Force Non local means
 
-struct BruteForceNonLocalMeans: testing::TestWithParam<cv::gpu::DeviceInfo>
-{
-    cv::gpu::DeviceInfo devInfo;
-
-    virtual void SetUp()
-    {
-        devInfo = GetParam();
-        cv::gpu::setDevice(devInfo.deviceID());
-    }
-};
-
-GPU_TEST_P(BruteForceNonLocalMeans, Regression)
+TEST(BruteForceNonLocalMeans, Regression)
 {
     using cv::gpu::GpuMat;
 
@@ -88,23 +79,10 @@ GPU_TEST_P(BruteForceNonLocalMeans, Regression)
     EXPECT_MAT_NEAR(gray_gold, dgray, 1e-4);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Denoising, BruteForceNonLocalMeans, ALL_DEVICES);
-
 ////////////////////////////////////////////////////////
 // Fast Force Non local means
 
-struct FastNonLocalMeans: testing::TestWithParam<cv::gpu::DeviceInfo>
-{
-    cv::gpu::DeviceInfo devInfo;
-
-    virtual void SetUp()
-    {
-        devInfo = GetParam();
-        cv::gpu::setDevice(devInfo.deviceID());
-    }
-};
-
-GPU_TEST_P(FastNonLocalMeans, Regression)
+TEST(FastNonLocalMeans, Regression)
 {
     using cv::gpu::GpuMat;
 
@@ -132,7 +110,5 @@ GPU_TEST_P(FastNonLocalMeans, Regression)
     EXPECT_MAT_NEAR(bgr_gold, dbgr, 1);
     EXPECT_MAT_NEAR(gray_gold, dgray, 1);
 }
-
-INSTANTIATE_TEST_CASE_P(GPU_Denoising, FastNonLocalMeans, ALL_DEVICES);
 
 #endif // HAVE_CUDA

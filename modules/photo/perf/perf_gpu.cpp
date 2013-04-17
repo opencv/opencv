@@ -42,57 +42,14 @@
 
 #include "perf_precomp.hpp"
 
+#include "opencv2/photo/gpu.hpp"
+#include "opencv2/ts/gpu_perf.hpp"
+
 using namespace std;
 using namespace testing;
 using namespace perf;
 
 #define GPU_DENOISING_IMAGE_SIZES testing::Values(perf::szVGA, perf::sz720p)
-
-//////////////////////////////////////////////////////////////////////
-// BilateralFilter
-
-DEF_PARAM_TEST(Sz_Depth_Cn_KernelSz, cv::Size, MatDepth, MatCn, int);
-
-PERF_TEST_P(Sz_Depth_Cn_KernelSz, Denoising_BilateralFilter,
-            Combine(GPU_DENOISING_IMAGE_SIZES,
-                    Values(CV_8U, CV_32F),
-                    GPU_CHANNELS_1_3,
-                    Values(3, 5, 9)))
-{
-    declare.time(60.0);
-
-    const cv::Size size = GET_PARAM(0);
-    const int depth = GET_PARAM(1);
-    const int channels = GET_PARAM(2);
-    const int kernel_size = GET_PARAM(3);
-
-    const float sigma_color = 7;
-    const float sigma_spatial = 5;
-    const int borderMode = cv::BORDER_REFLECT101;
-
-    const int type = CV_MAKE_TYPE(depth, channels);
-
-    cv::Mat src(size, type);
-    declare.in(src, WARMUP_RNG);
-
-    if (PERF_RUN_GPU())
-    {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
-
-        TEST_CYCLE() cv::gpu::bilateralFilter(d_src, dst, kernel_size, sigma_color, sigma_spatial, borderMode);
-
-        GPU_SANITY_CHECK(dst);
-    }
-    else
-    {
-        cv::Mat dst;
-
-        TEST_CYCLE() cv::bilateralFilter(src, dst, kernel_size, sigma_color, sigma_spatial, borderMode);
-
-        CPU_SANITY_CHECK(dst);
-    }
-}
 
 //////////////////////////////////////////////////////////////////////
 // nonLocalMeans
