@@ -750,7 +750,6 @@ Dilates an image by using a specific structuring element.
 .. ocv:pyfunction:: cv2.dilate(src, kernel[, dst[, anchor[, iterations[, borderType[, borderValue]]]]]) -> dst
 
 .. ocv:cfunction:: void cvDilate( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1 )
-.. ocv:pyoldfunction:: cv.Dilate(src, dst, element=None, iterations=1)-> None
 
     :param src: input image; the number of channels can be arbitrary, but the depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
@@ -790,7 +789,6 @@ Erodes an image by using a specific structuring element.
 .. ocv:pyfunction:: cv2.erode(src, kernel[, dst[, anchor[, iterations[, borderType[, borderValue]]]]]) -> dst
 
 .. ocv:cfunction:: void cvErode( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1)
-.. ocv:pyoldfunction:: cv.Erode(src, dst, element=None, iterations=1)-> None
 
     :param src: input image; the number of channels can be arbitrary, but the depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
@@ -831,8 +829,6 @@ Convolves an image with the kernel.
 .. ocv:pyfunction:: cv2.filter2D(src, ddepth, kernel[, dst[, anchor[, delta[, borderType]]]]) -> dst
 
 .. ocv:cfunction:: void cvFilter2D( const CvArr* src, CvArr* dst, const CvMat* kernel, CvPoint anchor=cvPoint(-1,-1) )
-
-.. ocv:pyoldfunction:: cv.Filter2D(src, dst, kernel, anchor=(-1, -1))-> None
 
     :param src: input image.
 
@@ -1013,8 +1009,6 @@ Returns a structuring element of the specified size and shape for morphological 
 
 .. ocv:cfunction:: IplConvKernel* cvCreateStructuringElementEx( int cols, int rows, int anchor_x, int anchor_y, int shape, int* values=NULL )
 
-.. ocv:pyoldfunction:: cv.CreateStructuringElementEx(cols, rows, anchorX, anchorY, shape, values=None)-> kernel
-
     :param shape: Element shape that could be one of the following:
 
       * **MORPH_RECT**         - a rectangular structuring element:
@@ -1091,7 +1085,6 @@ Performs advanced morphological transformations.
 .. ocv:pyfunction:: cv2.morphologyEx(src, op, kernel[, dst[, anchor[, iterations[, borderType[, borderValue]]]]]) -> dst
 
 .. ocv:cfunction:: void cvMorphologyEx( const CvArr* src, CvArr* dst, CvArr* temp, IplConvKernel* element, int operation, int iterations=1 )
-.. ocv:pyoldfunction:: cv.MorphologyEx(src, dst, temp, element, operation, iterations=1)-> None
 
     :param src: Source image. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
@@ -1168,8 +1161,6 @@ Calculates the Laplacian of an image.
 
 .. ocv:cfunction:: void cvLaplace( const CvArr* src, CvArr* dst, int aperture_size=3 )
 
-.. ocv:pyoldfunction:: cv.Laplace(src, dst, apertureSize=3) -> None
-
     :param src: Source image.
 
     :param dst: Destination image of the same size and the same number of channels as  ``src`` .
@@ -1214,8 +1205,6 @@ Blurs an image and downsamples it.
 
 .. ocv:cfunction:: void cvPyrDown( const CvArr* src, CvArr* dst, int filter=CV_GAUSSIAN_5x5 )
 
-.. ocv:pyoldfunction:: cv.PyrDown(src, dst, filter=CV_GAUSSIAN_5X5) -> None
-
     :param src: input image.
 
     :param dst: output image; it has the specified size and the same type as ``src``.
@@ -1247,8 +1236,6 @@ Upsamples an image and then blurs it.
 
 .. ocv:cfunction:: cvPyrUp( const CvArr* src, CvArr* dst, int filter=CV_GAUSSIAN_5x5 )
 
-.. ocv:pyoldfunction:: cv.PyrUp(src, dst, filter=CV_GAUSSIAN_5X5) -> None
-
     :param src: input image.
 
     :param dst: output image. It has the specified size and the same type as  ``src`` .
@@ -1273,8 +1260,6 @@ Performs initial step of meanshift segmentation of an image.
 .. ocv:pyfunction:: cv2.pyrMeanShiftFiltering(src, sp, sr[, dst[, maxLevel[, termcrit]]]) -> dst
 
 .. ocv:cfunction:: void cvPyrMeanShiftFiltering( const CvArr* src, CvArr* dst, double sp,  double sr,  int max_level=1, CvTermCriteria termcrit= cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,5,1))
-
-.. ocv:pyoldfunction:: cv.PyrMeanShiftFiltering(src, dst, sp, sr, max_level=1, termcrit=(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 5, 1)) -> None
 
     :param src: The source 8-bit, 3-channel image.
 
@@ -1361,8 +1346,6 @@ Smooths the image in one of several ways.
 
 .. ocv:cfunction:: void cvSmooth( const CvArr* src, CvArr* dst, int smoothtype=CV_GAUSSIAN, int size1=3, int size2=0, double sigma1=0, double sigma2=0 )
 
-.. ocv:pyoldfunction:: cv.Smooth(src, dst, smoothtype=CV_GAUSSIAN, param1=3, param2=0, param3=0, param4=0)-> None
-
     :param src: The source image
 
     :param dst: The destination image
@@ -1416,8 +1399,6 @@ Calculates the first, second, third, or mixed image derivatives using an extende
 .. ocv:pyfunction:: cv2.Sobel(src, ddepth, dx, dy[, dst[, ksize[, scale[, delta[, borderType]]]]]) -> dst
 
 .. ocv:cfunction:: void cvSobel( const CvArr* src, CvArr* dst, int xorder, int yorder, int aperture_size=3 )
-
-.. ocv:pyoldfunction:: cv.Sobel(src, dst, xorder, yorder, apertureSize=3)-> None
 
     :param src: input image.
 

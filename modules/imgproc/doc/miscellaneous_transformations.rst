@@ -14,8 +14,6 @@ Applies an adaptive threshold to an array.
 
 .. ocv:cfunction:: void cvAdaptiveThreshold( const CvArr* src, CvArr* dst, double max_value, int adaptive_method=CV_ADAPTIVE_THRESH_MEAN_C, int threshold_type=CV_THRESH_BINARY, int block_size=3, double param1=5 )
 
-.. ocv:pyoldfunction:: cv.AdaptiveThreshold(src, dst, maxValue, adaptive_method=CV_ADAPTIVE_THRESH_MEAN_C, thresholdType=CV_THRESH_BINARY, blockSize=3, param1=5)-> None
-
     :param src: Source 8-bit single-channel image.
 
     :param dst: Destination image of the same size and the same type as  ``src`` .
@@ -79,7 +77,6 @@ Converts an image from one color space to another.
 .. ocv:pyfunction:: cv2.cvtColor(src, code[, dst[, dstCn]]) -> dst
 
 .. ocv:cfunction:: void cvCvtColor( const CvArr* src, CvArr* dst, int code )
-.. ocv:pyoldfunction:: cv.CvtColor(src, dst, code)-> None
 
     :param src: input image: 8-bit unsigned, 16-bit unsigned ( ``CV_16UC...`` ), or single-precision floating-point.
 
@@ -419,8 +416,6 @@ Calculates the distance to the closest zero pixel for each pixel of the source i
 
 .. ocv:cfunction:: void cvDistTransform( const CvArr* src, CvArr* dst, int distance_type=CV_DIST_L2, int mask_size=3, const float* mask=NULL, CvArr* labels=NULL, int labelType=CV_DIST_LABEL_CCOMP )
 
-.. ocv:pyoldfunction:: cv.DistTransform(src, dst, distance_type=CV_DIST_L2, mask_size=3, mask=None, labels=None) -> None
-
     :param src: 8-bit, single-channel (binary) source image.
 
     :param dst: Output image with calculated distances. It is a 32-bit floating-point, single-channel image of the same size as  ``src`` .
@@ -491,7 +486,6 @@ Fills a connected component with the given color.
 .. ocv:pyfunction:: cv2.floodFill(image, mask, seedPoint, newVal[, loDiff[, upDiff[, flags]]]) -> retval, image, mask, rect
 
 .. ocv:cfunction:: void cvFloodFill( CvArr* image, CvPoint seed_point, CvScalar new_val, CvScalar lo_diff=cvScalarAll(0), CvScalar up_diff=cvScalarAll(0), CvConnectedComp* comp=NULL, int flags=4, CvArr* mask=NULL )
-.. ocv:pyoldfunction:: cv.FloodFill(image, seed_point, new_val, lo_diff=(0, 0, 0, 0), up_diff=(0, 0, 0, 0), flags=4, mask=None)-> comp
 
     :param image: Input/output 1- or 3-channel, 8-bit, or floating-point image. It is modified by the function unless the  ``FLOODFILL_MASK_ONLY``  flag is set in the second variant of the function. See the details below.
 
@@ -603,8 +597,6 @@ Calculates the integral of an image.
 
 .. ocv:cfunction:: void cvIntegral( const CvArr* image, CvArr* sum, CvArr* sqsum=NULL, CvArr* tilted_sum=NULL )
 
-.. ocv:pyoldfunction:: cv.Integral(image, sum, sqsum=None, tiltedSum=None)-> None
-
     :param image: input image as :math:`W \times H`, 8-bit or floating-point (32f or 64f).
 
     :param sum: integral image as  :math:`(W+1)\times (H+1)` , 32-bit integer or floating-point (32f or 64f).
@@ -654,8 +646,6 @@ Applies a fixed-level threshold to each array element.
 .. ocv:pyfunction:: cv2.threshold(src, thresh, maxval, type[, dst]) -> retval, dst
 
 .. ocv:cfunction:: double cvThreshold( const CvArr* src, CvArr* dst, double threshold, double max_value, int threshold_type )
-
-.. ocv:pyoldfunction:: cv.Threshold(src, dst, threshold, maxValue, thresholdType)-> None
 
     :param src: input array (single-channel, 8-bit or 32-bit floating point).
 

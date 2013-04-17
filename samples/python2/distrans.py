@@ -14,7 +14,6 @@ Keys:
 
 import numpy as np
 import cv2
-import cv2.cv as cv
 
 from common import make_cmap
 
@@ -30,7 +29,7 @@ if __name__ == '__main__':
     if img is None:
         print 'Failed to load fn:', fn
         sys.exit(1)
-        
+
     cm = make_cmap('jet')
     need_update = True
     voronoi = False
@@ -40,7 +39,7 @@ if __name__ == '__main__':
         need_update = False
         thrs = cv2.getTrackbarPos('threshold', 'distrans')
         mark = cv2.Canny(img, thrs, 3*thrs)
-        dist, labels = cv2.distanceTransformWithLabels(~mark, cv.CV_DIST_L2, 5)
+        dist, labels = cv2.distanceTransformWithLabels(~mark, cv2.DIST_L2, 5)
         if voronoi:
             vis = cm[np.uint8(labels)]
         else:

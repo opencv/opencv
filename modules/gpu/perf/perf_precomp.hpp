@@ -63,7 +63,6 @@
 #include "opencv2/calib3d.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/video.hpp"
-#include "opencv2/legacy.hpp"
 #include "opencv2/photo.hpp"
 
 #include "opencv2/core/gpu_private.hpp"

@@ -56,7 +56,7 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
 {
     int k, x, y;
 
-    assert( src.type() == CV_32FC1 );
+    CV_Assert( src.type() == CV_32FC1 );
     int width = src.cols;
     int height = src.rows;
     AutoBuffer<float> kbuf(n*6 + 3), _row((width + n*2)*3);

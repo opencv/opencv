@@ -36,6 +36,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/contrib/compat.hpp"
 
 #define ASD_INTENSITY_SET_PIXEL(pointer, qq) {(*pointer) = (unsigned char)qq;}
 

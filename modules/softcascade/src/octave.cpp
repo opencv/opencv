@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/ml.hpp"
 #include <queue>
 
 using cv::InputArray;

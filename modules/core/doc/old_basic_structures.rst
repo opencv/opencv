@@ -478,8 +478,6 @@ Clears a specific array element.
 
 .. ocv:cfunction:: void cvClearND( CvArr* arr, const int* idx )
 
-.. ocv:pyoldfunction:: cv.ClearND(arr, idx)-> None
-
     :param arr: Input array
     :param idx: Array of the element indices
 
@@ -490,7 +488,6 @@ CloneImage
 Makes a full copy of an image, including the header, data, and ROI.
 
 .. ocv:cfunction:: IplImage* cvCloneImage(const IplImage* image)
-.. ocv:pyoldfunction:: cv.CloneImage(image) -> image
 
     :param image: The original image
 
@@ -499,7 +496,6 @@ CloneMat
 Creates a full matrix copy.
 
 .. ocv:cfunction:: CvMat* cvCloneMat(const CvMat* mat)
-.. ocv:pyoldfunction:: cv.CloneMat(mat) -> mat
 
     :param mat: Matrix to be copied
 
@@ -510,7 +506,6 @@ CloneMatND
 Creates full copy of a multi-dimensional array and returns a pointer to the copy.
 
 .. ocv:cfunction:: CvMatND* cvCloneMatND(const CvMatND* mat)
-.. ocv:pyoldfunction:: cv.CloneMatND(mat) -> matND
 
     :param mat: Input array
 
@@ -530,8 +525,6 @@ ConvertScale
 Converts one array to another with optional linear transformation.
 
 .. ocv:cfunction:: void cvConvertScale(const CvArr* src, CvArr* dst, double scale=1, double shift=0)
-.. ocv:pyoldfunction:: cv.ConvertScale(src, dst, scale=1.0, shift=0.0)-> None
-.. ocv:pyoldfunction:: cv.Convert(src, dst)-> None
 
     ::
 
@@ -569,7 +562,6 @@ Copy
 Copies one array to another.
 
 .. ocv:cfunction:: void cvCopy(const CvArr* src, CvArr* dst, const CvArr* mask=NULL)
-.. ocv:pyoldfunction:: cv.Copy(src, dst, mask=None)-> None
 
     :param src: The source array
 
@@ -591,7 +583,6 @@ CreateData
 Allocates array data
 
 .. ocv:cfunction:: void cvCreateData(CvArr* arr)
-.. ocv:pyoldfunction:: cv.CreateData(arr) -> None
 
     :param arr: Array header
 
@@ -603,7 +594,6 @@ CreateImage
 Creates an image header and allocates the image data.
 
 .. ocv:cfunction:: IplImage* cvCreateImage(CvSize size, int depth, int channels)
-.. ocv:pyoldfunction:: cv.CreateImage(size, depth, channels)->image
 
     :param size: Image width and height
 
@@ -621,7 +611,6 @@ CreateImageHeader
 Creates an image header but does not allocate the image data.
 
 .. ocv:cfunction:: IplImage* cvCreateImageHeader(CvSize size, int depth, int channels)
-.. ocv:pyoldfunction:: cv.CreateImageHeader(size, depth, channels) -> image
 
     :param size: Image width and height
 
@@ -634,7 +623,6 @@ CreateMat
 Creates a matrix header and allocates the matrix data.
 
 .. ocv:cfunction:: CvMat* cvCreateMat( int rows, int cols, int type)
-.. ocv:pyoldfunction:: cv.CreateMat(rows, cols, type) -> mat
 
     :param rows: Number of rows in the matrix
 
@@ -652,7 +640,6 @@ CreateMatHeader
 Creates a matrix header but does not allocate the matrix data.
 
 .. ocv:cfunction:: CvMat* cvCreateMatHeader( int rows, int cols, int type)
-.. ocv:pyoldfunction:: cv.CreateMatHeader(rows, cols, type) -> mat
 
     :param rows: Number of rows in the matrix
 
@@ -667,7 +654,6 @@ CreateMatND
 Creates the header and allocates the data for a multi-dimensional dense array.
 
 .. ocv:cfunction:: CvMatND* cvCreateMatND( int dims, const int* sizes, int type)
-.. ocv:pyoldfunction:: cv.CreateMatND(dims, type) -> matND
 
     :param dims: Number of array dimensions. This must not exceed CV_MAX_DIM (32 by default, but can be changed at build time).
 
@@ -685,7 +671,6 @@ CreateMatNDHeader
 Creates a new matrix header but does not allocate the matrix data.
 
 .. ocv:cfunction:: CvMatND* cvCreateMatNDHeader( int dims, const int* sizes, int type)
-.. ocv:pyoldfunction:: cv.CreateMatNDHeader(dims, type) -> matND
 
     :param dims: Number of array dimensions
 
@@ -716,7 +701,6 @@ CrossProduct
 Calculates the cross product of two 3D vectors.
 
 .. ocv:cfunction:: void cvCrossProduct(const CvArr* src1, const CvArr* src2, CvArr* dst)
-.. ocv:pyoldfunction:: cv.CrossProduct(src1, src2, dst)-> None
 
     :param src1: The first source vector
 
@@ -742,7 +726,6 @@ DotProduct
 Calculates the dot product of two arrays in Euclidean metrics.
 
 .. ocv:cfunction:: double cvDotProduct(const CvArr* src1, const CvArr* src2)
-.. ocv:pyoldfunction:: cv.DotProduct(src1, src2) -> float
 
     :param src1: The first source array
 
@@ -767,11 +750,6 @@ Get?D
 .. ocv:cfunction:: CvScalar cvGet3D(const CvArr* arr, int idx0, int idx1, int idx2)
 .. ocv:cfunction:: CvScalar cvGetND( const CvArr* arr, const int* idx )
 
-.. ocv:pyoldfunction:: cv.Get1D(arr, idx) -> scalar
-.. ocv:pyoldfunction:: cv.Get2D(arr, idx0, idx1) -> scalar
-.. ocv:pyoldfunction:: cv.Get3D(arr, idx0, idx1, idx2) -> scalar
-.. ocv:pyoldfunction:: cv.GetND(arr, indices) -> scalar
-
     Return a specific array element.
 
     :param arr: Input array
@@ -794,10 +772,6 @@ Returns one of more array columns.
 
 .. ocv:cfunction:: CvMat* cvGetCols( const CvArr* arr, CvMat* submat, int start_col, int end_col )
 
-.. ocv:pyoldfunction:: cv.GetCol(arr, col)-> submat
-
-.. ocv:pyoldfunction:: cv.GetCols(arr, startCol, endCol)-> submat
-
     :param arr: Input array
 
     :param submat: Pointer to the resulting sub-array header
@@ -815,7 +789,6 @@ GetDiag
 Returns one of array diagonals.
 
 .. ocv:cfunction:: CvMat* cvGetDiag(const CvArr* arr, CvMat* submat, int diag=0)
-.. ocv:pyoldfunction:: cv.GetDiag(arr, diag=0)-> submat
 
     :param arr: Input array
 
@@ -830,7 +803,6 @@ GetDims
 Return number of array dimensions
 
 .. ocv:cfunction:: int cvGetDims(const CvArr* arr, int* sizes=NULL)
-.. ocv:pyoldfunction:: cv.GetDims(arr) -> (dim1, dim2, ...)
 
     :param arr: Input array
 
@@ -861,7 +833,6 @@ GetElemType
 Returns type of array elements.
 
 .. ocv:cfunction:: int cvGetElemType(const CvArr* arr)
-.. ocv:pyoldfunction:: cv.GetElemType(arr)-> int
 
     :param arr: Input array
 
@@ -877,8 +848,6 @@ Returns image header for arbitrary array.
 
 .. ocv:cfunction:: IplImage* cvGetImage( const CvArr* arr, IplImage* image_header )
 
-.. ocv:pyoldfunction:: cv.GetImage(arr) -> iplimage
-
     :param arr: Input array
 
     :param image_header: Pointer to  ``IplImage``  structure used as a temporary buffer
@@ -890,7 +859,6 @@ GetImageCOI
 Returns the index of the channel of interest.
 
 .. ocv:cfunction:: int cvGetImageCOI(const IplImage* image)
-.. ocv:pyoldfunction:: cv.GetImageCOI(image) -> int
 
     :param image: A pointer to the image header
 
@@ -902,7 +870,6 @@ GetImageROI
 Returns the image ROI.
 
 .. ocv:cfunction:: CvRect cvGetImageROI(const IplImage* image)
-.. ocv:pyoldfunction:: cv.GetImageROI(image)-> CvRect
 
     :param image: A pointer to the image header
 
@@ -913,7 +880,6 @@ GetMat
 Returns matrix header for arbitrary array.
 
 .. ocv:cfunction:: CvMat* cvGetMat(const CvArr* arr, CvMat* header, int* coi=NULL, int allowND=0)
-.. ocv:pyoldfunction:: cv.GetMat(arr, allowND=0) -> mat
 
     :param arr: Input array
 
@@ -1002,11 +968,6 @@ Return a specific element of single-channel 1D, 2D, 3D or nD array.
 .. ocv:cfunction:: double cvGetReal3D(const CvArr* arr, int idx0, int idx1, int idx2)
 .. ocv:cfunction:: double cvGetRealND( const CvArr* arr, const int* idx )
 
-.. ocv:pyoldfunction:: cv.GetReal1D(arr, idx0)->float
-.. ocv:pyoldfunction:: cv.GetReal2D(arr, idx0, idx1)->float
-.. ocv:pyoldfunction:: cv.GetReal3D(arr, idx0, idx1, idx2)->float
-.. ocv:pyoldfunction:: cv.GetRealND(arr, idx)->float
-
     :param arr: Input array. Must have a single channel.
 
     :param idx0: The first zero-based component of the element index
@@ -1030,9 +991,6 @@ Returns array row or row span.
 
 .. ocv:cfunction:: CvMat* cvGetRows( const CvArr* arr, CvMat* submat, int start_row, int end_row, int delta_row=1 )
 
-.. ocv:pyoldfunction:: cv.GetRow(arr, row)-> submat
-.. ocv:pyoldfunction:: cv.GetRows(arr, startRow, endRow, deltaRow=1)-> submat
-
     :param arr: Input array
 
     :param submat: Pointer to the resulting sub-array header
@@ -1053,7 +1011,6 @@ GetSize
 Returns size of matrix or image ROI.
 
 .. ocv:cfunction:: CvSize cvGetSize(const CvArr* arr)
-.. ocv:pyoldfunction:: cv.GetSize(arr)-> (width, height)
 
     :param arr: array header
 
@@ -1064,7 +1021,6 @@ GetSubRect
 Returns matrix header corresponding to the rectangular sub-array of input image or matrix.
 
 .. ocv:cfunction:: CvMat* cvGetSubRect(const CvArr* arr, CvMat* submat, CvRect rect)
-.. ocv:pyoldfunction:: cv.GetSubRect(arr, rect) -> submat
 
     :param arr: Input array
 
@@ -1357,7 +1313,6 @@ ResetImageROI
 Resets the image ROI to include the entire image and releases the ROI structure.
 
 .. ocv:cfunction:: void cvResetImageROI(IplImage* image)
-.. ocv:pyoldfunction:: cv.ResetImageROI(image)-> None
 
     :param image: A pointer to the image header
 
@@ -1373,8 +1328,6 @@ Reshape
 Changes shape of matrix/image without copying data.
 
 .. ocv:cfunction:: CvMat* cvReshape( const CvArr* arr, CvMat* header, int new_cn, int new_rows=0 )
-
-.. ocv:pyoldfunction:: cv.Reshape(arr, newCn, newRows=0) -> mat
 
     :param arr: Input array
 
@@ -1411,8 +1364,6 @@ ReshapeMatND
 Changes the shape of a multi-dimensional array without copying the data.
 
 .. ocv:cfunction:: CvArr* cvReshapeMatND( const CvArr* arr, int sizeof_header, CvArr* header, int new_cn, int new_dims, int* new_sizes )
-
-.. ocv:pyoldfunction:: cv.ReshapeMatND(arr, newCn, newDims) -> mat
 
     :param arr: Input array
 
@@ -1453,7 +1404,6 @@ Set
 Sets every element of an array to a given value.
 
 .. ocv:cfunction:: void cvSet(CvArr* arr, CvScalar value, const CvArr* mask=NULL)
-.. ocv:pyoldfunction:: cv.Set(arr, value, mask=None)-> None
 
     :param arr: The destination array
 
@@ -1481,12 +1431,6 @@ Change the particular array element.
 
 .. ocv:cfunction:: void cvSetND( CvArr* arr, const int* idx, CvScalar value )
 
-.. ocv:pyoldfunction:: cv.Set1D(arr, idx, value) -> None
-.. ocv:pyoldfunction:: cv.Set2D(arr, idx0, idx1, value) -> None
-.. ocv:pyoldfunction:: cv.Set3D(arr, idx0, idx1, idx2, value) -> None
-.. ocv:pyoldfunction:: cv.SetND(arr, indices, value) -> None
-
-
     :param arr: Input array
 
     :param idx0: The first zero-based component of the element index
@@ -1506,7 +1450,6 @@ SetData
 Assigns user data to the array header.
 
 .. ocv:cfunction:: void cvSetData(CvArr* arr, void* data, int step)
-.. ocv:pyoldfunction:: cv.SetData(arr, data, step)-> None
 
     :param arr: Array header
 
@@ -1525,7 +1468,6 @@ SetImageCOI
 Sets the channel of interest in an IplImage.
 
 .. ocv:cfunction:: void cvSetImageCOI( IplImage* image, int coi)
-.. ocv:pyoldfunction:: cv.SetImageCOI(image, coi)-> None
 
     :param image: A pointer to the image header
 
@@ -1539,7 +1481,6 @@ SetImageROI
 Sets an image Region Of Interest (ROI) for a given rectangle.
 
 .. ocv:cfunction:: void cvSetImageROI( IplImage* image, CvRect rect)
-.. ocv:pyoldfunction:: cv.SetImageROI(image, rect)-> None
 
     :param image: A pointer to the image header
 
@@ -1562,11 +1503,6 @@ Change a specific array element.
 
 .. ocv:cfunction:: void cvSetRealND( CvArr* arr, const int* idx, double value )
 
-.. ocv:pyoldfunction:: cv.SetReal1D(arr, idx, value) -> None
-.. ocv:pyoldfunction:: cv.SetReal2D(arr, idx0, idx1, value) -> None
-.. ocv:pyoldfunction:: cv.SetReal3D(arr, idx0, idx1, idx2, value) -> None
-.. ocv:pyoldfunction:: cv.SetRealND(arr, indices, value) -> None
-
     :param arr: Input array
 
     :param idx0: The first zero-based component of the element index
@@ -1588,7 +1524,6 @@ SetZero
 Clears the array.
 
 .. ocv:cfunction:: void cvSetZero(CvArr* arr)
-.. ocv:pyoldfunction:: cv.SetZero(arr) -> None
 
     :param arr: Array to be cleared
 
@@ -1599,7 +1534,6 @@ mGet
 Returns the particular element of single-channel floating-point matrix.
 
 .. ocv:cfunction:: double cvmGet(const CvMat* mat, int row, int col)
-.. ocv:pyoldfunction:: cv.mGet(mat, row, col) -> float
 
     :param mat: Input matrix
 
@@ -1614,7 +1548,6 @@ mSet
 Sets a specific element of a single-channel floating-point matrix.
 
 .. ocv:cfunction:: void cvmSet(CvMat* mat, int row, int col, double value)
-.. ocv:pyoldfunction:: cv.mSet(mat, row, col, value)-> None
 
     :param mat: The matrix
 
@@ -1655,7 +1588,6 @@ RNG
 Initializes a random number generator state.
 
 .. ocv:cfunction:: CvRNG cvRNG(int64 seed=-1)
-.. ocv:pyoldfunction:: cv.RNG(seed=-1LL)-> CvRNG
 
     :param seed: 64-bit value used to initiate a random sequence
 
@@ -1669,8 +1601,6 @@ RandArr
 Fills an array with random numbers and updates the RNG state.
 
 .. ocv:cfunction:: void cvRandArr( CvRNG* rng, CvArr* arr, int dist_type, CvScalar param1, CvScalar param2 )
-
-.. ocv:pyoldfunction:: cv.RandArr(rng, arr, distType, param1, param2)-> None
 
     :param rng: CvRNG state initialized by :ocv:cfunc:`RNG`
 
@@ -1695,7 +1625,6 @@ RandInt
 Returns a 32-bit unsigned integer and updates RNG.
 
 .. ocv:cfunction:: unsigned cvRandInt(CvRNG* rng)
-.. ocv:pyoldfunction:: cv.RandInt(rng)-> unsigned
 
     :param rng: CvRNG state initialized by  :ocv:cfunc:`RNG`.
 
@@ -1707,7 +1636,6 @@ RandReal
 Returns a floating-point random number and updates RNG.
 
 .. ocv:cfunction:: double cvRandReal(CvRNG* rng)
-.. ocv:pyoldfunction:: cv.RandReal(rng) -> float
 
     :param rng: RNG state initialized by  :ocv:cfunc:`RNG`
 
@@ -1717,8 +1645,6 @@ The function returns a uniformly-distributed random floating-point number betwee
 fromarray
 ---------
 Create a CvMat from an object that supports the array interface.
-
-.. ocv:pyoldfunction:: cv.fromarray(array, allowND=False) -> mat
 
     :param object: Any object that supports the array interface
 

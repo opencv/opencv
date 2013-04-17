@@ -108,8 +108,6 @@ Detects keypoints and computes SURF descriptors for them.
 
 .. ocv:cfunction:: void cvExtractSURF( const CvArr* image, const CvArr* mask, CvSeq** keypoints, CvSeq** descriptors, CvMemStorage* storage, CvSURFParams params )
 
-.. ocv:pyoldfunction:: cv.ExtractSURF(image, mask, storage, params)-> (keypoints, descriptors)
-
     :param image: Input 8-bit grayscale image
 
     :param mask: Optional input mask that marks the regions where we should detect features.

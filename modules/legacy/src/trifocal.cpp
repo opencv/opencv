@@ -42,12 +42,8 @@
 #include "precomp.hpp"
 #include "opencv2/calib3d/calib3d_c.h"
 
-//#include "cvtypes.h"
 #include <float.h>
 #include <limits.h>
-//#include "cv.h"
-//#include "windows.h"
-
 #include <stdio.h>
 
 /* Valery Mosyagin */

@@ -13,7 +13,6 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
 .. ocv:pyfunction:: cv2.calcOpticalFlowPyrLK(prevImg, nextImg, prevPts, nextPts[, status[, err[, winSize[, maxLevel[, criteria[, flags[, minEigThreshold]]]]]]]) -> nextPts, status, err
 
 .. ocv:cfunction:: void cvCalcOpticalFlowPyrLK( const CvArr* prev, const CvArr* curr, CvArr* prev_pyr, CvArr* curr_pyr, const CvPoint2D32f* prev_features, CvPoint2D32f* curr_features, int count, CvSize win_size, int level, char* status, float* track_error, CvTermCriteria criteria, int flags )
-.. ocv:pyoldfunction:: cv.CalcOpticalFlowPyrLK(prev, curr, prevPyr, currPyr, prevFeatures, winSize, level, criteria, flags, guesses=None) -> (currFeatures, status, track_error)
 
     :param prevImg: first 8-bit input image or pyramid constructed by :ocv:func:`buildOpticalFlowPyramid`.
 
@@ -210,7 +209,6 @@ Updates the motion history image by a moving silhouette.
 .. ocv:pyfunction:: cv2.updateMotionHistory(silhouette, mhi, timestamp, duration) -> mhi
 
 .. ocv:cfunction:: void cvUpdateMotionHistory( const CvArr* silhouette, CvArr* mhi, double timestamp, double duration )
-.. ocv:pyoldfunction:: cv.UpdateMotionHistory(silhouette, mhi, timestamp, duration)-> None
 
     :param silhouette: Silhouette mask that has non-zero pixels where the motion occurs.
 
@@ -244,7 +242,6 @@ Calculates a gradient orientation of a motion history image.
 .. ocv:pyfunction:: cv2.calcMotionGradient(mhi, delta1, delta2[, mask[, orientation[, apertureSize]]]) -> mask, orientation
 
 .. ocv:cfunction:: void cvCalcMotionGradient( const CvArr* mhi, CvArr* mask, CvArr* orientation, double delta1, double delta2, int aperture_size=3 )
-.. ocv:pyoldfunction:: cv.CalcMotionGradient(mhi, mask, orientation, delta1, delta2, apertureSize=3)-> None
 
     :param mhi: Motion history single-channel floating-point image.
 
@@ -284,7 +281,6 @@ Calculates a global motion orientation in a selected region.
 .. ocv:pyfunction:: cv2.calcGlobalOrientation(orientation, mask, mhi, timestamp, duration) -> retval
 
 .. ocv:cfunction:: double cvCalcGlobalOrientation( const CvArr* orientation, const CvArr* mask, const CvArr* mhi, double timestamp, double duration )
-.. ocv:pyoldfunction:: cv.CalcGlobalOrientation(orientation, mask, mhi, timestamp, duration)-> float
 
     :param orientation: Motion gradient orientation image calculated by the function  :ocv:func:`calcMotionGradient` .
 
@@ -314,7 +310,6 @@ Splits a motion history image into a few parts corresponding to separate indepen
 .. ocv:pyfunction:: cv2.segmentMotion(mhi, timestamp, segThresh[, segmask]) -> segmask, boundingRects
 
 .. ocv:cfunction:: CvSeq* cvSegmentMotion( const CvArr* mhi, CvArr* seg_mask, CvMemStorage* storage, double timestamp, double seg_thresh )
-.. ocv:pyoldfunction:: cv.SegmentMotion(mhi, seg_mask, storage, timestamp, seg_thresh) -> boundingRects
 
     :param mhi: Motion history image.
 
@@ -342,8 +337,6 @@ Finds an object center, size, and orientation.
 
 .. ocv:cfunction:: int cvCamShift( const CvArr* prob_image, CvRect window, CvTermCriteria criteria, CvConnectedComp* comp, CvBox2D* box=NULL )
 
-.. ocv:pyoldfunction:: cv.CamShift(prob_image, window, criteria) -> (int, comp, box)
-
     :param probImage: Back projection of the object histogram. See  :ocv:func:`calcBackProject` .
 
     :param window: Initial search window.
@@ -370,7 +363,6 @@ Finds an object on a back projection image.
 .. ocv:pyfunction:: cv2.meanShift(probImage, window, criteria) -> retval, window
 
 .. ocv:cfunction:: int cvMeanShift( const CvArr* prob_image, CvRect window, CvTermCriteria criteria, CvConnectedComp* comp )
-.. ocv:pyoldfunction:: cv.MeanShift(prob_image, window, criteria) -> comp
 
     :param probImage: Back projection of the object histogram. See  :ocv:func:`calcBackProject` for details.
 
@@ -413,7 +405,6 @@ The constructors.
 .. ocv:pyfunction:: cv2.KalmanFilter([dynamParams, measureParams[, controlParams[, type]]]) -> <KalmanFilter object>
 
 .. ocv:cfunction:: CvKalman* cvCreateKalman( int dynam_params, int measure_params, int control_params=0 )
-.. ocv:pyoldfunction:: cv.CreateKalman(dynam_params, measure_params, control_params=0) -> CvKalman
 
     The full constructor.
 
@@ -451,7 +442,6 @@ Computes a predicted state.
 .. ocv:pyfunction:: cv2.KalmanFilter.predict([control]) -> retval
 
 .. ocv:cfunction:: const CvMat* cvKalmanPredict( CvKalman* kalman, const CvMat* control=NULL)
-.. ocv:pyoldfunction:: cv.KalmanPredict(kalman, control=None) -> mat
 
     :param control: The optional input control
 
@@ -465,8 +455,6 @@ Updates the predicted state from the measurement.
 .. ocv:pyfunction:: cv2.KalmanFilter.correct(measurement) -> retval
 
 .. ocv:cfunction:: const CvMat* cvKalmanCorrect( CvKalman* kalman, const CvMat* measurement )
-
-.. ocv:pyoldfunction:: cv.KalmanCorrect(kalman, measurement) -> mat
 
     :param measurement: The measured system parameters
 
