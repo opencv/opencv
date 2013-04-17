@@ -333,7 +333,7 @@ namespace
 {
     IMPLEMENT_PARAM_CLASS(PyrScale, double)
     IMPLEMENT_PARAM_CLASS(PolyN, int)
-    CV_FLAGS(FarnebackOptFlowFlags, 0, cv::OPTFLOW_FARNEBACK_GAUSSIAN)
+    CV_FLAGS(FarnebackOptFlowFlags, 0, OPTFLOW_FARNEBACK_GAUSSIAN)
     IMPLEMENT_PARAM_CLASS(UseInitFlow, bool)
 }
 

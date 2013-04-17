@@ -471,8 +471,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Dilate, testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // MorphEx
 
-CV_ENUM(MorphOp, cv::MORPH_OPEN, cv::MORPH_CLOSE, cv::MORPH_GRADIENT, cv::MORPH_TOPHAT, cv::MORPH_BLACKHAT)
-#define ALL_MORPH_OPS testing::Values(MorphOp(cv::MORPH_OPEN), MorphOp(cv::MORPH_CLOSE), MorphOp(cv::MORPH_GRADIENT), MorphOp(cv::MORPH_TOPHAT), MorphOp(cv::MORPH_BLACKHAT))
+CV_ENUM(MorphOp, MORPH_OPEN, MORPH_CLOSE, MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT)
 
 PARAM_TEST_CASE(MorphEx, cv::gpu::DeviceInfo, cv::Size, MatType, MorphOp, Anchor, Iterations, UseRoi)
 {
@@ -518,7 +517,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, MorphEx, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
-    ALL_MORPH_OPS,
+    MorphOp::all(),
     testing::Values(Anchor(cv::Point(-1, -1)), Anchor(cv::Point(0, 0)), Anchor(cv::Point(2, 2))),
     testing::Values(Iterations(1), Iterations(2), Iterations(3)),
     WHOLE_SUBMAT));
