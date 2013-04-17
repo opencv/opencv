@@ -60,7 +60,7 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
                    const oclMat &src3, double beta, oclMat &dst, int flags)
 {
     CV_Assert(src1.cols == src2.rows &&
-              (src3.empty() || src1.rows == src3.rows && src2.cols == src3.cols));
+              (src3.empty() || (src1.rows == src3.rows && src2.cols == src3.cols)));
     CV_Assert(!(cv::GEMM_3_T & flags)); // cv::GEMM_3_T is not supported
     if(!src3.empty())
     {
