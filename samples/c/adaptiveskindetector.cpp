@@ -39,7 +39,7 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
-#include "opencv2/contrib/contrib.hpp"
+#include "opencv2/contrib/compat.hpp"
 #include "opencv2/highgui/highgui_c.h"
 
 static void help(char **argv)

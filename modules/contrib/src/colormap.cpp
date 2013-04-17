@@ -40,7 +40,7 @@ static Mat linspace(float x0, float x1, int n)
 static void sortMatrixRowsByIndices(InputArray _src, InputArray _indices, OutputArray _dst)
 {
     if(_indices.getMat().type() != CV_32SC1)
-        CV_Error(CV_StsUnsupportedFormat, "cv::sortRowsByIndices only works on integer indices!");
+        CV_Error(Error::StsUnsupportedFormat, "cv::sortRowsByIndices only works on integer indices!");
     Mat src = _src.getMat();
     std::vector<int> indices = _indices.getMat();
     _dst.create(src.rows, src.cols, src.type());
@@ -64,8 +64,8 @@ static Mat argsort(InputArray _src, bool ascending=true)
 {
     Mat src = _src.getMat();
     if (src.rows != 1 && src.cols != 1)
-        CV_Error(CV_StsBadArg, "cv::argsort only sorts 1D matrices.");
-    int flags = CV_SORT_EVERY_ROW+(ascending ? CV_SORT_ASCENDING : CV_SORT_DESCENDING);
+        CV_Error(Error::StsBadArg, "cv::argsort only sorts 1D matrices.");
+    int flags = SORT_EVERY_ROW | (ascending ? SORT_ASCENDING : SORT_DESCENDING);
     Mat sorted_indices;
     sortIdx(src.reshape(1,1),sorted_indices,flags);
     return sorted_indices;
@@ -116,8 +116,8 @@ static Mat interp1(InputArray _x, InputArray _Y, InputArray _xi)
     Mat Y = _Y.getMat();
     Mat xi = _xi.getMat();
     // check types & alignment
-    assert((x.type() == Y.type()) && (Y.type() == xi.type()));
-    assert((x.cols == 1) && (x.rows == Y.rows) && (x.cols == Y.cols));
+    CV_Assert((x.type() == Y.type()) && (Y.type() == xi.type()));
+    CV_Assert((x.cols == 1) && (x.rows == Y.rows) && (x.cols == Y.cols));
     // call templated interp1
     switch(x.type()) {
         case CV_8SC1: return interp1_<char>(x,Y,xi); break;
@@ -127,7 +127,7 @@ static Mat interp1(InputArray _x, InputArray _Y, InputArray _xi)
         case CV_32SC1: return interp1_<int>(x,Y,xi); break;
         case CV_32FC1: return interp1_<float>(x,Y,xi); break;
         case CV_64FC1: return interp1_<double>(x,Y,xi); break;
-        default: CV_Error(CV_StsUnsupportedFormat, ""); break;
+        default: CV_Error(Error::StsUnsupportedFormat, ""); break;
     }
     return Mat();
 }
@@ -473,7 +473,7 @@ namespace colormap
     void ColorMap::operator()(InputArray _src, OutputArray _dst) const
     {
         if(_lut.total() != 256)
-            CV_Error(CV_StsAssert, "cv::LUT only supports tables of size 256.");
+            CV_Error(Error::StsAssert, "cv::LUT only supports tables of size 256.");
         Mat src = _src.getMat();
         // Return original matrix if wrong type is given (is fail loud better here?)
         if(src.type() != CV_8UC1 && src.type() != CV_8UC3)
@@ -521,7 +521,7 @@ namespace colormap
             colormap == COLORMAP_WINTER ? (colormap::ColorMap*)(new colormap::Winter) : 0;
 
         if( !cm )
-            CV_Error( CV_StsBadArg, "Unknown colormap id; use one of COLORMAP_*");
+            CV_Error( Error::StsBadArg, "Unknown colormap id; use one of COLORMAP_*");
 
         (*cm)(src, dst);
 

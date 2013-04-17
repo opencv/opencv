@@ -267,10 +267,6 @@ class OCVPyModulelevel(OCVPyObject):
         else:
             return ''
 
-class OCVPyOldModulelevel(OCVPyModulelevel):
-    directive_prefix = 'pyold'
-    pass
-
 class OCVPyXRefRole(XRefRole):
     def process_link(self, env, refnode, has_explicit_title, title, target):
         refnode['ocv:module'] = env.temp_data.get('ocv:module')
@@ -1491,7 +1487,6 @@ class OCVDomain(Domain):
         'cfunction': ObjType(l_('cfunction'), 'cfunc', 'cfuncx'),
         'jfunction': ObjType(l_('jfunction'), 'jfunc', 'jfuncx'),
         'pyfunction': ObjType(l_('pyfunction'), 'pyfunc'),
-        'pyoldfunction': ObjType(l_('pyoldfunction'), 'pyoldfunc'),
         'member':   ObjType(l_('member'),   'member'),
         'emember':   ObjType(l_('emember'),   'emember'),
         'type':     ObjType(l_('type'),     'type'),
@@ -1505,7 +1500,6 @@ class OCVDomain(Domain):
         'cfunction':    OCVCFunctionObject,
         'jfunction':    OCVJavaFunctionObject,
         'pyfunction':   OCVPyModulelevel,
-        'pyoldfunction':   OCVPyOldModulelevel,
         'member':       OCVMemberObject,
         'emember':      OCVEnumMemberObject,
         'type':         OCVTypeObject,
@@ -1522,7 +1516,6 @@ class OCVDomain(Domain):
         'jfunc' :  OCVXRefRole(fix_parens=True),
         'jfuncx' :  OCVXRefRole(),
         'pyfunc' :  OCVPyXRefRole(),
-        'pyoldfunc' :  OCVPyXRefRole(),
         'member': OCVXRefRole(),
         'emember': OCVXRefRole(),
         'type':   OCVXRefRole(),
@@ -1612,7 +1605,6 @@ class OCVDomain(Domain):
             'cfunction':     _('C function'),
             'jfunction':     _('Java method'),
             'pyfunction':    _('Python function'),
-            'pyoldfunction': _('Legacy Python function'),
             'member':        _('C++ member'),
             'emember':       _('enum member'),
             'type':          _('C/C++ type'),

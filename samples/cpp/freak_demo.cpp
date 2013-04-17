@@ -43,7 +43,6 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/features2d.hpp>
 #include <opencv2/nonfree.hpp>
-#include <opencv2/legacy.hpp>
 
 using namespace cv;
 
@@ -95,9 +94,9 @@ int main( int argc, char** argv ) {
 
     // MATCHER
     // The standard Hamming distance can be used such as
-    // BruteForceMatcher<Hamming> matcher;
+    // BFMatcher matcher(NORM_HAMMING);
     // or the proposed cascade of hamming distance using SSSE3
-    BruteForceMatcher<Hamming> matcher;
+    BFMatcher matcher(NORM_HAMMING);
 
     // detect
     double t = (double)getTickCount();

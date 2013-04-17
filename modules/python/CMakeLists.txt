@@ -5,22 +5,19 @@
 if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug")
   ocv_module_disable(python)
 endif()
-if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_USE_NUMPY)
+
+if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_NUMPY_INCLUDE_DIR)
   ocv_module_disable(python)
 endif()
 
 set(the_description "The python bindings")
 ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect opencv_contrib opencv_legacy opencv_softcascade OPTIONAL opencv_nonfree)
 
-add_definitions(-DPYTHON_USE_NUMPY=1)
-
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
     "${PYTHON_NUMPY_INCLUDE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/src2"
     )
-
-
 
 set(opencv_hdrs
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core.hpp"
@@ -54,20 +51,13 @@ set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_const_reg.h")
 
 add_custom_command(
-   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated0.i
-   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen.py" "${CMAKE_CURRENT_SOURCE_DIR}/src2"
-   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/api
-   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/defs
-   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/gen.py)
-
-add_custom_command(
    OUTPUT ${cv2_generated_hdrs}
    COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_hdrs}
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/hdr_parser.py
    DEPENDS ${opencv_hdrs})
 
-add_library(${the_module} SHARED src2/cv2.cpp ${CMAKE_CURRENT_BINARY_DIR}/generated0.i ${cv2_generated_hdrs} src2/cv2.cv.hpp)
+add_library(${the_module} SHARED src2/cv2.cpp ${cv2_generated_hdrs})
 set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
 if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")

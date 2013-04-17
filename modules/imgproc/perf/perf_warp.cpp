@@ -23,8 +23,8 @@ void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode );
 PERF_TEST_P( TestWarpAffine, WarpAffine,
              Combine(
                 Values( szVGA, sz720p, sz1080p ),
-                ValuesIn( InterType::all() ),
-                ValuesIn( BorderMode::all() )
+                InterType::all(),
+                BorderMode::all()
              )
 )
 {
@@ -53,8 +53,8 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
 PERF_TEST_P( TestWarpPerspective, WarpPerspective,
              Combine(
                 Values( szVGA, sz720p, sz1080p ),
-                ValuesIn( InterType::all() ),
-                ValuesIn( BorderMode::all() )
+                InterType::all(),
+                BorderMode::all()
              )
 )
 {
@@ -91,8 +91,8 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
 PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
              Combine(
                  Values( Size(640,480), Size(1920,1080), Size(2592,1944) ),
-                 ValuesIn( InterType::all() ),
-                 ValuesIn( BorderMode::all() ),
+                 InterType::all(),
+                 BorderMode::all(),
                  Values( CV_8UC1, CV_8UC4 )
                  )
              )
@@ -138,9 +138,9 @@ PERF_TEST_P( TestRemap, remap,
              Combine(
                  Values( TYPICAL_MAT_TYPES ),
                  Values( szVGA, sz720p, sz1080p ),
-                 ValuesIn( InterType::all() ),
-                 ValuesIn( BorderMode::all() ),
-                 ValuesIn( RemapMode::all() )
+                 InterType::all(),
+                 BorderMode::all(),
+                 RemapMode::all()
                  )
              )
 {

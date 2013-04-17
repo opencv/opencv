@@ -79,8 +79,6 @@ class DeclarationParser(object):
             return "C"
         if line.startswith(".. ocv:pyfunction::"):
             return "Python2"
-        if line.startswith(".. ocv:pyoldfunction::"):
-            return "Python1"
         if line.startswith(".. ocv:jfunction::"):
             return "Java"
         return None

@@ -57,7 +57,7 @@ def motion_kernel(angle, d, sz=65):
 
 def defocus_kernel(d, sz=65):
     kern = np.zeros((sz, sz), np.uint8)
-    cv2.circle(kern, (sz, sz), d, 255, -1, cv2.CV_AA, shift=1)
+    cv2.circle(kern, (sz, sz), d, 255, -1, cv2.LINE_AA, shift=1)
     kern = np.float32(kern) / 255.0
     return kern
 
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     opts = dict(opts)
     try:
         fn = args[0]
-    except: 
+    except:
         fn = 'data/licenseplate_motion.jpg'
 
     win = 'deconvolution'
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     if img is None:
         print 'Failed to load fn1:', fn1
         sys.exit(1)
-    
+
     img = np.float32(img)/255.0
     cv2.imshow('input', img)
 

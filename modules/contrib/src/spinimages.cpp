@@ -56,24 +56,24 @@ namespace
 {
     const static Scalar colors[] =
     {
-        CV_RGB(255,   0,   0),
-        CV_RGB(  0, 255,   0),
-        CV_RGB(  0,   0, 255),
-        CV_RGB(255, 255,   0),
-        CV_RGB(255,   0, 255),
-        CV_RGB(  0, 255, 255),
-        CV_RGB(255, 127, 127),
-        CV_RGB(127, 127, 255),
-        CV_RGB(127, 255, 127),
-        CV_RGB(255, 255, 127),
-        CV_RGB(127, 255, 255),
-        CV_RGB(255, 127, 255),
-        CV_RGB(127,   0,   0),
-        CV_RGB(  0, 127,   0),
-        CV_RGB(  0,   0, 127),
-        CV_RGB(127, 127,   0),
-        CV_RGB(127,   0, 127),
-        CV_RGB(  0, 127, 127)
+        Scalar(255,   0,   0),
+        Scalar(  0, 255,   0),
+        Scalar(  0,   0, 255),
+        Scalar(255, 255,   0),
+        Scalar(255,   0, 255),
+        Scalar(  0, 255, 255),
+        Scalar(255, 127, 127),
+        Scalar(127, 127, 255),
+        Scalar(127, 255, 127),
+        Scalar(255, 255, 127),
+        Scalar(127, 255, 255),
+        Scalar(255, 127, 255),
+        Scalar(127,   0,   0),
+        Scalar(  0, 127,   0),
+        Scalar(  0,   0, 127),
+        Scalar(127, 127,   0),
+        Scalar(127,   0, 127),
+        Scalar(  0, 127, 127)
     };
     size_t colors_mum = sizeof(colors)/sizeof(colors[0]);
 
@@ -199,7 +199,7 @@ void convertTransformMatrix(const float* matrix, float* sseMatrix)
 
 inline __m128 transformSSE(const __m128* matrix, const __m128& in)
 {
-    assert(((size_t)matrix & 15) == 0);
+    CV_DbgAssert(((size_t)matrix & 15) == 0);
     __m128 a0 = _mm_mul_ps(_mm_load_ps((float*)(matrix+0)), _mm_shuffle_ps(in,in,_MM_SHUFFLE(0,0,0,0)));
     __m128 a1 = _mm_mul_ps(_mm_load_ps((float*)(matrix+1)), _mm_shuffle_ps(in,in,_MM_SHUFFLE(1,1,1,1)));
     __m128 a2 = _mm_mul_ps(_mm_load_ps((float*)(matrix+2)), _mm_shuffle_ps(in,in,_MM_SHUFFLE(2,2,2,2)));
@@ -221,8 +221,8 @@ void computeSpinImages( const Octree& Octree, const std::vector<Point3f>& points
     float pixelsPerMeter = 1.f / binSize;
     float support = imageWidth * binSize;
 
-    assert(normals.size() == points.size());
-    assert(mask.size() == points.size());
+    CV_Assert(normals.size() == points.size());
+    CV_Assert(mask.size() == points.size());
 
     size_t points_size = points.size();
     mask.resize(points_size);
@@ -250,7 +250,7 @@ void computeSpinImages( const Octree& Octree, const std::vector<Point3f>& points
         if (mask[i] == 0)
             continue;
 
-        int t = cvGetThreadNum();
+        int t = getThreadNum();
         std::vector<Point3f>& pointsInSphere = pointsInSpherePool[t];
 
         const Point3f& center = points[i];
@@ -289,7 +289,7 @@ void computeSpinImages( const Octree& Octree, const std::vector<Point3f>& points
             __m128 ppm4 = _mm_set1_ps(pixelsPerMeter);
             __m128i height4m1 = _mm_set1_epi32(spinImage.rows-1);
             __m128i width4m1 = _mm_set1_epi32(spinImage.cols-1);
-            assert( spinImage.step <= 0xffff );
+            CV_Assert( spinImage.step <= 0xffff );
             __m128i step4 = _mm_set1_epi16((short)step);
             __m128i zero4 = _mm_setzero_si128();
             __m128i one4i = _mm_set1_epi32(1);
@@ -472,7 +472,7 @@ float cv::Mesh3D::estimateResolution(float /*tryRatio*/)
 
     return resolution = (float)dist[ dist.size() / 2 ];
 #else
-    CV_Error(CV_StsNotImplemented, "");
+    CV_Error(Error::StsNotImplemented, "");
     return 1.f;
 #endif
 }
@@ -686,16 +686,15 @@ inline float cv::SpinImageModel::groupingCreteria(const Point3f& pointScene1, co
 }
 
 
-cv::SpinImageModel::SpinImageModel(const Mesh3D& _mesh) : mesh(_mesh) , out(0)
+cv::SpinImageModel::SpinImageModel(const Mesh3D& _mesh) : mesh(_mesh)
 {
      if (mesh.vtx.empty())
          throw Mesh3D::EmptyMeshException();
     defaultParams();
 }
-cv::SpinImageModel::SpinImageModel() : out(0) { defaultParams(); }
-cv::SpinImageModel::~SpinImageModel() {}
 
-void cv::SpinImageModel::setLogger(std::ostream* log) { out = log; }
+cv::SpinImageModel::SpinImageModel() { defaultParams(); }
+cv::SpinImageModel::~SpinImageModel() {}
 
 void cv::SpinImageModel::defaultParams()
 {
@@ -756,7 +755,7 @@ Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount,
     int sz = spins.front().cols;
 
     Mat result((int)(yCount * sz + (yCount - 1)), (int)(xCount * sz + (xCount - 1)), CV_8UC3);
-    result = colors[(static_cast<int64>(cvGetTickCount()/cvGetTickFrequency())/1000) % colors_mum];
+    result = colors[(static_cast<int64>(getTickCount()/getTickFrequency())/1000) % colors_mum];
 
     int pos = 0;
     for(int y = 0; y < (int)yCount; ++y)
@@ -1030,12 +1029,8 @@ private:
         matchSpinToModel(scene.spinImages.row(i), indeces, coeffs);
         for(size_t t = 0; t < indeces.size(); ++t)
             allMatches.push_back(Match(i, indeces[t], coeffs[t]));
-
-        if (out) if (i % 100 == 0) *out << "Comparing scene spinimage " << i << " of " << scene.spinImages.rows << std::endl;
     }
     corr_timer.stop();
-    if (out) *out << "Spin correlation time  = " << corr_timer << std::endl;
-    if (out) *out << "Matches number = " << allMatches.size() << std::endl;
 
     if(allMatches.empty())
         return;
@@ -1046,7 +1041,6 @@ private:
     allMatches.erase(
         remove_if(allMatches.begin(), allMatches.end(), bind2nd(std::less<float>(), maxMeasure * fraction)),
         allMatches.end());
-    if (out) *out << "Matches number [filtered by similarity measure] = " << allMatches.size() << std::endl;
 
     int matchesSize = (int)allMatches.size();
     if(matchesSize == 0)
@@ -1095,14 +1089,11 @@ private:
     allMatches.erase(
       std::remove_if(allMatches.begin(), allMatches.end(), std::bind2nd(std::equal_to<float>(), infinity)),
       allMatches.end());
-    if (out) *out << "Matches number [filtered by geometric consistency] = " << allMatches.size() << std::endl;
 
 
     matchesSize = (int)allMatches.size();
     if(matchesSize == 0)
         return;
-
-    if (out) *out << "grouping ..." << std::endl;
 
     Mat groupingMat((int)matchesSize, (int)matchesSize, CV_32F);
     groupingMat = Scalar(0);
@@ -1151,8 +1142,6 @@ private:
 
     for(int g = 0; g < matchesSize; ++g)
     {
-        if (out) if (g % 100 == 0) *out << "G = " << g << std::endl;
-
         group_t left = allMatchesInds;
         group_t group;
 
@@ -1201,16 +1190,16 @@ private:
 
 cv::TickMeter::TickMeter() { reset(); }
 int64 cv::TickMeter::getTimeTicks() const { return sumTime; }
-double cv::TickMeter::getTimeMicro() const { return (double)getTimeTicks()/cvGetTickFrequency(); }
+double cv::TickMeter::getTimeMicro() const { return (double)getTimeTicks()/getTickFrequency(); }
 double cv::TickMeter::getTimeMilli() const { return getTimeMicro()*1e-3; }
 double cv::TickMeter::getTimeSec()   const { return getTimeMilli()*1e-3; }
 int64 cv::TickMeter::getCounter() const { return counter; }
 void  cv::TickMeter::reset() {startTime = 0; sumTime = 0; counter = 0; }
 
-void cv::TickMeter::start(){ startTime = cvGetTickCount(); }
+void cv::TickMeter::start(){ startTime = getTickCount(); }
 void cv::TickMeter::stop()
 {
-    int64 time = cvGetTickCount();
+    int64 time = getTickCount();
     if ( startTime == 0 )
         return;
 
@@ -1220,4 +1209,4 @@ void cv::TickMeter::stop()
     startTime = 0;
 }
 
-std::ostream& cv::operator<<(std::ostream& out, const TickMeter& tm){ return out << tm.getTimeSec() << "sec"; }
+//std::ostream& cv::operator<<(std::ostream& out, const TickMeter& tm){ return out << tm.getTimeSec() << "sec"; }

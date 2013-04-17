@@ -28,9 +28,7 @@ Let's modify the program made in the tutorial :ref:`Adding_Images`. We will let 
 
 .. code-block:: cpp
 
-   #include <cv.h>
-   #include <highgui.h>
-
+   #include <opencv2/opencv.hpp>
    using namespace cv;
 
    /// Global Variables
@@ -50,41 +48,41 @@ Let's modify the program made in the tutorial :ref:`Adding_Images`. We will let 
     */
    void on_trackbar( int, void* )
    {
-    alpha = (double) alpha_slider/alpha_slider_max ;
-    beta = ( 1.0 - alpha );
+     alpha = (double) alpha_slider/alpha_slider_max ;
+     beta = ( 1.0 - alpha );
 
-    addWeighted( src1, alpha, src2, beta, 0.0, dst);
+     addWeighted( src1, alpha, src2, beta, 0.0, dst);
 
-    imshow( "Linear Blend", dst );
+     imshow( "Linear Blend", dst );
    }
 
    int main( int argc, char** argv )
    {
-    /// Read image ( same size, same type )
-    src1 = imread("../../images/LinuxLogo.jpg");
-    src2 = imread("../../images/WindowsLogo.jpg");
+     /// Read image ( same size, same type )
+     src1 = imread("../../images/LinuxLogo.jpg");
+     src2 = imread("../../images/WindowsLogo.jpg");
 
-    if( !src1.data ) { printf("Error loading src1 \n"); return -1; }
-    if( !src2.data ) { printf("Error loading src2 \n"); return -1; }
+     if( !src1.data ) { printf("Error loading src1 \n"); return -1; }
+     if( !src2.data ) { printf("Error loading src2 \n"); return -1; }
 
-    /// Initialize values
-    alpha_slider = 0;
+     /// Initialize values
+     alpha_slider = 0;
 
-    /// Create Windows
-    namedWindow("Linear Blend", 1);
+     /// Create Windows
+     namedWindow("Linear Blend", 1);
 
-    /// Create Trackbars
-    char TrackbarName[50];
-    sprintf( TrackbarName, "Alpha x %d", alpha_slider_max );
+     /// Create Trackbars
+     char TrackbarName[50];
+     sprintf( TrackbarName, "Alpha x %d", alpha_slider_max );
 
-    createTrackbar( TrackbarName, "Linear Blend", &alpha_slider, alpha_slider_max, on_trackbar );
+     createTrackbar( TrackbarName, "Linear Blend", &alpha_slider, alpha_slider_max, on_trackbar );
 
-    /// Show some stuff
-    on_trackbar( alpha_slider, 0 );
+     /// Show some stuff
+     on_trackbar( alpha_slider, 0 );
 
-    /// Wait until user press some key
-    waitKey(0);
-    return 0;
+     /// Wait until user press some key
+     waitKey(0);
+     return 0;
    }
 
 

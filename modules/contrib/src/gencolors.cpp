@@ -85,7 +85,7 @@ static void downsamplePoints( const Mat& src, Mat& dst, size_t count )
         candidatePointsMask.at<uchar>(0, maxLoc.x) = 0;
 
         Mat minDists;
-        reduce( activedDists, minDists, 0, CV_REDUCE_MIN );
+        reduce( activedDists, minDists, 0, REDUCE_MIN );
         minMaxLoc( minDists, 0, &maxVal, 0, &maxLoc, candidatePointsMask );
         dst.at<Point3_<uchar> >((int)i) = src.at<Point3_<uchar> >(maxLoc.x);
     }
