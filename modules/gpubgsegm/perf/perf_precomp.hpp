@@ -54,8 +54,7 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_perf.hpp"
 
-#include "opencv2/gpuvideo.hpp"
-#include "opencv2/gpuimgproc.hpp"
+#include "opencv2/gpubgsegm.hpp"
 
 #include "opencv2/video.hpp"
 #include "opencv2/legacy.hpp"
