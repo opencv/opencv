@@ -49,8 +49,6 @@ using namespace cv::gpu;
 
 void cv::gpu::meanShiftFiltering(const GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
 void cv::gpu::meanShiftProc(const GpuMat&, GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
-void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::reprojectImageTo3D(const GpuMat&, GpuMat&, const Mat&, int, Stream&) { throw_no_cuda(); }
 void cv::gpu::buildWarpPlaneMaps(Size, Rect, const Mat&, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 void cv::gpu::buildWarpCylindricalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 void cv::gpu::buildWarpSphericalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
@@ -155,74 +153,6 @@ void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int 
     eps = (float)std::max(criteria.epsilon, 0.0);
 
     meanShiftProc_gpu(src, dstr, dstsp, sp, sr, maxIter, eps, StreamAccessor::getStream(stream));
-}
-
-////////////////////////////////////////////////////////////////////////
-// drawColorDisp
-
-namespace cv { namespace gpu { namespace cudev
-{
-    namespace imgproc
-    {
-        void drawColorDisp_gpu(const PtrStepSzb& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream);
-        void drawColorDisp_gpu(const PtrStepSz<short>& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream);
-    }
-}}}
-
-namespace
-{
-    template <typename T>
-    void drawColorDisp_caller(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream)
-    {
-        using namespace ::cv::gpu::cudev::imgproc;
-
-        dst.create(src.size(), CV_8UC4);
-
-        drawColorDisp_gpu((PtrStepSz<T>)src, dst, ndisp, stream);
-    }
-
-    typedef void (*drawColorDisp_caller_t)(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream);
-
-    const drawColorDisp_caller_t drawColorDisp_callers[] = {drawColorDisp_caller<unsigned char>, 0, 0, drawColorDisp_caller<short>, 0, 0, 0, 0};
-}
-
-void cv::gpu::drawColorDisp(const GpuMat& src, GpuMat& dst, int ndisp, Stream& stream)
-{
-    CV_Assert(src.type() == CV_8U || src.type() == CV_16S);
-
-    drawColorDisp_callers[src.type()](src, dst, ndisp, StreamAccessor::getStream(stream));
-}
-
-////////////////////////////////////////////////////////////////////////
-// reprojectImageTo3D
-
-namespace cv { namespace gpu { namespace cudev
-{
-    namespace imgproc
-    {
-        template <typename T, typename D>
-        void reprojectImageTo3D_gpu(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
-    }
-}}}
-
-void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyz, const Mat& Q, int dst_cn, Stream& stream)
-{
-    using namespace cv::gpu::cudev::imgproc;
-
-    typedef void (*func_t)(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
-    static const func_t funcs[2][4] =
-    {
-        {reprojectImageTo3D_gpu<uchar, float3>, 0, 0, reprojectImageTo3D_gpu<short, float3>},
-        {reprojectImageTo3D_gpu<uchar, float4>, 0, 0, reprojectImageTo3D_gpu<short, float4>}
-    };
-
-    CV_Assert(disp.type() == CV_8U || disp.type() == CV_16S);
-    CV_Assert(Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4 && Q.isContinuous());
-    CV_Assert(dst_cn == 3 || dst_cn == 4);
-
-    xyz.create(disp.size(), CV_MAKE_TYPE(CV_32F, dst_cn));
-
-    funcs[dst_cn == 4][disp.type()](disp, xyz, Q.ptr<float>(), StreamAccessor::getStream(stream));
 }
 
 //////////////////////////////////////////////////////////////////////////////
