@@ -855,11 +855,14 @@ static CriticalSection cs;
 
 inline void* fastMalloc(size_t size)
 {
-    void* mem = allocFuncTable[currentIdx](size + 2 * sizeof(size_t) + CV_MALLOC_ALIGN, 
-        userDataTable[currentIdx]);
+    // Don't use currentIdx directly since it may be changed by other threads.
+    volatile int idx = currentIdx;
+
+    void* mem = allocFuncTable[idx](size + 2 * sizeof(size_t) + CV_MALLOC_ALIGN, 
+        userDataTable[idx]);
 
     void** data = alignPtr((void**)mem + 2, CV_MALLOC_ALIGN);
-    ((size_t*)data)[-1] = currentIdx;
+    ((size_t*)data)[-1] = idx;
     data[-2] = mem;
 
     return data;
