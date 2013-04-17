@@ -223,22 +223,6 @@ private:
     CannyBuf cannyBuf_;
 };
 
-//!performs labeling via graph cuts of a 2D regular 4-connected graph.
-CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels,
-                         GpuMat& buf, Stream& stream = Stream::Null());
-
-//!performs labeling via graph cuts of a 2D regular 8-connected graph.
-CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& topLeft, GpuMat& topRight,
-                         GpuMat& bottom, GpuMat& bottomLeft, GpuMat& bottomRight,
-                         GpuMat& labels,
-                         GpuMat& buf, Stream& stream = Stream::Null());
-
-//! compute mask for Generalized Flood fill componetns labeling.
-CV_EXPORTS void connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scalar& lo, const cv::Scalar& hi, Stream& stream = Stream::Null());
-
-//! performs connected componnents labeling.
-CV_EXPORTS void labelComponents(const GpuMat& mask, GpuMat& components, int flags = 0, Stream& stream = Stream::Null());
-
 //! Compute levels with even distribution. levels will have 1 row and nLevels cols and CV_32SC1 type.
 CV_EXPORTS void evenLevels(GpuMat& levels, int nLevels, int lowerLevel, int upperLevel);
 //! Calculates histogram with evenly distributed bins for signle channel source.
