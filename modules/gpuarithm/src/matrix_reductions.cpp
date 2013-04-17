@@ -155,12 +155,12 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev, GpuMat
 double cv::gpu::norm(const GpuMat& src, int normType)
 {
     GpuMat buf;
-    return norm(src, normType, GpuMat(), buf);
+    return gpu::norm(src, normType, GpuMat(), buf);
 }
 
 double cv::gpu::norm(const GpuMat& src, int normType, GpuMat& buf)
 {
-    return norm(src, normType, GpuMat(), buf);
+    return gpu::norm(src, normType, GpuMat(), buf);
 }
 
 double cv::gpu::norm(const GpuMat& src, int normType, const GpuMat& mask, GpuMat& buf)
@@ -171,14 +171,14 @@ double cv::gpu::norm(const GpuMat& src, int normType, const GpuMat& mask, GpuMat
     GpuMat src_single_channel = src.reshape(1);
 
     if (normType == NORM_L1)
-        return absSum(src_single_channel, mask, buf)[0];
+        return gpu::absSum(src_single_channel, mask, buf)[0];
 
     if (normType == NORM_L2)
-        return std::sqrt(sqrSum(src_single_channel, mask, buf)[0]);
+        return std::sqrt(gpu::sqrSum(src_single_channel, mask, buf)[0]);
 
     // NORM_INF
     double min_val, max_val;
-    minMax(src_single_channel, &min_val, &max_val, mask, buf);
+    gpu::minMax(src_single_channel, &min_val, &max_val, mask, buf);
     return std::max(std::abs(min_val), std::abs(max_val));
 }
 
@@ -232,12 +232,12 @@ namespace sum
 Scalar cv::gpu::sum(const GpuMat& src)
 {
     GpuMat buf;
-    return sum(src, GpuMat(), buf);
+    return gpu::sum(src, GpuMat(), buf);
 }
 
 Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf)
 {
-    return sum(src, GpuMat(), buf);
+    return gpu::sum(src, GpuMat(), buf);
 }
 
 Scalar cv::gpu::sum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
@@ -278,12 +278,12 @@ Scalar cv::gpu::sum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
 Scalar cv::gpu::absSum(const GpuMat& src)
 {
     GpuMat buf;
-    return absSum(src, GpuMat(), buf);
+    return gpu::absSum(src, GpuMat(), buf);
 }
 
 Scalar cv::gpu::absSum(const GpuMat& src, GpuMat& buf)
 {
-    return absSum(src, GpuMat(), buf);
+    return gpu::absSum(src, GpuMat(), buf);
 }
 
 Scalar cv::gpu::absSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
@@ -324,12 +324,12 @@ Scalar cv::gpu::absSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
 Scalar cv::gpu::sqrSum(const GpuMat& src)
 {
     GpuMat buf;
-    return sqrSum(src, GpuMat(), buf);
+    return gpu::sqrSum(src, GpuMat(), buf);
 }
 
 Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf)
 {
-    return sqrSum(src, GpuMat(), buf);
+    return gpu::sqrSum(src, GpuMat(), buf);
 }
 
 Scalar cv::gpu::sqrSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
@@ -381,7 +381,7 @@ namespace minMax
 void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask)
 {
     GpuMat buf;
-    minMax(src, minVal, maxVal, mask, buf);
+    gpu::minMax(src, minVal, maxVal, mask, buf);
 }
 
 void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf)
@@ -431,7 +431,7 @@ namespace minMaxLoc
 void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc, const GpuMat& mask)
 {
     GpuMat valBuf, locBuf;
-    minMaxLoc(src, minVal, maxVal, minLoc, maxLoc, mask, valBuf, locBuf);
+    gpu::minMaxLoc(src, minVal, maxVal, minLoc, maxLoc, mask, valBuf, locBuf);
 }
 
 void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,

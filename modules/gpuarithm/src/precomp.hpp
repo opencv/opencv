@@ -45,6 +45,8 @@
 
 #include <limits>
 
+#include "cvconfig.h"
+
 #include "opencv2/gpuarithm.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/core_c.h"

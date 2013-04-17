@@ -43,6 +43,10 @@
 #ifndef __OPENCV_GPUARITHM_HPP__
 #define __OPENCV_GPUARITHM_HPP__
 
+#ifndef __cplusplus
+#  error gpuarithm.hpp header must be compiled as C++
+#endif
+
 #include "opencv2/core/gpumat.hpp"
 
 namespace cv { namespace gpu {
@@ -330,7 +334,6 @@ struct CV_EXPORTS ConvolveBuf
     void create(Size image_size, Size templ_size);
     static Size estimateBlockSize(Size result_size, Size templ_size);
 };
-
 
 //! computes convolution (or cross-correlation) of two images using discrete Fourier transform
 //! supports source images of 32FC1 type only

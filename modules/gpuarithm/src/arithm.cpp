@@ -234,7 +234,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
         {
             if (tr3)
             {
-                transpose(src3, dst, stream);
+                gpu::transpose(src3, dst, stream);
             }
             else
             {
@@ -638,13 +638,13 @@ void cv::gpu::normalize(const GpuMat& src, GpuMat& dst, double a, double b, int 
     {
         double smin = 0, smax = 0;
         double dmin = std::min(a, b), dmax = std::max(a, b);
-        minMax(src, &smin, &smax, mask, norm_buf);
+        gpu::minMax(src, &smin, &smax, mask, norm_buf);
         scale = (dmax - dmin) * (smax - smin > std::numeric_limits<double>::epsilon() ? 1.0 / (smax - smin) : 0.0);
         shift = dmin - smin * scale;
     }
     else if (norm_type == NORM_L2 || norm_type == NORM_L1 || norm_type == NORM_INF)
     {
-        scale = norm(src, norm_type, mask, norm_buf);
+        scale = gpu::norm(src, norm_type, mask, norm_buf);
         scale = scale > std::numeric_limits<double>::epsilon() ? a / scale : 0.0;
         shift = 0;
     }
@@ -779,7 +779,7 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
 void cv::gpu::integral(const GpuMat& src, GpuMat& sum, Stream& s)
 {
     GpuMat buffer;
-    integralBuffered(src, sum, buffer, s);
+    gpu::integralBuffered(src, sum, buffer, s);
 }
 
 namespace cv { namespace gpu { namespace cudev
@@ -891,6 +891,8 @@ void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
 //////////////////////////////////////////////////////////////////////////////
 // mulSpectrums
 
+#ifdef HAVE_CUFFT
+
 namespace cv { namespace gpu { namespace cudev
 {
     void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c, cudaStream_t stream);
@@ -898,9 +900,20 @@ namespace cv { namespace gpu { namespace cudev
     void mulSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c, cudaStream_t stream);
 }}}
 
+#endif
+
 void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB, Stream& stream)
 {
-    (void)flags;
+#ifndef HAVE_CUFFT
+    (void) a;
+    (void) b;
+    (void) c;
+    (void) flags;
+    (void) conjB;
+    (void) stream;
+    throw_no_cuda();
+#else
+    (void) flags;
 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, PtrStepSz<cufftComplex>, cudaStream_t stream);
 
@@ -913,10 +926,13 @@ void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flag
 
     Caller caller = callers[(int)conjB];
     caller(a, b, c, StreamAccessor::getStream(stream));
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // mulAndScaleSpectrums
+
+#ifdef HAVE_CUFFT
 
 namespace cv { namespace gpu { namespace cudev
 {
@@ -925,8 +941,20 @@ namespace cv { namespace gpu { namespace cudev
     void mulAndScaleSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c, cudaStream_t stream);
 }}}
 
+#endif
+
 void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB, Stream& stream)
 {
+#ifndef HAVE_CUFFT
+    (void) a;
+    (void) b;
+    (void) c;
+    (void) flags;
+    (void) scale;
+    (void) conjB;
+    (void) stream;
+    throw_no_cuda();
+#else
     (void)flags;
 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, float scale, PtrStepSz<cufftComplex>, cudaStream_t stream);
@@ -939,6 +967,7 @@ void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, 
 
     Caller caller = callers[(int)conjB];
     caller(a, b, scale, c, StreamAccessor::getStream(stream));
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -947,15 +976,12 @@ void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, 
 void cv::gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags, Stream& stream)
 {
 #ifndef HAVE_CUFFT
-
-    OPENCV_GPU_UNUSED(src);
-    OPENCV_GPU_UNUSED(dst);
-    OPENCV_GPU_UNUSED(dft_size);
-    OPENCV_GPU_UNUSED(flags);
-    OPENCV_GPU_UNUSED(stream);
-
+    (void) src;
+    (void) dst;
+    (void) dft_size;
+    (void) flags;
+    (void) stream;
     throw_no_cuda();
-
 #else
 
     CV_Assert(src.type() == CV_32F || src.type() == CV_32FC2);
@@ -1094,16 +1120,22 @@ Size cv::gpu::ConvolveBuf::estimateBlockSize(Size result_size, Size /*templ_size
 void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr)
 {
     ConvolveBuf buf;
-    convolve(image, templ, result, ccorr, buf);
+    gpu::convolve(image, templ, result, ccorr, buf);
 }
 
 void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream)
 {
-    using namespace ::cv::gpu::cudev::imgproc;
-
 #ifndef HAVE_CUFFT
+    (void) image;
+    (void) templ;
+    (void) result;
+    (void) ccorr;
+    (void) buf;
+    (void) stream;
     throw_no_cuda();
 #else
+    using namespace cv::gpu::cudev::imgproc;
+
     CV_Assert(image.type() == CV_32F);
     CV_Assert(templ.type() == CV_32F);
 
@@ -1129,8 +1161,8 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     cufftSafeCall( cufftSetStream(planC2R, StreamAccessor::getStream(stream)) );
 
     GpuMat templ_roi(templ.size(), CV_32F, templ.data, templ.step);
-    copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
-                   templ_block.cols - templ_roi.cols, 0, Scalar(), stream);
+    gpu::copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
+                        templ_block.cols - templ_roi.cols, 0, Scalar(), stream);
 
     cufftSafeCall(cufftExecR2C(planR2C, templ_block.ptr<cufftReal>(),
                                templ_spect.ptr<cufftComplex>()));
@@ -1144,13 +1176,13 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
                                 std::min(y + dft_size.height, image.rows) - y);
             GpuMat image_roi(image_roi_size, CV_32F, (void*)(image.ptr<float>(y) + x),
                              image.step);
-            copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
-                           0, image_block.cols - image_roi.cols, 0, Scalar(), stream);
+            gpu::copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
+                                0, image_block.cols - image_roi.cols, 0, Scalar(), stream);
 
             cufftSafeCall(cufftExecR2C(planR2C, image_block.ptr<cufftReal>(),
                                        image_spect.ptr<cufftComplex>()));
-            mulAndScaleSpectrums(image_spect, templ_spect, result_spect, 0,
-                                 1.f / dft_size.area(), ccorr, stream);
+            gpu::mulAndScaleSpectrums(image_spect, templ_spect, result_spect, 0,
+                                      1.f / dft_size.area(), ccorr, stream);
             cufftSafeCall(cufftExecC2R(planC2R, result_spect.ptr<cufftComplex>(),
                                        result_data.ptr<cufftReal>()));
 
