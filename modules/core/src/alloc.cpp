@@ -856,32 +856,6 @@ static bool hasSetMemoryPool = false;
 
 static CriticalSection cs;
 
-inline void* fastMalloc(size_t size)
-{
-    // Don't use currentIdx directly since it may be changed by other threads.
-    volatile int idx = currentIdx;
-
-    void* mem = allocFuncTable[idx](size + 2 * sizeof(size_t) + CV_MALLOC_ALIGN, 
-        userDataTable[idx]);
-
-    void** data = alignPtr((void**)mem + 2, CV_MALLOC_ALIGN);
-    ((size_t*)data)[-1] = idx;
-    data[-2] = mem;
-
-    return data;
-}
-
-inline void fastFree(void* ptr)
-{
-    if (ptr == NULL)
-        return;
-
-    void* mem = ((void**)ptr)[-2];
-    size_t idx = ((size_t*)ptr)[-1];
-
-    freeFuncTable[idx](mem, userDataTable[idx]);
-}
-
 inline void addMemoryManager(CvAllocFunc allocFunc, CvFreeFunc freeFunc, void* userData)
 {
     if (allocFunc == NULL && freeFunc == NULL)
@@ -946,6 +920,32 @@ inline void useMemoryPool(size_t blockSize)
     hasSetMemoryPool = true;
     MemPoolAllocator::init(blockSize);
     currentIdx = 1;
+}
+
+void* fastMalloc(size_t size)
+{
+    // Don't use currentIdx directly since it may be changed by other threads.
+    volatile int idx = currentIdx;
+
+    void* mem = allocFuncTable[idx](size + 2 * sizeof(size_t) + CV_MALLOC_ALIGN, 
+        userDataTable[idx]);
+
+    void** data = alignPtr((void**)mem + 2, CV_MALLOC_ALIGN);
+    ((size_t*)data)[-1] = idx;
+    data[-2] = mem;
+
+    return data;
+}
+
+void fastFree(void* ptr)
+{
+    if (ptr == NULL)
+        return;
+
+    void* mem = ((void**)ptr)[-2];
+    size_t idx = ((size_t*)ptr)[-1];
+
+    freeFuncTable[idx](mem, userDataTable[idx]);
 }
 }
 
