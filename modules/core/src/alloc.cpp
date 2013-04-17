@@ -83,13 +83,13 @@ struct CriticalSection
     CRITICAL_SECTION cs;
 };
 
-void* SystemAlloc(size_t size)
+static void* SystemAlloc(size_t size)
 {
     void* ptr = malloc(size);
     return ptr ? ptr : OutOfMemoryError(size);
 }
 
-void SystemFree(void* ptr, size_t)
+static void SystemFree(void* ptr, size_t)
 {
     free(ptr);
 }
@@ -109,7 +109,7 @@ struct CriticalSection
     pthread_mutex_t mutex;
 };
 
-void* SystemAlloc(size_t size)
+static void* SystemAlloc(size_t size)
 {
 #ifndef MAP_ANONYMOUS
 #define MAP_ANONYMOUS MAP_ANON
@@ -119,7 +119,7 @@ void* SystemAlloc(size_t size)
     return ptr != MAP_FAILED ? ptr : OutOfMemoryError(size);
 }
 
-void SystemFree(void* ptr, size_t size)
+static void SystemFree(void* ptr, size_t size)
 {
     munmap(ptr, size);
 }
@@ -137,7 +137,7 @@ struct FastLock
 
 struct NaiveAllocator
 {
-    static void* allocate(size_t size, void* userdata = NULL)
+    static void* allocate(size_t size, void* = NULL)
     {
         uchar* udata = (uchar*)malloc(size + sizeof(void*) + CV_MALLOC_ALIGN);
         if(!udata)
@@ -147,7 +147,7 @@ struct NaiveAllocator
         return adata;
     }
 
-    static int deallocate(void* ptr, void* userdata = NULL)
+    static int deallocate(void* ptr, void* = NULL)
     {
         if (ptr)
         {
@@ -543,7 +543,7 @@ struct ThreadData
         delete (ThreadData*)data;
     }
 
-    static ThreadData* get()
+    static ThreadData* get(BlockPool* _blockPool)
     {
         ThreadData* data;
         if (!tlsKey)
@@ -551,7 +551,7 @@ struct ThreadData
         data = (ThreadData*)pthread_getspecific(tlsKey);
         if (!data)
         {
-            data = new ThreadData;
+            data = new ThreadData(_blockPool);
             pthread_setspecific(tlsKey, data);
         }
         return data;
@@ -626,7 +626,7 @@ struct MemPoolAllocator
     static size_t userDefinedBlockSize;
     static BlockPool blockPool;
 
-    static void* allocate(size_t size, void* userdata = NULL)
+    static void* allocate(size_t size, void* = NULL)
     {
         if (size > Block::maxBlockSize)
         {
@@ -742,7 +742,7 @@ struct MemPoolAllocator
         }
     }
 
-    static int deallocate(void* ptr, void* userdata = NULL)
+    static int deallocate(void* ptr, void* = NULL)
     {
         if (((size_t)ptr & (Block::memBlockSize - 1)) == 0)
         {
