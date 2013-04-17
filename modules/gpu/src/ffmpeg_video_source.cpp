@@ -108,7 +108,7 @@ cv::gpu::detail::FFmpegVideoSource::FFmpegVideoSource(const String& fname) :
 
     stream_ = create_InputMediaStream_FFMPEG_p(fname.c_str(), &codec, &chroma_format, &width, &height);
     if (!stream_)
-        CV_Error(CV_StsUnsupportedFormat, "Unsupported video source");
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported video source");
 
     format_.codec = static_cast<VideoReader_GPU::Codec>(codec);
     format_.chromaFormat = static_cast<VideoReader_GPU::ChromaFormat>(chroma_format);

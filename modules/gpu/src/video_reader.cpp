@@ -217,7 +217,7 @@ namespace
 bool cv::gpu::VideoReader_GPU::Impl::grab(GpuMat& frame)
 {
     if (videoSource_->hasError() || videoParser_->hasError())
-        CV_Error(CV_StsUnsupportedFormat, "Unsupported video source");
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported video source");
 
     if (!videoSource_->isStarted() || frameQueue_->isEndOfDecode())
         return false;
@@ -232,7 +232,7 @@ bool cv::gpu::VideoReader_GPU::Impl::grab(GpuMat& frame)
                 break;
 
             if (videoSource_->hasError() || videoParser_->hasError())
-                CV_Error(CV_StsUnsupportedFormat, "Unsupported video source");
+                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported video source");
 
             if (frameQueue_->isEndOfDecode())
                 return false;

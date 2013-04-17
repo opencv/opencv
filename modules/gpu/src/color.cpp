@@ -1854,7 +1854,7 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
     func_t func = funcs[code];
 
     if (func == 0)
-        CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+        CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" );
 
     func(src, dst, dcn, stream);
 }
@@ -1867,12 +1867,12 @@ void cv::gpu::demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn, Str
 
     switch (code)
     {
-    case CV_BayerBG2GRAY: case CV_BayerGB2GRAY: case CV_BayerRG2GRAY: case CV_BayerGR2GRAY:
-        bayer_to_gray(src, dst, code == CV_BayerBG2GRAY || code == CV_BayerGB2GRAY, code == CV_BayerGB2GRAY || code == CV_BayerGR2GRAY, stream);
+    case cv::COLOR_BayerBG2GRAY: case cv::COLOR_BayerGB2GRAY: case cv::COLOR_BayerRG2GRAY: case cv::COLOR_BayerGR2GRAY:
+        bayer_to_gray(src, dst, code == cv::COLOR_BayerBG2GRAY || code == cv::COLOR_BayerGB2GRAY, code == cv::COLOR_BayerGB2GRAY || code == cv::COLOR_BayerGR2GRAY, stream);
         break;
 
-    case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
-        bayer_to_bgr(src, dst, dcn, code == CV_BayerBG2BGR || code == CV_BayerGB2BGR, code == CV_BayerGB2BGR || code == CV_BayerGR2BGR, stream);
+    case cv::COLOR_BayerBG2BGR: case cv::COLOR_BayerGB2BGR: case cv::COLOR_BayerRG2BGR: case cv::COLOR_BayerGR2BGR:
+        bayer_to_bgr(src, dst, dcn, code == cv::COLOR_BayerBG2BGR || code == cv::COLOR_BayerGB2BGR, code == cv::COLOR_BayerGB2BGR || code == cv::COLOR_BayerGR2BGR, stream);
         break;
 
     case COLOR_BayerBG2BGR_MHT: case COLOR_BayerGB2BGR_MHT: case COLOR_BayerRG2BGR_MHT: case COLOR_BayerGR2BGR_MHT:
@@ -1923,7 +1923,7 @@ void cv::gpu::demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn, Str
     }
 
     default:
-        CV_Error( CV_StsBadFlag, "Unknown / unsupported color conversion code" );
+        CV_Error( cv::Error::StsBadFlag, "Unknown / unsupported color conversion code" );
     }
 }
 
@@ -1952,7 +1952,7 @@ void cv::gpu::gammaCorrection(const GpuMat& src, GpuMat& dst, bool forward, Stre
     (void)dst;
     (void)forward;
     (void)stream;
-    CV_Error( CV_StsNotImplemented, "This function works only with CUDA 5.0 or higher" );
+    CV_Error( cv::Error::StsNotImplemented, "This function works only with CUDA 5.0 or higher" );
 #else
     typedef NppStatus (*func_t)(const Npp8u* pSrc, int nSrcStep, Npp8u* pDst, int nDstStep, NppiSize oSizeROI);
     typedef NppStatus (*func_inplace_t)(Npp8u* pSrcDst, int nSrcDstStep, NppiSize oSizeROI);
