@@ -78,7 +78,7 @@ namespace
         if (depth == CV_64F)
         {
             if (!deviceSupports(NATIVE_DOUBLE))
-                CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+                CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
         }
 
         bool single_channel_only = true;
@@ -122,7 +122,7 @@ namespace
         if (depth == CV_64F)
         {
             if (!deviceSupports(NATIVE_DOUBLE))
-                CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+                CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
         }
 
         if (num_channels == 1)

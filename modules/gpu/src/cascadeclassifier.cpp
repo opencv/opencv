@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include <vector>
 #include <iostream>
+#include "opencv2/objdetect/objdetect_c.h"
 
 using namespace cv;
 using namespace cv::gpu;
@@ -169,7 +170,7 @@ public:
     cv::Size getClassifierCvSize() const { return cv::Size(haar.ClassifierSize.width, haar.ClassifierSize.height); }
 
 private:
-    static void NCVDebugOutputHandler(const String &msg) { CV_Error(CV_GpuApiCallError, msg.c_str()); }
+    static void NCVDebugOutputHandler(const String &msg) { CV_Error(cv::Error::GpuApiCallError, msg.c_str()); }
 
     NCVStatus load(const String& classifierFile)
     {
@@ -425,7 +426,7 @@ public:
                 GpuMat buff = integralBuffer;
 
                 // generate integral for scale
-                gpu::resize(image, src, level.sFrame, 0, 0, CV_INTER_LINEAR);
+                gpu::resize(image, src, level.sFrame, 0, 0, cv::INTER_LINEAR);
                 gpu::integralBuffered(src, sint, buff);
 
                 // calculate job

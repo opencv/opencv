@@ -634,27 +634,27 @@ void cv::gpu::morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& ke
         erode(src, buf2, kernel, buf1, anchor, iterations, stream);
         dilate(buf2, dst, kernel, buf1, anchor, iterations, stream);
         break;
-    case CV_MOP_CLOSE:
+    case MORPH_CLOSE:
         dilate(src, buf2, kernel, buf1, anchor, iterations, stream);
         erode(buf2, dst, kernel, buf1, anchor, iterations, stream);
         break;
-    case CV_MOP_GRADIENT:
+    case MORPH_GRADIENT:
         erode(src, buf2, kernel, buf1, anchor, iterations, stream);
         dilate(src, dst, kernel, buf1, anchor, iterations, stream);
         subtract(dst, buf2, dst, GpuMat(), -1, stream);
         break;
-    case CV_MOP_TOPHAT:
+    case MORPH_TOPHAT:
         erode(src, dst, kernel, buf1, anchor, iterations, stream);
         dilate(dst, buf2, kernel, buf1, anchor, iterations, stream);
         subtract(src, buf2, dst, GpuMat(), -1, stream);
         break;
-    case CV_MOP_BLACKHAT:
+    case MORPH_BLACKHAT:
         dilate(src, dst, kernel, buf1, anchor, iterations, stream);
         erode(dst, buf2, kernel, buf1, anchor, iterations, stream);
         subtract(buf2, src, dst, GpuMat(), -1, stream);
         break;
     default:
-        CV_Error(CV_StsBadArg, "unknown morphological operation");
+        CV_Error(cv::Error::StsBadArg, "unknown morphological operation");
     }
 }
 
@@ -985,7 +985,7 @@ namespace
             DeviceInfo devInfo;
             int cc = devInfo.majorVersion() * 10 + devInfo.minorVersion();
             if (ksize > 16 && cc < 20)
-                CV_Error(CV_StsNotImplemented, "column linear filter doesn't implemented for kernel size > 16 for device with compute capabilities less than 2.0");
+                CV_Error(cv::Error::StsNotImplemented, "column linear filter doesn't implemented for kernel size > 16 for device with compute capabilities less than 2.0");
 
             func(src, dst, kernel.ptr<float>(), ksize, anchor, brd_type, cc, StreamAccessor::getStream(s));
         }
