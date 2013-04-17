@@ -616,12 +616,14 @@ struct MemPoolAllocator
             return;
         }
 
+        userDefinedBlockSize = blockSize;
         blockPool.clear();
         size_t memBlockSize = align(blockSize + Block::HDR_SIZE);
         Block::initBlockSize(memBlockSize);
         BigBlock::bigBlockSize = memBlockSize << 2;
     };
 
+    static size_t userDefinedBlockSize;
     static BlockPool blockPool;
 
     static void* allocate(size_t size, void* userdata = NULL)
@@ -838,6 +840,7 @@ struct MemPoolAllocator
         return 0;
     }
 };
+size_t MemPoolAllocator::userDefinedBlockSize = 0;
 BlockPool MemPoolAllocator::blockPool;
 
 /////////////////////////// Alloc/Free Strategy Management ///////////////////////////
@@ -928,9 +931,15 @@ inline void useMemoryPool(size_t blockSize)
 {
     FastLock lock(cs);
 
+    if (blockSize > 0 && blockSize == MemPoolAllocator::userDefinedBlockSize)
+    {
+        currentIdx = 1;
+        return;
+    }
+
     if (hasSetMemoryPool)
     {
-        CV_Error(-1, "Turning on the memory pool more than one time is not supported.");
+        CV_Error(-1, "Turning on the memory pool with different blockSizes is not supported.");
         return;
     }
 
