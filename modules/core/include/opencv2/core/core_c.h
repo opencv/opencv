@@ -1510,7 +1510,7 @@ typedef int (CV_CDECL *CvFreeFunc)(void* pptr, void* userdata);
 CVAPI(void) cvTurnOnMemoryPool(size_t blockSize CV_DEFAULT(16256));
 
 /* Use system malloc/free to allocate and deallocate objects. */
-CVAPI(void) cvTurnOffMemoryPool();
+CVAPI(void) cvTurnOffMemoryPool(void);
 
 /* 
   Set user-defined memory management functions (substitutors for malloc and free) that 
@@ -1521,7 +1521,7 @@ CVAPI(void) cvSetMemoryManager(CvAllocFunc alloc_func CV_DEFAULT(NULL),
                                void* userdata CV_DEFAULT(NULL));
 
 /* Use system malloc/free to allocate and deallocate objects. */
-CVAPI(void) cvRemoveMemoryManager();
+CVAPI(void) cvRemoveMemoryManager(void);
 
 typedef IplImage* (CV_STDCALL* Cv_iplCreateImageHeader)
                             (int,int,int,char*,char*,int,int,int,int,int,
