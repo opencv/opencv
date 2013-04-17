@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Jiang Liyuan, jlyuan001.good@163.com
+//    Peng Xiao,    pengxiao@outlook.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -50,14 +51,20 @@
 #endif
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////BITWISE_OR////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-/**************************************bitwise_or without mask**************************************/
-__kernel void arithm_bitwise_or_D0 (__global uchar *src1, int src1_step, int src1_offset,
-                                    __global uchar *src2, int src2_step, int src2_offset,
-                                    __global uchar *dst,  int dst_step,  int dst_offset,
-                                    int rows, int cols, int dst_step1)
+//bitwise_binary without mask for and, or, xor operators
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////bitwise_binary///////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#ifndef OP_BINARY
+#define OP_BINARY &
+#endif
+
+__kernel void arithm_bitwise_binary_D0 (__global uchar *src1, int src1_step, int src1_offset,
+                                     __global uchar *src2, int src2_step, int src2_offset,
+                                     __global uchar *dst,  int dst_step,  int dst_offset,
+                                     int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -80,6 +87,7 @@ __kernel void arithm_bitwise_or_D0 (__global uchar *src1, int src1_step, int src
         int src2_index_fix = src2_index < 0 ? 0 : src2_index;
         uchar4 src1_data = vload4(0, src1 + src1_index_fix);
         uchar4 src2_data = vload4(0, src2 + src2_index_fix);
+
         if(src1_index < 0)
         {
             uchar4 tmp;
@@ -92,8 +100,9 @@ __kernel void arithm_bitwise_or_D0 (__global uchar *src1, int src1_step, int src
             tmp.xyzw = (src2_index == -2) ? src2_data.zwxy:src2_data.yzwx;
             src2_data.xyzw = (src2_index == -1) ? src2_data.wxyz:tmp.xyzw;
         }
+
         uchar4 dst_data = *((__global uchar4 *)(dst + dst_index));
-        uchar4 tmp_data = src1_data | src2_data;
+        uchar4 tmp_data = src1_data OP_BINARY src2_data;
 
         dst_data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : dst_data.x;
         dst_data.y = ((dst_index + 1 >= dst_start) && (dst_index + 1 < dst_end)) ? tmp_data.y : dst_data.y;
@@ -105,10 +114,10 @@ __kernel void arithm_bitwise_or_D0 (__global uchar *src1, int src1_step, int src
 }
 
 
-__kernel void arithm_bitwise_or_D1 (__global char *src1, int src1_step, int src1_offset,
-                                    __global char *src2, int src2_step, int src2_offset,
-                                    __global char *dst,  int dst_step,  int dst_offset,
-                                    int rows, int cols, int dst_step1)
+__kernel void arithm_bitwise_binary_D1 (__global char *src1, int src1_step, int src1_offset,
+                                     __global char *src2, int src2_step, int src2_offset,
+                                     __global char *dst,  int dst_step,  int dst_offset,
+                                     int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -128,11 +137,25 @@ __kernel void arithm_bitwise_or_D1 (__global char *src1, int src1_step, int src1
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + x & (int)0xfffffffc);
 
-        char4 src1_data = vload4(0, src1 + src1_index);
-        char4 src2_data = vload4(0, src2 + src2_index);
+        int src1_index_fix = src1_index < 0 ? 0 : src1_index;
+        int src2_index_fix = src2_index < 0 ? 0 : src2_index;
+        char4 src1_data = vload4(0, src1 + src1_index_fix);
+        char4 src2_data = vload4(0, src2 + src2_index_fix);
 
+        if(src1_index < 0)
+        {
+            char4 tmp;
+            tmp.xyzw = (src1_index == -2) ? src1_data.zwxy:src1_data.yzwx;
+            src1_data.xyzw = (src1_index == -1) ? src1_data.wxyz:tmp.xyzw;
+        }
+        if(src2_index < 0)
+        {
+            char4 tmp;
+            tmp.xyzw = (src2_index == -2) ? src2_data.zwxy:src2_data.yzwx;
+            src2_data.xyzw = (src2_index == -1) ? src2_data.wxyz:tmp.xyzw;
+        }
         char4 dst_data = *((__global char4 *)(dst + dst_index));
-        char4 tmp_data = src1_data | src2_data;
+        char4 tmp_data = src1_data OP_BINARY src2_data;
 
         dst_data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : dst_data.x;
         dst_data.y = ((dst_index + 1 >= dst_start) && (dst_index + 1 < dst_end)) ? tmp_data.y : dst_data.y;
@@ -144,10 +167,10 @@ __kernel void arithm_bitwise_or_D1 (__global char *src1, int src1_step, int src1
 }
 
 
-__kernel void arithm_bitwise_or_D2 (__global ushort *src1, int src1_step, int src1_offset,
-                                    __global ushort *src2, int src2_step, int src2_offset,
-                                    __global ushort *dst,  int dst_step,  int dst_offset,
-                                    int rows, int cols, int dst_step1)
+__kernel void arithm_bitwise_binary_D2 (__global ushort *src1, int src1_step, int src1_offset,
+                                     __global ushort *src2, int src2_step, int src2_offset,
+                                     __global ushort *dst,  int dst_step,  int dst_offset,
+                                     int rows, int cols, int dst_step1)
 
 {
     int x = get_global_id(0);
@@ -168,11 +191,25 @@ __kernel void arithm_bitwise_or_D2 (__global ushort *src1, int src1_step, int sr
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + (x << 1) & (int)0xfffffff8);
 
-        ushort4 src1_data = vload4(0, (__global ushort *)((__global char *)src1 + src1_index));
-        ushort4 src2_data = vload4(0, (__global ushort *)((__global char *)src2 + src2_index));
+        int src1_index_fix = src1_index < 0 ? 0 : src1_index;
+        int src2_index_fix = src2_index < 0 ? 0 : src2_index;
+        ushort4 src1_data = vload4(0, (__global ushort *)((__global char *)src1 + src1_index_fix));
+        ushort4 src2_data = vload4(0, (__global ushort *)((__global char *)src2 + src2_index_fix));
 
+        if(src1_index < 0)
+        {
+            ushort4 tmp;
+            tmp.xyzw = (src1_index == -2) ? src1_data.zwxy:src1_data.yzwx;
+            src1_data.xyzw = (src1_index == -1) ? src1_data.wxyz:tmp.xyzw;
+        }
+        if(src2_index < 0)
+        {
+            ushort4 tmp;
+            tmp.xyzw = (src2_index == -2) ? src2_data.zwxy:src2_data.yzwx;
+            src2_data.xyzw = (src2_index == -1) ? src2_data.wxyz:tmp.xyzw;
+        }
         ushort4 dst_data = *((__global ushort4 *)((__global char *)dst + dst_index));
-        ushort4 tmp_data = src1_data | src2_data;
+        ushort4 tmp_data = src1_data OP_BINARY src2_data;
 
         dst_data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : dst_data.x;
         dst_data.y = ((dst_index + 2 >= dst_start) && (dst_index + 2 < dst_end)) ? tmp_data.y : dst_data.y;
@@ -185,10 +222,10 @@ __kernel void arithm_bitwise_or_D2 (__global ushort *src1, int src1_step, int sr
 
 
 
-__kernel void arithm_bitwise_or_D3 (__global short *src1, int src1_step, int src1_offset,
-                                    __global short *src2, int src2_step, int src2_offset,
-                                    __global short *dst,  int dst_step,  int dst_offset,
-                                    int rows, int cols, int dst_step1)
+__kernel void arithm_bitwise_binary_D3 (__global short *src1, int src1_step, int src1_offset,
+                                     __global short *src2, int src2_step, int src2_offset,
+                                     __global short *dst,  int dst_step,  int dst_offset,
+                                     int rows, int cols, int dst_step1)
 
 {
     int x = get_global_id(0);
@@ -209,11 +246,25 @@ __kernel void arithm_bitwise_or_D3 (__global short *src1, int src1_step, int src
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + (x << 1) & (int)0xfffffff8);
 
-        short4 src1_data = vload4(0, (__global short *)((__global char *)src1 + src1_index));
-        short4 src2_data = vload4(0, (__global short *)((__global char *)src2 + src2_index));
+        int src1_index_fix = src1_index < 0 ? 0 : src1_index;
+        int src2_index_fix = src2_index < 0 ? 0 : src2_index;
+        short4 src1_data = vload4(0, (__global short *)((__global char *)src1 + src1_index_fix));
+        short4 src2_data = vload4(0, (__global short *)((__global char *)src2 + src2_index_fix));
 
+        if(src1_index < 0)
+        {
+            short4 tmp;
+            tmp.xyzw = (src1_index == -2) ? src1_data.zwxy:src1_data.yzwx;
+            src1_data.xyzw = (src1_index == -1) ? src1_data.wxyz:tmp.xyzw;
+        }
+        if(src2_index < 0)
+        {
+            short4 tmp;
+            tmp.xyzw = (src2_index == -2) ? src2_data.zwxy:src2_data.yzwx;
+            src2_data.xyzw = (src2_index == -1) ? src2_data.wxyz:tmp.xyzw;
+        }
         short4 dst_data = *((__global short4 *)((__global char *)dst + dst_index));
-        short4 tmp_data = src1_data | src2_data;
+        short4 tmp_data = src1_data OP_BINARY src2_data;
 
         dst_data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : dst_data.x;
         dst_data.y = ((dst_index + 2 >= dst_start) && (dst_index + 2 < dst_end)) ? tmp_data.y : dst_data.y;
@@ -226,10 +277,10 @@ __kernel void arithm_bitwise_or_D3 (__global short *src1, int src1_step, int src
 
 
 
-__kernel void arithm_bitwise_or_D4 (__global int *src1, int src1_step, int src1_offset,
-                                    __global int *src2, int src2_step, int src2_offset,
-                                    __global int *dst,  int dst_step,  int dst_offset,
-                                    int rows, int cols, int dst_step1)
+__kernel void arithm_bitwise_binary_D4 (__global int *src1, int src1_step, int src1_offset,
+                                     __global int *src2, int src2_step, int src2_offset,
+                                     __global int *dst,  int dst_step,  int dst_offset,
+                                     int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -242,16 +293,16 @@ __kernel void arithm_bitwise_or_D4 (__global int *src1, int src1_step, int src1_
 
         int data1 = *((__global int *)((__global char *)src1 + src1_index));
         int data2 = *((__global int *)((__global char *)src2 + src2_index));
-        int tmp  = data1 | data2;
+        int tmp  = data1 OP_BINARY data2;
 
         *((__global int *)((__global char *)dst + dst_index)) = tmp;
     }
 }
 
-__kernel void arithm_bitwise_or_D5 (__global char *src1, int src1_step, int src1_offset,
-                                    __global char *src2, int src2_step, int src2_offset,
-                                    __global char *dst,  int dst_step,  int dst_offset,
-                                    int rows, int cols, int dst_step1)
+__kernel void arithm_bitwise_binary_D5 (__global char *src1, int src1_step, int src1_offset,
+                                     __global char *src2, int src2_step, int src2_offset,
+                                     __global char *dst,  int dst_step,  int dst_offset,
+                                     int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -264,17 +315,17 @@ __kernel void arithm_bitwise_or_D5 (__global char *src1, int src1_step, int src1
 
         char4 data1 = *((__global char4 *)((__global char *)src1 + src1_index));
         char4 data2 = *((__global char4 *)((__global char *)src2 + src2_index));
-        char4 tmp = data1 | data2;
+        char4 tmp = data1 OP_BINARY data2;
 
         *((__global char4 *)((__global char *)dst + dst_index)) = tmp;
     }
 }
 
 #if defined (DOUBLE_SUPPORT)
-__kernel void arithm_bitwise_or_D6 (__global char *src1, int src1_step, int src1_offset,
-                                    __global char *src2, int src2_step, int src2_offset,
-                                    __global char *dst,  int dst_step,  int dst_offset,
-                                    int rows, int cols, int dst_step1)
+__kernel void arithm_bitwise_binary_D6 (__global char *src1, int src1_step, int src1_offset,
+                                     __global char *src2, int src2_step, int src2_offset,
+                                     __global char *dst,  int dst_step,  int dst_offset,
+                                     int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -288,7 +339,7 @@ __kernel void arithm_bitwise_or_D6 (__global char *src1, int src1_step, int src1
         char8 data1 = *((__global char8 *)((__global char *)src1 + src1_index));
         char8 data2 = *((__global char8 *)((__global char *)src2 + src2_index));
 
-        *((__global char8 *)((__global char *)dst + dst_index)) = data1 | data2;
+        *((__global char8 *)((__global char *)dst + dst_index)) = data1 OP_BINARY data2;
     }
 }
 #endif
