@@ -41,6 +41,7 @@
 //M*/
 
 #include "perf_precomp.hpp"
+#include "opencv2/legacy.hpp"
 
 using namespace std;
 using namespace testing;

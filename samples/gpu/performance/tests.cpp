@@ -1,10 +1,11 @@
 #include <stdexcept>
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/video/video.hpp"
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/legacy/legacy.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/video.hpp"
+#include "opencv2/gpu.hpp"
+
+#include "opencv2/legacy.hpp"
 #include "performance.h"
 
 #include "opencv2/opencv_modules.hpp"
@@ -21,7 +22,7 @@ static void InitMatchTemplate()
     Mat src; gen(src, 500, 500, CV_32F, 0, 1);
     Mat templ; gen(templ, 500, 500, CV_32F, 0, 1);
     gpu::GpuMat d_src(src), d_templ(templ), d_dst;
-    gpu::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
+    gpu::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
 }
 
 
@@ -39,17 +40,17 @@ TEST(matchTemplate)
         SUBTEST << src.cols << 'x' << src.rows << ", 32FC1" << ", templ " << templ_size << 'x' << templ_size << ", CCORR";
 
         gen(templ, templ_size, templ_size, CV_32F, 0, 1);
-        matchTemplate(src, templ, dst, CV_TM_CCORR);
+        matchTemplate(src, templ, dst, TM_CCORR);
 
         CPU_ON;
-        matchTemplate(src, templ, dst, CV_TM_CCORR);
+        matchTemplate(src, templ, dst, TM_CCORR);
         CPU_OFF;
 
         d_templ.upload(templ);
-        gpu::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
+        gpu::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
 
         GPU_ON;
-        gpu::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
+        gpu::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
         GPU_OFF;
     }
 }
@@ -604,120 +605,120 @@ TEST(cvtColor)
     gen(src, 4000, 4000, CV_8UC1, 0, 255);
     d_src.upload(src);
 
-    SUBTEST << "4000x4000, 8UC1, CV_GRAY2BGRA";
+    SUBTEST << "4000x4000, 8UC1, COLOR_GRAY2BGRA";
 
-    cvtColor(src, dst, CV_GRAY2BGRA, 4);
+    cvtColor(src, dst, COLOR_GRAY2BGRA, 4);
 
     CPU_ON;
-    cvtColor(src, dst, CV_GRAY2BGRA, 4);
+    cvtColor(src, dst, COLOR_GRAY2BGRA, 4);
     CPU_OFF;
 
-    gpu::cvtColor(d_src, d_dst, CV_GRAY2BGRA, 4);
+    gpu::cvtColor(d_src, d_dst, COLOR_GRAY2BGRA, 4);
 
     GPU_ON;
-    gpu::cvtColor(d_src, d_dst, CV_GRAY2BGRA, 4);
+    gpu::cvtColor(d_src, d_dst, COLOR_GRAY2BGRA, 4);
     GPU_OFF;
 
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
-    SUBTEST << "4000x4000, 8UC3 vs 8UC4, CV_BGR2YCrCb";
+    SUBTEST << "4000x4000, 8UC3 vs 8UC4, COLOR_BGR2YCrCb";
 
-    cvtColor(src, dst, CV_BGR2YCrCb);
+    cvtColor(src, dst, COLOR_BGR2YCrCb);
 
     CPU_ON;
-    cvtColor(src, dst, CV_BGR2YCrCb);
+    cvtColor(src, dst, COLOR_BGR2YCrCb);
     CPU_OFF;
 
-    gpu::cvtColor(d_src, d_dst, CV_BGR2YCrCb, 4);
+    gpu::cvtColor(d_src, d_dst, COLOR_BGR2YCrCb, 4);
 
     GPU_ON;
-    gpu::cvtColor(d_src, d_dst, CV_BGR2YCrCb, 4);
+    gpu::cvtColor(d_src, d_dst, COLOR_BGR2YCrCb, 4);
     GPU_OFF;
 
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
-    SUBTEST << "4000x4000, 8UC4, CV_YCrCb2BGR";
+    SUBTEST << "4000x4000, 8UC4, COLOR_YCrCb2BGR";
 
-    cvtColor(src, dst, CV_YCrCb2BGR, 4);
+    cvtColor(src, dst, COLOR_YCrCb2BGR, 4);
 
     CPU_ON;
-    cvtColor(src, dst, CV_YCrCb2BGR, 4);
+    cvtColor(src, dst, COLOR_YCrCb2BGR, 4);
     CPU_OFF;
 
-    gpu::cvtColor(d_src, d_dst, CV_YCrCb2BGR, 4);
+    gpu::cvtColor(d_src, d_dst, COLOR_YCrCb2BGR, 4);
 
     GPU_ON;
-    gpu::cvtColor(d_src, d_dst, CV_YCrCb2BGR, 4);
+    gpu::cvtColor(d_src, d_dst, COLOR_YCrCb2BGR, 4);
     GPU_OFF;
 
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
-    SUBTEST << "4000x4000, 8UC3 vs 8UC4, CV_BGR2XYZ";
+    SUBTEST << "4000x4000, 8UC3 vs 8UC4, COLOR_BGR2XYZ";
 
-    cvtColor(src, dst, CV_BGR2XYZ);
+    cvtColor(src, dst, COLOR_BGR2XYZ);
 
     CPU_ON;
-    cvtColor(src, dst, CV_BGR2XYZ);
+    cvtColor(src, dst, COLOR_BGR2XYZ);
     CPU_OFF;
 
-    gpu::cvtColor(d_src, d_dst, CV_BGR2XYZ, 4);
+    gpu::cvtColor(d_src, d_dst, COLOR_BGR2XYZ, 4);
 
     GPU_ON;
-    gpu::cvtColor(d_src, d_dst, CV_BGR2XYZ, 4);
+    gpu::cvtColor(d_src, d_dst, COLOR_BGR2XYZ, 4);
     GPU_OFF;
 
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
-    SUBTEST << "4000x4000, 8UC4, CV_XYZ2BGR";
+    SUBTEST << "4000x4000, 8UC4, COLOR_XYZ2BGR";
 
-    cvtColor(src, dst, CV_XYZ2BGR, 4);
+    cvtColor(src, dst, COLOR_XYZ2BGR, 4);
 
     CPU_ON;
-    cvtColor(src, dst, CV_XYZ2BGR, 4);
+    cvtColor(src, dst, COLOR_XYZ2BGR, 4);
     CPU_OFF;
 
-    gpu::cvtColor(d_src, d_dst, CV_XYZ2BGR, 4);
+    gpu::cvtColor(d_src, d_dst, COLOR_XYZ2BGR, 4);
 
     GPU_ON;
-    gpu::cvtColor(d_src, d_dst, CV_XYZ2BGR, 4);
+    gpu::cvtColor(d_src, d_dst, COLOR_XYZ2BGR, 4);
     GPU_OFF;
 
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
-    SUBTEST << "4000x4000, 8UC3 vs 8UC4, CV_BGR2HSV";
+    SUBTEST << "4000x4000, 8UC3 vs 8UC4, COLOR_BGR2HSV";
 
-    cvtColor(src, dst, CV_BGR2HSV);
+    cvtColor(src, dst, COLOR_BGR2HSV);
 
     CPU_ON;
-    cvtColor(src, dst, CV_BGR2HSV);
+    cvtColor(src, dst, COLOR_BGR2HSV);
     CPU_OFF;
 
-    gpu::cvtColor(d_src, d_dst, CV_BGR2HSV, 4);
+    gpu::cvtColor(d_src, d_dst, COLOR_BGR2HSV, 4);
 
     GPU_ON;
-    gpu::cvtColor(d_src, d_dst, CV_BGR2HSV, 4);
+    gpu::cvtColor(d_src, d_dst, COLOR_BGR2HSV, 4);
     GPU_OFF;
 
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
-    SUBTEST << "4000x4000, 8UC4, CV_HSV2BGR";
+    SUBTEST << "4000x4000, 8UC4, COLOR_HSV2BGR";
 
-    cvtColor(src, dst, CV_HSV2BGR, 4);
+    cvtColor(src, dst, COLOR_HSV2BGR, 4);
 
     CPU_ON;
-    cvtColor(src, dst, CV_HSV2BGR, 4);
+    cvtColor(src, dst, COLOR_HSV2BGR, 4);
     CPU_OFF;
 
-    gpu::cvtColor(d_src, d_dst, CV_HSV2BGR, 4);
+    gpu::cvtColor(d_src, d_dst, COLOR_HSV2BGR, 4);
 
     GPU_ON;
-    gpu::cvtColor(d_src, d_dst, CV_HSV2BGR, 4);
+    gpu::cvtColor(d_src, d_dst, COLOR_HSV2BGR, 4);
     GPU_OFF;
 
     cv::swap(src, dst);
@@ -1093,30 +1094,30 @@ TEST(reduce)
 
         SUBTEST << size << 'x' << size << ", dim = 0";
 
-        reduce(src, dst0, 0, CV_REDUCE_MIN);
+        reduce(src, dst0, 0, REDUCE_MIN);
 
         CPU_ON;
-        reduce(src, dst0, 0, CV_REDUCE_MIN);
+        reduce(src, dst0, 0, REDUCE_MIN);
         CPU_OFF;
 
-        gpu::reduce(d_src, d_dst0, 0, CV_REDUCE_MIN);
+        gpu::reduce(d_src, d_dst0, 0, REDUCE_MIN);
 
         GPU_ON;
-        gpu::reduce(d_src, d_dst0, 0, CV_REDUCE_MIN);
+        gpu::reduce(d_src, d_dst0, 0, REDUCE_MIN);
         GPU_OFF;
 
         SUBTEST << size << 'x' << size << ", dim = 1";
 
-        reduce(src, dst1, 1, CV_REDUCE_MIN);
+        reduce(src, dst1, 1, REDUCE_MIN);
 
         CPU_ON;
-        reduce(src, dst1, 1, CV_REDUCE_MIN);
+        reduce(src, dst1, 1, REDUCE_MIN);
         CPU_OFF;
 
-        gpu::reduce(d_src, d_dst1, 1, CV_REDUCE_MIN);
+        gpu::reduce(d_src, d_dst1, 1, REDUCE_MIN);
 
         GPU_ON;
-        gpu::reduce(d_src, d_dst1, 1, CV_REDUCE_MIN);
+        gpu::reduce(d_src, d_dst1, 1, REDUCE_MIN);
         GPU_OFF;
     }
 }
