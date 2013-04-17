@@ -104,18 +104,12 @@ if(PYTHON_EXECUTABLE)
   if(BUILD_DOCS)
     find_host_program(SPHINX_BUILD sphinx-build)
     if(SPHINX_BUILD)
-        if(UNIX)
-            execute_process(COMMAND sh -c "${SPHINX_BUILD} -_ 2>&1 | sed -ne 1p"
-                             RESULT_VARIABLE SPHINX_PROCESS
-                             OUTPUT_VARIABLE SPHINX_VERSION
-                             OUTPUT_STRIP_TRAILING_WHITESPACE)
-        else()
-            execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sphinx; print sphinx.__version__"
-                            RESULT_VARIABLE SPHINX_PROCESS
-                            OUTPUT_VARIABLE SPHINX_VERSION
-                            OUTPUT_STRIP_TRAILING_WHITESPACE)
-        endif()
-        if(SPHINX_PROCESS EQUAL 0)
+        execute_process(COMMAND "${SPHINX_BUILD}"
+                        OUTPUT_QUIET
+                        ERROR_VARIABLE SPHINX_OUTPUT
+                        OUTPUT_STRIP_TRAILING_WHITESPACE)
+        if(SPHINX_OUTPUT MATCHES "^Sphinx v([0-9][^ \n]*)")
+          set(SPHINX_VERSION "${CMAKE_MATCH_1}")
           set(HAVE_SPHINX 1)
           message(STATUS "Found Sphinx ${SPHINX_VERSION}: ${SPHINX_BUILD}")
         endif()
