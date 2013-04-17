@@ -291,12 +291,11 @@ PERF_TEST_P(Sz_Type, Filters_Dilate, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
 //////////////////////////////////////////////////////////////////////
 // MorphologyEx
 
-CV_ENUM(MorphOp, cv::MORPH_OPEN, cv::MORPH_CLOSE, cv::MORPH_GRADIENT, cv::MORPH_TOPHAT, cv::MORPH_BLACKHAT)
-#define ALL_MORPH_OPS ValuesIn(MorphOp::all())
+CV_ENUM(MorphOp, MORPH_OPEN, MORPH_CLOSE, MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT)
 
 DEF_PARAM_TEST(Sz_Type_Op, cv::Size, MatType, MorphOp);
 
-PERF_TEST_P(Sz_Type_Op, Filters_MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4), ALL_MORPH_OPS))
+PERF_TEST_P(Sz_Type_Op, Filters_MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4), MorphOp::all()))
 {
     declare.time(20.0);
 
