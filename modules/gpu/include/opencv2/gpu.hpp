@@ -43,12 +43,6 @@
 #ifndef __OPENCV_GPU_HPP__
 #define __OPENCV_GPU_HPP__
 
-#ifndef SKIP_INCLUDES
-#include <vector>
-#include <memory>
-#include <iosfwd>
-#endif
-
 #include "opencv2/core/gpumat.hpp"
 #include "opencv2/gpuarithm.hpp"
 #include "opencv2/gpufilters.hpp"
@@ -58,100 +52,7 @@
 #include "opencv2/gpucalib3d.hpp"
 #include "opencv2/gpuobjdetect.hpp"
 
-#include "opencv2/imgproc.hpp"
-#include "opencv2/objdetect.hpp"
-#include "opencv2/features2d.hpp"
-
 namespace cv { namespace gpu {
-////////////////////////////// Image processing //////////////////////////////
-
-
-
-
-///////////////////////////// Calibration 3D //////////////////////////////////
-
-//////////////////////////////// Image Labeling ////////////////////////////////
-
-
-
-////////////////////////////////// Histograms //////////////////////////////////
-
-
-
-//////////////////////////////// StereoBM_GPU ////////////////////////////////
-
-
-
-////////////////////////// StereoBeliefPropagation ///////////////////////////
-
-
-/////////////////////////// StereoConstantSpaceBP ///////////////////////////
-
-
-
-/////////////////////////// DisparityBilateralFilter ///////////////////////////
-
-
-
-
-
-
-////////////////////////////////// BruteForceMatcher //////////////////////////////////
-
-
-
-template <class Distance>
-class CV_EXPORTS BruteForceMatcher_GPU;
-
-template <typename T>
-class CV_EXPORTS BruteForceMatcher_GPU< L1<T> > : public BFMatcher_GPU
-{
-public:
-    explicit BruteForceMatcher_GPU() : BFMatcher_GPU(NORM_L1) {}
-    explicit BruteForceMatcher_GPU(L1<T> /*d*/) : BFMatcher_GPU(NORM_L1) {}
-};
-template <typename T>
-class CV_EXPORTS BruteForceMatcher_GPU< L2<T> > : public BFMatcher_GPU
-{
-public:
-    explicit BruteForceMatcher_GPU() : BFMatcher_GPU(NORM_L2) {}
-    explicit BruteForceMatcher_GPU(L2<T> /*d*/) : BFMatcher_GPU(NORM_L2) {}
-};
-template <> class CV_EXPORTS BruteForceMatcher_GPU< Hamming > : public BFMatcher_GPU
-{
-public:
-    explicit BruteForceMatcher_GPU() : BFMatcher_GPU(NORM_HAMMING) {}
-    explicit BruteForceMatcher_GPU(Hamming /*d*/) : BFMatcher_GPU(NORM_HAMMING) {}
-};
-
-////////////////////////////////// CascadeClassifier_GPU //////////////////////////////////////////
-
-
-////////////////////////////////// FAST //////////////////////////////////////////
-
-
-
-////////////////////////////////// ORB //////////////////////////////////////////
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 //! removes points (CV_32FC2, single row matrix) with zero mask value
 CV_EXPORTS void compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask);
@@ -160,8 +61,6 @@ CV_EXPORTS void calcWobbleSuppressionMaps(
         int left, int idx, int right, Size size, const Mat &ml, const Mat &mr,
         GpuMat &mapx, GpuMat &mapy);
 
-} // namespace gpu
-
-} // namespace cv
+}} // namespace cv { namespace gpu {
 
 #endif /* __OPENCV_GPU_HPP__ */
