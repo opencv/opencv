@@ -65,12 +65,12 @@ namespace cv
 static const int OPT_SIZE = 100;
 
 static const char * T_ARR [] = {
-    "uchar", 
-    "char", 
-    "ushort", 
-    "short", 
-    "int", 
-    "float -D T_FLOAT", 
+    "uchar",
+    "char",
+    "ushort",
+    "short",
+    "int",
+    "float -D T_FLOAT",
     "double"};
 
 template < int BLOCK_SIZE, int MAX_DESC_LEN/*, typename Mask*/ >
@@ -86,8 +86,8 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat 
     vector< pair<size_t, const void *> > args;
 
     char opt [OPT_SIZE] = "";
-    sprintf(opt, 
-        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d", 
+    sprintf(opt,
+        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d",
         T_ARR[query.depth()], distType, block_size, m_size);
 
     if(globalSize[0] != 0)
@@ -128,8 +128,8 @@ void match(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
     vector< pair<size_t, const void *> > args;
 
     char opt [OPT_SIZE] = "";
-    sprintf(opt, 
-        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d", 
+    sprintf(opt,
+        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d",
         T_ARR[query.depth()], distType, block_size);
     if(globalSize[0] != 0)
     {
@@ -171,8 +171,8 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDist
     vector< pair<size_t, const void *> > args;
 
     char opt [OPT_SIZE] = "";
-    sprintf(opt, 
-        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d", 
+    sprintf(opt,
+        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d",
         T_ARR[query.depth()], distType, block_size, m_size);
 
     if(globalSize[0] != 0)
@@ -212,8 +212,8 @@ void radius_match(const oclMat &query, const oclMat &train, float maxDistance, c
     vector< pair<size_t, const void *> > args;
 
     char opt [OPT_SIZE] = "";
-    sprintf(opt, 
-        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d", 
+    sprintf(opt,
+        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d",
         T_ARR[query.depth()], distType, block_size);
 
     if(globalSize[0] != 0)
@@ -312,8 +312,8 @@ void knn_matchUnrolledCached(const oclMat &query, const oclMat &train, const ocl
     vector< pair<size_t, const void *> > args;
 
     char opt [OPT_SIZE] = "";
-    sprintf(opt, 
-        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d", 
+    sprintf(opt,
+        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d",
         T_ARR[query.depth()], distType, block_size, m_size);
 
     if(globalSize[0] != 0)
@@ -348,8 +348,8 @@ void knn_match(const oclMat &query, const oclMat &train, const oclMat &/*mask*/,
     vector< pair<size_t, const void *> > args;
 
     char opt [OPT_SIZE] = "";
-    sprintf(opt, 
-        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d", 
+    sprintf(opt,
+        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d",
         T_ARR[query.depth()], distType, block_size);
 
     if(globalSize[0] != 0)
@@ -384,8 +384,8 @@ void calcDistanceUnrolled(const oclMat &query, const oclMat &train, const oclMat
     vector< pair<size_t, const void *> > args;
 
     char opt [OPT_SIZE] = "";
-    sprintf(opt, 
-        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d", 
+    sprintf(opt,
+        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d",
         T_ARR[query.depth()], distType, block_size, m_size);
 
     if(globalSize[0] != 0)
@@ -420,8 +420,8 @@ void calcDistance(const oclMat &query, const oclMat &train, const oclMat &/*mask
     vector< pair<size_t, const void *> > args;
 
     char opt [OPT_SIZE] = "";
-    sprintf(opt, 
-        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d", 
+    sprintf(opt,
+        "-D T=%s -D DIST_TYPE=%d -D BLOCK_SIZE=%d",
         T_ARR[query.depth()], distType, block_size);
 
     if(globalSize[0] != 0)
@@ -561,7 +561,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchSingle(const oclMat &query, const
 {
     if (query.empty() || train.empty())
         return;
-    
+
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
     CV_Assert(train.cols == query.cols && train.type() == query.type());
 
@@ -673,7 +673,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchCollection(const oclMat &query, c
         return;
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
-    
+
     const int nQuery = query.rows;
 
     ensureSizeIsEnough(1, nQuery, CV_32S, trainIdx);
@@ -845,8 +845,8 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch2Collection(const oclMat &quer
     if (query.empty() || trainCollection.empty())
         return;
 
-    typedef void (*caller_t)(const oclMat & query, const oclMat & trains, const oclMat & masks,
-                             const oclMat & trainIdx, const oclMat & imgIdx, const oclMat & distance);
+    // typedef void (*caller_t)(const oclMat & query, const oclMat & trains, const oclMat & masks,
+    //                          const oclMat & trainIdx, const oclMat & imgIdx, const oclMat & distance);
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
 
@@ -993,7 +993,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, vector< 
 
 // radiusMatchSingle
 void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchSingle(const oclMat &query, const oclMat &train,
-        oclMat &trainIdx, oclMat &distance, oclMat &nMatches, float maxDistance, const oclMat &mask)
+        oclMat &trainIdx,   oclMat &distance, oclMat &nMatches, float maxDistance, const oclMat &mask)
 {
     if (query.empty() || train.empty())
         return;
@@ -1095,9 +1095,9 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchCollection(const oclMat &qu
     if (query.empty() || empty())
         return;
 
+#if 0
     typedef void (*caller_t)(const oclMat & query, const oclMat * trains, int n, float maxDistance, const oclMat * masks,
                              const oclMat & trainIdx, const oclMat & imgIdx, const oclMat & distance, const oclMat & nMatches);
-#if 0
     static const caller_t callers[3][6] =
     {
         {

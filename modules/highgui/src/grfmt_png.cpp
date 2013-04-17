@@ -73,6 +73,11 @@
     #pragma warning( disable: 4611 )
 #endif
 
+// the following defines are a hack to avoid multiple problems with frame ponter handling and setjmp
+// see http://gcc.gnu.org/ml/gcc/2011-10/msg00324.html for some details
+#define mingw_getsp(...) 0
+#define __builtin_frame_address(...) 0
+
 namespace cv
 {
 
