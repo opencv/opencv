@@ -58,6 +58,4 @@
 #include "opencv2/gpuarithm.hpp"
 #include "opencv2/imgproc.hpp"
 
-#include "interpolation.hpp"
-
 #endif

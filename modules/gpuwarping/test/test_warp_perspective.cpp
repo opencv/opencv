@@ -102,7 +102,7 @@ GPU_TEST_P(BuildWarpPerspectiveMaps, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, BuildWarpPerspectiveMaps, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Warping, BuildWarpPerspectiveMaps, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DIRECT_INVERSE));
@@ -225,7 +225,7 @@ GPU_TEST_P(WarpPerspective, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-1 : 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, WarpPerspective, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Warping, WarpPerspective, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
@@ -274,7 +274,7 @@ GPU_TEST_P(WarpPerspectiveNPP, Accuracy)
     EXPECT_MAT_SIMILAR(dst_gold, dst, 2e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, WarpPerspectiveNPP, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Warping, WarpPerspectiveNPP, testing::Combine(
     ALL_DEVICES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
     DIRECT_INVERSE,

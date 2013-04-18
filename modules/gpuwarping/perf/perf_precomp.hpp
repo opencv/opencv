@@ -40,28 +40,25 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_HPP__
-#define __OPENCV_GPU_HPP__
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
+#endif
 
-#include "opencv2/core/gpumat.hpp"
-#include "opencv2/gpuarithm.hpp"
-#include "opencv2/gpufilters.hpp"
+#ifndef __OPENCV_PERF_PRECOMP_HPP__
+#define __OPENCV_PERF_PRECOMP_HPP__
+
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/gpu_perf.hpp"
+
 #include "opencv2/gpuwarping.hpp"
-#include "opencv2/gpuimgproc.hpp"
-#include "opencv2/gpufeatures2d.hpp"
-#include "opencv2/gpuvideo.hpp"
-#include "opencv2/gpucalib3d.hpp"
-#include "opencv2/gpuobjdetect.hpp"
+#include "opencv2/imgproc.hpp"
 
-namespace cv { namespace gpu {
+#ifdef GTEST_CREATE_SHARED_LIBRARY
+#error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
+#endif
 
-//! removes points (CV_32FC2, single row matrix) with zero mask value
-CV_EXPORTS void compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask);
-
-CV_EXPORTS void calcWobbleSuppressionMaps(
-        int left, int idx, int right, Size size, const Mat &ml, const Mat &mr,
-        GpuMat &mapx, GpuMat &mapy);
-
-}} // namespace cv { namespace gpu {
-
-#endif /* __OPENCV_GPU_HPP__ */
+#endif

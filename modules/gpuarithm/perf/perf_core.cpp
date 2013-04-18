@@ -2411,7 +2411,7 @@ CV_ENUM(ThreshOp, cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC, cv
 
 DEF_PARAM_TEST(Sz_Depth_Op, cv::Size, MatDepth, ThreshOp);
 
-PERF_TEST_P(Sz_Depth_Op, Threshold,
+PERF_TEST_P(Sz_Depth_Op, ImgProc_Threshold,
             Combine(GPU_TYPICAL_MAT_SIZES,
             Values(CV_8U, CV_16U, CV_32F, CV_64F),
             ALL_THRESH_OPS))
