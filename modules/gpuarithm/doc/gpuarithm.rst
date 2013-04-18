@@ -1,10 +1,11 @@
-*******************************************
-gpu. GPU-accelerated Operations on Matrices
-*******************************************
+*************************************************
+gpuarithm. GPU-accelerated Operations on Matrices
+*************************************************
 
 .. toctree::
     :maxdepth: 1
 
-    operations_on_matrices
-    per_element_operations
-    matrix_reductions
+    core
+    element_operations
+    reductions
+    arithm

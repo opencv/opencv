@@ -49,7 +49,6 @@
 
 #include "opencv2/gpuarithm.hpp"
 #include "opencv2/core/utility.hpp"
-#include "opencv2/core/core_c.h"
 
 #include "opencv2/core/gpu_private.hpp"
 

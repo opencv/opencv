@@ -47,29 +47,41 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&) { throw_no_cuda(); }
-void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&, GpuMat&) { throw_no_cuda(); }
 double cv::gpu::norm(const GpuMat&, int) { throw_no_cuda(); return 0.0; }
 double cv::gpu::norm(const GpuMat&, int, GpuMat&) { throw_no_cuda(); return 0.0; }
 double cv::gpu::norm(const GpuMat&, int, const GpuMat&, GpuMat&) { throw_no_cuda(); return 0.0; }
 double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_no_cuda(); return 0.0; }
+
 Scalar cv::gpu::sum(const GpuMat&) { throw_no_cuda(); return Scalar(); }
 Scalar cv::gpu::sum(const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
 Scalar cv::gpu::sum(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+
 Scalar cv::gpu::absSum(const GpuMat&) { throw_no_cuda(); return Scalar(); }
 Scalar cv::gpu::absSum(const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
 Scalar cv::gpu::absSum(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+
 Scalar cv::gpu::sqrSum(const GpuMat&) { throw_no_cuda(); return Scalar(); }
 Scalar cv::gpu::sqrSum(const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
 Scalar cv::gpu::sqrSum(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+
 void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&) { throw_no_cuda(); }
 void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&, GpuMat&) { throw_no_cuda(); }
+
 void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&) { throw_no_cuda(); }
 void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+
 int cv::gpu::countNonZero(const GpuMat&) { throw_no_cuda(); return 0; }
 int cv::gpu::countNonZero(const GpuMat&, GpuMat&) { throw_no_cuda(); return 0; }
+
 void cv::gpu::reduce(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
+
+void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&) { throw_no_cuda(); }
+void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&, GpuMat&) { throw_no_cuda(); }
+
 void cv::gpu::rectStdDev(const GpuMat&, const GpuMat&, GpuMat&, const Rect&, Stream&) { throw_no_cuda(); }
+
+void cv::gpu::normalize(const GpuMat&, GpuMat&, double, double, int, int, const GpuMat&) { throw_no_cuda(); }
+void cv::gpu::normalize(const GpuMat&, GpuMat&, double, double, int, int, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
 #else
 
@@ -107,46 +119,6 @@ namespace
         double* pdev;
         int count;
     };
-}
-
-
-////////////////////////////////////////////////////////////////////////
-// meanStdDev
-
-void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev)
-{
-    GpuMat buf;
-    meanStdDev(src, mean, stddev, buf);
-}
-
-void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev, GpuMat& buf)
-{
-    CV_Assert(src.type() == CV_8UC1);
-
-    if (!deviceSupports(FEATURE_SET_COMPUTE_13))
-        CV_Error(cv::Error::StsNotImplemented, "Not sufficient compute capebility");
-
-    NppiSize sz;
-    sz.width  = src.cols;
-    sz.height = src.rows;
-
-    DeviceBuffer dbuf(2);
-
-    int bufSize;
-#if (CUDA_VERSION <= 4020)
-    nppSafeCall( nppiMeanStdDev8uC1RGetBufferHostSize(sz, &bufSize) );
-#else
-    nppSafeCall( nppiMeanStdDevGetBufferHostSize_8u_C1R(sz, &bufSize) );
-#endif
-
-    ensureSizeIsEnough(1, bufSize, CV_8UC1, buf);
-
-    nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), sz, buf.ptr<Npp8u>(), dbuf, (double*)dbuf + 1) );
-
-    cudaSafeCall( cudaDeviceSynchronize() );
-
-    double* ptrs[2] = {mean.val, stddev.val};
-    dbuf.download(ptrs);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -697,6 +669,45 @@ void cv::gpu::reduce(const GpuMat& src, GpuMat& dst, int dim, int reduceOp, int 
     }
 }
 
+////////////////////////////////////////////////////////////////////////
+// meanStdDev
+
+void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev)
+{
+    GpuMat buf;
+    meanStdDev(src, mean, stddev, buf);
+}
+
+void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev, GpuMat& buf)
+{
+    CV_Assert(src.type() == CV_8UC1);
+
+    if (!deviceSupports(FEATURE_SET_COMPUTE_13))
+        CV_Error(cv::Error::StsNotImplemented, "Not sufficient compute capebility");
+
+    NppiSize sz;
+    sz.width  = src.cols;
+    sz.height = src.rows;
+
+    DeviceBuffer dbuf(2);
+
+    int bufSize;
+#if (CUDA_VERSION <= 4020)
+    nppSafeCall( nppiMeanStdDev8uC1RGetBufferHostSize(sz, &bufSize) );
+#else
+    nppSafeCall( nppiMeanStdDevGetBufferHostSize_8u_C1R(sz, &bufSize) );
+#endif
+
+    ensureSizeIsEnough(1, bufSize, CV_8UC1, buf);
+
+    nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), sz, buf.ptr<Npp8u>(), dbuf, (double*)dbuf + 1) );
+
+    cudaSafeCall( cudaDeviceSynchronize() );
+
+    double* ptrs[2] = {mean.val, stddev.val};
+    dbuf.download(ptrs);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // rectStdDev
 
@@ -725,6 +736,49 @@ void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, cons
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
+}
+
+////////////////////////////////////////////////////////////////////////
+// normalize
+
+void cv::gpu::normalize(const GpuMat& src, GpuMat& dst, double a, double b, int norm_type, int dtype, const GpuMat& mask)
+{
+    GpuMat norm_buf;
+    GpuMat cvt_buf;
+    normalize(src, dst, a, b, norm_type, dtype, mask, norm_buf, cvt_buf);
+}
+
+void cv::gpu::normalize(const GpuMat& src, GpuMat& dst, double a, double b, int norm_type, int dtype, const GpuMat& mask, GpuMat& norm_buf, GpuMat& cvt_buf)
+{
+    double scale = 1, shift = 0;
+    if (norm_type == NORM_MINMAX)
+    {
+        double smin = 0, smax = 0;
+        double dmin = std::min(a, b), dmax = std::max(a, b);
+        gpu::minMax(src, &smin, &smax, mask, norm_buf);
+        scale = (dmax - dmin) * (smax - smin > std::numeric_limits<double>::epsilon() ? 1.0 / (smax - smin) : 0.0);
+        shift = dmin - smin * scale;
+    }
+    else if (norm_type == NORM_L2 || norm_type == NORM_L1 || norm_type == NORM_INF)
+    {
+        scale = gpu::norm(src, norm_type, mask, norm_buf);
+        scale = scale > std::numeric_limits<double>::epsilon() ? a / scale : 0.0;
+        shift = 0;
+    }
+    else
+    {
+        CV_Error(cv::Error::StsBadArg, "Unknown/unsupported norm type");
+    }
+
+    if (mask.empty())
+    {
+        src.convertTo(dst, dtype, scale, shift);
+    }
+    else
+    {
+        src.convertTo(cvt_buf, dtype, scale, shift);
+        cvt_buf.copyTo(dst, mask);
+    }
 }
 
 #endif
