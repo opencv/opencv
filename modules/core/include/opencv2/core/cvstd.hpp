@@ -174,7 +174,7 @@ public:
   To make it all work, you need to specialize Ptr<>::delete_obj(), like:
 
   \code
-  template<> void Ptr<MyObjectType>::delete_obj() { call_destructor_func(obj); }
+  template<> CV_EXPORTS void Ptr<MyObjectType>::delete_obj() { call_destructor_func(obj); }
   \endcode
 
   \note{if MyObjectType is a C++ class with a destructor, you do not need to specialize delete_obj(),

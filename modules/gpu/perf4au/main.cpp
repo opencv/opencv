@@ -42,9 +42,7 @@
 
 #include <cstdio>
 
-#ifdef HAVE_CVCONFIG_H
 #include "cvconfig.h"
-#endif
 #include "opencv2/core.hpp"
 #include "opencv2/gpu.hpp"
 #include "opencv2/highgui.hpp"

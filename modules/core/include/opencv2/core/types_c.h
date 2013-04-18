@@ -272,7 +272,11 @@ CV_INLINE double cvRandReal( CvRNG* rng )
 #define IPL_BORDER_REFLECT    2
 #define IPL_BORDER_WRAP       3
 
-typedef struct CV_EXPORTS _IplImage
+typedef struct
+#ifdef __cplusplus
+  CV_EXPORTS
+#endif
+_IplImage
 {
     int  nSize;             /* sizeof(IplImage) */
     int  ID;                /* version (=0)*/
@@ -563,7 +567,11 @@ CV_INLINE int cvIplDepth( int type )
 #define CV_MAX_DIM            32
 #define CV_MAX_DIM_HEAP       1024
 
-typedef struct CV_EXPORTS CvMatND
+typedef struct
+#ifdef __cplusplus
+  CV_EXPORTS
+#endif
+CvMatND
 {
     int type;
     int dims;
@@ -610,7 +618,11 @@ CvMatND;
 
 struct CvSet;
 
-typedef struct CV_EXPORTS CvSparseMat
+typedef struct
+#ifdef __cplusplus
+  CV_EXPORTS
+#endif
+CvSparseMat
 {
     int type;
     int dims;

@@ -39,9 +39,7 @@
 //
 //M*/
 
-#ifdef HAVE_CVCONFIG_H
-  #include "cvconfig.h"
-#endif
+#include "cvconfig.h"
 
 #ifdef HAVE_MALLOC_H
   #include <malloc.h>

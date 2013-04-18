@@ -9,14 +9,6 @@
 #include <dirent.h>
 #endif
 
-#ifdef HAVE_CVCONFIG_H
-#include <cvconfig.h>
-#endif
-
-#ifdef HAVE_TBB
-#include "tbb/task_scheduler_init.h"
-#endif
-
 using namespace std;
 using namespace cv;
 
