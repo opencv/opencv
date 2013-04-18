@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
+#if !defined (HAVE_CUDA) || !defined (HAVE_OPENCV_GPUARITHM) || defined (CUDA_DISABLER)
 
 void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
 
@@ -172,15 +172,15 @@ namespace
             return;
         }
 
-        ConvolveBuf convolve_buf;
+        gpu::ConvolveBuf convolve_buf;
         convolve_buf.user_block_size = buf.user_block_size;
 
         if (image.channels() == 1)
-            convolve(image.reshape(1), templ.reshape(1), result, true, convolve_buf, stream);
+            gpu::convolve(image.reshape(1), templ.reshape(1), result, true, convolve_buf, stream);
         else
         {
             GpuMat result_;
-            convolve(image.reshape(1), templ.reshape(1), result_, true, convolve_buf, stream);
+            gpu::convolve(image.reshape(1), templ.reshape(1), result_, true, convolve_buf, stream);
             extractFirstChannel_32F(result_, result, image.channels(), StreamAccessor::getStream(stream));
         }
     }
@@ -216,9 +216,9 @@ namespace
         matchTemplate_CCORR_8U(image, templ, result, buf, stream);
 
         buf.image_sqsums.resize(1);
-        sqrIntegral(image.reshape(1), buf.image_sqsums[0], stream);
+        gpu::sqrIntegral(image.reshape(1), buf.image_sqsums[0], stream);
 
-        unsigned long long templ_sqsum = (unsigned long long)sqrSum(templ.reshape(1))[0];
+        unsigned long long templ_sqsum = (unsigned long long)gpu::sqrSum(templ.reshape(1))[0];
         normalize_8U(templ.cols, templ.rows, buf.image_sqsums[0], templ_sqsum, result, image.channels(), StreamAccessor::getStream(stream));
     }
 
@@ -243,9 +243,9 @@ namespace
         }
 
         buf.image_sqsums.resize(1);
-        sqrIntegral(image.reshape(1), buf.image_sqsums[0], stream);
+        gpu::sqrIntegral(image.reshape(1), buf.image_sqsums[0], stream);
 
-        unsigned long long templ_sqsum = (unsigned long long)sqrSum(templ.reshape(1))[0];
+        unsigned long long templ_sqsum = (unsigned long long)gpu::sqrSum(templ.reshape(1))[0];
 
         matchTemplate_CCORR_8U(image, templ, result, buf, stream);
         matchTemplatePrepared_SQDIFF_8U(templ.cols, templ.rows, buf.image_sqsums[0], templ_sqsum, result, image.channels(), StreamAccessor::getStream(stream));
@@ -256,9 +256,9 @@ namespace
             const GpuMat& image, const GpuMat& templ, GpuMat& result, MatchTemplateBuf &buf, Stream& stream)
     {
         buf.image_sqsums.resize(1);
-        sqrIntegral(image.reshape(1), buf.image_sqsums[0], stream);
+        gpu::sqrIntegral(image.reshape(1), buf.image_sqsums[0], stream);
 
-        unsigned long long templ_sqsum = (unsigned long long)sqrSum(templ.reshape(1))[0];
+        unsigned long long templ_sqsum = (unsigned long long)gpu::sqrSum(templ.reshape(1))[0];
 
         matchTemplate_CCORR_8U(image, templ, result, buf, stream);
         matchTemplatePrepared_SQDIFF_NORMED_8U(templ.cols, templ.rows, buf.image_sqsums[0], templ_sqsum, result, image.channels(), StreamAccessor::getStream(stream));
@@ -273,19 +273,19 @@ namespace
         if (image.channels() == 1)
         {
             buf.image_sums.resize(1);
-            integral(image, buf.image_sums[0], stream);
+            gpu::integral(image, buf.image_sums[0], stream);
 
             unsigned int templ_sum = (unsigned int)sum(templ)[0];
             matchTemplatePrepared_CCOFF_8U(templ.cols, templ.rows, buf.image_sums[0], templ_sum, result, StreamAccessor::getStream(stream));
         }
         else
         {
-            split(image, buf.images);
+            gpu::split(image, buf.images);
             buf.image_sums.resize(buf.images.size());
             for (int i = 0; i < image.channels(); ++i)
-                integral(buf.images[i], buf.image_sums[i], stream);
+                gpu::integral(buf.images[i], buf.image_sums[i], stream);
 
-            Scalar templ_sum = sum(templ);
+            Scalar templ_sum = gpu::sum(templ);
 
             switch (image.channels())
             {
@@ -333,12 +333,12 @@ namespace
         if (image.channels() == 1)
         {
             buf.image_sums.resize(1);
-            integral(image, buf.image_sums[0], stream);
+            gpu::integral(image, buf.image_sums[0], stream);
             buf.image_sqsums.resize(1);
-            sqrIntegral(image, buf.image_sqsums[0], stream);
+            gpu::sqrIntegral(image, buf.image_sqsums[0], stream);
 
-            unsigned int templ_sum = (unsigned int)sum(templ)[0];
-            unsigned long long templ_sqsum = (unsigned long long)sqrSum(templ)[0];
+            unsigned int templ_sum = (unsigned int)gpu::sum(templ)[0];
+            unsigned long long templ_sqsum = (unsigned long long)gpu::sqrSum(templ)[0];
 
             matchTemplatePrepared_CCOFF_NORMED_8U(
                     templ.cols, templ.rows, buf.image_sums[0], buf.image_sqsums[0],
@@ -346,17 +346,17 @@ namespace
         }
         else
         {
-            split(image, buf.images);
+            gpu::split(image, buf.images);
             buf.image_sums.resize(buf.images.size());
             buf.image_sqsums.resize(buf.images.size());
             for (int i = 0; i < image.channels(); ++i)
             {
-                integral(buf.images[i], buf.image_sums[i], stream);
-                sqrIntegral(buf.images[i], buf.image_sqsums[i], stream);
+                gpu::integral(buf.images[i], buf.image_sums[i], stream);
+                gpu::sqrIntegral(buf.images[i], buf.image_sqsums[i], stream);
             }
 
-            Scalar templ_sum = sum(templ);
-            Scalar templ_sqsum = sqrSum(templ);
+            Scalar templ_sum = gpu::sum(templ);
+            Scalar templ_sqsum = gpu::sqrSum(templ);
 
             switch (image.channels())
             {

@@ -40,19 +40,47 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "perf_precomp.hpp"
 
-#include "opencv2/gpuimgproc.hpp"
-#include "opencv2/gpufilters.hpp"
+using namespace std;
+using namespace testing;
+using namespace perf;
 
-#include "opencv2/core/private.hpp"
-#include "opencv2/core/gpu_private.hpp"
+//////////////////////////////////////////////////////
+// GoodFeaturesToTrack
 
-#include "opencv2/opencv_modules.hpp"
+DEF_PARAM_TEST(Image_MinDistance, string, double);
 
-#ifdef HAVE_OPENCV_GPUARITHM
-#  include "opencv2/gpuarithm.hpp"
-#endif
+PERF_TEST_P(Image_MinDistance, GoodFeaturesToTrack,
+            Combine(Values<string>("gpu/perf/aloe.png"),
+                    Values(0.0, 3.0)))
+{
+    const string fileName = GET_PARAM(0);
+    const double minDistance = GET_PARAM(1);
 
-#endif /* __OPENCV_PRECOMP_H__ */
+    const cv::Mat image = readImage(fileName, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
+
+    const int maxCorners = 8000;
+    const double qualityLevel = 0.01;
+
+    if (PERF_RUN_GPU())
+    {
+        cv::gpu::GoodFeaturesToTrackDetector_GPU d_detector(maxCorners, qualityLevel, minDistance);
+
+        const cv::gpu::GpuMat d_image(image);
+        cv::gpu::GpuMat pts;
+
+        TEST_CYCLE() d_detector(d_image, pts);
+
+        GPU_SANITY_CHECK(pts);
+    }
+    else
+    {
+        cv::Mat pts;
+
+        TEST_CYCLE() cv::goodFeaturesToTrack(image, pts, maxCorners, qualityLevel, minDistance);
+
+        CPU_SANITY_CHECK(pts);
+    }
+}

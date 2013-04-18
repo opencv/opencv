@@ -40,19 +40,58 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "test_precomp.hpp"
 
-#include "opencv2/gpuimgproc.hpp"
-#include "opencv2/gpufilters.hpp"
+#ifdef HAVE_CUDA
 
-#include "opencv2/core/private.hpp"
-#include "opencv2/core/gpu_private.hpp"
+using namespace cvtest;
 
-#include "opencv2/opencv_modules.hpp"
+////////////////////////////////////////////////////////
+// BilateralFilter
 
-#ifdef HAVE_OPENCV_GPUARITHM
-#  include "opencv2/gpuarithm.hpp"
-#endif
+PARAM_TEST_CASE(BilateralFilter, cv::gpu::DeviceInfo, cv::Size, MatType)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    int type;
+    int kernel_size;
+    float sigma_color;
+    float sigma_spatial;
 
-#endif /* __OPENCV_PRECOMP_H__ */
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        type = GET_PARAM(2);
+
+        kernel_size = 5;
+        sigma_color = 10.f;
+        sigma_spatial = 3.5f;
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+GPU_TEST_P(BilateralFilter, Accuracy)
+{
+    cv::Mat src = randomMat(size, type);
+
+    src.convertTo(src, type);
+    cv::gpu::GpuMat dst;
+
+    cv::gpu::bilateralFilter(loadMat(src), dst, kernel_size, sigma_color, sigma_spatial);
+
+    cv::Mat dst_gold;
+    cv::bilateralFilter(src, dst_gold, kernel_size, sigma_color, sigma_spatial);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-3 : 1.0);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, BilateralFilter, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(cv::Size(128, 128), cv::Size(113, 113), cv::Size(639, 481)),
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_32FC1), MatType(CV_32FC3))
+    ));
+
+
+#endif // HAVE_CUDA
