@@ -59,7 +59,7 @@ int cv::gpu::FGDStatModel::update(const cv::gpu::GpuMat&) { throw_no_cuda(); ret
 
 #else
 
-#include "fgd_bgfg_common.hpp"
+#include "cuda/fgd.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 
 namespace

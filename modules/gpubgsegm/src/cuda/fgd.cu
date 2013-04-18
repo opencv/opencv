@@ -48,7 +48,7 @@
 #include "opencv2/core/cuda/utility.hpp"
 #include "opencv2/core/cuda/reduce.hpp"
 #include "opencv2/core/cuda/functional.hpp"
-#include "fgd_bgfg_common.hpp"
+#include "fgd.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;

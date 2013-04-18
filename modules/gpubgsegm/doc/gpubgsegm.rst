@@ -1,6 +1,6 @@
-********************************************
-gpu. GPU-accelerated Background Segmentation
-********************************************
+**************************************************
+gpubgsegm. GPU-accelerated Background Segmentation
+**************************************************
 
 .. toctree::
     :maxdepth: 1

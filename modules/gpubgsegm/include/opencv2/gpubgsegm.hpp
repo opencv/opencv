@@ -43,6 +43,10 @@
 #ifndef __OPENCV_GPUBGSEGM_HPP__
 #define __OPENCV_GPUBGSEGM_HPP__
 
+#ifndef __cplusplus
+#  error gpubgsegm.hpp header must be compiled as C++
+#endif
+
 #include <memory>
 
 #include "opencv2/core/gpumat.hpp"
