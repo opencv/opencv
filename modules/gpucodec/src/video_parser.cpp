@@ -40,9 +40,9 @@
 //
 //M*/
 
-#include "video_parser.h"
+#include "precomp.hpp"
 
-#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
+#ifdef HAVE_NVCUVID
 
 cv::gpu::detail::VideoParser::VideoParser(VideoDecoder* videoDecoder, FrameQueue* frameQueue) :
     videoDecoder_(videoDecoder), frameQueue_(frameQueue), unparsedPackets_(0), hasError_(false)
@@ -158,4 +158,4 @@ int CUDAAPI cv::gpu::detail::VideoParser::HandlePictureDisplay(void* userData, C
     return true;
 }
 
-#endif // HAVE_CUDA
+#endif // HAVE_NVCUVID

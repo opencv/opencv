@@ -40,10 +40,9 @@
 //
 //M*/
 
-#include "video_decoder.h"
-#include "frame_queue.h"
+#include "precomp.hpp"
 
-#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
+#ifdef HAVE_NVCUVID
 
 void cv::gpu::detail::VideoDecoder::create(const VideoReader_GPU::FormatInfo& videoFormat)
 {
@@ -113,4 +112,4 @@ void cv::gpu::detail::VideoDecoder::release()
     }
 }
 
-#endif // HAVE_CUDA
+#endif // HAVE_NVCUVID

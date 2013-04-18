@@ -40,49 +40,34 @@
 //
 //M*/
 
-#ifndef __FFMPEG_VIDEO_SOURCE_H__
-#define __FFMPEG_VIDEO_SOURCE_H__
+#ifndef __THREAD_WRAPPERS_H__
+#define __THREAD_WRAPPERS_H__
 
-#include "precomp.hpp"
-#include "thread_wrappers.h"
+#include "opencv2/core.hpp"
 
-#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
+namespace cv { namespace gpu { namespace detail {
 
-struct InputMediaStream_FFMPEG;
-
-namespace cv { namespace gpu
+class Thread
 {
-    namespace detail
-    {
-        class FFmpegVideoSource : public VideoReader_GPU::VideoSource
-        {
-        public:
-            FFmpegVideoSource(const String& fname);
-            ~FFmpegVideoSource();
+public:
+    typedef void (*Func)(void* userData);
 
-            VideoReader_GPU::FormatInfo format() const;
-            void start();
-            void stop();
-            bool isStarted() const;
-            bool hasError() const;
+    explicit Thread(Func func, void* userData = 0);
 
-        private:
-            FFmpegVideoSource(const FFmpegVideoSource&);
-            FFmpegVideoSource& operator =(const FFmpegVideoSource&);
+    void wait();
 
-            VideoReader_GPU::FormatInfo format_;
+    static void sleep(int ms);
 
-            InputMediaStream_FFMPEG* stream_;
+    class Impl;
 
-            std::auto_ptr<Thread> thread_;
-            volatile bool stop_;
-            volatile bool hasError_;
+private:
+    cv::Ptr<Impl> impl_;
+};
 
-            static void readLoop(void* userData);
-        };
-    }
-}}
+}}}
 
-#endif // HAVE_CUDA
+namespace cv {
+    template <> void Ptr<cv::gpu::detail::Thread::Impl>::delete_obj();
+}
 
-#endif // __CUVUD_VIDEO_SOURCE_H__
+#endif // __THREAD_WRAPPERS_H__

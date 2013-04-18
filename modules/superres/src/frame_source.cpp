@@ -187,7 +187,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
 //////////////////////////////////////////////////////
 // VideoFrameSource_GPU
 
-#ifndef HAVE_OPENCV_GPU
+#ifndef HAVE_OPENCV_GPUCODEC
 
 Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const String& fileName)
 {
@@ -196,7 +196,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const String& fileNam
     return Ptr<FrameSource>();
 }
 
-#else // HAVE_OPENCV_GPU
+#else // HAVE_OPENCV_GPUCODEC
 
 namespace
 {
@@ -250,4 +250,4 @@ Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const String& fileNam
     return new VideoFrameSource(fileName);
 }
 
-#endif // HAVE_OPENCV_GPU
+#endif // HAVE_OPENCV_GPUCODEC

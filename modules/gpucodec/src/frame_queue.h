@@ -40,40 +40,58 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef __FRAME_QUEUE_H__
+#define __FRAME_QUEUE_H__
 
-#include <vector>
-#include <limits>
-
-#include "opencv2/opencv_modules.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/core/gpumat.hpp"
-#include "opencv2/core/opengl.hpp"
 #include "opencv2/core/utility.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/video/tracking.hpp"
-#include "opencv2/core/private.hpp"
+#include "opencv2/core/gpu_private.hpp"
 
-#ifdef HAVE_OPENCV_GPU
-#  include "opencv2/gpu.hpp"
-#  include "opencv2/core/gpu_private.hpp"
-#endif
+#include <nvcuvid.h>
 
-#ifdef HAVE_OPENCV_GPUCODEC
-#  include "opencv2/gpucodec.hpp"
-#endif
+namespace cv { namespace gpu { namespace detail
+{
 
-#ifdef HAVE_OPENCV_HIGHGUI
-    #include "opencv2/highgui.hpp"
-#endif
+class FrameQueue
+{
+public:
+    static const int MaximumSize = 20; // MAX_FRM_CNT;
 
-#include "opencv2/superres.hpp"
-#include "opencv2/superres/optical_flow.hpp"
-#include "input_array_utility.hpp"
+    FrameQueue();
 
-#include "ring_buffer.hpp"
+    void endDecode() { endOfDecode_ = true; }
+    bool isEndOfDecode() const { return endOfDecode_ != 0;}
 
-#include "opencv2/core/private.hpp"
+    // Spins until frame becomes available or decoding gets canceled.
+    // If the requested frame is available the method returns true.
+    // If decoding was interupted before the requested frame becomes
+    // available, the method returns false.
+    bool waitUntilFrameAvailable(int pictureIndex);
 
-#endif /* __OPENCV_PRECOMP_H__ */
+    void enqueue(const CUVIDPARSERDISPINFO* picParams);
+
+    // Deque the next frame.
+    // Parameters:
+    //      displayInfo - New frame info gets placed into this object.
+    // Returns:
+    //      true, if a new frame was returned,
+    //      false, if the queue was empty and no new frame could be returned.
+    bool dequeue(CUVIDPARSERDISPINFO& displayInfo);
+
+    void releaseFrame(const CUVIDPARSERDISPINFO& picParams) { isFrameInUse_[picParams.picture_index] = false; }
+
+private:
+    bool isInUse(int pictureIndex) const { return isFrameInUse_[pictureIndex] != 0; }
+
+    Mutex mtx_;
+
+    volatile int isFrameInUse_[MaximumSize];
+    volatile int endOfDecode_;
+
+    int framesInQueue_;
+    int readPosition_;
+    CUVIDPARSERDISPINFO displayQueue_[MaximumSize];
+};
+
+}}}
+
+#endif // __FRAME_QUEUE_H__

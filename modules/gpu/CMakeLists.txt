@@ -39,19 +39,6 @@ if(HAVE_CUDA)
   ocv_cuda_compile(cuda_objs ${lib_cuda} ${ncv_cuda})
 
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
-
-  if(WITH_NVCUVID)
-    set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvid_LIBRARY})
-  endif()
-
-  if(WIN32)
-    find_cuda_helper_libs(nvcuvenc)
-    set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvenc_LIBRARY})
-  endif()
-
-  if(WITH_FFMPEG)
-    set(cuda_link_libs ${cuda_link_libs} ${HIGHGUI_LIBRARIES})
-  endif()
 else()
   set(lib_cuda "")
   set(cuda_objs "")

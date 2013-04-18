@@ -40,40 +40,70 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "precomp.hpp"
 
-#include <vector>
-#include <limits>
+#ifdef HAVE_NVCUVID
 
-#include "opencv2/opencv_modules.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/core/gpumat.hpp"
-#include "opencv2/core/opengl.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/video/tracking.hpp"
-#include "opencv2/core/private.hpp"
+cv::gpu::detail::CuvidVideoSource::CuvidVideoSource(const String& fname)
+{
+    CUVIDSOURCEPARAMS params;
+    std::memset(&params, 0, sizeof(CUVIDSOURCEPARAMS));
 
-#ifdef HAVE_OPENCV_GPU
-#  include "opencv2/gpu.hpp"
-#  include "opencv2/core/gpu_private.hpp"
-#endif
+    // Fill parameter struct
+    params.pUserData = this;                        // will be passed to data handlers
+    params.pfnVideoDataHandler = HandleVideoData;   // our local video-handler callback
+    params.pfnAudioDataHandler = 0;
 
-#ifdef HAVE_OPENCV_GPUCODEC
-#  include "opencv2/gpucodec.hpp"
-#endif
+    // now create the actual source
+    CUresult res = cuvidCreateVideoSource(&videoSource_, fname.c_str(), &params);
+    if (res == CUDA_ERROR_INVALID_SOURCE)
+        throw std::runtime_error("Unsupported video source");
+    cuSafeCall( res );
 
-#ifdef HAVE_OPENCV_HIGHGUI
-    #include "opencv2/highgui.hpp"
-#endif
+    CUVIDEOFORMAT vidfmt;
+    cuSafeCall( cuvidGetSourceVideoFormat(videoSource_, &vidfmt, 0) );
 
-#include "opencv2/superres.hpp"
-#include "opencv2/superres/optical_flow.hpp"
-#include "input_array_utility.hpp"
+    format_.codec = static_cast<VideoReader_GPU::Codec>(vidfmt.codec);
+    format_.chromaFormat = static_cast<VideoReader_GPU::ChromaFormat>(vidfmt.chroma_format);
+    format_.width = vidfmt.coded_width;
+    format_.height = vidfmt.coded_height;
+}
 
-#include "ring_buffer.hpp"
+cv::gpu::detail::CuvidVideoSource::~CuvidVideoSource()
+{
+    cuvidDestroyVideoSource(videoSource_);
+}
 
-#include "opencv2/core/private.hpp"
+cv::gpu::VideoReader_GPU::FormatInfo cv::gpu::detail::CuvidVideoSource::format() const
+{
+    return format_;
+}
 
-#endif /* __OPENCV_PRECOMP_H__ */
+void cv::gpu::detail::CuvidVideoSource::start()
+{
+    cuSafeCall( cuvidSetVideoSourceState(videoSource_, cudaVideoState_Started) );
+}
+
+void cv::gpu::detail::CuvidVideoSource::stop()
+{
+    cuSafeCall( cuvidSetVideoSourceState(videoSource_, cudaVideoState_Stopped) );
+}
+
+bool cv::gpu::detail::CuvidVideoSource::isStarted() const
+{
+    return (cuvidGetVideoSourceState(videoSource_) == cudaVideoState_Started);
+}
+
+bool cv::gpu::detail::CuvidVideoSource::hasError() const
+{
+    return (cuvidGetVideoSourceState(videoSource_) == cudaVideoState_Error);
+}
+
+int CUDAAPI cv::gpu::detail::CuvidVideoSource::HandleVideoData(void* userData, CUVIDSOURCEDATAPACKET* packet)
+{
+    CuvidVideoSource* thiz = static_cast<CuvidVideoSource*>(userData);
+
+    return thiz->parseVideoData(packet->payload, packet->payload_size, (packet->flags & CUVID_PKT_ENDOFSTREAM) != 0);
+}
+
+#endif // HAVE_NVCUVID

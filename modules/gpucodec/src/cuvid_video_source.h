@@ -40,40 +40,47 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef __CUVUD_VIDEO_SOURCE_H__
+#define __CUVUD_VIDEO_SOURCE_H__
 
-#include <vector>
-#include <limits>
+#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/gpucodec.hpp"
+#include "thread.h"
 
-#include "opencv2/opencv_modules.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/core/gpumat.hpp"
-#include "opencv2/core/opengl.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/video/tracking.hpp"
-#include "opencv2/core/private.hpp"
+#include <nvcuvid.h>
 
-#ifdef HAVE_OPENCV_GPU
-#  include "opencv2/gpu.hpp"
-#  include "opencv2/core/gpu_private.hpp"
-#endif
+namespace cv { namespace gpu { namespace detail
+{
 
-#ifdef HAVE_OPENCV_GPUCODEC
-#  include "opencv2/gpucodec.hpp"
-#endif
+class CuvidVideoSource : public VideoReader_GPU::VideoSource
+{
+public:
+    explicit CuvidVideoSource(const String& fname);
+    ~CuvidVideoSource();
 
-#ifdef HAVE_OPENCV_HIGHGUI
-    #include "opencv2/highgui.hpp"
-#endif
+    VideoReader_GPU::FormatInfo format() const;
+    void start();
+    void stop();
+    bool isStarted() const;
+    bool hasError() const;
 
-#include "opencv2/superres.hpp"
-#include "opencv2/superres/optical_flow.hpp"
-#include "input_array_utility.hpp"
+private:
+    // Callback for handling packages of demuxed video data.
+    //
+    // Parameters:
+    //      pUserData - Pointer to user data. We must pass a pointer to a
+    //          VideoSourceData struct here, that contains a valid CUvideoparser
+    //          and FrameQueue.
+    //      pPacket - video-source data packet.
+    //
+    // NOTE: called from a different thread that doesn't not have a cuda context
+    //
+    static int CUDAAPI HandleVideoData(void* pUserData, CUVIDSOURCEDATAPACKET* pPacket);
 
-#include "ring_buffer.hpp"
+    CUvideosource videoSource_;
+    VideoReader_GPU::FormatInfo format_;
+};
 
-#include "opencv2/core/private.hpp"
+}}}
 
-#endif /* __OPENCV_PRECOMP_H__ */
+#endif // __CUVUD_VIDEO_SOURCE_H__

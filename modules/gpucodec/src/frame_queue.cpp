@@ -40,9 +40,9 @@
 //
 //M*/
 
-#include "frame_queue.h"
+#include "precomp.hpp"
 
-#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
+#ifdef HAVE_NVCUVID
 
 cv::gpu::detail::FrameQueue::FrameQueue() :
     endOfDecode_(0),
@@ -79,7 +79,7 @@ void cv::gpu::detail::FrameQueue::enqueue(const CUVIDPARSERDISPINFO* picParams)
         bool isFramePlaced = false;
 
         {
-            CriticalSection::AutoLock autoLock(criticalSection_);
+            AutoLock autoLock(mtx_);
 
             if (framesInQueue_ < MaximumSize)
             {
@@ -100,7 +100,7 @@ void cv::gpu::detail::FrameQueue::enqueue(const CUVIDPARSERDISPINFO* picParams)
 
 bool cv::gpu::detail::FrameQueue::dequeue(CUVIDPARSERDISPINFO& displayInfo)
 {
-    CriticalSection::AutoLock autoLock(criticalSection_);
+    AutoLock autoLock(mtx_);
 
     if (framesInQueue_ > 0)
     {
@@ -114,4 +114,4 @@ bool cv::gpu::detail::FrameQueue::dequeue(CUVIDPARSERDISPINFO& displayInfo)
     return false;
 }
 
-#endif // HAVE_CUDA
+#endif // HAVE_NVCUVID

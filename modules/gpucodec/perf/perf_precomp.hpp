@@ -40,64 +40,25 @@
 //
 //M*/
 
-#ifndef __FRAME_QUEUE_H__
-#define __FRAME_QUEUE_H__
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
+#endif
 
-#include "precomp.hpp"
-#include "thread_wrappers.h"
+#ifndef __OPENCV_PERF_PRECOMP_HPP__
+#define __OPENCV_PERF_PRECOMP_HPP__
 
-#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/gpu_perf.hpp"
 
-namespace cv { namespace gpu
-{
-    namespace detail
-    {
-        class FrameQueue
-        {
-        public:
-            static const int MaximumSize = 20; // MAX_FRM_CNT;
+#include "opencv2/gpucodec.hpp"
+#include "opencv2/highgui.hpp"
 
-            FrameQueue();
+#ifdef GTEST_CREATE_SHARED_LIBRARY
+#error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
+#endif
 
-            void endDecode() { endOfDecode_ = true; }
-            bool isEndOfDecode() const { return endOfDecode_ != 0;}
-
-            // Spins until frame becomes available or decoding gets canceled.
-            // If the requested frame is available the method returns true.
-            // If decoding was interupted before the requested frame becomes
-            // available, the method returns false.
-            bool waitUntilFrameAvailable(int pictureIndex);
-
-            void enqueue(const CUVIDPARSERDISPINFO* picParams);
-
-            // Deque the next frame.
-            // Parameters:
-            //      displayInfo - New frame info gets placed into this object.
-            // Returns:
-            //      true, if a new frame was returned,
-            //      false, if the queue was empty and no new frame could be returned.
-            bool dequeue(CUVIDPARSERDISPINFO& displayInfo);
-
-            void releaseFrame(const CUVIDPARSERDISPINFO& picParams) { isFrameInUse_[picParams.picture_index] = false; }
-
-        private:
-            FrameQueue(const FrameQueue&);
-            FrameQueue& operator =(const FrameQueue&);
-
-            bool isInUse(int pictureIndex) const { return isFrameInUse_[pictureIndex] != 0; }
-
-            CriticalSection criticalSection_;
-
-            volatile int isFrameInUse_[MaximumSize];
-            volatile int endOfDecode_;
-
-            int framesInQueue_;
-            int readPosition_;
-            CUVIDPARSERDISPINFO displayQueue_[MaximumSize];
-        };
-    }
-}}
-
-#endif // HAVE_CUDA
-
-#endif // __FRAME_QUEUE_H__
+#endif
