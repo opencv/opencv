@@ -1678,33 +1678,3 @@ String cv::gpu::getCudaDriverApiErrorMessage(int code)
     return getErrorString(code, cu_errors, cu_errors_num);
 #endif
 }
-
-bool cv::gpu::tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType)
-{
-#ifndef HAVE_CUDA
-    (void) cpuBorderType;
-    (void) gpuBorderType;
-    return false;
-#else
-    switch (cpuBorderType)
-    {
-    case IPL_BORDER_REFLECT_101:
-        gpuBorderType = cv::gpu::BORDER_REFLECT101_GPU;
-        return true;
-    case IPL_BORDER_REPLICATE:
-        gpuBorderType = cv::gpu::BORDER_REPLICATE_GPU;
-        return true;
-    case IPL_BORDER_CONSTANT:
-        gpuBorderType = cv::gpu::BORDER_CONSTANT_GPU;
-        return true;
-    case IPL_BORDER_REFLECT:
-        gpuBorderType = cv::gpu::BORDER_REFLECT_GPU;
-        return true;
-    case IPL_BORDER_WRAP:
-        gpuBorderType = cv::gpu::BORDER_WRAP_GPU;
-        return true;
-    default:
-        return false;
-    };
-#endif
-}

@@ -44,10 +44,7 @@
 
 using namespace cv;
 using namespace cv::detail;
-
-#ifdef HAVE_OPENCV_GPU
 using namespace cv::gpu;
-#endif
 
 #ifdef HAVE_OPENCV_NONFREE
 #include "opencv2/nonfree.hpp"
@@ -132,7 +129,7 @@ private:
     float match_conf_;
 };
 
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPUFEATURES2D
 class GpuMatcher : public FeaturesMatcher
 {
 public:
@@ -207,7 +204,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     LOG("1->2 & 2->1 matches: " << matches_info.matches.size() << endl);
 }
 
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPUFEATURES2D
 void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
     matches_info.matches.clear();
@@ -435,7 +432,7 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     }
 }
 
-#if defined(HAVE_OPENCV_NONFREE) && defined(HAVE_OPENCV_GPU)
+#ifdef HAVE_OPENCV_NONFREE
 SurfFeaturesFinderGpu::SurfFeaturesFinderGpu(double hess_thresh, int num_octaves, int num_layers,
                                              int num_octaves_descr, int num_layers_descr)
 {
@@ -536,14 +533,18 @@ void FeaturesMatcher::operator ()(const std::vector<ImageFeatures> &features, st
 
 BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
 {
-#ifdef HAVE_OPENCV_GPU
-    if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
-        impl_ = new GpuMatcher(match_conf);
-    else
-#else
     (void)try_use_gpu;
+
+#ifdef HAVE_OPENCV_GPUFEATURES2D
+    if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
+    {
+        impl_ = new GpuMatcher(match_conf);
+    }
+    else
 #endif
+    {
         impl_ = new CpuMatcher(match_conf);
+    }
 
     is_thread_safe_ = impl_->isThreadSafe();
     num_matches_thresh1_ = num_matches_thresh1;
