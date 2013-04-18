@@ -1,4 +1,4 @@
-set(PERF4AU_REQUIRED_DEPS opencv_core opencv_imgproc opencv_highgui opencv_video opencv_legacy opencv_gpu opencv_ts)
+set(PERF4AU_REQUIRED_DEPS opencv_core opencv_imgproc opencv_highgui opencv_video opencv_legacy opencv_ml opencv_ts opencv_gpufilters opencv_gpuimgproc opencv_gpuoptflow)
 
 ocv_check_dependencies(${PERF4AU_REQUIRED_DEPS})
 

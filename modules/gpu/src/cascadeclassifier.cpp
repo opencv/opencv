@@ -75,7 +75,7 @@ public:
 
 #ifndef HAVE_OPENCV_GPULEGACY
 
-struct cv::gpu::CascadeClassifier_GPU::HaarCascade
+struct cv::gpu::CascadeClassifier_GPU::HaarCascade : cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
 {
 public:
     HaarCascade()
@@ -508,6 +508,8 @@ private:
             resuzeBuffer.create(frame, CV_8UC1);
 
             integral.create(frame.height + 1, integralFactor * (frame.width + 1), CV_32SC1);
+
+#ifdef HAVE_OPENCV_GPULEGACY
             NcvSize32u roiSize;
             roiSize.width = frame.width;
             roiSize.height = frame.height;
@@ -518,6 +520,7 @@ private:
             Ncv32u bufSize;
             ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
             integralBuffer.create(1, bufSize, CV_8UC1);
+#endif
 
             candidates.create(1 , frame.width >> 1, CV_32SC4);
         }

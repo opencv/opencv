@@ -9,3 +9,4 @@ gpu. GPU-accelerated Computer Vision
     initalization_and_information
     data_structures
     object_detection
+    calib3d

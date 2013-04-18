@@ -43,10 +43,9 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#include <vector>
-#include <iostream>
-
 #include "opencv2/gpu.hpp"
+#include "opencv2/gpuarithm.hpp"
+#include "opencv2/gpuwarping.hpp"
 #include "opencv2/calib3d.hpp"
 #include "opencv2/objdetect.hpp"
 
@@ -55,7 +54,6 @@
 #include "opencv2/opencv_modules.hpp"
 
 #ifdef HAVE_OPENCV_GPULEGACY
-#  include "opencv2/gpulegacy.hpp"
 #  include "opencv2/gpulegacy/private.hpp"
 #endif
 
