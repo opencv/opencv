@@ -42,9 +42,7 @@
 
 #include "precomp.hpp"
 
-#if defined(HAVE_OPENCV_GPU)
-
-#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
+#ifndef HAVE_CUDA
 
 cv::gpu::VIBE_GPU::VIBE_GPU(unsigned long) { throw_no_cuda(); }
 void cv::gpu::VIBE_GPU::initialize(const GpuMat&, Stream&) { throw_no_cuda(); }
@@ -137,5 +135,3 @@ void cv::gpu::VIBE_GPU::release()
 }
 
 #endif
-
-#endif // defined(HAVE_OPENCV_GPU)
