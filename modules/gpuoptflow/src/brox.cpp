@@ -45,11 +45,9 @@
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
+#if !defined (HAVE_CUDA) || !defined (HAVE_OPENCV_GPULEGACY) || defined (CUDA_DISABLER)
 
 void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::interpolateFrames(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, float, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::createOpticalFlowNeedleMap(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
 #else
 
@@ -127,111 +125,6 @@ void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat& frame0, const GpuMat& f
     NCVMemStackAllocator gpuAllocator(NCVMemoryTypeDevice, bufSize, static_cast<Ncv32u>(devProp.textureAlignment), buf.ptr());
 
     ncvSafeCall( NCVBroxOpticalFlow(desc, gpuAllocator, frame0Mat, frame1Mat, uMat, vMat, stream) );
-}
-
-void cv::gpu::interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, const GpuMat& fu, const GpuMat& fv, const GpuMat& bu, const GpuMat& bv,
-                                float pos, GpuMat& newFrame, GpuMat& buf, Stream& s)
-{
-    CV_Assert(frame0.type() == CV_32FC1);
-    CV_Assert(frame1.size() == frame0.size() && frame1.type() == frame0.type());
-    CV_Assert(fu.size() == frame0.size() && fu.type() == frame0.type());
-    CV_Assert(fv.size() == frame0.size() && fv.type() == frame0.type());
-    CV_Assert(bu.size() == frame0.size() && bu.type() == frame0.type());
-    CV_Assert(bv.size() == frame0.size() && bv.type() == frame0.type());
-
-    newFrame.create(frame0.size(), frame0.type());
-
-    buf.create(6 * frame0.rows, frame0.cols, CV_32FC1);
-    buf.setTo(Scalar::all(0));
-
-    // occlusion masks
-    GpuMat occ0 = buf.rowRange(0 * frame0.rows, 1 * frame0.rows);
-    GpuMat occ1 = buf.rowRange(1 * frame0.rows, 2 * frame0.rows);
-
-    // interpolated forward flow
-    GpuMat fui = buf.rowRange(2 * frame0.rows, 3 * frame0.rows);
-    GpuMat fvi = buf.rowRange(3 * frame0.rows, 4 * frame0.rows);
-
-    // interpolated backward flow
-    GpuMat bui = buf.rowRange(4 * frame0.rows, 5 * frame0.rows);
-    GpuMat bvi = buf.rowRange(5 * frame0.rows, 6 * frame0.rows);
-
-    size_t step = frame0.step;
-
-    CV_Assert(frame1.step == step && fu.step == step && fv.step == step && bu.step == step && bv.step == step && newFrame.step == step && buf.step == step);
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-    NppStStreamHandler h(stream);
-
-    NppStInterpolationState state;
-
-    state.size         = NcvSize32u(frame0.cols, frame0.rows);
-    state.nStep        = static_cast<Ncv32u>(step);
-    state.pSrcFrame0   = const_cast<Ncv32f*>(frame0.ptr<Ncv32f>());
-    state.pSrcFrame1   = const_cast<Ncv32f*>(frame1.ptr<Ncv32f>());
-    state.pFU          = const_cast<Ncv32f*>(fu.ptr<Ncv32f>());
-    state.pFV          = const_cast<Ncv32f*>(fv.ptr<Ncv32f>());
-    state.pBU          = const_cast<Ncv32f*>(bu.ptr<Ncv32f>());
-    state.pBV          = const_cast<Ncv32f*>(bv.ptr<Ncv32f>());
-    state.pos          = pos;
-    state.pNewFrame    = newFrame.ptr<Ncv32f>();
-    state.ppBuffers[0] = occ0.ptr<Ncv32f>();
-    state.ppBuffers[1] = occ1.ptr<Ncv32f>();
-    state.ppBuffers[2] = fui.ptr<Ncv32f>();
-    state.ppBuffers[3] = fvi.ptr<Ncv32f>();
-    state.ppBuffers[4] = bui.ptr<Ncv32f>();
-    state.ppBuffers[5] = bvi.ptr<Ncv32f>();
-
-    ncvSafeCall( nppiStInterpolateFrames(&state) );
-
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
-}
-
-namespace cv { namespace gpu { namespace cudev
-{
-    namespace optical_flow
-    {
-        void NeedleMapAverage_gpu(PtrStepSzf u, PtrStepSzf v, PtrStepSzf u_avg, PtrStepSzf v_avg);
-        void CreateOpticalFlowNeedleMap_gpu(PtrStepSzf u_avg, PtrStepSzf v_avg, float* vertex_buffer, float* color_data, float max_flow, float xscale, float yscale);
-    }
-}}}
-
-void cv::gpu::createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors)
-{
-    using namespace cv::gpu::cudev::optical_flow;
-
-    CV_Assert(u.type() == CV_32FC1);
-    CV_Assert(v.type() == u.type() && v.size() == u.size());
-
-    const int NEEDLE_MAP_SCALE = 16;
-
-    const int x_needles = u.cols / NEEDLE_MAP_SCALE;
-    const int y_needles = u.rows / NEEDLE_MAP_SCALE;
-
-    GpuMat u_avg(y_needles, x_needles, CV_32FC1);
-    GpuMat v_avg(y_needles, x_needles, CV_32FC1);
-
-    NeedleMapAverage_gpu(u, v, u_avg, v_avg);
-
-    const int NUM_VERTS_PER_ARROW = 6;
-
-    const int num_arrows = x_needles * y_needles * NUM_VERTS_PER_ARROW;
-
-    vertex.create(1, num_arrows, CV_32FC3);
-    colors.create(1, num_arrows, CV_32FC3);
-
-    colors.setTo(Scalar::all(1.0));
-
-    double uMax, vMax;
-    minMax(u_avg, 0, &uMax);
-    minMax(v_avg, 0, &vMax);
-
-    float max_flow = static_cast<float>(std::sqrt(uMax * uMax + vMax * vMax));
-
-    CreateOpticalFlowNeedleMap_gpu(u_avg, v_avg, vertex.ptr<float>(), colors.ptr<float>(), max_flow, 1.0f / u.cols, 1.0f / u.rows);
-
-    cvtColor(colors, colors, COLOR_HSV2RGB);
 }
 
 #endif /* HAVE_CUDA */

@@ -55,9 +55,7 @@
 #include "opencv2/ts/gpu_perf.hpp"
 
 #include "opencv2/gpuoptflow.hpp"
-
 #include "opencv2/video.hpp"
-#include "opencv2/legacy.hpp"
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY
 #error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
