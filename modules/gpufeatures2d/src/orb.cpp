@@ -504,19 +504,19 @@ void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat& image, const GpuMat& mas
         {
             if (level < firstLevel_)
             {
-                resize(image, imagePyr_[level], sz, 0, 0, INTER_LINEAR);
+                gpu::resize(image, imagePyr_[level], sz, 0, 0, INTER_LINEAR);
 
                 if (!mask.empty())
-                    resize(mask, maskPyr_[level], sz, 0, 0, INTER_LINEAR);
+                    gpu::resize(mask, maskPyr_[level], sz, 0, 0, INTER_LINEAR);
             }
             else
             {
-                resize(imagePyr_[level - 1], imagePyr_[level], sz, 0, 0, INTER_LINEAR);
+                gpu::resize(imagePyr_[level - 1], imagePyr_[level], sz, 0, 0, INTER_LINEAR);
 
                 if (!mask.empty())
                 {
-                    resize(maskPyr_[level - 1], maskPyr_[level], sz, 0, 0, INTER_LINEAR);
-                    threshold(maskPyr_[level], maskPyr_[level], 254, 0, THRESH_TOZERO);
+                    gpu::resize(maskPyr_[level - 1], maskPyr_[level], sz, 0, 0, INTER_LINEAR);
+                    gpu::threshold(maskPyr_[level], maskPyr_[level], 254, 0, THRESH_TOZERO);
                 }
             }
         }
@@ -534,7 +534,7 @@ void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat& image, const GpuMat& mas
         Rect inner(edgeThreshold_, edgeThreshold_, sz.width - 2 * edgeThreshold_, sz.height - 2 * edgeThreshold_);
         buf_(inner).setTo(Scalar::all(255));
 
-        bitwise_and(maskPyr_[level], buf_, maskPyr_[level]);
+        gpu::bitwise_and(maskPyr_[level], buf_, maskPyr_[level]);
     }
 }
 

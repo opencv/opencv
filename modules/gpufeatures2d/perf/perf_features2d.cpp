@@ -51,7 +51,7 @@ using namespace perf;
 
 DEF_PARAM_TEST(Image_Threshold_NonMaxSupression, string, int, bool);
 
-PERF_TEST_P(Image_Threshold_NonMaxSupression, Features2D_FAST,
+PERF_TEST_P(Image_Threshold_NonMaxSupression, FAST,
             Combine(Values<string>("gpu/perf/aloe.png"),
                     Values(20),
                     Bool()))
@@ -93,7 +93,7 @@ PERF_TEST_P(Image_Threshold_NonMaxSupression, Features2D_FAST,
 
 DEF_PARAM_TEST(Image_NFeatures, string, int);
 
-PERF_TEST_P(Image_NFeatures, Features2D_ORB,
+PERF_TEST_P(Image_NFeatures, ORB,
             Combine(Values<string>("gpu/perf/aloe.png"),
                     Values(4000)))
 {
@@ -145,7 +145,7 @@ PERF_TEST_P(Image_NFeatures, Features2D_ORB,
 
 DEF_PARAM_TEST(DescSize_Norm, int, NormType);
 
-PERF_TEST_P(DescSize_Norm, Features2D_BFMatch,
+PERF_TEST_P(DescSize_Norm, BFMatch,
             Combine(Values(64, 128, 256),
                     Values(NormType(cv::NORM_L1), NormType(cv::NORM_L2), NormType(cv::NORM_HAMMING))))
 {
@@ -202,7 +202,7 @@ static void toOneRowMatches(const std::vector< std::vector<cv::DMatch> >& src, s
 
 DEF_PARAM_TEST(DescSize_K_Norm, int, int, NormType);
 
-PERF_TEST_P(DescSize_K_Norm, Features2D_BFKnnMatch,
+PERF_TEST_P(DescSize_K_Norm, BFKnnMatch,
             Combine(Values(64, 128, 256),
                     Values(2, 3),
                     Values(NormType(cv::NORM_L1), NormType(cv::NORM_L2))))
@@ -257,7 +257,7 @@ PERF_TEST_P(DescSize_K_Norm, Features2D_BFKnnMatch,
 //////////////////////////////////////////////////////////////////////
 // BFRadiusMatch
 
-PERF_TEST_P(DescSize_Norm, Features2D_BFRadiusMatch,
+PERF_TEST_P(DescSize_Norm, BFRadiusMatch,
             Combine(Values(64, 128, 256),
                     Values(NormType(cv::NORM_L1), NormType(cv::NORM_L2))))
 {
