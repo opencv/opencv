@@ -94,8 +94,8 @@ namespace canny
     texture<uchar, cudaTextureType2D, cudaReadModeElementType> tex_src(false, cudaFilterModePoint, cudaAddressModeClamp);
     struct SrcTex
     {
-        const int xoff;
-        const int yoff;
+        int xoff;
+        int yoff;
         __host__ SrcTex(int _xoff, int _yoff) : xoff(_xoff), yoff(_yoff) {}
 
         __device__ __forceinline__ int operator ()(int y, int x) const

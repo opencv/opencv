@@ -72,7 +72,7 @@ namespace arithm
     template <class Op, typename T>
     struct CmpScalar<Op, T, 1> : unary_function<T, uchar>
     {
-        const T val;
+        T val;
 
         __host__ explicit CmpScalar(T val_) : val(val_) {}
 
@@ -85,7 +85,7 @@ namespace arithm
     template <class Op, typename T>
     struct CmpScalar<Op, T, 2> : unary_function<TYPE_VEC(T, 2), TYPE_VEC(uchar, 2)>
     {
-        const TYPE_VEC(T, 2) val;
+        TYPE_VEC(T, 2) val;
 
         __host__ explicit CmpScalar(TYPE_VEC(T, 2) val_) : val(val_) {}
 
@@ -98,7 +98,7 @@ namespace arithm
     template <class Op, typename T>
     struct CmpScalar<Op, T, 3> : unary_function<TYPE_VEC(T, 3), TYPE_VEC(uchar, 3)>
     {
-        const TYPE_VEC(T, 3) val;
+        TYPE_VEC(T, 3) val;
 
         __host__ explicit CmpScalar(TYPE_VEC(T, 3) val_) : val(val_) {}
 
@@ -111,7 +111,7 @@ namespace arithm
     template <class Op, typename T>
     struct CmpScalar<Op, T, 4> : unary_function<TYPE_VEC(T, 4), TYPE_VEC(uchar, 4)>
     {
-        const TYPE_VEC(T, 4) val;
+        TYPE_VEC(T, 4) val;
 
         __host__ explicit CmpScalar(TYPE_VEC(T, 4) val_) : val(val_) {}
 
