@@ -1205,11 +1205,7 @@ static int to_ok(PyTypeObject *to)
   return (PyType_Ready(to) == 0);
 }
 
-extern "C"
-#if defined WIN32 || defined _WIN32
-__declspec(dllexport)
-#endif
-void initcv2();
+extern "C" CV_EXPORTS void initcv2();
 
 void initcv2()
 {
