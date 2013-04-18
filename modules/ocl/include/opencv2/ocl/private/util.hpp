@@ -68,7 +68,7 @@ namespace cv
         void CV_EXPORTS openCLMallocPitch(Context *clCxt, void **dev_ptr, size_t *pitch,
                                           size_t widthInBytes, size_t height);
         void CV_EXPORTS openCLMallocPitchEx(Context *clCxt, void **dev_ptr, size_t *pitch,
-                                            size_t widthInBytes, size_t height,
+                                            size_t widthInBytes, size_t height, 
                                             DevMemRW rw_type, DevMemType mem_type, void* hptr = 0);
         void CV_EXPORTS openCLMemcpy2D(Context *clCxt, void *dst, size_t dpitch,
                                        const void *src, size_t spitch,
@@ -134,6 +134,11 @@ namespace cv
         };
         //info should have been pre-allocated
         void CV_EXPORTS queryDeviceInfo(DEVICE_INFO info_type, void* info);
+
+        // initialize OpenGL context before creating OpenCL context
+        bool initOpenGLContext( cl_context_properties *cps );
+        // release OpenGL context after releasing OpenCL context
+        void releaseOpenGLContext();
 
     }//namespace ocl
 
