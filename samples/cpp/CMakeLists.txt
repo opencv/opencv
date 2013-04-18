@@ -18,6 +18,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
   if(HAVE_opencv_gpu)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpuarithm/include")
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpufilters/include")
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include")
   endif()
 
