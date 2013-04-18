@@ -60,7 +60,7 @@
 #ifndef _ncv_optical_flow_h_
 #define _ncv_optical_flow_h_
 
-#include "opencv2/gpunvidia/NCV.hpp"
+#include "opencv2/gpulegacy/NCV.hpp"
 
 /// \brief Model and solver parameters
 struct NCVBroxOpticalFlowDescriptor

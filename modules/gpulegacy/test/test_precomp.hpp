@@ -40,23 +40,56 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
-
-#include <limits>
-#include <iostream>
-#include <algorithm>
-
-#include "opencv2/gpunvidia.hpp"
-#include "opencv2/core/utility.hpp"
-
-#include "opencv2/opencv_modules.hpp"
-
-#ifdef HAVE_OPENCV_OBJDETECT
-#  include "opencv2/objdetect.hpp"
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
 #endif
 
-#include "opencv2/core/gpu_private.hpp"
-#include "opencv2/gpunvidia/private.hpp"
+#ifndef __OPENCV_TEST_PRECOMP_HPP__
+#define __OPENCV_TEST_PRECOMP_HPP__
 
-#endif /* __OPENCV_PRECOMP_H__ */
+#if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__)
+    #include <fpu_control.h>
+#endif
+
+#include <cfloat>
+#include <cstdio>
+#include <cmath>
+#include <vector>
+#include <string>
+#include <map>
+#include <memory>
+#include <algorithm>
+#include <fstream>
+
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/gpu_test.hpp"
+
+#include "opencv2/core/gpumat.hpp"
+#include "opencv2/gpulegacy.hpp"
+#include "opencv2/highgui.hpp"
+
+#include "opencv2/core/gpu_private.hpp"
+
+#include "NCVTest.hpp"
+#include "NCVAutoTestLister.hpp"
+#include "NCVTestSourceProvider.hpp"
+
+#include "TestIntegralImage.h"
+#include "TestIntegralImageSquared.h"
+#include "TestRectStdDev.h"
+#include "TestResize.h"
+#include "TestCompact.h"
+#include "TestTranspose.h"
+#include "TestDrawRects.h"
+#include "TestHypothesesGrow.h"
+#include "TestHypothesesFilter.h"
+#include "TestHaarCascadeLoader.h"
+#include "TestHaarCascadeApplication.h"
+
+#include "main_test_nvidia.h"
+
+#endif

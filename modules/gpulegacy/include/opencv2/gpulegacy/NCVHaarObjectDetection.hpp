@@ -59,7 +59,7 @@
 #ifndef _ncvhaarobjectdetection_hpp_
 #define _ncvhaarobjectdetection_hpp_
 
-#include "opencv2/gpunvidia/NCV.hpp"
+#include "opencv2/gpulegacy/NCV.hpp"
 
 
 //==============================================================================

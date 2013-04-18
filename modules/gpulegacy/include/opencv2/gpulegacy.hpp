@@ -40,21 +40,13 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef __OPENCV_GPULEGACY_HPP__
+#define __OPENCV_GPULEGACY_HPP__
 
-#include "opencv2/gpuobjdetect.hpp"
-#include "opencv2/gpuimgproc.hpp"
-#include "opencv2/gpuarithm.hpp"
+#include "opencv2/gpulegacy/NCV.hpp"
+#include "opencv2/gpulegacy/NPP_staging.hpp"
+#include "opencv2/gpulegacy/NCVPyramid.hpp"
+#include "opencv2/gpulegacy/NCVHaarObjectDetection.hpp"
+#include "opencv2/gpulegacy/NCVBroxOpticalFlow.hpp"
 
-#include "opencv2/objdetect.hpp"
-
-#include "opencv2/core/gpu_private.hpp"
-
-#include "opencv2/opencv_modules.hpp"
-
-#ifdef HAVE_OPENCV_GPULEGACY
-#  include "opencv2/gpulegacy/private.hpp"
-#endif
-
-#endif /* __OPENCV_PRECOMP_H__ */
+#endif /* __OPENCV_GPULEGACY_HPP__ */

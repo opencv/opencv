@@ -40,60 +40,112 @@
 //
 //M*/
 
-#ifndef _ncvpyramid_hpp_
-#define _ncvpyramid_hpp_
+#include "test_precomp.hpp"
 
-#include <memory>
-#include <vector>
-#include "opencv2/gpunvidia/NCV.hpp"
+#ifdef HAVE_CUDA
 
-#if 0 //def _WIN32
+OutputLevel nvidiaTestOutputLevel = OutputLevelNone;
 
-template <class T>
-class CV_EXPORTS NCVMatrixStack
+using namespace cvtest;
+using namespace testing;
+
+struct NVidiaTest : TestWithParam<cv::gpu::DeviceInfo>
 {
-public:
-    NCVMatrixStack() {this->_arr.clear();}
-    ~NCVMatrixStack()
+    cv::gpu::DeviceInfo devInfo;
+
+    std::string _path;
+
+    virtual void SetUp()
     {
-        const Ncv32u nElem = this->_arr.size();
-        for (Ncv32u i=0; i<nElem; i++)
-        {
-            pop_back();
-        }
+        devInfo = GetParam();
+
+        cv::gpu::setDevice(devInfo.deviceID());
+        _path = TS::ptr()->get_data_path().c_str();
+        _path = _path + "haarcascade/";
     }
-    void push_back(NCVMatrix<T> *elem) {this->_arr.push_back(std::tr1::shared_ptr< NCVMatrix<T> >(elem));}
-    void pop_back() {this->_arr.pop_back();}
-    NCVMatrix<T> * operator [] (int i) const {return this->_arr[i].get();}
-private:
-    std::vector< std::tr1::shared_ptr< NCVMatrix<T> > > _arr;
 };
 
+struct NPPST : NVidiaTest {};
+struct NCV : NVidiaTest {};
 
-template <class T>
-class CV_EXPORTS NCVImagePyramid
+GPU_TEST_P(NPPST, Integral)
 {
-public:
+    bool res = nvidia_NPPST_Integral_Image(_path, nvidiaTestOutputLevel);
 
-    NCVImagePyramid(const NCVMatrix<T> &img,
-                    Ncv8u nLayers,
-                    INCVMemAllocator &alloc,
-                    cudaStream_t cuStream);
-    ~NCVImagePyramid();
-    NcvBool isInitialized() const;
-    NCVStatus getLayer(NCVMatrix<T> &outImg,
-                       NcvSize32u outRoi,
-                       NcvBool bTrilinear,
-                       cudaStream_t cuStream) const;
+    ASSERT_TRUE(res);
+}
 
-private:
+GPU_TEST_P(NPPST, SquaredIntegral)
+{
+    bool res = nvidia_NPPST_Squared_Integral_Image(_path, nvidiaTestOutputLevel);
 
-    NcvBool _isInitialized;
-    const NCVMatrix<T> *layer0;
-    NCVMatrixStack<T> pyramid;
-    Ncv32u nLayers;
-};
+    ASSERT_TRUE(res);
+}
 
-#endif //_WIN32
+GPU_TEST_P(NPPST, RectStdDev)
+{
+    bool res = nvidia_NPPST_RectStdDev(_path, nvidiaTestOutputLevel);
 
-#endif //_ncvpyramid_hpp_
+    ASSERT_TRUE(res);
+}
+
+GPU_TEST_P(NPPST, Resize)
+{
+    bool res = nvidia_NPPST_Resize(_path, nvidiaTestOutputLevel);
+
+    ASSERT_TRUE(res);
+}
+
+GPU_TEST_P(NPPST, VectorOperations)
+{
+    bool res = nvidia_NPPST_Vector_Operations(_path, nvidiaTestOutputLevel);
+
+    ASSERT_TRUE(res);
+}
+
+GPU_TEST_P(NPPST, Transpose)
+{
+    bool res = nvidia_NPPST_Transpose(_path, nvidiaTestOutputLevel);
+
+    ASSERT_TRUE(res);
+}
+
+GPU_TEST_P(NCV, VectorOperations)
+{
+    bool res = nvidia_NCV_Vector_Operations(_path, nvidiaTestOutputLevel);
+
+    ASSERT_TRUE(res);
+}
+
+GPU_TEST_P(NCV, HaarCascadeLoader)
+{
+    bool res = nvidia_NCV_Haar_Cascade_Loader(_path, nvidiaTestOutputLevel);
+
+    ASSERT_TRUE(res);
+}
+
+GPU_TEST_P(NCV, HaarCascadeApplication)
+{
+    bool res = nvidia_NCV_Haar_Cascade_Application(_path, nvidiaTestOutputLevel);
+
+    ASSERT_TRUE(res);
+}
+
+GPU_TEST_P(NCV, HypothesesFiltration)
+{
+    bool res = nvidia_NCV_Hypotheses_Filtration(_path, nvidiaTestOutputLevel);
+
+    ASSERT_TRUE(res);
+}
+
+GPU_TEST_P(NCV, Visualization)
+{
+    bool res = nvidia_NCV_Visualization(_path, nvidiaTestOutputLevel);
+
+    ASSERT_TRUE(res);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Legacy, NPPST, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_Legacy, NCV, ALL_DEVICES);
+
+#endif // HAVE_CUDA

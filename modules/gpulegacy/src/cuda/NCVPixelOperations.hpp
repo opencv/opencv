@@ -45,7 +45,7 @@
 
 #include <limits.h>
 #include <float.h>
-#include "opencv2/gpunvidia/NCV.hpp"
+#include "opencv2/gpulegacy/NCV.hpp"
 
 template<typename TBase> inline __host__ __device__ TBase _pixMaxVal();
 template<> static inline __host__ __device__ Ncv8u  _pixMaxVal<Ncv8u>()  {return UCHAR_MAX;}

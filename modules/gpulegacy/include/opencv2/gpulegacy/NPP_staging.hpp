@@ -43,7 +43,7 @@
 #ifndef _npp_staging_hpp_
 #define _npp_staging_hpp_
 
-#include "opencv2/gpunvidia/NCV.hpp"
+#include "opencv2/gpulegacy/NCV.hpp"
 
 
 /**
