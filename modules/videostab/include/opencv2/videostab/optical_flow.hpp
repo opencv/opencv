@@ -46,8 +46,8 @@
 #include "opencv2/core.hpp"
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_GPU
-  #include "opencv2/gpu.hpp"
+#ifdef HAVE_OPENCV_GPUOPTFLOW
+  #include "opencv2/gpuoptflow.hpp"
 #endif
 
 namespace cv
@@ -99,7 +99,8 @@ public:
             OutputArray status, OutputArray errors);
 };
 
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPUOPTFLOW
+
 class CV_EXPORTS SparsePyrLkOptFlowEstimatorGpu
         : public PyrLkOptFlowEstimatorBase, public ISparseOptFlowEstimator
 {
@@ -135,6 +136,7 @@ private:
     gpu::PyrLKOpticalFlow optFlowEstimator_;
     gpu::GpuMat frame0_, frame1_, flowX_, flowY_, errors_;
 };
+
 #endif
 
 } // namespace videostab
