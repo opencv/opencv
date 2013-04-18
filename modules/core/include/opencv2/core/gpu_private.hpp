@@ -74,10 +74,6 @@
 namespace cv { namespace gpu {
     CV_EXPORTS cv::String getNppErrorMessage(int code);
     CV_EXPORTS cv::String getCudaDriverApiErrorMessage(int code);
-
-    // Converts CPU border extrapolation mode into GPU internal analogue.
-    // Returns true if the GPU analogue exists, false otherwise.
-    CV_EXPORTS bool tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType);
 }}
 
 #ifndef HAVE_CUDA

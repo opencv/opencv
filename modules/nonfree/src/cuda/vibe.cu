@@ -40,10 +40,6 @@
 //
 //M*/
 
-#include "opencv2/opencv_modules.hpp"
-
-#ifdef HAVE_OPENCV_GPU
-
 #include "opencv2/core/cuda/common.hpp"
 
 namespace cv { namespace gpu { namespace cudev
@@ -267,5 +263,3 @@ namespace cv { namespace gpu { namespace cudev
         }
     }
 }}}
-
-#endif
