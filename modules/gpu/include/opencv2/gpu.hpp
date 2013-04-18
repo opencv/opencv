@@ -50,7 +50,7 @@
 #include "opencv2/gpuimgproc.hpp"
 #include "opencv2/gpufeatures2d.hpp"
 #include "opencv2/gpuvideo.hpp"
-#include "opencv2/gpucalib3d.hpp"
+#include "opencv2/gpustereo.hpp"
 #include "opencv2/gpuobjdetect.hpp"
 
 namespace cv { namespace gpu {
@@ -70,6 +70,18 @@ CV_EXPORTS void connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Sc
 
 //! performs connected componnents labeling.
 CV_EXPORTS void labelComponents(const GpuMat& mask, GpuMat& components, int flags = 0, Stream& stream = Stream::Null());
+
+CV_EXPORTS void transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
+                                GpuMat& dst, Stream& stream = Stream::Null());
+
+CV_EXPORTS void projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
+                              const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst,
+                              Stream& stream = Stream::Null());
+
+CV_EXPORTS void solvePnPRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
+                               const Mat& dist_coef, Mat& rvec, Mat& tvec, bool use_extrinsic_guess=false,
+                               int num_iters=100, float max_dist=8.0, int min_inlier_count=100,
+                               std::vector<int>* inliers=NULL);
 
 //! removes points (CV_32FC2, single row matrix) with zero mask value
 CV_EXPORTS void compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask);

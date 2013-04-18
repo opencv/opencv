@@ -40,8 +40,12 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPUCALIB3D_HPP__
-#define __OPENCV_GPUCALIB3D_HPP__
+#ifndef __OPENCV_GPUSTEREO_HPP__
+#define __OPENCV_GPUSTEREO_HPP__
+
+#ifndef __cplusplus
+#  error gpustereo.hpp header must be compiled as C++
+#endif
 
 #include "opencv2/core/gpumat.hpp"
 
@@ -226,18 +230,6 @@ private:
     GpuMat table_space;
 };
 
-CV_EXPORTS void transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
-                                GpuMat& dst, Stream& stream = Stream::Null());
-
-CV_EXPORTS void projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
-                              const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst,
-                              Stream& stream = Stream::Null());
-
-CV_EXPORTS void solvePnPRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
-                               const Mat& dist_coef, Mat& rvec, Mat& tvec, bool use_extrinsic_guess=false,
-                               int num_iters=100, float max_dist=8.0, int min_inlier_count=100,
-                               std::vector<int>* inliers=NULL);
-
 //! Reprojects disparity image to 3D space.
 //! Supports CV_8U and CV_16S types of input disparity.
 //! The output is a 3- or 4-channel floating-point matrix.
@@ -252,4 +244,4 @@ CV_EXPORTS void drawColorDisp(const GpuMat& src_disp, GpuMat& dst_disp, int ndis
 
 }} // namespace cv { namespace gpu {
 
-#endif /* __OPENCV_GPUCALIB3D_HPP__ */
+#endif /* __OPENCV_GPUSTEREO_HPP__ */

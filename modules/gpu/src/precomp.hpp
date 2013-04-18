@@ -44,6 +44,7 @@
 #define __OPENCV_PRECOMP_H__
 
 #include "opencv2/gpu.hpp"
+#include "opencv2/calib3d.hpp"
 
 #include "opencv2/core/gpu_private.hpp"
 

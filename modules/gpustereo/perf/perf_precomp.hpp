@@ -54,8 +54,7 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_perf.hpp"
 
-#include "opencv2/gpucalib3d.hpp"
-
+#include "opencv2/gpustereo.hpp"
 #include "opencv2/calib3d.hpp"
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY
