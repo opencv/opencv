@@ -42,7 +42,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_GPUARITHM
+#ifdef HAVE_OPENCV_GPU
 
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/limits.hpp"
@@ -957,4 +957,5 @@ namespace cv { namespace gpu { namespace cudev
     } // namespace surf
 }}} // namespace cv { namespace gpu { namespace cudev
 
-#endif // HAVE_OPENCV_GPUARITHM
+
+#endif /* CUDA_DISABLER */

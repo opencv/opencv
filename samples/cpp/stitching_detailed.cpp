@@ -356,7 +356,7 @@ int main(int argc, char* argv[])
     Ptr<FeaturesFinder> finder;
     if (features_type == "surf")
     {
-#ifdef HAVE_OPENCV_NONFREE
+#if defined(HAVE_OPENCV_NONFREE) && defined(HAVE_OPENCV_GPU)
         if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
             finder = new SurfFeaturesFinderGpu();
         else
@@ -544,7 +544,7 @@ int main(int argc, char* argv[])
     // Warp images and their masks
 
     Ptr<WarperCreator> warper_creator;
-#ifdef HAVE_OPENCV_GPUWARPING
+#ifdef HAVE_OPENCV_GPU
     if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
     {
         if (warp_type == "plane") warper_creator = new cv::PlaneWarperGpu();

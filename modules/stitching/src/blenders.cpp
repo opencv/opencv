@@ -187,14 +187,12 @@ Rect FeatherBlender::createWeightMaps(const std::vector<Mat> &masks, const std::
 MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands, int weight_type)
 {
     setNumBands(num_bands);
-
-#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING)
+#ifdef HAVE_OPENCV_GPU
     can_use_gpu_ = try_gpu && gpu::getCudaEnabledDeviceCount();
 #else
-    (void) try_gpu;
+    (void)try_gpu;
     can_use_gpu_ = false;
 #endif
-
     CV_Assert(weight_type == CV_32F || weight_type == CV_16S);
     weight_type_ = weight_type;
 }
@@ -491,7 +489,7 @@ void createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat> &pyr)
 
 void createLaplacePyrGpu(const Mat &img, int num_levels, std::vector<Mat> &pyr)
 {
-#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING)
+#ifdef HAVE_OPENCV_GPU
     pyr.resize(num_levels + 1);
 
     std::vector<gpu::GpuMat> gpu_pyr(num_levels + 1);
@@ -531,7 +529,7 @@ void restoreImageFromLaplacePyr(std::vector<Mat> &pyr)
 
 void restoreImageFromLaplacePyrGpu(std::vector<Mat> &pyr)
 {
-#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING)
+#ifdef HAVE_OPENCV_GPU
     if (pyr.empty())
         return;
 

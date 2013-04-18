@@ -47,10 +47,6 @@
 #include "opencv2/opencv_modules.hpp"
 #include "clp.hpp"
 
-#ifdef HAVE_OPENCV_GPU
-#  include "opencv2/gpu.hpp"
-#endif
-
 namespace cv
 {
 namespace videostab
@@ -732,8 +728,7 @@ Mat KeypointBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1,
 }
 
 
-#if defined(HAVE_OPENCV_GPUIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
-
+#ifdef HAVE_OPENCV_GPU
 KeypointBasedMotionEstimatorGpu::KeypointBasedMotionEstimatorGpu(Ptr<MotionEstimatorBase> estimator)
     : ImageMotionEstimatorBase(estimator->motionModel()), motionEstimator_(estimator)
 {
@@ -804,8 +799,7 @@ Mat KeypointBasedMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const g
     // estimate motion
     return motionEstimator_->estimate(hostPointsPrev_, hostPoints_, ok);
 }
-
-#endif // defined(HAVE_OPENCV_GPUIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
+#endif // HAVE_OPENCV_GPU
 
 
 Mat getMotion(int from, int to, const std::vector<Mat> &motions)

@@ -42,7 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_OPENCV_GPU) && defined(HAVE_CUDA)
 
 #include "opencv2/ts/gpu_perf.hpp"
 
@@ -64,8 +64,6 @@ using namespace perf;
 
 //////////////////////////////////////////////////////////////////////
 // SURF
-
-#ifdef HAVE_OPENCV_GPUARITHM
 
 DEF_PARAM_TEST_1(Image, string);
 
@@ -109,8 +107,6 @@ PERF_TEST_P(Image, GPU_SURF,
         SANITY_CHECK(cpu_descriptors);
     }
 }
-
-#endif // HAVE_OPENCV_GPUARITHM
 
 //////////////////////////////////////////////////////
 // VIBE
@@ -181,6 +177,6 @@ PERF_TEST_P(Video_Cn, GPU_VIBE,
     }
 }
 
-#endif // BUILD_WITH_VIDEO_INPUT_SUPPORT
+#endif
 
-#endif // HAVE_CUDA
+#endif

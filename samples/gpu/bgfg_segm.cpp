@@ -6,12 +6,6 @@
 #include "opencv2/gpu.hpp"
 #include "opencv2/highgui.hpp"
 
-#include "opencv2/opencv_modules.hpp"
-
-#ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/gpu.hpp"
-#endif
-
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;

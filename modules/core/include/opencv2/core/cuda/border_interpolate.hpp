@@ -73,8 +73,8 @@ namespace cv { namespace gpu { namespace cudev
             return (x >= 0 && x < width) ? saturate_cast<D>(data[x]) : val;
         }
 
-        int width;
-        D val;
+        const int width;
+        const D val;
     };
 
     template <typename D> struct BrdColConstant
@@ -98,8 +98,8 @@ namespace cv { namespace gpu { namespace cudev
             return (y >= 0 && y < height) ? saturate_cast<D>(*(const T*)((const char*)data + y * step)) : val;
         }
 
-        int height;
-        D val;
+        const int height;
+        const D val;
     };
 
     template <typename D> struct BrdConstant
@@ -120,9 +120,9 @@ namespace cv { namespace gpu { namespace cudev
             return (x >= 0 && x < width && y >= 0 && y < height) ? saturate_cast<D>(src(y, x)) : val;
         }
 
-        int height;
-        int width;
-        D val;
+        const int height;
+        const int width;
+        const D val;
     };
 
     //////////////////////////////////////////////////////////////
@@ -165,7 +165,7 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<D>(data[idx_col(x)]);
         }
 
-        int last_col;
+        const int last_col;
     };
 
     template <typename D> struct BrdColReplicate
@@ -205,7 +205,7 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<D>(*(const T*)((const char*)data + idx_row(y) * step));
         }
 
-        int last_row;
+        const int last_row;
     };
 
     template <typename D> struct BrdReplicate
@@ -255,8 +255,8 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<D>(src(idx_row(y), idx_col(x)));
         }
 
-        int last_row;
-        int last_col;
+        const int last_row;
+        const int last_col;
     };
 
     //////////////////////////////////////////////////////////////
@@ -299,7 +299,7 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<D>(data[idx_col(x)]);
         }
 
-        int last_col;
+        const int last_col;
     };
 
     template <typename D> struct BrdColReflect101
@@ -339,7 +339,7 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row(y) * step));
         }
 
-        int last_row;
+        const int last_row;
     };
 
     template <typename D> struct BrdReflect101
@@ -389,8 +389,8 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<D>(src(idx_row(y), idx_col(x)));
         }
 
-        int last_row;
-        int last_col;
+        const int last_row;
+        const int last_col;
     };
 
     //////////////////////////////////////////////////////////////
@@ -433,7 +433,7 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<D>(data[idx_col(x)]);
         }
 
-        int last_col;
+        const int last_col;
     };
 
     template <typename D> struct BrdColReflect
@@ -473,7 +473,7 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row(y) * step));
         }
 
-        int last_row;
+        const int last_row;
     };
 
     template <typename D> struct BrdReflect
@@ -523,8 +523,8 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<D>(src(idx_row(y), idx_col(x)));
         }
 
-        int last_row;
-        int last_col;
+        const int last_row;
+        const int last_col;
     };
 
     //////////////////////////////////////////////////////////////
@@ -567,7 +567,7 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<D>(data[idx_col(x)]);
         }
 
-        int width;
+        const int width;
     };
 
     template <typename D> struct BrdColWrap
@@ -607,7 +607,7 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row(y) * step));
         }
 
-        int height;
+        const int height;
     };
 
     template <typename D> struct BrdWrap
@@ -664,8 +664,8 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<D>(src(idx_row(y), idx_col(x)));
         }
 
-        int height;
-        int width;
+        const int height;
+        const int width;
     };
 
     //////////////////////////////////////////////////////////////
@@ -683,8 +683,8 @@ namespace cv { namespace gpu { namespace cudev
             return b.at(y, x, ptr);
         }
 
-        Ptr2D ptr;
-        B b;
+        const Ptr2D ptr;
+        const B b;
     };
 
     // under win32 there is some bug with templated types that passed as kernel parameters
@@ -704,10 +704,10 @@ namespace cv { namespace gpu { namespace cudev
             return (x >= 0 && x < width && y >= 0 && y < height) ? saturate_cast<D>(src(y, x)) : val;
         }
 
-        Ptr2D src;
-        int height;
-        int width;
-        D val;
+        const Ptr2D src;
+        const int height;
+        const int width;
+        const D val;
     };
 }}} // namespace cv { namespace gpu { namespace cudev
 

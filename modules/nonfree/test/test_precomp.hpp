@@ -24,7 +24,7 @@
 #  include "opencv2/nonfree/ocl.hpp"
 #endif
 
-#ifdef HAVE_CUDA
+#ifdef HAVE_OPENCV_GPU
 #  include "opencv2/nonfree/gpu.hpp"
 #endif
 
