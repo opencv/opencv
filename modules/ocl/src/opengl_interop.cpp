@@ -67,12 +67,12 @@ using namespace cv;
 using namespace cv::ocl;
 
 #if defined WIN32 || defined _WIN32
-    //! parent window, HDC and associated OpenGL context,
-    // this parent context is shared to ocl::imshow display windows
-    HWND g_hWnd = NULL;
-    HWND g_mainhWnd = NULL;
-    HDC g_hDC = NULL;
-    HGLRC g_hGLRC = NULL;
+//! parent window, HDC and associated OpenGL context,
+// this parent context is shared to ocl::imshow display windows
+static HWND g_hWnd = NULL;
+static HWND g_mainhWnd = NULL;
+static HDC g_hDC = NULL;
+static HGLRC g_hGLRC = NULL;
 #endif
 
 #if defined HAVE_OPENGL && defined HAVE_OPENCL
