@@ -43,7 +43,6 @@ void run(bool src_is_image, VideoCapture &cap, string &imsrc)
         {
             Mat frame;
             cap >> frame;
-            imwrite("d:/frame.jpg",frame);
             dimg.upload(frame);
         }
 
