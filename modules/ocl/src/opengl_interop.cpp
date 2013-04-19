@@ -244,7 +244,8 @@ bool ocl::initOpenGLContext(cl_context_properties *cps)
 {
     bool useGl = false;
 
-#if defined WIN32 || defined _WIN32
+#if defined HAVE_OPENGL && defined HAVE_OPENCL && (defined WIN32 || defined _WIN32)
+
     const char* name = "initOpenGLContext hidden window";
     HDC hGLDC = NULL;
     HGLRC hGLRC = NULL;
@@ -263,7 +264,6 @@ bool ocl::initOpenGLContext(cl_context_properties *cps)
     if( !g_hWnd )
         CV_Error( Error::StsError, "Frame window can not be created" );
 
-#if defined HAVE_OPENGL && defined HAVE_OPENCL
     createGlContext(g_hWnd, hGLDC, hGLRC, useGl);
     if (useGl)
     {
@@ -274,7 +274,7 @@ bool ocl::initOpenGLContext(cl_context_properties *cps)
         cps[4] = CL_WGL_HDC_KHR;
         cps[5] = (cl_context_properties) hGLDC;
     }
-#endif
+
 #else
     (void)cps;
 #endif
