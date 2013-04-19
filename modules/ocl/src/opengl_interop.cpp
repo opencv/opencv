@@ -185,7 +185,6 @@ namespace
     }
 
 #if defined WIN32 || defined _WIN32
-
     //! create an invisible window,
     //  use its associate OpenGL context as parent rendering context
     void createGlContext(HWND hWnd, HDC& hGLDC, HGLRC& hGLRC, bool& useGl)
@@ -236,9 +235,7 @@ namespace
 
         useGl = true;
     }
-
 #endif
-
 } // namespace
 
 #endif // HAVE_OPENGL && HAVE_OPENCL
@@ -266,19 +263,18 @@ bool ocl::initOpenGLContext(cl_context_properties *cps)
     if( !g_hWnd )
         CV_Error( Error::StsError, "Frame window can not be created" );
 
+#if defined HAVE_OPENGL && defined HAVE_OPENCL
     createGlContext(g_hWnd, hGLDC, hGLRC, useGl);
-
     if (useGl)
     {
         g_hDC = hGLDC;
         g_hGLRC = hGLRC;
-#ifdef HAVE_OPENCL
         cps[2] = CL_GL_CONTEXT_KHR;
         cps[3] = (cl_context_properties) hGLRC;
         cps[4] = CL_WGL_HDC_KHR;
         cps[5] = (cl_context_properties) hGLDC;
-#endif
     }
+#endif
 #else
     (void)cps;
 #endif
