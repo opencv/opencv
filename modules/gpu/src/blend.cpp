@@ -92,7 +92,7 @@ void cv::gpu::blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& 
         blendLinearCaller<float>(size.height, size.width, cn, img1, img2, weights1, weights2, result, StreamAccessor::getStream(stream));
         break;
     default:
-        CV_Error(CV_StsUnsupportedFormat, "bad image depth in linear blending function");
+        CV_Error(cv::Error::StsUnsupportedFormat, "bad image depth in linear blending function");
     }
 }
 

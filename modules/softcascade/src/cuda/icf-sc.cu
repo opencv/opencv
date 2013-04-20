@@ -43,24 +43,7 @@
 #include <cuda_invoker.hpp>
 #include <float.h>
 #include <stdio.h>
-
-namespace cv { namespace softcascade { namespace internal {
-void error(const char *error_string, const char *file, const int line, const char *func);
-}}}
-#if defined(__GNUC__)
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
-#endif
-
-static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
-{
-    if (cudaSuccess != err) cv::softcascade::internal::error(cudaGetErrorString(err), file, line, func);
-}
-
-#ifndef CV_PI
-    #define CV_PI   3.1415926535897932384626433832795
-#endif
+#include "opencv2/core/cuda/common.hpp"
 
 namespace cv { namespace softcascade { namespace cudev {
 
