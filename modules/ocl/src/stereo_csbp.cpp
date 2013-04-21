@@ -571,36 +571,7 @@ namespace
     const float DEFAULT_DATA_WEIGHT = 1.0f;
     const float DEFAULT_MAX_DISC_TERM = 160.0f;
     const float DEFAULT_DISC_SINGLE_JUMP = 10.0f;
-
-    template<typename T>
-    void print_gpu_mat(const oclMat &mat)
-    {
-        T *data_1 = new T[mat.rows * mat.cols * mat.channels()];
-        Context  *clCxt = mat.clCxt;
-        int status = clEnqueueReadBuffer(clCxt -> impl->clCmdQueue, (cl_mem)mat.data, CL_TRUE, 0,
-            mat.rows * mat.cols * mat.channels() * sizeof(T), data_1, 0, NULL, NULL);
-
-        if(status != CL_SUCCESS)
-            cout << "error " << status << endl;
-
-        cout << ".........................................................." << endl;
-        cout << "elemSize() " << mat.elemSize() << endl;
-        cout << "elemSize() " << mat.elemSize1() << endl;
-        cout << "channels: " << mat.channels() << endl;
-        cout << "rows: " << mat.rows << endl;
-        cout << "cols: " << mat.cols << endl;
-
-        for(int i = 0; i < 100; i++)
-        {
-            for(int j = 0; j < 30; j++)
-            {
-                cout << (int)data_1[i * mat.cols * mat.channels() + j] << " ";
-            }
-            cout << endl;
-        }
-    }
 }
-
 
 void cv::ocl::StereoConstantSpaceBP::estimateRecommendedParams(int width, int height, int &ndisp, int &iters, int &levels, int &nr_plane)
 {
