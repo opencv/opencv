@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -51,111 +52,101 @@
 
 #include "opencv2/core/gpu.hpp"
 
-namespace cv { namespace gpu {
+namespace cv { namespace gpucodec {
 
 ////////////////////////////////// Video Encoding //////////////////////////////////
 
-// Works only under Windows
-// Supports olny H264 video codec and AVI files
-class CV_EXPORTS VideoWriter_GPU
+// Works only under Windows.
+// Supports olny H264 video codec and AVI files.
+
+enum SurfaceFormat
+{
+    SF_UYVY = 0,
+    SF_YUY2,
+    SF_YV12,
+    SF_NV12,
+    SF_IYUV,
+    SF_BGR,
+    SF_GRAY = SF_BGR
+};
+
+struct CV_EXPORTS EncoderParams
+{
+    int P_Interval;      // NVVE_P_INTERVAL,
+    int IDR_Period;      // NVVE_IDR_PERIOD,
+    int DynamicGOP;      // NVVE_DYNAMIC_GOP,
+    int RCType;          // NVVE_RC_TYPE,
+    int AvgBitrate;      // NVVE_AVG_BITRATE,
+    int PeakBitrate;     // NVVE_PEAK_BITRATE,
+    int QP_Level_Intra;  // NVVE_QP_LEVEL_INTRA,
+    int QP_Level_InterP; // NVVE_QP_LEVEL_INTER_P,
+    int QP_Level_InterB; // NVVE_QP_LEVEL_INTER_B,
+    int DeblockMode;     // NVVE_DEBLOCK_MODE,
+    int ProfileLevel;    // NVVE_PROFILE_LEVEL,
+    int ForceIntra;      // NVVE_FORCE_INTRA,
+    int ForceIDR;        // NVVE_FORCE_IDR,
+    int ClearStat;       // NVVE_CLEAR_STAT,
+    int DIMode;          // NVVE_SET_DEINTERLACE,
+    int Presets;         // NVVE_PRESETS,
+    int DisableCabac;    // NVVE_DISABLE_CABAC,
+    int NaluFramingType; // NVVE_CONFIGURE_NALU_FRAMING_TYPE
+    int DisableSPSPPS;   // NVVE_DISABLE_SPS_PPS
+
+    EncoderParams();
+    explicit EncoderParams(const String& configFile);
+
+    void load(const String& configFile);
+    void save(const String& configFile) const;
+};
+
+class CV_EXPORTS EncoderCallBack
 {
 public:
-    struct EncoderParams;
-
-    // Callbacks for video encoder, use it if you want to work with raw video stream
-    class EncoderCallBack;
-
-    enum SurfaceFormat
+    enum PicType
     {
-        SF_UYVY = 0,
-        SF_YUY2,
-        SF_YV12,
-        SF_NV12,
-        SF_IYUV,
-        SF_BGR,
-        SF_GRAY = SF_BGR
+        IFRAME = 1,
+        PFRAME = 2,
+        BFRAME = 3
     };
 
-    VideoWriter_GPU();
-    VideoWriter_GPU(const String& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
-    VideoWriter_GPU(const String& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
-    VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
-    VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
-    ~VideoWriter_GPU();
+    virtual ~EncoderCallBack() {}
 
-    // all methods throws cv::Exception if error occurs
-    void open(const String& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
-    void open(const String& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
-    void open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
-    void open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
+    //! callback function to signal the start of bitstream that is to be encoded
+    //! callback must allocate host buffer for CUDA encoder and return pointer to it and it's size
+    virtual uchar* acquireBitStream(int* bufferSize) = 0;
 
-    bool isOpened() const;
-    void close();
+    //! callback function to signal that the encoded bitstream is ready to be written to file
+    virtual void releaseBitStream(unsigned char* data, int size) = 0;
 
-    void write(const cv::gpu::GpuMat& image, bool lastFrame = false);
+    //! callback function to signal that the encoding operation on the frame has started
+    virtual void onBeginFrame(int frameNumber, PicType picType) = 0;
 
-    struct CV_EXPORTS EncoderParams
-    {
-        int       P_Interval;      //    NVVE_P_INTERVAL,
-        int       IDR_Period;      //    NVVE_IDR_PERIOD,
-        int       DynamicGOP;      //    NVVE_DYNAMIC_GOP,
-        int       RCType;          //    NVVE_RC_TYPE,
-        int       AvgBitrate;      //    NVVE_AVG_BITRATE,
-        int       PeakBitrate;     //    NVVE_PEAK_BITRATE,
-        int       QP_Level_Intra;  //    NVVE_QP_LEVEL_INTRA,
-        int       QP_Level_InterP; //    NVVE_QP_LEVEL_INTER_P,
-        int       QP_Level_InterB; //    NVVE_QP_LEVEL_INTER_B,
-        int       DeblockMode;     //    NVVE_DEBLOCK_MODE,
-        int       ProfileLevel;    //    NVVE_PROFILE_LEVEL,
-        int       ForceIntra;      //    NVVE_FORCE_INTRA,
-        int       ForceIDR;        //    NVVE_FORCE_IDR,
-        int       ClearStat;       //    NVVE_CLEAR_STAT,
-        int       DIMode;          //    NVVE_SET_DEINTERLACE,
-        int       Presets;         //    NVVE_PRESETS,
-        int       DisableCabac;    //    NVVE_DISABLE_CABAC,
-        int       NaluFramingType; //    NVVE_CONFIGURE_NALU_FRAMING_TYPE
-        int       DisableSPSPPS;   //    NVVE_DISABLE_SPS_PPS
-
-        EncoderParams();
-        explicit EncoderParams(const String& configFile);
-
-        void load(const String& configFile);
-        void save(const String& configFile) const;
-    };
-
-    EncoderParams getParams() const;
-
-    class CV_EXPORTS EncoderCallBack
-    {
-    public:
-        enum PicType
-        {
-            IFRAME = 1,
-            PFRAME = 2,
-            BFRAME = 3
-        };
-
-        virtual ~EncoderCallBack() {}
-
-        // callback function to signal the start of bitstream that is to be encoded
-        // must return pointer to buffer
-        virtual uchar* acquireBitStream(int* bufferSize) = 0;
-
-        // callback function to signal that the encoded bitstream is ready to be written to file
-        virtual void releaseBitStream(unsigned char* data, int size) = 0;
-
-        // callback function to signal that the encoding operation on the frame has started
-        virtual void onBeginFrame(int frameNumber, PicType picType) = 0;
-
-        // callback function signals that the encoding operation on the frame has finished
-        virtual void onEndFrame(int frameNumber, PicType picType) = 0;
-    };
-
-    class Impl;
-
-private:
-    cv::Ptr<Impl> impl_;
+    //! callback function signals that the encoding operation on the frame has finished
+    virtual void onEndFrame(int frameNumber, PicType picType) = 0;
 };
+
+class CV_EXPORTS VideoWriter
+{
+public:
+    virtual ~VideoWriter() {}
+
+    //! writes the next frame from GPU memory
+    virtual void write(InputArray frame, bool lastFrame = false) = 0;
+
+    virtual EncoderParams getEncoderParams() const = 0;
+};
+
+//! create VideoWriter for specified output file (only AVI file format is supported)
+CV_EXPORTS Ptr<VideoWriter> createVideoWriter(const String& fileName, Size frameSize, double fps, SurfaceFormat format = SF_BGR);
+CV_EXPORTS Ptr<VideoWriter> createVideoWriter(const String& fileName, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
+
+//! create VideoWriter for user-defined callbacks
+CV_EXPORTS Ptr<VideoWriter> createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, SurfaceFormat format = SF_BGR);
+CV_EXPORTS Ptr<VideoWriter> createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
+
+}} // namespace cv { namespace gpucodec {
+
+namespace cv { namespace gpu {
 
 ////////////////////////////////// Video Decoding //////////////////////////////////////////
 
@@ -257,7 +248,6 @@ private:
 
 namespace cv {
 
-template <> CV_EXPORTS void Ptr<cv::gpu::VideoWriter_GPU::Impl>::delete_obj();
 template <> CV_EXPORTS void Ptr<cv::gpu::VideoReader_GPU::Impl>::delete_obj();
 
 }
