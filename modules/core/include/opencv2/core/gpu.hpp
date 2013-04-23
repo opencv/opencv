@@ -359,6 +359,9 @@ public:
     //! waits for stream tasks to complete
     void waitForCompletion();
 
+    //! makes a compute stream wait on an event
+    void waitEvent(const Event& event);
+
     //! adds a callback to be called on the host after all currently enqueued items in the stream have completed
     void enqueueHostCallback(StreamCallback callback, void* userData);
 
@@ -388,6 +391,39 @@ private:
     Stream(const Ptr<Impl>& impl);
 
     friend struct StreamAccessor;
+};
+
+class CV_EXPORTS Event
+{
+public:
+    enum CreateFlags
+    {
+        DEFAULT        = 0x00,  /**< Default event flag */
+        BLOCKING_SYNC  = 0x01,  /**< Event uses blocking synchronization */
+        DISABLE_TIMING = 0x02,  /**< Event will not record timing data */
+        INTERPROCESS   = 0x04   /**< Event is suitable for interprocess use. DisableTiming must be set */
+    };
+
+    explicit Event(CreateFlags flags = DEFAULT);
+
+    //! records an event
+    void record(Stream& stream = Stream::Null());
+
+    //! queries an event's status
+    bool queryIfComplete() const;
+
+    //! waits for an event to complete
+    void waitForCompletion();
+
+    //! computes the elapsed time between events
+    static float elapsedTime(const Event& start, const Event& end);
+
+    class Impl;
+
+private:
+    Ptr<Impl> impl_;
+
+    friend struct EventAccessor;
 };
 
 //////////////////////////////// Initialization & Info ////////////////////////
@@ -642,6 +678,7 @@ CV_EXPORTS void printShortCudaDeviceInfo(int device);
 namespace cv {
 
 template <> CV_EXPORTS void Ptr<cv::gpu::Stream::Impl>::delete_obj();
+template <> CV_EXPORTS void Ptr<cv::gpu::Event::Impl>::delete_obj();
 
 }
 

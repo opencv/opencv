@@ -60,10 +60,16 @@ namespace cv
     namespace gpu
     {
         class Stream;
+        class Event;
 
         struct StreamAccessor
         {
             CV_EXPORTS static cudaStream_t getStream(const Stream& stream);
+        };
+
+        struct EventAccessor
+        {
+            CV_EXPORTS static cudaEvent_t getEvent(const Event& event);
         };
     }
 }

@@ -45,6 +45,9 @@
 using namespace cv;
 using namespace cv::gpu;
 
+////////////////////////////////////////////////////////////////
+// Stream
+
 #ifndef HAVE_CUDA
 
 class cv::gpu::Stream::Impl
@@ -126,6 +129,16 @@ void cv::gpu::Stream::waitForCompletion()
 #endif
 }
 
+void cv::gpu::Stream::waitEvent(const Event& event)
+{
+#ifndef HAVE_CUDA
+    (void) event;
+    throw_no_cuda();
+#else
+    cudaSafeCall( cudaStreamWaitEvent(impl_->stream, EventAccessor::getEvent(event), 0) );
+#endif
+}
+
 #if defined(HAVE_CUDA) && (CUDART_VERSION >= 5000)
 
 namespace
@@ -183,6 +196,113 @@ cv::gpu::Stream::operator bool_type() const
 }
 
 template <> void cv::Ptr<Stream::Impl>::delete_obj()
+{
+    if (obj) delete obj;
+}
+
+////////////////////////////////////////////////////////////////
+// Stream
+
+#ifndef HAVE_CUDA
+
+class cv::gpu::Event::Impl
+{
+public:
+    Impl(unsigned int)
+    {
+        throw_no_cuda();
+    }
+};
+
+#else
+
+class cv::gpu::Event::Impl
+{
+public:
+    cudaEvent_t event;
+
+    Impl(unsigned int flags);
+    ~Impl();
+};
+
+cv::gpu::Event::Impl::Impl(unsigned int flags) : event(0)
+{
+    cudaSafeCall( cudaEventCreateWithFlags(&event, flags) );
+}
+
+cv::gpu::Event::Impl::~Impl()
+{
+    if (event)
+        cudaEventDestroy(event);
+}
+
+cudaEvent_t cv::gpu::EventAccessor::getEvent(const Event& event)
+{
+    return event.impl_->event;
+}
+
+#endif
+
+cv::gpu::Event::Event(CreateFlags flags)
+{
+#ifndef HAVE_CUDA
+    (void) flags;
+    throw_no_cuda();
+#else
+    impl_ = new Impl(flags);
+#endif
+}
+
+void cv::gpu::Event::record(Stream& stream)
+{
+#ifndef HAVE_CUDA
+    (void) stream;
+    throw_no_cuda();
+#else
+    cudaSafeCall( cudaEventRecord(impl_->event, StreamAccessor::getStream(stream)) );
+#endif
+}
+
+bool cv::gpu::Event::queryIfComplete() const
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+    return false;
+#else
+    cudaError_t err = cudaEventQuery(impl_->event);
+
+    if (err == cudaErrorNotReady || err == cudaSuccess)
+        return err == cudaSuccess;
+
+    cudaSafeCall(err);
+    return false;
+#endif
+}
+
+void cv::gpu::Event::waitForCompletion()
+{
+#ifndef HAVE_CUDA
+    throw_no_cuda();
+#else
+    cudaSafeCall( cudaEventSynchronize(impl_->event) );
+#endif
+}
+
+float cv::gpu::Event::elapsedTime(const Event& start, const Event& end)
+{
+#ifndef HAVE_CUDA
+    (void) start;
+    (void) end;
+    throw_no_cuda();
+    return 0.0f;
+#else
+    float ms;
+    cudaSafeCall( cudaEventElapsedTime(&ms, start.impl_->event, end.impl_->event) );
+    return ms;
+#endif
+}
+
+template <> void cv::Ptr<Event::Impl>::delete_obj()
 {
     if (obj) delete obj;
 }
