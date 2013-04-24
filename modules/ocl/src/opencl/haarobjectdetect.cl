@@ -194,7 +194,7 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
                 int glb_x = grpoffx + (lcl_x<<2);
                 int glb_y = grpoffy + lcl_y;
 
-                int glb_off = mad24(glb_y,pixelstep,glb_x);
+                int glb_off = mad24(min(glb_y, height - 1),pixelstep,glb_x);
                 int4 data = *(__global int4*)&sum[glb_off];
                 int lcl_off = mad24(lcl_y, readwidth, lcl_x<<2);
 
