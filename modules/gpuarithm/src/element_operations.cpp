@@ -73,7 +73,7 @@ void cv::gpu::lshift(InputArray, Scalar_<int>, OutputArray, Stream&) { throw_no_
 void cv::gpu::min(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 void cv::gpu::max(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::addWeighted(const GpuMat&, double, const GpuMat&, double, double, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::addWeighted(InputArray, double, InputArray, double, double, OutputArray, int, Stream&) { throw_no_cuda(); }
 
 double cv::gpu::threshold(const GpuMat&, GpuMat&, double, double, int, Stream&) {throw_no_cuda(); return 0.0;}
 
@@ -2427,7 +2427,7 @@ namespace arithm
     void addWeighted(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst, int ddepth, Stream& stream)
+void cv::gpu::addWeighted(InputArray _src1, double alpha, InputArray _src2, double beta, double gamma, OutputArray _dst, int ddepth, Stream& stream)
 {
     typedef void (*func_t)(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     static const func_t funcs[7][7][7] =
@@ -2889,6 +2889,9 @@ void cv::gpu::addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, 
         }
     };
 
+    GpuMat src1 = _src1.getGpuMat();
+    GpuMat src2 = _src2.getGpuMat();
+
     int sdepth1 = src1.depth();
     int sdepth2 = src2.depth();
     ddepth = ddepth >= 0 ? CV_MAT_DEPTH(ddepth) : std::max(sdepth1, sdepth2);
@@ -2903,7 +2906,8 @@ void cv::gpu::addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, 
             CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
-    dst.create(src1.size(), CV_MAKE_TYPE(ddepth, cn));
+    _dst.create(src1.size(), CV_MAKE_TYPE(ddepth, cn));
+    GpuMat dst = _dst.getGpuMat();
 
     PtrStepSzb src1_(src1.rows, src1.cols * cn, src1.data, src1.step);
     PtrStepSzb src2_(src1.rows, src1.cols * cn, src2.data, src2.step);

@@ -122,11 +122,11 @@ CV_EXPORTS void min(InputArray src1, InputArray src2, OutputArray dst, Stream& s
 CV_EXPORTS void max(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
 
 //! computes the weighted sum of two arrays (dst = alpha*src1 + beta*src2 + gamma)
-CV_EXPORTS void addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst,
+CV_EXPORTS void addWeighted(InputArray src1, double alpha, InputArray src2, double beta, double gamma, OutputArray dst,
                             int dtype = -1, Stream& stream = Stream::Null());
 
 //! adds scaled array to another one (dst = alpha*src1 + src2)
-static inline void scaleAdd(const GpuMat& src1, double alpha, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null())
+static inline void scaleAdd(InputArray src1, double alpha, InputArray src2, OutputArray dst, Stream& stream = Stream::Null())
 {
     addWeighted(src1, alpha, src2, 1.0, 0.0, dst, -1, stream);
 }
