@@ -57,10 +57,8 @@ CV_EXPORTS void add(InputArray src1, InputArray src2, OutputArray dst, InputArra
 //! subtracts one matrix from another (dst = src1 - src2)
 CV_EXPORTS void subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), int dtype = -1, Stream& stream = Stream::Null());
 
-//! computes element-wise weighted product of the two arrays (c = scale * a * b)
-CV_EXPORTS void multiply(const GpuMat& a, const GpuMat& b, GpuMat& c, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
-//! weighted multiplies matrix to a scalar (c = scale * a * s)
-CV_EXPORTS void multiply(const GpuMat& a, const Scalar& sc, GpuMat& c, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
+//! computes element-wise weighted product of the two arrays (dst = scale * src1 * src2)
+CV_EXPORTS void multiply(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
 
 //! computes element-wise weighted quotient of the two arrays (c = a / b)
 CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());

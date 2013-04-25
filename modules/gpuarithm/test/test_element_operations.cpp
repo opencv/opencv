@@ -933,6 +933,93 @@ INSTANTIATE_TEST_CASE_P(GPU_Arithm, Multiply_Scalar, testing::Combine(
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
+// Multiply_Scalar_First
+
+PARAM_TEST_CASE(Multiply_Scalar_First, cv::gpu::DeviceInfo, cv::Size, std::pair<MatDepth, MatDepth>, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    std::pair<MatDepth, MatDepth> depth;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        depth = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+GPU_TEST_P(Multiply_Scalar_First, WithOutScale)
+{
+    cv::Mat mat = randomMat(size, depth.first);
+    cv::Scalar val = randomScalar(0, 255);
+
+    if ((depth.first == CV_64F || depth.second == CV_64F) && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::multiply(val, loadMat(mat), dst, 1, depth.second);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(cv::Error::StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, depth.second, useRoi);
+        cv::gpu::multiply(val, loadMat(mat, useRoi), dst, 1, depth.second);
+
+        cv::Mat dst_gold;
+        cv::multiply(val, mat, dst_gold, 1, depth.second);
+
+        EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
+    }
+}
+
+
+GPU_TEST_P(Multiply_Scalar_First, WithScale)
+{
+    cv::Mat mat = randomMat(size, depth.first);
+    cv::Scalar val = randomScalar(0, 255);
+    double scale = randomDouble(0.0, 255.0);
+
+    if ((depth.first == CV_64F || depth.second == CV_64F) && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::multiply(val, loadMat(mat), dst, scale, depth.second);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(cv::Error::StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, depth.second, useRoi);
+        cv::gpu::multiply(val, loadMat(mat, useRoi), dst, scale, depth.second);
+
+        cv::Mat dst_gold;
+        cv::multiply(val, mat, dst_gold, scale, depth.second);
+
+        EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Multiply_Scalar_First, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    DEPTH_PAIRS,
+    WHOLE_SUBMAT));
+
+////////////////////////////////////////////////////////////////////////////////
 // Divide_Array
 
 PARAM_TEST_CASE(Divide_Array, cv::gpu::DeviceInfo, cv::Size, std::pair<MatDepth, MatDepth>, Channels, UseRoi)

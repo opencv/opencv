@@ -51,8 +51,7 @@ void cv::gpu::add(InputArray, InputArray, OutputArray, InputArray, int, Stream&)
 
 void cv::gpu::subtract(InputArray, InputArray, OutputArray, InputArray, int, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::multiply(const GpuMat&, const GpuMat&, GpuMat&, double, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::multiply(const GpuMat&, const Scalar&, GpuMat&, double, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::multiply(InputArray, InputArray, OutputArray, double, int, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::divide(const GpuMat&, const GpuMat&, GpuMat&, double, int, Stream&) { throw_no_cuda(); }
 void cv::gpu::divide(const GpuMat&, const Scalar&, GpuMat&, double, int, Stream&) { throw_no_cuda(); }
@@ -880,127 +879,92 @@ namespace arithm
     void mulMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
 }
 
-void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double scale, int dtype, Stream& s)
+static void mulMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double scale, Stream& _stream)
 {
-    using namespace arithm;
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    if (src1.type() == CV_8UC4 && src2.type() == CV_32FC1)
+    typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
+    static const func_t funcs[7][7] =
     {
-        CV_Assert( src1.size() == src2.size() );
-
-        dst.create(src1.size(), src1.type());
-
-        mulMat_8uc4_32f(src1, src2, dst, stream);
-    }
-    else if (src1.type() == CV_16SC4 && src2.type() == CV_32FC1)
-    {
-        CV_Assert( src1.size() == src2.size() );
-
-        dst.create(src1.size(), src1.type());
-
-        mulMat_16sc4_32f(src1, src2, dst, stream);
-    }
-    else
-    {
-        typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-        static const func_t funcs[7][7] =
         {
-            {
-                mulMat<unsigned char, float, unsigned char>,
-                mulMat<unsigned char, float, signed char>,
-                mulMat<unsigned char, float, unsigned short>,
-                mulMat<unsigned char, float, short>,
-                mulMat<unsigned char, float, int>,
-                mulMat<unsigned char, float, float>,
-                mulMat<unsigned char, double, double>
-            },
-            {
-                mulMat<signed char, float, unsigned char>,
-                mulMat<signed char, float, signed char>,
-                mulMat<signed char, float, unsigned short>,
-                mulMat<signed char, float, short>,
-                mulMat<signed char, float, int>,
-                mulMat<signed char, float, float>,
-                mulMat<signed char, double, double>
-            },
-            {
-                0 /*mulMat<unsigned short, float, unsigned char>*/,
-                0 /*mulMat<unsigned short, float, signed char>*/,
-                mulMat<unsigned short, float, unsigned short>,
-                mulMat<unsigned short, float, short>,
-                mulMat<unsigned short, float, int>,
-                mulMat<unsigned short, float, float>,
-                mulMat<unsigned short, double, double>
-            },
-            {
-                0 /*mulMat<short, float, unsigned char>*/,
-                0 /*mulMat<short, float, signed char>*/,
-                mulMat<short, float, unsigned short>,
-                mulMat<short, float, short>,
-                mulMat<short, float, int>,
-                mulMat<short, float, float>,
-                mulMat<short, double, double>
-            },
-            {
-                0 /*mulMat<int, float, unsigned char>*/,
-                0 /*mulMat<int, float, signed char>*/,
-                0 /*mulMat<int, float, unsigned short>*/,
-                0 /*mulMat<int, float, short>*/,
-                mulMat<int, float, int>,
-                mulMat<int, float, float>,
-                mulMat<int, double, double>
-            },
-            {
-                0 /*mulMat<float, float, unsigned char>*/,
-                0 /*mulMat<float, float, signed char>*/,
-                0 /*mulMat<float, float, unsigned short>*/,
-                0 /*mulMat<float, float, short>*/,
-                0 /*mulMat<float, float, int>*/,
-                mulMat<float, float, float>,
-                mulMat<float, double, double>
-            },
-            {
-                0 /*mulMat<double, double, unsigned char>*/,
-                0 /*mulMat<double, double, signed char>*/,
-                0 /*mulMat<double, double, unsigned short>*/,
-                0 /*mulMat<double, double, short>*/,
-                0 /*mulMat<double, double, int>*/,
-                0 /*mulMat<double, double, float>*/,
-                mulMat<double, double, double>
-            }
-        };
-
-        if (dtype < 0)
-            dtype = src1.depth();
-
-        const int sdepth = src1.depth();
-        const int ddepth = CV_MAT_DEPTH(dtype);
-        const int cn = src1.channels();
-
-        CV_Assert( sdepth <= CV_64F && ddepth <= CV_64F );
-        CV_Assert( src2.type() == src1.type() && src2.size() == src1.size() );
-
-        if (sdepth == CV_64F || ddepth == CV_64F)
+            arithm::mulMat<unsigned char, float, unsigned char>,
+            arithm::mulMat<unsigned char, float, signed char>,
+            arithm::mulMat<unsigned char, float, unsigned short>,
+            arithm::mulMat<unsigned char, float, short>,
+            arithm::mulMat<unsigned char, float, int>,
+            arithm::mulMat<unsigned char, float, float>,
+            arithm::mulMat<unsigned char, double, double>
+        },
         {
-            if (!deviceSupports(NATIVE_DOUBLE))
-                CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
+            arithm::mulMat<signed char, float, unsigned char>,
+            arithm::mulMat<signed char, float, signed char>,
+            arithm::mulMat<signed char, float, unsigned short>,
+            arithm::mulMat<signed char, float, short>,
+            arithm::mulMat<signed char, float, int>,
+            arithm::mulMat<signed char, float, float>,
+            arithm::mulMat<signed char, double, double>
+        },
+        {
+            0 /*arithm::mulMat<unsigned short, float, unsigned char>*/,
+            0 /*arithm::mulMat<unsigned short, float, signed char>*/,
+            arithm::mulMat<unsigned short, float, unsigned short>,
+            arithm::mulMat<unsigned short, float, short>,
+            arithm::mulMat<unsigned short, float, int>,
+            arithm::mulMat<unsigned short, float, float>,
+            arithm::mulMat<unsigned short, double, double>
+        },
+        {
+            0 /*arithm::mulMat<short, float, unsigned char>*/,
+            0 /*arithm::mulMat<short, float, signed char>*/,
+            arithm::mulMat<short, float, unsigned short>,
+            arithm::mulMat<short, float, short>,
+            arithm::mulMat<short, float, int>,
+            arithm::mulMat<short, float, float>,
+            arithm::mulMat<short, double, double>
+        },
+        {
+            0 /*arithm::mulMat<int, float, unsigned char>*/,
+            0 /*arithm::mulMat<int, float, signed char>*/,
+            0 /*arithm::mulMat<int, float, unsigned short>*/,
+            0 /*arithm::mulMat<int, float, short>*/,
+            arithm::mulMat<int, float, int>,
+            arithm::mulMat<int, float, float>,
+            arithm::mulMat<int, double, double>
+        },
+        {
+            0 /*arithm::mulMat<float, float, unsigned char>*/,
+            0 /*arithm::mulMat<float, float, signed char>*/,
+            0 /*arithm::mulMat<float, float, unsigned short>*/,
+            0 /*arithm::mulMat<float, float, short>*/,
+            0 /*arithm::mulMat<float, float, int>*/,
+            arithm::mulMat<float, float, float>,
+            arithm::mulMat<float, double, double>
+        },
+        {
+            0 /*arithm::mulMat<double, double, unsigned char>*/,
+            0 /*arithm::mulMat<double, double, signed char>*/,
+            0 /*arithm::mulMat<double, double, unsigned short>*/,
+            0 /*arithm::mulMat<double, double, short>*/,
+            0 /*arithm::mulMat<double, double, int>*/,
+            0 /*arithm::mulMat<double, double, float>*/,
+            arithm::mulMat<double, double, double>
         }
+    };
 
-        dst.create(src1.size(), CV_MAKE_TYPE(ddepth, cn));
+    const int sdepth = src1.depth();
+    const int ddepth = dst.depth();
+    const int cn = src1.channels();
 
-        PtrStepSzb src1_(src1.rows, src1.cols * cn, src1.data, src1.step);
-        PtrStepSzb src2_(src1.rows, src1.cols * cn, src2.data, src2.step);
-        PtrStepSzb dst_(src1.rows, src1.cols * cn, dst.data, dst.step);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
 
-        const func_t func = funcs[sdepth][ddepth];
+    PtrStepSzb src1_(src1.rows, src1.cols * cn, src1.data, src1.step);
+    PtrStepSzb src2_(src1.rows, src1.cols * cn, src2.data, src2.step);
+    PtrStepSzb dst_(src1.rows, src1.cols * cn, dst.data, dst.step);
 
-        if (!func)
-            CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
+    const func_t func = funcs[sdepth][ddepth];
 
-        func(src1_, src2_, dst_, scale, stream);
-    }
+    if (!func)
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
+
+    func(src1_, src2_, dst_, scale, stream);
 }
 
 namespace arithm
@@ -1009,75 +973,73 @@ namespace arithm
     void mulScalar(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst, double scale, int dtype, Stream& s)
+static void mulScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const GpuMat&, Stream& _stream)
 {
-    using namespace arithm;
-
     typedef void (*func_t)(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream);
     static const func_t funcs[7][7] =
     {
         {
-            mulScalar<unsigned char, float, unsigned char>,
-            mulScalar<unsigned char, float, signed char>,
-            mulScalar<unsigned char, float, unsigned short>,
-            mulScalar<unsigned char, float, short>,
-            mulScalar<unsigned char, float, int>,
-            mulScalar<unsigned char, float, float>,
-            mulScalar<unsigned char, double, double>
+            arithm::mulScalar<unsigned char, float, unsigned char>,
+            arithm::mulScalar<unsigned char, float, signed char>,
+            arithm::mulScalar<unsigned char, float, unsigned short>,
+            arithm::mulScalar<unsigned char, float, short>,
+            arithm::mulScalar<unsigned char, float, int>,
+            arithm::mulScalar<unsigned char, float, float>,
+            arithm::mulScalar<unsigned char, double, double>
         },
         {
-            mulScalar<signed char, float, unsigned char>,
-            mulScalar<signed char, float, signed char>,
-            mulScalar<signed char, float, unsigned short>,
-            mulScalar<signed char, float, short>,
-            mulScalar<signed char, float, int>,
-            mulScalar<signed char, float, float>,
-            mulScalar<signed char, double, double>
+            arithm::mulScalar<signed char, float, unsigned char>,
+            arithm::mulScalar<signed char, float, signed char>,
+            arithm::mulScalar<signed char, float, unsigned short>,
+            arithm::mulScalar<signed char, float, short>,
+            arithm::mulScalar<signed char, float, int>,
+            arithm::mulScalar<signed char, float, float>,
+            arithm::mulScalar<signed char, double, double>
         },
         {
-            0 /*mulScalar<unsigned short, float, unsigned char>*/,
-            0 /*mulScalar<unsigned short, float, signed char>*/,
-            mulScalar<unsigned short, float, unsigned short>,
-            mulScalar<unsigned short, float, short>,
-            mulScalar<unsigned short, float, int>,
-            mulScalar<unsigned short, float, float>,
-            mulScalar<unsigned short, double, double>
+            0 /*arithm::mulScalar<unsigned short, float, unsigned char>*/,
+            0 /*arithm::mulScalar<unsigned short, float, signed char>*/,
+            arithm::mulScalar<unsigned short, float, unsigned short>,
+            arithm::mulScalar<unsigned short, float, short>,
+            arithm::mulScalar<unsigned short, float, int>,
+            arithm::mulScalar<unsigned short, float, float>,
+            arithm::mulScalar<unsigned short, double, double>
         },
         {
-            0 /*mulScalar<short, float, unsigned char>*/,
-            0 /*mulScalar<short, float, signed char>*/,
-            mulScalar<short, float, unsigned short>,
-            mulScalar<short, float, short>,
-            mulScalar<short, float, int>,
-            mulScalar<short, float, float>,
-            mulScalar<short, double, double>
+            0 /*arithm::mulScalar<short, float, unsigned char>*/,
+            0 /*arithm::mulScalar<short, float, signed char>*/,
+            arithm::mulScalar<short, float, unsigned short>,
+            arithm::mulScalar<short, float, short>,
+            arithm::mulScalar<short, float, int>,
+            arithm::mulScalar<short, float, float>,
+            arithm::mulScalar<short, double, double>
         },
         {
-            0 /*mulScalar<int, float, unsigned char>*/,
-            0 /*mulScalar<int, float, signed char>*/,
-            0 /*mulScalar<int, float, unsigned short>*/,
-            0 /*mulScalar<int, float, short>*/,
-            mulScalar<int, float, int>,
-            mulScalar<int, float, float>,
-            mulScalar<int, double, double>
+            0 /*arithm::mulScalar<int, float, unsigned char>*/,
+            0 /*arithm::mulScalar<int, float, signed char>*/,
+            0 /*arithm::mulScalar<int, float, unsigned short>*/,
+            0 /*arithm::mulScalar<int, float, short>*/,
+            arithm::mulScalar<int, float, int>,
+            arithm::mulScalar<int, float, float>,
+            arithm::mulScalar<int, double, double>
         },
         {
-            0 /*mulScalar<float, float, unsigned char>*/,
-            0 /*mulScalar<float, float, signed char>*/,
-            0 /*mulScalar<float, float, unsigned short>*/,
-            0 /*mulScalar<float, float, short>*/,
-            0 /*mulScalar<float, float, int>*/,
-            mulScalar<float, float, float>,
-            mulScalar<float, double, double>
+            0 /*arithm::mulScalar<float, float, unsigned char>*/,
+            0 /*arithm::mulScalar<float, float, signed char>*/,
+            0 /*arithm::mulScalar<float, float, unsigned short>*/,
+            0 /*arithm::mulScalar<float, float, short>*/,
+            0 /*arithm::mulScalar<float, float, int>*/,
+            arithm::mulScalar<float, float, float>,
+            arithm::mulScalar<float, double, double>
         },
         {
-            0 /*mulScalar<double, double, unsigned char>*/,
-            0 /*mulScalar<double, double, signed char>*/,
-            0 /*mulScalar<double, double, unsigned short>*/,
-            0 /*mulScalar<double, double, short>*/,
-            0 /*mulScalar<double, double, int>*/,
-            0 /*mulScalar<double, double, float>*/,
-            mulScalar<double, double, double>
+            0 /*arithm::mulScalar<double, double, unsigned char>*/,
+            0 /*arithm::mulScalar<double, double, signed char>*/,
+            0 /*arithm::mulScalar<double, double, unsigned short>*/,
+            0 /*arithm::mulScalar<double, double, short>*/,
+            0 /*arithm::mulScalar<double, double, int>*/,
+            0 /*arithm::mulScalar<double, double, float>*/,
+            arithm::mulScalar<double, double, double>
         }
     };
 
@@ -1093,32 +1055,16 @@ void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst, double 
         {0                                                    , 0, 0                                                    , 0                                                    }
     };
 
-    if (dtype < 0)
-        dtype = src.depth();
-
     const int sdepth = src.depth();
-    const int ddepth = CV_MAT_DEPTH(dtype);
+    const int ddepth = dst.depth();
     const int cn = src.channels();
 
-    CV_Assert( sdepth <= CV_64F && ddepth <= CV_64F );
-    CV_Assert( cn <= 4 );
-
-    if (sdepth == CV_64F || ddepth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    dst.create(src.size(), CV_MAKE_TYPE(ddepth, cn));
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    const Scalar nsc(sc.val[0] * scale, sc.val[1] * scale, sc.val[2] * scale, sc.val[3] * scale);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
 
     const npp_func_t npp_func = npp_funcs[sdepth][cn - 1];
     if (ddepth == sdepth && cn > 1 && npp_func != 0)
     {
-        npp_func(src, nsc, dst, stream);
+        npp_func(src, val, dst, stream);
         return;
     }
 
@@ -1129,7 +1075,39 @@ void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst, double 
     if (!func)
         CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
 
-    func(src, nsc.val[0], dst, stream);
+    func(src, val[0], dst, stream);
+}
+
+void cv::gpu::multiply(InputArray _src1, InputArray _src2, OutputArray _dst, double scale, int dtype, Stream& stream)
+{
+    if (_src1.type() == CV_8UC4 && _src2.type() == CV_32FC1)
+    {
+        GpuMat src1 = _src1.getGpuMat();
+        GpuMat src2 = _src2.getGpuMat();
+
+        CV_Assert( src1.size() == src2.size() );
+
+        _dst.create(src1.size(), src1.type());
+        GpuMat dst = _dst.getGpuMat();
+
+        arithm::mulMat_8uc4_32f(src1, src2, dst, StreamAccessor::getStream(stream));
+    }
+    else if (_src1.type() == CV_16SC4 && _src2.type() == CV_32FC1)
+    {
+        GpuMat src1 = _src1.getGpuMat();
+        GpuMat src2 = _src2.getGpuMat();
+
+        CV_Assert( src1.size() == src2.size() );
+
+        _dst.create(src1.size(), src1.type());
+        GpuMat dst = _dst.getGpuMat();
+
+        arithm::mulMat_16sc4_32f(src1, src2, dst, StreamAccessor::getStream(stream));
+    }
+    else
+    {
+        arithm_op(_src1, _src2, _dst, GpuMat(), scale, dtype, stream, mulMat, mulScalar);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////
