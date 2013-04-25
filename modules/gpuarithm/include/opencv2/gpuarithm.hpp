@@ -134,6 +134,34 @@ static inline void scaleAdd(InputArray src1, double alpha, InputArray src2, Outp
 //! applies fixed threshold to the image
 CV_EXPORTS double threshold(InputArray src, OutputArray dst, double thresh, double maxval, int type, Stream& stream = Stream::Null());
 
+//! computes magnitude of complex (x(i).re, x(i).im) vector
+//! supports only CV_32FC2 type
+CV_EXPORTS void magnitude(InputArray xy, OutputArray magnitude, Stream& stream = Stream::Null());
+
+//! computes squared magnitude of complex (x(i).re, x(i).im) vector
+//! supports only CV_32FC2 type
+CV_EXPORTS void magnitudeSqr(InputArray xy, OutputArray magnitude, Stream& stream = Stream::Null());
+
+//! computes magnitude of each (x(i), y(i)) vector
+//! supports only floating-point source
+CV_EXPORTS void magnitude(InputArray x, InputArray y, OutputArray magnitude, Stream& stream = Stream::Null());
+
+//! computes squared magnitude of each (x(i), y(i)) vector
+//! supports only floating-point source
+CV_EXPORTS void magnitudeSqr(InputArray x, InputArray y, OutputArray magnitude, Stream& stream = Stream::Null());
+
+//! computes angle of each (x(i), y(i)) vector
+//! supports only floating-point source
+CV_EXPORTS void phase(InputArray x, InputArray y, OutputArray angle, bool angleInDegrees = false, Stream& stream = Stream::Null());
+
+//! converts Cartesian coordinates to polar
+//! supports only floating-point source
+CV_EXPORTS void cartToPolar(InputArray x, InputArray y, OutputArray magnitude, OutputArray angle, bool angleInDegrees = false, Stream& stream = Stream::Null());
+
+//! converts polar coordinates to Cartesian
+//! supports only floating-point source
+CV_EXPORTS void polarToCart(InputArray magnitude, InputArray angle, OutputArray x, OutputArray y, bool angleInDegrees = false, Stream& stream = Stream::Null());
+
 //! implements generalized matrix product algorithm GEMM from BLAS
 CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha,
     const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null());
@@ -162,34 +190,6 @@ CV_EXPORTS void split(const GpuMat& src, GpuMat* dst, Stream& stream = Stream::N
 
 //! copies each plane of a multi-channel array to a dedicated array
 CV_EXPORTS void split(const GpuMat& src, std::vector<GpuMat>& dst, Stream& stream = Stream::Null());
-
-//! computes magnitude of complex (x(i).re, x(i).im) vector
-//! supports only CV_32FC2 type
-CV_EXPORTS void magnitude(const GpuMat& xy, GpuMat& magnitude, Stream& stream = Stream::Null());
-
-//! computes squared magnitude of complex (x(i).re, x(i).im) vector
-//! supports only CV_32FC2 type
-CV_EXPORTS void magnitudeSqr(const GpuMat& xy, GpuMat& magnitude, Stream& stream = Stream::Null());
-
-//! computes magnitude of each (x(i), y(i)) vector
-//! supports only floating-point source
-CV_EXPORTS void magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, Stream& stream = Stream::Null());
-
-//! computes squared magnitude of each (x(i), y(i)) vector
-//! supports only floating-point source
-CV_EXPORTS void magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, Stream& stream = Stream::Null());
-
-//! computes angle (angle(i)) of each (x(i), y(i)) vector
-//! supports only floating-point source
-CV_EXPORTS void phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees = false, Stream& stream = Stream::Null());
-
-//! converts Cartesian coordinates to polar
-//! supports only floating-point source
-CV_EXPORTS void cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees = false, Stream& stream = Stream::Null());
-
-//! converts polar coordinates to Cartesian
-//! supports only floating-point source
-CV_EXPORTS void polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees = false, Stream& stream = Stream::Null());
 
 //! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values
 CV_EXPORTS void normalize(const GpuMat& src, GpuMat& dst, double alpha = 1, double beta = 0,

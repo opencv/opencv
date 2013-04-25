@@ -77,17 +77,13 @@ void cv::gpu::addWeighted(InputArray, double, InputArray, double, double, Output
 
 double cv::gpu::threshold(InputArray, OutputArray, double, double, int, Stream&) {throw_no_cuda(); return 0.0;}
 
-void cv::gpu::magnitude(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::magnitude(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-
-void cv::gpu::magnitudeSqr(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::magnitudeSqr(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-
-void cv::gpu::phase(const GpuMat&, const GpuMat&, GpuMat&, bool, Stream&) { throw_no_cuda(); }
-
-void cv::gpu::cartToPolar(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, Stream&) { throw_no_cuda(); }
-
-void cv::gpu::polarToCart(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::magnitude(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::gpu::magnitude(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::gpu::magnitudeSqr(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::gpu::magnitudeSqr(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::gpu::phase(InputArray, InputArray, OutputArray, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::cartToPolar(InputArray, InputArray, OutputArray, OutputArray, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::polarToCart(InputArray, InputArray, OutputArray, OutputArray, bool, Stream&) { throw_no_cuda(); }
 
 #else
 
@@ -3005,11 +3001,9 @@ namespace
 {
     typedef NppStatus (*nppMagnitude_t)(const Npp32fc* pSrc, int nSrcStep, Npp32f* pDst, int nDstStep, NppiSize oSizeROI);
 
-    inline void npp_magnitude(const GpuMat& src, GpuMat& dst, nppMagnitude_t func, cudaStream_t stream)
+    void npp_magnitude(const GpuMat& src, GpuMat& dst, nppMagnitude_t func, cudaStream_t stream)
     {
         CV_Assert(src.type() == CV_32FC2);
-
-        dst.create(src.size(), CV_32FC1);
 
         NppiSize sz;
         sz.width = src.cols;
@@ -3024,13 +3018,23 @@ namespace
     }
 }
 
-void cv::gpu::magnitude(const GpuMat& src, GpuMat& dst, Stream& stream)
+void cv::gpu::magnitude(InputArray _src, OutputArray _dst, Stream& stream)
 {
+    GpuMat src = _src.getGpuMat();
+
+    _dst.create(src.size(), CV_32FC1);
+    GpuMat dst = _dst.getGpuMat();
+
     npp_magnitude(src, dst, nppiMagnitude_32fc32f_C1R, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::magnitudeSqr(const GpuMat& src, GpuMat& dst, Stream& stream)
+void cv::gpu::magnitudeSqr(InputArray _src, OutputArray _dst, Stream& stream)
 {
+    GpuMat src = _src.getGpuMat();
+
+    _dst.create(src.size(), CV_32FC1);
+    GpuMat dst = _dst.getGpuMat();
+
     npp_magnitude(src, dst, nppiMagnitudeSqr_32fc32f_C1R, StreamAccessor::getStream(stream));
 }
 
@@ -3048,17 +3052,12 @@ namespace cv { namespace gpu { namespace cudev
 
 namespace
 {
-    inline void cartToPolar_caller(const GpuMat& x, const GpuMat& y, GpuMat* mag, bool magSqr, GpuMat* angle, bool angleInDegrees, cudaStream_t stream)
+    void cartToPolar_caller(const GpuMat& x, const GpuMat& y, GpuMat* mag, bool magSqr, GpuMat* angle, bool angleInDegrees, cudaStream_t stream)
     {
         using namespace ::cv::gpu::cudev::mathfunc;
 
         CV_Assert(x.size() == y.size() && x.type() == y.type());
         CV_Assert(x.depth() == CV_32F);
-
-        if (mag)
-            mag->create(x.size(), x.type());
-        if (angle)
-            angle->create(x.size(), x.type());
 
         GpuMat x1cn = x.reshape(1);
         GpuMat y1cn = y.reshape(1);
@@ -3068,15 +3067,12 @@ namespace
         cartToPolar_gpu(x1cn, y1cn, mag1cn, magSqr, angle1cn, angleInDegrees, stream);
     }
 
-    inline void polarToCart_caller(const GpuMat& mag, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, cudaStream_t stream)
+    void polarToCart_caller(const GpuMat& mag, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, cudaStream_t stream)
     {
         using namespace ::cv::gpu::cudev::mathfunc;
 
         CV_Assert((mag.empty() || mag.size() == angle.size()) && mag.type() == angle.type());
         CV_Assert(mag.depth() == CV_32F);
-
-        x.create(mag.size(), mag.type());
-        y.create(mag.size(), mag.type());
 
         GpuMat mag1cn = mag.reshape(1);
         GpuMat angle1cn = angle.reshape(1);
@@ -3087,29 +3083,65 @@ namespace
     }
 }
 
-void cv::gpu::magnitude(const GpuMat& x, const GpuMat& y, GpuMat& dst, Stream& stream)
+void cv::gpu::magnitude(InputArray _x, InputArray _y, OutputArray _dst, Stream& stream)
 {
+    GpuMat x = _x.getGpuMat();
+    GpuMat y = _y.getGpuMat();
+
+    _dst.create(x.size(), CV_32FC1);
+    GpuMat dst = _dst.getGpuMat();
+
     cartToPolar_caller(x, y, &dst, false, 0, false, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& dst, Stream& stream)
+void cv::gpu::magnitudeSqr(InputArray _x, InputArray _y, OutputArray _dst, Stream& stream)
 {
+    GpuMat x = _x.getGpuMat();
+    GpuMat y = _y.getGpuMat();
+
+    _dst.create(x.size(), CV_32FC1);
+    GpuMat dst = _dst.getGpuMat();
+
     cartToPolar_caller(x, y, &dst, true, 0, false, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees, Stream& stream)
+void cv::gpu::phase(InputArray _x, InputArray _y, OutputArray _dst, bool angleInDegrees, Stream& stream)
 {
-    cartToPolar_caller(x, y, 0, false, &angle, angleInDegrees, StreamAccessor::getStream(stream));
+    GpuMat x = _x.getGpuMat();
+    GpuMat y = _y.getGpuMat();
+
+    _dst.create(x.size(), CV_32FC1);
+    GpuMat dst = _dst.getGpuMat();
+
+    cartToPolar_caller(x, y, 0, false, &dst, angleInDegrees, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& mag, GpuMat& angle, bool angleInDegrees, Stream& stream)
+void cv::gpu::cartToPolar(InputArray _x, InputArray _y, OutputArray _mag, OutputArray _angle, bool angleInDegrees, Stream& stream)
 {
+    GpuMat x = _x.getGpuMat();
+    GpuMat y = _y.getGpuMat();
+
+    _mag.create(x.size(), CV_32FC1);
+    GpuMat mag = _mag.getGpuMat();
+
+    _angle.create(x.size(), CV_32FC1);
+    GpuMat angle = _angle.getGpuMat();
+
     cartToPolar_caller(x, y, &mag, false, &angle, angleInDegrees, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, Stream& stream)
+void cv::gpu::polarToCart(InputArray _mag, InputArray _angle, OutputArray _x, OutputArray _y, bool angleInDegrees, Stream& stream)
 {
-    polarToCart_caller(magnitude, angle, x, y, angleInDegrees, StreamAccessor::getStream(stream));
+    GpuMat mag = _mag.getGpuMat();
+    GpuMat angle = _angle.getGpuMat();
+
+    _x.create(mag.size(), CV_32FC1);
+    GpuMat x = _x.getGpuMat();
+
+    _y.create(mag.size(), CV_32FC1);
+    GpuMat y = _y.getGpuMat();
+
+    polarToCart_caller(mag, angle, x, y, angleInDegrees, StreamAccessor::getStream(stream));
 }
 
 #endif
