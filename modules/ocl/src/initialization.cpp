@@ -127,7 +127,7 @@ namespace cv
             cl_platform_id oclplatform;
             std::vector<cl_device_id> devices;
             std::vector<String> devName;
-
+            String platName;
             cl_context oclcontext;
             cl_command_queue clCmdQueue;
             int devnum;
@@ -298,10 +298,14 @@ namespace cv
             std::vector<cl_platform_id> platforms(numPlatforms);
             openCLSafeCall(clGetPlatformIDs(numPlatforms, &platforms[0], 0));
 
-            char deviceName[256];
             int devcienums = 0;
+
+            const static int max_name_length = 256;
+            char deviceName[max_name_length];
+            char plfmName[max_name_length];
             for (unsigned i = 0; i < numPlatforms; ++i)
             {
+
                 cl_uint numsdev;
                 cl_int status = clGetDeviceIDs(platforms[i], devicetype, 0, NULL, &numsdev);
                 if(status != CL_DEVICE_NOT_FOUND)
@@ -314,6 +318,9 @@ namespace cv
                     openCLSafeCall(clGetDeviceIDs(platforms[i], devicetype, numsdev, &devices[0], 0));
 
                     Info ocltmpinfo;
+                    openCLSafeCall(clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR, sizeof(plfmName), plfmName, NULL));
+                    ocltmpinfo.PlatformName = String(plfmName);
+                    ocltmpinfo.impl->platName = String(plfmName);
                     ocltmpinfo.impl->oclplatform = platforms[i];
                     for(unsigned j = 0; j < numsdev; ++j)
                     {
@@ -1035,6 +1042,7 @@ namespace cv
             impl->release();
             impl = new Impl;
             DeviceName.clear();
+            PlatformName.clear();
         }
 
         Info::~Info()
@@ -1048,6 +1056,7 @@ namespace cv
             impl->release();
             impl = m.impl->copy();
             DeviceName = m.DeviceName;
+            PlatformName = m.PlatformName;
             return *this;
         }
 
@@ -1055,6 +1064,7 @@ namespace cv
         {
             impl = m.impl->copy();
             DeviceName = m.DeviceName;
+            PlatformName = m.PlatformName;
         }
     }//namespace ocl
 

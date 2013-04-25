@@ -103,6 +103,7 @@ namespace cv
             void release();
             Info &operator = (const Info &m);
             std::vector<String> DeviceName;
+            String PlatformName;
         };
         //////////////////////////////// Initialization & Info ////////////////////////
         //this function may be obsoleted
