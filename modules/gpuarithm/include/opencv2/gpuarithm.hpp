@@ -205,6 +205,10 @@ inline void LUT(InputArray src, InputArray lut, OutputArray dst, Stream& stream)
     createLookUpTable(lut)->transform(src, dst, stream);
 }
 
+//! copies 2D array to a larger destination array and pads borders with user-specifiable constant
+CV_EXPORTS void copyMakeBorder(InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType,
+                               Scalar value = Scalar(), Stream& stream = Stream::Null());
+
 //! implements generalized matrix product algorithm GEMM from BLAS
 CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha,
     const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null());
@@ -272,10 +276,6 @@ CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev, GpuM
 //! supports only CV_32SC1 source type and CV_32FC1 sqr type
 //! output will have CV_32FC1 type
 CV_EXPORTS void rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& stream = Stream::Null());
-
-//! copies 2D array to a larger destination array and pads borders with user-specifiable constant
-CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType,
-                               const Scalar& value = Scalar(), Stream& stream = Stream::Null());
 
 //! computes the integral image
 //! sum will have CV_32S type, but will contain unsigned int values

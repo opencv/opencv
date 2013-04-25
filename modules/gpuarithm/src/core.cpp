@@ -59,7 +59,7 @@ void cv::gpu::flip(InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
 
 Ptr<LookUpTable> cv::gpu::createLookUpTable(InputArray) { throw_no_cuda(); return Ptr<LookUpTable>(); }
 
-void cv::gpu::copyMakeBorder(const GpuMat&, GpuMat&, int, int, int, int, int, const Scalar&, Stream&) { throw_no_cuda(); }
+void cv::gpu::copyMakeBorder(InputArray, OutputArray, int, int, int, int, int, Scalar, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -529,14 +529,17 @@ typedef Npp32s __attribute__((__may_alias__)) Npp32s_a;
 typedef Npp32s Npp32s_a;
 #endif
 
-void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType, const Scalar& value, Stream& s)
+void cv::gpu::copyMakeBorder(InputArray _src, OutputArray _dst, int top, int bottom, int left, int right, int borderType, Scalar value, Stream& _stream)
 {
-    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
-    CV_Assert(borderType == BORDER_REFLECT_101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP);
+    GpuMat src = _src.getGpuMat();
 
-    dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
+    CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );
+    CV_Assert( borderType == BORDER_REFLECT_101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP );
 
-    cudaStream_t stream = StreamAccessor::getStream(s);
+    _dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
 
     if (borderType == BORDER_CONSTANT && (src.type() == CV_8UC1 || src.type() == CV_8UC4 || src.type() == CV_32SC1 || src.type() == CV_32FC1))
     {
