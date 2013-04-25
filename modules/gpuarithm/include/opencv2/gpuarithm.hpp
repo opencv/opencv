@@ -95,6 +95,18 @@ CV_EXPORTS void pow(InputArray src, double power, OutputArray dst, Stream& strea
 //! compares elements of two arrays (dst = src1 <cmpop> src2)
 CV_EXPORTS void compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop, Stream& stream = Stream::Null());
 
+//! performs per-elements bit-wise inversion
+CV_EXPORTS void bitwise_not(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
+
+//! calculates per-element bit-wise disjunction of two arrays
+CV_EXPORTS void bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
+
+//! calculates per-element bit-wise conjunction of two arrays
+CV_EXPORTS void bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
+
+//! calculates per-element bit-wise "exclusive or" operation
+CV_EXPORTS void bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
+
 //! computes the weighted sum of two arrays (dst = alpha*src1 + beta*src2 + gamma)
 CV_EXPORTS void addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst,
                             int dtype = -1, Stream& stream = Stream::Null());
@@ -104,27 +116,6 @@ static inline void scaleAdd(const GpuMat& src1, double alpha, const GpuMat& src2
 {
     addWeighted(src1, alpha, src2, 1.0, 0.0, dst, -1, stream);
 }
-
-//! performs per-elements bit-wise inversion
-CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
-
-//! calculates per-element bit-wise disjunction of two arrays
-CV_EXPORTS void bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
-//! calculates per-element bit-wise disjunction of array and scalar
-//! supports 1, 3 and 4 channels images with CV_8U, CV_16U or CV_32S depth
-CV_EXPORTS void bitwise_or(const GpuMat& src1, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null());
-
-//! calculates per-element bit-wise conjunction of two arrays
-CV_EXPORTS void bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
-//! calculates per-element bit-wise conjunction of array and scalar
-//! supports 1, 3 and 4 channels images with CV_8U, CV_16U or CV_32S depth
-CV_EXPORTS void bitwise_and(const GpuMat& src1, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null());
-
-//! calculates per-element bit-wise "exclusive or" operation
-CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
-//! calculates per-element bit-wise "exclusive or" of array and scalar
-//! supports 1, 3 and 4 channels images with CV_8U, CV_16U or CV_32S depth
-CV_EXPORTS void bitwise_xor(const GpuMat& src1, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null());
 
 //! pixel by pixel right shift of an image by a constant value
 //! supports 1, 3 and 4 channels images with integers elements

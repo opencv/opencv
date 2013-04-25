@@ -71,16 +71,13 @@ void cv::gpu::pow(InputArray, double, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::compare(InputArray, InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::bitwise_not(const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::bitwise_not(InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::bitwise_or(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::bitwise_or(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::bitwise_or(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::bitwise_and(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::bitwise_and(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::bitwise_and(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::bitwise_xor(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::bitwise_xor(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::bitwise_xor(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::rshift(const GpuMat&, Scalar_<int>, GpuMat&, Stream&) { throw_no_cuda(); }
 
@@ -1889,25 +1886,29 @@ void cv::gpu::compare(InputArray src1, InputArray src2, OutputArray dst, int cmp
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// Unary bitwise logical operations
+// bitwise_not
 
 namespace arithm
 {
     template <typename T> void bitMatNot(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
 }
 
-void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, Stream& s)
+void cv::gpu::bitwise_not(InputArray _src, OutputArray _dst, InputArray _mask, Stream& _stream)
 {
     using namespace arithm;
+
+    GpuMat src = _src.getGpuMat();
+    GpuMat mask = _mask.getGpuMat();
 
     const int depth = src.depth();
 
     CV_Assert( depth <= CV_64F );
     CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
 
-    dst.create(src.size(), src.type());
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
 
-    cudaStream_t stream = StreamAccessor::getStream(s);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
 
     const int bcols = (int) (src.cols * src.elemSize());
 
@@ -1941,6 +1942,16 @@ void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, St
 //////////////////////////////////////////////////////////////////////////////
 // Binary bitwise logical operations
 
+namespace
+{
+    enum
+    {
+        BIT_OP_AND,
+        BIT_OP_OR,
+        BIT_OP_XOR
+    };
+}
+
 namespace arithm
 {
     template <typename T> void bitMatAnd(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
@@ -1948,19 +1959,31 @@ namespace arithm
     template <typename T> void bitMatXor(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
 }
 
-void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, Stream& s)
+static void bitMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& _stream, int op)
 {
     using namespace arithm;
 
-    const int depth = src1.depth();
+    typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
+    static const func_t funcs32[] =
+    {
+        bitMatAnd<uint>,
+        bitMatOr<uint>,
+        bitMatXor<uint>
+    };
+    static const func_t funcs16[] =
+    {
+        bitMatAnd<ushort>,
+        bitMatOr<ushort>,
+        bitMatXor<ushort>
+    };
+    static const func_t funcs8[] =
+    {
+        bitMatAnd<uchar>,
+        bitMatOr<uchar>,
+        bitMatXor<uchar>
+    };
 
-    CV_Assert( depth <= CV_64F );
-    CV_Assert( src2.size() == src1.size() && src2.type() == src1.type() );
-    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src1.size()) );
-
-    dst.create(src1.size(), src1.type());
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
 
     const int bcols = (int) (src1.cols * src1.elemSize());
 
@@ -1968,8 +1991,7 @@ void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
     {
         const int vcols = bcols >> 2;
 
-        bitMatAnd<unsigned int>(
-                    PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
+        funcs32[op](PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
                     PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
                     PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
                     mask, stream);
@@ -1978,8 +2000,7 @@ void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
     {
         const int vcols = bcols >> 1;
 
-        bitMatAnd<unsigned int>(
-                    PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
+        funcs16[op](PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
                     PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
                     PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
                     mask, stream);
@@ -1987,110 +2008,12 @@ void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
     else
     {
 
-        bitMatAnd<unsigned int>(
-                    PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
-                    mask, stream);
+        funcs8[op](PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
+                   PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
+                   PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
+                   mask, stream);
     }
 }
-
-void cv::gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, Stream& s)
-{
-    using namespace arithm;
-
-    const int depth = src1.depth();
-
-    CV_Assert( depth <= CV_64F );
-    CV_Assert( src2.size() == src1.size() && src2.type() == src1.type() );
-    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src1.size()) );
-
-    dst.create(src1.size(), src1.type());
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    const int bcols = (int) (src1.cols * src1.elemSize());
-
-    if ((bcols & 3) == 0)
-    {
-        const int vcols = bcols >> 2;
-
-        bitMatOr<unsigned int>(
-                    PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
-                    mask, stream);
-    }
-    else if ((bcols & 1) == 0)
-    {
-        const int vcols = bcols >> 1;
-
-        bitMatOr<unsigned int>(
-                    PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
-                    mask, stream);
-    }
-    else
-    {
-
-        bitMatOr<unsigned int>(
-                    PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
-                    mask, stream);
-    }
-}
-
-void cv::gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, Stream& s)
-{
-    using namespace arithm;
-
-    const int depth = src1.depth();
-
-    CV_Assert( depth <= CV_64F );
-    CV_Assert( src2.size() == src1.size() && src2.type() == src1.type() );
-    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src1.size()) );
-
-    dst.create(src1.size(), src1.type());
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    const int bcols = (int) (src1.cols * src1.elemSize());
-
-    if ((bcols & 3) == 0)
-    {
-        const int vcols = bcols >> 2;
-
-        bitMatXor<unsigned int>(
-                    PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
-                    mask, stream);
-    }
-    else if ((bcols & 1) == 0)
-    {
-        const int vcols = bcols >> 1;
-
-        bitMatXor<unsigned int>(
-                    PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
-                    mask, stream);
-    }
-    else
-    {
-
-        bitMatXor<unsigned int>(
-                    PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
-                    mask, stream);
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-// Binary bitwise logical operations with scalars
 
 namespace arithm
 {
@@ -2179,18 +2102,34 @@ namespace
     };
 }
 
-void cv::gpu::bitwise_and(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream)
+static void bitScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op)
 {
     using namespace arithm;
 
     typedef void (*func_t)(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream);
-    static const func_t funcs[5][4] =
+    static const func_t funcs[3][5][4] =
     {
-        {BitScalar<unsigned char, bitScalarAnd<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiAndC_8u_C3R >::call, BitScalar4< bitScalarAnd<unsigned int> >::call},
-        {0,0,0,0},
-        {BitScalar<unsigned short, bitScalarAnd<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiAndC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiAndC_16u_C4R>::call},
-        {0,0,0,0},
-        {BitScalar<int, bitScalarAnd<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiAndC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiAndC_32s_C4R>::call}
+        {
+            {BitScalar<unsigned char, bitScalarAnd<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiAndC_8u_C3R >::call, BitScalar4< bitScalarAnd<unsigned int> >::call},
+            {0,0,0,0},
+            {BitScalar<unsigned short, bitScalarAnd<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiAndC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiAndC_16u_C4R>::call},
+            {0,0,0,0},
+            {BitScalar<int, bitScalarAnd<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiAndC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiAndC_32s_C4R>::call}
+        },
+        {
+            {BitScalar<unsigned char, bitScalarOr<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiOrC_8u_C3R >::call, BitScalar4< bitScalarOr<unsigned int> >::call},
+            {0,0,0,0},
+            {BitScalar<unsigned short, bitScalarOr<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiOrC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiOrC_16u_C4R>::call},
+            {0,0,0,0},
+            {BitScalar<int, bitScalarOr<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiOrC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiOrC_32s_C4R>::call}
+        },
+        {
+            {BitScalar<unsigned char, bitScalarXor<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiXorC_8u_C3R >::call, BitScalar4< bitScalarXor<unsigned int> >::call},
+            {0,0,0,0},
+            {BitScalar<unsigned short, bitScalarXor<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiXorC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiXorC_16u_C4R>::call},
+            {0,0,0,0},
+            {BitScalar<int, bitScalarXor<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiXorC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiXorC_32s_C4R>::call}
+        }
     };
 
     const int depth = src.depth();
@@ -2198,60 +2137,24 @@ void cv::gpu::bitwise_and(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stre
 
     CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32S );
     CV_Assert( cn == 1 || cn == 3 || cn == 4 );
+    CV_Assert( mask.empty() );
 
-    dst.create(src.size(), src.type());
-
-    funcs[depth][cn - 1](src, sc, dst, StreamAccessor::getStream(stream));
+    funcs[op][depth][cn - 1](src, val, dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::bitwise_or(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream)
+void cv::gpu::bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, Stream& stream)
 {
-    using namespace arithm;
-
-    typedef void (*func_t)(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream);
-    static const func_t funcs[5][4] =
-    {
-        {BitScalar<unsigned char, bitScalarOr<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiOrC_8u_C3R >::call, BitScalar4< bitScalarOr<unsigned int> >::call},
-        {0,0,0,0},
-        {BitScalar<unsigned short, bitScalarOr<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiOrC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiOrC_16u_C4R>::call},
-        {0,0,0,0},
-        {BitScalar<int, bitScalarOr<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiOrC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiOrC_32s_C4R>::call}
-    };
-
-    const int depth = src.depth();
-    const int cn = src.channels();
-
-    CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32S );
-    CV_Assert( cn == 1 || cn == 3 || cn == 4 );
-
-    dst.create(src.size(), src.type());
-
-    funcs[depth][cn - 1](src, sc, dst, StreamAccessor::getStream(stream));
+    arithm_op(src1, src2, dst, mask, 1.0, -1, stream, bitMat, bitScalar, BIT_OP_OR);
 }
 
-void cv::gpu::bitwise_xor(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream)
+void cv::gpu::bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, Stream& stream)
 {
-    using namespace arithm;
+    arithm_op(src1, src2, dst, mask, 1.0, -1, stream, bitMat, bitScalar, BIT_OP_AND);
+}
 
-    typedef void (*func_t)(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream);
-    static const func_t funcs[5][4] =
-    {
-        {BitScalar<unsigned char, bitScalarXor<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiXorC_8u_C3R >::call, BitScalar4< bitScalarXor<unsigned int> >::call},
-        {0,0,0,0},
-        {BitScalar<unsigned short, bitScalarXor<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiXorC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiXorC_16u_C4R>::call},
-        {0,0,0,0},
-        {BitScalar<int, bitScalarXor<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiXorC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiXorC_32s_C4R>::call}
-    };
-
-    const int depth = src.depth();
-    const int cn = src.channels();
-
-    CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32S );
-    CV_Assert( cn == 1 || cn == 3 || cn == 4 );
-
-    dst.create(src.size(), src.type());
-
-    funcs[depth][cn - 1](src, sc, dst, StreamAccessor::getStream(stream));
+void cv::gpu::bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, Stream& stream)
+{
+    arithm_op(src1, src2, dst, mask, 1.0, -1, stream, bitMat, bitScalar, BIT_OP_XOR);
 }
 
 //////////////////////////////////////////////////////////////////////////////
