@@ -57,17 +57,17 @@ void cv::gpu::divide(InputArray, InputArray, OutputArray, double, int, Stream&) 
 
 void cv::gpu::absdiff(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::abs(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::abs(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::sqr(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::sqr(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::sqrt(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::sqrt(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::exp(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::exp(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::log(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::log(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::pow(const GpuMat&, double, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::pow(InputArray, double, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::compare(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
 void cv::gpu::compare(const GpuMat&, Scalar, GpuMat&, int, Stream&) { throw_no_cuda(); }
@@ -1484,7 +1484,7 @@ namespace arithm
     void absMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::abs(const GpuMat& src, GpuMat& dst, Stream& stream)
+void cv::gpu::abs(InputArray _src, OutputArray _dst, Stream& stream)
 {
     using namespace arithm;
 
@@ -1500,6 +1500,8 @@ void cv::gpu::abs(const GpuMat& src, GpuMat& dst, Stream& stream)
         absMat<double>
     };
 
+    GpuMat src = _src.getGpuMat();
+
     const int depth = src.depth();
 
     CV_Assert( depth <= CV_64F );
@@ -1511,7 +1513,8 @@ void cv::gpu::abs(const GpuMat& src, GpuMat& dst, Stream& stream)
             CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
-    dst.create(src.size(), src.type());
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
 
     funcs[depth](src, dst, StreamAccessor::getStream(stream));
 }
@@ -1525,7 +1528,7 @@ namespace arithm
     void sqrMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::sqr(const GpuMat& src, GpuMat& dst, Stream& stream)
+void cv::gpu::sqr(InputArray _src, OutputArray _dst, Stream& stream)
 {
     using namespace arithm;
 
@@ -1541,6 +1544,8 @@ void cv::gpu::sqr(const GpuMat& src, GpuMat& dst, Stream& stream)
         sqrMat<double>
     };
 
+    GpuMat src = _src.getGpuMat();
+
     const int depth = src.depth();
 
     CV_Assert( depth <= CV_64F );
@@ -1552,7 +1557,8 @@ void cv::gpu::sqr(const GpuMat& src, GpuMat& dst, Stream& stream)
             CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
-    dst.create(src.size(), src.type());
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
 
     funcs[depth](src, dst, StreamAccessor::getStream(stream));
 }
@@ -1566,7 +1572,7 @@ namespace arithm
     void sqrtMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::sqrt(const GpuMat& src, GpuMat& dst, Stream& stream)
+void cv::gpu::sqrt(InputArray _src, OutputArray _dst, Stream& stream)
 {
     using namespace arithm;
 
@@ -1582,46 +1588,7 @@ void cv::gpu::sqrt(const GpuMat& src, GpuMat& dst, Stream& stream)
         sqrtMat<double>
     };
 
-    const int depth = src.depth();
-
-    CV_Assert( depth <= CV_64F );
-    CV_Assert( src.channels() == 1 );
-
-    if (depth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    dst.create(src.size(), src.type());
-
-    funcs[depth](src, dst, StreamAccessor::getStream(stream));
-}
-
-////////////////////////////////////////////////////////////////////////
-// log
-
-namespace arithm
-{
-    template <typename T>
-    void logMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-}
-
-void cv::gpu::log(const GpuMat& src, GpuMat& dst, Stream& stream)
-{
-    using namespace arithm;
-
-    typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-    static const func_t funcs[] =
-    {
-        logMat<unsigned char>,
-        logMat<signed char>,
-        logMat<unsigned short>,
-        logMat<short>,
-        logMat<int>,
-        logMat<float>,
-        logMat<double>
-    };
+    GpuMat src = _src.getGpuMat();
 
     const int depth = src.depth();
 
@@ -1634,7 +1601,8 @@ void cv::gpu::log(const GpuMat& src, GpuMat& dst, Stream& stream)
             CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
-    dst.create(src.size(), src.type());
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
 
     funcs[depth](src, dst, StreamAccessor::getStream(stream));
 }
@@ -1648,7 +1616,7 @@ namespace arithm
     void expMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::exp(const GpuMat& src, GpuMat& dst, Stream& stream)
+void cv::gpu::exp(InputArray _src, OutputArray _dst, Stream& stream)
 {
     using namespace arithm;
 
@@ -1664,6 +1632,8 @@ void cv::gpu::exp(const GpuMat& src, GpuMat& dst, Stream& stream)
         expMat<double>
     };
 
+    GpuMat src = _src.getGpuMat();
+
     const int depth = src.depth();
 
     CV_Assert( depth <= CV_64F );
@@ -1675,9 +1645,98 @@ void cv::gpu::exp(const GpuMat& src, GpuMat& dst, Stream& stream)
             CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
-    dst.create(src.size(), src.type());
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
 
     funcs[depth](src, dst, StreamAccessor::getStream(stream));
+}
+
+////////////////////////////////////////////////////////////////////////
+// log
+
+namespace arithm
+{
+    template <typename T>
+    void logMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+}
+
+void cv::gpu::log(InputArray _src, OutputArray _dst, Stream& stream)
+{
+    using namespace arithm;
+
+    typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+    static const func_t funcs[] =
+    {
+        logMat<unsigned char>,
+        logMat<signed char>,
+        logMat<unsigned short>,
+        logMat<short>,
+        logMat<int>,
+        logMat<float>,
+        logMat<double>
+    };
+
+    GpuMat src = _src.getGpuMat();
+
+    const int depth = src.depth();
+
+    CV_Assert( depth <= CV_64F );
+    CV_Assert( src.channels() == 1 );
+
+    if (depth == CV_64F)
+    {
+        if (!deviceSupports(NATIVE_DOUBLE))
+            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
+    }
+
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    funcs[depth](src, dst, StreamAccessor::getStream(stream));
+}
+
+////////////////////////////////////////////////////////////////////////
+// pow
+
+namespace arithm
+{
+    template<typename T> void pow(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);
+}
+
+void cv::gpu::pow(InputArray _src, double power, OutputArray _dst, Stream& stream)
+{
+    typedef void (*func_t)(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);
+    static const func_t funcs[] =
+    {
+        arithm::pow<unsigned char>,
+        arithm::pow<signed char>,
+        arithm::pow<unsigned short>,
+        arithm::pow<short>,
+        arithm::pow<int>,
+        arithm::pow<float>,
+        arithm::pow<double>
+    };
+
+    GpuMat src = _src.getGpuMat();
+
+    const int depth = src.depth();
+    const int cn = src.channels();
+
+    CV_Assert(depth <= CV_64F);
+
+    if (depth == CV_64F)
+    {
+        if (!deviceSupports(NATIVE_DOUBLE))
+            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
+    }
+
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    PtrStepSzb src_(src.rows, src.cols * cn, src.data, src.step);
+    PtrStepSzb dst_(src.rows, src.cols * cn, dst.data, dst.step);
+
+    funcs[depth](src_, power, dst_, StreamAccessor::getStream(stream));
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2560,47 +2619,6 @@ void cv::gpu::max(const GpuMat& src, double val, GpuMat& dst, Stream& stream)
     dst.create(src.size(), src.type());
 
     funcs[depth](src, cast_func[depth](val), dst, StreamAccessor::getStream(stream));
-}
-
-////////////////////////////////////////////////////////////////////////
-// pow
-
-namespace arithm
-{
-    template<typename T> void pow(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);
-}
-
-void cv::gpu::pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream)
-{
-    typedef void (*func_t)(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);
-    static const func_t funcs[] =
-    {
-        arithm::pow<unsigned char>,
-        arithm::pow<signed char>,
-        arithm::pow<unsigned short>,
-        arithm::pow<short>,
-        arithm::pow<int>,
-        arithm::pow<float>,
-        arithm::pow<double>
-    };
-
-    const int depth = src.depth();
-    const int cn = src.channels();
-
-    CV_Assert(depth <= CV_64F);
-
-    if (depth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    dst.create(src.size(), src.type());
-
-    PtrStepSzb src_(src.rows, src.cols * cn, src.data, src.step);
-    PtrStepSzb dst_(src.rows, src.cols * cn, dst.data, dst.step);
-
-    funcs[depth](src_, power, dst_, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////

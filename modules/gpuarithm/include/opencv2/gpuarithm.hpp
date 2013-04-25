@@ -72,6 +72,26 @@ static inline void divide(double src1, InputArray src2, OutputArray dst, int dty
 //! computes element-wise absolute difference of two arrays (dst = abs(src1 - src2))
 CV_EXPORTS void absdiff(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
 
+//! computes absolute value of each matrix element
+CV_EXPORTS void abs(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+
+//! computes square of each pixel in an image
+CV_EXPORTS void sqr(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+
+//! computes square root of each pixel in an image
+CV_EXPORTS void sqrt(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+
+//! computes exponent of each matrix element
+CV_EXPORTS void exp(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+
+//! computes natural logarithm of absolute value of each matrix element
+CV_EXPORTS void log(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+
+//! computes power of each matrix element:
+//!    (dst(i,j) = pow(     src(i,j) , power), if src.type() is integer
+//!    (dst(i,j) = pow(fabs(src(i,j)), power), otherwise
+CV_EXPORTS void pow(InputArray src, double power, OutputArray dst, Stream& stream = Stream::Null());
+
 //! computes the weighted sum of two arrays (dst = alpha*src1 + beta*src2 + gamma)
 CV_EXPORTS void addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst,
                             int dtype = -1, Stream& stream = Stream::Null());
@@ -81,32 +101,6 @@ static inline void scaleAdd(const GpuMat& src1, double alpha, const GpuMat& src2
 {
     addWeighted(src1, alpha, src2, 1.0, 0.0, dst, -1, stream);
 }
-
-//! computes absolute value of each matrix element
-//! supports CV_16S and CV_32F depth
-CV_EXPORTS void abs(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
-
-//! computes square of each pixel in an image
-//! supports CV_8U, CV_16U, CV_16S and CV_32F depth
-CV_EXPORTS void sqr(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
-
-//! computes square root of each pixel in an image
-//! supports CV_8U, CV_16U, CV_16S and CV_32F depth
-CV_EXPORTS void sqrt(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
-
-//! computes exponent of each matrix element (b = e**a)
-//! supports CV_8U, CV_16U, CV_16S and CV_32F depth
-CV_EXPORTS void exp(const GpuMat& a, GpuMat& b, Stream& stream = Stream::Null());
-
-//! computes natural logarithm of absolute value of each matrix element: b = log(abs(a))
-//! supports CV_8U, CV_16U, CV_16S and CV_32F depth
-CV_EXPORTS void log(const GpuMat& a, GpuMat& b, Stream& stream = Stream::Null());
-
-//! computes power of each matrix element:
-//    (dst(i,j) = pow(     src(i,j) , power), if src.type() is integer
-//    (dst(i,j) = pow(fabs(src(i,j)), power), otherwise
-//! supports all, except depth == CV_64F
-CV_EXPORTS void pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream = Stream::Null());
 
 //! compares elements of two arrays (c = a <cmpop> b)
 CV_EXPORTS void compare(const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop, Stream& stream = Stream::Null());
