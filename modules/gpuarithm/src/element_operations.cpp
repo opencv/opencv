@@ -47,8 +47,7 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::add(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::add(const GpuMat&, const Scalar&, GpuMat&, const GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::add(InputArray, InputArray, OutputArray, InputArray, int, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::subtract(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, int, Stream&) { throw_no_cuda(); }
 void cv::gpu::subtract(const GpuMat&, const Scalar&, GpuMat&, const GpuMat&, int, Stream&) { throw_no_cuda(); }
@@ -302,98 +301,81 @@ namespace arithm
     void addMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
 }
 
-void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, int dtype, Stream& s)
+static void addMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, Stream& _stream)
 {
-    using namespace arithm;
-
     typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
     static const func_t funcs[7][7] =
     {
         {
-            addMat<unsigned char, unsigned char>,
-            addMat<unsigned char, signed char>,
-            addMat<unsigned char, unsigned short>,
-            addMat<unsigned char, short>,
-            addMat<unsigned char, int>,
-            addMat<unsigned char, float>,
-            addMat<unsigned char, double>
+            arithm::addMat<unsigned char, unsigned char>,
+            arithm::addMat<unsigned char, signed char>,
+            arithm::addMat<unsigned char, unsigned short>,
+            arithm::addMat<unsigned char, short>,
+            arithm::addMat<unsigned char, int>,
+            arithm::addMat<unsigned char, float>,
+            arithm::addMat<unsigned char, double>
         },
         {
-            addMat<signed char, unsigned char>,
-            addMat<signed char, signed char>,
-            addMat<signed char, unsigned short>,
-            addMat<signed char, short>,
-            addMat<signed char, int>,
-            addMat<signed char, float>,
-            addMat<signed char, double>
+            arithm::addMat<signed char, unsigned char>,
+            arithm::addMat<signed char, signed char>,
+            arithm::addMat<signed char, unsigned short>,
+            arithm::addMat<signed char, short>,
+            arithm::addMat<signed char, int>,
+            arithm::addMat<signed char, float>,
+            arithm::addMat<signed char, double>
         },
         {
-            0 /*addMat<unsigned short, unsigned char>*/,
-            0 /*addMat<unsigned short, signed char>*/,
-            addMat<unsigned short, unsigned short>,
-            addMat<unsigned short, short>,
-            addMat<unsigned short, int>,
-            addMat<unsigned short, float>,
-            addMat<unsigned short, double>
+            0 /*arithm::addMat<unsigned short, unsigned char>*/,
+            0 /*arithm::addMat<unsigned short, signed char>*/,
+            arithm::addMat<unsigned short, unsigned short>,
+            arithm::addMat<unsigned short, short>,
+            arithm::addMat<unsigned short, int>,
+            arithm::addMat<unsigned short, float>,
+            arithm::addMat<unsigned short, double>
         },
         {
-            0 /*addMat<short, unsigned char>*/,
-            0 /*addMat<short, signed char>*/,
-            addMat<short, unsigned short>,
-            addMat<short, short>,
-            addMat<short, int>,
-            addMat<short, float>,
-            addMat<short, double>
+            0 /*arithm::addMat<short, unsigned char>*/,
+            0 /*arithm::addMat<short, signed char>*/,
+            arithm::addMat<short, unsigned short>,
+            arithm::addMat<short, short>,
+            arithm::addMat<short, int>,
+            arithm::addMat<short, float>,
+            arithm::addMat<short, double>
         },
         {
-            0 /*addMat<int, unsigned char>*/,
-            0 /*addMat<int, signed char>*/,
-            0 /*addMat<int, unsigned short>*/,
-            0 /*addMat<int, short>*/,
-            addMat<int, int>,
-            addMat<int, float>,
-            addMat<int, double>
+            0 /*arithm::addMat<int, unsigned char>*/,
+            0 /*arithm::addMat<int, signed char>*/,
+            0 /*arithm::addMat<int, unsigned short>*/,
+            0 /*arithm::addMat<int, short>*/,
+            arithm::addMat<int, int>,
+            arithm::addMat<int, float>,
+            arithm::addMat<int, double>
         },
         {
-            0 /*addMat<float, unsigned char>*/,
-            0 /*addMat<float, signed char>*/,
-            0 /*addMat<float, unsigned short>*/,
-            0 /*addMat<float, short>*/,
-            0 /*addMat<float, int>*/,
-            addMat<float, float>,
-            addMat<float, double>
+            0 /*arithm::addMat<float, unsigned char>*/,
+            0 /*arithm::addMat<float, signed char>*/,
+            0 /*arithm::addMat<float, unsigned short>*/,
+            0 /*arithm::addMat<float, short>*/,
+            0 /*arithm::addMat<float, int>*/,
+            arithm::addMat<float, float>,
+            arithm::addMat<float, double>
         },
         {
-            0 /*addMat<double, unsigned char>*/,
-            0 /*addMat<double, signed char>*/,
-            0 /*addMat<double, unsigned short>*/,
-            0 /*addMat<double, short>*/,
-            0 /*addMat<double, int>*/,
-            0 /*addMat<double, float>*/,
-            addMat<double, double>
+            0 /*arithm::addMat<double, unsigned char>*/,
+            0 /*arithm::addMat<double, signed char>*/,
+            0 /*arithm::addMat<double, unsigned short>*/,
+            0 /*arithm::addMat<double, short>*/,
+            0 /*arithm::addMat<double, int>*/,
+            0 /*arithm::addMat<double, float>*/,
+            arithm::addMat<double, double>
         }
     };
 
-    if (dtype < 0)
-        dtype = src1.depth();
-
     const int sdepth = src1.depth();
-    const int ddepth = CV_MAT_DEPTH(dtype);
+    const int ddepth = dst.depth();
     const int cn = src1.channels();
 
-    CV_Assert( sdepth <= CV_64F && ddepth <= CV_64F );
-    CV_Assert( src2.type() == src1.type() && src2.size() == src1.size() );
-    CV_Assert( mask.empty() || (cn == 1 && mask.size() == src1.size() && mask.type() == CV_8U) );
-
-    if (sdepth == CV_64F || ddepth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    dst.create(src1.size(), CV_MAKE_TYPE(ddepth, cn));
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
 
     PtrStepSzb src1_(src1.rows, src1.cols * cn, src1.data, src1.step);
     PtrStepSzb src2_(src1.rows, src1.cols * cn, src2.data, src2.step);
@@ -413,10 +395,10 @@ void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Gpu
             {
                 const int vcols = src1_.cols >> 2;
 
-                addMat_v4(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
-                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
-                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
-                          stream);
+                arithm::addMat_v4(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                                  PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                                  PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                                  stream);
 
                 return;
             }
@@ -424,10 +406,10 @@ void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Gpu
             {
                 const int vcols = src1_.cols >> 1;
 
-                addMat_v2(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
-                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
-                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
-                          stream);
+                arithm::addMat_v2(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                                  PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                                  PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                                  stream);
 
                 return;
             }
@@ -448,75 +430,73 @@ namespace arithm
     void addScalar(PtrStepSzb src1, double val, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
 }
 
-void cv::gpu::add(const GpuMat& src, const Scalar& sc, GpuMat& dst, const GpuMat& mask, int dtype, Stream& s)
+static void addScalar(const GpuMat& src, Scalar val, GpuMat& dst, const GpuMat& mask, Stream& _stream)
 {
-    using namespace arithm;
-
     typedef void (*func_t)(PtrStepSzb src1, double val, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
     static const func_t funcs[7][7] =
     {
         {
-            addScalar<unsigned char, float, unsigned char>,
-            addScalar<unsigned char, float, signed char>,
-            addScalar<unsigned char, float, unsigned short>,
-            addScalar<unsigned char, float, short>,
-            addScalar<unsigned char, float, int>,
-            addScalar<unsigned char, float, float>,
-            addScalar<unsigned char, double, double>
+            arithm::addScalar<unsigned char, float, unsigned char>,
+            arithm::addScalar<unsigned char, float, signed char>,
+            arithm::addScalar<unsigned char, float, unsigned short>,
+            arithm::addScalar<unsigned char, float, short>,
+            arithm::addScalar<unsigned char, float, int>,
+            arithm::addScalar<unsigned char, float, float>,
+            arithm::addScalar<unsigned char, double, double>
         },
         {
-            addScalar<signed char, float, unsigned char>,
-            addScalar<signed char, float, signed char>,
-            addScalar<signed char, float, unsigned short>,
-            addScalar<signed char, float, short>,
-            addScalar<signed char, float, int>,
-            addScalar<signed char, float, float>,
-            addScalar<signed char, double, double>
+            arithm::addScalar<signed char, float, unsigned char>,
+            arithm::addScalar<signed char, float, signed char>,
+            arithm::addScalar<signed char, float, unsigned short>,
+            arithm::addScalar<signed char, float, short>,
+            arithm::addScalar<signed char, float, int>,
+            arithm::addScalar<signed char, float, float>,
+            arithm::addScalar<signed char, double, double>
         },
         {
-            0 /*addScalar<unsigned short, float, unsigned char>*/,
-            0 /*addScalar<unsigned short, float, signed char>*/,
-            addScalar<unsigned short, float, unsigned short>,
-            addScalar<unsigned short, float, short>,
-            addScalar<unsigned short, float, int>,
-            addScalar<unsigned short, float, float>,
-            addScalar<unsigned short, double, double>
+            0 /*arithm::addScalar<unsigned short, float, unsigned char>*/,
+            0 /*arithm::addScalar<unsigned short, float, signed char>*/,
+            arithm::addScalar<unsigned short, float, unsigned short>,
+            arithm::addScalar<unsigned short, float, short>,
+            arithm::addScalar<unsigned short, float, int>,
+            arithm::addScalar<unsigned short, float, float>,
+            arithm::addScalar<unsigned short, double, double>
         },
         {
-            0 /*addScalar<short, float, unsigned char>*/,
-            0 /*addScalar<short, float, signed char>*/,
-            addScalar<short, float, unsigned short>,
-            addScalar<short, float, short>,
-            addScalar<short, float, int>,
-            addScalar<short, float, float>,
-            addScalar<short, double, double>
+            0 /*arithm::addScalar<short, float, unsigned char>*/,
+            0 /*arithm::addScalar<short, float, signed char>*/,
+            arithm::addScalar<short, float, unsigned short>,
+            arithm::addScalar<short, float, short>,
+            arithm::addScalar<short, float, int>,
+            arithm::addScalar<short, float, float>,
+            arithm::addScalar<short, double, double>
         },
         {
-            0 /*addScalar<int, float, unsigned char>*/,
-            0 /*addScalar<int, float, signed char>*/,
-            0 /*addScalar<int, float, unsigned short>*/,
-            0 /*addScalar<int, float, short>*/,
-            addScalar<int, float, int>,
-            addScalar<int, float, float>,
-            addScalar<int, double, double>
+            0 /*arithm::addScalar<int, float, unsigned char>*/,
+            0 /*arithm::addScalar<int, float, signed char>*/,
+            0 /*arithm::addScalar<int, float, unsigned short>*/,
+            0 /*arithm::addScalar<int, float, short>*/,
+            arithm::addScalar<int, float, int>,
+            arithm::addScalar<int, float, float>,
+            arithm::addScalar<int, double, double>
         },
         {
-            0 /*addScalar<float, float, unsigned char>*/,
-            0 /*addScalar<float, float, signed char>*/,
-            0 /*addScalar<float, float, unsigned short>*/,
-            0 /*addScalar<float, float, short>*/,
-            0 /*addScalar<float, float, int>*/,
-            addScalar<float, float, float>,
-            addScalar<float, double, double>
+            0 /*arithm::addScalar<float, float, unsigned char>*/,
+            0 /*arithm::addScalar<float, float, signed char>*/,
+            0 /*arithm::addScalar<float, float, unsigned short>*/,
+            0 /*arithm::addScalar<float, float, short>*/,
+            0 /*arithm::addScalar<float, float, int>*/,
+            arithm::addScalar<float, float, float>,
+            arithm::addScalar<float, double, double>
         },
         {
-            0 /*addScalar<double, double, unsigned char>*/,
-            0 /*addScalar<double, double, signed char>*/,
-            0 /*addScalar<double, double, unsigned short>*/,
-            0 /*addScalar<double, double, short>*/,
-            0 /*addScalar<double, double, int>*/,
-            0 /*addScalar<double, double, float>*/,
-            addScalar<double, double, double>
+            0 /*arithm::addScalar<double, double, unsigned char>*/,
+            0 /*arithm::addScalar<double, double, signed char>*/,
+            0 /*arithm::addScalar<double, double, unsigned short>*/,
+            0 /*arithm::addScalar<double, double, short>*/,
+            0 /*arithm::addScalar<double, double, int>*/,
+            0 /*arithm::addScalar<double, double, float>*/,
+            arithm::addScalar<double, double, double>
         }
     };
 
@@ -532,31 +512,16 @@ void cv::gpu::add(const GpuMat& src, const Scalar& sc, GpuMat& dst, const GpuMat
         {0                                                    , 0                                                     , 0                                                    , 0                                                    }
     };
 
-    if (dtype < 0)
-        dtype = src.depth();
-
     const int sdepth = src.depth();
-    const int ddepth = CV_MAT_DEPTH(dtype);
+    const int ddepth = dst.depth();
     const int cn = src.channels();
 
-    CV_Assert( sdepth <= CV_64F && ddepth <= CV_64F );
-    CV_Assert( cn <= 4 );
-    CV_Assert( mask.empty() || (cn == 1 && mask.size() == src.size() && mask.type() == CV_8U) );
-
-    if (sdepth == CV_64F || ddepth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    dst.create(src.size(), CV_MAKE_TYPE(ddepth, cn));
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
 
     const npp_func_t npp_func = npp_funcs[sdepth][cn - 1];
     if (ddepth == sdepth && cn > 1 && npp_func != 0)
     {
-        npp_func(src, sc, dst, stream);
+        npp_func(src, val, dst, stream);
         return;
     }
 
@@ -567,7 +532,69 @@ void cv::gpu::add(const GpuMat& src, const Scalar& sc, GpuMat& dst, const GpuMat
     if (!func)
         CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
 
-    func(src, sc.val[0], dst, mask, stream);
+    func(src, val[0], dst, mask, stream);
+}
+
+void cv::gpu::add(InputArray _src1, InputArray _src2, OutputArray _dst, InputArray _mask, int dtype, Stream& stream)
+{
+    const int kind1 = _src1.kind();
+    const int kind2 = _src2.kind();
+
+    const bool isScalar1 = (kind1 == _InputArray::MATX);
+    const bool isScalar2 = (kind2 == _InputArray::MATX);
+    CV_Assert( !isScalar1 || !isScalar2 );
+
+    GpuMat src1;
+    if (!isScalar1)
+        src1 = _src1.getGpuMat();
+
+    GpuMat src2;
+    if (!isScalar2)
+        src2 = _src2.getGpuMat();
+
+    Mat scalar;
+    if (isScalar1)
+        scalar = _src1.getMat();
+    else if (isScalar2)
+        scalar = _src2.getMat();
+
+    Scalar val;
+    if (!scalar.empty())
+    {
+        CV_Assert( scalar.total() <= 4 );
+        scalar.convertTo(Mat_<double>(scalar.rows, scalar.cols, &val[0]), CV_64F);
+    }
+
+    GpuMat mask = _mask.getGpuMat();
+
+    const int sdepth = src1.empty() ? src2.depth() : src1.depth();
+    const int cn = src1.empty() ? src2.channels() : src1.channels();
+    const Size size = src1.empty() ? src2.size() : src1.size();
+
+    if (dtype < 0)
+        dtype = sdepth;
+
+    const int ddepth = CV_MAT_DEPTH(dtype);
+
+    CV_Assert( sdepth <= CV_64F && ddepth <= CV_64F );
+    CV_Assert( !scalar.empty() || (src2.type() == src1.type() && src2.size() == src1.size()) );
+    CV_Assert( mask.empty() || (cn == 1 && mask.size() == size && mask.type() == CV_8UC1) );
+
+    if (sdepth == CV_64F || ddepth == CV_64F)
+    {
+        if (!deviceSupports(NATIVE_DOUBLE))
+            CV_Error(Error::StsUnsupportedFormat, "The device doesn't support double");
+    }
+
+    _dst.create(size, CV_MAKE_TYPE(ddepth, cn));
+    GpuMat dst = _dst.getGpuMat();
+
+    if (isScalar1)
+        ::addScalar(src2, val, dst, mask, stream);
+    else if (isScalar2)
+        ::addScalar(src1, val, dst, mask, stream);
+    else
+        ::addMat(src1, src2, dst, mask, stream);
 }
 
 ////////////////////////////////////////////////////////////////////////

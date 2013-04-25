@@ -51,10 +51,8 @@
 
 namespace cv { namespace gpu {
 
-//! adds one matrix to another (c = a + b)
-CV_EXPORTS void add(const GpuMat& a, const GpuMat& b, GpuMat& c, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null());
-//! adds scalar to a matrix (c = a + s)
-CV_EXPORTS void add(const GpuMat& a, const Scalar& sc, GpuMat& c, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null());
+//! adds one matrix to another (dst = src1 + src2)
+CV_EXPORTS void add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), int dtype = -1, Stream& stream = Stream::Null());
 
 //! subtracts one matrix from another (c = a - b)
 CV_EXPORTS void subtract(const GpuMat& a, const GpuMat& b, GpuMat& c, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null());
