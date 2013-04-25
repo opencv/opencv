@@ -48,46 +48,30 @@ using namespace cv::gpu;
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 void cv::gpu::add(InputArray, InputArray, OutputArray, InputArray, int, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::subtract(InputArray, InputArray, OutputArray, InputArray, int, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::multiply(InputArray, InputArray, OutputArray, double, int, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::divide(InputArray, InputArray, OutputArray, double, int, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::absdiff(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::abs(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::sqr(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::sqrt(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::exp(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::log(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::pow(InputArray, double, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::compare(InputArray, InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::bitwise_not(InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::bitwise_or(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::bitwise_and(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::bitwise_xor(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::rshift(InputArray, Scalar_<int>, OutputArray, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::lshift(InputArray, Scalar_<int>, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::min(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::min(const GpuMat&, double, GpuMat&, Stream&) { throw_no_cuda(); }
-
-void cv::gpu::max(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::max(const GpuMat&, double, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::min(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::gpu::max(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::addWeighted(const GpuMat&, double, const GpuMat&, double, double, GpuMat&, int, Stream&) { throw_no_cuda(); }
 
@@ -2262,6 +2246,15 @@ void cv::gpu::lshift(InputArray _src, Scalar_<int> val, OutputArray _dst, Stream
 //////////////////////////////////////////////////////////////////////////////
 // Minimum and maximum operations
 
+namespace
+{
+    enum
+    {
+        MIN_OP,
+        MAX_OP
+    };
+}
+
 namespace arithm
 {
     void minMat_v4(PtrStepSz<unsigned int> src1, PtrStepSz<unsigned int> src2, PtrStepSz<unsigned int> dst, cudaStream_t stream);
@@ -2275,37 +2268,49 @@ namespace arithm
     template <typename T> void maxScalar(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s)
+void minMaxMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& _stream, int op)
 {
     using namespace arithm;
 
     typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    static const func_t funcs[] =
+    static const func_t funcs[2][7] =
     {
-        minMat<unsigned char>,
-        minMat<signed char>,
-        minMat<unsigned short>,
-        minMat<short>,
-        minMat<int>,
-        minMat<float>,
-        minMat<double>
+        {
+            minMat<unsigned char>,
+            minMat<signed char>,
+            minMat<unsigned short>,
+            minMat<short>,
+            minMat<int>,
+            minMat<float>,
+            minMat<double>
+        },
+        {
+            maxMat<unsigned char>,
+            maxMat<signed char>,
+            maxMat<unsigned short>,
+            maxMat<short>,
+            maxMat<int>,
+            maxMat<float>,
+            maxMat<double>
+        }
+    };
+
+    typedef void (*opt_func_t)(PtrStepSz<unsigned int> src1, PtrStepSz<unsigned int> src2, PtrStepSz<unsigned int> dst, cudaStream_t stream);
+    static const opt_func_t funcs_v4[2] =
+    {
+        minMat_v4, maxMat_v4
+    };
+    static const opt_func_t funcs_v2[2] =
+    {
+        minMat_v2, maxMat_v2
     };
 
     const int depth = src1.depth();
     const int cn = src1.channels();
 
     CV_Assert( depth <= CV_64F );
-    CV_Assert( src2.type() == src1.type() && src2.size() == src1.size() );
 
-    if (depth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    dst.create(src1.size(), src1.type());
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
 
     PtrStepSzb src1_(src1.rows, src1.cols * cn, src1.data, src1.step);
     PtrStepSzb src2_(src1.rows, src1.cols * cn, src2.data, src2.step);
@@ -2325,10 +2330,10 @@ void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s
             {
                 const int vcols = src1_.cols >> 2;
 
-                minMat_v4(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
-                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
-                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
-                          stream);
+                funcs_v4[op](PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                             PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                             PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                             stream);
 
                 return;
             }
@@ -2336,96 +2341,17 @@ void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s
             {
                 const int vcols = src1_.cols >> 1;
 
-                minMat_v2(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
-                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
-                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
-                          stream);
+                funcs_v2[op](PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                             PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                             PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                             stream);
 
                 return;
             }
         }
     }
 
-    const func_t func = funcs[depth];
-
-    if (!func)
-        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
-
-    func(src1_, src2_, dst_, stream);
-}
-
-void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s)
-{
-    using namespace arithm;
-
-    typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    static const func_t funcs[] =
-    {
-        maxMat<unsigned char>,
-        maxMat<signed char>,
-        maxMat<unsigned short>,
-        maxMat<short>,
-        maxMat<int>,
-        maxMat<float>,
-        maxMat<double>
-    };
-
-    const int depth = src1.depth();
-    const int cn = src1.channels();
-
-    CV_Assert( depth <= CV_64F );
-    CV_Assert( src2.type() == src1.type() && src2.size() == src1.size() );
-
-    if (depth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    dst.create(src1.size(), src1.type());
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    PtrStepSzb src1_(src1.rows, src1.cols * cn, src1.data, src1.step);
-    PtrStepSzb src2_(src1.rows, src1.cols * cn, src2.data, src2.step);
-    PtrStepSzb dst_(src1.rows, src1.cols * cn, dst.data, dst.step);
-
-    if (depth == CV_8U || depth == CV_16U)
-    {
-        const intptr_t src1ptr = reinterpret_cast<intptr_t>(src1_.data);
-        const intptr_t src2ptr = reinterpret_cast<intptr_t>(src2_.data);
-        const intptr_t dstptr = reinterpret_cast<intptr_t>(dst_.data);
-
-        const bool isAllAligned = (src1ptr & 31) == 0 && (src2ptr & 31) == 0 && (dstptr & 31) == 0;
-
-        if (isAllAligned)
-        {
-            if (depth == CV_8U && (src1_.cols & 3) == 0)
-            {
-                const int vcols = src1_.cols >> 2;
-
-                maxMat_v4(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
-                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
-                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
-                          stream);
-
-                return;
-            }
-            else if (depth == CV_16U && (src1_.cols & 1) == 0)
-            {
-                const int vcols = src1_.cols >> 1;
-
-                maxMat_v2(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
-                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
-                          PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
-                          stream);
-
-                return;
-            }
-        }
-    }
-
-    const func_t func = funcs[depth];
+    const func_t func = funcs[op][depth];
 
     if (!func)
         CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
@@ -2441,20 +2367,31 @@ namespace
     }
 }
 
-void cv::gpu::min(const GpuMat& src, double val, GpuMat& dst, Stream& stream)
+void minMaxScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int op)
 {
     using namespace arithm;
 
     typedef void (*func_t)(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    static const func_t funcs[] =
+    static const func_t funcs[2][7] =
     {
-        minScalar<unsigned char>,
-        minScalar<signed char>,
-        minScalar<unsigned short>,
-        minScalar<short>,
-        minScalar<int>,
-        minScalar<float>,
-        minScalar<double>
+        {
+            minScalar<unsigned char>,
+            minScalar<signed char>,
+            minScalar<unsigned short>,
+            minScalar<short>,
+            minScalar<int>,
+            minScalar<float>,
+            minScalar<double>
+        },
+        {
+            maxScalar<unsigned char>,
+            maxScalar<signed char>,
+            maxScalar<unsigned short>,
+            maxScalar<short>,
+            maxScalar<int>,
+            maxScalar<float>,
+            maxScalar<double>
+        }
     };
 
     typedef double (*cast_func_t)(double sc);
@@ -2468,53 +2405,17 @@ void cv::gpu::min(const GpuMat& src, double val, GpuMat& dst, Stream& stream)
     CV_Assert( depth <= CV_64F );
     CV_Assert( src.channels() == 1 );
 
-    if (depth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    dst.create(src.size(), src.type());
-
-    funcs[depth](src, cast_func[depth](val), dst, StreamAccessor::getStream(stream));
+    funcs[op][depth](src, cast_func[depth](val[0]), dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::max(const GpuMat& src, double val, GpuMat& dst, Stream& stream)
+void cv::gpu::min(InputArray src1, InputArray src2, OutputArray dst, Stream& stream)
 {
-    using namespace arithm;
+    arithm_op(src1, src2, dst, noArray(), 1.0, -1, stream, minMaxMat, minMaxScalar, MIN_OP);
+}
 
-    typedef void (*func_t)(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
-    static const func_t funcs[] =
-    {
-        maxScalar<unsigned char>,
-        maxScalar<signed char>,
-        maxScalar<unsigned short>,
-        maxScalar<short>,
-        maxScalar<int>,
-        maxScalar<float>,
-        maxScalar<double>
-    };
-
-    typedef double (*cast_func_t)(double sc);
-    static const cast_func_t cast_func[] =
-    {
-        castScalar<unsigned char>, castScalar<signed char>, castScalar<unsigned short>, castScalar<short>, castScalar<int>, castScalar<float>, castScalar<double>
-    };
-
-    const int depth = src.depth();
-
-    CV_Assert( depth <= CV_64F );
-    CV_Assert( src.channels() == 1 );
-
-    if (depth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    dst.create(src.size(), src.type());
-
-    funcs[depth](src, cast_func[depth](val), dst, StreamAccessor::getStream(stream));
+void cv::gpu::max(InputArray src1, InputArray src2, OutputArray dst, Stream& stream)
+{
+    arithm_op(src1, src2, dst, noArray(), 1.0, -1, stream, minMaxMat, minMaxScalar, MAX_OP);
 }
 
 ////////////////////////////////////////////////////////////////////////

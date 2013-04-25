@@ -115,6 +115,12 @@ CV_EXPORTS void rshift(InputArray src, Scalar_<int> val, OutputArray dst, Stream
 //! supports 1, 3 and 4 channels images with CV_8U, CV_16U or CV_32S depth
 CV_EXPORTS void lshift(InputArray src, Scalar_<int> val, OutputArray dst, Stream& stream = Stream::Null());
 
+//! computes per-element minimum of two arrays (dst = min(src1, src2))
+CV_EXPORTS void min(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
+
+//! computes per-element maximum of two arrays (dst = max(src1, src2))
+CV_EXPORTS void max(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
+
 //! computes the weighted sum of two arrays (dst = alpha*src1 + beta*src2 + gamma)
 CV_EXPORTS void addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst,
                             int dtype = -1, Stream& stream = Stream::Null());
@@ -124,18 +130,6 @@ static inline void scaleAdd(const GpuMat& src1, double alpha, const GpuMat& src2
 {
     addWeighted(src1, alpha, src2, 1.0, 0.0, dst, -1, stream);
 }
-
-//! computes per-element minimum of two arrays (dst = min(src1, src2))
-CV_EXPORTS void min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null());
-
-//! computes per-element minimum of array and scalar (dst = min(src1, src2))
-CV_EXPORTS void min(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream = Stream::Null());
-
-//! computes per-element maximum of two arrays (dst = max(src1, src2))
-CV_EXPORTS void max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null());
-
-//! computes per-element maximum of array and scalar (dst = max(src1, src2))
-CV_EXPORTS void max(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream = Stream::Null());
 
 //! implements generalized matrix product algorithm GEMM from BLAS
 CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha,
