@@ -53,9 +53,9 @@ void cv::gpu::merge(const std::vector<GpuMat>&, OutputArray, Stream&) { throw_no
 void cv::gpu::split(InputArray, GpuMat*, Stream&) { throw_no_cuda(); }
 void cv::gpu::split(InputArray, std::vector<GpuMat>&, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::transpose(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::transpose(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::flip(const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::flip(InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::LUT(const GpuMat&, const Mat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
@@ -182,13 +182,16 @@ namespace arithm
     template <typename T> void transpose(PtrStepSz<T> src, PtrStepSz<T> dst, cudaStream_t stream);
 }
 
-void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
+void cv::gpu::transpose(InputArray _src, OutputArray _dst, Stream& _stream)
 {
+    GpuMat src = _src.getGpuMat();
+
     CV_Assert( src.elemSize() == 1 || src.elemSize() == 4 || src.elemSize() == 8 );
 
-    dst.create( src.cols, src.rows, src.type() );
+    _dst.create( src.cols, src.rows, src.type() );
+    GpuMat dst = _dst.getGpuMat();
 
-    cudaStream_t stream = StreamAccessor::getStream(s);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
 
     if (src.elemSize() == 1)
     {
@@ -260,7 +263,7 @@ namespace
     };
 }
 
-void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode, Stream& stream)
+void cv::gpu::flip(InputArray _src, OutputArray _dst, int flipCode, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& src, GpuMat& dst, int flipCode, cudaStream_t stream);
     static const func_t funcs[6][4] =
@@ -273,10 +276,13 @@ void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode, Stream& stream)
         {NppMirror<CV_32F, nppiMirror_32f_C1R>::call, 0, NppMirror<CV_32F, nppiMirror_32f_C3R>::call, NppMirror<CV_32F, nppiMirror_32f_C4R>::call}
     };
 
+    GpuMat src = _src.getGpuMat();
+
     CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32S || src.depth() == CV_32F);
     CV_Assert(src.channels() == 1 || src.channels() == 3 || src.channels() == 4);
 
-    dst.create(src.size(), src.type());
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
 
     funcs[src.depth()][src.channels() - 1](src, dst, flipCode, StreamAccessor::getStream(stream));
 }

@@ -170,17 +170,17 @@ CV_EXPORTS void merge(const std::vector<GpuMat>& src, OutputArray dst, Stream& s
 CV_EXPORTS void split(InputArray src, GpuMat* dst, Stream& stream = Stream::Null());
 CV_EXPORTS void split(InputArray src, std::vector<GpuMat>& dst, Stream& stream = Stream::Null());
 
-//! implements generalized matrix product algorithm GEMM from BLAS
-CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha,
-    const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null());
-
 //! transposes the matrix
 //! supports matrix with element size = 1, 4 and 8 bytes (CV_8UC1, CV_8UC4, CV_16UC2, CV_32FC1, etc)
-CV_EXPORTS void transpose(const GpuMat& src1, GpuMat& dst, Stream& stream = Stream::Null());
+CV_EXPORTS void transpose(InputArray src1, OutputArray dst, Stream& stream = Stream::Null());
 
 //! reverses the order of the rows, columns or both in a matrix
 //! supports 1, 3 and 4 channels images with CV_8U, CV_16U, CV_32S or CV_32F depth
-CV_EXPORTS void flip(const GpuMat& a, GpuMat& b, int flipCode, Stream& stream = Stream::Null());
+CV_EXPORTS void flip(InputArray src, OutputArray dst, int flipCode, Stream& stream = Stream::Null());
+
+//! implements generalized matrix product algorithm GEMM from BLAS
+CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha,
+    const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null());
 
 //! transforms 8-bit unsigned integers using lookup table: dst(i)=lut(src(i))
 //! destination array will have the depth type as lut and the same channels number as source
