@@ -75,7 +75,7 @@ void cv::gpu::max(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(
 
 void cv::gpu::addWeighted(InputArray, double, InputArray, double, double, OutputArray, int, Stream&) { throw_no_cuda(); }
 
-double cv::gpu::threshold(const GpuMat&, GpuMat&, double, double, int, Stream&) {throw_no_cuda(); return 0.0;}
+double cv::gpu::threshold(InputArray, OutputArray, double, double, int, Stream&) {throw_no_cuda(); return 0.0;}
 
 void cv::gpu::magnitude(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 void cv::gpu::magnitude(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
@@ -2938,8 +2938,10 @@ namespace arithm
     void threshold(PtrStepSzb src, PtrStepSzb dst, double thresh, double maxVal, int type, cudaStream_t stream);
 }
 
-double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type, Stream& s)
+double cv::gpu::threshold(InputArray _src, OutputArray _dst, double thresh, double maxVal, int type, Stream& _stream)
 {
+    GpuMat src = _src.getGpuMat();
+
     const int depth = src.depth();
 
     CV_Assert( src.channels() == 1 && depth <= CV_64F );
@@ -2951,9 +2953,10 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double 
             CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
-    dst.create(src.size(), src.type());
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
 
-    cudaStream_t stream = StreamAccessor::getStream(s);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
 
     if (src.type() == CV_32FC1 && type == 2/*THRESH_TRUNC*/)
     {

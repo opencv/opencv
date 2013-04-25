@@ -131,6 +131,9 @@ static inline void scaleAdd(InputArray src1, double alpha, InputArray src2, Outp
     addWeighted(src1, alpha, src2, 1.0, 0.0, dst, -1, stream);
 }
 
+//! applies fixed threshold to the image
+CV_EXPORTS double threshold(InputArray src, OutputArray dst, double thresh, double maxval, int type, Stream& stream = Stream::Null());
+
 //! implements generalized matrix product algorithm GEMM from BLAS
 CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha,
     const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null());
@@ -255,9 +258,6 @@ CV_EXPORTS void rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, co
 //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
 CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType,
                                const Scalar& value = Scalar(), Stream& stream = Stream::Null());
-
-//! applies fixed threshold to the image
-CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type, Stream& stream = Stream::Null());
 
 //! computes the integral image
 //! sum will have CV_32S type, but will contain unsigned int values
