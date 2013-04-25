@@ -107,6 +107,14 @@ CV_EXPORTS void bitwise_and(InputArray src1, InputArray src2, OutputArray dst, I
 //! calculates per-element bit-wise "exclusive or" operation
 CV_EXPORTS void bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
+//! pixel by pixel right shift of an image by a constant value
+//! supports 1, 3 and 4 channels images with integers elements
+CV_EXPORTS void rshift(InputArray src, Scalar_<int> val, OutputArray dst, Stream& stream = Stream::Null());
+
+//! pixel by pixel left shift of an image by a constant value
+//! supports 1, 3 and 4 channels images with CV_8U, CV_16U or CV_32S depth
+CV_EXPORTS void lshift(InputArray src, Scalar_<int> val, OutputArray dst, Stream& stream = Stream::Null());
+
 //! computes the weighted sum of two arrays (dst = alpha*src1 + beta*src2 + gamma)
 CV_EXPORTS void addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst,
                             int dtype = -1, Stream& stream = Stream::Null());
@@ -116,14 +124,6 @@ static inline void scaleAdd(const GpuMat& src1, double alpha, const GpuMat& src2
 {
     addWeighted(src1, alpha, src2, 1.0, 0.0, dst, -1, stream);
 }
-
-//! pixel by pixel right shift of an image by a constant value
-//! supports 1, 3 and 4 channels images with integers elements
-CV_EXPORTS void rshift(const GpuMat& src, Scalar_<int> sc, GpuMat& dst, Stream& stream = Stream::Null());
-
-//! pixel by pixel left shift of an image by a constant value
-//! supports 1, 3 and 4 channels images with CV_8U, CV_16U or CV_32S depth
-CV_EXPORTS void lshift(const GpuMat& src, Scalar_<int> sc, GpuMat& dst, Stream& stream = Stream::Null());
 
 //! computes per-element minimum of two arrays (dst = min(src1, src2))
 CV_EXPORTS void min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null());

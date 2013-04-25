@@ -79,9 +79,9 @@ void cv::gpu::bitwise_and(InputArray, InputArray, OutputArray, InputArray, Strea
 
 void cv::gpu::bitwise_xor(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::rshift(const GpuMat&, Scalar_<int>, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::rshift(InputArray, Scalar_<int>, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::lshift(const GpuMat&, Scalar_<int>, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::lshift(InputArray, Scalar_<int>, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::min(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 void cv::gpu::min(const GpuMat&, double, GpuMat&, Stream&) { throw_no_cuda(); }
@@ -2213,7 +2213,7 @@ namespace
     };
 }
 
-void cv::gpu::rshift(const GpuMat& src, Scalar_<int> sc, GpuMat& dst, Stream& stream)
+void cv::gpu::rshift(InputArray _src, Scalar_<int> val, OutputArray _dst, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& src, Scalar_<Npp32u> sc, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[5][4] =
@@ -2225,15 +2225,18 @@ void cv::gpu::rshift(const GpuMat& src, Scalar_<int> sc, GpuMat& dst, Stream& st
         {NppShift<CV_32S, 1, nppiRShiftC_32s_C1R>::call, 0, NppShift<CV_32S, 3, nppiRShiftC_32s_C3R>::call, NppShift<CV_32S, 4, nppiRShiftC_32s_C4R>::call},
     };
 
-    CV_Assert(src.depth() < CV_32F);
-    CV_Assert(src.channels() == 1 || src.channels() == 3 || src.channels() == 4);
+    GpuMat src = _src.getGpuMat();
 
-    dst.create(src.size(), src.type());
+    CV_Assert( src.depth() < CV_32F );
+    CV_Assert( src.channels() == 1 || src.channels() == 3 || src.channels() == 4 );
 
-    funcs[src.depth()][src.channels() - 1](src, sc, dst, StreamAccessor::getStream(stream));
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    funcs[src.depth()][src.channels() - 1](src, val, dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::lshift(const GpuMat& src, Scalar_<int> sc, GpuMat& dst, Stream& stream)
+void cv::gpu::lshift(InputArray _src, Scalar_<int> val, OutputArray _dst, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& src, Scalar_<Npp32u> sc, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[5][4] =
@@ -2245,12 +2248,15 @@ void cv::gpu::lshift(const GpuMat& src, Scalar_<int> sc, GpuMat& dst, Stream& st
         {NppShift<CV_32S, 1, nppiLShiftC_32s_C1R>::call, 0, NppShift<CV_32S, 3, nppiLShiftC_32s_C3R>::call, NppShift<CV_32S, 4, nppiLShiftC_32s_C4R>::call},
     };
 
-    CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32S);
-    CV_Assert(src.channels() == 1 || src.channels() == 3 || src.channels() == 4);
+    GpuMat src = _src.getGpuMat();
 
-    dst.create(src.size(), src.type());
+    CV_Assert( src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32S );
+    CV_Assert( src.channels() == 1 || src.channels() == 3 || src.channels() == 4 );
 
-    funcs[src.depth()][src.channels() - 1](src, sc, dst, StreamAccessor::getStream(stream));
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    funcs[src.depth()][src.channels() - 1](src, val, dst, StreamAccessor::getStream(stream));
 }
 
 //////////////////////////////////////////////////////////////////////////////
