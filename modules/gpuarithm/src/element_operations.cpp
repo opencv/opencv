@@ -69,8 +69,7 @@ void cv::gpu::log(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::pow(InputArray, double, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::compare(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::compare(const GpuMat&, Scalar, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::compare(InputArray, InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::bitwise_not(const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_no_cuda(); }
 
@@ -116,11 +115,11 @@ void cv::gpu::polarToCart(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, 
 
 namespace
 {
-    typedef void (*mat_mat_func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double scale, Stream& stream);
-    typedef void (*mat_scalar_func_t)(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, const GpuMat& mask, double scale, Stream& stream);
+    typedef void (*mat_mat_func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double scale, Stream& stream, int op);
+    typedef void (*mat_scalar_func_t)(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, const GpuMat& mask, double scale, Stream& stream, int op);
 
     void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst, InputArray _mask, double scale, int dtype, Stream& stream,
-                   mat_mat_func_t mat_mat_func, mat_scalar_func_t mat_scalar_func)
+                   mat_mat_func_t mat_mat_func, mat_scalar_func_t mat_scalar_func, int op = 0)
     {
         const int kind1 = _src1.kind();
         const int kind2 = _src2.kind();
@@ -175,11 +174,11 @@ namespace
         GpuMat dst = _dst.getGpuMat();
 
         if (isScalar1)
-            mat_scalar_func(src2, val, true, dst, mask, scale, stream);
+            mat_scalar_func(src2, val, true, dst, mask, scale, stream, op);
         else if (isScalar2)
-            mat_scalar_func(src1, val, false, dst, mask, scale, stream);
+            mat_scalar_func(src1, val, false, dst, mask, scale, stream, op);
         else
-            mat_mat_func(src1, src2, dst, mask, scale, stream);
+            mat_mat_func(src1, src2, dst, mask, scale, stream, op);
     }
 }
 
@@ -369,7 +368,7 @@ namespace arithm
     void addMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
 }
 
-static void addMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& _stream)
+static void addMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& _stream, int)
 {
     typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
     static const func_t funcs[7][7] =
@@ -498,7 +497,7 @@ namespace arithm
     void addScalar(PtrStepSzb src1, double val, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
 }
 
-static void addScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const GpuMat& mask, double, Stream& _stream)
+static void addScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const GpuMat& mask, double, Stream& _stream, int)
 {
     typedef void (*func_t)(PtrStepSzb src1, double val, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
     static const func_t funcs[7][7] =
@@ -620,7 +619,7 @@ namespace arithm
     void subMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
 }
 
-static void subMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& _stream)
+static void subMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& _stream, int)
 {
     typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
     static const func_t funcs[7][7] =
@@ -749,7 +748,7 @@ namespace arithm
     void subScalar(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
 }
 
-static void subScalar(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, const GpuMat& mask, double, Stream& _stream)
+static void subScalar(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, const GpuMat& mask, double, Stream& _stream, int)
 {
     typedef void (*func_t)(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
     static const func_t funcs[7][7] =
@@ -872,7 +871,7 @@ namespace arithm
     void mulMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
 }
 
-static void mulMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double scale, Stream& _stream)
+static void mulMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double scale, Stream& _stream, int)
 {
     typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
     static const func_t funcs[7][7] =
@@ -966,7 +965,7 @@ namespace arithm
     void mulScalar(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream);
 }
 
-static void mulScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const GpuMat&, double scale, Stream& _stream)
+static void mulScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const GpuMat&, double scale, Stream& _stream, int)
 {
     typedef void (*func_t)(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream);
     static const func_t funcs[7][7] =
@@ -1121,7 +1120,7 @@ namespace arithm
     void divMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
 }
 
-static void divMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double scale, Stream& _stream)
+static void divMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double scale, Stream& _stream, int)
 {
     typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
     static const func_t funcs[7][7] =
@@ -1215,7 +1214,7 @@ namespace arithm
     void divScalar(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, cudaStream_t stream);
 }
 
-static void divScalar(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, const GpuMat&, double scale, Stream& _stream)
+static void divScalar(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, const GpuMat&, double scale, Stream& _stream, int)
 {
     typedef void (*func_t)(PtrStepSzb src1, double val, bool inv, PtrStepSzb dst, cudaStream_t stream);
     static const func_t funcs[7][7] =
@@ -1379,7 +1378,7 @@ namespace arithm
     void absDiffMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
 }
 
-static void absDiffMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& _stream)
+static void absDiffMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& _stream, int)
 {
     typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
     static const func_t funcs[] =
@@ -1451,7 +1450,7 @@ namespace arithm
     void absDiffScalar(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream);
 }
 
-static void absDiffScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const GpuMat&, double, Stream& stream)
+static void absDiffScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int)
 {
     typedef void (*func_t)(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream);
     static const func_t funcs[] =
@@ -1755,7 +1754,7 @@ namespace arithm
     template <typename T> void cmpMatLe(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int cmpop, Stream& s)
+static void cmpMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& _stream, int cmpop)
 {
     using namespace arithm;
 
@@ -1780,19 +1779,7 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
     const int depth = src1.depth();
     const int cn = src1.channels();
 
-    CV_Assert( depth <= CV_64F );
-    CV_Assert( src2.size() == src1.size() && src2.type() == src1.type() );
-    CV_Assert( cmpop >= CMP_EQ && cmpop <= CMP_NE );
-
-    if (depth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    dst.create(src1.size(), CV_MAKE_TYPE(CV_8U, cn));
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
 
     static const int codes[] =
     {
@@ -1859,7 +1846,7 @@ namespace
     }
 }
 
-void cv::gpu::compare(const GpuMat& src, Scalar sc, GpuMat& dst, int cmpop, Stream& stream)
+static void cmpScalar(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, const GpuMat&, double, Stream& stream, int cmpop)
 {
     using namespace arithm;
 
@@ -1881,24 +1868,24 @@ void cv::gpu::compare(const GpuMat& src, Scalar sc, GpuMat& dst, int cmpop, Stre
         castScalar<unsigned char>, castScalar<signed char>, castScalar<unsigned short>, castScalar<short>, castScalar<int>, castScalar<float>, castScalar<double>
     };
 
+    if (inv)
+    {
+        // src1 is a scalar; swap it with src2
+        cmpop = cmpop == CMP_LT ? CMP_GT : cmpop == CMP_LE ? CMP_GE :
+            cmpop == CMP_GE ? CMP_LE : cmpop == CMP_GT ? CMP_LT : cmpop;
+    }
+
     const int depth = src.depth();
     const int cn = src.channels();
 
-    CV_Assert( depth <= CV_64F );
-    CV_Assert( cn <= 4 );
-    CV_Assert( cmpop >= CMP_EQ && cmpop <= CMP_NE );
+    cast_func[depth](val);
 
-    if (depth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
+    funcs[depth][cmpop](src, cn, val.val, dst, StreamAccessor::getStream(stream));
+}
 
-    dst.create(src.size(), CV_MAKE_TYPE(CV_8U, cn));
-
-    cast_func[depth](sc);
-
-    funcs[depth][cmpop](src, cn, sc.val, dst, StreamAccessor::getStream(stream));
+void cv::gpu::compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop, Stream& stream)
+{
+    arithm_op(src1, src2, dst, noArray(), 1.0, CV_8U, stream, cmpMat, cmpScalar, cmpop);
 }
 
 //////////////////////////////////////////////////////////////////////////////
