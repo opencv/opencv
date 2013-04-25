@@ -116,6 +116,83 @@ void cv::gpu::polarToCart(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, 
 #else
 
 ////////////////////////////////////////////////////////////////////////
+// arithm_op
+
+namespace
+{
+    typedef void (*mat_mat_func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double scale, Stream& stream);
+    typedef void (*mat_scalar_func_t)(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, const GpuMat& mask, Stream& stream);
+
+    void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst, InputArray _mask, double scale, int dtype, Stream& stream,
+                   mat_mat_func_t mat_mat_func, mat_scalar_func_t mat_scalar_func)
+    {
+        const int kind1 = _src1.kind();
+        const int kind2 = _src2.kind();
+
+        const bool isScalar1 = (kind1 == _InputArray::MATX);
+        const bool isScalar2 = (kind2 == _InputArray::MATX);
+        CV_Assert( !isScalar1 || !isScalar2 );
+
+        GpuMat src1;
+        if (!isScalar1)
+            src1 = _src1.getGpuMat();
+
+        GpuMat src2;
+        if (!isScalar2)
+            src2 = _src2.getGpuMat();
+
+        Mat scalar;
+        if (isScalar1)
+            scalar = _src1.getMat();
+        else if (isScalar2)
+            scalar = _src2.getMat();
+
+        Scalar val;
+        if (!scalar.empty())
+        {
+            CV_Assert( scalar.total() <= 4 );
+            scalar.convertTo(Mat_<double>(scalar.rows, scalar.cols, &val[0]), CV_64F);
+            val[0] *= scale;
+            val[1] *= scale;
+            val[2] *= scale;
+            val[3] *= scale;
+        }
+
+        GpuMat mask = _mask.getGpuMat();
+
+        const int sdepth = src1.empty() ? src2.depth() : src1.depth();
+        const int cn = src1.empty() ? src2.channels() : src1.channels();
+        const Size size = src1.empty() ? src2.size() : src1.size();
+
+        if (dtype < 0)
+            dtype = sdepth;
+
+        const int ddepth = CV_MAT_DEPTH(dtype);
+
+        CV_Assert( sdepth <= CV_64F && ddepth <= CV_64F );
+        CV_Assert( !scalar.empty() || (src2.type() == src1.type() && src2.size() == src1.size()) );
+        CV_Assert( mask.empty() || (cn == 1 && mask.size() == size && mask.type() == CV_8UC1) );
+
+        if (sdepth == CV_64F || ddepth == CV_64F)
+        {
+            if (!deviceSupports(NATIVE_DOUBLE))
+                CV_Error(Error::StsUnsupportedFormat, "The device doesn't support double");
+        }
+
+        _dst.create(size, CV_MAKE_TYPE(ddepth, cn));
+        GpuMat dst = _dst.getGpuMat();
+
+        if (isScalar1)
+            mat_scalar_func(src2, val, true, dst, mask, stream);
+        else if (isScalar2)
+            mat_scalar_func(src1, val, false, dst, mask, stream);
+        else
+            mat_mat_func(src1, src2, dst, mask, scale, stream);
+    }
+}
+
+
+////////////////////////////////////////////////////////////////////////
 // Basic arithmetical operations (add subtract multiply divide)
 
 namespace
@@ -300,7 +377,7 @@ namespace arithm
     void addMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
 }
 
-static void addMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, Stream& _stream)
+static void addMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& _stream)
 {
     typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
     static const func_t funcs[7][7] =
@@ -429,7 +506,7 @@ namespace arithm
     void addScalar(PtrStepSzb src1, double val, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
 }
 
-static void addScalar(const GpuMat& src, Scalar val, GpuMat& dst, const GpuMat& mask, Stream& _stream)
+static void addScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const GpuMat& mask, Stream& _stream)
 {
     typedef void (*func_t)(PtrStepSzb src1, double val, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
     static const func_t funcs[7][7] =
@@ -534,66 +611,9 @@ static void addScalar(const GpuMat& src, Scalar val, GpuMat& dst, const GpuMat& 
     func(src, val[0], dst, mask, stream);
 }
 
-void cv::gpu::add(InputArray _src1, InputArray _src2, OutputArray _dst, InputArray _mask, int dtype, Stream& stream)
+void cv::gpu::add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, int dtype, Stream& stream)
 {
-    const int kind1 = _src1.kind();
-    const int kind2 = _src2.kind();
-
-    const bool isScalar1 = (kind1 == _InputArray::MATX);
-    const bool isScalar2 = (kind2 == _InputArray::MATX);
-    CV_Assert( !isScalar1 || !isScalar2 );
-
-    GpuMat src1;
-    if (!isScalar1)
-        src1 = _src1.getGpuMat();
-
-    GpuMat src2;
-    if (!isScalar2)
-        src2 = _src2.getGpuMat();
-
-    Mat scalar;
-    if (isScalar1)
-        scalar = _src1.getMat();
-    else if (isScalar2)
-        scalar = _src2.getMat();
-
-    Scalar val;
-    if (!scalar.empty())
-    {
-        CV_Assert( scalar.total() <= 4 );
-        scalar.convertTo(Mat_<double>(scalar.rows, scalar.cols, &val[0]), CV_64F);
-    }
-
-    GpuMat mask = _mask.getGpuMat();
-
-    const int sdepth = src1.empty() ? src2.depth() : src1.depth();
-    const int cn = src1.empty() ? src2.channels() : src1.channels();
-    const Size size = src1.empty() ? src2.size() : src1.size();
-
-    if (dtype < 0)
-        dtype = sdepth;
-
-    const int ddepth = CV_MAT_DEPTH(dtype);
-
-    CV_Assert( sdepth <= CV_64F && ddepth <= CV_64F );
-    CV_Assert( !scalar.empty() || (src2.type() == src1.type() && src2.size() == src1.size()) );
-    CV_Assert( mask.empty() || (cn == 1 && mask.size() == size && mask.type() == CV_8UC1) );
-
-    if (sdepth == CV_64F || ddepth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    _dst.create(size, CV_MAKE_TYPE(ddepth, cn));
-    GpuMat dst = _dst.getGpuMat();
-
-    if (isScalar1)
-        ::addScalar(src2, val, dst, mask, stream);
-    else if (isScalar2)
-        ::addScalar(src1, val, dst, mask, stream);
-    else
-        ::addMat(src1, src2, dst, mask, stream);
+    arithm_op(src1, src2, dst, mask, 1.0, dtype, stream, addMat, addScalar);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -608,7 +628,7 @@ namespace arithm
     void subMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
 }
 
-static void subMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, Stream& _stream)
+static void subMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& _stream)
 {
     typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
     static const func_t funcs[7][7] =
@@ -842,66 +862,9 @@ static void subScalar(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, cons
     func(src, val[0], inv, dst, mask, stream);
 }
 
-void cv::gpu::subtract(InputArray _src1, InputArray _src2, OutputArray _dst, InputArray _mask, int dtype, Stream& stream)
+void cv::gpu::subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, int dtype, Stream& stream)
 {
-    const int kind1 = _src1.kind();
-    const int kind2 = _src2.kind();
-
-    const bool isScalar1 = (kind1 == _InputArray::MATX);
-    const bool isScalar2 = (kind2 == _InputArray::MATX);
-    CV_Assert( !isScalar1 || !isScalar2 );
-
-    GpuMat src1;
-    if (!isScalar1)
-        src1 = _src1.getGpuMat();
-
-    GpuMat src2;
-    if (!isScalar2)
-        src2 = _src2.getGpuMat();
-
-    Mat scalar;
-    if (isScalar1)
-        scalar = _src1.getMat();
-    else if (isScalar2)
-        scalar = _src2.getMat();
-
-    Scalar val;
-    if (!scalar.empty())
-    {
-        CV_Assert( scalar.total() <= 4 );
-        scalar.convertTo(Mat_<double>(scalar.rows, scalar.cols, &val[0]), CV_64F);
-    }
-
-    GpuMat mask = _mask.getGpuMat();
-
-    const int sdepth = src1.empty() ? src2.depth() : src1.depth();
-    const int cn = src1.empty() ? src2.channels() : src1.channels();
-    const Size size = src1.empty() ? src2.size() : src1.size();
-
-    if (dtype < 0)
-        dtype = sdepth;
-
-    const int ddepth = CV_MAT_DEPTH(dtype);
-
-    CV_Assert( sdepth <= CV_64F && ddepth <= CV_64F );
-    CV_Assert( !scalar.empty() || (src2.type() == src1.type() && src2.size() == src1.size()) );
-    CV_Assert( mask.empty() || (cn == 1 && mask.size() == size && mask.type() == CV_8UC1) );
-
-    if (sdepth == CV_64F || ddepth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    _dst.create(size, CV_MAKE_TYPE(ddepth, cn));
-    GpuMat dst = _dst.getGpuMat();
-
-    if (isScalar1)
-        ::subScalar(src2, val, true, dst, mask, stream);
-    else if (isScalar2)
-        ::subScalar(src1, val, false, dst, mask, stream);
-    else
-        ::subMat(src1, src2, dst, mask, stream);
+    arithm_op(src1, src2, dst, mask, 1.0, dtype, stream, subMat, subScalar);
 }
 
 ////////////////////////////////////////////////////////////////////////
