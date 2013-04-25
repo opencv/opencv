@@ -47,11 +47,11 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::merge(const GpuMat* /*src*/, size_t /*count*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_no_cuda(); }
-void cv::gpu::merge(const std::vector<GpuMat>& /*src*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_no_cuda(); }
+void cv::gpu::merge(const GpuMat*, size_t, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::gpu::merge(const std::vector<GpuMat>&, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::split(const GpuMat& /*src*/, GpuMat* /*dst*/, Stream& /*stream*/) { throw_no_cuda(); }
-void cv::gpu::split(const GpuMat& /*src*/, std::vector<GpuMat>& /*dst*/, Stream& /*stream*/) { throw_no_cuda(); }
+void cv::gpu::split(InputArray, GpuMat*, Stream&) { throw_no_cuda(); }
+void cv::gpu::split(InputArray, std::vector<GpuMat>&, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::transpose(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
@@ -70,22 +70,27 @@ namespace cv { namespace gpu { namespace cudev
 {
     namespace split_merge
     {
-        void merge_caller(const PtrStepSzb* src, PtrStepSzb& dst, int total_channels, size_t elem_size, const cudaStream_t& stream);
-        void split_caller(const PtrStepSzb& src, PtrStepSzb* dst, int num_channels, size_t elem_size1, const cudaStream_t& stream);
+        void merge(const PtrStepSzb* src, PtrStepSzb& dst, int total_channels, size_t elem_size, const cudaStream_t& stream);
+        void split(const PtrStepSzb& src, PtrStepSzb* dst, int num_channels, size_t elem_size1, const cudaStream_t& stream);
     }
 }}}
 
 namespace
 {
-    void merge(const GpuMat* src, size_t n, GpuMat& dst, const cudaStream_t& stream)
+    void merge_caller(const GpuMat* src, size_t n, OutputArray _dst, Stream& stream)
     {
-        using namespace ::cv::gpu::cudev::split_merge;
+        CV_Assert( src != 0 );
+        CV_Assert( n > 0 && n <= 4 );
 
-        CV_Assert(src);
-        CV_Assert(n > 0);
+        const int depth = src[0].depth();
+        const Size size = src[0].size();
 
-        int depth = src[0].depth();
-        Size size = src[0].size();
+        for (size_t i = 0; i < n; ++i)
+        {
+            CV_Assert( src[i].size() == size );
+            CV_Assert( src[i].depth() == depth );
+            CV_Assert( src[i].channels() == 1 );
+        }
 
         if (depth == CV_64F)
         {
@@ -93,43 +98,32 @@ namespace
                 CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
         }
 
-        bool single_channel_only = true;
-        int total_channels = 0;
-
-        for (size_t i = 0; i < n; ++i)
+        if (n == 1)
         {
-            CV_Assert(src[i].size() == size);
-            CV_Assert(src[i].depth() == depth);
-            single_channel_only = single_channel_only && src[i].channels() == 1;
-            total_channels += src[i].channels();
+            src[0].copyTo(_dst, stream);
         }
-
-        CV_Assert(single_channel_only);
-        CV_Assert(total_channels <= 4);
-
-        if (total_channels == 1)
-            src[0].copyTo(dst);
         else
         {
-            dst.create(size, CV_MAKETYPE(depth, total_channels));
+            _dst.create(size, CV_MAKE_TYPE(depth, (int)n));
+            GpuMat dst = _dst.getGpuMat();
 
             PtrStepSzb src_as_devmem[4];
             for(size_t i = 0; i < n; ++i)
                 src_as_devmem[i] = src[i];
 
             PtrStepSzb dst_as_devmem(dst);
-            merge_caller(src_as_devmem, dst_as_devmem, total_channels, CV_ELEM_SIZE(depth), stream);
+            cv::gpu::cudev::split_merge::merge(src_as_devmem, dst_as_devmem, (int)n, CV_ELEM_SIZE(depth), StreamAccessor::getStream(stream));
         }
     }
 
-    void split(const GpuMat& src, GpuMat* dst, const cudaStream_t& stream)
+    void split_caller(const GpuMat& src, GpuMat* dst, Stream& stream)
     {
-        using namespace ::cv::gpu::cudev::split_merge;
+        CV_Assert( dst != 0 );
 
-        CV_Assert(dst);
+        const int depth = src.depth();
+        const int num_channels = src.channels();
 
-        int depth = src.depth();
-        int num_channels = src.channels();
+        CV_Assert( num_channels <= 4 );
 
         if (depth == CV_64F)
         {
@@ -139,45 +133,45 @@ namespace
 
         if (num_channels == 1)
         {
-            src.copyTo(dst[0]);
+            src.copyTo(dst[0], stream);
             return;
         }
 
         for (int i = 0; i < num_channels; ++i)
             dst[i].create(src.size(), depth);
 
-        CV_Assert(num_channels <= 4);
-
         PtrStepSzb dst_as_devmem[4];
         for (int i = 0; i < num_channels; ++i)
             dst_as_devmem[i] = dst[i];
 
         PtrStepSzb src_as_devmem(src);
-        split_caller(src_as_devmem, dst_as_devmem, num_channels, src.elemSize1(), stream);
+        cv::gpu::cudev::split_merge::split(src_as_devmem, dst_as_devmem, num_channels, src.elemSize1(), StreamAccessor::getStream(stream));
     }
 }
 
-void cv::gpu::merge(const GpuMat* src, size_t n, GpuMat& dst, Stream& stream)
+void cv::gpu::merge(const GpuMat* src, size_t n, OutputArray dst, Stream& stream)
 {
-    ::merge(src, n, dst, StreamAccessor::getStream(stream));
+    merge_caller(src, n, dst, stream);
 }
 
 
-void cv::gpu::merge(const std::vector<GpuMat>& src, GpuMat& dst, Stream& stream)
+void cv::gpu::merge(const std::vector<GpuMat>& src, OutputArray dst, Stream& stream)
 {
-    ::merge(&src[0], src.size(), dst, StreamAccessor::getStream(stream));
+    merge_caller(&src[0], src.size(), dst, stream);
 }
 
-void cv::gpu::split(const GpuMat& src, GpuMat* dst, Stream& stream)
+void cv::gpu::split(InputArray _src, GpuMat* dst, Stream& stream)
 {
-    ::split(src, dst, StreamAccessor::getStream(stream));
+    GpuMat src = _src.getGpuMat();
+    split_caller(src, dst, stream);
 }
 
-void cv::gpu::split(const GpuMat& src, std::vector<GpuMat>& dst, Stream& stream)
+void cv::gpu::split(InputArray _src, std::vector<GpuMat>& dst, Stream& stream)
 {
+    GpuMat src = _src.getGpuMat();
     dst.resize(src.channels());
     if(src.channels() > 0)
-        ::split(src, &dst[0], StreamAccessor::getStream(stream));
+        split_caller(src, &dst[0], stream);
 }
 
 ////////////////////////////////////////////////////////////////////////

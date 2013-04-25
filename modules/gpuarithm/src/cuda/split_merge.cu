@@ -278,7 +278,7 @@ namespace cv { namespace gpu { namespace cudev
         }
 
 
-        void merge_caller(const PtrStepSzb* src, PtrStepSzb& dst,
+        void merge(const PtrStepSzb* src, PtrStepSzb& dst,
                                      int total_channels, size_t elem_size,
                                      const cudaStream_t& stream)
         {
@@ -487,7 +487,7 @@ namespace cv { namespace gpu { namespace cudev
         }
 
 
-        void split_caller(const PtrStepSzb& src, PtrStepSzb* dst, int num_channels, size_t elem_size1, const cudaStream_t& stream)
+        void split(const PtrStepSzb& src, PtrStepSzb* dst, int num_channels, size_t elem_size1, const cudaStream_t& stream)
         {
             static SplitFunction split_func_tbl[] =
             {

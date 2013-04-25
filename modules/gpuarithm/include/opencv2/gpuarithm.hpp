@@ -162,6 +162,14 @@ CV_EXPORTS void cartToPolar(InputArray x, InputArray y, OutputArray magnitude, O
 //! supports only floating-point source
 CV_EXPORTS void polarToCart(InputArray magnitude, InputArray angle, OutputArray x, OutputArray y, bool angleInDegrees = false, Stream& stream = Stream::Null());
 
+//! makes multi-channel array out of several single-channel arrays
+CV_EXPORTS void merge(const GpuMat* src, size_t n, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS void merge(const std::vector<GpuMat>& src, OutputArray dst, Stream& stream = Stream::Null());
+
+//! copies each plane of a multi-channel array to a dedicated array
+CV_EXPORTS void split(InputArray src, GpuMat* dst, Stream& stream = Stream::Null());
+CV_EXPORTS void split(InputArray src, std::vector<GpuMat>& dst, Stream& stream = Stream::Null());
+
 //! implements generalized matrix product algorithm GEMM from BLAS
 CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha,
     const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null());
@@ -178,18 +186,6 @@ CV_EXPORTS void flip(const GpuMat& a, GpuMat& b, int flipCode, Stream& stream = 
 //! destination array will have the depth type as lut and the same channels number as source
 //! supports CV_8UC1, CV_8UC3 types
 CV_EXPORTS void LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& stream = Stream::Null());
-
-//! makes multi-channel array out of several single-channel arrays
-CV_EXPORTS void merge(const GpuMat* src, size_t n, GpuMat& dst, Stream& stream = Stream::Null());
-
-//! makes multi-channel array out of several single-channel arrays
-CV_EXPORTS void merge(const std::vector<GpuMat>& src, GpuMat& dst, Stream& stream = Stream::Null());
-
-//! copies each plane of a multi-channel array to a dedicated array
-CV_EXPORTS void split(const GpuMat& src, GpuMat* dst, Stream& stream = Stream::Null());
-
-//! copies each plane of a multi-channel array to a dedicated array
-CV_EXPORTS void split(const GpuMat& src, std::vector<GpuMat>& dst, Stream& stream = Stream::Null());
 
 //! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values
 CV_EXPORTS void normalize(const GpuMat& src, GpuMat& dst, double alpha = 1, double beta = 0,
