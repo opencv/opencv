@@ -1433,6 +1433,35 @@ GPU_TEST_P(AbsDiff, Scalar)
     }
 }
 
+GPU_TEST_P(AbsDiff, Scalar_First)
+{
+    cv::Mat src = randomMat(size, depth);
+    cv::Scalar val = randomScalar(0.0, 255.0);
+
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::absdiff(val, loadMat(src), dst);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(cv::Error::StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, depth, useRoi);
+        cv::gpu::absdiff(val, loadMat(src, useRoi), dst);
+
+        cv::Mat dst_gold;
+        cv::absdiff(val, src, dst_gold);
+
+        EXPECT_MAT_NEAR(dst_gold, dst, depth <= CV_32F ? 1.0 : 1e-5);
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(GPU_Arithm, AbsDiff, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,

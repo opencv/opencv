@@ -55,8 +55,7 @@ void cv::gpu::multiply(InputArray, InputArray, OutputArray, double, int, Stream&
 
 void cv::gpu::divide(InputArray, InputArray, OutputArray, double, int, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::absdiff(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::absdiff(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::absdiff(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::abs(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
@@ -1380,37 +1379,24 @@ namespace arithm
     void absDiffMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s)
+static void absDiffMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& _stream)
 {
-    using namespace arithm;
-
     typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
     static const func_t funcs[] =
     {
-        absDiffMat<unsigned char>,
-        absDiffMat<signed char>,
-        absDiffMat<unsigned short>,
-        absDiffMat<short>,
-        absDiffMat<int>,
-        absDiffMat<float>,
-        absDiffMat<double>
+        arithm::absDiffMat<unsigned char>,
+        arithm::absDiffMat<signed char>,
+        arithm::absDiffMat<unsigned short>,
+        arithm::absDiffMat<short>,
+        arithm::absDiffMat<int>,
+        arithm::absDiffMat<float>,
+        arithm::absDiffMat<double>
     };
 
     const int depth = src1.depth();
     const int cn = src1.channels();
 
-    CV_Assert( depth <= CV_64F );
-    CV_Assert( src2.type() == src1.type() && src2.size() == src1.size() );
-
-    if (depth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    dst.create(src1.size(), src1.type());
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
 
     PtrStepSzb src1_(src1.rows, src1.cols * cn, src1.data, src1.step);
     PtrStepSzb src2_(src1.rows, src1.cols * cn, src2.data, src2.step);
@@ -1430,10 +1416,10 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
             {
                 const int vcols = src1_.cols >> 2;
 
-                absDiffMat_v4(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
-                              PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
-                              PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
-                              stream);
+                arithm::absDiffMat_v4(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                                      PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                                      PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                                      stream);
 
                 return;
             }
@@ -1441,10 +1427,10 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
             {
                 const int vcols = src1_.cols >> 1;
 
-                absDiffMat_v2(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
-                              PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
-                              PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
-                              stream);
+                arithm::absDiffMat_v2(PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src1_.data, src1_.step),
+                                      PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) src2_.data, src2_.step),
+                                      PtrStepSz<unsigned int>(src1_.rows, vcols, (unsigned int*) dst_.data, dst_.step),
+                                      stream);
 
                 return;
             }
@@ -1465,36 +1451,28 @@ namespace arithm
     void absDiffScalar(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::absdiff(const GpuMat& src1, const Scalar& src2, GpuMat& dst, Stream& stream)
+static void absDiffScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const GpuMat&, double, Stream& stream)
 {
-    using namespace arithm;
-
     typedef void (*func_t)(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream);
     static const func_t funcs[] =
     {
-        absDiffScalar<unsigned char, float>,
-        absDiffScalar<signed char, float>,
-        absDiffScalar<unsigned short, float>,
-        absDiffScalar<short, float>,
-        absDiffScalar<int, float>,
-        absDiffScalar<float, float>,
-        absDiffScalar<double, double>
+        arithm::absDiffScalar<unsigned char, float>,
+        arithm::absDiffScalar<signed char, float>,
+        arithm::absDiffScalar<unsigned short, float>,
+        arithm::absDiffScalar<short, float>,
+        arithm::absDiffScalar<int, float>,
+        arithm::absDiffScalar<float, float>,
+        arithm::absDiffScalar<double, double>
     };
 
-    const int depth = src1.depth();
+    const int depth = src.depth();
 
-    CV_Assert( depth <= CV_64F );
-    CV_Assert( src1.channels() == 1 );
+    funcs[depth](src, val[0], dst, StreamAccessor::getStream(stream));
+}
 
-    if (depth == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    dst.create(src1.size(), src1.type());
-
-    funcs[depth](src1, src2.val[0], dst, StreamAccessor::getStream(stream));
+void cv::gpu::absdiff(InputArray src1, InputArray src2, OutputArray dst, Stream& stream)
+{
+    arithm_op(src1, src2, dst, noArray(), 1.0, -1, stream, absDiffMat, absDiffScalar);
 }
 
 //////////////////////////////////////////////////////////////////////////////
