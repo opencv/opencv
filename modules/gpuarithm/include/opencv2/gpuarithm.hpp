@@ -60,12 +60,14 @@ CV_EXPORTS void subtract(InputArray src1, InputArray src2, OutputArray dst, Inpu
 //! computes element-wise weighted product of the two arrays (dst = scale * src1 * src2)
 CV_EXPORTS void multiply(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
 
-//! computes element-wise weighted quotient of the two arrays (c = a / b)
-CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
-//! computes element-wise weighted quotient of matrix and scalar (c = a / s)
-CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
+//! computes element-wise weighted quotient of the two arrays (dst = scale * (src1 / src2))
+CV_EXPORTS void divide(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
+
 //! computes element-wise weighted reciprocal of an array (dst = scale/src2)
-CV_EXPORTS void divide(double scale, const GpuMat& b, GpuMat& c, int dtype = -1, Stream& stream = Stream::Null());
+static inline void divide(double src1, InputArray src2, OutputArray dst, int dtype = -1, Stream& stream = Stream::Null())
+{
+    divide(src1, src2, dst, 1.0, dtype, stream);
+}
 
 //! computes the weighted sum of two arrays (dst = alpha*src1 + beta*src2 + gamma)
 CV_EXPORTS void addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst,

@@ -1299,9 +1299,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Arithm, Divide_Scalar, testing::Combine(
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
-// Divide_Scalar_Inv
+// Divide_Scalar_First
 
-PARAM_TEST_CASE(Divide_Scalar_Inv, cv::gpu::DeviceInfo, cv::Size, std::pair<MatDepth, MatDepth>, UseRoi)
+PARAM_TEST_CASE(Divide_Scalar_First, cv::gpu::DeviceInfo, cv::Size, std::pair<MatDepth, MatDepth>, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -1319,7 +1319,7 @@ PARAM_TEST_CASE(Divide_Scalar_Inv, cv::gpu::DeviceInfo, cv::Size, std::pair<MatD
     }
 };
 
-GPU_TEST_P(Divide_Scalar_Inv, Accuracy)
+GPU_TEST_P(Divide_Scalar_First, Accuracy)
 {
     double scale = randomDouble(0.0, 255.0);
     cv::Mat mat = randomMat(size, depth.first, 1.0, 255.0);
@@ -1348,7 +1348,7 @@ GPU_TEST_P(Divide_Scalar_Inv, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Divide_Scalar_Inv, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Arithm, Divide_Scalar_First, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
