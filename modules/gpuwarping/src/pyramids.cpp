@@ -44,9 +44,8 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::pyrDown(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-
-void cv::gpu::pyrUp(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::pyrDown(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::gpu::pyrUp(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::ImagePyramid::build(const GpuMat&, int, Stream&) { throw_no_cuda(); }
 void cv::gpu::ImagePyramid::getLayer(GpuMat&, Size, Stream&) const { throw_no_cuda(); }
@@ -64,12 +63,11 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream)
+void cv::gpu::pyrDown(InputArray _src, OutputArray _dst, Stream& stream)
 {
     using namespace cv::gpu::cudev::imgproc;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-
     static const func_t funcs[6][4] =
     {
         {pyrDown_gpu<uchar>      , 0 /*pyrDown_gpu<uchar2>*/ , pyrDown_gpu<uchar3>      , pyrDown_gpu<uchar4>      },
@@ -80,12 +78,15 @@ void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream)
         {pyrDown_gpu<float>      , 0 /*pyrDown_gpu<float2>*/ , pyrDown_gpu<float3>      , pyrDown_gpu<float4>      }
     };
 
-    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
+    GpuMat src = _src.getGpuMat();
+
+    CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );
 
     const func_t func = funcs[src.depth()][src.channels() - 1];
-    CV_Assert(func != 0);
+    CV_Assert( func != 0 );
 
-    dst.create((src.rows + 1) / 2, (src.cols + 1) / 2, src.type());
+    _dst.create((src.rows + 1) / 2, (src.cols + 1) / 2, src.type());
+    GpuMat dst = _dst.getGpuMat();
 
     func(src, dst, StreamAccessor::getStream(stream));
 }
@@ -102,12 +103,11 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream)
+void cv::gpu::pyrUp(InputArray _src, OutputArray _dst, Stream& stream)
 {
     using namespace cv::gpu::cudev::imgproc;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
-
     static const func_t funcs[6][4] =
     {
         {pyrUp_gpu<uchar>      , 0 /*pyrUp_gpu<uchar2>*/ , pyrUp_gpu<uchar3>      , pyrUp_gpu<uchar4>      },
@@ -118,16 +118,18 @@ void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream)
         {pyrUp_gpu<float>      , 0 /*pyrUp_gpu<float2>*/ , pyrUp_gpu<float3>      , pyrUp_gpu<float4>      }
     };
 
-    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
+    GpuMat src = _src.getGpuMat();
+
+    CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );
 
     const func_t func = funcs[src.depth()][src.channels() - 1];
-    CV_Assert(func != 0);
+    CV_Assert( func != 0 );
 
-    dst.create(src.rows * 2, src.cols * 2, src.type());
+    _dst.create(src.rows * 2, src.cols * 2, src.type());
+    GpuMat dst = _dst.getGpuMat();
 
     func(src, dst, StreamAccessor::getStream(stream));
 }
-
 
 //////////////////////////////////////////////////////////////////////////////
 // ImagePyramid

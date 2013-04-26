@@ -24,12 +24,11 @@ static void help()
 }
 
 
-template<class T>
-void convertAndResize(const T& src, T& gray, T& resized, double scale)
+static void convertAndResize(const Mat& src, Mat& gray, Mat& resized, double scale)
 {
     if (src.channels() == 3)
     {
-        cvtColor( src, gray, COLOR_BGR2GRAY );
+        cv::cvtColor( src, gray, COLOR_BGR2GRAY );
     }
     else
     {
@@ -40,7 +39,30 @@ void convertAndResize(const T& src, T& gray, T& resized, double scale)
 
     if (scale != 1)
     {
-        resize(gray, resized, sz);
+        cv::resize(gray, resized, sz);
+    }
+    else
+    {
+        resized = gray;
+    }
+}
+
+static void convertAndResize(const GpuMat& src, GpuMat& gray, GpuMat& resized, double scale)
+{
+    if (src.channels() == 3)
+    {
+        gpu::cvtColor( src, gray, COLOR_BGR2GRAY );
+    }
+    else
+    {
+        gray = src;
+    }
+
+    Size sz(cvRound(gray.cols * scale), cvRound(gray.rows * scale));
+
+    if (scale != 1)
+    {
+        gpu::resize(gray, resized, sz);
     }
     else
     {
