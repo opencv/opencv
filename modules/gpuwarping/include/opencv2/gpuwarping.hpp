@@ -100,31 +100,13 @@ CV_EXPORTS void pyrDown(InputArray src, OutputArray dst, Stream& stream = Stream
 //! upsamples the source image and then smoothes it
 CV_EXPORTS void pyrUp(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
-class CV_EXPORTS ImagePyramid
+class CV_EXPORTS ImagePyramid : public Algorithm
 {
 public:
-    inline ImagePyramid() : nLayers_(0) {}
-    inline ImagePyramid(const GpuMat& img, int nLayers, Stream& stream = Stream::Null())
-    {
-        build(img, nLayers, stream);
-    }
-
-    void build(const GpuMat& img, int nLayers, Stream& stream = Stream::Null());
-
-    void getLayer(GpuMat& outImg, Size outRoi, Stream& stream = Stream::Null()) const;
-
-    inline void release()
-    {
-        layer0_.release();
-        pyramid_.clear();
-        nLayers_ = 0;
-    }
-
-private:
-    GpuMat layer0_;
-    std::vector<GpuMat> pyramid_;
-    int nLayers_;
+    virtual void getLayer(OutputArray outImg, Size outRoi, Stream& stream = Stream::Null()) const = 0;
 };
+
+CV_EXPORTS Ptr<ImagePyramid> createImagePyramid(InputArray img, int nLayers = -1, Stream& stream = Stream::Null());
 
 }} // namespace cv { namespace gpu {
 
