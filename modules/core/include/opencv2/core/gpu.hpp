@@ -252,11 +252,11 @@ public:
 };
 
 //! creates continuous GPU matrix
-CV_EXPORTS void createContinuous(int rows, int cols, int type, GpuMat& m);
+CV_EXPORTS void createContinuous(int rows, int cols, int type, OutputArray arr);
 
 //! ensures that size of the given matrix is not less than (rows, cols) size
 //! and matrix type is match specified one too
-CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m);
+CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr);
 
 CV_EXPORTS GpuMat allocMatFromBuf(int rows, int cols, int type, GpuMat& mat);
 
@@ -295,6 +295,10 @@ public:
     //! allocates new matrix data unless the matrix already has specified size and type.
     void create(int rows, int cols, int type);
     void create(Size size, int type);
+
+    //! creates alternative CudaMem header for the same data, with different
+    //! number of channels and/or different number of rows
+    CudaMem reshape(int cn, int rows = 0) const;
 
     //! decrements reference counter and released memory if needed.
     void release();

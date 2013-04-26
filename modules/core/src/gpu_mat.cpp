@@ -1022,45 +1022,92 @@ GpuMat& cv::gpu::GpuMat::adjustROI(int dtop, int dbottom, int dleft, int dright)
     return *this;
 }
 
-void cv::gpu::createContinuous(int rows, int cols, int type, GpuMat& m)
+namespace
 {
-    const int area = rows * cols;
+    template <class ObjType>
+    void createContinuousImpl(int rows, int cols, int type, ObjType& obj)
+    {
+        const int area = rows * cols;
 
-    if (m.empty() || m.type() != type || !m.isContinuous() || m.size().area() < area)
-        m.create(1, area, type);
+        if (obj.empty() || obj.type() != type || !obj.isContinuous() || obj.size().area() < area)
+            obj.create(1, area, type);
 
-    m.cols = cols;
-    m.rows = rows;
-    m.step = m.elemSize() * cols;
-    m.flags |= Mat::CONTINUOUS_FLAG;
+        obj = obj.reshape(obj.channels(), rows);
+    }
 }
 
-void cv::gpu::ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
+void cv::gpu::createContinuous(int rows, int cols, int type, OutputArray arr)
 {
-    if (m.empty() || m.type() != type || m.data != m.datastart)
+    switch (arr.kind())
     {
-        m.create(rows, cols, type);
+    case _InputArray::MAT:
+        ::createContinuousImpl(rows, cols, type, arr.getMatRef());
+        break;
+
+    case _InputArray::GPU_MAT:
+        ::createContinuousImpl(rows, cols, type, arr.getGpuMatRef());
+        break;
+
+    case _InputArray::CUDA_MEM:
+        ::createContinuousImpl(rows, cols, type, arr.getCudaMemRef());
+        break;
+
+    default:
+        arr.create(rows, cols, type);
     }
-    else
+}
+
+namespace
+{
+    template <class ObjType>
+    void ensureSizeIsEnoughImpl(int rows, int cols, int type, ObjType& obj)
     {
-        const size_t esz = m.elemSize();
-        const ptrdiff_t delta2 = m.dataend - m.datastart;
-
-        const size_t minstep = m.cols * esz;
-
-        Size wholeSize;
-        wholeSize.height = std::max(static_cast<int>((delta2 - minstep) / m.step + 1), m.rows);
-        wholeSize.width = std::max(static_cast<int>((delta2 - m.step * (wholeSize.height - 1)) / esz), m.cols);
-
-        if (wholeSize.height < rows || wholeSize.width < cols)
+        if (obj.empty() || obj.type() != type || obj.data != obj.datastart)
         {
-            m.create(rows, cols, type);
+            obj.create(rows, cols, type);
         }
         else
         {
-            m.cols = cols;
-            m.rows = rows;
+            const size_t esz = obj.elemSize();
+            const ptrdiff_t delta2 = obj.dataend - obj.datastart;
+
+            const size_t minstep = obj.cols * esz;
+
+            Size wholeSize;
+            wholeSize.height = std::max(static_cast<int>((delta2 - minstep) / static_cast<size_t>(obj.step) + 1), obj.rows);
+            wholeSize.width = std::max(static_cast<int>((delta2 - static_cast<size_t>(obj.step) * (wholeSize.height - 1)) / esz), obj.cols);
+
+            if (wholeSize.height < rows || wholeSize.width < cols)
+            {
+                obj.create(rows, cols, type);
+            }
+            else
+            {
+                obj.cols = cols;
+                obj.rows = rows;
+            }
         }
+    }
+}
+
+void cv::gpu::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
+{
+    switch (arr.kind())
+    {
+    case _InputArray::MAT:
+        ::ensureSizeIsEnoughImpl(rows, cols, type, arr.getMatRef());
+        break;
+
+    case _InputArray::GPU_MAT:
+        ::ensureSizeIsEnoughImpl(rows, cols, type, arr.getGpuMatRef());
+        break;
+
+    case _InputArray::CUDA_MEM:
+        ::ensureSizeIsEnoughImpl(rows, cols, type, arr.getCudaMemRef());
+        break;
+
+    default:
+        arr.create(rows, cols, type);
     }
 }
 

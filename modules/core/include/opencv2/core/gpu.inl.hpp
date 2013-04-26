@@ -347,9 +347,9 @@ GpuMat createContinuous(int rows, int cols, int type)
 }
 
 static inline
-void createContinuous(Size size, int type, GpuMat& m)
+void createContinuous(Size size, int type, OutputArray arr)
 {
-    createContinuous(size.height, size.width, type, m);
+    createContinuous(size.height, size.width, type, arr);
 }
 
 static inline
@@ -361,9 +361,9 @@ GpuMat createContinuous(Size size, int type)
 }
 
 static inline
-void ensureSizeIsEnough(Size size, int type, GpuMat& m)
+void ensureSizeIsEnough(Size size, int type, OutputArray arr)
 {
-    ensureSizeIsEnough(size.height, size.width, type, m);
+    ensureSizeIsEnough(size.height, size.width, type, arr);
 }
 
 static inline
