@@ -49,11 +49,6 @@ using namespace cv::gpu;
 
 void cv::gpu::gemm(const GpuMat&, const GpuMat&, double, const GpuMat&, double, GpuMat&, int, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::integral(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::integralBuffered(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-
-void cv::gpu::sqrIntegral(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-
 void cv::gpu::mulSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, bool, Stream&) { throw_no_cuda(); }
 void cv::gpu::mulAndScaleSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, float, bool, Stream&) { throw_no_cuda(); }
 
@@ -291,116 +286,6 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     }
 
     cublasSafeCall( cublasDestroy_v2(handle) );
-#endif
-}
-
-////////////////////////////////////////////////////////////////////////
-// integral
-
-void cv::gpu::integral(const GpuMat& src, GpuMat& sum, Stream& s)
-{
-    GpuMat buffer;
-    gpu::integralBuffered(src, sum, buffer, s);
-}
-
-namespace cv { namespace gpu { namespace cudev
-{
-    namespace imgproc
-    {
-        void shfl_integral_gpu(const PtrStepSzb& img, PtrStepSz<unsigned int> integral, cudaStream_t stream);
-    }
-}}}
-
-void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, Stream& s)
-{
-    CV_Assert(src.type() == CV_8UC1);
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    cv::Size whole;
-    cv::Point offset;
-
-    src.locateROI(whole, offset);
-
-    if (deviceSupports(WARP_SHUFFLE_FUNCTIONS) && src.cols <= 2048
-        && offset.x % 16 == 0 && ((src.cols + 63) / 64) * 64 <= (static_cast<int>(src.step) - offset.x))
-    {
-        ensureSizeIsEnough(((src.rows + 7) / 8) * 8, ((src.cols + 63) / 64) * 64, CV_32SC1, buffer);
-
-        cv::gpu::cudev::imgproc::shfl_integral_gpu(src, buffer, stream);
-
-        sum.create(src.rows + 1, src.cols + 1, CV_32SC1);
-
-        sum.setTo(Scalar::all(0), s);
-
-        GpuMat inner = sum(Rect(1, 1, src.cols, src.rows));
-        GpuMat res = buffer(Rect(0, 0, src.cols, src.rows));
-
-        res.copyTo(inner, s);
-    }
-    else
-    {
-#ifndef HAVE_OPENCV_GPULEGACY
-    throw_no_cuda();
-#else
-        sum.create(src.rows + 1, src.cols + 1, CV_32SC1);
-
-        NcvSize32u roiSize;
-        roiSize.width = src.cols;
-        roiSize.height = src.rows;
-
-        cudaDeviceProp prop;
-        cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
-
-        Ncv32u bufSize;
-        ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
-        ensureSizeIsEnough(1, bufSize, CV_8UC1, buffer);
-
-        NppStStreamHandler h(stream);
-
-        ncvSafeCall( nppiStIntegral_8u32u_C1R(const_cast<Ncv8u*>(src.ptr<Ncv8u>()), static_cast<int>(src.step),
-            sum.ptr<Ncv32u>(), static_cast<int>(sum.step), roiSize, buffer.ptr<Ncv8u>(), bufSize, prop) );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
-#endif
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-// sqrIntegral
-
-void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
-{
-#ifndef HAVE_OPENCV_GPULEGACY
-    (void) src;
-    (void) sqsum;
-    (void) s;
-    throw_no_cuda();
-#else
-    CV_Assert(src.type() == CV_8U);
-
-    NcvSize32u roiSize;
-    roiSize.width = src.cols;
-    roiSize.height = src.rows;
-
-    cudaDeviceProp prop;
-    cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
-
-    Ncv32u bufSize;
-    ncvSafeCall(nppiStSqrIntegralGetSize_8u64u(roiSize, &bufSize, prop));
-    GpuMat buf(1, bufSize, CV_8U);
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    NppStStreamHandler h(stream);
-
-    sqsum.create(src.rows + 1, src.cols + 1, CV_64F);
-    ncvSafeCall(nppiStSqrIntegral_8u64u_C1R(const_cast<Ncv8u*>(src.ptr<Ncv8u>(0)), static_cast<int>(src.step),
-            sqsum.ptr<Ncv64u>(0), static_cast<int>(sqsum.step), roiSize, buf.ptr<Ncv8u>(0), bufSize, prop));
-
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
 #endif
 }
 
@@ -650,8 +535,6 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     (void) stream;
     throw_no_cuda();
 #else
-    using namespace cv::gpu::cudev::imgproc;
-
     CV_Assert(image.type() == CV_32F);
     CV_Assert(templ.type() == CV_32F);
 

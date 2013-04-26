@@ -265,7 +265,7 @@ PERF_TEST_P(Sz, Integral,
         cv::gpu::GpuMat dst;
         cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() cv::gpu::integralBuffered(d_src, dst, d_buf);
+        TEST_CYCLE() cv::gpu::integral(d_src, dst, d_buf);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -293,9 +293,9 @@ PERF_TEST_P(Sz, IntegralSqr,
     if (PERF_RUN_GPU())
     {
         const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        cv::gpu::GpuMat dst, buf;
 
-        TEST_CYCLE() cv::gpu::sqrIntegral(d_src, dst);
+        TEST_CYCLE() cv::gpu::sqrIntegral(d_src, dst, buf);
 
         GPU_SANITY_CHECK(dst);
     }

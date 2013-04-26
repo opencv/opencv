@@ -209,85 +209,150 @@ inline void LUT(InputArray src, InputArray lut, OutputArray dst, Stream& stream)
 CV_EXPORTS void copyMakeBorder(InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType,
                                Scalar value = Scalar(), Stream& stream = Stream::Null());
 
-//! implements generalized matrix product algorithm GEMM from BLAS
-CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha,
-    const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null());
-
-//! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values
-CV_EXPORTS void normalize(const GpuMat& src, GpuMat& dst, double alpha = 1, double beta = 0,
-                          int norm_type = NORM_L2, int dtype = -1, const GpuMat& mask = GpuMat());
-CV_EXPORTS void normalize(const GpuMat& src, GpuMat& dst, double a, double b,
-                          int norm_type, int dtype, const GpuMat& mask, GpuMat& norm_buf, GpuMat& cvt_buf);
-
 //! computes norm of array
 //! supports NORM_INF, NORM_L1, NORM_L2
 //! supports all matrices except 64F
-CV_EXPORTS double norm(const GpuMat& src1, int normType=NORM_L2);
-CV_EXPORTS double norm(const GpuMat& src1, int normType, GpuMat& buf);
-CV_EXPORTS double norm(const GpuMat& src1, int normType, const GpuMat& mask, GpuMat& buf);
+CV_EXPORTS double norm(InputArray src1, int normType, InputArray mask, GpuMat& buf);
+static inline double norm(InputArray src, int normType)
+{
+    GpuMat buf;
+    return norm(src, normType, GpuMat(), buf);
+}
+static inline double norm(InputArray src, int normType, GpuMat& buf)
+{
+    return norm(src, normType, GpuMat(), buf);
+}
 
 //! computes norm of the difference between two arrays
 //! supports NORM_INF, NORM_L1, NORM_L2
 //! supports only CV_8UC1 type
-CV_EXPORTS double norm(const GpuMat& src1, const GpuMat& src2, int normType=NORM_L2);
+CV_EXPORTS double norm(InputArray src1, InputArray src2, GpuMat& buf, int normType=NORM_L2);
+static inline double norm(InputArray src1, InputArray src2, int normType=NORM_L2)
+{
+    GpuMat buf;
+    return norm(src1, src2, buf, normType);
+}
 
 //! computes sum of array elements
 //! supports only single channel images
-CV_EXPORTS Scalar sum(const GpuMat& src);
-CV_EXPORTS Scalar sum(const GpuMat& src, GpuMat& buf);
-CV_EXPORTS Scalar sum(const GpuMat& src, const GpuMat& mask, GpuMat& buf);
+CV_EXPORTS Scalar sum(InputArray src, InputArray mask, GpuMat& buf);
+static inline Scalar sum(InputArray src)
+{
+    GpuMat buf;
+    return sum(src, GpuMat(), buf);
+}
+static inline Scalar sum(InputArray src, GpuMat& buf)
+{
+    return sum(src, GpuMat(), buf);
+}
 
 //! computes sum of array elements absolute values
 //! supports only single channel images
-CV_EXPORTS Scalar absSum(const GpuMat& src);
-CV_EXPORTS Scalar absSum(const GpuMat& src, GpuMat& buf);
-CV_EXPORTS Scalar absSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf);
+CV_EXPORTS Scalar absSum(InputArray src, InputArray mask, GpuMat& buf);
+static inline Scalar absSum(InputArray src)
+{
+    GpuMat buf;
+    return absSum(src, GpuMat(), buf);
+}
+static inline Scalar absSum(InputArray src, GpuMat& buf)
+{
+    return absSum(src, GpuMat(), buf);
+}
 
 //! computes squared sum of array elements
 //! supports only single channel images
-CV_EXPORTS Scalar sqrSum(const GpuMat& src);
-CV_EXPORTS Scalar sqrSum(const GpuMat& src, GpuMat& buf);
-CV_EXPORTS Scalar sqrSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf);
+CV_EXPORTS Scalar sqrSum(InputArray src, InputArray mask, GpuMat& buf);
+static inline Scalar sqrSum(InputArray src)
+{
+    GpuMat buf;
+    return sqrSum(src, GpuMat(), buf);
+}
+static inline Scalar sqrSum(InputArray src, GpuMat& buf)
+{
+    return sqrSum(src, GpuMat(), buf);
+}
 
 //! finds global minimum and maximum array elements and returns their values
-CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal=0, const GpuMat& mask=GpuMat());
-CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf);
+CV_EXPORTS void minMax(InputArray src, double* minVal, double* maxVal, InputArray mask, GpuMat& buf);
+static inline void minMax(InputArray src, double* minVal, double* maxVal=0, InputArray mask=noArray())
+{
+    GpuMat buf;
+    minMax(src, minVal, maxVal, mask, buf);
+}
 
 //! finds global minimum and maximum array elements and returns their values with locations
-CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0,
-                          const GpuMat& mask=GpuMat());
-CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
-                          const GpuMat& mask, GpuMat& valbuf, GpuMat& locbuf);
+CV_EXPORTS void minMaxLoc(InputArray src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
+                          InputArray mask, GpuMat& valbuf, GpuMat& locbuf);
+static inline void minMaxLoc(InputArray src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0,
+                             InputArray mask=noArray())
+{
+    GpuMat valBuf, locBuf;
+    minMaxLoc(src, minVal, maxVal, minLoc, maxLoc, mask, valBuf, locBuf);
+}
 
 //! counts non-zero array elements
-CV_EXPORTS int countNonZero(const GpuMat& src);
-CV_EXPORTS int countNonZero(const GpuMat& src, GpuMat& buf);
+CV_EXPORTS int countNonZero(InputArray src, GpuMat& buf);
+static inline int countNonZero(const GpuMat& src)
+{
+    GpuMat buf;
+    return countNonZero(src, buf);
+}
 
 //! reduces a matrix to a vector
-CV_EXPORTS void reduce(const GpuMat& mtx, GpuMat& vec, int dim, int reduceOp, int dtype = -1, Stream& stream = Stream::Null());
+CV_EXPORTS void reduce(InputArray mtx, OutputArray vec, int dim, int reduceOp, int dtype = -1, Stream& stream = Stream::Null());
 
 //! computes mean value and standard deviation of all or selected array elements
 //! supports only CV_8UC1 type
-CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev);
-//! buffered version
-CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev, GpuMat& buf);
+CV_EXPORTS void meanStdDev(InputArray mtx, Scalar& mean, Scalar& stddev, GpuMat& buf);
+static inline void meanStdDev(InputArray src, Scalar& mean, Scalar& stddev)
+{
+    GpuMat buf;
+    meanStdDev(src, mean, stddev, buf);
+}
 
 //! computes the standard deviation of integral images
 //! supports only CV_32SC1 source type and CV_32FC1 sqr type
 //! output will have CV_32FC1 type
-CV_EXPORTS void rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& stream = Stream::Null());
+CV_EXPORTS void rectStdDev(InputArray src, InputArray sqr, OutputArray dst, Rect rect, Stream& stream = Stream::Null());
+
+//! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values
+CV_EXPORTS void normalize(InputArray src, OutputArray dst, double alpha, double beta,
+                          int norm_type, int dtype, InputArray mask, GpuMat& norm_buf, GpuMat& cvt_buf);
+static inline void normalize(InputArray src, OutputArray dst, double alpha = 1, double beta = 0,
+                             int norm_type = NORM_L2, int dtype = -1, InputArray mask = noArray())
+{
+    GpuMat norm_buf;
+    GpuMat cvt_buf;
+    normalize(src, dst, alpha, beta, norm_type, dtype, mask, norm_buf, cvt_buf);
+}
 
 //! computes the integral image
 //! sum will have CV_32S type, but will contain unsigned int values
 //! supports only CV_8UC1 source type
-CV_EXPORTS void integral(const GpuMat& src, GpuMat& sum, Stream& stream = Stream::Null());
-//! buffered version
-CV_EXPORTS void integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, Stream& stream = Stream::Null());
+CV_EXPORTS void integral(InputArray src, OutputArray sum, GpuMat& buffer, Stream& stream = Stream::Null());
+static inline void integralBuffered(InputArray src, OutputArray sum, GpuMat& buffer, Stream& stream = Stream::Null())
+{
+    integral(src, sum, buffer, stream);
+}
+static inline void integral(InputArray src, OutputArray sum, Stream& stream = Stream::Null())
+{
+    GpuMat buffer;
+    integral(src, sum, buffer, stream);
+}
 
 //! computes squared integral image
 //! result matrix will have 64F type, but will contain 64U values
 //! supports source images of 8UC1 type only
-CV_EXPORTS void sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& stream = Stream::Null());
+CV_EXPORTS void sqrIntegral(InputArray src, OutputArray sqsum, GpuMat& buf, Stream& stream = Stream::Null());
+static inline void sqrIntegral(InputArray src, OutputArray sqsum, Stream& stream = Stream::Null())
+{
+    GpuMat buffer;
+    sqrIntegral(src, sqsum, buffer, stream);
+}
+
+//! implements generalized matrix product algorithm GEMM from BLAS
+CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha,
+    const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null());
 
 //! performs per-element multiplication of two full (not packed) Fourier spectrums
 //! supports 32FC2 matrixes only (interleaved format)

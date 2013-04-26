@@ -268,7 +268,7 @@ namespace
             buf.image_sums.resize(1);
             gpu::integral(image, buf.image_sums[0], stream);
 
-            unsigned int templ_sum = (unsigned int)sum(templ)[0];
+            unsigned int templ_sum = (unsigned int)gpu::sum(templ)[0];
             matchTemplatePrepared_CCOFF_8U(templ.cols, templ.rows, buf.image_sums[0], templ_sum, result, StreamAccessor::getStream(stream));
         }
         else
