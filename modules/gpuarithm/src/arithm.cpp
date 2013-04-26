@@ -49,10 +49,10 @@ using namespace cv::gpu;
 
 void cv::gpu::gemm(InputArray, InputArray, double, InputArray, double, OutputArray, int, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::mulSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, bool, Stream&) { throw_no_cuda(); }
-void cv::gpu::mulAndScaleSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, float, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::mulSpectrums(InputArray, InputArray, OutputArray, int, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::mulAndScaleSpectrums(InputArray, InputArray, OutputArray, int, float, bool, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::dft(const GpuMat&, GpuMat&, Size, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::dft(InputArray, OutputArray, Size, int, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::ConvolveBuf::create(Size, Size) { throw_no_cuda(); }
 void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool) { throw_no_cuda(); }
@@ -308,12 +308,12 @@ namespace cv { namespace gpu { namespace cudev
 
 #endif
 
-void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB, Stream& stream)
+void cv::gpu::mulSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst, int flags, bool conjB, Stream& stream)
 {
 #ifndef HAVE_CUFFT
-    (void) a;
-    (void) b;
-    (void) c;
+    (void) _src1;
+    (void) _src2;
+    (void) _dst;
     (void) flags;
     (void) conjB;
     (void) stream;
@@ -322,16 +322,19 @@ void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flag
     (void) flags;
 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, PtrStepSz<cufftComplex>, cudaStream_t stream);
-
     static Caller callers[] = { cudev::mulSpectrums, cudev::mulSpectrums_CONJ };
 
-    CV_Assert(a.type() == b.type() && a.type() == CV_32FC2);
-    CV_Assert(a.size() == b.size());
+    GpuMat src1 = _src1.getGpuMat();
+    GpuMat src2 = _src2.getGpuMat();
 
-    c.create(a.size(), CV_32FC2);
+    CV_Assert( src1.type() == src2.type() && src1.type() == CV_32FC2 );
+    CV_Assert( src1.size() == src2.size() );
+
+    _dst.create(src1.size(), CV_32FC2);
+    GpuMat dst = _dst.getGpuMat();
 
     Caller caller = callers[(int)conjB];
-    caller(a, b, c, StreamAccessor::getStream(stream));
+    caller(src1, src2, dst, StreamAccessor::getStream(stream));
 #endif
 }
 
@@ -349,12 +352,12 @@ namespace cv { namespace gpu { namespace cudev
 
 #endif
 
-void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB, Stream& stream)
+void cv::gpu::mulAndScaleSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst, int flags, float scale, bool conjB, Stream& stream)
 {
 #ifndef HAVE_CUFFT
-    (void) a;
-    (void) b;
-    (void) c;
+    (void) _src1;
+    (void) _src2;
+    (void) _dst;
     (void) flags;
     (void) scale;
     (void) conjB;
@@ -366,53 +369,57 @@ void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, float scale, PtrStepSz<cufftComplex>, cudaStream_t stream);
     static Caller callers[] = { cudev::mulAndScaleSpectrums, cudev::mulAndScaleSpectrums_CONJ };
 
-    CV_Assert(a.type() == b.type() && a.type() == CV_32FC2);
-    CV_Assert(a.size() == b.size());
+    GpuMat src1 = _src1.getGpuMat();
+    GpuMat src2 = _src2.getGpuMat();
 
-    c.create(a.size(), CV_32FC2);
+    CV_Assert( src1.type() == src2.type() && src1.type() == CV_32FC2);
+    CV_Assert( src1.size() == src2.size() );
+
+    _dst.create(src1.size(), CV_32FC2);
+    GpuMat dst = _dst.getGpuMat();
 
     Caller caller = callers[(int)conjB];
-    caller(a, b, scale, c, StreamAccessor::getStream(stream));
+    caller(src1, src2, scale, dst, StreamAccessor::getStream(stream));
 #endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // dft
 
-void cv::gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags, Stream& stream)
+void cv::gpu::dft(InputArray _src, OutputArray _dst, Size dft_size, int flags, Stream& stream)
 {
 #ifndef HAVE_CUFFT
-    (void) src;
-    (void) dst;
+    (void) _src;
+    (void) _dst;
     (void) dft_size;
     (void) flags;
     (void) stream;
     throw_no_cuda();
 #else
+    GpuMat src = _src.getGpuMat();
 
-    CV_Assert(src.type() == CV_32F || src.type() == CV_32FC2);
+    CV_Assert( src.type() == CV_32FC1 || src.type() == CV_32FC2 );
 
     // We don't support unpacked output (in the case of real input)
-    CV_Assert(!(flags & DFT_COMPLEX_OUTPUT));
+    CV_Assert( !(flags & DFT_COMPLEX_OUTPUT) );
 
-    bool is_1d_input = (dft_size.height == 1) || (dft_size.width == 1);
-    int is_row_dft = flags & DFT_ROWS;
-    int is_scaled_dft = flags & DFT_SCALE;
-    int is_inverse = flags & DFT_INVERSE;
-    bool is_complex_input = src.channels() == 2;
-    bool is_complex_output = !(flags & DFT_REAL_OUTPUT);
+    const bool is_1d_input       = (dft_size.height == 1) || (dft_size.width == 1);
+    const bool is_row_dft        = (flags & DFT_ROWS) != 0;
+    const bool is_scaled_dft     = (flags & DFT_SCALE) != 0;
+    const bool is_inverse        = (flags & DFT_INVERSE) != 0;
+    const bool is_complex_input  = src.channels() == 2;
+    const bool is_complex_output = !(flags & DFT_REAL_OUTPUT);
 
     // We don't support real-to-real transform
-    CV_Assert(is_complex_input || is_complex_output);
+    CV_Assert( is_complex_input || is_complex_output );
 
-    GpuMat src_data;
+    GpuMat src_cont = src;
 
     // Make sure here we work with the continuous input,
     // as CUFFT can't handle gaps
-    src_data = src;
-    createContinuous(src.rows, src.cols, src.type(), src_data);
-    if (src_data.data != src.data)
-        src.copyTo(src_data);
+    createContinuous(src.rows, src.cols, src.type(), src_cont);
+    if (src_cont.data != src.data)
+        src.copyTo(src_cont, stream);
 
     Size dft_size_opt = dft_size;
     if (is_1d_input && !is_row_dft)
@@ -422,17 +429,17 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags, Stre
         dft_size_opt.height = std::min(dft_size.width, dft_size.height);
     }
 
+    CV_Assert( dft_size_opt.width > 1 );
+
     cufftType dft_type = CUFFT_R2C;
     if (is_complex_input)
         dft_type = is_complex_output ? CUFFT_C2C : CUFFT_C2R;
 
-    CV_Assert(dft_size_opt.width > 1);
-
     cufftHandle plan;
     if (is_1d_input || is_row_dft)
-        cufftPlan1d(&plan, dft_size_opt.width, dft_type, dft_size_opt.height);
+        cufftSafeCall( cufftPlan1d(&plan, dft_size_opt.width, dft_type, dft_size_opt.height) );
     else
-        cufftPlan2d(&plan, dft_size_opt.height, dft_size_opt.width, dft_type);
+        cufftSafeCall( cufftPlan2d(&plan, dft_size_opt.height, dft_size_opt.width, dft_type) );
 
     cufftSafeCall( cufftSetStream(plan, StreamAccessor::getStream(stream)) );
 
@@ -440,34 +447,40 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags, Stre
     {
         if (is_complex_output)
         {
-            createContinuous(dft_size, CV_32FC2, dst);
+            createContinuous(dft_size, CV_32FC2, _dst);
+            GpuMat dst = _dst.getGpuMat();
+
             cufftSafeCall(cufftExecC2C(
-                    plan, src_data.ptr<cufftComplex>(), dst.ptr<cufftComplex>(),
+                    plan, src_cont.ptr<cufftComplex>(), dst.ptr<cufftComplex>(),
                     is_inverse ? CUFFT_INVERSE : CUFFT_FORWARD));
         }
         else
         {
-            createContinuous(dft_size, CV_32F, dst);
+            createContinuous(dft_size, CV_32F, _dst);
+            GpuMat dst = _dst.getGpuMat();
+
             cufftSafeCall(cufftExecC2R(
-                    plan, src_data.ptr<cufftComplex>(), dst.ptr<cufftReal>()));
+                    plan, src_cont.ptr<cufftComplex>(), dst.ptr<cufftReal>()));
         }
     }
     else
     {
         // We could swap dft_size for efficiency. Here we must reflect it
         if (dft_size == dft_size_opt)
-            createContinuous(Size(dft_size.width / 2 + 1, dft_size.height), CV_32FC2, dst);
+            createContinuous(Size(dft_size.width / 2 + 1, dft_size.height), CV_32FC2, _dst);
         else
-            createContinuous(Size(dft_size.width, dft_size.height / 2 + 1), CV_32FC2, dst);
+            createContinuous(Size(dft_size.width, dft_size.height / 2 + 1), CV_32FC2, _dst);
+
+        GpuMat dst = _dst.getGpuMat();
 
         cufftSafeCall(cufftExecR2C(
-                plan, src_data.ptr<cufftReal>(), dst.ptr<cufftComplex>()));
+                plan, src_cont.ptr<cufftReal>(), dst.ptr<cufftComplex>()));
     }
 
-    cufftSafeCall(cufftDestroy(plan));
+    cufftSafeCall( cufftDestroy(plan) );
 
     if (is_scaled_dft)
-        multiply(dst, Scalar::all(1. / dft_size.area()), dst, 1, -1, stream);
+        gpu::multiply(_dst, Scalar::all(1. / dft_size.area()), _dst, 1, -1, stream);
 
 #endif
 }
