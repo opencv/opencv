@@ -57,7 +57,7 @@ void cv::gpu::transpose(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::flip(InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::LUT(const GpuMat&, const Mat&, GpuMat&, Stream&) { throw_no_cuda(); }
+Ptr<LookUpTable> cv::gpu::createLookUpTable(InputArray) { throw_no_cuda(); return Ptr<LookUpTable>(); }
 
 void cv::gpu::copyMakeBorder(const GpuMat&, GpuMat&, int, int, int, int, int, const Scalar&, Stream&) { throw_no_cuda(); }
 
@@ -290,93 +290,214 @@ void cv::gpu::flip(InputArray _src, OutputArray _dst, int flipCode, Stream& stre
 ////////////////////////////////////////////////////////////////////////
 // LUT
 
-void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
+#if (CUDA_VERSION >= 5000)
+
+namespace
 {
-    const int cn = src.channels();
-
-    CV_Assert( src.type() == CV_8UC1 || src.type() == CV_8UC3 );
-    CV_Assert( lut.depth() == CV_8U );
-    CV_Assert( lut.channels() == 1 || lut.channels() == cn );
-    CV_Assert( lut.rows * lut.cols == 256 && lut.isContinuous() );
-
-    dst.create(src.size(), CV_MAKE_TYPE(lut.depth(), cn));
-
-    NppiSize sz;
-    sz.height = src.rows;
-    sz.width = src.cols;
-
-    Mat nppLut;
-    lut.convertTo(nppLut, CV_32S);
-
-    int nValues3[] = {256, 256, 256};
-
-    Npp32s pLevels[256];
-    for (int i = 0; i < 256; ++i)
-        pLevels[i] = i;
-
-    const Npp32s* pLevels3[3];
-
-#if (CUDA_VERSION <= 4020)
-    pLevels3[0] = pLevels3[1] = pLevels3[2] = pLevels;
-#else
-    GpuMat d_pLevels;
-    d_pLevels.upload(Mat(1, 256, CV_32S, pLevels));
-    pLevels3[0] = pLevels3[1] = pLevels3[2] = d_pLevels.ptr<Npp32s>();
-#endif
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-    NppStreamHandler h(stream);
-
-    if (src.type() == CV_8UC1)
+    class LookUpTableImpl : public LookUpTable
     {
-#if (CUDA_VERSION <= 4020)
-        nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, nppLut.ptr<Npp32s>(), pLevels, 256) );
-#else
-        GpuMat d_nppLut(Mat(1, 256, CV_32S, nppLut.data));
-        nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, d_nppLut.ptr<Npp32s>(), d_pLevels.ptr<Npp32s>(), 256) );
-#endif
-    }
-    else
-    {
+    public:
+        LookUpTableImpl(InputArray lut);
+
+        void transform(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+
+    private:
+        int lut_cn;
+
+        int nValues3[3];
         const Npp32s* pValues3[3];
+        const Npp32s* pLevels3[3];
 
-        Mat nppLut3[3];
-        if (nppLut.channels() == 1)
+        GpuMat d_pLevels;
+        GpuMat d_nppLut;
+        GpuMat d_nppLut3[3];
+    };
+
+    LookUpTableImpl::LookUpTableImpl(InputArray _lut)
+    {
+        nValues3[0] = nValues3[1] = nValues3[2] = 256;
+
+        Npp32s pLevels[256];
+        for (int i = 0; i < 256; ++i)
+            pLevels[i] = i;
+
+        d_pLevels.upload(Mat(1, 256, CV_32S, pLevels));
+        pLevels3[0] = pLevels3[1] = pLevels3[2] = d_pLevels.ptr<Npp32s>();
+
+        GpuMat lut;
+        if (_lut.kind() == _InputArray::GPU_MAT)
         {
-#if (CUDA_VERSION <= 4020)
-            pValues3[0] = pValues3[1] = pValues3[2] = nppLut.ptr<Npp32s>();
-#else
-            GpuMat d_nppLut(Mat(1, 256, CV_32S, nppLut.data));
+            lut = _lut.getGpuMat();
+        }
+        else
+        {
+            Mat hLut = _lut.getMat();
+            CV_Assert( hLut.total() == 256 && hLut.isContinuous() );
+            lut.upload(Mat(1, 256, hLut.type(), hLut.data));
+        }
+
+        lut_cn = lut.channels();
+
+        CV_Assert( lut.depth() == CV_8U );
+        CV_Assert( lut.rows == 1 && lut.cols == 256 );
+
+        lut.convertTo(d_nppLut, CV_32S);
+
+        if (lut_cn == 1)
+        {
             pValues3[0] = pValues3[1] = pValues3[2] = d_nppLut.ptr<Npp32s>();
-#endif
+        }
+        else
+        {
+            gpu::split(d_nppLut, d_nppLut3);
+
+            pValues3[0] = d_nppLut3[0].ptr<Npp32s>();
+            pValues3[1] = d_nppLut3[1].ptr<Npp32s>();
+            pValues3[2] = d_nppLut3[2].ptr<Npp32s>();
+        }
+    }
+
+    void LookUpTableImpl::transform(InputArray _src, OutputArray _dst, Stream& _stream)
+    {
+        GpuMat src = _src.getGpuMat();
+
+        const int cn = src.channels();
+
+        CV_Assert( src.type() == CV_8UC1 || src.type() == CV_8UC3 );
+        CV_Assert( lut_cn == 1 || lut_cn == cn );
+
+        _dst.create(src.size(), src.type());
+        GpuMat dst = _dst.getGpuMat();
+
+        cudaStream_t stream = StreamAccessor::getStream(_stream);
+
+        NppStreamHandler h(stream);
+
+        NppiSize sz;
+        sz.height = src.rows;
+        sz.width = src.cols;
+
+        if (src.type() == CV_8UC1)
+        {
+            nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, d_nppLut.ptr<Npp32s>(), d_pLevels.ptr<Npp32s>(), 256) );
+        }
+        else
+        {
+            nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step),
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, pValues3, pLevels3, nValues3) );
+        }
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+}
+
+#else //  (CUDA_VERSION >= 5000)
+
+namespace
+{
+    class LookUpTableImpl : public LookUpTable
+    {
+    public:
+        LookUpTableImpl(InputArray lut);
+
+        void transform(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+
+    private:
+        int lut_cn;
+
+        Npp32s pLevels[256];
+        int nValues3[3];
+        const Npp32s* pValues3[3];
+        const Npp32s* pLevels3[3];
+
+        Mat nppLut;
+        Mat nppLut3[3];
+    };
+
+    LookUpTableImpl::LookUpTableImpl(InputArray _lut)
+    {
+        nValues3[0] = nValues3[1] = nValues3[2] = 256;
+
+        for (int i = 0; i < 256; ++i)
+            pLevels[i] = i;
+        pLevels3[0] = pLevels3[1] = pLevels3[2] = pLevels;
+
+        Mat lut;
+        if (_lut.kind() == _InputArray::GPU_MAT)
+        {
+            lut = Mat(_lut.getGpuMat());
+        }
+        else
+        {
+            Mat hLut = _lut.getMat();
+            CV_Assert( hLut.total() == 256 && hLut.isContinuous() );
+            lut = hLut;
+        }
+
+        lut_cn = lut.channels();
+
+        CV_Assert( lut.depth() == CV_8U );
+        CV_Assert( lut.rows == 1 && lut.cols == 256 );
+
+        lut.convertTo(nppLut, CV_32S);
+
+        if (lut_cn == 1)
+        {
+            pValues3[0] = pValues3[1] = pValues3[2] = nppLut.ptr<Npp32s>();
         }
         else
         {
             cv::split(nppLut, nppLut3);
 
-#if (CUDA_VERSION <= 4020)
             pValues3[0] = nppLut3[0].ptr<Npp32s>();
             pValues3[1] = nppLut3[1].ptr<Npp32s>();
             pValues3[2] = nppLut3[2].ptr<Npp32s>();
-#else
-            GpuMat d_nppLut0(Mat(1, 256, CV_32S, nppLut3[0].data));
-            GpuMat d_nppLut1(Mat(1, 256, CV_32S, nppLut3[1].data));
-            GpuMat d_nppLut2(Mat(1, 256, CV_32S, nppLut3[2].data));
-
-            pValues3[0] = d_nppLut0.ptr<Npp32s>();
-            pValues3[1] = d_nppLut1.ptr<Npp32s>();
-            pValues3[2] = d_nppLut2.ptr<Npp32s>();
-#endif
         }
-
-        nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step),
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, pValues3, pLevels3, nValues3) );
     }
 
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
+    void LookUpTableImpl::transform(InputArray _src, OutputArray _dst, Stream& _stream)
+    {
+        GpuMat src = _src.getGpuMat();
+
+        const int cn = src.channels();
+
+        CV_Assert( src.type() == CV_8UC1 || src.type() == CV_8UC3 );
+        CV_Assert( lut_cn == 1 || lut_cn == cn );
+
+        _dst.create(src.size(), src.type());
+        GpuMat dst = _dst.getGpuMat();
+
+        cudaStream_t stream = StreamAccessor::getStream(_stream);
+
+        NppStreamHandler h(stream);
+
+        NppiSize sz;
+        sz.height = src.rows;
+        sz.width = src.cols;
+
+        if (src.type() == CV_8UC1)
+        {
+            nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, nppLut.ptr<Npp32s>(), pLevels, 256) );
+        }
+        else
+        {
+            nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step),
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, pValues3, pLevels3, nValues3) );
+        }
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+}
+
+#endif //  (CUDA_VERSION >= 5000)
+
+Ptr<LookUpTable> cv::gpu::createLookUpTable(InputArray lut)
+{
+    return new LookUpTableImpl(lut);
 }
 
 ////////////////////////////////////////////////////////////////////////

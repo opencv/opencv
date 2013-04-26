@@ -49,6 +49,17 @@
 
 #include "opencv2/core/gpu.hpp"
 
+#if defined __GNUC__
+    #define __OPENCV_GPUARITHM_DEPR_BEFORE__
+    #define __OPENCV_GPUARITHM_DEPR_AFTER__ __attribute__ ((deprecated))
+#elif (defined WIN32 || defined _WIN32)
+    #define __OPENCV_GPUARITHM_DEPR_BEFORE__ __declspec(deprecated)
+    #define __OPENCV_GPUARITHM_DEPR_AFTER__
+#else
+    #define __OPENCV_GPUARITHM_DEPR_BEFORE__
+    #define __OPENCV_GPUARITHM_DEPR_AFTER__
+#endif
+
 namespace cv { namespace gpu {
 
 //! adds one matrix to another (dst = src1 + src2)
@@ -178,14 +189,25 @@ CV_EXPORTS void transpose(InputArray src1, OutputArray dst, Stream& stream = Str
 //! supports 1, 3 and 4 channels images with CV_8U, CV_16U, CV_32S or CV_32F depth
 CV_EXPORTS void flip(InputArray src, OutputArray dst, int flipCode, Stream& stream = Stream::Null());
 
-//! implements generalized matrix product algorithm GEMM from BLAS
-CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha,
-    const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null());
-
 //! transforms 8-bit unsigned integers using lookup table: dst(i)=lut(src(i))
 //! destination array will have the depth type as lut and the same channels number as source
 //! supports CV_8UC1, CV_8UC3 types
-CV_EXPORTS void LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& stream = Stream::Null());
+class CV_EXPORTS LookUpTable : public Algorithm
+{
+public:
+    virtual void transform(InputArray src, OutputArray dst, Stream& stream = Stream::Null()) = 0;
+};
+CV_EXPORTS Ptr<LookUpTable> createLookUpTable(InputArray lut);
+
+__OPENCV_GPUARITHM_DEPR_BEFORE__ void LUT(InputArray src, InputArray lut, OutputArray dst, Stream& stream = Stream::Null()) __OPENCV_GPUARITHM_DEPR_AFTER__;
+inline void LUT(InputArray src, InputArray lut, OutputArray dst, Stream& stream)
+{
+    createLookUpTable(lut)->transform(src, dst, stream);
+}
+
+//! implements generalized matrix product algorithm GEMM from BLAS
+CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha,
+    const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null());
 
 //! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values
 CV_EXPORTS void normalize(const GpuMat& src, GpuMat& dst, double alpha = 1, double beta = 0,
@@ -310,5 +332,8 @@ CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& resul
 CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream = Stream::Null());
 
 }} // namespace cv { namespace gpu {
+
+#undef __OPENCV_GPUARITHM_DEPR_BEFORE__
+#undef __OPENCV_GPUARITHM_DEPR_AFTER__
 
 #endif /* __OPENCV_GPUARITHM_HPP__ */
