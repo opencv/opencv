@@ -47,7 +47,7 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::gemm(const GpuMat&, const GpuMat&, double, const GpuMat&, double, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::gemm(InputArray, InputArray, double, InputArray, double, OutputArray, int, Stream&) { throw_no_cuda(); }
 
 void cv::gpu::mulSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, bool, Stream&) { throw_no_cuda(); }
 void cv::gpu::mulAndScaleSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, float, bool, Stream&) { throw_no_cuda(); }
@@ -164,23 +164,27 @@ namespace
 ////////////////////////////////////////////////////////////////////////
 // gemm
 
-void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const GpuMat& src3, double beta, GpuMat& dst, int flags, Stream& stream)
+void cv::gpu::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray _src3, double beta, OutputArray _dst, int flags, Stream& stream)
 {
 #ifndef HAVE_CUBLAS
-    (void)src1;
-    (void)src2;
-    (void)alpha;
-    (void)src3;
-    (void)beta;
-    (void)dst;
-    (void)flags;
-    (void)stream;
-    CV_Error(cv::Error::StsNotImplemented, "The library was build without CUBLAS");
+    (void) _src1;
+    (void) _src2;
+    (void) alpha;
+    (void) _src3;
+    (void) beta;
+    (void) _dst;
+    (void) flags;
+    (void) stream;
+    CV_Error(:Error::StsNotImplemented, "The library was build without CUBLAS");
 #else
     // CUBLAS works with column-major matrices
 
-    CV_Assert(src1.type() == CV_32FC1 || src1.type() == CV_32FC2 || src1.type() == CV_64FC1 || src1.type() == CV_64FC2);
-    CV_Assert(src2.type() == src1.type() && (src3.empty() || src3.type() == src1.type()));
+    GpuMat src1 = _src1.getGpuMat();
+    GpuMat src2 = _src2.getGpuMat();
+    GpuMat src3 = _src3.getGpuMat();
+
+    CV_Assert( src1.type() == CV_32FC1 || src1.type() == CV_32FC2 || src1.type() == CV_64FC1 || src1.type() == CV_64FC2 );
+    CV_Assert( src2.type() == src1.type() && (src3.empty() || src3.type() == src1.type()) );
 
     if (src1.depth() == CV_64F)
     {
@@ -203,10 +207,11 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     Size src3Size = tr3 ? Size(src3.rows, src3.cols) : src3.size();
     Size dstSize(src2Size.width, src1Size.height);
 
-    CV_Assert(src1Size.width == src2Size.height);
-    CV_Assert(src3.empty() || src3Size == dstSize);
+    CV_Assert( src1Size.width == src2Size.height );
+    CV_Assert( src3.empty() || src3Size == dstSize );
 
-    dst.create(dstSize, src1.type());
+    _dst.create(dstSize, src1.type());
+    GpuMat dst = _dst.getGpuMat();
 
     if (beta != 0)
     {

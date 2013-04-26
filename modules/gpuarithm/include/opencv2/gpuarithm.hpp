@@ -350,9 +350,8 @@ static inline void sqrIntegral(InputArray src, OutputArray sqsum, Stream& stream
     sqrIntegral(src, sqsum, buffer, stream);
 }
 
-//! implements generalized matrix product algorithm GEMM from BLAS
-CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha,
-    const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null());
+CV_EXPORTS void gemm(InputArray src1, InputArray src2, double alpha,
+                     InputArray src3, double beta, OutputArray dst, int flags = 0, Stream& stream = Stream::Null());
 
 //! performs per-element multiplication of two full (not packed) Fourier spectrums
 //! supports 32FC2 matrixes only (interleaved format)
