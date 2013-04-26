@@ -54,9 +54,7 @@ void cv::gpu::mulAndScaleSpectrums(InputArray, InputArray, OutputArray, int, flo
 
 void cv::gpu::dft(InputArray, OutputArray, Size, int, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::ConvolveBuf::create(Size, Size) { throw_no_cuda(); }
-void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool) { throw_no_cuda(); }
-void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&, Stream&) { throw_no_cuda(); }
+Ptr<Convolution> cv::gpu::createConvolution(Size) { throw_no_cuda(); return Ptr<Convolution>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -486,136 +484,152 @@ void cv::gpu::dft(InputArray _src, OutputArray _dst, Size dft_size, int flags, S
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// convolve
+// Convolution
 
-void cv::gpu::ConvolveBuf::create(Size image_size, Size templ_size)
+#ifdef HAVE_CUFFT
+
+namespace
 {
-    result_size = Size(image_size.width - templ_size.width + 1,
-                       image_size.height - templ_size.height + 1);
-
-    block_size = user_block_size;
-    if (user_block_size.width == 0 || user_block_size.height == 0)
-        block_size = estimateBlockSize(result_size, templ_size);
-
-    dft_size.width = 1 << int(ceil(std::log(block_size.width + templ_size.width - 1.) / std::log(2.)));
-    dft_size.height = 1 << int(ceil(std::log(block_size.height + templ_size.height - 1.) / std::log(2.)));
-
-    // CUFFT has hard-coded kernels for power-of-2 sizes (up to 8192),
-    // see CUDA Toolkit 4.1 CUFFT Library Programming Guide
-    if (dft_size.width > 8192)
-        dft_size.width = getOptimalDFTSize(block_size.width + templ_size.width - 1);
-    if (dft_size.height > 8192)
-        dft_size.height = getOptimalDFTSize(block_size.height + templ_size.height - 1);
-
-    // To avoid wasting time doing small DFTs
-    dft_size.width = std::max(dft_size.width, 512);
-    dft_size.height = std::max(dft_size.height, 512);
-
-    createContinuous(dft_size, CV_32F, image_block);
-    createContinuous(dft_size, CV_32F, templ_block);
-    createContinuous(dft_size, CV_32F, result_data);
-
-    spect_len = dft_size.height * (dft_size.width / 2 + 1);
-    createContinuous(1, spect_len, CV_32FC2, image_spect);
-    createContinuous(1, spect_len, CV_32FC2, templ_spect);
-    createContinuous(1, spect_len, CV_32FC2, result_spect);
-
-    // Use maximum result matrix block size for the estimated DFT block size
-    block_size.width = std::min(dft_size.width - templ_size.width + 1, result_size.width);
-    block_size.height = std::min(dft_size.height - templ_size.height + 1, result_size.height);
-}
-
-
-Size cv::gpu::ConvolveBuf::estimateBlockSize(Size result_size, Size /*templ_size*/)
-{
-    int width = (result_size.width + 2) / 3;
-    int height = (result_size.height + 2) / 3;
-    width = std::min(width, result_size.width);
-    height = std::min(height, result_size.height);
-    return Size(width, height);
-}
-
-
-void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr)
-{
-    ConvolveBuf buf;
-    gpu::convolve(image, templ, result, ccorr, buf);
-}
-
-void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream)
-{
-#ifndef HAVE_CUFFT
-    (void) image;
-    (void) templ;
-    (void) result;
-    (void) ccorr;
-    (void) buf;
-    (void) stream;
-    throw_no_cuda();
-#else
-    CV_Assert(image.type() == CV_32F);
-    CV_Assert(templ.type() == CV_32F);
-
-    buf.create(image.size(), templ.size());
-    result.create(buf.result_size, CV_32F);
-
-    Size& block_size = buf.block_size;
-    Size& dft_size = buf.dft_size;
-
-    GpuMat& image_block = buf.image_block;
-    GpuMat& templ_block = buf.templ_block;
-    GpuMat& result_data = buf.result_data;
-
-    GpuMat& image_spect = buf.image_spect;
-    GpuMat& templ_spect = buf.templ_spect;
-    GpuMat& result_spect = buf.result_spect;
-
-    cufftHandle planR2C, planC2R;
-    cufftSafeCall(cufftPlan2d(&planC2R, dft_size.height, dft_size.width, CUFFT_C2R));
-    cufftSafeCall(cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C));
-
-    cufftSafeCall( cufftSetStream(planR2C, StreamAccessor::getStream(stream)) );
-    cufftSafeCall( cufftSetStream(planC2R, StreamAccessor::getStream(stream)) );
-
-    GpuMat templ_roi(templ.size(), CV_32F, templ.data, templ.step);
-    gpu::copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
-                        templ_block.cols - templ_roi.cols, 0, Scalar(), stream);
-
-    cufftSafeCall(cufftExecR2C(planR2C, templ_block.ptr<cufftReal>(),
-                               templ_spect.ptr<cufftComplex>()));
-
-    // Process all blocks of the result matrix
-    for (int y = 0; y < result.rows; y += block_size.height)
+    class ConvolutionImpl : public Convolution
     {
-        for (int x = 0; x < result.cols; x += block_size.width)
-        {
-            Size image_roi_size(std::min(x + dft_size.width, image.cols) - x,
-                                std::min(y + dft_size.height, image.rows) - y);
-            GpuMat image_roi(image_roi_size, CV_32F, (void*)(image.ptr<float>(y) + x),
-                             image.step);
-            gpu::copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
-                                0, image_block.cols - image_roi.cols, 0, Scalar(), stream);
+    public:
+        explicit ConvolutionImpl(Size user_block_size_) : user_block_size(user_block_size_) {}
 
-            cufftSafeCall(cufftExecR2C(planR2C, image_block.ptr<cufftReal>(),
-                                       image_spect.ptr<cufftComplex>()));
-            gpu::mulAndScaleSpectrums(image_spect, templ_spect, result_spect, 0,
-                                      1.f / dft_size.area(), ccorr, stream);
-            cufftSafeCall(cufftExecC2R(planC2R, result_spect.ptr<cufftComplex>(),
-                                       result_data.ptr<cufftReal>()));
+        void convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr = false, Stream& stream = Stream::Null());
 
-            Size result_roi_size(std::min(x + block_size.width, result.cols) - x,
-                                 std::min(y + block_size.height, result.rows) - y);
-            GpuMat result_roi(result_roi_size, result.type(),
-                              (void*)(result.ptr<float>(y) + x), result.step);
-            GpuMat result_block(result_roi_size, result_data.type(),
-                                result_data.ptr(), result_data.step);
+    private:
+        void create(Size image_size, Size templ_size);
+        static Size estimateBlockSize(Size result_size);
 
-            result_block.copyTo(result_roi, stream);
-        }
+        Size result_size;
+        Size block_size;
+        Size user_block_size;
+        Size dft_size;
+        int spect_len;
+
+        GpuMat image_spect, templ_spect, result_spect;
+        GpuMat image_block, templ_block, result_data;
+    };
+
+    void ConvolutionImpl::create(Size image_size, Size templ_size)
+    {
+        result_size = Size(image_size.width - templ_size.width + 1,
+                           image_size.height - templ_size.height + 1);
+
+        block_size = user_block_size;
+        if (user_block_size.width == 0 || user_block_size.height == 0)
+            block_size = estimateBlockSize(result_size);
+
+        dft_size.width = 1 << int(ceil(std::log(block_size.width + templ_size.width - 1.) / std::log(2.)));
+        dft_size.height = 1 << int(ceil(std::log(block_size.height + templ_size.height - 1.) / std::log(2.)));
+
+        // CUFFT has hard-coded kernels for power-of-2 sizes (up to 8192),
+        // see CUDA Toolkit 4.1 CUFFT Library Programming Guide
+        if (dft_size.width > 8192)
+            dft_size.width = getOptimalDFTSize(block_size.width + templ_size.width - 1);
+        if (dft_size.height > 8192)
+            dft_size.height = getOptimalDFTSize(block_size.height + templ_size.height - 1);
+
+        // To avoid wasting time doing small DFTs
+        dft_size.width = std::max(dft_size.width, 512);
+        dft_size.height = std::max(dft_size.height, 512);
+
+        createContinuous(dft_size, CV_32F, image_block);
+        createContinuous(dft_size, CV_32F, templ_block);
+        createContinuous(dft_size, CV_32F, result_data);
+
+        spect_len = dft_size.height * (dft_size.width / 2 + 1);
+        createContinuous(1, spect_len, CV_32FC2, image_spect);
+        createContinuous(1, spect_len, CV_32FC2, templ_spect);
+        createContinuous(1, spect_len, CV_32FC2, result_spect);
+
+        // Use maximum result matrix block size for the estimated DFT block size
+        block_size.width = std::min(dft_size.width - templ_size.width + 1, result_size.width);
+        block_size.height = std::min(dft_size.height - templ_size.height + 1, result_size.height);
     }
 
-    cufftSafeCall(cufftDestroy(planR2C));
-    cufftSafeCall(cufftDestroy(planC2R));
+    Size ConvolutionImpl::estimateBlockSize(Size result_size)
+    {
+        int width = (result_size.width + 2) / 3;
+        int height = (result_size.height + 2) / 3;
+        width = std::min(width, result_size.width);
+        height = std::min(height, result_size.height);
+        return Size(width, height);
+    }
+
+    void ConvolutionImpl::convolve(InputArray _image, InputArray _templ, OutputArray _result, bool ccorr, Stream& _stream)
+    {
+        GpuMat image = _image.getGpuMat();
+        GpuMat templ = _templ.getGpuMat();
+
+        CV_Assert( image.type() == CV_32FC1 );
+        CV_Assert( templ.type() == CV_32FC1 );
+
+        create(image.size(), templ.size());
+
+        _result.create(result_size, CV_32FC1);
+        GpuMat result = _result.getGpuMat();
+
+        cudaStream_t stream = StreamAccessor::getStream(_stream);
+
+        cufftHandle planR2C, planC2R;
+        cufftSafeCall( cufftPlan2d(&planC2R, dft_size.height, dft_size.width, CUFFT_C2R) );
+        cufftSafeCall( cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C) );
+
+        cufftSafeCall( cufftSetStream(planR2C, stream) );
+        cufftSafeCall( cufftSetStream(planC2R, stream) );
+
+        GpuMat templ_roi(templ.size(), CV_32FC1, templ.data, templ.step);
+        gpu::copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
+                            templ_block.cols - templ_roi.cols, 0, Scalar(), _stream);
+
+        cufftSafeCall( cufftExecR2C(planR2C, templ_block.ptr<cufftReal>(), templ_spect.ptr<cufftComplex>()) );
+
+        // Process all blocks of the result matrix
+        for (int y = 0; y < result.rows; y += block_size.height)
+        {
+            for (int x = 0; x < result.cols; x += block_size.width)
+            {
+                Size image_roi_size(std::min(x + dft_size.width, image.cols) - x,
+                                    std::min(y + dft_size.height, image.rows) - y);
+                GpuMat image_roi(image_roi_size, CV_32F, (void*)(image.ptr<float>(y) + x),
+                                 image.step);
+                gpu::copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
+                                    0, image_block.cols - image_roi.cols, 0, Scalar(), _stream);
+
+                cufftSafeCall(cufftExecR2C(planR2C, image_block.ptr<cufftReal>(),
+                                           image_spect.ptr<cufftComplex>()));
+                gpu::mulAndScaleSpectrums(image_spect, templ_spect, result_spect, 0,
+                                          1.f / dft_size.area(), ccorr, _stream);
+                cufftSafeCall(cufftExecC2R(planC2R, result_spect.ptr<cufftComplex>(),
+                                           result_data.ptr<cufftReal>()));
+
+                Size result_roi_size(std::min(x + block_size.width, result.cols) - x,
+                                     std::min(y + block_size.height, result.rows) - y);
+                GpuMat result_roi(result_roi_size, result.type(),
+                                  (void*)(result.ptr<float>(y) + x), result.step);
+                GpuMat result_block(result_roi_size, result_data.type(),
+                                    result_data.ptr(), result_data.step);
+
+                result_block.copyTo(result_roi, _stream);
+            }
+        }
+
+        cufftSafeCall( cufftDestroy(planR2C) );
+        cufftSafeCall( cufftDestroy(planC2R) );
+    }
+}
+
+#endif
+
+Ptr<Convolution> cv::gpu::createConvolution(Size user_block_size)
+{
+#ifndef HAVE_CUBLAS
+    (void) user_block_size;
+    CV_Error(cv::Error::StsNotImplemented, "The library was build without CUFFT");
+    return Ptr<BLAS>();
+#else
+    return new ConvolutionImpl(user_block_size);
 #endif
 }
 

@@ -228,10 +228,11 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, Convolve,
         cv::gpu::GpuMat d_templ = cv::gpu::createContinuous(templ_size, templ_size, CV_32FC1);
         d_templ.upload(templ);
 
-        cv::gpu::GpuMat dst;
-        cv::gpu::ConvolveBuf d_buf;
+        cv::Ptr<cv::gpu::Convolution> convolution = cv::gpu::createConvolution();
 
-        TEST_CYCLE() cv::gpu::convolve(d_image, d_templ, dst, ccorr, d_buf);
+        cv::gpu::GpuMat dst;
+
+        TEST_CYCLE() convolution->convolve(d_image, d_templ, dst, ccorr);
 
         GPU_SANITY_CHECK(dst);
     }

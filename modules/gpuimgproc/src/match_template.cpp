@@ -172,15 +172,16 @@ namespace
             return;
         }
 
-        gpu::ConvolveBuf convolve_buf;
-        convolve_buf.user_block_size = buf.user_block_size;
+        Ptr<gpu::Convolution> conv = gpu::createConvolution(buf.user_block_size);
 
         if (image.channels() == 1)
-            gpu::convolve(image.reshape(1), templ.reshape(1), result, true, convolve_buf, stream);
+        {
+            conv->convolve(image.reshape(1), templ.reshape(1), result, true, stream);
+        }
         else
         {
             GpuMat result_;
-            gpu::convolve(image.reshape(1), templ.reshape(1), result_, true, convolve_buf, stream);
+            conv->convolve(image.reshape(1), templ.reshape(1), result_, true, stream);
             extractFirstChannel_32F(result_, result, image.channels(), StreamAccessor::getStream(stream));
         }
     }

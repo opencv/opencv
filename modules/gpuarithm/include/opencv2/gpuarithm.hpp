@@ -374,7 +374,23 @@ CV_EXPORTS void mulAndScaleSpectrums(InputArray src1, InputArray src2, OutputArr
 //! For complex-to-real transform it is assumed that the source matrix is packed in CUFFT's format.
 CV_EXPORTS void dft(InputArray src, OutputArray dst, Size dft_size, int flags=0, Stream& stream = Stream::Null());
 
-struct CV_EXPORTS ConvolveBuf
+//! computes convolution (or cross-correlation) of two images using discrete Fourier transform
+//! supports source images of 32FC1 type only
+//! result matrix will have 32FC1 type
+class CV_EXPORTS Convolution : public Algorithm
+{
+public:
+    virtual void convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr = false, Stream& stream = Stream::Null()) = 0;
+};
+CV_EXPORTS Ptr<Convolution> createConvolution(Size user_block_size = Size());
+
+__OPENCV_GPUARITHM_DEPR_BEFORE__ void convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr = false, Stream& stream = Stream::Null()) __OPENCV_GPUARITHM_DEPR_AFTER__;
+inline void convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr , Stream& stream)
+{
+    createConvolution()->convolve(image, templ, result, ccorr, stream);
+}
+
+struct ConvolveBuf
 {
     Size result_size;
     Size block_size;
@@ -385,15 +401,15 @@ struct CV_EXPORTS ConvolveBuf
     GpuMat image_spect, templ_spect, result_spect;
     GpuMat image_block, templ_block, result_data;
 
-    void create(Size image_size, Size templ_size);
-    static Size estimateBlockSize(Size result_size, Size templ_size);
+    void create(Size, Size){}
+    static Size estimateBlockSize(Size, Size){ return Size(); }
 };
 
-//! computes convolution (or cross-correlation) of two images using discrete Fourier transform
-//! supports source images of 32FC1 type only
-//! result matrix will have 32FC1 type
-CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr = false);
-CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream = Stream::Null());
+__OPENCV_GPUARITHM_DEPR_BEFORE__ void convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr, ConvolveBuf& buf, Stream& stream = Stream::Null()) __OPENCV_GPUARITHM_DEPR_AFTER__;
+inline void convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr, ConvolveBuf& buf, Stream& stream)
+{
+    createConvolution(buf.user_block_size)->convolve(image, templ, result, ccorr, stream);
+}
 
 }} // namespace cv { namespace gpu {
 
