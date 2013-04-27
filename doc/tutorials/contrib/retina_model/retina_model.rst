@@ -235,10 +235,10 @@ Now, everything is ready to run the retina model. I propose here to allocate a r
         // if the last parameter is 'log', then activate log sampling (favour foveal vision and subsamples peripheral vision)
         if (useLogSampling)
         {
-            myRetina = new cv::Retina(inputFrame.size(), true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
+            myRetina = cv::createRetina(inputFrame.size(), true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
         }
         else// -> else allocate "classical" retina :
-            myRetina = new cv::Retina(inputFrame.size());
+            myRetina = cv::createRetina(inputFrame.size());
 
         
 Once done, the proposed code writes a default xml file that contains the default parameters of the retina. This is useful to make your own config using this template. Here generated template xml file is called *RetinaDefaultParameters.xml*.
@@ -381,7 +381,7 @@ This parameter set tunes the neural network connected to the photo-receptors, th
 
 * **horizontalCellsGain** here is a critical parameter ! If you are not interested by the mean luminance and focus on details enhancement, then, set to zero. But if you want to keep some environment luminance data, let some low spatial frequencies pass into the system and set a higher value (<1).
 
-* **hcellsTemporalConstant** similar to photo-receptors, this acts on the temporal constant of a low pass temporal filter that smooths input data. Here, a high value generates a high retina after effect while a lower value makes the retina more reactive.
+* **hcellsTemporalConstant** similar to photo-receptors, this acts on the temporal constant of a low pass temporal filter that smooths input data. Here, a high value generates a high retina after effect while a lower value makes the retina more reactive. this value should be lower than **photoreceptorsTemporalConstant** to limit strong retina after effects.
 
 * **hcellsSpatialConstant** is the spatial constant of the low pass filter of these cells filter. It specifies the lowest spatial frequency allowed in the following. Visually, a high value leads to very low spatial frequencies processing and leads to salient halo effects. Lower values reduce this effect but the limit is : do not go lower than the value of **photoreceptorsSpatialConstant**. Those 2 parameters actually specify the spatial band-pass of the retina.
 
