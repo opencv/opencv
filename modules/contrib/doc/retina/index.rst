@@ -33,11 +33,11 @@ The retina can be settled up with various parameters, by default, the retina can
     // -> foveal color vision details channel with luminance and noise correction
     void getParvo (Mat &retinaOutput_parvo);
     void getParvoRAW (Mat &retinaOutput_parvo);// retreive original output buffers without any normalisation
-    const Mat getParvo () const;// retreive original output buffers without any normalisation
+    const Mat getParvoRAW () const;// retreive original output buffers without any normalisation
     // -> peripheral monochrome motion and events (transient information) channel
     void getMagno (Mat &retinaOutput_magno);
     void getMagnoRAW (Mat &retinaOutput_magno); // retreive original output buffers without any normalisation 
-    const Mat getMagno () const;// retreive original output buffers without any normalisation
+    const Mat getMagnoRAW () const;// retreive original output buffers without any normalisation
 
     // reset retina buffers... equivalent to closing your eyes for some seconds
     void clearBuffers ();
