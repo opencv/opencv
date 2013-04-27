@@ -338,7 +338,7 @@ void RetinaColor::runColorDemultiplexing(const std::valarray<float> &multiplexed
         }
 
         // compute the gradient of the luminance
-#ifndef MAKE_PARALLEL // call the TemplateBuffer TBB clipping method
+#ifdef MAKE_PARALLEL // call the TemplateBuffer TBB clipping method
         cv::parallel_for_(cv::Range(2,_filterOutput.getNBrows()-2), Parallel_computeGradient(_filterOutput.getNBcolumns(), _filterOutput.getNBrows(), &(*_luminance)[0], &_imageGradient[0]));
 #else
         _computeGradient(&(*_luminance)[0]);
