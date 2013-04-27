@@ -14,6 +14,8 @@ Class which provides the main controls to the Gipsa/Listic labs human  retina mo
 
 * periphearal vision for sensitive transient signals detection (motion and events) : the magnocellular pathway.
 
+**NOTE : See the Retina tutorial in the tutorial/contrib section for complementary explanations.**
+
 The retina can be settled up with various parameters, by default, the retina cancels mean luminance and enforces all details of the visual scene. In order to use your own parameters, you can use at least one time the *write(std::string fs)* method which will write a proper XML file with all default parameters. Then, tweak it on your own and reload them at any time using method *setup(std::string fs)*. These methods update a *Retina::RetinaParameters* member structure that is described hereafter. ::
 
   class Retina
@@ -98,7 +100,9 @@ This retina filter code includes the research contributions of phd/research coll
 Demos and experiments !
 =======================
 
-Take a look at the C++ examples provided with OpenCV :
+**NOTE : Complementary to the following examples, have a look at the Retina tutorial in the tutorial/contrib section for complementary explanations.**
+
+Take a look at the provided C++ examples provided with OpenCV :
 
 * **samples/cpp/retinademo.cpp** shows how to use the retina module for details enhancement (Parvo channel output) and transient maps observation (Magno channel output). You can play with images, video sequences and webcam video.
     Typical uses are (provided your OpenCV installation is situated in folder *OpenCVReleaseFolder*)
@@ -121,6 +125,7 @@ Take a look at the C++ examples provided with OpenCV :
    **OpenCVReleaseFolder/bin/OpenEXRimages_HighDynamicRange_Retina_toneMapping memorial.exr**
 
       Note that some sliders are made available to allow you to play with luminance compression.
+
 
 Methods description
 ===================

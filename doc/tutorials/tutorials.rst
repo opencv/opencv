@@ -156,6 +156,21 @@ As always, we would be happy to hear your comments and receive your contribution
                  :width:  80pt
                  :alt: gpu icon
 
+*  :ref:`Table-Of-Content-Contrib`
+
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+
+   =========== =======================================================
+   |Contrib|       Discover additional contribution to OpenCV.
+
+   =========== =======================================================
+
+   .. |Contrib| image:: images/retina.jpg
+                 :height: 80pt
+                 :width:  80pt
+                 :alt: gpu icon
+
 *  :ref:`Table-Of-Content-iOS`
 
    .. tabularcolumns:: m{100pt} m{300pt}
@@ -204,5 +219,6 @@ As always, we would be happy to hear your comments and receive your contribution
    objdetect/table_of_content_objdetect/table_of_content_objdetect
    ml/table_of_content_ml/table_of_content_ml
    gpu/table_of_content_gpu/table_of_content_gpu
+   contrib/table_of_content_contrib/table_of_content_contrib
    ios/table_of_content_ios/table_of_content_ios
    general/table_of_content_general/table_of_content_general
