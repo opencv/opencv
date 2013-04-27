@@ -22,9 +22,9 @@ The retina can be settled up with various parameters, by default, the retina can
     // parameters setup instance
     struct RetinaParameters; // this class is detailled later
 
-    // constructors
-    Retina (Size inputSize);
-    Retina (Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
+    // constructors (interfaces)
+    cv::Ptr<Retina> createRetina (Size inputSize);
+    cv::Ptr<Retina> createRetina (Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
 
     // main method for input frame processing
     void run (const Mat &inputImage);
@@ -32,19 +32,19 @@ The retina can be settled up with various parameters, by default, the retina can
     // output buffers retreival methods
     // -> foveal color vision details channel with luminance and noise correction
     void getParvo (Mat &retinaOutput_parvo);
-    void getParvo (std::valarray< float > &retinaOutput_parvo);
-    const std::valarray< float > & getParvo () const;
+    void getParvoRAW (Mat &retinaOutput_parvo);// retreive original output buffers without any normalisation
+    const Mat getParvoRAW () const;// retreive original output buffers without any normalisation
     // -> peripheral monochrome motion and events (transient information) channel
     void getMagno (Mat &retinaOutput_magno);
-    void getMagno (std::valarray< float > &retinaOutput_magno);
-    const std::valarray< float > & getMagno () const;
+    void getMagnoRAW (Mat &retinaOutput_magno); // retreive original output buffers without any normalisation 
+    const Mat getMagnoRAW () const;// retreive original output buffers without any normalisation
 
     // reset retina buffers... equivalent to closing your eyes for some seconds
     void clearBuffers ();
 
     // retreive input and output buffers sizes
-    Size inputSize ();
-    Size outputSize ();
+    Size getInputSize ();
+    Size getOutputSize ();
 
     // setup methods with specific parameters specification of global xml config file loading/write
     void setup (std::string retinaParameterFile="", const bool applyDefaultSetupOnFailure=true);
@@ -127,13 +127,13 @@ Methods description
 
 Here are detailled the main methods to control the retina model
 
-Retina::Retina
+Ptr<Retina>::createRetina
 ++++++++++++++
 
-.. ocv:function:: Retina::Retina(Size inputSize)
-.. ocv:function:: Retina::Retina(Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod = RETINA_COLOR_BAYER, const bool useRetinaLogSampling = false, const double reductionFactor = 1.0, const double samplingStrenght = 10.0 )
+.. ocv:function:: Ptr<Retina> createRetina(Size inputSize)
+.. ocv:function:: Ptr<Retina> createRetina(Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod = RETINA_COLOR_BAYER, const bool useRetinaLogSampling = false, const double reductionFactor = 1.0, const double samplingStrenght = 10.0 )
 
-    Constructors
+    Constructors from standardized interfaces : retreive a smart pointer to a Retina instance
 
     :param inputSize: the input frame size
     :param colorMode: the chosen processing mode : with or without color processing
@@ -209,8 +209,21 @@ Retina::getParameters
 
     :return: the current parameters setup
 
-Retina::inputSize
-+++++++++++++++++
+Retina::getParvo/getMagno
++++++++++++++++++++++++++
+
+.. ocv:function:: void getParvo(Mat parvoOutput)
+.. ocv:function:: void getParvoRAW(Mat parvoOutput)
+.. ocv:function:: Mat getParvoRAW() 
+    Retrieve the Parvocellular channel (details with color) output normalized between range [0;255] if not 'RAW'.
+
+.. ocv:function:: void getParvo(Mat parvoOutput)
+.. ocv:function:: void getParvoRAW(Mat parvoOutput)
+.. ocv:function:: Mat getParvoRAW() 
+    Retrieve the Magnocellular channel (transient events, grayscale) output normalized between range [0;255] if not 'RAW'.
+
+Retina::getInputSize
+++++++++++++++++++++
 
 .. ocv:function:: Size Retina::inputSize()
 
@@ -218,8 +231,8 @@ Retina::inputSize
 
     :return: the retina input buffer size
 
-Retina::outputSize
-++++++++++++++++++
+Retina::getOutputSize
++++++++++++++++++++++
 
 .. ocv:function:: Size Retina::outputSize()
 
@@ -329,7 +342,7 @@ Parameters structure for better clarity, check explenations on the comments of m
                   photoreceptorsTemporalConstant(0.5f),// the time constant of the first order low pass filter of the photoreceptors, use it to cut high temporal frequencies (noise or fast motion), unit is frames, typical value is 1 frame
                   photoreceptorsSpatialConstant(0.53f),// the spatial constant of the first order low pass filter of the photoreceptors, use it to cut high spatial frequencies (noise or thick contours), unit is pixels, typical value is 1 pixel
                   horizontalCellsGain(0.0f),//gain of the horizontal cells network, if 0, then the mean value of the output is zero, if the parameter is near 1, then, the luminance is not filtered and is still reachable at the output, typicall value is 0
-                  hcellsTemporalConstant(1.f),// the time constant of the first order low pass filter of the horizontal cells, use it to cut low temporal frequencies (local luminance variations), unit is frames, typical value is 1 frame, as the photoreceptors
+                  hcellsTemporalConstant(1.f),// the time constant of the first order low pass filter of the horizontal cells, use it to cut low temporal frequencies (local luminance variations), unit is frames, typical value is 1 frame, as the photoreceptors. Reduce to 0.5 to limit retina after effects.
                   hcellsSpatialConstant(7.f),//the spatial constant of the first order low pass filter of the horizontal cells, use it to cut low spatial frequencies (local luminance), unit is pixels, typical value is 5 pixel, this value is also used for local contrast computing when computing the local contrast adaptation at the ganglion cells level (Inner Plexiform Layer parvocellular channel model)
                   ganglionCellsSensitivity(0.7f)//the compression strengh of the ganglion cells local adaptation output, set a value between 0.6 and 1 for best results, a high value increases more the low value sensitivity... and the output saturates faster, recommended value: 0.7
                   {};// default setup
