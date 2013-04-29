@@ -241,7 +241,18 @@ inline void morphologyEx(InputArray src, OutputArray dst, int op, InputArray ker
     f->apply(src, dst, stream);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Image Rank Filter
 
+//! Result pixel value is the maximum of pixel values under the rectangular mask region
+CV_EXPORTS Ptr<Filter> createBoxMaxFilter(int srcType, Size ksize,
+                                          Point anchor = Point(-1, -1),
+                                          int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+
+//! Result pixel value is the maximum of pixel values under the rectangular mask region
+CV_EXPORTS Ptr<Filter> createBoxMinFilter(int srcType, Size ksize,
+                                          Point anchor = Point(-1, -1),
+                                          int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
 
 
@@ -325,12 +336,6 @@ CV_EXPORTS Ptr<BaseColumnFilter_GPU> getColumnSumFilter_GPU(int sumType, int dst
 
 
 
-
-//! returns maximum filter
-CV_EXPORTS Ptr<BaseFilter_GPU> getMaxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1,-1));
-
-//! returns minimum filter
-CV_EXPORTS Ptr<BaseFilter_GPU> getMinFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1,-1));
 
 
 

@@ -63,6 +63,8 @@ Ptr<Filter> cv::gpu::createGaussianFilter(int, int, Size, double, double, int, i
 
 Ptr<Filter> cv::gpu::createMorphologyFilter(int, int, InputArray, Point, int) { throw_no_cuda(); return Ptr<Filter>(); }
 
+Ptr<Filter> cv::gpu::createBoxMaxFilter(int, Size, Point, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::gpu::createBoxMinFilter(int, Size, Point, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 
 
 
@@ -70,8 +72,6 @@ Ptr<Filter> cv::gpu::createMorphologyFilter(int, int, InputArray, Point, int) { 
 
 Ptr<BaseRowFilter_GPU> cv::gpu::getRowSumFilter_GPU(int, int, int, int) { throw_no_cuda(); return Ptr<BaseRowFilter_GPU>(0); }
 Ptr<BaseColumnFilter_GPU> cv::gpu::getColumnSumFilter_GPU(int, int, int, int) { throw_no_cuda(); return Ptr<BaseColumnFilter_GPU>(0); }
-Ptr<BaseFilter_GPU> cv::gpu::getMaxFilter_GPU(int, int, const Size&, Point) { throw_no_cuda(); return Ptr<BaseFilter_GPU>(0); }
-Ptr<BaseFilter_GPU> cv::gpu::getMinFilter_GPU(int, int, const Size&, Point) { throw_no_cuda(); return Ptr<BaseFilter_GPU>(0); }
 
 
 
@@ -783,6 +783,99 @@ Ptr<Filter> cv::gpu::createMorphologyFilter(int op, int srcType, InputArray kern
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Image Rank Filter
+
+namespace
+{
+    enum
+    {
+        RANK_MAX,
+        RANK_MIN
+    };
+
+    class NPPRankFilter : public Filter
+    {
+    public:
+        NPPRankFilter(int op, int srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal);
+
+        void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+
+    private:
+        typedef NppStatus (*nppFilterRank_t)(const Npp8u* pSrc, Npp32s nSrcStep, Npp8u* pDst, Npp32s nDstStep, NppiSize oSizeROI,
+                                             NppiSize oMaskSize, NppiPoint oAnchor);
+
+        int type_;
+        Size ksize_;
+        Point anchor_;
+        int borderMode_;
+        Scalar borderVal_;
+        nppFilterRank_t func_;
+
+        GpuMat srcBorder_;
+    };
+
+    NPPRankFilter::NPPRankFilter(int op, int srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal) :
+        type_(srcType), ksize_(ksize), anchor_(anchor), borderMode_(borderMode), borderVal_(borderVal)
+    {
+        static const nppFilterRank_t maxFuncs[] = {0, nppiFilterMax_8u_C1R, 0, 0, nppiFilterMax_8u_C4R};
+        static const nppFilterRank_t minFuncs[] = {0, nppiFilterMin_8u_C1R, 0, 0, nppiFilterMin_8u_C4R};
+
+        CV_Assert( srcType == CV_8UC1 || srcType == CV_8UC4 );
+
+        normalizeAnchor(anchor_, ksize_);
+
+        if (op == RANK_MAX)
+            func_ = maxFuncs[CV_MAT_CN(srcType)];
+        else
+            func_ = minFuncs[CV_MAT_CN(srcType)];
+    }
+
+    void NPPRankFilter::apply(InputArray _src, OutputArray _dst, Stream& _stream)
+    {
+        GpuMat src = _src.getGpuMat();
+        CV_Assert( src.type() == type_ );
+
+        gpu::copyMakeBorder(src, srcBorder_, ksize_.height, ksize_.height, ksize_.width, ksize_.width, borderMode_, borderVal_, _stream);
+
+        _dst.create(src.size(), src.type());
+        GpuMat dst = _dst.getGpuMat();
+
+        GpuMat srcRoi = srcBorder_(Rect(ksize_.width, ksize_.height, src.cols, src.rows));
+
+        cudaStream_t stream = StreamAccessor::getStream(_stream);
+        NppStreamHandler h(stream);
+
+        NppiSize oSizeROI;
+        oSizeROI.width = src.cols;
+        oSizeROI.height = src.rows;
+
+        NppiSize oMaskSize;
+        oMaskSize.height = ksize_.height;
+        oMaskSize.width = ksize_.width;
+
+        NppiPoint oAnchor;
+        oAnchor.x = anchor_.x;
+        oAnchor.y = anchor_.y;
+
+        nppSafeCall( func_(srcRoi.ptr<Npp8u>(), static_cast<int>(srcRoi.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step),
+                           oSizeROI, oMaskSize, oAnchor) );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+}
+
+Ptr<Filter> cv::gpu::createBoxMaxFilter(int srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
+{
+    return new NPPRankFilter(RANK_MAX, srcType, ksize, anchor, borderMode, borderVal);
+}
+
+Ptr<Filter> cv::gpu::createBoxMinFilter(int srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
+{
+    return new NPPRankFilter(RANK_MIN, srcType, ksize, anchor, borderMode, borderVal);
+}
+
 
 
 
@@ -923,65 +1016,5 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getColumnSumFilter_GPU(int sumType, int dstTy
 }
 
 
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Image Rank Filter
-
-namespace
-{
-    typedef NppStatus (*nppFilterRank_t)(const Npp8u * pSrc, Npp32s nSrcStep, Npp8u * pDst, Npp32s nDstStep, NppiSize oSizeROI,
-        NppiSize oMaskSize, NppiPoint oAnchor);
-
-    struct NPPRankFilter : public BaseFilter_GPU
-    {
-        NPPRankFilter(const Size& ksize_, const Point& anchor_, nppFilterRank_t func_) : BaseFilter_GPU(ksize_, anchor_), func(func_) {}
-
-        virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& s = Stream::Null())
-        {
-            NppiSize sz;
-            sz.width = src.cols;
-            sz.height = src.rows;
-            NppiSize oKernelSize;
-            oKernelSize.height = ksize.height;
-            oKernelSize.width = ksize.width;
-            NppiPoint oAnchor;
-            oAnchor.x = anchor.x;
-            oAnchor.y = anchor.y;
-
-            cudaStream_t stream = StreamAccessor::getStream(s);
-
-            NppStreamHandler h(stream);
-
-            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, oKernelSize, oAnchor) );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-
-        nppFilterRank_t func;
-    };
-}
-
-Ptr<BaseFilter_GPU> cv::gpu::getMaxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor)
-{
-    static const nppFilterRank_t nppFilterRank_callers[] = {0, nppiFilterMax_8u_C1R, 0, 0, nppiFilterMax_8u_C4R};
-
-    CV_Assert((srcType == CV_8UC1 || srcType == CV_8UC4) && dstType == srcType);
-
-    normalizeAnchor(anchor, ksize);
-
-    return Ptr<BaseFilter_GPU>(new NPPRankFilter(ksize, anchor, nppFilterRank_callers[CV_MAT_CN(srcType)]));
-}
-
-Ptr<BaseFilter_GPU> cv::gpu::getMinFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor)
-{
-    static const nppFilterRank_t nppFilterRank_callers[] = {0, nppiFilterMin_8u_C1R, 0, 0, nppiFilterMin_8u_C4R};
-
-    CV_Assert((srcType == CV_8UC1 || srcType == CV_8UC4) && dstType == srcType);
-
-    normalizeAnchor(anchor, ksize);
-
-    return Ptr<BaseFilter_GPU>(new NPPRankFilter(ksize, anchor, nppFilterRank_callers[CV_MAT_CN(srcType)]));
-}
 
 #endif
