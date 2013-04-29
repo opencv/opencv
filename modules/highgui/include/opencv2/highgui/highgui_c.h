@@ -305,6 +305,8 @@ enum
     CV_CAP_OPENNI_ASUS =910,   // OpenNI (for Asus Xtion)
 
     CV_CAP_ANDROID  =1000,  // Android
+    CV_CAP_ANDROID_BACK =CV_CAP_ANDROID+99, // Android back camera
+    CV_CAP_ANDROID_FRONT =CV_CAP_ANDROID+98, // Android front camera
 
     CV_CAP_XIAPI    =1100,   // XIMEA Camera API
 
