@@ -20,4 +20,4 @@ if (not os.path.exists(TARGET_PATH)):
 
 for filename in os.listdir("."):
     if ("dia" == filename[-3:]):
-    os.system("%s --export %s %s" % (DiaPath, os.path.join(TARGET_PATH, filename[0:len(filename)-4] + ".png"), filename))
+        os.system("%s --export %s %s" % (DiaPath, os.path.join(TARGET_PATH, filename[0:len(filename)-4] + ".png"), filename))

@@ -22,7 +22,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -47,15 +47,15 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::StereoBM_GPU::StereoBM_GPU() { throw_nogpu(); }
-cv::gpu::StereoBM_GPU::StereoBM_GPU(int, int, int) { throw_nogpu(); }
+cv::gpu::StereoBM_GPU::StereoBM_GPU() { throw_no_cuda(); }
+cv::gpu::StereoBM_GPU::StereoBM_GPU(int, int, int) { throw_no_cuda(); }
 
-bool cv::gpu::StereoBM_GPU::checkIfGpuCallReasonable() { throw_nogpu(); return false; }
-void cv::gpu::StereoBM_GPU::operator() ( const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+bool cv::gpu::StereoBM_GPU::checkIfGpuCallReasonable() { throw_no_cuda(); return false; }
+void cv::gpu::StereoBM_GPU::operator() ( const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace stereobm
     {
@@ -101,7 +101,7 @@ namespace
 {
     void stereo_bm_gpu_operator( GpuMat& minSSD,  GpuMat& leBuf, GpuMat&  riBuf,  int preset, int ndisp, int winSize, float avergeTexThreshold, const GpuMat& left, const GpuMat& right, GpuMat& disparity, cudaStream_t stream)
     {
-        using namespace ::cv::gpu::device::stereobm;
+        using namespace ::cv::gpu::cudev::stereobm;
 
         CV_Assert(left.rows == right.rows && left.cols == right.cols);
         CV_Assert(left.type() == CV_8UC1);

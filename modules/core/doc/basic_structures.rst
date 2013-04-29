@@ -175,7 +175,6 @@ The class represents rotated (i.e. not up-right) rectangles on a plane. Each rec
 
     .. ocv:function:: RotatedRect::RotatedRect()
     .. ocv:function:: RotatedRect::RotatedRect(const Point2f& center, const Size2f& size, float angle)
-    .. ocv:function:: RotatedRect::RotatedRect(const CvBox2D& box)
 
         :param center: The rectangle mass center.
         :param size: Width and height of the rectangle.
@@ -184,7 +183,6 @@ The class represents rotated (i.e. not up-right) rectangles on a plane. Each rec
 
     .. ocv:function:: void RotatedRect::points( Point2f pts[] ) const
     .. ocv:function:: Rect RotatedRect::boundingRect() const
-    .. ocv:function:: RotatedRect::operator CvBox2D() const
 
         :param pts: The points array for storing rectangle vertices.
 
@@ -210,16 +208,33 @@ The sample below demonstrates how to use RotatedRect:
 
 .. seealso::
 
-    :ocv:cfunc:`CamShift`,
-    :ocv:func:`fitEllipse`,
-    :ocv:func:`minAreaRect`,
+    :ocv:func:`CamShift` ,
+    :ocv:func:`fitEllipse` ,
+    :ocv:func:`minAreaRect` ,
     :ocv:struct:`CvBox2D`
 
 TermCriteria
 ------------
 .. ocv:class:: TermCriteria
 
-Template class defining termination criteria for iterative algorithms.
+  The class defining termination criteria for iterative algorithms. You can initialize it by default constructor and then override any parameters, or the structure may be fully initialized using the advanced variant of the constructor.
+
+TermCriteria::TermCriteria
+--------------------------
+The constructors.
+
+.. ocv:function:: TermCriteria::TermCriteria()
+
+.. ocv:function:: TermCriteria::TermCriteria(int type, int maxCount, double epsilon)
+
+    :param type: The type of termination criteria: ``TermCriteria::COUNT``, ``TermCriteria::EPS`` or ``TermCriteria::COUNT`` + ``TermCriteria::EPS``.
+
+    :param maxCount: The maximum number of iterations or elements to compute.
+
+    :param epsilon: The desired accuracy or change in parameters at which the iterative algorithm stops.
+
+    :param criteria: Termination criteria in the deprecated ``CvTermCriteria`` format.
+
 
 Matx
 ----
@@ -344,6 +359,96 @@ The static method ``Range::all()`` returns a special variable that means "the wh
     }
 
 
+KeyPoint
+--------
+.. ocv:class:: KeyPoint
+
+  Data structure for salient point detectors.
+
+  .. ocv:member:: Point2f pt
+
+     coordinates of the keypoint
+
+  .. ocv:member:: float size
+
+     diameter of the meaningful keypoint neighborhood
+
+  .. ocv:member:: float angle
+
+     computed orientation of the keypoint (-1 if not applicable). Its possible values are in a range [0,360) degrees. It is measured relative to image coordinate system (y-axis is directed downward), ie in clockwise.
+
+  .. ocv:member:: float response
+
+     the response by which the most strong keypoints have been selected. Can be used for further sorting or subsampling
+
+  .. ocv:member:: int octave
+
+     octave (pyramid layer) from which the keypoint has been extracted
+
+  .. ocv:member:: int class_id
+
+     object id that can be used to clustered keypoints by an object they belong to
+
+KeyPoint::KeyPoint
+------------------
+The keypoint constructors
+
+.. ocv:function:: KeyPoint::KeyPoint()
+
+.. ocv:function:: KeyPoint::KeyPoint(Point2f _pt, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
+
+.. ocv:function:: KeyPoint::KeyPoint(float x, float y, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
+
+.. ocv:pyfunction:: cv2.KeyPoint([x, y, _size[, _angle[, _response[, _octave[, _class_id]]]]]) -> <KeyPoint object>
+
+    :param x: x-coordinate of the keypoint
+
+    :param y: y-coordinate of the keypoint
+
+    :param _pt: x & y coordinates of the keypoint
+
+    :param _size: keypoint diameter
+
+    :param _angle: keypoint orientation
+
+    :param _response: keypoint detector response on the keypoint (that is, strength of the keypoint)
+
+    :param _octave: pyramid octave in which the keypoint has been detected
+
+    :param _class_id: object id
+
+
+DMatch
+------
+.. ocv:class:: DMatch
+
+Class for matching keypoint descriptors: query descriptor index,
+train descriptor index, train image index, and distance between descriptors. ::
+
+    class DMatch
+    {
+    public:
+        DMatch() : queryIdx(-1), trainIdx(-1), imgIdx(-1),
+                   distance(std::numeric_limits<float>::max()) {}
+        DMatch( int _queryIdx, int _trainIdx, float _distance ) :
+                queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(-1),
+                distance(_distance) {}
+        DMatch( int _queryIdx, int _trainIdx, int _imgIdx, float _distance ) :
+                queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(_imgIdx),
+                distance(_distance) {}
+
+        int queryIdx; // query descriptor index
+        int trainIdx; // train descriptor index
+        int imgIdx;   // train image index
+
+        float distance;
+
+        // less is better
+        bool operator<( const DMatch &m ) const;
+    };
+
+
+
 .. _Ptr:
 
 Ptr
@@ -394,27 +499,47 @@ Template class for smart reference-counting pointers ::
     };
 
 
-The ``Ptr<_Tp>`` class is a template class that wraps pointers of the corresponding type. It is similar to ``shared_ptr`` that is part of the Boost library (
-http://www.boost.org/doc/libs/1_40_0/libs/smart_ptr/shared_ptr.htm
-) and also part of the `C++0x <http://en.wikipedia.org/wiki/C++0x>`_
-standard.
+The ``Ptr<_Tp>`` class is a template class that wraps pointers of the corresponding type. It is
+similar to ``shared_ptr`` that is part of the Boost library
+(http://www.boost.org/doc/libs/1_40_0/libs/smart_ptr/shared_ptr.htm) and also part of the
+`C++0x <http://en.wikipedia.org/wiki/C++0x>`_ standard.
 
 This class provides the following options:
 
 *
-    Default constructor, copy constructor, and assignment operator for an arbitrary C++ class or a C structure. For some objects, like files, windows, mutexes, sockets, and others, a copy constructor or an assignment operator are difficult to define. For some other objects, like complex classifiers in OpenCV, copy constructors are absent and not easy to implement. Finally, some of complex OpenCV and your own data structures may be written in C. However, copy constructors and default constructors can simplify programming a lot. Besides, they are often required (for example, by STL containers). By wrapping a pointer to such a complex object ``TObj``     to ``Ptr<TObj>`` , you automatically get all of the necessary constructors and the assignment operator.
+    Default constructor, copy constructor, and assignment operator for an arbitrary C++ class
+    or a C structure. For some objects, like files, windows, mutexes, sockets, and others, a copy
+    constructor or an assignment operator are difficult to define. For some other objects, like
+    complex classifiers in OpenCV, copy constructors are absent and not easy to implement. Finally,
+    some of complex OpenCV and your own data structures may be written in C.
+    However, copy constructors and default constructors can simplify programming a lot.Besides,
+    they are often required (for example, by STL containers). By wrapping a pointer to such a
+    complex object ``TObj`` to ``Ptr<TObj>``, you automatically get all of the necessary
+    constructors and the assignment operator.
 
 *
-    *O(1)* complexity of the above-mentioned operations. While some structures, like ``std::vector``,   provide a copy constructor and an assignment operator, the operations may take a considerable amount of time if the data structures are large. But if the structures are put into ``Ptr<>``     , the overhead is small and independent of the data size.
+    *O(1)* complexity of the above-mentioned operations. While some structures, like ``std::vector``,
+    provide a copy constructor and an assignment operator, the operations may take a considerable
+    amount of time if the data structures are large. But if the structures are put into ``Ptr<>``,
+    the overhead is small and independent of the data size.
 
 *
-    Automatic destruction, even for C structures. See the example below with ``FILE*``     .
+    Automatic destruction, even for C structures. See the example below with ``FILE*``.
 
 *
-    Heterogeneous collections of objects. The standard STL and most other C++ and OpenCV containers can store only objects of the same type and the same size. The classical solution to store objects of different types in the same container is to store pointers to the base class ``base_class_t*``     instead but then you loose the automatic memory management. Again, by using ``Ptr<base_class_t>()``     instead of the raw pointers, you can solve the problem.
+    Heterogeneous collections of objects. The standard STL and most other C++ and OpenCV containers
+    can store only objects of the same type and the same size. The classical solution to store objects
+    of different types in the same container is to store pointers to the base class ``base_class_t*``
+    instead but then you loose the automatic memory management. Again, by using ``Ptr<base_class_t>()``
+    instead of the raw pointers, you can solve the problem.
 
-The ``Ptr`` class treats the wrapped object as a black box. The reference counter is allocated and managed separately. The only thing the pointer class needs to know about the object is how to deallocate it. This knowledge is encapsulated in the ``Ptr::delete_obj()`` method that is called when the reference counter becomes 0. If the object is a C++ class instance, no additional coding is needed, because the default implementation of this method calls ``delete obj;`` .
-However, if the object is deallocated in a different way, the specialized method should be created. For example, if you want to wrap ``FILE`` , the ``delete_obj`` may be implemented as follows: ::
+The ``Ptr`` class treats the wrapped object as a black box. The reference counter is allocated and
+managed separately. The only thing the pointer class needs to know about the object is how to
+deallocate it. This knowledge is encapsulated in the ``Ptr::delete_obj()`` method that is called when
+the reference counter becomes 0. If the object is a C++ class instance, no additional coding is
+needed, because the default implementation of this method calls ``delete obj;``. However, if the
+object is deallocated in a different way, the specialized method should be created. For example,
+if you want to wrap ``FILE``, the ``delete_obj`` may be implemented as follows: ::
 
     template<> inline void Ptr<FILE>::delete_obj()
     {
@@ -432,7 +557,73 @@ However, if the object is deallocated in a different way, the specialized method
     // the file will be closed automatically by the Ptr<FILE> destructor.
 
 
-.. note:: The reference increment/decrement operations are implemented as atomic operations, and therefore it is normally safe to use the classes in multi-threaded applications. The same is true for :ocv:class:`Mat` and other C++ OpenCV classes that operate on the reference counters.
+.. note:: The reference increment/decrement operations are implemented as atomic operations,
+          and therefore it is normally safe to use the classes in multi-threaded applications.
+          The same is true for :ocv:class:`Mat` and other C++ OpenCV classes that operate on
+          the reference counters.
+
+Ptr::Ptr
+--------
+Various Ptr constructors.
+
+.. ocv:function:: Ptr::Ptr()
+.. ocv:function:: Ptr::Ptr(_Tp* _obj)
+.. ocv:function:: Ptr::Ptr(const Ptr& ptr)
+
+Ptr::~Ptr
+---------
+The Ptr destructor.
+
+.. ocv:function:: Ptr::~Ptr()
+
+Ptr::operator =
+----------------
+Assignment operator.
+
+.. ocv:function:: Ptr& Ptr::operator = (const Ptr& ptr)
+
+Decrements own reference counter (with ``release()``) and increments ptr's reference counter.
+
+Ptr::addref
+-----------
+Increments reference counter.
+
+.. ocv:function:: void Ptr::addref()
+
+Ptr::release
+------------
+Decrements reference counter; when it becomes 0, ``delete_obj()`` is called.
+
+.. ocv:function:: void Ptr::release()
+
+Ptr::delete_obj
+---------------
+User-specified custom object deletion operation. By default, ``delete obj;`` is called.
+
+.. ocv:function:: void Ptr::delete_obj()
+
+Ptr::empty
+----------
+Returns true if obj == 0;
+
+bool empty() const;
+
+Ptr::operator ->
+----------------
+Provide access to the object fields and methods.
+
+ .. ocv:function:: template<typename _Tp> _Tp* Ptr::operator -> ()
+ .. ocv:function:: template<typename _Tp> const _Tp* Ptr::operator -> () const
+
+
+Ptr::operator _Tp*
+------------------
+Returns the underlying object pointer. Thanks to the methods, the ``Ptr<_Tp>`` can be used instead
+of ``_Tp*``.
+
+ .. ocv:function:: template<typename _Tp> Ptr::operator _Tp* ()
+ .. ocv:function:: template<typename _Tp> Ptr::operator const _Tp*() const
+
 
 Mat
 ---
@@ -470,9 +661,9 @@ OpenCV C++ n-dimensional dense array class ::
 
 
 The class ``Mat`` represents an n-dimensional dense numerical single-channel or multi-channel array. It can be used to store real or complex-valued vectors and matrices, grayscale or color images, voxel volumes, vector fields, point clouds, tensors, histograms (though, very high-dimensional histograms may be better stored in a ``SparseMat`` ). The data layout of the array
-:math:`M` is defined by the array ``M.step[]`` , so that the address of element
-:math:`(i_0,...,i_{M.dims-1})` , where
-:math:`0\leq i_k<M.size[k]` , is computed as:
+:math:`M` is defined by the array ``M.step[]``, so that the address of element
+:math:`(i_0,...,i_{M.dims-1})`, where
+:math:`0\leq i_k<M.size[k]`, is computed as:
 
 .. math::
 
@@ -505,7 +696,7 @@ There are many different ways to create a ``Mat`` object. The most popular optio
 
     ..
 
-    As noted in the introduction to this chapter, ``create()``      allocates only  a new array when the shape or type of the current array are different from the specified ones.
+    As noted in the introduction to this chapter, ``create()`` allocates only  a new array when the shape or type of the current array are different from the specified ones.
 
 *
 
@@ -519,7 +710,7 @@ There are many different ways to create a ``Mat`` object. The most popular optio
 
     ..
 
-    It passes the number of dimensions =1 to the ``Mat``     constructor but the created array will be 2-dimensional with the number of columns set to 1. So, ``Mat::dims``     is always >= 2 (can also be 0 when the array is empty).
+    It passes the number of dimensions =1 to the ``Mat`` constructor but the created array will be 2-dimensional with the number of columns set to 1. So, ``Mat::dims``     is always >= 2 (can also be 0 when the array is empty).
 
 *
 
@@ -549,7 +740,7 @@ There are many different ways to create a ``Mat`` object. The most popular optio
 
     ..
 
-    Due to the additional ``datastart``     and ``dataend``     members, it is possible to compute a relative sub-array position in the main *container* array using ``locateROI()``:
+    Due to the additional ``datastart`` and ``dataend`` members, it is possible to compute a relative sub-array position in the main *container* array using ``locateROI()``:
 
     ::
 
@@ -565,7 +756,7 @@ There are many different ways to create a ``Mat`` object. The most popular optio
 
     ..
 
-    As in case of whole matrices, if you need a deep copy, use the ``clone()``     method of the extracted sub-matrices.
+    As in case of whole matrices, if you need a deep copy, use the ``clone()`` method of the extracted sub-matrices.
 
 *
 
@@ -595,7 +786,7 @@ There are many different ways to create a ``Mat`` object. The most popular optio
 
         ..
 
-    Partial yet very common cases of this *user-allocated data* case are conversions from ``CvMat``     and ``IplImage`` to ``Mat``. For this purpose, there are special constructors taking pointers to ``CvMat``     or ``IplImage`` and the optional flag indicating whether to copy the data or not.
+    Partial yet very common cases of this *user-allocated data* case are conversions from ``CvMat`` and ``IplImage`` to ``Mat``. For this purpose, there are special constructors taking pointers to ``CvMat``     or ``IplImage`` and the optional flag indicating whether to copy the data or not.
 
         Backward conversion from ``Mat`` to ``CvMat`` or ``IplImage`` is provided via cast operators ``Mat::operator CvMat() const`` and ``Mat::operator IplImage()``. The operators do NOT copy the data.
 
@@ -801,10 +992,6 @@ Various Mat constructors
 
 .. ocv:function:: Mat::Mat(const Mat& m, const Rect& roi)
 
-.. ocv:function:: Mat::Mat(const CvMat* m, bool copyData=false)
-
-.. ocv:function:: Mat::Mat(const IplImage* img, bool copyData=false)
-
 .. ocv:function:: template<typename T, int n> explicit Mat::Mat(const Vec<T, n>& vec, bool copyData=true)
 
 .. ocv:function:: template<typename T, int m, int n> explicit Mat::Mat(const Matx<T, m, n>& vec, bool copyData=true)
@@ -881,7 +1068,7 @@ Provides matrix assignment operators.
 
     :param m: Assigned, right-hand-side matrix. Matrix assignment is an O(1) operation. This means that no data is copied but the data is shared and the reference counter, if any, is incremented. Before assigning new data, the old data is de-referenced via  :ocv:func:`Mat::release` .
 
-    :param expr: Assigned matrix expression object. As opposite to the first form of the assignment operation, the second form can reuse already allocated matrix if it has the right size and type to fit the matrix expression result. It is automatically handled by the real function that the matrix expressions is expanded to. For example,  ``C=A+B``  is expanded to  ``add(A, B, C)`` , and  :func:`add`  takes care of automatic  ``C``  reallocation.
+    :param expr: Assigned matrix expression object. As opposite to the first form of the assignment operation, the second form can reuse already allocated matrix if it has the right size and type to fit the matrix expression result. It is automatically handled by the real function that the matrix expressions is expanded to. For example,  ``C=A+B``  is expanded to  ``add(A, B, C)``, and  :func:`add`  takes care of automatic  ``C``  reallocation.
 
     :param s: Scalar assigned to each matrix element. The matrix size or type is not changed.
 
@@ -946,7 +1133,7 @@ Creates a matrix header for the specified row span.
 
     :param endrow: An exclusive 0-based ending index of the row span.
 
-    :param r: :ocv:class:`Range`  structure containing both the start and the end indices.
+    :param r: :ocv:class:`Range` structure containing both the start and the end indices.
 
 The method makes a new header for the specified row span of the matrix. Similarly to
 :ocv:func:`Mat::row` and
@@ -1303,7 +1490,7 @@ because ``cvtColor`` , as well as the most of OpenCV functions, calls ``Mat::cre
 
 
 Mat::addref
----------------
+-----------
 Increments the reference counter.
 
 .. ocv:function:: void Mat::addref()
@@ -1313,7 +1500,7 @@ The method increments the reference counter associated with the matrix data. If 
 
 
 Mat::release
-----------------
+------------
 Decrements the reference counter and deallocates the matrix if needed.
 
 .. ocv:function:: void Mat::release()
@@ -1324,7 +1511,7 @@ The method decrements the reference counter associated with the matrix data. Whe
 This method can be called manually to force the matrix data deallocation. But since this method is automatically called in the destructor, or by any other method that changes the data pointer, it is usually not needed. The reference counter decrement and check for 0 is an atomic operation on the platforms that support it. Thus, it is safe to operate on the same matrices asynchronously in different threads.
 
 Mat::resize
----------------
+-----------
 Changes the number of matrix rows.
 
 .. ocv:function:: void Mat::resize( size_t sz )
@@ -1337,7 +1524,7 @@ The methods change the number of matrix rows. If the matrix is reallocated, the 
 
 
 Mat::reserve
----------------
+------------
 Reserves space for the certain number of rows.
 
 .. ocv:function:: void Mat::reserve( size_t sz )
@@ -1370,7 +1557,7 @@ The method removes one or more rows from the bottom of the matrix.
 
 
 Mat::locateROI
-------------------
+--------------
 Locates the matrix header within a parent matrix.
 
 .. ocv:function:: void Mat::locateROI( Size& wholeSize, Point& ofs ) const
@@ -1387,7 +1574,7 @@ After you extracted a submatrix from a matrix using
 
 
 Mat::adjustROI
-------------------
+--------------
 Adjusts a submatrix size and position within the parent matrix.
 
 .. ocv:function:: Mat& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright )
@@ -1417,7 +1604,7 @@ The function is used internally by the OpenCV filtering functions, like
 
 
 Mat::operator()
--------------------
+---------------
 Extracts a rectangular submatrix.
 
 .. ocv:function:: Mat Mat::operator()( Range rowRange, Range colRange ) const
@@ -1441,33 +1628,6 @@ The operators make a new header for the specified sub-array of ``*this`` . They 
 :ocv:func:`Mat::rowRange`, and
 :ocv:func:`Mat::colRange` . For example, ``A(Range(0, 10), Range::all())`` is equivalent to ``A.rowRange(0, 10)`` . Similarly to all of the above, the operators are O(1) operations, that is, no matrix data is copied.
 
-
-Mat::operator CvMat
--------------------
-Creates the ``CvMat`` header for the matrix.
-
-.. ocv:function:: Mat::operator CvMat() const
-
-
-The operator creates the ``CvMat`` header for the matrix without copying the underlying data. The reference counter is not taken into account by this operation. Thus, you should make sure than the original matrix is not deallocated while the ``CvMat`` header is used. The operator is useful for intermixing the new and the old OpenCV API's, for example: ::
-
-    Mat img(Size(320, 240), CV_8UC3);
-    ...
-
-    CvMat cvimg = img;
-    mycvOldFunc( &cvimg, ...);
-
-
-where ``mycvOldFunc`` is a function written to work with OpenCV 1.x data structures.
-
-
-Mat::operator IplImage
-----------------------
-Creates the ``IplImage`` header for the matrix.
-
-.. ocv:function:: Mat::operator IplImage() const
-
-The operator creates the ``IplImage`` header for the matrix without copying the underlying data. You should make sure than the original matrix is not deallocated while the ``IplImage`` header is used. Similarly to ``Mat::operator CvMat`` , the operator is useful for intermixing the new and the old OpenCV API's.
 
 Mat::total
 ----------
@@ -1955,207 +2115,11 @@ SparseMat
 ---------
 .. ocv:class:: SparseMat
 
-Sparse n-dimensional array. ::
-
-    class SparseMat
-    {
-    public:
-        typedef SparseMatIterator iterator;
-        typedef SparseMatConstIterator const_iterator;
-
-        // internal structure - sparse matrix header
-        struct Hdr
-        {
-            ...
-        };
-
-        // sparse matrix node - element of a hash table
-        struct Node
-        {
-            size_t hashval;
-            size_t next;
-            int idx[CV_MAX_DIM];
-        };
-
-        ////////// constructors and destructor //////////
-        // default constructor
-        SparseMat();
-        // creates matrix of the specified size and type
-        SparseMat(int dims, const int* _sizes, int _type);
-        // copy constructor
-        SparseMat(const SparseMat& m);
-        // converts dense array to the sparse form,
-        // if try1d is true and matrix is a single-column matrix (Nx1),
-        // then the sparse matrix will be 1-dimensional.
-        SparseMat(const Mat& m, bool try1d=false);
-        // converts an old-style sparse matrix to the new style.
-        // all the data is copied so that "m" can be safely
-        // deleted after the conversion
-        SparseMat(const CvSparseMat* m);
-        // destructor
-        ~SparseMat();
-
-        ///////// assignment operations ///////////
-
-        // this is an O(1) operation; no data is copied
-        SparseMat& operator = (const SparseMat& m);
-        // (equivalent to the corresponding constructor with try1d=false)
-        SparseMat& operator = (const Mat& m);
-
-        // creates a full copy of the matrix
-        SparseMat clone() const;
-
-        // copy all the data to the destination matrix.
-        // the destination will be reallocated if needed.
-        void copyTo( SparseMat& m ) const;
-        // converts 1D or 2D sparse matrix to dense 2D matrix.
-        // If the sparse matrix is 1D, the result will
-        // be a single-column matrix.
-        void copyTo( Mat& m ) const;
-        // converts arbitrary sparse matrix to dense matrix.
-        // multiplies all the matrix elements by the specified scalar
-        void convertTo( SparseMat& m, int rtype, double alpha=1 ) const;
-        // converts sparse matrix to dense matrix with optional type conversion and scaling.
-        // When rtype=-1, the destination element type will be the same
-        // as the sparse matrix element type.
-        // Otherwise, rtype will specify the depth and
-        // the number of channels will remain the same as in the sparse matrix
-        void convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const;
-
-        // not used now
-        void assignTo( SparseMat& m, int type=-1 ) const;
-
-        // reallocates sparse matrix. If it was already of the proper size and type,
-        // it is simply cleared with clear(), otherwise,
-        // the old matrix is released (using release()) and the new one is allocated.
-        void create(int dims, const int* _sizes, int _type);
-        // sets all the matrix elements to 0, which means clearing the hash table.
-        void clear();
-        // manually increases reference counter to the header.
-        void addref();
-        // decreses the header reference counter when it reaches 0.
-        // the header and all the underlying data are deallocated.
-        void release();
-
-        // converts sparse matrix to the old-style representation.
-        // all the elements are copied.
-        operator CvSparseMat*() const;
-        // size of each element in bytes
-        // (the matrix nodes will be bigger because of
-        //  element indices and other SparseMat::Node elements).
-        size_t elemSize() const;
-        // elemSize()/channels()
-        size_t elemSize1() const;
-
-        // the same is in Mat
-        int type() const;
-        int depth() const;
-        int channels() const;
-
-        // returns the array of sizes and 0 if the matrix is not allocated
-        const int* size() const;
-        // returns i-th size (or 0)
-        int size(int i) const;
-        // returns the matrix dimensionality
-        int dims() const;
-        // returns the number of non-zero elements
-        size_t nzcount() const;
-
-        // compute element hash value from the element indices:
-        // 1D case
-        size_t hash(int i0) const;
-        // 2D case
-        size_t hash(int i0, int i1) const;
-        // 3D case
-        size_t hash(int i0, int i1, int i2) const;
-        // n-D case
-        size_t hash(const int* idx) const;
-
-        // low-level element-access functions,
-        // special variants for 1D, 2D, 3D cases, and the generic one for n-D case.
-        //
-        // return pointer to the matrix element.
-        //  if the element is there (it is non-zero), the pointer to it is returned
-        //  if it is not there and createMissing=false, NULL pointer is returned
-        //  if it is not there and createMissing=true, the new element
-        //    is created and initialized with 0. Pointer to it is returned.
-        //  If the optional hashval pointer is not NULL, the element hash value is
-        //  not computed but *hashval is taken instead.
-        uchar* ptr(int i0, bool createMissing, size_t* hashval=0);
-        uchar* ptr(int i0, int i1, bool createMissing, size_t* hashval=0);
-        uchar* ptr(int i0, int i1, int i2, bool createMissing, size_t* hashval=0);
-        uchar* ptr(const int* idx, bool createMissing, size_t* hashval=0);
-
-        // higher-level element access functions:
-        // ref<_Tp>(i0,...[,hashval]) - equivalent to *(_Tp*)ptr(i0,...true[,hashval]).
-        //    always return valid reference to the element.
-        //    If it does not exist, it is created.
-        // find<_Tp>(i0,...[,hashval]) - equivalent to (_const Tp*)ptr(i0,...false[,hashval]).
-        //    return pointer to the element or NULL pointer if the element is not there.
-        // value<_Tp>(i0,...[,hashval]) - equivalent to
-        //    { const _Tp* p = find<_Tp>(i0,...[,hashval]); return p ? *p : _Tp(); }
-        //    that is, 0 is returned when the element is not there.
-        // note that _Tp must match the actual matrix type -
-        // the functions do not do any on-fly type conversion
-
-        // 1D case
-        template<typename _Tp> _Tp& ref(int i0, size_t* hashval=0);
-        template<typename _Tp> _Tp value(int i0, size_t* hashval=0) const;
-        template<typename _Tp> const _Tp* find(int i0, size_t* hashval=0) const;
-
-        // 2D case
-        template<typename _Tp> _Tp& ref(int i0, int i1, size_t* hashval=0);
-        template<typename _Tp> _Tp value(int i0, int i1, size_t* hashval=0) const;
-        template<typename _Tp> const _Tp* find(int i0, int i1, size_t* hashval=0) const;
-
-        // 3D case
-        template<typename _Tp> _Tp& ref(int i0, int i1, int i2, size_t* hashval=0);
-        template<typename _Tp> _Tp value(int i0, int i1, int i2, size_t* hashval=0) const;
-        template<typename _Tp> const _Tp* find(int i0, int i1, int i2, size_t* hashval=0) const;
-
-        // n-D case
-        template<typename _Tp> _Tp& ref(const int* idx, size_t* hashval=0);
-        template<typename _Tp> _Tp value(const int* idx, size_t* hashval=0) const;
-        template<typename _Tp> const _Tp* find(const int* idx, size_t* hashval=0) const;
-
-        // erase the specified matrix element.
-        // when there is no such an element, the methods do nothing
-        void erase(int i0, int i1, size_t* hashval=0);
-        void erase(int i0, int i1, int i2, size_t* hashval=0);
-        void erase(const int* idx, size_t* hashval=0);
-
-        // return the matrix iterators,
-        //   pointing to the first sparse matrix element,
-        SparseMatIterator begin();
-        SparseMatConstIterator begin() const;
-        //   ... or to the point after the last sparse matrix element
-        SparseMatIterator end();
-        SparseMatConstIterator end() const;
-
-        // and the template forms of the above methods.
-        // _Tp must match the actual matrix type.
-        template<typename _Tp> SparseMatIterator_<_Tp> begin();
-        template<typename _Tp> SparseMatConstIterator_<_Tp> begin() const;
-        template<typename _Tp> SparseMatIterator_<_Tp> end();
-        template<typename _Tp> SparseMatConstIterator_<_Tp> end() const;
-
-        // return value stored in the sparse martix node
-        template<typename _Tp> _Tp& value(Node* n);
-        template<typename _Tp> const _Tp& value(const Node* n) const;
-
-        ////////////// some internally used methods ///////////////
-        ...
-
-        // pointer to the sparse matrix header
-        Hdr* hdr;
-    };
-
-
 The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Such a sparse array can store elements of any type that
 :ocv:class:`Mat` can store. *Sparse* means that only non-zero elements are stored (though, as a result of operations on a sparse matrix, some of its stored elements can actually become 0. It is up to you to detect such elements and delete them using ``SparseMat::erase`` ). The non-zero elements are stored in a hash table that grows when it is filled so that the search time is O(1) in average (regardless of whether element is there or not). Elements can be accessed using the following methods:
 
 *
-    Query operations ( ``SparseMat::ptr``     and the higher-level ``SparseMat::ref``,    ``SparseMat::value``     and ``SparseMat::find``     ), for example:
+    Query operations (``SparseMat::ptr`` and the higher-level ``SparseMat::ref``, ``SparseMat::value`` and ``SparseMat::find``), for example:
 
     ::
 
@@ -2173,7 +2137,7 @@ The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Su
     ..
 
 *
-    Sparse matrix iterators. They are similar to ``MatIterator`` but different from :ocv:class:`NAryMatIterator`.     That is, the iteration loop is familiar to STL users:
+    Sparse matrix iterators. They are similar to ``MatIterator`` but different from :ocv:class:`NAryMatIterator`. That is, the iteration loop is familiar to STL users:
 
     ::
 
@@ -2231,6 +2195,204 @@ The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Su
 
     ..
 
+SparseMat::SparseMat
+--------------------
+Various SparseMat constructors.
+
+.. ocv:function:: SparseMat::SparseMat()
+.. ocv:function:: SparseMat::SparseMat( int dims, const int* _sizes, int _type )
+.. ocv:function:: SparseMat::SparseMat( const SparseMat& m )
+.. ocv:function:: SparseMat::SparseMat( const Mat& m )
+
+
+    :param m: Source matrix for copy constructor. If m is dense matrix (ocv:class:`Mat`) then it will be converted to sparse representation.
+    :param dims: Array dimensionality.
+    :param _sizes: Sparce matrix size on all dementions.
+    :param _type: Sparse matrix data type.
+    :param try1d: if try1d is true and matrix is a single-column matrix (Nx1), then the sparse matrix will be 1-dimensional.
+
+SparseMat::~SparseMat
+---------------------
+SparseMat object destructor.
+
+.. ocv:function:: SparseMat::~SparseMat()
+
+SparseMat::operator=
+--------------------
+Provides sparse matrix assignment operators.
+
+.. ocv:function:: SparseMat& SparseMat::operator = (const SparseMat& m)
+.. ocv:function:: SparseMat& SparseMat::operator = (const Mat& m)
+
+The last variant is equivalent to the corresponding constructor with try1d=false.
+
+
+SparseMat::clone
+----------------
+Creates a full copy of the matrix.
+
+.. ocv:function:: SparseMat SparseMat::clone() const
+
+SparseMat::copyTo
+-----------------
+Copy all the data to the destination matrix.The destination will be reallocated if needed.
+
+.. ocv:function:: void SparseMat::copyTo( SparseMat& m ) const
+.. ocv:function:: void SparseMat::copyTo( Mat& m ) const
+
+    :param m: Target for copiing.
+
+The last variant converts 1D or 2D sparse matrix to dense 2D matrix. If the sparse matrix is 1D, the result will be a single-column matrix.
+
+SparceMat::convertTo
+--------------------
+Convert sparse matrix with possible type change and scaling.
+
+.. ocv:function:: void SparseMat::convertTo( SparseMat& m, int rtype, double alpha=1 ) const
+.. ocv:function:: void SparseMat::convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const
+
+The first version converts arbitrary sparse matrix to dense matrix and multiplies all the matrix elements by the specified scalar.
+The second versiob converts sparse matrix to dense matrix with optional type conversion and scaling.
+When rtype=-1, the destination element type will be the same as the sparse matrix element type.
+Otherwise, rtype will specify the depth and the number of channels will remain the same as in the sparse matrix.
+
+SparseMat:create
+----------------
+Reallocates sparse matrix. If it was already of the proper size and type, it is simply cleared with clear(), otherwise,
+the old matrix is released (using release()) and the new one is allocated.
+
+.. ocv:function:: void SparseMat::create(int dims, const int* _sizes, int _type)
+
+    :param dims: Array dimensionality.
+    :param _sizes: Sparce matrix size on all dementions.
+    :param _type: Sparse matrix data type.
+
+SparseMat::clear
+----------------
+Sets all the matrix elements to 0, which means clearing the hash table.
+
+.. ocv:function:: void SparseMat::clear()
+
+SparseMat::addref
+-----------------
+Manually increases reference counter to the header.
+
+.. ocv:function:: void SparseMat::addref()
+
+SparseMat::release
+------------------
+Decreses the header reference counter when it reaches 0. The header and all the underlying data are deallocated.
+
+.. ocv:function:: void SparseMat::release()
+
+SparseMat::CvSparseMat *
+------------------------
+Converts sparse matrix to the old-style representation. All the elements are copied.
+
+.. ocv:function:: SparseMat::operator CvSparseMat*() const
+
+SparseMat::elemSize
+-------------------
+Size of each element in bytes (the matrix nodes will be bigger because of element indices and other SparseMat::Node elements).
+
+.. ocv:function:: size_t SparseMat::elemSize() const
+
+SparseMat::elemSize1
+--------------------
+elemSize()/channels().
+
+.. ocv:function::  size_t SparseMat::elemSize() const
+
+SparseMat::type
+---------------
+Returns the type of a matrix element.
+
+.. ocv:function:: int SparseMat::type() const
+
+The method returns a sparse matrix element type. This is an identifier compatible with the ``CvMat`` type system, like ``CV_16SC3`` or 16-bit signed 3-channel array, and so on.
+
+SparseMat::depth
+----------------
+Returns the depth of a sparse matrix element.
+
+.. ocv:function:: int SparseMat::depth() const
+
+The method returns the identifier of the matrix element depth (the type of each individual channel). For example, for a 16-bit signed 3-channel array, the method returns ``CV_16S``
+
+* ``CV_8U``     - 8-bit unsigned integers ( ``0..255``     )
+
+* ``CV_8S``     - 8-bit signed integers ( ``-128..127``     )
+
+* ``CV_16U``     - 16-bit unsigned integers ( ``0..65535``     )
+
+* ``CV_16S``     - 16-bit signed integers ( ``-32768..32767``     )
+
+* ``CV_32S``     - 32-bit signed integers ( ``-2147483648..2147483647``     )
+
+* ``CV_32F``     - 32-bit floating-point numbers ( ``-FLT_MAX..FLT_MAX, INF, NAN``     )
+
+* ``CV_64F``     - 64-bit floating-point numbers ( ``-DBL_MAX..DBL_MAX, INF, NAN``     )
+
+SparseMat::channels
+-------------------
+Returns the number of matrix channels.
+
+.. ocv:function:: int SparseMat::channels() const
+
+The method returns the number of matrix channels.
+
+SparseMat::size
+---------------
+Returns the array of sizes or matrix size by i dimention and 0 if the matrix is not allocated.
+
+.. ocv:function:: const int* SparseMat::size() const
+.. ocv:function:: int SparseMat::size(int i) const
+
+    :param i: Dimention index.
+
+SparseMat::dims
+---------------
+Returns the matrix dimensionality.
+
+.. ocv:function:: int SparseMat::dims() const
+
+SparseMat::nzcount
+------------------
+Returns the number of non-zero elements.
+
+.. ocv:function:: size_t SparseMat::nzcount() const
+
+SparseMat::hash
+---------------
+Compute element hash value from the element indices.
+
+.. ocv:function:: size_t SparseMat::hash(int i0) const
+.. ocv:function:: size_t SparseMat::hash(int i0, int i1) const
+.. ocv:function:: size_t SparseMat::hash(int i0, int i1, int i2) const
+.. ocv:function:: size_t SparseMat::hash(const int* idx) const
+
+SparseMat::ptr
+--------------
+Low-level element-access functions, special variants for 1D, 2D, 3D cases, and the generic one for n-D case.
+
+.. ocv:function:: uchar* SparseMat::ptr(int i0, bool createMissing, size_t* hashval=0)
+.. ocv:function:: uchar* SparseMat::ptr(int i0, int i1, bool createMissing, size_t* hashval=0)
+.. ocv:function:: uchar* SparseMat::ptr(int i0, int i1, int i2, bool createMissing, size_t* hashval=0)
+.. ocv:function:: uchar* SparseMat::ptr(const int* idx, bool createMissing, size_t* hashval=0)
+
+Return pointer to the matrix element. If the element is there (it is non-zero), the pointer to it is returned.
+If it is not there and ``createMissing=false``, NULL pointer is returned. If it is not there and ``createMissing=true``,
+the new elementis created and initialized with 0. Pointer to it is returned. If the optional hashval pointer is not ``NULL``,
+the element hash value is not computed but ``hashval`` is taken instead.
+
+SparseMat::erase
+----------------
+Erase the specified matrix element. When there is no such an element, the methods do nothing.
+
+.. ocv:function:: void SparseMat::erase(int i0, int i1, size_t* hashval=0)
+.. ocv:function:: void SparseMat::erase(int i0, int i1, int i2, size_t* hashval=0)
+.. ocv:function:: void SparseMat::erase(const int* idx, size_t* hashval=0)
+
 SparseMat\_
 -----------
 .. ocv:class:: SparseMat_
@@ -2286,7 +2448,7 @@ Template sparse n-dimensional array class derived from
         SparseMatConstIterator_<_Tp> end() const;
     };
 
-``SparseMat_`` is a thin wrapper on top of :ocv:class:`SparseMat`  created in the same way as ``Mat_`` .
+``SparseMat_`` is a thin wrapper on top of :ocv:class:`SparseMat` created in the same way as ``Mat_`` .
 It simplifies notation of some operations. ::
 
     int sz[] = {10, 20, 30};
@@ -2312,7 +2474,7 @@ The class provides the following features for all derived classes:
 Here is example of SIFT use in your application via Algorithm interface: ::
 
     #include "opencv2/opencv.hpp"
-    #include "opencv2/nonfree/nonfree.hpp"
+    #include "opencv2/nonfree.hpp"
 
     ...
 
@@ -2340,12 +2502,17 @@ Here is example of SIFT use in your application via Algorithm interface: ::
     vector<KeyPoint> keypoints;
     (*sift)(image, noArray(), keypoints, descriptors);
 
+Algorithm::name
+---------------
+Returns the algorithm name
+
+.. ocv:function:: String Algorithm::name() const
 
 Algorithm::get
 --------------
 Returns the algorithm parameter
 
-.. ocv:function:: template<typename _Tp> typename ParamType<_Tp>::member_type Algorithm::get(const string& name) const
+.. ocv:function:: template<typename _Tp> typename ParamType<_Tp>::member_type Algorithm::get(const String& name) const
 
     :param name: The parameter name.
 
@@ -2354,7 +2521,7 @@ The method returns value of the particular parameter. Since the compiler can not
     * myalgo.get<int>("param_name")
     * myalgo.get<double>("param_name")
     * myalgo.get<bool>("param_name")
-    * myalgo.get<string>("param_name")
+    * myalgo.get<String>("param_name")
     * myalgo.get<Mat>("param_name")
     * myalgo.get<vector<Mat> >("param_name")
     * myalgo.get<Algorithm>("param_name") (it returns Ptr<Algorithm>).
@@ -2366,13 +2533,13 @@ Algorithm::set
 --------------
 Sets the algorithm parameter
 
-.. ocv:function:: void Algorithm::set(const string& name, int value)
-.. ocv:function:: void Algorithm::set(const string& name, double value)
-.. ocv:function:: void Algorithm::set(const string& name, bool value)
-.. ocv:function:: void Algorithm::set(const string& name, const string& value)
-.. ocv:function:: void Algorithm::set(const string& name, const Mat& value)
-.. ocv:function:: void Algorithm::set(const string& name, const vector<Mat>& value)
-.. ocv:function:: void Algorithm::set(const string& name, const Ptr<Algorithm>& value)
+.. ocv:function:: void Algorithm::set(const String& name, int value)
+.. ocv:function:: void Algorithm::set(const String& name, double value)
+.. ocv:function:: void Algorithm::set(const String& name, bool value)
+.. ocv:function:: void Algorithm::set(const String& name, const String& value)
+.. ocv:function:: void Algorithm::set(const String& name, const Mat& value)
+.. ocv:function:: void Algorithm::set(const String& name, const vector<Mat>& value)
+.. ocv:function:: void Algorithm::set(const String& name, const Ptr<Algorithm>& value)
 
     :param name: The parameter name.
     :param value: The parameter value.
@@ -2411,13 +2578,13 @@ Algorithm::getList
 ------------------
 Returns the list of registered algorithms
 
-.. ocv:function:: void Algorithm::getList(vector<string>& algorithms)
+.. ocv:function:: void Algorithm::getList(vector<String>& algorithms)
 
     :param algorithms: The output vector of algorithm names.
 
 This static method returns the list of registered algorithms in alphabetical order. Here is how to use it ::
 
-    vector<string> algorithms;
+    vector<String> algorithms;
     Algorithm::getList(algorithms);
     cout << "Algorithms: " << algorithms.size() << endl;
     for (size_t i=0; i < algorithms.size(); i++)
@@ -2428,7 +2595,7 @@ Algorithm::create
 -----------------
 Creates algorithm instance by name
 
-.. ocv:function:: template<typename _Tp> Ptr<_Tp> Algorithm::create(const string& name)
+.. ocv:function:: template<typename _Tp> Ptr<_Tp> Algorithm::create(const String& name)
 
     :param name: The algorithm name, one of the names returned by ``Algorithm::getList()``.
 

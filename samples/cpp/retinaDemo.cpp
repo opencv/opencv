@@ -9,7 +9,8 @@
 #include <iostream>
 #include <cstring>
 
-#include "opencv2/opencv.hpp"
+#include "opencv2/contrib.hpp"
+#include "opencv2/highgui.hpp"
 
 static void help(std::string errorMessage)
 {

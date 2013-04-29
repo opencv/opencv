@@ -65,8 +65,7 @@ Making a project
 
    .. code-block:: cpp
 
-      #include <cv.h>
-      #include <highgui.h>
+      #include <opencv2/opencv.hpp>
 
       using namespace cv;
 
@@ -81,7 +80,7 @@ Making a project
             return -1;
           }
 
-        namedWindow( "Display Image", CV_WINDOW_AUTOSIZE );
+        namedWindow( "Display Image", WINDOW_AUTOSIZE );
         imshow( "Display Image", image );
 
         waitKey(0);
@@ -201,29 +200,20 @@ Assuming that the image to use as the argument would be located in <DisplayImage
 V2: Using CMake+OpenCV with Eclipse (plugin CDT)
 ==================================================
 
-(See the `getting started <http://opencv.willowgarage.com/wiki/Getting_started>` section of the OpenCV Wiki)
-
 Say you have or create a new file, *helloworld.cpp* in a directory called *foo*:
 
 .. code-block:: cpp
 
 
-   #include <cv.h>
-   #include <highgui.h>
+   #include <opencv2/opencv.hpp>
+   using namespace cv;
+
    int main ( int argc, char **argv )
    {
-     cvNamedWindow( "My Window", 1 );
-     IplImage *img = cvCreateImage( cvSize( 640, 480 ), IPL_DEPTH_8U, 1 );
-     CvFont font;
-     double hScale = 1.0;
-     double vScale = 1.0;
-     int lineWidth = 1;
-     cvInitFont( &font, CV_FONT_HERSHEY_SIMPLEX | CV_FONT_ITALIC,
-                 hScale, vScale, 0, lineWidth );
-     cvPutText( img, "Hello World!", cvPoint( 200, 400 ), &font,
-                cvScalar( 255, 255, 0 ) );
-     cvShowImage( "My Window", img );
-     cvWaitKey();
+     Mat img(480, 640, CV_8U);
+     putText(img, "Hello World!", Point( 200, 400 ), FONT_HERSHEY_SIMPLEX | FONT_ITALIC, 1.0, Scalar( 255, 255, 0 ));
+     imshow("My Window", img);
+     waitKey();
      return 0;
    }
 

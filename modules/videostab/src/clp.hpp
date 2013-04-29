@@ -66,11 +66,7 @@
 
 // Clp replaces min and max with ?: globally, we can't use std::min and std::max in case
 // when HAVE_CLP is true. We create the defines by ourselves when HAVE_CLP == 0.
-#ifndef min
-  #define min(a,b) std::min(a,b)
-#endif
-#ifndef max
-  #define max(a,b) std::max(a,b)
-#endif
+#undef min
+#undef max
 
 #endif

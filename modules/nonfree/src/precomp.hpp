@@ -43,12 +43,24 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
+#include "opencv2/nonfree.hpp"
+#include "opencv2/imgproc.hpp"
+
+#include "opencv2/core/utility.hpp"
+#include "opencv2/core/private.hpp"
+
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_GPU
+#  include "opencv2/nonfree/gpu.hpp"
+#  include "opencv2/core/gpu_private.hpp"
 #endif
 
-#include "opencv2/nonfree/nonfree.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/core/internal.hpp"
+#ifdef HAVE_OPENCV_OCL
+#  include "opencv2/nonfree/ocl.hpp"
+#  include "opencv2/ocl/private/util.hpp"
+#endif
+
+#include "opencv2/core/private.hpp"
 
 #endif

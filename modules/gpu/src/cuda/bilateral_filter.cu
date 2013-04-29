@@ -12,7 +12,6 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
-// Copyright (C) 1993-2011, NVIDIA Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -29,7 +28,7 @@
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -43,11 +42,10 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
-
-#include "opencv2/gpu/device/vec_traits.hpp"
-#include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/border_interpolate.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/vec_traits.hpp"
+#include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/border_interpolate.hpp"
 
 using namespace cv::gpu;
 
@@ -57,7 +55,7 @@ typedef unsigned short ushort;
 //////////////////////////////////////////////////////////////////////////////////
 /// Bilateral filtering
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -165,7 +163,7 @@ namespace cv { namespace gpu { namespace device
 
 
 #define OCV_INSTANTIATE_BILATERAL_FILTER(T) \
-    template void cv::gpu::device::imgproc::bilateral_filter_gpu<T>(const PtrStepSzb&, PtrStepSzb, int, float, float, int, cudaStream_t);
+    template void cv::gpu::cudev::imgproc::bilateral_filter_gpu<T>(const PtrStepSzb&, PtrStepSzb, int, float, float, int, cudaStream_t);
 
 OCV_INSTANTIATE_BILATERAL_FILTER(uchar)
 //OCV_INSTANTIATE_BILATERAL_FILTER(uchar2)

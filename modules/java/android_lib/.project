@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>OpenCV Library - @OPENCV_VERSION_MAJOR@.@OPENCV_VERSION_MINOR@.@OPENCV_VERSION_PATCH@</name>
+	<name>OpenCV Library - @OPENCV_VERSION@</name>
 	<comment></comment>
 	<projects>
 	</projects>

@@ -12,7 +12,6 @@
 #define ARCH_ARMv7_NAME "armv7a"
 #define ARCH_ARMv8_NAME "armv8"
 
-
 #define FEATURES_HAS_VFPv3d16_NAME "vfpv3d16"
 #define FEATURES_HAS_VFPv3_NAME "vfpv3"
 #define FEATURES_HAS_NEON_NAME "neon"
@@ -25,15 +24,15 @@
 #define PLATFORM_TEGRA_NAME "tegra"
 #define PLATFORM_TEGRA2_NAME "tegra2"
 #define PLATFORM_TEGRA3_NAME "tegra3"
-
+#define PLATFORM_TEGRA4_NAME "tegra4"
 
 class PackageInfo
 {
 public:
-    PackageInfo(const std::string& version, int platform, int cpu_id, std::string install_path = "/data/data/");
+    PackageInfo(int version, int platform, int cpu_id, std::string install_path = "/data/data/");
     PackageInfo(const std::string& fullname, const std::string& install_path, std::string package_version = "0.0");
     std::string GetFullName() const;
-    std::string GetVersion() const;
+    int GetVersion() const;
     int GetPlatform() const;
     int GetCpuID() const;
     std::string GetInstalationPath() const;
@@ -43,7 +42,7 @@ public:
 
 protected:
     static std::map<int, std::string> InitPlatformNameMap();
-    std::string Version;
+    int Version;
     int Platform;
     int CpuID;
     std::string FullName;

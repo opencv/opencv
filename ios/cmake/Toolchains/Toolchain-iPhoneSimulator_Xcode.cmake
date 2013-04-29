@@ -8,8 +8,8 @@ set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/ios/cma
 
 # Force the compilers to gcc for iOS
 include (CMakeForceCompiler)
-CMAKE_FORCE_C_COMPILER (gcc gcc)
-CMAKE_FORCE_CXX_COMPILER (g++ g++)
+#CMAKE_FORCE_C_COMPILER (gcc gcc)
+#CMAKE_FORCE_CXX_COMPILER (g++ g++)
 
 set (CMAKE_C_SIZEOF_DATA_PTR 4)
 set (CMAKE_C_HAS_ISYSROOT 1)

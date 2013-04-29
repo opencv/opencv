@@ -19,7 +19,7 @@ IF(CMAKE_COMPILER_IS_GNUCXX)
         ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
         OUTPUT_VARIABLE gcc_compiler_version)
     #MESSAGE("GCC Version: ${gcc_compiler_version}")
-    IF(gcc_compiler_version MATCHES "4\\.[0,2-9]\\.[0-9x]")
+    IF(gcc_compiler_version VERSION_GREATER "4.2.-1")
         SET(PCHSupport_FOUND TRUE)
     ENDIF()
 
@@ -45,6 +45,13 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
         IF(${_targetType} STREQUAL SHARED_LIBRARY AND NOT WIN32)
             LIST(APPEND ${_out_compile_flags} "-fPIC")
         ENDIF()
+
+        GET_TARGET_PROPERTY(_target_definitions ${_PCH_current_target} COMPILE_DEFINITIONS)
+        if(_target_definitions)
+          foreach(_def ${_target_definitions})
+            LIST(APPEND ${_out_compile_flags} "-D${_def}")
+          endforeach()
+        endif()
 
     ELSE()
         ## TODO ... ? or does it work out of the box
@@ -182,10 +189,20 @@ MACRO(ADD_PRECOMPILED_HEADER_TO_TARGET _targetName _input _pch_output_to_use )
 
     _PCH_GET_TARGET_COMPILE_FLAGS(_target_cflags ${_name} ${_pch_output_to_use} ${_dowarn})
     #MESSAGE("Add flags ${_target_cflags} to ${_targetName} " )
-    SET_TARGET_PROPERTIES(${_targetName}
-      PROPERTIES
-      COMPILE_FLAGS ${_target_cflags}
-      )
+
+    GET_TARGET_PROPERTY(_sources ${_targetName} SOURCES)
+    FOREACH(src ${_sources})
+      if(NOT "${src}" MATCHES "\\.mm$")
+        get_source_file_property(_flags "${src}" COMPILE_FLAGS)
+        if(_flags)
+          set(_flags "${_flags} ${_target_cflags}")
+        else()
+          set(_flags "${_target_cflags}")
+        endif()
+
+        set_source_files_properties("${src}" PROPERTIES COMPILE_FLAGS "${_flags}")
+      endif()
+    ENDFOREACH()
 
     ADD_CUSTOM_TARGET(pch_Generate_${_targetName}
       DEPENDS ${_pch_output_to_use}

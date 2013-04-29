@@ -1,0 +1,11 @@
+#!/bin/sh
+
+mkdir -p build_carma
+cd build_carma
+
+cmake \
+-DGCC_COMPILER_VERSION="4.5" -DSOFTFP=ON -DUSE_NEON=ON -DCMAKE_SKIP_RPATH=ON \
+-DCUDA_TOOLKIT_ROOT_DIR=/usr/arm-linux-gnueabi/cuda/ -DCUDA_ARCH_BIN="2.1(2.0)" -DCUDA_ARCH_PTX="" \
+-DWITH_TBB=ON -DWITH_CUBLAS=ON \
+-DBUILD_ZLIB=ON -DBUILD_TIFF=ON -DBUILD_JASPER=ON -DBUILD_JPEG=ON -DBUILD_PNG=ON -DBUILD_OPENEXR=ON -DBUILD_TBB=ON \
+-DCMAKE_TOOLCHAIN_FILE=../arm-gnueabi.toolchain.cmake $@ ../../..

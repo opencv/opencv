@@ -169,7 +169,7 @@ private:
 
       __instype *split = median;
       for (; split != last && deref(ctor(*split), dim) ==
-       deref(ctor(*median), dim); ++split);
+       deref(ctor(*median), dim); ++split) {}
 
       if (split == last) { // leaf
   int nexti = -1;
@@ -387,9 +387,8 @@ public:
   // ret_nn_pq is an array containing the (at most) k nearest neighbors
   // (see bbf_nn structure def above).
   template < class __desctype >
-  int find_nn_bbf(const __desctype * d,
-      int k, int emax,
-      bbf_nn_pqueue & ret_nn_pq) const {
+  int find_nn_bbf(const __desctype * d, int k, int emax, bbf_nn_pqueue & ret_nn_pq) const
+  {
     assert(k > 0);
     ret_nn_pq.clear();
 
@@ -400,7 +399,8 @@ public:
     // iterate while queue non-empty and emax>0
     tmp_pq.clear();
     tmp_pq.push_back(bbf_node(root_node, 0));
-    while (tmp_pq.size() && emax > 0) {
+    while (tmp_pq.size() && emax > 0)
+    {
 
       // from node nearest query point d, run to leaf
       std::pop_heap(tmp_pq.begin(), tmp_pq.end());
@@ -408,18 +408,17 @@ public:
       tmp_pq.erase(tmp_pq.end() - 1);
 
       int i;
-      for (i = bbf.node;
-     i != -1 && nodes[i].dim >= 0;
-     i = bbf_branch(i, d, tmp_pq));
+      for (i = bbf.node; i != -1 && nodes[i].dim >= 0; i = bbf_branch(i, d, tmp_pq)) {}
 
-      if (i != -1) {
+      if (i != -1)
+      {
 
-  // add points in leaf/bin to ret_nn_pq
-  do {
-    bbf_new_nn(ret_nn_pq, k, d, nodes[i].value);
-  } while (-1 != (i = nodes[i].right));
+        // add points in leaf/bin to ret_nn_pq
+        do {
+          bbf_new_nn(ret_nn_pq, k, d, nodes[i].value);
+        } while (-1 != (i = nodes[i].right));
 
-  --emax;
+        --emax;
       }
     }
 

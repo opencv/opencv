@@ -44,7 +44,7 @@
 #define __OPENCV_VIDEOSTAB_MOTION_CORE_HPP__
 
 #include <cmath>
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 
 namespace cv
 {

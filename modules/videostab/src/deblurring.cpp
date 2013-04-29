@@ -45,8 +45,6 @@
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/ring_buffer.hpp"
 
-using namespace std;
-
 namespace cv
 {
 namespace videostab

@@ -55,7 +55,7 @@ int main(int argc, const char* argv[])
 
             std::cout << "Open CPU Writer" << std::endl;
 
-            if (!writer.open("output_cpu.avi", CV_FOURCC('X', 'V', 'I', 'D'), FPS, frame.size()))
+            if (!writer.open("output_cpu.avi", cv::VideoWriter::fourcc('X', 'V', 'I', 'D'), FPS, frame.size()))
                 return -1;
         }
 

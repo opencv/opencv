@@ -70,7 +70,8 @@
  */
 #include "precomp.hpp"
 #include "retinafilter.hpp"
-#include <iostream>
+#include <cstdio>
+#include <sstream>
 
 namespace cv
 {
@@ -113,7 +114,7 @@ public:
      * @param retinaParameterFile : the parameters filename
          * @param applyDefaultSetupOnFailure : set to true if an error must be thrown on error
      */
-    void setup(std::string retinaParameterFile="", const bool applyDefaultSetupOnFailure=true);
+    void setup(String retinaParameterFile="", const bool applyDefaultSetupOnFailure=true);
 
 
     /**
@@ -143,13 +144,13 @@ public:
      * parameters setup display method
      * @return a string which contains formatted parameters information
      */
-    const std::string printSetup();
+    const String printSetup();
 
     /**
      * write xml/yml formated parameters information
      * @rparam fs : the filename of the xml file that will be open and writen with formatted parameters information
      */
-    virtual void write( std::string fs ) const;
+    virtual void write( String fs ) const;
 
 
     /**
@@ -323,26 +324,26 @@ void RetinaImpl::setColorSaturation(const bool saturateColors, const float color
 
 struct Retina::RetinaParameters RetinaImpl::getParameters(){return _retinaParameters;}
 
-
-void RetinaImpl::setup(std::string retinaParameterFile, const bool applyDefaultSetupOnFailure)
+void RetinaImpl::setup(String retinaParameterFile, const bool applyDefaultSetupOnFailure)
 {
     try
     {
         // opening retinaParameterFile in read mode
         cv::FileStorage fs(retinaParameterFile, cv::FileStorage::READ);
         setup(fs, applyDefaultSetupOnFailure);
-    }catch(Exception &e)
-    {
-    std::cout<<"RetinaImpl::setup: wrong/unappropriate xml parameter file : error report :`n=>"<<e.what()<<std::endl;
-    if (applyDefaultSetupOnFailure)
-    {
-            std::cout<<"RetinaImpl::setup: resetting retina with default parameters"<<std::endl;
-        setupOPLandIPLParvoChannel();
-        setupIPLMagnoChannel();
     }
+    catch(Exception &e)
+    {
+        printf("Retina::setup: wrong/unappropriate xml parameter file : error report :`n=>%s\n", e.what());
+        if (applyDefaultSetupOnFailure)
+        {
+            printf("Retina::setup: resetting retina with default parameters\n");
+            setupOPLandIPLParvoChannel();
+            setupIPLMagnoChannel();
+        }
         else
         {
-        std::cout<<"=> keeping current parameters"<<std::endl;
+            printf("=> keeping current parameters\n");
         }
     }
 }
@@ -354,7 +355,7 @@ void RetinaImpl::setup(cv::FileStorage &fs, const bool applyDefaultSetupOnFailur
         // read parameters file if it exists or apply default setup if asked for
         if (!fs.isOpened())
         {
-            std::cout<<"RetinaImpl::setup: provided parameters file could not be open... skeeping configuration"<<std::endl;
+            printf("Retina::setup: provided parameters file could not be open... skeeping configuration\n");
             return;
             // implicit else case : retinaParameterFile could be open (it exists at least)
         }
@@ -386,18 +387,18 @@ void RetinaImpl::setup(cv::FileStorage &fs, const bool applyDefaultSetupOnFailur
 
     }catch(Exception &e)
     {
-        std::cout<<"RetinaImpl::setup: resetting retina with default parameters"<<std::endl;
+        printf("RetinaImpl::setup: resetting retina with default parameters\n");
         if (applyDefaultSetupOnFailure)
         {
             setupOPLandIPLParvoChannel();
             setupIPLMagnoChannel();
         }
-        std::cout<<"RetinaImpl::setup: wrong/unappropriate xml parameter file : error report :`n=>"<<e.what()<<std::endl;
-        std::cout<<"=> keeping current parameters"<<std::endl;
+        printf("Retina::setup: wrong/unappropriate xml parameter file : error report :`n=>%s\n", e.what());
+        printf("=> keeping current parameters\n");
     }
 
     // report current configuration
-    std::cout<<printSetup()<<std::endl;
+    printf("%s\n", printSetup().c_str());
 }
 
 void RetinaImpl::setup(cv::Retina::RetinaParameters newConfiguration)
@@ -410,7 +411,7 @@ void RetinaImpl::setup(cv::Retina::RetinaParameters newConfiguration)
 
 }
 
-const std::string RetinaImpl::printSetup()
+const String RetinaImpl::printSetup()
 {
     std::stringstream outmessage;
 
@@ -440,10 +441,10 @@ const std::string RetinaImpl::printSetup()
             << "\n\t localAdaptintegration_tau : " << _retinaParameters.IplMagno.localAdaptintegration_tau
             << "\n\t localAdaptintegration_k : " << _retinaParameters.IplMagno.localAdaptintegration_k
             <<"}";
-    return outmessage.str();
+    return outmessage.str().c_str();
 }
 
-void RetinaImpl::write( std::string fs ) const
+void RetinaImpl::write( String fs ) const
 {
     FileStorage parametersSaveFile(fs, cv::FileStorage::WRITE );
     write(parametersSaveFile);
@@ -602,7 +603,7 @@ void RetinaImpl::_init(const cv::Size inputSz, const bool colorMode, RETINA_COLO
     _retinaFilter->clearAllBuffers();
 
     // report current configuration
-    std::cout<<printSetup()<<std::endl;
+    printf("%s\n", printSetup().c_str());
 }
 
 void RetinaImpl::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, cv::Mat &outBuffer)
@@ -686,7 +687,7 @@ bool RetinaImpl::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, s
         inputMatToConvert.convertTo(dst, dsttype);
     }
         else
-            CV_Error(CV_StsUnsupportedFormat, "input image must be single channel (gray levels), bgr format (color) or bgra (color with transparency which won't be considered");
+            CV_Error(Error::StsUnsupportedFormat, "input image must be single channel (gray levels), bgr format (color) or bgra (color with transparency which won't be considered");
 
     return imageNumberOfChannels>1; // return bool : false for gray level image processing, true for color mode
 }

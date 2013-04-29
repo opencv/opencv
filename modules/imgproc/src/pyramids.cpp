@@ -327,11 +327,10 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
 
     CV_Assert( std::abs(dsize.width - ssize.width*2) == dsize.width % 2 &&
                std::abs(dsize.height - ssize.height*2) == dsize.height % 2);
-    int k, x, sy0 = -PU_SZ/2, sy = sy0, width0 = ssize.width - 1;
+    int k, x, sy0 = -PU_SZ/2, sy = sy0;
 
     ssize.width *= cn;
     dsize.width *= cn;
-    width0 *= cn;
 
     for( x = 0; x < ssize.width; x++ )
         dtab[x] = (x/cn)*2*cn + x % cn;

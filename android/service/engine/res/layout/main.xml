@@ -30,7 +30,7 @@
             android:id="@+id/EngineVersionCaption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Version: "
+            android:text="OpenCV Manager version: "
             android:textAppearance="?android:attr/textAppearanceMedium" />
 
         <TextView

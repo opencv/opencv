@@ -193,7 +193,7 @@ bool ImageLogPolProjection::_initLogRetinaSampling(const double reductionFactor,
     //double rlim=1.0/reductionFactor*(minDimension/2.0+samplingStrenght);
 
     // input frame dimensions INdependent log sampling:
-    _azero=(1.0+reductionFactor*sqrt(samplingStrenght))/(reductionFactor*reductionFactor*samplingStrenght-1.0);
+    _azero=(1.0+reductionFactor*std::sqrt(samplingStrenght))/(reductionFactor*reductionFactor*samplingStrenght-1.0);
     _alim=(1.0+_azero)/reductionFactor;
 #ifdef IMAGELOGPOLPROJECTION_DEBUG
     std::cout<<"ImageLogPolProjection::initLogRetinaSampling: rlim= "<<rlim<<std::endl;
@@ -223,10 +223,10 @@ bool ImageLogPolProjection::_initLogRetinaSampling(const double reductionFactor,
             // get the pixel position in the original picture
 
             // -> input frame dimensions dependent log sampling:
-            //double scale = samplingStrenght/(rlim-(double)sqrt(idRow*idRow+idColumn*idColumn));
+            //double scale = samplingStrenght/(rlim-(double)std::sqrt(idRow*idRow+idColumn*idColumn));
 
             // -> input frame dimensions INdependent log sampling:
-            double scale=getOriginalRadiusLength((double)sqrt((double)(idRow*idRow+idColumn*idColumn)));
+            double scale=getOriginalRadiusLength((double)std::sqrt((double)(idRow*idRow+idColumn*idColumn)));
 #ifdef IMAGELOGPOLPROJECTION_DEBUG
             std::cout<<"ImageLogPolProjection::initLogRetinaSampling: scale= "<<scale<<std::endl;
             std::cout<<"ImageLogPolProjection::initLogRetinaSampling: scale2= "<<scale2<<std::endl;
@@ -243,7 +243,7 @@ bool ImageLogPolProjection::_initLogRetinaSampling(const double reductionFactor,
 
             // manage border effects
             double length=u*u+v*v;
-            double radiusRatio=sqrt(rMax/length);
+            double radiusRatio=std::sqrt(rMax/length);
 
 #ifdef IMAGELOGPOLPROJECTION_DEBUG
             std::cout<<"ImageLogPolProjection::(inputH, inputW)="<<halfInputRows<<", "<<halfInputColumns<<", Rmax2="<<rMax<<std::endl;
@@ -362,14 +362,14 @@ bool ImageLogPolProjection::_initLogPolarCortexSampling(const double reductionFa
 
     //std::cout<<"ImageLogPolProjection::Starting cortex projection"<<std::endl;
     // compute transformation, get theta and Radius in reagrd of the output sampled pixel
-    double diagonalLenght=sqrt((double)(_outputNBcolumns*_outputNBcolumns+_outputNBrows*_outputNBrows));
+    double diagonalLenght=std::sqrt((double)(_outputNBcolumns*_outputNBcolumns+_outputNBrows*_outputNBrows));
     for (unsigned int radiusIndex=0;radiusIndex<_outputNBcolumns;++radiusIndex)
         for(unsigned int orientationIndex=0;orientationIndex<_outputNBrows;++orientationIndex)
         {
             double x=1.0+sinh(radiusAxis[radiusIndex])*cos(orientationAxis[orientationIndex]);
             double y=sinh(radiusAxis[radiusIndex])*sin(orientationAxis[orientationIndex]);
             // get the input picture coordinate
-            double R=diagonalLenght*sqrt(x*x+y*y)/(5.0+sqrt(x*x+y*y));
+            double R=diagonalLenght*std::sqrt(x*x+y*y)/(5.0+std::sqrt(x*x+y*y));
             double theta=atan2(y,x);
             // convert input polar coord into cartesian/C compatble coordinate
             unsigned int columnIndex=(unsigned int)(cos(theta)*R)+halfInputColumns;

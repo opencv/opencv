@@ -285,7 +285,7 @@ const CvMat* CvMLData::get_missing() const
     return missing;
 }
 
-const std::map<std::string, int>& CvMLData::get_class_labels_map() const
+const std::map<cv::String, int>& CvMLData::get_class_labels_map() const
 {
     return class_map;
 }

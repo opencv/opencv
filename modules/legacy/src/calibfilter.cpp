@@ -235,7 +235,7 @@ void CvCalibFilter::SetCameraCount( int count )
             cvReleaseMat( &rectMap[i][1] );
         }
 
-        memset( latestCounts, 0, sizeof(latestPoints) );
+        memset( latestCounts, 0, sizeof(latestCounts) );
         maxPoints = 0;
         cameraCount = count;
     }
@@ -546,19 +546,19 @@ void CvCalibFilter::DrawPoints( CvMat** dstarr )
 
                 static const CvScalar line_colors[] =
                 {
-                    {{0,0,255}},
-                    {{0,128,255}},
-                    {{0,200,200}},
-                    {{0,255,0}},
-                    {{200,200,0}},
-                    {{255,0,0}},
-                    {{255,0,255}}
+                    CvScalar(0,0,255),
+                    CvScalar(0,128,255),
+                    CvScalar(0,200,200),
+                    CvScalar(0,255,0),
+                    CvScalar(200,200,0),
+                    CvScalar(255,0,0),
+                    CvScalar(255,0,255)
                 };
 
                 const int colorCount = sizeof(line_colors)/sizeof(line_colors[0]);
                 const int r = 4;
                 CvScalar color = line_colors[0];
-                CvPoint prev_pt = { 0, 0};
+                CvPoint prev_pt;
 
                 for( j = 0; j < count; j++ )
                 {

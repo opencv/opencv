@@ -11,6 +11,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/nonfree/features2d.hpp"
 
+using namespace std;
 using namespace cv;
 
 void readme();
@@ -24,8 +25,8 @@ int main( int argc, char** argv )
   if( argc != 3 )
   { readme(); return -1; }
 
-  Mat img_1 = imread( argv[1], CV_LOAD_IMAGE_GRAYSCALE );
-  Mat img_2 = imread( argv[2], CV_LOAD_IMAGE_GRAYSCALE );
+  Mat img_1 = imread( argv[1], IMREAD_GRAYSCALE );
+  Mat img_2 = imread( argv[2], IMREAD_GRAYSCALE );
 
   if( !img_1.data || !img_2.data )
   { std::cout<< " --(!) Error reading images " << std::endl; return -1; }
@@ -83,7 +84,7 @@ int main( int argc, char** argv )
   //-- Show detected matches
   imshow( "Good Matches", img_matches );
 
-  for( int i = 0; i < good_matches.size(); i++ )
+  for( int i = 0; i < (int)good_matches.size(); i++ )
   { printf( "-- Good Match [%d] Keypoint 1: %d  -- Keypoint 2: %d  \n", i, good_matches[i].queryIdx, good_matches[i].trainIdx ); }
 
   waitKey(0);

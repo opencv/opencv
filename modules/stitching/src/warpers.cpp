@@ -42,8 +42,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
-
 namespace cv {
 namespace detail {
 
@@ -138,28 +136,28 @@ Rect PlaneWarper::warpRoi(Size src_size, const Mat &K, const Mat &R, const Mat &
 
 void PlaneWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
 {
-    float tl_uf = numeric_limits<float>::max();
-    float tl_vf = numeric_limits<float>::max();
-    float br_uf = -numeric_limits<float>::max();
-    float br_vf = -numeric_limits<float>::max();
+    float tl_uf = std::numeric_limits<float>::max();
+    float tl_vf = std::numeric_limits<float>::max();
+    float br_uf = -std::numeric_limits<float>::max();
+    float br_vf = -std::numeric_limits<float>::max();
 
     float u, v;
 
     projector_.mapForward(0, 0, u, v);
-    tl_uf = min(tl_uf, u); tl_vf = min(tl_vf, v);
-    br_uf = max(br_uf, u); br_vf = max(br_vf, v);
+    tl_uf = std::min(tl_uf, u); tl_vf = std::min(tl_vf, v);
+    br_uf = std::max(br_uf, u); br_vf = std::max(br_vf, v);
 
     projector_.mapForward(0, static_cast<float>(src_size.height - 1), u, v);
-    tl_uf = min(tl_uf, u); tl_vf = min(tl_vf, v);
-    br_uf = max(br_uf, u); br_vf = max(br_vf, v);
+    tl_uf = std::min(tl_uf, u); tl_vf = std::min(tl_vf, v);
+    br_uf = std::max(br_uf, u); br_vf = std::max(br_vf, v);
 
     projector_.mapForward(static_cast<float>(src_size.width - 1), 0, u, v);
-    tl_uf = min(tl_uf, u); tl_vf = min(tl_vf, v);
-    br_uf = max(br_uf, u); br_vf = max(br_vf, v);
+    tl_uf = std::min(tl_uf, u); tl_vf = std::min(tl_vf, v);
+    br_uf = std::max(br_uf, u); br_vf = std::max(br_vf, v);
 
     projector_.mapForward(static_cast<float>(src_size.width - 1), static_cast<float>(src_size.height - 1), u, v);
-    tl_uf = min(tl_uf, u); tl_vf = min(tl_vf, v);
-    br_uf = max(br_uf, u); br_vf = max(br_vf, v);
+    tl_uf = std::min(tl_uf, u); tl_vf = std::min(tl_vf, v);
+    br_uf = std::max(br_uf, u); br_vf = std::max(br_vf, v);
 
     dst_tl.x = static_cast<int>(tl_uf);
     dst_tl.y = static_cast<int>(tl_vf);
@@ -186,8 +184,8 @@ void SphericalWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_b
         float y_ = projector_.k[4] * y / z + projector_.k[5];
         if (x_ > 0.f && x_ < src_size.width && y_ > 0.f && y_ < src_size.height)
         {
-            tl_uf = min(tl_uf, 0.f); tl_vf = min(tl_vf, static_cast<float>(CV_PI * projector_.scale));
-            br_uf = max(br_uf, 0.f); br_vf = max(br_vf, static_cast<float>(CV_PI * projector_.scale));
+            tl_uf = std::min(tl_uf, 0.f); tl_vf = std::min(tl_vf, static_cast<float>(CV_PI * projector_.scale));
+            br_uf = std::max(br_uf, 0.f); br_vf = std::max(br_vf, static_cast<float>(CV_PI * projector_.scale));
         }
     }
 
@@ -200,8 +198,8 @@ void SphericalWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_b
         float y_ = projector_.k[4] * y / z + projector_.k[5];
         if (x_ > 0.f && x_ < src_size.width && y_ > 0.f && y_ < src_size.height)
         {
-            tl_uf = min(tl_uf, 0.f); tl_vf = min(tl_vf, static_cast<float>(0));
-            br_uf = max(br_uf, 0.f); br_vf = max(br_vf, static_cast<float>(0));
+            tl_uf = std::min(tl_uf, 0.f); tl_vf = std::min(tl_vf, static_cast<float>(0));
+            br_uf = std::max(br_uf, 0.f); br_vf = std::max(br_vf, static_cast<float>(0));
         }
     }
 
@@ -314,8 +312,8 @@ void SphericalPortraitWarper::detectResultRoi(Size src_size, Point &dst_tl, Poin
         float y_ = projector_.k[4] * y / z + projector_.k[5];
         if (x_ > 0.f && x_ < src_size.width && y_ > 0.f && y_ < src_size.height)
         {
-            tl_uf = min(tl_uf, 0.f); tl_vf = min(tl_vf, static_cast<float>(CV_PI * projector_.scale));
-            br_uf = max(br_uf, 0.f); br_vf = max(br_vf, static_cast<float>(CV_PI * projector_.scale));
+            tl_uf = std::min(tl_uf, 0.f); tl_vf = std::min(tl_vf, static_cast<float>(CV_PI * projector_.scale));
+            br_uf = std::max(br_uf, 0.f); br_vf = std::max(br_vf, static_cast<float>(CV_PI * projector_.scale));
         }
     }
 
@@ -328,8 +326,8 @@ void SphericalPortraitWarper::detectResultRoi(Size src_size, Point &dst_tl, Poin
         float y_ = projector_.k[4] * y / z + projector_.k[5];
         if (x_ > 0.f && x_ < src_size.width && y_ > 0.f && y_ < src_size.height)
         {
-            tl_uf = min(tl_uf, 0.f); tl_vf = min(tl_vf, static_cast<float>(0));
-            br_uf = max(br_uf, 0.f); br_vf = max(br_vf, static_cast<float>(0));
+            tl_uf = std::min(tl_uf, 0.f); tl_vf = std::min(tl_vf, static_cast<float>(0));
+            br_uf = std::max(br_uf, 0.f); br_vf = std::max(br_vf, static_cast<float>(0));
         }
     }
 

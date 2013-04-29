@@ -39,11 +39,6 @@ Queries the value of the histogram bin.
 .. ocv:cfunction:: float cvQueryHistValue_3D(CvHistogram hist, int idx0, int idx1, int idx2)
 .. ocv:cfunction:: float cvQueryHistValue_nD(CvHistogram hist, const int* idx)
 
-.. ocv:pyoldfunction:: cv.QueryHistValue_1D(hist, idx0) -> float
-.. ocv:pyoldfunction:: cv.QueryHistValue_2D(hist, idx0, idx1) -> float
-.. ocv:pyoldfunction:: cv.QueryHistValue_3D(hist, idx0, idx1, idx2) -> float
-.. ocv:pyoldfunction:: cv.QueryHistValue_nD(hist, idx) -> float
-
     :param hist: Histogram.
 
     :param idx0: 0-th index.

@@ -15,8 +15,6 @@ Finds edges in an image using the [Canny86]_ algorithm.
 
 .. ocv:cfunction:: void cvCanny( const CvArr* image, CvArr* edges, double threshold1, double threshold2, int aperture_size=3 )
 
-.. ocv:pyoldfunction:: cv.Canny(image, edges, threshold1, threshold2, aperture_size=3) -> None
-
     :param image: single-channel 8-bit input image.
 
     :param edges: output edge map; it has the same size and type as  ``image`` .
@@ -44,8 +42,6 @@ Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 
 .. ocv:cfunction:: void cvCornerEigenValsAndVecs( const CvArr* image, CvArr* eigenvv, int block_size, int aperture_size=3 )
 
-.. ocv:pyoldfunction:: cv.CornerEigenValsAndVecs(image, eigenvv, blockSize, aperture_size=3) -> None
-
     :param src: Input single-channel 8-bit or floating-point image.
 
     :param dst: Image to store the results. It has the same size as  ``src``  and the type  ``CV_32FC(6)`` .
@@ -62,7 +58,7 @@ For every pixel
 
 .. math::
 
-    M =  \begin{bmatrix} \sum _{S(p)}(dI/dx)^2 &  \sum _{S(p)}(dI/dx dI/dy)^2  \\ \sum _{S(p)}(dI/dx dI/dy)^2 &  \sum _{S(p)}(dI/dy)^2 \end{bmatrix}
+    M =  \begin{bmatrix} \sum _{S(p)}(dI/dx)^2 &  \sum _{S(p)}dI/dx dI/dy  \\ \sum _{S(p)}dI/dx dI/dy &  \sum _{S(p)}(dI/dy)^2 \end{bmatrix}
 
 where the derivatives are computed using the
 :ocv:func:`Sobel` operator.
@@ -96,8 +92,6 @@ Harris edge detector.
 .. ocv:pyfunction:: cv2.cornerHarris(src, blockSize, ksize, k[, dst[, borderType]]) -> dst
 
 .. ocv:cfunction:: void cvCornerHarris( const CvArr* image, CvArr* harris_responce, int block_size, int aperture_size=3, double k=0.04 )
-
-.. ocv:pyoldfunction:: cv.CornerHarris(image, harris_dst, blockSize, aperture_size=3, k=0.04) -> None
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -137,8 +131,6 @@ Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
 .. ocv:cfunction:: void cvCornerMinEigenVal( const CvArr* image, CvArr* eigenval, int block_size, int aperture_size=3 )
 
-.. ocv:pyoldfunction:: cv.CornerMinEigenVal(image, eigenval, blockSize, aperture_size=3) -> None
-
     :param src: Input single-channel 8-bit or floating-point image.
 
     :param dst: Image to store the minimal eigenvalues. It has the type  ``CV_32FC1``  and the same size as  ``src`` .
@@ -162,11 +154,9 @@ Refines the corner locations.
 
 .. ocv:function:: void cornerSubPix( InputArray image, InputOutputArray corners, Size winSize, Size zeroZone, TermCriteria criteria )
 
-.. ocv:pyfunction:: cv2.cornerSubPix(image, corners, winSize, zeroZone, criteria) -> None
+.. ocv:pyfunction:: cv2.cornerSubPix(image, corners, winSize, zeroZone, criteria) -> corners
 
 .. ocv:cfunction:: void cvFindCornerSubPix( const CvArr* image, CvPoint2D32f* corners, int count, CvSize win, CvSize zero_zone, CvTermCriteria criteria )
-
-.. ocv:pyoldfunction:: cv.FindCornerSubPix(image, corners, win, zero_zone, criteria) -> corners
 
     :param image: Input image.
 
@@ -227,8 +217,6 @@ Determines strong corners on an image.
 .. ocv:pyfunction:: cv2.goodFeaturesToTrack(image, maxCorners, qualityLevel, minDistance[, corners[, mask[, blockSize[, useHarrisDetector[, k]]]]]) -> corners
 
 .. ocv:cfunction:: void cvGoodFeaturesToTrack( const CvArr* image, CvArr* eig_image, CvArr* temp_image, CvPoint2D32f* corners, int* corner_count, double quality_level, double min_distance, const CvArr* mask=NULL, int block_size=3, int use_harris=0, double k=0.04 )
-
-.. ocv:pyoldfunction:: cv.GoodFeaturesToTrack(image, eigImage, tempImage, cornerCount, qualityLevel, minDistance, mask=None, blockSize=3, useHarris=0, k=0.04) -> cornerCount
 
     :param image: Input 8-bit or floating-point 32-bit, single-channel image.
 
@@ -318,8 +306,8 @@ The function finds circles in a grayscale image using a modification of the Houg
 
 Example: ::
 
-    #include <cv.h>
-    #include <highgui.h>
+    #include <opencv2/imgproc.hpp>
+    #include <opencv2/highgui.hpp>
     #include <math.h>
 
     using namespace cv;
@@ -329,11 +317,11 @@ Example: ::
         Mat img, gray;
         if( argc != 2 && !(img=imread(argv[1], 1)).data)
             return -1;
-        cvtColor(img, gray, CV_BGR2GRAY);
+        cvtColor(img, gray, COLOR_BGR2GRAY);
         // smooth it, otherwise a lot of false circles may be detected
         GaussianBlur( gray, gray, Size(9, 9), 2, 2 );
         vector<Vec3f> circles;
-        HoughCircles(gray, circles, CV_HOUGH_GRADIENT,
+        HoughCircles(gray, circles, HOUGH_GRADIENT,
                      2, gray->rows/4, 200, 100 );
         for( size_t i = 0; i < circles.size(); i++ )
         {
@@ -366,8 +354,6 @@ Finds lines in a binary image using the standard Hough transform.
 .. ocv:pyfunction:: cv2.HoughLines(image, rho, theta, threshold[, lines[, srn[, stn]]]) -> lines
 
 .. ocv:cfunction:: CvSeq* cvHoughLines2( CvArr* image, void* line_storage, int method, double rho, double theta, int threshold, double param1=0, double param2=0 )
-
-.. ocv:pyoldfunction:: cv.HoughLines2(image, storage, method, rho, theta, threshold, param1=0, param2=0)-> lines
 
     :param image: 8-bit, single-channel binary source image. The image may be modified by the function.
 
@@ -440,9 +426,8 @@ The function implements the probabilistic Hough transform algorithm for line det
     /* This is a standalone program. Pass an image name as the first parameter
     of the program.  Switch between standard and probabilistic Hough transform
     by changing "#if 1" to "#if 0" and back */
-    #include <cv.h>
-    #include <highgui.h>
-    #include <math.h>
+    #include <opencv2/imgproc.hpp>
+    #include <opencv2/highgui.hpp>
 
     using namespace cv;
 
@@ -453,7 +438,7 @@ The function implements the probabilistic Hough transform algorithm for line det
             return -1;
 
         Canny( src, dst, 50, 200, 3 );
-        cvtColor( dst, color_dst, CV_GRAY2BGR );
+        cvtColor( dst, color_dst, COLOR_GRAY2BGR );
 
     #if 0
         vector<Vec2f> lines;
@@ -509,8 +494,6 @@ Calculates a feature map for corner detection.
 .. ocv:pyfunction:: cv2.preCornerDetect(src, ksize[, dst[, borderType]]) -> dst
 
 .. ocv:cfunction:: void cvPreCornerDetect( const CvArr* image, CvArr* corners, int aperture_size=3 )
-
-.. ocv:pyoldfunction:: cv.PreCornerDetect(image, corners, apertureSize=3)-> None
 
     :param src: Source single-channel 8-bit of floating-point image.
 

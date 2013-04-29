@@ -699,7 +699,6 @@ public:
 private:
     Mat src;
     Mat dst;
-    int nStripes;
 
     double thresh;
     double maxval;

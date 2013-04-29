@@ -66,12 +66,12 @@ void CV_PyrSegmentationTest::run( int /*start_from*/ )
 
     int code = cvtest::TS::OK;
 
-    CvPoint _cp[] ={{33,33}, {43,33}, {43,43}, {33,43}};
-    CvPoint _cp2[] ={{50,50}, {70,50}, {70,70}, {50,70}};
+    CvPoint _cp[] ={ CvPoint(33,33), CvPoint(43,33), CvPoint(43,43), CvPoint(33,43)};
+    CvPoint _cp2[] ={CvPoint(50,50), CvPoint(70,50), CvPoint(70,70), CvPoint(50,70)};
     CvPoint* cp = _cp;
     CvPoint* cp2 = _cp2;
     CvConnectedComp *dst_comp[3];
-    CvRect rect[3] = {{50,50,21,21}, {0,0,128,128}, {33,33,11,11}};
+    CvRect rect[3] = {CvRect(50,50,21,21), CvRect(0,0,128,128), CvRect(33,33,11,11)};
     double a[3] = {441.0, 15822.0, 121.0};
 
 /*    ippiPoint cp3[] ={130,130, 150,130, 150,150, 130,150};  */
@@ -86,7 +86,7 @@ void CV_PyrSegmentationTest::run( int /*start_from*/ )
     int i, j, iter;
 
     IplImage *image, *image_f, *image_s;
-    CvSize size = {128, 128};
+    CvSize size(128, 128);
     const int threshold1 = 50, threshold2 = 50;
 
     rect[1].width = size.width;

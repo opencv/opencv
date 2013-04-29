@@ -242,3 +242,33 @@ Converts polar coordinates into Cartesian.
     :param stream: Stream for the asynchronous version.
 
 .. seealso:: :ocv:func:`polarToCart`
+
+
+
+gpu::normalize
+--------------
+Normalizes the norm or value range of an array.
+
+.. ocv:function:: void gpu::normalize(const GpuMat& src, GpuMat& dst, double alpha = 1, double beta = 0, int norm_type = NORM_L2, int dtype = -1, const GpuMat& mask = GpuMat())
+
+.. ocv:function:: void gpu::normalize(const GpuMat& src, GpuMat& dst, double a, double b, int norm_type, int dtype, const GpuMat& mask, GpuMat& norm_buf, GpuMat& cvt_buf)
+
+    :param src: input array.
+
+    :param dst: output array of the same size as  ``src`` .
+
+    :param alpha: norm value to normalize to or the lower range boundary in case of the range normalization.
+
+    :param beta: upper range boundary in case of the range normalization; it is not used for the norm normalization.
+
+    :param normType: normalization type (see the details below).
+
+    :param dtype: when negative, the output array has the same type as ``src``; otherwise, it has the same number of channels as  ``src`` and the depth ``=CV_MAT_DEPTH(dtype)``.
+
+    :param mask: optional operation mask.
+
+    :param norm_buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
+
+    :param cvt_buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
+
+.. seealso:: :ocv:func:`normalize`

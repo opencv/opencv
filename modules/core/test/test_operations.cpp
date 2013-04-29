@@ -69,7 +69,7 @@ protected:
 
     bool SomeMatFunctions();
     bool TestMat();
-    template<typename _Tp> void TestType(Size sz, _Tp value=_Tp(1.f));
+    template<typename _Tp> void TestType(Size sz, _Tp value);
     bool TestTemplateMat();
     bool TestMatND();
     bool TestSparseMat();
@@ -116,9 +116,12 @@ template<typename _Tp> void CV_OperationsTest::TestType(Size sz, _Tp value)
               m.elemSize() == sizeof(_Tp) && m.step == m.elemSize()*m.cols);
     for( int y = 0; y < sz.height; y++ )
         for( int x = 0; x < sz.width; x++ )
-            m(y, x) = value;
+        {
+            m(y,x) = value;
+        }
 
-    CV_Assert( sum(m.reshape(1,1))[0] == (double)sz.width*sz.height );
+    double s = sum(Mat(m).reshape(1))[0];
+    CV_Assert( s == (double)sz.width*sz.height );
 }
 
 bool CV_OperationsTest::TestMat()
@@ -795,15 +798,16 @@ bool CV_OperationsTest::TestTemplateMat()
         }
         CV_Assert( badarg_catched );
 
-#include <iostream>
-#include <opencv2/core/core.hpp>
-
         Size size(2, 5);
-        TestType<float>(size);
-        TestType<cv::Vec3f>(size);
-        TestType<cv::Matx31f>(size);
-        TestType<cv::Matx41f>(size);
-        TestType<cv::Matx32f>(size);
+        TestType<float>(size, 1.f);
+        cv::Vec3f val1 = 1.f;
+        TestType<cv::Vec3f>(size, val1);
+        cv::Matx31f val2 = 1.f;
+        TestType<cv::Matx31f>(size, val2);
+        cv::Matx41f val3 = 1.f;
+        TestType<cv::Matx41f>(size, val3);
+        cv::Matx32f val4 = 1.f;
+        TestType<cv::Matx32f>(size, val4);
     }
     catch (const test_excep& e)
     {
@@ -994,6 +998,23 @@ bool CV_OperationsTest::operations1()
 
         add(Mat::zeros(6, 1, CV_64F), 1, c, noArray(), c.type());
         CV_Assert( norm(Matx61f(1.f, 1.f, 1.f, 1.f, 1.f, 1.f), c, CV_C) == 0 );
+
+        vector<Point2f> pt2d(3);
+        vector<Point3d> pt3d(2);
+
+        CV_Assert( Mat(pt2d).checkVector(2) == 3 && Mat(pt2d).checkVector(3) < 0 &&
+                   Mat(pt3d).checkVector(2) < 0 && Mat(pt3d).checkVector(3) == 2 );
+
+        Matx44f m44(0.8147f, 0.6324f, 0.9575f, 0.9572f,
+                0.9058f, 0.0975f, 0.9649f, 0.4854f,
+                0.1270f, 0.2785f, 0.1576f, 0.8003f,
+                0.9134f, 0.5469f, 0.9706f, 0.1419f);
+        double d = determinant(m44);
+        CV_Assert( fabs(d - (-0.0262)) <= 0.001 );
+
+        Cv32suf z;
+        z.i = 0x80000000;
+        CV_Assert( cvFloor(z.f) == 0 && cvCeil(z.f) == 0 && cvRound(z.f) == 0 );
     }
     catch(const test_excep&)
     {

@@ -15,7 +15,7 @@ using namespace cv;
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   Mat src, dst;
 
@@ -71,7 +71,7 @@ int main( int argc, char** argv )
   }
 
   /// Display
-  namedWindow("calcHist Demo", CV_WINDOW_AUTOSIZE );
+  namedWindow("calcHist Demo", WINDOW_AUTOSIZE );
   imshow("calcHist Demo", histImage );
 
   waitKey(0);

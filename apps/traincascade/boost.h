@@ -17,7 +17,7 @@ struct CvCascadeBoostParams : CvBoostParams
     bool read( const FileNode &node );
     virtual void printDefaults() const;
     virtual void printAttrs() const;
-    virtual bool scanAttr( const String prmName, const String val);
+    virtual bool scanAttr( const std::string prmName, const std::string val);
 };
 
 struct CvCascadeBoostTrainData : CvDTreeTrainData

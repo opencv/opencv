@@ -14,8 +14,8 @@ using namespace cv;
 
 /// Global Variables
 Mat img; Mat templ; Mat result;
-char* image_window = "Source Image";
-char* result_window = "Result window";
+const char* image_window = "Source Image";
+const char* result_window = "Result window";
 
 int match_method;
 int max_Trackbar = 5;
@@ -26,18 +26,18 @@ void MatchingMethod( int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Load image and template
   img = imread( argv[1], 1 );
   templ = imread( argv[2], 1 );
 
   /// Create windows
-  namedWindow( image_window, CV_WINDOW_AUTOSIZE );
-  namedWindow( result_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( image_window, WINDOW_AUTOSIZE );
+  namedWindow( result_window, WINDOW_AUTOSIZE );
 
   /// Create Trackbar
-  char* trackbar_label = "Method: \n 0: SQDIFF \n 1: SQDIFF NORMED \n 2: TM CCORR \n 3: TM CCORR NORMED \n 4: TM COEFF \n 5: TM COEFF NORMED";
+  const char* trackbar_label = "Method: \n 0: SQDIFF \n 1: SQDIFF NORMED \n 2: TM CCORR \n 3: TM CCORR NORMED \n 4: TM COEFF \n 5: TM COEFF NORMED";
   createTrackbar( trackbar_label, image_window, &match_method, max_Trackbar, MatchingMethod );
 
   MatchingMethod( 0, 0 );
@@ -74,7 +74,7 @@ void MatchingMethod( int, void* )
 
 
   /// For SQDIFF and SQDIFF_NORMED, the best matches are lower values. For all the other methods, the higher the better
-  if( match_method  == CV_TM_SQDIFF || match_method == CV_TM_SQDIFF_NORMED )
+  if( match_method  == TM_SQDIFF || match_method == TM_SQDIFF_NORMED )
     { matchLoc = minLoc; }
   else
     { matchLoc = maxLoc; }

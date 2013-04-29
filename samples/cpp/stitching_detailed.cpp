@@ -45,7 +45,8 @@
 #include <fstream>
 #include <string>
 #include "opencv2/opencv_modules.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/highgui.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
 #include "opencv2/stitching/detail/camera.hpp"
@@ -120,7 +121,7 @@ static void printUsage()
 
 
 // Default command line args
-vector<string> img_names;
+vector<String> img_names;
 bool preview = false;
 bool try_gpu = false;
 double work_megapix = 0.6;
@@ -326,7 +327,10 @@ static int parseCmdArgs(int argc, char** argv)
 
 int main(int argc, char* argv[])
 {
+#if ENABLE_LOG
     int64 app_start_time = getTickCount();
+#endif
+
     cv::setBreakOnError(true);
 
     int retval = parseCmdArgs(argc, argv);
@@ -345,12 +349,14 @@ int main(int argc, char* argv[])
     bool is_work_scale_set = false, is_seam_scale_set = false, is_compose_scale_set = false;
 
     LOGLN("Finding features...");
+#if ENABLE_LOG
     int64 t = getTickCount();
+#endif
 
     Ptr<FeaturesFinder> finder;
     if (features_type == "surf")
     {
-#ifdef HAVE_OPENCV_GPU
+#if defined(HAVE_OPENCV_NONFREE) && defined(HAVE_OPENCV_GPU)
         if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
             finder = new SurfFeaturesFinderGpu();
         else
@@ -420,7 +426,9 @@ int main(int argc, char* argv[])
     LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     LOG("Pairwise matching");
+#if ENABLE_LOG
     t = getTickCount();
+#endif
     vector<MatchesInfo> pairwise_matches;
     BestOf2NearestMatcher matcher(try_gpu, match_conf);
     matcher(features, pairwise_matches);
@@ -438,7 +446,7 @@ int main(int argc, char* argv[])
     // Leave only images we are sure are from the same panorama
     vector<int> indices = leaveBiggestComponent(features, pairwise_matches, conf_thresh);
     vector<Mat> img_subset;
-    vector<string> img_names_subset;
+    vector<String> img_names_subset;
     vector<Size> full_img_sizes_subset;
     for (size_t i = 0; i < indices.size(); ++i)
     {
@@ -516,7 +524,9 @@ int main(int argc, char* argv[])
     }
 
     LOGLN("Warping images (auxiliary)... ");
+#if ENABLE_LOG
     t = getTickCount();
+#endif
 
     vector<Point> corners(num_images);
     vector<Mat> masks_warped(num_images);
@@ -634,7 +644,9 @@ int main(int argc, char* argv[])
     masks.clear();
 
     LOGLN("Compositing...");
+#if ENABLE_LOG
     t = getTickCount();
+#endif
 
     Mat img_warped, img_warped_s;
     Mat dilated_mask, seam_mask, mask, mask_warped;

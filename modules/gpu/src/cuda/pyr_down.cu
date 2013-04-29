@@ -42,13 +42,13 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/border_interpolate.hpp"
-#include "opencv2/gpu/device/vec_traits.hpp"
-#include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/saturate_cast.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/border_interpolate.hpp"
+#include "opencv2/core/cuda/vec_traits.hpp"
+#include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -222,7 +222,7 @@ namespace cv { namespace gpu { namespace device
         template void pyrDown_gpu<float3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
         template void pyrDown_gpu<float4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
     } // namespace imgproc
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cudev
 
 
 #endif /* CUDA_DISABLER */

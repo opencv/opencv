@@ -1,12 +1,13 @@
-﻿#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
+﻿#include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
 #include <sstream>
 
 using namespace std;
 using namespace cv;
 
-void help()
+static void help()
 {
     cout
         << "\n--------------------------------------------------------------------------" << endl
@@ -35,9 +36,9 @@ int main( int argc, char* argv[])
 
     Mat I, J;
     if( argc == 4 && !strcmp(argv[3],"G") )
-        I = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
+        I = imread(argv[1], IMREAD_GRAYSCALE);
     else
-        I = imread(argv[1], CV_LOAD_IMAGE_COLOR);
+        I = imread(argv[1], IMREAD_COLOR);
 
     if (!I.data)
     {
@@ -45,11 +46,11 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    int divideWith; // convert our input string to number - C++ style
+    int divideWith = 0; // convert our input string to number - C++ style
     stringstream s;
     s << argv[2];
     s >> divideWith;
-    if (!s)
+    if (!s || !divideWith)
     {
         cout << "Invalid number entered for dividing. " << endl;
         return -1;
@@ -57,7 +58,7 @@ int main( int argc, char* argv[])
 
     uchar table[256];
     for (int i = 0; i < 256; ++i)
-       table[i] = divideWith* (i/divideWith);
+       table[i] = (uchar)(divideWith * (i/divideWith));
 
     const int times = 100;
     double t;

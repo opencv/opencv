@@ -310,21 +310,6 @@ dl.pyfunction > dt:first-child {
     margin-bottom: 7px;
 }
 
-dl.pyoldfunction > dt:first-child {
-    margin-bottom: 7px;
-    color: #8080B0;
-}
-
-dl.pyoldfunction > dt:first-child tt.descname
-{
-    color: #8080B0;
-}
-
-dl.pyoldfunction > dt:first-child tt.descclassname
-{
-    color: #8080B0;
-}
-
 dl.jfunction > dt:first-child {
     margin-bottom: 7px;
 }
@@ -394,4 +379,12 @@ div.body ul.search li {
 div.linenodiv {
     min-width: 1em;
     text-align: right;
+}
+
+div.sphinxsidebar #searchbox input[type="text"] {
+    width:auto;
+}
+
+div.sphinxsidebar #searchbox input[type="submit"] {
+    width:auto;
 }

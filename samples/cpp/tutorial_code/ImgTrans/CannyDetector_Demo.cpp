@@ -21,13 +21,13 @@ int lowThreshold;
 int const max_lowThreshold = 100;
 int ratio = 3;
 int kernel_size = 3;
-char* window_name = "Edge Map";
+const char* window_name = "Edge Map";
 
 /**
  * @function CannyThreshold
  * @brief Trackbar callback - Canny thresholds input with a ratio 1:3
  */
-void CannyThreshold(int, void*)
+static void CannyThreshold(int, void*)
 {
     /// Reduce noise with a kernel 3x3
     blur( src_gray, detected_edges, Size(3,3) );
@@ -46,7 +46,7 @@ void CannyThreshold(int, void*)
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Load an image
   src = imread( argv[1] );
@@ -58,10 +58,10 @@ int main( int argc, char** argv )
   dst.create( src.size(), src.type() );
 
   /// Convert the image to grayscale
-  cvtColor( src, src_gray, CV_BGR2GRAY );
+  cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
   /// Create a window
-  namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+  namedWindow( window_name, WINDOW_AUTOSIZE );
 
   /// Create a Trackbar for user to enter threshold
   createTrackbar( "Min Threshold:", window_name, &lowThreshold, max_lowThreshold, CannyThreshold );

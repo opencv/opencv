@@ -3,7 +3,7 @@ package org.opencv.core;
 import java.util.Arrays;
 import java.util.List;
 
-import org.opencv.features2d.DMatch;
+import org.opencv.core.DMatch;
 
 public class MatOfDMatch extends Mat {
     // 32FC4
@@ -16,8 +16,8 @@ public class MatOfDMatch extends Mat {
 
     protected MatOfDMatch(long addr) {
         super(addr);
-        if(checkVector(_channels, _depth) < 0 )
-            throw new IllegalArgumentException("Incomatible Mat");
+        if( !empty() && checkVector(_channels, _depth) < 0 )
+            throw new IllegalArgumentException("Incomatible Mat: " + toString());
         //FIXME: do we need release() here?
     }
 
@@ -27,8 +27,8 @@ public class MatOfDMatch extends Mat {
 
     public MatOfDMatch(Mat m) {
         super(m, Range.all());
-        if(checkVector(_channels, _depth) < 0 )
-            throw new IllegalArgumentException("Incomatible Mat");
+        if( !empty() && checkVector(_channels, _depth) < 0 )
+            throw new IllegalArgumentException("Incomatible Mat: " + toString());
         //FIXME: do we need release() here?
     }
 

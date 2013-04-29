@@ -39,6 +39,7 @@
 //
 //M*/
 #include "precomp.hpp"
+#include "opencv2/calib3d/calib3d_c.h"
 
 /* POSIT structure */
 struct CvPOSITObject
@@ -119,12 +120,6 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
     float diff = (float)criteria.epsilon;
     float inv_focalLength = 1 / focalLength;
 
-    /* init variables */
-    int N = pObject->N;
-    float *objectVectors = pObject->obj_vecs;
-    float *invMatrix = pObject->inv_matr;
-    float *imgVectors = pObject->img_vecs;
-
     /* Check bad arguments */
     if( imagePoints == NULL )
         return CV_NULLPTR_ERR;
@@ -142,6 +137,12 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
         return CV_BADFACTOR_ERR;
     if( (criteria.type & CV_TERMCRIT_ITER) && criteria.max_iter <= 0 )
         return CV_BADFACTOR_ERR;
+
+    /* init variables */
+    int N = pObject->N;
+    float *objectVectors = pObject->obj_vecs;
+    float *invMatrix = pObject->inv_matr;
+    float *imgVectors = pObject->img_vecs;
 
     while( !converged )
     {

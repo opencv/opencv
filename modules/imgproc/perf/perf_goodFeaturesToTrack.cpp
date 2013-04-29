@@ -6,7 +6,7 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-typedef std::tr1::tuple<String, int, double, int, bool> Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris_t;
+typedef std::tr1::tuple<string, int, double, int, bool> Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris_t;
 typedef perf::TestBaseWithParam<Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris_t> Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris;
 
 PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris, goodFeaturesToTrack,
@@ -19,7 +19,7 @@ PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris, goodF
                 )
           )
 {
-    String filename = getDataPath(get<0>(GetParam()));
+    string filename = getDataPath(get<0>(GetParam()));
     int maxCorners = get<1>(GetParam());
     double qualityLevel = get<2>(GetParam());
     int blockSize = get<3>(GetParam());

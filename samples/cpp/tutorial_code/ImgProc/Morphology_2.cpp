@@ -21,7 +21,7 @@ int const max_operator = 4;
 int const max_elem = 2;
 int const max_kernel_size = 21;
 
-char* window_name = "Morphology Transformations Demo";
+const char* window_name = "Morphology Transformations Demo";
 
 
 /** Function Headers */
@@ -30,7 +30,7 @@ void Morphology_Operations( int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Load an image
   src = imread( argv[1] );
@@ -39,7 +39,7 @@ int main( int argc, char** argv )
     { return -1; }
 
   /// Create window
-  namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+  namedWindow( window_name, WINDOW_AUTOSIZE );
 
   /// Create Trackbar to select Morphology operation
   createTrackbar("Operator:\n 0: Opening - 1: Closing  \n 2: Gradient - 3: Top Hat \n 4: Black Hat", window_name, &morph_operator, max_operator, Morphology_Operations );

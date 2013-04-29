@@ -114,7 +114,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 {
     int  domains[] =
     {
-#ifdef HAVE_VIDEOINPUT
+#ifdef HAVE_DSHOW
         CV_CAP_DSHOW,
 #endif
 #if 1
@@ -168,11 +168,14 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
     // try every possibly installed camera API
     for (int i = 0; domains[i] >= 0; i++)
     {
-#if defined(HAVE_VIDEOINPUT)   || \
+#if defined(HAVE_DSHOW)        || \
+    defined(HAVE_MSMF)         || \
     defined(HAVE_TYZX)         || \
     defined(HAVE_VFW)          || \
     defined(HAVE_LIBV4L)       || \
-    (defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)) || \
+    defined(HAVE_CAMV4L)       || \
+    defined(HAVE_CAMV4L2)      || \
+    defined(HAVE_VIDEOIO)      || \
     defined(HAVE_GSTREAMER)    || \
     defined(HAVE_DC1394_2)     || \
     defined(HAVE_DC1394)       || \
@@ -193,11 +196,18 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 
         switch (domains[i])
         {
-#ifdef HAVE_VIDEOINPUT
+#ifdef HAVE_MSMF
+        case CV_CAP_MSMF:
+             capture = cvCreateCameraCapture_MSMF (index);
+             if (capture)
+                 return capture;
+            break;
+#endif
+#ifdef HAVE_DSHOW
         case CV_CAP_DSHOW:
-            capture = cvCreateCameraCapture_DShow (index);
-            if (capture)
-                return capture;
+             capture = cvCreateCameraCapture_DShow (index);
+             if (capture)
+                 return capture;
             break;
 #endif
 
@@ -216,7 +226,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
 #endif
 
-#if defined HAVE_LIBV4L || (defined (HAVE_CAMV4L) && defined (HAVE_CAMV4L2))
+#if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
             capture = cvCreateCameraCapture_V4L (index);
             if (capture)
                 return capture;
@@ -330,6 +340,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
         break; // CV_CAP_GIGANETIX
 #endif
+
         }
     }
 
@@ -424,7 +435,6 @@ CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
 
 CV_IMPL int cvWriteFrame( CvVideoWriter* writer, const IplImage* image )
 {
-
     return writer ? writer->writeFrame(image) : 0;
 }
 
@@ -443,7 +453,7 @@ namespace cv
 VideoCapture::VideoCapture()
 {}
 
-VideoCapture::VideoCapture(const string& filename)
+VideoCapture::VideoCapture(const String& filename)
 {
     open(filename);
 }
@@ -458,7 +468,7 @@ VideoCapture::~VideoCapture()
     cap.release();
 }
 
-bool VideoCapture::open(const string& filename)
+bool VideoCapture::open(const String& filename)
 {
     if (!isOpened())
     cap = cvCreateFileCapture(filename.c_str());
@@ -493,10 +503,10 @@ bool VideoCapture::retrieve(Mat& image, int channel)
         return false;
     }
     if(_img->origin == IPL_ORIGIN_TL)
-        image = Mat(_img);
+        image = cv::cvarrToMat(_img);
     else
     {
-        Mat temp(_img);
+        Mat temp = cv::cvarrToMat(_img);
         flip(temp, image, 0);
     }
     return true;
@@ -530,9 +540,9 @@ double VideoCapture::get(int propId)
 VideoWriter::VideoWriter()
 {}
 
-VideoWriter::VideoWriter(const string& filename, int fourcc, double fps, Size frameSize, bool isColor)
+VideoWriter::VideoWriter(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
-    open(filename, fourcc, fps, frameSize, isColor);
+    open(filename, _fourcc, fps, frameSize, isColor);
 }
 
 void VideoWriter::release()
@@ -545,9 +555,9 @@ VideoWriter::~VideoWriter()
     release();
 }
 
-bool VideoWriter::open(const string& filename, int fourcc, double fps, Size frameSize, bool isColor)
+bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
-    writer = cvCreateVideoWriter(filename.c_str(), fourcc, fps, frameSize, isColor);
+    writer = cvCreateVideoWriter(filename.c_str(), _fourcc, fps, frameSize, isColor);
     return isOpened();
 }
 
@@ -566,6 +576,11 @@ VideoWriter& VideoWriter::operator << (const Mat& image)
 {
     write(image);
     return *this;
+}
+
+int VideoWriter::fourcc(char c1, char c2, char c3, char c4)
+{
+    return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
 }
 
 }

@@ -10,8 +10,8 @@ DEVICE_ARCH = "armeabi"
 
 if (__name__ ==  "__main__"):
     if (len(sys.argv) >= 3):
-    DEVICE_ARCH = sys.argv[1]
-    DEVICE_NAME = sys.argv[2]
+        DEVICE_ARCH = sys.argv[1]
+        DEVICE_NAME = sys.argv[2]
 
     if (DEVICE_NAME != ""):
         DEVICE_STR = "-s \"" + DEVICE_NAME + "\""

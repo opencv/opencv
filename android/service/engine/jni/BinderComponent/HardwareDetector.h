@@ -27,6 +27,7 @@
 #define PLATFORM_TEGRA 1L
 #define PLATFORM_TEGRA2 2L
 #define PLATFORM_TEGRA3 3L
+#define PLATFORM_TEGRA4 4L
 
 int DetectKnownPlatforms();
 int GetProcessorCount();

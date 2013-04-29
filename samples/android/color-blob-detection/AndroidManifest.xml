@@ -4,7 +4,11 @@
           android:versionCode="21"
           android:versionName="2.1">
 
-    <application android:label="@string/app_name" android:icon="@drawable/icon">
+    <application
+        android:label="@string/app_name"
+        android:icon="@drawable/icon"
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen" >
+
         <activity android:name="ColorBlobDetectionActivity"
                   android:label="@string/app_name"
                   android:screenOrientation="landscape"
@@ -22,7 +26,7 @@
                       android:largeScreens="true"
                       android:anyDensity="true" />
 
-    <uses-sdk android:minSdkVersion="8" />
+    <uses-sdk android:minSdkVersion="8" android:targetSdkVersion="11" />
 
     <uses-permission android:name="android.permission.CAMERA"/>
 

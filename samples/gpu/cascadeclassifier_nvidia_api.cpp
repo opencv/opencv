@@ -8,6 +8,7 @@
 #include <cstdio>
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
 
 #ifdef HAVE_CUDA
 #include "NCVHaarObjectDetection.hpp"
@@ -27,10 +28,10 @@ int main( int, const char** )
 
 
 const Size2i preferredVideoFrameSize(640, 480);
-const string wndTitle = "NVIDIA Computer Vision :: Haar Classifiers Cascade";
+const cv::String wndTitle = "NVIDIA Computer Vision :: Haar Classifiers Cascade";
 
 
-void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const string &ss)
+static void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const string &ss)
 {
     int fontFace = FONT_HERSHEY_DUPLEX;
     double fontScale = 0.8;
@@ -40,15 +41,15 @@ void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const string &ss)
     Point org;
     org.x = 1;
     org.y = 3 * fontSize.height * (lineOffsY + 1) / 2;
-    putText(img, ss, org, fontFace, fontScale, CV_RGB(0,0,0), 5*fontThickness/2, 16);
+    putText(img, ss, org, fontFace, fontScale, Scalar(0,0,0), 5*fontThickness/2, 16);
     putText(img, ss, org, fontFace, fontScale, fontColor, fontThickness, 16);
 }
 
 
-void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bFilter, double fps)
+static void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bFilter, double fps)
 {
-    Scalar fontColorRed = CV_RGB(255,0,0);
-    Scalar fontColorNV  = CV_RGB(118,185,0);
+    Scalar fontColorRed(0,0,255);
+    Scalar fontColorNV(0,185,118);
 
     ostringstream ss;
     ss << "FPS = " << setprecision(1) << fixed << fps;
@@ -74,7 +75,7 @@ void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bF
 }
 
 
-NCVStatus process(Mat *srcdst,
+static NCVStatus process(Mat *srcdst,
                   Ncv32u width, Ncv32u height,
                   NcvBool bFilterRects, NcvBool bLargestFace,
                   HaarClassifierCascadeDescriptor &haar,
@@ -281,12 +282,12 @@ int main(int argc, const char** argv)
     //==============================================================================
 
     namedWindow(wndTitle, 1);
-    Mat gray, frameDisp;
+    Mat frameDisp;
 
     do
     {
         Mat gray;
-        cvtColor((image.empty() ? frame : image), gray, CV_BGR2GRAY);
+        cvtColor((image.empty() ? frame : image), gray, cv::COLOR_BGR2GRAY);
 
         //
         // process
@@ -334,12 +335,12 @@ int main(int argc, const char** argv)
 
         avgTime = (Ncv32f)ncvEndQueryTimerMs(timer);
 
-        cvtColor(gray, frameDisp, CV_GRAY2BGR);
+        cvtColor(gray, frameDisp, cv::COLOR_GRAY2BGR);
         displayState(frameDisp, bHelpScreen, bUseGPU, bLargestObject, bFilterRects, 1000.0f / avgTime);
         imshow(wndTitle, frameDisp);
 
         //handle input
-        switch (cvWaitKey(3))
+        switch (cv::waitKey(3))
         {
         case ' ':
             bUseGPU = !bUseGPU;
@@ -372,7 +373,7 @@ int main(int argc, const char** argv)
         }
     } while (!bQuit);
 
-    cvDestroyWindow(wndTitle.c_str());
+    cv::destroyWindow(wndTitle);
 
     return 0;
 }

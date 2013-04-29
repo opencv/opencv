@@ -180,7 +180,7 @@ void BasicRetinaFilter::setLPfilterParameters(const float beta, const float tau,
     }
 
     float _temp =  (1.0f+_beta)/(2.0f*_mu*_alpha);
-    float a = _filteringCoeficientsTable[tableOffset] = 1.0f + _temp - (float)sqrt( (1.0f+_temp)*(1.0f+_temp) - 1.0f);
+    float a = _filteringCoeficientsTable[tableOffset] = 1.0f + _temp - (float)std::sqrt( (1.0f+_temp)*(1.0f+_temp) - 1.0f);
     _filteringCoeficientsTable[1+tableOffset]=(1.0f-a)*(1.0f-a)*(1.0f-a)*(1.0f-a)/(1.0f+_beta);
     _filteringCoeficientsTable[2+tableOffset] =tau;
 
@@ -210,17 +210,17 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CentredAccuracy(const floa
 
     float _alpha=0.8f;
     float _temp =  (1.0f+_beta)/(2.0f*_mu*_alpha);
-    float a=_filteringCoeficientsTable[tableOffset] = 1.0f + _temp - (float)sqrt( (1.0f+_temp)*(1.0f+_temp) - 1.0f);
+    float a=_filteringCoeficientsTable[tableOffset] = 1.0f + _temp - (float)std::sqrt( (1.0f+_temp)*(1.0f+_temp) - 1.0f);
     _filteringCoeficientsTable[tableOffset+1]=(1.0f-a)*(1.0f-a)*(1.0f-a)*(1.0f-a)/(1.0f+_beta);
     _filteringCoeficientsTable[tableOffset+2] =tau;
 
-    float commonFactor=alpha0/(float)sqrt(_halfNBcolumns*_halfNBcolumns+_halfNBrows*_halfNBrows+1.0f);
+    float commonFactor=alpha0/(float)std::sqrt(_halfNBcolumns*_halfNBcolumns+_halfNBrows*_halfNBrows+1.0f);
     //memset(_progressiveSpatialConstant, 255, _filterOutput.getNBpixels());
     for (unsigned int idColumn=0;idColumn<_halfNBcolumns; ++idColumn)
         for (unsigned int idRow=0;idRow<_halfNBrows; ++idRow)
         {
             // computing local spatial constant
-            float localSpatialConstantValue=commonFactor*sqrt((float)(idColumn*idColumn)+(float)(idRow*idRow));
+            float localSpatialConstantValue=commonFactor*std::sqrt((float)(idColumn*idColumn)+(float)(idRow*idRow));
             if (localSpatialConstantValue>1.0f)
                 localSpatialConstantValue=1.0f;
 
@@ -236,7 +236,7 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CentredAccuracy(const floa
             _progressiveGain[_halfNBcolumns-1+idColumn+_filterOutput.getNBcolumns()*(_halfNBrows-1-idRow)]=localGain;
             _progressiveGain[_halfNBcolumns-1-idColumn+_filterOutput.getNBcolumns()*(_halfNBrows-1-idRow)]=localGain;
 
-            //std::cout<<commonFactor<<", "<<sqrt((_halfNBcolumns-1-idColumn)+(_halfNBrows-idRow-1))<<", "<<(_halfNBcolumns-1-idColumn)<<", "<<(_halfNBrows-idRow-1)<<", "<<localSpatialConstantValue<<std::endl;
+            //std::cout<<commonFactor<<", "<<std::sqrt((_halfNBcolumns-1-idColumn)+(_halfNBrows-idRow-1))<<", "<<(_halfNBcolumns-1-idColumn)<<", "<<(_halfNBrows-idRow-1)<<", "<<localSpatialConstantValue<<std::endl;
         }
 }
 
@@ -266,7 +266,7 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CustomAccuracy(const float
     }
     unsigned int tableOffset=filterIndex*3;
     float _temp =  (1.0f+_beta)/(2.0f*_mu*_alpha);
-    float a=_filteringCoeficientsTable[tableOffset] = 1.0f + _temp - (float)sqrt( (1.0f+_temp)*(1.0f+_temp) - 1.0f);
+    float a=_filteringCoeficientsTable[tableOffset] = 1.0f + _temp - (float)std::sqrt( (1.0f+_temp)*(1.0f+_temp) - 1.0f);
     _filteringCoeficientsTable[tableOffset+1]=(1.0f-a)*(1.0f-a)*(1.0f-a)*(1.0f-a)/(1.0f+_beta);
     _filteringCoeficientsTable[tableOffset+2] =tau;
 
@@ -286,7 +286,7 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CustomAccuracy(const float
             float localGain=(1.0f-localSpatialConstantValue)*(1.0f-localSpatialConstantValue)*(1.0f-localSpatialConstantValue)*(1.0f-localSpatialConstantValue)/(1.0f+_beta);
             _progressiveGain[index]=localGain;
 
-            //std::cout<<commonFactor<<", "<<sqrt((_halfNBcolumns-1-idColumn)+(_halfNBrows-idRow-1))<<", "<<(_halfNBcolumns-1-idColumn)<<", "<<(_halfNBrows-idRow-1)<<", "<<localSpatialConstantValue<<std::endl;
+            //std::cout<<commonFactor<<", "<<std::sqrt((_halfNBcolumns-1-idColumn)+(_halfNBrows-idRow-1))<<", "<<(_halfNBcolumns-1-idColumn)<<", "<<(_halfNBrows-idRow-1)<<", "<<localSpatialConstantValue<<std::endl;
         }
 }
 

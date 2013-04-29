@@ -133,10 +133,9 @@ PARAM_TEST_CASE(ArithmTestBase, MatType, bool)
 
     void random_roi()
     {
-        cv::RNG &rng = TS::ptr()->get_rng();
-
 #ifdef RANDOMROI
         //randomize ROI
+        cv::RNG &rng = TS::ptr()->get_rng();
         roicols = rng.uniform(1, mat1.cols);
         roirows = rng.uniform(1, mat1.rows);
         src1x   = rng.uniform(0, mat1.cols - roicols);
@@ -234,7 +233,7 @@ TEST_P(Exp, Mat)
 
         char s[1024];
         sprintf(s, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1, s);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 2, s);
 
     }
 }
@@ -855,7 +854,7 @@ TEST_P(MinMaxLoc, MAT)
         cv::Point minLoc_, maxLoc_;
         cv::ocl::minMaxLoc(gmat1, &minVal_, &maxVal_, &minLoc_, &maxLoc_, cv::ocl::oclMat());
 
-        double error0, error1, minlocVal, minlocVal_, maxlocVal, maxlocVal_;
+        double error0 = 0., error1 = 0., minlocVal = 0., minlocVal_ = 0., maxlocVal = 0., maxlocVal_ = 0.;
         if(depth == 0)
         {
             minlocVal = mat1_roi.at<unsigned char>(minLoc);
@@ -975,7 +974,7 @@ TEST_P(MinMaxLoc, MASK)
         cv::Point minLoc_, maxLoc_;
         cv::ocl::minMaxLoc(gmat1, &minVal_, &maxVal_, &minLoc_, &maxLoc_, gmask);
 
-        double error0, error1, minlocVal, minlocVal_, maxlocVal, maxlocVal_;
+        double error0 = 0., error1 = 0., minlocVal = 0., minlocVal_ = 0., maxlocVal = 0., maxlocVal_ = 0.;
         if(minLoc_.x == -1 || minLoc_.y == -1 || maxLoc_.x == -1 || maxLoc_.y == -1) continue;
         if(depth == 0)
         {
@@ -1111,8 +1110,8 @@ TEST_P(Phase, Mat)
         for(int j = 0; j < LOOP_TIMES; j++)
         {
             random_roi();
-            cv::phase(mat1_roi, mat2_roi, dst_roi, angelInDegrees);
-            cv::ocl::phase(gmat1, gmat2, gdst, angelInDegrees);
+            cv::phase(mat1_roi, mat2_roi, dst_roi, angelInDegrees ? true : false);
+            cv::ocl::phase(gmat1, gmat2, gdst, angelInDegrees ? true : false);
 
             cv::Mat cpu_dst;
             gdst_whole.download(cpu_dst);
@@ -1450,8 +1449,8 @@ TEST_P(MagnitudeSqr, Mat)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         // random_roi();
-        int64 start, end;
-        start = cv::getTickCount();
+        // int64 start, end;
+        // start = cv::getTickCount();
         for(int i = 0; i < mat1.rows; ++i)
             for(int j = 0; j < mat1.cols; ++j)
             {
@@ -1466,7 +1465,7 @@ TEST_P(MagnitudeSqr, Mat)
 
                 //  ((float *)(dst.data))[i*dst.step/4 +j]= val1 * val1 +val2 * val2;
             }
-        end = cv::getTickCount();
+        // end = cv::getTickCount();
 
 
 
@@ -1532,6 +1531,10 @@ INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(false)));
 
+INSTANTIATE_TEST_CASE_P(Arithm, Sub, Combine(
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                            Values(false)));
+
 INSTANTIATE_TEST_CASE_P(Arithm, Mul, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(false))); // Values(false) is the reserved parameter
@@ -1587,19 +1590,19 @@ INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(Values(CV_32FC1, CV_32FC3, CV_32F
 
 
 INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_and, Combine(
-                            Values(CV_8UC1, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
 //Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_or, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_32SC1, CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
 //Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_xor, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_32SC1, CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
 //Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_not, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_32SC1, CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
 //Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Compare, Combine(Values(CV_8UC1, CV_32SC1, CV_32FC1), Values(false)));

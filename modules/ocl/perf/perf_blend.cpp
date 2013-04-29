@@ -44,79 +44,77 @@
 //M*/
 
 #include "precomp.hpp"
-#include <iomanip>
-
-#ifdef HAVE_OPENCL
-using namespace cv;
-using namespace cv::ocl;
-using namespace cvtest;
-using namespace testing;
-using namespace std;
-
-PARAM_TEST_CASE(Blend, MatType, int)
+///////////// blend ////////////////////////
+template <typename T>
+void blendLinearGold(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &weights1, const cv::Mat &weights2, cv::Mat &result_gold)
 {
-    int type;
-    int channels;
-    std::vector<cv::ocl::Info> oclinfo;
+    result_gold.create(img1.size(), img1.type());
 
-    virtual void SetUp()
+    int cn = img1.channels();
+
+    for (int y = 0; y < img1.rows; ++y)
     {
+        const float *weights1_row = weights1.ptr<float>(y);
+        const float *weights2_row = weights2.ptr<float>(y);
+        const T *img1_row = img1.ptr<T>(y);
+        const T *img2_row = img2.ptr<T>(y);
+        T *result_gold_row = result_gold.ptr<T>(y);
 
-        type = GET_PARAM(0);
-        channels = GET_PARAM(1);
-        //int devnums = getDevice(oclinfo);
-        //CV_Assert(devnums > 0);
-        //cv::ocl::setBinpath(CLBINPATH);
-    }
-};
-
-TEST_P(Blend, Performance)
-{
-    cv::Size size(MWIDTH, MHEIGHT);
-    cv::Mat img1_host = randomMat(size, CV_MAKETYPE(type, channels), 0, type == CV_8U ? 255.0 : 1.0);
-    cv::Mat img2_host = randomMat(size, CV_MAKETYPE(type, channels), 0, type == CV_8U ? 255.0 : 1.0);
-    cv::Mat weights1 = randomMat(size, CV_32F, 0, 1);
-    cv::Mat weights2 = randomMat(size, CV_32F, 0, 1);
-    cv::ocl::oclMat gimg1(size, CV_MAKETYPE(type, channels)), gimg2(size, CV_MAKETYPE(type, channels)), gweights1(size, CV_32F), gweights2(size, CV_32F);
-    cv::ocl::oclMat gdst(size, CV_MAKETYPE(type, channels));
-
-
-    double totalgputick_all = 0;
-    double totalgputick_kernel = 0;
-    double t1 = 0;
-    double t2 = 0;
-
-    for (int j = 0; j < LOOP_TIMES + 1; j ++) //LOOP_TIMES=100
-    {
-        t1 = (double)cvGetTickCount();
-        cv::ocl::oclMat gimg1 = cv::ocl::oclMat(img1_host);
-        cv::ocl::oclMat gimg2 = cv::ocl::oclMat(img2_host);
-        cv::ocl::oclMat gweights1 = cv::ocl::oclMat(weights1);
-        cv::ocl::oclMat gweights2 = cv::ocl::oclMat(weights1);
-
-        t2 = (double)cvGetTickCount();
-        cv::ocl::blendLinear(gimg1, gimg2, gweights1, gweights2, gdst);
-        t2 = (double)cvGetTickCount() - t2;
-
-        cv::Mat m;
-        gdst.download(m);
-        t1 = (double)cvGetTickCount() - t1;
-
-        if (j == 0)
+        for (int x = 0; x < img1.cols * cn; ++x)
         {
-            continue;
+            float w1 = weights1_row[x / cn];
+            float w2 = weights2_row[x / cn];
+            result_gold_row[x] = static_cast<T>((img1_row[x] * w1 + img2_row[x] * w2) / (w1 + w2 + 1e-5f));
         }
-
-        totalgputick_all = t1 + totalgputick_all;
-        totalgputick_kernel = t2 + totalgputick_kernel;
-    };
-
-    cout << "average gpu total  runtime is  " << totalgputick_all / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-
-    cout << "average gpu runtime without data transfering  is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-
+    }
 }
+TEST(blend)
+{
+    Mat src1, src2, weights1, weights2, dst;
+    ocl::oclMat d_src1, d_src2, d_weights1, d_weights2, d_dst;
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Blend, Combine(
-                            Values(CV_8U, CV_32F), Values(1, 4)));
-#endif
+    int all_type[] = {CV_8UC1, CV_8UC4};
+    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+
+    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    {
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        {
+            SUBTEST << size << 'x' << size << "; " << type_name[j] << " and CV_32FC1";
+
+            gen(src1, size, size, all_type[j], 0, 256);
+            gen(src2, size, size, all_type[j], 0, 256);
+            gen(weights1, size, size, CV_32FC1, 0, 1);
+            gen(weights2, size, size, CV_32FC1, 0, 1);
+
+            blendLinearGold<uchar>(src1, src2, weights1, weights2, dst);
+
+            CPU_ON;
+            blendLinearGold<uchar>(src1, src2, weights1, weights2, dst);
+            CPU_OFF;
+
+            d_src1.upload(src1);
+            d_src2.upload(src2);
+            d_weights1.upload(weights1);
+            d_weights2.upload(weights2);
+
+            WARMUP_ON;
+            ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
+            WARMUP_OFF;
+
+            GPU_ON;
+            ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
+             ;
+            GPU_OFF;
+
+            GPU_FULL_ON;
+            d_src1.upload(src1);
+            d_src2.upload(src2);
+            d_weights1.upload(weights1);
+            d_weights2.upload(weights2);
+            ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
+            d_dst.download(dst);
+            GPU_FULL_OFF;
+        }
+    }
+}

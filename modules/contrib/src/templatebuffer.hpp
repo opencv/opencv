@@ -322,7 +322,7 @@ namespace cv
                 double diff=(*(bufferPTR++)-meanValue);
                 standardDeviation+=diff*diff;
             }
-            return sqrt(standardDeviation/this->size());
+            return std::sqrt(standardDeviation/this->size());
         };
 
         /**
@@ -513,7 +513,7 @@ namespace cv
             stdValue+=inputMinusMean*inputMinusMean;
         }
 
-        stdValue=sqrt(stdValue/((type)_NBpixels));
+        stdValue=std::sqrt(stdValue/((type)_NBpixels));
         // adjust luminance in regard of mean and std value;
         inputOutputBufferPTR=inputOutputBuffer;
         for (size_t index=0;index<_NBpixels;++index, ++inputOutputBufferPTR)

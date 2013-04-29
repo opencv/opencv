@@ -41,13 +41,13 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
-#endif
 
-#include "opencv2/ml/ml.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/ml.hpp"
 #include "opencv2/core/core_c.h"
-#include "opencv2/core/internal.hpp"
+#include "opencv2/core/utility.hpp"
+
+#include "opencv2/core/private.hpp"
 
 #include <assert.h>
 #include <float.h>
@@ -59,6 +59,9 @@
 #include <time.h>
 
 #define ML_IMPL CV_IMPL
+#define __BEGIN__ __CV_BEGIN__
+#define __END__ __CV_END__
+#define EXIT __CV_EXIT__
 
 #define CV_MAT_ELEM_FLAG( mat, type, comp, vect, tflag )    \
     (( tflag == CV_ROW_SAMPLE )                             \

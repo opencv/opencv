@@ -31,7 +31,7 @@ The proposed model originates from Jeanny Herault's research at `Gipsa <http://w
 
 The first two points are illustrated below :
 
-In the figure below, the OpenEXR image sample *CrissyField.exr*, a High Dynamic Range image is shown. In order to make it visible on this web-page, the original input image is linearly rescaled to the classical image luminance range [0-255] and is converted to 8bit/channel format. Such strong conversion hides many details because of too strong local contrasts. Furthermore, noise energy is also strong and pollutes visual information. 
+In the figure below, the OpenEXR image sample *CrissyField.exr*, a High Dynamic Range image is shown. In order to make it visible on this web-page, the original input image is linearly rescaled to the classical image luminance range [0-255] and is converted to 8bit/channel format. Such strong conversion hides many details because of too strong local contrasts. Furthermore, noise energy is also strong and pollutes visual information.
 
 .. image:: images/retina_TreeHdr_small.jpg
    :alt: A High dynamic range image linearly rescaled within range [0-255].
@@ -57,7 +57,7 @@ The retina model presents two outputs that benefit from the above cited behavior
 
 **NOTE :** regarding the proposed model, contrary to the real retina, we apply these two channels on the entire input images using the same resolution. This allows enhanced visual details and motion information to be extracted on all the considered images... but remember, that these two channels are complementary. For example, if Magnocellular channel gives strong energy in an area, then, the Parvocellular channel is certainly blurred there since there is a transient event.
 
-As an illustration, we apply in the following the retina model on a webcam video stream of a dark visual scene. In this visual scene, captured in an amphitheater of the university, some students are moving while talking to the teacher. 
+As an illustration, we apply in the following the retina model on a webcam video stream of a dark visual scene. In this visual scene, captured in an amphitheater of the university, some students are moving while talking to the teacher.
 
 In this video sequence, because of the dark ambiance, signal to noise ratio is low and color artifacts are present on visual features edges because of the low quality image capture tool-chain.
 
@@ -81,7 +81,7 @@ Retina use case
 ===============
 
 This model can be used basically for spatio-temporal video effects but also in the aim of :
-  
+
 * performing texture analysis with enhanced signal to noise ratio and enhanced details robust against input images luminance ranges (check out the Parvocellular retina channel output)
 
 * performing motion analysis also taking benefit of the previously cited properties.
@@ -105,13 +105,13 @@ Code tutorial
 
 Please refer to the original tutorial source code in file *opencv_folder/samples/cpp/tutorial_code/contrib/retina_tutorial.cpp*.
 
-To compile it, assuming OpenCV is correctly installed, use the following command. It requires the opencv_core *(cv::Mat and friends objects management)*, opencv_highgui *(display and image/video read)* and opencv_contrib *(Retina description)* libraries to compile. 
+To compile it, assuming OpenCV is correctly installed, use the following command. It requires the opencv_core *(cv::Mat and friends objects management)*, opencv_highgui *(display and image/video read)* and opencv_contrib *(Retina description)* libraries to compile.
 
 .. code-block:: cpp
 
    // compile
    gcc retina_tutorial.cpp -o Retina_tuto -lopencv_core -lopencv_highgui -lopencv_contrib
-   
+
    // Run commands : add 'log' as a last parameter to apply a spatial log sampling (simulates retina sampling)
    // run on webcam
    ./Retina_tuto -video
@@ -228,7 +228,7 @@ Once all input parameters are processed, a first image should have been loaded, 
 Now, everything is ready to run the retina model. I propose here to allocate a retina instance and to manage the eventual log sampling option. The Retina constructor expects at least a cv::Size object that shows the input data size that will have to be managed. One can activate other options such as color and its related color multiplexing strategy (here Bayer multiplexing is chosen using enum cv::RETINA_COLOR_BAYER). If using log sampling, the image reduction factor (smaller output images) and log sampling strengh can be adjusted.
 
 .. code-block:: cpp
-	
+
 	// pointer to a retina object
         cv::Ptr<cv::Retina> myRetina;
 
@@ -240,7 +240,6 @@ Now, everything is ready to run the retina model. I propose here to allocate a r
         else// -> else allocate "classical" retina :
             myRetina = cv::createRetina(inputFrame.size());
 
-        
 Once done, the proposed code writes a default xml file that contains the default parameters of the retina. This is useful to make your own config using this template. Here generated template xml file is called *RetinaDefaultParameters.xml*.
 
 .. code-block:: cpp
@@ -259,7 +258,7 @@ It is not required here but just to show it is possible, you can reset the retin
 
 .. code-block:: cpp
 
-	// reset all retina buffers (imagine you close your eyes for a long time)
+        // reset all retina buffers (imagine you close your eyes for a long time)
         myRetina->clearBuffers();
 
 Now, it is time to run the retina ! First create some output buffers ready to receive the two retina channels outputs
@@ -292,7 +291,7 @@ Then, run retina in a loop, load new frames from video sequence if necessary and
             cv::waitKey(10);
         }
 
-That's done ! But if you want to secure the system, take care and manage Exceptions. The retina can throw some when it sees irrelevant data (no input frame, wrong setup, etc.). 
+That's done ! But if you want to secure the system, take care and manage Exceptions. The retina can throw some when it sees irrelevant data (no input frame, wrong setup, etc.).
 Then, i recommend to surround all the retina code by a try/catch system like this :
 
 .. code-block:: cpp
@@ -317,7 +316,7 @@ Retina parameters, what to do ?
 
 First, it is recommended to read the reference paper :
 
-* Benoit A., Caplier A., Durette B., Herault, J., *"Using Human Visual System Modeling For Bio-Inspired Low Level Image Processing"*, Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773. DOI <http://dx.doi.org/10.1016/j.cviu.2010.01.011> 
+* Benoit A., Caplier A., Durette B., Herault, J., *"Using Human Visual System Modeling For Bio-Inspired Low Level Image Processing"*, Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773. DOI <http://dx.doi.org/10.1016/j.cviu.2010.01.011>
 
 Once done open the configuration file *RetinaDefaultParameters.xml* generated by the demo and let's have a look at it.
 
@@ -345,7 +344,6 @@ Once done open the configuration file *RetinaDefaultParameters.xml* generated by
 	  <localAdaptintegration_tau>0.</localAdaptintegration_tau>
 	  <localAdaptintegration_k>7.</localAdaptintegration_k></IPLmagno>
 	</opencv_storage>
-
 
 Here are some hints but actually, the best parameter setup depends more on what you want to do with the retina rather than the images input that you give to retina. Apart from the more specific case of High Dynamic Range images (HDR) that require more specific setup for specific luminance compression objective, the retina behaviors should be rather stable from content to content. Note that OpenCV is able to manage such HDR format thanks to the OpenEXR images compatibility.
 
@@ -381,7 +379,7 @@ This parameter set tunes the neural network connected to the photo-receptors, th
 
 * **horizontalCellsGain** here is a critical parameter ! If you are not interested by the mean luminance and focus on details enhancement, then, set to zero. But if you want to keep some environment luminance data, let some low spatial frequencies pass into the system and set a higher value (<1).
 
-* **hcellsTemporalConstant** similar to photo-receptors, this acts on the temporal constant of a low pass temporal filter that smooths input data. Here, a high value generates a high retina after effect while a lower value makes the retina more reactive. this value should be lower than **photoreceptorsTemporalConstant** to limit strong retina after effects.
+* **hcellsTemporalConstant** similar to photo-receptors, this acts on the temporal constant of a low pass temporal filter that smooths input data. Here, a high value generates a high retina after effect while a lower value makes the retina more reactive. This value should be lower than **photoreceptorsTemporalConstant** to limit strong retina after effects.
 
 * **hcellsSpatialConstant** is the spatial constant of the low pass filter of these cells filter. It specifies the lowest spatial frequency allowed in the following. Visually, a high value leads to very low spatial frequencies processing and leads to salient halo effects. Lower values reduce this effect but the limit is : do not go lower than the value of **photoreceptorsSpatialConstant**. Those 2 parameters actually specify the spatial band-pass of the retina.
 
@@ -405,12 +403,11 @@ Once image information is cleaned, this channel acts as a high pass temporal fil
 
 * **parasolCells_k** the spatial constant of the spatial filtering effect, set it at a high value to favor low spatial frequency signals that are lower subject to residual noise.
 
-* **amacrinCellsTemporalCutFrequency** specifies the temporal constant of the high pass filter. High values let slow transient events to be selected.  
+* **amacrinCellsTemporalCutFrequency** specifies the temporal constant of the high pass filter. High values let slow transient events to be selected.   
 
 * **V0CompressionParameter** specifies the strength of the log compression. Similar behaviors to previous description but here it enforces sensitivity of transient events.
 
 * **localAdaptintegration_tau** generally set to 0, no real use here actually
 
 * **localAdaptintegration_k** specifies the size of the area on which local adaptation is performed. Low values lead to short range local adaptation (higher sensitivity to noise), high values secure log compression.
-
 

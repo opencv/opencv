@@ -183,12 +183,11 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
         if( count == 0 )
             break;
 
-        double icount = 1.0 / count;
-        int x1 = cvFloor(sx * icount);
-        int y1 = cvFloor(sy * icount);
-        s0 = cvFloor(s0 * icount);
-        s1 = cvFloor(s1 * icount);
-        s2 = cvFloor(s2 * icount);
+        int x1 = sx / count;
+        int y1 = sy / count;
+        s0 = s0 / count;
+        s1 = s1 / count;
+        s2 = s2 / count;
 
         bool stopFlag = (x0 == x1 && y0 == y1) || (abs(x1 - x0) + abs(y1 - y0) +
                         tab[s0 - c0 + 255] + tab[s1 - c1 + 255] + tab[s2 - c2 + 255] <= eps);
@@ -213,18 +212,18 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
     dptr[3] = (uchar)c3;
 
     COOR coor;
-    coor.x = x0;
-    coor.y = y0;
+    coor.x = (short)x0;
+    coor.y = (short)y0;
     return coor;
 }
 
 void meanShiftFiltering_(const Mat &src_roi, Mat &dst_roi, int sp, int sr, cv::TermCriteria crit)
 {
     if( src_roi.empty() )
-        CV_Error( CV_StsBadArg, "The input image is empty" );
+        CV_Error(cv::Error::StsBadArg, "The input image is empty" );
 
     if( src_roi.depth() != CV_8U || src_roi.channels() != 4 )
-        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
+        CV_Error(cv::Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
     CV_Assert( (src_roi.cols == dst_roi.cols) && (src_roi.rows == dst_roi.rows) );
     CV_Assert( !(dst_roi.step & 0x3) );
@@ -260,9 +259,9 @@ void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi, int sp, 
 {
 
     if( src_roi.empty() )
-        CV_Error( CV_StsBadArg, "The input image is empty" );
+        CV_Error(cv::Error::StsBadArg, "The input image is empty" );
     if( src_roi.depth() != CV_8U || src_roi.channels() != 4 )
-        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
+        CV_Error(cv::Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
     CV_Assert( (src_roi.cols == dst_roi.cols) && (src_roi.rows == dst_roi.rows) &&
                (src_roi.cols == dstCoor_roi.cols) && (src_roi.rows == dstCoor_roi.rows));
     CV_Assert( !(dstCoor_roi.step & 0x3) );
@@ -498,11 +497,11 @@ TEST_P(bilateralFilter, Mat)
     }
     else
     {
-        for(int i = 0; i < sizeof(bordertype) / sizeof(int); i++)
+        for(size_t i = 0; i < sizeof(bordertype) / sizeof(int); i++)
             for(int j = 0; j < LOOP_TIMES; j++)
             {
                 random_roi();
-                if(((bordertype[i] != cv::BORDER_CONSTANT) && (bordertype[i] != cv::BORDER_REPLICATE)) && (mat1_roi.cols <= radius) || (mat1_roi.cols <= radius) || (mat1_roi.rows <= radius) || (mat1_roi.rows <= radius))
+                if(((bordertype[i] != cv::BORDER_CONSTANT) && (bordertype[i] != cv::BORDER_REPLICATE) && (mat1_roi.cols <= radius)) || (mat1_roi.cols <= radius) || (mat1_roi.rows <= radius) || (mat1_roi.rows <= radius))
                 {
                     continue;
                 }
@@ -563,7 +562,7 @@ TEST_P(CopyMakeBorder, Mat)
     }
     else
     {
-        for(int i = 0; i < sizeof(bordertype) / sizeof(int); i++)
+        for(size_t i = 0; i < sizeof(bordertype) / sizeof(int); i++)
             for(int j = 0; j < LOOP_TIMES; j++)
             {
                 random_roi();
@@ -792,8 +791,8 @@ TEST_P(WarpAffine, Mat)
 {
     static const double coeffs[2][3] =
     {
-        {cos(3.14 / 6), -sin(3.14 / 6), 100.0},
-        {sin(3.14 / 6), cos(3.14 / 6), -100.0}
+        {cos(CV_PI / 6), -sin(CV_PI / 6), 100.0},
+        {sin(CV_PI / 6), cos(CV_PI / 6), -100.0}
     };
     Mat M(2, 3, CV_64F, (void *)coeffs);
 
@@ -911,7 +910,6 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
 
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size srcSize = cv::Size(MWIDTH, MHEIGHT);
-        cv::Size dstSize = cv::Size(MWIDTH, MHEIGHT);
         cv::Size map1Size = cv::Size(MWIDTH, MHEIGHT);
         double min = 5, max = 16;
 
@@ -1008,7 +1006,7 @@ TEST_P(Remap, Mat)
     int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
     const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
     // for(int i = 0; i < sizeof(bordertype)/sizeof(int); i++)
-    for(int j = 0; j < 100; j++)
+    for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
         cv::remap(src_roi, dst_roi, map1_roi, map2_roi, interpolation, bordertype[0], val);
@@ -1017,7 +1015,7 @@ TEST_P(Remap, Mat)
         gdst.download(cpu_dst);
 
         char sss[1024];
-        sprintf(sss, "src_roicols=%d,src_roirows=%d,dst_roicols=%d,dst_roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d", src_roicols, src_roirows, dst_roicols, dst_roirows, srcx, srcy, dstx, dsty);
+        sprintf(sss, "src_roicols=%d,src_roirows=%d,dst_roicols=%d,dst_roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d bordertype=%s", src_roicols, src_roirows, dst_roicols, dst_roirows, srcx, srcy, dstx, dsty, borderstr[0]);
 
 
         if(interpolation == 0)
@@ -1740,7 +1738,7 @@ INSTANTIATE_TEST_CASE_P(Imgproc, meanShiftProc, Combine(
                         ));
 
 INSTANTIATE_TEST_CASE_P(Imgproc, Remap, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(CV_32FC1, CV_16SC2, CV_32FC2), Values(-1, CV_32FC1),
                             Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR),
                             Values((int)cv::BORDER_CONSTANT)));
@@ -1751,7 +1749,7 @@ INSTANTIATE_TEST_CASE_P(histTestBase, calcHist, Combine(
                             ONE_TYPE(CV_32SC1) //no use
                         ));
 
-INSTANTIATE_TEST_CASE_P(ConvolveTestBase, Convolve, Combine(
-                            Values(CV_32FC1, CV_32FC1),
-                            Values(false))); // Values(false) is the reserved parameter
+//INSTANTIATE_TEST_CASE_P(ConvolveTestBase, Convolve, Combine(
+//                            Values(CV_32FC1, CV_32FC1),
+//                            Values(false))); // Values(false) is the reserved parameter
 #endif // HAVE_OPENCL

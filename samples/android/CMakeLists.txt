@@ -11,11 +11,13 @@ add_subdirectory(face-detection)
 add_subdirectory(image-manipulations)
 add_subdirectory(color-blob-detection)
 
-add_subdirectory(tutorial-0-androidcamera)
-add_subdirectory(tutorial-1-addopencv)
-add_subdirectory(tutorial-2-opencvcamera)
-add_subdirectory(tutorial-3-native)
-add_subdirectory(tutorial-4-mixed)
+if (ANDROID_NATIVE_API_LEVEL GREATER 8)
+  add_subdirectory(native-activity)
+endif()
+
+add_subdirectory(tutorial-1-camerapreview)
+add_subdirectory(tutorial-2-mixedprocessing)
+add_subdirectory(tutorial-3-cameracontrol)
 
 #hello-android sample
 if(HAVE_opencv_highgui)

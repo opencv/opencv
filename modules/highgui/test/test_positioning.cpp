@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui/highgui_c.h"
 #include <stdio.h>
 
 using namespace cv;
@@ -88,7 +88,7 @@ CV_VideoRandomPositioningTest::~CV_VideoRandomPositioningTest() {}
 void CV_VideoPositioningTest::generate_idx_seq(CvCapture* cap, int method)
 {
     idx.clear();
-    int N = (int)cvGetCaptureProperty(cap, CV_CAP_PROP_FRAME_COUNT);
+    int N = (int)cvGetCaptureProperty(cap, CAP_PROP_FRAME_COUNT);
     switch(method)
     {
     case PROGRESSIVE:
@@ -147,7 +147,7 @@ void CV_VideoPositioningTest::run_test(int method)
             failed_videos++; continue;
         }
 
-        cvSetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES, 0);
+        cvSetCaptureProperty(cap, CAP_PROP_POS_FRAMES, 0);
 
         generate_idx_seq(cap, method);
 
@@ -157,7 +157,7 @@ void CV_VideoPositioningTest::run_test(int method)
         {
             bool flag = false;
 
-            cvSetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES, idx.at(j));
+            cvSetCaptureProperty(cap, CAP_PROP_POS_FRAMES, idx.at(j));
 
             /* IplImage* frame = cvRetrieveFrame(cap);
 
@@ -173,7 +173,7 @@ void CV_VideoPositioningTest::run_test(int method)
                 flag = !flag;
             } */
 
-            int val = (int)cvGetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES);
+            int val = (int)cvGetCaptureProperty(cap, CAP_PROP_POS_FRAMES);
 
             if (idx.at(j) != val)
             {
@@ -217,7 +217,7 @@ void CV_VideoRandomPositioningTest::run(int)
     run_test(RANDOM);
 }
 
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT && defined HAVE_FFMPEG
 TEST (Highgui_Video, seek_progressive) { CV_VideoProgressivePositioningTest test; test.safe_run(); }
 TEST (Highgui_Video, seek_random) { CV_VideoRandomPositioningTest test; test.safe_run(); }
 #endif

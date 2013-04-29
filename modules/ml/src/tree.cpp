@@ -50,7 +50,8 @@ static const int block_size_delta = 1 << 10;
 CvDTreeTrainData::CvDTreeTrainData()
 {
     var_idx = var_type = cat_count = cat_ofs = cat_map =
-        priors = priors_mult = counts = buf = direction = split_buf = responses_copy = 0;
+        priors = priors_mult = counts = direction = split_buf = responses_copy = 0;
+    buf = 0;
     tree_storage = temp_storage = 0;
 
     clear();
@@ -64,7 +65,8 @@ CvDTreeTrainData::CvDTreeTrainData( const CvMat* _train_data, int _tflag,
                       bool _shared, bool _add_labels )
 {
     var_idx = var_type = cat_count = cat_ofs = cat_map =
-        priors = priors_mult = counts = buf = direction = split_buf = responses_copy = 0;
+        priors = priors_mult = counts = direction = split_buf = responses_copy = 0;
+    buf = 0;
 
     tree_storage = temp_storage = 0;
 
@@ -118,16 +120,27 @@ bool CvDTreeTrainData::set_params( const CvDTreeParams& _params )
     return ok;
 }
 
-#define CV_CMP_NUM_PTR(a,b) (*(a) < *(b))
-static CV_IMPLEMENT_QSORT_EX( icvSortIntPtr, int*, CV_CMP_NUM_PTR, int )
-static CV_IMPLEMENT_QSORT_EX( icvSortDblPtr, double*, CV_CMP_NUM_PTR, int )
+template<typename T>
+class LessThanPtr
+{
+public:
+    bool operator()(T* a, T* b) const { return *a < *b; }
+};
 
-#define CV_CMP_NUM_IDX(i,j) (aux[i] < aux[j])
-static CV_IMPLEMENT_QSORT_EX( icvSortIntAux, int, CV_CMP_NUM_IDX, const float* )
-static CV_IMPLEMENT_QSORT_EX( icvSortUShAux, unsigned short, CV_CMP_NUM_IDX, const float* )
+template<typename T, typename Idx>
+class LessThanIdx
+{
+public:
+    LessThanIdx( const T* _arr ) : arr(_arr) {}
+    bool operator()(Idx a, Idx b) const { return arr[a] < arr[b]; }
+    const T* arr;
+};
 
-#define CV_CMP_PAIRS(a,b) (*((a).i) < *((b).i))
-static CV_IMPLEMENT_QSORT_EX( icvSortPairs, CvPair16u32s, CV_CMP_PAIRS, int )
+class LessThanPairs
+{
+public:
+    bool operator()(const CvPair16u32s& a, const CvPair16u32s& b) const { return *a.i < *b.i; }
+};
 
 void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     const CvMat* _responses, const CvMat* _var_idx, const CvMat* _sample_idx,
@@ -156,6 +169,9 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     int vi, i, size;
     char err[100];
     const int *sidx = 0, *vidx = 0;
+
+    uint64 effective_buf_size = 0;
+    int effective_buf_height = 0, effective_buf_width = 0;
 
     if( _update_data && data_root )
     {
@@ -285,18 +301,35 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     work_var_count = var_count + (is_classifier ? 1 : 0) // for responses class_labels
                                + (have_labels ? 1 : 0); // for cv_labels
 
-    buf_size = (work_var_count + 1 /*for sample_indices*/) * sample_count;
     shared = _shared;
     buf_count = shared ? 2 : 1;
 
+    buf_size = -1; // the member buf_size is obsolete
+
+    effective_buf_size = (uint64)(work_var_count + 1)*(uint64)sample_count * buf_count; // this is the total size of "CvMat buf" to be allocated
+    effective_buf_width = sample_count;
+    effective_buf_height = work_var_count+1;
+
+    if (effective_buf_width >= effective_buf_height)
+        effective_buf_height *= buf_count;
+    else
+        effective_buf_width *= buf_count;
+
+    if ((uint64)effective_buf_width * (uint64)effective_buf_height != effective_buf_size)
+    {
+        CV_Error(CV_StsBadArg, "The memory buffer cannot be allocated since its size exceeds integer fields limit");
+    }
+
+
+
     if ( is_buf_16u )
     {
-        CV_CALL( buf = cvCreateMat( buf_count, buf_size, CV_16UC1 ));
+        CV_CALL( buf = cvCreateMat( effective_buf_height, effective_buf_width, CV_16UC1 ));
         CV_CALL( pair16u32s_ptr = (CvPair16u32s*)cvAlloc( sample_count*sizeof(pair16u32s_ptr[0]) ));
     }
     else
     {
-        CV_CALL( buf = cvCreateMat( buf_count, buf_size, CV_32SC1 ));
+        CV_CALL( buf = cvCreateMat( effective_buf_height, effective_buf_width, CV_32SC1 ));
         CV_CALL( int_ptr = (int**)cvAlloc( sample_count*sizeof(int_ptr[0]) ));
     }
 
@@ -356,7 +389,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     {
         int ci;
         const uchar* mask = 0;
-        int m_step = 0, step;
+        int64 m_step = 0, step;
         const int* idata = 0;
         const float* fdata = 0;
         int num_valid = 0;
@@ -399,13 +432,13 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
             for( i = 0; i < sample_count; i++ )
             {
                 int val = INT_MAX, si = sidx ? sidx[i] : i;
-                if( !mask || !mask[si*m_step] )
+                if( !mask || !mask[(size_t)si*m_step] )
                 {
                     if( idata )
-                        val = idata[si*step];
+                        val = idata[(size_t)si*step];
                     else
                     {
-                        float t = fdata[si*step];
+                        float t = fdata[(size_t)si*step];
                         val = cvRound(t);
                         if( fabs(t - val) > FLT_EPSILON )
                         {
@@ -439,7 +472,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
             c_count = num_valid > 0;
             if (is_buf_16u)
             {
-                icvSortPairs( pair16u32s_ptr, sample_count, 0 );
+                std::sort(pair16u32s_ptr, pair16u32s_ptr + sample_count, LessThanPairs());
                 // count the categories
                 for( i = 1; i < num_valid; i++ )
                     if (*pair16u32s_ptr[i].i != *pair16u32s_ptr[i-1].i)
@@ -447,7 +480,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
             }
             else
             {
-                icvSortIntPtr( int_ptr, sample_count, 0 );
+                std::sort(int_ptr, int_ptr + sample_count, LessThanPtr<int>());
                 // count the categories
                 for( i = 1; i < num_valid; i++ )
                     c_count += *int_ptr[i] != *int_ptr[i-1];
@@ -515,12 +548,12 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
             {
                 float val = ord_nan;
                 int si = sidx ? sidx[i] : i;
-                if( !mask || !mask[si*m_step] )
+                if( !mask || !mask[(size_t)si*m_step] )
                 {
                     if( idata )
-                        val = (float)idata[si*step];
+                        val = (float)idata[(size_t)si*step];
                     else
-                        val = fdata[si*step];
+                        val = fdata[(size_t)si*step];
 
                     if( fabs(val) >= ord_nan )
                     {
@@ -532,16 +565,16 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
                 }
 
                 if (is_buf_16u)
-                    udst[i] = (unsigned short)i;
+                    udst[i] = (unsigned short)i; // TODO: memory corruption may be here
                 else
                     idst[i] = i;
                 _fdst[i] = val;
 
             }
             if (is_buf_16u)
-                icvSortUShAux( udst, sample_count, _fdst);
+                std::sort(udst, udst + sample_count, LessThanIdx<float, unsigned short>(_fdst));
             else
-                icvSortIntAux( idst, sample_count, _fdst );
+                std::sort(idst, idst + sample_count, LessThanIdx<float, int>(_fdst));
         }
 
         if( vi < var_count )
@@ -751,7 +784,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
 
                 if (is_buf_16u)
                 {
-                    unsigned short* udst = (unsigned short*)(buf->data.s + root->buf_idx*buf->cols +
+                    unsigned short* udst = (unsigned short*)(buf->data.s + root->buf_idx*get_length_subbuf() +
                         vi*sample_count + root->offset);
                     for( i = 0; i < count; i++ )
                     {
@@ -762,7 +795,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
                 }
                 else
                 {
-                    int* idst = buf->data.i + root->buf_idx*buf->cols +
+                    int* idst = buf->data.i + root->buf_idx*get_length_subbuf() +
                         vi*sample_count + root->offset;
                     for( i = 0; i < count; i++ )
                     {
@@ -788,7 +821,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
 
                 if (is_buf_16u)
                 {
-                    unsigned short* udst_idx = (unsigned short*)(buf->data.s + root->buf_idx*buf->cols +
+                    unsigned short* udst_idx = (unsigned short*)(buf->data.s + root->buf_idx*get_length_subbuf() +
                         vi*sample_count + data_root->offset);
                     for( i = 0; i < num_valid; i++ )
                     {
@@ -812,7 +845,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
                 }
                 else
                 {
-                    int* idst_idx = buf->data.i + root->buf_idx*buf->cols +
+                    int* idst_idx = buf->data.i + root->buf_idx*get_length_subbuf() +
                         vi*sample_count + root->offset;
                     for( i = 0; i < num_valid; i++ )
                     {
@@ -840,14 +873,14 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
         const int* sample_idx_src = get_sample_indices(data_root, (int*)(uchar*)inn_buf);
         if (is_buf_16u)
         {
-            unsigned short* sample_idx_dst = (unsigned short*)(buf->data.s + root->buf_idx*buf->cols +
+            unsigned short* sample_idx_dst = (unsigned short*)(buf->data.s + root->buf_idx*get_length_subbuf() +
                 workVarCount*sample_count + root->offset);
             for (i = 0; i < count; i++)
                 sample_idx_dst[i] = (unsigned short)sample_idx_src[sidx[i]];
         }
         else
         {
-            int* sample_idx_dst = buf->data.i + root->buf_idx*buf->cols +
+            int* sample_idx_dst = buf->data.i + root->buf_idx*get_length_subbuf() +
                 workVarCount*sample_count + root->offset;
             for (i = 0; i < count; i++)
                 sample_idx_dst[i] = sample_idx_src[sidx[i]];
@@ -1158,10 +1191,10 @@ void CvDTreeTrainData::get_ord_var_data( CvDTreeNode* n, int vi, float* ord_valu
     const int* sample_indices = get_sample_indices(n, sample_indices_buf);
 
     if( !is_buf_16u )
-        *sorted_indices = buf->data.i + n->buf_idx*buf->cols +
+        *sorted_indices = buf->data.i + n->buf_idx*get_length_subbuf() +
         vi*sample_count + n->offset;
     else {
-        const unsigned short* short_indices = (const unsigned short*)(buf->data.s + n->buf_idx*buf->cols +
+        const unsigned short* short_indices = (const unsigned short*)(buf->data.s + n->buf_idx*get_length_subbuf() +
             vi*sample_count + n->offset );
         for( int i = 0; i < node_sample_count; i++ )
             sorted_indices_buf[i] = short_indices[i];
@@ -1232,10 +1265,10 @@ const int* CvDTreeTrainData::get_cat_var_data( CvDTreeNode* n, int vi, int* cat_
 {
     const int* cat_values = 0;
     if( !is_buf_16u )
-        cat_values = buf->data.i + n->buf_idx*buf->cols +
+        cat_values = buf->data.i + n->buf_idx*get_length_subbuf() +
             vi*sample_count + n->offset;
     else {
-        const unsigned short* short_values = (const unsigned short*)(buf->data.s + n->buf_idx*buf->cols +
+        const unsigned short* short_values = (const unsigned short*)(buf->data.s + n->buf_idx*get_length_subbuf() +
             vi*sample_count + n->offset);
         for( int i = 0; i < n->sample_count; i++ )
             cat_values_buf[i] = short_values[i];
@@ -2159,7 +2192,7 @@ CvDTreeSplit* CvDTree::find_split_cat_class( CvDTreeNode* node, int vi, float in
 
     int base_size = m*(3 + mi)*sizeof(int) + (mi+1)*sizeof(double);
     if( m > 2 && mi > data->params.max_categories )
-        base_size += (m*min(data->params.max_categories, n) + mi)*sizeof(int);
+        base_size += (m*std::min(data->params.max_categories, n) + mi)*sizeof(int);
     else
         base_size += mi*sizeof(int*);
     cv::AutoBuffer<uchar> inn_buf(base_size);
@@ -2217,7 +2250,7 @@ CvDTreeSplit* CvDTree::find_split_cat_class( CvDTreeNode* node, int vi, float in
         int_ptr = (int**)(c_weights + _mi);
         for( j = 0; j < mi; j++ )
             int_ptr[j] = cjk + j*2 + 1;
-        icvSortIntPtr( int_ptr, mi, 0 );
+        std::sort(int_ptr, int_ptr + mi, LessThanPtr<int>());
         subset_i = 0;
         subset_n = mi;
     }
@@ -2444,7 +2477,7 @@ CvDTreeSplit* CvDTree::find_split_cat_reg( CvDTreeNode* node, int vi, float init
         sum_ptr[i] = sum + i;
     }
 
-    icvSortDblPtr( sum_ptr, mi, 0 );
+    std::sort(sum_ptr, sum_ptr + mi, LessThanPtr<double>());
 
     // revert back to unnormalized sums
     // (there should be a very little loss of accuracy)
@@ -3004,6 +3037,7 @@ void CvDTree::split_node_data( CvDTreeNode* node )
     int new_buf_idx = data->get_child_buf_idx( node );
     int work_var_count = data->get_work_var_count();
     CvMat* buf = data->buf;
+    size_t length_buf_row = data->get_length_subbuf();
     cv::AutoBuffer<uchar> inn_buf(n*(3*sizeof(int) + sizeof(float)));
     int* temp_buf = (int*)(uchar*)inn_buf;
 
@@ -3049,7 +3083,7 @@ void CvDTree::split_node_data( CvDTreeNode* node )
         {
             unsigned short *ldst, *rdst, *ldst0, *rdst0;
             //unsigned short tl, tr;
-            ldst0 = ldst = (unsigned short*)(buf->data.s + left->buf_idx*buf->cols +
+            ldst0 = ldst = (unsigned short*)(buf->data.s + left->buf_idx*length_buf_row +
                 vi*scount + left->offset);
             rdst0 = rdst = (unsigned short*)(ldst + nl);
 
@@ -3095,9 +3129,9 @@ void CvDTree::split_node_data( CvDTreeNode* node )
         else
         {
             int *ldst0, *ldst, *rdst0, *rdst;
-            ldst0 = ldst = buf->data.i + left->buf_idx*buf->cols +
+            ldst0 = ldst = buf->data.i + left->buf_idx*length_buf_row +
                 vi*scount + left->offset;
-            rdst0 = rdst = buf->data.i + right->buf_idx*buf->cols +
+            rdst0 = rdst = buf->data.i + right->buf_idx*length_buf_row +
                 vi*scount + right->offset;
 
             // split sorted
@@ -3158,9 +3192,9 @@ void CvDTree::split_node_data( CvDTreeNode* node )
 
         if (data->is_buf_16u)
         {
-            unsigned short *ldst = (unsigned short *)(buf->data.s + left->buf_idx*buf->cols +
+            unsigned short *ldst = (unsigned short *)(buf->data.s + left->buf_idx*length_buf_row +
                 vi*scount + left->offset);
-            unsigned short *rdst = (unsigned short *)(buf->data.s + right->buf_idx*buf->cols +
+            unsigned short *rdst = (unsigned short *)(buf->data.s + right->buf_idx*length_buf_row +
                 vi*scount + right->offset);
 
             for( i = 0; i < n; i++ )
@@ -3188,9 +3222,9 @@ void CvDTree::split_node_data( CvDTreeNode* node )
         }
         else
         {
-            int *ldst = buf->data.i + left->buf_idx*buf->cols +
+            int *ldst = buf->data.i + left->buf_idx*length_buf_row +
                 vi*scount + left->offset;
-            int *rdst = buf->data.i + right->buf_idx*buf->cols +
+            int *rdst = buf->data.i + right->buf_idx*length_buf_row +
                 vi*scount + right->offset;
 
             for( i = 0; i < n; i++ )
@@ -3230,9 +3264,9 @@ void CvDTree::split_node_data( CvDTreeNode* node )
     int pos = data->get_work_var_count();
     if (data->is_buf_16u)
     {
-        unsigned short* ldst = (unsigned short*)(buf->data.s + left->buf_idx*buf->cols +
+        unsigned short* ldst = (unsigned short*)(buf->data.s + left->buf_idx*length_buf_row +
             pos*scount + left->offset);
-        unsigned short* rdst = (unsigned short*)(buf->data.s + right->buf_idx*buf->cols +
+        unsigned short* rdst = (unsigned short*)(buf->data.s + right->buf_idx*length_buf_row +
             pos*scount + right->offset);
         for (i = 0; i < n; i++)
         {
@@ -3252,9 +3286,9 @@ void CvDTree::split_node_data( CvDTreeNode* node )
     }
     else
     {
-        int* ldst = buf->data.i + left->buf_idx*buf->cols +
+        int* ldst = buf->data.i + left->buf_idx*length_buf_row +
             pos*scount + left->offset;
-        int* rdst = buf->data.i + right->buf_idx*buf->cols +
+        int* rdst = buf->data.i + right->buf_idx*length_buf_row +
             pos*scount + right->offset;
         for (i = 0; i < n; i++)
         {
@@ -3277,7 +3311,7 @@ void CvDTree::split_node_data( CvDTreeNode* node )
     data->free_node_data(node);
 }
 
-float CvDTree::calc_error( CvMLData* _data, int type, vector<float> *resp )
+float CvDTree::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
 {
     float err = 0;
     const CvMat* values = _data->get_values();
@@ -3310,7 +3344,7 @@ float CvDTree::calc_error( CvMLData* _data, int type, vector<float> *resp )
             float r = (float)predict( &sample, missing ? &miss : 0 )->value;
             if( pred_resp )
                 pred_resp[i] = r;
-            int d = fabs((double)r - response->data.fl[si*r_step]) <= FLT_EPSILON ? 0 : 1;
+            int d = fabs((double)r - response->data.fl[(size_t)si*r_step]) <= FLT_EPSILON ? 0 : 1;
             err += d;
         }
         err = sample_count ? err / (float)sample_count * 100 : -FLT_MAX;
@@ -3327,7 +3361,7 @@ float CvDTree::calc_error( CvMLData* _data, int type, vector<float> *resp )
             float r = (float)predict( &sample, missing ? &miss : 0 )->value;
             if( pred_resp )
                 pred_resp[i] = r;
-            float d = r - response->data.fl[si*r_step];
+            float d = r - response->data.fl[(size_t)si*r_step];
             err += d*d;
         }
         err = sample_count ? err / (float)sample_count : -FLT_MAX;
@@ -3633,8 +3667,8 @@ CvDTreeNode* CvDTree::predict( const CvMat* _sample,
             int vi = split->var_idx;
             int ci = vtype[vi];
             i = vidx ? vidx[vi] : vi;
-            float val = sample[i*step];
-            if( m && m[i*mstep] )
+            float val = sample[(size_t)i*step];
+            if( m && m[(size_t)i*mstep] )
                 continue;
             if( ci < 0 ) // ordered
                 dir = val <= split->ord.c ? -1 : 1;
@@ -4108,7 +4142,7 @@ void CvDTree::read( CvFileStorage* fs, CvFileNode* node, CvDTreeTrainData* _data
 
 Mat CvDTree::getVarImportance()
 {
-    return Mat(get_var_importance());
+    return cvarrToMat(get_var_importance());
 }
 
 /* End of file. */

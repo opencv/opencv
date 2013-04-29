@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "opencv2/core/opengl_interop.hpp"
+#include "opencv2/core/opengl.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/gpu/gpu.hpp"
 

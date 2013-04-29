@@ -12,9 +12,9 @@ void onManagerConnected()
 
 .. method:: void onManagerConnected(int status)
 
-    Callback method that is called after OpenCV Library initialization.
+    Callback method that is called after OpenCV library initialization.
 
-    :param status: status of initialization (see Initialization Status Constants).
+    :param status: status of initialization (see "Initialization Status Constants" section below).
 
 void onPackageInstall()
 -----------------------
@@ -23,7 +23,7 @@ void onPackageInstall()
 
     Callback method that is called in case when package installation is needed.
 
-    :param callback: answer object with approve and cancel methods and package description.
+    :param callback: answer object with ``install`` and ``cancel`` methods and package description.
 
 Initialization status constants
 -------------------------------
@@ -34,15 +34,15 @@ Initialization status constants
 
 .. data:: MARKET_ERROR
 
-    Google Play (Android Market) cannot be invoked
+    Google Play (Android Market) application cannot be invoked
 
 .. data:: INSTALL_CANCELED
 
-    OpenCV library installation was canceled by user
+    OpenCV library installation was cancelled by user
 
 .. data:: INCOMPATIBLE_MANAGER_VERSION
 
-    Version of OpenCV Manager Service is incompatible with this app. Service update is needed
+    Version of OpenCV Manager is incompatible with this app. Manager update is needed.
 
 .. data:: INIT_FAILED
 

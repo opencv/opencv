@@ -44,11 +44,11 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/core.hpp"
+
 using namespace std;
 #ifdef HAVE_OPENCL
 
-
+extern string workdir;
 PARAM_TEST_CASE(HOG, cv::Size, int)
 {
     cv::Size winSize;
@@ -63,7 +63,7 @@ PARAM_TEST_CASE(HOG, cv::Size, int)
 TEST_P(HOG, GetDescriptors)
 {
     // Load image
-    cv::Mat img_rgb = readImage("../../../samples/gpu/road.png");
+    cv::Mat img_rgb = readImage(workdir + "lena.jpg");
     ASSERT_FALSE(img_rgb.empty());
 
     // Convert image
@@ -71,11 +71,11 @@ TEST_P(HOG, GetDescriptors)
     switch (type)
     {
     case CV_8UC1:
-        cv::cvtColor(img_rgb, img, CV_BGR2GRAY);
+        cv::cvtColor(img_rgb, img, cv::COLOR_BGR2GRAY);
         break;
     case CV_8UC4:
     default:
-        cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+        cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
         break;
     }
     cv::ocl::oclMat d_img(img);
@@ -120,7 +120,7 @@ bool match_rect(cv::Rect r1, cv::Rect r2, int threshold)
 TEST_P(HOG, Detect)
 {
     // Load image
-    cv::Mat img_rgb = readImage("../../../samples/gpu/road.png");
+    cv::Mat img_rgb = readImage(workdir + "lena.jpg");
     ASSERT_FALSE(img_rgb.empty());
 
     // Convert image
@@ -128,11 +128,11 @@ TEST_P(HOG, Detect)
     switch (type)
     {
     case CV_8UC1:
-        cv::cvtColor(img_rgb, img, CV_BGR2GRAY);
+        cv::cvtColor(img_rgb, img, cv::COLOR_BGR2GRAY);
         break;
     case CV_8UC4:
     default:
-        cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+        cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
         break;
     }
     cv::ocl::oclMat d_img(img);
@@ -199,8 +199,8 @@ TEST_P(HOG, Detect)
 
     int threshold = 10;
     int val = 32;
-    d_comp[0] = d_found.size();
-    comp[0] = found.size();
+    d_comp[0] = (int)d_found.size();
+    comp[0] = (int)found.size();
     if (winSize == cv::Size(48, 96))
     {
         for(int i = 0; i < (int)d_found.size(); i++)

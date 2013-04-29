@@ -1,5 +1,5 @@
 #include "perf_precomp.hpp"
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/imgproc.hpp>
 
 using namespace std;
 using namespace cv;
@@ -12,16 +12,9 @@ typedef perf::TestBaseWithParam<ImageName_MinSize_t> ImageName_MinSize;
 
 PERF_TEST_P(ImageName_MinSize, CascadeClassifierLBPFrontalFace,
             testing::Combine(testing::Values( std::string("cv/shared/lena.png"),
-                                              std::string("cv/shared/1_itseez-0000247.png"),
                                               std::string("cv/shared/1_itseez-0000289.png"),
                                               std::string("cv/shared/1_itseez-0000492.png"),
-                                              std::string("cv/shared/1_itseez-0000573.png"),
-                                              std::string("cv/shared/1_itseez-0000803.png"),
-                                              std::string("cv/shared/1_itseez-0000892.png"),
-                                              std::string("cv/shared/1_itseez-0000984.png"),
-                                              std::string("cv/shared/1_itseez-0001238.png"),
-                                              std::string("cv/shared/1_itseez-0001438.png"),
-                                              std::string("cv/shared/1_itseez-0002524.png")),
+                                              std::string("cv/shared/1_itseez-0000573.png")),
                              testing::Values(24, 30, 40, 50, 60, 70, 80, 90)
                              )
             )
@@ -53,5 +46,5 @@ PERF_TEST_P(ImageName_MinSize, CascadeClassifierLBPFrontalFace,
     }
 
     std::sort(faces.begin(), faces.end(), comparators::RectLess());
-    SANITY_CHECK(faces);
+    SANITY_CHECK(faces, 3.001 * faces.size());
 }

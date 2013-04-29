@@ -13,24 +13,24 @@ Script will create <outputdir>, if it's missing, and a few its subdirectories:
 
     <outputdir>
         build/
-            iPhoneOS/
+            iPhoneOS-*/
                [cmake-generated build tree for an iOS device target]
             iPhoneSimulator/
                [cmake-generated build tree for iOS simulator]
-        OpenCV.framework/
+        opencv2.framework/
             [the framework content]
 
 The script should handle minor OpenCV updates efficiently
 - it does not recompile the library from scratch each time.
-However, OpenCV.framework directory is erased and recreated on each run.
+However, opencv2.framework directory is erased and recreated on each run.
 """
 
 import glob, re, os, os.path, shutil, string, sys
 
-def build_opencv(srcroot, buildroot, target):
+def build_opencv(srcroot, buildroot, target, arch):
     "builds OpenCV for device or simulator"
 
-    builddir = os.path.join(buildroot, target)
+    builddir = os.path.join(buildroot, target + '-' + arch)
     if not os.path.isdir(builddir):
         os.makedirs(builddir)
     currdir = os.getcwd()
@@ -52,8 +52,8 @@ def build_opencv(srcroot, buildroot, target):
         if os.path.isfile(wlib):
             os.remove(wlib)
 
-    os.system("xcodebuild -parallelizeTargets -jobs 8 -sdk %s -configuration Release -target ALL_BUILD" % target.lower())
-    os.system("xcodebuild -sdk %s -configuration Release -target install install" % target.lower())
+    os.system("xcodebuild -parallelizeTargets ARCHS=%s -jobs 8 -sdk %s -configuration Release -target ALL_BUILD" % (arch, target.lower()))
+    os.system("xcodebuild ARCHS=%s -sdk %s -configuration Release -target install install" % (arch, target.lower()))
     os.chdir(currdir)
 
 def put_framework_together(srcroot, dstroot):
@@ -103,17 +103,19 @@ def put_framework_together(srcroot, dstroot):
     # TODO ...
 
     # make symbolic links
-    os.symlink(dstdir + "/Headers", "Headers")
-    os.symlink(dstdir + "/Resources", "Resources")
-    os.symlink(dstdir + "/opencv2", "opencv2")
     os.symlink("A", "Versions/Current")
+    os.symlink("Versions/Current/Headers", "Headers")
+    os.symlink("Versions/Current/Resources", "Resources")
+    os.symlink("Versions/Current/opencv2", "opencv2")
 
 
 def build_framework(srcroot, dstroot):
     "main function to do all the work"
 
-    for target in ["iPhoneOS", "iPhoneSimulator"]:
-        build_opencv(srcroot, os.path.join(dstroot, "build"), target)
+    targets = ["iPhoneOS", "iPhoneOS", "iPhoneSimulator"]
+    archs = ["armv7", "armv7s", "i386"]
+    for i in range(len(targets)):
+        build_opencv(srcroot, os.path.join(dstroot, "build"), targets[i], archs[i])
 
     put_framework_together(srcroot, dstroot)
 

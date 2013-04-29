@@ -22,13 +22,13 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -44,21 +44,22 @@
 
 using namespace cv;
 using namespace cv::gpu;
-using namespace std;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::gemm(const GpuMat&, const GpuMat&, double, const GpuMat&, double, GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::transpose(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::flip(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::LUT(const GpuMat&, const Mat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::magnitude(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::magnitudeSqr(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::magnitude(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::magnitudeSqr(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::phase(const GpuMat&, const GpuMat&, GpuMat&, bool, Stream&) { throw_nogpu(); }
-void cv::gpu::cartToPolar(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, Stream&) { throw_nogpu(); }
-void cv::gpu::polarToCart(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, Stream&) { throw_nogpu(); }
+void cv::gpu::gemm(const GpuMat&, const GpuMat&, double, const GpuMat&, double, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::transpose(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::flip(const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::LUT(const GpuMat&, const Mat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::magnitude(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::magnitudeSqr(const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::magnitude(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::magnitudeSqr(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::phase(const GpuMat&, const GpuMat&, GpuMat&, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::cartToPolar(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::polarToCart(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, Stream&) { throw_no_cuda(); }
+void cv::gpu::normalize(const GpuMat&, GpuMat&, double, double, int, int, const GpuMat&) { throw_no_cuda(); }
+void cv::gpu::normalize(const GpuMat&, GpuMat&, double, double, int, int, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -68,11 +69,16 @@ void cv::gpu::polarToCart(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, 
 void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const GpuMat& src3, double beta, GpuMat& dst, int flags, Stream& stream)
 {
 #ifndef HAVE_CUBLAS
-    (void)src1; (void)src2; (void)alpha; (void)src3; (void)beta; (void)dst; (void)flags; (void)stream;
-    CV_Error(CV_StsNotImplemented, "The library was build without CUBLAS");
-
+    (void)src1;
+    (void)src2;
+    (void)alpha;
+    (void)src3;
+    (void)beta;
+    (void)dst;
+    (void)flags;
+    (void)stream;
+    CV_Error(cv::Error::StsNotImplemented, "The library was build without CUBLAS");
 #else
-
     // CUBLAS works with column-major matrices
 
     CV_Assert(src1.type() == CV_32FC1 || src1.type() == CV_32FC2 || src1.type() == CV_64FC1 || src1.type() == CV_64FC2);
@@ -80,8 +86,8 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
 
     if (src1.depth() == CV_64F)
     {
-        if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+        if (!deviceSupports(NATIVE_DOUBLE))
+            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
     }
 
     bool tr1 = (flags & GEMM_1_T) != 0;
@@ -91,7 +97,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     if (src1.type() == CV_64FC2)
     {
         if (tr1 || tr2 || tr3)
-            CV_Error(CV_StsNotImplemented, "transpose operation doesn't implemented for CV_64FC2 type");
+            CV_Error(cv::Error::StsNotImplemented, "transpose operation doesn't implemented for CV_64FC2 type");
     }
 
     Size src1Size = tr1 ? Size(src1.rows, src1.cols) : src1.size();
@@ -188,7 +194,6 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     }
 
     cublasSafeCall( cublasDestroy_v2(handle) );
-
 #endif
 }
 
@@ -227,8 +232,8 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
     }
     else // if (src.elemSize() == 8)
     {
-        if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
-            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+        if (!deviceSupports(NATIVE_DOUBLE))
+            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
 
         NppStStreamHandler h(stream);
 
@@ -313,40 +318,14 @@ void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode, Stream& stream)
 
 void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
 {
-    class LevelsInit
-    {
-    public:
-        Npp32s pLevels[256];
-        const Npp32s* pLevels3[3];
-        int nValues3[3];
+    const int cn = src.channels();
 
-#if (CUDA_VERSION > 4020)
-        GpuMat d_pLevels;
-#endif
+    CV_Assert( src.type() == CV_8UC1 || src.type() == CV_8UC3 );
+    CV_Assert( lut.depth() == CV_8U );
+    CV_Assert( lut.channels() == 1 || lut.channels() == cn );
+    CV_Assert( lut.rows * lut.cols == 256 && lut.isContinuous() );
 
-        LevelsInit()
-        {
-            nValues3[0] = nValues3[1] = nValues3[2] = 256;
-            for (int i = 0; i < 256; ++i)
-                pLevels[i] = i;
-
-
-#if (CUDA_VERSION <= 4020)
-            pLevels3[0] = pLevels3[1] = pLevels3[2] = pLevels;
-#else
-            d_pLevels.upload(Mat(1, 256, CV_32S, pLevels));
-            pLevels3[0] = pLevels3[1] = pLevels3[2] = d_pLevels.ptr<Npp32s>();
-#endif
-        }
-    };
-    static LevelsInit lvls;
-
-    int cn = src.channels();
-
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC3);
-    CV_Assert(lut.depth() == CV_8U && (lut.channels() == 1 || lut.channels() == cn) && lut.rows * lut.cols == 256 && lut.isContinuous());
-
-    dst.create(src.size(), CV_MAKETYPE(lut.depth(), cn));
+    dst.create(src.size(), CV_MAKE_TYPE(lut.depth(), cn));
 
     NppiSize sz;
     sz.height = src.rows;
@@ -355,19 +334,34 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
     Mat nppLut;
     lut.convertTo(nppLut, CV_32S);
 
-    cudaStream_t stream = StreamAccessor::getStream(s);
+    int nValues3[] = {256, 256, 256};
 
+    Npp32s pLevels[256];
+    for (int i = 0; i < 256; ++i)
+        pLevels[i] = i;
+
+    const Npp32s* pLevels3[3];
+
+#if (CUDA_VERSION <= 4020)
+    pLevels3[0] = pLevels3[1] = pLevels3[2] = pLevels;
+#else
+    GpuMat d_pLevels;
+    d_pLevels.upload(Mat(1, 256, CV_32S, pLevels));
+    pLevels3[0] = pLevels3[1] = pLevels3[2] = d_pLevels.ptr<Npp32s>();
+#endif
+
+    cudaStream_t stream = StreamAccessor::getStream(s);
     NppStreamHandler h(stream);
 
     if (src.type() == CV_8UC1)
     {
 #if (CUDA_VERSION <= 4020)
         nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, nppLut.ptr<Npp32s>(), lvls.pLevels, 256) );
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, nppLut.ptr<Npp32s>(), pLevels, 256) );
 #else
         GpuMat d_nppLut(Mat(1, 256, CV_32S, nppLut.data));
         nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, d_nppLut.ptr<Npp32s>(), lvls.d_pLevels.ptr<Npp32s>(), 256) );
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, d_nppLut.ptr<Npp32s>(), d_pLevels.ptr<Npp32s>(), 256) );
 #endif
     }
     else
@@ -404,7 +398,7 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
         }
 
         nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step),
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, pValues3, lvls.pLevels3, lvls.nValues3) );
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, pValues3, pLevels3, nValues3) );
     }
 
     if (stream == 0)
@@ -450,7 +444,7 @@ void cv::gpu::magnitudeSqr(const GpuMat& src, GpuMat& dst, Stream& stream)
 ////////////////////////////////////////////////////////////////////////
 // Polar <-> Cart
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace mathfunc
     {
@@ -463,7 +457,7 @@ namespace
 {
     inline void cartToPolar_caller(const GpuMat& x, const GpuMat& y, GpuMat* mag, bool magSqr, GpuMat* angle, bool angleInDegrees, cudaStream_t stream)
     {
-        using namespace ::cv::gpu::device::mathfunc;
+        using namespace ::cv::gpu::cudev::mathfunc;
 
         CV_Assert(x.size() == y.size() && x.type() == y.type());
         CV_Assert(x.depth() == CV_32F);
@@ -483,7 +477,7 @@ namespace
 
     inline void polarToCart_caller(const GpuMat& mag, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, cudaStream_t stream)
     {
-        using namespace ::cv::gpu::device::mathfunc;
+        using namespace ::cv::gpu::cudev::mathfunc;
 
         CV_Assert((mag.empty() || mag.size() == angle.size()) && mag.type() == angle.type());
         CV_Assert(mag.depth() == CV_32F);
@@ -523,6 +517,49 @@ void cv::gpu::cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& mag, GpuMat&
 void cv::gpu::polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, Stream& stream)
 {
     polarToCart_caller(magnitude, angle, x, y, angleInDegrees, StreamAccessor::getStream(stream));
+}
+
+////////////////////////////////////////////////////////////////////////
+// normalize
+
+void cv::gpu::normalize(const GpuMat& src, GpuMat& dst, double a, double b, int norm_type, int dtype, const GpuMat& mask)
+{
+    GpuMat norm_buf;
+    GpuMat cvt_buf;
+    normalize(src, dst, a, b, norm_type, dtype, mask, norm_buf, cvt_buf);
+}
+
+void cv::gpu::normalize(const GpuMat& src, GpuMat& dst, double a, double b, int norm_type, int dtype, const GpuMat& mask, GpuMat& norm_buf, GpuMat& cvt_buf)
+{
+    double scale = 1, shift = 0;
+    if (norm_type == NORM_MINMAX)
+    {
+        double smin = 0, smax = 0;
+        double dmin = std::min(a, b), dmax = std::max(a, b);
+        minMax(src, &smin, &smax, mask, norm_buf);
+        scale = (dmax - dmin) * (smax - smin > std::numeric_limits<double>::epsilon() ? 1.0 / (smax - smin) : 0.0);
+        shift = dmin - smin * scale;
+    }
+    else if (norm_type == NORM_L2 || norm_type == NORM_L1 || norm_type == NORM_INF)
+    {
+        scale = norm(src, norm_type, mask, norm_buf);
+        scale = scale > std::numeric_limits<double>::epsilon() ? a / scale : 0.0;
+        shift = 0;
+    }
+    else
+    {
+        CV_Error(cv::Error::StsBadArg, "Unknown/unsupported norm type");
+    }
+
+    if (mask.empty())
+    {
+        src.convertTo(dst, dtype, scale, shift);
+    }
+    else
+    {
+        src.convertTo(cvt_buf, dtype, scale, shift);
+        cvt_buf.copyTo(dst, mask);
+    }
 }
 
 #endif /* !defined (HAVE_CUDA) */

@@ -20,7 +20,7 @@ if(ANDROID)
   endif()
 
   # setup lists of camera libs
-  foreach(abi ARMEABI ARMEABI_V7A X86)
+  foreach(abi ARMEABI ARMEABI_V7A X86 MIPS)
     ANDROID_GET_ABI_RAWNAME(${abi} ndkabi)
     if(BUILD_ANDROID_CAMERA_WRAPPER)
       if(ndkabi STREQUAL ANDROID_NDK_ABI_NAME)
@@ -70,6 +70,12 @@ if(ANDROID)
     string(REPLACE ";" " " ${lst} "${${lst}}")
   endforeach()
   string(REPLACE "opencv_" "" OPENCV_MODULES_CONFIGMAKE "${OPENCV_MODULES_CONFIGMAKE}")
+
+  # prepare 3rd-party component list without TBB for armeabi and mips platforms. TBB is useless there.
+  set(OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE_NO_TBB ${OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE})
+  foreach(mod ${OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE_NO_TBB})
+     string(REPLACE "tbb" "" OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE_NO_TBB "${OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE_NO_TBB}")
+  endforeach()
 
   if(BUILD_FAT_JAVA_LIB)
     set(OPENCV_LIBS_CONFIGMAKE java)

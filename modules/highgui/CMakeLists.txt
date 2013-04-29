@@ -20,6 +20,12 @@ if(WITH_JPEG)
   list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
 endif()
 
+if(WITH_WEBP)
+  add_definitions(-DHAVE_WEBP)
+  ocv_include_directories(${WEBP_INCLUDE_DIR})
+  list(APPEND GRFMT_LIBS ${WEBP_LIBRARIES})
+endif()
+
 if(WITH_PNG)
   add_definitions(-DHAVE_PNG)
   add_definitions(${PNG_DEFINITIONS})
@@ -68,7 +74,7 @@ set(highgui_srcs
     src/window.cpp
     )
 
-file(GLOB highgui_ext_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
+file(GLOB highgui_ext_hdrs "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
 
 if(HAVE_QT)
   if (HAVE_QT_OPENGL)
@@ -89,7 +95,7 @@ if(HAVE_QT)
   if(${_have_flag})
     set_source_files_properties(${_RCC_OUTFILES} PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
   endif()
-elseif(WIN32)
+elseif(HAVE_WIN32UI)
   list(APPEND highgui_srcs src/window_w32.cpp)
 elseif(HAVE_GTK)
   list(APPEND highgui_srcs src/window_gtk.cpp)
@@ -105,9 +111,21 @@ elseif(APPLE)
   endif()
 endif()
 
-if(WIN32)
-  list(APPEND highgui_srcs src/cap_vfw.cpp src/cap_cmu.cpp src/cap_dshow.cpp)
-endif(WIN32)
+if(WIN32 AND NOT ARM)
+  list(APPEND highgui_srcs src/cap_cmu.cpp)
+endif()
+
+if (WIN32 AND HAVE_DSHOW)
+  list(APPEND highgui_srcs src/cap_dshow.cpp)
+endif()
+
+if (WIN32 AND HAVE_MSMF)
+  list(APPEND highgui_srcs src/cap_msmf.cpp)
+endif()
+
+if (WIN32 AND HAVE_VFW)
+  list(APPEND highgui_srcs src/cap_vfw.cpp)
+endif()
 
 if(HAVE_XINE)
   list(APPEND highgui_srcs src/cap_xine.cpp)
@@ -131,7 +149,7 @@ endif(HAVE_UNICAP)
 
 if(HAVE_LIBV4L)
   list(APPEND highgui_srcs src/cap_libv4l.cpp)
-elseif(HAVE_CAMV4L OR HAVE_CAMV4L2)
+elseif(HAVE_CAMV4L OR HAVE_CAMV4L2 OR HAVE_VIDEOIO)
   list(APPEND highgui_srcs src/cap_v4l.cpp)
 endif()
 
@@ -179,13 +197,6 @@ if(HAVE_GIGE_API)
   list(APPEND highgui_srcs src/cap_giganetix.cpp)
 endif(HAVE_GIGE_API)
 
-if(WITH_IMAGEIO)
-  add_definitions(-DHAVE_IMAGEIO=1)
-  if(IOS)
-    list(APPEND HIGHGUI_LIBRARIES "-framework ImageIO")
-  endif()
-endif(WITH_IMAGEIO)
-
 if(WITH_AVFOUNDATION)
   add_definitions(-DHAVE_AVFOUNDATION=1)
   list(APPEND highgui_srcs src/cap_avfoundation.mm)
@@ -210,6 +221,7 @@ endif()
 if(WIN32)
   link_directories("${OpenCV_SOURCE_DIR}/3rdparty/lib") # for ffmpeg wrapper only
   include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include") # for directshow in VS2005 and multi-monitor support on MinGW
+  include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include/ffmpeg_") # for tests
 endif()
 
 if(UNIX)
@@ -229,6 +241,24 @@ ocv_set_module_sources(HEADERS ${highgui_ext_hdrs} SOURCES ${highgui_srcs} ${hig
 ocv_module_include_directories()
 
 ocv_create_module(${GRFMT_LIBS} ${HIGHGUI_LIBRARIES})
+
+if(APPLE)
+  ocv_check_flag_support(OBJCXX "-fobjc-exceptions" HAVE_OBJC_EXCEPTIONS)
+  if(HAVE_OBJC_EXCEPTIONS)
+    foreach(source ${OPENCV_MODULE_${the_module}_SOURCES})
+      if("${source}" MATCHES "\\.mm$")
+        get_source_file_property(flags "${source}" COMPILE_FLAGS)
+        if(flags)
+          set(flags "${_flags} -fobjc-exceptions")
+        else()
+          set(flags "-fobjc-exceptions")
+        endif()
+
+        set_source_files_properties("${source}" PROPERTIES COMPILE_FLAGS "${flags}")
+      endif()
+    endforeach()
+  endif()
+endif()
 
 if(BUILD_SHARED_LIBS)
   add_definitions(-DHIGHGUI_EXPORTS)
@@ -264,7 +294,7 @@ if(WIN32 AND WITH_FFMPEG)
                        COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Release/${ffmpeg_bare_name_ver}"
                        COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Debug/${ffmpeg_bare_name_ver}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
-  elseif(MSVC)
+  elseif(MSVC AND (CMAKE_GENERATOR MATCHES "Visual"))
     add_custom_command(TARGET ${the_module} POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}/${ffmpeg_bare_name_ver}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")

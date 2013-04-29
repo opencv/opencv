@@ -22,16 +22,16 @@ Mat src; Mat dst;
 char window_name[] = "Smoothing Demo";
 
 /// Function headers
-int display_caption( char* caption );
+int display_caption( const char* caption );
 int display_dst( int delay );
 
 
 /**
  * function main
  */
-int main( int argc, char** argv )
+int main( void )
 {
-  namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+  namedWindow( window_name, WINDOW_AUTOSIZE );
 
   /// Load the source image
   src = imread( "../images/lena.png", 1 );
@@ -84,12 +84,12 @@ int main( int argc, char** argv )
 /**
  * @function display_caption
  */
-int display_caption( char* caption )
+int display_caption( const char* caption )
 {
   dst = Mat::zeros( src.size(), src.type() );
   putText( dst, caption,
            Point( src.cols/4, src.rows/2),
-           CV_FONT_HERSHEY_COMPLEX, 1, Scalar(255, 255, 255) );
+           FONT_HERSHEY_COMPLEX, 1, Scalar(255, 255, 255) );
 
   imshow( window_name, dst );
   int c = waitKey( DELAY_CAPTION );

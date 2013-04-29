@@ -40,6 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/video/tracking_c.h"
 
 /* ///////////////////// pyrlk_test ///////////////////////// */
 
@@ -72,8 +73,9 @@ void CV_OptFlowPyrLKTest::run( int )
     CvMat *_u = 0, *_v = 0, *_v2 = 0;
     char* status = 0;
 
-    IplImage* imgI = 0;
-    IplImage* imgJ = 0;
+    IplImage imgI;
+    IplImage imgJ;
+    cv::Mat  imgI2, imgJ2;
 
     int  n = 0, i = 0;
 
@@ -115,9 +117,10 @@ void CV_OptFlowPyrLKTest::run( int )
 
     /* read first image */
     sprintf( filename, "%soptflow/%s", ts->get_data_path().c_str(), "rock_1.bmp" );
-    imgI = cvLoadImage( filename, -1 );
+    imgI2 = cv::imread( filename, cv::IMREAD_UNCHANGED );
+    imgI = imgI2;
 
-    if( !imgI )
+    if( imgI2.empty() )
     {
         ts->printf( cvtest::TS::LOG, "could not read %s\n", filename );
         code = cvtest::TS::FAIL_MISSING_TEST_DATA;
@@ -126,9 +129,10 @@ void CV_OptFlowPyrLKTest::run( int )
 
     /* read second image */
     sprintf( filename, "%soptflow/%s", ts->get_data_path().c_str(), "rock_2.bmp" );
-    imgJ = cvLoadImage( filename, -1 );
+    imgJ2 = cv::imread( filename, cv::IMREAD_UNCHANGED );
+    imgJ = imgJ2;
 
-    if( !imgJ )
+    if( imgJ2.empty() )
     {
         ts->printf( cvtest::TS::LOG, "could not read %s\n", filename );
         code = cvtest::TS::FAIL_MISSING_TEST_DATA;
@@ -139,7 +143,7 @@ void CV_OptFlowPyrLKTest::run( int )
     status = (char*)cvAlloc(n*sizeof(status[0]));
 
     /* calculate flow */
-    cvCalcOpticalFlowPyrLK( imgI, imgJ, 0, 0, u, v2, n, cvSize( 41, 41 ),
+    cvCalcOpticalFlowPyrLK( &imgI, &imgJ, 0, 0, u, v2, n, cvSize( 41, 41 ),
                             4, status, 0, cvTermCriteria( CV_TERMCRIT_ITER|
                             CV_TERMCRIT_EPS, 30, 0.01f ), 0 );
 
@@ -201,9 +205,6 @@ _exit_:
     cvReleaseMat( &_v );
     cvReleaseMat( &_v2 );
 
-    cvReleaseImage( &imgI );
-    cvReleaseImage( &imgJ );
-
     if( code < 0 )
         ts->set_failed_test_info( code );
 }
@@ -211,4 +212,34 @@ _exit_:
 
 TEST(Video_OpticalFlowPyrLK, accuracy) { CV_OptFlowPyrLKTest test; test.safe_run(); }
 
-/* End of file. */
+TEST(Video_OpticalFlowPyrLK, submat)
+{
+    // see bug #2075
+    std::string path = cvtest::TS::ptr()->get_data_path() + "../cv/shared/lena.png";
+
+    cv::Mat lenaImg = cv::imread(path);
+    ASSERT_FALSE(lenaImg.empty());
+
+    cv::Mat wholeImage;
+    cv::resize(lenaImg, wholeImage, cv::Size(1024, 1024));
+
+    cv::Mat img1 = wholeImage(cv::Rect(0, 0, 640, 360)).clone();
+    cv::Mat img2 = wholeImage(cv::Rect(40, 60, 640, 360));
+
+    std::vector<uchar> status;
+    std::vector<float> error;
+    std::vector<cv::Point2f> prev;
+    std::vector<cv::Point2f> next;
+
+    cv::RNG rng(123123);
+
+    for(int i = 0; i < 50; ++i)
+    {
+        int x = rng.uniform(0, 640);
+        int y = rng.uniform(0, 360);
+
+        prev.push_back(cv::Point2f((float)x, (float)y));
+    }
+
+    ASSERT_NO_THROW(cv::calcOpticalFlowPyrLK(img1, img2, prev, next, status, error));
+}

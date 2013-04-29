@@ -633,7 +633,7 @@ static CvTestSeqElem* icvTestSeqReadElemOne(CvTestSeq_* pTS, CvFileStorage* fs, 
 
             for(i0=0, i1=1; i1<KeyFrameNum;)
             {
-                for(i1=i0+1; i1<KeyFrameNum && KeyFrames[i1]<0; i1++);
+                for(i1=i0+1; i1<KeyFrameNum && KeyFrames[i1]<0; i1++) {}
 
                 assert(i1<KeyFrameNum);
                 assert(i1>i0);
@@ -779,7 +779,7 @@ static CvTestSeqElem* icvTestSeqReadElemAll(CvTestSeq_* pTS, CvFileStorage* fs, 
             }
 
             /* Find last element: */
-            for(pElemLast=pElemNew;pElemLast && pElemLast->next;pElemLast= pElemLast->next);
+            for(pElemLast=pElemNew;pElemLast && pElemLast->next;pElemLast= pElemLast->next) {}
 
         }   /* Next element. */
     }   /*  Read all element in sequence. */
@@ -842,7 +842,7 @@ CvTestSeq* cvCreateTestSeq(char* pConfigfile, char** videos, int numvideo, float
         else
         {
             CvTestSeqElem* p = NULL;
-            for(p=pTS->pElemList;p->next;p=p->next);
+            for(p=pTS->pElemList;p->next;p=p->next) {}
             p->next = pElemNew;
         }
     }   /* Read all videos. */
@@ -850,13 +850,13 @@ CvTestSeq* cvCreateTestSeq(char* pConfigfile, char** videos, int numvideo, float
     {   /* Calculate elements and image size and video length: */
         CvTestSeqElem*  p = pTS->pElemList;
         int             num = 0;
-        CvSize          MaxSize = {0,0};
+        CvSize          MaxSize;
         int             MaxFN = 0;
 
         for(p = pTS->pElemList; p; p=p->next, num++)
         {
             int     FN = p->FrameBegin+p->FrameNum;
-            CvSize  S = {0,0};
+            CvSize  S;
 
             if(p->pImg && p->BG)
             {
@@ -927,7 +927,7 @@ IplImage* cvTestSeqQueryFrame(CvTestSeq* pTestSeq)
 
     for(p=pTS->pElemList; p; p=p->next)
     {
-        int             DirectCopy = FALSE;
+        int             DirectCopy = 0;
         int             frame = pTS->CurFrame - p->FrameBegin;
         //float           t = p->FrameNum>1?((float)frame/(p->FrameNum-1)):0;
         CvTSTrans*      pTrans = p->pTrans + frame%p->TransNum;
@@ -996,13 +996,13 @@ IplImage* cvTestSeqQueryFrame(CvTestSeq* pTestSeq)
 
 
             {   /* Check for direct copy: */
-                DirectCopy = TRUE;
-                if( fabs(CV_MAT_ELEM(pT[0],float,0,0)-1) > 0.00001) DirectCopy = FALSE;
-                if( fabs(CV_MAT_ELEM(pT[0],float,1,0)) > 0.00001) DirectCopy = FALSE;
-                if( fabs(CV_MAT_ELEM(pT[0],float,0,1)) > 0.00001) DirectCopy = FALSE;
-                if( fabs(CV_MAT_ELEM(pT[0],float,0,1)) > 0.00001) DirectCopy = FALSE;
-                if( fabs(CV_MAT_ELEM(pT[0],float,0,2)-(pImg->width-1)*0.5) > 0.5) DirectCopy = FALSE;
-                if( fabs(CV_MAT_ELEM(pT[0],float,1,2)-(pImg->height-1)*0.5) > 0.5) DirectCopy = FALSE;
+                DirectCopy = 1;
+                if( fabs(CV_MAT_ELEM(pT[0],float,0,0)-1) > 0.00001) DirectCopy = 0;
+                if( fabs(CV_MAT_ELEM(pT[0],float,1,0)) > 0.00001) DirectCopy = 0;
+                if( fabs(CV_MAT_ELEM(pT[0],float,0,1)) > 0.00001) DirectCopy = 0;
+                if( fabs(CV_MAT_ELEM(pT[0],float,0,1)) > 0.00001) DirectCopy = 0;
+                if( fabs(CV_MAT_ELEM(pT[0],float,0,2)-(pImg->width-1)*0.5) > 0.5) DirectCopy = 0;
+                if( fabs(CV_MAT_ELEM(pT[0],float,1,2)-(pImg->height-1)*0.5) > 0.5) DirectCopy = 0;
             }
 
             /* Extract image and mask: */

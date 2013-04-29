@@ -22,13 +22,13 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -42,9 +42,9 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace split_merge
     {
@@ -293,7 +293,7 @@ namespace cv { namespace gpu { namespace device
             MergeFunction merge_func = merge_func_tbl[merge_func_id];
 
             if (merge_func == 0)
-                cv::gpu::error("Unsupported channel count or data type", __FILE__, __LINE__, "merge_caller");
+                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported channel count or data type");
 
             merge_func(src, dst, stream);
         }
@@ -500,12 +500,12 @@ namespace cv { namespace gpu { namespace device
             SplitFunction split_func = split_func_tbl[split_func_id];
 
             if (split_func == 0)
-                cv::gpu::error("Unsupported channel count or data type", __FILE__, __LINE__, "split_caller");
+                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported channel count or data type");
 
             split_func(src, dst, stream);
         }
     } // namespace split_merge
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cudev
 
 
 #endif /* CUDA_DISABLER */

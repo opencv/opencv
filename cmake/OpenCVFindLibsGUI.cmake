@@ -2,6 +2,16 @@
 #  Detect 3rd-party GUI libraries
 # ----------------------------------------------------------------------------
 
+#--- Win32 UI ---
+ocv_clear_vars(HAVE_WIN32UI)
+if(WITH_WIN32UI)
+  TRY_COMPILE(HAVE_WIN32UI
+    "${OPENCV_BINARY_DIR}/CMakeFiles/CMakeTmp"
+    "${OpenCV_SOURCE_DIR}/cmake/checks/win32uitest.cpp"
+    CMAKE_FLAGS "\"user32.lib\" \"gdi32.lib\""
+    OUTPUT_VARIABLE OUTPUT)
+endif(WITH_WIN32UI)
+
 # --- QT4 ---
 ocv_clear_vars(HAVE_QT)
 if(WITH_QT)
@@ -25,7 +35,7 @@ endif()
 # --- OpenGl ---
 ocv_clear_vars(HAVE_OPENGL HAVE_QT_OPENGL)
 if(WITH_OPENGL)
-  if(WIN32 OR QT_QTOPENGL_FOUND OR HAVE_GTKGLEXT)
+  if(WITH_WIN32UI OR (HAVE_QT AND QT_QTOPENGL_FOUND) OR HAVE_GTKGLEXT)
     find_package (OpenGL QUIET)
     if(OPENGL_FOUND)
       set(HAVE_OPENGL TRUE)

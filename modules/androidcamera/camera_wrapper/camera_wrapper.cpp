@@ -1,4 +1,4 @@
-#if !defined(ANDROID_r2_2_0) && !defined(ANDROID_r2_3_3) && !defined(ANDROID_r3_0_1) && !defined(ANDROID_r4_0_0) && !defined(ANDROID_r4_0_3) && !defined(ANDROID_r4_1_1)
+#if !defined(ANDROID_r2_2_0) && !defined(ANDROID_r2_3_3) && !defined(ANDROID_r3_0_1) && !defined(ANDROID_r4_0_0) && !defined(ANDROID_r4_0_3) && !defined(ANDROID_r4_1_1) && !defined(ANDROID_r4_2_0)
 # error Building camera wrapper for your version of Android is not supported by OpenCV. You need to modify OpenCV sources in order to compile camera wrapper for your version of Android.
 #endif
 
@@ -18,7 +18,7 @@
 # define MAGIC_OPENCV_TEXTURE_ID (0x10)
 #else // defined(ANDROID_r3_0_1) || defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3)
 //TODO: This is either 2.2 or 2.3. Include the headers for ISurface.h access
-#if defined(ANDROID_r4_1_1)
+#if defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0)
 #include <gui/ISurface.h>
 #include <gui/BufferQueue.h>
 #else
@@ -60,7 +60,7 @@ using namespace android;
 
 void debugShowFPS();
 
-#if defined(ANDROID_r4_1_1)
+#if defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0)
 class ConsumerListenerStub: public BufferQueue::ConsumerListener
 {
 public:
@@ -280,7 +280,7 @@ public:
     }
 
     virtual void postData(int32_t msgType, const sp<IMemory>& dataPtr
-#if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3) || defined(ANDROID_r4_1_1)
+    #if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3) || defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0)
                           ,camera_frame_metadata_t*
 #endif
                           )
@@ -526,7 +526,7 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
     pdstatus = camera->setPreviewTexture(surfaceTexture);
     if (pdstatus != 0)
         LOGE("initCameraConnect: failed setPreviewTexture call; camera migth not work correctly");
-#elif defined(ANDROID_r4_1_1)
+#elif defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0)
     sp<BufferQueue> bufferQueue = new BufferQueue();
     sp<BufferQueue::ConsumerListener> queueListener = new ConsumerListenerStub();
     bufferQueue->consumerConnect(queueListener);

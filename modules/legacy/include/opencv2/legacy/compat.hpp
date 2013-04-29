@@ -39,14 +39,6 @@
 //
 //M*/
 
-/*
-   A few macros and definitions for backward compatibility
-   with the previous versions of OpenCV. They are obsolete and
-   are likely to be removed in future. To check whether your code
-   uses any of these, define CV_NO_BACKWARD_COMPATIBILITY before
-   including cv.h.
-*/
-
 #ifndef __OPENCV_COMPAT_HPP__
 #define __OPENCV_COMPAT_HPP__
 
@@ -55,6 +47,8 @@
 
 #include <math.h>
 #include <string.h>
+
+#define CV_NOOP(...)
 
 #ifdef __cplusplus
 extern "C" {
@@ -190,7 +184,8 @@ CV_EXPORTS double cvPseudoInverse( const CvArr* src, CvArr* dst );
 #define cvMinMaxLocMask(img, mask, min_val, max_val, min_loc, max_loc) \
         cvMinMaxLoc(img, min_val, max_val, min_loc, max_loc, mask)
 
-#define cvRemoveMemoryManager  cvSetMemoryManager
+#define cvRemoveMemoryManager  CV_NOOP
+#define cvSetMemoryManager     CV_NOOP
 
 #define cvmSetZero( mat )               cvSetZero( mat )
 #define cvmSetIdentity( mat )           cvSetIdentity( mat )

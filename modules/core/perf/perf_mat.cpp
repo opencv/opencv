@@ -18,7 +18,8 @@ PERF_TEST_P(Size_MatType, Mat_Eye,
 
     declare.out(diagonalMatrix);
 
-    TEST_CYCLE()
+    int runs = (size.width <= 640) ? 15 : 5;
+    TEST_CYCLE_MULTIRUN(runs)
     {
         diagonalMatrix = Mat::eye(size, type);
     }
@@ -38,7 +39,8 @@ PERF_TEST_P(Size_MatType, Mat_Zeros,
 
     declare.out(zeroMatrix);
 
-    TEST_CYCLE()
+    int runs = (size.width <= 640) ? 15 : 5;
+    TEST_CYCLE_MULTIRUN(runs)
     {
         zeroMatrix = Mat::zeros(size, type);
     }

@@ -22,7 +22,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -44,18 +44,17 @@
 
 using namespace cv;
 using namespace cv::gpu;
-using namespace std;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::DisparityBilateralFilter::DisparityBilateralFilter(int, int, int) { throw_nogpu(); }
-cv::gpu::DisparityBilateralFilter::DisparityBilateralFilter(int, int, int, float, float, float) { throw_nogpu(); }
+cv::gpu::DisparityBilateralFilter::DisparityBilateralFilter(int, int, int) { throw_no_cuda(); }
+cv::gpu::DisparityBilateralFilter::DisparityBilateralFilter(int, int, int, float, float, float) { throw_no_cuda(); }
 
-void cv::gpu::DisparityBilateralFilter::operator()(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::DisparityBilateralFilter::operator()(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace disp_bilateral_filter
     {
@@ -66,7 +65,7 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-using namespace ::cv::gpu::device::disp_bilateral_filter;
+using namespace ::cv::gpu::cudev::disp_bilateral_filter;
 
 namespace
 {
@@ -107,7 +106,7 @@ namespace
                                    GpuMat& table_color, GpuMat& table_space,
                                    const GpuMat& disp, const GpuMat& img, GpuMat& dst, Stream& stream)
     {
-        short edge_disc = max<short>(short(1), short(ndisp * edge_threshold + 0.5));
+        short edge_disc = std::max<short>(short(1), short(ndisp * edge_threshold + 0.5));
         short max_disc = short(ndisp * max_disc_threshold + 0.5);
 
         disp_load_constants(table_color.ptr<float>(), table_space, ndisp, radius, edge_disc, max_disc);

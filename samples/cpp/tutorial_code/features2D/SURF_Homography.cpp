@@ -10,8 +10,9 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/nonfree/features2d.cpp"
+#include "opencv2/nonfree/features2d.hpp"
 
+using namespace std;
 using namespace cv;
 
 void readme();
@@ -25,8 +26,8 @@ int main( int argc, char** argv )
   if( argc != 3 )
   { readme(); return -1; }
 
-  Mat img_object = imread( argv[1], CV_LOAD_IMAGE_GRAYSCALE );
-  Mat img_scene = imread( argv[2], CV_LOAD_IMAGE_GRAYSCALE );
+  Mat img_object = imread( argv[1], IMREAD_GRAYSCALE );
+  Mat img_scene = imread( argv[2], IMREAD_GRAYSCALE );
 
   if( !img_object.data || !img_scene.data )
   { std::cout<< " --(!) Error reading images " << std::endl; return -1; }
@@ -84,29 +85,30 @@ int main( int argc, char** argv )
   std::vector<Point2f> obj;
   std::vector<Point2f> scene;
 
-  for( int i = 0; i < good_matches.size(); i++ )
+  for( size_t i = 0; i < good_matches.size(); i++ )
   {
     //-- Get the keypoints from the good matches
     obj.push_back( keypoints_object[ good_matches[i].queryIdx ].pt );
     scene.push_back( keypoints_scene[ good_matches[i].trainIdx ].pt );
   }
 
-  Mat H = findHomography( obj, scene, CV_RANSAC );
+  Mat H = findHomography( obj, scene, RANSAC );
 
   //-- Get the corners from the image_1 ( the object to be "detected" )
   std::vector<Point2f> obj_corners(4);
-  obj_corners[0] = cvPoint(0,0); obj_corners[1] = cvPoint( img_object.cols, 0 );
-  obj_corners[2] = cvPoint( img_object.cols, img_object.rows ); obj_corners[3] = cvPoint( 0, img_object.rows );
+  obj_corners[0] = Point(0,0); obj_corners[1] = Point( img_object.cols, 0 );
+  obj_corners[2] = Point( img_object.cols, img_object.rows ); obj_corners[3] = Point( 0, img_object.rows );
   std::vector<Point2f> scene_corners(4);
 
   perspectiveTransform( obj_corners, scene_corners, H);
 
 
   //-- Draw lines between the corners (the mapped object in the scene - image_2 )
-  line( img_matches, scene_corners[0] + Point2f( img_object.cols, 0), scene_corners[1] + Point2f( img_object.cols, 0), Scalar(0, 255, 0), 4 );
-  line( img_matches, scene_corners[1] + Point2f( img_object.cols, 0), scene_corners[2] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
-  line( img_matches, scene_corners[2] + Point2f( img_object.cols, 0), scene_corners[3] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
-  line( img_matches, scene_corners[3] + Point2f( img_object.cols, 0), scene_corners[0] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
+  Point2f offset( (float)img_object.cols, 0);
+  line( img_matches, scene_corners[0] + offset, scene_corners[1] + offset, Scalar(0, 255, 0), 4 );
+  line( img_matches, scene_corners[1] + offset, scene_corners[2] + offset, Scalar( 0, 255, 0), 4 );
+  line( img_matches, scene_corners[2] + offset, scene_corners[3] + offset, Scalar( 0, 255, 0), 4 );
+  line( img_matches, scene_corners[3] + offset, scene_corners[0] + offset, Scalar( 0, 255, 0), 4 );
 
   //-- Show detected matches
   imshow( "Good Matches & Object detection", img_matches );

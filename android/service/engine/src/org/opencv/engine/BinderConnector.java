@@ -4,23 +4,43 @@ import android.os.IBinder;
 
 public class BinderConnector
 {
-    public BinderConnector(MarketConnector Market)
-    {
-        Init(Market);
-    }
-    public native IBinder Connect();
-    public boolean Disconnect()
-    {
-        Final();
-        return true;
+    public BinderConnector(MarketConnector Market) {
+        mMarket = Market;
     }
 
-    static
+    public boolean Init() {
+        boolean result = false;
+        if (mIsReady)
+            result = Init(mMarket);
+
+        return result;
+    }
+
+    public native IBinder Connect();
+
+    public boolean Disconnect()
     {
-        System.loadLibrary("OpenCVEngine");
-        System.loadLibrary("OpenCVEngine_jni");
+        if (mIsReady)
+            Final();
+
+        return mIsReady;
     }
 
     private native boolean Init(MarketConnector Market);
-    public native void Final();
+    private native void Final();
+    private static boolean mIsReady = false;
+    private MarketConnector mMarket;
+
+    static {
+        try {
+            System.loadLibrary("OpenCVEngine");
+            System.loadLibrary("OpenCVEngine_jni");
+            mIsReady = true;
+        }
+        catch(UnsatisfiedLinkError e) {
+            mIsReady = false;
+            e.printStackTrace();
+        }
+    }
+
 }

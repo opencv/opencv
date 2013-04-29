@@ -41,6 +41,11 @@
 //M*/
 
 #include "precomp.hpp"
+#include <limits>
+
+#if defined _M_IX86 && defined _MSC_VER && _MSC_VER < 1700
+#pragma float_control(precise, on)
+#endif
 
 namespace cv
 {
@@ -527,12 +532,12 @@ template<> inline int VBLAS<double>::givensx(double* a, double* b, int n, double
 #endif
 
 template<typename _Tp> void
-JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int n, int n1, double minval)
+JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
+               int m, int n, int n1, double minval, _Tp eps)
 {
     VBLAS<_Tp> vblas;
     AutoBuffer<double> Wbuf(n);
     double* W = Wbuf;
-    _Tp eps = DBL_EPSILON*10;
     int i, j, k, iter, max_iter = std::max(m, 30);
     _Tp c, s;
     double sd;
@@ -573,10 +578,10 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
                     continue;
 
                 p *= 2;
-                double beta = a - b, gamma = hypot((double)p, beta), delta;
+                double beta = a - b, gamma = hypot((double)p, beta);
                 if( beta < 0 )
                 {
-                    delta = (gamma - beta)*0.5;
+                    double delta = (gamma - beta)*0.5;
                     s = (_Tp)std::sqrt(delta/gamma);
                     c = (_Tp)(p/(gamma*s*2));
                 }
@@ -584,36 +589,18 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
                 {
                     c = (_Tp)std::sqrt((gamma + beta)/(gamma*2));
                     s = (_Tp)(p/(gamma*c*2));
-                    delta = p*p*0.5/(gamma + beta);
                 }
 
-                W[i] += delta;
-                W[j] -= delta;
-
-                if( iter % 2 != 0 && W[i] > 0 && W[j] > 0 )
+                a = b = 0;
+                for( k = 0; k < m; k++ )
                 {
-                    k = vblas.givens(Ai, Aj, m, c, s);
+                    _Tp t0 = c*Ai[k] + s*Aj[k];
+                    _Tp t1 = -s*Ai[k] + c*Aj[k];
+                    Ai[k] = t0; Aj[k] = t1;
 
-                    for( ; k < m; k++ )
-                    {
-                        _Tp t0 = c*Ai[k] + s*Aj[k];
-                        _Tp t1 = -s*Ai[k] + c*Aj[k];
-                        Ai[k] = t0; Aj[k] = t1;
-                    }
+                    a += (double)t0*t0; b += (double)t1*t1;
                 }
-                else
-                {
-                    a = b = 0;
-                    for( k = 0; k < m; k++ )
-                    {
-                        _Tp t0 = c*Ai[k] + s*Aj[k];
-                        _Tp t1 = -s*Ai[k] + c*Aj[k];
-                        Ai[k] = t0; Aj[k] = t1;
-
-                        a += (double)t0*t0; b += (double)t1*t1;
-                    }
-                    W[i] = a; W[j] = b;
-                }
+                W[i] = a; W[j] = b;
 
                 changed = true;
 
@@ -725,12 +712,12 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
 
 static void JacobiSVD(float* At, size_t astep, float* W, float* Vt, size_t vstep, int m, int n, int n1=-1)
 {
-    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, FLT_MIN);
+    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, FLT_MIN, FLT_EPSILON*2);
 }
 
 static void JacobiSVD(double* At, size_t astep, double* W, double* Vt, size_t vstep, int m, int n, int n1=-1)
 {
-    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, DBL_MIN);
+    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, DBL_MIN, DBL_EPSILON*10);
 }
 
 /* y[0:m,0:n] += diag(a[0:1,0:m]) * x[0:m,0:n] */
@@ -874,6 +861,7 @@ double cv::determinant( InputArray _mat )
     size_t step = mat.step;
     const uchar* m = mat.data;
 
+    CV_Assert( !mat.empty() );
     CV_Assert( mat.rows == mat.cols && (type == CV_32F || type == CV_64F));
 
     #define Mf(y, x) ((float*)(m + y*step))[x]
@@ -954,7 +942,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
     size_t esz = CV_ELEM_SIZE(type);
     int m = src.rows, n = src.cols;
 
-   if( method == DECOMP_SVD )
+    if( method == DECOMP_SVD )
     {
         int nm = std::min(m, n);
 
@@ -1095,68 +1083,28 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
             if( type == CV_32FC1 )
             {
                 double d = det3(Sf);
+
                 if( d != 0. )
                 {
-                    float CV_DECL_ALIGNED(16) t[12];
+                    double t[12];
 
                     result = true;
                     d = 1./d;
-                #if CV_SSE2
-                    if(USE_SSE2)
-                    {
-                        __m128 det =_mm_set1_ps((float)d);
-                        __m128 s0 = _mm_loadu_ps((const float*)srcdata);//s0 = Sf(0,0) Sf(0,1) Sf(0,2) ***
-                        __m128 s1 = _mm_loadu_ps((const float*)(srcdata+srcstep));//s1 = Sf(1,0) Sf(1,1) Sf(1,2) ***
-                        __m128 s2 = _mm_set_ps(0.f, Sf(2,2), Sf(2,1), Sf(2,0)); //s2 = Sf(2,0) Sf(2,1) Sf(2,2) ***
+                    t[0] = (((double)Sf(1,1) * Sf(2,2) - (double)Sf(1,2) * Sf(2,1)) * d);
+                    t[1] = (((double)Sf(0,2) * Sf(2,1) - (double)Sf(0,1) * Sf(2,2)) * d);
+                    t[2] = (((double)Sf(0,1) * Sf(1,2) - (double)Sf(0,2) * Sf(1,1)) * d);
 
-                        __m128 r0 =  _mm_shuffle_ps(s1,s1,_MM_SHUFFLE(3,0,2,1)); //r0 = Sf(1,1) Sf(1,2) Sf(1,0) ***
-                        __m128 r1 =  _mm_shuffle_ps(s2,s2,_MM_SHUFFLE(3,1,0,2)); //r1 = Sf(2,2) Sf(2,0) Sf(2,1) ***
-                        __m128 r2 =  _mm_shuffle_ps(s2,s2,_MM_SHUFFLE(3,0,2,1)); //r2 = Sf(2,1) Sf(2,2) Sf(2,0) ***
+                    t[3] = (((double)Sf(1,2) * Sf(2,0) - (double)Sf(1,0) * Sf(2,2)) * d);
+                    t[4] = (((double)Sf(0,0) * Sf(2,2) - (double)Sf(0,2) * Sf(2,0)) * d);
+                    t[5] = (((double)Sf(0,2) * Sf(1,0) - (double)Sf(0,0) * Sf(1,2)) * d);
 
-                        __m128 t0 = _mm_mul_ps(s0, r0);//t0 = Sf(0,0)*Sf(1,1) Sf(0,1)*Sf(1,2) Sf(0,2)*Sf(1,0) ***
-                        __m128 t1 = _mm_mul_ps(s0, r1);//t1 = Sf(0,0)*Sf(2,2) Sf(0,1)*Sf(2,0) Sf(0,2)*Sf(2,1) ***
-                        __m128 t2 = _mm_mul_ps(s1, r2);//t2 = Sf(1,0)*Sf(2,1) Sf(1,1)*Sf(2,2) Sf(1,2)*Sf(2,0) ***
+                    t[6] = (((double)Sf(1,0) * Sf(2,1) - (double)Sf(1,1) * Sf(2,0)) * d);
+                    t[7] = (((double)Sf(0,1) * Sf(2,0) - (double)Sf(0,0) * Sf(2,1)) * d);
+                    t[8] = (((double)Sf(0,0) * Sf(1,1) - (double)Sf(0,1) * Sf(1,0)) * d);
 
-                        __m128 r3 = _mm_shuffle_ps(s0,s0,_MM_SHUFFLE(3,0,2,1));//r3 = Sf(0,1) Sf(0,2) Sf(0,0) ***
-                        __m128 r4 = _mm_shuffle_ps(s0,s0,_MM_SHUFFLE(3,1,0,2));//r4 = Sf(0,2) Sf(0,0) Sf(0,1) ***
-
-                        __m128 t00 = _mm_mul_ps(s1, r3);//t00 = Sf(1,0)*Sf(0,1) Sf(1,1)*Sf(0,2) Sf(1,2)*Sf(0,0) ***
-                        __m128 t11 = _mm_mul_ps(s2, r4);//t11 = Sf(2,0)*Sf(0,2) Sf(2,1)*Sf(0,0) Sf(2,2)*Sf(0,1) ***
-                        __m128 t22 = _mm_mul_ps(s2, r0);//t22 = Sf(2,0)*Sf(1,1) Sf(2,1)*Sf(1,2) Sf(2,2)*Sf(1,0) ***
-
-                        t0 = _mm_mul_ps(_mm_sub_ps(t0,t00), det);//Sf(0,0)*Sf(1,1)   Sf(0,1)*Sf(1,2)   Sf(0,2)*Sf(1,0) ***
-                                                                //-Sf(1,0)*Sf(0,1)  -Sf(1,1)*Sf(0,2)  -Sf(1,2)*Sf(0,0)
-                        t1 = _mm_mul_ps(_mm_sub_ps(t1,t11), det);//Sf(0,0)*Sf(2,2)   Sf(0,1)*Sf(2,0)   Sf(0,2)*Sf(2,1) ***
-                                                                //-Sf(2,0)*Sf(0,2)  -Sf(2,1)*Sf(0,0)  -Sf(2,2)*Sf(0,1)
-                        t2 = _mm_mul_ps(_mm_sub_ps(t2,t22), det);//Sf(1,0)*Sf(2,1)   Sf(1,1)*Sf(2,2)   Sf(1,2)*Sf(2,0) ***
-                                                                //-Sf(2,0)*Sf(1,1)  -Sf(2,1)*Sf(1,2)  -Sf(2,2)*Sf(1,0)
-                        _mm_store_ps(t, t0);
-                        _mm_store_ps(t+4, t1);
-                        _mm_store_ps(t+8, t2);
-
-                        Df(0,0) = t[9]; Df(0,1) = t[6]; Df(0,2) = t[1];
-                        Df(1,0) = t[10]; Df(1,1) = t[4]; Df(1,2) = t[2];
-                        Df(2,0) = t[8]; Df(2,1) = t[5]; Df(2,2) = t[0];
-                    }
-                    else
-                #endif
-                    {
-                        t[0] = (float)(((double)Sf(1,1) * Sf(2,2) - (double)Sf(1,2) * Sf(2,1)) * d);
-                        t[1] = (float)(((double)Sf(0,2) * Sf(2,1) - (double)Sf(0,1) * Sf(2,2)) * d);
-                        t[2] = (float)(((double)Sf(0,1) * Sf(1,2) - (double)Sf(0,2) * Sf(1,1)) * d);
-
-                        t[3] = (float)(((double)Sf(1,2) * Sf(2,0) - (double)Sf(1,0) * Sf(2,2)) * d);
-                        t[4] = (float)(((double)Sf(0,0) * Sf(2,2) - (double)Sf(0,2) * Sf(2,0)) * d);
-                        t[5] = (float)(((double)Sf(0,2) * Sf(1,0) - (double)Sf(0,0) * Sf(1,2)) * d);
-
-                        t[6] = (float)(((double)Sf(1,0) * Sf(2,1) - (double)Sf(1,1) * Sf(2,0)) * d);
-                        t[7] = (float)(((double)Sf(0,1) * Sf(2,0) - (double)Sf(0,0) * Sf(2,1)) * d);
-                        t[8] = (float)(((double)Sf(0,0) * Sf(1,1) - (double)Sf(0,1) * Sf(1,0)) * d);
-
-                        Df(0,0) = t[0]; Df(0,1) = t[1]; Df(0,2) = t[2];
-                        Df(1,0) = t[3]; Df(1,1) = t[4]; Df(1,2) = t[5];
-                        Df(2,0) = t[6]; Df(2,1) = t[7]; Df(2,2) = t[8];
-                    }
+                    Df(0,0) = (float)t[0]; Df(0,1) = (float)t[1]; Df(0,2) = (float)t[2];
+                    Df(1,0) = (float)t[3]; Df(1,1) = (float)t[4]; Df(1,2) = (float)t[5];
+                    Df(2,0) = (float)t[6]; Df(2,1) = (float)t[7]; Df(2,2) = (float)t[8];
                 }
             }
             else
@@ -1517,7 +1465,7 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
 
 /////////////////// finding eigenvalues and eigenvectors of a symmetric matrix ///////////////
 
-bool cv::eigen( InputArray _src, bool computeEvects, OutputArray _evals, OutputArray _evects )
+bool cv::eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
 {
     Mat src = _src.getMat();
     int type = src.type();
@@ -1527,7 +1475,7 @@ bool cv::eigen( InputArray _src, bool computeEvects, OutputArray _evals, OutputA
     CV_Assert (type == CV_32F || type == CV_64F);
 
     Mat v;
-    if( computeEvects )
+    if( _evects.needed() )
     {
         _evects.create(n, n, type);
         v = _evects.getMat();
@@ -1545,16 +1493,6 @@ bool cv::eigen( InputArray _src, bool computeEvects, OutputArray _evals, OutputA
 
     w.copyTo(_evals);
     return ok;
-}
-
-bool cv::eigen( InputArray src, OutputArray evals, int, int )
-{
-    return eigen(src, false, evals, noArray());
-}
-
-bool cv::eigen( InputArray src, OutputArray evals, OutputArray evects, int, int)
-{
-    return eigen(src, true, evals, evects);
 }
 
 namespace cv
@@ -1724,7 +1662,6 @@ cvDet( const CvArr* arr )
             if( rows == 3 )
                 return det3(Md);
         }
-        return cv::determinant(cv::Mat(mat));
     }
     return cv::determinant(cv::cvarrToMat(arr));
 }
@@ -1759,13 +1696,13 @@ cvSolve( const CvArr* Aarr, const CvArr* barr, CvArr* xarr, int method )
 
 CV_IMPL void
 cvEigenVV( CvArr* srcarr, CvArr* evectsarr, CvArr* evalsarr, double,
-           int lowindex, int highindex)
+           int, int )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), evals0 = cv::cvarrToMat(evalsarr), evals = evals0;
     if( evectsarr )
     {
         cv::Mat evects0 = cv::cvarrToMat(evectsarr), evects = evects0;
-        eigen(src, evals, evects, lowindex, highindex);
+        eigen(src, evals, evects);
         if( evects0.data != evects.data )
         {
             uchar* p = evects0.data;
@@ -1774,7 +1711,7 @@ cvEigenVV( CvArr* srcarr, CvArr* evectsarr, CvArr* evalsarr, double,
         }
     }
     else
-        eigen(src, evals, lowindex, highindex);
+        eigen(src, evals);
     if( evals0.data != evals.data )
     {
         uchar* p = evals0.data;

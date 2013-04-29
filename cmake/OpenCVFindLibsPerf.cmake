@@ -7,11 +7,6 @@ if(WITH_TBB)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectTBB.cmake")
 endif(WITH_TBB)
 
-# --- C= ---
-if(WITH_CSTRIPES)
-  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCStripes.cmake")
-endif(WITH_CSTRIPES)
-
 # --- IPP ---
 ocv_clear_vars(IPP_FOUND)
 if(WITH_IPP)
@@ -32,7 +27,7 @@ endif(WITH_CUDA)
 # --- Eigen ---
 if(WITH_EIGEN)
   find_path(EIGEN_INCLUDE_PATH "Eigen/Core"
-            PATHS /usr/local /opt /usr ENV ProgramFiles ENV ProgramW6432
+            PATHS /usr/local /opt /usr $ENV{EIGEN_ROOT}/include ENV ProgramFiles ENV ProgramW6432 
             PATH_SUFFIXES include/eigen3 include/eigen2 Eigen/include/eigen3 Eigen/include/eigen2
             DOC "The path to Eigen3/Eigen2 headers"
             CMAKE_FIND_ROOT_PATH_BOTH)
@@ -82,3 +77,37 @@ if(WITH_CLP)
     endif()
   endif()
 endif(WITH_CLP)
+
+# --- C= ---
+if(WITH_CSTRIPES AND NOT HAVE_TBB)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCStripes.cmake")
+else()
+  set(HAVE_CSTRIPES 0)
+endif()
+
+# --- OpenMP ---
+if(NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
+  set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/omptest.cpp")
+  file(WRITE "${_fname}" "#ifndef _OPENMP\n#error\n#endif\nint main() { return 0; }\n")
+  try_compile(HAVE_OPENMP "${CMAKE_BINARY_DIR}" "${_fname}")
+  file(REMOVE "${_fname}")
+else()
+  set(HAVE_OPENMP 0)
+endif()
+
+# --- GCD ---
+if(APPLE AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES AND NOT HAVE_OPENMP)
+  set(HAVE_GCD 1)
+else()
+  set(HAVE_GCD 0)
+endif()
+
+# --- Concurrency ---
+if(MSVC AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES AND NOT HAVE_OPENMP)
+  set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/concurrencytest.cpp")
+  file(WRITE "${_fname}" "#if _MSC_VER < 1600\n#error\n#endif\nint main() { return 0; }\n")
+  try_compile(HAVE_CONCURRENCY "${CMAKE_BINARY_DIR}" "${_fname}")
+  file(REMOVE "${_fname}")
+else()
+  set(HAVE_CONCURRENCY 0)
+endif()

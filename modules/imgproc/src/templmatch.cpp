@@ -252,6 +252,11 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     _result.create(corrSize, CV_32F);
     Mat result = _result.getMat();
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (tegra::matchTemplate(img, templ, result, method))
+        return;
+#endif
+
     int cn = img.channels();
     crossCorr( img, templ, result, result.size(), result.type(), Point(0,0), 0, 0);
 
@@ -275,8 +280,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         integral(img, sum, sqsum, CV_64F);
         meanStdDev( templ, templMean, templSdv );
 
-        templNorm = CV_SQR(templSdv[0]) + CV_SQR(templSdv[1]) +
-                    CV_SQR(templSdv[2]) + CV_SQR(templSdv[3]);
+        templNorm = templSdv[0]*templSdv[0] + templSdv[1]*templSdv[1] + templSdv[2]*templSdv[2] + templSdv[3]*templSdv[3];
 
         if( templNorm < DBL_EPSILON && method == CV_TM_CCOEFF_NORMED )
         {
@@ -284,9 +288,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
             return;
         }
 
-        templSum2 = templNorm +
-                     CV_SQR(templMean[0]) + CV_SQR(templMean[1]) +
-                     CV_SQR(templMean[2]) + CV_SQR(templMean[3]);
+        templSum2 = templNorm + templMean[0]*templMean[0] + templMean[1]*templMean[1] + templMean[2]*templMean[2] + templMean[3]*templMean[3];
 
         if( numType != 1 )
         {
@@ -295,8 +297,8 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         }
 
         templSum2 /= invArea;
-        templNorm = sqrt(templNorm);
-        templNorm /= sqrt(invArea); // care of accuracy here
+        templNorm = std::sqrt(templNorm);
+        templNorm /= std::sqrt(invArea); // care of accuracy here
 
         q0 = (double*)sqsum.data;
         q1 = q0 + templ.cols*cn;
@@ -330,7 +332,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
                 for( k = 0; k < cn; k++ )
                 {
                     t = p0[idx+k] - p1[idx+k] - p2[idx+k] + p3[idx+k];
-                    wndMean2 += CV_SQR(t);
+                    wndMean2 += t*t;
                     num -= t*templMean[k];
                 }
 
@@ -346,12 +348,15 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
                 }
 
                 if( numType == 2 )
+                {
                     num = wndSum2 - 2*num + templSum2;
+                    num = MAX(num, 0.);
+                }
             }
 
             if( isNormed )
             {
-                t = sqrt(MAX(wndSum2 - wndMean2,0))*templNorm;
+                t = std::sqrt(MAX(wndSum2 - wndMean2,0))*templNorm;
                 if( fabs(num) < t )
                     num /= t;
                 else if( fabs(num) < t*1.125 )

@@ -15,7 +15,7 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    fangfang bai fangfang@multicorewareinc.com
+//    Fangfang Bai, fangfang@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -30,7 +30,7 @@
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors "as is" and
+// This software is provided by the copyright holders and contributors as is and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
@@ -42,81 +42,46 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
-#include "opencv2/core/core.hpp"
 #include "precomp.hpp"
-#include <iomanip>
-#ifdef HAVE_OPENCL
-using namespace cv;
-using namespace cv::ocl;
-using namespace cvtest;
-using namespace testing;
-using namespace std;
 
-
-PARAM_TEST_CASE(PyrUp, MatType, int)
+///////////// pyrUp ////////////////////////
+TEST(pyrUp)
 {
-    int type;
-    int channels;
-    //std::vector<cv::ocl::Info> oclinfo;
+    Mat src, dst;
+    int all_type[] = {CV_8UC1, CV_8UC4};
+    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
-    virtual void SetUp()
+    for (int size = 500; size <= 2000; size *= 2)
     {
-        type = GET_PARAM(0);
-        channels = GET_PARAM(1);
-        //int devnums = getDevice(oclinfo);
-        //CV_Assert(devnums > 0);
-    }
-};
-
-TEST_P(PyrUp, Performance)
-{
-    cv::Size size(MWIDTH, MHEIGHT);
-    cv::Mat src = randomMat(size, CV_MAKETYPE(type, channels));
-    cv::Mat dst_gold;
-    cv::ocl::oclMat dst;
-
-
-    double totalgputick = 0;
-    double totalgputick_kernel = 0;
-
-    double t1 = 0;
-    double t2 = 0;
-
-    for (int j = 0; j < LOOP_TIMES + 1; j ++)
-    {
-        t1 = (double)cvGetTickCount();//gpu start1
-
-        cv::ocl::oclMat srcMat = cv::ocl::oclMat(src);//upload
-
-        t2 = (double)cvGetTickCount(); //kernel
-        cv::ocl::pyrUp(srcMat, dst);
-        t2 = (double)cvGetTickCount() - t2;//kernel
-
-        cv::Mat cpu_dst;
-        dst.download(cpu_dst); //download
-
-        t1 = (double)cvGetTickCount() - t1;//gpu end1
-
-        if (j == 0)
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
-            continue;
+            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+
+            gen(src, size, size, all_type[j], 0, 256);
+
+            pyrUp(src, dst);
+
+            CPU_ON;
+            pyrUp(src, dst);
+            CPU_OFF;
+
+            ocl::oclMat d_src(src);
+            ocl::oclMat d_dst;
+
+            WARMUP_ON;
+            ocl::pyrUp(d_src, d_dst);
+            WARMUP_OFF;
+
+            GPU_ON;
+            ocl::pyrUp(d_src, d_dst);
+             ;
+            GPU_OFF;
+
+            GPU_FULL_ON;
+            d_src.upload(src);
+            ocl::pyrUp(d_src, d_dst);
+            d_dst.download(dst);
+            GPU_FULL_OFF;
         }
-
-        totalgputick = t1 + totalgputick;
-
-        totalgputick_kernel = t2 + totalgputick_kernel;
-
     }
-
-
-    cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-    cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-
-
 }
-
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, PyrUp, Combine(
-                            Values(CV_8U, CV_32F), Values(1, 4)));
-
-#endif // HAVE_OPENCL

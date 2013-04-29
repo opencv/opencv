@@ -14,7 +14,7 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
     cout <<
         "\nA program using OCL module pyramid scaling, Canny, dilate functions, threshold, split; cpu contours, contour simpification and\n"
@@ -34,7 +34,7 @@ const char* wndname = "OpenCL Square Detection Demo";
 // helper function:
 // finds a cosine of angle between vectors
 // from pt0->pt1 and from pt0->pt2
-double angle( Point pt1, Point pt2, Point pt0 )
+static double angle( Point pt1, Point pt2, Point pt0 )
 {
     double dx1 = pt1.x - pt0.x;
     double dy1 = pt1.y - pt0.y;
@@ -45,7 +45,7 @@ double angle( Point pt1, Point pt2, Point pt0 )
 
 // returns sequence of squares detected on the image.
 // the sequence is stored in the specified memory storage
-void findSquares( const Mat& image, vector<vector<Point> >& squares )
+static void findSquares( const Mat& image, vector<vector<Point> >& squares )
 {
     squares.clear();
 
@@ -88,7 +88,7 @@ void findSquares( const Mat& image, vector<vector<Point> >& squares )
             }
 
             // find contours and store them all as a list
-            findContours(gray, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+            findContours(gray, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
 
             vector<Point> approx;
 
@@ -131,13 +131,13 @@ void findSquares( const Mat& image, vector<vector<Point> >& squares )
 
 
 // the function draws all the squares in the image
-void drawSquares( Mat& image, const vector<vector<Point> >& squares )
+static void drawSquares( Mat& image, const vector<vector<Point> >& squares )
 {
     for( size_t i = 0; i < squares.size(); i++ )
     {
         const Point* p = &squares[i][0];
         int n = (int)squares[i].size();
-        polylines(image, &p, &n, 1, true, Scalar(0,255,0), 3, CV_AA);
+        polylines(image, &p, &n, 1, true, Scalar(0,255,0), 3, LINE_AA);
     }
 
     imshow(wndname, image);

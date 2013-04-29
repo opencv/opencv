@@ -54,7 +54,7 @@ using namespace std;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // BroxOpticalFlow
-
+extern string workdir;
 #define BROX_OPTICAL_FLOW_DUMP_FILE            "opticalflow/brox_optical_flow.bin"
 #define BROX_OPTICAL_FLOW_DUMP_FILE_CC20       "opticalflow/brox_optical_flow_cc20.bin"
 
@@ -78,10 +78,10 @@ PARAM_TEST_CASE(Sparse, bool, bool)
 
 TEST_P(Sparse, Mat)
 {
-    cv::Mat frame0 = readImage("../../../samples/gpu/rubberwhale1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat frame0 = readImage(workdir + "../gpu/rubberwhale1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage("../../../samples/gpu/rubberwhale2.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat frame1 = readImage(workdir + "../gpu/rubberwhale2.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame1.empty());
 
     cv::Mat gray_frame;
@@ -118,9 +118,9 @@ TEST_P(Sparse, Mat)
     cv::Mat status_mat(1, d_status.cols, CV_8UC1, (void *)&status[0]);
     d_status.download(status_mat);
 
-    //std::vector<float> err(d_err.cols);
-    //cv::Mat err_mat(1, d_err.cols, CV_32FC1, (void*)&err[0]);
-    //d_err.download(err_mat);
+    std::vector<float> err(d_err.cols);
+    cv::Mat err_mat(1, d_err.cols, CV_32FC1, (void*)&err[0]);
+    d_err.download(err_mat);
 
     std::vector<cv::Point2f> nextPts_gold;
     std::vector<unsigned char> status_gold;
@@ -153,9 +153,9 @@ TEST_P(Sparse, Mat)
         }
     }
 
-    double bad_ratio = static_cast<double>(mistmatch) / (nextPts.size() * 2);
+    double bad_ratio = static_cast<double>(mistmatch) / (nextPts.size());
 
-    ASSERT_LE(bad_ratio, 0.05f);
+    ASSERT_LE(bad_ratio, 0.02f);
 
 }
 

@@ -1,4 +1,4 @@
-if(MINGW)
+if(MINGW OR (X86 AND UNIX AND NOT APPLE))
   # mingw compiler is known to produce unstable SSE code with -O3 hence we are trying to use -O2 instead
   if(CMAKE_COMPILER_IS_GNUCXX)
     foreach(flags CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
@@ -61,7 +61,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   add_extra_compiler_option(-W)
   add_extra_compiler_option(-Wall)
   add_extra_compiler_option(-Werror=return-type)
-  #add_extra_compiler_option(-Werror=non-virtual-dtor)
+  add_extra_compiler_option(-Werror=non-virtual-dtor)
   add_extra_compiler_option(-Werror=address)
   add_extra_compiler_option(-Werror=sequence-point)
   add_extra_compiler_option(-Wformat)
@@ -91,7 +91,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   endif()
 
   # We need pthread's
-  if(UNIX AND NOT ANDROID)
+  if(UNIX AND NOT ANDROID AND NOT (APPLE AND CMAKE_COMPILER_IS_CLANGCXX))
     add_extra_compiler_option(-pthread)
   endif()
 

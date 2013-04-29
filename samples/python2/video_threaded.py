@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
 Multithreaded video processing sample.
 Usage:
@@ -37,8 +39,10 @@ if __name__ == '__main__':
 
     print __doc__
 
-    try: fn = sys.argv[1]
-    except: fn = 0
+    try:
+        fn = sys.argv[1]
+    except:
+        fn = 0
     cap = video.create_capture(fn)
 
 

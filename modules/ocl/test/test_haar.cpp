@@ -43,16 +43,16 @@
 //
 //M*/
 
-#include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/objdetect.hpp"
 #include "precomp.hpp"
 
-#ifdef HAVE_OPENCL
+#if 0 //def HAVE_OPENCL
 
 using namespace cvtest;
 using namespace testing;
 using namespace std;
 using namespace cv;
-
+extern string workdir;
 struct getRect
 {
     Rect operator ()(const CvAvgComp &e) const
@@ -75,14 +75,11 @@ PARAM_TEST_CASE(HaarTestBase, int, int)
     {
         scale = 1.0;
         index = 0;
-        string cascadeName = "../../../data/haarcascades/haarcascade_frontalface_alt.xml";
+        string cascadeName = workdir + "../../data/haarcascades/haarcascade_frontalface_alt.xml";
 
         if( (!cascade.load( cascadeName )) || (!cpucascade.load(cascadeName)))
         {
             cout << "ERROR: Could not load classifier cascade" << endl;
-            cout << "Usage: facedetect [--cascade=<cascade_path>]\n"
-                 "   [--scale[=<image scale>\n"
-                 "   [filename|camera_index]\n" << endl ;
             return;
         }
         //int devnums = getDevice(oclinfo);
@@ -99,32 +96,32 @@ struct Haar : HaarTestBase {};
 
 TEST_F(Haar, FaceDetect)
 {
-    string imgName = "../../../samples/c/lena.jpg";
+    string imgName = workdir + "lena.jpg";
     Mat img = imread( imgName, 1 );
 
     if(img.empty())
     {
-        std::cout << "Couldn't read test" << index << ".jpg" << std::endl;
+        std::cout << "Couldn't read " << imgName << std::endl;
         return ;
     }
 
-    int i = 0;
-    double t = 0;
+    //int i = 0;
+    //double t = 0;
     vector<Rect> faces, oclfaces;
 
-    const static Scalar colors[] =  { CV_RGB(0, 0, 255),
-                                      CV_RGB(0, 128, 255),
-                                      CV_RGB(0, 255, 255),
-                                      CV_RGB(0, 255, 0),
-                                      CV_RGB(255, 128, 0),
-                                      CV_RGB(255, 255, 0),
-                                      CV_RGB(255, 0, 0),
-                                      CV_RGB(255, 0, 255)
-                                    } ;
+    // const static Scalar colors[] =  { CV_RGB(0, 0, 255),
+    //                                   CV_RGB(0, 128, 255),
+    //                                   CV_RGB(0, 255, 255),
+    //                                   CV_RGB(0, 255, 0),
+    //                                   CV_RGB(255, 128, 0),
+    //                                   CV_RGB(255, 255, 0),
+    //                                   CV_RGB(255, 0, 0),
+    //                                   CV_RGB(255, 0, 255)
+    //                                 } ;
 
     Mat gray, smallImg(cvRound (img.rows / scale), cvRound(img.cols / scale), CV_8UC1 );
     MemStorage storage(cvCreateMemStorage(0));
-    cvtColor( img, gray, CV_BGR2GRAY );
+    cvtColor( img, gray, COLOR_BGR2GRAY );
     resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
     equalizeHist( smallImg, smallImg );
 

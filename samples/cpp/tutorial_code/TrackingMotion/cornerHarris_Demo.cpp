@@ -18,8 +18,8 @@ Mat src, src_gray;
 int thresh = 200;
 int max_thresh = 255;
 
-char* source_window = "Source image";
-char* corners_window = "Corners detected";
+const char* source_window = "Source image";
+const char* corners_window = "Corners detected";
 
 /// Function header
 void cornerHarris_demo( int, void* );
@@ -27,14 +27,14 @@ void cornerHarris_demo( int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Load source image and convert it to gray
   src = imread( argv[1], 1 );
-  cvtColor( src, src_gray, CV_BGR2GRAY );
+  cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
   /// Create a window and a trackbar
-  namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( source_window, WINDOW_AUTOSIZE );
   createTrackbar( "Threshold: ", source_window, &thresh, max_thresh, cornerHarris_demo );
   imshow( source_window, src );
 
@@ -77,6 +77,6 @@ void cornerHarris_demo( int, void* )
           }
      }
   /// Showing the result
-  namedWindow( corners_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( corners_window, WINDOW_AUTOSIZE );
   imshow( corners_window, dst_norm_scaled );
 }

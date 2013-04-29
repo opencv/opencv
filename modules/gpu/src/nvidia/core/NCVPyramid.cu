@@ -1,6 +1,6 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
@@ -10,7 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2009-2010, NVIDIA Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -47,7 +48,7 @@
 #include "NCVAlg.hpp"
 #include "NCVPyramid.hpp"
 #include "NCVPixelOperations.hpp"
-#include "opencv2/gpu/device/common.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
 template<typename T, Ncv32u CN> struct __average4_CN {static __host__ __device__ T _average4_CN(const T &p00, const T &p01, const T &p10, const T &p11);};
 
@@ -203,7 +204,7 @@ __global__ void kernelDownsampleX2(T *d_src,
     }
 }
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace pyramid
     {
@@ -278,7 +279,7 @@ __global__ void kernelInterpolateFrom1(T *d_srcTop,
         d_dst_line[j] = outPix;
     }
 }
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace pyramid
     {

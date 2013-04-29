@@ -1,6 +1,6 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
@@ -10,7 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2009-2010, NVIDIA Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -58,7 +59,6 @@
 #ifndef _ncvhaarobjectdetection_hpp_
 #define _ncvhaarobjectdetection_hpp_
 
-#include <string>
 #include "NCV.hpp"
 
 
@@ -439,18 +439,18 @@ NCV_EXPORTS NCVStatus ncvGrowDetectionsVector_host(NCVVector<Ncv32u> &pixelMask,
                                                    Ncv32f curScale);
 
 
-NCV_EXPORTS NCVStatus ncvHaarGetClassifierSize(const std::string &filename, Ncv32u &numStages,
+NCV_EXPORTS NCVStatus ncvHaarGetClassifierSize(const cv::String &filename, Ncv32u &numStages,
                                                Ncv32u &numNodes, Ncv32u &numFeatures);
 
 
-NCV_EXPORTS NCVStatus ncvHaarLoadFromFile_host(const std::string &filename,
+NCV_EXPORTS NCVStatus ncvHaarLoadFromFile_host(const cv::String &filename,
                                                HaarClassifierCascadeDescriptor &haar,
                                                NCVVector<HaarStage64> &h_HaarStages,
                                                NCVVector<HaarClassifierNode128> &h_HaarNodes,
                                                NCVVector<HaarFeature64> &h_HaarFeatures);
 
 
-NCV_EXPORTS NCVStatus ncvHaarStoreNVBIN_host(const std::string &filename,
+NCV_EXPORTS NCVStatus ncvHaarStoreNVBIN_host(const cv::String &filename,
                                              HaarClassifierCascadeDescriptor haar,
                                              NCVVector<HaarStage64> &h_HaarStages,
                                              NCVVector<HaarClassifierNode128> &h_HaarNodes,

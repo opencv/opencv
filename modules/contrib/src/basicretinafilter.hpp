@@ -112,7 +112,6 @@
 
 //#define __BASIC_RETINA_ELEMENT_DEBUG
 
-//using namespace std;
 namespace cv
 {
     class BasicRetinaFilter

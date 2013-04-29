@@ -25,8 +25,8 @@ Let's use a simple program such as DisplayImage.cpp shown below.
 
 .. code-block:: cpp
 
-   #include <cv.h>
-   #include <highgui.h>
+   #include <stdio.h>
+   #include <opencv2/opencv.hpp>
 
    using namespace cv;
 
@@ -55,9 +55,10 @@ Now you have to create your CMakeLists.txt file. It should look like this:
 
 .. code-block:: cmake
 
+   cmake_minimum_required(VERSION 2.8)
    project( DisplayImage )
    find_package( OpenCV REQUIRED )
-   add_executable( DisplayImage DisplayImage )
+   add_executable( DisplayImage DisplayImage.cpp )
    target_link_libraries( DisplayImage ${OpenCV_LIBS} )
 
 Generate the executable

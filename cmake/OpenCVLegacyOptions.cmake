@@ -12,6 +12,7 @@ endmacro()
 ocv_legacy_option(BUILD_NEW_PYTHON_SUPPORT BUILD_opencv_python)
 ocv_legacy_option(BUILD_JAVA_SUPPORT       BUILD_opencv_java)
 ocv_legacy_option(WITH_ANDROID_CAMERA      BUILD_opencv_androidcamera)
+ocv_legacy_option(WITH_VIDEOINPUT          WITH_DSHOW)
 
 if(DEFINED OPENCV_BUILD_3RDPARTY_LIBS)
   set(BUILD_ZLIB   ${OPENCV_BUILD_3RDPARTY_LIBS} CACHE BOOL "Set via depricated OPENCV_BUILD_3RDPARTY_LIBS" FORCE)

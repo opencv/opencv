@@ -499,7 +499,7 @@ CV_IMPL void cvDestroyWindow(const char* name)
 CV_IMPL void cvDestroyAllWindows()
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        return;
 
     QMetaObject::invokeMethod(guiMainThread,
         "destroyAllWindow",
@@ -678,20 +678,6 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* window_name, CvOpenGlDrawCallba
 
     QMetaObject::invokeMethod(guiMainThread,
         "setOpenGlDrawCallback",
-        Qt::AutoConnection,
-        Q_ARG(QString, QString(window_name)),
-        Q_ARG(void*, (void*)callback),
-        Q_ARG(void*, userdata));
-}
-
-
-void icvSetOpenGlCleanCallback(const char* window_name, CvOpenGlCleanCallback callback, void* userdata)
-{
-    if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
-
-    QMetaObject::invokeMethod(guiMainThread,
-        "setOpenGlCleanCallback",
         Qt::AutoConnection,
         Q_ARG(QString, QString(window_name)),
         Q_ARG(void*, (void*)callback),
@@ -962,8 +948,8 @@ void GuiReceiver::showImage(QString name, void* arr)
 
         mat = cvGetMat(arr, &stub);
 
-        cv::Mat im(mat);
-        cv::imshow(name.toStdString(), im);
+        cv::Mat im = cv::cvarrToMat(mat);
+        cv::imshow(name.toUtf8().data(), im);
     }
     else
     {
@@ -1173,14 +1159,6 @@ void GuiReceiver::setOpenGlDrawCallback(QString name, void* callback, void* user
 
     if (w)
         w->setOpenGlDrawCallback((CvOpenGlDrawCallback) callback, userdata);
-}
-
-void GuiReceiver::setOpenGlCleanCallback(QString name, void* callback, void* userdata)
-{
-    QPointer<CvWindow> w = icvFindWindowByName(name);
-
-    if (w)
-        w->setOpenGlCleanCallback((CvOpenGlCleanCallback) callback, userdata);
 }
 
 void GuiReceiver::setOpenGlContext(QString name)
@@ -1828,12 +1806,6 @@ void CvWindow::setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userda
 }
 
 
-void CvWindow::setOpenGlCleanCallback(CvOpenGlCleanCallback callback, void* userdata)
-{
-    myView->setOpenGlCleanCallback(callback, userdata);
-}
-
-
 void CvWindow::makeCurrentOpenGlContext()
 {
     myView->makeCurrentOpenGlContext();
@@ -2415,12 +2387,6 @@ void DefaultViewPort::startDisplayInfo(QString text, int delayms)
 
 
 void DefaultViewPort::setOpenGlDrawCallback(CvOpenGlDrawCallback /*callback*/, void* /*userdata*/)
-{
-    CV_Error(CV_OpenGlNotSupported, "Window doesn't support OpenGL");
-}
-
-
-void DefaultViewPort::setOpenGlCleanCallback(CvOpenGlCleanCallback /*callback*/, void* /*userdata*/)
 {
     CV_Error(CV_OpenGlNotSupported, "Window doesn't support OpenGL");
 }
@@ -3074,19 +3040,10 @@ OpenGlViewPort::OpenGlViewPort(QWidget* _parent) : QGLWidget(_parent), size(-1, 
 
     glDrawCallback = 0;
     glDrawData = 0;
-
-    glCleanCallback = 0;
-    glCleanData = 0;
-
-    glFuncTab = 0;
 }
 
 OpenGlViewPort::~OpenGlViewPort()
 {
-    if (glFuncTab)
-        delete glFuncTab;
-
-    setOpenGlCleanCallback(0, 0);
 }
 
 QWidget* OpenGlViewPort::getWidget()
@@ -3131,21 +3088,9 @@ void OpenGlViewPort::setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* 
     glDrawData = userdata;
 }
 
-void OpenGlViewPort::setOpenGlCleanCallback(CvOpenGlCleanCallback callback, void* userdata)
-{
-    makeCurrentOpenGlContext();
-
-    if (glCleanCallback)
-        glCleanCallback(glCleanData);
-
-    glCleanCallback = callback;
-    glCleanData = userdata;
-}
-
 void OpenGlViewPort::makeCurrentOpenGlContext()
 {
     makeCurrent();
-    icvSetOpenGlFuncTab(glFuncTab);
 }
 
 void OpenGlViewPort::updateGl()
@@ -3153,255 +3098,9 @@ void OpenGlViewPort::updateGl()
     QGLWidget::updateGL();
 }
 
-#ifndef APIENTRY
-    #define APIENTRY
-#endif
-
-#ifndef APIENTRYP
-    #define APIENTRYP APIENTRY *
-#endif
-
-#ifndef GL_VERSION_1_5
-    /* GL types for handling large vertex buffer objects */
-    typedef ptrdiff_t GLintptr;
-    typedef ptrdiff_t GLsizeiptr;
-#endif
-
-typedef void (APIENTRYP PFNGLGENBUFFERSPROC   ) (GLsizei n, GLuint *buffers);
-typedef void (APIENTRYP PFNGLDELETEBUFFERSPROC) (GLsizei n, const GLuint *buffers);
-
-typedef void (APIENTRYP PFNGLBUFFERDATAPROC   ) (GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage);
-typedef void (APIENTRYP PFNGLBUFFERSUBDATAPROC) (GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data);
-
-typedef void (APIENTRYP PFNGLBINDBUFFERPROC   ) (GLenum target, GLuint buffer);
-
-typedef GLvoid* (APIENTRYP PFNGLMAPBUFFERPROC) (GLenum target, GLenum access);
-typedef GLboolean (APIENTRYP PFNGLUNMAPBUFFERPROC) (GLenum target);
-
-class GlFuncTab_QT : public CvOpenGlFuncTab
-{
-public:
-#ifdef Q_WS_WIN
-    GlFuncTab_QT(HDC hDC);
-#else
-    GlFuncTab_QT();
-#endif
-
-    void genBuffers(int n, unsigned int* buffers) const;
-    void deleteBuffers(int n, const unsigned int* buffers) const;
-
-    void bufferData(unsigned int target, ptrdiff_t size, const void* data, unsigned int usage) const;
-    void bufferSubData(unsigned int target, ptrdiff_t offset, ptrdiff_t size, const void* data) const;
-
-    void bindBuffer(unsigned int target, unsigned int buffer) const;
-
-    void* mapBuffer(unsigned int target, unsigned int access) const;
-    void unmapBuffer(unsigned int target) const;
-
-    void generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool underline, int start, int count, int base) const;
-
-    bool isGlContextInitialized() const;
-
-    PFNGLGENBUFFERSPROC    glGenBuffersExt;
-    PFNGLDELETEBUFFERSPROC glDeleteBuffersExt;
-
-    PFNGLBUFFERDATAPROC    glBufferDataExt;
-    PFNGLBUFFERSUBDATAPROC glBufferSubDataExt;
-
-    PFNGLBINDBUFFERPROC    glBindBufferExt;
-
-    PFNGLMAPBUFFERPROC     glMapBufferExt;
-    PFNGLUNMAPBUFFERPROC   glUnmapBufferExt;
-
-    bool initialized;
-
-#ifdef Q_WS_WIN
-    HDC hDC;
-#endif
-};
-
-#ifdef Q_WS_WIN
-    GlFuncTab_QT::GlFuncTab_QT(HDC hDC_) : hDC(hDC_)
-#else
-    GlFuncTab_QT::GlFuncTab_QT()
-#endif
-{
-    glGenBuffersExt    = 0;
-    glDeleteBuffersExt = 0;
-
-    glBufferDataExt    = 0;
-    glBufferSubDataExt = 0;
-
-    glBindBufferExt    = 0;
-
-    glMapBufferExt     = 0;
-    glUnmapBufferExt   = 0;
-
-    initialized = false;
-}
-
-void GlFuncTab_QT::genBuffers(int n, unsigned int* buffers) const
-{
-    CV_FUNCNAME( "GlFuncTab_QT::genBuffers" );
-
-    __BEGIN__;
-
-    if (!glGenBuffersExt)
-        CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-    glGenBuffersExt(n, buffers);
-    CV_CheckGlError();
-
-    __END__;
-}
-
-void GlFuncTab_QT::deleteBuffers(int n, const unsigned int* buffers) const
-{
-    CV_FUNCNAME( "GlFuncTab_QT::deleteBuffers" );
-
-    __BEGIN__;
-
-    if (!glDeleteBuffersExt)
-        CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-    glDeleteBuffersExt(n, buffers);
-    CV_CheckGlError();
-
-    __END__;
-}
-
-void GlFuncTab_QT::bufferData(unsigned int target, ptrdiff_t size, const void* data, unsigned int usage) const
-{
-    CV_FUNCNAME( "GlFuncTab_QT::bufferData" );
-
-    __BEGIN__;
-
-    if (!glBufferDataExt)
-        CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-    glBufferDataExt(target, size, data, usage);
-    CV_CheckGlError();
-
-    __END__;
-}
-
-void GlFuncTab_QT::bufferSubData(unsigned int target, ptrdiff_t offset, ptrdiff_t size, const void* data) const
-{
-    CV_FUNCNAME( "GlFuncTab_QT::bufferSubData" );
-
-    __BEGIN__;
-
-    if (!glBufferSubDataExt)
-        CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-    glBufferSubDataExt(target, offset, size, data);
-    CV_CheckGlError();
-
-    __END__;
-}
-
-void GlFuncTab_QT::bindBuffer(unsigned int target, unsigned int buffer) const
-{
-    CV_FUNCNAME( "GlFuncTab_QT::bindBuffer" );
-
-    __BEGIN__;
-
-    if (!glBindBufferExt)
-        CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-    glBindBufferExt(target, buffer);
-    CV_CheckGlError();
-
-    __END__;
-}
-
-void* GlFuncTab_QT::mapBuffer(unsigned int target, unsigned int access) const
-{
-    CV_FUNCNAME( "GlFuncTab_QT::mapBuffer" );
-
-    void* res = 0;
-
-    __BEGIN__;
-
-    if (!glMapBufferExt)
-        CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-    res = glMapBufferExt(target, access);
-    CV_CheckGlError();
-
-    __END__;
-
-    return res;
-}
-
-void GlFuncTab_QT::unmapBuffer(unsigned int target) const
-{
-    CV_FUNCNAME( "GlFuncTab_QT::unmapBuffer" );
-
-    __BEGIN__;
-
-    if (!glUnmapBufferExt)
-        CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-    glUnmapBufferExt(target);
-    CV_CheckGlError();
-
-    __END__;
-}
-
-void GlFuncTab_QT::generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool /*underline*/, int start, int count, int base) const
-{
-#ifdef Q_WS_WIN
-    CV_FUNCNAME( "GlFuncTab_QT::generateBitmapFont" );
-#endif
-
-    QFont font(QString(family.c_str()), height, weight, italic);
-
-    __BEGIN__;
-
-#ifndef Q_WS_WIN
-    font.setStyleStrategy(QFont::OpenGLCompatible);
-    if (font.handle())
-        glXUseXFont(font.handle(), start, count, base);
-#else
-    SelectObject(hDC, font.handle());
-    if (!wglUseFontBitmaps(hDC, start, count, base))
-        CV_ERROR(CV_OpenGlApiCallError, "Can't create font");
-#endif
-
-    __END__;
-}
-
-bool GlFuncTab_QT::isGlContextInitialized() const
-{
-    return initialized;
-}
-
 void OpenGlViewPort::initializeGL()
 {
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-
-#ifdef Q_WS_WIN
-    std::auto_ptr<GlFuncTab_QT> qglFuncTab(new GlFuncTab_QT(getDC()));
-#else
-    std::auto_ptr<GlFuncTab_QT> qglFuncTab(new GlFuncTab_QT);
-#endif
-
-    // Load extensions
-
-    qglFuncTab->glGenBuffersExt = (PFNGLGENBUFFERSPROC)context()->getProcAddress("glGenBuffers");
-    qglFuncTab->glDeleteBuffersExt = (PFNGLDELETEBUFFERSPROC)context()->getProcAddress("glDeleteBuffers");
-    qglFuncTab->glBufferDataExt = (PFNGLBUFFERDATAPROC)context()->getProcAddress("glBufferData");
-    qglFuncTab->glBufferSubDataExt = (PFNGLBUFFERSUBDATAPROC)context()->getProcAddress("glBufferSubData");
-    qglFuncTab->glBindBufferExt = (PFNGLBINDBUFFERPROC)context()->getProcAddress("glBindBuffer");
-    qglFuncTab->glMapBufferExt = (PFNGLMAPBUFFERPROC)context()->getProcAddress("glMapBuffer");
-    qglFuncTab->glUnmapBufferExt = (PFNGLUNMAPBUFFERPROC)context()->getProcAddress("glUnmapBuffer");
-
-    qglFuncTab->initialized = true;
-
-    glFuncTab = qglFuncTab.release();
-
-    icvSetOpenGlFuncTab(glFuncTab);
 }
 
 void OpenGlViewPort::resizeGL(int w, int h)
@@ -3411,14 +3110,10 @@ void OpenGlViewPort::resizeGL(int w, int h)
 
 void OpenGlViewPort::paintGL()
 {
-    icvSetOpenGlFuncTab(glFuncTab);
-
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (glDrawCallback)
         glDrawCallback(glDrawData);
-
-    CV_CheckGlError();
 }
 
 void OpenGlViewPort::mousePressEvent(QMouseEvent* evnt)

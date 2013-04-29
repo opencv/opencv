@@ -9,7 +9,7 @@ import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.FeatureDetector;
-import org.opencv.features2d.KeyPoint;
+import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
@@ -33,12 +33,10 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
 
     @Override
     protected void setUp() throws Exception {
+        super.setUp();
         detector = FeatureDetector.create(FeatureDetector.FAST);
-
         truth = new KeyPoint[] { new KeyPoint(32, 27, 7, -1, 254, 0, -1), new KeyPoint(27, 32, 7, -1, 254, 0, -1), new KeyPoint(73, 68, 7, -1, 254, 0, -1),
                 new KeyPoint(68, 73, 7, -1, 254, 0, -1) };
-
-        super.setUp();
     }
 
     public void testCreate() {
@@ -127,8 +125,10 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
 
         detector.write(filename);
 
-        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<name>Feature2D.FAST</name>\n<nonmaxSuppression>1</nonmaxSuppression>\n<threshold>10</threshold>\n</opencv_storage>\n";
-        assertEquals(truth, readFile(filename));
+        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<name>Feature2D.FAST</name>\n<nonmaxSuppression>1</nonmaxSuppression>\n<threshold>10</threshold>\n<type>2</type>\n</opencv_storage>\n";
+        String data = readFile(filename);
+        //Log.d("qqq", "\"" + data + "\"");
+        assertEquals(truth, data);
     }
 
     public void testWriteYml() {
@@ -136,8 +136,10 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
 
         detector.write(filename);
 
-        String truth = "%YAML:1.0\nname: \"Feature2D.FAST\"\nnonmaxSuppression: 1\nthreshold: 10\n";
-        assertEquals(truth, readFile(filename));
-    }
+        String truth = "%YAML:1.0\nname: \"Feature2D.FAST\"\nnonmaxSuppression: 1\nthreshold: 10\ntype: 2\n";
+        String data = readFile(filename);
 
+        //Log.d("qqq", "\"" + data + "\"");
+        assertEquals(truth, data);
+    }
 }

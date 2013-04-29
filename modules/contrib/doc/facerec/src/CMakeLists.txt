@@ -6,7 +6,7 @@ project(facerec_cpp_samples)
 #SET(OpenCV_DIR /path/to/your/opencv/installation)
 
 # packages
-find_package(OpenCV REQUIRED) # http://opencv.willowgarage.com
+find_package(OpenCV REQUIRED) # http://opencv.org
 
 # probably you should loop through the sample files here
 add_executable(facerec_demo facerec_demo.cpp)

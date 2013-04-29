@@ -1,5 +1,5 @@
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
+#include "opencv2/highgui/highgui_c.h"
 #include <stdio.h>
 
 #ifdef HAVE_CVCONFIG_H
@@ -56,11 +56,12 @@ static void detect_and_draw_objects( IplImage* image, CvLatentSvmDetector* detec
     for( i = 0; i < detections->total; i++ )
     {
         CvObjectDetection detection = *(CvObjectDetection*)cvGetSeqElem( detections, i );
+        float score         = detection.score;
         CvRect bounding_box = detection.rect;
         cvRectangle( image, cvPoint(bounding_box.x, bounding_box.y),
                      cvPoint(bounding_box.x + bounding_box.width,
                             bounding_box.y + bounding_box.height),
-                     CV_RGB(255,0,0), 3 );
+                     CV_RGB(cvRound(255.0f*score),0,0), 3 );
     }
     cvReleaseMemStorage( &storage );
 }

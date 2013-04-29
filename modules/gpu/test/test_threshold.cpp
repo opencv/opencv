@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -43,8 +44,9 @@
 
 #ifdef HAVE_CUDA
 
-CV_ENUM(ThreshOp, cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC, cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)
-#define ALL_THRESH_OPS testing::Values(ThreshOp(cv::THRESH_BINARY), ThreshOp(cv::THRESH_BINARY_INV), ThreshOp(cv::THRESH_TRUNC), ThreshOp(cv::THRESH_TOZERO), ThreshOp(cv::THRESH_TOZERO_INV))
+using namespace cvtest;
+
+CV_ENUM(ThreshOp, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
 
 PARAM_TEST_CASE(Threshold, cv::gpu::DeviceInfo, cv::Size, MatType, ThreshOp, UseRoi)
 {
@@ -66,7 +68,7 @@ PARAM_TEST_CASE(Threshold, cv::gpu::DeviceInfo, cv::Size, MatType, ThreshOp, Use
     }
 };
 
-TEST_P(Threshold, Accuracy)
+GPU_TEST_P(Threshold, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     double maxVal = randomDouble(20.0, 127.0);
@@ -85,7 +87,7 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Threshold, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_16SC1), MatType(CV_32FC1)),
-    ALL_THRESH_OPS,
+    ThreshOp::all(),
     WHOLE_SUBMAT));
 
 #endif // HAVE_CUDA

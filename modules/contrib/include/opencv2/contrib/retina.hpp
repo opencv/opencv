@@ -72,7 +72,7 @@
  *      Author: Alexandre Benoit
  */
 
-#include "opencv2/core/core.hpp" // for all OpenCV core functionalities access, including cv::Exception support
+#include "opencv2/core.hpp" // for all OpenCV core functionalities access, including cv::Exception support
 #include <valarray>
 
 namespace cv
@@ -85,10 +85,8 @@ enum RETINA_COLORSAMPLINGMETHOD
     RETINA_COLOR_BAYER//!< standard bayer sampling
 };
 
-class RetinaFilter;
-
 /**
- * @class Retina a wrapper class which allows the Gipsa/Listic Labs model to be used.
+ * @class Retina a wrapper class which allows the Gipsa/Listic Labs model to be used with OpenCV.
  * This retina model allows spatio-temporal image processing (applied on still images, video sequences).
  * As a summary, these are the retina model properties:
  * => It applies a spectral whithening (mid-frequency details enhancement)
@@ -115,7 +113,7 @@ class CV_EXPORTS Retina : public Algorithm {
 public:
 
     // parameters structure for better clarity, check explenations on the comments of methods : setupOPLandIPLParvoChannel and setupIPLMagnoChannel
-        struct RetinaParameters{
+    struct RetinaParameters{
         struct OPLandIplParvoParameters{ // Outer Plexiform Layer (OPL) and Inner Plexiform Layer Parvocellular (IplParvo) parameters
                OPLandIplParvoParameters():colorMode(true),
                                  normaliseOutput(true),
@@ -163,15 +161,14 @@ public:
      * @param retinaParameterFile : the parameters filename
          * @param applyDefaultSetupOnFailure : set to true if an error must be thrown on error
      */
-    virtual void setup(std::string retinaParameterFile="", const bool applyDefaultSetupOnFailure=true)=0;
-
+    virtual void setup(String retinaParameterFile="", const bool applyDefaultSetupOnFailure=true)=0;
 
     /**
      * try to open an XML retina parameters file to adjust current retina instance setup
      * => if the xml file does not exist, then default setup is applied
      * => warning, Exceptions are thrown if read XML file is not valid
      * @param fs : the open Filestorage which contains retina parameters
-         * @param applyDefaultSetupOnFailure : set to true if an error must be thrown on error
+     * @param applyDefaultSetupOnFailure : set to true if an error must be thrown on error
      */
     virtual void setup(cv::FileStorage &fs, const bool applyDefaultSetupOnFailure=true)=0;
 
@@ -193,14 +190,13 @@ public:
      * parameters setup display method
      * @return a string which contains formatted parameters information
      */
-    virtual const std::string printSetup()=0;
+    virtual const String printSetup()=0;
 
     /**
      * write xml/yml formated parameters information
      * @rparam fs : the filename of the xml file that will be open and writen with formatted parameters information
      */
-    virtual void write( std::string fs ) const=0;
-
+    virtual void write( String fs ) const=0;
 
     /**
      * write xml/yml formated parameters information

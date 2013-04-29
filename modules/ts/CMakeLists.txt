@@ -10,7 +10,13 @@ endif()
 
 set(OPENCV_MODULE_IS_PART_OF_WORLD FALSE)
 
-ocv_add_module(ts opencv_core opencv_features2d)
+if(HAVE_CUDA)
+  ocv_include_directories(${CUDA_INCLUDE_DIRS})
+endif()
+
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
+
+ocv_add_module(ts opencv_core opencv_imgproc opencv_highgui)
 
 ocv_glob_module_sources()
 ocv_module_include_directories()

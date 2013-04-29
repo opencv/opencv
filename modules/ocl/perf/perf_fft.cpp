@@ -15,7 +15,7 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Fangfangbai, fangfang@multicorewareinc.com
+//    Fangfang Bai, fangfang@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -42,85 +42,48 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
 #include "precomp.hpp"
-using namespace std;
-#ifdef HAVE_CLAMDFFT
-////////////////////////////////////////////////////////////////////////////
-// Dft
-PARAM_TEST_CASE(Dft, cv::Size, bool)
+
+///////////// dft ////////////////////////
+TEST(dft)
 {
-    cv::Size dft_size;
-    bool	 dft_rows;
-    vector<cv::ocl::Info> info;
-    virtual void SetUp()
+    Mat src, dst;
+    ocl::oclMat d_src, d_dst;
+
+    int all_type[] = {CV_32FC1, CV_32FC2};
+    std::string type_name[] = {"CV_32FC1", "CV_32FC2"};
+
+    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {
-        dft_size = GET_PARAM(0);
-        dft_rows = GET_PARAM(1);
-        cv::ocl::getDevice(info);
-    }
-};
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        {
+            SUBTEST << size << 'x' << size << "; " << type_name[j] << " ; complex-to-complex";
 
-TEST_P(Dft, C2C)
-{
-    cv::Mat a = randomMat(dft_size, CV_32FC2, 0.0, 10.0);
-    int flags = 0;
-    flags |= dft_rows ? cv::DFT_ROWS : 0;
+            gen(src, size, size, all_type[j], Scalar::all(0), Scalar::all(1));
 
-    cv::ocl::oclMat d_b;
+            dft(src, dst);
 
-    double totalgputick = 0;
-    double totalgputick_kernel = 0;
-    double t1 = 0;
-    double t2 = 0;
+            CPU_ON;
+            dft(src, dst);
+            CPU_OFF;
 
-    for(int j = 0; j < LOOP_TIMES + 1; j ++)
-    {
+            d_src.upload(src);
 
-        t1 = (double)cvGetTickCount();//gpu start1
+            WARMUP_ON;
+            ocl::dft(d_src, d_dst, Size(size, size));
+            WARMUP_OFF;
 
-        cv::ocl::oclMat ga = cv::ocl::oclMat(a); //upload
+            GPU_ON;
+            ocl::dft(d_src, d_dst, Size(size, size));
+             ;
+            GPU_OFF;
 
-        t2 = (double)cvGetTickCount(); //kernel
-        cv::ocl::dft(ga, d_b, a.size(), flags);
-        t2 = (double)cvGetTickCount() - t2;//kernel
-
-        cv::Mat cpu_dst;
-        d_b.download (cpu_dst);//download
-
-        t1 = (double)cvGetTickCount() - t1;//gpu end1
-
-        if(j == 0)
-            continue;
-
-        totalgputick = t1 + totalgputick;
-        totalgputick_kernel = t2 + totalgputick_kernel;
+            GPU_FULL_ON;
+            d_src.upload(src);
+            ocl::dft(d_src, d_dst, Size(size, size));
+            d_dst.download(dst);
+            GPU_FULL_OFF;
+        }
 
     }
-
-    cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-    cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
 }
-
-
-
-TEST_P(Dft, R2CthenC2R)
-{
-    cv::Mat a = randomMat(dft_size, CV_32FC1, 0.0, 10.0);
-
-    int flags = 0;
-    //flags |= dft_rows ? cv::DFT_ROWS : 0; // not supported yet
-
-    cv::ocl::oclMat d_b, d_c;
-
-    cv::ocl::dft(cv::ocl::oclMat(a), d_b, a.size(), flags);
-    cv::ocl::dft(d_b, d_c, a.size(), flags + cv::DFT_INVERSE + cv::DFT_REAL_OUTPUT);
-
-    EXPECT_MAT_NEAR(a, d_c, a.size().area() * 1e-4, "");
-}
-
-//INSTANTIATE_TEST_CASE_P(ocl_DFT, Dft, testing::Combine(
-//						testing::Values(cv::Size(1280, 1024), cv::Size(1920, 1080),cv::Size(1800, 1500)),
-//						testing::Values(false, true)));
-
-#endif // HAVE_CLAMDFFT

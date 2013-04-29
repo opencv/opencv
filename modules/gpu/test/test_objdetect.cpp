@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -43,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-namespace {
+using namespace cvtest;
 
 //#define DUMP
 
@@ -176,7 +177,7 @@ struct HOG : testing::TestWithParam<cv::gpu::DeviceInfo>, cv::gpu::HOGDescriptor
 };
 
 // desabled while resize does not fixed
-TEST_P(HOG, DISABLED_Detect)
+GPU_TEST_P(HOG, Detect)
 {
     cv::Mat img_rgb = readImage("hog/road.png");
     ASSERT_FALSE(img_rgb.empty());
@@ -191,17 +192,17 @@ TEST_P(HOG, DISABLED_Detect)
 
     // Test on color image
     cv::Mat img;
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
     testDetect(img);
 
     // Test on gray image
-    cv::cvtColor(img_rgb, img, CV_BGR2GRAY);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2GRAY);
     testDetect(img);
 
     f.close();
 }
 
-TEST_P(HOG, GetDescriptors)
+GPU_TEST_P(HOG, GetDescriptors)
 {
     // Load image (e.g. train data, composed from windows)
     cv::Mat img_rgb = readImage("hog/train_data.png");
@@ -209,7 +210,7 @@ TEST_P(HOG, GetDescriptors)
 
     // Convert to C4
     cv::Mat img;
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
 
     cv::gpu::GpuMat d_img(img);
 
@@ -249,38 +250,38 @@ TEST_P(HOG, GetDescriptors)
 
     img_rgb = readImage("hog/positive1.png");
     ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
     computeBlockHistograms(cv::gpu::GpuMat(img));
     // Everything is fine with interpolation for left top subimage
     ASSERT_EQ(0.0, cv::norm((cv::Mat)block_hists, (cv::Mat)descriptors.rowRange(0, 1)));
 
     img_rgb = readImage("hog/positive2.png");
     ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
     computeBlockHistograms(cv::gpu::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(1, 2)));
 
     img_rgb = readImage("hog/negative1.png");
     ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
     computeBlockHistograms(cv::gpu::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(2, 3)));
 
     img_rgb = readImage("hog/negative2.png");
     ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
     computeBlockHistograms(cv::gpu::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(3, 4)));
 
     img_rgb = readImage("hog/positive3.png");
     ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
     computeBlockHistograms(cv::gpu::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(4, 5)));
 
     img_rgb = readImage("hog/negative3.png");
     ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+    cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
     computeBlockHistograms(cv::gpu::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(5, 6)));
 }
@@ -288,6 +289,7 @@ TEST_P(HOG, GetDescriptors)
 INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, HOG, ALL_DEVICES);
 
 //============== caltech hog tests =====================//
+
 struct CalTech : public ::testing::TestWithParam<std::tr1::tuple<cv::gpu::DeviceInfo, std::string> >
 {
     cv::gpu::DeviceInfo devInfo;
@@ -303,7 +305,7 @@ struct CalTech : public ::testing::TestWithParam<std::tr1::tuple<cv::gpu::Device
     }
 };
 
-TEST_P(CalTech, HOG)
+GPU_TEST_P(CalTech, HOG)
 {
     cv::gpu::GpuMat d_img(img);
     cv::Mat markedImage(img.clone());
@@ -350,7 +352,7 @@ PARAM_TEST_CASE(LBP_Read_classifier, cv::gpu::DeviceInfo, int)
     }
 };
 
-TEST_P(LBP_Read_classifier, Accuracy)
+GPU_TEST_P(LBP_Read_classifier, Accuracy)
 {
     cv::gpu::CascadeClassifier_GPU classifier;
     std::string classifierXmlPath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml";
@@ -372,7 +374,7 @@ PARAM_TEST_CASE(LBP_classify, cv::gpu::DeviceInfo, int)
     }
 };
 
-TEST_P(LBP_classify, Accuracy)
+GPU_TEST_P(LBP_classify, Accuracy)
 {
     std::string classifierXmlPath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml";
     std::string imagePath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/er.png";
@@ -383,7 +385,7 @@ TEST_P(LBP_classify, Accuracy)
     cv::Mat image = cv::imread(imagePath);
     image = image.colRange(0, image.cols/2);
     cv::Mat grey;
-    cvtColor(image, grey, CV_BGR2GRAY);
+    cvtColor(image, grey, cv::COLOR_BGR2GRAY);
     ASSERT_FALSE(image.empty());
 
     std::vector<cv::Rect> rects;
@@ -392,7 +394,7 @@ TEST_P(LBP_classify, Accuracy)
 
     std::vector<cv::Rect>::iterator it = rects.begin();
     for (; it != rects.end(); ++it)
-        cv::rectangle(markedImage, *it, CV_RGB(0, 0, 255));
+        cv::rectangle(markedImage, *it, cv::Scalar(255, 0, 0));
 
     cv::gpu::CascadeClassifier_GPU gpuClassifier;
     ASSERT_TRUE(gpuClassifier.load(classifierXmlPath));
@@ -421,7 +423,5 @@ TEST_P(LBP_classify, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_classify,
                         testing::Combine(ALL_DEVICES, testing::Values<int>(0)));
-
-} // namespace
 
 #endif // HAVE_CUDA

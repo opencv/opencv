@@ -40,7 +40,7 @@ int main(int, char**)
     for(;;)
     {
         randn( state, Scalar::all(0), Scalar::all(0.1) );
-        KF.transitionMatrix = *(Mat_<float>(2, 2) << 1, 1, 0, 1);
+        KF.transitionMatrix = (Mat_<float>(2, 2) << 1, 1, 0, 1);
 
         setIdentity(KF.measurementMatrix);
         setIdentity(KF.processNoiseCov, Scalar::all(1e-5));
@@ -69,18 +69,18 @@ int main(int, char**)
             Point measPt = calcPoint(center, R, measAngle);
 
             // plot points
-            #define drawCross( center, color, d )                                 \
-                line( img, Point( center.x - d, center.y - d ),                \
-                             Point( center.x + d, center.y + d ), color, 1, CV_AA, 0); \
-                line( img, Point( center.x + d, center.y - d ),                \
-                             Point( center.x - d, center.y + d ), color, 1, CV_AA, 0 )
+            #define drawCross( center, color, d )                                        \
+                line( img, Point( center.x - d, center.y - d ),                          \
+                             Point( center.x + d, center.y + d ), color, 1, LINE_AA, 0); \
+                line( img, Point( center.x + d, center.y - d ),                          \
+                             Point( center.x - d, center.y + d ), color, 1, LINE_AA, 0 )
 
             img = Scalar::all(0);
             drawCross( statePt, Scalar(255,255,255), 3 );
             drawCross( measPt, Scalar(0,0,255), 3 );
             drawCross( predictPt, Scalar(0,255,0), 3 );
-            line( img, statePt, measPt, Scalar(0,0,255), 3, CV_AA, 0 );
-            line( img, statePt, predictPt, Scalar(0,255,255), 3, CV_AA, 0 );
+            line( img, statePt, measPt, Scalar(0,0,255), 3, LINE_AA, 0 );
+            line( img, statePt, predictPt, Scalar(0,255,255), 3, LINE_AA, 0 );
 
             if(theRNG().uniform(0,4) != 0)
                 KF.correct(measurement);

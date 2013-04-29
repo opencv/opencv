@@ -15,7 +15,7 @@ PERF_TEST_P( TestBilateralFilter, BilateralFilter,
              Combine(
                 Values( szVGA, sz1080p ), // image size
                 Values( 3, 5 ), // d
-                ValuesIn( Mat_Type::all() ) // image type
+                Mat_Type::all() // image type
              )
 )
 {

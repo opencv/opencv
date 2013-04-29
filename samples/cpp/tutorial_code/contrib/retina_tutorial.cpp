@@ -9,7 +9,8 @@
 #include <iostream>
 #include <cstring>
 
-#include "opencv2/opencv.hpp"
+#include "opencv2/contrib.hpp"
+#include "opencv2/highgui.hpp"
 
 static void help(std::string errorMessage)
 {
@@ -99,10 +100,12 @@ int main(int argc, char* argv[]) {
         // if the last parameter is 'log', then activate log sampling (favour foveal vision and subsamples peripheral vision)
         if (useLogSampling)
         {
-                        myRetina = cv::createRetina(inputFrame.size(), true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
+            myRetina = cv::createRetina(inputFrame.size(), true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
         }
         else// -> else allocate "classical" retina :
+        {
             myRetina = cv::createRetina(inputFrame.size());
+        }
 
         // save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
         myRetina->write("RetinaDefaultParameters.xml");
@@ -110,7 +113,7 @@ int main(int argc, char* argv[]) {
         // load parameters if file exists
         myRetina->setup("RetinaSpecificParameters.xml");
 
-	// reset all retina buffers (imagine you close your eyes for a long time)
+        // reset all retina buffers (imagine you close your eyes for a long time)
         myRetina->clearBuffers();
 
         // declare retina output buffers
@@ -118,7 +121,7 @@ int main(int argc, char* argv[]) {
         cv::Mat retinaOutput_magno;
 
         // processing loop with no stop condition
-        while(true)
+        for(;;)
         {
             // if using video stream, then, grabbing a new frame, else, input remains the same
             if (videoCapture.isOpened())

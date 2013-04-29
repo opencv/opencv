@@ -4,7 +4,7 @@
 # ----------------------------------------------------------------------------
 
 SET(OPENCV_CPP_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc
-    opencv_highgui opencv_ml opencv_video opencv_objdetect opencv_photo opencv_nonfree
+    opencv_highgui opencv_ml opencv_video opencv_objdetect opencv_photo opencv_nonfree opencv_softcascade
     opencv_features2d opencv_calib3d opencv_legacy opencv_contrib opencv_stitching opencv_videostab)
 
 ocv_check_dependencies(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
@@ -16,7 +16,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   ocv_include_directories("${OpenCV_SOURCE_DIR}/include")#for opencv.hpp
   ocv_include_modules(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
-  if (HAVE_opencv_gpu)
+  if(HAVE_opencv_gpu)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include")
   endif()
 
@@ -28,20 +28,31 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   #      Define executable targets
   # ---------------------------------------------
   MACRO(OPENCV_DEFINE_CPP_EXAMPLE name srcs)
-    set(the_target "example_${name}")
+
+    if("${srcs}" MATCHES "tutorial_code")
+      set(sample_kind tutorial)
+      set(sample_KIND TUTORIAL)
+      set(sample_folder "samples//tutorials")
+    else()
+      set(sample_kind example)
+      set(sample_KIND EXAMPLE)
+      set(sample_folder "samples//cpp")
+    endif()
+
+    set(the_target "${sample_kind}_${name}")
     add_executable(${the_target} ${srcs})
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
-    if (HAVE_opencv_gpu)
+    if(HAVE_opencv_gpu)
       target_link_libraries(${the_target} opencv_gpu)
     endif()
 
     set_target_properties(${the_target} PROPERTIES
-      OUTPUT_NAME "${name}"
-      PROJECT_LABEL "(EXAMPLE) ${name}")
+      OUTPUT_NAME "cpp-${sample_kind}-${name}"
+      PROJECT_LABEL "(${sample_KIND}) ${name}")
 
     if(ENABLE_SOLUTION_FOLDERS)
-      set_target_properties(${the_target} PROPERTIES FOLDER "samples//cpp")
+      set_target_properties(${the_target} PROPERTIES FOLDER "${sample_folder}")
     endif()
 
     if(WIN32)
@@ -49,11 +60,19 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
         set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
       endif()
       install(TARGETS ${the_target}
-              RUNTIME DESTINATION "samples/cpp" COMPONENT main)
+              RUNTIME DESTINATION "${sample_folder}" COMPONENT main)
     endif()
   ENDMACRO()
 
-  file(GLOB cpp_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
+  file(GLOB_RECURSE cpp_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
+
+  if(NOT HAVE_OPENGL)
+    ocv_list_filterout(cpp_samples Qt_sample)
+  endif()
+
+  if(NOT HAVE_opencv_gpu)
+    ocv_list_filterout(cpp_samples "/gpu/")
+  endif()
 
   foreach(sample_filename ${cpp_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)

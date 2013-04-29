@@ -44,11 +44,11 @@
 #define __OPENCV_VIDEOSTAB_INPAINTINT_HPP__
 
 #include <vector>
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/videostab/optical_flow.hpp"
 #include "opencv2/videostab/fast_marching.hpp"
 #include "opencv2/videostab/global_motion.hpp"
-#include "opencv2/photo/photo.hpp"
+#include "opencv2/photo.hpp"
 
 namespace cv
 {

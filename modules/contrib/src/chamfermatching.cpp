@@ -46,15 +46,13 @@
 #include "precomp.hpp"
 #include "opencv2/opencv_modules.hpp"
 #ifdef HAVE_OPENCV_HIGHGUI
-#  include "opencv2/highgui/highgui.hpp"
+#  include "opencv2/highgui.hpp"
 #endif
 #include <iostream>
 #include <queue>
 
 namespace cv
 {
-
-using std::queue;
 
 typedef std::pair<int,int> coordinate_t;
 typedef float orientation_t;
@@ -144,7 +142,7 @@ private:
         LocationScaleImageRange(const std::vector<Point>& locations, const std::vector<float>& _scales) :
         locations_(locations), scales_(_scales)
         {
-            assert(locations.size()==_scales.size());
+            CV_Assert(locations.size()==_scales.size());
         }
 
         ImageIterator* iterator() const
@@ -395,7 +393,7 @@ private:
         LocationScaleImageIterator(const std::vector<Point>& locations, const std::vector<float>& _scales) :
         locations_(locations), scales_(_scales)
         {
-            assert(locations.size()==_scales.size());
+            CV_Assert(locations.size()==_scales.size());
             reset();
         }
 
@@ -622,10 +620,9 @@ void ChamferMatcher::Matching::followContour(Mat& templ_img, template_coords_t& 
 {
     const int dir[][2] = { {-1,-1}, {-1,0}, {-1,1}, {0,1}, {1,1}, {1,0}, {1,-1}, {0,-1} };
     coordinate_t next;
-    coordinate_t next_temp;
     unsigned char ptr;
 
-    assert (direction==-1 || !coords.empty());
+    CV_Assert (direction==-1 || !coords.empty());
 
     coordinate_t crt = coords.back();
 
@@ -767,8 +764,8 @@ void ChamferMatcher::Matching::findContourOrientations(const template_coords_t& 
         }
 
         // get the middle two angles
-        nth_element(angles.begin(), angles.begin()+M-1,  angles.end());
-        nth_element(angles.begin()+M-1, angles.begin()+M,  angles.end());
+        std::nth_element(angles.begin(), angles.begin()+M-1,  angles.end());
+        std::nth_element(angles.begin()+M-1, angles.begin()+M,  angles.end());
         //        sort(angles.begin(), angles.end());
 
         // average them to compute tangent
@@ -825,7 +822,7 @@ ChamferMatcher::Template::Template(Mat& edge_image, float scale_) : addr_width(-
 }
 
 
-vector<int>& ChamferMatcher::Template::getTemplateAddresses(int width)
+std::vector<int>& ChamferMatcher::Template::getTemplateAddresses(int width)
 {
     if (addr_width!=width) {
         addr.resize(coords.size());
@@ -906,19 +903,18 @@ void ChamferMatcher::Template::show() const
             p2.x = x + pad*(int)(sin(orientations[i])*100)/100;
             p2.y = y + pad*(int)(cos(orientations[i])*100)/100;
 
-            line(templ_color, p1,p2, CV_RGB(255,0,0));
+            line(templ_color, p1,p2, Scalar(255,0,0));
         }
     }
 
-    circle(templ_color,Point(center.x + pad, center.y + pad),1,CV_RGB(0,255,0));
+    circle(templ_color,Point(center.x + pad, center.y + pad),1,Scalar(0,255,0));
 
 #ifdef HAVE_OPENCV_HIGHGUI
     namedWindow("templ",1);
     imshow("templ",templ_color);
-
-    cvWaitKey(0);
+    waitKey();
 #else
-    CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without GUI support");
+    CV_Error(Error::StsNotImplemented, "OpenCV has been compiled without GUI support");
 #endif
 
     templ_color.release();
@@ -931,15 +927,13 @@ void ChamferMatcher::Template::show() const
 void ChamferMatcher::Matching::addTemplateFromImage(Mat& templ, float scale)
 {
     Template* cmt = new Template(templ, scale);
-    if(templates.size() > 0)
-        templates.clear();
+    templates.clear();
     templates.push_back(cmt);
     cmt->show();
 }
 
 void ChamferMatcher::Matching::addTemplate(Template& template_){
-    if(templates.size() > 0)
-        templates.clear();
+    templates.clear();
     templates.push_back(&template_);
 }
 /**
@@ -1065,7 +1059,7 @@ void ChamferMatcher::Matching::fillNonContourOrientations(Mat& annotated_img, Ma
     int cols = annotated_img.cols;
     int rows = annotated_img.rows;
 
-    assert(orientation_img.cols==cols && orientation_img.rows==rows);
+    CV_Assert(orientation_img.cols==cols && orientation_img.rows==rows);
 
     for (int y=0;y<rows;++y) {
         for (int x=0;x<cols;++x) {
@@ -1285,7 +1279,7 @@ void ChamferMatcher::showMatch(Mat& img, int index)
         std::cout << "Index too big.\n" << std::endl;
     }
 
-    assert(img.channels()==3);
+    CV_Assert(img.channels()==3);
 
     Match match = matches[index];
 
@@ -1304,7 +1298,7 @@ void ChamferMatcher::showMatch(Mat& img, int index)
 
 void ChamferMatcher::showMatch(Mat& img, Match match)
 {
-    assert(img.channels()==3);
+    CV_Assert(img.channels()==3);
 
     const template_coords_t& templ_coords = match.tpl->coords;
     for (size_t i=0;i<templ_coords.size();++i) {

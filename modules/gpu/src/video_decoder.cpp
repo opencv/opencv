@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -43,7 +43,7 @@
 #include "video_decoder.h"
 #include "frame_queue.h"
 
-#if defined(HAVE_CUDA) && !defined(__APPLE__)
+#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
 
 void cv::gpu::detail::VideoDecoder::create(const VideoReader_GPU::FormatInfo& videoFormat)
 {

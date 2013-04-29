@@ -20,11 +20,7 @@ Installation by Using the Pre-built Libraries
 
    .. If you downloaded the source files present here see :ref:`CppTutWindowsMakeOwn`.
 
-#. Make sure you have admin rights. Start the setup and follow the wizard.
-
-#. While adding the OpenCV library to the system path is a good decision for a better control, we will do it manually for the sake of this tutorial. Make sure you do not set this option.
-
-#. Most of the time it is a good idea to install the source files too, as this will allow for you to debug into the OpenCV library, if it is necessary. Follow the default settings of the wizard and finish the installation.
+#. Make sure you have admin rights. Unpack the self-extracting archive.
 
 #. You can check the installation at the chosen path as you can see below.
 
@@ -294,15 +290,7 @@ Building the library
       :alt: The Install Project
       :align: center
 
-   This will create an *install* directory inside the *Build* one collecting all the built binaries into a single place. Use this only after you built both the *Release* and *Debug* versions.
-
-   .. note::
-
-      To create an installer you need to install `NSIS <http://nsis.sourceforge.net/Download>`_. Then just build the *Package* project to build the installer into the :file:`Build/_CPack_Packages/{win32}/NSIS` folder. You can then use this to distribute OpenCV with your build settings on other systems.
-
-      .. image:: images/WindowsOpenCVInstaller.png
-         :alt: The Installer directory
-         :align: center
+   This will create an *Install* directory inside the *Build* one collecting all the built binaries into a single place. Use this only after you built both the *Release* and *Debug* versions.
 
    To test your build just go into the :file:`Build/bin/Debug` or :file:`Build/bin/Release` directory and start a couple of applications like the *contours.exe*. If they run, you are done. Otherwise, something definitely went awfully wrong. In this case you should contact us via our :opencv_group:`user group <>`.
    If everything is okay the *contours.exe* output should resemble the following image (if built with Qt support):
@@ -320,15 +308,15 @@ Building the library
 Set the OpenCV enviroment variable and add it to the systems path
 =================================================================
 
-First we set an enviroment variable to make easier our work. This will hold the install directory of our OpenCV library that we use in our projects. Start up a command window and enter:
+First we set an enviroment variable to make easier our work. This will hold the build directory of our OpenCV library that we use in our projects. Start up a command window and enter:
 
 ::
 
-   setx -m OPENCV_DIR D:\OpenCV\Build\Install
+   setx -m OPENCV_DIR D:\OpenCV\Build\x86\vc10
 
-Here the directory is where you have your OpenCV binaries (*installed* or *built*). Inside this you should have folders like *bin* and *include*. The -m should be added if you wish to make the settings computer wise, instead of user wise.
+Here the directory is where you have your OpenCV binaries (*extracted* or *built*). You can have different platform (e.g. x64 instead of x86) or compiler type, so substitute appropriate value. Inside this you should have folders like *bin* and *include*. The -m should be added if you wish to make the settings computer wise, instead of user wise.
 
-If you built static libraries then you are done. Otherwise, you need to add the *bin* folders path to the systems path.This is cause you will use the OpenCV library in form of *\"Dynamic-link libraries\"* (also known as **DLL**). Inside these are stored all the algorithms and information the OpenCV library contains. The operating system will load them only on demand, during runtime. However, to do this he needs to know where they are. The systems **PATH** contains a list of folders where DLLs can be found. Add the OpenCV library path to this and the OS will know where to look if he ever needs the OpenCV binaries. Otherwise, you will need to copy the used DLLs right beside the applications executable file (*exe*) for the OS to find it, which is highly unpleasent if you work on many projects. To do this start up again the |PathEditor|_ and add the following new entry (right click in the application to bring up the menu):
+If you built static libraries then you are done. Otherwise, you need to add the *bin* folders path to the systems path. This is cause you will use the OpenCV library in form of *\"Dynamic-link libraries\"* (also known as **DLL**). Inside these are stored all the algorithms and information the OpenCV library contains. The operating system will load them only on demand, during runtime. However, to do this he needs to know where they are. The systems **PATH** contains a list of folders where DLLs can be found. Add the OpenCV library path to this and the OS will know where to look if he ever needs the OpenCV binaries. Otherwise, you will need to copy the used DLLs right beside the applications executable file (*exe*) for the OS to find it, which is highly unpleasent if you work on many projects. To do this start up again the |PathEditor|_ and add the following new entry (right click in the application to bring up the menu):
 
 ::
 
@@ -342,6 +330,6 @@ If you built static libraries then you are done. Otherwise, you need to add the 
    :alt: Add the entry.
    :align: center
 
-Save it to the registry and you are done. If you ever change the location of your install directories or want to try out your applicaton with a different build all you will need to do is to update the OPENCV_DIR variable via the *setx* command inside a command window.
+Save it to the registry and you are done. If you ever change the location of your build directories or want to try out your applicaton with a different build all you will need to do is to update the OPENCV_DIR variable via the *setx* command inside a command window.
 
 Now you can continue reading the tutorials with the :ref:`Windows_Visual_Studio_How_To` section. There you will find out how to use the OpenCV library in your own projects with the help of the Microsoft Visual Studio IDE.

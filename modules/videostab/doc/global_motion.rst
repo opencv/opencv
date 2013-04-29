@@ -7,22 +7,18 @@ The video stabilization module contains a set of functions and classes for globa
 
 videostab::MotionModel
 ----------------------
-
 Describes motion model between two point clouds.
 
-::
+.. ocv:enum:: videostab::MotionModel
 
-    enum MotionModel
-    {
-        MM_TRANSLATION = 0,
-        MM_TRANSLATION_AND_SCALE = 1,
-        MM_ROTATION = 2,
-        MM_RIGID = 3,
-        MM_SIMILARITY = 4,
-        MM_AFFINE = 5,
-        MM_HOMOGRAPHY = 6,
-        MM_UNKNOWN = 7
-    };
+  .. ocv:emember:: MM_TRANSLATION = 0
+  .. ocv:emember:: MM_TRANSLATION_AND_SCALE = 1
+  .. ocv:emember:: MM_ROTATION = 2
+  .. ocv:emember:: MM_RIGID = 3
+  .. ocv:emember:: MM_SIMILARITY = 4
+  .. ocv:emember:: MM_AFFINE = 5
+  .. ocv:emember:: MM_HOMOGRAPHY = 6
+  .. ocv:emember:: MM_UNKNOWN = 7
 
 
 videostab::RansacParams
@@ -34,7 +30,7 @@ Describes RANSAC method parameters.
 
 ::
 
-    struct CV_EXPORTS RansacParams
+    struct RansacParams
     {
         int size; // subset size
         float thresh; // max error to classify as inlier
@@ -87,7 +83,7 @@ videostab::RansacParams::default2dMotion
 
 .. ocv:function:: static RansacParams videostab::RansacParams::default2dMotion(MotionModel model)
 
-    :param model: Motion model. See :ocv:class:`videostab::MotionModel`.
+    :param model: Motion model. See :ocv:enum:`videostab::MotionModel`.
 
     :return: Default RANSAC method parameters for the given motion model.
 
@@ -123,9 +119,9 @@ Estimates best global motion between two 2D point clouds robustly (using RANSAC 
 
     :param points1: Destination set of 2D points (``32F``).
 
-    :param model: Motion model. See :ocv:class:`videostab::MotionModel`.
+    :param model: Motion model. See :ocv:enum:`videostab::MotionModel`.
 
-    :param params: RANSAC method parameters. See :ocv:class:`videostab::RansacParams`.
+    :param params: RANSAC method parameters. See :ocv:struct:`videostab::RansacParams`.
 
     :param rmse: Final root-mean-square error.
 
@@ -157,7 +153,7 @@ Base class for all global motion estimation methods.
 
 ::
 
-    class CV_EXPORTS MotionEstimatorBase
+    class MotionEstimatorBase
     {
     public:
         virtual ~MotionEstimatorBase();
@@ -176,16 +172,16 @@ Sets motion model.
 
 .. ocv:function:: void videostab::MotionEstimatorBase::setMotionModel(MotionModel val)
 
-    :param val: Motion model. See :ocv:class:`videostab::MotionModel`.
+    :param val: Motion model. See :ocv:enum:`videostab::MotionModel`.
 
 
 
 videostab::MotionEstimatorBase::motionModel
-----------------------------------------------
+-------------------------------------------
 
 .. ocv:function:: MotionModel videostab::MotionEstimatorBase::motionModel() const
 
-    :return: Motion model. See :ocv:class:`videostab::MotionModel`.
+    :return: Motion model. See :ocv:enum:`videostab::MotionModel`.
 
 
 videostab::MotionEstimatorBase::estimate
@@ -213,7 +209,7 @@ Describes a robust RANSAC-based global 2D motion estimation method which minimiz
 
 ::
 
-    class CV_EXPORTS MotionEstimatorRansacL2 : public MotionEstimatorBase
+    class MotionEstimatorRansacL2 : public MotionEstimatorBase
     {
     public:
         MotionEstimatorRansacL2(MotionModel model = MM_AFFINE);
@@ -239,7 +235,7 @@ Describes a global 2D motion estimation method which minimizes L1 error.
 
 ::
 
-    class CV_EXPORTS MotionEstimatorL1 : public MotionEstimatorBase
+    class MotionEstimatorL1 : public MotionEstimatorBase
     {
     public:
         MotionEstimatorL1(MotionModel model = MM_AFFINE);
@@ -257,7 +253,7 @@ Base class for global 2D motion estimation methods which take frames as input.
 
 ::
 
-    class CV_EXPORTS ImageMotionEstimatorBase
+    class ImageMotionEstimatorBase
     {
     public:
         virtual ~ImageMotionEstimatorBase();
@@ -278,7 +274,7 @@ Describes a global 2D motion estimation method which uses keypoints detection an
 
 ::
 
-    class CV_EXPORTS KeypointBasedMotionEstimator : public ImageMotionEstimatorBase
+    class KeypointBasedMotionEstimator : public ImageMotionEstimatorBase
     {
     public:
         KeypointBasedMotionEstimator(Ptr<MotionEstimatorBase> estimator);

@@ -26,8 +26,8 @@ double myShiTomasi_minVal; double myShiTomasi_maxVal;
 
 RNG rng(12345);
 
-char* myHarris_window = "My Harris corner detector";
-char* myShiTomasi_window = "My Shi Tomasi corner detector";
+const char* myHarris_window = "My Harris corner detector";
+const char* myShiTomasi_window = "My Shi Tomasi corner detector";
 
 /// Function headers
 void myShiTomasi_function( int, void* );
@@ -36,11 +36,11 @@ void myHarris_function( int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Load source image and convert it to gray
   src = imread( argv[1], 1 );
-  cvtColor( src, src_gray, CV_BGR2GRAY );
+  cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
   /// Set some parameters
   int blockSize = 3; int apertureSize = 3;
@@ -57,14 +57,14 @@ int main( int argc, char** argv )
           {
             float lambda_1 = myHarris_dst.at<Vec6f>(j, i)[0];
             float lambda_2 = myHarris_dst.at<Vec6f>(j, i)[1];
-            Mc.at<float>(j,i) = lambda_1*lambda_2 - 0.04*pow( ( lambda_1 + lambda_2 ), 2 );
+            Mc.at<float>(j,i) = lambda_1*lambda_2 - 0.04f*pow( ( lambda_1 + lambda_2 ), 2 );
           }
      }
 
   minMaxLoc( Mc, &myHarris_minVal, &myHarris_maxVal, 0, 0, Mat() );
 
   /* Create Window and Trackbar */
-  namedWindow( myHarris_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( myHarris_window, WINDOW_AUTOSIZE );
   createTrackbar( " Quality Level:", myHarris_window, &myHarris_qualityLevel, max_qualityLevel, myHarris_function );
   myHarris_function( 0, 0 );
 
@@ -75,7 +75,7 @@ int main( int argc, char** argv )
   minMaxLoc( myShiTomasi_dst, &myShiTomasi_minVal, &myShiTomasi_maxVal, 0, 0, Mat() );
 
   /* Create Window and Trackbar */
-  namedWindow( myShiTomasi_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( myShiTomasi_window, WINDOW_AUTOSIZE );
   createTrackbar( " Quality Level:", myShiTomasi_window, &myShiTomasi_qualityLevel, max_qualityLevel, myShiTomasi_function );
   myShiTomasi_function( 0, 0 );
 

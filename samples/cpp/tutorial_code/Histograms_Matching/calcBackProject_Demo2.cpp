@@ -17,7 +17,7 @@ Mat src; Mat hsv;
 Mat mask;
 
 int lo = 20; int up = 20;
-char* window_image = "Source image";
+const char* window_image = "Source image";
 
 /// Function Headers
 void Hist_and_Backproj( );
@@ -26,15 +26,15 @@ void pickPoint (int event, int x, int y, int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Read the image
   src = imread( argv[1], 1 );
   /// Transform it to HSV
-  cvtColor( src, hsv, CV_BGR2HSV );
+  cvtColor( src, hsv, COLOR_BGR2HSV );
 
   /// Show the image
-  namedWindow( window_image, CV_WINDOW_AUTOSIZE );
+  namedWindow( window_image, WINDOW_AUTOSIZE );
   imshow( window_image, src );
 
   /// Set Trackbars for floodfill thresholds
@@ -52,7 +52,7 @@ int main( int argc, char** argv )
  */
 void pickPoint (int event, int x, int y, int, void* )
 {
-  if( event != CV_EVENT_LBUTTONDOWN )
+  if( event != EVENT_LBUTTONDOWN )
     { return; }
 
   // Fill and get the mask

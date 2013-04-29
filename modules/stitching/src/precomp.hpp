@@ -43,9 +43,6 @@
 #ifndef __OPENCV_STITCHING_PRECOMP_H__
 #define __OPENCV_STITCHING_PRECOMP_H__
 
-#ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
-#endif
 #include "opencv2/opencv_modules.hpp"
 
 #include <vector>
@@ -55,9 +52,8 @@
 #include <functional>
 #include <sstream>
 #include <cmath>
-#include "opencv2/core/core.hpp"
-#include "opencv2/core/internal.hpp"
-#include "opencv2/stitching/stitcher.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/stitching.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
 #include "opencv2/stitching/detail/camera.hpp"
@@ -67,14 +63,19 @@
 #include "opencv2/stitching/detail/seam_finders.hpp"
 #include "opencv2/stitching/detail/util.hpp"
 #include "opencv2/stitching/detail/warpers.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/features2d.hpp"
+#include "opencv2/calib3d.hpp"
 #ifdef HAVE_OPENCV_GPU
-# include "opencv2/gpu/gpu.hpp"
+#  include "opencv2/gpu.hpp"
+#  ifdef HAVE_OPENCV_NONFREE
+#    include "opencv2/nonfree/gpu.hpp"
+#  endif
 #endif
 
 #include "../../imgproc/src/gcgraph.hpp"
+
+#include "opencv2/core/private.hpp"
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
 # include "opencv2/stitching/stitching_tegra.hpp"

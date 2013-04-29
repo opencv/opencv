@@ -395,7 +395,7 @@ SunRasterEncoder::~SunRasterEncoder()
 {
 }
 
-bool  SunRasterEncoder::write( const Mat& img, const vector<int>& )
+bool  SunRasterEncoder::write( const Mat& img, const std::vector<int>& )
 {
     bool result = false;
     int y, width = img.cols, height = img.rows, channels = img.channels();

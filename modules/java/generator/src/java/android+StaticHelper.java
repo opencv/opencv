@@ -1,7 +1,8 @@
 package org.opencv.android;
 
-import java.util.StringTokenizer;
+import org.opencv.core.Core;
 
+import java.util.StringTokenizer;
 import android.util.Log;
 
 class StaticHelper {
@@ -28,6 +29,10 @@ class StaticHelper {
         if (initOpenCVLibs(libs))
         {
             Log.d(TAG, "First attempt to load libs is OK");
+            String eol = System.getProperty("line.separator");
+            for (String str : Core.getBuildInformation().split(eol))
+                Log.i(TAG, str);
+
             result = true;
         }
         else

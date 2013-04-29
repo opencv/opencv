@@ -7,6 +7,7 @@
 .. |Author_ArtemM| unicode:: Artem U+0020 Myagkov
 .. |Author_FernandoI| unicode:: Fernando U+0020 Iglesias U+0020 Garc U+00ED a
 .. |Author_EduardF| unicode:: Eduard U+0020 Feicho
-.. |Author_AlexB| unicode:: Alexandre U+0020 Benoit 
-
-
+.. |Author_AlexB| unicode:: Alexandre U+0020 Benoit
+.. |Author_EricCh| unicode:: Eric U+0020 Christiansen
+.. |Author_AndreyP| unicode:: Andrey U+0020 Pavlenko
+.. |Author_AlexS| unicode:: Alexander U+0020 Smorkalov

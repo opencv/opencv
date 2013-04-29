@@ -56,7 +56,7 @@ CV_INIT_ALGORITHM(EM, "StatModel.EM",
 
 bool initModule_ml(void)
 {
-    Ptr<Algorithm> em = createEM();
+    Ptr<Algorithm> em = createEM_hidden();
     return em->info() != 0;
 }
 

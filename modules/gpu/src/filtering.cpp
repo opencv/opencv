@@ -48,46 +48,46 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-Ptr<FilterEngine_GPU> cv::gpu::createFilter2D_GPU(const Ptr<BaseFilter_GPU>&, int, int) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>&, const Ptr<BaseColumnFilter_GPU>&, int, int, int) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>&, const Ptr<BaseColumnFilter_GPU>&, int, int, int, GpuMat&) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<BaseRowFilter_GPU> cv::gpu::getRowSumFilter_GPU(int, int, int, int) { throw_nogpu(); return Ptr<BaseRowFilter_GPU>(0); }
-Ptr<BaseColumnFilter_GPU> cv::gpu::getColumnSumFilter_GPU(int, int, int, int) { throw_nogpu(); return Ptr<BaseColumnFilter_GPU>(0); }
-Ptr<BaseFilter_GPU> cv::gpu::getBoxFilter_GPU(int, int, const Size&, Point) { throw_nogpu(); return Ptr<BaseFilter_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createBoxFilter_GPU(int, int, const Size&, const Point&) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<BaseFilter_GPU> cv::gpu::getMorphologyFilter_GPU(int, int, const Mat&, const Size&, Point) { throw_nogpu(); return Ptr<BaseFilter_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createMorphologyFilter_GPU(int, int, const Mat&, const Point&, int) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createMorphologyFilter_GPU(int, int, const Mat&, GpuMat&, const Point&, int) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<BaseFilter_GPU> cv::gpu::getLinearFilter_GPU(int, int, const Mat&, Point, int) { throw_nogpu(); return Ptr<BaseFilter_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createLinearFilter_GPU(int, int, const Mat&, Point, int) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int, int, const Mat&, int, int) { throw_nogpu(); return Ptr<BaseRowFilter_GPU>(0); }
-Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int, int, const Mat&, int, int) { throw_nogpu(); return Ptr<BaseColumnFilter_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createSeparableLinearFilter_GPU(int, int, const Mat&, const Mat&, const Point&, int, int) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createSeparableLinearFilter_GPU(int, int, const Mat&, const Mat&, GpuMat&, const Point&, int, int) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createDerivFilter_GPU(int, int, int, int, int, int, int) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createDerivFilter_GPU(int, int, int, int, int, GpuMat&, int, int) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createGaussianFilter_GPU(int, Size, double, double, int, int) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createGaussianFilter_GPU(int, Size, GpuMat&, double, double, int, int) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<BaseFilter_GPU> cv::gpu::getMaxFilter_GPU(int, int, const Size&, Point) { throw_nogpu(); return Ptr<BaseFilter_GPU>(0); }
-Ptr<BaseFilter_GPU> cv::gpu::getMinFilter_GPU(int, int, const Size&, Point) { throw_nogpu(); return Ptr<BaseFilter_GPU>(0); }
+Ptr<FilterEngine_GPU> cv::gpu::createFilter2D_GPU(const Ptr<BaseFilter_GPU>&, int, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<FilterEngine_GPU> cv::gpu::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>&, const Ptr<BaseColumnFilter_GPU>&, int, int, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<FilterEngine_GPU> cv::gpu::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>&, const Ptr<BaseColumnFilter_GPU>&, int, int, int, GpuMat&) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<BaseRowFilter_GPU> cv::gpu::getRowSumFilter_GPU(int, int, int, int) { throw_no_cuda(); return Ptr<BaseRowFilter_GPU>(0); }
+Ptr<BaseColumnFilter_GPU> cv::gpu::getColumnSumFilter_GPU(int, int, int, int) { throw_no_cuda(); return Ptr<BaseColumnFilter_GPU>(0); }
+Ptr<BaseFilter_GPU> cv::gpu::getBoxFilter_GPU(int, int, const Size&, Point) { throw_no_cuda(); return Ptr<BaseFilter_GPU>(0); }
+Ptr<FilterEngine_GPU> cv::gpu::createBoxFilter_GPU(int, int, const Size&, const Point&) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<BaseFilter_GPU> cv::gpu::getMorphologyFilter_GPU(int, int, const Mat&, const Size&, Point) { throw_no_cuda(); return Ptr<BaseFilter_GPU>(0); }
+Ptr<FilterEngine_GPU> cv::gpu::createMorphologyFilter_GPU(int, int, const Mat&, const Point&, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<FilterEngine_GPU> cv::gpu::createMorphologyFilter_GPU(int, int, const Mat&, GpuMat&, const Point&, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<BaseFilter_GPU> cv::gpu::getLinearFilter_GPU(int, int, const Mat&, Point, int) { throw_no_cuda(); return Ptr<BaseFilter_GPU>(0); }
+Ptr<FilterEngine_GPU> cv::gpu::createLinearFilter_GPU(int, int, const Mat&, Point, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int, int, const Mat&, int, int) { throw_no_cuda(); return Ptr<BaseRowFilter_GPU>(0); }
+Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int, int, const Mat&, int, int) { throw_no_cuda(); return Ptr<BaseColumnFilter_GPU>(0); }
+Ptr<FilterEngine_GPU> cv::gpu::createSeparableLinearFilter_GPU(int, int, const Mat&, const Mat&, const Point&, int, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<FilterEngine_GPU> cv::gpu::createSeparableLinearFilter_GPU(int, int, const Mat&, const Mat&, GpuMat&, const Point&, int, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<FilterEngine_GPU> cv::gpu::createDerivFilter_GPU(int, int, int, int, int, int, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<FilterEngine_GPU> cv::gpu::createDerivFilter_GPU(int, int, int, int, int, GpuMat&, int, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<FilterEngine_GPU> cv::gpu::createGaussianFilter_GPU(int, Size, double, double, int, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<FilterEngine_GPU> cv::gpu::createGaussianFilter_GPU(int, Size, GpuMat&, double, double, int, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<BaseFilter_GPU> cv::gpu::getMaxFilter_GPU(int, int, const Size&, Point) { throw_no_cuda(); return Ptr<BaseFilter_GPU>(0); }
+Ptr<BaseFilter_GPU> cv::gpu::getMinFilter_GPU(int, int, const Size&, Point) { throw_no_cuda(); return Ptr<BaseFilter_GPU>(0); }
 
-void cv::gpu::boxFilter(const GpuMat&, GpuMat&, int, Size, Point, Stream&) { throw_nogpu(); }
-void cv::gpu::erode(const GpuMat&, GpuMat&, const Mat&, Point, int) { throw_nogpu(); }
-void cv::gpu::erode(const GpuMat&, GpuMat&, const Mat&, GpuMat&, Point, int, Stream&) { throw_nogpu(); }
-void cv::gpu::dilate(const GpuMat&, GpuMat&, const Mat&, Point, int) { throw_nogpu(); }
-void cv::gpu::dilate(const GpuMat&, GpuMat&, const Mat&, GpuMat&, Point, int, Stream&) { throw_nogpu(); }
-void cv::gpu::morphologyEx(const GpuMat&, GpuMat&, int, const Mat&, Point, int) { throw_nogpu(); }
-void cv::gpu::morphologyEx(const GpuMat&, GpuMat&, int, const Mat&, GpuMat&, GpuMat&, Point, int, Stream&) { throw_nogpu(); }
-void cv::gpu::filter2D(const GpuMat&, GpuMat&, int, const Mat&, Point, int, Stream&) { throw_nogpu(); }
-void cv::gpu::sepFilter2D(const GpuMat&, GpuMat&, int, const Mat&, const Mat&, Point, int, int) { throw_nogpu(); }
-void cv::gpu::sepFilter2D(const GpuMat&, GpuMat&, int, const Mat&, const Mat&, GpuMat&, Point, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::Sobel(const GpuMat&, GpuMat&, int, int, int, int, double, int, int) { throw_nogpu(); }
-void cv::gpu::Sobel(const GpuMat&, GpuMat&, int, int, int, GpuMat&, int, double, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::Scharr(const GpuMat&, GpuMat&, int, int, int, double, int, int) { throw_nogpu(); }
-void cv::gpu::Scharr(const GpuMat&, GpuMat&, int, int, int, GpuMat&, double, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::GaussianBlur(const GpuMat&, GpuMat&, Size, double, double, int, int) { throw_nogpu(); }
-void cv::gpu::GaussianBlur(const GpuMat&, GpuMat&, Size, GpuMat&, double, double, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::Laplacian(const GpuMat&, GpuMat&, int, int, double, int, Stream&) { throw_nogpu(); }
+void cv::gpu::boxFilter(const GpuMat&, GpuMat&, int, Size, Point, Stream&) { throw_no_cuda(); }
+void cv::gpu::erode(const GpuMat&, GpuMat&, const Mat&, Point, int) { throw_no_cuda(); }
+void cv::gpu::erode(const GpuMat&, GpuMat&, const Mat&, GpuMat&, Point, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::dilate(const GpuMat&, GpuMat&, const Mat&, Point, int) { throw_no_cuda(); }
+void cv::gpu::dilate(const GpuMat&, GpuMat&, const Mat&, GpuMat&, Point, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::morphologyEx(const GpuMat&, GpuMat&, int, const Mat&, Point, int) { throw_no_cuda(); }
+void cv::gpu::morphologyEx(const GpuMat&, GpuMat&, int, const Mat&, GpuMat&, GpuMat&, Point, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::filter2D(const GpuMat&, GpuMat&, int, const Mat&, Point, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::sepFilter2D(const GpuMat&, GpuMat&, int, const Mat&, const Mat&, Point, int, int) { throw_no_cuda(); }
+void cv::gpu::sepFilter2D(const GpuMat&, GpuMat&, int, const Mat&, const Mat&, GpuMat&, Point, int, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::Sobel(const GpuMat&, GpuMat&, int, int, int, int, double, int, int) { throw_no_cuda(); }
+void cv::gpu::Sobel(const GpuMat&, GpuMat&, int, int, int, GpuMat&, int, double, int, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::Scharr(const GpuMat&, GpuMat&, int, int, int, double, int, int) { throw_no_cuda(); }
+void cv::gpu::Scharr(const GpuMat&, GpuMat&, int, int, int, GpuMat&, double, int, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::GaussianBlur(const GpuMat&, GpuMat&, Size, double, double, int, int) { throw_no_cuda(); }
+void cv::gpu::GaussianBlur(const GpuMat&, GpuMat&, Size, GpuMat&, double, double, int, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::Laplacian(const GpuMat&, GpuMat&, int, int, double, int, Stream&) { throw_no_cuda(); }
 
 #else
 
@@ -634,34 +634,34 @@ void cv::gpu::morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& ke
         erode(src, buf2, kernel, buf1, anchor, iterations, stream);
         dilate(buf2, dst, kernel, buf1, anchor, iterations, stream);
         break;
-    case CV_MOP_CLOSE:
+    case MORPH_CLOSE:
         dilate(src, buf2, kernel, buf1, anchor, iterations, stream);
         erode(buf2, dst, kernel, buf1, anchor, iterations, stream);
         break;
-    case CV_MOP_GRADIENT:
+    case MORPH_GRADIENT:
         erode(src, buf2, kernel, buf1, anchor, iterations, stream);
         dilate(src, dst, kernel, buf1, anchor, iterations, stream);
         subtract(dst, buf2, dst, GpuMat(), -1, stream);
         break;
-    case CV_MOP_TOPHAT:
+    case MORPH_TOPHAT:
         erode(src, dst, kernel, buf1, anchor, iterations, stream);
         dilate(dst, buf2, kernel, buf1, anchor, iterations, stream);
         subtract(src, buf2, dst, GpuMat(), -1, stream);
         break;
-    case CV_MOP_BLACKHAT:
+    case MORPH_BLACKHAT:
         dilate(src, dst, kernel, buf1, anchor, iterations, stream);
         erode(dst, buf2, kernel, buf1, anchor, iterations, stream);
         subtract(buf2, src, dst, GpuMat(), -1, stream);
         break;
     default:
-        CV_Error(CV_StsBadArg, "unknown morphological operation");
+        CV_Error(cv::Error::StsBadArg, "unknown morphological operation");
     }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Linear Filter
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
     {
@@ -723,7 +723,7 @@ namespace
 
         virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
         {
-            using namespace cv::gpu::device::imgproc;
+            using namespace cv::gpu::cudev::imgproc;
 
             Point ofs;
             Size wholeSize;
@@ -742,7 +742,7 @@ namespace
 
 Ptr<BaseFilter_GPU> cv::gpu::getLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, Point anchor, int brd_type)
 {
-    using namespace cv::gpu::device::imgproc;
+    using namespace cv::gpu::cudev::imgproc;
 
     int sdepth = CV_MAT_DEPTH(srcType);
     int scn = CV_MAT_CN(srcType);
@@ -830,20 +830,14 @@ void cv::gpu::filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& ke
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Separable Linear Filter
 
-namespace cv { namespace gpu { namespace device
+namespace filter
 {
-    namespace row_filter
-    {
-        template <typename T, typename D>
-        void linearRowFilter_gpu(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
-    }
+    template <typename T, typename D>
+    void linearRow(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
 
-    namespace column_filter
-    {
-        template <typename T, typename D>
-        void linearColumnFilter_gpu(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
-    }
-}}}
+    template <typename T, typename D>
+    void linearColumn(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+}
 
 namespace
 {
@@ -899,71 +893,55 @@ namespace
 
 Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType, const Mat& rowKernel, int anchor, int borderType)
 {
-    using namespace ::cv::gpu::device::row_filter;
-
-    static const nppFilter1D_t nppFilter1D_callers[] = {0, nppiFilterRow_8u_C1R, 0, 0, nppiFilterRow_8u_C4R};
+    static const gpuFilter1D_t funcs[7][4] =
+    {
+        {filter::linearRow<uchar, float>, 0, filter::linearRow<uchar3, float3>, filter::linearRow<uchar4, float4>},
+        {0, 0, 0, 0},
+        {filter::linearRow<ushort, float>, 0, filter::linearRow<ushort3, float3>, filter::linearRow<ushort4, float4>},
+        {filter::linearRow<short, float>, 0, filter::linearRow<short3, float3>, filter::linearRow<short4, float4>},
+        {filter::linearRow<int, float>, 0, filter::linearRow<int3, float3>, filter::linearRow<int4, float4>},
+        {filter::linearRow<float, float>, 0, filter::linearRow<float3, float3>, filter::linearRow<float4, float4>},
+        {0, 0, 0, 0}
+    };
+    static const nppFilter1D_t npp_funcs[] =
+    {
+        0, nppiFilterRow_8u_C1R, 0, 0, nppiFilterRow_8u_C4R
+    };
 
     if ((bufType == srcType) && (srcType == CV_8UC1 || srcType == CV_8UC4))
     {
-        CV_Assert(borderType == BORDER_CONSTANT);
+        CV_Assert( borderType == BORDER_CONSTANT );
 
         GpuMat gpu_row_krnl;
         int nDivisor;
         normalizeKernel(rowKernel, gpu_row_krnl, CV_32S, &nDivisor, true);
 
-        int ksize = gpu_row_krnl.cols;
+        const int ksize = gpu_row_krnl.cols;
         normalizeAnchor(anchor, ksize);
 
-        return Ptr<BaseRowFilter_GPU>(new NppLinearRowFilter(ksize, anchor, gpu_row_krnl, nDivisor,
-            nppFilter1D_callers[CV_MAT_CN(srcType)]));
+        return Ptr<BaseRowFilter_GPU>(new NppLinearRowFilter(ksize, anchor, gpu_row_krnl, nDivisor, npp_funcs[CV_MAT_CN(srcType)]));
     }
 
-    CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP);
+    CV_Assert( borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP );
+
     int gpuBorderType;
-    CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
+    CV_Assert( tryConvertToGpuBorderType(borderType, gpuBorderType) );
 
-    CV_Assert(srcType == CV_8UC1 || srcType == CV_8UC3 || srcType == CV_8UC4 || srcType == CV_16SC3 || srcType == CV_32SC1 || srcType == CV_32FC1 || srcType == CV_32FC3 || srcType == CV_32FC4);
+    const int sdepth = CV_MAT_DEPTH(srcType);
+    const int cn = CV_MAT_CN(srcType);
+    CV_Assert( sdepth <= CV_64F && cn <= 4 );
+    CV_Assert( CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(bufType) == cn );
 
-    CV_Assert(CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(srcType) == CV_MAT_CN(bufType));
+    const gpuFilter1D_t func = funcs[sdepth][cn - 1];
+    CV_Assert( func != 0 );
 
     GpuMat gpu_row_krnl;
     normalizeKernel(rowKernel, gpu_row_krnl, CV_32F);
 
-    int ksize = gpu_row_krnl.cols;
-
-    CV_Assert(ksize > 0 && ksize <= 32);
+    const int ksize = gpu_row_krnl.cols;
+    CV_Assert( ksize > 0 && ksize <= 32 );
 
     normalizeAnchor(anchor, ksize);
-
-    gpuFilter1D_t func = 0;
-
-    switch (srcType)
-    {
-    case CV_8UC1:
-        func = linearRowFilter_gpu<uchar, float>;
-        break;
-    case CV_8UC3:
-        func = linearRowFilter_gpu<uchar3, float3>;
-        break;
-    case CV_8UC4:
-        func = linearRowFilter_gpu<uchar4, float4>;
-        break;
-    case CV_16SC3:
-        func = linearRowFilter_gpu<short3, float3>;
-        break;
-    case CV_32SC1:
-        func = linearRowFilter_gpu<int, float>;
-        break;
-    case CV_32FC1:
-        func = linearRowFilter_gpu<float, float>;
-        break;
-    case CV_32FC3:
-        func = linearRowFilter_gpu<float3, float3>;
-        break;
-    case CV_32FC4:
-        func = linearRowFilter_gpu<float4, float4>;
-        break;
-    }
 
     return Ptr<BaseRowFilter_GPU>(new GpuLinearRowFilter(ksize, anchor, gpu_row_krnl, func, gpuBorderType));
 }
@@ -1007,7 +985,7 @@ namespace
             DeviceInfo devInfo;
             int cc = devInfo.majorVersion() * 10 + devInfo.minorVersion();
             if (ksize > 16 && cc < 20)
-                CV_Error(CV_StsNotImplemented, "column linear filter doesn't implemented for kernel size > 16 for device with compute capabilities less than 2.0");
+                CV_Error(cv::Error::StsNotImplemented, "column linear filter doesn't implemented for kernel size > 16 for device with compute capabilities less than 2.0");
 
             func(src, dst, kernel.ptr<float>(), ksize, anchor, brd_type, cc, StreamAccessor::getStream(s));
         }
@@ -1020,71 +998,55 @@ namespace
 
 Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int dstType, const Mat& columnKernel, int anchor, int borderType)
 {
-    using namespace ::cv::gpu::device::column_filter;
-
-    static const nppFilter1D_t nppFilter1D_callers[] = {0, nppiFilterColumn_8u_C1R, 0, 0, nppiFilterColumn_8u_C4R};
+    static const gpuFilter1D_t funcs[7][4] =
+    {
+        {filter::linearColumn<float, uchar>, 0, filter::linearColumn<float3, uchar3>, filter::linearColumn<float4, uchar4>},
+        {0, 0, 0, 0},
+        {filter::linearColumn<float, ushort>, 0, filter::linearColumn<float3, ushort3>, filter::linearColumn<float4, ushort4>},
+        {filter::linearColumn<float, short>, 0, filter::linearColumn<float3, short3>, filter::linearColumn<float4, short4>},
+        {filter::linearColumn<float, int>, 0, filter::linearColumn<float3, int3>, filter::linearColumn<float4, int4>},
+        {filter::linearColumn<float, float>, 0, filter::linearColumn<float3, float3>, filter::linearColumn<float4, float4>},
+        {0, 0, 0, 0}
+    };
+    static const nppFilter1D_t npp_funcs[] =
+    {
+        0, nppiFilterColumn_8u_C1R, 0, 0, nppiFilterColumn_8u_C4R
+    };
 
     if ((bufType == dstType) && (bufType == CV_8UC1 || bufType == CV_8UC4))
     {
-        CV_Assert(borderType == BORDER_CONSTANT);
+        CV_Assert( borderType == BORDER_CONSTANT );
 
         GpuMat gpu_col_krnl;
         int nDivisor;
         normalizeKernel(columnKernel, gpu_col_krnl, CV_32S, &nDivisor, true);
 
-        int ksize = gpu_col_krnl.cols;
+        const int ksize = gpu_col_krnl.cols;
         normalizeAnchor(anchor, ksize);
 
-        return Ptr<BaseColumnFilter_GPU>(new NppLinearColumnFilter(ksize, anchor, gpu_col_krnl, nDivisor,
-            nppFilter1D_callers[CV_MAT_CN(bufType)]));
+        return Ptr<BaseColumnFilter_GPU>(new NppLinearColumnFilter(ksize, anchor, gpu_col_krnl, nDivisor, npp_funcs[CV_MAT_CN(bufType)]));
     }
 
-    CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP);
+    CV_Assert( borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP );
+
     int gpuBorderType;
-    CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
+    CV_Assert( tryConvertToGpuBorderType(borderType, gpuBorderType) );
 
-    CV_Assert(dstType == CV_8UC1 || dstType == CV_8UC3 || dstType == CV_8UC4 || dstType == CV_16SC3 || dstType == CV_32SC1 || dstType == CV_32FC1 || dstType == CV_32FC3 || dstType == CV_32FC4);
+    const int ddepth = CV_MAT_DEPTH(dstType);
+    const int cn = CV_MAT_CN(dstType);
+    CV_Assert( ddepth <= CV_64F && cn <= 4 );
+    CV_Assert( CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(bufType) == cn );
 
-    CV_Assert(CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(dstType) == CV_MAT_CN(bufType));
+    gpuFilter1D_t func = funcs[ddepth][cn - 1];
+    CV_Assert( func != 0 );
 
     GpuMat gpu_col_krnl;
     normalizeKernel(columnKernel, gpu_col_krnl, CV_32F);
 
-    int ksize = gpu_col_krnl.cols;
-
+    const int ksize = gpu_col_krnl.cols;
     CV_Assert(ksize > 0 && ksize <= 32);
 
     normalizeAnchor(anchor, ksize);
-
-    gpuFilter1D_t func = 0;
-
-    switch (dstType)
-    {
-    case CV_8UC1:
-        func = linearColumnFilter_gpu<float, uchar>;
-        break;
-    case CV_8UC3:
-        func = linearColumnFilter_gpu<float3, uchar3>;
-        break;
-    case CV_8UC4:
-        func = linearColumnFilter_gpu<float4, uchar4>;
-        break;
-    case CV_16SC3:
-        func = linearColumnFilter_gpu<float3, short3>;
-        break;
-    case CV_32SC1:
-        func = linearColumnFilter_gpu<float, int>;
-        break;
-    case CV_32FC1:
-        func = linearColumnFilter_gpu<float, float>;
-        break;
-    case CV_32FC3:
-        func = linearColumnFilter_gpu<float3, float3>;
-        break;
-    case CV_32FC4:
-        func = linearColumnFilter_gpu<float4, float4>;
-        break;
-    }
 
     return Ptr<BaseColumnFilter_GPU>(new GpuLinearColumnFilter(ksize, anchor, gpu_col_krnl, func, gpuBorderType));
 }

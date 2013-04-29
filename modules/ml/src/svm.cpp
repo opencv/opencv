@@ -220,6 +220,8 @@ bool CvSVMKernel::create( const CvSVMParams* _params, Calc _calc_func )
         calc_func = params->kernel_type == CvSVM::RBF ? &CvSVMKernel::calc_rbf :
                     params->kernel_type == CvSVM::POLY ? &CvSVMKernel::calc_poly :
                     params->kernel_type == CvSVM::SIGMOID ? &CvSVMKernel::calc_sigmoid :
+                    params->kernel_type == CvSVM::CHI2 ? &CvSVMKernel::calc_chi2 :
+                    params->kernel_type == CvSVM::INTER ? &CvSVMKernel::calc_intersec :
                     &CvSVMKernel::calc_linear;
 
     return true;
@@ -318,6 +320,52 @@ void CvSVMKernel::calc_rbf( int vcount, int var_count, const float** vecs,
         cvExp( &R, &R );
 }
 
+/// Histogram intersection kernel
+void CvSVMKernel::calc_intersec( int vcount, int var_count, const float** vecs,
+                            const float* another, Qfloat* results )
+{
+    int j, k;
+    for( j = 0; j < vcount; j++ )
+    {
+        const float* sample = vecs[j];
+        double s = 0;
+        for( k = 0; k <= var_count - 4; k += 4 )
+            s += std::min(sample[k],another[k]) + std::min(sample[k+1],another[k+1]) +
+                 std::min(sample[k+2],another[k+2]) + std::min(sample[k+3],another[k+3]);
+        for( ; k < var_count; k++ )
+            s += std::min(sample[k],another[k]);
+        results[j] = (Qfloat)(s);
+    }
+}
+
+/// Exponential chi2 kernel
+void CvSVMKernel::calc_chi2( int vcount, int var_count, const float** vecs,
+                            const float* another, Qfloat* results )
+{
+    CvMat R = cvMat( 1, vcount, QFLOAT_TYPE, results );
+    double gamma = -params->gamma;
+    int j, k;
+    for( j = 0; j < vcount; j++ )
+    {
+        const float* sample = vecs[j];
+        double chi2 = 0;
+        for(k = 0 ; k < var_count; k++ )
+    {
+            double d = sample[k]-another[k];
+        double devisor = sample[k]+another[k];
+        /// if devisor == 0, the Chi2 distance would be zero, but calculation would rise an error because of deviding by zero
+        if (devisor != 0)
+        {
+          chi2 += d*d/devisor;
+        }
+    }
+        results[j] = (Qfloat) (gamma*chi2);
+    }
+    if( vcount > 0 )
+      cvExp( &R, &R );
+
+
+}
 
 void CvSVMKernel::calc( int vcount, int var_count, const float** vecs,
                         const float* another, Qfloat* results )
@@ -1214,7 +1262,8 @@ bool CvSVM::set_params( const CvSVMParams& _params )
     svm_type = params.svm_type;
 
     if( kernel_type != LINEAR && kernel_type != POLY &&
-        kernel_type != SIGMOID && kernel_type != RBF )
+        kernel_type != SIGMOID && kernel_type != RBF &&
+        kernel_type != INTER && kernel_type != CHI2)
         CV_ERROR( CV_StsBadArg, "Unknown/unsupported kernel type" );
 
     if( kernel_type == LINEAR )
@@ -1517,12 +1566,69 @@ bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float
         }
     }
 
+    optimize_linear_svm();
     ok = true;
 
     __END__;
 
     return ok;
 }
+
+
+void CvSVM::optimize_linear_svm()
+{
+    // we optimize only linear SVM: compress all the support vectors into one.
+    if( params.kernel_type != LINEAR )
+        return;
+
+    int class_count = class_labels ? class_labels->cols :
+            params.svm_type == CvSVM::ONE_CLASS ? 1 : 0;
+
+    int i, df_count = class_count > 1 ? class_count*(class_count-1)/2 : 1;
+    CvSVMDecisionFunc* df = decision_func;
+
+    for( i = 0; i < df_count; i++ )
+    {
+        int sv_count = df[i].sv_count;
+        if( sv_count != 1 )
+            break;
+    }
+
+    // if every decision functions uses a single support vector;
+    // it's already compressed. skip it then.
+    if( i == df_count )
+        return;
+
+    int var_count = get_var_count();
+    cv::AutoBuffer<double> vbuf(var_count);
+    double* v = vbuf;
+    float** new_sv = (float**)cvMemStorageAlloc(storage, df_count*sizeof(new_sv[0]));
+
+    for( i = 0; i < df_count; i++ )
+    {
+        new_sv[i] = (float*)cvMemStorageAlloc(storage, var_count*sizeof(new_sv[i][0]));
+        float* dst = new_sv[i];
+        memset(v, 0, var_count*sizeof(v[0]));
+        int j, k, sv_count = df[i].sv_count;
+        for( j = 0; j < sv_count; j++ )
+        {
+            const float* src = class_count > 1 && df[i].sv_index ? sv[df[i].sv_index[j]] : sv[j];
+            double a = df[i].alpha[j];
+            for( k = 0; k < var_count; k++ )
+                v[k] += src[k]*a;
+        }
+        for( k = 0; k < var_count; k++ )
+            dst[k] = (float)v[k];
+        df[i].sv_count = 1;
+        df[i].alpha[0] = 1.;
+        if( class_count > 1 && df[i].sv_index )
+            df[i].sv_index[0] = i;
+    }
+
+    sv = new_sv;
+    sv_total = df_count;
+}
+
 
 bool CvSVM::train( const CvMat* _train_data, const CvMat* _responses,
     const CvMat* _var_idx, const CvMat* _sample_idx, CvSVMParams _params )
@@ -1821,7 +1927,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
         qsort(ratios, k_fold, sizeof(ratios[0]), icvCmpIndexedratio);
         double old_dist = 0.0;
         for (int k=0; k<k_fold; ++k)
-            old_dist += abs(ratios[k].val-class_ratio);
+            old_dist += cv::abs(ratios[k].val-class_ratio);
         double new_dist = 1.0;
         // iterate to make the folds more balanced
         while (new_dist > 0.0)
@@ -1838,7 +1944,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
             qsort(ratios, k_fold, sizeof(ratios[0]), icvCmpIndexedratio);
             new_dist = 0.0;
             for (int k=0; k<k_fold; ++k)
-                new_dist += abs(ratios[k].val-class_ratio);
+                new_dist += cv::abs(ratios[k].val-class_ratio);
             if (new_dist < old_dist)
             {
                 // swapping really improves, so swap the samples
@@ -2516,6 +2622,8 @@ void CvSVM::read( CvFileStorage* fs, CvFileNode* svm_node )
         CV_NEXT_SEQ_ELEM( df_node->data.seq->elem_size, reader );
     }
 
+    if( cvReadIntByName(fs, svm_node, "optimize_linear", 1) != 0 )
+        optimize_linear_svm();
     create_kernel();
 
     __END__;

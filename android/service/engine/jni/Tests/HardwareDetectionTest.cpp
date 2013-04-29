@@ -111,7 +111,6 @@ TEST(Split, SplitMultiElementString)
 TEST(CpuCount, CheckNonZero)
 {
     EXPECT_TRUE(GetProcessorCount() != 0);
-    EXPECT_TRUE(a.find("") == a.end());
 }
 
 TEST(GetCpuInfo, GetCpuInfo)
@@ -127,7 +126,7 @@ TEST(CpuID, CheckNotEmpy)
     EXPECT_NE(0, cpu_id);
 }
 
-#ifdef __i386__
+#if defined(__i386__)
 TEST(CpuID, CheckX86)
 {
     int cpu_id = GetCpuID();
@@ -139,14 +138,14 @@ TEST(CpuID, CheckSSE2)
     int cpu_id = GetCpuID();
     EXPECT_TRUE(cpu_id & FEATURES_HAS_SSE2);
 }
-#elseif __mips
-    #ifdef __SUPPORT_MIPS
-    TEST(CpuID, CheckMips)
-    {
+#elif defined(__mips)
+#ifdef __SUPPORT_MIPS
+TEST(CpuID, CheckMips)
+{
     int cpu_id = GetCpuID();
     EXPECT_TRUE(cpu_id & ARCH_MIPS);
-    }
-    #endif
+}
+#endif
 #else
 TEST(TegraDetector, Detect)
 {

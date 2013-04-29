@@ -27,7 +27,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_C_SAMPLES_REQUIRED_DEPS})
 
     set_target_properties(${the_target} PROPERTIES
-      OUTPUT_NAME "${name}"
+      OUTPUT_NAME "c-example-${name}"
       PROJECT_LABEL "(EXAMPLE) ${name}")
 
     if(ENABLE_SOLUTION_FOLDERS)
@@ -47,7 +47,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
   foreach(sample_filename ${cpp_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)
-    OPENCV_DEFINE_C_EXAMPLE(${sample}  ${sample_filename})
+    OPENCV_DEFINE_C_EXAMPLE(${sample} ${sample_filename})
   endforeach()
 endif()
 

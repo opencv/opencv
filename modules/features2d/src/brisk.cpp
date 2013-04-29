@@ -42,9 +42,9 @@
  the IEEE International Conference on Computer Vision (ICCV2011).
  */
 
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/features2d.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #include <fstream>
 #include <stdlib.h>
 
@@ -236,7 +236,7 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
 
   // get the total number of points
   const int rings = (int)radiusList.size();
-  assert(radiusList.size()!=0&&radiusList.size()==numberList.size());
+  CV_Assert(radiusList.size() != 0 && radiusList.size() == numberList.size());
   points_ = 0; // remember the total number of points
   for (int ring = 0; ring < rings; ring++)
   {
@@ -247,7 +247,7 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
   BriskPatternPoint* patternIterator = patternPoints_;
 
   // define the scale discretization:
-  static const float lb_scale = (float)(log(scalerange_) / log(2.0));
+  static const float lb_scale = (float)(std::log(scalerange_) / std::log(2.0));
   static const float lb_scale_step = lb_scale / (scales_);
 
   scaleList_ = new float[scales_];
@@ -257,7 +257,7 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
 
   for (unsigned int scale = 0; scale < scales_; ++scale)
   {
-    scaleList_[scale] = (float)pow((double) 2.0, (double) (scale * lb_scale_step));
+    scaleList_[scale] = (float)std::pow((double) 2.0, (double) (scale * lb_scale_step));
     sizeList_[scale] = 0;
 
     // generate the pattern points look-up
@@ -309,10 +309,9 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
   {
     indexChange.resize(points_ * (points_ - 1) / 2);
     indSize = (unsigned int)indexChange.size();
-  }
-  for (unsigned int i = 0; i < indSize; i++)
-  {
-    indexChange[i] = i;
+
+    for (unsigned int i = 0; i < indSize; i++)
+      indexChange[i] = i;
   }
   const float dMin_sq = dMin_ * dMin_;
   const float dMax_sq = dMax_ * dMax_;
@@ -337,7 +336,7 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
       else if (norm_sq < dMax_sq)
       {
         // save to short pairs
-        assert(noShortPairs_<indSize);
+        CV_Assert(noShortPairs_ < indSize);
         // make sure the user passes something sensible
         BriskShortPair& shortPair = shortPairs_[indexChange[noShortPairs_]];
         shortPair.j = j;
@@ -520,7 +519,7 @@ RoiPredicate(const float minX, const float minY, const float maxX, const float m
 
 // computes the descriptor
 void
-BRISK::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& keypoints,
+BRISK::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
                    OutputArray _descriptors, bool useProvidedKeypoints) const
 {
   bool doOrientation=true;
@@ -531,13 +530,13 @@ BRISK::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& keypoi
 }
 
 void
-BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, vector<KeyPoint>& keypoints,
+BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
                                      OutputArray _descriptors, bool doDescriptors, bool doOrientation,
                                      bool useProvidedKeypoints) const
 {
   Mat image = _image.getMat(), mask = _mask.getMat();
   if( image.type() != CV_8UC1 )
-      cvtColor(image, image, CV_BGR2GRAY);
+      cvtColor(image, image, COLOR_BGR2GRAY);
 
   if (!useProvidedKeypoints)
   {
@@ -550,14 +549,14 @@ BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, v
   std::vector<int> kscales; // remember the scale per keypoint
   kscales.resize(ksize);
   static const float log2 = 0.693147180559945f;
-  static const float lb_scalerange = (float)(log(scalerange_) / (log2));
+  static const float lb_scalerange = (float)(std::log(scalerange_) / (log2));
   std::vector<cv::KeyPoint>::iterator beginning = keypoints.begin();
   std::vector<int>::iterator beginningkscales = kscales.begin();
   static const float basicSize06 = basicSize_ * 0.6f;
   for (size_t k = 0; k < ksize; k++)
   {
     unsigned int scale;
-      scale = std::max((int) (scales_ / lb_scalerange * (log(keypoints[k].size / (basicSize06)) / log2) + 0.5), 0);
+      scale = std::max((int) (scales_ / lb_scalerange * (std::log(keypoints[k].size / (basicSize06)) / log2) + 0.5), 0);
       // saturate
       if (scale >= scales_)
         scale = scales_ - 1;
@@ -719,18 +718,18 @@ BRISK::~BRISK()
 }
 
 void
-BRISK::operator()(InputArray image, InputArray mask, vector<KeyPoint>& keypoints) const
+BRISK::operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const
 {
   computeKeypointsNoOrientation(image, mask, keypoints);
   computeDescriptorsAndOrOrientation(image, mask, keypoints, cv::noArray(), false, true, true);
 }
 
 void
-BRISK::computeKeypointsNoOrientation(InputArray _image, InputArray _mask, vector<KeyPoint>& keypoints) const
+BRISK::computeKeypointsNoOrientation(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints) const
 {
   Mat image = _image.getMat(), mask = _mask.getMat();
   if( image.type() != CV_8UC1 )
-      cvtColor(_image, image, CV_BGR2GRAY);
+      cvtColor(_image, image, COLOR_BGR2GRAY);
 
   BriskScaleSpace briskScaleSpace(octaves);
   briskScaleSpace.constructPyramid(image);
@@ -742,13 +741,13 @@ BRISK::computeKeypointsNoOrientation(InputArray _image, InputArray _mask, vector
 
 
 void
-BRISK::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
+BRISK::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
 {
     (*this)(image, mask, keypoints);
 }
 
 void
-BRISK::computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const
+BRISK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
 }
@@ -913,7 +912,7 @@ BriskScaleSpace::getKeypoints(const int threshold_, std::vector<cv::KeyPoint>& k
 inline int
 BriskScaleSpace::getScoreAbove(const int layer, const int x_layer, const int y_layer) const
 {
-  assert(layer<layers_-1);
+  CV_Assert(layer < layers_-1);
   const BriskLayer& l = pyramid_[layer + 1];
   if (layer % 2 == 0)
   { // octave
@@ -956,7 +955,7 @@ BriskScaleSpace::getScoreAbove(const int layer, const int x_layer, const int y_l
 inline int
 BriskScaleSpace::getScoreBelow(const int layer, const int x_layer, const int y_layer) const
 {
-  assert(layer);
+  CV_Assert(layer);
   const BriskLayer& l = pyramid_[layer - 1];
   int sixth_x;
   int quarter_x;
@@ -1344,7 +1343,7 @@ BriskScaleSpace::getScoreMaxAbove(const int layer, const int x_layer, const int 
   float y1;
 
   // the layer above
-  assert(layer+1<layers_);
+  CV_Assert(layer + 1 < layers_);
   const BriskLayer& layerAbove = pyramid_[layer + 1];
 
   if (layer % 2 == 0)
@@ -1540,7 +1539,7 @@ BriskScaleSpace::getScoreMaxBelow(const int layer, const int x_layer, const int 
   }
 
   // the layer below
-  assert(layer>0);
+  CV_Assert(layer > 0);
   const BriskLayer& layerBelow = pyramid_[layer - 1];
 
   // check the first row
@@ -2110,7 +2109,7 @@ BriskLayer::getAgastScore(float xf, float yf, int threshold_in, float scale_in) 
 inline int
 BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in) const
 {
-  assert(!mat.empty());
+  CV_Assert(!mat.empty());
   // get the position
   const int x = cvFloor(xf);
   const int y = cvFloor(yf);
@@ -2217,8 +2216,8 @@ inline void
 BriskLayer::halfsample(const cv::Mat& srcimg, cv::Mat& dstimg)
 {
   // make sure the destination image is of the right size:
-  assert(srcimg.cols/2==dstimg.cols);
-  assert(srcimg.rows/2==dstimg.rows);
+  CV_Assert(srcimg.cols / 2 == dstimg.cols);
+  CV_Assert(srcimg.rows / 2 == dstimg.rows);
 
   // handle non-SSE case
   resize(srcimg, dstimg, dstimg.size(), 0, 0, INTER_AREA);
@@ -2228,8 +2227,8 @@ inline void
 BriskLayer::twothirdsample(const cv::Mat& srcimg, cv::Mat& dstimg)
 {
   // make sure the destination image is of the right size:
-  assert((srcimg.cols/3)*2==dstimg.cols);
-  assert((srcimg.rows/3)*2==dstimg.rows);
+  CV_Assert((srcimg.cols / 3) * 2 == dstimg.cols);
+  CV_Assert((srcimg.rows / 3) * 2 == dstimg.rows);
 
   resize(srcimg, dstimg, dstimg.size(), 0, 0, INTER_AREA);
 }

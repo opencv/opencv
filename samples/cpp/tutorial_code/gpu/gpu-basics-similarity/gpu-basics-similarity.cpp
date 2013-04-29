@@ -1,10 +1,11 @@
 #include <iostream>                   // Console I/O
 #include <sstream>                    // String to number conversion
 
-#include <opencv2/core/core.hpp>      // Basic OpenCV structures
-#include <opencv2/imgproc/imgproc.hpp>// Image processing methods for the CPU
-#include <opencv2/highgui/highgui.hpp>// Read images
-#include <opencv2/gpu/gpu.hpp>        // GPU structures and methods
+#include <opencv2/core.hpp>      // Basic OpenCV structures
+#include <opencv2/core/utility.hpp>
+#include <opencv2/imgproc.hpp>// Image processing methods for the CPU
+#include <opencv2/highgui.hpp>// Read images
+#include <opencv2/gpu.hpp>        // GPU structures and methods
 
 using namespace std;
 using namespace cv;
@@ -42,7 +43,7 @@ struct BufferMSSIM                                     // Optimized GPU versions
 };
 Scalar getMSSIM_GPU_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b);
 
-void help()
+static void help()
 {
     cout
         << "\n--------------------------------------------------------------------------" << endl
@@ -54,7 +55,7 @@ void help()
         << endl;
 }
 
-int main(int argc, char *argv[])
+int main(int, char *argv[])
 {
     help();
     Mat I1 = imread(argv[1]);           // Read the two images
@@ -72,7 +73,7 @@ int main(int argc, char *argv[])
     int TIMES;
     stringstream sstr(argv[3]);
     sstr >> TIMES;
-    double time, result;
+    double time, result = 0;
 
     //------------------------------- PSNR CPU ----------------------------------------------------
     time = (double)getTickCount();
@@ -84,7 +85,7 @@ int main(int argc, char *argv[])
     time /= TIMES;
 
     cout << "Time of PSNR CPU (averaged for " << TIMES << " runs): " << time << " milliseconds."
-        << " With result of: " <<  result << endl;
+        << " With result of: " << result << endl;
 
     //------------------------------- PSNR GPU ----------------------------------------------------
     time = (double)getTickCount();
@@ -291,17 +292,17 @@ Scalar getMSSIM_GPU( const Mat& i1, const Mat& i2)
 {
     const float C1 = 6.5025f, C2 = 58.5225f;
     /***************************** INITS **********************************/
-    gpu::GpuMat gI1, gI2, gs1, t1,t2;
+    gpu::GpuMat gI1, gI2, gs1, tmp1,tmp2;
 
     gI1.upload(i1);
     gI2.upload(i2);
 
-    gI1.convertTo(t1, CV_MAKE_TYPE(CV_32F, gI1.channels()));
-    gI2.convertTo(t2, CV_MAKE_TYPE(CV_32F, gI2.channels()));
+    gI1.convertTo(tmp1, CV_MAKE_TYPE(CV_32F, gI1.channels()));
+    gI2.convertTo(tmp2, CV_MAKE_TYPE(CV_32F, gI2.channels()));
 
     vector<gpu::GpuMat> vI1, vI2;
-    gpu::split(t1, vI1);
-    gpu::split(t2, vI2);
+    gpu::split(tmp1, vI1);
+    gpu::split(tmp2, vI2);
     Scalar mssim;
 
     for( int i = 0; i < gI1.channels(); ++i )
@@ -356,8 +357,6 @@ Scalar getMSSIM_GPU( const Mat& i1, const Mat& i2)
 
 Scalar getMSSIM_GPU_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b)
 {
-    int cn = i1.channels();
-
     const float C1 = 6.5025f, C2 = 58.5225f;
     /***************************** INITS **********************************/
 

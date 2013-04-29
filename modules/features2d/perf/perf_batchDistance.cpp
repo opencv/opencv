@@ -92,6 +92,7 @@ PERF_TEST_P(Source_CrossCheck, batchDistance_L2,
 
     generateData(queryDescriptors, trainDescriptors, sourceType);
 
+    declare.time(50);
     TEST_CYCLE()
     {
         batchDistance(queryDescriptors, trainDescriptors, dist, CV_32F, (isCrossCheck) ? ndix : noArray(),
@@ -118,6 +119,7 @@ PERF_TEST_P(Norm_CrossCheck, batchDistance_32F,
     Mat ndix;
 
     generateData(queryDescriptors, trainDescriptors, CV_32F);
+    declare.time(100);
 
     TEST_CYCLE()
     {
@@ -148,7 +150,7 @@ void generateData( Mat& query, Mat& train, const int sourceType )
     // in ascending order. General boundaries of the perturbation
     // are (0.f, 1.f).
     train.create( query.rows*countFactor, query.cols, sourceType );
-    float step = 1.f / countFactor;
+    float step = (sourceType == CV_8U ? 256.f : 1.f) / countFactor;
     for( int qIdx = 0; qIdx < query.rows; qIdx++ )
     {
         Mat queryDescriptor = query.row(qIdx);
@@ -159,7 +161,7 @@ void generateData( Mat& query, Mat& train, const int sourceType )
             queryDescriptor.copyTo( trainDescriptor );
             int elem = rng(dim);
             float diff = rng.uniform( step*c, step*(c+1) );
-            trainDescriptor.at<float>(0, elem) += diff;
+            trainDescriptor.col(elem) += diff;
         }
     }
 }

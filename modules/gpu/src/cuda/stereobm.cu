@@ -42,9 +42,9 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace stereobm
     {
@@ -348,7 +348,7 @@ namespace cv { namespace gpu { namespace device
             int winsz2 = winsz >> 1;
 
             if (winsz2 == 0 || winsz2 >= calles_num)
-                cv::gpu::error("Unsupported window size", __FILE__, __LINE__, "stereoBM_GPU");
+                CV_Error(cv::Error::StsBadArg, "Unsupported window size");
 
             //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferL1) );
             //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferShared) );
@@ -534,7 +534,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaUnbindTexture (texForTF) );
         }
     } // namespace stereobm
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cudev
 
 
 #endif /* CUDA_DISABLER */

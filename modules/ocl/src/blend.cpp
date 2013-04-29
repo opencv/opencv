@@ -48,15 +48,7 @@
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
-#if !defined (HAVE_OPENCL)
-void cv::ocl::blendLinear(const oclMat &img1, const oclMat &img2, const oclMat &weights1, const oclMat &weights2,
-                          oclMat &result)
-{
-    throw_nogpu();
-}
-#else
 namespace cv
 {
     namespace ocl
@@ -70,32 +62,31 @@ void cv::ocl::blendLinear(const oclMat &img1, const oclMat &img2, const oclMat &
                           oclMat &result)
 {
     cv::ocl::Context *ctx = img1.clCxt;
-    assert(ctx == img2.clCxt && ctx == weights1.clCxt && ctx == weights2.clCxt);
+    CV_Assert(ctx == img2.clCxt && ctx == weights1.clCxt && ctx == weights2.clCxt);
     int channels = img1.oclchannels();
     int depth = img1.depth();
     int rows = img1.rows;
     int cols = img1.cols;
     int istep = img1.step1();
     int wstep = weights1.step1();
-    size_t globalSize[] = {cols * channels, rows, 1};
-    size_t localSize[] = {16, 16, 1};
+    size_t globalSize[] = {cols * channels / 4, rows, 1};
+    size_t localSize[] = {256, 1, 1};
 
-    vector< pair<size_t, const void *> > args;
-
+    std::vector< std::pair<size_t, const void *> > args;
+    result.create(img1.size(), CV_MAKE_TYPE(depth,img1.channels()));
     if(globalSize[0] != 0)
     {
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&result.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&img1.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&img2.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&weights1.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&weights2.data ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&istep ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&wstep ));
-        std::string kernelName = "BlendLinear";
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&result.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&img1.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&img2.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&weights1.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&weights2.data ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&rows ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&istep ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&wstep ));
+        String kernelName = "BlendLinear";
 
         openCLExecuteKernel(ctx, &blend_linear, kernelName, globalSize, localSize, args, channels, depth);
     }
 }
-#endif

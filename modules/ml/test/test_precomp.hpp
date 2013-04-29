@@ -1,16 +1,19 @@
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  pragma GCC diagnostic ignored "-Wmissing-prototypes" //OSX
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
 #endif
 
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-#include "opencv2/ts/ts.hpp"
-#include "opencv2/ml/ml.hpp"
-#include "opencv2/core/core_c.h"
 #include <iostream>
 #include <map>
+#include "opencv2/ts.hpp"
+#include "opencv2/ml.hpp"
+#include "opencv2/core/core_c.h"
 
 #define CV_NBAYES   "nbayes"
 #define CV_KNEAREST "knearest"

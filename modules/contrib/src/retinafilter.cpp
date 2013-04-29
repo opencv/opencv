@@ -206,7 +206,7 @@ namespace cv
         {
             for (j=0;j<(int)_photoreceptorsPrefilter.getNBcolumns();++j)
             {
-                float distanceToCenter=sqrt(((float)(i-halfRows)*(i-halfRows)+(j-halfColumns)*(j-halfColumns)));
+                float distanceToCenter=std::sqrt(((float)(i-halfRows)*(i-halfRows)+(j-halfColumns)*(j-halfColumns)));
                 if (distanceToCenter<minDistance)
                 {
                     float a=*(hybridParvoMagnoCoefTablePTR++)=0.5f+0.5f*(float)cos(CV_PI*distanceToCenter/minDistance);

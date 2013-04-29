@@ -56,7 +56,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${ANDROID_MANIFEST_FILE}" "${PACKAGE
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/res/values/strings.xml"   "${PACKAGE_DIR}/res/values/strings.xml"    @ONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/res/drawable/icon.png"   "${PACKAGE_DIR}/res/drawable/icon.png"   COPYONLY)
 
-set(target_name "OpenCV_${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}.${OPENCV_VERSION_PATCH}_binary_pack_${ANDROID_PACKAGE_PLATFORM}")
+set(target_name "OpenCV_${OPENCV_VERSION}_binary_pack_${ANDROID_PACKAGE_PLATFORM}")
 get_target_property(opencv_java_location opencv_java LOCATION)
 
 set(android_proj_target_files ${ANDROID_PROJECT_FILES})
@@ -86,7 +86,7 @@ add_custom_command(
          COMMAND ${CMAKE_COMMAND} -E touch "${APK_NAME}"
          WORKING_DIRECTORY "${PACKAGE_DIR}"
          MAIN_DEPENDENCY "${PACKAGE_DIR}/${ANDROID_MANIFEST_FILE}"
-         DEPENDS "${OpenCV_BINARY_DIR}/bin/.classes.jar.dephelper" "${PACKAGE_DIR}/res/values/strings.xml" "${PACKAGE_DIR}/res/drawable/icon.png" ${camera_wrappers} opencv_java
+         DEPENDS "${OpenCV_BINARY_DIR}/bin/classes.jar.dephelper" "${PACKAGE_DIR}/res/values/strings.xml" "${PACKAGE_DIR}/res/drawable/icon.png" ${camera_wrappers} opencv_java
        )
 
 install(FILES "${APK_NAME}" DESTINATION "apk/" COMPONENT main)

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import math, os, sys
 
 webcolors = {

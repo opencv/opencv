@@ -1,23 +1,13 @@
-#include <jni.h>
+#define LOG_TAG "org.opencv.android.Utils"
+#include "common.h"
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
 
-#ifdef ANDROID
-
+#ifdef __ANDROID__
 #include <android/bitmap.h>
 
-#include <android/log.h>
-#define LOG_TAG "org.opencv.android.Utils"
-#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
-#ifdef DEBUG
-#define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
-#else //!DEBUG
-#define LOGD(...)
-#endif //DEBUG
-
 using namespace cv;
-
 
 extern "C" {
 
@@ -54,7 +44,7 @@ JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nBitmapToMat2
                 // info.format == ANDROID_BITMAP_FORMAT_RGB_565
                 LOGD("nBitmapToMat: RGB_565 -> CV_8UC4");
                 Mat tmp(info.height, info.width, CV_8UC2, pixels);
-                cvtColor(tmp, dst, CV_BGR5652RGBA);
+                cvtColor(tmp, dst, COLOR_BGR5652RGBA);
             }
             AndroidBitmap_unlockPixels(env, bitmap);
             return;
@@ -114,10 +104,10 @@ JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap2
                 if(src.type() == CV_8UC1)
                 {
                     LOGD("nMatToBitmap: CV_8UC1 -> RGBA_8888");
-                    cvtColor(src, tmp, CV_GRAY2RGBA);
+                    cvtColor(src, tmp, COLOR_GRAY2RGBA);
                 } else if(src.type() == CV_8UC3){
                     LOGD("nMatToBitmap: CV_8UC3 -> RGBA_8888");
-                    cvtColor(src, tmp, CV_RGB2RGBA);
+                    cvtColor(src, tmp, COLOR_RGB2RGBA);
                 } else if(src.type() == CV_8UC4){
                     LOGD("nMatToBitmap: CV_8UC4 -> RGBA_8888");
                     if(needPremultiplyAlpha) cvtColor(src, tmp, COLOR_RGBA2mRGBA);
@@ -129,13 +119,13 @@ JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap2
                 if(src.type() == CV_8UC1)
                 {
                     LOGD("nMatToBitmap: CV_8UC1 -> RGB_565");
-                    cvtColor(src, tmp, CV_GRAY2BGR565);
+                    cvtColor(src, tmp, COLOR_GRAY2BGR565);
                 } else if(src.type() == CV_8UC3){
                     LOGD("nMatToBitmap: CV_8UC3 -> RGB_565");
-                    cvtColor(src, tmp, CV_RGB2BGR565);
+                    cvtColor(src, tmp, COLOR_RGB2BGR565);
                 } else if(src.type() == CV_8UC4){
                     LOGD("nMatToBitmap: CV_8UC4 -> RGB_565");
-                    cvtColor(src, tmp, CV_RGBA2BGR565);
+                    cvtColor(src, tmp, COLOR_RGBA2BGR565);
                 }
             }
             AndroidBitmap_unlockPixels(env, bitmap);
@@ -168,4 +158,4 @@ JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap
 
 } // extern "C"
 
-#endif //ANDROID
+#endif //__ANDROID__

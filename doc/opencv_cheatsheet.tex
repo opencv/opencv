@@ -67,6 +67,7 @@
 \usepackage[pdftex]{color,graphicx}
 \usepackage[landscape]{geometry}
 \usepackage{hyperref}
+\usepackage[T1]{fontenc}
 \hypersetup{colorlinks=true, filecolor=black, linkcolor=black, urlcolor=blue, citecolor=black}
 \graphicspath{{./images/}}
 
@@ -214,7 +215,7 @@
 \> \texttt{for(int y = 1; y < image.rows-1; y++) \{}\\
 \> \> \texttt{Vec3b* prevRow = image.ptr<Vec3b>(y-1);}\\
 \> \> \texttt{Vec3b* nextRow = image.ptr<Vec3b>(y+1);}\\
-\> \> \texttt{for(int x = 0; y < image.cols; x++)}\\
+\> \> \texttt{for(int x = 0; x < image.cols; x++)}\\
 \> \> \> \texttt{for(int c = 0; c < 3; c++)}\\
 \> \> \> \texttt{  dyImage.at<Vec3b>(y,x)[c] =}\\
 \> \> \> \texttt{    saturate\_cast<uchar>(}\\

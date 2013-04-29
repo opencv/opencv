@@ -30,13 +30,11 @@ circle
 ----------
 Draws a circle.
 
-.. ocv:function:: void circle(Mat& img, Point center, int radius, const Scalar& color, int thickness=1, int lineType=8, int shift=0)
+.. ocv:function:: void circle( Mat& img, Point center, int radius, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
-.. ocv:pyfunction:: cv2.circle(img, center, radius, color[, thickness[, lineType[, shift]]]) -> None
+.. ocv:pyfunction:: cv2.circle(img, center, radius, color[, thickness[, lineType[, shift]]]) -> img
 
 .. ocv:cfunction:: void cvCircle( CvArr* img, CvPoint center, int radius, CvScalar color, int thickness=1, int line_type=8, int shift=0 )
-
-.. ocv:pyoldfunction:: cv.Circle(img, center, radius, color, thickness=1, lineType=8, shift=0)-> None
 
     :param img: Image where the circle is drawn.
 
@@ -66,8 +64,6 @@ Clips the line against the image rectangle.
 
 .. ocv:cfunction:: int cvClipLine( CvSize img_size, CvPoint* pt1, CvPoint* pt2 )
 
-.. ocv:pyoldfunction:: cv.ClipLine(imgSize, pt1, pt2) -> (point1, point2)
-
     :param imgSize: Image size. The image rectangle is  ``Rect(0, 0, imgSize.width, imgSize.height)`` .
 
     :param imgRect: Image rectangle.
@@ -83,20 +79,17 @@ ellipse
 -----------
 Draws a simple or thick elliptic arc or fills an ellipse sector.
 
-.. ocv:function:: void ellipse(Mat& img, Point center, Size axes,             double angle, double startAngle, double endAngle,             const Scalar& color, int thickness=1,             int lineType=8, int shift=0)
+.. ocv:function:: void ellipse( Mat& img, Point center, Size axes, double angle, double startAngle, double endAngle, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
-.. ocv:function:: void ellipse(Mat& img, const RotatedRect& box, const Scalar& color,             int thickness=1, int lineType=8)
+.. ocv:function:: void ellipse( Mat& img, const RotatedRect& box, const Scalar& color, int thickness=1, int lineType=LINE_8 )
 
-.. ocv:pyfunction:: cv2.ellipse(img, center, axes, angle, startAngle, endAngle, color[, thickness[, lineType[, shift]]]) -> None
-.. ocv:pyfunction:: cv2.ellipse(img, box, color[, thickness[, lineType]]) -> None
+.. ocv:pyfunction:: cv2.ellipse(img, center, axes, angle, startAngle, endAngle, color[, thickness[, lineType[, shift]]]) -> img
+
+.. ocv:pyfunction:: cv2.ellipse(img, box, color[, thickness[, lineType]]) -> img
 
 .. ocv:cfunction:: void cvEllipse( CvArr* img, CvPoint center, CvSize axes, double angle, double start_angle, double end_angle, CvScalar color, int thickness=1, int line_type=8, int shift=0 )
 
-.. ocv:pyoldfunction:: cv.Ellipse(img, center, axes, angle, start_angle, end_angle, color, thickness=1, lineType=8, shift=0)-> None
-
 .. ocv:cfunction:: void cvEllipseBox( CvArr* img, CvBox2D box, CvScalar color, int thickness=1, int line_type=8, int shift=0 )
-
-.. ocv:pyoldfunction:: cv.EllipseBox(img, box, color, thickness=1, lineType=8, shift=0)-> None
 
     :param img: Image.
 
@@ -161,13 +154,13 @@ fillConvexPoly
 ------------------
 Fills a convex polygon.
 
-.. ocv:function:: void fillConvexPoly(Mat& img, const Point* pts, int npts, const Scalar& color, int lineType=8, int shift=0)
+.. ocv:function:: void fillConvexPoly( Mat& img, const Point* pts, int npts, const Scalar& color, int lineType=LINE_8, int shift=0 )
 
-.. ocv:pyfunction:: cv2.fillConvexPoly(img, points, color[, lineType[, shift]]) -> None
+.. ocv:function:: void fillConvexPoly( InputOutputArray img, InputArray points, const Scalar& color, int lineType=LINE_8, int shift=0 )
+
+.. ocv:pyfunction:: cv2.fillConvexPoly(img, points, color[, lineType[, shift]]) -> img
 
 .. ocv:cfunction:: void cvFillConvexPoly( CvArr* img, const CvPoint* pts, int npts, CvScalar color, int line_type=8, int shift=0 )
-
-.. ocv:pyoldfunction:: cv.FillConvexPoly(img, pn, color, lineType=8, shift=0)-> None
 
     :param img: Image.
 
@@ -191,13 +184,13 @@ fillPoly
 ------------
 Fills the area bounded by one or more polygons.
 
-.. ocv:function:: void fillPoly(Mat& img, const Point** pts,               const int* npts, int ncontours,              const Scalar& color, int lineType=8,              int shift=0, Point offset=Point() )
+.. ocv:function:: void fillPoly( Mat& img, const Point** pts, const int* npts, int ncontours, const Scalar& color, int lineType=LINE_8, int shift=0, Point offset=Point() )
 
-.. ocv:pyfunction:: cv2.fillPoly(img, pts, color[, lineType[, shift[, offset]]]) -> None
+.. ocv:function:: void fillPoly( InputOutputArray img, InputArrayOfArrays pts, const Scalar& color, int lineType=LINE_8, int shift=0, Point offset=Point() )
+
+.. ocv:pyfunction:: cv2.fillPoly(img, pts, color[, lineType[, shift[, offset]]]) -> img
 
 .. ocv:cfunction:: void cvFillPoly( CvArr* img, CvPoint** pts, const int* npts, int contours, CvScalar color, int line_type=8, int shift=0 )
-
-.. ocv:pyoldfunction:: cv.FillPoly(img, polys, color, lineType=8, shift=0)-> None
 
     :param img: Image.
 
@@ -224,13 +217,11 @@ getTextSize
 ---------------
 Calculates the width and height of a text string.
 
-.. ocv:function:: Size getTextSize(const string& text, int fontFace, double fontScale, int thickness, int* baseLine)
+.. ocv:function:: Size getTextSize(const String& text, int fontFace, double fontScale, int thickness, int* baseLine)
 
 .. ocv:pyfunction:: cv2.getTextSize(text, fontFace, fontScale, thickness) -> retval, baseLine
 
 .. ocv:cfunction:: void cvGetTextSize( const char* text_string, const CvFont* font, CvSize* text_size, int* baseline )
-
-.. ocv:pyoldfunction:: cv.GetTextSize(textString, font)-> (textSize, baseline)
 
     :param text: Input text string.
 
@@ -245,8 +236,7 @@ Calculates the width and height of a text string.
 The function ``getTextSize`` calculates and returns the size of a box that contains the specified text.
 That is, the following code renders some text, the tight box surrounding it, and the baseline: ::
 
-    // Use "y" to show that the baseLine is about
-    string text = "Funny text inside the box";
+    String text = "Funny text inside the box";
     int fontFace = FONT_HERSHEY_SCRIPT_SIMPLEX;
     double fontScale = 2;
     int thickness = 3;
@@ -330,13 +320,11 @@ line
 --------
 Draws a line segment connecting two points.
 
-.. ocv:function:: void line(Mat& img, Point pt1, Point pt2, const Scalar& color,          int thickness=1, int lineType=8, int shift=0)
+.. ocv:function:: void line( Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
-.. ocv:pyfunction:: cv2.line(img, pt1, pt2, color[, thickness[, lineType[, shift]]]) -> None
+.. ocv:pyfunction:: cv2.line(img, pt1, pt2, color[, thickness[, lineType[, shift]]]) -> img
 
 .. ocv:cfunction:: void cvLine( CvArr* img, CvPoint pt1, CvPoint pt2, CvScalar color, int thickness=1, int line_type=8, int shift=0 )
-
-.. ocv:pyoldfunction:: cv.Line(img, pt1, pt2, color, thickness=1, lineType=8, shift=0)-> None
 
     :param img: Image.
 
@@ -418,15 +406,13 @@ rectangle
 -------------
 Draws a simple, thick, or filled up-right rectangle.
 
-.. ocv:function:: void rectangle(Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness=1, int lineType=8, int shift=0)
+.. ocv:function:: void rectangle( Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
-.. ocv:function:: void rectangle( Mat& img, Rect rec, const Scalar& color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:function:: void rectangle( Mat& img, Rect rec, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
-.. ocv:pyfunction:: cv2.rectangle(img, pt1, pt2, color[, thickness[, lineType[, shift]]]) -> None
+.. ocv:pyfunction:: cv2.rectangle(img, pt1, pt2, color[, thickness[, lineType[, shift]]]) -> img
 
 .. ocv:cfunction:: void cvRectangle( CvArr* img, CvPoint pt1, CvPoint pt2, CvScalar color, int thickness=1, int line_type=8, int shift=0 )
-
-.. ocv:pyoldfunction:: cv.Rectangle(img, pt1, pt2, color, thickness=1, lineType=8, shift=0)-> None
 
     :param img: Image.
 
@@ -452,15 +438,13 @@ polylines
 -------------
 Draws several polygonal curves.
 
-.. ocv:function:: void polylines( Mat& img, const Point* const* pts, const int* npts, int ncontours, bool isClosed, const Scalar& color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:function:: void polylines( Mat& img, const Point* const* pts, const int* npts, int ncontours, bool isClosed, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
-.. ocv:function:: void polylines( InputOutputArray img, InputArrayOfArrays pts, bool isClosed, const Scalar& color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:function:: void polylines( InputOutputArray img, InputArrayOfArrays pts, bool isClosed, const Scalar& color, int thickness=1, int lineType=LINE_8, int shift=0 )
 
-.. ocv:pyfunction:: cv2.polylines(img, pts, isClosed, color[, thickness[, lineType[, shift]]]) -> None
+.. ocv:pyfunction:: cv2.polylines(img, pts, isClosed, color[, thickness[, lineType[, shift]]]) -> img
 
 .. ocv:cfunction:: void cvPolyLine( CvArr* img, CvPoint** pts, const int* npts, int contours, int is_closed, CvScalar color, int thickness=1, int line_type=8, int shift=0 )
-
-.. ocv:pyoldfunction:: cv.PolyLine(img, polys, is_closed, color, thickness=1, lineType=8, shift=0) -> None
 
     :param img: Image.
 
@@ -487,13 +471,11 @@ drawContours
 ----------------
 Draws contours outlines or filled contours.
 
-.. ocv:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours, int contourIdx, const Scalar& color, int thickness=1, int lineType=8, InputArray hierarchy=noArray(), int maxLevel=INT_MAX, Point offset=Point() )
+.. ocv:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours, int contourIdx, const Scalar& color, int thickness=1, int lineType=LINE_8, InputArray hierarchy=noArray(), int maxLevel=INT_MAX, Point offset=Point() )
 
-.. ocv:pyfunction:: cv2.drawContours(image, contours, contourIdx, color[, thickness[, lineType[, hierarchy[, maxLevel[, offset]]]]]) -> None
+.. ocv:pyfunction:: cv2.drawContours(image, contours, contourIdx, color[, thickness[, lineType[, hierarchy[, maxLevel[, offset]]]]]) -> image
 
 .. ocv:cfunction:: void cvDrawContours( CvArr * img, CvSeq* contour, CvScalar external_color, CvScalar hole_color, int max_level, int thickness=1, int line_type=8, CvPoint offset=cvPoint(0,0) )
-
-.. ocv:pyoldfunction:: cv.DrawContours(img, contour, external_color, hole_color, max_level, thickness=1, lineType=8, offset=(0, 0))-> None
 
     :param image: Destination image.
 
@@ -525,10 +507,11 @@ The function draws contour outlines in the image if
 :math:`\texttt{thickness} \ge 0` or fills the area bounded by the contours if
 :math:`\texttt{thickness}<0` . The example below shows how to retrieve connected components from the binary image and label them: ::
 
-    #include "cv.h"
-    #include "highgui.h"
+    #include "opencv2/imgproc.hpp"
+    #include "opencv2/highgui.hpp"
 
     using namespace cv;
+    using namespace std;
 
     int main( int argc, char** argv )
     {
@@ -548,7 +531,7 @@ The function draws contour outlines in the image if
         vector<Vec4i> hierarchy;
 
         findContours( src, contours, hierarchy,
-            CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
+            RETR_CCOMP, CHAIN_APPROX_SIMPLE );
 
         // iterate through all the top-level contours,
         // draw each connected component with its own random color
@@ -556,7 +539,7 @@ The function draws contour outlines in the image if
         for( ; idx >= 0; idx = hierarchy[idx][0] )
         {
             Scalar color( rand()&255, rand()&255, rand()&255 );
-            drawContours( dst, contours, idx, color, CV_FILLED, 8, hierarchy );
+            drawContours( dst, contours, idx, color, FILLED, 8, hierarchy );
         }
 
         namedWindow( "Components", 1 );
@@ -570,12 +553,11 @@ putText
 -----------
 Draws a text string.
 
-.. ocv:function:: void putText( Mat& img, const string& text, Point org,              int fontFace, double fontScale, Scalar color,              int thickness=1, int lineType=8,              bool bottomLeftOrigin=false )
+.. ocv:function:: void putText( Mat& img, const String& text, Point org, int fontFace, double fontScale, Scalar color, int thickness=1, int lineType=LINE_8, bool bottomLeftOrigin=false )
 
 .. ocv:pyfunction:: cv2.putText(img, text, org, fontFace, fontScale, color[, thickness[, lineType[, bottomLeftOrigin]]]) -> None
 
 .. ocv:cfunction:: void cvPutText( CvArr* img, const char* text, CvPoint org, const CvFont* font, CvScalar color )
-.. ocv:pyoldfunction:: cv.PutText(img, text, org, font, color)-> None
 
     :param img: Image.
 

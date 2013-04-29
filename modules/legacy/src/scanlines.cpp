@@ -1125,7 +1125,7 @@ icvBuildScanlineLeft( CvMatrix3 * matrix,
     CvMatrix3 *F;
     float i;
     int offset;
-    float epiline[3];
+    float epiline[3] = {0,};
     double a, b;
 
     assert( l_start_end != 0 );
@@ -1211,7 +1211,7 @@ icvBuildScanlineRight( CvMatrix3 * matrix,
     CvMatrix3 *F;
     float i;
     int offset;
-    float epiline[3];
+    float epiline[3] = {0,};
     double a, b;
 
     assert( r_start_end != 0 );
@@ -1389,7 +1389,9 @@ icvGetCoefficientStereo( CvMatrix3 * matrix,
     float l_angle[2], r_angle[2];
     float l_radius, r_radius;
     float r_point[3], l_point[3];
-    float l_epiline[3], r_epiline[3], x, y;
+    float l_epiline[3] = {0,};
+    float r_epiline[3] = {0,};
+    float x, y;
     float swap;
 
     float radius1, radius2, radius3, radius4;
@@ -1731,8 +1733,8 @@ icvBuildScanlineLeftStereo( CvSize imgSize,
     float delta;
     float angle;
     float l_point[3];
-    float l_epiline[3];
-    float r_epiline[3];
+    float l_epiline[3] = {0,};
+    float r_epiline[3] = {0,};
     CvStatus error = CV_OK;
     CvMatrix3 *F;
 
@@ -1819,8 +1821,8 @@ icvBuildScanlineRightStereo( CvSize imgSize,
     float delta;
     float angle;
     float r_point[3];
-    float l_epiline[3];
-    float r_epiline[3];
+    float l_epiline[3] = {0,};
+    float r_epiline[3] = {0,};
     CvStatus error = CV_OK;
     CvMatrix3 *F;
 

@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -45,56 +46,59 @@
 *                                       Watershed                                        *
 \****************************************************************************************/
 
-typedef struct CvWSNode
+namespace cv
 {
-    struct CvWSNode* next;
+
+struct WSNode
+{
+    int next;
     int mask_ofs;
     int img_ofs;
-}
-CvWSNode;
+};
 
-typedef struct CvWSQueue
+struct WSQueue
 {
-    CvWSNode* first;
-    CvWSNode* last;
-}
-CvWSQueue;
+    WSQueue() { first = last = 0; }
+    int first, last;
+};
 
-static CvWSNode*
-icvAllocWSNodes( CvMemStorage* storage )
+
+static int
+allocWSNodes( std::vector<WSNode>& storage )
 {
-    CvWSNode* n = 0;
+    int sz = (int)storage.size();
+    int newsz = MAX(128, sz*3/2);
 
-    int i, count = (storage->block_size - sizeof(CvMemBlock))/sizeof(*n) - 1;
+    storage.resize(newsz);
+    if( sz == 0 )
+    {
+        storage[0].next = 0;
+        sz = 1;
+    }
+    for( int i = sz; i < newsz-1; i++ )
+        storage[i].next = i+1;
+    storage[newsz-1].next = 0;
+    return sz;
+}
 
-    n = (CvWSNode*)cvMemStorageAlloc( storage, count*sizeof(*n) );
-    for( i = 0; i < count-1; i++ )
-        n[i].next = n + i + 1;
-    n[count-1].next = 0;
-
-    return n;
 }
 
 
-CV_IMPL void
-cvWatershed( const CvArr* srcarr, CvArr* dstarr )
+void cv::watershed( InputArray _src, InputOutputArray _markers )
 {
     const int IN_QUEUE = -2;
     const int WSHED = -1;
     const int NQ = 256;
-    cv::Ptr<CvMemStorage> storage;
 
-    CvMat sstub, *src;
-    CvMat dstub, *dst;
-    CvSize size;
-    CvWSNode* free_node = 0, *node;
-    CvWSQueue q[NQ];
+    Mat src = _src.getMat(), dst = _markers.getMat();
+    Size size = src.size();
+
+    std::vector<WSNode> storage;
+    int free_node = 0, node;
+    WSQueue q[NQ];
     int active_queue;
     int i, j;
     int db, dg, dr;
-    int* mask;
-    uchar* img;
-    int mstep, istep;
     int subs_tab[513];
 
     // MAX(a,b) = b + MAX(a-b,0)
@@ -102,66 +106,51 @@ cvWatershed( const CvArr* srcarr, CvArr* dstarr )
     // MIN(a,b) = a - MAX(a-b,0)
     #define ws_min(a,b) ((a) - subs_tab[(a)-(b)+NQ])
 
-    #define ws_push(idx,mofs,iofs)  \
-    {                               \
-        if( !free_node )            \
-            free_node = icvAllocWSNodes( storage );\
-        node = free_node;           \
-        free_node = free_node->next;\
-        node->next = 0;             \
-        node->mask_ofs = mofs;      \
-        node->img_ofs = iofs;       \
-        if( q[idx].last )           \
-            q[idx].last->next=node; \
-        else                        \
-            q[idx].first = node;    \
-        q[idx].last = node;         \
+    #define ws_push(idx,mofs,iofs)          \
+    {                                       \
+        if( !free_node )                    \
+            free_node = allocWSNodes( storage );\
+        node = free_node;                   \
+        free_node = storage[free_node].next;\
+        storage[node].next = 0;             \
+        storage[node].mask_ofs = mofs;      \
+        storage[node].img_ofs = iofs;       \
+        if( q[idx].last )                   \
+            storage[q[idx].last].next=node; \
+        else                                \
+            q[idx].first = node;            \
+        q[idx].last = node;                 \
     }
 
-    #define ws_pop(idx,mofs,iofs)   \
-    {                               \
-        node = q[idx].first;        \
-        q[idx].first = node->next;  \
-        if( !node->next )           \
-            q[idx].last = 0;        \
-        node->next = free_node;     \
-        free_node = node;           \
-        mofs = node->mask_ofs;      \
-        iofs = node->img_ofs;       \
+    #define ws_pop(idx,mofs,iofs)           \
+    {                                       \
+        node = q[idx].first;                \
+        q[idx].first = storage[node].next;  \
+        if( !storage[node].next )           \
+            q[idx].last = 0;                \
+        storage[node].next = free_node;     \
+        free_node = node;                   \
+        mofs = storage[node].mask_ofs;      \
+        iofs = storage[node].img_ofs;       \
     }
 
-    #define c_diff(ptr1,ptr2,diff)      \
-    {                                   \
-        db = abs((ptr1)[0] - (ptr2)[0]);\
-        dg = abs((ptr1)[1] - (ptr2)[1]);\
-        dr = abs((ptr1)[2] - (ptr2)[2]);\
-        diff = ws_max(db,dg);           \
-        diff = ws_max(diff,dr);         \
-        assert( 0 <= diff && diff <= 255 ); \
+    #define c_diff(ptr1,ptr2,diff)           \
+    {                                        \
+        db = std::abs((ptr1)[0] - (ptr2)[0]);\
+        dg = std::abs((ptr1)[1] - (ptr2)[1]);\
+        dr = std::abs((ptr1)[2] - (ptr2)[2]);\
+        diff = ws_max(db,dg);                \
+        diff = ws_max(diff,dr);              \
+        assert( 0 <= diff && diff <= 255 );  \
     }
 
-    src = cvGetMat( srcarr, &sstub );
-    dst = cvGetMat( dstarr, &dstub );
+    CV_Assert( src.type() == CV_8UC3 && dst.type() == CV_32SC1 );
+    CV_Assert( src.size() == dst.size() );
 
-    if( CV_MAT_TYPE(src->type) != CV_8UC3 )
-        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 3-channel input images are supported" );
-
-    if( CV_MAT_TYPE(dst->type) != CV_32SC1 )
-        CV_Error( CV_StsUnsupportedFormat,
-            "Only 32-bit, 1-channel output images are supported" );
-
-    if( !CV_ARE_SIZES_EQ( src, dst ))
-        CV_Error( CV_StsUnmatchedSizes, "The input and output images must have the same size" );
-
-    size = cvGetMatSize(src);
-    storage = cvCreateMemStorage();
-
-    istep = src->step;
-    img = src->data.ptr;
-    mstep = dst->step / sizeof(mask[0]);
-    mask = dst->data.i;
-
-    memset( q, 0, NQ*sizeof(q[0]) );
+    const uchar* img = src.data;
+    int istep = int(src.step/sizeof(img[0]));
+    int* mask = dst.ptr<int>();
+    int mstep = int(dst.step / sizeof(mask[0]));
 
     for( i = 0; i < 256; i++ )
         subs_tab[i] = 0;
@@ -185,7 +174,7 @@ cvWatershed( const CvArr* srcarr, CvArr* dstarr )
             if( m[0] < 0 ) m[0] = 0;
             if( m[0] == 0 && (m[-1] > 0 || m[1] > 0 || m[-mstep] > 0 || m[mstep] > 0) )
             {
-                uchar* ptr = img + j*3;
+                const uchar* ptr = img + j*3;
                 int idx = 256, t;
                 if( m[-1] > 0 )
                     c_diff( ptr, ptr - 3, idx );
@@ -221,8 +210,8 @@ cvWatershed( const CvArr* srcarr, CvArr* dstarr )
         return;
 
     active_queue = i;
-    img = src->data.ptr;
-    mask = dst->data.i;
+    img = src.data;
+    mask = dst.ptr<int>();
 
     // recursively fill the basins
     for(;;)
@@ -230,7 +219,7 @@ cvWatershed( const CvArr* srcarr, CvArr* dstarr )
         int mofs, iofs;
         int lab = 0, t;
         int* m;
-        uchar* ptr;
+        const uchar* ptr;
 
         if( q[active_queue].first == 0 )
         {
@@ -303,23 +292,23 @@ cvWatershed( const CvArr* srcarr, CvArr* dstarr )
 }
 
 
-void cv::watershed( InputArray _src, InputOutputArray markers )
-{
-    Mat src = _src.getMat();
-    CvMat c_src = _src.getMat(), c_markers = markers.getMat();
-    cvWatershed( &c_src, &c_markers );
-}
-
-
 /****************************************************************************************\
 *                                         Meanshift                                      *
 \****************************************************************************************/
 
-CV_IMPL void
-cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
-                         double sp0, double sr, int max_level,
-                         CvTermCriteria termcrit )
+
+void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
+                                double sp0, double sr, int max_level,
+                                TermCriteria termcrit )
 {
+    Mat src0 = _src.getMat();
+
+    if( src0.empty() )
+        return;
+
+    _dst.create( src0.size(), src0.type() );
+    Mat dst0 = _dst.getMat();
+
     const int cn = 3;
     const int MAX_LEVELS = 8;
 
@@ -338,8 +327,7 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
     double sr2 = sr * sr;
     int isr2 = cvRound(sr2), isr22 = MAX(isr2,16);
     int tab[768];
-    cv::Mat src0 = cv::cvarrToMat(srcarr);
-    cv::Mat dst0 = cv::cvarrToMat(dstarr);
+    
 
     if( src0.type() != CV_8UC3 )
         CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 3-channel images are supported" );
@@ -351,9 +339,9 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
         CV_Error( CV_StsUnmatchedSizes, "The input and output images must have the same size" );
 
     if( !(termcrit.type & CV_TERMCRIT_ITER) )
-        termcrit.max_iter = 5;
-    termcrit.max_iter = MAX(termcrit.max_iter,1);
-    termcrit.max_iter = MIN(termcrit.max_iter,100);
+        termcrit.maxCount = 5;
+    termcrit.maxCount = MAX(termcrit.maxCount,1);
+    termcrit.maxCount = MIN(termcrit.maxCount,100);
     if( !(termcrit.type & CV_TERMCRIT_EPS) )
         termcrit.epsilon = 1.f;
     termcrit.epsilon = MAX(termcrit.epsilon, 0.f);
@@ -435,7 +423,7 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
                 c0 = sptr[0], c1 = sptr[1], c2 = sptr[2];
 
                 // iterate meanshift procedure
-                for( iter = 0; iter < termcrit.max_iter; iter++ )
+                for( iter = 0; iter < termcrit.maxCount; iter++ )
                 {
                     uchar* ptr;
                     int x, y, count = 0;
@@ -507,7 +495,7 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
                     s1 = cvRound(s1*icount);
                     s2 = cvRound(s2*icount);
 
-                    stop_flag = (x0 == x1 && y0 == y1) || abs(x1-x0) + abs(y1-y0) +
+                    stop_flag = (x0 == x1 && y0 == y1) || std::abs(x1-x0) + std::abs(y1-y0) +
                         tab[s0 - c0 + 255] + tab[s1 - c1 + 255] +
                         tab[s2 - c2 + 255] <= termcrit.epsilon;
 
@@ -526,16 +514,24 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
     }
 }
 
-void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
-                                double sp, double sr, int maxLevel,
-                                TermCriteria termcrit )
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+CV_IMPL void cvWatershed( const CvArr* _src, CvArr* _markers )
 {
-    Mat src = _src.getMat();
-
-    if( src.empty() )
-        return;
-
-    _dst.create( src.size(), src.type() );
-    CvMat c_src = src, c_dst = _dst.getMat();
-    cvPyrMeanShiftFiltering( &c_src, &c_dst, sp, sr, maxLevel, termcrit );
+    cv::Mat src = cv::cvarrToMat(_src), markers = cv::cvarrToMat(_markers);
+    cv::watershed(src, markers);
 }
+
+
+CV_IMPL void
+cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
+                        double sp0, double sr, int max_level,
+                        CvTermCriteria termcrit )
+{
+    cv::Mat src = cv::cvarrToMat(srcarr);
+    const cv::Mat dst = cv::cvarrToMat(dstarr);
+
+    cv::pyrMeanShiftFiltering(src, dst, sp0, sr, max_level, termcrit);
+}
+

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
     ocv domain, a modified copy of sphinx.domains.cpp + shpinx.domains.python.
@@ -265,10 +266,6 @@ class OCVPyModulelevel(OCVPyObject):
             return _('%s (in module %s)') % (name_cls[0], modname)
         else:
             return ''
-
-class OCVPyOldModulelevel(OCVPyModulelevel):
-    directive_prefix = 'pyold'
-    pass
 
 class OCVPyXRefRole(XRefRole):
     def process_link(self, env, refnode, has_explicit_title, title, target):
@@ -991,6 +988,11 @@ class DefinitionParser(object):
         return rv
 
     def _parse_signature(self):
+        if r'CvStatModel::train' in self.definition:
+            # hack to skip parsing of problematic definition
+            self.pos = self.end
+            return [ArgumentDefExpr("const Mat&", "train_data", None), ArgumentDefExpr(None, self.definition[self.definition.find("["):-1], None)], False, True
+
         self.skip_ws()
         if not self.skip_string('('):
             self.fail('expected parentheses for function')
@@ -1066,6 +1068,17 @@ class DefinitionParser(object):
     def parse_member_object(self):
         visibility, static = self._parse_visibility_static()
         typename = self._parse_type()
+        name = self._parse_type()
+        self.skip_ws()
+        if self.skip_string('='):
+            value = self.read_rest().strip()
+        else:
+            value = None
+        return MemberObjDefExpr(name, visibility, static, typename, value)
+
+    def parse_enum_member_object(self):
+        visibility, static = self._parse_visibility_static()
+        typename = None
         name = self._parse_type()
         self.skip_ws()
         if self.skip_string('='):
@@ -1179,6 +1192,8 @@ class OCVObject(ObjectDescription):
     def add_target_and_index(self, sigobj, sig, signode):
         theid = sig#obj.get_id()
         theid = re.sub(r" +", " ", theid)
+        if self.objtype == 'emember':
+            theid = re.sub(r" ?=.*", "", theid)
         theid = re.sub(r"=[^,()]+\([^)]*?\)[^,)]*(,|\))", "\\1", theid)
         theid = re.sub(r"=\w*[^,)(]+(,|\))", "\\1", theid)
         theid = theid.replace("( ", "(").replace(" )", ")")
@@ -1292,6 +1307,25 @@ class OCVTypeObject(OCVObject):
             signode += nodes.Text(' ')
         self.attach_name(signode, obj.name)
 
+class OCVEnumObject(OCVObject):
+
+    def get_index_text(self, name):
+        if self.objtype == 'enum':
+            return _('%s (enum)') % name
+        return ''
+
+    def parse_definition(self, parser):
+        return parser.parse_type_object()
+
+    def describe_signature(self, signode, obj):
+        self.attach_modifiers(signode, obj)
+        signode += addnodes.desc_annotation('enum ', 'enum ')
+        if obj.typename is not None:
+            self.attach_type(signode, obj.typename)
+            signode += nodes.Text(' ')
+        self.attach_name(signode, obj.name)
+
+
 class OCVMemberObject(OCVObject):
     ismember = True
 
@@ -1308,11 +1342,19 @@ class OCVMemberObject(OCVObject):
 
     def describe_signature(self, signode, obj):
         self.attach_modifiers(signode, obj)
-        self.attach_type(signode, obj.typename)
-        signode += nodes.Text(' ')
+        if obj.typename:
+            self.attach_type(signode, obj.typename)
+            signode += nodes.Text(' ')
         self.attach_name(signode, obj.name)
         if obj.value is not None:
             signode += nodes.Text(u' = ' + obj.value)
+
+class OCVEnumMemberObject(OCVMemberObject):
+    def parse_definition(self, parser):
+        # parent_class = self.env.temp_data.get('ocv:parent')
+        # if parent_class is None:
+        #     parser.fail("missing parent structure/class")
+        return parser.parse_enum_member_object()
 
 class OCVFunctionObject(OCVObject):
 
@@ -1445,9 +1487,10 @@ class OCVDomain(Domain):
         'cfunction': ObjType(l_('cfunction'), 'cfunc', 'cfuncx'),
         'jfunction': ObjType(l_('jfunction'), 'jfunc', 'jfuncx'),
         'pyfunction': ObjType(l_('pyfunction'), 'pyfunc'),
-        'pyoldfunction': ObjType(l_('pyoldfunction'), 'pyoldfunc'),
         'member':   ObjType(l_('member'),   'member'),
-        'type':     ObjType(l_('type'),     'type')
+        'emember':   ObjType(l_('emember'),   'emember'),
+        'type':     ObjType(l_('type'),     'type'),
+        'enum':     ObjType(l_('enum'),     'enum')
     }
 
     directives = {
@@ -1457,9 +1500,10 @@ class OCVDomain(Domain):
         'cfunction':    OCVCFunctionObject,
         'jfunction':    OCVJavaFunctionObject,
         'pyfunction':   OCVPyModulelevel,
-        'pyoldfunction':   OCVPyOldModulelevel,
         'member':       OCVMemberObject,
+        'emember':      OCVEnumMemberObject,
         'type':         OCVTypeObject,
+        'enum':         OCVEnumObject,
         'namespace':    OCVCurrentNamespace
     }
     roles = {
@@ -1472,9 +1516,10 @@ class OCVDomain(Domain):
         'jfunc' :  OCVXRefRole(fix_parens=True),
         'jfuncx' :  OCVXRefRole(),
         'pyfunc' :  OCVPyXRefRole(),
-        'pyoldfunc' :  OCVPyXRefRole(),
         'member': OCVXRefRole(),
-        'type':   OCVXRefRole()
+        'emember': OCVXRefRole(),
+        'type':   OCVXRefRole(),
+        'enum':   OCVXRefRole()
     }
     initial_data = {
         'objects': {},  # fullname -> docname, objtype
@@ -1560,9 +1605,10 @@ class OCVDomain(Domain):
             'cfunction':     _('C function'),
             'jfunction':     _('Java method'),
             'pyfunction':    _('Python function'),
-            'pyoldfunction': _('Legacy Python function'),
             'member':        _('C++ member'),
+            'emember':       _('enum member'),
             'type':          _('C/C++ type'),
+            'enum':          _('C/C++ enum'),
             'namespace':     _('C++ namespace'),
             }.get(type.lname, _('%s %s') % (self.label, type.lname))
 

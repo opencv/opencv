@@ -42,11 +42,13 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/limits.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
+#include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
+#include "opencv2/core/cuda/functional.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace stereocsbp
     {
@@ -144,7 +146,7 @@ namespace cv { namespace gpu { namespace device
 
                 for(int i = 0; i < nr_plane; i++)
                 {
-                    T minimum = device::numeric_limits<T>::max();
+                    T minimum = cudev::numeric_limits<T>::max();
                     int id = 0;
                     for(int d = 0; d < cndisp; d++)
                     {
@@ -297,28 +299,13 @@ namespace cv { namespace gpu { namespace device
                 }
 
                 extern __shared__ float smem[];
-                float* dline = smem + winsz * threadIdx.z;
 
-                dline[tid] = val;
-
-                __syncthreads();
-
-                if (winsz >= 256) { if (tid < 128) { dline[tid] += dline[tid + 128]; } __syncthreads(); }
-                if (winsz >= 128) { if (tid <  64) { dline[tid] += dline[tid + 64]; } __syncthreads(); }
-
-                volatile float* vdline = smem + winsz * threadIdx.z;
-
-                if (winsz >= 64) if (tid < 32) vdline[tid] += vdline[tid + 32];
-                if (winsz >= 32) if (tid < 16) vdline[tid] += vdline[tid + 16];
-                if (winsz >= 16) if (tid <  8) vdline[tid] += vdline[tid + 8];
-                if (winsz >=  8) if (tid <  4) vdline[tid] += vdline[tid + 4];
-                if (winsz >=  4) if (tid <  2) vdline[tid] += vdline[tid + 2];
-                if (winsz >=  2) if (tid <  1) vdline[tid] += vdline[tid + 1];
+                reduce<winsz>(smem + winsz * threadIdx.z, val, tid, plus<float>());
 
                 T* data_cost = (T*)ctemp + y_out * cmsg_step + x_out;
 
                 if (tid == 0)
-                    data_cost[cdisp_step1 * d] = saturate_cast<T>(dline[0]);
+                    data_cost[cdisp_step1 * d] = saturate_cast<T>(val);
             }
         }
 
@@ -337,7 +324,7 @@ namespace cv { namespace gpu { namespace device
             case 1: init_data_cost<T, 1><<<grid, threads, 0, stream>>>(h, w, level); break;
             case 3: init_data_cost<T, 3><<<grid, threads, 0, stream>>>(h, w, level); break;
             case 4: init_data_cost<T, 4><<<grid, threads, 0, stream>>>(h, w, level); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "init_data_cost_caller_");
+            default: CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
         }
 
@@ -356,7 +343,7 @@ namespace cv { namespace gpu { namespace device
             case 1: init_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
             case 3: init_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
             case 4: init_data_cost_reduce<T, winsz, 4><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "init_data_cost_reduce_caller_");
+            default: CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
         }
 
@@ -496,26 +483,11 @@ namespace cv { namespace gpu { namespace device
                 }
 
                 extern __shared__ float smem[];
-                float* dline = smem + winsz * threadIdx.z;
 
-                dline[tid] = val;
-
-                __syncthreads();
-
-                if (winsz >= 256) { if (tid < 128) { dline[tid] += dline[tid + 128]; } __syncthreads(); }
-                if (winsz >= 128) { if (tid <  64) { dline[tid] += dline[tid +  64]; } __syncthreads(); }
-
-                volatile float* vdline = smem + winsz * threadIdx.z;
-
-                if (winsz >= 64) if (tid < 32) vdline[tid] += vdline[tid + 32];
-                if (winsz >= 32) if (tid < 16) vdline[tid] += vdline[tid + 16];
-                if (winsz >= 16) if (tid <  8) vdline[tid] += vdline[tid + 8];
-                if (winsz >=  8) if (tid <  4) vdline[tid] += vdline[tid + 4];
-                if (winsz >=  4) if (tid <  2) vdline[tid] += vdline[tid + 2];
-                if (winsz >=  2) if (tid <  1) vdline[tid] += vdline[tid + 1];
+                reduce<winsz>(smem + winsz * threadIdx.z, val, tid, plus<float>());
 
                 if (tid == 0)
-                    data_cost[cdisp_step1 * d] = saturate_cast<T>(dline[0]);
+                    data_cost[cdisp_step1 * d] = saturate_cast<T>(val);
             }
         }
 
@@ -534,7 +506,7 @@ namespace cv { namespace gpu { namespace device
             case 1: compute_data_cost<T, 1><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
             case 3: compute_data_cost<T, 3><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
             case 4: compute_data_cost<T, 4><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "compute_data_cost_caller_");
+            default: CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
         }
 
@@ -554,7 +526,7 @@ namespace cv { namespace gpu { namespace device
             case 1: compute_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
             case 3: compute_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
             case 4: compute_data_cost_reduce<T, winsz, 4><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "compute_data_cost_reduce_caller_");
+            default: CV_Error(cv::Error::BadNumChannels, "Unsupported channels count");
             }
         }
 
@@ -887,6 +859,6 @@ namespace cv { namespace gpu { namespace device
         template void compute_disp(const float* u, const float* d, const float* l, const float* r, const float* data_cost_selected, const float* disp_selected, size_t msg_step,
             const PtrStepSz<short>& disp, int nr_plane, cudaStream_t stream);
     } // namespace stereocsbp
-}}} // namespace cv { namespace gpu { namespace device {
+}}} // namespace cv { namespace gpu { namespace cudev {
 
 #endif /* CUDA_DISABLER */

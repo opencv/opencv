@@ -83,9 +83,9 @@ namespace cv
     };
   }
 
-  namespace device
+  namespace cuda
   {
-      using pcl::gpu::TextureBinder;
+      using cv::gpu::TextureBinder;
   }
 }
 

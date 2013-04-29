@@ -4,13 +4,20 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/ocl/ocl.hpp"
+
+#include "opencv2/highgui/highgui_c.h"
+
 #include <iostream>
 #include <stdio.h>
+
+int main( int, const char** ) { return 0; }
+
+#if 0
 
 using namespace std;
 using namespace cv;
 
-void help()
+static void help()
 {
     cout << "\nThis program demonstrates the cascade recognizer.\n"
         "This classifier can recognize many ~rigid objects, it's most known use is for faces.\n"
@@ -23,22 +30,24 @@ void help()
         "Hit any key to quit.\n"
         "Using OpenCV version " << CV_VERSION << "\n" << endl;
 }
+
+
 struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } };
 void detectAndDraw( Mat& img,
     cv::ocl::OclCascadeClassifier& cascade, CascadeClassifier& nestedCascade,
     double scale);
 
-String cascadeName = "../../../data/haarcascades/haarcascade_frontalface_alt.xml";
+string cascadeName = "../../../data/haarcascades/haarcascade_frontalface_alt.xml";
 
 int main( int argc, const char** argv )
 {
     CvCapture* capture = 0;
     Mat frame, frameCopy, image;
-    const String scaleOpt = "--scale=";
+    const string scaleOpt = "--scale=";
     size_t scaleOptLen = scaleOpt.length();
-    const String cascadeOpt = "--cascade=";
+    const string cascadeOpt = "--cascade=";
     size_t cascadeOptLen = cascadeOpt.length();
-    String inputName;
+    string inputName;
 
     help();
     cv::ocl::OclCascadeClassifier cascade;
@@ -114,7 +123,7 @@ int main( int argc, const char** argv )
         for(;;)
         {
             IplImage* iplImg = cvQueryFrame( capture );
-            frame = iplImg;
+            frame = cv::cvarrToMat(iplImg);
             if( frame.empty() )
                 break;
             if( iplImg->origin == IPL_ORIGIN_TL )
@@ -180,7 +189,7 @@ _cleanup_:
 }
 
 void detectAndDraw( Mat& img,
-    cv::ocl::OclCascadeClassifier& cascade, CascadeClassifier& nestedCascade,
+    cv::ocl::OclCascadeClassifier& cascade, CascadeClassifier&,
     double scale)
 {
     int i = 0;
@@ -197,7 +206,7 @@ void detectAndDraw( Mat& img,
     cv::ocl::oclMat image(img);
     cv::ocl::oclMat gray, smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
 
-    cv::ocl::cvtColor( image, gray, CV_BGR2GRAY );
+    cv::ocl::cvtColor( image, gray, COLOR_BGR2GRAY );
     cv::ocl::resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
     cv::ocl::equalizeHist( smallImg, smallImg );
 
@@ -227,3 +236,4 @@ void detectAndDraw( Mat& img,
     }
     cv::imshow( "result", img );
 }
+#endif

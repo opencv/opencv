@@ -128,6 +128,10 @@
 // Low-level types and utilities for porting Google Test to various
 // platforms.  They are subject to change without notice.  DO NOT USE
 // THEM IN USER CODE.
+//
+// This file is fundamental to Google Test.  All other Google Test source
+// files are expected to #include this.  Therefore, it cannot #include
+// any other Google Test header.
 
 #ifndef GTEST_INCLUDE_GTEST_INTERNAL_GTEST_PORT_H_
 #define GTEST_INCLUDE_GTEST_INTERNAL_GTEST_PORT_H_
@@ -168,6 +172,8 @@
 //                              Test's own tr1 tuple implementation should be
 //                              used.  Unused when the user sets
 //                              GTEST_HAS_TR1_TUPLE to 0.
+//   GTEST_LANG_CXX11         - Define it to 1/0 to indicate that Google Test
+//                              is building in C++11/C++98 mode.
 //   GTEST_LINKED_AS_SHARED_LIBRARY
 //                            - Define to 1 when compiling tests that use
 //                              Google Test as a shared library (known as
@@ -186,6 +192,8 @@
 //   GTEST_OS_LINUX    - Linux
 //     GTEST_OS_LINUX_ANDROID - Google Android
 //   GTEST_OS_MAC      - Mac OS X
+//     GTEST_OS_IOS    - iOS
+//       GTEST_OS_IOS_SIMULATOR - iOS simulator
 //   GTEST_OS_NACL     - Google Native Client (NaCl)
 //   GTEST_OS_OPENBSD  - OpenBSD
 //   GTEST_OS_QNX      - QNX
@@ -291,6 +299,11 @@
 # include <sys/stat.h>
 #endif  // !_WIN32_WCE
 
+#if defined __APPLE__
+# include <AvailabilityMacros.h>
+# include <TargetConditionals.h>
+#endif
+
 #include <iostream>  // NOLINT
 #include <sstream>  // NOLINT
 #include <string>  // NOLINT
@@ -326,6 +339,8 @@
 #define GTEST_OS_NACL 0
 #define GTEST_OS_OPENBSD 0
 #define GTEST_OS_QNX 0
+#define GTEST_OS_IOS 0
+#define GTEST_OS_IOS_SIMULATOR 0
 
 #ifdef __CYGWIN__
 # undef GTEST_OS_CYGWIN
@@ -349,13 +364,21 @@
 #elif defined __APPLE__
 # undef GTEST_OS_MAC
 # define GTEST_OS_MAC 1
+# if TARGET_OS_IPHONE
+#  undef GTEST_OS_IOS
+#  define GTEST_OS_IOS 1
+#  if TARGET_IPHONE_SIMULATOR
+#   undef GTEST_OS_IOS_SIMULATOR
+#   define GTEST_OS_IOS_SIMULATOR 1
+#  endif
+# endif
 #elif defined __linux__
 # undef GTEST_OS_LINUX
 # define GTEST_OS_LINUX 1
-# ifdef ANDROID
+# if defined __ANDROID__
 #  undef GTEST_OS_LINUX_ANDROID
 #  define GTEST_OS_LINUX_ANDROID 1
-# endif  // ANDROID
+# endif
 #elif defined __MVS__
 # undef GTEST_OS_ZOS
 # define GTEST_OS_ZOS 1
@@ -379,6 +402,19 @@
 # define GTEST_OS_QNX 1
 #endif  // __CYGWIN__
 
+#ifndef GTEST_LANG_CXX11
+// gcc and clang define __GXX_EXPERIMENTAL_CXX0X__ when
+// -std={c,gnu}++{0x,11} is passed.  The C++11 standard specifies a
+// value for __cplusplus, and recent versions of clang, gcc, and
+// probably other compilers set that too in C++11 mode.
+# if defined __GXX_EXPERIMENTAL_CXX0X__ || __cplusplus >= 201103L
+// Compiling in at least C++11 mode.
+#  define GTEST_LANG_CXX11 1
+# else
+#  define GTEST_LANG_CXX11 0
+# endif
+#endif
+
 // Brings in definitions for functions used in the testing::internal::posix
 // namespace (read, write, close, chdir, isatty, stat). We do not currently
 // use them on Windows Mobile.
@@ -387,20 +423,25 @@
 // is not the case, we need to include headers that provide the functions
 // mentioned above.
 # include <unistd.h>
-# if !GTEST_OS_NACL
-// TODO(vladl@google.com): Remove this condition when Native Client SDK adds
-// strings.h (tracked in
-// http://code.google.com/p/nativeclient/issues/detail?id=1175).
-#  include <strings.h>  // Native Client doesn't provide strings.h.
-# endif
+# include <strings.h>
 #elif !GTEST_OS_WINDOWS_MOBILE
 # include <direct.h>
 # include <io.h>
 #endif
 
+#if GTEST_OS_LINUX_ANDROID
+// Used to define __ANDROID_API__ matching the target NDK API level.
+#  include <android/api-level.h>  // NOLINT
+#endif
+
 // Defines this to true iff Google Test can use POSIX regular expressions.
 #ifndef GTEST_HAS_POSIX_RE
+# if GTEST_OS_LINUX_ANDROID
+// On Android, <regex.h> is only available starting with Froyo.
+#  define GTEST_HAS_POSIX_RE (__ANDROID_API__ >= 8)
+# else
 # define GTEST_HAS_POSIX_RE (!GTEST_OS_WINDOWS)
+#endif
 #endif
 
 #if GTEST_HAS_POSIX_RE
@@ -411,7 +452,7 @@
 // <stddef.h>.
 # include <regex.h>  // NOLINT
 
-# define GTEST_USES_POSIX_RE  1
+# define GTEST_USES_POSIX_RE 1
 # define GTEST_USES_SIMPLE_RE 0
 
 #elif GTEST_OS_WINDOWS
@@ -518,7 +559,16 @@
 # elif defined(__GNUC__) && (GTEST_GCC_VER_ >= 40302)
 
 #  ifdef __GXX_RTTI
+// When building against STLport with the Android NDK and with
+// -frtti -fno-exceptions, the build fails at link time with undefined
+// references to __cxa_bad_typeid. Note sure if STL or toolchain bug,
+// so disable RTTI when detected.
+#   if GTEST_OS_LINUX_ANDROID && defined(_STLPORT_MAJOR) && \
+       !defined(__EXCEPTIONS)
+#    define GTEST_HAS_RTTI 0
+#   else
 #   define GTEST_HAS_RTTI 1
+#   endif  // GTEST_OS_LINUX_ANDROID && _STLPORT_MAJOR && !__EXCEPTIONS
 #  else
 #   define GTEST_HAS_RTTI 0
 #  endif  // __GXX_RTTI
@@ -579,8 +629,13 @@
 // this macro to 0 to prevent Google Test from using tuple (any
 // feature depending on tuple with be disabled in this mode).
 #ifndef GTEST_HAS_TR1_TUPLE
+# if GTEST_OS_LINUX_ANDROID && defined(_STLPORT_MAJOR)
+// STLport, provided with the Android NDK, has neither <tr1/tuple> or <tuple>.
+#  define GTEST_HAS_TR1_TUPLE 0
+# else
 // The user didn't tell us not to do it, so we assume it's OK.
 # define GTEST_HAS_TR1_TUPLE 1
+# endif
 #endif  // GTEST_HAS_TR1_TUPLE
 
 // Determines whether Google Test's own tr1 tuple implementation
@@ -589,18 +644,38 @@
 // The user didn't tell us, so we need to figure it out.
 
 // We use our own TR1 tuple if we aren't sure the user has an
-// implementation of it already.  At this time, GCC 4.0.0+ and MSVC
-// 2010 are the only mainstream compilers that come with a TR1 tuple
-// implementation.  NVIDIA's CUDA NVCC compiler pretends to be GCC by
-// defining __GNUC__ and friends, but cannot compile GCC's tuple
-// implementation.  MSVC 2008 (9.0) provides TR1 tuple in a 323 MB
-// Feature Pack download, which we cannot assume the user has.
-// QNX's QCC compiler is a modified GCC but it doesn't support TR1 tuple.
+// implementation of it already.  At this time, libstdc++ 4.0.0+ and
+// MSVC 2010 are the only mainstream standard libraries that come
+// with a TR1 tuple implementation.  NVIDIA's CUDA NVCC compiler
+// pretends to be GCC by defining __GNUC__ and friends, but cannot
+// compile GCC's tuple implementation.  MSVC 2008 (9.0) provides TR1
+// tuple in a 323 MB Feature Pack download, which we cannot assume the
+// user has.  QNX's QCC compiler is a modified GCC but it doesn't
+// support TR1 tuple.  libc++ only provides std::tuple, in C++11 mode,
+// and it can be used with some compilers that define __GNUC__.
 # if (defined(__GNUC__) && !defined(__CUDACC__) && (GTEST_GCC_VER_ >= 40000) \
-      && !GTEST_OS_QNX) || _MSC_VER >= 1600
+      && !GTEST_OS_QNX && !defined(_LIBCPP_VERSION)) && !defined(_STLPORT_MAJOR) \
+      || (defined(_MSC_VER) && _MSC_VER >= 1600)
+#  define GTEST_ENV_HAS_TR1_TUPLE_ 1
+# else
+#  define GTEST_ENV_HAS_TR1_TUPLE_ 0
+# endif
+
+// C++11 specifies that <tuple> provides std::tuple. Use that if gtest is used
+// in C++11 mode and libstdc++ isn't very old (binaries targeting OS X 10.6
+// can build with clang but need to use gcc4.2's libstdc++).
+# if GTEST_LANG_CXX11 && (!defined(__GLIBCXX__) || __GLIBCXX__ > 20110325)
+#  define GTEST_ENV_HAS_STD_TUPLE_ 1
+# else
+#  define GTEST_ENV_HAS_STD_TUPLE_ 0
+# endif
+
+# if GTEST_ENV_HAS_TR1_TUPLE_ || GTEST_ENV_HAS_STD_TUPLE_
 #  define GTEST_USE_OWN_TR1_TUPLE 0
 # else
 #  define GTEST_USE_OWN_TR1_TUPLE 1
+#  undef  GTEST_HAS_TR1_TUPLE
+#  define GTEST_HAS_TR1_TUPLE 1
 # endif
 
 #endif  // GTEST_USE_OWN_TR1_TUPLE
@@ -1623,6 +1698,22 @@ inline bool operator!=(const GTEST_10_TUPLE_(T)& t,
 #undef GTEST_TUPLE_ELEMENT_
 
 #endif  // GTEST_INCLUDE_GTEST_INTERNAL_GTEST_TUPLE_H_
+# elif GTEST_ENV_HAS_STD_TUPLE_
+#  include <tuple>
+// C++11 puts its tuple into the ::std namespace rather than
+// ::std::tr1.  gtest expects tuple to live in ::std::tr1, so put it there.
+// This causes undefined behavior, but supported compilers react in
+// the way we intend.
+namespace std {
+namespace tr1 {
+using ::std::get;
+using ::std::make_tuple;
+using ::std::tuple;
+using ::std::tuple_element;
+using ::std::tuple_size;
+}
+}
+
 # elif GTEST_OS_SYMBIAN
 
 // On Symbian, BOOST_HAS_TR1_TUPLE causes Boost's TR1 tuple library to
@@ -1654,21 +1745,7 @@ inline bool operator!=(const GTEST_10_TUPLE_(T)& t,
 #   undef _TR1_FUNCTIONAL  // Allows the user to #include
                         // <tr1/functional> if he chooses to.
 #  else
-#  if defined (__cplusplus) && __cplusplus > 199711L
-#   include <tuple>
-namespace std {
-    namespace tr1 {
-        using std::tuple;
-        using std::tuple_element;
-        using std::get;
-        using std::tuple_size;
-        using std::make_tuple;
-    }
-}
-#  else
 #   include <tr1/tuple>  // NOLINT
-#  endif
-
 #  endif  // !GTEST_HAS_RTTI && GTEST_GCC_VER_ < 40302
 
 # else
@@ -1687,7 +1764,16 @@ namespace std {
 // The user didn't tell us, so we need to figure it out.
 
 # if GTEST_OS_LINUX && !defined(__ia64__)
+#  if GTEST_OS_LINUX_ANDROID
+// On Android, clone() is only available on ARM starting with Gingerbread.
+#    if (defined(__arm__) || defined(__mips__)) && __ANDROID_API__ >= 9
+#     define GTEST_HAS_CLONE 1
+#    else
+#     define GTEST_HAS_CLONE 0
+#    endif
+#  else
 #  define GTEST_HAS_CLONE 1
+#  endif
 # else
 #  define GTEST_HAS_CLONE 0
 # endif  // GTEST_OS_LINUX && !defined(__ia64__)
@@ -1710,7 +1796,8 @@ namespace std {
 // Google Test does not support death tests for VC 7.1 and earlier as
 // abort() in a VC 7.1 application compiled as GUI in debug config
 // pops up a dialog window that cannot be suppressed programmatically.
-#if (GTEST_OS_LINUX || GTEST_OS_MAC || GTEST_OS_CYGWIN || GTEST_OS_SOLARIS || \
+#if (GTEST_OS_LINUX || GTEST_OS_CYGWIN || GTEST_OS_SOLARIS || \
+     (GTEST_OS_MAC && !GTEST_OS_IOS) || GTEST_OS_IOS_SIMULATOR || \
      (GTEST_OS_WINDOWS_DESKTOP && _MSC_VER >= 1400) || \
      GTEST_OS_WINDOWS_MINGW || GTEST_OS_AIX || GTEST_OS_HPUX || \
      GTEST_OS_OPENBSD || GTEST_OS_QNX)
@@ -1859,7 +1946,10 @@ class Message;
 
 namespace internal {
 
-class String;
+// A secret type that Google Test users don't know about.  It has no
+// definition on purpose.  Therefore it's impossible to create a
+// Secret object, which is what we want.
+class Secret;
 
 // The GTEST_COMPILE_ASSERT_ macro can be used to verify that a compile time
 // expression is true. For example, you could use it to verify the
@@ -1881,8 +1971,8 @@ struct CompileAssert {
 };
 
 #define GTEST_COMPILE_ASSERT_(expr, msg) \
-  typedef ::testing::internal::CompileAssert<(bool(expr))> \
-      msg[bool(expr) ? 1 : -1]
+  typedef ::testing::internal::CompileAssert<(static_cast<bool>(expr))> \
+      msg[static_cast<bool>(expr) ? 1 : -1] GTEST_ATTRIBUTE_UNUSED_
 
 // Implementation details of GTEST_COMPILE_ASSERT_:
 //
@@ -2043,10 +2133,9 @@ class GTEST_API_ RE {
  private:
   void Init(const char* regex);
 
-  // We use a const char* instead of a string, as Google Test may be used
-  // where string is not available.  We also do not use Google Test's own
-  // String type here, in order to simplify dependencies between the
-  // files.
+  // We use a const char* instead of an std::string, as Google Test used to be
+  // used where std::string is not available.  TODO(wan@google.com): change to
+  // std::string.
   const char* pattern_;
   bool is_valid_;
 
@@ -2229,9 +2318,9 @@ Derived* CheckedDowncastToActualType(Base* base) {
 //   GetCapturedStderr - stops capturing stderr and returns the captured string.
 //
 GTEST_API_ void CaptureStdout();
-GTEST_API_ String GetCapturedStdout();
+GTEST_API_ std::string GetCapturedStdout();
 GTEST_API_ void CaptureStderr();
-GTEST_API_ String GetCapturedStderr();
+GTEST_API_ std::string GetCapturedStderr();
 
 #endif  // GTEST_HAS_STREAM_REDIRECTION
 
@@ -2982,7 +3071,7 @@ typedef TypeWithSize<8>::Int TimeInMillis;  // Represents time in milliseconds.
 #define GTEST_DECLARE_int32_(name) \
     GTEST_API_ extern ::testing::internal::Int32 GTEST_FLAG(name)
 #define GTEST_DECLARE_string_(name) \
-    GTEST_API_ extern ::testing::internal::String GTEST_FLAG(name)
+    GTEST_API_ extern ::std::string GTEST_FLAG(name)
 
 // Macros for defining flags.
 #define GTEST_DEFINE_bool_(name, default_val, doc) \
@@ -2990,7 +3079,7 @@ typedef TypeWithSize<8>::Int TimeInMillis;  // Represents time in milliseconds.
 #define GTEST_DEFINE_int32_(name, default_val, doc) \
     GTEST_API_ ::testing::internal::Int32 GTEST_FLAG(name) = (default_val)
 #define GTEST_DEFINE_string_(name, default_val, doc) \
-    GTEST_API_ ::testing::internal::String GTEST_FLAG(name) = (default_val)
+    GTEST_API_ ::std::string GTEST_FLAG(name) = (default_val)
 
 // Thread annotations
 #define GTEST_EXCLUSIVE_LOCK_REQUIRED_(locks)
@@ -3022,12 +3111,265 @@ const char* StringFromGTestEnv(const char* flag, const char* default_val);
 # include <unistd.h>
 #endif  // GTEST_OS_LINUX
 
+#if GTEST_HAS_EXCEPTIONS
+# include <stdexcept>
+#endif
+
 #include <ctype.h>
 #include <string.h>
 #include <iomanip>
 #include <limits>
 #include <set>
 
+// Copyright 2005, Google Inc.
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are
+// met:
+//
+//     * Redistributions of source code must retain the above copyright
+// notice, this list of conditions and the following disclaimer.
+//     * Redistributions in binary form must reproduce the above
+// copyright notice, this list of conditions and the following disclaimer
+// in the documentation and/or other materials provided with the
+// distribution.
+//     * Neither the name of Google Inc. nor the names of its
+// contributors may be used to endorse or promote products derived from
+// this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Author: wan@google.com (Zhanyong Wan)
+//
+// The Google C++ Testing Framework (Google Test)
+//
+// This header file defines the Message class.
+//
+// IMPORTANT NOTE: Due to limitation of the C++ language, we have to
+// leave some internal implementation details in this header file.
+// They are clearly marked by comments like this:
+//
+//   // INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
+//
+// Such code is NOT meant to be used by a user directly, and is subject
+// to CHANGE WITHOUT NOTICE.  Therefore DO NOT DEPEND ON IT in a user
+// program!
+
+#ifndef GTEST_INCLUDE_GTEST_GTEST_MESSAGE_H_
+#define GTEST_INCLUDE_GTEST_GTEST_MESSAGE_H_
+
+#include <limits>
+
+
+// Ensures that there is at least one operator<< in the global namespace.
+// See Message& operator<<(...) below for why.
+void operator<<(const testing::internal::Secret&, int);
+
+namespace testing {
+
+// The Message class works like an ostream repeater.
+//
+// Typical usage:
+//
+//   1. You stream a bunch of values to a Message object.
+//      It will remember the text in a stringstream.
+//   2. Then you stream the Message object to an ostream.
+//      This causes the text in the Message to be streamed
+//      to the ostream.
+//
+// For example;
+//
+//   testing::Message foo;
+//   foo << 1 << " != " << 2;
+//   std::cout << foo;
+//
+// will print "1 != 2".
+//
+// Message is not intended to be inherited from.  In particular, its
+// destructor is not virtual.
+//
+// Note that stringstream behaves differently in gcc and in MSVC.  You
+// can stream a NULL char pointer to it in the former, but not in the
+// latter (it causes an access violation if you do).  The Message
+// class hides this difference by treating a NULL char pointer as
+// "(null)".
+class GTEST_API_ Message {
+ private:
+  // The type of basic IO manipulators (endl, ends, and flush) for
+  // narrow streams.
+  typedef std::ostream& (*BasicNarrowIoManip)(std::ostream&);
+
+ public:
+  // Constructs an empty Message.
+  Message();
+
+  // Copy constructor.
+  Message(const Message& msg) : ss_(new ::std::stringstream) {  // NOLINT
+    *ss_ << msg.GetString();
+  }
+
+  // Constructs a Message from a C-string.
+  explicit Message(const char* str) : ss_(new ::std::stringstream) {
+    *ss_ << str;
+  }
+
+#if GTEST_OS_SYMBIAN
+  // Streams a value (either a pointer or not) to this object.
+  template <typename T>
+  inline Message& operator <<(const T& value) {
+    StreamHelper(typename internal::is_pointer<T>::type(), value);
+    return *this;
+  }
+#else
+  // Streams a non-pointer value to this object.
+  template <typename T>
+  inline Message& operator <<(const T& val) {
+    // Some libraries overload << for STL containers.  These
+    // overloads are defined in the global namespace instead of ::std.
+    //
+    // C++'s symbol lookup rule (i.e. Koenig lookup) says that these
+    // overloads are visible in either the std namespace or the global
+    // namespace, but not other namespaces, including the testing
+    // namespace which Google Test's Message class is in.
+    //
+    // To allow STL containers (and other types that has a << operator
+    // defined in the global namespace) to be used in Google Test
+    // assertions, testing::Message must access the custom << operator
+    // from the global namespace.  With this using declaration,
+    // overloads of << defined in the global namespace and those
+    // visible via Koenig lookup are both exposed in this function.
+    using ::operator <<;
+    *ss_ << val;
+    return *this;
+  }
+
+  // Streams a pointer value to this object.
+  //
+  // This function is an overload of the previous one.  When you
+  // stream a pointer to a Message, this definition will be used as it
+  // is more specialized.  (The C++ Standard, section
+  // [temp.func.order].)  If you stream a non-pointer, then the
+  // previous definition will be used.
+  //
+  // The reason for this overload is that streaming a NULL pointer to
+  // ostream is undefined behavior.  Depending on the compiler, you
+  // may get "0", "(nil)", "(null)", or an access violation.  To
+  // ensure consistent result across compilers, we always treat NULL
+  // as "(null)".
+  template <typename T>
+  inline Message& operator <<(T* const& pointer) {  // NOLINT
+    if (pointer == NULL) {
+      *ss_ << "(null)";
+    } else {
+      *ss_ << pointer;
+    }
+    return *this;
+  }
+#endif  // GTEST_OS_SYMBIAN
+
+  // Since the basic IO manipulators are overloaded for both narrow
+  // and wide streams, we have to provide this specialized definition
+  // of operator <<, even though its body is the same as the
+  // templatized version above.  Without this definition, streaming
+  // endl or other basic IO manipulators to Message will confuse the
+  // compiler.
+  Message& operator <<(BasicNarrowIoManip val) {
+    *ss_ << val;
+    return *this;
+  }
+
+  // Instead of 1/0, we want to see true/false for bool values.
+  Message& operator <<(bool b) {
+    return *this << (b ? "true" : "false");
+  }
+
+  // These two overloads allow streaming a wide C string to a Message
+  // using the UTF-8 encoding.
+  Message& operator <<(const wchar_t* wide_c_str);
+  Message& operator <<(wchar_t* wide_c_str);
+
+#if GTEST_HAS_STD_WSTRING
+  // Converts the given wide string to a narrow string using the UTF-8
+  // encoding, and streams the result to this Message object.
+  Message& operator <<(const ::std::wstring& wstr);
+#endif  // GTEST_HAS_STD_WSTRING
+
+#if GTEST_HAS_GLOBAL_WSTRING
+  // Converts the given wide string to a narrow string using the UTF-8
+  // encoding, and streams the result to this Message object.
+  Message& operator <<(const ::wstring& wstr);
+#endif  // GTEST_HAS_GLOBAL_WSTRING
+
+  // Gets the text streamed to this object so far as an std::string.
+  // Each '\0' character in the buffer is replaced with "\\0".
+  //
+  // INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
+  std::string GetString() const;
+
+ private:
+
+#if GTEST_OS_SYMBIAN
+  // These are needed as the Nokia Symbian Compiler cannot decide between
+  // const T& and const T* in a function template. The Nokia compiler _can_
+  // decide between class template specializations for T and T*, so a
+  // tr1::type_traits-like is_pointer works, and we can overload on that.
+  template <typename T>
+  inline void StreamHelper(internal::true_type /*is_pointer*/, T* pointer) {
+    if (pointer == NULL) {
+      *ss_ << "(null)";
+    } else {
+      *ss_ << pointer;
+    }
+  }
+  template <typename T>
+  inline void StreamHelper(internal::false_type /*is_pointer*/,
+                           const T& value) {
+    // See the comments in Message& operator <<(const T&) above for why
+    // we need this using statement.
+    using ::operator <<;
+    *ss_ << value;
+  }
+#endif  // GTEST_OS_SYMBIAN
+
+  // We'll hold the text streamed to this object here.
+  const internal::scoped_ptr< ::std::stringstream> ss_;
+
+  // We declare (but don't implement) this to prevent the compiler
+  // from implementing the assignment operator.
+  void operator=(const Message&);
+};
+
+// Streams a Message to an ostream.
+inline std::ostream& operator <<(std::ostream& os, const Message& sb) {
+  return os << sb.GetString();
+}
+
+namespace internal {
+
+// Converts a streamable value to an std::string.  A NULL pointer is
+// converted to "(null)".  When the input value is a ::string,
+// ::std::string, ::wstring, or ::std::wstring object, each NUL
+// character in it is replaced with "\\0".
+template <typename T>
+std::string StreamableToString(const T& streamable) {
+  return (Message() << streamable).GetString();
+}
+
+}  // namespace internal
+}  // namespace testing
+
+#endif  // GTEST_INCLUDE_GTEST_GTEST_MESSAGE_H_
 // Copyright 2005, Google Inc.
 // All rights reserved.
 //
@@ -3083,30 +3425,7 @@ const char* StringFromGTestEnv(const char* flag, const char* default_val);
 namespace testing {
 namespace internal {
 
-// String - a UTF-8 string class.
-//
-// For historic reasons, we don't use std::string.
-//
-// TODO(wan@google.com): replace this class with std::string or
-// implement it in terms of the latter.
-//
-// Note that String can represent both NULL and the empty string,
-// while std::string cannot represent NULL.
-//
-// NULL and the empty string are considered different.  NULL is less
-// than anything (including the empty string) except itself.
-//
-// This class only provides minimum functionality necessary for
-// implementing Google Test.  We do not intend to implement a full-fledged
-// string class here.
-//
-// Since the purpose of this class is to provide a substitute for
-// std::string on platforms where it cannot be used, we define a copy
-// constructor and assignment operators such that we don't need
-// conditional compilation in a lot of places.
-//
-// In order to make the representation efficient, the d'tor of String
-// is not virtual.  Therefore DO NOT INHERIT FROM String.
+// String - an abstract class holding static string utilities.
 class GTEST_API_ String {
  public:
   // Static utility methods
@@ -3157,7 +3476,7 @@ class GTEST_API_ String {
   // NULL will be converted to "(null)".  If an error occurred during
   // the conversion, "(failed to convert from wide string)" is
   // returned.
-  static String ShowWideCString(const wchar_t* wide_c_str);
+  static std::string ShowWideCString(const wchar_t* wide_c_str);
 
   // Compares two wide C strings.  Returns true iff they have the same
   // content.
@@ -3191,174 +3510,27 @@ class GTEST_API_ String {
   static bool CaseInsensitiveWideCStringEquals(const wchar_t* lhs,
                                                const wchar_t* rhs);
 
-  // Formats a list of arguments to a String, using the same format
-  // spec string as for printf.
-  //
-  // We do not use the StringPrintf class as it is not universally
-  // available.
-  //
-  // The result is limited to 4096 characters (including the tailing
-  // 0).  If 4096 characters are not enough to format the input,
-  // "<buffer exceeded>" is returned.
-  static String Format(const char* format, ...);
+  // Returns true iff the given string ends with the given suffix, ignoring
+  // case. Any string is considered to end with an empty suffix.
+  static bool EndsWithCaseInsensitive(
+      const std::string& str, const std::string& suffix);
 
-  // C'tors
+  // Formats an int value as "%02d".
+  static std::string FormatIntWidth2(int value);  // "%02d" for width == 2
 
-  // The default c'tor constructs a NULL string.
-  String() : c_str_(NULL), length_(0) {}
+  // Formats an int value as "%X".
+  static std::string FormatHexInt(int value);
 
-  // Constructs a String by cloning a 0-terminated C string.
-  String(const char* a_c_str) {  // NOLINT
-    if (a_c_str == NULL) {
-      c_str_ = NULL;
-      length_ = 0;
-    } else {
-      ConstructNonNull(a_c_str, strlen(a_c_str));
-    }
-  }
-
-  // Constructs a String by copying a given number of chars from a
-  // buffer.  E.g. String("hello", 3) creates the string "hel",
-  // String("a\0bcd", 4) creates "a\0bc", String(NULL, 0) creates "",
-  // and String(NULL, 1) results in access violation.
-  String(const char* buffer, size_t a_length) {
-    ConstructNonNull(buffer, a_length);
-  }
-
-  // The copy c'tor creates a new copy of the string.  The two
-  // String objects do not share content.
-  String(const String& str) : c_str_(NULL), length_(0) { *this = str; }
-
-  // D'tor.  String is intended to be a final class, so the d'tor
-  // doesn't need to be virtual.
-  ~String() { delete[] c_str_; }
-
-  // Allows a String to be implicitly converted to an ::std::string or
-  // ::string, and vice versa.  Converting a String containing a NULL
-  // pointer to ::std::string or ::string is undefined behavior.
-  // Converting a ::std::string or ::string containing an embedded NUL
-  // character to a String will result in the prefix up to the first
-  // NUL character.
-  String(const ::std::string& str) {  // NOLINT
-    ConstructNonNull(str.c_str(), str.length());
-  }
-
-  operator ::std::string() const { return ::std::string(c_str(), length()); }
-
-#if GTEST_HAS_GLOBAL_STRING
-  String(const ::string& str) {  // NOLINT
-    ConstructNonNull(str.c_str(), str.length());
-  }
-
-  operator ::string() const { return ::string(c_str(), length()); }
-#endif  // GTEST_HAS_GLOBAL_STRING
-
-  // Returns true iff this is an empty string (i.e. "").
-  bool empty() const { return (c_str() != NULL) && (length() == 0); }
-
-  // Compares this with another String.
-  // Returns < 0 if this is less than rhs, 0 if this is equal to rhs, or > 0
-  // if this is greater than rhs.
-  int Compare(const String& rhs) const;
-
-  // Returns true iff this String equals the given C string.  A NULL
-  // string and a non-NULL string are considered not equal.
-  bool operator==(const char* a_c_str) const { return Compare(a_c_str) == 0; }
-
-  // Returns true iff this String is less than the given String.  A
-  // NULL string is considered less than "".
-  bool operator<(const String& rhs) const { return Compare(rhs) < 0; }
-
-  // Returns true iff this String doesn't equal the given C string.  A NULL
-  // string and a non-NULL string are considered not equal.
-  bool operator!=(const char* a_c_str) const { return !(*this == a_c_str); }
-
-  // Returns true iff this String ends with the given suffix.  *Any*
-  // String is considered to end with a NULL or empty suffix.
-  bool EndsWith(const char* suffix) const;
-
-  // Returns true iff this String ends with the given suffix, not considering
-  // case. Any String is considered to end with a NULL or empty suffix.
-  bool EndsWithCaseInsensitive(const char* suffix) const;
-
-  // Returns the length of the encapsulated string, or 0 if the
-  // string is NULL.
-  size_t length() const { return length_; }
-
-  // Gets the 0-terminated C string this String object represents.
-  // The String object still owns the string.  Therefore the caller
-  // should NOT delete the return value.
-  const char* c_str() const { return c_str_; }
-
-  // Assigns a C string to this object.  Self-assignment works.
-  const String& operator=(const char* a_c_str) {
-    return *this = String(a_c_str);
-  }
-
-  // Assigns a String object to this object.  Self-assignment works.
-  const String& operator=(const String& rhs) {
-    if (this != &rhs) {
-      delete[] c_str_;
-      if (rhs.c_str() == NULL) {
-        c_str_ = NULL;
-        length_ = 0;
-      } else {
-        ConstructNonNull(rhs.c_str(), rhs.length());
-      }
-    }
-
-    return *this;
-  }
+  // Formats a byte as "%02X".
+  static std::string FormatByte(unsigned char value);
 
  private:
-  // Constructs a non-NULL String from the given content.  This
-  // function can only be called when c_str_ has not been allocated.
-  // ConstructNonNull(NULL, 0) results in an empty string ("").
-  // ConstructNonNull(NULL, non_zero) is undefined behavior.
-  void ConstructNonNull(const char* buffer, size_t a_length) {
-    char* const str = new char[a_length + 1];
-    memcpy(str, buffer, a_length);
-    str[a_length] = '\0';
-    c_str_ = str;
-    length_ = a_length;
-  }
-
-  const char* c_str_;
-  size_t length_;
+  String();  // Not meant to be instantiated.
 };  // class String
 
-// Streams a String to an ostream.  Each '\0' character in the String
-// is replaced with "\\0".
-inline ::std::ostream& operator<<(::std::ostream& os, const String& str) {
-  if (str.c_str() == NULL) {
-    os << "(null)";
-  } else {
-    const char* const c_str = str.c_str();
-    for (size_t i = 0; i != str.length(); i++) {
-      if (c_str[i] == '\0') {
-        os << "\\0";
-      } else {
-        os << c_str[i];
-      }
-    }
-  }
-  return os;
-}
-
-// Gets the content of the stringstream's buffer as a String.  Each '\0'
+// Gets the content of the stringstream's buffer as an std::string.  Each '\0'
 // character in the buffer is replaced with "\\0".
-GTEST_API_ String StringStreamToString(::std::stringstream* stream);
-
-// Converts a streamable value to a String.  A NULL pointer is
-// converted to "(null)".  When the input value is a ::string,
-// ::std::string, ::wstring, or ::std::wstring object, each NUL
-// character in it is replaced with "\\0".
-
-// Declared here but defined in gtest.h, so that it has access
-// to the definition of the Message class, required by the ARM
-// compiler.
-template <typename T>
-String StreamableToString(const T& streamable);
+GTEST_API_ std::string StringStreamToString(::std::stringstream* stream);
 
 }  // namespace internal
 }  // namespace testing
@@ -3426,11 +3598,7 @@ class GTEST_API_ FilePath {
   FilePath() : pathname_("") { }
   FilePath(const FilePath& rhs) : pathname_(rhs.pathname_) { }
 
-  explicit FilePath(const char* pathname) : pathname_(pathname) {
-    Normalize();
-  }
-
-  explicit FilePath(const String& pathname) : pathname_(pathname) {
+  explicit FilePath(const std::string& pathname) : pathname_(pathname) {
     Normalize();
   }
 
@@ -3443,7 +3611,7 @@ class GTEST_API_ FilePath {
     pathname_ = rhs.pathname_;
   }
 
-  String ToString() const { return pathname_; }
+  const std::string& string() const { return pathname_; }
   const char* c_str() const { return pathname_.c_str(); }
 
   // Returns the current working directory, or "" if unsuccessful.
@@ -3476,8 +3644,8 @@ class GTEST_API_ FilePath {
                                          const FilePath& base_name,
                                          const char* extension);
 
-  // Returns true iff the path is NULL or "".
-  bool IsEmpty() const { return c_str() == NULL || *c_str() == '\0'; }
+  // Returns true iff the path is "".
+  bool IsEmpty() const { return pathname_.empty(); }
 
   // If input name has a trailing separator character, removes it and returns
   // the name, otherwise return the name string unmodified.
@@ -3566,7 +3734,7 @@ class GTEST_API_ FilePath {
   // separators. Returns NULL if no path separator was found.
   const char* FindLastPathSeparator() const;
 
-  String pathname_;
+  std::string pathname_;
 };  // class FilePath
 
 }  // namespace internal
@@ -3635,7 +3803,7 @@ namespace internal {
 // NB: This function is also used in Google Mock, so don't move it inside of
 // the typed-test-only section below.
 template <typename T>
-String GetTypeName() {
+std::string GetTypeName() {
 # if GTEST_HAS_RTTI
 
   const char* const name = typeid(T).name();
@@ -3647,7 +3815,7 @@ String GetTypeName() {
   using abi::__cxa_demangle;
 #   endif  // GTEST_HAS_CXXABI_H_
   char* const readable_name = __cxa_demangle(name, 0, 0, &status);
-  const String name_str(status == 0 ? readable_name : name);
+  const std::string name_str(status == 0 ? readable_name : name);
   free(readable_name);
   return name_str;
 #  else
@@ -6915,36 +7083,6 @@ struct TypeList<Types<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13,
 #define GTEST_CONCAT_TOKEN_(foo, bar) GTEST_CONCAT_TOKEN_IMPL_(foo, bar)
 #define GTEST_CONCAT_TOKEN_IMPL_(foo, bar) foo ## bar
 
-// Google Test defines the testing::Message class to allow construction of
-// test messages via the << operator.  The idea is that anything
-// streamable to std::ostream can be streamed to a testing::Message.
-// This allows a user to use his own types in Google Test assertions by
-// overloading the << operator.
-//
-// util/gtl/stl_logging-inl.h overloads << for STL containers.  These
-// overloads cannot be defined in the std namespace, as that will be
-// undefined behavior.  Therefore, they are defined in the global
-// namespace instead.
-//
-// C++'s symbol lookup rule (i.e. Koenig lookup) says that these
-// overloads are visible in either the std namespace or the global
-// namespace, but not other namespaces, including the testing
-// namespace which Google Test's Message class is in.
-//
-// To allow STL containers (and other types that has a << operator
-// defined in the global namespace) to be used in Google Test assertions,
-// testing::Message must access the custom << operator from the global
-// namespace.  Hence this helper function.
-//
-// Note: Jeffrey Yasskin suggested an alternative fix by "using
-// ::operator<<;" in the definition of Message's operator<<.  That fix
-// doesn't require a helper function, but unfortunately doesn't
-// compile with MSVC.
-template <typename T>
-inline void GTestStreamToHelper(std::ostream* os, const T& val) {
-  *os << val;
-}
-
 class ProtocolMessage;
 namespace proto2 { class Message; }
 
@@ -6976,11 +7114,6 @@ GTEST_API_ extern int g_init_gtest_count;
 // stack trace.
 GTEST_API_ extern const char kStackTraceMarker[];
 
-// A secret type that Google Test users don't know about.  It has no
-// definition on purpose.  Therefore it's impossible to create a
-// Secret object, which is what we want.
-class Secret;
-
 // Two overloaded helpers for checking at compile time whether an
 // expression is a null pointer literal (i.e. NULL or any 0-valued
 // compile-time integral constant).  Their return values have
@@ -7011,8 +7144,33 @@ char (&IsNullLiteralHelper(...))[2];  // NOLINT
 #endif  // GTEST_ELLIPSIS_NEEDS_POD_
 
 // Appends the user-supplied message to the Google-Test-generated message.
-GTEST_API_ String AppendUserMessage(const String& gtest_msg,
-                                    const Message& user_msg);
+GTEST_API_ std::string AppendUserMessage(
+    const std::string& gtest_msg, const Message& user_msg);
+
+#if GTEST_HAS_EXCEPTIONS
+
+// This exception is thrown by (and only by) a failed Google Test
+// assertion when GTEST_FLAG(throw_on_failure) is true (if exceptions
+// are enabled).  We derive it from std::runtime_error, which is for
+// errors presumably detectable only at run time.  Since
+// std::runtime_error inherits from std::exception, many testing
+// frameworks know how to extract and print the message inside it.
+
+#ifdef _MSC_VER
+# pragma warning(push)          // Saves the current warning state.
+# pragma warning(disable:4275)  // Temporarily disables warning 4275.
+#endif  // _MSC_VER
+
+class GTEST_API_ GoogleTestFailureException : public ::std::runtime_error {
+ public:
+  explicit GoogleTestFailureException(const TestPartResult& failure);
+};
+
+#ifdef _MSC_VER
+# pragma warning(pop)           // Restores the warning state.
+#endif  // _MSC_VER
+
+#endif  // GTEST_HAS_EXCEPTIONS
 
 // A helper class for creating scoped traces in user programs.
 class GTEST_API_ ScopedTrace {
@@ -7033,16 +7191,6 @@ class GTEST_API_ ScopedTrace {
                             // c'tor and d'tor.  Therefore it doesn't
                             // need to be used otherwise.
 
-// Converts a streamable value to a String.  A NULL pointer is
-// converted to "(null)".  When the input value is a ::string,
-// ::std::string, ::wstring, or ::std::wstring object, each NUL
-// character in it is replaced with "\\0".
-// Declared here but defined in gtest.h, so that it has access
-// to the definition of the Message class, required by the ARM
-// compiler.
-template <typename T>
-String StreamableToString(const T& streamable);
-
 // Constructs and returns the message for an equality assertion
 // (e.g. ASSERT_EQ, EXPECT_STREQ, etc) failure.
 //
@@ -7060,12 +7208,12 @@ String StreamableToString(const T& streamable);
 // be inserted into the message.
 GTEST_API_ AssertionResult EqFailure(const char* expected_expression,
                                      const char* actual_expression,
-                                     const String& expected_value,
-                                     const String& actual_value,
+                                     const std::string& expected_value,
+                                     const std::string& actual_value,
                                      bool ignoring_case);
 
 // Constructs a failure message for Boolean assertions such as EXPECT_TRUE.
-GTEST_API_ String GetBoolAssertionFailureMessage(
+GTEST_API_ std::string GetBoolAssertionFailureMessage(
     const AssertionResult& assertion_result,
     const char* expression_text,
     const char* actual_predicate_value,
@@ -7140,7 +7288,7 @@ class FloatingPoint {
   // bits.  Therefore, 4 should be enough for ordinary use.
   //
   // See the following article for more details on ULP:
-  // http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm.
+  // http://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
   static const size_t kMaxUlps = 4;
 
   // Constructs a FloatingPoint from a raw floating-point number.
@@ -7341,7 +7489,7 @@ typedef void (*TearDownTestCaseFunc)();
 //   test_case_name:   name of the test case
 //   name:             name of the test
 //   type_param        the name of the test's type parameter, or NULL if
-//                     this is not  a typed or a type-parameterized test.
+//                     this is not a typed or a type-parameterized test.
 //   value_param       text representation of the test's value parameter,
 //                     or NULL if this is not a type-parameterized test.
 //   fixture_class_id: ID of the test fixture class
@@ -7351,7 +7499,8 @@ typedef void (*TearDownTestCaseFunc)();
 //                     The newly created TestInfo instance will assume
 //                     ownership of the factory object.
 GTEST_API_ TestInfo* MakeAndRegisterTestInfo(
-    const char* test_case_name, const char* name,
+    const char* test_case_name,
+    const char* name,
     const char* type_param,
     const char* value_param,
     TypeId fixture_class_id,
@@ -7411,9 +7560,9 @@ inline const char* SkipComma(const char* str) {
 
 // Returns the prefix of 'str' before the first comma in it; returns
 // the entire string if it contains no comma.
-inline String GetPrefixUntilComma(const char* str) {
+inline std::string GetPrefixUntilComma(const char* str) {
   const char* comma = strchr(str, ',');
-  return comma == NULL ? String(str) : String(str, comma - str);
+  return comma == NULL ? str : std::string(str, comma);
 }
 
 // TypeParameterizedTest<Fixture, TestSel, Types>::Register()
@@ -7439,8 +7588,8 @@ class TypeParameterizedTest {
     // First, registers the first type-parameterized test in the type
     // list.
     MakeAndRegisterTestInfo(
-        String::Format("%s%s%s/%d", prefix, prefix[0] == '\0' ? "" : "/",
-                       case_name, index).c_str(),
+        (std::string(prefix) + (prefix[0] == '\0' ? "" : "/") + case_name + "/"
+         + StreamableToString(index)).c_str(),
         GetPrefixUntilComma(test_names).c_str(),
         GetTypeName<Type>().c_str(),
         NULL,  // No value parameter.
@@ -7498,7 +7647,7 @@ class TypeParameterizedTestCase<Fixture, Templates0, Types> {
 
 #endif  // GTEST_HAS_TYPED_TEST || GTEST_HAS_TYPED_TEST_P
 
-// Returns the current OS stack trace as a String.
+// Returns the current OS stack trace as an std::string.
 //
 // The maximum number of stack frames to be included is specified by
 // the gtest_stack_trace_depth flag.  The skip_count parameter
@@ -7508,8 +7657,8 @@ class TypeParameterizedTestCase<Fixture, Templates0, Types> {
 // For example, if Foo() calls Bar(), which in turn calls
 // GetCurrentOsStackTraceExceptTop(..., 1), Foo() will be included in
 // the trace but Bar() and GetCurrentOsStackTraceExceptTop() won't.
-GTEST_API_ String GetCurrentOsStackTraceExceptTop(UnitTest* unit_test,
-                                                  int skip_count);
+GTEST_API_ std::string GetCurrentOsStackTraceExceptTop(
+    UnitTest* unit_test, int skip_count);
 
 // Helpers for suppressing warnings on unreachable code or constant
 // condition.
@@ -8185,11 +8334,11 @@ class GTEST_API_ DeathTest {
   // the last death test.
   static const char* LastMessage();
 
-  static void set_last_death_test_message(const String& message);
+  static void set_last_death_test_message(const std::string& message);
 
  private:
   // A string containing a description of the outcome of the last death test.
-  static String last_death_test_message_;
+  static std::string last_death_test_message_;
 
   GTEST_DISALLOW_COPY_AND_ASSIGN_(DeathTest);
 };
@@ -8291,7 +8440,7 @@ GTEST_API_ bool ExitedUnsuccessfully(int exit_status);
 // RUN_ALL_TESTS was called.
 class InternalRunDeathTestFlag {
  public:
-  InternalRunDeathTestFlag(const String& a_file,
+  InternalRunDeathTestFlag(const std::string& a_file,
                            int a_line,
                            int an_index,
                            int a_write_fd)
@@ -8303,13 +8452,13 @@ class InternalRunDeathTestFlag {
       posix::Close(write_fd_);
   }
 
-  String file() const { return file_; }
+  const std::string& file() const { return file_; }
   int line() const { return line_; }
   int index() const { return index_; }
   int write_fd() const { return write_fd_; }
 
  private:
-  String file_;
+  std::string file_;
   int line_;
   int index_;
   int write_fd_;
@@ -8628,234 +8777,6 @@ class GTEST_API_ KilledBySignal {
 }  // namespace testing
 
 #endif  // GTEST_INCLUDE_GTEST_GTEST_DEATH_TEST_H_
-// Copyright 2005, Google Inc.
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
-//
-//     * Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-//     * Redistributions in binary form must reproduce the above
-// copyright notice, this list of conditions and the following disclaimer
-// in the documentation and/or other materials provided with the
-// distribution.
-//     * Neither the name of Google Inc. nor the names of its
-// contributors may be used to endorse or promote products derived from
-// this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Author: wan@google.com (Zhanyong Wan)
-//
-// The Google C++ Testing Framework (Google Test)
-//
-// This header file defines the Message class.
-//
-// IMPORTANT NOTE: Due to limitation of the C++ language, we have to
-// leave some internal implementation details in this header file.
-// They are clearly marked by comments like this:
-//
-//   // INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
-//
-// Such code is NOT meant to be used by a user directly, and is subject
-// to CHANGE WITHOUT NOTICE.  Therefore DO NOT DEPEND ON IT in a user
-// program!
-
-#ifndef GTEST_INCLUDE_GTEST_GTEST_MESSAGE_H_
-#define GTEST_INCLUDE_GTEST_GTEST_MESSAGE_H_
-
-#include <limits>
-
-
-namespace testing {
-
-// The Message class works like an ostream repeater.
-//
-// Typical usage:
-//
-//   1. You stream a bunch of values to a Message object.
-//      It will remember the text in a stringstream.
-//   2. Then you stream the Message object to an ostream.
-//      This causes the text in the Message to be streamed
-//      to the ostream.
-//
-// For example;
-//
-//   testing::Message foo;
-//   foo << 1 << " != " << 2;
-//   std::cout << foo;
-//
-// will print "1 != 2".
-//
-// Message is not intended to be inherited from.  In particular, its
-// destructor is not virtual.
-//
-// Note that stringstream behaves differently in gcc and in MSVC.  You
-// can stream a NULL char pointer to it in the former, but not in the
-// latter (it causes an access violation if you do).  The Message
-// class hides this difference by treating a NULL char pointer as
-// "(null)".
-class GTEST_API_ Message {
- private:
-  // The type of basic IO manipulators (endl, ends, and flush) for
-  // narrow streams.
-  typedef std::ostream& (*BasicNarrowIoManip)(std::ostream&);
-
- public:
-  // Constructs an empty Message.
-  // We allocate the stringstream separately because otherwise each use of
-  // ASSERT/EXPECT in a procedure adds over 200 bytes to the procedure's
-  // stack frame leading to huge stack frames in some cases; gcc does not reuse
-  // the stack space.
-  Message() : ss_(new ::std::stringstream) {
-    // By default, we want there to be enough precision when printing
-    // a double to a Message.
-    *ss_ << std::setprecision(std::numeric_limits<double>::digits10 + 2);
-  }
-
-  // Copy constructor.
-  Message(const Message& msg) : ss_(new ::std::stringstream) {  // NOLINT
-    *ss_ << msg.GetString();
-  }
-
-  // Constructs a Message from a C-string.
-  explicit Message(const char* str) : ss_(new ::std::stringstream) {
-    *ss_ << str;
-  }
-
-#if GTEST_OS_SYMBIAN
-  // Streams a value (either a pointer or not) to this object.
-  template <typename T>
-  inline Message& operator <<(const T& value) {
-    StreamHelper(typename internal::is_pointer<T>::type(), value);
-    return *this;
-  }
-#else
-  // Streams a non-pointer value to this object.
-  template <typename T>
-  inline Message& operator <<(const T& val) {
-    ::GTestStreamToHelper(ss_.get(), val);
-    return *this;
-  }
-
-  // Streams a pointer value to this object.
-  //
-  // This function is an overload of the previous one.  When you
-  // stream a pointer to a Message, this definition will be used as it
-  // is more specialized.  (The C++ Standard, section
-  // [temp.func.order].)  If you stream a non-pointer, then the
-  // previous definition will be used.
-  //
-  // The reason for this overload is that streaming a NULL pointer to
-  // ostream is undefined behavior.  Depending on the compiler, you
-  // may get "0", "(nil)", "(null)", or an access violation.  To
-  // ensure consistent result across compilers, we always treat NULL
-  // as "(null)".
-  template <typename T>
-  inline Message& operator <<(T* const& pointer) {  // NOLINT
-    if (pointer == NULL) {
-      *ss_ << "(null)";
-    } else {
-      ::GTestStreamToHelper(ss_.get(), pointer);
-    }
-    return *this;
-  }
-#endif  // GTEST_OS_SYMBIAN
-
-  // Since the basic IO manipulators are overloaded for both narrow
-  // and wide streams, we have to provide this specialized definition
-  // of operator <<, even though its body is the same as the
-  // templatized version above.  Without this definition, streaming
-  // endl or other basic IO manipulators to Message will confuse the
-  // compiler.
-  Message& operator <<(BasicNarrowIoManip val) {
-    *ss_ << val;
-    return *this;
-  }
-
-  // Instead of 1/0, we want to see true/false for bool values.
-  Message& operator <<(bool b) {
-    return *this << (b ? "true" : "false");
-  }
-
-  // These two overloads allow streaming a wide C string to a Message
-  // using the UTF-8 encoding.
-  Message& operator <<(const wchar_t* wide_c_str) {
-    return *this << internal::String::ShowWideCString(wide_c_str);
-  }
-  Message& operator <<(wchar_t* wide_c_str) {
-    return *this << internal::String::ShowWideCString(wide_c_str);
-  }
-
-#if GTEST_HAS_STD_WSTRING
-  // Converts the given wide string to a narrow string using the UTF-8
-  // encoding, and streams the result to this Message object.
-  Message& operator <<(const ::std::wstring& wstr);
-#endif  // GTEST_HAS_STD_WSTRING
-
-#if GTEST_HAS_GLOBAL_WSTRING
-  // Converts the given wide string to a narrow string using the UTF-8
-  // encoding, and streams the result to this Message object.
-  Message& operator <<(const ::wstring& wstr);
-#endif  // GTEST_HAS_GLOBAL_WSTRING
-
-  // Gets the text streamed to this object so far as a String.
-  // Each '\0' character in the buffer is replaced with "\\0".
-  //
-  // INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
-  internal::String GetString() const {
-    return internal::StringStreamToString(ss_.get());
-  }
-
- private:
-
-#if GTEST_OS_SYMBIAN
-  // These are needed as the Nokia Symbian Compiler cannot decide between
-  // const T& and const T* in a function template. The Nokia compiler _can_
-  // decide between class template specializations for T and T*, so a
-  // tr1::type_traits-like is_pointer works, and we can overload on that.
-  template <typename T>
-  inline void StreamHelper(internal::true_type /*dummy*/, T* pointer) {
-    if (pointer == NULL) {
-      *ss_ << "(null)";
-    } else {
-      ::GTestStreamToHelper(ss_.get(), pointer);
-    }
-  }
-  template <typename T>
-  inline void StreamHelper(internal::false_type /*dummy*/, const T& value) {
-    ::GTestStreamToHelper(ss_.get(), value);
-  }
-#endif  // GTEST_OS_SYMBIAN
-
-  // We'll hold the text streamed to this object here.
-  const internal::scoped_ptr< ::std::stringstream> ss_;
-
-  // We declare (but don't implement) this to prevent the compiler
-  // from implementing the assignment operator.
-  void operator=(const Message&);
-};
-
-// Streams a Message to an ostream.
-inline std::ostream& operator <<(std::ostream& os, const Message& sb) {
-  return os << sb.GetString();
-}
-
-}  // namespace testing
-
-#endif  // GTEST_INCLUDE_GTEST_GTEST_MESSAGE_H_
 // This file was GENERATED by command:
 //     pump.py gtest-param-test.h.pump
 // DO NOT EDIT BY HAND!!!
@@ -10622,10 +10543,10 @@ class ParameterizedTestCaseInfo : public ParameterizedTestCaseInfoBase {
         const string& instantiation_name = gen_it->first;
         ParamGenerator<ParamType> generator((*gen_it->second)());
 
-        Message test_case_name_stream;
+        string test_case_name;
         if ( !instantiation_name.empty() )
-          test_case_name_stream << instantiation_name << "/";
-        test_case_name_stream << test_info->test_case_base_name;
+          test_case_name = instantiation_name + "/";
+        test_case_name += test_info->test_case_base_name;
 
         int i = 0;
         for (typename ParamGenerator<ParamType>::iterator param_it =
@@ -10634,7 +10555,7 @@ class ParameterizedTestCaseInfo : public ParameterizedTestCaseInfoBase {
           Message test_name_stream;
           test_name_stream << test_info->test_base_name << "/" << i;
           MakeAndRegisterTestInfo(
-              test_case_name_stream.GetString().c_str(),
+              test_case_name.c_str(),
               test_name_stream.GetString().c_str(),
               NULL,  // No type parameter.
               PrintToString(*param_it).c_str(),
@@ -17234,7 +17155,7 @@ class GTEST_API_ TestPartResult {
                  int a_line_number,
                  const char* a_message)
       : type_(a_type),
-        file_name_(a_file_name),
+        file_name_(a_file_name == NULL ? "" : a_file_name),
         line_number_(a_line_number),
         summary_(ExtractSummary(a_message)),
         message_(a_message) {
@@ -17245,7 +17166,9 @@ class GTEST_API_ TestPartResult {
 
   // Gets the name of the source file where the test part took place, or
   // NULL if it's unknown.
-  const char* file_name() const { return file_name_.c_str(); }
+  const char* file_name() const {
+    return file_name_.empty() ? NULL : file_name_.c_str();
+  }
 
   // Gets the line in the source file where the test part took place,
   // or -1 if it's unknown.
@@ -17274,16 +17197,16 @@ class GTEST_API_ TestPartResult {
 
   // Gets the summary of the failure message by omitting the stack
   // trace in it.
-  static internal::String ExtractSummary(const char* message);
+  static std::string ExtractSummary(const char* message);
 
   // The name of the source file where the test part took place, or
-  // NULL if the source file is unknown.
-  internal::String file_name_;
+  // "" if the source file is unknown.
+  std::string file_name_;
   // The line in the source file where the test part took place, or -1
   // if the line number is unknown.
   int line_number_;
-  internal::String summary_;  // The test failure summary.
-  internal::String message_;  // The test failure message.
+  std::string summary_;  // The test failure summary.
+  std::string message_;  // The test failure message.
 };
 
 // Prints a TestPartResult object.
@@ -17694,25 +17617,15 @@ class ExecDeathTest;
 class NoExecDeathTest;
 class FinalSuccessChecker;
 class GTestFlagSaver;
+class StreamingListenerTest;
 class TestResultAccessor;
 class TestEventListenersAccessor;
 class TestEventRepeater;
+class UnitTestRecordPropertyTestHelper;
 class WindowsDeathTest;
 class UnitTestImpl* GetUnitTestImpl();
 void ReportFailureInUnknownLocation(TestPartResult::Type result_type,
-                                    const String& message);
-
-// Converts a streamable value to a String.  A NULL pointer is
-// converted to "(null)".  When the input value is a ::string,
-// ::std::string, ::wstring, or ::std::wstring object, each NUL
-// character in it is replaced with "\\0".
-// Declared in gtest-internal.h but defined here, so that it has access
-// to the definition of the Message class, required by the ARM
-// compiler.
-template <typename T>
-String StreamableToString(const T& streamable) {
-  return (Message() << streamable).GetString();
-}
+                                    const std::string& message);
 
 }  // namespace internal
 
@@ -17932,20 +17845,21 @@ class GTEST_API_ Test {
   // non-fatal) failure.
   static bool HasFailure() { return HasFatalFailure() || HasNonfatalFailure(); }
 
-  // Logs a property for the current test.  Only the last value for a given
-  // key is remembered.
-  // These are public static so they can be called from utility functions
-  // that are not members of the test fixture.
-  // The arguments are const char* instead strings, as Google Test is used
-  // on platforms where string doesn't compile.
-  //
-  // Note that a driving consideration for these RecordProperty methods
-  // was to produce xml output suited to the Greenspan charting utility,
-  // which at present will only chart values that fit in a 32-bit int. It
-  // is the user's responsibility to restrict their values to 32-bit ints
-  // if they intend them to be used with Greenspan.
-  static void RecordProperty(const char* key, const char* value);
-  static void RecordProperty(const char* key, int value);
+  // Logs a property for the current test, test case, or for the entire
+  // invocation of the test program when used outside of the context of a
+  // test case.  Only the last value for a given key is remembered.  These
+  // are public static so they can be called from utility functions that are
+  // not members of the test fixture.  Calls to RecordProperty made during
+  // lifespan of the test (from the moment its constructor starts to the
+  // moment its destructor finishes) will be output in XML as attributes of
+  // the <testcase> element.  Properties recorded from fixture's
+  // SetUpTestCase or TearDownTestCase are logged as attributes of the
+  // corresponding <testsuite> element.  Calls to RecordProperty made in the
+  // global context (before or after invocation of RUN_ALL_TESTS and from
+  // SetUp/TearDown method of Environment objects registered with Google
+  // Test) will be output as attributes of the <testsuites> element.
+  static void RecordProperty(const std::string& key, const std::string& value);
+  static void RecordProperty(const std::string& key, int value);
 
  protected:
   // Creates a Test object.
@@ -18014,7 +17928,7 @@ class TestProperty {
   // C'tor.  TestProperty does NOT have a default constructor.
   // Always use this constructor (with parameters) to create a
   // TestProperty object.
-  TestProperty(const char* a_key, const char* a_value) :
+  TestProperty(const std::string& a_key, const std::string& a_value) :
     key_(a_key), value_(a_value) {
   }
 
@@ -18029,15 +17943,15 @@ class TestProperty {
   }
 
   // Sets a new value, overriding the one supplied in the constructor.
-  void SetValue(const char* new_value) {
+  void SetValue(const std::string& new_value) {
     value_ = new_value;
   }
 
  private:
   // The key supplied by the user.
-  internal::String key_;
+  std::string key_;
   // The value supplied by the user.
-  internal::String value_;
+  std::string value_;
 };
 
 // The result of a single Test.  This includes a list of
@@ -18088,6 +18002,7 @@ class GTEST_API_ TestResult {
 
  private:
   friend class TestInfo;
+  friend class TestCase;
   friend class UnitTest;
   friend class internal::DefaultGlobalTestPartResultReporter;
   friend class internal::ExecDeathTest;
@@ -18112,13 +18027,16 @@ class GTEST_API_ TestResult {
   // a non-fatal failure if invalid (e.g., if it conflicts with reserved
   // key names). If a property is already recorded for the same key, the
   // value will be updated, rather than storing multiple values for the same
-  // key.
-  void RecordProperty(const TestProperty& test_property);
+  // key.  xml_element specifies the element for which the property is being
+  // recorded and is used for validation.
+  void RecordProperty(const std::string& xml_element,
+                      const TestProperty& test_property);
 
   // Adds a failure if the key is a reserved attribute of Google Test
   // testcase tags.  Returns true if the property is valid.
   // TODO(russr): Validate attribute names are legal and human readable.
-  static bool ValidateTestProperty(const TestProperty& test_property);
+  static bool ValidateTestProperty(const std::string& xml_element,
+                                   const TestProperty& test_property);
 
   // Adds a test part result to the list.
   void AddTestPartResult(const TestPartResult& test_part_result);
@@ -18219,8 +18137,10 @@ class GTEST_API_ TestInfo {
   friend class Test;
   friend class TestCase;
   friend class internal::UnitTestImpl;
+  friend class internal::StreamingListenerTest;
   friend TestInfo* internal::MakeAndRegisterTestInfo(
-      const char* test_case_name, const char* name,
+      const char* test_case_name,
+      const char* name,
       const char* type_param,
       const char* value_param,
       internal::TypeId fixture_class_id,
@@ -18230,9 +18150,10 @@ class GTEST_API_ TestInfo {
 
   // Constructs a TestInfo object. The newly constructed instance assumes
   // ownership of the factory object.
-  TestInfo(const char* test_case_name, const char* name,
-           const char* a_type_param,
-           const char* a_value_param,
+  TestInfo(const std::string& test_case_name,
+           const std::string& name,
+           const char* a_type_param,   // NULL if not a type-parameterized test
+           const char* a_value_param,  // NULL if not a value-parameterized test
            internal::TypeId fixture_class_id,
            internal::TestFactoryBase* factory);
 
@@ -18340,6 +18261,10 @@ class GTEST_API_ TestCase {
   // total_test_count() - 1. If i is not in that range, returns NULL.
   const TestInfo* GetTestInfo(int i) const;
 
+  // Returns the TestResult that holds test properties recorded during
+  // execution of SetUpTestCase and TearDownTestCase.
+  const TestResult& ad_hoc_test_result() const { return ad_hoc_test_result_; }
+
  private:
   friend class Test;
   friend class internal::UnitTestImpl;
@@ -18409,7 +18334,7 @@ class GTEST_API_ TestCase {
   void UnshuffleTests();
 
   // Name of the test case.
-  internal::String name_;
+  std::string name_;
   // Name of the parameter type, or NULL if this is not a typed or a
   // type-parameterized test.
   const internal::scoped_ptr<const ::std::string> type_param_;
@@ -18428,6 +18353,9 @@ class GTEST_API_ TestCase {
   bool should_run_;
   // Elapsed time, in milliseconds.
   TimeInMillis elapsed_time_;
+  // Holds test properties recorded during execution of SetUpTestCase and
+  // TearDownTestCase.
+  TestResult ad_hoc_test_result_;
 
   // We disallow copying TestCases.
   GTEST_DISALLOW_COPY_AND_ASSIGN_(TestCase);
@@ -18713,6 +18641,10 @@ class GTEST_API_ UnitTest {
   // total_test_case_count() - 1. If i is not in that range, returns NULL.
   const TestCase* GetTestCase(int i) const;
 
+  // Returns the TestResult containing information on test failures and
+  // properties logged outside of individual test cases.
+  const TestResult& ad_hoc_test_result() const;
+
   // Returns the list of event listeners that can be used to track events
   // inside Google Test.
   TestEventListeners& listeners();
@@ -18736,13 +18668,16 @@ class GTEST_API_ UnitTest {
   void AddTestPartResult(TestPartResult::Type result_type,
                          const char* file_name,
                          int line_number,
-                         const internal::String& message,
-                         const internal::String& os_stack_trace)
+                         const std::string& message,
+                         const std::string& os_stack_trace)
       GTEST_LOCK_EXCLUDED_(mutex_);
 
-  // Adds a TestProperty to the current TestResult object. If the result already
-  // contains a property with the same key, the value will be updated.
-  void RecordPropertyForCurrentTest(const char* key, const char* value);
+  // Adds a TestProperty to the current TestResult object when invoked from
+  // inside a test, to current TestCase's ad_hoc_test_result_ when invoked
+  // from SetUpTestCase or TearDownTestCase, or to the global property set
+  // when invoked elsewhere.  If the result already contains a property with
+  // the same key, the value will be updated.
+  void RecordProperty(const std::string& key, const std::string& value);
 
   // Gets the i-th test case among all the test cases. i can range from 0 to
   // total_test_case_count() - 1. If i is not in that range, returns NULL.
@@ -18757,11 +18692,13 @@ class GTEST_API_ UnitTest {
   friend class Test;
   friend class internal::AssertHelper;
   friend class internal::ScopedTrace;
+  friend class internal::StreamingListenerTest;
+  friend class internal::UnitTestRecordPropertyTestHelper;
   friend Environment* AddGlobalTestEnvironment(Environment* env);
   friend internal::UnitTestImpl* internal::GetUnitTestImpl();
   friend void internal::ReportFailureInUnknownLocation(
       TestPartResult::Type result_type,
-      const internal::String& message);
+      const std::string& message);
 
   // Creates an empty UnitTest.
   UnitTest();
@@ -18923,8 +18860,8 @@ GTEST_IMPL_FORMAT_C_STRING_AS_STRING_(const wchar_t, ::std::wstring);
 //
 // INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
 template <typename T1, typename T2>
-String FormatForComparisonFailureMessage(const T1& value,
-                                         const T2& /* other_operand */) {
+std::string FormatForComparisonFailureMessage(
+    const T1& value, const T2& /* other_operand */) {
   return FormatForComparison<T1, T2>::Format(value);
 }
 
@@ -19243,7 +19180,7 @@ class GTEST_API_ AssertHelper {
     TestPartResult::Type const type;
     const char*        const file;
     int                const line;
-    String             const message;
+    std::string const message;
 
    private:
     GTEST_DISALLOW_COPY_AND_ASSIGN_(AssertHelperData);
@@ -19302,7 +19239,12 @@ class WithParamInterface {
   // references static data, to reduce the opportunity for incorrect uses
   // like writing 'WithParamInterface<bool>::GetParam()' for a test that
   // uses a fixture whose parameter type is int.
-  const ParamType& GetParam() const { return *parameter_; }
+  const ParamType& GetParam() const {
+    GTEST_CHECK_(parameter_ != NULL)
+        << "GetParam() can only be called inside a value-parameterized test "
+        << "-- did you intend to write TEST_P instead of TEST_F?";
+    return *parameter_;
+  }
 
  private:
   // Sets parameter value. The caller is responsible for making sure the value
@@ -19878,7 +19820,7 @@ AssertionResult AssertPred5Helper(const char* pred_text,
 # define ASSERT_GT(val1, val2) GTEST_ASSERT_GT(val1, val2)
 #endif
 
-// C String Comparisons.  All tests treat NULL and any non-NULL string
+// C-string Comparisons.  All tests treat NULL and any non-NULL string
 // as different.  Two NULLs are equal.
 //
 //    * {ASSERT|EXPECT}_STREQ(s1, s2):     Tests that s1 == s2
@@ -20119,15 +20061,20 @@ bool StaticAssertTypeEq() {
   GTEST_TEST_(test_fixture, test_name, test_fixture, \
               ::testing::internal::GetTypeId<test_fixture>())
 
-// Use this macro in main() to run all tests.  It returns 0 if all
+}  // namespace testing
+
+// Use this function in main() to run all tests.  It returns 0 if all
 // tests are successful, or 1 otherwise.
 //
 // RUN_ALL_TESTS() should be invoked after the command line has been
 // parsed by InitGoogleTest().
+//
+// This function was formerly a macro; thus, it is in the global
+// namespace and has an all-caps name.
+int RUN_ALL_TESTS() GTEST_MUST_USE_RESULT_;
 
-#define RUN_ALL_TESTS()\
-  (::testing::UnitTest::GetInstance()->Run())
-
-}  // namespace testing
+inline int RUN_ALL_TESTS() {
+  return ::testing::UnitTest::GetInstance()->Run();
+}
 
 #endif  // GTEST_INCLUDE_GTEST_GTEST_H_

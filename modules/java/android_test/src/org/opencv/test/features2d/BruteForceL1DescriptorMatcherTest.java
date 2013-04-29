@@ -10,11 +10,11 @@ import org.opencv.core.MatOfDMatch;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
-import org.opencv.features2d.DMatch;
+import org.opencv.core.DMatch;
 import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.FeatureDetector;
-import org.opencv.features2d.KeyPoint;
+import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
@@ -80,17 +80,17 @@ public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
     }
 
     protected void setUp() throws Exception {
+        super.setUp();
         matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_L1);
         matSize = 100;
 
         truth = new DMatch[] {
-                new DMatch(0, 1, 0, 6.9202332f),
-                new DMatch(1, 0, 0, 6.0567350f),
-                new DMatch(2, 1, 0, 2.6798587f),
-                new DMatch(3, 0, 0, 5.8991642f),
-                new DMatch(4, 0, 0, 6.1321812f)
+                new DMatch(0, 0, 0, 3.0975165f),
+                new DMatch(1, 1, 0, 3.5680308f),
+                new DMatch(2, 1, 0, 1.3722466f),
+                new DMatch(3, 1, 0, 1.3041023f),
+                new DMatch(4, 1, 0, 3.5970376f)
                 };
-        super.setUp();
     }
 
     public void testAdd() {
@@ -183,6 +183,7 @@ public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
         matcher.add(Arrays.asList(train));
 
         matcher.match(query, matches);
+
         assertArrayDMatchEquals(truth, matches.toArray(), EPS);
     }
 

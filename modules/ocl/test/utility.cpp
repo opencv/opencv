@@ -245,7 +245,7 @@ double checkNorm(const Mat &m1, const Mat &m2)
 double checkSimilarity(const Mat &m1, const Mat &m2)
 {
     Mat diff;
-    matchTemplate(m1, m2, diff, CV_TM_CCORR_NORMED);
+    matchTemplate(m1, m2, diff, TM_CCORR_NORMED);
     return std::abs(diff.at<float>(0, 0) - 1.f);
 }
 

@@ -13,6 +13,7 @@
 #include <iomanip>
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui/highgui_c.h"
 
 #ifdef HAVE_CUDA
 #include "NPP_staging/NPP_staging.hpp"
@@ -59,7 +60,7 @@ public:
 class RgbToR
 {
 public:
-    float operator ()(unsigned char b, unsigned char g, unsigned char r)
+    float operator ()(unsigned char /*b*/, unsigned char /*g*/, unsigned char r)
     {
         return static_cast<float>(r)/255.0f;
     }
@@ -69,7 +70,7 @@ public:
 class RgbToG
 {
 public:
-    float operator ()(unsigned char b, unsigned char g, unsigned char r)
+    float operator ()(unsigned char /*b*/, unsigned char g, unsigned char /*r*/)
     {
         return static_cast<float>(g)/255.0f;
     }
@@ -78,7 +79,7 @@ public:
 class RgbToB
 {
 public:
-    float operator ()(unsigned char b, unsigned char g, unsigned char r)
+    float operator ()(unsigned char b, unsigned char /*g*/, unsigned char /*r*/)
     {
         return static_cast<float>(b)/255.0f;
     }
@@ -135,7 +136,7 @@ NCVStatus CopyData(const IplImage *image, const NCVMatrixAlloc<Ncv32f> &dst)
     return NCV_SUCCESS;
 }
 
-NCVStatus LoadImages (const char *frame0Name,
+static NCVStatus LoadImages (const char *frame0Name,
                       const char *frame1Name,
                       int &width,
                       int &height,
@@ -186,7 +187,7 @@ inline T MapValue (T x, T a, T b, T c, T d)
     return c + (d - c) * (x - a) / (b - a);
 }
 
-NCVStatus ShowFlow (NCVMatrixAlloc<Ncv32f> &u, NCVMatrixAlloc<Ncv32f> &v, const char *name)
+static NCVStatus ShowFlow (NCVMatrixAlloc<Ncv32f> &u, NCVMatrixAlloc<Ncv32f> &v, const char *name)
 {
     IplImage *flowField;
 
@@ -246,7 +247,7 @@ NCVStatus ShowFlow (NCVMatrixAlloc<Ncv32f> &u, NCVMatrixAlloc<Ncv32f> &v, const 
     return NCV_SUCCESS;
 }
 
-IplImage *CreateImage (NCVMatrixAlloc<Ncv32f> &h_r, NCVMatrixAlloc<Ncv32f> &h_g, NCVMatrixAlloc<Ncv32f> &h_b)
+static IplImage *CreateImage (NCVMatrixAlloc<Ncv32f> &h_r, NCVMatrixAlloc<Ncv32f> &h_g, NCVMatrixAlloc<Ncv32f> &h_b)
 {
     CvSize imageSize = cvSize (h_r.width (), h_r.height ());
     IplImage *image  = cvCreateImage (imageSize, IPL_DEPTH_8U, 4);
@@ -270,7 +271,7 @@ IplImage *CreateImage (NCVMatrixAlloc<Ncv32f> &h_r, NCVMatrixAlloc<Ncv32f> &h_g,
     return image;
 }
 
-void PrintHelp ()
+static void PrintHelp ()
 {
     std::cout << "Usage help:\n";
     std::cout << std::setiosflags(std::ios::left);
@@ -286,7 +287,7 @@ void PrintHelp ()
     std::cout << "\t" << std::setw(15) << PARAM_HELP << " - display this help message\n";
 }
 
-int ProcessCommandLine(int argc, char **argv,
+static int ProcessCommandLine(int argc, char **argv,
                        Ncv32f &timeStep,
                        char *&frame0Name,
                        char *&frame1Name,

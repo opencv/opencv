@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui/highgui_c.h"
 #include <stdio.h>
 
 using namespace cv;
@@ -91,7 +91,7 @@ void CV_FramecountTest::run(int)
             FrameCount++;
         }
 
-        int framecount = (int)cvGetCaptureProperty(cap, CV_CAP_PROP_FRAME_COUNT);
+        int framecount = (int)cvGetCaptureProperty(cap, CAP_PROP_FRAME_COUNT);
 
         ts->printf(cvtest::TS::LOG, "\nFile information (video %d): \n"\
                    "\nName: big_buck_bunny.%s\nActual frame count: %d\n"\
@@ -109,6 +109,6 @@ void CV_FramecountTest::run(int)
         }
     }
 }
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT && defined HAVE_FFMPEG
 TEST(Highgui_Video, framecount) {CV_FramecountTest test; test.safe_run();}
 #endif

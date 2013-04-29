@@ -97,7 +97,8 @@ PERF_TEST_P(Size_MatType, countNonZero, testing::Combine( testing::Values( TYPIC
 
     declare.in(src, WARMUP_RNG);
 
-    TEST_CYCLE() cnt = countNonZero(src);
+    int runs = (sz.width <= 640) ? 8 : 1;
+    TEST_CYCLE_MULTIRUN(runs) cnt = countNonZero(src);
 
     SANITY_CHECK(cnt);
 }

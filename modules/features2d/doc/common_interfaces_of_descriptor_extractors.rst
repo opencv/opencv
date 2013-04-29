@@ -33,7 +33,7 @@ Abstract base class for computing descriptors for image keypoints. ::
         virtual int descriptorSize() const = 0;
         virtual int descriptorType() const = 0;
 
-        static Ptr<DescriptorExtractor> create( const string& descriptorExtractorType );
+        static Ptr<DescriptorExtractor> create( const String& descriptorExtractorType );
 
     protected:
         ...
@@ -70,7 +70,7 @@ DescriptorExtractor::create
 -------------------------------
 Creates a descriptor extractor by name.
 
-.. ocv:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const string& descriptorExtractorType )
+.. ocv:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const String& descriptorExtractorType )
 
     :param descriptorExtractorType: Descriptor extractor type.
 
@@ -79,6 +79,7 @@ The current implementation supports the following types of a descriptor extracto
  * ``"SIFT"`` -- :ocv:class:`SIFT`
  * ``"SURF"`` -- :ocv:class:`SURF`
  * ``"ORB"`` -- :ocv:class:`ORB`
+ * ``"BRISK"`` -- :ocv:class:`BRISK`
  * ``"BRIEF"`` -- :ocv:class:`BriefDescriptorExtractor`
 
 A combined format is also supported: descriptor extractor adapter name ( ``"Opponent"`` --

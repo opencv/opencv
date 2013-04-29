@@ -111,6 +111,8 @@ void CV_MomentsTest::get_test_array_types_and_sizes( int test_case_idx,
     types[INPUT][0] = CV_MAKETYPE(depth, cn);
     types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_64FC1;
     sizes[OUTPUT][0] = sizes[REF_OUTPUT][0] = cvSize(MOMENT_COUNT,1);
+    if(CV_MAT_DEPTH(types[INPUT][0])>=CV_32S)
+        sizes[INPUT][0].width = MAX(sizes[INPUT][0].width, 3);
 
     is_binary = cvtest::randInt(rng) % 2 != 0;
     coi = 0;

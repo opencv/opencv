@@ -52,16 +52,6 @@ CV_INLINE  float  icvDistanceL2_32f( CvPoint2D32f pt1, CvPoint2D32f pt2 )
 }
 
 
-int  icvIntersectLines( double x1, double dx1, double y1, double dy1,
-                        double x2, double dx2, double y2, double dy2,
-                        double* t2 );
-
-
-void icvIntersectLines3( double* a0, double* b0, double* c0,
-                         double* a1, double* b1, double* c1,
-                         CvPoint2D32f* point );
-
-
 /* curvature: 0 - 1-curvature, 1 - k-cosine curvature. */
 CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size, CvMemStorage* storage, int method );
 

@@ -74,7 +74,7 @@ TEST_P(Blend, Accuracy)
     else
         blendLinearGold<float>(img1, img2, weights1, weights2, result_gold);
 
-    EXPECT_MAT_NEAR(result_gold, result, CV_MAT_DEPTH(type) == CV_8U ? 1 : 1e-5f, NULL)
+    EXPECT_MAT_NEAR(result_gold, result, CV_MAT_DEPTH(type) == CV_8U ? 1.f : 1e-5f, 0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Blend, Combine(

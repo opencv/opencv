@@ -444,37 +444,6 @@ The call ``blur(src, dst, ksize, anchor, borderType)`` is equivalent to ``boxFil
    :ocv:func:`medianBlur`
 
 
-borderInterpolate
------------------
-Computes the source location of an extrapolated pixel.
-
-.. ocv:function:: int borderInterpolate( int p, int len, int borderType )
-
-.. ocv:pyfunction:: cv2.borderInterpolate(p, len, borderType) -> retval
-
-    :param p: 0-based coordinate of the extrapolated pixel along one of the axes, likely <0 or >= ``len`` .
-
-    :param len: Length of the array along the corresponding axis.
-
-    :param borderType: Border type, one of the  ``BORDER_*`` , except for  ``BORDER_TRANSPARENT``  and  ``BORDER_ISOLATED`` . When  ``borderType==BORDER_CONSTANT`` , the function always returns -1, regardless of  ``p``  and  ``len`` .
-
-The function computes and returns the coordinate of a donor pixel corresponding to the specified extrapolated pixel when using the specified extrapolation border mode. For example, if you use ``BORDER_WRAP`` mode in the horizontal direction, ``BORDER_REFLECT_101`` in the vertical direction and want to compute value of the "virtual" pixel ``Point(-5, 100)`` in a floating-point image ``img`` , it looks like: ::
-
-    float val = img.at<float>(borderInterpolate(100, img.rows, BORDER_REFLECT_101),
-                              borderInterpolate(-5, img.cols, BORDER_WRAP));
-
-
-Normally, the function is not called directly. It is used inside
-:ocv:class:`FilterEngine` and
-:ocv:func:`copyMakeBorder` to compute tables for quick extrapolation.
-
-.. seealso::
-
-    :ocv:class:`FilterEngine`,
-    :ocv:func:`copyMakeBorder`
-
-
-
 boxFilter
 ---------
 Blurs an image using the box filter.
@@ -486,6 +455,8 @@ Blurs an image using the box filter.
     :param src: input image.
 
     :param dst: output image of the same size and type as ``src``.
+
+    :param ddepth: the output image depth (-1 to use ``src.depth()``).
 
     :param ksize: blurring kernel size.
 
@@ -533,63 +504,6 @@ Constructs the Gaussian pyramid for an image.
 
 The function constructs a vector of images and builds the Gaussian pyramid by recursively applying
 :ocv:func:`pyrDown` to the previously built pyramid layers, starting from ``dst[0]==src`` .
-
-
-
-copyMakeBorder
---------------
-Forms a border around an image.
-
-.. ocv:function:: void copyMakeBorder( InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType, const Scalar& value=Scalar() )
-
-.. ocv:pyfunction:: cv2.copyMakeBorder(src, top, bottom, left, right, borderType[, dst[, value]]) -> dst
-
-.. ocv:cfunction:: void cvCopyMakeBorder( const CvArr* src, CvArr* dst, CvPoint offset, int bordertype, CvScalar value=cvScalarAll(0) )
-.. ocv:pyoldfunction:: cv.CopyMakeBorder(src, dst, offset, bordertype, value=(0, 0, 0, 0))-> None
-
-    :param src: Source image.
-
-    :param dst: Destination image of the same type as  ``src``  and the size  ``Size(src.cols+left+right, src.rows+top+bottom)`` .
-
-    :param top:
-
-    :param bottom:
-
-    :param left:
-
-    :param right: Parameter specifying how many pixels in each direction from the source image rectangle to extrapolate. For example,  ``top=1, bottom=1, left=1, right=1``  mean that 1 pixel-wide border needs to be built.
-
-    :param borderType: Border type. See  :ocv:func:`borderInterpolate` for details.
-
-    :param value: Border value if  ``borderType==BORDER_CONSTANT`` .
-
-The function copies the source image into the middle of the destination image. The areas to the left, to the right, above and below the copied source image will be filled with extrapolated pixels. This is not what
-:ocv:class:`FilterEngine` or filtering functions based on it do (they extrapolate pixels on-fly), but what other more complex functions, including your own, may do to simplify image boundary handling.
-
-The function supports the mode when ``src`` is already in the middle of ``dst`` . In this case, the function does not copy ``src`` itself but simply constructs the border, for example: ::
-
-    // let border be the same in all directions
-    int border=2;
-    // constructs a larger image to fit both the image and the border
-    Mat gray_buf(rgb.rows + border*2, rgb.cols + border*2, rgb.depth());
-    // select the middle part of it w/o copying data
-    Mat gray(gray_canvas, Rect(border, border, rgb.cols, rgb.rows));
-    // convert image from RGB to grayscale
-    cvtColor(rgb, gray, CV_RGB2GRAY);
-    // form a border in-place
-    copyMakeBorder(gray, gray_buf, border, border,
-                   border, border, BORDER_REPLICATE);
-    // now do some custom filtering ...
-    ...
-
-
-.. note::
-
-    When the source image is a part (ROI) of a bigger image, the function will try to use the pixels outside of the ROI to form a border. To disable this feature and always do extrapolation, as if ``src`` was not a ROI, use ``borderType | BORDER_ISOLATED``.
-
-.. seealso::
-
-    :ocv:func:`borderInterpolate`
 
 
 createBoxFilter
@@ -836,7 +750,6 @@ Dilates an image by using a specific structuring element.
 .. ocv:pyfunction:: cv2.dilate(src, kernel[, dst[, anchor[, iterations[, borderType[, borderValue]]]]]) -> dst
 
 .. ocv:cfunction:: void cvDilate( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1 )
-.. ocv:pyoldfunction:: cv.Dilate(src, dst, element=None, iterations=1)-> None
 
     :param src: input image; the number of channels can be arbitrary, but the depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
@@ -876,7 +789,6 @@ Erodes an image by using a specific structuring element.
 .. ocv:pyfunction:: cv2.erode(src, kernel[, dst[, anchor[, iterations[, borderType[, borderValue]]]]]) -> dst
 
 .. ocv:cfunction:: void cvErode( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1)
-.. ocv:pyoldfunction:: cv.Erode(src, dst, element=None, iterations=1)-> None
 
     :param src: input image; the number of channels can be arbitrary, but the depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
@@ -917,8 +829,6 @@ Convolves an image with the kernel.
 .. ocv:pyfunction:: cv2.filter2D(src, ddepth, kernel[, dst[, anchor[, delta[, borderType]]]]) -> dst
 
 .. ocv:cfunction:: void cvFilter2D( const CvArr* src, CvArr* dst, const CvMat* kernel, CvPoint anchor=cvPoint(-1,-1) )
-
-.. ocv:pyoldfunction:: cv.Filter2D(src, dst, kernel, anchor=(-1, -1))-> None
 
     :param src: input image.
 
@@ -1099,8 +1009,6 @@ Returns a structuring element of the specified size and shape for morphological 
 
 .. ocv:cfunction:: IplConvKernel* cvCreateStructuringElementEx( int cols, int rows, int anchor_x, int anchor_y, int shape, int* values=NULL )
 
-.. ocv:pyoldfunction:: cv.CreateStructuringElementEx(cols, rows, anchorX, anchorY, shape, values=None)-> kernel
-
     :param shape: Element shape that could be one of the following:
 
       * **MORPH_RECT**         - a rectangular structuring element:
@@ -1177,7 +1085,6 @@ Performs advanced morphological transformations.
 .. ocv:pyfunction:: cv2.morphologyEx(src, op, kernel[, dst[, anchor[, iterations[, borderType[, borderValue]]]]]) -> dst
 
 .. ocv:cfunction:: void cvMorphologyEx( const CvArr* src, CvArr* dst, CvArr* temp, IplConvKernel* element, int operation, int iterations=1 )
-.. ocv:pyoldfunction:: cv.MorphologyEx(src, dst, temp, element, operation, iterations=1)-> None
 
     :param src: Source image. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
@@ -1254,8 +1161,6 @@ Calculates the Laplacian of an image.
 
 .. ocv:cfunction:: void cvLaplace( const CvArr* src, CvArr* dst, int aperture_size=3 )
 
-.. ocv:pyoldfunction:: cv.Laplace(src, dst, apertureSize=3) -> None
-
     :param src: Source image.
 
     :param dst: Destination image of the same size and the same number of channels as  ``src`` .
@@ -1300,8 +1205,6 @@ Blurs an image and downsamples it.
 
 .. ocv:cfunction:: void cvPyrDown( const CvArr* src, CvArr* dst, int filter=CV_GAUSSIAN_5x5 )
 
-.. ocv:pyoldfunction:: cv.PyrDown(src, dst, filter=CV_GAUSSIAN_5X5) -> None
-
     :param src: input image.
 
     :param dst: output image; it has the specified size and the same type as ``src``.
@@ -1333,8 +1236,6 @@ Upsamples an image and then blurs it.
 
 .. ocv:cfunction:: cvPyrUp( const CvArr* src, CvArr* dst, int filter=CV_GAUSSIAN_5x5 )
 
-.. ocv:pyoldfunction:: cv.PyrUp(src, dst, filter=CV_GAUSSIAN_5X5) -> None
-
     :param src: input image.
 
     :param dst: output image. It has the specified size and the same type as  ``src`` .
@@ -1354,13 +1255,11 @@ pyrMeanShiftFiltering
 ---------------------
 Performs initial step of meanshift segmentation of an image.
 
-.. ocv:function:: void pyrMeanShiftFiltering( InputArray src, OutputArray dst, double sp, double sr, int maxLevel=1, TermCriteria termcrit=TermCriteria( TermCriteria::MAX_ITER+TermCriteria::EPS,5,1) )
+.. ocv:function:: void pyrMeanShiftFiltering( InputArray src, OutputArray dst, double sp, double sr, int maxLevel=1, TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5,1) )
 
 .. ocv:pyfunction:: cv2.pyrMeanShiftFiltering(src, sp, sr[, dst[, maxLevel[, termcrit]]]) -> dst
 
 .. ocv:cfunction:: void cvPyrMeanShiftFiltering( const CvArr* src, CvArr* dst, double sp,  double sr,  int max_level=1, CvTermCriteria termcrit= cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,5,1))
-
-.. ocv:pyoldfunction:: cv.PyrMeanShiftFiltering(src, dst, sp, sr, max_level=1, termcrit=(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 5, 1)) -> None
 
     :param src: The source 8-bit, 3-channel image.
 
@@ -1447,8 +1346,6 @@ Smooths the image in one of several ways.
 
 .. ocv:cfunction:: void cvSmooth( const CvArr* src, CvArr* dst, int smoothtype=CV_GAUSSIAN, int size1=3, int size2=0, double sigma1=0, double sigma2=0 )
 
-.. ocv:pyoldfunction:: cv.Smooth(src, dst, smoothtype=CV_GAUSSIAN, param1=3, param2=0, param3=0, param4=0)-> None
-
     :param src: The source image
 
     :param dst: The destination image
@@ -1502,8 +1399,6 @@ Calculates the first, second, third, or mixed image derivatives using an extende
 .. ocv:pyfunction:: cv2.Sobel(src, ddepth, dx, dy[, dst[, ksize[, scale[, delta[, borderType]]]]]) -> dst
 
 .. ocv:cfunction:: void cvSobel( const CvArr* src, CvArr* dst, int xorder, int yorder, int aperture_size=3 )
-
-.. ocv:pyoldfunction:: cv.Sobel(src, dst, xorder, yorder, apertureSize=3)-> None
 
     :param src: input image.
 

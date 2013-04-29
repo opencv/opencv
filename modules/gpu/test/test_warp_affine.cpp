@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -43,11 +44,14 @@
 
 #ifdef HAVE_CUDA
 
+using namespace cvtest;
+
 namespace
 {
     cv::Mat createTransfomMatrix(cv::Size srcSize, double angle)
     {
         cv::Mat M(2, 3, CV_64FC1);
+
         M.at<double>(0, 0) = std::cos(angle); M.at<double>(0, 1) = -std::sin(angle); M.at<double>(0, 2) = srcSize.width / 2;
         M.at<double>(1, 0) = std::sin(angle); M.at<double>(1, 1) =  std::cos(angle); M.at<double>(1, 2) = 0.0;
 
@@ -74,22 +78,23 @@ PARAM_TEST_CASE(BuildWarpAffineMaps, cv::gpu::DeviceInfo, cv::Size, Inverse)
     }
 };
 
-TEST_P(BuildWarpAffineMaps, Accuracy)
+GPU_TEST_P(BuildWarpAffineMaps, Accuracy)
 {
     cv::Mat M = createTransfomMatrix(size, CV_PI / 4);
+    cv::Mat src = randomMat(randomSize(200, 400), CV_8UC1);
+
     cv::gpu::GpuMat xmap, ymap;
     cv::gpu::buildWarpAffineMaps(M, inverse, size, xmap, ymap);
 
     int interpolation = cv::INTER_NEAREST;
     int borderMode = cv::BORDER_CONSTANT;
-
-    cv::Mat src = randomMat(randomSize(200, 400), CV_8UC1);
-    cv::Mat dst;
-    cv::remap(src, dst, cv::Mat(xmap), cv::Mat(ymap), interpolation, borderMode);
-
     int flags = interpolation;
     if (inverse)
         flags |= cv::WARP_INVERSE_MAP;
+
+    cv::Mat dst;
+    cv::remap(src, dst, cv::Mat(xmap), cv::Mat(ymap), interpolation, borderMode);
+
     cv::Mat dst_gold;
     cv::warpAffine(src, dst_gold, M, size, flags, borderMode);
 
@@ -199,7 +204,7 @@ PARAM_TEST_CASE(WarpAffine, cv::gpu::DeviceInfo, cv::Size, MatType, Inverse, Int
     }
 };
 
-TEST_P(WarpAffine, Accuracy)
+GPU_TEST_P(WarpAffine, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Mat M = createTransfomMatrix(size, CV_PI / 3);
@@ -247,9 +252,11 @@ PARAM_TEST_CASE(WarpAffineNPP, cv::gpu::DeviceInfo, MatType, Inverse, Interpolat
     }
 };
 
-TEST_P(WarpAffineNPP, Accuracy)
+GPU_TEST_P(WarpAffineNPP, Accuracy)
 {
     cv::Mat src = readImageType("stereobp/aloe-L.png", type);
+    ASSERT_FALSE(src.empty());
+
     cv::Mat M = createTransfomMatrix(src.size(), CV_PI / 4);
     int flags = interpolation;
     if (inverse)

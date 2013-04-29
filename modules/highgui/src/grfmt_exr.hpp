@@ -45,6 +45,10 @@
 
 #ifdef HAVE_OPENEXR
 
+#if defined __GNUC__ && defined __APPLE__
+#  pragma GCC diagnostic ignored "-Wshadow"
+#endif
+
 #include <ImfChromaticities.h>
 #include <ImfInputFile.h>
 #include <ImfChannelList.h>
@@ -102,7 +106,7 @@ public:
     ~ExrEncoder();
 
     bool  isFormatSupported( int depth ) const;
-    bool  write( const Mat& img, const vector<int>& params );
+    bool  write( const Mat& img, const std::vector<int>& params );
     ImageEncoder newEncoder() const;
 };
 

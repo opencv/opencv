@@ -6,7 +6,7 @@
 using namespace std;
 using namespace cv;
 
-void help()
+static void help()
 {
     cout
     << "\n--------------------------------------------------------------------------" << endl
@@ -59,10 +59,10 @@ int main(int,char**)
 
     // Demonstrate the output formating options
     cout << "R (default) = " << endl <<        R           << endl << endl;
-    cout << "R (python)  = " << endl << format(R,"python") << endl << endl;
-    cout << "R (numpy)   = " << endl << format(R,"numpy" ) << endl << endl;
-    cout << "R (csv)     = " << endl << format(R,"csv"   ) << endl << endl;
-    cout << "R (c)       = " << endl << format(R,"C"     ) << endl << endl;
+    cout << "R (python)  = " << endl << format(R, Formatter::FMT_PYTHON) << endl << endl;
+    cout << "R (numpy)   = " << endl << format(R, Formatter::FMT_NUMPY ) << endl << endl;
+    cout << "R (csv)     = " << endl << format(R, Formatter::FMT_CSV   ) << endl << endl;
+    cout << "R (c)       = " << endl << format(R, Formatter::FMT_C     ) << endl << endl;
 
     Point2f P(5, 1);
     cout << "Point (2D) = " << P << endl << endl;
@@ -77,8 +77,8 @@ int main(int,char**)
     cout << "Vector of floats via Mat = " << Mat(v) << endl << endl;
 
     vector<Point2f> vPoints(20);
-    for (size_t E = 0; E < vPoints.size(); ++E)
-        vPoints[E] = Point2f((float)(E * 5), (float)(E % 7));
+    for (size_t i = 0; i < vPoints.size(); ++i)
+        vPoints[i] = Point2f((float)(i * 5), (float)(i % 7));
 
     cout << "A vector of 2D Points = " << vPoints << endl << endl;
     return 0;

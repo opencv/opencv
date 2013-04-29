@@ -5,8 +5,7 @@
  * @author OpenCV team
  */
 
-#include <cv.h>
-#include <highgui.h>
+#include "opencv2/highgui/highgui.hpp"
 
 using namespace cv;
 
@@ -18,13 +17,12 @@ int beta;  /**< Simple brightness control*/
 
 /** Matrices to store images */
 Mat image;
-Mat new_image;
 
 /**
  * @function on_trackbar
  * @brief Called whenever any of alpha or beta changes
  */
-void on_trackbar( int, void* )
+static void on_trackbar( int, void* )
 {
    Mat new_image = Mat::zeros( image.size(), image.type() );
 
@@ -44,7 +42,7 @@ void on_trackbar( int, void* )
  * @function main
  * @brief Main function
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
    /// Read image given by user
    image = imread( argv[1] );

@@ -47,8 +47,6 @@
 // for debug purposes
 #define SAVE_MOTIONS 0
 
-using namespace std;
-
 namespace cv
 {
 namespace videostab
@@ -298,7 +296,7 @@ Mat OnePassStabilizer::estimateMotion()
 
 Mat OnePassStabilizer::estimateStabilizationMotion()
 {
-    return motionFilter_->stabilize(curStabilizedPos_, motions_, make_pair(0, curPos_));
+    return motionFilter_->stabilize(curStabilizedPos_, motions_, std::make_pair(0, curPos_));
 }
 
 
@@ -337,31 +335,31 @@ Mat TwoPassStabilizer::nextFrame()
 
 #if SAVE_MOTIONS
 static void saveMotions(
-        int frameCount, const vector<Mat> &motions, const vector<Mat> &stabilizationMotions)
+        int frameCount, const std::vector<Mat> &motions, const std::vector<Mat> &stabilizationMotions)
 {
-    ofstream fm("log_motions.csv");
+    std::ofstream fm("log_motions.csv");
     for (int i = 0; i < frameCount - 1; ++i)
     {
         Mat_<float> M = at(i, motions);
         fm << M(0,0) << " " << M(0,1) << " " << M(0,2) << " "
            << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
-           << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
+           << M(2,0) << " " << M(2,1) << " " << M(2,2) << std::endl;
     }
-    ofstream fo("log_orig.csv");
+    std::ofstream fo("log_orig.csv");
     for (int i = 0; i < frameCount; ++i)
     {
         Mat_<float> M = getMotion(0, i, motions);
         fo << M(0,0) << " " << M(0,1) << " " << M(0,2) << " "
            << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
-           << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
+           << M(2,0) << " " << M(2,1) << " " << M(2,2) << std::endl;
     }
-    ofstream fs("log_stab.csv");
+    std::ofstream fs("log_stab.csv");
     for (int i = 0; i < frameCount; ++i)
     {
         Mat_<float> M = stabilizationMotions[i] * getMotion(0, i, motions);
         fs << M(0,0) << " " << M(0,1) << " " << M(0,2) << " "
            << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
-           << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
+           << M(2,0) << " " << M(2,1) << " " << M(2,2) << std::endl;
     }
 }
 #endif
@@ -432,7 +430,7 @@ void TwoPassStabilizer::runPrePassIfNecessary()
 
         stabilizationMotions_.resize(frameCount_);
         motionStabilizer_->stabilize(
-            frameCount_, motions_, make_pair(0, frameCount_ - 1), &stabilizationMotions_[0]);
+            frameCount_, motions_, std::make_pair(0, frameCount_ - 1), &stabilizationMotions_[0]);
 
         elapsedTime = clock() - startTime;
         log_->print("motion stabilization time: %.3f sec\n",

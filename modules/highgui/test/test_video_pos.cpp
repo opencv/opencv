@@ -41,7 +41,7 @@
  //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 using namespace std;
@@ -110,9 +110,9 @@ public:
                 return;
             }
 
-            int N0 = (int)cap.get(CV_CAP_PROP_FRAME_COUNT);
-            cap.set(CV_CAP_PROP_POS_FRAMES, 0);
-            int N = (int)cap.get(CV_CAP_PROP_FRAME_COUNT);
+            int N0 = (int)cap.get(CAP_PROP_FRAME_COUNT);
+            cap.set(CAP_PROP_POS_FRAMES, 0);
+            int N = (int)cap.get(CAP_PROP_FRAME_COUNT);
 
             if (N != n_frames || N != N0)
             {
@@ -125,14 +125,14 @@ public:
             {
                 int idx = theRNG().uniform(0, N);
 
-                if( !cap.set(CV_CAP_PROP_POS_FRAMES, idx) )
+                if( !cap.set(CAP_PROP_POS_FRAMES, idx) )
                 {
                     ts->printf(ts->LOG, "\nError: cannot seek to frame %d.\n", idx);
                     ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                     return;
                 }
 
-                int idx1 = (int)cap.get(CV_CAP_PROP_POS_FRAMES);
+                int idx1 = (int)cap.get(CAP_PROP_POS_FRAMES);
 
                 Mat img; cap >> img;
                 Mat img0 = drawFrame(idx);
@@ -173,6 +173,6 @@ public:
     Size framesize;
 };
 
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT && BUILD_WITH_VIDEO_OUTPUT_SUPPORT
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT && BUILD_WITH_VIDEO_OUTPUT_SUPPORT && defined HAVE_FFMPEG
 TEST(Highgui_Video, seek_random_synthetic) { CV_PositioningTest test; test.safe_run(); }
 #endif

@@ -1,5 +1,6 @@
 package org.opencv.test.features2d;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -10,7 +11,7 @@ import org.opencv.core.MatOfDMatch;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
-import org.opencv.features2d.DMatch;
+import org.opencv.core.DMatch;
 import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.FeatureDetector;
@@ -65,6 +66,7 @@ public class BruteForceHammingDescriptorMatcherTest extends OpenCVTestCase {
     }
 
     protected void setUp() throws Exception {
+        super.setUp();
         matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_HAMMING);
         matSize = 100;
 
@@ -73,7 +75,6 @@ public class BruteForceHammingDescriptorMatcherTest extends OpenCVTestCase {
                 new DMatch(1, 2, 0, 42),
                 new DMatch(2, 1, 0, 40),
                 new DMatch(3, 3, 0, 53) };
-        super.setUp();
     }
 
     public void testAdd() {
@@ -204,7 +205,17 @@ public class BruteForceHammingDescriptorMatcherTest extends OpenCVTestCase {
     }
 
     public void testRadiusMatchMatListOfListOfDMatchFloat() {
-        fail("Not yet implemented");
+        Mat train = getTrainDescriptors();
+        Mat query = getQueryDescriptors();
+        ArrayList<MatOfDMatch> matches = new ArrayList<MatOfDMatch>();
+
+        matcher.radiusMatch(query, train, matches, 50.f);
+
+        assertEquals(matches.size(), 4);
+        assertTrue(matches.get(0).empty());
+        assertMatEqual(matches.get(1), new MatOfDMatch(truth[1]), EPS);
+        assertMatEqual(matches.get(2), new MatOfDMatch(truth[2]), EPS);
+        assertTrue(matches.get(3).empty());
     }
 
     public void testRadiusMatchMatListOfListOfDMatchFloatListOfMat() {

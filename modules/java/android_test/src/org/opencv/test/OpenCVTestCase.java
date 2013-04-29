@@ -1,10 +1,10 @@
 package org.opencv.test;
 
+import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.util.List;
@@ -19,18 +19,23 @@ import org.opencv.core.Point3;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
-import org.opencv.features2d.DMatch;
-import org.opencv.features2d.KeyPoint;
+import org.opencv.core.DMatch;
+import org.opencv.core.KeyPoint;
 import org.opencv.highgui.Highgui;
 
-public class OpenCVTestCase extends TestCase {
+import android.util.Log;
 
+public class OpenCVTestCase extends TestCase {
     //change to 'true' to unblock fail on fail("Not yet implemented")
     public static final boolean passNYI = true;
+
+    protected static boolean isTestCaseEnabled = true;
 
     protected static final int matSize = 10;
     protected static final double EPS = 0.001;
     protected static final double weakEPS = 0.5;
+
+    private static final String TAG = "OpenCVTestCase";
 
     protected Mat dst;
     protected Mat truth;
@@ -171,6 +176,16 @@ public class OpenCVTestCase extends TestCase {
         v2.release();
 
         super.tearDown();
+    }
+
+    @Override
+    protected void runTest() throws Throwable {
+        // Do nothing if the precondition does not hold.
+        if (isTestCaseEnabled) {
+            super.runTest();
+        } else {
+            Log.e(TAG, "Test case \"" + this.getClass().getName() + "\" disabled!");
+        }
     }
 
     protected Mat getMat(int type, double... vals)
@@ -411,24 +426,19 @@ public class OpenCVTestCase extends TestCase {
     }
 
     protected static String readFile(String path) {
-        FileInputStream stream = null;
         try {
-            stream = new FileInputStream(new File(path));
-            FileChannel fc = stream.getChannel();
-            MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, 0,
-                    fc.size());
-            return Charset.defaultCharset().decode(bb).toString();
+        BufferedReader br = new BufferedReader(new FileReader(path));
+        String line;
+        StringBuffer result = new StringBuffer();
+        while ((line = br.readLine()) != null) {
+            result.append(line);
+            result.append("\n");
+        }
+        return result.toString();
         } catch (IOException e) {
             OpenCVTestRunner.Log("Failed to read file \"" + path
                     + "\". Exception is thrown: " + e);
             return null;
-        } finally {
-            if (stream != null)
-                try {
-                    stream.close();
-                } catch (IOException e) {
-                    OpenCVTestRunner.Log("Exception is thrown: " + e);
-                }
         }
     }
 

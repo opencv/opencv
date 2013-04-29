@@ -1197,17 +1197,6 @@ void cv::min(const Mat& src1, const Mat& src2, Mat& dst)
     binary_op(src1, src2, _dst, noArray(), minTab, false );
 }
 
-void cv::max(const Mat& src1, double src2, Mat& dst)
-{
-    OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, noArray(), maxTab, false );
-}
-
-void cv::min(const Mat& src1, double src2, Mat& dst)
-{
-    OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, noArray(), minTab, false );
-}
 
 /****************************************************************************************\
 *                                      add/subtract                                      *
@@ -1228,10 +1217,10 @@ static int actualScalarDepth(const double* data, int len)
         maxval = MAX(maxval, ival);
     }
     return i < len ? CV_64F :
-        minval >= 0 && maxval <= UCHAR_MAX ? CV_8U :
-        minval >= SCHAR_MIN && maxval <= SCHAR_MAX ? CV_8S :
-        minval >= 0 && maxval <= USHRT_MAX ? CV_16U :
-        minval >= SHRT_MIN && maxval <= SHRT_MAX ? CV_16S :
+        minval >= 0 && maxval <= (int)UCHAR_MAX ? CV_8U :
+        minval >= (int)SCHAR_MIN && maxval <= (int)SCHAR_MAX ? CV_8S :
+        minval >= 0 && maxval <= (int)USHRT_MAX ? CV_16U :
+        minval >= (int)SHRT_MIN && maxval <= (int)SHRT_MAX ? CV_16S :
         CV_32S;
 }
 
@@ -1243,10 +1232,14 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     bool haveMask = !_mask.empty();
     bool reallocate = false;
 
+    bool src1Scalar = checkScalar(src1, src2.type(), kind1, kind2);
+    bool src2Scalar = checkScalar(src2, src1.type(), kind2, kind1);
+
     if( (kind1 == kind2 || src1.channels() == 1) && src1.dims <= 2 && src2.dims <= 2 &&
         src1.size() == src2.size() && src1.type() == src2.type() &&
         !haveMask && ((!_dst.fixedType() && (dtype < 0 || CV_MAT_DEPTH(dtype) == src1.depth())) ||
-                       (_dst.fixedType() && _dst.type() == _src1.type())) )
+                       (_dst.fixedType() && _dst.type() == _src1.type())) &&
+        ((src1Scalar && src2Scalar) || (!src1Scalar && !src2Scalar)) )
     {
         _dst.create(src1.size(), src1.type());
         Mat dst = _dst.getMat();
@@ -1281,7 +1274,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 depth2 = CV_32F;
         }
         else
-            depth2 = src1.depth() < CV_32S || src1.depth() == CV_32F ? CV_32F : CV_64F;
+            depth2 = CV_64F;
     }
 
     int cn = src1.channels(), depth1 = src1.depth(), wtype;

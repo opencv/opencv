@@ -24,18 +24,18 @@ void thresh_callback(int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Load source image and convert it to gray
   src = imread( argv[1], 1 );
 
   /// Convert image to gray and blur it
-  cvtColor( src, src_gray, CV_BGR2GRAY );
+  cvtColor( src, src_gray, COLOR_BGR2GRAY );
   blur( src_gray, src_gray, Size(3,3) );
 
   /// Create Window
-  char* source_window = "Source";
-  namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+  const char* source_window = "Source";
+  namedWindow( source_window, WINDOW_AUTOSIZE );
   imshow( source_window, src );
 
   createTrackbar( " Threshold:", "Source", &thresh, max_thresh, thresh_callback );
@@ -57,13 +57,13 @@ void thresh_callback(int, void* )
   /// Detect edges using Threshold
   threshold( src_gray, threshold_output, thresh, 255, THRESH_BINARY );
   /// Find contours
-  findContours( threshold_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+  findContours( threshold_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
   /// Find the rotated rectangles and ellipses for each contour
   vector<RotatedRect> minRect( contours.size() );
   vector<RotatedRect> minEllipse( contours.size() );
 
-  for( int i = 0; i < contours.size(); i++ )
+  for( size_t i = 0; i < contours.size(); i++ )
      { minRect[i] = minAreaRect( Mat(contours[i]) );
        if( contours[i].size() > 5 )
          { minEllipse[i] = fitEllipse( Mat(contours[i]) ); }
@@ -71,11 +71,11 @@ void thresh_callback(int, void* )
 
   /// Draw contours + rotated rects + ellipses
   Mat drawing = Mat::zeros( threshold_output.size(), CV_8UC3 );
-  for( int i = 0; i< contours.size(); i++ )
+  for( size_t i = 0; i< contours.size(); i++ )
      {
        Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
        // contour
-       drawContours( drawing, contours, i, color, 1, 8, vector<Vec4i>(), 0, Point() );
+       drawContours( drawing, contours, (int)i, color, 1, 8, vector<Vec4i>(), 0, Point() );
        // ellipse
        ellipse( drawing, minEllipse[i], color, 2, 8 );
        // rotated rectangle
@@ -85,6 +85,6 @@ void thresh_callback(int, void* )
      }
 
   /// Show in a window
-  namedWindow( "Contours", CV_WINDOW_AUTOSIZE );
+  namedWindow( "Contours", WINDOW_AUTOSIZE );
   imshow( "Contours", drawing );
 }

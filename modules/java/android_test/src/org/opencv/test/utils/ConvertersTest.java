@@ -5,8 +5,8 @@ import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Point3;
 import org.opencv.core.Rect;
-import org.opencv.features2d.DMatch;
-import org.opencv.features2d.KeyPoint;
+import org.opencv.core.DMatch;
+import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.utils.Converters;
 
