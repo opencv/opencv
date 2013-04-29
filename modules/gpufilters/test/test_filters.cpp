@@ -70,13 +70,14 @@ namespace
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Blur
 
-PARAM_TEST_CASE(Blur, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Anchor, UseRoi)
+PARAM_TEST_CASE(Blur, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Anchor, BorderType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
     int type;
     cv::Size ksize;
     cv::Point anchor;
+    int borderType;
     bool useRoi;
 
     virtual void SetUp()
@@ -86,7 +87,8 @@ PARAM_TEST_CASE(Blur, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Anchor, Use
         type = GET_PARAM(2);
         ksize = GET_PARAM(3);
         anchor = GET_PARAM(4);
-        useRoi = GET_PARAM(5);
+        borderType = GET_PARAM(5);
+        useRoi = GET_PARAM(6);
 
         cv::gpu::setDevice(devInfo.deviceID());
     }
@@ -96,13 +98,15 @@ GPU_TEST_P(Blur, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
+    cv::Ptr<cv::gpu::Filter> blurFilter = cv::gpu::createBoxFilter(src.type(), -1, ksize, anchor, borderType);
+
     cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-    cv::gpu::blur(loadMat(src, useRoi), dst, ksize, anchor);
+    blurFilter->apply(loadMat(src, useRoi), dst);
 
     cv::Mat dst_gold;
-    cv::blur(src, dst_gold, ksize, anchor);
+    cv::blur(src, dst_gold, ksize, anchor, borderType);
 
-    EXPECT_MAT_NEAR(getInnerROI(dst_gold, ksize), getInnerROI(dst, ksize), 1.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Filters, Blur, testing::Combine(
@@ -111,6 +115,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Filters, Blur, testing::Combine(
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
     testing::Values(KSize(cv::Size(3, 3)), KSize(cv::Size(5, 5)), KSize(cv::Size(7, 7))),
     testing::Values(Anchor(cv::Point(-1, -1)), Anchor(cv::Point(0, 0)), Anchor(cv::Point(2, 2))),
+    testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_CONSTANT), BorderType(cv::BORDER_REFLECT)),
     WHOLE_SUBMAT));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

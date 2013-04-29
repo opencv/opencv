@@ -70,7 +70,9 @@ PERF_TEST_P(Sz_Type_KernelSz, Blur,
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::blur(d_src, dst, cv::Size(ksize, ksize));
+        cv::Ptr<cv::gpu::Filter> blurFilter = cv::gpu::createBoxFilter(d_src.type(), -1, cv::Size(ksize, ksize));
+
+        TEST_CYCLE() blurFilter->apply(d_src, dst);
 
         GPU_SANITY_CHECK(dst, 1);
     }

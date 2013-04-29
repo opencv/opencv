@@ -48,9 +48,60 @@
 #endif
 
 #include "opencv2/core/gpu.hpp"
-#include "opencv2/core/base.hpp"
+
+#if defined __GNUC__
+    #define __OPENCV_GPUFILTERS_DEPR_BEFORE__
+    #define __OPENCV_GPUFILTERS_DEPR_AFTER__ __attribute__ ((deprecated))
+#elif (defined WIN32 || defined _WIN32)
+    #define __OPENCV_GPUFILTERS_DEPR_BEFORE__ __declspec(deprecated)
+    #define __OPENCV_GPUFILTERS_DEPR_AFTER__
+#else
+    #define __OPENCV_GPUFILTERS_DEPR_BEFORE__
+    #define __OPENCV_GPUFILTERS_DEPR_AFTER__
+#endif
 
 namespace cv { namespace gpu {
+
+class CV_EXPORTS Filter : public Algorithm
+{
+public:
+    virtual void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null()) = 0;
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Box Filter
+
+//! smooths the image using the normalized box filter
+//! supports CV_8UC1, CV_8UC4 types
+CV_EXPORTS Ptr<Filter> createBoxFilter(int srcType, int dstType, Size ksize, Point anchor = Point(-1,-1),
+                                       int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+
+__OPENCV_GPUFILTERS_DEPR_BEFORE__ void boxFilter(InputArray src, OutputArray dst, int dstType,
+                                                 Size ksize, Point anchor = Point(-1,-1),
+                                                 Stream& stream = Stream::Null()) __OPENCV_GPUFILTERS_DEPR_AFTER__;
+
+inline void boxFilter(InputArray src, OutputArray dst, int dstType, Size ksize, Point anchor, Stream& stream)
+{
+    Ptr<gpu::Filter> f = gpu::createBoxFilter(src.type(), dstType, ksize, anchor);
+    f->apply(src, dst, stream);
+}
+
+__OPENCV_GPUFILTERS_DEPR_BEFORE__ void blur(InputArray src, OutputArray dst, Size ksize,
+                                            Point anchor = Point(-1,-1),
+                                            Stream& stream = Stream::Null()) __OPENCV_GPUFILTERS_DEPR_AFTER__;
+
+inline void blur(InputArray src, OutputArray dst, Size ksize, Point anchor, Stream& stream)
+{
+    Ptr<gpu::Filter> f = gpu::createBoxFilter(src.type(), -1, ksize, anchor);
+    f->apply(src, dst, stream);
+}
+
+
+
+
+
+
+
 
 /*!
 The Base Class for 1D or Row-wise Filters
@@ -128,13 +179,7 @@ CV_EXPORTS Ptr<BaseRowFilter_GPU> getRowSumFilter_GPU(int srcType, int sumType, 
 //! supports only CV_8UC1 sum type and CV_32FC1 dst type
 CV_EXPORTS Ptr<BaseColumnFilter_GPU> getColumnSumFilter_GPU(int sumType, int dstType, int ksize, int anchor = -1);
 
-//! returns 2D box filter
-//! supports CV_8UC1 and CV_8UC4 source type, dst type must be the same as source type
-CV_EXPORTS Ptr<BaseFilter_GPU> getBoxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1, -1));
 
-//! returns box filter engine
-CV_EXPORTS Ptr<FilterEngine_GPU> createBoxFilter_GPU(int srcType, int dstType, const Size& ksize,
-    const Point& anchor = Point(-1,-1));
 
 //! returns 2D morphological filter
 //! only MORPH_ERODE and MORPH_DILATE are supported
@@ -205,15 +250,7 @@ CV_EXPORTS Ptr<BaseFilter_GPU> getMaxFilter_GPU(int srcType, int dstType, const 
 //! returns minimum filter
 CV_EXPORTS Ptr<BaseFilter_GPU> getMinFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1,-1));
 
-//! smooths the image using the normalized box filter
-//! supports CV_8UC1, CV_8UC4 types
-CV_EXPORTS void boxFilter(const GpuMat& src, GpuMat& dst, int ddepth, Size ksize, Point anchor = Point(-1,-1), Stream& stream = Stream::Null());
 
-//! a synonym for normalized box filter
-static inline void blur(const GpuMat& src, GpuMat& dst, Size ksize, Point anchor = Point(-1,-1), Stream& stream = Stream::Null())
-{
-    boxFilter(src, dst, -1, ksize, anchor, stream);
-}
 
 //! erodes the image (applies the local minimum operator)
 CV_EXPORTS void erode(const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1);
@@ -265,5 +302,8 @@ CV_EXPORTS void GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, GpuMat&
 CV_EXPORTS void Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize = 1, double scale = 1, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null());
 
 }} // namespace cv { namespace gpu {
+
+#undef __OPENCV_GPUFILTERS_DEPR_BEFORE__
+#undef __OPENCV_GPUFILTERS_DEPR_AFTER__
 
 #endif /* __OPENCV_GPUFILTERS_HPP__ */
