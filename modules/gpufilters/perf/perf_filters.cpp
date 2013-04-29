@@ -159,13 +159,6 @@ PERF_TEST_P(Sz_Type_KernelSz, Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, Values(C
     }
 }
 
-
-
-
-
-
-
-
 //////////////////////////////////////////////////////////////////////
 // Sobel
 
@@ -184,9 +177,10 @@ PERF_TEST_P(Sz_Type_KernelSz, Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
     {
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat dst;
-        cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() cv::gpu::Sobel(d_src, dst, -1, 1, 1, d_buf, ksize);
+        cv::Ptr<cv::gpu::Filter> sobel = cv::gpu::createSobelFilter(d_src.type(), -1, 1, 1, ksize);
+
+        TEST_CYCLE() sobel->apply(d_src, dst);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -217,9 +211,10 @@ PERF_TEST_P(Sz_Type, Scharr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8
     {
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat dst;
-        cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() cv::gpu::Scharr(d_src, dst, -1, 1, 0, d_buf);
+        cv::Ptr<cv::gpu::Filter> scharr = cv::gpu::createScharrFilter(d_src.type(), -1, 1, 0);
+
+        TEST_CYCLE() scharr->apply(d_src, dst);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -251,9 +246,10 @@ PERF_TEST_P(Sz_Type_KernelSz, GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZES, Value
     {
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat dst;
-        cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() cv::gpu::GaussianBlur(d_src, dst, cv::Size(ksize, ksize), d_buf, 0.5);
+        cv::Ptr<cv::gpu::Filter> gauss = cv::gpu::createGaussianFilter(d_src.type(), -1, cv::Size(ksize, ksize), 0.5);
+
+        TEST_CYCLE() gauss->apply(d_src, dst);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -266,6 +262,13 @@ PERF_TEST_P(Sz_Type_KernelSz, GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZES, Value
         CPU_SANITY_CHECK(dst);
     }
 }
+
+
+
+
+
+
+
 
 //////////////////////////////////////////////////////////////////////
 // Erode
