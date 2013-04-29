@@ -119,13 +119,13 @@ public:
         struct OPLandIplParvoParameters{ // Outer Plexiform Layer (OPL) and Inner Plexiform Layer Parvocellular (IplParvo) parameters
                OPLandIplParvoParameters():colorMode(true),
                                  normaliseOutput(true),
-                                 photoreceptorsLocalAdaptationSensitivity(0.7f),
-                                 photoreceptorsTemporalConstant(0.5f),
-                                 photoreceptorsSpatialConstant(0.53f),
-                                 horizontalCellsGain(0.0f),
-                                 hcellsTemporalConstant(1.f),
+                                 photoreceptorsLocalAdaptationSensitivity(0.75f),
+                                 photoreceptorsTemporalConstant(0.9f),
+                                 photoreceptorsSpatialConstant(0.57f),
+                                 horizontalCellsGain(0.01f),
+                                 hcellsTemporalConstant(0.5f),
                                  hcellsSpatialConstant(7.f),
-                                 ganglionCellsSensitivity(0.7f){};// default setup
+                                 ganglionCellsSensitivity(0.75f){};// default setup
                bool colorMode, normaliseOutput;
                float photoreceptorsLocalAdaptationSensitivity, photoreceptorsTemporalConstant, photoreceptorsSpatialConstant, horizontalCellsGain, hcellsTemporalConstant, hcellsSpatialConstant, ganglionCellsSensitivity;
            };
@@ -135,7 +135,7 @@ public:
                           parasolCells_beta(0.f),
                           parasolCells_tau(0.f),
                           parasolCells_k(7.f),
-                          amacrinCellsTemporalCutFrequency(1.2f),
+                          amacrinCellsTemporalCutFrequency(2.0f),
                           V0CompressionParameter(0.95f),
                           localAdaptintegration_tau(0.f),
                           localAdaptintegration_k(7.f){};// default setup

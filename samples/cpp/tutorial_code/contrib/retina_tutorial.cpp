@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
         }
     }catch(cv::Exception e)
     {
-        std::cerr<<"Error using Retina : "<<e.what()<<std::endl;
+        std::cerr<<"Error using Retina or end of video sequence reached : "<<e.what()<<std::endl;
     }
 
     // Program end message

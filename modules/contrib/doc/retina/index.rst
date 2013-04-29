@@ -367,7 +367,7 @@ Parameters structure for better clarity, check explenations on the comments of m
                   {};// default setup
                bool normaliseOutput;
                float parasolCells_beta, parasolCells_tau, parasolCells_k, amacrinCellsTemporalCutFrequency, V0CompressionParameter, localAdaptintegration_tau, localAdaptintegration_k;
-           };
+           }; 
             struct OPLandIplParvoParameters OPLandIplParvo;
             struct IplMagnoParameters IplMagno;
     };
