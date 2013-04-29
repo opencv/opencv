@@ -170,18 +170,6 @@ INSTANTIATE_TEST_CASE_P(GPU_Filters, Filter2D, testing::Combine(
     testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_CONSTANT), BorderType(cv::BORDER_REFLECT)),
     WHOLE_SUBMAT));
 
-
-
-
-
-
-
-
-
-
-
-
-
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Laplacian
 
@@ -209,8 +197,10 @@ GPU_TEST_P(Laplacian, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
+    cv::Ptr<cv::gpu::Filter> laplacian = cv::gpu::createLaplacianFilter(src.type(), -1, ksize.width);
+
     cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-    cv::gpu::Laplacian(loadMat(src, useRoi), dst, -1, ksize.width);
+    laplacian->apply(loadMat(src, useRoi), dst);
 
     cv::Mat dst_gold;
     cv::Laplacian(src, dst_gold, -1, ksize.width);

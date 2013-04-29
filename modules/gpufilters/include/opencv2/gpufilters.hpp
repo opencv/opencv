@@ -113,17 +113,23 @@ inline void filter2D(InputArray src, OutputArray dst, int ddepth, InputArray ker
     f->apply(src, dst, stream);
 }
 
-
-
-
-
-
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Laplacian Filter
 
 //! applies Laplacian operator to the image
 //! supports only ksize = 1 and ksize = 3
-CV_EXPORTS void Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize = 1, double scale = 1, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null());
+CV_EXPORTS Ptr<Filter> createLaplacianFilter(int srcType, int dstType, int ksize = 1, double scale = 1,
+                                            int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
+__OPENCV_GPUFILTERS_DEPR_BEFORE__ void Laplacian(InputArray src, OutputArray dst, int ddepth,
+                                                 int ksize = 1, double scale = 1, int borderType = BORDER_DEFAULT,
+                                                 Stream& stream = Stream::Null()) __OPENCV_GPUFILTERS_DEPR_AFTER__;
 
+inline void Laplacian(InputArray src, OutputArray dst, int ddepth, int ksize, double scale, int borderType, Stream& stream)
+{
+    Ptr<gpu::Filter> f = gpu::createLaplacianFilter(src.type(), ddepth, ksize, scale, borderType);
+    f->apply(src, dst, stream);
+}
 
 
 

@@ -51,6 +51,8 @@ Ptr<Filter> cv::gpu::createBoxFilter(int, int, Size, Point, int, Scalar) { throw
 
 Ptr<Filter> cv::gpu::createLinearFilter(int, int, InputArray, Point, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 
+Ptr<Filter> cv::gpu::createLaplacianFilter(int, int, int, double, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
+
 Ptr<FilterEngine_GPU> cv::gpu::createFilter2D_GPU(const Ptr<BaseFilter_GPU>&, int, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
 Ptr<FilterEngine_GPU> cv::gpu::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>&, const Ptr<BaseColumnFilter_GPU>&, int, int, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
 Ptr<FilterEngine_GPU> cv::gpu::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>&, const Ptr<BaseColumnFilter_GPU>&, int, int, int, GpuMat&) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
@@ -84,7 +86,6 @@ void cv::gpu::Scharr(const GpuMat&, GpuMat&, int, int, int, double, int, int) { 
 void cv::gpu::Scharr(const GpuMat&, GpuMat&, int, int, int, GpuMat&, double, int, int, Stream&) { throw_no_cuda(); }
 void cv::gpu::GaussianBlur(const GpuMat&, GpuMat&, Size, double, double, int, int) { throw_no_cuda(); }
 void cv::gpu::GaussianBlur(const GpuMat&, GpuMat&, Size, GpuMat&, double, double, int, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::Laplacian(const GpuMat&, GpuMat&, int, int, double, int, Stream&) { throw_no_cuda(); }
 
 #else
 
@@ -293,31 +294,26 @@ Ptr<Filter> cv::gpu::createLinearFilter(int srcType, int dstType, InputArray ker
     return new LinearFilter(srcType, dstType, kernel, anchor, borderMode, borderVal);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Laplacian Filter
 
-
-
-
-
-
-
-
-
-void cv::gpu::Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize, double scale, int borderType, Stream& stream)
+Ptr<Filter> cv::gpu::createLaplacianFilter(int srcType, int dstType, int ksize, double scale, int borderMode, Scalar borderVal)
 {
-    CV_Assert(ksize == 1 || ksize == 3);
+    CV_Assert( ksize == 1 || ksize == 3 );
 
-    static const int K[2][9] =
+    static const float K[2][9] =
     {
-        {0, 1, 0, 1, -4, 1, 0, 1, 0},
-        {2, 0, 2, 0, -8, 0, 2, 0, 2}
+        {0.0f, 1.0f, 0.0f, 1.0f, -4.0f, 1.0f, 0.0f, 1.0f, 0.0f},
+        {2.0f, 0.0f, 2.0f, 0.0f, -8.0f, 0.0f, 2.0f, 0.0f, 2.0f}
     };
-    Mat kernel(3, 3, CV_32S, (void*)K[ksize == 3]);
+
+    Mat kernel(3, 3, CV_32FC1, (void*)K[ksize == 3]);
     if (scale != 1)
         kernel *= scale;
 
-    Ptr<gpu::Filter> f = gpu::createLinearFilter(src.type(), ddepth, kernel, Point(-1,-1), borderType);
-    f->apply(src, dst, stream);
+    return gpu::createLinearFilter(srcType, dstType, kernel, Point(-1,-1), borderMode, borderVal);
 }
+
 
 
 

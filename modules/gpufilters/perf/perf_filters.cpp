@@ -124,6 +124,41 @@ PERF_TEST_P(Sz_Type_KernelSz, Filter2D, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV
     }
 }
 
+//////////////////////////////////////////////////////////////////////
+// Laplacian
+
+PERF_TEST_P(Sz_Type_KernelSz, Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1, 3)))
+{
+    declare.time(20.0);
+
+    const cv::Size size = GET_PARAM(0);
+    const int type = GET_PARAM(1);
+    const int ksize = GET_PARAM(2);
+
+    cv::Mat src(size, type);
+    declare.in(src, WARMUP_RNG);
+
+    if (PERF_RUN_GPU())
+    {
+        const cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat dst;
+
+        cv::Ptr<cv::gpu::Filter> laplacian = cv::gpu::createLaplacianFilter(d_src.type(), -1, ksize);
+
+        TEST_CYCLE() laplacian->apply(d_src, dst);
+
+        GPU_SANITY_CHECK(dst);
+    }
+    else
+    {
+        cv::Mat dst;
+
+        TEST_CYCLE() cv::Laplacian(src, dst, -1, ksize);
+
+        CPU_SANITY_CHECK(dst);
+    }
+}
+
 
 
 
@@ -227,39 +262,6 @@ PERF_TEST_P(Sz_Type_KernelSz, GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZES, Value
         cv::Mat dst;
 
         TEST_CYCLE() cv::GaussianBlur(src, dst, cv::Size(ksize, ksize), 0.5);
-
-        CPU_SANITY_CHECK(dst);
-    }
-}
-
-//////////////////////////////////////////////////////////////////////
-// Laplacian
-
-PERF_TEST_P(Sz_Type_KernelSz, Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1, 3)))
-{
-    declare.time(20.0);
-
-    const cv::Size size = GET_PARAM(0);
-    const int type = GET_PARAM(1);
-    const int ksize = GET_PARAM(2);
-
-    cv::Mat src(size, type);
-    declare.in(src, WARMUP_RNG);
-
-    if (PERF_RUN_GPU())
-    {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
-
-        TEST_CYCLE() cv::gpu::Laplacian(d_src, dst, -1, ksize);
-
-        GPU_SANITY_CHECK(dst);
-    }
-    else
-    {
-        cv::Mat dst;
-
-        TEST_CYCLE() cv::Laplacian(src, dst, -1, ksize);
 
         CPU_SANITY_CHECK(dst);
     }
