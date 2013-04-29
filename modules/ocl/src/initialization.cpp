@@ -60,6 +60,20 @@ using namespace cv::ocl;
 #endif
 //#define AMD_DOUBLE_DIFFER
 
+#ifdef HAVE_OPENGL
+    typedef CL_API_ENTRY cl_int (CL_API_CALL *clGetGLContextInfoKHR_fn)(
+        const cl_context_properties *properties,
+        cl_gl_context_info param_name,
+        size_t param_value_size,
+        void *param_value,
+        size_t *param_value_size_ret);
+
+    // Rename references to this dynamically linked function to avoid
+    // collision with static link version
+    #define clGetGLContextInfoKHR clGetGLContextInfoKHR_proc
+    static clGetGLContextInfoKHR_fn clGetGLContextInfoKHR;
+#endif
+
 namespace cv
 {
     namespace ocl
@@ -192,6 +206,9 @@ namespace cv
             {
                 openCLSafeCall(clReleaseContext(oclcontext));
                 oclcontext = 0;
+#ifdef HAVE_OPENGL
+                releaseOpenGLContext();
+#endif
             }
         }
 
@@ -212,7 +229,34 @@ namespace cv
             else
             {
                 cl_int status = 0;
+#ifdef HAVE_OPENGL
+                cl_context_properties cps[] = { CL_CONTEXT_PLATFORM, 
+                                                (cl_context_properties)(oclplatform), 0, 0, 0, 0, 0 };
+                bool useGl = initOpenGLContext(cps);
+                size_t extends_size;
+                openCLSafeCall(clGetDeviceInfo(devices[devnum], CL_DEVICE_EXTENSIONS, 0, NULL, &extends_size));
+                char* extends_set = new char[extends_size+1];
+                openCLSafeCall(clGetDeviceInfo(devices[devnum], CL_DEVICE_EXTENSIONS, 
+                               sizeof(char) * extends_size, extends_set, NULL));
+                String extends_str(extends_set);
+                delete[] extends_set;
+                if (useGl && (extends_str.find("cl_khr_gl_sharing") != String::npos))
+                {
+                    if (!clGetGLContextInfoKHR) 
+                    {
+                        clGetGLContextInfoKHR = (clGetGLContextInfoKHR_fn) 
+                            clGetExtensionFunctionAddressForPlatform(oclplatform, "clGetGLContextInfoKHR");
+                        if (!clGetGLContextInfoKHR) 
+                        {
+                            CV_Error(Error::StsBadFunc, "Failed to query proc address for clGetGLContextInfoKHR\r\n");
+                        }
+                    }
+                    openCLSafeCall(clGetGLContextInfoKHR(cps, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR, 
+                                                         sizeof(cl_device_id), &devices[devnum], NULL));
+                }
+#else
                 cl_context_properties cps[3] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(oclplatform), 0 };
+#endif
                 oclcontext = clCreateContext(cps, 1, &devices[devnum], 0, 0, &status);
                 openCLVerifyCall(status);
                 clCmdQueue = clCreateCommandQueue(oclcontext, devices[devnum], CL_QUEUE_PROFILING_ENABLE, &status);

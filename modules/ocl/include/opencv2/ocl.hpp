@@ -1735,6 +1735,9 @@ namespace cv
             std::vector<oclMat> datas;
             oclMat out;
         };
+
+        ///////////////////////// display image using cl_khr_gl_sharing extension /////////////////////////////
+        CV_EXPORTS void imshow( const String& winname, const oclMat& _img );
     }
 }
 #if defined _MSC_VER && _MSC_VER >= 1200
