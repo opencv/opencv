@@ -170,9 +170,9 @@ int main(int argc, const char* argv[])
     cout << endl;
 
     Mat frame0Gray;
-    cvtColor(frame0, frame0Gray, COLOR_BGR2GRAY);
+    cv::cvtColor(frame0, frame0Gray, COLOR_BGR2GRAY);
     Mat frame1Gray;
-    cvtColor(frame1, frame1Gray, COLOR_BGR2GRAY);
+    cv::cvtColor(frame1, frame1Gray, COLOR_BGR2GRAY);
 
     // goodFeaturesToTrack
 

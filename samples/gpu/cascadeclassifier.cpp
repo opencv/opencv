@@ -294,7 +294,7 @@ int main(int argc, const char *argv[])
         }
         cout << endl;
 
-        cvtColor(resized_cpu, frameDisp, COLOR_GRAY2BGR);
+        cv::cvtColor(resized_cpu, frameDisp, COLOR_GRAY2BGR);
         displayState(frameDisp, helpScreen, useGPU, findLargestObject, filterRects, fps);
         imshow("result", frameDisp);
 

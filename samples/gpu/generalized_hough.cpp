@@ -181,7 +181,7 @@ int main(int argc, const char* argv[])
     cout << "Detection time : " << tm.getTimeMilli() << " ms" << endl;
 
     Mat out;
-    cvtColor(image, out, COLOR_GRAY2BGR);
+    cv::cvtColor(image, out, COLOR_GRAY2BGR);
 
     for (size_t i = 0; i < position.size(); ++i)
     {

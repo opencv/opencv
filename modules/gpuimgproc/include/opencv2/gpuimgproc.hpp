@@ -57,7 +57,7 @@ namespace cv { namespace gpu {
 /////////////////////////// Color Processing ///////////////////////////
 
 //! converts image from one color space to another
-CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0, Stream& stream = Stream::Null());
+CV_EXPORTS void cvtColor(InputArray src, OutputArray dst, int code, int dcn = 0, Stream& stream = Stream::Null());
 
 enum
 {
@@ -77,24 +77,24 @@ enum
     COLOR_BayerRG2GRAY_MHT = 262,
     COLOR_BayerGR2GRAY_MHT = 263
 };
-CV_EXPORTS void demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn = -1, Stream& stream = Stream::Null());
+CV_EXPORTS void demosaicing(InputArray src, OutputArray dst, int code, int dcn = -1, Stream& stream = Stream::Null());
 
 //! swap channels
 //! dstOrder - Integer array describing how channel values are permutated. The n-th entry
 //!            of the array contains the number of the channel that is stored in the n-th channel of
 //!            the output image. E.g. Given an RGBA image, aDstOrder = [3,2,1,0] converts this to ABGR
 //!            channel order.
-CV_EXPORTS void swapChannels(GpuMat& image, const int dstOrder[4], Stream& stream = Stream::Null());
+CV_EXPORTS void swapChannels(InputOutputArray image, const int dstOrder[4], Stream& stream = Stream::Null());
 
 //! Routines for correcting image color gamma
-CV_EXPORTS void gammaCorrection(const GpuMat& src, GpuMat& dst, bool forward = true, Stream& stream = Stream::Null());
+CV_EXPORTS void gammaCorrection(InputArray src, OutputArray dst, bool forward = true, Stream& stream = Stream::Null());
 
 enum { ALPHA_OVER, ALPHA_IN, ALPHA_OUT, ALPHA_ATOP, ALPHA_XOR, ALPHA_PLUS, ALPHA_OVER_PREMUL, ALPHA_IN_PREMUL, ALPHA_OUT_PREMUL,
        ALPHA_ATOP_PREMUL, ALPHA_XOR_PREMUL, ALPHA_PLUS_PREMUL, ALPHA_PREMUL};
 
 //! Composite two images using alpha opacity values contained in each image
 //! Supports CV_8UC4, CV_16UC4, CV_32SC4 and CV_32FC4 types
-CV_EXPORTS void alphaComp(const GpuMat& img1, const GpuMat& img2, GpuMat& dst, int alpha_op, Stream& stream = Stream::Null());
+CV_EXPORTS void alphaComp(InputArray img1, InputArray img2, OutputArray dst, int alpha_op, Stream& stream = Stream::Null());
 
 ////////////////////////////// Histogram ///////////////////////////////
 
