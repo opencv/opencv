@@ -1970,7 +1970,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
     double result = 0;
     int j, len = (int)it.size;
 
-    CV_Assert( H1.type() == H2.type() && H1.type() == CV_32F );
+    CV_Assert( H1.type() == H2.type() && H1.depth() == CV_32F );
 
     double s1 = 0, s2 = 0, s11 = 0, s12 = 0, s22 = 0;
 
