@@ -46,6 +46,7 @@
 #include "precomp.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/highgui.hpp"
+#include "opencv2/highgui/highgui_c.h"
 
 #ifdef HAVE_OPENCL
 #  ifdef __APPLE__
@@ -254,10 +255,18 @@ bool ocl::initOpenGLContext(cl_context_properties *cps)
     Rect rect(10, 10, 100, 100);
     HINSTANCE hg_hinstance = 0;
 
+    cvInitSystem(0,0);
+
     g_mainhWnd = CreateWindow( "Main HighGUI class", name, defStyle | WS_OVERLAPPED,
                              rect.x, rect.y, rect.width, rect.height, 0, 0, hg_hinstance, 0 );
     if( !g_mainhWnd )
-        CV_Error( Error::StsError, "Frame window can not be created" );
+    {
+        LPTSTR lpBuffer;
+        DWORD n = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | 
+            FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), 0, (LPTSTR) &lpBuffer, 1024, NULL);
+        CV_Error_( Error::StsError, ("CreateWindow failed: %s", (n > 0) ? lpBuffer : "<NULL>") );
+        LocalFree(lpBuffer);
+    }
 
     g_hWnd = CreateWindow("HighGUI class", "", (defStyle & ~WS_SIZEBOX) | WS_CHILD, CW_USEDEFAULT, 
                         0, rect.width, rect.height, g_mainhWnd, 0, hg_hinstance, 0);
