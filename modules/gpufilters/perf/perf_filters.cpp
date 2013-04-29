@@ -263,13 +263,6 @@ PERF_TEST_P(Sz_Type_KernelSz, GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZES, Value
     }
 }
 
-
-
-
-
-
-
-
 //////////////////////////////////////////////////////////////////////
 // Erode
 
@@ -289,9 +282,10 @@ PERF_TEST_P(Sz_Type, Erode, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8U
     {
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat dst;
-        cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() cv::gpu::erode(d_src, dst, ker, d_buf);
+        cv::Ptr<cv::gpu::Filter> erode = cv::gpu::createMorphologyFilter(cv::MORPH_ERODE, src.type(), ker);
+
+        TEST_CYCLE() erode->apply(d_src, dst);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -324,9 +318,10 @@ PERF_TEST_P(Sz_Type, Dilate, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8
     {
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat dst;
-        cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() cv::gpu::dilate(d_src, dst, ker, d_buf);
+        cv::Ptr<cv::gpu::Filter> dilate = cv::gpu::createMorphologyFilter(cv::MORPH_DILATE, src.type(), ker);
+
+        TEST_CYCLE() dilate->apply(d_src, dst);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -364,10 +359,10 @@ PERF_TEST_P(Sz_Type_Op, MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8
     {
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat dst;
-        cv::gpu::GpuMat d_buf1;
-        cv::gpu::GpuMat d_buf2;
 
-        TEST_CYCLE() cv::gpu::morphologyEx(d_src, dst, morphOp, ker, d_buf1, d_buf2);
+        cv::Ptr<cv::gpu::Filter> morph = cv::gpu::createMorphologyFilter(morphOp, src.type(), ker);
+
+        TEST_CYCLE() morph->apply(d_src, dst);
 
         GPU_SANITY_CHECK(dst);
     }

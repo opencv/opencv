@@ -48,6 +48,7 @@
 #endif
 
 #include "opencv2/core/gpu.hpp"
+#include "opencv2/imgproc.hpp"
 
 #if defined __GNUC__
     #define __OPENCV_GPUFILTERS_DEPR_BEFORE__
@@ -203,8 +204,42 @@ inline void GaussianBlur(InputArray src, OutputArray dst, Size ksize, double sig
     f->apply(src, dst, stream);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Morphology Filter
 
+//! returns 2D morphological filter
+//! supports CV_8UC1 and CV_8UC4 types
+CV_EXPORTS Ptr<Filter> createMorphologyFilter(int op, int srcType, InputArray kernel, Point anchor = Point(-1, -1), int iterations = 1);
 
+__OPENCV_GPUFILTERS_DEPR_BEFORE__ void erode(InputArray src, OutputArray dst, InputArray kernel,
+                                             Point anchor = Point(-1, -1), int iterations = 1,
+                                             Stream& stream = Stream::Null()) __OPENCV_GPUFILTERS_DEPR_AFTER__;
+
+inline void erode(InputArray src, OutputArray dst, InputArray kernel, Point anchor, int iterations, Stream& stream)
+{
+    Ptr<gpu::Filter> f = gpu::createMorphologyFilter(MORPH_ERODE, src.type(), kernel, anchor, iterations);
+    f->apply(src, dst, stream);
+}
+
+__OPENCV_GPUFILTERS_DEPR_BEFORE__ void dilate(InputArray src, OutputArray dst, InputArray kernel,
+                                              Point anchor = Point(-1, -1), int iterations = 1,
+                                              Stream& stream = Stream::Null()) __OPENCV_GPUFILTERS_DEPR_AFTER__;
+
+inline void dilate(InputArray src, OutputArray dst, InputArray kernel, Point anchor, int iterations, Stream& stream)
+{
+    Ptr<gpu::Filter> f = gpu::createMorphologyFilter(MORPH_DILATE, src.type(), kernel, anchor, iterations);
+    f->apply(src, dst, stream);
+}
+
+__OPENCV_GPUFILTERS_DEPR_BEFORE__ void morphologyEx(InputArray src, OutputArray dst, int op,
+                                                    InputArray kernel, Point anchor = Point(-1, -1), int iterations = 1,
+                                                    Stream& stream = Stream::Null()) __OPENCV_GPUFILTERS_DEPR_AFTER__;
+
+inline void morphologyEx(InputArray src, OutputArray dst, int op, InputArray kernel, Point anchor, int iterations, Stream& stream)
+{
+    Ptr<gpu::Filter> f = gpu::createMorphologyFilter(op, src.type(), kernel, anchor, iterations);
+    f->apply(src, dst, stream);
+}
 
 
 
@@ -285,18 +320,7 @@ CV_EXPORTS Ptr<BaseColumnFilter_GPU> getColumnSumFilter_GPU(int sumType, int dst
 
 
 
-//! returns 2D morphological filter
-//! only MORPH_ERODE and MORPH_DILATE are supported
-//! supports CV_8UC1 and CV_8UC4 types
-//! kernel must have CV_8UC1 type, one rows and cols == ksize.width * ksize.height
-CV_EXPORTS Ptr<BaseFilter_GPU> getMorphologyFilter_GPU(int op, int type, const Mat& kernel, const Size& ksize,
-    Point anchor=Point(-1,-1));
 
-//! returns morphological filter engine. Only MORPH_ERODE and MORPH_DILATE are supported.
-CV_EXPORTS Ptr<FilterEngine_GPU> createMorphologyFilter_GPU(int op, int type, const Mat& kernel,
-    const Point& anchor = Point(-1,-1), int iterations = 1);
-CV_EXPORTS Ptr<FilterEngine_GPU> createMorphologyFilter_GPU(int op, int type, const Mat& kernel, GpuMat& buf,
-    const Point& anchor = Point(-1,-1), int iterations = 1);
 
 
 
@@ -310,22 +334,7 @@ CV_EXPORTS Ptr<BaseFilter_GPU> getMinFilter_GPU(int srcType, int dstType, const 
 
 
 
-//! erodes the image (applies the local minimum operator)
-CV_EXPORTS void erode(const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1);
-CV_EXPORTS void erode(const GpuMat& src, GpuMat& dst, const Mat& kernel, GpuMat& buf,
-                      Point anchor = Point(-1, -1), int iterations = 1,
-                      Stream& stream = Stream::Null());
 
-//! dilates the image (applies the local maximum operator)
-CV_EXPORTS void dilate(const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1);
-CV_EXPORTS void dilate(const GpuMat& src, GpuMat& dst, const Mat& kernel, GpuMat& buf,
-                       Point anchor = Point(-1, -1), int iterations = 1,
-                       Stream& stream = Stream::Null());
-
-//! applies an advanced morphological operation to the image
-CV_EXPORTS void morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1);
-CV_EXPORTS void morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, GpuMat& buf1, GpuMat& buf2,
-                             Point anchor = Point(-1, -1), int iterations = 1, Stream& stream = Stream::Null());
 
 
 

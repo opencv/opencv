@@ -61,6 +61,8 @@ Ptr<Filter> cv::gpu::createScharrFilter(int, int, int, int, double, int, int) { 
 
 Ptr<Filter> cv::gpu::createGaussianFilter(int, int, Size, double, double, int, int) { throw_no_cuda(); return Ptr<Filter>(); }
 
+Ptr<Filter> cv::gpu::createMorphologyFilter(int, int, InputArray, Point, int) { throw_no_cuda(); return Ptr<Filter>(); }
+
 
 
 
@@ -68,18 +70,9 @@ Ptr<Filter> cv::gpu::createGaussianFilter(int, int, Size, double, double, int, i
 
 Ptr<BaseRowFilter_GPU> cv::gpu::getRowSumFilter_GPU(int, int, int, int) { throw_no_cuda(); return Ptr<BaseRowFilter_GPU>(0); }
 Ptr<BaseColumnFilter_GPU> cv::gpu::getColumnSumFilter_GPU(int, int, int, int) { throw_no_cuda(); return Ptr<BaseColumnFilter_GPU>(0); }
-Ptr<BaseFilter_GPU> cv::gpu::getMorphologyFilter_GPU(int, int, const Mat&, const Size&, Point) { throw_no_cuda(); return Ptr<BaseFilter_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createMorphologyFilter_GPU(int, int, const Mat&, const Point&, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createMorphologyFilter_GPU(int, int, const Mat&, GpuMat&, const Point&, int) { throw_no_cuda(); return Ptr<FilterEngine_GPU>(0); }
 Ptr<BaseFilter_GPU> cv::gpu::getMaxFilter_GPU(int, int, const Size&, Point) { throw_no_cuda(); return Ptr<BaseFilter_GPU>(0); }
 Ptr<BaseFilter_GPU> cv::gpu::getMinFilter_GPU(int, int, const Size&, Point) { throw_no_cuda(); return Ptr<BaseFilter_GPU>(0); }
 
-void cv::gpu::erode(const GpuMat&, GpuMat&, const Mat&, Point, int) { throw_no_cuda(); }
-void cv::gpu::erode(const GpuMat&, GpuMat&, const Mat&, GpuMat&, Point, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::dilate(const GpuMat&, GpuMat&, const Mat&, Point, int) { throw_no_cuda(); }
-void cv::gpu::dilate(const GpuMat&, GpuMat&, const Mat&, GpuMat&, Point, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::morphologyEx(const GpuMat&, GpuMat&, int, const Mat&, Point, int) { throw_no_cuda(); }
-void cv::gpu::morphologyEx(const GpuMat&, GpuMat&, int, const Mat&, GpuMat&, GpuMat&, Point, int, Stream&) { throw_no_cuda(); }
 
 
 #else
@@ -506,6 +499,297 @@ Ptr<Filter> cv::gpu::createGaussianFilter(int srcType, int dstType, Size ksize, 
     return createSeparableLinearFilter(srcType, dstType, kx, ky, Point(-1,-1), rowBorderMode, columnBorderMode);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Morphology Filter
+
+namespace
+{
+    class MorphologyFilter : public Filter
+    {
+    public:
+        MorphologyFilter(int op, int srcType, InputArray kernel, Point anchor, int iterations);
+
+        void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+
+    private:
+        typedef NppStatus (*nppMorfFilter_t)(const Npp8u* pSrc, Npp32s nSrcStep, Npp8u* pDst, Npp32s nDstStep, NppiSize oSizeROI,
+                                             const Npp8u* pMask, NppiSize oMaskSize, NppiPoint oAnchor);
+
+        int type_;
+        GpuMat kernel_;
+        Point anchor_;
+        int iters_;
+        nppMorfFilter_t func_;
+
+        GpuMat srcBorder_;
+        GpuMat buf_;
+    };
+
+    MorphologyFilter::MorphologyFilter(int op, int srcType, InputArray _kernel, Point anchor, int iterations) :
+        type_(srcType), anchor_(anchor), iters_(iterations)
+    {
+        static const nppMorfFilter_t funcs[2][5] =
+        {
+            {0, nppiErode_8u_C1R, 0, 0, nppiErode_8u_C4R },
+            {0, nppiDilate_8u_C1R, 0, 0, nppiDilate_8u_C4R }
+        };
+
+        CV_Assert( op == MORPH_ERODE || op == MORPH_DILATE );
+        CV_Assert( srcType == CV_8UC1 || srcType == CV_8UC4 );
+
+        Mat kernel = _kernel.getMat();
+        Size ksize = !kernel.empty() ? _kernel.size() : Size(3, 3);
+
+        normalizeAnchor(anchor_, ksize);
+
+        if (kernel.empty())
+        {
+            kernel = getStructuringElement(MORPH_RECT, Size(1 + iters_ * 2, 1 + iters_ * 2));
+            anchor_ = Point(iters_, iters_);
+            iters_ = 1;
+        }
+        else if (iters_ > 1 && countNonZero(kernel) == (int) kernel.total())
+        {
+            anchor_ = Point(anchor_.x * iters_, anchor_.y * iters_);
+            kernel = getStructuringElement(MORPH_RECT,
+                                           Size(ksize.width + (iters_ - 1) * (ksize.width - 1),
+                                                ksize.height + (iters_ - 1) * (ksize.height - 1)),
+                                           anchor_);
+            iters_ = 1;
+        }
+
+        CV_Assert( kernel.channels() == 1 );
+
+        Mat kernel8U;
+        kernel.convertTo(kernel8U, CV_8U);
+
+        kernel_ = gpu::createContinuous(kernel.size(), CV_8UC1);
+        kernel_.upload(kernel8U);
+
+        func_ = funcs[op][CV_MAT_CN(srcType)];
+    }
+
+    void MorphologyFilter::apply(InputArray _src, OutputArray _dst, Stream& _stream)
+    {
+        GpuMat src = _src.getGpuMat();
+        CV_Assert( src.type() == type_ );
+
+        Size ksize = kernel_.size();
+        gpu::copyMakeBorder(src, srcBorder_, ksize.height, ksize.height, ksize.width, ksize.width, BORDER_DEFAULT, Scalar(), _stream);
+
+        GpuMat srcRoi = srcBorder_(Rect(ksize.width, ksize.height, src.cols, src.rows));
+
+        GpuMat bufRoi;
+        if (iters_ > 1)
+        {
+            ensureSizeIsEnough(srcBorder_.size(), type_, buf_);
+            buf_.setTo(Scalar::all(0), _stream);
+            bufRoi = buf_(Rect(ksize.width, ksize.height, src.cols, src.rows));
+        }
+
+        _dst.create(src.size(), src.type());
+        GpuMat dst = _dst.getGpuMat();
+
+        cudaStream_t stream = StreamAccessor::getStream(_stream);
+        NppStreamHandler h(stream);
+
+        NppiSize oSizeROI;
+        oSizeROI.width = src.cols;
+        oSizeROI.height = src.rows;
+
+        NppiSize oMaskSize;
+        oMaskSize.height = ksize.height;
+        oMaskSize.width = ksize.width;
+
+        NppiPoint oAnchor;
+        oAnchor.x = anchor_.x;
+        oAnchor.y = anchor_.y;
+
+        nppSafeCall( func_(srcRoi.ptr<Npp8u>(), static_cast<int>(srcRoi.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step),
+                           oSizeROI, kernel_.ptr<Npp8u>(), oMaskSize, oAnchor) );
+
+        for(int i = 1; i < iters_; ++i)
+        {
+            dst.copyTo(bufRoi, _stream);
+
+            nppSafeCall( func_(bufRoi.ptr<Npp8u>(), static_cast<int>(bufRoi.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step),
+                               oSizeROI, kernel_.ptr<Npp8u>(), oMaskSize, oAnchor) );
+        }
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+}
+
+namespace
+{
+    class MorphologyExFilter : public Filter
+    {
+    public:
+        MorphologyExFilter(int srcType, InputArray kernel, Point anchor, int iterations);
+
+    protected:
+        Ptr<gpu::Filter> erodeFilter_, dilateFilter_;
+        GpuMat buf_;
+    };
+
+    MorphologyExFilter::MorphologyExFilter(int srcType, InputArray kernel, Point anchor, int iterations)
+    {
+        erodeFilter_ = gpu::createMorphologyFilter(MORPH_ERODE, srcType, kernel, anchor, iterations);
+        dilateFilter_ = gpu::createMorphologyFilter(MORPH_DILATE, srcType, kernel, anchor, iterations);
+    }
+
+    // MORPH_OPEN
+
+    class MorphologyOpenFilter : public MorphologyExFilter
+    {
+    public:
+        MorphologyOpenFilter(int srcType, InputArray kernel, Point anchor, int iterations);
+
+        void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+    };
+
+    MorphologyOpenFilter::MorphologyOpenFilter(int srcType, InputArray kernel, Point anchor, int iterations) :
+        MorphologyExFilter(srcType, kernel, anchor, iterations)
+    {
+    }
+
+    void MorphologyOpenFilter::apply(InputArray src, OutputArray dst, Stream& stream)
+    {
+        erodeFilter_->apply(src, buf_, stream);
+        dilateFilter_->apply(buf_, dst, stream);
+    }
+
+    // MORPH_CLOSE
+
+    class MorphologyCloseFilter : public MorphologyExFilter
+    {
+    public:
+        MorphologyCloseFilter(int srcType, InputArray kernel, Point anchor, int iterations);
+
+        void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+    };
+
+    MorphologyCloseFilter::MorphologyCloseFilter(int srcType, InputArray kernel, Point anchor, int iterations) :
+        MorphologyExFilter(srcType, kernel, anchor, iterations)
+    {
+    }
+
+    void MorphologyCloseFilter::apply(InputArray src, OutputArray dst, Stream& stream)
+    {
+        dilateFilter_->apply(src, buf_, stream);
+        erodeFilter_->apply(buf_, dst, stream);
+    }
+
+    // MORPH_GRADIENT
+
+    class MorphologyGradientFilter : public MorphologyExFilter
+    {
+    public:
+        MorphologyGradientFilter(int srcType, InputArray kernel, Point anchor, int iterations);
+
+        void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+    };
+
+    MorphologyGradientFilter::MorphologyGradientFilter(int srcType, InputArray kernel, Point anchor, int iterations) :
+        MorphologyExFilter(srcType, kernel, anchor, iterations)
+    {
+    }
+
+    void MorphologyGradientFilter::apply(InputArray src, OutputArray dst, Stream& stream)
+    {
+        erodeFilter_->apply(src, buf_, stream);
+        dilateFilter_->apply(src, dst, stream);
+        gpu::subtract(dst, buf_, dst, noArray(), -1, stream);
+    }
+
+    // MORPH_TOPHAT
+
+    class MorphologyTophatFilter : public MorphologyExFilter
+    {
+    public:
+        MorphologyTophatFilter(int srcType, InputArray kernel, Point anchor, int iterations);
+
+        void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+    };
+
+    MorphologyTophatFilter::MorphologyTophatFilter(int srcType, InputArray kernel, Point anchor, int iterations) :
+        MorphologyExFilter(srcType, kernel, anchor, iterations)
+    {
+    }
+
+    void MorphologyTophatFilter::apply(InputArray src, OutputArray dst, Stream& stream)
+    {
+        erodeFilter_->apply(src, dst, stream);
+        dilateFilter_->apply(dst, buf_, stream);
+        gpu::subtract(src, buf_, dst, noArray(), -1, stream);
+    }
+
+    // MORPH_BLACKHAT
+
+    class MorphologyBlackhatFilter : public MorphologyExFilter
+    {
+    public:
+        MorphologyBlackhatFilter(int srcType, InputArray kernel, Point anchor, int iterations);
+
+        void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+    };
+
+    MorphologyBlackhatFilter::MorphologyBlackhatFilter(int srcType, InputArray kernel, Point anchor, int iterations) :
+        MorphologyExFilter(srcType, kernel, anchor, iterations)
+    {
+    }
+
+    void MorphologyBlackhatFilter::apply(InputArray src, OutputArray dst, Stream& stream)
+    {
+        dilateFilter_->apply(src, dst, stream);
+        erodeFilter_->apply(dst, buf_, stream);
+        gpu::subtract(buf_, src, dst, noArray(), -1, stream);
+    }
+}
+
+Ptr<Filter> cv::gpu::createMorphologyFilter(int op, int srcType, InputArray kernel, Point anchor, int iterations)
+{
+    switch( op )
+    {
+    case MORPH_ERODE:
+    case MORPH_DILATE:
+        return new MorphologyFilter(op, srcType, kernel, anchor, iterations);
+        break;
+
+    case MORPH_OPEN:
+        return new MorphologyOpenFilter(srcType, kernel, anchor, iterations);
+        break;
+
+    case MORPH_CLOSE:
+        return new MorphologyCloseFilter(srcType, kernel, anchor, iterations);
+        break;
+
+    case MORPH_GRADIENT:
+        return new MorphologyGradientFilter(srcType, kernel, anchor, iterations);
+        break;
+
+    case MORPH_TOPHAT:
+        return new MorphologyTophatFilter(srcType, kernel, anchor, iterations);
+        break;
+
+    case MORPH_BLACKHAT:
+        return new MorphologyBlackhatFilter(srcType, kernel, anchor, iterations);
+        break;
+
+    default:
+        CV_Error(Error::StsBadArg, "Unknown morphological operation");
+        return Ptr<Filter>();
+    }
+}
+
+
+
+
+
+
+
+
 
 
 
@@ -638,264 +922,7 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getColumnSumFilter_GPU(int sumType, int dstTy
     return Ptr<BaseColumnFilter_GPU>(new NppColumnSumFilter(ksize, anchor));
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Morphology Filter
 
-namespace
-{
-    typedef NppStatus (*nppMorfFilter_t)(const Npp8u*, Npp32s, Npp8u*, Npp32s, NppiSize, const Npp8u*, NppiSize, NppiPoint);
-
-    struct NPPMorphFilter : public BaseFilter_GPU
-    {
-        NPPMorphFilter(const Size& ksize_, const Point& anchor_, const GpuMat& kernel_, nppMorfFilter_t func_) :
-            BaseFilter_GPU(ksize_, anchor_), kernel(kernel_), func(func_) {}
-
-        virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& s = Stream::Null())
-        {
-            NppiSize sz;
-            sz.width = src.cols;
-            sz.height = src.rows;
-            NppiSize oKernelSize;
-            oKernelSize.height = ksize.height;
-            oKernelSize.width = ksize.width;
-            NppiPoint oAnchor;
-            oAnchor.x = anchor.x;
-            oAnchor.y = anchor.y;
-
-            cudaStream_t stream = StreamAccessor::getStream(s);
-
-            NppStreamHandler h(stream);
-
-            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step),
-                dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, kernel.ptr<Npp8u>(), oKernelSize, oAnchor) );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-
-        GpuMat kernel;
-        nppMorfFilter_t func;
-    };
-}
-
-Ptr<BaseFilter_GPU> cv::gpu::getMorphologyFilter_GPU(int op, int type, const Mat& kernel, const Size& ksize, Point anchor)
-{
-    static const nppMorfFilter_t nppMorfFilter_callers[2][5] =
-    {
-        {0, nppiErode_8u_C1R, 0, 0, nppiErode_8u_C4R },
-        {0, nppiDilate_8u_C1R, 0, 0, nppiDilate_8u_C4R }
-    };
-
-    CV_Assert(op == MORPH_ERODE || op == MORPH_DILATE);
-    CV_Assert(type == CV_8UC1 || type == CV_8UC4);
-
-    GpuMat gpu_krnl;
-    normalizeKernel(kernel, gpu_krnl);
-    normalizeAnchor(anchor, ksize);
-
-    return Ptr<BaseFilter_GPU>(new NPPMorphFilter(ksize, anchor, gpu_krnl, nppMorfFilter_callers[op][CV_MAT_CN(type)]));
-}
-
-namespace
-{
-    struct MorphologyFilterEngine_GPU : public FilterEngine_GPU
-    {
-        MorphologyFilterEngine_GPU(const Ptr<BaseFilter_GPU>& filter2D_, int type_, int iters_) :
-            filter2D(filter2D_), type(type_), iters(iters_)
-        {
-            pbuf = &buf;
-        }
-
-        MorphologyFilterEngine_GPU(const Ptr<BaseFilter_GPU>& filter2D_, int type_, int iters_, GpuMat& buf_) :
-            filter2D(filter2D_), type(type_), iters(iters_)
-        {
-            pbuf = &buf_;
-        }
-
-        virtual void apply(const GpuMat& src, GpuMat& dst, Rect roi = Rect(0,0,-1,-1), Stream& stream = Stream::Null())
-        {
-            CV_Assert(src.type() == type);
-
-            Size src_size = src.size();
-
-            dst.create(src_size, type);
-
-            if (roi.size() != src_size)
-            {
-                dst.setTo(Scalar::all(0), stream);
-            }
-
-            normalizeROI(roi, filter2D->ksize, filter2D->anchor, src_size);
-
-            if (iters > 1)
-                pbuf->create(src_size, type);
-
-            GpuMat srcROI = src(roi);
-            GpuMat dstROI = dst(roi);
-
-            (*filter2D)(srcROI, dstROI, stream);
-
-            for(int i = 1; i < iters; ++i)
-            {
-                dst.swap((*pbuf));
-
-                dstROI = dst(roi);
-                GpuMat bufROI = (*pbuf)(roi);
-
-                (*filter2D)(bufROI, dstROI, stream);
-            }
-        }
-
-        Ptr<BaseFilter_GPU> filter2D;
-
-        int type;
-        int iters;
-
-        GpuMat buf;
-        GpuMat* pbuf;
-    };
-}
-
-Ptr<FilterEngine_GPU> cv::gpu::createMorphologyFilter_GPU(int op, int type, const Mat& kernel, const Point& anchor, int iterations)
-{
-    CV_Assert(iterations > 0);
-
-    Size ksize = kernel.size();
-
-    Ptr<BaseFilter_GPU> filter2D = getMorphologyFilter_GPU(op, type, kernel, ksize, anchor);
-
-    return Ptr<FilterEngine_GPU>(new MorphologyFilterEngine_GPU(filter2D, type, iterations));
-}
-
-Ptr<FilterEngine_GPU> cv::gpu::createMorphologyFilter_GPU(int op, int type, const Mat& kernel, GpuMat& buf, const Point& anchor, int iterations)
-{
-    CV_Assert(iterations > 0);
-
-    Size ksize = kernel.size();
-
-    Ptr<BaseFilter_GPU> filter2D = getMorphologyFilter_GPU(op, type, kernel, ksize, anchor);
-
-    return Ptr<FilterEngine_GPU>(new MorphologyFilterEngine_GPU(filter2D, type, iterations, buf));
-}
-
-namespace
-{
-    void morphOp(int op, const GpuMat& src, GpuMat& dst, const Mat& _kernel, GpuMat& buf, Point anchor, int iterations, Stream& stream = Stream::Null())
-    {
-        Mat kernel;
-        Size ksize = _kernel.data ? _kernel.size() : Size(3, 3);
-
-        normalizeAnchor(anchor, ksize);
-
-        if (iterations == 0 || _kernel.rows * _kernel.cols == 1)
-        {
-            src.copyTo(dst, stream);
-            return;
-        }
-
-        dst.create(src.size(), src.type());
-
-        if (!_kernel.data)
-        {
-            kernel = getStructuringElement(MORPH_RECT, Size(1 + iterations * 2, 1 + iterations * 2));
-            anchor = Point(iterations, iterations);
-            iterations = 1;
-        }
-        else if (iterations > 1 && countNonZero(_kernel) == _kernel.rows * _kernel.cols)
-        {
-            anchor = Point(anchor.x * iterations, anchor.y * iterations);
-            kernel = getStructuringElement(MORPH_RECT,
-                                           Size(ksize.width + (iterations - 1) * (ksize.width - 1),
-                                                ksize.height + (iterations - 1) * (ksize.height - 1)),
-                                           anchor);
-            iterations = 1;
-        }
-        else
-            kernel = _kernel;
-
-        Ptr<FilterEngine_GPU> f = createMorphologyFilter_GPU(op, src.type(), kernel, buf, anchor, iterations);
-
-        f->apply(src, dst, Rect(0,0,-1,-1), stream);
-    }
-
-    void morphOp(int op, const GpuMat& src, GpuMat& dst, const Mat& _kernel, Point anchor, int iterations)
-    {
-        GpuMat buf;
-        morphOp(op, src, dst, _kernel, buf, anchor, iterations);
-    }
-}
-
-void cv::gpu::erode( const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor, int iterations)
-{
-    morphOp(MORPH_ERODE, src, dst, kernel, anchor, iterations);
-}
-
-void cv::gpu::erode( const GpuMat& src, GpuMat& dst, const Mat& kernel, GpuMat& buf, Point anchor, int iterations, Stream& stream)
-{
-    morphOp(MORPH_ERODE, src, dst, kernel, buf, anchor, iterations, stream);
-}
-
-void cv::gpu::dilate( const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor, int iterations)
-{
-    morphOp(MORPH_DILATE, src, dst, kernel, anchor, iterations);
-}
-
-void cv::gpu::dilate( const GpuMat& src, GpuMat& dst, const Mat& kernel, GpuMat& buf, Point anchor, int iterations, Stream& stream)
-{
-    morphOp(MORPH_DILATE, src, dst, kernel, buf, anchor, iterations, stream);
-}
-
-void cv::gpu::morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, Point anchor, int iterations)
-{
-    GpuMat buf1;
-    GpuMat buf2;
-    morphologyEx(src, dst, op, kernel, buf1, buf2, anchor, iterations);
-}
-
-void cv::gpu::morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, GpuMat& buf1, GpuMat& buf2, Point anchor, int iterations, Stream& stream)
-{
-    switch( op )
-    {
-    case MORPH_ERODE:
-        erode(src, dst, kernel, buf1, anchor, iterations, stream);
-        break;
-
-    case MORPH_DILATE:
-        dilate(src, dst, kernel, buf1, anchor, iterations, stream);
-        break;
-
-    case MORPH_OPEN:
-        erode(src, buf2, kernel, buf1, anchor, iterations, stream);
-        dilate(buf2, dst, kernel, buf1, anchor, iterations, stream);
-        break;
-
-    case MORPH_CLOSE:
-        dilate(src, buf2, kernel, buf1, anchor, iterations, stream);
-        erode(buf2, dst, kernel, buf1, anchor, iterations, stream);
-        break;
-
-    case MORPH_GRADIENT:
-        erode(src, buf2, kernel, buf1, anchor, iterations, stream);
-        dilate(src, dst, kernel, buf1, anchor, iterations, stream);
-        gpu::subtract(dst, buf2, dst, GpuMat(), -1, stream);
-        break;
-
-    case MORPH_TOPHAT:
-        erode(src, dst, kernel, buf1, anchor, iterations, stream);
-        dilate(dst, buf2, kernel, buf1, anchor, iterations, stream);
-        gpu::subtract(src, buf2, dst, GpuMat(), -1, stream);
-        break;
-
-    case MORPH_BLACKHAT:
-        dilate(src, dst, kernel, buf1, anchor, iterations, stream);
-        erode(dst, buf2, kernel, buf1, anchor, iterations, stream);
-        gpu::subtract(buf2, src, dst, GpuMat(), -1, stream);
-        break;
-
-    default:
-        CV_Error(cv::Error::StsBadArg, "unknown morphological operation");
-    }
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Image Rank Filter

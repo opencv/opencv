@@ -489,15 +489,6 @@ INSTANTIATE_TEST_CASE_P(GPU_Filters, GaussianBlur, testing::Combine(
                     BorderType(cv::BORDER_REFLECT)),
     WHOLE_SUBMAT));
 
-
-
-
-
-
-
-
-
-
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Erode
 
@@ -528,8 +519,10 @@ GPU_TEST_P(Erode, Accuracy)
     cv::Mat src = randomMat(size, type);
     cv::Mat kernel = cv::Mat::ones(3, 3, CV_8U);
 
+    cv::Ptr<cv::gpu::Filter> erode = cv::gpu::createMorphologyFilter(cv::MORPH_ERODE, src.type(), kernel, anchor, iterations);
+
     cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-    cv::gpu::erode(loadMat(src, useRoi), dst, kernel, anchor, iterations);
+    erode->apply(loadMat(src, useRoi), dst);
 
     cv::Mat dst_gold;
     cv::erode(src, dst_gold, kernel, anchor, iterations);
@@ -577,8 +570,10 @@ GPU_TEST_P(Dilate, Accuracy)
     cv::Mat src = randomMat(size, type);
     cv::Mat kernel = cv::Mat::ones(3, 3, CV_8U);
 
+    cv::Ptr<cv::gpu::Filter> dilate = cv::gpu::createMorphologyFilter(cv::MORPH_DILATE, src.type(), kernel, anchor, iterations);
+
     cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-    cv::gpu::dilate(loadMat(src, useRoi), dst, kernel, anchor, iterations);
+    dilate->apply(loadMat(src, useRoi), dst);
 
     cv::Mat dst_gold;
     cv::dilate(src, dst_gold, kernel, anchor, iterations);
@@ -630,8 +625,10 @@ GPU_TEST_P(MorphEx, Accuracy)
     cv::Mat src = randomMat(size, type);
     cv::Mat kernel = cv::Mat::ones(3, 3, CV_8U);
 
+    cv::Ptr<cv::gpu::Filter> morph = cv::gpu::createMorphologyFilter(morphOp, src.type(), kernel, anchor, iterations);
+
     cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-    cv::gpu::morphologyEx(loadMat(src, useRoi), dst, morphOp, kernel, anchor, iterations);
+    morph->apply(loadMat(src, useRoi), dst);
 
     cv::Mat dst_gold;
     cv::morphologyEx(src, dst_gold, morphOp, kernel, anchor, iterations);

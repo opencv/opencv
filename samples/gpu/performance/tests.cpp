@@ -746,10 +746,12 @@ TEST(erode)
 
         d_src.upload(src);
 
-        gpu::erode(d_src, d_dst, ker, d_buf);
+        Ptr<gpu::Filter> erode = gpu::createMorphologyFilter(MORPH_ERODE, d_src.type(), ker);
+
+        erode->apply(d_src, d_dst);
 
         GPU_ON;
-        gpu::erode(d_src, d_dst, ker, d_buf);
+        erode->apply(d_src, d_dst);
         GPU_OFF;
     }
 }

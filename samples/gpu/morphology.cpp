@@ -1,120 +1,186 @@
+#include <iostream>
 
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/gpu/gpu.hpp"
-#include <stdlib.h>
-#include <stdio.h>
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/gpufilters.hpp"
+#include "opencv2/gpuimgproc.hpp"
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
 
-static void help()
+class App
 {
+public:
+    App(int argc, const char* argv[]);
 
-printf("\nShow off image morphology: erosion, dialation, open and close\n"
-    "Call:\n   morphology2 [image]\n"
-    "This program also shows use of rect, elipse and cross kernels\n\n");
-printf( "Hot keys: \n"
-    "\tESC - quit the program\n"
-    "\tr - use rectangle structuring element\n"
-    "\te - use elliptic structuring element\n"
-    "\tc - use cross-shaped structuring element\n"
-    "\tSPACE - loop through all the options\n" );
-}
+    int run();
 
-GpuMat src, dst;
+private:
+    void help();
 
-int element_shape = MORPH_RECT;
+    void OpenClose();
+    void ErodeDilate();
 
-//the address of variable which receives trackbar position update
-int max_iters = 10;
-int open_close_pos = 0;
-int erode_dilate_pos = 0;
+    static void OpenCloseCallback(int, void*);
+    static void ErodeDilateCallback(int, void*);
 
-// callback function for open/close trackbar
-static void OpenClose(int, void*)
+    gpu::GpuMat src, dst;
+
+    int element_shape;
+
+    int max_iters;
+    int open_close_pos;
+    int erode_dilate_pos;
+};
+
+App::App(int argc, const char* argv[])
 {
-    int n = open_close_pos - max_iters;
-    int an = n > 0 ? n : -n;
-    Mat element = getStructuringElement(element_shape, Size(an*2+1, an*2+1), Point(an, an) );
-    if( n < 0 )
-        cv::gpu::morphologyEx(src, dst, MORPH_OPEN, element);
-    else
-        cv::gpu::morphologyEx(src, dst, MORPH_CLOSE, element);
-    imshow("Open/Close",(Mat)dst);
-}
+    element_shape = MORPH_RECT;
+    open_close_pos = erode_dilate_pos = max_iters = 10;
 
-// callback function for erode/dilate trackbar
-static void ErodeDilate(int, void*)
-{
-    int n = erode_dilate_pos - max_iters;
-    int an = n > 0 ? n : -n;
-    Mat element = getStructuringElement(element_shape, Size(an*2+1, an*2+1), Point(an, an) );
-    if( n < 0 )
-        cv::gpu::erode(src, dst, element);
-    else
-        cv::gpu::dilate(src, dst, element);
-    imshow("Erode/Dilate",(Mat)dst);
-}
-
-
-int main( int argc, char** argv )
-{
-    char* filename = argc == 2 ? argv[1] : (char*)"baboon.jpg";
-    if (string(argv[1]) == "--help")
+    if (argc == 2 && String(argv[1]) == "--help")
     {
         help();
-        return -1;
+        exit(0);
     }
 
-    src.upload(imread(filename, 1));
-    if (src.empty())
+    String filename = argc == 2 ? argv[1] : "baboon.jpg";
+
+    Mat img = imread(filename);
+    if (img.empty())
     {
-        help();
-        return -1;
+        cerr << "Can't open image " << filename.c_str() << endl;
+        exit(-1);
     }
 
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
-
-    help();
-
-
+    src.upload(img);
     if (src.channels() == 3)
     {
         // gpu support only 4th channel images
-        GpuMat src4ch;
-        cv::gpu::cvtColor(src, src4ch, COLOR_BGR2BGRA);
+        gpu::GpuMat src4ch;
+        gpu::cvtColor(src, src4ch, COLOR_BGR2BGRA);
         src = src4ch;
     }
 
-    //create windows for output images
-    namedWindow("Open/Close",1);
-    namedWindow("Erode/Dilate",1);
+    help();
 
-    open_close_pos = erode_dilate_pos = max_iters;
-    createTrackbar("iterations", "Open/Close",&open_close_pos,max_iters*2+1,OpenClose);
-    createTrackbar("iterations", "Erode/Dilate",&erode_dilate_pos,max_iters*2+1,ErodeDilate);
+    gpu::printShortCudaDeviceInfo(gpu::getDevice());
+}
+
+int App::run()
+{
+    // create windows for output images
+    namedWindow("Open/Close");
+    namedWindow("Erode/Dilate");
+
+    createTrackbar("iterations", "Open/Close", &open_close_pos, max_iters * 2 + 1, OpenCloseCallback, this);
+    createTrackbar("iterations", "Erode/Dilate", &erode_dilate_pos, max_iters * 2 + 1, ErodeDilateCallback, this);
 
     for(;;)
     {
-        int c;
+        OpenClose();
+        ErodeDilate();
 
-        OpenClose(open_close_pos, 0);
-        ErodeDilate(erode_dilate_pos, 0);
-        c = waitKey();
+        char c = (char) waitKey();
 
-        if( (char)c == 27 )
+        switch (c)
+        {
+        case 27:
+            return 0;
             break;
-        if( (char)c == 'e' )
+
+        case 'e':
             element_shape = MORPH_ELLIPSE;
-        else if( (char)c == 'r' )
+            break;
+
+        case 'r':
             element_shape = MORPH_RECT;
-        else if( (char)c == 'c' )
+            break;
+
+        case 'c':
             element_shape = MORPH_CROSS;
-        else if( (char)c == ' ' )
+            break;
+
+        case ' ':
             element_shape = (element_shape + 1) % 3;
+            break;
+        }
+    }
+}
+
+void App::help()
+{
+    cout << "Show off image morphology: erosion, dialation, open and close \n";
+    cout << "Call: \n";
+    cout << "   gpu-example-morphology [image] \n";
+    cout << "This program also shows use of rect, elipse and cross kernels \n" << endl;
+
+    cout << "Hot keys: \n";
+    cout << "\tESC - quit the program \n";
+    cout << "\tr - use rectangle structuring element \n";
+    cout << "\te - use elliptic structuring element \n";
+    cout << "\tc - use cross-shaped structuring element \n";
+    cout << "\tSPACE - loop through all the options \n" << endl;
+}
+
+void App::OpenClose()
+{
+    int n = open_close_pos - max_iters;
+    int an = n > 0 ? n : -n;
+
+    Mat element = getStructuringElement(element_shape, Size(an*2+1, an*2+1), Point(an, an));
+
+    if (n < 0)
+    {
+        Ptr<gpu::Filter> openFilter = gpu::createMorphologyFilter(MORPH_OPEN, src.type(), element);
+        openFilter->apply(src, dst);
+    }
+    else
+    {
+        Ptr<gpu::Filter> closeFilter = gpu::createMorphologyFilter(MORPH_CLOSE, src.type(), element);
+        closeFilter->apply(src, dst);
     }
 
-    return 0;
+    Mat h_dst(dst);
+    imshow("Open/Close", h_dst);
+}
+
+void App::ErodeDilate()
+{
+    int n = erode_dilate_pos - max_iters;
+    int an = n > 0 ? n : -n;
+
+    Mat element = getStructuringElement(element_shape, Size(an*2+1, an*2+1), Point(an, an));
+
+    if (n < 0)
+    {
+        Ptr<gpu::Filter> erodeFilter = gpu::createMorphologyFilter(MORPH_ERODE, src.type(), element);
+        erodeFilter->apply(src, dst);
+    }
+    else
+    {
+        Ptr<gpu::Filter> dilateFilter = gpu::createMorphologyFilter(MORPH_DILATE, src.type(), element);
+        dilateFilter->apply(src, dst);
+    }
+
+    Mat h_dst(dst);
+    imshow("Erode/Dilate", h_dst);
+}
+
+void App::OpenCloseCallback(int, void* data)
+{
+    App* thiz = (App*) data;
+    thiz->OpenClose();
+}
+
+void App::ErodeDilateCallback(int, void* data)
+{
+    App* thiz = (App*) data;
+    thiz->ErodeDilate();
+}
+
+int main(int argc, const char* argv[])
+{
+    App app(argc, argv);
+    return app.run();
 }
