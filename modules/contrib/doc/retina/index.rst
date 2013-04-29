@@ -14,6 +14,8 @@ Class which provides the main controls to the Gipsa/Listic labs human  retina mo
 
 * periphearal vision for sensitive transient signals detection (motion and events) : the magnocellular pathway.
 
+This model originates from Jeanny Herault work [herault2010]_. It has been involved in Alexandre Benoit phd and current research [benoit2010]_. It includes the work of other Jeanny's phd student such as [chaix2007]_ and the log polar transformations of Barthelemy Durette described in Jeanny's book.
+
 **NOTE : See the Retina tutorial in the tutorial/contrib section for complementary explanations.**
 
 The retina can be settled up with various parameters, by default, the retina cancels mean luminance and enforces all details of the visual scene. In order to use your own parameters, you can use at least one time the *write(String fs)* method which will write a proper XML file with all default parameters. Then, tweak it on your own and reload them at any time using method *setup(String fs)*. These methods update a *Retina::RetinaParameters* member structure that is described hereafter. ::
@@ -67,7 +69,7 @@ The retina can be settled up with various parameters, by default, the retina can
 Description
 +++++++++++
 
-Class which allows the `Gipsa <http://www.gipsa-lab.inpg.fr>`_ (preliminary work) / `Listic <http://www.listic.univ-savoie.fr>`_ (code maintainer) labs retina model to be used. This class allows human retina spatio-temporal image processing to be applied on still images, images sequences and video sequences. Briefly, here are the main human retina model properties:
+Class which allows the `Gipsa <http://www.gipsa-lab.inpg.fr>`_ (preliminary work) / `Listic <http://www.listic.univ-savoie.fr>`_ (code maintainer and user) labs retina model to be used. This class allows human retina spatio-temporal image processing to be applied on still images, images sequences and video sequences. Briefly, here are the main human retina model properties:
 
 * spectral whithening (mid-frequency details enhancement)
 
@@ -83,17 +85,20 @@ Use : this model can be used basically for spatio-temporal video effects but als
 
 * performing motion analysis also taking benefit of the previously cited properties  (check out the magnocellular retina channel output, by using the provided **getMagno** methods)
 
+Literature
+==========
 For more information, refer to the following papers :
 
-* Benoit A., Caplier A., Durette B., Herault, J., "Using Human Visual System Modeling For Bio-Inspired Low Level Image Processing", Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773. DOI <http://dx.doi.org/10.1016/j.cviu.2010.01.011>
+.. [benoit2010] Benoit A., Caplier A., Durette B., Herault, J., "Using Human Visual System Modeling For Bio-Inspired Low Level Image Processing", Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773. DOI <http://dx.doi.org/10.1016/j.cviu.2010.01.011>
 
 * Please have a look at the reference work of Jeanny Herault that you can read in his book :
 
-Vision: Images, Signals and Neural Networks: Models of Neural Processing in Visual Perception (Progress in Neural Processing),By: Jeanny Herault, ISBN: 9814273686. WAPI (Tower ID): 113266891.
+.. [herault2010] Vision: Images, Signals and Neural Networks: Models of Neural Processing in Visual Perception (Progress in Neural Processing),By: Jeanny Herault, ISBN: 9814273686. WAPI (Tower ID): 113266891.
 
 This retina filter code includes the research contributions of phd/research collegues from which code has been redrawn by the author :
 
-* take a look at the *retinacolor.hpp* module to discover Brice Chaix de Lavarene phD color mosaicing/demosaicing and his reference paper: B. Chaix de Lavarene, D. Alleysson, B. Durette, J. Herault (2007). "Efficient demosaicing through recursive filtering", IEEE International Conference on Image Processing ICIP 2007
+* take a look at the *retinacolor.hpp* module to discover Brice Chaix de Lavarene phD color mosaicing/demosaicing and his reference paper:
+.. [chaix2007] B. Chaix de Lavarene, D. Alleysson, B. Durette, J. Herault (2007). "Efficient demosaicing through recursive filtering", IEEE International Conference on Image Processing ICIP 2007
 
 * take a look at *imagelogpolprojection.hpp* to discover retina spatial log sampling which originates from Barthelemy Durette phd with Jeanny Herault. A Retina / V1 cortex projection is also proposed and originates from Jeanny's discussions. ====> more informations in the above cited Jeanny Heraults's book.
 
@@ -133,7 +138,7 @@ Methods description
 Here are detailled the main methods to control the retina model
 
 Ptr<Retina>::createRetina
-++++++++++++++
++++++++++++++++++++++++++
 
 .. ocv:function:: Ptr<Retina> createRetina(Size inputSize)
 .. ocv:function:: Ptr<Retina> createRetina(Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod = RETINA_COLOR_BAYER, const bool useRetinaLogSampling = false, const double reductionFactor = 1.0, const double samplingStrenght = 10.0 )
@@ -219,12 +224,12 @@ Retina::getParvo/getMagno
 
 .. ocv:function:: void getParvo(Mat parvoOutput)
 .. ocv:function:: void getParvoRAW(Mat parvoOutput)
-.. ocv:function:: Mat getParvoRAW() 
+.. ocv:function:: Mat getParvoRAW()
     Retrieve the Parvocellular channel (details with color) output normalized between range [0;255] if not 'RAW'.
 
 .. ocv:function:: void getParvo(Mat parvoOutput)
 .. ocv:function:: void getParvoRAW(Mat parvoOutput)
-.. ocv:function:: Mat getParvoRAW() 
+.. ocv:function:: Mat getParvoRAW()
     Retrieve the Magnocellular channel (transient events, grayscale) output normalized between range [0;255] if not 'RAW'.
 
 Retina::getInputSize
