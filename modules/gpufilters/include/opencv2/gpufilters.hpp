@@ -96,6 +96,34 @@ inline void blur(InputArray src, OutputArray dst, Size ksize, Point anchor, Stre
     f->apply(src, dst, stream);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Linear Filter
+
+//! non-separable linear 2D filter
+CV_EXPORTS Ptr<Filter> createLinearFilter(int srcType, int dstType, InputArray kernel, Point anchor = Point(-1,-1),
+                                            int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+
+__OPENCV_GPUFILTERS_DEPR_BEFORE__ void filter2D(InputArray src, OutputArray dst, int ddepth, InputArray kernel,
+                                                Point anchor = Point(-1,-1), int borderType = BORDER_DEFAULT,
+                                                Stream& stream = Stream::Null()) __OPENCV_GPUFILTERS_DEPR_AFTER__;
+
+inline void filter2D(InputArray src, OutputArray dst, int ddepth, InputArray kernel, Point anchor, int borderType, Stream& stream)
+{
+    Ptr<gpu::Filter> f = gpu::createLinearFilter(src.type(), ddepth, kernel, anchor, borderType);
+    f->apply(src, dst, stream);
+}
+
+
+
+
+
+
+
+//! applies Laplacian operator to the image
+//! supports only ksize = 1 and ksize = 3
+CV_EXPORTS void Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize = 1, double scale = 1, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null());
+
+
 
 
 
@@ -194,13 +222,7 @@ CV_EXPORTS Ptr<FilterEngine_GPU> createMorphologyFilter_GPU(int op, int type, co
 CV_EXPORTS Ptr<FilterEngine_GPU> createMorphologyFilter_GPU(int op, int type, const Mat& kernel, GpuMat& buf,
     const Point& anchor = Point(-1,-1), int iterations = 1);
 
-//! returns 2D filter with the specified kernel
-//! supports CV_8U, CV_16U and CV_32F one and four channel image
-CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
-//! returns the non-separable linear filter engine
-CV_EXPORTS Ptr<FilterEngine_GPU> createLinearFilter_GPU(int srcType, int dstType, const Mat& kernel,
-    Point anchor = Point(-1,-1), int borderType = BORDER_DEFAULT);
 
 //! returns the primitive row filter with the specified kernel.
 //! supports only CV_8UC1, CV_8UC4, CV_16SC1, CV_16SC2, CV_32SC1, CV_32FC1 source type.
@@ -269,9 +291,6 @@ CV_EXPORTS void morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& 
 CV_EXPORTS void morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, GpuMat& buf1, GpuMat& buf2,
                              Point anchor = Point(-1, -1), int iterations = 1, Stream& stream = Stream::Null());
 
-//! applies non-separable 2D linear filter to the image
-CV_EXPORTS void filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernel, Point anchor=Point(-1,-1), int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null());
-
 //! applies separable 2D linear filter to the image
 CV_EXPORTS void sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY,
                             Point anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
@@ -296,10 +315,6 @@ CV_EXPORTS void GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, double 
                              int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 CV_EXPORTS void GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, GpuMat& buf, double sigma1, double sigma2 = 0,
                              int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1, Stream& stream = Stream::Null());
-
-//! applies Laplacian operator to the image
-//! supports only ksize = 1 and ksize = 3
-CV_EXPORTS void Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize = 1, double scale = 1, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null());
 
 }} // namespace cv { namespace gpu {
 

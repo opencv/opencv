@@ -961,10 +961,11 @@ TEST(filter2D)
             gpu::GpuMat d_src(src);
             gpu::GpuMat d_dst;
 
-            gpu::filter2D(d_src, d_dst, -1, kernel);
+            Ptr<gpu::Filter> filter2D = gpu::createLinearFilter(d_src.type(), -1, kernel);
+            filter2D->apply(d_src, d_dst);
 
             GPU_ON;
-            gpu::filter2D(d_src, d_dst, -1, kernel);
+            filter2D->apply(d_src, d_dst);
             GPU_OFF;
         }
     }

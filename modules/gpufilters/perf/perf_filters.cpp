@@ -87,6 +87,51 @@ PERF_TEST_P(Sz_Type_KernelSz, Blur,
 }
 
 //////////////////////////////////////////////////////////////////////
+// Filter2D
+
+PERF_TEST_P(Sz_Type_KernelSz, Filter2D, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(3, 5, 7, 9, 11, 13, 15)))
+{
+    declare.time(20.0);
+
+    const cv::Size size = GET_PARAM(0);
+    const int type = GET_PARAM(1);
+    const int ksize = GET_PARAM(2);
+
+    cv::Mat src(size, type);
+    declare.in(src, WARMUP_RNG);
+
+    cv::Mat kernel(ksize, ksize, CV_32FC1);
+    declare.in(kernel, WARMUP_RNG);
+
+    if (PERF_RUN_GPU())
+    {
+        const cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat dst;
+
+        cv::Ptr<cv::gpu::Filter> filter2D = cv::gpu::createLinearFilter(d_src.type(), -1, kernel);
+
+        TEST_CYCLE() filter2D->apply(d_src, dst);
+
+        GPU_SANITY_CHECK(dst);
+    }
+    else
+    {
+        cv::Mat dst;
+
+        TEST_CYCLE() cv::filter2D(src, dst, -1, kernel);
+
+        CPU_SANITY_CHECK(dst);
+    }
+}
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
 // Sobel
 
 PERF_TEST_P(Sz_Type_KernelSz, Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1), Values(3, 5, 7, 9, 11, 13, 15)))
@@ -326,42 +371,6 @@ PERF_TEST_P(Sz_Type_Op, MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8
         cv::Mat dst;
 
         TEST_CYCLE() cv::morphologyEx(src, dst, morphOp, ker);
-
-        CPU_SANITY_CHECK(dst);
-    }
-}
-
-//////////////////////////////////////////////////////////////////////
-// Filter2D
-
-PERF_TEST_P(Sz_Type_KernelSz, Filter2D, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(3, 5, 7, 9, 11, 13, 15)))
-{
-    declare.time(20.0);
-
-    const cv::Size size = GET_PARAM(0);
-    const int type = GET_PARAM(1);
-    const int ksize = GET_PARAM(2);
-
-    cv::Mat src(size, type);
-    declare.in(src, WARMUP_RNG);
-
-    cv::Mat kernel(ksize, ksize, CV_32FC1);
-    declare.in(kernel, WARMUP_RNG);
-
-    if (PERF_RUN_GPU())
-    {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
-
-        TEST_CYCLE() cv::gpu::filter2D(d_src, dst, -1, kernel);
-
-        GPU_SANITY_CHECK(dst);
-    }
-    else
-    {
-        cv::Mat dst;
-
-        TEST_CYCLE() cv::filter2D(src, dst, -1, kernel);
 
         CPU_SANITY_CHECK(dst);
     }

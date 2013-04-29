@@ -119,6 +119,121 @@ INSTANTIATE_TEST_CASE_P(GPU_Filters, Blur, testing::Combine(
     WHOLE_SUBMAT));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
+// Filter2D
+
+PARAM_TEST_CASE(Filter2D, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Anchor, BorderType, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    int type;
+    cv::Size ksize;
+    cv::Point anchor;
+    int borderType;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        type = GET_PARAM(2);
+        ksize = GET_PARAM(3);
+        anchor = GET_PARAM(4);
+        borderType = GET_PARAM(5);
+        useRoi = GET_PARAM(6);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+GPU_TEST_P(Filter2D, Accuracy)
+{
+    cv::Mat src = randomMat(size, type);
+    cv::Mat kernel = randomMat(cv::Size(ksize.width, ksize.height), CV_32FC1, 0.0, 1.0);
+
+    cv::Ptr<cv::gpu::Filter> filter2D = cv::gpu::createLinearFilter(src.type(), -1, kernel, anchor, borderType);
+
+    cv::gpu::GpuMat dst = createMat(size, type, useRoi);
+    filter2D->apply(loadMat(src, useRoi), dst);
+
+    cv::Mat dst_gold;
+    cv::filter2D(src, dst_gold, -1, kernel, anchor, 0, borderType);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, CV_MAT_DEPTH(type) == CV_32F ? 1e-1 : 1.0);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Filters, Filter2D, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_16UC1), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC4)),
+    testing::Values(KSize(cv::Size(3, 3)), KSize(cv::Size(5, 5)), KSize(cv::Size(7, 7)), KSize(cv::Size(11, 11)), KSize(cv::Size(13, 13)), KSize(cv::Size(15, 15))),
+    testing::Values(Anchor(cv::Point(-1, -1)), Anchor(cv::Point(0, 0)), Anchor(cv::Point(2, 2))),
+    testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_CONSTANT), BorderType(cv::BORDER_REFLECT)),
+    WHOLE_SUBMAT));
+
+
+
+
+
+
+
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Laplacian
+
+PARAM_TEST_CASE(Laplacian, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    int type;
+    cv::Size ksize;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        type = GET_PARAM(2);
+        ksize = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+GPU_TEST_P(Laplacian, Accuracy)
+{
+    cv::Mat src = randomMat(size, type);
+
+    cv::gpu::GpuMat dst = createMat(size, type, useRoi);
+    cv::gpu::Laplacian(loadMat(src, useRoi), dst, -1, ksize.width);
+
+    cv::Mat dst_gold;
+    cv::Laplacian(src, dst_gold, -1, ksize.width);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() < CV_32F ? 0.0 : 1e-3);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Filters, Laplacian, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_32FC1)),
+    testing::Values(KSize(cv::Size(1, 1)), KSize(cv::Size(3, 3))),
+    WHOLE_SUBMAT));
+
+
+
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
 // Sobel
 
 PARAM_TEST_CASE(Sobel, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, KSize, Deriv_X, Deriv_Y, BorderType, UseRoi)
@@ -333,49 +448,6 @@ INSTANTIATE_TEST_CASE_P(GPU_Filters, GaussianBlur, testing::Combine(
     WHOLE_SUBMAT));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-// Laplacian
-
-PARAM_TEST_CASE(Laplacian, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, UseRoi)
-{
-    cv::gpu::DeviceInfo devInfo;
-    cv::Size size;
-    int type;
-    cv::Size ksize;
-    bool useRoi;
-
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        size = GET_PARAM(1);
-        type = GET_PARAM(2);
-        ksize = GET_PARAM(3);
-        useRoi = GET_PARAM(4);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-    }
-};
-
-GPU_TEST_P(Laplacian, Accuracy)
-{
-    cv::Mat src = randomMat(size, type);
-
-    cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-    cv::gpu::Laplacian(loadMat(src, useRoi), dst, -1, ksize.width);
-
-    cv::Mat dst_gold;
-    cv::Laplacian(src, dst_gold, -1, ksize.width);
-
-    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() < CV_32F ? 0.0 : 1e-3);
-}
-
-INSTANTIATE_TEST_CASE_P(GPU_Filters, Laplacian, testing::Combine(
-    ALL_DEVICES,
-    DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_32FC1)),
-    testing::Values(KSize(cv::Size(1, 1)), KSize(cv::Size(3, 3))),
-    WHOLE_SUBMAT));
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
 // Erode
 
 PARAM_TEST_CASE(Erode, cv::gpu::DeviceInfo, cv::Size, MatType, Anchor, Iterations, UseRoi)
@@ -525,58 +597,6 @@ INSTANTIATE_TEST_CASE_P(GPU_Filters, MorphEx, testing::Combine(
     MorphOp::all(),
     testing::Values(Anchor(cv::Point(-1, -1)), Anchor(cv::Point(0, 0)), Anchor(cv::Point(2, 2))),
     testing::Values(Iterations(1), Iterations(2), Iterations(3)),
-    WHOLE_SUBMAT));
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-// Filter2D
-
-PARAM_TEST_CASE(Filter2D, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Anchor, BorderType, UseRoi)
-{
-    cv::gpu::DeviceInfo devInfo;
-    cv::Size size;
-    int type;
-    cv::Size ksize;
-    cv::Point anchor;
-    int borderType;
-    bool useRoi;
-
-    cv::Mat img;
-
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        size = GET_PARAM(1);
-        type = GET_PARAM(2);
-        ksize = GET_PARAM(3);
-        anchor = GET_PARAM(4);
-        borderType = GET_PARAM(5);
-        useRoi = GET_PARAM(6);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-    }
-};
-
-GPU_TEST_P(Filter2D, Accuracy)
-{
-    cv::Mat src = randomMat(size, type);
-    cv::Mat kernel = randomMat(cv::Size(ksize.width, ksize.height), CV_32FC1, 0.0, 1.0);
-
-    cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-    cv::gpu::filter2D(loadMat(src, useRoi), dst, -1, kernel, anchor, borderType);
-
-    cv::Mat dst_gold;
-    cv::filter2D(src, dst_gold, -1, kernel, anchor, 0, borderType);
-
-    EXPECT_MAT_NEAR(dst_gold, dst, CV_MAT_DEPTH(type) == CV_32F ? 1e-1 : 1.0);
-}
-
-INSTANTIATE_TEST_CASE_P(GPU_Filters, Filter2D, testing::Combine(
-    ALL_DEVICES,
-    DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_16UC1), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC4)),
-    testing::Values(KSize(cv::Size(3, 3)), KSize(cv::Size(5, 5)), KSize(cv::Size(7, 7)), KSize(cv::Size(11, 11)), KSize(cv::Size(13, 13)), KSize(cv::Size(15, 15))),
-    testing::Values(Anchor(cv::Point(-1, -1)), Anchor(cv::Point(0, 0)), Anchor(cv::Point(2, 2))),
-    testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_CONSTANT), BorderType(cv::BORDER_REFLECT)),
     WHOLE_SUBMAT));
 
 #endif // HAVE_CUDA
