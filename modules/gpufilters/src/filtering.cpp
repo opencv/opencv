@@ -66,14 +66,8 @@ Ptr<Filter> cv::gpu::createMorphologyFilter(int, int, InputArray, Point, int) { 
 Ptr<Filter> cv::gpu::createBoxMaxFilter(int, Size, Point, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 Ptr<Filter> cv::gpu::createBoxMinFilter(int, Size, Point, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 
-
-
-
-
-Ptr<BaseRowFilter_GPU> cv::gpu::getRowSumFilter_GPU(int, int, int, int) { throw_no_cuda(); return Ptr<BaseRowFilter_GPU>(0); }
-Ptr<BaseColumnFilter_GPU> cv::gpu::getColumnSumFilter_GPU(int, int, int, int) { throw_no_cuda(); return Ptr<BaseColumnFilter_GPU>(0); }
-
-
+Ptr<Filter> cv::gpu::createRowSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::gpu::createColumnSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 
 #else
 
@@ -876,145 +870,129 @@ Ptr<Filter> cv::gpu::createBoxMinFilter(int srcType, Size ksize, Point anchor, i
     return new NPPRankFilter(RANK_MIN, srcType, ksize, anchor, borderMode, borderVal);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-namespace
-{
-    inline void normalizeROI(Rect& roi, const Size& ksize, const Point& anchor, const Size& src_size)
-    {
-        if (roi == Rect(0,0,-1,-1))
-            roi = Rect(anchor.x, anchor.y, src_size.width - ksize.width, src_size.height - ksize.height);
-
-        CV_Assert(roi.x >= 0 && roi.y >= 0 && roi.width <= src_size.width && roi.height <= src_size.height);
-    }
-
-    inline void normalizeKernel(const Mat& kernel, GpuMat& gpu_krnl, int type = CV_8U, int* nDivisor = 0, bool reverse = false)
-    {
-        int scale = nDivisor && (kernel.depth() == CV_32F || kernel.depth() == CV_64F) ? 256 : 1;
-        if (nDivisor) *nDivisor = scale;
-
-        Mat temp(kernel.size(), type);
-        kernel.convertTo(temp, type, scale);
-        Mat cont_krnl = temp.reshape(1, 1);
-
-        if (reverse)
-        {
-            int count = cont_krnl.cols >> 1;
-            for (int i = 0; i < count; ++i)
-            {
-                std::swap(cont_krnl.at<int>(0, i), cont_krnl.at<int>(0, cont_krnl.cols - 1 - i));
-            }
-        }
-
-        gpu_krnl.upload(cont_krnl);
-    }
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // 1D Sum Filter
 
 namespace
 {
-    struct NppRowSumFilter : public BaseRowFilter_GPU
+    class NppRowSumFilter : public Filter
     {
-        NppRowSumFilter(int ksize_, int anchor_) : BaseRowFilter_GPU(ksize_, anchor_) {}
+    public:
+        NppRowSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal);
 
-        virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& s = Stream::Null())
-        {
-            NppiSize sz;
-            sz.width = src.cols;
-            sz.height = src.rows;
+        void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
-            cudaStream_t stream = StreamAccessor::getStream(s);
+    private:
+        int srcType_, dstType_;
+        int ksize_;
+        int anchor_;
+        int borderMode_;
+        Scalar borderVal_;
 
-            NppStreamHandler h(stream);
-
-            nppSafeCall( nppiSumWindowRow_8u32f_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
-                dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, ksize, anchor) );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
+        GpuMat srcBorder_;
     };
+
+    NppRowSumFilter::NppRowSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal) :
+        srcType_(srcType), dstType_(dstType), ksize_(ksize), anchor_(anchor), borderMode_(borderMode), borderVal_(borderVal)
+    {
+        CV_Assert( srcType_ == CV_8UC1 );
+        CV_Assert( dstType_ == CV_32FC1 );
+
+        normalizeAnchor(anchor_, ksize_);
+    }
+
+    void NppRowSumFilter::apply(InputArray _src, OutputArray _dst, Stream& _stream)
+    {
+        GpuMat src = _src.getGpuMat();
+        CV_Assert( src.type() == srcType_ );
+
+        gpu::copyMakeBorder(src, srcBorder_, 0, 0, ksize_, ksize_, borderMode_, borderVal_, _stream);
+
+        _dst.create(src.size(), dstType_);
+        GpuMat dst = _dst.getGpuMat();
+
+        GpuMat srcRoi = srcBorder_(Rect(ksize_, 0, src.cols, src.rows));
+
+        cudaStream_t stream = StreamAccessor::getStream(_stream);
+        NppStreamHandler h(stream);
+
+        NppiSize oSizeROI;
+        oSizeROI.width = src.cols;
+        oSizeROI.height = src.rows;
+
+        nppSafeCall( nppiSumWindowRow_8u32f_C1R(srcRoi.ptr<Npp8u>(), static_cast<int>(srcRoi.step),
+                                                dst.ptr<Npp32f>(), static_cast<int>(dst.step),
+                                                oSizeROI, ksize_, anchor_) );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
 }
 
-Ptr<BaseRowFilter_GPU> cv::gpu::getRowSumFilter_GPU(int srcType, int sumType, int ksize, int anchor)
+Ptr<Filter> cv::gpu::createRowSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal)
 {
-    CV_Assert(srcType == CV_8UC1 && sumType == CV_32FC1);
-
-    normalizeAnchor(anchor, ksize);
-
-    return Ptr<BaseRowFilter_GPU>(new NppRowSumFilter(ksize, anchor));
+    return new NppRowSumFilter(srcType, dstType, ksize, anchor, borderMode, borderVal);
 }
 
 namespace
 {
-    struct NppColumnSumFilter : public BaseColumnFilter_GPU
+    class NppColumnSumFilter : public Filter
     {
-        NppColumnSumFilter(int ksize_, int anchor_) : BaseColumnFilter_GPU(ksize_, anchor_) {}
+    public:
+        NppColumnSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal);
 
-        virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& s = Stream::Null())
-        {
-            NppiSize sz;
-            sz.width = src.cols;
-            sz.height = src.rows;
+        void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
-            cudaStream_t stream = StreamAccessor::getStream(s);
+    private:
+        int srcType_, dstType_;
+        int ksize_;
+        int anchor_;
+        int borderMode_;
+        Scalar borderVal_;
 
-            NppStreamHandler h(stream);
-
-            nppSafeCall( nppiSumWindowColumn_8u32f_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
-                dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, ksize, anchor) );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
+        GpuMat srcBorder_;
     };
+
+    NppColumnSumFilter::NppColumnSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal) :
+        srcType_(srcType), dstType_(dstType), ksize_(ksize), anchor_(anchor), borderMode_(borderMode), borderVal_(borderVal)
+    {
+        CV_Assert( srcType_ == CV_8UC1 );
+        CV_Assert( dstType_ == CV_32FC1 );
+
+        normalizeAnchor(anchor_, ksize_);
+    }
+
+    void NppColumnSumFilter::apply(InputArray _src, OutputArray _dst, Stream& _stream)
+    {
+        GpuMat src = _src.getGpuMat();
+        CV_Assert( src.type() == srcType_ );
+
+        gpu::copyMakeBorder(src, srcBorder_, ksize_, ksize_, 0, 0, borderMode_, borderVal_, _stream);
+
+        _dst.create(src.size(), dstType_);
+        GpuMat dst = _dst.getGpuMat();
+
+        GpuMat srcRoi = srcBorder_(Rect(0, ksize_, src.cols, src.rows));
+
+        cudaStream_t stream = StreamAccessor::getStream(_stream);
+        NppStreamHandler h(stream);
+
+        NppiSize oSizeROI;
+        oSizeROI.width = src.cols;
+        oSizeROI.height = src.rows;
+
+        nppSafeCall( nppiSumWindowColumn_8u32f_C1R(srcRoi.ptr<Npp8u>(), static_cast<int>(srcRoi.step),
+                                                   dst.ptr<Npp32f>(), static_cast<int>(dst.step),
+                                                   oSizeROI, ksize_, anchor_) );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
 }
 
-Ptr<BaseColumnFilter_GPU> cv::gpu::getColumnSumFilter_GPU(int sumType, int dstType, int ksize, int anchor)
+Ptr<Filter> cv::gpu::createColumnSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal)
 {
-    CV_Assert(sumType == CV_8UC1 && dstType == CV_32FC1);
-
-    normalizeAnchor(anchor, ksize);
-
-    return Ptr<BaseColumnFilter_GPU>(new NppColumnSumFilter(ksize, anchor));
+    return new NppColumnSumFilter(srcType, dstType, ksize, anchor, borderMode, borderVal);
 }
-
-
 
 #endif

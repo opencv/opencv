@@ -254,95 +254,16 @@ CV_EXPORTS Ptr<Filter> createBoxMinFilter(int srcType, Size ksize,
                                           Point anchor = Point(-1, -1),
                                           int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// 1D Sum Filter
 
-
-
-
-
-
-/*!
-The Base Class for 1D or Row-wise Filters
-
-This is the base class for linear or non-linear filters that process 1D data.
-In particular, such filters are used for the "horizontal" filtering parts in separable filters.
-*/
-class CV_EXPORTS BaseRowFilter_GPU
-{
-public:
-    BaseRowFilter_GPU(int ksize_, int anchor_) : ksize(ksize_), anchor(anchor_) {}
-    virtual ~BaseRowFilter_GPU() {}
-    virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null()) = 0;
-    int ksize, anchor;
-};
-
-/*!
-The Base Class for Column-wise Filters
-
-This is the base class for linear or non-linear filters that process columns of 2D arrays.
-Such filters are used for the "vertical" filtering parts in separable filters.
-*/
-class CV_EXPORTS BaseColumnFilter_GPU
-{
-public:
-    BaseColumnFilter_GPU(int ksize_, int anchor_) : ksize(ksize_), anchor(anchor_) {}
-    virtual ~BaseColumnFilter_GPU() {}
-    virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null()) = 0;
-    int ksize, anchor;
-};
-
-/*!
-The Base Class for Non-Separable 2D Filters.
-
-This is the base class for linear or non-linear 2D filters.
-*/
-class CV_EXPORTS BaseFilter_GPU
-{
-public:
-    BaseFilter_GPU(const Size& ksize_, const Point& anchor_) : ksize(ksize_), anchor(anchor_) {}
-    virtual ~BaseFilter_GPU() {}
-    virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null()) = 0;
-    Size ksize;
-    Point anchor;
-};
-
-/*!
-The Base Class for Filter Engine.
-
-The class can be used to apply an arbitrary filtering operation to an image.
-It contains all the necessary intermediate buffers.
-*/
-class CV_EXPORTS FilterEngine_GPU
-{
-public:
-    virtual ~FilterEngine_GPU() {}
-
-    virtual void apply(const GpuMat& src, GpuMat& dst, Rect roi = Rect(0,0,-1,-1), Stream& stream = Stream::Null()) = 0;
-};
-
-
-
-//! returns horizontal 1D box filter
+//! creates a horizontal 1D box filter
 //! supports only CV_8UC1 source type and CV_32FC1 sum type
-CV_EXPORTS Ptr<BaseRowFilter_GPU> getRowSumFilter_GPU(int srcType, int sumType, int ksize, int anchor = -1);
+CV_EXPORTS Ptr<Filter> createRowSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
-//! returns vertical 1D box filter
+//! creates a vertical 1D box filter
 //! supports only CV_8UC1 sum type and CV_32FC1 dst type
-CV_EXPORTS Ptr<BaseColumnFilter_GPU> getColumnSumFilter_GPU(int sumType, int dstType, int ksize, int anchor = -1);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+CV_EXPORTS Ptr<Filter> createColumnSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
 }} // namespace cv { namespace gpu {
 
