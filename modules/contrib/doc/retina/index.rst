@@ -14,7 +14,7 @@ Class which provides the main controls to the Gipsa/Listic labs human  retina mo
 
 * periphearal vision for sensitive transient signals detection (motion and events) : the magnocellular pathway.
 
-This model originates from Jeanny Herault work [herault2010]_. It has been involved in Alexandre Benoit phd and current research [benoit2010]_. It includes the work of other Jeanny's phd student such as [chaix2007]_ and the log polar transformations of Barthelemy Durette described in Jeanny's book.
+This model originates from Jeanny Herault work [Herault2010]_. It has been involved in Alexandre Benoit phd and current research [Benoit2010]_. It includes the work of other Jeanny's phd student such as [Chaix2007]_ and the log polar transformations of Barthelemy Durette described in Jeanny's book.
 
 **NOTE : See the Retina tutorial in the tutorial/contrib section for complementary explanations.**
 
@@ -89,17 +89,17 @@ Literature
 ==========
 For more information, refer to the following papers :
 
-.. [benoit2010] Benoit A., Caplier A., Durette B., Herault, J., "Using Human Visual System Modeling For Bio-Inspired Low Level Image Processing", Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773. DOI <http://dx.doi.org/10.1016/j.cviu.2010.01.011>
+.. [Benoit2010] Benoit A., Caplier A., Durette B., Herault, J., "Using Human Visual System Modeling For Bio-Inspired Low Level Image Processing", Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773. DOI <http://dx.doi.org/10.1016/j.cviu.2010.01.011>
 
 * Please have a look at the reference work of Jeanny Herault that you can read in his book :
 
-.. [herault2010] Vision: Images, Signals and Neural Networks: Models of Neural Processing in Visual Perception (Progress in Neural Processing),By: Jeanny Herault, ISBN: 9814273686. WAPI (Tower ID): 113266891.
+.. [Herault2010] Vision: Images, Signals and Neural Networks: Models of Neural Processing in Visual Perception (Progress in Neural Processing),By: Jeanny Herault, ISBN: 9814273686. WAPI (Tower ID): 113266891.
 
 This retina filter code includes the research contributions of phd/research collegues from which code has been redrawn by the author :
 
 * take a look at the *retinacolor.hpp* module to discover Brice Chaix de Lavarene phD color mosaicing/demosaicing and his reference paper:
 
-.. [chaix2007] B. Chaix de Lavarene, D. Alleysson, B. Durette, J. Herault (2007). "Efficient demosaicing through recursive filtering", IEEE International Conference on Image Processing ICIP 2007
+.. [Chaix2007] B. Chaix de Lavarene, D. Alleysson, B. Durette, J. Herault (2007). "Efficient demosaicing through recursive filtering", IEEE International Conference on Image Processing ICIP 2007
 
 * take a look at *imagelogpolprojection.hpp* to discover retina spatial log sampling which originates from Barthelemy Durette phd with Jeanny Herault. A Retina / V1 cortex projection is also proposed and originates from Jeanny's discussions. More informations in the above cited Jeanny Heraults's book.
 
@@ -185,7 +185,7 @@ Retina::getParvo
 ++++++++++++++++
 
 .. ocv:function:: void Retina::getParvo( Mat & retinaOutput_parvo )
-.. ocv:function:: void Retina::getParvoRAW( std::valarray<float> & retinaOutput_parvo )
+.. ocv:function:: void Retina::getParvoRAW( Mat & retinaOutput_parvo )
 .. ocv:function:: const Mat Retina::getParvoRAW() const
 
     Accessor of the details channel of the retina (models foveal vision). Warning, getParvoRAW methods return buffers that are not rescaled within range [0;255] while the non RAW method allows a normalized matrix to be retrieved.
@@ -200,7 +200,7 @@ Retina::getMagno
 ++++++++++++++++
 
 .. ocv:function:: void Retina::getMagno( Mat & retinaOutput_magno )
-.. ocv:function:: void Retina::getMagnoRAW( std::valarray<float> & retinaOutput_magno )
+.. ocv:function:: void Retina::getMagnoRAW( Mat & retinaOutput_magno )
 .. ocv:function:: const Mat Retina::getMagnoRAW() const
 
     Accessor of the motion channel of the retina (models peripheral vision). Warning, getMagnoRAW methods return buffers that are not rescaled within range [0;255] while the non RAW method allows a normalized matrix to be retrieved.
@@ -218,12 +218,12 @@ Retina::getParameters
 
     Retrieve the current parameters values in a *Retina::RetinaParameters* structure
 
-    :return: the current parameters setup
+    :return: the current parameters setup as a struture object. 
 
 Retina::getInputSize
 ++++++++++++++++++++
 
-.. ocv:function:: Size Retina::inputSize()
+.. ocv:function:: Size Retina::getInputSize()
 
     Retreive retina input buffer size
 
@@ -232,7 +232,7 @@ Retina::getInputSize
 Retina::getOutputSize
 +++++++++++++++++++++
 
-.. ocv:function:: Size Retina::outputSize()
+.. ocv:function:: Size Retina::getOutputSize()
 
     Retreive retina output buffer size that can be different from the input if a spatial log transformation is applied
 
