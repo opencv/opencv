@@ -14,6 +14,8 @@ Class which provides the main controls to the Gipsa/Listic labs human  retina mo
 
 * periphearal vision for sensitive transient signals detection (motion and events) : the magnocellular pathway.
 
+This model originates from Jeanny Herault work [herault2010]_. It has been involved in Alexandre Benoit phd and current research [benoit2010]_. It includes the work of other Jeanny's phd student such as [chaix2007]_ and the log polar transformations of Barthelemy Durette described in Jeanny's book.
+
 **NOTE : See the Retina tutorial in the tutorial/contrib section for complementary explanations.**
 
 The retina can be settled up with various parameters, by default, the retina cancels mean luminance and enforces all details of the visual scene. In order to use your own parameters, you can use at least one time the *write(String fs)* method which will write a proper XML file with all default parameters. Then, tweak it on your own and reload them at any time using method *setup(String fs)*. These methods update a *Retina::RetinaParameters* member structure that is described hereafter. ::
@@ -24,9 +26,9 @@ The retina can be settled up with various parameters, by default, the retina can
     // parameters setup instance
     struct RetinaParameters; // this class is detailled later
 
-    // constructors
-    Retina (Size inputSize);
-    Retina (Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
+    // constructors (interfaces)
+    cv::Ptr<Retina> createRetina (Size inputSize);
+    cv::Ptr<Retina> createRetina (Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
 
     // main method for input frame processing
     void run (const Mat &inputImage);
@@ -34,19 +36,19 @@ The retina can be settled up with various parameters, by default, the retina can
     // output buffers retreival methods
     // -> foveal color vision details channel with luminance and noise correction
     void getParvo (Mat &retinaOutput_parvo);
-    void getParvo (std::valarray< float > &retinaOutput_parvo);
-    const std::valarray< float > & getParvo () const;
+    void getParvoRAW (Mat &retinaOutput_parvo);// retreive original output buffers without any normalisation
+    const Mat getParvoRAW () const;// retreive original output buffers without any normalisation
     // -> peripheral monochrome motion and events (transient information) channel
     void getMagno (Mat &retinaOutput_magno);
-    void getMagno (std::valarray< float > &retinaOutput_magno);
-    const std::valarray< float > & getMagno () const;
+    void getMagnoRAW (Mat &retinaOutput_magno); // retreive original output buffers without any normalisation 
+    const Mat getMagnoRAW () const;// retreive original output buffers without any normalisation
 
     // reset retina buffers... equivalent to closing your eyes for some seconds
     void clearBuffers ();
 
     // retreive input and output buffers sizes
-    Size inputSize ();
-    Size outputSize ();
+    Size getInputSize ();
+    Size getOutputSize ();
 
     // setup methods with specific parameters specification of global xml config file loading/write
     void setup (String retinaParameterFile="", const bool applyDefaultSetupOnFailure=true);
@@ -67,7 +69,7 @@ The retina can be settled up with various parameters, by default, the retina can
 Description
 +++++++++++
 
-Class which allows the `Gipsa <http://www.gipsa-lab.inpg.fr>`_ (preliminary work) / `Listic <http://www.listic.univ-savoie.fr>`_ (code maintainer) labs retina model to be used. This class allows human retina spatio-temporal image processing to be applied on still images, images sequences and video sequences. Briefly, here are the main human retina model properties:
+Class which allows the `Gipsa <http://www.gipsa-lab.inpg.fr>`_ (preliminary work) / `Listic <http://www.listic.univ-savoie.fr>`_ (code maintainer and user) labs retina model to be used. This class allows human retina spatio-temporal image processing to be applied on still images, images sequences and video sequences. Briefly, here are the main human retina model properties:
 
 * spectral whithening (mid-frequency details enhancement)
 
@@ -83,19 +85,23 @@ Use : this model can be used basically for spatio-temporal video effects but als
 
 * performing motion analysis also taking benefit of the previously cited properties  (check out the magnocellular retina channel output, by using the provided **getMagno** methods)
 
+Literature
+==========
 For more information, refer to the following papers :
 
-* Benoit A., Caplier A., Durette B., Herault, J., "Using Human Visual System Modeling For Bio-Inspired Low Level Image Processing", Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773. DOI <http://dx.doi.org/10.1016/j.cviu.2010.01.011>
+.. [benoit2010] Benoit A., Caplier A., Durette B., Herault, J., "Using Human Visual System Modeling For Bio-Inspired Low Level Image Processing", Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773. DOI <http://dx.doi.org/10.1016/j.cviu.2010.01.011>
 
 * Please have a look at the reference work of Jeanny Herault that you can read in his book :
 
-Vision: Images, Signals and Neural Networks: Models of Neural Processing in Visual Perception (Progress in Neural Processing),By: Jeanny Herault, ISBN: 9814273686. WAPI (Tower ID): 113266891.
+.. [herault2010] Vision: Images, Signals and Neural Networks: Models of Neural Processing in Visual Perception (Progress in Neural Processing),By: Jeanny Herault, ISBN: 9814273686. WAPI (Tower ID): 113266891.
 
 This retina filter code includes the research contributions of phd/research collegues from which code has been redrawn by the author :
 
-* take a look at the *retinacolor.hpp* module to discover Brice Chaix de Lavarene phD color mosaicing/demosaicing and his reference paper: B. Chaix de Lavarene, D. Alleysson, B. Durette, J. Herault (2007). "Efficient demosaicing through recursive filtering", IEEE International Conference on Image Processing ICIP 2007
+* take a look at the *retinacolor.hpp* module to discover Brice Chaix de Lavarene phD color mosaicing/demosaicing and his reference paper:
 
-* take a look at *imagelogpolprojection.hpp* to discover retina spatial log sampling which originates from Barthelemy Durette phd with Jeanny Herault. A Retina / V1 cortex projection is also proposed and originates from Jeanny's discussions. ====> more informations in the above cited Jeanny Heraults's book.
+.. [chaix2007] B. Chaix de Lavarene, D. Alleysson, B. Durette, J. Herault (2007). "Efficient demosaicing through recursive filtering", IEEE International Conference on Image Processing ICIP 2007
+
+* take a look at *imagelogpolprojection.hpp* to discover retina spatial log sampling which originates from Barthelemy Durette phd with Jeanny Herault. A Retina / V1 cortex projection is also proposed and originates from Jeanny's discussions. More informations in the above cited Jeanny Heraults's book.
 
 Demos and experiments !
 =======================
@@ -132,13 +138,13 @@ Methods description
 
 Here are detailled the main methods to control the retina model
 
-Retina::Retina
-++++++++++++++
+Ptr<Retina>::createRetina
++++++++++++++++++++++++++
 
-.. ocv:function:: Retina::Retina(Size inputSize)
-.. ocv:function:: Retina::Retina(Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod = RETINA_COLOR_BAYER, const bool useRetinaLogSampling = false, const double reductionFactor = 1.0, const double samplingStrenght = 10.0 )
+.. ocv:function:: Ptr<Retina> createRetina(Size inputSize)
+.. ocv:function:: Ptr<Retina> createRetina(Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod = RETINA_COLOR_BAYER, const bool useRetinaLogSampling = false, const double reductionFactor = 1.0, const double samplingStrenght = 10.0 )
 
-    Constructors
+    Constructors from standardized interfaces : retreive a smart pointer to a Retina instance
 
     :param inputSize: the input frame size
     :param colorMode: the chosen processing mode : with or without color processing
@@ -179,31 +185,31 @@ Retina::getParvo
 ++++++++++++++++
 
 .. ocv:function:: void Retina::getParvo( Mat & retinaOutput_parvo )
-.. ocv:function:: void Retina::getParvo( std::valarray<float> & retinaOutput_parvo )
-.. ocv:function:: const std::valarray<float> & Retina::getParvo() const
+.. ocv:function:: void Retina::getParvoRAW( std::valarray<float> & retinaOutput_parvo )
+.. ocv:function:: const Mat Retina::getParvoRAW() const
 
-    Accessor of the details channel of the retina (models foveal vision)
+    Accessor of the details channel of the retina (models foveal vision). Warning, getParvoRAW methods return buffers that are not rescaled within range [0;255] while the non RAW method allows a normalized matrix to be retrieved.
 
     :param retinaOutput_parvo: the output buffer (reallocated if necessary), format can be :
 
         * a Mat, this output is rescaled for standard 8bits image processing use in OpenCV
 
-        * a 1D std::valarray Buffer (encoding is R1, R2, ... Rn), this output is the original retina filter model output, without any quantification or rescaling
+        * RAW methods actually return a 1D matrix (encoding is R1, R2, ... Rn, G1, G2, ..., Gn, B1, B2, ...Bn), this output is the original retina filter model output, without any quantification or rescaling.
 
 Retina::getMagno
 ++++++++++++++++
 
 .. ocv:function:: void Retina::getMagno( Mat & retinaOutput_magno )
-.. ocv:function:: void Retina::getMagno( std::valarray<float> & retinaOutput_magno )
-.. ocv:function:: const std::valarray<float> & Retina::getMagno() const
+.. ocv:function:: void Retina::getMagnoRAW( std::valarray<float> & retinaOutput_magno )
+.. ocv:function:: const Mat Retina::getMagnoRAW() const
 
-    Accessor of the motion channel of the retina (models peripheral vision)
+    Accessor of the motion channel of the retina (models peripheral vision). Warning, getMagnoRAW methods return buffers that are not rescaled within range [0;255] while the non RAW method allows a normalized matrix to be retrieved.
 
     :param retinaOutput_magno: the output buffer (reallocated if necessary), format can be :
 
         * a Mat, this output is rescaled for standard 8bits image processing use in OpenCV
 
-        * a 1D std::valarray Buffer (encoding is R1, R2, ... Rn), this output is the original retina filter model output, without any quantification or rescaling
+        * RAW methods actually return a 1D matrix (encoding is M1, M2, ... Mn), this output is the original retina filter model output, without any quantification or rescaling.
 
 Retina::getParameters
 +++++++++++++++++++++
@@ -214,8 +220,8 @@ Retina::getParameters
 
     :return: the current parameters setup
 
-Retina::inputSize
-+++++++++++++++++
+Retina::getInputSize
+++++++++++++++++++++
 
 .. ocv:function:: Size Retina::inputSize()
 
@@ -223,8 +229,8 @@ Retina::inputSize
 
     :return: the retina input buffer size
 
-Retina::outputSize
-++++++++++++++++++
+Retina::getOutputSize
++++++++++++++++++++++
 
 .. ocv:function:: Size Retina::outputSize()
 
@@ -335,7 +341,7 @@ Retina::RetinaParameters
                   photoreceptorsTemporalConstant(0.5f),// the time constant of the first order low pass filter of the photoreceptors, use it to cut high temporal frequencies (noise or fast motion), unit is frames, typical value is 1 frame
                   photoreceptorsSpatialConstant(0.53f),// the spatial constant of the first order low pass filter of the photoreceptors, use it to cut high spatial frequencies (noise or thick contours), unit is pixels, typical value is 1 pixel
                   horizontalCellsGain(0.0f),//gain of the horizontal cells network, if 0, then the mean value of the output is zero, if the parameter is near 1, then, the luminance is not filtered and is still reachable at the output, typicall value is 0
-                  hcellsTemporalConstant(1.f),// the time constant of the first order low pass filter of the horizontal cells, use it to cut low temporal frequencies (local luminance variations), unit is frames, typical value is 1 frame, as the photoreceptors
+                  hcellsTemporalConstant(1.f),// the time constant of the first order low pass filter of the horizontal cells, use it to cut low temporal frequencies (local luminance variations), unit is frames, typical value is 1 frame, as the photoreceptors. Reduce to 0.5 to limit retina after effects.
                   hcellsSpatialConstant(7.f),//the spatial constant of the first order low pass filter of the horizontal cells, use it to cut low spatial frequencies (local luminance), unit is pixels, typical value is 5 pixel, this value is also used for local contrast computing when computing the local contrast adaptation at the ganglion cells level (Inner Plexiform Layer parvocellular channel model)
                   ganglionCellsSensitivity(0.7f)//the compression strengh of the ganglion cells local adaptation output, set a value between 0.6 and 1 for best results, a high value increases more the low value sensitivity... and the output saturates faster, recommended value: 0.7
                   {};// default setup
@@ -355,7 +361,7 @@ Retina::RetinaParameters
                   {};// default setup
                bool normaliseOutput;
                float parasolCells_beta, parasolCells_tau, parasolCells_k, amacrinCellsTemporalCutFrequency, V0CompressionParameter, localAdaptintegration_tau, localAdaptintegration_k;
-           };
+           }; 
             struct OPLandIplParvoParameters OPLandIplParvo;
             struct IplMagnoParameters IplMagno;
     };
