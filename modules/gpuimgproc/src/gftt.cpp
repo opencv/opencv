@@ -75,10 +75,12 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
 
     ensureSizeIsEnough(image.size(), CV_32F, eig_);
 
-    if (useHarrisDetector)
-        cornerHarris(image, eig_, Dx_, Dy_, buf_, blockSize, 3, harrisK);
-    else
-        cornerMinEigenVal(image, eig_, Dx_, Dy_, buf_, blockSize, 3);
+    Ptr<gpu::CornernessCriteria> cornerCriteria =
+            useHarrisDetector ?
+                gpu::createHarrisCorner(image.type(), blockSize, 3, harrisK) :
+                gpu::createMinEigenValCorner(image.type(), blockSize, 3);
+
+    cornerCriteria->compute(image, eig_);
 
     double maxVal = 0;
     gpu::minMax(eig_, 0, &maxVal, GpuMat(), minMaxbuf_);

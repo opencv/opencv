@@ -362,17 +362,37 @@ public:
 
 ////////////////////////// Corners Detection ///////////////////////////
 
+class CV_EXPORTS CornernessCriteria : public Algorithm
+{
+public:
+    virtual void compute(InputArray src, OutputArray dst, Stream& stream = Stream::Null()) = 0;
+};
+
 //! computes Harris cornerness criteria at each image pixel
-CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
-CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
-CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, double k,
-                             int borderType = BORDER_REFLECT101, Stream& stream = Stream::Null());
+CV_EXPORTS Ptr<CornernessCriteria> createHarrisCorner(int srcType, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
 
 //! computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria
-CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
-CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
-CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize,
-    int borderType=BORDER_REFLECT101, Stream& stream = Stream::Null());
+CV_EXPORTS Ptr<CornernessCriteria> createMinEigenValCorner(int srcType, int blockSize, int ksize, int borderType = BORDER_REFLECT101);
+
+// obsolete
+
+__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void cornerHarris(InputArray src, OutputArray dst,
+                                                    int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101,
+                                                    Stream& stream = Stream::Null()) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
+
+inline void cornerHarris(InputArray src, OutputArray dst, int blockSize, int ksize, double k, int borderType, Stream& stream)
+{
+    gpu::createHarrisCorner(src.type(), blockSize, ksize, k, borderType)->compute(src, dst, stream);
+}
+
+__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void cornerMinEigenVal(InputArray src, OutputArray dst,
+                                                         int blockSize, int ksize, int borderType = BORDER_REFLECT101,
+                                                         Stream& stream = Stream::Null()) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
+
+inline void cornerMinEigenVal(InputArray src, OutputArray dst, int blockSize, int ksize, int borderType, Stream& stream)
+{
+    gpu::createMinEigenValCorner(src.type(), blockSize, ksize, borderType)->compute(src, dst, stream);
+}
 
 ////////////////////////// Feature Detection ///////////////////////////
 

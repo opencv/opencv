@@ -176,10 +176,12 @@ TEST(cornerHarris)
 
         d_src.upload(src);
 
-        gpu::cornerHarris(d_src, d_dst, 5, 7, 0.1, BORDER_REFLECT101);
+        Ptr<gpu::CornernessCriteria> harris = gpu::createHarrisCorner(src.type(), 5, 7, 0.1, BORDER_REFLECT101);
+
+        harris->compute(d_src, d_dst);
 
         GPU_ON;
-        gpu::cornerHarris(d_src, d_dst, 5, 7, 0.1, BORDER_REFLECT101);
+        harris->compute(d_src, d_dst);
         GPU_OFF;
     }
 }
