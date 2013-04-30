@@ -103,9 +103,10 @@ PERF_TEST_P(Sz, HoughLines,
     {
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_lines;
-        cv::gpu::HoughLinesBuf d_buf;
 
-        TEST_CYCLE() cv::gpu::HoughLines(d_src, d_lines, d_buf, rho, theta, threshold);
+        cv::Ptr<cv::gpu::HoughLinesDetector> hough = cv::gpu::createHoughLinesDetector(rho, theta, threshold);
+
+        TEST_CYCLE() hough->detect(d_src, d_lines);
 
         cv::Mat gpu_lines(d_lines.row(0));
         cv::Vec2f* begin = gpu_lines.ptr<cv::Vec2f>(0);
@@ -151,9 +152,10 @@ PERF_TEST_P(Image, HoughLinesP,
     {
         const cv::gpu::GpuMat d_mask(mask);
         cv::gpu::GpuMat d_lines;
-        cv::gpu::HoughLinesBuf d_buf;
 
-        TEST_CYCLE() cv::gpu::HoughLinesP(d_mask, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
+        cv::Ptr<cv::gpu::HoughSegmentDetector> hough = cv::gpu::createHoughSegmentDetector(rho, theta, minLineLenght, maxLineGap);
+
+        TEST_CYCLE() hough->detect(d_mask, d_lines);
 
         cv::Mat gpu_lines(d_lines);
         cv::Vec4i* begin = gpu_lines.ptr<cv::Vec4i>();

@@ -220,18 +220,82 @@ inline void Canny(InputArray dx, InputArray dy, OutputArray edges, double low_th
 
 /////////////////////////// Hough Transform ////////////////////////////
 
-struct HoughLinesBuf
+//////////////////////////////////////
+// HoughLines
+
+class CV_EXPORTS HoughLinesDetector : public Algorithm
 {
-    GpuMat accum;
-    GpuMat list;
+public:
+    virtual void detect(InputArray src, OutputArray lines) = 0;
+    virtual void downloadResults(InputArray d_lines, OutputArray h_lines, OutputArray h_votes = noArray()) = 0;
+
+    virtual void setRho(float rho) = 0;
+    virtual float getRho() const = 0;
+
+    virtual void setTheta(float theta) = 0;
+    virtual float getTheta() const = 0;
+
+    virtual void setThreshold(int threshold) = 0;
+    virtual int getThreshold() const = 0;
+
+    virtual void setDoSort(bool doSort) = 0;
+    virtual bool getDoSort() const = 0;
+
+    virtual void setMaxLines(int maxLines) = 0;
+    virtual int getMaxLines() const = 0;
 };
 
-CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
-CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
-CV_EXPORTS void HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines, OutputArray h_votes = noArray());
+CV_EXPORTS Ptr<HoughLinesDetector> createHoughLinesDetector(float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
+
+// obsolete
+
+__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void HoughLines(InputArray src, OutputArray lines, float rho, float theta, int threshold,
+                                                  bool doSort = false, int maxLines = 4096) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
+
+inline void HoughLines(InputArray src, OutputArray lines, float rho, float theta, int threshold, bool doSort, int maxLines)
+{
+    gpu::createHoughLinesDetector(rho, theta, threshold, doSort, maxLines)->detect(src, lines);
+}
+
+//////////////////////////////////////
+// HoughLinesP
 
 //! finds line segments in the black-n-white image using probabalistic Hough transform
-CV_EXPORTS void HoughLinesP(const GpuMat& image, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int minLineLength, int maxLineGap, int maxLines = 4096);
+class CV_EXPORTS HoughSegmentDetector : public Algorithm
+{
+public:
+    virtual void detect(InputArray src, OutputArray lines) = 0;
+
+    virtual void setRho(float rho) = 0;
+    virtual float getRho() const = 0;
+
+    virtual void setTheta(float theta) = 0;
+    virtual float getTheta() const = 0;
+
+    virtual void setMinLineLength(int minLineLength) = 0;
+    virtual int getMinLineLength() const = 0;
+
+    virtual void setMaxLineGap(int maxLineGap) = 0;
+    virtual int getMaxLineGap() const = 0;
+
+    virtual void setMaxLines(int maxLines) = 0;
+    virtual int getMaxLines() const = 0;
+};
+
+CV_EXPORTS Ptr<HoughSegmentDetector> createHoughSegmentDetector(float rho, float theta, int minLineLength, int maxLineGap, int maxLines = 4096);
+
+// obsolete
+
+__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void HoughLinesP(InputArray src, OutputArray lines,
+                                                   float rho, float theta, int minLineLength, int maxLineGap, int maxLines = 4096) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
+
+inline void HoughLinesP(InputArray src, OutputArray lines, float rho, float theta, int minLineLength, int maxLineGap, int maxLines)
+{
+    gpu::createHoughSegmentDetector(rho, theta, minLineLength, maxLineGap, maxLines)->detect(src, lines);
+}
+
+//////////////////////////////////////
+// HoughCircles
 
 struct HoughCirclesBuf
 {
@@ -244,6 +308,9 @@ struct HoughCirclesBuf
 CV_EXPORTS void HoughCircles(const GpuMat& src, GpuMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
 CV_EXPORTS void HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& buf, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
 CV_EXPORTS void HoughCirclesDownload(const GpuMat& d_circles, OutputArray h_circles);
+
+//////////////////////////////////////
+// GeneralizedHough
 
 //! finds arbitrary template in the grayscale image using Generalized Hough Transform
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.

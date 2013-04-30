@@ -41,7 +41,7 @@ int main(int argc, const char* argv[])
     {
         const int64 start = getTickCount();
 
-        HoughLinesP(mask, lines_cpu, 1, CV_PI / 180, 50, 60, 5);
+        cv::HoughLinesP(mask, lines_cpu, 1, CV_PI / 180, 50, 60, 5);
 
         const double timeSec = (getTickCount() - start) / getTickFrequency();
         cout << "CPU Time : " << timeSec * 1000 << " ms" << endl;
@@ -56,11 +56,12 @@ int main(int argc, const char* argv[])
 
     GpuMat d_src(mask);
     GpuMat d_lines;
-    HoughLinesBuf d_buf;
     {
         const int64 start = getTickCount();
 
-        gpu::HoughLinesP(d_src, d_lines, d_buf, 1.0f, (float) (CV_PI / 180.0f), 50, 5);
+        Ptr<gpu::HoughSegmentDetector> hough = gpu::createHoughSegmentDetector(1.0f, (float) (CV_PI / 180.0f), 50, 5);
+
+        hough->detect(d_src, d_lines);
 
         const double timeSec = (getTickCount() - start) / getTickFrequency();
         cout << "GPU Time : " << timeSec * 1000 << " ms" << endl;

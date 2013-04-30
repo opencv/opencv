@@ -94,11 +94,13 @@ GPU_TEST_P(HoughLines, Accuracy)
     cv::Mat src(size, CV_8UC1);
     generateLines(src);
 
+    cv::Ptr<cv::gpu::HoughLinesDetector> hough = cv::gpu::createHoughLinesDetector(rho, theta, threshold);
+
     cv::gpu::GpuMat d_lines;
-    cv::gpu::HoughLines(loadMat(src, useRoi), d_lines, rho, theta, threshold);
+    hough->detect(loadMat(src, useRoi), d_lines);
 
     std::vector<cv::Vec2f> lines;
-    cv::gpu::HoughLinesDownload(d_lines, lines);
+    hough->downloadResults(d_lines, lines);
 
     cv::Mat dst(size, CV_8UC1);
     drawLines(dst, lines);

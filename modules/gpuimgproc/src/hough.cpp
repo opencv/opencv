@@ -47,11 +47,9 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::HoughLines(const GpuMat&, GpuMat&, float, float, int, bool, int) { throw_no_cuda(); }
-void cv::gpu::HoughLines(const GpuMat&, GpuMat&, HoughLinesBuf&, float, float, int, bool, int) { throw_no_cuda(); }
-void cv::gpu::HoughLinesDownload(const GpuMat&, OutputArray, OutputArray) { throw_no_cuda(); }
+Ptr<gpu::HoughLinesDetector> cv::gpu::createHoughLinesDetector(float, float, int, bool, int) { throw_no_cuda(); return Ptr<HoughLinesDetector>(); }
 
-void cv::gpu::HoughLinesP(const GpuMat&, GpuMat&, HoughLinesBuf&, float, float, int, int, int) { throw_no_cuda(); }
+Ptr<gpu::HoughSegmentDetector> cv::gpu::createHoughSegmentDetector(float, float, int, int, int) { throw_no_cuda(); return Ptr<HoughSegmentDetector>(); }
 
 void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, int, float, float, int, int, int, int, int) { throw_no_cuda(); }
 void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, HoughCirclesBuf&, int, float, float, int, int, int, int, int) { throw_no_cuda(); }
@@ -79,7 +77,7 @@ namespace cv { namespace gpu { namespace cudev
 }}}
 
 //////////////////////////////////////////////////////////
-// HoughLines
+// HoughLinesDetector
 
 namespace cv { namespace gpu { namespace cudev
 {
@@ -90,72 +88,137 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, float rho, float theta, int threshold, bool doSort, int maxLines)
+namespace
 {
-    HoughLinesBuf buf;
-    HoughLines(src, lines, buf, rho, theta, threshold, doSort, maxLines);
+    class HoughLinesDetectorImpl : public HoughLinesDetector
+    {
+    public:
+        HoughLinesDetectorImpl(float rho, float theta, int threshold, bool doSort, int maxLines) :
+            rho_(rho), theta_(theta), threshold_(threshold), doSort_(doSort), maxLines_(maxLines)
+        {
+        }
+
+        void detect(InputArray src, OutputArray lines);
+        void downloadResults(InputArray d_lines, OutputArray h_lines, OutputArray h_votes = noArray());
+
+        void setRho(float rho) { rho_ = rho; }
+        float getRho() const { return rho_; }
+
+        void setTheta(float theta) { theta_ = theta; }
+        float getTheta() const { return theta_; }
+
+        void setThreshold(int threshold) { threshold_ = threshold; }
+        int getThreshold() const { return threshold_; }
+
+        void setDoSort(bool doSort) { doSort_ = doSort; }
+        bool getDoSort() const { return doSort_; }
+
+        void setMaxLines(int maxLines) { maxLines_ = maxLines; }
+        int getMaxLines() const { return maxLines_; }
+
+        void write(FileStorage& fs) const
+        {
+            fs << "name" << "HoughLinesDetector_GPU"
+            << "rho" << rho_
+            << "theta" << theta_
+            << "threshold" << threshold_
+            << "doSort" << doSort_
+            << "maxLines" << maxLines_;
+        }
+
+        void read(const FileNode& fn)
+        {
+            CV_Assert( String(fn["name"]) == "HoughLinesDetector_GPU" );
+            rho_ = (float)fn["rho"];
+            theta_ = (float)fn["theta"];
+            threshold_ = (int)fn["threshold"];
+            doSort_ = (int)fn["doSort"] != 0;
+            maxLines_ = (int)fn["maxLines"];
+        }
+
+    private:
+        float rho_;
+        float theta_;
+        int threshold_;
+        bool doSort_;
+        int maxLines_;
+
+        GpuMat accum_;
+        GpuMat list_;
+        GpuMat result_;
+    };
+
+    void HoughLinesDetectorImpl::detect(InputArray _src, OutputArray lines)
+    {
+        using namespace cv::gpu::cudev::hough;
+
+        GpuMat src = _src.getGpuMat();
+
+        CV_Assert( src.type() == CV_8UC1 );
+        CV_Assert( src.cols < std::numeric_limits<unsigned short>::max() );
+        CV_Assert( src.rows < std::numeric_limits<unsigned short>::max() );
+
+        ensureSizeIsEnough(1, src.size().area(), CV_32SC1, list_);
+        unsigned int* srcPoints = list_.ptr<unsigned int>();
+
+        const int pointsCount = buildPointList_gpu(src, srcPoints);
+        if (pointsCount == 0)
+        {
+            lines.release();
+            return;
+        }
+
+        const int numangle = cvRound(CV_PI / theta_);
+        const int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho_);
+        CV_Assert( numangle > 0 && numrho > 0 );
+
+        ensureSizeIsEnough(numangle + 2, numrho + 2, CV_32SC1, accum_);
+        accum_.setTo(Scalar::all(0));
+
+        DeviceInfo devInfo;
+        linesAccum_gpu(srcPoints, pointsCount, accum_, rho_, theta_, devInfo.sharedMemPerBlock(), devInfo.supports(FEATURE_SET_COMPUTE_20));
+
+        ensureSizeIsEnough(2, maxLines_, CV_32FC2, result_);
+
+        int linesCount = linesGetResult_gpu(accum_, result_.ptr<float2>(0), result_.ptr<int>(1), maxLines_, rho_, theta_, threshold_, doSort_);
+
+        if (linesCount == 0)
+        {
+            lines.release();
+            return;
+        }
+
+        result_.cols = linesCount;
+        result_.copyTo(lines);
+    }
+
+    void HoughLinesDetectorImpl::downloadResults(InputArray _d_lines, OutputArray h_lines, OutputArray h_votes)
+    {
+        GpuMat d_lines = _d_lines.getGpuMat();
+
+        if (d_lines.empty())
+        {
+            h_lines.release();
+            if (h_votes.needed())
+                h_votes.release();
+            return;
+        }
+
+        CV_Assert( d_lines.rows == 2 && d_lines.type() == CV_32FC2 );
+
+        d_lines.row(0).download(h_lines);
+
+        if (h_votes.needed())
+        {
+            GpuMat d_votes(1, d_lines.cols, CV_32SC1, d_lines.ptr<int>(1));
+            d_votes.download(h_votes);
+        }
+    }
 }
 
-void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int threshold, bool doSort, int maxLines)
+Ptr<HoughLinesDetector> cv::gpu::createHoughLinesDetector(float rho, float theta, int threshold, bool doSort, int maxLines)
 {
-    using namespace cv::gpu::cudev::hough;
-
-    CV_Assert(src.type() == CV_8UC1);
-    CV_Assert(src.cols < std::numeric_limits<unsigned short>::max());
-    CV_Assert(src.rows < std::numeric_limits<unsigned short>::max());
-
-    ensureSizeIsEnough(1, src.size().area(), CV_32SC1, buf.list);
-    unsigned int* srcPoints = buf.list.ptr<unsigned int>();
-
-    const int pointsCount = buildPointList_gpu(src, srcPoints);
-    if (pointsCount == 0)
-    {
-        lines.release();
-        return;
-    }
-
-    const int numangle = cvRound(CV_PI / theta);
-    const int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
-    CV_Assert(numangle > 0 && numrho > 0);
-
-    ensureSizeIsEnough(numangle + 2, numrho + 2, CV_32SC1, buf.accum);
-    buf.accum.setTo(Scalar::all(0));
-
-    DeviceInfo devInfo;
-    linesAccum_gpu(srcPoints, pointsCount, buf.accum, rho, theta, devInfo.sharedMemPerBlock(), devInfo.supports(FEATURE_SET_COMPUTE_20));
-
-    ensureSizeIsEnough(2, maxLines, CV_32FC2, lines);
-
-    int linesCount = linesGetResult_gpu(buf.accum, lines.ptr<float2>(0), lines.ptr<int>(1), maxLines, rho, theta, threshold, doSort);
-    if (linesCount > 0)
-        lines.cols = linesCount;
-    else
-        lines.release();
-}
-
-void cv::gpu::HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines_, OutputArray h_votes_)
-{
-    if (d_lines.empty())
-    {
-        h_lines_.release();
-        if (h_votes_.needed())
-            h_votes_.release();
-        return;
-    }
-
-    CV_Assert(d_lines.rows == 2 && d_lines.type() == CV_32FC2);
-
-    h_lines_.create(1, d_lines.cols, CV_32FC2);
-    Mat h_lines = h_lines_.getMat();
-    d_lines.row(0).download(h_lines);
-
-    if (h_votes_.needed())
-    {
-        h_votes_.create(1, d_lines.cols, CV_32SC1);
-        Mat h_votes = h_votes_.getMat();
-        GpuMat d_votes(1, d_lines.cols, CV_32SC1, const_cast<int*>(d_lines.ptr<int>(1)));
-        d_votes.download(h_votes);
-    }
+    return new HoughLinesDetectorImpl(rho, theta, threshold, doSort, maxLines);
 }
 
 //////////////////////////////////////////////////////////
@@ -169,42 +232,113 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::HoughLinesP(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int minLineLength, int maxLineGap, int maxLines)
+namespace
 {
-    using namespace cv::gpu::cudev::hough;
-
-    CV_Assert( src.type() == CV_8UC1 );
-    CV_Assert( src.cols < std::numeric_limits<unsigned short>::max() );
-    CV_Assert( src.rows < std::numeric_limits<unsigned short>::max() );
-
-    ensureSizeIsEnough(1, src.size().area(), CV_32SC1, buf.list);
-    unsigned int* srcPoints = buf.list.ptr<unsigned int>();
-
-    const int pointsCount = buildPointList_gpu(src, srcPoints);
-    if (pointsCount == 0)
+    class PHoughLinesDetectorImpl : public HoughSegmentDetector
     {
-        lines.release();
-        return;
+    public:
+        PHoughLinesDetectorImpl(float rho, float theta, int minLineLength, int maxLineGap, int maxLines) :
+            rho_(rho), theta_(theta), minLineLength_(minLineLength), maxLineGap_(maxLineGap), maxLines_(maxLines)
+        {
+        }
+
+        void detect(InputArray src, OutputArray lines);
+
+        void setRho(float rho) { rho_ = rho; }
+        float getRho() const { return rho_; }
+
+        void setTheta(float theta) { theta_ = theta; }
+        float getTheta() const { return theta_; }
+
+        void setMinLineLength(int minLineLength) { minLineLength_ = minLineLength; }
+        int getMinLineLength() const { return minLineLength_; }
+
+        void setMaxLineGap(int maxLineGap) { maxLineGap_ = maxLineGap; }
+        int getMaxLineGap() const { return maxLineGap_; }
+
+        void setMaxLines(int maxLines) { maxLines_ = maxLines; }
+        int getMaxLines() const { return maxLines_; }
+
+        void write(FileStorage& fs) const
+        {
+            fs << "name" << "PHoughLinesDetector_GPU"
+            << "rho" << rho_
+            << "theta" << theta_
+            << "minLineLength" << minLineLength_
+            << "maxLineGap" << maxLineGap_
+            << "maxLines" << maxLines_;
+        }
+
+        void read(const FileNode& fn)
+        {
+            CV_Assert( String(fn["name"]) == "PHoughLinesDetector_GPU" );
+            rho_ = (float)fn["rho"];
+            theta_ = (float)fn["theta"];
+            minLineLength_ = (int)fn["minLineLength"];
+            maxLineGap_ = (int)fn["maxLineGap"];
+            maxLines_ = (int)fn["maxLines"];
+        }
+
+    private:
+        float rho_;
+        float theta_;
+        int minLineLength_;
+        int maxLineGap_;
+        int maxLines_;
+
+        GpuMat accum_;
+        GpuMat list_;
+        GpuMat result_;
+    };
+
+    void PHoughLinesDetectorImpl::detect(InputArray _src, OutputArray lines)
+    {
+        using namespace cv::gpu::cudev::hough;
+
+        GpuMat src = _src.getGpuMat();
+
+        CV_Assert( src.type() == CV_8UC1 );
+        CV_Assert( src.cols < std::numeric_limits<unsigned short>::max() );
+        CV_Assert( src.rows < std::numeric_limits<unsigned short>::max() );
+
+        ensureSizeIsEnough(1, src.size().area(), CV_32SC1, list_);
+        unsigned int* srcPoints = list_.ptr<unsigned int>();
+
+        const int pointsCount = buildPointList_gpu(src, srcPoints);
+        if (pointsCount == 0)
+        {
+            lines.release();
+            return;
+        }
+
+        const int numangle = cvRound(CV_PI / theta_);
+        const int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho_);
+        CV_Assert( numangle > 0 && numrho > 0 );
+
+        ensureSizeIsEnough(numangle + 2, numrho + 2, CV_32SC1, accum_);
+        accum_.setTo(Scalar::all(0));
+
+        DeviceInfo devInfo;
+        linesAccum_gpu(srcPoints, pointsCount, accum_, rho_, theta_, devInfo.sharedMemPerBlock(), devInfo.supports(FEATURE_SET_COMPUTE_20));
+
+        ensureSizeIsEnough(1, maxLines_, CV_32SC4, result_);
+
+        int linesCount = houghLinesProbabilistic_gpu(src, accum_, result_.ptr<int4>(), maxLines_, rho_, theta_, maxLineGap_, minLineLength_);
+
+        if (linesCount == 0)
+        {
+            lines.release();
+            return;
+        }
+
+        result_.cols = linesCount;
+        result_.copyTo(lines);
     }
+}
 
-    const int numangle = cvRound(CV_PI / theta);
-    const int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
-    CV_Assert( numangle > 0 && numrho > 0 );
-
-    ensureSizeIsEnough(numangle + 2, numrho + 2, CV_32SC1, buf.accum);
-    buf.accum.setTo(Scalar::all(0));
-
-    DeviceInfo devInfo;
-    linesAccum_gpu(srcPoints, pointsCount, buf.accum, rho, theta, devInfo.sharedMemPerBlock(), devInfo.supports(FEATURE_SET_COMPUTE_20));
-
-    ensureSizeIsEnough(1, maxLines, CV_32SC4, lines);
-
-    int linesCount = houghLinesProbabilistic_gpu(src, buf.accum, lines.ptr<int4>(), maxLines, rho, theta, maxLineGap, minLineLength);
-
-    if (linesCount > 0)
-        lines.cols = linesCount;
-    else
-        lines.release();
+Ptr<HoughSegmentDetector> cv::gpu::createHoughSegmentDetector(float rho, float theta, int minLineLength, int maxLineGap, int maxLines)
+{
+    return new PHoughLinesDetectorImpl(rho, theta, minLineLength, maxLineGap, maxLines);
 }
 
 //////////////////////////////////////////////////////////
