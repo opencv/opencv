@@ -549,14 +549,14 @@ void RetinaImpl::getMagno(cv::Mat &retinaOutput_magno)
 // original API level data accessors : copy buffers if size matches, reallocate if required
 void RetinaImpl::getMagnoRAW(cv::Mat &magnoOutputBufferCopy){
     // get magno channel header
-    const cv::Mat magnoChannel=cv::Mat(getMagnoRAW());	
+    const cv::Mat magnoChannel=cv::Mat(getMagnoRAW());
     // copy data
     magnoChannel.copyTo(magnoOutputBufferCopy);
 }
 
 void RetinaImpl::getParvoRAW(cv::Mat &parvoOutputBufferCopy){
     // get parvo channel header
-    const cv::Mat parvoChannel=cv::Mat(getMagnoRAW());	
+    const cv::Mat parvoChannel=cv::Mat(getMagnoRAW());
     // copy data
     parvoChannel.copyTo(parvoOutputBufferCopy);
 }
@@ -564,7 +564,7 @@ void RetinaImpl::getParvoRAW(cv::Mat &parvoOutputBufferCopy){
 // original API level data accessors : get buffers addresses...
 const Mat RetinaImpl::getMagnoRAW() const {
     // create a cv::Mat header for the valarray
-    const float *retinaMagnoFilterOutputPTR=&(_retinaFilter->getMovingContours()[0]); 
+    const float *retinaMagnoFilterOutputPTR=&(_retinaFilter->getMovingContours()[0]);
     return Mat(_retinaFilter->getMovingContours().size(),1, CV_32F, (void*)retinaMagnoFilterOutputPTR);
 
 }
@@ -573,7 +573,7 @@ const Mat RetinaImpl::getParvoRAW() const {
     if (_retinaFilter->getColorMode()) // check if color mode is enabled
     {
         // create a cv::Mat table (for RGB planes as a single vector)
-	const float *retinaParvoFilterOutputPTR=&(_retinaFilter->getColorOutput()[0]);
+        const float *retinaParvoFilterOutputPTR=&(_retinaFilter->getColorOutput()[0]);
         return Mat(_retinaFilter->getColorOutput().size(), 1, CV_32F, (void*)retinaParvoFilterOutputPTR);
     }
     // otherwise, output is gray level

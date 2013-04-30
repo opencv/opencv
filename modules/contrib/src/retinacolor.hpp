@@ -350,7 +350,7 @@ namespace cv
                     for (unsigned int idColumn=2;idColumn<nbColumns-2;++idColumn)
                     {
                         const unsigned int pixelIndex=idColumn+nbColumns*idLine;
-        
+
                         // horizontal and vertical local gradients
                         const float verticalGrad=fabs(luminance[pixelIndex+nbColumns]-luminance[pixelIndex-nbColumns]);
                         const float horizontalGrad=fabs(luminance[pixelIndex+1]-luminance[pixelIndex-1]);

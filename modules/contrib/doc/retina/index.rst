@@ -40,7 +40,7 @@ The retina can be settled up with various parameters, by default, the retina can
     const Mat getParvoRAW () const;// retreive original output buffers without any normalisation
     // -> peripheral monochrome motion and events (transient information) channel
     void getMagno (Mat &retinaOutput_magno);
-    void getMagnoRAW (Mat &retinaOutput_magno); // retreive original output buffers without any normalisation 
+    void getMagnoRAW (Mat &retinaOutput_magno); // retreive original output buffers without any normalisation
     const Mat getMagnoRAW () const;// retreive original output buffers without any normalisation
 
     // reset retina buffers... equivalent to closing your eyes for some seconds
@@ -209,7 +209,7 @@ Retina::getMagno
 
         * a Mat, this output is rescaled for standard 8bits image processing use in OpenCV
 
-        * RAW methods actually return a 1D matrix (encoding is M1, M2, ... Mn), this output is the original retina filter model output, without any quantification or rescaling.
+        * RAW methods actually return a 1D matrix (encoding is M1, M2,... Mn), this output is the original retina filter model output, without any quantification or rescaling.
 
 Retina::getParameters
 +++++++++++++++++++++
@@ -361,7 +361,7 @@ Retina::RetinaParameters
                   {};// default setup
                bool normaliseOutput;
                float parasolCells_beta, parasolCells_tau, parasolCells_k, amacrinCellsTemporalCutFrequency, V0CompressionParameter, localAdaptintegration_tau, localAdaptintegration_k;
-           }; 
+           };
             struct OPLandIplParvoParameters OPLandIplParvo;
             struct IplMagnoParameters IplMagno;
     };
