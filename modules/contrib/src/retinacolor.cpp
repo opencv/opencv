@@ -338,8 +338,11 @@ void RetinaColor::runColorDemultiplexing(const std::valarray<float> &multiplexed
         }
 
         // compute the gradient of the luminance
+#ifdef MAKE_PARALLEL // call the TemplateBuffer TBB clipping method
+        cv::parallel_for_(cv::Range(2,_filterOutput.getNBrows()-2), Parallel_computeGradient(_filterOutput.getNBcolumns(), _filterOutput.getNBrows(), &(*_luminance)[0], &_imageGradient[0]));
+#else
         _computeGradient(&(*_luminance)[0]);
-
+#endif
         // adaptively filter the submosaics to get the adaptive densities, here the buffer _chrominance is used as a temp buffer
         _adaptiveSpatialLPfilter(&_RGBmosaic[0], &_chrominance[0]);
         _adaptiveSpatialLPfilter(&_RGBmosaic[0]+_filterOutput.getNBpixels(), &_chrominance[0]+_filterOutput.getNBpixels());
