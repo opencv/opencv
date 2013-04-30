@@ -98,9 +98,10 @@ For more information, refer to the following papers :
 This retina filter code includes the research contributions of phd/research collegues from which code has been redrawn by the author :
 
 * take a look at the *retinacolor.hpp* module to discover Brice Chaix de Lavarene phD color mosaicing/demosaicing and his reference paper:
+
 .. [chaix2007] B. Chaix de Lavarene, D. Alleysson, B. Durette, J. Herault (2007). "Efficient demosaicing through recursive filtering", IEEE International Conference on Image Processing ICIP 2007
 
-* take a look at *imagelogpolprojection.hpp* to discover retina spatial log sampling which originates from Barthelemy Durette phd with Jeanny Herault. A Retina / V1 cortex projection is also proposed and originates from Jeanny's discussions. ====> more informations in the above cited Jeanny Heraults's book.
+* take a look at *imagelogpolprojection.hpp* to discover retina spatial log sampling which originates from Barthelemy Durette phd with Jeanny Herault. A Retina / V1 cortex projection is also proposed and originates from Jeanny's discussions. More informations in the above cited Jeanny Heraults's book.
 
 Demos and experiments !
 =======================
@@ -184,31 +185,31 @@ Retina::getParvo
 ++++++++++++++++
 
 .. ocv:function:: void Retina::getParvo( Mat & retinaOutput_parvo )
-.. ocv:function:: void Retina::getParvo( std::valarray<float> & retinaOutput_parvo )
-.. ocv:function:: const std::valarray<float> & Retina::getParvo() const
+.. ocv:function:: void Retina::getParvoRAW( std::valarray<float> & retinaOutput_parvo )
+.. ocv:function:: const Mat Retina::getParvoRAW() const
 
-    Accessor of the details channel of the retina (models foveal vision)
+    Accessor of the details channel of the retina (models foveal vision). Warning, getParvoRAW methods return buffers that are not rescaled within range [0;255] while the non RAW method allows a normalized matrix to be retrieved.
 
     :param retinaOutput_parvo: the output buffer (reallocated if necessary), format can be :
 
         * a Mat, this output is rescaled for standard 8bits image processing use in OpenCV
 
-        * a 1D std::valarray Buffer (encoding is R1, R2, ... Rn), this output is the original retina filter model output, without any quantification or rescaling
+        * RAW methods actually return a 1D matrix (encoding is R1, R2, ... Rn, G1, G2, ..., Gn, B1, B2, ...Bn), this output is the original retina filter model output, without any quantification or rescaling.
 
 Retina::getMagno
 ++++++++++++++++
 
 .. ocv:function:: void Retina::getMagno( Mat & retinaOutput_magno )
-.. ocv:function:: void Retina::getMagno( std::valarray<float> & retinaOutput_magno )
-.. ocv:function:: const std::valarray<float> & Retina::getMagno() const
+.. ocv:function:: void Retina::getMagnoRAW( std::valarray<float> & retinaOutput_magno )
+.. ocv:function:: const Mat Retina::getMagnoRAW() const
 
-    Accessor of the motion channel of the retina (models peripheral vision)
+    Accessor of the motion channel of the retina (models peripheral vision). Warning, getMagnoRAW methods return buffers that are not rescaled within range [0;255] while the non RAW method allows a normalized matrix to be retrieved.
 
     :param retinaOutput_magno: the output buffer (reallocated if necessary), format can be :
 
         * a Mat, this output is rescaled for standard 8bits image processing use in OpenCV
 
-        * a 1D std::valarray Buffer (encoding is R1, R2, ... Rn), this output is the original retina filter model output, without any quantification or rescaling
+        * RAW methods actually return a 1D matrix (encoding is M1, M2, ... Mn), this output is the original retina filter model output, without any quantification or rescaling.
 
 Retina::getParameters
 +++++++++++++++++++++
@@ -218,19 +219,6 @@ Retina::getParameters
     Retrieve the current parameters values in a *Retina::RetinaParameters* structure
 
     :return: the current parameters setup
-
-Retina::getParvo/getMagno
-+++++++++++++++++++++++++
-
-.. ocv:function:: void getParvo(Mat parvoOutput)
-.. ocv:function:: void getParvoRAW(Mat parvoOutput)
-.. ocv:function:: Mat getParvoRAW()
-    Retrieve the Parvocellular channel (details with color) output normalized between range [0;255] if not 'RAW'.
-
-.. ocv:function:: void getParvo(Mat parvoOutput)
-.. ocv:function:: void getParvoRAW(Mat parvoOutput)
-.. ocv:function:: Mat getParvoRAW()
-    Retrieve the Magnocellular channel (transient events, grayscale) output normalized between range [0;255] if not 'RAW'.
 
 Retina::getInputSize
 ++++++++++++++++++++

@@ -573,11 +573,13 @@ const Mat RetinaImpl::getParvoRAW() const {
     if (_retinaFilter->getColorMode()) // check if color mode is enabled
     {
         // create a cv::Mat table (for RGB planes as a single vector)
-        return Mat(_retinaFilter->getColorOutput().size(), 1, CV_32F, (void*)&(_retinaFilter->getColorOutput()[0]));
+	const float *retinaFilterOutputPTR=&(_retinaFilter->getColorOutput()[0]);
+        return Mat(_retinaFilter->getColorOutput().size(), 1, CV_32F, (void*)retinaFilterOutputPTR);
     }
     // otherwise, output is gray level
     // create a cv::Mat header for the valarray
-    return Mat( _retinaFilter->getContours().size(), 1, CV_32F, (void*)&(_retinaFilter->getContours()[0]));
+    const float *retinaFilterOutputPTR=&(_retinaFilter->getContours()[0]);
+    return Mat( _retinaFilter->getContours().size(), 1, CV_32F, (void*)retinaFilterOutputPTR);
 }
 
 // private method called by constructirs
