@@ -394,54 +394,17 @@ inline void cornerMinEigenVal(InputArray src, OutputArray dst, int blockSize, in
     gpu::createMinEigenValCorner(src.type(), blockSize, ksize, borderType)->compute(src, dst, stream);
 }
 
-////////////////////////// Feature Detection ///////////////////////////
+////////////////////////// Corners Detection ///////////////////////////
 
-class CV_EXPORTS GoodFeaturesToTrackDetector_GPU
+class CV_EXPORTS CornersDetector : public Algorithm
 {
 public:
-    explicit GoodFeaturesToTrackDetector_GPU(int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0,
-        int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04);
-
     //! return 1 rows matrix with CV_32FC2 type
-    void operator ()(const GpuMat& image, GpuMat& corners, const GpuMat& mask = GpuMat());
-
-    int maxCorners;
-    double qualityLevel;
-    double minDistance;
-
-    int blockSize;
-    bool useHarrisDetector;
-    double harrisK;
-
-    void releaseMemory()
-    {
-        Dx_.release();
-        Dy_.release();
-        buf_.release();
-        eig_.release();
-        minMaxbuf_.release();
-        tmpCorners_.release();
-    }
-
-private:
-    GpuMat Dx_;
-    GpuMat Dy_;
-    GpuMat buf_;
-    GpuMat eig_;
-    GpuMat minMaxbuf_;
-    GpuMat tmpCorners_;
+    virtual void detect(InputArray image, OutputArray corners, InputArray mask = noArray()) = 0;
 };
 
-inline GoodFeaturesToTrackDetector_GPU::GoodFeaturesToTrackDetector_GPU(int maxCorners_, double qualityLevel_, double minDistance_,
-        int blockSize_, bool useHarrisDetector_, double harrisK_)
-{
-    maxCorners = maxCorners_;
-    qualityLevel = qualityLevel_;
-    minDistance = minDistance_;
-    blockSize = blockSize_;
-    useHarrisDetector = useHarrisDetector_;
-    harrisK = harrisK_;
-}
+CV_EXPORTS Ptr<CornersDetector> createGoodFeaturesToTrackDetector(int srcType, int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0,
+                                                                  int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04);
 
 ///////////////////////////// Mean Shift //////////////////////////////
 

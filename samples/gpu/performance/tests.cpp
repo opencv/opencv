@@ -1174,15 +1174,15 @@ TEST(GoodFeaturesToTrack)
     goodFeaturesToTrack(src, pts, 8000, 0.01, 0.0);
     CPU_OFF;
 
-    gpu::GoodFeaturesToTrackDetector_GPU detector(8000, 0.01, 0.0);
+    Ptr<gpu::CornersDetector> detector = gpu::createGoodFeaturesToTrackDetector(src.type(), 8000, 0.01, 0.0);
 
     gpu::GpuMat d_src(src);
     gpu::GpuMat d_pts;
 
-    detector(d_src, d_pts);
+    detector->detect(d_src, d_pts);
 
     GPU_ON;
-    detector(d_src, d_pts);
+    detector->detect(d_src, d_pts);
     GPU_OFF;
 }
 

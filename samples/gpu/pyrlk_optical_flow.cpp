@@ -176,12 +176,12 @@ int main(int argc, const char* argv[])
 
     // goodFeaturesToTrack
 
-    GoodFeaturesToTrackDetector_GPU detector(points, 0.01, minDist);
-
     GpuMat d_frame0Gray(frame0Gray);
     GpuMat d_prevPts;
 
-    detector(d_frame0Gray, d_prevPts);
+    Ptr<gpu::CornersDetector> detector = gpu::createGoodFeaturesToTrackDetector(d_frame0Gray.type(), points, 0.01, minDist);
+
+    detector->detect(d_frame0Gray, d_prevPts);
 
     // Sparse
 

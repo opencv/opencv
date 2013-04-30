@@ -148,17 +148,17 @@ PERF_TEST_P(Image_Depth, GoodFeaturesToTrack,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GoodFeaturesToTrackDetector_GPU d_detector(maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k);
+        cv::Ptr<cv::gpu::CornersDetector> detector = cv::gpu::createGoodFeaturesToTrackDetector(src.type(), maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k);
 
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_mask(mask);
         cv::gpu::GpuMat d_pts;
 
-        d_detector(d_src, d_pts, d_mask);
+        detector->detect(d_src, d_pts, d_mask);
 
         TEST_CYCLE()
         {
-            d_detector(d_src, d_pts, d_mask);
+            detector->detect(d_src, d_pts, d_mask);
         }
     }
     else
