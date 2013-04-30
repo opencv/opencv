@@ -218,7 +218,7 @@ GPU_TEST_P(GeneralizedHough, POSITION)
         templ.copyTo(imageROI);
     }
 
-    cv::Ptr<cv::gpu::GeneralizedHough_GPU> hough = cv::gpu::GeneralizedHough_GPU::create(cv::GeneralizedHough::GHT_POSITION);
+    cv::Ptr<cv::gpu::GeneralizedHough> hough = cv::gpu::GeneralizedHough::create(cv::GeneralizedHough::GHT_POSITION);
     hough->set("votesThreshold", 200);
 
     hough->setTemplate(loadMat(templ, useRoi));
@@ -227,7 +227,7 @@ GPU_TEST_P(GeneralizedHough, POSITION)
     hough->detect(loadMat(image, useRoi), d_pos);
 
     std::vector<cv::Vec4f> pos;
-    hough->download(d_pos, pos);
+    hough->downloadResults(d_pos, pos);
 
     ASSERT_EQ(gold_count, pos.size());
 

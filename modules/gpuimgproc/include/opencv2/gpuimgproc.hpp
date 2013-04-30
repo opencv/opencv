@@ -344,34 +344,20 @@ inline void HoughCircles(InputArray src, OutputArray circles, int /*method*/, fl
 //! finds arbitrary template in the grayscale image using Generalized Hough Transform
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
 //! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
-class CV_EXPORTS GeneralizedHough_GPU : public cv::Algorithm
+class CV_EXPORTS GeneralizedHough : public Algorithm
 {
 public:
-    static Ptr<GeneralizedHough_GPU> create(int method);
-
-    GeneralizedHough_GPU();
-    virtual ~GeneralizedHough_GPU();
+    static Ptr<GeneralizedHough> create(int method);
 
     //! set template to search
-    void setTemplate(const GpuMat& templ, int cannyThreshold = 100, Point templCenter = Point(-1, -1));
-    void setTemplate(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, Point templCenter = Point(-1, -1));
+    virtual void setTemplate(InputArray templ, int cannyThreshold = 100, Point templCenter = Point(-1, -1)) = 0;
+    virtual void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1)) = 0;
 
     //! find template on image
-    void detect(const GpuMat& image, GpuMat& positions, int cannyThreshold = 100);
-    void detect(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, GpuMat& positions);
+    virtual void detect(InputArray image, OutputArray positions, int cannyThreshold = 100) = 0;
+    virtual void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions) = 0;
 
-    void download(const GpuMat& d_positions, OutputArray h_positions, OutputArray h_votes = noArray());
-
-    void release();
-
-protected:
-    virtual void setTemplateImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, Point templCenter) = 0;
-    virtual void detectImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, GpuMat& positions) = 0;
-    virtual void releaseImpl() = 0;
-
-private:
-    GpuMat edges_;
-    Ptr<CannyEdgeDetector> canny_;
+    virtual void downloadResults(InputArray d_positions, OutputArray h_positions, OutputArray h_votes = noArray()) = 0;
 };
 
 ////////////////////////// Corners Detection ///////////////////////////

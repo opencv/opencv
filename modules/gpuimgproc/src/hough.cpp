@@ -51,16 +51,9 @@ Ptr<gpu::HoughLinesDetector> cv::gpu::createHoughLinesDetector(float, float, int
 
 Ptr<gpu::HoughSegmentDetector> cv::gpu::createHoughSegmentDetector(float, float, int, int, int) { throw_no_cuda(); return Ptr<HoughSegmentDetector>(); }
 
-Ptr<HoughCirclesDetector> cv::gpu::createHoughCirclesDetector(float, float, int, int, int, int, int) { throw_no_cuda(); return Ptr<HoughCirclesDetector>(); }
+Ptr<gpu::HoughCirclesDetector> cv::gpu::createHoughCirclesDetector(float, float, int, int, int, int, int) { throw_no_cuda(); return Ptr<HoughCirclesDetector>(); }
 
-Ptr<GeneralizedHough_GPU> cv::gpu::GeneralizedHough_GPU::create(int) { throw_no_cuda(); return Ptr<GeneralizedHough_GPU>(); }
-cv::gpu::GeneralizedHough_GPU::~GeneralizedHough_GPU() {}
-void cv::gpu::GeneralizedHough_GPU::setTemplate(const GpuMat&, int, Point) { throw_no_cuda(); }
-void cv::gpu::GeneralizedHough_GPU::setTemplate(const GpuMat&, const GpuMat&, const GpuMat&, Point) { throw_no_cuda(); }
-void cv::gpu::GeneralizedHough_GPU::detect(const GpuMat&, GpuMat&, int) { throw_no_cuda(); }
-void cv::gpu::GeneralizedHough_GPU::detect(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); }
-void cv::gpu::GeneralizedHough_GPU::download(const GpuMat&, OutputArray, OutputArray) { throw_no_cuda(); }
-void cv::gpu::GeneralizedHough_GPU::release() {}
+Ptr<gpu::GeneralizedHough> cv::gpu::GeneralizedHough::create(int) { throw_no_cuda(); return Ptr<GeneralizedHough>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -644,7 +637,133 @@ namespace cv { namespace gpu { namespace cudev
 namespace
 {
     /////////////////////////////////////
-    // Common
+    // GeneralizedHoughBase
+
+    class GeneralizedHoughBase : public gpu::GeneralizedHough
+    {
+    public:
+        GeneralizedHoughBase();
+
+        void setTemplate(InputArray templ, int cannyThreshold = 100, Point templCenter = Point(-1, -1));
+        void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1));
+
+        void detect(InputArray image, OutputArray positions, int cannyThreshold = 100);
+        void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions);
+
+        void downloadResults(InputArray d_positions, OutputArray h_positions, OutputArray h_votes = noArray());
+
+    protected:
+        virtual void setTemplateImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, Point templCenter) = 0;
+        virtual void detectImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, OutputArray positions) = 0;
+
+    private:
+        GpuMat dx_, dy_;
+        GpuMat edges_;
+        Ptr<gpu::CannyEdgeDetector> canny_;
+        Ptr<gpu::Filter> filterDx_;
+        Ptr<gpu::Filter> filterDy_;
+    };
+
+    GeneralizedHoughBase::GeneralizedHoughBase()
+    {
+        canny_ = gpu::createCannyEdgeDetector(50, 100);
+        filterDx_ = gpu::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
+        filterDy_ = gpu::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
+    }
+
+    void GeneralizedHoughBase::setTemplate(InputArray _templ, int cannyThreshold, Point templCenter)
+    {
+        GpuMat templ = _templ.getGpuMat();
+
+        CV_Assert( templ.type() == CV_8UC1 );
+        CV_Assert( cannyThreshold > 0 );
+
+        ensureSizeIsEnough(templ.size(), CV_32SC1, dx_);
+        ensureSizeIsEnough(templ.size(), CV_32SC1, dy_);
+
+        filterDx_->apply(templ, dx_);
+        filterDy_->apply(templ, dy_);
+
+        ensureSizeIsEnough(templ.size(), CV_8UC1, edges_);
+
+        canny_->setLowThreshold(cannyThreshold / 2);
+        canny_->setHighThreshold(cannyThreshold);
+        canny_->detect(dx_, dy_, edges_);
+
+        if (templCenter == Point(-1, -1))
+            templCenter = Point(templ.cols / 2, templ.rows / 2);
+
+        setTemplateImpl(edges_, dx_, dy_, templCenter);
+    }
+
+    void GeneralizedHoughBase::setTemplate(InputArray _edges, InputArray _dx, InputArray _dy, Point templCenter)
+    {
+        GpuMat edges = _edges.getGpuMat();
+        GpuMat dx = _dx.getGpuMat();
+        GpuMat dy = _dy.getGpuMat();
+
+        if (templCenter == Point(-1, -1))
+            templCenter = Point(edges.cols / 2, edges.rows / 2);
+
+        setTemplateImpl(edges, dx, dy, templCenter);
+    }
+
+    void GeneralizedHoughBase::detect(InputArray _image, OutputArray positions, int cannyThreshold)
+    {
+        GpuMat image = _image.getGpuMat();
+
+        CV_Assert( image.type() == CV_8UC1 );
+        CV_Assert( cannyThreshold > 0 );
+
+        ensureSizeIsEnough(image.size(), CV_32SC1, dx_);
+        ensureSizeIsEnough(image.size(), CV_32SC1, dy_);
+
+        filterDx_->apply(image, dx_);
+        filterDy_->apply(image, dy_);
+
+        ensureSizeIsEnough(image.size(), CV_8UC1, edges_);
+
+        canny_->setLowThreshold(cannyThreshold / 2);
+        canny_->setHighThreshold(cannyThreshold);
+        canny_->detect(dx_, dy_, edges_);
+
+        detectImpl(edges_, dx_, dy_, positions);
+    }
+
+    void GeneralizedHoughBase::detect(InputArray _edges, InputArray _dx, InputArray _dy, OutputArray positions)
+    {
+        GpuMat edges = _edges.getGpuMat();
+        GpuMat dx = _dx.getGpuMat();
+        GpuMat dy = _dy.getGpuMat();
+
+        detectImpl(edges, dx, dy, positions);
+    }
+
+    void GeneralizedHoughBase::downloadResults(InputArray _d_positions, OutputArray h_positions, OutputArray h_votes)
+    {
+        GpuMat d_positions = _d_positions.getGpuMat();
+
+        if (d_positions.empty())
+        {
+            h_positions.release();
+            if (h_votes.needed())
+                h_votes.release();
+            return;
+        }
+
+        CV_Assert( d_positions.rows == 2 && d_positions.type() == CV_32FC4 );
+
+        d_positions.row(0).download(h_positions);
+
+        if (h_votes.needed())
+        {
+            GpuMat d_votes(1, d_positions.cols, CV_32SC3, d_positions.ptr<int3>(1));
+            d_votes.download(h_votes);
+        }
+    }
+
+    /////////////////////////////////////
+    // GHT_Pos
 
     template <typename T, class A> void releaseVector(std::vector<T, A>& v)
     {
@@ -652,14 +771,14 @@ namespace
         empty.swap(v);
     }
 
-    class GHT_Pos : public GeneralizedHough_GPU
+    class GHT_Pos : public GeneralizedHoughBase
     {
     public:
         GHT_Pos();
 
     protected:
         void setTemplateImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, Point templCenter);
-        void detectImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, GpuMat& positions);
+        void detectImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, OutputArray positions);
         void releaseImpl();
 
         virtual void processTempl() = 0;
@@ -667,7 +786,7 @@ namespace
 
         void buildEdgePointList(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy);
         void filterMinDist();
-        void convertTo(GpuMat& positions);
+        void convertTo(OutputArray positions);
 
         int maxSize;
         double minDist;
@@ -717,7 +836,7 @@ namespace
         processTempl();
     }
 
-    void GHT_Pos::detectImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, GpuMat& positions)
+    void GHT_Pos::detectImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, OutputArray positions)
     {
         imageSize = edges.size();
 
@@ -892,7 +1011,7 @@ namespace
         cudaSafeCall( cudaMemcpy(outBuf.ptr(1), &newVoteBuf[0], posCount * sizeof(int3), cudaMemcpyHostToDevice) );
     }
 
-    void GHT_Pos::convertTo(GpuMat& positions)
+    void GHT_Pos::convertTo(OutputArray positions)
     {
         ensureSizeIsEnough(2, posCount, CV_32FC4, positions);
         GpuMat(2, posCount, CV_32FC4, outBuf.data, outBuf.step).copyTo(positions);
@@ -1541,7 +1660,7 @@ namespace
     }
 }
 
-Ptr<GeneralizedHough_GPU> cv::gpu::GeneralizedHough_GPU::create(int method)
+Ptr<gpu::GeneralizedHough> cv::gpu::GeneralizedHough::create(int method)
 {
     switch (method)
     {
@@ -1562,104 +1681,8 @@ Ptr<GeneralizedHough_GPU> cv::gpu::GeneralizedHough_GPU::create(int method)
         return new GHT_Guil_Full();
     }
 
-    CV_Error(cv::Error::StsBadArg, "Unsupported method");
-    return Ptr<GeneralizedHough_GPU>();
-}
-
-cv::gpu::GeneralizedHough_GPU::GeneralizedHough_GPU()
-{
-    canny_ = gpu::createCannyEdgeDetector(50, 100);
-}
-
-cv::gpu::GeneralizedHough_GPU::~GeneralizedHough_GPU()
-{
-}
-
-void cv::gpu::GeneralizedHough_GPU::setTemplate(const GpuMat& templ, int cannyThreshold, Point templCenter)
-{
-    CV_Assert(templ.type() == CV_8UC1);
-    CV_Assert(cannyThreshold > 0);
-
-    ensureSizeIsEnough(templ.size(), CV_8UC1, edges_);
-
-    canny_->setLowThreshold(cannyThreshold / 2);
-    canny_->setHighThreshold(cannyThreshold);
-    canny_->detect(templ, edges_);
-
-    if (templCenter == Point(-1, -1))
-        templCenter = Point(templ.cols / 2, templ.rows / 2);
-
-    Ptr<gpu::Filter> filterDX = gpu::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
-    Ptr<gpu::Filter> filterDY = gpu::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
-    GpuMat dx, dy;
-    filterDX->apply(templ, dx);
-    filterDY->apply(templ, dy);
-
-    setTemplateImpl(edges_, dx, dy, templCenter);
-}
-
-void cv::gpu::GeneralizedHough_GPU::setTemplate(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, Point templCenter)
-{
-    if (templCenter == Point(-1, -1))
-        templCenter = Point(edges.cols / 2, edges.rows / 2);
-
-    setTemplateImpl(edges, dx, dy, templCenter);
-}
-
-void cv::gpu::GeneralizedHough_GPU::detect(const GpuMat& image, GpuMat& positions, int cannyThreshold)
-{
-    CV_Assert(image.type() == CV_8UC1);
-    CV_Assert(cannyThreshold > 0);
-
-    ensureSizeIsEnough(image.size(), CV_8UC1, edges_);
-
-    canny_->setLowThreshold(cannyThreshold / 2);
-    canny_->setHighThreshold(cannyThreshold);
-    canny_->detect(image, edges_);
-
-    Ptr<gpu::Filter> filterDX = gpu::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
-    Ptr<gpu::Filter> filterDY = gpu::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
-    GpuMat dx, dy;
-    filterDX->apply(image, dx);
-    filterDY->apply(image, dy);
-
-    detectImpl(edges_, dx, dy, positions);
-}
-
-void cv::gpu::GeneralizedHough_GPU::detect(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, GpuMat& positions)
-{
-    detectImpl(edges, dx, dy, positions);
-}
-
-void cv::gpu::GeneralizedHough_GPU::download(const GpuMat& d_positions, OutputArray h_positions_, OutputArray h_votes_)
-{
-    if (d_positions.empty())
-    {
-        h_positions_.release();
-        if (h_votes_.needed())
-            h_votes_.release();
-        return;
-    }
-
-    CV_Assert(d_positions.rows == 2 && d_positions.type() == CV_32FC4);
-
-    h_positions_.create(1, d_positions.cols, CV_32FC4);
-    Mat h_positions = h_positions_.getMat();
-    d_positions.row(0).download(h_positions);
-
-    if (h_votes_.needed())
-    {
-        h_votes_.create(1, d_positions.cols, CV_32SC3);
-        Mat h_votes = h_votes_.getMat();
-        GpuMat d_votes(1, d_positions.cols, CV_32SC3, const_cast<int3*>(d_positions.ptr<int3>(1)));
-        d_votes.download(h_votes);
-    }
-}
-
-void cv::gpu::GeneralizedHough_GPU::release()
-{
-    edges_.release();
-    releaseImpl();
+    CV_Error(Error::StsBadArg, "Unsupported method");
+    return Ptr<GeneralizedHough>();
 }
 
 #endif /* !defined (HAVE_CUDA) */

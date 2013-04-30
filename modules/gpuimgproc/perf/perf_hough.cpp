@@ -286,7 +286,7 @@ PERF_TEST_P(Method_Sz, GeneralizedHough,
         const cv::gpu::GpuMat d_dy(dy);
         cv::gpu::GpuMat posAndVotes;
 
-        cv::Ptr<cv::gpu::GeneralizedHough_GPU> d_hough = cv::gpu::GeneralizedHough_GPU::create(method);
+        cv::Ptr<cv::gpu::GeneralizedHough> d_hough = cv::gpu::GeneralizedHough::create(method);
         if (method & GHT_ROTATION)
         {
             d_hough->set("maxAngle", 90.0);
