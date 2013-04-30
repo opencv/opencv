@@ -18,7 +18,15 @@ This model originates from Jeanny Herault work [Herault2010]_. It has been invol
 
 **NOTE : See the Retina tutorial in the tutorial/contrib section for complementary explanations.**
 
-The retina can be settled up with various parameters, by default, the retina cancels mean luminance and enforces all details of the visual scene. In order to use your own parameters, you can use at least one time the *write(String fs)* method which will write a proper XML file with all default parameters. Then, tweak it on your own and reload them at any time using method *setup(String fs)*. These methods update a *Retina::RetinaParameters* member structure that is described hereafter. ::
+.. image:: images/retinaInput.jpg
+   :alt: a low quality color jpeg image with backlight problems.
+   :align: center
+
+.. image:: images/retinaOutput.jpg
+   :alt: the retina foveal model applied on the entire image with default parameters. Here contours are enforced, halo effects are voluntary visible with this configuration, increase horizontalCellsGain near 1 to remove them.
+   :align: center
+
+The retina can be settled up with various parameters, by default, as shown on the figure above, the retina cancels mean luminance and enforces all details of the visual scene. Halo effects can be modulated (exagerated to cancelled). In order to use your own parameters, you can use at least one time the *write(String fs)* method which will write a proper XML file with all default parameters. Then, tweak it on your own and reload them at any time using method *setup(String fs)*. These methods update a *Retina::RetinaParameters* member structure that is described hereafter. ::
 
   class Retina
   {
@@ -218,7 +226,7 @@ Retina::getParameters
 
     Retrieve the current parameters values in a *Retina::RetinaParameters* structure
 
-    :return: the current parameters setup as a struture object. 
+    :return: the current parameters setup as a struture object.
 
 Retina::getInputSize
 ++++++++++++++++++++
