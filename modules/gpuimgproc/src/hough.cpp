@@ -244,7 +244,8 @@ void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& 
 
     const float idp = 1.0f / dp;
 
-    cv::gpu::Canny(src, buf.cannyBuf, buf.edges, std::max(cannyThreshold / 2, 1), cannyThreshold);
+    buf.canny = gpu::createCannyEdgeDetector(std::max(cannyThreshold / 2, 1), cannyThreshold);
+    buf.canny->detect(src, buf.edges);
 
     ensureSizeIsEnough(2, src.size().area(), CV_32SC1, buf.list);
     unsigned int* srcPoints = buf.list.ptr<unsigned int>(0);
@@ -260,7 +261,13 @@ void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& 
     ensureSizeIsEnough(cvCeil(src.rows * idp) + 2, cvCeil(src.cols * idp) + 2, CV_32SC1, buf.accum);
     buf.accum.setTo(Scalar::all(0));
 
-    circlesAccumCenters_gpu(srcPoints, pointsCount, buf.cannyBuf.dx, buf.cannyBuf.dy, buf.accum, minRadius, maxRadius, idp);
+    Ptr<gpu::Filter> filterDX = gpu::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
+    Ptr<gpu::Filter> filterDY = gpu::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
+    GpuMat dx, dy;
+    filterDX->apply(src, dx);
+    filterDY->apply(src, dy);
+
+    circlesAccumCenters_gpu(srcPoints, pointsCount, dx, dy, buf.accum, minRadius, maxRadius, idp);
 
     int centersCount = buildCentersList_gpu(buf.accum, centers, votesThreshold);
     if (centersCount == 0)
@@ -1355,6 +1362,11 @@ Ptr<GeneralizedHough_GPU> cv::gpu::GeneralizedHough_GPU::create(int method)
     return Ptr<GeneralizedHough_GPU>();
 }
 
+cv::gpu::GeneralizedHough_GPU::GeneralizedHough_GPU()
+{
+    canny_ = gpu::createCannyEdgeDetector(50, 100);
+}
+
 cv::gpu::GeneralizedHough_GPU::~GeneralizedHough_GPU()
 {
 }
@@ -1365,12 +1377,21 @@ void cv::gpu::GeneralizedHough_GPU::setTemplate(const GpuMat& templ, int cannyTh
     CV_Assert(cannyThreshold > 0);
 
     ensureSizeIsEnough(templ.size(), CV_8UC1, edges_);
-    Canny(templ, cannyBuf_, edges_, cannyThreshold / 2, cannyThreshold);
+
+    canny_->setLowThreshold(cannyThreshold / 2);
+    canny_->setHighThreshold(cannyThreshold);
+    canny_->detect(templ, edges_);
 
     if (templCenter == Point(-1, -1))
         templCenter = Point(templ.cols / 2, templ.rows / 2);
 
-    setTemplateImpl(edges_, cannyBuf_.dx, cannyBuf_.dy, templCenter);
+    Ptr<gpu::Filter> filterDX = gpu::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
+    Ptr<gpu::Filter> filterDY = gpu::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
+    GpuMat dx, dy;
+    filterDX->apply(templ, dx);
+    filterDY->apply(templ, dy);
+
+    setTemplateImpl(edges_, dx, dy, templCenter);
 }
 
 void cv::gpu::GeneralizedHough_GPU::setTemplate(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, Point templCenter)
@@ -1387,9 +1408,18 @@ void cv::gpu::GeneralizedHough_GPU::detect(const GpuMat& image, GpuMat& position
     CV_Assert(cannyThreshold > 0);
 
     ensureSizeIsEnough(image.size(), CV_8UC1, edges_);
-    Canny(image, cannyBuf_, edges_, cannyThreshold / 2, cannyThreshold);
 
-    detectImpl(edges_, cannyBuf_.dx, cannyBuf_.dy, positions);
+    canny_->setLowThreshold(cannyThreshold / 2);
+    canny_->setHighThreshold(cannyThreshold);
+    canny_->detect(image, edges_);
+
+    Ptr<gpu::Filter> filterDX = gpu::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
+    Ptr<gpu::Filter> filterDY = gpu::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
+    GpuMat dx, dy;
+    filterDX->apply(image, dx);
+    filterDY->apply(image, dy);
+
+    detectImpl(edges_, dx, dy, positions);
 }
 
 void cv::gpu::GeneralizedHough_GPU::detect(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, GpuMat& positions)
@@ -1425,7 +1455,6 @@ void cv::gpu::GeneralizedHough_GPU::download(const GpuMat& d_positions, OutputAr
 void cv::gpu::GeneralizedHough_GPU::release()
 {
     edges_.release();
-    cannyBuf_.release();
     releaseImpl();
 }
 

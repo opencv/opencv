@@ -31,7 +31,7 @@ int main(int argc, const char* argv[])
     }
 
     Mat mask;
-    Canny(src, mask, 100, 200, 3);
+    cv::Canny(src, mask, 100, 200, 3);
 
     Mat dst_cpu;
     cv::cvtColor(mask, dst_cpu, COLOR_GRAY2BGR);

@@ -1072,12 +1072,13 @@ TEST(Canny)
 
     gpu::GpuMat d_img(img);
     gpu::GpuMat d_edges;
-    gpu::CannyBuf d_buf;
 
-    gpu::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
+    Ptr<gpu::CannyEdgeDetector> canny = gpu::createCannyEdgeDetector(50.0, 100.0);
+
+    canny->detect(d_img, d_edges);
 
     GPU_ON;
-    gpu::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
+    canny->detect(d_img, d_edges);
     GPU_OFF;
 }
 

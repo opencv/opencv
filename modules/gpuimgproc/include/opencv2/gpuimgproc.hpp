@@ -48,9 +48,18 @@
 #endif
 
 #include "opencv2/core/gpu.hpp"
-#include "opencv2/core/base.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/gpufilters.hpp"
+
+#if defined __GNUC__
+    #define __OPENCV_GPUIMGPROC_DEPR_BEFORE__
+    #define __OPENCV_GPUIMGPROC_DEPR_AFTER__ __attribute__ ((deprecated))
+#elif (defined WIN32 || defined _WIN32)
+    #define __OPENCV_GPUIMGPROC_DEPR_BEFORE__ __declspec(deprecated)
+    #define __OPENCV_GPUIMGPROC_DEPR_AFTER__
+#else
+    #define __OPENCV_GPUIMGPROC_DEPR_BEFORE__
+    #define __OPENCV_GPUIMGPROC_DEPR_AFTER__
+#endif
 
 namespace cv { namespace gpu {
 
@@ -172,22 +181,42 @@ static inline void histRange(InputArray src, GpuMat hist[4], const GpuMat levels
 
 //////////////////////////////// Canny ////////////////////////////////
 
-struct CV_EXPORTS CannyBuf
+class CV_EXPORTS CannyEdgeDetector : public Algorithm
 {
-    void create(const Size& image_size, int apperture_size = 3);
-    void release();
+public:
+    virtual void detect(InputArray image, OutputArray edges) = 0;
+    virtual void detect(InputArray dx, InputArray dy, OutputArray edges) = 0;
 
-    GpuMat dx, dy;
-    GpuMat mag;
-    GpuMat map;
-    GpuMat st1, st2;
-    Ptr<Filter> filterDX, filterDY;
+    virtual void setLowThreshold(double low_thresh) = 0;
+    virtual double getLowThreshold() const = 0;
+
+    virtual void setHighThreshold(double high_thresh) = 0;
+    virtual double getHighThreshold() const = 0;
+
+    virtual void setAppertureSize(int apperture_size) = 0;
+    virtual int getAppertureSize() const = 0;
+
+    virtual void setL2Gradient(bool L2gradient) = 0;
+    virtual bool getL2Gradient() const = 0;
 };
 
-CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
-CV_EXPORTS void Canny(const GpuMat& image, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
-CV_EXPORTS void Canny(const GpuMat& dx, const GpuMat& dy, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false);
-CV_EXPORTS void Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false);
+CV_EXPORTS Ptr<CannyEdgeDetector> createCannyEdgeDetector(double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
+
+// obsolete
+
+__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void Canny(InputArray image, OutputArray edges,
+                                             double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
+inline void Canny(InputArray image, OutputArray edges, double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
+{
+    gpu::createCannyEdgeDetector(low_thresh, high_thresh, apperture_size, L2gradient)->detect(image, edges);
+}
+
+__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void Canny(InputArray dx, InputArray dy, OutputArray edges,
+                                             double low_thresh, double high_thresh, bool L2gradient = false) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
+inline void Canny(InputArray dx, InputArray dy, OutputArray edges, double low_thresh, double high_thresh, bool L2gradient)
+{
+    gpu::createCannyEdgeDetector(low_thresh, high_thresh, 3, L2gradient)->detect(dx, dy, edges);
+}
 
 /////////////////////////// Hough Transform ////////////////////////////
 
@@ -209,7 +238,7 @@ struct HoughCirclesBuf
     GpuMat edges;
     GpuMat accum;
     GpuMat list;
-    CannyBuf cannyBuf;
+    Ptr<CannyEdgeDetector> canny;
 };
 
 CV_EXPORTS void HoughCircles(const GpuMat& src, GpuMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
@@ -224,6 +253,7 @@ class CV_EXPORTS GeneralizedHough_GPU : public cv::Algorithm
 public:
     static Ptr<GeneralizedHough_GPU> create(int method);
 
+    GeneralizedHough_GPU();
     virtual ~GeneralizedHough_GPU();
 
     //! set template to search
@@ -245,7 +275,7 @@ protected:
 
 private:
     GpuMat edges_;
-    CannyBuf cannyBuf_;
+    Ptr<CannyEdgeDetector> canny_;
 };
 
 ////////////////////////// Corners Detection ///////////////////////////
@@ -358,5 +388,8 @@ CV_EXPORTS void blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat
                             GpuMat& result, Stream& stream = Stream::Null());
 
 }} // namespace cv { namespace gpu {
+
+#undef __OPENCV_GPUIMGPROC_DEPR_BEFORE__
+#undef __OPENCV_GPUIMGPROC_DEPR_AFTER__
 
 #endif /* __OPENCV_GPUIMGPROC_HPP__ */
