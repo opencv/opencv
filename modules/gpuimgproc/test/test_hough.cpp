@@ -150,11 +150,13 @@ GPU_TEST_P(HoughCircles, Accuracy)
     cv::Mat src(size, CV_8UC1);
     drawCircles(src, circles_gold, true);
 
+    cv::Ptr<cv::gpu::HoughCirclesDetector> houghCircles = cv::gpu::createHoughCirclesDetector(dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+
     cv::gpu::GpuMat d_circles;
-    cv::gpu::HoughCircles(loadMat(src, useRoi), d_circles, cv::HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+    houghCircles->detect(loadMat(src, useRoi), d_circles);
 
     std::vector<cv::Vec3f> circles;
-    cv::gpu::HoughCirclesDownload(d_circles, circles);
+    d_circles.download(circles);
 
     ASSERT_FALSE(circles.empty());
 

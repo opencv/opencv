@@ -203,9 +203,10 @@ PERF_TEST_P(Sz_Dp_MinDist, HoughCircles,
     {
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_circles;
-        cv::gpu::HoughCirclesBuf d_buf;
 
-        TEST_CYCLE() cv::gpu::HoughCircles(d_src, d_circles, d_buf, cv::HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+        cv::Ptr<cv::gpu::HoughCirclesDetector> houghCircles = cv::gpu::createHoughCirclesDetector(dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+
+        TEST_CYCLE() houghCircles->detect(d_src, d_circles);
 
         cv::Mat gpu_circles(d_circles);
         cv::Vec3f* begin = gpu_circles.ptr<cv::Vec3f>(0);

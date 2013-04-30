@@ -297,17 +297,46 @@ inline void HoughLinesP(InputArray src, OutputArray lines, float rho, float thet
 //////////////////////////////////////
 // HoughCircles
 
-struct HoughCirclesBuf
+class CV_EXPORTS HoughCirclesDetector : public Algorithm
 {
-    GpuMat edges;
-    GpuMat accum;
-    GpuMat list;
-    Ptr<CannyEdgeDetector> canny;
+public:
+    virtual void detect(InputArray src, OutputArray circles) = 0;
+
+    virtual void setDp(float dp) = 0;
+    virtual float getDp() const = 0;
+
+    virtual void setMinDist(float minDist) = 0;
+    virtual float getMinDist() const = 0;
+
+    virtual void setCannyThreshold(int cannyThreshold) = 0;
+    virtual int getCannyThreshold() const = 0;
+
+    virtual void setVotesThreshold(int votesThreshold) = 0;
+    virtual int getVotesThreshold() const = 0;
+
+    virtual void setMinRadius(int minRadius) = 0;
+    virtual int getMinRadius() const = 0;
+
+    virtual void setMaxRadius(int maxRadius) = 0;
+    virtual int getMaxRadius() const = 0;
+
+    virtual void setMaxCircles(int maxCircles) = 0;
+    virtual int getMaxCircles() const = 0;
 };
 
-CV_EXPORTS void HoughCircles(const GpuMat& src, GpuMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
-CV_EXPORTS void HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& buf, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
-CV_EXPORTS void HoughCirclesDownload(const GpuMat& d_circles, OutputArray h_circles);
+CV_EXPORTS Ptr<HoughCirclesDetector> createHoughCirclesDetector(float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
+
+// obsolete
+
+__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void HoughCircles(InputArray src, OutputArray circles,
+                                                    int method, float dp, float minDist, int cannyThreshold, int votesThreshold,
+                                                    int minRadius, int maxRadius, int maxCircles = 4096) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
+
+inline void HoughCircles(InputArray src, OutputArray circles, int /*method*/, float dp, float minDist,
+                         int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles)
+{
+    gpu::createHoughCirclesDetector(dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius, maxCircles)->detect(src, circles);
+}
 
 //////////////////////////////////////
 // GeneralizedHough

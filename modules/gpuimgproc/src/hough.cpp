@@ -51,9 +51,7 @@ Ptr<gpu::HoughLinesDetector> cv::gpu::createHoughLinesDetector(float, float, int
 
 Ptr<gpu::HoughSegmentDetector> cv::gpu::createHoughSegmentDetector(float, float, int, int, int) { throw_no_cuda(); return Ptr<HoughSegmentDetector>(); }
 
-void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, int, float, float, int, int, int, int, int) { throw_no_cuda(); }
-void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, HoughCirclesBuf&, int, float, float, int, int, int, int, int) { throw_no_cuda(); }
-void cv::gpu::HoughCirclesDownload(const GpuMat&, OutputArray) { throw_no_cuda(); }
+Ptr<HoughCirclesDetector> cv::gpu::createHoughCirclesDetector(float, float, int, int, int, int, int) { throw_no_cuda(); return Ptr<HoughCirclesDetector>(); }
 
 Ptr<GeneralizedHough_GPU> cv::gpu::GeneralizedHough_GPU::create(int) { throw_no_cuda(); return Ptr<GeneralizedHough_GPU>(); }
 cv::gpu::GeneralizedHough_GPU::~GeneralizedHough_GPU() {}
@@ -355,158 +353,230 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles)
+namespace
 {
-    HoughCirclesBuf buf;
-    HoughCircles(src, circles, buf, method, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius, maxCircles);
-}
-
-void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& buf, int method,
-                           float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles)
-{
-    using namespace cv::gpu::cudev::hough;
-
-    CV_Assert(src.type() == CV_8UC1);
-    CV_Assert(src.cols < std::numeric_limits<unsigned short>::max());
-    CV_Assert(src.rows < std::numeric_limits<unsigned short>::max());
-    CV_Assert(method == cv::HOUGH_GRADIENT);
-    CV_Assert(dp > 0);
-    CV_Assert(minRadius > 0 && maxRadius > minRadius);
-    CV_Assert(cannyThreshold > 0);
-    CV_Assert(votesThreshold > 0);
-    CV_Assert(maxCircles > 0);
-
-    const float idp = 1.0f / dp;
-
-    buf.canny = gpu::createCannyEdgeDetector(std::max(cannyThreshold / 2, 1), cannyThreshold);
-    buf.canny->detect(src, buf.edges);
-
-    ensureSizeIsEnough(2, src.size().area(), CV_32SC1, buf.list);
-    unsigned int* srcPoints = buf.list.ptr<unsigned int>(0);
-    unsigned int* centers = buf.list.ptr<unsigned int>(1);
-
-    const int pointsCount = buildPointList_gpu(buf.edges, srcPoints);
-    if (pointsCount == 0)
+    class HoughCirclesDetectorImpl : public HoughCirclesDetector
     {
-        circles.release();
-        return;
-    }
+    public:
+        HoughCirclesDetectorImpl(float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles);
 
-    ensureSizeIsEnough(cvCeil(src.rows * idp) + 2, cvCeil(src.cols * idp) + 2, CV_32SC1, buf.accum);
-    buf.accum.setTo(Scalar::all(0));
+        void detect(InputArray src, OutputArray circles);
 
-    Ptr<gpu::Filter> filterDX = gpu::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
-    Ptr<gpu::Filter> filterDY = gpu::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
-    GpuMat dx, dy;
-    filterDX->apply(src, dx);
-    filterDY->apply(src, dy);
+        void setDp(float dp) { dp_ = dp; }
+        float getDp() const { return dp_; }
 
-    circlesAccumCenters_gpu(srcPoints, pointsCount, dx, dy, buf.accum, minRadius, maxRadius, idp);
+        void setMinDist(float minDist) { minDist_ = minDist; }
+        float getMinDist() const { return minDist_; }
 
-    int centersCount = buildCentersList_gpu(buf.accum, centers, votesThreshold);
-    if (centersCount == 0)
-    {
-        circles.release();
-        return;
-    }
+        void setCannyThreshold(int cannyThreshold) { cannyThreshold_ = cannyThreshold; }
+        int getCannyThreshold() const { return cannyThreshold_; }
 
-    if (minDist > 1)
-    {
-        cv::AutoBuffer<ushort2> oldBuf_(centersCount);
-        cv::AutoBuffer<ushort2> newBuf_(centersCount);
-        int newCount = 0;
+        void setVotesThreshold(int votesThreshold) { votesThreshold_ = votesThreshold; }
+        int getVotesThreshold() const { return votesThreshold_; }
 
-        ushort2* oldBuf = oldBuf_;
-        ushort2* newBuf = newBuf_;
+        void setMinRadius(int minRadius) { minRadius_ = minRadius; }
+        int getMinRadius() const { return minRadius_; }
 
-        cudaSafeCall( cudaMemcpy(oldBuf, centers, centersCount * sizeof(ushort2), cudaMemcpyDeviceToHost) );
+        void setMaxRadius(int maxRadius) { maxRadius_ = maxRadius; }
+        int getMaxRadius() const { return maxRadius_; }
 
-        const int cellSize = cvRound(minDist);
-        const int gridWidth = (src.cols + cellSize - 1) / cellSize;
-        const int gridHeight = (src.rows + cellSize - 1) / cellSize;
+        void setMaxCircles(int maxCircles) { maxCircles_ = maxCircles; }
+        int getMaxCircles() const { return maxCircles_; }
 
-        std::vector< std::vector<ushort2> > grid(gridWidth * gridHeight);
-
-        const float minDist2 = minDist * minDist;
-
-        for (int i = 0; i < centersCount; ++i)
+        void write(FileStorage& fs) const
         {
-            ushort2 p = oldBuf[i];
+            fs << "name" << "HoughCirclesDetector_GPU"
+            << "dp" << dp_
+            << "minDist" << minDist_
+            << "cannyThreshold" << cannyThreshold_
+            << "votesThreshold" << votesThreshold_
+            << "minRadius" << minRadius_
+            << "maxRadius" << maxRadius_
+            << "maxCircles" << maxCircles_;
+        }
 
-            bool good = true;
+        void read(const FileNode& fn)
+        {
+            CV_Assert( String(fn["name"]) == "HoughCirclesDetector_GPU" );
+            dp_ = (float)fn["dp"];
+            minDist_ = (float)fn["minDist"];
+            cannyThreshold_ = (int)fn["cannyThreshold"];
+            votesThreshold_ = (int)fn["votesThreshold"];
+            minRadius_ = (int)fn["minRadius"];
+            maxRadius_ = (int)fn["maxRadius"];
+            maxCircles_ = (int)fn["maxCircles"];
+        }
 
-            int xCell = static_cast<int>(p.x / cellSize);
-            int yCell = static_cast<int>(p.y / cellSize);
+    private:
+        float dp_;
+        float minDist_;
+        int cannyThreshold_;
+        int votesThreshold_;
+        int minRadius_;
+        int maxRadius_;
+        int maxCircles_;
 
-            int x1 = xCell - 1;
-            int y1 = yCell - 1;
-            int x2 = xCell + 1;
-            int y2 = yCell + 1;
+        GpuMat dx_, dy_;
+        GpuMat edges_;
+        GpuMat accum_;
+        GpuMat list_;
+        GpuMat result_;
+        Ptr<gpu::Filter> filterDx_;
+        Ptr<gpu::Filter> filterDy_;
+        Ptr<gpu::CannyEdgeDetector> canny_;
+    };
 
-            // boundary check
-            x1 = std::max(0, x1);
-            y1 = std::max(0, y1);
-            x2 = std::min(gridWidth - 1, x2);
-            y2 = std::min(gridHeight - 1, y2);
+    HoughCirclesDetectorImpl::HoughCirclesDetectorImpl(float dp, float minDist, int cannyThreshold, int votesThreshold,
+                                                       int minRadius, int maxRadius, int maxCircles) :
+        dp_(dp), minDist_(minDist), cannyThreshold_(cannyThreshold), votesThreshold_(votesThreshold),
+        minRadius_(minRadius), maxRadius_(maxRadius), maxCircles_(maxCircles)
+    {
+        canny_ = gpu::createCannyEdgeDetector(std::max(cannyThreshold_ / 2, 1), cannyThreshold_);
 
-            for (int yy = y1; yy <= y2; ++yy)
+        filterDx_ = gpu::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
+        filterDy_ = gpu::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
+    }
+
+    void HoughCirclesDetectorImpl::detect(InputArray _src, OutputArray circles)
+    {
+        using namespace cv::gpu::cudev::hough;
+
+        GpuMat src = _src.getGpuMat();
+
+        CV_Assert( src.type() == CV_8UC1 );
+        CV_Assert( src.cols < std::numeric_limits<unsigned short>::max() );
+        CV_Assert( src.rows < std::numeric_limits<unsigned short>::max() );
+        CV_Assert( dp_ > 0 );
+        CV_Assert( minRadius_ > 0 && maxRadius_ > minRadius_ );
+        CV_Assert( cannyThreshold_ > 0 );
+        CV_Assert( votesThreshold_ > 0 );
+        CV_Assert( maxCircles_ > 0 );
+
+        const float idp = 1.0f / dp_;
+
+        filterDx_->apply(src, dx_);
+        filterDy_->apply(src, dy_);
+
+        canny_->setLowThreshold(std::max(cannyThreshold_ / 2, 1));
+        canny_->setHighThreshold(cannyThreshold_);
+
+        canny_->detect(dx_, dy_, edges_);
+
+        ensureSizeIsEnough(2, src.size().area(), CV_32SC1, list_);
+        unsigned int* srcPoints = list_.ptr<unsigned int>(0);
+        unsigned int* centers = list_.ptr<unsigned int>(1);
+
+        const int pointsCount = buildPointList_gpu(edges_, srcPoints);
+        if (pointsCount == 0)
+        {
+            circles.release();
+            return;
+        }
+
+        ensureSizeIsEnough(cvCeil(src.rows * idp) + 2, cvCeil(src.cols * idp) + 2, CV_32SC1, accum_);
+        accum_.setTo(Scalar::all(0));
+
+        circlesAccumCenters_gpu(srcPoints, pointsCount, dx_, dy_, accum_, minRadius_, maxRadius_, idp);
+
+        int centersCount = buildCentersList_gpu(accum_, centers, votesThreshold_);
+        if (centersCount == 0)
+        {
+            circles.release();
+            return;
+        }
+
+        if (minDist_ > 1)
+        {
+            AutoBuffer<ushort2> oldBuf_(centersCount);
+            AutoBuffer<ushort2> newBuf_(centersCount);
+            int newCount = 0;
+
+            ushort2* oldBuf = oldBuf_;
+            ushort2* newBuf = newBuf_;
+
+            cudaSafeCall( cudaMemcpy(oldBuf, centers, centersCount * sizeof(ushort2), cudaMemcpyDeviceToHost) );
+
+            const int cellSize = cvRound(minDist_);
+            const int gridWidth = (src.cols + cellSize - 1) / cellSize;
+            const int gridHeight = (src.rows + cellSize - 1) / cellSize;
+
+            std::vector< std::vector<ushort2> > grid(gridWidth * gridHeight);
+
+            const float minDist2 = minDist_ * minDist_;
+
+            for (int i = 0; i < centersCount; ++i)
             {
-                for (int xx = x1; xx <= x2; ++xx)
+                ushort2 p = oldBuf[i];
+
+                bool good = true;
+
+                int xCell = static_cast<int>(p.x / cellSize);
+                int yCell = static_cast<int>(p.y / cellSize);
+
+                int x1 = xCell - 1;
+                int y1 = yCell - 1;
+                int x2 = xCell + 1;
+                int y2 = yCell + 1;
+
+                // boundary check
+                x1 = std::max(0, x1);
+                y1 = std::max(0, y1);
+                x2 = std::min(gridWidth - 1, x2);
+                y2 = std::min(gridHeight - 1, y2);
+
+                for (int yy = y1; yy <= y2; ++yy)
                 {
-                    std::vector<ushort2>& m = grid[yy * gridWidth + xx];
-
-                    for(size_t j = 0; j < m.size(); ++j)
+                    for (int xx = x1; xx <= x2; ++xx)
                     {
-                        float dx = (float)(p.x - m[j].x);
-                        float dy = (float)(p.y - m[j].y);
+                        std::vector<ushort2>& m = grid[yy * gridWidth + xx];
 
-                        if (dx * dx + dy * dy < minDist2)
+                        for(size_t j = 0; j < m.size(); ++j)
                         {
-                            good = false;
-                            goto break_out;
+                            float dx = (float)(p.x - m[j].x);
+                            float dy = (float)(p.y - m[j].y);
+
+                            if (dx * dx + dy * dy < minDist2)
+                            {
+                                good = false;
+                                goto break_out;
+                            }
                         }
                     }
                 }
+
+                break_out:
+
+                if(good)
+                {
+                    grid[yCell * gridWidth + xCell].push_back(p);
+
+                    newBuf[newCount++] = p;
+                }
             }
 
-            break_out:
-
-            if(good)
-            {
-                grid[yCell * gridWidth + xCell].push_back(p);
-
-                newBuf[newCount++] = p;
-            }
+            cudaSafeCall( cudaMemcpy(centers, newBuf, newCount * sizeof(unsigned int), cudaMemcpyHostToDevice) );
+            centersCount = newCount;
         }
 
-        cudaSafeCall( cudaMemcpy(centers, newBuf, newCount * sizeof(unsigned int), cudaMemcpyHostToDevice) );
-        centersCount = newCount;
+        ensureSizeIsEnough(1, maxCircles_, CV_32FC3, result_);
+
+        int circlesCount = circlesAccumRadius_gpu(centers, centersCount, srcPoints, pointsCount, result_.ptr<float3>(), maxCircles_,
+                                                  dp_, minRadius_, maxRadius_, votesThreshold_, deviceSupports(FEATURE_SET_COMPUTE_20));
+
+        if (circlesCount == 0)
+        {
+            circles.release();
+            return;
+        }
+
+        result_.cols = circlesCount;
+        result_.copyTo(circles);
     }
-
-    ensureSizeIsEnough(1, maxCircles, CV_32FC3, circles);
-
-    const int circlesCount = circlesAccumRadius_gpu(centers, centersCount, srcPoints, pointsCount, circles.ptr<float3>(), maxCircles,
-                                                    dp, minRadius, maxRadius, votesThreshold, deviceSupports(FEATURE_SET_COMPUTE_20));
-
-    if (circlesCount > 0)
-        circles.cols = circlesCount;
-    else
-        circles.release();
 }
 
-void cv::gpu::HoughCirclesDownload(const GpuMat& d_circles, cv::OutputArray h_circles_)
+Ptr<HoughCirclesDetector> cv::gpu::createHoughCirclesDetector(float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles)
 {
-    if (d_circles.empty())
-    {
-        h_circles_.release();
-        return;
-    }
-
-    CV_Assert(d_circles.rows == 1 && d_circles.type() == CV_32FC3);
-
-    h_circles_.create(1, d_circles.cols, CV_32FC3);
-    Mat h_circles = h_circles_.getMat();
-    d_circles.download(h_circles);
+    return new HoughCirclesDetectorImpl(dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius, maxCircles);
 }
 
 //////////////////////////////////////////////////////////

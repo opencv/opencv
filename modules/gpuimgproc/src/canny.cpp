@@ -170,6 +170,9 @@ namespace
         CV_Assert( dy.type() == dx.type() && dy.size() == dx.size() );
         CV_Assert( deviceSupports(SHARED_ATOMICS) );
 
+        dx.copyTo(dx_);
+        dy.copyTo(dy_);
+
         if (low_thresh_ > high_thresh_)
             std::swap(low_thresh_, high_thresh_);
 
