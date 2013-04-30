@@ -53,14 +53,16 @@ public class NativeCameraView extends CameraBridgeViewBase {
         /* 1. We need to stop thread which updating the frames
          * 2. Stop camera and release it
          */
-        try {
-            mStopThread = true;
-            mThread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally {
-            mThread =  null;
-            mStopThread = false;
+        if (mThread != null) {
+            try {
+                mStopThread = true;
+                mThread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                mThread =  null;
+                mStopThread = false;
+            }
         }
 
         /* Now release camera */
