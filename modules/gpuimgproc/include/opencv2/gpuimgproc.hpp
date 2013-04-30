@@ -409,17 +409,17 @@ CV_EXPORTS Ptr<CornersDetector> createGoodFeaturesToTrackDetector(int srcType, i
 ///////////////////////////// Mean Shift //////////////////////////////
 
 //! Does mean shift filtering on GPU.
-CV_EXPORTS void meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
+CV_EXPORTS void meanShiftFiltering(InputArray src, OutputArray dst, int sp, int sr,
                                    TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1),
                                    Stream& stream = Stream::Null());
 
 //! Does mean shift procedure on GPU.
-CV_EXPORTS void meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr,
+CV_EXPORTS void meanShiftProc(InputArray src, OutputArray dstr, OutputArray dstsp, int sp, int sr,
                               TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1),
                               Stream& stream = Stream::Null());
 
 //! Does mean shift segmentation with elimination of small regions.
-CV_EXPORTS void meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize,
+CV_EXPORTS void meanShiftSegmentation(InputArray src, OutputArray dst, int sp, int sr, int minsize,
                                       TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
 
 /////////////////////////// Match Template ////////////////////////////

@@ -43,7 +43,7 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::meanShiftSegmentation(const GpuMat&, Mat&, int, int, int, TermCriteria) { throw_no_cuda(); }
+void cv::gpu::meanShiftSegmentation(InputArray, OutputArray, int, int, int, TermCriteria) { throw_no_cuda(); }
 
 #else
 
@@ -222,9 +222,12 @@ inline int dist2(const cv::Vec2s& lhs, const cv::Vec2s& rhs)
 } // anonymous namespace
 
 
-void cv::gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize, TermCriteria criteria)
+void cv::gpu::meanShiftSegmentation(InputArray _src, OutputArray _dst, int sp, int sr, int minsize, TermCriteria criteria)
 {
-    CV_Assert(src.type() == CV_8UC4);
+    GpuMat src = _src.getGpuMat();
+
+    CV_Assert( src.type() == CV_8UC4 );
+
     const int nrows = src.rows;
     const int ncols = src.cols;
     const int hr = sr;
@@ -232,7 +235,7 @@ void cv::gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr,
 
     // Perform mean shift procedure and obtain region and spatial maps
     GpuMat d_rmap, d_spmap;
-    meanShiftProc(src, d_rmap, d_spmap, sp, sr, criteria);
+    gpu::meanShiftProc(src, d_rmap, d_spmap, sp, sr, criteria);
     Mat rmap(d_rmap);
     Mat spmap(d_spmap);
 
@@ -337,7 +340,7 @@ void cv::gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr,
     }
 
     // Sort all graph's edges connecting differnet components (in asceding order)
-    sort(edges.begin(), edges.end());
+    std::sort(edges.begin(), edges.end());
 
     // Exclude small components (starting from the nearest couple)
     for (size_t i = 0; i < edges.size(); ++i)
@@ -366,7 +369,8 @@ void cv::gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr,
     }
 
     // Create final image, color of each segment is the average color of its pixels
-    dst.create(src.size(), src.type());
+    _dst.create(src.size(), src.type());
+    Mat dst = _dst.getMat();
 
     for (int y = 0; y < nrows; ++y)
     {
