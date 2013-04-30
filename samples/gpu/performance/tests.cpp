@@ -1047,13 +1047,12 @@ TEST(equalizeHist)
 
         gpu::GpuMat d_src(src);
         gpu::GpuMat d_dst;
-        gpu::GpuMat d_hist;
         gpu::GpuMat d_buf;
 
-        gpu::equalizeHist(d_src, d_dst, d_hist, d_buf);
+        gpu::equalizeHist(d_src, d_dst, d_buf);
 
         GPU_ON;
-        gpu::equalizeHist(d_src, d_dst, d_hist, d_buf);
+        gpu::equalizeHist(d_src, d_dst, d_buf);
         GPU_OFF;
     }
 }

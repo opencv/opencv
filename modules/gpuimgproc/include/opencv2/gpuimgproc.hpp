@@ -98,46 +98,18 @@ CV_EXPORTS void alphaComp(InputArray img1, InputArray img2, OutputArray dst, int
 
 ////////////////////////////// Histogram ///////////////////////////////
 
-//! Compute levels with even distribution. levels will have 1 row and nLevels cols and CV_32SC1 type.
-CV_EXPORTS void evenLevels(GpuMat& levels, int nLevels, int lowerLevel, int upperLevel);
-
-//! Calculates histogram with evenly distributed bins for signle channel source.
-//! Supports CV_8UC1, CV_16UC1 and CV_16SC1 source types.
-//! Output hist will have one row and histSize cols and CV_32SC1 type.
-CV_EXPORTS void histEven(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
-CV_EXPORTS void histEven(const GpuMat& src, GpuMat& hist, GpuMat& buf, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
-
-//! Calculates histogram with evenly distributed bins for four-channel source.
-//! All channels of source are processed separately.
-//! Supports CV_8UC4, CV_16UC4 and CV_16SC4 source types.
-//! Output hist[i] will have one row and histSize[i] cols and CV_32SC1 type.
-CV_EXPORTS void histEven(const GpuMat& src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null());
-CV_EXPORTS void histEven(const GpuMat& src, GpuMat hist[4], GpuMat& buf, int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null());
-
-//! Calculates histogram with bins determined by levels array.
-//! levels must have one row and CV_32SC1 type if source has integer type or CV_32FC1 otherwise.
-//! Supports CV_8UC1, CV_16UC1, CV_16SC1 and CV_32FC1 source types.
-//! Output hist will have one row and (levels.cols-1) cols and CV_32SC1 type.
-CV_EXPORTS void histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels, Stream& stream = Stream::Null());
-CV_EXPORTS void histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels, GpuMat& buf, Stream& stream = Stream::Null());
-
-//! Calculates histogram with bins determined by levels array.
-//! All levels must have one row and CV_32SC1 type if source has integer type or CV_32FC1 otherwise.
-//! All channels of source are processed separately.
-//! Supports CV_8UC4, CV_16UC4, CV_16SC4 and CV_32FC4 source types.
-//! Output hist[i] will have one row and (levels[i].cols-1) cols and CV_32SC1 type.
-CV_EXPORTS void histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4], Stream& stream = Stream::Null());
-CV_EXPORTS void histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4], GpuMat& buf, Stream& stream = Stream::Null());
-
 //! Calculates histogram for 8u one channel image
 //! Output hist will have one row, 256 cols and CV32SC1 type.
-CV_EXPORTS void calcHist(const GpuMat& src, GpuMat& hist, Stream& stream = Stream::Null());
-CV_EXPORTS void calcHist(const GpuMat& src, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null());
+CV_EXPORTS void calcHist(InputArray src, OutputArray hist, Stream& stream = Stream::Null());
 
 //! normalizes the grayscale image brightness and contrast by normalizing its histogram
-CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
-CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, Stream& stream = Stream::Null());
-CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null());
+CV_EXPORTS void equalizeHist(InputArray src, OutputArray dst, InputOutputArray buf, Stream& stream = Stream::Null());
+
+static inline void equalizeHist(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
+{
+    GpuMat buf;
+    gpu::equalizeHist(src, dst, buf, stream);
+}
 
 class CV_EXPORTS CLAHE : public cv::CLAHE
 {
@@ -145,7 +117,58 @@ public:
     using cv::CLAHE::apply;
     virtual void apply(InputArray src, OutputArray dst, Stream& stream) = 0;
 };
-CV_EXPORTS Ptr<cv::gpu::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+CV_EXPORTS Ptr<gpu::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+
+//! Compute levels with even distribution. levels will have 1 row and nLevels cols and CV_32SC1 type.
+CV_EXPORTS void evenLevels(OutputArray levels, int nLevels, int lowerLevel, int upperLevel);
+
+//! Calculates histogram with evenly distributed bins for signle channel source.
+//! Supports CV_8UC1, CV_16UC1 and CV_16SC1 source types.
+//! Output hist will have one row and histSize cols and CV_32SC1 type.
+CV_EXPORTS void histEven(InputArray src, OutputArray hist, InputOutputArray buf, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
+
+static inline void histEven(InputArray src, OutputArray hist, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null())
+{
+    GpuMat buf;
+    gpu::histEven(src, hist, buf, histSize, lowerLevel, upperLevel, stream);
+}
+
+//! Calculates histogram with evenly distributed bins for four-channel source.
+//! All channels of source are processed separately.
+//! Supports CV_8UC4, CV_16UC4 and CV_16SC4 source types.
+//! Output hist[i] will have one row and histSize[i] cols and CV_32SC1 type.
+CV_EXPORTS void histEven(InputArray src, GpuMat hist[4], InputOutputArray buf, int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null());
+
+static inline void histEven(InputArray src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null())
+{
+    GpuMat buf;
+    gpu::histEven(src, hist, buf, histSize, lowerLevel, upperLevel, stream);
+}
+
+//! Calculates histogram with bins determined by levels array.
+//! levels must have one row and CV_32SC1 type if source has integer type or CV_32FC1 otherwise.
+//! Supports CV_8UC1, CV_16UC1, CV_16SC1 and CV_32FC1 source types.
+//! Output hist will have one row and (levels.cols-1) cols and CV_32SC1 type.
+CV_EXPORTS void histRange(InputArray src, OutputArray hist, InputArray levels, InputOutputArray buf, Stream& stream = Stream::Null());
+
+static inline void histRange(InputArray src, OutputArray hist, InputArray levels, Stream& stream = Stream::Null())
+{
+    GpuMat buf;
+    gpu::histRange(src, hist, levels, buf, stream);
+}
+
+//! Calculates histogram with bins determined by levels array.
+//! All levels must have one row and CV_32SC1 type if source has integer type or CV_32FC1 otherwise.
+//! All channels of source are processed separately.
+//! Supports CV_8UC4, CV_16UC4, CV_16SC4 and CV_32FC4 source types.
+//! Output hist[i] will have one row and (levels[i].cols-1) cols and CV_32SC1 type.
+CV_EXPORTS void histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4], InputOutputArray buf, Stream& stream = Stream::Null());
+
+static inline void histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4], Stream& stream = Stream::Null())
+{
+    GpuMat buf;
+    gpu::histRange(src, hist, levels, buf, stream);
+}
 
 //////////////////////////////// Canny ////////////////////////////////
 
