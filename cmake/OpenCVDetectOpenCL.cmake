@@ -17,7 +17,8 @@ else(APPLE)
               NAMES OpenCL/cl.h CL/cl.h
               HINTS ${OPENCL_ROOT_DIR}
               PATH_SUFFIXES include include/nvidia-current
-              DOC "OpenCL include directory")
+              DOC "OpenCL include directory"
+              NO_DEFAULT_PATH)
 
     if (X86_64)
       set(OPENCL_POSSIBLE_LIB_SUFFIXES lib/Win64 lib/x86_64 lib/x64)
@@ -29,7 +30,8 @@ else(APPLE)
               NAMES OpenCL
               HINTS ${OPENCL_ROOT_DIR}
               PATH_SUFFIXES ${OPENCL_POSSIBLE_LIB_SUFFIXES}
-              DOC "OpenCL library")
+              DOC "OpenCL library"
+              NO_DEFAULT_PATH)
 
     mark_as_advanced(OPENCL_INCLUDE_DIR OPENCL_LIBRARY)
     include(FindPackageHandleStandardArgs)
