@@ -424,20 +424,24 @@ CV_EXPORTS void meanShiftSegmentation(InputArray src, OutputArray dst, int sp, i
 
 /////////////////////////// Match Template ////////////////////////////
 
-struct CV_EXPORTS MatchTemplateBuf
+//! computes the proximity map for the raster template and the image where the template is searched for
+class CV_EXPORTS TemplateMatching : public Algorithm
 {
-    Size user_block_size;
-    GpuMat imagef, templf;
-    std::vector<GpuMat> images;
-    std::vector<GpuMat> image_sums;
-    std::vector<GpuMat> image_sqsums;
+public:
+    virtual void match(InputArray image, InputArray templ, OutputArray result, Stream& stream = Stream::Null()) = 0;
 };
 
-//! computes the proximity map for the raster template and the image where the template is searched for
-CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method, Stream &stream = Stream::Null());
+CV_EXPORTS Ptr<TemplateMatching> createTemplateMatching(int srcType, int method, Size user_block_size = Size());
 
-//! computes the proximity map for the raster template and the image where the template is searched for
-CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method, MatchTemplateBuf &buf, Stream& stream = Stream::Null());
+// obsolete
+
+__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void matchTemplate(InputArray image, InputArray templ, OutputArray result,
+                                                     int method, Stream& stream = Stream::Null()) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
+
+inline void matchTemplate(InputArray image, InputArray templ, OutputArray result, int method, Stream& stream)
+{
+    gpu::createTemplateMatching(image.type(), method)->match(image, templ, result, stream);
+}
 
 ////////////////////////// Bilateral Filter ///////////////////////////
 

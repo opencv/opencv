@@ -17,23 +17,15 @@
 using namespace std;
 using namespace cv;
 
-static void InitMatchTemplate()
-{
-    Mat src; gen(src, 500, 500, CV_32F, 0, 1);
-    Mat templ; gen(templ, 500, 500, CV_32F, 0, 1);
-    gpu::GpuMat d_src(src), d_templ(templ), d_dst;
-    gpu::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
-}
-
 
 TEST(matchTemplate)
 {
-    InitMatchTemplate();
-
     Mat src, templ, dst;
     gen(src, 3000, 3000, CV_32F, 0, 1);
 
     gpu::GpuMat d_src(src), d_templ, d_dst;
+
+    Ptr<gpu::TemplateMatching> alg = gpu::createTemplateMatching(src.type(), TM_CCORR);
 
     for (int templ_size = 5; templ_size < 200; templ_size *= 5)
     {
@@ -47,10 +39,10 @@ TEST(matchTemplate)
         CPU_OFF;
 
         d_templ.upload(templ);
-        gpu::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
+        alg->match(d_src, d_templ, d_dst);
 
         GPU_ON;
-        gpu::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
+        alg->match(d_src, d_templ, d_dst);
         GPU_OFF;
     }
 }
