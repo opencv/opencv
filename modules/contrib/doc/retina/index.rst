@@ -28,7 +28,7 @@ This model originates from Jeanny Herault work [Herault2010]_. It has been invol
 Preliminary illustration
 ++++++++++++++++++++++++
 
-As a preliminary presentation, let's start with a visual example. We propose to apply the filter on a low quality color jpeg image with backlight problems. Here is the considered input.
+As a preliminary presentation, let's start with a visual example. We propose to apply the filter on a low quality color jpeg image with backlight problems. Here is the considered input... *"Well, my eyes were able to see more that this strange black shadow..."*
 
 .. image:: images/retinaInput.jpg
    :alt: a low quality color jpeg image with backlight problems.
@@ -40,7 +40,7 @@ Below, the retina foveal model applied on the entire image with default paramete
    :alt: the retina foveal model applied on the entire image with default parameters. Here contours are enforced, luminance is corrected and halo effects are voluntary visible with this configuration, increase horizontalCellsGain near 1 to remove them.
    :align: center
 
-Below, a second retina foveal model output applied on the entire image with a parameters setup focused on naturalness perception. Here contours are enforced, luminance is corrected but halos are avoided with this configuration. The backlight effect is corrected and highlight details are still preserved. Then, even on a low quality jpeg image, if some luminance information remains, the retina is able to reconstruct a proper visual signal. Such configuration is also usefull for High Dynamic Range (*HDR*) images compression to 8bit images as discussed in [benoit2010]_ and in the demonstration codes discussed below.
+Below, a second retina foveal model output applied on the entire image with a parameters setup focused on naturalness perception. *"Hey, i now recognize my cat, looking at the mountains at the end of the day !"*. Here contours are enforced, luminance is corrected but halos are avoided with this configuration. The backlight effect is corrected and highlight details are still preserved. Then, even on a low quality jpeg image, if some luminance information remains, the retina is able to reconstruct a proper visual signal. Such configuration is also usefull for High Dynamic Range (*HDR*) images compression to 8bit images as discussed in [benoit2010]_ and in the demonstration codes discussed below.
 As shown at the end of the page, parameters change from defaults are :
 
 * horizontalCellsGain=0.3
@@ -51,7 +51,7 @@ As shown at the end of the page, parameters change from defaults are :
    :alt: the retina foveal model applied on the entire image with 'naturalness' parameters. Here contours are enforced but are avoided with this configuration, horizontalCellsGain is 0.3 and photoreceptorsLocalAdaptationSensitivity=ganglioncellsSensitivity=0.89.
    :align: center
 
-The retina can be settled up with various parameters, by default, as shown on the figure above, the retina strongly reduces mean luminance energy and enforces all details of the visual scene. Luminance energy and halo effects can be modulated (exagerated to cancelled as shown on the two examples). In order to use your own parameters, you can use at least one time the *write(String fs)* method which will write a proper XML file with all default parameters. Then, tweak it on your own and reload them at any time using method *setup(String fs)*. These methods update a *Retina::RetinaParameters* member structure that is described hereafter. XML parameters file samples are shown at the end of the page.
+As observed in this preliminary demo, the retina can be settled up with various parameters, by default, as shown on the figure above, the retina strongly reduces mean luminance energy and enforces all details of the visual scene. Luminance energy and halo effects can be modulated (exagerated to cancelled as shown on the two examples). In order to use your own parameters, you can use at least one time the *write(String fs)* method which will write a proper XML file with all default parameters. Then, tweak it on your own and reload them at any time using method *setup(String fs)*. These methods update a *Retina::RetinaParameters* member structure that is described hereafter. XML parameters file samples are shown at the end of the page.
 
 Here is an overview of the abstract Retina interface, allocate one instance with the *createRetina* functions.::
 
@@ -183,10 +183,14 @@ Ptr<Retina>::createRetina
 
     :param inputSize: the input frame size
     :param colorMode: the chosen processing mode : with or without color processing
-    :param colorSamplingMethod: specifies which kind of color sampling will be used
+    :param colorSamplingMethod: specifies which kind of color sampling will be used :
+
         * RETINA_COLOR_RANDOM: each pixel position is either R, G or B in a random choice
+
         * RETINA_COLOR_DIAGONAL: color sampling is RGBRGBRGB..., line 2 BRGBRGBRG..., line 3, GBRGBRGBR...
+
         * RETINA_COLOR_BAYER: standard bayer sampling
+
     :param useRetinaLogSampling: activate retina log sampling, if true, the 2 following parameters can be used
     :param reductionFactor: only usefull if param useRetinaLogSampling=true, specifies the reduction factor of the output frame (as the center (fovea) is high resolution and corners can be underscaled, then a reduction of the output is allowed without precision leak
     :param samplingStrenght: only usefull if param useRetinaLogSampling=true, specifies the strenght of the log scale that is applied
@@ -245,15 +249,6 @@ Retina::getMagno
         * a Mat, this output is rescaled for standard 8bits image processing use in OpenCV
 
         * RAW methods actually return a 1D matrix (encoding is M1, M2,... Mn), this output is the original retina filter model output, without any quantification or rescaling.
-
-Retina::getParameters
-+++++++++++++++++++++
-
-.. ocv:function:: Retina::RetinaParameters Retina::getParameters()
-
-    Retrieve the current parameters values in a *Retina::RetinaParameters* structure
-
-    :return: the current parameters setup as a struture object.
 
 Retina::getInputSize
 ++++++++++++++++++++
@@ -314,7 +309,7 @@ Retina::setup
     :param retinaParameterFile: the parameters filename
     :param applyDefaultSetupOnFailure: set to true if an error must be thrown on error
     :param fs: the open Filestorage which contains retina parameters
-    :param newParameters: a parameters structures updated with the new target configuration
+    :param newParameters: a parameters structures updated with the new target configuration. You can retreive the current parameers structure using method *Retina::RetinaParameters Retina::getParameters()* and update it before running method *setup*.
 
 Retina::write
 +++++++++++++
