@@ -50,6 +50,7 @@
 #include "opencv2/core/private.hpp"
 
 #include <algorithm>
+#include <limits>
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
 #include "opencv2/features2d/features2d_tegra.hpp"
