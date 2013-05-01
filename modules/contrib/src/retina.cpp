@@ -564,8 +564,7 @@ void RetinaImpl::getParvoRAW(cv::Mat &parvoOutputBufferCopy){
 // original API level data accessors : get buffers addresses...
 const Mat RetinaImpl::getMagnoRAW() const {
     // create a cv::Mat header for the valarray
-    const float *retinaMagnoFilterOutputPTR=&(_retinaFilter->getMovingContours()[0]);
-    return Mat(_retinaFilter->getMovingContours().size(),1, CV_32F, (void*)retinaMagnoFilterOutputPTR);
+    return Mat(_retinaFilter->getMovingContours().size(),1, CV_32F, (void*)get_data(_retinaFilter->getMovingContours()));
 
 }
 
@@ -573,13 +572,11 @@ const Mat RetinaImpl::getParvoRAW() const {
     if (_retinaFilter->getColorMode()) // check if color mode is enabled
     {
         // create a cv::Mat table (for RGB planes as a single vector)
-        const float *retinaParvoFilterOutputPTR=&(_retinaFilter->getColorOutput()[0]);
-        return Mat(_retinaFilter->getColorOutput().size(), 1, CV_32F, (void*)retinaParvoFilterOutputPTR);
+        return Mat(_retinaFilter->getColorOutput().size(), 1, CV_32F, (void*)get_data(_retinaFilter->getColorOutput()));
     }
     // otherwise, output is gray level
     // create a cv::Mat header for the valarray
-    const float *retinaParvoFilterOutputPTR=&(_retinaFilter->getContours()[0]);
-    return Mat( _retinaFilter->getContours().size(), 1, CV_32F, (void*)retinaParvoFilterOutputPTR);
+    return Mat( _retinaFilter->getContours().size(), 1, CV_32F, (void*)get_data(_retinaFilter->getContours()));
 }
 
 // private method called by constructirs
