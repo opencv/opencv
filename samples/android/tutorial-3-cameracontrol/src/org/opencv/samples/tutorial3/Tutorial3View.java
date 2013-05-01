@@ -57,8 +57,8 @@ public class Tutorial3View extends JavaCameraView implements PictureCallback {
     public void takePicture(final String fileName) {
         Log.i(TAG, "Taking picture");
         this.mPictureFileName = fileName;
-        // Call to garbage collector to avoid bug http://code.opencv.org/issues/2961 
-        System.gc();
+        // Clear up buffers to avoid bug http://code.opencv.org/issues/2961 
+        mCamera.setPreviewCallback(null);
 
         // PictureCallback is implemented by the current class
         mCamera.takePicture(null, null, this);
@@ -69,6 +69,7 @@ public class Tutorial3View extends JavaCameraView implements PictureCallback {
         Log.i(TAG, "Saving a bitmap to file");
         // The camera preview was automatically stopped. Start it again.
         mCamera.startPreview();
+        mCamera.setPreviewCallback(this);
 
         // Write the image in a file (in jpeg format)
         try {
