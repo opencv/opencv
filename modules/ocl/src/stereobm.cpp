@@ -80,7 +80,7 @@ static void prefilter_xsobel(const oclMat &input, oclMat &output, int prefilterC
     size_t globalThreads[3] = { input.cols, input.rows, 1 };
     size_t localThreads[3]  = { blockSize, blockSize, 1 };
 
-    std::vector<std::pair<size_t, const void *>> args;
+    std::vector< std::pair<size_t, const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&input.data));
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&output.data));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&input.rows));
@@ -123,7 +123,7 @@ static void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
                                1
                              };
 
-    std::vector<std::pair<size_t, const void *>> args;
+    std::vector< std::pair<size_t, const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&left.data));
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&right.data));
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&minSSD_buf.data));
@@ -158,7 +158,7 @@ static void postfilter_textureness(oclMat &left, int winSize,
 
     size_t local_mem_size = (localThreads[0] + localThreads[0] + (winSize / 2) * 2) * sizeof(float);
 
-    std::vector<std::pair<size_t, const void *>> args;
+    std::vector< std::pair<size_t, const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&disparity.data));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&disparity.rows));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&disparity.cols));
