@@ -119,7 +119,7 @@ public:
                                  normaliseOutput(true),
                                  photoreceptorsLocalAdaptationSensitivity(0.75f),
                                  photoreceptorsTemporalConstant(0.9f),
-                                 photoreceptorsSpatialConstant(0.57f),
+                                 photoreceptorsSpatialConstant(0.53f),
                                  horizontalCellsGain(0.01f),
                                  hcellsTemporalConstant(0.5f),
                                  hcellsSpatialConstant(7.f),
@@ -239,31 +239,31 @@ public:
      * method which allows retina to be applied on an input image, after run, encapsulated retina module is ready to deliver its outputs using dedicated acccessors, see getParvo and getMagno methods
      * @param inputImage : the input cv::Mat image to be processed, can be gray level or BGR coded in any format (from 8bit to 16bits)
      */
-    virtual void run(const Mat &inputImage)=0;
+    virtual void run(InputArray inputImage)=0;
 
     /**
      * accessor of the details channel of the retina (models foveal vision)
      * @param retinaOutput_parvo : the output buffer (reallocated if necessary), this output is rescaled for standard 8bits image processing use in OpenCV
      */
-    virtual void getParvo(Mat &retinaOutput_parvo)=0;
+    virtual void getParvo(OutputArray retinaOutput_parvo)=0;
 
     /**
      * accessor of the details channel of the retina (models foveal vision)
      * @param retinaOutput_parvo : a cv::Mat header filled with the internal parvo buffer of the retina module. This output is the original retina filter model output, without any quantification or rescaling
      */
-    virtual void getParvoRAW(Mat &retinaOutput_parvo)=0;
+    virtual void getParvoRAW(OutputArray retinaOutput_parvo)=0;
 
     /**
      * accessor of the motion channel of the retina (models peripheral vision)
      * @param retinaOutput_magno : the output buffer (reallocated if necessary), this output is rescaled for standard 8bits image processing use in OpenCV
      */
-    virtual void getMagno(Mat &retinaOutput_magno)=0;
+    virtual void getMagno(OutputArray retinaOutput_magno)=0;
 
     /**
      * accessor of the motion channel of the retina (models peripheral vision)
      * @param retinaOutput_magno : a cv::Mat header filled with the internal retina magno buffer of the retina module. This output is the original retina filter model output, without any quantification or rescaling
      */
-    virtual void getMagnoRAW(Mat &retinaOutput_magno)=0;
+    virtual void getMagnoRAW(OutputArray retinaOutput_magno)=0;
 
     // original API level data accessors : get buffers addresses from a Mat header, similar to getParvoRAW and getMagnoRAW...
     virtual const Mat getMagnoRAW() const=0;

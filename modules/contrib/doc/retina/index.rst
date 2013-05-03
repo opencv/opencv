@@ -62,16 +62,16 @@ Here is an overview of the abstract Retina interface, allocate one instance with
     struct RetinaParameters; // this class is detailled later
 
     // main method for input frame processing
-    void run (const Mat &inputImage);
+    void run (InputArray inputImage);
 
     // output buffers retreival methods
     // -> foveal color vision details channel with luminance and noise correction
-    void getParvo (Mat &retinaOutput_parvo);
-    void getParvoRAW (Mat &retinaOutput_parvo);// retreive original output buffers without any normalisation
+    void getParvo (OutputArray retinaOutput_parvo);
+    void getParvoRAW (OutputArray retinaOutput_parvo);// retreive original output buffers without any normalisation
     const Mat getParvoRAW () const;// retreive original output buffers without any normalisation
     // -> peripheral monochrome motion and events (transient information) channel
-    void getMagno (Mat &retinaOutput_magno);
-    void getMagnoRAW (Mat &retinaOutput_magno); // retreive original output buffers without any normalisation
+    void getMagno (OutputArray retinaOutput_magno);
+    void getMagnoRAW (OutputArray retinaOutput_magno); // retreive original output buffers without any normalisation
     const Mat getMagnoRAW () const;// retreive original output buffers without any normalisation
 
     // reset retina buffers... equivalent to closing your eyes for some seconds
@@ -223,8 +223,8 @@ Retina::clearBuffers
 Retina::getParvo
 ++++++++++++++++
 
-.. ocv:function:: void Retina::getParvo( Mat & retinaOutput_parvo )
-.. ocv:function:: void Retina::getParvoRAW( Mat & retinaOutput_parvo )
+.. ocv:function:: void Retina::getParvo( OutputArray retinaOutput_parvo )
+.. ocv:function:: void Retina::getParvoRAW( OutputArray retinaOutput_parvo )
 .. ocv:function:: const Mat Retina::getParvoRAW() const
 
     Accessor of the details channel of the retina (models foveal vision). Warning, getParvoRAW methods return buffers that are not rescaled within range [0;255] while the non RAW method allows a normalized matrix to be retrieved.
@@ -238,8 +238,8 @@ Retina::getParvo
 Retina::getMagno
 ++++++++++++++++
 
-.. ocv:function:: void Retina::getMagno( Mat & retinaOutput_magno )
-.. ocv:function:: void Retina::getMagnoRAW( Mat & retinaOutput_magno )
+.. ocv:function:: void Retina::getMagno( OutputArray retinaOutput_magno )
+.. ocv:function:: void Retina::getMagnoRAW( OutputArray retinaOutput_magno )
 .. ocv:function:: const Mat Retina::getMagnoRAW() const
 
     Accessor of the motion channel of the retina (models peripheral vision). Warning, getMagnoRAW methods return buffers that are not rescaled within range [0;255] while the non RAW method allows a normalized matrix to be retrieved.
@@ -280,7 +280,7 @@ Retina::printSetup
 Retina::run
 +++++++++++
 
-.. ocv:function:: void Retina::run(const Mat & inputImage)
+.. ocv:function:: void Retina::run(InputArray inputImage)
 
     Method which allows retina to be applied on an input image, after run, encapsulated retina module is ready to deliver its outputs using dedicated acccessors, see getParvo and getMagno methods
 
@@ -439,7 +439,7 @@ Here is the 'realistic" setup used to obtain the second retina output shown on t
       <photoreceptorsTemporalConstant>9.0e-01</photoreceptorsTemporalConstant>
       <photoreceptorsSpatialConstant>5.3e-01</photoreceptorsSpatialConstant>
       <horizontalCellsGain>0.3</horizontalCellsGain>
-      <hcellsTemporalConstant>0.</hcellsTemporalConstant>
+      <hcellsTemporalConstant>0.5</hcellsTemporalConstant>
       <hcellsSpatialConstant>7.</hcellsSpatialConstant>
       <ganglionCellsSensitivity>8.9e-01</ganglionCellsSensitivity></OPLandIPLparvo>
     <IPLmagno>

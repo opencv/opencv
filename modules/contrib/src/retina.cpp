@@ -194,31 +194,31 @@ public:
      * method which allows retina to be applied on an input image, after run, encapsulated retina module is ready to deliver its outputs using dedicated acccessors, see getParvo and getMagno methods
      * @param inputImage : the input cv::Mat image to be processed, can be gray level or BGR coded in any format (from 8bit to 16bits)
      */
-    void run(const Mat &inputImage);
+    void run(InputArray inputImage);
 
     /**
      * accessor of the details channel of the retina (models foveal vision)
      * @param retinaOutput_parvo : the output buffer (reallocated if necessary), this output is rescaled for standard 8bits image processing use in OpenCV
      */
-    void getParvo(Mat &retinaOutput_parvo);
+    void getParvo(OutputArray retinaOutput_parvo);
 
     /**
      * accessor of the details channel of the retina (models foveal vision)
      * @param retinaOutput_parvo : a cv::Mat header filled with the internal parvo buffer of the retina module. This output is the original retina filter model output, without any quantification or rescaling
      */
-    void getParvoRAW(Mat &retinaOutput_parvo);
+    void getParvoRAW(OutputArray retinaOutput_parvo);
 
     /**
      * accessor of the motion channel of the retina (models peripheral vision)
      * @param retinaOutput_magno : the output buffer (reallocated if necessary), this output is rescaled for standard 8bits image processing use in OpenCV
      */
-    void getMagno(Mat &retinaOutput_magno);
+    void getMagno(OutputArray retinaOutput_magno);
 
     /**
      * accessor of the motion channel of the retina (models peripheral vision)
      * @param retinaOutput_magno : a cv::Mat header filled with the internal retina magno buffer of the retina module. This output is the original retina filter model output, without any quantification or rescaling
      */
-    void getMagnoRAW(Mat &retinaOutput_magno);
+    void getMagnoRAW(OutputArray retinaOutput_magno);
 
     // original API level data accessors : get buffers addresses from a Mat header, similar to getParvoRAW and getMagnoRAW...
     const Mat getMagnoRAW() const;
@@ -267,7 +267,7 @@ private:
      * @param colorMode : a flag which mentions if matrix is color (true) or graylevel (false)
      * @param outBuffer : the output matrix which is reallocated to satisfy Retina output buffer dimensions
      */
-    void _convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, Mat &outBuffer);
+    void _convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, OutputArray outBuffer);
 
     /**
      *
@@ -275,7 +275,7 @@ private:
      * @param outputValarrayMatrix : the output valarray
      * @return the input image color mode (color=true, gray levels=false)
      */
-        bool _convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, std::valarray<float> &outputValarrayMatrix);
+        bool _convertCvMat2ValarrayBuffer(InputArray inputMatToConvert, std::valarray<float> &outputValarrayMatrix);
 
     //! private method called by constructors, gathers their parameters and use them in a unified way
     void _init(const Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
@@ -517,16 +517,16 @@ void RetinaImpl::setupIPLMagnoChannel(const bool normaliseOutput, const float pa
     _retinaParameters.IplMagno.localAdaptintegration_k = localAdaptintegration_k;
 }
 
-void RetinaImpl::run(const cv::Mat &inputMatToConvert)
+void RetinaImpl::run(InputArray inputMatToConvert)
 {
     // first convert input image to the compatible format : std::valarray<float>
-    const bool colorMode = _convertCvMat2ValarrayBuffer(inputMatToConvert, _inputBuffer);
+    const bool colorMode = _convertCvMat2ValarrayBuffer(inputMatToConvert.getMat(), _inputBuffer);
     // process the retina
     if (!_retinaFilter->runFilter(_inputBuffer, colorMode, false, _retinaParameters.OPLandIplParvo.colorMode && colorMode, false))
         throw cv::Exception(-1, "RetinaImpl cannot be applied, wrong input buffer size", "RetinaImpl::run", "RetinaImpl.h", 0);
 }
 
-void RetinaImpl::getParvo(cv::Mat &retinaOutput_parvo)
+void RetinaImpl::getParvo(OutputArray retinaOutput_parvo)
 {
     if (_retinaFilter->getColorMode())
     {
@@ -539,7 +539,7 @@ void RetinaImpl::getParvo(cv::Mat &retinaOutput_parvo)
     }
     //retinaOutput_parvo/=255.0;
 }
-void RetinaImpl::getMagno(cv::Mat &retinaOutput_magno)
+void RetinaImpl::getMagno(OutputArray retinaOutput_magno)
 {
     // reallocate output buffer (if necessary)
     _convertValarrayBuffer2cvMat(_retinaFilter->getMovingContours(), _retinaFilter->getOutputNBrows(), _retinaFilter->getOutputNBcolumns(), false, retinaOutput_magno);
@@ -547,14 +547,14 @@ void RetinaImpl::getMagno(cv::Mat &retinaOutput_magno)
 }
 
 // original API level data accessors : copy buffers if size matches, reallocate if required
-void RetinaImpl::getMagnoRAW(cv::Mat &magnoOutputBufferCopy){
+void RetinaImpl::getMagnoRAW(OutputArray magnoOutputBufferCopy){
     // get magno channel header
     const cv::Mat magnoChannel=cv::Mat(getMagnoRAW());
     // copy data
     magnoChannel.copyTo(magnoOutputBufferCopy);
 }
 
-void RetinaImpl::getParvoRAW(cv::Mat &parvoOutputBufferCopy){
+void RetinaImpl::getParvoRAW(OutputArray parvoOutputBufferCopy){
     // get parvo channel header
     const cv::Mat parvoChannel=cv::Mat(getMagnoRAW());
     // copy data
@@ -605,25 +605,27 @@ void RetinaImpl::_init(const cv::Size inputSz, const bool colorMode, RETINA_COLO
     printf("%s\n", printSetup().c_str());
 }
 
-void RetinaImpl::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, cv::Mat &outBuffer)
+void RetinaImpl::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, OutputArray outBuffer)
 {
     // fill output buffer with the valarray buffer
     const float *valarrayPTR=get_data(grayMatrixToConvert);
     if (!colorMode)
     {
         outBuffer.create(cv::Size(nbColumns, nbRows), CV_8U);
+        Mat outMat = outBuffer.getMat();
         for (unsigned int i=0;i<nbRows;++i)
         {
             for (unsigned int j=0;j<nbColumns;++j)
             {
                 cv::Point2d pixel(j,i);
-                outBuffer.at<unsigned char>(pixel)=(unsigned char)*(valarrayPTR++);
+                outMat.at<unsigned char>(pixel)=(unsigned char)*(valarrayPTR++);
             }
         }
     }else
     {
         const unsigned int doubleNBpixels=_retinaFilter->getOutputNBpixels()*2;
         outBuffer.create(cv::Size(nbColumns, nbRows), CV_8UC3);
+        Mat outMat = outBuffer.getMat();
         for (unsigned int i=0;i<nbRows;++i)
         {
             for (unsigned int j=0;j<nbColumns;++j,++valarrayPTR)
@@ -634,14 +636,15 @@ void RetinaImpl::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMa
                 pixelValues[1]=(unsigned char)*(valarrayPTR+_retinaFilter->getOutputNBpixels());
                 pixelValues[0]=(unsigned char)*(valarrayPTR+doubleNBpixels);
 
-                outBuffer.at<cv::Vec3b>(pixel)=pixelValues;
+                outMat.at<cv::Vec3b>(pixel)=pixelValues;
             }
         }
     }
 }
 
-bool RetinaImpl::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, std::valarray<float> &outputValarrayMatrix)
+bool RetinaImpl::_convertCvMat2ValarrayBuffer(InputArray inputMat, std::valarray<float> &outputValarrayMatrix)
 {
+    const Mat inputMatToConvert=inputMat.getMat();
     // first check input consistency
     if (inputMatToConvert.empty())
         throw cv::Exception(-1, "RetinaImpl cannot be applied, input buffer is empty", "RetinaImpl::run", "RetinaImpl.h", 0);
@@ -651,8 +654,9 @@ bool RetinaImpl::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, s
 
         // convert to float AND fill the valarray buffer
     typedef float T; // define here the target pixel format, here, float
-        const int dsttype = DataType<T>::depth; // output buffer is float format
+    const int dsttype = DataType<T>::depth; // output buffer is float format
 
+    
 
     if(imageNumberOfChannels==4)
     {
@@ -665,7 +669,7 @@ bool RetinaImpl::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, s
         };
         planes[3] = cv::Mat(inputMatToConvert.size(), dsttype);     // last channel (alpha) does not point on the valarray (not usefull in our case)
         // split color cv::Mat in 4 planes... it fills valarray directely
-        cv::split(cv::Mat_<Vec<T, 4> >(inputMatToConvert), planes);
+        cv::split(Mat_<Vec<T, 4> >(inputMatToConvert), planes);
     }
     else if (imageNumberOfChannels==3)
     {
