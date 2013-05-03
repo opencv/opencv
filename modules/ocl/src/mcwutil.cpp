@@ -45,10 +45,6 @@
 
 #include "precomp.hpp"
 
-#ifndef CL_VERSION_1_2
-#define CL_VERSION_1_2 0
-#endif
-
 using namespace std;
 
 namespace cv
@@ -162,9 +158,11 @@ namespace cv
                 CV_Error(-1, "Image forma is not supported");
                 break;
             }
+#ifdef CL_VERSION_1_2
+            //this enables backwards portability to
+            //run on OpenCL 1.1 platform if library binaries are compiled with OpenCL 1.2 support
             if(Context::getContext()->supportsFeature(Context::CL_VER_1_2))
             {
-#if CL_VERSION_1_2
                 cl_image_desc desc;
                 desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
                 desc.image_width      = mat.cols;
@@ -176,12 +174,10 @@ namespace cv
                 desc.buffer           = NULL;
                 desc.num_mip_levels   = 0;
                 desc.num_samples      = 0;
-                texture = clCreateImage((cl_context)mat.clCxt->oclContext(), CL_MEM_READ_WRITE, &format, &desc, NULL, &err);
-#else
-                CV_Error(CV_StsBadFunc, "Non-deprecated image creation API call is not supported."); 
-#endif
+                texture = clCreateImage((cl_context)mat.clCxt->oclContext(), CL_MEM_READ_WRITE, &format, &desc, NULL, &err);            
             }
             else
+#endif
             {
                 texture = clCreateImage2D(
                     (cl_context)mat.clCxt->oclContext(),
