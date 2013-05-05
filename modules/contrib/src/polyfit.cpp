@@ -49,14 +49,9 @@
 
 typedef double polyfit_type;
 
-void cv::polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order)
+void cv::polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order, bool outDoublePrecision = 0)
 {
-    CV_Assert(src_x.rows == src_y.rows && src_x.cols ==1 && src_y.cols == 1 
-    && order >= 1 && src_x.channels() == 1 && src_y.channels() == 1);
-
-    if(dst.empty())
-        dst.create(order + 1, 1, CV_MAKETYPE(DataType<polyfit_type>::depth, 1));
-    CV_Assert(dst.rows == (order + 1) && dst.cols == 1 && dst.depth() == CV_MAKETYPE(DataType<polyfit_type>::depth, 1));
+    CV_Assert(src_x.rows == src_y.rows && src_x.cols ==1 && src_y.cols == 1 && order >= 1 && src_x.channels() == 1 && src_y.channels() == 1);
 
     Mat srcX, srcY;
     if(src_y.depth() != CV_MAKETYPE(DataType<polyfit_type>::depth, 1))
@@ -92,6 +87,9 @@ void cv::polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order)
     Mat temp2;
     invert (temp,temp2);
     Mat temp3 = temp2*X;
+    
     Mat W = temp3*srcY;
+    if (!outDoublePrecision)
+		W.convertTo(W, CV_32F);
     W.copyTo(dst);
 }
