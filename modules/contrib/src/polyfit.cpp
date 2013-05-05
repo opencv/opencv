@@ -90,6 +90,6 @@ void cv::polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order, bool o
     
     Mat W = temp3*srcY;
     if (!outDoublePrecision)
-	W.convertTo(W, CV_32F);
+        W.convertTo(W, CV_32F);
     W.copyTo(dst);
 }
