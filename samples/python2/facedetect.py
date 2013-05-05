@@ -39,6 +39,7 @@ if __name__ == '__main__':
     nested = cv2.CascadeClassifier(nested_fn)
 
     cam = create_capture(video_src, fallback='synth:bg=../cpp/lena.jpg:noise=0.05')
+    cv2.namedWindow('facedetect', cv2.CV_WINDOW_AUTOSIZE)
 
     while True:
         ret, img = cam.read()
