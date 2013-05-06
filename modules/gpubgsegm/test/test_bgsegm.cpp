@@ -267,8 +267,8 @@ GPU_TEST_P(MOG2, Update)
     cap >> frame;
     ASSERT_FALSE(frame.empty());
 
-    cv::gpu::MOG2_GPU mog2;
-    mog2.bShadowDetection = detectShadow;
+    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::gpu::createBackgroundSubtractorMOG2();
+    mog2->setDetectShadows(detectShadow);
     cv::gpu::GpuMat foreground = createMat(frame.size(), CV_8UC1, useRoi);
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> mog2_gold = cv::createBackgroundSubtractorMOG2();
@@ -287,7 +287,7 @@ GPU_TEST_P(MOG2, Update)
             cv::swap(temp, frame);
         }
 
-        mog2(loadMat(frame, useRoi), foreground);
+        mog2->apply(loadMat(frame, useRoi), foreground);
 
         mog2_gold->apply(frame, foreground_gold);
 
@@ -312,8 +312,8 @@ GPU_TEST_P(MOG2, getBackgroundImage)
 
     cv::Mat frame;
 
-    cv::gpu::MOG2_GPU mog2;
-    mog2.bShadowDetection = detectShadow;
+    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::gpu::createBackgroundSubtractorMOG2();
+    mog2->setDetectShadows(detectShadow);
     cv::gpu::GpuMat foreground;
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> mog2_gold = cv::createBackgroundSubtractorMOG2();
@@ -325,13 +325,13 @@ GPU_TEST_P(MOG2, getBackgroundImage)
         cap >> frame;
         ASSERT_FALSE(frame.empty());
 
-        mog2(loadMat(frame, useRoi), foreground);
+        mog2->apply(loadMat(frame, useRoi), foreground);
 
         mog2_gold->apply(frame, foreground_gold);
     }
 
     cv::gpu::GpuMat background = createMat(frame.size(), frame.type(), useRoi);
-    mog2.getBackgroundImage(background);
+    mog2->getBackgroundImage(background);
 
     cv::Mat background_gold;
     mog2_gold->getBackgroundImage(background_gold);

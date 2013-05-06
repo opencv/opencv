@@ -274,13 +274,13 @@ PERF_TEST_P(Video_Cn, MOG2,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::MOG2_GPU d_mog2;
-        d_mog2.bShadowDetection = false;
+        cv::Ptr<cv::BackgroundSubtractorMOG2> d_mog2 = cv::gpu::createBackgroundSubtractorMOG2();
+        d_mog2->setDetectShadows(false);
 
         cv::gpu::GpuMat d_frame(frame);
         cv::gpu::GpuMat foreground;
 
-        d_mog2(d_frame, foreground);
+        d_mog2->apply(d_frame, foreground);
 
         for (int i = 0; i < 10; ++i)
         {
@@ -300,7 +300,7 @@ PERF_TEST_P(Video_Cn, MOG2,
             d_frame.upload(frame);
 
             startTimer(); next();
-            d_mog2(d_frame, foreground);
+            d_mog2->apply(d_frame, foreground);
             stopTimer();
         }
 
@@ -308,8 +308,8 @@ PERF_TEST_P(Video_Cn, MOG2,
     }
     else
     {
-        cv::Ptr<cv::BackgroundSubtractor> mog2 = cv::createBackgroundSubtractorMOG2();
-        mog2->set("detectShadows", false);
+        cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::createBackgroundSubtractorMOG2();
+        mog2->setDetectShadows(false);
 
         cv::Mat foreground;
 
@@ -360,8 +360,9 @@ PERF_TEST_P(Video_Cn, MOG2GetBackgroundImage,
 
     if (PERF_RUN_GPU())
     {
+        cv::Ptr<cv::BackgroundSubtractor> d_mog2 = cv::gpu::createBackgroundSubtractorMOG2();
+
         cv::gpu::GpuMat d_frame;
-        cv::gpu::MOG2_GPU d_mog2;
         cv::gpu::GpuMat d_foreground;
 
         for (int i = 0; i < 10; ++i)
@@ -381,12 +382,12 @@ PERF_TEST_P(Video_Cn, MOG2GetBackgroundImage,
 
             d_frame.upload(frame);
 
-            d_mog2(d_frame, d_foreground);
+            d_mog2->apply(d_frame, d_foreground);
         }
 
         cv::gpu::GpuMat background;
 
-        TEST_CYCLE() d_mog2.getBackgroundImage(background);
+        TEST_CYCLE() d_mog2->getBackgroundImage(background);
 
         GPU_SANITY_CHECK(background, 1);
     }

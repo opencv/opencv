@@ -1399,13 +1399,13 @@ TEST(MOG2)
 
     cap >> frame;
 
+    cv::Ptr<cv::BackgroundSubtractor> d_mog2 = cv::gpu::createBackgroundSubtractorMOG2();
     cv::gpu::GpuMat d_frame(frame);
-    cv::gpu::MOG2_GPU d_mog2;
     cv::gpu::GpuMat d_foreground;
     cv::gpu::GpuMat d_background;
 
-    d_mog2(d_frame, d_foreground);
-    d_mog2.getBackgroundImage(d_background);
+    d_mog2->apply(d_frame, d_foreground);
+    d_mog2->getBackgroundImage(d_background);
 
     while (!TestSystem::instance().stop())
     {
@@ -1414,8 +1414,8 @@ TEST(MOG2)
 
         TestSystem::instance().gpuOn();
 
-        d_mog2(d_frame, d_foreground);
-        d_mog2.getBackgroundImage(d_background);
+        d_mog2->apply(d_frame, d_foreground);
+        d_mog2->getBackgroundImage(d_background);
 
         TestSystem::instance().gpuOff();
     }
