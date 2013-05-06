@@ -408,8 +408,20 @@ CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
     if(!fourcc || !fps)
         result = cvCreateVideoWriter_Images(filename);
 
+#ifdef HAVE_FFMPEG
     if(!result)
         result = cvCreateVideoWriter_FFMPEG_proxy (filename, fourcc, fps, frameSize, is_color);
+#endif
+
+#ifdef HAVE_VFW
+    if(!result)
+     return cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, isColor);
+#endif
+
+#ifdef HAVE_MSMF
+    if (!result)
+        result = cvCreateVideoWriter_MSMF(filename, fourcc, fps, frameSize, is_color);
+#endif
 
 /*  #ifdef HAVE_XINE
     if(!result)

@@ -263,9 +263,5 @@ CvVideoWriter* cvCreateVideoWriter_FFMPEG_proxy( const char* filename, int fourc
     if( result->open( filename, fourcc, fps, frameSize, isColor != 0 ))
         return result;
     delete result;
-#ifdef HAVE_VFW
-     return cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, isColor);
- #else
     return 0;
-#endif
 }

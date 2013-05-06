@@ -54,6 +54,8 @@
 #include <mfplay.h>
 #include <mfobjects.h>
 #include "Strsafe.h"
+#include <wrl/client.h>
+#include <Mfreadwrite.h>
 #include <new>
 #include <map>
 #include <vector>
@@ -67,6 +69,7 @@
 #pragma comment(lib, "mf")
 #pragma comment(lib, "mfuuid")
 #pragma comment(lib, "Strmiids")
+#pragma comment(lib, "Mfreadwrite")
 #pragma comment(lib, "MinCore_Downlevel")
 
 struct IMFMediaType;
@@ -146,7 +149,6 @@ private:
 
 DWORD WINAPI MainThreadFunction( LPVOID lpParam );
 typedef void(*emergensyStopEventCallback)(int, void *);
-typedef unsigned char BYTE;
 
 class RawImage
 {
@@ -1031,7 +1033,7 @@ done:
     SafeRelease(&pEvent);
     SafeRelease(&ig_pSession);
     SafeRelease(&ig_pTopology);
-    
+
     return hr;
 }
 
@@ -1080,7 +1082,7 @@ done:
     SafeRelease(&pPD);
     SafeRelease(&pSD);
     SafeRelease(&pHandler);
-    
+
     return hr;
 }
 
@@ -2939,4 +2941,352 @@ CvCapture* cvCreateCameraCapture_MSMF( int index )
     delete capture;
     return 0;
 }
+
+
+//
+//
+// Media Foundation-based Video Writer
+//
+//
+
+using namespace Microsoft::WRL;
+
+class CvVideoWriter_MSMF : public CvVideoWriter
+{
+public:
+    CvVideoWriter_MSMF();
+    virtual ~CvVideoWriter_MSMF();
+    virtual bool open( const char* filename, int fourcc,
+                       double fps, CvSize frameSize, bool isColor );
+    virtual void close();
+    virtual bool writeFrame( const IplImage* img);
+
+private:
+    UINT32 videoWidth;
+    UINT32 videoHeight;
+    double fps;
+    UINT32 bitRate;
+    UINT32 frameSize;
+    GUID   encodingFormat;
+    GUID   inputFormat;
+
+    DWORD  streamIndex;
+    ComPtr<IMFSinkWriter> sinkWriter;
+
+    bool   initiated;
+
+    LONGLONG rtStart;
+    UINT64 rtDuration;
+
+    HRESULT InitializeSinkWriter(const char* filename);
+    HRESULT WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& rtStart, const LONGLONG& rtDuration);
+};
+
+CvVideoWriter_MSMF::CvVideoWriter_MSMF()
+{
+}
+
+CvVideoWriter_MSMF::~CvVideoWriter_MSMF()
+{
+    close();
+}
+
+bool CvVideoWriter_MSMF::open( const char* filename, int fourcc,
+                       double _fps, CvSize frameSize, bool isColor )
+{
+    videoWidth = frameSize.width;
+    videoHeight = frameSize.height;
+    fps = _fps;
+    bitRate = 4*800000;
+    encodingFormat = MFVideoFormat_WMV3;
+    inputFormat = MFVideoFormat_RGB32;
+
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    if (SUCCEEDED(hr))
+    {
+        printf("CoInitializeEx is successfull\n");
+        hr = MFStartup(MF_VERSION);
+        if (SUCCEEDED(hr))
+        {
+            printf("MFStartup is successfull\n");
+            hr = InitializeSinkWriter(filename);
+            if (SUCCEEDED(hr))
+            {
+                printf("InitializeSinkWriter is successfull\n");
+                initiated = true;
+                rtStart = 0;
+                MFFrameRateToAverageTimePerFrame(fps, 1, &rtDuration);
+                printf("duration: %d\n", rtDuration);
+            }
+        }
+    }
+
+    return SUCCEEDED(hr);
+}
+
+void CvVideoWriter_MSMF::close()
+{
+    printf("VideoWriter::close()\n");
+    if (!initiated)
+    {
+        printf("VideoWriter was not Initialized\n");
+        return;
+    }
+
+    initiated = false;
+    HRESULT hr = sinkWriter->Finalize();
+    printf("sinkWriter Finalize status %u\n", hr);
+    MFShutdown();
+}
+
+bool CvVideoWriter_MSMF::writeFrame(const IplImage* img)
+{
+    if (!img)
+        return false;
+
+    printf("Writing not empty IplImage\n");
+
+    auto length = img->width * img->height * 4;
+    printf("Image: %dx%d, %d\n", img->width, img->height, length);
+    DWORD* target = new DWORD[length];
+
+    printf("Before for loop\n");
+    for (int rowIdx = 0; rowIdx < img->height; rowIdx++)
+    {
+        char* rowStart = img->imageData + rowIdx*img->widthStep;
+        for (int colIdx = 0; colIdx < img->width; colIdx++)
+        {
+            BYTE b = rowStart[colIdx * img->nChannels + 0];
+            BYTE g = rowStart[colIdx * img->nChannels + 1];
+            BYTE r = rowStart[colIdx * img->nChannels + 2];
+
+                    // On ARM devices data is stored starting from the last line
+        // (and not the first line) so you have to revert them on the Y axis
+#if _M_ARM
+            auto row = index / videoWidth;
+            auto targetRow = videoHeight - row - 1;
+            auto column = index - (row * videoWidth);
+            target[(targetRow * videoWidth) + column] = (r << 16) + (g << 8) + b;
+#else
+            target[rowIdx*img->width+colIdx] = (r << 16) + (g << 8) + b;
+#endif
+        }
+    }
+
+    // Send frame to the sink writer.
+    printf("Before private WriteFrame call\n");
+    HRESULT hr = WriteFrame(target, rtStart, rtDuration);
+    printf("After private WriteFrame call\n");
+    if (FAILED(hr))
+    {
+        printf("Private WriteFrame failed\n");
+        delete[] target;
+        return false;
+    }
+    rtStart += rtDuration;
+
+    printf("End of writing IplImage\n");
+
+    delete[] target;
+
+    return true;
+}
+
+HRESULT CvVideoWriter_MSMF::InitializeSinkWriter(const char* filename)
+{
+    ComPtr<IMFAttributes> spAttr;
+    ComPtr<IMFMediaType>  mediaTypeOut;
+    ComPtr<IMFMediaType>  mediaTypeIn;
+    ComPtr<IMFByteStream> spByteStream;
+
+    MFCreateAttributes(&spAttr, 10);
+    spAttr->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, true);
+
+    wchar_t* unicodeFileName = new wchar_t[strlen(filename)+1];
+    MultiByteToWideChar(CP_ACP, 0, filename, -1, unicodeFileName, strlen(filename)+1);
+
+    HRESULT hr = MFCreateSinkWriterFromURL(unicodeFileName, NULL, spAttr.Get(), &sinkWriter);
+
+    delete[] unicodeFileName;
+
+    // Set the output media type.
+    if (SUCCEEDED(hr))
+    {
+        printf("MFCreateSinkWriterFromURL is successfull\n");
+        hr = MFCreateMediaType(&mediaTypeOut);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = mediaTypeOut->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = mediaTypeOut->SetGUID(MF_MT_SUBTYPE, encodingFormat);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = mediaTypeOut->SetUINT32(MF_MT_AVG_BITRATE, bitRate);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = mediaTypeOut->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = MFSetAttributeSize(mediaTypeOut.Get(), MF_MT_FRAME_SIZE, videoWidth, videoHeight);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = MFSetAttributeRatio(mediaTypeOut.Get(), MF_MT_FRAME_RATE, fps, 1);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = MFSetAttributeRatio(mediaTypeOut.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = sinkWriter->AddStream(mediaTypeOut.Get(), &streamIndex);
+    }
+
+    // Set the input media type.
+    if (SUCCEEDED(hr))
+    {
+        hr = MFCreateMediaType(&mediaTypeIn);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = mediaTypeIn->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = mediaTypeIn->SetGUID(MF_MT_SUBTYPE, inputFormat);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = mediaTypeIn->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = MFSetAttributeSize(mediaTypeIn.Get(), MF_MT_FRAME_SIZE, videoWidth, videoHeight);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = MFSetAttributeRatio(mediaTypeIn.Get(), MF_MT_FRAME_RATE, fps, 1);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = MFSetAttributeRatio(mediaTypeIn.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = sinkWriter->SetInputMediaType(streamIndex, mediaTypeIn.Get(), NULL);
+    }
+
+    // Tell the sink writer to start accepting data.
+    if (SUCCEEDED(hr))
+    {
+        hr = sinkWriter->BeginWriting();
+    }
+
+    return hr;
+}
+
+HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& Start, const LONGLONG& Duration)
+{
+    printf("Private WriteFrame(%p, %llu, %llu)\n", videoFrameBuffer, Start, Duration);
+    IMFSample* sample;
+    IMFMediaBuffer* buffer;
+
+    const LONG cbWidth = 4 * videoWidth;
+    const DWORD cbBuffer = cbWidth * videoHeight;
+
+    BYTE *pData = NULL;
+
+    // Create a new memory buffer.
+    HRESULT hr = MFCreateMemoryBuffer(cbBuffer, &buffer);
+
+    // Lock the buffer and copy the video frame to the buffer.
+    if (SUCCEEDED(hr))
+    {
+        printf("MFCreateMemoryBuffer successfull\n");
+        hr = buffer->Lock(&pData, NULL, NULL);
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        printf("Before MFCopyImage(%p, %d, %p, %d, %d %d)\n", pData, cbWidth, videoFrameBuffer, cbWidth, cbWidth, videoHeight);
+        hr = MFCopyImage(
+            pData,                      // Destination buffer.
+            cbWidth,                    // Destination stride.
+            (BYTE*)videoFrameBuffer,    // First row in source image.
+            cbWidth,                    // Source stride.
+            cbWidth,                    // Image width in bytes.
+            videoHeight                 // Image height in pixels.
+            );
+        printf("After MFCopyImage()\n");
+    }
+
+    printf("Before buffer.Get()\n");
+    if (buffer)
+    {
+        printf("Before buffer->Unlock\n");
+        buffer->Unlock();
+        printf("After buffer->Unlock\n");
+    }
+
+    // Set the data length of the buffer.
+    if (SUCCEEDED(hr))
+    {
+        printf("MFCopyImage successfull\n");
+        hr = buffer->SetCurrentLength(cbBuffer);
+    }
+
+    // Create a media sample and add the buffer to the sample.
+    if (SUCCEEDED(hr))
+    {
+        hr = MFCreateSample(&sample);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = sample->AddBuffer(buffer);
+    }
+
+    // Set the time stamp and the duration.
+    if (SUCCEEDED(hr))
+    {
+        printf("Sample time: %d\n", Start);
+        hr = sample->SetSampleTime(Start);
+    }
+    if (SUCCEEDED(hr))
+    {
+        printf("Duration: %d\n", Duration);
+        hr = sample->SetSampleDuration(Duration);
+    }
+
+    // Send the sample to the Sink Writer.
+    if (SUCCEEDED(hr))
+    {
+        printf("Setting writer params successfull\n");
+        hr = sinkWriter->WriteSample(streamIndex, sample);
+    }
+
+    printf("Private WriteFrame(%d, %p) end with status %u\n", streamIndex, sample, hr);
+
+    SafeRelease(&sample);
+    SafeRelease(&buffer);
+
+    return hr;
+}
+
+CvVideoWriter* cvCreateVideoWriter_MSMF( const char* filename, int fourcc,
+                                        double fps, CvSize frameSize, int isColor )
+{
+    printf("Creating Media Foundation VideoWriter\n");
+    CvVideoWriter_MSMF* writer = new CvVideoWriter_MSMF;
+    if( writer->open( filename, fourcc, fps, frameSize, isColor != 0 ))
+        return writer;
+    delete writer;
+    return NULL;
+}
+
 #endif
