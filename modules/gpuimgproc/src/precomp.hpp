@@ -46,6 +46,7 @@
 #include "opencv2/gpuimgproc.hpp"
 #include "opencv2/gpufilters.hpp"
 
+#include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/private.gpu.hpp"
 
