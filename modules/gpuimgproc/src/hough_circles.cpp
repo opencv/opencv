@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER) || !defined(HAVE_OPENCV_GPUFILTERS)
 
 Ptr<gpu::HoughCirclesDetector> cv::gpu::createHoughCirclesDetector(float, float, int, int, int, int, int) { throw_no_cuda(); return Ptr<HoughCirclesDetector>(); }
 

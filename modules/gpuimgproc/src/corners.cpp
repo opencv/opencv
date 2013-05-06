@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER) || !defined(HAVE_OPENCV_GPUFILTERS)
 
 Ptr<gpu::CornernessCriteria> cv::gpu::createHarrisCorner(int, int, int, double, int) { throw_no_cuda(); return Ptr<gpu::CornernessCriteria>(); }
 Ptr<gpu::CornernessCriteria> cv::gpu::createMinEigenValCorner(int, int, int, int) { throw_no_cuda(); return Ptr<gpu::CornernessCriteria>(); }

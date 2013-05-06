@@ -133,22 +133,32 @@ namespace
         virtual void detectImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, OutputArray positions) = 0;
 
     private:
+#ifdef HAVE_OPENCV_GPUFILTERS
         GpuMat dx_, dy_;
         GpuMat edges_;
         Ptr<gpu::CannyEdgeDetector> canny_;
         Ptr<gpu::Filter> filterDx_;
         Ptr<gpu::Filter> filterDy_;
+#endif
     };
 
     GeneralizedHoughBase::GeneralizedHoughBase()
     {
+#ifdef HAVE_OPENCV_GPUFILTERS
         canny_ = gpu::createCannyEdgeDetector(50, 100);
         filterDx_ = gpu::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
         filterDy_ = gpu::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
+#endif
     }
 
     void GeneralizedHoughBase::setTemplate(InputArray _templ, int cannyThreshold, Point templCenter)
     {
+#ifndef HAVE_OPENCV_GPUFILTERS
+        (void) _templ;
+        (void) cannyThreshold;
+        (void) templCenter;
+        throw_no_cuda();
+#else
         GpuMat templ = _templ.getGpuMat();
 
         CV_Assert( templ.type() == CV_8UC1 );
@@ -170,6 +180,7 @@ namespace
             templCenter = Point(templ.cols / 2, templ.rows / 2);
 
         setTemplateImpl(edges_, dx_, dy_, templCenter);
+#endif
     }
 
     void GeneralizedHoughBase::setTemplate(InputArray _edges, InputArray _dx, InputArray _dy, Point templCenter)
@@ -186,6 +197,12 @@ namespace
 
     void GeneralizedHoughBase::detect(InputArray _image, OutputArray positions, int cannyThreshold)
     {
+#ifndef HAVE_OPENCV_GPUFILTERS
+        (void) _image;
+        (void) positions;
+        (void) cannyThreshold;
+        throw_no_cuda();
+#else
         GpuMat image = _image.getGpuMat();
 
         CV_Assert( image.type() == CV_8UC1 );
@@ -204,6 +221,7 @@ namespace
         canny_->detect(dx_, dy_, edges_);
 
         detectImpl(edges_, dx_, dy_, positions);
+#endif
     }
 
     void GeneralizedHoughBase::detect(InputArray _edges, InputArray _dx, InputArray _dy, OutputArray positions)

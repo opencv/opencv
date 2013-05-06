@@ -46,6 +46,10 @@
 #include "opencv2/core/cuda/emulation.hpp"
 #include "opencv2/core/cuda/dynamic_smem.hpp"
 
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_GPUFILTERS
+
 namespace cv { namespace gpu { namespace cudev
 {
     namespace hough_circles
@@ -251,5 +255,6 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
+#endif // HAVE_OPENCV_GPUFILTERS
 
 #endif /* CUDA_DISABLER */

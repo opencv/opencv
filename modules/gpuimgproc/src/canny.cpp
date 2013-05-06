@@ -122,7 +122,9 @@ namespace
         GpuMat mag_;
         GpuMat map_;
         GpuMat st1_, st2_;
+#ifdef HAVE_OPENCV_GPUFILTERS
         Ptr<Filter> filterDX_, filterDY_;
+#endif
         int old_apperture_size_;
     };
 
@@ -152,10 +154,14 @@ namespace
         }
         else
         {
+#ifndef HAVE_OPENCV_GPUFILTERS
+            throw_no_cuda();
+#else
             filterDX_->apply(image, dx_);
             filterDY_->apply(image, dy_);
 
             canny::calcMagnitude(dx_, dy_, mag_, L2gradient_);
+#endif
         }
 
         CannyCaller(edges);
@@ -191,12 +197,14 @@ namespace
         ensureSizeIsEnough(image_size, CV_32SC1, dx_);
         ensureSizeIsEnough(image_size, CV_32SC1, dy_);
 
+#ifdef HAVE_OPENCV_GPUFILTERS
         if (apperture_size_ != 3 && apperture_size_ != old_apperture_size_)
         {
             filterDX_ = gpu::createDerivFilter(CV_8UC1, CV_32S, 1, 0, apperture_size_, false, 1, BORDER_REPLICATE);
             filterDY_ = gpu::createDerivFilter(CV_8UC1, CV_32S, 0, 1, apperture_size_, false, 1, BORDER_REPLICATE);
             old_apperture_size_ = apperture_size_;
         }
+#endif
 
         ensureSizeIsEnough(image_size, CV_32FC1, mag_);
         ensureSizeIsEnough(image_size, CV_32SC1, map_);
