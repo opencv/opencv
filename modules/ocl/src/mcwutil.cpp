@@ -179,6 +179,10 @@ namespace cv
             else
 #endif
             {
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
                 texture = clCreateImage2D(
                     (cl_context)mat.clCxt->oclContext(),
                     CL_MEM_READ_WRITE,
@@ -188,6 +192,9 @@ namespace cv
                     0,
                     NULL,
                     &err);
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
             }
             size_t origin[] = { 0, 0, 0 };
             size_t region[] = { mat.cols, mat.rows, 1 };
