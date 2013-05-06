@@ -2979,6 +2979,7 @@ private:
     UINT64 rtDuration;
 
     HRESULT InitializeSinkWriter(const char* filename);
+    static const GUID FourCC2GUID(int fourcc);
     HRESULT WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& rtStart, const LONGLONG& rtDuration);
 };
 
@@ -2991,14 +2992,65 @@ CvVideoWriter_MSMF::~CvVideoWriter_MSMF()
     close();
 }
 
+const GUID CvVideoWriter_MSMF::FourCC2GUID(int fourcc)
+{
+    switch(fourcc)
+    {
+        case 'dv25':
+            return MFVideoFormat_DV25; break;
+        case 'dv50':
+            return MFVideoFormat_DV50; break;
+        case 'dvc ':
+            return MFVideoFormat_DVC; break;
+        case 'dvh1':
+            return MFVideoFormat_DVH1; break;
+        case 'dvhd':
+            return MFVideoFormat_DVHD; break;
+        case 'dvsd':
+            return MFVideoFormat_DVSD; break;
+        case 'dvsl':
+                return MFVideoFormat_DVSL; break;
+        case 'H263':
+                return MFVideoFormat_H263; break;
+        case 'H264':
+                return MFVideoFormat_H264; break;
+        case 'M4S2':
+                return MFVideoFormat_M4S2; break;
+        case 'MJPG':
+                return MFVideoFormat_MJPG; break;
+        case 'MP43':
+                return MFVideoFormat_MP43; break;
+        case 'MP4S':
+                return MFVideoFormat_MP4S; break;
+        case 'MP4V':
+                return MFVideoFormat_MP4V; break;
+        case 'MPG1':
+                return MFVideoFormat_MPG1; break;
+        case 'MSS1':
+                return MFVideoFormat_MSS1; break;
+        case 'MSS2':
+                return MFVideoFormat_MSS2; break;
+        case 'WMV1':
+                return MFVideoFormat_WMV1; break;
+        case 'WMV2':
+                return MFVideoFormat_WMV2; break;
+        case 'WMV3':
+                return MFVideoFormat_WMV3; break;
+        case 'WVC1':
+                return MFVideoFormat_WVC1; break;
+        default:
+            return MFVideoFormat_H264;
+    }
+}
+
 bool CvVideoWriter_MSMF::open( const char* filename, int fourcc,
                        double _fps, CvSize frameSize, bool isColor )
 {
     videoWidth = frameSize.width;
     videoHeight = frameSize.height;
     fps = _fps;
-    bitRate = 4*800000;
-    encodingFormat = MFVideoFormat_WMV3;
+    bitRate = videoWidth*videoHeight; // 1-bit per pixel
+    encodingFormat = FourCC2GUID(fourcc);
     inputFormat = MFVideoFormat_RGB32;
 
     HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
@@ -3015,7 +3067,7 @@ bool CvVideoWriter_MSMF::open( const char* filename, int fourcc,
                 printf("InitializeSinkWriter is successfull\n");
                 initiated = true;
                 rtStart = 0;
-                MFFrameRateToAverageTimePerFrame(fps, 1, &rtDuration);
+                MFFrameRateToAverageTimePerFrame((UINT32)fps, 1, &rtDuration);
                 printf("duration: %d\n", rtDuration);
             }
         }
@@ -3046,7 +3098,7 @@ bool CvVideoWriter_MSMF::writeFrame(const IplImage* img)
 
     printf("Writing not empty IplImage\n");
 
-    auto length = img->width * img->height * 4;
+    int length = img->width * img->height * 4;
     printf("Image: %dx%d, %d\n", img->width, img->height, length);
     DWORD* target = new DWORD[length];
 
@@ -3060,13 +3112,11 @@ bool CvVideoWriter_MSMF::writeFrame(const IplImage* img)
             BYTE g = rowStart[colIdx * img->nChannels + 1];
             BYTE r = rowStart[colIdx * img->nChannels + 2];
 
-                    // On ARM devices data is stored starting from the last line
-        // (and not the first line) so you have to revert them on the Y axis
+            // On ARM devices data is stored starting from the last line
+            // (and not the first line) so you have to revert them on the Y axis
 #if _M_ARM
-            auto row = index / videoWidth;
-            auto targetRow = videoHeight - row - 1;
-            auto column = index - (row * videoWidth);
-            target[(targetRow * videoWidth) + column] = (r << 16) + (g << 8) + b;
+            int targetRow = videoHeight - rowIdx - 1;
+            target[(targetRow * videoWidth) + colIdx] = (r << 16) + (g << 8) + b;
 #else
             target[rowIdx*img->width+colIdx] = (r << 16) + (g << 8) + b;
 #endif
@@ -3137,7 +3187,7 @@ HRESULT CvVideoWriter_MSMF::InitializeSinkWriter(const char* filename)
     }
     if (SUCCEEDED(hr))
     {
-        hr = MFSetAttributeRatio(mediaTypeOut.Get(), MF_MT_FRAME_RATE, fps, 1);
+        hr = MFSetAttributeRatio(mediaTypeOut.Get(), MF_MT_FRAME_RATE, (UINT32)fps, 1);
     }
     if (SUCCEEDED(hr))
     {
@@ -3171,7 +3221,7 @@ HRESULT CvVideoWriter_MSMF::InitializeSinkWriter(const char* filename)
     }
     if (SUCCEEDED(hr))
     {
-        hr = MFSetAttributeRatio(mediaTypeIn.Get(), MF_MT_FRAME_RATE, fps, 1);
+        hr = MFSetAttributeRatio(mediaTypeIn.Get(), MF_MT_FRAME_RATE, (UINT32)fps, 1);
     }
     if (SUCCEEDED(hr))
     {
@@ -3194,8 +3244,8 @@ HRESULT CvVideoWriter_MSMF::InitializeSinkWriter(const char* filename)
 HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& Start, const LONGLONG& Duration)
 {
     printf("Private WriteFrame(%p, %llu, %llu)\n", videoFrameBuffer, Start, Duration);
-    IMFSample* sample;
-    IMFMediaBuffer* buffer;
+    ComPtr<IMFSample> sample;
+    ComPtr<IMFMediaBuffer> buffer;
 
     const LONG cbWidth = 4 * videoWidth;
     const DWORD cbBuffer = cbWidth * videoHeight;
@@ -3248,7 +3298,7 @@ HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& 
     }
     if (SUCCEEDED(hr))
     {
-        hr = sample->AddBuffer(buffer);
+        hr = sample->AddBuffer(buffer.Get());
     }
 
     // Set the time stamp and the duration.
@@ -3267,13 +3317,10 @@ HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& 
     if (SUCCEEDED(hr))
     {
         printf("Setting writer params successfull\n");
-        hr = sinkWriter->WriteSample(streamIndex, sample);
+        hr = sinkWriter->WriteSample(streamIndex, sample.Get());
     }
 
-    printf("Private WriteFrame(%d, %p) end with status %u\n", streamIndex, sample, hr);
-
-    SafeRelease(&sample);
-    SafeRelease(&buffer);
+    printf("Private WriteFrame(%d, %p) end with status %u\n", streamIndex, sample.Get(), hr);
 
     return hr;
 }
