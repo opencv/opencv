@@ -193,7 +193,7 @@ GPU_TEST_P(MOG, Update)
     cap >> frame;
     ASSERT_FALSE(frame.empty());
 
-    cv::gpu::MOG_GPU mog;
+    cv::Ptr<cv::BackgroundSubtractorMOG> mog = cv::gpu::createBackgroundSubtractorMOG();
     cv::gpu::GpuMat foreground = createMat(frame.size(), CV_8UC1, useRoi);
 
     cv::Ptr<cv::BackgroundSubtractorMOG> mog_gold = cv::createBackgroundSubtractorMOG();
@@ -211,7 +211,7 @@ GPU_TEST_P(MOG, Update)
             cv::swap(temp, frame);
         }
 
-        mog(loadMat(frame, useRoi), foreground, (float)learningRate);
+        mog->apply(loadMat(frame, useRoi), foreground, learningRate);
 
         mog_gold->apply(frame, foreground_gold, learningRate);
 

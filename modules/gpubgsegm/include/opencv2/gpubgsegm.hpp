@@ -47,12 +47,36 @@
 #  error gpubgsegm.hpp header must be compiled as C++
 #endif
 
-#include <memory>
-
 #include "opencv2/core/gpu.hpp"
+#include "opencv2/video/background_segm.hpp"
+
+#include <memory>
 #include "opencv2/gpufilters.hpp"
 
 namespace cv { namespace gpu {
+
+////////////////////////////////////////////////////
+// MOG
+
+class CV_EXPORTS BackgroundSubtractorMOG : public cv::BackgroundSubtractorMOG
+{
+public:
+    using cv::BackgroundSubtractorMOG::apply;
+    using cv::BackgroundSubtractorMOG::getBackgroundImage;
+
+    virtual void apply(InputArray image, OutputArray fgmask, double learningRate, Stream& stream) = 0;
+
+    virtual void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const = 0;
+};
+
+CV_EXPORTS Ptr<gpu::BackgroundSubtractorMOG>
+    createBackgroundSubtractorMOG(int history = 200, int nmixtures = 5,
+                                  double backgroundRatio = 0.7, double noiseSigma = 0);
+
+
+
+
+
 
 // Foreground Object Detection from Videos Containing Complex Background.
 // Liyuan Li, Weimin Huang, Irene Y.H. Gu, and Qi Tian.
@@ -114,51 +138,6 @@ private:
 
     class Impl;
     std::auto_ptr<Impl> impl_;
-};
-
-/*!
- Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm
-
- The class implements the following algorithm:
- "An improved adaptive background mixture model for real-time tracking with shadow detection"
- P. KadewTraKuPong and R. Bowden,
- Proc. 2nd European Workshp on Advanced Video-Based Surveillance Systems, 2001."
- http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
-*/
-class CV_EXPORTS MOG_GPU
-{
-public:
-    //! the default constructor
-    MOG_GPU(int nmixtures = -1);
-
-    //! re-initiaization method
-    void initialize(Size frameSize, int frameType);
-
-    //! the update operator
-    void operator()(const GpuMat& frame, GpuMat& fgmask, float learningRate = 0.0f, Stream& stream = Stream::Null());
-
-    //! computes a background image which are the mean of all background gaussians
-    void getBackgroundImage(GpuMat& backgroundImage, Stream& stream = Stream::Null()) const;
-
-    //! releases all inner buffers
-    void release();
-
-    int history;
-    float varThreshold;
-    float backgroundRatio;
-    float noiseSigma;
-
-private:
-    int nmixtures_;
-
-    Size frameSize_;
-    int frameType_;
-    int nframes_;
-
-    GpuMat weight_;
-    GpuMat sortKey_;
-    GpuMat mean_;
-    GpuMat var_;
 };
 
 /*!

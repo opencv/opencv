@@ -176,11 +176,12 @@ PERF_TEST_P(Video_Cn_LearningRate, MOG,
 
     if (PERF_RUN_GPU())
     {
+        cv::Ptr<cv::BackgroundSubtractor> d_mog = cv::gpu::createBackgroundSubtractorMOG();
+
         cv::gpu::GpuMat d_frame(frame);
-        cv::gpu::MOG_GPU d_mog;
         cv::gpu::GpuMat foreground;
 
-        d_mog(d_frame, foreground, learningRate);
+        d_mog->apply(d_frame, foreground, learningRate);
 
         for (int i = 0; i < 10; ++i)
         {
@@ -200,7 +201,7 @@ PERF_TEST_P(Video_Cn_LearningRate, MOG,
             d_frame.upload(frame);
 
             startTimer(); next();
-            d_mog(d_frame, foreground, learningRate);
+            d_mog->apply(d_frame, foreground, learningRate);
             stopTimer();
         }
 

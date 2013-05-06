@@ -76,7 +76,7 @@ int main(int argc, const char** argv)
     GpuMat d_frame(frame);
 
     FGDStatModel fgd_stat;
-    MOG_GPU mog;
+    cv::Ptr<cv::BackgroundSubtractorMOG> mog = cv::gpu::createBackgroundSubtractorMOG();
     MOG2_GPU mog2;
     GMG_GPU gmg;
     gmg.numInitializationFrames = 40;
@@ -96,7 +96,7 @@ int main(int argc, const char** argv)
         break;
 
     case MOG:
-        mog(d_frame, d_fgmask, 0.01f);
+        mog->apply(d_frame, d_fgmask, 0.01);
         break;
 
     case MOG2:
@@ -135,8 +135,8 @@ int main(int argc, const char** argv)
             break;
 
         case MOG:
-            mog(d_frame, d_fgmask, 0.01f);
-            mog.getBackgroundImage(d_bgimg);
+            mog->apply(d_frame, d_fgmask, 0.01);
+            mog->getBackgroundImage(d_bgimg);
             break;
 
         case MOG2:
