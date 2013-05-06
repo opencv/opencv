@@ -446,15 +446,15 @@ inline void matchTemplate(InputArray image, InputArray templ, OutputArray result
 ////////////////////////// Bilateral Filter ///////////////////////////
 
 //! Performa bilateral filtering of passsed image
-CV_EXPORTS void bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, float sigma_color, float sigma_spatial,
+CV_EXPORTS void bilateralFilter(InputArray src, OutputArray dst, int kernel_size, float sigma_color, float sigma_spatial,
                                 int borderMode = BORDER_DEFAULT, Stream& stream = Stream::Null());
 
 ///////////////////////////// Blending ////////////////////////////////
 
 //! performs linear blending of two images
 //! to avoid accuracy errors sum of weigths shouldn't be very close to zero
-CV_EXPORTS void blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2,
-                            GpuMat& result, Stream& stream = Stream::Null());
+CV_EXPORTS void blendLinear(InputArray img1, InputArray img2, InputArray weights1, InputArray weights2,
+                            OutputArray result, Stream& stream = Stream::Null());
 
 }} // namespace cv { namespace gpu {
 

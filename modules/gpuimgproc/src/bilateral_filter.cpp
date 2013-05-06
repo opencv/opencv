@@ -47,7 +47,7 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::bilateralFilter(const GpuMat&, GpuMat&, int, float, float, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::bilateralFilter(InputArray, OutputArray, int, float, float, int, Stream&) { throw_no_cuda(); }
 
 #else
 
@@ -60,7 +60,7 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode, Stream& s)
+void cv::gpu::bilateralFilter(InputArray _src, OutputArray _dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode, Stream& stream)
 {
     using cv::gpu::cudev::imgproc::bilateral_filter_gpu;
 
@@ -79,18 +79,21 @@ void cv::gpu::bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, f
     sigma_color = (sigma_color <= 0 ) ? 1 : sigma_color;
     sigma_spatial = (sigma_spatial <= 0 ) ? 1 : sigma_spatial;
 
-
     int radius = (kernel_size <= 0) ? cvRound(sigma_spatial*1.5) : kernel_size/2;
     kernel_size = std::max(radius, 1)*2 + 1;
 
-    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
+    GpuMat src = _src.getGpuMat();
+
+    CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );
+    CV_Assert( borderMode == BORDER_REFLECT101 || borderMode == BORDER_REPLICATE || borderMode == BORDER_CONSTANT || borderMode == BORDER_REFLECT || borderMode == BORDER_WRAP );
+
     const func_t func = funcs[src.depth()][src.channels() - 1];
-    CV_Assert(func != 0);
+    CV_Assert( func != 0 );
 
-    CV_Assert(borderMode == BORDER_REFLECT101 || borderMode == BORDER_REPLICATE || borderMode == BORDER_CONSTANT || borderMode == BORDER_REFLECT || borderMode == BORDER_WRAP);
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
 
-    dst.create(src.size(), src.type());
-    func(src, dst, kernel_size, sigma_spatial, sigma_color, borderMode, StreamAccessor::getStream(s));
+    func(src, dst, kernel_size, sigma_spatial, sigma_color, borderMode, StreamAccessor::getStream(stream));
 }
 
 #endif
