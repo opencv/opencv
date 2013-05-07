@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <limits>
 
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 2
 #include <Eigen/Array>
