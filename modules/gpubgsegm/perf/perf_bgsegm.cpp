@@ -462,10 +462,10 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
         cv::gpu::GpuMat d_frame(frame);
         cv::gpu::GpuMat foreground;
 
-        cv::gpu::GMG_GPU d_gmg;
-        d_gmg.maxFeatures = maxFeatures;
+        cv::Ptr<cv::BackgroundSubtractorGMG> d_gmg = cv::gpu::createBackgroundSubtractorGMG();
+        d_gmg->setMaxFeatures(maxFeatures);
 
-        d_gmg(d_frame, foreground);
+        d_gmg->apply(d_frame, foreground);
 
         for (int i = 0; i < 150; ++i)
         {
@@ -490,7 +490,7 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
             d_frame.upload(frame);
 
             startTimer(); next();
-            d_gmg(d_frame, foreground);
+            d_gmg->apply(d_frame, foreground);
             stopTimer();
         }
 
@@ -501,9 +501,8 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
         cv::Mat foreground;
         cv::Mat zeros(frame.size(), CV_8UC1, cv::Scalar::all(0));
 
-        cv::Ptr<cv::BackgroundSubtractor> gmg = cv::createBackgroundSubtractorGMG();
-        gmg->set("maxFeatures", maxFeatures);
-        //gmg.initialize(frame.size(), 0.0, 255.0);
+        cv::Ptr<cv::BackgroundSubtractorGMG> gmg = cv::createBackgroundSubtractorGMG();
+        gmg->setMaxFeatures(maxFeatures);
 
         gmg->apply(frame, foreground);
 

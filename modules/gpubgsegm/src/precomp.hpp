@@ -52,4 +52,6 @@
 
 #include "opencv2/core/private.gpu.hpp"
 
+#include "opencv2/opencv_modules.hpp"
+
 #endif /* __OPENCV_PRECOMP_H__ */

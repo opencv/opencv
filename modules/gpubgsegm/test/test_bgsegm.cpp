@@ -372,16 +372,15 @@ GPU_TEST_P(GMG, Accuracy)
     cv::Mat frame = randomMat(size, type, 0, 100);
     cv::gpu::GpuMat d_frame = loadMat(frame, useRoi);
 
-    cv::gpu::GMG_GPU gmg;
-    gmg.numInitializationFrames = 5;
-    gmg.smoothingRadius = 0;
-    gmg.initialize(d_frame.size(), 0, 255);
+    cv::Ptr<cv::BackgroundSubtractorGMG> gmg = cv::gpu::createBackgroundSubtractorGMG();
+    gmg->setNumFrames(5);
+    gmg->setSmoothingRadius(0);
 
     cv::gpu::GpuMat d_fgmask = createMat(size, CV_8UC1, useRoi);
 
-    for (int i = 0; i < gmg.numInitializationFrames; ++i)
+    for (int i = 0; i < gmg->getNumFrames(); ++i)
     {
-        gmg(d_frame, d_fgmask);
+        gmg->apply(d_frame, d_fgmask);
 
         // fgmask should be entirely background during training
         ASSERT_MAT_NEAR(zeros, d_fgmask, 0);
@@ -389,7 +388,7 @@ GPU_TEST_P(GMG, Accuracy)
 
     frame = randomMat(size, type, 160, 255);
     d_frame = loadMat(frame, useRoi);
-    gmg(d_frame, d_fgmask);
+    gmg->apply(d_frame, d_fgmask);
 
     // now fgmask should be entirely foreground
     ASSERT_MAT_NEAR(fullfg, d_fgmask, 0);
