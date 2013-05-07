@@ -72,11 +72,10 @@ namespace cv
     }
 }
 
-PARAM_TEST_CASE(FGDStatModel, cv::gpu::DeviceInfo, std::string, Channels)
+PARAM_TEST_CASE(FGDStatModel, cv::gpu::DeviceInfo, std::string)
 {
     cv::gpu::DeviceInfo devInfo;
     std::string inputFile;
-    int out_cn;
 
     virtual void SetUp()
     {
@@ -84,8 +83,6 @@ PARAM_TEST_CASE(FGDStatModel, cv::gpu::DeviceInfo, std::string, Channels)
         cv::gpu::setDevice(devInfo.deviceID());
 
         inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
-
-        out_cn = GET_PARAM(2);
     }
 };
 
@@ -102,15 +99,10 @@ GPU_TEST_P(FGDStatModel, Update)
     cv::Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
 
     cv::gpu::GpuMat d_frame(frame);
-    cv::gpu::FGDStatModel d_model(out_cn);
-    d_model.create(d_frame);
-
-    cv::Mat h_background;
-    cv::Mat h_foreground;
-    cv::Mat h_background3;
-
-    cv::Mat backgroundDiff;
-    cv::Mat foregroundDiff;
+    cv::Ptr<cv::gpu::BackgroundSubtractorFGD> d_fgd = cv::gpu::createBackgroundSubtractorFGD();
+    cv::gpu::GpuMat d_foreground, d_background;
+    std::vector< std::vector<cv::Point> > foreground_regions;
+    d_fgd->apply(d_frame, d_foreground);
 
     for (int i = 0; i < 5; ++i)
     {
@@ -121,32 +113,23 @@ GPU_TEST_P(FGDStatModel, Update)
         int gold_count = cvUpdateBGStatModel(&ipl_frame, model);
 
         d_frame.upload(frame);
-
-        int count = d_model.update(d_frame);
-
-        ASSERT_EQ(gold_count, count);
+        d_fgd->apply(d_frame, d_foreground);
+        d_fgd->getBackgroundImage(d_background);
+        d_fgd->getForegroundRegions(foreground_regions);
+        int count = (int) foreground_regions.size();
 
         cv::Mat gold_background = cv::cvarrToMat(model->background);
         cv::Mat gold_foreground = cv::cvarrToMat(model->foreground);
 
-        if (out_cn == 3)
-            d_model.background.download(h_background3);
-        else
-        {
-            d_model.background.download(h_background);
-            cv::cvtColor(h_background, h_background3, cv::COLOR_BGRA2BGR);
-        }
-        d_model.foreground.download(h_foreground);
-
-        ASSERT_MAT_NEAR(gold_background, h_background3, 1.0);
-        ASSERT_MAT_NEAR(gold_foreground, h_foreground, 0.0);
+        ASSERT_MAT_NEAR(gold_background, d_background, 1.0);
+        ASSERT_MAT_NEAR(gold_foreground, d_foreground, 0.0);
+        ASSERT_EQ(gold_count, count);
     }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_BgSegm, FGDStatModel, testing::Combine(
     ALL_DEVICES,
-    testing::Values(std::string("768x576.avi")),
-    testing::Values(Channels(3), Channels(4))));
+    testing::Values(std::string("768x576.avi"))));
 
 #endif
 

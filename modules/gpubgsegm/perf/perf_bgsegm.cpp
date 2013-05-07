@@ -42,6 +42,7 @@
 
 #include "perf_precomp.hpp"
 #include "opencv2/legacy.hpp"
+#include "opencv2/gpuimgproc.hpp"
 
 using namespace std;
 using namespace testing;
@@ -90,10 +91,10 @@ PERF_TEST_P(Video, FGDStatModel,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_frame(frame);
+        cv::gpu::GpuMat d_frame(frame), foreground, background3, background;
 
-        cv::gpu::FGDStatModel d_model(4);
-        d_model.create(d_frame);
+        cv::Ptr<cv::gpu::BackgroundSubtractorFGD> d_fgd = cv::gpu::createBackgroundSubtractorFGD();
+        d_fgd->apply(d_frame, foreground);
 
         for (int i = 0; i < 10; ++i)
         {
@@ -103,12 +104,12 @@ PERF_TEST_P(Video, FGDStatModel,
             d_frame.upload(frame);
 
             startTimer(); next();
-            d_model.update(d_frame);
+            d_fgd->apply(d_frame, foreground);
             stopTimer();
         }
 
-        const cv::gpu::GpuMat background = d_model.background;
-        const cv::gpu::GpuMat foreground = d_model.foreground;
+        d_fgd->getBackgroundImage(background3);
+        cv::gpu::cvtColor(background3, background, cv::COLOR_BGR2BGRA);
 
         GPU_SANITY_CHECK(background, 1e-2, ERROR_RELATIVE);
         GPU_SANITY_CHECK(foreground, 1e-2, ERROR_RELATIVE);

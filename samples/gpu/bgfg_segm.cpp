@@ -78,7 +78,7 @@ int main(int argc, const char** argv)
     Ptr<BackgroundSubtractor> mog = gpu::createBackgroundSubtractorMOG();
     Ptr<BackgroundSubtractor> mog2 = gpu::createBackgroundSubtractorMOG2();
     Ptr<BackgroundSubtractor> gmg = gpu::createBackgroundSubtractorGMG(40);
-    FGDStatModel fgd_stat;
+    Ptr<BackgroundSubtractor> fgd = gpu::createBackgroundSubtractorFGD();
 
     GpuMat d_fgmask;
     GpuMat d_fgimg;
@@ -103,7 +103,7 @@ int main(int argc, const char** argv)
         break;
 
     case FGD_STAT:
-        fgd_stat.create(d_frame);
+        fgd->apply(d_frame, d_fgmask);
         break;
     }
 
@@ -142,9 +142,8 @@ int main(int argc, const char** argv)
             break;
 
         case FGD_STAT:
-            fgd_stat.update(d_frame);
-            d_fgmask = fgd_stat.foreground;
-            d_bgimg = fgd_stat.background;
+            fgd->apply(d_frame, d_fgmask);
+            fgd->getBackgroundImage(d_bgimg);
             break;
         }
 
