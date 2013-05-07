@@ -285,7 +285,7 @@ PARAM_TEST_CASE(LaplacianTestBase, MatType, int)
     //src mat with roi
     cv::Mat mat_roi;
     cv::Mat dst_roi;
-    //std::vector<cv::ocl::Info> oclinfo;
+
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
 
@@ -304,10 +304,6 @@ PARAM_TEST_CASE(LaplacianTestBase, MatType, int)
         mat  = randomMat(rng, size, type, 5, 16, false);
         dst  = randomMat(rng, size, type, 5, 16, false);
 
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
-        ////if you want to use undefault device, set it here
-        ////setDevice(oclinfo[0]);
     }
 
     void random_roi()
@@ -388,7 +384,7 @@ PARAM_TEST_CASE(ErodeDilateBase, MatType, int)
     //src mat with roi
     cv::Mat mat1_roi;
     cv::Mat dst_roi;
-    //std::vector<cv::ocl::Info> oclinfo;
+
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
 
@@ -518,7 +514,7 @@ PARAM_TEST_CASE(Sobel, MatType, int, int, int, int)
     //src mat with roi
     cv::Mat mat1_roi;
     cv::Mat dst_roi;
-    //std::vector<cv::ocl::Info> oclinfo;
+
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
 
@@ -540,11 +536,6 @@ PARAM_TEST_CASE(Sobel, MatType, int, int, int, int)
 
         mat1 = randomMat(rng, size, type, 5, 16, false);
         dst  = randomMat(rng, size, type, 5, 16, false);
-
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
-        ////if you want to use undefault device, set it here
-        ////setDevice(oclinfo[0]);
     }
 
     void random_roi()
@@ -622,7 +613,6 @@ PARAM_TEST_CASE(Scharr, MatType, int, int, int)
     //src mat with roi
     cv::Mat mat1_roi;
     cv::Mat dst_roi;
-    //std::vector<cv::ocl::Info> oclinfo;
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
 
@@ -645,10 +635,6 @@ PARAM_TEST_CASE(Scharr, MatType, int, int, int)
         mat1 = randomMat(rng, size, type, 5, 16, false);
         dst  = randomMat(rng, size, type, 5, 16, false);
 
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
-        ////if you want to use undefault device, set it here
-        ////setDevice(oclinfo[0]);
     }
 
     void random_roi()
@@ -729,7 +715,6 @@ PARAM_TEST_CASE(GaussianBlur, MatType, cv::Size, int)
     //src mat with roi
     cv::Mat mat1_roi;
     cv::Mat dst_roi;
-    //std::vector<cv::ocl::Info> oclinfo;
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
 
@@ -752,10 +737,6 @@ PARAM_TEST_CASE(GaussianBlur, MatType, cv::Size, int)
         mat1 = randomMat(rng, size, type, 5, 16, false);
         dst  = randomMat(rng, size, type, 5, 16, false);
 
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
-        ////if you want to use undefault device, set it here
-        ////setDevice(oclinfo[0]);
     }
 
     void random_roi()

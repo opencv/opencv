@@ -33,20 +33,14 @@ void blendLinearGold(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &we
 
 PARAM_TEST_CASE(Blend, cv::Size, MatType/*, UseRoi*/)
 {
-    //std::vector<cv::ocl::Info> oclinfo;
     cv::Size size;
     int type;
     bool useRoi;
 
     virtual void SetUp()
     {
-        //devInfo = GET_PARAM(0);
         size = GET_PARAM(0);
         type = GET_PARAM(1);
-        /*useRoi = GET_PARAM(3);*/
-
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
     }
 };
 
@@ -59,12 +53,9 @@ TEST_P(Blend, Accuracy)
     cv::Mat weights1 = randomMat(size, CV_32F, 0, 1);
     cv::Mat weights2 = randomMat(size, CV_32F, 0, 1);
 
-    cv::ocl::oclMat gimg1(size, type), gimg2(size, type), gweights1(size, CV_32F), gweights2(size, CV_32F);
-    cv::ocl::oclMat dst(size, type);
-    gimg1.upload(img1);
-    gimg2.upload(img2);
-    gweights1.upload(weights1);
-    gweights2.upload(weights2);
+    cv::ocl::oclMat gimg1(img1), gimg2(img2), gweights1(weights1), gweights2(weights2);
+    cv::ocl::oclMat dst;
+
     cv::ocl::blendLinear(gimg1, gimg2, gweights1, gweights2, dst);
     cv::Mat result;
     cv::Mat result_gold;

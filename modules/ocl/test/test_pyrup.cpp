@@ -58,12 +58,9 @@ PARAM_TEST_CASE(PyrUp, MatType, int)
 {
     int type;
     int channels;
-    //std::vector<cv::ocl::Info> oclinfo;
 
     virtual void SetUp()
     {
-        //int devnums = cv::ocl::getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
         type = GET_PARAM(0);
         channels = GET_PARAM(1);
     }
