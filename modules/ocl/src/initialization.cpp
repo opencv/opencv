@@ -130,6 +130,7 @@ namespace cv
             cl_platform_id oclplatform;
             std::vector<cl_device_id> devices;
             std::vector<std::string> devName;
+            std::string clVersion;
 
             cl_context oclcontext;
             cl_command_queue clCmdQueue;
@@ -304,6 +305,7 @@ namespace cv
 
             char deviceName[256];
             int devcienums = 0;
+            char clVersion[256];
             for (unsigned i = 0; i < numPlatforms; ++i)
             {
                 cl_uint numsdev;
@@ -319,6 +321,8 @@ namespace cv
 
                     Info ocltmpinfo;
                     ocltmpinfo.impl->oclplatform = platforms[i];
+                    openCLSafeCall(clGetPlatformInfo(platforms[i], CL_PLATFORM_VERSION, sizeof(clVersion), clVersion, NULL));
+                    ocltmpinfo.impl->clVersion = clVersion;
                     for(unsigned j = 0; j < numsdev; ++j)
                     {
                         ocltmpinfo.impl->devices.push_back(devices[j]);
@@ -997,6 +1001,8 @@ namespace cv
                 return impl->double_support == 1;
             case CL_UNIFIED_MEM:
                 return impl->unified_memory == 1;
+            case CL_VER_1_2:
+                return impl->clVersion.find("OpenCL 1.2") != string::npos;
             default:
                 return false;
             }
