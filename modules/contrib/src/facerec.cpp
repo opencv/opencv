@@ -17,6 +17,7 @@
  */
 #include "precomp.hpp"
 #include <set>
+#include <limits>
 
 namespace cv
 {
