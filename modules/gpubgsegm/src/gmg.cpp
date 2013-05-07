@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined HAVE_CUDA || defined(CUDA_DISABLER) || !defined(HAVE_OPENCV_GPUFILTERS)
+#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
 Ptr<gpu::BackgroundSubtractorGMG> cv::gpu::createBackgroundSubtractorGMG(int, double) { throw_no_cuda(); return Ptr<gpu::BackgroundSubtractorGMG>(); }
 
@@ -141,8 +141,10 @@ namespace
         GpuMat colors_;
         GpuMat weights_;
 
+#if defined(HAVE_OPENCV_GPUFILTERS) && defined(HAVE_OPENCV_GPUARITHM)
         Ptr<gpu::Filter> boxFilter_;
         GpuMat buf_;
+#endif
     };
 
     GMGImpl::GMGImpl(int initializationFrames, double decisionThreshold)
@@ -212,6 +214,7 @@ namespace
         funcs[frame.depth()][frame.channels() - 1](frame, fgmask, colors_, weights_, nfeatures_, frameNum_,
                                                    learningRate_, updateBackgroundModel_, StreamAccessor::getStream(stream));
 
+#if defined(HAVE_OPENCV_GPUFILTERS) && defined(HAVE_OPENCV_GPUARITHM)
         // medianBlur
         if (smoothingRadius_ > 0)
         {
@@ -220,6 +223,7 @@ namespace
             const double thresh = 255.0 * minCount / (smoothingRadius_ * smoothingRadius_);
             gpu::threshold(buf_, fgmask, thresh, 255.0, THRESH_BINARY, stream);
         }
+#endif
 
         // keep track of how many frames we have processed
         ++frameNum_;
@@ -255,8 +259,10 @@ namespace
 
         nfeatures_.setTo(Scalar::all(0));
 
+#if defined(HAVE_OPENCV_GPUFILTERS) && defined(HAVE_OPENCV_GPUARITHM)
         if (smoothingRadius_ > 0)
             boxFilter_ = gpu::createBoxFilter(CV_8UC1, -1, Size(smoothingRadius_, smoothingRadius_));
+#endif
 
         loadConstants(frameSize_.width, frameSize_.height, minVal_, maxVal_,
                       quantizationLevels_, backgroundPrior_, decisionThreshold_, maxFeatures_, numInitializationFrames_);

@@ -41,8 +41,14 @@
 //M*/
 
 #include "perf_precomp.hpp"
-#include "opencv2/legacy.hpp"
-#include "opencv2/gpuimgproc.hpp"
+
+#ifdef HAVE_OPENCV_LEGACY
+#  include "opencv2/legacy.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_GPUIMGPROC
+#  include "opencv2/gpuimgproc.hpp"
+#endif
 
 using namespace std;
 using namespace testing;
@@ -60,6 +66,13 @@ using namespace perf;
 #  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
 #endif
 
+//////////////////////////////////////////////////////
+// FGDStatModel
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+
+#ifdef HAVE_OPENCV_LEGACY
+
 namespace cv
 {
     template<> void Ptr<CvBGStatModel>::delete_obj()
@@ -68,10 +81,7 @@ namespace cv
     }
 }
 
-//////////////////////////////////////////////////////
-// FGDStatModel
-
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+#endif
 
 DEF_PARAM_TEST_1(Video, string);
 
@@ -91,7 +101,7 @@ PERF_TEST_P(Video, FGDStatModel,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_frame(frame), foreground, background3, background;
+        cv::gpu::GpuMat d_frame(frame), foreground;
 
         cv::Ptr<cv::gpu::BackgroundSubtractorFGD> d_fgd = cv::gpu::createBackgroundSubtractorFGD();
         d_fgd->apply(d_frame, foreground);
@@ -108,14 +118,18 @@ PERF_TEST_P(Video, FGDStatModel,
             stopTimer();
         }
 
+        GPU_SANITY_CHECK(foreground, 1e-2, ERROR_RELATIVE);
+
+#ifdef HAVE_OPENCV_GPUIMGPROC
+        cv::gpu::GpuMat background3, background;
         d_fgd->getBackgroundImage(background3);
         cv::gpu::cvtColor(background3, background, cv::COLOR_BGR2BGRA);
-
         GPU_SANITY_CHECK(background, 1e-2, ERROR_RELATIVE);
-        GPU_SANITY_CHECK(foreground, 1e-2, ERROR_RELATIVE);
+#endif
     }
     else
     {
+#ifdef HAVE_OPENCV_LEGACY
         IplImage ipl_frame = frame;
         cv::Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
 
@@ -136,6 +150,9 @@ PERF_TEST_P(Video, FGDStatModel,
 
         CPU_SANITY_CHECK(background);
         CPU_SANITY_CHECK(foreground);
+#else
+        FAIL_NO_CPU();
+#endif
     }
 }
 

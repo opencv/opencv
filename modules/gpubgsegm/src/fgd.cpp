@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
+#if !defined(HAVE_CUDA) || defined(CUDA_DISABLER) || !defined(HAVE_OPENCV_IMGPROC) || !defined(HAVE_OPENCV_GPUARITHM) || !defined(HAVE_OPENCV_GPUIMGPROC)
 
 cv::gpu::FGDParams::FGDParams() { throw_no_cuda(); }
 
@@ -309,6 +309,8 @@ namespace
 /////////////////////////////////////////////////////////////////////////
 // smoothForeground
 
+#ifdef HAVE_OPENCV_GPUFILTERS
+
 namespace
 {
     void morphology(const GpuMat& src, GpuMat& dst, GpuMat& filterBrd, int brd, Ptr<gpu::Filter>& filter, Scalar brdVal)
@@ -335,6 +337,8 @@ namespace
         morphology(buf, foreground, filterBrd, brd, erodeFilter, erodeBrdVal);
     }
 }
+
+#endif
 
 /////////////////////////////////////////////////////////////////////////
 // findForegroundRegions
@@ -606,8 +610,10 @@ namespace
         GpuMat buf_;
         GpuMat filterBrd_;
 
+#ifdef HAVE_OPENCV_GPUFILTERS
         Ptr<gpu::Filter> dilateFilter_;
         Ptr<gpu::Filter> erodeFilter_;
+#endif
 
         CvMemStorage* storage_;
     };
@@ -645,8 +651,10 @@ namespace
 
         int FG_pixels_count = bgfgClassification(prevFrame_, curFrame, Ftd_, Fbd_, foreground_, countBuf_, params_, 4);
 
+#ifdef HAVE_OPENCV_GPUFILTERS
         if (params_.perform_morphing > 0)
             smoothForeground(foreground_, filterBrd_, buf_, erodeFilter_, dilateFilter_, params_);
+#endif
 
         if (params_.minArea > 0 || params_.is_obj_without_holes)
             findForegroundRegions(foreground_, h_foreground_, foreground_regions_, storage_, params_);
@@ -702,6 +710,7 @@ namespace
         stat_.create(firstFrame.size(), params_);
         fgd::setBGPixelStat(stat_);
 
+#ifdef HAVE_OPENCV_GPUFILTERS
         if (params_.perform_morphing > 0)
         {
             Mat kernel = getStructuringElement(MORPH_RECT, Size(1 + params_.perform_morphing * 2, 1 + params_.perform_morphing * 2));
@@ -710,6 +719,7 @@ namespace
             dilateFilter_ = gpu::createMorphologyFilter(MORPH_DILATE, CV_8UC1, kernel, anchor);
             erodeFilter_ = gpu::createMorphologyFilter(MORPH_ERODE, CV_8UC1, kernel, anchor);
         }
+#endif
     }
 }
 
