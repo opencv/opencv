@@ -1595,6 +1595,7 @@ GrabFrame int
   CvCapture* capture
 RetrieveFrame ROIplImage*
   CvCapture* capture
+  int index 0
 QueryFrame ROIplImage*
   CvCapture* capture
 GetCaptureProperty double
