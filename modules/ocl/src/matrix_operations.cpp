@@ -593,11 +593,16 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, stri
         CV_Error(CV_StsUnsupportedFormat, "unknown depth");
     }
 #ifdef CL_VERSION_1_2
-    if(dst.offset == 0 && dst.cols == dst.wholecols)
+    //this enables backwards portability to
+    //run on OpenCL 1.1 platform if library binaries are compiled with OpenCL 1.2 support
+    if(Context::getContext()->supportsFeature(Context::CL_VER_1_2) &&
+        dst.offset == 0 && dst.cols == dst.wholecols)
     {
-        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(), (cl_mem)dst.data, args[0].second, args[0].first, 0, dst.step * dst.rows, 0, NULL, NULL);
+        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(), 
+            (cl_mem)dst.data, args[0].second, args[0].first, 0, dst.step * dst.rows, 0, NULL, NULL);
     }
     else
+#endif
     {
         args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
         args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols ));
@@ -605,17 +610,8 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, stri
         args.push_back( make_pair( sizeof(cl_int) , (void *)&step_in_pixel ));
         args.push_back( make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
         openCLExecuteKernel(dst.clCxt , &operator_setTo, kernelName, globalThreads,
-                            localThreads, args, -1, -1, compile_option);
+            localThreads, args, -1, -1, compile_option);
     }
-#else
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.rows ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&step_in_pixel ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
-    openCLExecuteKernel(dst.clCxt , &operator_setTo, kernelName, globalThreads,
-                        localThreads, args, -1, -1, compile_option);
-#endif
 }
 
 static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &mask, string kernelName)
