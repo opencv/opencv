@@ -57,7 +57,8 @@ public class Tutorial3View extends JavaCameraView implements PictureCallback {
     public void takePicture(final String fileName) {
         Log.i(TAG, "Taking picture");
         this.mPictureFileName = fileName;
-        // Clear up buffers to avoid bug http://code.opencv.org/issues/2961 
+        // Postview and jpeg are sent in the same buffers if the queue is not empty when performing a capture.
+        // Clear up buffers to avoid mCamera.takePicture to be stuck because of a memory issue
         mCamera.setPreviewCallback(null);
 
         // PictureCallback is implemented by the current class
