@@ -129,7 +129,7 @@ TEST_P(StereoMatchBP, Regression)
     bp(d_left, d_right, d_disp);
     d_disp.download(disp);
     disp.convertTo(disp, disp_gold.depth());
-    EXPECT_MAT_NEAR(disp_gold, disp, 0.0, "");
+    EXPECT_MAT_NEAR(disp_gold, disp, 0.0);
 }
 INSTANTIATE_TEST_CASE_P(OCL_Calib3D, StereoMatchBP, testing::Combine(testing::Values(64),
     testing::Values(8),testing::Values(2),testing::Values(25.0f),

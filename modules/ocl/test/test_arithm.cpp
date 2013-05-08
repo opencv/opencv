@@ -172,12 +172,24 @@ PARAM_TEST_CASE(ArithmTestBase, MatType, bool)
         gmask = mask_roi; //end
     }
 
+    void Near(double threshold = 0.)
+    {
+        cv::Mat cpu_dst;
+        gdst_whole.download(cpu_dst);
+        EXPECT_MAT_NEAR(dst, cpu_dst, threshold);
+    }
+
+    void Near1(double threshold = 0.)
+    {
+        cv::Mat cpu_dst1;
+        gdst1_whole.download(cpu_dst1);      
+        EXPECT_MAT_NEAR(dst1, cpu_dst1, threshold);
+    }
+
 };
 ////////////////////////////////lut/////////////////////////////////////////////////
-
 struct Lut : ArithmTestBase {};
 #define VARNAME(A) string(#A);
-
 
 
 TEST_P(Lut, Mat)
@@ -200,10 +212,7 @@ TEST_P(Lut, Mat)
 
         cv::LUT(mat1_roi, mat2_roi, dst_roi);
         cv::ocl::LUT(gmat1, gmat2, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download (cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0, "");
+        Near(0);
     }
 }
 
@@ -219,12 +228,7 @@ TEST_P(Exp, Mat)
 
         cv::exp(mat1_roi, dst_roi);
         cv::ocl::exp(gmat1, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 2, "");
-
+        Near(2);
     }
 }
 
@@ -240,10 +244,7 @@ TEST_P(Log, Mat)
 
         cv::log(mat1_roi, dst_roi);
         cv::ocl::log(gmat1, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1, "");
+        Near(1);
     }
 }
 
@@ -259,10 +260,7 @@ TEST_P(Add, Mat)
 
         cv::add(mat1_roi, mat2_roi, dst_roi);
         cv::ocl::add(gmat1, gmat2, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
+        Near(0);
     }
 }
 
@@ -274,12 +272,10 @@ TEST_P(Add, Mat_Mask)
 
         cv::add(mat1_roi, mat2_roi, dst_roi, mask_roi);
         cv::ocl::add(gmat1, gmat2, gdst, gmask);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
+        Near(0);
     }
 }
+
 TEST_P(Add, Scalar)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
@@ -288,10 +284,7 @@ TEST_P(Add, Scalar)
 
         cv::add(mat1_roi, val, dst_roi);
         cv::ocl::add(gmat1, val, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -303,10 +296,7 @@ TEST_P(Add, Scalar_Mask)
 
         cv::add(mat1_roi, val, dst_roi, mask_roi);
         cv::ocl::add(gmat1, val, gdst, gmask);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -323,10 +313,7 @@ TEST_P(Sub, Mat)
 
         cv::subtract(mat1_roi, mat2_roi, dst_roi);
         cv::ocl::subtract(gmat1, gmat2, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
+        Near(0);
     }
 }
 
@@ -338,10 +325,7 @@ TEST_P(Sub, Mat_Mask)
 
         cv::subtract(mat1_roi, mat2_roi, dst_roi, mask_roi);
         cv::ocl::subtract(gmat1, gmat2, gdst, gmask);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
+        Near(0);
     }
 }
 
@@ -353,10 +337,7 @@ TEST_P(Sub, Scalar)
 
         cv::subtract(mat1_roi, val, dst_roi);
         cv::ocl::subtract(gmat1, val, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -368,10 +349,7 @@ TEST_P(Sub, Scalar_Mask)
 
         cv::subtract(mat1_roi, val, dst_roi, mask_roi);
         cv::ocl::subtract(gmat1, val, gdst, gmask);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -388,10 +366,7 @@ TEST_P(Mul, Mat)
 
         cv::multiply(mat1_roi, mat2_roi, dst_roi);
         cv::ocl::multiply(gmat1, gmat2, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
+        Near(0);
     }
 }
 
@@ -406,10 +381,7 @@ TEST_P(Mul, Mat_Scalar)
 
         cv::multiply(mat1_roi, mat2_roi, dst_roi, s);
         cv::ocl::multiply(gmat1, gmat2, gdst, s);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.001, "");
+        Near(.001);
     }
 }
 
@@ -425,10 +397,7 @@ TEST_P(Div, Mat)
 
         cv::divide(mat1_roi, mat2_roi, dst_roi);
         cv::ocl::divide(gmat1, gmat2, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1, "");
+        Near(1);
     }
 }
 
@@ -443,10 +412,7 @@ TEST_P(Div, Mat_Scalar)
 
         cv::divide(mat1_roi, mat2_roi, dst_roi, s);
         cv::ocl::divide(gmat1, gmat2, gdst, s);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.001, "");
+        Near(.001);
     }
 }
 
@@ -461,10 +427,7 @@ TEST_P(Absdiff, Mat)
 
         cv::absdiff(mat1_roi, mat2_roi, dst_roi);
         cv::ocl::absdiff(gmat1, gmat2, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0, "");
+        Near(0);
     }
 }
 
@@ -476,10 +439,7 @@ TEST_P(Absdiff, Mat_Scalar)
 
         cv::absdiff(mat1_roi, val, dst_roi);
         cv::ocl::absdiff(gmat1, val, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -495,14 +455,8 @@ TEST_P(CartToPolar, angleInDegree)
 
         cv::cartToPolar(mat1_roi, mat2_roi, dst_roi, dst1_roi, 1);
         cv::ocl::cartToPolar(gmat1, gmat2, gdst, gdst1, 1);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        cv::Mat cpu_dst1;
-        gdst1_whole.download(cpu_dst1);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.5, "");
-        EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.5, "");
+        Near(.5);
+        Near1(.5);
     }
 }
 
@@ -514,14 +468,8 @@ TEST_P(CartToPolar, angleInRadians)
 
         cv::cartToPolar(mat1_roi, mat2_roi, dst_roi, dst1_roi, 0);
         cv::ocl::cartToPolar(gmat1, gmat2, gdst, gdst1, 0);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        cv::Mat cpu_dst1;
-        gdst1_whole.download(cpu_dst1);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.5, "");
-        EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.5, "");
+        Near(.5);
+        Near1(.5);
     }
 }
 
@@ -536,15 +484,8 @@ TEST_P(PolarToCart, angleInDegree)
 
         cv::polarToCart(mat1_roi, mat2_roi, dst_roi, dst1_roi, 1);
         cv::ocl::polarToCart(gmat1, gmat2, gdst, gdst1, 1);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        cv::Mat cpu_dst1;
-        gdst1_whole.download(cpu_dst1);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.5, "");
-        EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.5, "");
+        Near(.5);
+        Near1(.5);
     }
 }
 
@@ -556,15 +497,8 @@ TEST_P(PolarToCart, angleInRadians)
 
         cv::polarToCart(mat1_roi, mat2_roi, dst_roi, dst1_roi, 0);
         cv::ocl::polarToCart(gmat1, gmat2, gdst, gdst1, 0);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        cv::Mat cpu_dst1;
-        gdst1_whole.download(cpu_dst1);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.5, "");
-        EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.5, "");
+        Near(.5);
+        Near1(.5);
     }
 }
 
@@ -581,11 +515,7 @@ TEST_P(Magnitude, Mat)
 
         cv::magnitude(mat1_roi, mat2_roi, dst_roi);
         cv::ocl::magnitude(gmat1, gmat2, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -600,14 +530,9 @@ TEST_P(Transpose, Mat)
 
         cv::transpose(mat1_roi, dst_roi);
         cv::ocl::transpose(gmat1, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
-
 
 
 struct Flip : ArithmTestBase {};
@@ -620,11 +545,7 @@ TEST_P(Flip, X)
 
         cv::flip(mat1_roi, dst_roi, 0);
         cv::ocl::flip(gmat1, gdst, 0);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -636,11 +557,7 @@ TEST_P(Flip, Y)
 
         cv::flip(mat1_roi, dst_roi, 1);
         cv::ocl::flip(gmat1, gdst, 1);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -652,11 +569,7 @@ TEST_P(Flip, BOTH)
 
         cv::flip(mat1_roi, dst_roi, -1);
         cv::ocl::flip(gmat1, gdst, -1);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -1016,11 +929,7 @@ TEST_P(Phase, Mat)
             random_roi();
             cv::phase(mat1_roi, mat2_roi, dst_roi, angelInDegrees ? true : false);
             cv::ocl::phase(gmat1, gmat2, gdst, angelInDegrees ? true : false);
-
-            cv::Mat cpu_dst;
-            gdst_whole.download(cpu_dst);
-
-            EXPECT_MAT_NEAR(dst, cpu_dst, 1e-2, "");
+            Near(1e-2);
         }
     }
 }
@@ -1037,11 +946,7 @@ TEST_P(Bitwise_and, Mat)
 
         cv::bitwise_and(mat1_roi, mat2_roi, dst_roi);
         cv::ocl::bitwise_and(gmat1, gmat2, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
+        Near(0);
     }
 }
 
@@ -1053,13 +958,10 @@ TEST_P(Bitwise_and, Mat_Mask)
 
         cv::bitwise_and(mat1_roi, mat2_roi, dst_roi, mask_roi);
         cv::ocl::bitwise_and(gmat1, gmat2, gdst, gmask);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
+        Near(0);
     }
 }
+
 TEST_P(Bitwise_and, Scalar)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
@@ -1068,12 +970,7 @@ TEST_P(Bitwise_and, Scalar)
 
         cv::bitwise_and(mat1_roi, val, dst_roi);
         cv::ocl::bitwise_and(gmat1, val, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
-
+        Near(1e-5);
     }
 }
 
@@ -1085,11 +982,7 @@ TEST_P(Bitwise_and, Scalar_Mask)
 
         cv::bitwise_and(mat1_roi, val, dst_roi, mask_roi);
         cv::ocl::bitwise_and(gmat1, val, gdst, gmask);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -1107,11 +1000,7 @@ TEST_P(Bitwise_or, Mat)
 
         cv::bitwise_or(mat1_roi, mat2_roi, dst_roi);
         cv::ocl::bitwise_or(gmat1, gmat2, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
+        Near(0);
     }
 }
 
@@ -1123,13 +1012,10 @@ TEST_P(Bitwise_or, Mat_Mask)
 
         cv::bitwise_or(mat1_roi, mat2_roi, dst_roi, mask_roi);
         cv::ocl::bitwise_or(gmat1, gmat2, gdst, gmask);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
+        Near(0);
     }
 }
+
 TEST_P(Bitwise_or, Scalar)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
@@ -1138,11 +1024,7 @@ TEST_P(Bitwise_or, Scalar)
 
         cv::bitwise_or(mat1_roi, val, dst_roi);
         cv::ocl::bitwise_or(gmat1, val, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -1154,11 +1036,7 @@ TEST_P(Bitwise_or, Scalar_Mask)
 
         cv::bitwise_or(mat1_roi, val, dst_roi, mask_roi);
         cv::ocl::bitwise_or(gmat1, val, gdst, gmask);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -1176,11 +1054,7 @@ TEST_P(Bitwise_xor, Mat)
 
         cv::bitwise_xor(mat1_roi, mat2_roi, dst_roi);
         cv::ocl::bitwise_xor(gmat1, gmat2, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
+        Near(0);
     }
 }
 
@@ -1192,13 +1066,10 @@ TEST_P(Bitwise_xor, Mat_Mask)
 
         cv::bitwise_xor(mat1_roi, mat2_roi, dst_roi, mask_roi);
         cv::ocl::bitwise_xor(gmat1, gmat2, gdst, gmask);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
+        Near(0);
     }
 }
+
 TEST_P(Bitwise_xor, Scalar)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
@@ -1207,11 +1078,7 @@ TEST_P(Bitwise_xor, Scalar)
 
         cv::bitwise_xor(mat1_roi, val, dst_roi);
         cv::ocl::bitwise_xor(gmat1, val, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -1223,11 +1090,7 @@ TEST_P(Bitwise_xor, Scalar_Mask)
 
         cv::bitwise_xor(mat1_roi, val, dst_roi, mask_roi);
         cv::ocl::bitwise_xor(gmat1, val, gdst, gmask);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -1244,11 +1107,7 @@ TEST_P(Bitwise_not, Mat)
 
         cv::bitwise_not(mat1_roi, dst_roi);
         cv::ocl::bitwise_not(gmat1, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
+        Near(0);
     }
 }
 
@@ -1277,11 +1136,7 @@ TEST_P(Compare, Mat)
 
             cv::compare(mat1_roi, mat2_roi, dst_roi, cmp_codes[i]);
             cv::ocl::compare(gmat1, gmat2, gdst, cmp_codes[i]);
-
-            cv::Mat cpu_dst;
-            gdst_whole.download(cpu_dst);
-
-            EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
+            Near(0);
         }
     }
 
@@ -1303,11 +1158,7 @@ TEST_P(Pow, Mat)
         double p = 4.5;
         cv::pow(mat1_roi, p, dst_roi);
         cv::ocl::pow(gmat1, p, gdst);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1, "");
+        Near(1);
     }
 }
 
@@ -1344,7 +1195,7 @@ TEST_P(MagnitudeSqr, Mat)
         cv::Mat cpu_dst;
         cldst.download(cpu_dst);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1, "");
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1);
     }
 }
 
@@ -1365,14 +1216,9 @@ TEST_P(AddWeighted, Mat)
 
         cv::ocl::addWeighted(gmat1, alpha, gmat2, beta, gama, gdst);
 
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
-
 
 
 

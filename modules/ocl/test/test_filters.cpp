@@ -127,7 +127,7 @@ PARAM_TEST_CASE(FilterTestBase,
     {
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, threshold, "");
+        EXPECT_MAT_NEAR(dst, cpu_dst, threshold);
     }
 };
 

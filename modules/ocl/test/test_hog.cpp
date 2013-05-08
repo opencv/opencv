@@ -240,8 +240,7 @@ TEST_P(HOG, Detect)
         }
     }
 
-    char s[100] = {0};
-    EXPECT_MAT_NEAR(cv::Mat(d_comp), cv::Mat(comp), 3, s);
+    EXPECT_MAT_NEAR(cv::Mat(d_comp), cv::Mat(comp), 3);
 }
 
 

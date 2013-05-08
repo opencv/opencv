@@ -442,6 +442,13 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
             clmask_roi = clmask(Rect(maskx, masky, roicols, roirows));
         }
     }
+
+    void Near(double threshold)
+    {
+        cv::Mat cpu_cldst;
+        cldst.download(cpu_cldst);
+        EXPECT_MAT_NEAR(dst, cpu_cldst, threshold);       
+    }
 };
 ////////////////////////////////equalizeHist//////////////////////////////////////////
 
@@ -461,11 +468,7 @@ TEST_P(equalizeHist, Mat)
             random_roi();
             cv::equalizeHist(mat1_roi, dst_roi);
             cv::ocl::equalizeHist(clmat1_roi, cldst_roi);
-            cv::Mat cpu_cldst;
-            cldst.download(cpu_cldst);
-            char sss[1024];
-            sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, maskx, masky, src2x, src2y);
-            EXPECT_MAT_NEAR(dst, cpu_cldst, 1.1, sss);
+            Near(1.1);
         }
     }
 }
@@ -485,7 +488,7 @@ TEST_P(bilateralFilter, Mat)
     int d = 2 * radius + 1;
     double sigmaspace = 20.0;
     int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, cv::BORDER_REFLECT, cv::BORDER_WRAP, cv::BORDER_REFLECT_101};
-    const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
+    //const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
 
     if (mat1.depth() != CV_8U || mat1.type() != dst.type())
     {
@@ -514,25 +517,7 @@ TEST_P(bilateralFilter, Mat)
 
                 cv::bilateralFilter(mat1_roi, dst_roi, d, sigmacolor, sigmaspace, bordertype[i] | cv::BORDER_ISOLATED);
                 cv::ocl::bilateralFilter(clmat1_roi, cldst_roi, d, sigmacolor, sigmaspace, bordertype[i] | cv::BORDER_ISOLATED);
-
-                cv::Mat cpu_cldst;
-                cldst.download(cpu_cldst);
-
-
-                char sss[1024];
-                sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,radius=%d,boredertype=%s", roicols, roirows, src1x, src1y, dstx, dsty, radius, borderstr[i]);
-                //for(int i=0;i<dst.rows;i++)
-                //{
-                //	for(int j=0;j<dst.cols*dst.channels();j++)
-                //	{
-                //		if(dst.at<uchar>(i,j)!=cpu_cldst.at<uchar>(i,j))
-                //		cout<< i <<" "<< j <<" "<< (int)dst.at<uchar>(i,j)<<" "<< (int)cpu_cldst.at<uchar>(i,j)<<"  ";
-                //	}
-                //	cout<<endl;
-                //}
-
-                EXPECT_MAT_NEAR(dst, cpu_cldst, 1.0, sss);
-
+                Near(1.);
             }
     }
 }
@@ -546,7 +531,7 @@ struct CopyMakeBorder : ImgprocTestBase {};
 TEST_P(CopyMakeBorder, Mat)
 {
     int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, cv::BORDER_REFLECT, cv::BORDER_WRAP, cv::BORDER_REFLECT_101};
-    const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
+    //const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
     cv::RNG &rng = TS::ptr()->get_rng();
     int top = rng.uniform(0, 10);
     int bottom = rng.uniform(0, 10);
@@ -584,24 +569,12 @@ TEST_P(CopyMakeBorder, Mat)
                 cv::Mat cpu_cldst;
 #ifndef RANDOMROI
                 cldst_roi.download(cpu_cldst);
+                EXPECT_MAT_NEAR(dst_roi, cpu_cldst, 0.0);
 #else
                 cldst.download(cpu_cldst);
+                EXPECT_MAT_NEAR(dst, cpu_cldst, 0.0);
 #endif
-                char sss[1024];
-                sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,top=%d,bottom=%d,left=%d,right=%d, bordertype=%s", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, top, bottom, left, right, borderstr[i]);
-#ifndef RANDOMROI
-                EXPECT_MAT_NEAR(dst_roi, cpu_cldst, 0.0, sss);
-#else
-                //for(int i=0;i<dst.rows;i++)
-                //{
-                //for(int j=0;j<dst.cols;j++)
-                //{
-                //	cout<< (int)dst.at<uchar>(i,j)<<" ";
-                //}
-                //cout<<endl;
-                //}
-                EXPECT_MAT_NEAR(dst, cpu_cldst, 0.0, sss);
-#endif
+
             }
     }
 }
@@ -624,14 +597,7 @@ TEST_P(cornerMinEigenVal, Mat)
         int borderType = cv::BORDER_REFLECT;
         cv::cornerMinEigenVal(mat1_roi, dst_roi, blockSize, apertureSize, borderType);
         cv::ocl::cornerMinEigenVal(clmat1_roi, cldst_roi, blockSize, apertureSize, borderType);
-
-
-        cv::Mat cpu_cldst;
-        cldst.download(cpu_cldst);
-
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_cldst, 1, sss);
+        Near(1.);
     }
 }
 
@@ -654,13 +620,7 @@ TEST_P(cornerHarris, Mat)
         int borderType = cv::BORDER_REFLECT;
         cv::cornerHarris(mat1_roi, dst_roi, blockSize, apertureSize, k, borderType);
         cv::ocl::cornerHarris(clmat1_roi, cldst_roi, blockSize, apertureSize, k, borderType);
-        cv::Mat cpu_cldst;
-        cldst.download(cpu_cldst);
-
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, maskx, masky, src2x, src2y);
-
-        EXPECT_MAT_NEAR(dst, cpu_cldst, 1, sss);
+        Near(1.);
     }
 }
 
@@ -677,15 +637,11 @@ TEST_P(integral, Mat)
 
         cv::ocl::integral(clmat1_roi, cldst_roi, cldst1_roi);
         cv::integral(mat1_roi, dst_roi, dst1_roi);
+        Near(0);
 
-        cv::Mat cpu_cldst, cpu_cldst1;
-        cldst.download(cpu_cldst);
+        cv::Mat cpu_cldst1;
         cldst1.download(cpu_cldst1);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, maskx, masky, src2x, src2y);
-
-        EXPECT_MAT_NEAR(dst, cpu_cldst, 0.0, sss);
-        EXPECT_MAT_NEAR(dst1, cpu_cldst1, 0.0, sss);
+        EXPECT_MAT_NEAR(dst1, cpu_cldst1, 0.0);
     }
 }
 
@@ -798,10 +754,7 @@ TEST_P(WarpAffine, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "src_roicols=%d,src_roirows=%d,dst_roicols=%d,dst_roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d", src_roicols, src_roirows, dst_roicols, dst_roirows, src1x, src1y, dstx, dsty);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1.0);
     }
 
 }
@@ -830,10 +783,7 @@ TEST_P(WarpPerspective, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "src_roicols=%d,src_roirows=%d,dst_roicols=%d,dst_roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d", src_roicols, src_roirows, dst_roicols, dst_roirows, src1x, src1y, dstx, dsty);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1.0);
     }
 
 }
@@ -994,7 +944,7 @@ TEST_P(Remap, Mat)
         return;
     }
     int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
-    const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
+    //const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
     // for(int i = 0; i < sizeof(bordertype)/sizeof(int); i++)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1004,13 +954,9 @@ TEST_P(Remap, Mat)
         cv::Mat cpu_dst;
         gdst.download(cpu_dst);
 
-        char sss[1024];
-        sprintf(sss, "src_roicols=%d,src_roirows=%d,dst_roicols=%d,dst_roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d bordertype=%s", src_roicols, src_roirows, dst_roicols, dst_roirows, srcx, srcy, dstx, dsty, borderstr[0]);
-
-
         if(interpolation == 0)
-            EXPECT_MAT_NEAR(dst, cpu_dst, 1.0, sss);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 2.0, sss);
+            EXPECT_MAT_NEAR(dst, cpu_dst, 1.0);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 2.0);
 
     }
 }
@@ -1134,10 +1080,7 @@ TEST_P(Resize, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "src_roicols=%d,src_roirows=%d,dst_roicols=%d,dst_roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d", src_roicols, src_roirows, dst_roicols, dst_roirows, src1x, src1y, dstx, dsty);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1.0);
     }
 
 }
@@ -1231,12 +1174,7 @@ TEST_P(Threshold, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-
-        //EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5)
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d", roicols, roirows, src1x , src1y, dstx, dsty);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1);
     }
 
 }
@@ -1342,11 +1280,7 @@ TEST_P(meanShiftFiltering, Mat)
         cv::ocl::meanShiftFiltering(gsrc_roi, gdst_roi, sp, sr, crit);
 
         gdst.download(cpu_gdst);
-
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,srcx=%d,srcy=%d,dstx=%d,dsty=%d\n", roicols, roirows, srcx, srcy, dstx, dsty);
-        EXPECT_MAT_NEAR(dst, cpu_gdst, 0.0, sss);
-
+        EXPECT_MAT_NEAR(dst, cpu_gdst, 0.0);
     }
 }
 
@@ -1368,11 +1302,8 @@ TEST_P(meanShiftProc, Mat)
 
         gdst.download(cpu_gdst);
         gdstCoor.download(cpu_gdstCoor);
-
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,srcx=%d,srcy=%d,dstx=%d,dsty=%d\n", roicols, roirows, srcx, srcy, dstx, dsty);
-        EXPECT_MAT_NEAR(dst, cpu_gdst, 0.0, sss);
-        EXPECT_MAT_NEAR(dstCoor, cpu_gdstCoor, 0.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_gdst, 0.0);
+        EXPECT_MAT_NEAR(dstCoor, cpu_gdstCoor, 0.0);
     }
 }
 
@@ -1459,10 +1390,7 @@ TEST_P(calcHist, Mat)
         cv::ocl::calcHist(gsrc_roi, gdst_hist);
 
         gdst_hist.download(cpu_hist);
-
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,srcx=%d,srcy=%d\n", roicols, roirows, srcx, srcy);
-        EXPECT_MAT_NEAR(dst_hist, cpu_hist, 0.0, sss);
+        EXPECT_MAT_NEAR(dst_hist, cpu_hist, 0.0);
     }
 }
 
@@ -1599,11 +1527,7 @@ TEST_P(Convolve, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, src2x, src2y);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-1, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, .1);
 
     }
 }
