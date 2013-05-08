@@ -106,10 +106,15 @@ GPU_TEST_P(StereoBeliefPropagation, Regression)
     ASSERT_FALSE(right_image.empty());
     ASSERT_FALSE(disp_gold.empty());
 
-    cv::gpu::StereoBeliefPropagation bp(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
+    cv::Ptr<cv::gpu::StereoBeliefPropagation> bp = cv::gpu::createStereoBeliefPropagation(64, 8, 2, CV_16S);
+    bp->setMaxDataTerm(25.0);
+    bp->setDataWeight(0.1);
+    bp->setMaxDiscTerm(15.0);
+    bp->setDiscSingleJump(1.0);
+
     cv::gpu::GpuMat disp;
 
-    bp(loadMat(left_image), loadMat(right_image), disp);
+    bp->compute(loadMat(left_image), loadMat(right_image), disp);
 
     cv::Mat h_disp(disp);
     h_disp.convertTo(h_disp, disp_gold.depth());

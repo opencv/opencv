@@ -65,60 +65,54 @@ public:
 
 CV_EXPORTS Ptr<gpu::StereoBM> createStereoBM(int numDisparities = 64, int blockSize = 19);
 
+/////////////////////////////////////////
+// StereoBeliefPropagation
 
-
-// "Efficient Belief Propagation for Early Vision"
-// P.Felzenszwalb
-class CV_EXPORTS StereoBeliefPropagation
+//! "Efficient Belief Propagation for Early Vision" P.Felzenszwalb
+class CV_EXPORTS StereoBeliefPropagation : public cv::StereoMatcher
 {
 public:
-    enum { DEFAULT_NDISP  = 64 };
-    enum { DEFAULT_ITERS  = 5  };
-    enum { DEFAULT_LEVELS = 5  };
+    using cv::StereoMatcher::compute;
 
-    static void estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels);
-
-    //! the default constructor
-    explicit StereoBeliefPropagation(int ndisp  = DEFAULT_NDISP,
-                                     int iters  = DEFAULT_ITERS,
-                                     int levels = DEFAULT_LEVELS,
-                                     int msg_type = CV_32F);
-
-    //! the full constructor taking the number of disparities, number of BP iterations on each level,
-    //! number of levels, truncation of data cost, data weight,
-    //! truncation of discontinuity cost and discontinuity single jump
-    //! DataTerm = data_weight * min(fabs(I2-I1), max_data_term)
-    //! DiscTerm = min(disc_single_jump * fabs(f1-f2), max_disc_term)
-    //! please see paper for more details
-    StereoBeliefPropagation(int ndisp, int iters, int levels,
-        float max_data_term, float data_weight,
-        float max_disc_term, float disc_single_jump,
-        int msg_type = CV_32F);
-
-    //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
-    //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
-    void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream = Stream::Null());
-
+    virtual void compute(InputArray left, InputArray right, OutputArray disparity, Stream& stream) = 0;
 
     //! version for user specified data term
-    void operator()(const GpuMat& data, GpuMat& disparity, Stream& stream = Stream::Null());
+    virtual void compute(InputArray data, OutputArray disparity, Stream& stream = Stream::Null()) = 0;
 
-    int ndisp;
+    //! number of BP iterations on each level
+    virtual int getNumIters() const = 0;
+    virtual void setNumIters(int iters) = 0;
 
-    int iters;
-    int levels;
+    //! number of levels
+    virtual int getNumLevels() const = 0;
+    virtual void setNumLevels(int levels) = 0;
 
-    float max_data_term;
-    float data_weight;
-    float max_disc_term;
-    float disc_single_jump;
+    //! truncation of data cost
+    virtual double getMaxDataTerm() const = 0;
+    virtual void setMaxDataTerm(double max_data_term) = 0;
 
-    int msg_type;
-private:
-    GpuMat u, d, l, r, u2, d2, l2, r2;
-    std::vector<GpuMat> datas;
-    GpuMat out;
+    //! data weight
+    virtual double getDataWeight() const = 0;
+    virtual void setDataWeight(double data_weight) = 0;
+
+    //! truncation of discontinuity cost
+    virtual double getMaxDiscTerm() const = 0;
+    virtual void setMaxDiscTerm(double max_disc_term) = 0;
+
+    //! discontinuity single jump
+    virtual double getDiscSingleJump() const = 0;
+    virtual void setDiscSingleJump(double disc_single_jump) = 0;
+
+    virtual int getMsgType() const = 0;
+    virtual void setMsgType(int msg_type) = 0;
+
+    static void estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels);
 };
+
+CV_EXPORTS Ptr<gpu::StereoBeliefPropagation>
+    createStereoBeliefPropagation(int ndisp = 64, int iters = 5, int levels = 5, int msg_type = CV_32F);
+
+
 
 // "A Constant-Space Belief Propagation Algorithm for Stereo Matching"
 // Qingxiong Yang, Liang Wang, Narendra Ahuja

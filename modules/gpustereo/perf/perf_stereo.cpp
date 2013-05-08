@@ -107,13 +107,13 @@ PERF_TEST_P(ImagePair, StereoBeliefPropagation,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::StereoBeliefPropagation d_bp(ndisp);
+        cv::Ptr<cv::gpu::StereoBeliefPropagation> d_bp = cv::gpu::createStereoBeliefPropagation(ndisp);
 
         const cv::gpu::GpuMat d_imgLeft(imgLeft);
         const cv::gpu::GpuMat d_imgRight(imgRight);
         cv::gpu::GpuMat dst;
 
-        TEST_CYCLE() d_bp(d_imgLeft, d_imgRight, dst);
+        TEST_CYCLE() d_bp->compute(d_imgLeft, d_imgRight, dst);
 
         GPU_SANITY_CHECK(dst);
     }
