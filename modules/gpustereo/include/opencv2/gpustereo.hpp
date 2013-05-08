@@ -103,6 +103,7 @@ public:
     virtual double getDiscSingleJump() const = 0;
     virtual void setDiscSingleJump(double disc_single_jump) = 0;
 
+    //! type for messages (CV_16SC1 or CV_32FC1)
     virtual int getMsgType() const = 0;
     virtual void setMsgType(int msg_type) = 0;
 
