@@ -16,6 +16,8 @@
 //
 // @Authors
 //    Jia Haipeng, jiahaipeng95@gmail.com
+//    Sen Liu, swjtuls1987@126.com
+//    Peng Xiao, pengxiao@outlook.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -50,59 +52,40 @@
 #define STEREO_MIND 0                    // The minimum d range to check
 #define STEREO_DISP_STEP N_DISPARITIES   // the d step, must be <= 1 to avoid aliasing
 
-int SQ(int a)
-{
-    return a * a;
-}
+#ifndef radius
+#define radius 64
+#endif
 
-unsigned int CalcSSD(volatile __local unsigned int *col_ssd_cache,
-                     volatile __local unsigned int *col_ssd, int radius)
+unsigned int CalcSSD(__local unsigned int *col_ssd)
 {
-    unsigned int cache = 0;
-    unsigned int cache2 = 0;
+    unsigned int cache = col_ssd[0];
 
-    for(int i = 1; i <= radius; i++)
+#pragma unroll
+    for(int i = 1; i <= (radius << 1); i++)
         cache += col_ssd[i];
 
-    col_ssd_cache[0] = cache;
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (get_local_id(0) < BLOCK_W - radius)
-        cache2 = col_ssd_cache[radius];
-    else
-        for(int i = radius + 1; i < (2 * radius + 1); i++)
-            cache2 += col_ssd[i];
-
-    return col_ssd[0] + cache + cache2;
+    return cache;
 }
 
-uint2 MinSSD(volatile __local unsigned int *col_ssd_cache,
-             volatile __local unsigned int *col_ssd, int radius)
+uint2 MinSSD(__local unsigned int *col_ssd)
 {
     unsigned int ssd[N_DISPARITIES];
+    const int win_size = (radius << 1);
 
-    //See above:  #define COL_SSD_SIZE (BLOCK_W + 2 * radius)
-    ssd[0] = CalcSSD(col_ssd_cache, col_ssd + 0 * (BLOCK_W + 2 * radius), radius);
-    barrier(CLK_LOCAL_MEM_FENCE);
-    ssd[1] = CalcSSD(col_ssd_cache, col_ssd + 1 * (BLOCK_W + 2 * radius), radius);
-    barrier(CLK_LOCAL_MEM_FENCE);
-    ssd[2] = CalcSSD(col_ssd_cache, col_ssd + 2 * (BLOCK_W + 2 * radius), radius);
-    barrier(CLK_LOCAL_MEM_FENCE);
-    ssd[3] = CalcSSD(col_ssd_cache, col_ssd + 3 * (BLOCK_W + 2 * radius), radius);
-    barrier(CLK_LOCAL_MEM_FENCE);
-    ssd[4] = CalcSSD(col_ssd_cache, col_ssd + 4 * (BLOCK_W + 2 * radius), radius);
-    barrier(CLK_LOCAL_MEM_FENCE);
-    ssd[5] = CalcSSD(col_ssd_cache, col_ssd + 5 * (BLOCK_W + 2 * radius), radius);
-    barrier(CLK_LOCAL_MEM_FENCE);
-    ssd[6] = CalcSSD(col_ssd_cache, col_ssd + 6 * (BLOCK_W + 2 * radius), radius);
-    barrier(CLK_LOCAL_MEM_FENCE);
-    ssd[7] = CalcSSD(col_ssd_cache, col_ssd + 7 * (BLOCK_W + 2 * radius), radius);
-    barrier(CLK_LOCAL_MEM_FENCE);
+    //See above:  #define COL_SSD_SIZE (BLOCK_W + WIN_SIZE)
+    ssd[0] = CalcSSD(col_ssd + 0 * (BLOCK_W + win_size));
+    ssd[1] = CalcSSD(col_ssd + 1 * (BLOCK_W + win_size));
+    ssd[2] = CalcSSD(col_ssd + 2 * (BLOCK_W + win_size));
+    ssd[3] = CalcSSD(col_ssd + 3 * (BLOCK_W + win_size));
+    ssd[4] = CalcSSD(col_ssd + 4 * (BLOCK_W + win_size));
+    ssd[5] = CalcSSD(col_ssd + 5 * (BLOCK_W + win_size));
+    ssd[6] = CalcSSD(col_ssd + 6 * (BLOCK_W + win_size));
+    ssd[7] = CalcSSD(col_ssd + 7 * (BLOCK_W + win_size));
 
     unsigned int mssd = min(min(min(ssd[0], ssd[1]), min(ssd[4], ssd[5])), min(min(ssd[2], ssd[3]), min(ssd[6], ssd[7])));
 
     int bestIdx = 0;
+
     for (int i = 0; i < N_DISPARITIES; i++)
     {
         if (mssd == ssd[i])
@@ -113,124 +96,66 @@ uint2 MinSSD(volatile __local unsigned int *col_ssd_cache,
 }
 
 void StepDown(int idx1, int idx2, __global unsigned char* imageL,
-              __global unsigned char* imageR, int d, volatile  __local unsigned int *col_ssd, int radius)
+              __global unsigned char* imageR, int d,   __local unsigned int *col_ssd)
 {
-    unsigned char leftPixel1;
-    unsigned char leftPixel2;
-    unsigned char rightPixel1[8];
-    unsigned char rightPixel2[8];
-    unsigned int diff1, diff2;
-
-    leftPixel1 = imageL[idx1];
-    leftPixel2 = imageL[idx2];
-
-    idx1 = idx1 - d;
-    idx2 = idx2 - d;
-
-    rightPixel1[7] = imageR[idx1 - 7];
-    rightPixel1[0] = imageR[idx1 - 0];
-    rightPixel1[1] = imageR[idx1 - 1];
-    rightPixel1[2] = imageR[idx1 - 2];
-    rightPixel1[3] = imageR[idx1 - 3];
-    rightPixel1[4] = imageR[idx1 - 4];
-    rightPixel1[5] = imageR[idx1 - 5];
-    rightPixel1[6] = imageR[idx1 - 6];
-
-    rightPixel2[7] = imageR[idx2 - 7];
-    rightPixel2[0] = imageR[idx2 - 0];
-    rightPixel2[1] = imageR[idx2 - 1];
-    rightPixel2[2] = imageR[idx2 - 2];
-    rightPixel2[3] = imageR[idx2 - 3];
-    rightPixel2[4] = imageR[idx2 - 4];
-    rightPixel2[5] = imageR[idx2 - 5];
-    rightPixel2[6] = imageR[idx2 - 6];
-
-    //See above:  #define COL_SSD_SIZE (BLOCK_W + 2 * radius)
-    diff1 = leftPixel1 - rightPixel1[0];
-    diff2 = leftPixel2 - rightPixel2[0];
-    col_ssd[0 * (BLOCK_W + 2 * radius)] += SQ(diff2) - SQ(diff1);
-
-    diff1 = leftPixel1 - rightPixel1[1];
-    diff2 = leftPixel2 - rightPixel2[1];
-    col_ssd[1 * (BLOCK_W + 2 * radius)] += SQ(diff2) - SQ(diff1);
-
-    diff1 = leftPixel1 - rightPixel1[2];
-    diff2 = leftPixel2 - rightPixel2[2];
-    col_ssd[2 * (BLOCK_W + 2 * radius)] += SQ(diff2) - SQ(diff1);
-
-    diff1 = leftPixel1 - rightPixel1[3];
-    diff2 = leftPixel2 - rightPixel2[3];
-    col_ssd[3 * (BLOCK_W + 2 * radius)] += SQ(diff2) - SQ(diff1);
-
-    diff1 = leftPixel1 - rightPixel1[4];
-    diff2 = leftPixel2 - rightPixel2[4];
-    col_ssd[4 * (BLOCK_W + 2 * radius)] += SQ(diff2) - SQ(diff1);
-
-    diff1 = leftPixel1 - rightPixel1[5];
-    diff2 = leftPixel2 - rightPixel2[5];
-    col_ssd[5 * (BLOCK_W + 2 * radius)] += SQ(diff2) - SQ(diff1);
-
-    diff1 = leftPixel1 - rightPixel1[6];
-    diff2 = leftPixel2 - rightPixel2[6];
-    col_ssd[6 * (BLOCK_W + 2 * radius)] += SQ(diff2) - SQ(diff1);
-
-    diff1 = leftPixel1 - rightPixel1[7];
-    diff2 = leftPixel2 - rightPixel2[7];
-    col_ssd[7 * (BLOCK_W + 2 * radius)] += SQ(diff2) - SQ(diff1);
+    uint8 imgR1 = convert_uint8(vload8(0, imageR + (idx1 - d - 7)));
+    uint8 imgR2 = convert_uint8(vload8(0, imageR + (idx2 - d - 7)));
+    uint8 diff1 = (uint8)(imageL[idx1]) - imgR1;
+    uint8 diff2 = (uint8)(imageL[idx2]) - imgR2;
+    uint8 res = diff2 * diff2 - diff1 * diff1;
+    const int win_size = (radius << 1);
+    col_ssd[0 * (BLOCK_W + win_size)] += res.s7;
+    col_ssd[1 * (BLOCK_W + win_size)] += res.s6;
+    col_ssd[2 * (BLOCK_W + win_size)] += res.s5;
+    col_ssd[3 * (BLOCK_W + win_size)] += res.s4;
+    col_ssd[4 * (BLOCK_W + win_size)] += res.s3;
+    col_ssd[5 * (BLOCK_W + win_size)] += res.s2;
+    col_ssd[6 * (BLOCK_W + win_size)] += res.s1;
+    col_ssd[7 * (BLOCK_W + win_size)] += res.s0;
 }
 
 void InitColSSD(int x_tex, int y_tex, int im_pitch, __global unsigned char* imageL,
                 __global unsigned char* imageR, int d,
-                volatile __local unsigned int *col_ssd, int radius)
+                 __local unsigned int *col_ssd)
 {
-    unsigned char leftPixel1;
-    int idx;
-    unsigned int diffa[] = {0, 0, 0, 0, 0, 0, 0, 0};
-
-    for(int i = 0; i < (2 * radius + 1); i++)
+    uint8 leftPixel1;
+    uint8 diffa = 0;
+    int idx = y_tex * im_pitch + x_tex;
+    const int win_size = (radius << 1);
+    for(int i = 0; i < (win_size + 1); i++)
     {
-        idx = y_tex * im_pitch + x_tex;
-        leftPixel1 = imageL[idx];
-        idx = idx - d;
+        leftPixel1 = (uint8)(imageL[idx]);
+        uint8 imgR = convert_uint8(vload8(0, imageR + (idx - d - 7)));
+        uint8 res = leftPixel1 - imgR;
+        diffa += res * res;
 
-        diffa[0] += SQ(leftPixel1 - imageR[idx - 0]);
-        diffa[1] += SQ(leftPixel1 - imageR[idx - 1]);
-        diffa[2] += SQ(leftPixel1 - imageR[idx - 2]);
-        diffa[3] += SQ(leftPixel1 - imageR[idx - 3]);
-        diffa[4] += SQ(leftPixel1 - imageR[idx - 4]);
-        diffa[5] += SQ(leftPixel1 - imageR[idx - 5]);
-        diffa[6] += SQ(leftPixel1 - imageR[idx - 6]);
-        diffa[7] += SQ(leftPixel1 - imageR[idx - 7]);
-
-        y_tex += 1;
+        idx += im_pitch;
     }
-    //See above:  #define COL_SSD_SIZE (BLOCK_W + 2 * radius)
-    col_ssd[0 * (BLOCK_W + 2 * radius)] = diffa[0];
-    col_ssd[1 * (BLOCK_W + 2 * radius)] = diffa[1];
-    col_ssd[2 * (BLOCK_W + 2 * radius)] = diffa[2];
-    col_ssd[3 * (BLOCK_W + 2 * radius)] = diffa[3];
-    col_ssd[4 * (BLOCK_W + 2 * radius)] = diffa[4];
-    col_ssd[5 * (BLOCK_W + 2 * radius)] = diffa[5];
-    col_ssd[6 * (BLOCK_W + 2 * radius)] = diffa[6];
-    col_ssd[7 * (BLOCK_W + 2 * radius)] = diffa[7];
+    //See above:  #define COL_SSD_SIZE (BLOCK_W + WIN_SIZE)
+    col_ssd[0 * (BLOCK_W + win_size)] = diffa.s7;
+    col_ssd[1 * (BLOCK_W + win_size)] = diffa.s6;
+    col_ssd[2 * (BLOCK_W + win_size)] = diffa.s5;
+    col_ssd[3 * (BLOCK_W + win_size)] = diffa.s4;
+    col_ssd[4 * (BLOCK_W + win_size)] = diffa.s3;
+    col_ssd[5 * (BLOCK_W + win_size)] = diffa.s2;
+    col_ssd[6 * (BLOCK_W + win_size)] = diffa.s1;
+    col_ssd[7 * (BLOCK_W + win_size)] = diffa.s0;
 }
 
 __kernel void stereoKernel(__global unsigned char *left, __global unsigned char *right,
                            __global unsigned int *cminSSDImage, int cminSSD_step,
                            __global unsigned char *disp, int disp_step,int cwidth, int cheight,
-                           int img_step, int maxdisp, int radius,
+                           int img_step, int maxdisp,
                            __local unsigned int *col_ssd_cache)
 {
-
-    volatile __local unsigned int *col_ssd = col_ssd_cache + BLOCK_W + get_local_id(0);
-    volatile __local unsigned int *col_ssd_extra = get_local_id(0) < (2 * radius) ? col_ssd + BLOCK_W : 0;
+    __local unsigned int *col_ssd = col_ssd_cache + get_local_id(0);
+    __local unsigned int *col_ssd_extra = get_local_id(0) < (radius << 1) ? col_ssd + BLOCK_W : 0;
 
     int X = get_group_id(0) * BLOCK_W + get_local_id(0) + maxdisp + radius;
-    // int Y = get_group_id(1) * ROWSperTHREAD + radius;
 
 #define Y (get_group_id(1) * ROWSperTHREAD + radius)
 
-    volatile __global unsigned int* minSSDImage = cminSSDImage + X + Y * cminSSD_step;
+    __global unsigned int* minSSDImage = cminSSDImage + X + Y * cminSSD_step;
     __global unsigned char* disparImage = disp + X + Y * disp_step;
 
     int end_row = ROWSperTHREAD < (cheight - Y) ? ROWSperTHREAD:(cheight - Y);
@@ -244,14 +169,14 @@ __kernel void stereoKernel(__global unsigned char *left, __global unsigned char 
     {
         y_tex = Y - radius;
 
-        InitColSSD(x_tex, y_tex, img_step, left, right, d, col_ssd, radius);
+        InitColSSD(x_tex, y_tex, img_step, left, right, d, col_ssd);
         if (col_ssd_extra > 0)
             if (x_tex + BLOCK_W < cwidth)
-                InitColSSD(x_tex + BLOCK_W, y_tex, img_step, left, right, d, col_ssd_extra, radius);
+                InitColSSD(x_tex + BLOCK_W, y_tex, img_step, left, right, d, col_ssd_extra);
 
         barrier(CLK_LOCAL_MEM_FENCE); //before MinSSD function
 
-        uint2 minSSD = MinSSD(col_ssd_cache + get_local_id(0), col_ssd, radius);
+        uint2 minSSD = MinSSD(col_ssd);
         if (X < cwidth - radius && Y < cheight - radius)
         {
             if (minSSD.x < minSSDImage[0])
@@ -264,21 +189,18 @@ __kernel void stereoKernel(__global unsigned char *left, __global unsigned char 
         for(int row = 1; row < end_row; row++)
         {
             int idx1 = y_tex * img_step + x_tex;
-            int idx2 = min(y_tex + (2 * radius + 1), cheight - 1) * img_step + x_tex;
-
-            barrier(CLK_GLOBAL_MEM_FENCE);
+            int idx2 = min(y_tex + ((radius << 1) + 1), cheight - 1) * img_step + x_tex;
+            
             barrier(CLK_LOCAL_MEM_FENCE);
 
-            StepDown(idx1, idx2, left, right, d, col_ssd, radius);
+            StepDown(idx1, idx2, left, right, d, col_ssd);
             if (col_ssd_extra > 0)
                 if (x_tex + BLOCK_W < cwidth)
-                    StepDown(idx1, idx2, left + BLOCK_W, right + BLOCK_W, d, col_ssd_extra, radius);
-
-            y_tex += 1;
+                    StepDown(idx1, idx2, left + BLOCK_W, right + BLOCK_W, d, col_ssd_extra);
 
             barrier(CLK_LOCAL_MEM_FENCE);
 
-            uint2 minSSD = MinSSD(col_ssd_cache + get_local_id(0), col_ssd, radius);
+            uint2 minSSD = MinSSD(col_ssd);
             if (X < cwidth - radius && row < cheight - radius - Y)
             {
                 int idx = row * cminSSD_step;
@@ -288,10 +210,11 @@ __kernel void stereoKernel(__global unsigned char *left, __global unsigned char 
                     minSSDImage[idx] = minSSD.x;
                 }
             }
+
+            y_tex++;
         } // for row loop
     } // for d loop
 }
-
 //////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////// Sobel Prefiler (signal channel)//////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////
