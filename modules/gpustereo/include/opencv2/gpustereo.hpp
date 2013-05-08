@@ -48,43 +48,24 @@
 #endif
 
 #include "opencv2/core/gpu.hpp"
+#include "opencv2/calib3d.hpp"
 
 namespace cv { namespace gpu {
 
-class CV_EXPORTS StereoBM_GPU
+/////////////////////////////////////////
+// StereoBM
+
+class CV_EXPORTS StereoBM : public cv::StereoBM
 {
 public:
-    enum { BASIC_PRESET = 0, PREFILTER_XSOBEL = 1 };
+    using cv::StereoBM::compute;
 
-    enum { DEFAULT_NDISP = 64, DEFAULT_WINSZ = 19 };
-
-    //! the default constructor
-    StereoBM_GPU();
-    //! the full constructor taking the camera-specific preset, number of disparities and the SAD window size. ndisparities must be multiple of 8.
-    StereoBM_GPU(int preset, int ndisparities = DEFAULT_NDISP, int winSize = DEFAULT_WINSZ);
-
-    //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
-    //! Output disparity has CV_8U type.
-    void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream = Stream::Null());
-
-    //! Some heuristics that tries to estmate
-    // if current GPU will be faster than CPU in this algorithm.
-    // It queries current active device.
-    static bool checkIfGpuCallReasonable();
-
-    int preset;
-    int ndisp;
-    int winSize;
-
-    // If avergeTexThreshold  == 0 => post procesing is disabled
-    // If avergeTexThreshold != 0 then disparity is set 0 in each point (x,y) where for left image
-    // SumOfHorizontalGradiensInWindow(x, y, winSize) < (winSize * winSize) * avergeTexThreshold
-    // i.e. input left image is low textured.
-    float avergeTexThreshold;
-
-private:
-    GpuMat minSSD, leBuf, riBuf;
+    virtual void compute(InputArray left, InputArray right, OutputArray disparity, Stream& stream) = 0;
 };
+
+CV_EXPORTS Ptr<gpu::StereoBM> createStereoBM(int numDisparities = 64, int blockSize = 19);
+
+
 
 // "Efficient Belief Propagation for Early Vision"
 // P.Felzenszwalb

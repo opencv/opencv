@@ -65,7 +65,7 @@ private:
     Mat left, right;
     gpu::GpuMat d_left, d_right;
 
-    gpu::StereoBM_GPU bm;
+    Ptr<gpu::StereoBM> bm;
     gpu::StereoBeliefPropagation bp;
     gpu::StereoConstantSpaceBP csbp;
 
@@ -172,7 +172,7 @@ void App::run()
     imshow("right", right);
 
     // Set common parameters
-    bm.ndisp = p.ndisp;
+    bm = gpu::createStereoBM(p.ndisp);
     bp.ndisp = p.ndisp;
     csbp.ndisp = p.ndisp;
 
@@ -201,7 +201,7 @@ void App::run()
                 imshow("left", left);
                 imshow("right", right);
             }
-            bm(d_left, d_right, d_disp);
+            bm->compute(d_left, d_right, d_disp);
             break;
         case Params::BP: bp(d_left, d_right, d_disp); break;
         case Params::CSBP: csbp(d_left, d_right, d_disp); break;
@@ -228,8 +228,8 @@ void App::printParams() const
     switch (p.method)
     {
     case Params::BM:
-        cout << "win_size: " << bm.winSize << endl;
-        cout << "prefilter_sobel: " << bm.preset << endl;
+        cout << "win_size: " << bm->getBlockSize() << endl;
+        cout << "prefilter_sobel: " << bm->getPreFilterType() << endl;
         break;
     case Params::BP:
         cout << "iter_count: " << bp.iters << endl;
@@ -289,44 +289,44 @@ void App::handleKey(char key)
     case 's': case 'S':
         if (p.method == Params::BM)
         {
-            switch (bm.preset)
+            switch (bm->getPreFilterType())
             {
-            case gpu::StereoBM_GPU::BASIC_PRESET:
-                bm.preset = gpu::StereoBM_GPU::PREFILTER_XSOBEL;
+            case 0:
+                bm->setPreFilterType(cv::StereoBM::PREFILTER_XSOBEL);
                 break;
-            case gpu::StereoBM_GPU::PREFILTER_XSOBEL:
-                bm.preset = gpu::StereoBM_GPU::BASIC_PRESET;
+            case cv::StereoBM::PREFILTER_XSOBEL:
+                bm->setPreFilterType(0);
                 break;
             }
-            cout << "prefilter_sobel: " << bm.preset << endl;
+            cout << "prefilter_sobel: " << bm->getPreFilterType() << endl;
         }
         break;
     case '1':
         p.ndisp = p.ndisp == 1 ? 8 : p.ndisp + 8;
         cout << "ndisp: " << p.ndisp << endl;
-        bm.ndisp = p.ndisp;
+        bm->setNumDisparities(p.ndisp);
         bp.ndisp = p.ndisp;
         csbp.ndisp = p.ndisp;
         break;
     case 'q': case 'Q':
         p.ndisp = max(p.ndisp - 8, 1);
         cout << "ndisp: " << p.ndisp << endl;
-        bm.ndisp = p.ndisp;
+        bm->setNumDisparities(p.ndisp);
         bp.ndisp = p.ndisp;
         csbp.ndisp = p.ndisp;
         break;
     case '2':
         if (p.method == Params::BM)
         {
-            bm.winSize = min(bm.winSize + 1, 51);
-            cout << "win_size: " << bm.winSize << endl;
+            bm->setBlockSize(min(bm->getBlockSize() + 1, 51));
+            cout << "win_size: " << bm->getBlockSize() << endl;
         }
         break;
     case 'w': case 'W':
         if (p.method == Params::BM)
         {
-            bm.winSize = max(bm.winSize - 1, 2);
-            cout << "win_size: " << bm.winSize << endl;
+            bm->setBlockSize(max(bm->getBlockSize() - 1, 2));
+            cout << "win_size: " << bm->getBlockSize() << endl;
         }
         break;
     case '3':

@@ -51,7 +51,7 @@ struct Worker { void operator()(int device_id) const; };
 // GPUs data
 GpuMat d_left[2];
 GpuMat d_right[2];
-StereoBM_GPU* bm[2];
+Ptr<gpu::StereoBM> bm[2];
 GpuMat d_result[2];
 
 static void printHelp()
@@ -112,13 +112,13 @@ int main(int argc, char** argv)
     setDevice(0);
     d_left[0].upload(left.rowRange(0, left.rows / 2));
     d_right[0].upload(right.rowRange(0, right.rows / 2));
-    bm[0] = new StereoBM_GPU();
+    bm[0] = gpu::createStereoBM();
 
     // Split source images for processing on the GPU #1
     setDevice(1);
     d_left[1].upload(left.rowRange(left.rows / 2, left.rows));
     d_right[1].upload(right.rowRange(right.rows / 2, right.rows));
-    bm[1] = new StereoBM_GPU();
+    bm[1] = gpu::createStereoBM();
 
     // Execute calculation in two threads using two GPUs
     int devices[] = {0, 1};
@@ -130,7 +130,7 @@ int main(int argc, char** argv)
     d_left[0].release();
     d_right[0].release();
     d_result[0].release();
-    delete bm[0];
+    bm[0].release();
 
     // Release the second GPU resources
     setDevice(1);
@@ -138,7 +138,7 @@ int main(int argc, char** argv)
     d_left[1].release();
     d_right[1].release();
     d_result[1].release();
-    delete bm[1];
+    bm[1].release();
 
     waitKey();
     return 0;
@@ -149,8 +149,7 @@ void Worker::operator()(int device_id) const
 {
     setDevice(device_id);
 
-    bm[device_id]->operator()(d_left[device_id], d_right[device_id],
-                              d_result[device_id]);
+    bm[device_id]->compute(d_left[device_id], d_right[device_id], d_result[device_id]);
 
     std::cout << "GPU #" << device_id << " (" << DeviceInfo().name()
         << "): finished\n";

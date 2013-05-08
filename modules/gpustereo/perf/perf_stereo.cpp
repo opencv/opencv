@@ -63,18 +63,17 @@ PERF_TEST_P(ImagePair, StereoBM,
     const cv::Mat imgRight = readImage(GET_PARAM(1), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(imgRight.empty());
 
-    const int preset = 0;
     const int ndisp = 256;
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::StereoBM_GPU d_bm(preset, ndisp);
+        cv::Ptr<cv::StereoBM> d_bm = cv::gpu::createStereoBM(ndisp);
 
         const cv::gpu::GpuMat d_imgLeft(imgLeft);
         const cv::gpu::GpuMat d_imgRight(imgRight);
         cv::gpu::GpuMat dst;
 
-        TEST_CYCLE() d_bm(d_imgLeft, d_imgRight, dst);
+        TEST_CYCLE() d_bm->compute(d_imgLeft, d_imgRight, dst);
 
         GPU_SANITY_CHECK(dst);
     }

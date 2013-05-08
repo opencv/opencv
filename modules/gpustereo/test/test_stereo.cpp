@@ -71,10 +71,10 @@ GPU_TEST_P(StereoBM, Regression)
     ASSERT_FALSE(right_image.empty());
     ASSERT_FALSE(disp_gold.empty());
 
-    cv::gpu::StereoBM_GPU bm(0, 128, 19);
+    cv::Ptr<cv::StereoBM> bm = cv::gpu::createStereoBM(128, 19);
     cv::gpu::GpuMat disp;
 
-    bm(loadMat(left_image), loadMat(right_image), disp);
+    bm->compute(loadMat(left_image), loadMat(right_image), disp);
 
     EXPECT_MAT_NEAR(disp_gold, disp, 0.0);
 }
