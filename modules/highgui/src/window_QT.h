@@ -42,19 +42,16 @@
 
 #include "precomp.hpp"
 
-#if defined( HAVE_QT_OPENGL )
+#if defined (HAVE_QT_OPENGL) || defined (HAVE_QT5_OPENGL)
 #include <QtOpenGL>
 #include <QGLWidget>
 #endif
 
 #include <QAbstractEventDispatcher>
-#include <QtGui/QApplication>
 #include <QFile>
 #include <QPushButton>
-#include <QtGui/QGraphicsView>
 #include <QSizePolicy>
 #include <QInputDialog>
-#include <QtGui/QBoxLayout>
 #include <QSettings>
 #include <qtimer.h>
 #include <QtConcurrentRun>
@@ -78,6 +75,17 @@
 #include <QRadioButton>
 #include <QButtonGroup>
 #include <QMenu>
+
+#if defined( HAVE_QT )
+#include <QtGui/QApplication>
+#include <QtGui/QGraphicsView>
+#include <QtGui/QBoxLayout>
+#elif defined( HAVE_QT5 )
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QGraphicsView>
+#include <QtWidgets/QBoxLayout>
+#endif
+
 #include <QtTest/QTest>
 
 //start private enum
@@ -403,7 +411,7 @@ public:
 
 
 
-#ifdef HAVE_QT_OPENGL
+#if defined (HAVE_QT_OPENGL) || defined (HAVE_QT5_OPENGL)
 
 class OpenGlViewPort : public QGLWidget, public ViewPort
 {
@@ -456,7 +464,7 @@ private:
     void icvmouseProcessing(QPointF pt, int cv_event, int flags);
 };
 
-#endif // HAVE_QT_OPENGL
+#endif // HAVE_QT_OPENGL || HAVE_QT5_OPENGL
 
 
 class DefaultViewPort : public QGraphicsView, public ViewPort

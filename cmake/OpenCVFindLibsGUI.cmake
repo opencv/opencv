@@ -22,6 +22,23 @@ if(WITH_QT)
   endif()
 endif()
 
+# --- QT5 ---
+ocv_clear_vars(HAVE_QT5)
+if(WITH_QT5)
+  find_package(Qt5Core)
+  find_package(Qt5Widgets)
+  find_package(Qt5Test)
+  find_package(Qt5Concurrent)
+  if(Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5Test_FOUND AND Qt5Concurrent_FOUND)
+    set(HAVE_QT5 TRUE)
+    add_definitions(-DHAVE_QT5) # We need to define the macro this way, using cvconfig.h does not work
+
+    if(WITH_OPENGL)
+      find_package(Qt5OpenGL)
+    endif()
+  endif()
+endif()
+
 # --- GTK ---
 ocv_clear_vars(HAVE_GTK HAVE_GTHREAD HAVE_GTKGLEXT)
 if(WITH_GTK AND NOT HAVE_QT)
@@ -33,9 +50,9 @@ if(WITH_GTK AND NOT HAVE_QT)
 endif()
 
 # --- OpenGl ---
-ocv_clear_vars(HAVE_OPENGL HAVE_QT_OPENGL)
+ocv_clear_vars(HAVE_OPENGL HAVE_QT_OPENGL HAVE_QT5_OPENGL)
 if(WITH_OPENGL)
-  if(WITH_WIN32UI OR (HAVE_QT AND QT_QTOPENGL_FOUND) OR HAVE_GTKGLEXT)
+  if(WITH_WIN32UI OR (HAVE_QT AND QT_QTOPENGL_FOUND) OR (HAVE_QT5 AND Qt5OpenGL_FOUND) OR HAVE_GTKGLEXT)
     find_package (OpenGL QUIET)
     if(OPENGL_FOUND)
       set(HAVE_OPENGL TRUE)
@@ -43,6 +60,9 @@ if(WITH_OPENGL)
       if(QT_QTOPENGL_FOUND)
         set(HAVE_QT_OPENGL TRUE)
         add_definitions(-DHAVE_QT_OPENGL)
+      elseif(Qt5OpenGL_FOUND)
+        set(HAVE_QT5_OPENGL TRUE)
+        add_definitions(-DHAVE_QT5_OPENGL) # We need to define the macro this way, using cvconfig.h does not work
       else()
         ocv_include_directories(${OPENGL_INCLUDE_DIR})
       endif()
