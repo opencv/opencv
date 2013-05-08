@@ -173,13 +173,13 @@ PERF_TEST_P(ImagePair, DisparityBilateralFilter,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::DisparityBilateralFilter d_filter(ndisp);
+        cv::Ptr<cv::gpu::DisparityBilateralFilter> d_filter = cv::gpu::createDisparityBilateralFilter(ndisp);
 
         const cv::gpu::GpuMat d_img(img);
         const cv::gpu::GpuMat d_disp(disp);
         cv::gpu::GpuMat dst;
 
-        TEST_CYCLE() d_filter(d_disp, d_img, dst);
+        TEST_CYCLE() d_filter->apply(d_disp, d_img, dst);
 
         GPU_SANITY_CHECK(dst);
     }

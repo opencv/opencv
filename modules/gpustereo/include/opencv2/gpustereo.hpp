@@ -134,43 +134,47 @@ public:
 CV_EXPORTS Ptr<gpu::StereoConstantSpaceBP>
     createStereoConstantSpaceBP(int ndisp = 128, int iters = 8, int levels = 4, int nr_plane = 4, int msg_type = CV_32F);
 
+/////////////////////////////////////////
+// DisparityBilateralFilter
 
-
-
-// Disparity map refinement using joint bilateral filtering given a single color image.
-// Qingxiong Yang, Liang Wang, Narendra Ahuja
-// http://vision.ai.uiuc.edu/~qyang6/
-class CV_EXPORTS DisparityBilateralFilter
+//! Disparity map refinement using joint bilateral filtering given a single color image.
+//! Qingxiong Yang, Liang Wang, Narendra Ahuja
+//! http://vision.ai.uiuc.edu/~qyang6/
+class CV_EXPORTS DisparityBilateralFilter : public cv::Algorithm
 {
 public:
-    enum { DEFAULT_NDISP  = 64 };
-    enum { DEFAULT_RADIUS = 3 };
-    enum { DEFAULT_ITERS  = 1 };
-
-    //! the default constructor
-    explicit DisparityBilateralFilter(int ndisp = DEFAULT_NDISP, int radius = DEFAULT_RADIUS, int iters = DEFAULT_ITERS);
-
-    //! the full constructor taking the number of disparities, filter radius,
-    //! number of iterations, truncation of data continuity, truncation of disparity continuity
-    //! and filter range sigma
-    DisparityBilateralFilter(int ndisp, int radius, int iters, float edge_threshold, float max_disc_threshold, float sigma_range);
-
     //! the disparity map refinement operator. Refine disparity map using joint bilateral filtering given a single color image.
     //! disparity must have CV_8U or CV_16S type, image must have CV_8UC1 or CV_8UC3 type.
-    void operator()(const GpuMat& disparity, const GpuMat& image, GpuMat& dst, Stream& stream = Stream::Null());
+    virtual void apply(InputArray disparity, InputArray image, OutputArray dst, Stream& stream = Stream::Null()) = 0;
 
-private:
-    int ndisp;
-    int radius;
-    int iters;
+    virtual int getNumDisparities() const = 0;
+    virtual void setNumDisparities(int numDisparities) = 0;
 
-    float edge_threshold;
-    float max_disc_threshold;
-    float sigma_range;
+    virtual int getRadius() const = 0;
+    virtual void setRadius(int radius) = 0;
 
-    GpuMat table_color;
-    GpuMat table_space;
+    virtual int getNumIters() const = 0;
+    virtual void setNumIters(int iters) = 0;
+
+    //! truncation of data continuity
+    virtual double getEdgeThreshold() const = 0;
+    virtual void setEdgeThreshold(double edge_threshold) = 0;
+
+    //! truncation of disparity continuity
+    virtual double getMaxDiscThreshold() const = 0;
+    virtual void setMaxDiscThreshold(double max_disc_threshold) = 0;
+
+    //! filter range sigma
+    virtual double getSigmaRange() const = 0;
+    virtual void setSigmaRange(double sigma_range) = 0;
 };
+
+CV_EXPORTS Ptr<gpu::DisparityBilateralFilter>
+    createDisparityBilateralFilter(int ndisp = 64, int radius = 3, int iters = 1);
+
+
+
+
 
 //! Reprojects disparity image to 3D space.
 //! Supports CV_8U and CV_16S types of input disparity.
