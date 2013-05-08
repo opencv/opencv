@@ -141,13 +141,13 @@ PERF_TEST_P(ImagePair, StereoConstantSpaceBP,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::StereoConstantSpaceBP d_csbp(ndisp);
+        cv::Ptr<cv::gpu::StereoConstantSpaceBP> d_csbp = cv::gpu::createStereoConstantSpaceBP(ndisp);
 
         const cv::gpu::GpuMat d_imgLeft(imgLeft);
         const cv::gpu::GpuMat d_imgRight(imgRight);
         cv::gpu::GpuMat dst;
 
-        TEST_CYCLE() d_csbp(d_imgLeft, d_imgRight, dst);
+        TEST_CYCLE() d_csbp->compute(d_imgLeft, d_imgRight, dst);
 
         GPU_SANITY_CHECK(dst);
     }

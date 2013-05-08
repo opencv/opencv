@@ -112,63 +112,30 @@ public:
 CV_EXPORTS Ptr<gpu::StereoBeliefPropagation>
     createStereoBeliefPropagation(int ndisp = 64, int iters = 5, int levels = 5, int msg_type = CV_32F);
 
+/////////////////////////////////////////
+// StereoConstantSpaceBP
 
-
-// "A Constant-Space Belief Propagation Algorithm for Stereo Matching"
-// Qingxiong Yang, Liang Wang, Narendra Ahuja
-// http://vision.ai.uiuc.edu/~qyang6/
-class CV_EXPORTS StereoConstantSpaceBP
+//! "A Constant-Space Belief Propagation Algorithm for Stereo Matching"
+//! Qingxiong Yang, Liang Wang, Narendra Ahuja
+//! http://vision.ai.uiuc.edu/~qyang6/
+class CV_EXPORTS StereoConstantSpaceBP : public gpu::StereoBeliefPropagation
 {
 public:
-    enum { DEFAULT_NDISP    = 128 };
-    enum { DEFAULT_ITERS    = 8   };
-    enum { DEFAULT_LEVELS   = 4   };
-    enum { DEFAULT_NR_PLANE = 4   };
+    //! number of active disparity on the first level
+    virtual int getNrPlane() const = 0;
+    virtual void setNrPlane(int nr_plane) = 0;
+
+    virtual bool getUseLocalInitDataCost() const = 0;
+    virtual void setUseLocalInitDataCost(bool use_local_init_data_cost) = 0;
 
     static void estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels, int& nr_plane);
-
-    //! the default constructor
-    explicit StereoConstantSpaceBP(int ndisp    = DEFAULT_NDISP,
-                                   int iters    = DEFAULT_ITERS,
-                                   int levels   = DEFAULT_LEVELS,
-                                   int nr_plane = DEFAULT_NR_PLANE,
-                                   int msg_type = CV_32F);
-
-    //! the full constructor taking the number of disparities, number of BP iterations on each level,
-    //! number of levels, number of active disparity on the first level, truncation of data cost, data weight,
-    //! truncation of discontinuity cost, discontinuity single jump and minimum disparity threshold
-    StereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane,
-        float max_data_term, float data_weight, float max_disc_term, float disc_single_jump,
-        int min_disp_th = 0,
-        int msg_type = CV_32F);
-
-    //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
-    //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
-    void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream = Stream::Null());
-
-    int ndisp;
-
-    int iters;
-    int levels;
-
-    int nr_plane;
-
-    float max_data_term;
-    float data_weight;
-    float max_disc_term;
-    float disc_single_jump;
-
-    int min_disp_th;
-
-    int msg_type;
-
-    bool use_local_init_data_cost;
-private:
-    GpuMat messages_buffers;
-
-    GpuMat temp;
-    GpuMat out;
 };
+
+CV_EXPORTS Ptr<gpu::StereoConstantSpaceBP>
+    createStereoConstantSpaceBP(int ndisp = 128, int iters = 8, int levels = 4, int nr_plane = 4, int msg_type = CV_32F);
+
+
+
 
 // Disparity map refinement using joint bilateral filtering given a single color image.
 // Qingxiong Yang, Liang Wang, Narendra Ahuja

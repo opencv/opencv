@@ -67,7 +67,7 @@ private:
 
     Ptr<gpu::StereoBM> bm;
     Ptr<gpu::StereoBeliefPropagation> bp;
-    gpu::StereoConstantSpaceBP csbp;
+    Ptr<gpu::StereoConstantSpaceBP> csbp;
 
     int64 work_begin;
     double work_fps;
@@ -174,7 +174,7 @@ void App::run()
     // Set common parameters
     bm = gpu::createStereoBM(p.ndisp);
     bp = gpu::createStereoBeliefPropagation(p.ndisp);
-    csbp.ndisp = p.ndisp;
+    csbp = cv::gpu::createStereoConstantSpaceBP(p.ndisp);
 
     // Prepare disparity map of specified type
     Mat disp(left.size(), CV_8U);
@@ -204,7 +204,7 @@ void App::run()
             bm->compute(d_left, d_right, d_disp);
             break;
         case Params::BP: bp->compute(d_left, d_right, d_disp); break;
-        case Params::CSBP: csbp(d_left, d_right, d_disp); break;
+        case Params::CSBP: csbp->compute(d_left, d_right, d_disp); break;
         }
         workEnd();
 
@@ -236,8 +236,8 @@ void App::printParams() const
         cout << "level_count: " << bp->getNumLevels() << endl;
         break;
     case Params::CSBP:
-        cout << "iter_count: " << csbp.iters << endl;
-        cout << "level_count: " << csbp.levels << endl;
+        cout << "iter_count: " << csbp->getNumIters() << endl;
+        cout << "level_count: " << csbp->getNumLevels() << endl;
         break;
     }
     cout << endl;
@@ -306,14 +306,14 @@ void App::handleKey(char key)
         cout << "ndisp: " << p.ndisp << endl;
         bm->setNumDisparities(p.ndisp);
         bp->setNumDisparities(p.ndisp);
-        csbp.ndisp = p.ndisp;
+        csbp->setNumDisparities(p.ndisp);
         break;
     case 'q': case 'Q':
         p.ndisp = max(p.ndisp - 8, 1);
         cout << "ndisp: " << p.ndisp << endl;
         bm->setNumDisparities(p.ndisp);
         bp->setNumDisparities(p.ndisp);
-        csbp.ndisp = p.ndisp;
+        csbp->setNumDisparities(p.ndisp);
         break;
     case '2':
         if (p.method == Params::BM)
@@ -337,8 +337,8 @@ void App::handleKey(char key)
         }
         else if (p.method == Params::CSBP)
         {
-            csbp.iters += 1;
-            cout << "iter_count: " << csbp.iters << endl;
+            csbp->setNumIters(csbp->getNumIters() + 1);
+            cout << "iter_count: " << csbp->getNumIters() << endl;
         }
         break;
     case 'e': case 'E':
@@ -349,8 +349,8 @@ void App::handleKey(char key)
         }
         else if (p.method == Params::CSBP)
         {
-            csbp.iters = max(csbp.iters - 1, 1);
-            cout << "iter_count: " << csbp.iters << endl;
+            csbp->setNumIters(max(csbp->getNumIters() - 1, 1));
+            cout << "iter_count: " << csbp->getNumIters() << endl;
         }
         break;
     case '4':
@@ -361,8 +361,8 @@ void App::handleKey(char key)
         }
         else if (p.method == Params::CSBP)
         {
-            csbp.levels += 1;
-            cout << "level_count: " << csbp.levels << endl;
+            csbp->setNumLevels(csbp->getNumLevels() + 1);
+            cout << "level_count: " << csbp->getNumLevels() << endl;
         }
         break;
     case 'r': case 'R':
@@ -373,8 +373,8 @@ void App::handleKey(char key)
         }
         else if (p.method == Params::CSBP)
         {
-            csbp.levels = max(csbp.levels - 1, 1);
-            cout << "level_count: " << csbp.levels << endl;
+            csbp->setNumLevels(max(csbp->getNumLevels() - 1, 1));
+            cout << "level_count: " << csbp->getNumLevels() << endl;
         }
         break;
     }

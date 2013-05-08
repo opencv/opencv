@@ -155,10 +155,10 @@ GPU_TEST_P(StereoConstantSpaceBP, Regression)
     ASSERT_FALSE(right_image.empty());
     ASSERT_FALSE(disp_gold.empty());
 
-    cv::gpu::StereoConstantSpaceBP csbp(128, 16, 4, 4);
+    cv::Ptr<cv::gpu::StereoConstantSpaceBP> csbp = cv::gpu::createStereoConstantSpaceBP(128, 16, 4, 4);
     cv::gpu::GpuMat disp;
 
-    csbp(loadMat(left_image), loadMat(right_image), disp);
+    csbp->compute(loadMat(left_image), loadMat(right_image), disp);
 
     cv::Mat h_disp(disp);
     h_disp.convertTo(h_disp, disp_gold.depth());
