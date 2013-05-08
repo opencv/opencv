@@ -318,7 +318,7 @@ namespace cv
                     openCLSafeCall(clGetDeviceIDs(platforms[i], devicetype, numsdev, &devices[0], 0));
 
                     Info ocltmpinfo;
-                    openCLSafeCall(clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR, sizeof(plfmName), plfmName, NULL));
+                    openCLSafeCall(clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, sizeof(plfmName), plfmName, NULL));
                     ocltmpinfo.PlatformName = String(plfmName);
                     ocltmpinfo.impl->platName = String(plfmName);
                     ocltmpinfo.impl->oclplatform = platforms[i];
