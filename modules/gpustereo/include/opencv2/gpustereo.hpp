@@ -172,21 +172,20 @@ public:
 CV_EXPORTS Ptr<gpu::DisparityBilateralFilter>
     createDisparityBilateralFilter(int ndisp = 64, int radius = 3, int iters = 1);
 
-
-
-
+/////////////////////////////////////////
+// Utility
 
 //! Reprojects disparity image to 3D space.
 //! Supports CV_8U and CV_16S types of input disparity.
 //! The output is a 3- or 4-channel floating-point matrix.
 //! Each element of this matrix will contain the 3D coordinates of the point (x,y,z,1), computed from the disparity map.
 //! Q is the 4x4 perspective transformation matrix that can be obtained with cvStereoRectify.
-CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, int dst_cn = 4, Stream& stream = Stream::Null());
+CV_EXPORTS void reprojectImageTo3D(InputArray disp, OutputArray xyzw, InputArray Q, int dst_cn = 4, Stream& stream = Stream::Null());
 
 //! Does coloring of disparity image: [0..ndisp) -> [0..240, 1, 1] in HSV.
 //! Supported types of input disparity: CV_8U, CV_16S.
 //! Output disparity has CV_8UC4 type in BGRA format (alpha = 255).
-CV_EXPORTS void drawColorDisp(const GpuMat& src_disp, GpuMat& dst_disp, int ndisp, Stream& stream = Stream::Null());
+CV_EXPORTS void drawColorDisp(InputArray src_disp, OutputArray dst_disp, int ndisp, Stream& stream = Stream::Null());
 
 }} // namespace cv { namespace gpu {
 
