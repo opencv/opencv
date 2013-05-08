@@ -116,6 +116,19 @@ PARAM_TEST_CASE(FilterTestBase,
         gmat1 = mat1_roi;
     }
 
+    void Init(int mat_type)
+    {
+        cv::Size size(MWIDTH, MHEIGHT);
+        mat1 = randomMat(size, mat_type, 5, 16);
+        dst  = randomMat(size, mat_type, 5, 16);
+    }
+
+    void Near(double threshold)
+    {
+        cv::Mat cpu_dst;
+        gdst_whole.download(cpu_dst);
+        EXPECT_MAT_NEAR(dst, cpu_dst, threshold, "");
+    }
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -131,12 +144,7 @@ struct Blur : FilterTestBase
         type = GET_PARAM(0);
         ksize = GET_PARAM(1);
         bordertype = GET_PARAM(3);
-
-        cv::RNG &rng = TS::ptr()->get_rng();
-        cv::Size size(MWIDTH, MHEIGHT);
-
-        mat1 = randomMat(rng, size, type, 5, 16, false);
-        dst  = randomMat(rng, size, type, 5, 16, false);
+        Init(type);
     }
 };
 
@@ -145,18 +153,11 @@ TEST_P(Blur, Mat)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-
         cv::blur(mat1_roi, dst_roi, ksize, Point(-1, -1), bordertype);
         cv::ocl::blur(gmat1, gdst, ksize, Point(-1, -1), bordertype);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1.0, "");
+        Near(1.0);
     }
-
 }
-
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -170,15 +171,8 @@ struct Laplacian : FilterTestBase
     {
         type = GET_PARAM(0);
         ksize = GET_PARAM(1);
-
-        cv::RNG &rng = TS::ptr()->get_rng();
-        cv::Size size(MWIDTH, MHEIGHT);
-
-        mat1  = randomMat(rng, size, type, 5, 16, false);
-        dst  = randomMat(rng, size, type, 5, 16, false);
-
+        Init(type);
     }
-
 };
 
 TEST_P(Laplacian, Accuracy)
@@ -186,14 +180,9 @@ TEST_P(Laplacian, Accuracy)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-
         cv::Laplacian(mat1_roi, dst_roi, -1, ksize.width, 1);
         cv::ocl::Laplacian(gmat1, gdst, -1, ksize.width, 1);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -213,45 +202,28 @@ struct ErodeDilate : FilterTestBase
     {
         type = GET_PARAM(0);
         iterations = GET_PARAM(3);
-
-        cv::RNG &rng = TS::ptr()->get_rng();
-        cv::Size size(MWIDTH, MHEIGHT);
-
-        mat1 = randomMat(rng, size, type, 5, 16, false);
-        dst  = randomMat(rng, size, type, 5, 16, false);
+        Init(type);
         //		rng.fill(kernel, cv::RNG::UNIFORM, cv::Scalar::all(0), cv::Scalar::all(3));
-        kernel = randomMat(rng, Size(3, 3), CV_8UC1, 0, 3, false);
-
+        kernel = randomMat(Size(3, 3), CV_8UC1, 0, 3);
     }
 
 };
-
-// erode
 
 TEST_P(ErodeDilate, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-
         cv::erode(mat1_roi, dst_roi, kernel, Point(-1, -1), iterations);
         cv::ocl::erode(gmat1, gdst, kernel, Point(-1, -1), iterations);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
         cv::dilate(mat1_roi, dst_roi, kernel, Point(-1, -1), iterations);
         cv::ocl::dilate(gmat1, gdst, kernel, Point(-1, -1), iterations);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
+        Near(1e-5);
     }
 }
 
@@ -272,15 +244,8 @@ struct Sobel : FilterTestBase
         dx = s.width;
         dy = s.height;
         bordertype = GET_PARAM(3);
-
-
-        cv::RNG &rng = TS::ptr()->get_rng();
-        cv::Size size(MWIDTH, MHEIGHT);
-
-        mat1 = randomMat(rng, size, type, 5, 16, false);
-        dst  = randomMat(rng, size, type, 5, 16, false);
+        Init(type);
     }
-
 };
 
 TEST_P(Sobel, Mat)
@@ -288,16 +253,10 @@ TEST_P(Sobel, Mat)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-
         cv::Sobel(mat1_roi, dst_roi, -1, dx, dy, ksize, /*scale*/0.00001,/*delta*/0, bordertype);
         cv::ocl::Sobel(gmat1, gdst, -1, dx, dy, ksize,/*scale*/0.00001,/*delta*/0, bordertype);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1, "");
+        Near(1);
     }
-
 }
 
 
@@ -315,17 +274,8 @@ struct Scharr : FilterTestBase
         dx = s.width;
         dy = s.height;
         bordertype = GET_PARAM(3);
-        dx = 1;
-        dy = 0;
-
-        cv::RNG &rng = TS::ptr()->get_rng();
-        cv::Size size(MWIDTH, MHEIGHT);
-
-        mat1 = randomMat(rng, size, type, 5, 16, false);
-        dst  = randomMat(rng, size, type, 5, 16, false);
-
+        Init(type);
     }
-
 };
 
 TEST_P(Scharr, Mat)
@@ -333,14 +283,9 @@ TEST_P(Scharr, Mat)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-
         cv::Scharr(mat1_roi, dst_roi, -1, dx, dy, /*scale*/1,/*delta*/0, bordertype);
         cv::ocl::Scharr(gmat1, gdst, -1, dx, dy,/*scale*/1,/*delta*/0, bordertype);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1, "");
+        Near(1);
     }
 
 }
@@ -360,18 +305,11 @@ struct GaussianBlur : FilterTestBase
         type = GET_PARAM(0);
         ksize = GET_PARAM(1);
         bordertype = GET_PARAM(3);
-
+        Init(type);
         cv::RNG &rng = TS::ptr()->get_rng();
-        cv::Size size(MWIDTH, MHEIGHT);
-
         sigma1 = rng.uniform(0.1, 1.0);
         sigma2 = rng.uniform(0.1, 1.0);
-
-        mat1 = randomMat(rng, size, type, 5, 16, false);
-        dst  = randomMat(rng, size, type, 5, 16, false);
-
     }
-
 };
 
 TEST_P(GaussianBlur, Mat)
@@ -379,14 +317,9 @@ TEST_P(GaussianBlur, Mat)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-
         cv::GaussianBlur(mat1_roi, dst_roi, ksize, sigma1, sigma2, bordertype);
         cv::ocl::GaussianBlur(gmat1, gdst, ksize, sigma1, sigma2, bordertype);
-
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1.0, "");
+        Near(1);
     }
 
 }
@@ -423,7 +356,7 @@ INSTANTIATE_TEST_CASE_P(Filter, Sobel, Combine(
 INSTANTIATE_TEST_CASE_P(Filter, Scharr, Combine(
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC4),
                         Values(Size(0, 0)), //not use
-                        Values(Size(0, 0), Size(0, 1), Size(1, 0), Size(1, 1)), 
+                        Values(Size(0, 1), Size(1, 0)), 
                         Values((MatType)cv::BORDER_CONSTANT, (MatType)cv::BORDER_REPLICATE)));
 
 INSTANTIATE_TEST_CASE_P(Filter, GaussianBlur, Combine(
