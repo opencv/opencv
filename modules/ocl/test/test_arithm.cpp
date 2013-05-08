@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -21,6 +22,7 @@
 //    Jiang Liyuan,jlyuan001.good@163.com
 //    Rock Li, Rock.Li@amd.com
 //    Zailong Wu, bullet@yeah.net
+//    Yao Wang, bitwangyaoyao@gmail.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -87,14 +89,13 @@ PARAM_TEST_CASE(ArithmTestBase, MatType, bool)
     int maskx;
     int masky;
 
-
     //src mat with roi
     cv::Mat mat1_roi;
     cv::Mat mat2_roi;
     cv::Mat mask_roi;
     cv::Mat dst_roi;
     cv::Mat dst1_roi; //bak
-    //std::vector<cv::ocl::Info> oclinfo;
+
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
     cv::ocl::oclMat gdst1_whole; //bak
@@ -202,17 +203,12 @@ TEST_P(Lut, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download (cpu_dst);
-        char s[1024];
-        sprintf(s, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0, s);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0, "");
     }
 }
 
 
-
-
 ////////////////////////////////exp/////////////////////////////////////////////////
-
 struct Exp : ArithmTestBase {};
 
 TEST_P(Exp, Mat)
@@ -227,16 +223,13 @@ TEST_P(Exp, Mat)
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
 
-        char s[1024];
-        sprintf(s, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 2, s);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 2, "");
 
     }
 }
 
 
 ////////////////////////////////log/////////////////////////////////////////////////
-
 struct Log : ArithmTestBase {};
 
 TEST_P(Log, Mat)
@@ -245,24 +238,17 @@ TEST_P(Log, Mat)
     {
         random_roi();
 
-
         cv::log(mat1_roi, dst_roi);
         cv::ocl::log(gmat1, gdst);
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char s[1024];
-        sprintf(s, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1, s);
-
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1, "");
     }
 }
 
 
-
-
 ////////////////////////////////add/////////////////////////////////////////////////
-
 struct Add : ArithmTestBase {};
 
 TEST_P(Add, Mat)
@@ -276,9 +262,7 @@ TEST_P(Add, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char s[1024];
-        sprintf(s, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, s);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
     }
 }
 
@@ -293,9 +277,7 @@ TEST_P(Add, Mat_Mask)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char s[1024];
-        sprintf(s, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, s);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
     }
 }
 TEST_P(Add, Scalar)
@@ -309,9 +291,7 @@ TEST_P(Add, Scalar)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char s[1024];
-        sprintf(s, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, s);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
 
@@ -326,9 +306,7 @@ TEST_P(Add, Scalar_Mask)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char s[1024];
-        sprintf(s, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, s);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
 
@@ -348,9 +326,7 @@ TEST_P(Sub, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char s[1024];
-        sprintf(s, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, s);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
     }
 }
 
@@ -365,11 +341,10 @@ TEST_P(Sub, Mat_Mask)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char s[1024];
-        sprintf(s, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, s);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
     }
 }
+
 TEST_P(Sub, Scalar)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
@@ -381,9 +356,7 @@ TEST_P(Sub, Scalar)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char s[1024];
-        sprintf(s, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, s);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
 
@@ -398,9 +371,7 @@ TEST_P(Sub, Scalar_Mask)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char s[1024];
-        sprintf(s, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, s);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
 
@@ -420,9 +391,7 @@ TEST_P(Mul, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char s[1024];
-        sprintf(s, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, s);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
     }
 }
 
@@ -440,9 +409,7 @@ TEST_P(Mul, Mat_Scalar)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.001, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.001, "");
     }
 }
 
@@ -461,10 +428,7 @@ TEST_P(Div, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1, "");
     }
 }
 
@@ -482,10 +446,7 @@ TEST_P(Div, Mat_Scalar)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.001, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.001, "");
     }
 }
 
@@ -503,10 +464,7 @@ TEST_P(Absdiff, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0, "");
     }
 }
 
@@ -521,10 +479,7 @@ TEST_P(Absdiff, Mat_Scalar)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
 
@@ -546,10 +501,8 @@ TEST_P(CartToPolar, angleInDegree)
 
         cv::Mat cpu_dst1;
         gdst1_whole.download(cpu_dst1);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.5, sss);
-        EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.5, "");
+        EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.5, "");
     }
 }
 
@@ -567,14 +520,10 @@ TEST_P(CartToPolar, angleInRadians)
 
         cv::Mat cpu_dst1;
         gdst1_whole.download(cpu_dst1);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.5, sss);
-        EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.5, "");
+        EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.5, "");
     }
 }
-
-
 
 
 struct PolarToCart : ArithmTestBase {};
@@ -593,11 +542,9 @@ TEST_P(PolarToCart, angleInDegree)
 
         cv::Mat cpu_dst1;
         gdst1_whole.download(cpu_dst1);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.5, sss);
-        EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.5, "");
+        EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.5, "");
     }
 }
 
@@ -615,11 +562,9 @@ TEST_P(PolarToCart, angleInRadians)
 
         cv::Mat cpu_dst1;
         gdst1_whole.download(cpu_dst1);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.5, sss);
-        EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.5, "");
+        EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.5, "");
     }
 }
 
@@ -639,14 +584,10 @@ TEST_P(Magnitude, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
-
-
 
 
 struct Transpose : ArithmTestBase {};
@@ -662,14 +603,10 @@ TEST_P(Transpose, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
-
-
 
 
 
@@ -686,10 +623,8 @@ TEST_P(Flip, X)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
 
@@ -704,10 +639,8 @@ TEST_P(Flip, Y)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
 
@@ -722,13 +655,10 @@ TEST_P(Flip, BOTH)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
-
 
 
 struct MinMax : ArithmTestBase {};
@@ -761,12 +691,8 @@ TEST_P(MinMax, MAT)
         double minVal_, maxVal_;
         cv::ocl::minMax(gmat1, &minVal_, &maxVal_);
 
-        //check results
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-
-        EXPECT_DOUBLE_EQ(minVal_, minVal) << sss;
-        EXPECT_DOUBLE_EQ(maxVal_, maxVal) << sss;
+        EXPECT_DOUBLE_EQ(minVal_, minVal);
+        EXPECT_DOUBLE_EQ(maxVal_, maxVal);
     }
 }
 
@@ -799,12 +725,8 @@ TEST_P(MinMax, MASK)
         double minVal_, maxVal_;
         cv::ocl::minMax(gmat1, &minVal_, &maxVal_, gmask);
 
-        //check results
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-
-        EXPECT_DOUBLE_EQ(minVal_, minVal) << sss;
-        EXPECT_DOUBLE_EQ(maxVal_, maxVal) << sss;
+        EXPECT_DOUBLE_EQ(minVal_, minVal);
+        EXPECT_DOUBLE_EQ(maxVal_, maxVal);
     }
 }
 
@@ -915,17 +837,13 @@ TEST_P(MinMaxLoc, MAT)
             error1 = ::abs(mat1_roi.at<double>(maxLoc_) - mat1_roi.at<double>(maxLoc));
         }
 
-        //check results
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
+        EXPECT_DOUBLE_EQ(minVal_, minVal);
+        EXPECT_DOUBLE_EQ(maxVal_, maxVal);
+        EXPECT_DOUBLE_EQ(minlocVal_, minlocVal);
+        EXPECT_DOUBLE_EQ(maxlocVal_, maxlocVal);
 
-        EXPECT_DOUBLE_EQ(minVal_, minVal) << sss;
-        EXPECT_DOUBLE_EQ(maxVal_, maxVal) << sss;
-        EXPECT_DOUBLE_EQ(minlocVal_, minlocVal) << sss;
-        EXPECT_DOUBLE_EQ(maxlocVal_, maxlocVal) << sss;
-
-        EXPECT_DOUBLE_EQ(error0, 0.0) << sss;
-        EXPECT_DOUBLE_EQ(error1, 0.0) << sss;
+        EXPECT_DOUBLE_EQ(error0, 0.0);
+        EXPECT_DOUBLE_EQ(error1, 0.0);
     }
 }
 
@@ -1036,17 +954,13 @@ TEST_P(MinMaxLoc, MASK)
             error1 = ::abs(mat1_roi.at<double>(maxLoc_) - mat1_roi.at<double>(maxLoc));
         }
 
-        //check results
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
+        EXPECT_DOUBLE_EQ(minVal_, minVal);
+        EXPECT_DOUBLE_EQ(maxVal_, maxVal);
+        EXPECT_DOUBLE_EQ(minlocVal_, minlocVal);
+        EXPECT_DOUBLE_EQ(maxlocVal_, maxlocVal);
 
-        EXPECT_DOUBLE_EQ(minVal_, minVal) << sss;
-        EXPECT_DOUBLE_EQ(maxVal_, maxVal) << sss;
-        EXPECT_DOUBLE_EQ(minlocVal_, minlocVal) << sss;
-        EXPECT_DOUBLE_EQ(maxlocVal_, maxlocVal) << sss;
-
-        EXPECT_DOUBLE_EQ(error0, 0.0) << sss;
-        EXPECT_DOUBLE_EQ(error1, 0.0) << sss;
+        EXPECT_DOUBLE_EQ(error0, 0.0);
+        EXPECT_DOUBLE_EQ(error1, 0.0);
     }
 }
 
@@ -1060,14 +974,12 @@ TEST_P(Sum, MAT)
         random_roi();
         Scalar cpures = cv::sum(mat1_roi);
         Scalar gpures = cv::ocl::sum(gmat1);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
         //check results
-        EXPECT_NEAR(cpures[0], gpures[0], 0.1) << sss;
-        EXPECT_NEAR(cpures[1], gpures[1], 0.1) << sss;
-        EXPECT_NEAR(cpures[2], gpures[2], 0.1) << sss;
-        EXPECT_NEAR(cpures[3], gpures[3], 0.1) << sss;
+        EXPECT_NEAR(cpures[0], gpures[0], 0.1);
+        EXPECT_NEAR(cpures[1], gpures[1], 0.1);
+        EXPECT_NEAR(cpures[2], gpures[2], 0.1);
+        EXPECT_NEAR(cpures[3], gpures[3], 0.1);
     }
 }
 
@@ -1082,11 +994,7 @@ TEST_P(CountNonZero, MAT)
         int cpures = cv::countNonZero(mat1_roi);
         int gpures = cv::ocl::countNonZero(gmat1);
 
-        //check results
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-
-        EXPECT_DOUBLE_EQ((double)cpures, (double)gpures) << sss;
+        EXPECT_DOUBLE_EQ((double)cpures, (double)gpures);
     }
 }
 
@@ -1112,9 +1020,7 @@ TEST_P(Phase, Mat)
             cv::Mat cpu_dst;
             gdst_whole.download(cpu_dst);
 
-            char sss[1024];
-            sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-            EXPECT_MAT_NEAR(dst, cpu_dst, 1e-2, sss);
+            EXPECT_MAT_NEAR(dst, cpu_dst, 1e-2, "");
         }
     }
 }
@@ -1134,10 +1040,8 @@ TEST_P(Bitwise_and, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
     }
 }
 
@@ -1152,10 +1056,8 @@ TEST_P(Bitwise_and, Mat_Mask)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
     }
 }
 TEST_P(Bitwise_and, Scalar)
@@ -1169,10 +1071,8 @@ TEST_P(Bitwise_and, Scalar)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
 
     }
 }
@@ -1188,11 +1088,8 @@ TEST_P(Bitwise_and, Scalar_Mask)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char *sss = new char[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, sss);
-        delete[] sss;
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
 
@@ -1213,10 +1110,8 @@ TEST_P(Bitwise_or, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
     }
 }
 
@@ -1231,10 +1126,8 @@ TEST_P(Bitwise_or, Mat_Mask)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
     }
 }
 TEST_P(Bitwise_or, Scalar)
@@ -1248,10 +1141,8 @@ TEST_P(Bitwise_or, Scalar)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
 
@@ -1266,10 +1157,8 @@ TEST_P(Bitwise_or, Scalar_Mask)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
 
@@ -1290,10 +1179,8 @@ TEST_P(Bitwise_xor, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
     }
 }
 
@@ -1308,10 +1195,8 @@ TEST_P(Bitwise_xor, Mat_Mask)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
     }
 }
 TEST_P(Bitwise_xor, Scalar)
@@ -1325,10 +1210,8 @@ TEST_P(Bitwise_xor, Scalar)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
 
@@ -1343,10 +1226,8 @@ TEST_P(Bitwise_xor, Scalar_Mask)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
 
@@ -1366,10 +1247,8 @@ TEST_P(Bitwise_not, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
     }
 }
 
@@ -1386,7 +1265,7 @@ TEST_P(Compare, Mat)
     }
 
     int cmp_codes[] = {CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE};
-    const char *cmp_str[] = {"CMP_EQ", "CMP_GT", "CMP_GE", "CMP_LT", "CMP_LE", "CMP_NE"};
+    //const char *cmp_str[] = {"CMP_EQ", "CMP_GT", "CMP_GE", "CMP_LT", "CMP_LE", "CMP_NE"};
     int cmp_num = sizeof(cmp_codes) / sizeof(int);
 
     for (int i = 0; i < cmp_num; ++i)
@@ -1401,10 +1280,8 @@ TEST_P(Compare, Mat)
 
             cv::Mat cpu_dst;
             gdst_whole.download(cpu_dst);
-            char sss[1024];
-            sprintf(sss, "cmptype=%s, roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", cmp_str[i], roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-            EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, sss);
+            EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, "");
         }
     }
 
@@ -1430,10 +1307,7 @@ TEST_P(Pow, Mat)
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
 
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1, "");
     }
 }
 
@@ -1464,16 +1338,13 @@ TEST_P(MagnitudeSqr, Mat)
         // end = cv::getTickCount();
 
 
-
         cv::ocl::oclMat clmat1(mat1), clmat2(mat2), cldst;
         cv::ocl::magnitudeSqr(clmat1, clmat2, cldst);
 
         cv::Mat cpu_dst;
         cldst.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1, "");
     }
 }
 
@@ -1498,10 +1369,7 @@ TEST_P(AddWeighted, Mat)
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
 
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5, "");
     }
 }
 
