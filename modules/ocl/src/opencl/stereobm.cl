@@ -60,8 +60,9 @@ unsigned int CalcSSD(__local unsigned int *col_ssd)
 {
     unsigned int cache = col_ssd[0];
 
-    for(int i = 1, j = radius + 1; i <= radius; i++, j++)
-        cache += col_ssd[i] + col_ssd[j];
+#pragma unroll
+    for(int i = 1; i <= (radius << 1); i++)
+        cache += col_ssd[i];
 
     return cache;
 }
@@ -69,20 +70,22 @@ unsigned int CalcSSD(__local unsigned int *col_ssd)
 uint2 MinSSD(__local unsigned int *col_ssd)
 {
     unsigned int ssd[N_DISPARITIES];
+    const int win_size = (radius << 1);
 
-    //See above:  #define COL_SSD_SIZE (BLOCK_W + 2 * radius)
-    ssd[0] = CalcSSD(col_ssd + 0 * (BLOCK_W + 2 * radius));
-    ssd[1] = CalcSSD(col_ssd + 1 * (BLOCK_W + 2 * radius));
-    ssd[2] = CalcSSD(col_ssd + 2 * (BLOCK_W + 2 * radius));
-    ssd[3] = CalcSSD(col_ssd + 3 * (BLOCK_W + 2 * radius));
-    ssd[4] = CalcSSD(col_ssd + 4 * (BLOCK_W + 2 * radius));
-    ssd[5] = CalcSSD(col_ssd + 5 * (BLOCK_W + 2 * radius));
-    ssd[6] = CalcSSD(col_ssd + 6 * (BLOCK_W + 2 * radius));
-    ssd[7] = CalcSSD(col_ssd + 7 * (BLOCK_W + 2 * radius));
+    //See above:  #define COL_SSD_SIZE (BLOCK_W + WIN_SIZE)
+    ssd[0] = CalcSSD(col_ssd + 0 * (BLOCK_W + win_size));
+    ssd[1] = CalcSSD(col_ssd + 1 * (BLOCK_W + win_size));
+    ssd[2] = CalcSSD(col_ssd + 2 * (BLOCK_W + win_size));
+    ssd[3] = CalcSSD(col_ssd + 3 * (BLOCK_W + win_size));
+    ssd[4] = CalcSSD(col_ssd + 4 * (BLOCK_W + win_size));
+    ssd[5] = CalcSSD(col_ssd + 5 * (BLOCK_W + win_size));
+    ssd[6] = CalcSSD(col_ssd + 6 * (BLOCK_W + win_size));
+    ssd[7] = CalcSSD(col_ssd + 7 * (BLOCK_W + win_size));
 
     unsigned int mssd = min(min(min(ssd[0], ssd[1]), min(ssd[4], ssd[5])), min(min(ssd[2], ssd[3]), min(ssd[6], ssd[7])));
 
     int bestIdx = 0;
+
     for (int i = 0; i < N_DISPARITIES; i++)
     {
         if (mssd == ssd[i])
@@ -100,14 +103,15 @@ void StepDown(int idx1, int idx2, __global unsigned char* imageL,
     uint8 diff1 = (uint8)(imageL[idx1]) - imgR1;
     uint8 diff2 = (uint8)(imageL[idx2]) - imgR2;
     uint8 res = diff2 * diff2 - diff1 * diff1;
-    col_ssd[0 * (BLOCK_W + 2 * radius)] += res.s7;
-    col_ssd[1 * (BLOCK_W + 2 * radius)] += res.s6;
-    col_ssd[2 * (BLOCK_W + 2 * radius)] += res.s5;
-    col_ssd[3 * (BLOCK_W + 2 * radius)] += res.s4;
-    col_ssd[4 * (BLOCK_W + 2 * radius)] += res.s3;
-    col_ssd[5 * (BLOCK_W + 2 * radius)] += res.s2;
-    col_ssd[6 * (BLOCK_W + 2 * radius)] += res.s1;
-    col_ssd[7 * (BLOCK_W + 2 * radius)] += res.s0;
+    const int win_size = (radius << 1);
+    col_ssd[0 * (BLOCK_W + win_size)] += res.s7;
+    col_ssd[1 * (BLOCK_W + win_size)] += res.s6;
+    col_ssd[2 * (BLOCK_W + win_size)] += res.s5;
+    col_ssd[3 * (BLOCK_W + win_size)] += res.s4;
+    col_ssd[4 * (BLOCK_W + win_size)] += res.s3;
+    col_ssd[5 * (BLOCK_W + win_size)] += res.s2;
+    col_ssd[6 * (BLOCK_W + win_size)] += res.s1;
+    col_ssd[7 * (BLOCK_W + win_size)] += res.s0;
 }
 
 void InitColSSD(int x_tex, int y_tex, int im_pitch, __global unsigned char* imageL,
@@ -115,28 +119,27 @@ void InitColSSD(int x_tex, int y_tex, int im_pitch, __global unsigned char* imag
                  __local unsigned int *col_ssd)
 {
     uint8 leftPixel1;
-    int idx;
     uint8 diffa = 0;
-
-    for(int i = 0; i < (2 * radius + 1); i++)
+    int idx = y_tex * im_pitch + x_tex;
+    const int win_size = (radius << 1);
+    for(int i = 0; i < (win_size + 1); i++)
     {
-        idx = y_tex * im_pitch + x_tex;
         leftPixel1 = (uint8)(imageL[idx]);
         uint8 imgR = convert_uint8(vload8(0, imageR + (idx - d - 7)));
         uint8 res = leftPixel1 - imgR;
         diffa += res * res;
 
-        y_tex += 1;
+        idx += im_pitch;
     }
-    //See above:  #define COL_SSD_SIZE (BLOCK_W + 2 * radius)
-    col_ssd[0 * (BLOCK_W + 2 * radius)] = diffa.s7;
-    col_ssd[1 * (BLOCK_W + 2 * radius)] = diffa.s6;
-    col_ssd[2 * (BLOCK_W + 2 * radius)] = diffa.s5;
-    col_ssd[3 * (BLOCK_W + 2 * radius)] = diffa.s4;
-    col_ssd[4 * (BLOCK_W + 2 * radius)] = diffa.s3;
-    col_ssd[5 * (BLOCK_W + 2 * radius)] = diffa.s2;
-    col_ssd[6 * (BLOCK_W + 2 * radius)] = diffa.s1;
-    col_ssd[7 * (BLOCK_W + 2 * radius)] = diffa.s0;
+    //See above:  #define COL_SSD_SIZE (BLOCK_W + WIN_SIZE)
+    col_ssd[0 * (BLOCK_W + win_size)] = diffa.s7;
+    col_ssd[1 * (BLOCK_W + win_size)] = diffa.s6;
+    col_ssd[2 * (BLOCK_W + win_size)] = diffa.s5;
+    col_ssd[3 * (BLOCK_W + win_size)] = diffa.s4;
+    col_ssd[4 * (BLOCK_W + win_size)] = diffa.s3;
+    col_ssd[5 * (BLOCK_W + win_size)] = diffa.s2;
+    col_ssd[6 * (BLOCK_W + win_size)] = diffa.s1;
+    col_ssd[7 * (BLOCK_W + win_size)] = diffa.s0;
 }
 
 __kernel void stereoKernel(__global unsigned char *left, __global unsigned char *right,
@@ -145,15 +148,14 @@ __kernel void stereoKernel(__global unsigned char *left, __global unsigned char 
                            int img_step, int maxdisp,
                            __local unsigned int *col_ssd_cache)
 {
-     __local unsigned int *col_ssd = col_ssd_cache + get_local_id(0);
-     __local unsigned int *col_ssd_extra = get_local_id(0) < (2 * radius) ? col_ssd + BLOCK_W : 0;
+    __local unsigned int *col_ssd = col_ssd_cache + get_local_id(0);
+    __local unsigned int *col_ssd_extra = get_local_id(0) < (radius << 1) ? col_ssd + BLOCK_W : 0;
 
     int X = get_group_id(0) * BLOCK_W + get_local_id(0) + maxdisp + radius;
-    // int Y = get_group_id(1) * ROWSperTHREAD + radius;
 
 #define Y (get_group_id(1) * ROWSperTHREAD + radius)
 
-     __global unsigned int* minSSDImage = cminSSDImage + X + Y * cminSSD_step;
+    __global unsigned int* minSSDImage = cminSSDImage + X + Y * cminSSD_step;
     __global unsigned char* disparImage = disp + X + Y * disp_step;
 
     int end_row = ROWSperTHREAD < (cheight - Y) ? ROWSperTHREAD:(cheight - Y);
@@ -187,7 +189,9 @@ __kernel void stereoKernel(__global unsigned char *left, __global unsigned char 
         for(int row = 1; row < end_row; row++)
         {
             int idx1 = y_tex * img_step + x_tex;
-            int idx2 = min(y_tex + (2 * radius + 1), cheight - 1) * img_step + x_tex;
+            int idx2 = min(y_tex + ((radius << 1) + 1), cheight - 1) * img_step + x_tex;
+            
+            barrier(CLK_LOCAL_MEM_FENCE);
 
             StepDown(idx1, idx2, left, right, d, col_ssd);
             if (col_ssd_extra > 0)
