@@ -88,7 +88,7 @@ TEST_P(ColumnSum, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ColumnSum, DIFFERENT_SIZES);
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, ColumnSum, DIFFERENT_SIZES);
 
 
 #endif

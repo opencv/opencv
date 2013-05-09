@@ -174,16 +174,12 @@ PARAM_TEST_CASE(ArithmTestBase, MatType, bool)
 
     void Near(double threshold = 0.)
     {
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, threshold);
+        EXPECT_MAT_NEAR(dst, Mat(gdst_whole), threshold);
     }
 
     void Near1(double threshold = 0.)
-    {
-        cv::Mat cpu_dst1;
-        gdst1_whole.download(cpu_dst1);      
-        EXPECT_MAT_NEAR(dst1, cpu_dst1, threshold);
+    {     
+        EXPECT_MAT_NEAR(dst1, Mat(gdst1_whole), threshold);
     }
 
 };
@@ -1169,33 +1165,18 @@ TEST_P(MagnitudeSqr, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
-        // random_roi();
-        // int64 start, end;
-        // start = cv::getTickCount();
+        random_roi();
         for(int i = 0; i < mat1.rows; ++i)
             for(int j = 0; j < mat1.cols; ++j)
             {
                 float val1 = mat1.at<float>(i, j);
                 float val2 = mat2.at<float>(i, j);
-
                 ((float *)(dst.data))[i * dst.step / 4 + j] = val1 * val1 + val2 * val2;
-
-                //        float val1 =((float *)( mat1.data))[(i*mat1.step/8 +j)*2];
-                //
-                //     float val2 =((float *)( mat1.data))[(i*mat1.step/8 +j)*2+ 1 ];
-
-                //  ((float *)(dst.data))[i*dst.step/4 +j]= val1 * val1 +val2 * val2;
             }
-        // end = cv::getTickCount();
 
-
-        cv::ocl::oclMat clmat1(mat1), clmat2(mat2), cldst;
-        cv::ocl::magnitudeSqr(clmat1, clmat2, cldst);
-
-        cv::Mat cpu_dst;
-        cldst.download(cpu_dst);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1);
+        cv::ocl::oclMat clmat1(mat1), clmat2(mat2);
+        cv::ocl::magnitudeSqr(clmat1, clmat2, gdst);
+        Near(1);
     }
 }
 

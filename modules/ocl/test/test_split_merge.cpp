@@ -202,12 +202,7 @@ TEST_P(Merge, Accuracy)
         cv::merge(dev_src, dst_roi);
         cv::ocl::merge(dev_gsrc, gdst);
 
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x =%d,src1y=%d,src2x =%d,src2y=%d,src3x =%d,src3y=%d,src4x =%d,src4y=%d,dstx=%d,dsty=%d", roicols, roirows, src1x, src1y, src2x , src2y, src3x , src3y, src4x , src4y, dstx, dsty);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, sss);
+        EXPECT_MAT_NEAR(dst, Mat(gdst_whole), 0.0);
     }
 }
 
@@ -349,28 +344,17 @@ TEST_P(Split, Accuracy)
         cv::split(mat_roi, dev_dst);
         cv::ocl::split(gmat, dev_gdst);
 
-        cv::Mat cpu_dst1;
-        cv::Mat cpu_dst2;
-        cv::Mat cpu_dst3;
-        cv::Mat cpu_dst4;
-        gdst1_whole.download(cpu_dst1);
-        gdst2_whole.download(cpu_dst2);
-        gdst3_whole.download(cpu_dst3);
-        gdst4_whole.download(cpu_dst4);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,dst1x =%d,dsty=%d,dst2x =%d,dst2y=%d,dst3x =%d,dst3y=%d,dst4x =%d,dst4y=%d,srcx=%d,srcy=%d", roicols, roirows, dst1x , dst1y, dst2x , dst2y, dst3x , dst3y, dst4x , dst4y, srcx, srcy);
-
         if(channels >= 1)
-            EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.0, sss);
+            EXPECT_MAT_NEAR(dst1, Mat(gdst1_whole), 0.0);
 
         if(channels >= 2)
-            EXPECT_MAT_NEAR(dst2, cpu_dst2, 0.0, sss);
+            EXPECT_MAT_NEAR(dst2, Mat(gdst2_whole), 0.0);
 
         if(channels >= 3)
-            EXPECT_MAT_NEAR(dst3, cpu_dst3, 0.0, sss);
+            EXPECT_MAT_NEAR(dst3, Mat(gdst3_whole), 0.0);
 
         if(channels >= 4)
-            EXPECT_MAT_NEAR(dst4, cpu_dst4, 0.0, sss);
+            EXPECT_MAT_NEAR(dst4, Mat(gdst4_whole), 0.0);
     }
 }
 

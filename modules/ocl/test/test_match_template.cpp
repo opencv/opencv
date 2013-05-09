@@ -89,12 +89,10 @@ TEST_P(MatchTemplate8U, Accuracy)
     cv::Mat dst_gold;
     cv::matchTemplate(image, templ, dst_gold, method);
 
-    char sss [100] = "";
-
     cv::Mat mat_dst;
     dst.download(mat_dst);
 
-    EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1, sss);
+    EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1);
 }
 
 PARAM_TEST_CASE(MatchTemplate32F, cv::Size, TemplateSize, Channels, TemplateMethod)
@@ -125,12 +123,10 @@ TEST_P(MatchTemplate32F, Accuracy)
     cv::Mat dst_gold;
     cv::matchTemplate(image, templ, dst_gold, method);
 
-    char sss [100] = "";
-
     cv::Mat mat_dst;
     dst.download(mat_dst);
 
-    EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1, sss);
+    EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1);
 }
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MatchTemplate8U,

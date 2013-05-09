@@ -125,9 +125,7 @@ PARAM_TEST_CASE(FilterTestBase,
 
     void Near(double threshold)
     {
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        EXPECT_MAT_NEAR(dst, cpu_dst, threshold);
+        EXPECT_MAT_NEAR(dst, Mat(gdst_whole), threshold);
     }
 };
 

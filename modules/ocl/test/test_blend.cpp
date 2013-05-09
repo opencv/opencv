@@ -112,7 +112,7 @@ TEST_P(Blend, Accuracy)
     EXPECT_MAT_NEAR(result_gold, result, CV_MAT_DEPTH(type) == CV_8U ? 1.f : 1e-5f);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Blend, Combine(
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, Blend, Combine(
                             DIFFERENT_SIZES,
                             testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC4))
                         ));

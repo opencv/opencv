@@ -77,17 +77,14 @@ TEST_P(PyrUp, Accuracy)
         ocl::oclMat dst;
         ocl::oclMat srcMat(src);
         ocl::pyrUp(srcMat, dst);
-        Mat cpu_dst;
-        dst.download(cpu_dst);
-        char s[100] = {0};
 
-        EXPECT_MAT_NEAR(dst_gold, cpu_dst, (src.depth() == CV_32F ? 1e-4f : 1.0), s);
+        EXPECT_MAT_NEAR(dst_gold, Mat(dst), (type == CV_32F ? 1e-4f : 1.0));
     }
 
 }
 
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, PyrUp, testing::Combine(
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrUp, testing::Combine(
                             Values(CV_8U, CV_32F), Values(1, 3, 4)));
 
 

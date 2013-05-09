@@ -83,15 +83,11 @@ TEST_P(PyrDown, Mat)
         cv::pyrDown(src, dst_cpu);
         cv::ocl::pyrDown(gsrc, gdst);
 
-        cv::Mat dst;
-        gdst.download(dst);
-        char s[1024] = {0};
-
-        EXPECT_MAT_NEAR(dst, dst_cpu, dst.depth() == CV_32F ? 1e-4f : 1.0f, s);
+        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), type == CV_32F ? 1e-4f : 1.0f);
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, PyrDown, Combine(
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrDown, Combine(
                             Values(CV_8U, CV_32F), Values(1, 3, 4)));
 
 
