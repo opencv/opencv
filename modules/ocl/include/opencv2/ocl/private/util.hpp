@@ -128,7 +128,7 @@ namespace cv
         enum DEVICE_INFO
         {
             WAVEFRONT_SIZE,
-            IS_CPU_DEVICE   //supports
+            IS_CPU_DEVICE
         };
         template<DEVICE_INFO _it, typename _ty>
         _ty queryDeviceInfo(cl_kernel kernel = NULL);
