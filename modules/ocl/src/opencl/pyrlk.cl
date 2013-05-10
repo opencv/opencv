@@ -60,49 +60,49 @@ void reduce3(float val1, float val2, float val3,  __local float* smem1,  __local
 
     if (tid < 32)
     {
-        smem1[tid] = val1 += smem1[tid + 32];
-        smem2[tid] = val2 += smem2[tid + 32];
-        smem3[tid] = val3 += smem3[tid + 32];
+        smem1[tid] += smem1[tid + 32];
+        smem2[tid] += smem2[tid + 32];
+        smem3[tid] += smem3[tid + 32];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 16)
     {
-        smem1[tid] = val1 += smem1[tid + 16];
-        smem2[tid] = val2 += smem2[tid + 16];
-        smem3[tid] = val3 += smem3[tid + 16];
+        smem1[tid] += smem1[tid + 16];
+        smem2[tid] += smem2[tid + 16];
+        smem3[tid] += smem3[tid + 16];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 8)
     {
-        smem1[tid] = val1 += smem1[tid + 8];
-        smem2[tid] = val2 += smem2[tid + 8];
-        smem3[tid] = val3 += smem3[tid + 8];
+        smem1[tid] += smem1[tid + 8];
+        smem2[tid] += smem2[tid + 8];
+        smem3[tid] += smem3[tid + 8];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 4)
     {
-        smem1[tid] = val1 += smem1[tid + 4];
-        smem2[tid] = val2 += smem2[tid + 4];
-        smem3[tid] = val3 += smem3[tid + 4];
+        smem1[tid] += smem1[tid + 4];
+        smem2[tid] += smem2[tid + 4];
+        smem3[tid] += smem3[tid + 4];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 2)
     {
-        smem1[tid] = val1 += smem1[tid + 2];
-        smem2[tid] = val2 += smem2[tid + 2];
-        smem3[tid] = val3 += smem3[tid + 2];
+        smem1[tid] += smem1[tid + 2];
+        smem2[tid] += smem2[tid + 2];
+        smem3[tid] += smem3[tid + 2];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 1)
     {
-        smem1[BUFFER] = val1 += smem1[tid + 1];
-        smem2[BUFFER] = val2 += smem2[tid + 1];
-        smem3[BUFFER] = val3 += smem3[tid + 1];
+        smem1[BUFFER] = smem1[tid] + smem1[tid + 1];
+        smem2[BUFFER] = smem2[tid] + smem2[tid + 1];
+        smem3[BUFFER] = smem3[tid] + smem3[tid + 1];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 }
@@ -115,43 +115,43 @@ void reduce2(float val1, float val2, volatile __local float* smem1, volatile __l
 
     if (tid < 32)
     {
-        smem1[tid] = (val1 += smem1[tid + 32]);
-        smem2[tid] = (val2 += smem2[tid + 32]);
+        smem1[tid] += smem1[tid + 32];
+        smem2[tid] += smem2[tid + 32];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 16)
     {
-        smem1[tid] = (val1 += smem1[tid + 16]);
-        smem2[tid] = (val2 += smem2[tid + 16]);
+        smem1[tid] += smem1[tid + 16];
+        smem2[tid] += smem2[tid + 16];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 8)
     {
-        smem1[tid] = (val1 += smem1[tid + 8]);
-        smem2[tid] = (val2 += smem2[tid + 8]);
+        smem1[tid] += smem1[tid + 8];
+        smem2[tid] += smem2[tid + 8];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 4)
     {
-        smem1[tid] = (val1 += smem1[tid + 4]);
-        smem2[tid] = (val2 += smem2[tid + 4]);
+        smem1[tid] += smem1[tid + 4];
+        smem2[tid] += smem2[tid + 4];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 2)
     {
-        smem1[tid] = (val1 += smem1[tid + 2]);
-        smem2[tid] = (val2 += smem2[tid + 2]);
+        smem1[tid] += smem1[tid + 2];
+        smem2[tid] += smem2[tid + 2];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 1)
     {
-        smem1[BUFFER] = (val1 += smem1[tid + 1]);
-        smem2[BUFFER] = (val2 += smem2[tid + 1]);
+        smem1[BUFFER] = smem1[tid] + smem1[tid + 1];
+        smem2[BUFFER] = smem2[tid] + smem2[tid + 1];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 }
@@ -163,37 +163,37 @@ void reduce1(float val1, volatile __local float* smem1, int tid)
 
     if (tid < 32)
     {
-        smem1[tid] = (val1 += smem1[tid + 32]);
+        smem1[tid] += smem1[tid + 32];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 16)
     {
-        smem1[tid] = (val1 += smem1[tid + 16]);
+        smem1[tid] += smem1[tid + 16];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 8)
     {
-        smem1[tid] = (val1 += smem1[tid + 8]);
+        smem1[tid] += smem1[tid + 8];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 4)
     {
-        smem1[tid] = (val1 += smem1[tid + 4]);
+        smem1[tid] += smem1[tid + 4];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 2)
     {
-        smem1[tid] = (val1 += smem1[tid + 2]);
+        smem1[tid] += smem1[tid + 2];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 1)
     {
-        smem1[BUFFER] = (val1 += smem1[tid + 1]);
+        smem1[BUFFER] = smem1[tid] + smem1[tid + 1];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 }
