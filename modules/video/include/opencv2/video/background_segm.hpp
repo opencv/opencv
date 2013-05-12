@@ -60,7 +60,7 @@ public:
     //! the virtual destructor
     virtual ~BackgroundSubtractor();
     //! the update operator that takes the next video frame and returns the current foreground mask as 8-bit binary image.
-    virtual void operator()(InputArray image, OutputArray fgmask,
+    CV_WRAP_AS(apply) virtual void operator()(InputArray image, OutputArray fgmask,
                                               double learningRate=0);
 
     //! computes a background image
