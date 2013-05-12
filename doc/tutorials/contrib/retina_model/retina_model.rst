@@ -21,7 +21,7 @@ In this tutorial you will learn how to:
 General overview
 ================
 
-The proposed model originates from Jeanny Herault's research at `Gipsa <http://www.gipsa-lab.inpg.fr>`_. It is involved in image processing applications with `Listic <http://www.listic.univ-savoie.fr>`_ (code maintainer) lab. This is not a complete model but it already present interesting properties that can be involved for enhanced image processing experience. The model allows the following human retina properties to be used :
+The proposed model originates from Jeanny Herault's research [herault2010]_ at `Gipsa <http://www.gipsa-lab.inpg.fr>`_. It is involved in image processing applications with `Listic <http://www.listic.univ-savoie.fr>`_ (code maintainer and user) lab. This is not a complete model but it already present interesting properties that can be involved for enhanced image processing experience. The model allows the following human retina properties to be used :
 
 * spectral whitening that has 3 important effects: high spatio-temporal frequency signals canceling (noise), mid-frequencies details enhancement and low frequencies luminance energy reduction. This *all in one* property directly allows visual signals cleaning of classical undesired distortions introduced by image sensors and input luminance range.
 
@@ -37,7 +37,7 @@ In the figure below, the OpenEXR image sample *CrissyField.exr*, a High Dynamic 
    :alt: A High dynamic range image linearly rescaled within range [0-255].
    :align: center
 
-In the following image, as your retina does, local luminance adaptation, spatial noise removal and spectral whitening work together and transmit accurate information on lower range 8bit data channels. On this picture, noise in significantly removed, local details hidden by strong luminance contrasts are enhanced. Output image keeps its naturalness and visual content is enhanced.
+In the following image, applying the ideas proposed in [benoit2010]_, as your retina does, local luminance adaptation, spatial noise removal and spectral whitening work together and transmit accurate information on lower range 8bit data channels. On this picture, noise in significantly removed, local details hidden by strong luminance contrasts are enhanced. Output image keeps its naturalness and visual content is enhanced. Color processing is based on the color multiplexing/demultiplexing method proposed in [chaix2007]_.
 
 .. image:: images/retina_TreeHdr_retina.jpg
    :alt: A High dynamic range image compressed within range [0-255] using the retina.
@@ -86,19 +86,23 @@ This model can be used basically for spatio-temporal video effects but also in t
 
 * performing motion analysis also taking benefit of the previously cited properties.
 
+Literature
+==========
 For more information, refer to the following papers :
 
-* Benoit A., Caplier A., Durette B., Herault, J., "Using Human Visual System Modeling For Bio-Inspired Low Level Image Processing", Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773. DOI <http://dx.doi.org/10.1016/j.cviu.2010.01.011>
+.. [benoit2010] Benoit A., Caplier A., Durette B., Herault, J., "Using Human Visual System Modeling For Bio-Inspired Low Level Image Processing", Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773. DOI <http://dx.doi.org/10.1016/j.cviu.2010.01.011>
 
 * Please have a look at the reference work of Jeanny Herault that you can read in his book :
 
-Vision: Images, Signals and Neural Networks: Models of Neural Processing in Visual Perception (Progress in Neural Processing),By: Jeanny Herault, ISBN: 9814273686. WAPI (Tower ID): 113266891.
+.. [herault2010] Vision: Images, Signals and Neural Networks: Models of Neural Processing in Visual Perception (Progress in Neural Processing),By: Jeanny Herault, ISBN: 9814273686. WAPI (Tower ID): 113266891.
 
 This retina filter code includes the research contributions of phd/research collegues from which code has been redrawn by the author :
 
-* take a look at the *retinacolor.hpp* module to discover Brice Chaix de Lavarene phD color mosaicing/demosaicing and his reference paper: B. Chaix de Lavarene, D. Alleysson, B. Durette, J. Herault (2007). "Efficient demosaicing through recursive filtering", IEEE International Conference on Image Processing ICIP 2007
+* take a look at the *retinacolor.hpp* module to discover Brice Chaix de Lavarene phD color mosaicing/demosaicing and his reference paper:
 
-* take a look at *imagelogpolprojection.hpp* to discover retina spatial log sampling which originates from Barthelemy Durette phd with Jeanny Herault. A Retina / V1 cortex projection is also proposed and originates from Jeanny's discussions. ====> more information in the above cited Jeanny Heraults's book.
+.. [chaix2007] B. Chaix de Lavarene, D. Alleysson, B. Durette, J. Herault (2007). "Efficient demosaicing through recursive filtering", IEEE International Conference on Image Processing ICIP 2007
+
+* take a look at *imagelogpolprojection.hpp* to discover retina spatial log sampling which originates from Barthelemy Durette phd with Jeanny Herault. A Retina / V1 cortex projection is also proposed and originates from Jeanny's discussions. More informations in the above cited Jeanny Heraults's book.
 
 Code tutorial
 =============
@@ -229,68 +233,67 @@ Now, everything is ready to run the retina model. I propose here to allocate a r
 
 .. code-block:: cpp
 
-        // pointer to a retina object
-        cv::Ptr<cv::Retina> myRetina;
+    // pointer to a retina object
+    cv::Ptr<cv::Retina> myRetina;
 
-        // if the last parameter is 'log', then activate log sampling (favour foveal vision and subsamples peripheral vision)
-        if (useLogSampling)
-        {
-            myRetina = new cv::Retina(inputFrame.size(), true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
-        }
-        else// -> else allocate "classical" retina :
-            myRetina = new cv::Retina(inputFrame.size());
-
+    // if the last parameter is 'log', then activate log sampling (favour foveal vision and subsamples peripheral vision)
+    if (useLogSampling)
+    {
+        myRetina = cv::createRetina(inputFrame.size(), true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
+    }
+    else// -> else allocate "classical" retina :
+        myRetina = cv::createRetina(inputFrame.size());
 
 Once done, the proposed code writes a default xml file that contains the default parameters of the retina. This is useful to make your own config using this template. Here generated template xml file is called *RetinaDefaultParameters.xml*.
 
 .. code-block:: cpp
 
-        // save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
-        myRetina->write("RetinaDefaultParameters.xml");
+    // save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
+    myRetina->write("RetinaDefaultParameters.xml");
 
 In the following line, the retina attempts to load another xml file called *RetinaSpecificParameters.xml*. If you created it and introduced your own setup, it will be loaded, in the other case, default retina parameters are used.
 
 .. code-block:: cpp
 
-        // load parameters if file exists
-        myRetina->setup("RetinaSpecificParameters.xml");
+    // load parameters if file exists
+    myRetina->setup("RetinaSpecificParameters.xml");
 
 It is not required here but just to show it is possible, you can reset the retina buffers to zero to force it to forget past events.
 
 .. code-block:: cpp
 
-        // reset all retina buffers (imagine you close your eyes for a long time)
-        myRetina->clearBuffers();
+    // reset all retina buffers (imagine you close your eyes for a long time)
+    myRetina->clearBuffers();
 
 Now, it is time to run the retina ! First create some output buffers ready to receive the two retina channels outputs
 
 .. code-block:: cpp
 
-        // declare retina output buffers
-        cv::Mat retinaOutput_parvo;
-        cv::Mat retinaOutput_magno;
+    // declare retina output buffers
+    cv::Mat retinaOutput_parvo;
+    cv::Mat retinaOutput_magno;
 
 Then, run retina in a loop, load new frames from video sequence if necessary and get retina outputs back to dedicated buffers.
 
 .. code-block:: cpp
 
-        // processing loop with no stop condition
-        while(true)
-        {
-            // if using video stream, then, grabbing a new frame, else, input remains the same
-            if (videoCapture.isOpened())
-                videoCapture>>inputFrame;
+    // processing loop with no stop condition
+    while(true)
+    {
+        // if using video stream, then, grabbing a new frame, else, input remains the same
+        if (videoCapture.isOpened())
+            videoCapture>>inputFrame;
 
-            // run retina filter on the loaded input frame
-            myRetina->run(inputFrame);
-            // Retrieve and display retina output
-            myRetina->getParvo(retinaOutput_parvo);
-            myRetina->getMagno(retinaOutput_magno);
-            cv::imshow("retina input", inputFrame);
-            cv::imshow("Retina Parvo", retinaOutput_parvo);
-            cv::imshow("Retina Magno", retinaOutput_magno);
-            cv::waitKey(10);
-        }
+        // run retina filter on the loaded input frame
+        myRetina->run(inputFrame);
+        // Retrieve and display retina output
+        myRetina->getParvo(retinaOutput_parvo);
+        myRetina->getMagno(retinaOutput_magno);
+        cv::imshow("retina input", inputFrame);
+        cv::imshow("Retina Parvo", retinaOutput_parvo);
+        cv::imshow("Retina Magno", retinaOutput_magno);
+        cv::waitKey(10);
+    }
 
 That's done ! But if you want to secure the system, take care and manage Exceptions. The retina can throw some when it sees irrelevant data (no input frame, wrong setup, etc.).
 Then, i recommend to surround all the retina code by a try/catch system like this :
@@ -323,29 +326,28 @@ Once done open the configuration file *RetinaDefaultParameters.xml* generated by
 
 .. code-block:: cpp
 
-        <?xml version="1.0"?>
-        <opencv_storage>
-        <OPLandIPLparvo>
-          <colorMode>1</colorMode>
-          <normaliseOutput>1</normaliseOutput>
-          <photoreceptorsLocalAdaptationSensitivity>7.0e-01</photoreceptorsLocalAdaptationSensitivity>
-          <photoreceptorsTemporalConstant>5.0e-01</photoreceptorsTemporalConstant>
-          <photoreceptorsSpatialConstant>5.3e-01</photoreceptorsSpatialConstant>
-          <horizontalCellsGain>0.</horizontalCellsGain>
-          <hcellsTemporalConstant>1.</hcellsTemporalConstant>
-          <hcellsSpatialConstant>7.</hcellsSpatialConstant>
-          <ganglionCellsSensitivity>7.0e-01</ganglionCellsSensitivity></OPLandIPLparvo>
-        <IPLmagno>
-          <normaliseOutput>1</normaliseOutput>
-          <parasolCells_beta>0.</parasolCells_beta>
-          <parasolCells_tau>0.</parasolCells_tau>
-          <parasolCells_k>7.</parasolCells_k>
-          <amacrinCellsTemporalCutFrequency>1.2e+00</amacrinCellsTemporalCutFrequency>
-          <V0CompressionParameter>9.5e-01</V0CompressionParameter>
-          <localAdaptintegration_tau>0.</localAdaptintegration_tau>
-          <localAdaptintegration_k>7.</localAdaptintegration_k></IPLmagno>
-        </opencv_storage>
-
+    <?xml version="1.0"?>
+    <opencv_storage>
+    <OPLandIPLparvo>
+        <colorMode>1</colorMode>
+        <normaliseOutput>1</normaliseOutput>
+        <photoreceptorsLocalAdaptationSensitivity>7.5e-01</photoreceptorsLocalAdaptationSensitivity>
+        <photoreceptorsTemporalConstant>9.0e-01</photoreceptorsTemporalConstant>
+        <photoreceptorsSpatialConstant>5.7e-01</photoreceptorsSpatialConstant>
+        <horizontalCellsGain>0.01</horizontalCellsGain>
+        <hcellsTemporalConstant>0.5</hcellsTemporalConstant>
+        <hcellsSpatialConstant>7.</hcellsSpatialConstant>
+        <ganglionCellsSensitivity>7.5e-01</ganglionCellsSensitivity></OPLandIPLparvo>
+    <IPLmagno>
+        <normaliseOutput>1</normaliseOutput>
+        <parasolCells_beta>0.</parasolCells_beta>
+        <parasolCells_tau>0.</parasolCells_tau>
+        <parasolCells_k>7.</parasolCells_k>
+        <amacrinCellsTemporalCutFrequency>2.0e+00</amacrinCellsTemporalCutFrequency>
+        <V0CompressionParameter>9.5e-01</V0CompressionParameter>
+        <localAdaptintegration_tau>0.</localAdaptintegration_tau>
+        <localAdaptintegration_k>7.</localAdaptintegration_k></IPLmagno>
+    </opencv_storage>
 
 Here are some hints but actually, the best parameter setup depends more on what you want to do with the retina rather than the images input that you give to retina. Apart from the more specific case of High Dynamic Range images (HDR) that require more specific setup for specific luminance compression objective, the retina behaviors should be rather stable from content to content. Note that OpenCV is able to manage such HDR format thanks to the OpenEXR images compatibility.
 
@@ -381,7 +383,7 @@ This parameter set tunes the neural network connected to the photo-receptors, th
 
 * **horizontalCellsGain** here is a critical parameter ! If you are not interested by the mean luminance and focus on details enhancement, then, set to zero. But if you want to keep some environment luminance data, let some low spatial frequencies pass into the system and set a higher value (<1).
 
-* **hcellsTemporalConstant** similar to photo-receptors, this acts on the temporal constant of a low pass temporal filter that smooths input data. Here, a high value generates a high retina after effect while a lower value makes the retina more reactive.
+* **hcellsTemporalConstant** similar to photo-receptors, this acts on the temporal constant of a low pass temporal filter that smooths input data. Here, a high value generates a high retina after effect while a lower value makes the retina more reactive. This value should be lower than **photoreceptorsTemporalConstant** to limit strong retina after effects.
 
 * **hcellsSpatialConstant** is the spatial constant of the low pass filter of these cells filter. It specifies the lowest spatial frequency allowed in the following. Visually, a high value leads to very low spatial frequencies processing and leads to salient halo effects. Lower values reduce this effect but the limit is : do not go lower than the value of **photoreceptorsSpatialConstant**. Those 2 parameters actually specify the spatial band-pass of the retina.
 

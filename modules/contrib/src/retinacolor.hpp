@@ -333,6 +333,53 @@ namespace cv
                 }
             }
         };
+
+        class Parallel_computeGradient: public cv::ParallelLoopBody
+        {
+        private:
+            float *imageGradient;
+            const float *luminance;
+            unsigned int nbColumns, doubleNbColumns, nbRows, nbPixels;
+        public:
+            Parallel_computeGradient(const unsigned int nbCols, const unsigned int nbRws, const float *lum, float *imageGrad)
+            :imageGradient(imageGrad), luminance(lum), nbColumns(nbCols), doubleNbColumns(2*nbCols), nbRows(nbRws), nbPixels(nbRws*nbCols){};
+
+            virtual void operator()( const Range& r ) const {
+                for (int idLine=r.start;idLine!=r.end;++idLine)
+                {
+                    for (unsigned int idColumn=2;idColumn<nbColumns-2;++idColumn)
+                    {
+                        const unsigned int pixelIndex=idColumn+nbColumns*idLine;
+
+                        // horizontal and vertical local gradients
+                        const float verticalGrad=fabs(luminance[pixelIndex+nbColumns]-luminance[pixelIndex-nbColumns]);
+                        const float horizontalGrad=fabs(luminance[pixelIndex+1]-luminance[pixelIndex-1]);
+
+                        // neighborhood horizontal and vertical gradients
+                        const float verticalGrad_p=fabs(luminance[pixelIndex]-luminance[pixelIndex-doubleNbColumns]);
+                        const float horizontalGrad_p=fabs(luminance[pixelIndex]-luminance[pixelIndex-2]);
+                        const float verticalGrad_n=fabs(luminance[pixelIndex+doubleNbColumns]-luminance[pixelIndex]);
+                        const float horizontalGrad_n=fabs(luminance[pixelIndex+2]-luminance[pixelIndex]);
+
+                        const float horizontalGradient=0.5f*horizontalGrad+0.25f*(horizontalGrad_p+horizontalGrad_n);
+                        const float verticalGradient=0.5f*verticalGrad+0.25f*(verticalGrad_p+verticalGrad_n);
+
+                        // compare local gradient means and fill the appropriate filtering coefficient value that will be used in adaptative filters
+                        if (horizontalGradient<verticalGradient)
+                        {
+                            imageGradient[pixelIndex+nbPixels]=0.06f;
+                            imageGradient[pixelIndex]=0.57f;
+                        }
+                        else
+                        {
+                            imageGradient[pixelIndex+nbPixels]=0.57f;
+                            imageGradient[pixelIndex]=0.06f;
+                        }
+                    }
+                }
+            }
+        };
+
 #endif
     };
 }
