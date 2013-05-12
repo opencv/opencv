@@ -144,7 +144,7 @@ public:
     virtual void reset();
     virtual Mat nextFrame() { return nextStabilizedFrame(); }
 
-private:
+protected:
     virtual void setUp(const Mat &firstFrame);
     virtual Mat estimateMotion();
     virtual Mat estimateStabilizationMotion();
@@ -170,7 +170,7 @@ public:
     virtual void reset();
     virtual Mat nextFrame();
 
-private:
+protected:
     void runPrePassIfNecessary();
 
     virtual void setUp(const Mat &firstFrame);
