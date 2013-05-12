@@ -484,6 +484,7 @@ int main(int argc, char **argv)\
     ::perf::Regression::Init(#testsuitname);\
     ::perf::TestBase::Init(argc, argv);\
     ::testing::InitGoogleTest(&argc, argv);\
+    cvtest::printVersionInfo();\
     return RUN_ALL_TESTS();\
 }
 
