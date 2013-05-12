@@ -60,7 +60,7 @@ public:
     //! the virtual destructor
     virtual ~BackgroundSubtractor();
     //! the update operator that takes the next video frame and returns the current foreground mask as 8-bit binary image.
-    CV_WRAP_AS(apply) virtual void operator()(InputArray image, OutputArray fgmask,
+    virtual void operator()(InputArray image, OutputArray fgmask,
                                               double learningRate=0);
 
     //! computes a background image
@@ -115,25 +115,62 @@ protected:
  International Conference Pattern Recognition, UK, August, 2004.
  http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
 */
-class CV_EXPORTS BackgroundSubtractorMOG2 : public BackgroundSubtractor
+class CV_EXPORTS_W BackgroundSubtractorMOG2 : public BackgroundSubtractor
 {
 public:
     //! the default constructor
-    BackgroundSubtractorMOG2();
+    CV_WRAP BackgroundSubtractorMOG2();
     //! the full constructor that takes the length of the history, the number of gaussian mixtures, the background ratio parameter and the noise strength
-    BackgroundSubtractorMOG2(int history,  float varThreshold, bool bShadowDetection=true);
+    CV_WRAP BackgroundSubtractorMOG2(int history,  float varThreshold, bool bShadowDetection=true);
     //! the destructor
-    virtual ~BackgroundSubtractorMOG2();
+    CV_WRAP virtual ~BackgroundSubtractorMOG2();
     //! the update operator
-    virtual void operator()(InputArray image, OutputArray fgmask, double learningRate=-1);
+
+    CV_WRAP_AS(apply) virtual void operator()(InputArray image, OutputArray fgmask, double learningRate=-1);
 
     //! computes a background image which are the mean of all background gaussians
-    virtual void getBackgroundImage(OutputArray backgroundImage) const;
+    CV_WRAP virtual void getBackgroundImage(OutputArray backgroundImage) const;
 
     //! re-initiaization method
-    virtual void initialize(Size frameSize, int frameType);
+    CV_WRAP virtual void initialize(Size frameSize, int frameType);
 
     virtual AlgorithmInfo* info() const;
+    
+    CV_WRAP virtual int getHistory() const;
+    CV_WRAP virtual void setHistory(int history);
+
+    CV_WRAP virtual int getNMixtures() const;
+    CV_WRAP virtual void setNMixtures(int nmixtures);
+
+    CV_WRAP virtual double getBackgroundRatio() const;
+    CV_WRAP virtual void setBackgroundRatio(double ratio);
+
+    CV_WRAP virtual double getVarThreshold() const;
+    CV_WRAP virtual void setVarThreshold(double varThreshold);
+
+    CV_WRAP virtual double getVarThresholdGen() const;
+    CV_WRAP virtual void setVarThresholdGen(double varThresholdGen);
+
+    CV_WRAP virtual double getVarInit() const;
+    CV_WRAP virtual void setVarInit(double varInit);
+
+    CV_WRAP virtual double getVarMin() const;
+    CV_WRAP virtual void setVarMin(double varMin);
+
+    CV_WRAP virtual double getVarMax() const;
+    CV_WRAP virtual void setVarMax(double varMax);
+
+    CV_WRAP virtual double getComplexityReductionThreshold() const;
+    CV_WRAP virtual void setComplexityReductionThreshold(double ct);
+
+    CV_WRAP virtual bool getDetectShadows() const;
+    CV_WRAP virtual void setDetectShadows(bool detectShadows);
+
+    CV_WRAP virtual int getShadowValue() const;
+    CV_WRAP virtual void setShadowValue(int value);
+
+    CV_WRAP virtual double getShadowThreshold() const;
+    CV_WRAP virtual void setShadowThreshold(double threshold);
 
 protected:
     Size frameSize;
@@ -189,6 +226,10 @@ protected:
     //Tau= 0.5 means that if pixel is more than 2 times darker then it is not shadow
     //See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
 };
+
+CV_EXPORTS_W Ptr<BackgroundSubtractorMOG2>
+    createBackgroundSubtractorMOG2(int history=500, double varThreshold=16,
+                                   bool detectShadows=true);
 
 /**
  * Background Subtractor module. Takes a series of images and returns a sequence of mask (8UC1)

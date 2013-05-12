@@ -626,6 +626,48 @@ void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) c
     }
 }
 
+int BackgroundSubtractorMOG2::getHistory() const { return history; }
+void BackgroundSubtractorMOG2::setHistory(int _nframes) { history = _nframes; }
+
+int BackgroundSubtractorMOG2::getNMixtures() const { return nmixtures; }
+void BackgroundSubtractorMOG2::setNMixtures(int nmix) { nmixtures = nmix; }
+
+double BackgroundSubtractorMOG2::getBackgroundRatio() const { return backgroundRatio; }
+void BackgroundSubtractorMOG2::setBackgroundRatio(double _backgroundRatio) { backgroundRatio = (float)_backgroundRatio; }
+
+double BackgroundSubtractorMOG2::getVarThreshold() const { return varThreshold; }
+void BackgroundSubtractorMOG2::setVarThreshold(double _varThreshold) { varThreshold = _varThreshold; }
+
+double BackgroundSubtractorMOG2::getVarThresholdGen() const { return varThresholdGen; }
+void BackgroundSubtractorMOG2::setVarThresholdGen(double _varThresholdGen) { varThresholdGen = (float)_varThresholdGen; }
+
+double BackgroundSubtractorMOG2::getVarInit() const { return fVarInit; }
+void BackgroundSubtractorMOG2::setVarInit(double varInit) { fVarInit = (float)varInit; }
+
+double BackgroundSubtractorMOG2::getVarMin() const { return fVarMin; }
+void BackgroundSubtractorMOG2::setVarMin(double varMin) { fVarMin = (float)varMin; }
+
+double BackgroundSubtractorMOG2::getVarMax() const { return fVarMax; }
+void BackgroundSubtractorMOG2::setVarMax(double varMax) { fVarMax = (float)varMax; }
+
+double BackgroundSubtractorMOG2::getComplexityReductionThreshold() const { return fCT; }
+void BackgroundSubtractorMOG2::setComplexityReductionThreshold(double ct) { fCT = (float)ct; }
+
+bool BackgroundSubtractorMOG2::getDetectShadows() const { return bShadowDetection; }
+void BackgroundSubtractorMOG2::setDetectShadows(bool detectshadows) { bShadowDetection = detectshadows; }
+
+int BackgroundSubtractorMOG2::getShadowValue() const { return nShadowDetection; }
+void BackgroundSubtractorMOG2::setShadowValue(int value) { nShadowDetection = (uchar)value; }
+
+double BackgroundSubtractorMOG2::getShadowThreshold() const { return fTau; }
+void BackgroundSubtractorMOG2::setShadowThreshold(double value) { fTau = (float)value; }
+    
+Ptr<BackgroundSubtractorMOG2> createBackgroundSubtractorMOG2(int _history, double _varThreshold,
+                                                             bool _bShadowDetection)
+{
+    return new BackgroundSubtractorMOG2(_history, (float)_varThreshold, _bShadowDetection);
+}
+
 }
 
 /* End of file. */

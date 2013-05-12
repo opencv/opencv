@@ -133,6 +133,7 @@ typedef Ptr<flann::SearchParams> Ptr_flann_SearchParams;
 
 typedef Ptr<FaceRecognizer> Ptr_FaceRecognizer;
 typedef vector<Scalar> vector_Scalar;
+typedef Ptr<BackgroundSubtractorMOG2> Ptr_BackgroundSubtractorMOG2;
 
 static PyObject* failmsgp(const char *fmt, ...)
 {
