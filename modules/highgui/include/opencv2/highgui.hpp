@@ -542,8 +542,8 @@ protected:
     Ptr<CvVideoWriter> writer;
 };
 
-template<> void Ptr<CvCapture>::delete_obj();
-template<> void Ptr<CvVideoWriter>::delete_obj();
+template<> CV_EXPORTS void Ptr<CvCapture>::delete_obj();
+template<> CV_EXPORTS void Ptr<CvVideoWriter>::delete_obj();
 
 } // cv
 
