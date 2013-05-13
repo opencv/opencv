@@ -62,7 +62,6 @@ PARAM_TEST_CASE(MatchTemplate8U, cv::Size, TemplateSize, Channels, TemplateMetho
     cv::Size templ_size;
     int cn;
     int method;
-    //std::vector<cv::ocl::Info> oclinfo;
 
     virtual void SetUp()
     {
@@ -70,8 +69,6 @@ PARAM_TEST_CASE(MatchTemplate8U, cv::Size, TemplateSize, Channels, TemplateMetho
         templ_size = GET_PARAM(1);
         cn = GET_PARAM(2);
         method = GET_PARAM(3);
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
     }
 };
 
@@ -92,12 +89,10 @@ TEST_P(MatchTemplate8U, Accuracy)
     cv::Mat dst_gold;
     cv::matchTemplate(image, templ, dst_gold, method);
 
-    char sss [100] = "";
-
     cv::Mat mat_dst;
     dst.download(mat_dst);
 
-    EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1, sss);
+    EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1);
 }
 
 PARAM_TEST_CASE(MatchTemplate32F, cv::Size, TemplateSize, Channels, TemplateMethod)
@@ -114,8 +109,6 @@ PARAM_TEST_CASE(MatchTemplate32F, cv::Size, TemplateSize, Channels, TemplateMeth
         templ_size = GET_PARAM(1);
         cn = GET_PARAM(2);
         method = GET_PARAM(3);
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
     }
 };
 
@@ -130,12 +123,10 @@ TEST_P(MatchTemplate32F, Accuracy)
     cv::Mat dst_gold;
     cv::matchTemplate(image, templ, dst_gold, method);
 
-    char sss [100] = "";
-
     cv::Mat mat_dst;
     dst.download(mat_dst);
 
-    EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1, sss);
+    EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1);
 }
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MatchTemplate8U,

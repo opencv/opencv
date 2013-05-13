@@ -71,7 +71,6 @@
 #include "opencv2/ocl/ocl.hpp"
 
 #include "utility.hpp"
-#include "interpolation.hpp"
 //#include "add_test_info.h"
 
 #endif
