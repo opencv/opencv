@@ -61,7 +61,7 @@ protected:
     {
         int     ObjNum = m_TrackList.GetBlobNum();
         int     i;
-        char    video_name[1024];
+        char    video_name[1024+1];
         char*   struct_name = NULL;
         CvFileStorage* storage = cvOpenFileStorage(m_pFileName,NULL,CV_STORAGE_WRITE_TEXT);
 
