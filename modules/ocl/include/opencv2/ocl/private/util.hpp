@@ -125,16 +125,21 @@ namespace cv
         bool CV_EXPORTS support_image2d(Context *clCxt = Context::getContext());
 
         // the enums are used to query device information
-        // currently only support wavefront size queries
         enum DEVICE_INFO
         {
-            WAVEFRONT_SIZE,             //in AMD speak
-            WARP_SIZE = WAVEFRONT_SIZE, //in nvidia speak
-            IS_CPU_DEVICE               //check if the device is CPU
+            WAVEFRONT_SIZE,
+            IS_CPU_DEVICE
         };
-        //info should have been pre-allocated
-        void CV_EXPORTS queryDeviceInfo(DEVICE_INFO info_type, void* info);
+        template<DEVICE_INFO _it, typename _ty>
+        _ty queryDeviceInfo(cl_kernel kernel = NULL);
 
+        //only these three specializations are implemented at the moment
+        template<>
+        int CV_EXPORTS queryDeviceInfo<WAVEFRONT_SIZE, int>(cl_kernel kernel);
+        template<>
+        size_t CV_EXPORTS queryDeviceInfo<WAVEFRONT_SIZE, size_t>(cl_kernel kernel);
+        template<>
+        bool CV_EXPORTS queryDeviceInfo<IS_CPU_DEVICE, bool>(cl_kernel kernel);
     }//namespace ocl
 
 }//namespace cv
