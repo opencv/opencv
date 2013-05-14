@@ -327,7 +327,7 @@ static void ocl_cvMoments( const void* array, CvMoments* mom, int binary )
     mom->m12 = dstsum[8];
     mom->m03 = dstsum[9];
     delete [] dstsum;
-
+    openCLSafeCall(clReleaseMemObject(sum));
     icvCompleteMomentState( mom );
 }
 
