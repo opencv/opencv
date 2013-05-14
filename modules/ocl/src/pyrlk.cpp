@@ -189,6 +189,7 @@ static void lkSparse_run(oclMat &I, oclMat &J,
 
     bool is_cpu;
     queryDeviceInfo(IS_CPU_DEVICE, &is_cpu);
+
     if (is_cpu)
     {
         openCLExecuteKernel(clCxt, &pyrlk, kernelName, globalThreads, localThreads, args, I.oclchannels(), I.depth(), (char*)" -D CPU");
@@ -199,7 +200,11 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     {
         if(isImageSupported)
         {
-            openCLExecuteKernel(clCxt, &pyrlk, kernelName, globalThreads, localThreads, args, I.oclchannels(), I.depth());
+            size_t wave_size;
+            queryDeviceInfo(WAVEFRONT_SIZE, &wave_size);
+            static char opt[16]={0};
+            sprintf(opt," -D WAVE_SIZE=%d", wave_size);
+            openCLExecuteKernel(clCxt, &pyrlk, kernelName, globalThreads, localThreads, args, I.oclchannels(), I.depth(), opt);
             releaseTexture(ITex);
             releaseTexture(JTex);
         }
