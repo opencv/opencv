@@ -81,8 +81,7 @@ endif(WITH_GIGEAPI)
 # --- Dc1394 ---
 ocv_clear_vars(HAVE_DC1394 HAVE_DC1394_2)
 if(WITH_1394)
-  if(WIN32)
-    if(MINGW)
+  if(WIN32 AND MINGW)
       find_path(CMU1394_INCLUDE_PATH "/1394common.h"
                 PATH_SUFFIXES include
                 DOC "The path to cmu1394 headers")
@@ -103,15 +102,12 @@ if(WITH_1394)
             "${DC1394_2_LIB_DIR}/libdc1394.a"
             "${CMU1394_LIB_DIR}/lib1394camera.a")
       endif(HAVE_DC1394_2)
-    else(MINGW)
-      message(STATUS "libdc1394 compilation is disabled (due to only MinGW compiler supported on your platform).")
-    endif(MINGW)
-  else(WIN32)
+  else(WIN32 AND MINGW)
     CHECK_MODULE(libdc1394-2 HAVE_DC1394_2)
     if(NOT HAVE_DC1394_2)
       CHECK_MODULE(libdc1394 HAVE_DC1394)
     endif()
-  endif(WIN32)
+  endif(WIN32 AND MINGW)
 endif(WITH_1394)
 
 # --- xine ---
