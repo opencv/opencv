@@ -209,11 +209,7 @@ CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char * filename)
     if( result->open( filename ))
         return result;
     delete result;
-#ifdef HAVE_VFW
-    return cvCreateFileCapture_VFW(filename);
-#else
     return 0;
-#endif
 }
 
 class CvVideoWriter_FFMPEG_proxy : 

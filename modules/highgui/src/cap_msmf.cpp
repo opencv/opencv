@@ -175,10 +175,17 @@ public:
     ~ImageGrabber(void);
     HRESULT initImageGrabber(IMFMediaSource *pSource, GUID VideoFormat);
     HRESULT startGrabbing(void);
+    void pauseGrabbing();
+    void resumeGrabbing();
     void stopGrabbing();
     RawImage *getRawImage();
     // Function of creation of the instance of the class
     static HRESULT CreateInstance(ImageGrabber **ppIG,unsigned int deviceID);
+
+    HANDLE ig_hFrameReady;
+    HANDLE ig_hFrameGrabbed;
+    HANDLE ig_hFinish;
+
 private:
     bool ig_RIE;
     bool ig_Close;
@@ -198,11 +205,7 @@ private:
     IMFPresentationDescriptor *pPD,
     IMFStreamDescriptor *pSD,
     IMFTopologyNode **ppNode);
-    HRESULT AddOutputNode(
-    IMFTopology *pTopology,
-    IMFActivate *pActivate,
-    DWORD dwId,
-    IMFTopologyNode **ppNode);
+    HRESULT AddOutputNode(IMFTopology *pTopology, IMFActivate *pActivate, DWORD dwId, IMFTopologyNode **ppNode);
     // IUnknown methods
     STDMETHODIMP QueryInterface(REFIID iid, void** ppv);
     STDMETHODIMP_(ULONG) AddRef();
@@ -851,20 +854,37 @@ FormatReader::~FormatReader(void)
 
 #define CHECK_HR(x) if (FAILED(x)) { printf("Checking failed !!!\n"); goto done; }
 
-ImageGrabber::ImageGrabber(unsigned int deviceID): m_cRef(1), ig_DeviceID(deviceID), ig_pSource(NULL), ig_pSession(NULL), ig_pTopology(NULL), ig_RIE(true), ig_Close(false)
-{
-}
+ImageGrabber::ImageGrabber(unsigned int deviceID):
+    m_cRef(1),
+    ig_DeviceID(deviceID),
+    ig_pSource(NULL),
+    ig_pSession(NULL),
+    ig_pTopology(NULL),
+    ig_RIE(true),
+    ig_Close(false),
+    ig_hFrameReady(CreateEvent(NULL, FALSE, FALSE, "ig_hFrameReady")),
+    ig_hFrameGrabbed(CreateEvent(NULL, FALSE, TRUE, "ig_hFrameGrabbed")),
+    ig_hFinish(CreateEvent(NULL, FALSE, FALSE, "ig_hFinish"))
+{}
 
 ImageGrabber::~ImageGrabber(void)
 {
+    printf("ImageGrabber::~ImageGrabber()\n");
     if (ig_pSession)
     {
+        printf("ig_pSession->Shutdown()");
         ig_pSession->Shutdown();
     }
-    //SafeRelease(&ig_pSession);
-    //SafeRelease(&ig_pTopology);
+
+    CloseHandle(ig_hFrameReady);
+    CloseHandle(ig_hFrameGrabbed);
+    CloseHandle(ig_hFinish);
+
+    SafeRelease(&ig_pSession);
+    SafeRelease(&ig_pTopology);
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-    DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Destroing instance of the ImageGrabber class \n", ig_DeviceID);
+
+    DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Destroing instance of the ImageGrabber class\n", ig_DeviceID);
 }
 
 HRESULT ImageGrabber::initImageGrabber(IMFMediaSource *pSource, GUID VideoFormat)
@@ -983,9 +1003,17 @@ HRESULT ImageGrabber::startGrabbing(void)
     PROPVARIANT var;
     PropVariantInit(&var);
     HRESULT hr = S_OK;
-    CHECK_HR(hr = ig_pSession->SetTopology(0, ig_pTopology));
-    CHECK_HR(hr = ig_pSession->Start(&GUID_NULL, &var));
+    hr = ig_pSession->SetTopology(0, ig_pTopology);
+    if (FAILED(hr))
+    {
+        printf("Error: cannot set topology (status %u)\n", hr);
+    }
     DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Start Grabbing of the images\n", ig_DeviceID);
+    hr = ig_pSession->Start(&GUID_NULL, &var);
+    if (FAILED(hr))
+    {
+        printf("Error: cannot start session (status %u)\n", hr);
+    }
     for(;;)
     {
         HRESULT hrStatus = S_OK;
@@ -1027,6 +1055,9 @@ HRESULT ImageGrabber::startGrabbing(void)
         }
         SafeRelease(&pEvent);
     }
+
+    SetEvent(ig_hFinish);
+
     DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Finish startGrabbing \n", ig_DeviceID);
 
 done:
@@ -1035,6 +1066,14 @@ done:
     SafeRelease(&ig_pTopology);
 
     return hr;
+}
+
+void ImageGrabber::pauseGrabbing()
+{
+}
+
+void ImageGrabber::resumeGrabbing()
+{
 }
 
 HRESULT ImageGrabber::CreateTopology(IMFMediaSource *pSource, IMFActivate *pSinkActivate, IMFTopology **ppTopo)
@@ -1229,6 +1268,8 @@ STDMETHODIMP ImageGrabber::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwS
     (void)llSampleDuration;
     (void)dwSampleSize;
 
+    WaitForSingleObject(ig_hFrameGrabbed, INFINITE);
+
     printf("ImageGrabber::OnProcessSample() -- begin\n");
 
     if(ig_RIE)
@@ -1245,11 +1286,14 @@ STDMETHODIMP ImageGrabber::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwS
 
     printf("ImageGrabber::OnProcessSample() -- end\n");
 
+    SetEvent(ig_hFrameReady);
+
     return S_OK;
 }
 
 STDMETHODIMP ImageGrabber::OnShutdown()
 {
+    SetEvent(ig_hFrameGrabbed);
     return S_OK;
 }
 
@@ -1279,7 +1323,7 @@ HRESULT ImageGrabberThread::CreateInstance(ImageGrabberThread **ppIGT, IMFMediaS
     return S_OK;
 }
 
-ImageGrabberThread::ImageGrabberThread(IMFMediaSource *pSource, unsigned int deviceID): igt_Handle(NULL), igt_stop(false)
+ImageGrabberThread::ImageGrabberThread(IMFMediaSource *pSource, unsigned int deviceID): igt_func(NULL), igt_Handle(NULL), igt_stop(false)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     HRESULT hr = ImageGrabber::CreateInstance(&igt_pImageGrabber, deviceID);
@@ -1330,11 +1374,11 @@ void ImageGrabberThread::stop()
 void ImageGrabberThread::start()
 {
     igt_Handle = CreateThread(
-            NULL,                   // default security attributes
-            0,                      // use default stack size
-            MainThreadFunction,       // thread function name
-            this,          // argument to thread function
-            0,                      // use default creation flags
+            NULL,                  // default security attributes
+            0,                     // use default stack size
+            MainThreadFunction,    // thread function name
+            this,                  // argument to thread function
+            0,                     // use default creation flags
             &igt_ThreadIdArray);   // returns the thread identifier
 }
 
@@ -1359,6 +1403,7 @@ void ImageGrabberThread::run()
         DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Emergency Stop thread\n", igt_DeviceID);
         if(igt_func)
         {
+            printf("Calling Emergency stop even handler\n");
             igt_func(igt_DeviceID, igt_userData);
         }
     }
@@ -2701,11 +2746,14 @@ protected:
     IplImage* frame;
     videoInput VI;
 };
+
 struct SuppressVideoInputMessages
 {
     SuppressVideoInputMessages() { videoInput::setVerbose(true); }
 };
+
 static SuppressVideoInputMessages do_it;
+
 CvCaptureCAM_MSMF::CvCaptureCAM_MSMF():
     index(-1),
     width(-1),
@@ -2713,7 +2761,7 @@ CvCaptureCAM_MSMF::CvCaptureCAM_MSMF():
     fourcc(-1),
     widthSet(-1),
     heightSet(-1),
-    frame(0),
+    frame(NULL),
     VI(videoInput::getInstance())
 {
     CoInitialize(0);
@@ -2925,6 +2973,435 @@ bool CvCaptureCAM_MSMF::setProperty( int property_id, double value )
     }
     return false;
 }
+
+class CvCaptureFile_MSMF : public CvCapture
+{
+public:
+    CvCaptureFile_MSMF();
+    virtual ~CvCaptureFile_MSMF();
+
+    virtual bool open( const char* filename );
+    virtual void close();
+
+    virtual double getProperty(int);
+    virtual bool setProperty(int, double);
+    virtual bool grabFrame();
+    virtual IplImage* retrieveFrame(int);
+    virtual int getCaptureDomain() { return CV_CAP_MSMF; }
+protected:
+    ImageGrabberThread* grabberThread;
+    IMFMediaSource* videoFileSource;
+    std::vector<MediaType> captureFormats;
+    int captureFormatIndex;
+    IplImage* frame;
+    bool isOpened;
+
+    long enumerateCaptureFormats(IMFMediaSource *pSource);
+    void processPixels(unsigned char * src, unsigned char * dst, unsigned int width,
+                                unsigned int height, unsigned int bpp, bool bRGB, bool bFlip);
+};
+
+CvCaptureFile_MSMF::CvCaptureFile_MSMF():
+    grabberThread(NULL),
+    videoFileSource(NULL),
+    captureFormatIndex(0),
+    frame(NULL),
+    isOpened(false)
+{
+    MFStartup(MF_VERSION);
+}
+
+CvCaptureFile_MSMF::~CvCaptureFile_MSMF()
+{
+    MFShutdown();
+}
+
+bool CvCaptureFile_MSMF::open(const char* filename)
+{
+    if (!filename)
+        return false;
+
+    wchar_t* unicodeFileName = new wchar_t[strlen(filename)+1];
+    MultiByteToWideChar(CP_ACP, 0, filename, -1, unicodeFileName, strlen(filename)+1);
+
+    HRESULT hr = S_OK;
+
+    MF_OBJECT_TYPE ObjectType = MF_OBJECT_INVALID;
+
+    IMFSourceResolver* pSourceResolver = NULL;
+    IUnknown* pUnkSource = NULL;
+
+    hr = MFCreateSourceResolver(&pSourceResolver);
+
+    if (SUCCEEDED(hr))
+    {
+        hr = pSourceResolver->CreateObjectFromURL(
+            unicodeFileName,
+            MF_RESOLUTION_MEDIASOURCE,
+            NULL, // Optional property store.
+            &ObjectType,
+            &pUnkSource
+            );
+    }
+
+    // Get the IMFMediaSource from the IUnknown pointer.
+    if (SUCCEEDED(hr))
+    {
+        hr = pUnkSource->QueryInterface(IID_PPV_ARGS(&videoFileSource));
+    }
+
+    SafeRelease(&pSourceResolver);
+    SafeRelease(&pUnkSource);
+
+    enumerateCaptureFormats(videoFileSource);
+
+    if (SUCCEEDED(hr))
+    {
+        hr = ImageGrabberThread::CreateInstance(&grabberThread, videoFileSource, -2);
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        grabberThread->start();
+    }
+
+    isOpened = true;
+
+    return true;
+}
+
+void CvCaptureFile_MSMF::close()
+{
+    if (grabberThread)
+    {
+        isOpened = false;
+        SetEvent(grabberThread->getImageGrabber()->ig_hFrameReady);
+        grabberThread->stop();
+        delete grabberThread;
+    }
+
+    if (videoFileSource)
+    {
+        HRESULT hr = videoFileSource->Shutdown();
+        if (FAILED(hr))
+        {
+            printf("VideoCapture Closing failed!\n");
+        }
+    }
+}
+
+bool CvCaptureFile_MSMF::setProperty(int property_id, double value)
+{
+    // image capture properties
+    bool handled = false;
+    int width, height, fourcc;
+    switch( property_id )
+    {
+    case CV_CAP_PROP_FRAME_WIDTH:
+        // width = cvRound(value);
+        // handled = true;
+        break;
+    case CV_CAP_PROP_FRAME_HEIGHT:
+        // height = cvRound(value);
+        // handled = true;
+        break;
+    case CV_CAP_PROP_FOURCC:
+        fourcc = (int)(unsigned long)(value);
+        if ( fourcc == -1 ) {
+            // following cvCreateVideo usage will pop up caprturepindialog here if fourcc=-1
+            // TODO - how to create a capture pin dialog
+        }
+        handled = true;
+        break;
+    case CV_CAP_PROP_FPS:
+        // FIXME: implement method in VideoInput back end
+        // int fps = cvRound(value);
+        // if (fps != VI.getFPS(index))
+        // {
+        //     VI.stopDevice(index);
+        //     VI.setIdealFramerate(index,fps);
+        //     if (widthSet > 0 && heightSet > 0)
+        //         VI.setupDevice(index, widthSet, heightSet);
+        //     else
+        //         VI.setupDevice(index);
+        // }
+        // return VI.isDeviceSetup(index);
+        ;
+    }
+    if ( handled ) {
+        // a stream setting
+        if( width > 0 && height > 0 )
+        {
+            if( width != captureFormats[captureFormatIndex].width ||
+                height != captureFormats[captureFormatIndex].height )//|| fourcc != VI.getFourcc(index) )
+            {
+                // FIXME: implement method in VideoInput back end
+                // int fps = static_cast<int>(VI.getFPS(index));
+                // VI.stopDevice(index);
+                // VI.setIdealFramerate(index, fps);
+                // VI.setupDeviceFourcc(index, width, height, fourcc);
+            }
+            if (isOpened)
+            {
+                // widthSet = width;
+                // heightSet = height;
+                // width = height = fourcc = -1;
+            }
+            return isOpened;
+        }
+        return true;
+    }
+    // show video/camera filter dialog
+    // FIXME: implement method in VideoInput back end
+    // if ( property_id == CV_CAP_PROP_SETTINGS ) {
+    //     VI.showSettingsWindow(index);
+    //     return true;
+    // }
+    //video Filter properties
+    switch( property_id )
+    {
+    case CV_CAP_PROP_BRIGHTNESS:
+    case CV_CAP_PROP_CONTRAST:
+    case CV_CAP_PROP_HUE:
+    case CV_CAP_PROP_SATURATION:
+    case CV_CAP_PROP_SHARPNESS:
+    case CV_CAP_PROP_GAMMA:
+    case CV_CAP_PROP_MONOCROME:
+    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+    case CV_CAP_PROP_BACKLIGHT:
+    case CV_CAP_PROP_GAIN:
+        // FIXME: implement method in VideoInput back end
+        //return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(property_id),(long)value);
+        ;
+    }
+    //camera properties
+    switch( property_id )
+    {
+    case CV_CAP_PROP_PAN:
+    case CV_CAP_PROP_TILT:
+    case CV_CAP_PROP_ROLL:
+    case CV_CAP_PROP_ZOOM:
+    case CV_CAP_PROP_EXPOSURE:
+    case CV_CAP_PROP_IRIS:
+    case CV_CAP_PROP_FOCUS:
+        // FIXME: implement method in VideoInput back end
+        //return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(property_id),(long)value);
+        ;
+    }
+
+    return false;
+}
+
+double CvCaptureFile_MSMF::getProperty(int property_id)
+{
+    // image format proprrties
+    switch( property_id )
+    {
+    case CV_CAP_PROP_FRAME_WIDTH:
+        return captureFormats[captureFormatIndex].width;
+    case CV_CAP_PROP_FRAME_HEIGHT:
+        return captureFormats[captureFormatIndex].height;
+    case CV_CAP_PROP_FOURCC:
+        // FIXME: implement method in VideoInput back end
+        //return VI.getFourcc(index);
+        ;
+    case CV_CAP_PROP_FPS:
+        // FIXME: implement method in VideoInput back end
+        //return VI.getFPS(index);
+        ;
+    }
+    // video filter properties
+    switch( property_id )
+    {
+    case CV_CAP_PROP_BRIGHTNESS:
+    case CV_CAP_PROP_CONTRAST:
+    case CV_CAP_PROP_HUE:
+    case CV_CAP_PROP_SATURATION:
+    case CV_CAP_PROP_SHARPNESS:
+    case CV_CAP_PROP_GAMMA:
+    case CV_CAP_PROP_MONOCROME:
+    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+    case CV_CAP_PROP_BACKLIGHT:
+    case CV_CAP_PROP_GAIN:
+        // FIXME: implement method in VideoInput back end
+        // if ( VI.getVideoSettingFilter(index, VI.getVideoPropertyFromCV(property_id), min_value,
+        //                               max_value, stepping_delta, current_value, flags,defaultValue) )
+        //     return (double)current_value;
+        return 0.;
+    }
+    // camera properties
+    switch( property_id )
+    {
+    case CV_CAP_PROP_PAN:
+    case CV_CAP_PROP_TILT:
+    case CV_CAP_PROP_ROLL:
+    case CV_CAP_PROP_ZOOM:
+    case CV_CAP_PROP_EXPOSURE:
+    case CV_CAP_PROP_IRIS:
+    case CV_CAP_PROP_FOCUS:
+    // FIXME: implement method in VideoInput back end
+    //     if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(property_id),min_value,
+    //          max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
+        return 0.;
+    }
+    // unknown parameter or value not available
+    return -1;
+}
+
+bool CvCaptureFile_MSMF::grabFrame()
+{
+    DWORD waitResult;
+    if (isOpened)
+    {
+        HANDLE tmp[] = {grabberThread->getImageGrabber()->ig_hFrameReady, grabberThread->getImageGrabber()->ig_hFinish, 0};
+        waitResult = WaitForMultipleObjects(2, tmp, FALSE, INFINITE);
+        SetEvent(grabberThread->getImageGrabber()->ig_hFrameGrabbed);
+    }
+
+    return isOpened && (waitResult == WAIT_OBJECT_0);
+}
+
+IplImage* CvCaptureFile_MSMF::retrieveFrame(int)
+{
+    unsigned int width = captureFormats[captureFormatIndex].width;
+    unsigned int height = captureFormats[captureFormatIndex].height;
+    unsigned int bytes = 3;
+    if( !frame || width != frame->width || height != frame->height )
+    {
+        if (frame)
+            cvReleaseImage( &frame );
+        frame = cvCreateImage( cvSize(width,height), 8, 3 );
+    }
+
+    RawImage *RIOut = grabberThread->getImageGrabber()->getRawImage();
+    unsigned int size = bytes * width * height;
+
+    if(RIOut && size == RIOut->getSize())
+    {
+        processPixels(RIOut->getpPixels(), (unsigned char*)frame->imageData, width, height, bytes, true, false);
+    }
+
+    return frame;
+}
+
+void CvCaptureFile_MSMF::processPixels(unsigned char * src, unsigned char * dst, unsigned int width,
+                                unsigned int height, unsigned int bpp, bool bRGB, bool bFlip)
+{
+    unsigned int widthInBytes = width * bpp;
+    unsigned int numBytes = widthInBytes * height;
+    int *dstInt, *srcInt;
+    if(!bRGB)
+    {
+        if(bFlip)
+        {
+            for(unsigned int y = 0; y < height; y++)
+            {
+                dstInt = (int *)(dst + (y * widthInBytes));
+                srcInt = (int *)(src + ( (height -y -1) * widthInBytes));
+                memcpy(dstInt, srcInt, widthInBytes);
+            }
+        }
+        else
+        {
+            memcpy(dst, src, numBytes);
+        }
+    }
+    else
+    {
+        if(bFlip)
+        {
+            unsigned int x = 0;
+            unsigned int y = (height - 1) * widthInBytes;
+            src += y;
+            for(unsigned int i = 0; i < numBytes; i+=3)
+            {
+                if(x >= width)
+                {
+                    x = 0;
+                    src -= widthInBytes*2;
+                }
+                *dst = *(src+2);
+                dst++;
+                *dst = *(src+1);
+                dst++;
+                *dst = *src;
+                dst++;
+                src+=3;
+                x++;
+            }
+        }
+        else
+        {
+            for(unsigned int i = 0; i < numBytes; i+=3)
+            {
+                *dst = *(src+2);
+                dst++;
+                *dst = *(src+1);
+                dst++;
+                *dst = *src;
+                dst++;
+                src+=3;
+            }
+        }
+    }
+}
+
+long CvCaptureFile_MSMF::enumerateCaptureFormats(IMFMediaSource *pSource)
+{
+    IMFPresentationDescriptor *pPD = NULL;
+    IMFStreamDescriptor *pSD = NULL;
+    IMFMediaTypeHandler *pHandler = NULL;
+    IMFMediaType *pType = NULL;
+    HRESULT hr = pSource->CreatePresentationDescriptor(&pPD);
+    if (FAILED(hr))
+    {
+        goto done;
+    }
+
+    DWORD cnt;
+
+    pPD->GetStreamDescriptorCount(&cnt);
+
+    printf("Stream count: %d\n", cnt);
+
+    BOOL fSelected;
+    hr = pPD->GetStreamDescriptorByIndex(0, &fSelected, &pSD);
+    if (FAILED(hr))
+    {
+        goto done;
+    }
+    hr = pSD->GetMediaTypeHandler(&pHandler);
+    if (FAILED(hr))
+    {
+        goto done;
+    }
+    DWORD cTypes = 0;
+    hr = pHandler->GetMediaTypeCount(&cTypes);
+    if (FAILED(hr))
+    {
+        goto done;
+    }
+    for (DWORD i = 0; i < cTypes; i++)
+    {
+        hr = pHandler->GetMediaTypeByIndex(i, &pType);
+        if (FAILED(hr))
+        {
+            goto done;
+        }
+        MediaType MT = FormatReader::Read(pType);
+        captureFormats.push_back(MT);
+        SafeRelease(&pType);
+    }
+
+done:
+    SafeRelease(&pPD);
+    SafeRelease(&pSD);
+    SafeRelease(&pHandler);
+    SafeRelease(&pType);
+    return hr;
+}
+
+
 CvCapture* cvCreateCameraCapture_MSMF( int index )
 {
     CvCaptureCAM_MSMF* capture = new CvCaptureCAM_MSMF;
@@ -2942,6 +3419,14 @@ CvCapture* cvCreateCameraCapture_MSMF( int index )
     return 0;
 }
 
+CvCapture* cvCreateFileCapture_MSMF (const char* filename)
+{
+    CvCaptureFile_MSMF* capture = new CvCaptureFile_MSMF;
+    if( capture->open(filename) )
+        return capture;
+    delete capture;
+    return 0;
+}
 
 //
 //

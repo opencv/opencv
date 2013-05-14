@@ -363,6 +363,20 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
     if (! result)
         result = cvCreateFileCapture_FFMPEG_proxy (filename);
 
+#ifdef HAVE_MSMF
+    if (! result)
+    {
+        printf("Creating Media foundation based reader\n");
+        result = cvCreateFileCapture_MSMF (filename);
+        printf("Construction result %p\n", result);
+    }
+#endif
+
+#ifdef HAVE_VFW
+    if (! result)
+        result = cvCreateFileCapture_VFW (filename);
+#endif
+
 #ifdef HAVE_XINE
     if (! result)
         result = cvCreateFileCapture_XINE (filename);
@@ -415,7 +429,7 @@ CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
 
 #ifdef HAVE_VFW
     if(!result)
-     return cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, isColor);
+     return cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, is_color);
 #endif
 
 #ifdef HAVE_MSMF
