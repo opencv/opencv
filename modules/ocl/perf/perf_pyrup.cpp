@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,7 +46,7 @@
 #include "precomp.hpp"
 
 ///////////// pyrUp ////////////////////////
-TEST(pyrUp)
+PERFTEST(pyrUp)
 {
     Mat src, dst;
     int all_type[] = {CV_8UC1, CV_8UC4};
@@ -72,9 +73,10 @@ TEST(pyrUp)
             ocl::pyrUp(d_src, d_dst);
             WARMUP_OFF;
 
+            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), (src.depth() == CV_32F ? 1e-4f : 1.0)));                     
+
             GPU_ON;
             ocl::pyrUp(d_src, d_dst);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;

@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,7 +46,7 @@
 #include "precomp.hpp"
 
 ///////////// gemm ////////////////////////
-TEST(gemm)
+PERFTEST(gemm)
 {
     Mat src1, src2, src3, dst;
     ocl::oclMat d_src1, d_src2, d_src3, d_dst;
@@ -71,10 +72,10 @@ TEST(gemm)
         WARMUP_ON;
         ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
         WARMUP_OFF;
+        TestSystem::instance().setAccurate(ExpectedMatNear(cv::Mat(d_dst), dst, src1.cols * src1.rows * 1e-4));
 
         GPU_ON;
         ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-         ;
         GPU_OFF;
 
         GPU_FULL_ON;

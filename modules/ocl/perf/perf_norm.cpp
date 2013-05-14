@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,7 +46,7 @@
 #include "precomp.hpp"
 
 ///////////// norm////////////////////////
-TEST(norm)
+PERFTEST(norm)
 {
     Mat src, buf;
     ocl::oclMat d_src, d_buf;
@@ -71,9 +72,10 @@ TEST(norm)
         ocl::norm(d_src, d_buf, NORM_INF);
         WARMUP_OFF;
 
+        TestSystem::instance().setAccurate(ExpectedMatNear(src, cv::Mat(d_buf), .5));                        
+
         GPU_ON;
         ocl::norm(d_src, d_buf, NORM_INF);
-         ;
         GPU_OFF;
 
         GPU_FULL_ON;

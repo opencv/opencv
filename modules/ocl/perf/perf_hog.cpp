@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,7 +46,13 @@
 #include "precomp.hpp"
 
 ///////////// HOG////////////////////////
-TEST(HOG)
+bool match_rect(cv::Rect r1, cv::Rect r2, int threshold)
+{
+    return ((abs(r1.x - r2.x) < threshold) && (abs(r1.y - r2.y) < threshold) &&
+        (abs(r1.width - r2.width) < threshold) && (abs(r1.height - r2.height) < threshold));
+}
+
+PERFTEST(HOG)
 {
     Mat src = imread(abspath("road.png"), cv::IMREAD_GRAYSCALE);
 
@@ -58,6 +65,7 @@ TEST(HOG)
     cv::HOGDescriptor hog;
     hog.setSVMDetector(hog.getDefaultPeopleDetector());
     std::vector<cv::Rect> found_locations;
+    std::vector<cv::Rect> d_found_locations;
 
     SUBTEST << 768 << 'x' << 576 << "; road.png";
 
@@ -73,12 +81,78 @@ TEST(HOG)
     d_src.upload(src);
 
     WARMUP_ON;
-    ocl_hog.detectMultiScale(d_src, found_locations);
+    ocl_hog.detectMultiScale(d_src, d_found_locations);
     WARMUP_OFF;
+    
+    // Ground-truth rectangular people window
+    cv::Rect win1_64x128(231, 190, 72, 144);
+    cv::Rect win2_64x128(621, 156, 97, 194);
+    cv::Rect win1_48x96(238, 198, 63, 126);
+    cv::Rect win2_48x96(619, 161, 92, 185);
+    cv::Rect win3_48x96(488, 136, 56, 112);
+
+    // Compare whether ground-truth windows are detected and compare the number of windows detected.
+    std::vector<int> d_comp(4);
+    std::vector<int> comp(4);
+    for(int i = 0; i < (int)d_comp.size(); i++)
+    {
+        d_comp[i] = 0;
+        comp[i] = 0;
+    }
+
+    int threshold = 10;
+    int val = 32;
+    d_comp[0] = (int)d_found_locations.size();
+    comp[0] = (int)found_locations.size();
+
+    cv::Size winSize = hog.winSize;
+
+    if (winSize == cv::Size(48, 96))
+    {
+        for(int i = 0; i < (int)d_found_locations.size(); i++)
+        {
+            if (match_rect(d_found_locations[i], win1_48x96, threshold))
+                d_comp[1] = val;
+            if (match_rect(d_found_locations[i], win2_48x96, threshold))
+                d_comp[2] = val;
+            if (match_rect(d_found_locations[i], win3_48x96, threshold))
+                d_comp[3] = val;
+        }
+        for(int i = 0; i < (int)found_locations.size(); i++)
+        {
+            if (match_rect(found_locations[i], win1_48x96, threshold))
+                comp[1] = val;
+            if (match_rect(found_locations[i], win2_48x96, threshold))
+                comp[2] = val;
+            if (match_rect(found_locations[i], win3_48x96, threshold))
+                comp[3] = val;
+        }
+    }
+    else if (winSize == cv::Size(64, 128))
+    {
+        for(int i = 0; i < (int)d_found_locations.size(); i++)
+        {
+            if (match_rect(d_found_locations[i], win1_64x128, threshold))
+                d_comp[1] = val;
+            if (match_rect(d_found_locations[i], win2_64x128, threshold))
+                d_comp[2] = val;
+        }
+        for(int i = 0; i < (int)found_locations.size(); i++)
+        {
+            if (match_rect(found_locations[i], win1_64x128, threshold))
+                comp[1] = val;
+            if (match_rect(found_locations[i], win2_64x128, threshold))
+                comp[2] = val;
+        }
+    }
+
+    cv::Mat ocl_mat;
+    ocl_mat = cv::Mat(d_comp);
+    ocl_mat.convertTo(ocl_mat, cv::Mat(comp).type());
+    TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat, cv::Mat(comp), 3));
 
     GPU_ON;
     ocl_hog.detectMultiScale(d_src, found_locations);
-     ;
     GPU_OFF;
 
     GPU_FULL_ON;
