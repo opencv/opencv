@@ -866,7 +866,6 @@ namespace cv
             std::vector<oclMat> image_sqsums;
         };
 
-
         //! computes the proximity map for the raster template and the image where the template is searched for
         // Supports TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED for type 8UC1 and 8UC4
         // Supports TM_SQDIFF, TM_CCORR for type 32FC1 and 32FC4
@@ -877,71 +876,36 @@ namespace cv
         // Supports TM_SQDIFF, TM_CCORR for type 32FC1 and 32FC4
         CV_EXPORTS void matchTemplate(const oclMat &image, const oclMat &templ, oclMat &result, int method, MatchTemplateBuf &buf);
 
-
-
         ///////////////////////////////////////////// Canny /////////////////////////////////////////////
-
         struct CV_EXPORTS CannyBuf;
-
-
-
         //! compute edges of the input image using Canny operator
-
         // Support CV_8UC1 only
-
         CV_EXPORTS void Canny(const oclMat &image, oclMat &edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
-
         CV_EXPORTS void Canny(const oclMat &image, CannyBuf &buf, oclMat &edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
-
         CV_EXPORTS void Canny(const oclMat &dx, const oclMat &dy, oclMat &edges, double low_thresh, double high_thresh, bool L2gradient = false);
-
         CV_EXPORTS void Canny(const oclMat &dx, const oclMat &dy, CannyBuf &buf, oclMat &edges, double low_thresh, double high_thresh, bool L2gradient = false);
 
-
-
         struct CV_EXPORTS CannyBuf
-
         {
-
             CannyBuf() : counter(NULL) {}
-
             ~CannyBuf()
             {
                 release();
             }
-
             explicit CannyBuf(const Size &image_size, int apperture_size = 3) : counter(NULL)
-
             {
-
                 create(image_size, apperture_size);
-
             }
-
             CannyBuf(const oclMat &dx_, const oclMat &dy_);
 
-
-
             void create(const Size &image_size, int apperture_size = 3);
-
-
-
             void release();
-
-
-
             oclMat dx, dy;
-
             oclMat dx_buf, dy_buf;
-
             oclMat edgeBuf;
-
             oclMat trackBuf1, trackBuf2;
-
             void *counter;
-
             Ptr<FilterEngine_GPU> filterDX, filterDY;
-
         };
 
         ///////////////////////////////////////// clAmdFft related /////////////////////////////////////////
@@ -966,159 +930,69 @@ namespace cv
                              const oclMat &src3, double beta, oclMat &dst, int flags = 0);
 
         //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
-
         struct CV_EXPORTS HOGDescriptor
-
         {
-
             enum { DEFAULT_WIN_SIGMA = -1 };
-
             enum { DEFAULT_NLEVELS = 64 };
-
             enum { DESCR_FORMAT_ROW_BY_ROW, DESCR_FORMAT_COL_BY_COL };
-
-
-
             HOGDescriptor(Size win_size = Size(64, 128), Size block_size = Size(16, 16),
-
                           Size block_stride = Size(8, 8), Size cell_size = Size(8, 8),
-
                           int nbins = 9, double win_sigma = DEFAULT_WIN_SIGMA,
-
                           double threshold_L2hys = 0.2, bool gamma_correction = true,
-
                           int nlevels = DEFAULT_NLEVELS);
 
-
-
             size_t getDescriptorSize() const;
-
             size_t getBlockHistogramSize() const;
-
-
-
             void setSVMDetector(const vector<float> &detector);
-
-
-
             static vector<float> getDefaultPeopleDetector();
-
             static vector<float> getPeopleDetector48x96();
-
             static vector<float> getPeopleDetector64x128();
-
-
-
             void detect(const oclMat &img, vector<Point> &found_locations,
-
                         double hit_threshold = 0, Size win_stride = Size(),
-
                         Size padding = Size());
-
-
-
             void detectMultiScale(const oclMat &img, vector<Rect> &found_locations,
-
                                   double hit_threshold = 0, Size win_stride = Size(),
-
                                   Size padding = Size(), double scale0 = 1.05,
-
                                   int group_threshold = 2);
-
-
-
             void getDescriptors(const oclMat &img, Size win_stride,
-
                                 oclMat &descriptors,
-
                                 int descr_format = DESCR_FORMAT_COL_BY_COL);
-
-
-
             Size win_size;
-
             Size block_size;
-
             Size block_stride;
-
             Size cell_size;
 
             int nbins;
-
             double win_sigma;
-
             double threshold_L2hys;
-
             bool gamma_correction;
-
             int nlevels;
 
-
-
         protected:
-
             // initialize buffers; only need to do once in case of multiscale detection
-
             void init_buffer(const oclMat &img, Size win_stride);
-
-
-
             void computeBlockHistograms(const oclMat &img);
-
             void computeGradient(const oclMat &img, oclMat &grad, oclMat &qangle);
-
-
-
             double getWinSigma() const;
-
             bool checkDetectorSize() const;
 
-
-
             static int numPartsWithin(int size, int part_size, int stride);
-
             static Size numPartsWithin(Size size, Size part_size, Size stride);
 
-
-
             // Coefficients of the separating plane
-
             float free_coef;
-
             oclMat detector;
-
-
-
             // Results of the last classification step
-
             oclMat labels;
-
             Mat labels_host;
-
-
-
             // Results of the last histogram evaluation step
-
             oclMat block_hists;
-
-
-
             // Gradients conputation results
-
             oclMat grad, qangle;
-
-
-
             // scaled image
-
             oclMat image_scale;
-
-
-
             // effect size of input image (might be different from original size after scaling)
-
             Size effect_size;
-
         };
 
 
@@ -1126,13 +1000,11 @@ namespace cv
         /****************************************************************************************\
         *                                      Distance                                          *
         \****************************************************************************************/
-
         template<typename T>
         struct CV_EXPORTS Accumulator
         {
             typedef T Type;
         };
-
         template<> struct Accumulator<unsigned char>
         {
             typedef float Type;
@@ -1206,469 +1078,225 @@ namespace cv
         {
         public:
             enum DistType {L1Dist = 0, L2Dist, HammingDist};
-
             explicit BruteForceMatcher_OCL_base(DistType distType = L2Dist);
-
-
-
             // Add descriptors to train descriptor collection
-
             void add(const std::vector<oclMat> &descCollection);
-
-
-
             // Get train descriptors collection
-
             const std::vector<oclMat> &getTrainDescriptors() const;
-
-
-
             // Clear train descriptors collection
-
             void clear();
-
-
-
             // Return true if there are not train descriptors in collection
-
             bool empty() const;
 
-
-
             // Return true if the matcher supports mask in match methods
-
             bool isMaskSupported() const;
 
-
-
             // Find one best match for each query descriptor
-
             void matchSingle(const oclMat &query, const oclMat &train,
-
                              oclMat &trainIdx, oclMat &distance,
-
                              const oclMat &mask = oclMat());
 
-
-
             // Download trainIdx and distance and convert it to CPU vector with DMatch
-
             static void matchDownload(const oclMat &trainIdx, const oclMat &distance, std::vector<DMatch> &matches);
-
             // Convert trainIdx and distance to vector with DMatch
-
             static void matchConvert(const Mat &trainIdx, const Mat &distance, std::vector<DMatch> &matches);
 
-
-
             // Find one best match for each query descriptor
-
             void match(const oclMat &query, const oclMat &train, std::vector<DMatch> &matches, const oclMat &mask = oclMat());
 
-
-
             // Make gpu collection of trains and masks in suitable format for matchCollection function
-
             void makeGpuCollection(oclMat &trainCollection, oclMat &maskCollection, const std::vector<oclMat> &masks = std::vector<oclMat>());
 
 
-
             // Find one best match from train collection for each query descriptor
-
             void matchCollection(const oclMat &query, const oclMat &trainCollection,
-
                                  oclMat &trainIdx, oclMat &imgIdx, oclMat &distance,
-
                                  const oclMat &masks = oclMat());
 
-
-
             // Download trainIdx, imgIdx and distance and convert it to vector with DMatch
-
             static void matchDownload(const oclMat &trainIdx, const oclMat &imgIdx, const oclMat &distance, std::vector<DMatch> &matches);
-
             // Convert trainIdx, imgIdx and distance to vector with DMatch
-
             static void matchConvert(const Mat &trainIdx, const Mat &imgIdx, const Mat &distance, std::vector<DMatch> &matches);
 
-
-
             // Find one best match from train collection for each query descriptor.
-
             void match(const oclMat &query, std::vector<DMatch> &matches, const std::vector<oclMat> &masks = std::vector<oclMat>());
 
-
-
             // Find k best matches for each query descriptor (in increasing order of distances)
-
             void knnMatchSingle(const oclMat &query, const oclMat &train,
-
                                 oclMat &trainIdx, oclMat &distance, oclMat &allDist, int k,
-
                                 const oclMat &mask = oclMat());
 
-
-
             // Download trainIdx and distance and convert it to vector with DMatch
-
             // compactResult is used when mask is not empty. If compactResult is false matches
-
             // vector will have the same size as queryDescriptors rows. If compactResult is true
-
             // matches vector will not contain matches for fully masked out query descriptors.
-
             static void knnMatchDownload(const oclMat &trainIdx, const oclMat &distance,
-
                                          std::vector< std::vector<DMatch> > &matches, bool compactResult = false);
 
             // Convert trainIdx and distance to vector with DMatch
-
             static void knnMatchConvert(const Mat &trainIdx, const Mat &distance,
-
                                         std::vector< std::vector<DMatch> > &matches, bool compactResult = false);
 
-
-
             // Find k best matches for each query descriptor (in increasing order of distances).
-
             // compactResult is used when mask is not empty. If compactResult is false matches
-
             // vector will have the same size as queryDescriptors rows. If compactResult is true
-
             // matches vector will not contain matches for fully masked out query descriptors.
-
             void knnMatch(const oclMat &query, const oclMat &train,
-
                           std::vector< std::vector<DMatch> > &matches, int k, const oclMat &mask = oclMat(),
-
                           bool compactResult = false);
 
-
-
             // Find k best matches from train collection for each query descriptor (in increasing order of distances)
-
             void knnMatch2Collection(const oclMat &query, const oclMat &trainCollection,
-
                                      oclMat &trainIdx, oclMat &imgIdx, oclMat &distance,
-
                                      const oclMat &maskCollection = oclMat());
 
-
-
             // Download trainIdx and distance and convert it to vector with DMatch
-
             // compactResult is used when mask is not empty. If compactResult is false matches
-
             // vector will have the same size as queryDescriptors rows. If compactResult is true
-
             // matches vector will not contain matches for fully masked out query descriptors.
-
             static void knnMatch2Download(const oclMat &trainIdx, const oclMat &imgIdx, const oclMat &distance,
-
                                           std::vector< std::vector<DMatch> > &matches, bool compactResult = false);
 
             // Convert trainIdx and distance to vector with DMatch
-
             static void knnMatch2Convert(const Mat &trainIdx, const Mat &imgIdx, const Mat &distance,
-
                                          std::vector< std::vector<DMatch> > &matches, bool compactResult = false);
 
-
-
             // Find k best matches  for each query descriptor (in increasing order of distances).
-
             // compactResult is used when mask is not empty. If compactResult is false matches
-
             // vector will have the same size as queryDescriptors rows. If compactResult is true
-
             // matches vector will not contain matches for fully masked out query descriptors.
-
             void knnMatch(const oclMat &query, std::vector< std::vector<DMatch> > &matches, int k,
-
                           const std::vector<oclMat> &masks = std::vector<oclMat>(), bool compactResult = false);
 
-
-
             // Find best matches for each query descriptor which have distance less than maxDistance.
-
             // nMatches.at<int>(0, queryIdx) will contain matches count for queryIdx.
-
             // carefully nMatches can be greater than trainIdx.cols - it means that matcher didn't find all matches,
-
             // because it didn't have enough memory.
-
             // If trainIdx is empty, then trainIdx and distance will be created with size nQuery x max((nTrain / 100), 10),
-
             // otherwize user can pass own allocated trainIdx and distance with size nQuery x nMaxMatches
-
             // Matches doesn't sorted.
-
             void radiusMatchSingle(const oclMat &query, const oclMat &train,
-
                                    oclMat &trainIdx, oclMat &distance, oclMat &nMatches, float maxDistance,
-
                                    const oclMat &mask = oclMat());
 
-
-
             // Download trainIdx, nMatches and distance and convert it to vector with DMatch.
-
             // matches will be sorted in increasing order of distances.
-
             // compactResult is used when mask is not empty. If compactResult is false matches
-
             // vector will have the same size as queryDescriptors rows. If compactResult is true
-
             // matches vector will not contain matches for fully masked out query descriptors.
-
             static void radiusMatchDownload(const oclMat &trainIdx, const oclMat &distance, const oclMat &nMatches,
-
                                             std::vector< std::vector<DMatch> > &matches, bool compactResult = false);
-
             // Convert trainIdx, nMatches and distance to vector with DMatch.
-
             static void radiusMatchConvert(const Mat &trainIdx, const Mat &distance, const Mat &nMatches,
-
                                            std::vector< std::vector<DMatch> > &matches, bool compactResult = false);
-
-
-
             // Find best matches for each query descriptor which have distance less than maxDistance
-
             // in increasing order of distances).
-
             void radiusMatch(const oclMat &query, const oclMat &train,
-
                              std::vector< std::vector<DMatch> > &matches, float maxDistance,
-
                              const oclMat &mask = oclMat(), bool compactResult = false);
-
-
-
             // Find best matches for each query descriptor which have distance less than maxDistance.
-
             // If trainIdx is empty, then trainIdx and distance will be created with size nQuery x max((nQuery / 100), 10),
-
             // otherwize user can pass own allocated trainIdx and distance with size nQuery x nMaxMatches
-
             // Matches doesn't sorted.
-
             void radiusMatchCollection(const oclMat &query, oclMat &trainIdx, oclMat &imgIdx, oclMat &distance, oclMat &nMatches, float maxDistance,
-
                                        const std::vector<oclMat> &masks = std::vector<oclMat>());
-
-
-
             // Download trainIdx, imgIdx, nMatches and distance and convert it to vector with DMatch.
-
             // matches will be sorted in increasing order of distances.
-
             // compactResult is used when mask is not empty. If compactResult is false matches
-
             // vector will have the same size as queryDescriptors rows. If compactResult is true
-
             // matches vector will not contain matches for fully masked out query descriptors.
-
             static void radiusMatchDownload(const oclMat &trainIdx, const oclMat &imgIdx, const oclMat &distance, const oclMat &nMatches,
-
                                             std::vector< std::vector<DMatch> > &matches, bool compactResult = false);
-
             // Convert trainIdx, nMatches and distance to vector with DMatch.
-
             static void radiusMatchConvert(const Mat &trainIdx, const Mat &imgIdx, const Mat &distance, const Mat &nMatches,
-
                                            std::vector< std::vector<DMatch> > &matches, bool compactResult = false);
-
-
-
             // Find best matches from train collection for each query descriptor which have distance less than
-
             // maxDistance (in increasing order of distances).
-
             void radiusMatch(const oclMat &query, std::vector< std::vector<DMatch> > &matches, float maxDistance,
-
                              const std::vector<oclMat> &masks = std::vector<oclMat>(), bool compactResult = false);
-
-
-
             DistType distType;
-
-
-
         private:
-
             std::vector<oclMat> trainDescCollection;
-
         };
-
-
 
         template <class Distance>
-
         class CV_EXPORTS BruteForceMatcher_OCL;
 
-
-
         template <typename T>
-
         class CV_EXPORTS BruteForceMatcher_OCL< L1<T> > : public BruteForceMatcher_OCL_base
-
         {
-
         public:
-
             explicit BruteForceMatcher_OCL() : BruteForceMatcher_OCL_base(L1Dist) {}
-
             explicit BruteForceMatcher_OCL(L1<T> /*d*/) : BruteForceMatcher_OCL_base(L1Dist) {}
-
         };
 
         template <typename T>
-
         class CV_EXPORTS BruteForceMatcher_OCL< L2<T> > : public BruteForceMatcher_OCL_base
-
         {
-
         public:
-
             explicit BruteForceMatcher_OCL() : BruteForceMatcher_OCL_base(L2Dist) {}
-
             explicit BruteForceMatcher_OCL(L2<T> /*d*/) : BruteForceMatcher_OCL_base(L2Dist) {}
-
         };
 
         template <> class CV_EXPORTS BruteForceMatcher_OCL< Hamming > : public BruteForceMatcher_OCL_base
-
         {
-
         public:
-
             explicit BruteForceMatcher_OCL() : BruteForceMatcher_OCL_base(HammingDist) {}
-
             explicit BruteForceMatcher_OCL(Hamming /*d*/) : BruteForceMatcher_OCL_base(HammingDist) {}
-
         };
 
-
-
         /////////////////////////////// PyrLKOpticalFlow /////////////////////////////////////
-
         class CV_EXPORTS PyrLKOpticalFlow
-
         {
-
         public:
-
             PyrLKOpticalFlow()
-
             {
-
                 winSize = Size(21, 21);
-
                 maxLevel = 3;
-
                 iters = 30;
-
                 derivLambda = 0.5;
-
                 useInitialFlow = false;
-
                 minEigThreshold = 1e-4f;
-
                 getMinEigenVals = false;
-
                 isDeviceArch11_ = false;
-
             }
-
-
 
             void sparse(const oclMat &prevImg, const oclMat &nextImg, const oclMat &prevPts, oclMat &nextPts,
-
                         oclMat &status, oclMat *err = 0);
-
-
-
             void dense(const oclMat &prevImg, const oclMat &nextImg, oclMat &u, oclMat &v, oclMat *err = 0);
-
-
-
             Size winSize;
-
             int maxLevel;
-
             int iters;
-
             double derivLambda;
-
             bool useInitialFlow;
-
             float minEigThreshold;
-
             bool getMinEigenVals;
-
-
-
             void releaseMemory()
-
             {
-
                 dx_calcBuf_.release();
-
                 dy_calcBuf_.release();
 
-
-
                 prevPyr_.clear();
-
                 nextPyr_.clear();
 
-
-
                 dx_buf_.release();
-
                 dy_buf_.release();
-
             }
-
-
-
         private:
-
             void calcSharrDeriv(const oclMat &src, oclMat &dx, oclMat &dy);
-
-
-
             void buildImagePyramid(const oclMat &img0, vector<oclMat> &pyr, bool withBorder);
 
-
-
             oclMat dx_calcBuf_;
-
             oclMat dy_calcBuf_;
 
-
-
             vector<oclMat> prevPyr_;
-
             vector<oclMat> nextPyr_;
 
-
-
             oclMat dx_buf_;
-
             oclMat dy_buf_;
-
-
-
             oclMat uPyr_[2];
-
             oclMat vPyr_[2];
-
-
-
             bool isDeviceArch11_;
-
         };
         //////////////// build warping maps ////////////////////
         //! builds plane warping maps
