@@ -58,12 +58,9 @@ PARAM_TEST_CASE(PyrUp, MatType, int)
 {
     int type;
     int channels;
-    //std::vector<cv::ocl::Info> oclinfo;
 
     virtual void SetUp()
     {
-        //int devnums = cv::ocl::getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
         type = GET_PARAM(0);
         channels = GET_PARAM(1);
     }
@@ -80,17 +77,14 @@ TEST_P(PyrUp, Accuracy)
         ocl::oclMat dst;
         ocl::oclMat srcMat(src);
         ocl::pyrUp(srcMat, dst);
-        Mat cpu_dst;
-        dst.download(cpu_dst);
-        char s[100] = {0};
 
-        EXPECT_MAT_NEAR(dst_gold, cpu_dst, (src.depth() == CV_32F ? 1e-4f : 1.0), s);
+        EXPECT_MAT_NEAR(dst_gold, Mat(dst), (type == CV_32F ? 1e-4f : 1.0));
     }
 
 }
 
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, PyrUp, testing::Combine(
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrUp, testing::Combine(
                             Values(CV_8U, CV_32F), Values(1, 3, 4)));
 
 

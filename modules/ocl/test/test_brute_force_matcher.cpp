@@ -7,11 +7,15 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Multicoreware inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
+//
+// @Authors
+//    Nathan, liujun@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -21,12 +25,12 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and/or other oclMaterials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors "as is" and
+// This software is provided by the copyright holders and contributors as is and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
@@ -45,9 +49,9 @@ namespace
 {
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // BruteForceMatcher
-    CV_ENUM(DistType, cv::ocl::BruteForceMatcher_OCL_base::L1Dist,\
-        cv::ocl::BruteForceMatcher_OCL_base::L2Dist,\
-        cv::ocl::BruteForceMatcher_OCL_base::HammingDist)
+    CV_ENUM(DistType, BruteForceMatcher_OCL_base::L1Dist,
+                      BruteForceMatcher_OCL_base::L2Dist,
+                      BruteForceMatcher_OCL_base::HammingDist)
     IMPLEMENT_PARAM_CLASS(DescriptorSize, int)
     PARAM_TEST_CASE(BruteForceMatcher, DistType, DescriptorSize)
     {
@@ -158,11 +162,7 @@ namespace
 
     TEST_P(BruteForceMatcher, RadiusMatch_Single)
     {
-        float radius;
-        if(distType == cv::ocl::BruteForceMatcher_OCL_base::L2Dist)
-            radius = 1.f / countFactor / countFactor;
-        else
-            radius = 1.f / countFactor;
+        float radius = 1.f / countFactor;
 
         cv::ocl::BruteForceMatcher_OCL_base matcher(distType);
 
@@ -191,8 +191,20 @@ namespace
 
     INSTANTIATE_TEST_CASE_P(OCL_Features2D, BruteForceMatcher, 
         testing::Combine(
-        testing::Values(DistType(cv::ocl::BruteForceMatcher_OCL_base::L1Dist), DistType(cv::ocl::BruteForceMatcher_OCL_base::L2Dist)),
-        testing::Values(DescriptorSize(57), DescriptorSize(64), DescriptorSize(83), DescriptorSize(128), DescriptorSize(179), DescriptorSize(256), DescriptorSize(304))));
-
+        testing::Values(
+            DistType(cv::ocl::BruteForceMatcher_OCL_base::L1Dist),
+            DistType(cv::ocl::BruteForceMatcher_OCL_base::L2Dist)/*, 
+            DistType(cv::ocl::BruteForceMatcher_OCL_base::HammingDist)*/
+        ),
+        testing::Values(
+            DescriptorSize(57), 
+            DescriptorSize(64), 
+            DescriptorSize(83), 
+            DescriptorSize(128), 
+            DescriptorSize(179), 
+            DescriptorSize(256), 
+            DescriptorSize(304))
+        )
+    );
 } // namespace
 #endif

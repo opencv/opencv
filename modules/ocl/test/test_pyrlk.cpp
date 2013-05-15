@@ -50,19 +50,7 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
-//#define DUMP
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-// BroxOpticalFlow
 extern string workdir;
-#define BROX_OPTICAL_FLOW_DUMP_FILE            "opticalflow/brox_optical_flow.bin"
-#define BROX_OPTICAL_FLOW_DUMP_FILE_CC20       "opticalflow/brox_optical_flow_cc20.bin"
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-// PyrLKOpticalFlow
-
-//IMPLEMENT_PARAM_CLASS(UseGray, bool)
 
 PARAM_TEST_CASE(Sparse, bool, bool)
 {

@@ -18,7 +18,7 @@ typedef perf::TestBaseWithParam<File_Type_t> fast;
 
 PERF_TEST_P(fast, detect, testing::Combine(
                             testing::Values(FAST_IMAGES),
-                            testing::ValuesIn(FastType::all())
+                            FastType::all()
                           ))
 {
     String filename = getDataPath(get<0>(GetParam()));

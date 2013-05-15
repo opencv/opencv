@@ -712,15 +712,14 @@ PERF_TEST_P(Sz_Depth_Power, Core_Pow,
 //////////////////////////////////////////////////////////////////////
 // CompareMat
 
-CV_ENUM(CmpCode, cv::CMP_EQ, cv::CMP_GT, cv::CMP_GE, cv::CMP_LT, cv::CMP_LE, cv::CMP_NE)
-#define ALL_CMP_CODES ValuesIn(CmpCode::all())
+CV_ENUM(CmpCode, CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE)
 
 DEF_PARAM_TEST(Sz_Depth_Code, cv::Size, MatDepth, CmpCode);
 
 PERF_TEST_P(Sz_Depth_Code, Core_CompareMat,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH,
-                    ALL_CMP_CODES))
+                    CmpCode::all()))
 {
     const cv::Size size = GET_PARAM(0);
     const int depth = GET_PARAM(1);
@@ -758,7 +757,7 @@ PERF_TEST_P(Sz_Depth_Code, Core_CompareMat,
 PERF_TEST_P(Sz_Depth_Code, Core_CompareScalar,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH,
-                    ALL_CMP_CODES))
+                    CmpCode::all()))
 {
     const cv::Size size = GET_PARAM(0);
     const int depth = GET_PARAM(1);
@@ -1304,7 +1303,7 @@ PERF_TEST_P(Sz_3Depth, Core_AddWeighted,
 //////////////////////////////////////////////////////////////////////
 // GEMM
 
-CV_FLAGS(GemmFlags, 0, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T)
+CV_FLAGS(GemmFlags, 0, GEMM_1_T, GEMM_2_T, GEMM_3_T)
 #define ALL_GEMM_FLAGS Values(0, CV_GEMM_A_T, CV_GEMM_B_T, CV_GEMM_C_T, CV_GEMM_A_T | CV_GEMM_B_T, CV_GEMM_A_T | CV_GEMM_C_T, CV_GEMM_A_T | CV_GEMM_B_T | CV_GEMM_C_T)
 
 DEF_PARAM_TEST(Sz_Type_Flags, cv::Size, MatType, GemmFlags);
@@ -1389,7 +1388,6 @@ PERF_TEST_P(Sz_Type, Core_Transpose,
 
 enum {FLIP_BOTH = 0, FLIP_X = 1, FLIP_Y = -1};
 CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
-#define ALL_FLIP_CODES ValuesIn(FlipCode::all())
 
 DEF_PARAM_TEST(Sz_Depth_Cn_Code, cv::Size, MatDepth, MatCn, FlipCode);
 
@@ -1397,7 +1395,7 @@ PERF_TEST_P(Sz_Depth_Cn_Code, Core_Flip,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
                     GPU_CHANNELS_1_3_4,
-                    ALL_FLIP_CODES))
+                    FlipCode::all()))
 {
     const cv::Size size = GET_PARAM(0);
     const int depth = GET_PARAM(1);
@@ -2071,12 +2069,9 @@ PERF_TEST_P(Sz_Depth, Core_CountNonZero,
 //////////////////////////////////////////////////////////////////////
 // Reduce
 
-CV_ENUM(ReduceCode, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN)
-#define ALL_REDUCE_CODES ValuesIn(ReduceCode::all())
-
 enum {Rows = 0, Cols = 1};
+CV_ENUM(ReduceCode, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN)
 CV_ENUM(ReduceDim, Rows, Cols)
-#define ALL_REDUCE_DIMS ValuesIn(ReduceDim::all())
 
 DEF_PARAM_TEST(Sz_Depth_Cn_Code_Dim, cv::Size, MatDepth, MatCn, ReduceCode, ReduceDim);
 
@@ -2084,8 +2079,8 @@ PERF_TEST_P(Sz_Depth_Cn_Code_Dim, Core_Reduce,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_16S, CV_32F),
                     Values(1, 2, 3, 4),
-                    ALL_REDUCE_CODES,
-                    ALL_REDUCE_DIMS))
+                    ReduceCode::all(),
+                    ReduceDim::all()))
 {
     const cv::Size size = GET_PARAM(0);
     const int depth = GET_PARAM(1);

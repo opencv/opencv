@@ -59,7 +59,7 @@ PARAM_TEST_CASE(StereoMatchBM, int, int)
     virtual void SetUp()
     {
         n_disp  = GET_PARAM(0);
-		winSize = GET_PARAM(1);
+        winSize = GET_PARAM(1);
     }
 };
 
@@ -69,27 +69,27 @@ TEST_P(StereoMatchBM, Regression)
     Mat left_image  = readImage("stereobm/aloe-L.png", IMREAD_GRAYSCALE);
     Mat right_image = readImage("stereobm/aloe-R.png", IMREAD_GRAYSCALE);
     Mat disp_gold   = readImage("stereobm/aloe-disp.png", IMREAD_GRAYSCALE);
-	ocl::oclMat d_left, d_right;
-	ocl::oclMat d_disp(left_image.size(), CV_8U);
-	Mat  disp;
+    ocl::oclMat d_left, d_right;
+    ocl::oclMat d_disp(left_image.size(), CV_8U);
+    Mat  disp;
 
     ASSERT_FALSE(left_image.empty());
     ASSERT_FALSE(right_image.empty());
     ASSERT_FALSE(disp_gold.empty());
-	d_left.upload(left_image);
-	d_right.upload(right_image);
+    d_left.upload(left_image);
+    d_right.upload(right_image);
 
     ocl::StereoBM_OCL bm(0, n_disp, winSize);
 
 
     bm(d_left, d_right, d_disp);
-	d_disp.download(disp);
+    d_disp.download(disp);
 
     EXPECT_MAT_SIMILAR(disp_gold, disp, 1e-3);
 }
 
 INSTANTIATE_TEST_CASE_P(OCL_Calib3D, StereoMatchBM, testing::Combine(testing::Values(128),
-	                                   testing::Values(19)));
+                                       testing::Values(19)));
 
 PARAM_TEST_CASE(StereoMatchBP, int, int, int, float, float, float, float)
 {
@@ -129,9 +129,69 @@ TEST_P(StereoMatchBP, Regression)
     bp(d_left, d_right, d_disp);
     d_disp.download(disp);
     disp.convertTo(disp, disp_gold.depth());
-    EXPECT_MAT_NEAR(disp_gold, disp, 0.0, "");
+    EXPECT_MAT_NEAR(disp_gold, disp, 0.0);
 }
 INSTANTIATE_TEST_CASE_P(OCL_Calib3D, StereoMatchBP, testing::Combine(testing::Values(64),
     testing::Values(8),testing::Values(2),testing::Values(25.0f),
     testing::Values(0.1f),testing::Values(15.0f),testing::Values(1.0f)));
+
+//////////////////////////////////////////////////////////////////////////
+//  ConstSpaceBeliefPropagation
+PARAM_TEST_CASE(StereoMatchConstSpaceBP, int, int, int, int, float, float, float, float, int, int)
+{
+    int ndisp_;
+    int iters_;
+    int levels_;
+    int nr_plane_;
+    float max_data_term_;
+    float data_weight_;
+    float max_disc_term_;
+    float disc_single_jump_;
+    int min_disp_th_;
+    int msg_type_;
+
+    virtual void SetUp()
+    {
+        ndisp_          = GET_PARAM(0);
+        iters_          = GET_PARAM(1);
+        levels_         = GET_PARAM(2);
+        nr_plane_ = GET_PARAM(3);
+        max_data_term_  = GET_PARAM(4);
+        data_weight_    = GET_PARAM(5);
+        max_disc_term_     = GET_PARAM(6);
+        disc_single_jump_  = GET_PARAM(7);
+        min_disp_th_ = GET_PARAM(8);
+        msg_type_  = GET_PARAM(9);
+    }
+};
+TEST_P(StereoMatchConstSpaceBP, Regression)
+{
+    Mat left_image  = readImage("csstereobp/aloe-L.png");
+    Mat right_image = readImage("csstereobp/aloe-R.png");
+    Mat disp_gold   = readImage("csstereobp/aloe-disp.png", IMREAD_GRAYSCALE);
+
+    ocl::oclMat d_left, d_right;
+    ocl::oclMat d_disp;
+
+    Mat  disp;
+    ASSERT_FALSE(left_image.empty());
+    ASSERT_FALSE(right_image.empty());
+    ASSERT_FALSE(disp_gold.empty());
+
+    d_left.upload(left_image);
+    d_right.upload(right_image);
+
+    ocl::StereoConstantSpaceBP bp(ndisp_, iters_, levels_, nr_plane_, max_data_term_, data_weight_,
+        max_disc_term_, disc_single_jump_, 0, CV_32F);
+    bp(d_left, d_right, d_disp);
+    d_disp.download(disp);
+    disp.convertTo(disp, disp_gold.depth());
+
+    EXPECT_MAT_SIMILAR(disp_gold, disp, 1e-4);
+    //EXPECT_MAT_NEAR(disp_gold, disp, 1.0, "");
+}
+INSTANTIATE_TEST_CASE_P(OCL_Calib3D, StereoMatchConstSpaceBP, testing::Combine(testing::Values(128),
+    testing::Values(16),testing::Values(4), testing::Values(4), testing::Values(30.0f),
+    testing::Values(1.0f),testing::Values(160.0f),
+    testing::Values(10.0f), testing::Values(0), testing::Values(CV_32F)));
 #endif // HAVE_OPENCL

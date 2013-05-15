@@ -663,8 +663,7 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Convolve, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // MatchTemplate8U
 
-CV_ENUM(TemplateMethod, cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED, cv::TM_CCORR, cv::TM_CCORR_NORMED, cv::TM_CCOEFF, cv::TM_CCOEFF_NORMED)
-#define ALL_TEMPLATE_METHODS testing::Values(TemplateMethod(cv::TM_SQDIFF), TemplateMethod(cv::TM_SQDIFF_NORMED), TemplateMethod(cv::TM_CCORR), TemplateMethod(cv::TM_CCORR_NORMED), TemplateMethod(cv::TM_CCOEFF), TemplateMethod(cv::TM_CCOEFF_NORMED))
+CV_ENUM(TemplateMethod, TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED)
 
 namespace
 {
@@ -710,7 +709,7 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MatchTemplate8U, testing::Combine(
     DIFFERENT_SIZES,
     testing::Values(TemplateSize(cv::Size(5, 5)), TemplateSize(cv::Size(16, 16)), TemplateSize(cv::Size(30, 30))),
     testing::Values(Channels(1), Channels(3), Channels(4)),
-    ALL_TEMPLATE_METHODS));
+    TemplateMethod::all()));
 
 ////////////////////////////////////////////////////////////////////////////////
 // MatchTemplate32F
@@ -919,7 +918,7 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MatchTemplate_CanFindBigTemplate, ALL_DEVIC
 ////////////////////////////////////////////////////////////////////////////
 // MulSpectrums
 
-CV_FLAGS(DftFlags, 0, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMPLEX_OUTPUT, cv::DFT_REAL_OUTPUT)
+CV_FLAGS(DftFlags, 0, DFT_INVERSE, DFT_SCALE, DFT_ROWS, DFT_COMPLEX_OUTPUT, DFT_REAL_OUTPUT)
 
 PARAM_TEST_CASE(MulSpectrums, cv::gpu::DeviceInfo, cv::Size, DftFlags)
 {

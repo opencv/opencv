@@ -1,3 +1,47 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// @Authors
+//    Nathan, liujun@multicorewareinc.com
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other oclMaterials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors as is and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
 #include "precomp.hpp"
 #include <iomanip>
 
@@ -33,20 +77,14 @@ void blendLinearGold(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &we
 
 PARAM_TEST_CASE(Blend, cv::Size, MatType/*, UseRoi*/)
 {
-    //std::vector<cv::ocl::Info> oclinfo;
     cv::Size size;
     int type;
     bool useRoi;
 
     virtual void SetUp()
     {
-        //devInfo = GET_PARAM(0);
         size = GET_PARAM(0);
         type = GET_PARAM(1);
-        /*useRoi = GET_PARAM(3);*/
-
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
     }
 };
 
@@ -59,12 +97,9 @@ TEST_P(Blend, Accuracy)
     cv::Mat weights1 = randomMat(size, CV_32F, 0, 1);
     cv::Mat weights2 = randomMat(size, CV_32F, 0, 1);
 
-    cv::ocl::oclMat gimg1(size, type), gimg2(size, type), gweights1(size, CV_32F), gweights2(size, CV_32F);
-    cv::ocl::oclMat dst(size, type);
-    gimg1.upload(img1);
-    gimg2.upload(img2);
-    gweights1.upload(weights1);
-    gweights2.upload(weights2);
+    cv::ocl::oclMat gimg1(img1), gimg2(img2), gweights1(weights1), gweights2(weights2);
+    cv::ocl::oclMat dst;
+
     cv::ocl::blendLinear(gimg1, gimg2, gweights1, gweights2, dst);
     cv::Mat result;
     cv::Mat result_gold;
@@ -74,10 +109,10 @@ TEST_P(Blend, Accuracy)
     else
         blendLinearGold<float>(img1, img2, weights1, weights2, result_gold);
 
-    EXPECT_MAT_NEAR(result_gold, result, CV_MAT_DEPTH(type) == CV_8U ? 1.f : 1e-5f, 0);
+    EXPECT_MAT_NEAR(result_gold, result, CV_MAT_DEPTH(type) == CV_8U ? 1.f : 1e-5f);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Blend, Combine(
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, Blend, Combine(
                             DIFFERENT_SIZES,
                             testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC4))
                         ));

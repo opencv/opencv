@@ -53,14 +53,16 @@ public class NativeCameraView extends CameraBridgeViewBase {
         /* 1. We need to stop thread which updating the frames
          * 2. Stop camera and release it
          */
-        try {
-            mStopThread = true;
-            mThread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally {
-            mThread =  null;
-            mStopThread = false;
+        if (mThread != null) {
+            try {
+                mStopThread = true;
+                mThread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                mThread =  null;
+                mStopThread = false;
+            }
         }
 
         /* Now release camera */
@@ -131,17 +133,17 @@ public class NativeCameraView extends CameraBridgeViewBase {
         }
     }
 
-    private class NativeCameraFrame implements CvCameraViewFrame {
+    private static class NativeCameraFrame implements CvCameraViewFrame {
 
         @Override
         public Mat rgba() {
-            mCamera.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+            mCapture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
             return mRgba;
         }
 
         @Override
         public Mat gray() {
-            mCamera.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
+            mCapture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
             return mGray;
         }
 
@@ -157,9 +159,6 @@ public class NativeCameraView extends CameraBridgeViewBase {
     };
 
     private class CameraWorker implements Runnable {
-
-        private Mat mRgba = new Mat();
-        private Mat mGray = new Mat();
 
         public void run() {
             do {
