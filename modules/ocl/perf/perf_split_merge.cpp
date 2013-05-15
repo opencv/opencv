@@ -137,7 +137,20 @@ PERFTEST(Split)
             ocl::split(d_src, d_dst);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(cv::Mat(dst), cv::Mat(d_dst), 0.0));                     
+            if(d_dst.size() == dst.size())
+            {
+                TestSystem::instance().setAccurate(1);
+                for(int i = 0; i < dst.size(); i++)
+                {
+                    if(ExpectedMatNear(dst[i], cv::Mat(d_dst[i]), 0.0) == 0)
+                    {
+                        TestSystem::instance().setAccurate(0);
+                        break;
+                    }
+                }
+            }else
+                TestSystem::instance().setAccurate(0);
+                                
 
             GPU_ON;
             ocl::split(d_src, d_dst);

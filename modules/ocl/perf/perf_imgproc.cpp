@@ -262,8 +262,8 @@ PERFTEST(integral)
 
             cv::Mat ocl_mat;
             d_sum.download(ocl_mat);
-            ocl_mat.convertTo(ocl_mat, sum.type());
-            TestSystem::instance().setAccurate(ExpectedMatNear(sum, ocl_mat, 0.0));
+            if(sum.type() == ocl_mat.type()) //we won't test accuracy when cpu function overlow
+                TestSystem::instance().setAccurate(ExpectedMatNear(sum, ocl_mat, 0.0));
 
 
             GPU_ON;
@@ -287,8 +287,8 @@ PERFTEST(WarpAffine)
 
     static const double coeffs[2][3] =
     {
-        {cos(3.14 / 6), -sin(3.14 / 6), 100.0},
-        {sin(3.14 / 6), cos(3.14 / 6), -100.0}
+        {cos(CV_PI / 6), -sin(CV_PI / 6), 100.0},
+        {sin(CV_PI / 6), cos(CV_PI / 6), -100.0}
     };
     Mat M(2, 3, CV_64F, (void *)coeffs);
     int interpolation = INTER_NEAREST;
@@ -342,12 +342,12 @@ PERFTEST(WarpPerspective)
 
     static const double coeffs[3][3] =
     {
-        {cos(3.14 / 6), -sin(3.14 / 6), 100.0},
-        {sin(3.14 / 6), cos(3.14 / 6), -100.0},
+        {cos(CV_PI / 6), -sin(CV_PI / 6), 100.0},
+        {sin(CV_PI / 6), cos(CV_PI / 6), -100.0},
         {0.0, 0.0, 1.0}
     };
     Mat M(3, 3, CV_64F, (void *)coeffs);
-    int interpolation = INTER_NEAREST;
+    int interpolation = INTER_LINEAR;
 
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
@@ -456,6 +456,8 @@ PERFTEST(resize)
             ocl::resize(d_src, d_dst, Size(), 0.5, 0.5);
             WARMUP_OFF;
 
+            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 1.0));
+
             GPU_ON;
             ocl::resize(d_src, d_dst, Size(), 0.5, 0.5);
             GPU_OFF;
@@ -526,6 +528,8 @@ PERFTEST(threshold)
         WARMUP_ON;
         ocl::threshold(d_src, d_dst, 50.0, 0.0, THRESH_TRUNC);
         WARMUP_OFF;
+
+        TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 1.0));
 
         GPU_ON;
         ocl::threshold(d_src, d_dst, 50.0, 0.0, THRESH_TRUNC);

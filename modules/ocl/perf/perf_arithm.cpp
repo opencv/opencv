@@ -818,7 +818,7 @@ PERFTEST(Sum)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
-            gen(src, size, size, all_type[j], 0, 256);
+            gen(src, size, size, all_type[j], 0, 60);
 
             cpures = sum(src);
 
