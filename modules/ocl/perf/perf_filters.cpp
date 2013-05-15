@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,7 +46,7 @@
 #include "precomp.hpp"
 
 ///////////// Blur////////////////////////
-TEST(Blur)
+PERFTEST(Blur)
 {
     Mat src1, dst;
     ocl::oclMat d_src1, d_dst;
@@ -77,9 +78,10 @@ TEST(Blur)
             ocl::blur(d_src1, d_dst, ksize, Point(-1, -1), bordertype);
             WARMUP_OFF;
 
+            TestSystem::instance().setAccurate(ExpectedMatNear(cv::Mat(d_dst), dst, 1.0));
+
             GPU_ON;
             ocl::blur(d_src1, d_dst, ksize, Point(-1, -1), bordertype);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
@@ -92,7 +94,7 @@ TEST(Blur)
     }
 }
 ///////////// Laplacian////////////////////////
-TEST(Laplacian)
+PERFTEST(Laplacian)
 {
     Mat src1, dst;
     ocl::oclMat d_src1, d_dst;
@@ -123,9 +125,10 @@ TEST(Laplacian)
             ocl::Laplacian(d_src1, d_dst, -1, ksize, 1);
             WARMUP_OFF;
 
+            TestSystem::instance().setAccurate(ExpectedMatNear(cv::Mat(d_dst), dst, 1e-5));
+
             GPU_ON;
             ocl::Laplacian(d_src1, d_dst, -1, ksize, 1);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
@@ -139,7 +142,7 @@ TEST(Laplacian)
 }
 
 ///////////// Erode ////////////////////
-TEST(Erode)
+PERFTEST(Erode)
 {
     Mat src, dst, ker;
     ocl::oclMat d_src, d_dst;
@@ -168,9 +171,10 @@ TEST(Erode)
             ocl::erode(d_src, d_dst, ker);
             WARMUP_OFF;
 
+            TestSystem::instance().setAccurate(ExpectedMatNear(cv::Mat(d_dst), dst, 1e-5));            
+
             GPU_ON;
             ocl::erode(d_src, d_dst, ker);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
@@ -184,7 +188,7 @@ TEST(Erode)
 }
 
 ///////////// Sobel ////////////////////////
-TEST(Sobel)
+PERFTEST(Sobel)
 {
     Mat src, dst;
     ocl::oclMat d_src, d_dst;
@@ -214,9 +218,10 @@ TEST(Sobel)
             ocl::Sobel(d_src, d_dst, -1, dx, dy);
             WARMUP_OFF;
 
+            TestSystem::instance().setAccurate(ExpectedMatNear(cv::Mat(d_dst), dst, 1));
+
             GPU_ON;
             ocl::Sobel(d_src, d_dst, -1, dx, dy);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
@@ -229,7 +234,7 @@ TEST(Sobel)
     }
 }
 ///////////// Scharr ////////////////////////
-TEST(Scharr)
+PERFTEST(Scharr)
 {
     Mat src, dst;
     ocl::oclMat d_src, d_dst;
@@ -259,9 +264,10 @@ TEST(Scharr)
             ocl::Scharr(d_src, d_dst, -1, dx, dy);
             WARMUP_OFF;
 
+            TestSystem::instance().setAccurate(ExpectedMatNear(cv::Mat(d_dst), dst, 1));
+
             GPU_ON;
             ocl::Scharr(d_src, d_dst, -1, dx, dy);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
@@ -275,7 +281,7 @@ TEST(Scharr)
 }
 
 ///////////// GaussianBlur ////////////////////////
-TEST(GaussianBlur)
+PERFTEST(GaussianBlur)
 {
     Mat src, dst;
     int all_type[] = {CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4};
@@ -288,6 +294,8 @@ TEST(GaussianBlur)
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
             gen(src, size, size, all_type[j], 0, 256);
+            dst = src;
+            dst.setTo(0);
 
             GaussianBlur(src, dst, Size(9, 9), 0);
 
@@ -303,9 +311,11 @@ TEST(GaussianBlur)
             ocl::GaussianBlur(d_src, d_dst, Size(9, 9), 0);
             WARMUP_OFF;
 
+            TestSystem::instance().setAccurate(ExpectedMatNear(cv::Mat(d_dst), dst, 1.0));
+
+
             GPU_ON;
             ocl::GaussianBlur(d_src, d_dst, Size(9, 9), 0);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
@@ -319,7 +329,7 @@ TEST(GaussianBlur)
 }
 
 ///////////// filter2D////////////////////////
-TEST(filter2D)
+PERFTEST(filter2D)
 {
     Mat src;
 
@@ -339,7 +349,8 @@ TEST(filter2D)
                 Mat kernel;
                 gen(kernel, ksize, ksize, CV_32FC1, 0.0, 1.0);
 
-                Mat dst;
+				Mat dst(src);
+				dst.setTo(0);
                 cv::filter2D(src, dst, -1, kernel);
 
                 CPU_ON;
@@ -347,15 +358,18 @@ TEST(filter2D)
                 CPU_OFF;
 
                 ocl::oclMat d_src(src);
-                ocl::oclMat d_dst;
+                ocl::oclMat d_dst(d_src);
+				d_dst.setTo(0);
 
                 WARMUP_ON;
                 ocl::filter2D(d_src, d_dst, -1, kernel);
                 WARMUP_OFF;
 
+                TestSystem::instance().setAccurate(ExpectedMatNear(cv::Mat(d_dst), dst, 1e-5));
+
+
                 GPU_ON;
                 ocl::filter2D(d_src, d_dst, -1, kernel);
-                 ;
                 GPU_OFF;
 
                 GPU_FULL_ON;

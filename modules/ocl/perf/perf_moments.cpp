@@ -44,46 +44,49 @@
 //
 //M*/
 #include "precomp.hpp"
-
-///////////// gemm ////////////////////////
-PERFTEST(gemm)
+///////////// Moments ////////////////////////
+PERFTEST(Moments)
 {
-    Mat src1, src2, src3, dst;
-    ocl::oclMat d_src1, d_src2, d_src3, d_dst;
+	Mat mat1;
+	bool binaryImage = 0;
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
-    {
-        SUBTEST << size << 'x' << size;
+	int all_type[] = {CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1, CV_64FC1};
+	std::string type_name[] = {"CV_8UC1", "CV_16UC1", "CV_16SC1", "CV_32FC1", "CV_64FC1"};
 
-        gen(src1, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
-        gen(src2, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
-        gen(src3, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
+	for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+	{
+		for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
+		{
+			SUBTEST << size << 'x' << size << "; " << type_name[j];
 
-        gemm(src1, src2, 1.0, src3, 1.0, dst);
+			gen(mat1, size, size, all_type[j], 0, 256);
+			_InputArray _array(mat1);
 
-        CPU_ON;
-        gemm(src1, src2, 1.0, src3, 1.0, dst);
-        CPU_OFF;
+            cv::Moments CvMom = moments(_array, binaryImage);
 
-        d_src1.upload(src1);
-        d_src2.upload(src2);
-        d_src3.upload(src3);
+			CPU_ON;
+			moments(_array, binaryImage);
+			CPU_OFF;
 
-        WARMUP_ON;
-        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-        WARMUP_OFF;
-        TestSystem::instance().setAccurate(ExpectedMatNear(cv::Mat(d_dst), dst, src1.cols * src1.rows * 1e-4));
+            cv::Moments oclMom;
+			WARMUP_ON;
+			oclMom = ocl::ocl_moments(_array, binaryImage);
+			WARMUP_OFF;
 
-        GPU_ON;
-        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-        GPU_OFF;
+            Mat gpu_dst, cpu_dst;
+            HuMoments(CvMom, cpu_dst);
+            HuMoments(oclMom, gpu_dst);
+            TestSystem::instance().setAccurate(ExpectedMatNear(gpu_dst, cpu_dst, .5));                        
 
-        GPU_FULL_ON;
-        d_src1.upload(src1);
-        d_src2.upload(src2);
-        d_src3.upload(src3);
-        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-        d_dst.download(dst);
-        GPU_FULL_OFF;
-    }
+			GPU_ON;
+			ocl::ocl_moments(_array, binaryImage);
+			GPU_OFF;
+
+			GPU_FULL_ON;
+			ocl::ocl_moments(_array, binaryImage);
+			GPU_FULL_OFF;
+
+		}
+
+	}
 }

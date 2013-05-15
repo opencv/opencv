@@ -43,47 +43,59 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
-
-///////////// gemm ////////////////////////
-PERFTEST(gemm)
+///////////// StereoMatchBM ////////////////////////
+PERFTEST(StereoMatchBM)
 {
-    Mat src1, src2, src3, dst;
-    ocl::oclMat d_src1, d_src2, d_src3, d_dst;
+	Mat left_image = imread(abspath("aloeL.jpg"), cv::IMREAD_GRAYSCALE);
+	Mat right_image = imread(abspath("aloeR.jpg"), cv::IMREAD_GRAYSCALE);
+	Mat disp,dst;
+	ocl::oclMat d_left, d_right,d_disp;
+	int n_disp= 128;
+	int winSize =19;
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
-    {
-        SUBTEST << size << 'x' << size;
+	SUBTEST << left_image.cols << 'x' << left_image.rows << "; aloeL.jpg ;"<< right_image.cols << 'x' << right_image.rows << "; aloeR.jpg ";
 
-        gen(src1, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
-        gen(src2, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
-        gen(src3, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
+	StereoBM bm(0, n_disp, winSize);
+	bm(left_image, right_image, dst);
 
-        gemm(src1, src2, 1.0, src3, 1.0, dst);
+	CPU_ON;
+	bm(left_image, right_image, dst);
+	CPU_OFF;
 
-        CPU_ON;
-        gemm(src1, src2, 1.0, src3, 1.0, dst);
-        CPU_OFF;
+	d_left.upload(left_image);
+	d_right.upload(right_image);
 
-        d_src1.upload(src1);
-        d_src2.upload(src2);
-        d_src3.upload(src3);
+	ocl::StereoBM_OCL d_bm(0, n_disp, winSize);
 
-        WARMUP_ON;
-        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-        WARMUP_OFF;
-        TestSystem::instance().setAccurate(ExpectedMatNear(cv::Mat(d_dst), dst, src1.cols * src1.rows * 1e-4));
+	WARMUP_ON;
+	d_bm(d_left, d_right, d_disp);
+	WARMUP_OFF;
 
-        GPU_ON;
-        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-        GPU_OFF;
+    cv::Mat ocl_mat;
+    d_disp.download(ocl_mat);
+    ocl_mat.convertTo(ocl_mat, dst.type());
 
-        GPU_FULL_ON;
-        d_src1.upload(src1);
-        d_src2.upload(src2);
-        d_src3.upload(src3);
-        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-        d_dst.download(dst);
-        GPU_FULL_OFF;
-    }
+    TestSystem::instance().setAccurate();
+
+	GPU_ON;
+	d_bm(d_left, d_right, d_disp);
+	GPU_OFF;
+
+	GPU_FULL_ON;
+	d_left.upload(left_image);
+	d_right.upload(right_image);
+	d_bm(d_left, d_right, d_disp);
+	d_disp.download(disp);
+	GPU_FULL_OFF;
 }
+
+
+
+
+
+
+
+
+	

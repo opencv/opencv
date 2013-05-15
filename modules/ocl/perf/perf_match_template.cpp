@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -52,7 +53,7 @@
 //	ocl::oclMat d_src(src), d_templ(templ), d_dst;
 //	ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
 //}
-TEST(matchTemplate)
+PERFTEST(matchTemplate)
 {
     //InitMatchTemplate();
 
@@ -89,9 +90,10 @@ TEST(matchTemplate)
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
                 WARMUP_OFF;
 
+                TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), templ.rows * templ.cols * 1e-1));            
+
                 GPU_ON;
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
-                 ;
                 GPU_OFF;
 
                 GPU_FULL_ON;
@@ -129,9 +131,10 @@ TEST(matchTemplate)
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR_NORMED);
                 WARMUP_OFF;
 
+                TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), templ.rows * templ.cols * 1e-1));            
+
                 GPU_ON;
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR_NORMED);
-                 ;
                 GPU_OFF;
 
                 GPU_FULL_ON;
