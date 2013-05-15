@@ -802,6 +802,44 @@ namespace cv
                                         int minNeighbors, int flags, CvSize minSize = cvSize(0, 0), CvSize maxSize = cvSize(0, 0));
         };
 
+        class CV_EXPORTS OclCascadeClassifierBuf : public  cv::CascadeClassifier
+        {
+        public:
+            OclCascadeClassifierBuf() :
+                m_flags(0), initialized(false), m_scaleFactor(0), buffers(NULL) {}
+
+            ~OclCascadeClassifierBuf() {}
+
+            void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
+                                  double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
+                                  Size minSize = Size(), Size maxSize = Size());
+            void release();
+
+        private:
+            void Init(const int rows, const int cols, double scaleFactor, int flags,
+                      const int outputsz, const size_t localThreads[],
+                      CvSize minSize, CvSize maxSize);
+            void CreateBaseBufs(const int datasize, const int totalclassifier, const int flags, const int outputsz);
+            void CreateFactorRelatedBufs(const int rows, const int cols, const int flags,
+                                         const double scaleFactor, const size_t localThreads[],
+                                         CvSize minSize, CvSize maxSize);
+            void GenResult(CV_OUT std::vector<cv::Rect>& faces, const std::vector<cv::Rect> &rectList, const std::vector<int> &rweights);
+
+            int m_rows;
+            int m_cols;
+            int m_flags;
+            int m_loopcount;
+            int m_nodenum;
+            bool findBiggestObject;
+            bool initialized;
+            double m_scaleFactor;
+            Size m_minSize;
+            Size m_maxSize;
+            vector<CvSize> sizev;
+            vector<float> scalev;
+            oclMat gimg1, gsum, gsqsum;
+            void * buffers;
+        };
 
 
         /////////////////////////////// Pyramid /////////////////////////////////////
@@ -1729,6 +1767,44 @@ namespace cv
         private:
             oclMat u, d, l, r, u2, d2, l2, r2;
             std::vector<oclMat> datas;
+            oclMat out;
+        };
+        class CV_EXPORTS StereoConstantSpaceBP
+        {
+        public:
+            enum { DEFAULT_NDISP    = 128 };
+            enum { DEFAULT_ITERS    = 8   };
+            enum { DEFAULT_LEVELS   = 4   };
+            enum { DEFAULT_NR_PLANE = 4   };
+            static void estimateRecommendedParams(int width, int height, int &ndisp, int &iters, int &levels, int &nr_plane);
+            explicit StereoConstantSpaceBP(
+                int ndisp    = DEFAULT_NDISP,
+                int iters    = DEFAULT_ITERS,
+                int levels   = DEFAULT_LEVELS,
+                int nr_plane = DEFAULT_NR_PLANE,
+                int msg_type = CV_32F);
+            StereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane,
+                float max_data_term, float data_weight, float max_disc_term, float disc_single_jump,
+                int min_disp_th = 0,
+                int msg_type = CV_32F);
+            void operator()(const oclMat &left, const oclMat &right, oclMat &disparity);
+            int ndisp;
+            int iters;
+            int levels;
+            int nr_plane;
+            float max_data_term;
+            float data_weight;
+            float max_disc_term;
+            float disc_single_jump;
+            int min_disp_th;
+            int msg_type;
+            bool use_local_init_data_cost;
+        private:
+            oclMat u[2], d[2], l[2], r[2];
+            oclMat disp_selected_pyr[2];
+            oclMat data_cost;
+            oclMat data_cost_selected;
+            oclMat temp;
             oclMat out;
         };
     }

@@ -554,6 +554,7 @@ namespace cvtest
 CV_EXPORTS void fillGradient(Mat& img, int delta = 5);
 CV_EXPORTS void smoothBorder(Mat& img, const Scalar& color, int delta = 3);
 
+CV_EXPORTS void printVersionInfo(bool useStdOut = true);
 } //namespace cvtest
 
 // fills c with zeros
@@ -573,6 +574,7 @@ int main(int argc, char **argv) \
 { \
     cvtest::TS::ptr()->init(resourcesubdir); \
     ::testing::InitGoogleTest(&argc, argv); \
+    cvtest::printVersionInfo();\
     return RUN_ALL_TESTS(); \
 }
 

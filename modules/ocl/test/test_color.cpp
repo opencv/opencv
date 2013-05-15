@@ -100,7 +100,7 @@ PARAM_TEST_CASE(CvtColor, cv::Size, MatDepth)
     cv::cvtColor(src, dst_gold, CVTCODE(name));\
     cv::Mat dst_mat;\
     dst.download(dst_mat);\
-    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5, "");\
+    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5);\
 }
 
 //add new ones here using macro
@@ -141,7 +141,7 @@ TEST_P(CvtColor_Gray2RGB, Accuracy)
     cv::cvtColor(src, dst_gold, code);
     cv::Mat dst_mat;
     dst.download(dst_mat);
-    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5, "");
+    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5);
 }
 
 
@@ -171,7 +171,7 @@ TEST_P(CvtColor_YUV420, Accuracy)
     cv::Mat dst_mat;
     dst.download(dst_mat);
     MAT_DIFF(dst_mat, dst_gold);
-    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5, "");
+    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5);
 }
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor, testing::Combine(
