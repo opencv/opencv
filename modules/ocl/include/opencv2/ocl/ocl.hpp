@@ -1245,6 +1245,11 @@ namespace cv
             explicit BruteForceMatcher_OCL(Hamming /*d*/) : BruteForceMatcher_OCL_base(HammingDist) {}
         };
 
+        class CV_EXPORTS BFMatcher_OCL : public BruteForceMatcher_OCL_base
+        {
+        public:
+            explicit BFMatcher_OCL(int norm = NORM_L2) : BruteForceMatcher_OCL_base(norm == NORM_L1 ? L1Dist : norm == NORM_L2 ? L2Dist : HammingDist) {}
+        };
         /////////////////////////////// PyrLKOpticalFlow /////////////////////////////////////
         class CV_EXPORTS PyrLKOpticalFlow
         {
