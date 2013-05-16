@@ -1,14 +1,9 @@
 #include <iostream>
 #include <string>
 
-#include "opencv2/opencv_modules.hpp"
 #include "opencv2/core/core.hpp"
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/highgui/highgui.hpp"
-
-#ifdef HAVE_OPENCV_NONFREE
-#include "opencv2/nonfree/gpu.hpp"
-#endif
 
 using namespace std;
 using namespace cv;
@@ -19,9 +14,6 @@ enum Method
     FGD_STAT,
     MOG,
     MOG2,
-#ifdef HAVE_OPENCV_NONFREE
-    VIBE,
-#endif
     GMG
 };
 
@@ -30,7 +22,7 @@ int main(int argc, const char** argv)
     cv::CommandLineParser cmd(argc, argv,
         "{ c | camera | false       | use camera }"
         "{ f | file   | 768x576.avi | input video file }"
-        "{ m | method | mog         | method (fgd, mog, mog2, vibe, gmg) }"
+        "{ m | method | mog         | method (fgd, mog, mog2, gmg) }"
         "{ h | help   | false       | print help message }");
 
     if (cmd.get<bool>("help"))
@@ -48,9 +40,6 @@ int main(int argc, const char** argv)
     if (method != "fgd"
         && method != "mog"
         && method != "mog2"
-    #ifdef HAVE_OPENCV_NONFREE
-        && method != "vibe"
-    #endif
         && method != "gmg")
     {
         cerr << "Incorrect method" << endl;
@@ -60,9 +49,6 @@ int main(int argc, const char** argv)
     Method m = method == "fgd" ? FGD_STAT :
                method == "mog" ? MOG :
                method == "mog2" ? MOG2 :
-            #ifdef HAVE_OPENCV_NONFREE
-               method == "vibe" ? VIBE :
-            #endif
                                   GMG;
 
     VideoCapture cap;
@@ -86,9 +72,6 @@ int main(int argc, const char** argv)
     FGDStatModel fgd_stat;
     MOG_GPU mog;
     MOG2_GPU mog2;
-#ifdef HAVE_OPENCV_NONFREE
-    VIBE_GPU vibe;
-#endif
     GMG_GPU gmg;
     gmg.numInitializationFrames = 40;
 
@@ -114,12 +97,6 @@ int main(int argc, const char** argv)
         mog2(d_frame, d_fgmask);
         break;
 
-#ifdef HAVE_OPENCV_NONFREE
-    case VIBE:
-        vibe.initialize(d_frame);
-        break;
-#endif
-
     case GMG:
         gmg.initialize(d_frame.size());
         break;
@@ -128,11 +105,7 @@ int main(int argc, const char** argv)
     namedWindow("image", WINDOW_NORMAL);
     namedWindow("foreground mask", WINDOW_NORMAL);
     namedWindow("foreground image", WINDOW_NORMAL);
-    if (m != GMG
-    #ifdef HAVE_OPENCV_NONFREE
-        && m != VIBE
-    #endif
-        )
+    if (m != GMG)
     {
         namedWindow("mean background image", WINDOW_NORMAL);
     }
@@ -164,12 +137,6 @@ int main(int argc, const char** argv)
             mog2(d_frame, d_fgmask);
             mog2.getBackgroundImage(d_bgimg);
             break;
-
-#ifdef HAVE_OPENCV_NONFREE
-        case VIBE:
-            vibe(d_frame, d_fgmask);
-            break;
-#endif
 
         case GMG:
             gmg(d_frame, d_fgmask);

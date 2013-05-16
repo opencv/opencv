@@ -8,4 +8,3 @@ The module contains algorithms that may be patented in some countries or have so
     :maxdepth: 2
 
     feature_detection
-    background_subtraction
