@@ -140,7 +140,7 @@ PERFTEST(Split)
             if(d_dst.size() == dst.size())
             {
                 TestSystem::instance().setAccurate(1);
-                for(int i = 0; i < dst.size(); i++)
+                for(size_t i = 0; i < dst.size(); i++)
                 {
                     if(ExpectedMatNear(dst[i], cv::Mat(d_dst[i]), 0.0) == 0)
                     {
