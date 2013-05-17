@@ -50,18 +50,6 @@ using namespace std;
 using namespace testing;
 using namespace perf;
 
-#if defined(HAVE_XINE)         || \
-    defined(HAVE_GSTREAMER)    || \
-    defined(HAVE_QUICKTIME)    || \
-    defined(HAVE_AVFOUNDATION) || \
-    defined(HAVE_FFMPEG)       || \
-    defined(WIN32) /* assume that we have ffmpeg */
-
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
-#else
-#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
-#endif
-
 //////////////////////////////////////////////////////////////////////
 // SURF
 
@@ -107,76 +95,5 @@ PERF_TEST_P(Image, GPU_SURF,
         SANITY_CHECK(cpu_descriptors);
     }
 }
-
-//////////////////////////////////////////////////////
-// VIBE
-
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
-
-DEF_PARAM_TEST(Video_Cn, string, int);
-
-PERF_TEST_P(Video_Cn, GPU_VIBE,
-            Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
-                    GPU_CHANNELS_1_3_4))
-{
-    const string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
-    const int cn = GET_PARAM(1);
-
-    cv::VideoCapture cap(inputFile);
-    ASSERT_TRUE(cap.isOpened());
-
-    cv::Mat frame;
-    cap >> frame;
-    ASSERT_FALSE(frame.empty());
-
-    if (cn != 3)
-    {
-        cv::Mat temp;
-        if (cn == 1)
-            cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-        else
-            cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-        cv::swap(temp, frame);
-    }
-
-    if (PERF_RUN_GPU())
-    {
-        cv::gpu::GpuMat d_frame(frame);
-        cv::gpu::VIBE_GPU vibe;
-        cv::gpu::GpuMat foreground;
-
-        vibe(d_frame, foreground);
-
-        for (int i = 0; i < 10; ++i)
-        {
-            cap >> frame;
-            ASSERT_FALSE(frame.empty());
-
-            if (cn != 3)
-            {
-                cv::Mat temp;
-                if (cn == 1)
-                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-                else
-                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-                cv::swap(temp, frame);
-            }
-
-            d_frame.upload(frame);
-
-            startTimer(); next();
-            vibe(d_frame, foreground);
-            stopTimer();
-        }
-
-        GPU_SANITY_CHECK(foreground);
-    }
-    else
-    {
-        FAIL_NO_CPU();
-    }
-}
-
-#endif
 
 #endif

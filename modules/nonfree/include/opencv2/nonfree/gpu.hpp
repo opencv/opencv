@@ -125,41 +125,6 @@ public:
     GpuMat maxPosBuffer;
 };
 
-/*!
- * The class implements the following algorithm:
- * "ViBe: A universal background subtraction algorithm for video sequences"
- * O. Barnich and M. Van D Roogenbroeck
- * IEEE Transactions on Image Processing, 20(6) :1709-1724, June 2011
- */
-class CV_EXPORTS VIBE_GPU
-{
-public:
-    //! the default constructor
-    explicit VIBE_GPU(unsigned long rngSeed = 1234567);
-
-    //! re-initiaization method
-    void initialize(const GpuMat& firstFrame, Stream& stream = Stream::Null());
-
-    //! the update operator
-    void operator()(const GpuMat& frame, GpuMat& fgmask, Stream& stream = Stream::Null());
-
-    //! releases all inner buffers
-    void release();
-
-    int nbSamples;         // number of samples per pixel
-    int reqMatches;        // #_min
-    int radius;            // R
-    int subsamplingFactor; // amount of random subsampling
-
-private:
-    Size frameSize_;
-
-    unsigned long rngSeed_;
-    GpuMat randStates_;
-
-    GpuMat samples_;
-};
-
 } // namespace gpu
 
 } // namespace cv
