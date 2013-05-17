@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -68,7 +69,7 @@ void blendLinearGold(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &we
         }
     }
 }
-TEST(blend)
+PERFTEST(blend)
 {
     Mat src1, src2, weights1, weights2, dst;
     ocl::oclMat d_src1, d_src2, d_weights1, d_weights2, d_dst;
@@ -102,9 +103,12 @@ TEST(blend)
             ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
             WARMUP_OFF;
 
+            cv::Mat ocl_mat;
+            d_dst.download(ocl_mat);
+            TestSystem::instance().setAccurate(ExpectedMatNear(dst, ocl_mat, 1.f));
+
             GPU_ON;
             ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;

@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,7 +46,7 @@
 #include "precomp.hpp"
 
 ///////////// columnSum////////////////////////
-TEST(columnSum)
+PERFTEST(columnSum)
 {
     Mat src, dst;
     ocl::oclMat d_src, d_dst;
@@ -58,12 +59,13 @@ TEST(columnSum)
 
         CPU_ON;
         dst.create(src.size(), src.type());
+        for (int j = 0; j < src.cols; j++)
+            dst.at<float>(0, j) = src.at<float>(0, j);
 
         for (int i = 1; i < src.rows; ++i)
-        {
-            for (int j = 0; j < src.cols; ++j)
+        {for (int j = 0; j < src.cols; ++j)
             {
-                dst.at<float>(i, j) = src.at<float>(i, j) += src.at<float>(i - 1, j);
+                dst.at<float>(i, j) = dst.at<float>(i - 1 , j) + src.at<float>(i , j);
             }
         }
 
@@ -74,9 +76,12 @@ TEST(columnSum)
         ocl::columnSum(d_src, d_dst);
         WARMUP_OFF;
 
+        cv::Mat ocl_mat;
+        d_dst.download(ocl_mat);
+        TestSystem::instance().setAccurate(ExpectedMatNear(dst, ocl_mat, 5e-1));
+
         GPU_ON;
         ocl::columnSum(d_src, d_dst);
-         ;
         GPU_OFF;
 
         GPU_FULL_ON;
