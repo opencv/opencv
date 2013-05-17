@@ -324,6 +324,39 @@ typedef signed char schar;
 #define CV_ELEM_SIZE(type) \
     (CV_MAT_CN(type) << ((((sizeof(size_t)/4+1)*16384|0x3a50) >> CV_MAT_DEPTH(type)*2) & 3))
 
+/* define the standard native types */
+typedef unsigned char  CvType8UC1;
+typedef signed char    CvType8SC1;
+typedef unsigned short CvType16UC1;
+typedef signed short   CvType16SC1;
+typedef int            CvType32SC1;
+typedef float     	   CvType32FC1;
+typedef double     	   CvType64FC1;
+
+typedef cv::Vec<CvType8UC1, 2>  CvType8UC2;
+typedef cv::Vec<CvType8SC1, 2>  CvType8SC2;
+typedef cv::Vec<CvType16UC1, 2> CvType16UC2;
+typedef cv::Vec<CvType16SC1, 2> CvType16SC2;
+typedef cv::Vec<CvType32SC1, 2> CvType32SC2;
+typedef cv::Vec<CvType32FC1, 2> CvType32FC2;
+typedef cv::Vec<CvType64FC1, 2> CvType64FC2;
+
+typedef cv::Vec<CvType8UC1, 3>  CvType8UC3;
+typedef cv::Vec<CvType8SC1, 3>  CvType8SC3;
+typedef cv::Vec<CvType16UC1, 3> CvType16UC3;
+typedef cv::Vec<CvType16SC1, 3> CvType16SC3;
+typedef cv::Vec<CvType32SC1, 3> CvType32SC3;
+typedef cv::Vec<CvType32FC1, 3> CvType32FC3;
+typedef cv::Vec<CvType64FC1, 3> CvType64FC3;
+
+typedef cv::Vec<CvType8UC1, 4>  CvType8UC4;
+typedef cv::Vec<CvType8SC1, 4>  CvType8SC4;
+typedef cv::Vec<CvType16UC1, 4> CvType16UC4;
+typedef cv::Vec<CvType16SC1, 4> CvType16SC4;
+typedef cv::Vec<CvType32SC1, 4> CvType32SC4;
+typedef cv::Vec<CvType32FC1, 4> CvType32FC4;
+typedef cv::Vec<CvType64FC1, 4> CvType64FC4;
+
 
 /****************************************************************************************\
 *                                      fast math                                         *
