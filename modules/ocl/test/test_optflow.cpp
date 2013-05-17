@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -7,11 +7,15 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
+// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
+//
+// @Authors
+//
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -21,9 +25,9 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and/or other oclMaterials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -51,6 +55,47 @@ using namespace testing;
 using namespace std;
 
 extern string workdir;
+//////////////////////////////////////////////////////////////////////////
+PARAM_TEST_CASE(TVL1, bool)
+{
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        useRoi = GET_PARAM(0);
+    }
+
+};
+
+TEST_P(TVL1, Accuracy)
+{
+    cv::Mat frame0 = readImage(workdir + "../gpu/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame0.empty());
+
+    cv::Mat frame1 = readImage(workdir + "../gpu/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame1.empty());
+
+    cv::ocl::OpticalFlowDual_TVL1_OCL d_alg;
+    cv::RNG &rng = TS::ptr()->get_rng();
+    cv::Mat flowx = randomMat(rng, frame0.size(), CV_32FC1, 0, 0, useRoi);
+    cv::Mat flowy = randomMat(rng, frame0.size(), CV_32FC1, 0, 0, useRoi);
+    cv::ocl::oclMat d_flowx(flowx), d_flowy(flowy);
+    d_alg(oclMat(frame0), oclMat(frame1), d_flowx, d_flowy);
+
+    cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
+    cv::Mat flow;
+    alg->calc(frame0, frame1, flow);
+    cv::Mat gold[2];
+    cv::split(flow, gold);
+
+    EXPECT_MAT_SIMILAR(gold[0], d_flowx, 3e-3);
+    EXPECT_MAT_SIMILAR(gold[1], d_flowy, 3e-3);
+}
+INSTANTIATE_TEST_CASE_P(OCL_Video, TVL1, Values(true, false));
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// PyrLKOpticalFlow
 
 PARAM_TEST_CASE(Sparse, bool, bool)
 {
@@ -60,7 +105,7 @@ PARAM_TEST_CASE(Sparse, bool, bool)
     virtual void SetUp()
     {
         UseSmart = GET_PARAM(0);
-        useGray = GET_PARAM(0);
+        useGray = GET_PARAM(1);
     }
 };
 
@@ -147,9 +192,9 @@ TEST_P(Sparse, Mat)
 
 }
 
-INSTANTIATE_TEST_CASE_P(Video, Sparse, Combine(
-                            Values(false, true),
-                            Values(false)));
+INSTANTIATE_TEST_CASE_P(OCL_Video, Sparse, Combine(
+    Values(false, true),
+    Values(false, true)));
 
 #endif // HAVE_OPENCL
 
