@@ -22,6 +22,7 @@
 //    Jiang Liyuan, jlyuan001.good@163.com
 //    Rock Li, Rock.Li@amd.com
 //    Zailong Wu, bullet@yeah.net
+//    Peng Xiao, pengxiao@outlook.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -286,6 +287,7 @@ void cv::ocl::multiply(const oclMat &src1, const oclMat &src2, oclMat &dst, doub
     else
         arithmetic_run<float>(src1, src2, dst, "arithm_mul", &arithm_mul, (void *)(&scalar));
 }
+
 void cv::ocl::divide(const oclMat &src1, const oclMat &src2, oclMat &dst, double scalar)
 {
 
@@ -467,6 +469,11 @@ void cv::ocl::subtract(const Scalar &src2, const oclMat &src1, oclMat &dst, cons
     string kernelName = mask.data ? "arithm_s_add_with_mask" : "arithm_s_add";
     const char **kernelString = mask.data ? &arithm_add_scalar_mask : &arithm_add_scalar;
     arithmetic_scalar( src1, src2, dst, mask, kernelName, kernelString, -1);
+}
+void cv::ocl::multiply(double scalar, const oclMat &src, oclMat &dst)
+{
+    string kernelName = "arithm_muls";
+    arithmetic_scalar_run( src, dst, kernelName, &arithm_mul, scalar);
 }
 void cv::ocl::divide(double scalar, const oclMat &src,  oclMat &dst)
 {
