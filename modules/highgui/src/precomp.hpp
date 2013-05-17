@@ -187,7 +187,7 @@ double cvGetOpenGlProp_W32(const char* name);
 double cvGetOpenGlProp_GTK(const char* name);
 
 //for QT
-#if defined (HAVE_QT)
+#if defined (HAVE_QT) || defined (HAVE_QT5)
 double cvGetModeWindow_QT(const char* name);
 void cvSetModeWindow_QT(const char* name, double prop_value);
 

@@ -39,7 +39,7 @@
 //--------------------Google Code 2010 -- Yannick Verdie--------------------//
 
 
-#if defined(HAVE_QT)
+#if defined(HAVE_QT) || defined (HAVE_QT5)
 
 #include <memory>
 
@@ -53,7 +53,7 @@
 #include <unistd.h>
 #endif
 
-#ifdef HAVE_QT_OPENGL
+#if defined (HAVE_QT_OPENGL) || defined (HAVE_QT5_OPENGL)
     #ifdef Q_WS_X11
         #include <GL/glx.h>
     #endif
@@ -449,7 +449,7 @@ static int icvInitSystem(int* c, char** v)
 
         qDebug() << "init done";
 
-#ifdef HAVE_QT_OPENGL
+#if defined (HAVE_QT_OPENGL) || defined (HAVE_QT5_OPENGL)
         qDebug() << "opengl support available";
 #endif
     }
@@ -669,7 +669,7 @@ CV_IMPL void cvShowImage(const char* name, const CvArr* arr)
 }
 
 
-#ifdef HAVE_QT_OPENGL
+#if defined (HAVE_QT_OPENGL) || defined (HAVE_QT5_OPENGL)
 
 CV_IMPL void cvSetOpenGlDrawCallback(const char* window_name, CvOpenGlDrawCallback callback, void* userdata)
 {
@@ -1549,7 +1549,7 @@ CvWindow::CvWindow(QString name, int arg2)
     createGlobalLayout();
 
     //3: my view
-#ifndef HAVE_QT_OPENGL
+#if !defined (HAVE_QT_OPENGL) && !defined (HAVE_QT5_OPENGL)
     if (arg2 & CV_WINDOW_OPENGL)
         CV_Error( CV_OpenGlNotSupported, "Library was built without OpenGL support" );
     mode_display = CV_MODE_NORMAL;
@@ -1859,7 +1859,7 @@ void CvWindow::createGlobalLayout()
 
 void CvWindow::createView()
 {
-#ifdef HAVE_QT_OPENGL
+#if defined (HAVE_QT_OPENGL) || defined (HAVE_QT5_OPENGL)
     if (isOpenGl())
         myView = new OpenGlViewPort(this);
     else
@@ -3031,7 +3031,7 @@ void DefaultViewPort::setSize(QSize /*size_*/)
 //////////////////////////////////////////////////////
 // OpenGlViewPort
 
-#ifdef HAVE_QT_OPENGL
+#if defined (HAVE_QT_OPENGL) || defined (HAVE_QT5_OPENGL)
 
 OpenGlViewPort::OpenGlViewPort(QWidget* _parent) : QGLWidget(_parent), size(-1, -1)
 {
@@ -3100,7 +3100,9 @@ void OpenGlViewPort::updateGl()
 
 void OpenGlViewPort::initializeGL()
 {
+#if !defined (QT_OPENGL_ES_2)
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+#endif
 }
 
 void OpenGlViewPort::resizeGL(int w, int h)
@@ -3231,4 +3233,4 @@ void OpenGlViewPort::setSize(QSize size_)
 
 #endif
 
-#endif // HAVE_QT
+#endif // HAVE_QT || HAVE_QT5

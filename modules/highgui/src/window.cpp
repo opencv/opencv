@@ -55,7 +55,7 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
         if (!name || (prop_value!=CV_WINDOW_NORMAL && prop_value!=CV_WINDOW_FULLSCREEN))//bad argument
             break;
 
-        #if defined (HAVE_QT)
+        #if defined (HAVE_QT) || defined (HAVE_QT5)
             cvSetModeWindow_QT(name,prop_value);
         #elif defined(HAVE_WIN32UI)
             cvSetModeWindow_W32(name,prop_value);
@@ -69,13 +69,13 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
     break;
 
     case CV_WND_PROP_AUTOSIZE:
-        #if defined (HAVE_QT)
+        #if defined (HAVE_QT) || defined (HAVE_QT5)
             cvSetPropWindow_QT(name,prop_value);
         #endif
     break;
 
     case CV_WND_PROP_ASPECTRATIO:
-        #if defined (HAVE_QT)
+        #if defined (HAVE_QT) || defined (HAVE_QT5)
             cvSetRatioWindow_QT(name,prop_value);
         #endif
     break;
@@ -94,7 +94,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
     {
     case CV_WND_PROP_FULLSCREEN:
 
-        #if defined (HAVE_QT)
+        #if defined (HAVE_QT) || defined (HAVE_QT5)
             return cvGetModeWindow_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetModeWindow_W32(name);
@@ -111,7 +111,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 
     case CV_WND_PROP_AUTOSIZE:
 
-        #if defined (HAVE_QT)
+        #if defined (HAVE_QT) || defined (HAVE_QT5)
             return cvGetPropWindow_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetPropWindowAutoSize_W32(name);
@@ -124,7 +124,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 
     case CV_WND_PROP_ASPECTRATIO:
 
-        #if defined (HAVE_QT)
+        #if defined (HAVE_QT) || defined (HAVE_QT5)
             return cvGetRatioWindow_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetRatioWindow_W32(name);
@@ -137,7 +137,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 
     case CV_WND_PROP_OPENGL:
 
-        #if defined (HAVE_QT)
+        #if defined (HAVE_QT) || defined (HAVE_QT5)
             return cvGetOpenGlProp_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetOpenGlProp_W32(name);
@@ -340,7 +340,7 @@ CV_IMPL void cvUpdateWindow(const char*)
 
 #endif // !HAVE_OPENGL
 
-#if defined (HAVE_QT)
+#if defined (HAVE_QT) || defined (HAVE_QT5)
 
 cv::QtFont cv::fontQt(const String& nameFont, int pointSize, Scalar color, int weight,  int style, int /*spacing*/)
 {
@@ -446,6 +446,7 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 #elif defined (HAVE_COCOA)    // see window_carbon.cpp
 #elif defined (HAVE_CARBON)
 #elif defined (HAVE_QT)       //YV see window_QT.cpp
+#elif defined (HAVE_QT5)
 
 #else
 
