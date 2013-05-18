@@ -54,6 +54,33 @@ string fourccToString(int fourcc)
     return format("%c%c%c%c", fourcc & 255, (fourcc >> 8) & 255, (fourcc >> 16) & 255, (fourcc >> 24) & 255);
 }
 
+#ifdef HAVE_MSMF
+const VideoFormat g_specific_fmt_list[] =
+{
+/*        VideoFormat("avi", 'dv25'),
+        VideoFormat("avi", 'dv50'),
+        VideoFormat("avi", 'dvc '),
+        VideoFormat("avi", 'dvh1'),
+        VideoFormat("avi", 'dvhd'),
+        VideoFormat("avi", 'dvsd'),
+        VideoFormat("avi", 'dvsl'),
+        VideoFormat("avi", 'M4S2'), */
+        VideoFormat("wmv", 'WMV3'),
+        // VideoFormat("avi", 'H264'),
+        // VideoFormat("avi", 'MJPG'),
+        // VideoFormat("avi", 'MP43'),
+        // VideoFormat("avi", 'MP4S'),
+        // VideoFormat("avi", 'MP4V'),
+/*        VideoFormat("avi", 'MPG1'),
+        VideoFormat("avi", 'MSS1'),
+        VideoFormat("avi", 'MSS2'),
+        VideoFormat("avi", 'WMV1'),
+        VideoFormat("avi", 'WMV2'),
+        VideoFormat("avi", 'WMV3'),
+        VideoFormat("avi", 'WVC1'), */
+        VideoFormat()
+};
+#else
 const VideoFormat g_specific_fmt_list[] =
 {
     VideoFormat("avi", CV_FOURCC('X', 'V', 'I', 'D')),
@@ -63,17 +90,17 @@ const VideoFormat g_specific_fmt_list[] =
     VideoFormat("mkv", CV_FOURCC('X', 'V', 'I', 'D')),
     VideoFormat("mkv", CV_FOURCC('M', 'P', 'E', 'G')),
     VideoFormat("mkv", CV_FOURCC('M', 'J', 'P', 'G')),
-
     VideoFormat("mov", CV_FOURCC('m', 'p', '4', 'v')),
     VideoFormat()
 };
+#endif
 
 }
 
 class CV_HighGuiTest : public cvtest::BaseTest
 {
 protected:
-    void ImageTest(const string& dir);
+    void ImageTest (const string& dir);
     void VideoTest (const string& dir, const cvtest::VideoFormat& fmt);
     void SpecificImageTest (const string& dir);
     void SpecificVideoTest (const string& dir, const cvtest::VideoFormat& fmt);
@@ -291,8 +318,11 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
         if (psnr < thresDbell)
         {
             printf("Too low psnr = %gdb\n", psnr);
-            // imwrite("img.png", img);
-            // imwrite("img1.png", img1);
+            //imwrite("original.png", img);
+            //imwrite("after_test.png", img1);
+            //Mat diff;
+            //absdiff(img, img1, diff);
+            //imwrite("diff.png", diff);
             ts->set_failed_test_info(ts->FAIL_MISMATCH);
             break;
         }

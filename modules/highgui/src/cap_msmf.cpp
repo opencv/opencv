@@ -54,7 +54,6 @@
 #include <mfplay.h>
 #include <mfobjects.h>
 #include <strsafe.h>
-#include <wrl/client.h>
 #include <Mfreadwrite.h>
 #include <new>
 #include <map>
@@ -72,6 +71,8 @@
 #pragma comment(lib, "Mfreadwrite")
 #pragma comment(lib, "MinCore_Downlevel")
 
+// for ComPtr usage
+#include <wrl/client.h>
 using namespace Microsoft::WRL;
 
 struct IMFMediaType;
@@ -112,7 +113,7 @@ struct MediaType
     unsigned int width;
     unsigned int MF_MT_YUV_MATRIX;
     unsigned int MF_MT_VIDEO_LIGHTING;
-    unsigned int MF_MT_DEFAULT_STRIDE;
+    int MF_MT_DEFAULT_STRIDE; // stride is negative if image is bottom-up
     unsigned int MF_MT_VIDEO_CHROMA_SITING;
     GUID MF_MT_AM_FORMAT_TYPE;
     wchar_t *pMF_MT_AM_FORMAT_TYPEName;
@@ -226,6 +227,7 @@ private:
         DWORD dwSampleSize);
     STDMETHODIMP OnShutdown();
 };
+
 /// Class for controlling of thread of the grabbing raw data from video device
 class ImageGrabberThread
 {
@@ -249,6 +251,7 @@ private:
     bool igt_stop;
     unsigned int igt_DeviceID;
 };
+
 // Structure for collecting info about one parametr of current video device
 struct Parametr
 {
@@ -260,6 +263,7 @@ struct Parametr
     long Flag;
     Parametr();
 };
+
 // Structure for collecting info about 17 parametrs of current video device
 struct CamParametrs
 {
@@ -281,11 +285,13 @@ struct CamParametrs
         Parametr Iris;
         Parametr Focus;
 };
+
 typedef std::wstring String;
 typedef std::vector<int> vectorNum;
 typedef std::map<String, vectorNum> SUBTYPEMap;
 typedef std::map<UINT64, SUBTYPEMap> FrameRateMap;
 typedef void(*emergensyStopEventCallback)(int, void *);
+
 /// Class for controlling of video device
 class videoDevice
 {
@@ -329,7 +335,7 @@ private:
     IMFMediaSource *vd_pSource;
     emergensyStopEventCallback vd_func;
     void *vd_userData;
-    long enumerateCaptureFormats(IMFMediaSource *pSource);
+    HRESULT enumerateCaptureFormats(IMFMediaSource *pSource);
     long setDeviceFormat(IMFMediaSource *pSource, unsigned long dwFormatIndex);
     void buildLibraryofTypes();
     int findType(unsigned int size, unsigned int frameRate = 0);
@@ -337,6 +343,7 @@ private:
     long initDevice();
     long checkDevice(IMFAttributes *pAttributes, IMFActivate **pDevice);
 };
+
 /// Class for managing of list of video devices
 class videoDevices
 {
@@ -352,6 +359,7 @@ private:
     std::vector<videoDevice *> vds_Devices;
     videoDevices(void);
 };
+
 // Class for creating of Media Foundation context
 class Media_Foundation
 {
@@ -362,6 +370,7 @@ public:
 private:
     Media_Foundation(void);
 };
+
 /// The only visiable class for controlling of video devices in format singelton
 class videoInput
 {
@@ -411,23 +420,27 @@ public:
     bool isFrameNew(int deviceID);
     // Writing of Raw Data pixels from video device with deviceID with correction of RedAndBlue flipping flipRedAndBlue and vertical flipping flipImage
     bool getPixels(int deviceID, unsigned char * pixels, bool flipRedAndBlue = false, bool flipImage = false);
+    static void processPixels(unsigned char * src, unsigned char * dst, unsigned int width, unsigned int height, unsigned int bpp, bool bRGB, bool bFlip);
 private:
     bool accessToDevices;
     videoInput(void);
-    void processPixels(unsigned char * src, unsigned char * dst, unsigned int width, unsigned int height, unsigned int bpp, bool bRGB, bool bFlip);
     void updateListOfDevices();
 };
+
 DebugPrintOut::DebugPrintOut(void):verbose(true)
 {
 }
+
 DebugPrintOut::~DebugPrintOut(void)
 {
 }
+
 DebugPrintOut& DebugPrintOut::getInstance()
 {
     static DebugPrintOut instance;
     return instance;
 }
+
 void DebugPrintOut::printOut(const wchar_t *format, ...)
 {
     if(verbose)
@@ -448,14 +461,17 @@ void DebugPrintOut::printOut(const wchar_t *format, ...)
         va_end (args);
     }
 }
+
 void DebugPrintOut::setVerbose(bool state)
 {
     verbose = state;
 }
+
 LPCWSTR GetGUIDNameConstNew(const GUID& guid);
 HRESULT GetGUIDNameNew(const GUID& guid, WCHAR **ppwsz);
 HRESULT LogAttributeValueByIndexNew(IMFAttributes *pAttr, DWORD index);
 HRESULT SpecialCaseAttributeValueNew(GUID guid, const PROPVARIANT& var, MediaType &out);
+
 unsigned int *GetParametr(GUID guid, MediaType &out)
 {
     if(guid == MF_MT_YUV_MATRIX)
@@ -463,7 +479,7 @@ unsigned int *GetParametr(GUID guid, MediaType &out)
     if(guid == MF_MT_VIDEO_LIGHTING)
         return &(out.MF_MT_VIDEO_LIGHTING);
     if(guid == MF_MT_DEFAULT_STRIDE)
-        return &(out.MF_MT_DEFAULT_STRIDE);
+        return (unsigned int*)&(out.MF_MT_DEFAULT_STRIDE);
     if(guid == MF_MT_VIDEO_CHROMA_SITING)
         return &(out.MF_MT_VIDEO_CHROMA_SITING);
     if(guid == MF_MT_VIDEO_NOMINAL_RANGE)
@@ -480,6 +496,7 @@ unsigned int *GetParametr(GUID guid, MediaType &out)
         return &(out.MF_MT_INTERLACE_MODE);
     return NULL;
 }
+
 HRESULT LogAttributeValueByIndexNew(IMFAttributes *pAttr, DWORD index, MediaType &out)
 {
     WCHAR *pGuidName = NULL;
@@ -566,6 +583,7 @@ done:
     PropVariantClear(&var);
     return hr;
 }
+
 HRESULT GetGUIDNameNew(const GUID& guid, WCHAR **ppwsz)
 {
     HRESULT hr = S_OK;
@@ -625,6 +643,10 @@ HRESULT LogVideoAreaNew(const PROPVARIANT& var)
 }
 HRESULT SpecialCaseAttributeValueNew(GUID guid, const PROPVARIANT& var, MediaType &out)
 {
+    if (guid == MF_MT_DEFAULT_STRIDE)
+    {
+        out.MF_MT_DEFAULT_STRIDE = var.intVal;
+    } else
     if (guid == MF_MT_FRAME_SIZE)
     {
         UINT32 uHigh = 0, uLow = 0;
@@ -1039,6 +1061,7 @@ HRESULT ImageGrabber::startGrabbing(void)
             hr = S_OK;
             goto done;
         }
+        printf("media foundation event: %d\n", met);
         if (met == MESessionEnded)
         {
             DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: MESessionEnded \n", ig_DeviceID);
@@ -1055,16 +1078,21 @@ HRESULT ImageGrabber::startGrabbing(void)
             DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: MEVideoCaptureDeviceRemoved \n", ig_DeviceID);
             break;
         }
+        if ((met == MEError) || (met == MENonFatalError))
+        {
+            pEvent->GetStatus(&hrStatus);
+            DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: MEError | MENonFatalError: %u\n", ig_DeviceID, hrStatus);
+            break;
+        }
     }
+    DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Finish startGrabbing \n", ig_DeviceID);
 
+done:
     if (ig_Synchronous)
     {
         SetEvent(ig_hFinish);
     }
 
-    DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Finish startGrabbing \n", ig_DeviceID);
-
-done:
     SafeRelease(&ig_pSession);
     SafeRelease(&ig_pTopology);
 
@@ -2010,7 +2038,7 @@ videoDevice::~videoDevice(void)
         CoTaskMemFree(vd_pFriendlyName);
 }
 
-long videoDevice::enumerateCaptureFormats(IMFMediaSource *pSource)
+HRESULT videoDevice::enumerateCaptureFormats(IMFMediaSource *pSource)
 {
     ComPtr<IMFPresentationDescriptor> pPD = NULL;
     ComPtr<IMFStreamDescriptor> pSD = NULL;
@@ -3002,9 +3030,7 @@ protected:
     IplImage* frame;
     bool isOpened;
 
-    long enumerateCaptureFormats(IMFMediaSource *pSource);
-    void processPixels(unsigned char * src, unsigned char * dst, unsigned int width,
-                                unsigned int height, unsigned int bpp, bool bRGB, bool bFlip);
+    HRESULT enumerateCaptureFormats(IMFMediaSource *pSource);
 };
 
 CvCaptureFile_MSMF::CvCaptureFile_MSMF():
@@ -3034,10 +3060,10 @@ bool CvCaptureFile_MSMF::open(const char* filename)
 
     MF_OBJECT_TYPE ObjectType = MF_OBJECT_INVALID;
 
-    IMFSourceResolver* pSourceResolver = NULL;
+    ComPtr<IMFSourceResolver> pSourceResolver = NULL;
     IUnknown* pUnkSource = NULL;
 
-    hr = MFCreateSourceResolver(&pSourceResolver);
+    hr = MFCreateSourceResolver(pSourceResolver.GetAddressOf());
 
     if (SUCCEEDED(hr))
     {
@@ -3056,10 +3082,12 @@ bool CvCaptureFile_MSMF::open(const char* filename)
         hr = pUnkSource->QueryInterface(IID_PPV_ARGS(&videoFileSource));
     }
 
-    SafeRelease(&pSourceResolver);
     SafeRelease(&pUnkSource);
 
-    enumerateCaptureFormats(videoFileSource);
+    if (SUCCEEDED(hr))
+    {
+        hr = enumerateCaptureFormats(videoFileSource);
+    }
 
     if (SUCCEEDED(hr))
     {
@@ -3071,9 +3099,9 @@ bool CvCaptureFile_MSMF::open(const char* filename)
         grabberThread->start();
     }
 
-    isOpened = true;
+    isOpened = SUCCEEDED(hr);
 
-    return true;
+    return isOpened;
 }
 
 void CvCaptureFile_MSMF::close()
@@ -3207,6 +3235,8 @@ double CvCaptureFile_MSMF::getProperty(int property_id)
         return captureFormats[captureFormatIndex].width;
     case CV_CAP_PROP_FRAME_HEIGHT:
         return captureFormats[captureFormatIndex].height;
+    case CV_CAP_PROP_FRAME_COUNT:
+        return 30;
     case CV_CAP_PROP_FOURCC:
         // FIXME: implement method in VideoInput back end
         //return VI.getFourcc(index);
@@ -3282,77 +3312,18 @@ IplImage* CvCaptureFile_MSMF::retrieveFrame(int)
     RawImage *RIOut = grabberThread->getImageGrabber()->getRawImage();
     unsigned int size = bytes * width * height;
 
+    bool verticalFlip = captureFormats[captureFormatIndex].MF_MT_DEFAULT_STRIDE < 0;
+
     if(RIOut && size == RIOut->getSize())
     {
-        processPixels(RIOut->getpPixels(), (unsigned char*)frame->imageData, width, height, bytes, false, false);
+         videoInput::processPixels(RIOut->getpPixels(), (unsigned char*)frame->imageData, width, 
+             height, bytes, false, verticalFlip);
     }
 
     return frame;
 }
 
-void CvCaptureFile_MSMF::processPixels(unsigned char * src, unsigned char * dst, unsigned int width,
-                                unsigned int height, unsigned int bpp, bool bRGB, bool bFlip)
-{
-    unsigned int widthInBytes = width * bpp;
-    unsigned int numBytes = widthInBytes * height;
-    int *dstInt, *srcInt;
-    if(!bRGB)
-    {
-        if(bFlip)
-        {
-            for(unsigned int y = 0; y < height; y++)
-            {
-                dstInt = (int *)(dst + (y * widthInBytes));
-                srcInt = (int *)(src + ( (height -y -1) * widthInBytes));
-                memcpy(dstInt, srcInt, widthInBytes);
-            }
-        }
-        else
-        {
-            memcpy(dst, src, numBytes);
-        }
-    }
-    else
-    {
-        if(bFlip)
-        {
-            unsigned int x = 0;
-            unsigned int y = (height - 1) * widthInBytes;
-            src += y;
-            for(unsigned int i = 0; i < numBytes; i+=3)
-            {
-                if(x >= width)
-                {
-                    x = 0;
-                    src -= widthInBytes*2;
-                }
-                *dst = *(src+2);
-                dst++;
-                *dst = *(src+1);
-                dst++;
-                *dst = *src;
-                dst++;
-                src+=3;
-                x++;
-            }
-        }
-        else
-        {
-            for(unsigned int i = 0; i < numBytes; i+=3)
-            {
-                *dst = *(src+2);
-                dst++;
-                *dst = *(src+1);
-                dst++;
-                *dst = *src;
-                dst++;
-                src+=3;
-            }
-        }
-    }
-}
-
-long CvCaptureFile_MSMF::enumerateCaptureFormats(IMFMediaSource *pSource)
+HRESULT CvCaptureFile_MSMF::enumerateCaptureFormats(IMFMediaSource *pSource)
 {
     ComPtr<IMFPresentationDescriptor> pPD = NULL;
     ComPtr<IMFStreamDescriptor> pSD = NULL;
@@ -3363,12 +3334,6 @@ long CvCaptureFile_MSMF::enumerateCaptureFormats(IMFMediaSource *pSource)
     {
         goto done;
     }
-
-    DWORD cnt;
-
-    pPD->GetStreamDescriptorCount(&cnt);
-
-    printf("Stream count: %d\n", cnt);
 
     BOOL fSelected;
     hr = pPD->GetStreamDescriptorByIndex(0, &fSelected, pSD.GetAddressOf());
@@ -3423,10 +3388,21 @@ CvCapture* cvCreateCameraCapture_MSMF( int index )
 CvCapture* cvCreateFileCapture_MSMF (const char* filename)
 {
     CvCaptureFile_MSMF* capture = new CvCaptureFile_MSMF;
-    if( capture->open(filename) )
-        return capture;
-    delete capture;
-    return 0;
+    try
+    {
+        if( capture->open(filename) )
+            return capture;
+        else
+        {
+            delete capture;
+            return NULL;
+        }
+    }
+    catch(...)
+    {
+        delete capture;
+        throw;
+    }
 }
 
 //
@@ -3440,10 +3416,10 @@ class CvVideoWriter_MSMF : public CvVideoWriter
 public:
     CvVideoWriter_MSMF();
     virtual ~CvVideoWriter_MSMF();
-    virtual bool open( const char* filename, int fourcc,
-                       double fps, CvSize frameSize, bool isColor );
+    virtual bool open(const char* filename, int fourcc,
+                       double fps, CvSize frameSize, bool isColor);
     virtual void close();
-    virtual bool writeFrame( const IplImage* img);
+    virtual bool writeFrame(const IplImage* img);
 
 private:
     UINT32 videoWidth;
@@ -3533,7 +3509,7 @@ bool CvVideoWriter_MSMF::open( const char* filename, int fourcc,
     videoWidth = frameSize.width;
     videoHeight = frameSize.height;
     fps = _fps;
-    bitRate = videoWidth*videoHeight; // 1-bit per pixel
+    bitRate = fps*videoWidth*videoHeight; // 1-bit per pixel
     encodingFormat = FourCC2GUID(fourcc);
     inputFormat = MFVideoFormat_RGB32;
 
@@ -3596,14 +3572,7 @@ bool CvVideoWriter_MSMF::writeFrame(const IplImage* img)
             BYTE g = rowStart[colIdx * img->nChannels + 1];
             BYTE r = rowStart[colIdx * img->nChannels + 2];
 
-            // On ARM devices data is stored starting from the last line
-            // (and not the first line) so you have to revert them on the Y axis
-#if _M_ARM
-            int targetRow = videoHeight - rowIdx - 1;
-            target[(targetRow * videoWidth) + colIdx] = (r << 16) + (g << 8) + b;
-#else
             target[rowIdx*img->width+colIdx] = (r << 16) + (g << 8) + b;
-#endif
         }
     }
 
@@ -3677,6 +3646,7 @@ HRESULT CvVideoWriter_MSMF::InitializeSinkWriter(const char* filename)
     {
         hr = MFSetAttributeRatio(mediaTypeOut.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
     }
+
     if (SUCCEEDED(hr))
     {
         hr = sinkWriter->AddStream(mediaTypeOut.Get(), &streamIndex);
@@ -3711,7 +3681,7 @@ HRESULT CvVideoWriter_MSMF::InitializeSinkWriter(const char* filename)
     {
         hr = MFSetAttributeRatio(mediaTypeIn.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
     }
-    if (SUCCEEDED(hr))
+        if (SUCCEEDED(hr))
     {
         hr = sinkWriter->SetInputMediaType(streamIndex, mediaTypeIn.Get(), NULL);
     }
