@@ -407,6 +407,9 @@ namespace cv
         //! computes element-wise product of the two arrays (c = a * b)
         // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
         CV_EXPORTS void multiply(const oclMat &a, const oclMat &b, oclMat &c, double scale = 1);
+        //! multiplies matrix to a number (dst = scalar * src)
+        // supports CV_32FC1 only
+        CV_EXPORTS void multiply(double scalar, const oclMat &src, oclMat &dst);
         //! computes element-wise quotient of the two arrays (c = a / b)
         // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
         CV_EXPORTS void divide(const oclMat &a, const oclMat &b, oclMat &c, double scale = 1);
@@ -1372,6 +1375,7 @@ namespace cv
         private:
             oclMat minSSD, leBuf, riBuf;
         };
+
         class CV_EXPORTS StereoBeliefPropagation
         {
         public:
@@ -1402,6 +1406,7 @@ namespace cv
             std::vector<oclMat> datas;
             oclMat out;
         };
+
         class CV_EXPORTS StereoConstantSpaceBP
         {
         public:
@@ -1439,6 +1444,94 @@ namespace cv
             oclMat data_cost_selected;
             oclMat temp;
             oclMat out;
+        };
+
+        // Implementation of the Zach, Pock and Bischof Dual TV-L1 Optical Flow method
+        //
+        // see reference:
+        //   [1] C. Zach, T. Pock and H. Bischof, "A Duality Based Approach for Realtime TV-L1 Optical Flow".
+        //   [2] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
+        class CV_EXPORTS OpticalFlowDual_TVL1_OCL
+        {
+        public:
+            OpticalFlowDual_TVL1_OCL();
+
+            void operator ()(const oclMat& I0, const oclMat& I1, oclMat& flowx, oclMat& flowy);
+
+            void collectGarbage();
+
+            /**
+            * Time step of the numerical scheme.
+            */
+            double tau;
+
+            /**
+            * Weight parameter for the data term, attachment parameter.
+            * This is the most relevant parameter, which determines the smoothness of the output.
+            * The smaller this parameter is, the smoother the solutions we obtain.
+            * It depends on the range of motions of the images, so its value should be adapted to each image sequence.
+            */
+            double lambda;
+
+            /**
+            * Weight parameter for (u - v)^2, tightness parameter.
+            * It serves as a link between the attachment and the regularization terms.
+            * In theory, it should have a small value in order to maintain both parts in correspondence.
+            * The method is stable for a large range of values of this parameter.
+            */
+            double theta;
+
+            /**
+            * Number of scales used to create the pyramid of images.
+            */
+            int nscales;
+
+            /**
+            * Number of warpings per scale.
+            * Represents the number of times that I1(x+u0) and grad( I1(x+u0) ) are computed per scale.
+            * This is a parameter that assures the stability of the method.
+            * It also affects the running time, so it is a compromise between speed and accuracy.
+            */
+            int warps;
+
+            /**
+            * Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time.
+            * A small value will yield more accurate solutions at the expense of a slower convergence.
+            */
+            double epsilon;
+
+            /**
+            * Stopping criterion iterations number used in the numerical scheme.
+            */
+            int iterations;
+
+            bool useInitialFlow;
+
+        private:
+            void procOneScale(const oclMat& I0, const oclMat& I1, oclMat& u1, oclMat& u2);
+
+            std::vector<oclMat> I0s;
+            std::vector<oclMat> I1s;
+            std::vector<oclMat> u1s;
+            std::vector<oclMat> u2s;
+
+            oclMat I1x_buf;
+            oclMat I1y_buf;
+
+            oclMat I1w_buf;
+            oclMat I1wx_buf;
+            oclMat I1wy_buf;
+
+            oclMat grad_buf;
+            oclMat rho_c_buf;
+
+            oclMat p11_buf;
+            oclMat p12_buf;
+            oclMat p21_buf;
+            oclMat p22_buf;
+
+            oclMat diff_buf;
+            oclMat norm_buf;
         };
     }
 }
