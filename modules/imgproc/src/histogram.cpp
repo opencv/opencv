@@ -1980,7 +1980,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
     {
         const float* h1 = (const float*)it.planes[0].data;
         const float* h2 = (const float*)it.planes[1].data;
-        len = it.planes[0].rows*it.planes[0].cols;
+        len = it.planes[0].rows*it.planes[0].cols*H1.channels();
 
         if( method == CV_COMP_CHISQR )
         {
