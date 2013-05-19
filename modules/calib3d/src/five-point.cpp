@@ -119,9 +119,9 @@ public:
             double bz[3][3];
             for (int j = 0; j < 3; j++)
             {
-                const double * br = b + j * 13;
-                bz[j][0] = br[0] * z3 + br[1] * z2 + br[2] * z1 + br[3];
-                bz[j][1] = br[4] * z3 + br[5] * z2 + br[6] * z1 + br[7];
+                const double * br = b + (j * 13);
+                bz[j][0] = br[0] * z3 + br[1] * z2 + br[2]  * z1 + br[3];
+                bz[j][1] = br[4] * z3 + br[5] * z2 + br[6]  * z1 + br[7];
                 bz[j][2] = br[8] * z4 + br[9] * z3 + br[10] * z2 + br[11] * z1 + br[12];
             }
 
@@ -129,9 +129,11 @@ public:
             cv::Mat xy1;
             SVD::solveZ(Bz, xy1);
 
-            if (fabs(xy1.at<double>(2)) < 1e-10) continue;
-            xs.push_back(xy1.at<double>(0) / xy1.at<double>(2));
-            ys.push_back(xy1.at<double>(1) / xy1.at<double>(2));
+            double xy1_2 = xy1.at<double>(2);
+            if (fabs(xy1_2) < 1e-10) continue;
+            xy1_2 = 1.0 / xy1_2;
+            xs.push_back(xy1.at<double>(0) * xy1_2);
+            ys.push_back(xy1.at<double>(1) * xy1_2);
             zs.push_back(z1);
 
             cv::Mat Evec = EE.col(0) * xs.back() + EE.col(1) * ys.back() + EE.col(2) * zs.back() + EE.col(3);
@@ -389,8 +391,8 @@ protected:
             Vec3d Etx2 = E.t() * x2;
             double x2tEx1 = x2.dot(Ex1);
 
-            double a = Ex1[0] * Ex1[0];
-            double b = Ex1[1] * Ex1[1];
+            double a = Ex1[0]  * Ex1[0];
+            double b = Ex1[1]  * Ex1[1];
             double c = Etx2[0] * Etx2[0];
             double d = Etx2[1] * Etx2[1];
 
@@ -432,7 +434,7 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double f
     points1 = points1.reshape(2, npoints);
     points2 = points2.reshape(2, npoints);
 
-    threshold /= focal;
+    threshold *= ifocal;
 
     Mat E;
     if( method == RANSAC )
@@ -453,6 +455,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     int npoints = points1.checkVector(2);
     CV_Assert( npoints >= 0 && points2.checkVector(2) == npoints &&
                               points1.type() == points2.type());
+    double ifocal = 1 / focal;
 
     if (points1.channels() > 1)
     {
@@ -462,10 +465,10 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     points1.convertTo(points1, CV_64F);
     points2.convertTo(points2, CV_64F);
 
-    points1.col(0) = (points1.col(0) - pp.x) / focal;
-    points2.col(0) = (points2.col(0) - pp.x) / focal;
-    points1.col(1) = (points1.col(1) - pp.y) / focal;
-    points2.col(1) = (points2.col(1) - pp.y) / focal;
+    points1.col(0) = (points1.col(0) - pp.x) * ifocal;
+    points2.col(0) = (points2.col(0) - pp.x) * ifocal;
+    points1.col(1) = (points1.col(1) - pp.y) * ifocal;
+    points2.col(1) = (points2.col(1) - pp.y) * ifocal;
 
     points1 = points1.t();
     points2 = points2.t();
@@ -474,8 +477,8 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     decomposeEssentialMat(E, R1, R2, t);
     Mat P0 = Mat::eye(3, 4, R1.type());
     Mat P1(3, 4, R1.type()), P2(3, 4, R1.type()), P3(3, 4, R1.type()), P4(3, 4, R1.type());
-    P1(Range::all(), Range(0, 3)) = R1 * 1.0; P1.col(3) = t * 1.0;
-    P2(Range::all(), Range(0, 3)) = R2 * 1.0; P2.col(3) = t * 1.0;
+    P1(Range::all(), Range(0, 3)) = R1 * 1.0; P1.col(3) =  t * 1.0;
+    P2(Range::all(), Range(0, 3)) = R2 * 1.0; P2.col(3) =  t * 1.0;
     P3(Range::all(), Range(0, 3)) = R1 * 1.0; P3.col(3) = -t * 1.0;
     P4(Range::all(), Range(0, 3)) = R2 * 1.0; P4.col(3) = -t * 1.0;
 
@@ -483,47 +486,51 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     // Notice here a threshold dist is used to filter
     // out far away points (i.e. infinite points) since
     // there depth may vary between postive and negtive.
-    double dist = 50.0;
+    double inv_Qrow3, dist = 50.0;
     Mat Q;
     triangulatePoints(P0, P1, points1, points2, Q);
+    inv_Qrow3 = 1 / Q.row(3);
     Mat mask1 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) /= Q.row(3);
-    Q.row(1) /= Q.row(3);
-    Q.row(2) /= Q.row(3);
-    Q.row(3) /= Q.row(3);
+    Q.row(0) *= inv_Qrow3;
+    Q.row(1) *= inv_Qrow3;
+    Q.row(2) *= inv_Qrow3;
+    Q.row(3) *= inv_Qrow3;
     mask1 = (Q.row(2) < dist) & mask1;
     Q = P1 * Q;
     mask1 = (Q.row(2) > 0) & mask1;
     mask1 = (Q.row(2) < dist) & mask1;
 
     triangulatePoints(P0, P2, points1, points2, Q);
+    inv_Qrow3 = 1 / Q.row(3);
     Mat mask2 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) /= Q.row(3);
-    Q.row(1) /= Q.row(3);
-    Q.row(2) /= Q.row(3);
-    Q.row(3) /= Q.row(3);
+    Q.row(0) *= inv_Qrow3;
+    Q.row(1) *= inv_Qrow3;
+    Q.row(2) *= inv_Qrow3;
+    Q.row(3) *= inv_Qrow3;
     mask2 = (Q.row(2) < dist) & mask2;
     Q = P2 * Q;
     mask2 = (Q.row(2) > 0) & mask2;
     mask2 = (Q.row(2) < dist) & mask2;
 
     triangulatePoints(P0, P3, points1, points2, Q);
+    inv_Qrow3 = 1 / Q.row(3);
     Mat mask3 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) /= Q.row(3);
-    Q.row(1) /= Q.row(3);
-    Q.row(2) /= Q.row(3);
-    Q.row(3) /= Q.row(3);
+    Q.row(0) *= inv_Qrow3;
+    Q.row(1) *= inv_Qrow3;
+    Q.row(2) *= inv_Qrow3;
+    Q.row(3) *= inv_Qrow3;
     mask3 = (Q.row(2) < dist) & mask3;
     Q = P3 * Q;
     mask3 = (Q.row(2) > 0) & mask3;
     mask3 = (Q.row(2) < dist) & mask3;
 
     triangulatePoints(P0, P4, points1, points2, Q);
+    inv_Qrow3 = 1 / Q.row(3);
     Mat mask4 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) /= Q.row(3);
-    Q.row(1) /= Q.row(3);
-    Q.row(2) /= Q.row(3);
-    Q.row(3) /= Q.row(3);
+    Q.row(0) *= inv_Qrow3;
+    Q.row(1) *= inv_Qrow3;
+    Q.row(2) *= inv_Qrow3;
+    Q.row(3) *= inv_Qrow3;
     mask4 = (Q.row(2) < dist) & mask4;
     Q = P4 * Q;
     mask4 = (Q.row(2) > 0) & mask4;
