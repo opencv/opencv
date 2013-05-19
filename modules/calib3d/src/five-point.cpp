@@ -490,13 +490,13 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     Mat Q;
     
     triangulatePoints(P0, P1, points1, points2, Q);
-	Mat Q3_inv(1, Q.cols, Q.type()); // CV_64Fc1
+    Mat Q3_inv(1, Q.cols, Q.type()); // CV_64Fc1
     Mat mask1 = Q.row(2).mul(Q.row(3)) > 0;
     Q3_inv.row(0) = 1.0 / Q.row(3); // FMUL faster than FDIV (only once)
     Q.row(0) *= Q3_inv.row(0);
     Q.row(1) *= Q3_inv.row(0);
     Q.row(2) *= Q3_inv.row(0);
-    Q.row(3) *= Q3_inv.row(0);
+    Q.row(3) *= Q3_inv.row(0); // old: Q.row(3) /= Q.row(3); ==> Q.row(3) = 1.0; why not the easy way ?
     mask1 = (Q.row(2) < dist) & mask1;
     Q = P1 * Q;
     mask1 = (Q.row(2) > 0) & mask1;
