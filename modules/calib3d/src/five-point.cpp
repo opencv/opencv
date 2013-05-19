@@ -486,51 +486,53 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     // Notice here a threshold dist is used to filter
     // out far away points (i.e. infinite points) since
     // there depth may vary between postive and negtive.
-    double inv_Qrow3, dist = 50.0;
+    const double dist = 50.0;
     Mat Q;
+    
     triangulatePoints(P0, P1, points1, points2, Q);
-    inv_Qrow3 = 1 / Q.row(3);
+	Mat Q3_inv(1, Q.cols, Q.type()); // CV_64Fc1
     Mat mask1 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) *= inv_Qrow3;
-    Q.row(1) *= inv_Qrow3;
-    Q.row(2) *= inv_Qrow3;
-    Q.row(3) *= inv_Qrow3;
+    Q3_inv.row(0) = 1.0 / Q.row(3); // FMUL faster than FDIV (only once)
+    Q.row(0) *= Q3_inv.row(0);
+    Q.row(1) *= Q3_inv.row(0);
+    Q.row(2) *= Q3_inv.row(0);
+    Q.row(3) *= Q3_inv.row(0);
     mask1 = (Q.row(2) < dist) & mask1;
     Q = P1 * Q;
     mask1 = (Q.row(2) > 0) & mask1;
     mask1 = (Q.row(2) < dist) & mask1;
 
     triangulatePoints(P0, P2, points1, points2, Q);
-    inv_Qrow3 = 1 / Q.row(3);
     Mat mask2 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) *= inv_Qrow3;
-    Q.row(1) *= inv_Qrow3;
-    Q.row(2) *= inv_Qrow3;
-    Q.row(3) *= inv_Qrow3;
+    Q3_inv.row(0) = 1.0 / Q.row(3);
+    Q.row(0) *= Q3_inv.row(0);
+    Q.row(1) *= Q3_inv.row(0);
+    Q.row(2) *= Q3_inv.row(0);
+    Q.row(3) *= Q3_inv.row(0);
     mask2 = (Q.row(2) < dist) & mask2;
     Q = P2 * Q;
     mask2 = (Q.row(2) > 0) & mask2;
     mask2 = (Q.row(2) < dist) & mask2;
 
     triangulatePoints(P0, P3, points1, points2, Q);
-    inv_Qrow3 = 1 / Q.row(3);
     Mat mask3 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) *= inv_Qrow3;
-    Q.row(1) *= inv_Qrow3;
-    Q.row(2) *= inv_Qrow3;
-    Q.row(3) *= inv_Qrow3;
+    Q3_inv.row(0) = 1.0 / Q.row(3);
+    Q.row(0) *= Q3_inv.row(0);
+    Q.row(1) *= Q3_inv.row(0);
+    Q.row(2) *= Q3_inv.row(0);
+    Q.row(3) *= Q3_inv.row(0);
     mask3 = (Q.row(2) < dist) & mask3;
     Q = P3 * Q;
     mask3 = (Q.row(2) > 0) & mask3;
     mask3 = (Q.row(2) < dist) & mask3;
 
     triangulatePoints(P0, P4, points1, points2, Q);
-    inv_Qrow3 = 1 / Q.row(3);
     Mat mask4 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) *= inv_Qrow3;
-    Q.row(1) *= inv_Qrow3;
-    Q.row(2) *= inv_Qrow3;
-    Q.row(3) *= inv_Qrow3;
+    Q3_inv.row(0) = 1.0 / Q.row(3);
+    Q.row(0) *= Q3_inv.row(0);
+    Q.row(1) *= Q3_inv.row(0);
+    Q.row(2) *= Q3_inv.row(0);
+    Q.row(3) *= Q3_inv.row(0);
     mask4 = (Q.row(2) < dist) & mask4;
     Q = P4 * Q;
     mask4 = (Q.row(2) > 0) & mask4;
