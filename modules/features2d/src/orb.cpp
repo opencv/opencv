@@ -52,17 +52,17 @@ const int DESCRIPTOR_SIZE = 32;
 static void
 HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float harris_k)
 {
-    CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
+    CV_Assert( img.type() == CV_8UC1 && (blockSize*blockSize) <= 2048 );
 
     size_t ptidx, ptsize = pts.size();
 
     const uchar* ptr00 = img.ptr<uchar>();
-    int step = (int)(img.step/img.elemSize1());
-    int r = blockSize/2;
+    const int step = (int)(img.step/img.elemSize1());
+    const int r = blockSize / 2;
 
-    float scale = (1 << 2) * blockSize * 255.0f;
+    float scale = ((1 << 2) * 255.0f) * blockSize;
     scale = 1.0f / scale;
-    float scale_sq_sq = scale * scale * scale * scale;
+    const float scale_sq_sq = (scale * scale) * (scale * scale);
 
     AutoBuffer<int> ofsbuf(blockSize*blockSize);
     int* ofs = ofsbuf;
@@ -75,10 +75,10 @@ HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float
         int x0 = cvRound(pts[ptidx].pt.x - r);
         int y0 = cvRound(pts[ptidx].pt.y - r);
 
-        const uchar* ptr0 = ptr00 + y0*step + x0;
+        const uchar* ptr0 = ptr00 + (y0*step) + x0;
         int a = 0, b = 0, c = 0;
 
-        for( int k = 0; k < blockSize*blockSize; k++ )
+        for( int k = 0; k < (blockSize*blockSize); k++ )
         {
             const uchar* ptr = ptr0 + ofs[k];
             int Ix = (ptr[1] - ptr[-1])*2 + (ptr[-step+1] - ptr[-step-1]) + (ptr[step+1] - ptr[step-1]);
