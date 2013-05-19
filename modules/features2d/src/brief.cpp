@@ -53,17 +53,18 @@ inline int smoothedSum(const Mat& sum, const KeyPoint& pt, int y, int x)
 {
     static const int HALF_KERNEL = BriefDescriptorExtractor::KERNEL_SIZE / 2;
 
-    int img_y = (int)(pt.pt.y + 0.5) + y;
-    int img_x = (int)(pt.pt.x + 0.5) + x;
-    return   sum.at<int>(img_y + HALF_KERNEL + 1, img_x + HALF_KERNEL + 1)
-           - sum.at<int>(img_y + HALF_KERNEL + 1, img_x - HALF_KERNEL)
-           - sum.at<int>(img_y - HALF_KERNEL, img_x + HALF_KERNEL + 1)
-           + sum.at<int>(img_y - HALF_KERNEL, img_x - HALF_KERNEL);
+    const int img_y = (int)(pt.pt.y + 0.5f) + y;
+    const int img_x = (int)(pt.pt.x + 0.5f) + x;
+    return   sum.at<int>(img_y + (HALF_KERNEL + 1), img_x + (HALF_KERNEL + 1))
+           - sum.at<int>(img_y + (HALF_KERNEL + 1), img_x -  HALF_KERNEL)
+           - sum.at<int>(img_y - HALF_KERNEL, img_x + (HALF_KERNEL + 1))
+           + sum.at<int>(img_y - HALF_KERNEL, img_x -  HALF_KERNEL);
 }
 
 static void pixelTests16(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
 {
-    for (int i = 0; i < (int)keypoints.size(); ++i)
+    const int keypoints_size = (int)keypoints.size();
+    for (int i = 0; i < keypoints_size; ++i)
     {
         uchar* desc = descriptors.ptr(i);
         const KeyPoint& pt = keypoints[i];
@@ -73,7 +74,8 @@ static void pixelTests16(const Mat& sum, const std::vector<KeyPoint>& keypoints,
 
 static void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
 {
-    for (int i = 0; i < (int)keypoints.size(); ++i)
+    const int keypoints_size = (int)keypoints.size();
+    for (int i = 0; i < keypoints_size; ++i)
     {
         uchar* desc = descriptors.ptr(i);
         const KeyPoint& pt = keypoints[i];
@@ -84,7 +86,8 @@ static void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints,
 
 static void pixelTests64(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
 {
-    for (int i = 0; i < (int)keypoints.size(); ++i)
+    const int keypoints_size = (int)keypoints.size();
+    for (int i = 0; i < keypoints_size; ++i)
     {
         uchar* desc = descriptors.ptr(i);
         const KeyPoint& pt = keypoints[i];
