@@ -99,7 +99,7 @@ CV_IMPL void cvCalcMatMulDeriv( const CvMat* A, const CvMat* B, CvMat* dABdA, Cv
                 for( j = 0; j < M*L; j++ )
                     dcda[j] = 0;
                 for( j = 0; j < L; j++ )
-                    dcda[i1*L + j] = b[j*bstep];
+                    dcda[(i1*L) + j] = b[j*bstep];
             }
 
             if( dABdB )
@@ -110,7 +110,7 @@ CV_IMPL void cvCalcMatMulDeriv( const CvMat* A, const CvMat* B, CvMat* dABdA, Cv
                 for( j = 0; j < L*N; j++ )
                     dcdb[j] = 0;
                 for( j = 0; j < L; j++ )
-                    dcdb[j*N + i2] = a[j];
+                    dcdb[(j*N) + i2] = a[j];
             }
         }
     }
@@ -139,7 +139,7 @@ CV_IMPL void cvCalcMatMulDeriv( const CvMat* A, const CvMat* B, CvMat* dABdA, Cv
                 for( j = 0; j < L*N; j++ )
                     dcdb[j] = 0;
                 for( j = 0; j < L; j++ )
-                    dcdb[j*N + i2] = a[j];
+                    dcdb[(j*N) + i2] = a[j];
             }
         }
     }
@@ -2928,14 +2928,14 @@ cvDecomposeProjectionMatrix( const CvMat *projMatr, CvMat *calibMatr,
     /* Compute position vector. */
     cvSetZero(&tmpProjMatr); // Add zero row to make matrix square.
     int i, k;
-    for(i = 0; i < 3; i++)
-        for(k = 0; k < 4; k++)
+    for( i = 0; i < 3; i++ )
+        for( k = 0; k < 4; k++ )
             cvmSet(&tmpProjMatr, i, k, cvmGet(projMatr, i, k));
 
     cvSVD(&tmpProjMatr, &tmpMatrixD, NULL, &tmpMatrixV, CV_SVD_MODIFY_A + CV_SVD_V_T);
 
     /* Save position vector. */
-    for(i = 0; i < 4; i++)
+    for( i = 0; i < 4; i++ )
         cvmSet(posVect, i, 0, cvmGet(&tmpMatrixV, 3, i)); // Solution is last row of V.
 
     /* Compute calibration and rotation matrices via RQ decomposition. */
