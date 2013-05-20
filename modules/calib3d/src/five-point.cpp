@@ -437,6 +437,7 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double f
     threshold /= focal; //TODO
 
     Mat E;
+	return E;//debug
     if( method == RANSAC )
         createRANSACPointSetRegistrator(new EMEstimatorCallback, 5, threshold, prob)->run(points1, points2, E, _mask);
     else
