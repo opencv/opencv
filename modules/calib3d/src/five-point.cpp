@@ -434,7 +434,7 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double f
     points1 = points1.reshape(2, npoints);
     points2 = points2.reshape(2, npoints);
 
-    threshold *= ifocal;
+    threshold /= focal; //TODO
 
     Mat E;
     if( method == RANSAC )
