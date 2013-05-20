@@ -351,14 +351,15 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
                 double d_r_x_[] = { 0, 0, 0, 0, 0, -1, 0, 1, 0,
                                     0, 0, 1, 0, 0, 0, -1, 0, 0,
                                     0, -1, 0, 1, 0, 0, 0, 0, 0 };
+                double r3[3] = {rx, ry, rz};
                 for( i = 0; i < 3; i++ )
                 {
-                    const double ri = (i == 0) ? rx : (i == 1 ? ry : rz);
+                    const double ri = r3[i]; // (i == 0) ? rx : (i == 1 ? ry : rz);
                     const double a0 = -s*ri, a1 = (s - 2*c1*itheta)*ri, a2 = c1*itheta;
                     const double a3 = (c - s*itheta)*ri, a4 = s*itheta;
                     for( k = 0; k < 9; k++ )
-                        J[i*9+k] = a0*I[k] + a1*rrt[k] + a2*drrt[i*9+k] +
-                                   a3*_r_x_[k] + a4*d_r_x_[i*9+k];
+                        J[(i*9)+k] = a0*I[k] + a1*rrt[k] + a2*drrt[(i*9)+k] +
+                                   a3*_r_x_[k] + a4*d_r_x_[(i*9)+k];
                 }
             }
         }
