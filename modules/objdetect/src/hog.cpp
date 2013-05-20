@@ -1060,7 +1060,9 @@ void HOGDescriptor::detectMultiScale(
     }
     else
     {
-        groupRectangles(foundLocations, (int)finalThreshold, 0.2);
+        vector<int> dummy;
+        dummy.resize(foundLocations.size(), INT_MAX);
+        groupRectangles(foundLocations, (int)finalThreshold, 0.2, &dummy, &foundWeights);
     }
 }
 
