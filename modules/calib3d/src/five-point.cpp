@@ -131,15 +131,15 @@ public:
 
             double xy1_2 = xy1.at<double>(2);
             if (fabs(xy1_2) < 1e-10) continue;
-            xy1_2 = 1.0 / xy1_2;
-            xs.push_back(xy1.at<double>(0) * xy1_2);
-            ys.push_back(xy1.at<double>(1) * xy1_2);
+            //xy1_2 = 1.0 / xy1_2; // TODO
+            xs.push_back(xy1.at<double>(0) / xy1_2);
+            ys.push_back(xy1.at<double>(1) / xy1_2);
             zs.push_back(z1);
 
             cv::Mat Evec = EE.col(0) * xs.back() + EE.col(1) * ys.back() + EE.col(2) * zs.back() + EE.col(3);
             Evec /= norm(Evec);
 
-            memcpy(e + count * 9, Evec.data, 9 * sizeof(double));
+            memcpy(e + (count*9), Evec.data, 9 * sizeof(double));
             count++;
         }
 
@@ -411,7 +411,7 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double f
     _points1.getMat().convertTo(points1, CV_64F);
     _points2.getMat().convertTo(points2, CV_64F);
 
-    int npoints = points1.checkVector(2);
+    const int npoints = points1.checkVector(2);
     CV_Assert( npoints >= 5 && points2.checkVector(2) == npoints &&
                               points1.type() == points2.type());
 
@@ -421,7 +421,7 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double f
         points2 = points2.reshape(1, npoints);
     }
 
-    double ifocal = focal != 0 ? 1./focal : 1.;
+    const double ifocal = (focal != 0) ? 1./focal : 1.;
     for( int i = 0; i < npoints; i++ )
     {
         points1.at<double>(i, 0) = (points1.at<double>(i, 0) - pp.x)*ifocal;
@@ -455,7 +455,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     int npoints = points1.checkVector(2);
     CV_Assert( npoints >= 0 && points2.checkVector(2) == npoints &&
                               points1.type() == points2.type());
-    double ifocal = 1 / focal;
+    const double ifocal = 1 / focal;
 
     if (points1.channels() > 1)
     {
