@@ -68,12 +68,12 @@ HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float
     int* ofs = ofsbuf;
     for( int i = 0; i < blockSize; i++ )
         for( int j = 0; j < blockSize; j++ )
-            ofs[i*blockSize + j] = (int)(i*step + j);
+            ofs[(i*blockSize) + j] = (int)((i*step) + j);
 
     for( ptidx = 0; ptidx < ptsize; ptidx++ )
     {
-        int x0 = cvRound(pts[ptidx].pt.x - r);
-        int y0 = cvRound(pts[ptidx].pt.y - r);
+        const int x0 = cvRound(pts[ptidx].pt.x - r);
+        const int y0 = cvRound(pts[ptidx].pt.y - r);
 
         const uchar* ptr0 = ptr00 + (y0*step) + x0;
         int a = 0, b = 0, c = 0;
@@ -87,8 +87,9 @@ HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float
             b += Iy*Iy;
             c += Ix*Iy;
         }
+        const float a_b = (float)a + b;
         pts[ptidx].response = ((float)a * b - (float)c * c -
-                               harris_k * ((float)a + b) * ((float)a + b))*scale_sq_sq;
+                               harris_k * (a_b) * (a_b)) * scale_sq_sq;
     }
 }
 
