@@ -60,9 +60,9 @@ HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float
     const int step = (int)(img.step/img.elemSize1());
     const int r = blockSize / 2;
 
-    float scale = ((1 << 2) * 255.0f) * blockSize;
+    float scale = (1 << 2) * blockSize * 255.0f; // float scale = ((1 << 2) * 255.0f) * blockSize;
     scale = 1.0f / scale;
-    const float scale_sq_sq = (scale * scale) * (scale * scale);
+    const float scale_sq_sq = scale * scale * scale * scale;
 
     AutoBuffer<int> ofsbuf(blockSize*blockSize);
     int* ofs = ofsbuf;
@@ -133,10 +133,10 @@ static void computeOrbDescriptor(const KeyPoint& kpt,
     float angle = kpt.angle;
     //angle = cvFloor(angle/12)*12.f;
     angle *= (float)(CV_PI/180.f);
-    float a = (float)cos(angle), b = (float)sin(angle);
+    const float a = (float)cos(angle), b = (float)sin(angle);
 
     const uchar* center = &img.at<uchar>(cvRound(kpt.pt.y), cvRound(kpt.pt.x));
-    int step = (int)img.step;
+    const int step = (int)img.step;
 
 #if 1
     #define GET_VALUE(idx) \
@@ -250,7 +250,7 @@ static void initializeOrbPattern( const Point* pattern0, std::vector<Point>& pat
 {
     RNG rng(0x12345678);
     int i, k, k1;
-    pattern.resize(ntuples*tupleSize);
+    pattern.resize(ntuples * tupleSize);
 
     for( i = 0; i < ntuples; i++ )
     {
@@ -261,11 +261,11 @@ static void initializeOrbPattern( const Point* pattern0, std::vector<Point>& pat
                 int idx = rng.uniform(0, poolSize);
                 Point pt = pattern0[idx];
                 for( k1 = 0; k1 < k; k1++ )
-                    if( pattern[tupleSize*i + k1] == pt )
+                    if( pattern[(tupleSize*i) + k1] == pt )
                         break;
                 if( k1 == k )
                 {
-                    pattern[tupleSize*i + k] = pt;
+                    pattern[(tupleSize*i) + k] = pt;
                     break;
                 }
             }
@@ -536,12 +536,13 @@ static int bit_pattern_31_[256*4] =
 
 static void makeRandomPattern(int patchSize, Point* pattern, int npoints)
 {
+    const int patchSize_2 = patchSize / 2;
     RNG rng(0x34985739); // we always start with a fixed seed,
                          // to make patterns the same on each run
     for( int i = 0; i < npoints; i++ )
     {
-        pattern[i].x = rng.uniform(-patchSize/2, patchSize/2+1);
-        pattern[i].y = rng.uniform(-patchSize/2, patchSize/2+1);
+        pattern[i].x = rng.uniform(-patchSize_2, patchSize_2+1);
+        pattern[i].y = rng.uniform(-patchSize_2, patchSize_2+1);
     }
 }
 
