@@ -60,7 +60,8 @@ HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float
     const int step = (int)(img.step/img.elemSize1());
     const int r = blockSize / 2;
 
-    float scale = (1 << 2) * blockSize * 255.0f; // float scale = ((1 << 2) * 255.0f) * blockSize;
+    //float scale = (1 << 2) * blockSize * 255.0f; // org
+    float scale = ((1 << 2) * 255.0f) * blockSize;
     scale = 1.0f / scale;
     const float scale_sq_sq = scale * scale * scale * scale;
 
