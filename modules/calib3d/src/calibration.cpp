@@ -3519,7 +3519,7 @@ static void adjust3rdMatrix(InputArrayOfArrays _imgpt1_0,
     y1y2_ *= inv_n;
 
     const double a = (y1y2_ - y1_*y2_) / (y1y1_ - y1_*y1_);
-    const double b = y2_ - a*y1_;
+    const double b = y2_ - (a*y1_);
 
     P3.at<double>(0,0) *= a;
     P3.at<double>(1,1) *= a;
