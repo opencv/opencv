@@ -1682,7 +1682,7 @@ Returns the type of a matrix element.
 
 .. ocv:function:: int Mat::type() const
 
-The method returns a matrix element type. This is an identifier compatible with the ``CvMat`` type system, like ``CV_16SC3`` for 16-bit signed 3-channel array, and so on.
+The method returns a matrix element type. This is an identifier compatible with the ``CvMat`` type system, like ``CV_16SC3`` or 16-bit signed 3-channel array, and so on.
 
 
 Mat::depth
