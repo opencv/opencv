@@ -60,11 +60,13 @@ HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float
     const int step = (int)(img.step/img.elemSize1());
     const int r = blockSize / 2;
 
-    float scale = ((1 << 2) * 255.0f) * blockSize;
-    scale = 1.0f / scale;
 #if 1 // original (test ok), but 1 FMUL more and less precise !
+    float scale = (1 << 2) * blockSize * 255.0f; // org
+    scale = 1.0f / scale;
     const float scale_sq_sq = scale * scale * scale * scale;
 #else // faster and more prescise, but features2d_rest fails (min is 1E-11 better than expected)
+    float scale = ((1 << 2) * 255.0f) * blockSize;
+    scale = 1.0f / scale;
     const float scale_sq_sq = (scale * scale) * (scale * scale);
 #endif
     AutoBuffer<int> ofsbuf(blockSize*blockSize);
