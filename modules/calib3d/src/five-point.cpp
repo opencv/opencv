@@ -504,11 +504,10 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
 
     triangulatePoints(P0, P2, points1, points2, Q);
     Mat mask2 = Q.row(2).mul(Q.row(3)) > 0;
-    Q3_inv.row(0) = 1.0 / Q.row(3);
-    Q.row(0) *= Q3_inv.row(0);
-    Q.row(1) *= Q3_inv.row(0);
-    Q.row(2) *= Q3_inv.row(0);
-    Q.row(3) *= Q3_inv.row(0);
+    Q.row(0) /= Q.row(3);
+    Q.row(1) /= Q.row(3);
+    Q.row(2) /= Q.row(3);
+    Q.row(3) /= Q.row(3);
     mask2 = (Q.row(2) < dist) & mask2;
     Q = P2 * Q;
     mask2 = (Q.row(2) > 0) & mask2;
@@ -516,11 +515,10 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
 
     triangulatePoints(P0, P3, points1, points2, Q);
     Mat mask3 = Q.row(2).mul(Q.row(3)) > 0;
-    Q3_inv.row(0) = 1.0 / Q.row(3);
-    Q.row(0) *= Q3_inv.row(0);
-    Q.row(1) *= Q3_inv.row(0);
-    Q.row(2) *= Q3_inv.row(0);
-    Q.row(3) *= Q3_inv.row(0);
+    Q.row(0) /= Q.row(3);
+    Q.row(1) /= Q.row(3);
+    Q.row(2) /= Q.row(3);
+    Q.row(3) /= Q.row(3);
     mask3 = (Q.row(2) < dist) & mask3;
     Q = P3 * Q;
     mask3 = (Q.row(2) > 0) & mask3;
@@ -528,11 +526,10 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
 
     triangulatePoints(P0, P4, points1, points2, Q);
     Mat mask4 = Q.row(2).mul(Q.row(3)) > 0;
-    Q3_inv.row(0) = 1.0 / Q.row(3);
-    Q.row(0) *= Q3_inv.row(0);
-    Q.row(1) *= Q3_inv.row(0);
-    Q.row(2) *= Q3_inv.row(0);
-    Q.row(3) *= Q3_inv.row(0);
+    Q.row(0) /= Q.row(3);
+    Q.row(1) /= Q.row(3);
+    Q.row(2) /= Q.row(3);
+    Q.row(3) /= Q.row(3);
     mask4 = (Q.row(2) < dist) & mask4;
     Q = P4 * Q;
     mask4 = (Q.row(2) > 0) & mask4;
