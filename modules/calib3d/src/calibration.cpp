@@ -3053,8 +3053,8 @@ void cv::Rodrigues(InputArray _src, OutputArray _dst, OutputArray _jacobian)
 void cv::matMulDeriv( InputArray _Amat, InputArray _Bmat,
                       OutputArray _dABdA, OutputArray _dABdB )
 {
-    const int A_type = A.type();
     Mat A = _Amat.getMat(), B = _Bmat.getMat();
+    const int A_type = A.type();
     _dABdA.create(A.rows*B.cols, A.rows*A.cols, A_type);
     _dABdB.create(A.rows*B.cols, B.rows*B.cols, A_type);
     CvMat matA = A, matB = B, c_dABdA = _dABdA.getMat(), c_dABdB = _dABdB.getMat();
