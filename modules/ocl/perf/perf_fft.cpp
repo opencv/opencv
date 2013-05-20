@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,13 +46,13 @@
 #include "precomp.hpp"
 
 ///////////// dft ////////////////////////
-TEST(dft)
+PERFTEST(dft)
 {
     Mat src, dst;
     ocl::oclMat d_src, d_dst;
 
-    int all_type[] = {CV_32FC1, CV_32FC2};
-    std::string type_name[] = {"CV_32FC1", "CV_32FC2"};
+    int all_type[] = {CV_32FC2};
+    std::string type_name[] = {"CV_32FC2"};
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {
@@ -73,9 +74,10 @@ TEST(dft)
             ocl::dft(d_src, d_dst, Size(size, size));
             WARMUP_OFF;
 
+            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), src.size().area() * 1e-4));
+
             GPU_ON;
             ocl::dft(d_src, d_dst, Size(size, size));
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
