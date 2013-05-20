@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,7 +46,7 @@
 #include "precomp.hpp"
 
 ///////////// PyrLKOpticalFlow ////////////////////////
-TEST(PyrLKOpticalFlow)
+PERFTEST(PyrLKOpticalFlow)
 {
     std::string images1[] = {"rubberwhale1.png", "aloeL.jpg"};
     std::string images2[] = {"rubberwhale2.png", "aloeR.jpg"};
@@ -115,9 +116,14 @@ TEST(PyrLKOpticalFlow)
             d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
             WARMUP_OFF;
 
+            std::vector<cv::Point2f> ocl_nextPts(d_nextPts.cols);
+            std::vector<unsigned char> ocl_status(d_status.cols);
+            TestSystem::instance().setAccurate(AssertEQ<size_t>(nextPts.size(), ocl_nextPts.size()));
+            TestSystem::instance().setAccurate(AssertEQ<size_t>(status.size(), ocl_status.size()));                        
+
+
             GPU_ON;
             d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
