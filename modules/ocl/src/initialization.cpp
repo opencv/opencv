@@ -363,64 +363,43 @@ namespace cv
             clFinish(Context::getContext()->impl->clCmdQueue);
         }
 
-        void queryDeviceInfo(DEVICE_INFO info_type, void* info)
+        //template specializations of queryDeviceInfo
+        template<>
+        bool queryDeviceInfo<IS_CPU_DEVICE, bool>(cl_kernel)
         {
-            static Info::Impl* impl = Context::getContext()->impl;
-            switch(info_type)
-            {
-            case WAVEFRONT_SIZE:
-                {
-                    bool is_cpu = false;
-                    queryDeviceInfo(IS_CPU_DEVICE, &is_cpu);
-                    if(is_cpu)
-                    {
-                        *(int*)info = 1;
-                        return;
-                    }
-#ifdef CL_DEVICE_WAVEFRONT_WIDTH_AMD
-                    try
-                    {
-                        openCLSafeCall(clGetDeviceInfo(Context::getContext()->impl->devices[0], 
-                            CL_DEVICE_WAVEFRONT_WIDTH_AMD, sizeof(size_t), info, 0));
-                    }
-                    catch(const cv::Exception&)
-#elif defined (CL_DEVICE_WARP_SIZE_NV)
-                    const int EXT_LEN = 4096 + 1 ;
-                    char extends_set[EXT_LEN];
-                    size_t extends_size;
-                    openCLSafeCall(clGetDeviceInfo(impl->devices[impl->devnum], CL_DEVICE_EXTENSIONS, EXT_LEN, (void *)extends_set, &extends_size));
-                    extends_set[EXT_LEN - 1] = 0;
-                    if(std::string(extends_set).find("cl_nv_device_attribute_query") != std::string::npos)
-                    {
-                        openCLSafeCall(clGetDeviceInfo(Context::getContext()->impl->devices[0], 
-                            CL_DEVICE_WARP_SIZE_NV, sizeof(size_t), info, 0));
-                    }
-                    else
-#endif
-                    {
-                        // if no way left for us to query the warp size, we can get it from kernel group info
-                        static const char * _kernel_string = "__kernel void test_func() {}";
-                        cl_kernel kernel;
-                        kernel = openCLGetKernelFromSource(Context::getContext(), &_kernel_string, "test_func");
-                        openCLSafeCall(clGetKernelWorkGroupInfo(kernel, impl->devices[impl->devnum],
-                            CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE, sizeof(size_t), info, NULL));
-                    }
+            Info::Impl* impl = Context::getContext()->impl;
+            cl_device_type devicetype;
+            openCLSafeCall(clGetDeviceInfo(impl->devices[impl->devnum],
+                CL_DEVICE_TYPE, sizeof(cl_device_type),
+                &devicetype, NULL));
+            return (devicetype == CVCL_DEVICE_TYPE_CPU);
+        }
 
-                }
-                break;
-            case IS_CPU_DEVICE:
-                {
-                    cl_device_type devicetype;
-                    openCLSafeCall(clGetDeviceInfo(impl->devices[impl->devnum], 
-                                    CL_DEVICE_TYPE, sizeof(cl_device_type), 
-                                    &devicetype, NULL));
-                    *(bool*)info = (devicetype == CVCL_DEVICE_TYPE_CPU);
-                }
-                break;
-            default:
-                CV_Error(-1, "Invalid device info type");
-                break;
+        template<typename _ty>
+        static _ty queryWavesize(cl_kernel kernel)
+        {
+            size_t info = 0;
+            Info::Impl* impl = Context::getContext()->impl;
+            bool is_cpu = queryDeviceInfo<IS_CPU_DEVICE, bool>();
+            if(is_cpu)
+            {
+                return 1;
             }
+            CV_Assert(kernel != NULL);
+            openCLSafeCall(clGetKernelWorkGroupInfo(kernel, impl->devices[impl->devnum],
+                CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE, sizeof(size_t), &info, NULL));
+            return static_cast<_ty>(info);
+        }
+
+        template<>
+        size_t queryDeviceInfo<WAVEFRONT_SIZE, size_t>(cl_kernel kernel)
+        {
+            return queryWavesize<size_t>(kernel);
+        }
+        template<>
+        int queryDeviceInfo<WAVEFRONT_SIZE, int>(cl_kernel kernel)
+        {
+            return queryWavesize<int>(kernel);
         }
 
         void openCLReadBuffer(Context *clCxt, cl_mem dst_buffer, void *host_buffer, size_t size)
