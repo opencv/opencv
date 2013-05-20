@@ -2183,7 +2183,7 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
         const CvMat* A = (k == 0) ? _cameraMatrix1 : _cameraMatrix2;
         const CvMat* Dk = (k == 0) ? _distCoeffs1 : _distCoeffs2;
         double dk1 = Dk ? cvmGet(Dk, 0, 0) : 0;
-        double fc = cvmGet(A,idx^1,idx^1);
+        double fc = cvmGet(A, idx^1, idx^1);
         if( dk1 < 0 ) {
             fc *= 1 + dk1*(nx*nx + ny*ny) / (4*fc*fc);
         }
