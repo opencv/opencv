@@ -355,7 +355,7 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
                 for( i = 0; i < 3; i++ )
                 {
                     const double ri = r3[i]; // (i == 0) ? rx : (i == 1 ? ry : rz);
-                    const double a0 = -s*ri, a1 = (s - 2*c1*itheta)*ri, a2 = c1*itheta;
+                    const double a0 = -s*ri, a2 = c1*itheta, a1 = (s - 2*a2)*ri;
                     const double a3 = (c - s*itheta)*ri, a4 = s*itheta;
                     for( k = 0; k < 9; k++ )
                         J[(i*9)+k] = a0*I[k] + a1*rrt[k] + a2*drrt[(i*9)+k] +
