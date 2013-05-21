@@ -493,9 +493,9 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     triangulatePoints(P0, P1, points1, points2, Q);
     Mat mask1 = Q.row(2).mul(Q.row(3)) > 0;
     Q.row(3) = 1.0 / Q.row(3); // inverse row_3 (slow FDIV)
-    Q.row(0) = Q.row(0).mul( Q3.row(3) );
-    Q.row(1) = Q.row(1).mul( Q3.row(3) );
-    Q.row(2) = Q.row(2).mul( Q3.row(3) );
+    Q.row(0) = Q.row(0).mul( Q.row(3) );
+    Q.row(1) = Q.row(1).mul( Q.row(3) );
+    Q.row(2) = Q.row(2).mul( Q.row(3) );
     Q.row(3) = 1.0; // Q.row(3) /= Q.row(3);
 
     mask1 = (Q.row(2) < dist) & mask1;
@@ -506,9 +506,9 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     triangulatePoints(P0, P2, points1, points2, Q);
     Mat mask2 = Q.row(2).mul(Q.row(3)) > 0;
     Q.row(3) = 1.0 / Q.row(3);
-    Q.row(0) = Q.row(0).mul( Q3.row(3) );
-    Q.row(1) = Q.row(1).mul( Q3.row(3) );
-    Q.row(2) = Q.row(2).mul( Q3.row(3) );
+    Q.row(0) = Q.row(0).mul( Q.row(3) );
+    Q.row(1) = Q.row(1).mul( Q.row(3) );
+    Q.row(2) = Q.row(2).mul( Q.row(3) );
     Q.row(3) = 1.0; // Q.row(3) /= Q.row(3);
     mask2 = (Q.row(2) < dist) & mask2;
     Q = P2 * Q;
@@ -518,9 +518,9 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     triangulatePoints(P0, P3, points1, points2, Q);
     Mat mask3 = Q.row(2).mul(Q.row(3)) > 0;
     Q.row(3) = 1.0 / Q.row(3);
-    Q.row(0) = Q.row(0).mul( Q3.row(3) );
-    Q.row(1) = Q.row(1).mul( Q3.row(3) );
-    Q.row(2) = Q.row(2).mul( Q3.row(3) );
+    Q.row(0) = Q.row(0).mul( Q.row(3) );
+    Q.row(1) = Q.row(1).mul( Q.row(3) );
+    Q.row(2) = Q.row(2).mul( Q.row(3) );
     Q.row(3) = 1.0; // Q.row(3) /= Q.row(3);
     mask3 = (Q.row(2) < dist) & mask3;
     Q = P3 * Q;
@@ -530,9 +530,9 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     triangulatePoints(P0, P4, points1, points2, Q);
     Mat mask4 = Q.row(2).mul(Q.row(3)) > 0;
     Q.row(3) = 1.0 / Q.row(3);
-    Q.row(0) = Q.row(0).mul( Q3.row(3) );
-    Q.row(1) = Q.row(1).mul( Q3.row(3) );
-    Q.row(2) = Q.row(2).mul( Q3.row(3) );
+    Q.row(0) = Q.row(0).mul( Q.row(3) );
+    Q.row(1) = Q.row(1).mul( Q.row(3) );
+    Q.row(2) = Q.row(2).mul( Q.row(3) );
     Q.row(3) = 1.0; // Q.row(3) /= Q.row(3);
     mask4 = (Q.row(2) < dist) & mask4;
     Q = P4 * Q;
