@@ -96,7 +96,7 @@ static inline void linearizeHomographyAt( const Mat_<double>& H, const Point2f& 
     A.create(2,2);
     double p1 = H(0,0)*pt.x + H(0,1)*pt.y + H(0,2),
            p2 = H(1,0)*pt.x + H(1,1)*pt.y + H(1,2),
-           p3 = H(2,0)*pt.x + H(2,1)*pt.y + H(2,2),
+           p3 = H(2,0)*pt.x + H(2,1)*pt.y + H(2,2);
 
     if( p3 )
     {
@@ -144,11 +144,11 @@ EllipticKeyPoint::EllipticKeyPoint( const Point2f& _center, const Scalar& _ellip
 
     const double a = ellipse[0], b = ellipse[1], c = ellipse[2];
     float  ac_b2 = (float) ((a*c) - (b*b)); // float is enough here!
-    double x1, x2;
-    solveQuadratic(1.f, -(a+c), ac_b2, x1, x2);
+    float x1, x2;
+    solveQuadratic(1.f, -(float)(a+c), ac_b2, x1, x2);
     ac_b2 = 1 / ac_b2;
-    axes.width  = (float)(1/sqrt((float)x1)); // NAN possible
-    axes.height = (float)(1/sqrt((float)x2));
+    axes.width  = (float)(1/sqrt(x1)); // NAN possible
+    axes.height = (float)(1/sqrt(x2));
 
     boundingBox.width  = (float)sqrt(ellipse[2]*ac_b2);
     boundingBox.height = (float)sqrt(ellipse[0]*ac_b2);
@@ -319,8 +319,8 @@ struct SIdx
 static void computeOneToOneMatchedOverlaps( const std::vector<EllipticKeyPoint>& keypoints1, const std::vector<EllipticKeyPoint>& keypoints2t,
                                             bool commonPart, std::vector<SIdx>& overlaps, float minOverlap )
 {
-    const size_t = keypoints1_size  = keypoints1.size();
-    const size_t = keypoints2t_size = keypoints2t.size();
+    const size_t keypoints1_size  = keypoints1.size();
+    const size_t keypoints2t_size = keypoints2t.size();
     CV_Assert( minOverlap >= 0.f );
     overlaps.clear();
     if( keypoints1.empty() || keypoints2t.empty() )
