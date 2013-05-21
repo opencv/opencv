@@ -60,7 +60,7 @@ HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float
     const int step = (int)(img.step/img.elemSize1());
     const int r = blockSize / 2;
 
-#if 1 // original (test ok), but 1 FMUL more and less precise !
+#if 0 // original (test ok), but 1 FMUL more and less precise !
     float scale = (1 << 2) * blockSize * 255.0f; // org
     scale = 1.0f / scale;
     const float scale_sq_sq = scale * scale * scale * scale;
